@@ -958,6 +958,9 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
         let supportsWakeDateLocalCompanions = supportsWakeDateDetails
             && (surface == .localVaultRangeWithoutSideEffects
                 || surface == .localVaultRangeWithProviderSidecars || surface == .preview)
+        let supportsWakeDateIndividuals = supportsWakeDateLocalCompanions
+            || (supportsWakeDateDetails && (surface == .connectedReceivedRangeWithoutSideEffects
+                || surface == .connectedReceivedRangeWithProviderSidecars))
         guard surface == .localVaultWithoutSideEffects
                 || surface == .localVaultRangeWithoutSideEffects
                 || surface == .localVaultRangeWithProviderSidecars
@@ -981,7 +984,7 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
               (!settingsSnapshot.detailPolicy.hasAnyDetail || supportsWakeDateDetails),
               (!hasConfiguredRollups || isRangeSurface),
               !settingsSnapshot.dailyNoteInjection.enabled,
-              (!settingsSnapshot.individualTracking.globalEnabled || supportsWakeDateLocalCompanions) else {
+              (!settingsSnapshot.individualTracking.globalEnabled || supportsWakeDateIndividuals) else {
             return false
         }
         return true

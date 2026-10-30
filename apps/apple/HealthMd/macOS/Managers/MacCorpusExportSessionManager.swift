@@ -89,7 +89,7 @@ final class MacCorpusExportSessionManager {
     }
 
     private enum StoredFinalizationArtifactKind: String, Codable {
-        case daily, rollup, providerSidecar
+        case daily, rollup, providerSidecar, individualEntry
     }
 
     private struct StoredFinalizationArtifact: Codable, Equatable {
@@ -113,7 +113,7 @@ final class MacCorpusExportSessionManager {
 
     private struct StoredReceivedRangePlan: Codable, Equatable {
         static let schema = "healthmd.connected_received_range_plan"
-        static let version = 2
+        static let version = 3
 
         let schema: String
         let version: Int
@@ -134,6 +134,9 @@ final class MacCorpusExportSessionManager {
         var dataDictionaryAcknowledged: Bool
         var nextArtifactIndex: Int
         let notes: [StoredReceivedNote]?
+        // Present (including []) for v3, so an empty individual selection cannot
+        // be downgraded into a plan that silently omits requested work.
+        let individualEntryCoverageGaps: [ExportPartialFailure]?
         var nextNoteIndex: Int?
     }
 
@@ -169,6 +172,7 @@ final class MacCorpusExportSessionManager {
         let rollupFileCount: Int
         let requestedRecordDatesWithData: [Date]
         let notes: [StoredReceivedNote]?
+        let individualEntryCoverageGaps: [ExportPartialFailure]?
     }
 
     private enum ReceivedRangeCommitError: Error {
@@ -312,6 +316,7 @@ final class MacCorpusExportSessionManager {
     var afterEncryptedContextApplyForTesting: (() async -> Void)?
     var beforeReceivedRangeSpoolForTesting: ((AppleLooseDailyRangeMaterialization) throws -> Void)?
     var afterReceivedNoteCommitForTesting: (() throws -> Void)?
+    var afterReceivedArtifactCommitForTesting: ((String) throws -> Void)?
     /// Test fault injection may keep a checksum valid while changing semantic metadata.
     static func receivedRangePlanDigestForTesting(_ data: Data) throws -> String {
         try immutableDigest(for: JSONDecoder().decode(StoredReceivedRangePlan.self, from: data))
@@ -1176,10 +1181,22 @@ final class MacCorpusExportSessionManager {
                             ) else {
                                 throw ConnectedMacDailyExportOperation.ResolutionError.unsupportedPinnedOperation
                             }
+                            let writesIndividuals = effectiveRangeSettingsSnapshot.makeAdvancedExportSettings().writesIndividualEntryFiles
+                            var individualEntries: [AppleLooseDailyIndividualEntry] = []
+                            var coverageGaps: [ExportPartialFailure] = []
+                            if writesIndividuals {
+                                for record in rangeInput.records where rangeInput.requestedRecordDatesWithData.contains(record.date) {
+                                    let entries = try vaultManager.materializeIndividualEntries(record, settingsSnapshot: effectiveRangeSettingsSnapshot)
+                                    individualEntries += entries.files
+                                    coverageGaps += entries.partialFailures
+                                }
+                            }
                             do {
                                 try persistReceivedRangePlan(
                                     materialized.addingProviderSidecars(try vaultManager.materializeExternalDailyRecords(
-                                        rangeInput.externalRecords, healthSubfolder: effectiveRangeSettingsSnapshot.healthSubfolder ?? "")),
+                                        rangeInput.externalRecords, healthSubfolder: effectiveRangeSettingsSnapshot.healthSubfolder ?? ""))
+                                        .addingIndividualEntries(individualEntries),
+                                    individualEntryCoverageGaps: writesIndividuals ? coverageGaps : nil,
                                     requestedRecordDatesWithData: rangeInput.requestedRecordDatesWithData,
                                     session: session,
                                     vaultManager: vaultManager
@@ -1204,6 +1221,8 @@ final class MacCorpusExportSessionManager {
                         }
                     }
                     try ensureFinalizationIsActive(session)
+                    session.journal.individualEntryCoverageGaps = (session.journal.individualEntryCoverageGaps ?? [])
+                        + (session.journal.receivedRangePlan?.individualEntryCoverageGaps ?? [])
                     session.journal.totalFilesWritten += rangeResult.totalFileCount
                     session.journal.externalRecordFileCount += rangeResult.providerSidecarFileCount
                     session.journal.dailyNoteUpdateCount = (session.journal.dailyNoteUpdateCount ?? 0) + rangeResult.dailyNoteUpdatedCount
@@ -2139,6 +2158,7 @@ final class MacCorpusExportSessionManager {
 
     private func persistReceivedRangePlan(
         _ materialized: AppleLooseDailyRangeMaterialization,
+        individualEntryCoverageGaps: [ExportPartialFailure]?,
         requestedRecordDatesWithData: Set<Date>,
         session: Session,
         vaultManager: VaultManager
@@ -2151,7 +2171,6 @@ final class MacCorpusExportSessionManager {
               session.journal.receivedRangePlan == nil,
               let expectedPin = session.journal.exportManifest.effectiveAppleExportEnginePin,
               materialized.operation.pin == expectedPin,
-              materialized.individualEntries.isEmpty,
               materialized.dailyNotes.isEmpty || materialized.operation.identity.capturedAt == session.journal.exportManifest.createdAt,
               materialized.operation.authority == expectedPin.engine,
               materialized.operation.selectedPlan.requestID
@@ -2181,6 +2200,7 @@ final class MacCorpusExportSessionManager {
         do {
             try vaultManager.preflightExportArtifactPaths(materialized.operation.artifacts.map(\.artifact.relativePath)
                 + materialized.providerSidecars.map(\.relativePath)
+                + materialized.individualEntries.map(\.relativePath)
                 + materialized.dailyNotes.map(\.relativePath)
                 + (materialized.dataDictionary.map { [$0.relativePath] } ?? []))
         } catch { throw ConnectedCorpusTransferModelError.invalidJournal }
@@ -2193,10 +2213,17 @@ final class MacCorpusExportSessionManager {
             guard !sum.overflow else { throw ConnectedCorpusTransferModelError.invalidJournal }
             providerBytes = sum.partialValue
         }
+        var individualBytes: UInt64 = 0
+        for file in materialized.individualEntries {
+            let sum = individualBytes.addingReportingOverflow(file.artifact.descriptor.byteCount)
+            guard !sum.overflow else { throw ConnectedCorpusTransferModelError.invalidJournal }
+            individualBytes = sum.partialValue
+        }
         let nativeAndProvider = materialized.operation.selectedPlan.totalByteCount.addingReportingOverflow(providerBytes)
-        let withNotes = nativeAndProvider.partialValue.addingReportingOverflow(noteBytes)
+        let withIndividuals = nativeAndProvider.partialValue.addingReportingOverflow(individualBytes)
+        let withNotes = withIndividuals.partialValue.addingReportingOverflow(noteBytes)
         let (spoolByteCount, spoolOverflow) = withNotes.partialValue.addingReportingOverflow(dictionaryByteCount)
-        guard !nativeAndProvider.overflow, !withNotes.overflow,
+        guard !nativeAndProvider.overflow, !withIndividuals.overflow, !withNotes.overflow,
               withNotes.partialValue <= 32 * 1_024 * 1_024 else { throw ConnectedCorpusTransferModelError.invalidJournal }
         let maximumSpoolBytes: UInt64 = 33 * 1_024 * 1_024
         guard !spoolOverflow,
@@ -2281,6 +2308,22 @@ final class MacCorpusExportSessionManager {
                     writeMode: "overwrite", kind: .providerSidecar, format: .json,
                     byteCount: sidecar.artifact.descriptor.byteCount, sha256: sidecar.artifact.descriptor.sha256))
             }
+            for (index, entry) in materialized.individualEntries.enumerated() {
+                let path = String(format: "finalization/artifacts/%04d.artifact", storedArtifacts.count)
+                let bytes = try entry.artifact.materializedData()
+                let descriptor = entry.artifact.descriptor
+                guard UInt64(bytes.count) == descriptor.byteCount,
+                      NativeExportArtifact.sha256(of: bytes) == descriptor.sha256,
+                      descriptor.mediaType == "text/markdown" || descriptor.mediaType == "application/json" else {
+                    throw CocoaError(.fileReadCorruptFile)
+                }
+                try writeProtectedFinalizationData(bytes, relativePath: path, sessionDirectoryURL: session.directoryURL)
+                storedArtifacts.append(StoredFinalizationArtifact(artifactID: "individual-entry-\(index)",
+                    relativePath: entry.relativePath, spoolRelativePath: path, mediaType: descriptor.mediaType,
+                    writeMode: "overwrite", kind: .individualEntry,
+                    format: descriptor.mediaType == "text/markdown" ? .markdown : .json,
+                    byteCount: descriptor.byteCount, sha256: descriptor.sha256))
+            }
             try syncProtectedSessionDirectory(
                 relativePath: "finalization/artifacts",
                 sessionDirectoryURL: session.directoryURL
@@ -2312,7 +2355,7 @@ final class MacCorpusExportSessionManager {
             let orderedRequestedDates = requestedRecordDatesWithData.sorted()
             var plan = StoredReceivedRangePlan(
                 schema: StoredReceivedRangePlan.schema,
-                version: storedNotes.isEmpty ? 1 : StoredReceivedRangePlan.version,
+                version: individualEntryCoverageGaps != nil ? StoredReceivedRangePlan.version : (storedNotes.isEmpty ? 1 : 2),
                 destinationBinding: destinationBinding,
                 authority: materialized.operation.authority,
                 pin: materialized.operation.pin,
@@ -2329,6 +2372,7 @@ final class MacCorpusExportSessionManager {
                 requestedRecordDatesWithData: orderedRequestedDates,
                 dataDictionaryAcknowledged: false,
                 nextArtifactIndex: 0, notes: storedNotes.isEmpty ? nil : storedNotes,
+                individualEntryCoverageGaps: individualEntryCoverageGaps,
                 nextNoteIndex: storedNotes.isEmpty ? nil : 0
             )
             plan = StoredReceivedRangePlan(
@@ -2349,7 +2393,7 @@ final class MacCorpusExportSessionManager {
                 rollupFileCount: plan.rollupFileCount,
                 requestedRecordDatesWithData: plan.requestedRecordDatesWithData,
                 dataDictionaryAcknowledged: false,
-                nextArtifactIndex: 0, notes: plan.notes, nextNoteIndex: plan.nextNoteIndex
+                nextArtifactIndex: 0, notes: plan.notes, individualEntryCoverageGaps: plan.individualEntryCoverageGaps, nextNoteIndex: plan.nextNoteIndex
             )
             try validateStoredReceivedRangePlan(
                 plan,
@@ -2545,6 +2589,10 @@ final class MacCorpusExportSessionManager {
                 )
                 try ensureFinalizationIsActive(session)
                 guard readback == .exact else { throw ReceivedRangeCommitError.invalid }
+                #if DEBUG
+                try afterReceivedArtifactCommitForTesting?(artifact.relativePath)
+                #endif
+                try ensureFinalizationIsActive(session)
                 try advanceReceivedRangePlan(session: session) { plan in
                     plan.nextArtifactIndex = index + 1
                 }
@@ -2587,6 +2635,7 @@ final class MacCorpusExportSessionManager {
             // artifact, not the sender's count; its presence is authoritative.
             dataDictionaryFileCount: completedPlan.dataDictionary != nil ? 1 : 0,
             providerSidecarFileCount: completedPlan.artifacts.count(where: { $0.kind == .providerSidecar }),
+            individualEntryFileCount: completedPlan.artifacts.count(where: { $0.kind == .individualEntry }),
             dailyNoteUpdatedDates: (completedPlan.notes ?? []).filter { $0.content != nil }.map(\.ownerDate),
             dailyNoteSkippedDates: (completedPlan.notes ?? []).filter { $0.content == nil }.map(\.ownerDate)
         )
@@ -2697,6 +2746,7 @@ final class MacCorpusExportSessionManager {
         }
         var calculatedArtifactBytes: UInt64 = 0
         var providerBytes: UInt64 = 0
+        var individualBytes: UInt64 = 0
         for artifact in plan.artifacts {
             let sum = calculatedArtifactBytes.addingReportingOverflow(artifact.byteCount)
             guard !sum.overflow,
@@ -2707,6 +2757,7 @@ final class MacCorpusExportSessionManager {
             }
             calculatedArtifactBytes = sum.partialValue
             if artifact.kind == .providerSidecar { providerBytes += artifact.byteCount }
+            if artifact.kind == .individualEntry { individualBytes += artifact.byteCount }
         }
         let notes = plan.notes ?? []
         var noteModeSnapshot = journal.exportManifest.settingsSnapshot
@@ -2717,15 +2768,25 @@ final class MacCorpusExportSessionManager {
         }
         let expectsNotes = noteModeSnapshot.dailyNoteInjection.enabled
             && !noteModeSnapshot.makeAdvancedExportSettings().summaryOnlyModeEnabled
-        guard notes.count <= 4_096,
-              (plan.version == 1 && plan.notes == nil && plan.nextNoteIndex == nil
-                && !expectsNotes)
-                || (plan.version == StoredReceivedRangePlan.version && !notes.isEmpty
+        guard notes.count <= 4_096, plan.version != 2 || !notes.isEmpty,
+              (plan.notes == nil && plan.nextNoteIndex == nil && !expectsNotes)
+                || (plan.version >= 2 && !notes.isEmpty
                     && plan.pin.isWakeDate && plan.authority == .rust
                     && expectsNotes
                     && plan.nextNoteIndex.map({ $0 >= 0 && $0 <= notes.count }) == true) else {
             throw ConnectedCorpusTransferModelError.invalidJournal
         }
+        let expectsIndividuals = noteModeSnapshot.makeAdvancedExportSettings().writesIndividualEntryFiles
+        guard (plan.version < 3 && !expectsIndividuals && plan.individualEntryCoverageGaps == nil && individualBytes == 0)
+                || (plan.version == 3 && expectsIndividuals && plan.individualEntryCoverageGaps != nil
+                    && plan.pin.isWakeDate && plan.authority == .rust),
+              (plan.individualEntryCoverageGaps ?? []).count <= plan.requestedRecordDatesWithData.count,
+              (plan.individualEntryCoverageGaps ?? []).allSatisfy({ failure in
+                  plan.requestedRecordDatesWithData.contains(failure.date) && failure.dataType == "Individual entries"
+                    && failure.errorDescription.utf8.count <= 65_536
+                    && failure.dateRangeDescription == HealthKitDailyOwnershipMetadata.ownerDate(for: failure.date,
+                        calendarTimeZoneIdentifier: plan.pin.calendarTimeZoneIdentifier)
+              }) else { throw ConnectedCorpusTransferModelError.invalidJournal }
         var noteBytes: UInt64 = 0
         for note in notes {
             guard note.relativePath.utf8.count <= 4_096,
@@ -2739,7 +2800,7 @@ final class MacCorpusExportSessionManager {
         let fileCount = plan.dailyFileCount.addingReportingOverflow(plan.rollupFileCount)
         guard !payloadBytes.overflow, !combinedBytes.overflow,
               !fileCount.overflow,
-              calculatedArtifactBytes - providerBytes == plan.totalByteCount,
+              calculatedArtifactBytes - providerBytes - individualBytes == plan.totalByteCount,
               payloadBytes.partialValue <= 32 * 1_024 * 1_024,
               dictionaryBytes <= 1 * 1_024 * 1_024,
               combinedBytes.partialValue <= 33 * 1_024 * 1_024 else {
@@ -2747,7 +2808,7 @@ final class MacCorpusExportSessionManager {
         }
 
         guard plan.schema == StoredReceivedRangePlan.schema,
-              (plan.version == 1 || plan.version == StoredReceivedRangePlan.version),
+              (1...StoredReceivedRangePlan.version).contains(plan.version),
               plan.authority == plan.pin.engine,
               plan.authority == .shadow || plan.authority == .rust,
               plan.pin == journal.exportManifest.effectiveAppleExportEnginePin,
@@ -2757,7 +2818,7 @@ final class MacCorpusExportSessionManager {
               plan.profile == plan.pin.profile,
               plan.dailyFileCount >= 0,
               plan.rollupFileCount >= 0,
-              fileCount.partialValue == plan.artifacts.count(where: { $0.kind != .providerSidecar }),
+              fileCount.partialValue == plan.artifacts.count(where: { $0.kind == .daily || $0.kind == .rollup }),
               plan.dailyFileCount == plan.artifacts.count(where: { $0.kind == .daily }),
               plan.rollupFileCount == plan.artifacts.count(where: { $0.kind == .rollup }),
               plan.nextArtifactIndex >= 0,
@@ -2775,6 +2836,10 @@ final class MacCorpusExportSessionManager {
             throw ConnectedCorpusTransferModelError.invalidJournal
         }
 
+        do {
+            try ExportPathPlanner.validatePortableArtifactPaths(plan.artifacts.map(\.relativePath)
+                + (plan.dataDictionary.map { [$0.relativePath] } ?? []) + notes.map(\.relativePath))
+        } catch { throw ConnectedCorpusTransferModelError.invalidJournal }
         guard Set(plan.artifacts.map { Self.portableDestinationPathKey($0.relativePath) }).count == plan.artifacts.count,
               Set(plan.artifacts.map(\.artifactID)).count == plan.artifacts.count else {
             throw ConnectedCorpusTransferModelError.invalidJournal
@@ -2871,7 +2936,9 @@ final class MacCorpusExportSessionManager {
             artifact.relativePath.lowercased().hasSuffix(
                 "." + artifact.format.fileExtension.lowercased()
             ),
-            Self.expectedMediaType(for: artifact.format) == artifact.mediaType else {
+            (artifact.kind == .individualEntry && artifact.format == .markdown
+                ? artifact.mediaType == "text/markdown"
+                : Self.expectedMediaType(for: artifact.format) == artifact.mediaType) else {
                 throw ConnectedCorpusTransferModelError.invalidJournal
             }
             let artifactURL = sessionDirectoryURL.appendingPathComponent(
@@ -2899,6 +2966,47 @@ final class MacCorpusExportSessionManager {
                 })
                 guard record.shouldExport, record.hasValidExportDate, ownerDates.contains(record.date),
                       artifact.relativePath == expectedPath else { throw ConnectedCorpusTransferModelError.invalidJournal }
+                continue
+            }
+            if artifact.kind == .individualEntry {
+                guard plan.version == 3, expectsIndividuals,
+                      artifact.artifactID == "individual-entry-\(plan.artifacts[..<index].count(where: { $0.kind == .individualEntry }))",
+                      artifact.format == .markdown || artifact.format == .json else {
+                    throw ConnectedCorpusTransferModelError.invalidJournal
+                }
+                if artifact.format == .json {
+                    let route = try JSONSerialization.jsonObject(with: data) as? [String: Any]
+                    let notePath = String(artifact.relativePath.dropLast(".route.json".count)) + ".md"
+                    guard artifact.relativePath.hasSuffix(".route.json"),
+                          route?["schema"] as? String == "healthmd.workout_route",
+                          route?["schema_version"] as? Int == 1,
+                          let points = route?["route"] as? [[String: Any]],
+                          route?["point_count"] as? Int == points.count,
+                          plan.artifacts.contains(where: { $0.kind == .individualEntry && $0.format == .markdown && $0.relativePath == notePath }) else {
+                        throw ConnectedCorpusTransferModelError.invalidJournal
+                    }
+                } else {
+                    guard let text = String(data: data, encoding: .utf8), text.hasPrefix("---\n") else {
+                        throw ConnectedCorpusTransferModelError.invalidJournal
+                    }
+                    let lines = text.split(separator: "\n", omittingEmptySubsequences: false)
+                    guard let closingIndex = lines.dropFirst().firstIndex(of: "---"),
+                          let contextLine = lines[1..<closingIndex].first(where: { $0.hasPrefix("healthmd_capture_context_json: ") }),
+                          let scalar = String(contextLine.dropFirst("healthmd_capture_context_json: ".count)).data(using: .utf8),
+                          let json = try? JSONDecoder().decode(String.self, from: scalar),
+                          let context = try? JSONDecoder().decode([String: String].self, from: Data(json.utf8)),
+                          context["schema_profile"] == "apple-v11",
+                          context["calendar_timezone"] == TimeZone(identifier: plan.pin.calendarTimeZoneIdentifier)?.identifier,
+                          context["timestamp_timezone"] == "UTC",
+                          context["sleep_day_attribution"] == "morning_ends",
+                          context["sleep_owner_day_rule"] == "session_end_date",
+                          context["sleep_interval_clipping"] == "none",
+                          context["sleep_owner_date"].map({ owner in plan.requestedRecordDatesWithData.contains {
+                              HealthKitDailyOwnershipMetadata.ownerDate(for: $0, calendarTimeZoneIdentifier: plan.pin.calendarTimeZoneIdentifier) == owner
+                          } }) ?? true else {
+                        throw ConnectedCorpusTransferModelError.invalidJournal
+                    }
+                }
                 continue
             }
             nativeArtifacts.append(try NativeExportArtifact(
@@ -3598,7 +3706,8 @@ final class MacCorpusExportSessionManager {
             artifacts: plan.artifacts,
             dailyFileCount: plan.dailyFileCount,
             rollupFileCount: plan.rollupFileCount,
-            requestedRecordDatesWithData: plan.requestedRecordDatesWithData, notes: plan.notes
+            requestedRecordDatesWithData: plan.requestedRecordDatesWithData, notes: plan.notes,
+            individualEntryCoverageGaps: plan.individualEntryCoverageGaps
         )
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]

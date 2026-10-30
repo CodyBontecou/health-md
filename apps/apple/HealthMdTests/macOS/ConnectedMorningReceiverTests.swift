@@ -342,6 +342,140 @@ struct ConnectedMorningReceiverTests {
         #expect(try Data(contentsOf: note) == written)
     }
 
+    @Test(arguments: ["individual", "individual-notes", "individual-provider", "individual-resume", "individual-empty", "individual-warning"])
+    func connectedIndividualsPreserveWholeSessionsRoutesAndReplay(mode: String) async throws {
+        let f = try await fixture(mode: mode)
+        defer { try? FileManager.default.removeItem(at: f.root) }
+        let (manager, finalize) = try await openAndApply(f)
+        let operation = try ConnectedMacDailyExportOperation.resolve(settingsSnapshot: f.manifest.settingsSnapshot,
+            declaredPin: f.manifest.effectiveAppleExportEnginePin, supportsRangePlan: true)
+        let source = try #require(f.payload.record)
+        let expected = try f.vault.materializeIndividualEntries(source, settingsSnapshot: operation.settingsSnapshot)
+        #expect(expected.files.count == (["individual-empty", "individual-warning"].contains(mode) ? 0 : 3))
+        manager.failNextPostRenameRangePlanSyncForTesting = true
+        guard case .inProgress = try await manager.finalize(finalize, vaultManager: f.vault) else {
+            Issue.record("Expected retained individual plan before destination writes"); return
+        }
+        #expect(try FileManager.default.contentsOfDirectory(atPath: f.destination.path).isEmpty)
+        let journal = f.sessions.appendingPathComponent(f.session.sessionID.uuidString).appendingPathComponent("journal.json")
+        let object = try #require(JSONSerialization.jsonObject(with: Data(contentsOf: journal)) as? [String: Any])
+        let plan = try #require(object["receivedRangePlan"] as? [String: Any])
+        #expect(plan["version"] as? Int == 3)
+        let coverageGaps = try #require(plan["individualEntryCoverageGaps"] as? [Any])
+        #expect(coverageGaps.count == (mode == "individual-warning" ? 1 : 0))
+        #expect(try planDigest(plan) == plan["immutablePlanSHA256"] as? String)
+        let rejecting = NoReplan()
+        let vault = makeVault(root: f.destination, planner: rejecting)
+        if mode == "individual-warning" {
+            let interrupted = MacCorpusExportSessionManager(rootURL: f.sessions)
+            interrupted.failNextTerminalPersistForTesting = true
+            guard case .inProgress = try await interrupted.finalize(finalize, vaultManager: vault) else {
+                Issue.record("Expected retry after terminal persistence failure"); return
+            }
+        }
+        let outcome = try await MacCorpusExportSessionManager(rootURL: f.sessions).finalize(finalize, vaultManager: vault)
+        guard case .files(let result, _) = outcome else { Issue.record("Expected committed individuals"); return }
+        #expect(rejecting.calls == 0)
+        #expect(result.totalFilesWritten == 4 + expected.files.count + f.payload.externalDailyRecords.count)
+        #expect(result.dailyNoteUpdateCount == (mode == "individual-notes" ? 1 : 0))
+        #expect(result.hasConsistentFileAccounting)
+        let written = try destinationFiles(in: f.destination)
+        if let directory = ProcessInfo.processInfo.environment["HEALTHMD_CONNECTED_INDIVIDUAL_FIXTURE_DIR"] {
+            let root = URL(fileURLWithPath: directory).appendingPathComponent(mode)
+            for (relativePath, bytes) in written {
+                let path = root.appendingPathComponent(relativePath)
+                try FileManager.default.createDirectory(at: path.deletingLastPathComponent(), withIntermediateDirectories: true)
+                try bytes.write(to: path)
+            }
+        }
+        for file in expected.files { #expect(written[file.relativePath] == (try file.artifact.materializedData())) }
+        let sleepNotes = expected.files.filter { $0.relativePath.contains("sleep_total") }
+        #expect((result.partialFailures ?? []).filter { $0.dataType == "Individual entries" } == expected.partialFailures)
+        if !["individual-empty", "individual-warning"].contains(mode) {
+            let sleepNote = String(decoding: try #require(sleepNotes.first).artifact.materializedData(), as: UTF8.self)
+            #expect(sleepNote.contains(f.ownerID))
+            #expect(sleepNote.contains("session_end_date"))
+            #expect(sleepNote.contains("27"))
+        }
+        let replay = try await MacCorpusExportSessionManager(rootURL: f.sessions).finalize(finalize, vaultManager: vault)
+        guard case .replay(_, let retainedResult) = replay else { Issue.record("Expected terminal replay"); return }
+        #expect(retainedResult?.totalFilesWritten == result.totalFilesWritten)
+        #expect(try destinationFiles(in: f.destination) == written)
+    }
+
+    @Test(arguments: ["downgrade", "corrupt", "collision", "lost-marker", "foreign-context"])
+    func invalidIndividualPlanCannotWriteOrReplan(damage: String) async throws {
+        let f = try await fixture(mode: "individual")
+        defer { try? FileManager.default.removeItem(at: f.root) }
+        let (manager, finalize) = try await openAndApply(f)
+        manager.failNextPostRenameRangePlanSyncForTesting = true
+        guard case .inProgress = try await manager.finalize(finalize, vaultManager: f.vault) else {
+            Issue.record("Expected retained plan"); return
+        }
+        let directory = f.sessions.appendingPathComponent(f.session.sessionID.uuidString)
+        let journal = directory.appendingPathComponent("journal.json")
+        var object = try #require(JSONSerialization.jsonObject(with: Data(contentsOf: journal)) as? [String: Any])
+        var plan = try #require(object["receivedRangePlan"] as? [String: Any])
+        var artifacts = try #require(plan["artifacts"] as? [[String: Any]])
+        let index = try #require(artifacts.firstIndex { $0["kind"] as? String == "individualEntry" && $0["format"] as? String == ExportFormat.markdown.rawValue })
+        if damage == "downgrade" { plan["version"] = 2 }
+        if damage == "lost-marker" { plan.removeValue(forKey: "individualEntryCoverageGaps") }
+        if damage == "collision" { artifacts[index]["relativePath"] = artifacts[0]["relativePath"] }
+        if damage == "corrupt" || damage == "foreign-context" {
+            let path = directory.appendingPathComponent(try #require(artifacts[index]["spoolRelativePath"] as? String))
+            let data = damage == "corrupt" ? Data("corrupt".utf8) : Data(String(decoding: try Data(contentsOf: path), as: UTF8.self)
+                .replacingOccurrences(of: "apple-v11", with: "apple-v10").utf8)
+            try data.write(to: path)
+            if damage == "foreign-context" {
+                artifacts[index]["sha256"] = NativeExportArtifact.sha256(of: data)
+                artifacts[index]["byteCount"] = data.count
+            }
+        }
+        plan["artifacts"] = artifacts
+        plan["immutablePlanSHA256"] = try planDigest(plan)
+        object["receivedRangePlan"] = plan
+        try JSONSerialization.data(withJSONObject: object).write(to: journal)
+        let rejecting = NoReplan()
+        let vault = makeVault(root: f.destination, planner: rejecting)
+        do {
+            _ = try await MacCorpusExportSessionManager(rootURL: f.sessions).finalize(finalize, vaultManager: vault)
+            Issue.record("Invalid individual plan must fail closed")
+        } catch { }
+        #expect(rejecting.calls == 0)
+        #expect(try FileManager.default.contentsOfDirectory(atPath: f.destination.path).isEmpty)
+    }
+
+    @Test(arguments: [false, true])
+    func individualPublicationBeforeAcknowledgementReplaysExactly(editAcknowledgedFile: Bool) async throws {
+        let f = try await fixture(mode: "individual")
+        defer { try? FileManager.default.removeItem(at: f.root) }
+        let (manager, finalize) = try await openAndApply(f)
+        var individualPaths: [String] = []
+        manager.afterReceivedArtifactCommitForTesting = { path in
+            guard path.contains("/entries/") else { return }
+            individualPaths.append(path)
+            if individualPaths.count == (editAcknowledgedFile ? 2 : 1) { throw CocoaError(.fileWriteUnknown) }
+        }
+        await #expect(throws: CocoaError.self) { _ = try await manager.finalize(finalize, vaultManager: f.vault) }
+        let first = f.destination.appendingPathComponent(try #require(individualPaths.first))
+        let bytes = try Data(contentsOf: first)
+        if editAcknowledgedFile { try Data("edited".utf8).write(to: first) }
+        let rejecting = NoReplan()
+        let vault = makeVault(root: f.destination, planner: rejecting)
+        if editAcknowledgedFile {
+            await #expect(throws: (any Error).self) {
+                _ = try await MacCorpusExportSessionManager(rootURL: f.sessions).finalize(finalize, vaultManager: vault)
+            }
+            #expect(try Data(contentsOf: first) == Data("edited".utf8))
+        } else {
+            let resumed = try await MacCorpusExportSessionManager(rootURL: f.sessions).finalize(finalize, vaultManager: vault)
+            guard case .files(let result, _) = resumed else { Issue.record("Expected exact artifact replay"); return }
+            #expect(result.totalFilesWritten == 7 && result.hasConsistentFileAccounting)
+            #expect(try Data(contentsOf: first) == bytes)
+        }
+        #expect(rejecting.calls == 0)
+    }
+
     private func planDigest(_ plan: [String: Any]) throws -> String {
         try MacCorpusExportSessionManager.receivedRangePlanDigestForTesting(
             JSONSerialization.data(withJSONObject: plan))
@@ -404,13 +538,21 @@ struct ConnectedMorningReceiverTests {
         settings.generateRangeSummary = mode == "range" || mode == "notes-range" || mode == "notes-summary-only" || mode == "notes-summary-fallback" || notesOnly
         settings.summaryOnlyExport = notesOnly || mode == "notes-summary-only" || mode == "notes-summary-fallback"
         settings.archiveExportFiles = notesOnly
-        settings.dailyNoteInjection.enabled = mode.hasPrefix("notes")
+        settings.dailyNoteInjection.enabled = mode.hasPrefix("notes") || mode == "individual-notes"
         settings.dailyNoteInjection.dailyNotesOnly = notesOnly
         settings.dailyNoteInjection.createIfMissing = mode != "notes-skip"
         settings.dailyNoteInjection.folderPath = "Journal"
-        settings.individualTracking.globalEnabled = notesOnly
-        settings.detailPolicy = .detailedTimeSeries
-        settings.metricSelection.enabledMetrics = ["sleep_total", "sleep_core", "sleep_bedtime", "sleep_wake"]
+        settings.individualTracking.globalEnabled = notesOnly || mode.hasPrefix("individual")
+        if mode.hasPrefix("individual") && mode != "individual-empty" {
+            settings.individualTracking.setTrackIndividually("workouts", enabled: true)
+            settings.individualTracking.setTrackIndividually("sleep_total", enabled: true)
+        }
+        if mode == "individual-warning" {
+            // A historical saved setting may track a metric excluded by selection.
+            settings.individualTracking.setTrackIndividually("weight", enabled: true)
+        }
+        settings.detailPolicy = mode == "individual-warning" ? .lossless : .detailedTimeSeries
+        settings.metricSelection.enabledMetrics = ["sleep_total", "sleep_core", "sleep_bedtime", "sleep_wake", "workouts"]
         let zone = try #require(TimeZone(identifier: "UTC"))
         settings.executionSleepCaptureContext = .init(timeZone: zone, sleepDayAttribution: .morningEnds)
         settings.exportTimeZoneOverride = zone
@@ -421,18 +563,26 @@ struct ConnectedMorningReceiverTests {
         var calendar = Calendar(identifier: .gregorian); calendar.timeZone = zone
         let owner = calendar.startOfDay(for: ExportFixtures.referenceDate)
         let ownerID = APIExportClient.dayString(from: owner, timeZone: zone)
-        let withProvider = ["provider", "warning", "resume", "notes-provider"].contains(mode)
+        let withProvider = ["provider", "warning", "resume", "notes-provider", "individual-provider"].contains(mode)
         let external = withProvider ? [ExternalDailyRecord(provider: .whoop, date: ownerID, fetchedAt: owner,
             payloads: mode == "warning" ? [] : [.init(name: "cycles", endpoint: "https://synthetic.invalid/cycles",
                 statusCode: 200, fetchedAt: owner, data: .object(["synthetic": .string("retained-connected-source")]))],
             warnings: mode == "warning" ? ["Synthetic unavailable connection"] : [])] : []
         let start = owner.addingTimeInterval(-14 * 3600 - 0.25), end = owner.addingTimeInterval(13 * 3600 + 0.25)
+        let archive = mode == "individual-warning" ? HealthKitRecordArchive(captureStatus: .complete,
+            dailyOwnership: .init(ownerDate: ownerID, intervalStart: owner, intervalEnd: owner.addingTimeInterval(86_400),
+                calendarTimeZoneIdentifier: zone.identifier)) : nil
         let record = HealthData(date: owner, timeContext: .init(timeZone: zone, sleepDayAttribution: .morningEnds),
             sleep: SleepData(totalDuration: end.timeIntervalSince(start), coreSleep: end.timeIntervalSince(start),
                 sessionStart: start, sessionEnd: end,
                 stages: [.init(stage: "core", startDate: start, endDate: end, metadata: ["synthetic": "connected-whole-session"])]),
+            workouts: mode.hasPrefix("individual") ? [WorkoutData(workoutType: .running,
+                startTime: owner.addingTimeInterval(3600), duration: 1800, calories: 100, distance: 1000,
+                route: [RoutePoint(timestamp: owner.addingTimeInterval(3600), latitude: 1, longitude: 2,
+                    altitudeMeters: nil, speedMps: nil, courseDegrees: nil, horizontalAccuracyMeters: nil)])] : [],
             providers: withProvider ? (mode == "warning" ? HealthProviderSections.normalized(from: external)
-                : ExportFixtures.whoopDay.providers) : nil)
+                : ExportFixtures.whoopDay.providers) : nil,
+            healthKitRecordArchive: archive)
         let original = ConnectedCorpusExportManifest(mode: .writeFiles, createdAt: Date(), sourceDeviceName: "Synthetic iPhone",
             sourceTimeZoneIdentifier: zone.identifier, dateRangeStart: owner, dateRangeEnd: owner,
             requestedDates: [owner],
