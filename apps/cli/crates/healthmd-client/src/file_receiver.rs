@@ -21,6 +21,7 @@ use healthmd_protocol::{
         TransferFinalAcknowledgement, TransferFinalize, TransferOpen, TransferPartition,
         TransferPartitionAcknowledgement, TransferPartitionComplete, TransferSession,
     },
+    notes::ScopedDailyNotePolicy,
     transfer::{is_sha256, request_fingerprint, sha256_hex},
 };
 use serde::{Deserialize, Serialize};
@@ -85,6 +86,7 @@ fn validate_journal_version(journal: &FileJournal) -> Result<(), ClientError> {
 }
 const HISTORY_SIDECAR_DIRECTORY: &str = ".healthmd/history-observations";
 const MAXIMUM_MERGE_BYTES: i64 = 64 * 1_024 * 1_024;
+const MAXIMUM_SCOPED_NOTE_BYTES: u64 = 8 * 1_024 * 1_024;
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 struct DestinationIdentity {
@@ -199,6 +201,14 @@ pub struct GeneratedStage {
     pub after_sha256: String,
 }
 
+/// A missing existing-only note is a real disposition, never an empty staged file.
+/// Callers must freeze this decision in their durable job before continuing.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum GeneratedNoteStage {
+    SkippedMissing,
+    Ready(GeneratedStage),
+}
+
 impl GeneratedDestination {
     /// Open and bind an existing absolute non-symlink destination directory.
     ///
@@ -266,6 +276,7 @@ impl GeneratedDestination {
             v2_write_mode(mode),
             b"\n\n",
             self.private_storage_root.as_deref(),
+            None,
         )?;
         let (_, after_sha256) = inspect_file(stage)?;
         Ok(GeneratedStage {
@@ -300,12 +311,73 @@ impl GeneratedDestination {
             v2_write_mode(mode),
             b"\n",
             self.private_storage_root.as_deref(),
+            None,
         )?;
         let (_, after_sha256) = inspect_file(stage)?;
         Ok(GeneratedStage {
             before_sha256,
             after_sha256,
         })
+    }
+
+    /// Prepare a policy-bound note or skip a missing existing-only destination.
+    /// No destination directory or private stage is created for a skipped note.
+    /// The owning receiver must validate the negotiated version and accepted job
+    /// authority, then persist this disposition before installing any ready stage.
+    ///
+    /// # Errors
+    /// Rejects unsafe paths, invalid capture/policy authority, changed roots,
+    /// complete-export destinations, oversized notes and IO failures.
+    pub fn prepare_scoped_note_stage(
+        &self,
+        relative_path: &str,
+        source: &Path,
+        stage: &Path,
+        policy: &ScopedDailyNotePolicy,
+    ) -> Result<GeneratedNoteStage, ClientError> {
+        self.ensure_identity()?;
+        let relative = validate_generated_relative_path(relative_path)?;
+        let patch = String::from_utf8(read_bounded(
+            source,
+            MAXIMUM_SCOPED_NOTE_BYTES,
+            "scoped note exceeds the merge limit",
+        )?)
+        .map_err(|_| invalid("scoped note is not UTF-8"))?;
+        markdown::merge_personal_note_for_policy("", &patch, policy).map_err(invalid)?;
+        let root = Dir::open_ambient_dir(&self.root, ambient_authority()).map_err(storage_error)?;
+        let existing_parent = open_existing_safe_parent(root, &relative)?;
+        let (parent, name, before_sha256) = if let Some((parent, name)) = existing_parent {
+            let before = digest_cap_file(&parent, &name)?;
+            if before.is_none() && !policy.create_if_missing {
+                return Ok(GeneratedNoteStage::SkippedMissing);
+            }
+            (parent, name, before)
+        } else {
+            if !policy.create_if_missing {
+                return Ok(GeneratedNoteStage::SkippedMissing);
+            }
+            let root =
+                Dir::open_ambient_dir(&self.root, ambient_authority()).map_err(storage_error)?;
+            let (parent, name) = open_safe_parent(root, &relative)?;
+            let before = digest_cap_file(&parent, &name)?;
+            (parent, name, before)
+        };
+        build_stage(
+            &parent,
+            &name,
+            before_sha256.is_some(),
+            source,
+            stage,
+            FileWriteMode::MergeMarkdownPreservingPreamble,
+            b"\n\n",
+            self.private_storage_root.as_deref(),
+            Some(policy),
+        )?;
+        let (_, after_sha256) = inspect_file(stage)?;
+        Ok(GeneratedNoteStage::Ready(GeneratedStage {
+            before_sha256,
+            after_sha256,
+        }))
     }
 
     /// Install a prepared stage iff the destination still has the expected digest.
@@ -1312,6 +1384,7 @@ fn commit_file(
         manifest.write_mode,
         b"\n\n",
         Some(&layout.root),
+        None,
     )?;
     let (_, after) = inspect_file(&stage)?;
     let plan = CommitPlan {
@@ -1344,7 +1417,7 @@ fn commit_file(
     save_journal(layout, journal)
 }
 
-#[allow(clippy::too_many_arguments)]
+#[allow(clippy::too_many_arguments, clippy::too_many_lines)]
 fn build_stage(
     parent: &Dir,
     name: &Path,
@@ -1354,7 +1427,11 @@ fn build_stage(
     mode: FileWriteMode,
     append_separator: &[u8],
     private_storage_root: Option<&Path>,
+    note_policy: Option<&ScopedDailyNotePolicy>,
 ) -> Result<(), ClientError> {
+    if note_policy.is_some() && mode != FileWriteMode::MergeMarkdownPreservingPreamble {
+        return Err(invalid("scoped note policy requires personal-note mode"));
+    }
     let source_bytes = fs::metadata(source).map_err(storage_error)?.len();
     let existing_bytes = if exists && mode != FileWriteMode::Overwrite {
         open_regular_cap_file(parent, name)?
@@ -1436,7 +1513,10 @@ fn build_stage(
                 .map_err(|_| invalid("existing Markdown is not UTF-8"))?;
             let new = String::from_utf8(source_bytes)
                 .map_err(|_| invalid("generated Markdown is not UTF-8"))?;
-            let merged = if mode == FileWriteMode::MergeMarkdownPreservingPreamble {
+            let merged = if let Some(policy) = note_policy {
+                markdown::merge_personal_note_for_policy(&existing, &new, policy)
+                    .map_err(invalid)?
+            } else if mode == FileWriteMode::MergeMarkdownPreservingPreamble {
                 markdown::merge_personal_note(&existing, &new).map_err(invalid)?
             } else {
                 markdown::merge(&existing, &new, false)
@@ -2302,6 +2382,160 @@ fn storage_error(error: io::Error) -> ClientError {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn scoped_note_preparation_obeys_host_existence_and_section_policy() {
+        for android in [false, true] {
+            for create in [false, true] {
+                for exists in [false, true] {
+                    for sections in [false, true] {
+                        let root = tempfile::tempdir().unwrap();
+                        let destination = root.path().join("vault");
+                        fs::create_dir(&destination).unwrap();
+                        let note = destination.join("Daily/2026-07-23.md");
+                        let personal = crate::test_support::personal_journal();
+                        if exists {
+                            fs::create_dir(note.parent().unwrap()).unwrap();
+                            fs::write(&note, &personal).unwrap();
+                        }
+                        let source = root.path().join("source.md");
+                        let stage = root.path().join("output.stage");
+                        let patch = crate::test_support::scoped_note_patch(android);
+                        let patch = if sections {
+                            patch.as_str()
+                        } else {
+                            patch.split("## Activity").next().unwrap()
+                        };
+                        fs::write(&source, patch).unwrap();
+                        let policy = ScopedDailyNotePolicy {
+                            version: 1,
+                            record_profile: if android {
+                                "android-sleep-v6"
+                            } else {
+                                "apple-v11"
+                            }
+                            .into(),
+                            owner_date: "2026-07-23".into(),
+                            calendar_timezone: "UTC".into(),
+                            create_if_missing: create,
+                            inject_sections: sections,
+                        };
+                        let bound = GeneratedDestination::open(&destination).unwrap();
+                        let disposition = bound
+                            .prepare_scoped_note_stage(
+                                "Daily/2026-07-23.md",
+                                &source,
+                                &stage,
+                                &policy,
+                            )
+                            .unwrap();
+                        if !exists && !create {
+                            assert_eq!(disposition, GeneratedNoteStage::SkippedMissing);
+                            assert!(!destination.join("Daily").exists());
+                            assert!(!stage.exists());
+                            continue;
+                        }
+                        let GeneratedNoteStage::Ready(prepared) = disposition else {
+                            panic!("existing or creatable note was skipped")
+                        };
+                        assert_eq!(
+                            prepared.before_sha256,
+                            exists.then(|| sha256_hex(personal.as_bytes()))
+                        );
+                        assert_eq!(
+                            fs::read_to_string(&note).ok(),
+                            exists.then(|| personal.clone())
+                        );
+                        let bytes = fs::read(&stage).unwrap();
+                        assert_eq!(sha256_hex(&bytes), prepared.after_sha256);
+                        let text = std::str::from_utf8(&bytes).unwrap();
+                        assert_eq!(text.contains("Current steps."), sections);
+                        if exists {
+                            assert!(text.contains("notes: |\r\n  Keep my: multiline YAML\r\n"));
+                            assert_eq!(text.matches("Personal journal.\r\n").count(), 500);
+                        }
+                        bound
+                            .install_stage(
+                                "Daily/2026-07-23.md",
+                                &stage,
+                                prepared.before_sha256.as_deref(),
+                                &prepared.after_sha256,
+                            )
+                            .unwrap();
+                        assert_eq!(fs::read(&note).unwrap(), bytes);
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn invalid_scoped_note_authority_rejects_even_when_the_note_would_be_skipped() {
+        for exists in [false, true] {
+            let root = tempfile::tempdir().unwrap();
+            let destination = root.path().join("vault");
+            fs::create_dir(&destination).unwrap();
+            if exists {
+                fs::create_dir(destination.join("Daily")).unwrap();
+                fs::write(
+                    destination.join("Daily/2026-07-23.md"),
+                    b"Personal sentinel",
+                )
+                .unwrap();
+            }
+            let source = root.path().join("source.md");
+            let stage = root.path().join("output.stage");
+            fs::write(&source, crate::test_support::scoped_note_patch(false)).unwrap();
+            let valid = ScopedDailyNotePolicy {
+                version: 1,
+                record_profile: "apple-v11".into(),
+                owner_date: "2026-07-23".into(),
+                calendar_timezone: "UTC".into(),
+                create_if_missing: false,
+                inject_sections: true,
+            };
+            let bound = GeneratedDestination::open(&destination).unwrap();
+            for field in ["version", "profile", "date", "zone", "sections"] {
+                let mut policy = valid.clone();
+                match field {
+                    "version" => policy.version = 2,
+                    "profile" => policy.record_profile = "android-sleep-v6".into(),
+                    "date" => policy.owner_date = "2026-07-24".into(),
+                    "zone" => policy.calendar_timezone = "America/New_York".into(),
+                    "sections" => policy.inject_sections = false,
+                    _ => unreachable!(),
+                }
+                assert!(
+                    bound
+                        .prepare_scoped_note_stage("Daily/2026-07-23.md", &source, &stage, &policy)
+                        .is_err()
+                );
+                assert!(!stage.exists());
+                assert_eq!(
+                    fs::read(destination.join("Daily/2026-07-23.md")).ok(),
+                    exists.then(|| b"Personal sentinel".to_vec())
+                );
+                assert_eq!(destination.join("Daily").exists(), exists);
+            }
+            fs::write(&source, "---\nschema: healthmd.health_data\n---\n").unwrap();
+            assert!(
+                bound
+                    .prepare_scoped_note_stage("Daily/2026-07-23.md", &source, &stage, &valid)
+                    .is_err()
+            );
+            assert!(!stage.exists());
+            File::create(&source)
+                .unwrap()
+                .set_len(MAXIMUM_SCOPED_NOTE_BYTES + 1)
+                .unwrap();
+            assert!(
+                bound
+                    .prepare_scoped_note_stage("Daily/2026-07-23.md", &source, &stage, &valid)
+                    .is_err()
+            );
+            assert!(!stage.exists());
+        }
+    }
+
     #[test]
     fn personal_note_stages_preserve_large_journals_and_validate_missing_destinations() {
         for exists in [false, true] {

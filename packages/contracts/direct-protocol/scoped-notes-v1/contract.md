@@ -1,8 +1,9 @@
 # Direct scoped daily-note writes, version 1
 
 Status: staged. Models and capture-binding semantics are implemented. The mobile producers and
-portable receiver do not yet advertise or execute this extension. A policy-bearing manifest
-currently fails closed. Completing destination skip recovery, frozen producer authority, and
+portable receiver do not yet advertise or execute this extension. The host preparation API
+validates policy-bound patches and returns a ready stage or an explicit missing-note skip;
+policy-bearing manifests in the receiving pipelines currently fail closed. Completing destination skip recovery, frozen producer authority, and
 cross-platform runtime qualification is required before advertising version 1.
 
 This independent extension applies the same personal-note settings to iPhone protocol v1 and
@@ -51,7 +52,8 @@ verified byte-for-byte by Kotlin and Rust. Existing v1/v2 fixtures stay unchange
 Only the host knows whether the note exists. The source always stages a complete scoped patch,
 including for existing-only settings; an empty mobile staging directory never justifies dropping it.
 A missing note with creation disabled yields a durable skipped disposition without creating the
-note or its parent directories. Resume reuses that disposition, even if the owner later creates a
+note or its parent directories. Scoped patches and merged notes are bounded to 8 MiB; larger
+personal notes fail without replacement. Resume reuses that disposition, even if the owner later creates a
 note. Skipped notes are absent from written-file counts and written-path lists. An existing note is
 merged into a bounded private stage, preserving personal YAML, preamble and unrelated body bytes.
 

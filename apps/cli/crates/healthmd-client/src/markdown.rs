@@ -73,6 +73,37 @@ pub(crate) fn merge_personal_note(existing: &str, patch: &str) -> Result<String,
     }
 }
 
+/// The negotiated policy supplies authority; payload text cannot override it.
+pub(crate) fn merge_personal_note_for_policy(
+    existing: &str,
+    patch: &str,
+    policy: &healthmd_protocol::notes::ScopedDailyNotePolicy,
+) -> Result<String, &'static str> {
+    use healthmd_core::semantic::SemanticProfile;
+    validate_personal_note_destination(existing)?;
+    validate_personal_note_destination(patch)?;
+    if !policy.is_valid() {
+        return Err("invalid scoped daily note policy");
+    }
+    let profile = match policy.record_profile.as_str() {
+        "apple-v8" => SemanticProfile::AppleHealthDataV8,
+        "apple-v11" => SemanticProfile::AppleHealthDataV11,
+        "android-frozen-v4" => SemanticProfile::AndroidFrozenV4,
+        "android-analytical-v5" => SemanticProfile::AndroidAnalyticalV5,
+        "android-sleep-v6" => SemanticProfile::AndroidSleepV6,
+        _ => return Err("invalid scoped daily note policy"),
+    };
+    healthmd_core::render::merge_scoped_daily_note_for_capture(
+        profile,
+        existing,
+        patch,
+        &policy.owner_date,
+        &policy.calendar_timezone,
+        policy.inject_sections,
+    )
+    .map_err(|_| "scoped daily note does not match its accepted policy")
+}
+
 /// A personal-note update must never acquire the role of a complete source export.
 /// This runs before building an installable stage; errors contain no note content.
 pub(crate) fn validate_personal_note_destination(existing: &str) -> Result<(), &'static str> {
