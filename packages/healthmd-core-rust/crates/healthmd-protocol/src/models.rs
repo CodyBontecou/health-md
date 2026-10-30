@@ -200,6 +200,12 @@ pub struct FileManifest {
     pub sha256: String,
     #[serde(rename = "writeMode")]
     pub write_mode: FileWriteMode,
+    #[serde(
+        rename = "scopedNotePolicy",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub scoped_note_policy: Option<crate::notes::ScopedDailyNotePolicy>,
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]

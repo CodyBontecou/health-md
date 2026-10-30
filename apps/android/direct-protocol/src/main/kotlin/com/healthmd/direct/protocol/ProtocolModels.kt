@@ -90,7 +90,11 @@ data class NegotiationHello(
     // RFC-0005 P2 wake enrollment uses the same additive hello capability. Android (P3) does not
     // enroll yet, but must still decode a current CLI hello strictly.
     val wake: JsonObject? = null,
-)
+    @SerialName("scopedDailyNoteVersions") val scopedDailyNoteVersions: List<Int>? = null,
+) {
+    fun negotiatedScopedDailyNoteVersion(peer: NegotiationHello): Int? =
+        if (scopedDailyNoteVersions?.contains(1) == true && peer.scopedDailyNoteVersions?.contains(1) == true) 1 else null
+}
 
 @Serializable
 enum class ProductId {
@@ -310,6 +314,7 @@ data class ArtifactManifest(
     @SerialName("logical_checksum_sha256") val logicalChecksumSha256: String? = null,
     @SerialName("relative_path") val relativePath: String? = null,
     @SerialName("write_mode") val writeMode: FileWriteMode? = null,
+    @SerialName("scoped_note_policy") val scopedNotePolicy: ScopedDailyNotePolicy? = null,
     @SerialName("snapshot_status") val snapshotStatus: String? = null,
     @SerialName("provider_id") val providerId: String? = null,
 )

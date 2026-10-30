@@ -563,6 +563,9 @@ impl FileReceiver {
     /// Returns an error for unsafe paths, bad digest/count, changed manifest, or storage failure.
     pub fn store_manifest(&mut self, manifest: FileManifest) -> Result<(), ClientError> {
         validate_generated_relative_path(&manifest.relative_path)?;
+        if manifest.scoped_note_policy.is_some() {
+            return Err(invalid("scoped note policy was not negotiated"));
+        }
         if manifest.byte_count < 0 || !is_sha256(&manifest.sha256) {
             return Err(invalid("file manifest is invalid"));
         }
@@ -1072,6 +1075,7 @@ fn validate_persisted_limits(journal: &FileJournal) -> Result<(), ClientError> {
     for (index, (file_id, manifest)) in manifests.iter().enumerate() {
         if **file_id != manifest.file_id
             || manifest.job_id != journal.request.job_id
+            || manifest.scoped_note_policy.is_some()
             || manifest.byte_count < 0
             || !is_sha256(&manifest.sha256)
         {
@@ -2665,6 +2669,7 @@ mod tests {
         let digest = sha256_hex(&data);
         let file_id = SwiftUuid(Uuid::new_v4());
         let manifest = FileManifest {
+            scoped_note_policy: None,
             job_id,
             file_id,
             relative_path: "daily.md".into(),
@@ -2707,6 +2712,16 @@ mod tests {
         receiver
             .prepare(request.clone(), accepted.clone(), session.clone())
             .unwrap();
+        let mut unnegotiated = manifest.clone();
+        unnegotiated.scoped_note_policy = Some(healthmd_protocol::notes::ScopedDailyNotePolicy {
+            version: 1,
+            record_profile: "apple-v11".into(),
+            owner_date: "2026-07-23".into(),
+            calendar_timezone: "UTC".into(),
+            create_if_missing: false,
+            inject_sections: true,
+        });
+        assert!(receiver.store_manifest(unnegotiated).is_err());
         receiver.store_manifest(manifest.clone()).unwrap();
         if observed {
             let mut conflict = manifest.clone();

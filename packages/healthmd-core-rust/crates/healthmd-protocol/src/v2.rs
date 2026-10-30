@@ -423,6 +423,8 @@ pub struct ArtifactManifest {
     pub relative_path: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub write_mode: Option<FileWriteMode>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub scoped_note_policy: Option<crate::notes::ScopedDailyNotePolicy>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub snapshot_status: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]

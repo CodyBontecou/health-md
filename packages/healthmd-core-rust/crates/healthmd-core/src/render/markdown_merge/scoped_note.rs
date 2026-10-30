@@ -254,6 +254,90 @@ pub fn merge_scoped_daily_note(
     patch: &str,
     inject_sections: bool,
 ) -> Result<String, RenderError> {
+    merge_scoped_daily_note_impl(profile, existing, patch, inject_sections, None)
+}
+
+/// Merge a scoped note only when its capture matches the accepted write policy.
+/// The caller owns destination existence and durable skip/install decisions.
+///
+/// # Errors
+/// Rejects a different owner date, frozen calendar clock, source profile, or a
+/// generated body when the accepted policy permits frontmatter updates only.
+pub fn merge_scoped_daily_note_for_capture(
+    profile: SemanticProfile,
+    existing: &str,
+    patch: &str,
+    owner_date: &str,
+    calendar_timezone: &str,
+    inject_sections: bool,
+) -> Result<String, RenderError> {
+    merge_scoped_daily_note_impl(
+        profile,
+        existing,
+        patch,
+        inject_sections,
+        Some((owner_date, calendar_timezone)),
+    )
+}
+
+fn validated_note_capture(
+    profile: SemanticProfile,
+    kind: Option<&str>,
+    capture: Option<&str>,
+    night_capture: Option<&str>,
+) -> Result<(String, String), RenderError> {
+    match kind {
+        Some("daily_capture_v1") => {
+            let envelope: Envelope =
+                serde_json::from_str(capture.ok_or(RenderError::PresentationMismatch)?)
+                    .map_err(|_| RenderError::PresentationMismatch)?;
+            if envelope.kind != "healthmd_daily_capture" || envelope.version != 1 {
+                return Err(RenderError::PresentationMismatch);
+            }
+            validate_capture(profile, &envelope.record_json)?;
+            let CaptureHeader(header) = serde_json::from_str(&envelope.record_json)
+                .map_err(|_| RenderError::PresentationMismatch)?;
+            let zone = header
+                .get("time_context")
+                .and_then(|context| context.get("calendar_timezone"))
+                .and_then(Value::as_str)
+                .ok_or(RenderError::PresentationMismatch)?
+                .to_owned();
+            Ok((envelope.record_json, zone))
+        }
+        Some("daily_capture_v2") => {
+            let envelope: NightEnvelope =
+                serde_json::from_str(night_capture.ok_or(RenderError::PresentationMismatch)?)
+                    .map_err(|_| RenderError::PresentationMismatch)?;
+            if envelope.kind != "healthmd_daily_capture"
+                || envelope.version != 2
+                || envelope.record_profile != profile.public_profile_id()
+                || envelope.time_context.calendar_timezone
+                    != envelope.time_context.timestamp_timezone
+            {
+                return Err(RenderError::PresentationMismatch);
+            }
+            validate_night_capture(
+                profile,
+                &envelope.record_json,
+                &envelope.time_context.calendar_timezone,
+            )?;
+            Ok((
+                envelope.record_json,
+                envelope.time_context.calendar_timezone,
+            ))
+        }
+        _ => Err(RenderError::PresentationMismatch),
+    }
+}
+
+fn merge_scoped_daily_note_impl(
+    profile: SemanticProfile,
+    existing: &str,
+    patch: &str,
+    inject_sections: bool,
+    expected_capture: Option<(&str, &str)>,
+) -> Result<String, RenderError> {
     validate(existing, patch)?;
     let mut incoming = frontmatter_document(patch).ok_or(RenderError::PresentationMismatch)?;
     let blocks = property_blocks(&incoming.content).ok_or(RenderError::PresentationMismatch)?;
@@ -275,41 +359,25 @@ pub fn merge_scoped_daily_note(
         }
         *target = Some(scalar_property(&incoming.content[block.range])?);
     }
-    match kind.as_deref() {
-        Some("daily_capture_v1") => {
-            let envelope: Envelope = serde_json::from_str(
-                capture
-                    .as_deref()
-                    .ok_or(RenderError::PresentationMismatch)?,
-            )
-            .map_err(|_| RenderError::PresentationMismatch)?;
-            if envelope.kind != "healthmd_daily_capture" || envelope.version != 1 {
-                return Err(RenderError::PresentationMismatch);
-            }
-            validate_capture(profile, &envelope.record_json)?;
+    let (record_json, capture_zone) = validated_note_capture(
+        profile,
+        kind.as_deref(),
+        capture.as_deref(),
+        night_capture.as_deref(),
+    )?;
+    if let Some((owner_date, calendar_timezone)) = expected_capture {
+        let CaptureHeader(header) =
+            serde_json::from_str(&record_json).map_err(|_| RenderError::PresentationMismatch)?;
+        if header.get("date").and_then(Value::as_str) != Some(owner_date)
+            || capture_zone != calendar_timezone
+            || (!inject_sections
+                && incoming
+                    .suffix
+                    .iter()
+                    .any(|line| !line.content.trim().is_empty()))
+        {
+            return Err(RenderError::PresentationMismatch);
         }
-        Some("daily_capture_v2") => {
-            let envelope: NightEnvelope = serde_json::from_str(
-                night_capture
-                    .as_deref()
-                    .ok_or(RenderError::PresentationMismatch)?,
-            )
-            .map_err(|_| RenderError::PresentationMismatch)?;
-            if envelope.kind != "healthmd_daily_capture"
-                || envelope.version != 2
-                || envelope.record_profile != profile.public_profile_id()
-                || envelope.time_context.calendar_timezone
-                    != envelope.time_context.timestamp_timezone
-            {
-                return Err(RenderError::PresentationMismatch);
-            }
-            validate_night_capture(
-                profile,
-                &envelope.record_json,
-                &envelope.time_context.calendar_timezone,
-            )?;
-        }
-        _ => return Err(RenderError::PresentationMismatch),
     }
     let (inactive_key, inactive_value) = if kind.as_deref() == Some("daily_capture_v1") {
         (NIGHT_CAPTURE_KEY, night_capture.as_deref())
@@ -532,6 +600,7 @@ mod tests {
     use serde_json::json;
 
     #[test]
+    #[allow(clippy::too_many_lines)]
     fn historical_android_capture_keeps_native_bytes_and_explicit_clock_across_toggles() {
         for profile in [
             SemanticProfile::AndroidFrozenV4,
@@ -563,6 +632,40 @@ mod tests {
                 .unwrap();
                 let night =
                     merge_scoped_daily_note(profile, &morning, &night_patch, sections).unwrap();
+                assert_eq!(
+                    merge_scoped_daily_note_for_capture(
+                        profile,
+                        &morning,
+                        &night_patch,
+                        "2026-03-08",
+                        "America/New_York",
+                        sections
+                    )
+                    .unwrap(),
+                    night
+                );
+                assert!(
+                    merge_scoped_daily_note_for_capture(
+                        profile,
+                        &morning,
+                        &night_patch,
+                        "2026-03-09",
+                        "America/New_York",
+                        sections
+                    )
+                    .is_err()
+                );
+                assert!(
+                    merge_scoped_daily_note_for_capture(
+                        profile,
+                        &morning,
+                        &night_patch,
+                        "2026-03-08",
+                        "UTC",
+                        sections
+                    )
+                    .is_err()
+                );
                 assert!(night.contains("notes: |\r\n  Keep my journal\r\n"));
                 assert!(night.contains("sleep_deep_hours: 9\r\n"));
                 assert!(night.contains("Keep this section"));
@@ -704,6 +807,54 @@ mod tests {
             serde_json::to_string(&envelope).unwrap()
         )
     }
+    #[test]
+    fn negotiated_note_policy_binds_profile_owner_clock_and_section_authority() {
+        let existing = "Personal journal.\r\n";
+        for profile in [
+            SemanticProfile::AppleHealthDataV8,
+            SemanticProfile::AppleHealthDataV11,
+            SemanticProfile::AndroidSleepV6,
+        ] {
+            let patch = patch(profile);
+            assert_eq!(
+                merge_scoped_daily_note_for_capture(
+                    profile,
+                    existing,
+                    &patch,
+                    "2026-03-08",
+                    "America/New_York",
+                    true
+                )
+                .unwrap(),
+                merge_scoped_daily_note(profile, existing, &patch, true).unwrap()
+            );
+            for (date, zone, sections) in [
+                ("2026-03-09", "America/New_York", true),
+                ("2026-03-08", "UTC", true),
+                ("2026-03-08", "America/New_York", false),
+                ("2026-02-30", "America/New_York", true),
+            ] {
+                assert!(
+                    merge_scoped_daily_note_for_capture(
+                        profile, existing, &patch, date, zone, sections
+                    )
+                    .is_err()
+                );
+            }
+            let header_only = patch.split("## Activity").next().unwrap();
+            let merged = merge_scoped_daily_note_for_capture(
+                profile,
+                existing,
+                header_only,
+                "2026-03-08",
+                "America/New_York",
+                false,
+            )
+            .unwrap();
+            assert!(merged.ends_with(existing));
+        }
+    }
+
     #[test]
     fn scoped_note_preserves_personal_yaml_and_body_for_known_inner_profiles() {
         let existing = "---\r\ntitle: Personal\r\nnotes: |\r\n  Keep my: multiline YAML\r\nsteps: 1\r\n---\r\nMy own preamble.\r\n## Thoughts\r\nMy journal.\r\n## Activity\r\nOld activity.\r\n";

@@ -1015,6 +1015,39 @@
           "mirrors": []
         }
       ]
+    },
+    {
+      "id": "healthmd.direct.scoped_daily_notes",
+      "version": 1,
+      "status": "deferred",
+      "summary": "Staged bilateral personal-note write policy and capture binding; not advertised pending producer, receiver skip recovery, and runtime integration.",
+      "specification": "packages/contracts/direct-protocol/scoped-notes-v1/contract.md",
+      "authorities": [
+        "packages/contracts/direct-protocol/scoped-notes-v1/contract.md"
+      ],
+      "implementations": [
+        "packages/healthmd-core-rust/crates/healthmd-protocol/src/notes.rs",
+        "packages/healthmd-core-rust/crates/healthmd-core/src/render/markdown_merge/scoped_note.rs",
+        "apps/apple/Packages/HealthMdConnectivity/Sources/HealthMdConnectionCore/DirectScopedDailyNotePolicy.swift",
+        "apps/android/direct-protocol/src/main/kotlin/com/healthmd/direct/protocol/ScopedDailyNotePolicy.kt"
+      ],
+      "consumers": [
+        "packages/healthmd-core-rust/crates/healthmd-protocol/tests/scoped_note_policy.rs",
+        "apps/apple/Packages/HealthMdConnectivity/Tests/HealthMdConnectionCoreTests/ScopedDailyNotePolicyTests.swift",
+        "apps/android/direct-protocol/src/test/kotlin/com/healthmd/direct/protocol/ScopedDailyNotePolicyTest.kt",
+        "apps/cli/crates/healthmd-client/src/file_receiver.rs",
+        "apps/cli/crates/healthmd-client/src/v2_receiver.rs"
+      ],
+      "fixtures": [
+        {
+          "path": "packages/contracts/direct-protocol/scoped-notes-v1/fixtures/policy.json",
+          "sha256": "e83e83ebf811ef6f0e5f53a47c284972190ca3206ee89db00e8ba29692d012c5",
+          "provenance": "Synthetic Swift policy-codec canonical JSON, independently byte-verified by Kotlin and Rust; no source health data.",
+          "mirrors": [
+            "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/scoped-note-policy-v1.json"
+          ]
+        }
+      ]
     }
   ]
 }

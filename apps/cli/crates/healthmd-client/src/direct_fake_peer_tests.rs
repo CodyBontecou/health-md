@@ -179,6 +179,7 @@ fn mobile_capabilities(
 ) -> PeerCapabilities {
     PeerCapabilities {
         export_history_observation_versions: None,
+        scoped_daily_note_versions: None,
         protocol_versions: versions,
         platform,
         installation_id: trust.installation_id,

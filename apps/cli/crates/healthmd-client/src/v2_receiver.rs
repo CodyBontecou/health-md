@@ -837,6 +837,9 @@ impl V2ArtifactReceiver {
 }
 
 fn validate_manifest(manifest: &ArtifactManifest) -> Result<(), ClientError> {
+    if manifest.scoped_note_policy.is_some() {
+        return Err(invalid("scoped note policy was not negotiated"));
+    }
     if manifest.job_id.is_nil()
         || manifest.artifact_id.is_nil()
         || manifest.byte_count == 0
@@ -967,6 +970,7 @@ fn validate_persisted_limits(
     }
     let manifests: Vec<_> = journal.manifests.iter().collect();
     for (index, (artifact_id, manifest)) in manifests.iter().enumerate() {
+        validate_manifest(manifest)?;
         if **artifact_id != manifest.artifact_id
             || !manifest_matches_product(manifest, journal.request.product.product_id())
             || !manifest_matches_request(manifest, journal)
@@ -2463,6 +2467,7 @@ mod tests {
             };
             let bytes = fs::read(&path).unwrap();
             let artifact = ArtifactManifest {
+                scoped_note_policy: None,
                 job_id,
                 artifact_id: Uuid::new_v4(),
                 kind: ArtifactKind::RawSnapshot,
@@ -2600,6 +2605,7 @@ mod tests {
         let artifact_id = Uuid::new_v4();
         let artifact_sha = sha256_hex(&snapshot);
         let manifest = ArtifactManifest {
+            scoped_note_policy: None,
             job_id,
             artifact_id,
             kind: ArtifactKind::RawSnapshot,
@@ -2798,6 +2804,7 @@ mod tests {
         let digest = sha256_hex(&data);
         let artifact_id = Uuid::new_v4();
         let manifest = ArtifactManifest {
+            scoped_note_policy: None,
             job_id,
             artifact_id,
             kind: ArtifactKind::GeneratedFile,
@@ -2833,6 +2840,16 @@ mod tests {
         receiver
             .prepare(request, accepted, session.clone())
             .unwrap();
+        let mut unnegotiated = manifest.clone();
+        unnegotiated.scoped_note_policy = Some(healthmd_protocol::notes::ScopedDailyNotePolicy {
+            version: 1,
+            record_profile: "android-sleep-v6".into(),
+            owner_date: "2026-07-23".into(),
+            calendar_timezone: "UTC".into(),
+            create_if_missing: false,
+            inject_sections: true,
+        });
+        assert!(receiver.store_manifest(unnegotiated).is_err());
         receiver.store_manifest(manifest).unwrap();
         receiver
             .disposition(TransferOpen {

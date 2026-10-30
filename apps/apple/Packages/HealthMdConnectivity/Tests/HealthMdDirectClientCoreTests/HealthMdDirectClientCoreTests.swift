@@ -840,6 +840,17 @@ final class HealthMdDirectClientCoreTests: XCTestCase {
         )
         let receiver = DirectFileReceiver(layout: layout, jobStore: store)
         try await receiver.prepare(request: request, accepted: accepted, session: session)
+        let unnegotiated = try DirectExportFileManifest(jobID: manifest.jobID, fileID: manifest.fileID,
+            relativePath: manifest.relativePath, byteCount: manifest.byteCount, sha256: manifest.sha256,
+            writeMode: .mergeMarkdownPreservingPreamble,
+            scopedNotePolicy: DirectScopedDailyNotePolicy(recordProfile: "apple-v11", ownerDate: "2026-07-01",
+                calendarTimezone: "UTC", createIfMissing: false, injectSections: true))
+        do {
+            try await receiver.store(manifest: unnegotiated)
+            XCTFail("Unnegotiated scoped note policy was accepted")
+        } catch {
+            XCTAssertEqual(error as? DirectFileReceiverError, .manifestChanged)
+        }
         try await receiver.store(manifest: manifest)
         _ = try await receiver.disposition(for: DirectTransferOpen(session: session, partition: descriptor))
         _ = try await receiver.receive(try DirectTransferChunk(

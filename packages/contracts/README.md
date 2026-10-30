@@ -20,6 +20,12 @@ The package is licensed under the [GNU Affero General Public License v3.0 only](
 | [`shared-setup/v2`](shared-setup/v2/contract.md) | Public bounded Apple/Android portable named-profile setup bundle with registry-backed alias union, exact v2 platform extensions, non-operative destination/schedule intent, and language-neutral Add/Replace/Undo transaction semantics; version 2 is the one and only profile version |
 | [`agent-data/v1`](agent-data/v1/contract.md) | Public read-only grant, query, and response contracts plus phone-to-gateway ingestion manifest and health-free receipt contracts, shared by local and future hosted agent data stores |
 
+## Scoped direct notes (staged)
+
+[Direct scoped daily-note writes v1](direct-protocol/scoped-notes-v1/contract.md) defines bilateral
+capability negotiation, frozen per-note policy, capture binding, and host-owned skip/install
+recovery. Models and capture-binding semantics are staged; no peer advertises this extension yet.
+
 ## History evidence (staged)
 
 | Path | Purpose |
