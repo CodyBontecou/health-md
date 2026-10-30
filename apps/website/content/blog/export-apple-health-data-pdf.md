@@ -3,14 +3,14 @@ title: "How to export Apple Health data as a PDF"
 description: "Create an Apple Health PDF with Health.md's Clinician Report. Choose dates and measurements, review coverage and reading tables, then explicitly save or share the report."
 lead: "On iPhone, open Health.md Settings → Clinician Report, choose a period and measurements, generate the report, review the PDF, then choose Share or Save PDF."
 date: "2026-10-26"
-updated: "2026-10-26"
+updated: "2026-10-30"
 category: "Workflow guide"
 related:
   - apple-health-to-excel
   - export-health-data-without-the-cloud
-  - export-apple-health-sleep-data
+  - export-apple-health-blood-pressure
 draft: false
-verified: "2026-10-26"
+verified: "2026-10-30"
 verified_by: "Codex (agent)"
 verified_method: traced
 tags:
@@ -32,9 +32,12 @@ This is a document workflow in **Settings**, rather than another format in the d
 | --- | --- |
 | Read or share a selected health summary | Clinician Report PDF, generated on iPhone. |
 | Analyze daily values in a spreadsheet | [CSV export](/apple-health-to-csv/), followed by the Excel or Sheets workflow. |
+| Inspect blood-pressure statistics or paired readings | [Blood-pressure CSV/JSON walkthrough](/blog/export-apple-health-blood-pressure/). |
 | Preserve selected public source records for software | JSON/CSV with the appropriate [data-detail settings](/docs/format/). |
 | Keep recurring daily files | The regular export and [scheduling workflow](/docs/scheduling/). PDF reports are not a scheduled export format. |
 | Obtain Apple's native archive | Apple's XML export, explained in the [Apple Health export guide](/apple-health-export/). |
+
+If you only need a PDF of a completed **Apple Blood Pressure Log**, Apple provides its own **Export PDF** option. Check [Apple's log instructions](https://support.apple.com/en-nz/122995) for requirements and availability. You do not need Health.md for that workflow; the steps below create a separately selected report in Health.md.
 
 Clinician Report is available on **iPhone and Android**; the Apple PDF workflow described here is on iPhone, not the Mac app. Android uses Health Connect and its own native controls; start from Settings → Clinician Report and the [report documentation](/docs/clinician-report/).
 
