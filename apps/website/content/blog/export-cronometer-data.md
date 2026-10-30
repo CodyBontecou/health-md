@@ -12,7 +12,7 @@ category: "Workflow guide"
 related:
   - apple-health-to-excel
   - export-myfitnesspal-data
-  - export-health-data-without-the-cloud
+  - export-dexcom-data
 draft: false
 tags:
   - cronometer
