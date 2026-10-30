@@ -108,7 +108,7 @@ class ExportOrchestrator(
 
         val (operationRepository, captureContext) = try {
             val context = resolveOperationCaptureContext(settings)
-            healthRepository.forCaptureOperation() to context
+            healthRepository.forCaptureOperation(settings) to context
         } catch (_: CancellationException) {
             return cancelledResult()
         } catch (error: Exception) {
@@ -289,7 +289,7 @@ class ExportOrchestrator(
         var attemptedDateCount = 0
         val (operationRepository, captureContext) = try {
             val context = resolveOperationCaptureContext(settings)
-            healthRepository.forCaptureOperation() to context
+            healthRepository.forCaptureOperation(settings) to context
         } catch (error: CancellationException) {
             throw error
         } catch (_: Exception) {

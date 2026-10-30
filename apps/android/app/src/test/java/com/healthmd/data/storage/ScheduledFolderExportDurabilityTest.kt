@@ -569,6 +569,58 @@ class ScheduledFolderExportDurabilityTest {
         directory.deleteRecursively()
     }
 
+    @Test
+    fun capturingMorningJournalReopensWithItsAcceptedSourceAndFrozenSnapshot() = runTest {
+        val library = System.getenv("HEALTHMD_HOST_CORE_LIBRARY")
+        org.junit.Assume.assumeTrue(!library.isNullOrBlank())
+        System.setProperty("uniffi.component.healthmd_core_uniffi.libraryOverride", library!!)
+        val root = temporaryDirectory("morning-source-capturing")
+        try {
+            val directory = File(root, "journals")
+            val destination = InMemoryDurableDestination()
+            val outputSettings = settingsRepository()
+            val context = AndroidCaptureContext(ZoneId.of("UTC"), SleepDayAttribution.MORNING_ENDS)
+            val authority = com.healthmd.domain.model.HealthProviderCaptureAuthority(selectedProviderId = "health_connect",
+                providerIds = listOf("health_connect"), connectionIds = emptyMap())
+            val settings = ExportSettings(exportFormat = ExportFormat.JSON, exportFormats = setOf(ExportFormat.JSON),
+                executionSleepCaptureContext = context, executionSleepCaptureAuthorityIsFrozen = true,
+                executionProviderCaptureAuthority = authority, executionProviderCaptureAuthorityIsFrozen = true)
+            val pin = requireNotNull(com.healthmd.domain.exportengine.ExportEnginePinPlanner()
+                .forScheduledExport(settings, ExportTarget.DEVICE_FOLDER, context.zoneId))
+            val accepted = settings.copy(executionEnginePin = pin, executionEngineAuthorityIsFrozen = true)
+            val snapshot = AndroidExportSettingsSnapshot.capture(accepted, pin, context.zoneId)
+            val snapshotFile = File(root, "snapshot.json")
+            snapshotFile.writeText(AndroidExportSettingsSnapshotCodec.encodeCanonical(snapshot))
+            fun output(store: ScheduledFolderExportJournalStore) = ExportRepositoryImpl(destination.manager, MarkdownExporter(),
+                JsonExporter(), CsvExporter(), ObsidianBasesExporter(), outputSettings, store)
+            val day = LocalDate.of(2026, 3, 15)
+            val store = ScheduledFolderExportJournalStore(directory)
+            assertThat(output(store).beginDurableScheduledFolderOperation(OPERATION_ID, listOf(day), accepted,
+                snapshotFile.readText(), false)).isEqualTo(com.healthmd.domain.repository.DurableScheduledFolderOperationStart.New)
+            assertThat((store.load(OPERATION_ID) as ScheduledFolderJournalLoad.Found).journal.phase)
+                .isEqualTo(ScheduledFolderJournalPhase.CAPTURING)
+            val decoded = AndroidExportSettingsSnapshotCodec.decode(snapshotFile.readText())
+            val restored = decoded.restoreOnto(ExportSettings()).copy(executionEnginePin = decoded.enginePin)
+            val live = mockk<SettingsRepository>()
+            coEvery { live.getSelectedHealthProviderId() } returns "whoop"
+            val sdk = mockk<com.healthmd.data.health.HealthConnectManager>()
+            every { sdk.isBeforeFirstUnlock() } returns false
+            coEvery { sdk.fetchHealthDataRange(any(), any(), any(), any(), any(), any()) } answers {
+                firstArg<List<LocalDate>>().map { HealthData(it, activity = ActivityData(steps = 99)) }
+            }
+            val source = com.healthmd.data.health.HealthRepositoryImpl(com.healthmd.data.health.HealthProviderRegistry(
+                com.healthmd.data.health.HealthConnectDataProvider(sdk)), live)
+            val result = ExportOrchestrator(source, output(ScheduledFolderExportJournalStore(directory)))
+                .exportDatesDurably(listOf(day), restored, OPERATION_ID, snapshotFile.readText(), requireExistingJournal = true)
+            assertThat(result.isFullSuccess).isTrue()
+            coVerify(exactly = 1) { sdk.fetchHealthDataRange(any(), any(), any(), any(), any(), any()) }
+            val file = destination.manager.inspectDurableFile(FOLDER_URI, "health/$day.json") as FileExportManager.DurableFileInspection.Found
+            assertThat(String(file.content, Charsets.UTF_8)).contains("morning_ends")
+            assertThat(String(file.content, Charsets.UTF_8)).doesNotContain("providerCaptureAuthority")
+            assertThat(snapshotFile.readText()).isEqualTo(AndroidExportSettingsSnapshotCodec.encodeCanonical(decoded))
+        } finally { root.deleteRecursively() }
+    }
+
     private fun repository(
         manager: FileExportManager,
         settingsRepository: SettingsRepository,

@@ -272,6 +272,7 @@ class ExportSchedulerTransitionRecoveryTest {
             context = context,
             workManager = workManager,
             settingsRepository = settingsRepository,
+            healthRepository = mockk(relaxed = true),
             apiCredentialStore = credentialStore,
             stateStore = stateStore,
             timeCalculator = ScheduledExportTimeCalculator(),

@@ -95,6 +95,8 @@ class ScheduledProfileSnapshotFactory @Inject constructor(
         // resolves its current device setting, while restoreForRun preserves accepted authority.
         executionSleepCaptureContext = null,
         executionSleepCaptureAuthorityIsFrozen = false,
+        executionProviderCaptureAuthority = null,
+        executionProviderCaptureAuthorityIsFrozen = false,
     )
 
     private fun restoreFrozenSnapshot(profile: ExportProfile, current: ExportSettings): ExportSettings? {

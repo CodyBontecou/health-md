@@ -44,6 +44,7 @@ import com.healthmd.domain.repository.EntitlementRepository
 import com.healthmd.domain.repository.ExportHistoryRepository
 import com.healthmd.domain.repository.ExportRepository
 import com.healthmd.domain.repository.HealthRepository
+import com.healthmd.domain.repository.forCaptureOperation
 import com.healthmd.domain.repository.SettingsRepository
 import com.healthmd.presentation.MainActivity
 import com.healthmd.rawexport.ExportMode
@@ -449,7 +450,7 @@ class ExportWorker @AssistedInject constructor(
             pendingApiOperationId == null && !canResumeStoredFolder
         ) {
             runCatchingCancellable {
-                healthRepository.hasBackgroundReadPermission()
+                healthRepository.forCaptureOperation(settings).hasBackgroundReadPermission()
             }
         } else {
             kotlin.Result.success(true)

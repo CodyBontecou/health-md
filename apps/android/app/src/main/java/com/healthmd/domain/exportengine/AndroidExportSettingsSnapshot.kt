@@ -1,5 +1,6 @@
 package com.healthmd.domain.exportengine
 
+import com.healthmd.domain.model.HealthProviderCaptureAuthority
 import com.healthmd.domain.model.SleepDayAttribution
 import com.healthmd.core.HEALTHMD_SLEEP_REGISTRY_SHA256
 import com.healthmd.domain.model.AndroidCaptureContext
@@ -84,6 +85,8 @@ data class AndroidExportSettingsSnapshot(
     val ianaTimeZone: String,
     /** Snapshot-v2 capture authority; missing v1/draft authority is never synthesized on decode. */
     val sleepCaptureContext: AndroidCaptureContext? = null,
+    /** Private snapshot-v3 account authority. Absent historical snapshots never acquire it. */
+    val providerCaptureAuthority: HealthProviderCaptureAuthority? = null,
 ) {
     /**
      * Applies only frozen output choices. Current folder grants, endpoint URL/credentials, schedule
@@ -137,6 +140,8 @@ data class AndroidExportSettingsSnapshot(
             executionEngineAuthorityIsFrozen = true,
             executionSleepCaptureContext = frozen.sleepCaptureContext,
             executionSleepCaptureAuthorityIsFrozen = true,
+            executionProviderCaptureAuthority = frozen.providerCaptureAuthority,
+            executionProviderCaptureAuthorityIsFrozen = frozen.sleepCaptureContext?.sleepDayAttribution == SleepDayAttribution.MORNING_ENDS,
         )
     }
 
@@ -144,6 +149,7 @@ data class AndroidExportSettingsSnapshot(
         // Preserve v1 encoding for legacy callers/journal identity comparisons.
         const val CURRENT_VERSION: Int = 1
         const val CAPTURE_AUTHORITY_VERSION: Int = 2
+        const val PROVIDER_AUTHORITY_VERSION: Int = 3
 
         /** Captures and size-validates every non-secret output setting before provider reads begin. */
         fun capture(
@@ -159,7 +165,12 @@ data class AndroidExportSettingsSnapshot(
             }
             val operationProfile = settings.expectedScheduledExportProfile(captureContext)
             val snapshot = AndroidExportSettingsSnapshot(
-                version = if (captureContext == null) CURRENT_VERSION else CAPTURE_AUTHORITY_VERSION,
+                version = when {
+                    settings.executionProviderCaptureAuthority != null -> PROVIDER_AUTHORITY_VERSION
+                    captureContext != null -> CAPTURE_AUTHORITY_VERSION
+                    else -> CURRENT_VERSION
+                },
+                providerCaptureAuthority = settings.executionProviderCaptureAuthority?.validatedCopy(),
                 sleepCaptureContext = captureContext,
                 exportMode = settings.exportMode,
                 exportProfile = operationProfile,
@@ -427,9 +438,13 @@ object AndroidExportSettingsSnapshotCodec {
         )
 
     fun isStructurallyValid(snapshot: AndroidExportSettingsSnapshot): Boolean = runCatching {
+        if (snapshot.version == AndroidExportSettingsSnapshot.PROVIDER_AUTHORITY_VERSION) {
+            snapshot.providerCaptureAuthority?.validatedCopy() ?: return false
+            if (snapshot.sleepCaptureContext?.sleepDayAttribution != SleepDayAttribution.MORNING_ENDS) return false
+        } else if (snapshot.providerCaptureAuthority != null) return false
         when (snapshot.version) {
             AndroidExportSettingsSnapshot.CURRENT_VERSION -> if (snapshot.sleepCaptureContext != null) return false
-            AndroidExportSettingsSnapshot.CAPTURE_AUTHORITY_VERSION -> {
+            AndroidExportSettingsSnapshot.CAPTURE_AUTHORITY_VERSION, AndroidExportSettingsSnapshot.PROVIDER_AUTHORITY_VERSION -> {
                 val context = snapshot.sleepCaptureContext ?: return false
                 if (context.zoneId.id != snapshot.ianaTimeZone) return false
                 if (context.sleepDayAttribution == SleepDayAttribution.MORNING_ENDS) {
@@ -451,7 +466,8 @@ object AndroidExportSettingsSnapshotCodec {
             return false
         }
         if (snapshot.exportProfile == AndroidExportProfile.android_sleep_v6 &&
-            snapshot.version != AndroidExportSettingsSnapshot.CAPTURE_AUTHORITY_VERSION) return false
+            snapshot.version !in setOf(AndroidExportSettingsSnapshot.CAPTURE_AUTHORITY_VERSION,
+                AndroidExportSettingsSnapshot.PROVIDER_AUTHORITY_VERSION)) return false
         if (snapshot.exportProfile != snapshot.expectedOperationProfile()) return false
         if (snapshot.exportMode == ExportMode.RAW_SNAPSHOT && snapshot.enginePin != null) return false
 
@@ -510,6 +526,7 @@ private fun CompatibilitySchemaProfile.toAndroidExportProfile(): AndroidExportPr
 }
 
 private fun AndroidExportSettingsSnapshot.immutableDeepCopy(): AndroidExportSettingsSnapshot = copy(
+    providerCaptureAuthority = providerCaptureAuthority?.validatedCopy(),
     rawSnapshot = rawSnapshot.copy(),
     dataTypes = dataTypes.copy(),
     exportFormats = exportFormats.immutableSortedBy { it.name },

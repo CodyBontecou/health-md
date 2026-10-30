@@ -33,6 +33,8 @@ import java.time.LocalDate
 import java.time.ZoneId
 import org.junit.Assert.assertThrows
 import org.junit.Test
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 
 class AndroidExportSettingsSnapshotTest {
     @Test
@@ -133,6 +135,39 @@ class AndroidExportSettingsSnapshotTest {
     }
 
     private val zone = ZoneId.of("America/Los_Angeles")
+
+    @Test
+    fun providerAuthorityIsPrivateVersionedAndCannotBeAddedToHistoricalSnapshots() {
+        val context = AndroidCaptureContext(ZoneId.of("Asia/Kathmandu"), SleepDayAttribution.MORNING_ENDS)
+        val pin = ExportEnginePin.create(engine = ExportEngineMode.rust, profile = AndroidExportProfile.android_sleep_v6,
+            ianaTimeZone = context.zoneId.id, readiness = testReadiness(),
+            registry = testRegistry(AndroidExportProfile.android_sleep_v6).copy(
+                registryVersion = 2u, registrySha256 = com.healthmd.core.HEALTHMD_SLEEP_REGISTRY_SHA256))
+        val authority = com.healthmd.domain.model.HealthProviderCaptureAuthority(selectedProviderId = "whoop",
+            providerIds = listOf("whoop"), connectionIds = mapOf("whoop" to null))
+        val settings = ExportSettings(executionSleepCaptureContext = context,
+            executionProviderCaptureAuthority = authority, executionProviderCaptureAuthorityIsFrozen = true)
+        val snapshot = AndroidExportSettingsSnapshot.capture(settings, pin, context.zoneId)
+        assertThat(snapshot.version).isEqualTo(3)
+        val encoded = AndroidExportSettingsSnapshotCodec.encodeCanonical(snapshot)
+        val decoded = AndroidExportSettingsSnapshotCodec.decode(encoded)
+        val restored = decoded.restoreOnto(ExportSettings())
+        assertThat(restored.executionProviderCaptureAuthority).isEqualTo(authority)
+        assertThat(restored.executionProviderCaptureAuthorityIsFrozen).isTrue()
+        assertThat(AndroidExportSettingsSnapshotCodec.encodeCanonical(decoded)).isEqualTo(encoded)
+        assertThat(Json.encodeToString(settings)).doesNotContain("connectionIds")
+        assertThat(Json.encodeToString(restored)).doesNotContain("providerCaptureAuthority")
+        listOf(snapshot.copy(version = 2), snapshot.copy(providerCaptureAuthority = null),
+            snapshot.copy(providerCaptureAuthority = authority.copy(version = 99)), snapshot.copy(sleepCaptureContext = null))
+            .forEach { assertThat(AndroidExportSettingsSnapshotCodec.isStructurallyValid(it)).isFalse() }
+        val old = AndroidExportSettingsSnapshot.capture(settings.copy(executionProviderCaptureAuthority = null), pin, context.zoneId)
+        assertThat(old.version).isEqualTo(2)
+        val oldBytes = AndroidExportSettingsSnapshotCodec.encodeCanonical(old)
+        assertThat(oldBytes).doesNotContain("providerCaptureAuthority")
+        val oldRestored = AndroidExportSettingsSnapshotCodec.decode(oldBytes).restoreOnto(settings)
+        assertThat(oldRestored.executionProviderCaptureAuthority).isNull()
+        assertThat(oldRestored.executionProviderCaptureAuthorityIsFrozen).isTrue()
+    }
 
     @Test
     fun explicitNightCaptureAuthoritySurvivesCanonicalStorage() {

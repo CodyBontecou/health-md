@@ -647,6 +647,49 @@ class ExportSchedulerGenerationTest {
         assertThat(stateStore.loadAdmission()).isEqualTo(admission)
     }
 
+    @Test
+    fun morningOccurrencePersistsProviderAuthorityAndReconcileDoesNotReacceptAccounts() = runTest {
+        val library = System.getenv("HEALTHMD_HOST_CORE_LIBRARY")
+        org.junit.Assume.assumeTrue(!library.isNullOrBlank())
+        System.setProperty("uniffi.component.healthmd_core_uniffi.libraryOverride", library!!)
+        val mode = com.healthmd.domain.model.SleepDayAttribution.MORNING_ENDS
+        val capture = com.healthmd.domain.model.AndroidCaptureContext(ZoneId.of("UTC"), mode)
+        val current = settings(ExportTarget.DEVICE_FOLDER).copy(
+            exportFormat = com.healthmd.domain.model.ExportFormat.JSON,
+            exportFormats = setOf(com.healthmd.domain.model.ExportFormat.JSON), executionSleepCaptureContext = capture)
+        val pin = requireNotNull(ExportEnginePinPlanner().forScheduledExport(current, ExportTarget.DEVICE_FOLDER, capture.zoneId))
+        var accepted = com.healthmd.domain.model.HealthProviderCaptureAuthority(selectedProviderId = "whoop",
+            providerIds = listOf("whoop"), connectionIds = mapOf("whoop" to "00000000-0000-4000-8000-000000000201"))
+        var acceptances = 0
+        val source = object : com.healthmd.domain.repository.HealthRepository by mockk(relaxed = true),
+            com.healthmd.domain.repository.RestorableHealthRepository {
+            override suspend fun captureProviderAuthority(): com.healthmd.domain.model.HealthProviderCaptureAuthority {
+                acceptances++
+                return accepted.validatedCopy()
+            }
+            override suspend fun restoreProviderAuthority(authority: com.healthmd.domain.model.HealthProviderCaptureAuthority): com.healthmd.domain.repository.HealthRepository =
+                error("Reconciliation must not read health")
+        }
+        stateStore.markGenerationMigrationComplete()
+        val scheduler = scheduler(workManager(), { current }, generations = listOf("generation-morning-a"),
+            attribution = mode, providerRepository = source, pin = pin)
+        scheduler.reconcile()
+        val first = requireNotNull(stateStore.load())
+        val saved = requireNotNull(first.settingsSnapshot)
+        assertThat(saved.version).isEqualTo(3)
+        assertThat(saved.providerCaptureAuthority).isEqualTo(accepted)
+        accepted = accepted.copy(connectionIds = mapOf("whoop" to "00000000-0000-4000-8000-000000000202"))
+        scheduler.reconcile()
+        assertThat(stateStore.load()).isEqualTo(first)
+        assertThat(acceptances).isEqualTo(1)
+        val reopened = ScheduledExportStateStore(context).load()
+        assertThat(reopened?.settingsSnapshot?.providerCaptureAuthority).isEqualTo(saved.providerCaptureAuthority)
+        assertThat(scheduler.handleOccurrenceDelivery(first, expedited = true)).isEqualTo(ScheduledExportDeliveryResult.ADMITTED)
+        assertThat(stateStore.loadAdmission()?.occurrence?.settingsSnapshot?.providerCaptureAuthority).isEqualTo(saved.providerCaptureAuthority)
+        assertThat(stateStore.load()?.settingsSnapshot?.providerCaptureAuthority).isEqualTo(accepted)
+        assertThat(acceptances).isEqualTo(2)
+    }
+
     private fun scheduler(
         workManager: WorkManager,
         currentSettings: () -> ExportSettings,
@@ -655,16 +698,19 @@ class ExportSchedulerGenerationTest {
         stateStore: ScheduledExportStateStore = this.stateStore,
         fingerprintForEndpoint: (String) -> String? = { API_FINGERPRINT },
         runCoordinator: ScheduledExportRunCoordinator = ScheduledExportRunCoordinator(),
+        attribution: com.healthmd.domain.model.SleepDayAttribution = com.healthmd.domain.model.SleepDayAttribution.NIGHT_BEGINS,
+        providerRepository: com.healthmd.domain.repository.HealthRepository = mockk(relaxed = true),
+        pin: com.healthmd.domain.exportengine.ExportEnginePin? = null,
     ): ExportScheduler {
         val settingsRepository = mockk<SettingsRepository>(relaxed = true)
         coEvery { settingsRepository.getExportSettings() } answers { currentSettings() }
-        coEvery { settingsRepository.getSleepDayAttribution() } returns com.healthmd.domain.model.SleepDayAttribution.NIGHT_BEGINS
+        coEvery { settingsRepository.getSleepDayAttribution() } returns attribution
         val credentialStore = mockk<APIExportCredentialStore>(relaxed = true)
         coEvery { credentialStore.destinationFingerprint(any()) } answers {
             fingerprintForEndpoint(firstArg())
         }
         val enginePinPlanner = mockk<ExportEnginePinPlanner>()
-        every { enginePinPlanner.forScheduledExport(any(), any(), any()) } returns null
+        every { enginePinPlanner.forScheduledExport(any(), any(), any()) } returns pin
         every {
             enginePinPlanner.persistedPinAppliesToScheduledExport(any(), any(), any())
         } returns true
@@ -672,6 +718,7 @@ class ExportSchedulerGenerationTest {
             context = context,
             workManager = workManager,
             settingsRepository = settingsRepository,
+            healthRepository = providerRepository,
             apiCredentialStore = credentialStore,
             stateStore = stateStore,
             timeCalculator = ScheduledExportTimeCalculator(),

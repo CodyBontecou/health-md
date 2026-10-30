@@ -191,6 +191,11 @@ data class ExportSettings(
     /** Missing context on recovered work is not permission to read the current preference. */
     @Transient
     val executionSleepCaptureAuthorityIsFrozen: Boolean = false,
+    /** Private source-account authority injected by accepted jobs, never a portable preference. */
+    @Transient
+    val executionProviderCaptureAuthority: HealthProviderCaptureAuthority? = null,
+    @Transient
+    val executionProviderCaptureAuthorityIsFrozen: Boolean = false,
 ) {
     val selectedExportFormats: Set<ExportFormat>
         get() = exportFormats

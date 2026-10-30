@@ -54,6 +54,35 @@ class SharedSetupV2CodecMapperTest {
         }
     }
 
+    @Test
+    fun `private successor source authority never enters portable setup`() {
+        val library = System.getenv("HEALTHMD_HOST_CORE_LIBRARY")
+        org.junit.Assume.assumeTrue(!library.isNullOrBlank())
+        System.setProperty("uniffi.component.healthmd_core_uniffi.libraryOverride", library!!)
+        val fixture = mappedFixture()
+        val original = fixture.profiles.first()
+        val old = AndroidExportSettingsSnapshotCodec.decode(original.settingsSnapshotJson)
+        val context = com.healthmd.domain.model.AndroidCaptureContext(java.time.ZoneId.of(old.ianaTimeZone),
+            com.healthmd.domain.model.SleepDayAttribution.MORNING_ENDS)
+        val grant = "00000000-0000-4000-8000-000000000201"
+        val authority = com.healthmd.domain.model.HealthProviderCaptureAuthority(selectedProviderId = "whoop",
+            providerIds = listOf("whoop"), connectionIds = mapOf("whoop" to grant))
+        val settings = ExportSettings(exportFormat = ExportFormat.JSON, exportFormats = setOf(ExportFormat.JSON),
+            metricSelection = old.metricSelection, executionSleepCaptureContext = context,
+            executionProviderCaptureAuthority = authority)
+        val pin = requireNotNull(com.healthmd.domain.exportengine.ExportEnginePinPlanner()
+            .forScheduledExport(settings, ExportTarget.DEVICE_FOLDER, context.zoneId))
+        val snapshot = AndroidExportSettingsSnapshot.capture(settings, pin, context.zoneId)
+        val profile = original.copy(target = ExportTarget.DEVICE_FOLDER,
+            settingsSnapshotJson = AndroidExportSettingsSnapshotCodec.encodeCanonical(snapshot))
+        val portable = codec.encode(mapper.export(listOf(profile), profile.id, emptyList(), "2.0-synthetic"))
+        val text = portable.decodeToString()
+        assertFalse(text.contains(grant))
+        assertFalse(text.contains("providerCaptureAuthority"))
+        assertFalse(text.contains("sleepCaptureContext"))
+        assertEquals(1, requireV2(codec.decode(portable)).profiles.size)
+    }
+
     private val registry = FixtureRegistry
     private val codec = SharedSetupV2Codec(registry)
     private val mapper = SharedSetupV2Mapper(registry)

@@ -79,7 +79,7 @@ interface APIExportCaptureSource {
 
 /** Production capture source contract for one immutable Android operation context. */
 private interface OperationScopedAPIExportCaptureSource : APIExportCaptureSource {
-    suspend fun forCaptureOperation(): APIExportCaptureSource
+    suspend fun forCaptureOperation(settings: ExportSettings): APIExportCaptureSource
     suspend fun resolveCaptureContext(zoneId: ZoneId): AndroidCaptureContext
     suspend fun authorizeExerciseRouteConsent(
         dates: List<LocalDate>,
@@ -96,8 +96,8 @@ private interface OperationScopedAPIExportCaptureSource : APIExportCaptureSource
 private class HealthRepositoryAPIExportCaptureSource(
     private val healthRepository: HealthRepository,
 ) : OperationScopedAPIExportCaptureSource {
-    override suspend fun forCaptureOperation(): APIExportCaptureSource =
-        HealthRepositoryAPIExportCaptureSource(healthRepository.forCaptureOperation())
+    override suspend fun forCaptureOperation(settings: ExportSettings): APIExportCaptureSource =
+        HealthRepositoryAPIExportCaptureSource(healthRepository.forCaptureOperation(settings))
     override fun isBeforeFirstUnlock(): Boolean = healthRepository.isBeforeFirstUnlock()
 
     override suspend fun authorizeExerciseRouteConsent(
@@ -528,7 +528,10 @@ class APIEndpointExportRunner private constructor(
     private suspend fun snapshotForCapture(settings: ExportSettings, historicalMode: ExportEngineMode): OperationSnapshot {
         val zone = ZoneId.of(operationCalendarZone(settings))
         val context = resolveOperationCaptureContext(settings, zone, captureSource)
-        val source = (captureSource as? OperationScopedAPIExportCaptureSource)?.forCaptureOperation() ?: captureSource
+        val scopedSource = captureSource as? OperationScopedAPIExportCaptureSource
+        check(scopedSource != null || (settings.executionProviderCaptureAuthority == null &&
+            !settings.executionProviderCaptureAuthorityIsFrozen)) { "This source cannot restore accepted provider authority" }
+        val source = scopedSource?.forCaptureOperation(settings) ?: captureSource
         var captured = if (context == null) settings else settings.copy(
             executionSleepCaptureContext = context, executionSleepCaptureAuthorityIsFrozen = true)
         val wakeDate = context?.sleepDayAttribution == SleepDayAttribution.MORNING_ENDS

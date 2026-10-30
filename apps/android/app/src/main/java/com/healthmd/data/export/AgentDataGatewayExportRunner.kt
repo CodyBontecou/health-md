@@ -50,6 +50,12 @@ interface AgentDataGatewayCaptureSource {
 /** Resolve the device preference once, before consent or any provider capture. */
 internal interface OperationScopedAgentDataGatewayCaptureSource : AgentDataGatewayCaptureSource {
     suspend fun forCaptureOperation(): AgentDataGatewayCaptureSource = this
+    suspend fun forCaptureOperation(settings: ExportSettings): AgentDataGatewayCaptureSource {
+        check(settings.executionProviderCaptureAuthority == null && !settings.executionProviderCaptureAuthorityIsFrozen) {
+            "This source cannot restore accepted provider authority"
+        }
+        return forCaptureOperation()
+    }
     suspend fun resolveCaptureContext(zoneId: ZoneId): AndroidCaptureContext
 }
 
@@ -58,6 +64,8 @@ private class HealthRepositoryAgentDataGatewayCaptureSource(
 ) : OperationScopedAgentDataGatewayCaptureSource {
     override suspend fun forCaptureOperation(): AgentDataGatewayCaptureSource =
         HealthRepositoryAgentDataGatewayCaptureSource(healthRepository.forCaptureOperation())
+    override suspend fun forCaptureOperation(settings: ExportSettings): AgentDataGatewayCaptureSource =
+        HealthRepositoryAgentDataGatewayCaptureSource(healthRepository.forCaptureOperation(settings))
     override suspend fun resolveCaptureContext(zoneId: ZoneId): AndroidCaptureContext =
         healthRepository.resolveCaptureContext(zoneId)
 
@@ -174,7 +182,10 @@ class AgentDataGatewayExportRunner private constructor(
         }
         val (capturedSettings, operationSource) = try {
             val frozen = snapshotForCapture(settings.frozenForAPIAction())
-            val source = (captureSource as? OperationScopedAgentDataGatewayCaptureSource)?.forCaptureOperation() ?: captureSource
+            val scopedSource = captureSource as? OperationScopedAgentDataGatewayCaptureSource
+            check(scopedSource != null || (frozen.executionProviderCaptureAuthority == null &&
+                !frozen.executionProviderCaptureAuthorityIsFrozen)) { "This source cannot restore accepted provider authority" }
+            val source = scopedSource?.forCaptureOperation(frozen) ?: captureSource
             frozen to source
         } catch (_: CancellationException) {
             return cancelledResult(normalizedDates, emptyList())
@@ -333,7 +344,10 @@ class AgentDataGatewayExportRunner private constructor(
         }
         val (capturedSettings, operationSource) = try {
             val frozen = snapshotForCapture(settings.frozenForAPIAction())
-            val source = (captureSource as? OperationScopedAgentDataGatewayCaptureSource)?.forCaptureOperation() ?: captureSource
+            val scopedSource = captureSource as? OperationScopedAgentDataGatewayCaptureSource
+            check(scopedSource != null || (frozen.executionProviderCaptureAuthority == null &&
+                !frozen.executionProviderCaptureAuthorityIsFrozen)) { "This source cannot restore accepted provider authority" }
+            val source = scopedSource?.forCaptureOperation(frozen) ?: captureSource
             frozen to source
         } catch (error: CancellationException) {
             throw error

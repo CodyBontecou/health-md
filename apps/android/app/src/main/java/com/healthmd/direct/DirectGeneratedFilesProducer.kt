@@ -115,7 +115,7 @@ class DirectGeneratedFilesProducer private constructor(
         val capturedSettings = settings.copy(executionSleepCaptureContext = captureContext,
             executionSleepCaptureAuthorityIsFrozen = true)
         val operationRepository = try {
-            healthRepository.forCaptureOperation()
+            healthRepository.forCaptureOperation(capturedSettings)
         } catch (error: CancellationException) {
             throw error
         } catch (_: Exception) {

@@ -163,6 +163,74 @@ class WhoopMorningEndsExportTest {
         assertThat(requests.map { it.url.path.substringAfterLast('/') }).containsExactly("body")
     }
 
+    @Test
+    fun savedMorningSnapshotRestoresAcceptedAccountThroughActualApiProducer() = runTest {
+        for (mode in listOf("unchanged", "rotation", "replacement", "unavailable", "legacy")) {
+            val case = Case("saved", "Asia/Kathmandu", "2026-07-02", "2026-07-01T16:15:00Z", "2026-07-02T00:15:00Z", 28_800_000)
+            val requests = mutableListOf<CloudHttpRequest>()
+            val tokens = InMemoryOAuthTokenStore(if (mode == "unavailable") emptyList() else listOf(OAuthToken("whoop", "accepted")))
+            val original = repository(case, requests, tokenStore = tokens)
+            val authority = original.captureProviderAuthority()
+            val context = AndroidCaptureContext(ZoneId.of(case.zone), SleepDayAttribution.MORNING_ENDS)
+            val settings = ExportSettings(exportFormat = ExportFormat.JSON, exportFormats = setOf(ExportFormat.JSON),
+                includeGranularData = true, exportTarget = ExportTarget.API_ENDPOINT, scheduledExportTarget = ExportTarget.API_ENDPOINT,
+                apiEndpointUrl = "https://api.example.invalid/healthmd", executionSleepCaptureContext = context,
+                executionProviderCaptureAuthority = authority, executionProviderCaptureAuthorityIsFrozen = true)
+            val pin = com.healthmd.domain.exportengine.ExportEnginePinPlanner().forScheduledExport(settings, ExportTarget.API_ENDPOINT, context.zoneId)
+            val snapshot = com.healthmd.domain.exportengine.AndroidExportSettingsSnapshot.capture(
+                if (mode == "legacy") settings.copy(executionProviderCaptureAuthority = null) else settings, pin, context.zoneId)
+            val bytes = com.healthmd.domain.exportengine.AndroidExportSettingsSnapshotCodec.encodeCanonical(snapshot)
+            val file = java.nio.file.Files.createTempFile("healthmd-private-snapshot-", ".json")
+            try {
+                java.nio.file.Files.write(file, bytes.toByteArray())
+                if (mode == "rotation") {
+                    assertThat(tokens.saveRotatedToken(OAuthToken("whoop", "rotated"), requireNotNull(tokens.getCredential("whoop")))).isTrue()
+                } else if (mode in listOf("replacement", "unavailable")) tokens.saveToken(OAuthToken("whoop", "replacement"))
+                val reopened = repository(case, requests, tokenStore = tokens, selectedId = "health_connect")
+                val decoded = com.healthmd.domain.exportengine.AndroidExportSettingsSnapshotCodec.decode(
+                    String(java.nio.file.Files.readAllBytes(file), Charsets.UTF_8))
+                val restored = decoded.restoreOnto(settings.copy(executionProviderCaptureAuthority = null))
+                    .copy(executionEnginePin = decoded.enginePin)
+                val payloads = mutableListOf<String>()
+                val result = runner(reopened, payloads).exportDates(listOf(LocalDate.parse(case.owner)), restored)
+                val healthy = mode in listOf("unchanged", "rotation")
+                assertThat(result.successCount).isEqualTo(if (healthy) 1 else 0)
+                assertThat(payloads).hasSize(if (mode == "legacy") 0 else 1)
+                val records = payloads.firstOrNull()?.let { Json.parseToJsonElement(it).jsonObject.getValue("records").jsonArray } ?: JsonArray(emptyList())
+                assertThat(records).hasSize(if (healthy) 1 else 0)
+                if (healthy) {
+                    assertThat(requests).isNotEmpty()
+                    assertThat(requests.all { it.authorization == "Bearer ${if (mode == "rotation") "rotated" else "accepted"}" }).isTrue()
+                    assertThat(records.single().jsonObject.getValue("sleep").jsonObject.getValue("totalDuration").jsonPrimitive.double).isEqualTo(28_800.0)
+                } else {
+                    assertThat(requests).isEmpty()
+                    assertThat(result.failedDateDetails.map { it.date }).containsExactly(LocalDate.parse(case.owner))
+                }
+                authority.connectionIds.values.filterNotNull().forEach { id -> payloads.forEach { assertThat(it).doesNotContain(id) } }
+                requests.clear()
+                val captured = mutableListOf<HealthData>()
+                val folder = mockk<com.healthmd.domain.repository.ExportRepository>()
+                coEvery { folder.hasExportFolder() } returns true
+                coEvery { folder.exportHealthData(any(), any()) } answers { captured += firstArg<HealthData>(); true }
+                val folderResult = ExportOrchestrator(reopened, folder).exportDates(listOf(LocalDate.parse(case.owner)),
+                    restored.copy(exportTarget = ExportTarget.DEVICE_FOLDER, scheduledExportTarget = ExportTarget.DEVICE_FOLDER))
+                assertThat(folderResult.successCount).isEqualTo(if (healthy) 1 else 0)
+                assertThat(captured).hasSize(if (healthy) 1 else 0)
+                if (!healthy) assertThat(requests).isEmpty()
+                else assertThat(captured.single().sleep.sessions).hasSize(1)
+                requests.clear()
+                val gateway = AgentDataGatewayExportRunner(reopened, mockk(relaxed = true), JsonExporter(),
+                    MarkdownExporter(), CsvExporter(), ObsidianBasesExporter())
+                val preview = gateway.previewDates(listOf(LocalDate.parse(case.owner)), restored.copy(
+                    exportTarget = ExportTarget.AGENT_DATA_GATEWAY, scheduledExportTarget = ExportTarget.AGENT_DATA_GATEWAY,
+                    agentDataGatewayUrl = "https://gateway.example.invalid"))
+                assertThat(preview.previewedDateCount).isEqualTo(if (healthy) 1 else 0)
+                if (!healthy) assertThat(requests).isEmpty()
+                else assertThat(preview.days.flatMap { it.files }).hasSize(1)
+            } finally { java.nio.file.Files.deleteIfExists(file) }
+        }
+    }
+
     private fun runner(repository: HealthRepositoryImpl, payloads: MutableList<String>): APIEndpointExportRunner {
         val json = JsonExporter()
         return APIEndpointExportRunner(repository, APIExportEnvelopeBuilder(json), json,
@@ -187,12 +255,12 @@ class WhoopMorningEndsExportTest {
         java.nio.file.Files.write(path.resolve("whoop-$name-v6.json"), json.toByteArray(Charsets.UTF_8))
     }
 
-    private fun repository(case: Case, requests: MutableList<CloudHttpRequest>, failure: String? = null): HealthRepositoryImpl {
+    private fun repository(case: Case, requests: MutableList<CloudHttpRequest>, failure: String? = null, tokenStore: InMemoryOAuthTokenStore? = null, selectedId: String = "whoop"): HealthRepositoryImpl {
         val token = OAuthToken("whoop", "synthetic")
         val config = OAuthProviderConfig("whoop", "WHOOP", "https://auth.example.test", "https://token.example.test",
             "synthetic-client", scopes = listOf("read:sleep"))
         val client = CloudHealthApiClient.forTesting(
-            OAuthAuthorizationManager(OAuthConfigRegistry(listOf(config)), InMemoryOAuthTokenStore(listOf(token))),
+            OAuthAuthorizationManager(OAuthConfigRegistry(listOf(config)), tokenStore ?: InMemoryOAuthTokenStore(listOf(token))),
             CloudHttpTransport { request ->
                 requests += request
                 // Deliberately overreturn the same whole record. Ownership must be enforced locally.
@@ -222,7 +290,7 @@ class WhoopMorningEndsExportTest {
             })
         val provider = WhoopCloudDataProvider(client, clock = Clock.fixed(Instant.parse("2027-01-01T12:00:00Z"), ZoneOffset.UTC))
         val settings = mockk<SettingsRepository>()
-        coEvery { settings.getSelectedHealthProviderId() } returns "whoop"
+        coEvery { settings.getSelectedHealthProviderId() } returns selectedId
         coEvery { settings.getSleepDayAttribution() } returns SleepDayAttribution.NIGHT_BEGINS
         return HealthRepositoryImpl(HealthProviderRegistry(HealthConnectDataProvider(mockk(relaxed = true)), listOf(provider)), settings)
     }
