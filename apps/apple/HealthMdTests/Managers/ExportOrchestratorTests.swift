@@ -1716,7 +1716,7 @@ final class ExportOrchestratorTests: XCTestCase {
     }
 
     @MainActor
-    func testUnqualifiedMorningSummaryOnlyNeverFallsBackToHistoricalRollup() async throws {
+    func testUnqualifiedMorningSummaryCompanionNeverFallsBackToHistoricalRollup() async throws {
         for background in [false, true] {
             let store = FakeHealthStore()
             HealthKitFixtures.populateAllCategories(store, date: HealthKitFixtures.referenceDate)
@@ -1726,7 +1726,7 @@ final class ExportOrchestratorTests: XCTestCase {
             let settings = makeExportSettings(formats: Set(ExportFormat.allCases), rollupPeriods: [.range])
             settings.executionSleepCaptureContext = nil
             settings.summaryOnlyExport = true
-            settings.archiveExportFiles = true
+            settings.dailyNoteInjection.enabled = true
             settings.includeDataDictionary = false
             settings.metricSelection.enabledMetrics = ["steps", "sleep_total"]
             let result: ExportOrchestrator.ExportResult

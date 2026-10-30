@@ -1,5 +1,7 @@
 import Compression
 import Darwin
+import HealthKit
+import Testing
 import XCTest
 import zlib
 @testable import HealthMd
@@ -490,6 +492,223 @@ final class ZipArchiveWriterTests: XCTestCase {
     private func fileSize(_ url: URL) -> UInt64 {
         let attributes = try? FileManager.default.attributesOfItem(atPath: url.path)
         return (attributes?[.size] as? NSNumber)?.uint64Value ?? 0
+    }
+}
+
+@MainActor
+struct MorningArchiveTests {
+    // STATIC RETENTION JUSTIFICATION: Isolated synthetic observation fixtures;
+    // see docs/testing/lifecycle-audit.md for the nested-observation teardown issue.
+    private static var retained: [AnyObject] = []
+
+    @Test(arguments: ["daily", "range", "summary"], [false, true])
+    func productionMorningArchiveKeepsAcceptedProfileAndWholeSession(mode: String, recovered: Bool) async throws {
+        let f = try fixture(mode: mode)
+        defer { f.cleanup() }
+        let snapshot = await ExportSettingsSnapshot.forNewAppleOperation(f.settings, healthSubfolder: "Health",
+            calendarTimeZone: f.context.timeZone, surface: .localVaultRangeWithoutSideEffects)
+        #expect(try #require(snapshot.appleExportEnginePin).isWakeDate)
+        let progress: (Int, Int, String) -> Void = { _, _, _ in
+            f.settings.archiveExportFiles = false
+            f.settings.exportFormats = [.json]
+            f.settings.metricSelection.enabledMetrics = ["steps"]
+            f.settings.exportTimeZoneOverride = .gmt
+            f.manager.setSleepDayAttribution(.nightBegins)
+            f.vault.healthSubfolder = "Changed"
+        }
+        let result: ExportOrchestrator.ExportResult
+        if recovered {
+            result = await ExportOrchestrator.exportDatesBackground(f.dates, healthKitManager: f.manager,
+                vaultManager: f.vault, settings: f.settings, frozenSettingsSnapshot: snapshot,
+                operationSurface: .localVaultRangeWithoutSideEffects, onProgress: progress)
+        } else {
+            result = await ExportOrchestrator.exportDates(f.dates, healthKitManager: f.manager,
+                vaultManager: f.vault, settings: f.settings, onProgress: progress)
+        }
+        #expect(result.didCompleteAllRequestedDates, "\(result.failedDateDetails) / \(result.partialFailures)")
+        #expect(result.archiveCount == 1)
+        #expect(result.totalFilesWritten == 1)
+        let zip = f.root.appendingPathComponent("Health/Health.md Export 2026-03-07_to_2026-03-08.zip")
+        let entries = try ZIP64TestReader.entries(in: Data(contentsOf: zip))
+        #expect(entries[HealthMdExportSchema.dataDictionaryFilename] != nil)
+        let daily = entries.filter { !$0.key.contains("/") && $0.key != HealthMdExportSchema.dataDictionaryFilename }
+        #expect(daily.count == (mode == "summary" ? 0 : 8))
+        #expect(entries.keys.filter { $0.contains("Rollups/Range/") }.count == (mode == "daily" ? 0 : 4))
+        if mode != "summary" {
+            let wakeBytes = try #require(entries["2026-03-08.json"]?.data)
+            let wake = try #require(JSONSerialization.jsonObject(with: wakeBytes) as? [String: Any])
+            #expect(wake["schema_version"] as? Int == 11)
+            #expect(wake["schema_profile"] as? String == "apple-v11")
+            let context = try #require(wake["time_context"] as? [String: Any])
+            #expect(context["calendar_timezone"] as? String == "America/New_York")
+            #expect(context["sleep_day_attribution"] as? String == "morning_ends")
+            let sleep = try #require(wake["sleep"] as? [String: Any])
+            #expect(sleep["totalDuration"] as? Double == 26 * 3600 + 0.5)
+            let first = try #require(entries["2026-03-07.json"]?.data)
+            let previous = try #require(JSONSerialization.jsonObject(with: first) as? [String: Any])
+            #expect((previous["sleep"] as? [String: Any])?["totalDuration"] as? Double != 26 * 3600 + 0.5)
+        }
+        let files = try #require(FileManager.default.enumerator(at: f.root, includingPropertiesForKeys: [.isRegularFileKey]))
+            .allObjects.compactMap { $0 as? URL }.filter { (try? $0.resourceValues(forKeys: [.isRegularFileKey]).isRegularFile) == true }
+        #expect(files.map { $0.resolvingSymlinksInPath().path } == [zip.resolvingSymlinksInPath().path])
+    }
+
+    @Test func acceptedMaterializationIsPackagedByteForByte() async throws {
+        let f = try fixture(mode: "daily")
+        defer { f.cleanup() }
+        f.settings.executionExternalProviderCaptureAuthority = .init(connections: ["whoop": UUID()])
+        let snapshot = await ExportSettingsSnapshot.forNewAppleOperation(f.settings, healthSubfolder: "Health",
+            calendarTimeZone: f.context.timeZone, surface: .localVaultRangeWithoutSideEffects)
+        var records: [HealthData] = []
+        for date in f.dates {
+            records.append(try await f.manager.fetchHealthData(for: date, detailPolicy: .detailedTimeSeries,
+                metricSelection: f.settings.metricSelection, timeZone: f.context.timeZone, captureContext: f.context))
+        }
+        let provider = ExternalDailyRecord(provider: .whoop, date: "2026-03-08", fetchedAt: f.dates[1],
+            payloads: [.init(name: "cycles", endpoint: "https://synthetic.invalid", statusCode: 200,
+                data: .object(["synthetic": .string("accepted-provider-bytes")]))])
+        let materialized = try #require(try await f.vault.materializeHealthDataRange(records,
+            settingsSnapshot: snapshot, operationSurface: .localVaultRangeWithoutSideEffects))
+            .addingProviderSidecars(try f.vault.materializeExternalDailyRecords([provider], healthSubfolder: "Health"))
+        var expected: [String: Data] = [:]
+        for file in materialized.operation.artifacts {
+            expected[String(file.artifact.relativePath.dropFirst("Health/".count))] = try file.artifact.content.materializedData()
+        }
+        if let dictionary = materialized.dataDictionary {
+            expected[String(dictionary.relativePath.dropFirst("Health/".count))] = dictionary.data
+        }
+        for file in materialized.providerSidecars {
+            expected[String(file.relativePath.dropFirst("Health/".count))] = try file.artifact.materializedData()
+        }
+        let archive = try #require(try await f.vault.commitHealthDataRangeArchive(materialized,
+            destination: f.vault.freezeHealthDataRangeDestination(), settingsSnapshot: snapshot,
+            startDate: f.dates[0], endDate: f.dates[1]))
+        let actual = try ZIP64TestReader.entries(in: Data(contentsOf: archive)).mapValues(\.data)
+        #expect(actual == expected)
+        #expect(expected.count == 10)
+    }
+
+    @Test(arguments: ["same", "swap", "truncate", "symlink", "cancel"])
+    func zipConsumesExactAcceptedFileDescriptor(mode: String) throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("MorningZipIntegrity-\(UUID())")
+        defer { try? FileManager.default.removeItem(at: root) }
+        let bytes = Data(repeating: 0x41, count: 100_003)
+        let file = try ExportArtifactIO.renderTemporary(in: root, prefix: "accepted", mediaType: "application/json") {
+            try $0.write(bytes)
+        }
+        let zip = root.appendingPathComponent("export.zip")
+        let old = Data("old committed archive".utf8)
+        try old.write(to: zip)
+        let writer = try ZipArchiveWriter.begin(to: zip, checkpointURL: root.appendingPathComponent("checkpoint"), chunkSize: 8192)
+        if mode == "swap" { try Data(repeating: 0x42, count: bytes.count).write(to: file.url) }
+        if mode == "truncate" { try Data("short".utf8).write(to: file.url) }
+        if mode == "symlink" {
+            let other = root.appendingPathComponent("other")
+            try bytes.write(to: other)
+            try FileManager.default.removeItem(at: file.url)
+            try FileManager.default.createSymbolicLink(at: file.url, withDestinationURL: other)
+        }
+        if mode == "same" {
+            try writer.append(path: "accepted.json", artifact: file)
+            try writer.finish()
+            #expect(try ZIP64TestReader.entries(in: Data(contentsOf: zip))["accepted.json"]?.data == bytes)
+        } else {
+            #expect(throws: (any Error).self) {
+                try writer.append(path: "accepted.json", artifact: file, cancellationCheck: { mode == "cancel" })
+            }
+            writer.abandon()
+            #expect(try Data(contentsOf: zip) == old)
+        }
+    }
+
+    @Test(arguments: ["cancel", "destination", "corrupt", "duplicate"])
+    func failedAcceptedArchivePreservesPreviousZip(mode: String) async throws {
+        let f = try fixture(mode: "daily")
+        defer { f.cleanup() }
+        let snapshot = await ExportSettingsSnapshot.forNewAppleOperation(f.settings, healthSubfolder: "Health",
+            calendarTimeZone: f.context.timeZone, surface: .localVaultRangeWithoutSideEffects)
+        var records: [HealthData] = []
+        for date in f.dates {
+            records.append(try await f.manager.fetchHealthData(for: date, detailPolicy: .detailedTimeSeries,
+                metricSelection: f.settings.metricSelection, timeZone: f.context.timeZone, captureContext: f.context))
+        }
+        var materialized = try #require(try await f.vault.materializeHealthDataRange(records,
+            settingsSnapshot: snapshot, operationSurface: .localVaultRangeWithoutSideEffects))
+        let destination = try f.vault.freezeHealthDataRangeDestination()
+        let zip = f.root.appendingPathComponent("Health/Health.md Export 2026-03-07_to_2026-03-08.zip")
+        try FileManager.default.createDirectory(at: zip.deletingLastPathComponent(), withIntermediateDirectories: true)
+        let old = Data("previous committed archive".utf8)
+        try old.write(to: zip)
+        if mode == "destination" {
+            let other = f.root.appendingPathComponent("Rebound")
+            try FileManager.default.createDirectory(at: other, withIntermediateDirectories: true)
+            f.vault.vaultURL = other
+        }
+        if mode == "corrupt" {
+            let file = try #require(materialized.operation.artifacts.compactMap { planned -> ExportArtifactFile? in
+                if case .file(let file) = planned.artifact.content { return file }; return nil
+            }.first)
+            try Data(repeating: 0x5a, count: Int(file.descriptor.byteCount)).write(to: file.url)
+        }
+        if mode == "duplicate" {
+            let file = try ExportArtifactIO.renderTemporary(in: f.root.appendingPathComponent("private"),
+                prefix: "duplicate", mediaType: "application/json") { try $0.write(Data("{}".utf8)) }
+            materialized = materialized.addingProviderSidecars([
+                .init(relativePath: try #require(materialized.operation.artifacts.first?.artifact.relativePath), artifact: file)])
+        }
+        let accepted = materialized
+        let task = Task {
+            if mode == "cancel" { withUnsafeCurrentTask { $0?.cancel() } }
+            return try await f.vault.commitHealthDataRangeArchive(accepted, destination: destination,
+                settingsSnapshot: snapshot, startDate: f.dates[0], endDate: f.dates[1])
+        }
+        await #expect(throws: (any Error).self) { try await task.value }
+        #expect(try Data(contentsOf: zip) == old)
+    }
+
+    private struct Fixture {
+        let root: URL
+        let suite: String
+        let defaults: UserDefaults
+        let settings: AdvancedExportSettings
+        let manager: HealthKitManager
+        let vault: VaultManager
+        let context: AppleSleepCaptureContext
+        let dates: [Date]
+        func cleanup() { try? FileManager.default.removeItem(at: root); defaults.removePersistentDomain(forName: suite) }
+    }
+    private func fixture(mode: String) throws -> Fixture {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("MorningArchive-\(UUID())").resolvingSymlinksInPath()
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        let suite = "MorningArchive-\(UUID())"
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        let settings = AdvancedExportSettings(userDefaults: defaults)
+        settings.exportFormats = Set(ExportFormat.allCases); settings.archiveExportFiles = true
+        settings.includeDataDictionary = true; settings.generateRangeSummary = mode != "daily"
+        settings.summaryOnlyExport = mode == "summary"; settings.detailPolicy = .detailedTimeSeries
+        settings.dailyNoteInjection.enabled = false; settings.individualTracking.globalEnabled = false
+        settings.filenameFormat = "{date}"; settings.folderStructure = ""; settings.organizeFormatsIntoFolders = false
+        settings.metricSelection.enabledMetrics = ["steps", "sleep_total", "sleep_core", "sleep_bedtime", "sleep_wake"]
+        let zone = try #require(TimeZone(identifier: "America/New_York"))
+        let context = AppleSleepCaptureContext(timeZone: zone, sleepDayAttribution: .morningEnds)
+        settings.exportTimeZoneOverride = zone; settings.executionSleepCaptureContext = context
+        settings.executionExternalProviderCaptureAuthority = .init(connections: [:])
+        var calendar = Calendar(identifier: .gregorian); calendar.timeZone = zone
+        let first = try #require(calendar.date(from: DateComponents(year: 2026, month: 3, day: 7)))
+        let wake = try #require(calendar.date(byAdding: .day, value: 1, to: first))
+        let start = try #require(calendar.date(bySettingHour: 10, minute: 0, second: 0, of: first))
+        let end = try #require(calendar.date(bySettingHour: 13, minute: 0, second: 0, of: wake)).addingTimeInterval(0.5)
+        let store = FakeHealthStore(); store.statisticsSums[HKQuantityTypeIdentifier.stepCount.rawValue] = 42
+        store.categorySampleResults[HKCategoryTypeIdentifier.sleepAnalysis.rawValue] = [
+            .init(value: HKCategoryValueSleepAnalysis.asleepCore.rawValue, startDate: start, endDate: end)]
+        let manager = HealthKitManager(store: store, userDefaults: defaults)
+        manager.setSleepDayAttribution(.morningEnds)
+        let bookmarks = FakeBookmarkResolver(); bookmarks.accessGranted = true
+        let vault = VaultManager(defaults: FakeUserDefaults(), fileSystem: SystemFileSystem(), bookmarkResolver: bookmarks)
+        vault.healthSubfolder = "Health"; vault.setVaultFolder(root)
+        Self.retained += [settings, manager, vault]
+        return Fixture(root: root, suite: suite, defaults: defaults, settings: settings, manager: manager,
+            vault: vault, context: context, dates: [first, wake])
     }
 }
 

@@ -11,6 +11,12 @@ nonisolated struct RenderedHealthDataArchiveEntryFile: Sendable {
     let archivePath: String
     let order: Int
     let url: URL
+    let acceptedArtifact: ExportArtifactFile?
+
+    init(date: Date, archivePath: String, order: Int, url: URL, acceptedArtifact: ExportArtifactFile? = nil) {
+        self.date = date; self.archivePath = archivePath; self.order = order; self.url = url
+        self.acceptedArtifact = acceptedArtifact
+    }
 }
 
 nonisolated private enum HealthDataArchiveSource: Sendable {
@@ -2625,6 +2631,71 @@ final class VaultManager: ObservableObject {
         )
     }
 
+    /// Package the already qualified daily/range/dictionary/provider files. No
+    /// health values enter the historical archive renderer on this path.
+    func commitHealthDataRangeArchive(
+        _ materialized: AppleLooseDailyRangeMaterialization,
+        destination: AppleLooseDailyRangeDestination,
+        settingsSnapshot: ExportSettingsSnapshot,
+        startDate: Date,
+        endDate: Date
+    ) async throws -> URL? {
+        guard settingsSnapshot.archiveExportFiles,
+              let context = settingsSnapshot.sleepCaptureContext,
+              context.sleepDayAttribution == .morningEnds,
+              materialized.operation.authority == .rust,
+              materialized.operation.pin == settingsSnapshot.appleExportEnginePin,
+              materialized.operation.pin.hasExplicitWakeDateContracts,
+              let healthSubfolder = settingsSnapshot.healthSubfolder else {
+            throw AppleLooseDailyExportPlannerError.rustPlanningFailed
+        }
+        try settingsSnapshot.validatedSleepCaptureContext().requireShippedProfile()
+        let paths = materialized.operation.artifacts.map(\.artifact.relativePath)
+            + (materialized.dataDictionary.map { [$0.relativePath] } ?? [])
+            + materialized.providerSidecars.map(\.relativePath)
+        try ExportPathPlanner.validatePortableArtifactPaths(paths)
+        guard Set(paths).count == paths.count else { throw AppleExactDestinationError.unsafeRelativePath }
+        let prefix = healthSubfolder.isEmpty ? "" : healthSubfolder + "/"
+        guard paths.allSatisfy({ $0.hasPrefix(prefix) && $0.count > prefix.count }) else {
+            throw AppleExactDestinationError.unsafeRelativePath
+        }
+        let temporary = FileManager.default.temporaryDirectory.appendingPathComponent("healthmd-wake-zip-\(UUID())")
+        defer { try? FileManager.default.removeItem(at: temporary) }
+        var files: [RenderedHealthDataArchiveEntryFile] = []
+        func append(path: String, artifact: ExportArtifactFile) throws {
+            try artifact.validateIntegrity()
+            files.append(.init(date: startDate, archivePath: String(path.dropFirst(prefix.count)),
+                order: files.count, url: artifact.url, acceptedArtifact: artifact))
+        }
+        func append(path: String, mediaType: String, bytes: Data) throws {
+            let artifact = try ExportArtifactIO.renderTemporary(in: temporary, prefix: "accepted", mediaType: mediaType) {
+                try $0.write(bytes)
+            }
+            try append(path: path, artifact: artifact)
+        }
+        for planned in materialized.operation.artifacts {
+            switch planned.artifact.content {
+            case .inline(let data):
+                try append(path: planned.artifact.relativePath, mediaType: planned.artifact.mediaType, bytes: data)
+            case .file(let file): try append(path: planned.artifact.relativePath, artifact: file)
+            }
+        }
+        if let dictionary = materialized.dataDictionary {
+            try append(path: dictionary.relativePath, mediaType: dictionary.mediaType, bytes: dictionary.data)
+        }
+        for file in materialized.providerSidecars { try append(path: file.relativePath, artifact: file.artifact) }
+        // These flags only tell the packager that the supplied files already
+        // contain every selected output, including summary-only and dictionary.
+        let packaging = settingsSnapshot.makeAdvancedExportSettings()
+        packaging.generateRangeSummary = false
+        packaging.historicalCalendarRollupPeriods = []
+        packaging.summaryOnlyExport = false
+        packaging.includeDataDictionary = false
+        return try await exportArchive(fromRenderedFiles: files, settings: packaging,
+            startDate: startDate, endDate: endDate, healthSubfolder: healthSubfolder,
+            acceptedDestination: destination)
+    }
+
     func freezeHealthDataRangeDestination() throws -> AppleLooseDailyRangeDestination {
         guard destinationState == .available, let rootURL = vaultURL else { throw unavailableExportError }
         guard bookmarkResolver.startAccessing(rootURL) else { throw ExportError.accessDenied }
@@ -3478,6 +3549,7 @@ final class VaultManager: ObservableObject {
         startDate: Date,
         endDate: Date,
         healthSubfolder: String? = nil,
+        acceptedDestination: AppleLooseDailyRangeDestination? = nil,
         cancellationCheck: @escaping @Sendable () -> Bool = { false }
     ) async throws -> URL? {
         try await exportArchive(
@@ -3487,6 +3559,7 @@ final class VaultManager: ObservableObject {
             startDate: startDate,
             endDate: endDate,
             healthSubfolder: healthSubfolder,
+            acceptedDestination: acceptedDestination,
             cancellationCheck: cancellationCheck
         )
     }
@@ -3498,6 +3571,7 @@ final class VaultManager: ObservableObject {
         startDate: Date,
         endDate: Date,
         healthSubfolder: String?,
+        acceptedDestination: AppleLooseDailyRangeDestination? = nil,
         cancellationCheck: @escaping @Sendable () -> Bool
     ) async throws -> URL? {
         func checkCancellation() throws {
@@ -3586,6 +3660,10 @@ final class VaultManager: ObservableObject {
         try validateExportArtifactPaths([archiveRelativePath], vaultURL: vaultURL)
 
         let destinationBinding = try productionDestinationBinding(for: vaultURL)
+        if let acceptedDestination {
+            guard vaultURL.standardizedFileURL == acceptedDestination.rootURL.standardizedFileURL,
+                  destinationBinding == acceptedDestination.binding else { throw ExportError.destinationChanged }
+        }
         let healthFolderURL = ExportPathPlanner.healthSubfolderURL(
             vaultURL: vaultURL,
             healthSubfolder: effectiveHealthSubfolder
@@ -3683,13 +3761,18 @@ final class VaultManager: ObservableObject {
                         }
                     case .file(let file):
                         try await Self.performArchiveIO {
-                            try writer.append(
-                                ZipArchiveWriter.FileEntry(
-                                    path: file.archivePath,
-                                    sourceURL: file.url
-                                ),
-                                cancellationCheck: { Task.isCancelled || cancellationCheck() }
-                            )
+                            if let artifact = file.acceptedArtifact {
+                                try writer.append(path: file.archivePath, artifact: artifact,
+                                    cancellationCheck: { Task.isCancelled || cancellationCheck() })
+                            } else {
+                                try writer.append(
+                                    ZipArchiveWriter.FileEntry(
+                                        path: file.archivePath,
+                                        sourceURL: file.url
+                                    ),
+                                    cancellationCheck: { Task.isCancelled || cancellationCheck() }
+                                )
+                            }
                         }
                         try checkCancellation()
                         await Task.yield()
