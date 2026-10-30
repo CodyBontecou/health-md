@@ -4,6 +4,8 @@ Verified 2026-10-30 by Codex (agent), method: traced. No account, device, permis
 
 ## Claims
 
+- [x] October 30 related-navigation addition links to the source-traced Dexcom Clarity/Apple Health file chooser. Existing Cronometer body and claims remain unchanged.
+
 - [x] October30: related recommendation now links the MyFitnessPal source-specific chooser. Cronometer body unchanged; existing weight link remains in the body and three related recommendations are preserved.
 
 - [x] Official Account Settings https://support.cronometer.com/hc/en-us/articles/360018760151-Account-Settings verifies Account Data/Export Data, CSV types/date range, Daily Nutrition Include diary group rows versus daily totals. Native route precedes installs. No exact archive schema, named-food guarantee, price or delivery-time promise.
