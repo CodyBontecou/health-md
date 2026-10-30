@@ -19,3 +19,5 @@ Documentation comparison only. No competitor app installation, device test, comp
 The existing blog builder owns canonical, Article metadata, blog index and sitemap publication. Contextual links come from the export hub, CSV page and workflow directory. The fixed `auto_export_comparison` acquisition page ID extends the existing browser/Worker vocabulary; collector deployment must precede frontend publication. It reuses sample, starter and Health.md store events, adds no visitor identifiers or competitor-click tracking, and needs no D1 migration.
 
 Private Search Console UI observations and task evidence live in the primary checkout's ignored `.pi/seo-auto-export-comparison/`. They are deliberately excluded from this public article and ledger. This is one acquisition experiment, not a claim of proven competitor-query impressions or traffic growth. Browser/device QA is not authorized for this implementation task; publication checks are host-side only.
+
+- [x] Oct30 related-navigation follow-up adds the Home Assistant sensors/files chooser. Comparison article body and dated claims are unchanged; this does not reverify competitor pricing or features.
