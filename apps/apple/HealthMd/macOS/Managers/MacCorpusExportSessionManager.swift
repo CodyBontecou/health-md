@@ -88,13 +88,17 @@ final class MacCorpusExportSessionManager {
         let sha256: String
     }
 
+    private enum StoredFinalizationArtifactKind: String, Codable {
+        case daily, rollup, providerSidecar
+    }
+
     private struct StoredFinalizationArtifact: Codable, Equatable {
         let artifactID: String
         let relativePath: String
         let spoolRelativePath: String
         let mediaType: String
         let writeMode: String
-        let kind: AppleLooseDailyArtifactKind
+        let kind: StoredFinalizationArtifactKind
         let format: ExportFormat
         let byteCount: UInt64
         let sha256: String
@@ -296,6 +300,7 @@ final class MacCorpusExportSessionManager {
     var failNextPostRenameTerminalSyncForTesting = false
     var beforeProtectedCleanupForTesting: (() throws -> Void)?
     var afterEncryptedContextApplyForTesting: (() async -> Void)?
+    var beforeReceivedRangeSpoolForTesting: ((AppleLooseDailyRangeMaterialization) throws -> Void)?
     #endif
 
     init(
@@ -920,7 +925,8 @@ final class MacCorpusExportSessionManager {
         let safetyBytes: Int64 = 128 * 1_024 * 1_024
         let writeFilesSettings: AdvancedExportSettings?
         if journal.exportManifest.mode == .writeFiles {
-            writeFilesSettings = journal.exportManifest.settingsSnapshot.makeAdvancedExportSettings()
+            writeFilesSettings = (session.dailyExportOperation?.settingsSnapshot
+                ?? journal.exportManifest.settingsSnapshot).makeAdvancedExportSettings()
         } else {
             writeFilesSettings = nil
         }
@@ -1048,7 +1054,8 @@ final class MacCorpusExportSessionManager {
                     || successfulRequestedDates.contains($0.sourceDate)
             }
             let usesRangePlan = session.dailyExportOperation?.usesRangePlan == true
-            var effectiveRangeSettingsSnapshot = journal.exportManifest.settingsSnapshot
+            var effectiveRangeSettingsSnapshot = session.dailyExportOperation?.settingsSnapshot
+                ?? journal.exportManifest.settingsSnapshot
             if usesRangePlan {
                 let rangeAvailability = ExportOrchestrator.settingsByDisablingUnavailableRangeSummary(
                     effectiveRangeSettingsSnapshot,
@@ -1141,7 +1148,7 @@ final class MacCorpusExportSessionManager {
                             guard let materialized = try await vaultManager.materializeHealthDataRange(
                                 rangeInput.records,
                                 settingsSnapshot: effectiveRangeSettingsSnapshot,
-                                operationSurface: .connectedReceivedRangeWithoutSideEffects,
+                                operationSurface: session.dailyExportOperation?.surface ?? .connectedReceivedRangeWithoutSideEffects,
                                 dailyOutputOwnerDates: rangeInput.dailyOutputOwnerDates,
                                 requestedRange: requestedRange,
                                 operationIdentity: AppleExportOperationIdentity(
@@ -1156,7 +1163,8 @@ final class MacCorpusExportSessionManager {
                             }
                             do {
                                 try persistReceivedRangePlan(
-                                    materialized,
+                                    materialized.addingProviderSidecars(try vaultManager.materializeExternalDailyRecords(
+                                        rangeInput.externalRecords, healthSubfolder: effectiveRangeSettingsSnapshot.healthSubfolder ?? "")),
                                     requestedRecordDatesWithData: rangeInput.requestedRecordDatesWithData,
                                     session: session,
                                     vaultManager: vaultManager
@@ -1182,6 +1190,7 @@ final class MacCorpusExportSessionManager {
                     }
                     try ensureFinalizationIsActive(session)
                     session.journal.totalFilesWritten += rangeResult.totalFileCount
+                    session.journal.externalRecordFileCount += rangeResult.providerSidecarFileCount
                     if rangeResult.totalFileCount > 0 {
                         session.journal.dataDictionaryWritten = true
                     }
@@ -1784,6 +1793,7 @@ final class MacCorpusExportSessionManager {
             )
         }
         session.journal.totalFilesWritten = fileCount.partialValue
+        session.journal.externalRecordFileCount += committedArtifacts.count(where: { $0.kind == .providerSidecar })
         session.journal.completedDates = Array(completedDates).sorted()
     }
 
@@ -2040,6 +2050,7 @@ final class MacCorpusExportSessionManager {
         let dailyOutputOwnerDates: Set<String>
         let requestedRecordDatesWithData: Set<Date>
         let hasAnyData: Bool
+        let externalRecords: [ExternalDailyRecord]
     }
 
     private func receivedRangeInput(
@@ -2054,6 +2065,7 @@ final class MacCorpusExportSessionManager {
         var dailyOutputOwnerDates: Set<String> = []
         var requestedRecordDatesWithData: Set<Date> = []
         var hasAnyData = false
+        var externalRecords: [ExternalDailyRecord] = []
 
         for item in items.sorted(by: { $0.sourceDate < $1.sourceDate }) {
             let payload = try decodeHealthDayPayload(
@@ -2061,9 +2073,19 @@ final class MacCorpusExportSessionManager {
                 session: session
             )
             guard payload.sourceDate == item.sourceDate,
-                  let record = payload.record,
-                  payload.externalDailyRecords.allSatisfy({ !$0.shouldExport }) else {
+                  let record = payload.record else {
                 throw ConnectedMacDailyExportOperation.ResolutionError.unsupportedPinnedOperation
+            }
+            let exportable = payload.externalDailyRecords.filter(\.shouldExport)
+            if !exportable.isEmpty {
+                guard session.journal.exportManifest.effectiveAppleExportEnginePin?.isWakeDate == true,
+                      settings.writesExternalProviderSidecars,
+                      payload.isRequestedDate, requestedDates.contains(payload.sourceDate),
+                      exportable.allSatisfy({ $0.date == HealthKitDailyOwnershipMetadata.ownerDate(
+                        for: payload.sourceDate, calendarTimeZoneIdentifier: calendarTimeZoneIdentifier) }) else {
+                    throw ConnectedMacDailyExportOperation.ResolutionError.unsupportedPinnedOperation
+                }
+                externalRecords.append(contentsOf: exportable)
             }
             let prepared = record.preparedExport(settings: settings)
             records.append(record)
@@ -2086,7 +2108,8 @@ final class MacCorpusExportSessionManager {
             records: records,
             dailyOutputOwnerDates: dailyOutputOwnerDates,
             requestedRecordDatesWithData: requestedRecordDatesWithData,
-            hasAnyData: hasAnyData
+            hasAnyData: hasAnyData,
+            externalRecords: externalRecords
         )
     }
 
@@ -2096,6 +2119,9 @@ final class MacCorpusExportSessionManager {
         session: Session,
         vaultManager: VaultManager
     ) throws {
+        #if DEBUG
+        try beforeReceivedRangeSpoolForTesting?(materialized)
+        #endif
         guard session.journal.state == .finalizing,
               session.journal.receivedRangePlanPersisted == false,
               session.journal.receivedRangePlan == nil,
@@ -2121,8 +2147,15 @@ final class MacCorpusExportSessionManager {
         }
 
         let dictionaryByteCount = UInt64(materialized.dataDictionary?.data.count ?? 0)
-        let (spoolByteCount, spoolOverflow) = materialized.operation.selectedPlan.totalByteCount
-            .addingReportingOverflow(dictionaryByteCount)
+        var providerBytes: UInt64 = 0
+        for file in materialized.providerSidecars {
+            let sum = providerBytes.addingReportingOverflow(file.artifact.descriptor.byteCount)
+            guard !sum.overflow else { throw ConnectedCorpusTransferModelError.invalidJournal }
+            providerBytes = sum.partialValue
+        }
+        let nativeAndProvider = materialized.operation.selectedPlan.totalByteCount.addingReportingOverflow(providerBytes)
+        let (spoolByteCount, spoolOverflow) = nativeAndProvider.partialValue.addingReportingOverflow(dictionaryByteCount)
+        guard !nativeAndProvider.overflow else { throw ConnectedCorpusTransferModelError.invalidJournal }
         let maximumSpoolBytes: UInt64 = 33 * 1_024 * 1_024
         guard !spoolOverflow,
               spoolByteCount <= maximumSpoolBytes,
@@ -2188,11 +2221,24 @@ final class MacCorpusExportSessionManager {
                     spoolRelativePath: spoolRelativePath,
                     mediaType: planned.artifact.mediaType,
                     writeMode: "overwrite",
-                    kind: planned.kind,
+                    kind: planned.kind == .daily ? .daily : .rollup,
                     format: planned.format,
                     byteCount: planned.artifact.byteCount,
                     sha256: planned.artifact.sha256
                 ))
+            }
+            for (index, sidecar) in materialized.providerSidecars.enumerated() {
+                let path = String(format: "finalization/artifacts/%04d.artifact", storedArtifacts.count)
+                let bytes = try sidecar.artifact.materializedData()
+                guard UInt64(bytes.count) == sidecar.artifact.descriptor.byteCount,
+                      NativeExportArtifact.sha256(of: bytes) == sidecar.artifact.descriptor.sha256 else {
+                    throw CocoaError(.fileReadCorruptFile)
+                }
+                try writeProtectedFinalizationData(bytes, relativePath: path, sessionDirectoryURL: session.directoryURL)
+                storedArtifacts.append(StoredFinalizationArtifact(artifactID: "provider-sidecar-\(index)",
+                    relativePath: sidecar.relativePath, spoolRelativePath: path, mediaType: "application/json",
+                    writeMode: "overwrite", kind: .providerSidecar, format: .json,
+                    byteCount: sidecar.artifact.descriptor.byteCount, sha256: sidecar.artifact.descriptor.sha256))
             }
             try syncProtectedSessionDirectory(
                 relativePath: "finalization/artifacts",
@@ -2213,7 +2259,7 @@ final class MacCorpusExportSessionManager {
                 artifactPlanVersion: materialized.operation.selectedPlan.artifactPlanVersion,
                 requestID: materialized.operation.selectedPlan.requestID,
                 sessionID: materialized.operation.selectedPlan.sessionID,
-                profile: "apple_health_data_v8",
+                profile: materialized.operation.pin.profile,
                 totalByteCount: materialized.operation.selectedPlan.totalByteCount,
                 immutablePlanSHA256: "",
                 dataDictionary: storedDictionary,
@@ -2425,7 +2471,8 @@ final class MacCorpusExportSessionManager {
             // (or verified exact) as part of this plan, so it is one of the
             // files this range wrote. The journal schema keeps only the
             // artifact, not the sender's count; its presence is authoritative.
-            dataDictionaryFileCount: completedPlan.dataDictionary != nil ? 1 : 0
+            dataDictionaryFileCount: completedPlan.dataDictionary != nil ? 1 : 0,
+            providerSidecarFileCount: completedPlan.artifacts.count(where: { $0.kind == .providerSidecar })
         )
     }
 
@@ -2533,6 +2580,7 @@ final class MacCorpusExportSessionManager {
             throw ConnectedCorpusTransferModelError.invalidJournal
         }
         var calculatedArtifactBytes: UInt64 = 0
+        var providerBytes: UInt64 = 0
         for artifact in plan.artifacts {
             let sum = calculatedArtifactBytes.addingReportingOverflow(artifact.byteCount)
             guard !sum.overflow,
@@ -2542,13 +2590,14 @@ final class MacCorpusExportSessionManager {
                 throw ConnectedCorpusTransferModelError.invalidJournal
             }
             calculatedArtifactBytes = sum.partialValue
+            if artifact.kind == .providerSidecar { providerBytes += artifact.byteCount }
         }
         let dictionaryBytes = plan.dataDictionary?.byteCount ?? 0
         let combinedBytes = calculatedArtifactBytes.addingReportingOverflow(dictionaryBytes)
         let fileCount = plan.dailyFileCount.addingReportingOverflow(plan.rollupFileCount)
         guard !combinedBytes.overflow,
               !fileCount.overflow,
-              calculatedArtifactBytes == plan.totalByteCount,
+              calculatedArtifactBytes - providerBytes == plan.totalByteCount,
               calculatedArtifactBytes <= 32 * 1_024 * 1_024,
               dictionaryBytes <= 1 * 1_024 * 1_024,
               combinedBytes.partialValue <= 33 * 1_024 * 1_024 else {
@@ -2563,10 +2612,10 @@ final class MacCorpusExportSessionManager {
               plan.artifactPlanVersion == plan.pin.artifactPlanVersion,
               plan.requestID == journal.session.jobID.uuidString.lowercased(),
               plan.sessionID == journal.session.sessionID.uuidString.lowercased(),
-              plan.profile == "apple_health_data_v8",
+              plan.profile == plan.pin.profile,
               plan.dailyFileCount >= 0,
               plan.rollupFileCount >= 0,
-              fileCount.partialValue == plan.artifacts.count,
+              fileCount.partialValue == plan.artifacts.count(where: { $0.kind != .providerSidecar }),
               plan.dailyFileCount == plan.artifacts.count(where: { $0.kind == .daily }),
               plan.rollupFileCount == plan.artifacts.count(where: { $0.kind == .rollup }),
               plan.nextArtifactIndex >= 0,
@@ -2581,6 +2630,11 @@ final class MacCorpusExportSessionManager {
               AppleExportEnginePin.isLowercaseSHA256(plan.immutablePlanSHA256),
               plan.immutablePlanSHA256 == (try immutableDigest(for: plan)),
               Self.isValidStoredDestinationBinding(plan.destinationBinding) else {
+            throw ConnectedCorpusTransferModelError.invalidJournal
+        }
+
+        guard Set(plan.artifacts.map { Self.portableDestinationPathKey($0.relativePath) }).count == plan.artifacts.count,
+              Set(plan.artifacts.map(\.artifactID)).count == plan.artifacts.count else {
             throw ConnectedCorpusTransferModelError.invalidJournal
         }
 
@@ -2652,6 +2706,23 @@ final class MacCorpusExportSessionManager {
                 artifact,
                 sessionDirectoryURL: sessionDirectoryURL
             )
+            if artifact.kind == .providerSidecar {
+                guard plan.pin.isWakeDate, artifact.format == .json,
+                      artifact.artifactID == "provider-sidecar-\(plan.artifacts[..<index].count(where: { $0.kind == .providerSidecar }))" else {
+                    throw ConnectedCorpusTransferModelError.invalidJournal
+                }
+                let decoder = JSONDecoder()
+                decoder.dateDecodingStrategy = .iso8601
+                let record = try decoder.decode(ExternalDailyRecord.self, from: data)
+                let expectedPath = [journal.exportManifest.settingsSnapshot.healthSubfolder ?? "", "integrations",
+                    record.provider.exportFolderName, "\(record.date).json"].filter { !$0.isEmpty }.joined(separator: "/")
+                let ownerDates = Set(journal.exportManifest.requestedDates.map {
+                    HealthKitDailyOwnershipMetadata.ownerDate(for: $0, calendarTimeZoneIdentifier: plan.pin.calendarTimeZoneIdentifier)
+                })
+                guard record.shouldExport, record.hasValidExportDate, ownerDates.contains(record.date),
+                      artifact.relativePath == expectedPath else { throw ConnectedCorpusTransferModelError.invalidJournal }
+                continue
+            }
             nativeArtifacts.append(try NativeExportArtifact(
                 role: .file,
                 id: artifact.artifactID,
@@ -2686,7 +2757,7 @@ final class MacCorpusExportSessionManager {
             artifactPlanVersion: plan.artifactPlanVersion,
             requestID: plan.requestID,
             sessionID: plan.sessionID,
-            profile: .appleHealthDataV8,
+            profile: plan.pin.isWakeDate ? .appleHealthDataV11 : .appleHealthDataV8,
             artifacts: nativeArtifacts,
             totalByteCount: plan.totalByteCount,
             pin: plan.pin

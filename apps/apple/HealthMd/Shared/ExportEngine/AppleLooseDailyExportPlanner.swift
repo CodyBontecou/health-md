@@ -13,6 +13,7 @@ nonisolated enum AppleExportOperationSurface: Equatable, Sendable {
     case directGeneratedFilesWithProviderSidecars
     case connectedReceivedFilesWithoutSideEffects
     case connectedReceivedRangeWithoutSideEffects
+    case connectedReceivedRangeWithProviderSidecars
     case apiEndpoint
     case preview
 
@@ -20,7 +21,8 @@ nonisolated enum AppleExportOperationSurface: Equatable, Sendable {
         switch self {
         case .localVaultWithoutSideEffects, .localVaultRangeWithoutSideEffects,
              .localVaultRangeWithProviderSidecars, .directGeneratedFilesWithoutSideEffects,
-             .directGeneratedFilesWithProviderSidecars, .preview:
+             .directGeneratedFilesWithProviderSidecars, .connectedReceivedRangeWithoutSideEffects,
+             .connectedReceivedRangeWithProviderSidecars, .preview:
             true
         default: false
         }
@@ -900,7 +902,8 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
         surface: AppleExportOperationSurface,
         allowsUnpinnedWakeDateDetails: Bool
     ) -> Bool {
-        guard (surface != .localVaultRangeWithProviderSidecars && surface != .directGeneratedFilesWithProviderSidecars)
+        guard (surface != .localVaultRangeWithProviderSidecars && surface != .directGeneratedFilesWithProviderSidecars
+                && surface != .connectedReceivedRangeWithProviderSidecars)
                 || settingsSnapshot.sleepCaptureContext?.sleepDayAttribution == .morningEnds else { return false }
         let supportsWakeDateDetails = settingsSnapshot.sleepCaptureContext?.sleepDayAttribution == .morningEnds
             && settingsSnapshot.sleepCaptureContext?.exportProfileID == "apple-v11"
@@ -914,6 +917,7 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
             || surface == .directGeneratedFilesWithoutSideEffects
             || surface == .directGeneratedFilesWithProviderSidecars
             || surface == .connectedReceivedRangeWithoutSideEffects
+            || surface == .connectedReceivedRangeWithProviderSidecars
             || (surface == .preview && settingsSnapshot.sleepCaptureContext?.sleepDayAttribution == .morningEnds)
         let isSummaryOnly = settingsSnapshot.summaryOnlyExport
             && hasConfiguredRollups
@@ -925,6 +929,7 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
                 || surface == .directGeneratedFilesWithProviderSidecars
                 || surface == .connectedReceivedFilesWithoutSideEffects
                 || surface == .connectedReceivedRangeWithoutSideEffects
+                || surface == .connectedReceivedRangeWithProviderSidecars
                 || surface == .preview,
               settingsSnapshot.healthSubfolder != nil,
               let calendarTimeZoneIdentifier = settingsSnapshot.calendarTimeZoneIdentifier,

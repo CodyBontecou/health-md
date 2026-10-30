@@ -623,6 +623,7 @@ struct ExportSettingsSnapshot: Codable, Equatable {
         case .localVaultWithoutSideEffects,
              .localVaultRangeWithoutSideEffects,
              .localVaultRangeWithProviderSidecars,
+             .connectedReceivedRangeWithProviderSidecars,
              .directGeneratedFilesWithProviderSidecars,
              .directGeneratedFilesWithoutSideEffects,
              .connectedReceivedFilesWithoutSideEffects,
@@ -765,6 +766,7 @@ nonisolated enum ApplePureRustAuthorityAdmission {
         case .localVaultWithoutSideEffects,
              .localVaultRangeWithoutSideEffects,
              .localVaultRangeWithProviderSidecars,
+             .connectedReceivedRangeWithProviderSidecars,
              .directGeneratedFilesWithProviderSidecars,
              .directGeneratedFilesWithoutSideEffects,
              .connectedReceivedFilesWithoutSideEffects,
@@ -791,6 +793,7 @@ nonisolated enum ApplePureRustAuthorityAdmission {
             return true
         case .legacyOnly,
              .localVaultRangeWithProviderSidecars,
+             .connectedReceivedRangeWithProviderSidecars,
              .directGeneratedFilesWithProviderSidecars,
              .localVaultWithoutSideEffects,
              .connectedReceivedFilesWithoutSideEffects,

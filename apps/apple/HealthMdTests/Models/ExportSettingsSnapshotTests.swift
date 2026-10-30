@@ -756,11 +756,11 @@ final class ExportSettingsSnapshotTests: XCTestCase {
     }
 
     @MainActor
-    func testFreshWakeDatePreflightRejectsRemoteSurfacesAndSideEffectsBeforeCoreAcquisition() async throws {
+    func testFreshWakeDatePreflightRejectsLegacySurfacesAndSideEffectsBeforeCoreAcquisition() async throws {
         let zone = try XCTUnwrap(TimeZone(identifier: "UTC"))
         let context = AppleSleepCaptureContext(timeZone: zone, sleepDayAttribution: .morningEnds)
         for surface: AppleExportOperationSurface in [.legacyOnly,
-                .connectedReceivedFilesWithoutSideEffects, .connectedReceivedRangeWithoutSideEffects] {
+                .connectedReceivedFilesWithoutSideEffects] {
             let settings = makeSimpleEngineSettings()
             settings.executionSleepCaptureContext = context
             let executor = SnapshotProfileRecordingCoreExecutor()

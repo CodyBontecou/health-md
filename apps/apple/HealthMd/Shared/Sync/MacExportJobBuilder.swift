@@ -129,11 +129,10 @@ struct MacExportJobBuilder {
         if legacySnapshot.appleExportEnginePin != nil {
             return legacySnapshot
         }
-        guard !hasNativeOnlyCompanionAction,
-              AppleLooseDailyExportPlanner.supports(
-                  settingsSnapshot: legacySnapshot,
-                  surface: operationSurface
-              ) else {
+        let supportsFreshSettings = legacySnapshot.sleepCaptureContext?.sleepDayAttribution == .morningEnds
+            ? AppleLooseDailyExportPlanner.supportsNewWakeDateSettings(settingsSnapshot: legacySnapshot, surface: operationSurface)
+            : AppleLooseDailyExportPlanner.supports(settingsSnapshot: legacySnapshot, surface: operationSurface)
+        guard !hasNativeOnlyCompanionAction, supportsFreshSettings else {
             var explicitlyLegacy = legacySnapshot
             explicitlyLegacy.appleExportEnginePin = nil
             return explicitlyLegacy
