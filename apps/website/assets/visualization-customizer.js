@@ -6,6 +6,7 @@
   var sampleData = [];
   var sampleRollups = [];
   var resizeTimer = 0;
+  var studioMetadata;
 
   var state = {
     visualization: "activity-rings",
@@ -638,6 +639,40 @@
     // Keep the search representative independent of the selected share palette
     // and category filter, matching the generated HTML and sitemap.
     if (canonical) canonical.setAttribute("href", "https://healthmd.app/visualizations/" + dataFilterSlugs[viz.category] + "/" + viz.id + "/theme-colors/");
+  }
+
+  function captureStudioMetadata() {
+    if (window.location.pathname.replace(/\/+$/, "") !== "/visualizations") return;
+    studioMetadata = { title: document.title, attributes: [] };
+    [
+      ['link[rel="canonical"]', "href"],
+      ['meta[name="description"]', "content"],
+      ['meta[property="og:title"]', "content"],
+      ['meta[property="og:description"]', "content"],
+      ['meta[property="og:url"]', "content"],
+      ['meta[name="twitter:title"]', "content"],
+      ['meta[name="twitter:description"]', "content"]
+    ].forEach(function (entry) {
+      var element = document.head.querySelector(entry[0]);
+      if (element) studioMetadata.attributes.push({ selector: entry[0], name: entry[1], value: element.getAttribute(entry[1]) });
+    });
+  }
+
+  function syncPageIdentity(viz, options) {
+    options = options || {};
+    // A saved selection is a preview preference, not navigation away from the
+    // studio. Explicit controls and query/deep links still select chart URLs.
+    var isStudio = window.location.pathname.replace(/\/+$/, "") === "/visualizations" && !readUrlState();
+    if (isStudio && !options.pushUrl && studioMetadata) {
+      document.title = studioMetadata.title;
+      studioMetadata.attributes.forEach(function (entry) {
+        var element = document.head.querySelector(entry.selector);
+        if (element) element.setAttribute(entry.name, entry.value);
+      });
+      return;
+    }
+    if (!options.skipUrl) syncUrl(viz, options.pushUrl);
+    updatePageMetadata(viz);
   }
 
   function byId(items, id) {
@@ -1444,8 +1479,7 @@
     options = options || {};
     ensureSelectionInFilter();
     var viz = currentVisualization();
-    if (!options.skipUrl) syncUrl(viz, options.pushUrl);
-    updatePageMetadata(viz);
+    syncPageIdentity(viz, options);
     renderVisualizationSelect();
     app.querySelector("[data-current-category]").textContent = categoryLabels[viz.category] || viz.category;
     app.querySelector("[data-current-title]").textContent = viz.label;
@@ -1776,6 +1810,7 @@
   document.addEventListener("DOMContentLoaded", function () {
     app = document.querySelector("[data-viz-app]");
     if (!app) return;
+    captureStudioMetadata();
     installObsidianDomShims();
     var urlState = readUrlState();
     readState();
