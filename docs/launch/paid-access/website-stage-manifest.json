@@ -161,6 +161,6 @@
   },
   "apps/website/privacy-policy.html": {
     "before_sha256": "a8a65dcfa5f846f989a6ed02fc06af859caa15018b458f7deaeff11b18e415ce",
-    "staged_sha256": "002c5ee6c06abe69000a607ebc0be66260c206937efc00e458aa400c649fbd49"
+    "staged_sha256": "3a548a1dc9225d561dca73dd4beadb67f851e9346325498ee64e8d39a07f4d64"
   }
 }

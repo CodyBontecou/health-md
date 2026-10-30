@@ -1,0 +1,35 @@
+{
+  "schema": 1,
+  "app": "health-md",
+  "candidate": "3.5.0",
+  "build": "202610071222",
+  "status": "PREPARED_NOT_PUBLISHED",
+  "releaseType": "MANUAL",
+  "tracking": false,
+  "published_declarations": "UNCHANGED_WHILE_OLDER_COLLECTOR_IS_LIVE",
+  "cutoverPrerequisites": [
+    "Approve retirement responder deployment",
+    "Confirm older analytics ingestion has stopped",
+    "Publish coordinated policy and terms",
+    "Publish candidate questionnaire after processor verification"
+  ],
+  "historicalDataDeletion": "Separate operation; not performed",
+  "physicalDeviceTesting": "Deferred by owner",
+  "candidateDeclarations": [
+    {
+      "dataType": "USER_ID",
+      "purposes": [
+        "APP_FUNCTIONALITY"
+      ],
+      "linkedToIdentity": true,
+      "tracking": false
+    }
+  ],
+  "analyticsTypesToRemoveAfterRetirement": [
+    "DEVICE_ID",
+    "PURCHASE_HISTORY",
+    "PRODUCT_INTERACTION",
+    "ADVERTISING_DATA",
+    "OTHER_USAGE_DATA"
+  ]
+}

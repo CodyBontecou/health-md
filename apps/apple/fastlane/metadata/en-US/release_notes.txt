@@ -4,3 +4,4 @@ Health.md 3.5.0 adds weekly and yearly subscriptions alongside one-time Lifetime
 • Existing Lifetime purchases and grandfathered access are preserved, including eligible Family Sharing.
 • Active access is required before setup and exports on iPhone and iPad. The free macOS companion is unchanged.
 • Purchase status and scheduling guidance distinguish subscription and Lifetime access.
+• Custom app usage analytics and advertising attribution have been removed.
