@@ -1,4 +1,6 @@
 from pathlib import Path
+import json
+import plistlib
 import re
 import shutil
 import subprocess
@@ -11,6 +13,22 @@ CLEANUP = 'apps/apple/HealthMd/Shared/Utilities/RetiredAnalyticsCleanup.swift'
 CLAIMS = 'apps/apple/HealthMd/iOS/Views/MyselfClaimView.swift'
 
 class RemovedAnalyticsTests(unittest.TestCase):
+    def test_analytics_retirement_preserves_scheduling_identifier_disclosures(self):
+        schema = (ROOT / 'apps/apple/worker/receipt-verifier/migrations/0001_init.sql').read_text()
+        self.assertRegex(schema, r'CREATE TABLE devices[\s\S]+apns_token\s+TEXT NOT NULL')
+        manifest = plistlib.loads((ROOT / 'apps/apple/HealthMd/PrivacyInfo.xcprivacy').read_bytes())
+        declarations = {row['NSPrivacyCollectedDataType']: row for row in manifest['NSPrivacyCollectedDataTypes']}
+        device = declarations['NSPrivacyCollectedDataTypeDeviceID']
+        self.assertIn('NSPrivacyCollectedDataTypePurposeAppFunctionality', device['NSPrivacyCollectedDataTypePurposes'])
+        self.assertTrue(device['NSPrivacyCollectedDataTypeLinked'])
+        self.assertFalse(device['NSPrivacyCollectedDataTypeTracking'])
+        candidate = json.loads((ROOT / 'docs/launch/paid-access/app-privacy-candidate.json').read_text())
+        self.assertNotIn('DEVICE_ID', candidate['analyticsTypesToRemoveAfterRetirement'])
+        scheduling_id = next(row for row in candidate['candidateDeclarations'] if row['dataType'] == 'DEVICE_ID')
+        self.assertIn('APP_FUNCTIONALITY', scheduling_id['purposes'])
+        self.assertTrue(scheduling_id['linkedToIdentity'])
+        self.assertFalse(scheduling_id['tracking'])
+
     def test_no_collection_or_override_path_in_application_sources(self):
         forbidden = re.compile(r'PricingAnalyticsClient|OnboardingAnalyticsClient|Cloudflare(?:Pricing|Onboarding)AnalyticsTransport|AppleAdsAttributionCollector|AAAttribution|PlayInstallReferrerSource|/v1/events|PRICING_ANALYTICS_ENDPOINT_URL|ONBOARDING_ANALYTICS_ENDPOINT_URL')
         for source in SOURCES:
