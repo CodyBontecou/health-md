@@ -1,9 +1,22 @@
 ---
-title: "API 엔드포인트"
-description: "선택한 Apple Health JSON을 iPhone에서 자체 HTTP(S) 엔드포인트로 직접 전송합니다."
+title: "Apple Health JSON을 자신의 API로 내보내기"
+description: "Health.md로 선택한 Apple Health 데이터를 iPhone에서 자신의 엔드포인트로 JSON 형식으로 보내세요. 설정, 페이로드 예제 및 요청 제한을 확인하세요."
 ---
 
 <p>API 엔드포인트는 Health.md 데이터를 자체 서버, 웹훅, 데이터베이스, 대시보드 또는 자동화로 보내려는 사용자를 위한 내보내기 대상입니다. Apple Health 데이터는 계속 iPhone에서 읽으며, 파일을 쓰는 대신 구성한 엔드포인트로 JSON을 POST합니다.</p>
+
+## API 워크플로 선택
+
+| 목표 | 시작 방법 |
+| --- | --- |
+| 선택한 데이터를 자신의 서버로 보내기 | 이 안내를 따르세요. iPhone이 설정한 URL로 JSON POST 요청을 보냅니다. |
+| Mac에서 로컬로 데이터 쿼리하기 | <a href="/ko/docs/agent-api/">루프백 쿼리 API</a>. 이 API는 해당 Mac에서만 사용하고 네트워크에 노출하지 마세요. |
+| iOS 건강 앱 개발하기 | <a href="https://developer.apple.com/documentation/healthkit" target="_blank" rel="noopener">Apple HealthKit 개발자 문서</a>. |
+
+<div class="callout">
+<strong>하루 분량으로 시작하기</strong>
+<p><a href="https://apps.apple.com/us/app/health-md/id6757763969" target="_blank" rel="noopener">iPhone에 Health.md 설치</a>. <a href="/docs/reference/generated/automation/api-export-v1.json">가상 JSON 예제 확인</a> 후 수신 서버를 설정하세요.</p>
+</div>
 
 <div class="callout">
 <strong>개인정보 보호 안내.</strong>
