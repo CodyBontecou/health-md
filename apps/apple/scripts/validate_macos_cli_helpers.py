@@ -39,6 +39,14 @@ def validate(app):
             result = subprocess.run([str(helper), "--help"], env=environment, capture_output=True, text=True, timeout=15, check=True)
             if "usage: healthmd" not in result.stdout:
                 raise ValueError("CLI did not render its help")
+            if "App Store helper: sandboxed." not in result.stdout:
+                raise ValueError("Bundled CLI help does not explain its signing policy")
+            offline = subprocess.run(
+                [str(helper), "--base-url", "http://127.0.0.1:1", "query", "--cached", "--metric", "stepCount", "--last", "1"],
+                env=environment, capture_output=True, text=True, timeout=15
+            )
+            if offline.returncode != 1 or json.loads(offline.stdout).get("error") != "capabilities_unavailable":
+                raise ValueError("Sandboxed CLI did not stream its expected offline response")
         else:
             request = {"jsonrpc": "2.0", "id": "packaging-smoke", "method": "initialize", "params": {"protocolVersion": "2025-11-25"}}
             result = subprocess.run([str(helper)], input=json.dumps(request) + "\n", env=environment, capture_output=True, text=True, timeout=15, check=True)
