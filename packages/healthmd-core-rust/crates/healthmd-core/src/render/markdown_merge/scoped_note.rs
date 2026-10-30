@@ -45,6 +45,83 @@ struct Envelope {
     record_json: String,
 }
 
+/// Apply an explicitly scoped personal-note patch using its validated source profile.
+/// Unmarked historical patches return `None` so a caller can retain its deployed merger.
+/// Empty generated bodies update only frontmatter and preserve personal sections exactly.
+///
+/// # Errors
+/// Rejects malformed scope declarations, incompatible complete-export roles, and oversized patches.
+pub fn merge_scoped_daily_note_if_present(
+    existing: &str,
+    patch: &str,
+) -> Result<Option<String>, RenderError> {
+    let reserved = [KIND_KEY, CAPTURE_KEY, NIGHT_CAPTURE_KEY];
+    let has_reserved_text = reserved.iter().any(|key| patch.contains(key));
+    let Some(document) = frontmatter_document(patch) else {
+        return if has_reserved_text && patch.trim_start_matches('\u{feff}').starts_with("---") {
+            Err(RenderError::PresentationMismatch)
+        } else {
+            unscoped_note_dispatch(existing)
+        };
+    };
+    let Some(blocks) = property_blocks(&document.content) else {
+        return if has_reserved_text {
+            Err(RenderError::PresentationMismatch)
+        } else {
+            unscoped_note_dispatch(existing)
+        };
+    };
+    let marked = blocks.iter().any(|block| {
+        matches!(&block.key,
+        FrontmatterPropertyKey::String(key) if reserved.contains(&key.as_str()))
+    });
+    if !marked {
+        return unscoped_note_dispatch(existing);
+    }
+    validate(existing, patch)?;
+    let inject_sections = document
+        .suffix
+        .iter()
+        .any(|line| !line.content.trim().is_empty());
+    // Each profile validates its own exact schema and clock. Do not infer authority
+    // with a second permissive YAML/JSON decoder in a transport consumer.
+    for profile in [
+        SemanticProfile::AppleHealthDataV8,
+        SemanticProfile::AppleHealthDataV11,
+        SemanticProfile::AndroidFrozenV4,
+        SemanticProfile::AndroidAnalyticalV5,
+        SemanticProfile::AndroidSleepV6,
+    ] {
+        if let Ok(merged) = merge_scoped_daily_note(profile, existing, patch, inject_sections) {
+            return Ok(Some(merged));
+        }
+    }
+    Err(RenderError::PresentationMismatch)
+}
+
+// An unmarked update has no authority to reinterpret an existing scoped capture.
+// Keep the old note intact until a producer supplies an explicit source profile.
+fn unscoped_note_dispatch(existing: &str) -> Result<Option<String>, RenderError> {
+    let reserved = [KIND_KEY, CAPTURE_KEY, NIGHT_CAPTURE_KEY];
+    if let Some(document) = frontmatter_document(existing) {
+        if let Some(blocks) = property_blocks(&document.content) {
+            if blocks.iter().any(|block| {
+                matches!(&block.key,
+                FrontmatterPropertyKey::String(key) if reserved.contains(&key.as_str()))
+            }) {
+                return Err(RenderError::PresentationMismatch);
+            }
+        } else if reserved.iter().any(|key| existing.contains(key)) {
+            return Err(RenderError::PresentationMismatch);
+        }
+    } else if existing.trim_start_matches('\u{feff}').starts_with("---")
+        && reserved.iter().any(|key| existing.contains(key))
+    {
+        return Err(RenderError::PresentationMismatch);
+    }
+    Ok(None)
+}
+
 /// Project selected generated properties and optional sections into a scoped
 /// personal-note patch. Inputs are artifacts from one accepted native plan.
 ///
@@ -685,6 +762,92 @@ mod tests {
                 "---\n? [ambiguous, key]\n: value\n---\nPersonal",
                 &valid,
                 true
+            )
+            .is_err()
+        );
+    }
+    #[test]
+    fn transport_note_merge_reuses_profile_validation_and_preserves_legacy_dispatch() {
+        let existing = "---\r\nnotes: |\r\n  Personal: text\r\nsleep_deep_hours: 9\r\n---\r\nIntroduction\r\n## Journal\r\nKeep this\r\n";
+        for profile in [
+            SemanticProfile::AppleHealthDataV8,
+            SemanticProfile::AppleHealthDataV11,
+            SemanticProfile::AndroidSleepV6,
+        ] {
+            let marked = patch(profile);
+            let expected = merge_scoped_daily_note(profile, existing, &marked, true).unwrap();
+            assert_eq!(
+                merge_scoped_daily_note_if_present(existing, &marked).unwrap(),
+                Some(expected)
+            );
+            let header_only = marked.split("## Activity").next().unwrap();
+            let expected = merge_scoped_daily_note(profile, existing, header_only, false).unwrap();
+            assert_eq!(
+                merge_scoped_daily_note_if_present(existing, header_only).unwrap(),
+                Some(expected)
+            );
+        }
+        for profile in [
+            SemanticProfile::AndroidFrozenV4,
+            SemanticProfile::AndroidAnalyticalV5,
+        ] {
+            let json = if profile == SemanticProfile::AndroidFrozenV4 {
+                r#"{"date":"2026-03-08","type":"health-data","units":"metric","activity":{"steps":42}}"#
+            } else {
+                r#"{"date":"2026-03-08","type":"health-data","schemaVersion":5,"schemaProfile":"android-analytical-v5","activity":{"steps":42}}"#
+            };
+            for sections in [false, true] {
+                let marked = prepare_scoped_android_night_note(
+                    profile,
+                    json,
+                    "America/New_York",
+                    "---\nsteps: 42\n---\n",
+                    "## Activity\nSteps\n",
+                    &["steps".into()],
+                    sections,
+                )
+                .unwrap();
+                let expected =
+                    merge_scoped_daily_note(profile, existing, &marked, sections).unwrap();
+                assert_eq!(
+                    merge_scoped_daily_note_if_present(existing, &marked).unwrap(),
+                    Some(expected)
+                );
+            }
+        }
+        assert_eq!(
+            merge_scoped_daily_note_if_present(
+                existing,
+                "---\nsteps: 42\n---\n## Activity\nSteps\n"
+            ),
+            Ok(None)
+        );
+        assert!(
+            merge_scoped_daily_note_if_present(
+                existing,
+                "---\nhealthmd_injection_kind: future_capture\n---\n"
+            )
+            .is_err()
+        );
+        assert!(
+            merge_scoped_daily_note_if_present(
+                existing,
+                "---\nhealthmd_injection_kind: daily_capture_v1\n"
+            )
+            .is_err()
+        );
+        assert!(
+            merge_scoped_daily_note_if_present(
+                &patch(SemanticProfile::AppleHealthDataV11),
+                "---\nsteps: 42\n---\n"
+            )
+            .is_err()
+        );
+        let complete = "---\nschema: healthmd.health_data\n---\n";
+        assert!(
+            merge_scoped_daily_note_if_present(
+                complete,
+                &patch(SemanticProfile::AppleHealthDataV11)
             )
             .is_err()
         );

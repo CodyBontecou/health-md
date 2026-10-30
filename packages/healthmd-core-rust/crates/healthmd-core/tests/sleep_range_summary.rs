@@ -8,7 +8,7 @@ use serde_json::{Value, json};
 #[test]
 fn apple_wake_date_range_preserves_requested_bounds_empty_days_and_public_authority() {
     let input: Value = serde_json::from_slice(include_bytes!(
-        "../../../../contracts/render-input/v2/fixtures/native-android-v6-handoff.json"
+        "fixtures/contracts/render-input/v2/fixtures/native-android-v6-handoff.json"
     ))
     .unwrap();
     let mut config = input["semantic_configuration"].clone();
@@ -119,7 +119,7 @@ fn has_extension(path: &str, expected: &str) -> bool {
 #[test]
 fn successor_range_authority_does_not_admit_calendar_or_downgraded_sessions() {
     let input: Value = serde_json::from_slice(include_bytes!(
-        "../../../../contracts/render-input/v2/fixtures/native-android-v6-handoff.json"
+        "fixtures/contracts/render-input/v2/fixtures/native-android-v6-handoff.json"
     ))
     .unwrap();
     let mut config = input["semantic_configuration"].clone();

@@ -60,6 +60,19 @@ pub fn merge(existing: &str, new: &str, preserve_preamble: bool) -> String {
     output
 }
 
+/// Scoped captures share the native profile merger; historical notes retain their exact merger.
+pub(crate) fn merge_personal_note(existing: &str, patch: &str) -> Result<String, &'static str> {
+    validate_personal_note_destination(existing)?;
+    validate_personal_note_destination(patch)?;
+    match healthmd_core::render::merge_scoped_daily_note_if_present(existing, patch)
+        .map_err(|_| "invalid scoped daily note patch")?
+    {
+        Some(merged) => Ok(merged),
+        None if existing.is_empty() => Ok(patch.into()),
+        None => Ok(merge(existing, patch, true)),
+    }
+}
+
 /// A personal-note update must never acquire the role of a complete source export.
 /// This runs before building an installable stage; errors contain no note content.
 pub(crate) fn validate_personal_note_destination(existing: &str) -> Result<(), &'static str> {
@@ -321,6 +334,50 @@ fn detect_section_level(content: &str) -> usize {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn scoped_personal_note_preserves_journal_and_rejects_invalid_source_roles() {
+        let existing = "---\r\nnotes: |\r\n  Personal YAML\r\n---\r\nMy introduction.\r\n## Journal\r\nKeep my journal.\r\n";
+        let record = serde_json::json!({"schema":"healthmd.health_data","schema_version":11,
+            "schema_profile":"apple-v11","type":"health-data","date":"2026-03-08",
+            "time_context":{"calendar_timezone":"America/New_York","timestamp_timezone":"UTC",
+                "sleep_day_attribution":"morning_ends","sleep_owner_day_rule":"session_end_date","sleep_interval_clipping":"none"},
+            "activity":{"steps":42}}).to_string();
+        let patch = healthmd_core::render::prepare_scoped_daily_note(
+            healthmd_core::semantic::SemanticProfile::AppleHealthDataV11,
+            &record,
+            "---\nsteps: 42\n---\n",
+            "---\n---\n## Activity\nCurrent steps.\n",
+            &["steps".into()],
+            true,
+        )
+        .unwrap();
+        let merged = super::merge_personal_note(existing, &patch).unwrap();
+        assert!(merged.contains("notes: |\r\n  Personal YAML\r\n"));
+        assert!(merged.contains("My introduction.\r\n## Journal\r\nKeep my journal."));
+        assert!(merged.contains("Current steps."));
+        assert!(merged.contains("healthmd_daily_injection_v2: null"));
+        assert_eq!(super::merge_personal_note(&merged, &patch).unwrap(), merged);
+        assert!(
+            super::merge_personal_note("", &patch)
+                .unwrap()
+                .contains("healthmd_daily_injection_v1:")
+        );
+        assert!(
+            super::merge_personal_note(existing, "---\nhealthmd_injection_kind: unknown\n---\n")
+                .is_err()
+        );
+        assert!(
+            super::merge_personal_note("", "---\nschema: healthmd.health_data\n---\n").is_err()
+        );
+        let legacy = "---\nsteps: 42\n---\nGenerated introduction without headings.\n";
+        assert_eq!(super::merge_personal_note("", legacy).unwrap(), legacy);
+        assert_eq!(
+            super::merge_personal_note(existing, legacy).unwrap(),
+            super::merge(existing, legacy, true)
+        );
+        assert!(super::merge_personal_note(&merged, legacy).is_err());
+    }
+
     #[test]
     fn personal_note_role_validation_preserves_valid_journal_shapes() {
         for existing in [

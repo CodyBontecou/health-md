@@ -14,7 +14,8 @@ mod scoped_note;
 mod wake_date;
 
 pub use scoped_note::{
-    merge_scoped_daily_note, prepare_scoped_android_night_note, prepare_scoped_daily_note,
+    merge_scoped_daily_note, merge_scoped_daily_note_if_present, prepare_scoped_android_night_note,
+    prepare_scoped_daily_note,
 };
 
 const MAX_MERGE_BYTES: usize = 8 * 1024 * 1024;

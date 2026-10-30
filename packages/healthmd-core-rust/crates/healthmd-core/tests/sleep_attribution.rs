@@ -7,7 +7,7 @@ use serde_json::{Value, json};
 #[test]
 fn wake_date_authority_survives_a_daily_document_with_no_sleep_values() {
     let day: Value = serde_json::from_str(include_str!(
-        "../../../../contracts/sleep-attribution/v1/fixtures/apple-v11-empty-sleep.json"
+        "fixtures/contracts/sleep-attribution/v1/fixtures/apple-v11-empty-sleep.json"
     ))
     .expect("synthetic successor fixture");
     let context = read_public_sleep_context(

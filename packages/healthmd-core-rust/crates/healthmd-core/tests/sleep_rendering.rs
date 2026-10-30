@@ -274,7 +274,7 @@ fn successor_decimal_parsing_never_loosens_exact_semantic_binding_or_json_gramma
 #[test]
 fn native_android_v6_handoffs_replay_without_legacy_aliases_or_clock_reinterpretation() {
     let fixture: Value = serde_json::from_slice(include_bytes!(
-        "../../../../contracts/render-input/v2/fixtures/native-android-v6-handoff.json"
+        "fixtures/contracts/render-input/v2/fixtures/native-android-v6-handoff.json"
     ))
     .unwrap();
     let mut semantic = SemanticSession::from_json(
@@ -315,7 +315,7 @@ fn native_android_v6_handoffs_replay_without_legacy_aliases_or_clock_reinterpret
     if std::env::var("HEALTHMD_UPDATE_WAKE_DATE_CORE_PLAN_FIXTURE").as_deref() == Ok("1") {
         std::fs::write(plan_fixture, &plan_bytes).unwrap();
     } else {
-        assert_eq!(std::fs::read(plan_fixture).unwrap(), plan_bytes);
+        assert_eq!(include_bytes!("fixtures/contracts/render-input/v2/fixtures/core-android-v6-summary-facts-artifact-plan.json").as_slice(), plan_bytes);
     }
     for item in &plan.items {
         let text = std::str::from_utf8(&item.content).unwrap();
@@ -1384,7 +1384,7 @@ fn successor_detail_blocks_cannot_shadow_archive_diagnostics() {
 #[test]
 fn selected_details_survive_unavailable_summaries_without_fabricating_values() {
     let fixture: Value = serde_json::from_slice(include_bytes!(
-        "../../../../contracts/render-input/v2/fixtures/native-android-v6-handoff.json"
+        "fixtures/contracts/render-input/v2/fixtures/native-android-v6-handoff.json"
     ))
     .unwrap();
     for input in [apple_successor_input, android_successor_input] {

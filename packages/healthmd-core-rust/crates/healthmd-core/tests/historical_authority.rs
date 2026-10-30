@@ -4,11 +4,10 @@ use serde_json::Value;
 use sha2::{Digest, Sha256};
 
 // Exact git objects from c77024b87170260531f8df8fc5b604ad35375466; never regenerate.
-const SEMANTIC: &[u8] = include_bytes!(
-    "../../../../contracts/semantic-input/v1/fixtures/historical-pre-v8-c77024b.json"
-);
+const SEMANTIC: &[u8] =
+    include_bytes!("fixtures/contracts/semantic-input/v1/fixtures/historical-pre-v8-c77024b.json");
 const RENDER: &[u8] =
-    include_bytes!("../../../../contracts/render-input/v1/fixtures/historical-pre-v8-c77024b.json");
+    include_bytes!("fixtures/contracts/render-input/v1/fixtures/historical-pre-v8-c77024b.json");
 
 #[test]
 fn historical_semantic_clients_reproduce_original_authority_and_result_bytes() {

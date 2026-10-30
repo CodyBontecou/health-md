@@ -9,7 +9,7 @@ const ORIGINAL_HASH: &str = "709df0ae9f583e82627bc5439c4385905a5d85000e4322a0384
 
 fn input(version: u32, minutes: bool) -> (Value, Value) {
     let source: Value = serde_json::from_slice(include_bytes!(
-        "../../../../contracts/render-input/v2/fixtures/native-android-v6-handoff.json"
+        "fixtures/contracts/render-input/v2/fixtures/native-android-v6-handoff.json"
     ))
     .unwrap();
     let mut config = source["semantic_configuration"].clone();
@@ -210,7 +210,7 @@ fn range_metric_weights_must_be_positive_and_rejection_preserves_batch_frontier(
 
 fn render_inputs() -> (Value, Value, Value) {
     let fixture: Value = serde_json::from_slice(include_bytes!(
-        "../../../../contracts/render-input/v2/fixtures/native-android-v6-handoff.json"
+        "fixtures/contracts/render-input/v2/fixtures/native-android-v6-handoff.json"
     ))
     .unwrap();
     let (config, batch) = input(3, false);

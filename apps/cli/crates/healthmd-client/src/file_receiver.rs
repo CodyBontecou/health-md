@@ -339,10 +339,18 @@ impl GeneratedDestination {
             return Ok(());
         };
         let existing_bytes = existing_cap_file_size(&parent, &name)?.unwrap_or(0);
-        if mode != FileWriteMode::Overwrite && existing_bytes > source_bytes {
+        if mode != FileWriteMode::Overwrite
+            && mode != FileWriteMode::MergeMarkdownPreservingPreamble
+            && existing_bytes > source_bytes
+        {
             return Err(invalid(
                 "existing destination exceeds bounded stage amplification",
             ));
+        }
+        if mode == FileWriteMode::MergeMarkdownPreservingPreamble
+            && existing_bytes > u64::try_from(MAXIMUM_MERGE_BYTES).unwrap()
+        {
+            return Err(invalid("Markdown merge exceeds 64 MiB"));
         }
         let separator_bytes = if existing_bytes > 0 && mode == FileWriteMode::Append {
             append_separator_bytes
@@ -356,6 +364,13 @@ impl GeneratedDestination {
                 existing_bytes
             })
             .and_then(|bytes| bytes.checked_add(separator_bytes))
+            .and_then(|bytes| {
+                bytes.checked_add(if mode == FileWriteMode::MergeMarkdownPreservingPreamble {
+                    1_024
+                } else {
+                    0
+                })
+            })
             .ok_or_else(|| invalid("generated stage byte total overflow"))?;
         ensure_job_bytes(stage_bytes)
     }
@@ -1313,7 +1328,10 @@ fn build_stage(
     } else {
         0
     };
-    if mode != FileWriteMode::Overwrite && existing_bytes > source_bytes {
+    if mode != FileWriteMode::Overwrite
+        && mode != FileWriteMode::MergeMarkdownPreservingPreamble
+        && existing_bytes > source_bytes
+    {
         return Err(invalid(
             "existing destination exceeds bounded stage amplification",
         ));
@@ -1326,6 +1344,13 @@ fn build_stage(
     let stage_bytes = source_bytes
         .checked_add(existing_bytes)
         .and_then(|bytes| bytes.checked_add(separator_bytes))
+        .and_then(|bytes| {
+            bytes.checked_add(if mode == FileWriteMode::MergeMarkdownPreservingPreamble {
+                1_024
+            } else {
+                0
+            })
+        })
         .ok_or_else(|| invalid("generated stage byte total overflow"))?;
     ensure_job_bytes(stage_bytes)?;
     let stage_parent = stage
@@ -1349,19 +1374,23 @@ fn build_stage(
             io::copy(&mut current, &mut output).map_err(storage_error)?;
             output.write_all(append_separator).map_err(storage_error)?;
         }
-        FileWriteMode::MergeMarkdown | FileWriteMode::MergeMarkdownPreservingPreamble if exists => {
+        FileWriteMode::MergeMarkdown | FileWriteMode::MergeMarkdownPreservingPreamble
+            if exists || mode == FileWriteMode::MergeMarkdownPreservingPreamble =>
+        {
             if fs::metadata(source).map_err(storage_error)?.len()
                 > u64::try_from(MAXIMUM_MERGE_BYTES).unwrap()
             {
                 return Err(invalid("Markdown merge exceeds 64 MiB"));
             }
             let source_bytes = fs::read(source).map_err(storage_error)?;
-            let current = open_regular_cap_file(parent, name)?;
             let mut existing = Vec::new();
-            current
-                .take(u64::try_from(MAXIMUM_MERGE_BYTES + 1).unwrap())
-                .read_to_end(&mut existing)
-                .map_err(storage_error)?;
+            if exists {
+                let current = open_regular_cap_file(parent, name)?;
+                current
+                    .take(u64::try_from(MAXIMUM_MERGE_BYTES + 1).unwrap())
+                    .read_to_end(&mut existing)
+                    .map_err(storage_error)?;
+            }
             if i64::try_from(existing.len()).unwrap_or(i64::MAX) > MAXIMUM_MERGE_BYTES
                 || i64::try_from(source_bytes.len()).unwrap_or(i64::MAX) > MAXIMUM_MERGE_BYTES
             {
@@ -1371,14 +1400,11 @@ fn build_stage(
                 .map_err(|_| invalid("existing Markdown is not UTF-8"))?;
             let new = String::from_utf8(source_bytes)
                 .map_err(|_| invalid("generated Markdown is not UTF-8"))?;
-            if mode == FileWriteMode::MergeMarkdownPreservingPreamble {
-                markdown::validate_personal_note_destination(&existing).map_err(invalid)?;
-            }
-            let merged = markdown::merge(
-                &existing,
-                &new,
-                mode == FileWriteMode::MergeMarkdownPreservingPreamble,
-            );
+            let merged = if mode == FileWriteMode::MergeMarkdownPreservingPreamble {
+                markdown::merge_personal_note(&existing, &new).map_err(invalid)?
+            } else {
+                markdown::merge(&existing, &new, false)
+            };
             if u64::try_from(merged.len()).unwrap_or(u64::MAX) > stage_bytes {
                 return Err(invalid("Markdown merge exceeds its admitted stage size"));
             }
@@ -2240,6 +2266,64 @@ fn storage_error(error: io::Error) -> ClientError {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn personal_note_stages_preserve_large_journals_and_validate_missing_destinations() {
+        for exists in [false, true] {
+            let root = tempfile::tempdir().unwrap();
+            let destination = root.path().join("vault");
+            std::fs::create_dir(&destination).unwrap();
+            let existing = "Personal journal.\r\n".repeat(500);
+            if exists {
+                std::fs::write(destination.join("day.md"), &existing).unwrap();
+            }
+            let source = root.path().join("incoming.md");
+            let stage = root.path().join("stage.md");
+            std::fs::write(&source, "---\nsteps: 42\n---\n## Activity\nNew steps.\n").unwrap();
+            let bound = super::GeneratedDestination::open(&destination).unwrap();
+            bound
+                .validate_stage_admission(
+                    "day.md",
+                    std::fs::metadata(&source).unwrap().len(),
+                    FileWriteMode::MergeMarkdownPreservingPreamble,
+                    2,
+                )
+                .unwrap();
+            bound
+                .prepare_stage(
+                    "day.md",
+                    &source,
+                    &stage,
+                    healthmd_protocol::v2::FileWriteMode::MergeMarkdownPreservingPreamble,
+                )
+                .unwrap();
+            let staged = std::fs::read_to_string(&stage).unwrap();
+            assert!(staged.contains("New steps."));
+            if exists {
+                assert!(staged.contains(&existing));
+            }
+            for invalid in [
+                "---\nhealthmd_injection_kind: unknown\n---\n",
+                "---\nschema: healthmd.health_data\n---\n",
+            ] {
+                std::fs::write(&source, invalid).unwrap();
+                assert!(
+                    bound
+                        .prepare_stage(
+                            "day.md",
+                            &source,
+                            &stage,
+                            healthmd_protocol::v2::FileWriteMode::MergeMarkdownPreservingPreamble
+                        )
+                        .is_err()
+                );
+                assert_eq!(
+                    std::fs::read_to_string(destination.join("day.md")).ok(),
+                    exists.then(|| existing.clone())
+                );
+            }
+        }
+    }
+
     #[test]
     fn daily_note_mode_rejects_whole_export_destinations_before_install() {
         for header in [

@@ -13,6 +13,11 @@ import tempfile
 from pathlib import Path
 
 REQUIRED = {
+    "healthmd-core": {
+        "Cargo.toml", "LICENSE", "README.md", "src/lib.rs", "src/render/markdown_merge/scoped_note.rs",
+        "registry/metric-registry-v1.json", "registry/metric-registry-v2.json", "registry/metric-registry-v3.json",
+        "fixtures/m1-self-test.json", "tests/fixtures/contracts/render-input/v2/fixtures/native-android-v6-handoff.json",
+    },
     "healthmd-protocol": {
         "Cargo.toml",
         "LICENSE",
@@ -142,22 +147,19 @@ def main() -> int:
         env.setdefault("CARGO_PROFILE_DEV_DEBUG", "0")
         env.setdefault("CARGO_PROFILE_TEST_DEBUG", "0")
         env["CARGO_TARGET_DIR"] = str(package_target)
-        run(
-            [
-                "cargo",
-                "package",
-                "--manifest-path",
-                str(root / "packages/healthmd-core-rust/Cargo.toml"),
-                "--locked",
-                "--allow-dirty",
-                "--no-verify",
-                "-p",
-                "healthmd-protocol",
-            ],
-            root,
-            env,
-        )
+        for package in ("healthmd-core", "healthmd-protocol"):
+            run(
+                [
+                    "cargo", "package", "--manifest-path",
+                    str(root / "packages/healthmd-core-rust/Cargo.toml"),
+                    "--locked", "--allow-dirty", "--no-verify", "-p", package,
+                ],
+                root,
+                env,
+            )
         local_patches = [
+            "--config",
+            f'patch.crates-io.healthmd-core.path={json.dumps(str(root / "packages/healthmd-core-rust/crates/healthmd-core"))}',
             "--config",
             f'patch.crates-io.healthmd-protocol.path={json.dumps(str(root / "packages/healthmd-core-rust/crates/healthmd-protocol"))}',
         ]
@@ -214,6 +216,7 @@ def main() -> int:
                 f"  {json.dumps(str(path))},\n" for path in member_paths.values()
             )
             + "]\n\n[patch.crates-io]\n"
+            + f"healthmd-core = {{ path = {json.dumps(str(member_paths['healthmd-core']))} }}\n"
             + f"healthmd-protocol = {{ path = {json.dumps(str(member_paths['healthmd-protocol']))} }}\n"
             + f"healthmd-operations = {{ path = {json.dumps(str(member_paths['healthmd-operations']))} }}\n"
             + f"healthmd-client = {{ path = {json.dumps(str(member_paths['healthmd-client']))} }}\n"
