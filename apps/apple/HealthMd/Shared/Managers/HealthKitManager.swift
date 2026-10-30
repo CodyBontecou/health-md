@@ -594,7 +594,7 @@ final class HealthKitManager: ObservableObject {
 
     /// Assesses the selected sample types using HealthKit's OS 27 limited-history
     /// API. HealthKit intentionally omits both unrestricted and denied types, so
-    /// `full_history` means "no limited boundary reported", not proof that every
+    /// omitted boundaries remain unknown. They do not prove that every
     /// requested read permission was granted.
     func assessHistoryAuthorization(
         forMetricIDs metricIDs: Set<String>,
@@ -637,7 +637,7 @@ final class HealthKitManager: ObservableObject {
             )
         } else if sampleTypes.isEmpty {
             assessment = HealthHistoryAuthorizationAssessment(
-                state: unassessedMetricIDs.isEmpty ? .fullHistory : .unknown,
+                state: .unknown,
                 unassessedMetricIDs: Array(unassessedMetricIDs),
                 checkedAt: Date(),
                 message: unassessedMetricIDs.isEmpty
@@ -654,7 +654,7 @@ final class HealthKitManager: ObservableObject {
                     )
                 }
                 assessment = HealthHistoryAuthorizationAssessment(
-                    state: boundaries.isEmpty ? .fullHistory : .limitedHistory,
+                    state: boundaries.isEmpty ? .unknown : .limitedHistory,
                     assessedTypeIdentifiers: sampleTypes.map(\.identifier),
                     boundaries: boundaries,
                     unassessedMetricIDs: Array(unassessedMetricIDs),

@@ -30,7 +30,7 @@ For many read types, HealthKit intentionally does not tell an app whether access
 On OS 27 and later, builds made with a supported OS 27 HealthKit SDK also call HealthKit's [`earliestAuthorizedSampleDate(for:)`](https://developer.apple.com/documentation/healthkit/hkhealthstore/earliestauthorizedsampledate(for:)) API after authorization and before resolving an all-available request. An older-SDK binary cannot perform this check merely because it runs on a newer OS. The machine-readable history state is one of:
 
 - `limited_history`: HealthKit returned at least one per-type earliest readable date. Data before each boundary is unknown, not absent. Health.md warns in the export UI and refuses an unqualified **All Time** / `all_available` completeness claim.
-- `full_history`: HealthKit returned no limited date boundary for the assessed types. By Apple's privacy design, this still does not prove each read permission was granted; a denied type can also be omitted.
+- `full_history`: reserved for affirmative completeness evidence. HealthKit's boundary API does not supply this evidence: an unrestricted read and a denied read can both omit a boundary, so an empty result remains `unknown`.
 - `unknown`: the boundary check failed or could not cover the requested scope. Health.md rejects `all_available`; an explicit date range remains available.
 - `api_unavailable`: the runtime predates OS 27, the app was built without the supported HealthKit SDK API, or the query is local to the Mac companion. Health.md rejects `all_available` because it cannot verify full-history authorization, but continues explicit-range bounded exports with that limitation reported.
 

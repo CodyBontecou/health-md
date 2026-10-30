@@ -3119,9 +3119,21 @@ final class HealthKitManagerObserverTests: XCTestCase {
 
         let assessment = await sut.assessHistoryAuthorization(forMetricIDs: ["steps"])
 
-        XCTAssertEqual(assessment.state, .fullHistory)
+        XCTAssertEqual(assessment.state, .unknown)
         XCTAssertTrue(assessment.message.contains("denied read"))
-        XCTAssertTrue(assessment.supportsUnqualifiedFullHistoryClaim)
+        XCTAssertFalse(assessment.supportsUnqualifiedFullHistoryClaim)
+    }
+
+    @MainActor
+    func test_historyAuthorization_emptySelectionDoesNotProveFullHistory() async {
+        let store = FakeHealthStore()
+        let sut = makeSUT(store: store)
+
+        let assessment = await sut.assessHistoryAuthorization(forMetricIDs: [])
+
+        XCTAssertEqual(assessment.state, .unknown)
+        XCTAssertFalse(assessment.supportsUnqualifiedFullHistoryClaim)
+        XCTAssertTrue(store.historyAuthorizationReadTypes.isEmpty)
     }
 
     @MainActor
