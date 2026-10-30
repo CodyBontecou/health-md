@@ -2894,6 +2894,78 @@ final class VaultManager: ObservableObject {
         return content
     }
 
+    /// Freeze the final note bytes before publishing any companion artifact.
+    /// A retained write can replay without a renderer or a fresh source capture.
+    func prepareDurableDailyNote(_ note: DailyNoteInjector.PreparedContent,
+        destination: AppleLooseDailyRangeDestination) throws -> DailyNoteInjector.DurableWrite {
+        guard fileSystem is SystemFileSystem, let binding = destination.binding else {
+            throw AppleExactDestinationError.destinationUnavailable
+        }
+        guard destinationState == .available, vaultURL?.standardizedFileURL == destination.rootURL.standardizedFileURL else {
+            throw ExportError.destinationChanged
+        }
+        guard bookmarkResolver.startAccessing(destination.rootURL) else { throw ExportError.accessDenied }
+        defer { bookmarkResolver.stopAccessing(destination.rootURL) }
+        let existingData = try SecureExactArtifactIO.read(rootURL: destination.rootURL, relativePath: note.relativePath,
+            binding: binding, maximumByteCount: 8 * 1024 * 1024)
+        let existing = try existingData.map { bytes in
+            guard let text = String(data: bytes, encoding: .utf8) else { throw CocoaError(.fileReadInapplicableStringEncoding) }
+            return text
+        }
+        let content = existing == nil && !DailyNoteInjector.createsMissingNote(note) ? nil
+            : try Data(DailyNoteInjector.mergePrepared(note, existing: existing ?? "").utf8)
+        return DailyNoteInjector.DurableWrite(version: 1, ownerDate: note.ownerDate, relativePath: note.relativePath,
+            identity: note.identity, pin: note.pin, destinationBinding: binding,
+            beforeSHA256: existingData.map(NativeExportArtifact.sha256),
+            contentSHA256: content.map(NativeExportArtifact.sha256), content: content)
+    }
+
+    /// Commit only against the captured predecessor or verify an already-installed result.
+    /// Personal edits after preparation or after an unacknowledged commit reject unchanged.
+    func commitDurableDailyNote(_ write: DailyNoteInjector.DurableWrite,
+        pin: AppleExportEnginePin, identity: AppleExportOperationIdentity,
+        injectionSettings: DailyNoteInjectionSnapshot, allowedOwnerDates: Set<String>,
+        destination: AppleLooseDailyRangeDestination
+    ) throws -> DailyNoteInjector.InjectionResult {
+        guard fileSystem is SystemFileSystem, let binding = destination.binding,
+              destinationState == .available, vaultURL?.standardizedFileURL == destination.rootURL.standardizedFileURL else {
+            throw ExportError.destinationChanged
+        }
+        try DailyNoteInjector.validateDurableWrite(write, pin: pin, identity: identity,
+            settings: injectionSettings, binding: binding, allowedOwnerDates: allowedOwnerDates)
+        guard bookmarkResolver.startAccessing(destination.rootURL) else { throw ExportError.accessDenied }
+        defer { bookmarkResolver.stopAccessing(destination.rootURL) }
+        guard try productionDestinationBinding(for: destination.rootURL) == binding else { throw ExportError.destinationChanged }
+        guard let data = write.content else { return .skipped(reason: "Daily note was missing when the operation was prepared") }
+        let target = ExportPathPlanner.appendingRelativePath(write.relativePath, to: destination.rootURL, isDirectory: false)
+        #if DEBUG
+        let beforeHook = productionDestinationWillCommitForTesting
+        let afterHook = productionDestinationDidValidateForTesting
+        #else
+        let beforeHook: (@Sendable () throws -> Void)? = nil
+        let afterHook: (@Sendable () throws -> Void)? = nil
+        #endif
+        return try fileCoordinator.coordinateWriting(at: target, intent: .replace,
+            cancellationCheck: { try Task.checkCancellation() }) { coordinated in
+            let root = try SecureExactArtifactIO.coordinatedRootURL(for: coordinated,
+                rootURL: destination.rootURL, relativePath: write.relativePath, binding: binding)
+            let current = try SecureExactArtifactIO.read(rootURL: root, relativePath: write.relativePath,
+                binding: binding, maximumByteCount: 8 * 1024 * 1024)
+            if current == data { return .updated(path: write.relativePath) }
+            let checkPredecessor: @Sendable () throws -> Void = {
+                let bytes = try SecureExactArtifactIO.read(rootURL: root, relativePath: write.relativePath,
+                    binding: binding, maximumByteCount: 8 * 1024 * 1024)
+                guard bytes.map(NativeExportArtifact.sha256) == write.beforeSHA256 else { throw ExportError.destinationChanged }
+            }
+            try checkPredecessor()
+            try SecureExactArtifactIO.overwrite(rootURL: root, relativePath: write.relativePath, data: data,
+                binding: binding, beforeCommit: { try beforeHook?(); try checkPredecessor() },
+                afterValidationBeforeRename: { try afterHook?(); try checkPredecessor() },
+                cancellationCheck: { try Task.checkCancellation() })
+            return .updated(path: write.relativePath)
+        }
+    }
+
     func freezeHealthDataRangeDestination() throws -> AppleLooseDailyRangeDestination {
         guard destinationState == .available, let rootURL = vaultURL else { throw unavailableExportError }
         guard bookmarkResolver.startAccessing(rootURL) else { throw ExportError.accessDenied }
@@ -3105,9 +3177,19 @@ final class VaultManager: ObservableObject {
             guard destinationState == .available, vaultURL?.standardizedFileURL == destination.rootURL.standardizedFileURL else {
                 throw ExportError.destinationChanged
             }
-            switch DailyNoteInjector.injectPrepared(note, into: destination.rootURL, fileSystem: fileSystem,
-                fileCoordinator: fileCoordinator, destinationBinding: destination.binding,
-                beforeCommit: beforeCommit, afterValidationBeforeRename: afterValidation) {
+            let outcome: DailyNoteInjector.InjectionResult
+            if fileSystem is SystemFileSystem {
+                let retained = try prepareDurableDailyNote(note, destination: destination)
+                outcome = try commitDurableDailyNote(retained, pin: note.pin, identity: note.identity,
+                    injectionSettings: DailyNoteInjector.capturedSettings(note),
+                    allowedOwnerDates: [HealthKitDailyOwnershipMetadata.ownerDate(for: note.ownerDate,
+                        calendarTimeZoneIdentifier: note.pin.calendarTimeZoneIdentifier)], destination: destination)
+            } else {
+                outcome = DailyNoteInjector.injectPrepared(note, into: destination.rootURL, fileSystem: fileSystem,
+                    fileCoordinator: fileCoordinator, destinationBinding: destination.binding,
+                    beforeCommit: beforeCommit, afterValidationBeforeRename: afterValidation)
+            }
+            switch outcome {
             case .updated: updated.append(note.ownerDate)
             case .skipped: skipped.append(note.ownerDate)
             case .failed(let error): throw error

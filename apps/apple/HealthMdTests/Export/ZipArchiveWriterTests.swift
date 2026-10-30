@@ -1358,6 +1358,90 @@ struct DailyNoteAttributionTransitionTests {
 
 @MainActor
 struct MorningLocalNoteCompositionTests {
+    @Test(arguments: ["commit", "skip", "edit-before", "edit-after", "hook-before", "hook-after",
+        "corrupt", "path", "clock", "version", "scope-owner", "symlink", "rebound"])
+    func durableNotesReplayAcceptedBytesWithoutOverwritingEdits(mode: String) async throws {
+        let f = try MorningArchiveTests().fixture(mode: "daily")
+        defer { f.cleanup() }
+        f.settings.archiveExportFiles = false
+        f.settings.dailyNoteInjection.enabled = true
+        f.settings.dailyNoteInjection.createIfMissing = mode != "skip"
+        f.settings.dailyNoteInjection.folderPath = "Journal"
+        let snapshot = await ExportSettingsSnapshot.forNewAppleOperation(f.settings, healthSubfolder: "Health",
+            calendarTimeZone: f.context.timeZone, surface: .localVaultRangeWithoutSideEffects)
+        let record = try await f.manager.fetchHealthData(for: f.dates[1], detailPolicy: .detailedTimeSeries,
+            metricSelection: f.settings.metricSelection, timeZone: f.context.timeZone, captureContext: f.context)
+        let prepared = try await f.vault.prepareWakeDateDailyNote(record, settingsSnapshot: snapshot)
+        let destination = try f.vault.freezeHealthDataRangeDestination()
+        let journal = f.root.appendingPathComponent(prepared.relativePath)
+        try FileManager.default.createDirectory(at: journal.deletingLastPathComponent(), withIntermediateDirectories: true)
+        let personal = "---\r\nnotes: |\r\n  Personal journal\r\n---\r\nMy introduction.\r\n"
+        if mode != "skip" { try personal.write(to: journal, atomically: true, encoding: .utf8) }
+        let accepted = try f.vault.prepareDurableDailyNote(prepared, destination: destination)
+        var bytes = try JSONEncoder().encode(accepted)
+        if ["corrupt", "path", "clock", "version", "scope-owner"].contains(mode) {
+            var object = try #require(JSONSerialization.jsonObject(with: bytes) as? [String: Any])
+            if mode == "corrupt" { object["content"] = Data("Corrupt note".utf8).base64EncodedString() }
+            if mode == "path" { object["relativePath"] = "Changed/2026-03-08.md" }
+            if mode == "version" { object["version"] = 2 }
+            if mode == "clock" {
+                var identity = try #require(object["identity"] as? [String: Any])
+                identity["calendarTimeZoneIdentifier"] = "UTC"; object["identity"] = identity
+            }
+            if mode == "scope-owner" {
+                let content = try #require(accepted.content)
+                let changed = Data(String(decoding: content, as: UTF8.self)
+                    .replacingOccurrences(of: "2026-03-08", with: "2000-01-01").utf8)
+                object["content"] = changed.base64EncodedString()
+                object["contentSHA256"] = NativeExportArtifact.sha256(of: changed)
+            }
+            bytes = try JSONSerialization.data(withJSONObject: object)
+        }
+        let restored = try JSONDecoder().decode(DailyNoteInjector.DurableWrite.self, from: bytes)
+        f.settings.dailyNoteInjection.enabled = false
+        f.settings.dailyNoteInjection.folderPath = "Changed"
+        f.settings.exportTimeZoneOverride = .gmt
+        let commit = {
+            try f.vault.commitDurableDailyNote(restored, pin: prepared.pin, identity: prepared.identity,
+                injectionSettings: DailyNoteInjector.capturedSettings(prepared),
+                allowedOwnerDates: ["2026-03-08"], destination: destination)
+        }
+        let edited = "User edit after preparation.\r\n"
+        if mode == "edit-after" { _ = try commit() }
+        if mode == "skip" || mode == "edit-before" || mode == "edit-after" {
+            try edited.write(to: journal, atomically: true, encoding: .utf8)
+        }
+        if mode == "hook-before" { f.vault.productionDestinationWillCommitForTesting = { try edited.write(to: journal, atomically: true, encoding: .utf8) } }
+        if mode == "hook-after" { f.vault.productionDestinationDidValidateForTesting = { try edited.write(to: journal, atomically: true, encoding: .utf8) } }
+        if mode == "symlink" {
+            let foreign = f.root.appendingPathComponent("foreign.md")
+            try edited.write(to: foreign, atomically: true, encoding: .utf8)
+            try FileManager.default.removeItem(at: journal)
+            try FileManager.default.createSymbolicLink(at: journal, withDestinationURL: foreign)
+        }
+        let moved = f.root.appendingPathExtension("moved")
+        defer { try? FileManager.default.removeItem(at: moved) }
+        if mode == "rebound" {
+            try FileManager.default.moveItem(at: f.root, to: moved)
+            try FileManager.default.createDirectory(at: journal.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try edited.write(to: journal, atomically: true, encoding: .utf8)
+        }
+        if mode == "commit" {
+            if case .updated = try commit() {} else { Issue.record("Expected committed note") }
+            #expect(try Data(contentsOf: journal) == accepted.content)
+            if case .updated = try commit() {} else { Issue.record("Expected exact replay") }
+            #expect(try Data(contentsOf: journal) == accepted.content)
+        } else if mode == "skip" {
+            if case .skipped = try commit() {} else { Issue.record("Expected retained skip") }
+            #expect(try String(contentsOf: journal, encoding: .utf8) == edited)
+        } else {
+            #expect(throws: (any Error).self) { _ = try commit() }
+            let expected = ["edit-before", "edit-after", "hook-before", "hook-after", "symlink", "rebound"].contains(mode) ? edited : personal
+            #expect(try String(contentsOf: journal, encoding: .utf8) == expected)
+        }
+        #expect(!FileManager.default.fileExists(atPath: f.root.appendingPathComponent("Changed").path))
+    }
+
     @Test(arguments: [false, true], [false, true])
     func archivesComposeSeparateFrozenNotesAndReportOutcomes(recovered: Bool, create: Bool) async throws {
         let f = try MorningArchiveTests().fixture(mode: "range")

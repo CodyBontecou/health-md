@@ -73,6 +73,68 @@ struct DailyNoteInjector {
         fileprivate let body: String
     }
 
+    /// Private journal payload: accepted output plus the exact predecessor digest.
+    /// Callers must protect and quota the encoded bytes with their owning job spool.
+    nonisolated struct DurableWrite: Codable, Equatable, Sendable {
+        let version: Int
+        let ownerDate: Date
+        let relativePath: String
+        let identity: AppleExportOperationIdentity
+        let pin: AppleExportEnginePin
+        let destinationBinding: AppleVaultDestinationBinding
+        let beforeSHA256: String?
+        let contentSHA256: String?
+        let content: Data?
+    }
+
+    static func capturedSettings(_ prepared: PreparedContent) -> DailyNoteInjectionSnapshot { prepared.settings }
+
+    static func validateDurableWrite(_ write: DurableWrite, pin: AppleExportEnginePin,
+        identity: AppleExportOperationIdentity, settings capturedSettings: DailyNoteInjectionSnapshot,
+        binding: AppleVaultDestinationBinding, allowedOwnerDates: Set<String>) throws {
+        guard let zone = TimeZone(identifier: pin.calendarTimeZoneIdentifier) else { throw CocoaError(.fileReadCorruptFile) }
+        let owner = HealthKitDailyOwnershipMetadata.ownerDate(for: write.ownerDate,
+            calendarTimeZoneIdentifier: pin.calendarTimeZoneIdentifier)
+        let settings = DailyNoteInjectionSettings()
+        capturedSettings.apply(to: settings)
+        guard write.version == 1, settings.enabled,
+              write.pin == pin, pin.hasExplicitWakeDateContracts,
+              write.identity == identity, identity.calendarTimeZoneIdentifier == pin.calendarTimeZoneIdentifier,
+              write.destinationBinding == binding, allowedOwnerDates.contains(owner),
+              write.relativePath == ExportPathPlanner.dailyNoteRelativePath(settings: settings,
+                date: write.ownerDate, timeZone: zone),
+              write.beforeSHA256.map(AppleExportEnginePin.isLowercaseSHA256) ?? true else {
+            throw CocoaError(.fileReadCorruptFile)
+        }
+        _ = try ExportPathPlanner.canonicalPortablePathKey(write.relativePath)
+        guard let content = write.content else {
+            guard !settings.createIfMissing, write.beforeSHA256 == nil, write.contentSHA256 == nil else {
+                throw CocoaError(.fileReadCorruptFile)
+            }
+            return
+        }
+        guard content.count <= 8 * 1024 * 1024,
+              NativeExportArtifact.sha256(of: content) == write.contentSHA256,
+              let text = String(data: content, encoding: .utf8),
+              let properties = MarkdownMerger.frontmatterProperties(named: [captureKey], in: text), properties.count == 1,
+              let quoted = properties.first?.split(separator: ":", maxSplits: 1).last else {
+            throw CocoaError(.fileReadCorruptFile)
+        }
+        let encoded = Data(quoted.trimmingCharacters(in: .whitespacesAndNewlines).utf8)
+        let scalar = try JSONDecoder().decode(String.self, from: encoded)
+        guard let envelope = try JSONSerialization.jsonObject(with: Data(scalar.utf8)) as? [String: Any],
+              let recordJSON = envelope["record_json"] as? String,
+              let record = try JSONSerialization.jsonObject(with: Data(recordJSON.utf8)) as? [String: Any],
+              record["date"] as? String == owner,
+              (record["time_context"] as? [String: String])?["calendar_timezone"] == pin.calendarTimeZoneIdentifier else {
+            throw CocoaError(.fileReadCorruptFile)
+        }
+        // The common validator checks version/profile, duplicate capture authority,
+        // inactive tombstones, native clocks and incompatible complete-export roles.
+        _ = try HealthMdCoreService().mergeScopedNote(profile: .appleHealthDataV11,
+            existing: text, patch: text, injectSections: settings.injectMarkdownSections)
+    }
+
     private static func preparedContent(_ prepared: PreparedContent) -> InjectionContent {
         InjectionContent(frontmatter: prepared.frontmatter, body: prepared.body, isWakeDateCapture: true)
     }

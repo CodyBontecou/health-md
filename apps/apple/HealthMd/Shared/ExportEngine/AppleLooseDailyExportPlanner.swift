@@ -29,7 +29,7 @@ nonisolated enum AppleExportOperationSurface: Equatable, Sendable {
     }
 }
 
-nonisolated struct AppleExportOperationIdentity: Equatable, Sendable {
+nonisolated struct AppleExportOperationIdentity: Codable, Equatable, Sendable {
     let requestID: String
     let sessionID: String
     let capturedAt: Date
