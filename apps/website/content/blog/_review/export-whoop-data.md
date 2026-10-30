@@ -11,3 +11,5 @@ Verified 2026-10-30 by Codex (agent), method: traced. Public official articles r
 - [x] Existing generated Apple and fixture-tested Android samples retain bytes/schema; no new cross-platform contract, score reconstruction or source-only daily total promised. Missingness, mixed Value types, units, duplicate/timed-summary distinctions explicit.
 - [x] Android history follows official older-data guidance; source backfill separate. Canonical sleep-date guide linked. Privacy distinguishes source services and local workflow, plus optional single-owner cloud pilot with no public signup/automatic sync/general availability.
 - [x] Existing platform:both rendering offers both stores. Three related guides and incoming Oura recommendation use existing graph. Oura body unchanged. No native/schema, pricing or quota change; no device/visual QA.
+
+- [x] Related recommendation now includes Withings; discovery-only frontmatter edit, WHOOP body unchanged. Oura retains another incoming recommendation.
