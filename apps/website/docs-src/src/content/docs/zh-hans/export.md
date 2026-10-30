@@ -7,7 +7,7 @@ description: "使用“导出”选项卡检查HealthKit和保管库连接。选
 
 ## 读取状态徽章
  <div class="options">
- <div class="option"> <strong>健康徽章</strong> <p>绿点表示HealthKit已获得授权。红点表示未授予访问权限。点击以重试 iOS 权限表。每次安装该表仅出现一次。之后，打开设置→隐私和隐私。安全→健康。 </p> </div>
+ <div class="option"> <strong>健康徽章</strong> <p>绿色表示应用的“已连接”设置状态，并不代表每个类别的读取权限都已确认。HealthKit 不会向应用透露被拒绝的读取权限。轻点标记以请求访问。对于尚未作出选择的数据类型，iOS 可能显示权限对话框；如果选择已记录，Health.md 会显示权限说明。请在 Apple Health 中检查类别。结果为空可能表示访问被拒绝，也可能表示没有匹配的数据。<a href="/zh-hans/docs/troubleshooting/">排查缺失的数据</a>。</p> </div>
  <div class="option"> <strong>保管库徽章</strong> <p>绿点 = 已选择保管库文件夹。点击以重新选择或更改保管库。标签显示文件夹名称。 </p> </div>
  </div>
  <p>导出<em>操作保持禁用状态</em>直到HealthKit 、输出格式和所选目标准备就绪。这可以防止最常见的故障模式：尝试在没有目的地的情况下导出。 </p>

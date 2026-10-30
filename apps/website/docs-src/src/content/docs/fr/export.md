@@ -7,7 +7,7 @@ description: "Utilisez l'onglet Exporter pour vérifier HealthKit et les connexi
 
 ## Lire les badges d'état
  <div class="options">
- <div class="option"> <strong> Badge Santé </strong> <p> Un point vert signifie que HealthKit est autorisé. Un point rouge signifie que l'accès n'est pas accordé. Appuyez pour réessayer la feuille d'autorisation iOS. La feuille n'apparaît qu'une seule fois par installation. Après cela, ouvrez Paramètres → Confidentialité et confidentialité. Sécurité → Santé. </p> </div>
+ <div class="option"> <strong> Badge Santé </strong> <p>Le vert indique l’état de configuration Connecté de l’app, sans confirmer l’accès en lecture à chaque catégorie. HealthKit ne révèle pas les autorisations de lecture refusées. Touchez l’indicateur pour demander l’accès. iOS peut afficher une boîte de dialogue pour les types nécessitant une décision ; si les choix sont déjà enregistrés, Health.md affiche le guide des autorisations. Vérifiez les catégories dans Apple Health. Un résultat vide peut indiquer un accès refusé ou l’absence de données correspondantes. <a href="/fr/docs/troubleshooting/">Résoudre les données manquantes</a>.</p> </div>
  <div class="option"> <strong> Badge du coffre-fort </strong> <p> Point vert = un dossier du coffre-fort est sélectionné. Appuyez pour choisir à nouveau ou modifier le coffre-fort. L'étiquette indique le nom du dossier. </p> </div>
  </div>
  <p> L'action <em> Export </em> reste désactivée jusqu'à ce que HealthKit , le format de sortie et la destination sélectionnée soient prêts. Cela évite le mode d’échec le plus courant : tenter d’exporter sans destination. </p>

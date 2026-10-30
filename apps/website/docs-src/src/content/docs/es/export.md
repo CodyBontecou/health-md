@@ -7,7 +7,7 @@ description: "Utilice la pestaña Exportar para verificar HealthKit y las conexi
 
 ## Leer las insignias de estado
  <div class="options">
- <div class="option"> <strong> Insignia de salud </strong> <p> Un punto verde significa que HealthKit está autorizado. Un punto rojo significa que no se concede el acceso. Toque para volver a intentar la hoja de permisos de iOS. La hoja aparece sólo una vez por instalación. Después de eso, abra Configuración → Privacidad y privacidad. Seguridad → Salud. </p> </div>
+ <div class="option"> <strong> Insignia de salud </strong> <p>El verde indica el estado de configuración Conectado de la app, no confirma acceso de lectura a todas las categorías. HealthKit no revela los permisos de lectura denegados. Toque el indicador para solicitar acceso. iOS puede mostrar un diálogo para tipos pendientes de decisión; si las decisiones ya están registradas, Health.md muestra la guía de permisos. Revise las categorías en Apple Health. Un resultado vacío puede deberse a acceso denegado o a que no haya datos coincidentes. <a href="/es/docs/troubleshooting/">Resolver datos faltantes</a>.</p> </div>
  <div class="option"> <strong> Insignia de bóveda </strong> <p> Punto verde = se selecciona una carpeta de bóveda. Toque para volver a seleccionar o cambiar la bóveda. La etiqueta muestra el nombre de la carpeta. </p> </div>
  </div>
  <p> La acción <em> Exportar </em> permanece deshabilitada hasta que HealthKit , el formato de salida y el destino seleccionado estén listos. Esto evita el modo de error más común: intentar exportar sin destino. </p>

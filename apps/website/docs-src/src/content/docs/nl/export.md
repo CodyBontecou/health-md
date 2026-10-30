@@ -7,7 +7,7 @@ description: "Gebruik het tabblad Exporteren om HealthKit en kluisverbindingen t
 
 ## Lees de statusbadges
  <div class="options">
- <div class="option"> <strong> Gezondheidsbadge </strong> <p> Een groene stip betekent dat HealthKit is geautoriseerd. Een rode stip betekent dat er geen toegang wordt verleend. Tik om het iOS-toestemmingsblad opnieuw te proberen. Het blad verschijnt slechts één keer per installatie. Open daarna Instellingen → Privacy &amp; Beveiliging → Gezondheid. </p> </div>
+ <div class="option"> <strong> Gezondheidsbadge </strong> <p>Groen toont de instellingsstatus Verbonden van de app, niet bevestigde leestoegang tot elke categorie. HealthKit maakt geweigerde leesrechten niet bekend. Tik op de indicator om toegang aan te vragen. iOS kan een dialoog tonen voor typen waarvoor nog een keuze nodig is; bij al vastgelegde keuzes toont Health.md de uitleg over machtigingen. Controleer de categorieën in Apple Health. Een leeg resultaat kan geweigerde toegang of geen overeenkomende gegevens betekenen. <a href="/nl/docs/troubleshooting/">Ontbrekende gegevens onderzoeken</a>.</p> </div>
  <div class="option"> <strong> Kluisbadge </strong> <p> Groene stip = er is een kluismap geselecteerd. Tik om de kluis opnieuw te kiezen of te wijzigen. Het label toont de mapnaam. </p> </div>
  </div>
  <p> De actie <em> Exporteren </em> blijft uitgeschakeld totdat HealthKit , het uitvoerformaat en de geselecteerde bestemming gereed zijn. Dit voorkomt de meest voorkomende fout: proberen te exporteren zonder bestemming. </p>

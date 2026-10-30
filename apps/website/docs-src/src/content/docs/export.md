@@ -7,7 +7,7 @@ description: "Use the Export tab to check HealthKit and vault connections. Selec
 
 ## Read the status badges
 <div class="options">
-<div class="option"><strong>Health badge</strong><p>A green dot means HealthKit is authorized. A red dot means access is not granted. Tap to retry the iOS permission sheet. The sheet appears only once per installation. After that, open Settings → Privacy &amp; Security → Health.</p></div>
+<div class="option"><strong>Health badge</strong><p>Green shows the app's Connected setup state, not confirmed read access to every category. HealthKit does not reveal denied read permissions. Tap the badge to request access. iOS may show a sheet for types needing a decision; for choices already recorded, Health.md shows permission guidance. Review categories in Apple Health. Empty results can mean withheld access or no matching data. <a href="/docs/troubleshooting/">Troubleshoot missing data</a>.</p></div>
 <div class="option"><strong>Vault badge</strong><p>Green dot = a vault folder is selected. Tap to re-pick or change the vault. The label shows the folder name.</p></div>
 </div>
 <p>The <em>Export</em> action stays disabled until HealthKit, output format, and the selected destination are ready. This prevents the most common failure mode: trying to export with no destination.</p>

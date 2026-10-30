@@ -7,7 +7,7 @@ description: "Use a guia Exportar para verificar HealthKit e conexões do vault.
 
 ## Leia os crachás de status
  <div class="options">
- <div class="option"> <strong> Crachá de saúde </strong> <p> Um ponto verde significa que HealthKit está autorizado. Um ponto vermelho significa que o acesso não foi concedido. Toque para tentar novamente a folha de permissão do iOS. A planilha aparece apenas uma vez por instalação. Depois disso, abra Configurações → Privacidade e Privacidade. Segurança → Saúde. </p> </div>
+ <div class="option"> <strong> Crachá de saúde </strong> <p>Verde indica o estado de configuração Conectado do app, não confirma acesso de leitura a todas as categorias. O HealthKit não revela permissões de leitura negadas. Toque no indicador para solicitar acesso. O iOS pode mostrar um diálogo para tipos que precisam de uma decisão; se as escolhas já estiverem registradas, o Health.md mostra as orientações de permissão. Confira as categorias no Apple Health. Um resultado vazio pode significar acesso negado ou ausência de dados correspondentes. <a href="/pt-br/docs/troubleshooting/">Resolver dados ausentes</a>.</p> </div>
  <div class="option"> <strong> Crachá do Vault </strong> <p> Ponto verde = uma pasta do Vault está selecionada. Toque para selecionar novamente ou alterar o cofre. O rótulo mostra o nome da pasta. </p> </div>
  </div>
  <p> A ação <em> Exportar </em> permanece desativada até que HealthKit , o formato de saída e o destino selecionado estejam prontos. Isso evita o modo de falha mais comum: tentar exportar sem destino. </p>
