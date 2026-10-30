@@ -11,7 +11,7 @@ platform: both
 category: "Workflow guide"
 related:
   - export-apple-health-workouts
-  - export-garmin-connect-data
+  - export-zepp-amazfit-data
   - export-health-data-without-the-cloud
 draft: false
 tags:
