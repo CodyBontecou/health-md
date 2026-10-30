@@ -335,6 +335,25 @@ class APIEndpointExportEngineIntegrationTest {
     }
 
     @Test
+    fun requiredPreparedOperationNeverRecapturesWhenJournalIsMissing() = runTest {
+        for (store in listOf(null, MemoryAPIExportOperationStore())) {
+            val capture = RecordingCapture(mapOf(first to HealthData(first)))
+            val uploader = RecordingUploader()
+            val runner = runner(mode = ExportEngineMode.rust, capture = capture,
+                native = APIExportNativePlanBuilder { error("must not plan") },
+                rust = APIExportRustPlanner { error("must not plan") }, uploader = uploader, operationStore = store)
+            for (id in listOf(null, "missing-prepared-operation")) {
+                val result = runner.exportDates(listOf(first), settings(), durableOperationId = id,
+                    durableSettingsSnapshotJson = "snapshot-v1", requireExistingDurableOperation = true)
+                assertThat(result.successCount).isEqualTo(0)
+                assertThat(result.failedDateDetails.map { it.date }).containsExactly(first)
+                assertThat(capture.calls).isEmpty()
+                assertThat(uploader.payloads).isEmpty()
+            }
+        }
+    }
+
+    @Test
     fun durableStoreMustCommitBeforeFirstPost() = runTest {
         val uploader = RecordingUploader()
         val store = object : APIExportOperationStore {
@@ -458,6 +477,7 @@ class APIEndpointExportEngineIntegrationTest {
             settings = acceptedSettings,
             durableOperationId = operationId,
             durableSettingsSnapshotJson = "snapshot-v1",
+            requireExistingDurableOperation = true,
         )
 
         assertThat(resumedCapture.calls).isEmpty()

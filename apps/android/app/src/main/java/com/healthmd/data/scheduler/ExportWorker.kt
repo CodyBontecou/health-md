@@ -532,6 +532,7 @@ class ExportWorker @AssistedInject constructor(
                             expectedDestinationFingerprint = destinationFingerprint,
                             durableOperationId = durableApiOperationId,
                             durableSettingsSnapshotJson = capturedSnapshotJson,
+                            requireExistingDurableOperation = pendingApiOperationId != null,
                         )
                         ExportTarget.AGENT_DATA_GATEWAY -> agentDataGatewayExportRunner.exportDates(
                             dates = dates,

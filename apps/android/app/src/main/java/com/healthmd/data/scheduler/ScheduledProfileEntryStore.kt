@@ -178,6 +178,26 @@ class ScheduledProfileEntryStore @Inject constructor(
         }
     }
 
+    /** Publishes one immutable capture acceptance before source checks can suspend or read health. */
+    suspend fun admitOccurrence(expected: ScheduledProfileEntry, pending: ScheduledProfilePendingExport): Boolean {
+        var accepted = false
+        dataStore.edit { prefs ->
+            val entries = decode(prefs[Keys.ENTRIES], prefs[Keys.MINUTE_INTENT]) ?: return@edit
+            val index = entries.indexOfFirst { it.profileId == expected.profileId }
+            if (index < 0 || entries[index] != expected || !expected.isEnabled || expected.pendingExports.isNotEmpty() ||
+                expected.profileId in prefs[SharedSetupV2ProfilePersistence.blockedProfileIdsKey].orEmpty()) return@edit
+            require(pending.ownerEpochDays.size in 1..31 && pending.ownerEpochDays == pending.ownerEpochDays.distinct().sorted())
+            val snapshot = com.healthmd.domain.exportengine.AndroidExportSettingsSnapshotCodec.decode(pending.settingsSnapshotJson)
+            require(snapshot.version == com.healthmd.domain.exportengine.AndroidExportSettingsSnapshot.PROVIDER_AUTHORITY_VERSION &&
+                snapshot.scheduledExportTarget == pending.target && snapshot.ianaTimeZone == expected.zoneId)
+            val updated = entries.toMutableList()
+            updated[index] = expected.copy(pendingExports = listOf(pending))
+            persist(prefs, updated.sortedBy { it.profileId })
+            accepted = true
+        }
+        return accepted
+    }
+
     /**
      * Records a successful same-day refresh slot so its occurrence is not re-run. Refresh
      * success is independent of the completed-day frontier: a merged run may satisfy its slot
@@ -317,8 +337,9 @@ class ScheduledProfileEntryStore @Inject constructor(
                     !entry.todayRefreshEnabled && minutes in listOf(30, 60)
                 ) entry.copy(todayRefreshIntervalMinutes = minutes) else entry
             }
-        }.getOrElse { error ->
-            Timber.e(error, "Scheduled profile entries failed to decode; blocking entry writes")
+        }.getOrElse {
+            // Parser exceptions can embed the private queued snapshot. Never log their payload.
+            Timber.e("Scheduled profile entries failed to decode; blocking entry writes")
             null
         }
     }

@@ -258,11 +258,13 @@ class APIEndpointExportRunner private constructor(
         expectedDestinationFingerprint: String? = null,
         durableOperationId: String? = null,
         durableSettingsSnapshotJson: String? = null,
+        requireExistingDurableOperation: Boolean = false,
     ): ExportResult {
         val normalizedDates = dates.distinct().sorted()
         if (normalizedDates.isEmpty()) {
             return ExportResult(0, 0, target = com.healthmd.domain.model.ExportTarget.API_ENDPOINT)
         }
+        if (requireExistingDurableOperation && durableOperationId == null) return preparationFailure(normalizedDates)
         val frozenSettings = settings.frozenForAPIAction()
         if (frozenSettings.selectedExportFormats.isEmpty()) {
             return configurationFailure(normalizedDates, ExportFailureReason.UNKNOWN)
@@ -306,6 +308,8 @@ class APIEndpointExportRunner private constructor(
                     invocationDates = normalizedDates,
                 )
             }
+            // Prepared-work retries never turn missing spool state into a new health capture.
+            if (requireExistingDurableOperation) return preparationFailure(normalizedDates)
         }
 
         val snapshot = try {

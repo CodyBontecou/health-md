@@ -1642,6 +1642,14 @@
     },
     {
       "source_type": "ScheduledProfilePendingExport",
+      "serialized_field": "refreshSlotMillis",
+      "coverage_kind": "descriptor",
+      "disposition": "prohibited",
+      "contract_path": null,
+      "evidence": "The immutable accepted Today Refresh slot is local pending-operation recovery authority and must not enter portable schedule intent."
+    },
+    {
+      "source_type": "ScheduledProfilePendingExport",
       "serialized_field": "settingsSnapshotJson",
       "coverage_kind": "descriptor",
       "disposition": "prohibited",

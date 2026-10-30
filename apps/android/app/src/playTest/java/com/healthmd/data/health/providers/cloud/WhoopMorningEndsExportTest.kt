@@ -164,7 +164,12 @@ class WhoopMorningEndsExportTest {
     }
 
     @Test
-    fun savedMorningSnapshotRestoresAcceptedAccountThroughActualApiProducer() = runTest {
+    fun savedMorningSnapshotRestoresAcceptedAccountThroughActualApiProducer() = runTest { exerciseSavedAuthority(false) }
+
+    @Test
+    fun freshProfileMorningSnapshotRestoresAcceptedAccountThroughActualProducers() = runTest { exerciseSavedAuthority(true) }
+
+    private suspend fun exerciseSavedAuthority(profileOccurrence: Boolean) {
         for (mode in listOf("unchanged", "rotation", "replacement", "unavailable", "legacy")) {
             val case = Case("saved", "Asia/Kathmandu", "2026-07-02", "2026-07-01T16:15:00Z", "2026-07-02T00:15:00Z", 28_800_000)
             val requests = mutableListOf<CloudHttpRequest>()
@@ -177,7 +182,25 @@ class WhoopMorningEndsExportTest {
                 apiEndpointUrl = "https://api.example.invalid/healthmd", executionSleepCaptureContext = context,
                 executionProviderCaptureAuthority = authority, executionProviderCaptureAuthorityIsFrozen = true)
             val pin = com.healthmd.domain.exportengine.ExportEnginePinPlanner().forScheduledExport(settings, ExportTarget.API_ENDPOINT, context.zoneId)
-            val snapshot = com.healthmd.domain.exportengine.AndroidExportSettingsSnapshot.capture(
+            val snapshot = if (profileOccurrence) {
+                val definitionSettings = settings.copy(executionSleepCaptureContext = null,
+                    executionProviderCaptureAuthority = null, executionProviderCaptureAuthorityIsFrozen = false)
+                val definitionJson = com.healthmd.domain.exportengine.AndroidExportSettingsSnapshotCodec.encodeCanonical(
+                    com.healthmd.domain.exportengine.AndroidExportSettingsSnapshot.capture(definitionSettings, null, context.zoneId))
+                val profile = ExportProfile(id = "whoop-profile", name = "Frozen JSON", settingsSnapshotJson = definitionJson,
+                    target = ExportTarget.API_ENDPOINT, apiEndpointUrl = settings.apiEndpointUrl,
+                    createdAtEpochMillis = 1L, updatedAtEpochMillis = 1L)
+                val preferences = mockk<SettingsRepository>()
+                coEvery { preferences.getSleepDayAttribution() } returns SleepDayAttribution.MORNING_ENDS
+                val factory = com.healthmd.data.scheduler.ScheduledProfileSnapshotFactory(
+                    com.healthmd.domain.exportengine.ExportEnginePinPlanner(), preferences)
+                val accepted = requireNotNull(factory.captureForNewOccurrence(profile,
+                    settings.copy(exportFormat = ExportFormat.CSV, exportFormats = setOf(ExportFormat.CSV)), context.zoneId, original))
+                assertThat(profile.settingsSnapshotJson).isEqualTo(definitionJson)
+                com.healthmd.domain.exportengine.AndroidExportSettingsSnapshotCodec.decode(accepted.settingsSnapshotJson).let {
+                    if (mode == "legacy") it.copy(version = 2, providerCaptureAuthority = null) else it
+                }
+            } else com.healthmd.domain.exportengine.AndroidExportSettingsSnapshot.capture(
                 if (mode == "legacy") settings.copy(executionProviderCaptureAuthority = null) else settings, pin, context.zoneId)
             val bytes = com.healthmd.domain.exportengine.AndroidExportSettingsSnapshotCodec.encodeCanonical(snapshot)
             val file = java.nio.file.Files.createTempFile("healthmd-private-snapshot-", ".json")

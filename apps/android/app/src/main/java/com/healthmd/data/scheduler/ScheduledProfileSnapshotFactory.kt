@@ -52,6 +52,8 @@ class ScheduledProfileSnapshotFactory @Inject constructor(
         val scoped = current.copy(
             executionSleepCaptureContext = context,
             executionSleepCaptureAuthorityIsFrozen = true,
+            executionProviderCaptureAuthority = null,
+            executionProviderCaptureAuthorityIsFrozen = false,
             exportTarget = target,
             scheduledExportTarget = target,
             apiEndpointUrl = apiEndpointUrl ?: current.apiEndpointUrl,
@@ -61,6 +63,31 @@ class ScheduledProfileSnapshotFactory @Inject constructor(
         return AndroidExportSettingsSnapshotCodec.encodeCanonical(
             AndroidExportSettingsSnapshot.capture(scoped, pin, zone, context),
         )
+    }
+
+    /** New occurrence only. Pending work must restore its saved profile without calling this. */
+    suspend fun captureForNewOccurrence(
+        profile: ExportProfile,
+        current: ExportSettings,
+        zone: ZoneId,
+        source: com.healthmd.domain.repository.HealthRepository,
+    ): ExportProfile? {
+        val original = AndroidExportSettingsSnapshotCodec.decodeOrNull(profile.settingsSnapshotJson) ?: return null
+        val attribution = settingsRepository.getSleepDayAttribution()
+        // Preserve historical Night profile pins and canonical bytes when no transition is needed.
+        if (attribution == com.healthmd.domain.model.SleepDayAttribution.NIGHT_BEGINS &&
+            original.sleepCaptureContext?.sleepDayAttribution != com.healthmd.domain.model.SleepDayAttribution.MORNING_ENDS) return profile
+        val frozen = restoreFrozenSnapshot(profile, current) ?: return null
+        val context = AndroidCaptureContext(zone, attribution).also { it.requireShippedProfile() }
+        val authority = if (attribution == com.healthmd.domain.model.SleepDayAttribution.MORNING_ENDS)
+            (source as? com.healthmd.domain.repository.RestorableHealthRepository
+                ?: error("Provider capture authority is unavailable")).captureProviderAuthority() else null
+        val settings = frozen.copy(executionSleepCaptureContext = context, executionSleepCaptureAuthorityIsFrozen = true,
+            executionProviderCaptureAuthority = authority, executionProviderCaptureAuthorityIsFrozen = authority != null,
+            executionEnginePin = null, executionEngineAuthorityIsFrozen = false)
+        val pin = enginePinPlanner.forScheduledExport(settings, profile.target, zone)
+        return profile.copy(settingsSnapshotJson = AndroidExportSettingsSnapshotCodec.encodeCanonical(
+            AndroidExportSettingsSnapshot.capture(settings, pin, zone, context)))
     }
 
     /**
