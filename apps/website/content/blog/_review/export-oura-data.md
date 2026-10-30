@@ -13,3 +13,4 @@ Verified 2026-10-30 by Codex (agent), method: traced. No Oura account, device, p
 - [x] Both phone downloads are offered without changing single-platform guides. Three related guides and incoming Fitbit recommendation use the existing graph; Fitbit body unchanged. No price or quota claim.
 
 - [x] Discovery-only related recommendation now links WHOOP; Oura article body unchanged. Fitbit retains incoming discovery from other guides.
+- [x] Oct30 discovery follow-up adds Clue to related recommendations; Android Obsidian and WHOOP remain, and Oura article body is unchanged. Apple Obsidian retains other incoming recommendations.

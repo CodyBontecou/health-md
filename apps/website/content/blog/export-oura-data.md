@@ -10,7 +10,7 @@ verified_method: traced
 platform: both
 category: "Workflow guide"
 related:
-  - export-apple-health-data-to-obsidian
+  - export-clue-data
   - export-health-connect-to-obsidian
   - export-whoop-data
 draft: false
