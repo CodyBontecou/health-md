@@ -268,7 +268,7 @@ final class AgentBridgeNativePlanningSession {
     /// Recover the Execute exclusively from signed native storage on a new owner. Resume
     /// contributes comparison values only; it cannot supply a plan, acceptance or frontier.
     func withResumedCaptureContext<T>(_ resume: AgentBridgeResume,
-        operation: (AgentBridgeExecute, AgentBridgeNativeCaptureContext) async throws -> T) async throws -> T {
+        acknowledging acknowledgement: DirectTransferPartitionAcknowledgement? = nil, operation: (AgentBridgeExecute, AgentBridgeNativeCaptureContext) async throws -> T) async throws -> T {
         try Task.checkCancellation(); _ = try requireCurrent()
         guard resume.peer == peer.peer else { throw AgentBridgeValidationError.bindingChanged }
         let request = try store.inspectCurrent { state in
@@ -280,7 +280,7 @@ final class AgentBridgeNativePlanningSession {
         }
         _ = try requireCurrent(); try Task.checkCancellation()
         return try await withRetainedCaptureContext(request) { context in
-            try context.requireResumeBeforeBegin(resume)
+            try context.requireResumeBeforeBegin(resume, acknowledging: acknowledgement)
             try Task.checkCancellation()
             return try await operation(request, context)
         }
@@ -529,10 +529,10 @@ final class AgentBridgeNativeCaptureContext {
     private let transferNegotiation: DirectTransferNegotiation?
     private let peerTransferCapabilities: DirectTransferCapabilities?
     fileprivate init(spool: AgentBridgeNativeCaptureSpool, transferNegotiation: DirectTransferNegotiation?, peerTransferCapabilities: DirectTransferCapabilities?, read: @escaping () throws -> AgentBridgeRequestSettingsResolution) { self.spool = spool; self.transferNegotiation = transferNegotiation; self.peerTransferCapabilities = peerTransferCapabilities; self.read = read }
-    fileprivate func requireResumeBeforeBegin(_ resume: AgentBridgeResume) throws {
+    fileprivate func requireResumeBeforeBegin(_ resume: AgentBridgeResume, acknowledging acknowledgement: DirectTransferPartitionAcknowledgement?) throws {
         do {
             guard !started, !closed, let read else { throw AgentBridgeValidationError.permissionRequired }
-            _ = try read(); try spool.requireResume(resume); _ = try read()
+            _ = try read(); try spool.requireResume(resume, acknowledging: acknowledgement); _ = try read()
             try spool.requirePreservedResume(resume)
             guard !closed else { throw AgentBridgeValidationError.permissionRequired }
         } catch { invalidate(); throw error }

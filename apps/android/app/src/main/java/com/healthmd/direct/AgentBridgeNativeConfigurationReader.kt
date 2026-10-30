@@ -302,7 +302,7 @@ internal class AgentBridgeNativePlanningSession(
     /** Select the original Execute only from protected native storage. Resume supplies no new
      * plan, acceptance or authority; all fields must match the existing signed job and frontier. */
     suspend fun <T> withResumedCaptureContext(resume: AgentBridgeResumeRequest,
-        operation: suspend (AgentBridgeExecuteRequest, AgentBridgeNativeCaptureContext) -> T): T {
+        acknowledgement: TransferPartitionAcknowledgement? = null, operation: suspend (AgentBridgeExecuteRequest, AgentBridgeNativeCaptureContext) -> T): T {
         currentCoroutineContext().ensureActive(); requireCurrent()
         val authenticated = peer.requireCurrent()
         if (resume.peer != authenticated) throw AgentBridgeException(AgentBridgeErrorCode.BINDING_CHANGED)
@@ -315,7 +315,7 @@ internal class AgentBridgeNativePlanningSession(
         }
         requireCurrent(); currentCoroutineContext().ensureActive()
         return withRetainedCaptureContext(request) { context ->
-            context.requireResumeBeforeBegin(resume)
+            context.requireResumeBeforeBegin(resume, acknowledgement)
             currentCoroutineContext().ensureActive()
             operation(request, context)
         }
@@ -556,13 +556,13 @@ internal class AgentBridgeNativeCaptureContext internal constructor(private val 
     private var closed = false
     private val claimedDays = mutableSetOf<String>()
     private var read: (() -> AgentBridgeRequestSettingsResolution)? = read
-    fun requireResumeBeforeBegin(resume: AgentBridgeResumeRequest) {
+    fun requireResumeBeforeBegin(resume: AgentBridgeResumeRequest, acknowledgement: TransferPartitionAcknowledgement? = null) {
         try {
             val callback = synchronized(lock) {
                 if (started || closed) throw AgentBridgeException(AgentBridgeErrorCode.PERMISSION_REQUIRED)
                 read ?: throw AgentBridgeException(AgentBridgeErrorCode.PERMISSION_REQUIRED)
             }
-            callback(); spool.requireResume(resume); callback()
+            callback(); spool.requireResume(resume, acknowledgement); callback()
             spool.requirePreservedResume(resume)
             synchronized(lock) { if (closed) throw AgentBridgeException(AgentBridgeErrorCode.PERMISSION_REQUIRED) }
         } catch (failure: Throwable) { invalidate(); throw failure }

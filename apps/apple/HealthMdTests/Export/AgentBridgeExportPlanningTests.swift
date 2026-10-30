@@ -802,6 +802,95 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
         }
     }
 
+    func testNativeResumeAcknowledgementAdvancesOnlyExactPendingPrefixAndReplaysWithoutRewrite() async throws { try await checkNativeResumeAcknowledgement("valid") }
+    func testNativeResumeAcknowledgementRejectsChangedManifestWithoutAdvancing() async throws { try await checkNativeResumeAcknowledgement("manifest") }
+    func testNativeResumeAcknowledgementRejectsChangedFrontierWithoutAdvancing() async throws { try await checkNativeResumeAcknowledgement("frontier") }
+    func testNativeResumeAcknowledgementRejectsChangedCountWithoutAdvancing() async throws { try await checkNativeResumeAcknowledgement("count") }
+    func testNativeResumeAcknowledgementRejectsChangedSessionWithoutAdvancing() async throws { try await checkNativeResumeAcknowledgement("session") }
+    func testNativeResumeAcknowledgementRejectsUnpreparedWithoutAdvancing() async throws { try await checkNativeResumeAcknowledgement("unprepared") }
+    func testNativeResumeAcknowledgementRejectsCorruptPendingWithoutAdvancing() async throws { try await checkNativeResumeAcknowledgement("corrupt") }
+    func testNativeResumeAcknowledgementRejectsUninitializedWithoutAdvancing() async throws { try await checkNativeResumeAcknowledgement("uninitialized") }
+    func testNativeResumeAcknowledgementRejectsDeniedAckWithoutAdvancing() async throws { try await checkNativeResumeAcknowledgement("rejected") }
+    func testNativeResumeAcknowledgementRejectsManifestDeletionBeforePublicationWithoutAdvancing() async throws { try await checkNativeResumeAcknowledgement("publication") }
+
+    private func checkNativeResumeAcknowledgement(_ mode: String) async throws {
+        try await withNativeExportPreparation { rig, planner, request, store, manager in
+            store.statisticsSums[HKQuantityTypeIdentifier.stepCount.rawValue] = 123
+            let transfer = try await planner.prepareTransferExport(request, manager: manager)
+            let partition = transfer.partitions[0]
+            let seed = try AgentBridgeTransferFrontier(jobID: request.jobId, requestSHA256: AgentBridgeDigest(transfer.export.requestSHA256),
+                manifestSHA256: AgentBridgeDigest(AgentBridgeV4Codec.sha256(transfer.export.manifestCanonical)),
+                sessionID: AgentBridgeUUID(transfer.session.sessionID.uuidString.lowercased()))
+            let expected = try seed.appending(.init(partitionIndex: 0, transferID: AgentBridgeUUID(partition.transferID.uuidString.lowercased()),
+                artifactID: AgentBridgeUUID(transfer.export.baseFiles[0].manifest.fileID.uuidString.lowercased()), artifactOffset: 0,
+                byteCount: partition.byteCount, chunkCount: Int64(partition.chunkCount), sha256: AgentBridgeDigest(partition.sha256)))
+            try await planner.withRetainedCaptureContext(request) { context in
+                _ = try context.begin()
+                if mode != "uninitialized" { _ = try context.preserveTransferFrontier() }
+                if !["unprepared", "uninitialized"].contains(mode) { try context.preserveAwaitingPartitionAcknowledgement(0) }
+            }
+            var object = try XCTUnwrap(JSONSerialization.jsonObject(with: AgentBridgeV4Codec.encode(resumeRequest(request, transfer: transfer, frontier: expected))) as? [String: Any])
+            if mode == "manifest" { object["manifest_sha256"] = String(repeating: "0", count: 64) }
+            if mode == "frontier" { object["frontier_sha256"] = seed.sha256.rawValue }
+            if mode == "count" { object["committed_partition_count"] = 0 }
+            let resume = try AgentBridgeV4Codec.decode(AgentBridgeResume.self, from: JSONSerialization.data(withJSONObject: object))
+            let ack = try DirectTransferPartitionAcknowledgement(sessionID: mode == "session" ? UUID() : transfer.session.sessionID,
+                jobID: transfer.session.jobID, partitionIndex: partition.index, transferID: partition.transferID,
+                partitionSHA256: partition.sha256, accepted: mode != "rejected")
+            let directory = rig.directory.appendingPathComponent("captures/" + transfer.export.requestSHA256)
+            let pendingURL = directory.appendingPathComponent("partition-awaiting-ack.json")
+            if mode == "corrupt" { try Data("corrupt".utf8).write(to: pendingURL) }
+            let pending = try? Data(contentsOf: pendingURL)
+            let before = try Data(contentsOf: directory.appendingPathComponent("progress.json"))
+            let accepted = try rig.store.snapshot().acceptedJobs
+            let reconnect = try transferReconnect(rig, capabilities: .current)
+            let issuer = try Data(contentsOf: rig.directory.appendingPathComponent("state.json"))
+            var damaged = false
+            if mode == "publication" {
+                rig.captureProtection.onRequire = { _ in
+                    guard !damaged else { return }
+                    for name in try FileManager.default.contentsOfDirectory(atPath: directory.path) where name.hasPrefix("pending-") {
+                        guard let bytes = try? Data(contentsOf: directory.appendingPathComponent(name)),
+                              let signed = try? JSONSerialization.jsonObject(with: bytes) as? [String: Any],
+                              let record = signed["record"] as? [String: Any], let encoded = record["payload"] as? String,
+                              let payload = Data(base64Encoded: encoded), let progress = try? JSONSerialization.jsonObject(with: payload) as? [String: Any],
+                              progress["committedPartitionCount"] as? Int == 1 else { continue }
+                        damaged = true; try FileManager.default.removeItem(at: directory.appendingPathComponent("manifest.json")); break
+                    }
+                }
+            }
+            defer { rig.captureProtection.onRequire = nil }
+            store.querySumResult = { _, _ in XCTFail("ACK Resume must not query SDK"); return nil }
+            var admitted = false
+            do {
+                try await reconnect.withResumedCaptureContext(resume, acknowledging: ack) { recovered, context in
+                    admitted = true
+                    XCTAssertEqual(try AgentBridgeV4Codec.encode(recovered), try AgentBridgeV4Codec.encode(request))
+                    _ = try context.begin(); XCTAssertEqual(try context.preserveTransferFrontier(), expected)
+                }
+                if mode != "valid" { XCTFail("Invalid ACK/Resume admitted: " + mode) }
+            } catch { if mode == "valid" { throw error }; XCTAssertNotNil(error as? AgentBridgeValidationError) }
+            if mode == "valid" {
+                XCTAssertTrue(admitted)
+                let committed = try Data(contentsOf: directory.appendingPathComponent("progress.json"))
+                XCTAssertNotEqual(committed, before)
+                try await reconnect.withResumedCaptureContext(resume, acknowledging: ack) { _, context in
+                    _ = try context.begin(); XCTAssertEqual(try context.preserveTransferFrontier(), expected)
+                }
+                XCTAssertEqual(try Data(contentsOf: directory.appendingPathComponent("progress.json")), committed)
+            } else {
+                XCTAssertFalse(admitted)
+                XCTAssertEqual(try Data(contentsOf: directory.appendingPathComponent("progress.json")), before)
+            }
+            if mode == "publication" { XCTAssertTrue(damaged); XCTAssertFalse(FileManager.default.fileExists(atPath: directory.appendingPathComponent("manifest.json").path)) }
+            XCTAssertEqual(try? Data(contentsOf: pendingURL), pending)
+            XCTAssertEqual(try Data(contentsOf: directory.appendingPathComponent("transfer.json")), transfer.checkpointCanonical)
+            XCTAssertEqual(try rig.store.snapshot().acceptedJobs, accepted)
+            XCTAssertEqual(try Data(contentsOf: rig.directory.appendingPathComponent("state.json")), issuer)
+            XCTAssertEqual(store.queriedSumIdentifiers.count, 2)
+        }
+    }
+
     func testNativePendingAcknowledgementReconcilesExactLostAckWithoutSDK() async throws {
         try await withNativeExportPreparation { rig, planner, request, store, manager in
             store.statisticsSums[HKQuantityTypeIdentifier.stepCount.rawValue] = 123

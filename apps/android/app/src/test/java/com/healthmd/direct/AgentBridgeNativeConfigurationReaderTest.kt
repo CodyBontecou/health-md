@@ -544,6 +544,86 @@ class AgentBridgeNativeConfigurationReaderTest {
         }
     }
 
+    @Test fun `native Resume ACK advances exact pending prefix and replays without rewrite`() = runBlocking { checkNativeResumeAcknowledgement("valid") }
+    @Test fun `native Resume ACK rejects mismatch and missing evidence without advancement`() = runBlocking {
+        for (mode in listOf("manifest", "frontier", "count", "session", "unprepared", "corrupt", "uninitialized", "rejected")) checkNativeResumeAcknowledgement(mode)
+    }
+    @Test fun `native Resume ACK rejects manifest deletion before publication without advancement`() = runBlocking { checkNativeResumeAcknowledgement("publication") }
+
+    private suspend fun checkNativeResumeAcknowledgement(mode: String) {
+        withNativeExportPreparation { f, planner, request, client, manager ->
+            val values = mockk<AggregationResult>(); every { values[StepsRecord.COUNT_TOTAL] } returns 123L
+            coEvery { client.aggregate(any()) } returns values
+            val resolution = Json.decodeFromString<AgentBridgeRequestSettingsResolution>(f.store.access { it!!.state.plans.single().resolutionCanonical })
+            val transfer = planner.prepareTransferExport(request, manager, journalRenderer(resolution))
+            val partition = transfer.partitions.first()
+            val seed = AgentBridgeTransferFrontier.start(request.jobId, transfer.export.requestSha256,
+                AgentBridgeCodec.sha256(transfer.export.manifestCanonical), transfer.session.sessionId)
+            val expected = seed.appending(AgentBridgeTransferFrontierPartition(0, partition.transferId,
+                transfer.export.baseFiles.first().manifest.artifactId, 0, partition.byteCount, partition.chunkCount.toLong(), partition.sha256))
+            planner.withRetainedCaptureContext(request) { context ->
+                context.begin()
+                if (mode != "uninitialized") context.preserveTransferFrontier()
+                if (mode !in listOf("unprepared", "uninitialized")) context.preserveAwaitingPartitionAcknowledgement(0)
+            }
+            val original = resumeRequest(request, transfer, expected)
+            val resume = when(mode) {
+                "manifest" -> original.copy(manifestSha256 = "0".repeat(64))
+                "frontier" -> original.copy(frontierSha256 = seed.sha256)
+                "count" -> original.copy(committedPartitionCount = 0)
+                else -> original
+            }
+            val ack = TransferPartitionAcknowledgement(if(mode == "session") java.util.UUID.randomUUID().toString() else transfer.session.sessionId,
+                transfer.session.jobId, partition.index, partition.transferId, partition.sha256, mode != "rejected")
+            val issuer = f.parent.resolve(AgentBridgeExportAuthorityStore.DIRECTORY_NAME)
+            val directory = issuer.resolve("captures").resolve(transfer.export.requestSha256)
+            val pendingPath = directory.resolve("partition-awaiting-ack.json")
+            if (mode == "corrupt") Files.write(pendingPath, "corrupt".toByteArray())
+            val pending = if (Files.exists(pendingPath)) Files.readAllBytes(pendingPath) else null
+            val before = Files.readAllBytes(directory.resolve("progress.json"))
+            val accepted = f.store.access { it!!.state.acceptedJobs }
+            var damaged = false
+            val lifecycle = AgentBridgeNativeCatalogLifecycle(); lifecycle.observe(state); lifecycle.publish(f.store, f.peer.sourceInstallationId)
+            val reconnect = ownedPlanner(f, lifecycle, mockk<DirectSecureChannel>(relaxed = true), beforeNativeRead = {
+                if (mode == "publication" && !damaged) {
+                    val staged = Files.newDirectoryStream(directory).use { stream -> stream.filter { it.fileName.toString().startsWith("pending-") }.toList() }
+                    for (path in staged) {
+                        val count = runCatching {
+                            val signed = Json.parseToJsonElement(Files.readString(path)).jsonObject
+                            val bytes = java.util.Base64.getDecoder().decode(signed.getValue("record").jsonObject.getValue("payload").jsonPrimitive.content)
+                            Json.parseToJsonElement(bytes.decodeToString()).jsonObject["committedPartitionCount"]?.jsonPrimitive?.long
+                        }.getOrNull()
+                        if (count == 1L) { damaged = true; Files.delete(directory.resolve("manifest.json")); break }
+                    }
+                }
+            })
+            val issuerBytes = Files.readAllBytes(issuer.resolve(AgentBridgeExportAuthorityStore.LEDGER_NAME))
+            coEvery { client.aggregate(any()) } throws IllegalStateException("ACK Resume must not query SDK")
+            var admitted = false
+            try {
+                reconnect.withResumedCaptureContext(resume, ack) { recovered, context ->
+                    admitted = true; assertThat(AgentBridgeCodec.encode(recovered)).isEqualTo(AgentBridgeCodec.encode(request))
+                    context.begin(); assertThat(context.preserveTransferFrontier().sha256).isEqualTo(expected.sha256)
+                }
+                if (mode != "valid") throw AssertionError("Invalid ACK/Resume admitted: $mode")
+            } catch (error: AgentBridgeException) { if (mode == "valid") throw error }
+            if (mode == "valid") {
+                assertThat(admitted).isTrue()
+                val committed = Files.readAllBytes(directory.resolve("progress.json")); assertThat(committed).isNotEqualTo(before)
+                reconnect.withResumedCaptureContext(resume, ack) { _, context -> context.begin(); assertThat(context.preserveTransferFrontier().sha256).isEqualTo(expected.sha256) }
+                assertThat(Files.readAllBytes(directory.resolve("progress.json"))).isEqualTo(committed)
+            } else {
+                assertThat(admitted).isFalse(); assertThat(Files.readAllBytes(directory.resolve("progress.json"))).isEqualTo(before)
+            }
+            if (mode == "publication") { assertThat(damaged).isTrue(); assertThat(Files.exists(directory.resolve("manifest.json"))).isFalse() }
+            assertThat(if (Files.exists(pendingPath)) Files.readAllBytes(pendingPath) else null).isEqualTo(pending)
+            assertThat(Files.readAllBytes(directory.resolve("transfer.json"))).isEqualTo(transfer.checkpointCanonical)
+            assertThat(f.store.access { it!!.state.acceptedJobs }).isEqualTo(accepted)
+            assertThat(Files.readAllBytes(issuer.resolve(AgentBridgeExportAuthorityStore.LEDGER_NAME))).isEqualTo(issuerBytes)
+            coVerify(exactly = 2) { client.aggregate(any()) }
+        }
+    }
+
     @Test fun `native pending ACK reopens exact lost acknowledgement without SDK or duplicate publication`() = runBlocking {
         withNativeExportPreparation { f, planner, request, client, manager ->
             val values = mockk<AggregationResult>(); every { values[StepsRecord.COUNT_TOTAL] } returns 123L

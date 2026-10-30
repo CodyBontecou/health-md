@@ -316,22 +316,31 @@ internal class AgentBridgeNativeCaptureSpool(
         } catch (_: Exception) { fail() }
         guard(); return bytes
     }
-    /** Existing-only Resume admission. No migration, metadata repair or incoming prefix installation. */
-    @Synchronized fun requireResume(resume: AgentBridgeResumeRequest) = safeCall {
+    /** Existing-job Resume admission. An optional original ACK may advance only its proven
+     * pending prefix; no migration, metadata repair or incoming prefix installation. */
+    @Synchronized fun requireResume(resume: AgentBridgeResumeRequest, acknowledgement: com.healthmd.direct.protocol.TransferPartitionAcknowledgement? = null) = safeCall {
         guard()
         collectingFileEvidence = linkedMapOf()
         try {
             if (read("header.json") != record("job", null)) fail()
             validateStoredProgress()
-            val state = progress().second
+            val (previous, state) = progress()
             val request = reservation.job.request()
             val plan = request.plan as? AgentBridgeGeneratedPlan ?: fail(AgentBridgeErrorCode.BINDING_CHANGED)
             val manifest = readManifest(state)
-            val frontier = checkedTransferFrontier(state)
+            val current = checkedTransferFrontier(state)
+            val frontier = acknowledgement?.let { acknowledgementFrontier(it, state) } ?: current
             if (resume.jobId != request.jobId || resume.peer != plan.intent.peer || resume.destination != plan.intent.destination ||
                 resume.binding != AgentBridgeValidation.bindingFor(request.plan) || resume.requestSha256 != reservation.job.requestSha256 ||
                 resume.manifestSha256 != AgentBridgeCodec.sha256(manifest) || resume.committedPartitionCount.toLong() != frontier.committedPartitionCount ||
                 resume.frontierSha256 != frontier.sha256) fail(AgentBridgeErrorCode.BINDING_CHANGED)
+            if (frontier.committedPartitionCount != current.committedPartitionCount) {
+                val evidence = collectingFileEvidence!!.toMap()
+                publishAcknowledgedFrontier(frontier, previous, state, evidence)
+                validateStoredProgress()
+                val preserved = checkedTransferFrontier(progress().second)
+                if (preserved.committedPartitionCount != frontier.committedPartitionCount || preserved.sha256 != frontier.sha256) fail(AgentBridgeErrorCode.BINDING_CHANGED)
+            }
             resumeEvidence = collectingFileEvidence!!.toMap()
             admittedResume = resume
             guard(); requirePreservedResume(resume)
@@ -372,7 +381,12 @@ internal class AgentBridgeNativeCaptureSpool(
     /** Exact original pending ACK, or exact last committed ACK only. No incoming frontier installation. */
     @Synchronized fun reconcilePartitionAcknowledgement(ack: com.healthmd.direct.protocol.TransferPartitionAcknowledgement): AgentBridgeTransferFrontier = safeCall {
         guard(); validateStoredProgress()
-        val state = progress().second
+        val (previous, state) = progress()
+        val frontier = acknowledgementFrontier(ack, state)
+        if (frontier.committedPartitionCount == state.committedPartitionCount) { guard(); frontier }
+        else publishAcknowledgedFrontier(frontier, previous, state)
+    }
+    private fun acknowledgementFrontier(ack: com.healthmd.direct.protocol.TransferPartitionAcknowledgement, state: Progress): AgentBridgeTransferFrontier {
         val frontier = checkedTransferFrontier(state)
         val bytes = readManifest(state)
         val manifest = AgentBridgeCodec.decode(bytes) as? AgentBridgeArtifactManifest ?: fail()
@@ -383,9 +397,19 @@ internal class AgentBridgeNativeCaptureSpool(
         if (!ack.accepted || ack.sessionId != checkpoint.sessionID || ack.jobId != manifest.jobId || index < 0 || index >= manifest.artifacts.size ||
             (index != frontier.committedPartitionCount && index != frontier.committedPartitionCount - 1) ||
             ack.transferId != ids[index.toInt()] || ack.partitionSha256 != manifest.artifacts[index.toInt()].sha256) fail(AgentBridgeErrorCode.BINDING_CHANGED)
-        if (index == frontier.committedPartitionCount && awaitingPartitionAcknowledgement(state) != index) fail(AgentBridgeErrorCode.BINDING_CHANGED)
-        recordAcknowledgedTransferPartition(index)
+        if (index < frontier.committedPartitionCount) return frontier
+        if (awaitingPartitionAcknowledgement(state) != index) fail(AgentBridgeErrorCode.BINDING_CHANGED)
+        return computedTransferFrontier(state, index + 1)
     }
+    private fun publishAcknowledgedFrontier(frontier: AgentBridgeTransferFrontier, previous: Record, state: Progress,
+        evidence: Map<String, ProtectedFileEvidence>? = null): AgentBridgeTransferFrontier {
+        val next = state.copy(committedPartitionCount = frontier.committedPartitionCount, frontierSHA256 = frontier.sha256)
+        publish("progress.json", record("progress", null, progressPayload(next)), previous, evidence)
+        val result = checkedTransferFrontier(progress().second)
+        if (result.committedPartitionCount != frontier.committedPartitionCount || result.sha256 != frontier.sha256) fail(AgentBridgeErrorCode.BINDING_CHANGED)
+        guard(); return result
+    }
+
     private fun awaitingPartitionAcknowledgement(state: Progress): Long? {
         if (!exists("partition-awaiting-ack.json")) return null
         val record = read("partition-awaiting-ack.json")
@@ -672,13 +696,13 @@ internal class AgentBridgeNativeCaptureSpool(
         } catch (_: Exception) { fail() } // Stored bytes are never a malformed incoming request.
         guard(); return signed.record
     }
-    private fun publish(name: String, value: Record, previous: Record? = null) {
+    private fun publish(name: String, value: Record, previous: Record? = null, evidenceBeforePublication: Map<String, ProtectedFileEvidence>? = null) {
         val bytes = canonical(Signed(value, mac(canonical(value))))
         if (bytes.size > RECORD_LIMIT) fail(AgentBridgeErrorCode.QUERY_BUDGET_EXCEEDED)
         val previousBytes = previous?.let { canonical(Signed(it, mac(canonical(it)))) }
-        publishBytes(name, bytes, previousBytes)
+        publishBytes(name, bytes, previousBytes, evidenceBeforePublication)
     }
-    private fun publishBytes(name: String, bytes: ByteArray, previousBytes: ByteArray?) {
+    private fun publishBytes(name: String, bytes: ByteArray, previousBytes: ByteArray?, evidenceBeforePublication: Map<String, ProtectedFileEvidence>? = null) {
         if (bytes.isEmpty() || bytes.size > MANIFEST_LIMIT || storedBytes + bytes.size > JOB_LIMIT) fail(AgentBridgeErrorCode.QUERY_BUDGET_EXCEEDED)
         guard()
         if (previousBytes != null) {
@@ -699,6 +723,7 @@ internal class AgentBridgeNativeCaptureSpool(
             if (previousBytes != null) {
                 if (!currentBytes(name).contentEquals(previousBytes)) fail()
             } else if (exists(name)) fail(AgentBridgeErrorCode.BUSY)
+            if (evidenceBeforePublication != null) requireProtectedEvidence(evidenceBeforePublication)
             // Cooperating writers hold the original job lock. Sampled path/inode fences do not
             // claim protection against an arbitrary same-UID writer or privileged rollback.
             Files.move(temporary, directory.resolve(name), ATOMIC_MOVE)
