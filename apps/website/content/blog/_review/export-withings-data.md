@@ -4,6 +4,8 @@ Verified 2026-10-30 by Codex (agent), method: traced. Current public official do
 
 ## Claims
 
+- [x] October30: one related recommendation links the Cronometer native-versus-shared export chooser. Withings body unchanged; three related recommendations and incoming coverage preserved.
+
 - [x] Replaced one related recommendation with the Apple weight-export guide for shared scale measurements; body content unchanged. WHOOP retains another incoming recommendation.
 
 - [x] Native export source https://support.withings.com/hc/en-us/articles/31647944317201-Withings-App-Exporting-your-data confirms Profile/Settings/Export All Health Data/user profile/Start my archive, email, CSV, account units for distance/weight and Celsius temperature. No obsolete Share-tab export, delivery guarantee, exact archive schema, completeness or Health.md importer. Native route before body install links.
