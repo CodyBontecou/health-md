@@ -58,7 +58,7 @@ Health.md.app/Contents/Helpers/healthmd
 Health.md.app/Contents/Helpers/healthmd-mcp
 ```
 
-Both targets use hardened runtime. `healthmd` is intentionally not App-Sandboxed because direct file mode must commit to an explicit user-supplied absolute destination; destination traversal, symlink, mutation, and digest protections are enforced in the receiver. `healthmd-mcp` remains App-Sandboxed with network-client-only entitlements. Its protocol surface additionally has no shell, arbitrary filesystem, arbitrary URL, resources, prompts, roots, sampling, or direct-iPhone capability.
+Both bundled targets use hardened runtime and App Sandbox. The Mac App Store `healthmd` helper has network client/server permissions; use the Mac app backend and its saved folder, or stream JSON to stdout and redirect it from your shell. Arbitrary-path direct file exports use the separately installed standalone CLI. `healthmd-mcp` remains sandboxed with network-client-only entitlements. The standalone `make install-cli` build retains its separate, non-sandboxed direct-file signing policy; the Xcode app target uses `healthmd-bundled.entitlements`. Its protocol surface additionally has no shell, arbitrary filesystem, arbitrary URL, resources, prompts, roots, sampling, or direct-iPhone capability.
 
 The Mac app includes a dedicated **CLI** tab that shows the bundled path and provides:
 
@@ -141,7 +141,7 @@ Override with:
 make install-cli CLI_INSTALL_DIR=/usr/local/bin
 ```
 
-`make install-cli` ad-hoc signs both binaries with hardened runtime and their target-specific entitlements; the installed `healthmd-mcp` therefore keeps its App Sandbox while `healthmd` keeps only the network authority needed for direct listeners. The same Swift package can be used later for a Homebrew formula or GitHub release artifact, but packaged artifacts must preserve that signing split.
+`make install-cli` ad-hoc signs both binaries with hardened runtime and their target-specific entitlements; the installed `healthmd-mcp` therefore keeps its App Sandbox while `healthmd` keeps only the network authority needed for direct listeners. The same Swift package can be used later for a Homebrew formula or GitHub release artifact, but standalone artifacts must preserve that signing split. Mac App Store bundles instead sandbox both helpers as described above.
 
 ## Commands
 

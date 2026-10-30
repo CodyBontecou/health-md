@@ -6,6 +6,9 @@ All notable changes to Health.md will be documented in this file.
 
 ## [3.5.0] - Unreleased
 
+### Mac companion
+- Sandbox both bundled CLI helpers for Mac App Store distribution. Mac-managed folders and stdout remain available; arbitrary-path direct file exports use the standalone CLI.
+
 ### Privacy
 - Removed custom in-app usage analytics and advertising attribution. Earlier service records and essential connected services retain their separate disclosures.
 

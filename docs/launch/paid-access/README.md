@@ -12,4 +12,6 @@ The owner approved publication of current main to healthmd.app on October 30, 20
 
 ## Current-source upload preparation
 
-Prepared candidate: 3.5.0 (202610071222). New signed iOS and Mac candidates are authorized for upload only. Keep the App Store versions on MANUAL release; do not submit a review, publish a GitHub release, deploy the Worker, change prices, or claim device qualification. Website publication is separately approved as recorded above. Candidate metadata is platform-specific; website deployment does not establish app release or device qualification. Physical-device testing remains deferred. Record exact built source and processed ASC build IDs in task receipts.
+Prepared candidate: 3.5.0 (202610071224). New signed iOS and Mac candidates are authorized for upload only. Keep the App Store versions on MANUAL release; do not submit a review, publish a GitHub release, deploy the Worker, change prices, or claim device qualification. Website publication is separately approved as recorded above. Candidate metadata is platform-specific; website deployment does not establish app release or device qualification. Physical-device testing remains deferred. Record exact built source and processed ASC build IDs in task receipts.
+
+Mac App Store helpers are sandboxed. Mac-managed folders and stdout remain supported; arbitrary-path direct file exports use the standalone CLI. This signing split was approved by the owner. Native-language and exact-build device acceptance remain separate from these copy checks.
