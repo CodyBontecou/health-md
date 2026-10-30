@@ -88,15 +88,19 @@ struct ConnectedMacDailyExportOperation {
         let surface: AppleExportOperationSurface = stagesWakeDate ? .connectedReceivedRangeWithProviderSidecars
             : supportsRangePlan && hasConfiguredRollups ? .connectedReceivedRangeWithoutSideEffects
             : .connectedReceivedFilesWithoutSideEffects
+        let composedNotes = AppleLooseDailyExportPlanner.supportsComposedWakeDateNotes(
+            settingsSnapshot: settingsSnapshot, surface: surface)
+        let renderingSnapshot = composedNotes
+            ? AppleLooseDailyExportPlanner.settingsForComposedNotes(settingsSnapshot) : settingsSnapshot
         guard !hasNativeOnlyCompanionAction || stagesWakeDate,
-              AppleLooseDailyExportPlanner.supports(
+              composedNotes || AppleLooseDailyExportPlanner.supports(
                   settingsSnapshot: settingsSnapshot,
                   surface: surface
               ),
               records?.allSatisfy({ record in
                   AppleLooseDailyExportPlanner.supports(
                       healthData: record,
-                      settingsSnapshot: settingsSnapshot,
+                      settingsSnapshot: renderingSnapshot,
                       surface: surface
                   )
               }) ?? true else {
@@ -113,12 +117,15 @@ struct ConnectedMacDailyExportOperation {
         hasNativeOnlyCompanionAction: Bool
     ) throws -> ConnectedMacDailyExportOperation {
         guard isNonLegacy else { return self }
+        let renderingSnapshot = AppleLooseDailyExportPlanner.supportsComposedWakeDateNotes(
+            settingsSnapshot: settingsSnapshot, surface: surface)
+            ? AppleLooseDailyExportPlanner.settingsForComposedNotes(settingsSnapshot) : settingsSnapshot
         guard !hasNativeOnlyCompanionAction || (surface == .connectedReceivedRangeWithProviderSidecars
                 && settingsSnapshot.appleExportEnginePin?.isWakeDate == true),
               records.allSatisfy({ record in
                   AppleLooseDailyExportPlanner.supports(
                       healthData: record,
-                      settingsSnapshot: settingsSnapshot,
+                      settingsSnapshot: renderingSnapshot,
                       surface: surface
                   )
               }) else {

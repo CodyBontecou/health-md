@@ -2615,17 +2615,19 @@ final class VaultManager: ObservableObject {
                 calendarTimeZoneIdentifier: calendarTimeZoneIdentifier
             )
         })
-        let wantsNotes = settingsSnapshot.dailyNoteInjection.enabled
+        let handlesNotes = settingsSnapshot.dailyNoteInjection.enabled
             && settingsSnapshot.sleepCaptureContext?.sleepDayAttribution == .morningEnds
+        let wantsNotes = handlesNotes && !frozenSettings.summaryOnlyModeEnabled
         let notesOnly = wantsNotes && settingsSnapshot.dailyNotesOnlyModeEnabled
-        if wantsNotes {
+        if handlesNotes {
             guard [.localVaultWithoutSideEffects, .localVaultRangeWithoutSideEffects,
-                .localVaultRangeWithProviderSidecars, .preview].contains(operationSurface) else { throw AppleLooseDailyExportPlannerError.rustPlanningFailed }
+                .localVaultRangeWithProviderSidecars, .preview, .connectedReceivedRangeWithoutSideEffects,
+                .connectedReceivedRangeWithProviderSidecars].contains(operationSurface) else { throw AppleLooseDailyExportPlannerError.rustPlanningFailed }
         }
         let identity = operationIdentity ?? AppleExportOperationIdentitySource().capture(
             calendarTimeZoneIdentifier: calendarTimeZoneIdentifier)
         var rendering = settingsSnapshot
-        if wantsNotes { rendering.dailyNoteInjection.enabled = false; rendering.dailyNoteInjection.dailyNotesOnly = false }
+        if handlesNotes { rendering.dailyNoteInjection.enabled = false; rendering.dailyNoteInjection.dailyNotesOnly = false }
         let noteRecords = wantsNotes ? healthData.filter { outputDates.contains(
             HealthKitDailyOwnershipMetadata.ownerDate(for: $0.date,
                 calendarTimeZoneIdentifier: calendarTimeZoneIdentifier)) } : []
@@ -2918,6 +2920,29 @@ final class VaultManager: ObservableObject {
             identity: note.identity, pin: note.pin, destinationBinding: binding,
             beforeSHA256: existingData.map(NativeExportArtifact.sha256),
             contentSHA256: content.map(NativeExportArtifact.sha256), content: content)
+    }
+
+    enum DurableDailyNoteInspection { case ready, exact, skipped }
+
+    func inspectDurableDailyNote(_ write: DailyNoteInjector.DurableWrite,
+        pin: AppleExportEnginePin, identity: AppleExportOperationIdentity,
+        injectionSettings: DailyNoteInjectionSnapshot, allowedOwnerDates: Set<String>,
+        destination: AppleLooseDailyRangeDestination) throws -> DurableDailyNoteInspection {
+        guard fileSystem is SystemFileSystem, let binding = destination.binding,
+              destinationState == .available, vaultURL?.standardizedFileURL == destination.rootURL.standardizedFileURL else {
+            throw ExportError.destinationChanged
+        }
+        try DailyNoteInjector.validateDurableWrite(write, pin: pin, identity: identity,
+            settings: injectionSettings, binding: binding, allowedOwnerDates: allowedOwnerDates)
+        guard bookmarkResolver.startAccessing(destination.rootURL) else { throw ExportError.accessDenied }
+        defer { bookmarkResolver.stopAccessing(destination.rootURL) }
+        guard try productionDestinationBinding(for: destination.rootURL) == binding else { throw ExportError.destinationChanged }
+        guard let data = write.content else { return .skipped }
+        let current = try SecureExactArtifactIO.read(rootURL: destination.rootURL, relativePath: write.relativePath,
+            binding: binding, maximumByteCount: 8 * 1024 * 1024)
+        if current == data { return .exact }
+        guard current.map(NativeExportArtifact.sha256) == write.beforeSHA256 else { throw ExportError.destinationChanged }
+        return .ready
     }
 
     /// Commit only against the captured predecessor or verify an already-installed result.

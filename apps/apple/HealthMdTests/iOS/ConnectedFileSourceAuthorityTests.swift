@@ -10,6 +10,53 @@ struct ConnectedFileSourceAuthorityTests {
     // observation objects use isolated synthetic settings and no live services.
     private static var retained: [AnyObject] = []
 
+    @Test(arguments: [false, true])
+    func noteAcceptanceProducesPinnedFrozenComposition(only: Bool) async throws {
+        let f = try fixture()
+        defer { f.defaults.removePersistentDomain(forName: f.suite) }
+        f.settings.dailyNoteInjection.enabled = true
+        f.settings.dailyNoteInjection.dailyNotesOnly = only
+        f.settings.dailyNoteInjection.folderPath = "Accepted"
+        f.settings.exportFormats = only ? [] : [.json]
+        f.settings.archiveExportFiles = only
+        f.settings.generateRangeSummary = only
+        let providers = Provider(); providers.currentID = nil
+        providers.beforeAcceptance = {
+            f.settings.dailyNoteInjection.enabled = false
+            f.settings.dailyNoteInjection.folderPath = "Changed"
+            f.settings.exportFormats = [.csv]
+            f.manager.setSleepDayAttribution(.nightBegins)
+        }
+        let capture = try await IPhoneConnectedCorpusProducer.prepareFileCapture(settings: f.settings,
+            healthSubfolder: "Health", protocolVersion: ConnectedCorpusTransferCapabilities.currentProtocolVersion,
+            healthKitManager: f.manager, providers: providers)
+        Self.retained.append(capture.settings)
+        f.settings.dailyNoteInjection.enabled = false
+        f.settings.dailyNoteInjection.folderPath = "Changed"
+        f.settings.exportFormats = [.csv]
+        f.manager.setSleepDayAttribution(.nightBegins)
+        #expect(try #require(capture.snapshot.appleExportEnginePin).hasExplicitWakeDateContracts)
+        #expect(capture.snapshot.dailyNoteInjection.enabled)
+        #expect(capture.snapshot.dailyNoteInjection.dailyNotesOnly == only)
+        #expect(capture.snapshot.dailyNoteInjection.folderPath == "Accepted")
+        #expect(capture.snapshot.exportFormats == (only ? [] : [.json]))
+        #expect(capture.context.sleepDayAttribution == .morningEnds)
+        #expect(providers.successfulFetches == 0)
+    }
+
+    @Test func olderPeerCannotAcceptAnUnpinnedMorningNoteOperation() async throws {
+        let f = try fixture()
+        defer { f.defaults.removePersistentDomain(forName: f.suite) }
+        f.settings.dailyNoteInjection.enabled = true
+        let providers = Provider(); providers.currentID = nil
+        await #expect(throws: AppleSleepCaptureContext.AvailabilityError.unapprovedAttribution) {
+            _ = try await IPhoneConnectedCorpusProducer.prepareFileCapture(settings: f.settings,
+                healthSubfolder: "Health", protocolVersion: ConnectedCorpusTransferCapabilities.rangePlanProtocolVersion - 1,
+                healthKitManager: f.manager, providers: providers)
+        }
+        #expect(providers.successfulFetches == 0)
+    }
+
     @Test(arguments: ["unchanged", "replaced", "disconnected", "empty"])
     func freshAcceptanceFreezesSettingsClockAndProviderMembership(change: String) async throws {
         try #require(ConnectedAppsFeature.isEnabled)

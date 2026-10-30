@@ -78,6 +78,10 @@ enum IPhoneConnectedCorpusProducer {
                 hasNativeOnlyCompanionAction: fetcher != nil,
                 operationSurface: MacExportStreamingJobBuilder.connectedOperationSurface(protocolVersion: protocolVersion))
         }
+        if context.sleepDayAttribution == .morningEnds,
+           snapshot.appleExportEnginePin?.hasExplicitWakeDateContracts != true {
+            throw AppleSleepCaptureContext.AvailabilityError.unapprovedAttribution
+        }
         return AcceptedFileCapture(snapshot: snapshot, settings: snapshot.makeAdvancedExportSettings(),
             context: context, providers: accepted, fetchExternalRecords: fetcher)
     }

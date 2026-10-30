@@ -1358,6 +1358,28 @@ struct DailyNoteAttributionTransitionTests {
 
 @MainActor
 struct MorningLocalNoteCompositionTests {
+    @Test func summaryOnlySuppressesSavedNotesWithDefaultDailyOwnerSelection() async throws {
+        let f = try MorningArchiveTests().fixture(mode: "summary")
+        defer { f.cleanup() }
+        f.settings.archiveExportFiles = false
+        f.settings.dailyNoteInjection.enabled = true
+        f.settings.dailyNoteInjection.folderPath = "Journal"
+        let snapshot = await ExportSettingsSnapshot.forNewAppleOperation(f.settings, healthSubfolder: "Health",
+            calendarTimeZone: f.context.timeZone, surface: .localVaultRangeWithoutSideEffects)
+        let record = try await f.manager.fetchHealthData(for: f.dates[1], detailPolicy: .summary,
+            metricSelection: f.settings.metricSelection, timeZone: f.context.timeZone, captureContext: f.context)
+        let requested = try HealthRollupRangeRequest(startDate: f.dates[0], endDate: f.dates[1],
+            calendarTimeZoneIdentifier: f.context.calendarTimeZoneIdentifier)
+        let materialized = try #require(try await f.vault.materializeHealthDataRange([record], settingsSnapshot: snapshot,
+            operationSurface: .localVaultRangeWithoutSideEffects, requestedRange: requested))
+        #expect(materialized.dailyNotes.isEmpty)
+        #expect(materialized.operation.artifacts.allSatisfy { $0.kind == .rollup })
+        let result = try await f.vault.commitHealthDataRangeMaterialization(materialized,
+            destination: f.vault.freezeHealthDataRangeDestination())
+        #expect(result.dailyNoteUpdatedCount == 0 && result.dailyNoteSkippedCount == 0)
+        #expect(!FileManager.default.fileExists(atPath: f.root.appendingPathComponent("Journal").path))
+    }
+
     @Test(arguments: ["commit", "skip", "edit-before", "edit-after", "hook-before", "hook-after",
         "corrupt", "path", "clock", "version", "scope-owner", "symlink", "rebound"])
     func durableNotesReplayAcceptedBytesWithoutOverwritingEdits(mode: String) async throws {

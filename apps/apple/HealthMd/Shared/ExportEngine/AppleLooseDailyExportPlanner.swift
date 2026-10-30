@@ -893,23 +893,41 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
               settingsSnapshot.sleepCaptureContext?.exportProfileID == "apple-v11",
               settingsSnapshot.appleExportEnginePin == nil,
               surface.supportsWakeDateFiles else { return false }
-        var rendering = settingsSnapshot
+        let rendering: ExportSettingsSnapshot
         if settingsSnapshot.dailyNoteInjection.enabled {
-            guard [.localVaultWithoutSideEffects, .localVaultRangeWithoutSideEffects,
-                .localVaultRangeWithProviderSidecars, .preview].contains(surface) else { return false }
-            rendering.dailyNoteInjection.enabled = false
-            rendering.dailyNoteInjection.dailyNotesOnly = false
-            if settingsSnapshot.dailyNotesOnlyModeEnabled {
-                rendering.exportFormats = [.json]
-                rendering.archiveExportFiles = false
-                rendering.summaryOnlyExport = false
-                rendering.generateRangeSummary = false
-                rendering = rendering.forDailyArtifactPreview()
-                rendering.individualTracking.globalEnabled = false
-            }
-        }
+            guard supportsWakeDateNoteSurface(surface) else { return false }
+            rendering = settingsForComposedNotes(settingsSnapshot)
+        } else { rendering = settingsSnapshot }
         return supportsSettings(settingsSnapshot: rendering, surface: surface,
             allowsUnpinnedWakeDateDetails: true)
+    }
+
+    static func settingsForComposedNotes(_ snapshot: ExportSettingsSnapshot) -> ExportSettingsSnapshot {
+        var rendering = snapshot
+        rendering.dailyNoteInjection.enabled = false
+        rendering.dailyNoteInjection.dailyNotesOnly = false
+        if snapshot.dailyNotesOnlyModeEnabled {
+            rendering.exportFormats = [.json]
+            rendering.archiveExportFiles = false
+            rendering.summaryOnlyExport = false
+            rendering.generateRangeSummary = false
+            rendering = rendering.forDailyArtifactPreview()
+            rendering.individualTracking.globalEnabled = false
+        }
+        return rendering
+    }
+
+    private static func supportsWakeDateNoteSurface(_ surface: AppleExportOperationSurface) -> Bool {
+        [.localVaultWithoutSideEffects, .localVaultRangeWithoutSideEffects, .localVaultRangeWithProviderSidecars,
+         .preview, .connectedReceivedRangeWithoutSideEffects, .connectedReceivedRangeWithProviderSidecars].contains(surface)
+    }
+
+    static func supportsComposedWakeDateNotes(settingsSnapshot: ExportSettingsSnapshot,
+        surface: AppleExportOperationSurface) -> Bool {
+        settingsSnapshot.dailyNoteInjection.enabled && settingsSnapshot.appleExportEnginePin?.hasExplicitWakeDateContracts == true
+            && supportsWakeDateNoteSurface(surface)
+            && supportsSettings(settingsSnapshot: settingsForComposedNotes(settingsSnapshot), surface: surface,
+                allowsUnpinnedWakeDateDetails: false)
     }
 
     private static func supportsSettings(
