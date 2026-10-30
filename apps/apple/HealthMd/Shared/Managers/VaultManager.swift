@@ -2726,6 +2726,41 @@ final class VaultManager: ObservableObject {
             acceptedDestination: destination)
     }
 
+    /// Prepare a scoped daily-note patch without reading or changing the user's
+    /// destination. These transient formats never become additional output files.
+    func prepareWakeDateDailyNote(_ healthData: HealthData, settingsSnapshot: ExportSettingsSnapshot) async throws
+        -> DailyNoteInjector.PreparedContent {
+        var rendering = settingsSnapshot.forDailyArtifactPreview()
+        rendering.exportFormats = [.json, .markdown, .obsidianBases]
+        rendering.includeMetadata = true
+        rendering.archiveExportFiles = false
+        rendering.summaryOnlyExport = false
+        rendering.dailyNoteInjection.enabled = false
+        rendering.dailyNoteInjection.dailyNotesOnly = false
+        rendering.individualTracking.globalEnabled = false
+        rendering.includeDataDictionary = false
+        rendering.filenameFormat = "{date}"
+        rendering.folderStructure = ""
+        rendering.healthSubfolder = ""
+        rendering.organizeFormatsIntoFolders = false
+        rendering.formatCustomization.frontmatterConfig.keyStyle = .snakeCase
+        rendering.formatCustomization.frontmatterConfig.customFields = [:]
+        rendering.formatCustomization.frontmatterConfig.placeholderFields = []
+        // Daily notes contain selected summaries and optional presentation
+        // sections. They never acquire a hidden canonical source archive.
+        rendering.detailPolicy = settingsSnapshot.dailyNoteInjection.injectMarkdownSections
+            && settingsSnapshot.detailPolicy.includesSelectedTimeSeries ? .detailedTimeSeries : .summary
+        for index in rendering.formatCustomization.frontmatterConfig.fields.indices {
+            rendering.formatCustomization.frontmatterConfig.fields[index].isEnabled = true
+        }
+        guard let planned = try await materializeHealthDataRange([healthData], settingsSnapshot: rendering,
+            operationSurface: .localVaultRangeWithoutSideEffects, includeDataDictionary: false) else {
+            throw AppleLooseDailyExportPlannerError.rustPlanningFailed
+        }
+        return try DailyNoteInjector.prepareWakeDateContent(healthData: healthData, operation: planned.operation,
+            settingsSnapshot: settingsSnapshot)
+    }
+
     func materializeIndividualEntries(_ healthData: HealthData, settingsSnapshot: ExportSettingsSnapshot) throws
         -> (files: [AppleLooseDailyIndividualEntry], partialFailures: [ExportPartialFailure]) {
         let context = try settingsSnapshot.validatedSleepCaptureContext()

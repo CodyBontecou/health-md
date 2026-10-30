@@ -44,9 +44,110 @@ struct DailyNoteInjector {
         case skipped(reason: String)
     }
 
-    private struct InjectionContent {
+    fileprivate struct InjectionContent {
         let frontmatter: String
         let body: String
+        let isWakeDateCapture: Bool
+
+        init(frontmatter: String, body: String, isWakeDateCapture: Bool = false) {
+            self.frontmatter = frontmatter
+            self.body = body
+            self.isWakeDateCapture = isWakeDateCapture
+        }
+    }
+
+    /// A projection of an accepted successor plan, never a relabelling of the
+    /// user's whole note. Construction requires the native renderer's authority.
+    struct PreparedContent {
+        fileprivate let ownerDate: Date
+        fileprivate let context: ExportTimeContext
+        fileprivate let settings: DailyNoteInjectionSnapshot
+        fileprivate let content: InjectionContent
+    }
+
+    private static let captureKey = "healthmd_daily_injection_v1"
+    private static let captureKindKey = "healthmd_injection_kind"
+
+    static func prepareWakeDateContent(
+        healthData: HealthData,
+        operation: AppleLooseDailyPlannedOperation,
+        settingsSnapshot: ExportSettingsSnapshot
+    ) throws -> PreparedContent {
+        let context = try settingsSnapshot.validatedSleepCaptureContext()
+        guard context.sleepDayAttribution == .morningEnds,
+              healthData.timeContext.sleepDayAttribution == .morningEnds,
+              healthData.timeContext.calendarTimeZoneIdentifier == context.calendarTimeZoneIdentifier,
+              operation.authority == .rust, operation.pin == settingsSnapshot.appleExportEnginePin,
+              operation.pin.hasExplicitWakeDateContracts else {
+            throw AppleLooseDailyExportPlannerError.rustPlanningFailed
+        }
+        func text(_ format: ExportFormat) throws -> String {
+            let artifacts = operation.artifacts.filter { $0.kind == .daily && $0.format == format }
+            guard artifacts.count == 1 else { throw AppleLooseDailyExportPlannerError.rustPlanningFailed }
+            let data: Data
+            switch artifacts[0].artifact.content {
+            case .inline(let bytes): data = bytes
+            case .file(let file):
+                try file.validateIntegrity()
+                data = try Data(contentsOf: file.url)
+            }
+            guard let result = String(data: data, encoding: .utf8) else { throw ExportError.markdownMergeRejected }
+            return result
+        }
+        let json = try text(.json)
+        guard let record = try JSONSerialization.jsonObject(with: Data(json.utf8)) as? [String: Any],
+              record["type"] as? String == "health-data",
+              record["schema_profile"] as? String == "apple-v11",
+              record["healthkit_record_archive"] == nil,
+              record["schema_version"] as? Int == 11,
+              let clock = record["time_context"] as? [String: String],
+              clock == ["calendar_timezone": context.calendarTimeZoneIdentifier, "timestamp_timezone": "UTC",
+                "sleep_day_attribution": "morning_ends", "sleep_owner_day_rule": "session_end_date",
+                "sleep_interval_clipping": "none"],
+              record["date"] as? String == HealthKitDailyOwnershipMetadata.ownerDate(
+                for: healthData.date, calendarTimeZoneIdentifier: context.calendarTimeZoneIdentifier) else {
+            throw AppleLooseDailyExportPlannerError.rustPlanningFailed
+        }
+        let settings = settingsSnapshot.makeAdvancedExportSettings()
+        let keys = frontmatterKeys(enabledIn: settings.metricSelection).map {
+            resolvedOutputKey(originalKey: $0, fmConfig: settings.formatCustomization.frontmatterConfig)
+        }
+        guard !keys.contains(captureKey), !keys.contains(captureKindKey), Set(keys).count == keys.count,
+              let properties = MarkdownMerger.frontmatterProperties(named: Set(keys), in: try text(.obsidianBases)) else {
+            throw ExportError.markdownMergeRejected
+        }
+        // Preserve the accepted JSON bytes inside a YAML-safe quoted string.
+        // The record applies only to this injected capture, not to other fields.
+        let envelope = try JSONSerialization.data(withJSONObject: [
+            "kind": "healthmd_daily_capture", "version": 1, "record_json": json
+        ], options: [.sortedKeys, .withoutEscapingSlashes])
+        let quoted = try JSONEncoder().encode(String(decoding: envelope, as: UTF8.self))
+        let frontmatter = "---\n" + properties.joined() + "\(captureKindKey): daily_capture_v1\n\(captureKey): "
+            + String(decoding: quoted, as: UTF8.self) + "\n---\n"
+        let markdown = try text(.markdown)
+        let body = settings.dailyNoteInjection.injectMarkdownSections
+            ? (MarkdownMerger.splitFrontmatter(from: markdown)?.body ?? markdown) : ""
+        return PreparedContent(ownerDate: healthData.date, context: healthData.timeContext,
+            settings: settingsSnapshot.dailyNoteInjection,
+            content: InjectionContent(frontmatter: frontmatter, body: body, isWakeDateCapture: true))
+    }
+
+    private static func resolvedContent(
+        healthData: HealthData, settings: DailyNoteInjectionSettings,
+        customization: FormatCustomization, metricSelection: MetricSelectionState,
+        prepared: PreparedContent?
+    ) throws -> InjectionContent? {
+        if healthData.timeContext.sleepDayAttribution == .morningEnds {
+            guard let prepared, prepared.ownerDate == healthData.date,
+                  prepared.context == healthData.timeContext,
+                  prepared.settings == .from(settings) else {
+                throw AppleLooseDailyExportPlannerError.rustPlanningFailed
+            }
+            return prepared.content
+        }
+        guard prepared == nil else { throw AppleLooseDailyExportPlannerError.rustPlanningFailed }
+        return buildInjectionContent(healthData: healthData, settings: settings,
+            customization: customization, metricSelection: metricSelection)
     }
 
     // MARK: - Public API
@@ -63,6 +164,7 @@ struct DailyNoteInjector {
         customization: FormatCustomization,
         metricSelection: MetricSelectionState,
         calendarTimeZone: TimeZone = .current,
+        preparedContent: PreparedContent? = nil,
         fileSystem: FileSystemAccessing = SystemFileSystem(),
         fileCoordinator: FileCoordinating = PassthroughFileCoordinator(),
         destinationBinding: AppleVaultDestinationBinding? = nil,
@@ -70,6 +172,18 @@ struct DailyNoteInjector {
         afterValidationBeforeRename: (@Sendable () throws -> Void)? = nil
     ) -> InjectionResult {
         guard settings.enabled else { return .skipped(reason: "Injection disabled") }
+
+        let injectionContent: InjectionContent
+        do {
+            guard let content = try resolvedContent(healthData: healthData, settings: settings,
+                customization: customization, metricSelection: metricSelection, prepared: preparedContent) else {
+                return .skipped(reason: "No data available for enabled metrics on this date")
+            }
+            guard preparedContent == nil || calendarTimeZone.identifier == healthData.timeContext.calendarTimeZoneIdentifier else {
+                throw AppleLooseDailyExportPlannerError.rustPlanningFailed
+            }
+            injectionContent = content
+        } catch { return .failed(error) }
 
         let targetURL = ExportPathPlanner.dailyNoteURL(
             vaultURL: vaultURL,
@@ -113,14 +227,6 @@ struct DailyNoteInjector {
                     } else {
                         existingContent = ""
                     }
-                    guard let injectionContent = buildInjectionContent(
-                        healthData: healthData,
-                        settings: settings,
-                        customization: customization,
-                        metricSelection: metricSelection
-                    ) else {
-                        return .skipped(reason: "No data available for enabled metrics on this date")
-                    }
                     let updatedContent = try mergedContent(
                         existing: existingContent,
                         injectionContent: injectionContent,
@@ -150,14 +256,6 @@ struct DailyNoteInjector {
                 }
 
                 let existingContent = try fileSystem.contentsOfFile(at: coordinatedURL)
-                guard let injectionContent = buildInjectionContent(
-                    healthData: healthData,
-                    settings: settings,
-                    customization: customization,
-                    metricSelection: metricSelection
-                ) else {
-                    return .skipped(reason: "No data available for enabled metrics on this date")
-                }
 
                 let updatedContent = try mergedContent(
                     existing: existingContent,
@@ -186,15 +284,18 @@ struct DailyNoteInjector {
         settings: DailyNoteInjectionSettings,
         customization: FormatCustomization,
         metricSelection: MetricSelectionState,
-        calendarTimeZone: TimeZone = .current
+        calendarTimeZone: TimeZone = .current,
+        preparedContent: PreparedContent? = nil
     ) -> InjectionPreviewResult {
         guard settings.enabled else { return .skipped(reason: "Injection disabled") }
 
-        guard let injectionContent = buildInjectionContent(
+        guard preparedContent == nil || calendarTimeZone.identifier == healthData.timeContext.calendarTimeZoneIdentifier,
+            let injectionContent = try? resolvedContent(
             healthData: healthData,
             settings: settings,
             customization: customization,
-            metricSelection: metricSelection
+            metricSelection: metricSelection,
+            prepared: preparedContent
         ) else {
             return .skipped(reason: "No data available for enabled metrics on this date")
         }
@@ -285,6 +386,19 @@ struct DailyNoteInjector {
         injectionContent: InjectionContent,
         settings: DailyNoteInjectionSettings
     ) throws -> String {
+        var injectionContent = injectionContent
+        if !injectionContent.isWakeDateCapture,
+           let properties = MarkdownMerger.frontmatterProperties(named: [captureKey, captureKindKey], in: existing),
+           !properties.isEmpty {
+            // A later Night begins injection invalidates the old scoped capture.
+            // It must never leave Morning facts authoritative beside new values.
+            let invalidation = "---\n\(captureKindKey): null\n\(captureKey): null\n---\n"
+            switch MarkdownMerger.mergeFrontmatterOutcome(existing: injectionContent.frontmatter, new: invalidation) {
+            case .merged(let frontmatter):
+                injectionContent = InjectionContent(frontmatter: frontmatter, body: injectionContent.body)
+            case .rejected: throw ExportError.markdownMergeRejected
+            }
+        }
         if settings.injectMarkdownSections {
             switch MarkdownMerger.mergePreservingPreambleOutcome(
                 existing: existing,

@@ -1134,3 +1134,114 @@ private extension Data {
         UInt64(uint32LE(at: offset)) | (UInt64(uint32LE(at: offset + 4)) << 32)
     }
 }
+
+@MainActor
+struct MorningDailyNoteTests {
+    @Test(arguments: [false, true])
+    func preparedInjectionScopesAuthorityAndPreservesPersonalContent(sections: Bool) async throws {
+        let f = try MorningArchiveTests().fixture(mode: "daily")
+        defer { f.cleanup() }
+        f.settings.archiveExportFiles = false
+        var snapshot = await ExportSettingsSnapshot.forNewAppleOperation(f.settings, healthSubfolder: "Health",
+            calendarTimeZone: f.context.timeZone, surface: .localVaultRangeWithoutSideEffects)
+        snapshot.dailyNoteInjection.enabled = true
+        snapshot.dailyNoteInjection.folderPath = "Journal"
+        snapshot.dailyNoteInjection.createIfMissing = true
+        snapshot.dailyNoteInjection.injectMarkdownSections = sections
+        snapshot.detailPolicy = .lossless
+        snapshot.formatCustomization.frontmatterConfig.keyStyle = .camelCase
+        snapshot.formatCustomization.frontmatterConfig.customFields = ["Daily steps": "incorrect custom value"]
+        // This custom field is disabled in full-note frontmatter. Injection is
+        // governed by metric selection and must still honor its accepted alias.
+        if let index = snapshot.formatCustomization.frontmatterConfig.fields.firstIndex(where: { $0.originalKey == "steps" }) {
+            snapshot.formatCustomization.frontmatterConfig.fields[index].customKey = "Daily steps"
+            snapshot.formatCustomization.frontmatterConfig.fields[index].isEnabled = false
+        }
+        let settings = snapshot.makeAdvancedExportSettings()
+        let record = try await f.manager.fetchHealthData(for: f.dates[1], detailPolicy: .detailedTimeSeries,
+            metricSelection: f.settings.metricSelection, timeZone: f.context.timeZone, captureContext: f.context)
+        let prepared = try await f.vault.prepareWakeDateDailyNote(record, settingsSnapshot: snapshot)
+        let personal = "---\ntitle: My journal\nsleep_deep_hours: 9 # historical field\n---\n# Personal title\nKeep my introduction.\n\n## Thoughts\nMy own section.\n"
+        let base = f.root.appendingPathComponent("Journal/2026-03-08.md")
+        try FileManager.default.createDirectory(at: base.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try personal.write(to: base, atomically: true, encoding: .utf8)
+        let destination = try f.vault.freezeHealthDataRangeDestination()
+        let result = DailyNoteInjector.inject(healthData: record, into: f.root,
+            settings: settings.dailyNoteInjection, customization: settings.formatCustomization,
+            metricSelection: settings.metricSelection, calendarTimeZone: f.context.timeZone,
+            preparedContent: prepared, destinationBinding: destination.binding)
+        guard case .updated = result else { Issue.record("Expected prepared injection: \(result)"); return }
+        let note = try String(contentsOf: base, encoding: .utf8)
+        #expect(note.contains("title: My journal\n"))
+        #expect(note.contains("sleep_deep_hours: 9 # historical field\n"))
+        #expect(note.contains("# Personal title\nKeep my introduction."))
+        #expect(note.contains("## Thoughts\nMy own section."))
+        #expect(note.contains("Daily steps: 42"))
+        #expect(!note.contains("schema_profile: apple-v11"))
+        let properties = try #require(MarkdownMerger.frontmatterProperties(named: ["healthmd_daily_injection_v1"], in: note))
+        #expect(properties.count == 1)
+        let value = try #require(properties.first?.split(separator: ":", maxSplits: 1).last)
+        let decoded = try JSONDecoder().decode(String.self, from: Data(value.trimmingCharacters(in: .whitespacesAndNewlines).utf8))
+        let envelope = try #require(JSONSerialization.jsonObject(with: Data(decoded.utf8)) as? [String: Any])
+        let nativeJSON = try #require(envelope["record_json"] as? String)
+        let native = try #require(JSONSerialization.jsonObject(with: Data(nativeJSON.utf8)) as? [String: Any])
+        #expect(native["schema_profile"] as? String == "apple-v11")
+        #expect(native["healthkit_record_archive"] == nil)
+        let sleep = try #require(native["sleep"] as? [String: Any])
+        #expect(sleep["totalDuration"] as? Double == 93600.5)
+        #expect(sleep["deepSleep"] == nil)
+        #expect(note.contains("##") && (!sections || note.contains("Sleep")))
+        guard case .preview(let preview) = DailyNoteInjector.preview(healthData: record, base: .existingContent(personal),
+            settings: settings.dailyNoteInjection, customization: settings.formatCustomization,
+            metricSelection: settings.metricSelection, calendarTimeZone: f.context.timeZone, preparedContent: prepared) else {
+            Issue.record("Expected exact prepared preview"); return
+        }
+        #expect(preview.content == note)
+        if let directory = ProcessInfo.processInfo.environment["HEALTHMD_DAILY_NOTE_FIXTURE_DIR"] {
+            let output = URL(fileURLWithPath: directory, isDirectory: true)
+            try FileManager.default.createDirectory(at: output, withIntermediateDirectories: true)
+            try Data(note.utf8).write(to: output.appendingPathComponent(sections ? "sections.md" : "frontmatter.md"))
+            try Data(nativeJSON.utf8).write(to: output.appendingPathComponent(sections ? "sections.json" : "frontmatter.json"))
+        }
+        // Changing the captured clock or injection settings cannot retarget a
+        // previously prepared patch or create an empty destination file.
+        let wrongRoot = f.root.appendingPathComponent("Rejected")
+        let wrong = DailyNoteInjector.inject(healthData: record, into: wrongRoot,
+            settings: settings.dailyNoteInjection, customization: settings.formatCustomization,
+            metricSelection: settings.metricSelection, calendarTimeZone: .gmt, preparedContent: prepared)
+        guard case .failed = wrong else { Issue.record("Expected clock mismatch"); return }
+        #expect(!FileManager.default.fileExists(atPath: wrongRoot.path))
+        if !sections {
+            let nightContext = AppleSleepCaptureContext(timeZone: f.context.timeZone, sleepDayAttribution: .nightBegins)
+            let night = try await f.manager.fetchHealthData(for: f.dates[1], detailPolicy: .summary,
+                metricSelection: settings.metricSelection, timeZone: f.context.timeZone, captureContext: nightContext)
+            let replaced = DailyNoteInjector.inject(healthData: night, into: f.root,
+                settings: settings.dailyNoteInjection, customization: settings.formatCustomization,
+                metricSelection: settings.metricSelection, calendarTimeZone: f.context.timeZone,
+                destinationBinding: destination.binding)
+            guard case .updated = replaced else { Issue.record("Expected Night begins replacement"); return }
+            let updated = try String(contentsOf: base, encoding: .utf8)
+            #expect(updated.contains("healthmd_injection_kind: null\n"))
+            #expect(updated.contains("healthmd_daily_injection_v1: null\n"))
+            #expect(updated.contains("sleep_deep_hours: 9 # historical field\n"))
+            #expect(!updated.contains("healthmd_daily_capture"))
+            if let directory = ProcessInfo.processInfo.environment["HEALTHMD_DAILY_NOTE_FIXTURE_DIR"] {
+                try Data(updated.utf8).write(to: URL(fileURLWithPath: directory).appendingPathComponent("night-replacement.md"))
+            }
+        }
+    }
+
+    @Test func morningInjectionWithoutAcceptedPlanFailsBeforeCreatingFile() async throws {
+        let f = try MorningArchiveTests().fixture(mode: "daily")
+        defer { f.cleanup() }
+        let record = try await f.manager.fetchHealthData(for: f.dates[1], detailPolicy: .summary,
+            metricSelection: f.settings.metricSelection, timeZone: f.context.timeZone, captureContext: f.context)
+        f.settings.dailyNoteInjection.enabled = true
+        f.settings.dailyNoteInjection.createIfMissing = true
+        let result = DailyNoteInjector.inject(healthData: record, into: f.root,
+            settings: f.settings.dailyNoteInjection, customization: f.settings.formatCustomization,
+            metricSelection: f.settings.metricSelection, calendarTimeZone: f.context.timeZone)
+        guard case .failed = result else { Issue.record("Expected missing-plan failure"); return }
+        #expect((try FileManager.default.contentsOfDirectory(atPath: f.root.path)).isEmpty)
+    }
+}

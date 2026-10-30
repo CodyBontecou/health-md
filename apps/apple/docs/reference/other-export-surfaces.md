@@ -18,6 +18,12 @@ Daily Notes Only applies to filesystem destinations and is rejected for API Endp
 
 User renames affect the written `key`; the data dictionary retains `canonicalKey` for cross-vault integrations.
 
+Morning ends daily-note preparation remains internal and does not enable production injection. Its independently versioned annotation uses `healthmd_injection_kind: daily_capture_v1` plus `healthmd_daily_injection_v1`, a quoted JSON envelope with `kind: healthmd_daily_capture`, `version: 1`, and the exact accepted Apple-v11 `record_json` string. This record describes only the newly injected, selected capture; it does not assign a schema or attribution to the surrounding personal note or its retained historical properties. Readers consume that scoped record rather than combining it with older fields. A later Night begins injection clears both annotation values to `null`.
+
+Preparation projects selected frontmatter properties from the accepted renderer, preserves personal preambles and unrelated sections, and optionally supplies the accepted Markdown sections. The scoped record never contains the canonical source archive. These annotation names are reserved for capture authority and cannot be selected metric aliases. Full local/connected orchestration, Daily Notes Only admission, preview integration and runtime qualification remain pending.
+
+The same scoped-capture outcome is planned for Android under Issue #104 before Morning ends production enablement. Android's record retains its own `android-sleep-v6` profile and native sleep identities; the annotation does not convert either platform's record into the other's profile.
+
 ## Apple Shortcuts and App Intents
 
 Shortcut export intents invoke Health.md's ordinary export orchestration for a date, yesterday, last N days, or a date range. They honor the resolved profile’s API or local-folder destination and do not define a separate daily file schema. Last N Days ends yesterday by default; Include Today shifts the same N-day window to end today.
