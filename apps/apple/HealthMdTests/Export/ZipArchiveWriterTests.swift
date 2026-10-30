@@ -666,18 +666,19 @@ struct MorningArchiveTests {
         #expect(try Data(contentsOf: zip) == old)
     }
 
-    private struct Fixture {
+    fileprivate struct Fixture {
         let root: URL
         let suite: String
         let defaults: UserDefaults
         let settings: AdvancedExportSettings
         let manager: HealthKitManager
+        let store: FakeHealthStore
         let vault: VaultManager
         let context: AppleSleepCaptureContext
         let dates: [Date]
         func cleanup() { try? FileManager.default.removeItem(at: root); defaults.removePersistentDomain(forName: suite) }
     }
-    private func fixture(mode: String) throws -> Fixture {
+    fileprivate func fixture(mode: String) throws -> Fixture {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent("MorningArchive-\(UUID())").resolvingSymlinksInPath()
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
         let suite = "MorningArchive-\(UUID())"
@@ -707,8 +708,179 @@ struct MorningArchiveTests {
         let vault = VaultManager(defaults: FakeUserDefaults(), fileSystem: SystemFileSystem(), bookmarkResolver: bookmarks)
         vault.healthSubfolder = "Health"; vault.setVaultFolder(root)
         Self.retained += [settings, manager, vault]
-        return Fixture(root: root, suite: suite, defaults: defaults, settings: settings, manager: manager,
+        return Fixture(root: root, suite: suite, defaults: defaults, settings: settings, manager: manager, store: store,
             vault: vault, context: context, dates: [first, wake])
+    }
+}
+
+@MainActor
+struct MorningIndividualEntryTests {
+    @Test func stagedNotesAndRoutesMatchWriterAndRestoreBorrowedCalendar() throws {
+        let f = try MorningArchiveTests().fixture(mode: "daily")
+        defer { f.cleanup() }
+        let settings = f.settings.individualTracking
+        settings.globalEnabled = true; settings.setTrackIndividually("workouts", enabled: true)
+        let instant = f.dates[1].addingTimeInterval(12 * 3600)
+        let route = [RoutePoint(timestamp: instant, latitude: 1, longitude: 2, altitudeMeters: nil,
+            speedMps: nil, courseDegrees: nil, horizontalAccuracyMeters: nil)]
+        let workout = WorkoutData(workoutType: .running, startTime: instant, duration: 1800,
+            calories: 100, distance: 1000, route: route)
+        let sample = IndividualHealthSample(metricId: "workouts", metricName: "Workouts", category: .workouts,
+            timestamp: instant, value: 1800.0, unit: "seconds", workout: workout)
+        let fileSystem = FakeFileSystem()
+        let exporter = IndividualEntryExporter(fileSystem: fileSystem)
+        let legacyPreview = exporter.previewEntryContent(for: sample, formatSettings: f.settings.formatCustomization)
+        let root = URL(fileURLWithPath: "/__individual_planner_control__")
+        var planned: [String: String] = [:]
+        let logicalCount = try exporter.planIndividualEntries(samples: [sample], to: root, settings: settings,
+            formatSettings: f.settings.formatCustomization, calendarTimeZone: f.context.timeZone) { url, content, _ in
+            planned[url.path] = content
+        }
+        #expect(logicalCount == 1)
+        #expect(planned.count == 2)
+        #expect(fileSystem.files.isEmpty)
+        #expect(planned.keys.contains { $0.hasSuffix("2026_03_08_1300_workouts.md") })
+        #expect(try exporter.exportIndividualEntries(samples: [sample], to: root, settings: settings,
+            formatSettings: f.settings.formatCustomization, calendarTimeZone: f.context.timeZone) == logicalCount)
+        #expect(fileSystem.files == planned)
+        #expect(exporter.previewEntryContent(for: sample, formatSettings: f.settings.formatCustomization) == legacyPreview)
+        #expect(exporter.previewEntryContent(for: sample, formatSettings: f.settings.formatCustomization,
+            calendarTimeZone: f.context.timeZone).contains("time: \"13:00\""))
+    }
+
+    @Test(arguments: ["folder", "filename"])
+    func unsafeIndividualPathsFailBeforeDestinationEffects(mode: String) throws {
+        let f = try MorningArchiveTests().fixture(mode: "daily")
+        defer { f.cleanup() }
+        let settings = f.settings.individualTracking
+        settings.globalEnabled = true; settings.setTrackIndividually("steps", enabled: true)
+        if mode == "folder" { settings.entriesFolder = "../../escape" }
+        else { settings.filenameTemplate = "../escape" }
+        let sample = IndividualHealthSample(metricId: "steps", metricName: "Steps", category: .activity,
+            timestamp: f.dates[1], value: 42, unit: "steps")
+        let files = FakeFileSystem()
+        let exporter = IndividualEntryExporter(fileSystem: files)
+        #expect(throws: (any Error).self) {
+            try exporter.exportIndividualEntries(samples: [sample], to: URL(fileURLWithPath: "/__unsafe_individual_control__"),
+                settings: settings, formatSettings: f.settings.formatCustomization, calendarTimeZone: f.context.timeZone)
+        }
+        #expect(files.files.isEmpty)
+        #expect(files.directories.isEmpty)
+    }
+
+    @Test(arguments: ["daily", "range", "zip", "summary", "workout"], [false, true])
+    func productionIndividualEntriesKeepAcceptedClockAndWholeSleep(mode: String, recovered: Bool) async throws {
+        let f = try MorningArchiveTests().fixture(mode: "daily")
+        defer { f.cleanup() }
+        f.settings.archiveExportFiles = mode == "zip"
+        f.settings.generateRangeSummary = mode == "range" || mode == "summary"
+        f.settings.summaryOnlyExport = mode == "summary"
+        f.settings.individualTracking.globalEnabled = true
+        f.settings.individualTracking.setTrackIndividually("sleep_total", enabled: true)
+        f.settings.individualTracking.setTrackIndividually("steps", enabled: true)
+        if mode == "workout" {
+            f.settings.metricSelection.enabledMetrics.insert("workouts")
+            f.settings.individualTracking.setTrackIndividually("workouts", enabled: true)
+            let start = f.dates[1].addingTimeInterval(12 * 3600)
+            f.store.workoutResults = [.init(activityType: HKWorkoutActivityType.running.rawValue, duration: 1800,
+                startDate: start, endDate: start.addingTimeInterval(1800), totalEnergyBurned: 100, totalDistance: 1000)]
+        }
+        let requestedDates = mode == "workout" ? [f.dates[1]] : f.dates
+        let snapshot = await ExportSettingsSnapshot.forNewAppleOperation(f.settings, healthSubfolder: "Health",
+            calendarTimeZone: f.context.timeZone, surface: .localVaultRangeWithoutSideEffects)
+        #expect(try #require(snapshot.appleExportEnginePin).isWakeDate)
+        let progress: (Int, Int, String) -> Void = { _, _, _ in
+            f.settings.individualTracking.globalEnabled = false
+            f.settings.individualTracking.entriesFolder = "Changed"
+            f.settings.exportTimeZoneOverride = .gmt
+            f.manager.setSleepDayAttribution(.nightBegins)
+        }
+        let result: ExportOrchestrator.ExportResult
+        if recovered {
+            result = await ExportOrchestrator.exportDatesBackground(requestedDates, healthKitManager: f.manager,
+                vaultManager: f.vault, settings: f.settings, frozenSettingsSnapshot: snapshot,
+                operationSurface: .localVaultRangeWithoutSideEffects, onProgress: progress)
+        } else {
+            result = await ExportOrchestrator.exportDates(requestedDates, healthKitManager: f.manager,
+                vaultManager: f.vault, settings: f.settings, onProgress: progress)
+        }
+        #expect(result.didCompleteAllRequestedDates, "\(result.failedDateDetails) / \(result.partialFailures)")
+        let files: [String: Data]
+        if mode == "zip" {
+            let url = f.root.appendingPathComponent("Health/Health.md Export 2026-03-07_to_2026-03-08.zip")
+            files = try ZIP64TestReader.entries(in: Data(contentsOf: url)).mapValues(\.data)
+            #expect(result.totalFilesWritten == 1)
+        } else {
+            let all = try #require(FileManager.default.enumerator(at: f.root, includingPropertiesForKeys: [.isRegularFileKey]))
+                .allObjects.compactMap { $0 as? URL }.filter { (try? $0.resourceValues(forKeys: [.isRegularFileKey]).isRegularFile) == true }
+            files = try Dictionary(uniqueKeysWithValues: all.map { ($0.path, try Data(contentsOf: $0)) })
+            #expect(result.totalFilesWritten == files.count)
+        }
+        let entries = files.filter { $0.key.contains("entries/") }
+        if ["daily", "workout"].contains(mode), !recovered,
+           let directory = ProcessInfo.processInfo.environment["HEALTHMD_INDIVIDUAL_ENTRY_FIXTURE_DIR"] {
+            let output = URL(fileURLWithPath: directory, isDirectory: true)
+                .appendingPathComponent(mode == "workout" ? "workouts" : "basic", isDirectory: true)
+            let root = f.root.resolvingSymlinksInPath().path + "/"
+            for (path, bytes) in files {
+                let resolved = URL(fileURLWithPath: path).resolvingSymlinksInPath().path
+                guard resolved.hasPrefix(root) else { throw CocoaError(.fileReadInvalidFileName) }
+                let target = output.appendingPathComponent(String(resolved.dropFirst(root.count)))
+                try FileManager.default.createDirectory(at: target.deletingLastPathComponent(), withIntermediateDirectories: true)
+                try bytes.write(to: target)
+            }
+        }
+        #expect(!files.keys.contains { $0.contains("Changed") })
+        if mode == "summary" {
+            #expect(entries.isEmpty)
+            #expect(result.individualEntryFileCount == 0)
+        } else {
+            #expect(!entries.isEmpty)
+            if mode != "zip" { #expect(result.individualEntryFileCount == entries.count) }
+            let wake = try #require(entries.first { $0.key.hasSuffix("2026_03_08_0000_sleep_total.md") })
+            let text = try #require(String(data: wake.value, encoding: .utf8))
+            #expect(text.contains("date: 2026-03-08\n"))
+            let valueLine = try #require(text.components(separatedBy: "\n").first { $0.hasPrefix("value: ") })
+            #expect(try #require(Double(valueLine.dropFirst(7).replacingOccurrences(of: "\"", with: ""))) >= 26)
+            let line = try #require(text.components(separatedBy: "\n").first { $0.hasPrefix("healthmd_capture_context_json: ") })
+            let quoted = Data(line.dropFirst("healthmd_capture_context_json: ".count).utf8)
+            let json = try #require(JSONSerialization.jsonObject(with: quoted, options: [.fragmentsAllowed]) as? String)
+            let context = try #require(JSONSerialization.jsonObject(with: Data(json.utf8)) as? [String: String])
+            #expect(context["schema_profile"] == "apple-v11")
+            #expect(context["calendar_timezone"] == "America/New_York")
+            #expect(context["sleep_owner_date"] == "2026-03-08")
+            #expect(context["sleep_interval_clipping"] == "none")
+        }
+    }
+
+    @Test func identicalIndividualSourcesDeduplicateAndConflictsReject() async throws {
+        let f = try MorningArchiveTests().fixture(mode: "daily")
+        defer { f.cleanup() }
+        let snapshot = await ExportSettingsSnapshot.forNewAppleOperation(f.settings, healthSubfolder: "Health",
+            calendarTimeZone: f.context.timeZone, surface: .localVaultRangeWithoutSideEffects)
+        let record = try await f.manager.fetchHealthData(for: f.dates[1], detailPolicy: .summary,
+            metricSelection: f.settings.metricSelection, timeZone: f.context.timeZone, captureContext: f.context)
+        let materialized = try #require(try await f.vault.materializeHealthDataRange([record],
+            settingsSnapshot: snapshot, operationSurface: .localVaultRangeWithoutSideEffects))
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("IndividualDedup-\(UUID())")
+        defer { try? FileManager.default.removeItem(at: root) }
+        let first = try ExportArtifactIO.renderTemporary(in: root, prefix: "first", mediaType: "text/markdown") {
+            try $0.write(Data("accepted".utf8))
+        }
+        let same = try ExportArtifactIO.renderTemporary(in: root, prefix: "same", mediaType: "text/markdown") {
+            try $0.write(Data("accepted".utf8))
+        }
+        let different = try ExportArtifactIO.renderTemporary(in: root, prefix: "different", mediaType: "text/markdown") {
+            try $0.write(Data("conflict".utf8))
+        }
+        let path = "Health/entries/accepted.md"
+        let accepted = try materialized.addingIndividualEntries([
+            .init(relativePath: path, artifact: first), .init(relativePath: path, artifact: same)])
+        #expect(accepted.individualEntries.count == 1)
+        #expect(accepted.result.individualEntryFileCount == 1)
+        #expect(throws: AppleExactDestinationError.self) {
+            try accepted.addingIndividualEntries([.init(relativePath: path, artifact: different)])
+        }
     }
 }
 

@@ -922,7 +922,7 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
         let isSummaryOnly = settingsSnapshot.summaryOnlyExport
             && hasConfiguredRollups
             && !settingsSnapshot.exportFormats.isEmpty
-        let supportsWakeDateArchive = supportsWakeDateDetails
+        let supportsWakeDateLocalCompanions = supportsWakeDateDetails
             && (surface == .localVaultRangeWithoutSideEffects
                 || surface == .localVaultRangeWithProviderSidecars || surface == .preview)
         guard surface == .localVaultWithoutSideEffects
@@ -941,14 +941,14 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
               settingsSnapshot.writeMode == .overwrite,
               !settingsSnapshot.exportFormats.isEmpty,
               settingsSnapshot.exportFormats.isSubset(of: Set(ExportFormat.allCases)),
-              (!settingsSnapshot.archiveExportFiles || supportsWakeDateArchive),
+              (!settingsSnapshot.archiveExportFiles || supportsWakeDateLocalCompanions),
               (!settingsSnapshot.summaryOnlyExport
                 || (isSummaryOnly && isRangeSurface)
                 || (!hasConfiguredRollups && isRangeSurface)),
               (!settingsSnapshot.detailPolicy.hasAnyDetail || supportsWakeDateDetails),
               (!hasConfiguredRollups || isRangeSurface),
               !settingsSnapshot.dailyNoteInjection.enabled,
-              !settingsSnapshot.individualTracking.globalEnabled else {
+              (!settingsSnapshot.individualTracking.globalEnabled || supportsWakeDateLocalCompanions) else {
             return false
         }
         return true

@@ -1246,10 +1246,12 @@ struct ExportPreviewView: View {
                 aggregation: .mostRecent
             )
             let entryFolderPath = settings.individualTracking.folderPath(for: metric)
-            let filename = exporter.filename(for: sample, settings: settings.individualTracking)
+            let filename = exporter.filename(for: sample, settings: settings.individualTracking,
+                calendarTimeZone: settings.exportTimeZoneOverride)
             let content = exporter.previewEntryContent(
                 for: sample,
-                formatSettings: settings.formatCustomization
+                formatSettings: settings.formatCustomization,
+                calendarTimeZone: settings.exportTimeZoneOverride
             )
 
             return FilePreview(

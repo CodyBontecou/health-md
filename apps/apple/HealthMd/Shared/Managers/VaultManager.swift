@@ -702,21 +702,24 @@ nonisolated struct AppleLooseDailyRangeWriteResult: Equatable, Sendable {
     /// Defaults to zero so stored journals and older call sites stay valid.
     let dataDictionaryFileCount: Int
     let providerSidecarFileCount: Int
+    let individualEntryFileCount: Int
 
     init(
         dailyFileCount: Int,
         rollupFileCount: Int,
         dataDictionaryFileCount: Int = 0,
-        providerSidecarFileCount: Int = 0
+        providerSidecarFileCount: Int = 0,
+        individualEntryFileCount: Int = 0
     ) {
         self.dailyFileCount = max(dailyFileCount, 0)
         self.rollupFileCount = max(rollupFileCount, 0)
         self.dataDictionaryFileCount = max(dataDictionaryFileCount, 0)
         self.providerSidecarFileCount = max(providerSidecarFileCount, 0)
+        self.individualEntryFileCount = max(individualEntryFileCount, 0)
     }
 
     var totalFileCount: Int {
-        dailyFileCount + rollupFileCount + dataDictionaryFileCount + providerSidecarFileCount
+        dailyFileCount + rollupFileCount + dataDictionaryFileCount + providerSidecarFileCount + individualEntryFileCount
     }
 }
 
@@ -732,6 +735,11 @@ nonisolated struct AppleLooseDailyProviderSidecar: Equatable, Sendable {
     let artifact: ExportArtifactFile
 }
 
+nonisolated struct AppleLooseDailyIndividualEntry: Equatable, Sendable {
+    let relativePath: String
+    let artifact: ExportArtifactFile
+}
+
 nonisolated struct AppleLooseDailyRangeDestination: Sendable {
     let rootURL: URL
     let binding: AppleVaultDestinationBinding?
@@ -742,13 +750,16 @@ nonisolated struct AppleLooseDailyRangeMaterialization: Equatable, Sendable {
     let dataDictionary: AppleLooseDailyMaterializedFile?
     let result: AppleLooseDailyRangeWriteResult
     let providerSidecars: [AppleLooseDailyProviderSidecar]
+    let individualEntries: [AppleLooseDailyIndividualEntry]
 
     init(operation: AppleLooseDailyPlannedOperation, dataDictionary: AppleLooseDailyMaterializedFile?,
-         result: AppleLooseDailyRangeWriteResult, providerSidecars: [AppleLooseDailyProviderSidecar] = []) {
+         result: AppleLooseDailyRangeWriteResult, providerSidecars: [AppleLooseDailyProviderSidecar] = [],
+         individualEntries: [AppleLooseDailyIndividualEntry] = []) {
         self.operation = operation
         self.dataDictionary = dataDictionary
         self.result = result
         self.providerSidecars = providerSidecars
+        self.individualEntries = individualEntries
     }
 
     func addingProviderSidecars(_ files: [AppleLooseDailyProviderSidecar]) -> Self {
@@ -756,7 +767,23 @@ nonisolated struct AppleLooseDailyRangeMaterialization: Equatable, Sendable {
         return Self(operation: operation, dataDictionary: dataDictionary,
             result: AppleLooseDailyRangeWriteResult(dailyFileCount: result.dailyFileCount,
                 rollupFileCount: result.rollupFileCount, dataDictionaryFileCount: result.dataDictionaryFileCount,
-                providerSidecarFileCount: all.count), providerSidecars: all)
+                providerSidecarFileCount: all.count, individualEntryFileCount: individualEntries.count),
+            providerSidecars: all, individualEntries: individualEntries)
+    }
+
+    func addingIndividualEntries(_ files: [AppleLooseDailyIndividualEntry]) throws -> Self {
+        var unique: [String: AppleLooseDailyIndividualEntry] = [:]
+        for file in individualEntries + files {
+            if let existing = unique[file.relativePath], existing.artifact != file.artifact {
+                throw AppleExactDestinationError.unsafeRelativePath
+            }
+            unique[file.relativePath] = file
+        }
+        let entries = unique.values.sorted { $0.relativePath < $1.relativePath }
+        return Self(operation: operation, dataDictionary: dataDictionary,
+            result: .init(dailyFileCount: result.dailyFileCount, rollupFileCount: result.rollupFileCount,
+                dataDictionaryFileCount: result.dataDictionaryFileCount, providerSidecarFileCount: providerSidecars.count,
+                individualEntryFileCount: entries.count), providerSidecars: providerSidecars, individualEntries: entries)
     }
 
     /// Merge already materialized portions of one successor operation without reopening sources.
@@ -781,12 +808,13 @@ nonisolated struct AppleLooseDailyRangeMaterialization: Equatable, Sendable {
         let plan = try NativeExportArtifactPlan(artifactPlanVersion: pin.artifactPlanVersion,
             requestID: identity.requestID, sessionID: identity.sessionID, profile: pin.coreProfile,
             artifacts: artifacts.map(\.artifact), totalByteCount: total, pin: pin)
-        return Self(operation: AppleLooseDailyPlannedOperation(authority: .rust, identity: identity,
+        return try Self(operation: AppleLooseDailyPlannedOperation(authority: .rust, identity: identity,
             pin: pin, nativePlan: nil, selectedPlan: plan, artifacts: artifacts),
             dataDictionary: dictionaries.first,
             result: AppleLooseDailyRangeWriteResult(dailyFileCount: artifacts.count { $0.kind == .daily },
                 rollupFileCount: artifacts.count { $0.kind == .rollup }, dataDictionaryFileCount: dictionaries.count))
             .addingProviderSidecars(parts.flatMap(\.providerSidecars))
+            .addingIndividualEntries(parts.flatMap(\.individualEntries))
     }
 }
 
@@ -2653,6 +2681,7 @@ final class VaultManager: ObservableObject {
         let paths = materialized.operation.artifacts.map(\.artifact.relativePath)
             + (materialized.dataDictionary.map { [$0.relativePath] } ?? [])
             + materialized.providerSidecars.map(\.relativePath)
+            + materialized.individualEntries.map(\.relativePath)
         try ExportPathPlanner.validatePortableArtifactPaths(paths)
         guard Set(paths).count == paths.count else { throw AppleExactDestinationError.unsafeRelativePath }
         let prefix = healthSubfolder.isEmpty ? "" : healthSubfolder + "/"
@@ -2684,6 +2713,7 @@ final class VaultManager: ObservableObject {
             try append(path: dictionary.relativePath, mediaType: dictionary.mediaType, bytes: dictionary.data)
         }
         for file in materialized.providerSidecars { try append(path: file.relativePath, artifact: file.artifact) }
+        for file in materialized.individualEntries { try append(path: file.relativePath, artifact: file.artifact) }
         // These flags only tell the packager that the supplied files already
         // contain every selected output, including summary-only and dictionary.
         let packaging = settingsSnapshot.makeAdvancedExportSettings()
@@ -2694,6 +2724,44 @@ final class VaultManager: ObservableObject {
         return try await exportArchive(fromRenderedFiles: files, settings: packaging,
             startDate: startDate, endDate: endDate, healthSubfolder: healthSubfolder,
             acceptedDestination: destination)
+    }
+
+    func materializeIndividualEntries(_ healthData: HealthData, settingsSnapshot: ExportSettingsSnapshot) throws
+        -> (files: [AppleLooseDailyIndividualEntry], partialFailures: [ExportPartialFailure]) {
+        let context = try settingsSnapshot.validatedSleepCaptureContext()
+        guard context.sleepDayAttribution == .morningEnds,
+              healthData.timeContext.sleepDayAttribution == .morningEnds,
+              healthData.timeContext.calendarTimeZoneIdentifier == context.calendarTimeZoneIdentifier else {
+            throw AppleLooseDailyExportPlannerError.rustPlanningFailed
+        }
+        let settings = settingsSnapshot.makeAdvancedExportSettings()
+        guard settings.writesIndividualEntryFiles else { return ([], []) }
+        let samples = individualExporter.extractIndividualSamples(from: healthData, settings: settings.individualTracking)
+        let gaps = healthData.healthKitRecordArchive == nil ? [] : individualExporter.coverageGaps(
+            emittedSamples: samples, from: healthData, settings: settings.individualTracking, metricSelection: settings.metricSelection)
+        let failures = gaps.isEmpty ? [] : [coverageGapFailure(gaps: gaps, for: healthData)]
+        let virtualRoot = URL(fileURLWithPath: "/__healthmd_individual_materialization__", isDirectory: true)
+        let base = individualEntriesBaseFolderURL(vaultURL: virtualRoot, healthSubfolder: settingsSnapshot.healthSubfolder,
+            date: healthData.date, settings: settings)
+        let staging = FileManager.default.temporaryDirectory.appendingPathComponent("healthmd-individual-\(UUID())")
+        var files: [AppleLooseDailyIndividualEntry] = []
+        do {
+            _ = try individualExporter.planIndividualEntries(samples: samples, to: base,
+                settings: settings.individualTracking, formatSettings: settings.formatCustomization,
+                calendarTimeZone: context.timeZone) { url, content, mediaType in
+                let root = virtualRoot.standardizedFileURL.path + "/"
+                let path = url.standardizedFileURL.path
+                guard path.hasPrefix(root) else { throw AppleExactDestinationError.unsafeRelativePath }
+                let relative = String(path.dropFirst(root.count))
+                try ExportPathPlanner.validatePortableArtifactPaths([relative])
+                let artifact = try ExportArtifactIO.renderTemporary(in: staging, prefix: "individual", mediaType: mediaType) {
+                    try $0.write(Data(content.utf8))
+                }
+                files.append(.init(relativePath: relative, artifact: artifact))
+            }
+            try ExportPathPlanner.validatePortableArtifactPaths(files.map(\.relativePath))
+            return (files, failures)
+        } catch { try? FileManager.default.removeItem(at: staging); throw error }
     }
 
     func freezeHealthDataRangeDestination() throws -> AppleLooseDailyRangeDestination {
@@ -2754,10 +2822,20 @@ final class VaultManager: ObservableObject {
         let allPaths = materialized.operation.artifacts.map(\.artifact.relativePath)
             + (materialized.dataDictionary.map { [$0.relativePath] } ?? [])
             + materialized.providerSidecars.map(\.relativePath)
+            + materialized.individualEntries.map(\.relativePath)
         guard Set(allPaths).count == allPaths.count else { throw AppleExactDestinationError.unsafeRelativePath }
         try preflightExportArtifactPaths(allPaths)
         let providerRequests = try materialized.providerSidecars.map { file in
             guard file.artifact.descriptor.mediaType == "application/json" else {
+                throw CocoaError(.fileReadCorruptFile)
+            }
+            try file.artifact.validateIntegrity()
+            let url = ExportPathPlanner.appendingRelativePath(file.relativePath, to: vaultURL, isDirectory: false)
+            return AggregateFileWriteRequest(fileURL: url, filename: url.lastPathComponent,
+                artifact: file.artifact, behavior: .overwrite)
+        }
+        let individualRequests = try materialized.individualEntries.map { file in
+            guard ["text/markdown", "application/json"].contains(file.artifact.descriptor.mediaType) else {
                 throw CocoaError(.fileReadCorruptFile)
             }
             try file.artifact.validateIntegrity()
@@ -2827,6 +2905,10 @@ final class VaultManager: ObservableObject {
                 ))
             }
             for (file, request) in zip(materialized.providerSidecars, providerRequests) {
+                _ = try await aggregateFileWriter.write(secureRequest(request,
+                    rootURL: vaultURL, relativePath: file.relativePath, binding: destinationBinding))
+            }
+            for (file, request) in zip(materialized.individualEntries, individualRequests) {
                 _ = try await aggregateFileWriter.write(secureRequest(request,
                     rootURL: vaultURL, relativePath: file.relativePath, binding: destinationBinding))
             }
