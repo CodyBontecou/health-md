@@ -65,6 +65,24 @@ class HealthMdCoreService internal constructor(
         mergeProfileRenderedMarkdown(profile, existing, generated, preservePreamble)
     }
 
+    fun mergeScopedNote(
+        profile: CoreMetricRegistryProfile,
+        existing: String,
+        patch: String,
+        injectSections: Boolean,
+    ): String = callRenderNative { mergeScopedDailyNote(profile, existing, patch, injectSections) }
+
+    fun prepareScopedNote(
+        profile: CoreMetricRegistryProfile,
+        recordJson: String,
+        bases: String,
+        markdown: String,
+        selectedProperties: List<String>,
+        injectSections: Boolean,
+    ): String = callRenderNative {
+        prepareScopedDailyNote(profile, recordJson, bases, markdown, selectedProperties, injectSections)
+    }
+
     fun mergeMarkdown(existing: String, generated: String): String =
         callRenderNative { mergeRenderedMarkdown(existing, generated) }
 
@@ -377,6 +395,22 @@ internal interface HealthMdCoreBindings {
         preservePreamble: Boolean,
     ): String
 
+    fun mergeScopedDailyNote(
+        profile: CoreMetricRegistryProfile,
+        existing: String,
+        patch: String,
+        injectSections: Boolean,
+    ): String = error("scoped daily-note merge is unavailable")
+
+    fun prepareScopedDailyNote(
+        profile: CoreMetricRegistryProfile,
+        recordJson: String,
+        bases: String,
+        markdown: String,
+        selectedProperties: List<String>,
+        injectSections: Boolean,
+    ): String = error("scoped daily-note preparation is unavailable")
+
     fun mergeRenderedMarkdown(existing: String, generated: String): String
 
     fun validateFixture(fixtureBytes: ByteBuffer, expectedSha256: String): FixtureValidation
@@ -453,6 +487,22 @@ private object UniFfiHealthMdCoreBindings : HealthMdCoreBindings {
         mode: CoreStreamMode,
         artifact: CoreStreamArtifactConfig,
     ): CoreLosslessArtifactStream = com.healthmd.core.createPlannedLosslessArtifactStream(mode, artifact)
+
+    override fun prepareScopedDailyNote(
+        profile: CoreMetricRegistryProfile,
+        recordJson: String,
+        bases: String,
+        markdown: String,
+        selectedProperties: List<String>,
+        injectSections: Boolean,
+    ): String = com.healthmd.core.prepareScopedDailyNote(profile, recordJson, bases, markdown, selectedProperties, injectSections)
+
+    override fun mergeScopedDailyNote(
+        profile: CoreMetricRegistryProfile,
+        existing: String,
+        patch: String,
+        injectSections: Boolean,
+    ): String = com.healthmd.core.mergeScopedDailyNote(profile, existing, patch, injectSections)
 
     override fun mergeProfileRenderedMarkdown(
         profile: CoreMetricRegistryProfile,

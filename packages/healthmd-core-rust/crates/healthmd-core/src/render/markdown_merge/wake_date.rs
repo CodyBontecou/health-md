@@ -189,7 +189,7 @@ fn context_mapping(lines: &[PhysicalLine]) -> Result<Value, RenderError> {
     Ok(Value::Object(context))
 }
 
-fn scalar_property(lines: &[PhysicalLine]) -> Result<String, RenderError> {
+pub(super) fn scalar_property(lines: &[PhysicalLine]) -> Result<String, RenderError> {
     if lines[1..].iter().any(|line| !is_yaml_trivia(&line.content)) {
         return Err(RenderError::PresentationMismatch);
     }

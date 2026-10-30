@@ -4348,6 +4348,23 @@ public func mergeRenderedMarkdown(existing: String, generated: String)throws  ->
 })
 }
 /**
+ * Merge a capture-scoped personal-note patch without changing whole-export behavior.
+ *
+ * # Errors
+ * Returns bounded capture/YAML/size failures or a contained panic.
+ */
+public func mergeScopedDailyNote(profile: CoreMetricRegistryProfile, existing: String, patch: String, injectSections: Bool)throws  -> String  {
+    return try  FfiConverterString.lift(try rustCallWithError(FfiConverterTypeHealthmdRenderError_lift) {
+        uniffiCallStatus in
+    uniffi_healthmd_core_uniffi_fn_func_merge_scoped_daily_note(
+        FfiConverterTypeCoreMetricRegistryProfile_lower(profile),
+        FfiConverterString.lower(existing),
+        FfiConverterString.lower(patch),
+        FfiConverterBool.lower(injectSections),uniffiCallStatus
+    )
+})
+}
+/**
  * Negotiate two owned capability records with the existing pure Rust algorithm.
  *
  * # Errors
@@ -4359,6 +4376,25 @@ public func negotiateDirectTransfer(local: CoreDirectTransferCapabilities, peer:
     uniffi_healthmd_core_uniffi_fn_func_negotiate_direct_transfer(
         FfiConverterTypeCoreDirectTransferCapabilities_lower(local),
         FfiConverterTypeCoreDirectTransferCapabilities_lower(peer),uniffiCallStatus
+    )
+})
+}
+/**
+ * Project accepted rendered artifacts into one independently versioned note patch.
+ *
+ * # Errors
+ * Returns bounded capture/YAML/size failures or a contained panic.
+ */
+public func prepareScopedDailyNote(profile: CoreMetricRegistryProfile, recordJson: String, bases: String, markdown: String, selectedProperties: [String], injectSections: Bool)throws  -> String  {
+    return try  FfiConverterString.lift(try rustCallWithError(FfiConverterTypeHealthmdRenderError_lift) {
+        uniffiCallStatus in
+    uniffi_healthmd_core_uniffi_fn_func_prepare_scoped_daily_note(
+        FfiConverterTypeCoreMetricRegistryProfile_lower(profile),
+        FfiConverterString.lower(recordJson),
+        FfiConverterString.lower(bases),
+        FfiConverterString.lower(markdown),
+        FfiConverterSequenceString.lower(selectedProperties),
+        FfiConverterBool.lower(injectSections),uniffiCallStatus
     )
 })
 }
@@ -4484,7 +4520,13 @@ private let initializationResult: InitializationResult = {
     if (uniffi_healthmd_core_uniffi_checksum_func_merge_rendered_markdown() != 52449) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_healthmd_core_uniffi_checksum_func_merge_scoped_daily_note() != 24416) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_healthmd_core_uniffi_checksum_func_negotiate_direct_transfer() != 2073) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_healthmd_core_uniffi_checksum_func_prepare_scoped_daily_note() != 59530) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_healthmd_core_uniffi_checksum_func_run_self_test() != 469) {

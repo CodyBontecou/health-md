@@ -10,7 +10,10 @@ use unicode_normalization::UnicodeNormalization;
 use super::RenderError;
 use crate::semantic::SemanticProfile;
 
+mod scoped_note;
 mod wake_date;
+
+pub use scoped_note::{merge_scoped_daily_note, prepare_scoped_daily_note};
 
 const MAX_MERGE_BYTES: usize = 8 * 1024 * 1024;
 

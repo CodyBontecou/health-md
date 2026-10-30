@@ -607,7 +607,7 @@ private fun ExportFormat.artifactMediaType(): String = when (this) {
     ExportFormat.CSV -> "text/csv; charset=utf-8"
 }
 
-private fun FormatCustomization.frozenCopy(): FormatCustomization = copy(
+internal fun FormatCustomization.frozenCopy(): FormatCustomization = copy(
     frontmatterConfig = frontmatterConfig.frozenCopy(),
     markdownTemplate = markdownTemplate.copy(),
 )

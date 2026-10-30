@@ -709,7 +709,11 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_healthmd_core_uniffi_checksum_func_merge_rendered_markdown(
     ): Int
+    external fun uniffi_healthmd_core_uniffi_checksum_func_merge_scoped_daily_note(
+    ): Int
     external fun uniffi_healthmd_core_uniffi_checksum_func_negotiate_direct_transfer(
+    ): Int
+    external fun uniffi_healthmd_core_uniffi_checksum_func_prepare_scoped_daily_note(
     ): Int
     external fun uniffi_healthmd_core_uniffi_checksum_func_run_self_test(
     ): Int
@@ -823,7 +827,11 @@ internal object UniffiLib {
     ): RustBuffer.ByValue
     external fun uniffi_healthmd_core_uniffi_fn_func_merge_rendered_markdown(`existing`: RustBuffer.ByValue,`generated`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
+    external fun uniffi_healthmd_core_uniffi_fn_func_merge_scoped_daily_note(`profile`: RustBuffer.ByValue,`existing`: RustBuffer.ByValue,`patch`: RustBuffer.ByValue,`injectSections`: Byte,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     external fun uniffi_healthmd_core_uniffi_fn_func_negotiate_direct_transfer(`local`: RustBuffer.ByValue,`peer`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_healthmd_core_uniffi_fn_func_prepare_scoped_daily_note(`profile`: RustBuffer.ByValue,`recordJson`: RustBuffer.ByValue,`bases`: RustBuffer.ByValue,`markdown`: RustBuffer.ByValue,`selectedProperties`: RustBuffer.ByValue,`injectSections`: Byte,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_healthmd_core_uniffi_fn_func_run_self_test(uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
@@ -1004,7 +1012,13 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_healthmd_core_uniffi_checksum_func_merge_rendered_markdown() and 0xffff) != 52449) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if ((lib.uniffi_healthmd_core_uniffi_checksum_func_merge_scoped_daily_note() and 0xffff) != 24416) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if ((lib.uniffi_healthmd_core_uniffi_checksum_func_negotiate_direct_transfer() and 0xffff) != 2073) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_healthmd_core_uniffi_checksum_func_prepare_scoped_daily_note() and 0xffff) != 59530) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_healthmd_core_uniffi_checksum_func_run_self_test() and 0xffff) != 469) {
@@ -5750,6 +5764,27 @@ public object FfiConverterSequenceTypeCoreRegistryUnavailableMetric: FfiConverte
     
 
         /**
+         * Merge a capture-scoped personal-note patch without changing whole-export behavior.
+         *
+         * # Errors
+         * Returns bounded capture/YAML/size failures or a contained panic.
+         */
+    @Throws(HealthmdRenderException::class) fun `mergeScopedDailyNote`(`profile`: CoreMetricRegistryProfile, `existing`: kotlin.String, `patch`: kotlin.String, `injectSections`: kotlin.Boolean): kotlin.String {
+            return FfiConverterString.lift(
+    uniffiRustCallWithError(HealthmdRenderException) { _status ->
+    UniffiLib.uniffi_healthmd_core_uniffi_fn_func_merge_scoped_daily_note(
+    
+        
+        FfiConverterTypeCoreMetricRegistryProfile.lower(`profile`),
+        FfiConverterString.lower(`existing`),
+        FfiConverterString.lower(`patch`),
+        FfiConverterBoolean.lower(`injectSections`),_status)
+}
+    )
+    }
+    
+
+        /**
          * Negotiate two owned capability records with the existing pure Rust algorithm.
          *
          * # Errors
@@ -5763,6 +5798,29 @@ public object FfiConverterSequenceTypeCoreRegistryUnavailableMetric: FfiConverte
         
         FfiConverterTypeCoreDirectTransferCapabilities.lower(`local`),
         FfiConverterTypeCoreDirectTransferCapabilities.lower(`peer`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * Project accepted rendered artifacts into one independently versioned note patch.
+         *
+         * # Errors
+         * Returns bounded capture/YAML/size failures or a contained panic.
+         */
+    @Throws(HealthmdRenderException::class) fun `prepareScopedDailyNote`(`profile`: CoreMetricRegistryProfile, `recordJson`: kotlin.String, `bases`: kotlin.String, `markdown`: kotlin.String, `selectedProperties`: List<kotlin.String>, `injectSections`: kotlin.Boolean): kotlin.String {
+            return FfiConverterString.lift(
+    uniffiRustCallWithError(HealthmdRenderException) { _status ->
+    UniffiLib.uniffi_healthmd_core_uniffi_fn_func_prepare_scoped_daily_note(
+    
+        
+        FfiConverterTypeCoreMetricRegistryProfile.lower(`profile`),
+        FfiConverterString.lower(`recordJson`),
+        FfiConverterString.lower(`bases`),
+        FfiConverterString.lower(`markdown`),
+        FfiConverterSequenceString.lower(`selectedProperties`),
+        FfiConverterBoolean.lower(`injectSections`),_status)
 }
     )
     }

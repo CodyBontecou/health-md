@@ -13,6 +13,7 @@
 //
 
 import Foundation
+import HealthMdCoreRust
 
 // MARK: - Daily Note Injector
 
@@ -115,19 +116,16 @@ struct DailyNoteInjector {
         let keys = frontmatterKeys(enabledIn: settings.metricSelection).map {
             resolvedOutputKey(originalKey: $0, fmConfig: settings.formatCustomization.frontmatterConfig)
         }
-        guard !keys.contains(captureKey), !keys.contains(captureKindKey), Set(keys).count == keys.count,
-              let properties = MarkdownMerger.frontmatterProperties(named: Set(keys), in: try text(.obsidianBases)) else {
+        guard !keys.contains(captureKey), !keys.contains(captureKindKey), Set(keys).count == keys.count else {
             throw ExportError.markdownMergeRejected
         }
-        // Preserve the accepted JSON bytes inside a YAML-safe quoted string.
-        // The record applies only to this injected capture, not to other fields.
-        let frontmatter = "---\n" + properties.joined() + (try scopedCaptureProperties(json: json)) + "---\n"
-        let markdown = try text(.markdown)
-        let body = settings.dailyNoteInjection.injectMarkdownSections
-            ? (MarkdownMerger.splitFrontmatter(from: markdown)?.body ?? markdown) : ""
+        let patch = try HealthMdCoreService().prepareScopedNote(profile: .appleHealthDataV11,
+            recordJSON: json, bases: text(.obsidianBases), markdown: text(.markdown),
+            selectedProperties: keys, injectSections: settings.dailyNoteInjection.injectMarkdownSections)
+        guard let parts = MarkdownMerger.splitFrontmatter(from: patch) else { throw ExportError.markdownMergeRejected }
         return PreparedContent(ownerDate: healthData.date, context: healthData.timeContext,
             settings: settingsSnapshot.dailyNoteInjection,
-            content: InjectionContent(frontmatter: frontmatter, body: body, isWakeDateCapture: true))
+            content: InjectionContent(frontmatter: parts.frontmatter, body: parts.body, isWakeDateCapture: true))
     }
 
     private static func scopedCaptureProperties(json: String) throws -> String {
@@ -408,6 +406,7 @@ struct DailyNoteInjector {
         settings: DailyNoteInjectionSettings
     ) throws -> String {
         var injectionContent = injectionContent
+        var scopedProfile: CoreMetricRegistryProfile? = injectionContent.isWakeDateCapture ? .appleHealthDataV11 : nil
         if !injectionContent.isWakeDateCapture,
            let properties = MarkdownMerger.frontmatterProperties(named: [captureKey, captureKindKey], in: existing),
            !properties.isEmpty {
@@ -421,6 +420,12 @@ struct DailyNoteInjector {
                 injectionContent = InjectionContent(frontmatter: frontmatter, body: injectionContent.body)
             case .rejected: throw ExportError.markdownMergeRejected
             }
+            scopedProfile = .appleHealthDataV8
+        }
+        if let scopedProfile {
+            return try HealthMdCoreService().mergeScopedNote(profile: scopedProfile, existing: existing,
+                patch: injectionContent.frontmatter + injectionContent.body,
+                injectSections: settings.injectMarkdownSections)
         }
         if settings.injectMarkdownSections {
             switch MarkdownMerger.mergePreservingPreambleOutcome(

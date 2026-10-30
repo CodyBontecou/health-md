@@ -288,7 +288,7 @@ private fun validateArtifactId(value: String) {
     if (!value.isLowercaseSha256()) invalid(ExportArtifactPlanValidationIssue.ARTIFACT_ID)
 }
 
-private fun validateRelativePath(value: String) {
+internal fun validateRelativePath(value: String) {
     val windowsAbsolute = value.length >= 2 && value[0].isLetter() && value[1] == ':'
     if (
         value.isEmpty() ||

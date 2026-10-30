@@ -1472,6 +1472,54 @@ pub fn merge_profile_rendered_markdown(
     })
 }
 
+/// Merge a capture-scoped personal-note patch without changing whole-export behavior.
+///
+/// # Errors
+/// Returns bounded capture/YAML/size failures or a contained panic.
+#[uniffi::export]
+pub fn merge_scoped_daily_note(
+    profile: CoreMetricRegistryProfile,
+    existing: &str,
+    patch: &str,
+    inject_sections: bool,
+) -> Result<String, HealthmdRenderError> {
+    render_panic_guard(|| {
+        healthmd_core::render::merge_scoped_daily_note(
+            semantic_profile(profile),
+            existing,
+            patch,
+            inject_sections,
+        )
+        .map_err(HealthmdRenderError::from)
+    })
+}
+
+/// Project accepted rendered artifacts into one independently versioned note patch.
+///
+/// # Errors
+/// Returns bounded capture/YAML/size failures or a contained panic.
+#[uniffi::export]
+pub fn prepare_scoped_daily_note(
+    profile: CoreMetricRegistryProfile,
+    record_json: &str,
+    bases: &str,
+    markdown: &str,
+    selected_properties: Vec<String>,
+    inject_sections: bool,
+) -> Result<String, HealthmdRenderError> {
+    render_panic_guard(move || {
+        healthmd_core::render::prepare_scoped_daily_note(
+            semantic_profile(profile),
+            record_json,
+            bases,
+            markdown,
+            &selected_properties,
+            inject_sections,
+        )
+        .map_err(HealthmdRenderError::from)
+    })
+}
+
 /// Backward-compatible Apple-style managed-Markdown merge.
 ///
 /// # Errors
@@ -1894,5 +1942,59 @@ mod tests {
             .chunks_exact(2)
             .map(|pair| u8::from_str_radix(std::str::from_utf8(pair).unwrap(), 16).unwrap())
             .collect()
+    }
+}
+
+#[cfg(test)]
+mod scoped_daily_note_tests {
+    use super::*;
+
+    #[test]
+    fn scoped_note_prepare_and_merge_cross_the_native_boundary() {
+        let record = serde_json::json!({"schema":"healthmd.health_data","schema_version":6,
+            "schema_profile":"android-sleep-v6","type":"health-data","date":"2026-03-08",
+            "time_context":{"calendar_timezone":"America/New_York","timestamp_timezone":"UTC",
+            "sleep_day_attribution":"morning_ends","sleep_owner_day_rule":"session_end_date","sleep_interval_clipping":"none"},
+            "activity":{"steps":42}}).to_string();
+        let patch = prepare_scoped_daily_note(
+            CoreMetricRegistryProfile::AndroidSleepV6,
+            &record,
+            "---\nsteps: 42\nother: 99\n---\n",
+            "## Activity\nNew activity.\n",
+            vec!["steps".into()],
+            true,
+        )
+        .unwrap();
+        assert!(!patch.contains("other: 99"));
+        let existing = "---\nnotes: |\n  Keep: personal YAML\n---\nMy introduction.\n## Journal\nPersonal text.\n";
+        let merged = merge_scoped_daily_note(
+            CoreMetricRegistryProfile::AndroidSleepV6,
+            existing,
+            &patch,
+            true,
+        )
+        .unwrap();
+        assert!(merged.contains("notes: |\n  Keep: personal YAML\n"));
+        assert!(merged.contains("My introduction."));
+        assert!(merged.contains("Personal text."));
+        assert!(merged.contains("New activity."));
+        assert!(
+            merge_scoped_daily_note(
+                CoreMetricRegistryProfile::AppleHealthDataV11,
+                existing,
+                &patch,
+                true
+            )
+            .is_err()
+        );
+        assert!(
+            merge_scoped_daily_note(
+                CoreMetricRegistryProfile::AndroidSleepV6,
+                "---\nschema: healthmd.health_data\n---\nOriginal",
+                &patch,
+                true
+            )
+            .is_err()
+        );
     }
 }

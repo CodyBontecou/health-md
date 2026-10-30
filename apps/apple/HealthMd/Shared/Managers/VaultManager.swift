@@ -2733,6 +2733,8 @@ final class VaultManager: ObservableObject {
         var rendering = settingsSnapshot.forDailyArtifactPreview()
         rendering.exportFormats = [.json, .markdown, .obsidianBases]
         rendering.includeMetadata = true
+        rendering.groupByCategory = true
+        rendering.formatCustomization.markdownTemplate.style = .standard
         rendering.archiveExportFiles = false
         rendering.summaryOnlyExport = false
         rendering.dailyNoteInjection.enabled = false

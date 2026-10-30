@@ -4,10 +4,10 @@
   "app_repository_url": "https://github.com/CodyBontecou/health-md.git",
   "source_app_commit": null,
   "source_revision_strategy": "content-addressed docs/reference tree; commit omitted to avoid same-commit self-reference",
-  "docs_reference_git_tree": "a56e1a00e30d16590689d1b62c3c9623b0b74769",
+  "docs_reference_git_tree": "645597fd171dbac2cf2491c55875f56e6980900f",
   "aggregate": {
     "algorithm": "SHA-256",
-    "digest": "10b76753f92ea5cedde601ef99258e87f812b14fcdf3bb8391aa1a706141685c",
+    "digest": "b126116b9e40dfcf8e99644ffce6d0185ff2dfa694d003ec62a3dd2d122829c1",
     "canonicalization": "For each source file sorted by path: UTF-8 path, NUL, decimal byte count, NUL, lowercase SHA-256, LF."
   },
   "schemas": [
@@ -1195,8 +1195,8 @@
     },
     {
       "path": "other-export-surfaces.md",
-      "bytes": 7124,
-      "sha256": "a043ac5f88aa060b7923ec4b0ec18ace15763f50e5927de31445fbb5ce47ed09",
+      "bytes": 7459,
+      "sha256": "dd625cf872e8ea1193f1f530b72e3674d3898e83865eba6fc03d23c84d9132d3",
       "classification": "handwritten-markdown",
       "routes": {
         "rendered": "/docs/reference/other-export-surfaces/",
@@ -2120,8 +2120,8 @@
     },
     {
       "path": "src/content/docs/reference/other-export-surfaces.md",
-      "bytes": 7478,
-      "sha256": "e14dd573e9c11fbdf1e7bb947726c9f7aa10d2e0cb75e2de95338e8f23f24f47",
+      "bytes": 7813,
+      "sha256": "0329c2dc640f7e317782186a947084f559b586756944e67f4f5d5d96a5a68b38",
       "classification": "rendered-page",
       "route": "/docs/reference/other-export-surfaces/"
     },

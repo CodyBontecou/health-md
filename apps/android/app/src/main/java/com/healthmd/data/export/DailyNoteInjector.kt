@@ -12,6 +12,9 @@ enum class InjectionResult {
 
 class DailyNoteInjector {
 
+    fun injectPrepared(existingContent: String?, prepared: PreparedWakeDateDailyNote): Pair<InjectionResult, String?> =
+        prepared.inject(existingContent)
+
     private val markdownExporter = MarkdownExporter()
     private val markdownMerger = MarkdownMerger()
 
