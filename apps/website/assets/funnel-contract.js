@@ -33,6 +33,7 @@ export const FUNNEL_PAGES = Object.freeze({
   home_assistant: '/blog/apple-health-home-assistant/',
   coros_export: '/blog/export-coros-data/',
   suunto_export: '/blog/export-suunto-data/',
+  clue_export: '/blog/export-clue-data/',
 });
 export const FUNNEL_LOCALES = Object.freeze(['en', 'es', 'de', 'fr', 'pt-br', 'it', 'nl', 'ja', 'ko', 'zh-hans']);
 export const FUNNEL_ACTIONS = Object.freeze({
