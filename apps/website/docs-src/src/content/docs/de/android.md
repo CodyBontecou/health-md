@@ -149,7 +149,7 @@ Health.md für Android ist lokal zuerst:
 
 Wenn Sie die strengste lokale Einrichtung wünschen, führen Sie manuelle Exporte in einen lokalen Geräteordner durch und lassen Sie geplante Exporte und die vom Anbieter unterstützte Synchronisierung deaktiviert.
 
-Der separate, optionale Cloud-Pilot Health.md für einen einzelnen Eigentümer behält nur API-Exporte bei, die absichtlich dorthin hochgeladen wurden. Es gibt keine öffentliche Anmeldung und keine automatische Gerätesynchronisierung. Dieser Ordner-Workflow lädt nicht dorthin hoch. Informationen zu Aufbewahrungs-, Lösch-, Kontingent- und nicht gesicherten Speicherrisiken finden Sie in der [Datenschutzrichtlinie](/privacy-policy.html).
+Der separate, optionale Health.md Cloud-Pilot ist nur für einen Eigentümer vorgesehen und speichert ausschließlich API-Exporte, die bewusst hochgeladen werden. Es gibt keine öffentliche Registrierung und keine automatische Gerätesynchronisierung; dieser Ordnerexport lädt nichts in den Pilot hoch. Die [Datenschutzerklärung](/privacy-policy.html) beschreibt Aufbewahrung, Löschung, Speicherquote und Verlustrisiken ohne Backup.
 
 ## Verwandte Dokumente
 
