@@ -1,5 +1,5 @@
 use std::{
-    collections::BTreeMap,
+    collections::{BTreeMap, BTreeSet},
     fs::{self, File},
     io::{self, Read as _, Write as _},
     path::{Component, Path, PathBuf},
@@ -64,7 +64,17 @@ fn journal_version(accepted: &ExportAccepted) -> u16 {
 // stages with the pre-scoped merger. Legacy stages for other write modes retain
 // their original meaning and may be upgraded without rendering them again.
 fn validate_journal_version(journal: &FileJournal) -> Result<(), ClientError> {
-    let current = journal_version(&journal.accepted);
+    if !matches!(journal.scoped_daily_note_version, None | Some(1))
+        || (journal.scoped_daily_note_version.is_none() && !journal.skipped_notes.is_empty())
+    {
+        return Err(invalid("durable scoped note version is unsupported"));
+    }
+    let current = journal_version(&journal.accepted)
+        + if journal.scoped_daily_note_version.is_some() {
+            2
+        } else {
+            0
+        };
     if journal.version == current {
         return Ok(());
     }
@@ -73,7 +83,8 @@ fn validate_journal_version(journal: &FileJournal) -> Result<(), ClientError> {
     } else {
         LEGACY_JOURNAL_VERSION
     };
-    if journal.version != legacy
+    if journal.scoped_daily_note_version.is_some()
+        || journal.version != legacy
         || journal.commit_plans.keys().any(|file_id| {
             journal.manifests.get(file_id).is_some_and(|manifest| {
                 manifest.write_mode == FileWriteMode::MergeMarkdownPreservingPreamble
@@ -86,7 +97,7 @@ fn validate_journal_version(journal: &FileJournal) -> Result<(), ClientError> {
 }
 const HISTORY_SIDECAR_DIRECTORY: &str = ".healthmd/history-observations";
 const MAXIMUM_MERGE_BYTES: i64 = 64 * 1_024 * 1_024;
-const MAXIMUM_SCOPED_NOTE_BYTES: u64 = 8 * 1_024 * 1_024;
+pub(crate) const MAXIMUM_SCOPED_NOTE_BYTES: u64 = 8 * 1_024 * 1_024;
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 struct DestinationIdentity {
@@ -121,6 +132,18 @@ struct CommitPlan {
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 struct FileJournal {
     version: u16,
+    #[serde(
+        rename = "scopedDailyNoteVersion",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    scoped_daily_note_version: Option<i32>,
+    #[serde(
+        rename = "skippedNotes",
+        default,
+        skip_serializing_if = "BTreeSet::is_empty"
+    )]
+    skipped_notes: BTreeSet<SwiftUuid>,
     request: ExportRequest,
     accepted: ExportAccepted,
     session: TransferSession,
@@ -158,6 +181,8 @@ pub struct FileReceiptPayload {
     pub total_bytes: i64,
     #[serde(rename = "relative_paths")]
     pub relative_paths: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub skipped_relative_paths: Vec<String>,
     #[serde(rename = "success_count")]
     pub success_count: i64,
     #[serde(rename = "total_count")]
@@ -483,7 +508,9 @@ impl GeneratedDestination {
         self.ensure_identity()?;
         let relative = validate_generated_relative_path(relative_path)?;
         let root = Dir::open_ambient_dir(&self.root, ambient_authority()).map_err(storage_error)?;
-        let (parent, name) = open_safe_parent(root, &relative)?;
+        let Some((parent, name)) = open_existing_safe_parent(root, &relative)? else {
+            return Ok(None);
+        };
         digest_cap_file(&parent, &name)
     }
 
@@ -512,6 +539,7 @@ pub(crate) const fn v2_write_mode(mode: healthmd_protocol::v2::FileWriteMode) ->
 }
 
 pub struct FileReceiver {
+    scoped_daily_note_version: Option<i32>,
     layout: StorageLayout,
     jobs: JobStore,
     journal: Option<FileJournal>,
@@ -522,11 +550,30 @@ impl FileReceiver {
     #[must_use]
     pub const fn new(layout: StorageLayout, jobs: JobStore) -> Self {
         Self {
+            scoped_daily_note_version: None,
             layout,
             jobs,
             journal: None,
             pending: None,
         }
+    }
+
+    /// Configure bilateral note support from the authenticated connection.
+    /// New jobs freeze this version; existing jobs retain their original semantics.
+    ///
+    /// # Errors
+    /// Rejects unknown versions and changes after preparing a job.
+    pub fn configure_scoped_daily_notes(
+        &mut self,
+        version: Option<i32>,
+    ) -> Result<(), ClientError> {
+        if !matches!(version, None | Some(1)) || self.journal.is_some() {
+            return Err(invalid(
+                "scoped note negotiation is unsupported or already frozen",
+            ));
+        }
+        self.scoped_daily_note_version = version;
+        Ok(())
     }
 
     /// Create or reopen an immutable direct generated-file transfer.
@@ -544,36 +591,22 @@ impl FileReceiver {
             .destination
             .as_ref()
             .ok_or_else(|| invalid("file request has no destination"))?;
-        let accepted_dates = &accepted.resolved_date_identifiers;
-        if request.response_mode != ResponseMode::WriteFiles
-            || request.raw_profile.is_some()
-            || request.job_id != accepted.job_id
-            || request.job_id != session.job_id
-            || session.peer_binding != accepted.peer_binding
-            || accepted
-                .history_observation
-                .as_ref()
-                .is_some_and(|observation| !observation.matches(&request, &accepted, &session))
-            || accepted_dates.is_empty()
-            || accepted_dates.len() > MAXIMUM_DATES_PER_JOB
-            || accepted_dates.windows(2).any(|pair| pair[0] >= pair[1])
-            || accepted_dates.iter().any(|date| !is_source_date(date))
-            || !safe_peer_metadata(&accepted.source_device_name, 128)
-            || !valid_time_zone(&accepted.source_time_zone_identifier)
-            || request_fingerprint(&request).map_err(|_| invalid("fingerprint failed"))?
-                != session.request_fingerprint
-        {
-            return Err(invalid(
-                "file request, acceptance, and session do not agree",
-            ));
-        }
+        validate_file_session(&request, &accepted, &session)?;
         let root = validated_root(&destination.root_path)?;
         let identity = destination_identity(&root)?;
         let directory = self.session_directory(request.job_id.0)?;
         let path = directory.join("file-journal.json");
+        let expected_version = journal_version(&accepted)
+            + if self.scoped_daily_note_version.is_some() {
+                2
+            } else {
+                0
+            };
         let journal = if path.exists() {
             let mut persisted = load_journal(&path)?;
-            if persisted.request != request
+            if (persisted.scoped_daily_note_version.is_some()
+                && persisted.scoped_daily_note_version != self.scoped_daily_note_version)
+                || persisted.request != request
                 || persisted.session != session
                 || persisted.destination_identity != identity
                 || persisted.accepted.peer_binding != accepted.peer_binding
@@ -589,14 +622,22 @@ impl FileReceiver {
                 return Err(invalid("durable file session changed"));
             }
             validate_persisted_limits(&persisted)?;
-            if persisted.version != journal_version(&accepted) {
-                persisted.version = journal_version(&accepted);
+            let expected_version = journal_version(&accepted)
+                + if persisted.scoped_daily_note_version.is_some() {
+                    2
+                } else {
+                    0
+                };
+            if persisted.version != expected_version {
+                persisted.version = expected_version;
                 save_journal(&self.layout, &persisted)?;
             }
             persisted
         } else {
             let journal = FileJournal {
-                version: journal_version(&accepted),
+                version: expected_version,
+                scoped_daily_note_version: self.scoped_daily_note_version,
+                skipped_notes: BTreeSet::new(),
                 request,
                 accepted,
                 session,
@@ -635,9 +676,6 @@ impl FileReceiver {
     /// Returns an error for unsafe paths, bad digest/count, changed manifest, or storage failure.
     pub fn store_manifest(&mut self, manifest: FileManifest) -> Result<(), ClientError> {
         validate_generated_relative_path(&manifest.relative_path)?;
-        if manifest.scoped_note_policy.is_some() {
-            return Err(invalid("scoped note policy was not negotiated"));
-        }
         if manifest.byte_count < 0 || !is_sha256(&manifest.sha256) {
             return Err(invalid("file manifest is invalid"));
         }
@@ -645,6 +683,7 @@ impl FileReceiver {
             .journal
             .as_mut()
             .ok_or_else(|| invalid("file receiver is not prepared"))?;
+        validate_note_manifest(&manifest, journal)?;
         if (journal.accepted.history_observation.is_some()
             && generated_paths_conflict(&manifest.relative_path, HISTORY_SIDECAR_DIRECTORY))
             || manifest.job_id != journal.request.job_id
@@ -990,6 +1029,7 @@ impl FileReceiver {
         for manifest in &manifests {
             commit_file(&self.layout, manifest, &mut journal)?;
         }
+        save_journal(&self.layout, &journal)?;
         let receipt = make_receipt(&self.layout, &journal)?;
         let mut record = self.jobs.load(journal.request.job_id.0)?;
         record.state = JobState::AwaitingPeerAcknowledgement;
@@ -1074,10 +1114,12 @@ impl FileReceiver {
         )?)
         .map_err(|_| invalid("file receipt is malformed"))?;
         let journal = load_journal(&self.session_directory(job_id)?.join("file-journal.json"))?;
+        validate_persisted_limits(&journal)?;
         if journal.request != record.request
             || journal.request.job_id.0 != job_id
             || artifact.history_observation_sha256 != history_observation_digest(&journal.accepted)?
             || payload.job_id != journal.request.job_id
+            || payload.skipped_relative_paths != skipped_note_paths(&journal)
             || payload.history_observation != journal.accepted.history_observation
             || payload.history_sidecar != expected_history_sidecar(&journal)?
         {
@@ -1117,7 +1159,14 @@ impl FileReceiver {
             final_partition_sha256: finalize.final_partition_sha256.clone(),
             response_byte_count: Some(receipt.response_byte_count),
             response_sha256: Some(receipt.response_sha256.clone()),
-            message: Some("CLI committed generated files to the explicit destination.".into()),
+            message: Some(
+                if receipt.payload.skipped_relative_paths.is_empty() {
+                    "CLI committed generated files to the explicit destination."
+                } else {
+                    "CLI processed the export with skipped notes."
+                }
+                .into(),
+            ),
         }
     }
 
@@ -1126,12 +1175,96 @@ impl FileReceiver {
     }
 }
 
+fn validate_file_session(
+    request: &ExportRequest,
+    accepted: &ExportAccepted,
+    session: &TransferSession,
+) -> Result<(), ClientError> {
+    let accepted_dates = &accepted.resolved_date_identifiers;
+    if request.response_mode != ResponseMode::WriteFiles
+        || request.raw_profile.is_some()
+        || request.job_id != accepted.job_id
+        || request.job_id != session.job_id
+        || session.peer_binding != accepted.peer_binding
+        || accepted
+            .history_observation
+            .as_ref()
+            .is_some_and(|observation| !observation.matches(request, accepted, session))
+        || accepted_dates.is_empty()
+        || accepted_dates.len() > MAXIMUM_DATES_PER_JOB
+        || accepted_dates.windows(2).any(|pair| pair[0] >= pair[1])
+        || accepted_dates.iter().any(|date| !is_source_date(date))
+        || !safe_peer_metadata(&accepted.source_device_name, 128)
+        || !valid_time_zone(&accepted.source_time_zone_identifier)
+        || request_fingerprint(request).map_err(|_| invalid("fingerprint failed"))?
+            != session.request_fingerprint
+    {
+        return Err(invalid(
+            "file request, acceptance, and session do not agree",
+        ));
+    }
+    Ok(())
+}
+
 fn safe_peer_metadata(value: &str, maximum_bytes: usize) -> bool {
     !value.trim().is_empty() && value.len() <= maximum_bytes && !value.chars().any(char::is_control)
 }
 
 fn valid_time_zone(value: &str) -> bool {
     value.len() <= 64 && value.parse::<chrono_tz::Tz>().is_ok()
+}
+
+fn validate_note_manifest(
+    manifest: &FileManifest,
+    journal: &FileJournal,
+) -> Result<(), ClientError> {
+    let Some(policy) = &manifest.scoped_note_policy else {
+        return if journal.scoped_daily_note_version.is_some()
+            && manifest.write_mode == FileWriteMode::MergeMarkdownPreservingPreamble
+        {
+            Err(invalid("negotiated note manifest has no policy"))
+        } else {
+            Ok(())
+        };
+    };
+    if journal.scoped_daily_note_version != Some(1)
+        || !policy.is_valid()
+        || !u64::try_from(manifest.byte_count)
+            .is_ok_and(|bytes| bytes > 0 && bytes <= MAXIMUM_SCOPED_NOTE_BYTES)
+        || manifest.write_mode != FileWriteMode::MergeMarkdownPreservingPreamble
+        || !matches!(policy.record_profile.as_str(), "apple-v8" | "apple-v11")
+        || !journal
+            .accepted
+            .resolved_date_identifiers
+            .contains(&policy.owner_date)
+        || policy.calendar_timezone != journal.accepted.source_time_zone_identifier
+        || !manifest.relative_path.to_ascii_lowercase().ends_with(".md")
+    {
+        return Err(invalid(
+            "scoped note policy does not match accepted authority",
+        ));
+    }
+    if let healthmd_protocol::models::DateSelection::Exact(range) = &journal.request.date_selection
+    {
+        if !is_source_date(&range.start)
+            || !is_source_date(&range.end)
+            || policy.owner_date < range.start
+            || policy.owner_date > range.end
+        {
+            return Err(invalid("scoped note owner date does not match request"));
+        }
+    }
+    Ok(())
+}
+
+fn skipped_note_paths(journal: &FileJournal) -> Vec<String> {
+    let mut paths: Vec<_> = journal
+        .skipped_notes
+        .iter()
+        .filter_map(|id| journal.manifests.get(id).map(|m| m.relative_path.clone()))
+        .collect();
+    paths.sort();
+    paths
 }
 
 fn validate_persisted_limits(journal: &FileJournal) -> Result<(), ClientError> {
@@ -1147,17 +1280,31 @@ fn validate_persisted_limits(journal: &FileJournal) -> Result<(), ClientError> {
     for (index, (file_id, manifest)) in manifests.iter().enumerate() {
         if **file_id != manifest.file_id
             || manifest.job_id != journal.request.job_id
-            || manifest.scoped_note_policy.is_some()
             || manifest.byte_count < 0
             || !is_sha256(&manifest.sha256)
         {
             return Err(invalid("durable file manifest is invalid"));
         }
+        validate_note_manifest(manifest, journal)?;
         validate_generated_relative_path(&manifest.relative_path)?;
         if manifests.iter().skip(index + 1).any(|(_, other)| {
             generated_paths_conflict(&manifest.relative_path, &other.relative_path)
         }) {
             return Err(invalid("durable generated destinations collide"));
+        }
+    }
+    for file_id in &journal.skipped_notes {
+        let manifest = journal
+            .manifests
+            .get(file_id)
+            .ok_or_else(|| invalid("skipped note has no manifest"))?;
+        if journal.commit_plans.contains_key(file_id)
+            || manifest
+                .scoped_note_policy
+                .as_ref()
+                .is_none_or(|policy| policy.create_if_missing)
+        {
+            return Err(invalid("skipped note disposition is incompatible"));
         }
     }
     for (file_id, plan) in &journal.commit_plans {
@@ -1321,9 +1468,61 @@ fn commit_file(
     if destination_identity(&root)? != journal.destination_identity {
         return Err(invalid("destination root identity changed"));
     }
+    if journal.skipped_notes.contains(&manifest.file_id) {
+        return Ok(());
+    }
+    if let Some(policy) = &manifest.scoped_note_policy {
+        if !journal.commit_plans.contains_key(&manifest.file_id) {
+            let source = assemble_source(layout, journal, manifest)?;
+            let stage_name = format!(
+                "file-output-{}.stage",
+                manifest.file_id.0.to_string().to_lowercase()
+            );
+            let stage = session_directory(layout, journal.request.job_id.0)?.join(&stage_name);
+            let destination =
+                GeneratedDestination::open(&root)?.with_private_storage_root(&layout.root);
+            match destination.prepare_scoped_note_stage(
+                &manifest.relative_path,
+                &source,
+                &stage,
+                policy,
+            )? {
+                GeneratedNoteStage::SkippedMissing => {
+                    journal.skipped_notes.insert(manifest.file_id);
+                }
+                GeneratedNoteStage::Ready(prepared) => {
+                    journal.commit_plans.insert(
+                        manifest.file_id,
+                        CommitPlan {
+                            file_id: manifest.file_id,
+                            destination_relative_path: manifest.relative_path.clone(),
+                            before_sha256: prepared.before_sha256,
+                            after_sha256: prepared.after_sha256,
+                            staged_relative_path: stage_name,
+                            committed: false,
+                        },
+                    );
+                }
+            }
+            journal.updated_at = Utc::now();
+            save_journal(layout, journal)?;
+            if journal.skipped_notes.contains(&manifest.file_id) {
+                return Ok(());
+            }
+        }
+    }
     let relative = validate_generated_relative_path(&manifest.relative_path)?;
     let capability = Dir::open_ambient_dir(&root, ambient_authority()).map_err(storage_error)?;
-    let (parent, name) = open_safe_parent(capability, &relative)?;
+    let (parent, name) = if manifest
+        .scoped_note_policy
+        .as_ref()
+        .is_some_and(|policy| !policy.create_if_missing)
+    {
+        open_existing_safe_parent(capability, &relative)?
+            .ok_or_else(|| invalid("existing-only note destination changed before commit"))?
+    } else {
+        open_safe_parent(capability, &relative)?
+    };
     let current = digest_cap_file(&parent, &name)?;
     if let Some(plan) = journal.commit_plans.get(&manifest.file_id).cloned() {
         let staged = session_directory(layout, journal.request.job_id.0)?.join(format!(
@@ -1935,6 +2134,7 @@ fn history_file_receipt(
     let artifacts = journal
         .manifests
         .values()
+        .filter(|manifest| !journal.skipped_notes.contains(&manifest.file_id))
         .map(|manifest| {
             validate_generated_relative_path(&manifest.relative_path)?;
             if generated_paths_conflict(&manifest.relative_path, HISTORY_SIDECAR_DIRECTORY) {
@@ -2041,6 +2241,7 @@ fn make_receipt(
     let mut relative_paths: Vec<_> = journal
         .manifests
         .values()
+        .filter(|file| !journal.skipped_notes.contains(&file.file_id))
         .map(|file| file.relative_path.clone())
         .collect();
     relative_paths.sort();
@@ -2048,10 +2249,11 @@ fn make_receipt(
         job_id: journal.request.job_id,
         status: outcome.status.clone(),
         destination_path: destination.root_path.clone(),
-        files_written: i64::try_from(journal.manifests.len())
+        files_written: i64::try_from(relative_paths.len())
             .map_err(|_| invalid("too many files"))?,
         total_bytes: checked_byte_total(journal.manifests.values().map(|file| file.byte_count))?,
         relative_paths,
+        skipped_relative_paths: skipped_note_paths(journal),
         success_count: outcome.success_count,
         total_count: outcome.total_count,
         failed_date_identifiers: outcome.failed_date_identifiers.clone(),
@@ -2070,7 +2272,11 @@ fn make_receipt(
         .ok_or_else(|| invalid("receipt is not an object"))?;
     object.insert(
         "message".into(),
-        json!("iPhone export files were committed to the explicit destination."),
+        json!(if journal.skipped_notes.is_empty() {
+            "iPhone export files were committed to the explicit destination."
+        } else {
+            "iPhone export completed with skipped notes."
+        }),
     );
     save_json(&layout.root, &path, &value)?;
     let (bytes, digest) = inspect_file(&path)?;
@@ -2176,7 +2382,7 @@ fn destination_identity(root: &Path) -> Result<DestinationIdentity, ClientError>
     }
 }
 
-fn is_source_date(value: &str) -> bool {
+pub(crate) fn is_source_date(value: &str) -> bool {
     value.len() == 10
         && NaiveDate::parse_from_str(value, "%Y-%m-%d")
             .is_ok_and(|date| date.format("%Y-%m-%d").to_string() == value)
@@ -2646,6 +2852,7 @@ mod tests {
 
     use super::*;
     use crate::job::{JobRecord, JobStore};
+    use crate::test_support::NoteCase;
 
     #[cfg(windows)]
     #[test]
@@ -2782,22 +2989,42 @@ mod tests {
 
     #[test]
     fn append_commit_is_digest_bound_and_idempotent() {
-        check_append_commit(false, false);
+        check_append_commit(false, false, NoteCase::Legacy);
     }
 
     #[test]
     fn observed_file_receipt_survives_restart_and_rejects_rebound_evidence() {
-        check_append_commit(true, false);
+        check_append_commit(true, false, NoteCase::Legacy);
     }
 
     #[test]
     fn scoped_note_commit_is_digest_bound_and_survives_restart() {
-        check_append_commit(false, true);
-        check_append_commit(true, true);
+        check_append_commit(false, true, NoteCase::Legacy);
+        check_append_commit(true, true, NoteCase::Legacy);
+    }
+
+    #[test]
+    fn negotiated_note_transfers_bind_authority_and_freeze_missing_note_skips() {
+        for observed in [false, true] {
+            for case in [
+                NoteCase::Existing,
+                NoteCase::SkipMissing,
+                NoteCase::CreateMissing,
+                NoteCase::RejectCapture,
+            ] {
+                check_append_commit(observed, true, case);
+            }
+        }
     }
 
     #[allow(clippy::too_many_lines)]
-    fn check_append_commit(observed: bool, scoped: bool) {
+    fn check_append_commit(observed: bool, scoped: bool, case: NoteCase) {
+        let negotiated = case != NoteCase::Legacy;
+        let missing = matches!(
+            case,
+            NoteCase::SkipMissing | NoteCase::CreateMissing | NoteCase::RejectCapture
+        );
+        let version = negotiated.then_some(1);
         let temporary = TempDir::new().unwrap();
         let destination = temporary.path().join("destination");
         fs::create_dir(&destination).unwrap();
@@ -2806,7 +3033,9 @@ mod tests {
         } else {
             "old".into()
         };
-        fs::write(destination.join("daily.md"), &existing).unwrap();
+        if !missing {
+            fs::write(destination.join("daily.md"), &existing).unwrap();
+        }
         let layout = StorageLayout {
             root: temporary.path().join("state"),
         };
@@ -2884,14 +3113,24 @@ mod tests {
         }
         let expected_history = accepted.history_observation.clone();
         let data = if scoped {
-            crate::test_support::scoped_note_patch(false).into_bytes()
+            {
+                let patch = crate::test_support::scoped_note_patch(false);
+                if case == NoteCase::RejectCapture {
+                    patch.replace("2026-07-23", "2026-07-24").into_bytes()
+                } else {
+                    patch.into_bytes()
+                }
+            }
         } else {
             b"fresh".to_vec()
         };
         let expected = if scoped {
-            markdown::merge_personal_note(&existing, std::str::from_utf8(&data).unwrap())
-                .unwrap()
-                .into_bytes()
+            markdown::merge_personal_note(
+                if missing { "" } else { &existing },
+                std::str::from_utf8(&data).unwrap(),
+            )
+            .unwrap()
+            .into_bytes()
         } else {
             b"old\n\nfresh".to_vec()
         };
@@ -2903,7 +3142,14 @@ mod tests {
         let digest = sha256_hex(&data);
         let file_id = SwiftUuid(Uuid::new_v4());
         let manifest = FileManifest {
-            scoped_note_policy: None,
+            scoped_note_policy: negotiated.then(|| ScopedDailyNotePolicy {
+                version: 1,
+                record_profile: "apple-v11".into(),
+                owner_date: "2026-07-23".into(),
+                calendar_timezone: "UTC".into(),
+                create_if_missing: case == NoteCase::CreateMissing,
+                inject_sections: true,
+            }),
             job_id,
             file_id,
             relative_path: "daily.md".into(),
@@ -2943,12 +3189,14 @@ mod tests {
         };
 
         let mut receiver = FileReceiver::new(layout.clone(), jobs.clone());
+        assert!(receiver.configure_scoped_daily_notes(Some(2)).is_err());
+        receiver.configure_scoped_daily_notes(version).unwrap();
         receiver
             .prepare(request.clone(), accepted.clone(), session.clone())
             .unwrap();
         let mut unnegotiated = manifest.clone();
         unnegotiated.scoped_note_policy = Some(healthmd_protocol::notes::ScopedDailyNotePolicy {
-            version: 1,
+            version: if negotiated { 2 } else { 1 },
             record_profile: "apple-v11".into(),
             owner_date: "2026-07-23".into(),
             calendar_timezone: "UTC".into(),
@@ -2996,10 +3244,16 @@ mod tests {
             .unwrap();
         fs::write(partition_path(&layout, job_id.0, 0).unwrap(), b"corrupt").unwrap();
         let mut resumed = FileReceiver::new(layout.clone(), jobs.clone());
-        resumed.prepare(request, accepted, session.clone()).unwrap();
+        resumed.configure_scoped_daily_notes(Some(1)).unwrap();
+        resumed
+            .prepare(request.clone(), accepted.clone(), session.clone())
+            .unwrap();
         assert_eq!(
             resumed
-                .disposition(TransferOpen { session, partition })
+                .disposition(TransferOpen {
+                    session: session.clone(),
+                    partition
+                })
                 .unwrap()
                 .disposition,
             TransferDispositionKind::Needed
@@ -3022,6 +3276,191 @@ mod tests {
             })
             .unwrap();
         receiver = resumed;
+        assert!(receiver.configure_scoped_daily_notes(version).is_err());
+        if negotiated {
+            let original_dates = receiver
+                .journal
+                .as_ref()
+                .unwrap()
+                .accepted
+                .resolved_date_identifiers
+                .clone();
+            receiver
+                .journal
+                .as_mut()
+                .unwrap()
+                .accepted
+                .resolved_date_identifiers = vec!["2026-07-24".into()];
+            let mut outside_request = manifest.clone();
+            outside_request.file_id = SwiftUuid(Uuid::new_v4());
+            outside_request.relative_path = "outside-request.md".into();
+            outside_request
+                .scoped_note_policy
+                .as_mut()
+                .unwrap()
+                .owner_date = "2026-07-24".into();
+            assert!(
+                matches!(receiver.store_manifest(outside_request), Err(ClientError::InvalidTransfer(message))
+                if message == "scoped note owner date does not match request")
+            );
+            receiver
+                .journal
+                .as_mut()
+                .unwrap()
+                .accepted
+                .resolved_date_identifiers = original_dates;
+            let mut no_capability = FileReceiver::new(layout.clone(), jobs.clone());
+            assert!(
+                no_capability
+                    .prepare(request.clone(), accepted.clone(), session.clone())
+                    .is_err()
+            );
+            for field in [
+                "profile", "date", "clock", "policy", "mode", "size", "empty",
+            ] {
+                let mut changed = manifest.clone();
+                changed.file_id = SwiftUuid(Uuid::new_v4());
+                changed.relative_path = format!("invalid-{field}.md");
+                match field {
+                    "profile" => {
+                        changed.scoped_note_policy.as_mut().unwrap().record_profile =
+                            "android-sleep-v6".into();
+                    }
+                    "date" => {
+                        changed.scoped_note_policy.as_mut().unwrap().owner_date =
+                            "2026-07-24".into();
+                    }
+                    "clock" => {
+                        changed
+                            .scoped_note_policy
+                            .as_mut()
+                            .unwrap()
+                            .calendar_timezone = "America/New_York".into();
+                    }
+                    "policy" => changed.scoped_note_policy = None,
+                    "mode" => changed.write_mode = FileWriteMode::Overwrite,
+                    "size" => {
+                        changed.byte_count = i64::try_from(MAXIMUM_SCOPED_NOTE_BYTES + 1).unwrap();
+                    }
+                    "empty" => changed.byte_count = 0,
+                    _ => unreachable!(),
+                }
+                assert!(receiver.store_manifest(changed).is_err());
+            }
+        }
+        if case == NoteCase::RejectCapture {
+            let error = receiver.finalize(&finalize).unwrap_err();
+            assert!(matches!(error, ClientError::InvalidTransfer(ref message)
+                if message == "scoped daily note does not match its accepted policy"));
+            assert!(!destination.join("daily.md").exists());
+            let path = receiver
+                .session_directory(job_id.0)
+                .unwrap()
+                .join("file-journal.json");
+            let journal = load_journal(&path).unwrap();
+            assert!(journal.skipped_notes.is_empty());
+            assert!(journal.commit_plans.is_empty());
+            return;
+        }
+        if case == NoteCase::SkipMissing {
+            let mut interrupted = receiver.journal.clone().unwrap();
+            commit_file(&layout, &manifest, &mut interrupted).unwrap();
+            assert!(interrupted.skipped_notes.contains(&file_id));
+            assert!(interrupted.commit_plans.is_empty());
+            assert!(!destination.join("daily.md").exists());
+            let stage = session_directory(&layout, job_id.0)
+                .unwrap()
+                .join(format!("file-output-{}.stage", file_id.0));
+            assert!(!stage.exists());
+            for corruption in ["unknown_id", "create", "version", "missing_version", "plan"] {
+                let mut changed = interrupted.clone();
+                match corruption {
+                    "unknown_id" => {
+                        changed.skipped_notes.insert(SwiftUuid(Uuid::new_v4()));
+                    }
+                    "create" => {
+                        changed
+                            .manifests
+                            .get_mut(&file_id)
+                            .unwrap()
+                            .scoped_note_policy
+                            .as_mut()
+                            .unwrap()
+                            .create_if_missing = true;
+                    }
+                    "version" => {
+                        changed.scoped_daily_note_version = Some(2);
+                    }
+                    "missing_version" => {
+                        changed.scoped_daily_note_version = None;
+                    }
+                    "plan" => {
+                        changed.commit_plans.insert(
+                            file_id,
+                            CommitPlan {
+                                file_id,
+                                destination_relative_path: "daily.md".into(),
+                                before_sha256: None,
+                                after_sha256: manifest.sha256.clone(),
+                                staged_relative_path: format!("file-output-{}.stage", file_id.0),
+                                committed: true,
+                            },
+                        );
+                    }
+                    _ => unreachable!(),
+                }
+                save_journal(&layout, &changed).unwrap();
+                let mut rejected = FileReceiver::new(layout.clone(), jobs.clone());
+                rejected.configure_scoped_daily_notes(version).unwrap();
+                assert!(
+                    rejected
+                        .prepare(request.clone(), accepted.clone(), session.clone())
+                        .is_err()
+                );
+                assert!(!destination.join("daily.md").exists());
+            }
+            save_journal(&layout, &interrupted).unwrap();
+            // An owner-created note after the frozen skip is never reinterpreted on resume.
+            fs::write(destination.join("daily.md"), b"Created after skip").unwrap();
+            let mut reopened = FileReceiver::new(layout.clone(), jobs.clone());
+            reopened.configure_scoped_daily_notes(version).unwrap();
+            reopened
+                .prepare(request.clone(), accepted.clone(), session.clone())
+                .unwrap();
+            let partition = partition_path(&layout, job_id.0, 0).unwrap();
+            let saved_bytes = fs::read(&partition).unwrap();
+            fs::write(&partition, b"corrupt").unwrap();
+            assert!(reopened.finalize(&finalize).is_err());
+            assert_eq!(
+                fs::read(destination.join("daily.md")).unwrap(),
+                b"Created after skip"
+            );
+            fs::write(&partition, saved_bytes).unwrap();
+            assert!(reopened.finalize(&finalize).is_err());
+            reopened.prepare(request, accepted, session).unwrap();
+            let receipt = reopened.finalize(&finalize).unwrap();
+            assert_eq!(receipt.payload.files_written, 0);
+            assert!(receipt.payload.relative_paths.is_empty());
+            assert_eq!(receipt.payload.skipped_relative_paths, ["daily.md"]);
+            assert_eq!(receipt.payload.total_bytes, manifest.byte_count);
+            assert_eq!(receipt.payload.success_count, 1);
+            assert_eq!(
+                fs::read(destination.join("daily.md")).unwrap(),
+                b"Created after skip"
+            );
+            assert_eq!(reopened.finalize(&finalize).unwrap(), receipt);
+            if let Some(sidecar) = &receipt.payload.history_sidecar {
+                let bytes = fs::read(destination.join(&sidecar.relative_path)).unwrap();
+                let history: ExportHistoryFileReceipt = serde_json::from_slice(&bytes).unwrap();
+                assert!(history.artifacts().is_empty());
+            }
+            reopened.acknowledge_peer_completion(job_id.0).unwrap();
+            assert_eq!(
+                FileReceiver::new(layout, jobs).receipt(job_id.0).unwrap(),
+                receipt
+            );
+            return;
+        }
         let mut invalid_outcome = finalize.clone();
         invalid_outcome.outcome = Some(ExportOutcome {
             status: "partial_success".into(),
@@ -3031,8 +3470,8 @@ mod tests {
         });
         assert!(receiver.finalize(&invalid_outcome).is_err());
         assert_eq!(
-            fs::read(destination.join("daily.md")).unwrap(),
-            existing.as_bytes()
+            fs::read(destination.join("daily.md")).ok(),
+            (!missing).then(|| existing.as_bytes().to_vec())
         );
         let receipt = receiver.finalize(&finalize).unwrap();
         assert_eq!(fs::read(destination.join("daily.md")).unwrap(), expected);
@@ -3050,6 +3489,7 @@ mod tests {
             saved.version -= 2;
             save_journal(&receiver.layout, &saved).unwrap();
             let mut reopened = FileReceiver::new(receiver.layout.clone(), jobs.clone());
+            reopened.configure_scoped_daily_notes(version).unwrap();
             reopened
                 .prepare(saved.request, saved.accepted, saved.session)
                 .unwrap();
@@ -3071,6 +3511,7 @@ mod tests {
                 saved.version -= 2;
                 save_journal(&receiver.layout, &saved).unwrap();
                 let mut reopened = FileReceiver::new(receiver.layout.clone(), jobs.clone());
+                reopened.configure_scoped_daily_notes(version).unwrap();
                 assert!(
                     reopened
                         .prepare(
@@ -3085,8 +3526,13 @@ mod tests {
             let mut saved = original.clone();
             saved.commit_plans.get_mut(&file_id).unwrap().committed = false;
             save_journal(&receiver.layout, &saved).unwrap();
-            fs::write(destination.join("daily.md"), &existing).unwrap();
+            if missing {
+                fs::remove_file(destination.join("daily.md")).unwrap();
+            } else {
+                fs::write(destination.join("daily.md"), &existing).unwrap();
+            }
             let mut reopened = FileReceiver::new(receiver.layout.clone(), jobs.clone());
+            reopened.configure_scoped_daily_notes(version).unwrap();
             reopened
                 .prepare(saved.request, saved.accepted, saved.session)
                 .unwrap();
@@ -3124,7 +3570,9 @@ mod tests {
                 artifact.committed_sha256,
                 sha256_hex(&fs::read(destination.join("daily.md")).unwrap())
             );
-            assert_ne!(artifact.generated_sha256, artifact.committed_sha256);
+            if !missing {
+                assert_ne!(artifact.generated_sha256, artifact.committed_sha256);
+            }
         }
 
         let reopened = FileReceiver::new(layout, jobs.clone());

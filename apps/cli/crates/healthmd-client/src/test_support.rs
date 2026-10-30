@@ -31,3 +31,12 @@ pub(crate) fn personal_journal() -> String {
         "Personal journal.\r\n".repeat(500)
     )
 }
+
+#[derive(Clone, Copy, PartialEq)]
+pub(crate) enum NoteCase {
+    Legacy,
+    Existing,
+    SkipMissing,
+    CreateMissing,
+    RejectCapture,
+}

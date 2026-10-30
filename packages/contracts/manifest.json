@@ -1020,7 +1020,7 @@
       "id": "healthmd.direct.scoped_daily_notes",
       "version": 1,
       "status": "deferred",
-      "summary": "Staged bilateral personal-note write policy and capture binding; not advertised pending producer, receiver skip recovery, and runtime integration.",
+      "summary": "Staged bilateral personal-note write policy with capture-bound receiver recovery and truthful skip receipts; not advertised pending producer and connection integration.",
       "specification": "packages/contracts/direct-protocol/scoped-notes-v1/contract.md",
       "authorities": [
         "packages/contracts/direct-protocol/scoped-notes-v1/contract.md"

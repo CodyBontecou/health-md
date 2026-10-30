@@ -169,7 +169,12 @@ Never attach raw output to an issue or CI log.
    patches, preserve a larger personal journal and multiline YAML across staging, restart, and
    receipt recovery. Pre-scoped receiver journals containing any personal-note commit plan must
    fail before writing, whether the plan is ready or committed; legacy append plans must upgrade
-   without changing their staged bytes. Older CLIs must reject the new journal version.
+   without changing their staged bytes. Older CLIs must reject the new journal version. With the
+   scoped-note extension configured, interrupt after a missing-note skip, create that note as its
+   owner, and resume: the note stays untouched, its skip remains durable, and written-file counts
+   exclude it. An all-skipped observed job has an empty history artifact list; MCP skip paths are
+   bounded with an honest full count. Changed/missing negotiation, invalid/orphaned skip IDs, and
+   overlapping skip/install plans must reject before destination writes.
 10. On Windows, verify status/raw/extract/resume/cancel plus protocol-v1 generated-file export into
    an existing NTFS destination, including drive-root and UNC-path validation where available.
 11. Run `healthmd setup codex` and verify first-pair, idempotent rerun, safe preservation of existing

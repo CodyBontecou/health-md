@@ -1,10 +1,9 @@
 # Direct scoped daily-note writes, version 1
 
-Status: staged. Models and capture-binding semantics are implemented. The mobile producers and
-portable receiver do not yet advertise or execute this extension. The host preparation API
-validates policy-bound patches and returns a ready stage or an explicit missing-note skip;
-policy-bearing manifests in the receiving pipelines currently fail closed. Completing destination skip recovery, frozen producer authority, and
-cross-platform runtime qualification is required before advertising version 1.
+Status: staged. Both portable receivers implement explicitly configured version-1 note jobs,
+policy/capture binding, durable skip/install decisions and restart-safe receipts. The mobile
+producers and connection negotiation do not advertise or execute this extension yet. Completing
+frozen producer authority and cross-platform runtime qualification is required before advertisement.
 
 This independent extension applies the same personal-note settings to iPhone protocol v1 and
 Android protocol v2 file exports. It changes neither historical daily export profiles nor pairing,
@@ -62,3 +61,26 @@ write. It never rerenders a ready plan after restart. Owner edits reject replace
 complete health-data/rollup documents are not personal notes and reject. Neither an upgrade nor a
 downgrade may replay a plan with different merger authority: pre-scoped personal-note plans fail
 closed; safe predecessor plans for other write modes retain their exact staged bytes.
+
+
+## Receiver journals and receipts
+
+The receiver freezes negotiated version 1 separately from the immutable manifests. New private
+iPhone journal versions 6/7 (without/with history observations) and Android journal version 4
+reject reinterpretation by earlier receivers. A missing, changed, future, or no-longer-negotiated
+version rejects resume. An older job frozen without this extension retains its legacy semantics
+when a newer connection offers version 1; negotiation never silently upgrades its manifests or
+re-renders its stages. Skip IDs refer only to admitted existing-only note policies and are disjoint
+from ready/committed install plans; invalid or orphaned dispositions reject before destination IO.
+
+The durable JSON receipt adds `skipped_relative_paths` only when nonempty. Written-file counts and
+`relative_paths` exclude skipped notes. The existing iPhone `total_bytes` remains the total verified
+incoming artifact bytes, including skipped note patches; it is not a count of installed note bytes.
+Date success counts continue to describe source processing rather than the number of note files
+written. An all-skipped job may succeed with zero written files.
+
+History sidecars contain only actually committed artifacts; skipped notes have no fabricated
+committed hash. An all-skipped observed job retains its operation admission evidence with an empty
+artifact list. The outer receipt carries skip paths separately. The MCP iPhone file presenter
+returns at most 256 skip paths with the full count and a truncation flag, omitting the extension
+when no note was skipped. These fields do not change the existing tool input schema.
