@@ -2,7 +2,7 @@
   "schema": 1,
   "app": "health-md",
   "candidate": "3.5.0",
-  "build": "202610071223",
+  "build": "202610071224",
   "status": "PREPARED_NOT_PUBLISHED",
   "releaseType": "MANUAL",
   "tracking": false,
