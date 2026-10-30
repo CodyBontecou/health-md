@@ -306,29 +306,16 @@ struct ScheduleSettingsView: View {
     }
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: Spacing.s4) {
-                heroHeader
-                scheduleAutomationCard
-#if os(iOS)
-                if let profileCoordinator {
-                    // Per-profile schedule toggles and cadence editors mutate
-                    // profile automation, so the whole card stays inspectable
-                    // but is intercepted by the shared lock.
-                    ProfileScheduleSection(coordinator: profileCoordinator)
-                        .configurationChangesProtected()
+        GeometryReader { viewport in
+            ScrollView {
+                VStack(alignment: .leading, spacing: Spacing.s4) {
+                    heroHeader(availableWidth: viewport.size.width)
+                    scheduleSections(availableWidth: viewport.size.width)
                 }
-#endif
-                if schedulingManager.schedule.isEnabled {
-                    scheduledDestinationSection
-                        .configurationChangesProtected()
-                    scheduleConfigurationCard
-                }
-                exportHistoryCard
+                .padding(.horizontal, Spacing.s4)
+                .padding(.top, Spacing.s4)
+                .padding(.bottom, 132)
             }
-            .padding(.horizontal, Spacing.s4)
-            .padding(.top, Spacing.s4)
-            .padding(.bottom, 132)
         }
         .background(Color.bgSecondary.ignoresSafeArea())
         .toolbar(.hidden, for: .navigationBar)
@@ -369,8 +356,33 @@ struct ScheduleSettingsView: View {
 
     // MARK: - Sections
 
-    private var heroHeader: some View {
-        HealthMdPageHeader(
+    private func scheduleSections(availableWidth: CGFloat) -> some View {
+        AdaptivePageColumns(availableWidth: availableWidth) {
+            VStack(alignment: .leading, spacing: Spacing.s4) {
+                scheduleAutomationCard
+#if os(iOS)
+                if let profileCoordinator {
+                    // Per-profile schedule toggles and cadence editors mutate
+                    // profile automation, so the whole card stays inspectable
+                    // but is intercepted by the shared lock.
+                    ProfileScheduleSection(coordinator: profileCoordinator)
+                        .configurationChangesProtected()
+                }
+#endif
+                if schedulingManager.schedule.isEnabled {
+                    scheduledDestinationSection
+                        .configurationChangesProtected()
+                    scheduleConfigurationCard
+                }
+            }
+        } secondary: {
+            exportHistoryCard
+        }
+    }
+
+    private func heroHeader(availableWidth: CGFloat) -> some View {
+        AdaptivePageHeader(
+            availableWidth: availableWidth,
             title: "Scheduled Exports",
             subtitle: "Keep your Health.md destinations updated with recurring Apple Health exports."
         ) {

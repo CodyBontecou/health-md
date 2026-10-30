@@ -2972,44 +2972,37 @@ struct SettingsTabView: View {
 
     var body: some View {
         ScrollViewReader { proxy in
-            ScrollView {
-                VStack(alignment: .leading, spacing: Spacing.s4) {
-                    settingsHeader
-                    configurationProtectionSection
-                    accountAndStorageSection
-                    profilesAndReportsSection
-                    sharedSetupSection
-                privacyAndAnalyticsSection
-                if ConnectedAppsFeature.isEnabled {
-                    connectedAppsSection
-                }
-                supportSection
-                debugToolsSection
-            }
-                .padding(.horizontal, Spacing.s4)
-                .padding(.top, Spacing.s4)
-                .padding(.bottom, 120)
-            }
-            .background(Color.bgPrimary.ignoresSafeArea())
-            .scrollIndicators(.hidden)
-            .onAppear {
-                guard let requestID = configurationProtection.settingsNavigationRequestID else { return }
-                Task { @MainActor in
-                    await Task.yield()
-                    withAnimation(AnimationTimings.smooth) {
-                        proxy.scrollTo(AccessibilityID.ConfigurationProtection.section, anchor: .center)
+            GeometryReader { viewport in
+                ScrollView {
+                    VStack(alignment: .leading, spacing: Spacing.s4) {
+                        settingsHeader(availableWidth: viewport.size.width)
+                        settingsSections(availableWidth: viewport.size.width)
                     }
-                    configurationProtection.consumeSettingsNavigationRequest(requestID)
+                    .padding(.horizontal, Spacing.s4)
+                    .padding(.top, Spacing.s4)
+                    .padding(.bottom, 120)
                 }
-            }
-            .onChange(of: configurationProtection.settingsNavigationRequestID) { _, requestID in
-                guard let requestID else { return }
-                Task { @MainActor in
-                    await Task.yield()
-                    withAnimation(AnimationTimings.smooth) {
-                        proxy.scrollTo(AccessibilityID.ConfigurationProtection.section, anchor: .center)
+                .background(Color.bgPrimary.ignoresSafeArea())
+                .scrollIndicators(.hidden)
+                .onAppear {
+                    guard let requestID = configurationProtection.settingsNavigationRequestID else { return }
+                    Task { @MainActor in
+                        await Task.yield()
+                        withAnimation(AnimationTimings.smooth) {
+                            proxy.scrollTo(AccessibilityID.ConfigurationProtection.section, anchor: .center)
+                        }
+                        configurationProtection.consumeSettingsNavigationRequest(requestID)
                     }
-                    configurationProtection.consumeSettingsNavigationRequest(requestID)
+                }
+                .onChange(of: configurationProtection.settingsNavigationRequestID) { _, requestID in
+                    guard let requestID else { return }
+                    Task { @MainActor in
+                        await Task.yield()
+                        withAnimation(AnimationTimings.smooth) {
+                            proxy.scrollTo(AccessibilityID.ConfigurationProtection.section, anchor: .center)
+                        }
+                        configurationProtection.consumeSettingsNavigationRequest(requestID)
+                    }
                 }
             }
         }
@@ -3039,8 +3032,29 @@ struct SettingsTabView: View {
         )
     }
 
-    private var settingsHeader: some View {
-        HealthMdPageHeader(
+    private func settingsSections(availableWidth: CGFloat) -> some View {
+        AdaptivePageColumns(availableWidth: availableWidth) {
+            VStack(alignment: .leading, spacing: Spacing.s4) {
+                configurationProtectionSection
+                accountAndStorageSection
+                profilesAndReportsSection
+                sharedSetupSection
+            }
+        } secondary: {
+            VStack(alignment: .leading, spacing: Spacing.s4) {
+                privacyAndAnalyticsSection
+                if ConnectedAppsFeature.isEnabled {
+                    connectedAppsSection
+                }
+                supportSection
+                debugToolsSection
+            }
+        }
+    }
+
+    private func settingsHeader(availableWidth: CGFloat) -> some View {
+        AdaptivePageHeader(
+            availableWidth: availableWidth,
             title: "Settings",
             subtitle: "Manage access, storage, and support for Health.md."
         ) {
@@ -3050,7 +3064,7 @@ struct SettingsTabView: View {
                         settingsHeaderStatusPills
                     }
                 } else {
-                    HStack(spacing: Spacing.sm) {
+                    SchedulingAdaptiveStack {
                         settingsHeaderStatusPills
                     }
                 }
