@@ -60,6 +60,105 @@ pub fn merge(existing: &str, new: &str, preserve_preamble: bool) -> String {
     output
 }
 
+/// A personal-note update must never acquire the role of a complete source export.
+/// This runs before building an installable stage; errors contain no note content.
+pub(crate) fn validate_personal_note_destination(existing: &str) -> Result<(), &'static str> {
+    let mut lines = existing.lines();
+    if lines
+        .next()
+        .is_none_or(|line| line.trim_start_matches('\u{feff}').trim() != "---")
+    {
+        return Ok(());
+    }
+    let mut schema_seen = false;
+    let mut root_indentation = None;
+    for line in lines {
+        if line.trim() == "---" {
+            return Ok(());
+        }
+        if line.trim().is_empty() || line.trim_start().starts_with('#') {
+            continue;
+        }
+        let indentation = line.bytes().take_while(|byte| *byte == b' ').count();
+        let root = *root_indentation.get_or_insert(indentation);
+        if indentation < root {
+            return Err("ambiguous daily note frontmatter");
+        }
+        if indentation > root {
+            continue;
+        }
+        let line = &line[indentation..];
+        if line.starts_with("- ") {
+            continue;
+        }
+        let (key, value) = note_property(line).ok_or("ambiguous daily note frontmatter")?;
+        if key == "<<" || key.starts_with(['*', '&', '?', '!', '{', '[']) {
+            return Err("ambiguous daily note frontmatter");
+        }
+        if key != "schema" {
+            continue;
+        }
+        if schema_seen {
+            return Err("ambiguous daily note schema");
+        }
+        schema_seen = true;
+        let value = note_scalar(value).ok_or("ambiguous daily note schema")?;
+        if matches!(
+            value.as_str(),
+            "healthmd.health_data" | "healthmd.health_rollup"
+        ) {
+            return Err("daily note destination declares a complete export schema");
+        }
+    }
+    Err("unterminated daily note frontmatter")
+}
+
+fn note_property(line: &str) -> Option<(String, &str)> {
+    if line.starts_with(['\"', '\'']) {
+        let (key, rest) = quoted_note_scalar(line)?;
+        return Some((key, rest.trim_start().strip_prefix(':')?.trim()));
+    }
+    let (key, value) = line.split_once(':')?;
+    Some((key.trim().into(), value.trim()))
+}
+
+fn note_scalar(value: &str) -> Option<String> {
+    if value.starts_with(['\"', '\'']) {
+        let (scalar, rest) = quoted_note_scalar(value)?;
+        return (rest.trim().is_empty() || rest.trim_start().starts_with('#')).then_some(scalar);
+    }
+    if value.is_empty() || value.starts_with(['*', '&', '?', '!', '|', '>', '{', '[']) {
+        return None;
+    }
+    let comment = value.char_indices().find_map(|(index, character)| {
+        (character == '#' && value[..index].ends_with(char::is_whitespace)).then_some(index)
+    });
+    Some(value[..comment.unwrap_or(value.len())].trim().into())
+}
+
+fn quoted_note_scalar(value: &str) -> Option<(String, &str)> {
+    if value.starts_with('\"') {
+        let mut stream = serde_json::Deserializer::from_str(value).into_iter::<String>();
+        let scalar = stream.next()?.ok()?;
+        return Some((scalar, &value[stream.byte_offset()..]));
+    }
+    let mut scalar = String::new();
+    let mut characters = value.char_indices().skip(1).peekable();
+    while let Some((index, character)) = characters.next() {
+        if character == '\'' {
+            if characters.peek().is_some_and(|(_, next)| *next == '\'') {
+                scalar.push('\'');
+                characters.next();
+            } else {
+                return Some((scalar, &value[index + 1..]));
+            }
+        } else {
+            scalar.push(character);
+        }
+    }
+    None
+}
+
 fn merge_frontmatter(existing: &str, new: &str) -> String {
     use std::fmt::Write as _;
 
@@ -222,6 +321,46 @@ fn detect_section_level(content: &str) -> usize {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn personal_note_role_validation_preserves_valid_journal_shapes() {
+        for existing in [
+            "Personal introduction.\r\n",
+            "---\r\nnotes: |\r\n  schema: healthmd.health_data\r\n---\r\nText.",
+            "---\n\"schema\": \"journal\" # own role\n---\nText.",
+            "---\n'schema': 'personal journal'\n---\nText.",
+            "---\ntags:\n- journal\n- personal\n---\nText.",
+            "---\n  schema: journal\n  title: Personal\n---\n",
+            "---\n\"personal:key\": value\n---\nText.",
+        ] {
+            assert_eq!(
+                validate_personal_note_destination(existing),
+                Ok(()),
+                "{existing}"
+            );
+        }
+    }
+
+    #[test]
+    fn personal_note_role_validation_rejects_ambiguous_authority() {
+        for existing in [
+            "---\nschema: healthmd.health_data\n",
+            "---\nschema: &role healthmd.health_data\n---\n",
+            "---\n  schema: healthmd.health_data\n---\n",
+            "\u{feff}---\nschema: healthmd.health_data\n---\n",
+            "---\nschema: healthmd.health_data\t# complete\n---\n",
+            "---\nschema: journal\nschema: other\n---\n",
+            "---\n<<: *export\n---\n",
+            "---\n? schema\n: healthmd.health_data\n---\n",
+            "---\n{schema: healthmd.health_data}\n---\n",
+            "---\n\"sche\\u006da\": healthmd.health_data\n---\n",
+        ] {
+            assert!(
+                validate_personal_note_destination(existing).is_err(),
+                "{existing}"
+            );
+        }
+    }
+
     use super::*;
 
     #[test]

@@ -1371,6 +1371,9 @@ fn build_stage(
                 .map_err(|_| invalid("existing Markdown is not UTF-8"))?;
             let new = String::from_utf8(source_bytes)
                 .map_err(|_| invalid("generated Markdown is not UTF-8"))?;
+            if mode == FileWriteMode::MergeMarkdownPreservingPreamble {
+                markdown::validate_personal_note_destination(&existing).map_err(invalid)?;
+            }
             let merged = markdown::merge(
                 &existing,
                 &new,
@@ -2237,6 +2240,45 @@ fn storage_error(error: io::Error) -> ClientError {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn daily_note_mode_rejects_whole_export_destinations_before_install() {
+        for header in [
+            "schema: healthmd.health_data",
+            "schema: healthmd.health_rollup",
+            "\"schema\": \"healthmd.health_data\"",
+            "'schema': 'healthmd.health_rollup'",
+            "schema: healthmd.health_data # complete export",
+            "schema: journal\nschema: healthmd.health_data",
+        ] {
+            let root = tempfile::tempdir().unwrap();
+            let destination = root.path().join("vault");
+            std::fs::create_dir(&destination).unwrap();
+            let existing = format!("---\n{header}\n---\nComplete source export.\n");
+            std::fs::write(destination.join("day.md"), &existing).unwrap();
+            let source = root.path().join("incoming.md");
+            std::fs::write(
+                &source,
+                format!(
+                    "---\nsteps: 42\n---\n{}",
+                    "Generated annotation.\n".repeat(20)
+                ),
+            )
+            .unwrap();
+            let bound = super::GeneratedDestination::open(&destination).unwrap();
+            let result = bound.prepare_stage(
+                "day.md",
+                &source,
+                &root.path().join("stage.md"),
+                healthmd_protocol::v2::FileWriteMode::MergeMarkdownPreservingPreamble,
+            );
+            assert!(result.is_err(), "accepted complete export role: {header}");
+            assert_eq!(
+                std::fs::read_to_string(destination.join("day.md")).unwrap(),
+                existing
+            );
+        }
+    }
+
     use chrono::Timelike as _;
     use healthmd_protocol::{
         encoding::SwiftUuid,
