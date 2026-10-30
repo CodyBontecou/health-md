@@ -586,7 +586,12 @@
 
   function applyUrlState(parsed) {
     if (!parsed) return;
-    if (parsed.visualization) state.visualization = parsed.visualization;
+    var selected = byId(visualizations, parsed.visualization);
+    if (selected) {
+      state.visualization = selected.id;
+      // A chart-only link must not inherit an incompatible saved category.
+      if (!parsed.dataFilter) state.dataFilter = selected.category;
+    }
     if (parsed.colorScheme) state.colorScheme = parsed.colorScheme;
     if (parsed.dataFilter) state.dataFilter = parsed.dataFilter;
   }

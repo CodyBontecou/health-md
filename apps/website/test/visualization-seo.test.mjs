@@ -115,7 +115,10 @@ test('studio identity survives saved selections, theme rerenders and Back while 
     const next = new URL(url, origin);
     Object.assign(location, { pathname: next.pathname, search: next.search, hash: next.hash });
   }
-  const window = { location, HealthMdPluginVisualizations: { colorSchemes: { ocean: {}, forest: {} } }, history: {
+  const window = { location, HealthMdPluginVisualizations: {
+    colorSchemes: { ocean: {}, forest: {} },
+    renderers: { 'mood-trend': () => {}, 'activity-rings': () => {} }, htmlRenderers: {},
+  }, history: {
     replaceState: (_state, _title, url) => navigate('replace', url),
     pushState: (_state, _title, url) => navigate('push', url),
   } };
@@ -126,7 +129,7 @@ test('studio identity survives saved selections, theme rerenders and Back while 
       setAttribute: (name, value) => attributes.set(`${selector}:${name}`, value),
     }) },
   };
-  const instrumented = source.replace(/\}\)\(\);\s*$/, 'window.testIdentity = { state, readState, captureStudioMetadata, syncPageIdentity, readUrlState, applyUrlState, visualizations }; })();');
+  const instrumented = source.replace(/\}\)\(\);\s*$/, 'window.testIdentity = { state, readState, captureStudioMetadata, syncPageIdentity, readUrlState, applyUrlState, ensureSelectionInFilter, visualizations }; })();');
   const localStorage = { getItem: () => JSON.stringify({ visualization: 'mood-trend', dataFilter: 'mental', colorScheme: 'ocean' }) };
   vm.runInNewContext(instrumented, { window, document, URLSearchParams, localStorage });
   const api = window.testIdentity;
@@ -158,8 +161,11 @@ test('studio identity survives saved selections, theme rerenders and Back while 
   assertStudio();
   assert.equal(calls.length, 1);
 
-  location.search = '?viz=activity-rings&colors=forest&data=activity';
+  location.search = '?viz=activity-rings&colors=forest';
   api.applyUrlState(api.readUrlState());
+  api.ensureSelectionInFilter();
+  assert.equal(api.state.visualization, 'activity-rings', 'explicit chart query wins over the saved mood category');
+  assert.equal(api.state.dataFilter, 'activity');
   const explicitChart = api.visualizations.find((item) => item.id === api.state.visualization);
   api.syncPageIdentity(explicitChart);
   assert.ok(location.pathname.endsWith('/activity-rings/forest-colors/'));
@@ -168,4 +174,10 @@ test('studio identity survives saved selections, theme rerenders and Back while 
   const explicitTitle = document.title;
   api.syncPageIdentity(explicitChart);
   assert.equal(document.title, explicitTitle, 'deep-link theme rerender remains a chart');
+
+  location.search = '?visualization=mood-trend&data=all&colors=ocean';
+  api.applyUrlState(api.readUrlState());
+  api.ensureSelectionInFilter();
+  assert.equal(api.state.visualization, 'mood-trend');
+  assert.equal(api.state.dataFilter, 'all', 'an explicit category filter remains authoritative');
 });
