@@ -1469,15 +1469,28 @@ class SchedulingManager: ObservableObject {
             // The gateway materializes artifacts exactly as a folder
             // destination does over its staging root before uploading, so its
             // snapshot surface matches the local-folder range surface.
-            let hasNativeOnlyCompanionAction = settings.writesExternalProviderSidecars
-                && ConnectedAppsFeature.isEnabled
-                && (scheduledExternalIntegrations?.connectedProviderCount ?? 0) > 0
-            return await ExportSettingsSnapshot.forNewAppleOperation(
-                settings,
-                calendarTimeZone: calendarTimeZone,
-                surface: .localVaultRangeWithoutSideEffects,
-                hasNativeOnlyCompanionAction: hasNativeOnlyCompanionAction
-            )
+            guard !(settings.executionSleepCaptureContextIsFrozen && settings.executionSleepCaptureContext == nil) else {
+                return ExportSettingsSnapshot.from(settings, appleExportEngineAuthorityIsFrozen: true)
+            }
+            let context = settings.executionSleepCaptureContext ?? AppleSleepCaptureContext.resolve(
+                timeZone: calendarTimeZone, attribution: HealthKitManager.shared.sleepDayAttribution)
+            do {
+                let capture = try AcceptedExternalProviderFileCapture(settings: settings,
+                    context: context, healthSubfolder: "Health", providers: scheduledExternalIntegrations)
+                let hasProviders = (capture.providers?.connectedProviderCount ?? 0) > 0
+                let stagesWakeDateProviders = hasProviders && context.sleepDayAttribution == .morningEnds
+                return await ExportSettingsSnapshot.forNewAppleOperation(
+                    capture.snapshot.makeAdvancedExportSettings(), healthSubfolder: capture.snapshot.healthSubfolder,
+                    calendarTimeZone: context.timeZone,
+                    surface: stagesWakeDateProviders ? .localVaultRangeWithProviderSidecars : .localVaultRangeWithoutSideEffects,
+                    hasNativeOnlyCompanionAction: hasProviders && !stagesWakeDateProviders)
+            } catch {
+                // Keep failed recovery unqualified; execution reports the unavailable source.
+                var snapshot = ExportSettingsSnapshot.from(settings, appleExportEngineAuthorityIsFrozen: true,
+                    calendarTimeZoneIdentifier: context.calendarTimeZoneIdentifier)
+                snapshot.sleepCaptureContext = context
+                return snapshot
+            }
         case .connectedMac:
             if settings.executionSleepCaptureContextIsFrozen && settings.executionSleepCaptureContext == nil {
                 return ExportSettingsSnapshot.from(settings, appleExportEngineAuthorityIsFrozen: true)
@@ -1509,7 +1522,8 @@ class SchedulingManager: ObservableObject {
     func makeSettingsSnapshotForNewScheduledProfileOperation(
         _ profile: ScheduledExportCoordinator.ScheduledProfileRequestContext
     ) async -> ExportSettingsSnapshot {
-        guard profile.target == .localIPhoneFolder || profile.target == .apiEndpoint || profile.target == .connectedMac else { return profile.settings }
+        guard profile.target == .localIPhoneFolder || profile.target == .apiEndpoint
+                || profile.target == .connectedMac || profile.target == .agentDataGateway else { return profile.settings }
         let zone = profile.settings.calendarTimeZoneIdentifier.flatMap(TimeZone.init(identifier:)) ?? .current
         let context = AppleSleepCaptureContext.resolve(timeZone: zone,
             attribution: HealthKitManager.shared.sleepDayAttribution)

@@ -138,8 +138,8 @@ struct ConnectedFileSourceAuthorityTests {
         #expect(replay.fetchExternalRecords == nil)
     }
 
-    @Test(arguments: [false, true])
-    func scheduledConnectedOccurrencesAcceptSourceAndProfileBeforeCapture(profile: Bool) async throws {
+    @Test(arguments: [false, true], [ExportTargetSelection.connectedMac, .agentDataGateway])
+    func scheduledFileOccurrencesAcceptSourceAndProfileBeforeCapture(profile: Bool, target: ExportTargetSelection) async throws {
         try #require(ConnectedAppsFeature.isEnabled)
         let fixture = try fixture()
         defer { fixture.defaults.removePersistentDomain(forName: fixture.suite) }
@@ -153,9 +153,9 @@ struct ConnectedFileSourceAuthorityTests {
             if profile {
                 let saved = ExportSettingsSnapshot.from(fixture.settings, healthSubfolder: "Saved", calendarTimeZoneIdentifier: "GMT")
                 return await scheduler.makeSettingsSnapshotForNewScheduledProfileOperation(.init(profileID: UUID(),
-                    profileName: "Synthetic", target: .connectedMac, settings: saved))
+                    profileName: "Synthetic", target: target, settings: saved))
             }
-            return await scheduler.makeSettingsSnapshotForNewScheduledOperation(target: .connectedMac,
+            return await scheduler.makeSettingsSnapshotForNewScheduledOperation(target: target,
                 settings: fixture.settings, calendarTimeZone: .gmt)
         }
         #expect(try #require(snapshot.appleExportEnginePin).isWakeDate)

@@ -1,5 +1,6 @@
 import XCTest
 import HealthKit
+import Testing
 @testable import HealthMd
 
 /// End-to-end and seam tests for `AgentDataGatewayExportRunner`:
@@ -169,6 +170,7 @@ final class AgentDataGatewayExportRunnerTests: XCTestCase {
         let settings: AdvancedExportSettings
         if recovered {
             configured.executionSleepCaptureContext = context
+            configured.executionExternalProviderCaptureAuthority = .init(connections: [:])
             let snapshot = await ExportSettingsSnapshot.forNewAppleOperation(configured, healthSubfolder: "Health",
                 calendarTimeZone: acceptedZone, surface: .localVaultRangeWithoutSideEffects)
             settings = snapshot.makeAdvancedExportSettings()
@@ -534,6 +536,146 @@ final class AgentDataGatewayExportRunnerTests: XCTestCase {
             ]
             try JSONSerialization.data(withJSONObject: document, options: [.sortedKeys])
                 .write(to: url)
+        }
+    }
+}
+
+@MainActor
+struct GatewaySourceAuthorityTests {
+    // STATIC RETENTION JUSTIFICATION: Observation teardown workaround documented
+    // in docs/testing/lifecycle-audit.md; these objects use only synthetic stores.
+    private static var retained: [AnyObject] = []
+
+    @Test(arguments: ["unchanged", "replaced", "empty"])
+    func productionGatewayKeepsAcceptedSourceAndSettings(change: String) async throws {
+        try #require(ConnectedAppsFeature.isEnabled)
+        let suite = "GatewaySourceAuthority-\(UUID())"
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let settings = AdvancedExportSettings(userDefaults: defaults)
+        settings.exportFormats = [.json]; settings.generateRangeSummary = false
+        settings.archiveExportFiles = false; settings.summaryOnlyExport = false
+        settings.includeDataDictionary = false; settings.dailyNoteInjection.enabled = false
+        settings.individualTracking.globalEnabled = false; settings.detailPolicy = .summary
+        settings.metricSelection.enabledMetrics = ["steps"]
+        settings.exportTimeZoneOverride = .gmt
+        let store = FakeHealthStore()
+        store.statisticsSums[HKQuantityTypeIdentifier.stepCount.rawValue] = 42
+        let manager = HealthKitManager(store: store, userDefaults: defaults)
+        manager.setSleepDayAttribution(.morningEnds)
+        Self.retained += [settings, manager]
+        let providers = Provider()
+        if change == "empty" { providers.currentID = nil }
+        let acceptedID = providers.currentID
+        providers.beforeAcceptance = {
+            settings.exportFormats = [.csv]
+            settings.metricSelection.enabledMetrics = []
+            settings.exportTimeZoneOverride = TimeZone(identifier: "Asia/Tokyo")!
+            manager.setSleepDayAttribution(.nightBegins)
+        }
+        let dates = [Date(timeIntervalSince1970: 1_777_766_400), Date(timeIntervalSince1970: 1_777_852_800)]
+        var uploads: [AgentDataIngestArtifactKind] = []
+        let result = await AgentDataGatewayExportRunner.export(dates: dates, healthKitManager: manager,
+            settings: settings,
+            destination: try #require(AgentDataGatewayDestinationSnapshot(endpointURLString: "https://synthetic.invalid")),
+            externalIntegrations: providers,
+            uploader: { manifest, file, _ in
+                do {
+                let bytes = try Data(contentsOf: file)
+                #expect(manifest.sha256 == AgentDataIngestManifest.sha256(of: bytes))
+                #expect(!String(decoding: bytes, as: UTF8.self).contains(acceptedID?.uuidString ?? "never-a-grant"))
+                if manifest.artifactKind == .healthDataDaily {
+                    #expect(manifest.artifactSchemaVersion == 11)
+                    let document = try #require(JSONSerialization.jsonObject(with: bytes) as? [String: Any])
+                    #expect((document["activity"] as? [String: Any])?["steps"] as? Int == 42)
+                }
+                uploads.append(manifest.artifactKind)
+                return AgentDataIngestUploadOutcome(result: .accepted, attempts: 1, byteCount: manifest.byteCount)
+                } catch {
+                    Issue.record(error)
+                    return AgentDataIngestUploadOutcome(result: .rejected(.manifestIncomplete), attempts: 1, byteCount: manifest.byteCount)
+                }
+            }, onProgress: { _ in
+                if change == "replaced" || change == "empty" { providers.currentID = UUID() }
+            })
+        #expect(result.export.didCompleteAllRequestedDates, "\(result.export.failedDateDetails)")
+        #expect(result.uploads.didUploadAllEligibleArtifacts)
+        #expect(uploads.filter { $0 == .healthDataDaily }.count == 2)
+        #expect(providers.acceptanceCalls == 1)
+        #expect(providers.expectedIDs == (change == "empty" ? [] : [acceptedID, acceptedID]))
+        #expect(providers.successfulFetches == (change == "unchanged" ? 2 : change == "replaced" ? 1 : 0))
+    }
+
+    @Test(arguments: ["empty", "missing", "mismatched"])
+    func savedSelectionCannotAdoptCurrentProvider(mode: String) throws {
+        let suite = "GatewaySavedAuthority-\(UUID())"
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let settings = AdvancedExportSettings(userDefaults: defaults)
+        Self.retained.append(settings)
+        settings.executionExternalProviderCaptureAuthorityIsFrozen = true
+        let providers = Provider()
+        if mode == "empty" { settings.executionExternalProviderCaptureAuthority = .init(connections: [:]) }
+        if mode == "mismatched" {
+            settings.executionExternalProviderCaptureAuthority = .init(connections: ["whoop": UUID()])
+            providers.ignoreRestoredAuthority = true
+        }
+        let context = AppleSleepCaptureContext.resolve(timeZone: .gmt, attribution: .morningEnds)
+        if mode == "empty" {
+            let capture = try AcceptedExternalProviderFileCapture(settings: settings, context: context, providers: providers)
+            #expect(capture.providers == nil)
+            #expect(capture.snapshot.externalProviderCaptureAuthority?.connections.isEmpty == true)
+        } else {
+            #expect(throws: ExternalProviderCaptureAuthority.RecoveryError.self) {
+                try AcceptedExternalProviderFileCapture(settings: settings, context: context, providers: providers)
+            }
+        }
+        #expect(providers.acceptanceCalls == 0)
+        #expect(providers.expectedIDs.isEmpty)
+    }
+
+    @MainActor private final class Provider: ExternalIntegrationDailyRecordProviding {
+        var currentID: UUID? = UUID()
+        var beforeAcceptance: (() -> Void)?
+        var acceptanceCalls = 0
+        var expectedIDs: [UUID?] = []
+        var successfulFetches = 0
+        var ignoreRestoredAuthority = false
+        var connectedProviderCount: Int { currentID == nil ? 0 : 1 }
+        func forCaptureOperation() -> any ExternalIntegrationDailyRecordProviding {
+            acceptanceCalls += 1
+            let authority = ExternalProviderCaptureAuthority(connections: currentID == nil ? [:] : ["whoop": currentID])
+            beforeAcceptance?()
+            return Scope(root: self, authority: authority)
+        }
+        func forCaptureOperation(authority: ExternalProviderCaptureAuthority) throws -> any ExternalIntegrationDailyRecordProviding {
+            Scope(root: self, authority: ignoreRestoredAuthority ? .init(connections: ["whoop": currentID]) : authority)
+        }
+        func fetchDailyRecords(for date: Date) async -> [ExternalDailyRecord] { [] }
+        func fetchDailyRecords(for date: Date, providerIDs: Set<String>) async -> [ExternalDailyRecord] { [] }
+    }
+    @MainActor private final class Scope: ExternalIntegrationDailyRecordProviding {
+        let root: Provider
+        let authority: ExternalProviderCaptureAuthority
+        init(root: Provider, authority: ExternalProviderCaptureAuthority) { self.root = root; self.authority = authority }
+        var captureAuthority: ExternalProviderCaptureAuthority? { authority }
+        var connectedProviderCount: Int { authority.connections.count }
+        func forCaptureOperation(authority: ExternalProviderCaptureAuthority) throws -> any ExternalIntegrationDailyRecordProviding {
+            guard authority == self.authority else { throw ExternalProviderCaptureAuthority.RecoveryError.unavailable }
+            return self
+        }
+        func fetchDailyRecords(for date: Date) async -> [ExternalDailyRecord] {
+            let expected = authority.connections["whoop"] ?? nil
+            root.expectedIDs.append(expected)
+            let available = expected != nil && expected == root.currentID
+            if available { root.successfulFetches += 1 }
+            return [.init(provider: .whoop, date: APIExportClient.dayString(from: date, timeZone: .gmt),
+                payloads: available ? [.init(name: "cycles", endpoint: "https://synthetic.invalid", statusCode: 200,
+                    data: .object(["synthetic": .string("accepted-source")]))] : [],
+                warnings: available ? [] : ["Unavailable saved connection"])]
+        }
+        func fetchDailyRecords(for date: Date, providerIDs: Set<String>) async -> [ExternalDailyRecord] {
+            await fetchDailyRecords(for: date)
         }
     }
 }

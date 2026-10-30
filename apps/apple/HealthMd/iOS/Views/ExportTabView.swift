@@ -276,6 +276,7 @@ struct ExportTabView: View {
                     ? apiExportSettings.destinationSnapshot
                     : nil,
                 connectedAppsEnabled: ConnectedAppsFeature.isEnabled,
+                externalIntegrations: externalIntegrations,
                 fetchHealthData: { date, snapshot in
                     let capturedSettings = snapshot.makeAdvancedExportSettings()
                     #if DEBUG

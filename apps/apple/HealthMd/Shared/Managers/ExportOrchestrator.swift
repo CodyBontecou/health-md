@@ -508,10 +508,18 @@ struct ExportOrchestrator {
             )
         }
         #endif
-        let externalIntegrations = externalIntegrations?.forCaptureOperation()
-        externalIntegrations?.beginExportAction()
-        defer { externalIntegrations?.endExportAction() }
-        vaultManager.clearLastExportPresentationTarget()
+        let captureAuthorityWasFrozen = settings.executionSleepCaptureContextIsFrozen
+        let acceptedCapture: AcceptedExternalProviderFileCapture
+        do {
+            let context = try healthKitManager.resolveSleepCaptureContext(settings: settings)
+            acceptedCapture = try AcceptedExternalProviderFileCapture(settings: settings, context: context,
+                healthSubfolder: vaultManager.healthSubfolder, providers: externalIntegrations)
+        } catch {
+            return unavailableSleepContextResult(dates: dates, settings: settings, error: error)
+        }
+        let acceptedSettings = acceptedCapture.snapshot.makeAdvancedExportSettings()
+        acceptedSettings.executionSleepCaptureContextIsFrozen = captureAuthorityWasFrozen
+        let externalIntegrations = acceptedCapture.providers
 
         let totalDays = dates.count
         var successCount = 0
@@ -526,8 +534,7 @@ struct ExportOrchestrator {
         var dailyNoteUpdateCount = 0
         var dailyNoteSkipCount = 0
         var shouldWriteDataDictionary = true
-        let hasProviderSideEffects = settings.writesExternalProviderSidecars
-            && ConnectedAppsFeature.isEnabled
+        let hasProviderSideEffects = acceptedSettings.writesExternalProviderSidecars
             && (externalIntegrations?.connectedProviderCount ?? 0) > 0
         let stagesWakeDateProviders = hasProviderSideEffects
             && AppleSleepCaptureContext.pinned.wrappedValue?.sleepDayAttribution == .morningEnds
@@ -540,20 +547,23 @@ struct ExportOrchestrator {
         } catch {
             return ExportResult(successCount: 0, totalCount: dates.count,
                 failedDateDetails: dates.map { FailedDateDetail(date: $0, reason: .fileWriteError, errorDetails: error.localizedDescription) },
-                formatsPerDate: looseFormatsPerDate(settings: settings))
+                formatsPerDate: looseFormatsPerDate(settings: acceptedSettings))
         }
-        let sourceTimeZone = AppleSleepCaptureContext.pinned.wrappedValue?.timeZone ?? settings.exportTimeZoneOverride ?? .current
+        externalIntegrations?.beginExportAction()
+        defer { externalIntegrations?.endExportAction() }
+        vaultManager.clearLastExportPresentationTarget()
+        let sourceTimeZone = AppleSleepCaptureContext.pinned.wrappedValue?.timeZone ?? acceptedSettings.exportTimeZoneOverride ?? .current
         // Foreground ranges freeze renderer authority and calendar ownership once before the first
         // HealthKit read. Per-day planning must never inherit a flag or timezone changed mid-run.
         let operationSettingsSnapshot = await ExportSettingsSnapshot.forNewAppleOperation(
-            settings,
-            healthSubfolder: vaultManager.healthSubfolder,
+            acceptedSettings,
+            healthSubfolder: acceptedCapture.snapshot.healthSubfolder,
             calendarTimeZone: sourceTimeZone,
             surface: operationSurface,
             hasNativeOnlyCompanionAction: hasProviderSideEffects && !stagesWakeDateProviders
         )
         if stagesWakeDateProviders && operationSettingsSnapshot.appleExportEnginePin?.isWakeDate != true {
-            return unavailableSleepContextResult(dates: dates, settings: settings,
+            return unavailableSleepContextResult(dates: dates, settings: acceptedSettings,
                 error: AppleSleepCaptureContext.AvailabilityError.unapprovedAttribution)
         }
         let frozenOperationSettings = operationSettingsSnapshot.makeAdvancedExportSettings()

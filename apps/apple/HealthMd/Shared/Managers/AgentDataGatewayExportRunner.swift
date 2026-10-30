@@ -209,10 +209,15 @@ struct AgentDataGatewayExportRunner {
             return failureResult(dates: dates, message: error.localizedDescription)
         }
         let captureAuthorityWasFrozen = settings.executionSleepCaptureContextIsFrozen
-        var acceptedSnapshot = ExportSettingsSnapshot.from(settings,
-            appleExportEngineAuthorityIsFrozen: settings.executionAppleExportEngineAuthorityIsFrozen,
-            calendarTimeZoneIdentifier: captureContext.calendarTimeZoneIdentifier)
-        acceptedSnapshot.sleepCaptureContext = captureContext
+        let acceptedCapture: AcceptedExternalProviderFileCapture
+        do {
+            acceptedCapture = try AcceptedExternalProviderFileCapture(settings: settings,
+                context: captureContext, providers: externalIntegrations)
+        } catch {
+            return failureResult(dates: dates, message: error.localizedDescription)
+        }
+        let acceptedSnapshot = acceptedCapture.snapshot
+        let externalIntegrations = acceptedCapture.providers
         let settings = acceptedSnapshot.makeAdvancedExportSettings()
         // Fresh work still acquires its renderer through the ordinary folder engine;
         // recovered work retains the original frozen context/pin admission checks.

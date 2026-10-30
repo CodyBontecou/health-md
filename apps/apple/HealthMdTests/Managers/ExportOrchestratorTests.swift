@@ -2450,6 +2450,7 @@ private final class MorningProviderRangeProbe: ExternalIntegrationDailyRecordPro
     final class Bound: ExternalIntegrationDailyRecordProviding {
         let strain: Double
         let invalidDate: Bool
+        let captureAuthority: ExternalProviderCaptureAuthority? = .init(connections: ["whoop": UUID()])
         var calendars: [String] = []
         var completionSignals: [Bool] = []
         func endExportAction(succeeded: Bool) { completionSignals.append(succeeded) }

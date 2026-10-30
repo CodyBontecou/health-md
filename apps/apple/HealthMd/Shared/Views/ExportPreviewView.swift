@@ -118,6 +118,7 @@ struct ExportPreviewView: View {
     let targetType: PricingAnalyticsExportTargetType
     let apiDestination: APIExportDestinationSnapshot?
     let connectedAppsEnabled: Bool
+    let externalIntegrations: (any ExternalIntegrationDailyRecordProviding)?
     let fetchHealthData: (Date, ExportSettingsSnapshot) async -> HealthData?
     let fetchExternalDailyRecords: APIEndpointExportRunner.ExternalDailyRecordFetcher?
     let requestHealthAuthorization: (@MainActor () async throws -> HealthKitManager.AuthorizationRequestOutcome)?
@@ -137,6 +138,7 @@ struct ExportPreviewView: View {
         targetType: PricingAnalyticsExportTargetType,
         apiDestination: APIExportDestinationSnapshot? = nil,
         connectedAppsEnabled: Bool = false,
+        externalIntegrations: (any ExternalIntegrationDailyRecordProviding)? = nil,
         fetchHealthData: @escaping (Date, ExportSettingsSnapshot) async -> HealthData?,
         fetchExternalDailyRecords: APIEndpointExportRunner.ExternalDailyRecordFetcher? = nil,
         requestHealthAuthorization: (@MainActor () async throws -> HealthKitManager.AuthorizationRequestOutcome)? = nil,
@@ -154,6 +156,7 @@ struct ExportPreviewView: View {
         self.targetType = targetType
         self.apiDestination = apiDestination
         self.connectedAppsEnabled = connectedAppsEnabled
+        self.externalIntegrations = externalIntegrations
         self.fetchHealthData = fetchHealthData
         self.fetchExternalDailyRecords = fetchExternalDailyRecords
         self.requestHealthAuthorization = requestHealthAuthorization
@@ -763,8 +766,41 @@ struct ExportPreviewView: View {
         let acceptedRootName = destinationRootName ?? vaultManager.vaultName
         let acceptedVaultURL = vaultManager.vaultURL
         let acceptedTimeZone = settings.exportTimeZoneOverride ?? .current
+        let acceptedCapture: AcceptedExternalProviderFileCapture
+        do {
+            let context = try HealthKitManager.shared.resolveSleepCaptureContext(settings: settings)
+            let includesProviders = connectedAppsEnabled && (targetType == .apiEndpoint || settings.writesExternalProviderSidecars)
+            // A legacy closure does not identify an account and cannot authorize
+            // Morning capture. Real app callers supply the provider adapter.
+            if includesProviders && context.sleepDayAttribution == .morningEnds
+                && externalIntegrations == nil && fetchExternalDailyRecords != nil {
+                throw ExternalProviderCaptureAuthority.RecoveryError.unavailable
+            }
+            acceptedCapture = try AcceptedExternalProviderFileCapture(settings: settings, context: context,
+                healthSubfolder: vaultManager.healthSubfolder, includesProviders: includesProviders,
+                providers: externalIntegrations)
+        } catch {
+            partialFailures = [ExportPartialFailure(date: startDate, dataType: "Export preview",
+                dateRangeDescription: Self.dateLabelFormatter.string(from: startDate),
+                errorDescription: error.localizedDescription)]
+            isLoading = false
+            return
+        }
+        let fetchExternalDailyRecords: APIEndpointExportRunner.ExternalDailyRecordFetcher?
+        if let providers = acceptedCapture.providers,
+           let context = acceptedCapture.snapshot.sleepCaptureContext,
+           providers.connectedProviderCount > 0 {
+            var calendar = Calendar(identifier: .gregorian)
+            calendar.timeZone = context.timeZone
+            fetchExternalDailyRecords = { await providers.fetchDailyRecords(for: $0, calendar: calendar) }
+        } else {
+            fetchExternalDailyRecords = acceptedCapture.snapshot.sleepCaptureContext?.sleepDayAttribution == .nightBegins
+                && externalIntegrations == nil && connectedAppsEnabled ? self.fetchExternalDailyRecords : nil
+        }
+        acceptedCapture.providers?.beginExportAction()
+        defer { acceptedCapture.providers?.endExportAction(succeeded: false) }
         let operationSnapshot = await ExportSettingsSnapshot.forNewAppleOperation(
-            settings, healthSubfolder: vaultManager.healthSubfolder,
+            acceptedCapture.snapshot.makeAdvancedExportSettings(), healthSubfolder: acceptedCapture.snapshot.healthSubfolder,
             calendarTimeZone: acceptedTimeZone,
             surface: targetType == .apiEndpoint ? .apiEndpoint : .preview)
         let frozenTimeZone = operationSnapshot.sleepCaptureContext?.timeZone

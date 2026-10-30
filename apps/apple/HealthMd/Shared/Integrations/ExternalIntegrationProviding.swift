@@ -103,3 +103,53 @@ extension ExternalIntegrationDailyRecordProviding {
         endExportAction(succeeded: true)
     }
 }
+
+/// Accept file settings and account identity synchronously, before provider callbacks
+/// or renderer qualification can change the caller's observable configuration.
+@MainActor
+struct AcceptedExternalProviderFileCapture {
+    var snapshot: ExportSettingsSnapshot
+    let providers: (any ExternalIntegrationDailyRecordProviding)?
+
+    init(settings: AdvancedExportSettings, context: AppleSleepCaptureContext,
+         healthSubfolder: String? = nil,
+         includesProviders: Bool? = nil,
+         providers: (any ExternalIntegrationDailyRecordProviding)?) throws {
+        var snapshot = ExportSettingsSnapshot.from(settings, healthSubfolder: healthSubfolder,
+            appleExportEngineAuthorityIsFrozen: false,
+            calendarTimeZoneIdentifier: context.calendarTimeZoneIdentifier)
+        snapshot.sleepCaptureContext = context
+        let frozenAuthority = settings.executionExternalProviderCaptureAuthorityIsFrozen
+        let accepted: (any ExternalIntegrationDailyRecordProviding)?
+        if !(includesProviders ?? settings.writesExternalProviderSidecars) {
+            accepted = nil
+            if !frozenAuthority { snapshot.externalProviderCaptureAuthority = .init(connections: [:]) }
+        } else if let authority = snapshot.externalProviderCaptureAuthority {
+            if authority.connections.isEmpty { accepted = nil }
+            else {
+                guard let providers else { throw ExternalProviderCaptureAuthority.RecoveryError.unavailable }
+                let restored = try providers.forCaptureOperation(authority: authority)
+                guard restored.captureAuthority == authority else {
+                    throw ExternalProviderCaptureAuthority.RecoveryError.unavailable
+                }
+                accepted = restored
+            }
+        } else if frozenAuthority && context.sleepDayAttribution == .morningEnds {
+            throw ExternalProviderCaptureAuthority.RecoveryError.unavailable
+        } else {
+            let selected = ConnectedAppsFeature.isEnabled ? providers?.forCaptureOperation() : nil
+            let count = selected?.connectedProviderCount ?? 0
+            accepted = count > 0 ? selected : nil
+            let authority = selected?.captureAuthority
+            if let authority { snapshot.externalProviderCaptureAuthority = authority }
+            else if count == 0 {
+                snapshot.externalProviderCaptureAuthority = .init(connections: [:])
+            }
+            if context.sleepDayAttribution == .morningEnds && snapshot.externalProviderCaptureAuthority == nil {
+                throw ExternalProviderCaptureAuthority.RecoveryError.unavailable
+            }
+        }
+        self.snapshot = snapshot
+        self.providers = accepted
+    }
+}
