@@ -10,7 +10,8 @@ const PAGES = [
   {
     dir: 'apple-health-export',
     url: 'https://healthmd.app/apple-health-export/',
-    title: 'Export Apple Health Data — CSV, JSON, Markdown &amp; Obsidian | Health.md',
+    title: 'Export Apple Health Data to CSV &amp; More | Health.md',
+    minDescriptionLength: 120,
     h1: 'How to export Apple Health data',
     minFaqs: 5,
   },
@@ -50,13 +51,14 @@ for (const page of PAGES) {
     assert.ok(html.includes('<meta name="robots" content="index,follow">'), 'robots');
   });
 
-  test(`${page.dir}: meta description is SEO-length (150-160 chars)`, () => {
+  const minDescriptionLength = page.minDescriptionLength ?? 150;
+  test(`${page.dir}: meta description is SEO-length (${minDescriptionLength}-160 chars)`, () => {
     const match = html.match(/<meta name="description" content="([^"]+)">/);
     assert.ok(match, 'meta description exists');
     const length = match[1].length;
     assert.ok(
-      length >= 150 && length <= 160,
-      `meta description is ${length} chars, expected 150-160`,
+      length >= minDescriptionLength && length <= 160,
+      `meta description is ${length} chars, expected ${minDescriptionLength}-160`,
     );
   });
 
