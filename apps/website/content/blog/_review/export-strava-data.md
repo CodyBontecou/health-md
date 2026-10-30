@@ -4,6 +4,8 @@ Verified 2026-10-30 by Codex (agent), method: traced. No account/device/permissi
 
 ## Claims
 
+- [x] October30: related recommendation now includes Polar Flow's distinct export chooser. Strava body unchanged; the existing Garmin body link and three recommendations remain.
+
 - [x] Current official https://support.strava.com/en-us/articles/15401919-how-do-i-export-my-strava-data establishes website-only original/activity/bulk export, original uploaded format, GPS-dependent GPX/TCX, export_tcx suffix, Settings/My Account/Download your account/Get Started/Request download and email. Native options precede installation. Derived native-export section kept under200words from that source; no archive filename/schema/delivery-time guarantee or Health.md converter claim.
 - [x] https://support.strava.com/en-us/articles/15402024-apple-health-and-strava verifies current You/settings/Manage Apps and Devices/Health, Send to Health, outgoing type/time/distance/calories/routes, and third-party recorded-route exclusion. Automatic Uploads/30days belongs to Apple Workout→Strava, not outgoing backfill. Under200words derived, no promise that all shared activities have routes/sensor data.
 - [x] https://support.strava.com/en-us/articles/15401554-health-connect-and-strava verifies Android-only connection, GPS activity time/distance/calories outgoing, weight incoming, menu and Health Connect system/app distinction. Does not fabricate outgoing weight/route/heart-rate/indoor support or import a stale Google Fit integration. Under200words derived.
