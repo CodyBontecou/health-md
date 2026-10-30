@@ -62,11 +62,46 @@ struct DailyNoteInjector {
 
     /// A projection of an accepted successor plan, never a relabelling of the
     /// user's whole note. Construction requires the native renderer's authority.
-    struct PreparedContent {
-        fileprivate let ownerDate: Date
+    nonisolated struct PreparedContent: Equatable, Sendable {
+        let ownerDate: Date
+        let relativePath: String
+        let identity: AppleExportOperationIdentity
+        let pin: AppleExportEnginePin
         fileprivate let context: ExportTimeContext
         fileprivate let settings: DailyNoteInjectionSnapshot
-        fileprivate let content: InjectionContent
+        fileprivate let frontmatter: String
+        fileprivate let body: String
+    }
+
+    private static func preparedContent(_ prepared: PreparedContent) -> InjectionContent {
+        InjectionContent(frontmatter: prepared.frontmatter, body: prepared.body, isWakeDateCapture: true)
+    }
+
+    static func mergePrepared(_ prepared: PreparedContent, existing: String) throws -> String {
+        let settings = DailyNoteInjectionSettings()
+        prepared.settings.apply(to: settings)
+        return try mergedContent(existing: existing, injectionContent: preparedContent(prepared), settings: settings)
+    }
+
+    static func createsMissingNote(_ prepared: PreparedContent) -> Bool { prepared.settings.createIfMissing }
+
+    @discardableResult
+    static func injectPrepared(_ prepared: PreparedContent, into vaultURL: URL,
+        fileSystem: FileSystemAccessing = SystemFileSystem(),
+        fileCoordinator: FileCoordinating = PassthroughFileCoordinator(),
+        destinationBinding: AppleVaultDestinationBinding? = nil,
+        beforeCommit: (@Sendable () throws -> Void)? = nil,
+        afterValidationBeforeRename: (@Sendable () throws -> Void)? = nil
+    ) -> InjectionResult {
+        guard let zone = TimeZone(identifier: prepared.context.calendarTimeZoneIdentifier) else {
+            return .failed(AppleLooseDailyExportPlannerError.rustPlanningFailed)
+        }
+        let settings = DailyNoteInjectionSettings()
+        prepared.settings.apply(to: settings)
+        return commitContent(preparedContent(prepared), date: prepared.ownerDate, into: vaultURL,
+            settings: settings, calendarTimeZone: zone, fileSystem: fileSystem, fileCoordinator: fileCoordinator,
+            destinationBinding: destinationBinding, beforeCommit: beforeCommit,
+            afterValidationBeforeRename: afterValidationBeforeRename)
     }
 
     private static let captureKey = "healthmd_daily_injection_v1"
@@ -123,9 +158,12 @@ struct DailyNoteInjector {
             recordJSON: json, bases: text(.obsidianBases), markdown: text(.markdown),
             selectedProperties: keys, injectSections: settings.dailyNoteInjection.injectMarkdownSections)
         guard let parts = MarkdownMerger.splitFrontmatter(from: patch) else { throw ExportError.markdownMergeRejected }
-        return PreparedContent(ownerDate: healthData.date, context: healthData.timeContext,
-            settings: settingsSnapshot.dailyNoteInjection,
-            content: InjectionContent(frontmatter: parts.frontmatter, body: parts.body, isWakeDateCapture: true))
+        let path = ExportPathPlanner.dailyNoteRelativePath(settings: settings.dailyNoteInjection,
+            date: healthData.date, timeZone: context.timeZone)
+        _ = try ExportPathPlanner.canonicalPortablePathKey(path)
+        return PreparedContent(ownerDate: healthData.date, relativePath: path, identity: operation.identity, pin: operation.pin,
+            context: healthData.timeContext, settings: settingsSnapshot.dailyNoteInjection,
+            frontmatter: parts.frontmatter, body: parts.body)
     }
 
     private static func scopedCaptureProperties(json: String) throws -> String {
@@ -148,7 +186,7 @@ struct DailyNoteInjector {
                   prepared.settings == .from(settings) else {
                 throw AppleLooseDailyExportPlannerError.rustPlanningFailed
             }
-            return prepared.content
+            return preparedContent(prepared)
         }
         guard prepared == nil else { throw AppleLooseDailyExportPlannerError.rustPlanningFailed }
         return buildInjectionContent(healthData: healthData, settings: settings,
@@ -190,15 +228,26 @@ struct DailyNoteInjector {
             injectionContent = content
         } catch { return .failed(error) }
 
+        return commitContent(injectionContent, date: healthData.date, into: vaultURL,
+            settings: settings, calendarTimeZone: calendarTimeZone, fileSystem: fileSystem,
+            fileCoordinator: fileCoordinator, destinationBinding: destinationBinding,
+            beforeCommit: beforeCommit, afterValidationBeforeRename: afterValidationBeforeRename)
+    }
+
+    private static func commitContent(_ injectionContent: InjectionContent, date: Date, into vaultURL: URL,
+        settings: DailyNoteInjectionSettings, calendarTimeZone: TimeZone, fileSystem: FileSystemAccessing,
+        fileCoordinator: FileCoordinating, destinationBinding: AppleVaultDestinationBinding?,
+        beforeCommit: (@Sendable () throws -> Void)?, afterValidationBeforeRename: (@Sendable () throws -> Void)?
+    ) -> InjectionResult {
         let targetURL = ExportPathPlanner.dailyNoteURL(
             vaultURL: vaultURL,
             settings: settings,
-            date: healthData.date,
+            date: date,
             timeZone: calendarTimeZone
         )
         let relativePath = ExportPathPlanner.dailyNoteRelativePath(
             settings: settings,
-            date: healthData.date,
+            date: date,
             timeZone: calendarTimeZone
         )
 
@@ -218,7 +267,8 @@ struct DailyNoteInjector {
                     let existingData = try SecureExactArtifactIO.read(
                         rootURL: coordinatedRootURL,
                         relativePath: relativePath,
-                        binding: destinationBinding
+                        binding: destinationBinding,
+                        maximumByteCount: 8 * 1024 * 1024
                     )
                     guard existingData != nil || settings.createIfMissing else {
                         return .skipped(reason: "Daily note not found: \(relativePath)")

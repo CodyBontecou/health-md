@@ -542,12 +542,14 @@ struct ExportOrchestrator {
             && AppleSleepCaptureContext.pinned.wrappedValue?.sleepDayAttribution == .morningEnds
         let stagesWakeDateIndividuals = acceptedSettings.writesIndividualEntryFiles
             && AppleSleepCaptureContext.pinned.wrappedValue?.sleepDayAttribution == .morningEnds
+        let stagesWakeDateNotes = acceptedSettings.dailyNoteInjection.enabled
+            && AppleSleepCaptureContext.pinned.wrappedValue?.sleepDayAttribution == .morningEnds
         let operationSurface: AppleExportOperationSurface = hasProviderSideEffects
             ? (stagesWakeDateProviders ? .localVaultRangeWithProviderSidecars : .legacyOnly)
             : .localVaultRangeWithoutSideEffects
         let acceptedProviderDestination: AppleLooseDailyRangeDestination?
         do {
-            acceptedProviderDestination = stagesWakeDateProviders || stagesWakeDateArchive || stagesWakeDateIndividuals
+            acceptedProviderDestination = stagesWakeDateProviders || stagesWakeDateArchive || stagesWakeDateIndividuals || stagesWakeDateNotes
                 ? try vaultManager.freezeHealthDataRangeDestination() : nil
         } catch {
             return ExportResult(successCount: 0, totalCount: dates.count,
@@ -567,7 +569,7 @@ struct ExportOrchestrator {
             surface: operationSurface,
             hasNativeOnlyCompanionAction: hasProviderSideEffects && !stagesWakeDateProviders
         )
-        if (stagesWakeDateProviders || stagesWakeDateArchive || stagesWakeDateIndividuals)
+        if (stagesWakeDateProviders || stagesWakeDateArchive || stagesWakeDateIndividuals || stagesWakeDateNotes)
             && operationSettingsSnapshot.appleExportEnginePin?.isWakeDate != true {
             return unavailableSleepContextResult(dates: dates, settings: acceptedSettings,
                 error: AppleSleepCaptureContext.AvailabilityError.unapprovedAttribution)
@@ -606,7 +608,7 @@ struct ExportOrchestrator {
         // query. Rollups still require the range planner's shared summary corpus.
         if operationSettingsSnapshot.appleExportEnginePin != nil,
            !operationSettingsSnapshot.operationRollupPeriods.isEmpty || stagesWakeDateProviders
-                || stagesWakeDateArchive || stagesWakeDateIndividuals {
+                || stagesWakeDateArchive || stagesWakeDateIndividuals || stagesWakeDateNotes {
             return await exportForegroundPinnedSimpleRange(
                 dates,
                 healthKitManager: healthKitManager,
@@ -957,7 +959,7 @@ struct ExportOrchestrator {
         var effectiveSettingsSnapshot = settingsSnapshot
         var requestedRange: HealthRollupRangeRequest?
         var partialFailures: [ExportPartialFailure] = []
-        if settingsSnapshot.generateRangeSummary {
+        if settingsSnapshot.generateRangeSummary && !settingsSnapshot.dailyNotesOnlyModeEnabled {
             do {
                 requestedRange = try HealthRollupRangeRequest(
                     ownerDateIdentifiers: requestedIdentifiers,
@@ -1240,7 +1242,18 @@ struct ExportOrchestrator {
                 }
                 writeResult = result
             }
-            providerCaptureCommitted = writeResult.totalFileCount > 0
+            providerCaptureCommitted = writeResult.totalFileCount > 0 || writeResult.dailyNoteUpdatedCount > 0
+            if frozenSettings.dailyNotesOnlyModeEnabled {
+                failures.append(contentsOf: writeResult.dailyNoteSkippedDates.map {
+                    FailedDateDetail(date: $0, reason: .noHealthData, errorDetails: "Daily note not found and creation is disabled")
+                })
+                completedDates.append(contentsOf: writeResult.dailyNoteUpdatedDates + writeResult.dailyNoteSkippedDates)
+                return ExportResult(successCount: writeResult.dailyNoteUpdatedCount, totalCount: totalCount,
+                    failedDateDetails: failures, partialFailures: partialFailures, formatsPerDate: 0,
+                    looseAggregateFileCount: 0, authoritativeFileCount: 0, isFileCategoryBreakdownComplete: true,
+                    dailyNoteUpdateCount: writeResult.dailyNoteUpdatedCount, dailyNoteSkipCount: writeResult.dailyNoteSkippedCount,
+                    completedDates: completedDates)
+            }
             if isSummaryOnly {
                 let filesWritten = writeResult.rollupFileCount
                     + writeResult.dataDictionaryFileCount
@@ -1289,6 +1302,8 @@ struct ExportOrchestrator {
                 externalRecordFileCount: writeResult.providerSidecarFileCount,
                 authoritativeFileCount: authoritativeFileCount,
                 isFileCategoryBreakdownComplete: true,
+                dailyNoteUpdateCount: writeResult.dailyNoteUpdatedCount,
+                dailyNoteSkipCount: writeResult.dailyNoteSkippedCount,
                 completedDates: completedDates
             )
         } catch is CancellationError {
@@ -1438,13 +1453,14 @@ struct ExportOrchestrator {
         let stagesWakeDateProviders = isWakeDate && hasProviderSideEffects
         let stagesWakeDateArchive = isWakeDate && sourceSettings.archiveModeEnabled
         let stagesWakeDateIndividuals = isWakeDate && sourceSettings.writesIndividualEntryFiles
+        let stagesWakeDateNotes = isWakeDate && sourceSettings.dailyNoteInjection.enabled
         if isWakeDate, sourceSettings.writesExternalProviderSidecars,
            frozenSettingsSnapshot?.externalProviderCaptureAuthority?.connections.isEmpty == false,
            !ConnectedAppsFeature.isEnabled {
             return unavailableSleepContextResult(dates: dates, settings: settings,
                 error: ExternalProviderCaptureAuthority.RecoveryError.unavailable)
         }
-        if isFreshWakeDate || stagesWakeDateProviders || stagesWakeDateArchive || stagesWakeDateIndividuals {
+        if isFreshWakeDate || stagesWakeDateProviders || stagesWakeDateArchive || stagesWakeDateIndividuals || stagesWakeDateNotes {
             do { acceptedDestination = try vaultManager.freezeHealthDataRangeDestination() }
             catch {
                 return ExportResult(successCount: 0, totalCount: dates.count,
@@ -1512,7 +1528,7 @@ struct ExportOrchestrator {
         if let frozenSettingsSnapshot,
            frozenSettingsSnapshot.appleExportEnginePin != nil,
            !frozenSettingsSnapshot.operationRollupPeriods.isEmpty || isFreshWakeDate || stagesWakeDateProviders
-                || stagesWakeDateArchive || stagesWakeDateIndividuals {
+                || stagesWakeDateArchive || stagesWakeDateIndividuals || stagesWakeDateNotes {
             guard let identifier = frozenSettingsSnapshot.calendarTimeZoneIdentifier,
                   let sourceTimeZone = TimeZone(identifier: identifier) else {
                 return ExportResult(

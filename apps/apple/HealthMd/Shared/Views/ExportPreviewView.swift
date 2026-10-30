@@ -40,15 +40,17 @@ struct ExportPreviewOperationConfiguration {
     let healthSubfolder: String
     let destinationRootName: String
     let vaultURL: URL?
+    let dailyNoteDestination: AppleLooseDailyRangeDestination?
     let scope: ExportPreviewScope
 
     init(snapshot: ExportSettingsSnapshot, destinationRootName: String, vaultURL: URL?,
-        maximumRenderedDates: Int = 5) {
+        maximumRenderedDates: Int = 5, dailyNoteDestination: AppleLooseDailyRangeDestination? = nil) {
         self.snapshot = snapshot
         self.settings = snapshot.makeAdvancedExportSettings()
         self.healthSubfolder = snapshot.healthSubfolder ?? ""
         self.destinationRootName = destinationRootName
         self.vaultURL = vaultURL
+        self.dailyNoteDestination = dailyNoteDestination
         self.scope = ExportPreviewScope.make(selectedFormats: snapshot.exportFormats,
             losslessEnabled: snapshot.detailPolicy.includesCanonicalArchive,
             defaultMaximumRenderedDates: maximumRenderedDates)
@@ -799,6 +801,13 @@ struct ExportPreviewView: View {
         }
         acceptedCapture.providers?.beginExportAction()
         defer { acceptedCapture.providers?.endExportAction(succeeded: false) }
+        let acceptedNoteDestination: AppleLooseDailyRangeDestination?
+        if targetType == .localFile, acceptedVaultURL != nil,
+           acceptedCapture.snapshot.sleepCaptureContext?.sleepDayAttribution == .morningEnds,
+           acceptedCapture.snapshot.dailyNoteInjection.enabled {
+            let candidate = try? vaultManager.freezeHealthDataRangeDestination()
+            acceptedNoteDestination = candidate?.rootURL.standardizedFileURL == acceptedVaultURL?.standardizedFileURL ? candidate : nil
+        } else { acceptedNoteDestination = nil }
         let operationSnapshot = await ExportSettingsSnapshot.forNewAppleOperation(
             acceptedCapture.snapshot.makeAdvancedExportSettings(), healthSubfolder: acceptedCapture.snapshot.healthSubfolder,
             calendarTimeZone: acceptedTimeZone,
@@ -824,7 +833,7 @@ struct ExportPreviewView: View {
         }
         let configuration = ExportPreviewOperationConfiguration(snapshot: operationSnapshot,
             destinationRootName: acceptedRootName, vaultURL: acceptedVaultURL,
-            maximumRenderedDates: Self.maxRenderedDates)
+            maximumRenderedDates: Self.maxRenderedDates, dailyNoteDestination: acceptedNoteDestination)
         let settings = configuration.settings
 
         guard settings.hasFileDestinationOutput,
@@ -880,7 +889,7 @@ struct ExportPreviewView: View {
             if settings.summaryOnlyModeEnabled { continue }
 
             let plannedContentByFormat: [ExportFormat: ExportPreviewDisplayContent]?
-            if targetType == .localFile {
+            if targetType == .localFile && !settings.dailyNotesOnlyModeEnabled {
                 do {
                     if let artifacts = try await AppleLooseDailyExportPreviewPlanner.artifacts(
                         healthData: healthData,
@@ -945,7 +954,7 @@ struct ExportPreviewView: View {
             }
 
             if scope.includesSupplementalFiles {
-                if let dailyNotePreview = dailyNoteInjectionPreview(for: healthData, configuration: configuration) {
+                if let dailyNotePreview = await dailyNoteInjectionPreview(for: healthData, configuration: configuration) {
                     if let file = dailyNotePreview.file {
                         files.append(file)
                     }
@@ -1271,7 +1280,7 @@ struct ExportPreviewView: View {
     }
 
     private func dailyNoteInjectionPreview(for healthData: HealthData,
-        configuration: ExportPreviewOperationConfiguration) -> (file: FilePreview?, warning: ExportPartialFailure?)? {
+        configuration: ExportPreviewOperationConfiguration) async -> (file: FilePreview?, warning: ExportPartialFailure?)? {
         let settings = configuration.settings
         let dailyNoteSettings = settings.dailyNoteInjection
         guard dailyNoteSettings.enabled else { return nil }
@@ -1298,13 +1307,19 @@ struct ExportPreviewView: View {
             )
         }
 
+        let prepared: DailyNoteInjector.PreparedContent?
+        if healthData.timeContext.sleepDayAttribution == .morningEnds {
+            do { prepared = try await vaultManager.prepareWakeDateDailyNote(healthData, settingsSnapshot: configuration.snapshot) }
+            catch { return (nil, warning(for: healthData.date, message: "The selected renderer could not prepare this daily note.")) }
+        } else { prepared = nil }
         let result = DailyNoteInjector.preview(
             healthData: healthData,
             base: previewBase,
             settings: dailyNoteSettings,
             customization: settings.formatCustomization,
             metricSelection: settings.metricSelection,
-            calendarTimeZone: settings.exportTimeZoneOverride ?? .current
+            calendarTimeZone: settings.exportTimeZoneOverride ?? .current,
+            preparedContent: prepared
         )
 
         switch result {
@@ -1315,7 +1330,8 @@ struct ExportPreviewView: View {
                     filename: preview.filename,
                     folderPath: configuration.dailyNoteFolderPath(for: healthData.date),
                     kind: .dailyNoteInjection,
-                    content: preview.content
+                    content: ExportPreviewDisplayContent.make(from: preview.content).text,
+                    preparedDisplayContent: .make(from: preview.content)
                 ),
                 nil
             )
@@ -1334,6 +1350,17 @@ struct ExportPreviewView: View {
 
         guard configuration.matchesVault(vaultManager.vaultURL) else {
             return .unreadable(FileCoordinationError.destinationChanged)
+        }
+        if configuration.snapshot.sleepCaptureContext?.sleepDayAttribution == .morningEnds {
+            guard let destination = configuration.dailyNoteDestination else { return .unreadable(ExportError.destinationChanged) }
+            do {
+                let path = ExportPathPlanner.dailyNoteRelativePath(settings: dailyNoteSettings, date: date,
+                    timeZone: configuration.settings.exportTimeZoneOverride ?? .current)
+                if let content = try vaultManager.readDailyNoteForPreview(relativePath: path, destination: destination) {
+                    return .resolved(.existingContent(content))
+                }
+                return dailyNoteSettings.createIfMissing ? .resolved(.emptyDocument) : .missing
+            } catch { return .unreadable(error) }
         }
         guard let accessLease = vaultManager.beginVaultAccess() else {
             return .unreadable(ExportError.accessDenied)

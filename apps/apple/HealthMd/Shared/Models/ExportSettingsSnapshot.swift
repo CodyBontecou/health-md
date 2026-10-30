@@ -898,7 +898,7 @@ struct IndividualTrackingSnapshot: Codable, Equatable {
 
 // MARK: - Daily Note Injection Snapshot
 
-struct DailyNoteInjectionSnapshot: Codable, Equatable {
+nonisolated struct DailyNoteInjectionSnapshot: Codable, Equatable, Sendable {
     var enabled: Bool
     var folderPath: String
     var filenamePattern: String
@@ -936,7 +936,7 @@ struct DailyNoteInjectionSnapshot: Codable, Equatable {
         dailyNotesOnly = try container.decodeIfPresent(Bool.self, forKey: .dailyNotesOnly) ?? false
     }
 
-    static func from(_ settings: DailyNoteInjectionSettings) -> DailyNoteInjectionSnapshot {
+    @MainActor static func from(_ settings: DailyNoteInjectionSettings) -> DailyNoteInjectionSnapshot {
         DailyNoteInjectionSnapshot(
             enabled: settings.enabled,
             folderPath: settings.folderPath,
@@ -947,7 +947,7 @@ struct DailyNoteInjectionSnapshot: Codable, Equatable {
         )
     }
 
-    func apply(to settings: DailyNoteInjectionSettings) {
+    @MainActor func apply(to settings: DailyNoteInjectionSettings) {
         settings.enabled = enabled
         settings.folderPath = folderPath
         settings.filenamePattern = filenamePattern

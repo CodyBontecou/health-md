@@ -893,7 +893,23 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
               settingsSnapshot.sleepCaptureContext?.exportProfileID == "apple-v11",
               settingsSnapshot.appleExportEnginePin == nil,
               surface.supportsWakeDateFiles else { return false }
-        return supportsSettings(settingsSnapshot: settingsSnapshot, surface: surface,
+        var rendering = settingsSnapshot
+        if settingsSnapshot.dailyNoteInjection.enabled {
+            guard [.localVaultWithoutSideEffects, .localVaultRangeWithoutSideEffects,
+                .localVaultRangeWithProviderSidecars, .preview].contains(surface),
+                !settingsSnapshot.makeAdvancedExportSettings().archiveModeEnabled else { return false }
+            rendering.dailyNoteInjection.enabled = false
+            rendering.dailyNoteInjection.dailyNotesOnly = false
+            if settingsSnapshot.dailyNotesOnlyModeEnabled {
+                rendering.exportFormats = [.json]
+                rendering.archiveExportFiles = false
+                rendering.summaryOnlyExport = false
+                rendering.generateRangeSummary = false
+                rendering = rendering.forDailyArtifactPreview()
+                rendering.individualTracking.globalEnabled = false
+            }
+        }
+        return supportsSettings(settingsSnapshot: rendering, surface: surface,
             allowsUnpinnedWakeDateDetails: true)
     }
 
@@ -1385,9 +1401,13 @@ enum AppleLooseDailyExportPreviewPlanner {
               settingsSnapshot.generateRangeSummary else {
             throw AppleLooseDailyExportPlannerError.rustPlanningFailed
         }
+        guard !settingsSnapshot.dailyNotesOnlyModeEnabled else { throw AppleLooseDailyExportPlannerError.rustPlanningFailed }
+        var rendering = settingsSnapshot
+        rendering.dailyNoteInjection.enabled = false
+        rendering.dailyNoteInjection.dailyNotesOnly = false
         let resolution = try await planner.planRange(healthData: healthData,
             dailyOutputOwnerDates: [], requestedRange: requestedRange,
-            settingsSnapshot: settingsSnapshot, surface: .preview, operationIdentity: nil)
+            settingsSnapshot: rendering, surface: .preview, operationIdentity: nil)
         guard case .planned(let operation) = resolution,
               operation.artifacts.allSatisfy({ $0.kind == .rollup }) else {
             throw AppleLooseDailyExportPlannerError.rustPlanningFailed
@@ -1400,9 +1420,15 @@ enum AppleLooseDailyExportPreviewPlanner {
         settingsSnapshot: ExportSettingsSnapshot,
         planner: any AppleLooseDailyExportPlanning
     ) async throws -> [AppleLooseDailyPreviewArtifact]? {
+        var rendering = settingsSnapshot.forDailyArtifactPreview()
+        if rendering.sleepCaptureContext?.sleepDayAttribution == .morningEnds && rendering.dailyNoteInjection.enabled {
+            if rendering.dailyNotesOnlyModeEnabled { return [] }
+            rendering.dailyNoteInjection.enabled = false
+            rendering.dailyNoteInjection.dailyNotesOnly = false
+        }
         switch try await planner.plan(
             healthData: healthData,
-            settingsSnapshot: settingsSnapshot.forDailyArtifactPreview(),
+            settingsSnapshot: rendering,
             surface: .preview
         ) {
         case .legacy:
