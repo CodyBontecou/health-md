@@ -8,8 +8,8 @@ New app translations fill missing units only and preserve established translatio
 
 Source changes do not alter already archived/uploaded binaries. Incorporate them into a newly qualified candidate with an unused build number when authorized. Do not modify the historical release/approval evidence or the in-app Vox.md What's New slider as part of this copy pass.
 
-Automatic Vercel deployments remain held for main and preview branches while the app/privacy rollout is under review. Restore the main-branch deployment rule in both vercel.template.json and generated vercel.json only after owner publication approval. App, Worker, pricing and store releases require their separate approval.
+The owner approved publication of current main to healthmd.app on October 30, 2026. Automatic Vercel deployments are enabled for main in vercel.template.json and generated vercel.json; preview branches remain disabled. App, Worker, pricing and store releases still require their separate approval.
 
 ## Current-source upload preparation
 
-Prepared candidate: 3.5.0 (202610071222). New signed iOS and Mac candidates are authorized for upload only. Keep the App Store versions on MANUAL release; do not submit a review, publish a GitHub release, deploy the website/Worker, change prices, or claim device qualification. Candidate metadata is platform-specific; the privacy proposal and staged website bundle are publication inputs, not deployed facts. Physical-device testing remains deferred. Record exact built source and processed ASC build IDs in task receipts.
+Prepared candidate: 3.5.0 (202610071222). New signed iOS and Mac candidates are authorized for upload only. Keep the App Store versions on MANUAL release; do not submit a review, publish a GitHub release, deploy the Worker, change prices, or claim device qualification. Website publication is separately approved as recorded above. Candidate metadata is platform-specific; website deployment does not establish app release or device qualification. Physical-device testing remains deferred. Record exact built source and processed ASC build IDs in task receipts.

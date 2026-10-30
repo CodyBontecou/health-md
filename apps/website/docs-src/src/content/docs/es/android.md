@@ -149,7 +149,7 @@ Health.md para Android es local primero:
 
 Si desea la configuración local más estricta, ejecute exportaciones manuales a una carpeta de dispositivo local y deje deshabilitadas las exportaciones programadas y la sincronización respaldada por el proveedor.
 
-El piloto de nube Health.md independiente y opcional de propietario único conserva solo las exportaciones de API cargadas intencionalmente. No hay registro público ni sincronización automática de dispositivos; el flujo de trabajo de esta carpeta no se carga en ella. Consulte la [política de privacidad](/privacy-policy.html) para conocer los riesgos de retención, eliminación, cuotas y almacenamiento sin respaldo.
+El piloto separado y opcional de Health.md Cloud es para un único propietario y conserva solo las exportaciones de API enviadas intencionalmente. No hay registro público ni sincronización automática de dispositivos; este flujo de carpetas no sube datos al piloto. Consulta la [política de privacidad](/privacy-policy.html) sobre conservación, eliminación, cuota y riesgos de pérdida sin copias de seguridad.
 
 ## Documentos relacionados
 

@@ -2,7 +2,7 @@
   "git": {
     "deploymentEnabled": {
       "**": false,
-      "main": false
+      "main": true
     }
   },
   "buildCommand": "npm run build",

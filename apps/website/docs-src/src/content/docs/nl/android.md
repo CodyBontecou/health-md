@@ -149,7 +149,7 @@ Health.md voor Android is eerst lokaal:
 
 Als u de strengste lokale instellingen wilt, voert u handmatige exports uit naar een lokale apparaatmap en laat u geplande exports en door de provider ondersteunde synchronisatie uitgeschakeld.
 
-De afzonderlijke, optionele Health.md Cloud-pilot met één eigenaar bewaart alleen API-exports die er opzettelijk naar zijn geüpload. Er is geen openbare aanmelding en geen automatische apparaatsynchronisatie; deze mapworkflow wordt er niet naartoe geüpload. Zie het [privacybeleid](/privacy-policy.html) voor risico's op het gebied van bewaren, verwijderen, quota en niet-backed opslag.
+De afzonderlijke, optionele Health.md Cloud-pilot is uitsluitend voor één eigenaar en bewaart alleen bewust geüploade API-exports. Er is geen openbare registratie of automatische apparaatsynchronisatie; deze mapworkflow uploadt niets naar de pilot. Het [privacybeleid](/privacy-policy.html) beschrijft bewaartermijnen, verwijdering, opslagquota en verliesrisico’s zonder back-up.
 
 ## Gerelateerde documenten
 
