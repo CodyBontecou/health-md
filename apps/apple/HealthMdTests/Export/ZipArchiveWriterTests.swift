@@ -580,6 +580,13 @@ struct MorningArchiveTests {
         for file in materialized.providerSidecars {
             expected[String(file.relativePath.dropFirst("Health/".count))] = try file.artifact.materializedData()
         }
+        let before = try FileManager.default.contentsOfDirectory(atPath: f.root.path)
+        let frozenArchive = try await f.vault.materializeHealthDataRangeArchive(materialized, settingsSnapshot: snapshot,
+            startDate: f.dates[0], endDate: f.dates[1])
+        #expect(try FileManager.default.contentsOfDirectory(atPath: f.root.path) == before)
+        #expect(frozenArchive.relativePath == "Health/Health.md Export 2026-03-07_to_2026-03-08.zip")
+        #expect(frozenArchive.artifact.descriptor.mediaType == "application/zip")
+        #expect(try ZIP64TestReader.entries(in: frozenArchive.artifact.materializedData()).mapValues(\.data) == expected)
         let archive = try #require(try await f.vault.commitHealthDataRangeArchive(materialized,
             destination: f.vault.freezeHealthDataRangeDestination(), settingsSnapshot: snapshot,
             startDate: f.dates[0], endDate: f.dates[1]))
@@ -884,7 +891,7 @@ struct MorningIndividualEntryTests {
     }
 }
 
-private enum ZIP64TestReader {
+enum ZIP64TestReader {
     struct Entry: Equatable {
         let method: UInt16
         let compressedSize: UInt64

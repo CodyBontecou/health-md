@@ -476,6 +476,131 @@ struct ConnectedMorningReceiverTests {
         #expect(rejecting.calls == 0)
     }
 
+    @Test(arguments: ["zip", "zip-range", "zip-summary", "zip-notes", "zip-note-overlap", "zip-individual", "zip-provider", "zip-dictionary", "zip-note-skip", "zip-summary-fallback"])
+    func connectedArchiveContainsOnlyAcceptedBytesAndReplaysWithoutRendering(mode: String) async throws {
+        let f = try await fixture(mode: mode)
+        defer { try? FileManager.default.removeItem(at: f.root) }
+        let (manager, finalize) = try await openAndApply(f)
+        manager.failNextPostRenameRangePlanSyncForTesting = true
+        guard case .inProgress = try await manager.finalize(finalize, vaultManager: f.vault) else {
+            Issue.record("Expected frozen archive before destination publication"); return
+        }
+        #expect(try FileManager.default.contentsOfDirectory(atPath: f.destination.path).isEmpty)
+        let directory = f.sessions.appendingPathComponent(f.session.sessionID.uuidString)
+        let object = try #require(JSONSerialization.jsonObject(with: Data(contentsOf: directory.appendingPathComponent("journal.json"))) as? [String: Any])
+        let plan = try #require(object["receivedRangePlan"] as? [String: Any])
+        #expect(plan["version"] as? Int == 4)
+        #expect(plan["archiveAcknowledged"] as? Bool == false)
+        let archive = try #require(plan["archive"] as? [String: Any])
+        let relativePath = try #require(archive["relativePath"] as? String)
+        let bytes = try Data(contentsOf: directory.appendingPathComponent(try #require(archive["spoolRelativePath"] as? String)))
+        var expected: [String: Data] = [:]
+        for file in (try #require(plan["artifacts"] as? [[String: Any]])) + ((plan["dataDictionary"] as? [String: Any]).map { [$0] } ?? []) {
+            let path = try #require(file["relativePath"] as? String)
+            expected[String(path.dropFirst("Health/".count))] = try Data(contentsOf: directory.appendingPathComponent(try #require(file["spoolRelativePath"] as? String)))
+        }
+        let entries = try ZIP64TestReader.entries(in: bytes).mapValues(\.data)
+        #expect(entries == expected)
+        let additionalEntries: [String: Int] = ["zip-range": 4, "zip-individual": 3, "zip-provider": 1, "zip-dictionary": 1]
+        let expectedEntryCount = 4 + (additionalEntries[mode] ?? 0)
+        #expect(entries.count == expectedEntryCount)
+        #expect(!entries.keys.contains { $0.hasPrefix("Journal/") })
+        let rejecting = NoReplan()
+        let vault = makeVault(root: f.destination, planner: rejecting)
+        let outcome = try await MacCorpusExportSessionManager(rootURL: f.sessions).finalize(finalize, vaultManager: vault)
+        guard case .files(let result, let acknowledgement) = outcome else { Issue.record("Expected archive result"); return }
+        #expect(result.successCount == 1 && acknowledgement.successCount == 1)
+        #expect(result.totalFilesWritten == 1 && result.externalRecordFileCount == 0)
+        #expect(result.hasConsistentFileAccounting)
+        let noteCount = mode == "zip-notes" || mode == "zip-note-overlap" ? 1 : 0
+        #expect(result.dailyNoteUpdateCount == noteCount)
+        #expect(result.dailyNoteSkipCount == (mode == "zip-note-skip" ? 1 : 0))
+        #expect(try destinationFiles(in: f.destination).count == 1 + noteCount)
+        #expect(try Data(contentsOf: f.destination.appendingPathComponent(relativePath)) == bytes)
+        #expect(rejecting.calls == 0)
+        let replay = try await MacCorpusExportSessionManager(rootURL: f.sessions).finalize(finalize, vaultManager: vault)
+        guard case .replay(_, let retained) = replay else { Issue.record("Expected archive ACK replay"); return }
+        #expect(retained?.totalFilesWritten == 1)
+        if let output = ProcessInfo.processInfo.environment["HEALTHMD_CONNECTED_ZIP_FIXTURE_DIR"] {
+            let root = URL(fileURLWithPath: output).appendingPathComponent(mode)
+            for (path, data) in try destinationFiles(in: f.destination) {
+                let target = root.appendingPathComponent(path)
+                try FileManager.default.createDirectory(at: target.deletingLastPathComponent(), withIntermediateDirectories: true)
+                try data.write(to: target)
+            }
+        }
+    }
+
+    @Test(arguments: ["downgrade", "missing-archive", "corrupt", "bad-magic", "foreign-path", "frontier", "symlink"])
+    func damagedArchivePlansRejectBeforeDestinationWrites(damage: String) async throws {
+        let f = try await fixture(mode: "zip")
+        defer { try? FileManager.default.removeItem(at: f.root) }
+        let (manager, finalize) = try await openAndApply(f)
+        manager.failNextPostRenameRangePlanSyncForTesting = true
+        guard case .inProgress = try await manager.finalize(finalize, vaultManager: f.vault) else { Issue.record("Expected retained ZIP"); return }
+        let directory = f.sessions.appendingPathComponent(f.session.sessionID.uuidString)
+        let journal = directory.appendingPathComponent("journal.json")
+        var object = try #require(JSONSerialization.jsonObject(with: Data(contentsOf: journal)) as? [String: Any])
+        var plan = try #require(object["receivedRangePlan"] as? [String: Any])
+        var archive = try #require(plan["archive"] as? [String: Any])
+        let spool = directory.appendingPathComponent(try #require(archive["spoolRelativePath"] as? String))
+        if damage == "downgrade" { plan["version"] = 3 }
+        if damage == "frontier" { plan["nextArtifactIndex"] = 1 }
+        if damage == "foreign-path" { archive["relativePath"] = "Health/other.zip" }
+        if damage == "corrupt" || damage == "bad-magic" {
+            var bytes = try Data(contentsOf: spool); bytes[0] ^= 1; try bytes.write(to: spool)
+            if damage == "bad-magic" { archive["sha256"] = NativeExportArtifact.sha256(of: bytes) }
+        }
+        if damage == "symlink" {
+            let other = f.root.appendingPathComponent("other.zip")
+            try Data(contentsOf: spool).write(to: other)
+            try FileManager.default.removeItem(at: spool)
+            try FileManager.default.createSymbolicLink(at: spool, withDestinationURL: other)
+        }
+        plan["archive"] = damage == "missing-archive" ? nil : archive
+        plan["immutablePlanSHA256"] = try planDigest(plan)
+        object["receivedRangePlan"] = plan
+        try JSONSerialization.data(withJSONObject: object).write(to: journal)
+        let rejecting = NoReplan()
+        let vault = makeVault(root: f.destination, planner: rejecting)
+        await #expect(throws: (any Error).self) {
+            _ = try await MacCorpusExportSessionManager(rootURL: f.sessions).finalize(finalize, vaultManager: vault)
+        }
+        #expect(rejecting.calls == 0)
+        #expect(try FileManager.default.contentsOfDirectory(atPath: f.destination.path).isEmpty)
+    }
+
+    @Test(arguments: [false, true])
+    func archivePublicationCrashUsesExactBytesAndRejectsAcknowledgedEdits(editAcknowledgedArchive: Bool) async throws {
+        let f = try await fixture(mode: "zip-notes")
+        defer { try? FileManager.default.removeItem(at: f.root) }
+        let (manager, finalize) = try await openAndApply(f)
+        if editAcknowledgedArchive {
+            manager.afterReceivedNoteCommitForTesting = { throw CocoaError(.fileWriteUnknown) }
+        } else {
+            manager.afterReceivedArtifactCommitForTesting = { path in
+                if path.hasSuffix(".zip") { throw CocoaError(.fileWriteUnknown) }
+            }
+        }
+        await #expect(throws: CocoaError.self) { _ = try await manager.finalize(finalize, vaultManager: f.vault) }
+        let path = "Health/Health.md Export \(f.ownerID).zip"
+        let archive = f.destination.appendingPathComponent(path)
+        let bytes = try Data(contentsOf: archive)
+        if editAcknowledgedArchive { try Data("edited".utf8).write(to: archive) }
+        let rejecting = NoReplan()
+        let vault = makeVault(root: f.destination, planner: rejecting)
+        if editAcknowledgedArchive {
+            await #expect(throws: (any Error).self) { _ = try await MacCorpusExportSessionManager(rootURL: f.sessions).finalize(finalize, vaultManager: vault) }
+            #expect(try Data(contentsOf: archive) == Data("edited".utf8))
+        } else {
+            let resumed = try await MacCorpusExportSessionManager(rootURL: f.sessions).finalize(finalize, vaultManager: vault)
+            guard case .files(let result, _) = resumed else { Issue.record("Expected exact ZIP replay"); return }
+            #expect(result.totalFilesWritten == 1 && result.dailyNoteUpdateCount == 1 && result.hasConsistentFileAccounting)
+            #expect(try Data(contentsOf: archive) == bytes)
+        }
+        #expect(rejecting.calls == 0)
+    }
+
     private func planDigest(_ plan: [String: Any]) throws -> String {
         try MacCorpusExportSessionManager.receivedRangePlanDigestForTesting(
             JSONSerialization.data(withJSONObject: plan))
@@ -532,18 +657,19 @@ struct ConnectedMorningReceiverTests {
         let settings = AdvancedExportSettings(userDefaults: defaults)
         Self.retained.append(settings)
         let notesOnly = mode == "notes-only" || mode == "notes-skip"
+        let summaryFallback = mode == "notes-summary-fallback" || mode == "zip-summary-fallback"
         settings.exportFormats = notesOnly ? [] : Set(ExportFormat.allCases)
         settings.writeMode = .overwrite
-        settings.includeDataDictionary = notesOnly
-        settings.generateRangeSummary = mode == "range" || mode == "notes-range" || mode == "notes-summary-only" || mode == "notes-summary-fallback" || notesOnly
-        settings.summaryOnlyExport = notesOnly || mode == "notes-summary-only" || mode == "notes-summary-fallback"
-        settings.archiveExportFiles = notesOnly
-        settings.dailyNoteInjection.enabled = mode.hasPrefix("notes") || mode == "individual-notes"
+        settings.includeDataDictionary = notesOnly || mode == "zip-dictionary"
+        settings.generateRangeSummary = mode == "range" || mode == "notes-range" || mode == "notes-summary-only" || summaryFallback || notesOnly || mode == "zip-range" || mode == "zip-summary"
+        settings.summaryOnlyExport = notesOnly || mode == "notes-summary-only" || summaryFallback || mode == "zip-summary"
+        settings.archiveExportFiles = notesOnly || mode.hasPrefix("zip")
+        settings.dailyNoteInjection.enabled = mode.hasPrefix("notes") || mode == "individual-notes" || mode == "zip-notes" || mode == "zip-note-overlap" || mode == "zip-note-skip" || mode == "zip-summary"
         settings.dailyNoteInjection.dailyNotesOnly = notesOnly
-        settings.dailyNoteInjection.createIfMissing = mode != "notes-skip"
-        settings.dailyNoteInjection.folderPath = "Journal"
-        settings.individualTracking.globalEnabled = notesOnly || mode.hasPrefix("individual")
-        if mode.hasPrefix("individual") && mode != "individual-empty" {
+        settings.dailyNoteInjection.createIfMissing = mode != "notes-skip" && mode != "zip-note-skip"
+        settings.dailyNoteInjection.folderPath = mode == "zip-note-overlap" ? "Health" : "Journal"
+        settings.individualTracking.globalEnabled = notesOnly || mode.contains("individual") || mode == "zip-summary"
+        if (mode.contains("individual") && mode != "individual-empty") || mode == "zip-summary" {
             settings.individualTracking.setTrackIndividually("workouts", enabled: true)
             settings.individualTracking.setTrackIndividually("sleep_total", enabled: true)
         }
@@ -563,7 +689,7 @@ struct ConnectedMorningReceiverTests {
         var calendar = Calendar(identifier: .gregorian); calendar.timeZone = zone
         let owner = calendar.startOfDay(for: ExportFixtures.referenceDate)
         let ownerID = APIExportClient.dayString(from: owner, timeZone: zone)
-        let withProvider = ["provider", "warning", "resume", "notes-provider", "individual-provider"].contains(mode)
+        let withProvider = ["provider", "warning", "resume", "notes-provider", "individual-provider", "zip-provider"].contains(mode)
         let external = withProvider ? [ExternalDailyRecord(provider: .whoop, date: ownerID, fetchedAt: owner,
             payloads: mode == "warning" ? [] : [.init(name: "cycles", endpoint: "https://synthetic.invalid/cycles",
                 statusCode: 200, fetchedAt: owner, data: .object(["synthetic": .string("retained-connected-source")]))],
@@ -576,7 +702,7 @@ struct ConnectedMorningReceiverTests {
             sleep: SleepData(totalDuration: end.timeIntervalSince(start), coreSleep: end.timeIntervalSince(start),
                 sessionStart: start, sessionEnd: end,
                 stages: [.init(stage: "core", startDate: start, endDate: end, metadata: ["synthetic": "connected-whole-session"])]),
-            workouts: mode.hasPrefix("individual") ? [WorkoutData(workoutType: .running,
+            workouts: mode.contains("individual") ? [WorkoutData(workoutType: .running,
                 startTime: owner.addingTimeInterval(3600), duration: 1800, calories: 100, distance: 1000,
                 route: [RoutePoint(timestamp: owner.addingTimeInterval(3600), latitude: 1, longitude: 2,
                     altitudeMeters: nil, speedMps: nil, courseDegrees: nil, horizontalAccuracyMeters: nil)])] : [],
@@ -586,10 +712,10 @@ struct ConnectedMorningReceiverTests {
         let original = ConnectedCorpusExportManifest(mode: .writeFiles, createdAt: Date(), sourceDeviceName: "Synthetic iPhone",
             sourceTimeZoneIdentifier: zone.identifier, dateRangeStart: owner, dateRangeEnd: owner,
             requestedDates: [owner],
-            originalRequestedDates: mode == "notes-summary-fallback"
+            originalRequestedDates: summaryFallback
                 ? [owner.addingTimeInterval(-10_000 * 86_400), owner.addingTimeInterval(100 * 86_400)] : nil,
-            originalCalendarTimeZoneIdentifier: mode == "notes-summary-fallback" ? zone.identifier : nil,
-            requestedDateIdentifiers: [ownerID], transferDates: mode == "notes-summary-fallback"
+            originalCalendarTimeZoneIdentifier: summaryFallback ? zone.identifier : nil,
+            requestedDateIdentifiers: [ownerID], transferDates: summaryFallback
                 ? [owner.addingTimeInterval(-10_000 * 86_400), owner, owner.addingTimeInterval(100 * 86_400)] : [owner],
             settingsSnapshot: snapshot,
             requestedTarget: .init(kind: .connectedMac, displayName: "Synthetic", destinationDisplayName: "Synthetic"))

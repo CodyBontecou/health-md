@@ -695,6 +695,11 @@ struct ExportPresentationTarget: Equatable, Sendable {
     }
 }
 
+nonisolated struct AppleLooseDailyArchiveMaterialization: Equatable, Sendable {
+    let relativePath: String
+    let artifact: ExportArtifactFile
+}
+
 nonisolated struct AppleLooseDailyArchiveWriteResult: Equatable, Sendable {
     let fileURL: URL
     let notes: AppleLooseDailyRangeWriteResult
@@ -708,6 +713,7 @@ nonisolated struct AppleLooseDailyRangeWriteResult: Equatable, Sendable {
     let dataDictionaryFileCount: Int
     let providerSidecarFileCount: Int
     let individualEntryFileCount: Int
+    let archiveFileCount: Int
     let dailyNoteUpdatedDates: [Date]
     let dailyNoteSkippedDates: [Date]
     var dailyNoteUpdatedCount: Int { dailyNoteUpdatedDates.count }
@@ -719,6 +725,7 @@ nonisolated struct AppleLooseDailyRangeWriteResult: Equatable, Sendable {
         dataDictionaryFileCount: Int = 0,
         providerSidecarFileCount: Int = 0,
         individualEntryFileCount: Int = 0,
+        archiveFileCount: Int = 0,
         dailyNoteUpdatedDates: [Date] = [], dailyNoteSkippedDates: [Date] = []
     ) {
         self.dailyFileCount = max(dailyFileCount, 0)
@@ -726,12 +733,13 @@ nonisolated struct AppleLooseDailyRangeWriteResult: Equatable, Sendable {
         self.dataDictionaryFileCount = max(dataDictionaryFileCount, 0)
         self.providerSidecarFileCount = max(providerSidecarFileCount, 0)
         self.individualEntryFileCount = max(individualEntryFileCount, 0)
+        self.archiveFileCount = max(archiveFileCount, 0)
         self.dailyNoteUpdatedDates = dailyNoteUpdatedDates
         self.dailyNoteSkippedDates = dailyNoteSkippedDates
     }
 
     var totalFileCount: Int {
-        dailyFileCount + rollupFileCount + dataDictionaryFileCount + providerSidecarFileCount + individualEntryFileCount
+        dailyFileCount + rollupFileCount + dataDictionaryFileCount + providerSidecarFileCount + individualEntryFileCount + archiveFileCount
     }
 }
 
@@ -2714,15 +2722,13 @@ final class VaultManager: ObservableObject {
         )
     }
 
-    /// Package the already qualified daily/range/dictionary/provider files. No
-    /// health values enter the historical archive renderer on this path.
-    func commitHealthDataRangeArchive(
+    /// Freeze the same accepted entries used by local ZIP publication. Notes
+    /// remain separate destination patches, never files inside the archive.
+    private func healthDataRangeArchiveInputs(
         _ materialized: AppleLooseDailyRangeMaterialization,
-        destination: AppleLooseDailyRangeDestination,
-        settingsSnapshot: ExportSettingsSnapshot,
-        startDate: Date,
-        endDate: Date
-    ) async throws -> AppleLooseDailyArchiveWriteResult? {
+        settingsSnapshot: ExportSettingsSnapshot, startDate: Date, endDate: Date,
+        temporary: URL
+    ) throws -> (relativePath: String, healthSubfolder: String, files: [RenderedHealthDataArchiveEntryFile]) {
         guard settingsSnapshot.archiveExportFiles,
               let context = settingsSnapshot.sleepCaptureContext,
               context.sleepDayAttribution == .morningEnds,
@@ -2733,11 +2739,6 @@ final class VaultManager: ObservableObject {
             throw AppleLooseDailyExportPlannerError.rustPlanningFailed
         }
         try settingsSnapshot.validatedSleepCaptureContext().requireShippedProfile()
-        guard destinationState == .available, vaultURL?.standardizedFileURL == destination.rootURL.standardizedFileURL else {
-            throw ExportError.destinationChanged
-        }
-        guard bookmarkResolver.startAccessing(destination.rootURL) else { throw ExportError.accessDenied }
-        defer { bookmarkResolver.stopAccessing(destination.rootURL) }
         let paths = materialized.operation.artifacts.map(\.artifact.relativePath)
             + (materialized.dataDictionary.map { [$0.relativePath] } ?? [])
             + materialized.providerSidecars.map(\.relativePath)
@@ -2748,12 +2749,9 @@ final class VaultManager: ObservableObject {
         guard paths.allSatisfy({ $0.hasPrefix(prefix) && $0.count > prefix.count }) else {
             throw AppleExactDestinationError.unsafeRelativePath
         }
-        let archivePath = [healthSubfolder, archiveFilename(startDate: startDate, endDate: endDate,
+        let archivePath = [healthSubfolder, Self.archiveFilename(startDate: startDate, endDate: endDate,
             timeZone: context.timeZone)].filter { !$0.isEmpty }.joined(separator: "/")
-        try preflightExportArtifactPaths([archivePath] + materialized.dailyNotes.map(\.relativePath))
-        try preflightDailyNotes(materialized.dailyNotes, operation: materialized.operation, destination: destination)
-        let temporary = FileManager.default.temporaryDirectory.appendingPathComponent("healthmd-wake-zip-\(UUID())")
-        defer { try? FileManager.default.removeItem(at: temporary) }
+        try ExportPathPlanner.validatePortableArtifactPaths([archivePath] + materialized.dailyNotes.map(\.relativePath))
         var files: [RenderedHealthDataArchiveEntryFile] = []
         func append(path: String, artifact: ExportArtifactFile) throws {
             try artifact.validateIntegrity()
@@ -2778,6 +2776,62 @@ final class VaultManager: ObservableObject {
         }
         for file in materialized.providerSidecars { try append(path: file.relativePath, artifact: file.artifact) }
         for file in materialized.individualEntries { try append(path: file.relativePath, artifact: file.artifact) }
+        return (archivePath, healthSubfolder, files)
+    }
+
+    /// Build a temporary ZIP without opening or writing the selected vault.
+    /// Durable receivers retain these exact bytes before their first commit.
+    func materializeHealthDataRangeArchive(
+        _ materialized: AppleLooseDailyRangeMaterialization,
+        settingsSnapshot: ExportSettingsSnapshot, startDate: Date, endDate: Date
+    ) async throws -> AppleLooseDailyArchiveMaterialization {
+        let temporary = FileManager.default.temporaryDirectory.appendingPathComponent("healthmd-wake-zip-\(UUID())")
+        defer { try? FileManager.default.removeItem(at: temporary) }
+        let inputs = try healthDataRangeArchiveInputs(materialized, settingsSnapshot: settingsSnapshot,
+            startDate: startDate, endDate: endDate, temporary: temporary)
+        guard !inputs.files.isEmpty else { throw AppleLooseDailyExportPlannerError.rustPlanningFailed }
+        let archiveURL = temporary.appendingPathComponent("accepted.zip")
+        let writer = try ZipArchiveWriter.begin(to: archiveURL, workingDirectoryURL: temporary)
+        do {
+            for file in inputs.files {
+                try Task.checkCancellation()
+                guard let artifact = file.acceptedArtifact else { throw CocoaError(.fileReadCorruptFile) }
+                try await Self.performArchiveIO { try writer.append(path: file.archivePath, artifact: artifact) }
+            }
+            try Task.checkCancellation()
+            try await Self.performArchiveIO { try writer.finish() }
+            let attributes = try FileManager.default.attributesOfItem(atPath: archiveURL.path)
+            guard let size = attributes[.size] as? NSNumber else { throw CocoaError(.fileReadCorruptFile) }
+            let artifact = try ExportArtifactIO.renderTemporary(prefix: "healthmd-accepted-archive", mediaType: "application/zip") { sink in
+                try ExportArtifactIO.forEachFileChunk(at: archiveURL, expectedByteCount: size.uint64Value) { try sink.write($0) }
+            }
+            return AppleLooseDailyArchiveMaterialization(relativePath: inputs.relativePath, artifact: artifact)
+        } catch {
+            try? await Self.performArchiveIO { writer.abandon() }
+            throw error
+        }
+    }
+
+    /// Package the already qualified daily/range/dictionary/provider files. No
+    /// health values enter the historical archive renderer on this path.
+    func commitHealthDataRangeArchive(
+        _ materialized: AppleLooseDailyRangeMaterialization,
+        destination: AppleLooseDailyRangeDestination,
+        settingsSnapshot: ExportSettingsSnapshot,
+        startDate: Date,
+        endDate: Date
+    ) async throws -> AppleLooseDailyArchiveWriteResult? {
+        guard destinationState == .available, vaultURL?.standardizedFileURL == destination.rootURL.standardizedFileURL else {
+            throw ExportError.destinationChanged
+        }
+        guard bookmarkResolver.startAccessing(destination.rootURL) else { throw ExportError.accessDenied }
+        defer { bookmarkResolver.stopAccessing(destination.rootURL) }
+        let temporary = FileManager.default.temporaryDirectory.appendingPathComponent("healthmd-wake-zip-\(UUID())")
+        defer { try? FileManager.default.removeItem(at: temporary) }
+        let inputs = try healthDataRangeArchiveInputs(materialized, settingsSnapshot: settingsSnapshot,
+            startDate: startDate, endDate: endDate, temporary: temporary)
+        try preflightExportArtifactPaths([inputs.relativePath] + materialized.dailyNotes.map(\.relativePath))
+        try preflightDailyNotes(materialized.dailyNotes, operation: materialized.operation, destination: destination)
         // These flags only tell the packager that the supplied files already
         // contain every selected output, including summary-only and dictionary.
         let packaging = settingsSnapshot.makeAdvancedExportSettings()
@@ -2785,8 +2839,8 @@ final class VaultManager: ObservableObject {
         packaging.historicalCalendarRollupPeriods = []
         packaging.summaryOnlyExport = false
         packaging.includeDataDictionary = false
-        guard let archive = try await exportArchive(fromRenderedFiles: files, settings: packaging,
-            startDate: startDate, endDate: endDate, healthSubfolder: healthSubfolder,
+        guard let archive = try await exportArchive(fromRenderedFiles: inputs.files, settings: packaging,
+            startDate: startDate, endDate: endDate, healthSubfolder: inputs.healthSubfolder,
             acceptedDestination: destination) else { return nil }
         let notes = try commitDailyNotes(materialized.dailyNotes, destination: destination)
         return AppleLooseDailyArchiveWriteResult(fileURL: archive, notes: notes)
@@ -3266,14 +3320,16 @@ final class VaultManager: ObservableObject {
         }
     }
 
-    func overwriteExactUTF8Artifact(
-        relativePath: String,
-        data: Data,
-        binding: AppleVaultDestinationBinding
-    ) async throws {
-        guard let content = String(data: data, encoding: .utf8) else {
-            throw AppleExactDestinationError.invalidUTF8
-        }
+    func overwriteExactUTF8Artifact(relativePath: String, data: Data, binding: AppleVaultDestinationBinding) async throws {
+        try await overwriteExactArtifact(relativePath: relativePath, data: data, binding: binding, binary: false)
+    }
+
+    func overwriteExactBinaryArtifact(relativePath: String, data: Data, binding: AppleVaultDestinationBinding) async throws {
+        try await overwriteExactArtifact(relativePath: relativePath, data: data, binding: binding, binary: true)
+    }
+
+    private func overwriteExactArtifact(relativePath: String, data: Data,
+        binding: AppleVaultDestinationBinding, binary: Bool) async throws {
         guard let vaultURL else { throw AppleExactDestinationError.destinationUnavailable }
         guard bookmarkResolver.startAccessing(vaultURL) else {
             throw AppleExactDestinationError.destinationUnavailable
@@ -3284,12 +3340,18 @@ final class VaultManager: ObservableObject {
             binding: binding,
             vaultURL: vaultURL
         )
-        let request = AggregateFileWriteRequest(
-            fileURL: fileURL,
-            filename: fileURL.lastPathComponent,
-            newContent: content,
-            behavior: .overwrite
-        )
+        let request: AggregateFileWriteRequest
+        if binary {
+            let artifact = try ExportArtifactIO.renderTemporary(prefix: "healthmd-exact-binary", mediaType: "application/octet-stream") {
+                try $0.write(data)
+            }
+            request = AggregateFileWriteRequest(fileURL: fileURL, filename: fileURL.lastPathComponent,
+                artifact: artifact, behavior: .overwrite)
+        } else {
+            guard let content = String(data: data, encoding: .utf8) else { throw AppleExactDestinationError.invalidUTF8 }
+            request = AggregateFileWriteRequest(fileURL: fileURL, filename: fileURL.lastPathComponent,
+                newContent: content, behavior: .overwrite)
+        }
         #if DEBUG
         let beforeCommit = exactDestinationWillCommitForTesting
         #else
@@ -4010,7 +4072,7 @@ final class VaultManager: ObservableObject {
         if settings.summaryOnlyModeEnabled && rollupEntries.isEmpty { return nil }
 
         let effectiveHealthSubfolder = healthSubfolder ?? self.healthSubfolder
-        let archiveName = archiveFilename(
+        let archiveName = Self.archiveFilename(
             startDate: startDate,
             endDate: endDate,
             timeZone: settings.exportTimeZoneOverride
@@ -4245,7 +4307,7 @@ final class VaultManager: ObservableObject {
         )
     }
 
-    private func archiveFilename(
+    nonisolated static func archiveFilename(
         startDate: Date,
         endDate: Date,
         timeZone: TimeZone? = nil
@@ -4595,7 +4657,7 @@ final class VaultManager: ObservableObject {
             if destinationBinding == nil {
                 try ensureCoordinatedDirectoryExists(at: healthFolderURL)
             }
-            let archiveName = archiveFilename(
+            let archiveName = Self.archiveFilename(
                 startDate: immutableRollupDates.first ?? startDate,
                 endDate: immutableRollupDates.last ?? endDate,
                 timeZone: sourceCalendar.timeZone
@@ -4977,7 +5039,7 @@ final class VaultManager: ObservableObject {
                 ?? startDate
             let archivePath = [
                 effectiveHealthSubfolder,
-                archiveFilename(
+                Self.archiveFilename(
                     startDate: startDate,
                     endDate: endDate,
                     timeZone: settings.exportTimeZoneOverride
