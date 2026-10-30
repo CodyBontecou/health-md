@@ -10,7 +10,7 @@ verified_method: traced
 platform: apple
 category: "Workflow guide"
 related:
-  - export-apple-health-workouts
+  - export-suunto-data
   - export-zepp-amazfit-data
   - export-health-data-without-the-cloud
 draft: false
