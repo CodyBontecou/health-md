@@ -8,9 +8,8 @@ import { expectedVercelConfig } from "../scripts/build-vercel-config.mjs";
 const configSource = await readFile(new URL("../vercel.json", import.meta.url), "utf8");
 const config = JSON.parse(configSource);
 
-test("Vercel automatic deployments stay held pending owner approval", () => {
-  // Hold both main and preview branches until the owner approves publication.
-  assert.deepEqual(config.git.deploymentEnabled, { "**": false, main: false });
+test("Vercel deploys owner-approved main while keeping preview branches disabled", () => {
+  assert.deepEqual(config.git.deploymentEnabled, { "**": false, main: true });
 });
 
 test("Vercel config is generated from the locale manifest", async () => {
