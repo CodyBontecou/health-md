@@ -552,7 +552,7 @@
     <!-- Paywall screen -->
     <string name="paywall_title">Health.md अनलॉक करें</string>
     <string name="paywall_subtitle">आपने अपने 5 निःशुल्क निर्यात का उपयोग किया है</string>
-    <string name="paywall_unlimited_exports">असीमित निर्यात, हमेशा के लिए</string>
+    <string name="paywall_unlimited_exports">असीमित निर्यात</string>
     <string name="paywall_scheduled_exports">स्वचालित निर्धारित निर्यात</string>
     <string name="paywall_future_features">सभी भविष्य की सुविधाएं शामिल हैं</string>
     <string name="paywall_one_time">एकबारी भुगतान \u2014 कोई सदस्यता नहीं</string>
@@ -623,7 +623,7 @@
     <string name="privacy_category_history_permissions">READ_HEALTH_DATA_HISTORY</string>
     <string name="privacy_category_history_exports">केवल बड़े मैन्युअल निर्यातों के लिए उपयोग होता है, जैसे 90 दिन या पूरी अवधि, ताकि Health.md मानक 30-दिन की सीमा से पुराना Health Connect डेटा पढ़ सके</string>
     <string name="privacy_policy_direct_cli">Direct CLI निर्यात तभी होता है जब आप स्पष्ट रूप से अपने कंप्यूटर से पेयर और कनेक्ट करते हैं। स्वास्थ्य रिकॉर्ड प्रमाणित, एन्क्रिप्टेड कनेक्शन से भेजे जाते हैं। ट्रांसफ़र दोबारा शुरू किया जा सके, इसके लिए उन्हें अधिकतम सात दिन निजी रूप से रखा जाता है; रद्द करने या पेयरिंग हटाने पर वे इससे पहले ही मिटा दिए जाते हैं।</string>
-    <string name="privacy_policy_footer">Health.md कोई स्वास्थ्य-डेटा क्लाउड संचालित नहीं करता। अभियान एट्रिब्यूशन ऐप के बनाए रैंडम इंस्टॉल/इवेंट UUIDs और सत्यापित अभियान मेटाडेटा भेज सकता है। यह कभी स्वास्थ्य डेटा, रॉ रेफ़रर, डिवाइस IDs, निर्यात, खाते या पाथ नहीं भेजता।</string>
+    <string name="privacy_policy_footer">यह संस्करण कस्टम उपयोग विश्लेषण या विज्ञापन एट्रिब्यूशन डेटा एकत्र नहीं करता है। खरीदारी, शेड्यूलिंग और वैकल्पिक सेवाओं के लिए अलग गोपनीयता विवरण हैं।</string>
     <!-- Feedback helper -->
     <string name="feedback_email_subject">Health.md प्रतिक्रिया</string>
     <string name="feedback_send_chooser">प्रतिक्रिया भेजें</string>
@@ -743,7 +743,7 @@
     <string name="onboarding_back">वापस</string>
     <!-- P1 parity: billing/schedule/history/settings -->
     <string name="export_failure_paywall_label">अनलॉक आवश्यक है</string>
-    <string name="export_guidance_paywall">अनुसूचित निर्यात के लिए आजीवन अनलॉक की आवश्यकता होती है। असीमित निर्यात और शेड्यूलिंग को अनलॉक करने के लिए पेवॉल खोलें।</string>
+    <string name="export_guidance_paywall">अनुसूचित निर्यात के लिए सक्रिय ट्रायल या सदस्यता, या आजीवन एक्सेस चाहिए। एक्सेस के विकल्प देखने के लिए खरीदारी स्क्रीन खोलें।</string>
     <string name="export_source_retry">पुनः प्रयास करें</string>
     <string name="export_source_shortcut">शॉर्टकट</string>
     <string name="export_source_remote">रिमोट</string>
@@ -1436,4 +1436,17 @@
     <string name="whoop_reconnect">WHOOP फिर से कनेक्ट करें</string>
     <string name="whoop_disconnect">WHOOP डिस्कनेक्ट करें</string>
     <string name="whoop_use_for_exports">निर्यात के लिए WHOOP उपयोग करें</string>
+    <string name="paywall_access_subtitle">अपना निजी स्वास्थ्य संग्रह शुरू करने के लिए सदस्यता या आजीवन एक्सेस चुनें। योग्य सदस्यताओं में 7 दिन का मुफ़्त ट्रायल शामिल है।</string>
+    <string name="paywall_access_active_title">आपका एक्सेस सक्रिय है</string>
+    <string name="paywall_access_active_body">अपने स्वास्थ्य डेटा को कनेक्ट करने और निजी संग्रह सहेजने की जगह चुनने के लिए सेटअप जारी रखें।</string>
+    <string name="paywall_plan_choices">साप्ताहिक, वार्षिक या आजीवन एक्सेस</string>
+    <string name="paywall_weekly_price">%1$s / सप्ताह</string>
+    <string name="paywall_yearly_price">%1$s / वर्ष</string>
+    <string name="paywall_lifetime_price">आजीवन — एक बार %1$s</string>
+    <string name="paywall_trial_then">7 दिन मुफ़्त, फिर %1$s</string>
+    <string name="paywall_retry">फिर कोशिश करें</string>
+    <string name="paywall_manage_subscriptions">सदस्यताएँ प्रबंधित करें</string>
+    <string name="paywall_terms">शर्तें</string>
+    <string name="paywall_privacy">गोपनीयता</string>
+    <string name="paywall_subscription_disclosure">योग्य सदस्यताओं में 7 दिन का मुफ़्त ट्रायल शामिल है, जिसके बाद दिखाए गए मूल्य पर अपने आप नवीनीकरण होता है, जब तक ट्रायल या मौजूदा अवधि समाप्त होने से पहले रद्द न किया जाए। Google Play में प्रबंधित करें या रद्द करें। आजीवन एक्सेस का एकमुश्त भुगतान तुरंत लिया जाता है। मौजूदा सशुल्क एक्सेस बरकरार रहता है। जीवन भर का कोई परीक्षण नहीं है. ऐप को हटाने या लाइफटाइम खरीदने से मौजूदा सदस्यता रद्द नहीं होती है।</string>
 </resources>

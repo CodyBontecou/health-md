@@ -33,13 +33,7 @@ struct iPadSettingsView: View {
     }
 
     private var purchaseStatusTitle: String {
-        if purchaseManager.isFamilyUnlocked {
-            return "Family Lifetime active"
-        }
-        if purchaseManager.isUnlocked {
-            return "Full access active"
-        }
-        return "Unlock Full Access"
+        purchaseManager.activePlanTitle
     }
 
     private var purchaseStatusDetail: String {
@@ -167,18 +161,13 @@ struct iPadSettingsView: View {
 
                 // Configuration now lives on the Export page so iPad matches the iOS workflow.
 
-                // MARK: Privacy & Analytics
+                // MARK: Privacy
                 VStack(alignment: .leading, spacing: Spacing.s3) {
-                    iPadBrandLabel("Privacy & Analytics")
+                    iPadBrandLabel("Privacy")
 
-                    Text("Health.md collects limited product events using a random app-install identifier for setup, export-shape, and purchase-flow analytics.")
+                    Text("This version does not collect custom usage analytics or advertising attribution.")
                         .font(Typography.bodyEmphasis())
                         .foregroundStyle(Color.textPrimary)
-                        .fixedSize(horizontal: false, vertical: true)
-
-                    Text("Analytics never includes health values, metric names, health dates, exported files, paths, peer names, or credentials. On iPhone and iPad, Apple Ads campaign identifiers are linked to purchase outcomes to measure campaign conversion. No health data or purchase events are sent to Apple Ads.")
-                        .font(Typography.caption())
-                        .foregroundStyle(Color.textMuted)
                         .fixedSize(horizontal: false, vertical: true)
 
                     Divider().background(Color.borderSubtle)

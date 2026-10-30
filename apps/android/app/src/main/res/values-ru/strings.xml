@@ -297,7 +297,7 @@
     <!-- Paywall screen -->
     <string name="paywall_title">Разблокировать Health.md</string>
     <string name="paywall_subtitle">Вы исчерпали 5 бесплатных экспортов</string>
-    <string name="paywall_unlimited_exports">Неограниченные экспорты, навсегда</string>
+    <string name="paywall_unlimited_exports">Неограниченные экспорты</string>
     <string name="paywall_scheduled_exports">Автоматизированные запланированные экспорты</string>
     <string name="paywall_future_features">Все будущие функции включены</string>
     <string name="paywall_one_time">Единовременная оплата — без подписки</string>
@@ -722,7 +722,7 @@
     <string name="privacy_category_history_permissions">READ_HEALTH_DATA_HISTORY</string>
     <string name="privacy_category_history_exports">Используется только для большого экспорта вручную, например, за 90 дней или за все время, поэтому Health.md может читать данные Health Connect старше стандартного 30-дневного окна.</string>
     <string name="privacy_policy_direct_cli">Экспорт Direct CLI происходит только после явного сопряжения и подключения к компьютеру. Медицинские записи отправляются через аутентифицированное зашифрованное соединение, хранятся в частном порядке для возобновления передачи не более семи дней и удаляются раньше, когда вы отменяете или забываете сопряжение.</string>
-    <string name="privacy_policy_footer">Health.md не управляет облаком данных о здоровье. Собственная атрибуция кампаний может отправлять случайные созданные приложением UUID установки/события и проверенные метаданные кампании, но никогда не отправляет данные о здоровье, необработанные рефереры, идентификаторы устройств, экспортированные данные, данные учетных записей или пути.</string>
+    <string name="privacy_policy_footer">Эта версия не собирает собственную аналитику использования или данные рекламной атрибуции. Для покупок, расписаний и дополнительных сервисов предусмотрены отдельные сведения о конфиденциальности.</string>
     <string name="section_export_type">Тип экспорта</string>
     <string name="export_type_compatibility">Экспорт совместимости</string>
     <string name="export_type_compatibility_description">Ежедневные файлы Markdown, Bases, JSON или CSV для существующих рабочих процессов Health.md.</string>
@@ -794,7 +794,7 @@
     <string name="onboarding_skip">Пропустить</string>
     <string name="onboarding_back">Назад</string>
     <string name="export_failure_paywall_label">Требуется разблокировка</string>
-    <string name="export_guidance_paywall">Для запланированного экспорта требуется пожизненная разблокировка. Откройте платный доступ, чтобы разблокировать неограниченный экспорт и планирование.</string>
+    <string name="export_guidance_paywall">Для экспорта по расписанию нужен активный пробный период или подписка либо пожизненный доступ. Откройте экран покупки, чтобы посмотреть варианты доступа.</string>
     <string name="export_source_retry">Повторная попытка</string>
     <string name="export_source_shortcut">Ярлык</string>
     <string name="export_source_remote">Удаленный</string>
@@ -1564,4 +1564,17 @@
     <string name="whoop_reconnect">Повторно подключить WHOOP</string>
     <string name="whoop_disconnect">Отключить WHOOP</string>
     <string name="whoop_use_for_exports">Использовать WHOOP для экспорта</string>
+    <string name="paywall_access_subtitle">Выберите подписку или пожизненный доступ для создания личного архива здоровья. Для подходящих подписок доступен бесплатный пробный период на 7 дней.</string>
+    <string name="paywall_access_active_title">Ваш доступ активен</string>
+    <string name="paywall_access_active_body">Продолжите настройку, чтобы подключить данные о здоровье и выбрать место для личного архива.</string>
+    <string name="paywall_plan_choices">Недельный, годовой или пожизненный доступ</string>
+    <string name="paywall_weekly_price">%1$s / неделя</string>
+    <string name="paywall_yearly_price">%1$s / год</string>
+    <string name="paywall_lifetime_price">Пожизненно — %1$s однократно</string>
+    <string name="paywall_trial_then">7 дней бесплатно, затем %1$s</string>
+    <string name="paywall_retry">Повторить</string>
+    <string name="paywall_manage_subscriptions">Управление подписками</string>
+    <string name="paywall_terms">Условия</string>
+    <string name="paywall_privacy">Конфиденциальность</string>
+    <string name="paywall_subscription_disclosure">Подходящие подписки включают бесплатный пробный период на 7 дней, затем автоматически продлеваются по указанной цене, если не отменены до окончания пробного или текущего периода. Управляйте подпиской или отмените её в Google Play. Пожизненный доступ оплачивается сразу одним платежом. Существующий платный доступ сохраняется. Жизнь не имеет суда. Удаление приложения или покупка Lifetime не отменяет существующую подписку.</string>
 </resources>

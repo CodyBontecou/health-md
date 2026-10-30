@@ -1,30 +1,28 @@
 ---
-title: "Desbloqueo y paywall"
-description: "Entiende las 5 acciones gratuitas, los recordatorios no bloqueantes, las compras Lifetime y la restauración con StoreKit."
+title: "Planes, pruebas y restauración."
+description: "Acceso semanal, anual y de por vida, pruebas elegibles de siete días, Family Sharing y restauración."
 ---
 
-Health.md incluye 5 acciones de exportación completadas antes de exigir Full Access. Una acción puede escribir varios días y formatos. Las exportaciones manuales, programadas, de Atajos y directas comparten el contador cuando corresponda.
+Esta guía describe la versión del teléfono habilitado para suscripción. La preparación de la tienda no es un comunicado público; Las versiones distribuidas anteriores pueden mostrar la asignación de libre exportación anterior. La aplicación instalada y la confirmación de la tienda muestran la oferta disponible.
 
-## Cuándo aparece una oferta
+## Acceso antes de la configuración
 
-- La configuración inicial no contiene un paywall.
-- Tras cerrar la primera vista previa puede aparecer una oferta única y descartable.
-- Después de la primera exportación gratuita completada, una guía permite revisar una programación diaria sin activarla.
-- Después de la tercera, una oferta descartable de acceso de por vida muestra dos acciones gratuitas restantes. El límite es de cinco acciones completadas.
-- Después de 5 usos, una nueva exportación contabilizada queda bloqueada.
+En iPhone y iPad , los usuarios sin acceso ven un muro de pago obligatorio antes de la configuración. Inicie una prueba elegible, suscríbase, compre Lifetime o restablezca una compra existente. En esta versión no hay ninguna asignación de libre exportación local ni ventas adicionales de primera o tercera exportación descartables.
 
-Descartar las primeras ofertas no consume usos ni elimina los restantes.
+## Planes y pruebas
 
-## Opciones Lifetime
+Individual y Apple Family Sharing ofrecen cada uno acceso semanal, anual y de por vida. Las suscripciones elegibles incluyen una prueba gratuita de 7 días y luego se renuevan automáticamente según el precio y el intervalo mostrados. Apple determina la elegibilidad; reinstalar o cambiar de plan no garantiza otra prueba. Lifetime se cobra inmediatamente una vez y no tiene prueba ni renovación automática.
 
-StoreKit 2 ofrece compras únicas, sin suscripción recurrente: **Individual Lifetime**, **Family Lifetime** y una mejora familiar para propietarios elegibles. El precio localizado del panel de Apple es la autoridad. Family Lifetime depende de Compartir compras de Apple.
+Family Sharing comparte el acceso a funciones con hasta otros cinco miembros elegibles de la familia, no a datos ni archivos de salud. Google Play ofrece acceso individual únicamente. El complemento Mac y la compilación F-Droid incluyen acceso sin facturación. Las compras no se transfieren entre tiendas.
 
-**Restaurar compra** actualiza las transacciones del Apple ID. Para Familia, comprueba el Apple ID, Compartir compras y que Health.md no esté oculto del historial.
+## Administrar y restaurar
 
-| Problema | Acción |
-|---|---|
-| Falta el precio | Comprueba App Store y la red; vuelve a abrir la oferta. |
-| Aparece antes del uso 5 | Es un recordatorio descartable, no el bloqueo final. |
-| Una programación se detuvo | Compra o restaura y usa la recuperación normal. |
+Gestionar o cancelar a través de la cuenta de Apple o Google de compras. Para las suscripciones de Apple, cancele al menos 24 horas antes de que finalice la prueba o el período y siga la confirmación de la tienda. Eliminar la aplicación o comprar Lifetime no cancela una suscripción existente.
 
-<div class="related"><a href="/es/docs/onboarding/"><span>Inicio</span>Configuración de cinco pasos.</a><a href="/es/docs/scheduling/"><span>Automatización</span>Uso del cupo compartido.</a></div>
+Las compras vitalicias existentes y el acceso heredado previamente otorgado siguen siendo válidos. Restaurar compra actualiza los derechos de tienda elegibles, no los archivos eliminados. Verifique la configuración de Family Sharing si falta el acceso compartido. Una suscripción por sí sola no califica para la actualización Family Lifetime con descuento.
+
+## Si el acceso finaliza
+
+Las nuevas exportaciones y configuraciones requieren acceso activo nuevamente. Los archivos existentes siguen siendo suyos en los destinos que elija. Después de restaurar el acceso, inspeccione el trabajo pendiente y utilice la ruta de recuperación normal. Los precios faltantes requieren un reintento del catálogo; un error de la tienda no otorga acceso.
+
+<div class="related"> <a href="/es/docs/onboarding/"> <span> Configuración </span> Prepare su archivo de salud. </a> <a href="/es/docs/scheduling/"> <span> Automatización </span> Programar y recuperar exportaciones. </a> </div>

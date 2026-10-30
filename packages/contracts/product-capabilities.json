@@ -41,16 +41,17 @@
     {
       "id": "apple.ads-purchase-attribution",
       "name": "Apple Ads purchase attribution",
-      "classification": "apple_only",
-      "summary": "Measure campaign-to-purchase conversion using AdServices campaign dimensions and pseudonymous install-local purchase outcomes.",
+      "classification": "unavailable",
+      "summary": "Custom app analytics and advertising attribution are intentionally removed from the unpublished Apple and Android candidates.",
       "profiles": [],
       "platforms": {
         "apple": {
-          "state": "available"
+          "state": "unavailable",
+          "reason": "Custom in-app analytics and advertising attribution are intentionally removed. Essential app services remain."
         },
         "android": {
           "state": "unavailable",
-          "reason": "Apple AdServices attributes App Store acquisitions on iOS/iPadOS. Google Play Install Referrer is a separate provider and does not expose Apple Ads campaign claims."
+          "reason": "Custom in-app analytics and advertising attribution are intentionally removed. Essential app services remain."
         }
       },
       "evidence": [
@@ -1009,9 +1010,9 @@
     },
     {
       "id": "purchase.free-export-journey",
-      "name": "Free export allowance and next steps",
+      "name": "Paid access and store-backed trials",
       "classification": "shared",
-      "summary": "Five completed free export actions on iOS/iPadOS and Google Play Android, with dismissible scheduling guidance after the first and a lifetime offer after the third. Existing usage and purchased access are retained. Apple scheduling shares the allowance; Google Play scheduling requires lifetime access. Free macOS companion and F-Droid Full Access are unchanged.",
+      "summary": "Hard paywall before tracking/setup on iOS/iPadOS and Google Play Android. Individual weekly/yearly subscriptions offer eligible users a seven-day store-backed trial; Lifetime is charged immediately. Existing paid and previously grandfathered permanent access is preserved. Historical capability ID and usage ledgers are retained; no new free export allowance or soft quota prompts. Free macOS companion and F-Droid Full Access are unchanged.",
       "platforms": {
         "apple": {
           "state": "available"
@@ -1022,11 +1023,32 @@
       },
       "evidence": [
         "apps/apple/HealthMd/Shared/Managers/PurchaseManager.swift",
-        "apps/apple/HealthMd/iOS/Views/ExportUpgradePrompt.swift",
+        "apps/apple/HealthMd/iOS/Views/PaywallView.swift",
         "apps/android/app/src/main/java/com/healthmd/domain/billing/FreemiumPolicy.kt",
         "apps/android/app/src/main/java/com/healthmd/presentation/export/ExportScreen.kt",
         "apps/apple/docs/features/onboarding.md",
         "apps/android/docs/features/lifetime-unlock.md"
+      ],
+      "profiles": []
+    },
+    {
+      "id": "purchase.family-sharing",
+      "name": "Native Apple Family Sharing plans",
+      "classification": "apple_only",
+      "summary": "Higher-priced Family weekly, yearly, and Lifetime plans use Apple Family Sharing. No custom family accounts or cross-platform entitlement transfer.",
+      "platforms": {
+        "apple": {
+          "state": "available"
+        },
+        "android": {
+          "state": "unavailable",
+          "reason": "Owner-approved individual-only Google Play offering. Google Play Family Library does not share in-app purchases or subscriptions; custom family account/invite infrastructure is explicitly out of scope."
+        }
+      },
+      "evidence": [
+        "apps/apple/docs/experiments/subscription-pricing-rollout.md",
+        "apps/apple/HealthMd/Shared/Managers/PurchaseManager.swift",
+        "apps/android/app/src/main/java/com/healthmd/domain/repository/PurchaseRepository.kt"
       ],
       "profiles": []
     }

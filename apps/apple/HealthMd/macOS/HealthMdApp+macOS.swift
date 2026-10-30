@@ -296,6 +296,7 @@ struct HealthMdApp: App {
     )
 
     init() {
+        RetiredAnalyticsCleanup.run()
         LegacyLocalAgentArtifactCleanup.runIfNeeded()
         let contextStore = EncryptedHealthContextStore()
         encryptedHealthContextStore = contextStore

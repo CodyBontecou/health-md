@@ -1,5 +1,7 @@
 # First-party onboarding and pricing analytics
 
+> Candidate removal — unpublished: app analytics and attribution collectors, queues and identifiers are removed. Legacy /v1/events and /v1/installs uploads are discarded by the candidate server code without reading or storing their bodies. Website redirects/counters remain a separate surface. No deployment or deletion of historical data has occurred. The details below document the earlier implementation, not current candidate behavior.
+
 The Google Play build uses a small first-party Android client to understand whether onboarding steps and the onboarding paywall are usable. It does not use Firebase Analytics, Google Analytics, AppsFlyer, or another third-party analytics SDK. This client is independent from the Google Play campaign-attribution subsystem and does not read or alter campaign attribution state. The F-Droid build binds a no-op onboarding event sink: analytics implementation code, endpoints, workers, identifiers, queues, and DataStore state are not compiled into that APK.
 
 ## Event and property allowlist

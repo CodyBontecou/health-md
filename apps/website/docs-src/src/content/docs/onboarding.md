@@ -5,7 +5,7 @@ description: "Set up Health.md in five steps: privacy, Apple Health, preview, fo
 
 Onboarding appears the first time you open Health.md on iPhone. It explains the local-first model and prepares Apple Health and a folder you control. Product analytics never includes health values, metric names, health dates, files, paths, credentials, or user text.
 
-<div class="availability available"><strong>Available now · iPhone</strong><p>The five steps do not block progress. Health access and the folder can be skipped and repaired later. A purchase no longer blocks setup.</p></div>
+<div class="availability available"><strong>Available now · iPhone</strong><p>The five steps do not block progress. Health access and the folder can be skipped and repaired later. Users without access first choose a plan, start an eligible store-backed trial, or restore a purchase. These five setup steps follow the root paywall.</p></div>
 
 ## Five steps
 
@@ -15,8 +15,8 @@ Onboarding appears the first time you open Health.md on iPhone. It explains the 
 4. **Folder:** choose iCloud Drive, On My iPhone, an Obsidian vault, or another Files provider.
 5. **Ready:** repair missing connections and open the first export preview.
 
-After that preview closes, an eligible locked user may see one dismissible offer. After the first completed free export, a dismissible guide offers to review a daily schedule. After the third, a Lifetime offer shows two free actions remaining. The hard limit is five completed actions.
+The subscription-enabled release has no local free-export allowance or first/third-export reminder. Eligible weekly/yearly subscriptions include a 7-day free trial; Lifetime is charged once immediately, without a trial. Existing paid and previously grandfathered access remains valid. Earlier distributed versions can show the previous offer.
 
 Permissions, metrics, folder, formats, names, profiles, scheduling, and Mac connectivity can all be changed later.
 
-<div class="related"><a href="/docs/iphone-first-export/"><span>Next</span>Run and verify the first export.</a><a href="/docs/paywall/"><span>Plans</span>Review free exports and restore.</a><a href="/docs/share-my-setup/"><span>Move settings</span>Review the QA status.</a></div>
+<div class="related"><a href="/docs/iphone-first-export/"><span>Next</span>Run and verify the first export.</a><a href="/docs/paywall/"><span>Plans</span>Review plans, trials, and restore.</a><a href="/docs/share-my-setup/"><span>Move settings</span>Review the QA status.</a></div>

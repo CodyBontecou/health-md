@@ -8,10 +8,9 @@ import { expectedVercelConfig } from "../scripts/build-vercel-config.mjs";
 const configSource = await readFile(new URL("../vercel.json", import.meta.url), "utf8");
 const config = JSON.parse(configSource);
 
-test("Vercel only automatically deploys main", () => {
-  // A globstar also covers branch names containing slashes. Vercel allows a
-  // branch when any matching rule is true, so main overrides the default deny.
-  assert.deepEqual(config.git.deploymentEnabled, { "**": false, main: true });
+test("Vercel automatic deployments stay held pending owner approval", () => {
+  // Hold both main and preview branches until the owner approves publication.
+  assert.deepEqual(config.git.deploymentEnabled, { "**": false, main: false });
 });
 
 test("Vercel config is generated from the locale manifest", async () => {

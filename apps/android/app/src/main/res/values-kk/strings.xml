@@ -530,7 +530,7 @@
     <string name="export_notification_unknown_error">Белгісіз қате</string>
     <string name="paywall_title">Health.md құлпын ашу</string>
     <string name="paywall_subtitle">Сіз 5 тегін экспортты пайдаландыңыз</string>
-    <string name="paywall_unlimited_exports">Шексіз экспорттар — мәңгілікке</string>
+    <string name="paywall_unlimited_exports">Шексіз экспорттар</string>
     <string name="paywall_scheduled_exports">Автоматты жоспарланған экспорттар</string>
     <string name="paywall_future_features">Барлық болашақ ерекшеліктер қосылған</string>
     <string name="paywall_one_time">Бір реттік төлем — жазылымсыз</string>
@@ -596,7 +596,7 @@
     <string name="privacy_category_history_permissions">READ_HEALTH_DATA_HISTORY</string>
     <string name="privacy_category_history_exports">90 күн немесе барлық уақыт сияқты үлкен қолмен экспорттар үшін ғана пайдаланылады. Бұл Health.md қолданбасына стандартты 30 күндік мерзімнен ескі Health Connect деректерін оқуға мүмкіндік береді.</string>
     <string name="privacy_policy_direct_cli">Direct CLI экспорттары компьютермен нақты жұптастырып, оған қосылғаннан кейін ғана орындалады. Денсаулық жазбалары түпнұсқалығы тексерілген шифрланған қосылым арқылы жіберіледі, жалғастыруға болатын тасымалдау үшін ең көбі жеті күн құпия сақталады және жұптастыруды тоқтатсаңыз немесе ұмытсаңыз, ертерек жойылады.</string>
-    <string name="privacy_policy_footer">Health.md денсаулық деректеріне арналған бұлттық қызметті пайдаланбайды. Науқан атрибуциясы қолданба кездейсоқ жасаған орнату/оқиға UUID идентификаторлары мен тексерілген науқан метадеректерін жіберуі мүмкін. Ол ешқашан денсаулық деректерін, өңделмеген реферерлерді, құрылғы идентификаторларын, экспорттарды, тіркелгілерді немесе жолдарды жібермейді.</string>
+    <string name="privacy_policy_footer">Бұл нұсқа пайдаланудың арнайы аналитикасын немесе жарнама атрибуциясы деректерін жинамайды. Сатып алу, жоспарлау және қосымша қызметтер үшін бөлек құпиялық мәлімдемелері бар.</string>
     <string name="feedback_email_subject">Health.md туралы пікір</string>
     <string name="feedback_send_chooser">Пікір жіберу</string>
     <string name="section_export_type">Экспорт түрі</string>
@@ -705,7 +705,7 @@
     <string name="onboarding_skip">Өткізіп жіберу</string>
     <string name="onboarding_back">Артқа</string>
     <string name="export_failure_paywall_label">Құлыпты ашу қажет</string>
-    <string name="export_guidance_paywall">Жоспарланған экспорттар үшін өмір бойғы құлыпты ашу қажет. Шексіз экспорттар мен жоспарлаудың құлпын ашу үшін төлем экранын ашыңыз.</string>
+    <string name="export_guidance_paywall">Жоспарланған экспорттар үшін белсенді сынақ мерзімі не жазылым немесе өмір бойы қолжетімділік қажет. Қолжетімділік нұсқаларын көру үшін сатып алу экранын ашыңыз.</string>
     <string name="export_source_retry">Қайталау</string>
     <string name="export_source_shortcut">Таңбаша</string>
     <string name="export_source_remote">Қашықтан</string>
@@ -1403,4 +1403,17 @@
     <string name="whoop_reconnect">WHOOP қызметіне қайта қосылу</string>
     <string name="whoop_disconnect">WHOOP қызметін ажырату</string>
     <string name="whoop_use_for_exports">Экспорттау үшін WHOOP пайдалану</string>
+    <string name="paywall_access_subtitle">Жеке денсаулық мұрағатын бастау үшін жазылымды немесе өмір бойы қолжетімділікті таңдаңыз. Тиісті жазылымдарға 7 күндік тегін сынақ мерзімі кіреді.</string>
+    <string name="paywall_access_active_title">Қолжетімділігіңіз белсенді</string>
+    <string name="paywall_access_active_body">Денсаулық деректерін қосып, жеке мұрағатты сақтау орнын таңдау үшін баптауды жалғастырыңыз.</string>
+    <string name="paywall_plan_choices">Апталық, жылдық немесе өмір бойы қолжетімділік</string>
+    <string name="paywall_weekly_price">%1$s / апта</string>
+    <string name="paywall_yearly_price">%1$s / жыл</string>
+    <string name="paywall_lifetime_price">Өмір бойы — бір рет %1$s</string>
+    <string name="paywall_trial_then">7 күн тегін, одан кейін %1$s</string>
+    <string name="paywall_retry">Қайталау</string>
+    <string name="paywall_manage_subscriptions">Жазылымдарды басқару</string>
+    <string name="paywall_terms">Шарттар</string>
+    <string name="paywall_privacy">Құпиялық</string>
+    <string name="paywall_subscription_disclosure">Тиісті жазылымдарға 7 күндік тегін сынақ мерзімі кіреді, одан кейін сынақ немесе ағымдағы кезең аяқталмай тұрып бас тартпасаңыз, көрсетілген бағамен автоматты түрде жаңартылады. Google Play арқылы басқарыңыз немесе бас тартыңыз. Өмір бойы қолжетімділік үшін төлем бірден бір рет алынады. Бұрынғы ақылы қолжетімділік сақталады. Өмір бойы сынақ болмайды. Қолданбаны жою немесе Lifetime сатып алу бұрыннан бар жазылымнан бас тартпайды.</string>
 </resources>

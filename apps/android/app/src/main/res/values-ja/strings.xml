@@ -519,7 +519,7 @@
     <string name="export_notification_unknown_error">不明なエラー</string>
     <string name="paywall_title">Health.mdをロック解除</string>
     <string name="paywall_subtitle">5回の無料エクスポートを使用しました</string>
-    <string name="paywall_unlimited_exports">無制限のエクスポート（永久）</string>
+    <string name="paywall_unlimited_exports">無制限のエクスポート</string>
     <string name="paywall_scheduled_exports">自動スケジュール済みエクスポート</string>
     <string name="paywall_future_features">今後追加されるすべての機能を利用可能</string>
     <string name="paywall_one_time">一回限りの支払い — サブスクリプションなし</string>
@@ -585,7 +585,7 @@
     <string name="privacy_category_history_permissions">READ_HEALTH_DATA_HISTORY</string>
     <string name="privacy_category_history_exports">90日間や全期間など、大規模な手動エクスポートでのみ使用します。これにより、Health.md は標準の30日間より古い Health Connect データを読み取れます</string>
     <string name="privacy_policy_direct_cli">Direct CLI エクスポートは、コンピューターに明示的にペアリングして接続した後にのみ行われます。健康記録は認証された暗号化接続を介して送信され、再開可能な転送のために最大 7 日間非公開で保持され、ペアリングをキャンセルしたり忘れたりするとすぐに削除されます。</string>
-    <string name="privacy_policy_footer">Health.md は健康データクラウドを運用しません。ファーストパーティ キャンペーン アトリビューションでは、ランダムなアプリ生成のインストール/イベント UUIDs と検証されたキャンペーン メタデータが送信される場合がありますが、健康データ、生のリファラー、デバイス ID、エクスポート、アカウント、またはパスは送信されません。</string>
+    <string name="privacy_policy_footer">このバージョンは独自の利用状況分析データや広告アトリビューションデータを収集しません。購入、スケジュール、オプションサービスには個別のプライバシーに関する説明があります。</string>
     <string name="feedback_email_subject">Health.mdフィードバック</string>
     <string name="feedback_send_chooser">フィードバックを送信</string>
     <string name="section_export_type">エクスポートタイプ</string>
@@ -693,7 +693,7 @@
     <string name="onboarding_skip">スキップ</string>
     <string name="onboarding_back">戻る</string>
     <string name="export_failure_paywall_label">ロック解除が必要です</string>
-    <string name="export_guidance_paywall">スケジュールされたエクスポートには、生涯ロック解除が必要です。ペイウォールを開いて、無制限のエクスポートとスケジュールのロックを解除します。</string>
+    <string name="export_guidance_paywall">定期エクスポートには、有効なトライアルまたはサブスクリプション、もしくは永久アクセスが必要です。購入画面を開いてアクセスの選択肢を確認してください。</string>
     <string name="export_source_retry">リトライ</string>
     <string name="export_source_shortcut">ショートカット</string>
     <string name="export_source_remote">リモート</string>
@@ -1287,4 +1287,17 @@
     <string name="whoop_reconnect">WHOOPに再接続</string>
     <string name="whoop_disconnect">WHOOPの接続を解除</string>
     <string name="whoop_use_for_exports">エクスポートにWHOOPを使用</string>
+    <string name="paywall_access_subtitle">サブスクリプションまたは永久アクセスを選んで、プライベートな健康アーカイブを始めましょう。対象のサブスクリプションには7日間の無料トライアルが含まれます。</string>
+    <string name="paywall_access_active_title">アクセスは有効です</string>
+    <string name="paywall_access_active_body">設定を続けて健康データを接続し、プライベートアーカイブの保存先を選択してください。</string>
+    <string name="paywall_plan_choices">週額、年額、または永久アクセス</string>
+    <string name="paywall_weekly_price">%1$s / 週</string>
+    <string name="paywall_yearly_price">%1$s / 年</string>
+    <string name="paywall_lifetime_price">永久 — %1$sの一回払い</string>
+    <string name="paywall_trial_then">7日間無料、その後%1$s</string>
+    <string name="paywall_retry">再試行</string>
+    <string name="paywall_manage_subscriptions">サブスクリプションを管理</string>
+    <string name="paywall_terms">利用規約</string>
+    <string name="paywall_privacy">プライバシー</string>
+    <string name="paywall_subscription_disclosure">対象のサブスクリプションには7日間の無料トライアルが含まれ、トライアルまたは現在の期間が終了する前に解約しない限り、表示価格で自動更新されます。管理や解約はGoogle Playで行えます。永久アクセスは一回払いで直ちに請求されます。既存の有料アクセスは維持されます。 生涯に試練はない。アプリを削除したり、ライフタイムを購入したりしても、既存のサブスクリプションはキャンセルされません。</string>
 </resources>

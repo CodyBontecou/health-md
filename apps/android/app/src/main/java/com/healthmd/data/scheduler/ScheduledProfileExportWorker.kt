@@ -241,7 +241,7 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
         entitlementRepository.refresh()
         val isPurchased = distributionPolicy.fullAccessIncluded ||
             settingsRepository.isPurchased.first() ||
-            entitlementRepository.isUnlocked.first()
+            entitlementRepository.verifyAccess()
         if (!isPurchased) {
             // Scheduled automation is a purchased capability on Android; record and stop.
             recordHistory(

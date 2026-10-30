@@ -1,4 +1,5 @@
-v1.9.4 — Complimentary myself.md access
-• Google Play lifetime purchasers can verify their existing purchase in Settings and claim complimentary lifetime access to myself.md.
-• Review the purchase-proof disclosure, then sign in and confirm the receiving account in your browser.
-• Health and location data stay on your device. Free or grandfathered access alone does not qualify.
+v3.5.0 — More ways to access Health.md
+• Choose weekly or yearly subscriptions with a 7-day free trial when eligible, or a one-time Lifetime purchase.
+• Existing Lifetime and grandfathered access is preserved.
+• Active access is required before setup and exports; the free-export allowance is retired.
+• Clearer purchase status, scheduling guidance, and renewal terms.
