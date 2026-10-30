@@ -388,7 +388,8 @@ struct DailyNoteInjector {
         // Freeze the possible successor-to-historical transition before a file
         // coordinator can invoke callbacks. Ordinary historical notes do not
         // render this extra record or acquire a new annotation.
-        let source = ConnectedExportDetailPolicy.sanitized(healthData.filtered(by: metricSelection), detailPolicy: .summary)
+        let source = ConnectedExportDetailPolicy.sanitized(healthData.filtered(by: metricSelection),
+            detailPolicy: settings.injectMarkdownSections ? .detailedTimeSeries : .summary)
         let format = FormatCustomizationSnapshot.from(customization)
         return InjectionContent(frontmatter: injectionFrontmatter, body: injectionBody, nightCaptureJSON: {
             let config = FormatCustomization()

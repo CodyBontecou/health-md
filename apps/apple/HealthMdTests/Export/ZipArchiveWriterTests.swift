@@ -1280,9 +1280,9 @@ struct DailyNoteAttributionTransitionTests {
         let nightSettings = snapshot.makeAdvancedExportSettings()
         nightSettings.dailyNoteInjection.injectMarkdownSections = parts[1] == "1"
         nightSettings.metricSelection.enabledMetrics = parts[2] == "steps" ? ["steps"]
-            : parts[2] == "sleep" ? ["sleep_total"] : ["steps", "sleep_total"]
+            : parts[2] == "sleep" ? ["sleep_total", "sleep_core"] : ["steps", "sleep_total", "sleep_core"]
         let nightContext = AppleSleepCaptureContext(timeZone: f.context.timeZone, sleepDayAttribution: .nightBegins)
-        let night = try await f.manager.fetchHealthData(for: f.dates[1], detailPolicy: .summary,
+        let night = try await f.manager.fetchHealthData(for: f.dates[1], detailPolicy: .detailedTimeSeries,
             metricSelection: nightSettings.metricSelection, timeZone: f.context.timeZone, captureContext: nightContext)
         let result = DailyNoteInjector.inject(healthData: night, into: f.root, settings: nightSettings.dailyNoteInjection,
             customization: nightSettings.formatCustomization, metricSelection: nightSettings.metricSelection,
@@ -1306,6 +1306,11 @@ struct DailyNoteAttributionTransitionTests {
         }
         if parts[2] == "sleep" { #expect(activity?["steps"] == nil) }
         else { #expect(activity?["steps"] as? Int == 42) }
+        let stages = sleep?["sleepStages"] as? [[String: Any]] ?? []
+        if parts[1] == "1", parts[2] != "steps" {
+            #expect(stages.count == 1, "Selected current Night details must stay in the scoped record")
+            #expect(stages.first?["durationSeconds"] as? Double == 3600.5)
+        } else { #expect(stages.isEmpty) }
         if parts[0] == "1", parts[1] == "0" {
             #expect(nightContent.contains("## Sleep Stage Details"), "Sections disabled: preserve the user's existing body")
         }
