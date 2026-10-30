@@ -347,9 +347,11 @@ final class IPhoneDirectQueryCoordinator {
         )
         guard authorized else { throw IPhoneDirectQueryError.healthKitNotAuthorized }
 
+        // Revalidate every request, including pages served from a cached snapshot.
+        // A trial/subscription expiring must not leave cached health queries open.
+        await PurchaseManager.shared.refreshStatus()
+        guard PurchaseManager.shared.canExport else { throw IPhoneDirectQueryError.accessUnavailable }
         let snapshot = try await snapshotForQuery(query, key: captureKey, lease: lease) {
-            await PurchaseManager.shared.refreshStatus()
-            guard PurchaseManager.shared.canExport else { throw IPhoneDirectQueryError.accessUnavailable }
             let timeZone = TimeZone.current
             let settings = AdvancedExportSettings()
             settings.exportTimeZoneOverride = timeZone

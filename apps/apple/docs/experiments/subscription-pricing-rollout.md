@@ -1,5 +1,7 @@
 # Health.md paid-access rollout
 
+> Source integration is authorized for main. App/website/Worker releases remain on hold. Keep current Lifetime prices unchanged; future price targets in historical proposals are not authorization to apply them. Physical-device and multi-account Family Sharing acceptance are deferred.
+
 > Unpublished candidate update: custom in-app analytics and attribution have been removed. Historical analytics below describe earlier builds/services. Essential services remain. Prices are unchanged; nothing is deployed, submitted, or released.
 
 ## Status and scope
@@ -74,3 +76,11 @@ Measure net proceeds per install, trial-to-paid conversion from mature trial coh
 ## Historical context
 
 The earlier iOS 3.0 subscription proposal was canceled. It proposed individual monthly/yearly/lifetime at $4.99/$24.99/$59.99 and Family at $7.99/$39.99/$89.99; subscriptions never went live. The verified October 25 one-time US schedules were $19.99 Individual, $39.99 Family, and $19.99 Family Upgrade. Neither historical proposal nor these development files establish current deployed subscription availability.
+
+## Current working-checkout qualification — October 30 UTC
+
+The owner confirmed weekly/yearly subscriptions and deferred Vox Android. These checks qualify the local candidate, including its uncommitted changes; they do not certify committed main, an uploaded binary, Apple sandbox accounts, cross-account Family Sharing, or a physically paired Watch.
+
+- Health.md: 24 purchase-policy/local StoreKit tests, five mandatory-root-wall UI tests and four onboarding/import/first-preview UI journeys passed. Twenty focused Android billing/offer/admission tests passed; queued Apple and Android compilation passed.
+- Whereday: 17 purchase/StoreKit tests and eight Watch queue/reconnect regressions passed. Restore uses the actual restore path; separate fresh-user cases prove cancellation and network-failed restore cannot grant tracking. These are local StoreKit and synthetic Watch tests.
+- Current-source and submitted-build provenance must be reconciled before release. Keep the first-paid Whereday cutoff at 51 and existing Lifetime price schedules unchanged.

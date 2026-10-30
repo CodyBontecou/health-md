@@ -5,7 +5,7 @@ description: "Set up Health.md in five steps: privacy, Apple Health, preview, fo
 
 Onboarding appears the first time you open Health.md on iPhone. It explains the local-first model and prepares Apple Health and a folder you control. Product analytics never includes health values, metric names, health dates, files, paths, credentials, or user text.
 
-<div class="availability available"><strong>Available now · iPhone</strong><p>The five steps do not block progress. Health access and the folder can be skipped and repaired later. Users without access first choose a plan, start an eligible store-backed trial, or restore a purchase. These five setup steps follow the root paywall.</p></div>
+<div class="availability available"><strong>Health.md 3.5.0 · iPhone</strong><p>The five steps do not block progress. Health access and the folder can be skipped and repaired later. Users without access first choose a plan, start an eligible store-backed trial, or restore a purchase. These five setup steps follow the root paywall.</p></div>
 
 ## Five steps
 

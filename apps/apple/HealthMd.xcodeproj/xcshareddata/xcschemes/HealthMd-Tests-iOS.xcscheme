@@ -53,6 +53,8 @@
             </BuildableReference>
          </TestableReference>
       </Testables>
+      <StoreKitConfigurationFileReference identifier="../../HealthMd.storekit">
+      </StoreKitConfigurationFileReference>
    </TestAction>
    <ArchiveAction
       buildConfiguration = "Release-iOS"
