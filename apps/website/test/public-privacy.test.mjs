@@ -77,7 +77,7 @@ test('privacy policy keeps the pilot retention, deletion, failure, AI-provider, 
   assert.match(description, /optional single-owner cloud pilot/i);
 });
 
-test('generated source sitemap is deterministic and dates track the revised disclosures', async () => {
+test('generated source sitemap is deterministic and dates track page revisions', async () => {
   const sitemap = await read('sitemap.xml');
   assert.equal(renderLocalizedSitemap(sitemap), sitemap, 'Regenerate with npm run i18n:sitemap');
   const entries = new Map([...sitemap.matchAll(/<url>([\s\S]*?)<\/url>/g)].map(([, entry]) => [
@@ -96,7 +96,7 @@ test('generated source sitemap is deterministic and dates track the revised disc
     const updated = file === 'health-connect-export/index.html' ? '2026-10-30'
       : file === 'apple-health-to-csv/index.html' ? '2026-10-27'
       : file === 'health-data-for-ai/index.html' ? '2026-10-26'
-      : ['apple-health-export/index.html'].includes(file) ? '2026-10-25' : '2026-10-04';
+      : ['apple-health-export/index.html'].includes(file) ? '2026-10-30' : '2026-10-04';
     assert.equal(entries.get(`https://healthmd.app/${file.replace(/index\.html$/, '')}`), updated);
   }
 });
