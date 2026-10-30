@@ -1,9 +1,14 @@
 ---
-title: "Health.md MCP 服务器与 App"
-description: "使用 Codex 或 Claude 运行限定范围的 Apple Health 分析、呈现原生图表，并通过本地沙盒化 MCP App 启动持久 Health.md 导出。"
+title: "适用于 Claude 和 Codex 的 Apple Health MCP 服务器"
+description: "通过 Health.md Mac 版将 Apple Health 连接到 Claude 或 Codex。查看 iPhone 要求、查询本地上下文，并按照设置指南完成配置。"
 ---
 
 Health.md Mac 版内置经过签名的 `healthmd-mcp` stdio 辅助程序。Codex、Claude 和其他 MCP 主机可通过它查询事实性 Apple Health 数据、呈现可视化内容、刷新加密本地上下文，并通过已打开的 Mac 应用执行经过批准的持久导出。
+
+<div class="callout">
+<strong>从已发布的 Mac 辅助程序开始</strong>
+<p><a href="https://apps.apple.com/us/app/health-md/id6757763969" target="_blank" rel="noopener">从 App Store 下载 Health.md</a>并在 Mac 和 iPhone 上安装，然后<a href="/zh-hans/docs/guides/connect-agent/">按照设置指南操作</a>。</p>
+</div>
 
 ```text
 Codex / Claude / another local MCP host
