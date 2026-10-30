@@ -695,6 +695,11 @@ struct ExportPresentationTarget: Equatable, Sendable {
     }
 }
 
+nonisolated struct AppleLooseDailyArchiveWriteResult: Equatable, Sendable {
+    let fileURL: URL
+    let notes: AppleLooseDailyRangeWriteResult
+}
+
 nonisolated struct AppleLooseDailyRangeWriteResult: Equatable, Sendable {
     let dailyFileCount: Int
     let rollupFileCount: Int
@@ -2615,8 +2620,7 @@ final class VaultManager: ObservableObject {
         let notesOnly = wantsNotes && settingsSnapshot.dailyNotesOnlyModeEnabled
         if wantsNotes {
             guard [.localVaultWithoutSideEffects, .localVaultRangeWithoutSideEffects,
-                .localVaultRangeWithProviderSidecars, .preview].contains(operationSurface),
-                !frozenSettings.archiveModeEnabled else { throw AppleLooseDailyExportPlannerError.rustPlanningFailed }
+                .localVaultRangeWithProviderSidecars, .preview].contains(operationSurface) else { throw AppleLooseDailyExportPlannerError.rustPlanningFailed }
         }
         let identity = operationIdentity ?? AppleExportOperationIdentitySource().capture(
             calendarTimeZoneIdentifier: calendarTimeZoneIdentifier)
@@ -2716,9 +2720,7 @@ final class VaultManager: ObservableObject {
         settingsSnapshot: ExportSettingsSnapshot,
         startDate: Date,
         endDate: Date
-    ) async throws -> URL? {
-        guard materialized.dailyNotes.isEmpty else { throw AppleLooseDailyExportPlannerError.rustPlanningFailed }
-
+    ) async throws -> AppleLooseDailyArchiveWriteResult? {
         guard settingsSnapshot.archiveExportFiles,
               let context = settingsSnapshot.sleepCaptureContext,
               context.sleepDayAttribution == .morningEnds,
@@ -2729,6 +2731,11 @@ final class VaultManager: ObservableObject {
             throw AppleLooseDailyExportPlannerError.rustPlanningFailed
         }
         try settingsSnapshot.validatedSleepCaptureContext().requireShippedProfile()
+        guard destinationState == .available, vaultURL?.standardizedFileURL == destination.rootURL.standardizedFileURL else {
+            throw ExportError.destinationChanged
+        }
+        guard bookmarkResolver.startAccessing(destination.rootURL) else { throw ExportError.accessDenied }
+        defer { bookmarkResolver.stopAccessing(destination.rootURL) }
         let paths = materialized.operation.artifacts.map(\.artifact.relativePath)
             + (materialized.dataDictionary.map { [$0.relativePath] } ?? [])
             + materialized.providerSidecars.map(\.relativePath)
@@ -2739,6 +2746,10 @@ final class VaultManager: ObservableObject {
         guard paths.allSatisfy({ $0.hasPrefix(prefix) && $0.count > prefix.count }) else {
             throw AppleExactDestinationError.unsafeRelativePath
         }
+        let archivePath = [healthSubfolder, archiveFilename(startDate: startDate, endDate: endDate,
+            timeZone: context.timeZone)].filter { !$0.isEmpty }.joined(separator: "/")
+        try preflightExportArtifactPaths([archivePath] + materialized.dailyNotes.map(\.relativePath))
+        try preflightDailyNotes(materialized.dailyNotes, operation: materialized.operation, destination: destination)
         let temporary = FileManager.default.temporaryDirectory.appendingPathComponent("healthmd-wake-zip-\(UUID())")
         defer { try? FileManager.default.removeItem(at: temporary) }
         var files: [RenderedHealthDataArchiveEntryFile] = []
@@ -2772,9 +2783,11 @@ final class VaultManager: ObservableObject {
         packaging.historicalCalendarRollupPeriods = []
         packaging.summaryOnlyExport = false
         packaging.includeDataDictionary = false
-        return try await exportArchive(fromRenderedFiles: files, settings: packaging,
+        guard let archive = try await exportArchive(fromRenderedFiles: files, settings: packaging,
             startDate: startDate, endDate: endDate, healthSubfolder: healthSubfolder,
-            acceptedDestination: destination)
+            acceptedDestination: destination) else { return nil }
+        let notes = try commitDailyNotes(materialized.dailyNotes, destination: destination)
+        return AppleLooseDailyArchiveWriteResult(fileURL: archive, notes: notes)
     }
 
     /// Prepare a scoped daily-note patch without reading or changing the user's
@@ -3000,27 +3013,7 @@ final class VaultManager: ObservableObject {
               try productionDestinationBinding(for: vaultURL) == destinationBinding else {
             throw ExportError.destinationChanged
         }
-        // Read/merge every note before the first output write. The coordinated
-        // writer reads again at commit so it preserves the latest personal text.
-        for note in materialized.dailyNotes {
-            let existing: String
-            if fileSystem is SystemFileSystem, let destinationBinding {
-                let bytes = try SecureExactArtifactIO.read(rootURL: vaultURL, relativePath: note.relativePath,
-                    binding: destinationBinding, maximumByteCount: 8 * 1024 * 1024)
-                if bytes == nil && !DailyNoteInjector.createsMissingNote(note) { continue }
-                if let bytes {
-                    guard let text = String(data: bytes, encoding: .utf8) else {
-                        throw CocoaError(.fileReadInapplicableStringEncoding)
-                    }
-                    existing = text
-                } else { existing = "" }
-            } else {
-                let url = ExportPathPlanner.appendingRelativePath(note.relativePath, to: vaultURL, isDirectory: false)
-                if !fileSystem.fileExists(atPath: url.path) && !DailyNoteInjector.createsMissingNote(note) { continue }
-                existing = fileSystem.fileExists(atPath: url.path) ? try fileSystem.contentsOfFile(at: url) : ""
-            }
-            _ = try DailyNoteInjector.mergePrepared(note, existing: existing)
-        }
+        try preflightDailyNotes(materialized.dailyNotes, operation: materialized.operation, destination: destination)
         do {
             try await barrier.transition(to: .committing)
             if let dictionaryRequest, let dictionary = materialized.dataDictionary {
@@ -3054,25 +3047,9 @@ final class VaultManager: ObservableObject {
                 _ = try await aggregateFileWriter.write(secureRequest(request,
                     rootURL: vaultURL, relativePath: file.relativePath, binding: destinationBinding))
             }
-            var updatedNoteDates: [Date] = []
-            var skippedNoteDates: [Date] = []
-            #if DEBUG
-            let noteBeforeCommit = productionDestinationWillCommitForTesting
-            let noteAfterValidation = productionDestinationDidValidateForTesting
-            #else
-            let noteBeforeCommit: (@Sendable () throws -> Void)? = nil
-            let noteAfterValidation: (@Sendable () throws -> Void)? = nil
-            #endif
-            for note in materialized.dailyNotes {
-                try Task.checkCancellation()
-                switch DailyNoteInjector.injectPrepared(note, into: vaultURL, fileSystem: fileSystem,
-                    fileCoordinator: fileCoordinator, destinationBinding: destinationBinding,
-                    beforeCommit: noteBeforeCommit, afterValidationBeforeRename: noteAfterValidation) {
-                case .updated: updatedNoteDates.append(note.ownerDate)
-                case .skipped: skippedNoteDates.append(note.ownerDate)
-                case .failed(let error): throw error
-                }
-            }
+            let noteResult = try commitDailyNotes(materialized.dailyNotes, destination: destination)
+            let updatedNoteDates = noteResult.dailyNoteUpdatedDates
+            let skippedNoteDates = noteResult.dailyNoteSkippedDates
             try await barrier.transition(to: .completed)
             lastExportStatus = materialized.dailyNotes.isEmpty
                 ? "Exported \(writtenFiles.count) files"
@@ -3096,6 +3073,48 @@ final class VaultManager: ObservableObject {
             try? await barrier.transition(to: .failed)
             throw error
         }
+    }
+
+    /// Validate every note before any companion is published; re-read under coordination at commit.
+    private func preflightDailyNotes(_ notes: [DailyNoteInjector.PreparedContent],
+        operation: AppleLooseDailyPlannedOperation, destination: AppleLooseDailyRangeDestination) throws {
+        try Task.checkCancellation()
+        guard notes.allSatisfy({ $0.pin == operation.pin && $0.identity == operation.identity }) else {
+            throw AppleLooseDailyExportPlannerError.rustPlanningFailed
+        }
+        for note in notes {
+            let existing = try readDailyNoteForPreview(relativePath: note.relativePath, destination: destination)
+            if existing == nil && !DailyNoteInjector.createsMissingNote(note) { continue }
+            _ = try DailyNoteInjector.mergePrepared(note, existing: existing ?? "")
+        }
+    }
+
+    private func commitDailyNotes(_ notes: [DailyNoteInjector.PreparedContent],
+        destination: AppleLooseDailyRangeDestination) throws -> AppleLooseDailyRangeWriteResult {
+        var updated: [Date] = []
+        var skipped: [Date] = []
+        #if DEBUG
+        let beforeCommit = productionDestinationWillCommitForTesting
+        let afterValidation = productionDestinationDidValidateForTesting
+        #else
+        let beforeCommit: (@Sendable () throws -> Void)? = nil
+        let afterValidation: (@Sendable () throws -> Void)? = nil
+        #endif
+        for note in notes {
+            try Task.checkCancellation()
+            guard destinationState == .available, vaultURL?.standardizedFileURL == destination.rootURL.standardizedFileURL else {
+                throw ExportError.destinationChanged
+            }
+            switch DailyNoteInjector.injectPrepared(note, into: destination.rootURL, fileSystem: fileSystem,
+                fileCoordinator: fileCoordinator, destinationBinding: destination.binding,
+                beforeCommit: beforeCommit, afterValidationBeforeRename: afterValidation) {
+            case .updated: updated.append(note.ownerDate)
+            case .skipped: skipped.append(note.ownerDate)
+            case .failed(let error): throw error
+            }
+        }
+        return AppleLooseDailyRangeWriteResult(dailyFileCount: 0, rollupFileCount: 0,
+            dailyNoteUpdatedDates: updated, dailyNoteSkippedDates: skipped)
     }
 
     /// Captures the exact selected-root identity used by durable connected finalization.

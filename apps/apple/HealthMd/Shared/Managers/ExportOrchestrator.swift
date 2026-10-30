@@ -1220,8 +1220,8 @@ struct ExportOrchestrator {
                 guard let stagedDestination else { throw AppleLooseDailyExportPlannerError.rustPlanningFailed }
                 if isArchive {
                     guard let first = immutableRollupDates.min(), let last = immutableRollupDates.max(),
-                          try await vaultManager.commitHealthDataRangeArchive(materialized, destination: stagedDestination,
-                            settingsSnapshot: effectiveSettingsSnapshot, startDate: first, endDate: last) != nil else {
+                          let archive = try await vaultManager.commitHealthDataRangeArchive(materialized, destination: stagedDestination,
+                            settingsSnapshot: effectiveSettingsSnapshot, startDate: first, endDate: last) else {
                         throw AppleLooseDailyExportPlannerError.rustPlanningFailed
                     }
                     providerCaptureCommitted = true
@@ -1229,7 +1229,9 @@ struct ExportOrchestrator {
                     return ExportResult(successCount: isSummaryOnly ? totalCount : selectedRecordDates.count,
                         totalCount: totalCount, failedDateDetails: failures, partialFailures: partialFailures,
                         formatsPerDate: 0, archiveCount: 1, authoritativeFileCount: 1,
-                        isFileCategoryBreakdownComplete: true, completedDates: completedDates)
+                        isFileCategoryBreakdownComplete: true,
+                        dailyNoteUpdateCount: archive.notes.dailyNoteUpdatedCount,
+                        dailyNoteSkipCount: archive.notes.dailyNoteSkippedCount, completedDates: completedDates)
                 }
                 writeResult = try await vaultManager.commitHealthDataRangeMaterialization(materialized, destination: stagedDestination)
             } else {

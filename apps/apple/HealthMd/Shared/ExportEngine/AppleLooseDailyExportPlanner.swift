@@ -896,8 +896,7 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
         var rendering = settingsSnapshot
         if settingsSnapshot.dailyNoteInjection.enabled {
             guard [.localVaultWithoutSideEffects, .localVaultRangeWithoutSideEffects,
-                .localVaultRangeWithProviderSidecars, .preview].contains(surface),
-                !settingsSnapshot.makeAdvancedExportSettings().archiveModeEnabled else { return false }
+                .localVaultRangeWithProviderSidecars, .preview].contains(surface) else { return false }
             rendering.dailyNoteInjection.enabled = false
             rendering.dailyNoteInjection.dailyNotesOnly = false
             if settingsSnapshot.dailyNotesOnlyModeEnabled {
