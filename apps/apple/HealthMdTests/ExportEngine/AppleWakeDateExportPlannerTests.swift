@@ -1116,14 +1116,15 @@ final class AppleWakeDateExportPlannerTests: XCTestCase {
         }
     }
 
-    func testWakeDateDetailsAdmitArchivePoliciesAndRejectRemoteSurfacesAndInvalidPairs() async throws {
+    func testWakeDateDetailsAdmitDirectAndArchivePoliciesAndRejectConnectedSurfacesAndInvalidPairs() async throws {
         let zone = try XCTUnwrap(TimeZone(identifier: "UTC"))
         let context = AppleSleepCaptureContext(timeZone: zone, sleepDayAttribution: .morningEnds)
         var snapshot = try acceptedSnapshot(context: context, formats: Set(ExportFormat.allCases),
             selectionIDs: ["sleep_total", "blood_pressure_systolic", "blood_pressure_diastolic"])
         snapshot.detailPolicy = .detailedTimeSeries
         XCTAssertTrue(AppleLooseDailyExportPlanner.supports(settingsSnapshot: snapshot, surface: .localVaultWithoutSideEffects))
-        XCTAssertFalse(AppleLooseDailyExportPlanner.supports(settingsSnapshot: snapshot, surface: .directGeneratedFilesWithoutSideEffects))
+        XCTAssertTrue(AppleLooseDailyExportPlanner.supports(settingsSnapshot: snapshot, surface: .directGeneratedFilesWithoutSideEffects))
+        XCTAssertTrue(AppleLooseDailyExportPlanner.supports(settingsSnapshot: snapshot, surface: .directGeneratedFilesWithProviderSidecars))
         XCTAssertFalse(AppleLooseDailyExportPlanner.supports(settingsSnapshot: snapshot, surface: .connectedReceivedFilesWithoutSideEffects))
         for policy: AppleExportDetailPolicy in [.archiveOnly, .lossless] {
             var accepted = snapshot

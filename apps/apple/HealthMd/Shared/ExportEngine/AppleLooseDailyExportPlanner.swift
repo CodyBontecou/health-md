@@ -10,10 +10,21 @@ nonisolated enum AppleExportOperationSurface: Equatable, Sendable {
     case localVaultRangeWithoutSideEffects
     case localVaultRangeWithProviderSidecars
     case directGeneratedFilesWithoutSideEffects
+    case directGeneratedFilesWithProviderSidecars
     case connectedReceivedFilesWithoutSideEffects
     case connectedReceivedRangeWithoutSideEffects
     case apiEndpoint
     case preview
+
+    var supportsWakeDateFiles: Bool {
+        switch self {
+        case .localVaultWithoutSideEffects, .localVaultRangeWithoutSideEffects,
+             .localVaultRangeWithProviderSidecars, .directGeneratedFilesWithoutSideEffects,
+             .directGeneratedFilesWithProviderSidecars, .preview:
+            true
+        default: false
+        }
+    }
 }
 
 nonisolated struct AppleExportOperationIdentity: Equatable, Sendable {
@@ -822,7 +833,7 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
         records: [HealthData], settings: ExportSettingsSnapshot,
         surface: AppleExportOperationSurface
     ) -> Bool {
-        (surface == .localVaultWithoutSideEffects || surface == .localVaultRangeWithoutSideEffects || surface == .localVaultRangeWithProviderSidecars || surface == .preview)
+        surface.supportsWakeDateFiles
             && !settings.exportFormats.isEmpty && settings.exportFormats.isSubset(of: Set(ExportFormat.allCases))
             // Provider facts are composed natively after aggregate attestation.
             // Registry 2's original workout extrema fold as sums. Keep those immutable rules
@@ -879,8 +890,7 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
         guard settingsSnapshot.sleepCaptureContext?.sleepDayAttribution == .morningEnds,
               settingsSnapshot.sleepCaptureContext?.exportProfileID == "apple-v11",
               settingsSnapshot.appleExportEnginePin == nil,
-              surface == .localVaultWithoutSideEffects
-                || surface == .localVaultRangeWithoutSideEffects || surface == .localVaultRangeWithProviderSidecars || surface == .preview else { return false }
+              surface.supportsWakeDateFiles else { return false }
         return supportsSettings(settingsSnapshot: settingsSnapshot, surface: surface,
             allowsUnpinnedWakeDateDetails: true)
     }
@@ -890,18 +900,19 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
         surface: AppleExportOperationSurface,
         allowsUnpinnedWakeDateDetails: Bool
     ) -> Bool {
-        guard surface != .localVaultRangeWithProviderSidecars
+        guard (surface != .localVaultRangeWithProviderSidecars && surface != .directGeneratedFilesWithProviderSidecars)
                 || settingsSnapshot.sleepCaptureContext?.sleepDayAttribution == .morningEnds else { return false }
         let supportsWakeDateDetails = settingsSnapshot.sleepCaptureContext?.sleepDayAttribution == .morningEnds
             && settingsSnapshot.sleepCaptureContext?.exportProfileID == "apple-v11"
             && (allowsUnpinnedWakeDateDetails
                 || (settingsSnapshot.appleExportEnginePin?.isWakeDate == true
                     && settingsSnapshot.appleExportEnginePin?.engine == .rust))
-            && (surface == .localVaultWithoutSideEffects || surface == .localVaultRangeWithoutSideEffects || surface == .localVaultRangeWithProviderSidecars || surface == .preview)
+            && surface.supportsWakeDateFiles
         let hasConfiguredRollups = !settingsSnapshot.operationRollupPeriods.isEmpty
         let isRangeSurface = surface == .localVaultRangeWithoutSideEffects
             || surface == .localVaultRangeWithProviderSidecars
             || surface == .directGeneratedFilesWithoutSideEffects
+            || surface == .directGeneratedFilesWithProviderSidecars
             || surface == .connectedReceivedRangeWithoutSideEffects
             || (surface == .preview && settingsSnapshot.sleepCaptureContext?.sleepDayAttribution == .morningEnds)
         let isSummaryOnly = settingsSnapshot.summaryOnlyExport
@@ -911,6 +922,7 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
                 || surface == .localVaultRangeWithoutSideEffects
                 || surface == .localVaultRangeWithProviderSidecars
                 || surface == .directGeneratedFilesWithoutSideEffects
+                || surface == .directGeneratedFilesWithProviderSidecars
                 || surface == .connectedReceivedFilesWithoutSideEffects
                 || surface == .connectedReceivedRangeWithoutSideEffects
                 || surface == .preview,

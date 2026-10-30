@@ -527,9 +527,9 @@ final class IPhoneDirectFileExportProducer {
         return providers?.forCaptureOperation()
     }
 
-    /// Selects whole-operation authority before the durable renderer pin is captured. Provider
-    /// sidecars are native companion artifacts, so a request that can produce them is explicitly
-    /// legacy rather than discovering the incompatibility after capture with a Rust pin.
+    /// Selects whole-operation authority before the durable renderer pin is captured.
+    /// Morning provider sidecars use the staged successor writer; Night sidecars
+    /// retain their historical native renderer.
     static func operationSurfaceForNewGeneratedFileJob(
         request: DirectExportRequest,
         settings: AdvancedExportSettings,
@@ -540,7 +540,8 @@ final class IPhoneDirectFileExportProducer {
               settings.writesExternalProviderSidecars else {
             return .directGeneratedFilesWithoutSideEffects
         }
-        return .legacyOnly
+        return settings.executionSleepCaptureContext?.sleepDayAttribution == .morningEnds
+            ? .directGeneratedFilesWithProviderSidecars : .legacyOnly
     }
 
     struct RangePlanningInput {
@@ -866,6 +867,57 @@ final class IPhoneDirectFileExportProducer {
         return journal
     }
 
+    /// Plans every direct daily/range artifact and provider sidecar before staging writes.
+    /// The transfer manifest is built only after this complete materialization commits.
+    static func materializePinnedGeneratedFiles(
+        journal: IPhoneDirectFileJournal,
+        payloads: [ConnectedCorpusHealthDayPayload],
+        settingsSnapshot: ExportSettingsSnapshot,
+        vault: VaultManager
+    ) async throws -> AppleLooseDailyRangeMaterialization? {
+        let settings = settingsSnapshot.makeAdvancedExportSettings()
+        let input = try rangePlanningInput(capturedDays: journal.capturedDays, payloads: payloads,
+            settings: settings, settingsSnapshot: settingsSnapshot)
+        guard !input.records.isEmpty, input.hasAnyData,
+              let zone = journal.originalCalendarTimeZoneIdentifier,
+              settingsSnapshot.calendarTimeZoneIdentifier == zone,
+              settingsSnapshot.healthSubfolder == journal.healthSubfolder,
+              journal.appleExportEnginePin == settingsSnapshot.appleExportEnginePin else {
+            throw IPhoneDirectFileProducerError.invalidSpool
+        }
+        for (day, payload) in zip(journal.capturedDays, payloads) {
+            let exported = payload.externalDailyRecords.filter(\.shouldExport)
+            guard exported.count == day.externalRecordCount,
+                  exported.allSatisfy({ day.isRequestedDate && $0.date == day.sourceDateIdentifier }) else {
+                throw IPhoneDirectFileProducerError.invalidSpool
+            }
+        }
+        let external = payloads.flatMap { $0.externalDailyRecords.filter(\.shouldExport) }
+        let surface: AppleExportOperationSurface
+        if !external.isEmpty {
+            guard journal.appleExportEnginePin?.isWakeDate == true,
+                  settings.writesExternalProviderSidecars,
+                  let authority = settingsSnapshot.externalProviderCaptureAuthority,
+                  external.allSatisfy({ authority.connections.keys.contains($0.provider.id)
+                      && ((authority.connections[$0.provider.id] ?? nil) != nil || $0.payloads.isEmpty) }) else {
+                throw IPhoneDirectFileProducerError.invalidSpool
+            }
+            surface = .directGeneratedFilesWithProviderSidecars
+        } else { surface = .directGeneratedFilesWithoutSideEffects }
+        let range = try settingsSnapshot.generateRangeSummary ? HealthRollupRangeRequest(
+            ownerDateIdentifiers: Set(journal.originalRequestedDates.map {
+                HealthKitDailyOwnershipMetadata.ownerDate(for: $0, calendarTimeZoneIdentifier: zone)
+            }), calendarTimeZoneIdentifier: zone) : nil
+        guard let materialized = try await vault.materializeHealthDataRange(input.records,
+            settingsSnapshot: settingsSnapshot, operationSurface: surface,
+            dailyOutputOwnerDates: input.dailyOutputOwnerDates, requestedRange: range,
+            operationIdentity: AppleExportOperationIdentity(requestID: journal.request.jobID.uuidString.lowercased(),
+                sessionID: journal.session.sessionID.uuidString.lowercased(), capturedAt: journal.session.createdAt,
+                calendarTimeZoneIdentifier: zone)) else { return nil }
+        return materialized.addingProviderSidecars(try vault.materializeExternalDailyRecords(external,
+            healthSubfolder: journal.healthSubfolder))
+    }
+
     private func generateFiles(
         _ supplied: IPhoneDirectFileJournal,
         channel: IPhoneDirectExportConnection
@@ -928,7 +980,7 @@ final class IPhoneDirectFileExportProducer {
             $0.externalRecordCount > 0
         }
         let operationSurface: AppleExportOperationSurface = hasProviderSidecars
-            ? .legacyOnly
+            ? (journal.appleExportEnginePin?.isWakeDate == true ? .directGeneratedFilesWithProviderSidecars : .legacyOnly)
             : .directGeneratedFilesWithoutSideEffects
         let originallySummaryOnly = journal.settingsSnapshot.makeAdvancedExportSettings()
             .summaryOnlyModeEnabled
@@ -943,9 +995,9 @@ final class IPhoneDirectFileExportProducer {
             }
             // A renderer pin is operation-wide. Materialize every selected daily file and roll-up
             // from the immutable spool in one M4/M5 range plan before generated artifact writes
-            // begin. Provider sidecars discovered after pin capture fail closed instead of
-            // silently mixing native and Rust authority.
-            guard operationSurface == .directGeneratedFilesWithoutSideEffects else {
+            // begin. Morning provider sidecars join this same validated materialization.
+            guard operationSurface == .directGeneratedFilesWithoutSideEffects
+                    || operationSurface == .directGeneratedFilesWithProviderSidecars else {
                 throw AppleLooseDailyExportPlannerError.rustPlanningFailed
             }
             let rangeInput = try Self.rangePlanningInput(
@@ -957,34 +1009,12 @@ final class IPhoneDirectFileExportProducer {
             hasAnyRequestedData = rangeInput.hasAnyData
             if !rangeInput.records.isEmpty && rangeInput.hasAnyData {
                 try checkCancellation(journal)
-                let calendarTimeZoneIdentifier = originalCalendarTimeZoneIdentifier
-                let requestedRange = try effectiveSettingsSnapshot.generateRangeSummary
-                    ? HealthRollupRangeRequest(
-                        ownerDateIdentifiers: Set(journal.originalRequestedDates.map {
-                            HealthKitDailyOwnershipMetadata.ownerDate(
-                                for: $0,
-                                calendarTimeZoneIdentifier: calendarTimeZoneIdentifier
-                            )
-                        }),
-                        calendarTimeZoneIdentifier: calendarTimeZoneIdentifier
-                    )
-                    : nil
-                guard try await vault.exportHealthDataRange(
-                    rangeInput.records,
-                    settingsSnapshot: effectiveSettingsSnapshot,
-                    operationSurface: operationSurface,
-                    dailyOutputOwnerDates: rangeInput.dailyOutputOwnerDates,
-                    requestedRange: requestedRange,
-                    operationIdentity: AppleExportOperationIdentity(
-                        requestID: journal.request.jobID.uuidString.lowercased(),
-                        sessionID: journal.session.sessionID.uuidString.lowercased(),
-                        capturedAt: journal.session.createdAt,
-                        calendarTimeZoneIdentifier: calendarTimeZoneIdentifier
-                    ),
-                    writeDataDictionary: true
-                ) != nil else {
+                let destination = try vault.freezeHealthDataRangeDestination()
+                guard let materialized = try await Self.materializePinnedGeneratedFiles(journal: journal,
+                    payloads: payloads, settingsSnapshot: effectiveSettingsSnapshot, vault: vault) else {
                     throw AppleLooseDailyExportPlannerError.rustPlanningFailed
                 }
+                _ = try await vault.commitHealthDataRangeMaterialization(materialized, destination: destination)
                 try checkCancellation(journal)
             }
             for (index, day) in journal.capturedDays.enumerated() where day.isRequestedDate {
