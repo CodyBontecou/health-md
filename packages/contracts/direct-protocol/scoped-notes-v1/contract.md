@@ -1,9 +1,9 @@
 # Direct scoped daily-note writes, version 1
 
-Status: staged. Both portable receivers implement explicitly configured version-1 note jobs,
-policy/capture binding, durable skip/install decisions and restart-safe receipts. The mobile
-producers and connection negotiation do not advertise or execute this extension yet. Completing
-frozen producer authority and cross-platform runtime qualification is required before advertisement.
+Status: staged. The portable CLI conditionally negotiates version 1 after the source offers it,
+then freezes policy/capture-bound receiver jobs, durable skip/install decisions and truthful receipts.
+The native producers do not yet advertise this extension or attach its policies. Completing frozen
+producer authority and cross-platform runtime qualification is required before native advertisement.
 
 This independent extension applies the same personal-note settings to iPhone protocol v1 and
 Android protocol v2 file exports. It changes neither historical daily export profiles nor pairing,
@@ -16,8 +16,10 @@ Authenticated peer hellos may include `scopedDailyNoteVersions: [1]`. Both peers
 offer implemented version 1; absent, empty, or future-only lists mean unsupported. The source must
 reject an unsupported note export before capture or sending manifests. The CLI must read the mobile
 hello before adding this field to its reply: deployed Android peers reject unknown hello fields.
-Both mobile platforms send their hello immediately after authentication. New mobile readers omit
-nil capabilities and accept the corresponding optional field; no implementation advertises it yet.
+Both mobile platforms send their hello immediately after authentication. The CLI replies with
+version 1 only when that source offered implemented version 1; absent, empty and future-only
+source lists receive no extra hello field. Existing neutral export-history negotiation remains
+unchanged. Native readers support the optional field but their current producers omit it.
 
 The negotiated version is frozen in both durable jobs and must still be supported on resume.
 Neither an unnegotiated policy nor a policy-less personal-note artifact in an extension job may be
@@ -84,3 +86,10 @@ committed hash. An all-skipped observed job retains its operation admission evid
 artifact list. The outer receipt carries skip paths separately. The MCP iPhone file presenter
 returns at most 256 skip paths with the full count and a truncation flag, omitting the extension
 when no note was skipped. These fields do not change the existing tool input schema.
+
+
+The portable transport regressions use authenticated encrypted iPhone and Android peers through
+`DirectClient::export_files` / `export_android`, including bounded binary transfer, final receipt
+acknowledgement and completion. They prove host negotiation and dispatch without claiming native
+app/device behavior. Pairing, query, wake enrollment/rotation, silence deadlines and neutral-history
+regressions retain their original expectations with the mobile-first hello ordering.

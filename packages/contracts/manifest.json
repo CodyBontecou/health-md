@@ -1020,7 +1020,7 @@
       "id": "healthmd.direct.scoped_daily_notes",
       "version": 1,
       "status": "deferred",
-      "summary": "Staged bilateral personal-note write policy with capture-bound receiver recovery and truthful skip receipts; not advertised pending producer and connection integration.",
+      "summary": "Source-opt-in CLI note negotiation with capture-bound durable recovery and truthful skip receipts; staged pending mobile producers and runtime qualification.",
       "specification": "packages/contracts/direct-protocol/scoped-notes-v1/contract.md",
       "authorities": [
         "packages/contracts/direct-protocol/scoped-notes-v1/contract.md"
@@ -1029,14 +1029,18 @@
         "packages/healthmd-core-rust/crates/healthmd-protocol/src/notes.rs",
         "packages/healthmd-core-rust/crates/healthmd-core/src/render/markdown_merge/scoped_note.rs",
         "apps/apple/Packages/HealthMdConnectivity/Sources/HealthMdConnectionCore/DirectScopedDailyNotePolicy.swift",
-        "apps/android/direct-protocol/src/main/kotlin/com/healthmd/direct/protocol/ScopedDailyNotePolicy.kt"
+        "apps/android/direct-protocol/src/main/kotlin/com/healthmd/direct/protocol/ScopedDailyNotePolicy.kt",
+        "apps/cli/crates/healthmd-client/src/direct.rs",
+        "apps/cli/crates/healthmd-client/src/file_receiver.rs",
+        "apps/cli/crates/healthmd-client/src/v2_receiver.rs"
       ],
       "consumers": [
         "packages/healthmd-core-rust/crates/healthmd-protocol/tests/scoped_note_policy.rs",
         "apps/apple/Packages/HealthMdConnectivity/Tests/HealthMdConnectionCoreTests/ScopedDailyNotePolicyTests.swift",
         "apps/android/direct-protocol/src/test/kotlin/com/healthmd/direct/protocol/ScopedDailyNotePolicyTest.kt",
         "apps/cli/crates/healthmd-client/src/file_receiver.rs",
-        "apps/cli/crates/healthmd-client/src/v2_receiver.rs"
+        "apps/cli/crates/healthmd-client/src/v2_receiver.rs",
+        "apps/cli/crates/healthmd-client/src/direct_fake_peer_tests.rs"
       ],
       "fixtures": [
         {

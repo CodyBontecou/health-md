@@ -24,7 +24,8 @@ The package is licensed under the [GNU Affero General Public License v3.0 only](
 
 [Direct scoped daily-note writes v1](direct-protocol/scoped-notes-v1/contract.md) defines bilateral
 capability negotiation, frozen per-note policy, capture binding, and host-owned skip/install
-recovery. Models and capture-binding semantics are staged; no peer advertises this extension yet.
+recovery. Portable CLI negotiation and receiver behavior are staged; native producers do not
+advertise the extension yet.
 
 ## History evidence (staged)
 
