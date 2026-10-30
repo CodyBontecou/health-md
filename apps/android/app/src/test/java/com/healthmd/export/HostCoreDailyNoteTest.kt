@@ -2,9 +2,25 @@ package com.healthmd.export
 
 import com.google.common.truth.Truth.assertThat
 import com.healthmd.data.export.DailyNoteInjector
+import com.healthmd.data.export.CsvExporter
+import com.healthmd.data.export.JsonExporter
+import com.healthmd.data.export.MarkdownExporter
+import com.healthmd.data.export.ObsidianBasesExporter
+import com.healthmd.data.storage.ExportRepositoryImpl
+import com.healthmd.data.storage.FileExportManager
+import com.healthmd.domain.repository.SettingsRepository
+import com.healthmd.domain.model.ExportFormat
+import com.healthmd.domain.model.WriteMode
+import com.healthmd.domain.model.ExportPreviewSideEffectAction
+import io.mockk.mockk
+import io.mockk.every
+import io.mockk.coEvery
 import com.healthmd.data.export.InjectionResult
 import com.healthmd.data.export.PreparedWakeDateDailyNote
 import com.healthmd.domain.exportengine.DailyAggregateExportIds
+import com.healthmd.domain.exportengine.AndroidExportSettingsSnapshot
+import com.healthmd.domain.exportengine.ExportEnginePinPlanner
+import com.healthmd.domain.model.ExportTarget
 import com.healthmd.domain.exportengine.DailyAggregateRustPlanner
 import com.healthmd.domain.exportengine.HealthMdRustDailyAggregatePlanner
 import com.healthmd.domain.model.ActivityData
@@ -135,6 +151,139 @@ class HostCoreDailyNoteTest {
         try { PreparedWakeDateDailyNote.prepare(source(),settings(false),DailyAggregateExportIds("wrong-clock","wrong-clock-session"),planner=changed) }
         catch (_: IllegalArgumentException) { rejected = true }
         assertThat(rejected).isTrue()
+    }
+
+    @Test fun repositoryPreviewAndWriteUseSameScopedNoteAndPreserveUserText() = runTest {
+        for (sections in listOf(false, true)) {
+            val original = "---\r\nnotes: |\r\n  Keep my journal\r\nsleep_deep_hours: 9 # history\r\n---\r\nMy introduction.\r\n"
+            val destination = NoteDestination(original)
+            val repository = destination.repository()
+            val settings = repositorySettings(sections)
+            val preview = repository.previewHealthData(source(), settings)
+            assertThat(preview.failureReason).isNull()
+            assertThat(preview.files).hasSize(1)
+            assertThat(preview.sideEffects).hasSize(1)
+            val effect = preview.sideEffects.single()
+            assertThat(effect.action).isEqualTo(ExportPreviewSideEffectAction.UPDATE_DAILY_NOTE)
+            assertThat(effect.content).contains("Keep my journal")
+            assertThat(destination.writes).isEmpty()
+            assertThat(repository.exportHealthData(source(), settings)).isTrue()
+            assertThat(destination.writes[effect.relativePath]).isEqualTo(effect.content)
+            assertThat(destination.writes[preview.files.single().relativePath]).isEqualTo(preview.files.single().content)
+        }
+    }
+
+    @Test fun repositoryMissingNoteSkipCreateAndCollisionHaveExplicitOutcomes() = runTest {
+        for (create in listOf(false, true)) {
+            val destination = NoteDestination(null)
+            val repository = destination.repository()
+            val settings = repositorySettings(false).let { it.copy(dailyNoteInjection = it.dailyNoteInjection.copy(createIfMissing = create)) }
+            val effect = repository.previewHealthData(source(), settings).sideEffects.single()
+            assertThat(effect.action).isEqualTo(if(create) ExportPreviewSideEffectAction.CREATE_DAILY_NOTE else ExportPreviewSideEffectAction.SKIP_DAILY_NOTE)
+            assertThat(repository.exportHealthData(source(), settings)).isTrue()
+            assertThat(destination.writes.containsKey("Daily/2026-03-08.md")).isEqualTo(create)
+        }
+        val destination = NoteDestination(null)
+        val repository = destination.repository()
+        val collision = repositorySettings(false).copy(exportFormat = ExportFormat.MARKDOWN,
+            exportFormats = setOf(ExportFormat.MARKDOWN), subfolder = "daily")
+        assertThat(repository.previewHealthData(source(), collision).failureReason).isNotNull()
+        assertThat(repository.exportHealthData(source(), collision)).isFalse()
+        assertThat(destination.writes).isEmpty()
+    }
+
+    @Test fun repositoryRejectsUncertainNotesAndChangesDuringCommit() = runTest {
+        for (baseline in listOf(FileExportManager.DurableFileInspection.Ambiguous,
+            FileExportManager.DurableFileInspection.Unavailable,
+            FileExportManager.DurableFileInspection.Found("note", byteArrayOf(0xff.toByte())))) {
+            val destination = NoteDestination(null)
+            destination.inspectionOverride = baseline
+            assertThat(destination.repository().exportHealthData(source(), repositorySettings(false))).isFalse()
+            assertThat(destination.writes).isEmpty()
+        }
+        val registered = NoteDestination("---\nschema: healthmd.health_data\n---\nOriginal export")
+        assertThat(registered.repository().exportHealthData(source(),repositorySettings(false))).isFalse()
+        assertThat(registered.writes).isEmpty()
+        val failedAggregate = NoteDestination("My journal")
+        failedAggregate.aggregateSuccess = false
+        assertThat(failedAggregate.repository().exportHealthData(source(),repositorySettings(false))).isFalse()
+        assertThat(failedAggregate.note).isEqualTo("My journal")
+        assertThat(failedAggregate.writes.keys).doesNotContain("Daily/2026-03-08.md")
+        val destination = NoteDestination("My original journal")
+        destination.afterAggregate = { destination.note = "My concurrent edit" }
+        assertThat(destination.repository().exportHealthData(source(), repositorySettings(false))).isFalse()
+        assertThat(destination.note).isEqualTo("My concurrent edit")
+        assertThat(destination.writes.keys).doesNotContain("Daily/2026-03-08.md")
+        val changed = NoteDestination("Original")
+        changed.afterAggregate = { changed.folder = "content://different-tree" }
+        assertThat(changed.repository().exportHealthData(source(), repositorySettings(false))).isFalse()
+        assertThat(changed.writes.keys).doesNotContain("Daily/2026-03-08.md")
+    }
+
+    @Test fun repositoryFreezesSelectionBeforeLookupAndRetainsRecoveredClock() = runTest {
+        val metrics = mutableSetOf("steps")
+        val fields = mutableListOf(CustomFrontmatterField("steps", "My steps", true))
+        val destination = NoteDestination(null)
+        destination.onLookup = { metrics.clear(); fields.clear() }
+        val settings = repositorySettings(false).copy(metricSelection=MetricSelectionState(enabledMetrics=metrics),
+            formatCustomization=FormatCustomization(frontmatterConfig=FrontmatterConfiguration(fields=fields)))
+        val preview = destination.repository().previewHealthData(source(),settings)
+        assertThat(preview.sideEffects.single().content).contains("My steps: 42")
+        val pin = requireNotNull(ExportEnginePinPlanner().forScheduledExport(repositorySettings(false),
+            ExportTarget.DEVICE_FOLDER,context.zoneId))
+        val snapshot = AndroidExportSettingsSnapshot.capture(repositorySettings(false),pin,context.zoneId)
+        val restored = snapshot.restoreOnto(repositorySettings(false).copy(
+            executionSleepCaptureContext=AndroidCaptureContext(ZoneId.of("Asia/Tokyo"),SleepDayAttribution.NIGHT_BEGINS)))
+            .copy(executionEnginePin=pin)
+        val recovered = NoteDestination(null)
+        assertThat(recovered.repository().exportHealthData(source(),restored)).isTrue()
+        assertThat(recovered.writes["Daily/2026-03-08.md"]).contains("America/New_York")
+        assertThat(recovered.writes["Daily/2026-03-08.md"]).doesNotContain("Asia/Tokyo")
+        val missingPin = NoteDestination(null)
+        assertThat(missingPin.repository().exportHealthData(source(),restored.copy(executionEnginePin=null))).isFalse()
+        assertThat(missingPin.lookupCount).isEqualTo(0)
+        assertThat(ExportEnginePinPlanner.supportsNewScheduledPin(repositorySettings(false),ExportTarget.DEVICE_FOLDER)).isTrue()
+        assertThat(ExportEnginePinPlanner.supportsNewDirectGeneratedFilesPin(repositorySettings(false))).isFalse()
+        assertThat(ExportEnginePinPlanner.supportsNewScheduledPin(repositorySettings(false),ExportTarget.AGENT_DATA_GATEWAY)).isFalse()
+        val withoutFolder = NoteDestination(null)
+        withoutFolder.folder=null
+        assertThat(withoutFolder.repository().previewHealthData(source(),repositorySettings(false)).sideEffects.single().wouldWrite).isTrue()
+        assertThat(withoutFolder.writes).isEmpty()
+        assertThat(withoutFolder.repository().exportHealthData(source(),repositorySettings(false))).isFalse()
+    }
+
+    private fun repositorySettings(sections: Boolean) = settings(sections).copy(filenameFormat="{date}",
+        writeMode=WriteMode.OVERWRITE, exportFormat=ExportFormat.JSON, exportFormats=setOf(ExportFormat.JSON), subfolder="health")
+
+    private class NoteDestination(var note: String?) {
+        var folder: String? = "content://synthetic-tree"
+        var onLookup: (() -> Unit)? = null
+        var lookupCount = 0
+        var afterAggregate: (() -> Unit)? = null
+        var aggregateSuccess = true
+        var inspectionOverride: FileExportManager.DurableFileInspection? = null
+        val writes = linkedMapOf<String,String>()
+        private val manager = mockk<FileExportManager>()
+        init {
+            every { manager.inspectDurableFile(any(), any()) } answers {
+                inspectionOverride ?: note?.let { FileExportManager.DurableFileInspection.Found("note", it.encodeToByteArray()) }
+                    ?: FileExportManager.DurableFileInspection.Missing
+            }
+            every { manager.writeFileAtRelativePath(any(), any(), any(), any()) } answers {
+                writes[arg(1)] = arg(2); afterAggregate?.invoke(); aggregateSuccess
+            }
+            every { manager.bindDurableFile(any(),any(),any(),any(),any()) } answers {
+                FileExportManager.DurableBoundFile("note")
+            }
+            every { manager.overwriteDurableBoundFile(any(),any(),any(),any()) } answers {
+                val content = arg<ByteArray>(3).decodeToString(); writes[arg(1)] = content; note = content; true
+            }
+        }
+        fun repository(): ExportRepositoryImpl {
+            val settings = mockk<SettingsRepository>()
+            coEvery { settings.getExportFolderUri() } answers { lookupCount++; onLookup?.invoke(); folder }
+            return ExportRepositoryImpl(manager,MarkdownExporter(),JsonExporter(),CsvExporter(),ObsidianBasesExporter(),settings)
+        }
     }
 
     private fun settings(sections: Boolean) = ExportSettings(groupByCategory=false,filenameFormat="../irrelevant-aggregate",

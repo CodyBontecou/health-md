@@ -219,7 +219,7 @@ class ExportEnginePinPlanner @Inject constructor() {
             target: ExportTarget,
         ): Boolean = when (target) {
             ExportTarget.DEVICE_FOLDER ->
-                AndroidDailyAggregateExportPlanner.supportsNonLegacy(settings)
+                AndroidDailyAggregateExportPlanner.supportsNonLegacy(settings) || supportsWakeDateDailyNote(settings)
             ExportTarget.API_ENDPOINT ->
                 settings.exportMode == ExportMode.COMPATIBILITY &&
                     settings.selectedExportFormats.isNotEmpty()
@@ -228,6 +228,14 @@ class ExportEnginePinPlanner @Inject constructor() {
                 // the device-folder destination runs.
                 AndroidDailyAggregateExportPlanner.supportsNonLegacy(settings.copy(exportTarget = ExportTarget.DEVICE_FOLDER))
         }
+
+        /** Folder note composition is owned by the repository, never the aggregate/durable planner. */
+        fun supportsWakeDateDailyNote(settings: ExportSettings): Boolean =
+            settings.dailyNoteInjection.enabled &&
+                settings.executionSleepCaptureContext?.sleepDayAttribution == SleepDayAttribution.MORNING_ENDS &&
+                settings.executionSleepCaptureContext.exportProfileID == "android-sleep-v6" &&
+                AndroidDailyAggregateExportPlanner.supportsNonLegacy(
+                    settings.copy(dailyNoteInjection = settings.dailyNoteInjection.copy(enabled = false)))
 
         fun supportsNewDirectGeneratedFilesPin(settings: ExportSettings): Boolean =
             AndroidDailyAggregateExportPlanner.supportsNonLegacy(settings)

@@ -176,7 +176,7 @@ class ExportArtifactPlan(
         if (this.items.map { it.artifactId }.distinct().size != this.items.size) {
             invalid(ExportArtifactPlanValidationIssue.DUPLICATE_ARTIFACT_ID)
         }
-        val pathKeys = this.items.map { collisionKey(it.relativePath) }
+        val pathKeys = this.items.map { portableArtifactPathKey(it.relativePath) }
         if (pathKeys.distinct().size != pathKeys.size) {
             invalid(ExportArtifactPlanValidationIssue.PATH_COLLISION)
         }
@@ -328,7 +328,7 @@ private fun validateOpaqueId(value: String, issue: ExportArtifactPlanValidationI
     if (value.isEmpty() || value.length > 128 || value.any(Char::isISOControl)) invalid(issue)
 }
 
-private fun collisionKey(path: String): String {
+internal fun portableArtifactPathKey(path: String): String {
     val compatible = Normalizer.normalize(path, Normalizer.Form.NFKC)
     // Root uppercase before lowercase covers multi-code-point folds such as ß -> ss.
     val folded = compatible.uppercase(Locale.ROOT).lowercase(Locale.ROOT)
