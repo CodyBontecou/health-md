@@ -165,7 +165,11 @@ Never attach raw output to an issue or CI log.
    digest/result, and test explicit cancellation plus cancellation-pending delivery.
 9. On macOS and Linux, test overwrite, append, both Markdown merge modes, nested directories,
    duplicate/case/Unicode-alias paths, symlink ancestors/files, destination mutation, low disk, and
-   interruption between destination commit and final confirmation.
+   interruption between destination commit and final confirmation. With synthetic scoped daily-note
+   patches, preserve a larger personal journal and multiline YAML across staging, restart, and
+   receipt recovery. Pre-scoped receiver journals containing any personal-note commit plan must
+   fail before writing, whether the plan is ready or committed; legacy append plans must upgrade
+   without changing their staged bytes. Older CLIs must reject the new journal version.
 10. On Windows, verify status/raw/extract/resume/cancel plus protocol-v1 generated-file export into
    an existing NTFS destination, including drive-root and UNC-path validation where available.
 11. Run `healthmd setup codex` and verify first-pair, idempotent rerun, safe preservation of existing
@@ -232,7 +236,9 @@ or CI log.
 7. Exercise Disconnect, CLI cancellation, notification actions, service timeout, low storage, and
    seven-day cleanup.
 8. On macOS, Linux, and Windows, test generated-file traversal/symlink/collision defenses, all write
-   modes, nested directories, destination replacement, and idempotent commit recovery.
+   modes, nested directories, destination replacement, and idempotent commit recovery. Repeat the
+   scoped daily-note journal preservation and receiver-version recovery cases from the iPhone
+   checklist using Android-sleep-v6 patches and protocol-v2 transfers.
 9. Confirm Android Keystore invalidation fails closed and requires pairing again; inspect backup
    output to ensure direct credentials and health spools are absent.
 10. Confirm logs, notifications, CLI JSON errors, and diagnostics contain no health values, raw

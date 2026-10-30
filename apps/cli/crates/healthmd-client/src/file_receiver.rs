@@ -48,13 +48,40 @@ use crate::{
 
 const LEGACY_JOURNAL_VERSION: u16 = 2;
 const HISTORY_JOURNAL_VERSION: u16 = 3;
+const SCOPED_NOTE_JOURNAL_VERSION: u16 = 4;
+const SCOPED_NOTE_HISTORY_JOURNAL_VERSION: u16 = 5;
 
 fn journal_version(accepted: &ExportAccepted) -> u16 {
     if accepted.history_observation.is_some() {
+        SCOPED_NOTE_HISTORY_JOURNAL_VERSION
+    } else {
+        SCOPED_NOTE_JOURNAL_VERSION
+    }
+}
+
+// Older receivers reject these new journal versions rather than replaying note
+// stages with the pre-scoped merger. Legacy stages for other write modes retain
+// their original meaning and may be upgraded without rendering them again.
+fn validate_journal_version(journal: &FileJournal) -> Result<(), ClientError> {
+    let current = journal_version(&journal.accepted);
+    if journal.version == current {
+        return Ok(());
+    }
+    let legacy = if journal.accepted.history_observation.is_some() {
         HISTORY_JOURNAL_VERSION
     } else {
         LEGACY_JOURNAL_VERSION
+    };
+    if journal.version != legacy
+        || journal.commit_plans.keys().any(|file_id| {
+            journal.manifests.get(file_id).is_some_and(|manifest| {
+                manifest.write_mode == FileWriteMode::MergeMarkdownPreservingPreamble
+            })
+        })
+    {
+        return Err(invalid("durable file merger version is unsupported"));
     }
+    Ok(())
 }
 const HISTORY_SIDECAR_DIRECTORY: &str = ".healthmd/history-observations";
 const MAXIMUM_MERGE_BYTES: i64 = 64 * 1_024 * 1_024;
@@ -473,9 +500,8 @@ impl FileReceiver {
         let directory = self.session_directory(request.job_id.0)?;
         let path = directory.join("file-journal.json");
         let journal = if path.exists() {
-            let persisted = load_journal(&path)?;
-            if persisted.version != journal_version(&accepted)
-                || persisted.request != request
+            let mut persisted = load_journal(&path)?;
+            if persisted.request != request
                 || persisted.session != session
                 || persisted.destination_identity != identity
                 || persisted.accepted.peer_binding != accepted.peer_binding
@@ -489,6 +515,11 @@ impl FileReceiver {
                     != accepted.resolved_canonical_selection
             {
                 return Err(invalid("durable file session changed"));
+            }
+            validate_persisted_limits(&persisted)?;
+            if persisted.version != journal_version(&accepted) {
+                persisted.version = journal_version(&accepted);
+                save_journal(&self.layout, &persisted)?;
             }
             persisted
         } else {
@@ -1029,6 +1060,7 @@ fn valid_time_zone(value: &str) -> bool {
 }
 
 fn validate_persisted_limits(journal: &FileJournal) -> Result<(), ClientError> {
+    validate_journal_version(journal)?;
     if journal.manifests.len() > MAXIMUM_GENERATED_FILES_PER_JOB
         || journal.commit_plans.len() > journal.manifests.len()
         || u64::try_from(journal.committed_partitions.len()).unwrap_or(u64::MAX)
@@ -2073,14 +2105,14 @@ fn load_journal(path: &Path) -> Result<FileJournal, ClientError> {
         "file journal exceeds the durable metadata limit",
     )?)
     .map_err(|_| invalid("file journal is malformed"))?;
-    if journal.version != journal_version(&journal.accepted)
-        || journal
-            .accepted
-            .history_observation
-            .as_ref()
-            .is_some_and(|evidence| {
-                !evidence.matches(&journal.request, &journal.accepted, &journal.session)
-            })
+    validate_journal_version(&journal)?;
+    if journal
+        .accepted
+        .history_observation
+        .as_ref()
+        .is_some_and(|evidence| {
+            !evidence.matches(&journal.request, &journal.accepted, &journal.session)
+        })
     {
         return Err(invalid(
             "durable history observation or journal version changed",
@@ -2512,20 +2544,31 @@ mod tests {
 
     #[test]
     fn append_commit_is_digest_bound_and_idempotent() {
-        check_append_commit(false);
+        check_append_commit(false, false);
     }
 
     #[test]
     fn observed_file_receipt_survives_restart_and_rejects_rebound_evidence() {
-        check_append_commit(true);
+        check_append_commit(true, false);
+    }
+
+    #[test]
+    fn scoped_note_commit_is_digest_bound_and_survives_restart() {
+        check_append_commit(false, true);
+        check_append_commit(true, true);
     }
 
     #[allow(clippy::too_many_lines)]
-    fn check_append_commit(observed: bool) {
+    fn check_append_commit(observed: bool, scoped: bool) {
         let temporary = TempDir::new().unwrap();
         let destination = temporary.path().join("destination");
         fs::create_dir(&destination).unwrap();
-        fs::write(destination.join("daily.md"), b"old").unwrap();
+        let existing = if scoped {
+            crate::test_support::personal_journal()
+        } else {
+            "old".into()
+        };
+        fs::write(destination.join("daily.md"), &existing).unwrap();
         let layout = StorageLayout {
             root: temporary.path().join("state"),
         };
@@ -2602,7 +2645,23 @@ mod tests {
             accepted.history_observation = Some(serde_json::from_value(evidence).unwrap());
         }
         let expected_history = accepted.history_observation.clone();
-        let data = b"fresh".to_vec();
+        let data = if scoped {
+            crate::test_support::scoped_note_patch(false).into_bytes()
+        } else {
+            b"fresh".to_vec()
+        };
+        let expected = if scoped {
+            markdown::merge_personal_note(&existing, std::str::from_utf8(&data).unwrap())
+                .unwrap()
+                .into_bytes()
+        } else {
+            b"old\n\nfresh".to_vec()
+        };
+        let mode = if scoped {
+            FileWriteMode::MergeMarkdownPreservingPreamble
+        } else {
+            FileWriteMode::Append
+        };
         let digest = sha256_hex(&data);
         let file_id = SwiftUuid(Uuid::new_v4());
         let manifest = FileManifest {
@@ -2611,7 +2670,7 @@ mod tests {
             relative_path: "daily.md".into(),
             byte_count: i64::try_from(data.len()).unwrap(),
             sha256: digest.clone(),
-            write_mode: FileWriteMode::Append,
+            write_mode: mode,
         };
         let transfer_id = SwiftUuid(Uuid::new_v4());
         let partition = TransferPartition {
@@ -2722,19 +2781,76 @@ mod tests {
             failed_date_identifiers: Vec::new(),
         });
         assert!(receiver.finalize(&invalid_outcome).is_err());
-        assert_eq!(fs::read(destination.join("daily.md")).unwrap(), b"old");
-        let receipt = receiver.finalize(&finalize).unwrap();
         assert_eq!(
             fs::read(destination.join("daily.md")).unwrap(),
-            b"old\n\nfresh"
+            existing.as_bytes()
         );
+        let receipt = receiver.finalize(&finalize).unwrap();
+        assert_eq!(fs::read(destination.join("daily.md")).unwrap(), expected);
         assert_eq!(receipt.payload.files_written, 1);
 
         receiver.finalize(&finalize).unwrap();
-        assert_eq!(
-            fs::read(destination.join("daily.md")).unwrap(),
-            b"old\n\nfresh"
-        );
+        assert_eq!(fs::read(destination.join("daily.md")).unwrap(), expected);
+        if !scoped {
+            let path = receiver
+                .session_directory(job_id.0)
+                .unwrap()
+                .join("file-journal.json");
+            let mut saved = load_journal(&path).unwrap();
+            let plans = saved.commit_plans.clone();
+            saved.version -= 2;
+            save_journal(&receiver.layout, &saved).unwrap();
+            let mut reopened = FileReceiver::new(receiver.layout.clone(), jobs.clone());
+            reopened
+                .prepare(saved.request, saved.accepted, saved.session)
+                .unwrap();
+            let upgraded = load_journal(&path).unwrap();
+            assert_eq!(upgraded.version, journal_version(&upgraded.accepted));
+            assert_eq!(upgraded.commit_plans, plans);
+            assert_eq!(fs::read(destination.join("daily.md")).unwrap(), expected);
+            assert_eq!(reopened.finalize(&finalize).unwrap(), receipt);
+        }
+        if scoped {
+            let path = receiver
+                .session_directory(job_id.0)
+                .unwrap()
+                .join("file-journal.json");
+            let original = load_journal(&path).unwrap();
+            for committed in [false, true] {
+                let mut saved = original.clone();
+                saved.commit_plans.get_mut(&file_id).unwrap().committed = committed;
+                saved.version -= 2;
+                save_journal(&receiver.layout, &saved).unwrap();
+                let mut reopened = FileReceiver::new(receiver.layout.clone(), jobs.clone());
+                assert!(
+                    reopened
+                        .prepare(
+                            saved.request.clone(),
+                            saved.accepted.clone(),
+                            saved.session.clone()
+                        )
+                        .is_err()
+                );
+                assert_eq!(fs::read(destination.join("daily.md")).unwrap(), expected);
+            }
+            let mut saved = original.clone();
+            saved.commit_plans.get_mut(&file_id).unwrap().committed = false;
+            save_journal(&receiver.layout, &saved).unwrap();
+            fs::write(destination.join("daily.md"), &existing).unwrap();
+            let mut reopened = FileReceiver::new(receiver.layout.clone(), jobs.clone());
+            reopened
+                .prepare(saved.request, saved.accepted, saved.session)
+                .unwrap();
+            assert_eq!(reopened.finalize(&finalize).unwrap(), receipt);
+            assert_eq!(fs::read(destination.join("daily.md")).unwrap(), expected);
+            fs::write(destination.join("daily.md"), b"changed by owner").unwrap();
+            assert!(reopened.finalize(&finalize).is_err());
+            assert_eq!(
+                fs::read(destination.join("daily.md")).unwrap(),
+                b"changed by owner"
+            );
+            fs::write(destination.join("daily.md"), &expected).unwrap();
+        }
         receiver.acknowledge_peer_completion(job_id.0).unwrap();
         assert_eq!(jobs.load(job_id.0).unwrap().state, JobState::Completed);
         assert_eq!(receipt.payload.history_observation, expected_history);
@@ -2752,9 +2868,9 @@ mod tests {
             assert_eq!(sidecar.artifacts().len(), 1);
             let artifact = &sidecar.artifacts()[0];
             assert_eq!(artifact.relative_path, "daily.md");
-            assert_eq!(artifact.write_mode, FileWriteMode::Append);
-            assert_eq!(artifact.generated_byte_count, 5);
-            assert_eq!(artifact.generated_sha256, sha256_hex(b"fresh"));
+            assert_eq!(artifact.write_mode, mode);
+            assert_eq!(artifact.generated_byte_count, manifest.byte_count);
+            assert_eq!(artifact.generated_sha256, manifest.sha256);
             assert_eq!(
                 artifact.committed_sha256,
                 sha256_hex(&fs::read(destination.join("daily.md")).unwrap())
@@ -2808,17 +2924,14 @@ mod tests {
             changed.accepted.history_observation = None;
             changed.version = LEGACY_JOURNAL_VERSION;
             save_journal(&reopened.layout, &changed).unwrap();
-            assert!(load_journal(&path).is_ok());
+            assert_eq!(load_journal(&path).is_ok(), !scoped);
             assert!(
                 reopened.receipt(job_id.0).is_err(),
                 "a downgrade cannot erase finalized evidence"
             );
             fs::write(&path, original).unwrap();
             assert_eq!(reopened.receipt(job_id.0).unwrap(), receipt);
-            assert_eq!(
-                fs::read(destination.join("daily.md")).unwrap(),
-                b"old\n\nfresh"
-            );
+            assert_eq!(fs::read(destination.join("daily.md")).unwrap(), expected);
             let descriptor = receipt.payload.history_sidecar.as_ref().unwrap();
             let private = receipt
                 .response_path
@@ -2838,10 +2951,7 @@ mod tests {
                 "metadata collision must never be overwritten"
             );
             assert_eq!(fs::read(&public).unwrap(), b"changed by owner");
-            assert_eq!(
-                fs::read(destination.join("daily.md")).unwrap(),
-                b"old\n\nfresh"
-            );
+            assert_eq!(fs::read(destination.join("daily.md")).unwrap(), expected);
             // The historical receipt remains available even when destination
             // files subsequently change; its sidecar descriptor pins original bytes.
             assert_eq!(reopened.receipt(job_id.0).unwrap(), receipt);

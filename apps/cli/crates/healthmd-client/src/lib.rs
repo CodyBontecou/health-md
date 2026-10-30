@@ -17,6 +17,8 @@ pub mod packet;
 pub mod raw_receiver;
 pub mod secure_channel;
 pub mod storage;
+#[cfg(test)]
+mod test_support;
 pub mod trust;
 pub mod v2_job;
 pub mod v2_receiver;

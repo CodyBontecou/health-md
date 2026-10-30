@@ -38,7 +38,8 @@ use crate::{
     v2_job::{V2JobStore, V2ResponseArtifact},
 };
 
-const JOURNAL_VERSION: u16 = 2;
+const LEGACY_JOURNAL_VERSION: u16 = 2;
+const JOURNAL_VERSION: u16 = 3;
 const MAXIMUM_NDJSON_LINE_BYTES: u64 = 64 * 1_024 * 1_024;
 const MAXIMUM_IN_MEMORY_JSON_BYTES: u64 = 64 * 1_024 * 1_024;
 
@@ -135,13 +136,17 @@ impl V2ArtifactReceiver {
         let directory = self.session_directory(request.job_id)?;
         let path = directory.join("receiver-journal.json");
         let journal = if path.exists() {
-            let persisted = load_journal(&path)?;
-            if persisted.version != JOURNAL_VERSION
-                || persisted.request != request
+            let mut persisted = load_journal(&path)?;
+            if persisted.request != request
                 || persisted.accepted != accepted
                 || persisted.session != session
             {
                 return Err(invalid("durable v2 transfer session changed"));
+            }
+            validate_persisted_limits(&self.layout, &persisted)?;
+            if persisted.version != JOURNAL_VERSION {
+                persisted.version = JOURNAL_VERSION;
+                save_journal(&self.layout, &persisted)?;
             }
             persisted
         } else {
@@ -952,6 +957,7 @@ fn validate_persisted_limits(
     layout: &StorageLayout,
     journal: &ReceiverJournal,
 ) -> Result<(), ClientError> {
+    validate_journal_version(journal)?;
     if journal.manifests.len() > maximum_manifests(journal.request.product.product_id())
         || journal.commit_plans.len() > journal.manifests.len()
         || u64::try_from(journal.committed_partitions.len()).unwrap_or(u64::MAX)
@@ -2128,12 +2134,30 @@ fn raw_exclusive_end_date(value: &Value, zone: &str) -> Option<String> {
 }
 
 fn load_journal(path: &Path) -> Result<ReceiverJournal, ClientError> {
-    serde_json::from_slice(&read_bounded(
+    let journal = serde_json::from_slice(&read_bounded(
         path,
         MAXIMUM_DURABLE_JSON_BYTES,
         "v2 journal exceeds the durable metadata limit",
     )?)
-    .map_err(|_| invalid("v2 receiver journal is malformed"))
+    .map_err(|_| invalid("v2 receiver journal is malformed"))?;
+    validate_journal_version(&journal)?;
+    Ok(journal)
+}
+
+fn validate_journal_version(journal: &ReceiverJournal) -> Result<(), ClientError> {
+    if journal.version == JOURNAL_VERSION {
+        return Ok(());
+    }
+    if journal.version != LEGACY_JOURNAL_VERSION
+        || journal.commit_plans.keys().any(|artifact_id| {
+            journal.manifests.get(artifact_id).is_some_and(|manifest| {
+                manifest.write_mode == Some(v2::FileWriteMode::MergeMarkdownPreservingPreamble)
+            })
+        })
+    {
+        return Err(invalid("durable v2 merger version is unsupported"));
+    }
+    Ok(())
 }
 
 fn save_journal(layout: &StorageLayout, journal: &ReceiverJournal) -> Result<(), ClientError> {
@@ -2680,12 +2704,26 @@ mod tests {
     }
 
     #[test]
-    #[allow(clippy::too_many_lines)]
     fn android_generated_file_transfer_commits_with_v2_destination_binding() {
+        check_generated_file_transfer(false);
+    }
+
+    #[test]
+    fn android_scoped_note_transfer_survives_restart_and_rejects_legacy_stages() {
+        check_generated_file_transfer(true);
+    }
+
+    #[allow(clippy::too_many_lines)]
+    fn check_generated_file_transfer(scoped: bool) {
         let temporary = TempDir::new().unwrap();
         let destination_path = temporary.path().join("destination");
         fs::create_dir(&destination_path).unwrap();
-        fs::write(destination_path.join("daily.md"), b"old").unwrap();
+        let existing = if scoped {
+            crate::test_support::personal_journal()
+        } else {
+            "old".into()
+        };
+        fs::write(destination_path.join("daily.md"), &existing).unwrap();
         let destination = GeneratedDestination::open(&destination_path).unwrap();
         let layout = StorageLayout {
             root: temporary.path().join("data"),
@@ -2745,7 +2783,18 @@ mod tests {
             partition_target_bytes: 32 * 1_024 * 1_024,
             created_at: now,
         };
-        let data = b"fresh".to_vec();
+        let data = if scoped {
+            crate::test_support::scoped_note_patch(true).into_bytes()
+        } else {
+            b"fresh".to_vec()
+        };
+        let expected = if scoped {
+            crate::markdown::merge_personal_note(&existing, std::str::from_utf8(&data).unwrap())
+                .unwrap()
+                .into_bytes()
+        } else {
+            b"old\nfresh".to_vec()
+        };
         let digest = sha256_hex(&data);
         let artifact_id = Uuid::new_v4();
         let manifest = ArtifactManifest {
@@ -2761,7 +2810,11 @@ mod tests {
             sha256: digest.clone(),
             logical_checksum_sha256: None,
             relative_path: Some("daily.md".into()),
-            write_mode: Some(v2::FileWriteMode::Append),
+            write_mode: Some(if scoped {
+                v2::FileWriteMode::MergeMarkdownPreservingPreamble
+            } else {
+                v2::FileWriteMode::Append
+            }),
             snapshot_status: None,
             provider_id: None,
         };
@@ -2807,20 +2860,89 @@ mod tests {
                 partition_sha256: digest.clone(),
             })
             .unwrap();
-        receiver
-            .finalize(&TransferFinalize {
-                session_id: session.session_id,
-                job_id,
-                request_fingerprint: fingerprint,
-                total_partitions: 1,
-                total_bytes: u64::try_from(data.len()).unwrap(),
-                final_partition_sha256: Some(digest),
-            })
-            .unwrap();
+        let finalize = TransferFinalize {
+            session_id: session.session_id,
+            job_id,
+            request_fingerprint: fingerprint,
+            total_partitions: 1,
+            total_bytes: u64::try_from(data.len()).unwrap(),
+            final_partition_sha256: Some(digest),
+        };
+        receiver.finalize(&finalize).unwrap();
         assert_eq!(
             fs::read(destination_path.join("daily.md")).unwrap(),
-            b"old\nfresh"
+            expected
         );
+        if !scoped {
+            let path = receiver
+                .session_directory(job_id)
+                .unwrap()
+                .join("receiver-journal.json");
+            let mut saved = load_journal(&path).unwrap();
+            let plans = saved.commit_plans.clone();
+            saved.version = LEGACY_JOURNAL_VERSION;
+            save_journal(&receiver.layout, &saved).unwrap();
+            let mut reopened = V2ArtifactReceiver::new(receiver.layout.clone(), jobs.clone());
+            reopened
+                .prepare(saved.request, saved.accepted, saved.session)
+                .unwrap();
+            let upgraded = load_journal(&path).unwrap();
+            assert_eq!(upgraded.version, JOURNAL_VERSION);
+            assert_eq!(upgraded.commit_plans, plans);
+            assert_eq!(
+                fs::read(destination_path.join("daily.md")).unwrap(),
+                expected
+            );
+        }
+        if scoped {
+            let path = receiver
+                .session_directory(job_id)
+                .unwrap()
+                .join("receiver-journal.json");
+            let original = load_journal(&path).unwrap();
+            for committed in [false, true] {
+                let mut saved = original.clone();
+                saved.commit_plans.get_mut(&artifact_id).unwrap().committed = committed;
+                saved.version = LEGACY_JOURNAL_VERSION;
+                save_journal(&receiver.layout, &saved).unwrap();
+                let mut reopened = V2ArtifactReceiver::new(receiver.layout.clone(), jobs.clone());
+                assert!(
+                    reopened
+                        .prepare(
+                            saved.request.clone(),
+                            saved.accepted.clone(),
+                            saved.session.clone()
+                        )
+                        .is_err()
+                );
+                assert_eq!(
+                    fs::read(destination_path.join("daily.md")).unwrap(),
+                    expected
+                );
+            }
+            let mut saved = original.clone();
+            saved.commit_plans.get_mut(&artifact_id).unwrap().committed = false;
+            save_journal(&receiver.layout, &saved).unwrap();
+            fs::write(destination_path.join("daily.md"), &existing).unwrap();
+            let mut reopened = V2ArtifactReceiver::new(receiver.layout.clone(), jobs.clone());
+            reopened
+                .prepare(saved.request, saved.accepted, saved.session)
+                .unwrap();
+            reopened.finalize(&finalize).unwrap();
+            assert_eq!(
+                fs::read(destination_path.join("daily.md")).unwrap(),
+                expected
+            );
+            let receipt = reopened.receipt(job_id).unwrap();
+            let payload: Value = serde_json::from_slice(&fs::read(receipt.path).unwrap()).unwrap();
+            assert_eq!(payload["files_written"], 1);
+            fs::write(destination_path.join("daily.md"), b"changed by owner").unwrap();
+            assert!(reopened.finalize(&finalize).is_err());
+            assert_eq!(
+                fs::read(destination_path.join("daily.md")).unwrap(),
+                b"changed by owner"
+            );
+        }
         receiver.acknowledge_completion(job_id).unwrap();
         assert_eq!(jobs.load(job_id).unwrap().state, JobState::Completed);
     }
