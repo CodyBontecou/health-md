@@ -7,7 +7,7 @@ updated: "2026-10-30"
 category: "Workflow guide"
 related:
   - export-apple-health-data-pdf
-  - apple-health-to-excel
+  - export-omron-connect-data
   - export-health-data-without-the-cloud
 draft: false
 verified: "2026-10-30"
