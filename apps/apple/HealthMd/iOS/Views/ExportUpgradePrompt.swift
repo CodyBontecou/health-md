@@ -1,3 +1,4 @@
+#if os(iOS)
 import SwiftUI
 import StoreKit
 
@@ -93,3 +94,5 @@ struct ExportUpgradePrompt: View {
         }
     }
 }
+
+#endif
