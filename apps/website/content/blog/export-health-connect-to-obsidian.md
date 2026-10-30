@@ -3,14 +3,14 @@ title: "How to export Health Connect data to Obsidian on Android."
 description: "Turn Health Connect records into Markdown, Obsidian Bases, JSON, or CSV files in an Android-accessible Obsidian vault with Health.md."
 lead: "Health.md for Android reads Health Connect on the device and writes plain files to a folder you choose—without a Health.md account or health-data cloud."
 date: "2026-09-22T13:00:00.000Z"
-updated: "2026-10-27"
+updated: "2026-10-30"
 verified: "2026-10-27"
 verified_by: "Codex (agent)"
 verified_method: traced
 platform: android
 category: "Workflow guide"
 related:
-  - export-apple-health-data-to-obsidian
+  - export-samsung-health-data
   - apple-health-vs-health-connect-data-models
   - local-first-health-data-architecture
 draft: false

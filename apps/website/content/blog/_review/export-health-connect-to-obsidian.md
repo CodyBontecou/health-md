@@ -6,6 +6,8 @@ Source and documentation review only. No emulator, device, Obsidian import, sche
 
 ## Claims
 
+- [x] October30,2026: the related-guide recommendation now links to the Samsung Health → Health Connect CSV workflow, which has its own producer/official-source claim ledger. Only the related slug and publication revision changed; existing article body and verified feature claims remain unchanged.
+
 - [x] Android reads authorized Health Connect records on the device and writes selected formats to a chosen folder: `apps/android/app/src/main/java/com/healthmd/data/health/HealthConnectManager.kt`, `data/health/HealthConnectDataProvider.kt`, `data/storage/FileExportManager.kt` and `apps/website/docs-src/src/content/docs/android.md`. Source apps must actually write records to Health Connect; missing data is not a zero or proof of an absent real-world event.
 - [x] Folder access uses an Android document-tree picker and persisted URI permissions: `presentation/export/ExportScreen.kt`, `presentation/onboarding/OnboardingViewModel.kt` and `data/storage/FileExportManager.kt`. The guide conditions sync/provider use on writable persistent access and offers local export followed by the user's chosen sync tool. It does not promise every provider exposes a writable folder.
 - [x] Markdown, Bases frontmatter, JSON and CSV outputs are implemented by `data/export/MarkdownExporter.kt`, `ObsidianBasesExporter.kt`, `JsonExporter.kt` and `CsvExporter.kt`; also documented in `docs-src/src/content/docs/android.md` and `format.md`. Formats may be combined; previewing a small date/metric selection follows the documented first-export workflow. Bases notes do not imply a prebuilt Bases view.
