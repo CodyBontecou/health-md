@@ -1863,6 +1863,7 @@ struct ContentView: View {
                         negotiation: negotiation,
                         healthKitManager: healthKitManager,
                         externalRecordFetcher: externalRecordFetcher,
+                        externalIntegrations: externalIntegrationManager,
                         syncService: syncService,
                         progress: { update in
                             exportStatusMessage = update.message

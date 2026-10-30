@@ -1479,15 +1479,29 @@ class SchedulingManager: ObservableObject {
                 hasNativeOnlyCompanionAction: hasNativeOnlyCompanionAction
             )
         case .connectedMac:
-            let hasNativeOnlyCompanionAction = settings.writesExternalProviderSidecars
-                && ConnectedAppsFeature.isEnabled
-                && (scheduledExternalIntegrations?.connectedProviderCount ?? 0) > 0
-            return await MacExportJobBuilder.settingsSnapshotForNewConnectedMacOperation(
-                settings,
-                healthSubfolder: VaultManager().healthSubfolder,
-                calendarTimeZone: calendarTimeZone,
-                hasNativeOnlyCompanionAction: hasNativeOnlyCompanionAction
-            )
+            if settings.executionSleepCaptureContextIsFrozen && settings.executionSleepCaptureContext == nil {
+                return ExportSettingsSnapshot.from(settings, appleExportEngineAuthorityIsFrozen: true)
+            }
+            var snapshot = ExportSettingsSnapshot.from(settings,
+                appleExportEngineAuthorityIsFrozen: false, calendarTimeZoneIdentifier: calendarTimeZone.identifier)
+            let context = settings.executionSleepCaptureContext ?? AppleSleepCaptureContext.resolve(
+                timeZone: calendarTimeZone, attribution: HealthKitManager.shared.sleepDayAttribution)
+            snapshot.sleepCaptureContext = context
+            let frozen = snapshot.makeAdvancedExportSettings()
+            let providers = !settings.executionExternalProviderCaptureAuthorityIsFrozen
+                && settings.writesExternalProviderSidecars && ConnectedAppsFeature.isEnabled
+                ? scheduledExternalIntegrations?.forCaptureOperation() : nil
+            let count = providers?.connectedProviderCount ?? 0
+            let authority = settings.executionExternalProviderCaptureAuthority
+                ?? (settings.executionExternalProviderCaptureAuthorityIsFrozen ? nil : providers?.captureAuthority
+                    ?? (count == 0 ? ExternalProviderCaptureAuthority(connections: [:]) : nil))
+            frozen.executionExternalProviderCaptureAuthority = authority
+            frozen.executionExternalProviderCaptureAuthorityIsFrozen = true
+            let accepted = await MacExportJobBuilder.settingsSnapshotForNewConnectedMacOperation(frozen,
+                healthSubfolder: VaultManager().healthSubfolder, calendarTimeZone: context.timeZone,
+                hasNativeOnlyCompanionAction: count > 0 || authority?.connections.isEmpty == false,
+                operationSurface: .connectedReceivedRangeWithoutSideEffects)
+            return accepted
         }
     }
 
@@ -1495,7 +1509,7 @@ class SchedulingManager: ObservableObject {
     func makeSettingsSnapshotForNewScheduledProfileOperation(
         _ profile: ScheduledExportCoordinator.ScheduledProfileRequestContext
     ) async -> ExportSettingsSnapshot {
-        guard profile.target == .localIPhoneFolder || profile.target == .apiEndpoint else { return profile.settings }
+        guard profile.target == .localIPhoneFolder || profile.target == .apiEndpoint || profile.target == .connectedMac else { return profile.settings }
         let zone = profile.settings.calendarTimeZoneIdentifier.flatMap(TimeZone.init(identifier:)) ?? .current
         let context = AppleSleepCaptureContext.resolve(timeZone: zone,
             attribution: HealthKitManager.shared.sleepDayAttribution)
@@ -1511,7 +1525,7 @@ class SchedulingManager: ObservableObject {
                 ?? (hasProviders ? nil : ExternalProviderCaptureAuthority(connections: [:]))
             return snapshot
         }
-        guard profile.target != .localIPhoneFolder || profile.settings.operationRollupPeriods.allSatisfy({ $0 == .range }) else {
+        guard profile.target == .apiEndpoint || profile.settings.operationRollupPeriods.allSatisfy({ $0 == .range }) else {
             // A historical calendar profile cannot silently become a range summary.
             var snapshot = profile.settings
             snapshot.sleepCaptureContext = context
@@ -1990,6 +2004,7 @@ class SchedulingManager: ObservableObject {
                         negotiation: negotiation,
                         healthKitManager: HealthKitManager.shared,
                         externalRecordFetcher: externalRecordFetcher,
+                        externalIntegrations: scheduledExternalIntegrations,
                         syncService: syncService,
                         origin: .scheduledIPhone,
                         progress: { update in

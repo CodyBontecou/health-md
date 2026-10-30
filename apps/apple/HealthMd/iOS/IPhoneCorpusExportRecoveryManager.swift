@@ -120,7 +120,7 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
     ) {
         self.syncService = syncService
         self.healthKitManager = healthKitManager
-        self.externalIntegrations = ConnectedAppsFeature.isEnabled ? externalIntegrations : nil
+        self.externalIntegrations = externalIntegrations
         cleanupExpiredJournals()
         if connectedPeerProvider(syncService) == nil {
             pauseInterruptedJournals()
@@ -587,8 +587,10 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
         ) -> Void)?,
         produceItem: @escaping ConnectedCorpusDurableSender.ItemProducer
     ) async throws -> ConnectedCorpusDurableSender.Result {
-        externalIntegrations?.beginExportAction()
-        defer { externalIntegrations?.endExportAction() }
+        let savedMode = try store.load(jobID: jobID, allowExpired: true)?.exportManifest.mode
+        let bookkeepingProviders = savedMode == .writeFiles || !ConnectedAppsFeature.isEnabled ? nil : externalIntegrations
+        bookkeepingProviders?.beginExportAction()
+        defer { bookkeepingProviders?.endExportAction() }
         let queryController = queryExecutionControllers[jobID]
             ?? HealthKitQueryExecutionController()
         queryExecutionControllers[jobID] = queryController
@@ -747,7 +749,20 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
         formatter.timeZone = sourceTimeZone
         formatter.dateFormat = "yyyy-MM-dd"
         let healthKitManager = self.healthKitManager
-        let integrations = self.externalIntegrations
+        let fileIntegrations = self.externalIntegrations
+        let integrations = ConnectedAppsFeature.isEnabled ? fileIntegrations : nil
+        let fileProviders: Result<(any ExternalIntegrationDailyRecordProviding)?, Error> = Result {
+            guard journal.exportManifest.mode == .writeFiles,
+                  journal.nextItemIndex < journal.totalItemCount,
+                  settings.writesExternalProviderSidecars else { return nil }
+            if let authority = journal.exportManifest.settingsSnapshot.externalProviderCaptureAuthority {
+                return try IPhoneConnectedCorpusProducer.restoreProviders(authority: authority, providers: fileIntegrations)
+            }
+            guard journal.exportManifest.settingsSnapshot.sleepCaptureContext?.sleepDayAttribution != .morningEnds else {
+                throw ExternalProviderCaptureAuthority.RecoveryError.unavailable
+            }
+            return integrations?.forCaptureOperation()
+        }
 
         return { index, date in
             guard let healthKitManager else {
@@ -758,6 +773,10 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
             let isRequested = requestedDays.contains(sourceCalendar.startOfDay(for: date))
             switch journal.exportManifest.mode {
             case .writeFiles:
+                let integrations = try fileProviders.get()
+                integrations?.beginExportAction()
+                var providerCaptureSucceeded = false
+                defer { integrations?.endExportAction(succeeded: providerCaptureSucceeded) }
                 let detailPolicy = metadata.map {
                     MacExportStreamingJobBuilder.detailPolicy(
                         for: date,
@@ -798,6 +817,7 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
                     },
                     fetchExternalDailyRecords: externalFetcher
                 )
+                providerCaptureSucceeded = outcome.failure == nil
                 return try await ConnectedCorpusSpoolItem.encodeHealthDay(
                     ConnectedCorpusHealthDayPayload(
                         sourceDate: date,

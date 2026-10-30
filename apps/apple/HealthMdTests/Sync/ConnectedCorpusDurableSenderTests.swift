@@ -1707,7 +1707,7 @@ final class ConnectedCorpusDurableSenderTests: XCTestCase {
                     XCTFail("Missing or unapproved saved attribution must remain unavailable")
                 } catch {
                     XCTAssertEqual(error as? AppleSleepCaptureContext.AvailabilityError,
-                        saved == nil ? .missingDurableAttribution : .unapprovedAttribution)
+                        saved == nil ? .missingDurableAttribution : .incompatibleDurableAuthority)
                 }
                 XCTAssertEqual(counter.count, 0)
             }

@@ -129,10 +129,15 @@ struct MacExportJobBuilder {
         if legacySnapshot.appleExportEnginePin != nil {
             return legacySnapshot
         }
+        let stagesWakeDateProviders = hasNativeOnlyCompanionAction
+            && legacySnapshot.sleepCaptureContext?.sleepDayAttribution == .morningEnds
+            && legacySnapshot.externalProviderCaptureAuthority?.connections.isEmpty == false
+            && (operationSurface == .connectedReceivedRangeWithoutSideEffects || operationSurface == .connectedReceivedRangeWithProviderSidecars)
+        let acceptedSurface: AppleExportOperationSurface = stagesWakeDateProviders ? .connectedReceivedRangeWithProviderSidecars : operationSurface
         let supportsFreshSettings = legacySnapshot.sleepCaptureContext?.sleepDayAttribution == .morningEnds
-            ? AppleLooseDailyExportPlanner.supportsNewWakeDateSettings(settingsSnapshot: legacySnapshot, surface: operationSurface)
-            : AppleLooseDailyExportPlanner.supports(settingsSnapshot: legacySnapshot, surface: operationSurface)
-        guard !hasNativeOnlyCompanionAction, supportsFreshSettings else {
+            ? AppleLooseDailyExportPlanner.supportsNewWakeDateSettings(settingsSnapshot: legacySnapshot, surface: acceptedSurface)
+            : AppleLooseDailyExportPlanner.supports(settingsSnapshot: legacySnapshot, surface: acceptedSurface)
+        guard (!hasNativeOnlyCompanionAction || stagesWakeDateProviders), supportsFreshSettings else {
             var explicitlyLegacy = legacySnapshot
             explicitlyLegacy.appleExportEnginePin = nil
             return explicitlyLegacy
@@ -141,7 +146,7 @@ struct MacExportJobBuilder {
             settings,
             healthSubfolder: healthSubfolder,
             calendarTimeZone: calendarTimeZone,
-            surface: operationSurface,
+            surface: acceptedSurface,
             policyResolver: policyResolver
         )
     }

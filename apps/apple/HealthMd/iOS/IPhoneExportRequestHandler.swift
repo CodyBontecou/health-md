@@ -58,8 +58,7 @@ final class IPhoneExportRequestHandler: ObservableObject {
             !isAutomation || (automationClient.allowsAcquisition(request, sync: syncService)
                 && syncService.remoteCapabilities == automationPeerCapabilities)
         }
-        externalIntegrations?.beginExportAction()
-        defer { externalIntegrations?.endExportAction() }
+        let suppliedIntegrations = externalIntegrations
         defer {
             if cancelledRequestIDs.remove(request.jobID) != nil {
                 pendingRequests.removeValue(forKey: request.jobID)
@@ -180,6 +179,40 @@ final class IPhoneExportRequestHandler: ObservableObject {
                 reason: .healthKitFetchFailed, message: error.localizedDescription)))
             return
         }
+        let externalIntegrations: (any ExternalIntegrationDailyRecordProviding)?
+        do {
+            if request.responseMode == .writeFiles {
+                if request.canonicalSelection != nil || !settings.writesExternalProviderSidecars
+                    || (persistedJournal?.macRequest == request && persistedJournal!.nextItemIndex >= persistedJournal!.totalItemCount) {
+                    externalIntegrations = nil
+                } else if let authority = settings.executionExternalProviderCaptureAuthority {
+                    externalIntegrations = try IPhoneConnectedCorpusProducer.restoreProviders(authority: authority, providers: suppliedIntegrations)
+                } else if persistedJournal?.macRequest == request,
+                          settings.executionSleepCaptureContext?.sleepDayAttribution == .morningEnds {
+                    throw ExternalProviderCaptureAuthority.RecoveryError.unavailable
+                } else {
+                    externalIntegrations = ConnectedAppsFeature.isEnabled ? suppliedIntegrations?.forCaptureOperation() : nil
+                }
+                if persistedJournal?.macRequest != request {
+                    let count = externalIntegrations?.connectedProviderCount ?? 0
+                    settings.executionExternalProviderCaptureAuthority = externalIntegrations?.captureAuthority
+                        ?? (count == 0 ? ExternalProviderCaptureAuthority(connections: [:]) : nil)
+                    settings.executionExternalProviderCaptureAuthorityIsFrozen = true
+                    if settings.executionSleepCaptureContext?.sleepDayAttribution == .morningEnds,
+                       settings.executionExternalProviderCaptureAuthority == nil {
+                        throw ExternalProviderCaptureAuthority.RecoveryError.unavailable
+                    }
+                }
+            } else {
+                externalIntegrations = ConnectedAppsFeature.isEnabled ? suppliedIntegrations?.forCaptureOperation() : nil
+            }
+        } catch {
+            syncService.send(.iphoneExportRejected(IPhoneExportFailure(jobID: request.jobID,
+                reason: .healthKitFetchFailed, message: error.localizedDescription)))
+            return
+        }
+        externalIntegrations?.beginExportAction()
+        defer { externalIntegrations?.endExportAction() }
         let healthSubfolder = VaultManager.savedHealthSubfolder()
         let sourceTimeZone = settings.exportTimeZoneOverride ?? .current
         var sourceCalendar = Calendar(identifier: .gregorian)
@@ -382,7 +415,7 @@ final class IPhoneExportRequestHandler: ObservableObject {
         )))
 
         let dateFormatter = sourceDateFormatter
-        let enabledExternalIntegrations: ExternalIntegrationDailyRecordProviding? = ConnectedAppsFeature.isEnabled ? externalIntegrations : nil
+        let enabledExternalIntegrations = externalIntegrations
         let selectedContextProviderIDs = request.canonicalSelection.map {
             Set($0.sourceIDs).subtracting(["apple_health"])
         }

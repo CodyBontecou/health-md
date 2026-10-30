@@ -444,6 +444,7 @@ private final class ConnectedCorpusOutboundNamespaceStore {
         encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
         self.encoder = encoder
         self.decoder = JSONDecoder()
+        self.decoder.userInfo[ExportSettingsSnapshot.durableSleepContextEncoding] = true
     }
 
     // Avoid Swift 6.2+'s isolated-deinit back-deployment crash when synchronous
