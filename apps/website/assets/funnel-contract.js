@@ -31,6 +31,7 @@ export const FUNNEL_PAGES = Object.freeze({
   polar_export: '/blog/export-polar-flow-data/',
   zepp_export: '/blog/export-zepp-amazfit-data/',
   home_assistant: '/blog/apple-health-home-assistant/',
+  coros_export: '/blog/export-coros-data/',
 });
 export const FUNNEL_LOCALES = Object.freeze(['en', 'es', 'de', 'fr', 'pt-br', 'it', 'nl', 'ja', 'ko', 'zh-hans']);
 export const FUNNEL_ACTIONS = Object.freeze({
