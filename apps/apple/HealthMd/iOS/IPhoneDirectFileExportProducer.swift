@@ -153,9 +153,11 @@ final class IPhoneDirectFileExportProducer {
         }
         // The profile gate must run before even beginning an external-provider
         // export action; a blocked durable resume performs no health-data work.
-        externalIntegrations?.beginExportAction()
+        // New work accepts a grant view before preparation can suspend. Recovery
+        // resolves only the saved selection after validating the durable request.
+        let newProviders = persistedJournal == nil && request.canonicalSelection == nil && ConnectedAppsFeature.isEnabled
+            ? externalIntegrations?.forCaptureOperation() : nil
         var externalExportSucceeded = false
-        defer { externalIntegrations?.endExportAction(succeeded: externalExportSucceeded) }
         let operationAuthority: AppleDirectProtocolAuthority
         let journal: IPhoneDirectFileJournal
         var incomingProtocolLease: IPhoneDirectIncomingProtocolLease?
@@ -194,7 +196,7 @@ final class IPhoneDirectFileExportProducer {
                     protocolPin: protocolPin,
                     protocolAuthority: operationAuthority,
                     healthKitManager: healthKitManager,
-                    connectedProviderCount: externalIntegrations?.connectedProviderCount ?? 0,
+                    providers: newProviders,
                     historyObservationVersion: historyObservationVersion,
                     historyAdmission: historyAdmission
                 )
@@ -204,6 +206,11 @@ final class IPhoneDirectFileExportProducer {
             journal = prepared
         }
 
+        let acceptedProviders = try Self.providersForRemainingCapture(snapshot: journal.settingsSnapshot,
+            needsCapture: journal.capturedDays.count < journal.transferDates.count,
+            providers: persistedJournal == nil ? newProviders : externalIntegrations)
+        acceptedProviders?.beginExportAction()
+        defer { acceptedProviders?.endExportAction(succeeded: externalExportSucceeded) }
         let channel = channel.retainingProtocolAuthority(operationAuthority)
         let queryController = try didAcquireOwnership(journal.checkpoint)
         return try await HealthKitQueryExecutionController.withController(queryController) {
@@ -216,7 +223,7 @@ final class IPhoneDirectFileExportProducer {
                         current,
                         channel: channel,
                         healthKitManager: healthKitManager,
-                        externalIntegrations: externalIntegrations
+                        externalIntegrations: acceptedProviders
                     )
                 }
             }
@@ -371,7 +378,7 @@ final class IPhoneDirectFileExportProducer {
         protocolPin: AppleDirectProtocolPin?,
         protocolAuthority: AppleDirectProtocolAuthority,
         healthKitManager: HealthKitManager,
-        connectedProviderCount: Int,
+        providers: (any ExternalIntegrationDailyRecordProviding)?,
         historyObservationVersion: Int?,
         historyAdmission: HealthHistoryExportAdmission
     ) async throws -> IPhoneDirectFileJournal {
@@ -389,6 +396,15 @@ final class IPhoneDirectFileExportProducer {
         )
         settings.exportTimeZoneOverride = sourceTimeZone
         settings.executionSleepCaptureContext = try healthKitManager.resolveSleepCaptureContext(settings: settings)
+        let selectedProviders = request.canonicalSelection == nil && settings.writesExternalProviderSidecars ? providers : nil
+        let connectedProviderCount = selectedProviders?.connectedProviderCount ?? 0
+        settings.executionExternalProviderCaptureAuthority = selectedProviders?.captureAuthority
+            ?? (connectedProviderCount == 0 ? ExternalProviderCaptureAuthority(connections: [:]) : nil)
+        settings.executionExternalProviderCaptureAuthorityIsFrozen = true
+        if settings.executionSleepCaptureContext?.sleepDayAttribution == .morningEnds,
+           settings.executionExternalProviderCaptureAuthority == nil {
+            throw ExternalProviderCaptureAuthority.RecoveryError.unavailable
+        }
         guard healthKitManager.isAuthorized else {
             throw IPhoneDirectFileProducerError.healthKitNotAuthorized
         }
@@ -488,6 +504,27 @@ final class IPhoneDirectFileExportProducer {
             completionRecorded: false,
             updatedAt: Date()
         )
+    }
+
+    /// Prepared artifacts replay without source access. Missing successor authority
+    /// cannot borrow a new login while an unfinished capture resumes.
+    static func providersForRemainingCapture(
+        snapshot: ExportSettingsSnapshot,
+        needsCapture: Bool,
+        providers: (any ExternalIntegrationDailyRecordProviding)?
+    ) throws -> (any ExternalIntegrationDailyRecordProviding)? {
+        guard needsCapture else { return nil }
+        if let authority = snapshot.externalProviderCaptureAuthority {
+            guard !authority.connections.isEmpty else { return nil }
+            guard let providers else { throw ExternalProviderCaptureAuthority.RecoveryError.unavailable }
+            let accepted = try providers.forCaptureOperation(authority: authority)
+            guard accepted.captureAuthority == authority else { throw ExternalProviderCaptureAuthority.RecoveryError.unavailable }
+            return accepted
+        }
+        guard snapshot.sleepCaptureContext?.sleepDayAttribution != .morningEnds else {
+            throw ExternalProviderCaptureAuthority.RecoveryError.unavailable
+        }
+        return providers?.forCaptureOperation()
     }
 
     /// Selects whole-operation authority before the durable renderer pin is captured. Provider

@@ -127,6 +127,59 @@ struct AppleDirectArtifactRecoveryTests {
         #expect(try FileManager.default.contentsOfDirectory(atPath: directory.path).sorted() == entries)
     }
 
+    @Test(arguments: ["selected", "empty", "unavailable", "missing"])
+    func privateProviderAuthoritySurvivesDirectJournalRecovery(mode: String) async throws {
+        let id = UUID()
+        let authority: ExternalProviderCaptureAuthority?
+        switch mode {
+        case "selected": authority = .init(connections: ["whoop": id])
+        case "empty": authority = .init(connections: [:])
+        case "unavailable": authority = .init(connections: ["whoop": nil])
+        default: authority = nil
+        }
+        let (storage, directory, journal) = try await fixture(authority: authority)
+        defer { try? FileManager.default.removeItem(at: storage.support) }
+        let bytes = try encode(journal)
+        let journalURL = directory.appendingPathComponent("journal.json")
+        try bytes.write(to: journalURL)
+        let restored = try #require(try storage.loadGeneratedJournal(jobID: journal.request.jobID))
+        #expect(restored.settingsSnapshot.externalProviderCaptureAuthority == authority)
+        #expect(try Data(contentsOf: journalURL) == bytes)
+        #expect(!String(decoding: try JSONEncoder().encode(restored.settingsSnapshot), as: UTF8.self)
+            .contains("externalProviderCaptureAuthority"))
+        #if os(iOS)
+        let suite = "DirectProviderRecovery.\(UUID())"
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let tokens = ExternalIntegrationTokenStore(keychain: DirectProviderMemoryStore(), userDefaults: defaults)
+        try tokens.save(token: ExternalIntegrationToken(accessToken: "synthetic-replacement"), provider: .whoop)
+        let replacement = ExternalIntegrationManager(tokenStore: tokens, enabledProviders: [.whoop],
+            brokerClient: ExternalOAuthBrokerClient(), apiClient: ExternalProviderAPIClient())
+        // A retained artifact never needs source credentials, including historical
+        // drafts with no source authority. No provider factory runs on replay.
+        #expect(try IPhoneDirectFileExportProducer.providersForRemainingCapture(snapshot: restored.settingsSnapshot,
+            needsCapture: false, providers: nil) == nil)
+        if mode == "missing" {
+            #expect(throws: ExternalProviderCaptureAuthority.RecoveryError.self) {
+                _ = try IPhoneDirectFileExportProducer.providersForRemainingCapture(snapshot: restored.settingsSnapshot,
+                    needsCapture: true, providers: replacement)
+            }
+        } else {
+            let accepted = try IPhoneDirectFileExportProducer.providersForRemainingCapture(snapshot: restored.settingsSnapshot,
+                needsCapture: true, providers: replacement)
+            if mode == "empty" { #expect(accepted == nil) }
+            else {
+                #expect(try #require(accepted).captureAuthority == authority)
+                #expect(accepted?.captureAuthority != replacement.captureAuthority)
+                #expect(throws: ExternalProviderCaptureAuthority.RecoveryError.self) {
+                    _ = try IPhoneDirectFileExportProducer.providersForRemainingCapture(snapshot: restored.settingsSnapshot,
+                        needsCapture: true, providers: nil)
+                }
+            }
+        }
+        #endif
+    }
+
     #if os(iOS)
     @Test(arguments: ["valid-expired", "corrupt-expired", "corrupt-unexpired"])
     func actualCoordinatorExpiryRetainsCorruptSpoolsAndSkipsUnexpiredContent(mode: String) async throws {
@@ -161,7 +214,8 @@ struct AppleDirectArtifactRecoveryTests {
     }
     #endif
 
-    private func fixture(attribution: SleepDayAttribution = .morningEnds, legacyProtocol: Bool = false) async throws -> (AppleDirectJobStorage, URL, IPhoneDirectFileJournal) {
+    private func fixture(attribution: SleepDayAttribution = .morningEnds, legacyProtocol: Bool = false,
+                         authority: ExternalProviderCaptureAuthority? = nil) async throws -> (AppleDirectJobStorage, URL, IPhoneDirectFileJournal) {
         let support = FileManager.default.temporaryDirectory.appendingPathComponent("synthetic-direct-artifacts-\(UUID())")
         try FileManager.default.createDirectory(at: support, withIntermediateDirectories: true)
         var ready = false
@@ -186,6 +240,7 @@ struct AppleDirectArtifactRecoveryTests {
         settings.executionSleepCaptureContext = AppleSleepCaptureContext(
             timeZone: try #require(TimeZone(identifier: "America/Los_Angeles")), sleepDayAttribution: attribution)
         settings.executionSleepCaptureContextIsFrozen = true
+        settings.executionExternalProviderCaptureAuthority = authority
         let snapshot = await ExportSettingsSnapshot.forNewAppleOperation(settings, healthSubfolder: "Health",
             surface: .localVaultWithoutSideEffects,
             policyResolver: AppleExportEnginePolicyResolver(injectedOverride: "legacy", userDefaults: nil, environment: [:]))
@@ -237,5 +292,14 @@ nonisolated private final class ArtifactRecoverySupportFileManager: FileManager,
         if path.contains("/generated") { inspectionLock.withLock { inspectionCount += 1 } }
         return try super.attributesOfItem(atPath: path)
     }
+}
+#endif
+
+#if os(iOS)
+@MainActor private final class DirectProviderMemoryStore: ExternalIntegrationSecureStoring {
+    private var values: [String: String] = [:]
+    func readString(key: String) -> String? { values[key] }
+    func writeStringOrThrow(key: String, value: String) throws { values[key] = value }
+    func removeOrThrow(key: String) throws { values[key] = nil }
 }
 #endif

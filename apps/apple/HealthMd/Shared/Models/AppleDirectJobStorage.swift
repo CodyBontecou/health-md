@@ -77,11 +77,14 @@ struct AppleDirectJobStorage {
         #if os(iOS)
         attributes[.protectionKey] = FileProtectionType.completeUntilFirstUserAuthentication
         #endif
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        decoder.userInfo[ExportSettingsSnapshot.durableSleepContextEncoding] = true
         let saved: (journal: IPhoneDirectFileJournal, checkpoint: AppleExportJournalCheckpoint)? =
             try AppleExportJournalRecovery.loadOwned(
                 at: directory.appendingPathComponent("journal.json"),
                 lockURL: lock(namespace), durabilityRoot: support, fileManager: fileManager,
-                attributes: attributes, legacyCompletionIdentity: { $0.request.jobID },
+                decoder: decoder, attributes: attributes, legacyCompletionIdentity: { $0.request.jobID },
                 isSupported: { journal in
                     guard journal.request.jobID == jobID,
                           IPhoneDirectFileJournal.isSupportedVersion(journal.version),
