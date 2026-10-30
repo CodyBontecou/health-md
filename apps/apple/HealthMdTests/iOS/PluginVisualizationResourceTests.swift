@@ -2,7 +2,7 @@ import Foundation
 import XCTest
 
 final class PluginVisualizationResourceTests: XCTestCase {
-    private let pinnedPluginRevision = "cbd88e4f00b7d0ec02bbfb3d853dcfb0f18c62c1"
+    private let pinnedPluginRevision = "649f869a144e121fcce7fb35ca3eaf68b41bc0bd"
     func testOnboardingResourcesMatchPinnedWebsitePluginAndSamples() throws {
         let root = try repositoryRoot()
         let website = root.appendingPathComponent("apps/website")
