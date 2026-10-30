@@ -14,3 +14,5 @@ No Fitbit/Google account access, phone, permission flow, export, spreadsheet or 
 - [x] History follows https://developer.android.com/health-and-fitness/health-connect/read-data#read-older-data: window before the initial Health.md grant plus later records; conditional broader access, separate source backfill, missingness not zero. Sleep attribution links existing examples; no contract changed.
 - [x] Privacy follows maintained policy and Health Connect guide: no Health.md account/server copy by default, separate Google/provider services, optional single-owner pilot only intentionally uploaded API exports, no public signup/automatic sync/general availability. Publication guard includes this slug.
 - [x] Android platform selects Google Play and no Apple-only CTA. Three related guides and incoming Android Obsidian recommendation use existing graph/generator; ledger excluded. No pricing, billing quota or entitlement claim added.
+
+- [x] Related recommendations now include the Oura chooser; discovery metadata only, article body unchanged. Garmin retains another incoming recommendation.

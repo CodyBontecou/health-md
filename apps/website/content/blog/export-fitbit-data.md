@@ -11,7 +11,7 @@ platform: android
 category: "Workflow guide"
 related:
   - export-health-connect-to-obsidian
-  - export-garmin-connect-data
+  - export-oura-data
   - export-samsung-health-data
 draft: false
 tags:
