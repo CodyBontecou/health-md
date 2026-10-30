@@ -87,9 +87,6 @@ struct ExportUpgradePrompt: View {
         .onAppear {
             guard !didTrackShown else { return }
             didTrackShown = true
-            PricingAnalyticsClient.shared.trackUpgradePromptShown(
-                quotaState: purchaseManager.analyticsQuotaState
-            )
         }
         .task {
             if !isFirstExport { await purchaseManager.loadProductsIfNeeded() }

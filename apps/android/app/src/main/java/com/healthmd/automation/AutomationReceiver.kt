@@ -253,7 +253,7 @@ class AutomationReceiver : BroadcastReceiver() {
         entitlementRepository.refresh()
         val isPurchased = distributionPolicy.fullAccessIncluded ||
             settingsRepository.isPurchased.first() ||
-            entitlementRepository.isUnlocked.first()
+            entitlementRepository.verifyAccess()
         val freeExportsRemaining = settingsRepository.getFreeExportsRemaining()
         // A folder-bound profile satisfies the destination requirement on its own.
         val folderUri = settingsRepository.getExportFolderUri()

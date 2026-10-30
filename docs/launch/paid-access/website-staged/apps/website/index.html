@@ -1,0 +1,588 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Export Apple Health and Health Connect | Health.md</title>
+  <meta name="description" content="Export selected Apple Health and Health Connect data to CSV, JSON, Markdown, or Obsidian Bases. Choose your metrics, dates, and destination folder.">
+  <link rel="canonical" href="https://healthmd.app/">
+  <link rel="alternate" hreflang="en" href="https://healthmd.app/">
+  <link rel="alternate" hreflang="es" href="https://healthmd.app/es/">
+  <link rel="alternate" hreflang="x-default" href="https://healthmd.app/">
+  <meta name="robots" content="index,follow">
+  <meta name="theme-color" content="#fafaf8">
+
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Health.md">
+  <meta property="og:locale" content="en_US">
+  <meta property="og:locale:alternate" content="es_ES">
+  <meta property="og:title" content="Apple Health and Health Connect exports">
+  <meta property="og:description" content="Export selected Apple Health and Health Connect data to CSV, JSON, Markdown, or Obsidian Bases. Choose your metrics, dates, and destination folder.">
+  <meta property="og:url" content="https://healthmd.app/">
+  <meta property="og:image" content="https://healthmd.app/assets/app-icon/icon_1024x1024.png">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="Export Apple Health and Health Connect | Health.md">
+  <meta name="twitter:description" content="Your Apple Health and Health Connect data as CSV, JSON, Markdown, or Obsidian Bases files. Select metrics and dates, then save to a folder you choose.">
+  <meta name="twitter:image" content="https://healthmd.app/assets/app-icon/icon_1024x1024.png">
+
+  <link rel="icon" href="favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/app-icon/icon_32x32.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="assets/app-icon/icon_192x192.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="assets/app-icon/icon_180x180.png">
+  <script id="healthmd-locale-redirect">
+    /* Generated from i18n/locales.mjs by scripts/build-localized-pages.mjs. */
+  </script>
+  <script>document.documentElement.classList.add("has-js");</script>
+  <link rel="stylesheet" href="assets/landing.css">
+  <script src="assets/landing.js" defer></script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "Health.md",
+    "applicationCategory": "HealthApplication",
+    "operatingSystem": "Android, iOS, iPadOS, macOS, Linux, Windows",
+    "url": "https://healthmd.app/",
+    "inLanguage": "en",
+    "downloadUrl": [
+      "https://apps.apple.com/us/app/health-md/id6757763969",
+      "https://play.google.com/store/apps/details?id=com.healthmd.android"
+    ],
+    "description": "Health.md is a private bridge from Apple Health and Android Health Connect to local files, automation, CLI workflows, and local agents.",
+    "isAccessibleForFree": true,
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD",
+      "description": "Android access: Google Play offers weekly/yearly subscriptions and Lifetime. Eligible subscriptions include a 7-day free trial. F-Droid catalog publication is pending."
+    },
+    "publisher": {
+      "@type": "Organization",
+      "name": "isolated.tech",
+      "url": "https://isolated.tech"
+    },
+    "featureList": [
+      "Export Apple Health and Health Connect data to Markdown, CSV, and JSON",
+      "Schedule local exports and trigger automation workflows",
+      "Query exact health data through a standalone CLI and local MCP server",
+      "Operate locally without requiring a Health.md health-data cloud"
+    ]
+  }
+  </script>
+</head>
+<body>
+  <a class="skip-link" href="#hero-title">Skip to content</a>
+
+  <header class="site-header">
+    <div class="header-shell">
+      <a class="brand" href="#top" aria-label="Health.md home">
+        <span class="brand-name">health.md</span>
+      </a>
+
+      <div class="header-nav">
+        <nav aria-label="Main navigation">
+          <a class="header-docs-link" href="docs/">Docs</a>
+          <a class="header-docs-link" href="/blog/" hreflang="en">Guides</a>
+        </nav>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero" id="top" aria-labelledby="hero-title">
+      <div class="hero-intro reveal">
+        <h1 id="hero-title">Export your<br>health data.</h1>
+        <p>Your data. Your rules.</p>
+      </div>
+
+      <div class="flow-map reveal" role="img" aria-label="Health data from Apple Health, Health Connect, WHOOP, Oura, Strava, and Garmin flowing privately through Health.md into files, your doctor, scripts, and AI">
+        <svg class="flow-art" viewBox="0 0 1010 430" preserveAspectRatio="none" aria-hidden="true">
+          <defs>
+            <linearGradient id="thread-gradient" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0" stop-color="#dddce3" stop-opacity="0.16"></stop>
+              <stop offset="0.28" stop-color="#d8d5e2" stop-opacity="0.74"></stop>
+              <stop offset="0.72" stop-color="#b8add4" stop-opacity="0.82"></stop>
+              <stop offset="1" stop-color="#8f63ff" stop-opacity="0.22"></stop>
+            </linearGradient>
+            <linearGradient id="route-gradient" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0" stop-color="#c4bcdf" stop-opacity="0.45"></stop>
+              <stop offset="1" stop-color="#9567ff" stop-opacity="0.92"></stop>
+            </linearGradient>
+            <radialGradient id="core-halo">
+              <stop offset="0" stop-color="#b997ff" stop-opacity="0.18"></stop>
+              <stop offset="0.42" stop-color="#c9b4ff" stop-opacity="0.08"></stop>
+              <stop offset="1" stop-color="#ffffff" stop-opacity="0"></stop>
+            </radialGradient>
+          </defs>
+
+          <ellipse class="core-halo" cx="692" cy="218" rx="92" ry="92" fill="url(#core-halo)"></ellipse>
+          <g class="thread-field" data-thread-field></g>
+          <g class="thread-particles" data-thread-particles></g>
+          <g class="route-lines">
+            <path d="M692 218 C792 212 824 34 900 34"></path>
+            <path d="M692 218 C792 216 828 155 900 155"></path>
+            <path d="M692 218 C792 220 828 275 900 275"></path>
+            <path d="M692 218 C792 224 824 396 900 396"></path>
+          </g>
+        </svg>
+
+        <div class="source-list" aria-hidden="true">
+          <span class="source-node source-apple-health">
+            <img src="assets/brand-icons/apple-health.png" width="32" height="32" decoding="async" alt="">
+          </span>
+          <span class="source-node source-health-connect">
+            <img src="assets/brand-icons/health-connect.png" width="32" height="32" decoding="async" alt="">
+          </span>
+          <span class="source-node source-whoop">
+            <img src="https://img.logo.dev/whoop.com?token=pk_O_ZGdx4QSLCUENuM4MHPlg&amp;size=96&amp;format=png&amp;retina=true" width="32" height="32" decoding="async" referrerpolicy="origin" alt="">
+          </span>
+          <span class="source-node source-oura">
+            <img src="https://img.logo.dev/ouraring.com?token=pk_O_ZGdx4QSLCUENuM4MHPlg&amp;size=96&amp;format=png&amp;retina=true" width="32" height="32" decoding="async" referrerpolicy="origin" alt="">
+          </span>
+          <span class="source-node source-strava">
+            <img src="https://img.logo.dev/strava.com?token=pk_O_ZGdx4QSLCUENuM4MHPlg&amp;size=96&amp;format=png&amp;retina=true" width="32" height="32" decoding="async" referrerpolicy="origin" alt="">
+          </span>
+          <span class="source-node source-garmin">
+            <img src="https://img.logo.dev/garmin.com?token=pk_O_ZGdx4QSLCUENuM4MHPlg&amp;size=96&amp;format=png&amp;retina=true" width="32" height="32" decoding="async" referrerpolicy="origin" alt="">
+          </span>
+        </div>
+
+        <div class="flow-core" aria-hidden="true">
+          <img src="assets/app-icon/healthmd-mark.png" width="58" height="58" decoding="async" alt="">
+        </div>
+
+        <div class="outcome outcome-files">
+          <span class="outcome-stack outcome-stack-three" aria-hidden="true">
+            <span class="outcome-logo-card"><img src="https://img.logo.dev/dropbox.com?token=pk_O_ZGdx4QSLCUENuM4MHPlg&amp;size=96&amp;format=png&amp;retina=true" width="32" height="32" decoding="async" referrerpolicy="origin" alt=""></span>
+            <span class="outcome-logo-card"><img src="https://img.logo.dev/google.com?token=pk_O_ZGdx4QSLCUENuM4MHPlg&amp;size=96&amp;format=png&amp;retina=true" width="32" height="32" decoding="async" referrerpolicy="origin" alt=""></span>
+            <span class="outcome-logo-card"><img src="https://img.logo.dev/icloud.com?token=pk_O_ZGdx4QSLCUENuM4MHPlg&amp;size=96&amp;format=png&amp;retina=true" width="32" height="32" decoding="async" referrerpolicy="origin" alt=""></span>
+          </span>
+          <span class="outcome-label">Files</span>
+        </div>
+        <div class="outcome outcome-doctor">
+          <span class="outcome-stack outcome-stack-three" aria-hidden="true">
+            <span class="outcome-logo-card"><img src="assets/brand-icons/apple-health.png" width="32" height="32" decoding="async" alt=""></span>
+            <span class="outcome-logo-card"><img src="https://img.logo.dev/kaiserpermanente.org?token=pk_O_ZGdx4QSLCUENuM4MHPlg&amp;size=96&amp;format=png&amp;retina=true" width="32" height="32" decoding="async" referrerpolicy="origin" alt=""></span>
+            <span class="outcome-logo-card"><img src="https://img.logo.dev/commonhealth.org?token=pk_O_ZGdx4QSLCUENuM4MHPlg&amp;size=96&amp;format=png&amp;retina=true" width="32" height="32" decoding="async" referrerpolicy="origin" alt=""></span>
+          </span>
+          <span class="outcome-label">Doctor</span>
+        </div>
+        <div class="outcome outcome-scripts">
+          <span class="outcome-stack outcome-stack-four" aria-hidden="true">
+            <span class="outcome-logo-card"><img src="https://img.logo.dev/nodejs.org?token=pk_O_ZGdx4QSLCUENuM4MHPlg&amp;size=96&amp;format=png&amp;retina=true" width="32" height="32" decoding="async" referrerpolicy="origin" alt=""></span>
+            <span class="outcome-logo-card outcome-icon-card">
+              <svg class="lucide lucide-square-terminal" viewBox="0 0 24 24">
+                <path d="m7 11 2-2-2-2"></path>
+                <path d="M11 13h4"></path>
+                <rect width="18" height="18" x="3" y="3" rx="2" ry="2"></rect>
+              </svg>
+            </span>
+            <span class="outcome-logo-card"><img src="https://img.logo.dev/js.org?token=pk_O_ZGdx4QSLCUENuM4MHPlg&amp;size=96&amp;format=png&amp;retina=true" width="32" height="32" decoding="async" referrerpolicy="origin" alt=""></span>
+            <span class="outcome-logo-card"><img src="https://img.logo.dev/python.org?token=pk_O_ZGdx4QSLCUENuM4MHPlg&amp;size=96&amp;format=png&amp;retina=true" width="32" height="32" decoding="async" referrerpolicy="origin" alt=""></span>
+          </span>
+          <span class="outcome-label">Scripts</span>
+        </div>
+        <div class="outcome outcome-ai">
+          <span class="outcome-stack outcome-stack-four" aria-hidden="true">
+            <span class="outcome-logo-card"><img src="https://img.logo.dev/openai.com?token=pk_O_ZGdx4QSLCUENuM4MHPlg&amp;size=96&amp;format=png&amp;retina=true" width="32" height="32" decoding="async" referrerpolicy="origin" alt=""></span>
+            <span class="outcome-logo-card"><img src="https://img.logo.dev/anthropic.com?token=pk_O_ZGdx4QSLCUENuM4MHPlg&amp;size=96&amp;format=png&amp;retina=true" width="32" height="32" decoding="async" referrerpolicy="origin" alt=""></span>
+            <span class="outcome-logo-card"><img src="https://img.logo.dev/huggingface.co?token=pk_O_ZGdx4QSLCUENuM4MHPlg&amp;size=96&amp;format=png&amp;retina=true" width="32" height="32" decoding="async" referrerpolicy="origin" alt=""></span>
+            <span class="outcome-logo-card"><img src="https://img.logo.dev/deepseek.com?token=pk_O_ZGdx4QSLCUENuM4MHPlg&amp;size=96&amp;format=png&amp;retina=true" width="32" height="32" decoding="async" referrerpolicy="origin" alt=""></span>
+          </span>
+          <span class="outcome-label">AI</span>
+        </div>
+      </div>
+
+      <div class="hero-pitch reveal">
+        <p class="hero-description">A private bridge for your health data<br>to your files, scripts, and agents.</p>
+        <div class="hero-actions" aria-label="Download Health.md">
+          <a class="hero-store-badge hero-store-badge-apple" href="https://apps.apple.com/us/app/health-md/id6757763969" target="_blank" rel="noopener">
+            <img src="assets/store-badges/download-on-app-store.svg" width="120" height="40" decoding="async" alt="Download Health.md on the App Store">
+          </a>
+          <a class="hero-store-badge hero-store-badge-google" href="https://play.google.com/store/apps/details?id=com.healthmd.android" target="_blank" rel="noopener">
+            <img src="assets/store-badges/get-it-on-google-play.png" width="646" height="250" decoding="async" alt="Get Health.md on Google Play">
+          </a>
+        </div>
+        <p class="hero-trust">Local-first by default.<br>The optional single-owner Health.md Cloud pilot retains only intentionally uploaded exports; no public signup.</p>
+      </div>
+    </section>
+
+    <section class="export-showcase" id="exports" aria-labelledby="exports-title">
+      <div class="export-copy reveal">
+        <h2 id="exports-title">Your health data,<br>as ordinary files.</h2>
+        <p class="export-lede">Pick your metrics. Export them as Markdown, JSON, CSV, or Obsidian Bases.</p>
+
+        <div class="format-picker" role="group" aria-label="Choose a sample export format">
+          <button class="format-option is-active" type="button" data-export-format="markdown" aria-pressed="true">
+            <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M4 7h24v18H4z"></path><path d="M8 20v-8l4 5 4-5v8"></path><path d="M22 12v8m-3-3 3 3 3-3"></path></svg>
+            <span>Markdown</span>
+          </button>
+          <button class="format-option" type="button" data-export-format="json" aria-pressed="false">
+            <span class="format-braces" aria-hidden="true">{ }</span>
+            <span>JSON</span>
+          </button>
+          <button class="format-option" type="button" data-export-format="csv" aria-pressed="false">
+            <svg viewBox="0 0 32 32" aria-hidden="true"><rect x="5" y="6" width="22" height="20" rx="2"></rect><path d="M5 12h22M5 18h22M12 6v20M20 6v20"></path></svg>
+            <span>CSV</span>
+          </button>
+          <button class="format-option" type="button" data-export-format="obsidian" aria-pressed="false">
+            <svg viewBox="0 0 32 32" aria-hidden="true"><path d="m17 3 8 8-2 14-8 4-8-9 4-14Z"></path><path d="m11 6 6 8-2 15m2-15 8-3M7 20l10-6"></path></svg>
+            <span>Obsidian</span>
+          </button>
+        </div>
+
+        <div class="export-actions">
+          <a class="sample-download" href="assets/samples/health-data-sample.md" download data-sample-download>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12"></path><path d="m7 10 5 5 5-5"></path><path d="M5 21h14"></path></svg>
+            <span>Download a sample</span>
+          </a>
+          <a class="formats-link" href="docs/reference/export-formats/">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3h7v7"></path><path d="M10 14 21 3"></path><path d="M21 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5"></path></svg>
+            <span>Explore export formats</span>
+          </a>
+        </div>
+        <ul class="workflow-links" aria-label="Export walkthroughs">
+          <li><a href="apple-health-export/">Choose an export workflow</a></li>
+          <li><a href="apple-health-to-csv/">Export to CSV</a></li>
+          <li><a href="blog/export-apple-health-data-to-obsidian/">Add health data to Obsidian</a> · <a href="blog/export-apple-health-data-to-obsidian/#starter-vault">Try the free starter vault</a></li>
+          <li><a href="health-connect-export/">Export from Health Connect</a></li>
+        </ul>
+
+      </div>
+
+      <figure class="export-phone-wrap reveal">
+        <div class="export-phone" role="img" aria-label="Apple Health Summary displayed in a white iPhone 17 Pro">
+          <img class="export-phone-screen" src="assets/screenshots/showcase/apple-health-summary.png" width="1206" height="2622" loading="lazy" decoding="async" alt="Apple Health Summary showing sleep score, steps, walking distance, and weight">
+          <img class="export-phone-frame" src="assets/screenshots/showcase/iphone-17-pro-silver.png" width="1350" height="2760" loading="lazy" decoding="async" alt="">
+        </div>
+      </figure>
+
+      <div class="export-transfer reveal" aria-hidden="true"><span></span><span></span><span></span><span></span><svg viewBox="0 0 24 24"><path d="M5 12h14M14 7l5 5-5 5"></path></svg></div>
+
+      <div class="file-preview-stack reveal" data-preview-stack aria-live="polite" aria-label="Selected export files">
+        <article class="file-preview" data-preview-format="markdown">
+          <header class="file-preview-header">
+            <span><strong>health-data-sample.md</strong><small>1.2 KB</small></span>
+            <svg class="file-success" viewBox="0 0 24 24" aria-label="Sample file ready"><circle cx="12" cy="12" r="9"></circle><path d="m8 12 3 3 5-6"></path></svg>
+          </header>
+          <div class="file-preview-body">
+            <h3># Health Data Sample</h3>
+            <p><em>*Sample data only. These values are fictional.*</em></p>
+            <table>
+              <thead><tr><th>Metric</th><th>Value</th></tr></thead>
+              <tbody>
+                <tr><td>Date</td><td>August 2, 2026</td></tr>
+                <tr><td>Steps</td><td>8,421 steps</td></tr>
+                <tr><td>Sleep</td><td>7 hr 42 min</td></tr>
+                <tr><td>Resting heart rate</td><td>58 bpm</td></tr>
+                <tr><td>Walking distance</td><td>4.1 mi</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="schedule-showcase" id="scheduling" aria-labelledby="scheduling-title">
+      <figure class="schedule-phone-wrap reveal">
+        <div class="schedule-phone" role="img" aria-label="Health.md scheduled exports displayed in a white iPhone 17 Pro">
+          <img class="schedule-phone-screen" src="assets/screenshots/showcase/scheduled-exports.png" width="1206" height="2622" loading="lazy" decoding="async" alt="Health.md Scheduled Exports screen with automatic export enabled and a local iPhone folder selected">
+          <img class="schedule-phone-frame" src="assets/screenshots/showcase/iphone-17-pro-silver.png" width="1350" height="2760" loading="lazy" decoding="async" alt="">
+        </div>
+      </figure>
+
+      <div class="schedule-map reveal" aria-label="A daily Health.md export flowing to files, Obsidian, and API automations">
+        <div class="schedule-frequency" role="group" aria-label="Preview export frequency">
+          <button class="is-active" type="button" data-schedule-frequency="daily" aria-pressed="true">Daily</button>
+          <button type="button" data-schedule-frequency="weekly" aria-pressed="false">Weekly</button>
+          <button type="button" data-schedule-frequency="monthly" aria-pressed="false">Monthly</button>
+        </div>
+
+        <svg class="schedule-routes schedule-routes-desktop" viewBox="0 0 500 660" preserveAspectRatio="none" aria-hidden="true">
+          <defs>
+            <marker id="schedule-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z"></path>
+            </marker>
+          </defs>
+          <path class="schedule-route-main" d="M170 62 V473"></path>
+          <path class="schedule-route-branch" marker-end="url(#schedule-arrow)" d="M184 495 C260 495 250 211 314 211"></path>
+          <path class="schedule-route-branch" marker-end="url(#schedule-arrow)" d="M184 495 C260 495 254 329 314 329"></path>
+          <path class="schedule-route-branch" marker-end="url(#schedule-arrow)" d="M184 495 C255 495 264 447 314 447"></path>
+        </svg>
+
+        <svg class="schedule-routes schedule-routes-mobile" viewBox="0 0 350 590" preserveAspectRatio="none" aria-hidden="true">
+          <defs>
+            <marker id="schedule-arrow-mobile" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z"></path>
+            </marker>
+          </defs>
+          <path class="schedule-route-main" d="M175 58 V351"></path>
+          <path class="schedule-route-trunk" d="M175 416 V425"></path>
+          <path class="schedule-route-branch" marker-end="url(#schedule-arrow-mobile)" d="M175 425 H55 V460"></path>
+          <path class="schedule-route-branch" marker-end="url(#schedule-arrow-mobile)" d="M175 425 V460"></path>
+          <path class="schedule-route-branch" marker-end="url(#schedule-arrow-mobile)" d="M175 425 H295 V460"></path>
+        </svg>
+
+        <div class="schedule-clock" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>
+          <strong class="schedule-time" data-schedule-time>7:00 AM</strong>
+        </div>
+
+        <div class="schedule-export-node" aria-hidden="true">
+          <img src="assets/app-icon/icon_80x80.png" width="58" height="58" decoding="async" alt="">
+          <strong class="schedule-export-label">Export</strong>
+        </div>
+
+        <div class="schedule-file" aria-live="polite">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H7a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7Z"></path><path d="M14 2v5h5"></path></svg>
+          <span data-schedule-file>Health/<br>2026-08-03.md</span>
+        </div>
+
+        <div class="schedule-destinations">
+          <div class="schedule-destination">
+            <span class="schedule-destination-logo"><img src="assets/brand-icons/destinations/icloud.png" width="48" height="48" loading="lazy" decoding="async" alt=""></span>
+            <span><strong>Files</strong><small>Local or cloud folder</small></span>
+          </div>
+          <div class="schedule-destination">
+            <span class="schedule-destination-logo"><img src="assets/brand-icons/destinations/obsidian.png" width="48" height="48" loading="lazy" decoding="async" alt=""></span>
+            <span><strong>Obsidian</strong><small>Your vault, updated</small></span>
+          </div>
+          <div class="schedule-destination">
+            <span class="schedule-destination-logo"><img src="assets/brand-icons/destinations/zapier.png" width="48" height="48" loading="lazy" decoding="async" alt=""></span>
+            <span><strong>API workflows</strong><small>Send JSON to your tools</small></span>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="schedule-copy reveal">
+        <h2 id="scheduling-title">Your health data, scheduled.</h2>
+        <p>Choose when Health.md exports and where the files go.</p>
+
+        <ul class="schedule-benefits">
+          <li>
+            <span><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="2" width="10" height="20" rx="2"></rect><path d="M11 18h2"></path></svg></span>
+            <div><strong>Runs from your device</strong><p>Scheduled exports use your iPhone.</p></div>
+          </li>
+          <li>
+            <span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20v-7M9 20V8M14 20V4M19 20v-10"></path><path d="M2 20h20"></path></svg></span>
+            <div><strong>Uses the metrics you choose</strong><p>Pick the categories and date range.</p></div>
+          </li>
+          <li>
+            <span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h6l2 2h10v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"></path></svg></span>
+            <div><strong>Saves where you want</strong><p>Choose a folder, Obsidian vault, or API.</p></div>
+          </li>
+        </ul>
+
+        <p class="schedule-device-note">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10" width="14" height="11" rx="2"></rect><path d="M8 10V7a4 4 0 0 1 8 0v3"></path></svg>
+          Your iPhone must be unlocked when a scheduled export runs.
+        </p>
+        <p class="workflow-link"><a href="docs/scheduling/">Set up scheduled exports</a></p>
+      </div>
+    </section>
+
+    <section class="agent-showcase" id="agents" aria-labelledby="agents-title">
+      <div class="agent-copy reveal">
+        <h2 id="agents-title">Your health data,<br>ready for questions.</h2>
+        <p class="agent-lede">Connect Health.md to Codex, Claude, or your terminal for exact questions about metrics, sleep, workouts, and coverage from a paired device. The separate single-owner cloud pilot can query only exports intentionally uploaded to it.</p>
+
+        <p class="workflow-link"><a href="health-data-for-ai/">Choose an AI workflow</a></p>
+
+        <div class="agent-actions">
+          <a class="agent-primary-action" href="docs/guides/connect-agent/">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+            <span>Connect an agent</span>
+          </a>
+          <a class="agent-secondary-action" href="docs/cli/">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 17 6-6-6-6"></path><path d="M12 19h8"></path></svg>
+            <span>Explore CLI &amp; MCP</span>
+          </a>
+        </div>
+
+      </div>
+
+      <div class="agent-visual reveal" data-agent-preview>
+        <div class="agent-tabs" role="group" aria-label="Choose an agent interface">
+          <button class="is-active" type="button" data-agent-client="codex" aria-pressed="true">Codex</button>
+          <span aria-hidden="true">•</span>
+          <button type="button" data-agent-client="claude" aria-pressed="false">Claude</button>
+          <span aria-hidden="true">•</span>
+          <button type="button" data-agent-client="terminal" aria-pressed="false">Terminal</button>
+        </div>
+
+        <div class="agent-questions">
+          <div class="agent-questions-heading">Your questions</div>
+          <ol>
+            <li class="is-active">
+              <span>1</span>
+              <p data-agent-question="0">Compare my average resting heart rate this week with last week.</p>
+            </li>
+            <li>
+              <span>2</span>
+              <p data-agent-question="1">Show sleep sessions around my running workouts.</p>
+            </li>
+            <li>
+              <span>3</span>
+              <p data-agent-question="2">Which days are missing sleep data?</p>
+            </li>
+          </ol>
+        </div>
+
+        <svg class="agent-route" viewBox="0 0 885 710" preserveAspectRatio="none" aria-hidden="true">
+          <path d="M234 221 H261 Q274 221 274 234 V321 Q274 334 287 334 H324"></path>
+          <path d="M420 334 H514"></path>
+        </svg>
+
+        <div class="agent-hub">
+          <span class="agent-hub-mark"><img src="assets/app-icon/healthmd-mark.png" width="256" height="256" loading="lazy" decoding="async" alt=""></span>
+          <p><strong data-agent-transport-title>Health.md MCP</strong><span data-agent-transport-note>· scoped request</span></p>
+        </div>
+
+        <div class="agent-answer-group">
+          <article class="agent-result-card" aria-label="Example Health.md answer">
+            <header>
+              <h3>Resting heart rate</h3>
+            </header>
+            <dl>
+              <div>
+                <dt>This week</dt>
+                <dd><strong>58</strong><span>bpm</span><small>average</small></dd>
+              </div>
+              <div>
+                <dt>Last week</dt>
+                <dd><strong>60</strong><span>bpm</span><small>average</small></dd>
+              </div>
+              <div class="agent-result-difference">
+                <dt>Difference</dt>
+                <dd>Decreased by 2 bpm</dd>
+              </div>
+            </dl>
+          </article>
+
+          <aside class="agent-evidence-card" aria-label="Example answer context">
+            <ul>
+              <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78Z"></path></svg><span>Apple Health</span></li>
+              <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 2v4"></path><path d="M16 2v4"></path><rect width="18" height="18" x="3" y="4" rx="2"></rect><path d="M3 10h18"></path></svg><span>Coverage: 14 of 14 days</span></li>
+              <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20v-7"></path><path d="M9 20V8"></path><path d="M14 20V4"></path><path d="M19 20V10"></path></svg><span>14 observations</span></li>
+              <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"></path><path d="m9 12 2 2 4-4"></path></svg><span>Evidence available</span></li>
+            </ul>
+          </aside>
+        </div>
+      </div>
+    </section>
+
+    <section class="testimonials" id="reviews" lang="en" aria-labelledby="reviews-title">
+      <div class="testimonials-inner">
+        <header class="testimonials-heading reveal">
+          <p class="testimonials-eyebrow">From the App Store</p>
+          <h2 id="reviews-title">Good words.<br>From real people.</h2>
+          <p>A few words from people using Health.md.</p>
+        </header>
+        <div class="testimonials-wall" data-testimonials>
+        <div class="testimonials-row"><div class="testimonials-track"><div class="testimonials-group">
+          <figure class="testimonial-card" data-review-id="00000192-cb4b-8103-31ae-0b7100000000">
+            <p class="testimonial-rating" aria-label="5 out of 5 stars"><span aria-hidden="true">★★★★★</span></p>
+            <blockquote><p>“Works great, I needed a solution to export my health file to markdown locally. This allows me to have that.”</p></blockquote>
+            <figcaption>
+              <span class="testimonial-author">Manjil</span>
+              <span class="testimonial-source">App Store review · <time datetime="2026-02-05">Feb 5, 2026</time></span>
+            </figcaption>
+          </figure>
+          <figure class="testimonial-card" data-review-id="00000192-cb4b-8103-5dde-c28500000000">
+            <p class="testimonial-rating" aria-label="5 out of 5 stars"><span aria-hidden="true">★★★★★</span></p>
+            <blockquote><p>“I’ve looked for a long time off and on for a good way to get my Apple Health data to my Mac and analyze it.”</p></blockquote>
+            <figcaption>
+              <span class="testimonial-author">Paul, just Paul ...</span>
+              <span class="testimonial-source">App Store review · <time datetime="2026-08-22">Aug 22, 2026</time></span>
+            </figcaption>
+          </figure>
+          <figure class="testimonial-card" data-review-id="00000192-cb4b-8103-3698-385d00000000">
+            <p class="testimonial-rating" aria-label="5 out of 5 stars"><span aria-hidden="true">★★★★★</span></p>
+            <blockquote><p>“Love the idea and implementation. Extremely fast export, high polished design and extra attentive and engaged author. Thank you!”</p></blockquote>
+            <figcaption>
+              <span class="testimonial-author">pasadental</span>
+              <span class="testimonial-source">App Store review · <time datetime="2026-02-28">Feb 28, 2026</time></span>
+            </figcaption>
+          </figure>
+        </div></div></div>
+        <div class="testimonials-row testimonials-row-reverse"><div class="testimonials-track"><div class="testimonials-group">
+          <figure class="testimonial-card" data-review-id="00000192-cb4b-8103-5245-2c0f00000000">
+            <p class="testimonial-rating" aria-label="5 out of 5 stars"><span aria-hidden="true">★★★★★</span></p>
+            <blockquote><p>“Works great. Easy to use!”</p></blockquote>
+            <figcaption>
+              <span class="testimonial-author">Woratana</span>
+              <span class="testimonial-source">App Store review · <time datetime="2026-07-05">Jul 5, 2026</time></span>
+            </figcaption>
+          </figure>
+          <figure class="testimonial-card" data-review-id="00000192-cb4b-8103-609f-9bc000000000">
+            <p class="testimonial-rating" aria-label="5 out of 5 stars"><span aria-hidden="true">★★★★★</span></p>
+            <blockquote><p>“Thank you. Exactly what I needed.”</p></blockquote>
+            <figcaption>
+              <span class="testimonial-author">eric00531</span>
+              <span class="testimonial-source">App Store review · <time datetime="2026-09-03">Sep 3, 2026</time></span>
+            </figcaption>
+          </figure>
+          <figure class="testimonial-card" data-review-id="00000192-cb4b-8103-3fa7-eac300000000">
+            <p class="testimonial-rating" aria-label="5 out of 5 stars"><span aria-hidden="true">★★★★★</span></p>
+            <blockquote><p>“Does almost everything i need to do. You can even schedule the export time.”</p></blockquote>
+            <figcaption>
+              <span class="testimonial-author">thatkidhovs</span>
+              <span class="testimonial-source">App Store review · <time datetime="2026-04-13">Apr 13, 2026</time></span>
+            </figcaption>
+          </figure>
+        </div></div></div>
+        </div>
+        <button class="testimonials-pause" type="button" aria-pressed="false" hidden>Pause scrolling</button>
+        <p class="testimonials-note">Selected reviews. Quotes are in their original English; some are excerpts.</p>
+        <a class="testimonials-link" href="https://apps.apple.com/us/app/health-md/id6757763969?see-all=reviews" target="_blank" rel="noopener">Read App Store reviews <span aria-hidden="true">→</span></a>
+      </div>
+    </section>
+
+    <section class="download-cta" id="download" aria-labelledby="download-title">
+      <div class="download-cta-inner reveal">
+        <div class="download-cta-mark" aria-hidden="true">
+          <img src="assets/app-icon/icon_80x80.png" width="72" height="72" loading="lazy" decoding="async" alt="">
+        </div>
+        <h2 id="download-title">Take your health data with you.</h2>
+        <p class="download-offer">Google Play offers weekly/yearly subscriptions and Lifetime. Eligible subscriptions include a 7-day trial. F-Droid catalog publication is pending.</p>
+        <div class="download-actions" aria-label="Download Health.md">
+          <a class="hero-store-badge hero-store-badge-apple" href="https://apps.apple.com/us/app/health-md/id6757763969" target="_blank" rel="noopener">
+            <img src="assets/store-badges/download-on-app-store.svg" width="120" height="40" decoding="async" alt="Download Health.md on the App Store">
+          </a>
+          <a class="hero-store-badge hero-store-badge-google" href="https://play.google.com/store/apps/details?id=com.healthmd.android" target="_blank" rel="noopener">
+            <img src="assets/store-badges/get-it-on-google-play.png" width="646" height="250" decoding="async" alt="Get Health.md on Google Play">
+          </a>
+          <a class="hero-store-badge hero-store-badge-fdroid" href="/docs/android/#distribution-status" target="_blank" rel="noopener" aria-label="F-Droid publication status">
+            <span class="fdroid-badge-kicker">PUBLICATION PENDING</span>
+            <strong>F-Droid</strong>
+          </a>
+        </div>
+        <p class="channel-switch-warning">Google Play and F-Droid use different signatures. Switching channels requires uninstalling the app and does not migrate local app state.</p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="footer-shell">
+      <a class="footer-brand" href="#top" aria-label="Health.md home">health.md</a>
+      <nav class="footer-links" aria-label="Footer navigation">
+        <a href="about/">About</a>
+        <a href="apple-health-export/">Export Apple Health</a>
+        <a href="health-data-for-ai/">Health Data for AI</a>
+        <a href="apple-health-to-csv/">Apple Health to CSV</a>
+        <a href="docs/">Docs</a>
+        <a href="privacy-policy.html">Privacy</a>
+        <a href="terms-of-service.html">Terms</a>
+        <a href="mailto:cody@isolated.tech">Support</a>
+      </nav>
+      <div class="footer-language">
+        <!-- HEALTHMD_FOOTER_LANGUAGE_SELECTOR -->
+      </div>
+    </div>
+  </footer>
+
+  <script src="assets/analytics.js" defer></script>
+</body>
+</html>

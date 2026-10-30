@@ -307,7 +307,7 @@
     <!-- Paywall screen -->
     <string name="paywall_title">إلغاء قفل Health.md</string>
     <string name="paywall_subtitle">لقد استخدمت عمليات التصدير المجانية الخمس</string>
-    <string name="paywall_unlimited_exports">عمليات تصدير غير محدودة، إلى الأبد</string>
+    <string name="paywall_unlimited_exports">عمليات تصدير غير محدودة</string>
     <string name="paywall_scheduled_exports">عمليات تصدير تلقائية مجدولة</string>
     <string name="paywall_future_features">جميع الميزات المستقبلية مضمنة</string>
     <string name="paywall_one_time">دفعة واحدة \u2014 بلا اشتراك</string>
@@ -744,7 +744,7 @@
     <string name="privacy_category_history_permissions">READ_HEALTH_DATA_HISTORY</string>
     <string name="privacy_category_history_exports">يُستخدم فقط لعمليات التصدير اليدوية الكبيرة، مثل 90 يومًا أو كل المدة، كي يتمكن Health.md من قراءة بيانات Health Connect الأقدم من النافذة القياسية البالغة 30 يومًا</string>
     <string name="privacy_policy_direct_cli">لا تحدث عمليات تصدير Direct CLI إلا بعد أن تقرن جهازك بالكمبيوتر وتتصل به صراحةً. تُرسل السجلات الصحية عبر اتصال مشفّر ومصادق عليه، وتُحفظ بصورة خاصة لإتاحة استئناف النقل لمدة لا تتجاوز سبعة أيام، وتُحذف قبل ذلك إذا ألغيت العملية أو نسيت الاقتران.</string>
-    <string name="privacy_policy_footer">لا يشغّل Health.md سحابة للبيانات الصحية. قد ترسل إحالة الحملات معرّفات UUID عشوائية ينشئها التطبيق للتثبيتات أو الأحداث وبيانات وصفية للحملة تم التحقق منها. ولا ترسل أبدًا بيانات صحية أو بيانات إحالة خام أو معرّفات أجهزة أو عمليات تصدير أو حسابات أو مسارات.</string>
+    <string name="privacy_policy_footer">لا يجمع هذا الإصدار تحليلات استخدام مخصصة أو بيانات إسناد الإعلانات. للمشتريات والجدولة والخدمات الاختيارية إفصاحات خصوصية منفصلة.</string>
     <string name="section_export_type">نوع التصدير</string>
     <string name="export_type_compatibility">تصدير التوافق</string>
     <string name="export_type_compatibility_description">ملفات Markdown أو Obsidian Bases أو JSON أو CSV يومية لمسارات عمل Health.md الحالية</string>
@@ -818,7 +818,7 @@
     <string name="onboarding_skip">تخطي</string>
     <string name="onboarding_back">العودة</string>
     <string name="export_failure_paywall_label">يلزم إلغاء القفل</string>
-    <string name="export_guidance_paywall">تتطلب عمليات التصدير المجدولة إلغاء القفل الدائم. افتح شاشة الترقية لإتاحة عمليات التصدير غير المحدودة والجدولة.</string>
+    <string name="export_guidance_paywall">تتطلب عمليات التصدير المجدولة تجربة أو اشتراكًا نشطًا أو وصولًا مدى الحياة. افتح شاشة الشراء لعرض خيارات الوصول.</string>
     <string name="export_source_retry">أعد المحاولة</string>
     <string name="export_source_shortcut">الاختصار</string>
     <string name="export_source_remote">عن بُعد</string>
@@ -1655,4 +1655,17 @@
     <string name="whoop_reconnect">إعادة ربط WHOOP</string>
     <string name="whoop_disconnect">قطع اتصال WHOOP</string>
     <string name="whoop_use_for_exports">استخدام WHOOP للتصدير</string>
+    <string name="paywall_access_subtitle">اختر اشتراكًا أو وصولًا مدى الحياة لبدء أرشيفك الصحي الخاص. تتضمن الاشتراكات المؤهلة تجربة مجانية لمدة 7 أيام.</string>
+    <string name="paywall_access_active_title">وصولك نشط</string>
+    <string name="paywall_access_active_body">تابع الإعداد لربط بياناتك الصحية واختيار مكان حفظ أرشيفك الخاص.</string>
+    <string name="paywall_plan_choices">وصول أسبوعي أو سنوي أو مدى الحياة</string>
+    <string name="paywall_weekly_price">%1$s / أسبوع</string>
+    <string name="paywall_yearly_price">%1$s / سنة</string>
+    <string name="paywall_lifetime_price">مدى الحياة — %1$s مرة واحدة</string>
+    <string name="paywall_trial_then">7 أيام مجانًا، ثم %1$s</string>
+    <string name="paywall_retry">حاول مجددًا</string>
+    <string name="paywall_manage_subscriptions">إدارة الاشتراكات</string>
+    <string name="paywall_terms">الشروط</string>
+    <string name="paywall_privacy">الخصوصية</string>
+    <string name="paywall_subscription_disclosure">تتضمن الاشتراكات المؤهلة تجربة مجانية لمدة 7 أيام، ثم تتجدد تلقائيًا بالسعر المعروض ما لم تُلغَ قبل انتهاء التجربة أو الفترة الحالية. يمكنك الإدارة أو الإلغاء في Google Play. يُحصّل ثمن الوصول مدى الحياة فورًا كعملية شراء لمرة واحدة. يظل الوصول المدفوع الحالي محفوظًا. العمر ليس لديه محاكمة. لا يؤدي حذف التطبيق أو شراء مدى الحياة إلى إلغاء الاشتراك الحالي.</string>
 </resources>

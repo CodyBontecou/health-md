@@ -292,7 +292,7 @@
     <!-- Paywall screen -->
     <string name="paywall_title">Deblocați Health.md</string>
     <string name="paywall_subtitle">Ați folosit cele 5 exporturi gratuite</string>
-    <string name="paywall_unlimited_exports">Exporturi nelimitate, pentru totdeauna</string>
+    <string name="paywall_unlimited_exports">Exporturi nelimitate</string>
     <string name="paywall_scheduled_exports">Exporturi programate automatizate</string>
     <string name="paywall_future_features">Toate caracteristicile viitoare incluse</string>
     <string name="paywall_one_time">Plată unică — fără abonament</string>
@@ -711,7 +711,7 @@
     <string name="privacy_category_history_permissions">READ_HEALTH_DATA_HISTORY</string>
     <string name="privacy_category_history_exports">Folosit numai pentru exporturi manuale mari, cum ar fi 90 de zile sau întreaga perioadă, astfel încât Health.md să poată citi date Health Connect mai vechi decât intervalul standard de 30 de zile</string>
     <string name="privacy_policy_direct_cli">Exporturile Direct CLI au loc numai după ce asociați și conectați explicit computerul. Înregistrările de sănătate sunt trimise printr-o conexiune autentificată și criptată, păstrate privat pentru reluarea transferului timp de cel mult șapte zile și șterse mai devreme când anulați sau eliminați asocierea.</string>
-    <string name="privacy_policy_footer">Health.md nu operează un cloud pentru date de sănătate. Atribuirea proprie a campaniilor poate trimite UUID-uri aleatorii de instalare/eveniment generate de aplicație și metadate de campanie validate, dar niciodată date de sănătate, informații brute despre sursa instalării, ID-uri de dispozitiv, exporturi, conturi sau căi.</string>
+    <string name="privacy_policy_footer">Această versiune nu colectează analize de utilizare proprii sau date de atribuire publicitară. Achizițiile, programarea și serviciile opționale au informări de confidențialitate separate.</string>
     <string name="section_export_type">Tip de export</string>
     <string name="export_type_compatibility">Export de compatibilitate</string>
     <string name="export_type_compatibility_description">Fișiere zilnice Markdown, Bases, JSON sau CSV pentru fluxurile de lucru Health.md existente</string>
@@ -782,7 +782,7 @@
     <string name="onboarding_skip">Omiteți</string>
     <string name="onboarding_back">Înapoi</string>
     <string name="export_failure_paywall_label">Este necesară deblocarea</string>
-    <string name="export_guidance_paywall">Exporturile programate necesită deblocarea pe viață. Deschideți ecranul de deblocare pentru a activa exporturile nelimitate și programarea.</string>
+    <string name="export_guidance_paywall">Exporturile programate necesită o perioadă de probă activă, un abonament activ sau acces pe viață. Deschide ecranul de cumpărare pentru a vedea opțiunile de acces.</string>
     <string name="export_source_retry">Reîncercați</string>
     <string name="export_source_shortcut">Comandă rapidă</string>
     <string name="export_source_remote">La distanță</string>
@@ -1510,4 +1510,17 @@
     <string name="whoop_reconnect">Reconectează WHOOP</string>
     <string name="whoop_disconnect">Deconectează WHOOP</string>
     <string name="whoop_use_for_exports">Folosește WHOOP pentru exporturi</string>
+    <string name="paywall_access_subtitle">Alege un abonament sau acces pe viață pentru a începe arhiva ta privată de sănătate. Abonamentele eligibile includ o perioadă de probă gratuită de 7 zile.</string>
+    <string name="paywall_access_active_title">Accesul tău este activ</string>
+    <string name="paywall_access_active_body">Continuă configurarea pentru a conecta datele de sănătate și a alege unde salvezi arhiva privată.</string>
+    <string name="paywall_plan_choices">Acces săptămânal, anual sau pe viață</string>
+    <string name="paywall_weekly_price">%1$s / săptămână</string>
+    <string name="paywall_yearly_price">%1$s / an</string>
+    <string name="paywall_lifetime_price">Pe viață — %1$s o singură dată</string>
+    <string name="paywall_trial_then">7 zile gratuite, apoi %1$s</string>
+    <string name="paywall_retry">Încearcă din nou</string>
+    <string name="paywall_manage_subscriptions">Gestionează abonamentele</string>
+    <string name="paywall_terms">Condiții</string>
+    <string name="paywall_privacy">Confidențialitate</string>
+    <string name="paywall_subscription_disclosure">Abonamentele eligibile includ o perioadă de probă gratuită de 7 zile, apoi se reînnoiesc automat la prețul afișat, dacă nu sunt anulate înainte de sfârșitul perioadei de probă sau al perioadei curente. Gestionează sau anulează în Google Play. Accesul pe viață se plătește imediat, o singură dată. Accesul plătit existent se păstrează. Viața nu are nicio încercare. Ștergerea aplicației sau cumpărarea Lifetime nu anulează un abonament existent.</string>
 </resources>

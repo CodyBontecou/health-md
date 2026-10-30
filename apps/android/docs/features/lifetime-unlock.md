@@ -11,18 +11,18 @@
 
 Health.md has one channel-neutral entitlement outcome: access to unlimited manual exports, scheduled exports, automation, recovery, and Direct CLI export.
 
-- **Google Play:** 5 free manual export actions, followed by a one-time lifetime purchase through Google Play Billing. There is no subscription.
+- **Google Play:** a hard paywall before tracking/setup. Choose Individual weekly ($0.99 US), yearly ($29.99 US), or Lifetime ($49.99 US). Eligible subscriptions include a seven-day store-backed free trial; Lifetime is charged immediately. Existing paid and grandfathered permanent access is retained. Android has no Family plans.
 - **F-Droid:** full access is included. There is no free counter, paywall, product lookup, purchase, or restore action.
 
 The distribution difference does not change export formats, bytes, schemas, or direct-device protocol behavior.
 
 ## Google Play flow
 
-1. Use the free exports to verify permissions, folder access, formats, and the Obsidian workflow.
-2. Open **Settings → Unlock**, or follow the paywall after the free limit.
-3. Tap **Unlock for …** using the live Play price, or **Restore Purchase** for an existing purchase.
+1. Choose a plan using the localized Play price, or **Restore Purchase** for existing paid access.
+2. Complete setup to connect permissions and choose a destination.
+3. Manage or cancel a subscription through Google Play. Canceling renewal preserves access until the paid-through/trial end; expired subscriptions do not become Lifetime access.
 
-The counter tracks export actions, not files: one action that writes Markdown, JSON, and CSV for a date range still consumes one free action.
+Historical export counters are retained for migration but grant no new free actions. Missing products and failed verification do not bypass the gate. Subscription-only users need Play connectivity after a process restart. See the [billing guide](../../GOOGLE_PLAY_BILLING_SETUP.md) for lifecycle and qualification boundaries.
 
 ## F-Droid flow
 
@@ -45,6 +45,8 @@ Google Play and F-Droid use different signing keys. Switching requires uninstall
 
 `DistributionPolicy` declares channel capabilities. Consumers gate behavior through `EntitlementRepository`, not Billing classes. The Play implementation combines current/cached Billing entitlement with `PurchaseRepository`; the F-Droid repository exposes a stable unlocked state and unavailable purchase operations. `ExportAccountingPolicy` never consumes a free action for an unlocked entitlement. Workers, automation, recovery, Direct CLI, schedules, export view models, and paywall navigation all use these channel-neutral boundaries.
 
-## After a successful free export
+## Trial and permanent access
 
-The first completed free export offers a dismissible guide to daily scheduling. Opening Schedule does not enable it; Google Play scheduling still requires lifetime access. The third completed free export offers lifetime access with two manual actions remaining. Both offers return to the export screen when dismissed. Failed and partial exports do not display a success guide. Existing usage is retained when moving from ten to five free actions; a user who already used five or more has no new free actions. F-Droid continues to include Full Access without purchase prompts.
+Trials are store subscription entitlements, not a local timer or export allowance. Only permanent purchases are persisted in the historical purchase flag; subscription access is re-queried from Play. Workers, automation, recovery, and Direct CLI verify access before new work. No first/third-export soft upsells remain. F-Droid continues to include Full Access without purchase prompts.
+
+These source changes do not establish configured products, live prices, or store approval. Store setup and authorized exact-build purchase testing remain release prerequisites.

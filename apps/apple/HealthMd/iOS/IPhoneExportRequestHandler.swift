@@ -326,11 +326,6 @@ final class IPhoneExportRequestHandler: ObservableObject {
             await PurchaseManager.shared.refreshStatus()
         }
         guard request.responseMode == .contextStore || PurchaseManager.shared.canExport else {
-            PricingAnalyticsClient.shared.trackExportBlockedByQuota(
-                context: .macTarget,
-                targetType: .connectedMac,
-                quotaState: PurchaseManager.shared.analyticsQuotaState
-            )
             syncService.send(.iphoneExportRejected(IPhoneExportFailure(
                 jobID: request.jobID,
                 reason: .exportLimitReached,
@@ -674,17 +669,6 @@ final class IPhoneExportRequestHandler: ObservableObject {
 
         if payload.successCount > 0 {
             PurchaseManager.shared.recordExportUse()
-            PricingAnalyticsClient.shared.trackExportSucceeded(
-                metadata: PricingAnalyticsExportMetadata(
-                    targetType: .connectedMac,
-                    formatCount: pending.settings.exportFormats.count,
-                    metricCount: pending.settings.metricSelection.totalEnabledCount,
-                    dateRangePreset: PricingAnalyticsDateRangePreset.custom,
-                    startDate: pending.request.dateRangeStart,
-                    endDate: pending.request.dateRangeEnd
-                ),
-                quotaState: PurchaseManager.shared.analyticsQuotaState
-            )
         }
         IPhoneCorpusExportRecoveryManager.shared.markCompletionRecorded(jobID: payload.jobID)
         finishCLIActivity(for: pending.request, status: payload.status)
@@ -1315,17 +1299,6 @@ final class IPhoneExportRequestHandler: ObservableObject {
         )
         guard successCount > 0 else { return }
         PurchaseManager.shared.recordExportUse()
-        PricingAnalyticsClient.shared.trackExportSucceeded(
-            metadata: PricingAnalyticsExportMetadata(
-                targetType: .connectedMac,
-                formatCount: 0,
-                metricCount: settings.metricSelection.totalEnabledCount,
-                dateRangePreset: PricingAnalyticsDateRangePreset.custom,
-                startDate: resolvedDates.first ?? request.dateRangeStart,
-                endDate: resolvedDates.last ?? request.dateRangeEnd
-            ),
-            quotaState: PurchaseManager.shared.analyticsQuotaState
-        )
     }
 
     private func sendSizeBoundedMacExportJob(
@@ -1861,17 +1834,6 @@ final class IPhoneExportRequestHandler: ObservableObject {
 
         guard retainedDayCount > 0 else { return }
         PurchaseManager.shared.recordExportUse()
-        PricingAnalyticsClient.shared.trackExportSucceeded(
-            metadata: PricingAnalyticsExportMetadata(
-                targetType: .connectedMac,
-                formatCount: 0,
-                metricCount: settings.metricSelection.totalEnabledCount,
-                dateRangePreset: PricingAnalyticsDateRangePreset.custom,
-                startDate: pending.request.dateRangeStart,
-                endDate: pending.request.dateRangeEnd
-            ),
-            quotaState: PurchaseManager.shared.analyticsQuotaState
-        )
     }
 
     private func failPreparation(

@@ -15,6 +15,7 @@ import com.healthmd.domain.billing.FreemiumPolicy
 import com.healthmd.domain.repository.EntitlementRepository
 import com.healthmd.domain.repository.PurchaseOffer
 import com.healthmd.domain.repository.PurchaseRepository
+import com.healthmd.domain.repository.PurchasePlan
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -36,9 +37,9 @@ import timber.log.Timber
  * - Caches unlock state in SharedPreferences (healthmd_purchase_prefs)
  * - Supports Auto Backup for purchase state persistence
  *
- * Product: health_md_premium_lifetime (INAPP, one-time purchase, $19.99 USD —
- * matches the iOS individual lifetime unlock price; Play Console is the
- * source of truth, this comment is documentation only)
+ * Individual weekly/yearly subscriptions and the existing lifetime INAPP.
+ * Play Console owns prices and seven-day trial eligibility. Subscription
+ * access is re-queried, never persisted as a permanent lifetime grant.
  */
 class BillingRepositoryImpl(
     private val context: Context,
@@ -72,6 +73,8 @@ class BillingRepositoryImpl(
 
     private val _isUnlocked = MutableStateFlow(loadCachedUnlockState())
     override val isUnlocked: StateFlow<Boolean> = _isUnlocked.asStateFlow()
+    private val _isPermanentlyUnlocked = MutableStateFlow(loadCachedUnlockState())
+    override val isPermanentlyUnlocked = _isPermanentlyUnlocked.asStateFlow()
 
     override val isAvailable: Boolean = true
 
@@ -87,6 +90,19 @@ class BillingRepositoryImpl(
     private val _productDetails = MutableStateFlow<ProductDetails?>(null)
     private val _offer = MutableStateFlow<PurchaseOffer?>(null)
     override val offer: StateFlow<PurchaseOffer?> = _offer.asStateFlow()
+    private val _offers = MutableStateFlow<List<PurchaseOffer>>(emptyList())
+    override val offers = _offers.asStateFlow()
+    private var detailsByID: Map<String, ProductDetails> = emptyMap()
+    private var offerTokensByID: Map<String, String> = emptyMap()
+
+    init {
+        scope.launch {
+            while (true) {
+                delay(60_000)
+                if (hasCompletedInitialSetup) refreshPurchaseStatus()
+            }
+        }
+    }
 
     // Connection admission is confined to [scope], whose dispatcher is Main.
     private var hasCompletedInitialSetup = false
@@ -122,6 +138,7 @@ class BillingRepositoryImpl(
 
     private fun saveUnlockState(unlocked: Boolean) {
         prefs.edit().putBoolean(KEY_IS_UNLOCKED, unlocked).apply()
+        _isPermanentlyUnlocked.value = unlocked
         if (BuildConfig.DEBUG && prefs.contains(KEY_DEBUG_OVERRIDE)) {
             _isUnlocked.value = prefs.getBoolean(KEY_DEBUG_OVERRIDE, false)
             Timber.d("Unlock state saved: $unlocked (debug override active, showing: ${_isUnlocked.value})")
@@ -183,6 +200,9 @@ class BillingRepositoryImpl(
         isConnecting = false
         _productDetails.value = null
         _offer.value = null
+        _offers.value = emptyList()
+        detailsByID = emptyMap()
+        offerTokensByID = emptyMap()
         _isUnlocked.value = loadCachedUnlockState()
         Timber.d("Billing service disconnected; the next Billing API call will reconnect")
         if (!hasCompletedInitialSetup) {
@@ -234,59 +254,63 @@ class BillingRepositoryImpl(
         _productDetails.value = null
         _offer.value = null
 
-        val productList = listOf(
-            QueryProductDetailsParams.Product.newBuilder()
-                .setProductId(PRODUCT_ID)
-                .setProductType(BillingClient.ProductType.INAPP)
-                .build()
-        )
-
-        val params = QueryProductDetailsParams.newBuilder()
-            .setProductList(productList)
-            .build()
-
-        val result = executeWithBillingRetry(
-            operationName = "query product details",
-            maxAttempts = BillingRetryPolicy.FOREGROUND_MAX_ATTEMPTS,
-            retryDelayMillis = BillingRetryPolicy::foregroundRetryDelayMillis,
-            billingResult = { it.billingResult },
-        ) {
-            billingClient.queryProductDetails(params)
-        }
-        val billingResult = result.billingResult
-
-        if (billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
-            val details = result.productDetailsList?.firstOrNull { it.productId == PRODUCT_ID }
-            _productDetails.value = details
-            _offer.value = details?.oneTimePurchaseOfferDetails?.formattedPrice?.let { price ->
-                PurchaseOffer(productId = PRODUCT_ID, localizedPriceText = price)
+        _offers.value = emptyList()
+        val loaded = mutableMapOf<String, ProductDetails>()
+        var lastResult = BillingResult.newBuilder()
+            .setResponseCode(BillingClient.BillingResponseCode.OK).build()
+        for (type in listOf(BillingClient.ProductType.INAPP, BillingClient.ProductType.SUBS)) {
+            val plans = PurchasePlan.entries.filter {
+                (it == PurchasePlan.LIFETIME) == (type == BillingClient.ProductType.INAPP)
             }
-            // billing-ktx's suspend result omits Billing 8's unfetched-product list.
-            if (details != null) {
-                Timber.d("Product loaded: ${details.productId}, price: ${details.oneTimePurchaseOfferDetails?.formattedPrice}")
+            val params = QueryProductDetailsParams.newBuilder().setProductList(plans.map {
+                QueryProductDetailsParams.Product.newBuilder()
+                    .setProductId(it.productId).setProductType(type).build()
+            }).build()
+            val result = executeWithBillingRetry(
+                operationName = "query product details",
+                maxAttempts = BillingRetryPolicy.FOREGROUND_MAX_ATTEMPTS,
+                retryDelayMillis = BillingRetryPolicy::foregroundRetryDelayMillis,
+                billingResult = { it.billingResult },
+            ) { billingClient.queryProductDetails(params) }
+            lastResult = result.billingResult
+            if (lastResult.responseCode == BillingClient.BillingResponseCode.OK) {
+                result.productDetailsList.orEmpty().forEach { loaded[it.productId] = it }
+            }
+        }
+        val tokens = mutableMapOf<String, String>()
+        val available = PurchasePlan.entries.mapNotNull { plan ->
+            val details = loaded[plan.productId] ?: return@mapNotNull null
+            if (plan == PurchasePlan.LIFETIME) {
+                details.oneTimePurchaseOfferDetails?.formattedPrice?.let {
+                    PurchaseOffer(plan.productId, it, plan)
+                }
             } else {
-                Timber.w("Product not found in Play Store: $PRODUCT_ID")
+                val selected = selectSubscriptionOffer(details, plan) ?: return@mapNotNull null
+                tokens[plan.productId] = selected.offerToken
+                val phases = selected.pricingPhases.pricingPhaseList
+                PurchaseOffer(plan.productId, phases.last().formattedPrice, plan,
+                    phases.first().priceAmountMicros == 0L && phases.first().billingPeriod == "P7D")
             }
-        } else {
-            Timber.e(
-                "Failed to query product: responseCode=%d, debugMessage=%s",
-                billingResult.responseCode,
-                billingResult.debugMessage,
-            )
         }
-
-        return billingResult
+        detailsByID = loaded
+        offerTokensByID = tokens
+        _productDetails.value = loaded[PRODUCT_ID]
+        _offers.value = available
+        _offer.value = available.firstOrNull { it.plan == PurchasePlan.LIFETIME }
+        return lastResult
     }
 
-    override suspend fun launchPurchase(activity: Activity): Boolean {
+    override suspend fun launchPurchase(activity: Activity, plan: PurchasePlan): Boolean {
         val result = withPurchaseLaunchAdmission(_isPurchasing) { markFlowLaunched ->
             _purchaseError.value = null
 
             // ProductDetails should be refreshed immediately before a purchase launch rather
             // than relying on the copy cached for paywall display.
+            val displayedOffer = _offers.value.firstOrNull { it.plan == plan }
             val queryResult = queryAndCacheProductDetails()
-            val details = _productDetails.value
-            if (details == null) {
+            val details = detailsByID[plan.productId]
+            val offer = _offers.value.firstOrNull { it.plan == plan }
+            if (details == null || offer == null) {
                 _purchaseError.value = errorForResponse(
                     responseCode = queryResult.responseCode,
                     fallback = BillingError.PRODUCT_UNAVAILABLE,
@@ -294,9 +318,17 @@ class BillingRepositoryImpl(
                 return@withPurchaseLaunchAdmission false
             }
 
-            val productDetailsParams = BillingFlowParams.ProductDetailsParams.newBuilder()
-                .setProductDetails(details)
-                .build()
+            if (displayedOffer != null && displayedOffer != offer) {
+                // Refresh the visible terms and require another explicit tap.
+                _purchaseError.value = BillingError.SERVICE_UNAVAILABLE
+                return@withPurchaseLaunchAdmission false
+            }
+            val builder = BillingFlowParams.ProductDetailsParams.newBuilder().setProductDetails(details)
+            if (plan != PurchasePlan.LIFETIME) {
+                val token = offerTokensByID[plan.productId] ?: return@withPurchaseLaunchAdmission false
+                builder.setOfferToken(token)
+            }
+            val productDetailsParams = builder.build()
             val billingFlowParams = BillingFlowParams.newBuilder()
                 .setProductDetailsParamsList(listOf(productDetailsParams))
                 .build()
@@ -346,7 +378,7 @@ class BillingRepositoryImpl(
                 throw MyselfClaimException(MyselfClaimFailure.STORE_UNAVAILABLE)
             }
         }
-        val result = queryPurchases("verify myself.md claim purchase")
+        val result = queryPurchases("verify myself.md claim purchase", includeSubscriptions = false)
         if (result.billingResult.responseCode != BillingClient.BillingResponseCode.OK) {
             throw MyselfClaimException(MyselfClaimFailure.STORE_UNAVAILABLE)
         }
@@ -357,8 +389,10 @@ class BillingRepositoryImpl(
     private suspend fun refreshPurchaseStatus() {
         val result = queryPurchases("refresh purchases")
         if (result.billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
-            processPurchases(result.purchasesList)
+            processPurchases(result.purchasesList, fullSnapshot = true)
         } else {
+            // No offline permanent grant for a subscription. Lifetime caches remain valid.
+            _isUnlocked.value = loadCachedUnlockState()
             logPurchaseQueryFailure("Failed to query purchases", result.billingResult)
         }
     }
@@ -374,7 +408,7 @@ class BillingRepositoryImpl(
             val billingResult = result.billingResult
 
             if (billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
-                val hasPremium = processPurchases(result.purchasesList)
+                val hasPremium = processPurchases(result.purchasesList, fullSnapshot = true) || loadCachedUnlockState()
 
                 if (hasPremium) {
                     Timber.d("Purchase restored successfully")
@@ -397,17 +431,38 @@ class BillingRepositoryImpl(
         }
     }
 
-    private suspend fun queryPurchases(operationName: String) = executeWithBillingRetry(
-        operationName = operationName,
-        maxAttempts = BillingRetryPolicy.FOREGROUND_MAX_ATTEMPTS,
-        retryDelayMillis = BillingRetryPolicy::foregroundRetryDelayMillis,
-        billingResult = { it.billingResult },
-    ) {
-        billingClient.queryPurchasesAsync(
-            QueryPurchasesParams.newBuilder()
-                .setProductType(BillingClient.ProductType.INAPP)
-                .build()
-        )
+    private suspend fun queryPurchases(operationName: String, includeSubscriptions: Boolean = true): PurchasesResult {
+        val purchases = mutableListOf<Purchase>()
+        val types = if (includeSubscriptions) listOf(BillingClient.ProductType.INAPP, BillingClient.ProductType.SUBS)
+            else listOf(BillingClient.ProductType.INAPP)
+        for (type in types) {
+            val result = executeWithBillingRetry(
+                operationName = operationName,
+                maxAttempts = BillingRetryPolicy.FOREGROUND_MAX_ATTEMPTS,
+                retryDelayMillis = BillingRetryPolicy::foregroundRetryDelayMillis,
+                billingResult = { it.billingResult },
+            ) {
+                billingClient.queryPurchasesAsync(QueryPurchasesParams.newBuilder().setProductType(type).build())
+            }
+            if (result.billingResult.responseCode != BillingClient.BillingResponseCode.OK) {
+                // A successful lifetime query must remain restorable even when
+                // subscriptions are unsupported or their query is unavailable.
+                if (playEntitlementSnapshot(purchases).hasLifetime) break
+                return result
+            }
+            purchases += result.purchasesList
+        }
+        return PurchasesResult(BillingResult.newBuilder().setResponseCode(BillingClient.BillingResponseCode.OK).build(), purchases)
+    }
+
+    override suspend fun verifyAccess(): Boolean = withContext(Dispatchers.Main) {
+        if (loadCachedUnlockState()) return@withContext true
+        if (!hasCompletedInitialSetup) {
+            startInitialConnectionIfNeeded()
+            if (withTimeoutOrNull(15_000) { claimBillingReady.first { it } } != true) return@withContext false
+        }
+        refreshPurchaseStatus()
+        _isUnlocked.value
     }
 
     private suspend fun reconcileAlreadyOwnedPurchase(source: String): Boolean {
@@ -530,41 +585,18 @@ class BillingRepositoryImpl(
         }
     }
 
-    private fun processPurchases(purchases: List<Purchase>): Boolean {
-        var hasValidPurchase = false
-        val unacknowledgedTokens = mutableListOf<String>()
-
-        for (purchase in purchases) {
-            if (!purchase.products.contains(PRODUCT_ID)) continue
-
-            when (purchase.purchaseState) {
-                Purchase.PurchaseState.PURCHASED -> {
-                    hasValidPurchase = true
-                    if (!purchase.isAcknowledged) {
-                        unacknowledgedTokens += purchase.purchaseToken
-                    }
-                }
-                Purchase.PurchaseState.PENDING -> {
-                    Timber.d("Purchase pending: ${purchase.orderId}")
-                }
-                Purchase.PurchaseState.UNSPECIFIED_STATE -> {
-                    Timber.w("Purchase in unspecified state: ${purchase.orderId}")
-                }
-            }
+    private fun processPurchases(purchases: List<Purchase>, fullSnapshot: Boolean = false): Boolean {
+        val snapshot = playEntitlementSnapshot(purchases)
+        if (snapshot.hasLifetime) saveUnlockState(true)
+        if (fullSnapshot || snapshot.hasAccess) {
+            _isUnlocked.value = loadCachedUnlockState() || snapshot.hasAccess
         }
-
-        if (hasValidPurchase) {
-            // Cache the verified entitlement before acknowledgement retries so cancellation or a
-            // transient acknowledgement failure cannot leave a completed purchase locked.
-            saveUnlockState(true)
-        }
-        if (unacknowledgedTokens.isNotEmpty()) {
+        if (snapshot.unacknowledgedTokens.isNotEmpty()) {
             scope.launch {
-                unacknowledgedTokens.forEach { acknowledgePurchase(it) }
+                snapshot.unacknowledgedTokens.forEach { acknowledgePurchase(it) }
             }
         }
-
-        return hasValidPurchase
+        return snapshot.hasAccess
     }
 
     override fun debugSetUnlocked(unlocked: Boolean) {
@@ -574,6 +606,7 @@ class BillingRepositoryImpl(
         }
         prefs.edit().putBoolean(KEY_DEBUG_OVERRIDE, unlocked).apply()
         _isUnlocked.value = unlocked
+        _isPermanentlyUnlocked.value = unlocked
         Timber.d("Debug: Set unlock state to $unlocked")
     }
 
@@ -588,6 +621,8 @@ class BillingRepositoryImpl(
             .remove(KEY_LEGACY_UNLOCK_GRANTED)
             .apply()
         _isUnlocked.value = false
+        _isPermanentlyUnlocked.value = false
+        _offers.value = emptyList()
         _productDetails.value = null
         _offer.value = null
         _purchaseError.value = null

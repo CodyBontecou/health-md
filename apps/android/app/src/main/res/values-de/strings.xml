@@ -367,7 +367,7 @@
     <!-- Paywall screen -->
     <string name="paywall_title">Health.md freischalten</string>
     <string name="paywall_subtitle">Sie haben Ihre 5 kostenlosen Exporte aufgebraucht</string>
-    <string name="paywall_unlimited_exports">Unbegrenzte Exporte, für immer</string>
+    <string name="paywall_unlimited_exports">Unbegrenzte Exporte</string>
     <string name="paywall_scheduled_exports">Automatische Exporte nach Zeitplan</string>
     <string name="paywall_future_features">Alle zukünftigen Funktionen enthalten</string>
     <string name="paywall_one_time">Einmalige Zahlung — kein Abonnement</string>
@@ -700,7 +700,7 @@
     <string name="privacy_category_history_permissions">READ_HEALTH_DATA_HISTORY</string>
     <string name="privacy_category_history_exports">Wird nur für große manuelle Exporte verwendet, etwa für 90 Tage oder den gesamten Zeitraum, damit Health.md auf Health Connect-Daten zugreifen kann, die älter als das standardmäßige 30-Tage-Fenster sind</string>
     <string name="privacy_policy_direct_cli">Direct CLI-Exporte erfolgen nur, nachdem Sie Ihr Gerät ausdrücklich mit Ihrem Computer gekoppelt und verbunden haben. Gesundheitsdaten werden über eine authentifizierte, verschlüsselte Verbindung übertragen, für eine wiederaufnehmbare Übertragung höchstens sieben Tage privat gespeichert und bei Abbruch oder Aufheben der Kopplung früher gelöscht.</string>
-    <string name="privacy_policy_footer">Health.md betreibt keine Cloud für Gesundheitsdaten. Die eigene Kampagnenattribution kann zufällige, von der App erzeugte Installations-/Ereignis-UUIDs und validierte Kampagnenmetadaten senden, jedoch niemals Gesundheitsdaten, unverarbeitete Referrer-Daten, Geräte-IDs, Exporte, Kontodaten oder Pfade.</string>
+    <string name="privacy_policy_footer">Diese Version erfasst keine eigenen Nutzungsanalysen oder Werbezuordnungen. Für Käufe, Zeitpläne und optionale Dienste gelten separate Datenschutzhinweise.</string>
     <string name="section_export_type">Exporttyp</string>
     <string name="export_type_compatibility">Kompatibilitäts-Export</string>
     <string name="export_type_compatibility_description">Tägliche Markdown-, Bases-, JSON- oder CSV-Dateien für bestehende Health.md-Workflows</string>
@@ -770,7 +770,7 @@
     <string name="onboarding_skip">Überspringen</string>
     <string name="onboarding_back">Zurück</string>
     <string name="export_failure_paywall_label">Freischaltung erforderlich</string>
-    <string name="export_guidance_paywall">Für geplante Exporte ist die lebenslange Freischaltung erforderlich. Öffnen Sie den Kaufbildschirm, um unbegrenzte Exporte und die Zeitplanung freizuschalten.</string>
+    <string name="export_guidance_paywall">Geplante Exporte erfordern eine aktive Testphase oder ein aktives Abo oder lebenslangen Zugriff. Öffne den Kaufbildschirm, um die Zugriffsoptionen anzusehen.</string>
     <string name="export_source_retry">Erneut versuchen</string>
     <string name="export_source_shortcut">Verknüpfung</string>
     <string name="export_source_remote">Remote</string>
@@ -1462,4 +1462,17 @@
     <string name="whoop_reconnect">WHOOP erneut verbinden</string>
     <string name="whoop_disconnect">WHOOP trennen</string>
     <string name="whoop_use_for_exports">WHOOP für Exporte verwenden</string>
+    <string name="paywall_access_subtitle">Wähle ein Abo oder lebenslangen Zugriff für dein privates Gesundheitsarchiv. Berechtigte Abos bieten eine kostenlose 7-tägige Testphase.</string>
+    <string name="paywall_access_active_title">Dein Zugriff ist aktiv</string>
+    <string name="paywall_access_active_body">Fahre mit der Einrichtung fort, um deine Gesundheitsdaten zu verbinden und den Speicherort deines privaten Archivs auszuwählen.</string>
+    <string name="paywall_plan_choices">Wöchentlicher, jährlicher oder lebenslanger Zugriff</string>
+    <string name="paywall_weekly_price">%1$s / Woche</string>
+    <string name="paywall_yearly_price">%1$s / Jahr</string>
+    <string name="paywall_lifetime_price">Lebenslang — einmalig %1$s</string>
+    <string name="paywall_trial_then">7 Tage kostenlos, danach %1$s</string>
+    <string name="paywall_retry">Erneut versuchen</string>
+    <string name="paywall_manage_subscriptions">Abos verwalten</string>
+    <string name="paywall_terms">Nutzungsbedingungen</string>
+    <string name="paywall_privacy">Datenschutz</string>
+    <string name="paywall_subscription_disclosure">Berechtigte Abos bieten eine kostenlose 7-tägige Testphase und verlängern sich danach automatisch zum angezeigten Preis, sofern sie nicht vor Ende der Testphase oder des aktuellen Zeitraums gekündigt werden. Verwaltung und Kündigung erfolgen in Google Play. Lebenslanger Zugriff wird sofort einmalig berechnet. Bestehender bezahlter Zugriff bleibt erhalten. Lifetime hat keine Testversion. Durch das Löschen der App oder den Kauf von Lifetime wird ein bestehendes Abonnement nicht gekündigt.</string>
 </resources>

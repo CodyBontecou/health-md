@@ -350,7 +350,7 @@ class ExportWorker @AssistedInject constructor(
         entitlementRepository.refresh()
         val isPurchased = distributionPolicy.fullAccessIncluded ||
             settingsRepository.isPurchased.first() ||
-            entitlementRepository.isUnlocked.first()
+            entitlementRepository.verifyAccess()
         val dates = scheduledDates(
             settings,
             destinationFingerprint,

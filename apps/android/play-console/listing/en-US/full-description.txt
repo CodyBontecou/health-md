@@ -42,4 +42,4 @@ PRIVACY AND CONTROL
 • Permissions can be reviewed or revoked in Health Connect at any time
 • Limited first-party install attribution and onboarding or pricing analytics never include health records, Health Connect permission details, export content, account text or file paths
 
-Health.md includes 5 free manual export actions. A one-time purchase unlocks unlimited exports and scheduling; there is no subscription.
+Exports require an active trial, weekly/yearly subscription, or Lifetime access. Eligible first-time subscribers get 7 days free; subscriptions then auto-renew at the price shown in-app unless canceled before the trial or current period ends. Manage or cancel in Google Play. Lifetime is charged immediately as a one-time purchase, with no trial. Existing permanent access is retained.

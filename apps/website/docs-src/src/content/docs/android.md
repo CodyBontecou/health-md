@@ -5,7 +5,7 @@ description: Set up Health.md for Android. Export Health Connect data, select St
 
 <div class="docs-hero">
   <p class="docs-eyebrow">Health Connect to private files</p>
-  <p>Health.md for Android reads Health Connect on-device and writes Markdown, Obsidian Bases, JSON, or CSV to folders you choose. This folder export workflow requires no Health.md account or health-data cloud, and no subscription.</p>
+  <p>Health.md for Android reads Health Connect on-device and writes Markdown, Obsidian Bases, JSON, or CSV to folders you choose. This folder export workflow requires no Health.md account. Google Play access options and F-Droid included access are described below.</p>
   <div class="docs-actions">
     <a class="docs-button" href="https://play.google.com/store/apps/details?id=com.healthmd.android" target="_blank" rel="noopener">Get on Google Play</a>
     <a class="docs-button-secondary" href="#distribution-status">F-Droid publication status</a>
@@ -48,7 +48,7 @@ Health.md for Android turns Health Connect into a local-first health journal. Ch
 6. Preview the output.
 7. Tap export and verify the generated files in your folder or vault.
 
-The Google Play build includes 5 manual export actions before its one-time unlock. The F-Droid build includes unlimited access with no purchase or restore flow.
+The subscription-enabled Google Play phone release requires active trial, subscription, Lifetime, or preserved permanent access for manual exports. Eligible subscriptions include a 7-day trial; Lifetime has no trial. The F-Droid build includes unlimited access with no purchase or restore flow.
 
 ## Destinations on Android
 
@@ -78,7 +78,7 @@ Android JSON exports are designed to be compatible with Health.md's Obsidian vis
 
 ## Scheduling and automation
 
-Scheduled exports require the one-time lifetime entitlement in the Google Play build and are included in the F-Droid build. They use a one-shot exact alarm when you grant Android's Alarms & reminders access, with durable WorkManager work as a backup. Without exact-alarm access, WorkManager becomes the primary scheduler, so the selected time is a target rather than a hard guarantee. Health.md records export history, can recover missed scheduled dates, and lets you retry failed runs.
+In the subscription-enabled Google Play phone release, scheduled exports require active trial, subscription, Lifetime, or preserved permanent access; they are included in the F-Droid build. They use a one-shot exact alarm when you grant Android's Alarms & reminders access, with durable WorkManager work as a backup. Without exact-alarm access, WorkManager becomes the primary scheduler, so the selected time is a target rather than a hard guarantee. Health.md records export history, can recover missed scheduled dates, and lets you retry failed runs.
 
 For Tasker, adb, or other automation tools, Health.md exposes explicit-only broadcast intents. External callers must address the receiver component directly:
 
@@ -126,7 +126,7 @@ Daily step totals use exact zoned-local-day boundaries. Before aggregation, Heal
 
 ## Distribution, pricing, and switching
 
-- **Google Play:** 5 free manual export actions, followed by one lifetime purchase through Google Play Billing. There is no subscription. Restore Purchase uses the purchasing Google account. The current release is phone-only. The Wear OS companion is deferred to a later qualification cycle.
+- **Google Play:** the subscription-enabled phone release offers Individual weekly/yearly subscriptions and Lifetime. Eligible first-time subscribers receive a 7-day trial, then renew automatically at the displayed price until canceled through Google Play. Lifetime is charged once immediately with no trial. No local free-export allowance remains. Existing permanent access is preserved. Restore Purchase uses the purchasing Google account; deleting the app or buying Lifetime does not cancel a subscription. Older released builds can show the previous allowance. The current release is phone-only. The Wear OS companion is deferred to a later qualification cycle.
 - **F-Droid:** unlimited access is included. There is no free counter, Billing dependency, paywall, purchase, or restore action.
 - **F-Droid scope:** Health Connect only, with no Wear OS integration, direct cloud-provider OAuth, Play review, attribution, or Health.md onboarding telemetry.
 - **Shared outcome:** both channels use the same Health Connect capture, exporters, schemas, automation actions, and direct-device protocol.

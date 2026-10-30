@@ -442,7 +442,7 @@ class ScheduledExportRecoveryManager @Inject constructor(
         entitlementRepository.refresh()
         return distributionPolicy.fullAccessIncluded ||
             settingsRepository.isPurchased.first() ||
-            entitlementRepository.isUnlocked.first()
+            entitlementRepository.verifyAccess()
     }
 
     private suspend fun inspectPendingRecoveryIgnoringLock(): ScheduledExportRecoveryStatus {

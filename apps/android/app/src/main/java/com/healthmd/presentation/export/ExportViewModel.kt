@@ -232,7 +232,7 @@ class ExportViewModel @Inject constructor(
         // Persist confirmed purchases to DataStore so the state survives offline / app restarts
         if (!distributionPolicy.fullAccessIncluded) {
             viewModelScope.launch {
-                entitlementRepository.isUnlocked
+                entitlementRepository.isPermanentlyUnlocked
                     .filter { it }
                     .collect { settingsRepository.setPurchased(true) }
             }
@@ -485,6 +485,11 @@ class ExportViewModel @Inject constructor(
         dismissJob?.cancel()
         val awakeActivityId = ExportAwakeCoordinator.shared.beginActivity()
         exportJob = viewModelScope.launch {
+            if (!distributionPolicy.fullAccessIncluded &&
+                !settingsRepository.isPurchased.first() && !entitlementRepository.verifyAccess()) {
+                _uiState.update { it.copy(isPurchased = false) }
+                return@launch
+            }
             _uiState.update {
                 it.copy(
                     isExporting = true,

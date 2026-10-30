@@ -24,7 +24,12 @@ FLEXIBLE FORMATTING
 • Use date placeholders in folder paths ({year}, {month}, {quarter}, {week})
 • Export as Markdown, CSV, JSON, or Obsidian Bases YAML
 
+PLANS AND TRIALS
+The subscription-enabled release requires access before setup and exports. Choose Individual or Apple Family Sharing, with weekly, yearly, or Lifetime options. Eligible subscriptions include a 7-day free trial, then renew automatically at the displayed price and interval. Lifetime is charged once immediately with no trial. Existing paid access remains valid. Manage or cancel in Apple Account settings at least 24 hours before the trial or period ends. Deleting the app or buying Lifetime does not cancel a subscription. Family Sharing shares access, not health records.
+
 PRIVACY
 Health.md does not store your health data on Health.md servers. Processing happens on your devices, and exports go only to destinations you choose. Health.md automatically collects limited pseudonymous product events using a random app-install ID to understand onboarding and purchase flows. These events never include health values, metric names, health dates, or exported files and are not used for ad targeting or cross-app tracking. On iPhone and iPad, Apple Ads campaign identifiers are linked to purchase outcomes to measure campaign conversion. No health data or purchase events are sent to Apple Ads.
 
 Terms of Use: https://www.apple.com/legal/internet-services/itunes/dev/stdeula/
+
+Privacy: https://healthmd.app/privacy-policy.html

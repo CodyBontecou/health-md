@@ -145,6 +145,16 @@ internal fun StorageSetupPage(folderName: String?, onSelectFolder: () -> Unit) {
 }
 
 @Composable
+internal fun ActiveAccessPage() {
+    OnboardingPageColumn {
+        OnboardingPageHeader(
+            title = stringResource(R.string.paywall_access_active_title),
+            subtitle = stringResource(R.string.paywall_access_active_body),
+        ) { HeroIcon(Icons.Rounded.Verified, AppColors.success) }
+    }
+}
+
+@Composable
 internal fun IncludedAccessPage() {
     OnboardingPageColumn {
         OnboardingPageHeader(

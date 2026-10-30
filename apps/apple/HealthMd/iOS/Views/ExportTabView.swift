@@ -1351,7 +1351,7 @@ struct ExportTabView: View {
         }
     }
 
-    private var previewExportTargetType: PricingAnalyticsExportTargetType {
+    private var previewExportTargetType: ExportPreviewTargetType {
         switch exportTargetSelection {
         case .localIPhoneFolder:
             return .localFile

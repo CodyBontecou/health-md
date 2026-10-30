@@ -1,85 +1,85 @@
 ---
 title: "Export"
-description: "Der Tab „Export“ ist die zentrale Arbeitsfläche. Er zeigt, ob HealthKit und Ihr Vault verbunden sind, lässt Sie ein Ziel wählen und führt einmalige Exporte für den gewählten Datumsbereich aus."
+description: "Verwenden Sie die Registerkarte „Exportieren“, um HealthKit und Tresorverbindungen zu überprüfen. Wählen Sie ein Ziel aus und exportieren Sie einen Datumsbereich."
 ---
 
-<p>Der Tab „Export“ gliedert sich in drei kurze Entscheidungen: Einsatzbereitschaft bestätigen, Ziel auswählen und anschließend den Datumsbereich festlegen, bevor Sie eine Vorschau anzeigen oder exportieren.</p>
+<p> Die Registerkarte „Exportieren“ ist in drei kleine Entscheidungen unterteilt: Bestätigen Sie die Bereitschaft, wählen Sie ein Ziel und wählen Sie dann den Datumsbereich aus, bevor Sie eine Vorschau anzeigen oder exportieren. </p>
 
-## Statusanzeigen lesen
-<div class="options">
-<div class="option"><strong>Health-Anzeige</strong><p>Grüner Punkt = HealthKit autorisiert. Rot = nicht erlaubt. Tippen Sie darauf, um das iOS-Berechtigungsfenster erneut aufzurufen. Dies funktioniert pro Installation nur beim ersten Mal; danach reagiert iOS nicht mehr sichtbar und Sie müssen die Berechtigung unter Einstellungen → Datenschutz &amp; Sicherheit → Health korrigieren.</p></div>
-<div class="option"><strong>Vault-Anzeige</strong><p>Grüner Punkt = ein Vault-Ordner ist ausgewählt. Tippen Sie darauf, um den Vault erneut auszuwählen oder zu ändern. Die Beschriftung zeigt den Ordnernamen.</p></div>
-</div>
-<p>Die Aktion <em>Export</em> bleibt deaktiviert, bis HealthKit, Ausgabeformat und gewähltes Ziel bereit sind. So wird der häufigste Fehler vermieden: ein Export ohne Ziel.</p>
+## Lesen Sie die Status-Badges
+ <div class="options">
+ <div class="option"> <strong> Gesundheits-Badge </strong> <p> Ein grüner Punkt bedeutet, dass HealthKit autorisiert ist. Ein roter Punkt bedeutet, dass der Zugriff nicht gewährt wird. Tippen Sie, um das iOS-Berechtigungsblatt erneut zu versuchen. Das Blatt erscheint nur einmal pro Installation. Öffnen Sie anschließend Einstellungen → Datenschutz &amp; Sicherheit → Gesundheit. </p> </div>
+ <div class="option"> <strong> Tresor-Abzeichen </strong> <p> Grüner Punkt = ein Tresorordner ist ausgewählt. Tippen Sie, um den Tresor erneut auszuwählen oder zu ändern. Die Beschriftung zeigt den Ordnernamen. </p> </div>
+ </div>
+ <p> Die Aktion <em> Export </em> bleibt deaktiviert, bis HealthKit , das Ausgabeformat und das ausgewählte Ziel bereit sind. Dies verhindert den häufigsten Fehlermodus: den Versuch, ohne Ziel zu exportieren. </p>
 
-## Exportziel auswählen
-<p>Die Karte „Exportziel“ legt fest, wohin die Daten gelangen:</p>
-
-<div class="options">
-<div class="option"><strong>Lokaler iPhone-Ordner</strong><p>Schreibt direkt in den Ordner oder Obsidian-Vault, den Sie auf diesem Gerät ausgewählt haben.</p></div>
-<div class="option"><strong>Verbundener Mac</strong><p>Sendet erfasste Tagesdaten und eine exakte Momentaufnahme der Einstellungen an die Mac-App in der Nähe. Das iPhone liest HealthKit; der Mac rendert die ausgewählten Formate und schreibt die Dateien.</p></div>
-<div class="option"><strong>API-Endpunkt</strong><p>Sendet einen API-Envelope per POST direkt vom iPhone an einen vom Benutzer konfigurierten HTTP(S)-Endpunkt. <a href="/de/docs/api-endpoint/">Weitere Informationen zum API-Endpunkt</a>.</p></div>
-</div>
-
-## Datumsbereich auswählen
-<p>Voreinstellungen decken die häufigsten Fälle ab:</p>
+## Wählen Sie ein Exportziel
+ <p> Die Exportzielkarte entscheidet, wohin die Daten gehen: </p>
 
 <div class="options">
-<div class="option"><strong>Heute</strong><p>Exportiert den aktuellen Tag. Nützlich zum Testen der Ausgabeformatierung.</p></div>
-<div class="option"><strong>Gestern</strong><p>Die sicherste Wahl für tägliche Exporte, da der Tag vollständig abgeschlossen ist.</p></div>
-<div class="option"><strong>Gesamter Zeitraum</strong><p>Exportiert rückwirkend ab den frühesten HealthKit-Daten, die Health.md finden kann.</p></div>
-<div class="option"><strong>Benutzerdefiniert</strong><p>Wählen Sie Start- und Enddatum für einen bestimmten Zeitraum.</p></div>
-</div>
+ <div class="option"> <strong> Lokaler iPhone Ordner </strong> <p> Schreibt direkt in den Ordner oder Obsidian Tresor, den Sie auf diesem Gerät ausgewählt haben. </p> </div>
+ <div class="option"> <strong> Verbundener Mac </strong> <p> Sendet erfasste Tagesdaten und einen genauen Einstellungs-Snapshot an die nahegelegene Mac-App. Der iPhone lautet HealthKit . Der Mac rendert die ausgewählten Formate und schreibt die Dateien. </p> </div>
+ <div class="option"> <strong> API-Endpunkt </strong> <p> POSTET einen JSON-Umschlag direkt von iPhone an einen vom Benutzer konfigurierten HTTP(S)-Endpunkt. <a href="/de/docs/api-endpoint/"> Siehe API-Endpunkt </a> . </p> </div>
+ </div>
+
+## Wählen Sie einen Datumsbereich aus
+ <p> Datumsvoreinstellungen decken die gängigen Pfade ab: </p>
+
+<div class="options">
+ <div class="option"> <strong> Heute </strong> <p> Den aktuellen Tag exportieren. Nützlich zum Testen der Ausgabeformatierung. </p> </div>
+ <div class="option"> <strong> Gestern </strong> <p> Die sicherste Wahl für den täglichen Export, da der Tag abgeschlossen ist. </p> </div>
+ <div class="option"> <strong> Alle Zeiten </strong> <p> Backfill von den frühesten HealthKit Daten, Health.md finden kann. </p> </div>
+ <div class="option"> <strong> Benutzerdefiniert </strong> <p> Wählen Sie Start- und Enddatum für einen bestimmten Bereich. </p> </div>
+ </div>
 
 ## Vorschau oder Export
+ <div class="options">
+ <div class="option"> <strong> Vorschau </strong> <p> Zeigt die Dateien und Inhalte an, die generiert werden, bevor etwas geschrieben wird. </p> </div>
+ <div class="option"> <strong> Export </strong> <p> Führt den Export aus, zeigt den Fortschritt auf dem Hauptbildschirm an und zeichnet das Ergebnis im Verlauf auf. </p> </div>
+ </div>
+
+## Wählen Sie die Datendetailebene
+
 <div class="options">
-<div class="option"><strong>Vorschau</strong><p>Zeigt vor dem Schreiben, welche Dateien und Inhalte erzeugt werden.</p></div>
-<div class="option"><strong>Export</strong><p>Führt den Export aus, zeigt den Fortschritt auf dem Hauptbildschirm und zeichnet das Ergebnis im Verlauf auf.</p></div>
-</div>
+ <div class="option"> <strong> Zusammenfassung </strong> <p> Kompakte Tagessummen und Rollups zum Lesen, für Notizen und Dashboards. </p> </div>
+ <div class="option"> <strong> Detaillierte Zeitreihen </strong> <p> Ausgewählte zeitgestempelte Stichproben und Intervalle. Diese Ebene ist sowohl auf Apple als auch auf Android verfügbar, wenn die ausgewählte Metrik geeignete Details offenlegt. </p> </div>
+ <div class="option"> <strong> Verlustfreie Gesundheitsakten </strong> <p> Das kanonische HealthKit Quelldatensatzarchiv. Diese Ebene ist nur für Apple verfügbar. Android wandelt Health Connect Datensätze nicht in ein HealthKit Archiv um. </p> </div>
+ </div>
 
-## Datendetail auswählen
+## Was „Exportieren“ tatsächlich bewirkt
+ <ol>
+ <li> Erfassen Sie für jeden Tag im Bereich ausgewählte zusammenfassende Prognosen. Fügen Sie kompatible Beispiele für detaillierte Zeitreihen hinzu. Und für verlustfreie Gesundheitsakten können Sie kanonische Quelldatensätze hinzufügen und Diagnosen abfragen. </li>
+ <li> Wenden Sie das von Ihnen gewählte Format ( Markdown , Bases, JSON oder CSV) und die Vorlage an. </li>
+ <li> Schreiben Sie eine Datei pro Tag in <code>{vault}/{subfolder}/</code> , übertragen Sie Dateien über den verbundenen Mac-Workflow oder POSTEN Sie einen versionierten JSON-Umschlag an Ihren API-Endpunkt. </li>
+ <li> Wenn <em> Einzelverfolgung </em> aktiviert ist, leiten Sie ausgewählte Markdown Dateien pro Eintrag aus dem kanonischen Archiv für dateibasierte Ziele ab. </li>
+ <li> Wenn <em> Daily Note Injection </em> aktiviert ist, führen Sie ausgewählte Zusammenfassungsfelder in Ihre täglichen Notizen ein. </li>
+ </ol>
 
-<div class="options">
-<div class="option"><strong>Zusammenfassung</strong><p>Kompakte Tagessummen und Roll-ups für Notizen, Übersichten und zum Lesen.</p></div>
-<div class="option"><strong>Detaillierte Zeitreihen</strong><p>Ausgewählte Messpunkte und Intervalle mit Zeitstempel. Diese Stufe ist auf Apple und Android verfügbar, wenn die Metrik entsprechende Details bietet.</p></div>
-<div class="option"><strong>Verlustfreie Gesundheitsdatensätze</strong><p>Das kanonische Archiv der HealthKit-Quelldatensätze. Diese Stufe gibt es nur bei Apple; Android wandelt Health Connect-Datensätze nicht in ein HealthKit-Archiv um.</p></div>
-</div>
+<p> JSON und CSV können kanonische Datensätze beibehalten. Markdown und Bases bleiben lesbar und stellen eine kompakte Erfassungsdiagnose bereit, anstatt das Archiv einzubetten. Genaue Schemata und Auslassungsregeln finden Sie in der vollständigen Exportreferenz <a href="/de/docs/reference/"> </a> . </p>
 
-## Was beim „Exportieren“ tatsächlich geschieht
-<ol>
-<li>Für jeden Tag im Zeitraum werden ausgewählte Zusammenfassungen erfasst, bei detaillierten Zeitreihen kompatible Messpunkte ergänzt und bei Lossless Health Records kanonische Quelldatensätze samt Abfragediagnosen hinzugefügt.</li>
-<li>Das gewählte Format (Markdown, Bases, JSON oder CSV) und die Vorlage werden angewendet.</li>
-<li>Pro Tag wird eine Datei in <code>{vault}/{subfolder}/</code> geschrieben, über den Workflow mit dem verbundenen Mac übertragen oder als versionierter API-Envelope per POST an Ihren API-Endpunkt gesendet.</li>
-<li>Ist <em>Individual Tracking</em> aktiviert, werden für dateibasierte Ziele ausgewählte Markdown-Dateien pro Eintrag aus dem kanonischen Archiv abgeleitet.</li>
-<li>Ist <em>Daily Note Injection</em> aktiviert, werden ausgewählte Zusammenfassungsfelder in Ihre täglichen Notizen eingefügt.</li>
-</ol>
+## Anhalten, abbrechen und erneut versuchen
 
-<p>JSON und CSV können kanonische Datensätze erhalten. Markdown und Bases bleiben gut lesbar und zeigen kompakte Erfassungsdiagnosen, statt das Archiv einzubetten. Exakte Schemas und Auslassungsregeln finden Sie in der <a href="/de/docs/reference/">vollständigen Exportreferenz</a>.</p>
+Durch Stoppen oder Abbrechen wird nur der aktuelle Versuch beendet. Bereits abgeschlossene Dateien und Termine bleiben abgeschlossen, während ungelöste Termine weiterhin für einen erneuten Versuch verfügbar sind. Durch das Abbrechen eines geplanten Versuchs wird dessen wiederkehrender Zeitplan nicht deaktiviert.
 
-## Stoppen, abbrechen und erneut versuchen
+## Profile und vertrauenswürdige Geschichte
 
-Stoppen oder Abbrechen beendet nur den aktuellen Versuch. Bereits abgeschlossene Dateien und Tage bleiben erhalten, offene Tage können erneut versucht werden. Der Abbruch eines geplanten Versuchs deaktiviert den wiederkehrenden Zeitplan nicht.
-
-## Profile und verlässlicher Verlauf
-
-Ein gespeichertes Profil fixiert seine Einstellungen und sein Ziel für den Lauf. Profilbezogene geplante und automatisierte Verlaufszeilen speichern das beim Lauf verwendete Profil; der Verlauf behält außerdem eine datenschutzfreundliche Bezeichnung des tatsächlichen Ziels. Eine manuelle Export-Zeile kann den Profilnamen auslassen. Spätere Umbenennungen und Zieländerungen schreiben bestehende Einträge nicht um. Fehlende Profilreferenzen brechen sicher ab. Siehe [Exportprofile](/de/docs/export-profiles/).
+Ein gespeichertes Profil friert seine Einstellungen und das Ziel für den Lauf ein. Profilbewusste geplante und Automatisierungsverlaufszeilen behalten das Laufzeitprofil bei, während der Verlauf eine datenschutzsichere Bezeichnung für das tatsächlich verwendete Ziel beibehält. In einer manuellen Export-Tab-Zeile kann der Profilname weggelassen werden. Spätere Umbenennungen und Zieländerungen schreiben den vorhandenen Verlauf nicht neu. Fehlende Profilverweise werden nicht geschlossen, sondern zurückgesetzt. Siehe [Profile exportieren](/de/docs/export-profiles/).
 
 ## Tab-Leiste
 
-<p>Die vier Tabs am unteren Bildschirmrand – Export, Zeitplan, Synchronisierung und Einstellungen – decken die gesamte App ab. Alles Weitere befindet sich eine oder zwei Ebenen tiefer in den Einstellungen.</p>
+<p> Die vier Registerkarten am unteren Bildschirmrand, Export, Zeitplan, Synchronisierung, Einstellungen, decken die gesamte App-Oberfläche ab. Alles andere befindet sich ein oder zwei Ebenen tief in den Einstellungen. </p>
 
 <div class="callout">
-<strong>Freischaltung.</strong>
-<p style="margin-top:6px;">Auf Apple-Plattformen gilt die kostenlose Freigrenze für 5 manuelle oder geplante Exportaktionen. Full Access hebt dieses Limit auf und schaltet Mac-Ziel-Workflows und Kurzbefehle frei. Android bietet dagegen 5 kostenlose manuelle Aktionen; für Zeitplanung ist dort die dauerhafte Freischaltung erforderlich. Die <a href="/de/docs/paywall/">Paywall-Seite</a> erklärt den Apple-Kauf.</p>
-</div>
+ <strong> Entsperrverhalten. </strong>
+ <p style="margin-top:6px;"> Die abonnementaktivierten Telefonversionen iPhone / iPad und Google Play erfordern eine aktive Testversion, ein Abonnement, Lifetime oder einen beibehaltenen permanenten Zugriff für Exporte und Planung. Es verbleibt keine örtliche Freiausfuhrbewilligung. Der Mac-Begleiter und der Build mit eingeschlossenem Zugriff F-Droid behalten ihre dokumentierten Ausnahmen bei. <a href="/de/docs/paywall/"> Einzelheiten zum Apple-Kauf finden Sie auf der Paywall-Seite </a> . </p>
+ </div>
 
-## Verwandte Themen
+## Verwandt
 
 <div class="related">
-  <a href="/de/docs/export-profiles/"><span>Profile</span>Unabhängige Ziele, Einstellungen, Zeitpläne und Automatisierungs-IDs speichern.</a>
-  <a href="/de/docs/scheduling/"><span>Tägliche Nutzung</span>Zeitplanung – automatisieren Sie den Vorgang, damit Sie nie wieder auf „Export“ tippen müssen.</a>
-  <a href="/de/docs/api-endpoint/"><span>Integration</span>API-Endpunkt – senden Sie ausgewählte JSON-Daten direkt an Ihren eigenen Dienst.</a>
-  <a href="/de/docs/format/"><span>Anpassen</span>Formatanpassung – ändern Sie das Erscheinungsbild jeder Datei.</a>
-  <a href="/de/docs/shortcuts/"><span>Automatisierung</span>Kurzbefehle – starten Sie Exporte über Siri, Automationen oder andere Apps.</a>
-  <a href="/de/docs/reference/"><span>Referenz</span>Exportreferenz – Schemas, kanonische Datensätze, Diagnosen und generierte Beispiele.</a>
-</div>
+ <a href="/de/docs/export-profiles/"> <span> Wiederholbare Setups </span> Profile exportieren, unabhängige Einstellungen, Ziele, Zeitpläne und stabile Automatisierungs-IDs speichern. </a>
+ <a href="/de/docs/scheduling/"> <span> Täglicher Gebrauch </span> Planung, automatisieren Sie dies, damit Sie nie wieder auf „Exportieren“ tippen müssen. </a>
+ <a href="/de/docs/api-endpoint/"> <span> Integrieren Sie den </span> API-Endpunkt und senden Sie ausgewähltes JSON direkt an Ihren eigenen Dienst. </a>
+ <a href="/de/docs/format/"> <span> Anpassen </span> Formatanpassung, ändern Sie das Aussehen jeder Datei. </a>
+ <a href="/de/docs/shortcuts/"> <span> Power </span> Shortcuts , Auslösen von Exporten aus Siri , Automatisierungen oder anderen Apps. </a>
+ <a href="/de/docs/reference/"> <span> Referenz </span> Exportreferenz, Schemata, kanonische Datensätze, Diagnosen und generierte Beispiele. </a>
+ </div>

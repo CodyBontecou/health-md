@@ -6,7 +6,7 @@
       "id": "healthmd.product_capabilities",
       "version": 1,
       "path": "packages/contracts/product-capabilities.json",
-      "sha256": "0aa6e87a269b6b9b53978968756a9d064665d85003b0b131405a454f41272e25",
+      "sha256": "220b7098d766d908a63ce992e119471153af9576eaadf1bd5a6f65bdf5bbcc53",
       "implementations": [
         "packages/contracts/validate.py",
         "apps/apple/HealthMdTests/Contracts/ProductCapabilityManifestTests.swift",
@@ -683,13 +683,12 @@
       "id": "healthmd.campaign_attribution",
       "version": 1,
       "status": "deferred",
-      "summary": "First-party Android campaign-install payload accepted by the website Worker; schema extraction is deferred.",
+      "summary": "Historical Android campaign-install contract; the candidate removes its app producer and replaces ingestion with a discard responder. Website redirects and counters remain separate.",
       "authorities": [
-        "apps/android/app/src/play/java/com/healthmd/data/attribution/CampaignAttributionModels.kt",
+        "apps/android/docs/campaign-attribution.md",
         "apps/website/cloudflare/attribution-worker/src/worker.js"
       ],
       "consumers": [
-        "apps/android/app/src/playTest/java/com/healthmd/data/attribution/OkHttpCampaignAttributionReporterTest.kt",
         "apps/website/test/attribution-worker.test.mjs"
       ],
       "documentation": [

@@ -552,7 +552,7 @@
     <!-- Paywall screen -->
     <string name="paywall_title">Health.md ਅਨਲਾਕ ਕਰੋ</string>
     <string name="paywall_subtitle">ਤੁਸੀਂ ਆਪਣੇ 5 ਮੁਫ਼ਤ ਨਿਰਯਾਤ ਵਰਤ ਲਏ ਹਨ</string>
-    <string name="paywall_unlimited_exports">ਅਨੰਤ ਨਿਰਯਾਤ, ਹਮੇਸ਼ਾ ਲਈ</string>
+    <string name="paywall_unlimited_exports">ਅਨੰਤ ਨਿਰਯਾਤ</string>
     <string name="paywall_scheduled_exports">ਸਵੈਚਲਿਤ ਅਨੁਸੂਚਿਤ ਨਿਰਯਾਤ</string>
     <string name="paywall_future_features">ਭਵਿੱਖ ਦੀਆਂ ਸਾਰੀਆਂ ਵਿਸ਼ੇਸ਼ਤਾਵਾਂ ਸ਼ਾਮਲ</string>
     <string name="paywall_one_time">ਇੱਕ-ਮੁਸ਼ਤ ਭੁਗਤਾਨ \u2014 ਕੋਈ ਸਬਸਕ੍ਰਿਪਸ਼ਨ ਨਹੀਂ</string>
@@ -623,7 +623,7 @@
     <string name="privacy_category_history_permissions">READ_HEALTH_DATA_HISTORY</string>
     <string name="privacy_category_history_exports">ਸਿਰਫ਼ ਵੱਡੇ ਦਸਤੀ ਨਿਰਯਾਤਾਂ ਲਈ ਵਰਤਿਆ ਜਾਂਦਾ ਹੈ, ਜਿਵੇਂ 90 ਦਿਨ ਜਾਂ ਸਾਰੀ ਮਿਆਦ, ਤਾਂ ਜੋ Health.md ਮਿਆਰੀ 30-ਦਿਨ ਦੀ ਸੀਮਾ ਤੋਂ ਪੁਰਾਣਾ Health Connect ਡੇਟਾ ਪੜ੍ਹ ਸਕੇ</string>
     <string name="privacy_policy_direct_cli">Direct CLI ਨਿਰਯਾਤ ਉਦੋਂ ਹੀ ਹੁੰਦਾ ਹੈ ਜਦੋਂ ਤੁਸੀਂ ਸਪਸ਼ਟ ਤੌਰ ’ਤੇ ਆਪਣੇ ਕੰਪਿਊਟਰ ਨਾਲ ਪੇਅਰ ਅਤੇ ਕਨੈਕਟ ਕਰਦੇ ਹੋ। ਸਿਹਤ ਰਿਕਾਰਡ ਪ੍ਰਮਾਣਿਤ, ਇਨਕ੍ਰਿਪਟਡ ਕਨੈਕਸ਼ਨ ਰਾਹੀਂ ਭੇਜੇ ਜਾਂਦੇ ਹਨ। ਟ੍ਰਾਂਸਫਰ ਦੁਬਾਰਾ ਸ਼ੁਰੂ ਕੀਤਾ ਜਾ ਸਕੇ, ਇਸ ਲਈ ਉਹ ਵੱਧ ਤੋਂ ਵੱਧ ਸੱਤ ਦਿਨ ਨਿੱਜੀ ਤੌਰ ’ਤੇ ਰੱਖੇ ਜਾਂਦੇ ਹਨ; ਰੱਦ ਕਰਨ ਜਾਂ ਪੇਅਰਿੰਗ ਹਟਾਉਣ ’ਤੇ ਉਹ ਇਸ ਤੋਂ ਪਹਿਲਾਂ ਹੀ ਮਿਟਾ ਦਿੱਤੇ ਜਾਂਦੇ ਹਨ।</string>
-    <string name="privacy_policy_footer">Health.md ਕੋਈ ਸਿਹਤ-ਡੇਟਾ ਕਲਾਊਡ ਨਹੀਂ ਚਲਾਉਂਦਾ। ਮੁਹਿੰਮ ਐਟ੍ਰਿਬਿਊਸ਼ਨ ਐਪ ਵੱਲੋਂ ਬਣਾਏ ਬੇਤਰਤੀਬ ਇੰਸਟਾਲ/ਇਵੈਂਟ UUIDs ਅਤੇ ਪ੍ਰਮਾਣਿਤ ਮੁਹਿੰਮ ਮੈਟਾਡੇਟਾ ਭੇਜ ਸਕਦੀ ਹੈ। ਇਹ ਕਦੇ ਸਿਹਤ ਡੇਟਾ, ਰਾਅ ਰੈਫਰਰ, ਡਿਵਾਈਸ IDs, ਨਿਰਯਾਤ, ਖਾਤੇ ਜਾਂ ਪਾਥ ਨਹੀਂ ਭੇਜਦੀ।</string>
+    <string name="privacy_policy_footer">ਇਹ ਵਰਜਨ ਕਸਟਮ ਵਰਤੋਂ ਵਿਸ਼ਲੇਸ਼ਣ ਜਾਂ ਇਸ਼ਤਿਹਾਰ ਐਟ੍ਰਿਬਿਊਸ਼ਨ ਡਾਟਾ ਇਕੱਠਾ ਨਹੀਂ ਕਰਦਾ। ਖਰੀਦਾਂ, ਸਮਾਂ-ਸਾਰਣੀ ਅਤੇ ਵਿਕਲਪਿਕ ਸੇਵਾਵਾਂ ਲਈ ਵੱਖਰੇ ਪਰਦੇਦਾਰੀ ਵੇਰਵੇ ਹਨ।</string>
     <!-- Feedback helper -->
     <string name="feedback_email_subject">Health.md ਪ੍ਰਤੀਕ੍ਰਿਆ</string>
     <string name="feedback_send_chooser">ਪ੍ਰਤੀਕ੍ਰਿਆ ਭੇਜੋ</string>
@@ -743,7 +743,7 @@
     <string name="onboarding_back">ਪਿੱਛੇ</string>
     <!-- P1 parity: billing/schedule/history/settings -->
     <string name="export_failure_paywall_label">ਅਣਲਾਕ ਲੋੜੀਂਦਾ ਹੈ</string>
-    <string name="export_guidance_paywall">ਅਨੁਸੂਚਿਤ ਨਿਰਯਾਤ ਲਈ ਜੀਵਨ ਭਰ ਅਨਲੌਕ ਦੀ ਲੋੜ ਹੁੰਦੀ ਹੈ। ਅਸੀਮਤ ਨਿਰਯਾਤ ਅਤੇ ਸਮਾਂ-ਸੂਚੀ ਨੂੰ ਅਨਲੌਕ ਕਰਨ ਲਈ ਪੇਵਾਲ ਖੋਲ੍ਹੋ।</string>
+    <string name="export_guidance_paywall">ਅਨੁਸੂਚਿਤ ਨਿਰਯਾਤ ਲਈ ਸਰਗਰਮ ਅਜ਼ਮਾਇਸ਼ ਜਾਂ ਗਾਹਕੀ, ਜਾਂ ਉਮਰ ਭਰ ਦੀ ਪਹੁੰਚ ਚਾਹੀਦੀ ਹੈ। ਪਹੁੰਚ ਦੇ ਵਿਕਲਪ ਦੇਖਣ ਲਈ ਖ਼ਰੀਦ ਸਕ੍ਰੀਨ ਖੋਲ੍ਹੋ।</string>
     <string name="export_source_retry">ਦੁਬਾਰਾ ਕੋਸ਼ਿਸ਼ ਕਰੋ</string>
     <string name="export_source_shortcut">ਸ਼ਾਰਟਕੱਟ</string>
     <string name="export_source_remote">ਰਿਮੋਟ</string>
@@ -1436,4 +1436,17 @@
     <string name="whoop_reconnect">WHOOP ਮੁੜ ਕਨੈਕਟ ਕਰੋ</string>
     <string name="whoop_disconnect">WHOOP ਡਿਸਕਨੈਕਟ ਕਰੋ</string>
     <string name="whoop_use_for_exports">ਨਿਰਯਾਤ ਲਈ WHOOP ਵਰਤੋ</string>
+    <string name="paywall_access_subtitle">ਆਪਣਾ ਨਿੱਜੀ ਸਿਹਤ ਆਰਕਾਈਵ ਸ਼ੁਰੂ ਕਰਨ ਲਈ ਗਾਹਕੀ ਜਾਂ ਉਮਰ ਭਰ ਦੀ ਪਹੁੰਚ ਚੁਣੋ। ਯੋਗ ਗਾਹਕੀਆਂ ਵਿੱਚ 7 ਦਿਨਾਂ ਦੀ ਮੁਫ਼ਤ ਅਜ਼ਮਾਇਸ਼ ਸ਼ਾਮਲ ਹੈ।</string>
+    <string name="paywall_access_active_title">ਤੁਹਾਡੀ ਪਹੁੰਚ ਸਰਗਰਮ ਹੈ</string>
+    <string name="paywall_access_active_body">ਆਪਣਾ ਸਿਹਤ ਡਾਟਾ ਜੋੜਨ ਅਤੇ ਨਿੱਜੀ ਆਰਕਾਈਵ ਸੰਭਾਲਣ ਦੀ ਥਾਂ ਚੁਣਨ ਲਈ ਸੈੱਟਅੱਪ ਜਾਰੀ ਰੱਖੋ।</string>
+    <string name="paywall_plan_choices">ਹਫ਼ਤਾਵਾਰੀ, ਸਾਲਾਨਾ ਜਾਂ ਉਮਰ ਭਰ ਦੀ ਪਹੁੰਚ</string>
+    <string name="paywall_weekly_price">%1$s / ਹਫ਼ਤਾ</string>
+    <string name="paywall_yearly_price">%1$s / ਸਾਲ</string>
+    <string name="paywall_lifetime_price">ਉਮਰ ਭਰ — ਇੱਕ ਵਾਰ %1$s</string>
+    <string name="paywall_trial_then">7 ਦਿਨ ਮੁਫ਼ਤ, ਫਿਰ %1$s</string>
+    <string name="paywall_retry">ਮੁੜ ਕੋਸ਼ਿਸ਼ ਕਰੋ</string>
+    <string name="paywall_manage_subscriptions">ਗਾਹਕੀਆਂ ਦਾ ਪ੍ਰਬੰਧਨ ਕਰੋ</string>
+    <string name="paywall_terms">ਸ਼ਰਤਾਂ</string>
+    <string name="paywall_privacy">ਪਰਦੇਦਾਰੀ</string>
+    <string name="paywall_subscription_disclosure">ਯੋਗ ਗਾਹਕੀਆਂ ਵਿੱਚ 7 ਦਿਨਾਂ ਦੀ ਮੁਫ਼ਤ ਅਜ਼ਮਾਇਸ਼ ਸ਼ਾਮਲ ਹੈ, ਫਿਰ ਅਜ਼ਮਾਇਸ਼ ਜਾਂ ਮੌਜੂਦਾ ਮਿਆਦ ਖ਼ਤਮ ਹੋਣ ਤੋਂ ਪਹਿਲਾਂ ਰੱਦ ਨਾ ਕਰਨ ਉੱਤੇ ਦਿਖਾਈ ਕੀਮਤ ਉੱਤੇ ਆਪਣੇ ਆਪ ਨਵੀਆਂ ਹੁੰਦੀਆਂ ਹਨ। Google Play ਵਿੱਚ ਪ੍ਰਬੰਧਨ ਜਾਂ ਰੱਦ ਕਰੋ। ਉਮਰ ਭਰ ਦੀ ਪਹੁੰਚ ਲਈ ਤੁਰੰਤ ਇੱਕ ਵਾਰ ਭੁਗਤਾਨ ਲਿਆ ਜਾਂਦਾ ਹੈ। ਮੌਜੂਦਾ ਭੁਗਤਾਨ ਕੀਤੀ ਪਹੁੰਚ ਬਰਕਰਾਰ ਰਹਿੰਦੀ ਹੈ। ਉਮਰ ਭਰ ਦਾ ਕੋਈ ਅਜ਼ਮਾਇਸ਼ ਨਹੀਂ ਹੈ। ਐਪ ਨੂੰ ਮਿਟਾਉਣਾ ਜਾਂ ਲਾਈਫਟਾਈਮ ਖਰੀਦਣਾ ਮੌਜੂਦਾ ਗਾਹਕੀ ਨੂੰ ਰੱਦ ਨਹੀਂ ਕਰਦਾ ਹੈ।</string>
 </resources>

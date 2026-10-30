@@ -8,8 +8,6 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.healthmd.data.health.HealthConnectManager
 import com.healthmd.domain.distribution.DistributionPolicy
-import com.healthmd.domain.onboarding.OnboardingEventSink
-import com.healthmd.domain.onboarding.OnboardingStep
 import com.healthmd.domain.repository.SettingsRepository
 import com.healthmd.presentation.common.HealthConnectActionError
 import com.healthmd.util.runCatchingCancellable
@@ -17,16 +15,10 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
 
-enum class OnboardingPage(val analyticsStep: OnboardingStep) {
-    WELCOME(OnboardingStep.WELCOME),
-    HEALTH_ACCESS(OnboardingStep.HEALTH_ACCESS),
-    FOLDER_SETUP(OnboardingStep.FOLDER_SETUP),
-    PLAY_ACCESS(OnboardingStep.ACCESS),
-    INCLUDED_ACCESS(OnboardingStep.ACCESS),
-    READY(OnboardingStep.READY),
+enum class OnboardingPage {
+    WELCOME, HEALTH_ACCESS, FOLDER_SETUP, PLAY_ACCESS, INCLUDED_ACCESS, READY,
 }
 
 fun onboardingPages(policy: DistributionPolicy): List<OnboardingPage> = listOf(
@@ -50,7 +42,6 @@ data class OnboardingUiState(
 class OnboardingViewModel @Inject constructor(
     application: Application,
     private val settingsRepository: SettingsRepository,
-    private val onboardingEvents: OnboardingEventSink,
     val distributionPolicy: DistributionPolicy,
 ) : AndroidViewModel(application) {
 
@@ -152,57 +143,13 @@ class OnboardingViewModel @Inject constructor(
 
             // Save to settings
             settingsRepository.saveExportFolderUri(uri.toString())
-            runCatchingCancellable { onboardingEvents.folderSelected() }
         }
-    }
-
-    fun recordInitialOnboarding() {
-        viewModelScope.launch {
-            val startRecorded = runCatchingCancellable {
-                onboardingEvents.onboardingStarted()
-            }.isSuccess
-            if (startRecorded) {
-                runCatchingCancellable {
-                    onboardingEvents.stepViewed(OnboardingStep.WELCOME)
-                }
-            }
-        }
-    }
-
-    fun recordSettledPage(page: OnboardingPage) {
-        recordAnalytics { onboardingEvents.stepViewed(page.analyticsStep) }
-    }
-
-    fun recordHealthSkipped() {
-        recordAnalytics { onboardingEvents.healthSkipped() }
-    }
-
-    fun recordFolderSkipped() {
-        recordAnalytics { onboardingEvents.folderSkipped() }
-    }
-
-    fun recordContinueFreeTapped() {
-        recordAnalytics { onboardingEvents.continueFreeTapped() }
-    }
-
-    fun recordPurchaseTapped() {
-        recordAnalytics { onboardingEvents.purchaseTapped() }
     }
 
     fun completeOnboarding(onComplete: () -> Unit) {
         viewModelScope.launch {
             runCatchingCancellable { settingsRepository.setOnboardingCompleted(true) }
-            // Give the durable local queue a brief chance to persist without ever trapping setup.
-            withTimeoutOrNull(ANALYTICS_COMPLETION_TIMEOUT_MS) {
-                runCatchingCancellable { onboardingEvents.onboardingCompleted() }
-            }
             onComplete()
-        }
-    }
-
-    private fun recordAnalytics(event: suspend () -> Unit) {
-        viewModelScope.launch {
-            runCatchingCancellable { event() }
         }
     }
 
@@ -219,7 +166,4 @@ class OnboardingViewModel @Inject constructor(
         }
     }
 
-    private companion object {
-        const val ANALYTICS_COMPLETION_TIMEOUT_MS = 500L
-    }
 }

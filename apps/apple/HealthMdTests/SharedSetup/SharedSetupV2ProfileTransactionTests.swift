@@ -756,7 +756,7 @@ final class SharedSetupV2ProfileTransactionTests: XCTestCase {
         let dependencies = ExportIntentRunner.Dependencies(
             refreshPurchaseStatus: { events.append("purchase") },
             canExport: { true },
-            trackExportBlockedByQuota: { _ in },
+
             hasVaultAccess: {
                 events.append("vault")
                 return true
@@ -778,7 +778,7 @@ final class SharedSetupV2ProfileTransactionTests: XCTestCase {
             },
             recordResult: { _, _, _, _, _, _, _ in },
             recordExportUse: {},
-            trackExportSucceeded: { _ in },
+
             updateScheduleLastExport: {},
             pendingExportStore: InMemoryPendingExportStore(),
             exportNotificationScheduler: InspectableExportNotificationScheduler(),

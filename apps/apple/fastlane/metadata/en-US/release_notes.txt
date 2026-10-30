@@ -1,5 +1,6 @@
-Health.md 3.4.5 adds more ways to connect and format your health journal.
+Health.md 3.5.0 adds weekly and yearly subscriptions alongside one-time Lifetime access on iPhone and iPad.
 
-• Choose EU Dot (DD.MM.YYYY) in Format Customization. Your choice is saved and included in shared setups.
-• Connect WHOOP to include recovery, strain, sleep, and workout data in your exports.
-• Clearer sleep-date guidance explains which night each export covers.
+• Eligible subscriptions include a 7-day free trial, then renew automatically at the displayed price unless canceled.
+• Existing Lifetime purchases and grandfathered access are preserved, including eligible Family Sharing.
+• Active access is required before setup and exports on iPhone and iPad. The free macOS companion is unchanged.
+• Purchase status and scheduling guidance distinguish subscription and Lifetime access.

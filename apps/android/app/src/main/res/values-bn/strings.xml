@@ -552,7 +552,7 @@
     <!-- Paywall screen -->
     <string name="paywall_title">Health.md আনলক করুন</string>
     <string name="paywall_subtitle">আপনি আপনার ৫টি বিনামূল্যের রপ্তানি ব্যবহার করেছেন</string>
-    <string name="paywall_unlimited_exports">সীমাহীন রপ্তানি, চিরকাল</string>
+    <string name="paywall_unlimited_exports">সীমাহীন রপ্তানি</string>
     <string name="paywall_scheduled_exports">স্বয়ংক্রিয় নির্ধারিত রপ্তানি</string>
     <string name="paywall_future_features">সমস্ত ভবিষ্যত বৈশিষ্ট্য অন্তর্ভুক্ত</string>
     <string name="paywall_one_time">এককালীন পেমেন্ট \u2014 কোনো সাবস্ক্রিপশন নেই</string>
@@ -623,7 +623,7 @@
     <string name="privacy_category_history_permissions">READ_HEALTH_DATA_HISTORY</string>
     <string name="privacy_category_history_exports">শুধু বড় ম্যানুয়াল রপ্তানির জন্য ব্যবহৃত হয়, যেমন ৯০ দিন বা সব সময়, যাতে Health.md সাধারণ ৩০ দিনের সীমার চেয়ে পুরোনো Health Connect ডেটা পড়তে পারে</string>
     <string name="privacy_policy_direct_cli">আপনি স্পষ্টভাবে কম্পিউটারের সঙ্গে পেয়ার ও সংযোগ করার পরেই Direct CLI রপ্তানি হয়। স্বাস্থ্য রেকর্ডগুলো একটি প্রমাণীকৃত, এনক্রিপ্ট করা সংযোগের মাধ্যমে পাঠানো হয়। স্থানান্তর আবার শুরু করা যায়—এ জন্য সেগুলো সর্বোচ্চ সাত দিন ব্যক্তিগতভাবে রাখা হয়; আপনি বাতিল করলে বা পেয়ারিং মুছে দিলে আরও আগেই সেগুলো মুছে যায়।</string>
-    <string name="privacy_policy_footer">Health.md কোনো স্বাস্থ্য-ডেটা ক্লাউড পরিচালনা করে না। ক্যাম্পেইন অ্যাট্রিবিউশন অ্যাপের তৈরি এলোমেলো ইনস্টল/ইভেন্ট UUIDs এবং যাচাই করা ক্যাম্পেইন মেটাডেটা পাঠাতে পারে। এটি কখনো স্বাস্থ্য ডেটা, অপরিশোধিত রেফারার, ডিভাইস IDs, রপ্তানি, অ্যাকাউন্ট বা পাথ পাঠায় না।</string>
+    <string name="privacy_policy_footer">এই সংস্করণ কাস্টম ব্যবহার বিশ্লেষণ বা বিজ্ঞাপন অ্যাট্রিবিউশন ডেটা সংগ্রহ করে না। কেনাকাটা, সময়সূচি এবং ঐচ্ছিক পরিষেবার জন্য আলাদা গোপনীয়তা বিবৃতি রয়েছে।</string>
     <!-- Feedback helper -->
     <string name="feedback_email_subject">Health.md প্রতিক্রিয়া</string>
     <string name="feedback_send_chooser">প্রতিক্রিয়া পাঠান</string>
@@ -743,7 +743,7 @@
     <string name="onboarding_back">ফিরে যান</string>
     <!-- P1 parity: billing/schedule/history/settings -->
     <string name="export_failure_paywall_label">আনলক আবশ্যক</string>
-    <string name="export_guidance_paywall">নির্ধারিত রপ্তানি আজীবন আনলক প্রয়োজন. সীমাহীন এক্সপোর্ট এবং শিডিউল আনলক করতে পেওয়াল খুলুন।</string>
+    <string name="export_guidance_paywall">নির্ধারিত রপ্তানির জন্য সক্রিয় ট্রায়াল বা সাবস্ক্রিপশন, অথবা আজীবন অ্যাক্সেস প্রয়োজন। অ্যাক্সেসের বিকল্প দেখতে কেনার পর্দা খুলুন।</string>
     <string name="export_source_retry">আবার চেষ্টা করুন</string>
     <string name="export_source_shortcut">শর্টকাট</string>
     <string name="export_source_remote">দূরবর্তী</string>
@@ -1436,4 +1436,17 @@
     <string name="whoop_reconnect">WHOOP আবার সংযুক্ত করুন</string>
     <string name="whoop_disconnect">WHOOP সংযোগ বিচ্ছিন্ন করুন</string>
     <string name="whoop_use_for_exports">রপ্তানির জন্য WHOOP ব্যবহার করুন</string>
+    <string name="paywall_access_subtitle">আপনার ব্যক্তিগত স্বাস্থ্য আর্কাইভ শুরু করতে সাবস্ক্রিপশন বা আজীবন অ্যাক্সেস বেছে নিন। যোগ্য সাবস্ক্রিপশনে 7 দিনের বিনামূল্যের ট্রায়াল রয়েছে।</string>
+    <string name="paywall_access_active_title">আপনার অ্যাক্সেস সক্রিয়</string>
+    <string name="paywall_access_active_body">স্বাস্থ্য তথ্য সংযুক্ত করতে এবং ব্যক্তিগত আর্কাইভ কোথায় সংরক্ষণ করবেন তা বেছে নিতে সেটআপ চালিয়ে যান।</string>
+    <string name="paywall_plan_choices">সাপ্তাহিক, বার্ষিক বা আজীবন অ্যাক্সেস</string>
+    <string name="paywall_weekly_price">%1$s / সপ্তাহ</string>
+    <string name="paywall_yearly_price">%1$s / বছর</string>
+    <string name="paywall_lifetime_price">আজীবন — একবার %1$s</string>
+    <string name="paywall_trial_then">7 দিন বিনামূল্যে, তারপর %1$s</string>
+    <string name="paywall_retry">আবার চেষ্টা করুন</string>
+    <string name="paywall_manage_subscriptions">সাবস্ক্রিপশন পরিচালনা করুন</string>
+    <string name="paywall_terms">শর্তাবলি</string>
+    <string name="paywall_privacy">গোপনীয়তা</string>
+    <string name="paywall_subscription_disclosure">যোগ্য সাবস্ক্রিপশনে 7 দিনের বিনামূল্যের ট্রায়াল রয়েছে, তারপর ট্রায়াল বা বর্তমান মেয়াদ শেষ হওয়ার আগে বাতিল না করলে দেখানো মূল্যে স্বয়ংক্রিয়ভাবে নবায়ন হয়। Google Play-তে পরিচালনা বা বাতিল করুন। আজীবন অ্যাক্সেসের জন্য সঙ্গে সঙ্গে এককালীন মূল্য নেওয়া হয়। বিদ্যমান অর্থপ্রদত্ত অ্যাক্সেস বজায় থাকে। আজীবন কোন বিচার নেই। অ্যাপ মুছে ফেলা বা লাইফটাইম কেনা একটি বিদ্যমান সাবস্ক্রিপশন বাতিল করে না।</string>
 </resources>

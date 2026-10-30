@@ -48,7 +48,7 @@ struct ExportPreviewView: View {
     let destinationLabel: String
     let destinationRootName: String?
     let dateRangePreset: ExportDateRangePreset
-    let targetType: PricingAnalyticsExportTargetType
+    let targetType: ExportPreviewTargetType
     let apiDestination: APIExportDestinationSnapshot?
     let connectedAppsEnabled: Bool
     let fetchHealthData: (Date) async -> HealthData?
@@ -57,7 +57,6 @@ struct ExportPreviewView: View {
     let onExport: (() -> Void)?
     let onSizeEstimateUpdated: ((ExportPreviewSizeEstimate?) -> Void)?
     private let appleLooseDailyPlanner: any AppleLooseDailyExportPlanning
-    private let analytics = PricingAnalyticsClient.shared
 
     init(
         startDate: Date,
@@ -67,7 +66,7 @@ struct ExportPreviewView: View {
         destinationLabel: String,
         destinationRootName: String?,
         dateRangePreset: ExportDateRangePreset,
-        targetType: PricingAnalyticsExportTargetType,
+        targetType: ExportPreviewTargetType,
         apiDestination: APIExportDestinationSnapshot? = nil,
         connectedAppsEnabled: Bool = false,
         fetchHealthData: @escaping (Date) async -> HealthData?,
@@ -650,7 +649,7 @@ struct ExportPreviewView: View {
     @MainActor
     static func fetchPreviewRecord(
         for date: Date,
-        targetType: PricingAnalyticsExportTargetType,
+        targetType: ExportPreviewTargetType,
         connectedAppsEnabled: Bool,
         writesExternalProviderSidecars: Bool,
         fetchHealthData: (Date) async -> HealthData?,
@@ -688,9 +687,6 @@ struct ExportPreviewView: View {
         estimatedExportSize = nil
         onSizeEstimateUpdated?(nil)
 
-        let metadata = analyticsMetadata()
-        analytics.trackExportPreviewOpened(metadata: metadata)
-
         let frozenTimeZone = settings.exportTimeZoneOverride ?? .current
         var frozenCalendar = Calendar(identifier: .gregorian)
         frozenCalendar.timeZone = frozenTimeZone
@@ -706,10 +702,6 @@ struct ExportPreviewView: View {
               !(settings.dailyNotesOnlyModeEnabled
                 && (targetType == .apiEndpoint || targetType == .agentDataGateway)) else {
             isLoading = false
-            analytics.trackExportPreviewFailed(
-                metadata: metadata,
-                errorCategory: .configurationUnavailable
-            )
             return
         }
 
@@ -971,12 +963,7 @@ struct ExportPreviewView: View {
         isLoading = false
 
         if built.isEmpty {
-            analytics.trackExportPreviewFailed(
-                metadata: metadata,
-                errorCategory: .noData
-            )
         } else {
-            analytics.trackExportPreviewGenerated(metadata: metadata)
         }
     }
 
@@ -1050,17 +1037,6 @@ struct ExportPreviewView: View {
             dateLabel: "Roll-up summaries",
             folderPath: previewRollupFolderPath(for: nil),
             files: files
-        )
-    }
-
-    private func analyticsMetadata() -> PricingAnalyticsExportMetadata {
-        PricingAnalyticsExportMetadata(
-            targetType: targetType,
-            formatCount: settings.exportFormats.count,
-            metricCount: settings.metricSelection.totalEnabledCount,
-            dateRangePreset: dateRangePreset,
-            startDate: startDate,
-            endDate: endDate
         )
     }
 

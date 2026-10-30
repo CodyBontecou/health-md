@@ -1041,9 +1041,6 @@ struct ScheduleSettingsView: View {
     }
 
     private func trackScheduleEnableAttempt() {
-        PricingAnalyticsClient.shared.trackScheduleEnableUnblocked(
-            quotaState: purchaseManager.analyticsQuotaState
-        )
     }
 
     // MARK: - Retry Export
@@ -1100,7 +1097,7 @@ struct ScheduleSettingsView: View {
 
         guard purchaseManager.canExport else {
             await MainActor.run {
-                retryErrorMessage = String(localized: "Free export limit reached. Unlock Full Access to retry this export.")
+                retryErrorMessage = String(localized: "Retrying this export requires an active trial or subscription, or Lifetime access.")
                 showRetryError = true
             }
             return
