@@ -1,0 +1,7 @@
+{
+  "description": "Mac 版 Health.md 是 iPhone 版 Health.md 的免费伴侣。\n\n将选定的 Apple Health 导出内容保存到 Mac 上的文件夹中，包括 Obsidian 保管库。您的 iPhone 读取 HealthKit； Mac 接收选定的数据并写入 Markdown、CSV、JSON 或 Obsidian Bases 文件。\n\n如何使用它\n• 在两台设备上打开Health.md。\n• 选择并授权Mac 上的目标文件夹。\n• 在iPhone 上，选择“同步”中的“Mac 目标”，选择您的指标、日期和格式，然后导出。\n\n在传输过程中保持两个应用程序打开并连接。 Mac 无法自行读取Apple Health，也不会导入Apple 的export.xml 存档。\n\n访问\nMac 伴侣仍然免费。配对的 iPhone 或 iPad 需要有效试用、订阅、终身或保留的永久访问权限。符合条件的 Apple 订阅包括 7 天免费试用。家庭共享共享访问权限，而不是健康记录。\n\n隐私\n此版本删除了自定义应用程序使用情况分析和广告归因。出口到您选择的目的地。隐私政策中描述了基本连接和早期保留的服务记录。\n\nTerms of Use: https://www.apple.com/legal/internet-services/itunes/dev/stdeula/\nPrivacy: https://healthmd.app/privacy-policy.html",
+  "keywords": "健康数据,备份,Obsidian,CSV,JSON,PDF,本地,隐私,快捷指令,Mac同步,医生,就诊,归档,数据迁移,健康报告,数据库,表格,YAML,Bases,CLI,iCloud,文件夹",
+  "marketingUrl": "https://healthmd.app/zh-hans/",
+  "supportUrl": "https://healthmd.app/zh-hans/docs/",
+  "whatsNew": "Health.md 3.5.0 使 Mac 伴侣保持免费，并更新了当前 iPhone 和 iPad 版本的隐私条款。自定义应用程序使用情况分析和广告归因已被删除。"
+}

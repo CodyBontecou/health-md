@@ -6,6 +6,9 @@ All notable changes to Health.md will be documented in this file.
 
 ## [3.5.0] - Unreleased
 
+### Privacy
+- Removed custom in-app usage analytics and advertising attribution. Earlier service records and essential connected services retain their separate disclosures.
+
 ### Changed
 - Weekly and yearly subscription options with a seven-day free trial for eligible customers, alongside one-time Lifetime access; Apple Family plans use native Family Sharing.
 - On iPhone and iPad, active trial, subscription, or permanent access is required before setup and exports. Existing Lifetime and grandfathered access is preserved; the macOS companion remains free.

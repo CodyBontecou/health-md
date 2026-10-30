@@ -27,6 +27,26 @@ enum HealthMdReleaseNotes {
 
     static let notes: [NoteletVersionNotes] = [
         .init(
+            version: "3.5.0",
+            items: [
+                .list(
+                    title: "Plans and privacy",
+                    rows: [
+                        .init(
+                            symbolSystemName: "creditcard",
+                            title: "Weekly, yearly, or Lifetime",
+                            description: "Eligible subscriptions include a seven-day free trial. Existing Lifetime and grandfathered access remain valid."
+                        ),
+                        .init(
+                            symbolSystemName: "hand.raised",
+                            title: "Custom app analytics removed",
+                            description: "This version removes custom usage analytics and advertising attribution. Essential connected services are described in the Privacy Policy."
+                        )
+                    ]
+                )
+            ]
+        ),
+        .init(
             version: "3.4.5",
             items: [
                 .list(
