@@ -29,7 +29,7 @@
              }
            },
            {
-@@ -230,7 +230,7 @@
+@@ -227,7 +227,7 @@
              <li>If Preview succeeds but saving fails, check the <a href="/docs/folder-vault/">destination folder and file provider</a>.</li>
            </ul>
            <p>Once the result is useful, <a href="/docs/scheduling/">set up scheduled exports</a>. iOS controls background timing; a target time is not a guaranteed run time.</p>
@@ -38,7 +38,7 @@
          </section>
 
          <section class="about-section" id="privacy">
-@@ -291,7 +291,7 @@
+@@ -288,7 +288,7 @@
              </div>
              <div>
                <h3>Is there a free trial?</h3>
@@ -763,6 +763,28 @@
          <p class="legal-lede">Health.md is local-first. Your device reads the records you authorize; you choose where exports or direct responses go. A separate, optional single-owner cloud pilot stores exports intentionally sent to it.</p>
 
          <div class="legal-promise" role="list" aria-label="Privacy principles">
+@@ -63,8 +63,8 @@
+           </div>
+           <div role="listitem">
+             <span>03</span>
+-            <strong>Analytics stays health-free</strong>
+-            <p>Limited first-party events use coarse fields that cannot represent health records or export content.</p>
++            <strong>No custom app analytics</strong>
++            <p>Health.md 3.5.0 removes custom app usage analytics and advertising attribution. Website measurement and essential services are described separately.</p>
+           </div>
+         </div>
+       </div>
+@@ -79,8 +79,8 @@
+             <li><a href="#health-data">Health data</a></li>
+             <li><a href="#destinations">Destinations</a></li>
+             <li><a href="#medical-records">Android medical records</a></li>
+-            <li><a href="#product-analytics">Product analytics</a></li>
+-            <li><a href="#campaigns">Campaign attribution</a></li>
++            <li><a href="#product-analytics">App analytics and earlier versions</a></li>
++            <li><a href="#campaigns">Website measurement</a></li>
+             <li><a href="#operations">Scheduling and support</a></li>
+             <li><a href="#website">Website data</a></li>
+             <li><a href="#retention">Storage and retention</a></li>
 @@ -101,7 +101,7 @@
            <p>It does not replace the privacy terms of Apple, Google, a health provider, a file or sync provider, an API operator, an AI tool, or another destination you choose. Once you direct data to one of those services, that service's terms and your configuration govern its copy.</p>
            <div class="policy-note">
@@ -840,6 +862,180 @@
            </ul>
 -          <p>Contact us to exercise an applicable right. We may need information to verify and locate the relevant record. Because analytics identifiers are random and not connected to an account or email address, we may be unable to associate an email request with a particular analytics row. Those rows still expire automatically within the period above.</p>
 +          <p>Contact us to exercise an applicable right. We may need information to verify and locate the relevant record. Because analytics identifiers are random and not connected to an account or email address, we may be unable to associate an email request with a particular analytics row. Contact us to discuss the information needed to locate earlier installation records. Deletion and recovery-copy expiry must be confirmed separately.</p>
+         </section>
+
+         <section id="children">
+--- a/apps/website/es/privacy-policy.html
++++ b/apps/website/es/privacy-policy.html
+@@ -47,7 +47,7 @@
+       <div class="legal-hero-inner">
+         <p class="legal-eyebrow">Legal · Privacidad</p>
+         <h1 id="privacy-title">Privacidad,<br>sin rodeos.</h1>
+-        <p class="legal-updated">Última actualización: 2026-10-24</p>
++        <p class="legal-updated">Aplicable a Health.md 3.5.0 cuando se publique · Preparado: 2026-10-30</p>
+         <p class="legal-lede">Health.md mueve datos de salud sensibles sin crear una nube de datos de salud de Health.md. Tu dispositivo lee los registros que autorizas y tú eliges adónde va cada exportación o respuesta directa.</p>
+
+         <div class="legal-promise" role="list" aria-label="Principios de privacidad">
+@@ -63,8 +63,8 @@
+           </div>
+           <div role="listitem">
+             <span>03</span>
+-            <strong>Análisis sin datos de salud</strong>
+-            <p>Los eventos propios limitados usan campos generales que no pueden representar registros de salud ni contenido exportado.</p>
++            <strong>Sin analítica personalizada en la aplicación</strong>
++            <p>Health.md 3.5.0 elimina la analítica personalizada de uso y la atribución publicitaria. La medición del sitio web y los servicios esenciales se describen por separado.</p>
+           </div>
+         </div>
+       </div>
+@@ -79,8 +79,8 @@
+             <li><a href="#health-data">Datos de salud</a></li>
+             <li><a href="#destinations">Destinos</a></li>
+             <li><a href="#medical-records">Registros médicos en Android</a></li>
+-            <li><a href="#product-analytics">Análisis del producto</a></li>
+-            <li><a href="#campaigns">Atribución de campañas</a></li>
++            <li><a href="#product-analytics">Analítica y versiones anteriores</a></li>
++            <li><a href="#campaigns">Medición del sitio web</a></li>
+             <li><a href="#operations">Programación y soporte</a></li>
+             <li><a href="#website">Datos del sitio web</a></li>
+             <li><a href="#retention">Almacenamiento y conservación</a></li>
+@@ -106,7 +106,8 @@
+           <div class="policy-note">
+             <p><strong>Aviso sobre la traducción:</strong> Esta versión se facilita para tu comodidad. En caso de conflicto, prevalecerá la <a href="../privacy-policy.html" hreflang="en">versión en inglés</a> en la medida permitida por la legislación aplicable y sin limitar derechos obligatorios del consumidor.</p>
+           </div>
+-        </section>
++        <p>Health.md 3.5.0 elimina la analítica personalizada del producto y la atribución de campañas dentro de la aplicación. Los servicios esenciales y la medición del sitio web se describen por separado. Las versiones anteriores y los registros conservados requieren un tratamiento independiente.</p>
++</section>
+
+         <section id="health-data">
+           <h2>Datos de salud que procesamos siguiendo tus instrucciones</h2>
+@@ -159,26 +160,14 @@
+         </section>
+
+         <section id="product-analytics">
+-          <h2>Análisis propios del producto</h2>
+-          <p><strong>Compilación Android de F-Droid:</strong> no envía telemetría de Health.md ni crea un identificador de instalación, cola de eventos, Worker o estado persistente de telemetría. Install Referrer, análisis de incorporación, Play Review, Billing, OAuth de proveedores directos y Wear Data Layer no se compilan en esta versión. Las exportaciones a un endpoint API configurado por el usuario y las sesiones explícitas de Direct CLI son acciones del producto iniciadas por el usuario, no telemetría de Health.md.</p>
+-          <p>Las compilaciones de Apple y Google Play usan un Worker propio de Cloudflare y una base de datos D1 para saber si los flujos de incorporación, activación, exportación, programación, muro de pago y compra funcionan. Health.md recopila automáticamente estos eventos limitados del producto sin Firebase Analytics, Google Analytics, AppsFlyer, un SDK externo de informes de fallos ni un SDK publicitario dentro de la aplicación.</p>
+-          <p>Según la plataforma y el evento, una carga aceptada puede contener un UUID aleatorio de instalación, un UUID aleatorio del evento, el nombre del evento, versión de la aplicación, número de compilación, plataforma, experimento o variante, paso de incorporación u omisión explícita, recuentos acotados de exportaciones gratuitas, categoría del destino, número de formatos, rangos generales de número de métricas y periodo de fechas, contexto del muro de pago, identificador del producto, resultado de compra o restauración y una categoría amplia de autorización o error.</p>
+-          <p>El UUID de instalación persiste durante esa instalación de la aplicación, por lo que los datos son <strong>seudónimos y no anónimos</strong>. Se genera al azar y no deriva de tu nombre, cuenta, identificador de salud, identificador de hardware, Android ID ni Advertising ID.</p>
+-          <p>Los análisis del producto <strong>nunca incluyen valores ni identificadores de HealthKit o Health Connect, nombres de métricas ni fechas de salud</strong>, medicamentos, entrenamientos, contenido exportado, resultados de consultas escritas, nombres de carpetas o bóvedas, rutas de archivos, nombres de dispositivos o pares, datos de cuentas, precios, <strong>credenciales o tokens</strong>, texto del usuario, referentes sin procesar, cadenas completas de User-Agent ni direcciones IP almacenadas. Se rechazan eventos, propiedades y valores desconocidos. Las listas públicas permitidas del cliente y del Worker están diseñadas para que <strong>los registros de salud y el contenido exportado no puedan representarse en una carga de análisis</strong>.</p>
+-          <p>Estos eventos no se usan para segmentación publicitaria, identificación por huella digital ni seguimiento entre aplicaciones, y no se venden ni comparten con anunciantes. Las filas validadas se conservan durante un máximo de 13 meses y se eliminan mediante una limpieza diaria automática. Cloudflare sigue procesando la información ordinaria de conexión conforme a sus propias condiciones.</p>
++          <h2>Análisis de aplicaciones y versiones anteriores</h2>
++          <p><strong>Análisis de aplicaciones en esta versión:</strong>esta versión no recopila análisis de uso personalizados, no crea un identificador de instalación de análisis, no envía eventos de incorporación o flujo de compras, ni realiza atribución de publicidad de aplicaciones. Al actualizar, elimina los identificadores de análisis locales retirados y las colas no enviadas. La compra de acceso y servicios esenciales aún funciona.</p>
++<p><strong>Versiones anteriores:</strong>Las versiones anteriores podrían enviar eventos de flujo de compras e incorporación vinculados a la instalación. Se trataba de registros seudónimos, no de recuentos anónimos. Esta actualización no elimina los datos ya recibidos por el servicio. Póngase en contacto con el soporte sobre registros retenidos. El almacenamiento de análisis históricos, las exportaciones, los registros y las copias de recuperación se abordan por separado; No asuma que eliminar datos locales los elimina.</p>
+         </section>
+
+         <section id="campaigns">
+-          <h2>Atribución propia de campañas</h2>
+-          <p>Health.md usa enlaces cortos propios, como <code>healthmd.app/v/yt-csv-001</code>, para medir de forma agregada el rendimiento de campañas sin un SDK externo de atribución.</p>
+-          <p>En iPhone y iPad, AdServices consulta la atribución de Apple Ads directamente con Apple. El token es temporal y nunca se almacena ni se envía a Health.md. Solo los identificadores de campaña, grupo y palabra clave, el estado, clic o impresión y descarga o nueva descarga se vinculan al ID aleatorio de instalación y los resultados de compra. No usamos IDFA ni SDK de atribución de terceros. No enviamos datos de salud ni compras a Apple Ads. Los errores quedan como desconocidos, no como tráfico orgánico.</p>
+-          <ul>
+-            <li>El servicio de redirección puede registrar el token y slug de campaña, plataforma y enfoque del contenido, categoría general de destino o cliente, nombre de host referente cuando se proporciona, código aproximado de país y hora.</li>
+-            <li>La fila almacenada del clic no incluye dirección IP, User-Agent completo, cookie, identificador de solicitud de Cloudflare ni huella digital.</li>
+-            <li>En Android, Google Play Install Referrer puede generar un evento de instalación atribuida depurado con UUID aleatorios de instalación y evento, versión/compilación de la aplicación, campos de campaña validados, hora del evento y marcas de tiempo opcionales de clic e instalación de Play.</li>
+-            <li>Health.md descarta el Install Referrer completo y nunca lo conserva ni transmite. Los clics y las instalaciones solo se unen mediante el token de campaña validado para elaborar informes agregados.</li>
+-          </ul>
+-          <p>Las filas de clics e instalaciones de campañas se conservan durante un máximo de 13 meses. Las ventanas agregadas de límite de ingestión contienen solo un minuto y un recuento y se eliminan después de 24 horas. Cloudflare procesa información ordinaria de red al entregar estas solicitudes, pero Health.md no la añade a los registros de campañas.</p>
++          <h2>Medición de campañas en sitios web</h2>
++          <p>Los enlaces de campañas de sitios web públicos y la medición de sitios web son independientes del análisis de aplicaciones. La aplicación ya no resuelve los tokens de atribución de Apple Ads ni lee la referencia de instalación de Google Play. Los registros de campañas anteriores y eventos de aplicaciones se manejan por separado de la eliminación de aplicaciones locales.</p>
+         </section>
+
+         <section id="operations">
+@@ -203,58 +192,58 @@
+         </section>
+
+         <section id="retention">
+-          <h2>Almacenamiento y conservación</h2>
+-          <ul>
+-            <li><strong>Los datos de salud de origen</strong> permanecen en HealthKit, Health Connect o el proveedor conectado salvo que indiques una exportación o consulta.</li>
+-            <li><strong>Los ajustes y el historial de la aplicación</strong> se guardan en tu dispositivo mediante el almacenamiento de la plataforma. Las credenciales de proveedores usan almacenamiento protegido cuando es compatible.</li>
+-            <li><strong>Los archivos exportados y las entregas a API</strong> permanecen en el destino que elegiste hasta que se eliminen mediante los controles de ese destino.</li>
+-            <li><strong>Los datos de Mac, CLI y MCP emparejados</strong> permanecen en el resultado local, estado del trabajo, almacén de credenciales, transcripción u otro almacenamiento creado por tu flujo de trabajo.</li>
+-            <li><strong>Las filas de análisis del producto y campañas</strong> se conservan durante un máximo de 13 meses; los contadores de límite de ingestión de campañas se eliminan después de 24 horas.</li>
+-            <li><strong>Los registros de programación, compra, soporte y red ordinaria</strong> se conservan solo según sea necesario para prestar, proteger, documentar o cumplir los requisitos de esos servicios, sujetos a las condiciones de la plataforma y del proveedor correspondientes.</li>
+-          </ul>
+-          <p>Desinstalar Health.md elimina el estado local de la aplicación según el sistema operativo, pero no elimina archivos ya exportados a otra carpeta o servicio, datos guardados por un cliente emparejado, un mensaje que enviaste ni datos en manos de un proveedor de destino.</p>
++          <h2>Almacenamiento y retención</h2>
++          <ul>
++            <li><strong>Datos de salud de origen</strong>permanece en HealthKit, Health Connect o el proveedor conectado a menos que dirija una exportación o consulta.</li>
++            <li><strong>Configuración e historial de la aplicación</strong>se almacenan en su dispositivo mediante el almacenamiento de la plataforma. Las credenciales del proveedor utilizan almacenamiento de credenciales de plataforma protegida cuando sea compatible.</li>
++            <li><strong>Archivos exportados y entregas de API</strong>permanecerá en el destino que eligió hasta que se elimine bajo los controles de ese destino. El piloto opcional de Health.md Cloud conserva todas las revisiones aceptadas sin límite de edad, sujeto a la cuota de almacenamiento de su cuenta. El piloto se ejecuta en una máquina virtual sin respaldo: la pérdida de disco, clave o máquina virtual puede destruir permanentemente las exportaciones. La eliminación de la cuenta desactiva el acceso inmediatamente y un trabajo en segundo plano luego borra el texto cifrado y los metadatos almacenados; la finalización no es instantánea.</li>
++            <li><strong>Mac emparejado y datos CLI/MCP directos</strong>permanece en la salida local, estado del trabajo, almacén de credenciales, transcripción u otro almacenamiento informático creado por su flujo de trabajo. Las llamadas MCP en la nube autorizadas por separado leen las exportaciones de API retenidas y pueden colocar valores devueltos en los sistemas del proveedor del agente.</li>
++            <li><strong>Análisis de aplicaciones anteriores y filas de campaña:</strong>Eliminar la recopilación de la aplicación no elimina los registros de servicio existentes. Póngase en contacto con el soporte técnico sobre la eliminación. La medición del sitio web y los servicios esenciales tienen retención por separado; Esta actualización no establece una nueva fecha límite de eliminación global.</li>
++            <li><strong>Programación, compras, soporte y registros ordinarios de la red.</strong>se conservan solo según sea necesario para proporcionar, asegurar, documentar o cumplir con los requisitos de esos servicios, sujeto a los términos aplicables de la plataforma y del proveedor.</li>
++          </ul>
++          <p>La desinstalación de Health.md elimina el estado local de la aplicación según el sistema operativo, pero no elimina los archivos ya exportados a otra carpeta o servicio, los datos almacenados por un cliente emparejado, un mensaje que usted envió o los datos conservados por un proveedor de destino.</p>
+         </section>
+
+         <section id="services">
+-          <h2>Servicios que usamos</h2>
+-          <p>Health.md no usa SDK publicitarios ni SDK externos de análisis y atribución dentro de la aplicación. Sí usa los siguientes servicios de plataforma, infraestructura y elección del usuario cuando corresponde:</p>
++          <h2>Servicios que utilizamos</h2>
++          <p>Health.md no utiliza SDK de publicidad ni SDK de atribución y análisis en la aplicación de terceros. Utiliza la siguiente plataforma, infraestructura y servicios elegidos por el usuario cuando sea relevante:</p>
+           <ul>
+             <li>Apple HealthKit y WorkoutKit</li>
+-            <li>Android Health Connect</li>
+-            <li>Apple Files, Storage Access Framework de Android y los proveedores de archivos que elijas</li>
+-            <li>StoreKit, App Store, Google Play y Google Play Billing</li>
+-            <li>Google Play Install Referrer para atribución depurada de campañas en Android</li>
+-            <li>Apple Push Notification service para activar exportaciones programadas</li>
+-            <li>Cloudflare para análisis propios, servicios de campaña, almacenamiento D1, limitación de abuso, entrega del sitio y análisis web</li>
+-            <li>API de proveedores opcionales, servicios OAuth, endpoints de API, servicios de sincronización, proveedores de IA/modelos y clientes locales que configures</li>
+-          </ul>
+-          <p>Estos proveedores pueden procesar datos en los países donde operan. Su tratamiento se rige por sus condiciones y la legislación aplicable. No vendemos datos de salud ni información personal, y no los compartimos para publicidad conductual entre contextos.</p>
++            <li>Conexión de salud de Android</li>
++            <li>Apple Files, Android Storage Access Framework y proveedores de archivos que usted elija</li>
++            <li>StoreKit, App Store, Google Play y facturación de Google Play</li>
++            <li>Servicio de notificaciones push de Apple para reactivaciones de exportación programada</li>
++            <li>Cloudflare para servicios esenciales, retiro de análisis heredados, servicios de campañas de sitios web, entrega de sitios web, panel de nube opcional/entrada HTTPS MCP y análisis de sitios web</li>
++            <li>API de proveedores opcionales, servicios OAuth, puntos finales de API, servicios de sincronización, proveedores de modelos/IA y clientes locales que usted configure</li>
++          </ul>
++          <p>El piloto de exportación opcional de Health.md Cloud, de un solo propietario y sin respaldo, se ejecuta en la infraestructura de VM EXE.dev. No es el destino predeterminado de la aplicación.</p>
++          <p>Estos proveedores pueden procesar datos en los países donde operan. Su manejo se rige por sus términos y la ley aplicable. No vendemos datos de salud ni información personal, y no los compartimos para publicidad conductual entre contextos.</p>
+         </section>
+
+         <section id="security">
+           <h2>Cómo protegemos los datos</h2>
+-          <p>Aplicamos medidas adecuadas a cada ruta, aunque ningún sistema de almacenamiento o transferencia puede garantizar una seguridad perfecta:</p>
+-          <ul>
+-            <li>El acceso a la salud está controlado por los permisos de HealthKit y Health Connect y las protecciones del dispositivo.</li>
+-            <li>El emparejamiento directo con Mac y CLI usa sesiones autenticadas y cifradas, tramas acotadas, comprobaciones de integridad y aprobación explícita.</li>
+-            <li>El modo protegido de API Endpoint exige HTTPS; el operador del endpoint controla lo que ocurre después de la entrega.</li>
+-            <li>La ingestión de análisis y campañas rechaza campos desconocidos o demasiado grandes y, de forma intencionada, no puede representar cargas de salud.</li>
+-            <li>Los archivos locales heredan los controles de acceso, cifrado, copia de seguridad y sincronización del dispositivo, carpeta, bóveda o proveedor donde los guardes.</li>
+-          </ul>
+-          <p>La API local de consultas para Mac usa la accesibilidad de loopback como límite de acceso y no tiene token de portador. No expongas ni redirijas su puerto a otra máquina. El emparejamiento directo con iPhone solo debe activarse para ordenadores y redes de confianza. Mantén los dispositivos actualizados, usa códigos de acceso y cifrado de disco, y revisa los ajustes de conservación y registro de destinos, hosts de agentes y proveedores de modelos.</p>
++          <p>Aplicamos salvaguardas adecuadas a cada trayecto, aunque ningún sistema de almacenamiento o transferencia puede garantizarse perfectamente seguro:</p>
++          <ul>
++            <li>El acceso a la salud está controlado por los permisos y las protecciones del dispositivo de HealthKit y Health Connect.</li>
++            <li>El emparejamiento directo de Mac y CLI utiliza sesiones cifradas autenticadas, marcos delimitados, comprobaciones de integridad y aprobación explícita.</li>
++            <li>El modo de punto final de API protegido requiere HTTPS; el operador del punto final controla lo que sucede después de la entrega. El piloto de nube opcional cifra las exportaciones almacenadas y requiere credenciales de lectura revocables, de ingesta y de cuenta separadas. No tiene respaldo externo ni recuperación de cuentas, y no es un servicio auditado de forma independiente ni disponible de forma generalizada.</li>
++            <li>En el retiro coordinado del servicio, el punto final de análisis de aplicaciones heredado de reemplazo descarta las cargas sin analizarlas ni almacenarlas. Hasta que se complete la transición, los clientes anteriores aún pueden comunicarse con el recopilador anterior. Los servicios esenciales permanecen separados de los análisis.</li>
++            <li>Los archivos locales heredan los controles de acceso, cifrado, copia de seguridad y sincronización del dispositivo, carpeta, bóveda o proveedor donde los coloca.</li>
++          </ul>
++          <p>La API de consulta local de Mac utiliza la accesibilidad de bucle invertido como límite de acceso y no tiene token de portador. No utilice proxy ni exponga su puerto a otra máquina. El emparejamiento directo de iPhone debe habilitarse solo para computadoras y redes de confianza. Mantenga los dispositivos actualizados, utilice códigos de acceso y cifrado de disco, y revise la configuración de retención y registro de destinos, hosts de agentes y proveedores de modelos.</p>
+         </section>
+
+         <section id="choices">
+-          <h2>Tus opciones y derechos de privacidad</h2>
+-          <ul>
+-            <li><strong>Permisos:</strong> concede o revoca categorías de HealthKit y Health Connect en los ajustes de la plataforma.</li>
+-            <li><strong>Destinos:</strong> elige carpetas locales, retira acceso a proveedores de archivos, desconecta proveedores, borra un endpoint de API o desempareja clientes directos.</li>
+-            <li><strong>Programación:</strong> usa exportaciones manuales si no quieres registrar metadatos de programación y APNs que no son de salud.</li>
+-            <li><strong>Archivos y resultados:</strong> accede, muévelos o elimínalos con los controles del destino o del ordenador emparejado.</li>
+-            <li><strong>Portabilidad:</strong> usa fuera de Health.md los archivos Markdown, Obsidian, CSV, JSON, FHIR y otros formatos compatibles.</li>
+-            <li><strong>Derechos legales:</strong> según dónde vivas, puedes tener derecho a acceder, corregir, eliminar, limitar, oponerte u obtener una copia de los datos personales que controlamos, así como a recurrir o presentar una reclamación ante una autoridad de protección de datos.</li>
+-          </ul>
+-          <p>Contáctanos para ejercer un derecho aplicable. Podemos necesitar información para verificar y localizar el registro correspondiente. Como los identificadores de análisis son aleatorios y no están conectados a una cuenta o correo electrónico, es posible que no podamos asociar una solicitud por correo con una fila concreta. Esas filas se eliminan automáticamente dentro del plazo indicado.</p>
++          <h2>Sus opciones y derechos de privacidad</h2>
++          <ul>
++            <li><strong>Permisos:</strong>otorgar o revocar categorías de HealthKit y Health Connect en la configuración de la plataforma.</li>
++            <li><strong>Destinos:</strong>elija carpetas locales, elimine el acceso del proveedor de archivos, desconecte proveedores, borre un punto final de API o desempareje clientes directos.</li>
++            <li><strong>Programación:</strong>utilice exportaciones manuales si no desea que se registren metadatos de APN y cronogramas que no sean de salud.</li>
++            <li><strong>Archivos y resultados:</strong>acceder a ellos, moverlos o eliminarlos utilizando los controles del ordenador de destino o emparejado.</li>
++            <li><strong>Portabilidad:</strong>utilice Markdown, Obsidian, CSV, JSON, FHIR y otros archivos exportados compatibles fuera de Health.md.</li>
++            <li><strong>Derechos legales:</strong>Dependiendo de dónde viva, puede tener derecho a acceder, corregir, eliminar, restringir, objetar u obtener una copia de los datos personales que controlamos, y a apelar o presentar una queja ante una autoridad de protección de datos.</li>
++          </ul>
++          <p>Contáctenos para ejercer un derecho aplicable. Es posible que necesitemos información para verificar y localizar el registro relevante. Debido a que los identificadores de análisis son aleatorios y no están conectados a una cuenta o dirección de correo electrónico, es posible que no podamos asociar una solicitud de correo electrónico con una fila de análisis en particular. Contáctenos para discutir la información necesaria para localizar registros de instalación anteriores. La eliminación y la caducidad de la copia de recuperación deben confirmarse por separado.</p>
          </section>
 
          <section id="children">
