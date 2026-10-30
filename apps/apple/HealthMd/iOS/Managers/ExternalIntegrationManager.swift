@@ -459,7 +459,8 @@ final class ExternalIntegrationManager: NSObject, ObservableObject, ExternalInte
                 connections.map { ($0.key.id, $0.value) }))
         }
         func forCaptureOperation(authority: ExternalProviderCaptureAuthority) throws -> any ExternalIntegrationDailyRecordProviding {
-            try manager.forCaptureOperation(authority: authority)
+            guard captureAuthority == authority else { throw ExternalProviderCaptureAuthority.RecoveryError.unavailable }
+            return self
         }
         func forCaptureOperation() -> any ExternalIntegrationDailyRecordProviding { self }
         func beginExportAction() { manager.beginExportAction() }

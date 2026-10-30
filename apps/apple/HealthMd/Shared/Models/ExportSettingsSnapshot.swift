@@ -492,6 +492,7 @@ struct ExportSettingsSnapshot: Codable, Equatable {
         )
         snapshot.sleepCaptureContext = settings.executionSleepCaptureContext
             ?? (settings.executionSleepCaptureContextIsFrozen ? nil : AppleSleepCaptureContext.pinned.wrappedValue)
+        snapshot.externalProviderCaptureAuthority = settings.executionExternalProviderCaptureAuthority
         return snapshot
     }
 
@@ -648,6 +649,8 @@ struct ExportSettingsSnapshot: Codable, Equatable {
         if forNewConfiguration {
             settings.executionSleepCaptureContext = nil
             settings.executionSleepCaptureContextIsFrozen = false
+            settings.executionExternalProviderCaptureAuthority = nil
+            settings.executionExternalProviderCaptureAuthorityIsFrozen = false
         }
         applyCalendarTimeZone(to: settings, includeSleepContext: !forNewConfiguration)
         return settings

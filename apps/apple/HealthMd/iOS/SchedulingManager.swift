@@ -1455,11 +1455,16 @@ class SchedulingManager: ObservableObject {
             snapshot.externalProviderCaptureAuthority = authority
             return snapshot
         case .apiEndpoint:
-            return await ExportSettingsSnapshot.forNewAppleOperation(
-                settings,
-                calendarTimeZone: calendarTimeZone,
-                surface: .apiEndpoint
-            )
+            let providers = !settings.executionExternalProviderCaptureAuthorityIsFrozen && ConnectedAppsFeature.isEnabled
+                ? scheduledExternalIntegrations?.forCaptureOperation() : nil
+            let hasProviders = (providers?.connectedProviderCount ?? 0) > 0
+            let authority = settings.executionExternalProviderCaptureAuthority
+                ?? (settings.executionExternalProviderCaptureAuthorityIsFrozen ? nil :
+                    providers?.captureAuthority ?? (hasProviders ? nil : ExternalProviderCaptureAuthority(connections: [:])))
+            var snapshot = await ExportSettingsSnapshot.forNewAppleOperation(
+                settings, calendarTimeZone: calendarTimeZone, surface: .apiEndpoint)
+            snapshot.externalProviderCaptureAuthority = authority
+            return snapshot
         case .agentDataGateway:
             // The gateway materializes artifacts exactly as a folder
             // destination does over its staging root before uploading, so its
@@ -1490,23 +1495,23 @@ class SchedulingManager: ObservableObject {
     func makeSettingsSnapshotForNewScheduledProfileOperation(
         _ profile: ScheduledExportCoordinator.ScheduledProfileRequestContext
     ) async -> ExportSettingsSnapshot {
-        guard profile.target == .localIPhoneFolder else { return profile.settings }
+        guard profile.target == .localIPhoneFolder || profile.target == .apiEndpoint else { return profile.settings }
         let zone = profile.settings.calendarTimeZoneIdentifier.flatMap(TimeZone.init(identifier:)) ?? .current
         let context = AppleSleepCaptureContext.resolve(timeZone: zone,
             attribution: HealthKitManager.shared.sleepDayAttribution)
         let settings = profile.settings.makeAdvancedExportSettings(forNewConfiguration: true)
-        if context.sleepDayAttribution == .nightBegins {
+        if context.sleepDayAttribution == .nightBegins && profile.settings.appleExportEnginePin?.isWakeDate != true {
             // Preserve historical renderer and calendar-rollup authority for Night profiles.
             var snapshot = profile.settings
             snapshot.sleepCaptureContext = context
-            let providers = settings.writesExternalProviderSidecars && ConnectedAppsFeature.isEnabled
+            let providers = (profile.target == .apiEndpoint || settings.writesExternalProviderSidecars) && ConnectedAppsFeature.isEnabled
                 ? scheduledExternalIntegrations?.forCaptureOperation() : nil
             let hasProviders = (providers?.connectedProviderCount ?? 0) > 0
             snapshot.externalProviderCaptureAuthority = providers?.captureAuthority
                 ?? (hasProviders ? nil : ExternalProviderCaptureAuthority(connections: [:]))
             return snapshot
         }
-        guard profile.settings.operationRollupPeriods.allSatisfy({ $0 == .range }) else {
+        guard profile.target != .localIPhoneFolder || profile.settings.operationRollupPeriods.allSatisfy({ $0 == .range }) else {
             // A historical calendar profile cannot silently become a range summary.
             var snapshot = profile.settings
             snapshot.sleepCaptureContext = context
@@ -1686,9 +1691,8 @@ class SchedulingManager: ObservableObject {
                 message: APIExportClientError.invalidEndpoint.localizedDescription
             )
         }
-        let externalIntegrations: ExternalIntegrationDailyRecordProviding? = ConnectedAppsFeature.isEnabled
-            ? scheduledExternalIntegrations
-            : nil
+        // API capture itself distinguishes new feature selection from saved grant authority.
+        let externalIntegrations = scheduledExternalIntegrations
 
         logger.info("Starting scheduled API Endpoint export")
         return await APIEndpointExportRunner.export(

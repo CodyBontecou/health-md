@@ -257,6 +257,7 @@ struct APIEndpointExportRunner {
         identitySource: AppleExportOperationIdentitySource = AppleExportOperationIdentitySource(),
         comparisonOptions: NativeExportComparisonOptions = NativeExportComparisonOptions(),
         diagnosticSink: @escaping EngineDiagnosticSink = ShadowExportEvidenceRecorder.productionSink,
+        upload: PreparedUploader? = nil,
         onProgress: ProgressHandler? = nil
     ) async -> ExportOrchestrator.ExportResult {
         let awakeActivityID = UUID()
@@ -271,19 +272,48 @@ struct APIEndpointExportRunner {
                 completedDates: [])
         }
 
-        externalIntegrations?.beginExportAction()
-
-        // Freeze process-global/provider decisions and the HealthKit calendar before any capture.
-        let connectedAppsEnabled = ConnectedAppsFeature.isEnabled
+        var snapshot = ExportSettingsSnapshot.from(settings, appleExportEngineAuthorityIsFrozen: false,
+            calendarTimeZoneIdentifier: captureContext.calendarTimeZoneIdentifier)
+        snapshot.sleepCaptureContext = captureContext
+        let providerAuthorityIsFrozen = settings.executionExternalProviderCaptureAuthorityIsFrozen
+        let connectedAppsEnabledForNewOperation = ConnectedAppsFeature.isEnabled
+        let providers: (any ExternalIntegrationDailyRecordProviding)?
+        let frozenSettings: AdvancedExportSettings
+        do {
+            if let authority = snapshot.externalProviderCaptureAuthority {
+                if authority.connections.isEmpty { providers = nil }
+                else {
+                    guard let externalIntegrations else { throw ExternalProviderCaptureAuthority.RecoveryError.unavailable }
+                    providers = try externalIntegrations.forCaptureOperation(authority: authority)
+                }
+            } else {
+                guard !providerAuthorityIsFrozen else {
+                    throw ExternalProviderCaptureAuthority.RecoveryError.unavailable
+                }
+                providers = connectedAppsEnabledForNewOperation ? externalIntegrations?.forCaptureOperation() : nil
+            }
+            let count = providers?.connectedProviderCount ?? 0
+            let authority = providers?.captureAuthority ?? (count == 0 ? ExternalProviderCaptureAuthority(connections: [:]) : nil)
+            guard captureContext.sleepDayAttribution != .morningEnds || authority != nil else {
+                throw ExternalProviderCaptureAuthority.RecoveryError.unavailable
+            }
+            snapshot.externalProviderCaptureAuthority = authority
+            frozenSettings = snapshot.makeAdvancedExportSettings()
+        } catch {
+            return failureResult(dates: dates, reason: .unknown, message: error.localizedDescription)
+        }
+        providers?.beginExportAction()
+        // Source membership, settings and the calendar are accepted before the first suspension.
+        let connectedAppsEnabled = (providers?.connectedProviderCount ?? 0) > 0
         let calendarTimeZone = captureContext.timeZone
         let externalFetcher: ExternalDailyRecordFetcher?
         if connectedAppsEnabled,
-           let externalIntegrations,
-           externalIntegrations.connectedProviderCount > 0 {
+           let providers,
+           providers.connectedProviderCount > 0 {
             var providerCalendar = Calendar(identifier: .gregorian)
             providerCalendar.timeZone = calendarTimeZone
             externalFetcher = { date in
-                await externalIntegrations.fetchDailyRecords(
+                await providers.fetchDailyRecords(
                     for: date,
                     calendar: providerCalendar
                 )
@@ -297,7 +327,7 @@ struct APIEndpointExportRunner {
             await HealthKitQueryExecutionController.withController {
                 await exportEngineAware(
                     dates: dates,
-                    settings: settings,
+                    settings: frozenSettings,
                     destination: destination,
                     calendarTimeZone: calendarTimeZone,
                     connectedAppsEnabled: connectedAppsEnabled,
@@ -311,7 +341,7 @@ struct APIEndpointExportRunner {
                         )
                     },
                     fetchExternalDailyRecords: externalFetcher,
-                    upload: { batch, destination in
+                    upload: upload ?? { batch, destination in
                         try await apiClient.upload(
                             payloadArtifact: batch.bodyArtifact,
                             destination: destination
@@ -328,7 +358,7 @@ struct APIEndpointExportRunner {
                 )
             }
         }
-        externalIntegrations?.endExportAction(
+        providers?.endExportAction(
             succeeded: result.didCompleteAllRequestedDates && !result.wasCancelled
         )
         return result
