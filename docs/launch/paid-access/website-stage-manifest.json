@@ -4,8 +4,8 @@
     "staged_sha256": "6638b3da2d930dab37c38470ab8317390ee1b3cef26644f4141a4454fadafb86"
   },
   "apps/website/apple-health-export/index.html": {
-    "before_sha256": "b88d54eb3cec7543bb9f9aee1c6c67893c642ed22897779eae23e331d28ff90b",
-    "staged_sha256": "e3f79998b5fd57009ad2f136fccff28eb656b1a904009d6bf4d2bb1037429f61"
+    "before_sha256": "acb7d5c12f6f5174ed02c0b6f79d862779a6c2ce5d01c4b207dfca1ba504b22e",
+    "staged_sha256": "1c46ede264bbf1a5a230601d8f40d49f45be7a32ae5c96675ad780d6a3d54b08"
   },
   "apps/website/apple-health-to-csv/index.html": {
     "before_sha256": "d84f765e389857809a59c9004e545ef06a20710c8f41ad96da55053a70b469fe",

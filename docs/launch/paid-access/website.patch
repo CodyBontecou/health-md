@@ -29,7 +29,7 @@
              }
            },
            {
-@@ -230,7 +230,7 @@
+@@ -227,7 +227,7 @@
              <li>If Preview succeeds but saving fails, check the <a href="/docs/folder-vault/">destination folder and file provider</a>.</li>
            </ul>
            <p>Once the result is useful, <a href="/docs/scheduling/">set up scheduled exports</a>. iOS controls background timing; a target time is not a guaranteed run time.</p>
@@ -38,7 +38,7 @@
          </section>
 
          <section class="about-section" id="privacy">
-@@ -291,7 +291,7 @@
+@@ -288,7 +288,7 @@
              </div>
              <div>
                <h3>Is there a free trial?</h3>
