@@ -15,6 +15,22 @@ export const FUNNEL_PAGES = Object.freeze({
   auto_export_comparison: '/blog/health-md-vs-health-auto-export/',
   xml_export: '/blog/apple-health-xml-export/',
   mac_export: '/blog/health-md-for-macos/',
+  python: '/blog/apple-health-to-python/',
+  blood_pressure: '/blog/export-apple-health-blood-pressure/',
+  weight: '/blog/export-apple-health-weight-data/',
+  samsung_export: '/blog/export-samsung-health-data/',
+  garmin_export: '/blog/export-garmin-connect-data/',
+  fitbit_export: '/blog/export-fitbit-data/',
+  oura_export: '/blog/export-oura-data/',
+  whoop_export: '/blog/export-whoop-data/',
+  withings_export: '/blog/export-withings-data/',
+  strava_export: '/blog/export-strava-data/',
+  cronometer_export: '/blog/export-cronometer-data/',
+  myfitnesspal_export: '/blog/export-myfitnesspal-data/',
+  google_fit_export: '/blog/export-google-fit-data/',
+  polar_export: '/blog/export-polar-flow-data/',
+  zepp_export: '/blog/export-zepp-amazfit-data/',
+  home_assistant: '/blog/apple-health-home-assistant/',
 });
 export const FUNNEL_LOCALES = Object.freeze(['en', 'es', 'de', 'fr', 'pt-br', 'it', 'nl', 'ja', 'ko', 'zh-hans']);
 export const FUNNEL_ACTIONS = Object.freeze({
