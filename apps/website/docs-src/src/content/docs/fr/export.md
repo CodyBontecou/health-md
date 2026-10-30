@@ -62,7 +62,7 @@ L'arrêt ou l'annulation met fin uniquement à la tentative en cours. Les fichie
 
 ## Profils et historique fiable
 
-Un profil enregistré gèle ses paramètres et sa destination pour l'exécution. Les lignes de l'historique planifié et d'automatisation prenant en compte le profil conservent le profil d'exécution, tandis que l'historique conserve une étiquette de confidentialité pour la destination réellement utilisée. Une ligne de l'onglet Exportation manuelle peut omettre le nom du profil. Les changements de nom et de destination ultérieurs ne réécrivent pas l’historique existant. Les références de profil manquantes échouent au lieu de revenir en arrière. Voir [Exporter les profils](/fr/docs/export-profiles/).
+Un profil enregistré gèle ses paramètres et sa destination pour l'exécution. Les lignes de l'historique planifié et d'automatisation prenant en compte le profil conservent le profil d'exécution, tandis que l'historique conserve une étiquette de confidentialité pour la destination réellement utilisée. Une ligne de l'onglet Exportation manuelle peut omettre le nom du profil. Les changements de nom et de destination ultérieurs ne réécrivent pas l’historique existant. Si le profil référencé est introuvable, l’opération échoue sans utiliser d’autres paramètres. Voir [Exporter les profils](/fr/docs/export-profiles/).
 
 ## Barre d'onglets
 

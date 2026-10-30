@@ -62,7 +62,7 @@ Interromper ou cancelar encerra apenas a tentativa atual. Os arquivos e as datas
 
 ## Perfis e histórico confiável
 
-Um perfil salvo congela suas configurações e destino da execução. As linhas do histórico de automação e programado com reconhecimento de perfil mantêm o perfil de tempo de execução, enquanto o histórico mantém um rótulo de segurança de privacidade para o destino realmente usado. Uma linha da guia Exportação manual pode omitir o nome do perfil. Renomeações posteriores e alterações de destino não reescrevem o histórico existente. As referências de perfil ausentes falham no fechamento em vez de retroceder. Consulte [Exportar perfis](/pt-br/docs/export-profiles/).
+Um perfil salvo congela suas configurações e destino da execução. As linhas do histórico de automação e programado com reconhecimento de perfil mantêm o perfil de tempo de execução, enquanto o histórico mantém um rótulo de segurança de privacidade para o destino realmente usado. Uma linha da guia Exportação manual pode omitir o nome do perfil. Renomeações posteriores e alterações de destino não reescrevem o histórico existente. Se o perfil referenciado estiver ausente, a operação falha sem usar outras configurações. Consulte [Exportar perfis](/pt-br/docs/export-profiles/).
 
 ## Barra de guias
 

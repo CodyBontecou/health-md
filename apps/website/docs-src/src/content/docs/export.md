@@ -62,7 +62,7 @@ Stopping or cancelling ends only the current attempt. Files and dates already co
 
 ## Profiles and trustworthy history
 
-A saved profile freezes its settings and destination for the run. Profile-aware scheduled and automation history rows keep the run-time profile, while history retains a privacy-safe label for the destination actually used. A manual Export-tab row may omit the profile name. Later renames and destination changes do not rewrite existing history. Missing profile references fail closed instead of falling back. See [Export profiles](/docs/export-profiles/).
+A saved profile freezes its settings and destination for the run. Profile-aware scheduled and automation history rows keep the run-time profile, while history retains a privacy-safe label for the destination actually used. A manual Export-tab row may omit the profile name. Later renames and destination changes do not rewrite existing history. If a referenced profile is missing, the operation fails without substituting other settings. See [Export profiles](/docs/export-profiles/).
 
 ## Tab bar
 

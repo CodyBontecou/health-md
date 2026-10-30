@@ -62,7 +62,7 @@ Als u stopt of annuleert, wordt alleen de huidige poging beëindigd. Reeds volto
 
 ## Profielen en betrouwbare geschiedenis
 
-Een opgeslagen profiel bevriest de instellingen en bestemming voor de run. Profielbewuste geplande en automatiseringsgeschiedenisrijen behouden het runtimeprofiel, terwijl de geschiedenis een privacyveilig label behoudt voor de daadwerkelijk gebruikte bestemming. In een handmatige exporttabbladrij kan de profielnaam weggelaten worden. Latere hernoemingen en bestemmingswijzigingen herschrijven de bestaande geschiedenis niet. Ontbrekende profielreferenties worden niet gesloten in plaats van terug te vallen. Zie [Profielen exporteren](/nl/docs/export-profiles/).
+Een opgeslagen profiel bevriest de instellingen en bestemming voor de run. Profielbewuste geplande en automatiseringsgeschiedenisrijen behouden het runtimeprofiel, terwijl de geschiedenis een privacyveilig label behoudt voor de daadwerkelijk gebruikte bestemming. In een handmatige exporttabbladrij kan de profielnaam weggelaten worden. Latere hernoemingen en bestemmingswijzigingen herschrijven de bestaande geschiedenis niet. Als het opgegeven profiel ontbreekt, mislukt de bewerking zonder andere instellingen te gebruiken. Zie [Profielen exporteren](/nl/docs/export-profiles/).
 
 ## Tabbalk
 

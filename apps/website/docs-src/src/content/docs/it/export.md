@@ -62,7 +62,7 @@ L'interruzione o l'annullamento termina solo il tentativo corrente. I file e le 
 
 ## Profili e storia affidabile
 
-Un profilo salvato blocca le impostazioni e la destinazione della corsa. Le righe della cronologia pianificata e di automazione sensibile al profilo mantengono il profilo di runtime, mentre la cronologia conserva un'etichetta sicura per la privacy per la destinazione effettivamente utilizzata. Una riga manuale della scheda Esporta può omettere il nome del profilo. Le successive ridenominazioni e modifiche della destinazione non riscrivono la cronologia esistente. I riferimenti al profilo mancanti non riescono a chiudersi invece di eseguire il fallback. Vedere [Esporta profili](/it/docs/export-profiles/).
+Un profilo salvato blocca le impostazioni e la destinazione della corsa. Le righe della cronologia pianificata e di automazione sensibile al profilo mantengono il profilo di runtime, mentre la cronologia conserva un'etichetta sicura per la privacy per la destinazione effettivamente utilizzata. Una riga manuale della scheda Esporta può omettere il nome del profilo. Le successive ridenominazioni e modifiche della destinazione non riscrivono la cronologia esistente. Se il profilo indicato manca, l’operazione non viene eseguita e non vengono usate impostazioni alternative. Vedere [Esporta profili](/it/docs/export-profiles/).
 
 ## Barra delle schede
 

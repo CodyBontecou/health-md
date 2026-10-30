@@ -62,7 +62,7 @@ Detener o cancelar finaliza sólo el intento actual. Los archivos y fechas ya co
 
 ## Perfiles e historial confiable
 
-Un perfil guardado congela su configuración y destino de la ejecución. Las filas del historial de automatización y programación que tienen en cuenta el perfil mantienen el perfil en tiempo de ejecución, mientras que el historial conserva una etiqueta de seguridad de privacidad para el destino realmente utilizado. Una fila de la pestaña Exportar manual puede omitir el nombre del perfil. Los cambios de nombre y destino posteriores no reescriben el historial existente. Las referencias de perfil que faltan fallan al cerrarse en lugar de retroceder. Consulte [Exportar perfiles](/es/docs/export-profiles/).
+Un perfil guardado congela su configuración y destino de la ejecución. Las filas del historial de automatización y programación que tienen en cuenta el perfil mantienen el perfil en tiempo de ejecución, mientras que el historial conserva una etiqueta de seguridad de privacidad para el destino realmente utilizado. Una fila de la pestaña Exportar manual puede omitir el nombre del perfil. Los cambios de nombre y destino posteriores no reescriben el historial existente. Si falta el perfil al que se hace referencia, la operación falla sin sustituirlo por otra configuración. Consulte [Exportar perfiles](/es/docs/export-profiles/).
 
 ## Barra de pestañas
 
