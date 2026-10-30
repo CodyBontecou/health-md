@@ -147,6 +147,45 @@ function request(payload = event, overrides = {}) {
     headers: { origin: 'https://healthmd.app', 'content-type': 'application/json' }, body: JSON.stringify(payload), ...overrides });
 }
 
+test('published acquisition guides count store actions through the browser and collector contract', async t => {
+  const DB = database(t);
+  const guides = {
+    python: 'apple-health-to-python',
+    blood_pressure: 'export-apple-health-blood-pressure',
+    weight: 'export-apple-health-weight-data',
+    samsung_export: 'export-samsung-health-data',
+    garmin_export: 'export-garmin-connect-data',
+    fitbit_export: 'export-fitbit-data',
+    oura_export: 'export-oura-data',
+    whoop_export: 'export-whoop-data',
+    withings_export: 'export-withings-data',
+    strava_export: 'export-strava-data',
+    cronometer_export: 'export-cronometer-data',
+    myfitnesspal_export: 'export-myfitnesspal-data',
+    google_fit_export: 'export-google-fit-data',
+    polar_export: 'export-polar-flow-data',
+    zepp_export: 'export-zepp-amazfit-data',
+    home_assistant: 'apple-health-home-assistant',
+  };
+  for (const [page, slug] of Object.entries(guides)) {
+    const b = browser(`/blog/${slug}/?private=not-transmitted`);
+    startFunnel(b.win);
+    assert.deepEqual(b.sent[0]?.data, { v: 1, page, locale: 'en', source: 'search_referral', action: 'page_view', target: 'none', placement: 'page' });
+    b.listeners.click(click(anchor('https://apps.apple.com/app/health-md/id6757763969')));
+    b.listeners.click(click(anchor('https://play.google.com/store/apps/details?id=com.healthmd.android')));
+    assert.deepEqual(b.sent.slice(1).map(x => x.data.target), ['app_store', 'google_play']);
+    for (const sent of b.sent) {
+      assert.doesNotMatch(sent.settings.body, /private|not-transmitted|https:|\/blog\//);
+      assert.equal((await handleWebFunnel(request(sent.data), { DB }, now)).status, 204);
+    }
+  }
+  assert.equal(DB.db.prepare('SELECT COUNT(*) n FROM web_funnel_daily').get().n, 48);
+  assert.equal(DB.db.prepare('SELECT SUM(count) n FROM web_funnel_daily').get().n, 48);
+  for (const pathname of ['/docs/iphone-first-export/', '/blog/not-an-allowlisted-guide/', '/de/blog/apple-health-home-assistant/']) {
+    const b = browser(pathname); startFunnel(b.win); assert.equal(b.sent.length, 0);
+  }
+});
+
 test('collector routes events to real SQLite daily counters without storing request metadata', async t => {
   const DB = database(t);
   assert.equal((await worker.fetch(request(), { DB }, {})).status, 204);
