@@ -4,6 +4,8 @@ Verified 2026-10-30 by Codex (agent), method: traced. No account, device, permis
 
 ## Claims
 
+- [x] October30: related recommendation now links the MyFitnessPal source-specific chooser. Cronometer body unchanged; existing weight link remains in the body and three related recommendations are preserved.
+
 - [x] Official Account Settings https://support.cronometer.com/hc/en-us/articles/360018760151-Account-Settings verifies Account Data/Export Data, CSV types/date range, Daily Nutrition Include diary group rows versus daily totals. Native route precedes installs. No exact archive schema, named-food guarantee, price or delivery-time promise.
 - [x] Official Mobile Nutrition Report https://support.cronometer.com/hc/en-us/articles/360019864891-Mobile-Nutrition-Report directs export/print to website; Subscription Types https://support.cronometer.com/hc/en-us/articles/360028026971-Subscription-Types lists raw export for Basic. No mixing native export and Gold report/custom-date restrictions. Nutrition Report https://support.cronometer.com/hc/en-us/articles/360018569691-Nutrition-Report establishes averages and day inclusion, not clinical targets.
 - [x] Apple setup https://support.cronometer.com/hc/en-us/articles/360020734212-Apple-Health-Apple-Watch verifies More/Connect Apps & Devices/Apple Health, read/write categories and Backfill direction Health→Cronometer. Official integration overview https://cronometer.com/blog/apple-health/ explicitly describes selected outgoing nutrients/biometrics despite inconsistent section heading. No exhaustive outgoing list, universal diary sharing or outward-backfill promise.

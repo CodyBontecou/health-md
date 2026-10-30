@@ -11,7 +11,7 @@ platform: both
 category: "Workflow guide"
 related:
   - apple-health-to-excel
-  - export-apple-health-weight-data
+  - export-myfitnesspal-data
   - export-health-data-without-the-cloud
 draft: false
 tags:
