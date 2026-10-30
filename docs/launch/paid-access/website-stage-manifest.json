@@ -161,6 +161,10 @@
   },
   "apps/website/privacy-policy.html": {
     "before_sha256": "a8a65dcfa5f846f989a6ed02fc06af859caa15018b458f7deaeff11b18e415ce",
-    "staged_sha256": "3a548a1dc9225d561dca73dd4beadb67f851e9346325498ee64e8d39a07f4d64"
+    "staged_sha256": "6fdf5e8a9d0020487df8655b549db07698cf5c7722e3aa8ef9c3bc79da2aca24"
+  },
+  "apps/website/es/privacy-policy.html": {
+    "before_sha256": "38e7d0b2f19fe7fbf97dc0024e458ff4823ad7676fe22568f7dff3995a2bbb7b",
+    "staged_sha256": "4a1716366b17b3a257f0b016dda270632d4a7a3f19ceae1d7a27e43a8245802f"
   }
 }
