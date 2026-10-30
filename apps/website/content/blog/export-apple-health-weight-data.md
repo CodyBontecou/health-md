@@ -10,7 +10,7 @@ verified_method: traced
 platform: apple
 category: "Workflow guide"
 related:
-  - apple-health-to-excel
+  - export-renpho-data
   - export-health-data-without-the-cloud
   - export-withings-data
 draft: false
