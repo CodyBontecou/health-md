@@ -14,7 +14,7 @@ Gebruik deze stappen om eerst een kleine, controleerbare export te maken voordat
 
 Je hebt het volgende nodig:
 
-- Health.md op een iPhone met Apple Health-gegevens;
+- [Health.md in de App Store](https://apps.apple.com/app/health-md/id6757763969) op een iPhone met Apple Health-gegevens;
 - leestoegang tot ten minste één Apple Health-categorie;
 - een schrijfbare bestemming in Bestanden, zoals iCloud Drive, Op mijn iPhone of een Obsidian-kluis.
 

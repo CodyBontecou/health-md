@@ -14,7 +14,7 @@ Use este guia para produzir uma exportação pequena e verificável antes de alt
 
 Você precisa de:
 
-- Health.md instalado em um iPhone que contenha dados do Apple Health;
+- [Health.md na App Store](https://apps.apple.com/app/health-md/id6757763969) instalado em um iPhone que contenha dados do Apple Health;
 - permissão para ler pelo menos uma categoria do Apple Health;
 - um destino gravável no app Arquivos, como iCloud Drive, No Meu iPhone ou um cofre do Obsidian.
 
