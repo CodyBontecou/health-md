@@ -11,3 +11,5 @@ Verified 2026-10-30 by Codex (agent), method: traced. No Oura account, device, p
 - [x] Android older-data permission window follows official read-data documentation; source backfill separate. Sleep-date examples link canonical maintained guide. No promised completeness or Oura-only daily reduction.
 - [x] Privacy text distinguishes Oura account services and synced destinations from the local Health.md path; optional single-owner pilot has no public signup, automatic sync or general availability. Publication guard includes guide.
 - [x] Both phone downloads are offered without changing single-platform guides. Three related guides and incoming Fitbit recommendation use the existing graph; Fitbit body unchanged. No price or quota claim.
+
+- [x] Discovery-only related recommendation now links WHOOP; Oura article body unchanged. Fitbit retains incoming discovery from other guides.

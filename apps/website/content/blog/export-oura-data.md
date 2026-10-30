@@ -12,7 +12,7 @@ category: "Workflow guide"
 related:
   - export-apple-health-data-to-obsidian
   - export-health-connect-to-obsidian
-  - export-fitbit-data
+  - export-whoop-data
 draft: false
 tags:
   - oura
