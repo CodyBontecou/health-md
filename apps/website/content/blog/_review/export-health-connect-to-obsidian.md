@@ -24,3 +24,5 @@ Source and documentation review only. No emulator, device, Obsidian import, sche
 - [x] Supersedes the earlier calendar-start-day shorthand. Android SleepJournalSummary uses a local noon-to-noon window, matching the normative android-sleep-journal-summary.md contract. After-midnight sleep can belong to the previous journal date; raw records retain their own ownership. No Android exporter, schema, unit, aggregation or fixture changed. Current website wording and localized troubleshooting now point to the shared concrete examples. Verification is source tracing, not a new device export.
 
 - [x] October 30 discovery follow-up adds the verified Garmin export guide to related recommendations; the article body and prior claims are unchanged.
+
+- [x] October 30 related-guide follow-up adds the source-traced Fitbit/Google Health export chooser. Article body and prior workflow claims are unchanged.

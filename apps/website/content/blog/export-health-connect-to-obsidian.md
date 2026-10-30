@@ -11,7 +11,7 @@ platform: android
 category: "Workflow guide"
 related:
   - export-samsung-health-data
-  - apple-health-vs-health-connect-data-models
+  - export-fitbit-data
   - export-garmin-connect-data
 draft: false
 tags:
