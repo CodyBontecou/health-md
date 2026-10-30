@@ -170,6 +170,7 @@ test('published acquisition guides count store actions through the browser and c
     suunto_export: 'export-suunto-data',
     clue_export: 'export-clue-data',
     omron_export: 'export-omron-connect-data',
+    renpho_export: 'export-renpho-data',
   };
   for (const [page, slug] of Object.entries(guides)) {
     const b = browser(`/blog/${slug}/?private=not-transmitted`);
@@ -183,8 +184,8 @@ test('published acquisition guides count store actions through the browser and c
       assert.equal((await handleWebFunnel(request(sent.data), { DB }, now)).status, 204);
     }
   }
-  assert.equal(DB.db.prepare('SELECT COUNT(*) n FROM web_funnel_daily').get().n, 60);
-  assert.equal(DB.db.prepare('SELECT SUM(count) n FROM web_funnel_daily').get().n, 60);
+  assert.equal(DB.db.prepare('SELECT COUNT(*) n FROM web_funnel_daily').get().n, 63);
+  assert.equal(DB.db.prepare('SELECT SUM(count) n FROM web_funnel_daily').get().n, 63);
   for (const pathname of ['/docs/iphone-first-export/', '/blog/not-an-allowlisted-guide/', '/de/blog/apple-health-home-assistant/']) {
     const b = browser(pathname); startFunnel(b.win); assert.equal(b.sent.length, 0);
   }
