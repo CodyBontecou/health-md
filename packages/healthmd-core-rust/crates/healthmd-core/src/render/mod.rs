@@ -34,7 +34,7 @@ pub use artifact_plan::{ArtifactPlan, ArtifactPlanItem, validate_relative_path};
 pub use format::merge_markdown;
 pub use markdown_merge::merge_profile_markdown;
 pub use markdown_merge::merge_scoped_daily_note;
-pub use markdown_merge::prepare_scoped_daily_note;
+pub use markdown_merge::{prepare_scoped_android_night_note, prepare_scoped_daily_note};
 pub use stream::{
     LosslessArtifactStream, StreamArtifactConfig, StreamArtifactPlanItem, StreamDescriptor,
     StreamFinish, StreamMode,

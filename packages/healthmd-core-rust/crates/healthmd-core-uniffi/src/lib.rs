@@ -1520,6 +1520,34 @@ pub fn prepare_scoped_daily_note(
     })
 }
 
+/// Scope unchanged historical Android JSON with an explicit captured local clock.
+///
+/// # Errors
+/// Returns bounded profile/clock/YAML/size failures or a contained panic.
+#[uniffi::export]
+pub fn prepare_scoped_android_night_note(
+    profile: CoreMetricRegistryProfile,
+    record_json: &str,
+    calendar_timezone: &str,
+    bases: &str,
+    markdown: &str,
+    selected_properties: Vec<String>,
+    inject_sections: bool,
+) -> Result<String, HealthmdRenderError> {
+    render_panic_guard(move || {
+        healthmd_core::render::prepare_scoped_android_night_note(
+            semantic_profile(profile),
+            record_json,
+            calendar_timezone,
+            bases,
+            markdown,
+            &selected_properties,
+            inject_sections,
+        )
+        .map_err(HealthmdRenderError::from)
+    })
+}
+
 /// Backward-compatible Apple-style managed-Markdown merge.
 ///
 /// # Errors
@@ -1948,6 +1976,42 @@ mod tests {
 #[cfg(test)]
 mod scoped_daily_note_tests {
     use super::*;
+
+    #[test]
+    fn historical_android_note_crosses_the_boundary_without_rewriting_its_record() {
+        let json = "{\"date\":\"2026-03-08\",\"type\":\"health-data\",\"activity\":{\"steps\":42}}";
+        let patch = prepare_scoped_android_night_note(
+            CoreMetricRegistryProfile::AndroidFrozenV4,
+            json,
+            "America/New_York",
+            "---\nsteps: 42\n---\n",
+            "",
+            vec!["steps".into()],
+            false,
+        )
+        .unwrap();
+        let merged = merge_scoped_daily_note(
+            CoreMetricRegistryProfile::AndroidFrozenV4,
+            "My personal note",
+            &patch,
+            false,
+        )
+        .unwrap();
+        assert!(merged.contains("daily_capture_v2"));
+        assert!(merged.contains("My personal note"));
+        assert!(
+            prepare_scoped_android_night_note(
+                CoreMetricRegistryProfile::AndroidSleepV6,
+                json,
+                "America/New_York",
+                "---\n---\n",
+                "",
+                vec![],
+                false
+            )
+            .is_err()
+        );
+    }
 
     #[test]
     fn scoped_note_prepare_and_merge_cross_the_native_boundary() {

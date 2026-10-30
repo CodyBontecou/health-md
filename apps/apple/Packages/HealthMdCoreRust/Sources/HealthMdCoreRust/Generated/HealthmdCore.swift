@@ -4380,6 +4380,26 @@ public func negotiateDirectTransfer(local: CoreDirectTransferCapabilities, peer:
 })
 }
 /**
+ * Scope unchanged historical Android JSON with an explicit captured local clock.
+ *
+ * # Errors
+ * Returns bounded profile/clock/YAML/size failures or a contained panic.
+ */
+public func prepareScopedAndroidNightNote(profile: CoreMetricRegistryProfile, recordJson: String, calendarTimezone: String, bases: String, markdown: String, selectedProperties: [String], injectSections: Bool)throws  -> String  {
+    return try  FfiConverterString.lift(try rustCallWithError(FfiConverterTypeHealthmdRenderError_lift) {
+        uniffiCallStatus in
+    uniffi_healthmd_core_uniffi_fn_func_prepare_scoped_android_night_note(
+        FfiConverterTypeCoreMetricRegistryProfile_lower(profile),
+        FfiConverterString.lower(recordJson),
+        FfiConverterString.lower(calendarTimezone),
+        FfiConverterString.lower(bases),
+        FfiConverterString.lower(markdown),
+        FfiConverterSequenceString.lower(selectedProperties),
+        FfiConverterBool.lower(injectSections),uniffiCallStatus
+    )
+})
+}
+/**
  * Project accepted rendered artifacts into one independently versioned note patch.
  *
  * # Errors
@@ -4524,6 +4544,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_healthmd_core_uniffi_checksum_func_negotiate_direct_transfer() != 2073) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_healthmd_core_uniffi_checksum_func_prepare_scoped_android_night_note() != 45811) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_healthmd_core_uniffi_checksum_func_prepare_scoped_daily_note() != 59530) {

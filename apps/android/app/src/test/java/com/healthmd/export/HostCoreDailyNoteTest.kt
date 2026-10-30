@@ -10,6 +10,8 @@ import com.healthmd.data.storage.ExportRepositoryImpl
 import com.healthmd.data.storage.FileExportManager
 import com.healthmd.domain.repository.SettingsRepository
 import com.healthmd.domain.model.ExportFormat
+import com.healthmd.domain.model.CompatibilitySchemaProfile
+import com.healthmd.domain.model.DateFormatPreference
 import com.healthmd.domain.model.WriteMode
 import com.healthmd.domain.model.ExportPreviewSideEffectAction
 import io.mockk.mockk
@@ -252,6 +254,111 @@ class HostCoreDailyNoteTest {
         assertThat(withoutFolder.repository().exportHealthData(source(),repositorySettings(false))).isFalse()
     }
 
+    @Test fun scopedMorningNightMorningMatrixRetainsOnlyCurrentSelectedNativeFacts() = runTest {
+        val nightContext=AndroidCaptureContext(context.zoneId,SleepDayAttribution.NIGHT_BEGINS)
+        val start=Instant.parse("2026-03-08T16:00:00Z");val end=Instant.parse("2026-03-08T17:00:00.500Z")
+        val localStart=start.atZone(context.zoneId).toLocalDateTime();val localEnd=end.atZone(context.zoneId).toLocalDateTime()
+        fun exact(value:Instant)=ExactSourceTimestamp.from(value,context.zoneId.rules.getOffset(value))
+        val nightData=HealthData(date,sleep=SleepData(totalDuration=3600.5.seconds,lightSleep=3600.5.seconds,
+            stages=listOf(SleepStageEntry(localStart,localEnd,"light",exact(start),exact(end))),
+            sessions=listOf(SleepSessionEntry(localStart,localEnd,notes="Synthetic Night session",exactStartTime=exact(start),exactEndTime=exact(end))),
+            sessionStart=localStart,sessionEnd=localEnd),activity=ActivityData(steps=84))
+        for(profile in CompatibilitySchemaProfile.entries) for(initialSections in listOf(false,true)) {
+            val prepared=PreparedWakeDateDailyNote.prepare(source(),settings(initialSections),DailyAggregateExportIds("initial-$profile-$initialSections","transition-session"))
+            val personal="---\r\ndate: 1999-01-01\r\nnotes: |\r\n  Personal: multiline text\r\nsleep_deep_hours: 9 # historical\r\n---\r\nMy introduction.\r\n## Journal\r\nKeep this section.\r\n"
+            val morning=requireNotNull(DailyNoteInjector().injectPrepared(personal,prepared).second)
+            for(sections in listOf(false,true)) for(selection in listOf("steps","sleep","both")) {
+                val selected=MetricSelectionState(enabledMetrics=when(selection) {
+                    "steps"->setOf("steps");"sleep"->setOf("sleep_total","sleep_light");else->setOf("steps","sleep_total","sleep_light") })
+                val customization=FormatCustomization(compatibilitySchemaProfile=profile,includeAndroidNativeFields=profile==CompatibilitySchemaProfile.ANDROID_ANALYTICAL_V5)
+                val injection=DailyNoteInjectionSettings(enabled=true,injectMarkdownSections=sections)
+                val (result,content)=DailyNoteInjector().inject(morning,nightData,injection,customization,selected,nightContext,true)
+                assertThat(result).isEqualTo(InjectionResult.UPDATED)
+                val note=requireNotNull(content)
+                assertThat(note).contains("notes: |\r\n  Personal: multiline text\r\n")
+                assertThat(note).contains("sleep_deep_hours: 9 # historical\r\n")
+                assertThat(note).contains("Keep this section.")
+                assertThat(note).contains("healthmd_daily_injection_v1: null")
+                val encoded=note.lineSequence().first{it.startsWith("healthmd_daily_injection_v2:")}.substringAfter(':').trim()
+                val envelope=Json.parseToJsonElement(Json.decodeFromString<String>(encoded)).jsonObject
+                assertThat(envelope["version"]?.jsonPrimitive?.long).isEqualTo(2)
+                assertThat(envelope["record_profile"]?.jsonPrimitive?.content).isEqualTo(if(profile==CompatibilitySchemaProfile.ANDROID_ANALYTICAL_V5)"android-analytical-v5" else "android-frozen-v4")
+                assertThat(envelope["time_context"]?.jsonObject?.get("calendar_timezone")?.jsonPrimitive?.content).isEqualTo("America/New_York")
+                val recordText=requireNotNull(envelope["record_json"]).jsonPrimitive.content
+                val expected=JsonExporter().export(nightData.filtered(selected,nightContext),customization.copy(dateFormat=DateFormatPreference.ISO8601),sections)
+                assertThat(recordText).isEqualTo(expected)
+                val record=Json.parseToJsonElement(recordText).jsonObject
+                assertThat(record["time_context"]).isNull()
+                val sleep=record["sleep"]?.jsonObject
+                assertThat(sleep?.get("totalDuration")?.jsonPrimitive?.double).isEqualTo(if(selection=="steps")null else 3600.0)
+                assertThat(sleep?.get("sleepStages")?.jsonArray?.size ?: 0).isEqualTo(if(sections && selection!="steps")1 else 0)
+                assertThat(record["activity"]?.jsonObject?.get("steps")?.jsonPrimitive?.long).isEqualTo(if(selection=="sleep")null else 84L)
+                val restored=requireNotNull(DailyNoteInjector().injectPrepared(note,prepared).second)
+                assertThat(restored).contains("healthmd_daily_injection_v2: null")
+                val restoredEncoded=restored.lineSequence().first{it.startsWith("healthmd_daily_injection_v1:")}.substringAfter(':').trim()
+                val restoredRecord=Json.parseToJsonElement(Json.decodeFromString<String>(restoredEncoded)).jsonObject["record_json"]!!.jsonPrimitive.content
+                assertThat(Json.parseToJsonElement(restoredRecord).jsonObject["sleep"]?.jsonObject?.get("totalDuration")?.jsonPrimitive?.double).isEqualTo(93600.5)
+                System.getenv("HEALTHMD_ANDROID_NIGHT_TRANSITION_FIXTURE_DIR")?.let { directory ->
+                    val name="${profile.name}-$initialSections-$sections-$selection"
+                    File(directory).mkdirs()
+                    File(directory,"night-$name.md").writeText(note);File(directory,"night-$name.json").writeText(recordText)
+                    File(directory,"restored-$name.md").writeText(restored);File(directory,"restored-$name.json").writeText(restoredRecord)
+                }
+            }
+        }
+        val old=DailyNoteInjector().injectPrepared(null,PreparedWakeDateDailyNote.prepare(source(),settings(false),DailyAggregateExportIds("fail-transition","fail-session"))).second!!
+        assertThat(DailyNoteInjector().inject(old,nightData,DailyNoteInjectionSettings(enabled=true)).first).isEqualTo(InjectionResult.FAILED)
+        assertThat(DailyNoteInjector().inject(old.replace("daily_capture_v1","daily_capture_v99"),nightData,
+            DailyNoteInjectionSettings(enabled=true),captureContext=nightContext).first).isEqualTo(InjectionResult.FAILED)
+    }
+
+    @Test fun repositoryNightTransitionWritesExactPreviewWithoutASecondLegacyMerge() = runTest {
+        val prepared=PreparedWakeDateDailyNote.prepare(source(),settings(true),DailyAggregateExportIds("repository-night","repository-night-session"))
+        val personal="---\r\nnotes: |\r\n  My personal journal\r\nsleep_deep_hours: 9 # history\r\n---\r\nMy introduction.\r\n"
+        val morning=requireNotNull(DailyNoteInjector().injectPrepared(personal,prepared).second)
+        val nightContext=AndroidCaptureContext(context.zoneId,SleepDayAttribution.NIGHT_BEGINS)
+        val original=source()
+        val nightData=original.copy(sleep=original.sleep!!.copy(totalDuration=3600.5.seconds,lightSleep=3600.5.seconds),activity=ActivityData(steps=84))
+        for(profile in CompatibilitySchemaProfile.entries) for(mode in WriteMode.entries) {
+            val destination=NoteDestination(morning)
+            val repository=destination.repository()
+            val settings=repositorySettings(true).copy(writeMode=mode,executionSleepCaptureContext=nightContext,
+                formatCustomization=FormatCustomization(compatibilitySchemaProfile=profile))
+            val preview=repository.previewHealthData(nightData,settings)
+            assertThat(preview.failureReason).isNull()
+            val content=preview.sideEffects.single().content
+            assertThat(content).contains("notes: |\r\n  My personal journal\r\n")
+            assertThat(destination.writes).isEmpty()
+            assertThat(repository.exportHealthData(nightData,settings)).isTrue()
+            assertThat(destination.note).isEqualTo(content)
+            val encoded=content!!.lineSequence().first{it.startsWith("healthmd_daily_injection_v2:")}.substringAfter(':').trim()
+            val recordText=Json.parseToJsonElement(Json.decodeFromString<String>(encoded)).jsonObject["record_json"]!!.jsonPrimitive.content
+            val record=Json.parseToJsonElement(recordText).jsonObject
+            System.getenv("HEALTHMD_ANDROID_NIGHT_REPOSITORY_FIXTURE_DIR")?.let { directory ->
+                File(directory).mkdirs()
+                File(directory,"repository-${profile.name}-${mode.name}.md").writeText(content)
+                File(directory,"repository-${profile.name}-${mode.name}.json").writeText(recordText)
+            }
+            assertThat(record["sleep"]?.jsonObject?.get("totalDuration")?.jsonPrimitive?.double).isEqualTo(3600.0)
+            // The frozen local-clock duration spans the DST jump; preserve its shipped wall-clock value.
+            assertThat(record["sleep"]?.jsonObject?.get("sleepStages")?.jsonArray?.single()?.jsonObject?.get("durationSeconds")?.jsonPrimitive?.double).isEqualTo(97200.0)
+        }
+        val changed=NoteDestination(morning)
+        changed.afterAggregate={changed.note="My concurrent Night edit"}
+        val nightSettings=repositorySettings(false).copy(executionSleepCaptureContext=nightContext)
+        assertThat(changed.repository().exportHealthData(nightData,nightSettings)).isFalse()
+        assertThat(changed.note).isEqualTo("My concurrent Night edit")
+        val collision=NoteDestination(morning)
+        val collisionSettings=nightSettings.copy(exportFormat=ExportFormat.MARKDOWN,exportFormats=setOf(ExportFormat.MARKDOWN),subfolder="daily")
+        assertThat(collision.repository().previewHealthData(nightData,collisionSettings).failureReason).isNotNull()
+        assertThat(collision.repository().exportHealthData(nightData,collisionSettings)).isFalse()
+        assertThat(collision.writes).isEmpty()
+        val unavailable=NoteDestination(morning)
+        unavailable.inspectionOverride=FileExportManager.DurableFileInspection.Unavailable
+        assertThat(unavailable.repository().exportHealthData(nightData,nightSettings)).isFalse()
+        assertThat(unavailable.writes).isEmpty()
+    }
+
     private fun repositorySettings(sections: Boolean) = settings(sections).copy(filenameFormat="{date}",
         writeMode=WriteMode.OVERWRITE, exportFormat=ExportFormat.JSON, exportFormats=setOf(ExportFormat.JSON), subfolder="health")
 
@@ -268,6 +375,16 @@ class HostCoreDailyNoteTest {
             every { manager.inspectDurableFile(any(), any()) } answers {
                 inspectionOverride ?: note?.let { FileExportManager.DurableFileInspection.Found("note", it.encodeToByteArray()) }
                     ?: FileExportManager.DurableFileInspection.Missing
+            }
+            every { manager.readFileAtRelativePath(any(),any()) } answers {
+                val path=arg<String>(1)
+                if(path=="Daily/2026-03-08.md") note else writes[path]
+            }
+            every { manager.fileExistsAtRelativePath(any(),any()) } answers { writes.containsKey(arg<String>(1)) }
+            every { manager.writeFile(any(),any(),any(),any(),any(),any()) } answers {
+                val parent=arg<String?>(1)
+                val path=listOfNotNull(parent?.takeIf{it.isNotBlank()},arg<String>(2)+"."+arg<String>(3)).joinToString("/")
+                writes[path]=arg(4);afterAggregate?.invoke();aggregateSuccess
             }
             every { manager.writeFileAtRelativePath(any(), any(), any(), any()) } answers {
                 writes[arg(1)] = arg(2); afterAggregate?.invoke(); aggregateSuccess

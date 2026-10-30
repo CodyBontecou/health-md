@@ -713,6 +713,8 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_healthmd_core_uniffi_checksum_func_negotiate_direct_transfer(
     ): Int
+    external fun uniffi_healthmd_core_uniffi_checksum_func_prepare_scoped_android_night_note(
+    ): Int
     external fun uniffi_healthmd_core_uniffi_checksum_func_prepare_scoped_daily_note(
     ): Int
     external fun uniffi_healthmd_core_uniffi_checksum_func_run_self_test(
@@ -830,6 +832,8 @@ internal object UniffiLib {
     external fun uniffi_healthmd_core_uniffi_fn_func_merge_scoped_daily_note(`profile`: RustBuffer.ByValue,`existing`: RustBuffer.ByValue,`patch`: RustBuffer.ByValue,`injectSections`: Byte,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_healthmd_core_uniffi_fn_func_negotiate_direct_transfer(`local`: RustBuffer.ByValue,`peer`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_healthmd_core_uniffi_fn_func_prepare_scoped_android_night_note(`profile`: RustBuffer.ByValue,`recordJson`: RustBuffer.ByValue,`calendarTimezone`: RustBuffer.ByValue,`bases`: RustBuffer.ByValue,`markdown`: RustBuffer.ByValue,`selectedProperties`: RustBuffer.ByValue,`injectSections`: Byte,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_healthmd_core_uniffi_fn_func_prepare_scoped_daily_note(`profile`: RustBuffer.ByValue,`recordJson`: RustBuffer.ByValue,`bases`: RustBuffer.ByValue,`markdown`: RustBuffer.ByValue,`selectedProperties`: RustBuffer.ByValue,`injectSections`: Byte,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
@@ -1016,6 +1020,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_healthmd_core_uniffi_checksum_func_negotiate_direct_transfer() and 0xffff) != 2073) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_healthmd_core_uniffi_checksum_func_prepare_scoped_android_night_note() and 0xffff) != 45811) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_healthmd_core_uniffi_checksum_func_prepare_scoped_daily_note() and 0xffff) != 59530) {
@@ -5798,6 +5805,30 @@ public object FfiConverterSequenceTypeCoreRegistryUnavailableMetric: FfiConverte
         
         FfiConverterTypeCoreDirectTransferCapabilities.lower(`local`),
         FfiConverterTypeCoreDirectTransferCapabilities.lower(`peer`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * Scope unchanged historical Android JSON with an explicit captured local clock.
+         *
+         * # Errors
+         * Returns bounded profile/clock/YAML/size failures or a contained panic.
+         */
+    @Throws(HealthmdRenderException::class) fun `prepareScopedAndroidNightNote`(`profile`: CoreMetricRegistryProfile, `recordJson`: kotlin.String, `calendarTimezone`: kotlin.String, `bases`: kotlin.String, `markdown`: kotlin.String, `selectedProperties`: List<kotlin.String>, `injectSections`: kotlin.Boolean): kotlin.String {
+            return FfiConverterString.lift(
+    uniffiRustCallWithError(HealthmdRenderException) { _status ->
+    UniffiLib.uniffi_healthmd_core_uniffi_fn_func_prepare_scoped_android_night_note(
+    
+        
+        FfiConverterTypeCoreMetricRegistryProfile.lower(`profile`),
+        FfiConverterString.lower(`recordJson`),
+        FfiConverterString.lower(`calendarTimezone`),
+        FfiConverterString.lower(`bases`),
+        FfiConverterString.lower(`markdown`),
+        FfiConverterSequenceString.lower(`selectedProperties`),
+        FfiConverterBoolean.lower(`injectSections`),_status)
 }
     )
     }

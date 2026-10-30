@@ -208,6 +208,36 @@ The shared core exposes separate coarse preparation and merge methods for this r
 
 V1 accepts canonical Apple-v11 and Android-sleep-v6 records with their complete approved attribution metadata, and canonical Apple-v8 Night records with an explicit captured calendar and UTC machine timestamps. Identity/profile/date/clock disagreement, duplicate root keys, metadata aliases, missing authority, canonical archives or unknown envelope fields reject with bounded health-free errors. Selected property names are distinct, at most 128 UTF-8 bytes each and 512 per patch; inputs and the merged note retain the shared managed-merge 8 MiB bound. An oversized operation rejects without truncating or writing a substitute.
 
-Frozen Android-v4/v5 native JSON does not declare an inner capture clock (v4 can also omit a schema identity). That absence cannot be repaired by adding a new meaning under those frozen bytes or inferring today's timezone. A separately qualified outer-clock capture envelope is planned under Issue #104 before Android Morning-to-Night injection admission. Ordinary historical injection remains unchanged. Early unqualified v1 notes that cleared both annotation fields to `null` attest no capture and must not regain authority by generic fallback.
+Frozen Android-v4/v5 native JSON does not declare an inner capture clock (v4 can also omit a schema identity). That absence cannot be repaired by adding a new meaning under those frozen bytes or inferring today's timezone. The separately versioned outer-clock envelope below carries that authority for new scoped Night transitions under Issue #104; v1 does not accept those records. Ordinary historical injection remains unchanged. Early unqualified v1 notes that cleared both annotation fields to `null` attest no capture and must not regain authority by generic fallback.
 
 These additive internal library methods do not change existing daily schemas, semantic/render records, registry identities, direct protocols or journal versions. Historical fixtures remain immutable. Native bindings are generated from the source-matched bundled core; this does not authorize production admission or a release.
+
+
+## Scoped historical Android personal-note capture v2
+
+Status: internal implementation and boundary qualification. Production Morning ends admission remains closed. This envelope is separate from daily schemas, render input, direct protocol and durable journal versions. It preserves the existing Android v4/v5 Night begins meaning; it does not create a successor daily profile.
+
+A transition from an already scoped note uses `healthmd_injection_kind: daily_capture_v2` and `healthmd_daily_injection_v2`, a quoted YAML string containing exactly:
+
+```json
+{
+  "kind": "healthmd_daily_capture",
+  "version": 2,
+  "record_profile": "android-frozen-v4",
+  "time_context": {
+    "calendar_timezone": "America/New_York",
+    "timestamp_timezone": "America/New_York"
+  },
+  "record_json": "<exact selected historical native JSON string>"
+}
+```
+
+`record_profile` is exactly `android-frozen-v4` or `android-analytical-v5`. Both clocks must be the same valid, explicitly captured IANA zone: those native records serialize timezone-less local clocks. The captured native writer supplies the record under a private ISO owner-date presentation; the record bytes are never retagged or given an inner clock. V4 has no version/profile discriminator; v5 must have its existing exact `schemaVersion: 5` and `schemaProfile: android-analytical-v5`. Canonical schema/profile/time-context aliases, duplicate root properties, hidden canonical archives, unknown envelope/clock fields and conflicting authority reject.
+
+The exact historical JSON retains its existing units, aliases, truncation and detail behavior. In particular, a noon-clipped summary may coexist with original source detail, and the frozen local-clock `durationSeconds` can differ from elapsed time over a DST jump. V5 exact source clocks, when present, remain separately authoritative. Neither the envelope nor a reader may silently replace those fields with successor calculations.
+
+Only the selected current record is authoritative for this note. Retained Morning summaries, old detail tables and personal YAML remain outside it. The shared core clears the inactive capture slot to YAML `null`; a later Morning v1 capture clears v2 in the same way. Older v1 records without a v2 slot remain readable. A missing/unknown kind, malformed or duplicate capture metadata, or non-null inactive slot rejects rather than falling through to generic note parsing.
+
+Readers retain the declared historical profile and captured local clock separately from the unchanged record. Two explicitly declared Night clocks/profiles must agree. A legacy companion with no declared clock retains its established historical interpretation; absence is not a new claim of a captured timezone. Whole-session Morning records continue to conflict with same-date historical Night captures.
+
+The native Night injector uses this envelope only for already scoped notes; ordinary historical injection bytes remain unchanged. Local folder composition prepares the scoped merge before any destination write, validates combined portable paths, rechecks folder/document identity and observed content changes, and writes the already merged note through its bound document. It does not run that note through the legacy flat-YAML merger again, even if aggregate files use Append or Update. SAF still provides no atomic multi-file transaction or compare-and-swap. A durable note journal and runtime qualification remain separate requirements before production admission.

@@ -56,6 +56,13 @@ class HealthMdCoreService internal constructor(
         HealthMdCoreLosslessArtifactStream(bindings.value.createPlannedLosslessArtifactStream(mode, artifact))
     }
 
+    fun prepareScopedAndroidNightNote(
+        profile: CoreMetricRegistryProfile, recordJson: String, calendarTimezone: String,
+        bases: String, markdown: String, selectedProperties: List<String>, injectSections: Boolean,
+    ): String = callRenderNative {
+        prepareScopedAndroidNightNote(profile, recordJson, calendarTimezone, bases, markdown, selectedProperties, injectSections)
+    }
+
     fun mergeMarkdown(
         profile: CoreMetricRegistryProfile,
         existing: String,
@@ -411,6 +418,11 @@ internal interface HealthMdCoreBindings {
         injectSections: Boolean,
     ): String = error("scoped daily-note preparation is unavailable")
 
+    fun prepareScopedAndroidNightNote(
+        profile: CoreMetricRegistryProfile, recordJson: String, calendarTimezone: String,
+        bases: String, markdown: String, selectedProperties: List<String>, injectSections: Boolean,
+    ): String = error("scoped Android Night capture is unavailable")
+
     fun mergeRenderedMarkdown(existing: String, generated: String): String
 
     fun validateFixture(fixtureBytes: ByteBuffer, expectedSha256: String): FixtureValidation
@@ -496,6 +508,12 @@ private object UniFfiHealthMdCoreBindings : HealthMdCoreBindings {
         selectedProperties: List<String>,
         injectSections: Boolean,
     ): String = com.healthmd.core.prepareScopedDailyNote(profile, recordJson, bases, markdown, selectedProperties, injectSections)
+
+    override fun prepareScopedAndroidNightNote(
+        profile: CoreMetricRegistryProfile, recordJson: String, calendarTimezone: String,
+        bases: String, markdown: String, selectedProperties: List<String>, injectSections: Boolean,
+    ): String = com.healthmd.core.prepareScopedAndroidNightNote(profile, recordJson, calendarTimezone,
+        bases, markdown, selectedProperties, injectSections)
 
     override fun mergeScopedDailyNote(
         profile: CoreMetricRegistryProfile,
