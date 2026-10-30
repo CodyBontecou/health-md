@@ -34,6 +34,7 @@ export const FUNNEL_PAGES = Object.freeze({
   coros_export: '/blog/export-coros-data/',
   suunto_export: '/blog/export-suunto-data/',
   clue_export: '/blog/export-clue-data/',
+  omron_export: '/blog/export-omron-connect-data/',
 });
 export const FUNNEL_LOCALES = Object.freeze(['en', 'es', 'de', 'fr', 'pt-br', 'it', 'nl', 'ja', 'ko', 'zh-hans']);
 export const FUNNEL_ACTIONS = Object.freeze({
