@@ -1261,7 +1261,7 @@
 			buildSettings = {
 				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "Health.md CLI connects directly to your open iPhone app over the local network.";
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				CODE_SIGN_ENTITLEMENTS = HealthMdCLI/healthmd.entitlements;
+				CODE_SIGN_ENTITLEMENTS = "HealthMdCLI/healthmd-bundled.entitlements";
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CREATE_INFOPLIST_SECTION_IN_BINARY = YES;
@@ -1276,7 +1276,7 @@
 					"$(inherited)",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				OTHER_SWIFT_FLAGS = "$(inherited) -parse-as-library";
+				OTHER_SWIFT_FLAGS = "$(inherited) -parse-as-library -D HEALTHMD_BUNDLED_APPSTORE_CLI";
 				PRODUCT_BUNDLE_IDENTIFIER = "com.codybontecou.obsidianhealth.healthmd-cli";
 				PRODUCT_NAME = healthmd;
 				SDKROOT = macosx;
@@ -2001,7 +2001,7 @@
 			buildSettings = {
 				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "Health.md CLI connects directly to your open iPhone app over the local network.";
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				CODE_SIGN_ENTITLEMENTS = HealthMdCLI/healthmd.entitlements;
+				CODE_SIGN_ENTITLEMENTS = "HealthMdCLI/healthmd-bundled.entitlements";
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CREATE_INFOPLIST_SECTION_IN_BINARY = YES;
@@ -2016,7 +2016,7 @@
 					"$(inherited)",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				OTHER_SWIFT_FLAGS = "$(inherited) -parse-as-library";
+				OTHER_SWIFT_FLAGS = "$(inherited) -parse-as-library -D HEALTHMD_BUNDLED_APPSTORE_CLI";
 				PRODUCT_BUNDLE_IDENTIFIER = "com.codybontecou.obsidianhealth.healthmd-cli";
 				PRODUCT_NAME = healthmd;
 				SDKROOT = macosx;
@@ -2178,7 +2178,7 @@
 			buildSettings = {
 				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "Health.md CLI connects directly to your open iPhone app over the local network.";
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				CODE_SIGN_ENTITLEMENTS = HealthMdCLI/healthmd.entitlements;
+				CODE_SIGN_ENTITLEMENTS = "HealthMdCLI/healthmd-bundled.entitlements";
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CREATE_INFOPLIST_SECTION_IN_BINARY = YES;
@@ -2193,7 +2193,7 @@
 					"$(inherited)",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				OTHER_SWIFT_FLAGS = "$(inherited) -parse-as-library";
+				OTHER_SWIFT_FLAGS = "$(inherited) -parse-as-library -D HEALTHMD_BUNDLED_APPSTORE_CLI";
 				PRODUCT_BUNDLE_IDENTIFIER = "com.codybontecou.obsidianhealth.healthmd-cli";
 				PRODUCT_NAME = healthmd;
 				SDKROOT = macosx;
@@ -2246,7 +2246,7 @@
 			buildSettings = {
 				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "Health.md CLI connects directly to your open iPhone app over the local network.";
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				CODE_SIGN_ENTITLEMENTS = HealthMdCLI/healthmd.entitlements;
+				CODE_SIGN_ENTITLEMENTS = "HealthMdCLI/healthmd-bundled.entitlements";
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CREATE_INFOPLIST_SECTION_IN_BINARY = YES;
@@ -2261,7 +2261,7 @@
 					"$(inherited)",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				OTHER_SWIFT_FLAGS = "$(inherited) -parse-as-library";
+				OTHER_SWIFT_FLAGS = "$(inherited) -parse-as-library -D HEALTHMD_BUNDLED_APPSTORE_CLI";
 				PRODUCT_BUNDLE_IDENTIFIER = "com.codybontecou.obsidianhealth.healthmd-cli";
 				PRODUCT_NAME = healthmd;
 				SDKROOT = macosx;

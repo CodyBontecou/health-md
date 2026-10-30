@@ -3,6 +3,7 @@
 import argparse
 import json
 import os
+import plistlib
 from pathlib import Path
 import re
 import subprocess
@@ -15,6 +16,10 @@ def validate(app):
     environment["DYLD_PRINT_LIBRARIES"] = "1"
     for name in ("healthmd", "healthmd-mcp"):
         helper = app / "Contents" / "Helpers" / name
+        signature = subprocess.run(["codesign", "-d", "--entitlements", ":-", str(helper)], capture_output=True, check=True)
+        entitlements = plistlib.loads(signature.stdout)
+        if entitlements.get("com.apple.security.app-sandbox") is not True:
+            raise ValueError(f"{name}: App Store helper is missing App Sandbox")
         commands = subprocess.check_output(["otool", "-l", str(helper)], text=True)
         paths = re.findall(r"cmd LC_RPATH\s+cmdsize \d+\s+path (.*?) \(offset", commands)
         if "@loader_path/../Frameworks" not in paths:
