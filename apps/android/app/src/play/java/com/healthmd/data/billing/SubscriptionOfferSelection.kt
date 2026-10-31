@@ -15,7 +15,15 @@ internal fun selectSubscriptionOffer(
         val recurring = phases.lastOrNull()
         recurring?.billingPeriod == period && recurring.priceAmountMicros > 0 &&
             recurring.recurrenceMode == ProductDetails.RecurrenceMode.INFINITE_RECURRING &&
-            (phases.size == 1 || (phases.size == 2 && phases.first().priceAmountMicros == 0L &&
-                phases.first().billingPeriod == "P7D" && phases.first().billingCycleCount == 1))
+            (phases.size == 1 || (phases.size == 2 && phases.first().isSevenDayFreeTrial()))
     }.sortedByDescending { it.pricingPhases.pricingPhaseList.size }.firstOrNull()
 }
+
+/** Play may express one week as P1W or P7D; a non-recurring phase has zero cycles. */
+internal fun ProductDetails.PricingPhase.isSevenDayFreeTrial(): Boolean =
+    priceAmountMicros == 0L && billingPeriod in setOf("P7D", "P1W") &&
+        when (recurrenceMode) {
+            ProductDetails.RecurrenceMode.FINITE_RECURRING -> billingCycleCount == 1
+            ProductDetails.RecurrenceMode.NON_RECURRING -> billingCycleCount == 0
+            else -> false
+        }

@@ -289,7 +289,7 @@ class BillingRepositoryImpl(
                 tokens[plan.productId] = selected.offerToken
                 val phases = selected.pricingPhases.pricingPhaseList
                 PurchaseOffer(plan.productId, phases.last().formattedPrice, plan,
-                    phases.first().priceAmountMicros == 0L && phases.first().billingPeriod == "P7D")
+                    phases.first().isSevenDayFreeTrial())
             }
         }
         detailsByID = loaded

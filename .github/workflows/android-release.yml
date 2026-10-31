@@ -239,7 +239,6 @@ jobs:
         run: |
           set -euo pipefail
           git fetch --force --no-tags origin "+refs/tags/${RELEASE_TAG}:refs/tags/${RELEASE_TAG}"
-          version="${RELEASE_TAG#android/v}"
           version_name="$(sed -n 's/.*versionName = "\([^"]*\)".*/\1/p' app/build.gradle.kts | head -1)"
           version_code="$(sed -n 's/.*versionCode = \([0-9][0-9]*\).*/\1/p' app/build.gradle.kts | head -1)"
           test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
@@ -247,7 +246,11 @@ jobs:
           test "$(git rev-parse "$RELEASE_TAG^{commit}")" = "$RELEASE_SHA"
           git fetch --force origin '+refs/heads/main:refs/remotes/origin/main'
           git merge-base --is-ancestor "$RELEASE_SHA" refs/remotes/origin/main
-          test "$version_name" = "$version"
+          # Recovery can check out older product source; use the validator owned by this workflow.
+          validator="$RUNNER_TEMP/android-phone-release-tag.py"
+          git show "$GITHUB_SHA:apps/android/scripts/validate-phone-release-tag.py" > "$validator"
+          python3 "$validator" "$RELEASE_TAG" "$version_name" "$version_code"
+          version="$version_name"
           [[ "$version_code" =~ ^[1-9][0-9]*$ ]]
           (( version_code < 1000000 ))
           jq -e --arg version "$version" --argjson code "$version_code" '
