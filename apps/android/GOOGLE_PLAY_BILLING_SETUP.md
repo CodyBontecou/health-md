@@ -6,7 +6,7 @@ This guide covers the `play` Android variant. F-Droid does not compile Billing a
 
 The approved future US Individual launch targets are **$0.99 weekly**, **$29.99 yearly**, and **$49.99 Lifetime**. Live Lifetime remains **$19.99 US** under the hold below. Eligible subscriptions include a **seven-day free trial**. Lifetime is charged immediately. Android offers no Family plans and no monthly subscription. The cross-platform decision and Apple setup are recorded in the [paid-access rollout](../apple/docs/experiments/subscription-pricing-rollout.md).
 
-**Internal-testing release:** Android 3.5.0 build 44 is available on Internal Testing and includes the seven-day trial phase fix; it supersedes build 43 on that track. Upload through the protected `android-release.yml` workflow, then qualify real Play purchases with license-test accounts before production promotion. The Internal Testing upload does not activate subscription products or change any product price.
+**Internal-testing release:** Android 3.5.0 build 45 is available on Internal Testing. It retains build 44's seven-day trial phase fix and corrects refunded-Lifetime revocation and asynchronous automation results. Upload through the protected `android-release.yml` workflow, then qualify real Play purchases with license-test accounts before production promotion. The Internal Testing upload does not activate subscription products or change any product price. Production promotion remains on hold.
 
 **Live-price hold:** these are launch targets. Leave the existing live lifetime product's price and regional pricing unchanged until the subscription-containing app is live and the owner explicitly approves the coordinated cutover. Draft subscription products, prices, and trials may be prepared in advance; do not activate, submit, publish, or release as a side effect of setup. Follow the rollout guide's live-price hold when resuming Console work.
 
@@ -128,4 +128,23 @@ The repository regression reproduced a successful empty Play ownership query ret
 
 The same device automation probe returned default result code `0` to its ordered-broadcast caller. `goAsync()` detaches the receiver's result; asynchronous responses must be written through that invocation's retained `PendingResult` before finishing it. The candidate carries that result explicitly through each automation path, without changing action names, extras or result-code meanings.
 
-Code 45 is not qualified by these source changes or host tests. Retain the code-44 failure evidence and repeat same-installation revocation, ordered-broadcast admission, subscription-only offline/recovery, paid Yearly renewal and remaining owner-upgrade cases on the signed replacement. Lifetime's live price and regional mappings remain unchanged; production promotion remains on hold.
+Source changes and host tests alone do not qualify code 45. The signed-build results below supersede the corresponding outstanding code-44 cases; retain the code-44 failure evidence. Lifetime's live price and regional mappings remain unchanged; production promotion remains on hold.
+
+### Code-45 device qualification
+
+The annotated [`android/v3.5.0+45` tag](https://github.com/CodyBontecou/health-md/tree/android/v3.5.0%2B45) identifies `a296ffeae821b6f94291ac8fed605d3f32153c5a`. The protected [Internal Testing workflow](https://github.com/CodyBontecou/health-md/actions/runs/41232644269) passed on attempt 2 and committed the internal upload. Its matching intent/upload receipts identify AAB SHA-256 `f2af6bd0fcee02663ca315d259086d72378cb8c9e372f076d31184d751253e47` and the registered upload signer. Attempt 1 exceeded the unchanged portable CI time budget; no gate was relaxed. The exact-source main CI and queued Android native compilation passed. The affected Play host batch passed 109 tests, and seven F-Droid boundary tests passed separately.
+
+The authorized Pixel normally updated from code 44 through Google Play to 3.5.0/code 45, preserving app data and its original installation time. The base plus arm64/English/xxhdpi split delivery and Play app-signing certificate were verified. The checks below used no-charge license-test instruments. No Health Connect read permissions were granted and no health data was read or exported.
+
+| Surface | Result |
+| --- | --- |
+| Refunded Lifetime | The same installation that incorrectly retained access on code 44 returned to the mandatory gate on code 45; the two-step restart regression passed |
+| Ordered automation | Revoked access returned result `2`, “Unlock Health.md to run automation exports”; an active Yearly subscription advanced to “No export folder selected,” before health access |
+| Returning subscriber offers | $0.99 weekly and $29.99 yearly displayed without trial badges for the ineligible tester; Lifetime remained $19.99 |
+| Paid Yearly renewal | The purchase sheet showed the paid $29.99/30-minute test cycle, the intended tester, and a no-charge test instrument. Billing Lab accelerated renewal; Console confirmed a processed recurring test order. Post-renewal restart passed |
+| Subscription-only offline restart | With Wi-Fi off and airplane mode on, Play still supplied valid ownership: restart and explicit automation retained access. Wi-Fi was restored. This does not test failed ownership queries or establish an app-defined offline grace period |
+| Cancellation before expiry | Canceling the renewed Yearly test preserved access through the displayed paid-through time; restart passed |
+
+Billing Lab's product-response simulator is distinct from ownership verification. Its `queryProductDetailsAsync` error control does not establish a failed `queryPurchasesAsync` result. Failed-query cache behavior remains covered by host regressions until that device boundary is exercised explicitly.
+
+The owner confirmed no device retaining an eligible pre-April-26 installation is available. True grandfathered-user upgrade qualification remains **unrun**; passing cutoff and grandfathered-grant host tests do not replace it. A legitimate existing permanent owner's upgrade, device-level scheduled/recovery/Direct CLI execution, and end-to-end exports also remain unqualified by these billing admission probes. Preserve those gaps before any production decision. The original debug installation's private backup remains retained outside the release worktree.
