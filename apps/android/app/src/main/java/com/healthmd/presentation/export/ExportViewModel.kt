@@ -101,7 +101,9 @@ data class ExportUiState(
     val profileExecutionIssue: ExportProfileExecutionIssue? = null,
 ) {
     val requiresHistoricalReadPermission: Boolean
-        get() = ExportHistoryAccess.requiresHistoricalReadPermission(
+        // The earliest readable sample may already be clipped by Health Connect's
+        // history window. It cannot establish the full range requested by All Time.
+        get() = allTimeSelected || ExportHistoryAccess.requiresHistoricalReadPermission(
             startDate = startDate,
             endDate = endDate,
             firstPermissionGrantDate = firstHealthPermissionGrantDate,

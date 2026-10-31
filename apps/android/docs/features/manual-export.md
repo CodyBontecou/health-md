@@ -46,7 +46,7 @@ One export action for a three-day range with Markdown + JSON enabled writes six 
 ## Tips
 
 - Free actions count exports, not files — batching days and formats in one run conserves your quota.
-- All Time uses the earliest data Health Connect will give you; very old data may need the History permission.
+- All Time requires Health Connect's History permission, even when the earliest readable sample is recent. Recent readable data does not prove that older history is accessible.
 - After a successful export you may be offered a Google Play review prompt — it is optional and appears only after clean full successes.
 - Failed exports don't consume an action: only a run with at least one success counts.
 
