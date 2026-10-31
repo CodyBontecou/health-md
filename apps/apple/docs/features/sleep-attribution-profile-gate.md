@@ -1,12 +1,14 @@
 # Sleep attribution profile gate
 
-Status: `planned` on Apple and Android. Target: **Issue #104 sleep-attribution-successor-profile-review**.
+Status: available in the current Apple and Android source through explicit Apple-v11 and Android-sleep-v6 authority. This branch is not merged or released; historical Apple v8 and Android v4/v5 behavior remains unchanged.
 
 ## Current app admission and remaining qualification
 
-Both app settings gates remain Debug-only in `SleepDayAttribution.swift` and
-`SleepDayAttribution.kt`. This status describes release admission, not an absence
-of native producers. The sections below record incremental qualification history;
+Both app settings gates now admit Morning ends in production builds. Admission still requires the explicit
+successor profile, frozen timezone, and matching immutable engine authority; a
+legacy or draft context cannot acquire that authority. This is current source
+status, not a claim that the branch is merged, released, or deployed. The
+sections below record incremental qualification history;
 their earlier route restrictions do not replace the current owning code.
 
 The iPhone `IPhoneDirectFileExportProducer` and Android `DirectGeneratedFilesProducer`
@@ -34,8 +36,9 @@ iPhone preview, connected recovery and Android schedule-Save smoke checks pass.
 The Android schedule checks include ordinary English and constrained large-text
 Arabic layouts. Historical registry pins remain supported by both semantic and
 render adapters; successor registry authority remains independently constrained.
-Release admission still requires the complete producer/consumer admission review
-and coherent native integration builds before opening the production gates.
+The source gates are open. Final affected-option and producer/consumer checks,
+plus a coherent native integration build, remain required before merge; opening
+these source gates does not claim a release.
 Portable contract and bundled-reader tests cannot substitute for native results.
 These remaining checks do not authorize changing historical Night begins bytes
 or dropping export options.
@@ -48,9 +51,9 @@ The 2026-10-08 integration audit found a conflicting draft identity: commit `566
 
 A daily export must have one stable owner-day meaning for the whole operation. Current Apple daily v8, Android frozen v4 and Android analytical v5 retain `night_begins`: the existing noon-to-noon window and its boundary clipping. No stored preference may change that meaning under the same public identity.
 
-`morning_ends` assigns a whole session to its wake-up date without noon clipping. It changes meaning, even though the existing JSON/CSV/frontmatter shapes can represent the resulting values. It remains unavailable in shipped production capture/export routes. The pickers disable new selection of this mode. Previously stored values remain visible and unchanged, with an unavailable explanation; production captures reject them rather than substituting `night_begins` or exporting zeros.
+`morning_ends` assigns a whole session to its wake-up date without noon clipping. It changes meaning, even though the existing JSON/CSV/frontmatter shapes can represent the resulting values. Current source admits it in production capture/export routes only with explicit Apple-v11 or Android-sleep-v6 authority. The pickers allow new selection of this mode. Previously stored draft values remain visible and unchanged; unversioned or conflicting captures still reject rather than substituting `night_begins` or exporting zeros. This unmerged branch is not a shipped release.
 
-Successor implementation is owner-authorized. On 2026-10-29, the owner explicitly approved the Apple-v11 and Android-sleep-v6 public meanings: whole sessions belong to the wake-up date, without noon clipping, using the frozen export timezone and explicit attribution metadata. This approves profile meaning; production qualification and release admission remain incomplete. Explicit Apple-v11 and Android-v6 native JSON preparation and shared successor rendering are implemented; they do not enable production operations. Historical daily defaults, signatures, API envelopes and direct protocols retain their existing identities. The existing Apple range-summary v9 is independent; the proposed successor roll-up v11 must not repurpose it.
+Successor implementation is owner-authorized. On 2026-10-29, the owner explicitly approved the Apple-v11 and Android-sleep-v6 public meanings: whole sessions belong to the wake-up date, without noon clipping, using the frozen export timezone and explicit attribution metadata. Explicit Apple-v11 and Android-v6 operations are enabled in current source. Final affected-option and producer/consumer checks, native integration, merge, and release remain separate steps and are not claimed here. Historical daily defaults, signatures, API envelopes and direct protocols retain their existing identities. The existing Apple range-summary v9 is independent; the proposed successor roll-up v11 must not repurpose it.
 
 ## Operation and persistence authority
 

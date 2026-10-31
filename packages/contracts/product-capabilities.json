@@ -175,17 +175,15 @@
     {
       "id": "settings.sleep-attribution",
       "name": "Sleep day attribution",
-      "classification": "planned",
-      "summary": "The shipped night_begins noon-to-noon window and clipping remain unchanged. morning_ends is unavailable for immutable Apple v8 and Android v4/v5 writers; stored preferences and pending contexts are retained without coercion.",
+      "classification": "shared",
+      "summary": "Current Apple and Android source admits explicit Morning ends successor profiles: whole sessions belong to the wake-up date without noon clipping, using the frozen export timezone and explicit attribution metadata. Historical Apple v8 and Android v4/v5 Night begins meanings and bytes remain unchanged. This source capability inventory does not claim that an unmerged branch is released.",
       "profiles": [],
       "platforms": {
         "apple": {
-          "state": "planned",
-          "target": "Issue #104 sleep-attribution-successor-profile-review: Apple-v11 whole-session wake-up-date ownership, no noon clipping, frozen export timezone and explicit attribution metadata were owner-approved on 2026-10-29. Qualify Apple/core/CLI/website/API/direct and external Obsidian readers, immutable operation/durable recovery, complete producer admission and native accessibility before enabling morning_ends. This approval does not approve unified-v9 or enable production."
+          "state": "available"
         },
         "android": {
-          "state": "planned",
-          "target": "Issue #104 sleep-attribution-successor-profile-review: Android-sleep-v6 whole-session wake-up-date ownership, no noon clipping, frozen export timezone and explicit attribution metadata were owner-approved on 2026-10-29. Qualify Android/core/CLI/website/API/direct and external Obsidian readers, immutable operation/durable recovery, complete producer admission and native accessibility before enabling morning_ends. This approval does not approve unified-v9 or enable production."
+          "state": "available"
         }
       },
       "evidence": [

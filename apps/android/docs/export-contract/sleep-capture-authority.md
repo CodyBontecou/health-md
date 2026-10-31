@@ -1,8 +1,14 @@
 # Immutable sleep capture authority
 
-Status: compatibility implementation in progress; Morning ends remains production-gated.
+Status: current source enables explicit Android-sleep-v6 Morning ends operations. Final native integration and runtime verification remain separate from source availability.
 
 One accepted operation owns one calendar timezone, attribution and explicit successor discriminator. A preference or ambient timezone change cannot change that operation. Committed journal/spool bytes remain authoritative and recover before any fresh-capture availability check.
+
+Current native producers reuse the existing export, preview, API, scheduling and direct-file paths with frozen successor authority. Native detail composition preserves selected temperature samples, meals, menstruation periods, planned workouts, medical resources and provider provenance without adding shared semantic identities. Legacy aliases remain a presentation option; Android Light never acquires a Core identity. See [the current admission status](../../../apple/docs/features/sleep-attribution-profile-gate.md) for cross-platform verification requirements.
+
+## Incremental boundary qualification history
+
+The sections below record the state when each boundary was added. Earlier statements that a route is gated, unadopted or pending describe that stage; the current source availability and admission status above take precedence. Historical profile and recovery invariants remain normative.
 
 ## Android durable settings snapshots
 
@@ -28,7 +34,7 @@ Synthetic Kotlin-generated handoffs and a separately core-generated plan live un
 
 `FrozenDailyAggregateExportRequest` copies the captured authority, rejects missing frozen/draft authority and conflicting pin clocks, and passes the same context into the concrete semantic configuration and every batch. The Rust planner prefers that captured clock, not ambient time. Fresh export/preview orchestration now passes operation-only frozen settings to every destination planner; saved preferences remain unchanged.
 
-The local router selects v6 only from the explicit matching Morning discriminator and requires Rust. A pinned v6 request bypasses current policy without borrowing a historical target. Invalid policies, unsupported operations and frozen nil engine authority fail rather than returning a historical legacy plan. Fresh Morning policy requires the separately identified, compatible Rust `ANDROID_SLEEP_V6` renderer. The settings control remains Debug-only pending final admission. API-v1 stays frozen-v4; explicit Morning operations use the successor envelope.
+The local router selects v6 only from the explicit matching Morning discriminator and requires Rust. A pinned v6 request bypasses current policy without borrowing a historical target. Invalid policies, unsupported operations and frozen nil engine authority fail rather than returning a historical legacy plan. Fresh Morning policy requires the separately identified, compatible Rust `ANDROID_SLEEP_V6` renderer. The settings control is available in production builds after final source admission; explicit matching authority remains mandatory. API-v1 stays frozen-v4; explicit Morning operations use the successor envelope.
 
 The current v6 path supports native workout and selected time-series records, requested human display units and all saved destination write modes; machine quantities remain canonical. Planned workouts and medical resources now use the existing native source-composition path in all four formats and the successor API envelope. Planned source instants and opaque FHIR JSON remain intact. Medical resources without a source timestamp do not acquire an invented clock. Hiding count frontmatter does not remove the selected source records. The legacy alias control decorates native JSON, CSV and frontmatter while semantic IDs stay canonical. It never adds a Core identity for Android Light. Provider provenance is frozen with its nested source lists/maps and remains audit metadata, not a source of relabeled primary values. Summary frontmatter visibility does not revoke selected raw-record authority; invalid values, intervals and owner dates still reject. Every admitted request containing JSON now prepares the same native JSON grammar, including empty sleep, populated sleep and non-sleep days. Captured sleep summary clocks now enter all four formats, including requests that omit JSON. Visible bedtime/wake values use the selected 12/24-hour format; CSV's Timestamp column uses the original UTC source instant, including nanoseconds. The exact source interval validates end-date ownership before presentation. Missing clocks and conflicting whole-second local summary clocks are rejected without guessing an instant from a wall clock. Native summary fields may omit subsecond display precision; independent source clocks retain it. In an admitted multi-format request, only JSON receives a native document: other formats keep completed canonical projections, never historical native bodies. Missing required source clocks and draft/mismatched authority remain rejected. Bare core post-capture prototype controls are not qualification of the native public grammar or production consumer support.
 
@@ -44,7 +50,7 @@ HEALTHMD_HOST_CORE_LIBRARY=/absolute/path/to/target/debug/libhealthmd_core_uniff
     -Pkotlin.compiler.execution.strategy=in-process
 ```
 
-Without explicit host opt-in the host planner tests skip. Host execution does not qualify packaged Android JNI/device libraries, Health Connect ownership/clipping, native timestamp/unit normalization, durable v6 acceptance or UI enablement. Morning ends remains unavailable until those and the cross-platform/consumer gates pass.
+Without explicit host opt-in the host planner tests skip. Host execution does not qualify packaged Android JNI/device libraries, Health Connect ownership/clipping, native timestamp/unit normalization, durable v6 acceptance or UI enablement. The source gate is open; final affected-option, producer/consumer and native integration checks remain required before merge.
 
 ## Native JSON and API source preparation
 

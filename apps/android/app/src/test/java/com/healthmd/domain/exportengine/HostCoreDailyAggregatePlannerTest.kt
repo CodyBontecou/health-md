@@ -50,6 +50,31 @@ import org.junit.Test
  */
 class HostCoreDailyAggregatePlannerTest {
     @Test
+    fun successorHonorsDisabledAndroidNativeFieldsLikeTheHistoricalWriter() = runTest {
+        val data = HealthData(LocalDate.of(2026, 3, 15),
+            body = BodyData(weight = 72.125, bodyWaterMass = 40.625, boneMass = 3.125))
+        val customization = FormatCustomization.analyticalDefault().copy(includeAndroidNativeFields = false)
+        val historical = com.healthmd.data.export.JsonExporter().export(data, customization)
+        assertThat(historical).contains("weight")
+        assertThat(historical).doesNotContain("bodyWaterMass")
+        assertThat(historical).doesNotContain("boneMass")
+        val context = AndroidCaptureContext(ZoneId.of("UTC"), SleepDayAttribution.MORNING_ENDS)
+        val settings = ExportSettings(exportFormats = ExportFormat.entries.toSet(), formatCustomization = customization,
+            metricSelection = MetricSelectionState(enabledMetrics = setOf("weight", "body_water_mass", "bone_mass")),
+            executionSleepCaptureContext = context, executionSleepCaptureAuthorityIsFrozen = true)
+        val request = FrozenDailyAggregateExportRequest.capture(data, settings, AndroidExportProfile.android_sleep_v6,
+            ExportEngineMode.rust, DailyAggregateExportIds("native-switch-off", "native-switch-off-session"))
+        val plan = HealthMdRustDailyAggregatePlanner().plan(request).plan
+        assertThat(plan.items).hasSize(4)
+        for (item in plan.items) {
+            val text = item.content.decodeToString()
+            for (key in listOf("bodyWaterMass", "boneMass", "body_water_mass", "bone_mass", "Body Water", "Bone Mass")) {
+                assertWithMessage(item.relativePath).that(text).doesNotContain(key)
+            }
+        }
+    }
+
+    @Test
     fun successorKeepsRemainingNativeDetailRecordsAcrossFormatsAndApi() = runTest {
         val context = AndroidCaptureContext(ZoneId.of("UTC"), SleepDayAttribution.MORNING_ENDS)
         val date = LocalDate.of(2026, 3, 15)

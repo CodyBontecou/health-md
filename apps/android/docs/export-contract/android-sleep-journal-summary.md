@@ -1,10 +1,10 @@
 # Android sleep journal summary
 
-**Status:** Night begins is shipped; approved Morning ends successor meanings remain guarded in development
+**Status:** Night begins remains the historical default; Morning ends is available in current source through explicit successor authority (the branch is not merged or released)
 
 **Shipped rule ID:** `noon-to-noon-sleep-window-v1`
 
-**Successor calculation rule:** `wake-date-sleep-window-v1` (unavailable in production profiles)
+**Successor calculation rule:** `wake-date-sleep-window-v1` (Android-sleep-v6 only)
 
 **Scope:** Health Connect compatibility summaries and detailed records, with independently specified WHOOP aggregate capture below
 
@@ -18,11 +18,11 @@ Health Connect sleep reads use a sleep-only interval. For requested dates `first
 
 ## Sleep Day Attribution gate (issue #104)
 
-`settings.sleep-attribution` is **planned** on both platforms. The exact target is **Issue #104 sleep-attribution-successor-profile-review**, documented in `apps/apple/docs/features/sleep-attribution-profile-gate.md`.
+`settings.sleep-attribution` is **available in current source** on both platforms. The exact target is **Issue #104 sleep-attribution-successor-profile-review**, documented in `apps/apple/docs/features/sleep-attribution-profile-gate.md`.
 
-`morning_ends` assigns a whole source session to the calendar date of its end, without noon clipping. It cannot ship under immutable Apple v8 or Android v4/v5 identities. Qualified development paths use explicit Apple-v11 or Android-sleep-v6 contexts and attribution metadata. Release gates remain closed; missing, unversioned or conflicting authority is rejected rather than coerced to `night_begins`. A changed preference applies only to a separately requested new operation, never to a saved explicit capture context.
+`morning_ends` assigns a whole source session to the calendar date of its end, without noon clipping. It cannot ship under immutable Apple v8 or Android v4/v5 identities. Qualified development paths use explicit Apple-v11 or Android-sleep-v6 contexts and attribution metadata. The source availability gates are open; missing, unversioned or conflicting authority is still rejected rather than coerced to `night_begins`. This branch is not merged, shipped, or released. A changed preference applies only to a separately requested new operation, never to a saved explicit capture context.
 
-The owner approved Apple-v11 and Android-sleep-v6 meanings on 2026-10-29: whole-session wake-date ownership, no noon clipping, frozen export timezone and explicit attribution metadata. Unified-v9 remains an unapproved proposal. Meaning approval does not enable production; producer, consumer and durable-context qualification remain required. An internal rule constant or unchanged structural signature does not authorize relabeling historical output.
+The owner approved Apple-v11 and Android-sleep-v6 meanings on 2026-10-29: whole-session wake-date ownership, no noon clipping, frozen export timezone and explicit attribution metadata. Unified-v9 remains an unapproved proposal. Producer, consumer, and durable-context admission are implemented in current source; merge and release qualification remain separate. An internal rule constant or unchanged structural signature does not authorize relabeling historical output.
 
 The same device-local raw values remain in DataStore (`sleep_day_attribution`) and Apple UserDefaults (`healthKit.sleepDayAttribution`). Portable Share My Setup does not import them. Apple internal durable journals now retain their operation context separately from portable/wire encoding; missing or unapproved recovery contexts remain unavailable without journal erasure. Android passes one explicit context across capture chunks and does not substitute provider-native single-day semantics after an empty authoritative range.
 

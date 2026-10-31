@@ -16,9 +16,9 @@ enum class SleepDayAttribution(val wireValue: String) {
     NIGHT_BEGINS("night_begins"),
     MORNING_ENDS("morning_ends");
 
+    /** Capture separately validates the explicit profile and immutable engine authority. */
     val isAvailableForShippedProfiles: Boolean
-        // Development QA can exercise the successor while release qualification is pending.
-        get() = this == NIGHT_BEGINS || com.healthmd.BuildConfig.DEBUG
+        get() = true
 
     companion object {
         val DEFAULT: SleepDayAttribution = NIGHT_BEGINS

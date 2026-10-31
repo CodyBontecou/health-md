@@ -46,7 +46,6 @@ class ProductCapabilityManifestTest {
                 "direct.cli_agent_push_wake",
                 "export.range-summary",
                 "setup.share-portable-configuration",
-                "settings.sleep-attribution",
                 "support.local-reporting-fallback",
             ),
             idsWithState(states, "planned"),
@@ -71,7 +70,7 @@ class ProductCapabilityManifestTest {
             it.getValue("id").jsonPrimitive.content == "settings.sleep-attribution"
         }
         assertEquals(
-            "planned",
+            "shared",
             sleepAttributionCapability.getValue("classification").jsonPrimitive.content,
         )
         assertTrue(sleepAttributionCapability.getValue("profiles").jsonArray.isEmpty())
@@ -154,6 +153,7 @@ class ProductCapabilityManifestTest {
             "direct.cli_agent_wake",
             "direct.full_public_authorized_corpus",
             "diagnostics.local_bundle",
+            "settings.sleep-attribution",
         )
 
         val appleCapabilities = setOf(

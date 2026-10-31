@@ -1,6 +1,6 @@
 # Versioned sleep day attribution
 
-Status: owner-authorized implementation, not yet production-qualified. On 2026-10-05 the owner requested the compatibility work needed to make Morning ends functional after the shipped-profile gate was explained. This authorizes the successor implementation below, not a product release, deployment, real-device export/upload, or adoption of the unrelated unified-v9 proposal.
+Status: current source enables the explicit Apple-v11 and Android-sleep-v6 profiles. Final affected-option, producer/consumer and native integration checks remain required before merge. On 2026-10-05 the owner requested the compatibility work, and on 2026-10-29 approved the successor meanings. This source status does not claim a merge, release, deployment, or adoption of the unrelated unified-v9 proposal. Incremental qualification notes below preserve the status at the time each boundary was added; their older “gate closed” wording is historical rather than the current admission state.
 
 ## Shared outcome
 

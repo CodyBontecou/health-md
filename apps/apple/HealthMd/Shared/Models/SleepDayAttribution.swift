@@ -21,15 +21,8 @@ nonisolated enum SleepDayAttribution: String, CaseIterable, Codable, Sendable, E
     case nightBegins = "night_begins"
     case morningEnds = "morning_ends"
 
-    /// Development QA can exercise the successor while release qualification is pending.
-    /// Capture still requires an explicit profile and matching immutable engine authority.
-    var isAvailableForShippedProfiles: Bool {
-        #if DEBUG
-        true
-        #else
-        self == .nightBegins
-        #endif
-    }
+    /// Capture still requires a matching immutable profile and engine authority.
+    var isAvailableForShippedProfiles: Bool { true }
 
     var localizedDisplayName: String {
         switch self {

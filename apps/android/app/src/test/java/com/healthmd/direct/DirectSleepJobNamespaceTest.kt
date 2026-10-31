@@ -23,6 +23,10 @@ import java.time.Instant
 import java.security.MessageDigest
 import java.util.UUID
 import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.jsonObject
 import org.junit.Assert.assertThrows
 import org.junit.Test
 
@@ -149,11 +153,16 @@ class DirectSleepJobNamespaceTest {
             val successor = prepare(store, successorPin())
             val directory = directory(root, successor)
             val journal = File(directory, "job.json")
+            fun replaceJournalVersion(version: Int) {
+                val document = Json.parseToJsonElement(journal.readText()).jsonObject
+                assertThat(document["version"]).isEqualTo(JsonPrimitive(successor.version))
+                journal.writeText(JsonObject(document + ("version" to JsonPrimitive(version))).toString())
+            }
             when (damage) {
                 "owner" -> check(File(directory, "preparation-owner").delete())
-                "version" -> journal.writeText(journal.readText().replace("\"version\":3", "\"version\":999"))
-                "legacy" -> journal.writeText(journal.readText().replaceFirst("\"version\":3", "\"version\":1"))
-                "v2" -> journal.writeText(journal.readText().replaceFirst("\"version\":3", "\"version\":2"))
+                "version" -> replaceJournalVersion(999)
+                "legacy" -> replaceJournalVersion(1)
+                "v2" -> replaceJournalVersion(2)
                 "journal" -> journal.writeText("synthetic unrecognized journal")
                 "schema" -> journal.writeText(kotlinx.serialization.json.Json.encodeToString(successor.copy(
                     transfer = successor.transfer.copy(manifests = successor.transfer.manifests.map {

@@ -13,13 +13,14 @@ class AndroidCaptureContextTest {
     private val codec = Json { encodeDefaults = true; explicitNulls = false; ignoreUnknownKeys = false }
 
     @Test
-    fun freshMorningCarriesExplicitSuccessorAuthorityWithoutEnablingAnUnqualifiedWriter() {
+    fun freshMorningCarriesExplicitAvailableSuccessorAuthority() {
         val fresh = AndroidCaptureContext(ZoneId.of("Asia/Kathmandu"), SleepDayAttribution.MORNING_ENDS)
         assertThat(codec.encodeToString(fresh)).contains("\"exportProfileID\":\"android-sleep-v6\"")
         val restored = codec.decodeFromString<AndroidCaptureContext>(codec.encodeToString(fresh))
         assertThat(restored).isEqualTo(fresh)
-        val error = assertThrows(SleepAttributionUnavailableException::class.java) { restored.requireShippedProfile() }
-        assertThat(error.reason).isEqualTo(SleepCaptureAuthorityError.PROFILE_UNAVAILABLE)
+        restored.requireShippedProfile()
+        assertThat(restored.explicitSleepDayAttributionOverride)
+            .isEqualTo(SleepDayAttributionOverride.Value(SleepDayAttribution.MORNING_ENDS))
     }
 
     @Test
