@@ -34,7 +34,8 @@ final class SleepExportAvailabilityTests: XCTestCase {
 
             // A new concurrent operation owns its own Morning ends context.
             let other = Task.detached { @MainActor in
-                try await manager.fetchHealthData(for: wake, detailPolicy: .summary, metricSelection: selection)
+                try await manager.fetchHealthData(for: wake, detailPolicy: .summary,
+                    metricSelection: selection, timeZone: context.timeZone)
             }
             let morning = try await other.value
             XCTAssertEqual(morning.sleep.totalDuration, 465 * 60, accuracy: 0.001)
@@ -57,16 +58,20 @@ final class SleepExportAvailabilityTests: XCTestCase {
             let request = PendingExportRequest(dates: [Date()], source: .shortcut, sleepCaptureContext: context)
             try PendingExportStore(userDefaults: defaults).upsert(request)
             let original = defaults.data(forKey: PendingExportStore.storageKey)
+            let originalSuccessor = defaults.data(forKey: PendingExportStore.successorStorageKey)
             let healthManager = HealthKitManager(store: FakeHealthStore(), userDefaults: defaults)
             healthManager.setSleepDayAttribution(current)
             let recovered = try XCTUnwrap(PendingExportStore(userDefaults: defaults).loadAll().first)
-            if saved != nil {
+            if saved == .nightBegins {
                 XCTAssertEqual(try recovered.recoveredSleepCaptureContext(), context)
             } else {
-                XCTAssertThrowsError(try recovered.recoveredSleepCaptureContext())
+                XCTAssertThrowsError(try recovered.recoveredSleepCaptureContext()) {
+                    XCTAssertEqual($0 as? AppleSleepCaptureContext.AvailabilityError, .missingDurableAttribution)
+                }
             }
             XCTAssertEqual(recovered.replacingResidualDates(recovered.dates, attemptedAt: Date()).sleepCaptureContext, context)
             XCTAssertEqual(defaults.data(forKey: PendingExportStore.storageKey), original)
+            XCTAssertEqual(defaults.data(forKey: PendingExportStore.successorStorageKey), originalSuccessor)
             XCTAssertEqual(healthManager.sleepDayAttribution, current)
         }
     }
