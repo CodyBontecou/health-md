@@ -281,13 +281,13 @@ class HostCoreDailyAggregatePlannerTest {
         val context = AndroidCaptureContext(ZoneId.of("UTC"), SleepDayAttribution.MORNING_ENDS)
         val date = LocalDate.of(2026, 3, 15)
         val start = Instant.parse("2026-03-15T10:00:00.125Z")
-        val end = start.plusSeconds(60)
+        val end = start.plusSeconds(60).plusMillis(250)
         val fhir = """{"resourceType":"Observation","id":"synthetic-observation","valueString":"literal | ` < & text"}"""
         val data = HealthData(date,
             plannedWorkouts = listOf(com.healthmd.domain.model.PlannedExerciseData(
                 workoutType = com.healthmd.domain.model.WorkoutType.RUNNING,
                 startTime = start.atZone(context.zoneId).toLocalDateTime(),
-                endTime = end.atZone(context.zoneId).toLocalDateTime(), duration = 1.minutes,
+                endTime = end.atZone(context.zoneId).toLocalDateTime(), duration = kotlin.time.Duration.parse("60.25s"),
                 hasExplicitTime = true, exerciseTypeRaw = 56, title = "Synthetic planned run",
                 blockDescriptions = listOf("Retain the complete planned block"),
                 exactStartTime = com.healthmd.domain.model.ExactSourceTimestamp.from(start, ZoneOffset.UTC),
@@ -322,11 +322,14 @@ class HostCoreDailyAggregatePlannerTest {
                 assertWithMessage(item.relativePath).that(text).contains("Synthetic planned run")
                 assertWithMessage(item.relativePath).that(text).contains("synthetic-observation")
                 assertWithMessage(item.relativePath).that(text).contains("Retain the complete planned block")
+                assertWithMessage(item.relativePath).that(text).contains("60.25")
             }
             val document = Json.parseToJsonElement(result.plan.items.single { it.relativePath.endsWith(".json") }
                 .content.decodeToString()).jsonObject
             assertThat(document.getValue("plannedWorkouts").jsonArray.single().jsonObject
                 .getValue("startTimeISO").jsonPrimitive.content).isEqualTo(start.toString())
+            assertThat(document.getValue("plannedWorkouts").jsonArray.single().jsonObject
+                .getValue("duration").jsonPrimitive.content.toDouble()).isEqualTo(60.25)
             val medical = document.getValue("medicalResources").jsonObject
             assertThat(medical.getValue("resources").jsonArray.single().jsonObject
                 .getValue("fhirResourceJson").jsonPrimitive.content).isEqualTo(fhir)
@@ -354,6 +357,8 @@ class HostCoreDailyAggregatePlannerTest {
             .getValue("records").jsonArray.single().jsonObject
         assertThat(record.getValue("plannedWorkouts").jsonArray.single().jsonObject
             .getValue("title").jsonPrimitive.content).isEqualTo("Synthetic planned run")
+        assertThat(record.getValue("plannedWorkouts").jsonArray.single().jsonObject
+            .getValue("duration").jsonPrimitive.content.toDouble()).isEqualTo(60.25)
         assertThat(record.getValue("medicalResources").jsonObject.getValue("resources").jsonArray.single().jsonObject
             .getValue("fhirResourceJson").jsonPrimitive.content).isEqualTo(fhir)
     }

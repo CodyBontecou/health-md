@@ -891,7 +891,12 @@ class JsonExporter {
                             put("type", plan.workoutType.displayName())
                             put("startTimeISO", plan.startTime.toIso8601())
                             put("endTimeISO", plan.endTime.toIso8601())
-                            put("duration", plan.duration.inWholeSeconds)
+                            val seconds = plan.duration.toDouble(kotlin.time.DurationUnit.SECONDS)
+                            if (nativeSuccessor && seconds != plan.duration.inWholeSeconds.toDouble()) {
+                                put("duration", seconds)
+                            } else {
+                                put("duration", plan.duration.inWholeSeconds)
+                            }
                             put("hasExplicitTime", plan.hasExplicitTime)
                             put("exerciseTypeRaw", plan.exerciseTypeRaw)
                             plan.completedExerciseSessionId?.let { put("completedExerciseSessionId", it) }
