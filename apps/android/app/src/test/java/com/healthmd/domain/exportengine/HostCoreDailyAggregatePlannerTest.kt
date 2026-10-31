@@ -50,6 +50,56 @@ import org.junit.Test
  */
 class HostCoreDailyAggregatePlannerTest {
     @Test
+    fun successorKeepsRemainingNativeDetailRecordsAcrossFormatsAndApi() = runTest {
+        val context = AndroidCaptureContext(ZoneId.of("UTC"), SleepDayAttribution.MORNING_ENDS)
+        val date = LocalDate.of(2026, 3, 15)
+        val start = Instant.parse("2026-03-15T10:00:00.125Z")
+        val end = start.plusSeconds(60).plusMillis(250)
+        val from = start.atZone(context.zoneId).toLocalDateTime(); val to = end.atZone(context.zoneId).toLocalDateTime()
+        fun exact(value: Instant) = com.healthmd.domain.model.ExactSourceTimestamp.from(value, ZoneOffset.UTC)
+        fun sample(value: Double, marker: String) = com.healthmd.domain.model.TimestampedSample(from, value,
+            metadata = mapOf("synthetic" to marker), exactTime = exact(start))
+        val data = HealthData(date,
+            vitals = VitalsData(bodyTemperatureSamples = listOf(sample(36.125, "body-temperature-source")),
+                basalBodyTemperatureSamples = listOf(sample(36.25, "basal-temperature-source")),
+                skinTemperatureDeltas = listOf(sample(-0.125, "skin-delta-source"))),
+            nutrition = NutritionData(meals = listOf(com.healthmd.domain.model.NutritionMealEntry(from, to,
+                name = "Synthetic captured meal", dietaryEnergy = 250.5, protein = 12.25,
+                metadata = mapOf("synthetic" to "meal-source"), exactStartTime = exact(start), exactEndTime = exact(end)))),
+            reproductiveHealth = com.healthmd.domain.model.ReproductiveHealthData(menstruationPeriods = listOf(
+                com.healthmd.domain.model.MenstruationPeriodEntry(from, to, kotlin.time.Duration.parse("60.25s"),
+                    metadata = mapOf("synthetic" to "period-source"), exactStartTime = exact(start), exactEndTime = exact(end)))))
+        val settings = ExportSettings(exportFormats = ExportFormat.entries.toSet(), includeGranularData = true,
+            metricSelection = MetricSelectionState(enabledMetrics = setOf("body_temp", "basal_body_temp", "skin_temperature",
+                "nutrition_meals", "menstruation_periods", "menstruation_period_days")),
+            executionSleepCaptureContext = context, executionSleepCaptureAuthorityIsFrozen = true)
+        for (metadata in listOf(false, true)) {
+            val request = FrozenDailyAggregateExportRequest.capture(data, settings.copy(includeMetadata = metadata),
+                AndroidExportProfile.android_sleep_v6, ExportEngineMode.rust,
+                DailyAggregateExportIds("native-extra-$metadata", "native-extra-session-$metadata"))
+            val plan = HealthMdRustDailyAggregatePlanner().plan(request).plan
+            assertThat(plan.items).hasSize(4)
+            for (item in plan.items) for (marker in listOf("body-temperature-source", "basal-temperature-source", "skin-delta-source", "meal-source", "period-source")) {
+                assertWithMessage(item.relativePath).that(item.content.decodeToString()).contains(marker)
+            }
+            val record = Json.parseToJsonElement(plan.items.single { it.relativePath.endsWith(".json") }.content.decodeToString()).jsonObject
+            assertThat(record.getValue("vitals").jsonObject.getValue("skinTemperatureDeltas").jsonArray.single().jsonObject
+                .getValue("value").jsonPrimitive.content.toDouble()).isEqualTo(-0.125)
+            assertThat(record.getValue("nutrition").jsonObject.getValue("meals").jsonArray.single().jsonObject
+                .getValue("startTimeISO").jsonPrimitive.content).isEqualTo(start.toString())
+            assertThat(record.getValue("reproductiveHealth").jsonObject.getValue("menstruationPeriods").jsonArray.single().jsonObject
+                .getValue("duration").jsonPrimitive.content.toDouble()).isEqualTo(60.25)
+        }
+        val apiRequest = FrozenAPIExportRequest.capture(listOf(date), listOf(data), emptyList(), settings, ExportEngineMode.rust,
+            APIExportIds("native-extra-api", "native-extra-api-session"), context.zoneId.id, Instant.parse("2026-03-16T00:00:00Z"))
+        val api = HealthMdRustAPIExportPlanner().plan(apiRequest)
+        validateAPIPlan(api.plan, apiRequest)
+        for (marker in listOf("body-temperature-source", "basal-temperature-source", "skin-delta-source", "meal-source", "period-source")) {
+            assertThat(api.plan.items.single().content.decodeToString()).contains(marker)
+        }
+    }
+
+    @Test
     fun successorHonorsLegacyAliasChoiceWithoutCreatingCoreSleep() = runTest {
         val context = AndroidCaptureContext(ZoneId.of("UTC"), SleepDayAttribution.MORNING_ENDS)
         val date = LocalDate.of(2026, 3, 15)
