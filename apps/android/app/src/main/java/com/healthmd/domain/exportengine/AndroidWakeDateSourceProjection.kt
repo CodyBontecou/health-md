@@ -16,6 +16,8 @@ internal object AndroidWakeDateSourceProjection {
         vitals = data.vitals.copy(bloodOxygenSamples = emptyList(), bloodGlucoseSamples = emptyList(), respiratoryRateSamples = emptyList(), bloodPressureSamples = emptyList()),
         activity = data.activity.copy(stepSamples = emptyList(), activityIntensityEntries = emptyList()),
         mindfulness = data.mindfulness.copy(sessions = emptyList()),
+        plannedWorkouts = emptyList(),
+        medicalResources = MedicalResourcesData(),
     )
 
     suspend fun compose(request: FrozenDailyAggregateExportRequest, plan: ExportArtifactPlan, semanticResult: ByteArray): ExportArtifactPlan {
@@ -62,7 +64,8 @@ internal object AndroidWakeDateSourceProjection {
                             val value = block.jsonObject
                             val key = value.getValue("key").jsonPrimitive.content
                             require(key in setOf("native_quantity_details", "sleep_stage_details", "sleep_session_details", "native_workout_details",
-                                "native_correlation_details", "native_activity_details", "native_mindfulness_details"))
+                                "native_correlation_details", "native_activity_details", "native_mindfulness_details",
+                                "native_planned_workout_details", "native_medical_resource_details"))
                             require(!aggregate.substring(0, end).contains("\n$key:"))
                             append("\n").append(key).append(":\n")
                             for (line in value.getValue("lines").jsonArray) append(line.jsonPrimitive.content).append('\n')
@@ -93,6 +96,7 @@ internal object AndroidWakeDateSourceProjection {
         includeGranularData: Boolean, context: AndroidCaptureContext, semanticResult: ByteArray): Pair<JsonObject, JsonObject>? {
         val selected = data.filtered(selection, context)
         val source = HealthData(date = selected.date, sleep = selected.sleep, workouts = selected.workouts,
+            plannedWorkouts = selected.plannedWorkouts, medicalResources = selected.medicalResources,
             // Preserve the adapter's fail-closed admission of raw interval arrays with no selected owner.
             activity = ActivityData(stepSamples = data.activity.stepSamples, activityIntensityEntries = data.activity.activityIntensityEntries),
             mindfulness = MindfulnessData(sessions = data.mindfulness.sessions),
@@ -100,7 +104,8 @@ internal object AndroidWakeDateSourceProjection {
             vitals = VitalsData(bloodPressureSamples = data.vitals.bloodPressureSamples, bloodOxygenSamples = selected.vitals.bloodOxygenSamples,
                 bloodGlucoseSamples = selected.vitals.bloodGlucoseSamples, respiratoryRateSamples = selected.vitals.respiratoryRateSamples))
         if (!source.heart.hasData && !source.vitals.hasData && !source.activity.hasData && !source.mindfulness.hasData &&
-            source.sleep.stages.isEmpty() && source.sleep.sessions.isEmpty() && source.workouts.isEmpty()) return null
+            source.sleep.stages.isEmpty() && source.sleep.sessions.isEmpty() && source.workouts.isEmpty() &&
+            source.plannedWorkouts.isEmpty() && !source.medicalResources.hasData) return null
         val root = Json.parseToJsonElement(JsonExporter().export(source, customization, includeGranularData, context)).jsonObject
         val keys = Json.parseToJsonElement(semanticResult.decodeToString()).jsonObject.getValue("selected_output_keys").jsonArray
             .map { it.jsonPrimitive.content }
@@ -116,6 +121,7 @@ internal object AndroidWakeDateSourceProjection {
             HealthMdRenderInputAdapter.bloodPressureDetails(root, source.date.toString(), enabledKeys),
             HealthMdRenderInputAdapter.activityDetails(root, source.date.toString(), enabledKeys),
             HealthMdRenderInputAdapter.mindfulnessDetails(root, source.date.toString(), enabledKeys),
+            HealthMdRenderInputAdapter.plannedAndMedicalDetails(root, source.date.toString(), keys),
         ).reduce(HealthMdRenderInputAdapter::mergeDetails)
         return root to details
     }
@@ -133,9 +139,11 @@ internal object AndroidWakeDateSourceProjection {
             values[field] = samples
             result[category] = JsonObject(values)
         }
-        root["workouts"]?.let { workouts ->
-            require("workouts" !in result)
-            result["workouts"] = workouts
+        for (key in listOf("workouts", "plannedWorkouts", "medicalResources")) {
+            root[key]?.let { value ->
+                require(key !in result)
+                result[key] = value
+            }
         }
         return JsonObject(result)
     }

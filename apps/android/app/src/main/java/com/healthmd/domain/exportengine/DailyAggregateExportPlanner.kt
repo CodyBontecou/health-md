@@ -100,8 +100,7 @@ class FrozenDailyAggregateExportRequest private constructor(
                 // The render adapter admits qualified selected native records and
                 // rejects remaining arrays before a destination can accept the plan.
                 require(!settings.formatCustomization.includeLegacyAndroidAliases &&
-                    data.compatibilityProvenance == null &&
-                    data.plannedWorkouts.isEmpty() && !data.medicalResources.hasData) {
+                    data.compatibilityProvenance == null) {
                     "wake-date native presentation is not qualified"
                 }
             } else if (context != null) {

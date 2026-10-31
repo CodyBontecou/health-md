@@ -92,7 +92,7 @@ class FrozenAPIExportRequest private constructor(
             require(!this.settings.executionEngineAuthorityIsFrozen || suppliedPin != null) {
                 "API successor renderer authority is missing"
             }
-            require(this.records.none { it.compatibilityProvenance != null || it.plannedWorkouts.isNotEmpty() || it.medicalResources.hasData }) {
+            require(this.records.none { it.compatibilityProvenance != null }) {
                 "API successor native source is incompatible"
             }
         } else {

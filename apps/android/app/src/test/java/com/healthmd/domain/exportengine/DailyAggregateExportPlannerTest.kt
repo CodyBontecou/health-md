@@ -57,11 +57,17 @@ class DailyAggregateExportPlannerTest {
         counts["synthetic"] = 1
         assertThat(kotlinx.serialization.json.Json.encodeToJsonElement(
             com.healthmd.domain.model.HealthData.serializer(), request.data)).isEqualTo(expected)
-        // A distinct new request sees the added, still-unqualified records. The accepted one does not.
-        assertThrows(IllegalArgumentException::class.java) {
-            FrozenDailyAggregateExportRequest.capture(data, settings, AndroidExportProfile.android_sleep_v6,
-                ExportEngineMode.rust, ids)
-        }
+        // New work admits the selected native records; already accepted work stays unchanged.
+        val fresh = FrozenDailyAggregateExportRequest.capture(data, settings, AndroidExportProfile.android_sleep_v6,
+            ExportEngineMode.rust, ids)
+        assertThat(fresh.data.plannedWorkouts).containsExactlyElementsIn(plans)
+        assertThat(fresh.data.medicalResources.resources).containsExactlyElementsIn(resources)
+        plans.clear()
+        resources.clear()
+        counts.clear()
+        assertThat(fresh.data.plannedWorkouts).hasSize(1)
+        assertThat(fresh.data.medicalResources.resources).hasSize(1)
+        assertThat(fresh.data.medicalResources.countsByType).containsExactly("synthetic", 1)
         assertThrows(UnsupportedOperationException::class.java) {
             (request.data.vitals.bodyTemperatureSamples as MutableList).add(samples.single())
         }

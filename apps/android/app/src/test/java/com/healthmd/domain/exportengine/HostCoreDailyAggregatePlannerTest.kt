@@ -50,6 +50,88 @@ import org.junit.Test
  */
 class HostCoreDailyAggregatePlannerTest {
     @Test
+    fun successorPreservesPlannedWorkoutsAndFhirInEveryFormatAndApi() = runTest {
+        val context = AndroidCaptureContext(ZoneId.of("UTC"), SleepDayAttribution.MORNING_ENDS)
+        val date = LocalDate.of(2026, 3, 15)
+        val start = Instant.parse("2026-03-15T10:00:00.125Z")
+        val end = start.plusSeconds(60)
+        val fhir = """{"resourceType":"Observation","id":"synthetic-observation","valueString":"literal | ` < & text"}"""
+        val data = HealthData(date,
+            plannedWorkouts = listOf(com.healthmd.domain.model.PlannedExerciseData(
+                workoutType = com.healthmd.domain.model.WorkoutType.RUNNING,
+                startTime = start.atZone(context.zoneId).toLocalDateTime(),
+                endTime = end.atZone(context.zoneId).toLocalDateTime(), duration = 1.minutes,
+                hasExplicitTime = true, exerciseTypeRaw = 56, title = "Synthetic planned run",
+                blockDescriptions = listOf("Retain the complete planned block"),
+                exactStartTime = com.healthmd.domain.model.ExactSourceTimestamp.from(start, ZoneOffset.UTC),
+                exactEndTime = com.healthmd.domain.model.ExactSourceTimestamp.from(end, ZoneOffset.UTC))),
+            medicalResources = com.healthmd.domain.model.MedicalResourcesData(listOf(
+                com.healthmd.domain.model.MedicalResourceData("Observation", 1, "synthetic-source", "synthetic-resource",
+                    "4.0.1", "Observation", 1, "synthetic-observation", fhir)), mapOf("Observation" to 1)))
+        val settings = ExportSettings(exportFormats = ExportFormat.entries.toSet(),
+            metricSelection = MetricSelectionState(enabledMetrics = setOf("planned_workouts", "medical_resources")),
+            executionSleepCaptureContext = context, executionSleepCaptureAuthorityIsFrozen = true)
+        for (metadata in listOf(false, true)) for (granular in listOf(false, true)) {
+            val customization = settings.formatCustomization.copy(frontmatterConfig =
+                com.healthmd.domain.model.FrontmatterConfiguration(fields = listOf(
+                    com.healthmd.domain.model.CustomFrontmatterField("planned_workout_count", isEnabled = metadata),
+                    com.healthmd.domain.model.CustomFrontmatterField("medical_resource_count", isEnabled = metadata))))
+            val request = FrozenDailyAggregateExportRequest.capture(data,
+                settings.copy(includeMetadata = metadata, includeGranularData = granular, formatCustomization = customization),
+                AndroidExportProfile.android_sleep_v6, ExportEngineMode.rust,
+                DailyAggregateExportIds("planned-medical-$metadata-$granular", "planned-medical-session-$metadata-$granular"))
+            val result = HealthMdRustDailyAggregatePlanner().plan(request)
+            assertThat(result.plan.items).hasSize(4)
+            System.getenv("HEALTHMD_WAKE_DATE_CONSUMER_FIXTURE_DIR")?.takeIf(String::isNotBlank)?.let { folder ->
+                result.plan.items.forEach { item ->
+                    val output = File(folder, "android-v6-planned-medical-$metadata-$granular/${item.relativePath}")
+                    val parent = requireNotNull(output.parentFile)
+                    check(parent.mkdirs() || parent.isDirectory)
+                    output.writeBytes(item.content)
+                }
+            }
+            for (item in result.plan.items) {
+                val text = item.content.decodeToString()
+                assertWithMessage(item.relativePath).that(text).contains("Synthetic planned run")
+                assertWithMessage(item.relativePath).that(text).contains("synthetic-observation")
+                assertWithMessage(item.relativePath).that(text).contains("Retain the complete planned block")
+            }
+            val document = Json.parseToJsonElement(result.plan.items.single { it.relativePath.endsWith(".json") }
+                .content.decodeToString()).jsonObject
+            assertThat(document.getValue("plannedWorkouts").jsonArray.single().jsonObject
+                .getValue("startTimeISO").jsonPrimitive.content).isEqualTo(start.toString())
+            val medical = document.getValue("medicalResources").jsonObject
+            assertThat(medical.getValue("resources").jsonArray.single().jsonObject
+                .getValue("fhirResourceJson").jsonPrimitive.content).isEqualTo(fhir)
+            // The pinned registry defines planned-workout count as dimensionless.
+            assertThat(document.getValue("units").jsonObject).doesNotContainKey("planned_workout_count")
+            assertThat(document.getValue("units").jsonObject.getValue("medical_resource_count").jsonPrimitive.content).isEqualTo("count")
+            for (item in result.plan.items) {
+                val expected = when {
+                    item.relativePath.endsWith(".csv") -> medical.toString().replace("\"", "\"\"")
+                    item.relativePath == request.relativePath(ExportFormat.MARKDOWN) -> medical.toString().replace("|", "\\u007c")
+                        .replace("`", "\\u0060").replace("<", "\\u003c").replace(">", "\\u003e").replace("&", "\\u0026")
+                    else -> medical.toString()
+                }
+                // JSON is pretty printed; its decoded document was checked above.
+                if (!item.relativePath.endsWith(".json")) assertWithMessage(item.relativePath)
+                    .that(item.content.decodeToString()).contains(expected)
+            }
+        }
+        val apiRequest = FrozenAPIExportRequest.capture(listOf(date), listOf(data), emptyList(), settings,
+            ExportEngineMode.rust, APIExportIds("planned-medical-api", "planned-medical-api-session"),
+            context.zoneId.id, Instant.parse("2026-03-16T00:00:00Z"))
+        val api = HealthMdRustAPIExportPlanner().plan(apiRequest)
+        validateAPIPlan(api.plan, apiRequest)
+        val record = Json.parseToJsonElement(api.plan.items.single().content.decodeToString()).jsonObject
+            .getValue("records").jsonArray.single().jsonObject
+        assertThat(record.getValue("plannedWorkouts").jsonArray.single().jsonObject
+            .getValue("title").jsonPrimitive.content).isEqualTo("Synthetic planned run")
+        assertThat(record.getValue("medicalResources").jsonObject.getValue("resources").jsonArray.single().jsonObject
+            .getValue("fhirResourceJson").jsonPrimitive.content).isEqualTo(fhir)
+    }
+
+    @Test
     fun denseSuccessorApiRetainsNativeRecordsAndBatchesFinalBytes() = runTest {
         val context = AndroidCaptureContext(ZoneId.of("UTC"), SleepDayAttribution.MORNING_ENDS)
         val first = LocalDate.of(2026, 3, 15)

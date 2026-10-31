@@ -520,6 +520,45 @@ object HealthMdRenderInputAdapter {
         encoded.replace("|", "\\u007c").replace("`", "\\u0060")
             .replace("<", "\\u003c").replace(">", "\\u003e").replace("&", "\\u0026") + "`"
 
+    /** Native-only records keep their own identities and opaque FHIR, without shared-metric aliases. */
+    internal fun plannedAndMedicalDetails(root: JsonObject, ownerDate: String, selected: List<String>): JsonObject {
+        val planned = root["plannedWorkouts"]?.jsonArray.orEmpty()
+        val medical = root["medicalResources"]?.jsonObject
+        val rows = mutableListOf<JsonObject>()
+        val markdown = mutableListOf<JsonObject>()
+        val bases = mutableListOf<JsonObject>()
+        val owners = mutableListOf<JsonPrimitive>()
+        fun add(records: List<JsonElement>, outputKey: String, label: String, key: String) {
+            if (records.isEmpty()) return
+            if (outputKey !in selected) throw AdapterException("wake-date native record selection is incompatible")
+            owners += JsonPrimitive(outputKey)
+            for (record in records) rows += buildJsonObject {
+                put("date", ownerDate); put("category", "Native Detail"); put("metric", label)
+                put("value", record.toString()); put("unit", "json")
+                put("timestamp", if (outputKey == "planned_workout_count")
+                    record.jsonObject.getValue("startTimeISO").jsonPrimitive.content else "")
+                put("ordinal", rows.size)
+            }
+            markdown += buildJsonObject {
+                put("heading", "$label Details")
+                put("lines", JsonArray((listOf("| Native Record (JSON) |", "|---|") + records.map {
+                    "| ${nativeJsonCodeCell(it.toString())} |"
+                }).map(::JsonPrimitive)))
+                put("ordinal", markdown.size)
+            }
+            bases += buildJsonObject {
+                put("key", key); put("lines", JsonArray(records.map { JsonPrimitive("  - $it") }))
+                put("ordinal", bases.size)
+            }
+        }
+        add(planned, "planned_workout_count", "Planned Workout", "native_planned_workout_details")
+        add(listOfNotNull(medical), "medical_resource_count", "Medical Resource", "native_medical_resource_details")
+        return buildJsonObject {
+            put("output_keys", JsonArray(owners)); put("csv_rows", JsonArray(rows))
+            put("markdown_blocks", JsonArray(markdown)); put("bases_frontmatter_blocks", JsonArray(bases))
+        }
+    }
+
     internal fun mindfulnessDetails(root: JsonObject, ownerDate: String, selected: List<String>): JsonObject {
         val samples = root["mindfulness"]?.jsonObject?.get("sessions")?.jsonArray ?: JsonArray(emptyList())
         val owner = listOf("mindful_minutes", "mindful_sessions").firstOrNull(selected::contains)
