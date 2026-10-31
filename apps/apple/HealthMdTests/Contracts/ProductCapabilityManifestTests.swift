@@ -30,7 +30,10 @@ final class ProductCapabilityManifestTests: XCTestCase {
         )
         XCTAssertEqual(
             Self.ids(with: .planned, in: states),
-            ["core.shared-rust-profile-engine", "setup.share-portable-configuration"]
+            [
+                "core.shared-rust-profile-engine",
+                "setup.share-portable-configuration",
+            ]
         )
         XCTAssertEqual(Set(states.keys), Self.allCapabilities)
         XCTAssertEqual(
@@ -47,6 +50,9 @@ final class ProductCapabilityManifestTests: XCTestCase {
             "shared"
         )
 
+        let sleepAttributionCapability = inventory.capabilities.first { $0.id == "settings.sleep-attribution" }
+        XCTAssertEqual(sleepAttributionCapability?.classification, "shared")
+        XCTAssertEqual(sleepAttributionCapability?.profiles, [])
         XCTAssertEqual(
             inventory.capabilities.first { $0.id == "direct.full_public_authorized_corpus" }?.classification,
             "shared"
@@ -118,6 +124,7 @@ final class ProductCapabilityManifestTests: XCTestCase {
         "direct.cli_agent_wake",
         "direct.full_public_authorized_corpus",
         "diagnostics.local_bundle",
+        "settings.sleep-attribution",
     ]
 
     private static let appleCapabilities: Set<String> = [
@@ -177,6 +184,7 @@ private struct CapabilityInventory: Decodable {
     struct Capability: Decodable {
         let id: String
         let classification: String
+        let profiles: [String]
         let platforms: Platforms
     }
 

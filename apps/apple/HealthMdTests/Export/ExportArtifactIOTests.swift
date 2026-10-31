@@ -1,10 +1,127 @@
 import Foundation
+import Darwin
 import XCTest
+import HealthMdCoreRust
 @testable import HealthMd
 
 final class ExportArtifactIOTests: XCTestCase {
     private enum FixtureError: Error {
         case injected
+    }
+
+    private func previewArtifact(_ data: Data) throws -> NativeExportArtifact {
+        let file = try ExportArtifactIO.renderTemporary(prefix: "synthetic-preview", mediaType: "text/plain") {
+            try $0.write(data)
+        }
+        return try NativeExportArtifact(role: .file, id: String(repeating: "0", count: 64),
+            relativePath: "daily.txt", mediaType: "text/plain", writeMode: .overwrite, file: file,
+            byteCount: file.descriptor.byteCount, sha256: file.descriptor.sha256)
+    }
+
+    func testFilePreviewKeepsSmallUTF8BytesAndTrueEmptySize() throws {
+        for text in ["", "synthetic 🌙 é\n", String(repeating: "x", count: 64 * 1024)] {
+            let preview = try ExportArtifactTextPreview.make(from: previewArtifact(Data(text.utf8)))
+            XCTAssertEqual(preview.head, text)
+            XCTAssertEqual(preview.tail, "")
+            XCTAssertEqual(preview.originalByteCount, text.utf8.count)
+            XCTAssertEqual(preview.omittedByteCount, 0)
+        }
+    }
+
+    func testLargeFilePreviewHasBoundedUTF8WindowsAndFullSize() throws {
+        let text = "START\n" + String(repeating: "🌙é", count: 500000) + "\nEND"
+        let artifact = try previewArtifact(Data(text.utf8))
+        let preview = try ExportArtifactTextPreview.make(from: artifact)
+        XCTAssertTrue(preview.head.hasPrefix("START\n"))
+        XCTAssertTrue(preview.tail.hasSuffix("\nEND"))
+        XCTAssertLessThanOrEqual(preview.head.utf8.count, 48 * 1024)
+        XCTAssertLessThanOrEqual(preview.tail.utf8.count, 16 * 1024)
+        XCTAssertTrue(text.hasPrefix(preview.head))
+        XCTAssertTrue(text.hasSuffix(preview.tail))
+        XCTAssertEqual(preview.originalByteCount, text.utf8.count)
+        XCTAssertEqual(preview.omittedByteCount, text.utf8.count - preview.head.utf8.count - preview.tail.utf8.count)
+        let display = ExportPreviewDisplayContent.make(from: preview)
+        XCTAssertTrue(display.isTruncated)
+        XCTAssertEqual(display.originalByteCount, text.utf8.count)
+        XCTAssertTrue(display.text.contains("omitted from the middle"))
+        try Data(repeating: 0x78, count: text.utf8.count).write(to: XCTUnwrap(artifact.fileArtifact).url)
+        XCTAssertThrowsError(try ExportArtifactTextPreview.make(from: artifact))
+    }
+
+    func testPreviewRejectsMalformedBoundaryBytesInsteadOfRepairingThem() throws {
+        var bytes = Data(repeating: 0x78, count: 100000)
+        bytes[48 * 1024 - 1] = 0xff
+        XCTAssertThrowsError(try ExportArtifactTextPreview.make(from: previewArtifact(bytes)))
+    }
+
+    func testSecureFileCommitRejectsSameLengthMutationBeforeReplacingDestination() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let destination = root.appendingPathComponent("daily.json")
+        try Data("retained".utf8).write(to: destination)
+        var info = stat()
+        XCTAssertEqual(Darwin.lstat(root.resolvingSymlinksInPath().path, &info), 0)
+        let binding = AppleVaultDestinationBinding(standardizedPath: root.standardizedFileURL.path,
+            resolvedPath: root.resolvingSymlinksInPath().path, deviceID: UInt64(info.st_dev), inode: UInt64(info.st_ino))
+        let file = try ExportArtifactIO.renderTemporary(prefix: "synthetic-commit", mediaType: "application/json") {
+            try $0.write(Data("before".utf8))
+        }
+        try Data("after!".utf8).write(to: file.url)
+        XCTAssertThrowsError(try SecureExactArtifactIO.overwrite(rootURL: root, relativePath: "daily.json",
+            sourceFileURL: file.url, binding: binding, expectedByteCount: file.descriptor.byteCount,
+            expectedSHA256: file.descriptor.sha256))
+        XCTAssertEqual(try Data(contentsOf: destination), Data("retained".utf8))
+        XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: root.path), ["daily.json"])
+    }
+
+    func testIntegrityValidationRejectsSameLengthArtifactMutation() throws {
+        let file = try ExportArtifactIO.renderTemporary(prefix: "synthetic-integrity", mediaType: "text/plain") {
+            try $0.write(Data("before".utf8))
+        }
+        XCTAssertNoThrow(try file.validateIntegrity())
+        try Data("after!".utf8).write(to: file.url)
+        XCTAssertThrowsError(try file.validateIntegrity())
+    }
+
+    func testFirstPublicationLockSupportsNestedMarkerAndJournalWrites() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let lock = root.appendingPathComponent(".publication.lock")
+        XCTAssertFalse(FileManager.default.fileExists(atPath: lock.path))
+        let lease = try AtomicFileWriter.beginPublicationTransaction(at: lock)
+        defer { lease.close() }
+        let marker = root.appendingPathComponent(".generation")
+        let journal = root.appendingPathComponent("journal.json")
+        try AtomicFileWriter.writeData(Data("generation".utf8), to: marker, transactionLockURL: lock)
+        try AtomicFileWriter.writeData(Data("journal".utf8), to: journal, transactionLockURL: lock)
+        XCTAssertEqual(try Data(contentsOf: marker), Data("generation".utf8))
+        XCTAssertEqual(try Data(contentsOf: journal), Data("journal".utf8))
+        let mode = try FileManager.default.attributesOfItem(atPath: lock.path)[.posixPermissions] as? NSNumber
+        XCTAssertEqual(mode?.intValue, 0o600)
+    }
+
+    func testPublicationLockHardLinkSharesLeaseWithoutReleasingOuterKernelLock() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let lock = root.appendingPathComponent(".publication.lock")
+        let alias = root.appendingPathComponent(".lock-alias")
+        let lease = try AtomicFileWriter.beginPublicationTransaction(at: lock)
+        defer { lease.close() }
+        try FileManager.default.linkItem(at: lock, to: alias)
+        let nested = try AtomicFileWriter.beginPublicationTransaction(at: alias)
+        nested.close()
+        let probe = try FileHandle(forUpdating: alias)
+        defer { try? probe.close() }
+        let lockedResult = flock(probe.fileDescriptor, LOCK_EX | LOCK_NB)
+        let lockedError = errno
+        XCTAssertEqual(lockedResult, -1)
+        XCTAssertEqual(lockedError, EWOULDBLOCK, "Closing the nested alias must retain the outer OS lock")
+        lease.close()
+        XCTAssertEqual(flock(probe.fileDescriptor, LOCK_EX | LOCK_NB), 0)
+        XCTAssertEqual(flock(probe.fileDescriptor, LOCK_UN), 0)
     }
 
     func testCanonicalStringEscapingMatchesFoundationForScalarBoundaries() throws {

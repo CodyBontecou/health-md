@@ -138,7 +138,7 @@ class ExportArtifactPlanItem(
     }
 }
 
-/** Ordered immutable plan matching the UniFFI artifact-plan v1 boundary. */
+/** Ordered immutable plan; v1 stays historical and explicit wake-date v6 requires plan v2. */
 class ExportArtifactPlan(
     val schema: String,
     val artifactPlanVersion: UInt,
@@ -153,7 +153,9 @@ class ExportArtifactPlan(
 
     init {
         if (schema != SCHEMA) invalid(ExportArtifactPlanValidationIssue.SCHEMA)
-        if (artifactPlanVersion != VERSION) invalid(ExportArtifactPlanValidationIssue.VERSION)
+        if (artifactPlanVersion != profile.contractVersions.artifactPlan) {
+            invalid(ExportArtifactPlanValidationIssue.VERSION)
+        }
         validateOpaqueId(requestId, ExportArtifactPlanValidationIssue.REQUEST_ID)
         validateOpaqueId(sessionId, ExportArtifactPlanValidationIssue.SESSION_ID)
         if (this.items.size > MAX_ARTIFACTS) {
@@ -174,7 +176,7 @@ class ExportArtifactPlan(
         if (this.items.map { it.artifactId }.distinct().size != this.items.size) {
             invalid(ExportArtifactPlanValidationIssue.DUPLICATE_ARTIFACT_ID)
         }
-        val pathKeys = this.items.map { collisionKey(it.relativePath) }
+        val pathKeys = this.items.map { portableArtifactPathKey(it.relativePath) }
         if (pathKeys.distinct().size != pathKeys.size) {
             invalid(ExportArtifactPlanValidationIssue.PATH_COLLISION)
         }
@@ -255,8 +257,11 @@ object CoreArtifactPlanConverter {
                 AndroidExportProfile.android_frozen_v4
             CoreMetricRegistryProfile.ANDROID_ANALYTICAL_V5 ->
                 AndroidExportProfile.android_analytical_v5
+            CoreMetricRegistryProfile.ANDROID_SLEEP_V6 ->
+                AndroidExportProfile.android_sleep_v6
             CoreMetricRegistryProfile.APPLE_HEALTH_DATA_V7,
-            CoreMetricRegistryProfile.APPLE_HEALTH_DATA_V8 ->
+            CoreMetricRegistryProfile.APPLE_HEALTH_DATA_V8,
+            CoreMetricRegistryProfile.APPLE_HEALTH_DATA_V11 ->
                 invalid(ExportArtifactPlanValidationIssue.PROFILE)
         },
         items = plan.items.map { item ->
@@ -283,7 +288,7 @@ private fun validateArtifactId(value: String) {
     if (!value.isLowercaseSha256()) invalid(ExportArtifactPlanValidationIssue.ARTIFACT_ID)
 }
 
-private fun validateRelativePath(value: String) {
+internal fun validateRelativePath(value: String) {
     val windowsAbsolute = value.length >= 2 && value[0].isLetter() && value[1] == ':'
     if (
         value.isEmpty() ||
@@ -323,7 +328,7 @@ private fun validateOpaqueId(value: String, issue: ExportArtifactPlanValidationI
     if (value.isEmpty() || value.length > 128 || value.any(Char::isISOControl)) invalid(issue)
 }
 
-private fun collisionKey(path: String): String {
+internal fun portableArtifactPathKey(path: String): String {
     val compatible = Normalizer.normalize(path, Normalizer.Form.NFKC)
     // Root uppercase before lowercase covers multi-code-point folds such as ß -> ss.
     val folded = compatible.uppercase(Locale.ROOT).lowercase(Locale.ROOT)

@@ -1,11 +1,16 @@
 package com.healthmd.domain.exportengine
 
 import com.google.common.truth.Truth.assertThat
+import com.healthmd.core.HEALTHMD_SLEEP_REGISTRY_SHA256
 import com.healthmd.data.export.CsvExporter
 import com.healthmd.data.export.JsonExporter
 import com.healthmd.data.export.MarkdownExporter
 import com.healthmd.data.export.ObsidianBasesExporter
+import com.healthmd.domain.model.AndroidCaptureContext
 import com.healthmd.domain.model.CompatibilitySchemaProfile
+import com.healthmd.domain.model.SleepDayAttribution
+import org.junit.Assert.assertThrows
+import java.time.ZoneId
 import com.healthmd.domain.model.DailyNoteInjectionSettings
 import com.healthmd.domain.model.ExportFormat
 import com.healthmd.domain.model.ExportSettings
@@ -18,6 +23,167 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Test
 
 class DailyAggregateExportPlannerTest {
+    @Test
+    fun acceptedEmptySourceCollectionsCannotChangeLaterAdmission() {
+        val samples = mutableListOf<com.healthmd.domain.model.TimestampedSample>()
+        val meals = mutableListOf<com.healthmd.domain.model.NutritionMealEntry>()
+        val periods = mutableListOf<com.healthmd.domain.model.MenstruationPeriodEntry>()
+        val plans = mutableListOf<com.healthmd.domain.model.PlannedExerciseData>()
+        val resources = mutableListOf<com.healthmd.domain.model.MedicalResourceData>()
+        val counts = mutableMapOf<String, Int>()
+        val data = day.copy(vitals = day.vitals.copy(bodyTemperatureSamples = samples,
+            basalBodyTemperatureSamples = samples, skinTemperatureDeltas = samples),
+            nutrition = day.nutrition.copy(meals = meals),
+            reproductiveHealth = day.reproductiveHealth.copy(menstruationPeriods = periods),
+            plannedWorkouts = plans,
+            medicalResources = com.healthmd.domain.model.MedicalResourcesData(resources, counts))
+        val context = AndroidCaptureContext(ZoneId.of("UTC"), SleepDayAttribution.MORNING_ENDS)
+        val settings = simpleSettings().copy(executionSleepCaptureContext = context,
+            executionSleepCaptureAuthorityIsFrozen = true)
+        val ids = DailyAggregateExportIds(TEST_REQUEST_ID, TEST_SESSION_ID)
+        val request = FrozenDailyAggregateExportRequest.capture(data, settings, AndroidExportProfile.android_sleep_v6,
+            ExportEngineMode.rust, ids)
+        val expected = kotlinx.serialization.json.Json.encodeToJsonElement(
+            com.healthmd.domain.model.HealthData.serializer(), request.data)
+        val time = java.time.LocalDateTime.of(2026, 3, 15, 1, 0)
+        samples.add(com.healthmd.domain.model.TimestampedSample(time, 36.5))
+        meals.add(com.healthmd.domain.model.NutritionMealEntry(time, time.plusHours(1), name = "synthetic meal"))
+        periods.add(com.healthmd.domain.model.MenstruationPeriodEntry(time, time.plusHours(1),
+            kotlin.time.Duration.parse("1h")))
+        plans.add(com.healthmd.domain.model.PlannedExerciseData(com.healthmd.domain.model.WorkoutType.RUNNING,
+            time, time.plusHours(1), kotlin.time.Duration.parse("1h"), true, 1))
+        resources.add(com.healthmd.domain.model.MedicalResourceData("synthetic", 1, "synthetic-source", "synthetic-id",
+            "4.0.1", "Observation", 1, "synthetic-fhir-id", "{}"))
+        counts["synthetic"] = 1
+        assertThat(kotlinx.serialization.json.Json.encodeToJsonElement(
+            com.healthmd.domain.model.HealthData.serializer(), request.data)).isEqualTo(expected)
+        // New work admits the selected native records; already accepted work stays unchanged.
+        val fresh = FrozenDailyAggregateExportRequest.capture(data, settings, AndroidExportProfile.android_sleep_v6,
+            ExportEngineMode.rust, ids)
+        assertThat(fresh.data.plannedWorkouts).containsExactlyElementsIn(plans)
+        assertThat(fresh.data.medicalResources.resources).containsExactlyElementsIn(resources)
+        plans.clear()
+        resources.clear()
+        counts.clear()
+        assertThat(fresh.data.plannedWorkouts).hasSize(1)
+        assertThat(fresh.data.medicalResources.resources).hasSize(1)
+        assertThat(fresh.data.medicalResources.countsByType).containsExactly("synthetic", 1)
+        assertThrows(UnsupportedOperationException::class.java) {
+            (request.data.vitals.bodyTemperatureSamples as MutableList).add(samples.single())
+        }
+        assertThrows(UnsupportedOperationException::class.java) {
+            (request.data.medicalResources.countsByType as MutableMap)["synthetic"] = 1
+        }
+    }
+
+    @Test
+    fun explicitlyPinnedWakeDateRoutesOnlyToRustWithItsCapturedProfileAndClock() = runTest {
+        val context = AndroidCaptureContext(ZoneId.of("Asia/Kathmandu"), SleepDayAttribution.MORNING_ENDS)
+        val pin = ExportEnginePin.create(
+            engine = ExportEngineMode.rust,
+            profile = AndroidExportProfile.android_sleep_v6,
+            ianaTimeZone = context.zoneId.id,
+            readiness = testReadiness(),
+            registry = testRegistry(AndroidExportProfile.android_sleep_v6).copy(
+                registryVersion = 2u, registrySha256 = HEALTHMD_SLEEP_REGISTRY_SHA256,
+            ),
+        )
+        var rustCalls = 0
+        val planner = AndroidDailyAggregateExportPlanner(
+            nativePlanner = DailyAggregateNativePlanBuilder { error("successor cannot use native historical writers") },
+            policyResolver = LocalExportEnginePolicyResolver { error("frozen authority cannot consult current policy") },
+            rustPlanner = DailyAggregateRustPlanner { request ->
+                rustCalls += 1
+                assertThat(request.profile).isEqualTo(AndroidExportProfile.android_sleep_v6)
+                assertThat(request.captureContext).isEqualTo(context)
+                assertThat(request.suppliedPin).isEqualTo(pin)
+                DailyAggregateRustPlan(pin, plan(request, "wake-date"))
+            },
+            idSource = fixedIds(),
+        )
+        val result = planner.plan(day, simpleSettings().copy(
+            executionEnginePin = pin,
+            executionSleepCaptureContext = context,
+            executionSleepCaptureAuthorityIsFrozen = true,
+        ))
+        assertThat(result).isInstanceOf(LocalDailyAggregatePlanningResult.Planned::class.java)
+        val planned = result as LocalDailyAggregatePlanningResult.Planned
+        assertThat(planned.plan.profile).isEqualTo(AndroidExportProfile.android_sleep_v6)
+        assertThat(planned.plan.artifactPlanVersion).isEqualTo(2u)
+        assertThat(planned.mode).isEqualTo(ExportEngineMode.rust)
+        assertThat(rustCalls).isEqualTo(1)
+    }
+
+    @Test
+    fun wakeDateRoutingNeverReturnsHistoricalLegacyForUnqualifiedOperationsOrPolicies() = runTest {
+        var nativeCalls = 0
+        var rustCalls = 0
+        val planner = AndroidDailyAggregateExportPlanner(
+            nativePlanner = DailyAggregateNativePlanBuilder { nativeCalls += 1; error("historical writer must not run") },
+            policyResolver = LocalExportEnginePolicyResolver { profile ->
+                ResolvedExportEnginePolicy(ExportEngineMode.legacy, profile, ExportEnginePolicyTarget.ANDROID_ANALYTICAL_V5)
+            },
+            rustPlanner = DailyAggregateRustPlanner { rustCalls += 1; error("invalid request must not run") },
+            idSource = fixedIds(),
+        )
+        val settings = simpleSettings().copy(
+            executionSleepCaptureContext = AndroidCaptureContext(ZoneId.of("UTC"), SleepDayAttribution.MORNING_ENDS),
+            executionSleepCaptureAuthorityIsFrozen = true,
+        )
+        val candidates = listOf(
+            settings,
+            settings.copy(writeMode = WriteMode.APPEND),
+            settings.copy(dailyNoteInjection = DailyNoteInjectionSettings(enabled = true)),
+            settings.copy(individualTracking = IndividualTrackingSettings(globalEnabled = true)),
+            settings.copy(executionEngineAuthorityIsFrozen = true),
+            settings.copy(executionSleepCaptureContext = settings.executionSleepCaptureContext!!.copy(exportProfileID = null)),
+        )
+        assertThat(candidates.map { planner.plan(day, it) }).containsExactlyElementsIn(
+            List(candidates.size) { LocalDailyAggregatePlanningResult.Failed(ExportEngineMode.rust) },
+        )
+        assertThat(nativeCalls).isEqualTo(0)
+        assertThat(rustCalls).isEqualTo(0)
+    }
+
+    @Test
+    fun frozenRequestRejectsMissingDraftAndConflictingAuthorityBeforePlanning() {
+        val context = AndroidCaptureContext(ZoneId.of("Asia/Kathmandu"), SleepDayAttribution.MORNING_ENDS)
+        val settings = simpleSettings().copy(executionSleepCaptureContext = context,
+            executionSleepCaptureAuthorityIsFrozen = true)
+        val incompatible = listOf(
+            settings.copy(executionSleepCaptureContext = null),
+            settings.copy(executionSleepCaptureContext = context.copy(exportProfileID = null)),
+            settings.copy(executionSleepCaptureContext = AndroidCaptureContext(context.zoneId, SleepDayAttribution.NIGHT_BEGINS)),
+        )
+        for (candidate in incompatible) {
+            assertThrows(IllegalArgumentException::class.java) {
+                FrozenDailyAggregateExportRequest.capture(day, candidate, AndroidExportProfile.android_sleep_v6,
+                    ExportEngineMode.rust, DailyAggregateExportIds(TEST_REQUEST_ID, TEST_SESSION_ID))
+            }
+        }
+        val aliases = settings.copy(formatCustomization = settings.formatCustomization.copy(includeLegacyAndroidAliases = true))
+        assertThat(FrozenDailyAggregateExportRequest.capture(day, aliases, AndroidExportProfile.android_sleep_v6,
+            ExportEngineMode.rust, DailyAggregateExportIds(TEST_REQUEST_ID, TEST_SESSION_ID))
+            .customization.includeLegacyAndroidAliases).isTrue()
+        for (mode in listOf(ExportEngineMode.legacy, ExportEngineMode.shadow)) {
+            assertThrows(IllegalArgumentException::class.java) {
+                FrozenDailyAggregateExportRequest.capture(day, settings, AndroidExportProfile.android_sleep_v6,
+                    mode, DailyAggregateExportIds(TEST_REQUEST_ID, TEST_SESSION_ID))
+            }
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            FrozenDailyAggregateExportRequest.capture(day, settings, AndroidExportProfile.android_frozen_v4,
+                ExportEngineMode.rust, DailyAggregateExportIds(TEST_REQUEST_ID, TEST_SESSION_ID))
+        }
+        val night = settings.copy(executionSleepCaptureContext = AndroidCaptureContext(context.zoneId, SleepDayAttribution.NIGHT_BEGINS),
+            executionEnginePin = testPin(ExportEngineMode.rust))
+        val error = assertThrows(IllegalArgumentException::class.java) {
+            FrozenDailyAggregateExportRequest.capture(day, night, AndroidExportProfile.android_frozen_v4,
+                ExportEngineMode.rust, DailyAggregateExportIds(TEST_REQUEST_ID, TEST_SESSION_ID))
+        }
+        assertThat(error.message).isEqualTo("capture and engine clock authority disagree")
+    }
+
     @Test
     fun profilePolicyIsResolvedOnceAndRustSkipsNativeAndReturnsOnlyRustPlan() = runTest {
         var policyCalls = 0
@@ -323,7 +489,7 @@ class DailyAggregateExportPlannerTest {
         }
         return ExportArtifactPlan(
             schema = ExportArtifactPlan.SCHEMA,
-            artifactPlanVersion = ExportArtifactPlan.VERSION,
+            artifactPlanVersion = request.profile.contractVersions.artifactPlan,
             requestId = request.ids.requestId,
             sessionId = request.ids.sessionId,
             profile = request.profile,
@@ -340,6 +506,7 @@ class DailyAggregateExportPlannerTest {
         target = when (profile) {
             AndroidExportProfile.android_frozen_v4 -> ExportEnginePolicyTarget.ANDROID_FROZEN_V4
             AndroidExportProfile.android_analytical_v5 -> ExportEnginePolicyTarget.ANDROID_ANALYTICAL_V5
+            AndroidExportProfile.android_sleep_v6 -> error("No qualified successor production policy")
         },
     )
 

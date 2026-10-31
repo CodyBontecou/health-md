@@ -177,6 +177,10 @@ pub enum CoreMetricRegistryProfile {
     AndroidAnalyticalV5,
     /// Historical Apple `healthmd.health_data` v7; appended to retain existing FFI discriminants.
     AppleHealthDataV7,
+    /// Apple wake-date daily v11, selected explicitly from registry v2.
+    AppleHealthDataV11,
+    /// Android wake-date daily v6, selected explicitly from registry v2.
+    AndroidSleepV6,
 }
 
 /// One ordered native category.
@@ -1051,6 +1055,12 @@ const fn semantic_profile(
         CoreMetricRegistryProfile::AndroidAnalyticalV5 => {
             healthmd_core::semantic::SemanticProfile::AndroidAnalyticalV5
         }
+        CoreMetricRegistryProfile::AppleHealthDataV11 => {
+            healthmd_core::semantic::SemanticProfile::AppleHealthDataV11
+        }
+        CoreMetricRegistryProfile::AndroidSleepV6 => {
+            healthmd_core::semantic::SemanticProfile::AndroidSleepV6
+        }
     }
 }
 
@@ -1070,6 +1080,12 @@ const fn core_profile(
         healthmd_core::semantic::SemanticProfile::AndroidAnalyticalV5 => {
             CoreMetricRegistryProfile::AndroidAnalyticalV5
         }
+        healthmd_core::semantic::SemanticProfile::AppleHealthDataV11 => {
+            CoreMetricRegistryProfile::AppleHealthDataV11
+        }
+        healthmd_core::semantic::SemanticProfile::AndroidSleepV6 => {
+            CoreMetricRegistryProfile::AndroidSleepV6
+        }
     }
 }
 
@@ -1080,6 +1096,8 @@ impl From<CoreMetricRegistryProfile> for healthmd_core::registry::MetricRegistry
             CoreMetricRegistryProfile::AppleHealthDataV8 => Self::AppleHealthDataV8,
             CoreMetricRegistryProfile::AndroidFrozenV4 => Self::AndroidFrozenV4,
             CoreMetricRegistryProfile::AndroidAnalyticalV5 => Self::AndroidAnalyticalV5,
+            CoreMetricRegistryProfile::AppleHealthDataV11 => Self::AppleHealthDataV11,
+            CoreMetricRegistryProfile::AndroidSleepV6 => Self::AndroidSleepV6,
         }
     }
 }
@@ -1449,6 +1467,82 @@ pub fn merge_profile_rendered_markdown(
             existing,
             generated,
             preserve_preamble,
+        )
+        .map_err(HealthmdRenderError::from)
+    })
+}
+
+/// Merge a capture-scoped personal-note patch without changing whole-export behavior.
+///
+/// # Errors
+/// Returns bounded capture/YAML/size failures or a contained panic.
+#[uniffi::export]
+pub fn merge_scoped_daily_note(
+    profile: CoreMetricRegistryProfile,
+    existing: &str,
+    patch: &str,
+    inject_sections: bool,
+) -> Result<String, HealthmdRenderError> {
+    render_panic_guard(|| {
+        healthmd_core::render::merge_scoped_daily_note(
+            semantic_profile(profile),
+            existing,
+            patch,
+            inject_sections,
+        )
+        .map_err(HealthmdRenderError::from)
+    })
+}
+
+/// Project accepted rendered artifacts into one independently versioned note patch.
+///
+/// # Errors
+/// Returns bounded capture/YAML/size failures or a contained panic.
+#[uniffi::export]
+pub fn prepare_scoped_daily_note(
+    profile: CoreMetricRegistryProfile,
+    record_json: &str,
+    bases: &str,
+    markdown: &str,
+    selected_properties: Vec<String>,
+    inject_sections: bool,
+) -> Result<String, HealthmdRenderError> {
+    render_panic_guard(move || {
+        healthmd_core::render::prepare_scoped_daily_note(
+            semantic_profile(profile),
+            record_json,
+            bases,
+            markdown,
+            &selected_properties,
+            inject_sections,
+        )
+        .map_err(HealthmdRenderError::from)
+    })
+}
+
+/// Scope unchanged historical Android JSON with an explicit captured local clock.
+///
+/// # Errors
+/// Returns bounded profile/clock/YAML/size failures or a contained panic.
+#[uniffi::export]
+pub fn prepare_scoped_android_night_note(
+    profile: CoreMetricRegistryProfile,
+    record_json: &str,
+    calendar_timezone: &str,
+    bases: &str,
+    markdown: &str,
+    selected_properties: Vec<String>,
+    inject_sections: bool,
+) -> Result<String, HealthmdRenderError> {
+    render_panic_guard(move || {
+        healthmd_core::render::prepare_scoped_android_night_note(
+            semantic_profile(profile),
+            record_json,
+            calendar_timezone,
+            bases,
+            markdown,
+            &selected_properties,
+            inject_sections,
         )
         .map_err(HealthmdRenderError::from)
     })
@@ -1876,5 +1970,95 @@ mod tests {
             .chunks_exact(2)
             .map(|pair| u8::from_str_radix(std::str::from_utf8(pair).unwrap(), 16).unwrap())
             .collect()
+    }
+}
+
+#[cfg(test)]
+mod scoped_daily_note_tests {
+    use super::*;
+
+    #[test]
+    fn historical_android_note_crosses_the_boundary_without_rewriting_its_record() {
+        let json = "{\"date\":\"2026-03-08\",\"type\":\"health-data\",\"activity\":{\"steps\":42}}";
+        let patch = prepare_scoped_android_night_note(
+            CoreMetricRegistryProfile::AndroidFrozenV4,
+            json,
+            "America/New_York",
+            "---\nsteps: 42\n---\n",
+            "",
+            vec!["steps".into()],
+            false,
+        )
+        .unwrap();
+        let merged = merge_scoped_daily_note(
+            CoreMetricRegistryProfile::AndroidFrozenV4,
+            "My personal note",
+            &patch,
+            false,
+        )
+        .unwrap();
+        assert!(merged.contains("daily_capture_v2"));
+        assert!(merged.contains("My personal note"));
+        assert!(
+            prepare_scoped_android_night_note(
+                CoreMetricRegistryProfile::AndroidSleepV6,
+                json,
+                "America/New_York",
+                "---\n---\n",
+                "",
+                vec![],
+                false
+            )
+            .is_err()
+        );
+    }
+
+    #[test]
+    fn scoped_note_prepare_and_merge_cross_the_native_boundary() {
+        let record = serde_json::json!({"schema":"healthmd.health_data","schema_version":6,
+            "schema_profile":"android-sleep-v6","type":"health-data","date":"2026-03-08",
+            "time_context":{"calendar_timezone":"America/New_York","timestamp_timezone":"UTC",
+            "sleep_day_attribution":"morning_ends","sleep_owner_day_rule":"session_end_date","sleep_interval_clipping":"none"},
+            "activity":{"steps":42}}).to_string();
+        let patch = prepare_scoped_daily_note(
+            CoreMetricRegistryProfile::AndroidSleepV6,
+            &record,
+            "---\nsteps: 42\nother: 99\n---\n",
+            "## Activity\nNew activity.\n",
+            vec!["steps".into()],
+            true,
+        )
+        .unwrap();
+        assert!(!patch.contains("other: 99"));
+        let existing = "---\nnotes: |\n  Keep: personal YAML\n---\nMy introduction.\n## Journal\nPersonal text.\n";
+        let merged = merge_scoped_daily_note(
+            CoreMetricRegistryProfile::AndroidSleepV6,
+            existing,
+            &patch,
+            true,
+        )
+        .unwrap();
+        assert!(merged.contains("notes: |\n  Keep: personal YAML\n"));
+        assert!(merged.contains("My introduction."));
+        assert!(merged.contains("Personal text."));
+        assert!(merged.contains("New activity."));
+        assert!(
+            merge_scoped_daily_note(
+                CoreMetricRegistryProfile::AppleHealthDataV11,
+                existing,
+                &patch,
+                true
+            )
+            .is_err()
+        );
+        assert!(
+            merge_scoped_daily_note(
+                CoreMetricRegistryProfile::AndroidSleepV6,
+                "---\nschema: healthmd.health_data\n---\nOriginal",
+                &patch,
+                true
+            )
+            .is_err()
+        );
     }
 }

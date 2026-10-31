@@ -14,6 +14,7 @@ class OAuthConfigRegistry(
     fun isConfigured(providerId: String): Boolean = configs[providerId]?.isConfigured == true
 
     companion object {
+        // Build credentials alone must not opt unfinished integrations into production.
         private fun defaultConfigs(): List<OAuthProviderConfig> = listOf(
             OAuthProviderConfig(
                 providerId = "fitbit",
@@ -73,7 +74,7 @@ class OAuthConfigRegistry(
                 healthMdBroker = whoopHealthMdBroker(),
                 redirectUri = if (whoopHealthMdBroker() != null) "healthmd://oauth/callback" else OAuthProviderConfig.DEFAULT_REDIRECT_URI,
             ),
-        )
+        ).filter { it.providerId == "whoop" }
 
         private fun tokenEndpoint(brokerUrl: String, providerTokenEndpoint: String): String =
             brokerUrl.takeIf { it.isNotBlank() } ?: providerTokenEndpoint

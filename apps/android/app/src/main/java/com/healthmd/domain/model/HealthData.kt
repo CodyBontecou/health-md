@@ -781,7 +781,11 @@ data class HealthData(
      * individual disabled metrics before any exporter, Daily Note Injection, or Individual Entry
      * Tracking sees the data. That keeps every output format aligned to the same metric selection.
      */
-    fun filtered(selection: MetricSelectionState): HealthData {
+    fun filtered(selection: MetricSelectionState, captureContext: AndroidCaptureContext? = null): HealthData {
+        val wakeDate = captureContext?.sleepDayAttribution == SleepDayAttribution.MORNING_ENDS
+        require(!wakeDate || captureContext?.exportProfileID == "android-sleep-v6") {
+            "wake-date filtering requires versioned capture authority"
+        }
         fun enabled(metricId: String): Boolean = selection.isEnabled(metricId)
 
         val filteredSleep = SleepData(
@@ -795,7 +799,8 @@ data class HealthData(
                 when (stage.stage.lowercase()) {
                     "deep" -> enabled("sleep_deep")
                     "rem" -> enabled("sleep_rem")
-                    "light", "core", "sleeping" -> enabled("sleep_light")
+                    "light", "core" -> enabled("sleep_light")
+                    "sleeping" -> enabled(if (wakeDate) "sleep_total" else "sleep_light")
                     "awake", "wake" -> enabled("sleep_awake")
                     else -> enabled("sleep_total")
                 }

@@ -134,6 +134,12 @@ final class ConnectedCorpusHistoryObservationTests: XCTestCase {
                        fixture.manifest.historyObservation)
         let url = root.appendingPathComponent(fixture.session.jobID.uuidString.lowercased()).appendingPathComponent("journal.json")
         let original = try Data(contentsOf: url)
+        XCTAssertEqual(try reopened.load(jobID: fixture.session.jobID)?.version,
+                       ConnectedCorpusOutboundJournal.historyObservationVersion)
+        XCTAssertEqual(try reopened.createOrRestore(origin: .macInitiated, session: fixture.session,
+            manifest: fixture.manifest).exportManifest.historyObservation, fixture.manifest.historyObservation)
+        XCTAssertEqual(try Data(contentsOf: url), original,
+            "Peeking and resuming observed journals must retain their original authority and bytes")
         var object = try XCTUnwrap(JSONSerialization.jsonObject(with: original) as? [String: Any])
         var manifest = try XCTUnwrap(object["exportManifest"] as? [String: Any])
         manifest.removeValue(forKey: "historyObservation")
@@ -141,6 +147,16 @@ final class ConnectedCorpusHistoryObservationTests: XCTestCase {
         let malformed = try JSONSerialization.data(withJSONObject: object, options: [.sortedKeys])
         try malformed.write(to: url)
         XCTAssertThrowsError(try reopened.load(jobID: fixture.session.jobID))
+        XCTAssertThrowsError(try reopened.createOrRestore(origin: .macInitiated,
+            session: fixture.session, manifest: fixture.manifest),
+            "Cached admission must reject a changed journal generation")
+        let freshLoader = ConnectedCorpusOutboundStore(rootURL: root)
+        XCTAssertThrowsError(try freshLoader.load(jobID: fixture.session.jobID),
+            "A fresh loader must reject removed history authority without a cached-generation fence")
+        let freshAdmission = ConnectedCorpusOutboundStore(rootURL: root)
+        XCTAssertThrowsError(try freshAdmission.createOrRestore(origin: .macInitiated,
+            session: fixture.session, manifest: fixture.manifest),
+            "Fresh admission must reject removed history authority through its private peek path")
         XCTAssertEqual(try Data(contentsOf: url), malformed, "Rejected reads must preserve source evidence")
         try original.write(to: url)
         XCTAssertEqual(try reopened.load(jobID: fixture.session.jobID)?.version,

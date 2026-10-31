@@ -3,6 +3,7 @@ package com.healthmd.data.health
 import com.google.common.truth.Truth.assertThat
 import com.healthmd.domain.model.ExactSourceIdentity
 import com.healthmd.domain.model.ExactSourceTimestamp
+import com.healthmd.domain.model.SleepDayAttribution
 import com.healthmd.domain.model.SleepSessionEntry
 import com.healthmd.domain.model.SleepStageEntry
 import java.time.Instant
@@ -11,11 +12,59 @@ import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.ZoneId
 import java.time.ZoneOffset
+import kotlin.time.Duration.Companion.hours
+import kotlin.time.Duration.Companion.nanoseconds
 import org.junit.Test
 
 class SleepJournalSummaryTest {
     private val utc = ZoneId.of("UTC")
     private val journalDay = LocalDate.of(2026, 1, 10)
+
+    @Test
+    fun `morning ends preserves fractional additive session and stage durations without changing night begins`() {
+        val start = local(journalDay, 22, 0).withNano(100)
+        val end = local(journalDay.plusDays(1), 5, 0).withNano(900)
+        val sources = listOf("first", "overlapping").map { id -> session(id, start, end,
+            listOf("deep", "rem", "light", "awake", "sleeping").map { stage(start, end, it) }) }
+        val expected = 14.hours + 1600.nanoseconds
+        for (granular in listOf(false, true)) {
+            val sleep = SleepJournalSummary.summarize(sources, listOf(journalDay.plusDays(1)), utc,
+                granular, SleepDayAttribution.MORNING_ENDS).getValue(journalDay.plusDays(1))
+            assertThat(listOf(sleep.totalDuration, sleep.inBedTime, sleep.deepSleep, sleep.remSleep,
+                sleep.lightSleep, sleep.awakeTime)).containsExactlyElementsIn(List(6) { expected })
+            assertThat(sleep.sessions).hasSize(2)
+            assertThat(sleep.stages).hasSize(if (granular) 10 else 0)
+        }
+        val historical = summarize(journalDay, sources)
+        assertThat(historical.totalDuration).isEqualTo(14.hours)
+        assertThat(historical.deepSleep).isEqualTo(14.hours)
+        assertThat(historical.lightSleep).isEqualTo(28.hours)
+    }
+
+    @Test
+    fun `morning ends keeps positive submillisecond sources that historical summaries truncate`() {
+        val start = local(journalDay, 14, 0).withNano(100)
+        val end = start.withNano(900)
+        val sources = listOf("first", "second").map { session(it, start, end, listOf(stage(start, end, "light"))) }
+        val morning = summarize(journalDay, sources, attribution = SleepDayAttribution.MORNING_ENDS)
+        assertThat(morning.totalDuration).isEqualTo(1600.nanoseconds)
+        assertThat(morning.lightSleep).isEqualTo(1600.nanoseconds)
+        assertThat(summarize(journalDay, sources).totalDuration).isEqualTo(kotlin.time.Duration.ZERO)
+    }
+
+    @Test
+    fun `morning ends rejects duration precision the native model cannot represent`() {
+        val source = session("oversized-fraction", local(journalDay.minusYears(200), 6, 0),
+            local(journalDay, 6, 0).withNano(1))
+        org.junit.Assert.assertThrows(IllegalArgumentException::class.java) {
+            summarize(journalDay, listOf(source), attribution = SleepDayAttribution.MORNING_ENDS)
+        }
+        val representable = session("large-representable", local(journalDay.minusDays(200), 6, 0),
+            local(journalDay, 6, 0).withNano(1))
+        val duration = summarize(journalDay, listOf(representable), attribution = SleepDayAttribution.MORNING_ENDS).totalDuration
+        assertThat(duration.toComponents { seconds, nanos -> java.time.Duration.ofSeconds(seconds, nanos.toLong()) })
+            .isEqualTo(java.time.Duration.between(representable.start, representable.end))
+    }
 
     @Test
     fun `issue 96 full overnight boundaries survive a nested fragment`() {
@@ -236,6 +285,9 @@ class SleepJournalSummaryTest {
         assertThat(sleep.totalDuration.inWholeMinutes).isEqualTo(150)
         assertThat(sleep.deepSleep.inWholeMinutes).isEqualTo(60)
         assertThat(sleep.remSleep.inWholeMinutes).isEqualTo(90)
+        val originalDeepStage = sleep.stages.single { it.stage == "deep" }
+        assertThat(originalDeepStage.startTime).isEqualTo(local(journalDay, 10, 0))
+        assertThat(originalDeepStage.endTime).isEqualTo(local(journalDay, 13, 0))
         assertThat(sleep.sessions.first { it.identity?.nativeId == "across-noon" }.startTime)
             .isEqualTo(local(journalDay, 10, 0))
     }
@@ -381,15 +433,185 @@ class SleepJournalSummaryTest {
         assertThat(range.stages).isEmpty()
     }
 
+    // MARK: Wake-up-date attribution (issue #104)
+
+    @Test
+    fun `wake date rule id is versioned alongside the shipped noon window`() {
+        assertThat(SleepJournalSummary.WAKE_DATE_WINDOW_RULE_ID)
+            .isEqualTo("wake-date-sleep-window-v1")
+    }
+
+    @Test
+    fun `night begins default keeps late night session on its start day`() {
+        val lateNight = session(
+            id = "late-night",
+            start = local(journalDay, 23, 45),
+            end = local(journalDay.plusDays(1), 7, 30),
+            stages = listOf(stage(local(journalDay, 23, 45), local(journalDay.plusDays(1), 7, 30), "light")),
+        )
+
+        val startDay = summarize(journalDay, listOf(lateNight))
+        val wakeDay = summarize(journalDay.plusDays(1), listOf(lateNight))
+
+        assertThat(startDay.totalDuration.inWholeMinutes).isEqualTo(465)
+        assertThat(startDay.sessionStart).isEqualTo(local(journalDay, 23, 45))
+        assertThat(startDay.sessionEnd).isEqualTo(local(journalDay.plusDays(1), 7, 30))
+        assertThat(wakeDay.hasData).isFalse()
+    }
+
+    @Test
+    fun `morning ends attributes late night session to its wake day whole`() {
+        val lateNight = session(
+            id = "late-night",
+            start = local(journalDay, 23, 45),
+            end = local(journalDay.plusDays(1), 7, 30),
+            stages = listOf(stage(local(journalDay, 23, 45), local(journalDay.plusDays(1), 7, 30), "light")),
+        )
+
+        val startDay = summarize(journalDay, listOf(lateNight), attribution = SleepDayAttribution.MORNING_ENDS)
+        val wakeDay = summarize(journalDay.plusDays(1), listOf(lateNight), attribution = SleepDayAttribution.MORNING_ENDS)
+
+        assertThat(startDay.hasData).isFalse()
+        // The whole session stays together: never clipped at midnight or a noon boundary.
+        assertThat(wakeDay.totalDuration.inWholeMinutes).isEqualTo(465)
+        assertThat(wakeDay.inBedTime.inWholeMinutes).isEqualTo(465)
+        assertThat(wakeDay.lightSleep.inWholeMinutes).isEqualTo(465)
+        assertThat(wakeDay.sessionStart).isEqualTo(local(journalDay, 23, 45))
+        assertThat(wakeDay.sessionEnd).isEqualTo(local(journalDay.plusDays(1), 7, 30))
+        assertThat(wakeDay.sessions.map { it.identity?.nativeId }).containsExactly("late-night")
+        assertThat(wakeDay.stages).hasSize(1)
+    }
+
+    @Test
+    fun `morning ends keeps an afternoon nap on the day it ends`() {
+        val nap = session(
+            id = "nap",
+            start = local(journalDay, 14, 0),
+            end = local(journalDay, 15, 30),
+            stages = listOf(stage(local(journalDay, 14, 0), local(journalDay, 15, 30), "deep")),
+        )
+
+        val sameDay = summarize(journalDay, listOf(nap), attribution = SleepDayAttribution.MORNING_ENDS)
+        val nextDay = summarize(journalDay.plusDays(1), listOf(nap), attribution = SleepDayAttribution.MORNING_ENDS)
+
+        assertThat(sameDay.totalDuration.inWholeMinutes).isEqualTo(90)
+        assertThat(sameDay.sessionStart).isEqualTo(local(journalDay, 14, 0))
+        assertThat(sameDay.sessionEnd).isEqualTo(local(journalDay, 15, 30))
+        assertThat(nextDay.hasData).isFalse()
+    }
+
+    @Test
+    fun `morning ends keeps a single-day evening nap on its start day`() {
+        val eveningNap = session(
+            id = "evening-nap",
+            start = local(journalDay, 20, 0),
+            end = local(journalDay, 22, 0),
+        )
+
+        val sameDay = summarize(journalDay, listOf(eveningNap), attribution = SleepDayAttribution.MORNING_ENDS)
+        val nextDay = summarize(journalDay.plusDays(1), listOf(eveningNap), attribution = SleepDayAttribution.MORNING_ENDS)
+
+        assertThat(sameDay.totalDuration.inWholeHours).isEqualTo(2)
+        assertThat(nextDay.hasData).isFalse()
+    }
+
+    @Test
+    fun `morning ends separates two nights by wake day without duplication`() {
+        val nap = session(
+            id = "nap",
+            start = local(journalDay, 14, 0),
+            end = local(journalDay, 15, 0),
+        )
+        val firstNight = session(
+            id = "night-one",
+            start = local(journalDay, 23, 0),
+            end = local(journalDay.plusDays(1), 6, 0),
+        )
+        val secondNight = session(
+            id = "night-two",
+            start = local(journalDay.plusDays(1), 23, 30),
+            end = local(journalDay.plusDays(2), 7, 0),
+        )
+        val sessions = listOf(nap, firstNight, secondNight)
+
+        val result = SleepJournalSummary.summarize(
+            sourceSessions = sessions,
+            requestedDates = listOf(journalDay, journalDay.plusDays(1), journalDay.plusDays(2)),
+            zone = utc,
+            includeGranularData = false,
+            attribution = SleepDayAttribution.MORNING_ENDS,
+        )
+
+        assertThat(result.getValue(journalDay).sessions.map { it.identity?.nativeId })
+            .containsExactly("nap")
+        assertThat(result.getValue(journalDay).totalDuration.inWholeMinutes).isEqualTo(60)
+        assertThat(result.getValue(journalDay.plusDays(1)).sessions.map { it.identity?.nativeId })
+            .containsExactly("night-one")
+        assertThat(result.getValue(journalDay.plusDays(1)).totalDuration.inWholeHours).isEqualTo(7)
+        assertThat(result.getValue(journalDay.plusDays(2)).sessions.map { it.identity?.nativeId })
+            .containsExactly("night-two")
+        assertThat(result.getValue(journalDay.plusDays(2)).totalDuration.inWholeMinutes).isEqualTo(450)
+    }
+
+    @Test
+    fun `morning ends retains additive overlapping aggregation`() {
+        val first = session(
+            id = "source-a",
+            start = local(journalDay, 23, 0),
+            end = local(journalDay.plusDays(1), 3, 0),
+            stages = listOf(stage(local(journalDay, 23, 0), local(journalDay.plusDays(1), 3, 0), "deep")),
+        )
+        val second = session(
+            id = "source-b",
+            start = local(journalDay.plusDays(1), 1, 0),
+            end = local(journalDay.plusDays(1), 5, 0),
+            stages = listOf(stage(local(journalDay.plusDays(1), 1, 0), local(journalDay.plusDays(1), 5, 0), "rem")),
+        )
+
+        val wakeDay = summarize(
+            journalDay.plusDays(1),
+            listOf(first, second),
+            attribution = SleepDayAttribution.MORNING_ENDS,
+        )
+
+        assertThat(wakeDay.totalDuration.inWholeHours).isEqualTo(8)
+        assertThat(wakeDay.deepSleep.inWholeHours).isEqualTo(4)
+        assertThat(wakeDay.remSleep.inWholeHours).isEqualTo(4)
+        assertThat(wakeDay.sessions).hasSize(2)
+    }
+
+    @Test
+    fun `morning ends lands a before-noon malformed session on its end date`() {
+        val malformed = session(
+            id = "zero-length",
+            start = local(journalDay, 9, 30),
+            end = local(journalDay, 9, 30),
+        )
+
+        val nightBegins = summarize(journalDay, listOf(malformed))
+        val morningEnds = summarize(journalDay, listOf(malformed), attribution = SleepDayAttribution.MORNING_ENDS)
+
+        // Night-begins keeps the shipped malformed fallback: a 9:30 AM zero-length
+        // record stays on the PREVIOUS journal day (start before noon).
+        assertThat(nightBegins.sessions).isEmpty()
+        assertThat(summarize(journalDay.minusDays(1), listOf(malformed)).sessions.map { it.identity?.nativeId })
+            .containsExactly("zero-length")
+        // Wake-date ownership uses the end date directly: same calendar day.
+        assertThat(morningEnds.sessions.map { it.identity?.nativeId }).containsExactly("zero-length")
+        assertThat(morningEnds.sessionStart).isNull()
+    }
+
     private fun summarize(
         date: LocalDate,
         sessions: List<SourceSession>,
         zone: ZoneId = utc,
+        attribution: SleepDayAttribution = SleepDayAttribution.DEFAULT,
     ) = SleepJournalSummary.summarize(
         sourceSessions = sessions,
         requestedDates = listOf(date),
         zone = zone,
         includeGranularData = true,
+        attribution = attribution,
     ).getValue(date)
 
     private fun session(

@@ -2,6 +2,7 @@ package com.healthmd.data.health
 
 import com.healthmd.domain.model.DataTypeSelection
 import com.healthmd.domain.model.HealthData
+import com.healthmd.domain.model.SleepDayAttribution
 import java.time.LocalDate
 import java.time.ZoneId
 
@@ -19,6 +20,7 @@ class HealthConnectDataProvider(
         includeGranularData: Boolean,
         zoneId: ZoneId,
         pinnedCalendarDays: Boolean,
+        sleepDayAttribution: SleepDayAttribution,
     ): List<HealthData> =
         healthConnectManager.fetchHealthDataRange(
             dates,
@@ -26,6 +28,7 @@ class HealthConnectDataProvider(
             includeGranularData,
             zoneId,
             pinnedCalendarDays,
+            sleepDayAttribution,
         )
 
     override suspend fun authorizeExerciseRouteConsent(
@@ -43,10 +46,12 @@ class HealthConnectDataProvider(
         dates: List<LocalDate>,
         selection: HealthConnectWidgetReadSelection,
         zoneId: ZoneId = ZoneId.systemDefault(),
+        sleepDayAttribution: SleepDayAttribution = SleepDayAttribution.DEFAULT,
     ): List<HealthData> = healthConnectManager.fetchWidgetHealthDataRange(
         dates = dates,
         selection = selection,
         zoneId = zoneId,
+        sleepDayAttribution = sleepDayAttribution,
     )
 
     override suspend fun isAvailable(): Boolean =

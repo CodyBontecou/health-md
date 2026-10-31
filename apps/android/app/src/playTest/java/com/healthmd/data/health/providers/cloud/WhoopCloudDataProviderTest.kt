@@ -5,6 +5,7 @@ import com.healthmd.data.health.oauth.InMemoryOAuthTokenStore
 import com.healthmd.data.health.oauth.OAuthAuthorizationManager
 import com.healthmd.data.health.oauth.OAuthConfigRegistry
 import com.healthmd.data.health.oauth.OAuthToken
+import com.healthmd.domain.model.SleepDayAttribution
 import com.healthmd.domain.model.WorkoutType
 import java.time.Clock
 import java.time.Instant
@@ -44,7 +45,7 @@ class WhoopCloudDataProviderTest {
         val adjacentDays = provider { request ->
             if (request.url.path.endsWith("/sleep")) response("""{"records":[$requestedNight,$previousNight]}""")
             else if (request.url.path.endsWith("/body")) response("{}") else response("""{"records":[]}""")
-        }.fetchHealthDataRange(listOf(date.minusDays(1), date), zoneId = ZoneOffset.UTC)
+        }.fetchHealthDataRange(listOf(date.minusDays(1), date), zoneId = ZoneOffset.UTC, sleepDayAttribution = SleepDayAttribution.NIGHT_BEGINS)
         assertThat(adjacentDays.map { it.sleep.totalDuration.inWholeHours }).containsExactly(7L, 8L).inOrder()
     }
 
@@ -82,7 +83,7 @@ class WhoopCloudDataProviderTest {
             if (request.url.path.endsWith("/sleep")) response("""{"records":[$records]}""")
             else if (request.url.path.endsWith("/body")) response("{}") else response("""{"records":[]}""")
         }
-        val ranged = provider(clock, transport).fetchHealthDataRange(listOf(date), zoneId = zone).single()
+        val ranged = provider(clock, transport).fetchHealthDataRange(listOf(date), zoneId = zone, sleepDayAttribution = SleepDayAttribution.NIGHT_BEGINS).single()
         val single = provider(clock.withZone(zone), transport).fetchHealthData(date)
         assertThat(ranged.sleep).isEqualTo(single.sleep)
         assertThat(ranged.sleep.totalDuration.inWholeMinutes).isEqualTo(60)

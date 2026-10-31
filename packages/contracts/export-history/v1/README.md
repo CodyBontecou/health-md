@@ -142,6 +142,10 @@ not actual artifact contents, source authorization, or a trusted binding. Observ
 inside the explicit destination after all generated files commit. Their durable
 JSON receipt carries `history_sidecar` with `relative_path`, `byte_count` and
 `sha256`; the descriptor and private copy are validated on offline recovery.
+Skipped existing-only notes from the independently negotiated
+[scoped-note extension](../../direct-protocol/scoped-notes-v1/contract.md) have no committed artifact
+and are omitted from this list; an empty artifact list is valid. Their outer file receipt records
+skip paths separately and never assigns them a fabricated committed hash.
 Metadata is excluded from health-file counts and transfer bytes. Observed source
 manifests cannot collide with the reserved directory or its parents. A matching
 sidecar is idempotent; a conflicting file or symlink fails without overwriting it.

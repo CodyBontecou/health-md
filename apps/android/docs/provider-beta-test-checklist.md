@@ -1,5 +1,8 @@
 # Health provider beta test checklist
 
+Current production rollout enables only WHOOP as a direct integration. Other provider-specific sections below are future qualification checklists; supplying credentials does not enable those providers. Health Connect remains available in both channels.
+
+
 Use this checklist when a tester has access to a device/account that maintainers do not. Ask testers to share the redacted diagnostics report from **Settings → Health diagnostics → Share redacted diagnostics** rather than screenshots of health data or token screens.
 
 ## What the diagnostics report contains

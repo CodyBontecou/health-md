@@ -11,6 +11,7 @@ pub mod encoding;
 pub mod foundation;
 pub mod history;
 pub mod models;
+pub mod notes;
 pub mod time;
 pub mod transfer;
 pub mod v2;

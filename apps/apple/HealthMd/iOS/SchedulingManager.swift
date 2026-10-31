@@ -338,6 +338,10 @@ class SchedulingManager: ObservableObject {
         self.scheduledExportCoordinator.shouldRetainRequest = { [weak self] request in
             self?.shouldRetainScheduledRequest(request) == true
         }
+        self.scheduledExportCoordinator.makeProfileSettingsSnapshot = { [weak self] profile in
+            guard let self else { throw ScheduledExportPreparationError.invalidated }
+            return await self.makeSettingsSnapshotForNewScheduledProfileOperation(profile)
+        }
         refreshPendingRecoveryProfiles()
     }
 
@@ -677,7 +681,14 @@ class SchedulingManager: ObservableObject {
 
         let requestCalendar = pendingExportCalendar(for: request)
         let outcome = await runCancellableNotificationExport(operationID: request.id) {
-            await self.shortcutExportRunner(request.dates, requestCalendar)
+            do {
+                let context = try request.recoveredSleepCaptureContext()
+                return await AppleSleepCaptureContext.pinned.withValue(context) {
+                    await self.shortcutExportRunner(request.dates, requestCalendar)
+                }
+            } catch {
+                return .failure(reason: error.localizedDescription)
+            }
         }
 
         switch outcome {
@@ -1414,50 +1425,135 @@ class SchedulingManager: ObservableObject {
     }
 
     @MainActor
-    private func makeSettingsSnapshotForNewScheduledOperation(
-        target: ExportTargetSelection
+    func makeSettingsSnapshotForNewScheduledOperation(
+        target: ExportTargetSelection,
+        settings: AdvancedExportSettings? = nil,
+        calendarTimeZone: TimeZone? = nil
     ) async -> ExportSettingsSnapshot {
-        let settings = AdvancedExportSettings()
-        let calendarTimeZone = TimeZone.current
+        let settings = settings ?? AdvancedExportSettings()
+        let calendarTimeZone = calendarTimeZone ?? TimeZone.current
         switch target {
         case .localIPhoneFolder:
-            let hasNativeOnlyCompanionAction = ConnectedAppsFeature.isEnabled
-                && (scheduledExternalIntegrations?.connectedProviderCount ?? 0) > 0
-            return await ExportSettingsSnapshot.forNewAppleOperation(
-                settings,
-                healthSubfolder: VaultManager().healthSubfolder,
-                calendarTimeZone: calendarTimeZone,
-                surface: .localVaultRangeWithoutSideEffects,
-                hasNativeOnlyCompanionAction: hasNativeOnlyCompanionAction
-            )
+            let providers = settings.writesExternalProviderSidecars && ConnectedAppsFeature.isEnabled
+                ? scheduledExternalIntegrations?.forCaptureOperation() : nil
+            let hasProviders = (providers?.connectedProviderCount ?? 0) > 0
+            let authority = providers?.captureAuthority
+                ?? (hasProviders ? nil : ExternalProviderCaptureAuthority(connections: [:]))
+            let context = settings.executionSleepCaptureContext ?? AppleSleepCaptureContext.resolve(
+                timeZone: calendarTimeZone, attribution: HealthKitManager.shared.sleepDayAttribution)
+            let stagesWakeDateProviders = hasProviders && authority != nil
+                && context.sleepDayAttribution == .morningEnds
+            var snapshot = await AppleSleepCaptureContext.pinned.withValue(context) {
+                await ExportSettingsSnapshot.forNewAppleOperation(
+                    settings,
+                    healthSubfolder: VaultManager().healthSubfolder,
+                    calendarTimeZone: calendarTimeZone,
+                    surface: stagesWakeDateProviders ? .localVaultRangeWithProviderSidecars : .localVaultRangeWithoutSideEffects,
+                    hasNativeOnlyCompanionAction: hasProviders && !stagesWakeDateProviders
+                )
+            }
+            snapshot.externalProviderCaptureAuthority = authority
+            return snapshot
         case .apiEndpoint:
-            return await ExportSettingsSnapshot.forNewAppleOperation(
-                settings,
-                calendarTimeZone: calendarTimeZone,
-                surface: .apiEndpoint
-            )
+            let providers = !settings.executionExternalProviderCaptureAuthorityIsFrozen && ConnectedAppsFeature.isEnabled
+                ? scheduledExternalIntegrations?.forCaptureOperation() : nil
+            let hasProviders = (providers?.connectedProviderCount ?? 0) > 0
+            let authority = settings.executionExternalProviderCaptureAuthority
+                ?? (settings.executionExternalProviderCaptureAuthorityIsFrozen ? nil :
+                    providers?.captureAuthority ?? (hasProviders ? nil : ExternalProviderCaptureAuthority(connections: [:])))
+            var snapshot = await ExportSettingsSnapshot.forNewAppleOperation(
+                settings, calendarTimeZone: calendarTimeZone, surface: .apiEndpoint)
+            snapshot.externalProviderCaptureAuthority = authority
+            return snapshot
         case .agentDataGateway:
             // The gateway materializes artifacts exactly as a folder
             // destination does over its staging root before uploading, so its
             // snapshot surface matches the local-folder range surface.
-            let hasNativeOnlyCompanionAction = ConnectedAppsFeature.isEnabled
-                && (scheduledExternalIntegrations?.connectedProviderCount ?? 0) > 0
-            return await ExportSettingsSnapshot.forNewAppleOperation(
-                settings,
-                calendarTimeZone: calendarTimeZone,
-                surface: .localVaultRangeWithoutSideEffects,
-                hasNativeOnlyCompanionAction: hasNativeOnlyCompanionAction
-            )
+            guard !(settings.executionSleepCaptureContextIsFrozen && settings.executionSleepCaptureContext == nil) else {
+                return ExportSettingsSnapshot.from(settings, appleExportEngineAuthorityIsFrozen: true)
+            }
+            let context = settings.executionSleepCaptureContext ?? AppleSleepCaptureContext.resolve(
+                timeZone: calendarTimeZone, attribution: HealthKitManager.shared.sleepDayAttribution)
+            do {
+                let capture = try AcceptedExternalProviderFileCapture(settings: settings,
+                    context: context, healthSubfolder: "Health", providers: scheduledExternalIntegrations)
+                let hasProviders = (capture.providers?.connectedProviderCount ?? 0) > 0
+                let stagesWakeDateProviders = hasProviders && context.sleepDayAttribution == .morningEnds
+                return await ExportSettingsSnapshot.forNewAppleOperation(
+                    capture.snapshot.makeAdvancedExportSettings(), healthSubfolder: capture.snapshot.healthSubfolder,
+                    calendarTimeZone: context.timeZone,
+                    surface: stagesWakeDateProviders ? .localVaultRangeWithProviderSidecars : .localVaultRangeWithoutSideEffects,
+                    hasNativeOnlyCompanionAction: hasProviders && !stagesWakeDateProviders)
+            } catch {
+                // Keep failed recovery unqualified; execution reports the unavailable source.
+                var snapshot = ExportSettingsSnapshot.from(settings, appleExportEngineAuthorityIsFrozen: true,
+                    calendarTimeZoneIdentifier: context.calendarTimeZoneIdentifier)
+                snapshot.sleepCaptureContext = context
+                return snapshot
+            }
         case .connectedMac:
-            let hasNativeOnlyCompanionAction = ConnectedAppsFeature.isEnabled
-                && (scheduledExternalIntegrations?.connectedProviderCount ?? 0) > 0
-            return await MacExportJobBuilder.settingsSnapshotForNewConnectedMacOperation(
-                settings,
-                healthSubfolder: VaultManager().healthSubfolder,
-                calendarTimeZone: calendarTimeZone,
-                hasNativeOnlyCompanionAction: hasNativeOnlyCompanionAction
-            )
+            if settings.executionSleepCaptureContextIsFrozen && settings.executionSleepCaptureContext == nil {
+                return ExportSettingsSnapshot.from(settings, appleExportEngineAuthorityIsFrozen: true)
+            }
+            var snapshot = ExportSettingsSnapshot.from(settings,
+                appleExportEngineAuthorityIsFrozen: false, calendarTimeZoneIdentifier: calendarTimeZone.identifier)
+            let context = settings.executionSleepCaptureContext ?? AppleSleepCaptureContext.resolve(
+                timeZone: calendarTimeZone, attribution: HealthKitManager.shared.sleepDayAttribution)
+            snapshot.sleepCaptureContext = context
+            let frozen = snapshot.makeAdvancedExportSettings()
+            let providers = !settings.executionExternalProviderCaptureAuthorityIsFrozen
+                && settings.writesExternalProviderSidecars && ConnectedAppsFeature.isEnabled
+                ? scheduledExternalIntegrations?.forCaptureOperation() : nil
+            let count = providers?.connectedProviderCount ?? 0
+            let authority = settings.executionExternalProviderCaptureAuthority
+                ?? (settings.executionExternalProviderCaptureAuthorityIsFrozen ? nil : providers?.captureAuthority
+                    ?? (count == 0 ? ExternalProviderCaptureAuthority(connections: [:]) : nil))
+            frozen.executionExternalProviderCaptureAuthority = authority
+            frozen.executionExternalProviderCaptureAuthorityIsFrozen = true
+            let accepted = await MacExportJobBuilder.settingsSnapshotForNewConnectedMacOperation(frozen,
+                healthSubfolder: VaultManager().healthSubfolder, calendarTimeZone: context.timeZone,
+                hasNativeOnlyCompanionAction: count > 0 || authority?.connections.isEmpty == false,
+                operationSurface: .connectedReceivedRangeWithoutSideEffects)
+            return accepted
         }
+    }
+
+    @MainActor
+    func makeSettingsSnapshotForNewScheduledProfileOperation(
+        _ profile: ScheduledExportCoordinator.ScheduledProfileRequestContext
+    ) async -> ExportSettingsSnapshot {
+        guard profile.target == .localIPhoneFolder || profile.target == .apiEndpoint
+                || profile.target == .connectedMac || profile.target == .agentDataGateway else { return profile.settings }
+        let zone = profile.settings.calendarTimeZoneIdentifier.flatMap(TimeZone.init(identifier:)) ?? .current
+        let context = AppleSleepCaptureContext.resolve(timeZone: zone,
+            attribution: HealthKitManager.shared.sleepDayAttribution)
+        let settings = profile.settings.makeAdvancedExportSettings(forNewConfiguration: true)
+        if context.sleepDayAttribution == .nightBegins && profile.settings.appleExportEnginePin?.isWakeDate != true {
+            // Preserve historical renderer and calendar-rollup authority for Night profiles.
+            var snapshot = profile.settings
+            snapshot.sleepCaptureContext = context
+            let providers = (profile.target == .apiEndpoint || settings.writesExternalProviderSidecars) && ConnectedAppsFeature.isEnabled
+                ? scheduledExternalIntegrations?.forCaptureOperation() : nil
+            let hasProviders = (providers?.connectedProviderCount ?? 0) > 0
+            snapshot.externalProviderCaptureAuthority = providers?.captureAuthority
+                ?? (hasProviders ? nil : ExternalProviderCaptureAuthority(connections: [:]))
+            return snapshot
+        }
+        guard profile.target == .apiEndpoint || profile.settings.operationRollupPeriods.allSatisfy({ $0 == .range }) else {
+            // A historical calendar profile cannot silently become a range summary.
+            var snapshot = profile.settings
+            snapshot.sleepCaptureContext = context
+            return snapshot
+        }
+        // This is a new occurrence, not recovery of a pending profile job. Its
+        // Morning renderer must be qualified against the profile's saved output settings.
+        settings.executionAppleExportEnginePin = nil
+        settings.executionAppleExportEngineAuthorityIsFrozen = false
+        settings.executionSleepCaptureContext = context
+        var snapshot = await makeSettingsSnapshotForNewScheduledOperation(target: profile.target,
+            settings: settings, calendarTimeZone: context.timeZone)
+        snapshot.healthSubfolder = profile.settings.healthSubfolder
+        return snapshot
     }
 
     @MainActor
@@ -1471,7 +1567,12 @@ class SchedulingManager: ObservableObject {
         notificationOperationID: UUID? = nil,
         expectedRequest: PendingExportRequest? = nil
     ) async -> ExportOrchestrator.ExportResult {
-        let pending = expectedRequest ?? loadPendingScheduledExportRequest(id: quotaJobID)
+        let pending: PendingExportRequest?
+        do {
+            pending = try expectedRequest ?? pendingExportStore.loadAll().first { $0.id == quotaJobID }
+        } catch {
+            return scheduledFailureResult(dates: dates, reason: .unknown, message: error.localizedDescription)
+        }
         if Task.isCancelled || pending.map({ !isPendingExportRequestStillStored($0) }) == true {
             return scheduledFailureResult(dates: dates, reason: .unknown,
                 message: "Scheduled recovery was invalidated.", wasCancelled: true)
@@ -1491,6 +1592,40 @@ class SchedulingManager: ObservableObject {
             return scheduledFailureResult(dates: dates, reason: .unknown,
                 message: Self.apiRecoveryDestinationChangedMessage)
         }
+        let context: AppleSleepCaptureContext
+        do {
+            if let pending {
+                context = try pending.recoveredSleepCaptureContext()
+            } else if let settingsSnapshot {
+                context = try settingsSnapshot.recoveredSleepCaptureContext()
+            } else {
+                context = AppleSleepCaptureContext.resolve(attribution: HealthKitManager.shared.sleepDayAttribution)
+                try context.requireShippedProfile()
+            }
+        } catch {
+            return scheduledFailureResult(dates: dates, reason: .unknown, message: error.localizedDescription)
+        }
+        // A profile snapshot can remain portable configuration; only this local
+        // execution copy receives the separately persisted capture authority.
+        var operationSnapshot = settingsSnapshot
+        operationSnapshot?.sleepCaptureContext = context
+        return await AppleSleepCaptureContext.pinned.withValue(context) {
+            await runScheduledExportWithCaptureContext(dates: dates, target: target,
+                settingsSnapshot: operationSnapshot, originalRequestedDates: originalRequestedDates,
+                originalCalendarTimeZoneIdentifier: originalCalendarTimeZoneIdentifier,
+                quotaJobID: quotaJobID, notificationOperationID: notificationOperationID,
+                resolvedAPIDestination: resolvedAPIDestination)
+        }
+    }
+
+    @MainActor
+    private func runScheduledExportWithCaptureContext(
+        dates: [Date], target: ExportTargetSelection,
+        settingsSnapshot: ExportSettingsSnapshot?, originalRequestedDates: [Date]?,
+        originalCalendarTimeZoneIdentifier: String?, quotaJobID: UUID?,
+        notificationOperationID: UUID?,
+        resolvedAPIDestination: APIExportDestinationSnapshot?
+    ) async -> ExportOrchestrator.ExportResult {
         var diagnosticFields: [DiagnosticField: DiagnosticValue] = [.dayCount: .integer(Int64(dates.count))]
         if let quotaJobID { diagnosticFields[.operationId] = .text(quotaJobID.uuidString.lowercased()) }
         DiagnosticRecorder.shared.record(.attemptStarted, fields: diagnosticFields)
@@ -1584,9 +1719,8 @@ class SchedulingManager: ObservableObject {
                 message: APIExportClientError.invalidEndpoint.localizedDescription
             )
         }
-        let externalIntegrations: ExternalIntegrationDailyRecordProviding? = ConnectedAppsFeature.isEnabled
-            ? scheduledExternalIntegrations
-            : nil
+        // API capture itself distinguishes new feature selection from saved grant authority.
+        let externalIntegrations = scheduledExternalIntegrations
 
         logger.info("Starting scheduled API Endpoint export")
         return await APIEndpointExportRunner.export(
@@ -1730,6 +1864,7 @@ class SchedulingManager: ObservableObject {
         scheduledExternalIntegrations?.beginExportAction()
         defer { scheduledExternalIntegrations?.endExportAction() }
         do {
+            let captureContext = try HealthKitManager.shared.resolveSleepCaptureContext(settings: settings, timeZone: providerTimeZone)
             if let remote = syncService.remoteCapabilities,
                let negotiation = SyncPeerCapabilities.current(platform: .iOS)
                     .negotiateConnectedCorpusTransfer(with: remote) {
@@ -1766,7 +1901,8 @@ class SchedulingManager: ObservableObject {
                         for: date,
                         detailPolicy: detailPolicy,
                         metricSelection: settings.metricSelection,
-                        timeZone: providerTimeZone
+                        timeZone: providerTimeZone,
+                        captureContext: captureContext
                     )
                 },
                 fetchExternalDailyRecords: externalRecordFetcher,
@@ -1882,6 +2018,7 @@ class SchedulingManager: ObservableObject {
                         negotiation: negotiation,
                         healthKitManager: HealthKitManager.shared,
                         externalRecordFetcher: externalRecordFetcher,
+                        externalIntegrations: scheduledExternalIntegrations,
                         syncService: syncService,
                         origin: .scheduledIPhone,
                         progress: { update in

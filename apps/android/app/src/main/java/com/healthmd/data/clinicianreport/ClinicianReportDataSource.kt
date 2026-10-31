@@ -51,12 +51,14 @@ class DefaultClinicianReportDataSource @Inject constructor(
             medicalResources = false,
         )
         return try {
+            val captureContext = healthRepository.resolveCaptureContext(zoneId)
             val records = healthRepository.fetchHealthDataRange(
                 dates = range.dates(),
                 dataTypes = dataTypes,
                 includeGranularData = true,
-                zoneId = zoneId,
+                zoneId = captureContext.zoneId,
                 pinnedCalendarDays = true,
+                sleepDayAttributionOverride = captureContext.explicitSleepDayAttributionOverride,
             )
             adapt(normalized, zoneId, records)
         } catch (cancelled: CancellationException) {

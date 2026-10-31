@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="export_sleep_date_guidance_morning_ends">Whole sleep sessions belong to the date they end in the export\'s time zone. For last night\'s sleep, choose Today.</string>
+    <string name="export_sleep_preview_window_morning_ends">Sleep end dates: %1$s to %2$s (%3$s).</string>
+    <string name="export_sleep_preview_guidance_morning_ends">Whole sleep sessions belong to their end date in this export\'s time zone, without noon clipping. Query failures are listed separately; an empty result can also mean read access is unavailable.</string>
     <string name="export_sleep_date_guidance">Sleep covers noon on each selected date through noon the next day. For last night\'s sleep, choose Yesterday.</string>
     <string name="export_sleep_preview_window">Sleep window: %1$s at noon to %2$s at noon (%3$s).</string>
     <string name="export_sleep_preview_guidance">If sleep is missing, try the preceding date. Morning sleep can appear in that date\'s summary even when its raw records are dated today. Query failures are listed separately; an empty result can also mean read access is unavailable.</string>
@@ -307,6 +310,14 @@
     </plurals>
     <string name="granular_data_title">Include Detailed Time-Series</string>
     <string name="granular_data_description">Add timestamped samples such as heart rate and sleep stages to compatibility exports. For an API-complete copy, use Raw API Snapshot.</string>
+
+    <!-- Sleep day attribution (issue #104) -->
+    <string name="sleep_attribution_title">Sleep Day Attribution</string>
+    <string name="sleep_attribution_night_begins">Night begins</string>
+    <string name="sleep_attribution_morning_ends">Morning ends</string>
+    <string name="sleep_attribution_night_begins_description">Sleep uses the daily note’s noon-to-noon window. This is the default and matches previous exports.</string>
+    <string name="sleep_attribution_morning_ends_description">Morning ends is unavailable for current export profiles. Choose Night begins for a new export.</string>
+    <string name="sleep_attribution_morning_ends_wake_description">Assigns the whole sleep session to the date you wake up, using the export’s time zone.</string>
 
     <!-- Metric selection screen -->
     <string name="metric_selection_title">Health Metrics</string>

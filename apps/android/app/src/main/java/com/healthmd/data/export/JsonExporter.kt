@@ -39,6 +39,9 @@ class JsonExporter {
 
     private fun LocalDateTime.toIso8601(): String = format(isoFormatter)
 
+    private fun sleepSeconds(duration: kotlin.time.Duration, nativeSuccessor: Boolean): Double =
+        if (nativeSuccessor) duration.toDouble(kotlin.time.DurationUnit.SECONDS) else duration.inWholeSeconds.toDouble()
+
     private fun Double.roundedTo(decimals: Int): Double {
         val scale = 10.0.pow(decimals)
         return round(this * scale) / scale
@@ -128,19 +131,58 @@ class JsonExporter {
         data: HealthData,
         customization: FormatCustomization = FormatCustomization(),
         includeGranularData: Boolean = false,
-    ): String {
+        captureContext: AndroidCaptureContext? = null,
+    ): String = render(data, customization, includeGranularData, captureContext, includeSleepRecords = true, includeWorkoutRecords = true)
+
+    /** Aggregate projection retains original data for source authority and summary validation. */
+    internal fun exportForNativeComposition(data: HealthData, customization: FormatCustomization,
+        includeGranularData: Boolean, captureContext: AndroidCaptureContext,
+        composeSleepRecords: Boolean, composeWorkoutRecords: Boolean): String =
+        render(data, customization, includeGranularData, captureContext,
+            includeSleepRecords = !composeSleepRecords, includeWorkoutRecords = !composeWorkoutRecords)
+
+    private fun render(data: HealthData, customization: FormatCustomization, includeGranularData: Boolean,
+        captureContext: AndroidCaptureContext?, includeSleepRecords: Boolean, includeWorkoutRecords: Boolean): String {
+        val authority = captureContext?.let(::WakeDateJsonDocument)
+        val effectiveCustomization = if (authority == null) customization else customization.copy(
+            unitPreference = UnitPreference.METRIC,
+            dateFormat = DateFormatPreference.ISO8601,
+        )
+        if (authority == null) return Json { prettyPrint = true }.encodeToString(
+            JsonElement.serializer(), nativePayload(data, effectiveCustomization, includeGranularData, false),
+        )
+        return try {
+            val payload = nativePayload(data, effectiveCustomization, includeGranularData, true, includeSleepRecords, includeWorkoutRecords)
+            Json { prettyPrint = true }.encodeToString(JsonElement.serializer(),
+                authority.finish(payload, data, effectiveCustomization.includeAndroidNativeFields))
+        } catch (error: RuntimeException) {
+            if (error is java.util.concurrent.CancellationException) throw error
+            // Native encoding/time errors can echo values; neither message nor cause may escape.
+            throw IllegalArgumentException("wake-date native JSON is incompatible")
+        }
+    }
+
+    /** Shared source construction, not a call to or relabeling of a historical public writer. */
+    private fun nativePayload(
+        data: HealthData,
+        customization: FormatCustomization,
+        includeGranularData: Boolean,
+        nativeSuccessor: Boolean,
+        includeSleepRecords: Boolean = true,
+        includeWorkoutRecords: Boolean = true,
+    ): JsonObject {
         val dateString = customization.dateFormat.format(data.date)
         val converter = customization.unitConverter
         val includeLegacyAliases = customization.includeLegacyAndroidAliases
         val includeAndroidNativeFields = customization.includeAndroidNativeFields
-        val analyticalV5 = customization.compatibilitySchemaProfile == CompatibilitySchemaProfile.ANDROID_ANALYTICAL_V5
+        val analyticalV5 = nativeSuccessor || customization.compatibilitySchemaProfile == CompatibilitySchemaProfile.ANDROID_ANALYTICAL_V5
         val emitAndroidNativeFields = includeAndroidNativeFields || analyticalV5
 
         val json = buildJsonObject {
             put("date", dateString)
             put("type", "health-data")
             put("units", customization.unitPreference.name.lowercase())
-            if (analyticalV5) {
+            if (analyticalV5 && !nativeSuccessor) {
                 put("schemaProfile", "android-analytical-v5")
                 put("schemaVersion", 5)
             }
@@ -212,7 +254,7 @@ class JsonExporter {
                 putJsonObject("sleep") {
                     val s = data.sleep
                     s.totalDuration.takeIf { it > kotlin.time.Duration.ZERO }?.let {
-                        put("totalDuration", it.inWholeSeconds.toDouble())
+                        put("totalDuration", sleepSeconds(it, nativeSuccessor))
                         put("totalDurationFormatted", ExportHelpers.formatDuration(it))
                     }
 
@@ -240,33 +282,38 @@ class JsonExporter {
                     }
 
                     s.deepSleep.takeIf { it > kotlin.time.Duration.ZERO }?.let {
-                        put("deepSleep", it.inWholeSeconds.toDouble())
+                        put("deepSleep", sleepSeconds(it, nativeSuccessor))
                         put("deepSleepFormatted", ExportHelpers.formatDuration(it))
                     }
                     s.remSleep.takeIf { it > kotlin.time.Duration.ZERO }?.let {
-                        put("remSleep", it.inWholeSeconds.toDouble())
+                        put("remSleep", sleepSeconds(it, nativeSuccessor))
                         put("remSleepFormatted", ExportHelpers.formatDuration(it))
                     }
-                    // T1-01: coreSleep = lightSleep (Health Connect "light" ≈ iOS "core" for viz)
+                    // Historical Core alias remains frozen. V6 declares native Light only.
                     s.lightSleep.takeIf { it > kotlin.time.Duration.ZERO }?.let {
-                        put("coreSleep", it.inWholeSeconds.toDouble())
-                        put("coreSleepFormatted", ExportHelpers.formatDuration(it))
-                        if (includeLegacyAliases) {
-                            put("lightSleep", it.inWholeSeconds.toDouble())
+                        if (nativeSuccessor) {
+                            put("lightSleep", sleepSeconds(it, nativeSuccessor))
                             put("lightSleepFormatted", ExportHelpers.formatDuration(it))
+                        } else {
+                            put("coreSleep", it.inWholeSeconds.toDouble())
+                            put("coreSleepFormatted", ExportHelpers.formatDuration(it))
+                            if (includeLegacyAliases) {
+                                put("lightSleep", it.inWholeSeconds.toDouble())
+                                put("lightSleepFormatted", ExportHelpers.formatDuration(it))
+                            }
                         }
                     }
                     s.awakeTime.takeIf { it > kotlin.time.Duration.ZERO }?.let {
-                        put("awakeTime", it.inWholeSeconds.toDouble())
+                        put("awakeTime", sleepSeconds(it, nativeSuccessor))
                         put("awakeTimeFormatted", ExportHelpers.formatDuration(it))
                     }
                     s.inBedTime.takeIf { it > kotlin.time.Duration.ZERO }?.let {
-                        put("inBedTime", it.inWholeSeconds.toDouble())
+                        put("inBedTime", sleepSeconds(it, nativeSuccessor))
                         put("inBedTimeFormatted", ExportHelpers.formatDuration(it))
                     }
 
                     // T0-01/02/03/04: renamed array + ISO timestamps + durationSeconds
-                    if (includeGranularData && s.stages.isNotEmpty()) {
+                    if (includeGranularData && includeSleepRecords && s.stages.isNotEmpty()) {
                         putJsonArray("sleepStages") {
                             for (stage in s.stages) {
                                 addJsonObject {
@@ -283,7 +330,7 @@ class JsonExporter {
                             }
                         }
                     }
-                    if (includeGranularData && s.sessions.isNotEmpty()) {
+                    if (includeGranularData && includeSleepRecords && s.sessions.isNotEmpty()) {
                         putJsonArray("sleepSessions") {
                             for (session in s.sessions) {
                                 addJsonObject {
@@ -362,7 +409,18 @@ class JsonExporter {
                                 addJsonObject {
                                     // T0-04: ISO 8601 timestamp
                                     put("timestamp", sample.time.toIso8601())
-                                    put("value", sample.value.toInt())
+                                    if (nativeSuccessor) {
+                                        // The successor must not silently clamp a native interval
+                                        // count to the historical signed-Int representation.
+                                        require(sample.value.isFinite() && sample.value >= 0 &&
+                                            sample.value <= 9_007_199_254_740_991.0 &&
+                                            sample.value == sample.value.toLong().toDouble()) {
+                                            "wake-date native step count is incompatible"
+                                        }
+                                        put("value", sample.value.toLong())
+                                    } else {
+                                        put("value", sample.value.toInt())
+                                    }
                                     putSampleContext(sample, analyticalV5)
                                 }
                             }
@@ -417,9 +475,10 @@ class JsonExporter {
                         putJsonArray("heartRateSamples") {
                             for (sample in h.samples) {
                                 addJsonObject {
-                                    // T0-04: ISO 8601; T0-05: `value` (was `bpm`)
+                                    // Frozen v4/v5 keep their integer projection. The native successor
+                                    // retains the admitted source quantity without display rounding.
                                     put("timestamp", sample.time.toIso8601())
-                                    put("value", sample.value.toInt())
+                                    if (nativeSuccessor) put("value", sample.value) else put("value", sample.value.toInt())
                                     putSampleContext(sample, analyticalV5)
                                 }
                             }
@@ -655,8 +714,8 @@ class JsonExporter {
                         putJsonArray("meals") {
                             for (meal in n.meals) {
                                 addJsonObject {
-                                    put("startTimeISO", meal.startTime.toIso8601())
-                                    put("endTimeISO", meal.endTime.toIso8601())
+                                    put("startTimeISO", if (nativeSuccessor) meal.exactStartTime?.toIso8601() ?: meal.startTime.toIso8601() else meal.startTime.toIso8601())
+                                    put("endTimeISO", if (nativeSuccessor) meal.exactEndTime?.toIso8601() ?: meal.endTime.toIso8601() else meal.endTime.toIso8601())
                                     meal.name?.let { put("name", it) }
                                     meal.mealType?.let { put("mealType", it) }
                                     meal.dietaryEnergy?.let { put("dietaryEnergy", it) }
@@ -782,9 +841,13 @@ class JsonExporter {
                         putJsonArray("menstruationPeriods") {
                             for (period in r.menstruationPeriods) {
                                 addJsonObject {
-                                    put("startTimeISO", period.startTime.toIso8601())
-                                    put("endTimeISO", period.endTime.toIso8601())
-                                    put("duration", period.duration.inWholeSeconds)
+                                    put("startTimeISO", if (nativeSuccessor) period.exactStartTime?.toIso8601() ?: period.startTime.toIso8601() else period.startTime.toIso8601())
+                                    put("endTimeISO", if (nativeSuccessor) period.exactEndTime?.toIso8601() ?: period.endTime.toIso8601() else period.endTime.toIso8601())
+                                    if (nativeSuccessor) {
+                                        put("duration", period.duration.toDouble(kotlin.time.DurationUnit.SECONDS))
+                                    } else {
+                                        put("duration", period.duration.inWholeSeconds)
+                                    }
                                     period.source?.let { put("source", it) }
                                     putMetadataObject("metadata", period.metadata)
                                     if (analyticalV5) putExactInterval(period.exactStartTime, period.exactEndTime, period.identity)
@@ -828,7 +891,12 @@ class JsonExporter {
                             put("type", plan.workoutType.displayName())
                             put("startTimeISO", plan.startTime.toIso8601())
                             put("endTimeISO", plan.endTime.toIso8601())
-                            put("duration", plan.duration.inWholeSeconds)
+                            val seconds = plan.duration.toDouble(kotlin.time.DurationUnit.SECONDS)
+                            if (nativeSuccessor && seconds != plan.duration.inWholeSeconds.toDouble()) {
+                                put("duration", seconds)
+                            } else {
+                                put("duration", plan.duration.inWholeSeconds)
+                            }
                             put("hasExplicitTime", plan.hasExplicitTime)
                             put("exerciseTypeRaw", plan.exerciseTypeRaw)
                             plan.completedExerciseSessionId?.let { put("completedExerciseSessionId", it) }
@@ -838,7 +906,7 @@ class JsonExporter {
                             put("stepCount", plan.stepCount)
                             if (plan.blockDescriptions.isNotEmpty()) putJsonArray("blockDescriptions") { plan.blockDescriptions.forEach { add(it) } }
                             putMetadataObject("metadata", plan.metadata)
-                            if (analyticalV5 && includeGranularData) putExactInterval(plan.exactStartTime, plan.exactEndTime, plan.identity)
+                            if (analyticalV5 && (includeGranularData || nativeSuccessor)) putExactInterval(plan.exactStartTime, plan.exactEndTime, plan.identity)
                         }
                     }
                 }
@@ -870,7 +938,7 @@ class JsonExporter {
             }
 
             // ── Workouts ───────────────────────────────────────────────────────────────────────
-            if (data.workouts.isNotEmpty()) {
+            if (includeWorkoutRecords && data.workouts.isNotEmpty()) {
                 putJsonArray("workouts") {
                     for (workout in data.workouts) {
                         addJsonObject {
@@ -898,7 +966,7 @@ class JsonExporter {
                                     }
                                 }
                             }
-                            if (analyticalV5 && includeGranularData) {
+                            if (analyticalV5 && (includeGranularData || nativeSuccessor)) {
                                 putExactInterval(workout.exactStartTime, workout.exactEndTime, workout.identity)
                                 if (workout.correlatedSourceIds.isNotEmpty()) {
                                     putJsonObject("correlatedSourceIds") {
@@ -914,7 +982,7 @@ class JsonExporter {
                             }
                             workout.metadata["title"]?.let { put("title", it) }
                             workout.metadata["notes"]?.let { put("notes", it) }
-                            put("duration", workout.duration.inWholeSeconds.toDouble())
+                            put("duration", if (nativeSuccessor) workout.duration.toDouble(kotlin.time.DurationUnit.SECONDS) else workout.duration.inWholeSeconds.toDouble())
                             put("durationFormatted", ExportHelpers.formatDurationShort(workout.duration))
                             workout.distance?.takeIf { it > 0 }?.let {
                                 put("distance", it)
@@ -933,15 +1001,15 @@ class JsonExporter {
                             }
                             workout.averageHeartRate?.let {
                                 if (includeLegacyAliases) put("averageHeartRate", it)
-                                put("avgHeartRate", it.roundToInt()) // iOS canonical key
+                                put("avgHeartRate", if (nativeSuccessor) JsonPrimitive(it) else JsonPrimitive(it.roundToInt())) // iOS canonical key
                             }
                             workout.heartRateMin?.let {
                                 if (includeLegacyAliases) put("heartRateMin", it)
-                                put("minHeartRate", it.roundToInt()) // iOS canonical key
+                                put("minHeartRate", if (nativeSuccessor) JsonPrimitive(it) else JsonPrimitive(it.roundToInt())) // iOS canonical key
                             }
                             workout.heartRateMax?.let {
                                 if (includeLegacyAliases) put("heartRateMax", it)
-                                put("maxHeartRate", it.roundToInt()) // iOS canonical key
+                                put("maxHeartRate", if (nativeSuccessor) JsonPrimitive(it) else JsonPrimitive(it.roundToInt())) // iOS canonical key
                             }
                             if (includeAndroidNativeFields) {
                                 workout.averageSpeed?.let {
@@ -952,23 +1020,23 @@ class JsonExporter {
                             }
                             workout.cyclingCadenceAvg?.let {
                                 if (includeLegacyAliases) put("cyclingCadenceAvg", it)
-                                put("avgCyclingCadence", it.roundToInt()) // iOS canonical key
+                                put("avgCyclingCadence", if (nativeSuccessor) JsonPrimitive(it) else JsonPrimitive(it.roundToInt())) // iOS canonical key
                             }
-                            if (includeAndroidNativeFields) workout.cyclingCadenceMax?.let { put("maxCyclingCadence", it.roundToInt()) }
+                            if (includeAndroidNativeFields) workout.cyclingCadenceMax?.let { put("maxCyclingCadence", if (nativeSuccessor) JsonPrimitive(it) else JsonPrimitive(it.roundToInt())) }
                             workout.stepsCadenceAvg?.let {
                                 if (includeLegacyAliases) put("stepsCadenceAvg", it)
                                 if (workout.workoutType == WorkoutType.RUNNING) {
-                                    put("avgRunningCadence", it.roundToInt()) // iOS canonical key
+                                    put("avgRunningCadence", if (nativeSuccessor) JsonPrimitive(it) else JsonPrimitive(it.roundToInt())) // iOS canonical key
                                 }
                             }
-                            if (includeAndroidNativeFields) workout.stepsCadenceMax?.let { put("maxStepsCadence", it.roundToInt()) }
+                            if (includeAndroidNativeFields) workout.stepsCadenceMax?.let { put("maxStepsCadence", if (nativeSuccessor) JsonPrimitive(it) else JsonPrimitive(it.roundToInt())) }
                             workout.powerAvg?.let {
                                 if (includeLegacyAliases) put("powerAvg", it)
-                                put("avgPower", it.roundToInt()) // iOS canonical key
+                                put("avgPower", if (nativeSuccessor) JsonPrimitive(it) else JsonPrimitive(it.roundToInt())) // iOS canonical key
                             }
                             workout.powerMax?.let {
                                 if (includeLegacyAliases) put("powerMax", it)
-                                put("maxPower", it.roundToInt()) // iOS canonical key
+                                put("maxPower", if (nativeSuccessor) JsonPrimitive(it) else JsonPrimitive(it.roundToInt())) // iOS canonical key
                             }
                             if (workout.laps.isNotEmpty()) {
                                 putJsonArray("laps") {
@@ -986,7 +1054,7 @@ class JsonExporter {
                                                 if (includeLegacyAliases) put("length", it)
                                                 put("distance", it)
                                             }
-                                            if (analyticalV5 && includeGranularData) putExactInterval(lap.exactStartTime, lap.exactEndTime, lap.identity)
+                                            if (analyticalV5 && (includeGranularData || nativeSuccessor)) putExactInterval(lap.exactStartTime, lap.exactEndTime, lap.identity)
                                         }
                                     }
                                 }
@@ -1000,13 +1068,13 @@ class JsonExporter {
                                             put("startTimeISO", split.startTime.toIso8601())
                                             if (includeLegacyAliases) put("endTime", split.endTime.toIso8601())
                                             put("endTimeISO", split.endTime.toIso8601())
-                                            put("duration", split.duration.inWholeSeconds.toDouble())
+                                            put("duration", if (nativeSuccessor) split.duration.toDouble(kotlin.time.DurationUnit.SECONDS) else split.duration.inWholeSeconds.toDouble())
                                             split.distance?.let { put("distance", it) }
                                             split.averageHeartRate?.let {
                                                 if (includeLegacyAliases) put("averageHeartRate", it)
-                                                put("avgHeartRate", it.roundToInt())
+                                                put("avgHeartRate", if (nativeSuccessor) JsonPrimitive(it) else JsonPrimitive(it.roundToInt()))
                                             }
-                                            if (analyticalV5 && includeGranularData) putExactInterval(split.exactStartTime, split.exactEndTime, split.identity)
+                                            if (analyticalV5 && (includeGranularData || nativeSuccessor)) putExactInterval(split.exactStartTime, split.exactEndTime, split.identity)
                                         }
                                     }
                                 }
@@ -1023,7 +1091,7 @@ class JsonExporter {
                                             )
                                             put("type", segment.type)
                                             segment.repetitions?.let { put("repetitions", it) }
-                                            if (analyticalV5 && includeGranularData) putExactInterval(segment.exactStartTime, segment.exactEndTime, segment.identity)
+                                            if (analyticalV5 && (includeGranularData || nativeSuccessor)) putExactInterval(segment.exactStartTime, segment.exactEndTime, segment.identity)
                                         }
                                     }
                                 }
@@ -1087,7 +1155,6 @@ class JsonExporter {
             }
         }
 
-        val prettyJson = Json { prettyPrint = true }
-        return prettyJson.encodeToString(JsonElement.serializer(), json)
+        return json
     }
 }

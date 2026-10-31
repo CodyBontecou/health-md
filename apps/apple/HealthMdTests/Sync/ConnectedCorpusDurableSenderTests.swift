@@ -1,4 +1,5 @@
 import XCTest
+import Darwin
 @testable import HealthMd
 
 @MainActor
@@ -117,6 +118,445 @@ final class ConnectedCorpusDurableSenderTests: XCTestCase {
             pendingBeforeRelaunch.transferID
         )
         XCTAssertTrue(secondHarness.transfers.isEmpty)
+    }
+
+    func testOlderAcknowledgementCannotCommitAnotherWritersPendingPartition() async throws {
+        let fixture = try makeFixture(dayCount: 2)
+        let first = try fixture.store.adoptItem(makeSmallItem(date: fixture.dates[0]), expectedIndex: 0,
+            jobID: fixture.session.jobID)
+        let firstPending = try preparePending(in: fixture.store, journal: first)
+        let other = ConnectedCorpusOutboundStore(rootURL: fixture.root)
+        let harness = Harness()
+        harness.openResponse = { Self.disposition(for: $0, kind: .alreadyCommitted, next: $0.partition.index + 1) }
+        var advanced = false
+        var winner: Data?
+        var retained: [(URL, Data)] = []
+        var staleCheckpoints = 0
+        let directory = fixture.root.appendingPathComponent(fixture.session.jobID.uuidString.lowercased())
+        do {
+            _ = try await ConnectedCorpusDurableSender.send(
+                configuration: .init(jobID: fixture.session.jobID, retryDelayNanoseconds: 0),
+                store: fixture.store, transport: harness.transport(),
+                onCheckpoint: { _ in if advanced { staleCheckpoints += 1 } },
+                afterReceiverAcceptedPartition: {
+                    guard !advanced else { return }
+                    advanced = true
+                    _ = try other.commitPendingPartition(jobID: fixture.session.jobID,
+                        expected: XCTUnwrap(firstPending.pendingPartition))
+                    let second = try other.adoptItem(self.makeSmallItem(date: fixture.dates[1]), expectedIndex: 1,
+                        jobID: fixture.session.jobID)
+                    let pending = try self.preparePending(in: other, journal: second)
+                    XCTAssertEqual(pending.committedPartitionCount, 1)
+                    XCTAssertEqual(pending.pendingPartition?.descriptor.index, 1)
+                    winner = try Data(contentsOf: directory.appendingPathComponent("journal.json"))
+                    let paths = pending.items.map(\.relativePath) + [try XCTUnwrap(pending.pendingPartition).relativePath]
+                    retained = try paths.map { path in
+                        let url = directory.appendingPathComponent(path)
+                        return (url, try Data(contentsOf: url))
+                    }
+                }, produceItem: { _, _ in
+                    XCTFail("The older sender must not recapture another writer's day")
+                    throw TestError.unexpectedProduction
+                })
+            XCTFail("An old acknowledgement must not advance the new pending partition")
+        } catch {
+            XCTAssertTrue(advanced)
+            XCTAssertEqual(error as? ConnectedCorpusOutboundStoreError, .checkpointSuperseded)
+        }
+        XCTAssertEqual(staleCheckpoints, 0)
+        XCTAssertEqual(harness.opens.count, 1)
+        XCTAssertTrue(harness.transfers.isEmpty)
+        XCTAssertTrue(harness.finalizations.isEmpty)
+        XCTAssertEqual(try Data(contentsOf: directory.appendingPathComponent("journal.json")), try XCTUnwrap(winner))
+        for (url, bytes) in retained { XCTAssertEqual(try? Data(contentsOf: url), bytes) }
+        let current = try XCTUnwrap(other.load(jobID: fixture.session.jobID))
+        XCTAssertEqual(current.committedPartitionCount, 1)
+        XCTAssertEqual(current.pendingPartition?.descriptor.index, 1)
+        XCTAssertEqual(current.completedItemCount, 1)
+    }
+
+    func testNativeSyncServiceStopsAfterOpenStartOrChunkOwnershipChanges() async throws {
+        for stage in ["open", "start", "chunk"] {
+            let service = SyncService()
+            defer { clearTransportHooks(service) }
+            let peer = UUID()
+            service.remoteCapabilities = .current(installationID: peer)
+            let fixture = try makeFixture(dayCount: 1, sourceInstallationID: service.installationID, destinationInstallationID: peer)
+            let saved = try fixture.store.adoptItem(makeSmallItem(date: fixture.dates[0]), expectedIndex: 0,
+                jobID: fixture.session.jobID)
+            _ = try preparePending(in: fixture.store, journal: saved)
+            let other = ConnectedCorpusOutboundStore(rootURL: fixture.root)
+            let url = fixture.root.appendingPathComponent(fixture.session.jobID.uuidString.lowercased()).appendingPathComponent("journal.json")
+            var winner: Data?
+            var injected = false
+            var hookError: Error?
+            var enqueued: [String] = []
+            var opened = 0
+            var read = 0
+            var progress = 0
+            var ownedProgress = 0
+            let previousError = service.lastError
+            service.testConnectedTransferSourceOpen = { _ in opened += 1 }
+            service.testConnectedTransferSourceRead = { read += 1 }
+            let replace = {
+                do {
+                    _ = try other.updateState(jobID: fixture.session.jobID, state: .paused, message: "New checkpoint owns the operation")
+                    winner = try Data(contentsOf: url)
+                    injected = true
+                } catch { hookError = error }
+            }
+            service.testMessageSendObserver = { message in
+                if stage == "chunk", !injected, case .connectedTransferChunk = message { replace() }
+            }
+            service.testReliablePayloadEnqueue = { message, bytes in
+                XCTAssertFalse(bytes.isEmpty)
+                switch message {
+                case .connectedCorpusTransferOpen(let open):
+                    enqueued.append("open")
+                    if stage == "open" { replace() }
+                    _ = service.resolveConnectedCorpusDisposition(Self.disposition(for: open, kind: .accept, next: open.partition.index))
+                case .connectedTransferStart(let start):
+                    enqueued.append("start")
+                    if stage == "start" { replace() }
+                    _ = service.resolveConnectedTransferAck(.init(transferID: start.transferID, sequence: 0,
+                        accepted: true, sha256: start.sha256, message: nil))
+                case .connectedTransferChunk(let chunk):
+                    enqueued.append("chunk")
+                    _ = service.resolveConnectedTransferAck(.init(transferID: chunk.transferID, sequence: chunk.sequence,
+                        accepted: true, sha256: chunk.sha256, message: nil))
+                default: enqueued.append("unexpected")
+                }
+                return true
+            }
+            service.testReliableBinaryEnqueue = { bytes in
+                enqueued.append("chunk")
+                do {
+                    let chunk = try ConnectedTransferBinaryFrame.decode(bytes).chunk
+                    _ = service.resolveConnectedTransferAck(.init(transferID: chunk.transferID, sequence: chunk.sequence,
+                        accepted: true, sha256: chunk.sha256, message: nil))
+                } catch { hookError = error }
+                return true
+            }
+            do {
+                _ = try await ConnectedCorpusDurableSender.send(configuration: .init(jobID: fixture.session.jobID, retryDelayNanoseconds: 0),
+                    store: fixture.store, transport: .syncService(service),
+                    onValidatedPartitionProgress: { _, _, _ in
+                        if injected { progress += 1 } else { ownedProgress += 1 }
+                    },
+                    produceItem: { _, _ in throw TestError.unexpectedProduction })
+                XCTFail("Superseded native transport must stop")
+            } catch { XCTAssertEqual(error as? ConnectedCorpusOutboundStoreError, .checkpointSuperseded, stage) }
+            XCTAssertNil(hookError)
+            XCTAssertTrue(injected, stage)
+            XCTAssertEqual(enqueued, stage == "open" ? ["open"] : ["open", "start"], stage)
+            XCTAssertEqual(opened, stage == "chunk" ? 1 : 0, stage)
+            XCTAssertEqual(read, stage == "chunk" ? 1 : 0, stage)
+            XCTAssertEqual(progress, 0, stage)
+            XCTAssertEqual(ownedProgress, stage == "chunk" ? 1 : 0, stage)
+            XCTAssertEqual(try Data(contentsOf: url), try XCTUnwrap(winner))
+            XCTAssertEqual(service.lastError, previousError)
+        }
+    }
+
+    func testNativeSyncServiceCompletesWhileCheckpointAndPeerRemainOwned() async throws {
+        let service = SyncService()
+        defer { clearTransportHooks(service) }
+        let peer = UUID()
+        service.remoteCapabilities = .current(installationID: peer)
+        let fixture = try makeFixture(dayCount: 1, sourceInstallationID: service.installationID, destinationInstallationID: peer)
+        var chunks = 0
+        var hookError: Error?
+        service.testReliablePayloadEnqueue = { message, bytes in
+            XCTAssertFalse(bytes.isEmpty)
+            switch message {
+            case .connectedCorpusTransferOpen(let open):
+                _ = service.resolveConnectedCorpusDisposition(Self.disposition(for: open, kind: .accept, next: open.partition.index))
+            case .connectedTransferStart(let start):
+                _ = service.resolveConnectedTransferAck(.init(transferID: start.transferID, sequence: 0,
+                    accepted: true, sha256: start.sha256, message: nil))
+            case .connectedTransferChunk(let chunk):
+                chunks += 1
+                _ = service.resolveConnectedTransferAck(.init(transferID: chunk.transferID, sequence: chunk.sequence,
+                    accepted: true, sha256: chunk.sha256, message: nil))
+            case .connectedTransferComplete(let complete):
+                _ = service.resolveConnectedTransferFinalAck(.init(transferID: complete.transferID,
+                    accepted: true, sha256: complete.sha256, message: nil))
+            case .connectedCorpusTransferFinalize(let request):
+                _ = service.resolveConnectedCorpusFinalAck(.init(sessionID: request.sessionID, jobID: request.jobID,
+                    accepted: true, requestFingerprint: request.requestFingerprint,
+                    finalPartitionSHA256: request.finalPartitionSHA256, successCount: 1, totalCount: 1))
+            default: XCTFail("Unexpected packet")
+            }
+            return true
+        }
+        service.testReliableBinaryEnqueue = { bytes in
+            do {
+                let chunk = try ConnectedTransferBinaryFrame.decode(bytes).chunk
+                chunks += 1
+                _ = service.resolveConnectedTransferAck(.init(transferID: chunk.transferID, sequence: chunk.sequence,
+                    accepted: true, sha256: chunk.sha256, message: nil))
+            } catch { hookError = error }
+            return true
+        }
+        let result = try await ConnectedCorpusDurableSender.send(configuration: .init(jobID: fixture.session.jobID, retryDelayNanoseconds: 0),
+            store: fixture.store, transport: .syncService(service),
+            produceItem: { _, date in try self.makeSmallItem(date: date) })
+        XCTAssertTrue(result.acknowledgement.accepted)
+        XCTAssertNil(hookError)
+        XCTAssertGreaterThan(chunks, 0)
+        XCTAssertEqual(try fixture.store.load(jobID: fixture.session.jobID)?.state, .completed)
+    }
+
+    func testNativeEnqueueRejectsWrongPeerForeignTransferAndExpiredCheckpoint() async throws {
+        let service = SyncService()
+        defer { clearTransportHooks(service) }
+        let peer = UUID()
+        var clock = Date(timeIntervalSince1970: 1_800_000_000)
+        let fixture = try makeFixture(dayCount: 1, sourceInstallationID: service.installationID,
+            destinationInstallationID: peer, now: { clock })
+        let spooled = try fixture.store.adoptItem(makeSmallItem(date: fixture.dates[0]), expectedIndex: 0,
+            jobID: fixture.session.jobID)
+        let saved = try preparePending(in: fixture.store, journal: spooled)
+        let partition = try XCTUnwrap(fixture.store.preparedPendingPartition(for: saved))
+        let receipt = try fixture.store.operationReceipt(for: saved)
+        let open = ConnectedCorpusTransferOpen(session: saved.session, partition: partition.descriptor, exportManifest: saved.exportManifest)
+        var queued = 0
+        var observed = 0
+        service.testReliablePayloadEnqueue = { _, _ in queued += 1; return true }
+        service.testMessageSendObserver = { _ in observed += 1 }
+        service.remoteCapabilities = .current(installationID: UUID())
+        let wrongPeer = try await receipt.continueWhileOwned { service.sendLargePayload(.connectedCorpusTransferOpen(open)) }
+        XCTAssertFalse(wrongPeer)
+        service.remoteCapabilities = .current(installationID: peer)
+        let foreign = try await receipt.continueWhileOwned {
+            service.sendLargePayload(.connectedTransferChunk(.init(transferID: UUID(), sequence: 1,
+                data: Data("synthetic".utf8), sha256: String(repeating: "0", count: 64))))
+        }
+        XCTAssertFalse(foreign)
+        XCTAssertEqual(queued, 0)
+        XCTAssertEqual(observed, 0)
+        service.testMessageSendObserver = { _ in
+            observed += 1
+            clock = clock.addingTimeInterval(ConnectedCorpusOutboundStore.retentionInterval + 1)
+        }
+        do {
+            _ = try await receipt.continueWhileOwned { service.sendLargePayload(.connectedCorpusTransferOpen(open)) }
+            XCTFail("An enqueue cannot outlive its expiry")
+        } catch { XCTAssertEqual(error as? ConnectedCorpusOutboundStoreError, .expired) }
+        XCTAssertEqual(observed, 1)
+        XCTAssertEqual(queued, 0)
+        XCTAssertEqual(try fixture.store.load(jobID: saved.jobID, allowExpired: true)?.pendingPartition, saved.pendingPartition)
+    }
+
+    func testRetiredReplyCancellationAndTimeoutCannotResolveReplacementSlot() async throws {
+        let fixture = try makeFixture(dayCount: 1)
+        let spooled = try fixture.store.adoptItem(makeSmallItem(date: fixture.dates[0]), expectedIndex: 0,
+            jobID: fixture.session.jobID)
+        let saved = try preparePending(in: fixture.store, journal: spooled)
+        let partition = try XCTUnwrap(saved.pendingPartition)
+        let open = ConnectedCorpusTransferOpen(session: saved.session, partition: partition.descriptor, exportManifest: saved.exportManifest)
+        let service = SyncService()
+        defer { clearTransportHooks(service) }
+        var first: Task<ConnectedCorpusTransferDisposition?, Never>?
+        var enqueued = 0
+        service.testReliablePayloadEnqueue = { message, _ in
+            if case .connectedCorpusTransferOpen = message {
+                enqueued += 1
+                if enqueued == 2 { first?.cancel() }
+            }
+            return true
+        }
+        first = Task { await service.sendConnectedCorpusOpenAndWait(open, timeoutSeconds: 1, maximumAttempts: 1) }
+        await waitUntil { enqueued == 1 }
+        let second = Task { await service.sendConnectedCorpusOpenAndWait(open, timeoutSeconds: 1, maximumAttempts: 1) }
+        await waitUntil { enqueued == 2 }
+        for _ in 0..<8 { await Task.yield() }
+        let ack = Self.disposition(for: open, kind: .accept, next: open.partition.index)
+        XCTAssertTrue(service.resolveConnectedCorpusDisposition(ack), "Retired cancellation/timer must leave the new slot registered")
+        let secondResult = await second.value
+        let firstResult = await first?.value
+        XCTAssertEqual(secondResult, ack)
+        XCTAssertNil(firstResult)
+    }
+
+    func testFinalizationCannotCompleteOrPauseAnotherWritersCheckpoint() async throws {
+        for accepted in [true, false] {
+            let fixture = try makeFixture(dayCount: 1)
+            let other = ConnectedCorpusOutboundStore(rootURL: fixture.root)
+            let url = fixture.root.appendingPathComponent(fixture.session.jobID.uuidString.lowercased()).appendingPathComponent("journal.json")
+            let harness = Harness()
+            var winner: Data?
+            var hookError: Error?
+            var stalePublications = 0
+            harness.finalizeResponse = { request in
+                do {
+                    _ = try other.updateState(jobID: request.jobID, state: .paused, message: "Replacement owns finalization")
+                    winner = try Data(contentsOf: url)
+                } catch { hookError = error }
+                guard accepted else { return nil }
+                return ConnectedCorpusTransferFinalAck(sessionID: request.sessionID, jobID: request.jobID,
+                    accepted: true, requestFingerprint: request.requestFingerprint,
+                    finalPartitionSHA256: request.finalPartitionSHA256, successCount: 1, totalCount: 1)
+            }
+            do {
+                _ = try await ConnectedCorpusDurableSender.send(configuration: .init(jobID: fixture.session.jobID, retryDelayNanoseconds: 0),
+                    store: fixture.store, transport: harness.transport(),
+                    onCheckpoint: { _ in if winner != nil { stalePublications += 1 } },
+                    produceItem: { _, date in try self.makeSmallItem(date: date) })
+                XCTFail("A retired finalizer cannot complete or pause a replacement")
+            } catch { XCTAssertEqual(error as? ConnectedCorpusOutboundStoreError, .checkpointSuperseded) }
+            XCTAssertNil(hookError)
+            XCTAssertEqual(harness.finalizations.count, 1)
+            XCTAssertEqual(stalePublications, 0)
+            XCTAssertEqual(try Data(contentsOf: url), try XCTUnwrap(winner))
+            let current = try XCTUnwrap(other.load(jobID: fixture.session.jobID))
+            XCTAssertEqual(current.state, .paused)
+            XCTAssertNil(current.terminalAcknowledgement)
+        }
+    }
+
+    func testNativeTransferRejectsForeignSourceAndSourceSymlinkBeforeReading() async throws {
+        for substituteAtOpen in [false, true] {
+            let service = SyncService()
+            defer { clearTransportHooks(service) }
+            let peer = UUID()
+            service.remoteCapabilities = .current(installationID: peer)
+            let fixture = try makeFixture(dayCount: 1, sourceInstallationID: service.installationID, destinationInstallationID: peer)
+            let item = try fixture.store.adoptItem(makeSmallItem(date: fixture.dates[0]), expectedIndex: 0, jobID: fixture.session.jobID)
+            let saved = try preparePending(in: fixture.store, journal: item)
+            let partition = try XCTUnwrap(fixture.store.preparedPendingPartition(for: saved))
+            let foreign = fixture.root.appendingPathComponent("foreign.bin")
+            let original = try Data(contentsOf: partition.file.url)
+            try original.write(to: foreign)
+            let manifest = ConnectedTransferManifest(kind: .connectedCorpusPartitionV1, jobID: saved.jobID,
+                payloadSchemaVersion: ConnectedCorpusPartitionFileManifest.currentVersion, corpusPartition: partition.descriptor)
+            let receipt = try fixture.store.operationReceipt(for: saved)
+            var starts = 0
+            var reads = 0
+            var chunks = 0
+            var hookError: Error?
+            service.testConnectedTransferSourceRead = { reads += 1 }
+            service.testConnectedTransferSourceOpen = { url in
+                guard substituteAtOpen else { return }
+                do {
+                    try FileManager.default.removeItem(at: url)
+                    try FileManager.default.createSymbolicLink(at: url, withDestinationURL: foreign)
+                } catch { hookError = error }
+            }
+            service.testReliablePayloadEnqueue = { message, _ in
+                if case .connectedTransferStart(let start) = message {
+                    starts += 1
+                    _ = service.resolveConnectedTransferAck(.init(transferID: start.transferID, sequence: 0,
+                        accepted: true, sha256: start.sha256, message: nil))
+                }
+                return true
+            }
+            service.testReliableBinaryEnqueue = { _ in chunks += 1; return true }
+            let file = substituteAtOpen ? partition.file : ConnectedTransferPreparedFile(url: foreign,
+                totalBytes: partition.file.totalBytes, sha256: partition.file.sha256)
+            let result = try await receipt.continueWhileOwned {
+                await service.sendConnectedTransfer(file, manifest: manifest, transferID: partition.transferID,
+                    protocolVersion: ConnectedTransferStart.corpusPartitionProtocolVersion,
+                    acknowledgementTimeout: 1, maximumAttempts: 1)
+            }
+            guard case .failure = result else { return XCTFail("A foreign source must not transfer") }
+            XCTAssertNil(hookError)
+            XCTAssertEqual(starts, substituteAtOpen ? 1 : 0)
+            XCTAssertEqual(reads, 0)
+            XCTAssertEqual(chunks, 0)
+            XCTAssertEqual(try Data(contentsOf: foreign), original)
+        }
+    }
+
+    func testNativePeerChangeAfterStartOrChunkPausesWithoutStaleProgress() async throws {
+        for stage in ["start", "chunk"] {
+            let service = SyncService()
+            defer { clearTransportHooks(service) }
+            let peer = UUID()
+            service.remoteCapabilities = .current(installationID: peer)
+            let fixture = try makeFixture(dayCount: 1, sourceInstallationID: service.installationID, destinationInstallationID: peer)
+            let item = try fixture.store.adoptItem(makeSmallItem(date: fixture.dates[0]), expectedIndex: 0, jobID: fixture.session.jobID)
+            _ = try preparePending(in: fixture.store, journal: item)
+            var opens = 0
+            var reads = 0
+            var changedPeer = false
+            var staleProgress = 0
+            var ownedProgress = 0
+            var hookError: Error?
+            service.testConnectedTransferSourceOpen = { _ in opens += 1 }
+            service.testConnectedTransferSourceRead = { reads += 1 }
+            let changePeer = {
+                changedPeer = true
+                service.remoteCapabilities = .current(installationID: UUID())
+            }
+            service.testReliablePayloadEnqueue = { message, _ in
+                switch message {
+                case .connectedCorpusTransferOpen(let open):
+                    _ = service.resolveConnectedCorpusDisposition(Self.disposition(for: open, kind: .accept, next: open.partition.index))
+                case .connectedTransferStart(let start):
+                    if stage == "start" { changePeer() }
+                    _ = service.resolveConnectedTransferAck(.init(transferID: start.transferID, sequence: 0,
+                        accepted: true, sha256: start.sha256, message: nil))
+                case .connectedTransferChunk(let chunk):
+                    changePeer()
+                    _ = service.resolveConnectedTransferAck(.init(transferID: chunk.transferID, sequence: chunk.sequence,
+                        accepted: true, sha256: chunk.sha256, message: nil))
+                default: XCTFail("A replacement peer must receive no further control messages")
+                }
+                return true
+            }
+            service.testReliableBinaryEnqueue = { bytes in
+                do {
+                    let chunk = try ConnectedTransferBinaryFrame.decode(bytes).chunk
+                    changePeer()
+                    _ = service.resolveConnectedTransferAck(.init(transferID: chunk.transferID, sequence: chunk.sequence,
+                        accepted: true, sha256: chunk.sha256, message: nil))
+                } catch { hookError = error }
+                return true
+            }
+            do {
+                _ = try await ConnectedCorpusDurableSender.send(configuration: .init(jobID: fixture.session.jobID, retryDelayNanoseconds: 0),
+                    store: fixture.store, transport: .syncService(service),
+                    onValidatedPartitionProgress: { _, _, _ in
+                        if changedPeer { staleProgress += 1 } else { ownedProgress += 1 }
+                    }, produceItem: { _, _ in throw TestError.unexpectedProduction })
+                XCTFail("Peer replacement must pause the original operation")
+            } catch {
+                guard let senderError = error as? ConnectedCorpusDurableSender.DurableSenderError,
+                      case .paused = senderError else {
+                    return XCTFail("Expected resumable pause, got \(error)")
+                }
+            }
+            XCTAssertNil(hookError)
+            XCTAssertTrue(changedPeer)
+            XCTAssertEqual(opens, stage == "start" ? 0 : 1, stage)
+            XCTAssertEqual(reads, stage == "start" ? 0 : 1, stage)
+            XCTAssertEqual(staleProgress, 0, stage)
+            XCTAssertEqual(ownedProgress, stage == "start" ? 0 : 1, stage)
+            let current = try XCTUnwrap(fixture.store.load(jobID: fixture.session.jobID))
+            XCTAssertEqual(current.state, .paused)
+            XCTAssertNotNil(current.pendingPartition)
+        }
+    }
+
+    private func clearTransportHooks(_ service: SyncService) {
+        service.testMessageSendObserver = nil
+        service.testReliablePayloadEnqueue = nil
+        service.testReliableBinaryEnqueue = nil
+        service.testConnectedTransferSourceOpen = nil
+        service.testConnectedTransferSourceRead = nil
+        service.cancelAllConnectedCorpusWaiters()
+        service.cancelAllConnectedTransferWaiters()
+    }
+
+    private func preparePending(in store: ConnectedCorpusOutboundStore,
+                                journal: ConnectedCorpusOutboundJournal) throws -> ConnectedCorpusOutboundJournal {
+        let partition = try ConnectedCorpusDurablePartitionBuilder.prepare(sessionID: journal.sessionID,
+            jobID: journal.jobID, targetBytes: journal.session.partitionTargetBytes,
+            partitionIndex: journal.committedPartitionCount,
+            previousPartitionSHA256: journal.lastCommittedPartitionSHA256,
+            sources: store.spoolItems(for: journal))
+        return try store.adoptPendingPartition(partition, jobID: journal.jobID)
     }
 
     func testV1OutboundJournalMigratesWithoutChangingPinnedLegacySession() throws {
@@ -352,6 +792,189 @@ final class ConnectedCorpusDurableSenderTests: XCTestCase {
         XCTAssertFalse(tracker.keepsScreenAwake)
     }
 
+    func testDormantConnectedCancellationDoesNotFinishUnownedSameIDActivity() async throws {
+        for source in [CLIExportActivityTracker.Source.macApp, .direct] {
+            let fixture = try makeFixture(dayCount: 1, origin: .macInitiated, includeCLIRequest: true)
+            let tracker = CLIExportActivityTracker()
+            defer { tracker.clear() }
+            let manager = IPhoneCorpusExportRecoveryManager(store: fixture.store, cliActivityTracker: tracker)
+            Self.retainedRecoveryManagers.append(manager)
+            tracker.begin(jobID: fixture.session.jobID, source: source, totalDays: 1,
+                          message: "Independent live request")
+            let snapshot = tracker.snapshot
+            let admissionID = tracker.admissionID
+
+            let cancelled = await manager.cancel(jobID: fixture.session.jobID, notifyPeer: false)
+
+            XCTAssertTrue(cancelled)
+            XCTAssertEqual(try fixture.store.load(jobID: fixture.session.jobID, allowExpired: true)?.state, .cancelled)
+            XCTAssertEqual(tracker.snapshot, snapshot, "A dormant journal cannot finish an independent activity")
+            XCTAssertEqual(tracker.admissionID, admissionID)
+            XCTAssertTrue(tracker.keepsScreenAwake)
+        }
+    }
+
+    func testConnectedCancellationFinishesItsBoundActivity() async throws {
+        let fixture = try makeFixture(dayCount: 1, origin: .macInitiated, includeCLIRequest: true)
+        let tracker = CLIExportActivityTracker()
+        defer { tracker.clear() }
+        let manager = IPhoneCorpusExportRecoveryManager(store: fixture.store, cliActivityTracker: tracker)
+        Self.retainedRecoveryManagers.append(manager)
+        let transferring = try fixture.store.updateState(jobID: fixture.session.jobID, state: .transferring, message: "Owned connected transfer")
+        tracker.updateConnected(try XCTUnwrap(transferring.cliUIProgressSnapshot))
+        let admissionID = tracker.admissionID
+
+        let cancelled = await manager.cancel(jobID: fixture.session.jobID, notifyPeer: false)
+
+        XCTAssertTrue(cancelled)
+        XCTAssertEqual(tracker.snapshot?.phase, .cancelled)
+        XCTAssertEqual(tracker.admissionID, admissionID)
+        XCTAssertFalse(tracker.keepsScreenAwake)
+    }
+
+    func testRecoveredCompletionRejectionFinishesOnlyBoundActivity() async throws {
+        for (source, bound) in [(CLIExportActivityTracker.Source.macApp, false), (.direct, false), (.macApp, true)] {
+            let fixture = try makeFixture(dayCount: 1, origin: .macInitiated, includeCLIRequest: true)
+            let tracker = CLIExportActivityTracker()
+            defer { tracker.clear() }
+            let manager = IPhoneCorpusExportRecoveryManager(store: fixture.store, cliActivityTracker: tracker)
+            Self.retainedRecoveryManagers.append(manager)
+            let harness = Harness()
+            _ = try await ConnectedCorpusDurableSender.send(
+                configuration: .init(jobID: fixture.session.jobID, retryDelayNanoseconds: 0),
+                store: fixture.store, transport: harness.transport(),
+                produceItem: { _, date in try self.makeSmallItem(date: date) }
+            )
+            let completed = try XCTUnwrap(fixture.store.load(jobID: fixture.session.jobID))
+            XCTAssertEqual(completed.state, .completed)
+            // The first Mac and Direct cases are independently admitted; the last
+            // Mac case below explicitly retains the connected session authority.
+            tracker.begin(jobID: fixture.session.jobID, source: source, totalDays: 1, message: "Independent request")
+            if bound { tracker.updateConnected(try XCTUnwrap(completed.cliUIProgressSnapshot)) }
+            let snapshot = tracker.snapshot
+            let admissionID = tracker.admissionID
+            let rejected = manager.rejectRecoveredMacRequestCompletion(jobID: fixture.session.jobID,
+                                                                       message: "Invalid terminal accounting")
+            XCTAssertTrue(rejected)
+            XCTAssertTrue(try XCTUnwrap(fixture.store.load(jobID: fixture.session.jobID)).completionRecorded)
+            XCTAssertEqual(tracker.admissionID, admissionID)
+            if bound {
+                XCTAssertEqual(tracker.snapshot?.phase, .failed)
+                XCTAssertFalse(tracker.keepsScreenAwake)
+            } else {
+                XCTAssertEqual(tracker.snapshot, snapshot)
+                XCTAssertTrue(tracker.keepsScreenAwake)
+            }
+        }
+    }
+
+    func testConnectedExpiryFinishesOnlyBoundActivity() throws {
+        for (source, bound) in [(CLIExportActivityTracker.Source.macApp, false), (.direct, false), (.macApp, true)] {
+            var now = Date(timeIntervalSince1970: 1_800_000_000)
+            let fixture = try makeFixture(dayCount: 1, origin: .macInitiated, includeCLIRequest: true, now: { now })
+            let tracker = CLIExportActivityTracker()
+            defer { tracker.clear() }
+            if bound {
+                let journal = try XCTUnwrap(fixture.store.load(jobID: fixture.session.jobID))
+                tracker.updateConnected(try XCTUnwrap(journal.cliUIProgressSnapshot))
+            } else {
+                tracker.begin(jobID: fixture.session.jobID, source: source, totalDays: 1, message: "Independent request")
+            }
+            let snapshot = tracker.snapshot
+            let admissionID = tracker.admissionID
+            now = now.addingTimeInterval(ConnectedCorpusOutboundStore.retentionInterval + 1)
+            let manager = IPhoneCorpusExportRecoveryManager(store: fixture.store, cliActivityTracker: tracker)
+            Self.retainedRecoveryManagers.append(manager)
+            XCTAssertEqual(try fixture.store.load(jobID: fixture.session.jobID, allowExpired: true)?.state, .expired)
+            XCTAssertEqual(tracker.admissionID, admissionID)
+            if bound {
+                XCTAssertEqual(tracker.snapshot?.phase, .failed)
+                XCTAssertFalse(tracker.keepsScreenAwake)
+            } else {
+                XCTAssertEqual(tracker.snapshot, snapshot)
+                XCTAssertTrue(tracker.keepsScreenAwake)
+            }
+        }
+    }
+
+    func testActualConnectedSenderAndResultPreserveReplacementActivityAdmission() async throws {
+        let replacements: [CLIExportActivityTracker.Source?] = [nil, .macApp, .direct]
+        for replacementSource in replacements {
+            let fixture = try makeFixture(dayCount: 1, origin: .macInitiated, includeCLIRequest: true)
+            let tracker = CLIExportActivityTracker()
+            defer { tracker.clear() }
+            let harness = Harness()
+            var recorded: [UUID] = []
+            let manager = IPhoneCorpusExportRecoveryManager(
+                store: fixture.store, cliActivityTracker: tracker,
+                transportProvider: { _ in harness.transport() },
+                completionRecorder: { journal, payload in
+                    XCTAssertEqual(journal.jobID, payload.jobID)
+                    recorded.append(payload.jobID)
+                }
+            )
+            Self.retainedRecoveryManagers.append(manager)
+            let initial = try XCTUnwrap(fixture.store.load(jobID: fixture.session.jobID))
+            let negotiation = ConnectedCorpusDurableNegotiation(
+                transfer: .init(protocolVersion: fixture.session.protocolVersion,
+                                partitionTargetBytes: fixture.session.partitionTargetBytes),
+                peerBinding: try XCTUnwrap(fixture.session.peerBinding)
+            )
+            var replacement: CLIExportActivityTracker.Snapshot?
+            var replacementAdmission: UUID?
+            var prepared = false
+            _ = try await manager.send(
+                origin: .macInitiated, jobID: fixture.session.jobID,
+                manifest: fixture.manifest, macRequest: initial.macRequest,
+                durableNegotiation: negotiation, syncService: SyncService(),
+                onCheckpoint: { journal in
+                    guard journal.state == .preparing, !prepared else { return }
+                    prepared = true
+                    guard let source = replacementSource, let previous = tracker.snapshot else { return }
+                    let oldAdmission = tracker.admissionID
+                    tracker.begin(jobID: previous.jobID, source: source, totalDays: previous.totalDays,
+                                  targetLabel: previous.targetLabel, message: previous.message)
+                    tracker.update(jobID: previous.jobID, source: source, targetLabel: previous.targetLabel,
+                                   phase: previous.phase, processedDays: previous.processedDays,
+                                   totalDays: previous.totalDays, currentDate: previous.currentDate,
+                                   committedPartitions: previous.committedPartitions,
+                                   committedBytes: previous.committedBytes, message: previous.message)
+                    replacement = tracker.snapshot
+                    replacementAdmission = tracker.admissionID
+                    XCTAssertNotEqual(replacementAdmission, oldAdmission)
+                    if source == .macApp { XCTAssertEqual(replacement, previous) }
+                },
+                produceItem: { _, date in try self.makeSmallItem(date: date) }
+            )
+            XCTAssertTrue(prepared)
+            let completed = try XCTUnwrap(fixture.store.load(jobID: fixture.session.jobID))
+            XCTAssertEqual(completed.state, .completed)
+            if replacementSource != nil {
+                XCTAssertEqual(tracker.snapshot, replacement, "Sender callbacks cannot borrow replacement admission")
+                XCTAssertEqual(tracker.admissionID, replacementAdmission)
+                XCTAssertTrue(tracker.keepsScreenAwake)
+            }
+            let payload = MacExportResultPayload(
+                jobID: fixture.session.jobID, status: .success, successCount: 1, totalCount: 1,
+                formatsPerDate: 1, totalFilesWritten: 1, isTotalFilesWrittenAuthoritative: true,
+                failedDateDetails: [], completedDates: fixture.dates,
+                destinationDisplayName: "Synthetic Mac", destinationPathForDisplay: nil,
+                completedAt: fixture.manifest.createdAt
+            )
+            XCTAssertTrue(manager.recordRecoveredMacRequestCompletion(payload))
+            XCTAssertFalse(manager.recordRecoveredMacRequestCompletion(payload), "Completion effects remain once-only")
+            XCTAssertEqual(recorded, [fixture.session.jobID])
+            if replacementSource != nil {
+                XCTAssertEqual(tracker.snapshot, replacement, "A completed journal cannot finish an unowned activity")
+                XCTAssertEqual(tracker.admissionID, replacementAdmission)
+                XCTAssertTrue(tracker.keepsScreenAwake)
+            } else {
+                XCTAssertEqual(tracker.snapshot?.phase, .completed)
+                XCTAssertFalse(tracker.keepsScreenAwake)
+            }
+        }
+    }
+
     func testRecoveryManagerRejectsSecondJobBeforeCreatingCheckpoint() async throws {
         let fixture = try makeFixture(dayCount: 1)
         _ = try fixture.store.updateState(
@@ -549,6 +1172,50 @@ final class ConnectedCorpusDurableSenderTests: XCTestCase {
         XCTAssertEqual(manager.resumableSnapshots.map(\.jobID), [fixture.session.jobID])
     }
 
+    func testDiscardCleanupCannotDeleteACompetingCheckpointWhileSenderUnwinds() async throws {
+        let fixture = try makeFixture(dayCount: 1, origin: .scheduledIPhone)
+        let harness = Harness()
+        let baseline = harness.transport()
+        var release: CheckedContinuation<Void, Never>?
+        defer { release?.resume() }
+        let transport = ConnectedCorpusSender.Transport(open: baseline.open,
+            sendPartition: { _, manifest, transferID, _ in
+                await withCheckedContinuation { release = $0 }
+                return .failure(.init(transferID: transferID, jobID: manifest.jobID,
+                    reason: .cancelled, message: "Controlled unwind"))
+            }, finalize: baseline.finalize, cancel: baseline.cancel)
+        let manager = IPhoneCorpusExportRecoveryManager(store: fixture.store, transportProvider: { _ in transport })
+        Self.retainedRecoveryManagers.append(manager)
+        let negotiation = ConnectedCorpusDurableNegotiation(transfer: .init(protocolVersion: fixture.session.protocolVersion,
+            partitionTargetBytes: fixture.session.partitionTargetBytes), peerBinding: try XCTUnwrap(fixture.session.peerBinding))
+        let service = SyncService()
+        let task = Task { @MainActor in
+            try await manager.send(origin: .scheduledIPhone, jobID: fixture.session.jobID,
+                manifest: fixture.manifest, durableNegotiation: negotiation, syncService: service,
+                produceItem: { _, date in try self.makeSmallItem(date: date) })
+        }
+        await waitUntil { release != nil }
+        try manager.discardScheduledRecovery(jobID: fixture.session.jobID)
+        let discarded = try XCTUnwrap(manager.journal(jobID: fixture.session.jobID))
+        XCTAssertEqual(discarded.state, .cancelled)
+        XCTAssertNotNil(discarded.pendingPartition)
+        XCTAssertEqual(discarded.items.count, 1)
+        let other = ConnectedCorpusOutboundStore(rootURL: fixture.root)
+        let winner = try other.updateState(jobID: fixture.session.jobID, state: .cancelled, message: "A different revocation owns cleanup")
+        let directory = fixture.root.appendingPathComponent(fixture.session.jobID.uuidString.lowercased())
+        let journalURL = directory.appendingPathComponent("journal.json")
+        let metadata = try Data(contentsOf: journalURL)
+        let paths = winner.items.map(\.relativePath) + [try XCTUnwrap(winner.pendingPartition).relativePath]
+        let files = try paths.map { (directory.appendingPathComponent($0), try Data(contentsOf: directory.appendingPathComponent($0))) }
+        release?.resume()
+        release = nil
+        _ = try? await task.value
+        XCTAssertEqual(try Data(contentsOf: journalURL), metadata)
+        for (url, bytes) in files { XCTAssertEqual(try Data(contentsOf: url), bytes) }
+        XCTAssertEqual(try other.load(jobID: fixture.session.jobID)?.state, .cancelled)
+        XCTAssertFalse(manager.hasRunningExport)
+    }
+
     func testDiscardScheduledCorpusRecoveryRetainsJournalAndDoesNotTouchInteractiveJobs() throws {
         for origin in [ConnectedCorpusOutboundOrigin.scheduledIPhone, .interactiveIPhone, .macInitiated] {
             let fixture = try makeFixture(dayCount: 1, origin: origin)
@@ -564,7 +1231,8 @@ final class ConnectedCorpusDurableSenderTests: XCTestCase {
         }
     }
 
-    func testScheduledCorpusRecoveryChecksCurrentScheduleAuthorityBeforeOpeningTransport() throws {
+    // Provide a Swift task context for isolated deinit on older iOS runtimes (swiftlang/swift#85663).
+    func testScheduledCorpusRecoveryChecksCurrentScheduleAuthorityBeforeOpeningTransport() async throws {
         let sync = SyncService()
         let remoteID = UUID()
         let fixture = try makeFixture(dayCount: 1, origin: .scheduledIPhone,
@@ -823,9 +1491,320 @@ final class ConnectedCorpusDurableSenderTests: XCTestCase {
         }
     }
 
+    func testCompetingFreshAdmissionRetainsWinningJournalBytes() throws {
+        let fixture = try makeFixture(dayCount: 1)
+        let jobDirectoryName = fixture.session.jobID.uuidString.lowercased()
+        let originalURL = fixture.root.appendingPathComponent(jobDirectoryName).appendingPathComponent("journal.json")
+        var object = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: originalURL)) as? [String: Any])
+        object["origin"] = ConnectedCorpusOutboundOrigin.scheduledIPhone.rawValue
+        let winner = try JSONSerialization.data(withJSONObject: object, options: [.sortedKeys])
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("competing-admission-\(UUID().uuidString)")
+        addTeardownBlock { try? FileManager.default.removeItem(at: root) }
+        let destination = root.appendingPathComponent(jobDirectoryName).appendingPathComponent("journal.json")
+        let manager = CompetingAdmissionFileManager(destination: destination, winner: winner)
+        let store = ConnectedCorpusOutboundStore(rootURL: root, fileManager: manager)
+        XCTAssertThrowsError(try store.createOrRestore(origin: .interactiveIPhone, session: fixture.session, manifest: fixture.manifest)) {
+            XCTAssertEqual($0 as? ConnectedCorpusOutboundStoreError, .requestChanged)
+        }
+        XCTAssertEqual(try Data(contentsOf: destination), winner)
+        XCTAssertEqual(try store.load(jobID: fixture.session.jobID, allowExpired: true)?.origin, .scheduledIPhone)
+        XCTAssertEqual(try Data(contentsOf: destination), winner)
+    }
+
+    func testCheckpointCannotOverwriteJournalChangedAfterRead() throws {
+        let fixture = try makeFixture(dayCount: 1)
+        let destination = fixture.root
+            .appendingPathComponent(fixture.session.jobID.uuidString.lowercased())
+            .appendingPathComponent("journal.json")
+        var object = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: destination)) as? [String: Any])
+        object["origin"] = ConnectedCorpusOutboundOrigin.scheduledIPhone.rawValue
+        let winner = try JSONSerialization.data(withJSONObject: object, options: [.sortedKeys])
+        let manager = CompetingAdmissionFileManager(destination: destination, winner: winner)
+        let store = ConnectedCorpusOutboundStore(rootURL: fixture.root, fileManager: manager)
+        XCTAssertThrowsError(try store.updateState(jobID: fixture.session.jobID, state: .paused, message: "synthetic stale checkpoint"))
+        XCTAssertEqual(try Data(contentsOf: destination), winner)
+        XCTAssertEqual(try store.load(jobID: fixture.session.jobID)?.origin, .scheduledIPhone)
+        XCTAssertThrowsError(try store.updateState(jobID: fixture.session.jobID, state: .paused,
+            message: "Observing a winner grants no replacement write authority"))
+        XCTAssertEqual(try Data(contentsOf: destination), winner)
+    }
+
+    func testExpiryCheckpointConflictRetainsWinningJournalAndSpool() throws {
+        let fixture = try makeFixture(dayCount: 1)
+        let directory = fixture.root.appendingPathComponent(fixture.session.jobID.uuidString.lowercased())
+        let destination = directory.appendingPathComponent("journal.json")
+        let prepared = try fixture.store.adoptItem(try makeSmallItem(date: fixture.dates[0]),
+            expectedIndex: 0, jobID: fixture.session.jobID)
+        let spool = directory.appendingPathComponent(try XCTUnwrap(prepared.items.first).relativePath)
+        let retained = try Data(contentsOf: spool)
+        var object = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: destination)) as? [String: Any])
+        let cleanupTime = fixture.manifest.createdAt.addingTimeInterval(ConnectedCorpusOutboundStore.retentionInterval + 1)
+        object["expiresAt"] = ISO8601DateFormatter().string(from: cleanupTime.addingTimeInterval(86400))
+        let winner = try JSONSerialization.data(withJSONObject: object, options: [.sortedKeys])
+        let manager = CompetingAdmissionFileManager(destination: destination, winner: winner)
+        let store = ConnectedCorpusOutboundStore(rootURL: fixture.root, fileManager: manager)
+        XCTAssertEqual(store.cleanupExpired(now: cleanupTime), [])
+        XCTAssertEqual(try Data(contentsOf: destination), winner)
+        XCTAssertEqual(try Data(contentsOf: spool), retained)
+    }
+
+    func testConnectedCleanupAndRevocationHoldThePublicationLock() throws {
+        let fixture = try makeFixture(dayCount: 1)
+        let directory = fixture.root.appendingPathComponent(fixture.session.jobID.uuidString.lowercased())
+        let orphan = directory.appendingPathComponent("items/orphan.bin")
+        try Data("synthetic orphan".utf8).write(to: orphan)
+        let lock = fixture.root.deletingLastPathComponent()
+            .appendingPathComponent(".\(fixture.root.lastPathComponent).journal.lock")
+        let manager = CleanupLockFileManager(lockURL: lock, watchedPaths: Set([
+            orphan.path, directory.appendingPathComponent("items").path,
+            directory.appendingPathComponent("partitions").path, directory.path,
+        ]))
+        let store = ConnectedCorpusOutboundStore(rootURL: fixture.root, fileManager: manager)
+        XCTAssertNotNil(try store.load(jobID: fixture.session.jobID))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: orphan.path))
+        try store.cancel(jobID: fixture.session.jobID)
+        try store.remove(jobID: fixture.session.jobID)
+        XCTAssertEqual(manager.removalLockObservations, [true, true, true, true])
+        XCTAssertTrue(FileManager.default.fileExists(atPath: lock.path))
+    }
+
+    func testFailedRemovalSyncReportsUncertaintyAndAllowsLockedRetry() throws {
+        let fixture = try makeFixture(dayCount: 1)
+        let directory = fixture.root.appendingPathComponent(fixture.session.jobID.uuidString.lowercased())
+        let lock = fixture.root.deletingLastPathComponent()
+            .appendingPathComponent(".\(fixture.root.lastPathComponent).journal.lock")
+        var rejectRemovalSync = true
+        var rejected = 0
+        let store = ConnectedCorpusOutboundStore(rootURL: fixture.root, directorySync: { url in
+            if rejectRemovalSync, url.pathComponents == fixture.root.pathComponents,
+               !FileManager.default.fileExists(atPath: directory.path) {
+                rejected += 1
+                throw POSIXError(.EIO)
+            }
+            try AtomicFileWriter.synchronizeDirectory(url)
+        })
+        XCTAssertThrowsError(try store.remove(jobID: fixture.session.jobID)) {
+            XCTAssertEqual(($0 as? POSIXError)?.code, .EIO)
+        }
+        XCTAssertEqual(rejected, 1)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: directory.path))
+        rejectRemovalSync = false
+        XCTAssertNoThrow(try store.remove(jobID: fixture.session.jobID))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: lock.path))
+    }
+
+    func testTerminalExpiryDoesNotReportFailedRemovalAndRetriesRetainedJob() throws {
+        let fixture = try makeFixture(dayCount: 1)
+        try fixture.store.cancel(jobID: fixture.session.jobID)
+        let directory = fixture.root.appendingPathComponent(fixture.session.jobID.uuidString.lowercased())
+        let lock = fixture.root.deletingLastPathComponent()
+            .appendingPathComponent(".\(fixture.root.lastPathComponent).journal.lock")
+        let manager = CleanupLockFileManager(lockURL: lock, watchedPaths: [directory.path])
+        manager.removalFailurePath = directory.resolvingSymlinksInPath().path
+        let store = ConnectedCorpusOutboundStore(rootURL: fixture.root, fileManager: manager)
+        let cleanupTime = fixture.manifest.createdAt.addingTimeInterval(
+            ConnectedCorpusOutboundStore.retentionInterval + 1)
+        XCTAssertEqual(store.cleanupExpired(now: cleanupTime), [])
+        XCTAssertTrue(FileManager.default.fileExists(atPath: directory.path))
+        manager.removalFailurePath = nil
+        XCTAssertEqual(store.cleanupExpired(now: cleanupTime), [fixture.session.jobID])
+        XCTAssertFalse(FileManager.default.fileExists(atPath: directory.path))
+        XCTAssertEqual(manager.removalLockObservations, [true, true])
+    }
+
+    private final class CleanupLockFileManager: FileManager, @unchecked Sendable {
+        let lockURL: URL
+        let watchedPaths: Set<String>
+        var removalLockObservations: [Bool] = []
+        var removalFailurePath: String?
+        init(lockURL: URL, watchedPaths: Set<String>) {
+            self.lockURL = lockURL
+            self.watchedPaths = Set(watchedPaths.map { URL(fileURLWithPath: $0).resolvingSymlinksInPath().path })
+            super.init()
+        }
+        override func removeItem(at URL: URL) throws {
+            if watchedPaths.contains(URL.resolvingSymlinksInPath().path) {
+                let descriptor = Darwin.open(lockURL.path, O_RDWR)
+                guard descriptor >= 0 else { throw POSIXError(.EIO) }
+                defer { Darwin.close(descriptor) }
+                let result = flock(descriptor, LOCK_EX | LOCK_NB)
+                removalLockObservations.append(result != 0 && errno == EWOULDBLOCK)
+                if result == 0 { _ = flock(descriptor, LOCK_UN) }
+            }
+            if URL.resolvingSymlinksInPath().path == removalFailurePath { throw POSIXError(.EIO) }
+            try super.removeItem(at: URL)
+        }
+    }
+
+    /// Installs another writer's valid journal after initial absence was observed.
+    private final class CompetingAdmissionFileManager: FileManager, @unchecked Sendable {
+        let destination: URL
+        let winner: Data
+        init(destination: URL, winner: Data) { self.destination = destination; self.winner = winner; super.init() }
+        override func createFile(atPath path: String, contents data: Data?, attributes attr: [FileAttributeKey: Any]? = nil) -> Bool {
+            let created = super.createFile(atPath: path, contents: data, attributes: attr)
+            if created && (URL(fileURLWithPath: path).lastPathComponent.hasPrefix("journal-") || URL(fileURLWithPath: path).lastPathComponent.hasPrefix(".journal.json.")) {
+                do { try winner.write(to: destination, options: .atomic) } catch { return false }
+            }
+            return created
+        }
+    }
+
     private enum TestError: Error {
         case simulatedCrash
         case unexpectedProduction
+    }
+
+    #if os(iOS)
+    func testRecoveredProducerUsesPersistedSleepContextInBothMutationDirectionsAndRetainsMissingJournal() async throws {
+        let changes: [(SleepDayAttribution?, SleepDayAttribution)] = [(.nightBegins, .morningEnds), (.morningEnds, .nightBegins), (nil, .nightBegins)]
+        for (saved, current) in changes {
+            // An unpinned Morning ends draft models pre-existing disk state; it
+            // must not be admitted as a new successor operation by today's store.
+            let fixture = try makeFixture(dayCount: 1, sleepAttribution: saved == .morningEnds ? .nightBegins : saved)
+            let directory = fixture.root.appendingPathComponent(fixture.session.jobID.uuidString.lowercased())
+            let url = directory.appendingPathComponent("journal.json")
+            let marker = try Data(contentsOf: directory.appendingPathComponent(".journal-generation"))
+            if saved == .morningEnds {
+                var object = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: url)) as? [String: Any])
+                var manifest = try XCTUnwrap(object["exportManifest"] as? [String: Any])
+                var snapshot = try XCTUnwrap(manifest["settingsSnapshot"] as? [String: Any])
+                snapshot["sleepCaptureContext"] = try JSONSerialization.jsonObject(with: JSONEncoder().encode(
+                    AppleSleepCaptureContext(timeZone: .current, sleepDayAttribution: .morningEnds)))
+                manifest["settingsSnapshot"] = snapshot
+                object["exportManifest"] = manifest
+                try JSONSerialization.data(withJSONObject: object, options: [.sortedKeys]).write(to: url)
+            }
+            let retainedBytes = try Data(contentsOf: url)
+            let relaunchedStore = ConnectedCorpusOutboundStore(rootURL: fixture.root)
+            let journal: ConnectedCorpusOutboundJournal
+            if saved == .morningEnds {
+                XCTAssertThrowsError(try relaunchedStore.load(jobID: fixture.session.jobID, allowExpired: true))
+                XCTAssertTrue(relaunchedStore.resumableJournals().isEmpty)
+                journal = try JSONDecoder().decode(ConnectedCorpusOutboundJournal.self, from: retainedBytes)
+            } else {
+                journal = try XCTUnwrap(relaunchedStore.load(jobID: fixture.session.jobID, allowExpired: true))
+            }
+            XCTAssertEqual(journal.exportManifest.settingsSnapshot.sleepCaptureContext?.sleepDayAttribution, saved)
+            let healthStore = FakeHealthStore()
+            let counter = SleepRecoveryQueryCounter()
+            healthStore.beforeQueryCategorySamples = { _ in await MainActor.run { counter.count += 1 } }
+            let healthManager = HealthKitManager(store: healthStore,
+                userDefaults: UserDefaults(suiteName: "SleepRecovery.\(UUID())")!)
+            healthManager.setSleepDayAttribution(current)
+            let manager = IPhoneCorpusExportRecoveryManager(store: relaunchedStore)
+            Self.retainedRecoveryManagers.append(manager)
+            let service = SyncService()
+            manager.configure(syncService: service, healthKitManager: healthManager, externalIntegrations: nil)
+            let producer = manager.makeRecoveredProducer(for: journal)
+            if saved == .nightBegins {
+                let item = try await producer(0, fixture.dates[0])
+                item.file.remove()
+                XCTAssertGreaterThan(counter.count, 0, "A recovered night operation must not read the changed morning preference")
+            } else {
+                do {
+                    _ = try await producer(0, fixture.dates[0])
+                    XCTFail("Missing or unapproved saved attribution must remain unavailable")
+                } catch {
+                    XCTAssertEqual(error as? AppleSleepCaptureContext.AvailabilityError,
+                        saved == nil ? .missingDurableAttribution : .incompatibleDurableAuthority)
+                }
+                XCTAssertEqual(counter.count, 0)
+            }
+            let retained: ConnectedCorpusOutboundJournal
+            if saved == .morningEnds {
+                retained = try JSONDecoder().decode(ConnectedCorpusOutboundJournal.self, from: Data(contentsOf: url))
+            } else {
+                retained = try XCTUnwrap(relaunchedStore.load(jobID: fixture.session.jobID, allowExpired: true))
+            }
+            if saved == .morningEnds {
+                XCTAssertEqual(try Data(contentsOf: url), retainedBytes)
+            } else {
+                XCTAssertEqual(retained.state, .paused, "Disconnected recognized jobs retain ordinary recovery bookkeeping")
+            }
+            XCTAssertEqual(try Data(contentsOf: directory.appendingPathComponent(".journal-generation")), marker)
+            XCTAssertEqual(retained.exportManifest.settingsSnapshot.sleepCaptureContext?.sleepDayAttribution, saved)
+            XCTAssertEqual(retained.session.requestFingerprint, journal.session.requestFingerprint)
+            XCTAssertEqual(healthManager.sleepDayAttribution, current)
+        }
+    }
+
+    @MainActor private final class SleepRecoveryQueryCounter { var count = 0 }
+    #endif
+
+    func testMissingConnectedJournalCannotReplaceRetainedSpoolAuthority() throws {
+        let fixture = try makeFixture(dayCount: 1)
+        let saved = try fixture.store.adoptItem(try makeSmallItem(date: fixture.dates[0]),
+            expectedIndex: 0, jobID: fixture.session.jobID)
+        let directory = fixture.root.appendingPathComponent(fixture.session.jobID.uuidString.lowercased())
+        let spool = directory.appendingPathComponent(try XCTUnwrap(saved.items.first).relativePath)
+        let bytes = try Data(contentsOf: spool)
+        let journal = directory.appendingPathComponent("journal.json")
+        try FileManager.default.removeItem(at: journal)
+        XCTAssertThrowsError(try fixture.store.createOrRestore(origin: .interactiveIPhone,
+            session: fixture.session, manifest: fixture.manifest)) {
+            XCTAssertEqual($0 as? ConnectedCorpusOutboundStoreError, .invalidJournal)
+        }
+        XCTAssertEqual(fixture.store.cleanupExpired(now: fixture.manifest.createdAt.addingTimeInterval(
+            ConnectedCorpusOutboundStore.retentionInterval + 100)), [])
+        XCTAssertEqual(try Data(contentsOf: spool), bytes)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: journal.path), "Do not invent replacement authority")
+    }
+
+    func testConnectedJournalSymbolicLinkCannotAdmitOrRewriteItsTarget() throws {
+        let fixture = try makeFixture(dayCount: 1)
+        let directory = fixture.root.appendingPathComponent(fixture.session.jobID.uuidString.lowercased())
+        let journal = directory.appendingPathComponent("journal.json")
+        let target = fixture.root.appendingPathComponent("retained-authority.json")
+        let bytes = try Data(contentsOf: journal)
+        try FileManager.default.moveItem(at: journal, to: target)
+        try FileManager.default.createSymbolicLink(at: journal, withDestinationURL: target)
+        XCTAssertThrowsError(try fixture.store.load(jobID: fixture.session.jobID)) {
+            XCTAssertEqual($0 as? ConnectedCorpusOutboundStoreError, .invalidJournal)
+        }
+        XCTAssertEqual(try Data(contentsOf: target), bytes)
+        XCTAssertEqual(try FileManager.default.destinationOfSymbolicLink(atPath: journal.path), target.path)
+    }
+
+    func testConnectedJournalRejectsDifferentJobIdentityWithoutChangingEitherJournal() throws {
+        let fixture = try makeFixture(dayCount: 1)
+        let original = fixture.root.appendingPathComponent(fixture.session.jobID.uuidString.lowercased())
+            .appendingPathComponent("journal.json")
+        let bytes = try Data(contentsOf: original)
+        let otherJob = UUID()
+        let otherDirectory = fixture.root.appendingPathComponent(otherJob.uuidString.lowercased())
+        try FileManager.default.createDirectory(at: otherDirectory, withIntermediateDirectories: true)
+        let conflicting = otherDirectory.appendingPathComponent("journal.json")
+        try bytes.write(to: conflicting)
+        XCTAssertThrowsError(try fixture.store.load(jobID: otherJob)) {
+            XCTAssertEqual($0 as? ConnectedCorpusOutboundStoreError, .invalidJournal)
+        }
+        XCTAssertEqual(try Data(contentsOf: original), bytes)
+        XCTAssertEqual(try Data(contentsOf: conflicting), bytes)
+    }
+
+    func testUnreadableConnectedJournalsRetainBytesWithoutAdmittingReplacement() throws {
+        let fixture = try makeFixture(dayCount: 1)
+        let journal = fixture.root.appendingPathComponent(fixture.session.jobID.uuidString.lowercased())
+            .appendingPathComponent("journal.json")
+        let original = try Data(contentsOf: journal)
+        var unknownObject = try XCTUnwrap(JSONSerialization.jsonObject(with: original) as? [String: Any])
+        unknownObject["version"] = 999
+        let unknown = try JSONSerialization.data(withJSONObject: unknownObject)
+        for bytes in [Data("{private-invalid-journal".utf8), unknown] {
+            try bytes.write(to: journal)
+            XCTAssertThrowsError(try fixture.store.createOrRestore(origin: .interactiveIPhone,
+                session: fixture.session, manifest: fixture.manifest)) {
+                XCTAssertEqual($0 as? ConnectedCorpusOutboundStoreError, .invalidJournal)
+            }
+            XCTAssertEqual(fixture.store.cleanupExpired(now: fixture.manifest.createdAt.addingTimeInterval(
+                ConnectedCorpusOutboundStore.retentionInterval + 100)), [])
+            XCTAssertEqual(try Data(contentsOf: journal), bytes)
+        }
+        try original.write(to: journal)
+        XCTAssertEqual(try fixture.store.load(jobID: fixture.session.jobID)?.session, fixture.session)
+        XCTAssertEqual(try Data(contentsOf: journal), original)
+        XCTAssertNil(try fixture.store.load(jobID: UUID()))
     }
 
     private struct Fixture {
@@ -842,12 +1821,15 @@ final class ConnectedCorpusDurableSenderTests: XCTestCase {
         origin: ConnectedCorpusOutboundOrigin = .interactiveIPhone,
         protocolVersion: Int = 2,
         includeCLIRequest: Bool = false,
+        sleepAttribution: SleepDayAttribution? = .nightBegins,
         sourceInstallationID: UUID? = nil,
         destinationInstallationID: UUID? = nil,
         now: @escaping () -> Date = { Date(timeIntervalSince1970: 1_800_000_000) }
     ) throws -> Fixture {
-        let root = FileManager.default.temporaryDirectory
+        let candidate = FileManager.default.temporaryDirectory
             .appendingPathComponent("durable-sender-tests-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: candidate, withIntermediateDirectories: true)
+        let root = candidate.standardizedFileURL.resolvingSymlinksInPath()
         addTeardownBlock { try? FileManager.default.removeItem(at: root) }
         let suite = "ConnectedCorpusDurableSenderTests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suite)!
@@ -855,6 +1837,9 @@ final class ConnectedCorpusDurableSenderTests: XCTestCase {
         let settings = AdvancedExportSettings(userDefaults: defaults)
         Self.retainedSettings.append(settings)
         settings.exportFormats = [.json]
+        settings.executionSleepCaptureContext = sleepAttribution.map {
+            AppleSleepCaptureContext(timeZone: .current, sleepDayAttribution: $0)
+        }
         let start = Calendar.current.startOfDay(for: Date(timeIntervalSince1970: 1_800_000_000))
         let dates = (0..<dayCount).compactMap {
             Calendar.current.date(byAdding: .day, value: $0, to: start)

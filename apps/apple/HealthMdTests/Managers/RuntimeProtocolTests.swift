@@ -8,6 +8,9 @@
 //
 
 import XCTest
+import CryptoKit
+import Darwin
+import HealthMdConnectionCore
 @testable import HealthMd
 
 // MARK: - Fake Implementations
@@ -454,6 +457,267 @@ final class FileSystemAccessingTests: XCTestCase {
 
 final class AtomicFileWriterTests: XCTestCase {
 
+    func testDirectCheckpointRejectsByteIdenticalReplacementGeneration() throws {
+        let root = try makeTemporaryDirectory()
+        let job = root.appendingPathComponent("job")
+        try FileManager.default.createDirectory(at: job, withIntermediateDirectories: false)
+        let destination = job.appendingPathComponent("journal.json")
+        let lock = root.appendingPathComponent(".publication.lock")
+        let bytes = Data("synthetic accepted authority".utf8)
+        var stale = AppleExportJournalCheckpoint()
+        try stale.publish(bytes, to: destination, freshAdmission: true,
+            lockURL: lock, durabilityRoot: root)
+        try FileManager.default.removeItem(at: job)
+        try FileManager.default.createDirectory(at: job, withIntermediateDirectories: false)
+        var replacement = AppleExportJournalCheckpoint()
+        try replacement.publish(bytes, to: destination, freshAdmission: true,
+            lockURL: lock, durabilityRoot: root)
+        XCTAssertNotNil(stale.generation)
+        XCTAssertNotEqual(stale.generation, replacement.generation)
+        XCTAssertThrowsError(try stale.publish(Data("stale paused checkpoint".utf8), to: destination,
+            freshAdmission: false, lockURL: lock, durabilityRoot: root)) {
+            XCTAssertEqual(($0 as? POSIXError)?.code, .EAGAIN)
+        }
+        XCTAssertEqual(try Data(contentsOf: destination), bytes)
+    }
+
+    func testContinuationOwnershipSurvivesProgressButRejectsReplacement() throws {
+        let root = try makeTemporaryDirectory()
+        let job = root.appendingPathComponent("job")
+        try FileManager.default.createDirectory(at: job, withIntermediateDirectories: false)
+        let destination = job.appendingPathComponent("journal.json")
+        let lock = root.appendingPathComponent(".publication.lock")
+        var original = AppleExportJournalCheckpoint()
+        try original.publish(Data("initial checkpoint".utf8), to: destination,
+            freshAdmission: true, lockURL: lock, durabilityRoot: root)
+        var progress = original
+        let bytes = Data("advanced checkpoint".utf8)
+        try progress.publish(bytes, to: destination, freshAdmission: false,
+            lockURL: lock, durabilityRoot: root)
+        XCTAssertNoThrow(try original.validateGeneration())
+        try FileManager.default.removeItem(at: job)
+        try FileManager.default.createDirectory(at: job, withIntermediateDirectories: false)
+        var replacement = AppleExportJournalCheckpoint()
+        try replacement.publish(bytes, to: destination, freshAdmission: true,
+            lockURL: lock, durabilityRoot: root)
+        XCTAssertThrowsError(try original.validateGeneration()) {
+            XCTAssertEqual(($0 as? POSIXError)?.code, .EAGAIN)
+        }
+        XCTAssertNoThrow(try replacement.validateGeneration())
+        XCTAssertEqual(try Data(contentsOf: destination), bytes)
+    }
+
+    func testContinuationCannotRecreateMissingJobOrUseUnboundReceipt() throws {
+        let root = try makeTemporaryDirectory()
+        let job = root.appendingPathComponent("job")
+        try FileManager.default.createDirectory(at: job, withIntermediateDirectories: false)
+        let destination = job.appendingPathComponent("journal.json")
+        var checkpoint = AppleExportJournalCheckpoint()
+        try checkpoint.publish(Data("owned checkpoint".utf8), to: destination,
+            freshAdmission: true, lockURL: root.appendingPathComponent(".publication.lock"), durabilityRoot: root)
+        try FileManager.default.removeItem(at: job)
+        XCTAssertThrowsError(try checkpoint.validateGeneration())
+        XCTAssertFalse(FileManager.default.fileExists(atPath: job.path))
+        let unbound = AppleExportJournalCheckpoint(bytes: checkpoint.bytes, generation: checkpoint.generation)
+        XCTAssertThrowsError(try unbound.validateGeneration())
+        XCTAssertFalse(FileManager.default.fileExists(atPath: job.path))
+    }
+
+    @MainActor
+    func testSuspendedReceiveRejectsReplacementBeforeReturningReply() async throws {
+        let root = try makeTemporaryDirectory()
+        let job = root.appendingPathComponent("job")
+        try FileManager.default.createDirectory(at: job, withIntermediateDirectories: false)
+        let destination = job.appendingPathComponent("journal.json")
+        let lock = root.appendingPathComponent(".publication.lock")
+        let bytes = Data("synthetic accepted authority".utf8)
+        var checkpoint = AppleExportJournalCheckpoint()
+        try checkpoint.publish(bytes, to: destination, freshAdmission: true,
+            lockURL: lock, durabilityRoot: root)
+        var consumedReply: Int?
+        do {
+            consumedReply = try await checkpoint.continueWhileOwned {
+                await Task.yield()
+                try FileManager.default.removeItem(at: job)
+                try FileManager.default.createDirectory(at: job, withIntermediateDirectories: false)
+                var replacement = AppleExportJournalCheckpoint()
+                try replacement.publish(bytes, to: destination, freshAdmission: true,
+                    lockURL: lock, durabilityRoot: root)
+                return 42
+            }
+            XCTFail("A superseded sender must not consume the pending reply")
+        } catch {
+            XCTAssertEqual(error as? AppleExportJournalCheckpoint.ContinuationError, .superseded)
+        }
+        XCTAssertNil(consumedReply)
+        XCTAssertEqual(try Data(contentsOf: destination), bytes)
+    }
+
+    @MainActor
+    func testOwnedSendSequenceStopsAfterReplacementButAllowsSameGenerationProgress() async throws {
+        for timing in ["before-send", "during-send", "same-generation-progress"] {
+            let root = try makeTemporaryDirectory()
+            let job = root.appendingPathComponent("job")
+            try FileManager.default.createDirectory(at: job, withIntermediateDirectories: false)
+            let destination = job.appendingPathComponent("journal.json")
+            let lock = root.appendingPathComponent(".publication.lock")
+            let bytes = Data("synthetic accepted authority".utf8)
+            var checkpoint = AppleExportJournalCheckpoint()
+            try checkpoint.publish(bytes, to: destination, freshAdmission: true,
+                lockURL: lock, durabilityRoot: root)
+            func replaceJob() throws {
+                try FileManager.default.removeItem(at: job)
+                try FileManager.default.createDirectory(at: job, withIntermediateDirectories: false)
+                var replacement = AppleExportJournalCheckpoint()
+                try replacement.publish(bytes, to: destination, freshAdmission: true,
+                    lockURL: lock, durabilityRoot: root)
+            }
+            if timing == "before-send" { try replaceJob() }
+            var frames: [String] = []
+            do {
+                try await checkpoint.continueWhileOwned {
+                    frames.append("session")
+                    await Task.yield()
+                    if timing == "during-send" { try replaceJob() }
+                    if timing == "same-generation-progress" {
+                        var progress = checkpoint
+                        try progress.publish(Data("advanced progress".utf8), to: destination,
+                            freshAdmission: false, lockURL: lock, durabilityRoot: root)
+                    }
+                }
+                try await checkpoint.continueWhileOwned { frames.append("manifest") }
+                XCTAssertEqual(timing, "same-generation-progress")
+            } catch {
+                XCTAssertNotEqual(timing, "same-generation-progress")
+                XCTAssertEqual(error as? AppleExportJournalCheckpoint.ContinuationError, .superseded)
+            }
+            switch timing {
+            case "before-send": XCTAssertEqual(frames, [])
+            case "during-send": XCTAssertEqual(frames, ["session"])
+            default: XCTAssertEqual(frames, ["session", "manifest"])
+            }
+            XCTAssertEqual(try Data(contentsOf: destination),
+                timing == "same-generation-progress" ? Data("advanced progress".utf8) : bytes)
+        }
+    }
+
+    private enum SimulatedReceiveError: Error, Equatable { case disconnected }
+
+    @MainActor
+    func testReceiveFailureRevalidatesOwnershipAndPreservesOwnedTransportErrors() async throws {
+        for replaceDuringReceive in [false, true] {
+            let root = try makeTemporaryDirectory()
+            let job = root.appendingPathComponent("job")
+            try FileManager.default.createDirectory(at: job, withIntermediateDirectories: false)
+            let destination = job.appendingPathComponent("journal.json")
+            let lock = root.appendingPathComponent(".publication.lock")
+            let bytes = Data("synthetic accepted authority".utf8)
+            var checkpoint = AppleExportJournalCheckpoint()
+            try checkpoint.publish(bytes, to: destination, freshAdmission: true,
+                lockURL: lock, durabilityRoot: root)
+            do {
+                let _: Int = try await checkpoint.continueWhileOwned {
+                    await Task.yield()
+                    if replaceDuringReceive {
+                        try FileManager.default.removeItem(at: job)
+                        try FileManager.default.createDirectory(at: job, withIntermediateDirectories: false)
+                        var replacement = AppleExportJournalCheckpoint()
+                        try replacement.publish(bytes, to: destination, freshAdmission: true,
+                            lockURL: lock, durabilityRoot: root)
+                    }
+                    throw SimulatedReceiveError.disconnected
+                }
+                XCTFail("The receive failed")
+            } catch {
+                if replaceDuringReceive {
+                    XCTAssertEqual(error as? AppleExportJournalCheckpoint.ContinuationError, .superseded)
+                } else {
+                    XCTAssertEqual(error as? SimulatedReceiveError, .disconnected)
+                }
+            }
+            XCTAssertEqual(try Data(contentsOf: destination), bytes)
+        }
+    }
+
+    func testErrorCleanupHoldsOriginalGenerationThroughProgressMutation() throws {
+        let root = try makeTemporaryDirectory()
+        let job = root.appendingPathComponent("job")
+        try FileManager.default.createDirectory(at: job, withIntermediateDirectories: false)
+        let destination = job.appendingPathComponent("journal.json")
+        let lock = root.appendingPathComponent(".publication.lock")
+        var execution = AppleExportJournalCheckpoint()
+        try execution.publish(Data("accepted".utf8), to: destination,
+            freshAdmission: true, lockURL: lock, durabilityRoot: root)
+        var progress = execution
+        try progress.publish(Data("captured".utf8), to: destination,
+            freshAdmission: false, lockURL: lock, durabilityRoot: root)
+        try execution.withGenerationOwnership {
+            let descriptor = Darwin.open(lock.path, O_RDWR)
+            guard descriptor >= 0 else { throw POSIXError(.EIO) }
+            defer { Darwin.close(descriptor) }
+            let result = flock(descriptor, LOCK_EX | LOCK_NB)
+            let observedError = errno
+            if result == 0 { _ = flock(descriptor, LOCK_UN) }
+            XCTAssertEqual(result, -1)
+            XCTAssertEqual(observedError, EWOULDBLOCK)
+            XCTAssertEqual(try Data(contentsOf: destination), Data("captured".utf8))
+            // A loaded checkpoint may advance within this execution's generation.
+            try progress.publish(Data("paused".utf8), to: destination,
+                freshAdmission: false, lockURL: lock, durabilityRoot: root)
+        }
+        XCTAssertEqual(try Data(contentsOf: destination), Data("paused".utf8))
+        try FileManager.default.removeItem(at: job)
+        try FileManager.default.createDirectory(at: job, withIntermediateDirectories: false)
+        var replacement = AppleExportJournalCheckpoint()
+        let replacementBytes = Data("paused".utf8)
+        try replacement.publish(replacementBytes, to: destination,
+            freshAdmission: true, lockURL: lock, durabilityRoot: root)
+        var cleanupCalled = false
+        XCTAssertThrowsError(try execution.withGenerationOwnership {
+            cleanupCalled = true
+            try replacement.publish(Data("stale pause".utf8), to: destination,
+                freshAdmission: false, lockURL: lock, durabilityRoot: root)
+        }) {
+            XCTAssertEqual(($0 as? POSIXError)?.code, .EAGAIN)
+        }
+        XCTAssertFalse(cleanupCalled)
+        XCTAssertEqual(try Data(contentsOf: destination), replacementBytes)
+    }
+
+    func testTransportAuthorizationHoldsOSLockAndRejectsReplacement() throws {
+        let root = try makeTemporaryDirectory()
+        let job = root.appendingPathComponent("job")
+        try FileManager.default.createDirectory(at: job, withIntermediateDirectories: false)
+        let destination = job.appendingPathComponent("journal.json")
+        let lock = root.appendingPathComponent(".publication.lock")
+        let bytes = Data("synthetic accepted authority".utf8)
+        var checkpoint = AppleExportJournalCheckpoint()
+        try checkpoint.publish(bytes, to: destination, freshAdmission: true,
+            lockURL: lock, durabilityRoot: root)
+        let descriptor = Darwin.open(lock.path, O_RDWR)
+        guard descriptor >= 0 else { throw POSIXError(.EIO) }
+        defer { Darwin.close(descriptor) }
+        let authorization = checkpoint.sendAuthorization
+        let lease = try authorization.acquireLease()
+        let heldProbe = flock(descriptor, LOCK_EX | LOCK_NB)
+        let heldError = errno
+        if heldProbe == 0 { _ = flock(descriptor, LOCK_UN) }
+        XCTAssertEqual(heldProbe, -1)
+        XCTAssertEqual(heldError, EWOULDBLOCK)
+        lease.close()
+        XCTAssertEqual(flock(descriptor, LOCK_EX | LOCK_NB), 0)
+        _ = flock(descriptor, LOCK_UN)
+        try FileManager.default.removeItem(at: job)
+        try FileManager.default.createDirectory(at: job, withIntermediateDirectories: false)
+        var replacement = AppleExportJournalCheckpoint()
+        try replacement.publish(bytes, to: destination, freshAdmission: true,
+            lockURL: lock, durabilityRoot: root)
+        XCTAssertThrowsError(try authorization.acquireLease())
+        let current = try replacement.sendAuthorization.acquireLease()
+        current.close()
+        XCTAssertEqual(try Data(contentsOf: destination), bytes)
+    }
+
     func testTemporaryFileURL_usesSameDirectoryAndHiddenUniqueName() {
         let destination = URL(fileURLWithPath: "/tmp/Health.md Export.md")
         let uuid = UUID(uuidString: "12345678-1234-1234-1234-1234567890AB")!
@@ -484,6 +748,145 @@ final class AtomicFileWriterTests: XCTestCase {
         XCTAssertThrowsError(try AtomicFileWriter.writeString("content", to: destinationDirectory))
         XCTAssertEqual(try temporaryFiles(in: directory), [])
         XCTAssertTrue(FileManager.default.fileExists(atPath: destinationDirectory.path))
+    }
+
+    func testRequireAbsentPublishesOnceAndRetainsExistingBytes() throws {
+        let directory = try makeTemporaryDirectory()
+        let destination = directory.appendingPathComponent("journal.json")
+        let original = Data("accepted-authority".utf8)
+        try AtomicFileWriter.writeData(original, to: destination, attributes: [.posixPermissions: 0o600], commitPolicy: .requireAbsent)
+        XCTAssertThrowsError(try AtomicFileWriter.writeData(Data("replacement-authority".utf8), to: destination, commitPolicy: .requireAbsent)) {
+            XCTAssertEqual(($0 as? POSIXError)?.code, .EEXIST)
+        }
+        XCTAssertEqual(try Data(contentsOf: destination), original)
+        XCTAssertEqual(try temporaryFiles(in: directory), [])
+        let permissions = try FileManager.default.attributesOfItem(atPath: destination.path)[.posixPermissions] as? NSNumber
+        XCTAssertEqual(permissions?.intValue, 0o600)
+    }
+
+    func testRequireAbsentRejectsWinnerInstalledImmediatelyBeforePublication() throws {
+        let directory = try makeTemporaryDirectory()
+        let destination = directory.appendingPathComponent("journal.json")
+        let winner = Data("competing-accepted-authority".utf8)
+        XCTAssertThrowsError(try AtomicFileWriter.writeFile(to: destination, commitPolicy: .requireAbsent,
+            beforeCommit: { try winner.write(to: destination, options: .atomic) },
+            producer: { try Data("losing-authority".utf8).write(to: $0) })) {
+            XCTAssertEqual(($0 as? POSIXError)?.code, .EEXIST)
+        }
+        XCTAssertEqual(try Data(contentsOf: destination), winner)
+        XCTAssertEqual(try temporaryFiles(in: directory), [])
+    }
+
+    func testRequireAbsentRetainsSymbolicLinkAndTarget() throws {
+        let directory = try makeTemporaryDirectory()
+        let destination = directory.appendingPathComponent("journal.json")
+        let target = directory.appendingPathComponent("retained-source.json")
+        let original = Data("retained-source-authority".utf8)
+        try original.write(to: target)
+        try FileManager.default.createSymbolicLink(at: destination, withDestinationURL: target)
+        XCTAssertThrowsError(try AtomicFileWriter.writeData(Data("replacement".utf8), to: destination, commitPolicy: .requireAbsent)) {
+            XCTAssertEqual(($0 as? POSIXError)?.code, .EEXIST)
+        }
+        XCTAssertEqual(try Data(contentsOf: target), original)
+        XCTAssertEqual(try FileManager.default.attributesOfItem(atPath: destination.path)[.type] as? FileAttributeType, .typeSymbolicLink)
+        XCTAssertEqual(try temporaryFiles(in: directory), [])
+    }
+
+    func testRequiredDirectoryFailureDoesNotAcknowledgePublishedJournal() throws {
+        let directory = try makeTemporaryDirectory()
+        let destination = directory.appendingPathComponent("journal.json")
+        let authority = Data("accepted-durable-authority".utf8)
+        var synchronized: [URL] = []
+        XCTAssertThrowsError(try AtomicFileWriter.writeData(
+            authority, to: destination, commitPolicy: .requireAbsent,
+            directoryDurability: .required(upTo: directory),
+            directorySync: { synchronized.append($0); throw POSIXError(.EIO) }
+        )) { XCTAssertEqual(($0 as? POSIXError)?.code, .EIO) }
+        XCTAssertEqual(synchronized.map(\.path), [directory.path])
+        XCTAssertEqual(try Data(contentsOf: destination), authority)
+        XCTAssertEqual(try temporaryFiles(in: directory), [])
+    }
+
+    func testRequiredDirectorySyncCoversNestedAuthorityParentsInOrder() throws {
+        let root = try makeTemporaryDirectory()
+        let first = root.appendingPathComponent("jobs", isDirectory: true)
+        let leaf = first.appendingPathComponent("synthetic-job", isDirectory: true)
+        try FileManager.default.createDirectory(at: leaf, withIntermediateDirectories: true)
+        let destination = leaf.appendingPathComponent("journal.json")
+        var synchronized: [URL] = []
+        try AtomicFileWriter.writeData(Data("authority".utf8), to: destination,
+            directoryDurability: .required(upTo: root), directorySync: {
+                synchronized.append($0)
+                try AtomicFileWriter.synchronizeDirectory($0)
+            })
+        XCTAssertEqual(synchronized.map(\.path), [leaf.path, first.path, root.path])
+        synchronized.removeAll()
+        XCTAssertThrowsError(try AtomicFileWriter.writeData(Data("checkpoint".utf8), to: destination,
+            directoryDurability: .required(upTo: root), directorySync: {
+                synchronized.append($0)
+                if $0.path == first.path { throw POSIXError(.EIO) }
+                try AtomicFileWriter.synchronizeDirectory($0)
+            }))
+        XCTAssertEqual(synchronized.map(\.path), [leaf.path, first.path])
+        XCTAssertEqual(try String(contentsOf: destination, encoding: .utf8), "checkpoint")
+        XCTAssertEqual(try temporaryFiles(in: leaf), [])
+    }
+
+    func testRequiredDirectoryRootMustContainDestinationBeforeProducerRuns() throws {
+        let root = try makeTemporaryDirectory()
+        let unrelated = root.appendingPathComponent("unrelated", isDirectory: true)
+        let destination = root.appendingPathComponent("journal.json")
+        var produced = false
+        XCTAssertThrowsError(try AtomicFileWriter.writeFile(to: destination,
+            directoryDurability: .required(upTo: unrelated), producer: { _ in produced = true }))
+        XCTAssertFalse(produced)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: destination.path))
+        XCTAssertEqual(try temporaryFiles(in: root), [])
+    }
+
+    func testValueOwnedCheckpointCopiesCannotRefreshStaleReadAuthority() throws {
+        let root = try makeTemporaryDirectory()
+        let destination = root.appendingPathComponent("journal.json")
+        let lock = root.appendingPathComponent(".publication.lock")
+        let original = Data("accepted-authority".utf8)
+        var stale = AppleExportJournalCheckpoint()
+        try stale.publish(original, to: destination, freshAdmission: true, lockURL: lock, durabilityRoot: root)
+        var independent = stale
+        let paused = Data("independent-paused-checkpoint".utf8)
+        try independent.publish(paused, to: destination, freshAdmission: false, lockURL: lock, durabilityRoot: root)
+        XCTAssertEqual(independent.bytes, paused)
+        XCTAssertEqual(stale.bytes, original)
+        XCTAssertThrowsError(try stale.publish(Data("stale-progress".utf8), to: destination,
+            freshAdmission: false, lockURL: lock, durabilityRoot: root)) {
+            XCTAssertEqual(($0 as? POSIXError)?.code, .EAGAIN)
+        }
+        XCTAssertEqual(try Data(contentsOf: destination), paused)
+        XCTAssertEqual(stale.bytes, original)
+        var resumed = AppleExportJournalCheckpoint(bytes: try Data(contentsOf: destination),
+            generation: independent.generation, completionIdentity: independent.completionIdentity)
+        let completed = Data("resumed-completion".utf8)
+        try resumed.publish(completed, to: destination, freshAdmission: false, lockURL: lock, durabilityRoot: root)
+        XCTAssertEqual(resumed.bytes, completed)
+        XCTAssertEqual(try Data(contentsOf: destination), completed)
+        XCTAssertEqual(try temporaryFiles(in: root), [])
+    }
+
+    func testCheckpointWithoutReadReceiptCannotCreateOrReplaceAcceptedWork() throws {
+        let root = try makeTemporaryDirectory()
+        let destination = root.appendingPathComponent("journal.json")
+        let lock = root.appendingPathComponent(".publication.lock")
+        let authority = Data("retained-authority".utf8)
+        try authority.write(to: destination)
+        var unowned = AppleExportJournalCheckpoint()
+        XCTAssertThrowsError(try unowned.publish(Data("unowned".utf8), to: destination,
+            freshAdmission: false, lockURL: lock, durabilityRoot: root))
+        XCTAssertNil(unowned.bytes)
+        XCTAssertEqual(try Data(contentsOf: destination), authority)
+        try FileManager.default.removeItem(at: destination)
+        XCTAssertThrowsError(try unowned.publish(Data("unowned".utf8), to: destination,
+            freshAdmission: false, lockURL: lock, durabilityRoot: root))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: destination.path))
+        XCTAssertEqual(try temporaryFiles(in: root), [])
     }
 
     private func makeTemporaryDirectory() throws -> URL {
@@ -581,3 +984,437 @@ final class ProductionAdapterTests: XCTestCase {
         // Compile-time conformance check
     }
 }
+
+
+#if os(iOS)
+final class DirectCoordinatorAdmissionTests: XCTestCase {
+    @MainActor
+    func testCancellationAcknowledgementRejectsFinishedPreparationAndReplacedJournalWithoutSequenceGap() async throws {
+        let key = SymmetricKey(data: Data(repeating: 0x42, count: 32))
+        let transport = CancellationAcknowledgementTransport()
+        let sender = DirectSecureChannel(packetConnection: transport, sessionKey: key,
+            peerInstallationID: UUID(), peerDisplayName: "synthetic")
+        let receiver = DirectSecureChannel(packetConnection: transport, sessionKey: key,
+            peerInstallationID: UUID(), peerDisplayName: "synthetic")
+        let original = IPhoneDirectCancellationInvocation(jobID: UUID())
+        original.cancel()
+        let preparationReceipt = IPhoneDirectCancellationReceipt(invocation: original)
+        try await preparationReceipt.sendAcknowledgement(on: sender)
+        guard case .message(.cancelAcknowledged(let firstID)) = try await receiver.receive() else {
+            return XCTFail("Current preparation must publish its acknowledgement")
+        }
+        XCTAssertEqual(firstID, original.jobID)
+        original.finish()
+        do {
+            try await preparationReceipt.sendAcknowledgement(on: sender)
+            XCTFail("Finished preparation must reject its acknowledgement before enqueue")
+        } catch {}
+        XCTAssertEqual(transport.packetCount, 0)
+
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let job = root.appendingPathComponent("job")
+        try FileManager.default.createDirectory(at: job, withIntermediateDirectories: false)
+        let destination = job.appendingPathComponent("journal.json")
+        let lock = root.appendingPathComponent(".publication.lock")
+        let bytes = Data("synthetic cancelled authority".utf8)
+        var old = AppleExportJournalCheckpoint()
+        try old.publish(bytes, to: destination, freshAdmission: true, lockURL: lock, durabilityRoot: root)
+        let durableReceipt = IPhoneDirectCancellationReceipt(jobID: UUID(), ownership: old)
+        try FileManager.default.removeItem(at: job)
+        try FileManager.default.createDirectory(at: job, withIntermediateDirectories: false)
+        var replacement = AppleExportJournalCheckpoint()
+        try replacement.publish(bytes, to: destination, freshAdmission: true, lockURL: lock, durabilityRoot: root)
+        do {
+            try await durableReceipt.sendAcknowledgement(on: sender)
+            XCTFail("Replacement must reject the old durable acknowledgement before enqueue")
+        } catch {}
+        XCTAssertEqual(transport.packetCount, 0)
+        let currentID = UUID()
+        let current = IPhoneDirectCancellationReceipt(jobID: currentID, ownership: replacement)
+        try await current.sendAcknowledgement(on: sender)
+        guard case .message(.cancelAcknowledged(let receivedID)) = try await receiver.receive() else {
+            return XCTFail("Current owner must send without a secure sequence gap")
+        }
+        XCTAssertEqual(receivedID, currentID)
+        XCTAssertEqual(transport.packetCount, 0)
+        XCTAssertEqual(try Data(contentsOf: destination), bytes)
+        let acceptedReceipt = IPhoneDirectCancellationReceipt(jobID: currentID, ownership: replacement)
+        try replacement.publish(Data("same-generation changed checkpoint".utf8), to: destination,
+            freshAdmission: false, lockURL: lock, durabilityRoot: root)
+        do {
+            try await acceptedReceipt.sendAcknowledgement(on: sender)
+            XCTFail("Changed cancellation checkpoint must reject before packet creation")
+        } catch {}
+        XCTAssertEqual(transport.packetCount, 0)
+        let refreshedReceipt = IPhoneDirectCancellationReceipt(jobID: currentID, ownership: replacement)
+        try await refreshedReceipt.sendAcknowledgement(on: sender)
+        guard case .message(.cancelAcknowledged(let refreshedID)) = try await receiver.receive() else {
+            return XCTFail("Current checkpoint must preserve secure sequence after rejected acknowledgement")
+        }
+        XCTAssertEqual(refreshedID, currentID)
+        XCTAssertEqual(transport.packetCount, 0)
+    }
+
+    @MainActor
+    func testCancelledPreparationDoesNotPoisonNextActualSameIDInvocation() async throws {
+        let suite = "synthetic-cancellation-invocation-" + UUID().uuidString
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let healthStore = FakeHealthStore()
+        let healthKit = HealthKitManager(store: healthStore, userDefaults: defaults)
+        let coordinator = IPhoneDirectExportCoordinator()
+        let authority = AppleDirectProtocolAuthority(defaultMode: .legacy)
+        let jobID = UUID()
+        let support = try FileManager.default.url(for: .applicationSupportDirectory,
+            in: .userDomainMask, appropriateFor: nil, create: true)
+        let ownedJob = support.appendingPathComponent("Health.md/DirectCLIOutbound/v1/" + jobID.uuidString.lowercased())
+        guard !FileManager.default.fileExists(atPath: ownedJob.path) else {
+            XCTFail("Synthetic job must start without retained files")
+            return
+        }
+        defer {
+            try? FileManager.default.removeItem(at: ownedJob)
+            CLIExportActivityTracker.shared.clear(jobID: jobID)
+        }
+        let request = DirectExportRequest(protocolVersion: -1, jobID: jobID, createdAt: Date(),
+            dateSelection: .exact(start: "2026-10-08", end: "2026-10-08"),
+            responseMode: .rawJSON, rawProfile: .canonicalSourceRecordsV1)
+        let binding = DirectPeerBinding(sourceInstallationID: UUID(), destinationInstallationID: UUID())
+        let negotiation = try XCTUnwrap(DirectTransferCapabilities.current.negotiated(with: .current))
+        func invoke(_ transport: DirectAdmissionPacketTransport) async {
+            let connection = IPhoneDirectExportConnection(channel: DirectSecureChannel(packetConnection: transport,
+                sessionKey: SymmetricKey(data: Data(repeating: 0x42, count: 32)),
+                peerInstallationID: binding.destinationInstallationID, peerDisplayName: "synthetic"))
+            await coordinator.handle(request, peerBinding: binding, negotiation: negotiation,
+                channel: connection, protocolAuthority: authority, healthKitManager: healthKit)
+        }
+        let firstTransport = DirectAdmissionPacketTransport(blockSend: true)
+        let first = Task { await invoke(firstTransport) }
+        defer { first.cancel(); Task { await firstTransport.gate.release() } }
+        let deadline = ContinuousClock.now.advanced(by: .seconds(5))
+        while !(await firstTransport.gate.isBlocked), ContinuousClock.now < deadline {
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        guard await firstTransport.gate.isBlocked else {
+            await firstTransport.gate.release()
+            await first.value
+            XCTFail("Synthetic invocation must reach held rejection before cancellation")
+            return
+        }
+        let capturedOriginal = await firstTransport.gate.invocation
+        let original = try XCTUnwrap(capturedOriginal)
+        let activityAdmission = CLIExportActivityTracker.shared.admissionID
+        XCTAssertEqual(activityAdmission, original.activityAdmissionID)
+        XCTAssertTrue(coordinator.cancel(jobID: jobID))
+        XCTAssertTrue(original.isCancelled)
+        XCTAssertEqual(CLIExportActivityTracker.shared.admissionID, activityAdmission)
+        XCTAssertEqual(CLIExportActivityTracker.shared.snapshot?.message,
+            "Cancelling the direct CLI export…",
+            "An active invocation must still update its own cancellation activity")
+        await firstTransport.gate.release()
+        await first.value
+        XCTAssertNil(coordinator.currentJobID)
+        let nextTransport = DirectAdmissionPacketTransport(blockSend: false)
+        await invoke(nextTransport)
+        let capturedNext = await nextTransport.gate.invocation
+        let next = try XCTUnwrap(capturedNext)
+        XCTAssertFalse(original === next)
+        XCTAssertFalse(next.isCancelled)
+        XCTAssertTrue(original.isCancelled)
+        XCTAssertFalse(healthStore.authRequested)
+        XCTAssertTrue(healthStore.requestedReadTypes.isEmpty)
+    }
+
+    @MainActor
+    func testCancellationScopeIsInheritedButDoesNotPoisonSameIDReplacement() async {
+        let jobID = UUID()
+        let original = IPhoneDirectCancellationInvocation(jobID: jobID)
+        original.cancel()
+        await IPhoneDirectCancellationScope.$current.withValue(original) {
+            XCTAssertTrue(IPhoneDirectCancellationScope.isCancelled(jobID: jobID))
+            let inherited = await Task { IPhoneDirectCancellationScope.isCancelled(jobID: jobID) }.value
+            XCTAssertTrue(inherited)
+            XCTAssertFalse(IPhoneDirectCancellationScope.isCancelled(jobID: UUID()))
+        }
+        let replacement = IPhoneDirectCancellationInvocation(jobID: jobID)
+        await IPhoneDirectCancellationScope.$current.withValue(replacement) {
+            XCTAssertFalse(IPhoneDirectCancellationScope.isCancelled(jobID: jobID))
+            let inherited = await Task { IPhoneDirectCancellationScope.isCancelled(jobID: jobID) }.value
+            XCTAssertFalse(inherited)
+        }
+        XCTAssertFalse(IPhoneDirectCancellationScope.isCancelled(jobID: jobID))
+        XCTAssertTrue(original.isCancelled)
+    }
+
+    @MainActor
+    func testCancellationCommitDoesNotSignalOnPersistenceFailureOrReplacement() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let job = root.appendingPathComponent("job")
+        try FileManager.default.createDirectory(at: job, withIntermediateDirectories: false)
+        let destination = job.appendingPathComponent("journal.json")
+        let lock = root.appendingPathComponent(".publication.lock")
+        let bytes = Data("synthetic accepted authority".utf8)
+        var checkpoint = AppleExportJournalCheckpoint()
+        try checkpoint.publish(bytes, to: destination, freshAdmission: true, lockURL: lock, durabilityRoot: root)
+        var signals = 0
+        XCTAssertThrowsError(try checkpoint.commitCancellation(operation: {
+            throw POSIXError(.EIO)
+        }, onCommitted: { signals += 1 }))
+        XCTAssertEqual(signals, 0)
+        XCTAssertEqual(try Data(contentsOf: destination), bytes)
+        let admitted = checkpoint
+        try admitted.commitCancellation(operation: {
+            try checkpoint.publish(Data("cancelled".utf8), to: destination,
+                freshAdmission: false, lockURL: lock, durabilityRoot: root)
+        }, onCommitted: { signals += 1 })
+        XCTAssertEqual(signals, 1)
+        XCTAssertEqual(try Data(contentsOf: destination), Data("cancelled".utf8))
+        try FileManager.default.removeItem(at: job)
+        try FileManager.default.createDirectory(at: job, withIntermediateDirectories: false)
+        var replacement = AppleExportJournalCheckpoint()
+        try replacement.publish(bytes, to: destination, freshAdmission: true, lockURL: lock, durabilityRoot: root)
+        var writes = 0
+        XCTAssertThrowsError(try admitted.commitCancellation(operation: { writes += 1 },
+            onCommitted: { signals += 1 }))
+        XCTAssertEqual(writes, 0)
+        XCTAssertEqual(signals, 1)
+        XCTAssertEqual(try Data(contentsOf: destination), bytes)
+    }
+
+    @MainActor
+    func testAcceptedGenerationRetainsQueryBudgetButReplacementGetsFreshController() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let job = root.appendingPathComponent("job")
+        try FileManager.default.createDirectory(at: job, withIntermediateDirectories: false)
+        let destination = job.appendingPathComponent("journal.json")
+        let lock = root.appendingPathComponent(".publication.lock")
+        let bytes = Data("synthetic accepted authority".utf8)
+        var accepted = AppleExportJournalCheckpoint()
+        try accepted.publish(bytes, to: destination, freshAdmission: true, lockURL: lock, durabilityRoot: root)
+        let original = accepted
+        let coordinator = IPhoneDirectExportCoordinator()
+        let jobID = UUID()
+        let configuration = HealthKitQueryExecutionConfiguration(deadline: .milliseconds(20),
+            slowQueryThreshold: .milliseconds(10), maximumOutstandingQueries: 1)
+        let controller = try coordinator.queryControllerForAcceptedGeneration(jobID: jobID,
+            ownership: accepted, fallback: HealthKitQueryExecutionController(configuration: configuration))
+        let heldWorker = DirectAdmissionSendGate()
+        defer { Task { await heldWorker.release() } }
+        do {
+            _ = try await HealthKitQueryExecutionController.withController(controller) {
+                try await executeHealthKitQuery(operation: "synthetic-generation-query", typeIdentifier: "synthetic") {
+                    await heldWorker.block()
+                    return 1
+                }
+            }
+            XCTFail("Expected the physically held query to time out")
+        } catch {
+            XCTAssertEqual((error as NSError).code, HealthKitQueryExecutionError.Code.timedOut.rawValue)
+        }
+        try accepted.publish(Data("same-generation progress".utf8), to: destination,
+            freshAdmission: false, lockURL: lock, durabilityRoot: root)
+        let resumed = try coordinator.queryControllerForAcceptedGeneration(jobID: jobID,
+            ownership: accepted, fallback: HealthKitQueryExecutionController())
+        XCTAssertTrue(resumed === controller)
+        XCTAssertEqual(resumed.snapshot().unresolvedQueries, 1)
+        try FileManager.default.removeItem(at: job)
+        try FileManager.default.createDirectory(at: job, withIntermediateDirectories: false)
+        var replacement = AppleExportJournalCheckpoint()
+        try replacement.publish(bytes, to: destination, freshAdmission: true, lockURL: lock, durabilityRoot: root)
+        let fresh = try coordinator.queryControllerForAcceptedGeneration(jobID: jobID,
+            ownership: replacement, fallback: HealthKitQueryExecutionController())
+        XCTAssertFalse(fresh === controller)
+        XCTAssertEqual(fresh.snapshot().unresolvedQueries, 0)
+        do {
+            let result = try await HealthKitQueryExecutionController.withController(fresh) {
+                try await executeHealthKitQuery(operation: "synthetic-generation-query", typeIdentifier: "synthetic") { 7 }
+            }
+            XCTAssertEqual(result, 7)
+        } catch {
+            XCTFail("A replacement must not inherit the old query circuit: \(error)")
+        }
+        coordinator.releaseQueryController(jobID: jobID, controller: controller)
+        let retained = try coordinator.queryControllerForAcceptedGeneration(jobID: jobID,
+            ownership: replacement, fallback: HealthKitQueryExecutionController())
+        XCTAssertTrue(retained === fresh, "Old cleanup cannot remove the replacement controller")
+        XCTAssertThrowsError(try coordinator.queryControllerForAcceptedGeneration(jobID: jobID,
+            ownership: original, fallback: HealthKitQueryExecutionController()))
+        XCTAssertEqual(try Data(contentsOf: destination), bytes)
+        await heldWorker.release()
+    }
+
+    @MainActor
+    func testReplacedGenerationCannotPublishTerminalActivityButCurrentProgressCanFinish() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let job = root.appendingPathComponent("job")
+        try FileManager.default.createDirectory(at: job, withIntermediateDirectories: false)
+        let destination = job.appendingPathComponent("journal.json")
+        let lock = root.appendingPathComponent(".publication.lock")
+        let bytes = Data("synthetic accepted authority".utf8)
+        var old = AppleExportJournalCheckpoint()
+        try old.publish(bytes, to: destination, freshAdmission: true, lockURL: lock, durabilityRoot: root)
+        try FileManager.default.removeItem(at: job)
+        try FileManager.default.createDirectory(at: job, withIntermediateDirectories: false)
+        var replacement = AppleExportJournalCheckpoint()
+        try replacement.publish(bytes, to: destination, freshAdmission: true, lockURL: lock, durabilityRoot: root)
+        let coordinator = IPhoneDirectExportCoordinator()
+        let jobID = UUID()
+        let tracker = CLIExportActivityTracker.shared
+        defer { tracker.clear(jobID: jobID) }
+        tracker.begin(jobID: jobID, source: .direct, totalDays: 2, message: "Replacement capture")
+        let admitted = tracker.snapshot
+        for phase in [CLIExportActivityTracker.Phase.failed, .cancelled, .completed, .paused] {
+            XCTAssertFalse(coordinator.publishActivityOutcome(jobID: jobID, ownership: old,
+                phase: phase, message: "Stale callback"))
+            XCTAssertEqual(tracker.snapshot, admitted)
+        }
+        XCTAssertEqual(try Data(contentsOf: destination), bytes)
+        let accepted = replacement
+        try replacement.publish(Data("same-generation progress".utf8), to: destination,
+            freshAdmission: false, lockURL: lock, durabilityRoot: root)
+        XCTAssertTrue(coordinator.publishActivityOutcome(jobID: jobID, ownership: accepted,
+            phase: .completed, message: "Current completion"))
+        XCTAssertEqual(tracker.snapshot?.phase, .completed)
+        XCTAssertEqual(tracker.snapshot?.message, "Current completion")
+    }
+
+    @MainActor
+    func testRejectedSameIDRequestDoesNotReleaseTheAdmittedOperation() async throws {
+        let suite = "synthetic-direct-admission-" + UUID().uuidString
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let healthStore = FakeHealthStore()
+        let healthKit = HealthKitManager(store: healthStore, userDefaults: defaults)
+        let coordinator = IPhoneDirectExportCoordinator()
+        let authority = AppleDirectProtocolAuthority(defaultMode: .shadow)
+        let jobID = UUID()
+        defer { CLIExportActivityTracker.shared.clear(jobID: jobID) }
+        let request = DirectExportRequest(protocolVersion: -1, jobID: jobID, createdAt: Date(),
+            dateSelection: .exact(start: "2026-10-08", end: "2026-10-08"),
+            responseMode: .rawJSON, rawProfile: .canonicalSourceRecordsV1)
+        let binding = DirectPeerBinding(sourceInstallationID: UUID(), destinationInstallationID: UUID())
+        let negotiation = try XCTUnwrap(DirectTransferCapabilities.current.negotiated(with: .current))
+        let firstTransport = DirectAdmissionPacketTransport(blockSend: true)
+        let secondTransport = DirectAdmissionPacketTransport(blockSend: false)
+        func connection(_ transport: DirectAdmissionPacketTransport) -> IPhoneDirectExportConnection {
+            IPhoneDirectExportConnection(channel: DirectSecureChannel(packetConnection: transport,
+                sessionKey: SymmetricKey(data: Data(repeating: 0x42, count: 32)),
+                peerInstallationID: binding.destinationInstallationID, peerDisplayName: "synthetic"))
+        }
+        let firstConnection = connection(firstTransport)
+        let first = Task {
+            await coordinator.handle(request, peerBinding: binding, negotiation: negotiation,
+                channel: firstConnection, protocolAuthority: authority, healthKitManager: healthKit)
+        }
+        let clock = ContinuousClock()
+        let deadline = clock.now.advanced(by: .seconds(5))
+        while !(await firstTransport.gate.isBlocked), clock.now < deadline {
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        guard await firstTransport.gate.isBlocked else {
+            first.cancel()
+            await firstTransport.gate.release()
+            await first.value
+            XCTFail("The first request must reach its rejection send without any health query")
+            return
+        }
+        XCTAssertEqual(coordinator.currentJobID, jobID)
+        let activity = CLIExportActivityTracker.shared.snapshot
+        XCTAssertNotNil(activity)
+        authority.beginBootstrap()
+        await coordinator.handle(request, peerBinding: binding, negotiation: negotiation,
+            channel: connection(secondTransport), protocolAuthority: authority, healthKitManager: healthKit)
+        XCTAssertEqual(coordinator.currentJobID, jobID, "Rejected admission cannot release an active same-ID job")
+        XCTAssertEqual(CLIExportActivityTracker.shared.snapshot, activity,
+            "Rejected admission cannot finish or replace the admitted activity")
+        _ = try authority.canonicalizeDirectMessage(Data("synthetic-native-protocol".utf8))
+        XCTAssertNil(authority.comparisonSnapshot().comparisons[.directMessage],
+            "Rejected admission cannot clear the active legacy bootstrap mode")
+        XCTAssertFalse(healthStore.authRequested)
+        XCTAssertTrue(healthStore.requestedReadTypes.isEmpty)
+        await firstTransport.gate.release()
+        await first.value
+        XCTAssertNil(coordinator.currentJobID)
+    }
+}
+
+nonisolated private final class DirectAdmissionPacketTransport: DirectPacketTransport, @unchecked Sendable {
+    let gate = DirectAdmissionSendGate()
+    private let blockSend: Bool
+    private let enqueueLock = NSLock()
+    private var submittedPackets: [ManualIPSyncPacket] = []
+    init(blockSend: Bool) { self.blockSend = blockSend }
+    func send(_ packet: ManualIPSyncPacket) async throws {
+        enqueueLock.withLock { submittedPackets.append(packet) }
+        await completeSend()
+    }
+    func send(authorizedBy authorization: DirectPacketSendAuthorization,
+              packet: @Sendable () throws -> ManualIPSyncPacket) async throws {
+        let lease = try authorization.acquireLease()
+        do {
+            let generated = try packet()
+            enqueueLock.withLock { submittedPackets.append(generated) }
+            lease.close()
+        } catch {
+            lease.close()
+            throw error
+        }
+        await completeSend()
+    }
+    private func completeSend() async {
+        await gate.capture(IPhoneDirectCancellationScope.current)
+        if blockSend { await gate.block() }
+    }
+    func receive() async throws -> ManualIPSyncPacket { throw DirectChannelError.connectionClosed }
+    func cancel() { Task { await gate.release() } }
+}
+
+private actor DirectAdmissionSendGate {
+    private(set) var invocation: IPhoneDirectCancellationInvocation?
+    func capture(_ invocation: IPhoneDirectCancellationInvocation?) { self.invocation = invocation }
+    private var continuation: CheckedContinuation<Void, Never>?
+    private var released = false
+    var isBlocked: Bool { continuation != nil }
+    func block() async {
+        guard !released else { return }
+        await withCheckedContinuation { continuation = $0 }
+    }
+    func release() {
+        released = true
+        let pending = continuation
+        continuation = nil
+        pending?.resume()
+    }
+}
+#endif
+
+#if os(iOS)
+nonisolated private final class CancellationAcknowledgementTransport: DirectPacketTransport, @unchecked Sendable {
+    private let lock = NSLock()
+    private var packets: [ManualIPSyncPacket] = []
+    var packetCount: Int { lock.withLock { packets.count } }
+    private func enqueue(_ packet: ManualIPSyncPacket) { lock.withLock { packets.append(packet) } }
+    func send(_ packet: ManualIPSyncPacket) async throws { enqueue(packet) }
+    func send(authorizedBy authorization: DirectPacketSendAuthorization,
+              packet: @Sendable () throws -> ManualIPSyncPacket) async throws {
+        let lease = try authorization.acquireLease()
+        defer { lease.close() }
+        enqueue(try packet())
+    }
+    func receive() async throws -> ManualIPSyncPacket {
+        try lock.withLock {
+            guard !packets.isEmpty else { throw DirectChannelError.connectionClosed }
+            return packets.removeFirst()
+        }
+    }
+    func cancel() {}
+}
+#endif

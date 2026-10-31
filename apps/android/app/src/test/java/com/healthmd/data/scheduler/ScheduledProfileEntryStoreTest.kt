@@ -55,6 +55,25 @@ class ScheduledProfileEntryStoreTest {
         assertThat(store.getEntries()).isEmpty()
     }
 
+    @Test
+    fun `corrupt private queue blocks writes without logging its contents`() = runTest {
+        val marker = "00000000-0000-4000-8000-000000000201"
+        val messages = mutableListOf<String>()
+        val tree = object : timber.log.Timber.Tree() {
+            override fun log(priority: Int, tag: String?, message: String, t: Throwable?) { messages += message }
+        }
+        timber.log.Timber.plant(tree)
+        try {
+            val corrupt = "{\"private_grant\":\"$marker\"}"
+            dataStore.edit { it[ENTRIES_KEY] = corrupt }
+            assertThat(store.getEntries()).isEmpty()
+            assertThat(store.upsert(entry("blocked"))).isFalse()
+            assertThat(dataStore.data.first()[ENTRIES_KEY]).isEqualTo(corrupt)
+            assertThat(messages).isNotEmpty()
+            assertThat(messages.any { marker in it || "private_grant" in it }).isFalse()
+        } finally { timber.log.Timber.uproot(tree) }
+    }
+
     @get:Rule
     val temporaryFolder = TemporaryFolder()
 

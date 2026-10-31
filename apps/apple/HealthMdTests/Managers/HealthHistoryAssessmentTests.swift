@@ -323,6 +323,52 @@ final class HealthHistoryAssessmentTests: XCTestCase {
         XCTAssertEqual(selection.scope.endDate, scope().endDate)
     }
 
+    func testFreshInteractiveCaptureDoesNotRecoverMissingDurableContext() throws {
+        let settings = AdvancedExportSettings(userDefaults: ExportSettingsSnapshot.makeTemporaryUserDefaults())
+        let selection = HealthHistoryExecutionSelection(scope: scope(),
+            settings: ExportSettingsSnapshot.from(settings, appleExportEngineAuthorityIsFrozen: false),
+            target: .localIPhoneFolder, preset: .today)
+        XCTAssertNil(selection.settings.sleepCaptureContext)
+        let capture = selection.makeCaptureSettings()
+        let context = try manager(FakeHealthStore()).resolveSleepCaptureContext(settings: capture)
+        XCTAssertEqual(context.timeZone.identifier, selection.scope.timeZoneIdentifier)
+    }
+
+    func testFreshCaptureRetainsOptionsAndSleepChoiceAcrossHistoryAssessment() async throws {
+        let sut = manager(FakeHealthStore())
+        for attribution in SleepDayAttribution.allCases {
+            for mode in WriteMode.allCases {
+                let live = AdvancedExportSettings(userDefaults: ExportSettingsSnapshot.makeTemporaryUserDefaults())
+                live.exportFormats = Set(ExportFormat.allCases)
+                live.writeMode = mode
+                live.archiveExportFiles = true
+                live.generateRangeSummary = true
+                live.individualTracking.globalEnabled = true
+                live.dailyNoteInjection.enabled = true
+                let snapshot = ExportSettingsSnapshot.from(live, healthSubfolder: "qa-output",
+                    appleExportEngineAuthorityIsFrozen: false)
+                let selection = HealthHistoryExecutionSelection(scope: scope(), settings: snapshot,
+                    target: .localIPhoneFolder, preset: .custom, sleepDayAttribution: attribution)
+                let opposite: SleepDayAttribution = attribution == .morningEnds ? .nightBegins : .morningEnds
+                sut.setSleepDayAttribution(opposite)
+                let changed = HealthHistoryExecutionSelection(scope: selection.scope, settings: snapshot,
+                    target: selection.target, preset: selection.preset, sleepDayAttribution: opposite)
+                XCTAssertNotEqual(selection, changed, "Changing sleep attribution invalidates the history selection")
+                let capture = selection.makeCaptureSettings()
+                let context = try sut.resolveSleepCaptureContext(settings: capture)
+                XCTAssertEqual(context.sleepDayAttribution, attribution)
+                XCTAssertEqual(context.timeZone.identifier, selection.scope.timeZoneIdentifier)
+                XCTAssertFalse(capture.executionSleepCaptureContextIsFrozen)
+                let copied = ExportSettingsSnapshot.from(capture, healthSubfolder: "qa-output",
+                    appleExportEngineAuthorityIsFrozen: false)
+                var expected = snapshot
+                expected.sleepCaptureContext = context
+                expected.calendarTimeZoneIdentifier = copied.calendarTimeZoneIdentifier
+                XCTAssertEqual(copied, expected, "Every existing export option survives the handoff")
+            }
+        }
+    }
+
     func testContinueUnverifiedIsNotAnEmptySuccessfulAssessmentOrFullHistory() {
         let store = FakeHealthStore()
         let sut = manager(store)

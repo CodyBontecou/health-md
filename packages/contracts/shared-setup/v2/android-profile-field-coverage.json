@@ -178,6 +178,14 @@
     },
     {
       "source_type": "AndroidExportSettingsSnapshot",
+      "serialized_field": "providerCaptureAuthority",
+      "coverage_kind": "descriptor",
+      "disposition": "prohibited",
+      "contract_path": null,
+      "evidence": "Private snapshot-v3 accepted provider membership and grant identities are local job authority. SharedSetupV2Mapper maps output preferences explicitly and excludes this field."
+    },
+    {
+      "source_type": "AndroidExportSettingsSnapshot",
       "serialized_field": "rawSnapshot",
       "coverage_kind": "descriptor",
       "disposition": "platform_extension",
@@ -191,6 +199,14 @@
       "disposition": "derived_or_legacy",
       "contract_path": null,
       "evidence": "Named profiles use ExportProfile.target; this duplicate native operation target is not a second v2 destination."
+    },
+    {
+      "source_type": "AndroidExportSettingsSnapshot",
+      "serialized_field": "sleepCaptureContext",
+      "coverage_kind": "descriptor",
+      "disposition": "prohibited",
+      "contract_path": null,
+      "evidence": "Accepted operation attribution, profile discriminator and capture timezone must remain immutable local authority, never portable setup."
     },
     {
       "source_type": "AndroidExportSettingsSnapshot",
@@ -666,6 +682,38 @@
     },
     {
       "source_type": "ExportSettings",
+      "serialized_field": "executionProviderCaptureAuthority",
+      "coverage_kind": "supplemental",
+      "disposition": "prohibited",
+      "contract_path": null,
+      "evidence": "Transient accepted provider/grant authority is excluded by ExportSettings serialization and cannot be imported as portable source consent."
+    },
+    {
+      "source_type": "ExportSettings",
+      "serialized_field": "executionProviderCaptureAuthorityIsFrozen",
+      "coverage_kind": "supplemental",
+      "disposition": "prohibited",
+      "contract_path": null,
+      "evidence": "Transient missing-authority rejection is local execution state, never a portable preference."
+    },
+    {
+      "source_type": "ExportSettings",
+      "serialized_field": "executionSleepCaptureAuthorityIsFrozen",
+      "coverage_kind": "supplemental",
+      "disposition": "prohibited",
+      "contract_path": null,
+      "evidence": "Transient immutable capture authority cannot become a portable setting or a live preference fallback."
+    },
+    {
+      "source_type": "ExportSettings",
+      "serialized_field": "executionSleepCaptureContext",
+      "coverage_kind": "supplemental",
+      "disposition": "prohibited",
+      "contract_path": null,
+      "evidence": "Operation capture profile, timezone and attribution remain device-local durable authority, excluded from setup sharing."
+    },
+    {
+      "source_type": "ExportSettings",
       "serialized_field": "exportFormat",
       "coverage_kind": "descriptor",
       "disposition": "platform_extension",
@@ -1031,6 +1079,38 @@
       "disposition": "portable",
       "contract_path": "profiles[].presentation.frontmatter.placeholders",
       "evidence": "Bounded placeholder names are portable after dialect validation."
+    },
+    {
+      "source_type": "HealthProviderCaptureAuthority",
+      "serialized_field": "connectionIds",
+      "coverage_kind": "descriptor",
+      "disposition": "prohibited",
+      "contract_path": null,
+      "evidence": "The entire versioned accepted-source object is private job authority, excluded from setup mapping; opaque grant IDs and accepted membership must not travel between installations."
+    },
+    {
+      "source_type": "HealthProviderCaptureAuthority",
+      "serialized_field": "providerIds",
+      "coverage_kind": "descriptor",
+      "disposition": "prohibited",
+      "contract_path": null,
+      "evidence": "The entire versioned accepted-source object is private job authority, excluded from setup mapping; opaque grant IDs and accepted membership must not travel between installations."
+    },
+    {
+      "source_type": "HealthProviderCaptureAuthority",
+      "serialized_field": "selectedProviderId",
+      "coverage_kind": "descriptor",
+      "disposition": "prohibited",
+      "contract_path": null,
+      "evidence": "The entire versioned accepted-source object is private job authority, excluded from setup mapping; opaque grant IDs and accepted membership must not travel between installations."
+    },
+    {
+      "source_type": "HealthProviderCaptureAuthority",
+      "serialized_field": "version",
+      "coverage_kind": "descriptor",
+      "disposition": "prohibited",
+      "contract_path": null,
+      "evidence": "The entire versioned accepted-source object is private job authority, excluded from setup mapping; opaque grant IDs and accepted membership must not travel between installations."
     },
     {
       "source_type": "IndividualTrackingSettings",
@@ -1559,6 +1639,14 @@
       "disposition": "prohibited",
       "contract_path": null,
       "evidence": "This value is nested frozen pending/retry state and must never enter a Shared Setup artifact."
+    },
+    {
+      "source_type": "ScheduledProfilePendingExport",
+      "serialized_field": "refreshSlotMillis",
+      "coverage_kind": "descriptor",
+      "disposition": "prohibited",
+      "contract_path": null,
+      "evidence": "The immutable accepted Today Refresh slot is local pending-operation recovery authority and must not enter portable schedule intent."
     },
     {
       "source_type": "ScheduledProfilePendingExport",

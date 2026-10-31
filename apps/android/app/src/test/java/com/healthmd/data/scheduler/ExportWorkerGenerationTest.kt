@@ -211,6 +211,7 @@ class ExportWorkerGenerationTest {
                 expectedDestinationFingerprint = API_FINGERPRINT,
                 durableOperationId = capture(exportedOperationId),
                 durableSettingsSnapshotJson = any(),
+                requireExistingDurableOperation = any(),
             )
         } returns ExportResult(1, 1, target = ExportTarget.API_ENDPOINT)
         val scheduler = mockk<ExportScheduler>(relaxed = true)
@@ -271,6 +272,7 @@ class ExportWorkerGenerationTest {
                 expectedDestinationFingerprint = API_FINGERPRINT,
                 durableOperationId = any(),
                 durableSettingsSnapshotJson = any(),
+                requireExistingDurableOperation = any(),
             )
         } returns ExportResult(1, 1, target = ExportTarget.API_ENDPOINT)
         val scheduler = mockk<ExportScheduler>(relaxed = true)
@@ -308,6 +310,7 @@ class ExportWorkerGenerationTest {
                 expectedDestinationFingerprint = API_FINGERPRINT,
                 durableOperationId = any(),
                 durableSettingsSnapshotJson = any(),
+                requireExistingDurableOperation = any(),
             )
         }
         coVerify(exactly = 1) { scheduler.reconcile() }
@@ -343,6 +346,7 @@ class ExportWorkerGenerationTest {
                 expectedDestinationFingerprint = API_FINGERPRINT,
                 durableOperationId = any(),
                 durableSettingsSnapshotJson = any(),
+                requireExistingDurableOperation = any(),
             )
         } returns ExportResult(
             successCount = 0,
@@ -443,6 +447,7 @@ class ExportWorkerGenerationTest {
                 expectedDestinationFingerprint = API_FINGERPRINT,
                 durableOperationId = any(),
                 durableSettingsSnapshotJson = any(),
+                requireExistingDurableOperation = any(),
             )
         } answers {
             ExportResult(
@@ -521,6 +526,7 @@ class ExportWorkerGenerationTest {
                 expectedDestinationFingerprint = API_FINGERPRINT,
                 durableOperationId = any(),
                 durableSettingsSnapshotJson = any(),
+                requireExistingDurableOperation = any(),
             )
         } answers {
             val dates = exportedDates.captured

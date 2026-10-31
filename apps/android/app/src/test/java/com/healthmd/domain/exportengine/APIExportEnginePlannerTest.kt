@@ -19,6 +19,53 @@ import org.junit.Test
 
 class APIExportEnginePlannerTest {
     @Test
+    fun successorApiFiltersSleepingStagesUsingItsFrozenWakeDateContext() {
+        val date = LocalDate.of(2026, 11, 1)
+        val zone = java.time.ZoneId.of("America/New_York")
+        val context = com.healthmd.domain.model.AndroidCaptureContext(zone, com.healthmd.domain.model.SleepDayAttribution.MORNING_ENDS)
+        val start = Instant.parse("2026-11-01T05:30:00.123456789Z"); val end = start.plusSeconds(3600)
+        val stage = com.healthmd.domain.model.SleepStageEntry(start.atZone(zone).toLocalDateTime(), end.atZone(zone).toLocalDateTime(),
+            "sleeping", com.healthmd.domain.model.ExactSourceTimestamp.from(start), com.healthmd.domain.model.ExactSourceTimestamp.from(end))
+        val source = HealthData(date, sleep = com.healthmd.domain.model.SleepData(stages = listOf(stage)))
+        for (key in listOf("sleep_total", "sleep_light")) {
+            val settings = ExportSettings(includeGranularData = true, executionSleepCaptureContext = context,
+                executionSleepCaptureAuthorityIsFrozen = true,
+                metricSelection = com.healthmd.domain.model.MetricSelectionState(enabledMetrics = setOf(key)))
+            val request = FrozenAPIExportRequest.capture(listOf(date), listOf(source), emptyList(), settings,
+                ExportEngineMode.rust, APIExportIds("sleep-filter", "sleep-filter-session"), zone.id, end)
+            assertThat(request.records.single().sleep.stages).isEqualTo(if (key == "sleep_total") listOf(stage) else emptyList())
+            assertThat(source.filtered(settings.metricSelection).sleep.stages).isEqualTo(if (key == "sleep_light") listOf(stage) else emptyList())
+        }
+    }
+
+    @Test
+    fun successorApiRejectsConflictingOrMissingAuthorityBeforePlanning() {
+        val date = LocalDate.of(2026, 11, 1)
+        val context = com.healthmd.domain.model.AndroidCaptureContext(java.time.ZoneId.of("America/New_York"),
+            com.healthmd.domain.model.SleepDayAttribution.MORNING_ENDS)
+        val accepted = ExportSettings(executionSleepCaptureContext = context,
+            executionSleepCaptureAuthorityIsFrozen = true)
+        val invalid = listOf(
+            accepted.copy(executionSleepCaptureContext = context.copy(exportProfileID = null)),
+            accepted.copy(executionSleepCaptureContext = null),
+            accepted.copy(executionEngineAuthorityIsFrozen = true, executionEnginePin = null),
+            accepted.copy(executionEnginePin = testPin()),
+        )
+        for (settings in invalid) {
+            org.junit.Assert.assertThrows(IllegalArgumentException::class.java) {
+                FrozenAPIExportRequest.capture(listOf(date), listOf(HealthData(date)), emptyList(),
+                    settings, ExportEngineMode.rust, APIExportIds("authority-api", "authority-session"),
+                    context.zoneId.id, Instant.parse("2026-11-02T12:00:00Z"))
+            }
+        }
+        org.junit.Assert.assertThrows(IllegalArgumentException::class.java) {
+            FrozenAPIExportRequest.capture(listOf(date), listOf(HealthData(date)), emptyList(),
+                accepted, ExportEngineMode.shadow, APIExportIds("authority-api", "authority-session"),
+                context.zoneId.id, Instant.parse("2026-11-02T12:00:00Z"))
+        }
+    }
+
+    @Test
     fun nativePlanUsesExactBuilderBodiesOrderingAndArtifactIdentity() {
         val first = LocalDate.of(2026, 7, 24)
         val second = first.plusDays(1)

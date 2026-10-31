@@ -30,9 +30,17 @@ import com.healthmd.domain.exportengine.ExportArtifactPlanValidationException
 import com.healthmd.domain.exportengine.isFatalExportEngineFailure
 import com.healthmd.domain.exportengine.validateAPIPlan
 import com.healthmd.domain.model.APIExportEndpoint
+import com.healthmd.domain.model.AndroidCaptureContext
+import com.healthmd.domain.exportengine.ExportEnginePinPlanner
+import com.healthmd.domain.model.SleepDayAttribution
+import com.healthmd.domain.model.ExportTarget
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import com.healthmd.domain.model.SleepAttributionUnavailableException
 import com.healthmd.domain.model.ExportFailureReason
 import com.healthmd.domain.model.ExportFormat
 import com.healthmd.domain.model.ExportPreview
+import com.healthmd.domain.model.ExportPreviewSleepWindow
 import com.healthmd.domain.model.ExportPreviewDay
 import com.healthmd.domain.model.ExportPreviewFile
 import com.healthmd.domain.model.ExportPreviewIssue
@@ -43,6 +51,7 @@ import com.healthmd.domain.model.FailedDateDetail
 import com.healthmd.domain.model.HealthData
 import com.healthmd.domain.model.MetricSelectionState
 import com.healthmd.domain.repository.HealthRepository
+import com.healthmd.domain.repository.forCaptureOperation
 import com.healthmd.rawexport.allowsInteractiveRouteConsent
 import java.time.Instant
 import java.time.LocalDate
@@ -68,38 +77,66 @@ interface APIExportCaptureSource {
     suspend fun capture(date: LocalDate, settings: ExportSettings): HealthData
 }
 
+/** Production capture source contract for one immutable Android operation context. */
+private interface OperationScopedAPIExportCaptureSource : APIExportCaptureSource {
+    suspend fun forCaptureOperation(settings: ExportSettings): APIExportCaptureSource
+    suspend fun resolveCaptureContext(zoneId: ZoneId): AndroidCaptureContext
+    suspend fun authorizeExerciseRouteConsent(
+        dates: List<LocalDate>,
+        settings: ExportSettings,
+        context: AndroidCaptureContext,
+    )
+    suspend fun capture(
+        date: LocalDate,
+        settings: ExportSettings,
+        context: AndroidCaptureContext,
+    ): HealthData
+}
+
 private class HealthRepositoryAPIExportCaptureSource(
     private val healthRepository: HealthRepository,
-) : APIExportCaptureSource {
+) : OperationScopedAPIExportCaptureSource {
+    override suspend fun forCaptureOperation(settings: ExportSettings): APIExportCaptureSource =
+        HealthRepositoryAPIExportCaptureSource(healthRepository.forCaptureOperation(settings))
     override fun isBeforeFirstUnlock(): Boolean = healthRepository.isBeforeFirstUnlock()
 
-    override suspend fun authorizeExerciseRouteConsent(dates: List<LocalDate>, settings: ExportSettings) {
+    override suspend fun authorizeExerciseRouteConsent(
+        dates: List<LocalDate>,
+        settings: ExportSettings,
+        context: AndroidCaptureContext,
+    ) {
         val effectiveSelection = settings.effectiveDataTypeSelection()
         if (effectiveSelection.workouts) {
             healthRepository.authorizeExerciseRouteConsent(
                 dates = dates,
                 dataTypes = effectiveSelection,
                 includeGranularData = settings.shouldFetchGranularData(),
-                zoneId = settings.executionEnginePin?.ianaTimeZone?.let(ZoneId::of) ?: ZoneId.systemDefault(),
+                zoneId = context.zoneId,
             )
         }
     }
 
-    override suspend fun capture(date: LocalDate, settings: ExportSettings): HealthData {
+    override suspend fun resolveCaptureContext(zoneId: ZoneId): AndroidCaptureContext =
+        healthRepository.resolveCaptureContext(zoneId)
+
+    override suspend fun capture(date: LocalDate, settings: ExportSettings): HealthData =
+        error("Production API capture requires an operation-scoped context")
+
+    override suspend fun capture(
+        date: LocalDate,
+        settings: ExportSettings,
+        context: AndroidCaptureContext,
+    ): HealthData {
         val effectiveSelection = settings.effectiveDataTypeSelection()
-        val captured = healthRepository.fetchHealthDataRange(
+        return (healthRepository.fetchHealthDataRange(
             dates = listOf(date),
             dataTypes = effectiveSelection,
             includeGranularData = settings.shouldFetchGranularData(),
-        ).firstOrNull() ?: HealthData(date)
-        val filtered = captured
+            zoneId = context.zoneId,
+            sleepDayAttributionOverride = context.explicitSleepDayAttributionOverride,
+        ).firstOrNull() ?: HealthData(date))
             .filtered(effectiveSelection)
-            .filtered(settings.metricSelection)
-        if (filtered.hasAnyData) return filtered
-
-        return healthRepository.fetchHealthData(date)
-            .filtered(effectiveSelection)
-            .filtered(settings.metricSelection)
+            .filtered(settings.metricSelection, context)
     }
 }
 
@@ -221,11 +258,13 @@ class APIEndpointExportRunner private constructor(
         expectedDestinationFingerprint: String? = null,
         durableOperationId: String? = null,
         durableSettingsSnapshotJson: String? = null,
+        requireExistingDurableOperation: Boolean = false,
     ): ExportResult {
         val normalizedDates = dates.distinct().sorted()
         if (normalizedDates.isEmpty()) {
             return ExportResult(0, 0, target = com.healthmd.domain.model.ExportTarget.API_ENDPOINT)
         }
+        if (requireExistingDurableOperation && durableOperationId == null) return preparationFailure(normalizedDates)
         val frozenSettings = settings.frozenForAPIAction()
         if (frozenSettings.selectedExportFormats.isEmpty()) {
             return configurationFailure(normalizedDates, ExportFailureReason.UNKNOWN)
@@ -269,27 +308,41 @@ class APIEndpointExportRunner private constructor(
                     invocationDates = normalizedDates,
                 )
             }
+            // Prepared-work retries never turn missing spool state into a new health capture.
+            if (requireExistingDurableOperation) return preparationFailure(normalizedDates)
         }
 
-        val snapshot = OperationSnapshot(
-            mode = resolvedMode,
-            settings = frozenSettings,
-            calendarTimeZone = frozenSettings.executionEnginePin?.ianaTimeZone ?: zoneIdProvider().id,
-            exportedAt = clock(),
-            ids = idSource.next(),
-        )
-        if (coroutineContext.allowsInteractiveRouteConsent() && !captureSource.isBeforeFirstUnlock()) {
+        val snapshot = try {
+            snapshotForCapture(frozenSettings, resolvedMode)
+        } catch (error: Throwable) {
+            rethrowCancellationOrFatal(error)
+            return preparationFailure(normalizedDates)
+        }
+        val operationSource = snapshot.source as? OperationScopedAPIExportCaptureSource
+        val captureContext = snapshot.settings.executionSleepCaptureContext
+        if (coroutineContext.allowsInteractiveRouteConsent() && !snapshot.source.isBeforeFirstUnlock()) {
             try {
                 // Authorization sees the complete scope before owner dates are captured in their
                 // canonical ascending order. Noninteractive capture sources intentionally no-op.
-                captureSource.authorizeExerciseRouteConsent(normalizedDates, snapshot.settings)
+                if (operationSource != null && captureContext != null) {
+                    operationSource.authorizeExerciseRouteConsent(normalizedDates, snapshot.settings, captureContext)
+                } else {
+                    snapshot.source.authorizeExerciseRouteConsent(normalizedDates, snapshot.settings)
+                }
             } catch (_: CancellationException) {
                 return cancelledResult(normalizedDates, emptyList())
             } catch (_: Exception) {
                 // Consent is optional; preserve the established capture and failure behavior.
             }
         }
-        val capture = captureDates(normalizedDates, snapshot.settings, onProgress)
+        val capture = captureDates(
+            normalizedDates,
+            snapshot.settings,
+            ZoneId.of(snapshot.calendarTimeZone),
+            onProgress,
+            captureContext = captureContext,
+            source = snapshot.source,
+        )
         if (capture.wasCancelled) {
             return cancelledResult(normalizedDates, capture.failedDateDetails)
         }
@@ -329,7 +382,7 @@ class APIEndpointExportRunner private constructor(
                     operationId = durableOperationId,
                     destinationFingerprint = requestConfiguration.destinationFingerprint,
                     mode = validated.mode,
-                    enginePinJson = enginePinJson,
+                    enginePinJson = snapshot.settings.executionEnginePin?.let(ExportEnginePinCodec::encodeCanonical),
                     settingsSnapshotJson = durableSettingsSnapshotJson,
                     requestedDates = normalizedDates,
                     recordDates = capture.records.mapTo(linkedSetOf(), HealthData::date),
@@ -389,27 +442,32 @@ class APIEndpointExportRunner private constructor(
         // Preview resolves the same authority before capture but intentionally never snapshots
         // credentials and never calls the uploader.
         val mode = resolveModeOnce(previewCandidates.sorted(), frozenSettings)
-        val snapshot = OperationSnapshot(
-            mode = mode,
-            settings = frozenSettings,
-            calendarTimeZone = frozenSettings.executionEnginePin?.ianaTimeZone ?: zoneIdProvider().id,
-            exportedAt = clock(),
-            ids = idSource.next(),
-        )
+        val snapshot = try {
+            snapshotForCapture(frozenSettings, mode)
+        } catch (error: Throwable) {
+            rethrowCancellationOrFatal(error)
+            return preparationFailurePreview(normalizedDates, previewCandidates.first())
+        }
         val capture = captureDates(
             dates = previewCandidates,
             settings = snapshot.settings,
+            zoneId = ZoneId.of(snapshot.calendarTimeZone),
             onProgress = onProgress,
             stopAfterRecordCount = maxPreviewDays.coerceAtLeast(1),
+            captureContext = snapshot.settings.executionSleepCaptureContext,
+            source = snapshot.source,
         )
         coroutineContext.ensureActive()
         val attemptedDates = capture.attemptedDates.sorted()
+        val sleepWindow = ExportPreviewSleepWindow.capture(normalizedDates, snapshot.settings,
+            snapshot.settings.executionSleepCaptureContext)
         if (attemptedDates.isEmpty()) {
             return ExportPreview(
                 requestedDateCount = normalizedDates.size,
                 previewedDateCount = 0,
                 isTruncated = normalizedDates.isNotEmpty(),
                 days = emptyList(),
+                sleepWindow = sleepWindow,
             )
         }
         if (snapshot.mode == ExportEngineMode.legacy && capture.records.isEmpty()) {
@@ -420,6 +478,7 @@ class APIEndpointExportRunner private constructor(
                 days = capture.failedDateDetails
                     .filter { it.reason != ExportFailureReason.NO_HEALTH_DATA }
                     .map { ExportPreviewDay(it.date, failureReason = it.reason) },
+                sleepWindow = sleepWindow,
             )
         }
         val request = try {
@@ -466,7 +525,37 @@ class APIEndpointExportRunner private constructor(
             previewedDateCount = capture.records.size,
             isTruncated = normalizedDates.size > capture.attemptedDates.size,
             days = days,
+            sleepWindow = sleepWindow,
         )
+    }
+
+    private suspend fun snapshotForCapture(settings: ExportSettings, historicalMode: ExportEngineMode): OperationSnapshot {
+        val zone = ZoneId.of(operationCalendarZone(settings))
+        val context = resolveOperationCaptureContext(settings, zone, captureSource)
+        val scopedSource = captureSource as? OperationScopedAPIExportCaptureSource
+        check(scopedSource != null || (settings.executionProviderCaptureAuthority == null &&
+            !settings.executionProviderCaptureAuthorityIsFrozen)) { "This source cannot restore accepted provider authority" }
+        val source = scopedSource?.forCaptureOperation(settings) ?: captureSource
+        var captured = if (context == null) settings else settings.copy(
+            executionSleepCaptureContext = context, executionSleepCaptureAuthorityIsFrozen = true)
+        val wakeDate = context?.sleepDayAttribution == SleepDayAttribution.MORNING_ENDS
+        if (wakeDate) {
+            val pin = captured.executionEnginePin ?: if (captured.executionEngineAuthorityIsFrozen) null else
+                withContext(Dispatchers.Default) {
+                    ExportEnginePinPlanner().forScheduledExport(captured, ExportTarget.API_ENDPOINT, zone)
+                }
+            require(pin != null && pin.profile == AndroidExportProfile.android_sleep_v6 &&
+                pin.engine == ExportEngineMode.rust && pin.ianaTimeZone == requireNotNull(context).zoneId.id &&
+                ExportEnginePinCodec.isStructurallyValid(pin)) { "API successor renderer authority is unavailable" }
+            captured = captured.copy(executionEnginePin = pin, executionEngineAuthorityIsFrozen = true)
+        } else {
+            require(captured.executionEnginePin?.profile != AndroidExportProfile.android_sleep_v6) {
+                "API capture and renderer authority disagree"
+            }
+        }
+        return OperationSnapshot(mode = if (wakeDate) ExportEngineMode.rust else historicalMode,
+            settings = captured, calendarTimeZone = context?.zoneId?.id ?: zone.id,
+            exportedAt = clock(), ids = idSource.next(), source = source)
     }
 
     private fun resolveModeOnce(
@@ -501,12 +590,35 @@ class APIEndpointExportRunner private constructor(
         return policy.mode
     }
 
+    private fun operationCalendarZone(settings: ExportSettings): String =
+        settings.executionSleepCaptureContext?.zoneId?.id
+            ?: settings.executionEnginePin?.ianaTimeZone
+            ?: zoneIdProvider().id
+
+    private suspend fun resolveOperationCaptureContext(settings: ExportSettings, zoneId: ZoneId,
+        source: APIExportCaptureSource): AndroidCaptureContext? =
+        if (settings.executionSleepCaptureAuthorityIsFrozen || settings.executionSleepCaptureContext != null) {
+            AndroidCaptureContext.recovered(settings.executionSleepCaptureContext)
+        } else {
+            (source as? OperationScopedAPIExportCaptureSource)?.resolveCaptureContext(zoneId)
+                ?.also { it.requireShippedProfile() }
+        }
+
     private suspend fun captureDates(
         dates: List<LocalDate>,
         settings: ExportSettings,
+        zoneId: ZoneId,
         onProgress: ((current: Int, total: Int, dateString: String) -> Unit)?,
         stopAfterRecordCount: Int? = null,
+        captureContext: AndroidCaptureContext? = null,
+        source: APIExportCaptureSource,
     ): CaptureResult {
+        val operationSource = source as? OperationScopedAPIExportCaptureSource
+        val resolvedCaptureContext = try {
+            (captureContext ?: resolveOperationCaptureContext(settings, zoneId, source))?.also { it.requireShippedProfile() }
+        } catch (error: SleepAttributionUnavailableException) {
+            return CaptureResult(emptyList(), dates.map { FailedDateDetail(it, ExportFailureReason.UNKNOWN, error.message) }, dates, wasCancelled = false)
+        }
         val records = mutableListOf<HealthData>()
         val failures = mutableListOf<FailedDateDetail>()
         val attempted = mutableListOf<LocalDate>()
@@ -519,12 +631,16 @@ class APIEndpointExportRunner private constructor(
             }
             attempted += date
             onProgress?.invoke(index + 1, dates.size, date.toString())
-            if (captureSource.isBeforeFirstUnlock()) {
+            if (source.isBeforeFirstUnlock()) {
                 failures += FailedDateDetail(date, ExportFailureReason.DEVICE_LOCKED)
                 continue
             }
             try {
-                val record = captureSource.capture(date, settings)
+                val record = if (operationSource != null && resolvedCaptureContext != null) {
+                    operationSource.capture(date, settings, resolvedCaptureContext)
+                } else {
+                    source.capture(date, settings)
+                }
                 if (record.date != date) {
                     failures += FailedDateDetail(date, ExportFailureReason.UNKNOWN)
                 } else if (record.hasAnyData) {
@@ -583,7 +699,7 @@ class APIEndpointExportRunner private constructor(
         val rust = try {
             rustPlanner.plan(request).also { result ->
                 if (result.pin.engine != request.mode ||
-                    result.pin.profile != AndroidExportProfile.android_frozen_v4
+                    result.pin.profile != request.profile
                 ) {
                     throw ExportArtifactPlanValidationException(
                         com.healthmd.domain.exportengine.ExportArtifactPlanValidationIssue.PROFILE,
@@ -596,7 +712,7 @@ class APIEndpointExportRunner private constructor(
             if (request.mode == ExportEngineMode.shadow) {
                 emitSafely(
                     ShadowRustFailureDiagnostic(
-                        profile = AndroidExportProfile.android_frozen_v4,
+                        profile = request.profile,
                         semanticProfileRevision = ExportEnginePin.EXPECTED_SEMANTIC_PROFILE_REVISION,
                         renderProfileRevision = HealthMdCoreServiceRevision.renderProfileRevision,
                         code = error.toShadowFailureCode(),
@@ -620,7 +736,7 @@ class APIEndpointExportRunner private constructor(
                 }
                 emitSafely(
                     ShadowComparisonDiagnostic(
-                        profile = AndroidExportProfile.android_frozen_v4,
+                        profile = request.profile,
                         semanticProfileRevision = rust.pin.semanticProfileRevision,
                         renderProfileRevision = rust.pin.renderProfileRevision,
                         comparison = comparator.compare(shadowNativePlan, rust.plan),
@@ -843,13 +959,17 @@ class APIEndpointExportRunner private constructor(
             require(root.getValue("schema").jsonPrimitive.content == APIExportEnvelopeBuilder.API_EXPORT_SCHEMA)
             require(
                 root.getValue("schema_version").jsonPrimitive.int ==
-                    APIExportEnvelopeBuilder.API_EXPORT_SCHEMA_VERSION,
+                    request.envelopeVersion,
             )
             require(root.getValue("daily_record_schema").jsonPrimitive.content == HealthMdExportSchema.IDENTIFIER)
             require(
                 root.getValue("daily_record_schema_version").jsonPrimitive.int ==
-                    HealthMdExportSchema.VERSION,
+                    request.profile.publicSchemaVersion.toInt(),
             )
+            if (request.profile == AndroidExportProfile.android_sleep_v6) {
+                require(root["daily_record_schema_profile"]?.jsonPrimitive?.content == request.profile.publicProfileId)
+                require(root["daily_record_time_context"] == WakeDateJsonDocument(requireNotNull(request.captureContext)).timeContext)
+            }
             require(root.getValue("exported_at").jsonPrimitive.content == request.exportedAt.toString())
             require(root.getValue("source").jsonPrimitive.content == "android")
 
@@ -878,8 +998,13 @@ class APIEndpointExportRunner private constructor(
                 require(record.getValue("schema").jsonPrimitive.content == HealthMdExportSchema.IDENTIFIER)
                 require(
                     record.getValue("schema_version").jsonPrimitive.int ==
-                        HealthMdExportSchema.VERSION,
+                        request.profile.publicSchemaVersion.toInt(),
                 )
+                if (request.profile == AndroidExportProfile.android_sleep_v6) {
+                    require(record["schema_profile"]?.jsonPrimitive?.content == request.profile.publicProfileId)
+                    require(record["time_context"] == WakeDateJsonDocument(requireNotNull(request.captureContext)).timeContext)
+                    require(record["unit_system"]?.jsonPrimitive?.content == "metric")
+                }
                 val timeContext = record.getValue("time_context").jsonObject
                 require(
                     timeContext.getValue("calendar_timezone").jsonPrimitive.content ==
@@ -1031,6 +1156,7 @@ class APIEndpointExportRunner private constructor(
     }
 
     private data class OperationSnapshot(
+        val source: APIExportCaptureSource,
         val mode: ExportEngineMode,
         val settings: ExportSettings,
         val calendarTimeZone: String,
@@ -1103,7 +1229,7 @@ class APIEndpointExportRunner private constructor(
     }
 }
 
-private fun ExportSettings.frozenForAPIAction(): ExportSettings = copy(
+internal fun ExportSettings.frozenForAPIAction(): ExportSettings = copy(
     exportFormats = Collections.unmodifiableSet(exportFormats.toSet()),
     metricSelection = MetricSelectionState(
         Collections.unmodifiableSet(metricSelection.enabledMetrics.toSet()),

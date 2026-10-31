@@ -1,4 +1,5 @@
 import Combine
+import CryptoKit
 import Darwin
 import Foundation
 import HealthMdCoreRust
@@ -10,6 +11,12 @@ nonisolated struct RenderedHealthDataArchiveEntryFile: Sendable {
     let archivePath: String
     let order: Int
     let url: URL
+    let acceptedArtifact: ExportArtifactFile?
+
+    init(date: Date, archivePath: String, order: Int, url: URL, acceptedArtifact: ExportArtifactFile? = nil) {
+        self.date = date; self.archivePath = archivePath; self.order = order; self.url = url
+        self.acceptedArtifact = acceptedArtifact
+    }
 }
 
 nonisolated private enum HealthDataArchiveSource: Sendable {
@@ -218,12 +225,25 @@ nonisolated private final class AggregateFileWriter: Sendable {
         relativePath: String,
         expectedData: Data,
         binding: AppleVaultDestinationBinding,
-        fallbackFileURL: URL
+        fallbackFileURL: URL,
+        behavior: AggregateFileWriteBehavior = .overwrite
     ) async throws -> AppleExactDestinationState {
         try await withCheckedThrowingContinuation { continuation in
             Self.queue.async { [self] in
                 do {
-                    if fileSystem is SystemFileSystem {
+                    if behavior != .overwrite {
+                        let existing: Data?
+                        if fileSystem is SystemFileSystem {
+                            existing = try SecureExactArtifactIO.read(rootURL: rootURL, relativePath: relativePath, binding: binding)
+                        } else {
+                            existing = fileSystem.fileExists(atPath: fallbackFileURL.path)
+                                ? Data(try fileSystem.contentsOfFile(at: fallbackFileURL).utf8) : nil
+                        }
+                        guard let existing else { continuation.resume(returning: .missing); return }
+                        guard let incoming = String(data: expectedData, encoding: .utf8) else { throw AppleExactDestinationError.invalidUTF8 }
+                        let desired = try secureMergedContent(existingData: existing, newContent: incoming, behavior: behavior)
+                        continuation.resume(returning: Data(desired.content.utf8) == existing ? .exact : .different)
+                    } else if fileSystem is SystemFileSystem {
                         continuation.resume(returning: try SecureExactArtifactIO.inspect(
                             rootURL: rootURL,
                             relativePath: relativePath,
@@ -256,7 +276,14 @@ nonisolated private final class AggregateFileWriter: Sendable {
         try await withCheckedThrowingContinuation { continuation in
             Self.queue.async { [self] in
                 do {
-                    if fileSystem is SystemFileSystem {
+                    if fallbackRequest.behavior != .overwrite {
+                        guard let incoming = String(data: data, encoding: .utf8) else { throw AppleExactDestinationError.invalidUTF8 }
+                        let request = AggregateFileWriteRequest(fileURL: fallbackRequest.fileURL,
+                            filename: fallbackRequest.filename, newContent: incoming, behavior: fallbackRequest.behavior,
+                            secureDestination: .init(rootURL: rootURL, relativePath: relativePath, binding: binding,
+                                beforeCommit: beforeCommit, afterValidationBeforeRename: nil))
+                        _ = try performWrite(request)
+                    } else if fileSystem is SystemFileSystem {
                         try SecureExactArtifactIO.overwrite(
                             rootURL: rootURL,
                             relativePath: relativePath,
@@ -363,6 +390,7 @@ nonisolated private final class AggregateFileWriter: Sendable {
                     sourceFileURL: artifact.url,
                     binding: destination.binding,
                     expectedByteCount: artifact.descriptor.byteCount,
+                    expectedSHA256: artifact.descriptor.sha256,
                     beforeCommit: destination.beforeCommit,
                     afterValidationBeforeRename: destination.afterValidationBeforeRename,
                     cancellationCheck: cancellationCheck
@@ -687,25 +715,51 @@ struct ExportPresentationTarget: Equatable, Sendable {
     }
 }
 
+nonisolated struct AppleLooseDailyArchiveMaterialization: Equatable, Sendable {
+    let relativePath: String
+    let artifact: ExportArtifactFile
+}
+
+nonisolated struct AppleLooseDailyArchiveWriteResult: Equatable, Sendable {
+    let fileURL: URL
+    let notes: AppleLooseDailyRangeWriteResult
+}
+
 nonisolated struct AppleLooseDailyRangeWriteResult: Equatable, Sendable {
     let dailyFileCount: Int
     let rollupFileCount: Int
     /// Data-dictionary artifact written beside the planned range outputs.
     /// Defaults to zero so stored journals and older call sites stay valid.
     let dataDictionaryFileCount: Int
+    let providerSidecarFileCount: Int
+    let individualEntryFileCount: Int
+    let archiveFileCount: Int
+    let dailyNoteUpdatedDates: [Date]
+    let dailyNoteSkippedDates: [Date]
+    var dailyNoteUpdatedCount: Int { dailyNoteUpdatedDates.count }
+    var dailyNoteSkippedCount: Int { dailyNoteSkippedDates.count }
 
     init(
         dailyFileCount: Int,
         rollupFileCount: Int,
-        dataDictionaryFileCount: Int = 0
+        dataDictionaryFileCount: Int = 0,
+        providerSidecarFileCount: Int = 0,
+        individualEntryFileCount: Int = 0,
+        archiveFileCount: Int = 0,
+        dailyNoteUpdatedDates: [Date] = [], dailyNoteSkippedDates: [Date] = []
     ) {
         self.dailyFileCount = max(dailyFileCount, 0)
         self.rollupFileCount = max(rollupFileCount, 0)
         self.dataDictionaryFileCount = max(dataDictionaryFileCount, 0)
+        self.providerSidecarFileCount = max(providerSidecarFileCount, 0)
+        self.individualEntryFileCount = max(individualEntryFileCount, 0)
+        self.archiveFileCount = max(archiveFileCount, 0)
+        self.dailyNoteUpdatedDates = dailyNoteUpdatedDates
+        self.dailyNoteSkippedDates = dailyNoteSkippedDates
     }
 
     var totalFileCount: Int {
-        dailyFileCount + rollupFileCount + dataDictionaryFileCount
+        dailyFileCount + rollupFileCount + dataDictionaryFileCount + providerSidecarFileCount + individualEntryFileCount + archiveFileCount
     }
 }
 
@@ -715,10 +769,97 @@ nonisolated struct AppleLooseDailyMaterializedFile: Equatable, Sendable {
     let data: Data
 }
 
+/// Exact provider bytes live behind a cleanup lease, not in the retained range corpus.
+nonisolated struct AppleLooseDailyProviderSidecar: Equatable, Sendable {
+    let relativePath: String
+    let artifact: ExportArtifactFile
+}
+
+nonisolated struct AppleLooseDailyIndividualEntry: Equatable, Sendable {
+    let relativePath: String
+    let artifact: ExportArtifactFile
+}
+
+nonisolated struct AppleLooseDailyRangeDestination: Sendable {
+    let rootURL: URL
+    let binding: AppleVaultDestinationBinding?
+}
+
 nonisolated struct AppleLooseDailyRangeMaterialization: Equatable, Sendable {
     let operation: AppleLooseDailyPlannedOperation
     let dataDictionary: AppleLooseDailyMaterializedFile?
     let result: AppleLooseDailyRangeWriteResult
+    let providerSidecars: [AppleLooseDailyProviderSidecar]
+    let individualEntries: [AppleLooseDailyIndividualEntry]
+    let dailyNotes: [DailyNoteInjector.PreparedContent]
+
+    init(operation: AppleLooseDailyPlannedOperation, dataDictionary: AppleLooseDailyMaterializedFile?,
+         result: AppleLooseDailyRangeWriteResult, providerSidecars: [AppleLooseDailyProviderSidecar] = [],
+         individualEntries: [AppleLooseDailyIndividualEntry] = [],
+         dailyNotes: [DailyNoteInjector.PreparedContent] = []) {
+        self.operation = operation
+        self.dataDictionary = dataDictionary
+        self.result = result
+        self.providerSidecars = providerSidecars
+        self.individualEntries = individualEntries
+        self.dailyNotes = dailyNotes
+    }
+
+    func addingProviderSidecars(_ files: [AppleLooseDailyProviderSidecar]) -> Self {
+        let all = providerSidecars + files
+        return Self(operation: operation, dataDictionary: dataDictionary,
+            result: AppleLooseDailyRangeWriteResult(dailyFileCount: result.dailyFileCount,
+                rollupFileCount: result.rollupFileCount, dataDictionaryFileCount: result.dataDictionaryFileCount,
+                providerSidecarFileCount: all.count, individualEntryFileCount: individualEntries.count),
+            providerSidecars: all, individualEntries: individualEntries, dailyNotes: dailyNotes)
+    }
+
+    func addingIndividualEntries(_ files: [AppleLooseDailyIndividualEntry]) throws -> Self {
+        var unique: [String: AppleLooseDailyIndividualEntry] = [:]
+        for file in individualEntries + files {
+            if let existing = unique[file.relativePath], existing.artifact != file.artifact {
+                throw AppleExactDestinationError.unsafeRelativePath
+            }
+            unique[file.relativePath] = file
+        }
+        let entries = unique.values.sorted { $0.relativePath < $1.relativePath }
+        return Self(operation: operation, dataDictionary: dataDictionary,
+            result: .init(dailyFileCount: result.dailyFileCount, rollupFileCount: result.rollupFileCount,
+                dataDictionaryFileCount: result.dataDictionaryFileCount, providerSidecarFileCount: providerSidecars.count,
+                individualEntryFileCount: entries.count), providerSidecars: providerSidecars, individualEntries: entries, dailyNotes: dailyNotes)
+    }
+
+    /// Merge already materialized portions of one successor operation without reopening sources.
+    static func combining(_ parts: [Self]) throws -> Self {
+        guard let first = parts.first,
+              first.operation.pin.hasExplicitWakeDateContracts,
+              parts.allSatisfy({ $0.operation.authority == .rust
+                  && $0.operation.identity == first.operation.identity
+                  && $0.operation.pin == first.operation.pin }) else {
+            throw AppleLooseDailyExportPlannerError.rustPlanningFailed
+        }
+        let dictionaries = parts.compactMap(\.dataDictionary)
+        guard dictionaries.count <= 1 else { throw AppleLooseDailyExportPlannerError.rustPlanningFailed }
+        let artifacts = parts.flatMap { $0.operation.artifacts }
+        let total = try artifacts.reduce(UInt64(0)) { total, planned in
+            let next = total.addingReportingOverflow(planned.artifact.byteCount)
+            guard !next.overflow else { throw NativeExportArtifactPlan.ValidationError.invalidTotalByteCount }
+            return next.partialValue
+        }
+        let identity = first.operation.identity
+        let pin = first.operation.pin
+        let plan = try NativeExportArtifactPlan(artifactPlanVersion: pin.artifactPlanVersion,
+            requestID: identity.requestID, sessionID: identity.sessionID, profile: pin.coreProfile,
+            artifacts: artifacts.map(\.artifact), totalByteCount: total, pin: pin)
+        return try Self(operation: AppleLooseDailyPlannedOperation(authority: .rust, identity: identity,
+            pin: pin, nativePlan: nil, selectedPlan: plan, artifacts: artifacts),
+            dataDictionary: dictionaries.first,
+            result: AppleLooseDailyRangeWriteResult(dailyFileCount: artifacts.count { $0.kind == .daily },
+                rollupFileCount: artifacts.count { $0.kind == .rollup }, dataDictionaryFileCount: dictionaries.count),
+            dailyNotes: parts.flatMap(\.dailyNotes))
+            .addingProviderSidecars(parts.flatMap(\.providerSidecars))
+            .addingIndividualEntries(parts.flatMap(\.individualEntries))
+    }
 }
 
 nonisolated struct AppleVaultDestinationBinding: Codable, Equatable, Sendable {
@@ -878,7 +1019,8 @@ nonisolated enum SecureExactArtifactIO {
     static func read(
         rootURL: URL,
         relativePath: String,
-        binding: AppleVaultDestinationBinding
+        binding: AppleVaultDestinationBinding,
+        maximumByteCount: Int? = nil
     ) throws -> Data? {
         let rootDescriptor = try openBoundRoot(rootURL, binding: binding)
         defer { Darwin.close(rootDescriptor) }
@@ -914,6 +1056,11 @@ nonisolated enum SecureExactArtifactIO {
               metadata.st_size >= 0,
               metadata.st_size <= off_t(Int.max) else {
             throw AppleExactDestinationError.unsafeRelativePath
+        }
+        if let maximumByteCount {
+            guard maximumByteCount >= 0, metadata.st_size <= off_t(maximumByteCount) else {
+                throw CocoaError(.fileReadTooLarge)
+            }
         }
         let data = try readAll(descriptor: descriptor, count: Int(metadata.st_size))
         var finalMetadata = stat()
@@ -965,6 +1112,7 @@ nonisolated enum SecureExactArtifactIO {
         sourceFileURL: URL,
         binding: AppleVaultDestinationBinding,
         expectedByteCount: UInt64? = nil,
+        expectedSHA256: String? = nil,
         chunkSize: Int = 64 * 1024,
         beforeCommit: (@Sendable () throws -> Void)? = nil,
         afterValidationBeforeRename: (@Sendable () throws -> Void)? = nil,
@@ -981,6 +1129,7 @@ nonisolated enum SecureExactArtifactIO {
             let input = try FileHandle(forReadingFrom: sourceFileURL)
             defer { try? input.close() }
             var copiedByteCount: UInt64 = 0
+            var hasher = SHA256()
             while true {
                 try cancellationCheck()
                 guard let bytes = try input.read(upToCount: chunkSize), !bytes.isEmpty else {
@@ -991,10 +1140,15 @@ nonisolated enum SecureExactArtifactIO {
                     throw AppleExactDestinationError.destinationUnavailable
                 }
                 copiedByteCount = nextCount.partialValue
+                hasher.update(data: bytes)
                 try writeAll(bytes, descriptor: descriptor)
             }
             if let expectedByteCount, copiedByteCount != expectedByteCount {
                 throw AppleExactDestinationError.destinationUnavailable
+            }
+            if let expectedSHA256 {
+                let digest = hasher.finalize().map { String(format: "%02x", $0) }.joined()
+                guard digest == expectedSHA256 else { throw CocoaError(.fileReadCorruptFile) }
             }
         }
     }
@@ -1529,6 +1683,7 @@ final class VaultManager: ObservableObject {
     private let bookmarkResolver: BookmarkResolving
     private let identityProbe: VaultFolderIdentityProbing
     private let appleLooseDailyPlanner: any AppleLooseDailyExportPlanning
+    private let providerSidecarStagingDirectory: URL
 
     #if DEBUG
     var archiveEntryWillAppendForTesting: (() -> Void)?
@@ -1607,7 +1762,8 @@ final class VaultManager: ObservableObject {
         fileCoordinator: FileCoordinating? = nil,
         bookmarkResolver: BookmarkResolving = SystemBookmarkResolver(),
         identityProbe: VaultFolderIdentityProbing = SystemVaultFolderIdentityProbe(),
-        appleLooseDailyPlanner: (any AppleLooseDailyExportPlanning)? = nil
+        appleLooseDailyPlanner: (any AppleLooseDailyExportPlanning)? = nil,
+        providerSidecarStagingDirectory: URL? = nil
     ) {
         self.defaults = defaults
         self.fileSystem = fileSystem
@@ -1627,6 +1783,7 @@ final class VaultManager: ObservableObject {
         self.bookmarkResolver = bookmarkResolver
         self.identityProbe = identityProbe
         self.appleLooseDailyPlanner = appleLooseDailyPlanner ?? AppleLooseDailyExportPlanner()
+        self.providerSidecarStagingDirectory = providerSidecarStagingDirectory ?? FileManager.default.temporaryDirectory
         loadSavedSettings()
     }
 
@@ -2486,24 +2643,65 @@ final class VaultManager: ObservableObject {
                 calendarTimeZoneIdentifier: calendarTimeZoneIdentifier
             )
         })
+        let handlesNotes = settingsSnapshot.dailyNoteInjection.enabled
+            && settingsSnapshot.sleepCaptureContext?.sleepDayAttribution == .morningEnds
+        let wantsNotes = handlesNotes && !frozenSettings.summaryOnlyModeEnabled
+        let notesOnly = wantsNotes && settingsSnapshot.dailyNotesOnlyModeEnabled
+        if handlesNotes {
+            guard [.localVaultWithoutSideEffects, .localVaultRangeWithoutSideEffects,
+                .localVaultRangeWithProviderSidecars, .preview, .connectedReceivedRangeWithoutSideEffects,
+                .connectedReceivedRangeWithProviderSidecars, .directGeneratedFilesWithoutSideEffects,
+                .directGeneratedFilesWithProviderSidecars].contains(operationSurface) else { throw AppleLooseDailyExportPlannerError.rustPlanningFailed }
+        }
+        let identity = operationIdentity ?? AppleExportOperationIdentitySource().capture(
+            calendarTimeZoneIdentifier: calendarTimeZoneIdentifier)
+        var rendering = settingsSnapshot
+        if handlesNotes { rendering.dailyNoteInjection.enabled = false; rendering.dailyNoteInjection.dailyNotesOnly = false }
+        let noteRecords = wantsNotes ? healthData.filter { outputDates.contains(
+            HealthKitDailyOwnershipMetadata.ownerDate(for: $0.date,
+                calendarTimeZoneIdentifier: calendarTimeZoneIdentifier)) } : []
+        var notes: [DailyNoteInjector.PreparedContent] = []
+        for record in noteRecords {
+            notes.append(try await prepareWakeDateDailyNote(record, settingsSnapshot: settingsSnapshot, operationIdentity: identity))
+        }
+        let operation: AppleLooseDailyPlannedOperation
+        if notesOnly {
+            guard let first = notes.first, notes.allSatisfy({ $0.pin == first.pin && $0.identity == identity }) else {
+                throw AppleLooseDailyExportPlannerError.rustPlanningFailed
+            }
+            let empty = try NativeExportArtifactPlan(artifactPlanVersion: first.pin.artifactPlanVersion,
+                requestID: identity.requestID, sessionID: identity.sessionID, profile: first.pin.coreProfile,
+                artifacts: [], totalByteCount: 0, pin: first.pin)
+            operation = AppleLooseDailyPlannedOperation(authority: .rust, identity: identity,
+                pin: first.pin, nativePlan: nil, selectedPlan: empty, artifacts: [])
+        } else {
         let resolution = try await rangePlanner.planRange(
             healthData: healthData,
             dailyOutputOwnerDates: outputDates,
             requestedRange: requestedRange,
-            settingsSnapshot: settingsSnapshot,
+            settingsSnapshot: rendering,
             surface: operationSurface,
-            operationIdentity: operationIdentity
+            operationIdentity: wantsNotes ? identity : operationIdentity
         )
-        guard case .planned(let operation) = resolution else { return nil }
+        guard case .planned(let planned) = resolution else { return nil }
+        operation = planned
+        }
 
         for planned in operation.artifacts {
-            guard planned.artifact.writeMode == .overwrite,
-                  String(data: planned.artifact.inlineData, encoding: .utf8) != nil else {
+            guard planned.artifact.writeMode == .overwrite else {
                 throw CocoaError(.fileWriteInapplicableStringEncoding)
+            }
+            switch planned.artifact.content {
+            case .inline(let data):
+                guard String(data: data, encoding: .utf8) != nil else {
+                    throw CocoaError(.fileWriteInapplicableStringEncoding)
+                }
+            case .file(let file):
+                try file.validateIntegrity()
             }
         }
         let dictionary: AppleLooseDailyMaterializedFile?
-        if includeDataDictionary {
+        if includeDataDictionary && !notesOnly {
             let materializationRoot = URL(
                 fileURLWithPath: "/__healthmd_range_materialization__",
                 isDirectory: true
@@ -2541,8 +2739,338 @@ final class VaultManager: ObservableObject {
                 dailyFileCount: operation.artifacts.count - rollupFileCount,
                 rollupFileCount: rollupFileCount,
                 dataDictionaryFileCount: dictionary != nil ? 1 : 0
-            )
+            ), dailyNotes: notes
         )
+    }
+
+    /// Freeze the same accepted entries used by local ZIP publication. Notes
+    /// remain separate destination patches, never files inside the archive.
+    private func healthDataRangeArchiveInputs(
+        _ materialized: AppleLooseDailyRangeMaterialization,
+        settingsSnapshot: ExportSettingsSnapshot, startDate: Date, endDate: Date,
+        temporary: URL
+    ) throws -> (relativePath: String, healthSubfolder: String, files: [RenderedHealthDataArchiveEntryFile]) {
+        guard settingsSnapshot.archiveExportFiles,
+              let context = settingsSnapshot.sleepCaptureContext,
+              context.sleepDayAttribution == .morningEnds,
+              materialized.operation.authority == .rust,
+              materialized.operation.pin == settingsSnapshot.appleExportEnginePin,
+              materialized.operation.pin.hasExplicitWakeDateContracts,
+              let healthSubfolder = settingsSnapshot.healthSubfolder else {
+            throw AppleLooseDailyExportPlannerError.rustPlanningFailed
+        }
+        try settingsSnapshot.validatedSleepCaptureContext().requireShippedProfile()
+        let paths = materialized.operation.artifacts.map(\.artifact.relativePath)
+            + (materialized.dataDictionary.map { [$0.relativePath] } ?? [])
+            + materialized.providerSidecars.map(\.relativePath)
+            + materialized.individualEntries.map(\.relativePath)
+        try ExportPathPlanner.validatePortableArtifactPaths(paths)
+        guard Set(paths).count == paths.count else { throw AppleExactDestinationError.unsafeRelativePath }
+        let prefix = healthSubfolder.isEmpty ? "" : healthSubfolder + "/"
+        guard paths.allSatisfy({ $0.hasPrefix(prefix) && $0.count > prefix.count }) else {
+            throw AppleExactDestinationError.unsafeRelativePath
+        }
+        let archivePath = [healthSubfolder, Self.archiveFilename(startDate: startDate, endDate: endDate,
+            timeZone: context.timeZone)].filter { !$0.isEmpty }.joined(separator: "/")
+        try ExportPathPlanner.validatePortableArtifactPaths([archivePath] + materialized.dailyNotes.map(\.relativePath))
+        var files: [RenderedHealthDataArchiveEntryFile] = []
+        func append(path: String, artifact: ExportArtifactFile) throws {
+            try artifact.validateIntegrity()
+            files.append(.init(date: startDate, archivePath: String(path.dropFirst(prefix.count)),
+                order: files.count, url: artifact.url, acceptedArtifact: artifact))
+        }
+        func append(path: String, mediaType: String, bytes: Data) throws {
+            let artifact = try ExportArtifactIO.renderTemporary(in: temporary, prefix: "accepted", mediaType: mediaType) {
+                try $0.write(bytes)
+            }
+            try append(path: path, artifact: artifact)
+        }
+        for planned in materialized.operation.artifacts {
+            switch planned.artifact.content {
+            case .inline(let data):
+                try append(path: planned.artifact.relativePath, mediaType: planned.artifact.mediaType, bytes: data)
+            case .file(let file): try append(path: planned.artifact.relativePath, artifact: file)
+            }
+        }
+        if let dictionary = materialized.dataDictionary {
+            try append(path: dictionary.relativePath, mediaType: dictionary.mediaType, bytes: dictionary.data)
+        }
+        for file in materialized.providerSidecars { try append(path: file.relativePath, artifact: file.artifact) }
+        for file in materialized.individualEntries { try append(path: file.relativePath, artifact: file.artifact) }
+        return (archivePath, healthSubfolder, files)
+    }
+
+    /// Build a temporary ZIP without opening or writing the selected vault.
+    /// Durable receivers retain these exact bytes before their first commit.
+    func materializeHealthDataRangeArchive(
+        _ materialized: AppleLooseDailyRangeMaterialization,
+        settingsSnapshot: ExportSettingsSnapshot, startDate: Date, endDate: Date
+    ) async throws -> AppleLooseDailyArchiveMaterialization {
+        let temporary = FileManager.default.temporaryDirectory.appendingPathComponent("healthmd-wake-zip-\(UUID())")
+        defer { try? FileManager.default.removeItem(at: temporary) }
+        let inputs = try healthDataRangeArchiveInputs(materialized, settingsSnapshot: settingsSnapshot,
+            startDate: startDate, endDate: endDate, temporary: temporary)
+        guard !inputs.files.isEmpty else { throw AppleLooseDailyExportPlannerError.rustPlanningFailed }
+        let archiveURL = temporary.appendingPathComponent("accepted.zip")
+        let writer = try ZipArchiveWriter.begin(to: archiveURL, workingDirectoryURL: temporary)
+        do {
+            for file in inputs.files {
+                try Task.checkCancellation()
+                guard let artifact = file.acceptedArtifact else { throw CocoaError(.fileReadCorruptFile) }
+                try await Self.performArchiveIO { try writer.append(path: file.archivePath, artifact: artifact) }
+            }
+            try Task.checkCancellation()
+            try await Self.performArchiveIO { try writer.finish() }
+            let attributes = try FileManager.default.attributesOfItem(atPath: archiveURL.path)
+            guard let size = attributes[.size] as? NSNumber else { throw CocoaError(.fileReadCorruptFile) }
+            let artifact = try ExportArtifactIO.renderTemporary(prefix: "healthmd-accepted-archive", mediaType: "application/zip") { sink in
+                try ExportArtifactIO.forEachFileChunk(at: archiveURL, expectedByteCount: size.uint64Value) { try sink.write($0) }
+            }
+            return AppleLooseDailyArchiveMaterialization(relativePath: inputs.relativePath, artifact: artifact)
+        } catch {
+            try? await Self.performArchiveIO { writer.abandon() }
+            throw error
+        }
+    }
+
+    /// Package the already qualified daily/range/dictionary/provider files. No
+    /// health values enter the historical archive renderer on this path.
+    func commitHealthDataRangeArchive(
+        _ materialized: AppleLooseDailyRangeMaterialization,
+        destination: AppleLooseDailyRangeDestination,
+        settingsSnapshot: ExportSettingsSnapshot,
+        startDate: Date,
+        endDate: Date
+    ) async throws -> AppleLooseDailyArchiveWriteResult? {
+        guard destinationState == .available, vaultURL?.standardizedFileURL == destination.rootURL.standardizedFileURL else {
+            throw ExportError.destinationChanged
+        }
+        guard bookmarkResolver.startAccessing(destination.rootURL) else { throw ExportError.accessDenied }
+        defer { bookmarkResolver.stopAccessing(destination.rootURL) }
+        let temporary = FileManager.default.temporaryDirectory.appendingPathComponent("healthmd-wake-zip-\(UUID())")
+        defer { try? FileManager.default.removeItem(at: temporary) }
+        let inputs = try healthDataRangeArchiveInputs(materialized, settingsSnapshot: settingsSnapshot,
+            startDate: startDate, endDate: endDate, temporary: temporary)
+        try preflightExportArtifactPaths([inputs.relativePath] + materialized.dailyNotes.map(\.relativePath))
+        try preflightDailyNotes(materialized.dailyNotes, operation: materialized.operation, destination: destination)
+        // These flags only tell the packager that the supplied files already
+        // contain every selected output, including summary-only and dictionary.
+        let packaging = settingsSnapshot.makeAdvancedExportSettings()
+        packaging.generateRangeSummary = false
+        packaging.historicalCalendarRollupPeriods = []
+        packaging.summaryOnlyExport = false
+        packaging.includeDataDictionary = false
+        guard let archive = try await exportArchive(fromRenderedFiles: inputs.files, settings: packaging,
+            startDate: startDate, endDate: endDate, healthSubfolder: inputs.healthSubfolder,
+            acceptedDestination: destination) else { return nil }
+        let notes = try commitDailyNotes(materialized.dailyNotes, destination: destination)
+        return AppleLooseDailyArchiveWriteResult(fileURL: archive, notes: notes)
+    }
+
+    /// Prepare a scoped daily-note patch without reading or changing the user's
+    /// destination. These transient formats never become additional output files.
+    func prepareWakeDateDailyNote(_ healthData: HealthData, settingsSnapshot: ExportSettingsSnapshot,
+        operationIdentity: AppleExportOperationIdentity? = nil) async throws
+        -> DailyNoteInjector.PreparedContent {
+        let captured = try settingsSnapshot.validatedSleepCaptureContext()
+        let path = ExportPathPlanner.dailyNoteRelativePath(settings: settingsSnapshot.makeAdvancedExportSettings().dailyNoteInjection,
+            date: healthData.date, timeZone: captured.timeZone)
+        _ = try ExportPathPlanner.canonicalPortablePathKey(path)
+        var rendering = settingsSnapshot.forDailyArtifactPreview()
+        rendering.exportFormats = [.json, .markdown, .obsidianBases]
+        rendering.includeMetadata = true
+        rendering.groupByCategory = true
+        rendering.formatCustomization.markdownTemplate.style = .standard
+        rendering.archiveExportFiles = false
+        rendering.summaryOnlyExport = false
+        rendering.dailyNoteInjection.enabled = false
+        rendering.dailyNoteInjection.dailyNotesOnly = false
+        rendering.individualTracking.globalEnabled = false
+        rendering.includeDataDictionary = false
+        rendering.filenameFormat = "{date}"
+        rendering.folderStructure = ""
+        rendering.healthSubfolder = ""
+        rendering.organizeFormatsIntoFolders = false
+        rendering.formatCustomization.frontmatterConfig.keyStyle = .snakeCase
+        rendering.formatCustomization.frontmatterConfig.customFields = [:]
+        rendering.formatCustomization.frontmatterConfig.placeholderFields = []
+        // Daily notes contain selected summaries and optional presentation
+        // sections. They never acquire a hidden canonical source archive.
+        rendering.detailPolicy = settingsSnapshot.dailyNoteInjection.injectMarkdownSections
+            && settingsSnapshot.detailPolicy.includesSelectedTimeSeries ? .detailedTimeSeries : .summary
+        for index in rendering.formatCustomization.frontmatterConfig.fields.indices {
+            rendering.formatCustomization.frontmatterConfig.fields[index].isEnabled = true
+        }
+        guard let planned = try await materializeHealthDataRange([healthData], settingsSnapshot: rendering,
+            operationSurface: .localVaultRangeWithoutSideEffects, operationIdentity: operationIdentity,
+            includeDataDictionary: false) else {
+            throw AppleLooseDailyExportPlannerError.rustPlanningFailed
+        }
+        return try DailyNoteInjector.prepareWakeDateContent(healthData: healthData, operation: planned.operation,
+            settingsSnapshot: settingsSnapshot)
+    }
+
+    func materializeIndividualEntries(_ healthData: HealthData, settingsSnapshot: ExportSettingsSnapshot) throws
+        -> (files: [AppleLooseDailyIndividualEntry], partialFailures: [ExportPartialFailure]) {
+        let context = try settingsSnapshot.validatedSleepCaptureContext()
+        guard context.sleepDayAttribution == .morningEnds,
+              healthData.timeContext.sleepDayAttribution == .morningEnds,
+              healthData.timeContext.calendarTimeZoneIdentifier == context.calendarTimeZoneIdentifier else {
+            throw AppleLooseDailyExportPlannerError.rustPlanningFailed
+        }
+        let settings = settingsSnapshot.makeAdvancedExportSettings()
+        guard settings.writesIndividualEntryFiles else { return ([], []) }
+        let samples = individualExporter.extractIndividualSamples(from: healthData, settings: settings.individualTracking)
+        let gaps = healthData.healthKitRecordArchive == nil ? [] : individualExporter.coverageGaps(
+            emittedSamples: samples, from: healthData, settings: settings.individualTracking, metricSelection: settings.metricSelection)
+        let failures = gaps.isEmpty ? [] : [coverageGapFailure(gaps: gaps, for: healthData)]
+        let virtualRoot = URL(fileURLWithPath: "/__healthmd_individual_materialization__", isDirectory: true)
+        let base = individualEntriesBaseFolderURL(vaultURL: virtualRoot, healthSubfolder: settingsSnapshot.healthSubfolder,
+            date: healthData.date, settings: settings)
+        let staging = FileManager.default.temporaryDirectory.appendingPathComponent("healthmd-individual-\(UUID())")
+        var files: [AppleLooseDailyIndividualEntry] = []
+        do {
+            _ = try individualExporter.planIndividualEntries(samples: samples, to: base,
+                settings: settings.individualTracking, formatSettings: settings.formatCustomization,
+                calendarTimeZone: context.timeZone) { url, content, mediaType in
+                let root = virtualRoot.standardizedFileURL.path + "/"
+                let path = url.standardizedFileURL.path
+                guard path.hasPrefix(root) else { throw AppleExactDestinationError.unsafeRelativePath }
+                let relative = String(path.dropFirst(root.count))
+                try ExportPathPlanner.validatePortableArtifactPaths([relative])
+                let artifact = try ExportArtifactIO.renderTemporary(in: staging, prefix: "individual", mediaType: mediaType) {
+                    try $0.write(Data(content.utf8))
+                }
+                files.append(.init(relativePath: relative, artifact: artifact))
+            }
+            try ExportPathPlanner.validatePortableArtifactPaths(files.map(\.relativePath))
+            return (files, failures)
+        } catch { try? FileManager.default.removeItem(at: staging); throw error }
+    }
+
+    /// Read a preview under the same captured root identity as the local writer.
+    /// No directories or files are created; symlinks, rebounds and oversized notes reject.
+    func readDailyNoteForPreview(relativePath: String, destination: AppleLooseDailyRangeDestination) throws -> String? {
+        _ = try ExportPathPlanner.canonicalPortablePathKey(relativePath)
+        guard destinationState == .available, vaultURL?.standardizedFileURL == destination.rootURL.standardizedFileURL else {
+            throw ExportError.destinationChanged
+        }
+        guard bookmarkResolver.startAccessing(destination.rootURL) else { throw ExportError.accessDenied }
+        defer { bookmarkResolver.stopAccessing(destination.rootURL) }
+        if fileSystem is SystemFileSystem {
+            guard let binding = destination.binding else { throw AppleExactDestinationError.destinationUnavailable }
+            guard let bytes = try SecureExactArtifactIO.read(rootURL: destination.rootURL, relativePath: relativePath,
+                binding: binding, maximumByteCount: 8 * 1024 * 1024) else { return nil }
+            guard let content = String(data: bytes, encoding: .utf8) else { throw CocoaError(.fileReadInapplicableStringEncoding) }
+            return content
+        }
+        let target = ExportPathPlanner.appendingRelativePath(relativePath, to: destination.rootURL, isDirectory: false)
+        guard fileSystem.fileExists(atPath: target.path) else { return nil }
+        let content = try fileSystem.contentsOfFile(at: target)
+        guard content.utf8.count <= 8 * 1024 * 1024 else { throw CocoaError(.fileReadTooLarge) }
+        return content
+    }
+
+    /// Freeze the final note bytes before publishing any companion artifact.
+    /// A retained write can replay without a renderer or a fresh source capture.
+    func prepareDurableDailyNote(_ note: DailyNoteInjector.PreparedContent,
+        destination: AppleLooseDailyRangeDestination) throws -> DailyNoteInjector.DurableWrite {
+        guard fileSystem is SystemFileSystem, let binding = destination.binding else {
+            throw AppleExactDestinationError.destinationUnavailable
+        }
+        guard destinationState == .available, vaultURL?.standardizedFileURL == destination.rootURL.standardizedFileURL else {
+            throw ExportError.destinationChanged
+        }
+        guard bookmarkResolver.startAccessing(destination.rootURL) else { throw ExportError.accessDenied }
+        defer { bookmarkResolver.stopAccessing(destination.rootURL) }
+        let existingData = try SecureExactArtifactIO.read(rootURL: destination.rootURL, relativePath: note.relativePath,
+            binding: binding, maximumByteCount: 8 * 1024 * 1024)
+        let existing = try existingData.map { bytes in
+            guard let text = String(data: bytes, encoding: .utf8) else { throw CocoaError(.fileReadInapplicableStringEncoding) }
+            return text
+        }
+        let content = existing == nil && !DailyNoteInjector.createsMissingNote(note) ? nil
+            : try Data(DailyNoteInjector.mergePrepared(note, existing: existing ?? "").utf8)
+        return DailyNoteInjector.DurableWrite(version: 1, ownerDate: note.ownerDate, relativePath: note.relativePath,
+            identity: note.identity, pin: note.pin, destinationBinding: binding,
+            beforeSHA256: existingData.map(NativeExportArtifact.sha256),
+            contentSHA256: content.map(NativeExportArtifact.sha256), content: content)
+    }
+
+    enum DurableDailyNoteInspection { case ready, exact, skipped }
+
+    func inspectDurableDailyNote(_ write: DailyNoteInjector.DurableWrite,
+        pin: AppleExportEnginePin, identity: AppleExportOperationIdentity,
+        injectionSettings: DailyNoteInjectionSnapshot, allowedOwnerDates: Set<String>,
+        destination: AppleLooseDailyRangeDestination) throws -> DurableDailyNoteInspection {
+        guard fileSystem is SystemFileSystem, let binding = destination.binding,
+              destinationState == .available, vaultURL?.standardizedFileURL == destination.rootURL.standardizedFileURL else {
+            throw ExportError.destinationChanged
+        }
+        try DailyNoteInjector.validateDurableWrite(write, pin: pin, identity: identity,
+            settings: injectionSettings, binding: binding, allowedOwnerDates: allowedOwnerDates)
+        guard bookmarkResolver.startAccessing(destination.rootURL) else { throw ExportError.accessDenied }
+        defer { bookmarkResolver.stopAccessing(destination.rootURL) }
+        guard try productionDestinationBinding(for: destination.rootURL) == binding else { throw ExportError.destinationChanged }
+        guard let data = write.content else { return .skipped }
+        let current = try SecureExactArtifactIO.read(rootURL: destination.rootURL, relativePath: write.relativePath,
+            binding: binding, maximumByteCount: 8 * 1024 * 1024)
+        if current == data { return .exact }
+        guard current.map(NativeExportArtifact.sha256) == write.beforeSHA256 else { throw ExportError.destinationChanged }
+        return .ready
+    }
+
+    /// Commit only against the captured predecessor or verify an already-installed result.
+    /// Personal edits after preparation or after an unacknowledged commit reject unchanged.
+    func commitDurableDailyNote(_ write: DailyNoteInjector.DurableWrite,
+        pin: AppleExportEnginePin, identity: AppleExportOperationIdentity,
+        injectionSettings: DailyNoteInjectionSnapshot, allowedOwnerDates: Set<String>,
+        destination: AppleLooseDailyRangeDestination
+    ) throws -> DailyNoteInjector.InjectionResult {
+        guard fileSystem is SystemFileSystem, let binding = destination.binding,
+              destinationState == .available, vaultURL?.standardizedFileURL == destination.rootURL.standardizedFileURL else {
+            throw ExportError.destinationChanged
+        }
+        try DailyNoteInjector.validateDurableWrite(write, pin: pin, identity: identity,
+            settings: injectionSettings, binding: binding, allowedOwnerDates: allowedOwnerDates)
+        guard bookmarkResolver.startAccessing(destination.rootURL) else { throw ExportError.accessDenied }
+        defer { bookmarkResolver.stopAccessing(destination.rootURL) }
+        guard try productionDestinationBinding(for: destination.rootURL) == binding else { throw ExportError.destinationChanged }
+        guard let data = write.content else { return .skipped(reason: "Daily note was missing when the operation was prepared") }
+        let target = ExportPathPlanner.appendingRelativePath(write.relativePath, to: destination.rootURL, isDirectory: false)
+        #if DEBUG
+        let beforeHook = productionDestinationWillCommitForTesting
+        let afterHook = productionDestinationDidValidateForTesting
+        #else
+        let beforeHook: (@Sendable () throws -> Void)? = nil
+        let afterHook: (@Sendable () throws -> Void)? = nil
+        #endif
+        return try fileCoordinator.coordinateWriting(at: target, intent: .replace,
+            cancellationCheck: { try Task.checkCancellation() }) { coordinated in
+            let root = try SecureExactArtifactIO.coordinatedRootURL(for: coordinated,
+                rootURL: destination.rootURL, relativePath: write.relativePath, binding: binding)
+            let current = try SecureExactArtifactIO.read(rootURL: root, relativePath: write.relativePath,
+                binding: binding, maximumByteCount: 8 * 1024 * 1024)
+            if current == data { return .updated(path: write.relativePath) }
+            let checkPredecessor: @Sendable () throws -> Void = {
+                let bytes = try SecureExactArtifactIO.read(rootURL: root, relativePath: write.relativePath,
+                    binding: binding, maximumByteCount: 8 * 1024 * 1024)
+                guard bytes.map(NativeExportArtifact.sha256) == write.beforeSHA256 else { throw ExportError.destinationChanged }
+            }
+            try checkPredecessor()
+            try SecureExactArtifactIO.overwrite(rootURL: root, relativePath: write.relativePath, data: data,
+                binding: binding, beforeCommit: { try beforeHook?(); try checkPredecessor() },
+                afterValidationBeforeRename: { try afterHook?(); try checkPredecessor() },
+                cancellationCheck: { try Task.checkCancellation() })
+            return .updated(path: write.relativePath)
+        }
+    }
+
+    func freezeHealthDataRangeDestination() throws -> AppleLooseDailyRangeDestination {
+        guard destinationState == .available, let rootURL = vaultURL else { throw unavailableExportError }
+        guard bookmarkResolver.startAccessing(rootURL) else { throw ExportError.accessDenied }
+        defer { bookmarkResolver.stopAccessing(rootURL) }
+        return AppleLooseDailyRangeDestination(rootURL: rootURL, binding: try productionDestinationBinding(for: rootURL))
     }
 
     /// Plans a complete simple-summary range under one identity and commits only after every byte
@@ -2559,9 +3087,7 @@ final class VaultManager: ObservableObject {
         guard !healthData.isEmpty else {
             return AppleLooseDailyRangeWriteResult(dailyFileCount: 0, rollupFileCount: 0)
         }
-        guard destinationState == .available, let vaultURL else {
-            throw unavailableExportError
-        }
+        let destination = try freezeHealthDataRangeDestination()
         guard let materialized = try await materializeHealthDataRange(
             healthData,
             settingsSnapshot: settingsSnapshot,
@@ -2572,10 +3098,58 @@ final class VaultManager: ObservableObject {
             includeDataDictionary: shouldWriteDataDictionary
         ) else { return nil }
 
-        try preflightExportArtifactPaths(
-            materialized.operation.artifacts.map(\.artifact.relativePath)
-                + (materialized.dataDictionary.map { [$0.relativePath] } ?? [])
-        )
+        return try await commitHealthDataRangeMaterialization(materialized, destination: destination, writeMode: settingsSnapshot.writeMode)
+    }
+
+    /// Validate the complete retained plan again before the first destination effect.
+    func commitHealthDataRangeMaterialization(
+        _ materialized: AppleLooseDailyRangeMaterialization,
+        destination: AppleLooseDailyRangeDestination,
+        writeMode: WriteMode = .overwrite
+    ) async throws -> AppleLooseDailyRangeWriteResult {
+        guard destinationState == .available, let currentURL = vaultURL else { throw unavailableExportError }
+        guard currentURL.standardizedFileURL == destination.rootURL.standardizedFileURL else {
+            throw ExportError.destinationChanged
+        }
+        let vaultURL = destination.rootURL
+        guard materialized.dailyNotes.allSatisfy({ $0.pin == materialized.operation.pin && $0.identity == materialized.operation.identity }) else {
+            throw AppleLooseDailyExportPlannerError.rustPlanningFailed
+        }
+        for planned in materialized.operation.artifacts {
+            switch planned.artifact.content {
+            case .inline(let data):
+                guard String(data: data, encoding: .utf8) != nil else {
+                    throw CocoaError(.fileWriteInapplicableStringEncoding)
+                }
+            case .file(let file):
+                try file.validateIntegrity()
+            }
+        }
+        let allPaths = materialized.operation.artifacts.map(\.artifact.relativePath)
+            + (materialized.dataDictionary.map { [$0.relativePath] } ?? [])
+            + materialized.providerSidecars.map(\.relativePath)
+            + materialized.individualEntries.map(\.relativePath)
+            + materialized.dailyNotes.map(\.relativePath)
+        guard Set(allPaths).count == allPaths.count else { throw AppleExactDestinationError.unsafeRelativePath }
+        try preflightExportArtifactPaths(allPaths)
+        let providerRequests = try materialized.providerSidecars.map { file in
+            guard file.artifact.descriptor.mediaType == "application/json" else {
+                throw CocoaError(.fileReadCorruptFile)
+            }
+            try file.artifact.validateIntegrity()
+            let url = ExportPathPlanner.appendingRelativePath(file.relativePath, to: vaultURL, isDirectory: false)
+            return AggregateFileWriteRequest(fileURL: url, filename: url.lastPathComponent,
+                artifact: file.artifact, behavior: .overwrite)
+        }
+        let individualRequests = try materialized.individualEntries.map { file in
+            guard ["text/markdown", "application/json"].contains(file.artifact.descriptor.mediaType) else {
+                throw CocoaError(.fileReadCorruptFile)
+            }
+            try file.artifact.validateIntegrity()
+            let url = ExportPathPlanner.appendingRelativePath(file.relativePath, to: vaultURL, isDirectory: false)
+            return AggregateFileWriteRequest(fileURL: url, filename: url.lastPathComponent,
+                artifact: file.artifact, behavior: writeMode == .append ? .append : writeMode == .update ? .mergeMarkdown : .overwrite)
+        }
 
         let dictionaryRequest = try materialized.dataDictionary.map { file in
             guard let content = String(data: file.data, encoding: .utf8) else {
@@ -2595,27 +3169,24 @@ final class VaultManager: ObservableObject {
         }
         let aggregateRequests: [(AppleLooseDailyPlannedArtifact, AggregateFileWriteRequest)] =
             try materialized.operation.artifacts.map { planned in
-                guard let content = String(data: planned.artifact.inlineData, encoding: .utf8) else {
-                    throw CocoaError(.fileWriteInapplicableStringEncoding)
-                }
                 let fileURL = ExportPathPlanner.appendingRelativePath(
                     planned.artifact.relativePath,
                     to: vaultURL,
                     isDirectory: false
                 )
-                return (planned, AggregateFileWriteRequest(
-                    fileURL: fileURL,
-                    filename: fileURL.lastPathComponent,
-                    newContent: content,
-                    behavior: .overwrite
-                ))
+                return (planned, try Self.plannedArtifactWriteRequest(planned.artifact, fileURL: fileURL, writeMode: writeMode, format: planned.format))
             }
 
-        let destinationBinding = try productionDestinationBinding(for: vaultURL)
+        let destinationBinding = destination.binding
         let barrier = ExportCommitBarrier()
         try await barrier.transition(to: .materialized)
         guard bookmarkResolver.startAccessing(vaultURL) else { throw ExportError.accessDenied }
         defer { bookmarkResolver.stopAccessing(vaultURL) }
+        guard self.vaultURL?.standardizedFileURL == vaultURL.standardizedFileURL,
+              try productionDestinationBinding(for: vaultURL) == destinationBinding else {
+            throw ExportError.destinationChanged
+        }
+        try preflightDailyNotes(materialized.dailyNotes, operation: materialized.operation, destination: destination)
         do {
             try await barrier.transition(to: .committing)
             if let dictionaryRequest, let dictionary = materialized.dataDictionary {
@@ -2641,19 +3212,92 @@ final class VaultManager: ObservableObject {
                     format: planned.format
                 ))
             }
+            for (file, request) in zip(materialized.providerSidecars, providerRequests) {
+                _ = try await aggregateFileWriter.write(secureRequest(request,
+                    rootURL: vaultURL, relativePath: file.relativePath, binding: destinationBinding))
+            }
+            for (file, request) in zip(materialized.individualEntries, individualRequests) {
+                _ = try await aggregateFileWriter.write(secureRequest(request,
+                    rootURL: vaultURL, relativePath: file.relativePath, binding: destinationBinding))
+            }
+            let noteResult = try commitDailyNotes(materialized.dailyNotes, destination: destination)
+            let updatedNoteDates = noteResult.dailyNoteUpdatedDates
+            let skippedNoteDates = noteResult.dailyNoteSkippedDates
             try await barrier.transition(to: .completed)
-            lastExportStatus = "Exported \(writtenFiles.count) files from one frozen range plan"
+            lastExportStatus = materialized.dailyNotes.isEmpty
+                ? "Exported \(writtenFiles.count) files"
+                : "Updated \(updatedNoteDates.count) daily notes"
             if let previewFile = preferredPresentationFile(in: writtenFiles) {
                 recordExportPresentationTarget(
                     fileURL: previewFile.fileURL,
                     securityScopedRootURL: vaultURL
                 )
             }
-            return materialized.result
+            else if let note = materialized.dailyNotes.first(where: { updatedNoteDates.contains($0.ownerDate) }) {
+                recordExportPresentationTarget(fileURL: ExportPathPlanner.appendingRelativePath(note.relativePath,
+                    to: vaultURL, isDirectory: false), securityScopedRootURL: vaultURL)
+            }
+            return AppleLooseDailyRangeWriteResult(dailyFileCount: materialized.result.dailyFileCount,
+                rollupFileCount: materialized.result.rollupFileCount, dataDictionaryFileCount: materialized.result.dataDictionaryFileCount,
+                providerSidecarFileCount: materialized.result.providerSidecarFileCount,
+                individualEntryFileCount: materialized.result.individualEntryFileCount,
+                dailyNoteUpdatedDates: updatedNoteDates, dailyNoteSkippedDates: skippedNoteDates)
         } catch {
             try? await barrier.transition(to: .failed)
             throw error
         }
+    }
+
+    /// Validate every note before any companion is published; re-read under coordination at commit.
+    private func preflightDailyNotes(_ notes: [DailyNoteInjector.PreparedContent],
+        operation: AppleLooseDailyPlannedOperation, destination: AppleLooseDailyRangeDestination) throws {
+        try Task.checkCancellation()
+        guard notes.allSatisfy({ $0.pin == operation.pin && $0.identity == operation.identity }) else {
+            throw AppleLooseDailyExportPlannerError.rustPlanningFailed
+        }
+        for note in notes {
+            let existing = try readDailyNoteForPreview(relativePath: note.relativePath, destination: destination)
+            if existing == nil && !DailyNoteInjector.createsMissingNote(note) { continue }
+            _ = try DailyNoteInjector.mergePrepared(note, existing: existing ?? "")
+        }
+    }
+
+    private func commitDailyNotes(_ notes: [DailyNoteInjector.PreparedContent],
+        destination: AppleLooseDailyRangeDestination) throws -> AppleLooseDailyRangeWriteResult {
+        var updated: [Date] = []
+        var skipped: [Date] = []
+        #if DEBUG
+        let beforeCommit = productionDestinationWillCommitForTesting
+        let afterValidation = productionDestinationDidValidateForTesting
+        #else
+        let beforeCommit: (@Sendable () throws -> Void)? = nil
+        let afterValidation: (@Sendable () throws -> Void)? = nil
+        #endif
+        for note in notes {
+            try Task.checkCancellation()
+            guard destinationState == .available, vaultURL?.standardizedFileURL == destination.rootURL.standardizedFileURL else {
+                throw ExportError.destinationChanged
+            }
+            let outcome: DailyNoteInjector.InjectionResult
+            if fileSystem is SystemFileSystem {
+                let retained = try prepareDurableDailyNote(note, destination: destination)
+                outcome = try commitDurableDailyNote(retained, pin: note.pin, identity: note.identity,
+                    injectionSettings: DailyNoteInjector.capturedSettings(note),
+                    allowedOwnerDates: [HealthKitDailyOwnershipMetadata.ownerDate(for: note.ownerDate,
+                        calendarTimeZoneIdentifier: note.pin.calendarTimeZoneIdentifier)], destination: destination)
+            } else {
+                outcome = DailyNoteInjector.injectPrepared(note, into: destination.rootURL, fileSystem: fileSystem,
+                    fileCoordinator: fileCoordinator, destinationBinding: destination.binding,
+                    beforeCommit: beforeCommit, afterValidationBeforeRename: afterValidation)
+            }
+            switch outcome {
+            case .updated: updated.append(note.ownerDate)
+            case .skipped: skipped.append(note.ownerDate)
+            case .failed(let error): throw error
+            }
+        }
+        return AppleLooseDailyRangeWriteResult(dailyFileCount: 0, rollupFileCount: 0,
+            dailyNoteUpdatedDates: updated, dailyNoteSkippedDates: skipped)
     }
 
     /// Captures the exact selected-root identity used by durable connected finalization.
@@ -2671,7 +3315,8 @@ final class VaultManager: ObservableObject {
     func inspectExactUTF8Artifact(
         relativePath: String,
         expectedData: Data,
-        binding: AppleVaultDestinationBinding
+        binding: AppleVaultDestinationBinding,
+        writeMode: WriteMode = .overwrite
     ) async throws -> AppleExactDestinationState {
         guard let vaultURL else { throw AppleExactDestinationError.destinationUnavailable }
         guard bookmarkResolver.startAccessing(vaultURL) else {
@@ -2689,7 +3334,8 @@ final class VaultManager: ObservableObject {
                 relativePath: relativePath,
                 expectedData: expectedData,
                 binding: binding,
-                fallbackFileURL: fileURL
+                fallbackFileURL: fileURL,
+                behavior: writeMode == .append ? .append : writeMode == .update ? .mergeMarkdown : .overwrite
             )
         } catch let error as AppleExactDestinationError {
             throw error
@@ -2698,14 +3344,16 @@ final class VaultManager: ObservableObject {
         }
     }
 
-    func overwriteExactUTF8Artifact(
-        relativePath: String,
-        data: Data,
-        binding: AppleVaultDestinationBinding
-    ) async throws {
-        guard let content = String(data: data, encoding: .utf8) else {
-            throw AppleExactDestinationError.invalidUTF8
-        }
+    func overwriteExactUTF8Artifact(relativePath: String, data: Data, binding: AppleVaultDestinationBinding, writeMode: WriteMode = .overwrite) async throws {
+        try await overwriteExactArtifact(relativePath: relativePath, data: data, binding: binding, binary: false, writeMode: writeMode)
+    }
+
+    func overwriteExactBinaryArtifact(relativePath: String, data: Data, binding: AppleVaultDestinationBinding) async throws {
+        try await overwriteExactArtifact(relativePath: relativePath, data: data, binding: binding, binary: true)
+    }
+
+    private func overwriteExactArtifact(relativePath: String, data: Data,
+        binding: AppleVaultDestinationBinding, binary: Bool, writeMode: WriteMode = .overwrite) async throws {
         guard let vaultURL else { throw AppleExactDestinationError.destinationUnavailable }
         guard bookmarkResolver.startAccessing(vaultURL) else {
             throw AppleExactDestinationError.destinationUnavailable
@@ -2716,12 +3364,18 @@ final class VaultManager: ObservableObject {
             binding: binding,
             vaultURL: vaultURL
         )
-        let request = AggregateFileWriteRequest(
-            fileURL: fileURL,
-            filename: fileURL.lastPathComponent,
-            newContent: content,
-            behavior: .overwrite
-        )
+        let request: AggregateFileWriteRequest
+        if binary {
+            let artifact = try ExportArtifactIO.renderTemporary(prefix: "healthmd-exact-binary", mediaType: "application/octet-stream") {
+                try $0.write(data)
+            }
+            request = AggregateFileWriteRequest(fileURL: fileURL, filename: fileURL.lastPathComponent,
+                artifact: artifact, behavior: .overwrite)
+        } else {
+            guard let content = String(data: data, encoding: .utf8) else { throw AppleExactDestinationError.invalidUTF8 }
+            request = AggregateFileWriteRequest(fileURL: fileURL, filename: fileURL.lastPathComponent,
+                newContent: content, behavior: writeMode == .append ? .append : writeMode == .update ? .mergeMarkdown : .overwrite)
+        }
         #if DEBUG
         let beforeCommit = exactDestinationWillCommitForTesting
         #else
@@ -3154,20 +3808,12 @@ final class VaultManager: ObservableObject {
             nil
         }
         let aggregateRequests: [(AppleLooseDailyPlannedArtifact, AggregateFileWriteRequest)] = try operation.artifacts.map { planned in
-            guard let content = String(data: planned.artifact.inlineData, encoding: .utf8) else {
-                throw CocoaError(.fileWriteInapplicableStringEncoding)
-            }
             let fileURL = ExportPathPlanner.appendingRelativePath(
                 planned.artifact.relativePath,
                 to: vaultURL,
                 isDirectory: false
             )
-            return (planned, AggregateFileWriteRequest(
-                fileURL: fileURL,
-                filename: fileURL.lastPathComponent,
-                newContent: content,
-                behavior: .overwrite
-            ))
+            return (planned, try Self.plannedArtifactWriteRequest(planned.artifact, fileURL: fileURL, writeMode: settings.writeMode, format: planned.format))
         }
 
         let barrier = ExportCommitBarrier()
@@ -3229,6 +3875,40 @@ final class VaultManager: ObservableObject {
             return result
         } catch {
             try? await barrier.transition(to: .failed)
+            throw error
+        }
+    }
+
+    /// Encodes provider-native v1 sidecars without destination effects. They join
+    /// the daily/range materialization's path and destination-binding preflight.
+    func materializeExternalDailyRecords(_ records: [ExternalDailyRecord],
+                                        healthSubfolder: String) throws -> [AppleLooseDailyProviderSidecar] {
+        let exportable = records.filter(\.shouldExport)
+        guard !exportable.isEmpty else { return [] }
+        let root = providerSidecarStagingDirectory.appendingPathComponent(
+            "healthmd-provider-sidecars-" + UUID().uuidString, isDirectory: true)
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        encoder.dateEncodingStrategy = .iso8601
+        do {
+            return try exportable.map { record in
+                try Task.checkCancellation()
+                guard record.hasValidExportDate else { throw ExternalProviderExportError.invalidDate(record.date) }
+                let path = [healthSubfolder, "integrations", record.provider.exportFolderName, "\(record.date).json"]
+                    .filter { !$0.isEmpty }.joined(separator: "/")
+                return try autoreleasepool {
+                    // Encoding is per provider/day. Drain its Foundation buffers
+                    // before retaining only this exact file's descriptor/lease.
+                    let data = try encoder.encode(record)
+                    let artifact = try ExportArtifactIO.renderTemporary(in: root, prefix: "provider-sidecar",
+                        mediaType: "application/json") { try $0.write(data) }
+                    return AppleLooseDailyProviderSidecar(relativePath: path, artifact: artifact)
+                }
+            }
+        } catch {
+            // A failed batch never transfers cleanup ownership to its caller.
+            // Only this invocation's private UUID directory can be removed.
+            try? FileManager.default.removeItem(at: root)
             throw error
         }
     }
@@ -3334,6 +4014,7 @@ final class VaultManager: ObservableObject {
         startDate: Date,
         endDate: Date,
         healthSubfolder: String? = nil,
+        acceptedDestination: AppleLooseDailyRangeDestination? = nil,
         cancellationCheck: @escaping @Sendable () -> Bool = { false }
     ) async throws -> URL? {
         try await exportArchive(
@@ -3343,6 +4024,7 @@ final class VaultManager: ObservableObject {
             startDate: startDate,
             endDate: endDate,
             healthSubfolder: healthSubfolder,
+            acceptedDestination: acceptedDestination,
             cancellationCheck: cancellationCheck
         )
     }
@@ -3354,6 +4036,7 @@ final class VaultManager: ObservableObject {
         startDate: Date,
         endDate: Date,
         healthSubfolder: String?,
+        acceptedDestination: AppleLooseDailyRangeDestination? = nil,
         cancellationCheck: @escaping @Sendable () -> Bool
     ) async throws -> URL? {
         func checkCancellation() throws {
@@ -3413,7 +4096,7 @@ final class VaultManager: ObservableObject {
         if settings.summaryOnlyModeEnabled && rollupEntries.isEmpty { return nil }
 
         let effectiveHealthSubfolder = healthSubfolder ?? self.healthSubfolder
-        let archiveName = archiveFilename(
+        let archiveName = Self.archiveFilename(
             startDate: startDate,
             endDate: endDate,
             timeZone: settings.exportTimeZoneOverride
@@ -3442,6 +4125,10 @@ final class VaultManager: ObservableObject {
         try validateExportArtifactPaths([archiveRelativePath], vaultURL: vaultURL)
 
         let destinationBinding = try productionDestinationBinding(for: vaultURL)
+        if let acceptedDestination {
+            guard vaultURL.standardizedFileURL == acceptedDestination.rootURL.standardizedFileURL,
+                  destinationBinding == acceptedDestination.binding else { throw ExportError.destinationChanged }
+        }
         let healthFolderURL = ExportPathPlanner.healthSubfolderURL(
             vaultURL: vaultURL,
             healthSubfolder: effectiveHealthSubfolder
@@ -3539,13 +4226,18 @@ final class VaultManager: ObservableObject {
                         }
                     case .file(let file):
                         try await Self.performArchiveIO {
-                            try writer.append(
-                                ZipArchiveWriter.FileEntry(
-                                    path: file.archivePath,
-                                    sourceURL: file.url
-                                ),
-                                cancellationCheck: { Task.isCancelled || cancellationCheck() }
-                            )
+                            if let artifact = file.acceptedArtifact {
+                                try writer.append(path: file.archivePath, artifact: artifact,
+                                    cancellationCheck: { Task.isCancelled || cancellationCheck() })
+                            } else {
+                                try writer.append(
+                                    ZipArchiveWriter.FileEntry(
+                                        path: file.archivePath,
+                                        sourceURL: file.url
+                                    ),
+                                    cancellationCheck: { Task.isCancelled || cancellationCheck() }
+                                )
+                            }
                         }
                         try checkCancellation()
                         await Task.yield()
@@ -3639,7 +4331,7 @@ final class VaultManager: ObservableObject {
         )
     }
 
-    private func archiveFilename(
+    nonisolated static func archiveFilename(
         startDate: Date,
         endDate: Date,
         timeZone: TimeZone? = nil
@@ -3989,7 +4681,7 @@ final class VaultManager: ObservableObject {
             if destinationBinding == nil {
                 try ensureCoordinatedDirectoryExists(at: healthFolderURL)
             }
-            let archiveName = archiveFilename(
+            let archiveName = Self.archiveFilename(
                 startDate: immutableRollupDates.first ?? startDate,
                 endDate: immutableRollupDates.last ?? endDate,
                 timeZone: sourceCalendar.timeZone
@@ -4371,7 +5063,7 @@ final class VaultManager: ObservableObject {
                 ?? startDate
             let archivePath = [
                 effectiveHealthSubfolder,
-                archiveFilename(
+                Self.archiveFilename(
                     startDate: startDate,
                     endDate: endDate,
                     timeZone: settings.exportTimeZoneOverride
@@ -4488,6 +5180,28 @@ final class VaultManager: ObservableObject {
 
     /// Freezes mutable render settings into an immutable write request on MainActor.
     /// The serialized filesystem transaction can then run safely on its utility queue.
+    private static func plannedArtifactWriteRequest(
+        _ artifact: NativeExportArtifact, fileURL: URL,
+        writeMode: WriteMode, format: ExportFormat
+    ) throws -> AggregateFileWriteRequest {
+        let behavior: AggregateFileWriteBehavior = switch writeMode {
+        case .append: .append
+        case .update where format == .markdown: .mergeMarkdown
+        case .update, .overwrite: .overwrite
+        }
+        switch artifact.content {
+        case .file(let file):
+            return AggregateFileWriteRequest(fileURL: fileURL, filename: fileURL.lastPathComponent,
+                artifact: file, behavior: behavior)
+        case .inline(let data):
+            guard let content = String(data: data, encoding: .utf8) else {
+                throw CocoaError(.fileWriteInapplicableStringEncoding)
+            }
+            return AggregateFileWriteRequest(fileURL: fileURL, filename: fileURL.lastPathComponent,
+                newContent: content, behavior: behavior)
+        }
+    }
+
     private func makeAggregateFileWriteRequest(
         preparedExport: PreparedHealthDataExport,
         date: Date,

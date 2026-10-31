@@ -14,6 +14,10 @@ import com.healthmd.domain.model.ExportFormat
 import com.healthmd.domain.model.ExportSettings
 import com.healthmd.domain.model.HealthData
 import com.healthmd.domain.model.WriteMode
+import com.healthmd.domain.model.AndroidCaptureContext
+import com.healthmd.domain.model.SleepDayAttribution
+import com.healthmd.domain.repository.SettingsRepository
+import java.lang.reflect.Proxy
 import java.time.LocalDate
 import java.time.ZoneId
 import kotlinx.coroutines.runBlocking
@@ -26,7 +30,13 @@ class HistoricalExportRecoveryTest {
         val service = HealthMdCoreService()
         val readiness = service.checkReadiness()
         val native = ProductionDailyAggregateNativePlanBuilder(MarkdownExporter(), JsonExporter(), CsvExporter(), ObsidianBasesExporter())
-        for (profile in AndroidExportProfile.entries) {
+        val liveSettings = Proxy.newProxyInstance(
+            SettingsRepository::class.java.classLoader, arrayOf(SettingsRepository::class.java),
+        ) { _, method, _ -> error("Historical recovery must not read live settings: ${method.name}") } as SettingsRepository
+        val snapshotFactory = ScheduledProfileSnapshotFactory(ExportEnginePinPlanner(), liveSettings)
+        // Registry revision 1 predates the wake-date profile; only shipped historical profiles
+        // can carry this pin. The successor's own frozen authority has separate coverage.
+        for (profile in listOf(AndroidExportProfile.android_frozen_v4, AndroidExportProfile.android_analytical_v5)) {
             for (mode in listOf(ExportEngineMode.rust, ExportEngineMode.shadow)) {
                 val current = service.getMetricRegistry(profile.coreProfile)
                 val original = ExportEnginePin.create(mode, profile, "UTC", readiness, current).copy(
@@ -40,13 +50,15 @@ class HistoricalExportRecoveryTest {
                 ).let { it.copy(formatCustomization = it.formatCustomization.copy(
                     compatibilitySchemaProfile = if (profile == AndroidExportProfile.android_frozen_v4) CompatibilitySchemaProfile.IOS_V4_FROZEN else CompatibilitySchemaProfile.ANDROID_ANALYTICAL_V5,
                 )) }
-                val snapshot = AndroidExportSettingsSnapshot.capture(settings, original, ZoneId.of("UTC"))
+                val capture = AndroidCaptureContext(ZoneId.of("UTC"), SleepDayAttribution.NIGHT_BEGINS,
+                    profile.publicProfileId)
+                val snapshot = AndroidExportSettingsSnapshot.capture(settings, original, capture.zoneId, capture)
                 val encoded = AndroidExportSettingsSnapshotCodec.encodeCanonical(snapshot)
                 // The generic settings projection deliberately excludes execution authority.
                 // Exercise the shipped profile recovery path that rebinds the saved exact pin.
                 val decoded = AndroidExportSettingsSnapshotCodec.decode(encoded)
                 assertThat(decoded.restoreOnto(ExportSettings()).executionEnginePin).isNull()
-                val restored = requireNotNull(ScheduledProfileSnapshotFactory(ExportEnginePinPlanner()).restoreForRun(
+                val restored = requireNotNull(snapshotFactory.restoreForRun(
                     profile = ExportProfile(
                         id = "historical-profile", name = "Synthetic historical profile",
                         settingsSnapshotJson = encoded, target = settings.exportTarget,
@@ -55,6 +67,7 @@ class HistoricalExportRecoveryTest {
                     current = ExportSettings(), lookbackDays = 1,
                 ))
                 assertThat(restored.executionEnginePin).isEqualTo(original)
+                assertThat(restored.executionSleepCaptureContext).isEqualTo(capture)
                 val data = HealthData(LocalDate.of(2026, 3, 15), activity = ActivityData(steps = 1234))
                 val ids = DailyAggregateExportIds("historical-request", "historical-session")
                 val request = FrozenDailyAggregateExportRequest.capture(data, restored, profile, mode, ids)

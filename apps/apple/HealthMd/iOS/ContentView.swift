@@ -553,12 +553,10 @@ struct ContentView: View {
                     vaultManager.clearVaultFolder()
                 }
                 if TestMode.useHealthKitExportPreviewFixtures {
-                    advancedSettings.exportFormats = [.markdown]
-                    advancedSettings.detailPolicy = .lossless
+                    advancedSettings.exportFormats = TestMode.healthKitExportPreviewFormats
+                    advancedSettings.detailPolicy = TestMode.healthKitExportPreviewDetailPolicy
                     advancedSettings.metricSelection.selectAll()
-                    advancedSettings.generateWeeklyRollups = true
-                    advancedSettings.generateMonthlyRollups = true
-                    advancedSettings.generateYearlyRollups = true
+                    advancedSettings.generateRangeSummary = TestMode.healthKitExportPreviewRangeSummary
                 }
                 if TestMode.noExportFormats {
                     advancedSettings.exportFormats = []
@@ -1295,7 +1293,8 @@ struct ContentView: View {
     private var interactiveHistorySelection: HealthHistoryExecutionSelection {
         HealthHistoryExecutionSelection(scope: interactiveHistoryScope,
             settings: ExportSettingsSnapshot.from(advancedSettings, appleExportEngineAuthorityIsFrozen: false),
-            target: exportTargetSelection, preset: dateRangePreset)
+            target: exportTargetSelection, preset: dateRangePreset,
+            sleepDayAttribution: healthKitManager.sleepDayAttribution)
     }
 
     private var interactiveHistoryScope: HealthHistoryScope {
@@ -1770,6 +1769,7 @@ struct ContentView: View {
                 let dateFormatter = DateFormatter()
                 dateFormatter.dateFormat = "yyyy-MM-dd"
                 let providerTimeZone = advancedSettings.exportTimeZoneOverride ?? .current
+                let captureContext = try healthKitManager.resolveSleepCaptureContext(settings: advancedSettings, timeZone: providerTimeZone)
                 var providerCalendar = Calendar(identifier: .gregorian)
                 providerCalendar.timeZone = providerTimeZone
                 let externalRecordFetcher: MacExportJobBuilder.ExternalDailyRecordFetcher?
@@ -1801,6 +1801,7 @@ struct ContentView: View {
                         negotiation: negotiation,
                         healthKitManager: healthKitManager,
                         externalRecordFetcher: externalRecordFetcher,
+                        externalIntegrations: externalIntegrationManager,
                         syncService: syncService,
                         progress: { update in
                             exportStatusMessage = update.message
@@ -1824,6 +1825,7 @@ struct ContentView: View {
                             destinationName: destinationName,
                             dateFormatter: dateFormatter,
                             externalRecordFetcher: externalRecordFetcher,
+                            captureContext: captureContext,
                             selection: selection,
                             frozenSettings: advancedSettings
                         )
@@ -1845,7 +1847,8 @@ struct ContentView: View {
                             for: date,
                             detailPolicy: detailPolicy,
                             metricSelection: advancedSettings.metricSelection,
-                            timeZone: providerTimeZone
+                            timeZone: providerTimeZone,
+                            captureContext: captureContext
                         )
                     },
                     fetchExternalDailyRecords: externalRecordFetcher,
@@ -1980,6 +1983,7 @@ struct ContentView: View {
         destinationName: String,
         dateFormatter: DateFormatter,
         externalRecordFetcher: MacExportJobBuilder.ExternalDailyRecordFetcher?,
+        captureContext: AppleSleepCaptureContext,
         selection: HealthHistoryExecutionSelection,
         frozenSettings: AdvancedExportSettings
     ) async throws {
@@ -2089,7 +2093,8 @@ struct ContentView: View {
                         for: date,
                         detailPolicy: detailPolicy,
                         metricSelection: advancedSettings.metricSelection,
-                        timeZone: sourceTimeZone
+                        timeZone: sourceTimeZone,
+                        captureContext: captureContext
                     )
                     var record = ConnectedExportDetailPolicy.sanitized(
                         fetchedRecord,

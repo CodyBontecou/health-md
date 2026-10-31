@@ -54,6 +54,10 @@ The generated path matrix is at [`generated/individual/filename-path-matrix.md`]
 
 ## Common frontmatter
 
+Qualified Morning ends captures add `healthmd_capture_context_json`, a quoted JSON annotation on each individual note. It contains the accepted `schema_profile` (`apple-v11`), `calendar_timezone`, `timestamp_timezone` (`UTC`), `sleep_day_attribution`, `sleep_owner_day_rule`, and `sleep_interval_clipping`. Sleep notes also identify `sleep_owner_date`. This describes the capture that selected the entry; the note retains its individual-entry kind and canonical raw-record schema. Source timestamps and UUIDs keep their original meaning.
+
+Local Morning entries and workout route sidecars are staged with the daily/range artifacts before destination writes. Filenames and display clocks use the accepted Gregorian export calendar. Identical repeated source files share one path; conflicting bytes for that path reject the operation. Summary-only mode suppresses individual entries, and ZIP mode packages their accepted bytes. Morning ends remains unavailable in production while profile qualification is pending.
+
 A non-workout entry begins with these fields when applicable:
 
 | Field | Meaning |

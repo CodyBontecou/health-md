@@ -1,6 +1,7 @@
 package com.healthmd.data.health.oauth
 
 import com.google.common.truth.Truth.assertThat
+import kotlinx.coroutines.async
 import kotlinx.coroutines.test.runTest
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
@@ -179,6 +180,36 @@ class OAuthAuthorizationManagerTest {
         assertThat((failure as OAuthAuthorizationException).reason).isEqualTo(OAuthFailureReason.INVALID_TOKEN_RESPONSE)
         assertThat(store.tokens.getValue("whoop").accessToken).isEqualTo("access-new")
         assertThat(store.tokens.getValue("whoop").refreshToken).isEqualTo("refresh-new")
+    }
+
+    @Test
+    fun delayedRefreshCannotReplaceNewGrantOrReconnectDisconnectedAccount() = runTest {
+        for (disconnect in listOf(false, true)) {
+            val original = OAuthToken("oura", "old", "old-refresh", expiresAtEpochSeconds = 1)
+            val store = InMemoryOAuthTokenStore(listOf(original))
+            val manager = manager(store)
+            val accepted = requireNotNull(store.getCredential("oura"))
+            val started = java.util.concurrent.CountDownLatch(1)
+            val release = java.util.concurrent.CountDownLatch(1)
+            server.dispatcher = object : okhttp3.mockwebserver.Dispatcher() {
+                override fun dispatch(request: okhttp3.mockwebserver.RecordedRequest): MockResponse {
+                    started.countDown()
+                    check(release.await(10, java.util.concurrent.TimeUnit.SECONDS))
+                    return MockResponse().setBody("""{"access_token":"stale-refresh","refresh_token":"stale-next","expires_in":3600}""")
+                }
+            }
+            val pending = async(kotlinx.coroutines.Dispatchers.Default) {
+                manager.validAccessToken("oura", accepted.connectionId)
+            }
+            try {
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    check(started.await(10, java.util.concurrent.TimeUnit.SECONDS))
+                }
+                if (disconnect) store.clearToken("oura") else store.saveToken(OAuthToken("oura", "replacement", "new-refresh"))
+            } finally { release.countDown() }
+            assertThat(pending.await()).isNull()
+            assertThat(store.getToken("oura")?.accessToken).isEqualTo(if (disconnect) null else "replacement")
+        }
     }
 
     @Test
