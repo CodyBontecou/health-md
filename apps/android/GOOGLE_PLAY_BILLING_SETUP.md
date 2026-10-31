@@ -6,6 +6,8 @@ This guide covers the `play` Android variant. F-Droid does not compile Billing a
 
 The approved US Individual prices are **$0.99 weekly**, **$29.99 yearly**, and **$49.99 Lifetime**. Eligible subscriptions include a **seven-day free trial**. Lifetime is charged immediately. Android offers no Family plans and no monthly subscription. The cross-platform decision and Apple setup are recorded in the [paid-access rollout](../apple/docs/experiments/subscription-pricing-rollout.md).
 
+**Internal-testing release:** Android 3.5.0 uses phone version code 43. Upload through the protected `android-release.yml` workflow, then qualify real Play purchases with license-test accounts before production promotion. The Internal Testing upload does not activate subscription products or change any product price.
+
 **Live-price hold:** these are launch targets. Leave the existing live lifetime product's price and regional pricing unchanged until the subscription-containing app is live and the owner explicitly approves the coordinated cutover. Draft subscription products, prices, and trials may be prepared in advance; do not activate, submit, publish, or release as a side effect of setup. Follow the rollout guide's live-price hold when resuming Console work.
 
 Configure draft products in Google Play Console under Monetize → Products:
