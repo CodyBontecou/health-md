@@ -70,6 +70,8 @@
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>CONNECTED_APPS_WHOOP_ENABLED</key>
 	<string>$(CONNECTED_APPS_WHOOP_ENABLED)</string>
+	<key>NEW_EXPERIENCE_ENABLED</key>
+	<string>$(NEW_EXPERIENCE_ENABLED)</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<key>LSSupportsOpeningDocumentsInPlace</key>

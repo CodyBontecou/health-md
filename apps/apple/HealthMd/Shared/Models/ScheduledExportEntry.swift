@@ -325,11 +325,17 @@ final class ScheduledExportEntryStore: ObservableObject {
                 ? stored.enabledAt : (entry.isEnabled ? now() : nil)
             entries[index] = merged
             persist()
+            if stored.isEnabled != entry.isEnabled {
+                recordCoverageTransition(profileID: entry.profileID, isEnabled: entry.isEnabled)
+            }
             return true
         }
         guard entries.count < Self.maximumScheduledEntries else { return false }
         entries.append(entry)
         persist()
+        if entry.isEnabled {
+            recordCoverageTransition(profileID: entry.profileID, isEnabled: true)
+        }
         return true
     }
 
@@ -351,7 +357,15 @@ final class ScheduledExportEntryStore: ObservableObject {
         }
         entries[index] = changed
         persist()
+        if changed.isEnabled != current.isEnabled {
+            recordCoverageTransition(profileID: profileID, isEnabled: changed.isEnabled)
+        }
         return true
+    }
+
+    /// `enabledAt` is cleared on pause, so the coverage ledger keeps the transition.
+    private func recordCoverageTransition(profileID: UUID, isEnabled: Bool) {
+        CoverageLedgerStore.shared.recordScheduleTransition(profileID: profileID, isEnabled: isEnabled)
     }
 
     /// Removes the entry bound to a profile. Deleting a profile must delete

@@ -2124,7 +2124,8 @@ struct ExportOrchestrator {
         idempotencyKey: UUID? = nil,
         appleExportEnginePin: AppleExportEnginePin? = nil,
         operationDetails: ExportHistoryOperationDetails? = nil,
-        profileName: String? = nil
+        profileName: String? = nil,
+        profileID: UUID? = nil
     ) {
         let history = ExportHistoryManager.shared
         let suppliedFileCount = fileCount.map { max($0, 0) }
@@ -2151,7 +2152,9 @@ struct ExportOrchestrator {
                 partialFailures: result.partialFailures,
                 appleExportEnginePin: appleExportEnginePin,
                 operationDetails: operationDetails,
-                profileName: profileName
+                profileName: profileName,
+                profileID: profileID,
+                completedDates: result.completedDates
             )
         } else {
             history.recordFailure(
@@ -2172,7 +2175,9 @@ struct ExportOrchestrator {
                 partialFailures: result.partialFailures,
                 appleExportEnginePin: appleExportEnginePin,
                 operationDetails: operationDetails,
-                profileName: profileName
+                profileName: profileName,
+                profileID: profileID,
+                completedDates: result.completedDates
             )
         }
     }

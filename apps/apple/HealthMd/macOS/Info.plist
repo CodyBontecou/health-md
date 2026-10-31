@@ -19,5 +19,7 @@
 	<string>$(PRICING_ANALYTICS_ENDPOINT_URL)</string>
 	<key>PRICING_ANALYTICS_INGEST_TOKEN</key>
 	<string>$(PRICING_ANALYTICS_INGEST_TOKEN)</string>
+	<key>NEW_EXPERIENCE_ENABLED</key>
+	<string>$(NEW_EXPERIENCE_ENABLED)</string>
 </dict>
 </plist>
