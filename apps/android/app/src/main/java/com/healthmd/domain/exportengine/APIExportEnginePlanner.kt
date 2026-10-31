@@ -92,9 +92,6 @@ class FrozenAPIExportRequest private constructor(
             require(!this.settings.executionEngineAuthorityIsFrozen || suppliedPin != null) {
                 "API successor renderer authority is missing"
             }
-            require(this.records.none { it.compatibilityProvenance != null }) {
-                "API successor native source is incompatible"
-            }
         } else {
             require(captureContext == null || captureContext.sleepDayAttribution == SleepDayAttribution.NIGHT_BEGINS) {
                 "historical API capture authority is incompatible"

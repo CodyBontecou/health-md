@@ -520,13 +520,14 @@ object HealthDataFields {
         data: HealthData,
         converter: UnitConverter,
         timeFormat: TimeFormatPreference = TimeFormatPreference.HOUR_24,
+        includeLegacyAndroidAliases: Boolean = false,
     ): List<HealthField> = extract(
         data, converter, timeFormat,
         includeLegacyAndroidAliases = true,
         includeAndroidNativeFields = true,
     ).filter { field ->
         field.key != "sleep_core_hours" &&
-            (field.key == "sleep_light_hours" || field.key !in legacyAndroidAliasKeys)
+            (includeLegacyAndroidAliases || field.key == "sleep_light_hours" || field.key !in legacyAndroidAliasKeys)
     }
 
     private fun Duration.toHoursRounded(): String? {

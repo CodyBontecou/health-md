@@ -146,7 +146,7 @@ class DailyAggregateExportPlannerTest {
     }
 
     @Test
-    fun frozenRequestRejectsMissingDraftConflictingAndUnqualifiedAuthorityBeforePlanning() {
+    fun frozenRequestRejectsMissingDraftAndConflictingAuthorityBeforePlanning() {
         val context = AndroidCaptureContext(ZoneId.of("Asia/Kathmandu"), SleepDayAttribution.MORNING_ENDS)
         val settings = simpleSettings().copy(executionSleepCaptureContext = context,
             executionSleepCaptureAuthorityIsFrozen = true)
@@ -154,7 +154,6 @@ class DailyAggregateExportPlannerTest {
             settings.copy(executionSleepCaptureContext = null),
             settings.copy(executionSleepCaptureContext = context.copy(exportProfileID = null)),
             settings.copy(executionSleepCaptureContext = AndroidCaptureContext(context.zoneId, SleepDayAttribution.NIGHT_BEGINS)),
-            settings.copy(formatCustomization = settings.formatCustomization.copy(includeLegacyAndroidAliases = true)),
         )
         for (candidate in incompatible) {
             assertThrows(IllegalArgumentException::class.java) {
@@ -162,6 +161,10 @@ class DailyAggregateExportPlannerTest {
                     ExportEngineMode.rust, DailyAggregateExportIds(TEST_REQUEST_ID, TEST_SESSION_ID))
             }
         }
+        val aliases = settings.copy(formatCustomization = settings.formatCustomization.copy(includeLegacyAndroidAliases = true))
+        assertThat(FrozenDailyAggregateExportRequest.capture(day, aliases, AndroidExportProfile.android_sleep_v6,
+            ExportEngineMode.rust, DailyAggregateExportIds(TEST_REQUEST_ID, TEST_SESSION_ID))
+            .customization.includeLegacyAndroidAliases).isTrue()
         for (mode in listOf(ExportEngineMode.legacy, ExportEngineMode.shadow)) {
             assertThrows(IllegalArgumentException::class.java) {
                 FrozenDailyAggregateExportRequest.capture(day, settings, AndroidExportProfile.android_sleep_v6,

@@ -1063,7 +1063,7 @@ object HealthMdRenderInputAdapter {
         else -> throw AdapterException("JSON presentation is invalid")
     }
 
-    private fun provenanceFrontmatterFields(
+    internal fun provenanceFrontmatterFields(
         provenance: com.healthmd.domain.model.CompatibilityProvenance,
     ): List<JsonObject> {
         fun yamlList(values: List<String>): String = values.joinToString(prefix = "[", postfix = "]") {

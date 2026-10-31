@@ -72,11 +72,17 @@ class HostCoreDailyNoteTest {
         for (attribution in SleepDayAttribution.entries) for (sections in listOf(false, true)) {
             val capture = context.copy(sleepDayAttribution = attribution,
                 exportProfileID = if (attribution == SleepDayAttribution.MORNING_ENDS) "android-sleep-v6" else null)
-            val data = if (attribution == SleepDayAttribution.MORNING_ENDS) source()
+            val data = if (attribution == SleepDayAttribution.MORNING_ENDS) source().copy(
+                nutrition = com.healthmd.domain.model.NutritionData(iodine = 150.0),
+                compatibilityProvenance = com.healthmd.domain.model.CompatibilityProvenance(
+                    providerIdsAttempted = listOf("synthetic-provider"), mergePolicyId = "synthetic-note-policy"))
                 else HealthData(date, activity = ActivityData(steps = 42))
             val repository = mockk<com.healthmd.domain.repository.HealthRepository>()
             coEvery { repository.fetchHealthDataRange(any(), any(), any(), any(), any(), any()) } returns listOf(data)
-            val settings = repositorySettings(sections).copy(executionSleepCaptureContext = capture,
+            val base = repositorySettings(sections)
+            val settings = base.copy(executionSleepCaptureContext = capture,
+                metricSelection = base.metricSelection.copy(enabledMetrics = base.metricSelection.enabledMetrics + "iodine"),
+                formatCustomization = base.formatCustomization.copy(includeLegacyAndroidAliases = attribution == SleepDayAttribution.MORNING_ENDS),
                 dailyNoteInjection = DailyNoteInjectionSettings(enabled = true, createIfMissing = false,
                     injectMarkdownSections = sections))
             val pin = ExportEnginePinPlanner().forDirectGeneratedFiles(settings, capture.zoneId)
@@ -100,6 +106,11 @@ class HostCoreDailyNoteTest {
                     "---\nprivate: preserved\n---\n# My journal\n", note.file.readText(), sections)
                 assertThat(merged).contains("private: preserved")
                 assertThat(merged).contains("# My journal")
+                if (attribution == SleepDayAttribution.MORNING_ENDS) {
+                    assertThat(merged).contains("iodine_mcg: 150.0")
+                    assertThat(merged).contains("synthetic-note-policy")
+                    assertThat(merged).doesNotContain("sleep_core_hours")
+                }
             } finally { directory.deleteRecursively() }
         }
     }

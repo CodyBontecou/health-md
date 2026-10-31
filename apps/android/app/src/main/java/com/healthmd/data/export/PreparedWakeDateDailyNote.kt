@@ -128,7 +128,8 @@ class PreparedWakeDateDailyNote private constructor(
                 identity.context["calendar_timezone"] == context.zoneId.id) { "scoped record authority is incompatible" }
             val selected = request.data.filtered(request.metricSelection, context)
             val names = HealthDataFields.extractForWakeDate(selected, request.customization.unitConverter,
-                request.customization.timeFormat).filter { it.value != null }.map { field ->
+                request.customization.timeFormat, request.customization.includeLegacyAndroidAliases)
+                .filter { it.value != null }.map { field ->
                 request.customization.frontmatterConfig.fields.firstOrNull { it.originalKey == field.key }
                     ?.outputKey ?: field.key
             }

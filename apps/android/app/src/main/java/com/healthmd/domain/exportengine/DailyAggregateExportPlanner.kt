@@ -97,12 +97,6 @@ class FrozenDailyAggregateExportRequest private constructor(
                 require(mode == ExportEngineMode.rust) { "wake-date export requires the Rust engine" }
                 require(context?.sleepDayAttribution == SleepDayAttribution.MORNING_ENDS &&
                     context.exportProfileID == profile.publicProfileId) { "wake-date capture authority is incompatible" }
-                // The render adapter admits qualified selected native records and
-                // rejects remaining arrays before a destination can accept the plan.
-                require(!settings.formatCustomization.includeLegacyAndroidAliases &&
-                    data.compatibilityProvenance == null) {
-                    "wake-date native presentation is not qualified"
-                }
             } else if (context != null) {
                 require(context.sleepDayAttribution == SleepDayAttribution.NIGHT_BEGINS &&
                     (context.exportProfileID == null || context.exportProfileID == profile.publicProfileId)) {
@@ -271,7 +265,9 @@ class HealthMdRustDailyAggregatePlanner(
             converter = request.customization.unitConverter,
             calendarTimeZone = timeZone,
             timeFormat = request.customization.timeFormat,
-            includeLegacyAndroidAliases = request.customization.includeLegacyAndroidAliases,
+            // Aliases decorate native presentation; successor semantic IDs remain canonical.
+            includeLegacyAndroidAliases = request.profile != AndroidExportProfile.android_sleep_v6 &&
+                request.customization.includeLegacyAndroidAliases,
             captureContext = request.captureContext,
         ).map { it.bytes }
         val semanticResult = HealthMdSemanticSessionRunner.process(
@@ -706,11 +702,29 @@ internal fun HealthData.immutableWakeDateSource(): HealthData = copy(
         }),
     ),
     workouts = freezeWorkouts(this.workouts),
-    // These sources are rejected when populated at acceptance. Freeze the empty
-    // collections too, so later caller mutation cannot change that decision.
-    plannedWorkouts = Collections.unmodifiableList(this.plannedWorkouts.toList()),
+    plannedWorkouts = Collections.unmodifiableList(this.plannedWorkouts.map { plan ->
+        plan.copy(blockDescriptions = Collections.unmodifiableList(plan.blockDescriptions.toList()),
+            metadata = Collections.unmodifiableMap(plan.metadata.toMap()))
+    }),
     medicalResources = this.medicalResources.copy(
         resources = Collections.unmodifiableList(this.medicalResources.resources.toList()),
         countsByType = Collections.unmodifiableMap(this.medicalResources.countsByType.toMap()),
     ),
+    compatibilityProvenance = this.compatibilityProvenance?.let { provenance ->
+        provenance.copy(
+            providerIdsAttempted = Collections.unmodifiableList(provenance.providerIdsAttempted.toList()),
+            providerIdsSucceeded = Collections.unmodifiableList(provenance.providerIdsSucceeded.toList()),
+            providerFailures = Collections.unmodifiableList(provenance.providerFailures.toList()),
+            categorySelections = Collections.unmodifiableList(provenance.categorySelections.map { selection ->
+                selection.copy(omittedOverlappingProviderIds = Collections.unmodifiableList(selection.omittedOverlappingProviderIds.toList()))
+            }),
+            workoutDetailSources = Collections.unmodifiableList(provenance.workoutDetailSources.map { source ->
+                source.copy(sourceIdsByDetail = Collections.unmodifiableMap(source.sourceIdsByDetail.mapValues {
+                    Collections.unmodifiableList(it.value.toList())
+                }))
+            }),
+            workoutSources = Collections.unmodifiableList(provenance.workoutSources.toList()),
+            workoutDedupeDecisions = Collections.unmodifiableList(provenance.workoutDedupeDecisions.toList()),
+        )
+    },
 )

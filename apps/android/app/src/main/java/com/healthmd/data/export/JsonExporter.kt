@@ -144,9 +144,6 @@ class JsonExporter {
     private fun render(data: HealthData, customization: FormatCustomization, includeGranularData: Boolean,
         captureContext: AndroidCaptureContext?, includeSleepRecords: Boolean, includeWorkoutRecords: Boolean): String {
         val authority = captureContext?.let(::WakeDateJsonDocument)
-        if (authority != null) require(!customization.includeLegacyAndroidAliases) {
-            "wake-date native JSON cannot use historical aliases"
-        }
         val effectiveCustomization = if (authority == null) customization else customization.copy(
             unitPreference = UnitPreference.METRIC,
             dateFormat = DateFormatPreference.ISO8601,

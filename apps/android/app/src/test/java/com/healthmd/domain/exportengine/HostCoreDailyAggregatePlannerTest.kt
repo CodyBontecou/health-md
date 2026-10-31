@@ -50,6 +50,118 @@ import org.junit.Test
  */
 class HostCoreDailyAggregatePlannerTest {
     @Test
+    fun successorHonorsLegacyAliasChoiceWithoutCreatingCoreSleep() = runTest {
+        val context = AndroidCaptureContext(ZoneId.of("UTC"), SleepDayAttribution.MORNING_ENDS)
+        val date = LocalDate.of(2026, 3, 15)
+        val start = Instant.parse("2026-03-14T23:30:00Z")
+        val end = Instant.parse("2026-03-15T00:00:00Z")
+        val from = start.atZone(context.zoneId).toLocalDateTime()
+        val to = end.atZone(context.zoneId).toLocalDateTime()
+        val exactStart = com.healthmd.domain.model.ExactSourceTimestamp.from(start, ZoneOffset.UTC)
+        val exactEnd = com.healthmd.domain.model.ExactSourceTimestamp.from(end, ZoneOffset.UTC)
+        val data = HealthData(date, activity = ActivityData(wheelchairPushes = 12),
+            nutrition = NutritionData(iodine = 150.0),
+            mobility = com.healthmd.domain.model.MobilityData(powerAvg = 123.0),
+            sleep = SleepData(totalDuration = 30.minutes, lightSleep = 30.minutes, sessionStart = from, sessionEnd = to,
+                sessions = listOf(com.healthmd.domain.model.SleepSessionEntry(from, to, exactStartTime = exactStart, exactEndTime = exactEnd)),
+                stages = listOf(com.healthmd.domain.model.SleepStageEntry(from, to, "light", exactStart, exactEnd))))
+        for (aliases in listOf(false, true)) for (metadata in listOf(false, true)) {
+            val settings = ExportSettings(exportFormats = ExportFormat.entries.toSet(), includeMetadata = metadata,
+                formatCustomization = FormatCustomization.analyticalDefault().copy(includeLegacyAndroidAliases = aliases),
+                metricSelection = MetricSelectionState(enabledMetrics = setOf("wheelchair_pushes", "iodine", "power_avg",
+                    "sleep_total", "sleep_light", "sleep_bedtime", "sleep_wake")),
+                executionSleepCaptureContext = context, executionSleepCaptureAuthorityIsFrozen = true)
+            val request = FrozenDailyAggregateExportRequest.capture(data, settings, AndroidExportProfile.android_sleep_v6,
+                ExportEngineMode.rust, DailyAggregateExportIds("aliases-$aliases-$metadata", "aliases-session-$aliases-$metadata"))
+            val plan = HealthMdRustDailyAggregatePlanner().plan(request).plan
+            System.getenv("HEALTHMD_WAKE_DATE_CONSUMER_FIXTURE_DIR")?.takeIf(String::isNotBlank)?.let { folder ->
+                for (item in plan.items) {
+                    val output = File(folder, "android-v6-aliases-$aliases-$metadata/${item.relativePath}")
+                    val parent = requireNotNull(output.parentFile); check(parent.mkdirs() || parent.isDirectory)
+                    output.writeBytes(item.content)
+                }
+            }
+            val byFormat = ExportFormat.entries.associateWith { format ->
+                plan.items.single { it.relativePath == request.relativePath(format) }.content.decodeToString()
+            }
+            val document = Json.parseToJsonElement(byFormat.getValue(ExportFormat.JSON)).jsonObject
+            assertThat(document.getValue("sleep").jsonObject.getValue("lightSleep").jsonPrimitive.content.toDouble()).isEqualTo(1800.0)
+            assertThat(document.getValue("activity").jsonObject.containsKey("wheelchairPushes")).isEqualTo(aliases)
+            assertThat(document.getValue("mobility").jsonObject.containsKey("powerAvg")).isEqualTo(aliases)
+            for (format in listOf(ExportFormat.MARKDOWN, ExportFormat.OBSIDIAN_BASES)) {
+                assertThat(byFormat.getValue(format).contains("\niodine_mcg: 150.0"))
+                    .isEqualTo(aliases && (format == ExportFormat.OBSIDIAN_BASES || metadata))
+                assertThat(byFormat.getValue(format).contains("\npower_avg: 123.0"))
+                    .isEqualTo(aliases && (format == ExportFormat.OBSIDIAN_BASES || metadata))
+            }
+            assertThat(byFormat.getValue(ExportFormat.CSV).contains(",Mobility,Average Power,123.0,W,")).isEqualTo(aliases)
+            for (text in byFormat.values) {
+                assertThat(text).doesNotContain("sleep_core_hours")
+                assertThat(text).doesNotContain("coreSleep")
+                assertThat(text).doesNotContain(",Core Sleep,")
+            }
+        }
+    }
+
+    @Test
+    fun successorKeepsFrozenProviderProvenanceInEveryFormatAndApi() = runTest {
+        val context = AndroidCaptureContext(ZoneId.of("UTC"), SleepDayAttribution.MORNING_ENDS)
+        val date = LocalDate.of(2026, 3, 15)
+        for (metadata in listOf(false, true)) {
+            val ids = mutableListOf("health_connect", "synthetic-provider")
+            val detailIds = mutableListOf("synthetic-record")
+            val detailMap = mutableMapOf<String, List<String>>("route" to detailIds)
+            val provenance = com.healthmd.domain.model.CompatibilityProvenance(providerIdsAttempted = ids,
+                providerIdsSucceeded = ids,
+                categorySelections = listOf(com.healthmd.domain.model.CategoryMergeProvenance("activity", "health_connect")),
+                workoutDetailSources = listOf(com.healthmd.domain.model.WorkoutDetailSourceProvenance("synthetic-workout", detailMap)),
+                mergePolicyId = "synthetic-merge-policy")
+            val data = HealthData(date, activity = ActivityData(steps = 42), compatibilityProvenance = provenance)
+            val settings = ExportSettings(exportFormats = ExportFormat.entries.toSet(), includeMetadata = metadata,
+                includeGranularData = true, metricSelection = MetricSelectionState(enabledMetrics = setOf("steps")),
+                executionSleepCaptureContext = context, executionSleepCaptureAuthorityIsFrozen = true)
+            val request = FrozenDailyAggregateExportRequest.capture(data, settings, AndroidExportProfile.android_sleep_v6,
+                ExportEngineMode.rust, DailyAggregateExportIds("provenance-$metadata", "provenance-session-$metadata"))
+            val apiRequest = FrozenAPIExportRequest.capture(listOf(date), listOf(data), emptyList(), settings,
+                ExportEngineMode.rust, APIExportIds("provenance-api-$metadata", "provenance-api-session-$metadata"),
+                context.zoneId.id, Instant.parse("2026-03-16T00:00:00Z"))
+            ids.clear(); ids += "later-source"
+            detailIds.clear(); detailIds += "later-source"
+            detailMap["route"] = listOf("later-source")
+            val plan = HealthMdRustDailyAggregatePlanner().plan(request).plan
+            System.getenv("HEALTHMD_WAKE_DATE_CONSUMER_FIXTURE_DIR")?.takeIf(String::isNotBlank)?.let { folder ->
+                for (item in plan.items) {
+                    val output = File(folder, "android-v6-provenance-$metadata/${item.relativePath}")
+                    val parent = requireNotNull(output.parentFile); check(parent.mkdirs() || parent.isDirectory)
+                    output.writeBytes(item.content)
+                }
+                if (!metadata) File(folder, "provenance-metadata-off-night-control.md").writeText(
+                    com.healthmd.data.export.MarkdownExporter().export(request.data, includeMetadata = false))
+            }
+            for (item in plan.items) {
+                val text = item.content.decodeToString()
+                assertWithMessage(item.relativePath).that(text).contains("synthetic-merge-policy")
+                assertWithMessage(item.relativePath).that(text).contains("synthetic-provider")
+                assertWithMessage(item.relativePath).that(text).contains("synthetic-record")
+                assertThat(text).doesNotContain("later-source")
+            }
+            val document = Json.parseToJsonElement(plan.items.single { it.relativePath.endsWith(".json") }
+                .content.decodeToString()).jsonObject
+            assertThat(document.getValue("activity").jsonObject.getValue("steps").jsonPrimitive.content).isEqualTo("42")
+            assertThat(document.getValue("metadata").jsonObject.getValue("provenance").jsonObject
+                .getValue("providerIdsAttempted").jsonArray.map { it.jsonPrimitive.content })
+                .containsExactly("health_connect", "synthetic-provider").inOrder()
+            val api = HealthMdRustAPIExportPlanner().plan(apiRequest)
+            validateAPIPlan(api.plan, apiRequest)
+            val record = Json.parseToJsonElement(api.plan.items.single().content.decodeToString()).jsonObject
+                .getValue("records").jsonArray.single().jsonObject
+            assertThat(record.getValue("metadata").jsonObject.getValue("provenance").jsonObject
+                .getValue("mergePolicyId").jsonPrimitive.content).isEqualTo("synthetic-merge-policy")
+            assertThat(api.plan.items.single().content.decodeToString()).doesNotContain("later-source")
+        }
+    }
+
+    @Test
     fun successorPreservesPlannedWorkoutsAndFhirInEveryFormatAndApi() = runTest {
         val context = AndroidCaptureContext(ZoneId.of("UTC"), SleepDayAttribution.MORNING_ENDS)
         val date = LocalDate.of(2026, 3, 15)
@@ -261,7 +373,7 @@ class HostCoreDailyAggregatePlannerTest {
     }
 
     @Test
-    fun nativePressureActivityAndMindfulnessRejectInvalidSelectedOrDisabledSources() = runTest {
+    fun nativePressureActivityAndMindfulnessKeepHiddenFrontmatterSourcesAndRejectInvalidRecords() = runTest {
         val context = AndroidCaptureContext(ZoneId.of("UTC"), SleepDayAttribution.MORNING_ENDS)
         val start = Instant.parse("2026-11-01T01:00:00.123456789Z"); val end = start.plusSeconds(1)
         fun exact(value: Instant) = com.healthmd.domain.model.ExactSourceTimestamp.from(value, ZoneOffset.UTC)
@@ -287,7 +399,20 @@ class HostCoreDailyAggregatePlannerTest {
         for ((selection, disabled) in listOf(setOf("bp_systolic", "bp_diastolic") to listOf("blood_pressure_systolic"),
             setOf("steps") to listOf("steps"), setOf("activity_intensity_minutes") to listOf("activity_intensity_minutes"),
             setOf("mindful_minutes") to listOf("mindful_minutes", "mindful_sessions"))) {
-            assertThat(runCatching { plan(data, selection, disabled) }.isFailure).isTrue()
+            val result = plan(data, selection, disabled)
+            assertThat(result.items).hasSize(4)
+            val document = Json.parseToJsonElement(result.items.single { it.relativePath.endsWith(".json") }
+                .content.decodeToString()).jsonObject
+            val (category, field) = when {
+                "bp_systolic" in selection -> "vitals" to "bloodPressureSamples"
+                "steps" in selection -> "activity" to "stepSamples"
+                "activity_intensity_minutes" in selection -> "activity" to "activityIntensity"
+                else -> "mindfulness" to "sessions"
+            }
+            assertThat(document.getValue(category).jsonObject.getValue(field).jsonArray).hasSize(1)
+            for (item in result.items.filter { it.relativePath.endsWith(".md") }) for (key in disabled) {
+                assertThat(item.content.decodeToString()).doesNotContain("\n$key:")
+            }
         }
         val badPressure = data.copy(vitals = VitalsData(bloodPressureSamples = listOf(pressure.copy(systolic = Double.NaN))))
         assertThat(runCatching { plan(badPressure, setOf("bp_systolic", "bp_diastolic")) }.isFailure).isTrue()
@@ -390,7 +515,15 @@ class HostCoreDailyAggregatePlannerTest {
         }
         val registry = HealthMdCoreService().getMetricRegistry(com.healthmd.core.CoreMetricRegistryProfile.ANDROID_SLEEP_V6, 2u)
         val owners = registry.outputs.filter { it.key == "workouts" || it.key.startsWith("workout_") }.map { it.key }
-        assertThat(runCatching { plan(workout, setOf("workouts"), owners) }.isFailure).isTrue()
+        val hiddenPlan = plan(workout, setOf("workouts"), owners)
+        assertThat(hiddenPlan.items).hasSize(4)
+        val hiddenRecord = Json.parseToJsonElement(hiddenPlan.items.single { it.relativePath.endsWith(".json") }
+            .content.decodeToString()).jsonObject.getValue("workouts").jsonArray.single().jsonObject
+        assertThat(hiddenRecord.getValue("startTimeISO").jsonPrimitive.content).isEqualTo(start.toString())
+        assertThat(hiddenRecord.getValue("duration").jsonPrimitive.content.toDouble()).isEqualTo(1800.0)
+        for (item in hiddenPlan.items.filter { it.relativePath.endsWith(".md") }) for (key in owners) {
+            assertThat(item.content.decodeToString()).doesNotContain("\n$key:")
+        }
         val reversed = workout.copy(endTime = workout.startTime.minusSeconds(1), exactEndTime = exact(start.minusSeconds(1)))
         assertThat(runCatching { plan(reversed, setOf("workouts")) }.isFailure).isTrue()
         val nonfinite = workout.copy(heartRateSamples = listOf(com.healthmd.domain.model.TimestampedSample(
@@ -460,7 +593,7 @@ class HostCoreDailyAggregatePlannerTest {
     }
 
     @Test
-    fun composedSleepSourcesKeepOwnershipAndDisabledOutputValidation() = runTest {
+    fun composedSleepSourcesKeepOwnershipWhenSummaryFrontmatterIsHidden() = runTest {
         val context = AndroidCaptureContext(ZoneId.of("UTC"), SleepDayAttribution.MORNING_ENDS)
         val start = Instant.parse("2026-11-01T01:00:00.123456789Z")
         val end = start.plusSeconds(3600)
@@ -481,8 +614,17 @@ class HostCoreDailyAggregatePlannerTest {
             return HealthMdRustDailyAggregatePlanner(zoneIdProvider = { error("No ambient clock") }).plan(request).plan
         }
         val owners = setOf("sleep_total", "sleep_light")
-        assertThat(runCatching { plan(data, owners, listOf("sleep_light_hours")) }.isFailure).isTrue()
-        assertThat(runCatching { plan(data, owners, listOf("sleep_total_hours", "sleep_in_bed_hours")) }.isFailure).isTrue()
+        for (disabled in listOf(listOf("sleep_light_hours"), listOf("sleep_total_hours", "sleep_in_bed_hours"))) {
+            val result = plan(data, owners, disabled)
+            assertThat(result.items).hasSize(4)
+            val document = Json.parseToJsonElement(result.items.single { it.relativePath.endsWith(".json") }
+                .content.decodeToString()).jsonObject
+            assertThat(document.getValue("sleep").jsonObject.getValue("sleepStages").jsonArray).hasSize(1)
+            assertThat(document.getValue("sleep").jsonObject.getValue("sleepSessions").jsonArray).hasSize(1)
+            for (item in result.items.filter { it.relativePath.endsWith(".md") }) for (key in disabled) {
+                assertThat(item.content.decodeToString()).doesNotContain("\n$key:")
+            }
+        }
         val reversed = data.copy(sleep = data.sleep.copy(stages = listOf(stage.copy(
             startTime = stage.endTime, endTime = stage.startTime, exactStartTime = exact(end), exactEndTime = exact(start)))))
         assertThat(runCatching { plan(reversed, owners) }.isFailure).isTrue()
@@ -567,7 +709,7 @@ class HostCoreDailyAggregatePlannerTest {
     }
 
     @Test
-    fun nativeQuantityCompositionRejectsInvalidSelectedSourcesAndDisabledOwners() = runTest {
+    fun nativeQuantityCompositionRejectsInvalidSourcesAndKeepsHiddenFrontmatterRecords() = runTest {
         val context = AndroidCaptureContext(ZoneId.of("UTC"), SleepDayAttribution.MORNING_ENDS)
         val instant = Instant.parse("2026-11-01T01:30:00.123456789Z")
         fun sample(value: Double) = com.healthmd.domain.model.TimestampedSample(
@@ -589,7 +731,16 @@ class HostCoreDailyAggregatePlannerTest {
             assertThat(runCatching { plan(data, setOf("blood_oxygen")) }.isFailure).isTrue()
         }
         val heart = HealthData(date, heart = HeartData(samples = listOf(sample(72.125))))
-        assertThat(runCatching { plan(heart, setOf("avg_hr"), listOf("average_heart_rate", "heart_rate_min", "heart_rate_max")) }.isFailure).isTrue()
+        val hidden = listOf("average_heart_rate", "heart_rate_min", "heart_rate_max")
+        val hiddenPlan = plan(heart, setOf("avg_hr"), hidden)
+        assertThat(hiddenPlan.items).hasSize(4)
+        val document = Json.parseToJsonElement(hiddenPlan.items.single { it.relativePath.endsWith(".json") }
+            .content.decodeToString()).jsonObject
+        assertThat(document.getValue("heart").jsonObject.getValue("heartRateSamples").jsonArray.single().jsonObject
+            .getValue("value").jsonPrimitive.content.toDouble()).isEqualTo(72.125)
+        for (item in hiddenPlan.items.filter { it.relativePath.endsWith(".md") }) for (key in hidden) {
+            assertThat(item.content.decodeToString()).doesNotContain("\n$key:")
+        }
         val unselected = heart.copy(activity = ActivityData(steps = 42),
             vitals = VitalsData(bloodOxygenSamples = listOf(sample(Double.NaN))))
         val selectedPlan = plan(unselected, setOf("steps"))
