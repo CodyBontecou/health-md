@@ -136756,17 +136756,17 @@
         "zh-Hans": {"stringUnit":{"state":"translated","value":"%@：历史评估失败；仍可能有可读取的数据。"}}
       }
     },
-    "%@: history assessment requires OS 27. This does not mean health data is unavailable." : {
+    "%@: history access could not be checked. Readable health data can still be exported." : {
       "localizations" : {
-        "de": {"stringUnit":{"state":"translated","value":"%@: Die Verlaufsprüfung erfordert OS 27. Das bedeutet nicht, dass keine Gesundheitsdaten verfügbar sind."}},
-        "es": {"stringUnit":{"state":"translated","value":"%@: la evaluación del historial requiere OS 27. Esto no significa que los datos de salud no estén disponibles."}},
-        "fr": {"stringUnit":{"state":"translated","value":"%@ : l’évaluation de l’historique nécessite OS 27. Cela ne signifie pas que les données de santé sont indisponibles."}},
-        "it": {"stringUnit":{"state":"translated","value":"%@: la valutazione della cronologia richiede OS 27. Questo non significa che i dati sanitari non siano disponibili."}},
-        "ja": {"stringUnit":{"state":"translated","value":"%@：履歴の評価にはOS 27が必要です。健康データが利用できないという意味ではありません。"}},
-        "ko": {"stringUnit":{"state":"translated","value":"%@: 기록 평가에는 OS 27이 필요합니다. 건강 데이터를 사용할 수 없다는 뜻은 아닙니다."}},
-        "nl": {"stringUnit":{"state":"translated","value":"%@: beoordeling van de historie vereist OS 27. Dit betekent niet dat gezondheidsgegevens niet beschikbaar zijn."}},
-        "pt-BR": {"stringUnit":{"state":"translated","value":"%@: a avaliação do histórico requer OS 27. Isso não significa que os dados de saúde estejam indisponíveis."}},
-        "zh-Hans": {"stringUnit":{"state":"translated","value":"%@：历史评估需要 OS 27。这并不表示健康数据不可用。"}}
+        "de": {"stringUnit":{"state":"translated","value":"%@: Der Zugriff auf den Verlauf konnte nicht geprüft werden. Lesbare Gesundheitsdaten können weiterhin exportiert werden."}},
+        "es": {"stringUnit":{"state":"translated","value":"%@: no se pudo comprobar el acceso al historial. Los datos de salud que se pueden leer aún se pueden exportar."}},
+        "fr": {"stringUnit":{"state":"translated","value":"%@ : l’accès à l’historique n’a pas pu être vérifié. Les données de santé lisibles peuvent toujours être exportées."}},
+        "it": {"stringUnit":{"state":"translated","value":"%@: non è stato possibile verificare l’accesso alla cronologia. I dati sanitari leggibili possono comunque essere esportati."}},
+        "ja": {"stringUnit":{"state":"translated","value":"%@：履歴へのアクセスを確認できませんでした。読み取り可能な健康データは引き続きエクスポートできます。"}},
+        "ko": {"stringUnit":{"state":"translated","value":"%@: 기록 접근 권한을 확인할 수 없습니다. 읽을 수 있는 건강 데이터는 계속 내보낼 수 있습니다."}},
+        "nl": {"stringUnit":{"state":"translated","value":"%@: toegang tot de historie kon niet worden gecontroleerd. Leesbare gezondheidsgegevens kunnen nog steeds worden geëxporteerd."}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"%@: não foi possível verificar o acesso ao histórico. Os dados de saúde legíveis ainda podem ser exportados."}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"%@：无法检查历史访问权限。仍可导出可读取的健康数据。"}}
       }
     },
     "%@: no authorization boundary returned; history access is unknown." : {
