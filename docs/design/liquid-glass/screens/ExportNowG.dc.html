@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Health.md glass — Export now</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+body{margin:0;color-scheme:dark}
+a{color:#CDB6FF;text-decoration:none}a:hover{color:#FFFFFF}
+button{font-family:inherit;cursor:pointer}
+@keyframes breathe{0%,100%{opacity:1}50%{opacity:.45}}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; position: relative; background: #0E0E11; font-family: -apple-system, 'SF Pro Text', 'SF Pro Display', Inter, system-ui, sans-serif; color: #FFFFFF; overflow: hidden; ">
+<div aria-hidden="true" style="position: absolute; inset: 0; overflow: hidden; z-index: 0"></div>
+<div style="position: relative; z-index: 1; height: 100%; display: flex; flex-direction: column">
+<div aria-hidden="true" style="position: absolute; inset: 0; padding: 60px 20px; opacity: 0.35"><div style="display: flex; flex-direction: column; gap: 14px"><span style="font-size: 34px; font-weight: 700; color: #FFFFFF">Archive</span><div style="height: 90px; background: rgba(255,255,255,0.06); backdrop-filter: blur(26px) saturate(180%); -webkit-backdrop-filter: blur(26px) saturate(180%); border: 1px solid rgba(255,255,255,0.12); border-radius: 26px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.22), inset 0 -1px 0 rgba(255,255,255,0.06), 0 1px 2px rgba(0,0,0,0.3)"></div><div style="height: 300px; background: rgba(255,255,255,0.06); backdrop-filter: blur(26px) saturate(180%); -webkit-backdrop-filter: blur(26px) saturate(180%); border: 1px solid rgba(255,255,255,0.12); border-radius: 26px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.22), inset 0 -1px 0 rgba(255,255,255,0.06), 0 1px 2px rgba(0,0,0,0.3)"></div></div></div><div style="position: absolute; inset: 0; background: rgba(0,0,0,0.45)"></div><div style="position: absolute; left: 0; right: 0; bottom: 0; top: 70px; display: flex; flex-direction: column; border-radius: 34px 34px 0 0; background: #17171B; border-top: 1px solid rgba(255,255,255,0.12); box-shadow: inset 0 1px 0 rgba(255,255,255,0.22); overflow: hidden"><span style="align-self: center; flex: none; width: 38px; height: 5px; border-radius: 3px; background: rgba(255,255,255,0.20); margin-top: 8px"></span><div style="flex: none; display: flex; align-items: center; justify-content: space-between; padding: 4px 16px 8px"><button type="button" style="min-height: 44px; min-width: 70px; border: none; background: transparent; text-align: left; font-size: 16px; color: #DAD4E8">Cancel</button><span style="font-size: 17px; font-weight: 600">Export now</span><span style="min-width: 70px"></span></div><div style="flex: 1; min-height: 0; overflow-y: auto; padding: 4px 16px 16px; display: flex; flex-direction: column; gap: 18px">
+  <div style="display: flex; flex-direction: column; gap: 8px">
+    <span style="font-size: 13px; font-weight: 600; color: #B3ABC6">Profile</span>
+    <div style="flex: none; display: flex; gap: 8px; overflow-x: auto; margin: 0 -16px; padding: 0 16px 2px">
+      <sc-for list="{{ profiles }}" as="p" hint-placeholder-count="3">
+        <button type="button" aria-pressed="{{ p.on }}" onClick="{{ p.pick }}" style="{{ p.style }}">{{ p.name }}</button>
+      </sc-for>
+    </div>
+  </div>
+  <div style="display: flex; flex-direction: column; gap: 8px">
+    <span style="font-size: 13px; font-weight: 600; color: #B3ABC6">Dates</span>
+    <div role="group" aria-label="Date range" style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 2px; padding: 3px; border-radius: 19px; background: rgba(255,255,255,0.10); border: 1px solid rgba(255,255,255,0.14)">
+      <sc-for list="{{ ranges }}" as="r" hint-placeholder-count="4">
+        <button type="button" aria-pressed="{{ r.on }}" onClick="{{ r.pick }}" style="{{ r.style }}">{{ r.label }}</button>
+      </sc-for>
+    </div>
+    <sc-if value="{{ custom }}" hint-placeholder-val="{{ false }}">
+      <div style="padding: 4px 16px; background: rgba(255,255,255,0.06); backdrop-filter: blur(26px) saturate(180%); -webkit-backdrop-filter: blur(26px) saturate(180%); border: 1px solid rgba(255,255,255,0.12); border-radius: 26px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.22), inset 0 -1px 0 rgba(255,255,255,0.06), 0 1px 2px rgba(0,0,0,0.3)">
+        <a href="#" style="display: flex; align-items: center; min-height: 46px; color: #FFFFFF"><span style="flex: 1; font-size: 16px">From</span><span style="font-size: 15px; color: #DAD4E8">Oct 1, 2026</span></a>
+        <a href="#" style="display: flex; align-items: center; min-height: 46px; border-top: 1px solid rgba(255,255,255,0.14); color: #FFFFFF"><span style="flex: 1; font-size: 16px">To</span><span style="font-size: 15px; color: #DAD4E8">Oct 30, 2026</span></a>
+      </div>
+    </sc-if>
+    <span style="font-size: 13px; color: #B3ABC6; padding: 0 4px">{{ rangeText }} · sleep counts noon → noon. For last night, choose Yesterday.</span>
+  </div>
+  <div style="padding: 4px 16px; background: rgba(255,255,255,0.06); backdrop-filter: blur(26px) saturate(180%); -webkit-backdrop-filter: blur(26px) saturate(180%); border: 1px solid rgba(255,255,255,0.12); border-radius: 26px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.22), inset 0 -1px 0 rgba(255,255,255,0.06), 0 1px 2px rgba(0,0,0,0.3)">
+    <div style="display: flex; align-items: center; gap: 12px; min-height: 58px">
+      <span style="flex: 1; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 16px">Range summary only</span><span style="font-size: 12.5px; color: #B3ABC6">One roll-up file; skips daily files, notes and entries</span></span>
+      <button type="button" role="switch" aria-checked="{{ sumAria }}" aria-label="Range summary only" onClick="{{ toggleSum }}" style="{{ sumTrack }}"><span style="width: 38px; height: 26px; border-radius: 13px; background: #FFFFFF; box-shadow: 0 2px 6px rgba(0,0,0,0.25)"></span></button>
+    </div>
+  </div>
+  <a href="ExportPreviewG.dc.html" style="display: flex; flex-direction: column; gap: 10px; padding: 16px; color: #FFFFFF; background: rgba(255,255,255,0.06); backdrop-filter: blur(26px) saturate(180%); -webkit-backdrop-filter: blur(26px) saturate(180%); border: 1px solid rgba(255,255,255,0.12); border-radius: 26px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.22), inset 0 -1px 0 rgba(255,255,255,0.06), 0 1px 2px rgba(0,0,0,0.3)">
+    <div style="display: flex; justify-content: space-between"><span style="font-size: 13px; font-weight: 600; color: #B3ABC6">Will write</span><span style="font-size: 13px; font-weight: 600; color: #CDB6FF">Preview →</span></div>
+    <span style="font-family: 'SF Mono', 'JetBrains Mono', ui-monospace, monospace; font-size: 13px; color: #DAD4E8">{{ dest }}</span>
+    <span style="font-size: 15px; color: #FFFFFF">{{ summary }}</span>
+  </a>
+  <sc-if value="{{ large }}" hint-placeholder-val="{{ false }}">
+    <div style="display: flex; gap: 12px; padding: 14px 16px; background: rgba(255,255,255,0.06); backdrop-filter: blur(26px) saturate(180%); -webkit-backdrop-filter: blur(26px) saturate(180%); border: 1px solid rgba(255,255,255,0.12); border-radius: 20px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.22), inset 0 -1px 0 rgba(255,255,255,0.06), 0 1px 2px rgba(0,0,0,0.3); border-color: #CDB6FF"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#CDB6FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: none; margin-top: 1px"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 7.5v.01"/></svg><div style="flex: 1; display: flex; flex-direction: column; gap: 6px"><span style="font-size: 14px; line-height: 1.45; color: #DAD4E8">Large export. This can take several minutes; keep Health.md open until it finishes.</span></div></div>
+  </sc-if>
+</div><div style="flex: none; display: flex; flex-direction: column; gap: 8px; padding: 12px 16px 34px; background: rgba(255,255,255,0.06); backdrop-filter: blur(26px) saturate(180%); -webkit-backdrop-filter: blur(26px) saturate(180%); border: 1px solid rgba(255,255,255,0.12); border-radius: 0px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.22), inset 0 -1px 0 rgba(255,255,255,0.06), 0 1px 2px rgba(0,0,0,0.3); border-width: 1px 0 0 0"><button type="button" style="width: 100%; height: 54px; border-radius: 27px; border: 1px solid rgba(255,255,255,0.12); background: #CDB6FF; color: #1A0F33; font-size: 17px; font-weight: 600; box-shadow: inset 0 1px 0 rgba(255,255,255,0.5)">{{ cta }}</button></div></div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { p: 'daily', r: 1, sum: false }; }
+  renderVals() {
+    var C = {"fill": "#3B3058", "fillText": "#FFFFFF", "partial": "rgba(255,255,255,0.07)", "bg": "#0E0E11", "text": "#FFFFFF", "sec": "#DAD4E8", "muted": "#B3ABC6", "accent": "#CDB6FF", "accentInk": "#1A0F33", "track": "rgba(255,255,255,0.20)", "coral": "#FFA184", "ok": "#8BF0B4", "surface": "rgba(255,255,255,0.10)", "surface2": "rgba(255,255,255,0.18)", "line": "rgba(255,255,255,0.14)", "glass": "rgba(255,255,255,0.06)", "glassStrong": "rgba(255,255,255,0.12)", "edge": "rgba(255,255,255,0.12)", "hi": "rgba(255,255,255,0.22)", "shadow": "0 1px 2px rgba(0,0,0,0.3)", "tint": "rgba(205,182,255,0.30)"}, self = this, s = this.state;
+    var P = [{ id: 'daily', name: 'Daily', dest: 'Vault/Health/', f: 2 }, { id: 'weekly', name: 'Weekly CSV', dest: 'Files/Exports/', f: 1 }, { id: 'feed', name: 'Agent feed', dest: 'POST api.example.com', f: 1 }];
+    var R = [{ l: 'Yesterday', d: 1, t: 'Fri, Oct 30' }, { l: '7 days', d: 7, t: 'Oct 24 – 30' }, { l: '30 days', d: 30, t: 'Oct 1 – 30' }, { l: 'Custom', d: 30, t: 'Oct 1 – 30' }];
+    var cur = P.filter(function (p) { return p.id === s.p; })[0], rr = R[s.r];
+    var files = s.sum ? 1 : rr.d * cur.f;
+    return {
+      profiles: P.map(function (p) { var on = p.id === s.p; return { name: p.name, on: on ? 'true' : 'false', pick: function () { self.setState({ p: p.id }); },
+        style: 'flex: none; height: 36px; padding: 0 16px; border-radius: 18px; border: 1px solid ' + C.edge + '; font-size: 14px; font-weight: 600; white-space: nowrap; background: ' + (on ? C.accent : C.surface2) + '; color: ' + (on ? C.accentInk : C.text) }; }),
+      ranges: R.map(function (r, i) { var on = i === s.r; return { label: r.l, on: on ? 'true' : 'false', pick: function () { self.setState({ r: i }); },
+        style: 'height: 32px; border: none; border-radius: 16px; font-size: 13px; font-weight: ' + (on ? '700' : '500') + '; color: ' + C.text + '; background: ' + (on ? C.glassStrong : 'transparent') }; }),
+      custom: s.r === 3, rangeText: rr.t, large: rr.d >= 30 && !s.sum,
+      sumAria: s.sum ? 'true' : 'false', toggleSum: function () { self.setState({ sum: !s.sum }); },
+      sumTrack: 'flex: none; width: 60px; height: 30px; border-radius: 15px; border: none; padding: 2px; display: flex; justify-content: ' + (s.sum ? 'flex-end' : 'flex-start') + '; background: ' + (s.sum ? C.accent : C.track),
+      dest: cur.dest, summary: s.sum ? '1 range summary for ' + rr.t : files + ' files · ' + rr.d + (rr.d === 1 ? ' day' : ' days') + (cur.id === 'daily' && !s.sum ? ' · daily notes updated' : ''),
+      cta: s.sum ? 'Write summary' : (rr.d === 1 ? 'Export yesterday' : 'Export ' + rr.d + ' days')
+    };
+  }
+}
+</script>
+</body>
+</html>

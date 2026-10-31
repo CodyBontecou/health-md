@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Health.md glass — Export moment</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+body{margin:0;color-scheme:dark}
+a{color:#CDB6FF;text-decoration:none}a:hover{color:#FFFFFF}
+button{font-family:inherit;cursor:pointer}
+@keyframes breathe{0%,100%{opacity:1}50%{opacity:.45}}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; position: relative; background: #0E0E11; font-family: -apple-system, 'SF Pro Text', 'SF Pro Display', Inter, system-ui, sans-serif; color: #FFFFFF; overflow: hidden; ">
+<div aria-hidden="true" style="position: absolute; inset: 0; overflow: hidden; z-index: 0"></div>
+<div style="position: relative; z-index: 1; height: 100%; display: flex; flex-direction: column">
+
+<div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px 20px 0">
+  <svg width="270" height="220" viewBox="40 4 160 150" role="img" aria-label="Crystal heart filling as days are written"><polygon points="45,55 60,20 95,55" fill="{{ f0 }}" fill-opacity="{{ o0 }}" stroke="rgba(255,255,255,0.45)" stroke-width="0.8" stroke-linejoin="round"></polygon><polygon points="60,20 95,8 95,55" fill="{{ f1 }}" fill-opacity="{{ o1 }}" stroke="rgba(255,255,255,0.45)" stroke-width="0.8" stroke-linejoin="round"></polygon><polygon points="95,8 120,30 95,55" fill="{{ f2 }}" fill-opacity="{{ o2 }}" stroke="rgba(255,255,255,0.45)" stroke-width="0.8" stroke-linejoin="round"></polygon><polygon points="95,55 120,30 145,55" fill="{{ f3 }}" fill-opacity="{{ o3 }}" stroke="rgba(255,255,255,0.45)" stroke-width="0.8" stroke-linejoin="round"></polygon><polygon points="120,30 145,8 145,55" fill="{{ f4 }}" fill-opacity="{{ o4 }}" stroke="rgba(255,255,255,0.45)" stroke-width="0.8" stroke-linejoin="round"></polygon><polygon points="145,8 180,20 145,55" fill="{{ f5 }}" fill-opacity="{{ o5 }}" stroke="rgba(255,255,255,0.45)" stroke-width="0.8" stroke-linejoin="round"></polygon><polygon points="180,20 195,55 145,55" fill="{{ f6 }}" fill-opacity="{{ o6 }}" stroke="rgba(255,255,255,0.45)" stroke-width="0.8" stroke-linejoin="round"></polygon><polygon points="45,55 95,55 120,150" fill="{{ f7 }}" fill-opacity="{{ o7 }}" stroke="rgba(255,255,255,0.45)" stroke-width="0.8" stroke-linejoin="round"></polygon><polygon points="95,55 145,55 120,150" fill="{{ f8 }}" fill-opacity="{{ o8 }}" stroke="rgba(255,255,255,0.45)" stroke-width="0.8" stroke-linejoin="round"></polygon><polygon points="145,55 195,55 120,150" fill="{{ f9 }}" fill-opacity="{{ o9 }}" stroke="rgba(255,255,255,0.45)" stroke-width="0.8" stroke-linejoin="round"></polygon></svg>
+</div>
+<div style="flex: none; margin: 0 16px 34px; padding: 22px 20px 16px; display: flex; flex-direction: column; gap: 14px; background: rgba(255,255,255,0.06); backdrop-filter: blur(26px) saturate(180%); -webkit-backdrop-filter: blur(26px) saturate(180%); border: 1px solid rgba(255,255,255,0.12); border-radius: 32px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.22), inset 0 -1px 0 rgba(255,255,255,0.06), 0 1px 2px rgba(0,0,0,0.3)">
+  <div style="display: flex; align-items: baseline; justify-content: space-between">
+    <span style="font-size: 22px; font-weight: 700">{{ line }}</span>
+    <span style="font-family: 'SF Mono', 'JetBrains Mono', ui-monospace, monospace; font-size: 15px; color: #DAD4E8; font-variant-numeric: tabular-nums">{{ counter }}</span>
+  </div>
+  <div style="height: 6px; border-radius: 3px; background: rgba(255,255,255,0.20); overflow: hidden"><div style="{{ bar }}"></div></div>
+  <span style="font-size: 14px; color: #B3ABC6">{{ sub }}</span>
+  <sc-if value="{{ done }}" hint-placeholder-val="{{ true }}">
+    <div style="display: flex; gap: 8px">
+      <a href="ArchiveGlassDark.dc.html" style="flex: 1; height: 50px; border-radius: 25px; background: #CDB6FF; color: #1A0F33; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 600; box-shadow: inset 0 1px 0 rgba(255,255,255,0.5)">See in archive</a>
+      <button type="button" onClick="{{ again }}" style="height: 50px; padding: 0 20px; border-radius: 25px; border: 1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.18); color: #FFFFFF; font-size: 15px">Replay</button>
+    </div>
+  </sc-if>
+  <sc-if value="{{ running }}" hint-placeholder-val="{{ false }}">
+    <button type="button" style="height: 50px; border-radius: 25px; border: 1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.18); color: #FFFFFF; font-size: 16px">Cancel</button>
+  </sc-if>
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { k: 0 }; }
+  componentDidMount() { this.run(); }
+  componentWillUnmount() { clearInterval(this.t); }
+  run() { var self = this; clearInterval(this.t); this.setState({ k: 0 });
+    this.t = setInterval(function () { if (self.state.k >= 10) { clearInterval(self.t); return; } self.setState({ k: self.state.k + 1 }); }, 380); }
+  renderVals() {
+    var cols = ["#8B6BE8", "#B9A0FF", "#E6DCFF", "#9F82F0", "#F4EFFF", "#FFFFFF", "#C7B2FF", "#5A3FB0", "#7A5BD6", "#3F2B86"], k = this.state.k, self = this, v = {};
+    for (var i = 0; i < 10; i++) { v['f' + i] = i < k ? cols[i] : '#FFFFFF'; v['o' + i] = i < k ? 0.92 : 0.06; }
+    var days = Math.min(7, Math.round(k * 0.7));
+    var dl = ['Oct 24', 'Oct 25', 'Oct 26', 'Oct 27', 'Oct 28', 'Oct 29', 'Oct 30'];
+    v.counter = days + ' / 7';
+    v.bar = 'height: 100%; border-radius: 3px; background: #CDB6FF; transition: width .35s; width: ' + Math.round(k * 10) + '%';
+    v.done = k >= 10; v.running = k < 10;
+    v.line = k >= 10 ? 'Seven days written' : 'Writing ' + dl[Math.min(days, 6)] + '…';
+    v.sub = k >= 10 ? 'Oct 24 – 30 · [N] files · daily notes updated' : 'Keep Health.md open until it finishes.';
+    v.again = function () { self.run(); };
+    return v;
+  }
+}
+</script>
+</body>
+</html>
