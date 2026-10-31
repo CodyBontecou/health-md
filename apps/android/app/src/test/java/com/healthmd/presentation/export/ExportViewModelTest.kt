@@ -646,6 +646,27 @@ class ExportViewModelTest {
         assertThat(exports.exportCalls).isEqualTo(0)
     }
 
+    @Test
+    fun stalePersistedLifetimeFlagCannotBypassFreshExportAdmission() = runTest {
+        val health = FakeHealthRepository(hasPermissions = true)
+        val exports = FakeExportRepository()
+        val settings = FakeSettingsRepository()
+        settings.setPurchased(true)
+        val viewModel = createViewModel(
+            healthRepository = health,
+            exportRepository = exports,
+            settingsRepository = settings,
+            entitlementRepository = FakeBillingRepository(initialUnlocked = true, permanent = false, verifiedAccess = false),
+        )
+        advanceUntilIdle()
+        assertThat(viewModel.uiState.value.isPurchased).isTrue()
+        viewModel.startExport()
+        advanceUntilIdle()
+        assertThat(health.fetchCalls).isEqualTo(0)
+        assertThat(exports.exportCalls).isEqualTo(0)
+        assertThat(viewModel.uiState.value.isPurchased).isFalse()
+    }
+
     private fun allowedProfileRepository() = mockk<ExportProfileRepository> {
         coEvery { activeSharedSetupV2ExecutionAccess() } returns
             SharedSetupV2ProfileExecutionAccess.Allowed

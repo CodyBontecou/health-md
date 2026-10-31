@@ -648,7 +648,7 @@ class ExportWorkerGenerationTest {
                 timeCalculator = ScheduledExportTimeCalculator(),
                 stateStore = stateStore,
                 exportScheduler = Lazy { exportScheduler },
-                entitlementRepository = FakeBillingRepository(),
+                entitlementRepository = FakeBillingRepository(initialUnlocked = true),
                 distributionPolicy = DistributionPolicy.play(),
             )
         }

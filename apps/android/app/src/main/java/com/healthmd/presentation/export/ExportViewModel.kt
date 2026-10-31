@@ -486,7 +486,7 @@ class ExportViewModel @Inject constructor(
         val awakeActivityId = ExportAwakeCoordinator.shared.beginActivity()
         exportJob = viewModelScope.launch {
             if (!distributionPolicy.fullAccessIncluded &&
-                !settingsRepository.isPurchased.first() && !entitlementRepository.verifyAccess()) {
+                !entitlementRepository.verifyAccess()) {
                 _uiState.update { it.copy(isPurchased = false) }
                 return@launch
             }

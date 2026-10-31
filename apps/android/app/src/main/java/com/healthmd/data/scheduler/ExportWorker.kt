@@ -349,7 +349,6 @@ class ExportWorker @AssistedInject constructor(
         val historyOperationId = durableFolderOperationId ?: durableApiOperationId ?: admissionOperationId
         entitlementRepository.refresh()
         val isPurchased = distributionPolicy.fullAccessIncluded ||
-            settingsRepository.isPurchased.first() ||
             entitlementRepository.verifyAccess()
         val dates = scheduledDates(
             settings,
