@@ -10,7 +10,7 @@ verified_method: traced
 platform: apple
 category: "Workflow guide"
 related:
-  - export-polar-flow-data
+  - export-huawei-health-data
   - export-apple-health-workouts
   - export-health-data-without-the-cloud
 draft: false
