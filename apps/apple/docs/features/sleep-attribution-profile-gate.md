@@ -19,20 +19,26 @@ Apple `ExportPreviewView.buildPreviews` preserves the original
 `executionSleepCaptureContextIsFrozen` value across accepted-provider settings
 reconstruction, as foreground `ExportOrchestrator` already does. A fresh profile
 with frozen nil renderer authority can acquire its Apple-v11 pin; a durable frozen
-nil-pin operation cannot. The Lossless + Range UI regression and the corresponding
-`ExportPreviewDisplayContentTests` authority regression still require native execution.
+nil-pin operation cannot. The Lossless + Range UI regression passes alongside the
+historical Night begins preview. `ExportPreviewDisplayContentTests` verifies both
+fresh admission and durable nil-pin rejection with the accepted destination scope.
 
 Connected Append/Update destination behavior comes from the frozen settings, while
 retained renderer plans keep overwrite as their materialization mode.
 `ConnectedMorningReceiverTests.connectedWriteModesPreservePersonalContentAcrossCommitBeforeAckRecovery`
-covers both modes; both parameterized cases must actually execute before claiming
-crash-before-acknowledgement recovery qualification. A zero-test invocation is not evidence.
+covers both modes; both parameterized cases now pass in the native receiver suite.
+A zero-test invocation is not evidence.
 
-Release admission still needs the affected Android host-core regression batch,
-the iPhone preview and Android schedule-Save/runtime checks, the connected recovery
-cases above, and coherent native integration builds. Portable contract and bundled-reader
-tests cannot substitute for those native results. These gaps do not authorize changing
-historical Night begins bytes or dropping export options.
+The affected Android host-core regressions, packaged renderer/storage recovery,
+iPhone preview, connected recovery and Android schedule-Save smoke checks pass.
+The Android schedule checks include ordinary English and constrained large-text
+Arabic layouts. Historical registry pins remain supported by both semantic and
+render adapters; successor registry authority remains independently constrained.
+Release admission still requires the complete producer/consumer admission review
+and coherent native integration builds before opening the production gates.
+Portable contract and bundled-reader tests cannot substitute for native results.
+These remaining checks do not authorize changing historical Night begins bytes
+or dropping export options.
 
 ## Version allocation audit
 

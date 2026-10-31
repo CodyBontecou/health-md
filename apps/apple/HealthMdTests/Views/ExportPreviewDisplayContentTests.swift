@@ -26,14 +26,14 @@ final class ExportPreviewDisplayContentTests: XCTestCase {
             source.executionSleepCaptureContextIsFrozen = captureWasFrozen
 
             let accepted = try AcceptedExternalProviderFileCapture(settings: source,
-                context: context, includesProviders: false, providers: nil)
+                context: context, healthSubfolder: "", includesProviders: false, providers: nil)
             let settings = accepted.snapshot.makeAdvancedExportSettings()
             Self.retainedPreviewSettings.append(settings)
             XCTAssertTrue(settings.executionSleepCaptureContextIsFrozen,
                 "Accepting capture freezes selection, independently of durable renderer authority")
             settings.executionSleepCaptureContextIsFrozen = captureWasFrozen
             let snapshot = await ExportSettingsSnapshot.forNewAppleOperation(settings,
-                calendarTimeZone: zone, surface: .preview)
+                healthSubfolder: accepted.snapshot.healthSubfolder, calendarTimeZone: zone, surface: .preview)
             XCTAssertEqual(snapshot.sleepCaptureContext, context)
             XCTAssertEqual(snapshot.detailPolicy, .lossless)
             XCTAssertTrue(snapshot.generateRangeSummary)
