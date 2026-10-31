@@ -1716,13 +1716,13 @@ final class ExportOrchestratorTests: XCTestCase {
     }
 
     @MainActor
-    func testUnqualifiedMorningSummaryCompanionNeverFallsBackToHistoricalRollup() async throws {
+    func testMorningSummaryOnlyWritesSuccessorRangeFilesWithoutDailyNotes() async throws {
         for background in [false, true] {
             let store = FakeHealthStore()
             HealthKitFixtures.populateAllCategories(store, date: HealthKitFixtures.referenceDate)
             let manager = HealthKitManager(store: store, userDefaults: makeIsolatedDefaults())
             manager.setSleepDayAttribution(.morningEnds)
-            let (vault, fileSystem) = makeVaultManager(vaultPath: "/tmp/UnqualifiedMorningSummary-\(background)")
+            let (vault, fileSystem) = makeVaultManager(vaultPath: "/tmp/MorningSummaryOnly-\(background)")
             let settings = makeExportSettings(formats: Set(ExportFormat.allCases), rollupPeriods: [.range])
             settings.executionSleepCaptureContext = nil
             settings.summaryOnlyExport = true
@@ -1737,13 +1737,16 @@ final class ExportOrchestratorTests: XCTestCase {
                 result = await ExportOrchestrator.exportDates([HealthKitFixtures.referenceDate],
                     healthKitManager: manager, vaultManager: vault, settings: settings)
             }
-            XCTAssertEqual(result.successCount, 0)
-            XCTAssertEqual(result.totalFilesWritten, 0)
-            XCTAssertTrue(fileSystem.files.isEmpty)
-            XCTAssertTrue(store.queriedSumIdentifiers.isEmpty,
-                "Unsupported successor work must fail before health capture")
-            XCTAssertEqual(result.failedDateDetails.first?.errorDetails,
-                AppleSleepCaptureContext.AvailabilityError.unapprovedAttribution.localizedDescription)
+            XCTAssertEqual(result.successCount, 1, "\(result.failedDateDetails)")
+            XCTAssertEqual(result.totalFilesWritten, 4)
+            XCTAssertEqual(result.rollupFileCount, 4)
+            XCTAssertEqual(result.looseAggregateFileCount, 0)
+            XCTAssertEqual(result.dailyNoteUpdateCount, 0)
+            XCTAssertEqual(fileSystem.files.count, 4)
+            XCTAssertTrue(fileSystem.files.keys.allSatisfy { $0.contains("/Rollups/Range/") })
+            let json = try XCTUnwrap(fileSystem.files.first { $0.key.hasSuffix(".json") }?.value)
+            XCTAssertTrue(json.contains("apple-v11"), "Range summaries must retain successor authority")
+            XCTAssertTrue(json.contains("morning_ends"))
         }
     }
 

@@ -1341,7 +1341,8 @@ struct ContentView: View {
     private var interactiveHistorySelection: HealthHistoryExecutionSelection {
         HealthHistoryExecutionSelection(scope: interactiveHistoryScope,
             settings: ExportSettingsSnapshot.from(advancedSettings, appleExportEngineAuthorityIsFrozen: false),
-            target: exportTargetSelection, preset: dateRangePreset)
+            target: exportTargetSelection, preset: dateRangePreset,
+            sleepDayAttribution: healthKitManager.sleepDayAttribution)
     }
 
     private var interactiveHistoryScope: HealthHistoryScope {

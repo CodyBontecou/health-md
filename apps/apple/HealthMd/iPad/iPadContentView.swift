@@ -539,7 +539,8 @@ struct iPadContentView: View {
             profileID: profileID, rangeSemantics: .ownerDates)
         return HealthHistoryExecutionSelection(scope: scope,
             settings: ExportSettingsSnapshot.from(advancedSettings, appleExportEngineAuthorityIsFrozen: false),
-            target: .localIPhoneFolder, preset: dateRangePreset, localDestinationURL: vaultManager.vaultURL)
+            target: .localIPhoneFolder, preset: dateRangePreset, localDestinationURL: vaultManager.vaultURL,
+            sleepDayAttribution: healthKitManager.sleepDayAttribution)
     }
 
     private func clearPendingHistoryCheck() {
