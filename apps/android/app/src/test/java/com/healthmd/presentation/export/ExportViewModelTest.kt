@@ -429,7 +429,7 @@ class ExportViewModelTest {
     }
 
     @Test
-    fun allTimeExportDoesNotRequireHistoryWhenAllVisibleDataIsRecent() = runTest {
+    fun allTimeStillNeedsHistoryAfterSwitchingToTodayAndBackWhenVisibleDataIsRecent() = runTest {
         val today = LocalDate.now()
         val healthRepository = FakeHealthRepository(
             hasPermissions = true,
@@ -449,7 +449,51 @@ class ExportViewModelTest {
         advanceUntilIdle()
 
         assertThat(viewModel.uiState.value.allTimeSelected).isTrue()
-        assertThat(viewModel.uiState.value.requiresHistoricalReadPermission).isFalse()
+        assertThat(viewModel.uiState.value.requiresHistoricalReadPermission).isTrue()
+        assertThat(viewModel.uiState.value.historyPermissionNeeded).isTrue()
+
+        viewModel.setDateRange(today, today)
+        assertThat(viewModel.uiState.value.allTimeSelected).isFalse()
+        assertThat(viewModel.uiState.value.historyPermissionNeeded).isFalse()
+
+        viewModel.selectAllTime()
+        advanceUntilIdle()
+        assertThat(viewModel.uiState.value.startDate).isEqualTo(today.minusDays(6))
+        assertThat(viewModel.uiState.value.historyPermissionNeeded).isTrue()
+
+        viewModel.buildPreview()
+        advanceUntilIdle()
+        viewModel.startExport()
+        advanceUntilIdle()
+
+        assertThat(healthRepository.fetchCalls).isEqualTo(0)
+        assertThat(exportRepository.exportCalls).isEqualTo(0)
+        assertThat(exportRepository.previewCalls).isEqualTo(0)
+        assertThat(historyRepository.entries).isEmpty()
+    }
+
+    @Test
+    fun allTimeWithHistoryPermissionExportsReadableData() = runTest {
+        val today = LocalDate.now()
+        val healthRepository = FakeHealthRepository(
+            hasPermissions = true,
+            hasHistoricalReadPermission = true,
+            earliestDataDate = today.minusDays(6),
+        )
+        val exportRepository = FakeExportRepository()
+        val historyRepository = FakeExportHistoryRepository()
+        val viewModel = createViewModel(
+            healthRepository = healthRepository,
+            exportRepository = exportRepository,
+            exportHistoryRepository = historyRepository,
+        )
+        advanceUntilIdle()
+
+        viewModel.selectAllTime()
+        advanceUntilIdle()
+
+        assertThat(viewModel.uiState.value.allTimeSelected).isTrue()
+        assertThat(viewModel.uiState.value.requiresHistoricalReadPermission).isTrue()
         assertThat(viewModel.uiState.value.historyPermissionNeeded).isFalse()
 
         viewModel.startExport()
