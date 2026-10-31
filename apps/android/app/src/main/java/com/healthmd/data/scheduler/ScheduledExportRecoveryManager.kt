@@ -441,7 +441,6 @@ class ScheduledExportRecoveryManager @Inject constructor(
     private suspend fun hasFullAccess(): Boolean {
         entitlementRepository.refresh()
         return distributionPolicy.fullAccessIncluded ||
-            settingsRepository.isPurchased.first() ||
             entitlementRepository.verifyAccess()
     }
 

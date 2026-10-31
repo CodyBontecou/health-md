@@ -16,6 +16,7 @@ import com.healthmd.domain.repository.EntitlementRepository
 import com.healthmd.domain.repository.PurchaseOffer
 import com.healthmd.domain.repository.PurchaseRepository
 import com.healthmd.domain.repository.PurchasePlan
+import com.healthmd.domain.repository.SettingsRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -43,6 +44,9 @@ import timber.log.Timber
  */
 class BillingRepositoryImpl(
     private val context: Context,
+    private val settingsRepository: SettingsRepository,
+    billingClientOverride: BillingClient? = null,
+    private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Main),
 ) : EntitlementRepository, PurchaseRepository, PurchasesUpdatedListener {
 
     companion object {
@@ -55,13 +59,11 @@ class BillingRepositoryImpl(
         private const val MAX_INITIAL_CONNECTION_RETRY_ATTEMPTS = 3
     }
 
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
-
     private val prefs: SharedPreferences by lazy {
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
     }
 
-    private val billingClient: BillingClient = BillingClient.newBuilder(context)
+    private val billingClient: BillingClient = billingClientOverride ?: BillingClient.newBuilder(context)
         .setListener(this)
         .enableAutoServiceReconnection()
         .enablePendingPurchases(
@@ -139,13 +141,6 @@ class BillingRepositoryImpl(
     private fun saveUnlockState(unlocked: Boolean) {
         prefs.edit().putBoolean(KEY_IS_UNLOCKED, unlocked).apply()
         _isPermanentlyUnlocked.value = unlocked
-        if (BuildConfig.DEBUG && prefs.contains(KEY_DEBUG_OVERRIDE)) {
-            _isUnlocked.value = prefs.getBoolean(KEY_DEBUG_OVERRIDE, false)
-            Timber.d("Unlock state saved: $unlocked (debug override active, showing: ${_isUnlocked.value})")
-        } else {
-            _isUnlocked.value = unlocked
-            Timber.d("Unlock state saved: $unlocked")
-        }
     }
 
     override fun refresh() {
@@ -386,14 +381,16 @@ class BillingRepositoryImpl(
             ?: throw MyselfClaimException(MyselfClaimFailure.NO_PURCHASE)
     }
 
-    private suspend fun refreshPurchaseStatus() {
+    private suspend fun refreshPurchaseStatus(): Boolean {
         val result = queryPurchases("refresh purchases")
         if (result.billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
             processPurchases(result.purchasesList, fullSnapshot = true)
+            return true
         } else {
             // No offline permanent grant for a subscription. Lifetime caches remain valid.
             _isUnlocked.value = loadCachedUnlockState()
             logPurchaseQueryFailure("Failed to query purchases", result.billingResult)
+            return false
         }
     }
 
@@ -456,13 +453,16 @@ class BillingRepositoryImpl(
     }
 
     override suspend fun verifyAccess(): Boolean = withContext(Dispatchers.Main) {
-        if (loadCachedUnlockState()) return@withContext true
+        // Permanent access remains usable if Play cannot be reached. A successful query,
+        // however, must reconcile refunded Lifetime purchases before admitting work.
         if (!hasCompletedInitialSetup) {
             startInitialConnectionIfNeeded()
-            if (withTimeoutOrNull(15_000) { claimBillingReady.first { it } } != true) return@withContext false
+            if (withTimeoutOrNull(15_000) { claimBillingReady.first { it } } != true) {
+                return@withContext loadCachedUnlockState() || settingsRepository.isPurchased.first()
+            }
         }
-        refreshPurchaseStatus()
-        _isUnlocked.value
+        if (refreshPurchaseStatus()) _isUnlocked.value
+        else loadCachedUnlockState() || settingsRepository.isPurchased.first()
     }
 
     private suspend fun reconcileAlreadyOwnedPurchase(source: String): Boolean {
@@ -477,7 +477,7 @@ class BillingRepositoryImpl(
             return false
         }
 
-        val reconciled = processPurchases(result.purchasesList)
+        val reconciled = processPurchases(result.purchasesList, fullSnapshot = true)
         if (!reconciled) {
             _purchaseError.value = BillingError.PURCHASE_FAILED
             Timber.e("Already-owned purchase from %s had no completed matching entitlement", source)
@@ -585,11 +585,22 @@ class BillingRepositoryImpl(
         }
     }
 
-    private fun processPurchases(purchases: List<Purchase>, fullSnapshot: Boolean = false): Boolean {
+    private suspend fun processPurchases(purchases: List<Purchase>, fullSnapshot: Boolean = false): Boolean {
         val snapshot = playEntitlementSnapshot(purchases)
-        if (snapshot.hasLifetime) saveUnlockState(true)
+        if (fullSnapshot || snapshot.hasLifetime) {
+            // Purchase callbacks are deltas, so absence there cannot revoke anything.
+            // Grandfathered access is independent of current Play product ownership.
+            val legacy = prefs.getBoolean(KEY_LEGACY_UNLOCK_GRANTED, false) || isLegacyInstall()
+            if (legacy) prefs.edit().putBoolean(KEY_LEGACY_UNLOCK_GRANTED, true).apply()
+            saveUnlockState(snapshot.hasLifetime || legacy)
+        }
         if (fullSnapshot || snapshot.hasAccess) {
             _isUnlocked.value = loadCachedUnlockState() || snapshot.hasAccess
+        }
+        if (fullSnapshot || snapshot.hasLifetime) {
+            // UI and headless consumers historically also persisted this separate flag.
+            // Reconcile it in the repository, including when no paywall ViewModel exists.
+            settingsRepository.setPurchased(_isPermanentlyUnlocked.value)
         }
         if (snapshot.unacknowledgedTokens.isNotEmpty()) {
             scope.launch {
