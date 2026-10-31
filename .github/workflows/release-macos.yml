@@ -97,6 +97,9 @@ jobs:
           RELEASE_EVENT_TAG: ${{ github.event.release.tag_name || '' }}
           RELEASE_INPUT_TAG: ${{ inputs.release_tag || '' }}
           RELEASE_DRY_RUN: ${{ inputs.dry_run || false }}
+          # Asset repair may use newer workflow code, but always archives the tag.
+          # Requiring both flags keeps every ASC upload/submission step disabled.
+          RELEASE_ASSET_ONLY: ${{ github.event_name == 'workflow_dispatch' && inputs.skip_asc_upload == true && inputs.skip_asc_submit == true }}
         run: python3 .github/scripts/apple_release_source.py resolve
 
       # The draft is the source ledger before any store operation. A human

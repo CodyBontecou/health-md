@@ -122,6 +122,21 @@ class AppleReleasePolicyTests(unittest.TestCase):
                     "GitHub hides draft releases from tokens without push access",
                 )
 
+    def test_macos_asset_repair_disables_store_steps_and_keeps_draft_asset_attachment(self):
+        caller = workflow("release-macos.yml")
+        event = context(caller["name"], release_tag="v3.0")
+        event["inputs"].update(skip_asc_upload=True, skip_asc_submit=True, dry_run=False)
+        event["github"]["event"]["inputs"].update(skip_asc_upload="true", skip_asc_submit="true", dry_run="false")
+        step = next(s for s in caller["jobs"]["resolve-release-sha"]["steps"] if s.get("id") == "resolve")
+        self.assertEqual(render(step["env"]["RELEASE_ASSET_ONLY"], event), "true")
+        steps = {s["name"]: s for s in caller["jobs"]["release"]["steps"]}
+        for name in ("Build App Store pkg", "Upload pkg to App Store Connect", "Create ASC version and submit for review"):
+            with self.subTest(step=name):
+                self.assertFalse(permitted(steps[name], event))
+        attach = steps["Attach macOS zip to GitHub release"]
+        self.assertTrue(permitted(attach, event))
+        self.assertNotIn("--draft=false", attach["run"])
+
     def test_existing_draft_is_required_before_qualification_not_created_after_upload(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
