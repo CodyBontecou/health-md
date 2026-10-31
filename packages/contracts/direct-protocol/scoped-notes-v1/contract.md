@@ -2,8 +2,10 @@
 
 Status: staged. The portable CLI conditionally negotiates version 1 after the source offers it,
 then freezes policy/capture-bound receiver jobs, durable skip/install decisions and truthful receipts.
-The native producers do not yet advertise this extension or attach its policies. Completing frozen
-producer authority and cross-platform runtime qualification is required before native advertisement.
+The iPhone and Android native producers advertise version 1, attach per-note policies and retain
+the negotiated version and manifests in their private journals. Morning ends note exports require
+the extension before capture; resume requires the retained version to remain supported. Native
+runtime qualification is still pending, and Morning ends remains production-gated on both apps.
 
 This independent extension applies the same personal-note settings to iPhone protocol v1 and
 Android protocol v2 file exports. It changes neither historical daily export profiles nor pairing,
@@ -19,7 +21,8 @@ hello before adding this field to its reply: deployed Android peers reject unkno
 Both mobile platforms send their hello immediately after authentication. The CLI replies with
 version 1 only when that source offered implemented version 1; absent, empty and future-only
 source lists receive no extra hello field. Existing neutral export-history negotiation remains
-unchanged. Native readers support the optional field but their current producers omit it.
+unchanged. Native producers attach the optional policy to scoped personal-note artifacts only
+when version 1 was negotiated. Historical jobs without the extension keep their original behavior.
 
 The negotiated version is frozen in both durable jobs and must still be supported on resume.
 Neither an unnegotiated policy nor a policy-less personal-note artifact in an extension job may be

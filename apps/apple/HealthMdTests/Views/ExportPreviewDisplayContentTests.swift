@@ -8,6 +8,48 @@ final class ExportPreviewDisplayContentTests: XCTestCase {
     @MainActor private static var retainedPreviewConfigurations: [ExportPreviewOperationConfiguration] = []
 
     @MainActor
+    func testAcceptedMorningPreviewDistinguishesFreshProfileFromDurableNilPin() async throws {
+        let suite = "MorningPreviewAuthority.\(UUID())"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let zone = try XCTUnwrap(TimeZone(identifier: "Asia/Kathmandu"))
+        let context = AppleSleepCaptureContext(timeZone: zone, sleepDayAttribution: .morningEnds)
+        for captureWasFrozen in [false, true] {
+            let source = AdvancedExportSettings(userDefaults: defaults)
+            Self.retainedPreviewSettings.append(source)
+            source.exportFormats = [.markdown]
+            source.detailPolicy = .lossless
+            source.generateRangeSummary = true
+            source.executionAppleExportEngineAuthorityIsFrozen = true
+            source.executionAppleExportEnginePin = nil
+            source.executionSleepCaptureContext = captureWasFrozen ? context : nil
+            source.executionSleepCaptureContextIsFrozen = captureWasFrozen
+
+            let accepted = try AcceptedExternalProviderFileCapture(settings: source,
+                context: context, includesProviders: false, providers: nil)
+            let settings = accepted.snapshot.makeAdvancedExportSettings()
+            Self.retainedPreviewSettings.append(settings)
+            XCTAssertTrue(settings.executionSleepCaptureContextIsFrozen,
+                "Accepting capture freezes selection, independently of durable renderer authority")
+            settings.executionSleepCaptureContextIsFrozen = captureWasFrozen
+            let snapshot = await ExportSettingsSnapshot.forNewAppleOperation(settings,
+                calendarTimeZone: zone, surface: .preview)
+            XCTAssertEqual(snapshot.sleepCaptureContext, context)
+            XCTAssertEqual(snapshot.detailPolicy, .lossless)
+            XCTAssertTrue(snapshot.generateRangeSummary)
+            if captureWasFrozen {
+                XCTAssertNil(snapshot.appleExportEnginePin,
+                    "A durable nil pin must never acquire successor authority during replay")
+                XCTAssertThrowsError(try snapshot.recoveredSleepCaptureContext())
+            } else {
+                XCTAssertTrue(snapshot.appleExportEnginePin?.hasExplicitWakeDateContracts == true,
+                    "A live profile with a nil engine pin must still admit a fresh Morning preview")
+                XCTAssertEqual(try snapshot.recoveredSleepCaptureContext(), context)
+            }
+        }
+    }
+
+    @MainActor
     func testAcceptedPreviewKeepsCaptureScopeAndDestinationPathsAcrossLivePreferenceMutation() async throws {
         let suite = "FrozenPreviewConfiguration.\(UUID())"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
