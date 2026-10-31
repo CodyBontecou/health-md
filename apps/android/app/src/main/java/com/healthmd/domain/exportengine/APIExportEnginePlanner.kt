@@ -261,7 +261,8 @@ class HealthMdRustAPIExportPlanner(
             )
             val wakeDate = request.profile == AndroidExportProfile.android_sleep_v6
             val frozenCustomization = if (wakeDate) request.settings.formatCustomization.copy(
-                unitPreference = UnitPreference.METRIC, includeLegacyAndroidAliases = false)
+                unitPreference = UnitPreference.METRIC, includeLegacyAndroidAliases = false,
+                includeAndroidNativeFields = true)
                 else request.settings.formatCustomization.forFrozenApiV4()
             val semanticProfile = if (wakeDate) HealthMdSemanticInputAdapter.Profile.SLEEP_V6
                 else HealthMdSemanticInputAdapter.Profile.FROZEN_V4

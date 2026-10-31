@@ -268,6 +268,7 @@ class HealthMdRustDailyAggregatePlanner(
             // Aliases decorate native presentation; successor semantic IDs remain canonical.
             includeLegacyAndroidAliases = request.profile != AndroidExportProfile.android_sleep_v6 &&
                 request.customization.includeLegacyAndroidAliases,
+            includeAndroidNativeFields = request.customization.includeAndroidNativeFields,
             captureContext = request.captureContext,
         ).map { it.bytes }
         val semanticResult = HealthMdSemanticSessionRunner.process(

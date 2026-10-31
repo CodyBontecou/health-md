@@ -388,7 +388,9 @@ object HealthMdRenderInputAdapter {
         } else emptyMap()
         val presentationFields = presentationData?.let { data ->
             val fields = if (nativeWakeDateContext != null) {
-                HealthDataFields.extractForWakeDate(data, presentationCustomization.unitConverter, presentationCustomization.timeFormat)
+                HealthDataFields.extractForWakeDate(data, presentationCustomization.unitConverter,
+                    presentationCustomization.timeFormat,
+                    includeAndroidNativeFields = options.api != null || presentationCustomization.includeAndroidNativeFields)
             } else HealthDataFields.extract(
                 data,
                 presentationCustomization.unitConverter,

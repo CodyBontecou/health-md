@@ -50,6 +50,32 @@ import org.junit.Test
  */
 class HostCoreDailyAggregatePlannerTest {
     @Test
+    fun successorApiKeepsCanonicalNativeFieldsIndependentOfLocalDisplaySwitch() = runTest {
+        val date = LocalDate.of(2026, 3, 15)
+        val data = HealthData(date, body = BodyData(weight = 72.125, bodyWaterMass = 40.625, boneMass = 3.125))
+        val context = AndroidCaptureContext(ZoneId.of("UTC"), SleepDayAttribution.MORNING_ENDS)
+        val exportedAt = Instant.parse("2026-03-16T00:00:00Z")
+        for (enabled in listOf(false, true)) {
+            val settings = ExportSettings(
+                formatCustomization = FormatCustomization.analyticalDefault().copy(includeAndroidNativeFields = enabled),
+                metricSelection = MetricSelectionState(enabledMetrics = setOf("weight", "body_water_mass", "bone_mass")),
+                executionSleepCaptureContext = context, executionSleepCaptureAuthorityIsFrozen = true)
+            val request = FrozenAPIExportRequest.capture(listOf(date), listOf(data), emptyList(), settings,
+                ExportEngineMode.rust, APIExportIds("native-switch-api", "native-switch-api-session"), context.zoneId.id, exportedAt)
+            val planned = HealthMdRustAPIExportPlanner().plan(request)
+            validateAPIPlan(planned.plan, request)
+            val native = com.healthmd.data.export.APIExportEnvelopeBuilder(com.healthmd.data.export.JsonExporter())
+                .buildWakeDate(listOf(data), emptyList(), settings, date, date, context, exportedAt)
+            for (encoded in listOf(planned.plan.items.single().content.decodeToString(), native)) {
+                val record = Json.parseToJsonElement(encoded).jsonObject.getValue("records").jsonArray.single().jsonObject
+                assertThat(record.getValue("body").jsonObject.getValue("bodyWaterMass").jsonPrimitive.content.toDouble()).isEqualTo(40.625)
+                assertThat(record.getValue("body").jsonObject.getValue("boneMass").jsonPrimitive.content.toDouble()).isEqualTo(3.125)
+                assertThat(record.getValue("units").jsonObject.keys).containsAtLeast("body_water_mass_kg", "bone_mass_kg")
+            }
+        }
+    }
+
+    @Test
     fun successorHonorsDisabledAndroidNativeFieldsLikeTheHistoricalWriter() = runTest {
         val data = HealthData(LocalDate.of(2026, 3, 15),
             body = BodyData(weight = 72.125, bodyWaterMass = 40.625, boneMass = 3.125))
@@ -2175,7 +2201,7 @@ class HostCoreDailyAggregatePlannerTest {
         for (preference in UnitPreference.entries) {
             val request = FrozenDailyAggregateExportRequest.capture(data, ExportSettings(
                 exportFormats = ExportFormat.entries.toSet(),
-                formatCustomization = FormatCustomization(unitPreference = preference),
+                formatCustomization = FormatCustomization(unitPreference = preference, includeAndroidNativeFields = true),
                 metricSelection = MetricSelectionState(enabledMetrics = setOf("body_temp", "skin_temperature", "water")),
                 executionSleepCaptureContext = context, executionSleepCaptureAuthorityIsFrozen = true),
                 AndroidExportProfile.android_sleep_v6, ExportEngineMode.rust,
@@ -2216,6 +2242,7 @@ class HostCoreDailyAggregatePlannerTest {
             .metrics.map { it.selectionId }.toSet()
         val request = FrozenDailyAggregateExportRequest.capture(data, ExportSettings(
             exportFormats = setOf(ExportFormat.OBSIDIAN_BASES), metricSelection = MetricSelectionState(enabledMetrics = selected),
+            formatCustomization = FormatCustomization.analyticalDefault(),
             executionSleepCaptureContext = context, executionSleepCaptureAuthorityIsFrozen = true,
         ), AndroidExportProfile.android_sleep_v6, ExportEngineMode.rust,
             DailyAggregateExportIds("host-fractional-facts", "host-fractional-facts-session"))

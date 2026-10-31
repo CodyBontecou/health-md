@@ -521,10 +521,11 @@ object HealthDataFields {
         converter: UnitConverter,
         timeFormat: TimeFormatPreference = TimeFormatPreference.HOUR_24,
         includeLegacyAndroidAliases: Boolean = false,
+        includeAndroidNativeFields: Boolean = true,
     ): List<HealthField> = extract(
         data, converter, timeFormat,
         includeLegacyAndroidAliases = true,
-        includeAndroidNativeFields = true,
+        includeAndroidNativeFields = includeAndroidNativeFields,
     ).filter { field ->
         field.key != "sleep_core_hours" &&
             (includeLegacyAndroidAliases || field.key == "sleep_light_hours" || field.key !in legacyAndroidAliasKeys)

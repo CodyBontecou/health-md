@@ -36,9 +36,12 @@ internal object AndroidWakeDateSourceProjection {
         val selected = request.data.filtered(request.metricSelection, context)
         val aliases = if (request.customization.includeLegacyAndroidAliases) {
             val canonicalKeys = HealthDataFields.extractForWakeDate(selected, request.customization.unitConverter,
-                request.customization.timeFormat).mapTo(mutableSetOf()) { it.key }
+                request.customization.timeFormat,
+                includeAndroidNativeFields = request.customization.includeAndroidNativeFields).mapTo(mutableSetOf()) { it.key }
             HealthDataFields.extractForWakeDate(selected, request.customization.unitConverter, request.customization.timeFormat,
-                includeLegacyAndroidAliases = true).filter { it.value != null && it.key !in canonicalKeys }
+                includeLegacyAndroidAliases = true,
+                includeAndroidNativeFields = request.customization.includeAndroidNativeFields)
+                .filter { it.value != null && it.key !in canonicalKeys }
         } else emptyList()
         val formats = request.formats.associateBy(request::relativePath)
         val items = plan.items.map { item ->
@@ -118,7 +121,8 @@ internal object AndroidWakeDateSourceProjection {
         semanticResult: ByteArray, aggregate: JsonObject): JsonObject {
         coroutineContext.ensureActive()
         val (root, _) = nativeParts(data, settings.metricSelection, settings.formatCustomization.copy(
-            unitPreference = UnitPreference.METRIC, includeLegacyAndroidAliases = false),
+            unitPreference = UnitPreference.METRIC, includeLegacyAndroidAliases = false,
+            includeAndroidNativeFields = true),
             settings.includeGranularData, context, semanticResult) ?: return aggregate
         return composeJson(aggregate, root)
     }

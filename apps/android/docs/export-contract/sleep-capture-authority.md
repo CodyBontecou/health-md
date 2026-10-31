@@ -6,6 +6,8 @@ One accepted operation owns one calendar timezone, attribution and explicit succ
 
 Current native producers reuse the existing export, preview, API, scheduling and direct-file paths with frozen successor authority. Native detail composition preserves selected temperature samples, meals, menstruation periods, planned workouts, medical resources and provider provenance without adding shared semantic identities. Legacy aliases remain a presentation option; Android Light never acquires a Core identity. See [the current admission status](../../../apple/docs/features/sleep-attribution-profile-gate.md) for cross-platform verification requirements.
 
+The Android-native fields switch controls local JSON, CSV, Markdown, Bases and scoped-note presentation, including the emitted summary-unit dictionary. The successor API retains its canonical native profile fields independently of that local display choice. Metric selection and granular-record selection remain separate controls.
+
 ## Incremental boundary qualification history
 
 The sections below record the state when each boundary was added. Earlier statements that a route is gated, unadopted or pending describe that stage; the current source availability and admission status above take precedence. Historical profile and recovery invariants remain normative.

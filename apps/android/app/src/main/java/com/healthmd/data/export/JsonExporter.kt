@@ -147,14 +147,14 @@ class JsonExporter {
         val effectiveCustomization = if (authority == null) customization else customization.copy(
             unitPreference = UnitPreference.METRIC,
             dateFormat = DateFormatPreference.ISO8601,
-            includeAndroidNativeFields = true,
         )
         if (authority == null) return Json { prettyPrint = true }.encodeToString(
             JsonElement.serializer(), nativePayload(data, effectiveCustomization, includeGranularData, false),
         )
         return try {
             val payload = nativePayload(data, effectiveCustomization, includeGranularData, true, includeSleepRecords, includeWorkoutRecords)
-            Json { prettyPrint = true }.encodeToString(JsonElement.serializer(), authority.finish(payload, data))
+            Json { prettyPrint = true }.encodeToString(JsonElement.serializer(),
+                authority.finish(payload, data, effectiveCustomization.includeAndroidNativeFields))
         } catch (error: RuntimeException) {
             if (error is java.util.concurrent.CancellationException) throw error
             // Native encoding/time errors can echo values; neither message nor cause may escape.

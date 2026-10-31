@@ -78,7 +78,7 @@ internal class WakeDateJsonDocument(private val context: AndroidCaptureContext) 
         return start to end
     }
 
-    fun finish(payload: JsonObject, data: HealthData): JsonObject {
+    fun finish(payload: JsonObject, data: HealthData, includeAndroidNativeFields: Boolean = true): JsonObject {
         val (start, end) = sleepClocks(data)
         val source = payload.toMutableMap()
         (source["sleep"] as? JsonObject)?.let { original ->
@@ -92,7 +92,8 @@ internal class WakeDateJsonDocument(private val context: AndroidCaptureContext) 
             source["sleep"] = JsonObject(sleep)
         }
         val canonical = canonicalize(JsonObject(source), emptyList()) as JsonObject
-        val summaryUnits = HealthDataFields.extractForWakeDate(data, UnitConverter(UnitPreference.METRIC))
+        val summaryUnits = HealthDataFields.extractForWakeDate(data, UnitConverter(UnitPreference.METRIC),
+            includeAndroidNativeFields = includeAndroidNativeFields)
             .filter { it.value != null && it.unit.isNotBlank() && it.unit != "time" }
             .mapNotNull { field ->
                 WakeDateSummaryUnits.byOutputKey[field.key]?.takeIf { it.isNotBlank() }?.let { field.key to it }

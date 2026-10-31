@@ -116,7 +116,7 @@ class APIExportEnvelopeBuilder @Inject constructor(
         val recordObjects = records.map { record ->
             parser.parseToJsonElement(jsonExporter.export(
                 data = record,
-                customization = settings.formatCustomization,
+                customization = settings.formatCustomization.copy(includeAndroidNativeFields = true),
                 includeGranularData = settings.includeGranularData,
                 captureContext = captureContext,
             )).jsonObject

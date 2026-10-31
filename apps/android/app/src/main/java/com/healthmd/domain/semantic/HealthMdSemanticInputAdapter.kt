@@ -130,6 +130,7 @@ object HealthMdSemanticInputAdapter {
         calendarTimeZone: String,
         timeFormat: TimeFormatPreference = TimeFormatPreference.HOUR_24,
         includeLegacyAndroidAliases: Boolean = false,
+        includeAndroidNativeFields: Boolean = profile.includeAndroidNativeFields,
         startingSourceOrdinal: ULong = 0u,
         captureContext: AndroidCaptureContext? = null,
     ): EncodedBatch {
@@ -162,7 +163,8 @@ object HealthMdSemanticInputAdapter {
                 val dayIndex = capturedDay.index
                 val day = capturedDay.value
                 val fields = if (profile == Profile.SLEEP_V6) {
-                    HealthDataFields.extractForWakeDate(day, converter, timeFormat)
+                    HealthDataFields.extractForWakeDate(day, converter, timeFormat,
+                        includeAndroidNativeFields = includeAndroidNativeFields)
                 } else {
                     HealthDataFields.extract(
                         data = day,
@@ -366,6 +368,7 @@ object HealthMdSemanticInputAdapter {
         calendarTimeZone: String,
         timeFormat: TimeFormatPreference = TimeFormatPreference.HOUR_24,
         includeLegacyAndroidAliases: Boolean = false,
+        includeAndroidNativeFields: Boolean = profile.includeAndroidNativeFields,
         startingSourceOrdinal: ULong = 0u,
         captureContext: AndroidCaptureContext? = null,
     ): List<EncodedBatch> {
@@ -380,6 +383,7 @@ object HealthMdSemanticInputAdapter {
             calendarTimeZone = calendarTimeZone,
             timeFormat = timeFormat,
             includeLegacyAndroidAliases = includeLegacyAndroidAliases,
+            includeAndroidNativeFields = includeAndroidNativeFields,
             startingSourceOrdinal = startingSourceOrdinal,
             captureContext = captureContext,
         )
