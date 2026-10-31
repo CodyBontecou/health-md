@@ -312,6 +312,9 @@ final class ExportJourneyUITests: XCTestCase {
             purchaseUnlocked: true,
             useHealthKitExportPreviewFixtures: true
         )
+        // The installed app retains the owner's choice between journeys.
+        // This fixture verifies the historical Night begins output explicitly.
+        app.launchArguments += ["-healthKit.sleepDayAttribution", "night_begins"]
         app.launch()
 
         let previewButton = app.buttons[UITestLaunchHelper.Export.previewButton]

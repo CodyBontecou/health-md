@@ -6,7 +6,7 @@ import com.healthmd.data.export.JsonExporter
 import com.healthmd.data.export.MarkdownExporter
 import com.healthmd.data.export.WakeDateJsonDocument
 import com.healthmd.core.HEALTHMD_SLEEP_REGISTRY_SHA256
-import com.healthmd.domain.model.HEALTHMD_CORE_REGISTRY_SHA256
+import com.healthmd.domain.exportengine.ExportEnginePin
 import com.healthmd.domain.model.AndroidCaptureContext
 import com.healthmd.domain.model.SleepDayAttribution
 import com.healthmd.domain.model.FormatCustomization
@@ -217,7 +217,8 @@ object HealthMdRenderInputAdapter {
             "android_sleep_v6" -> 2
             else -> throw AdapterException("registry profile is incompatible")
         }
-        val expectedHash = if (version == 2) HEALTHMD_SLEEP_REGISTRY_SHA256 else HEALTHMD_CORE_REGISTRY_SHA256
+        val registryHashMatches = if (version == 2) registry.registrySha256 == HEALTHMD_SLEEP_REGISTRY_SHA256
+            else ExportEnginePin.supportsRegistryHash(registry.registrySha256)
         val expectedPublicProfile = when (registry.profileId) {
             "android_frozen_v4" -> "android-frozen-v4"
             "android_analytical_v5" -> "android-analytical-v5"
@@ -228,7 +229,7 @@ object HealthMdRenderInputAdapter {
             "android_analytical_v5" -> 5u
             else -> 6u
         }
-        if (registry.registryVersion != version.toUInt() || registry.registrySha256 != expectedHash ||
+        if (registry.registryVersion != version.toUInt() || !registryHashMatches ||
             registry.publicSchema != "healthmd.health_data" || registry.publicProfileId != expectedPublicProfile ||
             registry.publicSchemaVersion != expectedPublicVersion || registry.profileRevision != 1u
         ) {
