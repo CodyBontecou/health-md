@@ -66,7 +66,7 @@ class PhoneReleaseTagTest(unittest.TestCase):
             ):
                 env = {**os.environ, "VERSION": "3.5.0", "VERSION_CODE": code,
                        "RELEASE_TAG": release_tag, "GITHUB_REF_TYPE": "tag", "GITHUB_REF_NAME": ref,
-                       "GITHUB_SHA": sha, "GITHUB_REF": f"refs/tags/{ref}", "GITHUB_OUTPUT": str(Path(temp) / "output")}
+                       "GITHUB_SHA": sha, "RUNNER_TEMP": temp, "GITHUB_REF": f"refs/tags/{ref}", "GITHUB_OUTPUT": str(Path(temp) / "output")}
                 result = subprocess.run(["bash", "-c", step["run"]], cwd=android, env=env, capture_output=True)
                 self.assertEqual(success, result.returncode == 0, (ref, release_tag, result.stderr.decode()))
 
@@ -80,10 +80,22 @@ class PhoneReleaseTagTest(unittest.TestCase):
                 ("android/v3.5.0+45", sha, False),
                 ("android/v3.5.0+44", "0" * 40, False),
             ):
-                env = {**os.environ, "RELEASE_TAG": tag, "RELEASE_SHA": expected_sha,
+                env = {**os.environ, "RELEASE_TAG": tag, "RELEASE_SHA": expected_sha, "GITHUB_SHA": sha, "RUNNER_TEMP": temp,
                        "GITHUB_OUTPUT": str(Path(temp) / "output")}
                 result = subprocess.run(["bash", "-c", release_step["run"]], cwd=android, env=env, capture_output=True)
                 self.assertEqual(success, result.returncode == 0, (tag, result.stderr.decode()))
+
+            # Older recovery product checkouts predate the helper. The workflow's
+            # Git revision, rather than that checkout's files, must supply it.
+            (android / "scripts" / VALIDATOR.name).unlink()
+            env = {**os.environ, "VERSION": "3.5.0", "VERSION_CODE": "44",
+                   "RELEASE_TAG": "android/v3.5.0+44", "RELEASE_SHA": sha,
+                   "GITHUB_REF_TYPE": "tag", "GITHUB_REF_NAME": "android/recovery/workflow",
+                   "GITHUB_SHA": sha, "GITHUB_REF": "refs/tags/android/recovery/workflow",
+                   "RUNNER_TEMP": temp, "GITHUB_OUTPUT": str(Path(temp) / "output")}
+            for run in (step["run"], release_step["run"]):
+                result = subprocess.run(["bash", "-c", run], cwd=android, env=env, capture_output=True)
+                self.assertEqual(0, result.returncode, result.stderr.decode())
 
     def test_all_active_phone_tag_consumers_use_validator(self):
         for name in ("android-release.yml", "android-promote-production.yml", "android-announce.yml"):

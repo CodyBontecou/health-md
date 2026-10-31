@@ -62,7 +62,10 @@ jobs:
           if [[ "$GITHUB_REF_NAME" == "$build_tag" || "$RELEASE_TAG" == "$build_tag" ]]; then
             expected_tag="$build_tag"
           fi
-          python3 scripts/validate-phone-release-tag.py "$expected_tag" "$VERSION" "$VERSION_CODE"
+          # Recovery can check out older product source; use the validator owned by this workflow.
+          validator="$RUNNER_TEMP/android-phone-release-tag.py"
+          git show "$GITHUB_SHA:apps/android/scripts/validate-phone-release-tag.py" > "$validator"
+          python3 "$validator" "$expected_tag" "$VERSION" "$VERSION_CODE"
           [[ -z "$RELEASE_TAG" || "$RELEASE_TAG" == "$expected_tag" ]]
           git fetch --force --no-tags origin "+refs/tags/${expected_tag}:refs/tags/${expected_tag}"
           test "$(git cat-file -t "$expected_tag")" = tag

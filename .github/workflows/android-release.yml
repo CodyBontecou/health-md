@@ -246,7 +246,10 @@ jobs:
           test "$(git rev-parse "$RELEASE_TAG^{commit}")" = "$RELEASE_SHA"
           git fetch --force origin '+refs/heads/main:refs/remotes/origin/main'
           git merge-base --is-ancestor "$RELEASE_SHA" refs/remotes/origin/main
-          python3 scripts/validate-phone-release-tag.py "$RELEASE_TAG" "$version_name" "$version_code"
+          # Recovery can check out older product source; use the validator owned by this workflow.
+          validator="$RUNNER_TEMP/android-phone-release-tag.py"
+          git show "$GITHUB_SHA:apps/android/scripts/validate-phone-release-tag.py" > "$validator"
+          python3 "$validator" "$RELEASE_TAG" "$version_name" "$version_code"
           version="$version_name"
           [[ "$version_code" =~ ^[1-9][0-9]*$ ]]
           (( version_code < 1000000 ))
