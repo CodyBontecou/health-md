@@ -1,5 +1,7 @@
 # Cloud provider-native raw snapshot ledger
 
+Production rollout registers only Health Connect and WHOOP. The other provider entries below preserve adapter semantics and synthetic fixture coverage for future enablement; they do not make those integrations available in the app.
+
 This additive ledger governs `recordKind=provider_payload`. Every successful page is captured by the existing OAuth-aware `CloudHealthApiClient` and synchronously streamed through `CloudRawResponseObserver`; adapters do not create a second client. The exact response bytes/base64 and their SHA-256 are authoritative. Parsed JSON is used only for pagination and application-envelope validation. Withings pages are observer-eligible only when the parsed top-level application `status` is `0`; an HTTP-200 Withings error envelope is rejected before every raw observer.
 
 Selected Health.md metrics expand to the whole listed endpoint. `ALL_AUTHORIZED_SUPPORTED_DATA` requests every implemented endpoint. Each adapter also generates explicit `unsupported/<category>` reports for uncovered metric categories. Those entries never trigger normalized `HealthData` serialization.

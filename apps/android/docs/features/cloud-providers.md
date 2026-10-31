@@ -9,7 +9,7 @@
 
 ## What it does
 
-Health Connect is the default export source in both channels. The Google Play build can also connect Fitbit, Oura, WHOOP, and Withings accounts through their public cloud APIs. After a browser OAuth sign-in, both compatibility exports and Raw API Snapshots can read from the connected provider—snapshots capture each provider's exact response bytes. The F-Droid build contains only Health Connect; cloud-provider catalog entries, adapters, OAuth callbacks, credentials, and token state are absent.
+Health Connect is the default export source in both channels. The Google Play build enables WHOOP as its only direct third-party integration. Fitbit, Oura, Withings, Polar, Samsung, Huawei, and Garmin remain disabled in the catalog, OAuth configuration, normalized export registry, and raw export registry. Their adapter code and synthetic fixtures are retained for future work. After a browser OAuth sign-in, both compatibility exports and Raw API Snapshots can read from the connected provider—snapshots capture each provider's exact response bytes. The F-Droid build contains only Health Connect; cloud-provider catalog entries, adapters, OAuth callbacks, credentials, and token state are absent.
 
 ## Who it is for
 
@@ -25,7 +25,7 @@ Health Connect is the default export source in both channels. The Google Play bu
 
 ## Prerequisites
 
-- A Fitbit, Oura, WHOOP, or Withings account and a Play build configured for that provider's OAuth client. See [provider prerequisites](../health-provider-support.md#direct-provider-prerequisites).
+- A WHOOP account and a Play build configured for WHOOP OAuth. See [provider prerequisites](../health-provider-support.md#direct-provider-prerequisites).
 - Network access for cloud reads
 - Android 9 / API 28+
 

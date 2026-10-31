@@ -36,6 +36,7 @@ object PlayHealthProviderDefinitions {
         "Needs app configuration",
     )
 
+    // Keep future definitions dormant until their provider access and rollout are approved.
     fun all(): List<HealthProviderDefinition> = listOf(
         HealthProviderCatalog.healthConnectDefinition(),
         HealthProviderDefinition(
@@ -125,5 +126,5 @@ object PlayHealthProviderDefinitions {
             setupDescriptionRes = R.string.health_provider_whoop_setup_description,
             directExportStatus = requiresOAuthCredentials,
         ),
-    )
+    ).filter { it.id == HealthProviderId.HEALTH_CONNECT || it.id == HealthProviderId.WHOOP }
 }
