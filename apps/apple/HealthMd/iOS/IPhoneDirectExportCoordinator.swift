@@ -1619,7 +1619,7 @@ final class IPhoneDirectExportCoordinator {
             guard let journal: IPhoneDirectFileJournal = try AppleExportJournalRecovery.load(at: url,
                 fileManager: fileManager, isSupported: { journal in
                     (IPhoneDirectFileJournal.derivedOutputReconciliationVersion...IPhoneDirectFileJournal.currentVersion).contains(journal.version)
-                        && (journal.version == IPhoneDirectFileJournal.historyObservationVersion)
+                        && journal.requiresHistoryObservation
                             == (journal.accepted.historyObservation != nil)
                 }),
                   journal.appleExportEnginePin == journal.settingsSnapshot.appleExportEnginePin,
@@ -1630,7 +1630,7 @@ final class IPhoneDirectExportCoordinator {
                 try storage.validateGeneratedArtifacts(journal, in: url.deletingLastPathComponent())
             }
             try HealthHistoryExportAdmission.validateResume(request: journal.request, accepted: journal.accepted,
-                session: journal.session, historyRequired: journal.version >= IPhoneDirectFileJournal.historyObservationVersion,
+                session: journal.session, historyRequired: journal.requiresHistoryObservation,
                 negotiatedVersion: 1)
             try HealthHistoryExportAdmission.validateCaptureScope(request: journal.request, accepted: journal.accepted,
                 metricIDs: journal.settingsSnapshot.metricSelection.enabledMetricIDs,

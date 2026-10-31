@@ -124,12 +124,16 @@ struct IPhoneDirectFileJournal: Codable {
     static let immutableRangeRequestVersion = 5
     static let derivedOutputReconciliationVersion = 6
     static let historyObservationVersion = 7
-    static let currentVersion = historyObservationVersion
+    static let scopedNoteVersion = 8
+    static let scopedNoteHistoryVersion = 9
+    static let currentVersion = scopedNoteHistoryVersion
+
+    var requiresHistoryObservation: Bool { version == Self.historyObservationVersion || version == Self.scopedNoteHistoryVersion }
 
     var checkpoint = AppleExportJournalCheckpoint()
 
     private enum CodingKeys: String, CodingKey {
-        case version, request, accepted, session, settingsSnapshot
+        case version, request, accepted, session, settingsSnapshot, scopedDailyNoteVersion
         case appleExportEnginePin, appleDirectProtocolPin, healthSubfolder, requestedDates, originalRequestedDates
         case originalCalendarTimeZoneIdentifier, transferDates, capturedDays, generatedFiles, partitions
         case committedPartitionCount, committedBytes, derivedOutputPartialFailures, terminalNoDataDateIdentifiers, generationCompleted
@@ -137,6 +141,7 @@ struct IPhoneDirectFileJournal: Codable {
     }
 
     let version: Int
+    let scopedDailyNoteVersion: Int?
     let request: DirectExportRequest
     let accepted: DirectExportAccepted
     let session: DirectTransferSession
@@ -192,12 +197,36 @@ struct IPhoneDirectFileJournal: Codable {
         }
     }
 
+    func validateScopedNotePolicies() throws {
+        guard (version >= Self.scopedNoteVersion && scopedDailyNoteVersion == 1)
+            || (version < Self.scopedNoteVersion && scopedDailyNoteVersion == nil) else {
+            throw DirectScopedDailyNotePolicy.ValidationError.invalidPolicy
+        }
+        let profile = settingsSnapshot.sleepCaptureContext?.sleepDayAttribution == .morningEnds ? "apple-v11" : "apple-v8"
+        let zone = originalCalendarTimeZoneIdentifier ?? settingsSnapshot.calendarTimeZoneIdentifier ?? accepted.sourceTimeZoneIdentifier
+        let owners = Set(requestedDates.map { HealthKitDailyOwnershipMetadata.ownerDate(for: $0, calendarTimeZoneIdentifier: zone) })
+        for file in generatedFiles {
+            let personal = file.manifest.writeMode == .mergeMarkdownPreservingPreamble
+            guard let policy = file.manifest.scopedNotePolicy else {
+                if personal && scopedDailyNoteVersion == 1 { throw DirectScopedDailyNotePolicy.ValidationError.invalidPolicy }
+                continue
+            }
+            guard scopedDailyNoteVersion == 1, personal, policy.recordProfile == profile,
+                  policy.calendarTimezone == zone, owners.contains(policy.ownerDate),
+                  policy.createIfMissing == settingsSnapshot.dailyNoteInjection.createIfMissing,
+                  policy.injectSections == settingsSnapshot.dailyNoteInjection.injectMarkdownSections else {
+                throw DirectScopedDailyNotePolicy.ValidationError.invalidPolicy
+            }
+        }
+    }
+
     static func isSupportedVersion(_ version: Int) -> Bool {
         version >= legacyVersion && version <= currentVersion
     }
 
     init(
         version: Int? = nil,
+        scopedDailyNoteVersion: Int? = nil,
         request: DirectExportRequest,
         accepted: DirectExportAccepted,
         session: DirectTransferSession,
@@ -221,9 +250,11 @@ struct IPhoneDirectFileJournal: Codable {
         completionRecorded: Bool,
         updatedAt: Date
     ) {
-        let resolvedVersion = version ?? (accepted.historyObservation == nil
-            ? Self.derivedOutputReconciliationVersion : Self.historyObservationVersion)
+        let resolvedVersion = version ?? (scopedDailyNoteVersion == 1
+            ? (accepted.historyObservation == nil ? Self.scopedNoteVersion : Self.scopedNoteHistoryVersion)
+            : (accepted.historyObservation == nil ? Self.derivedOutputReconciliationVersion : Self.historyObservationVersion))
         self.version = resolvedVersion
+        self.scopedDailyNoteVersion = scopedDailyNoteVersion
         self.request = request
         self.accepted = accepted
         self.session = session
@@ -257,6 +288,11 @@ struct IPhoneDirectFileJournal: Codable {
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         version = try container.decode(Int.self, forKey: .version)
+        scopedDailyNoteVersion = try container.decodeIfPresent(Int.self, forKey: .scopedDailyNoteVersion)
+        guard (version >= Self.scopedNoteVersion && scopedDailyNoteVersion == 1)
+            || (version < Self.scopedNoteVersion && scopedDailyNoteVersion == nil) else {
+            throw DirectScopedDailyNotePolicy.ValidationError.invalidPolicy
+        }
         request = try container.decode(DirectExportRequest.self, forKey: .request)
         accepted = try container.decode(DirectExportAccepted.self, forKey: .accepted)
         session = try container.decode(DirectTransferSession.self, forKey: .session)
@@ -303,6 +339,7 @@ struct IPhoneDirectFileJournal: Codable {
         state = try container.decode(String.self, forKey: .state)
         completionRecorded = try container.decodeIfPresent(Bool.self, forKey: .completionRecorded) ?? false
         updatedAt = try container.decode(Date.self, forKey: .updatedAt)
+        try validateScopedNotePolicies()
     }
 }
 

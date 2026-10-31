@@ -70,14 +70,13 @@ class ExportEnginePolicyResolverTest {
             isDebugOrTestBuild = false,
             compatibility = allowCompatible,
         )
-        val error = org.junit.Assert.assertThrows(IllegalStateException::class.java) {
-            resolver.resolveLocal(AndroidExportProfile.android_sleep_v6)
+        assertThat(resolver.resolveLocal(AndroidExportProfile.android_sleep_v6).mode).isEqualTo(ExportEngineMode.rust)
+        assertThat(resolver.resolve(ExportEnginePolicyTarget.ANDROID_SLEEP_V6).mode).isEqualTo(ExportEngineMode.rust)
+        val incompatible = ExportEnginePolicyResolver(isDebugOrTestBuild = false,
+            compatibility = ExportEngineCompatibility { _, _ -> false })
+        org.junit.Assert.assertThrows(IllegalStateException::class.java) {
+            incompatible.resolveLocal(AndroidExportProfile.android_sleep_v6)
         }
-        assertThat(error.message).isEqualTo("wake-date production policy is not qualified")
-        val directError = org.junit.Assert.assertThrows(IllegalStateException::class.java) {
-            resolver.resolve(ExportEnginePolicyTarget.ANDROID_SLEEP_V6)
-        }
-        assertThat(directError.message).isEqualTo(error.message)
     }
 
     @Test

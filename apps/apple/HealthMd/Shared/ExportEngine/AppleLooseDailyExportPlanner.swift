@@ -919,7 +919,8 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
 
     private static func supportsWakeDateNoteSurface(_ surface: AppleExportOperationSurface) -> Bool {
         [.localVaultWithoutSideEffects, .localVaultRangeWithoutSideEffects, .localVaultRangeWithProviderSidecars,
-         .preview, .connectedReceivedRangeWithoutSideEffects, .connectedReceivedRangeWithProviderSidecars].contains(surface)
+         .preview, .connectedReceivedRangeWithoutSideEffects, .connectedReceivedRangeWithProviderSidecars,
+         .directGeneratedFilesWithoutSideEffects, .directGeneratedFilesWithProviderSidecars].contains(surface)
     }
 
     static func supportsComposedWakeDateNotes(settingsSnapshot: ExportSettingsSnapshot,
@@ -960,7 +961,8 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
                 || surface == .localVaultRangeWithProviderSidecars || surface == .preview)
         let supportsWakeDateCompanions = supportsWakeDateLocalCompanions
             || (supportsWakeDateDetails && (surface == .connectedReceivedRangeWithoutSideEffects
-                || surface == .connectedReceivedRangeWithProviderSidecars))
+                || surface == .connectedReceivedRangeWithProviderSidecars
+                || surface == .directGeneratedFilesWithoutSideEffects || surface == .directGeneratedFilesWithProviderSidecars))
         guard surface == .localVaultWithoutSideEffects
                 || surface == .localVaultRangeWithoutSideEffects
                 || surface == .localVaultRangeWithProviderSidecars
@@ -974,7 +976,7 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
               let calendarTimeZoneIdentifier = settingsSnapshot.calendarTimeZoneIdentifier,
               AppleExportEnginePin.isIANAIdentifier(calendarTimeZoneIdentifier),
               TimeZone(identifier: calendarTimeZoneIdentifier) != nil,
-              settingsSnapshot.writeMode == .overwrite,
+              (settingsSnapshot.writeMode == .overwrite || supportsWakeDateDetails),
               !settingsSnapshot.exportFormats.isEmpty,
               settingsSnapshot.exportFormats.isSubset(of: Set(ExportFormat.allCases)),
               (!settingsSnapshot.archiveExportFiles || supportsWakeDateCompanions),

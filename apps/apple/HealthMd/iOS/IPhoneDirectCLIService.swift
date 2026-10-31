@@ -9,10 +9,12 @@ final class IPhoneDirectExportConnection: @unchecked Sendable {
     private let operationProtocolAuthority: AppleDirectProtocolAuthority?
     private let incomingProtocolSelection: IPhoneDirectIncomingProtocolSelection
     @MainActor private(set) var exportHistoryObservationVersion: Int?
+    @MainActor private(set) var scopedDailyNoteVersion: Int?
 
     @MainActor
     func configureExportHistoryObservation(local: DirectPeerCapabilities, remote: DirectPeerCapabilities) {
         exportHistoryObservationVersion = local.negotiatedExportHistoryObservationVersion(with: remote)
+        scopedDailyNoteVersion = local.negotiatedScopedDailyNoteVersion(with: remote)
     }
 
     init(channel: DirectSecureChannel) {
@@ -36,6 +38,7 @@ final class IPhoneDirectExportConnection: @unchecked Sendable {
         let retained = IPhoneDirectExportConnection(channel: channel, inbox: inbox, protocolAuthority: authority,
             incomingProtocolSelection: incomingProtocolSelection)
         retained.exportHistoryObservationVersion = exportHistoryObservationVersion
+        retained.scopedDailyNoteVersion = scopedDailyNoteVersion
         return retained
     }
 
@@ -410,7 +413,7 @@ final class IPhoneDirectCLIService: ObservableObject {
         DirectPeerCapabilities(protocolVersions: [HealthMdDirectProtocol.currentVersion, HealthMdDirectProtocol.queryVersion],
             platform: .iOS, installationID: installationID, query: .current,
             wake: wakeManager?.advertisesWake == true ? DirectWakeCapabilities(supported: true) : nil,
-            exportHistoryObservationVersions: [1])
+            exportHistoryObservationVersions: [1], scopedDailyNoteVersions: [1])
     }
 
     private let defaults: UserDefaults

@@ -138,8 +138,11 @@ final class IPhoneDirectFileExportProducer {
             guard IPhoneDirectFileJournal.isSupportedVersion(persisted.version) else {
                 throw IPhoneDirectFileProducerError.requestChanged
             }
+            guard persisted.scopedDailyNoteVersion == nil || persisted.scopedDailyNoteVersion == channel.scopedDailyNoteVersion else {
+                throw DirectScopedDailyNotePolicy.ValidationError.invalidPolicy
+            }
             try HealthHistoryExportAdmission.validateResume(request: request, accepted: persisted.accepted,
-                session: persisted.session, historyRequired: persisted.version >= IPhoneDirectFileJournal.historyObservationVersion,
+                session: persisted.session, historyRequired: persisted.requiresHistoryObservation,
                 negotiatedVersion: historyObservationVersion)
             guard persisted.accepted.historyObservation == nil
                     || persisted.originalCalendarTimeZoneIdentifier == persisted.settingsSnapshot.calendarTimeZoneIdentifier else {
@@ -198,6 +201,7 @@ final class IPhoneDirectFileExportProducer {
                     healthKitManager: healthKitManager,
                     providers: newProviders,
                     historyObservationVersion: historyObservationVersion,
+                    scopedDailyNoteVersion: channel.scopedDailyNoteVersion,
                     historyAdmission: historyAdmission
                 )
             }
@@ -380,6 +384,7 @@ final class IPhoneDirectFileExportProducer {
         healthKitManager: HealthKitManager,
         providers: (any ExternalIntegrationDailyRecordProviding)?,
         historyObservationVersion: Int?,
+        scopedDailyNoteVersion: Int?,
         historyAdmission: HealthHistoryExportAdmission
     ) async throws -> IPhoneDirectFileJournal {
         let sourceTimeZone = TimeZone.current
@@ -396,6 +401,10 @@ final class IPhoneDirectFileExportProducer {
         )
         settings.exportTimeZoneOverride = sourceTimeZone
         settings.executionSleepCaptureContext = try healthKitManager.resolveSleepCaptureContext(settings: settings)
+        guard settings.executionSleepCaptureContext?.sleepDayAttribution != .morningEnds
+            || !settings.dailyNoteInjection.enabled || scopedDailyNoteVersion == 1 else {
+            throw DirectScopedDailyNotePolicy.ValidationError.invalidPolicy
+        }
         let selectedProviders = request.canonicalSelection == nil && settings.writesExternalProviderSidecars ? providers : nil
         let connectedProviderCount = selectedProviders?.connectedProviderCount ?? 0
         settings.executionExternalProviderCaptureAuthority = selectedProviders?.captureAuthority
@@ -483,7 +492,10 @@ final class IPhoneDirectFileExportProducer {
             createdAt: Date()
         )
         return IPhoneDirectFileJournal(
-            version: observation == nil ? IPhoneDirectFileJournal.derivedOutputReconciliationVersion : IPhoneDirectFileJournal.historyObservationVersion,
+            version: scopedDailyNoteVersion == 1
+                ? (observation == nil ? IPhoneDirectFileJournal.scopedNoteVersion : IPhoneDirectFileJournal.scopedNoteHistoryVersion)
+                : (observation == nil ? IPhoneDirectFileJournal.derivedOutputReconciliationVersion : IPhoneDirectFileJournal.historyObservationVersion),
+            scopedDailyNoteVersion: scopedDailyNoteVersion,
             request: request,
             accepted: accepted,
             session: session,
@@ -873,7 +885,8 @@ final class IPhoneDirectFileExportProducer {
         journal: IPhoneDirectFileJournal,
         payloads: [ConnectedCorpusHealthDayPayload],
         settingsSnapshot: ExportSettingsSnapshot,
-        vault: VaultManager
+        vault: VaultManager,
+        onCoverageGaps: ([ExportPartialFailure]) -> Void = { _ in }
     ) async throws -> AppleLooseDailyRangeMaterialization? {
         let settings = settingsSnapshot.makeAdvancedExportSettings()
         let input = try rangePlanningInput(capturedDays: journal.capturedDays, payloads: payloads,
@@ -914,8 +927,19 @@ final class IPhoneDirectFileExportProducer {
             operationIdentity: AppleExportOperationIdentity(requestID: journal.request.jobID.uuidString.lowercased(),
                 sessionID: journal.session.sessionID.uuidString.lowercased(), capturedAt: journal.session.createdAt,
                 calendarTimeZoneIdentifier: zone)) else { return nil }
-        return materialized.addingProviderSidecars(try vault.materializeExternalDailyRecords(external,
-            healthSubfolder: journal.healthSubfolder))
+        var individualEntries: [AppleLooseDailyIndividualEntry] = []
+        var coverageGaps: [ExportPartialFailure] = []
+        if settings.writesIndividualEntryFiles {
+            for record in input.records where input.dailyOutputOwnerDates.contains(
+                HealthKitDailyOwnershipMetadata.ownerDate(for: record.date, calendarTimeZoneIdentifier: zone)) {
+                let entries = try vault.materializeIndividualEntries(record, settingsSnapshot: settingsSnapshot)
+                individualEntries += entries.files
+                coverageGaps += entries.partialFailures
+            }
+        }
+        onCoverageGaps(coverageGaps)
+        return try materialized.addingProviderSidecars(vault.materializeExternalDailyRecords(external,
+            healthSubfolder: journal.healthSubfolder)).addingIndividualEntries(individualEntries)
     }
 
     private func generateFiles(
@@ -985,6 +1009,7 @@ final class IPhoneDirectFileExportProducer {
         let originallySummaryOnly = journal.settingsSnapshot.makeAdvancedExportSettings()
             .summaryOnlyModeEnabled
         var hasAnyRequestedData = false
+        var scopedNotePolicies: [String: DirectScopedDailyNotePolicy] = [:]
         if journal.appleExportEnginePin != nil {
             // Current range planning still consumes complete records. Keep this materialization
             // confined to pinned range authority; Swift legacy generation remains one-day bounded.
@@ -1010,11 +1035,44 @@ final class IPhoneDirectFileExportProducer {
             if !rangeInput.records.isEmpty && rangeInput.hasAnyData {
                 try checkCancellation(journal)
                 let destination = try vault.freezeHealthDataRangeDestination()
+                var coverageGaps: [ExportPartialFailure] = []
                 guard let materialized = try await Self.materializePinnedGeneratedFiles(journal: journal,
-                    payloads: payloads, settingsSnapshot: effectiveSettingsSnapshot, vault: vault) else {
+                    payloads: payloads, settingsSnapshot: effectiveSettingsSnapshot, vault: vault,
+                    onCoverageGaps: { coverageGaps = $0 }) else {
                     throw AppleLooseDailyExportPlannerError.rustPlanningFailed
                 }
-                _ = try await vault.commitHealthDataRangeMaterialization(materialized, destination: destination)
+                journal.derivedOutputPartialFailures += coverageGaps.filter { !journal.derivedOutputPartialFailures.contains($0) }
+                // The receiving desktop owns note existence. Stage the accepted patch even for
+                // existing-only notes; never merge it into the phone's empty staging vault.
+                for note in materialized.dailyNotes {
+                    guard journal.scopedDailyNoteVersion == 1 else { throw DirectScopedDailyNotePolicy.ValidationError.invalidPolicy }
+                    let policy = try DirectScopedDailyNotePolicy(recordProfile: "apple-v11",
+                        ownerDate: HealthKitDailyOwnershipMetadata.ownerDate(for: note.ownerDate,
+                            calendarTimeZoneIdentifier: note.identity.calendarTimeZoneIdentifier),
+                        calendarTimezone: note.identity.calendarTimeZoneIdentifier,
+                        createIfMissing: settings.dailyNoteInjection.createIfMissing,
+                        injectSections: settings.dailyNoteInjection.injectMarkdownSections)
+                    let target = try generatedFileURL(relativePath: note.relativePath, under: staging)
+                    try fileManager.createDirectory(at: target.deletingLastPathComponent(), withIntermediateDirectories: true)
+                    try Data(note.directPatch.utf8).write(to: target, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
+                    scopedNotePolicies[note.relativePath] = policy
+                }
+                let filesOnly = AppleLooseDailyRangeMaterialization(operation: materialized.operation,
+                    dataDictionary: materialized.dataDictionary, result: materialized.result,
+                    providerSidecars: materialized.providerSidecars, individualEntries: materialized.individualEntries)
+                if settings.archiveModeEnabled {
+                    let archive = try await vault.materializeHealthDataRangeArchive(filesOnly,
+                        settingsSnapshot: effectiveSettingsSnapshot,
+                        startDate: journal.originalRequestedDates.min() ?? journal.requestedDates[0],
+                        endDate: journal.originalRequestedDates.max() ?? journal.requestedDates[0])
+                    try archive.artifact.validateIntegrity()
+                    let target = try generatedFileURL(relativePath: archive.relativePath, under: staging)
+                    try fileManager.createDirectory(at: target.deletingLastPathComponent(), withIntermediateDirectories: true)
+                    try fileManager.copyItem(at: archive.artifact.url, to: target)
+                    try fileManager.setAttributes([.protectionKey: FileProtectionType.completeUntilFirstUserAuthentication], ofItemAtPath: target.path)
+                } else {
+                    _ = try await vault.commitHealthDataRangeMaterialization(filesOnly, destination: destination)
+                }
                 try checkCancellation(journal)
             }
             for (index, day) in journal.capturedDays.enumerated() where day.isRequestedDate {
@@ -1136,6 +1194,27 @@ final class IPhoneDirectFileExportProducer {
         } else {
             journal.terminalNoDataDateIdentifiers = []
         }
+        if journal.scopedDailyNoteVersion == 1 && settings.dailyNoteInjection.enabled && !originallySummaryOnly
+            && journal.appleExportEnginePin?.isWakeDate != true {
+            for (index, day) in journal.capturedDays.enumerated() where day.isRequestedDate {
+                let payload = try decodeCapturedPayload(from: payloadURLs[index])
+                guard let record = payload.record,
+                      let patch = try DailyNoteInjector.prepareDirectNightPatch(healthData: record,
+                        settings: settings.dailyNoteInjection, customization: settings.formatCustomization,
+                        metricSelection: settings.metricSelection) else { continue }
+                let path = ExportPathPlanner.dailyNoteRelativePath(settings: settings.dailyNoteInjection,
+                    date: record.date, timeZone: sourceTimeZone)
+                let target = try generatedFileURL(relativePath: path, under: staging)
+                try fileManager.createDirectory(at: target.deletingLastPathComponent(), withIntermediateDirectories: true)
+                try Data(patch.utf8).write(to: target, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
+                scopedNotePolicies[path] = try DirectScopedDailyNotePolicy(recordProfile: "apple-v8",
+                    ownerDate: HealthKitDailyOwnershipMetadata.ownerDate(for: record.date,
+                        calendarTimeZoneIdentifier: sourceTimeZone.identifier),
+                    calendarTimezone: sourceTimeZone.identifier,
+                    createIfMissing: settings.dailyNoteInjection.createIfMissing,
+                    injectSections: settings.dailyNoteInjection.injectMarkdownSections)
+            }
+        }
         try checkCancellation(journal)
         let dailyNotePaths = Set(journal.requestedDates.map {
             ExportPathPlanner.dailyNoteRelativePath(
@@ -1176,7 +1255,8 @@ final class IPhoneDirectFileExportProducer {
                 relativePath: relativePath,
                 byteCount: inspected.totalBytes,
                 sha256: inspected.sha256,
-                writeMode: writeMode
+                writeMode: writeMode,
+                scopedNotePolicy: scopedNotePolicies[relativePath]
             )
             return IPhoneDirectGeneratedFile(manifest: manifest, relativePath: relativePath)
         }.sorted { $0.manifest.relativePath < $1.manifest.relativePath }

@@ -32,6 +32,17 @@ final class ScopedDailyNotePolicyTests: XCTestCase {
         }
     }
 
+    func testOwnerDatesUseProlepticGregorianLeapRulesOnBothSidesOfTheHistoricalCutover() throws {
+        for date in ["0001-01-01", "1500-02-28", "1582-10-10", "1600-02-29", "2000-02-29", "9999-12-31"] {
+            XCTAssertNoThrow(try DirectScopedDailyNotePolicy(recordProfile: "apple-v11", ownerDate: date,
+                calendarTimezone: "UTC", createIfMissing: false, injectSections: false))
+        }
+        for date in ["1500-02-29", "1700-02-29", "1900-02-29", "2100-02-29", "2026-00-01", "2026-13-01"] {
+            XCTAssertThrowsError(try DirectScopedDailyNotePolicy(recordProfile: "apple-v11", ownerDate: date,
+                calendarTimezone: "UTC", createIfMissing: false, injectSections: false))
+        }
+    }
+
     func testHelloRequiresBothPeersAndManifestPolicyIsOmittedForLegacy() throws {
         func capabilities(_ versions: [Int]?) -> DirectPeerCapabilities {
             DirectPeerCapabilities(platform: .iOS, installationID: UUID(), scopedDailyNoteVersions: versions)

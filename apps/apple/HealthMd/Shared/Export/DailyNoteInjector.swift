@@ -71,6 +71,7 @@ struct DailyNoteInjector {
         fileprivate let settings: DailyNoteInjectionSnapshot
         fileprivate let frontmatter: String
         fileprivate let body: String
+        var directPatch: String { frontmatter + body }
     }
 
     /// Private journal payload: accepted output plus the exact predecessor digest.
@@ -226,6 +227,18 @@ struct DailyNoteInjector {
         return PreparedContent(ownerDate: healthData.date, relativePath: path, identity: operation.identity, pin: operation.pin,
             context: healthData.timeContext, settings: settingsSnapshot.dailyNoteInjection,
             frontmatter: parts.frontmatter, body: parts.body)
+    }
+
+    static func prepareDirectNightPatch(healthData: HealthData, settings: DailyNoteInjectionSettings,
+        customization: FormatCustomization, metricSelection: MetricSelectionState) throws -> String? {
+        guard healthData.timeContext.sleepDayAttribution == .nightBegins,
+              let content = buildInjectionContent(healthData: healthData, settings: settings,
+                customization: customization, metricSelection: metricSelection),
+              let makeRecord = content.nightCaptureJSON else { return nil }
+        let annotation = "---\n" + (try scopedCaptureProperties(json: makeRecord())) + "---\n"
+        guard case .merged(let frontmatter) = MarkdownMerger.mergeFrontmatterOutcome(
+            existing: content.frontmatter, new: annotation) else { throw ExportError.markdownMergeRejected }
+        return frontmatter + content.body
     }
 
     private static func scopedCaptureProperties(json: String) throws -> String {

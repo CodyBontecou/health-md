@@ -13,6 +13,30 @@ final class AppleWakeDateExportPlannerTests: XCTestCase {
     private static var retainedSettings: [AdvancedExportSettings] = []
     private static var retainedManagers: [VaultManager] = []
 
+    func testWakeDateAdmissionKeepsAppendUpdateAndDirectCompanionOptions() async throws {
+        let context = AppleSleepCaptureContext(timeZone: .gmt, sleepDayAttribution: .morningEnds)
+        let day = HealthData(date: ExportFixtures.referenceDate,
+            timeContext: ExportTimeContext(timeZone: .gmt, sleepDayAttribution: .morningEnds),
+            activity: ActivityData(steps: 42))
+        for mode in [WriteMode.overwrite, .append, .update] {
+            var snapshot = try acceptedSnapshot(context: context, formats: Set(ExportFormat.allCases), selectionIDs: ["steps"])
+            snapshot.writeMode = mode
+            guard case .planned(let operation) = try await AppleLooseDailyExportPlanner().plan(healthData: day,
+                settingsSnapshot: snapshot, surface: .localVaultRangeWithoutSideEffects) else {
+                return XCTFail("The native writer must retain the selected write behavior")
+            }
+            XCTAssertEqual(operation.artifacts.count, ExportFormat.allCases.count)
+            snapshot.archiveExportFiles = true
+            snapshot.individualTracking.globalEnabled = true
+            snapshot.dailyNoteInjection.enabled = true
+            // The direct producer composes these with the same accepted planner as local/Mac.
+            var fresh = snapshot
+            fresh.appleExportEnginePin = nil
+            XCTAssertTrue(AppleLooseDailyExportPlanner.supportsNewWakeDateSettings(settingsSnapshot: fresh,
+                surface: .directGeneratedFilesWithoutSideEffects))
+        }
+    }
+
     func testNativeStagesRejectInvalidBoundsAndKeepZeroLengthSourceFactsWithoutSummaries() async throws {
         let context = AppleSleepCaptureContext(timeZone: .gmt, sleepDayAttribution: .morningEnds)
         let date = ExportFixtures.referenceDate

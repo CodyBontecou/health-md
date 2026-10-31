@@ -61,11 +61,10 @@ public struct DirectScopedDailyNotePolicy: Codable, Equatable, Sendable {
               let year = Int(value.prefix(4)), year > 0,
               let month = Int(value.dropFirst(5).prefix(2)),
               let day = Int(value.suffix(2)) else { return false }
-        var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
-        let components = DateComponents(year: year, month: month, day: day)
-        guard let date = calendar.date(from: components) else { return false }
-        return calendar.dateComponents([.year, .month, .day], from: date) == components
+        guard (1...12).contains(month), day > 0 else { return false }
+        let leap = year.isMultiple(of: 4) && (!year.isMultiple(of: 100) || year.isMultiple(of: 400))
+        let lengths = [31, leap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+        return day <= lengths[month - 1]
     }
 }
 

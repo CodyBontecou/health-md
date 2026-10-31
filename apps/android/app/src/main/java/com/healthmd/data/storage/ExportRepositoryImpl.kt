@@ -109,7 +109,7 @@ class ExportRepositoryImpl(
                 exportLegacy(folderUri, data, settings)
             is LocalDailyAggregatePlanningResult.Failed -> false
             is LocalDailyAggregatePlanningResult.Planned ->
-                commitAuthoritativePlan(folderUri, selection.plan)
+                commitPlanAndIndividualEntries(folderUri, data, settings, selection.plan)
         }
     }
 
@@ -657,7 +657,7 @@ class ExportRepositoryImpl(
             LocalDailyAggregatePlanningResult.Legacy ->
                 previewLegacy(folderUri, data, settings)
             is LocalDailyAggregatePlanningResult.Failed -> planningFailurePreview(data)
-            is LocalDailyAggregatePlanningResult.Planned -> previewPlan(data, selection)
+            is LocalDailyAggregatePlanningResult.Planned -> previewPlan(data, selection, settings, folderUri)
         }
     }
 
@@ -734,7 +734,7 @@ class ExportRepositoryImpl(
         if (folderUri == null) false else {
             val output = materializeWakeDateNote(frozenData, frozenSettings, folderUri)
             if (settingsRepository.getExportFolderUri() != folderUri) false
-            else if (!commitAuthoritativePlan(folderUri, output.aggregate.plan)) false
+            else if (!commitPlanAndIndividualEntries(folderUri, frozenData, frozenSettings, output.aggregate.plan, output.note.relativePath)) false
             else if (output.result == InjectionResult.SKIPPED) true
             else if (settingsRepository.getExportFolderUri() != folderUri) false
             else commitScopedNote(folderUri, output.note.relativePath, output.original, output.content)
@@ -770,8 +770,8 @@ class ExportRepositoryImpl(
         val (frozenData, frozenSettings) = freezeWakeDateNote(data, settings)
         val folderUri = settingsRepository.getExportFolderUri()
         val output = materializeWakeDateNote(frozenData, frozenSettings, folderUri)
-        val preview = previewPlan(frozenData, output.aggregate)
-        preview.copy(sideEffects = listOf(ExportPreviewSideEffect(
+        val preview = previewPlan(frozenData, output.aggregate, frozenSettings, folderUri)
+        preview.copy(sideEffects = preview.sideEffects + listOf(ExportPreviewSideEffect(
             type = ExportPreviewSideEffectType.DAILY_NOTE, relativePath = output.note.relativePath,
             action = when (output.result) {
                 InjectionResult.CREATED -> ExportPreviewSideEffectAction.CREATE_DAILY_NOTE
@@ -900,7 +900,24 @@ class ExportRepositoryImpl(
         )
     }
 
-    private fun commitAuthoritativePlan(folderUri: String, plan: ExportArtifactPlan): Boolean {
+    private fun distinctOutputPaths(plan: ExportArtifactPlan, extras: List<String>): Boolean {
+        val paths = plan.items.map { it.relativePath } + extras
+        return try {
+            paths.forEach(::validateRelativePath)
+            paths.map(::portableArtifactPathKey).distinct().size == paths.size
+        } catch (_: IllegalArgumentException) { false }
+    }
+
+    private fun commitPlanAndIndividualEntries(folderUri: String, data: HealthData, settings: ExportSettings,
+        plan: ExportArtifactPlan, notePath: String? = null): Boolean {
+        val entries = individualEntrySideEffects(data, settings)
+        if (!distinctOutputPaths(plan, entries.map { it.relativePath } + listOfNotNull(notePath))) return false
+        if (!commitAuthoritativePlan(folderUri, plan, settings.writeMode)) return false
+        return entries.all { entry -> fileExportManager.writeFileAtRelativePath(folderUri, entry.relativePath,
+            entry.content.orEmpty(), settings.writeMode.toFileWriteMode()) }
+    }
+
+    private fun commitAuthoritativePlan(folderUri: String, plan: ExportArtifactPlan, writeMode: SettingsWriteMode): Boolean {
         val barrier = ExportCommitBarrier()
         val writes = plan.items.map { item ->
             if (item.writeMode != ExportArtifactWriteMode.overwrite) {
@@ -924,7 +941,7 @@ class ExportRepositoryImpl(
                     folderUriString = folderUri,
                     relativePath = write.relativePath,
                     content = write.content,
-                    writeMode = FileExportManager.WriteMode.OVERWRITE,
+                    writeMode = writeMode.toFileWriteMode(),
                 )
             } catch (error: Throwable) {
                 if (error is CancellationException || error.isFatalExportEngineFailure()) {
@@ -950,22 +967,29 @@ class ExportRepositoryImpl(
     private fun previewPlan(
         data: HealthData,
         selection: LocalDailyAggregatePlanningResult.Planned,
+        settings: ExportSettings, folderUri: String?,
     ): ExportPreviewDay {
         if (selection.plan.items.size != selection.formats.size) return planningFailurePreview(data)
         val files = selection.plan.items.zip(selection.formats).map { (item, format) ->
             val bytes = item.content
             val content = bytes.decodeToString()
             if (!content.encodeToByteArray().contentEquals(bytes)) return planningFailurePreview(data)
+            val preview = contentAfterWriteMode(folderUri, item.relativePath, format.fileExtension, content, settings)
             ExportPreviewFile(
                 format = format,
                 relativePath = item.relativePath,
-                byteCount = bytes.size,
-                content = content,
+                byteCount = preview.encodeToByteArray().size,
+                content = preview,
             )
         }
+        val entries = individualEntrySideEffects(data, settings)
+        if (!distinctOutputPaths(selection.plan, entries.map { it.relativePath })) return planningFailurePreview(data)
         return ExportPreviewDay(
             date = data.date,
             files = files,
+            sideEffects = entries.map { entry -> ExportPreviewSideEffect(type = entry.type, relativePath = entry.relativePath,
+                action = entry.action, content = contentAfterWriteMode(folderUri, entry.relativePath, "md", entry.content.orEmpty(), settings),
+                wouldWrite = true) },
             issues = if (files.isEmpty()) {
                 listOf(ExportPreviewIssue(ExportPreviewIssueKind.NO_FILES_WRITTEN))
             } else {

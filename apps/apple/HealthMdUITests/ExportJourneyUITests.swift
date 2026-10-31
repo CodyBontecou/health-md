@@ -712,6 +712,23 @@ final class ExportJourneyUITests: XCTestCase {
         XCTAssertTrue(app.buttons["Morning ends"].isSelected)
     }
 
+    func testSleepAttribution_morningEndsPreviewsDefaultLosslessAndRangeSettings() throws {
+        let app = UITestLaunchHelper.configuredApp(healthAuthorized: true, vaultSelected: true,
+            purchaseUnlocked: true, useHealthKitExportPreviewFixtures: true)
+        app.launchArguments += ["-healthKit.sleepDayAttribution", "morning_ends"]
+        app.launch()
+        let preview = app.buttons[UITestLaunchHelper.Export.previewButton]
+        XCTAssertTrue(preview.waitForExistence(timeout: 5))
+        preview.tap()
+        let row = app.descendants(matching: .any)[UITestLaunchHelper.ExportPreview.markdownFileRow]
+        XCTAssertTrue(row.waitForExistence(timeout: 15), "Default Morning ends preview must acquire its successor renderer")
+        row.tap()
+        let content = app.staticTexts[UITestLaunchHelper.ExportPreview.fileContent]
+        XCTAssertTrue(content.waitForExistence(timeout: 5))
+        XCTAssertTrue(content.label.contains("apple-v11"))
+        XCTAssertTrue(content.label.contains("morning_ends"))
+    }
+
     func testSleepAttribution_storedMorningEndsRemainsVisibleAndCanChangeToNightBegins() throws {
         let app = UITestLaunchHelper.firstRunExportApp()
         app.launchArguments += ["-healthKit.sleepDayAttribution", "morning_ends"]

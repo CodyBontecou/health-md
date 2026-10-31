@@ -42,7 +42,7 @@ class PreparedWakeDateDailyNote private constructor(
     val captureContext: AndroidCaptureContext,
     private val settings: DailyNoteInjectionSettings,
     private val creationPreamble: String,
-    private val patch: String,
+    internal val patch: String,
     private val core: HealthMdCoreService,
 ) {
     internal fun inject(existingContent: String?): Pair<InjectionResult, String?> {

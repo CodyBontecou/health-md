@@ -9,6 +9,35 @@ struct ConnectedMorningReceiverTests {
     // these observation fixtures contain only isolated synthetic state.
     private static var retained: [AnyObject] = []
 
+    @Test(arguments: ["append", "update"])
+    func connectedWriteModesPreservePersonalContentAcrossCommitBeforeAckRecovery(mode: String) async throws {
+        let f = try await fixture(mode: mode)
+        defer { try? FileManager.default.removeItem(at: f.root) }
+        let settings = f.manifest.settingsSnapshot.makeAdvancedExportSettings()
+        let path = ExportPathPlanner.aggregateRelativePath(healthSubfolder: "Health", settings: settings,
+            date: f.owner, format: .markdown)
+        let target = f.destination.appendingPathComponent(path)
+        try FileManager.default.createDirectory(at: target.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try "---\nprivate: preserved\n---\n# Journal\n## Personal\nMy original journal.\n".write(to: target, atomically: true, encoding: .utf8)
+        let (manager, finalize) = try await openAndApply(f)
+        var injected = false
+        manager.afterReceivedArtifactCommitForTesting = { committed in
+            if committed == path && !injected { injected = true; throw POSIXError(.EIO) }
+        }
+        await #expect(throws: POSIXError.self) { _ = try await manager.finalize(finalize, vaultManager: f.vault) }
+        #expect(injected)
+        let first = try Data(contentsOf: target)
+        #expect(String(decoding: first, as: UTF8.self).contains("My original journal."))
+        let rejecting = NoReplan()
+        let recoveredVault = makeVault(root: f.destination, planner: rejecting)
+        let recovered = MacCorpusExportSessionManager(rootURL: f.sessions)
+        guard case .files = try await recovered.finalize(finalize, vaultManager: recoveredVault) else {
+            Issue.record("A retained plan must resume the selected write mode"); return
+        }
+        #expect(rejecting.calls == 0)
+        #expect(try Data(contentsOf: target) == first)
+    }
+
     @Test(arguments: ["daily", "range", "provider", "warning", "resume"])
     func receiverStagesWholeMorningCorpusAndReplaysRetainedPlan(mode: String) async throws {
         let fixture = try await fixture(mode: mode)
@@ -659,7 +688,7 @@ struct ConnectedMorningReceiverTests {
         let notesOnly = mode == "notes-only" || mode == "notes-skip"
         let summaryFallback = mode == "notes-summary-fallback" || mode == "zip-summary-fallback"
         settings.exportFormats = notesOnly ? [] : Set(ExportFormat.allCases)
-        settings.writeMode = .overwrite
+        settings.writeMode = mode == "append" ? .append : mode == "update" ? .update : .overwrite
         settings.includeDataDictionary = notesOnly || mode == "zip-dictionary"
         settings.generateRangeSummary = mode == "range" || mode == "notes-range" || mode == "notes-summary-only" || summaryFallback || notesOnly || mode == "zip-range" || mode == "zip-summary"
         settings.summaryOnlyExport = notesOnly || mode == "notes-summary-only" || summaryFallback || mode == "zip-summary"

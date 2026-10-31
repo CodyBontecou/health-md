@@ -225,12 +225,25 @@ nonisolated private final class AggregateFileWriter: Sendable {
         relativePath: String,
         expectedData: Data,
         binding: AppleVaultDestinationBinding,
-        fallbackFileURL: URL
+        fallbackFileURL: URL,
+        behavior: AggregateFileWriteBehavior = .overwrite
     ) async throws -> AppleExactDestinationState {
         try await withCheckedThrowingContinuation { continuation in
             Self.queue.async { [self] in
                 do {
-                    if fileSystem is SystemFileSystem {
+                    if behavior != .overwrite {
+                        let existing: Data?
+                        if fileSystem is SystemFileSystem {
+                            existing = try SecureExactArtifactIO.read(rootURL: rootURL, relativePath: relativePath, binding: binding)
+                        } else {
+                            existing = fileSystem.fileExists(atPath: fallbackFileURL.path)
+                                ? Data(try fileSystem.contentsOfFile(at: fallbackFileURL).utf8) : nil
+                        }
+                        guard let existing else { continuation.resume(returning: .missing); return }
+                        guard let incoming = String(data: expectedData, encoding: .utf8) else { throw AppleExactDestinationError.invalidUTF8 }
+                        let desired = try secureMergedContent(existingData: existing, newContent: incoming, behavior: behavior)
+                        continuation.resume(returning: Data(desired.content.utf8) == existing ? .exact : .different)
+                    } else if fileSystem is SystemFileSystem {
                         continuation.resume(returning: try SecureExactArtifactIO.inspect(
                             rootURL: rootURL,
                             relativePath: relativePath,
@@ -263,7 +276,14 @@ nonisolated private final class AggregateFileWriter: Sendable {
         try await withCheckedThrowingContinuation { continuation in
             Self.queue.async { [self] in
                 do {
-                    if fileSystem is SystemFileSystem {
+                    if fallbackRequest.behavior != .overwrite {
+                        guard let incoming = String(data: data, encoding: .utf8) else { throw AppleExactDestinationError.invalidUTF8 }
+                        let request = AggregateFileWriteRequest(fileURL: fallbackRequest.fileURL,
+                            filename: fallbackRequest.filename, newContent: incoming, behavior: fallbackRequest.behavior,
+                            secureDestination: .init(rootURL: rootURL, relativePath: relativePath, binding: binding,
+                                beforeCommit: beforeCommit, afterValidationBeforeRename: nil))
+                        _ = try performWrite(request)
+                    } else if fileSystem is SystemFileSystem {
                         try SecureExactArtifactIO.overwrite(
                             rootURL: rootURL,
                             relativePath: relativePath,
@@ -2630,7 +2650,8 @@ final class VaultManager: ObservableObject {
         if handlesNotes {
             guard [.localVaultWithoutSideEffects, .localVaultRangeWithoutSideEffects,
                 .localVaultRangeWithProviderSidecars, .preview, .connectedReceivedRangeWithoutSideEffects,
-                .connectedReceivedRangeWithProviderSidecars].contains(operationSurface) else { throw AppleLooseDailyExportPlannerError.rustPlanningFailed }
+                .connectedReceivedRangeWithProviderSidecars, .directGeneratedFilesWithoutSideEffects,
+                .directGeneratedFilesWithProviderSidecars].contains(operationSurface) else { throw AppleLooseDailyExportPlannerError.rustPlanningFailed }
         }
         let identity = operationIdentity ?? AppleExportOperationIdentitySource().capture(
             calendarTimeZoneIdentifier: calendarTimeZoneIdentifier)
@@ -3077,13 +3098,14 @@ final class VaultManager: ObservableObject {
             includeDataDictionary: shouldWriteDataDictionary
         ) else { return nil }
 
-        return try await commitHealthDataRangeMaterialization(materialized, destination: destination)
+        return try await commitHealthDataRangeMaterialization(materialized, destination: destination, writeMode: settingsSnapshot.writeMode)
     }
 
     /// Validate the complete retained plan again before the first destination effect.
     func commitHealthDataRangeMaterialization(
         _ materialized: AppleLooseDailyRangeMaterialization,
-        destination: AppleLooseDailyRangeDestination
+        destination: AppleLooseDailyRangeDestination,
+        writeMode: WriteMode = .overwrite
     ) async throws -> AppleLooseDailyRangeWriteResult {
         guard destinationState == .available, let currentURL = vaultURL else { throw unavailableExportError }
         guard currentURL.standardizedFileURL == destination.rootURL.standardizedFileURL else {
@@ -3126,7 +3148,7 @@ final class VaultManager: ObservableObject {
             try file.artifact.validateIntegrity()
             let url = ExportPathPlanner.appendingRelativePath(file.relativePath, to: vaultURL, isDirectory: false)
             return AggregateFileWriteRequest(fileURL: url, filename: url.lastPathComponent,
-                artifact: file.artifact, behavior: .overwrite)
+                artifact: file.artifact, behavior: writeMode == .append ? .append : writeMode == .update ? .mergeMarkdown : .overwrite)
         }
 
         let dictionaryRequest = try materialized.dataDictionary.map { file in
@@ -3152,7 +3174,7 @@ final class VaultManager: ObservableObject {
                     to: vaultURL,
                     isDirectory: false
                 )
-                return (planned, try Self.plannedArtifactWriteRequest(planned.artifact, fileURL: fileURL))
+                return (planned, try Self.plannedArtifactWriteRequest(planned.artifact, fileURL: fileURL, writeMode: writeMode, format: planned.format))
             }
 
         let destinationBinding = destination.binding
@@ -3293,7 +3315,8 @@ final class VaultManager: ObservableObject {
     func inspectExactUTF8Artifact(
         relativePath: String,
         expectedData: Data,
-        binding: AppleVaultDestinationBinding
+        binding: AppleVaultDestinationBinding,
+        writeMode: WriteMode = .overwrite
     ) async throws -> AppleExactDestinationState {
         guard let vaultURL else { throw AppleExactDestinationError.destinationUnavailable }
         guard bookmarkResolver.startAccessing(vaultURL) else {
@@ -3311,7 +3334,8 @@ final class VaultManager: ObservableObject {
                 relativePath: relativePath,
                 expectedData: expectedData,
                 binding: binding,
-                fallbackFileURL: fileURL
+                fallbackFileURL: fileURL,
+                behavior: writeMode == .append ? .append : writeMode == .update ? .mergeMarkdown : .overwrite
             )
         } catch let error as AppleExactDestinationError {
             throw error
@@ -3320,8 +3344,8 @@ final class VaultManager: ObservableObject {
         }
     }
 
-    func overwriteExactUTF8Artifact(relativePath: String, data: Data, binding: AppleVaultDestinationBinding) async throws {
-        try await overwriteExactArtifact(relativePath: relativePath, data: data, binding: binding, binary: false)
+    func overwriteExactUTF8Artifact(relativePath: String, data: Data, binding: AppleVaultDestinationBinding, writeMode: WriteMode = .overwrite) async throws {
+        try await overwriteExactArtifact(relativePath: relativePath, data: data, binding: binding, binary: false, writeMode: writeMode)
     }
 
     func overwriteExactBinaryArtifact(relativePath: String, data: Data, binding: AppleVaultDestinationBinding) async throws {
@@ -3329,7 +3353,7 @@ final class VaultManager: ObservableObject {
     }
 
     private func overwriteExactArtifact(relativePath: String, data: Data,
-        binding: AppleVaultDestinationBinding, binary: Bool) async throws {
+        binding: AppleVaultDestinationBinding, binary: Bool, writeMode: WriteMode = .overwrite) async throws {
         guard let vaultURL else { throw AppleExactDestinationError.destinationUnavailable }
         guard bookmarkResolver.startAccessing(vaultURL) else {
             throw AppleExactDestinationError.destinationUnavailable
@@ -3350,7 +3374,7 @@ final class VaultManager: ObservableObject {
         } else {
             guard let content = String(data: data, encoding: .utf8) else { throw AppleExactDestinationError.invalidUTF8 }
             request = AggregateFileWriteRequest(fileURL: fileURL, filename: fileURL.lastPathComponent,
-                newContent: content, behavior: .overwrite)
+                newContent: content, behavior: writeMode == .append ? .append : writeMode == .update ? .mergeMarkdown : .overwrite)
         }
         #if DEBUG
         let beforeCommit = exactDestinationWillCommitForTesting
@@ -3789,7 +3813,7 @@ final class VaultManager: ObservableObject {
                 to: vaultURL,
                 isDirectory: false
             )
-            return (planned, try Self.plannedArtifactWriteRequest(planned.artifact, fileURL: fileURL))
+            return (planned, try Self.plannedArtifactWriteRequest(planned.artifact, fileURL: fileURL, writeMode: settings.writeMode, format: planned.format))
         }
 
         let barrier = ExportCommitBarrier()
@@ -5157,18 +5181,24 @@ final class VaultManager: ObservableObject {
     /// Freezes mutable render settings into an immutable write request on MainActor.
     /// The serialized filesystem transaction can then run safely on its utility queue.
     private static func plannedArtifactWriteRequest(
-        _ artifact: NativeExportArtifact, fileURL: URL
+        _ artifact: NativeExportArtifact, fileURL: URL,
+        writeMode: WriteMode, format: ExportFormat
     ) throws -> AggregateFileWriteRequest {
+        let behavior: AggregateFileWriteBehavior = switch writeMode {
+        case .append: .append
+        case .update where format == .markdown: .mergeMarkdown
+        case .update, .overwrite: .overwrite
+        }
         switch artifact.content {
         case .file(let file):
             return AggregateFileWriteRequest(fileURL: fileURL, filename: fileURL.lastPathComponent,
-                artifact: file, behavior: .overwrite)
+                artifact: file, behavior: behavior)
         case .inline(let data):
             guard let content = String(data: data, encoding: .utf8) else {
                 throw CocoaError(.fileWriteInapplicableStringEncoding)
             }
             return AggregateFileWriteRequest(fileURL: fileURL, filename: fileURL.lastPathComponent,
-                newContent: content, behavior: .overwrite)
+                newContent: content, behavior: behavior)
         }
     }
 

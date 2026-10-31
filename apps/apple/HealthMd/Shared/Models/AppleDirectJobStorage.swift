@@ -104,6 +104,7 @@ struct AppleDirectJobStorage {
     /// Validate retained successor bytes under the caller's journal ownership transaction.
     /// Historical callers keep their existing admission; no journal grammar is upgraded here.
     func validateGeneratedArtifacts(_ journal: IPhoneDirectFileJournal, in directory: URL) throws {
+        try journal.validateScopedNotePolicies()
         let files = journal.generatedFiles
         let partitions = journal.partitions
         guard journal.generationCompleted else {

@@ -219,14 +219,16 @@ class ExportEnginePinPlanner @Inject constructor() {
             target: ExportTarget,
         ): Boolean = when (target) {
             ExportTarget.DEVICE_FOLDER ->
-                AndroidDailyAggregateExportPlanner.supportsNonLegacy(settings) || supportsWakeDateDailyNote(settings)
+                AndroidDailyAggregateExportPlanner.supportsNonLegacy(settings) ||
+                    AndroidDailyAggregateExportPlanner.supportsWakeDateFiles(settings)
             ExportTarget.API_ENDPOINT ->
                 settings.exportMode == ExportMode.COMPATIBILITY &&
                     settings.selectedExportFormats.isNotEmpty()
             ExportTarget.AGENT_DATA_GATEWAY ->
                 // Folder-parity rendering: the gateway runs the same daily-aggregate planner
                 // the device-folder destination runs.
-                AndroidDailyAggregateExportPlanner.supportsNonLegacy(settings.copy(exportTarget = ExportTarget.DEVICE_FOLDER))
+                (AndroidDailyAggregateExportPlanner.supportsNonLegacy(settings.copy(exportTarget = ExportTarget.DEVICE_FOLDER)) ||
+                    AndroidDailyAggregateExportPlanner.supportsWakeDateFiles(settings.copy(exportTarget = ExportTarget.DEVICE_FOLDER)))
         }
 
         /** Folder note composition is owned by the repository, never the aggregate/durable planner. */
@@ -234,11 +236,11 @@ class ExportEnginePinPlanner @Inject constructor() {
             settings.dailyNoteInjection.enabled &&
                 settings.executionSleepCaptureContext?.sleepDayAttribution == SleepDayAttribution.MORNING_ENDS &&
                 settings.executionSleepCaptureContext.exportProfileID == "android-sleep-v6" &&
-                AndroidDailyAggregateExportPlanner.supportsNonLegacy(
-                    settings.copy(dailyNoteInjection = settings.dailyNoteInjection.copy(enabled = false)))
+                AndroidDailyAggregateExportPlanner.supportsWakeDateFiles(settings)
 
         fun supportsNewDirectGeneratedFilesPin(settings: ExportSettings): Boolean =
-            AndroidDailyAggregateExportPlanner.supportsNonLegacy(settings)
+            AndroidDailyAggregateExportPlanner.supportsNonLegacy(settings) ||
+                AndroidDailyAggregateExportPlanner.supportsWakeDateFiles(settings)
     }
 
     private fun ExportSettings.localExportProfile(): AndroidExportProfile =

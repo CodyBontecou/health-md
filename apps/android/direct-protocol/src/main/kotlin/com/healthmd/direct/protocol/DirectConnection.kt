@@ -211,6 +211,7 @@ class DirectSecureChannel internal constructor(
             supportsDurableJobs = true,
             supportsCanonicalExtraction = false,
             transfer = TransferCapabilities(),
+            scopedDailyNoteVersions = listOf(1),
         )
         sendControl(LegacyCodec.hello(hello))
     }

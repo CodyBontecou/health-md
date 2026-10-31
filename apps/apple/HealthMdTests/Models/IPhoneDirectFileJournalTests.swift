@@ -43,6 +43,24 @@ final class IPhoneDirectFileJournalTests: XCTestCase {
         XCTAssertEqual(restored.appleExportEnginePin?.renderProfileRevision, 1)
     }
 
+    func testScopedNoteEpochRetainsNegotiationWithoutRequiringHistoryForAnUnobservedJob() throws {
+        let legacy = try makeJournal()
+        var object = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(legacy)) as? [String: Any])
+        object["version"] = IPhoneDirectFileJournal.scopedNoteVersion
+        object["scopedDailyNoteVersion"] = 1
+        let restored = try JSONDecoder().decode(IPhoneDirectFileJournal.self, from: JSONSerialization.data(withJSONObject: object))
+        XCTAssertEqual(restored.scopedDailyNoteVersion, 1)
+        XCTAssertFalse(restored.requiresHistoryObservation)
+        object["scopedDailyNoteVersion"] = 2
+        XCTAssertThrowsError(try JSONDecoder().decode(IPhoneDirectFileJournal.self, from: JSONSerialization.data(withJSONObject: object)))
+        object["scopedDailyNoteVersion"] = 1
+        object["version"] = IPhoneDirectFileJournal.derivedOutputReconciliationVersion
+        XCTAssertThrowsError(try JSONDecoder().decode(IPhoneDirectFileJournal.self, from: JSONSerialization.data(withJSONObject: object)))
+        object.removeValue(forKey: "scopedDailyNoteVersion")
+        let old = try JSONDecoder().decode(IPhoneDirectFileJournal.self, from: JSONSerialization.data(withJSONObject: object))
+        XCTAssertNil(old.scopedDailyNoteVersion)
+    }
+
     func testVersionOneJournalDecodesAsLegacy() throws {
         let journal = try makeJournal()
         var object = try XCTUnwrap(

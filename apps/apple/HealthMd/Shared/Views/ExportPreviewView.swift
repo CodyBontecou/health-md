@@ -765,6 +765,7 @@ struct ExportPreviewView: View {
         let metadata = analyticsMetadata()
         analytics.trackExportPreviewOpened(metadata: metadata)
 
+        let captureAuthorityWasFrozen = settings.executionSleepCaptureContextIsFrozen
         let acceptedRootName = destinationRootName ?? vaultManager.vaultName
         let acceptedVaultURL = vaultManager.vaultURL
         let acceptedTimeZone = settings.exportTimeZoneOverride ?? .current
@@ -808,8 +809,12 @@ struct ExportPreviewView: View {
             let candidate = try? vaultManager.freezeHealthDataRangeDestination()
             acceptedNoteDestination = candidate?.rootURL.standardizedFileURL == acceptedVaultURL?.standardizedFileURL ? candidate : nil
         } else { acceptedNoteDestination = nil }
+        let acceptedSettings = acceptedCapture.snapshot.makeAdvancedExportSettings()
+        // A fresh preview freezes its provider/capture selection before renderer admission.
+        // Reconstructing those settings must not turn it into a resumed legacy operation.
+        acceptedSettings.executionSleepCaptureContextIsFrozen = captureAuthorityWasFrozen
         let operationSnapshot = await ExportSettingsSnapshot.forNewAppleOperation(
-            acceptedCapture.snapshot.makeAdvancedExportSettings(), healthSubfolder: acceptedCapture.snapshot.healthSubfolder,
+            acceptedSettings, healthSubfolder: acceptedCapture.snapshot.healthSubfolder,
             calendarTimeZone: acceptedTimeZone,
             surface: targetType == .apiEndpoint ? .apiEndpoint : .preview)
         let frozenTimeZone = operationSnapshot.sleepCaptureContext?.timeZone

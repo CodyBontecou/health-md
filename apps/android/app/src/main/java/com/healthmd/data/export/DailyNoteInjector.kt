@@ -87,6 +87,22 @@ class DailyNoteInjector {
             .removeSurrounding("'") in setOf("daily_capture_v1","daily_capture_v2"))
         val profile = if (customization.compatibilitySchemaProfile == CompatibilitySchemaProfile.ANDROID_ANALYTICAL_V5)
             CoreMetricRegistryProfile.ANDROID_ANALYTICAL_V5 else CoreMetricRegistryProfile.ANDROID_FROZEN_V4
+        val core = HealthMdCoreService()
+        val patch = prepareScopedNightPatch(data, settings, customization, selection, requireNotNull(context), includeGranularData)
+        InjectionResult.UPDATED to core.mergeScopedNote(profile,existing,patch,settings.injectMarkdownSections)
+    } catch (error: CancellationException) { throw error }
+    catch (_: HealthMdRenderServiceException) { InjectionResult.FAILED to null }
+    catch (_: HealthMdCoreServiceException) { InjectionResult.FAILED to null }
+    catch (_: RuntimeException) { InjectionResult.FAILED to null }
+    catch (_: LinkageError) { InjectionResult.FAILED to null }
+
+    internal fun prepareScopedNightPatch(
+        data: HealthData, settings: DailyNoteInjectionSettings, customization: FormatCustomization,
+        selection: MetricSelectionState?, context: AndroidCaptureContext, includeGranularData: Boolean,
+    ): String {
+        require(context.sleepDayAttribution == SleepDayAttribution.NIGHT_BEGINS)
+        val profile = if (customization.compatibilitySchemaProfile == CompatibilitySchemaProfile.ANDROID_ANALYTICAL_V5)
+            CoreMetricRegistryProfile.ANDROID_ANALYTICAL_V5 else CoreMetricRegistryProfile.ANDROID_FROZEN_V4
         require(context.exportProfileID == null || context.exportProfileID ==
             if (profile == CoreMetricRegistryProfile.ANDROID_ANALYTICAL_V5) "android-analytical-v5" else "android-frozen-v4")
         val selected = if (selection == null) data else data.filtered(selection, context)
@@ -102,14 +118,9 @@ class DailyNoteInjector {
         val markdown = if(settings.injectMarkdownSections) markdownExporter.export(selected,false,true,rendering,
             includeGranularData) else ""
         val core = HealthMdCoreService()
-        val patch = core.prepareScopedAndroidNightNote(profile,record,context.zoneId.id,
+        return core.prepareScopedAndroidNightNote(profile,record,context.zoneId.id,
             ObsidianBasesExporter().export(selected,rendering),markdown,names,settings.injectMarkdownSections)
-        InjectionResult.UPDATED to core.mergeScopedNote(profile,existing,patch,settings.injectMarkdownSections)
-    } catch (error: CancellationException) { throw error }
-    catch (_: HealthMdRenderServiceException) { InjectionResult.FAILED to null }
-    catch (_: HealthMdCoreServiceException) { InjectionResult.FAILED to null }
-    catch (_: RuntimeException) { InjectionResult.FAILED to null }
-    catch (_: LinkageError) { InjectionResult.FAILED to null }
+    }
 
     private fun buildInjectionContent(
         data: HealthData,

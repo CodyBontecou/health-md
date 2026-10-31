@@ -2599,11 +2599,14 @@ final class MacCorpusExportSessionManager {
             } catch {
                 throw ReceivedRangeCommitError.invalid
             }
+            let selectedWriteMode = session.journal.exportManifest.settingsSnapshot.writeMode
+            let writeMode: WriteMode = artifact.kind == .providerSidecar
+                || (selectedWriteMode == .update && artifact.format != .markdown) ? .overwrite : selectedWriteMode
             let state = try await exactDestinationState(
                 relativePath: artifact.relativePath,
                 data: data,
                 binding: initialPlan.destinationBinding,
-                vaultManager: vaultManager
+                vaultManager: vaultManager, writeMode: writeMode
             )
             try ensureFinalizationIsActive(session)
             guard let current = session.journal.receivedRangePlan else {
@@ -2621,7 +2624,7 @@ final class MacCorpusExportSessionManager {
                     relativePath: artifact.relativePath,
                     data: data,
                     binding: initialPlan.destinationBinding,
-                    vaultManager: vaultManager
+                    vaultManager: vaultManager, writeMode: writeMode
                 )
                 try ensureFinalizationIsActive(session)
                 if transactionalState != .exact {
@@ -2630,7 +2633,7 @@ final class MacCorpusExportSessionManager {
                         data: data,
                         binding: initialPlan.destinationBinding,
                         session: session,
-                        vaultManager: vaultManager
+                        vaultManager: vaultManager, writeMode: writeMode
                     )
                     try ensureFinalizationIsActive(session)
                 }
@@ -2638,7 +2641,7 @@ final class MacCorpusExportSessionManager {
                     relativePath: artifact.relativePath,
                     data: data,
                     binding: initialPlan.destinationBinding,
-                    vaultManager: vaultManager
+                    vaultManager: vaultManager, writeMode: writeMode
                 )
                 try ensureFinalizationIsActive(session)
                 guard readback == .exact else { throw ReceivedRangeCommitError.invalid }
@@ -2726,13 +2729,14 @@ final class MacCorpusExportSessionManager {
         relativePath: String,
         data: Data,
         binding: AppleVaultDestinationBinding,
-        vaultManager: VaultManager
+        vaultManager: VaultManager,
+        writeMode: WriteMode = .overwrite
     ) async throws -> AppleExactDestinationState {
         do {
             return try await vaultManager.inspectExactUTF8Artifact(
                 relativePath: relativePath,
                 expectedData: data,
-                binding: binding
+                binding: binding, writeMode: writeMode
             )
         } catch let error as AppleExactDestinationError {
             switch error {
@@ -2770,7 +2774,8 @@ final class MacCorpusExportSessionManager {
         binding: AppleVaultDestinationBinding,
         session: Session,
         vaultManager: VaultManager,
-        binary: Bool = false
+        binary: Bool = false,
+        writeMode: WriteMode = .overwrite
     ) async throws {
         try ensureFinalizationIsActive(session)
         guard destinationCommitInFlightSessionID == session.journal.session.sessionID else {
@@ -2780,7 +2785,7 @@ final class MacCorpusExportSessionManager {
             if binary {
                 try await vaultManager.overwriteExactBinaryArtifact(relativePath: relativePath, data: data, binding: binding)
             } else {
-                try await vaultManager.overwriteExactUTF8Artifact(relativePath: relativePath, data: data, binding: binding)
+                try await vaultManager.overwriteExactUTF8Artifact(relativePath: relativePath, data: data, binding: binding, writeMode: writeMode)
             }
         } catch let error as AppleExactDestinationError {
             switch error {

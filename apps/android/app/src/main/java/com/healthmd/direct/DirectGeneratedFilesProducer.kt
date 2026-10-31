@@ -20,6 +20,10 @@ import com.healthmd.domain.model.AndroidCaptureContext
 import com.healthmd.domain.model.ExportFormat
 import com.healthmd.domain.model.ExportSettings
 import com.healthmd.domain.model.HealthData
+import com.healthmd.domain.model.SleepDayAttribution
+import com.healthmd.data.export.PreparedWakeDateDailyNote
+import com.healthmd.domain.exportengine.DailyAggregateExportIds
+import com.healthmd.direct.protocol.ScopedDailyNotePolicy
 import com.healthmd.domain.model.WriteMode
 import com.healthmd.domain.repository.HealthRepository
 import com.healthmd.domain.repository.forCaptureOperation
@@ -42,6 +46,7 @@ data class ProducedGeneratedFile(
     val file: File,
     val format: ArtifactFormat,
     val writeMode: FileWriteMode,
+    val scopedNotePolicy: ScopedDailyNotePolicy? = null,
 )
 
 @Singleton
@@ -103,9 +108,15 @@ class DirectGeneratedFilesProducer private constructor(
         dates: List<LocalDate>,
         settings: ExportSettings,
         captureContext: AndroidCaptureContext,
+        scopedNoteVersion: Int? = null,
         onProgress: (completed: Int, total: Int) -> Unit = { _, _ -> },
     ): List<ProducedGeneratedFile> {
         require(dates.isNotEmpty())
+        require(scopedNoteVersion == null || scopedNoteVersion == 1)
+        require(captureContext.sleepDayAttribution != SleepDayAttribution.MORNING_ENDS ||
+            !settings.dailyNoteInjection.enabled || scopedNoteVersion == 1) {
+            "Update the Health.md CLI before exporting Morning ends daily notes."
+        }
         captureContext.requireShippedProfile()
         requireDirectGeneratedFilesAuthority(captureContext, settings.executionEnginePin)
         require(!settings.executionSleepCaptureAuthorityIsFrozen ||
@@ -150,7 +161,7 @@ class DirectGeneratedFilesProducer private constructor(
                     .filtered(capturedSettings.metricSelection, captureContext)
                 if (data.hasAnyData) {
                     (plannedAggregateFiles(data, capturedSettings) +
-                        dailyNote(data, capturedSettings) +
+                        dailyNote(data, capturedSettings, scopedNoteVersion) +
                         individualEntries(data, capturedSettings))
                         .forEach { stage(it, staged, output) }
                 }
@@ -166,6 +177,7 @@ class DirectGeneratedFilesProducer private constructor(
                 file = item.file,
                 format = item.format,
                 writeMode = item.writeMode,
+                scopedNotePolicy = item.scopedNotePolicy,
             )
         }
     }
@@ -181,7 +193,8 @@ class DirectGeneratedFilesProducer private constructor(
         if (existing != null) {
             require(
                 existing.relativePath.equals(item.relativePath, ignoreCase = true) &&
-                    existing.format == item.format && existing.writeMode == item.writeMode,
+                    existing.format == item.format && existing.writeMode == item.writeMode &&
+                    existing.scopedNotePolicy == item.scopedNotePolicy,
             ) { "Generated files contain incompatible destination collisions." }
         }
         if (existing == null && staged.size >= MAXIMUM_GENERATED_ARTIFACTS) {
@@ -193,6 +206,7 @@ class DirectGeneratedFilesProducer private constructor(
             file = File(output, "${UUID.randomUUID()}.bin"),
             format = item.format,
             writeMode = item.writeMode,
+            scopedNotePolicy = item.scopedNotePolicy,
         ).also { staged[key] = it }
         when {
             !target.file.isFile || target.file.length() == 0L ->
@@ -219,7 +233,10 @@ class DirectGeneratedFilesProducer private constructor(
     private suspend fun plannedAggregateFiles(
         data: HealthData,
         settings: ExportSettings,
-    ): List<PlannedContent> = when (val selection = dailyAggregatePlanner.plan(data, settings)) {
+    ): List<PlannedContent> = when (val selection = dailyAggregatePlanner.plan(data, settings.copy(
+        dailyNoteInjection = settings.dailyNoteInjection.copy(enabled = false),
+        individualTracking = settings.individualTracking.copy(globalEnabled = false),
+    ))) {
         LocalDailyAggregatePlanningResult.Legacy -> aggregateFiles(data, settings)
         is LocalDailyAggregatePlanningResult.Failed ->
             throw IllegalStateException("Pinned generated-file rendering failed before staging.")
@@ -231,7 +248,7 @@ class DirectGeneratedFilesProducer private constructor(
                 relativePath = item.relativePath,
                 bytes = item.content,
                 format = format.toProtocolFormat(),
-                writeMode = FileWriteMode.OVERWRITE,
+                writeMode = settings.writeMode.toProtocolMode(format == ExportFormat.MARKDOWN),
             )
         }
     }
@@ -255,9 +272,28 @@ class DirectGeneratedFilesProducer private constructor(
         }
     }
 
-    private fun dailyNote(data: HealthData, settings: ExportSettings): List<PlannedContent> {
+    private suspend fun dailyNote(data: HealthData, settings: ExportSettings, scopedNoteVersion: Int?): List<PlannedContent> {
         val injection = settings.dailyNoteInjection
         if (!injection.enabled) return emptyList()
+        val context = requireNotNull(settings.executionSleepCaptureContext)
+        if (context.sleepDayAttribution == SleepDayAttribution.MORNING_ENDS) {
+            require(scopedNoteVersion == 1)
+            val prepared = PreparedWakeDateDailyNote.prepare(data, settings,
+                DailyAggregateExportIds(UUID.randomUUID().toString(), UUID.randomUUID().toString()))
+            return listOf(PlannedContent(prepared.relativePath, prepared.patch.encodeToByteArray(),
+                ArtifactFormat.MARKDOWN, FileWriteMode.MERGE_MARKDOWN_PRESERVING_PREAMBLE,
+                ScopedDailyNotePolicy(1, requireNotNull(context.exportProfileID), data.date.toString(), context.zoneId.id,
+                    injection.createIfMissing, injection.injectMarkdownSections)))
+        }
+        if (scopedNoteVersion == 1) {
+            val profile = if (settings.formatCustomization.compatibilitySchemaProfile == com.healthmd.domain.model.CompatibilitySchemaProfile.ANDROID_ANALYTICAL_V5) "android-analytical-v5" else "android-frozen-v4"
+            val patch = dailyNoteInjector.prepareScopedNightPatch(data, injection, settings.formatCustomization,
+                settings.metricSelection, context, settings.includeGranularData)
+            return listOf(PlannedContent(injection.resolvedPath(data.date), patch.encodeToByteArray(),
+                ArtifactFormat.MARKDOWN, FileWriteMode.MERGE_MARKDOWN_PRESERVING_PREAMBLE,
+                ScopedDailyNotePolicy(1, profile, data.date.toString(), context.zoneId.id,
+                    injection.createIfMissing, injection.injectMarkdownSections)))
+        }
         val (result, content) = dailyNoteInjector.inject(
             existingContent = null,
             data = data,
@@ -343,6 +379,7 @@ class DirectGeneratedFilesProducer private constructor(
         bytes: ByteArray,
         val format: ArtifactFormat,
         val writeMode: FileWriteMode,
+        val scopedNotePolicy: ScopedDailyNotePolicy? = null,
     ) {
         private val storedBytes = bytes.copyOf()
         val bytes: ByteArray get() = storedBytes.copyOf()
@@ -361,6 +398,7 @@ class DirectGeneratedFilesProducer private constructor(
         val file: File,
         val format: ArtifactFormat,
         val writeMode: FileWriteMode,
+        val scopedNotePolicy: ScopedDailyNotePolicy? = null,
     )
 
     companion object {

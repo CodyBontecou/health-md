@@ -443,7 +443,7 @@ class AndroidDailyAggregateExportPlanner(
             else LocalDailyAggregatePlanningResult.Failed(policy.mode)
         }
         if (policy.mode == ExportEngineMode.legacy) return LocalDailyAggregatePlanningResult.Legacy
-        if (!supportsNonLegacy(settings)) {
+        if (!(if (isWakeDate) supportsWakeDateFiles(settings) else supportsNonLegacy(settings))) {
             return if (suppliedPin == null && !isWakeDate) LocalDailyAggregatePlanningResult.Legacy
             else LocalDailyAggregatePlanningResult.Failed(policy.mode)
         }
@@ -539,6 +539,13 @@ class AndroidDailyAggregateExportPlanner(
                 settings.exportTarget == ExportTarget.DEVICE_FOLDER &&
                 settings.selectedExportFormats.isNotEmpty() &&
                 settings.selectedExportFormats.all { it in M5_FORMATS }
+
+        /** Side effects and destination write modes are applied by the existing native writer. */
+        fun supportsWakeDateFiles(settings: ExportSettings): Boolean =
+            settings.executionSleepCaptureContext?.sleepDayAttribution == SleepDayAttribution.MORNING_ENDS &&
+                supportsNonLegacy(settings.copy(writeMode = WriteMode.OVERWRITE,
+                    dailyNoteInjection = settings.dailyNoteInjection.copy(enabled = false),
+                    individualTracking = settings.individualTracking.copy(globalEnabled = false)))
 
         private val M5_FORMATS: Set<ExportFormat> = setOf(
             ExportFormat.MARKDOWN,

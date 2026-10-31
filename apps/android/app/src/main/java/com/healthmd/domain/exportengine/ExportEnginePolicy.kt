@@ -103,8 +103,11 @@ class ExportEnginePolicyResolver(
     private val compatibility: ExportEngineCompatibility = HealthMdCoreEngineCompatibility(),
 ) {
     fun resolve(target: ExportEnginePolicyTarget): ResolvedExportEnginePolicy {
-        check(target != ExportEnginePolicyTarget.ANDROID_SLEEP_V6) {
-            "wake-date production policy is not qualified"
+        if (target == ExportEnginePolicyTarget.ANDROID_SLEEP_V6) {
+            check(isCompatible(ExportEngineMode.rust, target.profile)) {
+                "The packaged wake-date renderer is incompatible."
+            }
+            return ResolvedExportEnginePolicy(ExportEngineMode.rust, target.profile, target)
         }
         val configured = configuredValue(target)
         val parsed = ExportEngineMode.fromWireValue(configured)

@@ -350,7 +350,9 @@ class DirectCliCoordinator @Inject constructor(
         }
     }
 
-    private suspend fun negotiate(channel: DirectSecureChannel): TransferNegotiation {
+    private data class NegotiatedTransfer(val transfer: TransferNegotiation, val scopedNoteVersion: Int?)
+
+    private suspend fun negotiate(channel: DirectSecureChannel): NegotiatedTransfer {
         channel.sendNegotiationHello(trustStore.installationId())
         val listener = channel.receiveNegotiationHello()
         require(listener.platform == "macos_cli") { "The peer is not a Health.md CLI." }
@@ -364,12 +366,12 @@ class DirectCliCoordinator @Inject constructor(
             protocolAuthority.negotiateTransfer(listener.transfer),
         ) { "The CLI transfer capabilities are incompatible." }
         channel.sendV2("source_hello", SourceHello.serializer(), sourceHello())
-        return transferNegotiation
+        return NegotiatedTransfer(transferNegotiation, if (listener.scopedDailyNoteVersions?.contains(1) == true) 1 else null)
     }
 
     private suspend fun serve(
         channel: DirectSecureChannel,
-        transferNegotiation: TransferNegotiation,
+        transferNegotiation: NegotiatedTransfer,
     ) {
         while (true) {
             val envelope = channel.receiveV2()
@@ -410,7 +412,7 @@ class DirectCliCoordinator @Inject constructor(
     private suspend fun handleExport(
         channel: DirectSecureChannel,
         request: ExportRequest,
-        transferNegotiation: TransferNegotiation,
+        transferNegotiation: NegotiatedTransfer,
     ) {
         val awakeActivityId = ExportAwakeCoordinator.shared.beginActivity()
         var phase = ExportPhase.PREPARING
@@ -549,6 +551,9 @@ class DirectCliCoordinator @Inject constructor(
                     return
                 }
             }
+            require(existing?.scopedNoteVersion == null || existing.scopedNoteVersion == transferNegotiation.scopedNoteVersion) {
+                "Update the Health.md CLI to resume this daily-note export."
+            }
             val journal = if (existing != null) {
                 existing
             } else {
@@ -556,7 +561,8 @@ class DirectCliCoordinator @Inject constructor(
                     channel,
                     request,
                     fingerprint,
-                    transferNegotiation.partitionTargetBytes,
+                    transferNegotiation.transfer.partitionTargetBytes,
+                    transferNegotiation.scopedNoteVersion,
                     protocolPin,
                     onPreparationAdmitted = { preparationLease = it },
                 )
@@ -676,6 +682,7 @@ class DirectCliCoordinator @Inject constructor(
         request: ExportRequest,
         fingerprint: String,
         partitionTargetBytes: Long,
+        scopedNoteVersion: Int?,
         protocolPin: AndroidDirectProtocolPin?,
         onPreparationAdmitted: (DirectPreparationLease) -> Unit,
     ): DirectJobJournal {
@@ -693,6 +700,11 @@ class DirectCliCoordinator @Inject constructor(
             }
         } else {
             null
+        }
+        require(productId != ProductId.GENERATED_FILES_V1 ||
+            captureContext?.sleepDayAttribution != com.healthmd.domain.model.SleepDayAttribution.MORNING_ENDS ||
+            !settings.dailyNoteInjection.enabled || scopedNoteVersion == 1) {
+            "Update the Health.md CLI before exporting Morning ends daily notes."
         }
         val enginePin = when (productId) {
             ProductId.ANDROID_PROVIDER_NATIVE_SNAPSHOT_V1 -> null
@@ -833,6 +845,7 @@ class DirectCliCoordinator @Inject constructor(
                         exportTarget = ExportTarget.DEVICE_FOLDER,
                     ),
                     captureContext = requireNotNull(captureContext),
+                    scopedNoteVersion = scopedNoteVersion,
                 ) { completed, total ->
                     channel.sendV2(
                         "export_progress",
@@ -859,6 +872,7 @@ class DirectCliCoordinator @Inject constructor(
                         sha256 = sha256(item.file),
                         relativePath = item.relativePath,
                         writeMode = item.writeMode,
+                        scopedNotePolicy = item.scopedNotePolicy,
                     )
                 } to generated.associate { it.artifactId to it.file }
             }
@@ -879,6 +893,7 @@ class DirectCliCoordinator @Inject constructor(
             requestFingerprint = fingerprint,
             expiresAt = request.expiresAt,
             transfer = transfer,
+            scopedNoteVersion = if (productId == ProductId.GENERATED_FILES_V1) scopedNoteVersion else null,
             enginePin = enginePin,
             protocolPin = protocolPin,
         )

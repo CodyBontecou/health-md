@@ -68,6 +68,58 @@ class HostCoreDailyNoteTest {
         System.setProperty("uniffi.component.healthmd_core_uniffi.libraryOverride", path)
     }
 
+    @Test fun directNotesCarryFrozenPolicyEvenWhenMissingNotesMustNotBeCreated() = runTest {
+        for (attribution in SleepDayAttribution.entries) for (sections in listOf(false, true)) {
+            val capture = context.copy(sleepDayAttribution = attribution,
+                exportProfileID = if (attribution == SleepDayAttribution.MORNING_ENDS) "android-sleep-v6" else null)
+            val data = if (attribution == SleepDayAttribution.MORNING_ENDS) source()
+                else HealthData(date, activity = ActivityData(steps = 42))
+            val repository = mockk<com.healthmd.domain.repository.HealthRepository>()
+            coEvery { repository.fetchHealthDataRange(any(), any(), any(), any(), any(), any()) } returns listOf(data)
+            val settings = repositorySettings(sections).copy(executionSleepCaptureContext = capture,
+                dailyNoteInjection = DailyNoteInjectionSettings(enabled = true, createIfMissing = false,
+                    injectMarkdownSections = sections))
+            val pin = ExportEnginePinPlanner().forDirectGeneratedFiles(settings, capture.zoneId)
+            val producer = com.healthmd.direct.DirectGeneratedFilesProducer(repository, MarkdownExporter(),
+                JsonExporter(), CsvExporter(), ObsidianBasesExporter())
+            val directory = java.nio.file.Files.createTempDirectory("direct-scoped-note").toFile()
+            try {
+                val files = producer.produce(directory, listOf(date), settings.copy(executionEnginePin = pin,
+                    executionEngineAuthorityIsFrozen = true), capture, scopedNoteVersion = 1)
+                val note = files.single { it.scopedNotePolicy != null }
+                val policy = requireNotNull(note.scopedNotePolicy)
+                assertThat(policy.createIfMissing).isFalse()
+                assertThat(policy.injectSections).isEqualTo(sections)
+                assertThat(policy.ownerDate).isEqualTo(date.toString())
+                assertThat(policy.calendarTimezone).isEqualTo(capture.zoneId.id)
+                assertThat(note.file.readText()).contains("healthmd_injection_kind:")
+                val profile = if (attribution == SleepDayAttribution.MORNING_ENDS)
+                    com.healthmd.core.CoreMetricRegistryProfile.ANDROID_SLEEP_V6
+                    else com.healthmd.core.CoreMetricRegistryProfile.ANDROID_FROZEN_V4
+                val merged = com.healthmd.core.HealthMdCoreService().mergeScopedNote(profile,
+                    "---\nprivate: preserved\n---\n# My journal\n", note.file.readText(), sections)
+                assertThat(merged).contains("private: preserved")
+                assertThat(merged).contains("# My journal")
+            } finally { directory.deleteRecursively() }
+        }
+    }
+
+    @Test fun morningExportsRetainAllNativeWriteModesAndPreviewTheirDestinationEffect() = runTest {
+        for (mode in WriteMode.entries) {
+            val destination = NoteDestination(null)
+            val settings = repositorySettings(false).copy(writeMode = mode,
+                exportFormats = ExportFormat.entries.toSet(),
+                dailyNoteInjection = DailyNoteInjectionSettings(enabled = false))
+            assertThat(destination.repository().exportHealthData(source(), settings)).isTrue()
+            assertThat(destination.writes).hasSize(4)
+            assertThat(destination.writeModes.values.toSet()).containsExactly(
+                com.healthmd.data.storage.FileExportManager.WriteMode.valueOf(mode.name))
+            val json = destination.writes.entries.single { it.key.endsWith(".json") }.value
+            assertThat(Json.parseToJsonElement(json).jsonObject["schema_profile"]?.jsonPrimitive?.content)
+                .isEqualTo("android-sleep-v6")
+        }
+    }
+
     @Test fun acceptedCaptureSurvivesMutationAndPreservesPersonalYaml() = runTest {
         for (sections in listOf(false,true)) {
             val metrics = mutableSetOf("steps","sleep_total","sleep_light")
@@ -245,8 +297,8 @@ class HostCoreDailyNoteTest {
         assertThat(missingPin.repository().exportHealthData(source(),restored.copy(executionEnginePin=null))).isFalse()
         assertThat(missingPin.lookupCount).isEqualTo(0)
         assertThat(ExportEnginePinPlanner.supportsNewScheduledPin(repositorySettings(false),ExportTarget.DEVICE_FOLDER)).isTrue()
-        assertThat(ExportEnginePinPlanner.supportsNewDirectGeneratedFilesPin(repositorySettings(false))).isFalse()
-        assertThat(ExportEnginePinPlanner.supportsNewScheduledPin(repositorySettings(false),ExportTarget.AGENT_DATA_GATEWAY)).isFalse()
+        assertThat(ExportEnginePinPlanner.supportsNewDirectGeneratedFilesPin(repositorySettings(false))).isTrue()
+        assertThat(ExportEnginePinPlanner.supportsNewScheduledPin(repositorySettings(false),ExportTarget.AGENT_DATA_GATEWAY)).isTrue()
         val withoutFolder = NoteDestination(null)
         withoutFolder.folder=null
         assertThat(withoutFolder.repository().previewHealthData(source(),repositorySettings(false)).sideEffects.single().wouldWrite).isTrue()
@@ -370,6 +422,7 @@ class HostCoreDailyNoteTest {
         var aggregateSuccess = true
         var inspectionOverride: FileExportManager.DurableFileInspection? = null
         val writes = linkedMapOf<String,String>()
+        val writeModes = linkedMapOf<String, FileExportManager.WriteMode>()
         private val manager = mockk<FileExportManager>()
         init {
             every { manager.inspectDurableFile(any(), any()) } answers {
@@ -387,7 +440,7 @@ class HostCoreDailyNoteTest {
                 writes[path]=arg(4);afterAggregate?.invoke();aggregateSuccess
             }
             every { manager.writeFileAtRelativePath(any(), any(), any(), any()) } answers {
-                writes[arg(1)] = arg(2); afterAggregate?.invoke(); aggregateSuccess
+                writes[arg(1)] = arg(2); writeModes[arg(1)] = arg(3); afterAggregate?.invoke(); aggregateSuccess
             }
             every { manager.bindDurableFile(any(),any(),any(),any(),any()) } answers {
                 FileExportManager.DurableBoundFile("note")

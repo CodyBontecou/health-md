@@ -37,6 +37,8 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonDecoder
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonEncoder
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.JsonNull
 
 internal class DirectCliNamespaceJobStore(
@@ -658,6 +660,7 @@ data class DirectJobJournal(
     val requestFingerprint: String,
     val expiresAt: String,
     val transfer: PreparedTransfer,
+    val scopedNoteVersion: Int? = null,
     val enginePin: ExportEnginePin? = null,
     val protocolPin: AndroidDirectProtocolPin? = null,
     val accounted: Boolean = false,
@@ -671,6 +674,20 @@ data class DirectJobJournal(
         require(version >= PROTOCOL_PIN_VERSION || protocolPin == null) {
             "A pre-v3 Direct CLI journal cannot contain a protocol pin."
         }
+        require(scopedNoteVersion == null || version >= SCOPED_NOTE_VERSION && scopedNoteVersion == 1) {
+            "Unsupported durable daily-note version."
+        }
+        require(transfer.manifests.all { manifest ->
+            val personal = manifest.writeMode == com.healthmd.direct.protocol.FileWriteMode.MERGE_MARKDOWN_PRESERVING_PREAMBLE
+            if (scopedNoteVersion == 1 && personal) manifest.scopedNotePolicy?.let { policy ->
+                policy.calendarTimezone == transfer.accepted.resolvedRange.timeZoneId &&
+                    policy.ownerDate >= transfer.accepted.resolvedRange.startDate &&
+                    policy.ownerDate <= transfer.accepted.resolvedRange.endDate &&
+                    policy.recordProfile in setOf("android-frozen-v4", "android-analytical-v5", "android-sleep-v6") &&
+                    (enginePin == null || policy.recordProfile == enginePin.profile.publicProfileId)
+            } == true
+            else manifest.scopedNotePolicy == null
+        }) { "The durable daily-note policy changed." }
         requireValidOptionalPin(enginePin)
         requireValidOptionalProtocolPin(protocolPin)
         require(enginePin == null || enginePin.ianaTimeZone == transfer.accepted.resolvedRange.timeZoneId) {
@@ -689,6 +706,7 @@ data class DirectJobJournal(
                 requestFingerprint = value.requestFingerprint,
                 expiresAt = value.expiresAt,
                 transfer = value.transfer,
+                scopedNoteVersion = value.scopedNoteVersion,
                 enginePin = value.enginePin?.let {
                     CODEC.parseToJsonElement(ExportEnginePinCodec.encodeCanonical(it))
                 },
@@ -696,7 +714,8 @@ data class DirectJobJournal(
                 accounted = value.accounted,
                 completed = value.completed,
             )
-            jsonEncoder.encodeJsonElement(CODEC.encodeToJsonElement(Wire.serializer(), wire))
+            val encoded = CODEC.encodeToJsonElement(Wire.serializer(), wire).jsonObject
+            jsonEncoder.encodeJsonElement(if (value.scopedNoteVersion == null) JsonObject(encoded - "scopedNoteVersion") else encoded)
         }
 
         override fun deserialize(decoder: Decoder): DirectJobJournal {
@@ -715,6 +734,7 @@ data class DirectJobJournal(
                 requestFingerprint = wire.requestFingerprint,
                 expiresAt = wire.expiresAt,
                 transfer = wire.transfer,
+                scopedNoteVersion = wire.scopedNoteVersion,
                 enginePin = pin,
                 protocolPin = protocolPin,
                 accounted = wire.accounted,
@@ -728,6 +748,7 @@ data class DirectJobJournal(
             val requestFingerprint: String,
             val expiresAt: String,
             val transfer: PreparedTransfer,
+            val scopedNoteVersion: Int? = null,
             val enginePin: JsonElement? = null,
             val protocolPin: AndroidDirectProtocolPin? = null,
             val accounted: Boolean = false,
@@ -745,7 +766,8 @@ data class DirectJobJournal(
         const val LEGACY_VERSION = 1
         const val EXPORT_PIN_VERSION = 2
         const val PROTOCOL_PIN_VERSION = 3
-        const val CURRENT_VERSION = PROTOCOL_PIN_VERSION
+        const val SCOPED_NOTE_VERSION = 4
+        const val CURRENT_VERSION = SCOPED_NOTE_VERSION
         internal val SUPPORTED_VERSIONS = LEGACY_VERSION..CURRENT_VERSION
     }
 }

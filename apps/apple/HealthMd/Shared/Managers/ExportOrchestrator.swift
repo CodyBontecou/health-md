@@ -1233,7 +1233,7 @@ struct ExportOrchestrator {
                         dailyNoteUpdateCount: archive.notes.dailyNoteUpdatedCount,
                         dailyNoteSkipCount: archive.notes.dailyNoteSkippedCount, completedDates: completedDates)
                 }
-                writeResult = try await vaultManager.commitHealthDataRangeMaterialization(materialized, destination: stagedDestination)
+                writeResult = try await vaultManager.commitHealthDataRangeMaterialization(materialized, destination: stagedDestination, writeMode: effectiveSettingsSnapshot.writeMode)
             } else {
                 guard let result = try await vaultManager.exportHealthDataRange(
                     records, settingsSnapshot: effectiveSettingsSnapshot, operationSurface: operationSurface,

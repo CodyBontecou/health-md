@@ -63,6 +63,31 @@ struct DirectMorningFileRenderingTests {
         _ = try await fixture.vault.commitHealthDataRangeMaterialization(planned, destination: destination)
     }
 
+    @Test(arguments: ["note", "notes-only", "individual", "zip", "zip-note"])
+    func directOptionsReuseAcceptedLocalComposition(mode: String) async throws {
+        let f = try await makeFixture(mode: mode)
+        defer { try? FileManager.default.removeItem(at: f.root) }
+        let materialized = try #require(try await IPhoneDirectFileExportProducer.materializePinnedGeneratedFiles(
+            journal: f.journal, payloads: [f.payload], settingsSnapshot: f.journal.settingsSnapshot, vault: f.vault))
+        let wantsNotes = ["note", "notes-only", "zip-note"].contains(mode)
+        #expect(materialized.dailyNotes.count == (wantsNotes ? 1 : 0))
+        if let note = materialized.dailyNotes.first {
+            #expect(!DailyNoteInjector.createsMissingNote(note))
+            #expect(note.directPatch.contains("apple-v11"))
+            #expect(note.directPatch.contains(f.ownerID))
+            #expect(!FileManager.default.fileExists(atPath: f.root.appendingPathComponent(note.relativePath).path))
+        }
+        #expect(materialized.operation.artifacts.isEmpty == (mode == "notes-only"))
+        #expect(materialized.individualEntries.isEmpty == (mode != "individual"))
+        if mode.hasPrefix("zip") {
+            let archive = try await f.vault.materializeHealthDataRangeArchive(materialized,
+                settingsSnapshot: f.journal.settingsSnapshot, startDate: f.payload.sourceDate, endDate: f.payload.sourceDate)
+            try archive.artifact.validateIntegrity()
+            #expect(archive.relativePath.hasSuffix(".zip"))
+            #expect(archive.artifact.descriptor.byteCount > 0)
+        }
+    }
+
     @Test(arguments: ["missing-authority", "foreign-day", "unselected-provider", "count-mismatch", "unavailable-with-payload"])
     func contradictorySidecarScopeRejectsBeforeWriting(damage: String) async throws {
         let fixture = try await makeFixture(mode: "provider")
@@ -105,13 +130,21 @@ struct DirectMorningFileRenderingTests {
         settings.includeDataDictionary = false
         settings.includeMetadata = mode != "metadata-off"
         settings.dailyNoteInjection.enabled = false
-        settings.individualTracking.globalEnabled = false
+        settings.individualTracking.globalEnabled = mode == "individual"
+        if mode == "individual" { settings.individualTracking.setTrackIndividually("sleep_total", enabled: true) }
+        if ["note", "notes-only", "zip-note"].contains(mode) {
+            settings.dailyNoteInjection.enabled = true
+            settings.dailyNoteInjection.createIfMissing = false
+            settings.dailyNoteInjection.injectMarkdownSections = true
+            settings.dailyNoteInjection.dailyNotesOnly = mode == "notes-only"
+        }
+        settings.archiveExportFiles = mode.hasPrefix("zip")
         settings.detailPolicy = .detailedTimeSeries
         settings.metricSelection.enabledMetrics = ["sleep_total", "sleep_core", "sleep_bedtime", "sleep_wake"]
         let zone = try #require(TimeZone(identifier: "UTC"))
         settings.executionSleepCaptureContext = .init(timeZone: zone, sleepDayAttribution: .morningEnds)
         settings.executionSleepCaptureContextIsFrozen = true
-        let hasProvider = mode != "native-only"
+        let hasProvider = ["provider", "range", "metadata-off", "warning"].contains(mode)
         let connections: [String: UUID?] = mode == "warning" ? ["whoop": nil] : (hasProvider ? ["whoop": UUID()] : [:])
         settings.executionExternalProviderCaptureAuthority = .init(connections: connections)
         let owner = Calendar.utc.startOfDay(for: ExportFixtures.referenceDate)
