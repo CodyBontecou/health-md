@@ -6,7 +6,7 @@ This guide covers the `play` Android variant. F-Droid does not compile Billing a
 
 The approved US Individual prices are **$0.99 weekly**, **$29.99 yearly**, and **$49.99 Lifetime**. Eligible subscriptions include a **seven-day free trial**. Lifetime is charged immediately. Android offers no Family plans and no monthly subscription. The cross-platform decision and Apple setup are recorded in the [paid-access rollout](../apple/docs/experiments/subscription-pricing-rollout.md).
 
-**Internal-testing release:** Android 3.5.0 uses phone version code 43. Upload through the protected `android-release.yml` workflow, then qualify real Play purchases with license-test accounts before production promotion. The Internal Testing upload does not activate subscription products or change any product price.
+**Internal-testing release:** Android 3.5.0 build 44 is the follow-up candidate for trial-offer qualification; build 43 is already on Internal Testing. Upload through the protected `android-release.yml` workflow, then qualify real Play purchases with license-test accounts before production promotion. The Internal Testing upload does not activate subscription products or change any product price.
 
 **Live-price hold:** these are launch targets. Leave the existing live lifetime product's price and regional pricing unchanged until the subscription-containing app is live and the owner explicitly approves the coordinated cutover. Draft subscription products, prices, and trials may be prepared in advance; do not activate, submit, publish, or release as a side effect of setup. Follow the rollout guide's live-price hold when resuming Console work.
 
@@ -90,3 +90,9 @@ Retain exact-build evidence and use the canonical [Play release guide](PLAY_STOR
 - [Subscription lifecycle](https://developer.android.com/google/play/billing/lifecycle/subscriptions)
 - [Testing](https://developer.android.com/google/play/billing/test)
 - [Security](https://developer.android.com/google/play/billing/security)
+
+### Trial-offer qualification follow-up
+
+On the authorized license-test Pixel, code 43 displayed the three correct US prices and preserved the mandatory gate after a canceled test purchase. Weekly's store sheet omitted the trial even after Billing Lab trial eligibility was enabled and the Play cache cleared. The billing account was confirmed in the payment-method sheet. A no-charge Weekly test payment subsequently succeeded; access, restore, renewal and expiry qualification are still pending.
+
+The Android offer filter rejected equivalent `P1W` seven-day phases and non-recurring phases with zero cycles. Build 44 accepts `P1W` and `P7D` only when the free phase represents exactly one week, and uses the same predicate for trial disclosure and offer selection. Regression tests reproduce the rejection before the fix. This corrects the SDK representation handling; only a signed-build store-sheet check can establish whether it resolves the observed missing trial. The immutable code-43 tag and upload evidence remain unchanged. Lifetime's live price remains US $19.99.

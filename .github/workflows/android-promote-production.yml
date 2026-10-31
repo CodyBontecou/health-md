@@ -58,6 +58,11 @@ jobs:
           set -euo pipefail
           test "$GITHUB_REF_TYPE" = tag
           expected_tag="android/v$VERSION"
+          build_tag="$expected_tag+$VERSION_CODE"
+          if [[ "$GITHUB_REF_NAME" == "$build_tag" || "$RELEASE_TAG" == "$build_tag" ]]; then
+            expected_tag="$build_tag"
+          fi
+          python3 scripts/validate-phone-release-tag.py "$expected_tag" "$VERSION" "$VERSION_CODE"
           [[ -z "$RELEASE_TAG" || "$RELEASE_TAG" == "$expected_tag" ]]
           git fetch --force --no-tags origin "+refs/tags/${expected_tag}:refs/tags/${expected_tag}"
           test "$(git cat-file -t "$expected_tag")" = tag
@@ -70,7 +75,9 @@ jobs:
             recovery=false
           else
             test "$RELEASE_TAG" = "$expected_tag"
-            [[ "$GITHUB_REF_NAME" == android/recovery/* ]]
+            [[ "$GITHUB_REF_NAME" == android/recovery/* ]] || {
+              echo '::error::a different workflow ref requires an android/recovery/* tag'; exit 1;
+            }
             git fetch --force --no-tags origin "+refs/tags/${GITHUB_REF_NAME}:refs/tags/${GITHUB_REF_NAME}"
             test "$(git cat-file -t "$GITHUB_REF_NAME")" = tag
             test "$(git rev-parse "$GITHUB_REF_NAME^{commit}")" = "$GITHUB_SHA"

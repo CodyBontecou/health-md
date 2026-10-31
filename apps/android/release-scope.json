@@ -5,7 +5,7 @@
     "phone": {
       "module": ":app",
       "status": "release_candidate",
-      "versionCode": 43,
+      "versionCode": 44,
       "testingTrack": "internal",
       "productionTrack": "production"
     },

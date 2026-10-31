@@ -25,7 +25,7 @@ class ReleaseReadinessTest {
     fun appVersion_isPreparedForPaidAccessRelease() {
         val buildGradle = readRepoFile("app/build.gradle.kts")
 
-        assertTrue(buildGradle.contains("versionCode = 43"))
+        assertTrue(buildGradle.contains("versionCode = 44"))
         assertTrue(buildGradle.contains("versionName = \"3.5.0\""))
     }
 
@@ -64,7 +64,7 @@ class ReleaseReadinessTest {
         val wearCapabilities = readRepoFile("wear/src/main/res/values/wear.xml")
 
         assertTrue(releaseScope.contains("\"releaseVersionName\": \"3.5.0\""))
-        assertTrue(releaseScope.contains("\"versionCode\": 43"))
+        assertTrue(releaseScope.contains("\"versionCode\": 44"))
         assertTrue(releaseScope.contains("\"status\": \"deferred\""))
         assertTrue(releaseScope.contains("\"published\": false"))
         assertTrue(releaseScope.contains("\"runtimeAdvertisedByPhone\": false"))

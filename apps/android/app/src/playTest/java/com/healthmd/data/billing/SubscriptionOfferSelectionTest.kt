@@ -8,13 +8,14 @@ import io.mockk.mockk
 import org.junit.Test
 
 class SubscriptionOfferSelectionTest {
-    private fun phase(period: String, price: Long, recurring: Boolean = true) =
+    private fun phase(period: String, price: Long, recurring: Boolean = true, cycles: Int = 1,
+                      mode: Int? = null) =
         mockk<ProductDetails.PricingPhase> {
             every { billingPeriod } returns period
             every { priceAmountMicros } returns price
-            every { recurrenceMode } returns if (recurring) ProductDetails.RecurrenceMode.INFINITE_RECURRING
-                else ProductDetails.RecurrenceMode.FINITE_RECURRING
-            every { billingCycleCount } returns 1
+            every { recurrenceMode } returns (mode ?: if (recurring) ProductDetails.RecurrenceMode.INFINITE_RECURRING
+                else ProductDetails.RecurrenceMode.FINITE_RECURRING)
+            every { billingCycleCount } returns cycles
         }
 
     private fun offer(vararg phases: ProductDetails.PricingPhase) =
@@ -35,6 +36,23 @@ class SubscriptionOfferSelectionTest {
         assertThat(selectSubscriptionOffer(details(base, trial), PurchasePlan.WEEKLY)).isSameInstanceAs(trial)
     }
 
+    @Test fun equivalentSevenDayTrialRepresentationsArePreferred() {
+        val paid = phase("P1W", 990_000)
+        val base = offer(paid)
+        for (period in listOf("P7D", "P1W")) {
+            for ((mode, cycles) in listOf(
+                ProductDetails.RecurrenceMode.FINITE_RECURRING to 1,
+                ProductDetails.RecurrenceMode.NON_RECURRING to 0,
+            )) {
+                val free = phase(period, 0, false, cycles, mode)
+                assertThat(free.isSevenDayFreeTrial()).isTrue()
+                val trial = offer(free, paid)
+                assertThat(selectSubscriptionOffer(details(base, trial), PurchasePlan.WEEKLY))
+                    .isSameInstanceAs(trial)
+            }
+        }
+    }
+
     @Test fun ineligibleAccountGetsOnlyItsPaidTerms() {
         val base = offer(phase("P1Y", 29_990_000))
         assertThat(selectSubscriptionOffer(details(base), PurchasePlan.YEARLY)).isSameInstanceAs(base)
@@ -46,6 +64,10 @@ class SubscriptionOfferSelectionTest {
             offer(phase("P1M", 4_990_000)),
             offer(phase("P3D", 0, false), paid),
             offer(phase("P7D", 100_000, false), paid),
+            offer(phase("P1W", 0, false, cycles = 2), paid),
+            offer(phase("P7D", 0, mode = ProductDetails.RecurrenceMode.INFINITE_RECURRING), paid),
+            offer(phase("P7D", 0, false, cycles = 1,
+                mode = ProductDetails.RecurrenceMode.NON_RECURRING), paid),
             offer(phase("P1W", 990_000, false)),
             offer(),
         )) {
