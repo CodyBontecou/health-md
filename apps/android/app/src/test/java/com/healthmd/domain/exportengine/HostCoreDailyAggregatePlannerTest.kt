@@ -97,6 +97,20 @@ class HostCoreDailyAggregatePlannerTest {
         for (marker in listOf("body-temperature-source", "basal-temperature-source", "skin-delta-source", "meal-source", "period-source")) {
             assertThat(api.plan.items.single().content.decodeToString()).contains(marker)
         }
+        suspend fun rejects(candidate: HealthData) {
+            val request = FrozenDailyAggregateExportRequest.capture(candidate, settings,
+                AndroidExportProfile.android_sleep_v6, ExportEngineMode.rust,
+                DailyAggregateExportIds("invalid-native-extra", "invalid-native-extra-session"))
+            assertThat(runCatching { HealthMdRustDailyAggregatePlanner().plan(request) }.isFailure).isTrue()
+        }
+        rejects(data.copy(vitals = data.vitals.copy(bodyTemperatureSamples = listOf(sample(Double.NaN, "nonfinite")))))
+        rejects(data.copy(vitals = data.vitals.copy(bodyTemperatureSamples = listOf(
+            com.healthmd.domain.model.TimestampedSample(from.minusDays(1), 36.5, exactTime = exact(start.minusSeconds(86_400)))))))
+        rejects(data.copy(nutrition = data.nutrition.copy(meals = listOf(data.nutrition.meals.single().copy(exactStartTime = null)))))
+        rejects(data.copy(nutrition = data.nutrition.copy(meals = listOf(data.nutrition.meals.single().copy(
+            startTime = to, endTime = from, exactStartTime = exact(end), exactEndTime = exact(start))))))
+        rejects(data.copy(reproductiveHealth = data.reproductiveHealth.copy(menstruationPeriods = listOf(
+            data.reproductiveHealth.menstruationPeriods.single().copy(duration = kotlin.time.Duration.INFINITE)))))
     }
 
     @Test

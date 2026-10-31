@@ -200,6 +200,13 @@ internal object AndroidWakeDateSourceProjection {
 
     /** Preserve already-captured Android records without extending shared quantity identities. */
     private fun remainingNativeDetails(root: JsonObject, ownerDate: String): JsonObject {
+        val owner = runCatching { java.time.LocalDate.parse(ownerDate) }.getOrElse {
+            throw HealthMdRenderInputAdapter.AdapterException("wake-date native detail owner is incompatible")
+        }
+        val zone = runCatching {
+            java.time.ZoneId.of(root.getValue("time_context").jsonObject
+                .getValue("calendar_timezone").jsonPrimitive.content)
+        }.getOrElse { throw HealthMdRenderInputAdapter.AdapterException("wake-date native detail owner is incompatible") }
         val definitions = listOf(
             Triple("vitals", "bodyTemperatureSamples", "Body Temperature Sample"),
             Triple("vitals", "basalBodyTemperatureSamples", "Basal Body Temperature Sample"),
@@ -213,15 +220,37 @@ internal object AndroidWakeDateSourceProjection {
         for ((category, field, label) in definitions) {
             val records = root[category]?.jsonObject?.get(field)?.jsonArray ?: continue
             for (element in records) {
-                val record = buildJsonObject { put("metric", field); put("record", element) }.toString()
                 val value = element.jsonObject
-                val timestamp = value["exactTime"]?.jsonObject?.get("iso8601")?.jsonPrimitive?.contentOrNull
-                    ?: value["timestamp"]?.jsonPrimitive?.contentOrNull
-                    ?: value["startTimeISO"]?.jsonPrimitive?.contentOrNull
-                    ?: throw HealthMdRenderInputAdapter.AdapterException("wake-date native detail clock is missing")
-                if (runCatching { java.time.Instant.parse(timestamp) }.isFailure) {
-                    throw HealthMdRenderInputAdapter.AdapterException("wake-date native detail clock is incompatible")
+                fun incompatible(): Nothing = throw HealthMdRenderInputAdapter.AdapterException("wake-date native detail is incompatible")
+                fun clock(name: String): java.time.Instant {
+                    val encoded = value[name]?.jsonPrimitive?.contentOrNull ?: incompatible()
+                    if (!encoded.endsWith("Z")) incompatible()
+                    return runCatching { java.time.Instant.parse(encoded) }.getOrElse { incompatible() }
                 }
+                val timestamp = when (field) {
+                    "bodyTemperatureSamples", "basalBodyTemperatureSamples", "skinTemperatureDeltas" -> {
+                        val instant = clock("timestamp")
+                        if (value["value"]?.jsonPrimitive?.doubleOrNull?.isFinite() != true) incompatible()
+                        if (instant.atZone(zone).toLocalDate() != owner) incompatible()
+                        instant
+                    }
+                    "meals", "menstruationPeriods" -> {
+                        val start = clock("startTimeISO")
+                        val end = clock("endTimeISO")
+                        if (end < start) incompatible()
+                        val numericFields = if (field == "meals") {
+                            listOf("dietaryEnergy", "energyFromFat", "protein", "carbohydrates", "fat")
+                        } else listOf("duration")
+                        for (numeric in numericFields) value[numeric]?.let {
+                            if (it.jsonPrimitive.doubleOrNull?.isFinite() != true) incompatible()
+                        }
+                        if (field == "menstruationPeriods" &&
+                            value["duration"]?.jsonPrimitive?.doubleOrNull?.let { it < 0 } != false) incompatible()
+                        start
+                    }
+                    else -> incompatible()
+                }.toString()
+                val record = buildJsonObject { put("metric", field); put("record", element) }.toString()
                 rows += buildJsonObject {
                     put("date", ownerDate); put("category", "Native Detail"); put("metric", label)
                     put("value", record); put("unit", "json"); put("timestamp", timestamp); put("ordinal", rows.size)
