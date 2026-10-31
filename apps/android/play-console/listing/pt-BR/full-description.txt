@@ -1,16 +1,16 @@
 Health.md transforma dados autorizados do Android Health Connect em arquivos portáteis que você escolhe e controla.
 
 EXPORTE DADOS DO HEALTH CONNECT DO SEU JEITO
-Crie resumos legíveis em Markdown, Obsidian Bases, CSV e JSON ou instantâneos nativos do provedor em JSON/NDJSON. Escolha as métricas, o período e o destino, visualize os nomes e o conteúdo dos arquivos e exporte para uma pasta local, um cofre do Obsidian, outro provedor de documentos do Android, seu próprio endpoint de API ou uma Health.md CLI pareada. Health.md não exige conta nem opera uma nuvem de dados de saúde.
+Crie resumos Markdown, Obsidian Bases, CSV e JSON ou instantâneos nativos JSON/NDJSON. Escolha métricas, período e destino; visualize nomes e conteúdo. Exporte para pastas locais, cofres Obsidian, provedores de documentos Android, sua API ou uma Health.md CLI pareada.
 
 ESCOLHA ENTRE MAIS DE 100 MÉTRICAS DE SAÚDE
 Exporte dados autorizados de sono, passos, exercícios, frequência cardíaca, HRV, pressão arterial, glicemia, saturação de oxigênio, frequência respiratória, peso, composição corporal, nutrição, hidratação, mobilidade, atenção plena, saúde reprodutiva e outros registros do Health Connect. Negar uma categoria não impede a exportação de outras categorias autorizadas.
 
 VISUALIZE, PERSONALIZE E AUTOMATIZE
-Escolha unidades, formatos, modos de gravação, organização de pastas e amostras detalhadas. Visualize os caminhos e o conteúdo exatos antes que qualquer dado seja gravado. Execute exportações manualmente ou agende-as para um destino escolhido e consulte execuções concluídas e com falha no histórico de exportações.
+Escolha unidades, formatos, modos de gravação, pastas e amostras detalhadas. Visualize caminhos e conteúdo antes de gravar. Exporte manualmente ou por agendamento para seu destino e consulte sucessos e falhas no histórico.
 
 SUA SAÚDE EM UM INSTANTE
-Quatro widgets opcionais da tela inicial mostram resumos autorizados de atividade, sono e coração usando um pequeno cache no dispositivo. O acesso dos widgets e a atualização em segundo plano permanecem sob seu controle.
+Quatro widgets opcionais mostram resumos autorizados de atividade, sono e coração do cache local. Você controla o acesso e a atualização em segundo plano.
 
 PRONTUÁRIOS MÉDICOS PESSOAIS (FHIR)
 Quando o dispositivo oferece suporte a prontuários pessoais de saúde, a opção “Prontuários médicos (FHIR)” permite preservar recursos médicos autorizados no mesmo arquivo sob seu controle. As categorias compatíveis são:
@@ -42,4 +42,4 @@ PRIVACIDADE E CONTROLE
 • As permissões podem ser revisadas ou revogadas no Health Connect a qualquer momento
 • Análises próprias limitadas sobre atribuição de instalação, integração ou preços nunca incluem registros de saúde, detalhes de permissões do Health Connect, conteúdo exportado, texto de contas ou caminhos de arquivos
 
-Health.md inclui 5 ações gratuitas de exportação manual. Uma compra única libera exportações ilimitadas e agendamento; não há assinatura.
+As exportações exigem teste ativo, assinatura semanal/anual ou acesso vitalício. Novos assinantes elegíveis têm 7 dias grátis; depois a renovação é automática pelo preço no app, salvo cancelamento antes do fim do teste ou período atual. Gerencie ou cancele no Google Play. O acesso vitalício é cobrado imediatamente em pagamento único, sem teste. O acesso permanente existente é mantido.

@@ -1,6 +1,6 @@
 ---
-title: "Erster iPhone-Export"
-description: "Autorisieren Sie Apple Health, wählen Sie ein Ziel in Dateien, prüfen Sie die Health.md-Ausgabe in der Vorschau, führen Sie einen kleinen ersten iPhone-Export aus und verifizieren Sie die geschriebenen Dateien."
+title: "Apple-Health-Daten exportieren: erster iPhone-Export"
+description: "Exportieren Sie Apple-Health-Daten mit Health.md in einen eigenen Ordner. Starten Sie mit einem Tag; ergänzen Sie CSV oder JSON nach dem ersten Export."
 ---
 
 Mit dieser Anleitung erstellen Sie einen kleinen, überprüfbaren Export, bevor Sie Metriken, Formatierung oder Automatisierung ändern. Health.md liest nur die von iOS autorisierten Apple Health-Kategorien und schreibt die generierten Dateien in den von Ihnen gewählten Ordner.
@@ -14,7 +14,7 @@ Mit dieser Anleitung erstellen Sie einen kleinen, überprüfbaren Export, bevor 
 
 Sie benötigen:
 
-- Health.md auf einem iPhone mit Apple Health-Daten;
+- [Health.md im App Store](https://apps.apple.com/app/health-md/id6757763969) auf einem iPhone mit Apple Health-Daten;
 - die Berechtigung, mindestens eine Apple Health-Kategorie zu lesen;
 - ein beschreibbares Ziel in Dateien, etwa iCloud Drive, „Auf meinem iPhone“ oder einen Obsidian-Vault.
 

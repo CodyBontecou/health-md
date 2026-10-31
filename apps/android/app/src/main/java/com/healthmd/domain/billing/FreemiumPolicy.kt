@@ -4,14 +4,13 @@ import java.time.LocalDate
 import java.time.ZoneOffset
 
 /**
- * Shared freemium rules mirrored from the iOS PurchaseManager.
- *
- * A free user gets five export actions. Each successful user-triggered export
- * consumes one action regardless of the number of days/files written. Unlocking
- * the lifetime purchase resets accumulated free usage.
+ * Shared access rules mirrored from the iOS PurchaseManager.
+ * Trials are store-backed subscription entitlements, not a local export quota.
+ * Historical counters and legacy unlock decisions remain migration-compatible.
  */
 object FreemiumPolicy {
-    const val FREE_EXPORT_LIMIT = 5
+    const val FREE_EXPORT_LIMIT = 0
+    private const val HISTORICAL_EXPORT_LIMIT = 5
     private const val LEGACY_FREE_EXPORT_LIMIT = 3
 
     /** Android equivalent of iOS' grandfather cutoff date. */
@@ -24,9 +23,9 @@ object FreemiumPolicy {
 
     /** Only completed first and third free actions offer a next step. Never replay old milestones. */
     fun guidanceMilestone(usedCount: Int, isUnlocked: Boolean): Int? =
-        usedCount.takeIf { !isUnlocked && it in setOf(1, 3) }
+        null
 
-    fun sanitizedUsedCount(count: Int): Int = count.coerceIn(0, FREE_EXPORT_LIMIT)
+    fun sanitizedUsedCount(count: Int): Int = count.coerceIn(0, HISTORICAL_EXPORT_LIMIT)
 
     fun remainingExports(usedCount: Int): Int =
         (FREE_EXPORT_LIMIT - sanitizedUsedCount(usedCount)).coerceAtLeast(0)
@@ -37,7 +36,7 @@ object FreemiumPolicy {
         )
 
     fun canExport(isUnlocked: Boolean, freeExportsUsed: Int): Boolean =
-        isUnlocked || remainingExports(freeExportsUsed) > 0
+        isUnlocked
 
     fun isLegacyUnlock(firstInstallTimeMillis: Long): Boolean =
         firstInstallTimeMillis < grandfatherCutoffMillis

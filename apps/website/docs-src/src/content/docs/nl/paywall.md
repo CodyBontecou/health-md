@@ -1,30 +1,28 @@
 ---
-title: "Ontgrendelen en paywall"
-description: "Lees over 5 gratis acties, vrijblijvende herinneringen, Lifetime-aankopen en StoreKit-herstel."
+title: "Plannen, testen en herstellen"
+description: "Wekelijkse, jaarlijkse en levenslange toegang, in aanmerking komende proefperioden van zeven dagen, Family Sharing en herstel."
 ---
 
-Health.md bevat 5 voltooide exportacties voordat Full Access nodig is. Eén actie kan meerdere dagen en formaten schrijven. Handmatige, geplande, Opdrachten- en directe exports delen de teller wanneer ze meetellen.
+In deze handleiding wordt de telefoonversie met abonnement beschreven. Winkelvoorbereiding is geen publieke release; eerdere gedistribueerde versies kunnen het eerdere vrije exportbedrag tonen. De geïnstalleerde app en winkelbevestiging tonen het beschikbare aanbod.
 
-## Wanneer verschijnt een aanbod?
+## Toegang vóór installatie
 
-- Onboarding bevat geen paywall.
-- Na de eerste echte preview kan één wegklikbaar aanbod verschijnen.
-- Na de eerste voltooide gratis export biedt een gids aan een dagelijks schema te bekijken zonder het in te schakelen.
-- Na de derde toont een wegklikbaar aanbod voor levenslange toegang twee resterende gratis acties. De limiet is vijf voltooide acties.
-- Na 5 acties wordt de volgende meetellende export geblokkeerd.
+Op iPhone en iPad zien gebruikers zonder toegang een verplichte betaalmuur voordat ze worden ingesteld. Start een in aanmerking komende proefperiode, abonneer u, koop Lifetime of herstel een bestaande aankoop. Er is in deze release geen lokale vrije exportvergoeding of een afwijsbare eerste/derde export-upsell.
 
-Het sluiten van eerdere aanbiedingen verbruikt geen actie.
+## Plannen en proeven
 
-## Lifetime-opties
+Individueel en Apple Family Sharing bieden elk wekelijkse, jaarlijkse en levenslange toegang. In aanmerking komende abonnementen omvatten een gratis proefperiode van zeven dagen, die vervolgens automatisch wordt verlengd tegen de weergegeven prijs en het weergegeven interval. Apple bepaalt of je in aanmerking komt; het opnieuw installeren of wijzigen van plannen garandeert geen nieuwe proefperiode. Lifetime wordt één keer in rekening gebracht en kent geen proefperiode of automatische verlenging.
 
-StoreKit 2 biedt eenmalige aankopen zonder abonnement: **Individual Lifetime**, **Family Lifetime** en een gezinsupgrade voor geschikte eigenaars. De gelokaliseerde prijs van Apple is leidend. Family Lifetime hangt af van Apple Aankopen delen.
+Family Sharing shares bieden toegang tot maximaal vijf andere in aanmerking komende gezinsleden, geen gezondheidsgegevens of bestanden. Google Play biedt alleen individuele toegang. De Mac-companion en F-Droid build omvatten toegang zonder facturering. Aankopen worden niet overgedragen tussen winkels.
 
-**Herstel aankoop** vernieuwt transacties van de Apple ID. Controleer voor Gezin de ID, Aankopen delen en zichtbaarheid van Health.md in de aankoopgeschiedenis.
+## Beheer en herstel
 
-| Probleem | Actie |
-|---|---|
-| Geen prijs | Controleer netwerk/App Store en open opnieuw. |
-| Aanbod vóór actie 5 | Vrijblijvende herinnering, niet de eindblokkade. |
-| Planning gepauzeerd | Koop of herstel en gebruik normaal herstel. |
+Beheer of annuleer via het gekochte Apple- of Google-account. Voor Apple-abonnementen annuleert u minimaal 24 uur vóór het einde van de proefperiode of periode en volgt u de winkelbevestiging. Het verwijderen van de app of het kopen van Lifetime annuleert een bestaand abonnement niet.
 
-<div class="related"><a href="/nl/docs/onboarding/"><span>Start</span>Vijf stappen.</a><a href="/nl/docs/scheduling/"><span>Automatisering</span>Gedeeld tegoed.</a></div>
+Bestaande levenslange aankopen en eerder verleende oude toegang blijven geldig. Aankoop herstellen vernieuwt in aanmerking komende winkelrechten, niet verwijderde bestanden. Controleer de Family Sharing instellingen als gedeelde toegang ontbreekt. Een abonnement alleen komt niet in aanmerking voor de Family Lifetime-upgrade met korting.
+
+## Als de toegang eindigt
+
+Voor nieuwe exports en configuraties is opnieuw actieve toegang vereist. Bestaande bestanden blijven van u op de door u gekozen bestemmingen. Nadat u de toegang hebt hersteld, inspecteert u de lopende werkzaamheden en gebruikt u het normale herstelpad. Ontbrekende prijzen vereisen een nieuwe poging van de catalogus; een winkelfout geeft geen toegang.
+
+<div class="related"> <a href="/nl/docs/onboarding/"> <span> Installatie </span> Bereid uw gezondheidsarchief voor. </a> <a href="/nl/docs/scheduling/"> <span> Automatisering </span> Plan en herstel exports. </a> </div>

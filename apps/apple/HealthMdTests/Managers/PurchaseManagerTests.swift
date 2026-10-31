@@ -1,609 +1,272 @@
-//
-//  PurchaseManagerTests.swift
-//  HealthMdTests
-//
-//  Tests for PurchaseManager state machine and business logic.
-//  No StoreKit or network calls — uses injected fakes.
-//
-
 import XCTest
 @testable import HealthMd
 
 @MainActor
 final class PurchaseManagerTests: XCTestCase {
-
-    // STATIC RETENTION JUSTIFICATION: PurchaseManager is an ObservableObject.
-    // Static retention avoids macOS 26 / Swift 6 deinit crash.
-    // See docs/testing/lifecycle-audit.md.
-    private static var retainedManagers: [PurchaseManager] = []
-
     private var keychain: FakeKeychainStore!
     private var defaults: FakeUserDefaults!
-    private var analyticsTransport: PurchaseManagerAnalyticsTransport!
-    private var analyticsClient: PricingAnalyticsClient!
 
     override func setUp() {
         super.setUp()
         keychain = FakeKeychainStore()
         defaults = FakeUserDefaults()
-        analyticsTransport = PurchaseManagerAnalyticsTransport()
-        analyticsClient = PricingAnalyticsClient(
-            transport: analyticsTransport,
-            defaults: FakeUserDefaults(),
-            queueKey: "pricing.analytics.test.purchase-manager.\(UUID().uuidString)",
-            maxQueueSize: 10,
-            isEnabled: true
-        )
     }
 
     private func makeManager() -> PurchaseManager {
-        let manager = PurchaseManager(keychain: keychain, defaults: defaults, analytics: analyticsClient)
-        Self.retainedManagers.append(manager)
+        let manager = PurchaseManager(keychain: keychain, defaults: defaults)
+        LifecycleHarness.retain(manager)
         return manager
     }
 
-    // MARK: - Legacy Unlock Decision
-
-    /// Build a UTC date for use in date-based assertions.
-    private func date(_ year: Int, _ month: Int, _ day: Int) -> Date {
-        var components = DateComponents()
-        components.year = year; components.month = month; components.day = day
-        components.timeZone = TimeZone(identifier: "UTC")
-        return Calendar(identifier: .gregorian).date(from: components)!
+    func testLegacyCutoffIsUnchangedAndStrict() {
+        let cutoff = PurchaseManager.grandfatherCutoffDate
+        XCTAssertTrue(PurchaseManager.isLegacyUnlock(originalPurchaseDate: cutoff.addingTimeInterval(-1)))
+        XCTAssertFalse(PurchaseManager.isLegacyUnlock(originalPurchaseDate: cutoff))
+        XCTAssertFalse(PurchaseManager.isLegacyUnlock(originalPurchaseDate: cutoff.addingTimeInterval(1)))
     }
 
-    func testIsLegacyUnlock_grandfathersAnyInstallBeforeCutoff() {
-        // Pre-freemium paid era.
-        XCTAssertTrue(PurchaseManager.isLegacyUnlock(originalPurchaseDate: date(2026, 1, 1)))
-        XCTAssertTrue(PurchaseManager.isLegacyUnlock(originalPurchaseDate: date(2026, 3, 15)))
-        // v1.7.x freemium era.
-        XCTAssertTrue(PurchaseManager.isLegacyUnlock(originalPurchaseDate: date(2026, 3, 25)))
-        // v1.8.0 / v1.8.1 leak cohort (incl. Morgan, 2026-04-14).
-        XCTAssertTrue(PurchaseManager.isLegacyUnlock(originalPurchaseDate: date(2026, 4, 14)))
-    }
-
-    func testIsLegacyUnlock_doesNotGrandfatherInstallsAtOrAfterCutoff() {
-        XCTAssertFalse(PurchaseManager.isLegacyUnlock(originalPurchaseDate: PurchaseManager.grandfatherCutoffDate))
-        XCTAssertFalse(PurchaseManager.isLegacyUnlock(originalPurchaseDate: date(2026, 9, 1)))
-        XCTAssertFalse(PurchaseManager.isLegacyUnlock(originalPurchaseDate: date(2027, 1, 15)))
-    }
-
-    func testIsLegacyUnlock_cutoffBoundaryIsStrict() {
-        XCTAssertTrue(PurchaseManager.isLegacyUnlock(
-            originalPurchaseDate: PurchaseManager.grandfatherCutoffDate.addingTimeInterval(-1)
-        ))
-        XCTAssertFalse(PurchaseManager.isLegacyUnlock(
-            originalPurchaseDate: PurchaseManager.grandfatherCutoffDate
-        ))
-    }
-
-    // MARK: - Free Export Quota
-
-    func testFreeExportsRemaining_defaultIsFive() {
+    func testHardPaywallRequiresEntitlementEvenOnFirstInstall() {
         let manager = makeManager()
-        XCTAssertEqual(PurchaseManager.freeExportLimit, 5)
-        XCTAssertEqual(manager.freeExportsRemaining, 5)
-    }
-
-    func testRecordExportUse_decrementsRemaining() {
-        let manager = makeManager()
-        manager.recordExportUse()
-        XCTAssertEqual(manager.freeExportsRemaining, 4)
-    }
-
-    func testRecordExportUse_tracksFreeExportUsageAfterIncrement() async {
-        let manager = makeManager()
-
-        manager.recordExportUse()
-        await analyticsClient.flushAndWait()
-
-        let payloads = await analyticsTransport.payloadsValue()
-        XCTAssertEqual(payloads.count, 1)
-        XCTAssertEqual(payloads.first?.eventName, "pricing_free_export_used")
-        XCTAssertEqual(payloads.first?.properties[.freeExportsUsed], .int(1))
-        XCTAssertEqual(payloads.first?.properties[.freeExportsRemaining], .int(4))
-    }
-
-    func testDurableRecordExportUseIsIdempotentByJobID() throws {
-        let manager = makeManager()
-        let first = UUID()
-        try manager.recordExportUse(jobID: first)
-        try manager.recordExportUse(jobID: first)
-        XCTAssertEqual(manager.freeExportsUsed, 1)
-        XCTAssertEqual(manager.freeExportsRemaining, 4)
-
-        try manager.recordExportUse(jobID: UUID())
-        manager.recordExportUse()
-        XCTAssertEqual(manager.freeExportsUsed, 3)
-        XCTAssertEqual(manager.freeExportsRemaining, 2)
-    }
-
-    func testOwnedDirectCompletionRetriesQuotaFailureAndRejectsReplacement() throws {
-        let manager = makeManager()
-        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
-        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: false)
-        defer { try? FileManager.default.removeItem(at: root) }
-        let job = root.appendingPathComponent("job")
-        try FileManager.default.createDirectory(at: job, withIntermediateDirectories: false)
-        let destination = job.appendingPathComponent("journal.json")
-        let lock = root.appendingPathComponent(".publication.lock")
-        let original = Data("transferring".utf8)
-        var current = AppleExportJournalCheckpoint()
-        try current.publish(original, to: destination, freshAdmission: true,
-            lockURL: lock, durabilityRoot: root)
-        let execution = current
-        let completionIdentity = try XCTUnwrap(execution.completionIdentity)
-        keychain.nextWriteStringError = POSIXError(.EIO)
-        XCTAssertThrowsError(try execution.withCheckpointOwnership {
-            try manager.recordExportUse(jobID: completionIdentity)
-            try current.publish(Data("completed".utf8), to: destination,
-                freshAdmission: false, lockURL: lock, durabilityRoot: root)
-        })
-        XCTAssertEqual(manager.freeExportsUsed, 0)
-        XCTAssertEqual(try Data(contentsOf: destination), original)
-        // Simulate quota persistence followed by interruption before checkpoint publication.
-        XCTAssertThrowsError(try execution.withCheckpointOwnership {
-            try manager.recordExportUse(jobID: completionIdentity)
-            throw POSIXError(.EINTR)
-        })
-        XCTAssertEqual(manager.freeExportsUsed, 1)
-        let reopened = makeManager()
-        try execution.withCheckpointOwnership {
-            try reopened.recordExportUse(jobID: completionIdentity)
-            try current.publish(Data("completed".utf8), to: destination,
-                freshAdmission: false, lockURL: lock, durabilityRoot: root)
-        }
-        XCTAssertEqual(reopened.freeExportsUsed, 1)
-        try FileManager.default.removeItem(at: job)
-        try FileManager.default.createDirectory(at: job, withIntermediateDirectories: false)
-        var replacement = AppleExportJournalCheckpoint()
-        let replacementBytes = original
-        try replacement.publish(replacementBytes, to: destination, freshAdmission: true,
-            lockURL: lock, durabilityRoot: root)
-        var callbackCalled = false
-        XCTAssertThrowsError(try execution.withCheckpointOwnership {
-            callbackCalled = true
-            try reopened.recordExportUse(jobID: UUID())
-        })
-        XCTAssertFalse(callbackCalled)
-        XCTAssertEqual(reopened.freeExportsUsed, 1)
-        XCTAssertEqual(try Data(contentsOf: destination), replacementBytes)
-        let replacementIdentity = try XCTUnwrap(replacement.completionIdentity)
-        XCTAssertNotEqual(replacementIdentity, completionIdentity)
-        try replacement.withCheckpointOwnership {
-            try reopened.recordExportUse(jobID: replacementIdentity)
-        }
-        let restarted = makeManager()
-        try replacement.withCheckpointOwnership {
-            try restarted.recordExportUse(jobID: replacementIdentity)
-        }
-        XCTAssertEqual(restarted.freeExportsUsed, 2)
-    }
-
-    func testLegacyDirectRecoveryReusesPreviouslyChargedQuotaReceipt() throws {
-        struct HistoricalJob: Codable { let jobID: UUID }
-        let manager = makeManager()
-        let jobID = UUID()
-        try manager.recordExportUse(jobID: jobID)
-        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
-        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: false)
-        defer { try? FileManager.default.removeItem(at: root) }
-        let destination = root.appendingPathComponent("journal.json")
-        let bytes = try JSONEncoder().encode(HistoricalJob(jobID: jobID))
-        try bytes.write(to: destination)
-        let recovered = try XCTUnwrap(AppleExportJournalRecovery.loadOwned(at: destination,
-            lockURL: root.appendingPathComponent(".publication.lock"), durabilityRoot: root,
-            legacyCompletionIdentity: { $0.jobID },
-            isSupported: { (saved: HistoricalJob) in saved.jobID == jobID }))
-        let identity = try XCTUnwrap(recovered.checkpoint.completionIdentity)
-        XCTAssertEqual(identity, jobID)
-        let restarted = makeManager()
-        try recovered.checkpoint.withCheckpointOwnership {
-            try restarted.recordExportUse(jobID: identity)
-        }
-        XCTAssertEqual(restarted.freeExportsUsed, 1)
-        XCTAssertEqual(try Data(contentsOf: destination), bytes)
-    }
-
-    func testSameGenerationCancellationBlocksDirectCompletionQuota() throws {
-        let manager = makeManager()
-        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
-        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: false)
-        defer { try? FileManager.default.removeItem(at: root) }
-        let destination = root.appendingPathComponent("journal.json")
-        let lock = root.appendingPathComponent(".publication.lock")
-        var execution = AppleExportJournalCheckpoint()
-        try execution.publish(Data("transferring".utf8), to: destination,
-            freshAdmission: true, lockURL: lock, durabilityRoot: root)
-        var cancelled = execution
-        let cancelledBytes = Data("cancelled".utf8)
-        try cancelled.publish(cancelledBytes, to: destination,
-            freshAdmission: false, lockURL: lock, durabilityRoot: root)
-        XCTAssertEqual(execution.generation, cancelled.generation)
-        var completionCalled = false
-        XCTAssertThrowsError(try execution.withCheckpointOwnership {
-            completionCalled = true
-            try manager.recordExportUse(jobID: UUID())
-        }) {
-            XCTAssertEqual(($0 as? POSIXError)?.code, .EAGAIN)
-        }
-        XCTAssertFalse(completionCalled)
-        XCTAssertEqual(manager.freeExportsUsed, 0)
-        XCTAssertEqual(try Data(contentsOf: destination), cancelledBytes)
-    }
-
-    func testRecordedDurableJobCanResumeAfterQuotaIsExhausted() throws {
-        let manager = makeManager()
-        let recordedJobID = UUID()
-        manager.setFreeExportsUsed(PurchaseManager.freeExportLimit - 1)
-        try manager.recordExportUse(jobID: recordedJobID)
-
+        XCTAssertEqual(PurchaseManager.freeExportLimit, 0)
+        XCTAssertEqual(manager.freeExportsRemaining, 0)
+        XCTAssertFalse(manager.canExportFree)
         XCTAssertFalse(manager.canExport)
-        XCTAssertTrue(manager.canExport(jobID: recordedJobID))
         XCTAssertFalse(manager.canExport(jobID: UUID()))
     }
 
-    func testRecordExportUse_stopsAtLimit() {
-        let manager = makeManager()
-        manager.setFreeExportsUsed(PurchaseManager.freeExportLimit - 1)
-        manager.recordExportUse()
-        XCTAssertEqual(manager.freeExportsUsed, PurchaseManager.freeExportLimit)
-        XCTAssertEqual(manager.freeExportsRemaining, 0)
-
-        manager.recordExportUse()
-        XCTAssertEqual(manager.freeExportsUsed, PurchaseManager.freeExportLimit)
-        XCTAssertEqual(manager.freeExportsRemaining, 0)
-    }
-
-    func testDurableRecordExportUseDoesNotExceedLimit() throws {
-        let manager = makeManager()
-        let blockedJobID = UUID()
-        manager.setFreeExportsUsed(PurchaseManager.freeExportLimit)
-
-        try manager.recordExportUse(jobID: blockedJobID)
-
-        XCTAssertEqual(manager.freeExportsUsed, PurchaseManager.freeExportLimit)
-        XCTAssertFalse(manager.canExport(jobID: blockedJobID))
-    }
-
-    func testResetFreeExports_restoresQuota() {
+    func testNoLocalTrialOrSoftUpgradeMilestones() throws {
         let manager = makeManager()
         manager.recordExportUse()
-        manager.recordExportUse()
-        XCTAssertEqual(manager.freeExportsRemaining, 3)
-
-        manager.resetFreeExports()
-        XCTAssertEqual(manager.freeExportsRemaining, 5)
-    }
-
-    func testGuidanceAppearsAfterFirstAndThirdExportsOnly() {
-        let manager = makeManager()
-        manager.recordExportUse()
-        XCTAssertEqual(manager.pendingUpgradePrompt, 1)
-        manager.consumeUpgradePrompt()
-        manager.recordExportUse()
+        try manager.recordExportUse(jobID: UUID())
+        XCTAssertEqual(manager.freeExportsUsed, 0)
         XCTAssertNil(manager.pendingUpgradePrompt)
-        manager.recordExportUse()
-        XCTAssertEqual(manager.pendingUpgradePrompt, 3)
-        XCTAssertEqual(manager.freeExportsRemaining, 2)
-        manager.consumeUpgradePrompt()
-        manager.recordExportUse()
-        manager.recordExportUse()
-        XCTAssertNil(manager.pendingUpgradePrompt)
+        XCTAssertTrue(PurchaseManager.upgradePromptMilestones.isEmpty)
         XCTAssertFalse(manager.canExport)
     }
 
-    func testGuidanceDismissalPersistsAndDoesNotConsumeAnotherExport() {
-        let manager = makeManager()
-        manager.recordExportUse()
-        manager.consumeUpgradePrompt()
-        XCTAssertEqual(manager.freeExportsUsed, 1)
-        XCTAssertEqual(manager.freeExportsRemaining, 4)
-        XCTAssertTrue(defaults.bool(forKey: "pricing.upgradePrompt.shown.v1.1"))
-        let relaunched = makeManager()
-        relaunched.setFreeExportsUsed(0)
-        relaunched.recordExportUse()
-        XCTAssertNil(relaunched.pendingUpgradePrompt)
-    }
-
-    func testExistingTenActionUsageStaysExhaustedWithoutReset() {
+    func testHistoricalUsageIsPreservedButNeverGrantsAccess() {
         let manager = makeManager()
         manager.setFreeExportsUsed(8)
+        manager.recordExportUse()
         XCTAssertEqual(manager.freeExportsUsed, 8)
         XCTAssertEqual(manager.freeExportsRemaining, 0)
         XCTAssertFalse(manager.canExport)
-        manager.recordExportUse()
-        XCTAssertEqual(manager.freeExportsUsed, 8)
-        XCTAssertNil(manager.pendingUpgradePrompt)
-    }
-
-    func testPartialWorkCanConsumeAnActionWithoutObscuringDiagnostics() {
-        let manager = makeManager()
-        manager.recordExportUse(offerGuidance: false)
-        XCTAssertEqual(manager.freeExportsUsed, 1)
-        XCTAssertEqual(manager.freeExportsRemaining, 4)
-        XCTAssertNil(manager.pendingUpgradePrompt)
-    }
-
-    func testUnlockDismissesPendingGuidance() {
-        let manager = makeManager()
-        manager.recordExportUse()
-        XCTAssertEqual(manager.pendingUpgradePrompt, 1)
-        manager.setUnlocked(true)
-        XCTAssertNil(manager.pendingUpgradePrompt)
-        XCTAssertTrue(manager.canExport)
-    }
-
-    // MARK: - canExport
-
-    func testCanExport_trueWhenFreeExportsAvailable() {
-        let manager = makeManager()
-        XCTAssertTrue(manager.canExport)
-    }
-
-    func testCanExport_falseWhenQuotaExhaustedAndNotUnlocked() {
-        let manager = makeManager()
-        manager.setFreeExportsUsed(PurchaseManager.freeExportLimit)
+        manager.resetFreeExports()
+        XCTAssertEqual(manager.freeExportsUsed, 0)
         XCTAssertFalse(manager.canExport)
     }
 
-    func testRecordExportUse_noOpWhenUnlocked() {
-        let manager = makeManager()
-        manager.setUnlocked(true)
-        manager.recordExportUse() // should be no-op
-        XCTAssertEqual(manager.freeExportsUsed, 0, "Should not increment when unlocked")
+    func testOldDurableQuotaReceiptCannotBypassPaywall() {
+        let id = UUID()
+        keychain.writeString(key: "directExportUseIDs", value: id.uuidString.lowercased())
+        XCTAssertFalse(makeManager().canExport(jobID: id))
     }
 
-    func testRecordExportUse_doesNotTrackWhenUnlocked() async {
+    func testEveryLifetimeProductAndLegacyOwnerRetainsAccess() {
+        for product in [PurchaseManager.productID, PurchaseManager.familyProductID, PurchaseManager.familyUpgradeProductID] {
+            let manager = makeManager()
+            manager.setUnlockedProductID(product)
+            XCTAssertTrue(manager.isUnlocked)
+            XCTAssertTrue(manager.canExport)
+            XCTAssertTrue(manager.canExport(jobID: UUID()))
+        }
         let manager = makeManager()
-        manager.setUnlocked(true)
-
-        manager.recordExportUse()
-        await analyticsClient.flushAndWait()
-
-        let payloads = await analyticsTransport.payloadsValue()
-        XCTAssertEqual(payloads, [])
+        manager.setLegacyUser(true)
+        XCTAssertTrue(manager.canExport)
     }
 
-    // MARK: - Purchase Analytics
+    func testCatalogContainsWeeklyYearlyAndExistingLifetimeIDsButNoMonthly() {
+        XCTAssertEqual(Set(HealthMdPurchaseOption.allCases), Set([
+            .weekly, .yearly, .individual, .familyWeekly, .familyYearly, .family, .familyUpgrade,
+        ]))
+        XCTAssertEqual(PurchaseManager.productID, "com.codybontecou.obsidianhealth.unlock")
+        XCTAssertEqual(PurchaseManager.familyProductID, "com.codybontecou.obsidianhealth.unlock.family")
+        XCTAssertEqual(PurchaseManager.familyUpgradeProductID, "com.codybontecou.obsidianhealth.unlock.family.upgrade")
+        XCTAssertEqual(PurchaseManager.productIDs.count, 7)
+        XCTAssertEqual(HealthMdPurchaseOption.yearly.productID, "com.codybontecou.obsidianhealth.pro.yearly.v2")
+        XCTAssertEqual(HealthMdPurchaseOption.familyYearly.productID, "com.codybontecou.obsidianhealth.pro.family.yearly.v2")
+        XCTAssertFalse(PurchaseManager.productIDs.contains { $0.contains("monthly") })
+    }
 
-    func testPurchaseRetriesProductLoadBeforeStoreUnavailableFailure() async throws {
-        #if os(macOS)
-        throw XCTSkip("The free macOS companion intentionally does not load StoreKit products.")
-        #else
-        var productLoadAttempts = 0
-        let manager = PurchaseManager(
-            keychain: keychain,
-            defaults: defaults,
-            analytics: analyticsClient,
-            productLoader: { productIDs in
-                productLoadAttempts += 1
-                XCTAssertEqual(Set(productIDs), Set(PurchaseManager.productIDs))
-                return []
+    func testSubscriptionExpirationRevocationAndUpgradeAreNotPermanentGrants() {
+        let now = Date(timeIntervalSince1970: 1_800_000_000)
+        for option in HealthMdPurchaseOption.allCases.filter(\.isSubscription) {
+            XCTAssertTrue(PurchaseManager.isActiveEntitlement(option: option,
+                expirationDate: now.addingTimeInterval(1), revocationDate: nil, isUpgraded: false, now: now))
+            for expiration in [nil, now, now.addingTimeInterval(-1)] as [Date?] {
+                XCTAssertFalse(PurchaseManager.isActiveEntitlement(option: option,
+                    expirationDate: expiration, revocationDate: nil, isUpgraded: false, now: now))
             }
-        )
-        Self.retainedManagers.append(manager)
-
-        await manager.purchase(.individual)
-        await analyticsClient.flushAndWait()
-
-        XCTAssertEqual(productLoadAttempts, 1)
-        XCTAssertFalse(manager.isLoadingProducts)
-        XCTAssertEqual(manager.purchaseError, "Product unavailable. Please try again later.")
-
-        let payloads = await analyticsTransport.payloadsValue()
-        XCTAssertEqual(payloads.map(\.eventName), [
-            "pricing_purchase_started",
-            "pricing_purchase_finished"
-        ])
-        XCTAssertEqual(payloads.last?.properties[.purchaseOutcome], .string("failed"))
-        XCTAssertEqual(payloads.last?.properties[.errorCategory], .string("store_unavailable"))
-        #endif
+            XCTAssertFalse(PurchaseManager.isActiveEntitlement(option: option,
+                expirationDate: now.addingTimeInterval(1), revocationDate: now, isUpgraded: false, now: now))
+            XCTAssertFalse(PurchaseManager.isActiveEntitlement(option: option,
+                expirationDate: now.addingTimeInterval(1), revocationDate: nil, isUpgraded: true, now: now))
+        }
     }
 
-    func testProductCatalogContainsOnlyLifetimeOptions() {
-        XCTAssertEqual(
-            Set(HealthMdPurchaseOption.allCases),
-            Set([.individual, .family, .familyUpgrade])
-        )
-        XCTAssertEqual(
-            Set(PurchaseManager.productIDs),
-            Set([
-                PurchaseManager.productID,
-                PurchaseManager.familyProductID,
-                PurchaseManager.familyUpgradeProductID,
-            ])
-        )
-        XCTAssertFalse(PurchaseManager.productIDs.contains("com.codybontecou.obsidianhealth.pro.monthly"))
-        XCTAssertFalse(PurchaseManager.productIDs.contains("com.codybontecou.obsidianhealth.pro.yearly"))
-        XCTAssertFalse(PurchaseManager.productIDs.contains("com.codybontecou.obsidianhealth.pro.family.monthly"))
-        XCTAssertFalse(PurchaseManager.productIDs.contains("com.codybontecou.obsidianhealth.pro.family.yearly"))
+    func testLifetimeDoesNotExpireButRevocationsAreHonored() {
+        for option in HealthMdPurchaseOption.allCases.filter({ !$0.isSubscription }) {
+            XCTAssertTrue(PurchaseManager.isActiveEntitlement(option: option,
+                expirationDate: nil, revocationDate: nil, isUpgraded: false))
+            XCTAssertFalse(PurchaseManager.isActiveEntitlement(option: option,
+                expirationDate: nil, revocationDate: Date(), isUpgraded: false))
+        }
     }
 
-    func testFamilyPurchaseUnavailableTracksFamilyProductID() async {
+    func testPreferredEntitlementKeepsLifetimeAheadOfSubscriptions() {
+        XCTAssertEqual(PurchaseManager.preferredEntitlementProductID(from: PurchaseManager.productIDs), PurchaseManager.familyProductID)
+        XCTAssertEqual(PurchaseManager.preferredEntitlementProductID(from: [
+            HealthMdPurchaseOption.familyYearly.productID, PurchaseManager.productID,
+        ]), PurchaseManager.productID)
+        XCTAssertEqual(PurchaseManager.preferredEntitlementProductID(from: [
+            HealthMdPurchaseOption.weekly.productID, HealthMdPurchaseOption.familyWeekly.productID,
+        ]), HealthMdPurchaseOption.familyWeekly.productID)
+        XCTAssertNil(PurchaseManager.preferredEntitlementProductID(from: ["unknown"]))
+    }
+
+    func testFamilyUpgradeRequiresPermanentIndividualOrLegacyAccess() {
         let manager = makeManager()
-
-        await manager.purchase(.family)
-        await analyticsClient.flushAndWait()
-
-        let payloads = await analyticsTransport.payloadsValue()
-        XCTAssertEqual(payloads.map(\.eventName), [
-            "pricing_purchase_started",
-            "pricing_purchase_finished"
-        ])
-        XCTAssertEqual(payloads.first?.properties[.productId], .string(PurchaseManager.familyProductID))
-        XCTAssertEqual(payloads.last?.properties[.productId], .string(PurchaseManager.familyProductID))
-        XCTAssertEqual(payloads.last?.properties[.purchaseOutcome], .string("failed"))
-        XCTAssertEqual(payloads.last?.properties[.errorCategory], .string("store_unavailable"))
-    }
-
-    func testFamilyUpgradeRequiresExistingIndividualOrLegacyUnlock() async {
-        let manager = makeManager()
-
-        await manager.purchase(.familyUpgrade)
-        await analyticsClient.flushAndWait()
-
         XCTAssertFalse(manager.canBuyFamilyUpgrade)
-        XCTAssertEqual(
-            manager.purchaseError,
-            "Family Upgrade requires an existing Lifetime unlock."
-        )
-
-        let payloads = await analyticsTransport.payloadsValue()
-        XCTAssertEqual(payloads.map(\.eventName), [
-            "pricing_purchase_started",
-            "pricing_purchase_finished"
-        ])
-        XCTAssertEqual(payloads.first?.properties[.productId], .string(PurchaseManager.familyUpgradeProductID))
-        XCTAssertEqual(payloads.last?.properties[.productId], .string(PurchaseManager.familyUpgradeProductID))
-        XCTAssertEqual(payloads.last?.properties[.purchaseOutcome], .string("failed"))
-        XCTAssertEqual(payloads.last?.properties[.errorCategory], .string("not_unlocked"))
-    }
-
-    func testFamilyUpgradeUnavailableTracksUpgradeProductIDWhenEligible() async {
-        let manager = makeManager()
+        manager.setUnlockedProductID(HealthMdPurchaseOption.weekly.productID)
+        XCTAssertFalse(manager.canBuyFamilyUpgrade)
         manager.setUnlockedProductID(PurchaseManager.productID)
-
-        await manager.purchase(.familyUpgrade)
-        await analyticsClient.flushAndWait()
-
-        let payloads = await analyticsTransport.payloadsValue()
-        XCTAssertEqual(payloads.map(\.eventName), [
-            "pricing_purchase_started",
-            "pricing_purchase_finished"
-        ])
-        XCTAssertEqual(payloads.first?.properties[.productId], .string(PurchaseManager.familyUpgradeProductID))
-        XCTAssertEqual(payloads.last?.properties[.productId], .string(PurchaseManager.familyUpgradeProductID))
-        XCTAssertEqual(payloads.last?.properties[.purchaseOutcome], .string("failed"))
-        XCTAssertEqual(payloads.last?.properties[.errorCategory], .string("store_unavailable"))
-    }
-
-    func testFamilyUpgradeEligibilityRequiresIndividualOrLegacyAndNoFamilyUnlock() {
-        let individual = makeManager()
-        individual.setUnlockedProductID(PurchaseManager.productID)
-        XCTAssertTrue(individual.canBuyFamilyUpgrade)
-
+        XCTAssertTrue(manager.canBuyFamilyUpgrade)
+        manager.setUnlockedProductID(PurchaseManager.familyProductID)
+        XCTAssertFalse(manager.canBuyFamilyUpgrade)
+        XCTAssertTrue(manager.isFamilyUnlocked)
         let legacy = makeManager()
         legacy.setLegacyUser(true)
         XCTAssertTrue(legacy.canBuyFamilyUpgrade)
-
-        let genericUnlocked = makeManager()
-        genericUnlocked.setUnlocked(true)
-        XCTAssertFalse(
-            genericUnlocked.canBuyFamilyUpgrade,
-            "A generic unlocked state without an individual purchase or legacy grant must not expose the Family Upgrade."
-        )
-
-        let family = makeManager()
-        family.setUnlockedProductID(PurchaseManager.familyProductID)
-        XCTAssertFalse(family.canBuyFamilyUpgrade)
-        XCTAssertTrue(family.isFamilyUnlocked)
-
-        let upgrade = makeManager()
-        upgrade.setUnlockedProductID(PurchaseManager.familyUpgradeProductID)
-        XCTAssertFalse(upgrade.canBuyFamilyUpgrade)
-        XCTAssertTrue(upgrade.isFamilyUnlocked)
     }
 
-    func testPreferredEntitlement_prioritizesFamilyAndLifetimeAccess() {
-        XCTAssertEqual(
-            PurchaseManager.preferredEntitlementProductID(from: [
-                PurchaseManager.productID,
-                PurchaseManager.familyUpgradeProductID,
-                PurchaseManager.familyProductID,
-            ]),
-            PurchaseManager.familyProductID
-        )
-        XCTAssertEqual(
-            PurchaseManager.preferredEntitlementProductID(from: [
-                PurchaseManager.productID,
-                PurchaseManager.familyUpgradeProductID,
-            ]),
-            PurchaseManager.familyUpgradeProductID
-        )
-        XCTAssertEqual(
-            PurchaseManager.preferredEntitlementProductID(from: [
-                PurchaseManager.productID,
-            ]),
-            PurchaseManager.productID
-        )
-        XCTAssertNil(PurchaseManager.preferredEntitlementProductID(from: [
-            "com.codybontecou.obsidianhealth.pro.monthly",
-            "com.codybontecou.obsidianhealth.pro.yearly",
-            "com.codybontecou.obsidianhealth.pro.family.monthly",
-            "com.codybontecou.obsidianhealth.pro.family.yearly",
-        ]))
-        XCTAssertNil(PurchaseManager.preferredEntitlementProductID(from: ["com.example.unknown"]))
+    func testActivePlanTitlesDistinguishSubscriptionsAndLifetimeAccess() {
+        let expected: [HealthMdPurchaseOption: String] = [
+            .weekly: "Weekly active",
+            .yearly: "Yearly active",
+            .familyWeekly: "Family Weekly active",
+            .familyYearly: "Family Yearly active",
+            .individual: "Lifetime active",
+            .family: "Family Lifetime active",
+            .familyUpgrade: "Family Lifetime active",
+        ]
+        XCTAssertEqual(Set(expected.keys), Set(HealthMdPurchaseOption.allCases))
+        for (option, title) in expected {
+            let manager = makeManager()
+            manager.setUnlockedProductID(option.productID)
+            XCTAssertEqual(manager.activePlanTitle, title, option.rawValue)
+            XCTAssertEqual(manager.canShowPermanentAccessNotice, !option.isSubscription, option.rawValue)
+        }
+        let legacy = makeManager()
+        legacy.setLegacyUser(true)
+        XCTAssertEqual(legacy.activePlanTitle, "Grandfathered Full Access active")
+        XCTAssertTrue(legacy.canShowPermanentAccessNotice)
     }
 
-    func testRestoreNotFoundMessageMentionsFamilyPurchaseSharing() {
-        XCTAssertTrue(PurchaseManager.restoreNotFoundMessage.contains("Family Lifetime"))
+    func testPermanentAccessNoticeRequiresKnownActivePermanentEvidence() {
+        let manager = makeManager()
+        XCTAssertEqual(manager.activePlanTitle, "Unlock Full Access")
+        XCTAssertFalse(manager.canShowPermanentAccessNotice)
+        manager.setUnlocked(true)
+        XCTAssertFalse(manager.canShowPermanentAccessNotice, "An unlocked flag is not permanent purchase evidence")
+        manager.setUnlockedProductID("unknown.product")
+        XCTAssertFalse(manager.canShowPermanentAccessNotice)
+        manager.setUnlockedProductID(PurchaseManager.familyUpgradeProductID)
+        XCTAssertTrue(manager.canShowPermanentAccessNotice)
+        manager.setUnlocked(false)
+        XCTAssertFalse(manager.canShowPermanentAccessNotice, "A stale Lifetime product ID must not show the notice")
+        XCTAssertEqual(manager.activePlanTitle, "Unlock Full Access")
+
+        let legacy = makeManager()
+        legacy.setLegacyUser(true)
+        legacy.setUnlockedProductID(HealthMdPurchaseOption.yearly.productID)
+        XCTAssertTrue(legacy.canShowPermanentAccessNotice, "Independent legacy access remains permanent")
+        legacy.setLegacyUser(false)
+        XCTAssertFalse(legacy.canShowPermanentAccessNotice, "Subscription access alone is not permanent")
+        legacy.setLegacyUser(true)
+        legacy.setUnlocked(false)
+        XCTAssertFalse(legacy.canShowPermanentAccessNotice, "Inactive legacy state must not show the notice")
+    }
+
+    func testSettingsSurfacesUseSharedPlanCopyAndGuardPermanentNotice() throws {
+        let appleRoot = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+        for path in ["HealthMd/iOS/ContentView.swift", "HealthMd/iPad/iPadSettingsView.swift", "HealthMd/iOS/Views/PaywallView.swift"] {
+            let source = try String(contentsOf: appleRoot.appendingPathComponent(path), encoding: .utf8)
+            XCTAssertTrue(source.contains("purchaseManager.activePlanTitle"), path)
+            XCTAssertFalse(source.contains("return \"Family Lifetime active\""), path)
+        }
+        let paywall = try String(contentsOf: appleRoot.appendingPathComponent("HealthMd/iOS/Views/PaywallView.swift"), encoding: .utf8)
+        XCTAssertTrue(paywall.contains("if purchaseManager.canShowPermanentAccessNotice {"))
+        XCTAssertTrue(paywall.contains("Your existing permanent access remains valid"))
+        XCTAssertTrue(paywall.contains("Upgrade pricing for existing Lifetime owners"))
+    }
+
+    func testFamilySharedSubscriptionIsFamilyAccess() {
+        let manager = makeManager()
+        manager.setUnlockedProductID(HealthMdPurchaseOption.familyYearly.productID)
+        XCTAssertTrue(manager.isFamilyUnlocked)
+        XCTAssertFalse(manager.canBuyFamilyUpgrade)
+    }
+
+    func testPurchaseAndRestoreErrorsDoNotUnlock() async {
+        let manager = makeManager()
+        await manager.purchase(.weekly)
+        XCTAssertFalse(manager.isUnlocked)
+        XCTAssertNotNil(manager.purchaseError)
+        await manager.purchase(.familyUpgrade)
+        XCTAssertEqual(manager.purchaseError, "Family Upgrade requires an existing Lifetime unlock.")
+        XCTAssertFalse(manager.isUnlocked)
+    }
+
+    func testPurchaseRetriesProductLoading() async throws {
+        #if os(macOS)
+        throw XCTSkip("The free macOS companion does not load StoreKit products.")
+        #else
+        var attempts = 0
+        let manager = PurchaseManager(keychain: keychain, defaults: defaults, productLoader: { ids in
+            attempts += 1
+            XCTAssertEqual(Set(ids), Set(PurchaseManager.productIDs))
+            return []
+        })
+        LifecycleHarness.retain(manager)
+        await manager.purchase(.yearly)
+        XCTAssertEqual(attempts, 1)
+        XCTAssertFalse(manager.isLoadingProducts)
+        XCTAssertFalse(manager.isUnlocked)
+        #endif
+    }
+
+    func testUnlockClearsOldCountersWithoutCreatingFreeAllowance() {
+        let manager = makeManager()
+        manager.setFreeExportsUsed(3)
+        manager.setUnlocked(true)
+        XCTAssertEqual(manager.freeExportsUsed, 0)
+        XCTAssertTrue(manager.canExport)
+        manager.setUnlocked(false)
+        XCTAssertFalse(manager.canExport)
+        XCTAssertEqual(manager.freeExportsRemaining, 0)
+    }
+
+    func testLegacyUsageMigrationStillRunsExactlyOnce() {
+        defaults.set(2, forKey: "freeExportsUsed")
+        XCTAssertEqual(makeManager().freeExportsUsed, 2)
+        XCTAssertTrue(defaults.bool(forKey: "freeExportsUsed_migratedToKeychain"))
+        keychain.storage = [:]
+        XCTAssertEqual(makeManager().freeExportsUsed, 0)
+    }
+
+    func testCachedDirectQueriesRecheckAccessBeforeSnapshotReuse() throws {
+        let appleRoot = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+        let source = try String(contentsOf: appleRoot.appendingPathComponent("HealthMd/iOS/IPhoneDirectQueryCoordinator.swift"), encoding: .utf8)
+        let admission = try XCTUnwrap(source.range(of: "guard PurchaseManager.shared.canExport else"))
+        let cache = try XCTUnwrap(source.range(of: "let snapshot = try await snapshotForQuery"))
+        XCTAssertLessThan(admission.lowerBound, cache.lowerBound,
+                          "Cached pages must not bypass trial/subscription admission.")
+    }
+
+    func testRestoreHelpRetainsLegacyAndFamilyGuidance() {
         XCTAssertTrue(PurchaseManager.restoreNotFoundMessage.contains("Purchase Sharing"))
         XCTAssertTrue(PurchaseManager.restoreNotFoundMessage.contains("cody@isolated.tech"))
-    }
-
-    func testUnlockTransition_resetsAccumulatedFreeExports() {
-        // Reproduces the launch-time race: refreshStatus() is async, so a
-        // legacy/unlocked user can burn quota by exporting before isUnlocked
-        // settles. Once status resolves, the accumulated count must reset
-        // so a future status loss (network blip, server cold start) doesn't
-        // leave them locked out with zero quota.
-        let manager = makeManager()
-        manager.recordExportUse()
-        manager.recordExportUse()
-        XCTAssertEqual(manager.freeExportsUsed, 2)
-
-        manager.setUnlocked(true)
-        XCTAssertEqual(manager.freeExportsUsed, 0, "Quota should reset on false→true transition")
-        XCTAssertEqual(manager.freeExportsRemaining, 5)
-    }
-
-    func testUnlockTransition_doesNotResetWhenAlreadyUnlocked() {
-        let manager = makeManager()
-        manager.setUnlocked(true)
-        manager.recordExportUse() // no-op, count stays 0
-        manager.setUnlocked(true) // idempotent — no transition
-        XCTAssertEqual(manager.freeExportsUsed, 0)
-    }
-
-    func testUnlockTransition_doesNotResetWhenSetToFalse() {
-        let manager = makeManager()
-        manager.recordExportUse()
-        manager.setUnlocked(false) // false→false, no reset
-        XCTAssertEqual(manager.freeExportsUsed, 1, "Setting unlocked=false must not clear quota")
-    }
-
-    // MARK: - Keychain Migration
-
-    func testMigration_copiesUserDefaultsToKeychain() {
-        // Simulate pre-migration state: value in UserDefaults, not in keychain
-        defaults.set(2, forKey: "freeExportsUsed")
-        let manager = makeManager()
-
-        XCTAssertEqual(manager.freeExportsUsed, 2, "Should migrate value from UserDefaults")
-        XCTAssertTrue(defaults.bool(forKey: "freeExportsUsed_migratedToKeychain"), "Migration flag should be set")
-    }
-
-    func testMigration_doesNotRunTwice() {
-        defaults.set(2, forKey: "freeExportsUsed")
-        let _ = makeManager()
-
-        // Reset keychain but keep migration flag
-        keychain.storage = [:]
-        let manager2 = makeManager()
-
-        XCTAssertEqual(manager2.freeExportsUsed, 0, "Should not re-migrate since flag is set")
-    }
-}
-
-private actor PurchaseManagerAnalyticsTransport: PricingAnalyticsTransport {
-    private(set) var payloads: [PricingAnalyticsPayload] = []
-
-    func send(_ payload: PricingAnalyticsPayload) async throws {
-        payloads.append(payload)
-    }
-
-    func payloadsValue() -> [PricingAnalyticsPayload] {
-        payloads
     }
 }

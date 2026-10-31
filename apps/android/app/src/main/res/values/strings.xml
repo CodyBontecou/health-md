@@ -601,8 +601,21 @@
 
     <!-- Paywall screen -->
     <string name="paywall_title">Unlock Health.md</string>
-    <string name="paywall_subtitle">You\'ve used your 5 free exports</string>
-    <string name="paywall_unlimited_exports">Unlimited exports, forever</string>
+    <string name="paywall_subtitle">Choose a subscription or Lifetime access to begin your private health archive. Eligible subscriptions include a 7-day free trial.</string>
+    <string name="paywall_access_subtitle">Choose a subscription or Lifetime access to begin your private health archive. Eligible subscriptions include a 7-day free trial.</string>
+    <string name="paywall_access_active_title">Your access is active</string>
+    <string name="paywall_access_active_body">Continue setup to connect your health data and choose where to save your private archive.</string>
+    <string name="paywall_plan_choices">Weekly, yearly, or Lifetime access</string>
+    <string name="paywall_weekly_price">%1$s / week</string>
+    <string name="paywall_yearly_price">%1$s / year</string>
+    <string name="paywall_lifetime_price">Lifetime — %1$s once</string>
+    <string name="paywall_trial_then">7 days free, then %1$s</string>
+    <string name="paywall_retry">Try again</string>
+    <string name="paywall_manage_subscriptions">Manage subscriptions</string>
+    <string name="paywall_terms">Terms</string>
+    <string name="paywall_privacy">Privacy</string>
+    <string name="paywall_subscription_disclosure">Eligible subscriptions include a 7-day free trial, then renew automatically at the displayed price unless canceled before the trial or current period ends. Manage or cancel in Google Play. Lifetime is charged immediately as a one-time purchase. Existing paid access is retained. Lifetime has no trial. Deleting the app or buying Lifetime does not cancel an existing subscription.</string>
+    <string name="paywall_unlimited_exports">Unlimited exports</string>
     <string name="paywall_scheduled_exports">Automated scheduled exports</string>
     <string name="paywall_future_features">All future features included</string>
     <string name="paywall_one_time">One-time payment \u2014 no subscription</string>
@@ -690,7 +703,7 @@
     <string name="privacy_category_history_exports">Used only for large manual exports, such as 90 days or all time, so Health.md can read Health Connect data older than the standard 30-day window</string>
 
     <string name="privacy_policy_direct_cli">Direct CLI exports occur only after you explicitly pair and connect to your computer. Health records are sent through an authenticated encrypted connection, retained privately for resumable transfer for at most seven days, and deleted sooner when you cancel or forget the pairing.</string>
-    <string name="privacy_policy_footer">Health.md does not operate a health-data cloud. Campaign attribution may send random app-generated install/event UUIDs and validated campaign metadata. It never sends health data, raw referrers, device IDs, exports, accounts, or paths.</string>
+    <string name="privacy_policy_footer">This version does not collect custom usage analytics or advertising attribution. Purchases, scheduling, and optional services have separate privacy disclosures.</string>
 
 
     <!-- Feedback helper -->
@@ -827,12 +840,12 @@
 
     <!-- P1 parity: billing/schedule/history/settings -->
     <string name="export_failure_paywall_label">Unlock required</string>
-    <string name="export_guidance_paywall">Scheduled exports require the lifetime unlock. Open the paywall to unlock unlimited exports and scheduling.</string>
+    <string name="export_guidance_paywall">Scheduled exports require an active trial or subscription, or Lifetime access. Open the paywall to view access options.</string>
     <string name="export_source_retry">Retry</string>
     <string name="export_source_shortcut">Shortcut</string>
     <string name="export_source_remote">Remote</string>
     <string name="schedule_unlock_required_title">Unlock scheduled exports</string>
-    <string name="schedule_unlock_required_body">Manual exports include 5 free runs. Automatic scheduled exports are included with the one-time lifetime unlock.</string>
+    <string name="schedule_unlock_required_body">Manual and scheduled exports require an active trial, subscription, or Lifetime access.</string>
     <string name="schedule_unlock_required_short">Unlock Health.md to enable scheduled exports.</string>
     <string name="export_folder_root_label">Export folder</string>
 
@@ -915,7 +928,7 @@
     <string name="direct_cli_status_export_cancelled">Android export cancelled.</string>
     <string name="direct_cli_failure_connection">Could not connect to the Health.md CLI. Confirm it is listening and try again.</string>
     <string name="direct_cli_failure_timeout">The Direct CLI session reached Android\'s time limit.</string>
-    <string name="direct_cli_failure_quota">The free export limit has been reached.</string>
+    <string name="direct_cli_failure_quota">An active trial, subscription, or Lifetime access is required.</string>
     <string name="direct_cli_failure_provider_range">Raw provider export requires an explicit range of at most 366 days.</string>
     <string name="direct_cli_failure_profile_not_found">The referenced export profile does not exist on this device.</string>
     <string name="direct_cli_failure_source_unavailable">The requested health provider is unavailable on this device.</string>

@@ -1,9 +1,22 @@
 ---
-title: "API 端点"
-description: "将所选 Apple Health JSON 直接从 iPhone 发送到您自己的 HTTP(S) 端点。"
+title: "将 Apple Health JSON 导出到自己的 API"
+description: "使用 Health.md 将选定的 Apple Health 数据以 JSON 格式从 iPhone 发送到自己的端点。查看设置步骤、载荷示例和请求限制。"
 ---
 
 <p>API 端点是一种导出目标，适合希望将 Health.md 数据发送到自有服务器、Webhook、数据库、仪表板或自动化流程的用户。iPhone 仍负责读取 Apple Health；与写入文件不同，它会将 JSON POST 到您配置的端点。</p>
+
+## 选择 API 工作流程
+
+| 目标 | 从这里开始 |
+| --- | --- |
+| 将选定的数据发送到自己的服务器 | 按照本指南操作。iPhone 会向您配置的 URL 发送 JSON POST 请求。 |
+| 在 Mac 上本地查询数据 | <a href="/zh-hans/docs/agent-api/">回环查询 API</a>。 此 API 仅限在这台 Mac 上使用，请勿向网络开放。 |
+| 开发 iOS 健康应用 | <a href="https://developer.apple.com/documentation/healthkit" target="_blank" rel="noopener">Apple HealthKit 开发者文档</a>。 |
+
+<div class="callout">
+<strong>先从一天的数据开始</strong>
+<p><a href="https://apps.apple.com/us/app/health-md/id6757763969" target="_blank" rel="noopener">在 iPhone 上安装 Health.md</a>。 <a href="/docs/reference/generated/automation/api-export-v1.json">查看虚构的 JSON 示例</a>再配置接收端。</p>
+</div>
 
 <div class="callout">
 <strong>隐私提醒。</strong>

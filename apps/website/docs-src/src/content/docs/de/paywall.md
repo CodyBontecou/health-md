@@ -1,30 +1,28 @@
 ---
-title: "Freischaltung & Paywall"
-description: "Erfahre mehr über 5 kostenlose Aktionen, unverbindliche Hinweise, Lifetime-Käufe und StoreKit-Wiederherstellung."
+title: "Pläne, Tests und Wiederherstellung"
+description: "Wöchentlicher, jährlicher und lebenslanger Zugriff, berechtigte siebentägige Testversionen, Family Sharing und Wiederherstellung."
 ---
 
-Health.md erlaubt 5 abgeschlossene Exportaktionen, bevor Full Access erforderlich ist. Eine Aktion kann mehrere Tage und Formate schreiben. Manuelle, geplante, Shortcut- und direkte Exporte teilen sich den Zähler, wenn sie abrechnungspflichtig sind.
+In diesem Handbuch wird die abonnementfähige Telefonversion beschrieben. Die Store-Vorbereitung ist keine öffentliche Veröffentlichung; Frühere verteilte Versionen können die bisherige Freiausfuhrbewilligung aufweisen. Die installierte App und die Store-Bestätigung zeigen das verfügbare Angebot.
 
-## Wann erscheint ein Angebot?
+## Zugriff vor der Einrichtung
 
-- Die Ersteinrichtung enthält keine Paywall.
-- Nach der ersten echten Vorschau kann einmalig ein wegklickbares Angebot erscheinen.
-- Nach dem ersten abgeschlossenen kostenlosen Export bietet ein Hinweis die Prüfung eines täglichen Zeitplans an, ohne ihn zu aktivieren.
-- Nach dem dritten Export zeigt ein wegklickbares Dauerzugriffsangebot zwei verbleibende kostenlose Aktionen. Die Grenze beträgt fünf abgeschlossene Aktionen.
-- Nach 5 Aktionen wird der nächste abrechnungspflichtige Export blockiert.
+Auf iPhone und iPad sehen Benutzer ohne Zugriff vor der Einrichtung eine obligatorische Paywall. Starten Sie eine berechtigte Testversion, abonnieren Sie, kaufen Sie Lifetime oder stellen Sie einen bestehenden Kauf wieder her. In dieser Version gibt es keine lokale Frei-Export-Zulage oder einen absetzbaren Erst-/Drittexport-Upsell.
 
-Das Schließen früher Hinweise verbraucht keinen Export.
+## Pläne und Versuche
 
-## Lifetime-Optionen
+Individual und Apple Family Sharing bieten jeweils wöchentlichen, jährlichen und lebenslangen Zugriff. Berechtigte Abonnements beinhalten eine 7-tägige kostenlose Testversion und verlängern sich dann automatisch zum angezeigten Preis und Intervall. Apple bestimmt die Berechtigung; Eine Neuinstallation oder Änderung der Pläne garantiert keine weitere Testversion. Lifetime wird sofort einmalig berechnet und es gibt keine Testversion oder automatische Verlängerung.
 
-StoreKit 2 bietet einmalige Käufe ohne Abo: **Individual Lifetime**, **Family Lifetime** und ein Familien-Upgrade für berechtigte Besitzer. Der lokalisierte Preis im Apple-Kaufdialog ist maßgeblich. Family Lifetime hängt von Apples Kauffreigabe ab.
+Family Sharing teilt den Funktionszugriff mit bis zu fünf anderen berechtigten Familienmitgliedern, jedoch nicht mit Gesundheitsdaten oder Dateien. Google Play bietet nur individuellen Zugang. Der Mac-Begleiter und F-Droid Build beinhalten den Zugriff ohne Abrechnung. Einkäufe werden nicht zwischen Geschäften übertragen.
 
-**Kauf wiederherstellen** aktualisiert die Transaktionen der Apple-ID. Prüfe für Familie Apple-ID, Kauffreigabe und die Sichtbarkeit von Health.md im Kaufverlauf.
+## Verwalten und wiederherstellen
 
-| Problem | Maßnahme |
-|---|---|
-| Preis fehlt | Netzwerk und App Store prüfen und Angebot neu öffnen. |
-| Angebot vor Aktion 5 | Unverbindlicher Hinweis, nicht die feste Sperre. |
-| Zeitplan pausiert | Freischalten oder wiederherstellen und normal fortsetzen. |
+Verwalten oder kündigen Sie den Kauf über das Apple- oder Google-Konto. Kündigen Sie bei Apple-Abonnements mindestens 24 Stunden vor Ablauf der Testversion oder des Zeitraums und folgen Sie der Store-Bestätigung. Durch das Löschen der App oder den Kauf von Lifetime wird ein bestehendes Abonnement nicht gekündigt.
 
-<div class="related"><a href="/de/docs/onboarding/"><span>Start</span>Fünfstufige Einrichtung.</a><a href="/de/docs/scheduling/"><span>Automatisierung</span>Gemeinsames Kontingent.</a></div>
+Bestehende Lifetime-Käufe und zuvor gewährte Legacy-Zugriffe behalten ihre Gültigkeit. „Kauf wiederherstellen“ aktualisiert berechtigte Store-Berechtigungen, nicht gelöschte Dateien. Überprüfen Sie Family Sharing Einstellungen, wenn der gemeinsame Zugriff fehlt. Ein Abonnement allein berechtigt nicht zum vergünstigten Family Lifetime-Upgrade.
+
+## Wenn der Zugriff endet
+
+Neue Exporte und Einrichtung erfordern erneut einen aktiven Zugriff. Vorhandene Dateien bleiben an den von Ihnen gewählten Zielorten Ihr Eigentum. Überprüfen Sie nach der Wiederherstellung des Zugriffs die ausstehenden Arbeiten und verwenden Sie den normalen Wiederherstellungspfad. Fehlende Preise erfordern einen erneuten Katalogversuch; Ein Speicherfehler gewährt keinen Zugriff.
+
+<div class="related"> <a href="/de/docs/onboarding/"> <span> Setup </span> Bereiten Sie Ihr Gesundheitsarchiv vor. </a> <a href="/de/docs/scheduling/"> <span> Automatisierung </span> Exporte planen und wiederherstellen. </a> </div>

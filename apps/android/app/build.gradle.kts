@@ -32,10 +32,6 @@ fun String.asBuildConfigString(): String = "\"${
         .replace("\t", "\\t")
 }\""
 
-val campaignAttributionEndpointUrl = configuredValue("CAMPAIGN_ATTRIBUTION_ENDPOINT_URL")
-val campaignAttributionIngestToken = configuredValue("CAMPAIGN_ATTRIBUTION_INGEST_TOKEN")
-val onboardingAnalyticsEndpointUrl = configuredValue("ONBOARDING_ANALYTICS_ENDPOINT_URL")
-    .ifBlank { "https://health-md-pricing-analytics.costream.workers.dev" }
 val exportEngineAndroidFrozenV4 = configuredEngineMode("EXPORT_ENGINE_ANDROID_FROZEN_V4")
 val exportEngineAndroidAnalyticalV5 = configuredEngineMode("EXPORT_ENGINE_ANDROID_ANALYTICAL_V5")
 val exportEngineApiV1FrozenV4 = configuredEngineMode("EXPORT_ENGINE_API_V1_FROZEN_V4")
@@ -58,11 +54,11 @@ android {
         applicationId = "com.healthmd.android"
         minSdk = 28
         targetSdk = 36
-        versionCode = 42
-        versionName = "1.9.4"
+        versionCode = 45
+        versionName = "3.5.0"
 
         // Explicit opt-in; absent or malformed values keep claim entry points disabled.
-        buildConfigField("boolean", "MYSELF_CLAIM_ENABLED", (configuredValue("MYSELF_CLAIM_ENABLED") == "true").toString())
+        buildConfigField("boolean", "MYSELF_CLAIM_ENABLED", "false")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -123,9 +119,6 @@ android {
             buildConfigField("String", "WHOOP_TOKEN_BROKER_URL", configuredValue("WHOOP_TOKEN_BROKER_URL").asBuildConfigString())
             buildConfigField("String", "WHOOP_HEALTHMD_BROKER_URL", configuredValue("WHOOP_HEALTHMD_BROKER_URL").asBuildConfigString())
             buildConfigField("String", "WHOOP_HEALTHMD_BROKER_CLIENT_TOKEN", configuredValue("WHOOP_HEALTHMD_BROKER_CLIENT_TOKEN").asBuildConfigString())
-            buildConfigField("String", "CAMPAIGN_ATTRIBUTION_ENDPOINT_URL", campaignAttributionEndpointUrl.asBuildConfigString())
-            buildConfigField("String", "CAMPAIGN_ATTRIBUTION_INGEST_TOKEN", campaignAttributionIngestToken.asBuildConfigString())
-            buildConfigField("String", "ONBOARDING_ANALYTICS_ENDPOINT_URL", onboardingAnalyticsEndpointUrl.asBuildConfigString())
             signingConfig = signingConfigs.getByName("release")
         }
         create("fdroid") {
@@ -262,7 +255,6 @@ dependencies {
 
     // Google Play-only integrations. The F-Droid runtime graph must not resolve these artifacts.
     add("playImplementation", libs.billing.ktx)
-    add("playImplementation", libs.install.referrer)
     add("playImplementation", libs.play.review)
     add("playImplementation", libs.play.review.ktx)
 

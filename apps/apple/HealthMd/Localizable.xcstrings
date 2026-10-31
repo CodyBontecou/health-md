@@ -11000,122 +11000,6 @@
         }
       }
     },
-    "Analytics events are automatically deleted within 13 months." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Analyseereignisse werden innerhalb von 13 Monaten automatisch gelöscht."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Los eventos de analíticas se eliminan automáticamente en un plazo de 13 meses."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Les événements d’analyse sont automatiquement supprimés sous 13 mois."
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Gli eventi di analisi vengono eliminati automaticamente entro 13 mesi."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "分析イベントは 13 か月以内に自動的に削除されます。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "분석 이벤트는 13개월 이내에 자동으로 삭제됩니다."
-          }
-        },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Analysegebeurtenissen worden binnen 13 maanden automatisch verwijderd."
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Os eventos de análise são excluídos automaticamente em até 13 meses."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "分析事件会在 13 个月内自动删除。"
-          }
-        }
-      }
-    },
-    "Analytics never includes health values, metric names, health dates, exported files, paths, peer names, or credentials. On iPhone and iPad, Apple Ads campaign identifiers are linked to purchase outcomes to measure campaign conversion. No health data or purchase events are sent to Apple Ads." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Analysen enthalten niemals Gesundheitswerte, Messwertnamen, Gesundheitsdaten, exportierte Dateien, Pfade, Peer-Namen oder Zugangsdaten. Auf iPhone und iPad werden Apple Ads-Kampagnenkennungen mit Kaufergebnissen verknüpft, um die Konversion zu messen. Es werden keine Gesundheitsdaten oder Kaufereignisse an Apple Ads gesendet."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Las analíticas nunca incluyen valores de salud, nombres de métricas, fechas de salud, archivos exportados, rutas, nombres de dispositivos vinculados ni credenciales. En iPhone y iPad, los identificadores de campañas de Apple Ads se vinculan a los resultados de compra para medir la conversión. No se envían datos de salud ni eventos de compra a Apple Ads."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Les analyses ne contiennent jamais de valeurs de santé, noms de métriques, dates de santé, fichiers exportés, chemins, noms d’appareils liés ou identifiants de connexion. Sur iPhone et iPad, les identifiants de campagne Apple Ads sont associés aux résultats d’achat pour mesurer la conversion. Aucune donnée de santé ni événement d’achat n’est envoyé à Apple Ads."
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Le analisi non includono mai valori sanitari, nomi di metriche, date sanitarie, file esportati, percorsi, nomi di dispositivi collegati o credenziali. Su iPhone e iPad, gli identificatori delle campagne Apple Ads vengono collegati agli esiti degli acquisti per misurare la conversione. Nessun dato sanitario o evento di acquisto viene inviato a Apple Ads."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "分析には健康の値、指標名、健康データの日付、エクスポートしたファイル、パス、接続先名、認証情報は含まれません。iPhoneとiPadでは、Apple AdsのキャンペーンIDを購入結果と関連付けてコンバージョンを測定します。健康データや購入イベントをApple Adsへ送信することはありません。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "분석에는 건강 수치, 지표 이름, 건강 데이터 날짜, 내보낸 파일, 경로, 연결 기기 이름 또는 인증 정보가 포함되지 않습니다. iPhone과 iPad에서는 Apple Ads 캠페인 식별자를 구매 결과와 연결하여 전환율을 측정합니다. 건강 데이터나 구매 이벤트는 Apple Ads로 전송되지 않습니다."
-          }
-        },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Analyses bevatten nooit gezondheidswaarden, meetnamen, gezondheidsdatums, geëxporteerde bestanden, paden, namen van gekoppelde apparaten of inloggegevens. Op iPhone en iPad worden Apple Ads-campagne-ID’s aan aankoopresultaten gekoppeld om conversie te meten. Er worden geen gezondheidsgegevens of aankoopgebeurtenissen naar Apple Ads gestuurd."
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "As análises nunca incluem valores de saúde, nomes de métricas, datas de saúde, arquivos exportados, caminhos, nomes de dispositivos vinculados ou credenciais. No iPhone e iPad, identificadores de campanhas do Apple Ads são associados aos resultados de compras para medir a conversão. Nenhum dado de saúde ou evento de compra é enviado ao Apple Ads."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "分析绝不包含健康数值、指标名称、健康日期、导出的文件、路径、连接设备名称或凭据。在 iPhone 和 iPad 上，Apple Ads 广告系列标识符会与购买结果关联，以衡量转化率。健康数据和购买事件不会发送给 Apple Ads。"
-          }
-        }
-      }
-    },
     "API bearer token" : {
       "localizations" : {
         "de": {"stringUnit":{"state":"translated","value":"API-Bearer-Token"}},
@@ -68748,64 +68632,6 @@
         }
       }
     },
-    "Health.md collects limited product events using a random app-install identifier for setup, export-shape, and purchase-flow analytics." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Health.md erfasst begrenzte Produktereignisse mit einer zufälligen App-Installations-ID für Einrichtung, grobe Exportmerkmale und Kaufablaufanalysen."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Health.md recopila eventos limitados del producto mediante un identificador aleatorio de instalación para la configuración, las características generales de exportación y el flujo de compra."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Health.md collecte des événements produit limités à l’aide d’un identifiant aléatoire d’installation pour la configuration, les caractéristiques générales des exports et le parcours d’achat."
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Health.md raccoglie eventi di prodotto limitati usando un identificatore casuale di installazione per configurazione, caratteristiche generali delle esportazioni e flusso di acquisto."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Health.md は、セットアップ、エクスポート形式の概要、購入フローの分析のために、ランダムなアプリインストール ID を使って限定的な製品イベントを収集します。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Health.md는 설정, 대략적인 내보내기 형태 및 구매 흐름 분석을 위해 무작위 앱 설치 ID로 제한된 제품 이벤트를 수집합니다."
-          }
-        },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Health.md verzamelt beperkte productgebeurtenissen met een willekeurige app-installatie-ID voor configuratie, globale exportkenmerken en aankoopstromen."
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "O Health.md coleta eventos limitados do produto usando um identificador aleatório de instalação para configuração, características gerais de exportação e fluxo de compra."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Health.md 使用随机应用安装 ID 收集有限的产品事件，用于了解设置、粗略的导出形式和购买流程。"
-          }
-        }
-      }
-    },
     "Health.md could not allocate an immutable query-context generation." : {
       "comment" : "macOS production UI",
       "localizations" : {
@@ -100459,71 +100285,64 @@
     },
     "Privacy" : {
       "localizations" : {
-        "de": {"stringUnit":{"state":"translated","value":"Datenschutz"}},
-        "es": {"stringUnit":{"state":"translated","value":"Privacidad"}},
-        "fr": {"stringUnit":{"state":"translated","value":"Confidentialité"}},
-        "it": {"stringUnit":{"state":"translated","value":"Privacy"}},
-        "ja": {"stringUnit":{"state":"translated","value":"プライバシー"}},
-        "ko": {"stringUnit":{"state":"translated","value":"개인정보 보호"}},
-        "nl": {"stringUnit":{"state":"translated","value":"Privacy"}},
-        "pt-BR": {"stringUnit":{"state":"translated","value":"Privacidade"}},
-        "zh-Hans": {"stringUnit":{"state":"translated","value":"隐私"}}
-      }
-    },
-    "Privacy & Analytics" : {
-      "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Datenschutz & Analysen"
+            "value" : "Datenschutz"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Privacy"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Privacidad y analíticas"
+            "value" : "Privacidad"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Confidentialité et analyses"
+            "value" : "Confidentialité"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Privacy e analisi"
+            "value" : "Privacy"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "プライバシーと分析"
+            "value" : "プライバシー"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "개인정보 보호 및 분석"
+            "value" : "개인정보 보호"
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Privacy en analyse"
+            "value" : "Privacy"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Privacidade e análises"
+            "value" : "Privacidade"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "隐私与分析"
+            "value" : "隐私"
           }
         }
       }
@@ -106839,6 +106658,12 @@
             "value" : "Vorherigen Kauf wiederherstellen"
           }
         },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Restore previous purchase"
+          }
+        },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
@@ -106895,6 +106720,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Kauf wiederherstellen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Restore Purchase"
           }
         },
         "es" : {
@@ -122507,15 +122338,66 @@
     },
     "Terms" : {
       "localizations" : {
-        "de": {"stringUnit":{"state":"translated","value":"Nutzungsbedingungen"}},
-        "es": {"stringUnit":{"state":"translated","value":"Condiciones"}},
-        "fr": {"stringUnit":{"state":"translated","value":"Conditions"}},
-        "it": {"stringUnit":{"state":"translated","value":"Termini"}},
-        "ja": {"stringUnit":{"state":"translated","value":"利用規約"}},
-        "ko": {"stringUnit":{"state":"translated","value":"이용 약관"}},
-        "nl": {"stringUnit":{"state":"translated","value":"Voorwaarden"}},
-        "pt-BR": {"stringUnit":{"state":"translated","value":"Termos"}},
-        "zh-Hans": {"stringUnit":{"state":"translated","value":"条款"}}
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nutzungsbedingungen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Terms"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Condiciones"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Conditions"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Termini"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "利用規約"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이용 약관"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Voorwaarden"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Termos"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "条款"
+          }
+        }
       }
     },
     "That QR is not a valid Direct CLI pairing code. Scan the fresh QR shown by healthmd." : {
@@ -126876,6 +126758,12 @@
             "value" : "Erneut versuchen"
           }
         },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Try Again"
+          }
+        },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
@@ -126993,15 +126881,66 @@
     },
     "Try loading purchase options again" : {
       "localizations" : {
-        "de": {"stringUnit":{"state":"translated","value":"Kaufoptionen erneut laden"}},
-        "es": {"stringUnit":{"state":"translated","value":"Volver a cargar las opciones de compra"}},
-        "fr": {"stringUnit":{"state":"translated","value":"Réessayer de charger les options d’achat"}},
-        "it": {"stringUnit":{"state":"translated","value":"Riprova a caricare le opzioni di acquisto"}},
-        "ja": {"stringUnit":{"state":"translated","value":"購入オプションを再読み込み"}},
-        "ko": {"stringUnit":{"state":"translated","value":"구매 옵션 다시 불러오기"}},
-        "nl": {"stringUnit":{"state":"translated","value":"Aankoopopties opnieuw proberen te laden"}},
-        "pt-BR": {"stringUnit":{"state":"translated","value":"Tentar carregar as opções de compra novamente"}},
-        "zh-Hans": {"stringUnit":{"state":"translated","value":"重试加载购买选项"}}
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kaufoptionen erneut laden"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Try loading purchase options again"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Volver a cargar las opciones de compra"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Réessayer de charger les options d’achat"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Riprova a caricare le opzioni di acquisto"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "購入オプションを再読み込み"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "구매 옵션 다시 불러오기"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aankoopopties opnieuw proberen te laden"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tentar carregar as opções de compra novamente"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重试加载购买选项"
+          }
+        }
       }
     },
     "Tune presentation settings without changing Health.md’s export schema." : {
@@ -127657,6 +127596,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Nicht verfügbar"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unavailable"
           }
         },
         "es" : {
@@ -136446,6 +136391,12 @@
             "value" : "Jährlich"
           }
         },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yearly"
+          }
+        },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
@@ -137497,19 +137448,6 @@
         "nl": {"stringUnit":{"state":"translated","value":"%@: beoordeling van de historie mislukt; leesbare gegevens kunnen nog beschikbaar zijn."}},
         "pt-BR": {"stringUnit":{"state":"translated","value":"%@: a avaliação do histórico falhou; dados legíveis ainda podem estar disponíveis."}},
         "zh-Hans": {"stringUnit":{"state":"translated","value":"%@：历史评估失败；仍可能有可读取的数据。"}}
-      }
-    },
-    "%@: history assessment requires OS 27. This does not mean health data is unavailable." : {
-      "localizations" : {
-        "de": {"stringUnit":{"state":"translated","value":"%@: Die Verlaufsprüfung erfordert OS 27. Das bedeutet nicht, dass keine Gesundheitsdaten verfügbar sind."}},
-        "es": {"stringUnit":{"state":"translated","value":"%@: la evaluación del historial requiere OS 27. Esto no significa que los datos de salud no estén disponibles."}},
-        "fr": {"stringUnit":{"state":"translated","value":"%@ : l’évaluation de l’historique nécessite OS 27. Cela ne signifie pas que les données de santé sont indisponibles."}},
-        "it": {"stringUnit":{"state":"translated","value":"%@: la valutazione della cronologia richiede OS 27. Questo non significa che i dati sanitari non siano disponibili."}},
-        "ja": {"stringUnit":{"state":"translated","value":"%@：履歴の評価にはOS 27が必要です。健康データが利用できないという意味ではありません。"}},
-        "ko": {"stringUnit":{"state":"translated","value":"%@: 기록 평가에는 OS 27이 필요합니다. 건강 데이터를 사용할 수 없다는 뜻은 아닙니다."}},
-        "nl": {"stringUnit":{"state":"translated","value":"%@: beoordeling van de historie vereist OS 27. Dit betekent niet dat gezondheidsgegevens niet beschikbaar zijn."}},
-        "pt-BR": {"stringUnit":{"state":"translated","value":"%@: a avaliação do histórico requer OS 27. Isso não significa que os dados de saúde estejam indisponíveis."}},
-        "zh-Hans": {"stringUnit":{"state":"translated","value":"%@：历史评估需要 OS 27。这并不表示健康数据不可用。"}}
       }
     },
     "%@: no authorization boundary returned; history access is unknown." : {
@@ -139488,19 +139426,6 @@
         "zh-Hans": {"stringUnit":{"state":"translated","value":"刷新配对电脑加密上下文中明确指定的归属日期，不生成导出文件，也不占用文件配额。需要两端 App 均已打开并通过身份验证。"}}
       }
     },
-    "Refresh windows are best effort; iOS may delay background runs. Each run exports the profile's metrics and formats to its own destination. A run consumes one of the 5 free export actions unless you have Full Access." : {
-      "localizations" : {
-        "de": {"stringUnit":{"state":"translated","value":"Aktualisierungszeitfenster werden nach Möglichkeit eingehalten; iOS kann Hintergrundausführungen verzögern. Jeder Durchlauf exportiert die Messwerte und Formate des Profils an dessen eigenes Ziel. Ein Durchlauf verbraucht eine der 5 kostenlosen Exportaktionen, sofern du keinen Vollzugriff hast."}},
-        "es": {"stringUnit":{"state":"translated","value":"Se intentará respetar los intervalos de actualización, pero iOS puede retrasar las ejecuciones en segundo plano. Cada ejecución exporta las métricas y los formatos del perfil a su propio destino. Cada ejecución consume una de las 5 acciones de exportación gratuitas, salvo que tengas Full Access."}},
-        "fr": {"stringUnit":{"state":"translated","value":"Les créneaux d’actualisation ne sont pas garantis ; iOS peut retarder les exécutions en arrière-plan. Chaque exécution exporte les mesures et formats du profil vers sa propre destination. Elle utilise l’une des 5 actions d’export gratuites, sauf si vous disposez de l’accès complet."}},
-        "it": {"stringUnit":{"state":"translated","value":"Gli intervalli di aggiornamento non sono garantiti: iOS può ritardare le esecuzioni in background. Ogni esecuzione esporta le metriche e i formati del profilo nella relativa destinazione. Ogni esecuzione utilizza una delle 5 azioni di esportazione gratuite, a meno che tu non disponga di Full Access."}},
-        "ja": {"stringUnit":{"state":"translated","value":"更新時間帯は目安です。iOSによりバックグラウンド実行が遅れることがあります。各実行では、プロファイルの指標と形式で、そのプロファイルの保存先にエクスポートします。フルアクセスがない場合、実行ごとに無料エクスポート5回分のうち1回分を消費します。"}},
-        "ko": {"stringUnit":{"state":"translated","value":"새로 고침 시간은 최대한 준수되지만 iOS에서 백그라운드 실행을 지연시킬 수 있습니다. 각 실행은 프로필의 지표와 형식을 해당 대상으로 내보냅니다. 전체 이용 권한이 없으면 실행할 때마다 무료 내보내기 5회 중 1회를 사용합니다."}},
-        "nl": {"stringUnit":{"state":"translated","value":"Verversmomenten zijn niet gegarandeerd; iOS kan uitvoeringen op de achtergrond uitstellen. Elke uitvoering exporteert de meetgegevens en indelingen van het profiel naar de eigen bestemming. Elke uitvoering verbruikt een van de 5 gratis exportacties, tenzij je Full Access hebt."}},
-        "pt-BR": {"stringUnit":{"state":"translated","value":"As janelas de atualização não são garantidas; o iOS pode atrasar execuções em segundo plano. Cada execução exporta as métricas e os formatos do perfil para seu próprio destino. Uma execução consome uma das 5 ações de exportação gratuitas, a menos que você tenha Acesso completo."}},
-        "zh-Hans": {"stringUnit":{"state":"translated","value":"系统会尽量在刷新时段内执行，但 iOS 可能延迟后台运行。每次运行都会将该配置的指标按所选格式导出到其各自的目标位置。除非您拥有完整访问权限，否则每次运行会消耗 5 次免费导出操作中的一次。"}}
-      }
-    },
     "Repeat exports and clearer privacy information" : {
       "localizations" : {
         "de": {"stringUnit":{"state":"translated","value":"Erneute Exporte und klarere Datenschutzhinweise"}},
@@ -140697,19 +140622,6 @@
         "zh-Hans": {"stringUnit":{"state":"translated","value":"对于文件导出，“更新”或“覆盖”会用最新数据替换当前 JSON 快照。"}}
       }
     },
-    "Free export limit reached. Unlock Full Access to retry this export." : {
-      "localizations" : {
-        "de": {"stringUnit":{"state":"translated","value":"Limit für kostenlose Exporte erreicht. Schalte den Vollzugriff frei, um diesen Export erneut zu versuchen."}},
-        "es": {"stringUnit":{"state":"translated","value":"Se ha alcanzado el límite de exportaciones gratuitas. Desbloquea el acceso completo para reintentar esta exportación."}},
-        "fr": {"stringUnit":{"state":"translated","value":"Limite d’exports gratuits atteinte. Débloquez l’accès complet pour réessayer cet export."}},
-        "it": {"stringUnit":{"state":"translated","value":"Limite di esportazioni gratuite raggiunto. Sblocca l’accesso completo per riprovare questa esportazione."}},
-        "ja": {"stringUnit":{"state":"translated","value":"無料エクスポートの上限に達しました。このエクスポートを再試行するには、フルアクセスを有効にしてください。"}},
-        "ko": {"stringUnit":{"state":"translated","value":"무료 내보내기 한도에 도달했습니다. 이 내보내기를 다시 시도하려면 전체 이용 권한을 잠금 해제하세요."}},
-        "nl": {"stringUnit":{"state":"translated","value":"Limiet voor gratis exports bereikt. Ontgrendel Volledige toegang om deze export opnieuw te proberen."}},
-        "pt-BR": {"stringUnit":{"state":"translated","value":"Limite de exportações gratuitas atingido. Desbloqueie o Acesso completo para tentar esta exportação novamente."}},
-        "zh-Hans": {"stringUnit":{"state":"translated","value":"已达到免费导出上限。解锁完整访问权限以重试此次导出。"}}
-      }
-    },
     "Incompatible Mac. Update Health.md on Mac." : {
       "localizations" : {
         "de": {"stringUnit":{"state":"translated","value":"Mac nicht kompatibel. Aktualisiere Health.md auf dem Mac."}},
@@ -141700,15 +141612,66 @@
     },
     "Loading…" : {
       "localizations" : {
-        "de": {"stringUnit":{"state":"translated","value":"Wird geladen…"}},
-        "es": {"stringUnit":{"state":"translated","value":"Cargando…"}},
-        "fr": {"stringUnit":{"state":"translated","value":"Chargement…"}},
-        "it": {"stringUnit":{"state":"translated","value":"Caricamento…"}},
-        "ja": {"stringUnit":{"state":"translated","value":"読み込み中…"}},
-        "ko": {"stringUnit":{"state":"translated","value":"불러오는 중…"}},
-        "nl": {"stringUnit":{"state":"translated","value":"Laden…"}},
-        "pt-BR": {"stringUnit":{"state":"translated","value":"Carregando…"}},
-        "zh-Hans": {"stringUnit":{"state":"translated","value":"正在加载…"}}
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wird geladen…"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Loading…"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cargando…"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chargement…"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Caricamento…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "読み込み中…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "불러오는 중…"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Laden…"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Carregando…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在加载…"
+          }
+        }
       }
     },
     "Mac destination disabled" : {
@@ -142515,6 +142478,2990 @@
         "nl": {"stringUnit":{"state":"translated","value":"Volledige slaapsessies worden toegewezen aan de datum waarop ze eindigen in de tijdzone van de export. Kies Vandaag voor de slaap van afgelopen nacht."}},
         "pt-BR": {"stringUnit":{"state":"translated","value":"As sessões de sono completas são atribuídas à data em que terminam, no fuso horário da exportação. Para o sono da noite passada, escolha Hoje."}},
         "zh-Hans": {"stringUnit":{"state":"translated","value":"完整的睡眠时段按导出时区归属到结束的日期。要导出昨晚的睡眠，请选择“今天”。"}}
+      }
+    },
+    " once" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : " einmal"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : " once"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : " una vez"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : " une fois"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : " una volta"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : " 一度"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : " 한 번"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : " eenmaal"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : " uma vez"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : " 一次"
+          }
+        }
+      }
+    },
+    "%@ active" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ aktiv"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ active"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ activo"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ actif"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ attivo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@アクティブ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ 활동적인"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ actief"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ ativo"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@积极的"
+          }
+        }
+      }
+    },
+    "%@: history access could not be checked. Readable health data can still be exported." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@: Der Zugriff auf den Verlauf konnte nicht geprüft werden. Lesbare Gesundheitsdaten können weiterhin exportiert werden."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@: no se pudo comprobar el acceso al historial. Los datos de salud que se pueden leer aún se pueden exportar."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ : l’accès à l’historique n’a pas pu être vérifié. Les données de santé lisibles peuvent toujours être exportées."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@: non è stato possibile verificare l’accesso alla cronologia. I dati sanitari leggibili possono comunque essere esportati."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@：履歴へのアクセスを確認できませんでした。読み取り可能な健康データは引き続きエクスポートできます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@: 기록 접근 권한을 확인할 수 없습니다. 읽을 수 있는 건강 데이터는 계속 내보낼 수 있습니다."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@: toegang tot de historie kon niet worden gecontroleerd. Leesbare gezondheidsgegevens kunnen nog steeds worden geëxporteerd."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@: não foi possível verificar o acesso ao histórico. Os dados de saúde legíveis ainda podem ser exportados."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@：无法检查历史访问权限。仍可导出可读取的健康数据。"
+          }
+        }
+      }
+    },
+    "/week" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "/Woche"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "/week"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "/semana"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "/semaine"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "/settimana"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "/週"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "/주"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "/week"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "/semana"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "/星期"
+          }
+        }
+      }
+    },
+    "/year" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "/Jahr"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "/year"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "/año"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "/année"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "/anno"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "/年"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "/년도"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "/jaar"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "/ano"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "/年"
+          }
+        }
+      }
+    },
+    "7 days free, then %@ per week. Auto-renews; cancel anytime." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "7 Tage kostenlos, dann %@ pro Woche. Automatische Verlängerung; jederzeit kündigen."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "7 days free, then %@ per week. Auto-renews; cancel anytime."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "7 días gratis, luego %@ por semana. Renovación automática; cancelar en cualquier momento."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "7 jours gratuits, puis %@ par semaine. Renouvellement automatique ; annuler à tout moment."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "7 giorni gratis, poi %@ a settimana. Rinnovo automatico; annullare in qualsiasi momento."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "7 日間無料、その後は 1 週間ごとに%@ 。自動更新。いつでもキャンセルできます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "7일 무료, 이후 매주 %@ . 자동 갱신; 언제든지 취소하세요."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "7 dagen gratis, daarna %@ per week. Automatische verlenging; op elk gewenst moment opzeggen."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "7 dias grátis e depois %@ por semana. Renovação automática; cancele a qualquer momento."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "7 天免费，然后每周%@ 。自动续订；随时取消。"
+          }
+        }
+      }
+    },
+    "7 days free, then %@ per year. Auto-renews; cancel anytime." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "7 Tage kostenlos, dann %@ pro Jahr. Automatische Verlängerung; jederzeit kündigen."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "7 days free, then %@ per year. Auto-renews; cancel anytime."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "7 días gratis, luego %@ por año. Renovación automática; cancelar en cualquier momento."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "7 jours gratuits, puis %@ par an. Renouvellement automatique ; annuler à tout moment."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "7 giorni gratuiti, poi %@ all'anno. Rinnovo automatico; annullare in qualsiasi momento."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "7 日間無料、その後は%@ /年当たり。自動更新。いつでもキャンセルできます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "7일 무료, 그 이후에는 연간 %@ . 자동 갱신; 언제든지 취소하세요."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "7 dagen gratis, daarna %@ per jaar. Automatische verlenging; op elk gewenst moment opzeggen."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "7 dias grátis e depois %@ por ano. Renovação automática; cancele a qualquer momento."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "7 天免费，然后每年%@ 。自动续订；随时取消。"
+          }
+        }
+      }
+    },
+    "Auto-renewing access for your Apple Family" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Automatisch erneuernder Zugriff für Ihre Apple Familie"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Auto-renewing access for your Apple Family"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Acceso de renovación automática para tu familia Apple"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Accès à renouvellement automatique pour votre famille Apple"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Accesso con rinnovo automatico per la tua famiglia Apple"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Appleファミリーのアクセスの自動更新"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apple 가족을 위한 자동 갱신 액세스"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Toegang automatisch verlengen voor uw Apple Family"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Acesso com renovação automática para sua família Apple"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自动续订Apple Family 的访问权限"
+          }
+        }
+      }
+    },
+    "Auto-renewing unlimited private exports" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Automatische Verlängerung unbegrenzter privater Exporte"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Auto-renewing unlimited private exports"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Exportaciones privadas ilimitadas con renovación automática"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Exportations privées illimitées à renouvellement automatique"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Esportazioni private illimitate con rinnovo automatico"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自動更新無制限のプライベートエクスポート"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "무제한 개인 내보내기 자동 갱신"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Automatische verlenging van onbeperkte privé-exporten"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Renovação automática de exportações privadas ilimitadas"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自动续订无限私人出口"
+          }
+        }
+      }
+    },
+    "Build a permanent Apple Health archive" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Erstellen Sie ein permanentes Apple Health Archiv"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Build a permanent Apple Health archive"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cree un archivo permanente Apple Health"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Créez une archive Apple Health permanente"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Crea un archivio permanente Apple Health"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "永続的なApple Healthアーカイブを構築する"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "영구 Apple Health 아카이브 구축"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bouw een permanent Apple Health archief"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Crie um arquivo permanente Apple Health"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "建立永久的Apple Health档案"
+          }
+        }
+      }
+    },
+    "Bundled helpers are sandboxed. Use the Mac app's saved folder or stream JSON to stdout. For direct exports to arbitrary paths, install the standalone CLI." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die mitgelieferten Hilfsprogramme laufen in einer Sandbox. Verwende den in der Mac-App gespeicherten Ordner oder gib JSON über stdout aus. Installiere die eigenständige CLI für direkte Dateiexporte an beliebige Pfade."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Las herramientas incluidas se ejecutan en un entorno aislado. Usa la carpeta guardada en la app para Mac o envía JSON a stdout. Para exportar archivos directamente a rutas de tu elección, instala la CLI independiente."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Les outils intégrés sont isolés dans une sandbox. Utilisez le dossier enregistré dans l’app Mac ou envoyez le JSON vers stdout. Pour exporter directement des fichiers vers les chemins de votre choix, installez la CLI autonome."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gli strumenti inclusi vengono eseguiti in una sandbox. Usa la cartella salvata nell’app Mac o invia JSON a stdout. Per esportare file direttamente in percorsi a tua scelta, installa la CLI autonoma."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "同梱のヘルパーはサンドボックス内で動作します。Macアプリに保存したフォルダを使うか、JSONを標準出力に送信してください。任意のパスへ直接ファイルを書き出すには、スタンドアロンCLIをインストールしてください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "번들 도우미는 샌드박스에서 실행됩니다. Mac 앱에 저장된 폴더를 사용하거나 JSON을 표준 출력으로 내보내세요. 원하는 경로로 파일을 직접 내보내려면 독립형 CLI를 설치하세요."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "De meegeleverde hulpprogramma’s werken in een sandbox. Gebruik de in de Mac-app opgeslagen map of stuur JSON naar stdout. Installeer de zelfstandige CLI om bestanden rechtstreeks naar een zelfgekozen pad te exporteren."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Os auxiliares incluídos são executados em sandbox. Use a pasta salva no app para Mac ou envie JSON para stdout. Para exportar arquivos diretamente para caminhos de sua escolha, instale a CLI independente."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "内置辅助工具在沙盒中运行。请使用 Mac 应用中保存的文件夹，或将 JSON 发送到标准输出。若要直接将文件导出到任意路径，请安装独立版 CLI。"
+          }
+        }
+      }
+    },
+    "Checking purchases…" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Einkäufe prüfen…"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Checking purchases…"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Comprobando compras…"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vérification des achats…"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Controllo degli acquisti…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "購入内容を確認中…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "구매 확인 중…"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aankopen controleren…"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verificando compras…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在检查购买记录…"
+          }
+        }
+      }
+    },
+    "Choose a subscription or Lifetime access to begin your private health archive. Eligible subscriptions include a 7-day free trial." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wählen Sie ein Abonnement oder einen lebenslangen Zugang, um mit Ihrem privaten Gesundheitsarchiv zu beginnen. Berechtigte Abonnements beinhalten eine 7-tägige kostenlose Testversion."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose a subscription or Lifetime access to begin your private health archive. Eligible subscriptions include a 7-day free trial."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Elija una suscripción o acceso de por vida para comenzar su archivo de salud privado. Las suscripciones elegibles incluyen una prueba gratuita de 7 días."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choisissez un abonnement ou un accès à vie pour démarrer vos archives de santé privées. Les abonnements éligibles incluent un essai gratuit de 7 jours."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Scegli un abbonamento o un accesso a vita per iniziare il tuo archivio sanitario privato. Gli abbonamenti idonei includono una prova gratuita di 7 giorni."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "プライベート健康アーカイブを開始するには、サブスクリプションまたは生涯アクセスを選択してください。対象となるサブスクリプションには 7 日間の無料トライアルが含まれます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "개인 건강 아카이브를 시작하려면 구독 또는 평생 액세스를 선택하세요. 해당 구독에는 7일 무료 평가판이 포함됩니다."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kies een abonnement of levenslange toegang om uw privézorgarchief te starten. Bij in aanmerking komende abonnementen is een gratis proefperiode van zeven dagen inbegrepen."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Escolha uma assinatura ou acesso vitalício para iniciar seu arquivo privado de saúde. As assinaturas qualificadas incluem uma avaliação gratuita de 7 dias."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "选择订阅或终身访问来开始您的私人健康档案。符合条件的订阅包括 7 天免费试用。"
+          }
+        }
+      }
+    },
+    "Eligible subscriptions include a 7-day free trial, then renew automatically at the displayed price unless canceled at least 24 hours before the trial or current period ends. Payment is charged to your Apple ID. Manage or cancel in App Store subscriptions. Lifetime plans are charged immediately as one-time purchases with no trial. Deleting the app or buying Lifetime does not cancel an existing subscription." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Berechtigte Abonnements beinhalten eine 7-tägige kostenlose Testversion und verlängern sich dann automatisch zum angezeigten Preis, sofern sie nicht mindestens 24 Stunden vor Ablauf der Testversion oder des aktuellen Zeitraums gekündigt werden. Die Zahlung erfolgt über Ihre Apple ID . Verwalten oder kündigen Sie Abonnements im App Store . Lifetime-Pläne werden sofort als einmalige Käufe ohne Testversion berechnet. Durch das Löschen der App oder den Kauf von Lifetime wird ein bestehendes Abonnement nicht gekündigt."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eligible subscriptions include a 7-day free trial, then renew automatically at the displayed price unless canceled at least 24 hours before the trial or current period ends. Payment is charged to your Apple ID. Manage or cancel in App Store subscriptions. Lifetime plans are charged immediately as one-time purchases with no trial. Deleting the app or buying Lifetime does not cancel an existing subscription."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Las suscripciones elegibles incluyen una prueba gratuita de 7 días y luego se renuevan automáticamente al precio mostrado, a menos que se cancelen al menos 24 horas antes de que finalice la prueba o el período actual. El pago se carga a tu Apple ID . Gestionar o cancelar suscripciones en App Store . Los planes de por vida se cobran inmediatamente como compras únicas sin prueba. Eliminar la aplicación o comprar Lifetime no cancela una suscripción existente."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Les abonnements éligibles incluent un essai gratuit de 7 jours, puis se renouvellent automatiquement au prix affiché, sauf annulation au moins 24 heures avant la fin de l'essai ou de la période en cours. Le paiement est facturé sur votre Apple ID . Gérez ou annulez les abonnements dans App Store . Les forfaits à vie sont facturés immédiatement comme des achats uniques sans essai. La suppression de l'application ou l'achat de Lifetime n'annule pas un abonnement existant."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gli abbonamenti idonei includono una prova gratuita di 7 giorni, quindi si rinnovano automaticamente al prezzo visualizzato a meno che non vengano annullati almeno 24 ore prima della fine del periodo di prova o del periodo corrente. Il pagamento viene addebitato sul tuo Apple ID . Gestisci o annulla gli abbonamenti nell'App App Store . I piani a vita vengono addebitati immediatamente come acquisti una tantum senza prova. L'eliminazione dell'app o l'acquisto di Lifetime non annulla un abbonamento esistente."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "対象となるサブスクリプションには 7 日間の無料トライアルが含まれており、トライアルまたは現在の期間が終了する少なくとも 24 時間前にキャンセルしない限り、表示された価格で自動的に更新されます。お支払いはApple IDに請求されます。 App Storeのサブスクリプションを管理またはキャンセルします。生涯プランは、試用なしで 1 回限りの購入としてすぐに請求されます。アプリを削除したり、ライフタイムを購入したりしても、既存のサブスクリプションはキャンセルされません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "해당 구독에는 7일 무료 평가판이 포함되며, 평가판 또는 현재 기간이 종료되기 최소 24시간 전에 취소하지 않는 한 표시된 가격으로 자동 갱신됩니다. 결제는 Apple ID 로 청구됩니다. App Store 구독을 관리하거나 취소하세요. 평생 플랜은 평가판 없이 일회성 구매로 즉시 청구됩니다. 앱을 삭제하거나 Lifetime을 구매해도 기존 구독은 취소되지 않습니다."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In aanmerking komende abonnementen omvatten een gratis proefperiode van zeven dagen, die vervolgens automatisch wordt verlengd tegen de weergegeven prijs, tenzij ze ten minste 24 uur vóór het einde van de proefperiode of de huidige periode worden opgezegd. De betaling wordt in rekening gebracht op uw Apple ID . Beheer of annuleer abonnementen in App Store . Levenslange abonnementen worden onmiddellijk in rekening gebracht als eenmalige aankoop, zonder proefperiode. Het verwijderen van de app of het kopen van Lifetime annuleert een bestaand abonnement niet."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "As assinaturas qualificadas incluem uma avaliação gratuita de 7 dias e, em seguida, são renovadas automaticamente pelo preço exibido, a menos que sejam canceladas pelo menos 24 horas antes do término da avaliação ou do período atual. O pagamento é cobrado em seu Apple ID . Gerencie ou cancele assinaturas na App Store . Os planos vitalícios são cobrados imediatamente como compras únicas, sem avaliação. Excluir o aplicativo ou comprar o Lifetime não cancela uma assinatura existente."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "符合条件的订阅包括 7 天免费试用期，然后按显示的价格自动续订，除非在试用期或当前期限结束前至少 24 小时取消。付款将从您的Apple ID中扣除。在App Store中管理或取消订阅。终身计划作为一次性购买立即收费，无需试用。删除应用程序或购买终身不会取消现有订阅。"
+          }
+        }
+      }
+    },
+    "Family" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Familie"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Family"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Familia"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Famille"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "famiglia"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "家族"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "가족"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "familie"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Família"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "家庭"
+          }
+        }
+      }
+    },
+    "Family Lifetime" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Familienleben"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Family Lifetime"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Familiar de por vida"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Famille à vie"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vita familiare"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ファミリー向け買い切り版"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "가족 평생"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gezinsleven"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Família vitalício"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "家庭终身版"
+          }
+        }
+      }
+    },
+    "Family Sharing" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Familienfreigabe"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Family Sharing"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "En familia"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Partage familial"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In famiglia"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ファミリー共有"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "가족 공유"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delen met gezin"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Compartilhamento Familiar"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "家人共享"
+          }
+        }
+      }
+    },
+    "Family Sharing is active" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Family Sharing ist aktiv"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Family Sharing is active"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Family Sharing está activo"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Family Sharing est actif"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Family Sharing è attiva"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Family Sharingが有効になっています"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Family Sharing 활성화되었습니다."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Family Sharing is actief"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Family Sharing está ativo"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Family Sharing已激活"
+          }
+        }
+      }
+    },
+    "Family Sharing is enabled for this Apple ID." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Für diese Apple ID ist Family Sharing aktiviert."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Family Sharing is enabled for this Apple ID."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Family Sharing está habilitado para este Apple ID ."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Family Sharing est activé pour cet Apple ID ."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Family Sharing è abilitata per questo Apple ID ."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このApple IDではFamily Sharingが有効になっています。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이 Apple ID 에 대해 Family Sharing 활성화되었습니다."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Family Sharing is ingeschakeld voor deze Apple ID ."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Family Sharing está ativado para este Apple ID ."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此Apple ID已启用Family Sharing 。"
+          }
+        }
+      }
+    },
+    "Family Sharing is not active" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Family Sharing ist nicht aktiv"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Family Sharing is not active"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Family Sharing no está activo"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Family Sharing n'est pas actif"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Family Sharing non è attiva"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Family Sharingアクティブではありません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Family Sharing 활성화되어 있지 않습니다."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Family Sharing is niet actief"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Family Sharing não está ativo"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Family Sharing未激活"
+          }
+        }
+      }
+    },
+    "Family Weekly" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Familienwoche"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Family Weekly"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Familiar semanal"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Famille · hebdomadaire"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Settimanale per famiglie"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ファミリー・週額"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "패밀리 위클리"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Familie wekelijks"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Familiar semanal"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "家庭周订阅"
+          }
+        }
+      }
+    },
+    "Family Yearly" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Familienjahrbuch"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Family Yearly"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Familiar anual"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Famille · annuel"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Famiglia annuale"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ファミリー・年額"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "가족 연간"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Familie Jaarlijks"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Familiar anual"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "家庭年订阅"
+          }
+        }
+      }
+    },
+    "Family upgrade available" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Familien-Upgrade verfügbar"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Family upgrade available"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Actualización familiar disponible"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Surclassement familial disponible"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Upgrade familiare disponibile"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ファミリーアップグレードも可能"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "가족 업그레이드 가능"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Familie-upgrade beschikbaar"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Atualização familiar disponível"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "家庭可升级"
+          }
+        }
+      }
+    },
+    "Full access active" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vollzugriff aktiv"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Full access active"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Acceso completo activo"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Accès complet actif"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Accesso completo attivo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "フルアクセスが有効です"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "전체 액세스 활성"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Volledige toegang actief"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Acesso total ativo"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "完全访问激活"
+          }
+        }
+      }
+    },
+    "Grandfathered Full Access active" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Grandfathered Vollzugriff aktiv"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Grandfathered Full Access active"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Acceso completo protegido activo"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Accès complet avec droits acquis actif"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Accesso completo nonno attivo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "祖父のフルアクセスがアクティブです"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "할아버지 전체 액세스 활성"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Grootvader Volledige toegang actief"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Acesso total adquirido ativo"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "祖父完全访问激活"
+          }
+        }
+      }
+    },
+    "Individual" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Person"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Individual"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Individual"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Individuel"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Individuale"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "個人"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "개인"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Individueel"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Individual"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "个人"
+          }
+        }
+      }
+    },
+    "Individual and Apple Family Sharing plans" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Einzel- und Apple Family Sharing -Pläne"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Individual and Apple Family Sharing plans"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Planes individuales y Apple Family Sharing"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Forfaits individuels et Apple Family Sharing"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Piani individuali e Apple Family Sharing"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "個人およびApple Family Sharingプラン"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "개인 및 Apple Family Sharing 계획"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Individuele abonnementen en Apple Family Sharing -abonnementen"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Planos individuais e Apple Family Sharing"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "个人和Apple Family Sharing计划"
+          }
+        }
+      }
+    },
+    "Keep Your Health Archive Growing" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sorgen Sie dafür, dass Ihr Gesundheitsarchiv wächst"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keep Your Health Archive Growing"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mantenga su archivo de salud creciendo"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gardez vos archives de santé en croissance"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mantieni il tuo archivio sanitario in crescita"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "健康アーカイブを成長させ続ける"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "건강 아카이브를 계속 성장시키세요"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zorg ervoor dat uw gezondheidsarchief groeit"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mantenha seu arquivo de saúde crescendo"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "让您的健康档案不断增长"
+          }
+        }
+      }
+    },
+    "Keep scheduled health notes running without limits" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Halten Sie geplante Gesundheitsnotizen ohne Einschränkungen am Laufen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keep scheduled health notes running without limits"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mantenga las notas de salud programadas ejecutándose sin límites"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gardez les notes de santé programmées en cours d'exécution sans limites"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mantieni le note sulla salute pianificate in esecuzione senza limiti"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "スケジュールされたヘルスノートを制限なく実行し続ける"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "예약된 건강 메모를 제한 없이 계속 실행"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Houd geplande gezondheidsnotities onbeperkt actief"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mantenha as notas de saúde programadas em execução sem limites"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "让预定的健康笔记不受限制地运行"
+          }
+        }
+      }
+    },
+    "Lifetime" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lebensdauer"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lifetime"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vida"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Durée de vie"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tutta la vita"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "一生"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "일생"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Levensduur"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vida"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "寿命"
+          }
+        }
+      }
+    },
+    "Manage Subscriptions" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abonnements verwalten"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Manage Subscriptions"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Administrar suscripciones"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gérer les abonnements"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gestisci abbonamenti"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "サブスクリプションの管理"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "구독 관리"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Beheer abonnementen"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gerenciar assinaturas"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "管理订阅"
+          }
+        }
+      }
+    },
+    "Pay once and share with up to 5 family members" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zahlen Sie einmal und teilen Sie es mit bis zu 5 Familienmitgliedern"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pay once and share with up to 5 family members"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Paga una vez y comparte con hasta 5 miembros de la familia"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Payez une fois et partagez avec jusqu'à 5 membres de la famille"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Paga una volta e condividi con un massimo di 5 membri della famiglia"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "一度の支払いで最大 5 人の家族と共有できます"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "한 번만 결제하면 최대 5명의 가족 구성원과 공유할 수 있습니다."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Betaal één keer en deel met maximaal 5 gezinsleden"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pague uma vez e compartilhe com até 5 familiares"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "一次付款即可与最多 5 名家庭成员共享"
+          }
+        }
+      }
+    },
+    "Pay once for unlimited private exports" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zahlen Sie einmal für unbegrenzte private Exporte"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pay once for unlimited private exports"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pague una vez por exportaciones privadas ilimitadas"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Payez une fois pour des exportations privées illimitées"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Paga una volta per esportazioni private illimitate"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "一度支払うだけで無制限のプライベートエクスポートが可能"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "무제한 개인 수출을 위해 한 번만 지불하세요"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Betaal één keer voor onbeperkte particuliere export"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pague uma vez por exportações privadas ilimitadas"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "一次性支付无限量私人出口"
+          }
+        }
+      }
+    },
+    "Private local files. Choose where your exports go." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Private lokale Dateien. Wählen Sie, wohin Ihre Exporte gehen."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Private local files. Choose where your exports go."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Archivos locales privados. Elija a dónde van sus exportaciones."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fichiers locaux privés. Choisissez où vont vos exportations."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "File locali privati. Scegli dove vanno le tue esportazioni."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "プライベートローカルファイル。輸出先を選択してください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "개인 로컬 파일. 수출품이 어디로 갈지 선택하세요."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Privé lokale bestanden. Kies waar uw export naartoe gaat."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Arquivos locais privados. Escolha para onde vão suas exportações."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "私有本地文件。选择您的出口目的地。"
+          }
+        }
+      }
+    },
+    "Purchases & Family" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Einkäufe & Familie"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Purchases & Family"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Compras y familia"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Achats et famille"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Acquisti e famiglia"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "購入とファミリー"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "구매 및 가족"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aankopen en familie"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Compras e Família"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "购买与家庭"
+          }
+        }
+      }
+    },
+    "Refresh windows are best effort; iOS may delay background runs. Each run exports the profile's metrics and formats to its own destination. Scheduled exports require an active trial or subscription, or Lifetime access." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aktualisierungszeitfenster werden nach Möglichkeit eingehalten; iOS kann Hintergrundausführungen verzögern. Jeder Durchlauf exportiert die Messwerte und Formate des Profils an dessen eigenes Ziel. Geplante Exporte erfordern eine aktive Testphase oder ein aktives Abo oder lebenslangen Zugriff."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Se intentará respetar los intervalos de actualización, pero iOS puede retrasar las ejecuciones en segundo plano. Cada ejecución exporta las métricas y los formatos del perfil a su propio destino. Las exportaciones programadas requieren una prueba o suscripción activa, o acceso de por vida."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Les créneaux d’actualisation ne sont pas garantis ; iOS peut retarder les exécutions en arrière-plan. Chaque exécution exporte les mesures et formats du profil vers sa propre destination. Les exports planifiés nécessitent une période d’essai ou un abonnement en cours de validité, ou un accès à vie."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gli intervalli di aggiornamento non sono garantiti: iOS può ritardare le esecuzioni in background. Ogni esecuzione esporta le metriche e i formati del profilo nella relativa destinazione. Le esportazioni programmate richiedono una prova o un abbonamento attivo, oppure l’accesso a vita."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "更新時間帯は目安です。iOSによりバックグラウンド実行が遅れることがあります。各実行では、プロファイルの指標と形式で、そのプロファイルの保存先にエクスポートします。定期エクスポートには、有効なトライアルまたはサブスクリプション、もしくは永久アクセスが必要です。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "새로 고침 시간은 최대한 준수되지만 iOS에서 백그라운드 실행을 지연시킬 수 있습니다. 각 실행은 프로필의 지표와 형식을 해당 대상으로 내보냅니다. 예약 내보내기에는 활성 체험판이나 구독 또는 평생 이용 권한이 필요합니다."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verversmomenten zijn niet gegarandeerd; iOS kan uitvoeringen op de achtergrond uitstellen. Elke uitvoering exporteert de meetgegevens en indelingen van het profiel naar de eigen bestemming. Geplande exports vereisen een actieve proefperiode of een actief abonnement, of levenslange toegang."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "As janelas de atualização não são garantidas; o iOS pode atrasar execuções em segundo plano. Cada execução exporta as métricas e os formatos do perfil para seu próprio destino. As exportações agendadas exigem um período de teste ou uma assinatura ativa, ou acesso vitalício."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "系统会尽量在刷新时段内执行，但 iOS 可能延迟后台运行。每次运行都会将该配置的指标按所选格式导出到其各自的目标位置。定时导出需要有效的试用或订阅，或终身访问权限。"
+          }
+        }
+      }
+    },
+    "Retrying this export requires an active trial or subscription, or Lifetime access." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Um diesen Export erneut zu versuchen, benötigst du eine aktive Testphase oder ein aktives Abo oder lebenslangen Zugriff."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Para reintentar esta exportación, necesitas una prueba o suscripción activa, o acceso de por vida."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pour réessayer cet export, vous devez disposer d’une période d’essai ou d’un abonnement en cours de validité, ou d’un accès à vie."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Per riprovare questa esportazione è necessaria una prova o un abbonamento attivo, oppure l’accesso a vita."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このエクスポートを再試行するには、有効なトライアルまたはサブスクリプション、もしくは永久アクセスが必要です。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이 내보내기를 다시 시도하려면 활성 체험판이나 구독 또는 평생 이용 권한이 필요합니다."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Om deze export opnieuw te proberen, heb je een actieve proefperiode of een actief abonnement, of levenslange toegang nodig."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Para tentar esta exportação novamente, é necessário um período de teste ou uma assinatura ativa, ou acesso vitalício."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重试此导出需要有效的试用或订阅，或终身访问权限。"
+          }
+        }
+      }
+    },
+    "This version does not collect custom usage analytics or advertising attribution." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diese Version erfasst keine eigenen Nutzungsanalysen oder Werbezuordnungen."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This version does not collect custom usage analytics or advertising attribution."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Esta versión no recopila análisis de uso propios ni atribución publicitaria."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cette version ne collecte aucune analyse d’utilisation interne ni donnée d’attribution publicitaire."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Questa versione non raccoglie analisi di utilizzo proprietarie né dati di attribuzione pubblicitaria."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このバージョンは独自の利用状況分析データや広告アトリビューションデータを収集しません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이 버전은 자체 사용 분석이나 광고 기여도 데이터를 수집하지 않습니다."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deze versie verzamelt geen eigen gebruiksanalyses of advertentietoewijzing."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Esta versão não coleta análises de uso próprias nem dados de atribuição de publicidade."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此版本不收集自定义使用情况分析或广告归因数据。"
+          }
+        }
+      }
+    },
+    "Unlimited automated daily notes" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unbegrenzte automatisierte tägliche Notizen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unlimited automated daily notes"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Notas diarias automatizadas ilimitadas"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Notes quotidiennes automatisées illimitées"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Note giornaliere automatizzate illimitate"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "無制限の自動化された毎日のメモ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "무제한 자동 일일 메모"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Onbeperkt geautomatiseerde dagelijkse notities"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Notas diárias automatizadas ilimitadas"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无限制的自动每日笔记"
+          }
+        }
+      }
+    },
+    "Unlock Full Access" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Schalten Sie den Vollzugriff frei"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unlock Full Access"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Desbloquear acceso completo"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Débloquez l'accès complet"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sblocca l'accesso completo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "フルアクセスのロックを解除する"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "전체 액세스 잠금 해제"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ontgrendel volledige toegang"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Desbloquear acesso total"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "解锁完全访问权限"
+          }
+        }
+      }
+    },
+    "Upgrade pricing for existing Lifetime owners" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Upgrade-Preise für bestehende Lifetime-Besitzer"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Upgrade pricing for existing Lifetime owners"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Precios de actualización para propietarios existentes de Lifetime"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tarif de mise à niveau pour les propriétaires à vie existants"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Prezzi di aggiornamento per i proprietari a vita esistenti"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "既存のライフタイム所有者向けのアップグレード価格"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "기존 평생 소유자를 위한 업그레이드 가격"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Upgradeprijzen voor bestaande levenslange eigenaren"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Preços de atualização para proprietários vitalícios existentes"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "现有终身所有者的升级定价"
+          }
+        }
+      }
+    },
+    "Upgrade to Family Lifetime" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Upgrade auf Family Lifetime"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Upgrade to Family Lifetime"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mejorar a Familiar de por vida"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Passer à Famille à vie"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Passa a Family Lifetime"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ファミリー向け買い切り版にアップグレード"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "가족 평생으로 업그레이드"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Upgrade naar gezinsleven"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fazer upgrade para Família vitalício"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "升级至家庭终身版"
+          }
+        }
+      }
+    },
+    "View how purchases, scheduling, and optional services handle data." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Erfahre, wie Käufe, Zeitpläne und optionale Dienste Daten verarbeiten."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "View how purchases, scheduling, and optional services handle data."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Consulta cómo las compras, la programación y los servicios opcionales gestionan los datos."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Découvrez comment les achats, la planification et les services facultatifs traitent les données."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Scopri come acquisti, programmazione e servizi facoltativi gestiscono i dati."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "購入、スケジュール、オプションサービスによるデータの取り扱いを確認します。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "구매, 예약 및 선택적 서비스가 데이터를 처리하는 방식을 확인하세요."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bekijk hoe aankopen, planning en optionele diensten gegevens verwerken."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Veja como compras, agendamento e serviços opcionais tratam os dados."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "查看购买、定时任务和可选服务如何处理数据。"
+          }
+        }
+      }
+    },
+    "You have unlimited exports." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sie haben unbegrenzte Exporte."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You have unlimited exports."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tienes exportaciones ilimitadas."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vous disposez d’exportations illimitées."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hai esportazioni illimitate."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "無制限にエクスポートできます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "내보내기는 무제한입니다."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Je hebt onbeperkte exportmogelijkheden."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Você tem exportações ilimitadas."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "您有无限的出口。"
+          }
+        }
+      }
+    },
+    "Your existing permanent access remains valid" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ihr bestehender Dauerzugang bleibt weiterhin gültig"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your existing permanent access remains valid"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Su acceso permanente existente sigue siendo válido"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Votre accès permanent existant reste valable"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Il tuo accesso permanente esistente rimane valido"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "既存の永久アクセスは引き続き有効です"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "기존 영구 액세스는 계속 유효합니다."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Uw bestaande permanente toegang blijft geldig"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Seu acesso permanente existente permanece válido"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "您现有的永久访问权限仍然有效"
+          }
+        }
+      }
+    },
+    "Your health archive access is active" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ihr Zugriff auf das Gesundheitsarchiv ist aktiv"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your health archive access is active"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "El acceso a su archivo de salud está activo"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Votre accès aux archives de santé est actif"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Il tuo accesso all'archivio sanitario è attivo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "健康アーカイブへのアクセスは有効です"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "귀하의 건강 기록 보관소 액세스가 활성화되었습니다"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Uw toegang tot het gezondheidsarchief is actief"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Seu acesso ao arquivo de saúde está ativo"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "您的健康档案访问权限已激活"
+          }
+        }
+      }
+    },
+    "Your health archive has unlimited exports. Upgrade to Family Lifetime at upgrade pricing if you want to share Health.md with up to 5 family members." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ihr Gesundheitsarchiv verfügt über unbegrenzte Exporte. Upgraden Sie zum Upgrade-Preis auf Family Lifetime, wenn Sie Health.md mit bis zu 5 Familienmitgliedern teilen möchten."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your health archive has unlimited exports. Upgrade to Family Lifetime at upgrade pricing if you want to share Health.md with up to 5 family members."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Su archivo de salud tiene exportaciones ilimitadas. Actualice a Family Lifetime con un precio de actualización si desea compartir Health.md con hasta 5 miembros de la familia."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vos archives de santé ont des exportations illimitées. Passez à Family Lifetime au tarif de mise à niveau si vous souhaitez partager Health.md avec jusqu'à 5 membres de la famille."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Il tuo archivio sanitario ha esportazioni illimitate. Passa a Family Lifetime al prezzo di aggiornamento se desideri condividere Health.md con un massimo di 5 membri della famiglia."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "健康アーカイブは無制限にエクスポートできます。 Health.md最大 5 人の家族と共有したい場合は、アップグレード価格で Family Lifetime にアップグレードしてください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "건강 아카이브에는 무제한으로 내보낼 수 있습니다. 최대 5명의 가족 구성원과 Health.md 공유하려면 업그레이드 가격으로 Family Lifetime으로 업그레이드하세요."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Uw gezondheidsarchief heeft onbeperkte exportmogelijkheden. Upgrade naar Family Lifetime tegen upgradeprijzen als u Health.md met maximaal 5 gezinsleden wilt delen."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Seu arquivo de saúde tem exportações ilimitadas. Faça upgrade para Family Lifetime com preço de upgrade se quiser compartilhar Health.md com até 5 membros da família."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "您的健康档案可以无限导出。如果您想与最多 5 名家庭成员共享Health.md ，请按升级价格升级到家庭终身版。"
+          }
+        }
       }
     }
   },

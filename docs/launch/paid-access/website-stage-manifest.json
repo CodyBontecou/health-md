@@ -1,0 +1,170 @@
+{
+  "apps/website/index.html": {
+    "before_sha256": "3a6ede88a25cff9f21ca95c723250c1f004b7174f3b615a67c231d106e337e0c",
+    "staged_sha256": "6638b3da2d930dab37c38470ab8317390ee1b3cef26644f4141a4454fadafb86"
+  },
+  "apps/website/apple-health-export/index.html": {
+    "before_sha256": "acb7d5c12f6f5174ed02c0b6f79d862779a6c2ce5d01c4b207dfca1ba504b22e",
+    "staged_sha256": "1c46ede264bbf1a5a230601d8f40d49f45be7a32ae5c96675ad780d6a3d54b08"
+  },
+  "apps/website/apple-health-to-csv/index.html": {
+    "before_sha256": "d84f765e389857809a59c9004e545ef06a20710c8f41ad96da55053a70b469fe",
+    "staged_sha256": "bb2889c64a7e799f9feea0a409037f84aebb0f36389a0d9cc6b8e876b551db6a"
+  },
+  "apps/website/about/index.html": {
+    "before_sha256": "71297f708441917bd9c695f97c14f1be1f2522b13fd6673cf8b071f0ae6421f5",
+    "staged_sha256": "75d2bf68ccdaffb2df09de6bf88470c29c68118ef0adfffb7e949226707e561c"
+  },
+  "apps/website/health-connect-export/index.html": {
+    "before_sha256": "d5353589466d91c6e465440fbbd4213720b61d3949c81be054228072d77bc025",
+    "staged_sha256": "ea620c599b68dcfc6feb313fa20bce18ab862ec8748aed0d728fd8fcdb1b2d16"
+  },
+  "apps/website/content/blog/analyze-apple-health-with-claude.md": {
+    "before_sha256": "d2005a7c00a4dc471f0a986f5851ef86e47e7792e6d603f544c5f62f4b79ff1d",
+    "staged_sha256": "331d6fe2c3602317d4215ded8edf04a75a7a3ddbd5a77e474783884735aa6a87"
+  },
+  "apps/website/content/blog/export-apple-health-data-to-obsidian.md": {
+    "before_sha256": "9fc7069037e98fb727a73c1854a3ef1963fe8d0d3970062a3952279ac1601686",
+    "staged_sha256": "d1974f65db4d9eeb072c4823b5164b589169c269dce21c2989ce92c79e1f0eda"
+  },
+  "apps/website/content/blog/health-md-for-macos.md": {
+    "before_sha256": "1bc7b13d0887b4cc648907eb596ec9276f104b3b20c8fffdd63771ce166d156b",
+    "staged_sha256": "8990763704bf9e26fcd4c742ac091d191ea57886ec3e1787152586df2d475b1a"
+  },
+  "apps/website/content/blog/export-apple-health-hrv.md": {
+    "before_sha256": "2ffd6ab9ddaaf3ed4ccc6e9907b851c0d4417b03bc5d202b2e0584be21421dbe",
+    "staged_sha256": "158a8c3b1b92c310caced43b7c6d07c3140b3a8c97a22f1f8141193b2e99c2f0"
+  },
+  "apps/website/content/blog/apple-health-to-python.md": {
+    "before_sha256": "533dff9fcc8a0482249cfb30a438440ace23a33d0ebd03849ba231c2f8f56052",
+    "staged_sha256": "22d6fc133fdc374af54500f9b4d98c9d7360e98e22503bb8144ceb224f4aaf90"
+  },
+  "apps/website/content/blog/apple-health-to-google-sheets.md": {
+    "before_sha256": "99f6d4df17436b30e269fa37a589d7d7853b287f0f3ab9ef5cc6d2428ff1a368",
+    "staged_sha256": "06599eae11e34940911dcce4552e3f7aaa680140b41b28c4b4eb5ecb122012aa"
+  },
+  "apps/website/content/blog/export-apple-health-sleep-data.md": {
+    "before_sha256": "fc48fe4f7bb24802dc8d5a4c5401682d844a06e83d935f655cd75196ffc72e3f",
+    "staged_sha256": "535113ec6daddb42b2ab9202dae1da66ff517b4a7965426c2b9940abc3da9dd4"
+  },
+  "apps/website/content/blog/export-apple-health-workouts.md": {
+    "before_sha256": "92ae2481236e3100e21b2f673f23cfbfe64dded1b988accd9d6019a945ec1e00",
+    "staged_sha256": "a09e1d853f069cc24055527e013be560558399eb2b715c61b347536d3782b950"
+  },
+  "apps/website/content/blog/health-md-vs-health-auto-export.md": {
+    "before_sha256": "2121612497edc8db8d0b48771d14eb1ce10a492925e0712513311cae994204ea",
+    "staged_sha256": "ee6656cc9942b2a619c46cabefa6f4b369fa2fc94cade3f38a962a652a18a7b1"
+  },
+  "apps/website/content/blog/export-apple-health-heart-rate.md": {
+    "before_sha256": "18eb41326df2432a4288ccc82098dc2a4531fe3c88230dd7979986b0c84bb828",
+    "staged_sha256": "2c83a800f7c7e3be2588df31d2112bd46d37739d8c6aca870e5a32fd6b98e7b1"
+  },
+  "apps/website/content/blog/apple-health-to-excel.md": {
+    "before_sha256": "a9451b39fc4717e83963feb5bea55d0dda7f78a9e6970ce76e254ddc2ae9b536",
+    "staged_sha256": "b16e536f641d86dcb6a134a5d2afbd1f4d3d7f8459d946abd3d6a49c14d20e14"
+  },
+  "apps/website/content/blog/export-apple-health-steps-data.md": {
+    "before_sha256": "c6e810a5374fdb39b1518acea06e48c499515dcaaf0b9a9a02c7a438203c340a",
+    "staged_sha256": "0f3413f088d12ad2fd1c512cb13436b6e83f838f34348f26c5259b0d21d55380"
+  },
+  "apps/website/content/blog/export-health-connect-to-obsidian.md": {
+    "before_sha256": "fea8f788aa250b638e7be357a725d09b1d52c77486974f22becfb9c1dfd04523",
+    "staged_sha256": "7bfd19170deb6f158b8ad7cc286cad11f92953873df6d8146c54327a3d682deb"
+  },
+  "apps/website/content/blog/apple-health-to-chatgpt.md": {
+    "before_sha256": "00d7a795e72e341be5651aa3f03b00fd20262c6e42631794384fc73d9307a4c4",
+    "staged_sha256": "1e228f6204b0e099bb6862928255c4464408f44a3a2e4c427b21d2f6016c3f49"
+  },
+  "apps/website/content/blog/export-health-data-without-the-cloud.md": {
+    "before_sha256": "293ae5861ba415dcff047c586de11d321e99e6c918e301cd6dd78daa418c668a",
+    "staged_sha256": "22759eca2d643f716e437c0e968d8455c011be0f3eab9f357b24295d44adc969"
+  },
+  "apps/website/terms-of-service.html": {
+    "before_sha256": "025fc97980f229d0effc3f3631d2f7fe5d20e517c35d8ccf506eae0617c9d6f6",
+    "staged_sha256": "94aad96cde864b57d3631d64a54b2cdbadef0cc0cb86e4c91d5bcc0734bd2fa6"
+  },
+  "apps/website/i18n/messages/en.json": {
+    "before_sha256": "516104018887e9ff3f16d3f9235f853f9d26081bea5ae0fe0eb4873385c29d5a",
+    "staged_sha256": "45b00d06bfdbfc207db0ded6377090d6aa7354f99d9423d1c28a50217afc454e"
+  },
+  "apps/website/i18n/messages/de.json": {
+    "before_sha256": "69ea7e6083f77b5f56f068767f62f6ba7ec068bc59654d4e924e2a804f019d3f",
+    "staged_sha256": "ba95877235ff00a3504b3512530714e58ee15ea5233f501216c2427cb72e3414"
+  },
+  "apps/website/de/terms-of-service.html": {
+    "before_sha256": "f64cb1451bb58268d62cbbfcd65f7326e5d6ee090ca8087f44ebe714f6d42514",
+    "staged_sha256": "bfb27ee6cbe7020e7287188f84996321a9d6dc556e3f8b3af6c23c40c3b97e91"
+  },
+  "apps/website/i18n/messages/es.json": {
+    "before_sha256": "6ed3f94ab91cf008a886fd497dc79f7886c00835034518516bf14338ae470a5d",
+    "staged_sha256": "028ca98d9869bce20da4d8f14a990e1c0546176d5f0d46919c584ac1a8c3add9"
+  },
+  "apps/website/es/terms-of-service.html": {
+    "before_sha256": "0a264154c7b0b533fbaafefc081dc676ef6431789b66fd68424dd3beb47313f7",
+    "staged_sha256": "e053c5b0ac2d24cad03ea65480b3d8abb5b9585db06067fd7828c70b199169a2"
+  },
+  "apps/website/i18n/messages/fr.json": {
+    "before_sha256": "fea384548bf339961709e23c5919b87a6e5b326be5687a0566d96e25900e2f02",
+    "staged_sha256": "35311cb728300a98f1955810adc79cce2f22648a5285449e7ac5ab0c9c5aa62c"
+  },
+  "apps/website/fr/terms-of-service.html": {
+    "before_sha256": "3a09539be26c09e014165b01353f0a926cdf99946dc6868689293cc0d3ec25aa",
+    "staged_sha256": "c807d0147be99eab812083dc553cac0a22d89b75646c03e0f269d036d6daa743"
+  },
+  "apps/website/i18n/messages/it.json": {
+    "before_sha256": "07510b9e8b4a87faa0e111812bd01b688bcbdb020b86cfde420be1bab147aad8",
+    "staged_sha256": "de6b3a0a8903e2c7a62717114cf68e4decaf13a28bd8ab49caf80cb7f0f3711d"
+  },
+  "apps/website/it/terms-of-service.html": {
+    "before_sha256": "952eee3e9494cd9b437df29dfd84b20a0ec4fec4829e74a47b18494f36e23f24",
+    "staged_sha256": "5749e5147fdae9a28ba9736dece429a51b1853bc35ff6c7b3b6f34f957da44d8"
+  },
+  "apps/website/i18n/messages/ja.json": {
+    "before_sha256": "a0017c60d6bb8dfe183f3a85f1da904b9a8a32d28d9d6b21a7ad497c846136b2",
+    "staged_sha256": "9e3425af3eb4ff6195b21194d1700b8367b37816de7902175d9f3c33a2eddd12"
+  },
+  "apps/website/ja/terms-of-service.html": {
+    "before_sha256": "c733def2282345b82f5960cf293f8628babbbf112583bfa888884295c6e9dd98",
+    "staged_sha256": "d570e032cd78f190f196b031b7efca114323da2f80635e3adec5eb957cc412f3"
+  },
+  "apps/website/i18n/messages/ko.json": {
+    "before_sha256": "89c8143873d581bb339be4e0970d8b85a0a153ce35c61ccb6fbddc170b954611",
+    "staged_sha256": "7911a377bc319f69d0d3c7ae52b4221932814b2f9e598265137b1bcce52ae539"
+  },
+  "apps/website/ko/terms-of-service.html": {
+    "before_sha256": "789f71022ca3b65cf001a75a234bcabbfa9cc1f3138d5baa5b11073c6ff50987",
+    "staged_sha256": "4edcdbc06da9e9e8e74050e527304d72561a576d19dc1ab162b52e5ce4bafb52"
+  },
+  "apps/website/i18n/messages/nl.json": {
+    "before_sha256": "4698f7413bde200e35b3432d2b969a98d6e6437984baa7320de7866561bbcec5",
+    "staged_sha256": "51960b96481ace7516ef2f802877acfcbaaa7486c45017de8fe896e46f5a7349"
+  },
+  "apps/website/nl/terms-of-service.html": {
+    "before_sha256": "ea6483078596fd2b30053a56b7ee58225200ecb012031f14054562531b5d54a3",
+    "staged_sha256": "2c6b9cdc64ec9f3ab46438d77368dc933700046eabc13c5466967fde456cde19"
+  },
+  "apps/website/i18n/messages/pt-br.json": {
+    "before_sha256": "06e19507ba4f9133d404f5d52781078e8f80468afb0ccbd4cb00a4bdfa4403c2",
+    "staged_sha256": "7982e7191e8f7b06c6180c45329532217d9aa5de5e7c7dd160f252ee5ac7b11d"
+  },
+  "apps/website/pt-br/terms-of-service.html": {
+    "before_sha256": "d9885dfac8b04a8fb317ca0f6425aec58601d37083624c426fe1921087c39a06",
+    "staged_sha256": "0aeb6e2c72dffb1041919c980f233a842057e354062064381b776b26675ec97b"
+  },
+  "apps/website/i18n/messages/zh-hans.json": {
+    "before_sha256": "35145456dfd84d19299c7814c69e18784bd80b2502b39be188667436c970164f",
+    "staged_sha256": "a75f9eb240b39ac591cb82f30b93ad0fc26635649c7bb62c8356734c8c62b5f1"
+  },
+  "apps/website/zh-hans/terms-of-service.html": {
+    "before_sha256": "0fd04f06fc52b98569d72870d715e1a14a0910f8e1345287a1d560c8ab4b1c97",
+    "staged_sha256": "38b317e7c10d4d1bf0bdb1398a3495f45f1010cb84e2f89f0801b8a413fd3d59"
+  },
+  "apps/website/privacy-policy.html": {
+    "before_sha256": "a8a65dcfa5f846f989a6ed02fc06af859caa15018b458f7deaeff11b18e415ce",
+    "staged_sha256": "6fdf5e8a9d0020487df8655b549db07698cf5c7722e3aa8ef9c3bc79da2aca24"
+  },
+  "apps/website/es/privacy-policy.html": {
+    "before_sha256": "38e7d0b2f19fe7fbf97dc0024e458ff4823ad7676fe22568f7dff3995a2bbb7b",
+    "staged_sha256": "4a1716366b17b3a257f0b016dda270632d4a7a3f19ceae1d7a27e43a8245802f"
+  }
+}

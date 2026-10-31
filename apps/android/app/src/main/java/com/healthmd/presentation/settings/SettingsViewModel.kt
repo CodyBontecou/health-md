@@ -69,7 +69,7 @@ class SettingsViewModel @Inject constructor(
         }
         if (!distributionPolicy.fullAccessIncluded) {
             viewModelScope.launch {
-                entitlementRepository.isUnlocked
+                entitlementRepository.isPermanentlyUnlocked
                     .filter { it }
                     .collect { settingsRepository.setPurchased(true) }
             }

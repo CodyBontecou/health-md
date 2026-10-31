@@ -220,7 +220,7 @@ final class ExportPreviewDisplayContentTests: XCTestCase {
 
     @MainActor
     func testPreviewSkipsProviderFetchWhenPolicyExcludesIt() async {
-        let cases: [(PricingAnalyticsExportTargetType, Bool, Bool, Bool)] = [
+        let cases: [(ExportPreviewTargetType, Bool, Bool, Bool)] = [
             (.apiEndpoint, true, true, true),
             (.agentDataGateway, true, true, true),
             (.localFile, false, true, true),

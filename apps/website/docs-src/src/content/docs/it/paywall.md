@@ -1,30 +1,28 @@
 ---
-title: "Sblocco e paywall"
-description: "Comprendi le 5 azioni gratuite, i promemoria non bloccanti, gli acquisti Lifetime e il ripristino StoreKit."
+title: "Piani, prove e ripristino"
+description: "Accesso settimanale, annuale e a vita, prove idonee di sette giorni, Family Sharing e ripristino."
 ---
 
-Health.md include 5 azioni di esportazione completate prima di richiedere Full Access. Un’azione può scrivere più giorni e formati. Esportazioni manuali, pianificate, Comandi rapidi e dirette condividono il contatore quando previsto.
+Questa guida descrive la versione del telefono abilitato all'abbonamento. La preparazione del negozio non è un rilascio pubblico; le versioni distribuite precedenti possono mostrare la precedente indennità di libera esportazione. L'app installata e la conferma dello store mostrano l'offerta disponibile.
 
-## Quando appare un’offerta
+## Accesso prima della configurazione
 
-- La configurazione iniziale non include un paywall.
-- Dopo la prima anteprima reale può apparire una sola offerta ignorabile.
-- Dopo la prima esportazione gratuita completata, una guida permette di rivedere una pianificazione giornaliera senza attivarla.
-- Dopo la terza, un’offerta a vita ignorabile mostra due azioni gratuite rimanenti. Il limite è di cinque azioni completate.
-- Dopo 5 azioni, la successiva esportazione conteggiata è bloccata.
+Su iPhone e iPad , gli utenti senza accesso visualizzano un paywall obbligatorio prima della configurazione. Inizia una prova idonea, iscriviti, acquista Lifetime o ripristina un acquisto esistente. In questa versione non è prevista alcuna franchigia di esportazione locale gratuita o un aumento di vendita di prima/terza esportazione ignorabile.
 
-Ignorare le prime offerte non consuma azioni.
+## Piani e prove
 
-## Opzioni Lifetime
+Individuale e Apple Family Sharing offrono ciascuno accesso settimanale, annuale e a vita. Gli abbonamenti idonei includono una prova gratuita di 7 giorni, quindi si rinnovano automaticamente al prezzo e all'intervallo visualizzati. Apple determina l'idoneità; la reinstallazione o la modifica dei piani non garantisce un'altra prova. La durata viene addebitata immediatamente una volta e non prevede prova o rinnovo automatico.
 
-StoreKit 2 offre acquisti una tantum senza abbonamento: **Individual Lifetime**, **Family Lifetime** e upgrade famiglia per proprietari idonei. Fa fede il prezzo localizzato mostrato da Apple. Family Lifetime dipende dalla Condivisione acquisti Apple.
+Family Sharing condivide l'accesso alle funzionalità con un massimo di altri cinque membri della famiglia idonei, non dati o file sanitari. Google Play offre solo l'accesso individuale. Il compagno Mac e la build F-Droid includono l'accesso senza fatturazione. Gli acquisti non vengono trasferiti tra negozi.
 
-**Ripristina acquisto** aggiorna le transazioni dell’Apple ID. Per Famiglia verifica ID, condivisione acquisti e visibilità di Health.md nella cronologia.
+## Gestisci e ripristina
 
-| Problema | Azione |
-|---|---|
-| Prezzo assente | Verifica rete/App Store e riapri l’offerta. |
-| Offerta prima dell’azione 5 | È un promemoria ignorabile, non il blocco finale. |
-| Pianificazione in pausa | Acquista o ripristina e usa il normale recupero. |
+Gestisci o annulla tramite l'account Apple o Google acquirente. Per gli abbonamenti Apple, annulla almeno 24 ore prima della fine del periodo di prova o del periodo e segui la conferma del negozio. L'eliminazione dell'app o l'acquisto di Lifetime non annulla un abbonamento esistente.
 
-<div class="related"><a href="/it/docs/onboarding/"><span>Inizio</span>Percorso in cinque passaggi.</a><a href="/it/docs/scheduling/"><span>Automazione</span>Quota condivisa.</a></div>
+Gli acquisti a vita esistenti e l'accesso legacy precedentemente concesso rimangono validi. Ripristina acquisto aggiorna i diritti del negozio idonei, non i file eliminati. Controlla le impostazioni Family Sharing se manca l'accesso condiviso. Il solo abbonamento non dà diritto all'upgrade scontato Family Lifetime.
+
+## Se l'accesso termina
+
+Le nuove esportazioni e impostazioni richiedono nuovamente l'accesso attivo. I file esistenti rimangono tuoi nelle destinazioni che hai scelto. Dopo aver ripristinato l'accesso, ispeziona il lavoro in sospeso e utilizza il normale percorso di ripristino. I prezzi mancanti richiedono un nuovo tentativo di catalogo; un errore del negozio non concede l'accesso.
+
+<div class="related"> <a href="/it/docs/onboarding/"> <span> Configurazione </span> Prepara il tuo archivio sanitario. </a> <a href="/it/docs/scheduling/"> <span> Automazione </span> Pianificazione e recupero delle esportazioni. </a> </div>

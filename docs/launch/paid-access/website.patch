@@ -1,0 +1,1041 @@
+--- a/apps/website/index.html
++++ b/apps/website/index.html
+@@ -55,7 +55,7 @@
+       "@type": "Offer",
+       "price": "0",
+       "priceCurrency": "USD",
+-      "description": "Android access: Google Play provides free manual exports and a lifetime purchase. F-Droid catalog publication is pending."
++      "description": "Android access: Google Play offers weekly/yearly subscriptions and Lifetime. Eligible subscriptions include a 7-day free trial. F-Droid catalog publication is pending."
+     },
+     "publisher": {
+       "@type": "Organization",
+@@ -546,7 +546,7 @@
+           <img src="assets/app-icon/icon_80x80.png" width="72" height="72" loading="lazy" decoding="async" alt="">
+         </div>
+         <h2 id="download-title">Take your health data with you.</h2>
+-        <p class="download-offer">Google Play offers free manual exports, then a one-time lifetime purchase. F-Droid catalog publication is pending.</p>
++        <p class="download-offer">Google Play offers weekly/yearly subscriptions and Lifetime. Eligible subscriptions include a 7-day trial. F-Droid catalog publication is pending.</p>
+         <div class="download-actions" aria-label="Download Health.md">
+           <a class="hero-store-badge hero-store-badge-apple" href="https://apps.apple.com/us/app/health-md/id6757763969" target="_blank" rel="noopener">
+             <img src="assets/store-badges/download-on-app-store.svg" width="120" height="40" decoding="async" alt="Download Health.md on the App Store">
+--- a/apps/website/apple-health-export/index.html
++++ b/apps/website/apple-health-export/index.html
+@@ -66,7 +66,7 @@
+             "name": "Is there a free trial?",
+             "acceptedAnswer": {
+               "@type": "Answer",
+-              "text": "The app includes 5 free export actions. After that, a one-time lifetime unlock removes the limit — Health.md does not sell a recurring consumer subscription."
++              "text": "Exports require active trial, subscription, Lifetime, or preserved permanent access. Weekly and yearly subscriptions include a 7-day trial for eligible accounts. Lifetime is a one-time purchase without a trial."
+             }
+           },
+           {
+@@ -227,7 +227,7 @@
+             <li>If Preview succeeds but saving fails, check the <a href="/docs/folder-vault/">destination folder and file provider</a>.</li>
+           </ul>
+           <p>Once the result is useful, <a href="/docs/scheduling/">set up scheduled exports</a>. iOS controls background timing; a target time is not a guaranteed run time.</p>
+-          <p><a href="https://apps.apple.com/us/app/health-md/id6757763969">Try Health.md on iPhone</a> with 5 free export actions, then a one-time lifetime unlock. One action can include multiple dates and formats.</p>
++          <p><a href="https://apps.apple.com/us/app/health-md/id6757763969">Try Health.md on iPhone</a> with weekly, yearly, or Lifetime access. Eligible subscriptions include a 7-day trial; existing purchases remain valid.</p>
+         </section>
+
+         <section class="about-section" id="privacy">
+@@ -288,7 +288,7 @@
+             </div>
+             <div>
+               <h3>Is there a free trial?</h3>
+-              <p>The app includes 5 free export actions. After that, a one-time lifetime unlock removes the limit — Health.md does not sell a recurring consumer subscription.</p>
++              <p>Exports require active trial, subscription, Lifetime, or preserved permanent access. Weekly and yearly subscriptions include a 7-day trial for eligible accounts. Lifetime is a one-time purchase without a trial.</p>
+             </div>
+             <div>
+               <h3>Does Health.md work with Android and Health Connect?</h3>
+--- a/apps/website/apple-health-to-csv/index.html
++++ b/apps/website/apple-health-to-csv/index.html
+@@ -89,7 +89,7 @@
+             "name": "Is it free?",
+             "acceptedAnswer": {
+               "@type": "Answer",
+-              "text": "The app includes 5 free export actions. One action can include multiple dates and formats. After that, a one-time lifetime unlock removes the limit — no subscription. The App Store shows your current localized purchase price."
++              "text": "Exports require active trial, subscription, Lifetime, or preserved permanent access. Choose weekly, yearly, or Lifetime. Eligible subscriptions include a 7-day trial; Lifetime has no trial. The store shows the current localized price and renewal terms."
+             }
+           }
+         ]
+@@ -123,7 +123,7 @@
+         <p class="about-eyebrow">Apple Health → CSV</p>
+         <h1 id="csv-title">Export Apple Health to CSV</h1>
+         <p class="about-value-prop"><strong>Export selected Apple Health data to CSV for Excel, Google Sheets, or Numbers. Choose metrics and dates, preview the output, and save it to your own folder.</strong></p>
+-        <p class="about-intro"><strong>5 free export actions.</strong> Then a one-time lifetime unlock for unlimited exports. No subscription.</p>
++        <p class="about-intro">Choose weekly, yearly, or Lifetime access. Eligible subscriptions include a 7-day free trial; Lifetime has no trial.</p>
+         <div class="hero-actions" role="group" aria-label="Download Health.md">
+           <a class="hero-store-badge hero-store-badge-apple" href="https://apps.apple.com/us/app/health-md/id6757763969" target="_blank" rel="noopener">
+             <img src="/assets/store-badges/download-on-app-store.svg" width="120" height="40" decoding="async" alt="Download Health.md on the App Store">
+@@ -370,7 +370,7 @@
+           <h2 id="csv-next-title">Open a sample. Export one day.</h2>
+           <p>Once the sample fits your spreadsheet, use Health.md to export your own selected metrics. Start with one day, verify the values, then choose a longer range.</p>
+           <a class="proof-button" href="https://apps.apple.com/us/app/health-md/id6757763969">Try a CSV export on iPhone <span aria-hidden="true">↗</span></a>
+-          <p>5 free export actions, then one lifetime purchase. Prefer a journal? <a href="/blog/export-apple-health-data-to-obsidian/#starter-vault">Explore the free Obsidian starter vault</a>.</p>
++          <p>Eligible subscriptions include a 7-day trial; weekly, yearly, and Lifetime options are available. Prefer a journal? <a href="/blog/export-apple-health-data-to-obsidian/#starter-vault">Explore the free Obsidian starter vault</a>.</p>
+         </section>
+
+         <section class="about-section faq-section" id="frequently-asked-questions">
+@@ -400,7 +400,7 @@
+             </div>
+             <div>
+               <h3>Is it free?</h3>
+-              <p>The app includes 5 free export actions. One action can include multiple dates and formats. After that, a one-time lifetime unlock removes the limit — no subscription. The App Store shows your current localized purchase price.</p>
++              <p>Exports require active trial, subscription, Lifetime, or preserved permanent access. Choose weekly, yearly, or Lifetime. Eligible subscriptions include a 7-day trial; Lifetime has no trial. The store shows the current localized price and renewal terms.</p>
+             </div>
+           </div>
+         </section>
+--- a/apps/website/about/index.html
++++ b/apps/website/about/index.html
+@@ -100,7 +100,7 @@
+             "name": "How much does Health.md cost?",
+             "acceptedAnswer": {
+               "@type": "Answer",
+-              "text": "The consumer apps include 5 free export actions before a one-time lifetime unlock; localized prices are shown by the App Store or Google Play. The F-Droid Android build includes Full Access, and Health.md does not sell a recurring consumer subscription."
++              "text": "The subscription-enabled iPhone/iPad and Google Play phone releases require paid access before setup/export. Choose weekly, yearly, or Lifetime. Eligible subscriptions include a 7-day trial; Lifetime has no trial. Existing purchases remain valid. Apple offers Family Sharing plans; Google Play is Individual-only. The Mac companion and F-Droid build include access without billing."
+             }
+           },
+           {
+@@ -227,8 +227,8 @@
+             </div>
+             <div>
+               <span>05</span>
+-              <h3>A lifetime purchase model with open source code</h3>
+-              <p>The consumer apps provide 5 free export actions and offer Full Access without a recurring subscription; the F-Droid build includes Full Access. Product source is published under AGPL-3.0-only and the website under MIT, so the implementation and contracts can be inspected rather than accepted as a black box.</p>
++              <h3>Subscriptions and Lifetime access with open source code</h3>
++              <p>The paid phone releases offer weekly/yearly subscriptions and Lifetime; eligible subscriptions include a 7-day trial. Existing purchases remain valid. The Mac companion and F-Droid build include access without billing. Product source is published under AGPL-3.0-only and the website under MIT, so the implementation and contracts can be inspected rather than accepted as a black box.</p>
+             </div>
+           </div>
+         </section>
+@@ -310,7 +310,7 @@
+             <div><dt>Headquarters</dt><dd>No public headquarters or storefront is listed; Health.md operates online</dd></div>
+             <div><dt>Website</dt><dd><a href="https://healthmd.app/">healthmd.app</a></dd></div>
+             <div><dt>Core Offering</dt><dd>Move authorized Apple Health and Health Connect data into user-controlled files, automations, direct clients, and bounded agent workflows</dd></div>
+-            <div><dt>Pricing</dt><dd>5 free export actions, then a one-time lifetime unlock at the localized App Store or Google Play price; F-Droid includes Full Access</dd></div>
++            <div><dt>Pricing</dt><dd>Weekly/yearly subscriptions with an eligible 7-day trial, or Lifetime without a trial; existing purchases preserved; Mac and F-Droid included access</dd></div>
+             <div><dt>Contract Terms</dt><dd>Self-serve consumer store terms; no recurring consumer subscription or long-term service contract</dd></div>
+             <div><dt>Services</dt><dd>Apple and Android apps; Markdown, CSV, JSON, Obsidian, and raw exports; scheduling; API delivery; CLI; MCP; documentation; visualizations</dd></div>
+             <div><dt>Communication</dt><dd><a href="mailto:cody@isolated.tech">Email</a>, <a href="https://github.com/CodyBontecou/health-md/issues" target="_blank" rel="noopener">GitHub Issues</a>, and <a href="https://discord.gg/jNRWSSSz4N" target="_blank" rel="noopener">Discord</a>; no guaranteed support SLA</dd></div>
+@@ -345,7 +345,7 @@
+             </div>
+             <div>
+               <h3>How much does Health.md cost?</h3>
+-              <p>The consumer apps include 5 free export actions before a one-time lifetime unlock; localized prices are shown by the App Store or Google Play. The F-Droid Android build includes Full Access, and Health.md does not sell a recurring consumer subscription.</p>
++              <p>The subscription-enabled iPhone/iPad and Google Play phone releases require paid access before setup/export. Choose weekly, yearly, or Lifetime. Eligible subscriptions include a 7-day trial; Lifetime has no trial. Existing purchases remain valid. Apple offers Family Sharing plans; Google Play is Individual-only. The Mac companion and F-Droid build include access without billing.</p>
+             </div>
+             <div>
+               <h3>Is Health.md a medical device or healthcare provider?</h3>
+--- a/apps/website/health-connect-export/index.html
++++ b/apps/website/health-connect-export/index.html
+@@ -97,7 +97,7 @@
+           "name": "Is Health.md for Android free?",
+           "acceptedAnswer": {
+             "@type": "Answer",
+-            "text": "Google Play includes free manual export actions, followed by a one-time lifetime purchase with no subscription. F-Droid catalog publication is pending. The F-Droid build includes unlimited Health Connect exports without billing. The channels use different signing keys; switching requires uninstalling and does not migrate app state or purchases."
++            "text": "The subscription-enabled Google Play phone release offers Individual weekly/yearly subscriptions and Lifetime. Eligible subscriptions include a 7-day trial, then renew automatically at the displayed price until canceled in Google Play. Lifetime is charged once with no trial. Existing permanent access remains valid. F-Droid catalog publication is pending. The F-Droid build includes unlimited Health Connect exports without billing. The channels use different signing keys; switching requires uninstalling and does not migrate app state or purchases."
+           }
+         },
+         {
+@@ -146,7 +146,7 @@
+           <p class="about-eyebrow">Health Connect → your files</p>
+           <h1 id="health-connect-title">Export Health Connect data to CSV, JSON and Markdown</h1>
+           <p class="about-value-prop">Choose the Android health metrics and dates you need. Preview the output, then save it to a folder you control or your Obsidian vault.</p>
+-          <p class="about-intro">Google Play includes <strong>free manual export actions</strong>, then a one-time lifetime purchase. No subscription.</p>
++          <p class="about-intro">Google Play offers Individual weekly/yearly subscriptions and Lifetime. Eligible subscriptions include a 7-day trial; Lifetime has no trial.</p>
+           <div class="hero-actions" role="group" aria-label="Get Health.md for Android">
+             <a class="hero-store-badge hero-store-badge-google" href="https://play.google.com/store/apps/details?id=com.healthmd.android" target="_blank" rel="noopener"><img src="/assets/store-badges/get-it-on-google-play.png" width="646" height="250" decoding="async" alt="Get Health.md on Google Play"></a>
+           </div>
+@@ -206,7 +206,7 @@
+           <p class="section-kicker">Choose your Android channel</p>
+           <h2>Google Play or F-Droid</h2>
+           <div class="about-card-grid">
+-            <div class="about-card"><h3>Google Play</h3><p>Try manual export actions for free, then unlock with one lifetime purchase through Google Play Billing. Scheduled exports require that entitlement. The store shows the current localized price.</p><a href="https://play.google.com/store/apps/details?id=com.healthmd.android">Get Health.md on Google Play</a></div>
++            <div class="about-card"><h3>Google Play</h3><p>Use an active trial, subscription, Lifetime purchase, or preserved permanent access for manual and scheduled exports through Google Play. Eligible subscriptions include a 7-day trial; Lifetime has no trial. The store shows the current localized price.</p><a href="https://play.google.com/store/apps/details?id=com.healthmd.android">Get Health.md on Google Play</a></div>
+             <div class="about-card"><h3>F-Droid build</h3><p>Catalog publication is pending. The build includes unlimited Health Connect exports and scheduling are included without billing. This channel is limited to Health Connect and does not include direct cloud-provider OAuth or Health.md telemetry.</p><a href="/docs/android/#distribution-status">F-Droid publication status</a></div>
+           </div>
+           <p>The channels use different signing keys. Switching requires uninstalling and does not migrate settings, history, purchases, credentials, or private transfer state. Exported files remain in the destination you chose.</p>
+@@ -224,7 +224,7 @@
+ <div><h3>Can I export data from my watch or another health app?</h3><p>Only records that the source app or device has made available in Health Connect can appear in this workflow. Enable Health Connect writing in that source app, let it synchronize, and check the data in Health Connect before exporting.</p></div>
+ <div><h3>Can I export more than 30 days of history?</h3><p>Older records depend on Health Connect history access, platform support, and the permissions granted to Health.md. A longer date range cannot bypass those limits or recover data that the source never wrote to Health Connect.</p></div>
+ <div><h3>Can I save to Obsidian or a synced folder?</h3><p>Yes, when Android&#x27;s folder picker exposes the destination and grants persistent write access. If your provider does not offer a writable folder, export locally and let your chosen sync tool move the files.</p></div>
+-<div><h3>Is Health.md for Android free?</h3><p>Google Play includes free manual export actions, followed by a one-time lifetime purchase with no subscription. F-Droid catalog publication is pending. The F-Droid build includes unlimited Health Connect exports without billing. The channels use different signing keys; switching requires uninstalling and does not migrate app state or purchases.</p></div>
++<div><h3>Is Health.md for Android free?</h3><p>The subscription-enabled Google Play phone release offers Individual weekly/yearly subscriptions and Lifetime. Eligible subscriptions include a 7-day trial, then renew automatically at the displayed price until canceled in Google Play. Lifetime is charged once with no trial. Existing permanent access remains valid. F-Droid catalog publication is pending. The F-Droid build includes unlimited Health Connect exports without billing. The channels use different signing keys; switching requires uninstalling and does not migrate app state or purchases.</p></div>
+ <div><h3>Does this export upload my health data to Health.md?</h3><p>This Health Connect folder workflow reads on your device and saves to the folder you choose. It does not create a Health.md server copy by default. A synced folder follows its provider&#x27;s terms. The separate optional single-owner cloud pilot retains only intentionally uploaded API exports, with no public signup and no automatic device sync.</p></div>
+ <div><h3>Are Android and Apple exports identical?</h3><p>Both platforms support CSV, JSON, Markdown, and Obsidian Bases workflows, but available records, source statistics, and export profiles differ. Android does not provide the Apple-only Lossless Health Records archive. Check the platform guide before combining exports.</p></div></div>
+         </section>
+--- a/apps/website/content/blog/analyze-apple-health-with-claude.md
++++ b/apps/website/content/blog/analyze-apple-health-with-claude.md
+@@ -24,7 +24,7 @@
+
+ <a class="button" href="https://apps.apple.com/us/app/health-md/id6757763969">Get Health.md for iPhone</a>
+
+-Health.md includes **5 free export actions**, followed by a single lifetime unlock. Manual iPhone export does not require a Mac. You will also need a Claude account for the upload steps.
++The subscription-enabled phone release offers weekly/yearly subscriptions and Lifetime. Eligible subscriptions include a 7-day trial; existing purchases remain valid. Manual iPhone export does not require a Mac. You will also need a Claude account for the upload steps.
+
+ ## Before uploading: decide what to share
+
+--- a/apps/website/content/blog/export-apple-health-data-to-obsidian.md
++++ b/apps/website/content/blog/export-apple-health-data-to-obsidian.md
+@@ -98,7 +98,7 @@
+ <a class="button" href="https://apps.apple.com/us/app/health-md/id6757763969">Export your own data with Health.md</a>
+ </div>
+
+-The app includes 5 free export actions, then a one-time lifetime unlock. The starter vault remains free.
++The subscription-enabled phone release offers weekly/yearly subscriptions and Lifetime, with a 7-day trial for eligible subscriptions. The starter vault remains free.
+
+ ### The quick workflow
+
+--- a/apps/website/content/blog/health-md-for-macos.md
++++ b/apps/website/content/blog/health-md-for-macos.md
+@@ -35,7 +35,7 @@
+ - Both Health.md apps open and able to connect. Start with nearby devices and local network access; a cellular connection alone cannot discover a nearby Mac.
+ - A writable destination folder on the Mac. This can be a local folder or a folder inside your Obsidian vault.
+
+-Health.md offers free export actions followed by a lifetime unlock. Check the installed app's purchase screen for its current allowance and local price; [purchase and restore documentation](/docs/paywall/) explains access. No Health.md account is required for this core export workflow.
++The Health.md Mac companion remains free. Paired iPhone/iPad exports require active trial, subscription, Lifetime, or preserved permanent access in the subscription-enabled phone release; [purchase and restore documentation](/docs/paywall/) explains access. No Health.md account is required for this core export workflow.
+
+ <figure>
+ <img alt="Health.md Mac sync with iPhone" decoding="async" height="750" src="/assets/screenshots/optimized/macos-sync-with-iphone-1200.webp" width="1200"/>
+--- a/apps/website/content/blog/export-apple-health-hrv.md
++++ b/apps/website/content/blog/export-apple-health-hrv.md
+@@ -24,7 +24,7 @@
+
+ <a class="button" href="https://apps.apple.com/us/app/health-md/id6757763969">Get Health.md for iPhone</a>
+
+-Health.md includes **5 free export actions**, followed by a single lifetime unlock. Manual export needs no Mac. For the native Apple XML archive and the broader export choices, see [how to export Apple Health data](/apple-health-export/).
++The subscription-enabled phone release offers weekly/yearly subscriptions and Lifetime. Eligible subscriptions include a 7-day trial; existing purchases remain valid. Manual export needs no Mac. For the native Apple XML archive and the broader export choices, see [how to export Apple Health data](/apple-health-export/).
+
+ ## Know which HRV you are exporting
+
+--- a/apps/website/content/blog/apple-health-to-python.md
++++ b/apps/website/content/blog/apple-health-to-python.md
+@@ -37,7 +37,7 @@
+
+ <a class="button" href="https://apps.apple.com/us/app/health-md/id6757763969">Get Health.md for iPhone</a>
+
+-Health.md includes 5 free export actions, followed by one lifetime unlock. A Mac is not required to export on iPhone; the Python recipe runs on a computer with Python 3 installed.
++The subscription-enabled phone release offers weekly/yearly subscriptions and Lifetime, with a 7-day trial for eligible subscriptions. A Mac is not required to export on iPhone; the Python recipe runs on a computer with Python 3 installed.
+
+ ## 2. Read the CSV contract before converting numbers
+
+--- a/apps/website/content/blog/apple-health-to-google-sheets.md
++++ b/apps/website/content/blog/apple-health-to-google-sheets.md
+@@ -36,7 +36,7 @@
+
+ <a class="button" href="https://apps.apple.com/us/app/health-md/id6757763969">Get Health.md for iPhone</a>
+
+-Health.md includes **5 free export actions**, followed by a single lifetime unlock. You do not need a Mac to create the manual iPhone export. Use a computer and a Google account for the browser-based Sheets steps below.
++The subscription-enabled phone release offers weekly/yearly subscriptions and Lifetime. Eligible subscriptions include a 7-day trial; existing purchases remain valid. You do not need a Mac to create the manual iPhone export. Use a computer and a Google account for the browser-based Sheets steps below.
+
+ ## Step 1: Export one day as CSV
+
+--- a/apps/website/content/blog/export-apple-health-sleep-data.md
++++ b/apps/website/content/blog/export-apple-health-sleep-data.md
+@@ -27,7 +27,7 @@
+
+ <a class="button" href="https://apps.apple.com/us/app/health-md/id6757763969">Get Health.md for iPhone</a>
+
+-The iPhone app includes **5 free export actions**, followed by a single lifetime unlock. For the general spreadsheet workflow, use the [Apple Health to CSV guide](/apple-health-to-csv/).
++The subscription-enabled phone release offers weekly/yearly subscriptions and Lifetime. Eligible subscriptions include a 7-day trial; existing purchases remain valid. For the general spreadsheet workflow, use the [Apple Health to CSV guide](/apple-health-to-csv/).
+
+ ## Before you start
+
+--- a/apps/website/content/blog/export-apple-health-workouts.md
++++ b/apps/website/content/blog/export-apple-health-workouts.md
+@@ -24,7 +24,7 @@
+
+ <a class="button" href="https://apps.apple.com/us/app/health-md/id6757763969">Get Health.md for iPhone</a>
+
+-Health.md includes **5 free export actions**, followed by a single lifetime unlock. Manual export runs on your iPhone and does not require a Mac. For Apple's native XML archive and the broader export choices, see [how to export Apple Health data](/apple-health-export/).
++The subscription-enabled phone release offers weekly/yearly subscriptions and Lifetime. Eligible subscriptions include a 7-day trial; existing purchases remain valid. Manual export runs on your iPhone and does not require a Mac. For Apple's native XML archive and the broader export choices, see [how to export Apple Health data](/apple-health-export/).
+
+ ## Choose the format for the job
+
+--- a/apps/website/content/blog/health-md-vs-health-auto-export.md
++++ b/apps/website/content/blog/health-md-vs-health-auto-export.md
+@@ -69,7 +69,7 @@
+
+ ## Pricing and where the data goes
+
+-Health.md includes **5 completed export actions**, then a lifetime unlock with no subscription. One action can cover multiple dates and formats. Some workflows require Full Access; see [purchase and restore details](/docs/paywall/).
++The subscription-enabled Health.md phone release offers weekly/yearly subscriptions and Lifetime. Eligible subscriptions include a 7-day trial; existing purchases remain valid. Manual and scheduled exports require active access; see [purchase and restore details](/docs/paywall/).
+
+ Health Auto Export lists a seven-day Premium trial, a free tier, a Basic one-time purchase, and Premium subscription or lifetime options. Basic covers manual exports; Premium adds automated integrations and Mac sync. Check its [purchase description](https://github.com/Lybron/health-auto-export#pricing) and each app's purchase sheet for current local prices and feature access. A subscription is not the only purchase option for either app.
+
+--- a/apps/website/content/blog/export-apple-health-heart-rate.md
++++ b/apps/website/content/blog/export-apple-health-heart-rate.md
+@@ -24,7 +24,7 @@
+
+ <a class="button" href="https://apps.apple.com/us/app/health-md/id6757763969">Get Health.md for iPhone</a>
+
+-Health.md includes **5 free export actions**, followed by a single lifetime unlock. Manual export needs no Mac. For Apple's native XML archive and the broader export options, see [how to export Apple Health data](/apple-health-export/).
++The subscription-enabled phone release offers weekly/yearly subscriptions and Lifetime. Eligible subscriptions include a 7-day trial; existing purchases remain valid. Manual export needs no Mac. For Apple's native XML archive and the broader export options, see [how to export Apple Health data](/apple-health-export/).
+
+ ## Choose the heart metric and level of detail
+
+--- a/apps/website/content/blog/apple-health-to-excel.md
++++ b/apps/website/content/blog/apple-health-to-excel.md
+@@ -44,7 +44,7 @@
+
+ <a class="button" href="https://apps.apple.com/us/app/health-md/id6757763969">Get Health.md for iPhone</a>
+
+-Health.md includes **5 free export actions**, followed by a single lifetime unlock. You need desktop Excel for the import steps below. A Mac is not required to create the export on your iPhone.
++The subscription-enabled phone release offers weekly/yearly subscriptions and Lifetime. Eligible subscriptions include a 7-day trial; existing purchases remain valid. You need desktop Excel for the import steps below. A Mac is not required to create the export on your iPhone.
+
+ ## 1. Export one day before a longer range
+
+--- a/apps/website/content/blog/export-apple-health-steps-data.md
++++ b/apps/website/content/blog/export-apple-health-steps-data.md
+@@ -24,7 +24,7 @@
+
+ <a class="button" href="https://apps.apple.com/us/app/health-md/id6757763969">Get Health.md for iPhone</a>
+
+-Health.md includes **5 free export actions**, followed by a single lifetime unlock. Manual export needs no Mac. For Apple's native XML archive and the broader format choices, see [how to export Apple Health data](/apple-health-export/).
++The subscription-enabled phone release offers weekly/yearly subscriptions and Lifetime. Eligible subscriptions include a 7-day trial; existing purchases remain valid. Manual export needs no Mac. For Apple's native XML archive and the broader format choices, see [how to export Apple Health data](/apple-health-export/).
+
+ ## Choose daily totals or source records
+
+--- a/apps/website/content/blog/export-health-connect-to-obsidian.md
++++ b/apps/website/content/blog/export-health-connect-to-obsidian.md
+@@ -34,7 +34,7 @@
+ <a class="button secondary" href="/docs/android/#distribution-status">Check F-Droid publication status</a>
+ </div>
+
+-Google Play offers free manual export actions followed by a one-time lifetime unlock, with no subscription. Check the installed app's purchase screen for its current allowance and access terms. F-Droid catalog publication is pending. Its build is configured for unlimited Health Connect exports without billing. The channels use different signing keys: switching requires uninstalling and does not migrate app state or purchases. See the [Android channel comparison](/health-connect-export/#android-channels) before choosing.
++The subscription-enabled Google Play phone release offers Individual weekly/yearly subscriptions and Lifetime. Eligible subscriptions include a 7-day trial; the store shows the current price and renewal terms. Existing permanent access remains valid. F-Droid catalog publication is pending. Its build is configured for unlimited Health Connect exports without billing. The channels use different signing keys: switching requires uninstalling and does not migrate app state or purchases. See the [Android channel comparison](/health-connect-export/#android-channels) before choosing.
+
+ Want to inspect output first? [Download the synthetic Android CSV excerpt](/assets/samples/health-connect-summary-excerpt.csv). It contains fictional steps and walking distance rows, not a person's health records or a complete export. It is a CSV example for inspecting values and units; choose Markdown or Obsidian Bases for notes in your vault.
+
+--- a/apps/website/content/blog/apple-health-to-chatgpt.md
++++ b/apps/website/content/blog/apple-health-to-chatgpt.md
+@@ -26,7 +26,7 @@
+
+ <a class="button" href="https://apps.apple.com/us/app/health-md/id6757763969">Get Health.md for iPhone</a>
+
+-Health.md includes **5 free export actions**, followed by a single lifetime unlock. A manual iPhone export does not require a Mac. You also need access to ChatGPT with file uploads; available tools and limits can vary by account and workspace.
++The subscription-enabled phone release offers weekly/yearly subscriptions and Lifetime. Eligible subscriptions include a 7-day trial; existing purchases remain valid. A manual iPhone export does not require a Mac. You also need access to ChatGPT with file uploads; available tools and limits can vary by account and workspace.
+
+ ## Before uploading: review the destination
+
+--- a/apps/website/content/blog/export-health-data-without-the-cloud.md
++++ b/apps/website/content/blog/export-health-data-without-the-cloud.md
+@@ -26,7 +26,7 @@
+
+ <a class="button" href="https://apps.apple.com/us/app/health-md/id6757763969">Get Health.md for iPhone</a>
+
+-Health.md includes **5 free export actions**, followed by a single lifetime unlock. This manual iPhone workflow needs no Mac. The steps below are for Apple Health; for Android's source and folder picker, use the [Health Connect export guide](/health-connect-export/).
++The subscription-enabled phone release offers weekly/yearly subscriptions and Lifetime. Eligible subscriptions include a 7-day trial; existing purchases remain valid. This manual iPhone workflow needs no Mac. The steps below are for Apple Health; for Android's source and folder picker, use the [Health Connect export guide](/health-connect-export/).
+
+ ## What “without the cloud” covers
+
+--- a/apps/website/terms-of-service.html
++++ b/apps/website/terms-of-service.html
+@@ -200,11 +200,13 @@
+         </section>
+
+         <section id="purchases">
+-          <h2>10. Free use, Full Access, and refunds</h2>
+-          <p>The Products may allow a limited number of successful export actions at no charge. The current consumer offer is 5 free exports. A successful manual, scheduled, Shortcut, or direct action may count against the same allowance as shown in the Product, regardless of how many dates or files it contains. Failed work and retries can be treated differently under the documented quota rules.</p>
+-          <p>Where offered, Full Access is a one-time in-app purchase that removes the export limit for supported features. It is not a subscription and does not renew. Apple platforms may offer Individual Lifetime, Family Lifetime, or an upgrade between them; other stores can offer their own supported one-time product. The store purchase sheet controls the displayed product, price, currency, tax, account, and Family Sharing eligibility.</p>
+-          <p>A “lifetime” or permanent entitlement means the purchased license does not expire on a recurring billing schedule. It does not guarantee that every feature, operating system, device, provider, or Product will remain available or supported forever. We may change future pricing or offers without changing a completed purchase except as allowed by the store terms and law.</p>
+-          <p>Purchases, restores, billing, and refunds are handled by the store where you bought Full Access. We do not receive full card details and ordinarily cannot issue a store refund directly. For Apple purchases, use <a href="https://reportaproblem.apple.com/" target="_blank" rel="noopener">Report a Problem</a>; for Google Play purchases, use Google's applicable refund flow. Refund eligibility is determined by the store and applicable law.</p>
++          <h2>10. Paid access, subscriptions, and refunds</h2>
++          <p>On the subscription-enabled iPhone, iPad, and Google Play phone releases, setup and exports require an active store-backed trial, subscription, Lifetime purchase, or preserved permanent entitlement. There is no local free-export allowance. The Mac companion and F-Droid included-access channel remain free. Older distributed versions can have different offers.</p>
++          <p>Individual access is available through weekly or yearly auto-renewable subscriptions or a one-time Lifetime purchase. Apple platforms also offer Family Sharing products and an upgrade for eligible Individual Lifetime or legacy owners. Google Play products are Individual-only; purchases do not transfer between stores. Family Sharing shares feature access, not health records or exported files.</p>
++          <p>Eligible subscriptions include a 7-day free trial, then renew automatically at the price and billing interval shown by the store before confirmation. The store determines introductory eligibility. Lifetime is charged immediately once, has no trial, and does not renew. The purchase sheet controls the product, local price, currency, tax and applicable terms.</p>
++          <p>Manage or cancel through the purchasing Apple or Google account. For Apple subscriptions, cancel at least 24 hours before the trial or current period ends; follow any cancellation deadline shown for your store offer. Deleting the app or buying Lifetime does not cancel an existing subscription. When access expires or is revoked, new exports and setup are gated; previously exported files remain yours.</p>
++          <p>Existing paid and previously grandfathered access remains valid. Restore Purchases restores eligible access, not deleted health data or files. A subscription alone does not qualify for the discounted Family Lifetime upgrade. A permanent entitlement has no recurring expiration, but does not guarantee indefinite device, provider or feature support.</p>
++          <p>Apple or Google handles billing, purchase restoration and refunds under its terms and applicable law. We do not receive full payment-card details. Use Apple's <a href="https://reportaproblem.apple.com/">Report a Problem</a> or Google's applicable refund process. These terms do not limit mandatory consumer rights or announce a future price increase.</p>
+         </section>
+
+         <section id="third-parties">
+--- a/apps/website/i18n/messages/en.json
++++ b/apps/website/i18n/messages/en.json
+@@ -7,7 +7,7 @@
+       "meta.ogTitle": "Apple Health and Health Connect exports",
+       "meta.twitterDescription": "Your Apple Health and Health Connect data as CSV, JSON, Markdown, or Obsidian Bases files. Select metrics and dates, then save to a folder you choose.",
+       "schema.description": "Health.md is a private bridge from Apple Health and Android Health Connect to local files, automation, CLI workflows, and local agents.",
+-      "schema.offerDescription": "Android access: Google Play provides free manual exports and a lifetime purchase. F-Droid catalog publication is pending.",
++      "schema.offerDescription": "Android access: Google Play offers weekly/yearly subscriptions and Lifetime. Eligible subscriptions include a 7-day free trial. F-Droid catalog publication is pending.",
+       "schema.featureExport": "Export Apple Health and Health Connect data to Markdown, CSV, and JSON",
+       "schema.featureSchedule": "Schedule local exports and trigger automation workflows",
+       "schema.featureQuery": "Query exact health data through a standalone CLI and local MCP server",
+@@ -99,7 +99,7 @@
+       "observations": "14 observations",
+       "evidence": "Evidence available",
+       "downloadTitle": "Take your health data with you.",
+-      "downloadOffer": "Google Play offers free manual exports, then a one-time lifetime purchase. F-Droid catalog publication is pending.",
++      "downloadOffer": "Google Play offers weekly/yearly subscriptions and Lifetime. Eligible subscriptions include a 7-day trial. F-Droid catalog publication is pending.",
+       "channelSwitchWarning": "Google Play and F-Droid use different signatures. Switching channels requires uninstalling the app and does not migrate local app state.",
+       "footerNavLabel": "Footer navigation",
+       "about": "About",
+--- a/apps/website/i18n/messages/de.json
++++ b/apps/website/i18n/messages/de.json
+@@ -7,7 +7,7 @@
+       "meta.ogTitle": "Exporte aus Apple Health und Health Connect",
+       "meta.twitterDescription": "Deine Daten aus Apple Health und Health Connect als CSV, JSON, Markdown oder Obsidian Bases. Wähle Messwerte und Zeitraum und speichere sie im gewünschten Ordner.",
+       "schema.description": "Health.md ist eine private Brücke von Apple Health und Android Health Connect zu lokalen Dateien, Automatisierungen, CLI-Workflows und lokalen Agenten.",
+-      "schema.offerDescription": "Google Play bietet kostenlose manuelle Exporte und danach einen einmaligen Kauf mit dauerhaftem Zugriff. Die Veröffentlichung im F-Droid-Katalog steht noch aus.",
++      "schema.offerDescription": "Android-Zugriff: Google Play bietet wöchentliche/jährliche Abonnements und Lifetime. Berechtigte Abonnements beinhalten eine 7-tägige kostenlose Testversion. Die Veröffentlichung F-Droid Katalogs steht noch aus.",
+       "schema.featureExport": "Apple Health- und Health Connect-Daten als Markdown, CSV und JSON exportieren",
+       "schema.featureSchedule": "Lokale Exporte planen und automatisierte Workflows auslösen",
+       "schema.featureQuery": "Exakte Gesundheitsdaten über eine eigenständige CLI und einen lokalen MCP-Server abfragen",
+@@ -99,7 +99,7 @@
+       "observations": "14 Beobachtungen",
+       "evidence": "Nachweise verfügbar",
+       "downloadTitle": "Nehmen Sie Ihre Gesundheits&shy;daten mit.",
+-      "downloadOffer": "Google Play bietet kostenlose manuelle Exporte und danach einen einmaligen Kauf mit dauerhaftem Zugriff. Die Veröffentlichung im F-Droid-Katalog steht noch aus.",
++      "downloadOffer": "Google Play bietet wöchentliche/jährliche Abonnements und Lifetime. Berechtigte Abonnements beinhalten eine 7-tägige Testversion. Die Veröffentlichung F-Droid Katalogs steht noch aus.",
+       "channelSwitchWarning": "Google Play und F-Droid verwenden unterschiedliche Signaturen. Ein Wechsel erfordert die Deinstallation der App; lokale App-Daten werden nicht übertragen.",
+       "footerNavLabel": "Fußzeilennavigation",
+       "about": "Über uns (Englisch)",
+--- a/apps/website/de/terms-of-service.html
++++ b/apps/website/de/terms-of-service.html
+@@ -201,11 +201,7 @@
+         </section>
+
+         <section id="purchases">
+-          <h2>10. Kostenlose Nutzung, Full Access und Erstattungen</h2>
+-          <p>Die Produkte können eine begrenzte Anzahl erfolgreicher Exportaktionen kostenlos ermöglichen. Das aktuelle Verbraucherangebot umfasst 5 kostenlose Exporte. Eine erfolgreiche manuelle, geplante, Shortcut- oder direkte Aktion kann unabhängig von der Anzahl enthaltener Daten oder Dateien auf dasselbe Kontingent angerechnet werden, wie im Produkt angezeigt. Fehlgeschlagene Vorgänge und Wiederholungen können nach den dokumentierten Kontingentregeln anders behandelt werden.</p>
+-          <p>Soweit angeboten, ist Full Access ein einmaliger In-App-Kauf, der das Exportlimit für unterstützte Funktionen aufhebt. Es handelt sich nicht um ein Abonnement und der Kauf verlängert sich nicht. Apple-Plattformen können Individual Lifetime, Family Lifetime oder ein Upgrade zwischen beiden anbieten; andere Stores können ein eigenes unterstütztes einmaliges Produkt anbieten. Die Kaufansicht des Stores legt angezeigtes Produkt, Preis, Währung, Steuer, Konto und Berechtigung für Family Sharing fest.</p>
+-          <p>Eine „lebenslange“ oder dauerhafte Berechtigung bedeutet, dass die erworbene Lizenz nicht nach einem wiederkehrenden Abrechnungsplan abläuft. Sie garantiert nicht, dass jede Funktion, jedes Betriebssystem, Gerät, jeder Anbieter oder jedes Produkt für immer verfügbar oder unterstützt bleibt. Wir können zukünftige Preise oder Angebote ändern, ohne einen abgeschlossenen Kauf zu ändern, soweit Store-Bedingungen und Gesetz nichts anderes bestimmen.</p>
+-          <p>Käufe, Wiederherstellungen, Abrechnung und Erstattungen werden von dem Store abgewickelt, bei dem du Full Access gekauft hast. Wir erhalten keine vollständigen Kartendaten und können normalerweise keine Store-Erstattung direkt veranlassen. Verwende für Apple-Käufe <a href="https://reportaproblem.apple.com/" target="_blank" rel="noopener">Problem melden</a> und für Google Play-Käufe das geltende Erstattungsverfahren von Google. Ob ein Anspruch auf Erstattung besteht, richtet sich nach den Bestimmungen des Stores und dem anwendbaren Recht.</p>
++          <h2> 10. Bezahlter Zugriff, Abonnements und Rückerstattungen </h2> <p> Auf den abonnementaktivierten Telefonversionen iPhone , iPad und Google Play erfordern die Einrichtung und Exporte eine aktive, vom Geschäft unterstützte Testversion, ein Abonnement, einen lebenslangen Kauf oder eine beibehaltene dauerhafte Berechtigung. Es gibt keine örtliche Freiausfuhrbewilligung. Der Mac-Begleiter und der inklusive Zugangskanal F-Droid bleiben kostenlos. Ältere verteilte Versionen können andere Angebote haben. </p> <p> Der individuelle Zugriff ist über wöchentliche oder jährliche Abonnements mit automatischer Verlängerung oder einen einmaligen lebenslangen Kauf möglich. Apple-Plattformen bieten außerdem Family Sharing Produkte und ein Upgrade für berechtigte Individual Lifetime- oder Legacy-Besitzer. Google Play Produkte sind nur für Einzelpersonen erhältlich; Einkäufe werden nicht zwischen Geschäften übertragen. Family Sharing gibt den Funktionszugriff frei, nicht jedoch Gesundheitsakten oder exportierte Dateien. </p> <p> Berechtigte Abonnements beinhalten eine 7-tägige kostenlose Testversion und verlängern sich dann automatisch zu dem Preis und Abrechnungsintervall, das der Shop vor der Bestätigung anzeigt. Das Geschäft bestimmt die Einführungsberechtigung. Lifetime wird sofort einmal berechnet, es gibt keine Testversion und es verlängert sich nicht. Das Einkaufsformular regelt das Produkt, den lokalen Preis, die Währung, die Steuer und die geltenden Bedingungen. </p> <p> Verwalten oder kündigen Sie den Kauf über das Apple- oder Google-Konto. Kündigen Sie Apple-Abonnements mindestens 24 Stunden vor Ablauf der Testversion oder des aktuellen Zeitraums. Befolgen Sie die für Ihr Shop-Angebot angegebene Stornierungsfrist. Durch das Löschen der App oder den Kauf von Lifetime wird ein bestehendes Abonnement nicht gekündigt. Wenn der Zugriff abläuft oder widerrufen wird, werden neue Exporte und Setups gesperrt; Zuvor exportierte Dateien bleiben Ihr Eigentum. </p> <p> Bestehender kostenpflichtiger und zuvor bestandsgeschützter Zugriff bleibt gültig. „Käufe wiederherstellen“ stellt den berechtigten Zugriff wieder her, nicht gelöschte Gesundheitsdaten oder Dateien. Ein Abonnement allein berechtigt nicht zum vergünstigten Family Lifetime-Upgrade. Eine dauerhafte Berechtigung hat keinen wiederkehrenden Ablauf, garantiert jedoch keinen unbegrenzten Geräte-, Anbieter- oder Funktionssupport. </p> <p> Apple oder Google wickelt die Abrechnung, die Wiederherstellung des Kaufs und Rückerstattungen gemäß seinen Bedingungen und geltendem Recht ab. Wir erhalten keine vollständigen Zahlungskartendaten. Verwenden Sie Apples <a href="https://reportaproblem.apple.com/"> „Problem melden“ </a> oder das entsprechende Rückerstattungsverfahren von Google. Diese Bedingungen beschränken weder zwingende Verbraucherrechte noch kündigen sie eine zukünftige Preiserhöhung an. </p>
+         </section>
+
+         <section id="third-parties">
+--- a/apps/website/i18n/messages/es.json
++++ b/apps/website/i18n/messages/es.json
+@@ -7,7 +7,7 @@
+       "meta.ogTitle": "Exportaciones de Apple Health y Health Connect",
+       "meta.twitterDescription": "Tus datos de Apple Health y Health Connect en archivos CSV, JSON, Markdown u Obsidian Bases. Selecciona métricas y fechas y guárdalos en tu carpeta.",
+       "schema.description": "Health.md es un puente privado entre Apple Health, Health Connect de Android y tus archivos locales, automatizaciones, flujos de trabajo con la CLI y agentes locales.",
+-      "schema.offerDescription": "Google Play ofrece exportaciones manuales gratuitas y después una compra única de por vida. La publicación en el catálogo de F-Droid está pendiente.",
++      "schema.offerDescription": "Acceso a Android: Google Play ofrece suscripciones semanales/anuales y de por vida. Las suscripciones elegibles incluyen una prueba gratuita de 7 días. F-Droid está pendiente de publicación del catálogo.",
+       "schema.featureExport": "Exporta datos de Apple Health y Health Connect a Markdown, CSV y JSON",
+       "schema.featureSchedule": "Programa exportaciones locales y activa flujos de automatización",
+       "schema.featureQuery": "Consulta datos de salud precisos mediante una CLI independiente y un servidor MCP local",
+@@ -99,7 +99,7 @@
+       "observations": "14 observaciones",
+       "evidence": "Evidencia disponible",
+       "downloadTitle": "Lleva tus datos de salud contigo.",
+-      "downloadOffer": "Google Play ofrece exportaciones manuales gratuitas y después una compra única de por vida. La publicación en el catálogo de F-Droid está pendiente.",
++      "downloadOffer": "Google Play ofrece suscripciones semanales/anuales y de por vida. Las suscripciones elegibles incluyen una prueba de 7 días. F-Droid está pendiente de publicación del catálogo.",
+       "channelSwitchWarning": "Google Play y F-Droid usan firmas diferentes. Para cambiar de canal hay que desinstalar la aplicación; los datos locales no se migran.",
+       "footerNavLabel": "Navegación del pie de página",
+       "about": "Acerca de (en inglés)",
+--- a/apps/website/es/terms-of-service.html
++++ b/apps/website/es/terms-of-service.html
+@@ -203,11 +203,7 @@
+         </section>
+
+         <section id="purchases">
+-          <h2>10. Uso gratuito, Full Access y reembolsos</h2>
+-          <p>Los Productos pueden permitir un número limitado de exportaciones correctas sin coste. La oferta actual de consumo incluye 5 exportaciones gratuitas. Una acción manual, programada, de Atajos o directa que termine correctamente puede consumir el mismo cupo como se muestra en el Producto, sin importar cuántas fechas o archivos incluya. Los fallos y reintentos pueden tratarse de forma distinta según las reglas documentadas del cupo.</p>
+-          <p>Cuando se ofrece, Full Access es una compra única dentro de la aplicación que elimina el límite de exportaciones para las funciones compatibles. No es una suscripción y no se renueva. Las plataformas Apple pueden ofrecer Individual Lifetime, Family Lifetime o una mejora entre ambas; otras tiendas pueden ofrecer su propio producto único compatible. La hoja de compra controla producto, precio, moneda, impuestos, cuenta y elegibilidad para Compartir en familia.</p>
+-          <p>Un derecho «de por vida» o permanente significa que la licencia comprada no caduca en un ciclo de facturación recurrente. No garantiza que todas las funciones, sistemas operativos, dispositivos, proveedores o Productos sigan disponibles o respaldados para siempre. Podemos cambiar precios u ofertas futuras sin alterar una compra completada, salvo cuando lo permitan las condiciones de la tienda y la ley.</p>
+-          <p>La tienda donde compraste Full Access gestiona las compras, restauraciones, facturación y reembolsos. No recibimos los datos completos de la tarjeta y normalmente no podemos emitir directamente un reembolso de la tienda. Para compras de Apple, usa <a href="https://reportaproblem.apple.com/" target="_blank" rel="noopener">Report a Problem</a>; para Google Play, usa el proceso de reembolso aplicable de Google. La tienda y la ley aplicable determinan la elegibilidad.</p>
++          <h2> 10. Acceso pago, suscripciones y reembolsos </h2> <p> En las versiones de teléfono iPhone , iPad y Google Play habilitadas para suscripción, la configuración y las exportaciones requieren una prueba activa respaldada por la tienda, una suscripción, una compra de por vida o un derecho permanente preservado. No existe ningún subsidio de libre exportación local. El complemento Mac y el canal de acceso incluido F-Droid siguen siendo gratuitos. Las versiones distribuidas más antiguas pueden tener ofertas diferentes. </p> <p> El acceso individual está disponible a través de suscripciones semanales o anuales renovables automáticamente o una compra única de por vida. Las plataformas Apple también ofrecen productos Family Sharing y una actualización para propietarios individuales de por vida o heredados elegibles. Los productos Google Play son solo individuales; las compras no se transfieren entre tiendas. Family Sharing comparte acceso a funciones, no a registros médicos ni archivos exportados. </p> <p> Las suscripciones elegibles incluyen una prueba gratuita de 7 días, luego se renuevan automáticamente al precio y al intervalo de facturación que muestra la tienda antes de la confirmación. La tienda determina la elegibilidad introductoria. Lifetime se cobra inmediatamente una vez, no tiene prueba y no se renueva. La hoja de compra controla el producto, precio local, moneda, impuestos y términos aplicables. </p> <p> Gestionar o cancelar a través de la cuenta de compras de Apple o Google. Para las suscripciones de Apple, cancele al menos 24 horas antes de que finalice la prueba o el período actual; Siga cualquier fecha límite de cancelación que se muestre para la oferta de su tienda. Eliminar la aplicación o comprar Lifetime no cancela una suscripción existente. Cuando el acceso caduca o se revoca, se bloquean las nuevas exportaciones y configuraciones; Los archivos exportados previamente siguen siendo suyos. </p> <p> El acceso pago existente y previamente protegido sigue siendo válido. Restaurar compras restaura el acceso elegible, no los datos o archivos de salud eliminados. Una suscripción por sí sola no califica para la actualización Family Lifetime con descuento. Un derecho permanente no tiene vencimiento recurrente, pero no garantiza soporte indefinido para dispositivos, proveedores o funciones. </p> <p> Apple o Google manejan la facturación, la restauración de compras y los reembolsos según sus términos y la ley aplicable. No recibimos los datos completos de la tarjeta de pago. Utilice <a href="https://reportaproblem.apple.com/"> Informar un problema </a> de Apple o el proceso de reembolso correspondiente de Google. Estos términos no limitan los derechos obligatorios de los consumidores ni anuncian un futuro aumento de precios. </p>
+         </section>
+
+         <section id="third-parties">
+--- a/apps/website/i18n/messages/fr.json
++++ b/apps/website/i18n/messages/fr.json
+@@ -7,7 +7,7 @@
+       "meta.ogTitle": "Exports Apple Health et Health Connect",
+       "meta.twitterDescription": "Vos données Apple Health et Health Connect en fichiers CSV, JSON, Markdown ou Obsidian Bases. Sélectionnez métriques et dates, puis votre dossier.",
+       "schema.description": "Health.md est une passerelle privée reliant Apple Health et Android Health Connect aux fichiers locaux, aux automatisations, aux flux de travail CLI et aux agents locaux.",
+-      "schema.offerDescription": "Google Play propose des exports manuels gratuits, puis un achat unique à vie. La publication dans le catalogue F-Droid est en attente.",
++      "schema.offerDescription": "Accès Android : Google Play propose des abonnements hebdomadaires/annuels et à vie. Les abonnements éligibles incluent un essai gratuit de 7 jours. La publication du catalogue F-Droid est en attente.",
+       "schema.featureExport": "Exportez les données d’Apple Health et de Health Connect vers Markdown, CSV et JSON",
+       "schema.featureSchedule": "Planifiez des exports locaux et déclenchez des flux de travail automatisés",
+       "schema.featureQuery": "Interrogez des données de santé précises à l’aide d’une CLI autonome et d’un serveur MCP local",
+@@ -99,7 +99,7 @@
+       "observations": "14 observations",
+       "evidence": "Preuves disponibles",
+       "downloadTitle": "Emportez vos données de santé avec vous.",
+-      "downloadOffer": "Google Play propose des exports manuels gratuits, puis un achat unique à vie. La publication dans le catalogue F-Droid est en attente.",
++      "downloadOffer": "Google Play propose des abonnements hebdomadaires/annuels et à vie. Les abonnements éligibles incluent un essai de 7 jours. La publication du catalogue F-Droid est en attente.",
+       "channelSwitchWarning": "Google Play et F-Droid utilisent des signatures différentes. Changer de canal exige de désinstaller l’application et ne transfère pas les données locales.",
+       "footerNavLabel": "Navigation du pied de page",
+       "about": "À propos (anglais)",
+--- a/apps/website/fr/terms-of-service.html
++++ b/apps/website/fr/terms-of-service.html
+@@ -203,11 +203,7 @@
+         </section>
+
+         <section id="purchases">
+-          <h2>10. Utilisation gratuite, Full Access et remboursements</h2>
+-          <p>Les Produits peuvent permettre un nombre limité d’exports réussis sans frais. L’offre grand public actuelle comprend 5 exports gratuits. Une action manuelle, planifiée, déclenchée par un raccourci ou directe réussie peut être décomptée de la même allocation, comme indiqué dans le Produit, quel que soit le nombre de dates ou de fichiers qu’elle contient. Les échecs et nouvelles tentatives peuvent être traités différemment selon les règles de quota documentées.</p>
+-          <p>Lorsque cette option est proposée, Full Access est un achat intégré unique qui supprime la limite d’exports pour les fonctionnalités prises en charge. Il ne s’agit pas d’un abonnement et il ne se renouvelle pas. Les plateformes Apple peuvent proposer Individual Lifetime, Family Lifetime ou le passage de l’un à l’autre ; les autres boutiques peuvent proposer leur propre produit unique compatible. La feuille d’achat de la boutique détermine le produit, le prix, la devise, les taxes, le compte et l’admissibilité au Partage familial affichés.</p>
+-          <p>Un droit d’accès « à vie » ou permanent signifie que la licence achetée n’expire pas selon un calendrier de facturation récurrent. Il ne garantit pas que chaque fonctionnalité, système d’exploitation, appareil, fournisseur ou Produit restera indéfiniment disponible ou pris en charge. Nous pouvons modifier les prix ou offres à venir sans modifier un achat déjà effectué, sauf dans la mesure permise par les conditions de la boutique et la loi.</p>
+-          <p>Les achats, restaurations, facturations et remboursements sont gérés par la boutique dans laquelle vous avez acheté Full Access. Nous ne recevons pas l’intégralité des données de votre carte et ne pouvons généralement pas effectuer directement le remboursement d’un achat en boutique. Pour un achat Apple, utilisez <a href="https://reportaproblem.apple.com/" target="_blank" rel="noopener">Signaler un problème</a> ; pour un achat Google Play, utilisez la procédure de remboursement Google applicable. L’admissibilité au remboursement est déterminée par la boutique et la législation applicable.</p>
++          <h2> 10. Accès payant, abonnements et remboursements </h2> <p> Sur les téléphones iPhone , iPad et Google Play activés par abonnement, les versions, la configuration et les exportations nécessitent un essai actif, un abonnement, un achat à vie ou un droit permanent préservé. Il n'existe pas d'autorisation locale de libre exportation. Le compagnon Mac et la chaîne à accès inclus F-Droid restent gratuits. Les anciennes versions distribuées peuvent avoir des offres différentes. </p> <p> L'accès individuel est disponible via des abonnements hebdomadaires ou annuels auto-renouvelables ou un achat unique à vie. Les plates-formes Apple proposent également des produits Family Sharing et une mise à niveau pour les propriétaires individuels à vie ou hérités éligibles. Les produits Google Play sont réservés aux individus ; les achats ne sont pas transférés entre les magasins. Family Sharing partage l'accès aux fonctionnalités, et non aux dossiers de santé ou aux fichiers exportés. </p> <p> Les abonnements éligibles incluent un essai gratuit de 7 jours, puis se renouvellent automatiquement au prix et à l'intervalle de facturation indiqués par le magasin avant confirmation. Le magasin détermine l’éligibilité de lancement. La durée de vie est facturée immédiatement une fois, sans essai et sans renouvellement. La fiche d'achat contrôle le produit, le prix local, la devise, les taxes et les conditions applicables. </p> <p> Gérez ou annulez via le compte Apple ou Google d'achat. Pour les abonnements Apple, annulez au moins 24 heures avant la fin de l'essai ou de la période en cours ; suivez tout délai d’annulation indiqué pour votre offre en magasin. La suppression de l'application ou l'achat de Lifetime n'annule pas un abonnement existant. Lorsque l'accès expire ou est révoqué, les nouvelles exportations et configurations sont bloquées ; les fichiers précédemment exportés restent les vôtres. </p> <p> L'accès payant existant et bénéficiant de droits acquis reste valide. Restaurer les achats restaure l’accès éligible, et non les données ou fichiers de santé supprimés. Un abonnement à lui seul ne donne pas droit à la mise à niveau à prix réduit de Family Lifetime. Un droit permanent n’a pas d’expiration récurrente, mais ne garantit pas une prise en charge indéfinie des appareils, des fournisseurs ou des fonctionnalités. </p> <p> Apple ou Google gère la facturation, la restauration des achats et les remboursements conformément à leurs conditions et à la loi applicable. Nous ne recevons pas tous les détails de la carte de paiement. Utilisez <a href="https://reportaproblem.apple.com/"> Signaler un problème </a> d'Apple ou le processus de remboursement applicable de Google. Ces conditions ne limitent pas les droits obligatoires des consommateurs et n'annoncent pas une future augmentation de prix. </p>
+         </section>
+
+         <section id="third-parties">
+--- a/apps/website/i18n/messages/it.json
++++ b/apps/website/i18n/messages/it.json
+@@ -7,7 +7,7 @@
+       "meta.ogTitle": "Esportazioni Apple Health e Health Connect",
+       "meta.twitterDescription": "I tuoi dati Apple Health e Health Connect in file CSV, JSON, Markdown o Obsidian Bases. Seleziona metriche e date e salvali nella cartella che scegli.",
+       "schema.description": "Health.md è un ponte privato tra Apple Health e Android Health Connect e file locali, automazioni, flussi di lavoro CLI e agenti locali.",
+-      "schema.offerDescription": "Google Play offre esportazioni manuali gratuite, poi un acquisto unico a vita. La pubblicazione nel catalogo F-Droid è in attesa.",
++      "schema.offerDescription": "Accesso Android: Google Play offre abbonamenti settimanali/annuali e a vita. Gli abbonamenti idonei includono una prova gratuita di 7 giorni. La pubblicazione del catalogo F-Droid è in sospeso.",
+       "schema.featureExport": "Esporta i dati di Apple Health e Health Connect in Markdown, CSV e JSON",
+       "schema.featureSchedule": "Programma esportazioni locali e avvia flussi di lavoro automatizzati",
+       "schema.featureQuery": "Interroga dati sanitari precisi tramite una CLI autonoma e un server MCP locale",
+@@ -99,7 +99,7 @@
+       "observations": "14 osservazioni",
+       "evidence": "Dati di riscontro disponibili",
+       "downloadTitle": "Porta con te i tuoi dati sanitari.",
+-      "downloadOffer": "Google Play offre esportazioni manuali gratuite, poi un acquisto unico a vita. La pubblicazione nel catalogo F-Droid è in attesa.",
++      "downloadOffer": "Google Play offre abbonamenti settimanali/annuali e a vita. Gli abbonamenti idonei includono una prova di 7 giorni. La pubblicazione del catalogo F-Droid è in sospeso.",
+       "channelSwitchWarning": "Google Play e F-Droid usano firme diverse. Per cambiare canale devi disinstallare l’app; i dati locali non vengono trasferiti.",
+       "footerNavLabel": "Navigazione a piè di pagina",
+       "about": "Chi siamo (in inglese)",
+--- a/apps/website/it/terms-of-service.html
++++ b/apps/website/it/terms-of-service.html
+@@ -203,11 +203,7 @@
+         </section>
+
+         <section id="purchases">
+-          <h2>10. Uso gratuito, Full Access e rimborsi</h2>
+-          <p>I Prodotti possono consentire gratuitamente un numero limitato di esportazioni completate. L'offerta attuale per i consumatori comprende 5 esportazioni gratuite. Un'operazione manuale, pianificata, tramite Shortcut o diretta completata può essere conteggiata nella stessa quota, come indicato nel Prodotto, indipendentemente dal numero di date o file inclusi. Le operazioni non riuscite e i nuovi tentativi possono essere trattati diversamente secondo le regole documentate della quota.</p>
+-          <p>Ove offerto, Full Access è un acquisto in-app una tantum che elimina il limite di esportazione per le funzioni supportate. Non è un abbonamento e non si rinnova. Le piattaforme Apple possono offrire Individual Lifetime, Family Lifetime o un upgrade dall'uno all'altro; altri store possono offrire il proprio prodotto una tantum supportato. La schermata di acquisto dello store determina il prodotto, il prezzo, la valuta, le imposte, l'account e l'idoneità a Family Sharing visualizzati.</p>
+-          <p>Un diritto «lifetime» o permanente significa che la licenza acquistata non scade secondo un piano di fatturazione ricorrente. Non garantisce che ogni funzione, sistema operativo, dispositivo, fornitore o Prodotto resti disponibile o supportato per sempre. Possiamo modificare prezzi od offerte futuri senza incidere su un acquisto completato, salvo quanto consentito dalle condizioni dello store e dalla legge.</p>
+-          <p>Acquisti, ripristini, addebiti e rimborsi sono gestiti dallo store presso il quale hai acquistato Full Access. Non riceviamo i dati completi della carta e di norma non possiamo emettere direttamente un rimborso dello store. Per gli acquisti Apple, usa <a href="https://reportaproblem.apple.com/" target="_blank" rel="noopener">Segnala un problema</a>; per gli acquisti Google Play, usa la procedura di rimborso applicabile di Google. L'idoneità al rimborso è determinata dallo store e dalla legge applicabile.</p>
++          <h2> 10. Accesso a pagamento, abbonamenti e rimborsi </h2> <p> Nelle versioni del telefono iPhone , iPad e Google Play abilitate per l'abbonamento, la configurazione e le esportazioni richiedono una prova attiva supportata dallo store, un abbonamento, un acquisto a vita o un diritto permanente mantenuto. Non è prevista alcuna franchigia di esportazione locale. Il compagno Mac e il canale di accesso incluso F-Droid rimangono gratuiti. Le versioni distribuite precedenti possono avere offerte diverse. </p> <p> L'accesso individuale è disponibile tramite abbonamenti settimanali o annuali con rinnovo automatico o un acquisto una tantum a vita. Le piattaforme Apple offrono anche prodotti Family Sharing e un aggiornamento per i proprietari individuali a vita o legacy idonei. I prodotti Google Play sono solo individuali; gli acquisti non vengono trasferiti tra negozi. Family Sharing condivide l'accesso alle funzionalità, non i dati sanitari o i file esportati. </p> <p> Gli abbonamenti idonei includono una prova gratuita di 7 giorni, quindi si rinnovano automaticamente al prezzo e all'intervallo di fatturazione indicati dal negozio prima della conferma. Il negozio determina l'idoneità introduttiva. La durata viene addebitata immediatamente una volta, non è prevista una prova e non è rinnovabile. La scheda di acquisto controlla il prodotto, il prezzo locale, la valuta, le tasse e i termini applicabili. </p> <p> Gestisci o annulla tramite l'account Apple o Google di acquisto. Per gli abbonamenti Apple, annulla almeno 24 ore prima della fine del periodo di prova o corrente; seguire eventuali termini di cancellazione indicati per l'offerta del negozio. L'eliminazione dell'app o l'acquisto di Lifetime non annulla un abbonamento esistente. Quando l'accesso scade o viene revocato, le nuove esportazioni e impostazioni vengono bloccate; i file precedentemente esportati rimangono tuoi. </p> <p> L'accesso esistente a pagamento e precedentemente garantito rimane valido. Ripristina acquisti ripristina l'accesso idoneo, non i dati sanitari o i file eliminati. Il solo abbonamento non dà diritto all'upgrade scontato Family Lifetime. Un diritto permanente non ha scadenza ricorrente, ma non garantisce il supporto indefinito di dispositivi, provider o funzionalità. </p> <p> Apple o Google gestiscono la fatturazione, il ripristino degli acquisti e i rimborsi in base ai propri termini e alla legge applicabile. Non riceviamo i dettagli completi della carta di pagamento. Utilizza <a href="https://reportaproblem.apple.com/"> Segnala un problema </a> di Apple o la procedura di rimborso applicabile di Google. Questi termini non limitano i diritti obbligatori dei consumatori né annunciano un futuro aumento dei prezzi. </p>
+         </section>
+
+         <section id="third-parties">
+--- a/apps/website/i18n/messages/ja.json
++++ b/apps/website/i18n/messages/ja.json
+@@ -7,7 +7,7 @@
+       "meta.ogTitle": "Apple Health・Health Connectの書き出し",
+       "meta.twitterDescription": "Apple HealthとHealth ConnectのデータをCSV、JSON、Markdown、Obsidian Basesのファイルに。指標と日付を選び、指定したフォルダに保存できます。",
+       "schema.description": "Health.mdは、Apple HealthとAndroid Health Connectをローカルファイル、自動化、CLIワークフロー、ローカルエージェントにつなぐプライベートな橋渡しです。",
+-      "schema.offerDescription": "Google Play では無料の手動エクスポート後、買い切りで無期限に利用できます。F-Droid カタログへの公開は保留中です。",
++      "schema.offerDescription": "Android アクセス: Google Playは、週次/年次のサブスクリプションとライフタイムを提供します。対象となるサブスクリプションには 7 日間の無料トライアルが含まれます。 F-Droidカタログの発行は保留中です。",
+       "schema.featureExport": "Apple HealthとHealth ConnectのデータをMarkdown、CSV、JSONにエクスポート",
+       "schema.featureSchedule": "ローカルエクスポートをスケジュールし、自動化ワークフローを実行",
+       "schema.featureQuery": "スタンドアロンCLIとローカルMCPサーバーから必要なヘルスデータを正確に照会",
+@@ -99,7 +99,7 @@
+       "observations": "14件の観測値",
+       "evidence": "根拠データあり",
+       "downloadTitle": "健康データを、いつでもあなたの手元に。",
+-      "downloadOffer": "Google Play では無料の手動エクスポート後、買い切りで無期限に利用できます。F-Droid カタログへの公開は保留中です。",
++      "downloadOffer": "Google Playでは、毎週/毎年のサブスクリプションと生涯サブスクリプションを提供しています。対象となるサブスクリプションには 7 日間のトライアルが含まれます。 F-Droidカタログの発行は保留中です。",
+       "channelSwitchWarning": "Google Play版とF-Droid版は署名が異なります。切り替えるにはアプリのアンインストールが必要で、ローカルのアプリデータは移行されません。",
+       "footerNavLabel": "フッターナビゲーション",
+       "about": "Health.mdについて（英語）",
+@@ -146,9 +146,21 @@
+       "scheduleMonthlyFile": "Health/<br>August 2026.md",
+       "scopedRequest": "· スコープ指定リクエスト",
+       "typedQuery": "· 型付きクエリ",
+-      "codexQuestions": ["今週と先週の平均安静時心拍数を比較して。", "ランニングワークアウト前後の睡眠セッションを表示して。", "睡眠データがない日はどれ？"],
+-      "claudeQuestions": ["今週と先週の安静時心拍数を比較して。", "ランニングワークアウトの前後の睡眠セッションを表示して。", "睡眠データがない日を探して。"],
+-      "terminalQuestions": ["今週と先週の平均安静時心拍数を比較。", "ランニングワークアウト前後の睡眠セッションを一覧表示。", "睡眠データがない日付を表示。"]
++      "codexQuestions": [
++        "今週と先週の平均安静時心拍数を比較して。",
++        "ランニングワークアウト前後の睡眠セッションを表示して。",
++        "睡眠データがない日はどれ？"
++      ],
++      "claudeQuestions": [
++        "今週と先週の安静時心拍数を比較して。",
++        "ランニングワークアウトの前後の睡眠セッションを表示して。",
++        "睡眠データがない日を探して。"
++      ],
++      "terminalQuestions": [
++        "今週と先週の平均安静時心拍数を比較。",
++        "ランニングワークアウト前後の睡眠セッションを一覧表示。",
++        "睡眠データがない日付を表示。"
++      ]
+     }
+   }
+ }
+--- a/apps/website/ja/terms-of-service.html
++++ b/apps/website/ja/terms-of-service.html
+@@ -203,11 +203,7 @@
+         </section>
+
+         <section id="purchases">
+-          <h2>10. 無料利用、Full Access、返金</h2>
+-          <p>製品では、一定回数のエクスポート処理を無料で正常完了できる場合があります。現在のコンシューマー向け提供内容は、無料エクスポート10回です。手動、スケジュール、Shortcut、直接接続による処理が正常に完了すると、処理に含まれる日付またはファイルの数にかかわらず、製品に表示される同一の利用枠から1回として数えられる場合があります。失敗した処理および再試行は、文書化された利用枠の規則に基づき別に扱われることがあります。</p>
+-          <p>提供される場合、Full Accessは対応機能のエクスポート制限を解除する1回限りのアプリ内購入です。サブスクリプションではなく、更新されません。AppleプラットフォームではIndividual Lifetime、Family Lifetime、または両者間のアップグレードが提供される場合があります。他のストアでは、それぞれ対応する1回限りの製品が提供されることがあります。表示される製品、価格、通貨、税、アカウント、Family Sharingの利用資格は、ストアの購入画面によって決まります。</p>
+-          <p>「lifetime」または永続的な権利とは、購入したライセンスが定期的な課金スケジュールによって失効しないことを意味します。すべての機能、OS、デバイス、プロバイダ、製品が永続的に利用またはサポートされることを保証するものではありません。当社は、ストア規約および法令で認められる場合を除き、完了済みの購入を変更することなく、将来の価格または提供内容を変更できます。</p>
+-          <p>購入、復元、請求、返金は、Full Accessを購入したストアが処理します。当社は支払カードの完全な情報を受け取らず、通常、ストアの返金を直接行うことはできません。Appleでの購入には<a href="https://reportaproblem.apple.com/" target="_blank" rel="noopener">問題を報告する</a>を使用してください。Google Playでの購入には、Googleの該当する返金手続を使用してください。返金の可否はストアおよび適用法令により決まります。</p>
++          <h2> 10. 有料アクセス、サブスクリプション、および返金</h2> <p>サブスクリプション対応のiPhone 、 iPad 、およびGoogle Play電話機のリリースでは、セットアップとエクスポートにはアクティブなストア保証の試用版、サブスクリプション、生涯購入、または保存された永久資格が必要です。現地の自由輸出枠はありません。 Mac コンパニオンとF-Droidに含まれるアクセス チャネルは引き続き無料です。古い配布バージョンには異なるオファーが含まれる場合があります。 </p> <p>個人のアクセスは、毎週または毎年の自動更新可能なサブスクリプション、または 1 回限りの生涯購入を通じて利用できます。 Apple プラットフォームでは、 Family Sharing製品と、適格な個人生涯所有者または従来の所有者向けのアップグレードも提供しています。 Google Play製品は個人専用です。購入した商品は店舗間で転送されません。 Family Sharingは、健康記録やエクスポートされたファイルではなく、機能へのアクセスを共有します。 </p> <p>対象となるサブスクリプションには 7 日間の無料トライアルが含まれており、その後、確認する前にストアが示す価格と請求間隔で自動的に更新されます。店舗が紹介資格を決定します。ライフタイムは 1 回だけすぐに請求され、トライアルや更新はありません。購入シートでは、製品、現地価格、通貨、税金、適用条件が管理されます。 </p> <p>購入した Apple または Google アカウントを通じて管理またはキャンセルします。 Apple サブスクリプションの場合は、試用期間または現在の期間が終了する少なくとも 24 時間前にキャンセルしてください。ストアのオファーに表示されているキャンセル期限に従ってください。アプリを削除したり、ライフタイムを購入したりしても、既存のサブスクリプションはキャンセルされません。アクセスが期限切れになるか取り消されると、新しいエクスポートとセットアップが制限されます。以前にエクスポートしたファイルは引き続き自分のものになります。 </p> <p>既存の有料アクセスおよび以前に廃止されたアクセスは引き続き有効です。購入を復元すると、削除された健康データやファイルではなく、対象となるアクセスが復元されます。サブスクリプションのみでは、ファミリー ライフタイム アップグレードの割引を受ける資格はありません。永久資格には定期的な有効期限はありませんが、デバイス、プロバイダー、または機能の無期限のサポートは保証されません。 </p> <p> Apple または Google は、その規約および適用法に基づいて請求、購入の復元、返金を処理します。支払いカードの詳細をすべて受け取ることはできません。 Apple の<a href="https://reportaproblem.apple.com/">問題の報告</a>または Google の該当する返金プロセスを使用してください。これらの規約は、消費者の義務的な権利を制限したり、将来の値上げを予告したりするものではありません。 </p>
+         </section>
+
+         <section id="third-parties">
+--- a/apps/website/i18n/messages/ko.json
++++ b/apps/website/i18n/messages/ko.json
+@@ -7,7 +7,7 @@
+       "meta.ogTitle": "Apple Health·Health Connect 데이터 내보내기",
+       "meta.twitterDescription": "Apple Health와 Health Connect 데이터를 CSV, JSON, Markdown, Obsidian Bases 파일로 저장하세요. 지표와 날짜를 고르고 원하는 폴더에 저장할 수 있습니다.",
+       "schema.description": "Health.md는 Apple Health와 Android Health Connect를 로컬 파일, 자동화, CLI 워크플로 및 로컬 에이전트에 연결하는 개인정보 보호 중심의 브리지입니다.",
+-      "schema.offerDescription": "Google Play에서는 무료 수동 내보내기 후 일회성 구매로 평생 이용할 수 있습니다. F-Droid 카탈로그 게시는 대기 중입니다.",
++      "schema.offerDescription": "Android 액세스: Google Play 주간/연간 구독 및 평생 구독을 제공합니다. 해당 구독에는 7일 무료 평가판이 포함됩니다. F-Droid 카탈로그 게시가 보류 중입니다.",
+       "schema.featureExport": "Apple Health와 Health Connect 데이터를 Markdown, CSV, JSON으로 내보내기",
+       "schema.featureSchedule": "로컬 내보내기 예약 및 자동화 워크플로 실행",
+       "schema.featureQuery": "독립 실행형 CLI와 로컬 MCP 서버를 통해 건강 데이터를 정확하게 조회",
+@@ -99,7 +99,7 @@
+       "observations": "관측값 14개",
+       "evidence": "근거 확인 가능",
+       "downloadTitle": "건강 데이터를 언제나 직접 관리하세요.",
+-      "downloadOffer": "Google Play에서는 무료 수동 내보내기 후 일회성 구매로 평생 이용할 수 있습니다. F-Droid 카탈로그 게시는 대기 중입니다.",
++      "downloadOffer": "Google Play 주간/연간 구독과 평생 구독을 제공합니다. 해당 구독에는 7일 평가판이 포함됩니다. F-Droid 카탈로그 게시가 보류 중입니다.",
+       "channelSwitchWarning": "Google Play와 F-Droid는 서로 다른 서명을 사용합니다. 채널을 바꾸려면 앱을 제거해야 하며 로컬 앱 데이터는 이전되지 않습니다.",
+       "footerNavLabel": "푸터 탐색",
+       "about": "Health.md 소개(영문)",
+--- a/apps/website/ko/terms-of-service.html
++++ b/apps/website/ko/terms-of-service.html
+@@ -203,11 +203,7 @@
+         </section>
+
+         <section id="purchases">
+-          <h2>10. 무료 이용, Full Access 및 환불</h2>
+-          <p>제품은 성공한 내보내기 작업을 제한된 횟수만큼 무료로 허용할 수 있습니다. 현재 소비자용 제공 조건은 무료 내보내기 10회입니다. 성공한 수동, 예약, Shortcut 또는 직접 작업은 포함된 날짜 또는 파일 수와 관계없이 제품에 표시된 대로 같은 허용량에서 차감될 수 있습니다. 실패한 작업과 재시도는 문서화된 할당량 규칙에 따라 다르게 처리될 수 있습니다.</p>
+-          <p>제공되는 경우 Full Access는 지원되는 기능의 내보내기 제한을 해제하는 일회성 앱 내 구매입니다. 구독이 아니며 갱신되지 않습니다. Apple 플랫폼은 Individual Lifetime, Family Lifetime 또는 이들 간의 업그레이드를 제공할 수 있고, 다른 스토어는 자체적으로 지원되는 일회성 제품을 제공할 수 있습니다. 스토어 구매 화면에 표시된 제품, 가격, 통화, 세금, 계정 및 Family Sharing 이용 자격이 우선합니다.</p>
+-          <p>“평생” 또는 영구적인 권리는 구매한 라이선스가 정기 결제 일정에 따라 만료되지 않는다는 뜻입니다. 모든 기능, 운영체제, 기기, 제공자 또는 제품이 영구히 제공되거나 지원된다는 보장은 아닙니다. 스토어 약관 및 법률이 허용하는 경우를 제외하고 완료된 구매를 변경하지 않으면서 향후 가격이나 제공 조건을 변경할 수 있습니다.</p>
+-          <p>구매, 복원, 청구 및 환불은 Full Access를 구매한 스토어에서 처리합니다. 당사는 카드 전체 정보를 수신하지 않으며 일반적으로 스토어 환불을 직접 처리할 수 없습니다. Apple 구매는 <a href="https://reportaproblem.apple.com/" target="_blank" rel="noopener">문제 신고</a>를 이용하고, Google Play 구매는 Google의 해당 환불 절차를 이용하십시오. 환불 자격은 스토어와 관련 법률에 따라 결정됩니다.</p>
++          <h2> 10. 유료 액세스, 구독 및 환불 </h2> <p> 구독이 활성화된 iPhone , iPad 및 Google Play 전화 릴리스에서 설정 및 내보내기에는 활성 매장 지원 평가판, 구독, 평생 구매 또는 보존된 영구 권한이 필요합니다. 현지 자유 수출 허용은 없습니다. Mac 컴패니언 및 F-Droid 포함 액세스 채널은 무료로 유지됩니다. 이전 배포 버전에는 다른 제안이 있을 수 있습니다. </p> <p> 개인 액세스는 주간 또는 연간 자동 갱신 구독 또는 일회성 평생 구매를 통해 제공됩니다. Apple 플랫폼은 또한 자격을 갖춘 개인 평생 또는 기존 소유자를 위해 Family Sharing 제품과 업그레이드를 제공합니다. Google Play 제품은 개인 전용입니다. 구매 내역은 매장 간에 이전되지 않습니다. Family Sharing 건강 기록이나 내보낸 파일이 아닌 기능 액세스를 공유합니다. </p> <p> 적격한 구독에는 7일 무료 평가판이 포함되며, 확인 전 매장에서 표시한 가격과 청구 간격에 따라 자동으로 갱신됩니다. 매장에서 신규 자격 여부를 결정합니다. 평생 요금은 한 번만 청구되며 무료 체험 및 갱신이 없습니다. 구매 시트에서는 제품, 현지 가격, 통화, 세금 및 해당 조건을 관리합니다. </p> <p> 구매한 Apple 또는 Google 계정을 통해 관리 또는 취소할 수 있습니다. Apple 구독의 경우 평가판 또는 현재 기간이 종료되기 최소 24시간 전에 취소하십시오. 매장 제안에 표시된 취소 기한을 따르십시오. 앱을 삭제하거나 Lifetime을 구매해도 기존 구독은 취소되지 않습니다. 액세스가 만료되거나 취소되면 새로운 내보내기 및 설정이 제한됩니다. 이전에 내보낸 파일은 그대로 유지됩니다. </p> <p> 기존 유료 및 이전에 부여된 액세스 권한은 계속 유효합니다. 구매 복원은 삭제된 건강 데이터나 파일이 아닌 적격 액세스를 복원합니다. 구독만으로는 할인된 가족 평생 업그레이드를 받을 수 없습니다. 영구 권한은 반복적으로 만료되지 않지만 무기한 장치, 공급자 또는 기능 지원을 보장하지는 않습니다. </p> <p> Apple 또는 Google은 해당 약관 및 관련 법률에 따라 청구, 구매 복원 및 환불을 처리합니다. 우리는 전체 결제 카드 정보를 받지 않습니다. Apple의 <a href="https://reportaproblem.apple.com/"> 문제 신고 </a> 또는 Google의 해당 환불 절차를 사용하세요. 본 약관은 필수 소비자 권리를 제한하거나 향후 가격 인상을 발표하지 않습니다. </p>
+         </section>
+
+         <section id="third-parties">
+--- a/apps/website/i18n/messages/nl.json
++++ b/apps/website/i18n/messages/nl.json
+@@ -7,7 +7,7 @@
+       "meta.ogTitle": "Exports uit Apple Health en Health Connect",
+       "meta.twitterDescription": "Je Apple Health- en Health Connect-gegevens als CSV, JSON, Markdown of Obsidian Bases. Selecteer meetwaarden en datums en sla ze op in je eigen map.",
+       "schema.description": "Health.md is een privéverbinding van Apple Health en Android Health Connect naar lokale bestanden, automatisering, CLI-workflows en lokale agents.",
+-      "schema.offerDescription": "Google Play biedt gratis handmatige exports, gevolgd door een eenmalige aankoop voor levenslange toegang. Publicatie in de F-Droid-catalogus is nog in behandeling.",
++      "schema.offerDescription": "Android-toegang: Google Play biedt wekelijkse/jaarlijkse abonnementen en Lifetime. Bij in aanmerking komende abonnementen is een gratis proefperiode van zeven dagen inbegrepen. F-Droid cataloguspublicatie is in behandeling.",
+       "schema.featureExport": "Exporteer gegevens uit Apple Health en Health Connect naar Markdown, CSV en JSON",
+       "schema.featureSchedule": "Plan lokale exports en start geautomatiseerde workflows",
+       "schema.featureQuery": "Vraag exacte gezondheidsgegevens op via een zelfstandige CLI en lokale MCP-server",
+@@ -99,7 +99,7 @@
+       "observations": "14 waarnemingen",
+       "evidence": "Bewijs beschikbaar",
+       "downloadTitle": "Neem je gezondheids&shy;gegevens mee.",
+-      "downloadOffer": "Google Play biedt gratis handmatige exports, gevolgd door een eenmalige aankoop voor levenslange toegang. Publicatie in de F-Droid-catalogus is nog in behandeling.",
++      "downloadOffer": "Google Play biedt wekelijkse/jaarlijkse abonnementen en Lifetime. Bij in aanmerking komende abonnementen is een proefperiode van zeven dagen inbegrepen. F-Droid cataloguspublicatie is in behandeling.",
+       "channelSwitchWarning": "Google Play en F-Droid gebruiken verschillende handtekeningen. Wisselen vereist dat je de app verwijdert; lokale appgegevens worden niet gemigreerd.",
+       "footerNavLabel": "Voettekstnavigatie",
+       "about": "Over ons (Engels)",
+--- a/apps/website/nl/terms-of-service.html
++++ b/apps/website/nl/terms-of-service.html
+@@ -203,11 +203,7 @@
+         </section>
+
+         <section id="purchases">
+-          <h2>10. Gratis gebruik, Full Access en terugbetalingen</h2>
+-          <p>De Producten kunnen een beperkt aantal geslaagde exporthandelingen kosteloos toestaan. Het huidige consumentenaanbod omvat 5 gratis exports. Een geslaagde handmatige, geplande, Opdracht- of rechtstreekse handeling kan, ongeacht het aantal datums of bestanden, meetellen voor dezelfde limiet zoals in het Product wordt aangegeven. Mislukte taken en nieuwe pogingen kunnen volgens de gedocumenteerde quotaregels anders worden behandeld.</p>
+-          <p>Waar aangeboden is Full Access een eenmalige in-appaankoop waarmee de exportlimiet voor ondersteunde functies vervalt. Het is geen abonnement en wordt niet verlengd. Apple-platforms kunnen Individual Lifetime, Family Lifetime of een upgrade daartussen aanbieden; andere winkels kunnen een eigen ondersteund eenmalig product aanbieden. Het aankoopscherm van de winkel bepaalt het weergegeven product, de prijs, valuta, belasting, account en of Delen met gezin beschikbaar is.</p>
+-          <p>Een ‘levenslange’ of permanente aanspraak betekent dat de gekochte licentie niet volgens een terugkerend factureringsschema verloopt. Dit garandeert niet dat elke functie, elk besturingssysteem, apparaat, elke provider of elk Product voor altijd beschikbaar of ondersteund blijft. Wij kunnen toekomstige prijzen of aanbiedingen wijzigen zonder een voltooide aankoop te wijzigen, behalve voor zover de winkelvoorwaarden en de wet dit toestaan.</p>
+-          <p>Aankopen, herstel, facturering en terugbetalingen worden afgehandeld door de winkel waar u Full Access hebt gekocht. Wij ontvangen geen volledige kaartgegevens en kunnen normaal gesproken niet zelf een winkelterugbetaling verstrekken. Ga voor Apple-aankopen naar <a href="https://reportaproblem.apple.com/" target="_blank" rel="noopener">Meld een probleem</a>; gebruik voor aankopen via Google Play de toepasselijke terugbetalingsprocedure van Google. Of u voor terugbetaling in aanmerking komt, wordt bepaald door de winkel en het toepasselijke recht.</p>
++          <h2> 10. Betaalde toegang, abonnementen en terugbetalingen </h2> <p> Op de telefoonreleases iPhone , iPad en Google Play waarvoor een abonnement is ingeschakeld, vereisen installatie en export een actieve, door de winkel ondersteunde proefperiode, abonnement, levenslange aankoop of behouden permanent recht. Er is geen lokale vrije exportvergoeding. De Mac-companion en F-Droid kanaal met inbegrepen toegang blijven gratis. Oudere gedistribueerde versies kunnen verschillende aanbiedingen hebben. </p> <p> Individuele toegang is beschikbaar via wekelijkse of jaarlijkse automatisch verlengbare abonnementen of een eenmalige levenslange aankoop. Apple-platforms bieden ook Family Sharing producten en een upgrade voor in aanmerking komende individuele levenslange of oudere eigenaren. Google Play producten zijn alleen voor individuele personen; aankopen worden niet overgedragen tussen winkels. Family Sharing deelt functietoegang, geen gezondheidsdossiers of geëxporteerde bestanden. </p> <p> In aanmerking komende abonnementen omvatten een gratis proefperiode van 7 dagen, die vervolgens automatisch wordt verlengd tegen de prijs en het factureringsinterval die vóór bevestiging door de winkel worden weergegeven. De winkel bepaalt of u in aanmerking komt voor een introductie. Lifetime wordt één keer in rekening gebracht, heeft geen proefperiode en wordt niet verlengd. Op het aankoopblad staan ​​het product, de lokale prijs, de valuta, de belasting en de toepasselijke voorwaarden vermeld. </p> <p> Beheer of annuleer via het aangeschafte Apple- of Google-account. Voor Apple-abonnementen dient u uw abonnement minimaal 24 uur vóór het einde van de proefperiode of de huidige periode op te zeggen; volg de annuleringsdeadline die voor uw winkelaanbieding wordt weergegeven. Het verwijderen van de app of het kopen van Lifetime annuleert een bestaand abonnement niet. Wanneer de toegang verloopt of wordt ingetrokken, worden nieuwe exports en instellingen afgesloten; eerder geëxporteerde bestanden blijven van u. </p> <p> Bestaande betaalde toegang en voorheen verleende toegang blijft geldig. Aankopen herstellen herstelt de in aanmerking komende toegang, niet de verwijderde gezondheidsgegevens of bestanden. Een abonnement alleen komt niet in aanmerking voor de Family Lifetime-upgrade met korting. Een permanent recht heeft geen terugkerende vervaldatum, maar garandeert geen onbeperkte ondersteuning voor apparaten, providers of functies. </p> <p> Apple of Google handelt de facturering, het herstel van aankopen en terugbetalingen af ​​volgens de voorwaarden en de toepasselijke wetgeving. Wij ontvangen geen volledige betaalkaartgegevens. Gebruik het Apple-programma <a href="https://reportaproblem.apple.com/"> Een probleem melden </a> of het toepasselijke teruggaveproces van Google. Deze voorwaarden beperken de verplichte consumentenrechten niet en kondigen geen toekomstige prijsverhoging aan. </p>
+         </section>
+
+         <section id="third-parties">
+--- a/apps/website/i18n/messages/pt-br.json
++++ b/apps/website/i18n/messages/pt-br.json
+@@ -7,7 +7,7 @@
+       "meta.ogTitle": "Exportações do Apple Health e Health Connect",
+       "meta.twitterDescription": "Seus dados do Apple Health e Health Connect em arquivos CSV, JSON, Markdown ou Obsidian Bases. Selecione métricas e datas e salve na pasta escolhida.",
+       "schema.description": "O Health.md é uma ponte privada que conecta o Apple Health e o Health Connect no Android a arquivos locais, automações, fluxos de trabalho com CLI e agentes locais.",
+-      "schema.offerDescription": "O Google Play oferece exportações manuais gratuitas e depois uma compra única vitalícia. A publicação no catálogo do F-Droid está pendente.",
++      "schema.offerDescription": "Acesso Android: Google Play oferece assinaturas semanais/anuais e vitalícias. As assinaturas qualificadas incluem uma avaliação gratuita de 7 dias. A publicação do catálogo F-Droid está pendente.",
+       "schema.featureExport": "Exporte dados do Apple Health e do Health Connect para Markdown, CSV e JSON",
+       "schema.featureSchedule": "Agende exportações locais e acione fluxos de automação",
+       "schema.featureQuery": "Consulte dados de saúde exatos por uma CLI independente e um servidor MCP local",
+@@ -99,7 +99,7 @@
+       "observations": "14 observações",
+       "evidence": "Evidências disponíveis",
+       "downloadTitle": "Leve seus dados de saúde com você.",
+-      "downloadOffer": "O Google Play oferece exportações manuais gratuitas e depois uma compra única vitalícia. A publicação no catálogo do F-Droid está pendente.",
++      "downloadOffer": "Google Play oferece assinaturas semanais/anuais e vitalícias. As assinaturas qualificadas incluem uma avaliação de 7 dias. A publicação do catálogo F-Droid está pendente.",
+       "channelSwitchWarning": "Google Play e F-Droid usam assinaturas diferentes. Para mudar de canal, é preciso desinstalar o app; os dados locais não são migrados.",
+       "footerNavLabel": "Navegação do rodapé",
+       "about": "Sobre (em inglês)",
+--- a/apps/website/pt-br/terms-of-service.html
++++ b/apps/website/pt-br/terms-of-service.html
+@@ -203,11 +203,7 @@
+         </section>
+
+         <section id="purchases">
+-          <h2>10. Uso gratuito, Full Access e reembolsos</h2>
+-          <p>Os Produtos podem permitir um número limitado de ações de exportação bem-sucedidas sem cobrança. A oferta atual para consumidores inclui 5 exportações gratuitas. Uma ação manual, agendada, via Shortcut ou direta bem-sucedida pode consumir a mesma franquia, conforme mostrado no Produto, independentemente de quantas datas ou arquivos ela inclua. Trabalhos com falha e novas tentativas podem ser tratados de forma diferente conforme as regras documentadas da cota.</p>
+-          <p>Quando oferecido, o Full Access é uma compra única no aplicativo que remove o limite de exportações para recursos compatíveis. Ele não é uma assinatura e não se renova. As plataformas Apple podem oferecer Individual Lifetime, Family Lifetime ou uma atualização entre eles; outras lojas podem oferecer seu próprio produto único compatível. A tela de compra da loja controla o produto, preço, moeda, tributos, conta e elegibilidade para Compartilhamento Familiar exibidos.</p>
+-          <p>Um direito “vitalício” ou permanente significa que a licença adquirida não expira em um ciclo de cobrança recorrente. Isso não garante que todos os recursos, sistemas operacionais, dispositivos, provedores ou Produtos continuarão disponíveis ou compatíveis para sempre. Podemos alterar preços ou ofertas futuras sem modificar uma compra concluída, exceto conforme permitido pelos termos da loja e pela legislação.</p>
+-          <p>Compras, restaurações, cobranças e reembolsos são tratados pela loja em que você comprou o Full Access. Não recebemos os dados completos do cartão e, normalmente, não podemos emitir diretamente um reembolso da loja. Para compras da Apple, use <a href="https://reportaproblem.apple.com/" target="_blank" rel="noopener">Relatar um Problema</a>; para compras no Google Play, use o processo de reembolso aplicável do Google. A elegibilidade ao reembolso é determinada pela loja e pela legislação aplicável.</p>
++          <h2> 10. Acesso pago, assinaturas e reembolsos </h2> <p> Nas versões de telefone iPhone , iPad e Google Play habilitadas para assinatura, a configuração e as exportações exigem uma avaliação ativa apoiada pela loja, assinatura, compra vitalícia ou direito permanente preservado. Não há permissão de livre exportação local. O companheiro Mac e o canal de acesso incluído F-Droid permanecem gratuitos. Versões distribuídas mais antigas podem ter ofertas diferentes. </p> <p> O acesso individual está disponível por meio de assinaturas semanais ou anuais renováveis ​​automaticamente ou por meio de uma compra vitalícia única. As plataformas Apple também oferecem produtos Family Sharing e uma atualização para proprietários individuais elegíveis ou legados. Os produtos Google Play são apenas individuais; as compras não são transferidas entre lojas. Family Sharing compartilha acesso a recursos, não registros de saúde ou arquivos exportados. </p> <p> As assinaturas qualificadas incluem uma avaliação gratuita de 7 dias e são renovadas automaticamente de acordo com o preço e intervalo de cobrança mostrados pela loja antes da confirmação. A loja determina a elegibilidade introdutória. O Lifetime é cobrado imediatamente uma vez, não tem avaliação e não é renovado. A planilha de compra controla o produto, preço local, moeda, impostos e termos aplicáveis. </p> <p> Gerencie ou cancele através da compra da conta Apple ou Google. Para assinaturas da Apple, cancele pelo menos 24 horas antes do término do teste ou do período atual; siga qualquer prazo de cancelamento mostrado para a oferta da sua loja. Excluir o aplicativo ou comprar o Lifetime não cancela uma assinatura existente. Quando o acesso expira ou é revogado, novas exportações e configurações são bloqueadas; os arquivos exportados anteriormente permanecem seus. </p> <p> O acesso pago existente e anteriormente adquirido permanece válido. Restaurar compras restaura o acesso qualificado, não dados ou arquivos de saúde excluídos. A assinatura por si só não se qualifica para o upgrade Family Lifetime com desconto. Um direito permanente não tem expiração recorrente, mas não garante suporte indefinido a dispositivos, provedores ou recursos. </p> <p> A Apple ou o Google cuidam do faturamento, da restauração de compras e dos reembolsos de acordo com seus termos e a lei aplicável. Não recebemos detalhes completos do cartão de pagamento. Use o <a href="https://reportaproblem.apple.com/"> Informar um problema </a> da Apple ou o processo de reembolso aplicável do Google. Estes termos não limitam os direitos obrigatórios do consumidor nem anunciam um futuro aumento de preços. </p>
+         </section>
+
+         <section id="third-parties">
+--- a/apps/website/i18n/messages/zh-hans.json
++++ b/apps/website/i18n/messages/zh-hans.json
+@@ -7,7 +7,7 @@
+       "meta.ogTitle": "Apple Health 与 Health Connect 数据导出",
+       "meta.twitterDescription": "把 Apple Health 和 Health Connect 数据保存为 CSV、JSON、Markdown 或 Obsidian Bases 文件。选择指标和日期，保存到你指定的文件夹。",
+       "schema.description": "Health.md 是连接 Apple Health、Android Health Connect 与本地文件、自动化、CLI 工作流及本地智能体的私密桥梁。",
+-      "schema.offerDescription": "Google Play 提供免费手动导出，之后可一次性购买终身访问权限。F-Droid 目录发布尚待完成。",
++      "schema.offerDescription": "Android 访问： Google Play提供每周/每年订阅和终身订阅。符合条件的订阅包括 7 天免费试用。 F-Droid目录发布待定。",
+       "schema.featureExport": "将 Apple Health 和 Health Connect 数据导出为 Markdown、CSV 和 JSON",
+       "schema.featureSchedule": "安排本地导出并触发自动化工作流",
+       "schema.featureQuery": "通过独立 CLI 和本地 MCP 服务器精确查询健康数据",
+@@ -99,7 +99,7 @@
+       "observations": "14 条观测记录",
+       "evidence": "证据可用",
+       "downloadTitle": "随时掌控并带走您的健康数据。",
+-      "downloadOffer": "Google Play 提供免费手动导出，之后可一次性购买终身访问权限。F-Droid 目录发布尚待完成。",
++      "downloadOffer": "Google Play提供每周/每年订阅和终身订阅。符合条件的订阅包括 7 天试用期。 F-Droid目录发布待定。",
+       "channelSwitchWarning": "Google Play 与 F-Droid 使用不同签名。切换渠道需要卸载应用，且不会迁移本地应用数据。",
+       "footerNavLabel": "页脚导航",
+       "about": "关于 Health.md（英文）",
+@@ -146,9 +146,21 @@
+       "scheduleMonthlyFile": "Health/<br>August 2026.md",
+       "scopedRequest": "· 限定范围的请求",
+       "typedQuery": "· 类型化查询",
+-      "codexQuestions": ["比较本周与上周的平均静息心率。", "显示跑步锻炼前后的睡眠时段。", "哪些日期缺少睡眠数据？"],
+-      "claudeQuestions": ["比较本周与上周的静息心率。", "显示跑步锻炼前后的睡眠时段。", "找出缺少睡眠数据的日期。"],
+-      "terminalQuestions": ["比较本周和上周的平均静息心率。", "列出跑步锻炼前后的睡眠时段。", "显示缺少睡眠数据覆盖的日期。"]
++      "codexQuestions": [
++        "比较本周与上周的平均静息心率。",
++        "显示跑步锻炼前后的睡眠时段。",
++        "哪些日期缺少睡眠数据？"
++      ],
++      "claudeQuestions": [
++        "比较本周与上周的静息心率。",
++        "显示跑步锻炼前后的睡眠时段。",
++        "找出缺少睡眠数据的日期。"
++      ],
++      "terminalQuestions": [
++        "比较本周和上周的平均静息心率。",
++        "列出跑步锻炼前后的睡眠时段。",
++        "显示缺少睡眠数据覆盖的日期。"
++      ]
+     }
+   }
+ }
+--- a/apps/website/zh-hans/terms-of-service.html
++++ b/apps/website/zh-hans/terms-of-service.html
+@@ -203,11 +203,7 @@
+         </section>
+
+         <section id="purchases">
+-          <h2>10. 免费使用、Full Access 与退款</h2>
+-          <p>产品可以允许您免费完成有限次数的导出操作。目前面向消费者的方案提供 5 次免费导出。一次成功的手动、计划、Shortcut 或直接操作，无论包含多少日期或文件，都可能按照产品中的提示从同一额度中扣除。失败的任务和重试可能按文档规定的额度规则作不同处理。</p>
+-          <p>在提供时，Full Access 是一次性应用内购买，可解除受支持功能的导出限制。它并非订阅，也不会续订。Apple 平台可能提供 Individual Lifetime、Family Lifetime 或两者之间的升级；其他商店可以提供各自支持的一次性产品。商店购买页面中显示的产品、价格、币种、税费、账户和 Family Sharing 资格为准。</p>
+-          <p>“终身”或永久权益，是指所购许可不会按周期性计费计划到期，并不保证所有功能、操作系统、设备、提供方或产品都会永久提供或获得支持。我们可以调整未来价格或方案，但不得变更已经完成的购买，商店条款和法律允许的情形除外。</p>
+-          <p>购买、恢复、计费和退款由您购买 Full Access 的商店处理。我们不会收到完整的银行卡信息，通常也无法直接办理商店退款。Apple 购买请使用<a href="https://reportaproblem.apple.com/" target="_blank" rel="noopener">“报告问题”</a>服务；Google Play 购买请使用 Google 适用的退款流程。退款资格由商店和适用法律决定。</p>
++          <h2> 10. 付费访问、订阅和退款</h2> <p>在支持订阅的iPhone 、 iPad和Google Play手机版本中，设置和导出需要有效的商店支持的试用、订阅、终身购买或保留的永久权利。当地没有自由出口补贴。 Mac 伴侣和F-Droid包含访问频道仍然免费。较旧的分布式版本可能有不同的优惠。 </p> <p>可通过每周或每年自动续订订阅或一次性终生购买获得个人访问权限。 Apple 平台还为符合条件的个人终身或遗留所有者提供Family Sharing产品和升级。 Google Play产品仅供个人使用；购买不会在商店之间转移。 Family Sharing共享功能访问权限，而不是健康记录或导出的文件。 </p> <p>符合条件的订阅包括 7 天免费试用，然后按照确认前商店显示的价格和计费间隔自动续订。商店确定介绍资格。终身一次立即充值，无试用，不续费。采购表控制产品、当地价格、货币、税收和适用条款。 </p> <p>通过购买的 Apple 或 Google 帐户进行管理或取消。对于 Apple 订阅，请在试用期或当前期限结束前至少 24 小时取消；请遵循商店报价中显示的任何取消截止日期。删除应用程序或购买终身不会取消现有订阅。当访问权限过期或被撤销时，新的导出和设置将受到限制；以前导出的文件仍然属于您。 </p> <p>现有的付费访问权限和之前的访问权限仍然有效。恢复购买恢复符合资格的访问权限，而不是删除已删除的健康数据或文件。单独订阅不符合享受折扣家庭终身升级的资格。永久权利不会重复到期，但不保证无限期的设备、提供商或功能支持。 </p> <p> Apple 或 Google 根据其条款和适用法律处理计费、购买恢复和退款。我们没有收到完整的支付卡详细信息。使用 Apple 的<a href="https://reportaproblem.apple.com/">报告问题</a>或 Google 的适用退款流程。这些条款不限制强制性消费者权利或宣布未来价格上涨。 </p>
+         </section>
+
+         <section id="third-parties">
+--- a/apps/website/privacy-policy.html
++++ b/apps/website/privacy-policy.html
+@@ -4,7 +4,7 @@
+   <meta charset="utf-8">
+   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+   <title>Privacy Policy — Health.md</title>
+-  <meta name="description" content="Health.md is local-first by default. An optional single-owner cloud pilot retains only intentionally uploaded exports; analytics remains health-free.">
++  <meta name="description" content="Health.md is local-first by default. An optional single-owner cloud pilot retains only intentionally uploaded exports; connected services have separate disclosures.">
+   <link rel="canonical" href="https://healthmd.app/privacy-policy.html">
+   <link rel="alternate" hreflang="en" href="https://healthmd.app/privacy-policy.html">
+   <link rel="alternate" hreflang="es" href="https://healthmd.app/es/privacy-policy.html">
+@@ -14,7 +14,7 @@
+   <meta property="og:type" content="website">
+   <meta property="og:site_name" content="Health.md">
+   <meta property="og:title" content="Privacy Policy — Health.md">
+-  <meta property="og:description" content="Health.md is local-first. An optional single-owner cloud pilot retains only exports intentionally sent to it; website analytics remains health-free.">
++  <meta property="og:description" content="Health.md is local-first. An optional single-owner cloud pilot retains only exports intentionally sent to it; website connected services have separate disclosures.">
+   <meta property="og:url" content="https://healthmd.app/privacy-policy.html">
+   <meta property="og:locale" content="en_US">
+   <meta property="og:locale:alternate" content="es_ES">
+@@ -47,7 +47,7 @@
+       <div class="legal-hero-inner">
+         <p class="legal-eyebrow">Legal · Privacy</p>
+         <h1 id="privacy-title">Privacy,<br>in plain language.</h1>
+-        <p class="legal-updated">Last updated: 2026-10-24</p>
++        <p class="legal-updated">Applies to Health.md 3.5.0 when released · Prepared: 2026-10-30</p>
+         <p class="legal-lede">Health.md is local-first. Your device reads the records you authorize; you choose where exports or direct responses go. A separate, optional single-owner cloud pilot stores exports intentionally sent to it.</p>
+
+         <div class="legal-promise" role="list" aria-label="Privacy principles">
+@@ -63,8 +63,8 @@
+           </div>
+           <div role="listitem">
+             <span>03</span>
+-            <strong>Analytics stays health-free</strong>
+-            <p>Limited first-party events use coarse fields that cannot represent health records or export content.</p>
++            <strong>No custom app analytics</strong>
++            <p>Health.md 3.5.0 removes custom app usage analytics and advertising attribution. Website measurement and essential services are described separately.</p>
+           </div>
+         </div>
+       </div>
+@@ -79,8 +79,8 @@
+             <li><a href="#health-data">Health data</a></li>
+             <li><a href="#destinations">Destinations</a></li>
+             <li><a href="#medical-records">Android medical records</a></li>
+-            <li><a href="#product-analytics">Product analytics</a></li>
+-            <li><a href="#campaigns">Campaign attribution</a></li>
++            <li><a href="#product-analytics">App analytics and earlier versions</a></li>
++            <li><a href="#campaigns">Website measurement</a></li>
+             <li><a href="#operations">Scheduling and support</a></li>
+             <li><a href="#website">Website data</a></li>
+             <li><a href="#retention">Storage and retention</a></li>
+@@ -101,7 +101,7 @@
+           <p>It does not replace the privacy terms of Apple, Google, a health provider, a file or sync provider, an API operator, an AI tool, or another destination you choose. Once you direct data to one of those services, that service's terms and your configuration govern its copy.</p>
+           <div class="policy-note">
+             <p><strong>The simple version:</strong> Health.md is local-first, but an optional, unbacked single-owner Health.md Cloud pilot stores API exports the owner chooses to upload. No public signup or automatic device sync exists. Direct queries remain on the paired device unless you choose to share results elsewhere.</p>
+-            <p>We do automatically collect limited first-party product analytics and campaign data. Those systems are pseudonymous, contain no health records or exports, and are used for product and campaign measurement.</p>
++            <p>Health.md 3.5.0 removes custom product analytics and app campaign attribution. Essential services and separately disclosed website measurement can still process data as described below.</p>
+           </div>
+         </section>
+
+@@ -156,26 +156,13 @@
+         </section>
+
+         <section id="product-analytics">
+-          <h2>First-Party Product Analytics</h2>
+-          <p><strong>Android F-Droid build:</strong> it performs no Health.md telemetry and does not create a telemetry installation identifier, event queue, worker, or persisted telemetry state. Install Referrer, onboarding analytics, Play review, Billing, direct cloud-provider OAuth, and Wear Data Layer code are not compiled into that build. Exports to an API endpoint you configure and explicit Direct CLI sessions are user-directed product actions, not Health.md telemetry.</p>
+-          <p>The Apple and Google Play builds use a first-party Cloudflare Worker and D1 database to understand whether onboarding, activation, export, scheduling, paywall, and purchase flows work. Health.md collects these limited product events automatically without Firebase Analytics, Google Analytics, AppsFlyer, a third-party crash-reporting SDK, or an advertising SDK in the app.</p>
+-          <p>Depending on the platform and event, an accepted payload can contain a random app-install UUID, random event UUID, event name, app version, build number, platform, experiment or variant, onboarding step or explicit skip, bounded free-export counts, export-target category, format count, coarse metric-count and date-span buckets, paywall context, product identifier, purchase or restore outcome, and broad authorization or error category.</p>
+-          <p>The installation UUID persists for that app installation, so the data is <strong>pseudonymous rather than anonymous</strong>. It is randomly generated and is not derived from your name, account, health identifier, device hardware identifier, Android ID, or Advertising ID.</p>
+-          <p>Product analytics <strong>never include HealthKit or Health Connect values or identifiers, metric names, health dates</strong>, medications, workouts, export contents, typed query results, folder or vault names, file paths, peer or device names, account data, prices, <strong>credentials or tokens</strong>, user text, raw referrers, full User-Agent strings, or stored IP addresses. Unknown events, properties, and property values are rejected. The public client and Worker allowlists are designed so <strong>health records and exported content cannot be represented in an analytics payload</strong>.</p>
+-          <p>These events are not used for ad targeting, fingerprinting, or cross-app tracking, and they are not sold or shared with advertisers. Validated rows are retained for no more than 13 months and removed by automatic daily cleanup. Cloudflare still processes ordinary connection information under its own terms.</p>
+-        </section>
+-
++          <h2>App analytics and earlier versions</h2>
++          <p><strong>App analytics in this release:</strong> this version does not collect custom usage analytics, create an analytics installation identifier, send onboarding or purchase-flow events, or perform app advertising attribution. On upgrade, it removes retired local analytics identifiers and unsent queues. Purchase access and essential services still work.</p>
++<p><strong>Earlier versions:</strong> older versions could send installation-linked onboarding and purchase-flow events. These were pseudonymous records, not anonymous counts. This update does not delete data already received by the service. Contact support about retained records. Historical analytics storage, exports, logs and recovery copies are addressed separately; do not assume deleting local data deletes them.</p>
++        </section>
+         <section id="campaigns">
+-          <h2>First-party campaign attribution</h2>
+-          <p>Health.md uses first-party short links, such as <code>healthmd.app/v/yt-csv-001</code>, to measure aggregate campaign performance without a third-party attribution SDK.</p>
+-          <p>On iPhone and iPad, Apple AdServices resolves an Apple Ads attribution token directly with Apple. The token is transient and never stored or sent to Health.md. Only campaign, ad group and keyword identifiers, match status, click or impression claim, and download or redownload category are linked to the random installation ID and purchase outcomes in first-party analytics. No IDFA or third-party attribution SDK is used. Health data and purchase events are never sent to Apple Ads. Failed lookups remain unknown, not organic.</p>
+-          <ul>
+-            <li>The redirect service can record the campaign token and slug, platform and content angle, coarse destination or client category, referring hostname when supplied, coarse country code, and time.</li>
+-            <li>The stored click row does not include an IP address, full User-Agent, cookie, Cloudflare request ID, or fingerprint.</li>
+-            <li>On Android, Google Play Install Referrer can produce one sanitized attributed-install event with random install and event UUIDs, app version/build, validated campaign fields, event time, and optional Play click/install timestamps.</li>
+-            <li>The raw Install Referrer is discarded and never persisted or transmitted by Health.md. Clicks and installs are joined only by the validated campaign token for aggregate reporting.</li>
+-          </ul>
+-          <p>Campaign click and install rows are retained for no more than 13 months. Aggregate ingest-rate windows contain only a minute and count and are deleted after 24 hours. Cloudflare processes ordinary network information while delivering these requests, but Health.md does not add it to campaign records.</p>
++          <h2>Website campaign measurement</h2>
++          <p>Public website campaign links and website measurement are separate from app analytics. The app no longer resolves Apple Ads attribution tokens or reads Google Play Install Referrer. Earlier campaign and app-event records are handled separately from local app deletion.</p>
+         </section>
+
+         <section id="operations">
+@@ -206,7 +193,7 @@
+             <li><strong>App settings and history</strong> are stored on your device using platform storage. Provider credentials use protected platform credential storage where supported.</li>
+             <li><strong>Exported files and API deliveries</strong> remain with the destination you chose until deleted under that destination's controls. The optional Health.md Cloud pilot retains every accepted revision without an age cutoff, subject to its account storage quota. The pilot runs on an unbacked VM: disk, key or VM loss can permanently destroy exports. Account deletion disables access immediately and a background job then erases stored ciphertext and metadata; completion is not instantaneous.</li>
+             <li><strong>Paired Mac and direct CLI/MCP data</strong> remains in local output, job state, credential store, transcript, or other computer storage created by your workflow. Separately authorized cloud MCP calls read retained API exports and may put returned values into the agent provider's systems.</li>
+-            <li><strong>Product analytics and campaign rows</strong> are retained for no more than 13 months; campaign ingest-rate counters are deleted after 24 hours.</li>
++            <li><strong>Earlier app analytics and campaign rows:</strong> removing collection from the app does not delete existing service records. Contact support about deletion. Website measurement and essential services have separate retention; no new global deletion deadline is established by this update.</li>
+             <li><strong>Scheduling, purchase, support, and ordinary network records</strong> are retained only as needed to provide, secure, document, or comply with requirements for those services, subject to the applicable platform and provider terms.</li>
+           </ul>
+           <p>Uninstalling Health.md removes app-local state according to the operating system, but it does not remove files already exported to another folder or service, data stored by a paired client, a message you sent, or data held by a destination provider.</p>
+@@ -220,9 +207,8 @@
+             <li>Android Health Connect</li>
+             <li>Apple Files, Android Storage Access Framework, and file providers you choose</li>
+             <li>StoreKit, the App Store, Google Play, and Google Play Billing</li>
+-            <li>Google Play Install Referrer for sanitized Android campaign attribution</li>
+             <li>Apple Push Notification service for scheduled-export wakeups</li>
+-            <li>Cloudflare for first-party analytics, campaign services, D1 storage, abuse throttling, website delivery, optional cloud dashboard/MCP HTTPS ingress, and website analytics</li>
++            <li>Cloudflare for essential services, legacy analytics retirement, website campaign services, website delivery, optional cloud dashboard/MCP HTTPS ingress, and website analytics</li>
+             <li>Optional provider APIs, OAuth services, API endpoints, sync services, AI/model providers, and local clients that you configure</li>
+           </ul>
+           <p>The optional, unbacked single-owner Health.md Cloud export pilot runs on EXE.dev VM infrastructure. It is not the default app destination.</p>
+@@ -236,7 +222,7 @@
+             <li>Health access is controlled by HealthKit and Health Connect permissions and device protections.</li>
+             <li>Direct Mac and CLI pairing uses authenticated encrypted sessions, bounded frames, integrity checks, and explicit approval.</li>
+             <li>Protected API Endpoint mode requires HTTPS; the endpoint operator controls what happens after delivery. The opt-in Cloud pilot encrypts stored exports and requires separate account, ingest, and revocable read credentials. It has no off-host backup or account recovery, and is not an independently audited or generally available service.</li>
+-            <li>Analytics and campaign ingest reject unknown or oversized fields and intentionally cannot represent health payloads.</li>
++            <li>At the coordinated service retirement, the replacement legacy app-analytics endpoint discards uploads without parsing or storing them. Until that cutover is complete, earlier clients can still reach the earlier collector. Essential services remain separate from analytics.</li>
+             <li>Local files inherit the access, encryption, backup, and sync controls of the device, folder, vault, or provider where you place them.</li>
+           </ul>
+           <p>The local Mac query API uses loopback reachability as its access boundary and has no bearer token. Do not proxy or expose its port to another machine. Direct iPhone pairing should be enabled only for computers and networks you trust. Keep devices updated, use passcodes and disk encryption, and review the retention and logging settings of destinations, agent hosts, and model providers.</p>
+@@ -252,7 +238,7 @@
+             <li><strong>Portability:</strong> use exported Markdown, Obsidian, CSV, JSON, FHIR, and other supported files outside Health.md.</li>
+             <li><strong>Legal rights:</strong> depending on where you live, you may have rights to access, correct, delete, restrict, object to, or obtain a copy of personal data we control, and to appeal or complain to a data-protection authority.</li>
+           </ul>
+-          <p>Contact us to exercise an applicable right. We may need information to verify and locate the relevant record. Because analytics identifiers are random and not connected to an account or email address, we may be unable to associate an email request with a particular analytics row. Those rows still expire automatically within the period above.</p>
++          <p>Contact us to exercise an applicable right. We may need information to verify and locate the relevant record. Because analytics identifiers are random and not connected to an account or email address, we may be unable to associate an email request with a particular analytics row. Contact us to discuss the information needed to locate earlier installation records. Deletion and recovery-copy expiry must be confirmed separately.</p>
+         </section>
+
+         <section id="children">
+--- a/apps/website/es/privacy-policy.html
++++ b/apps/website/es/privacy-policy.html
+@@ -47,7 +47,7 @@
+       <div class="legal-hero-inner">
+         <p class="legal-eyebrow">Legal · Privacidad</p>
+         <h1 id="privacy-title">Privacidad,<br>sin rodeos.</h1>
+-        <p class="legal-updated">Última actualización: 2026-10-24</p>
++        <p class="legal-updated">Aplicable a Health.md 3.5.0 cuando se publique · Preparado: 2026-10-30</p>
+         <p class="legal-lede">Health.md mueve datos de salud sensibles sin crear una nube de datos de salud de Health.md. Tu dispositivo lee los registros que autorizas y tú eliges adónde va cada exportación o respuesta directa.</p>
+
+         <div class="legal-promise" role="list" aria-label="Principios de privacidad">
+@@ -63,8 +63,8 @@
+           </div>
+           <div role="listitem">
+             <span>03</span>
+-            <strong>Análisis sin datos de salud</strong>
+-            <p>Los eventos propios limitados usan campos generales que no pueden representar registros de salud ni contenido exportado.</p>
++            <strong>Sin analítica personalizada en la aplicación</strong>
++            <p>Health.md 3.5.0 elimina la analítica personalizada de uso y la atribución publicitaria. La medición del sitio web y los servicios esenciales se describen por separado.</p>
+           </div>
+         </div>
+       </div>
+@@ -79,8 +79,8 @@
+             <li><a href="#health-data">Datos de salud</a></li>
+             <li><a href="#destinations">Destinos</a></li>
+             <li><a href="#medical-records">Registros médicos en Android</a></li>
+-            <li><a href="#product-analytics">Análisis del producto</a></li>
+-            <li><a href="#campaigns">Atribución de campañas</a></li>
++            <li><a href="#product-analytics">Analítica y versiones anteriores</a></li>
++            <li><a href="#campaigns">Medición del sitio web</a></li>
+             <li><a href="#operations">Programación y soporte</a></li>
+             <li><a href="#website">Datos del sitio web</a></li>
+             <li><a href="#retention">Almacenamiento y conservación</a></li>
+@@ -106,7 +106,8 @@
+           <div class="policy-note">
+             <p><strong>Aviso sobre la traducción:</strong> Esta versión se facilita para tu comodidad. En caso de conflicto, prevalecerá la <a href="../privacy-policy.html" hreflang="en">versión en inglés</a> en la medida permitida por la legislación aplicable y sin limitar derechos obligatorios del consumidor.</p>
+           </div>
+-        </section>
++        <p>Health.md 3.5.0 elimina la analítica personalizada del producto y la atribución de campañas dentro de la aplicación. Los servicios esenciales y la medición del sitio web se describen por separado. Las versiones anteriores y los registros conservados requieren un tratamiento independiente.</p>
++</section>
+
+         <section id="health-data">
+           <h2>Datos de salud que procesamos siguiendo tus instrucciones</h2>
+@@ -159,26 +160,14 @@
+         </section>
+
+         <section id="product-analytics">
+-          <h2>Análisis propios del producto</h2>
+-          <p><strong>Compilación Android de F-Droid:</strong> no envía telemetría de Health.md ni crea un identificador de instalación, cola de eventos, Worker o estado persistente de telemetría. Install Referrer, análisis de incorporación, Play Review, Billing, OAuth de proveedores directos y Wear Data Layer no se compilan en esta versión. Las exportaciones a un endpoint API configurado por el usuario y las sesiones explícitas de Direct CLI son acciones del producto iniciadas por el usuario, no telemetría de Health.md.</p>
+-          <p>Las compilaciones de Apple y Google Play usan un Worker propio de Cloudflare y una base de datos D1 para saber si los flujos de incorporación, activación, exportación, programación, muro de pago y compra funcionan. Health.md recopila automáticamente estos eventos limitados del producto sin Firebase Analytics, Google Analytics, AppsFlyer, un SDK externo de informes de fallos ni un SDK publicitario dentro de la aplicación.</p>
+-          <p>Según la plataforma y el evento, una carga aceptada puede contener un UUID aleatorio de instalación, un UUID aleatorio del evento, el nombre del evento, versión de la aplicación, número de compilación, plataforma, experimento o variante, paso de incorporación u omisión explícita, recuentos acotados de exportaciones gratuitas, categoría del destino, número de formatos, rangos generales de número de métricas y periodo de fechas, contexto del muro de pago, identificador del producto, resultado de compra o restauración y una categoría amplia de autorización o error.</p>
+-          <p>El UUID de instalación persiste durante esa instalación de la aplicación, por lo que los datos son <strong>seudónimos y no anónimos</strong>. Se genera al azar y no deriva de tu nombre, cuenta, identificador de salud, identificador de hardware, Android ID ni Advertising ID.</p>
+-          <p>Los análisis del producto <strong>nunca incluyen valores ni identificadores de HealthKit o Health Connect, nombres de métricas ni fechas de salud</strong>, medicamentos, entrenamientos, contenido exportado, resultados de consultas escritas, nombres de carpetas o bóvedas, rutas de archivos, nombres de dispositivos o pares, datos de cuentas, precios, <strong>credenciales o tokens</strong>, texto del usuario, referentes sin procesar, cadenas completas de User-Agent ni direcciones IP almacenadas. Se rechazan eventos, propiedades y valores desconocidos. Las listas públicas permitidas del cliente y del Worker están diseñadas para que <strong>los registros de salud y el contenido exportado no puedan representarse en una carga de análisis</strong>.</p>
+-          <p>Estos eventos no se usan para segmentación publicitaria, identificación por huella digital ni seguimiento entre aplicaciones, y no se venden ni comparten con anunciantes. Las filas validadas se conservan durante un máximo de 13 meses y se eliminan mediante una limpieza diaria automática. Cloudflare sigue procesando la información ordinaria de conexión conforme a sus propias condiciones.</p>
++          <h2>Análisis de aplicaciones y versiones anteriores</h2>
++          <p><strong>Análisis de aplicaciones en esta versión:</strong>esta versión no recopila análisis de uso personalizados, no crea un identificador de instalación de análisis, no envía eventos de incorporación o flujo de compras, ni realiza atribución de publicidad de aplicaciones. Al actualizar, elimina los identificadores de análisis locales retirados y las colas no enviadas. La compra de acceso y servicios esenciales aún funciona.</p>
++<p><strong>Versiones anteriores:</strong>Las versiones anteriores podrían enviar eventos de flujo de compras e incorporación vinculados a la instalación. Se trataba de registros seudónimos, no de recuentos anónimos. Esta actualización no elimina los datos ya recibidos por el servicio. Póngase en contacto con el soporte sobre registros retenidos. El almacenamiento de análisis históricos, las exportaciones, los registros y las copias de recuperación se abordan por separado; No asuma que eliminar datos locales los elimina.</p>
+         </section>
+
+         <section id="campaigns">
+-          <h2>Atribución propia de campañas</h2>
+-          <p>Health.md usa enlaces cortos propios, como <code>healthmd.app/v/yt-csv-001</code>, para medir de forma agregada el rendimiento de campañas sin un SDK externo de atribución.</p>
+-          <p>En iPhone y iPad, AdServices consulta la atribución de Apple Ads directamente con Apple. El token es temporal y nunca se almacena ni se envía a Health.md. Solo los identificadores de campaña, grupo y palabra clave, el estado, clic o impresión y descarga o nueva descarga se vinculan al ID aleatorio de instalación y los resultados de compra. No usamos IDFA ni SDK de atribución de terceros. No enviamos datos de salud ni compras a Apple Ads. Los errores quedan como desconocidos, no como tráfico orgánico.</p>
+-          <ul>
+-            <li>El servicio de redirección puede registrar el token y slug de campaña, plataforma y enfoque del contenido, categoría general de destino o cliente, nombre de host referente cuando se proporciona, código aproximado de país y hora.</li>
+-            <li>La fila almacenada del clic no incluye dirección IP, User-Agent completo, cookie, identificador de solicitud de Cloudflare ni huella digital.</li>
+-            <li>En Android, Google Play Install Referrer puede generar un evento de instalación atribuida depurado con UUID aleatorios de instalación y evento, versión/compilación de la aplicación, campos de campaña validados, hora del evento y marcas de tiempo opcionales de clic e instalación de Play.</li>
+-            <li>Health.md descarta el Install Referrer completo y nunca lo conserva ni transmite. Los clics y las instalaciones solo se unen mediante el token de campaña validado para elaborar informes agregados.</li>
+-          </ul>
+-          <p>Las filas de clics e instalaciones de campañas se conservan durante un máximo de 13 meses. Las ventanas agregadas de límite de ingestión contienen solo un minuto y un recuento y se eliminan después de 24 horas. Cloudflare procesa información ordinaria de red al entregar estas solicitudes, pero Health.md no la añade a los registros de campañas.</p>
++          <h2>Medición de campañas en sitios web</h2>
++          <p>Los enlaces de campañas de sitios web públicos y la medición de sitios web son independientes del análisis de aplicaciones. La aplicación ya no resuelve los tokens de atribución de Apple Ads ni lee la referencia de instalación de Google Play. Los registros de campañas anteriores y eventos de aplicaciones se manejan por separado de la eliminación de aplicaciones locales.</p>
+         </section>
+
+         <section id="operations">
+@@ -203,58 +192,58 @@
+         </section>
+
+         <section id="retention">
+-          <h2>Almacenamiento y conservación</h2>
+-          <ul>
+-            <li><strong>Los datos de salud de origen</strong> permanecen en HealthKit, Health Connect o el proveedor conectado salvo que indiques una exportación o consulta.</li>
+-            <li><strong>Los ajustes y el historial de la aplicación</strong> se guardan en tu dispositivo mediante el almacenamiento de la plataforma. Las credenciales de proveedores usan almacenamiento protegido cuando es compatible.</li>
+-            <li><strong>Los archivos exportados y las entregas a API</strong> permanecen en el destino que elegiste hasta que se eliminen mediante los controles de ese destino.</li>
+-            <li><strong>Los datos de Mac, CLI y MCP emparejados</strong> permanecen en el resultado local, estado del trabajo, almacén de credenciales, transcripción u otro almacenamiento creado por tu flujo de trabajo.</li>
+-            <li><strong>Las filas de análisis del producto y campañas</strong> se conservan durante un máximo de 13 meses; los contadores de límite de ingestión de campañas se eliminan después de 24 horas.</li>
+-            <li><strong>Los registros de programación, compra, soporte y red ordinaria</strong> se conservan solo según sea necesario para prestar, proteger, documentar o cumplir los requisitos de esos servicios, sujetos a las condiciones de la plataforma y del proveedor correspondientes.</li>
+-          </ul>
+-          <p>Desinstalar Health.md elimina el estado local de la aplicación según el sistema operativo, pero no elimina archivos ya exportados a otra carpeta o servicio, datos guardados por un cliente emparejado, un mensaje que enviaste ni datos en manos de un proveedor de destino.</p>
++          <h2>Almacenamiento y retención</h2>
++          <ul>
++            <li><strong>Datos de salud de origen</strong>permanece en HealthKit, Health Connect o el proveedor conectado a menos que dirija una exportación o consulta.</li>
++            <li><strong>Configuración e historial de la aplicación</strong>se almacenan en su dispositivo mediante el almacenamiento de la plataforma. Las credenciales del proveedor utilizan almacenamiento de credenciales de plataforma protegida cuando sea compatible.</li>
++            <li><strong>Archivos exportados y entregas de API</strong>permanecerá en el destino que eligió hasta que se elimine bajo los controles de ese destino. El piloto opcional de Health.md Cloud conserva todas las revisiones aceptadas sin límite de edad, sujeto a la cuota de almacenamiento de su cuenta. El piloto se ejecuta en una máquina virtual sin respaldo: la pérdida de disco, clave o máquina virtual puede destruir permanentemente las exportaciones. La eliminación de la cuenta desactiva el acceso inmediatamente y un trabajo en segundo plano luego borra el texto cifrado y los metadatos almacenados; la finalización no es instantánea.</li>
++            <li><strong>Mac emparejado y datos CLI/MCP directos</strong>permanece en la salida local, estado del trabajo, almacén de credenciales, transcripción u otro almacenamiento informático creado por su flujo de trabajo. Las llamadas MCP en la nube autorizadas por separado leen las exportaciones de API retenidas y pueden colocar valores devueltos en los sistemas del proveedor del agente.</li>
++            <li><strong>Análisis de aplicaciones anteriores y filas de campaña:</strong>Eliminar la recopilación de la aplicación no elimina los registros de servicio existentes. Póngase en contacto con el soporte técnico sobre la eliminación. La medición del sitio web y los servicios esenciales tienen retención por separado; Esta actualización no establece una nueva fecha límite de eliminación global.</li>
++            <li><strong>Programación, compras, soporte y registros ordinarios de la red.</strong>se conservan solo según sea necesario para proporcionar, asegurar, documentar o cumplir con los requisitos de esos servicios, sujeto a los términos aplicables de la plataforma y del proveedor.</li>
++          </ul>
++          <p>La desinstalación de Health.md elimina el estado local de la aplicación según el sistema operativo, pero no elimina los archivos ya exportados a otra carpeta o servicio, los datos almacenados por un cliente emparejado, un mensaje que usted envió o los datos conservados por un proveedor de destino.</p>
+         </section>
+
+         <section id="services">
+-          <h2>Servicios que usamos</h2>
+-          <p>Health.md no usa SDK publicitarios ni SDK externos de análisis y atribución dentro de la aplicación. Sí usa los siguientes servicios de plataforma, infraestructura y elección del usuario cuando corresponde:</p>
++          <h2>Servicios que utilizamos</h2>
++          <p>Health.md no utiliza SDK de publicidad ni SDK de atribución y análisis en la aplicación de terceros. Utiliza la siguiente plataforma, infraestructura y servicios elegidos por el usuario cuando sea relevante:</p>
+           <ul>
+             <li>Apple HealthKit y WorkoutKit</li>
+-            <li>Android Health Connect</li>
+-            <li>Apple Files, Storage Access Framework de Android y los proveedores de archivos que elijas</li>
+-            <li>StoreKit, App Store, Google Play y Google Play Billing</li>
+-            <li>Google Play Install Referrer para atribución depurada de campañas en Android</li>
+-            <li>Apple Push Notification service para activar exportaciones programadas</li>
+-            <li>Cloudflare para análisis propios, servicios de campaña, almacenamiento D1, limitación de abuso, entrega del sitio y análisis web</li>
+-            <li>API de proveedores opcionales, servicios OAuth, endpoints de API, servicios de sincronización, proveedores de IA/modelos y clientes locales que configures</li>
+-          </ul>
+-          <p>Estos proveedores pueden procesar datos en los países donde operan. Su tratamiento se rige por sus condiciones y la legislación aplicable. No vendemos datos de salud ni información personal, y no los compartimos para publicidad conductual entre contextos.</p>
++            <li>Conexión de salud de Android</li>
++            <li>Apple Files, Android Storage Access Framework y proveedores de archivos que usted elija</li>
++            <li>StoreKit, App Store, Google Play y facturación de Google Play</li>
++            <li>Servicio de notificaciones push de Apple para reactivaciones de exportación programada</li>
++            <li>Cloudflare para servicios esenciales, retiro de análisis heredados, servicios de campañas de sitios web, entrega de sitios web, panel de nube opcional/entrada HTTPS MCP y análisis de sitios web</li>
++            <li>API de proveedores opcionales, servicios OAuth, puntos finales de API, servicios de sincronización, proveedores de modelos/IA y clientes locales que usted configure</li>
++          </ul>
++          <p>El piloto de exportación opcional de Health.md Cloud, de un solo propietario y sin respaldo, se ejecuta en la infraestructura de VM EXE.dev. No es el destino predeterminado de la aplicación.</p>
++          <p>Estos proveedores pueden procesar datos en los países donde operan. Su manejo se rige por sus términos y la ley aplicable. No vendemos datos de salud ni información personal, y no los compartimos para publicidad conductual entre contextos.</p>
+         </section>
+
+         <section id="security">
+           <h2>Cómo protegemos los datos</h2>
+-          <p>Aplicamos medidas adecuadas a cada ruta, aunque ningún sistema de almacenamiento o transferencia puede garantizar una seguridad perfecta:</p>
+-          <ul>
+-            <li>El acceso a la salud está controlado por los permisos de HealthKit y Health Connect y las protecciones del dispositivo.</li>
+-            <li>El emparejamiento directo con Mac y CLI usa sesiones autenticadas y cifradas, tramas acotadas, comprobaciones de integridad y aprobación explícita.</li>
+-            <li>El modo protegido de API Endpoint exige HTTPS; el operador del endpoint controla lo que ocurre después de la entrega.</li>
+-            <li>La ingestión de análisis y campañas rechaza campos desconocidos o demasiado grandes y, de forma intencionada, no puede representar cargas de salud.</li>
+-            <li>Los archivos locales heredan los controles de acceso, cifrado, copia de seguridad y sincronización del dispositivo, carpeta, bóveda o proveedor donde los guardes.</li>
+-          </ul>
+-          <p>La API local de consultas para Mac usa la accesibilidad de loopback como límite de acceso y no tiene token de portador. No expongas ni redirijas su puerto a otra máquina. El emparejamiento directo con iPhone solo debe activarse para ordenadores y redes de confianza. Mantén los dispositivos actualizados, usa códigos de acceso y cifrado de disco, y revisa los ajustes de conservación y registro de destinos, hosts de agentes y proveedores de modelos.</p>
++          <p>Aplicamos salvaguardas adecuadas a cada trayecto, aunque ningún sistema de almacenamiento o transferencia puede garantizarse perfectamente seguro:</p>
++          <ul>
++            <li>El acceso a la salud está controlado por los permisos y las protecciones del dispositivo de HealthKit y Health Connect.</li>
++            <li>El emparejamiento directo de Mac y CLI utiliza sesiones cifradas autenticadas, marcos delimitados, comprobaciones de integridad y aprobación explícita.</li>
++            <li>El modo de punto final de API protegido requiere HTTPS; el operador del punto final controla lo que sucede después de la entrega. El piloto de nube opcional cifra las exportaciones almacenadas y requiere credenciales de lectura revocables, de ingesta y de cuenta separadas. No tiene respaldo externo ni recuperación de cuentas, y no es un servicio auditado de forma independiente ni disponible de forma generalizada.</li>
++            <li>En el retiro coordinado del servicio, el punto final de análisis de aplicaciones heredado de reemplazo descarta las cargas sin analizarlas ni almacenarlas. Hasta que se complete la transición, los clientes anteriores aún pueden comunicarse con el recopilador anterior. Los servicios esenciales permanecen separados de los análisis.</li>
++            <li>Los archivos locales heredan los controles de acceso, cifrado, copia de seguridad y sincronización del dispositivo, carpeta, bóveda o proveedor donde los coloca.</li>
++          </ul>
++          <p>La API de consulta local de Mac utiliza la accesibilidad de bucle invertido como límite de acceso y no tiene token de portador. No utilice proxy ni exponga su puerto a otra máquina. El emparejamiento directo de iPhone debe habilitarse solo para computadoras y redes de confianza. Mantenga los dispositivos actualizados, utilice códigos de acceso y cifrado de disco, y revise la configuración de retención y registro de destinos, hosts de agentes y proveedores de modelos.</p>
+         </section>
+
+         <section id="choices">
+-          <h2>Tus opciones y derechos de privacidad</h2>
+-          <ul>
+-            <li><strong>Permisos:</strong> concede o revoca categorías de HealthKit y Health Connect en los ajustes de la plataforma.</li>
+-            <li><strong>Destinos:</strong> elige carpetas locales, retira acceso a proveedores de archivos, desconecta proveedores, borra un endpoint de API o desempareja clientes directos.</li>
+-            <li><strong>Programación:</strong> usa exportaciones manuales si no quieres registrar metadatos de programación y APNs que no son de salud.</li>
+-            <li><strong>Archivos y resultados:</strong> accede, muévelos o elimínalos con los controles del destino o del ordenador emparejado.</li>
+-            <li><strong>Portabilidad:</strong> usa fuera de Health.md los archivos Markdown, Obsidian, CSV, JSON, FHIR y otros formatos compatibles.</li>
+-            <li><strong>Derechos legales:</strong> según dónde vivas, puedes tener derecho a acceder, corregir, eliminar, limitar, oponerte u obtener una copia de los datos personales que controlamos, así como a recurrir o presentar una reclamación ante una autoridad de protección de datos.</li>
+-          </ul>
+-          <p>Contáctanos para ejercer un derecho aplicable. Podemos necesitar información para verificar y localizar el registro correspondiente. Como los identificadores de análisis son aleatorios y no están conectados a una cuenta o correo electrónico, es posible que no podamos asociar una solicitud por correo con una fila concreta. Esas filas se eliminan automáticamente dentro del plazo indicado.</p>
++          <h2>Sus opciones y derechos de privacidad</h2>
++          <ul>
++            <li><strong>Permisos:</strong>otorgar o revocar categorías de HealthKit y Health Connect en la configuración de la plataforma.</li>
++            <li><strong>Destinos:</strong>elija carpetas locales, elimine el acceso del proveedor de archivos, desconecte proveedores, borre un punto final de API o desempareje clientes directos.</li>
++            <li><strong>Programación:</strong>utilice exportaciones manuales si no desea que se registren metadatos de APN y cronogramas que no sean de salud.</li>
++            <li><strong>Archivos y resultados:</strong>acceder a ellos, moverlos o eliminarlos utilizando los controles del ordenador de destino o emparejado.</li>
++            <li><strong>Portabilidad:</strong>utilice Markdown, Obsidian, CSV, JSON, FHIR y otros archivos exportados compatibles fuera de Health.md.</li>
++            <li><strong>Derechos legales:</strong>Dependiendo de dónde viva, puede tener derecho a acceder, corregir, eliminar, restringir, objetar u obtener una copia de los datos personales que controlamos, y a apelar o presentar una queja ante una autoridad de protección de datos.</li>
++          </ul>
++          <p>Contáctenos para ejercer un derecho aplicable. Es posible que necesitemos información para verificar y localizar el registro relevante. Debido a que los identificadores de análisis son aleatorios y no están conectados a una cuenta o dirección de correo electrónico, es posible que no podamos asociar una solicitud de correo electrónico con una fila de análisis en particular. Contáctenos para discutir la información necesaria para localizar registros de instalación anteriores. La eliminación y la caducidad de la copia de recuperación deben confirmarse por separado.</p>
+         </section>
+
+         <section id="children">

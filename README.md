@@ -1,5 +1,7 @@
 # Health.md
 
+The unpublished candidate removes custom in-app analytics, installation-linked event uploads, and advertising attribution. Upgrades erase retired local analytics state. Essential purchase, scheduling, provider and user-requested services remain; myself.md purchase claims stay disabled. Earlier released versions and retained server data require a separate approved retirement. Website measurement is a separate surface and is not removed by this app change.
+
 Health.md is a local-first health data platform. This repository is the canonical source for the Apple apps, Android app, standalone CLI, notification-only wake service, practice boundary, and website.
 
 ## Agent skills

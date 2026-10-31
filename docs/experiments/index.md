@@ -3,7 +3,8 @@
 | Experiment | Window | Status |
 | --- | --- | --- |
 | [$14.99 lifetime price (ISO-294)](./2026-09-17-19.99-lifetime-price.md) | 2026-06-01 → 2026-09-16 | Kept — results recorded in the $19.99 note |
-| [$19.99 lifetime price](./2026-09-17-19.99-lifetime-price.md) | 2026-09-17 → | In progress |
+| [$19.99 lifetime price](./2026-09-17-19.99-lifetime-price.md) | 2026-09-17 → | Live price retained pending the coordinated subscription launch |
+| [Paid access, trials, and subscriptions](../../apps/apple/docs/experiments/subscription-pricing-rollout.md) | Pre-launch | Apple subscriptions READY_TO_SUBMIT with review screenshots complete; group/first-review preparation and purchase QA pending. Android 3.5.0/code 44 is available on Internal Testing with normal Play delivery and core license-test trial, purchase, restore, cancellation and expiry checks passed. Weekly/yearly plans and trials are Active; remaining production qualification is recorded in the Android billing guide. Lifetime pricing held unchanged |
 | [Apple export competitor review brief](./2026-10-19-apple-export-competitors.md) | 2026-10-19 | Complete — public-source Treg trial; $0 spent |
 
 ## Operational sources
@@ -13,10 +14,7 @@ Use ASC/Google Play price schedules and commerce reports for production price an
 StoreKit `.storekit` files and code fallback strings describe local/test behavior, not proof of
 a deployed price or its effective date. Record the territory, report window, and reporting lag.
 
-For D1 event definitions, privacy boundaries, mature conversion denominators, and query commands,
-use the [pricing analytics Worker runbook](../../apps/apple/worker/pricing-analytics/README.md).
-Its [Wrangler configuration](../../apps/apple/worker/pricing-analytics/wrangler.toml) selects the
-pricing service; Practice and wake are separate services, not pricing-data sources.
+Custom app analytics are removed from the unpublished candidate. Use Apple/Google commerce reports for sales and subscription reporting. No price changes are included. The [retirement runbook](../../apps/apple/worker/pricing-analytics/README.md) covers the legacy endpoint and the separately approved deletion of historical analytics. Practice, wake, receipt verification, OAuth and scheduling remain separate essential services.
 
 ## Historical plans
 

@@ -1,0 +1,13 @@
+# Google Fit export claim verification
+
+Verified 2026-10-30 by Codex (agent), method: traced. No account, device, permission, actual export, spreadsheet, restore or product visual QA. Native behavior, contracts and generated samples unchanged.
+
+## Claims
+
+- [x] Google-owned Fit download help https://support.google.com/fit/answer/3024190?hl=en points to Takeout and documents selected products/options, delivery/type/size, one-time archive, desktop format guidance, possible missing recent changes and no server deletion. Fit selection conditional on account offerings; no exact CSV schema/filename, guaranteed product availability, app lifecycle date or GoogleFit↔GoogleHealth migration promise. Takeout steps are under200derivedwords from this source.
+- [x] Google-owned https://support.google.com/fit/answer/12830119?hl=en verifies Android-only Profile/Settings/Sync Fit with Health Connect and Manage data/access/Connected apps. Access/edit permission not universal account-history backfill, source-only output or guaranteed dashboard equivalence. Absence of setting directs current Google help, not unsupported workaround. No deletion/disconnect steps performed or recommended as an export fix.
+- [x] Google-owned https://support.google.com/android/answer/15323271?hl=en verifies Android14+ native HCbackupZIP/cloud-provider path distinct from Takeout and daily analysis files; explicitly directs coverage-limit review. No claim Health.md imports/restores either ZIP or exports every health-record type.
+- [x] Google-owned https://support.google.com/fit/answer/10066680?co=GENIE.Platform%3DiOS&hl=en describes AppleHealth→Fit. Guide does not infer reverse account archival import. Existing Fitbit/GoogleHealth source guide remains distinct; no third-party sunset statement promoted to Google policy.
+- [x] Committed Android HealthConnectDataProvider uses health_connect, HealthConnectManager captures authorized records with historical access checks, and existing format/Android/Obsidian guides establish daily folder output. Guide requires actual source records and separate read permissions; no direct account read/archive importer/completeness/native score or schema parity claim.
+- [x] Existing fictional Android sample linked unchanged, not presented as Takeout or GoogleFit source proof. Mixed Value/units/time context/source overlap/duplicates/daily-versus-sample/missingness boundaries preserved. Privacy follows local/default versus optional single-owner retained-export pilot; no Health.md price/quota or measured SEO gain.
+- [x] Three related guides and incoming Fitbit recommendation. Fitbit body unchanged; protected landings/setup docs/native/schema/sample bytes unchanged.

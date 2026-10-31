@@ -4,8 +4,8 @@ Status: staged. The portable CLI conditionally negotiates version 1 after the so
 then freezes policy/capture-bound receiver jobs, durable skip/install decisions and truthful receipts.
 The iPhone and Android native producers advertise version 1, attach per-note policies and retain
 the negotiated version and manifests in their private journals. Morning ends note exports require
-the extension before capture; resume requires the retained version to remain supported. Native
-runtime qualification is still pending, and Morning ends remains production-gated on both apps.
+the extension before capture; resume requires the retained version to remain supported. Morning ends is admitted through explicit Apple-v11 and Android-sleep-v6 authority.
+Remaining native/runtime qualification is recorded in the sleep-attribution profile gate.
 
 This independent extension applies the same personal-note settings to iPhone protocol v1 and
 Android protocol v2 file exports. It changes neither historical daily export profiles nor pairing,

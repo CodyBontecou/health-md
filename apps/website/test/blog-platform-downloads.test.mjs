@@ -10,6 +10,32 @@ import { funnelPage } from '../assets/funnel-contract.js';
 const ORIGIN = 'https://healthmd.app';
 const ANDROID = 'export-health-connect-to-obsidian';
 
+test('guide directory offers both phone stores recognized by the existing funnel', async t => {
+  const outputRoot = await mkdtemp(path.join(os.tmpdir(), 'healthmd-directory-downloads-'));
+  t.after(() => rm(outputRoot, { recursive: true, force: true }));
+  await buildBlog({ outputRoot });
+  const html = await readFile(path.join(outputRoot, 'blog/index.html'), 'utf8');
+  const header = html.match(/<header[\s\S]*?<\/header>/)[0];
+  const destinations = [...header.matchAll(/<a[^>]+href="([^"]+)"/g)]
+    .map(match => funnelLink(new URL(match[1], ORIGIN).href, ORIGIN))
+    .filter(target => target?.action === 'store_click').map(target => target.target);
+  assert.deepEqual(destinations, ['app_store', 'google_play']);
+});
+
+test('Oura chooser offers both phone stores while preserving the native-download-first decision', async t => {
+  const outputRoot = await mkdtemp(path.join(os.tmpdir(), 'healthmd-oura-downloads-'));
+  t.after(() => rm(outputRoot, { recursive: true, force: true }));
+  await buildBlog({ outputRoot });
+  const html = await readFile(path.join(outputRoot, 'blog/export-oura-data/index.html'), 'utf8');
+  const header = html.match(/<header[\s\S]*?<\/header>/)[0];
+  for (const label of ['App Store', 'Google Play']) assert.ok(header.includes(`>${label}</a>`));
+  const body = html.match(/<div class="article-body">([\s\S]*?)<\/main>/)[1];
+  assert.ok(body.includes('https://membership.ouraring.com/'));
+  assert.ok(body.includes('https://apps.apple.com/'));
+  assert.ok(body.indexOf('https://membership.ouraring.com/') < body.indexOf('https://apps.apple.com/'));
+  assert.ok(body.includes('https://play.google.com/store/apps/details?id=com.healthmd.android'));
+});
+
 test('Android acquisition guide offers working Android destinations recognized by the existing funnel', async t => {
   const outputRoot = await mkdtemp(path.join(os.tmpdir(), 'healthmd-platform-downloads-'));
   t.after(() => rm(outputRoot, { recursive: true, force: true }));

@@ -9,6 +9,73 @@ import org.w3c.dom.Element
 
 class LocalizationContractTest {
     @Test
+    fun sharedPaywallBenefitDoesNotPromiseLifetimeAccess() {
+        // This benefit is shared by subscriptions and Lifetime; duration belongs
+        // in the plan-specific price labels and billing disclosures instead.
+        val benefits = mapOf(
+            "values" to "Unlimited exports",
+            "values-ar" to "عمليات تصدير غير محدودة",
+            "values-b+pa+Guru" to "ਅਨੰਤ ਨਿਰਯਾਤ",
+            "values-b+zh+Hans" to "无限导出",
+            "values-bn" to "সীমাহীন রপ্তানি",
+            "values-de" to "Unbegrenzte Exporte",
+            "values-es" to "Exportaciones ilimitadas",
+            "values-fr" to "Exports illimités",
+            "values-hi" to "असीमित निर्यात",
+            "values-ja" to "無制限のエクスポート",
+            "values-kk" to "Шексіз экспорттар",
+            "values-nl" to "Onbeperkte exports",
+            "values-pt-rBR" to "Exportações ilimitadas",
+            "values-ro" to "Exporturi nelimitate",
+            "values-ru" to "Неограниченные экспорты",
+            "values-uk" to "Необмежені експорти",
+        )
+        assertThat(benefits.keys)
+            .containsExactlyElementsIn(listOf("values") + supportedLocales.map { "values-$it" })
+        benefits.forEach { (directory, expected) ->
+            assertWithMessage("shared paywall benefit in $directory")
+                .that(parseResources(resourceFile(directory))
+                    .getValue("paywall_unlimited_exports").values.getValue(null))
+                .isEqualTo(expected)
+        }
+    }
+
+    @Test
+    fun exportPaywallGuidanceIncludesTrialsSubscriptionsAndLifetimeInEveryLocale() {
+        val terms = mapOf(
+            "values" to listOf("active trial", "subscription", "Lifetime access", "access options"),
+            "values-ar" to listOf("تجربة", "اشتراكًا نشطًا", "مدى الحياة", "خيارات الوصول"),
+            "values-b+pa+Guru" to listOf("ਅਜ਼ਮਾਇਸ਼", "ਗਾਹਕੀ", "ਉਮਰ ਭਰ", "ਵਿਕਲਪ"),
+            "values-b+zh+Hans" to listOf("试用", "订阅", "终身访问权限", "访问选项"),
+            "values-bn" to listOf("ট্রায়াল", "সাবস্ক্রিপশন", "আজীবন", "বিকল্প"),
+            "values-de" to listOf("Testphase", "Abo", "lebenslangen Zugriff", "Zugriffsoptionen"),
+            "values-es" to listOf("prueba", "suscripción", "por vida", "opciones de acceso"),
+            "values-fr" to listOf("essai", "abonnement", "à vie", "options d’accès"),
+            "values-hi" to listOf("ट्रायल", "सदस्यता", "आजीवन", "विकल्प"),
+            "values-ja" to listOf("トライアル", "サブスクリプション", "永久アクセス", "選択肢"),
+            "values-kk" to listOf("сынақ мерзімі", "жазылым", "өмір бойы", "нұсқаларын"),
+            "values-nl" to listOf("proefperiode", "abonnement", "levenslange toegang", "toegangsopties"),
+            "values-pt-rBR" to listOf("teste", "assinatura", "vitalício", "opções de acesso"),
+            "values-ro" to listOf("probă", "abonament", "pe viață", "opțiunile de acces"),
+            "values-ru" to listOf("пробный период", "подписка", "пожизненный доступ", "варианты доступа"),
+            "values-uk" to listOf("пробний період", "передплата", "довічний доступ", "варіанти доступу"),
+        )
+        assertThat(terms.keys)
+            .containsExactlyElementsIn(listOf("values") + supportedLocales.map { "values-$it" })
+        terms.forEach { (directory, expectedTerms) ->
+            val guidance = parseResources(resourceFile(directory))
+                .getValue("export_guidance_paywall").values.getValue(null)
+            expectedTerms.forEach { term ->
+                assertWithMessage("export access guidance in $directory")
+                    .that(guidance).contains(term)
+            }
+        }
+        assertThat(parseResources(resourceFile("values"))
+            .getValue("export_guidance_paywall").values.getValue(null))
+            .isEqualTo("Scheduled exports require an active trial or subscription, or Lifetime access. Open the paywall to view access options.")
+    }
+
+    @Test
     fun canonicalUserFacingResourcesDoNotOptOutOfTranslation() {
         val optedOut = parseResources(resourceFile("values")).values
             .filter { it.translatable == false }

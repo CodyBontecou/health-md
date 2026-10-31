@@ -1,84 +1,39 @@
-# Full Access Unlock
+# Paid access, trials, and restore
 
-## Status
+## Scope
 
-- **Docs status:** draft
-- **Video priority:** medium
-- **Primary screens:** Post-preview offer; 3rd/7th export reminder; hard-quota paywall; Settings restore
-- **Source files:** `HealthMd/iOS/Views/PaywallView.swift`, `HealthMd/iOS/Views/ExportUpgradePrompt.swift`, `HealthMd/Shared/Managers/PurchaseManager.swift`, `HealthMd/iOS/ContentView.swift`
+This guide describes the subscription-enabled source for the planned 3.5.0 phone release. Store preparation is not a public release; see the [rollout status](../experiments/subscription-pricing-rollout.md). Earlier distributed versions can show the former export allowance.
 
-## What it does
+## Access before setup
 
-On iPhone and iPad, Full Access removes the shared free export limit. Health.md for Mac is free. Free users can complete 10 accounted export actions across manual, scheduled, Shortcut, and direct workflows. One action can write several formats or dates and still consumes one use.
+On iPhone and iPad, a root paywall precedes setup for users without access. Start an eligible store-backed trial, subscribe, buy Lifetime, or restore an existing purchase. There is no local free-export allowance or dismissible first/third-export offer. An unavailable catalog, canceled purchase, or pending purchase does not grant access.
 
-Health.md offers Individual Lifetime and Family Lifetime one-time purchases, plus a Family Lifetime upgrade for eligible Individual or legacy owners. There is no recurring subscription. Family Lifetime uses Apple Family Sharing for up to five family members under Apple's eligibility and Purchase Sharing rules.
+Individual and Apple Family Sharing each offer weekly, yearly, and Lifetime access. Family shares access with up to five other eligible family members through Apple; it does not share health records, folders, or exports. The Mac companion remains free. Google Play offers Individual weekly/yearly/Lifetime; the F-Droid build includes access without billing. Apple purchases do not transfer to Google Play.
 
-## Offer timing
+## Trials and billing
 
-The purchase flow is designed not to block setup prematurely:
+Eligible subscriptions include a 7-day free trial, then automatically renew at the localized price and interval displayed by the store. Apple or Google determines eligibility; installing the app, completing setup, switching plans, or reinstalling does not guarantee a trial. Lifetime is charged once immediately, without a trial or recurring renewal.
 
-1. Onboarding itself has no paywall step.
-2. After the first real export preview closes, an eligible locked user sees one dismissible Full Access offer per install.
-3. A soft, dismissible upgrade prompt can appear after the 3rd and 7th completed free exports.
-4. After all 10 actions are used, another accounted export is blocked until purchase or restore.
+Manage subscriptions with the purchasing Apple or Google account. For Apple subscriptions, cancel at least 24 hours before the trial or current period ends; follow the applicable store confirmation for your offer. Deleting Health.md or buying Lifetime does not cancel an existing subscription.
 
-Dismissing the post-preview, 3rd-export, or 7th-export offer does not spend an export or remove remaining quota.
+## Existing purchases and restore
 
-## Where to find it
+Existing lifetime purchases, eligible Family Sharing transactions, and previously granted legacy access remain valid. Use Restore Purchase with the purchasing account. If Family restore fails, check Apple's purchase/subscription sharing settings and purchase visibility. Store restoration recovers access, not deleted local files.
 
-- The one-time offer after the first onboarding export preview.
-- The soft prompt after the 3rd and 7th successful free actions.
-- The hard-quota paywall when another export is attempted after 10 uses.
-- Restore and plan-management controls in the paywall/settings surfaces.
+The discounted Family Lifetime upgrade is for eligible Individual Lifetime or legacy owners. A subscription alone does not qualify. Existing product IDs remain unchanged; see the rollout document for the four subscription IDs. Prices come from StoreKit/Play, not source-code fallback amounts. Higher lifetime targets remain on hold and are not current offers.
 
-## Products
+## When access ends
 
-- Individual Lifetime: `com.codybontecou.obsidianhealth.unlock`
-- Family Lifetime: `com.codybontecou.obsidianhealth.unlock.family`
-- Family Lifetime Upgrade: `com.codybontecou.obsidianhealth.unlock.family.upgrade`
-
-The App Store sheet and StoreKit product are the live localized price authority.
-
-## Free export accounting
-
-```text
-Free export limit: 10
-One manual action exporting Markdown + JSON + CSV for 7 days: 1 use
-One accepted scheduled request exporting one or more dates: 1 use
-One dismissed soft upgrade prompt: 0 uses
-```
-
-The counter is Keychain-backed. Durable retries use idempotent job accounting so resuming the same accepted job does not consume another use. Unlocking clears accumulated free-use state.
-
-## Restore and legacy access
-
-Tap **Restore Purchase** while signed into the purchasing Apple ID. For Family Lifetime, confirm Family Sharing, Purchase Sharing, and purchase visibility. Earlier paid users can be recognized through StoreKit app-transaction history and the bounded legacy verification path; successful verification is cached in Keychain.
-
-Legacy verification concerns entitlement evidence only. It does not include health values, selected metrics, export files, or folder paths.
+Expired or revoked subscriptions block new exports and setup through the root gate. Exported files already saved to your destinations remain yours. Pending/manual/scheduled/Shortcut/direct admission checks use the same access requirement; an old usage ledger does not grant a free action. After restoring access, inspect pending work and use the normal recovery path.
 
 ## Troubleshooting
 
-| Problem | Likely cause | Fix |
-|---|---|---|
-| Offer appears before 10 uses | Non-blocking post-preview or 3rd/7th reminder | Dismiss it to retain the remaining allowance. |
-| Export is blocked | The 10-action allowance is exhausted | Purchase Full Access or restore an existing entitlement. |
-| Price is missing | StoreKit product unavailable or still loading | Check network/App Store state and retry. |
-| Family restore fails | Purchase Sharing, Apple ID, or purchase visibility mismatch | Correct Apple Family settings, reopen Health.md, and restore again. |
-| Scheduled export pauses | The shared allowance is exhausted | Unlock or restore, then use the normal pending/retry flow. |
+| Problem | Action |
+|---|---|
+| No trial appears | The store may consider the account ineligible. Review the paid terms before confirming. |
+| Prices are missing | Retry loading the catalog after checking the store/network. Do not infer access from a loading failure. |
+| Export or scheduling is blocked | Restore or obtain active access, then inspect the pending attempt. |
+| Family access is missing | Check the purchasing account's Family Sharing settings, then restore. |
+| Old files are missing | Purchases restore access only; check your chosen folder or backups. |
 
-## Video outline
-
-- **Suggested title:** Try Health.md, Then Unlock Unlimited Exports
-- **Hook:** “Your first 10 successful export actions are free.”
-- **Demo flow:** complete onboarding without a gate → inspect first preview → dismiss the offer → show remaining quota → demonstrate a 3rd/7th reminder → show restore.
-- **Key captures:** preview dismissal, quota-aware subtitle, soft prompt, plan choices, restore.
-
-## Implementation notes
-
-- `PurchaseManager.freeExportLimit` is `10`.
-- `PurchaseManager.upgradePromptMilestones` is `[3, 7]`.
-- `ExportUpgradePrompt` is non-blocking and consumes only the pending prompt state.
-- The one-time post-onboarding offer is armed by onboarding completion and presented after the first preview's dismissal transaction.
-- `PaywallContext.onboarding` uses quota-aware copy rather than claiming the free allowance is exhausted.
-- Durable scheduled and direct jobs use job-ID-based accounting.
-- StoreKit entitlements, family eligibility, and legacy paths remain separate from health data access.
+Implementation owners: `PurchaseAccessGate`, `PurchaseManager`, `PaywallView`, and `OnboardingPurchaseDisclosure`. `freeExportLimit` is zero for the paid phone flow and `upgradePromptMilestones` is empty. Historical post-preview state is not the unpaid entry point.

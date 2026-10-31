@@ -866,7 +866,7 @@ class ScheduledProfileExportWorkerCancellationTest {
                 snapshotFactory = snapshotFactory,
                 folderAdoption = folderAdoption,
                 profileScheduler = Lazy { profileScheduler },
-                entitlementRepository = FakeBillingRepository(),
+                entitlementRepository = FakeBillingRepository(initialUnlocked = true),
                 distributionPolicy = DistributionPolicy.play(),
             )
         }

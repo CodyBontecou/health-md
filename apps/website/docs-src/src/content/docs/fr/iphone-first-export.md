@@ -14,7 +14,7 @@ Suivez ce guide pour créer un export limité et vérifiable avant de modifier l
 
 Vous avez besoin des éléments suivants :
 
-- Health.md installé sur un iPhone contenant des données Apple Health ;
+- [Health.md sur l’App Store](https://apps.apple.com/app/health-md/id6757763969) installé sur un iPhone contenant des données Apple Health ;
 - l’autorisation de lire au moins une catégorie Apple Health ;
 - une destination accessible en écriture dans Fichiers, comme iCloud Drive, Sur mon iPhone ou un coffre Obsidian.
 

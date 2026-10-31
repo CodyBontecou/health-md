@@ -13,6 +13,21 @@ from pathlib import Path
 ANDROID = Path(__file__).resolve().parents[2]
 
 
+class AuthoredPhoneReleaseIdentityTest(unittest.TestCase):
+    def test_phone_version_scope_and_release_notes_agree(self) -> None:
+        config = (ANDROID / "app/build.gradle.kts").read_text()
+        version = re.search(r'versionName = "([^"]+)"', config).group(1)
+        code = int(re.search(r'versionCode = ([0-9]+)', config).group(1))
+        scope = json.loads((ANDROID / "release-scope.json").read_text())
+        self.assertEqual(scope["releaseVersionName"], version)
+        self.assertEqual(scope["googlePlay"]["phone"]["versionCode"], code)
+        authored = (ANDROID / "play-console/listing/en-US/release-notes/en-US/default.txt").read_text()
+        bundled = (ANDROID / "app/src/main/play/release-notes/en-US/default.txt").read_text()
+        self.assertEqual(authored, bundled)
+        self.assertTrue(authored.startswith(f"v{version} —"))
+        self.assertLessEqual(len(authored.strip()), 500)
+
+
 class AndroidDeferredWearScopeTest(unittest.TestCase):
     def setUp(self) -> None:
         self.temp = tempfile.TemporaryDirectory()

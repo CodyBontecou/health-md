@@ -1,5 +1,7 @@
 # Health.md short-form attribution on Cloudflare
 
+> Candidate removal — unpublished: app analytics and attribution collectors, queues and identifiers are removed. Legacy /v1/events and /v1/installs uploads are discarded by the candidate server code without reading or storing their bodies. Website redirects/counters remain a separate surface. No deployment or deletion of historical data has occurred. The details below document the earlier implementation, not current candidate behavior.
+
 The same Worker also serves the bounded website action collector. Its schema,
 reporting command, privacy limits, and migration/deployment order are maintained in
 [SEO measurement](SEO.md#website-action-counters). Website counters remain separate

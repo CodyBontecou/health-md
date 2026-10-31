@@ -579,6 +579,8 @@ cargo test --workspace                         # local-first default
 cargo test --workspace --all-features          # experimental remote profiles
 cargo clippy --workspace --all-targets -- -D warnings
 cargo clippy --workspace --all-targets --all-features -- -D warnings
+python3 -m unittest scripts/test_smoke_cli.py
+python3 scripts/smoke-cli.py               # Python 3.11+; hermetic, no Keychain access
 cargo run -- --help
 cargo run -- export                       # local structured discovery
 cargo run -- extract                      # local structured discovery
@@ -592,6 +594,10 @@ cargo run --features streamable-http -- mcp serve-http --help
 cargo run --features oauth-resource-server -- mcp serve-http --help
 cargo run -- mcp schema healthmd_sleep_sessions
 ```
+
+Development smoke needs no Keychain setup or disposable macOS account. Native credential upgrade
+checks remain in the automated signed-release pipeline; see [release QA](docs/qa.md#automated-gate).
+A temporary data directory does not isolate pairing trust.
 
 ## License
 

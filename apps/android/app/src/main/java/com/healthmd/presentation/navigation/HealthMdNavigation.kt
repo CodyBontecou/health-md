@@ -84,6 +84,48 @@ fun HealthMdNavigation(
     myselfClaimRequestId: Long = 0L,
     scheduledRecoveryPromptRequestId: Long = 0L,
 ) {
+    // Root boundary, outside NavHost: Back/deep links cannot expose tracking
+    // without a store entitlement. F-Droid keeps its included-access policy.
+    val accessViewModel: PaywallViewModel = hiltViewModel()
+    val accessUnlocked by accessViewModel.accessState.collectAsStateWithLifecycle()
+    val accessOwner = LocalLifecycleOwner.current
+    DisposableEffect(accessOwner, accessViewModel) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) accessViewModel.refreshAccess()
+        }
+        accessOwner.lifecycle.addObserver(observer)
+        onDispose { accessOwner.lifecycle.removeObserver(observer) }
+    }
+    if (accessViewModel.purchasesAvailable && accessUnlocked == null) {
+        Box(Modifier.fillMaxSize().background(AppColors.bgPrimary), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator(color = AppColors.accent)
+        }
+        return
+    }
+    if (accessViewModel.purchasesAvailable && accessUnlocked != true) {
+        val offers by accessViewModel.offers.collectAsStateWithLifecycle()
+        val purchasing by accessViewModel.isPurchasing.collectAsStateWithLifecycle()
+        val restoring by accessViewModel.isRestoring.collectAsStateWithLifecycle()
+        val error by accessViewModel.purchaseError.collectAsStateWithLifecycle()
+        val context = LocalContext.current
+        PaywallScreen(
+            onPurchase = {},
+            onPlanPurchase = { plan ->
+                (context as? android.app.Activity)?.let { accessViewModel.launchPurchaseFlow(it, plan) }
+            },
+            offers = offers,
+            onRetry = accessViewModel::refreshAccess,
+            onRestore = accessViewModel::restorePurchases,
+            onDismiss = null,
+            subtitle = stringResource(R.string.paywall_access_subtitle),
+            isPurchasing = purchasing,
+            isRestoring = restoring,
+            purchaseError = error,
+            onClearError = accessViewModel::clearError,
+        )
+        return
+    }
+
     val navController = rememberNavController()
     val coroutineScope = rememberCoroutineScope()
     val appContext = LocalContext.current
@@ -440,6 +482,7 @@ fun HealthMdNavigation(
                         val isRestoring by paywallViewModel.isRestoring.collectAsStateWithLifecycle()
                         val purchaseError by paywallViewModel.purchaseError.collectAsStateWithLifecycle()
                         val priceText by paywallViewModel.priceText.collectAsStateWithLifecycle()
+                        val offers by paywallViewModel.offers.collectAsStateWithLifecycle()
                         val debugUnlockOverride by paywallViewModel.debugUnlockOverride.collectAsStateWithLifecycle()
                         val context = LocalContext.current
 
@@ -457,9 +500,14 @@ fun HealthMdNavigation(
                                     paywallViewModel.launchPurchaseFlow(activity)
                                 }
                             },
+                            offers = offers,
+                            onPlanPurchase = { plan ->
+                                (context as? android.app.Activity)?.let { paywallViewModel.launchPurchaseFlow(it, plan) }
+                            },
+                            onRetry = paywallViewModel::refreshAccess,
                             onRestore = { paywallViewModel.restorePurchases() },
                             onDismiss = { navController.popBackStack() },
-                            subtitle = stringResource(entryPoint.subtitleResource),
+                            subtitle = stringResource(R.string.paywall_access_subtitle),
                             isPurchasing = isPurchasing,
                             isRestoring = isRestoring,
                             priceText = priceText,

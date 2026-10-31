@@ -504,7 +504,7 @@ class ScheduledExportRecoveryManagerTest {
         exportHistoryRepository = historyRepository,
         rawSnapshotService = rawSnapshotService,
         apiCredentialStore = apiCredentialStore,
-        entitlementRepository = FakeBillingRepository(),
+        entitlementRepository = FakeBillingRepository(initialUnlocked = true),
         distributionPolicy = DistributionPolicy.play(),
     )
 }

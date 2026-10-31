@@ -196,7 +196,6 @@ final class ExportIntentRunnerTests: XCTestCase {
         XCTAssertEqual(harness.stopVaultAccessCount, 0)
         XCTAssertEqual(harness.exportDatesCount, 0)
         XCTAssertEqual(harness.recordExportUseCount, 0)
-        XCTAssertEqual(harness.trackExportSucceededCount, 0)
         XCTAssertEqual(harness.updateScheduleLastExportCount, 0)
         XCTAssertTrue(harness.recordedResults.isEmpty)
     }
@@ -215,7 +214,6 @@ final class ExportIntentRunnerTests: XCTestCase {
         _ = await ExportIntentRunner.run(dates: [yesterday], dependencies: harness.dependencies)
 
         XCTAssertEqual(harness.recordExportUseCount, 0)
-        XCTAssertEqual(harness.trackExportSucceededCount, 0)
         XCTAssertEqual(harness.updateScheduleLastExportCount, 0)
         XCTAssertTrue(harness.recordedResults.isEmpty)
     }
@@ -246,7 +244,6 @@ final class ExportIntentRunnerTests: XCTestCase {
         XCTAssertEqual(remainingDates, [secondDate])
         XCTAssertEqual(harness.recordedResults.count, 1)
         XCTAssertEqual(harness.recordExportUseCount, 1)
-        XCTAssertEqual(harness.trackExportSucceededCount, 1)
         XCTAssertEqual(harness.updateScheduleLastExportCount, 0)
     }
 
@@ -273,7 +270,6 @@ final class ExportIntentRunnerTests: XCTestCase {
         XCTAssertEqual(remainingDates, [requestedDate])
         XCTAssertTrue(harness.recordedResults.isEmpty)
         XCTAssertEqual(harness.recordExportUseCount, 0)
-        XCTAssertEqual(harness.trackExportSucceededCount, 0)
         XCTAssertEqual(harness.updateScheduleLastExportCount, 0)
     }
 
@@ -299,7 +295,6 @@ final class ExportIntentRunnerTests: XCTestCase {
         XCTAssertEqual(dailyNoteUpdateCount, 0)
         XCTAssertEqual(harness.recordedResults.count, 1)
         XCTAssertEqual(harness.recordExportUseCount, 1)
-        XCTAssertEqual(harness.trackExportSucceededCount, 1)
         XCTAssertEqual(harness.updateScheduleLastExportCount, 1)
         XCTAssertTrue((try? harness.pendingStore.loadAll().isEmpty) ?? false)
     }
@@ -371,7 +366,6 @@ final class ExportIntentRunnerTests: XCTestCase {
         let notificationScheduler = InspectableExportNotificationScheduler()
         var recordedResults: [ExportOrchestrator.ExportResult] = []
         var recordExportUseCount = 0
-        var trackExportSucceededCount = 0
         var updateScheduleLastExportCount = 0
         var startVaultAccessCount = 0
         var stopVaultAccessCount = 0
@@ -402,7 +396,7 @@ final class ExportIntentRunnerTests: XCTestCase {
             ExportIntentRunner.Dependencies(
                 refreshPurchaseStatus: {},
                 canExport: { true },
-                trackExportBlockedByQuota: { _ in },
+
                 hasVaultAccess: { [weak self] in
                     self?.destinationEvents.append("hasAccess")
                     return true
@@ -432,9 +426,7 @@ final class ExportIntentRunnerTests: XCTestCase {
                 recordExportUse: { [weak self] in
                     self?.recordExportUseCount += 1
                 },
-                trackExportSucceeded: { [weak self] _ in
-                    self?.trackExportSucceededCount += 1
-                },
+
                 updateScheduleLastExport: { [weak self] in
                     self?.updateScheduleLastExportCount += 1
                 },

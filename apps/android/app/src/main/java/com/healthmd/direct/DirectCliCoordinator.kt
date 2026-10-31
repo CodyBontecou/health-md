@@ -957,8 +957,7 @@ class DirectCliCoordinator @Inject constructor(
     private suspend fun isUnlocked(): Boolean {
         entitlementRepository.refresh()
         return distributionPolicy.fullAccessIncluded ||
-            settingsRepository.isPurchased.first() ||
-            entitlementRepository.isUnlocked.first()
+            entitlementRepository.verifyAccess()
     }
 
     private suspend fun resolveDates(

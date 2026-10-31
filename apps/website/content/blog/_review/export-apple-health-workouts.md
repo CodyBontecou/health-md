@@ -6,6 +6,8 @@ No device workout export, Files/spreadsheet click-through, route capture, or vis
 
 ## Claims
 
+- [x] October30: related recommendation now includes the source-specific Strava chooser; body unchanged. Existing Excel links remain in the walkthrough; three related recommendations and incoming coverage preserved.
+
 - [x] Workouts selection, authorization, formats, Summary, writable folder, Preview and one-day verification follow `docs-src/src/content/docs/metrics.md`, `format.md`, `iphone-first-export.md`, and `troubleshooting.md`. Workouts is an enabled-by-default definition in `apps/apple/HealthMd/Shared/Models/HealthMetrics.swift`; the guide still tells users to check selection. Manual export needs no Mac. Five free actions/multiple days and formats/lifetime unlock: `paywall.md`; App Store URL: verified registry. No mobile or export contract changed.
 - [x] Native Apple XML export and app read-permission controls: https://support.apple.com/guide/iphone/share-your-health-data-iph5ede58c3d/ios, checked 2026-10-25. The article links that alternative, does not convert an XML archive, and does not claim Health.md writes GPX/FIT/TCX in this workflow. Chosen formats follow current product docs; no external fitness-service import compatibility is promised.
 - [x] Workouts belong to the day their start time falls within the effective fetch calendar. Evidence: `HealthKitManager.swift` fetchWorkouts(for:), compatibilitySamplePredicate and ownsCompatibilitySample(startingAt:dayStart:dayEnd:). The range is start-of-day inclusive/end exclusive; returned workouts are filtered again by startDate. Exact UTC timestamps and calendar date labels serve distinct purposes.

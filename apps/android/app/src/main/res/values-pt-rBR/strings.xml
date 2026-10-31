@@ -375,7 +375,7 @@
     <!-- Paywall screen -->
     <string name="paywall_title">Desbloquear Health.md</string>
     <string name="paywall_subtitle">Você usou suas 5 exportações gratuitas</string>
-    <string name="paywall_unlimited_exports">Exportações ilimitadas, para sempre</string>
+    <string name="paywall_unlimited_exports">Exportações ilimitadas</string>
     <string name="paywall_scheduled_exports">Exportações agendadas automatizadas</string>
     <string name="paywall_future_features">Todos os recursos futuros inclusos</string>
     <string name="paywall_one_time">Pagamento único — sem assinatura</string>
@@ -718,7 +718,7 @@
     <string name="privacy_category_history_permissions">READ_HEALTH_DATA_HISTORY</string>
     <string name="privacy_category_history_exports">Usado apenas para exportações manuais grandes, como 90 dias ou todo o período, para que o Health.md possa ler dados do Health Connect mais antigos que a janela padrão de 30 dias</string>
     <string name="privacy_policy_direct_cli">As exportações via Direct CLI só ocorrem depois que você faz o pareamento e se conecta explicitamente ao seu computador. Os registros de saúde são enviados por uma conexão autenticada e criptografada, mantidos de forma privada para permitir a retomada da transferência por no máximo sete dias e excluídos antes disso quando você cancela ou remove o pareamento.</string>
-    <string name="privacy_policy_footer">O Health.md não opera uma nuvem de dados de saúde. A atribuição de campanha própria pode enviar UUIDs aleatórios de instalação/evento gerados pelo app e metadados de campanha validados, mas nunca dados de saúde, informações brutas sobre a origem da instalação, IDs de dispositivo, exportações, contas ou caminhos.</string>
+    <string name="privacy_policy_footer">Esta versão não coleta análises de uso próprias nem dados de atribuição de publicidade. Compras, agendamento e serviços opcionais têm avisos de privacidade separados.</string>
     <string name="section_export_type">Tipo de exportação</string>
     <string name="export_type_compatibility">Exportação de compatibilidade</string>
     <string name="export_type_compatibility_description">Arquivos diários em Markdown, Bases, JSON ou CSV para fluxos de trabalho existentes do Health.md</string>
@@ -789,7 +789,7 @@
     <string name="onboarding_skip">Pular</string>
     <string name="onboarding_back">Voltar</string>
     <string name="export_failure_paywall_label">Desbloqueio necessário</string>
-    <string name="export_guidance_paywall">Exportações agendadas exigem o desbloqueio vitalício. Abra a tela de desbloqueio para liberar exportações ilimitadas e o agendamento.</string>
+    <string name="export_guidance_paywall">As exportações agendadas exigem um período de teste ou uma assinatura ativa, ou acesso vitalício. Abra a tela de compra para ver as opções de acesso.</string>
     <string name="export_source_retry">Tentar novamente</string>
     <string name="export_source_shortcut">Atalho</string>
     <string name="export_source_remote">Remoto</string>
@@ -1506,4 +1506,28 @@
     <string name="post_export_upgrade_action">Ver acesso vitalício</string>
     <string name="post_export_manual_action">Continuar exportando manualmente</string>
     <string name="post_export_continue_free">Continuar grátis</string>
+    <string name="export_sleep_date_guidance">O sono abrange do meio-dia de cada data selecionada ao meio-dia seguinte. Para o sono da última noite, escolha Ontem.</string>
+    <string name="export_sleep_preview_window">Janela de sono: de %1$s ao meio-dia a %2$s ao meio-dia (%3$s).</string>
+    <string name="export_sleep_preview_guidance">Se o sono estiver ausente, tente a data anterior. O sono da manhã pode aparecer nesse resumo mesmo quando os registros brutos têm a data de hoje. Falhas de consulta são listadas separadamente; um resultado vazio também pode indicar que o acesso de leitura está indisponível.</string>
+    <string name="whoop_connection_description">Conecte o WHOOP para exportar recuperação, esforço, sono, treinos e medidas corporais. O login usa seu navegador; o Health.md armazena os tokens criptografados neste dispositivo. Desconectar remove a conexão salva neste dispositivo.</string>
+    <string name="whoop_connect">Conectar WHOOP</string>
+    <string name="whoop_sources_description">Conecte o WHOOP para exportar diretamente do provedor ou continue usando o Health Connect para registros locais.</string>
+    <string name="whoop_sign_in_failed">Não foi possível iniciar o login no WHOOP. Verifique sua conexão e tente novamente.</string>
+    <string name="whoop_use_health_connect">Usar Health Connect para exportações</string>
+    <string name="whoop_reconnect">Reconectar WHOOP</string>
+    <string name="whoop_disconnect">Desconectar WHOOP</string>
+    <string name="whoop_use_for_exports">Usar WHOOP para exportações</string>
+    <string name="paywall_access_subtitle">Escolha uma assinatura ou acesso vitalício para começar seu arquivo de saúde privado. Assinaturas elegíveis incluem um teste gratuito de 7 dias.</string>
+    <string name="paywall_access_active_title">Seu acesso está ativo</string>
+    <string name="paywall_access_active_body">Continue a configuração para conectar seus dados de saúde e escolher onde salvar seu arquivo privado.</string>
+    <string name="paywall_plan_choices">Acesso semanal, anual ou vitalício</string>
+    <string name="paywall_weekly_price">%1$s / semana</string>
+    <string name="paywall_yearly_price">%1$s / ano</string>
+    <string name="paywall_lifetime_price">Vitalício — %1$s uma única vez</string>
+    <string name="paywall_trial_then">7 dias grátis, depois %1$s</string>
+    <string name="paywall_retry">Tentar novamente</string>
+    <string name="paywall_manage_subscriptions">Gerenciar assinaturas</string>
+    <string name="paywall_terms">Termos</string>
+    <string name="paywall_privacy">Privacidade</string>
+    <string name="paywall_subscription_disclosure">Assinaturas elegíveis incluem um teste gratuito de 7 dias e depois são renovadas automaticamente pelo preço exibido, a menos que sejam canceladas antes do fim do teste ou do período atual. Gerencie ou cancele no Google Play. O acesso vitalício é cobrado imediatamente como compra única. O acesso pago existente é mantido. Lifetime não tem julgamento. Excluir o aplicativo ou comprar o Lifetime não cancela uma assinatura existente.</string>
 </resources>

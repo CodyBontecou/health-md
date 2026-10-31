@@ -100,9 +100,10 @@ struct ExportTabView: View {
     var body: some View {
         NavigationStack {
             ScrollViewReader { proxy in
+            GeometryReader { viewport in
             SchedulingExportScroll(showsFooter: !isExporting) {
                 VStack(spacing: Spacing.md) {
-                    heroHeader
+                    heroHeader(availableWidth: viewport.size.width)
                     #if DEBUG
                     if TestMode.isUITesting {
                         // Synthetic journey diagnostics only, not a production
@@ -112,19 +113,7 @@ struct ExportTabView: View {
                             .accessibilityIdentifier("export.synthetic.statusMessage")
                     }
                     #endif
-                    statusBadges
-                        .configurationChangesProtected()
-                    exportTargetSection
-                        .configurationChangesProtected()
-                    dateRangeSection
-                    historyWarningSection
-                    healthDataSection
-                        .id("marketing-export-health-data")
-                    formatsSection
-                    automationSection
-                    formatOptionsSection
-                    outputSection
-                    pathPreviewSection
+                    exportSections(availableWidth: viewport.size.width)
                     resetButton
                         .configurationChangesProtected()
                 }
@@ -156,6 +145,7 @@ struct ExportTabView: View {
                 proxy.scrollTo(anchor, anchor: .top)
             }
             #endif
+            }
             }
         }
         // SwiftUI owns the logical waiter; the parent-owned worker retains the
@@ -329,13 +319,40 @@ struct ExportTabView: View {
         }
     }
 
+    // MARK: - Adaptive Sections
+
+    private func exportSections(availableWidth: CGFloat) -> some View {
+        AdaptivePageColumns(availableWidth: availableWidth) {
+            VStack(spacing: Spacing.md) {
+                exportTargetSection
+                    .configurationChangesProtected()
+                dateRangeSection
+                historyWarningSection
+                healthDataSection
+                    .id("marketing-export-health-data")
+                formatsSection
+            }
+        } secondary: {
+            VStack(spacing: Spacing.md) {
+                automationSection
+                formatOptionsSection
+                outputSection
+                pathPreviewSection
+            }
+        }
+    }
+
     // MARK: - Header
 
-    private var heroHeader: some View {
-        HealthMdPageHeader(
+    private func heroHeader(availableWidth: CGFloat) -> some View {
+        AdaptivePageHeader(
+            availableWidth: availableWidth,
             title: "Export",
             subtitle: "Choose what Health.md writes from Apple Health"
-        )
+        ) {
+            statusBadges
+                .configurationChangesProtected()
+        }
     }
 
     // MARK: - Status Badges
@@ -373,12 +390,19 @@ struct ExportTabView: View {
 
         return Group {
             if usesAccessibilityLayout {
-                VStack(spacing: Spacing.md) {
+                VStack(alignment: .leading, spacing: Spacing.md) {
                     badges
                 }
             } else {
-                HStack(spacing: Spacing.md) {
-                    badges
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: Spacing.md) {
+                        badges
+                    }
+                    .fixedSize(horizontal: true, vertical: false)
+
+                    VStack(alignment: .leading, spacing: Spacing.md) {
+                        badges
+                    }
                 }
             }
         }
@@ -1404,7 +1428,7 @@ struct ExportTabView: View {
         }
     }
 
-    private var previewExportTargetType: PricingAnalyticsExportTargetType {
+    private var previewExportTargetType: ExportPreviewTargetType {
         switch exportTargetSelection {
         case .localIPhoneFolder:
             return .localFile

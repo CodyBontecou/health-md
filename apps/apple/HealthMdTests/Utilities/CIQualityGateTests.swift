@@ -1,492 +1,88 @@
-//
-//  CIQualityGateTests.swift
-//  HealthMdTests
-//
-//  Infrastructure tests for E5 CI quality gates.
-//  Validates that scripts, configs, and workflow wiring exist and function correctly.
-//
-
+// Host-only guards for the current portable CI and opt-in native diagnostics.
+// The former per-platform/nightly job graph was retired by the two-minute CI
+// strategy. Do not restore those mandatory jobs just to satisfy old assertions.
 import Foundation
 import XCTest
 
 final class CIQualityGateTests: XCTestCase {
-
     private var projectDir: URL {
         URL(fileURLWithPath: #filePath)
-            .deletingLastPathComponent() // Utilities
-            .deletingLastPathComponent() // HealthMdTests
-            .deletingLastPathComponent() // apps/apple
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
     }
 
     private var monorepoRoot: URL {
-        projectDir
-            .deletingLastPathComponent() // apps
-            .deletingLastPathComponent() // repository root
+        projectDir.deletingLastPathComponent().deletingLastPathComponent()
     }
 
-    private var appleCIWorkflowPath: String {
-        monorepoRoot.appendingPathComponent(".github/workflows/apple-ci.yml").path
-    }
-
-    private var appleNightlyWorkflowPath: String {
-        monorepoRoot.appendingPathComponent(".github/workflows/apple-nightly.yml").path
-    }
-
-    // MARK: - Coverage Threshold Gate (TODO-55c3e0ec)
-
-    func testCoverageThresholdScript_exists() throws {
-        let scriptPath = projectDir.appendingPathComponent("scripts/check-coverage.sh").path
-        XCTAssertTrue(
-            FileManager.default.fileExists(atPath: scriptPath),
-            "scripts/check-coverage.sh must exist"
-        )
-    }
-
-    func testCoverageThresholdScript_isExecutable() throws {
-        let scriptPath = projectDir.appendingPathComponent("scripts/check-coverage.sh").path
-        XCTAssertTrue(
-            FileManager.default.isExecutableFile(atPath: scriptPath),
-            "scripts/check-coverage.sh must be executable"
-        )
-    }
-
-    func testCoverageThresholdConfig_exists() throws {
-        let configPath = projectDir.appendingPathComponent(".ci/coverage-thresholds.json").path
-        XCTAssertTrue(
-            FileManager.default.fileExists(atPath: configPath),
-            ".ci/coverage-thresholds.json must exist"
-        )
-    }
-
-    func testCoverageThresholdConfig_hasValidJSON() throws {
-        let configPath = projectDir.appendingPathComponent(".ci/coverage-thresholds.json").path
-        let data = try Data(contentsOf: URL(fileURLWithPath: configPath))
-        let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
-        XCTAssertNotNil(json, "Config must be valid JSON object")
-        XCTAssertNotNil(json?["minimum_coverage"], "Config must contain minimum_coverage key")
-    }
-
-    #if os(macOS)
-    func testCoverageThresholdScript_failsOnMissingInput() throws {
-        let scriptPath = projectDir.appendingPathComponent("scripts/check-coverage.sh").path
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/bin/bash")
-        process.arguments = [scriptPath, "/nonexistent/path.xcresult"]
-        process.environment = ["CI_CONFIG_DIR": projectDir.appendingPathComponent(".ci").path]
-        let pipe = Pipe()
-        process.standardOutput = pipe
-        process.standardError = pipe
-        try process.run()
-        process.waitUntilExit()
-        XCTAssertNotEqual(
-            process.terminationStatus, 0,
-            "Script must exit non-zero when xcresult path doesn't exist"
-        )
-    }
-    #else
-    func testCoverageThresholdScript_failsOnMissingInput() throws {
-        throw XCTSkip("Process is unavailable on iOS test runtime")
-    }
-    #endif
-
-    func testWorkflow_referencesCoverageThresholdCheck() throws {
-        let workflowPath = appleCIWorkflowPath
-        let content = try String(contentsOfFile: workflowPath, encoding: .utf8)
-        XCTAssertTrue(
-            content.contains("check-coverage"),
-            "Workflow must reference the coverage threshold check"
-        )
-    }
-
-    // MARK: - Warning Gate (TODO-eb0b1b50)
-
-    func testWarningGateScript_exists() throws {
-        let scriptPath = projectDir.appendingPathComponent("scripts/check-warnings.sh").path
-        XCTAssertTrue(
-            FileManager.default.fileExists(atPath: scriptPath),
-            "scripts/check-warnings.sh must exist"
-        )
-    }
-
-    func testWarningGateScript_isExecutable() throws {
-        let scriptPath = projectDir.appendingPathComponent("scripts/check-warnings.sh").path
-        XCTAssertTrue(
-            FileManager.default.isExecutableFile(atPath: scriptPath),
-            "scripts/check-warnings.sh must be executable"
-        )
-    }
-
-    func testWarningBaseline_exists() throws {
-        let baselinePath = projectDir.appendingPathComponent(".ci/warning-baseline.json").path
-        XCTAssertTrue(
-            FileManager.default.fileExists(atPath: baselinePath),
-            ".ci/warning-baseline.json must exist"
-        )
-    }
-
-    func testWarningBaseline_hasValidJSON() throws {
-        let baselinePath = projectDir.appendingPathComponent(".ci/warning-baseline.json").path
-        let data = try Data(contentsOf: URL(fileURLWithPath: baselinePath))
-        let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
-        XCTAssertNotNil(json, "Baseline must be valid JSON object")
-        XCTAssertNotNil(json?["allowed_count"], "Baseline must contain allowed_count key")
-    }
-
-    #if os(macOS)
-    func testWarningGateScript_failsOnMissingLogFile() throws {
-        let scriptPath = projectDir.appendingPathComponent("scripts/check-warnings.sh").path
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/bin/bash")
-        process.arguments = [scriptPath, "/nonexistent/build.log"]
-        process.environment = [
-            "PATH": "/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin",
-            "CI_CONFIG_DIR": projectDir.appendingPathComponent(".ci").path,
-        ]
-        let pipe = Pipe()
-        process.standardOutput = pipe
-        process.standardError = pipe
-        try process.run()
-        process.waitUntilExit()
-        XCTAssertNotEqual(
-            process.terminationStatus, 0,
-            "Script must exit non-zero when log file doesn't exist"
-        )
-    }
-    #else
-    func testWarningGateScript_failsOnMissingLogFile() throws {
-        throw XCTSkip("Process is unavailable on iOS test runtime")
-    }
-    #endif
-
-    func testWorkflow_referencesWarningCheck() throws {
-        let workflowPath = appleCIWorkflowPath
-        let content = try String(contentsOfFile: workflowPath, encoding: .utf8)
-        XCTAssertTrue(
-            content.contains("check-warnings"),
-            "Workflow must reference the warning gate check"
-        )
-    }
-
-    // MARK: - Split iOS/macOS Jobs (TODO-a55c5428)
-
-    func testWorkflow_hasSeparateIOSJob() throws {
-        let workflowPath = appleCIWorkflowPath
-        let content = try String(contentsOfFile: workflowPath, encoding: .utf8)
-        XCTAssertTrue(
-            content.contains("test-ios:"),
-            "Workflow must have a separate test-ios job"
-        )
-    }
-
-    func testWorkflow_hasSeparateMacOSJob() throws {
-        let workflowPath = appleCIWorkflowPath
-        let content = try String(contentsOfFile: workflowPath, encoding: .utf8)
-        XCTAssertTrue(
-            content.contains("test-macos:"),
-            "Workflow must have a separate test-macos job"
-        )
-    }
-
-    func testWorkflow_hasPerJobArtifactUploads() throws {
-        let workflowPath = appleCIWorkflowPath
-        let content = try String(contentsOfFile: workflowPath, encoding: .utf8)
-        // Should have at least two artifact upload steps (one per job)
-        let uploadCount = content.components(separatedBy: "upload-artifact").count - 1
-        XCTAssertGreaterThanOrEqual(
-            uploadCount, 2,
-            "Workflow must have at least 2 artifact upload steps (one per platform job)"
-        )
-    }
-
-    func testWorkflow_boundsAppleTestsAndRunsMacOSSuiteOnce() throws {
-        let workflowPath = appleCIWorkflowPath
-        let content = try String(contentsOfFile: workflowPath, encoding: .utf8)
-        XCTAssertEqual(
-            content.components(separatedBy: "timeout-minutes: 75").count - 1,
-            2,
-            "Hosted Apple unit and coverage jobs must allow enough time for clean builds"
-        )
-        XCTAssertTrue(
-            content.contains("ios-ui-shards:\n    name: iOS UI shard ${{ matrix.shard }}\n    strategy:\n      fail-fast: false\n      matrix:\n        shard: [0, 1, 2, 3]\n    needs: [changes, prepare-shared-core, prepare-ui-artifacts]\n    if: ${{ needs.changes.outputs.ios_ui == 'true' }}\n    runs-on: xcode-27\n    timeout-minutes: 60"),
-            "The split UI job must allow at least 60 minutes for clean builds"
-        )
-        XCTAssertEqual(
-            content.components(separatedBy: "- name: Prepare and validate shared Rust core for Apple").count - 1,
-            1,
-            "Apple CI must build the exact shared-core XCFramework only once"
-        )
-        XCTAssertEqual(
-            content.components(separatedBy: "needs: [changes, prepare-shared-core]").count - 1,
-            3,
-            "All Xcode test jobs must consume the single prepared shared-core artifact"
-        )
-        let runner = try source("scripts/ios_ui_shards.py")
-        XCTAssertTrue(
-            runner.contains("\"-test-timeouts-enabled\", \"YES\"") &&
-                runner.contains("\"-default-test-execution-time-allowance\", \"180\"") &&
-                runner.contains("\"-maximum-test-execution-time-allowance\", \"300\""),
-            "Every UI lane must retain the original diagnostic test timeouts"
-        )
-        let smokeStep = try XCTUnwrap(
-            content.components(separatedBy: "- name: Run UI smoke tests (iOS)").last?
-                .components(separatedBy: "- name: Check warnings (iOS UI)").first
-        )
-        XCTAssertFalse(smokeStep.contains("continue-on-error: true"), "Selected UI smoke failures must remain blocking")
-        XCTAssertTrue(smokeStep.contains("python3 scripts/ios_ui_shards.py run"))
-        XCTAssertTrue(smokeStep.contains("--shard '${{ matrix.shard }}'"))
-        XCTAssertTrue(runner.contains("\"xcodebuild\", \"test-without-building\""))
-        XCTAssertTrue(runner.contains("selection(index)"), "The real test command must use the lane selection")
-        let inventory = try XCTUnwrap(runner.components(separatedBy: "SHARDS = (").last?
-            .components(separatedBy: "\n)\n").first)
-        let lanes = inventory.components(separatedBy: "\n    (").dropFirst()
-        XCTAssertEqual(lanes.count, 4, "PR smoke must retain three phone lanes and a tablet lane")
-        let selectorPattern = try NSRegularExpression(pattern: #""([A-Za-z]+Tests/test[^"\n]+)""#)
-        let selections = lanes.flatMap { lane -> [String] in
-            let matches = selectorPattern.matches(in: lane, range: NSRange(lane.startIndex..., in: lane))
-            let names = matches.compactMap { match -> String? in
-                guard let range = Range(match.range(at: 1), in: lane) else { return nil }
-                return String(lane[range])
-            }
-            XCTAssertGreaterThan(names.count, 0, "Each UI lane must select tests explicitly")
-            XCTAssertLessThanOrEqual(names.count, 10, "Each UI lane must remain bounded")
-            return names
+    func testPortableWorkflowUsesOneBoundedHostJobAndFreshResults() throws {
+        let workflow = try String(contentsOf: monorepoRoot.appendingPathComponent(".github/workflows/ci.yml"), encoding: .utf8)
+        for snippet in ["name: CI", "runs-on: ubuntu-24.04", "timeout-minutes: 2",
+                        "run: python3 scripts/ci/run.py", "run: python3 scripts/ci/verify_run.py",
+                        "if: ${{ !cancelled() }}", "cancel-in-progress: ${{ !inputs.release_sha }}"] {
+            XCTAssertTrue(workflow.contains(snippet), "Portable CI must retain: \(snippet)")
         }
-        let expectedSelections: Set<String> = [
-            "ExportProfilesJourneyUITests/testCreatingAPIProfileKeepsSelectedEndpointOnFirstSave",
-            "ExportProfilesJourneyUITests/testQA_ManagementDuplicateRenameDeleteAndLastProfileGuard",
-            "ExportProfilesJourneyUITests/testQA_ManageProfilesViewDetailCopyIDActivateAndRename",
-            "ExportProfilesJourneyUITests/testQA_MigrationShowsDefaultProfileInSettings",
-            "ExportProfilesJourneyUITests/testQA_ProfileSchedulesToggleCadenceAndEmptyStateFooter",
-            "ConfigurationProtectionJourneyUITests/testProtectedProfileDetailActionsAreBlocked",
-            "ConfigurationProtectionJourneyUITests/testProtectedProfileSchedulesCardIsLockedOnScheduleTab",
-            "ConfigurationProtectionJourneyUITests/testTurningProtectionOffRestoresConfigurationControls",
-            "HealthMdUILaunchTests/testAppLaunches",
-            "OnboardingJourneyUITests/testReleaseNotesStillAppearForReturningUsers",
-            "ExportJourneyUITests/testDateRangePresets_selectedCustomRemainsEnabledAfterLeavingAndReopeningExport",
-            "ExportJourneyUITests/testDateRangePresets_customRevealsStartAndEndPickers",
-            "ExportJourneyUITests/testDateRangePresets_visibleAndCustomPickersHiddenByDefault",
-            "ExportJourneyUITests/testFirstRunExportJourney_showsExportButton_andCompletesExport",
-            "ExportJourneyUITests/testConfiguredGateway_admitsExportWithoutLocalFolder",
-            "ExportJourneyUITests/testSuccessfulExport_folderBrowserRendersOnFirstPresentationAndReopens",
-            "PaywallJourneyUITests/testPaywallShown_whenQuotaExhausted",
-            "ScheduleSyncJourneyUITests/testSyncView_showsDisconnectedState",
-            "HistoryAuthorizationJourneyUITests/testAllTimeLimitedHistoryShowsBoundaryAndPermissionGuide",
-            "HistoryAuthorizationJourneyUITests/testBoundedUnknownHistoryRechecksExecutionWithoutClaimingFullAccess",
-            "HistoryAuthorizationJourneyUITests/testDelayedAssessmentCanContinueUnverifiedWithoutBlockingReadableExport",
-            "ExportJourneyUITests/testNoDataExport_showsGuidanceInsteadOfGenericError",
-            "HistoryAuthorizationJourneyUITests/testUnavailableHistoryAtLargeTextHasAccessibleAction",
-            "HistoryAuthorizationJourneyUITests/testUnknownHistoryPreviewHasAccessibleActionOnNativeRoot",
-        ]
-        XCTAssertEqual(selections.count, 25, "PR smoke must preserve twenty-one phone and four tablet executions")
-        XCTAssertEqual(Set(selections), expectedSelections, "PR smoke must retain the historical UI inventory plus configured gateway admission")
-        XCTAssertTrue(content.contains("needs: [changes, prepare-ui-artifacts, ios-ui-shards]"))
-        XCTAssertTrue(content.contains("test \"$SHARDS_RESULT\" = success"))
-        XCTAssertTrue(content.contains("python3 apps/apple/scripts/ios_ui_shards.py verify"))
-        XCTAssertTrue(content.contains("--device-family iPad --create-missing"))
-        XCTAssertTrue(content.contains("--prepared-sha256 '${{ needs.prepare-ui-artifacts.outputs.sha256 }}'"))
-        XCTAssertTrue(content.contains("test \"$PREPARE_RESULT\" = success"))
-        XCTAssertTrue(runner.contains("qualify_device(json.loads(raw_devices), args.destination, args.shard)"))
-        XCTAssertTrue(runner.contains("run-owned-ui.py"))
-        XCTAssertTrue(content.contains("Qualify SDK27 compiler before native slice build"))
-        XCTAssertTrue(content.contains("apple-shared-core-v2-"))
-        XCTAssertEqual(content.components(separatedBy: "python3 scripts/compare-history-sdk27-receipts.py").count - 1, 4)
-        let qualifier = try source("scripts/qualify-history-authorization-sdk27.sh")
-        XCTAssertTrue(qualifier.contains("Xcode 27.0\\nBuild version 27A266a"))
-        XCTAssertTrue(qualifier.contains("swiftlang-6.4.0.34.1 clang-2100.3.34.1"))
-        let makefile = try String(
-            contentsOf: projectDir.appendingPathComponent("Makefile"),
-            encoding: .utf8
-        )
-        XCTAssertTrue(
-            makefile.contains("XCODE_TEST_TIMEOUT_FLAGS := -test-timeouts-enabled YES"),
-            "macOS, coverage, and sanitizer tests must enable per-test execution timeouts"
-        )
-        XCTAssertTrue(
-            makefile.contains("-resultBundlePath \"$(IOS_XCRESULT_PATH)\""),
-            "iOS unit tests must retain an xcresult bundle"
-        )
-        XCTAssertTrue(
-            makefile.contains("tee \"$(IOS_TEST_RAW_LOG)\""),
-            "iOS unit tests must retain unfiltered xcodebuild output"
-        )
-        let iosTestTarget = makefile.components(separatedBy: "test-ios: prepare-healthmd-core-rust").last?
-            .components(separatedBy: "test-macos: prepare-healthmd-core-rust").first ?? ""
-        XCTAssertFalse(
-            iosTestTarget.contains("$(XCODE_TEST_TIMEOUT_FLAGS)"),
-            "iOS unit tests must not use Xcode's flaky hosted-simulator timeout allowances"
-        )
-        XCTAssertTrue(
-            iosTestTarget.contains("-test-timeouts-enabled NO"),
-            "iOS unit tests must explicitly disable hosted-simulator timeout handling"
-        )
-        XCTAssertTrue(
-            content.contains("xcrun xcresulttool get test-results summary --path \"$result\""),
-            "CI must report the structured iOS test result"
-        )
-        XCTAssertTrue(
-            content.contains("raise SystemExit(1)"),
-            "An inconsistent or failed iOS xcresult must fail the reporting step"
-        )
-        XCTAssertTrue(
-            content.contains("scripts/check-warnings.sh build/logs/xcodebuild-ios-raw.log"),
-            "The iOS warning gate must scan unfiltered compiler output"
-        )
-        XCTAssertTrue(
-            content.contains("apps/apple/build/logs/xcodebuild-ios-raw.log") &&
-                content.contains("apps/apple/build/test-results/HealthMd-iOS.xcresult"),
-            "CI must upload raw iOS diagnostics and the xcresult bundle"
-        )
-        XCTAssertFalse(
-            content.contains("make test-macos"),
-            "The PR workflow must not run the macOS suite before the coverage pass"
-        )
-        XCTAssertEqual(
-            content.components(separatedBy: "make coverage").count - 1,
-            1,
-            "The PR workflow must run the coverage-enabled macOS suite exactly once"
-        )
-        XCTAssertTrue(
-            content.contains("test-ios-ui:"),
-            "UI regressions must run in a job parallel to iOS unit tests"
-        )
+        XCTAssertFalse(workflow.contains("continue-on-error"))
+        XCTAssertFalse(workflow.contains("xcodebuild"))
+        XCTAssertFalse(workflow.contains("simctl"))
+        let wrapper = try String(contentsOf: monorepoRoot.appendingPathComponent(".github/workflows/apple-ci.yml"), encoding: .utf8)
+        XCTAssertTrue(wrapper.contains("uses: ./.github/workflows/ci.yml"))
+        XCTAssertTrue(wrapper.contains("release_sha: ${{ inputs.release_sha || github.sha }}"))
     }
 
-    func testWorkflow_preservesConcurrency() throws {
-        let workflowPath = appleCIWorkflowPath
-        let content = try String(contentsOfFile: workflowPath, encoding: .utf8)
-        XCTAssertTrue(
-            content.contains("cancel-in-progress"),
-            "Workflow must preserve concurrency cancellation behavior"
-        )
+    func testNativeDiagnosticsRemainExplicitAndPreserveLogsAndTimeouts() throws {
+        let makefile = try source("Makefile")
+        for snippet in ["test: test-ios test-macos", "coverage: prepare-healthmd-core-rust",
+                        "XCODE_TEST_TIMEOUT_FLAGS := -test-timeouts-enabled YES",
+                        "-resultBundlePath \"$(IOS_XCRESULT_PATH)\"", "tee \"$(IOS_TEST_RAW_LOG)\"",
+                        "-test-timeouts-enabled NO", "-enableCodeCoverage YES"] {
+            XCTAssertTrue(makefile.contains(snippet), "Native diagnostic must retain: \(snippet)")
+        }
+        let policy = try String(contentsOf: monorepoRoot.appendingPathComponent("docs/qa/two-minute-ci.md"), encoding: .utf8)
+        XCTAssertTrue(policy.contains("not PR regression"))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: monorepoRoot.appendingPathComponent(".github/workflows/apple-nightly.yml").path))
     }
 
-    func testWorkflows_doNotLaunchExpensiveFollowupsAfterCancellation() throws {
-        for path in [appleCIWorkflowPath, appleNightlyWorkflowPath] {
-            let content = try String(contentsOfFile: path, encoding: .utf8)
-            XCTAssertFalse(
-                content.contains("if: always()\n        continue-on-error: true"),
-                "UI tests must not start after an in-progress workflow is cancelled: \(path)"
-            )
-            XCTAssertTrue(
-                content.contains("if: ${{ success() }}"),
-                "Expensive follow-up tests must require earlier steps to succeed: \(path)"
-            )
-            XCTAssertTrue(
-                content.contains("if: ${{ !cancelled() }}"),
-                "Artifact and diagnostic follow-ups must stop when a run is cancelled: \(path)"
-            )
+    func testDiagnosticScriptsAndConfigsRemainAvailable() throws {
+        for script in ["check-coverage.sh", "check-warnings.sh", "check-tdd-evidence.sh"] {
+            XCTAssertTrue(FileManager.default.isExecutableFile(atPath: projectDir.appendingPathComponent("scripts/\(script)").path))
+        }
+        for (file, key) in [("coverage-thresholds.json", "minimum_coverage"), ("warning-baseline.json", "allowed_count")] {
+            let data = try Data(contentsOf: projectDir.appendingPathComponent(".ci/\(file)"))
+            let config = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+            XCTAssertNotNil(config[key], "\(file) must declare \(key)")
         }
     }
 
-    // MARK: - Scheduled Extended Run (TODO-74fdb59f)
-
-    func testScheduledWorkflow_exists() throws {
-        let path = appleNightlyWorkflowPath
-        XCTAssertTrue(
-            FileManager.default.fileExists(atPath: path),
-            ".github/workflows/apple-nightly.yml must exist for scheduled extended runs"
-        )
-    }
-
-    func testScheduledWorkflow_hasScheduleTrigger() throws {
-        let path = appleNightlyWorkflowPath
-        let content = try String(contentsOfFile: path, encoding: .utf8)
-        XCTAssertTrue(
-            content.contains("schedule:"),
-            "Nightly workflow must have a schedule trigger"
-        )
-        XCTAssertTrue(
-            content.contains("cron:"),
-            "Nightly workflow must have a cron expression"
-        )
-    }
-
-    func testScheduledWorkflow_hasExtendedChecks() throws {
-        let path = appleNightlyWorkflowPath
-        let content = try String(contentsOfFile: path, encoding: .utf8)
-        XCTAssertTrue(
-            content.contains("upload-artifact"),
-            "Nightly workflow must upload summary artifacts"
-        )
-    }
-
-    // MARK: - TDD Evidence Guard (TODO-9f8571ce)
-
-    func testTDDEvidenceScript_exists() throws {
-        let scriptPath = projectDir.appendingPathComponent("scripts/check-tdd-evidence.sh").path
-        XCTAssertTrue(
-            FileManager.default.fileExists(atPath: scriptPath),
-            "scripts/check-tdd-evidence.sh must exist"
-        )
-    }
-
-    func testTDDEvidenceScript_isExecutable() throws {
-        let scriptPath = projectDir.appendingPathComponent("scripts/check-tdd-evidence.sh").path
-        XCTAssertTrue(
-            FileManager.default.isExecutableFile(atPath: scriptPath),
-            "scripts/check-tdd-evidence.sh must be executable"
-        )
-    }
-
     #if os(macOS)
-    func testTDDEvidenceScript_failsOnMissingTodosDir() throws {
-        let scriptPath = projectDir.appendingPathComponent("scripts/check-tdd-evidence.sh").path
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/bin/bash")
-        process.arguments = [scriptPath]
-        process.environment = [
-            "PATH": "/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin",
-            "TODOS_DIR": "/nonexistent/todos",
-        ]
-        let pipe = Pipe()
-        process.standardOutput = pipe
-        process.standardError = pipe
-        try process.run()
-        process.waitUntilExit()
-        XCTAssertNotEqual(
-            process.terminationStatus, 0,
-            "Script must exit non-zero when todos directory doesn't exist"
-        )
-    }
-    #else
-    func testTDDEvidenceScript_failsOnMissingTodosDir() throws {
-        throw XCTSkip("Process is unavailable on iOS test runtime")
+    func testDiagnosticScriptsFailOnMissingExplicitInput() throws {
+        for (script, arguments, extra) in [
+            ("check-coverage.sh", ["/nonexistent/path.xcresult"], [String: String]()),
+            ("check-warnings.sh", ["/nonexistent/build.log"], [String: String]()),
+            ("check-tdd-evidence.sh", [], ["TODOS_DIR": "/nonexistent/todos"]),
+        ] {
+            let process = Process()
+            process.executableURL = URL(fileURLWithPath: "/bin/bash")
+            process.arguments = [projectDir.appendingPathComponent("scripts/\(script)").path] + arguments
+            process.environment = ["PATH": "/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin",
+                                   "CI_CONFIG_DIR": projectDir.appendingPathComponent(".ci").path]
+                .merging(extra, uniquingKeysWith: { _, new in new })
+            process.standardOutput = FileHandle.nullDevice
+            process.standardError = FileHandle.nullDevice
+            try process.run()
+            process.waitUntilExit()
+            XCTAssertNotEqual(process.terminationStatus, 0, "\(script) must fail on missing input")
+        }
     }
     #endif
 
-    func testWorkflow_referencesTDDEvidenceCheck() throws {
-        let workflowPath = appleCIWorkflowPath
-        let content = try String(contentsOfFile: workflowPath, encoding: .utf8)
-        let nightlyPath = appleNightlyWorkflowPath
-        let nightlyContent = (try? String(contentsOfFile: nightlyPath, encoding: .utf8)) ?? ""
-        let combined = content + nightlyContent
-        XCTAssertTrue(
-            combined.contains("check-tdd-evidence"),
-            "At least one workflow must reference the TDD evidence check"
-        )
+    func testDiagnosticRunbookCoversRetainedGates() throws {
+        let content = try source("docs/testing/CI-QUALITY-GATES.md")
+        for snippet in ["check-coverage", "check-warnings", "check-tdd-evidence", "coverage-thresholds", "warning-baseline"] {
+            XCTAssertTrue(content.contains(snippet))
+        }
     }
-
-    // MARK: - CI Quality Gates Documentation (TODO-188d2f69)
-
-    func testCIQualityGatesDoc_exists() throws {
-        let docPath = projectDir.appendingPathComponent("docs/testing/CI-QUALITY-GATES.md").path
-        XCTAssertTrue(
-            FileManager.default.fileExists(atPath: docPath),
-            "docs/testing/CI-QUALITY-GATES.md must exist"
-        )
-    }
-
-    func testCIQualityGatesDoc_coversAllGates() throws {
-        let docPath = projectDir.appendingPathComponent("docs/testing/CI-QUALITY-GATES.md").path
-        let content = try String(contentsOfFile: docPath, encoding: .utf8)
-        XCTAssertTrue(content.contains("check-coverage"), "Docs must cover coverage gate")
-        XCTAssertTrue(content.contains("check-warnings"), "Docs must cover warning gate")
-        XCTAssertTrue(content.contains("check-tdd-evidence"), "Docs must cover TDD evidence guard")
-        XCTAssertTrue(content.contains("coverage-thresholds"), "Docs must explain threshold config")
-        XCTAssertTrue(content.contains("warning-baseline"), "Docs must explain warning baseline")
-    }
-
-    // MARK: - Accessibility Source Checks (issue #38)
 
     func testIconOnlyControls_haveExplicitAccessibilityLabels() throws {
         let criticalFiles = [
@@ -510,54 +106,35 @@ final class CIQualityGateTests: XCTestCase {
                 ".accessibilityLabel(\"Rename \\(field.originalKey)\")",
             ],
         ]
-
         for (relativePath, expectedSnippets) in criticalFiles {
             let content = try source(relativePath)
             for snippet in expectedSnippets {
-                XCTAssertTrue(
-                    content.contains(snippet),
-                    "\(relativePath) must keep explicit accessibility label snippet: \(snippet)"
-                )
+                XCTAssertTrue(content.contains(snippet), "\(relativePath) must keep accessibility label: \(snippet)")
             }
         }
     }
 
     func testDecorativeGlowAndNavigationIcons_areHiddenFromAccessibilityTree() throws {
         let criticalFiles = [
-            // The heart and folder icons are semantic and labeled; only the three remaining layers are decorative.
             "HealthMd/iOS/Components/StatusIndicator.swift": 3,
             "HealthMd/iOS/Components/SectionCard.swift": 6,
             "HealthMd/iOS/Components/ExportModal.swift": 12,
             "HealthMd/iPad/iPadSidebar.swift": 3,
         ]
-
         for (relativePath, minimumHiddenCount) in criticalFiles {
-            let content = try source(relativePath)
-            let hiddenCount = content.components(separatedBy: ".accessibilityHidden(true)").count - 1
-            XCTAssertGreaterThanOrEqual(
-                hiddenCount,
-                minimumHiddenCount,
-                "\(relativePath) must hide decorative icons, status dots, and glow layers from VoiceOver"
-            )
+            let hiddenCount = try source(relativePath).components(separatedBy: ".accessibilityHidden(true)").count - 1
+            XCTAssertGreaterThanOrEqual(hiddenCount, minimumHiddenCount, "\(relativePath) must hide decorative layers")
         }
-
-        // Onboarding's production surface is split between the page and its
-        // extracted accessibility components; preserve the original combined guard.
         let onboardingHiddenCount = try [
             "HealthMd/iOS/Views/OnboardingView.swift",
             "HealthMd/iOS/Components/OnboardingA11yComponents.swift",
         ].reduce(into: 0) { count, relativePath in
             count += try source(relativePath).components(separatedBy: ".accessibilityHidden(true)").count - 1
         }
-        XCTAssertGreaterThanOrEqual(
-            onboardingHiddenCount,
-            12,
-            "Onboarding must hide decorative icons and progress layers from VoiceOver"
-        )
+        XCTAssertGreaterThanOrEqual(onboardingHiddenCount, 12)
     }
 
     private func source(_ relativePath: String) throws -> String {
-        let path = projectDir.appendingPathComponent(relativePath).path
-        return try String(contentsOfFile: path, encoding: .utf8)
+        try String(contentsOf: projectDir.appendingPathComponent(relativePath), encoding: .utf8)
     }
 }

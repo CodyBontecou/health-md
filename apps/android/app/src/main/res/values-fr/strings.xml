@@ -375,7 +375,7 @@
     <!-- Paywall screen -->
     <string name="paywall_title">Débloquer Health.md</string>
     <string name="paywall_subtitle">Vous avez utilisé vos 5 exports gratuits</string>
-    <string name="paywall_unlimited_exports">Exports illimités à vie</string>
+    <string name="paywall_unlimited_exports">Exports illimités</string>
     <string name="paywall_scheduled_exports">Exports planifiés automatisés</string>
     <string name="paywall_future_features">Toutes les futures fonctionnalités incluses</string>
     <string name="paywall_one_time">Paiement unique — pas d\'abonnement</string>
@@ -718,7 +718,7 @@
     <string name="privacy_category_history_permissions">READ_HEALTH_DATA_HISTORY</string>
     <string name="privacy_category_history_exports">Utilisé uniquement pour les exportations manuelles volumineuses, telles que 90 jours ou depuis toujours, afin que Health.md puisse lire les données Health Connect antérieures à la fenêtre standard de 30 jours.</string>
     <string name="privacy_policy_direct_cli">Les exportations Direct CLI n’ont lieu qu’après l’association et la connexion explicites à votre ordinateur. Les données de santé sont envoyées via une connexion authentifiée et chiffrée, conservées de manière confidentielle pendant sept jours au maximum pour permettre la reprise du transfert, puis supprimées plus tôt si vous annulez ou oubliez l’association.</string>
-    <string name="privacy_policy_footer">Health.md n’exploite aucun cloud de données de santé. L’attribution de campagne propre à Health.md peut envoyer des UUID aléatoires d’installation ou d’événement générés par l’application ainsi que des métadonnées de campagne validées, mais jamais de données de santé, de référents bruts, d’identifiants d’appareil, d’exportations, de comptes ni de chemins.</string>
+    <string name="privacy_policy_footer">Cette version ne collecte aucune analyse d’utilisation interne ni donnée d’attribution publicitaire. Les achats, la planification et les services facultatifs font l’objet d’informations de confidentialité distinctes.</string>
     <string name="section_export_type">Type d\'exportation</string>
     <string name="export_type_compatibility">Exportation de compatibilité</string>
     <string name="export_type_compatibility_description">Fichiers quotidiens Markdown, Bases, JSON ou CSV pour les flux de travail Health.md existants</string>
@@ -789,7 +789,7 @@
     <string name="onboarding_skip">Passer</string>
     <string name="onboarding_back">Retour</string>
     <string name="export_failure_paywall_label">Déverrouillage requis</string>
-    <string name="export_guidance_paywall">Les exportations planifiées nécessitent le déverrouillage à vie. Ouvrez l’écran d’achat pour débloquer les exportations et la planification illimitées.</string>
+    <string name="export_guidance_paywall">Les exports planifiés nécessitent une période d’essai ou un abonnement en cours de validité, ou un accès à vie. Ouvrez l’écran d’achat pour consulter les options d’accès.</string>
     <string name="export_source_retry">Nouvelle tentative</string>
     <string name="export_source_shortcut">Raccourci</string>
     <string name="export_source_remote">À distance</string>
@@ -1506,4 +1506,28 @@
     <string name="post_export_upgrade_action">Voir l’accès à vie</string>
     <string name="post_export_manual_action">Continuer les exports manuels</string>
     <string name="post_export_continue_free">Continuer gratuitement</string>
+    <string name="export_sleep_date_guidance">Le sommeil couvre la période de midi à midi le lendemain pour chaque date sélectionnée. Pour la nuit dernière, choisissez Hier.</string>
+    <string name="export_sleep_preview_window">Fenêtre de sommeil : du %1$s à midi au %2$s à midi (%3$s).</string>
+    <string name="export_sleep_preview_guidance">Si le sommeil manque, essayez la date précédente. Le sommeil du matin peut figurer dans ce résumé même si les données brutes sont datées du jour. Les erreurs de requête sont indiquées séparément ; un résultat vide peut aussi signaler un accès en lecture indisponible.</string>
+    <string name="whoop_connection_description">Connectez WHOOP pour exporter la récupération, l’effort, le sommeil, les entraînements et les mesures corporelles. La connexion utilise votre navigateur ; Health.md conserve les jetons chiffrés sur cet appareil. La déconnexion supprime la connexion enregistrée sur cet appareil.</string>
+    <string name="whoop_connect">Connecter WHOOP</string>
+    <string name="whoop_sources_description">Connectez WHOOP pour exporter directement depuis le fournisseur, ou continuez à utiliser Health Connect pour les données locales.</string>
+    <string name="whoop_sign_in_failed">La connexion à WHOOP n’a pas pu démarrer. Vérifiez votre connexion et réessayez.</string>
+    <string name="whoop_use_health_connect">Utiliser Health Connect pour les exports</string>
+    <string name="whoop_reconnect">Reconnecter WHOOP</string>
+    <string name="whoop_disconnect">Déconnecter WHOOP</string>
+    <string name="whoop_use_for_exports">Utiliser WHOOP pour les exports</string>
+    <string name="paywall_access_subtitle">Choisissez un abonnement ou un accès à vie pour créer vos archives de santé privées. Les abonnements éligibles incluent un essai gratuit de 7 jours.</string>
+    <string name="paywall_access_active_title">Votre accès est actif</string>
+    <string name="paywall_access_active_body">Poursuivez la configuration pour connecter vos données de santé et choisir où enregistrer vos archives privées.</string>
+    <string name="paywall_plan_choices">Accès hebdomadaire, annuel ou à vie</string>
+    <string name="paywall_weekly_price">%1$s / semaine</string>
+    <string name="paywall_yearly_price">%1$s / an</string>
+    <string name="paywall_lifetime_price">À vie — %1$s en une fois</string>
+    <string name="paywall_trial_then">7 jours gratuits, puis %1$s</string>
+    <string name="paywall_retry">Réessayer</string>
+    <string name="paywall_manage_subscriptions">Gérer les abonnements</string>
+    <string name="paywall_terms">Conditions</string>
+    <string name="paywall_privacy">Confidentialité</string>
+    <string name="paywall_subscription_disclosure">Les abonnements éligibles incluent un essai gratuit de 7 jours, puis se renouvellent automatiquement au prix affiché, sauf annulation avant la fin de l’essai ou de la période en cours. Gérez ou annulez dans Google Play. L’accès à vie est facturé immédiatement en un seul paiement. Les accès payants existants sont conservés. La vie n’a pas d’épreuve. La suppression de l\'application ou l\'achat de Lifetime n\'annule pas un abonnement existant.</string>
 </resources>
