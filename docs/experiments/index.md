@@ -4,7 +4,7 @@
 | --- | --- | --- |
 | [$14.99 lifetime price (ISO-294)](./2026-09-17-19.99-lifetime-price.md) | 2026-06-01 → 2026-09-16 | Kept — results recorded in the $19.99 note |
 | [$19.99 lifetime price](./2026-09-17-19.99-lifetime-price.md) | 2026-09-17 → | Live price retained pending the coordinated subscription launch |
-| [Paid access, trials, and subscriptions](../../apps/apple/docs/experiments/subscription-pricing-rollout.md) | Pre-launch | Apple subscriptions READY_TO_SUBMIT with review screenshots complete; group/first-review preparation and purchase QA pending. Google Play plans/trials remain Draft; live pricing held unchanged |
+| [Paid access, trials, and subscriptions](../../apps/apple/docs/experiments/subscription-pricing-rollout.md) | Pre-launch | Apple subscriptions READY_TO_SUBMIT with review screenshots complete; group/first-review preparation and purchase QA pending. Android 3.5.0/code 43 is available on Internal Testing; Google Play weekly/yearly plans and seven-day trials are Active. Real-purchase QA remains pending. Lifetime pricing held unchanged |
 | [Apple export competitor review brief](./2026-10-19-apple-export-competitors.md) | 2026-10-19 | Complete — public-source Treg trial; $0 spent |
 
 ## Operational sources
