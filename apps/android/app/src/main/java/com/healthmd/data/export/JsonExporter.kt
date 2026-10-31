@@ -714,8 +714,8 @@ class JsonExporter {
                         putJsonArray("meals") {
                             for (meal in n.meals) {
                                 addJsonObject {
-                                    put("startTimeISO", meal.startTime.toIso8601())
-                                    put("endTimeISO", meal.endTime.toIso8601())
+                                    put("startTimeISO", if (nativeSuccessor) meal.exactStartTime?.toIso8601() ?: meal.startTime.toIso8601() else meal.startTime.toIso8601())
+                                    put("endTimeISO", if (nativeSuccessor) meal.exactEndTime?.toIso8601() ?: meal.endTime.toIso8601() else meal.endTime.toIso8601())
                                     meal.name?.let { put("name", it) }
                                     meal.mealType?.let { put("mealType", it) }
                                     meal.dietaryEnergy?.let { put("dietaryEnergy", it) }
@@ -841,9 +841,13 @@ class JsonExporter {
                         putJsonArray("menstruationPeriods") {
                             for (period in r.menstruationPeriods) {
                                 addJsonObject {
-                                    put("startTimeISO", period.startTime.toIso8601())
-                                    put("endTimeISO", period.endTime.toIso8601())
-                                    put("duration", period.duration.inWholeSeconds)
+                                    put("startTimeISO", if (nativeSuccessor) period.exactStartTime?.toIso8601() ?: period.startTime.toIso8601() else period.startTime.toIso8601())
+                                    put("endTimeISO", if (nativeSuccessor) period.exactEndTime?.toIso8601() ?: period.endTime.toIso8601() else period.endTime.toIso8601())
+                                    if (nativeSuccessor) {
+                                        put("duration", period.duration.toDouble(kotlin.time.DurationUnit.SECONDS))
+                                    } else {
+                                        put("duration", period.duration.inWholeSeconds)
+                                    }
                                     period.source?.let { put("source", it) }
                                     putMetadataObject("metadata", period.metadata)
                                     if (analyticalV5) putExactInterval(period.exactStartTime, period.exactEndTime, period.identity)

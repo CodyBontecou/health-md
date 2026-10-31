@@ -14,7 +14,11 @@ internal object AndroidWakeDateSourceProjection {
 
     fun aggregate(data: HealthData): HealthData = data.copy(
         heart = data.heart.copy(samples = emptyList(), hrvSamples = emptyList()),
-        vitals = data.vitals.copy(bloodOxygenSamples = emptyList(), bloodGlucoseSamples = emptyList(), respiratoryRateSamples = emptyList(), bloodPressureSamples = emptyList()),
+        vitals = data.vitals.copy(bloodOxygenSamples = emptyList(), bloodGlucoseSamples = emptyList(), respiratoryRateSamples = emptyList(),
+            bloodPressureSamples = emptyList(), bodyTemperatureSamples = emptyList(), basalBodyTemperatureSamples = emptyList(),
+            skinTemperatureDeltas = emptyList()),
+        nutrition = data.nutrition.copy(meals = emptyList()),
+        reproductiveHealth = data.reproductiveHealth.copy(menstruationPeriods = emptyList()),
         activity = data.activity.copy(stepSamples = emptyList(), activityIntensityEntries = emptyList()),
         mindfulness = data.mindfulness.copy(sessions = emptyList()),
         plannedWorkouts = emptyList(),
@@ -77,7 +81,8 @@ internal object AndroidWakeDateSourceProjection {
                             val key = value.getValue("key").jsonPrimitive.content
                             require(key in setOf("native_quantity_details", "sleep_stage_details", "sleep_session_details", "native_workout_details",
                                 "native_correlation_details", "native_activity_details", "native_mindfulness_details",
-                                "native_planned_workout_details", "native_medical_resource_details", "native_provider_provenance"))
+                                "native_planned_workout_details", "native_medical_resource_details", "native_provider_provenance",
+                                "native_android_record_details"))
                             require(!aggregate.substring(0, end).contains("\n$key:"))
                             append("\n").append(key).append(":\n")
                             for (line in value.getValue("lines").jsonArray) append(line.jsonPrimitive.content).append('\n')
@@ -129,8 +134,14 @@ internal object AndroidWakeDateSourceProjection {
             mindfulness = MindfulnessData(sessions = data.mindfulness.sessions),
             heart = HeartData(samples = selected.heart.samples, hrvSamples = selected.heart.hrvSamples),
             vitals = VitalsData(bloodPressureSamples = data.vitals.bloodPressureSamples, bloodOxygenSamples = selected.vitals.bloodOxygenSamples,
-                bloodGlucoseSamples = selected.vitals.bloodGlucoseSamples, respiratoryRateSamples = selected.vitals.respiratoryRateSamples))
+                bloodGlucoseSamples = selected.vitals.bloodGlucoseSamples, respiratoryRateSamples = selected.vitals.respiratoryRateSamples,
+                bodyTemperatureSamples = selected.vitals.bodyTemperatureSamples,
+                basalBodyTemperatureSamples = selected.vitals.basalBodyTemperatureSamples,
+                skinTemperatureDeltas = selected.vitals.skinTemperatureDeltas),
+            nutrition = NutritionData(meals = selected.nutrition.meals),
+            reproductiveHealth = ReproductiveHealthData(menstruationPeriods = selected.reproductiveHealth.menstruationPeriods))
         if (!source.heart.hasData && !source.vitals.hasData && !source.activity.hasData && !source.mindfulness.hasData &&
+            !source.nutrition.hasData && !source.reproductiveHealth.hasData &&
             source.sleep.stages.isEmpty() && source.sleep.sessions.isEmpty() && source.workouts.isEmpty() &&
             source.plannedWorkouts.isEmpty() && !source.medicalResources.hasData &&
             source.compatibilityProvenance == null && !customization.includeLegacyAndroidAliases) return null
@@ -149,6 +160,7 @@ internal object AndroidWakeDateSourceProjection {
             HealthMdRenderInputAdapter.bloodPressureDetails(root, source.date.toString(), keys),
             HealthMdRenderInputAdapter.activityDetails(root, source.date.toString(), keys),
             HealthMdRenderInputAdapter.mindfulnessDetails(root, source.date.toString(), keys),
+            remainingNativeDetails(root, source.date.toString()),
             HealthMdRenderInputAdapter.plannedAndMedicalDetails(root, source.date.toString(), keys),
             provenanceDetails(root, source.date.toString()),
         ).reduce(HealthMdRenderInputAdapter::mergeDetails)
@@ -159,7 +171,10 @@ internal object AndroidWakeDateSourceProjection {
         val sourceArrays = listOf("heart" to "heartRateSamples", "heart" to "hrvSamples", "vitals" to "bloodOxygenSamples",
             "vitals" to "bloodGlucoseSamples", "vitals" to "respiratoryRateSamples",
             "sleep" to "sleepStages", "sleep" to "sleepSessions", "vitals" to "bloodPressureSamples",
-            "activity" to "stepSamples", "activity" to "activityIntensity", "mindfulness" to "sessions")
+            "activity" to "stepSamples", "activity" to "activityIntensity", "mindfulness" to "sessions",
+            "vitals" to "bodyTemperatureSamples", "vitals" to "basalBodyTemperatureSamples",
+            "vitals" to "skinTemperatureDeltas", "nutrition" to "meals",
+            "reproductiveHealth" to "menstruationPeriods")
         val result = aggregate.toMutableMap()
         for ((category, field) in sourceArrays) {
             val samples = root[category]?.jsonObject?.get(field) ?: continue
@@ -182,6 +197,59 @@ internal object AndroidWakeDateSourceProjection {
         }
         return JsonObject(result)
     }
+
+    /** Preserve already-captured Android records without extending shared quantity identities. */
+    private fun remainingNativeDetails(root: JsonObject, ownerDate: String): JsonObject {
+        val definitions = listOf(
+            Triple("vitals", "bodyTemperatureSamples", "Body Temperature Sample"),
+            Triple("vitals", "basalBodyTemperatureSamples", "Basal Body Temperature Sample"),
+            Triple("vitals", "skinTemperatureDeltas", "Skin Temperature Delta"),
+            Triple("nutrition", "meals", "Meal"),
+            Triple("reproductiveHealth", "menstruationPeriods", "Menstruation Period"),
+        )
+        val rows = mutableListOf<JsonObject>()
+        val lines = mutableListOf("| Native Record (JSON) |", "|---|")
+        val yaml = mutableListOf<String>()
+        for ((category, field, label) in definitions) {
+            val records = root[category]?.jsonObject?.get(field)?.jsonArray ?: continue
+            for (element in records) {
+                val record = buildJsonObject { put("metric", field); put("record", element) }.toString()
+                val value = element.jsonObject
+                val timestamp = value["exactTime"]?.jsonObject?.get("iso8601")?.jsonPrimitive?.contentOrNull
+                    ?: value["timestamp"]?.jsonPrimitive?.contentOrNull
+                    ?: value["startTimeISO"]?.jsonPrimitive?.contentOrNull
+                    ?: throw HealthMdRenderInputAdapter.AdapterException("wake-date native detail clock is missing")
+                if (runCatching { java.time.Instant.parse(timestamp) }.isFailure) {
+                    throw HealthMdRenderInputAdapter.AdapterException("wake-date native detail clock is incompatible")
+                }
+                rows += buildJsonObject {
+                    put("date", ownerDate); put("category", "Native Detail"); put("metric", label)
+                    put("value", record); put("unit", "json"); put("timestamp", timestamp); put("ordinal", rows.size)
+                }
+                lines += "| ${nativeJsonCodeCell(record)} |"
+                yaml += "  - $record"
+            }
+        }
+        return buildJsonObject {
+            put("output_keys", JsonArray(emptyList()))
+            put("csv_rows", JsonArray(rows))
+            put("markdown_blocks", buildJsonArray {
+                if (rows.isNotEmpty()) add(buildJsonObject {
+                    put("heading", "Android Native Record Details")
+                    put("lines", JsonArray(lines.map(::JsonPrimitive))); put("ordinal", 0)
+                })
+            })
+            put("bases_frontmatter_blocks", buildJsonArray {
+                if (yaml.isNotEmpty()) add(buildJsonObject {
+                    put("key", "native_android_record_details")
+                    put("lines", JsonArray(yaml.map(::JsonPrimitive))); put("ordinal", 0)
+                })
+            })
+        }
+    }
+
+    private fun nativeJsonCodeCell(encoded: String): String = "`" +
+        encoded.replace("|", "\\u007c").replace("`", "\\u0060") + "`"
 
     private fun appendFrontmatter(text: String, fields: List<Triple<String, String, String>>): String {
         if (fields.isEmpty()) return text
