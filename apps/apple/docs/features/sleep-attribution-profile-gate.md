@@ -2,6 +2,38 @@
 
 Status: `planned` on Apple and Android. Target: **Issue #104 sleep-attribution-successor-profile-review**.
 
+## Current app admission and remaining qualification
+
+Both app settings gates remain Debug-only in `SleepDayAttribution.swift` and
+`SleepDayAttribution.kt`. This status describes release admission, not an absence
+of native producers. The sections below record incremental qualification history;
+their earlier route restrictions do not replace the current owning code.
+
+The iPhone `IPhoneDirectFileExportProducer` and Android `DirectGeneratedFilesProducer`
+now stage scoped personal-note patches without consulting phone staging-vault note
+existence. Both retain per-note policy and negotiated extension authority for replay.
+Existing desktop notes still receive patches when personal-note creation is disabled.
+The receiver decides whether to create or skip the destination note.
+
+Apple `ExportPreviewView.buildPreviews` preserves the original
+`executionSleepCaptureContextIsFrozen` value across accepted-provider settings
+reconstruction, as foreground `ExportOrchestrator` already does. A fresh profile
+with frozen nil renderer authority can acquire its Apple-v11 pin; a durable frozen
+nil-pin operation cannot. The Lossless + Range UI regression and the corresponding
+`ExportPreviewDisplayContentTests` authority regression still require native execution.
+
+Connected Append/Update destination behavior comes from the frozen settings, while
+retained renderer plans keep overwrite as their materialization mode.
+`ConnectedMorningReceiverTests.connectedWriteModesPreservePersonalContentAcrossCommitBeforeAckRecovery`
+covers both modes; both parameterized cases must actually execute before claiming
+crash-before-acknowledgement recovery qualification. A zero-test invocation is not evidence.
+
+Release admission still needs the affected Android host-core regression batch,
+the iPhone preview and Android schedule-Save/runtime checks, the connected recovery
+cases above, and coherent native integration builds. Portable contract and bundled-reader
+tests cannot substitute for those native results. These gaps do not authorize changing
+historical Night begins bytes or dropping export options.
+
 ## Version allocation audit
 
 The 2026-10-08 integration audit found a conflicting draft identity: commit `56611bc65` on `feat/cloud-mcp-pilot` defines daily v10 and `apple_health_data_v10` for Night begins plus WHOOP provider-v2 cycle steps. The external Obsidian plugin's main commit `fd5356c4dd032fed975122f4d691d0fdf6fd804f` already has fixtures for that meaning. The original sleep draft reused those identifiers for Morning ends. The sleep workstream now reserves daily v11 / `apple_health_data_v11` / `apple-v11` instead; historical v8 and the separate WHOOP v10 meaning are unchanged. Saved draft v10 sleep contexts retain their exact marker and remain unavailable, never gaining v11 authority on upgrade. Reader adoption must use this distinct identity before enabling production operations. The independent roll-up schema may use version 11 too; daily and roll-up schemas have separate version domains.
