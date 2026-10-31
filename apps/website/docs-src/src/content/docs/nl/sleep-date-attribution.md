@@ -3,7 +3,9 @@ title: "Slaapdatums en dagelijkse notities"
 description: "Kies de juiste slaapexportdatum: het venster van middag tot middag, bedtijd na middernacht, dutjes en lege resultaten."
 ---
 
-Exporteer op dinsdagochtend **maandag**, meestal **Gisteren**, voor de afgelopen nacht. Het dagelijkse slaapoverzicht van Health.md gebruikt een lokaal venster van **12:00 tot 12:00**: maandagmiddag tot dinsdagmiddag, niet de middernachtgrens van activiteit.
+**Begin van de nacht** is de standaard op iPhone en Android. Exporteer op dinsdagochtend **maandag**, meestal **Gisteren**, voor de afgelopen nacht. Het dagelijkse slaapoverzicht van Health.md gebruikt een lokaal venster van **12:00 tot 12:00**: maandagmiddag tot dinsdagmiddag, niet de middernachtgrens van activiteit.
+
+Kies **Einde in de ochtend** in de exportinstellingen om elke volledige slaapsessie toe te wijzen aan de datum waarop deze eindigt, in de tijdzone van de export en zonder afkapping op de middaggrens. Exporteer voor maandagnacht die dinsdag eindigt **dinsdag (Vandaag)**; dutjes op dinsdag horen ook bij dinsdag. Een wijziging geldt voor nieuwe bewerkingen; opgeslagen bewerkingen behouden hun aanvaarde datumtoewijzing.
 
 <div id="sleep-journal-window"></div>
 
@@ -11,13 +13,13 @@ Exporteer op dinsdagochtend **maandag**, meestal **Gisteren**, voor de afgelopen
 
 Het venster houdt een gebruikelijke nacht bij elkaar, ook bij een bedtijd na middernacht. De eerste middaggrens telt mee, de volgende niet. Slaap over een middaggrens kan bijdragen aan twee aangrenzende dagoverzichten. Oorspronkelijke tijdstempels worden niet aan de notitiedatum aangepast.
 
-Apple en Android delen dit venster voor compatibele overzichten. Meetwaarden, slaapfasen, bronrecords en aggregatie kunnen verschillen. Er is geen instelling om het overzicht naar de wekdatum te verplaatsen.
+Beide manieren om slaap aan een datum toe te wijzen zijn beschikbaar op Apple en Android. Meetwaarden, slaapfasen, bronrecords en aggregatie kunnen per platform verschillen.
 
 <div id="sleep-date-examples"></div>
 
 ## Welke datum exporteren?
 
-Fictieve voorbeelden in lokale tijd, geen gezondheidsgegevens:
+**Begin van de nacht:** Fictieve voorbeelden in lokale tijd, geen gezondheidsgegevens:
 
 | Slaap of activiteit | Exportdatum |
 | --- | --- |
@@ -38,7 +40,7 @@ Controleer de lokale tijdzone van de export. De wekdatum in een andere app of de
 3. Controleer de toegang. Op iPhone onthult een leeg HealthKit-resultaat niet of leestoegang is geweigerd. Op Android moet de bron het ondersteunde record werkelijk naar Health Connect hebben geschreven.
 4. Controleer bestemming en geschreven, overgeslagen of mislukte resultaten. Een voorvertoning bewijst niet dat een bestand is opgeslagen. Ontbrekend is niet nul.
 
-Daily Note Injection en API Endpoint-overzichten volgen hetzelfde venster. Herhaal bij late bronupdates de dag of controleer de terugblikperiode van het schema. Achtergrondwerk garandeert geen geslaagde schrijfactie op een exact tijdstip.
+Overzichten van Daily Note Injection en API Endpoint gebruiken de slaapdatumtoewijzing die voor de bewerking is gekozen. Exporteer bij late brongegevens de bijbehorende datum voor die modus opnieuw of controleer de terugblikperiode van de planning. Achtergrondtijdstippen zijn streefwaarden, geen garantie op een geslaagde schrijfactie.
 
 <div id="sleep-records-and-queries"></div>
 
@@ -46,7 +48,7 @@ Daily Note Injection en API Endpoint-overzichten volgen hetzelfde venster. Herha
 
 Ruwe of canonieke records behouden hun tijdstempels en eigen dagregels. Reconstrueer geen sessies uit een dagtotaal en tel bronintervallen niet als extra slaap daarbij op.
 
-Op Apple deelt het ruwe archief records in op basis van hun oorspronkelijke begintijd binnen de lokale kalenderdag, van middernacht tot middernacht. Het slaapoverzicht knipt intervallen juist af op het dagboekvenster van middag tot middag. Een geslaagde ruwe Sleep Analysis-query kan daarom ochtendrecords bevatten terwijl het slaapoverzicht voor die datum leeg is. Exporteer de vorige dagboekdatum en controleer `time_context.calendar_timezone` voordat je een ontbrekend overzicht onderzoekt. Records van 22 september van 04:03–11:52 UTC horen bijvoorbeeld in UTC volledig bij het overzicht van 21 september; in Europe/Lisbon vallen de laatste 52 minuten na de lokale middag en tellen die mee voor 22 september.
+**Begin van de nacht:** Op Apple deelt het ruwe archief records in op basis van hun oorspronkelijke begintijd binnen de lokale kalenderdag, van middernacht tot middernacht. Het slaapoverzicht knipt intervallen juist af op het dagboekvenster van middag tot middag. Een geslaagde ruwe Sleep Analysis-query kan daarom ochtendrecords bevatten terwijl het slaapoverzicht voor die datum leeg is. Exporteer de vorige dagboekdatum en controleer `time_context.calendar_timezone` voordat je een ontbrekend overzicht onderzoekt. Records van 22 september van 04:03–11:52 UTC horen bijvoorbeeld in UTC volledig bij het overzicht van 21 september; in Europe/Lisbon vallen de laatste 52 minuten na de lokale middag en tellen die mee voor 22 september.
 
 Slaapfasen vereisen geen expliciet `inBed`-record: als dat ontbreekt, gebruiken Apple-overzichten de vereniging van de beschikbare intervallen waarin je sliep. Ontbrekende gegevens over tijd in bed leveren geen duur in bed op. Een mislukte overzichtsquery hoort in `diagnostics.partial_failures` te staan; een geslaagde query zonder geschikte intervallen is geldige afwezigheid van gegevens. De rusthartslag gebruikt een aparte kalenderdagquery en vereist een echte rusthartslagmeting; slaapfasen of alleen leestoestemming leveren die niet.
 
