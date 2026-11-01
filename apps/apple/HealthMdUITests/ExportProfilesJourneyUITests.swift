@@ -191,9 +191,7 @@ final class ExportProfilesJourneyUITests: XCTestCase {
         let app = UITestLaunchHelper.firstRunExportApp()
         app.launch()
 
-        let scheduleTab = app.tabBars.buttons["Schedule"]
-        XCTAssertTrue(scheduleTab.waitUntilExists(timeout: 10))
-        scheduleTab.tap()
+        XCTAssertTrue(UITestLaunchHelper.openScheduleTab(in: app))
 
         // Profile Schedules card appears below the legacy schedule card.
         let card = app.staticTexts["Profile Schedules"]

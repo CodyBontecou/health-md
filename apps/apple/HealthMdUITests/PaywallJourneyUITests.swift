@@ -45,7 +45,7 @@ final class PaywallJourneyUITests: XCTestCase {
     func testUnlockedUserCanReachExportsWithoutQuotaCopy() {
         let app = UITestLaunchHelper.configuredApp(healthAuthorized: true, vaultSelected: true, purchaseUnlocked: true)
         app.launch()
-        XCTAssertTrue(app.buttons[UITestLaunchHelper.Export.exportButton].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.buttons["glass.exportNow"].waitForExistence(timeout: 10))
         XCTAssertFalse(app.staticTexts[UITestLaunchHelper.Export.freeExportsLabel].exists)
         XCTAssertFalse(app.staticTexts[UITestLaunchHelper.Paywall.title].exists)
     }

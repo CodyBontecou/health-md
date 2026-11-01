@@ -12,6 +12,7 @@ final class ExportJourneyUITests: XCTestCase {
 
     func testFirstRunExportJourney_showsExportButton_andCompletesExport() throws {
         let app = UITestLaunchHelper.firstRunExportApp()
+        app.launchArguments += ["-UITestOpenClassicExport", "YES"]
         app.launch()
 
         // Verify app launched and is on the export tab (default)
@@ -55,6 +56,7 @@ final class ExportJourneyUITests: XCTestCase {
             purchaseUnlocked: true,
             exportResult: "no-data"
         )
+        app.launchArguments += ["-UITestOpenClassicExport", "YES"]
         app.launch()
         defer { app.terminate() }
         let exportButton = app.buttons[UITestLaunchHelper.Export.exportButton]
@@ -76,6 +78,7 @@ final class ExportJourneyUITests: XCTestCase {
             purchaseUnlocked: true,
             exportResult: "intermediate-success"
         )
+        app.launchArguments += ["-UITestOpenClassicExport", "YES"]
         app.launch()
 
         let exportButton = app.buttons[UITestLaunchHelper.Export.exportButton]
@@ -127,6 +130,7 @@ final class ExportJourneyUITests: XCTestCase {
 
     func testSuccessfulExport_previewsExactMarkdownFileInApp() throws {
         let app = UITestLaunchHelper.firstRunExportApp()
+        app.launchArguments += ["-UITestOpenClassicExport", "YES"]
         app.launch()
 
         let exportButton = app.buttons[UITestLaunchHelper.Export.exportButton]
@@ -162,6 +166,7 @@ final class ExportJourneyUITests: XCTestCase {
         let app = UITestLaunchHelper.firstRunExportApp()
         // Files can browse the UI host's synthetic Documents directory, not tmp.
         app.launchEnvironment["UITEST_BROWSABLE_VAULT"] = "true"
+        app.launchArguments += ["-UITestOpenClassicExport", "YES"]
         app.launch()
         addTeardownBlock { UITestLaunchHelper.finishSystemPresentation(in: app) }
 
@@ -244,6 +249,7 @@ final class ExportJourneyUITests: XCTestCase {
     func testArchivedExport_stillUsesQuickLook() throws {
         let app = UITestLaunchHelper.firstRunExportApp()
         app.launchEnvironment["UITEST_ARCHIVE_EXPORTS"] = "true"
+        app.launchArguments += ["-UITestOpenClassicExport", "YES"]
         app.launch()
         addTeardownBlock { UITestLaunchHelper.finishSystemPresentation(in: app) }
 
@@ -271,6 +277,7 @@ final class ExportJourneyUITests: XCTestCase {
             purchaseUnlocked: true,
             exportResult: "partial"
         )
+        app.launchArguments += ["-UITestOpenClassicExport", "YES"]
         app.launch()
 
         let exportButton = app.buttons[UITestLaunchHelper.Export.exportButton]
@@ -315,6 +322,7 @@ final class ExportJourneyUITests: XCTestCase {
         // The installed app retains the owner's choice between journeys.
         // This fixture verifies the historical Night begins output explicitly.
         app.launchArguments += ["-healthKit.sleepDayAttribution", "night_begins"]
+        app.launchArguments += ["-UITestOpenClassicExport", "YES"]
         app.launch()
 
         let previewButton = app.buttons[UITestLaunchHelper.Export.previewButton]
@@ -348,6 +356,7 @@ final class ExportJourneyUITests: XCTestCase {
             purchaseUnlocked: true,
             useHealthKitExportPreviewFixtures: true
         )
+        app.launchArguments += ["-UITestOpenClassicExport", "YES"]
         app.launch()
         addTeardownBlock { UITestLaunchHelper.finishSystemPresentation(in: app) }
 
@@ -376,6 +385,7 @@ final class ExportJourneyUITests: XCTestCase {
             purchaseUnlocked: true
         )
         app.launchEnvironment["UITEST_NO_EXPORT_FORMATS"] = "true"
+        app.launchArguments += ["-UITestOpenClassicExport", "YES"]
         app.launch()
 
         let previewButton = app.buttons[UITestLaunchHelper.Export.previewButton]
@@ -398,6 +408,7 @@ final class ExportJourneyUITests: XCTestCase {
             analyticsTransport: "offline",
             remoteConfig: "offline"
         )
+        app.launchArguments += ["-UITestOpenClassicExport", "YES"]
         app.launch()
 
         let previewButton = app.buttons[UITestLaunchHelper.Export.previewButton]
@@ -415,6 +426,7 @@ final class ExportJourneyUITests: XCTestCase {
             vaultSelected: false,
             purchaseUnlocked: true
         )
+        app.launchArguments += ["-UITestOpenClassicExport", "YES"]
         app.launch()
 
         let previewButton = app.buttons[UITestLaunchHelper.Export.previewButton]
@@ -436,6 +448,7 @@ final class ExportJourneyUITests: XCTestCase {
             purchaseUnlocked: true,
             useHealthKitExportPreviewFixtures: true
         )
+        app.launchArguments += ["-UITestOpenClassicExport", "YES"]
         app.launch()
 
         let previewButton = app.buttons[UITestLaunchHelper.Export.previewButton]
@@ -453,6 +466,7 @@ final class ExportJourneyUITests: XCTestCase {
             vaultSelected: true,
             purchaseUnlocked: true
         )
+        app.launchArguments += ["-UITestOpenClassicExport", "YES"]
         app.launch()
 
         let exportButton = app.buttons[UITestLaunchHelper.Export.exportButton]
@@ -469,6 +483,7 @@ final class ExportJourneyUITests: XCTestCase {
             vaultSelected: false,
             purchaseUnlocked: true
         )
+        app.launchArguments += ["-UITestOpenClassicExport", "YES"]
         app.launch()
         addTeardownBlock { UITestLaunchHelper.finishSystemPresentation(in: app) }
 
@@ -496,6 +511,7 @@ final class ExportJourneyUITests: XCTestCase {
             vaultSelected: false,
             purchaseUnlocked: true
         )
+        app.launchArguments += ["-UITestOpenClassicExport", "YES"]
         app.launch()
 
         let gateway = app.buttons["export.target.agentDataGateway"]
@@ -534,6 +550,7 @@ final class ExportJourneyUITests: XCTestCase {
 
     func testExportTargetSelector_visible() throws {
         let app = UITestLaunchHelper.firstRunExportApp()
+        app.launchArguments += ["-UITestOpenClassicExport", "YES"]
         app.launch()
 
         XCTAssertTrue(app.staticTexts["Export Target"].waitForExistence(timeout: 5), "Export target section should be visible")
@@ -548,6 +565,7 @@ final class ExportJourneyUITests: XCTestCase {
             purchaseUnlocked: true,
             syncState: "disconnected"
         )
+        app.launchArguments += ["-UITestOpenClassicExport", "YES"]
         app.launch()
 
         let macTarget = app.buttons[UITestLaunchHelper.Export.macTargetOption]
@@ -568,6 +586,7 @@ final class ExportJourneyUITests: XCTestCase {
             syncState: "connected",
             macExportStatus: "noFolder"
         )
+        app.launchArguments += ["-UITestOpenClassicExport", "YES"]
         app.launch()
 
         let macTarget = app.buttons[UITestLaunchHelper.Export.macTargetOption]
@@ -588,6 +607,7 @@ final class ExportJourneyUITests: XCTestCase {
             syncState: "connected",
             macExportStatus: "ready"
         )
+        app.launchArguments += ["-UITestOpenClassicExport", "YES"]
         app.launch()
 
         let macTarget = app.buttons[UITestLaunchHelper.Export.macTargetOption]
@@ -604,6 +624,7 @@ final class ExportJourneyUITests: XCTestCase {
             macExportStatus: "ready",
             macDestinationPath: "/tmp/ReadyMacVault"
         )
+        app.launchArguments += ["-UITestOpenClassicExport", "YES"]
         app.launch()
 
         let pathPreview = app.descendants(matching: .any)[UITestLaunchHelper.Export.pathPreview]
@@ -631,6 +652,7 @@ final class ExportJourneyUITests: XCTestCase {
             syncState: "connected",
             macExportStatus: "ready"
         )
+        app.launchArguments += ["-UITestOpenClassicExport", "YES"]
         app.launch()
 
         let macTarget = app.buttons[UITestLaunchHelper.Export.macTargetOption]
@@ -651,6 +673,7 @@ final class ExportJourneyUITests: XCTestCase {
             syncState: "connected",
             macExportStatus: "ready"
         )
+        app.launchArguments += ["-UITestOpenClassicExport", "YES"]
         app.launch()
 
         let macTarget = app.buttons[UITestLaunchHelper.Export.macTargetOption]
@@ -677,6 +700,7 @@ final class ExportJourneyUITests: XCTestCase {
             analyticsTransport: "offline",
             remoteConfig: "offline"
         )
+        app.launchArguments += ["-UITestOpenClassicExport", "YES"]
         app.launch()
 
         let macTarget = app.buttons[UITestLaunchHelper.Export.macTargetOption]
@@ -699,6 +723,7 @@ final class ExportJourneyUITests: XCTestCase {
         let app = UITestLaunchHelper.firstRunExportApp()
         // The argument domain isolates the starting preference from earlier journeys.
         app.launchArguments += ["-healthKit.sleepDayAttribution", "night_begins"]
+        app.launchArguments += ["-UITestOpenClassicExport", "YES"]
         app.launch()
 
         let picker = sleepDayAttributionPicker(in: app)
@@ -719,6 +744,7 @@ final class ExportJourneyUITests: XCTestCase {
         let app = UITestLaunchHelper.configuredApp(healthAuthorized: true, vaultSelected: true,
             purchaseUnlocked: true, useHealthKitExportPreviewFixtures: true)
         app.launchArguments += ["-healthKit.sleepDayAttribution", "morning_ends"]
+        app.launchArguments += ["-UITestOpenClassicExport", "YES"]
         app.launch()
         let preview = app.buttons[UITestLaunchHelper.Export.previewButton]
         XCTAssertTrue(preview.waitForExistence(timeout: 5))
@@ -735,6 +761,7 @@ final class ExportJourneyUITests: XCTestCase {
     func testSleepAttribution_storedMorningEndsRemainsVisibleAndCanChangeToNightBegins() throws {
         let app = UITestLaunchHelper.firstRunExportApp()
         app.launchArguments += ["-healthKit.sleepDayAttribution", "morning_ends"]
+        app.launchArguments += ["-UITestOpenClassicExport", "YES"]
         app.launch()
 
         let picker = sleepDayAttributionPicker(in: app)
@@ -766,6 +793,7 @@ final class ExportJourneyUITests: XCTestCase {
 
     func testDateRangePresets_visibleAndCustomPickersHiddenByDefault() throws {
         let app = UITestLaunchHelper.firstRunExportApp()
+        app.launchArguments += ["-UITestOpenClassicExport", "YES"]
         app.launch()
 
         XCTAssertTrue(app.staticTexts["Date Range"].waitForExistence(timeout: 5), "Date Range section should be visible")
@@ -791,6 +819,7 @@ final class ExportJourneyUITests: XCTestCase {
 
     func testDateRangePresets_customRevealsStartAndEndPickers() throws {
         let app = UITestLaunchHelper.firstRunExportApp()
+        app.launchArguments += ["-UITestOpenClassicExport", "YES"]
         app.launch()
 
         let customPreset = app.buttons[UITestLaunchHelper.Export.datePresetCustomButton]
@@ -809,6 +838,7 @@ final class ExportJourneyUITests: XCTestCase {
     /// the reported native calendar completion flow (see investigation #168).
     func testDateRangePresets_selectedCustomRemainsEnabledAfterLeavingAndReopeningExport() throws {
         let app = UITestLaunchHelper.firstRunExportApp()
+        app.launchArguments += ["-UITestOpenClassicExport", "YES"]
         app.launch()
         let custom = app.buttons[UITestLaunchHelper.Export.datePresetCustomButton]
         scrollDatePresetIntoView(custom, in: app)
@@ -820,8 +850,9 @@ final class ExportJourneyUITests: XCTestCase {
         XCTAssertTrue(end.waitForExistence(timeout: 3))
         XCTAssertEqual(custom.value as? String, "Selected")
 
-        tabButton(in: app, identifier: UITestLaunchHelper.Tab.sync, label: "Sync").tap()
-        tabButton(in: app, identifier: UITestLaunchHelper.Tab.export, label: "Export").tap()
+        // Leave the Export settings sheet and come back through Automations.
+        app.buttons["glass.classicExport.done"].tap()
+        UITestLaunchHelper.openClassicExport(in: app)
         scrollDatePresetIntoView(custom, in: app)
         XCTAssertTrue(custom.isEnabled, "Selected Custom must not become a disabled preset on reentry")
         XCTAssertEqual(custom.value as? String, "Selected")
@@ -836,54 +867,7 @@ final class ExportJourneyUITests: XCTestCase {
         add(screenshot)
     }
 
-    // MARK: - Tab Navigation
-
-    func testTabNavigation_switchesBetweenTabs() throws {
-        let app = UITestLaunchHelper.firstRunExportApp()
-        app.launch()
-
-        // Start on export tab
-        let exportButton = app.buttons[UITestLaunchHelper.Export.exportButton]
-        XCTAssertTrue(exportButton.waitForExistence(timeout: 5))
-
-        // Navigate to schedule tab
-        let scheduleTab = tabButton(
-            in: app,
-            identifier: UITestLaunchHelper.Tab.schedule,
-            label: "Schedule"
-        )
-        XCTAssertTrue(scheduleTab.exists, "Schedule tab should exist")
-        scheduleTab.tap()
-
-        // Schedule controls are inline on the tab — the toggle is the anchor
-        let scheduleToggle = app.switches[UITestLaunchHelper.Schedule.enableToggle]
-        XCTAssertTrue(scheduleToggle.waitForExistence(timeout: 3), "Schedule toggle should appear inline")
-
-        // Navigate to sync tab
-        let syncTab = tabButton(
-            in: app,
-            identifier: UITestLaunchHelper.Tab.sync,
-            label: "Sync"
-        )
-        syncTab.tap()
-
-        // Navigate back to export
-        let exportTab = tabButton(
-            in: app,
-            identifier: UITestLaunchHelper.Tab.export,
-            label: "Export"
-        )
-        exportTab.tap()
-        XCTAssertTrue(exportButton.waitForExistence(timeout: 3))
-    }
-
     // MARK: - Helpers
-
-    private func tabButton(in app: XCUIApplication, identifier: String, label: String) -> XCUIElement {
-        let identified = app.buttons[identifier]
-        if identified.exists { return identified }
-        return app.buttons[label]
-    }
 
     private func sleepDayAttributionPicker(in app: XCUIApplication) -> XCUIElement {
         // Reveal an anchor below the picker so it clears the sticky export action bar.

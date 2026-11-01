@@ -25,6 +25,7 @@ final class HistoryAuthorizationJourneyUITests: XCTestCase {
     func testAllTimeLimitedHistoryShowsBoundaryAndPermissionGuide() throws {
         let app = UITestLaunchHelper.firstRunExportApp()
         app.launchEnvironment["UITEST_HISTORY_ASSESSMENT"] = "limited"
+        app.launchArguments += ["-UITestOpenClassicExport", "YES"]
         app.launch()
         let allTime = app.buttons[UITestLaunchHelper.Export.datePresetAllTimeButton]
         reveal(allTime, in: app)
@@ -59,6 +60,7 @@ final class HistoryAuthorizationJourneyUITests: XCTestCase {
     func testBoundedUnknownHistoryRechecksExecutionWithoutClaimingFullAccess() throws {
         let app = UITestLaunchHelper.firstRunExportApp()
         app.launchEnvironment["UITEST_HISTORY_ASSESSMENT"] = "unknown"
+        app.launchArguments += ["-UITestOpenClassicExport", "YES"]
         app.launch()
         let custom = app.buttons[UITestLaunchHelper.Export.datePresetCustomButton]
         reveal(custom, in: app)
@@ -80,6 +82,7 @@ final class HistoryAuthorizationJourneyUITests: XCTestCase {
     func testUnknownHistoryPreviewHasAccessibleActionOnNativeRoot() throws {
         let app = UITestLaunchHelper.firstRunExportApp()
         app.launchEnvironment["UITEST_HISTORY_ASSESSMENT"] = "unknown"
+        app.launchArguments += ["-UITestOpenClassicExport", "YES"]
         app.launch()
         let message = app.staticTexts["export.historyWarning.message"]
         reveal(message, in: app)
@@ -96,6 +99,7 @@ final class HistoryAuthorizationJourneyUITests: XCTestCase {
         let app = UITestLaunchHelper.firstRunExportApp()
         app.launchEnvironment["UITEST_HISTORY_ASSESSMENT"] = "unavailable"
         app.launchArguments += ["-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL"]
+        app.launchArguments += ["-UITestOpenClassicExport", "YES"]
         app.launch()
         let message = app.staticTexts["export.historyWarning.message"]
         reveal(message, in: app)
@@ -111,6 +115,7 @@ final class HistoryAuthorizationJourneyUITests: XCTestCase {
     func testDelayedAssessmentCanContinueUnverifiedWithoutBlockingReadableExport() throws {
         let app = UITestLaunchHelper.firstRunExportApp()
         app.launchEnvironment["UITEST_HISTORY_ASSESSMENT"] = "pending"
+        app.launchArguments += ["-UITestOpenClassicExport", "YES"]
         app.launch()
         defer { app.terminate() }
         let exportButton = app.buttons[UITestLaunchHelper.Export.exportButton]

@@ -9,20 +9,50 @@ enum UITestLaunchHelper {
 
     /// Establish navigation before asserting content in the destination. A
     /// missed tab tap must report as navigation failure, not missing profiles.
+    /// The classic Settings content lives under Settings › App & support.
     static func openSettingsTab(
         in app: XCUIApplication,
         file: StaticString = #filePath,
         line: UInt = #line
     ) {
-        _ = openTab("Settings", in: app, file: file, line: line)
+        guard openTab("Settings", in: app, file: file, line: line) else { return }
+        let row = app.buttons["App & support"]
+        guard row.waitForExistence(timeout: 10) else {
+            XCTFail("App & support must be reachable from Settings", file: file, line: line)
+            return
+        }
+        row.tap()
     }
 
+    /// Schedules and history live under Automations › Schedule & history.
     static func openScheduleTab(
         in app: XCUIApplication,
         file: StaticString = #filePath,
         line: UInt = #line
     ) -> Bool {
-        openTab("Schedule", in: app, file: file, line: line)
+        guard openTab("Automations", in: app, file: file, line: line) else { return false }
+        let row = app.buttons["Schedule & history"]
+        guard row.waitForExistence(timeout: 10) else {
+            XCTFail("Schedule & history must be reachable from Automations", file: file, line: line)
+            return false
+        }
+        row.tap()
+        return true
+    }
+
+    /// The classic Export settings open from Automations.
+    static func openClassicExport(
+        in app: XCUIApplication,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) {
+        guard openTab("Automations", in: app, file: file, line: line) else { return }
+        let button = app.buttons["All export settings"]
+        guard button.waitForExistence(timeout: 10) else {
+            XCTFail("All export settings must be reachable", file: file, line: line)
+            return
+        }
+        button.tap()
     }
 
     private static func openTab(
@@ -31,7 +61,7 @@ enum UITestLaunchHelper {
         file: StaticString,
         line: UInt
     ) -> Bool {
-        let tab = app.tabBars.buttons[name]
+        let tab = app.buttons[name].firstMatch
         let hittable = XCTNSPredicateExpectation(
             predicate: NSPredicate(format: "exists == true AND isHittable == true"),
             object: tab
@@ -40,15 +70,7 @@ enum UITestLaunchHelper {
             XCTFail("\(name) tab must be hittable before navigation", file: file, line: line)
             return false
         }
-        if !tab.isSelected { tab.tap() }
-        let selected = XCTNSPredicateExpectation(
-            predicate: NSPredicate(format: "isSelected == true"),
-            object: tab
-        )
-        guard XCTWaiter().wait(for: [selected], timeout: 10) == .completed else {
-            XCTFail("\(name) tab must become selected before inspecting its content", file: file, line: line)
-            return false
-        }
+        tab.tap()
         return true
     }
 

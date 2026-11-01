@@ -147,7 +147,7 @@ struct SettingsScreen: View {
         case .cli:
             GlassCLIDestinationScreen()
         case .appSupport:
-            GlassAppSupportScreen()
+            GlassAppSupportScreen { showExportProfiles = true }
         }
     }
 

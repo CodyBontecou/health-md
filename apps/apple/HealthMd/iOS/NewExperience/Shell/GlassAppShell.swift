@@ -50,6 +50,7 @@ struct GlassAppShell: View {
     @State private var showPreview = false
     @State private var showAttention = false
     @State private var showClassicExport = false
+    @State private var showPreviewRequirements = false
     @State private var resultEntry: ExportHistoryEntry?
     @State private var scheduleRevision = 0
     @State private var tabRootID = UUID()
@@ -156,8 +157,35 @@ struct GlassAppShell: View {
         .sheet(isPresented: $showAttention) {
             AttentionScreen(items: attentionItems).glassTheme()
         }
+        .geistDialog(
+            isPresented: $showPreviewRequirements,
+            title: Text("Finish Preview Setup"),
+            message: Text("To preview your export, connect Apple Health so Health.md can read your data."),
+            actions: [
+                .cancel(),
+                .action("Connect Apple Health") {
+                    Task {
+                        _ = try? await healthKitManager.requestAuthorization()
+                        if healthKitManager.isAuthorized {
+                            await Task.yield()
+                            showPreview = true
+                        }
+                    }
+                }
+            ]
+        )
         .sheet(isPresented: $showClassicExport) {
             NavigationStack { classicExportTab }
+                .overlay(alignment: .topTrailing) {
+                    Button(String(localized: "Done")) { showClassicExport = false }
+                        .buttonStyle(.plain)
+                        .glassFont(.caption)
+                        .padding(.horizontal, 14)
+                        .frame(minHeight: GlassMetrics.touchTarget)
+                        .glassSurface(in: Capsule(), isInteractive: true)
+                        .padding(GlassMetrics.screenMargin)
+                        .accessibilityIdentifier("glass.classicExport.done")
+                }
         }
         .sheet(item: resultBinding) { entry in
             ExportResultScreen(entry: entry) { start, end in
@@ -174,6 +202,10 @@ struct GlassAppShell: View {
         }
         .onChange(of: presentFirstExportPreview) { _, requested in consumeFirstPreview(requested) }
         .onAppear {
+            #if DEBUG
+            // Lets the classic export journeys reach the still-shipping Export settings directly.
+            if UserDefaults.standard.bool(forKey: "UITestOpenClassicExport") { showClassicExport = true }
+            #endif
             consumeFirstPreview(presentFirstExportPreview)
         }
     }
@@ -185,7 +217,14 @@ struct GlassAppShell: View {
     private func consumeFirstPreview(_ requested: Bool) {
         guard requested else { return }
         presentFirstExportPreview = false
-        showPreview = true
+        // As on the Export tab: without Health access the preview has nothing to show.
+        if healthKitManager.isAuthorized {
+            showPreview = true
+        } else if configurationProtection.isEnabled {
+            configurationProtection.presentBlockedChangeToast()
+        } else {
+            showPreviewRequirements = true
+        }
     }
 
     private static let navigationItems: [GlassNavigationItem<GlassTab>] = [
@@ -219,7 +258,8 @@ struct GlassAppShell: View {
                         _ = profileCoordinator.activate(profileID: profileID)
                         showPreview = true
                     },
-                    onSchedulesChanged: { scheduleRevision += 1 }
+                    onSchedulesChanged: { scheduleRevision += 1 },
+                    onOpenExportSettings: { showClassicExport = true }
                 )
             }
         case .settings:
@@ -236,7 +276,7 @@ struct GlassAppShell: View {
         }
     }
 
-    /// Interim home for the Schedule tab's history, retry and the full Export tab.
+    /// Interim home for the Schedule tab's history and retry.
     private var scheduleDetails: some View {
         ScheduleSettingsView(
             vaultManager: vaultManager,
@@ -246,11 +286,6 @@ struct GlassAppShell: View {
             showFolderPicker: $showFolderPicker,
             profileCoordinator: profileCoordinator
         )
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Button(String(localized: "All export settings")) { showClassicExport = true }
-            }
-        }
     }
 
     private var classicExportTab: some View {
@@ -517,6 +552,17 @@ struct GlassExportPreviewSheet: View {
             connectedAppsEnabled: ConnectedAppsFeature.isEnabled,
             fetchHealthData: { date, snapshot in
                 let settings = snapshot.makeAdvancedExportSettings()
+                #if DEBUG
+                if TestMode.useHealthKitExportPreviewFixtures || MarketingCapture.isActive {
+                    return UITestHealthKitFixtures.exportPreviewHealthData(
+                        for: date,
+                        includeGranularData: settings.effectiveDetailPolicy.includesSelectedTimeSeries,
+                        includeLargeSourceArchive: TestMode.healthKitExportPreviewLargeArchive
+                            && settings.effectiveDetailPolicy.includesCanonicalArchive,
+                        includePartialFailures: TestMode.healthKitExportPreviewPartialCapture
+                    )
+                }
+                #endif
                 return try? await healthKitManager.fetchHealthData(
                     for: date,
                     detailPolicy: settings.effectiveDetailPolicy,

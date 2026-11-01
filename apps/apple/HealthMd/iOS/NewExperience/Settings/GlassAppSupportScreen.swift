@@ -6,6 +6,8 @@ import SwiftUI
 struct GlassAppSupportScreen: View {
     private enum Anchor { case protection }
 
+    var onManageProfiles: () -> Void = {}
+
     @EnvironmentObject private var sharedSetupCoordinator: SharedSetupCoordinator
     @EnvironmentObject private var configurationProtection: ConfigurationProtectionManager
     @Environment(\.glassPalette) private var palette
@@ -37,6 +39,10 @@ struct GlassAppSupportScreen: View {
                     .id(Anchor.protection)
 
                     GlassSectionLabel(title: String(localized: "Configuration"))
+                    GlassPanel {
+                        row(String(localized: "Export Profiles"), action: onManageProfiles)
+                            .accessibilityIdentifier("export.profiles.entry")
+                    }
                     SharedSetupConfigurationCard(coordinator: sharedSetupCoordinator)
                         .padding(GlassMetrics.panelPadding)
                         .glassSurface()

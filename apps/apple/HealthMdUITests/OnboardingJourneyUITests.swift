@@ -17,7 +17,7 @@ final class OnboardingJourneyUITests: XCTestCase {
         )
         app.launch()
 
-        tapButton("Start Setup", in: app)
+        tapButton("Connect Apple Health", in: app)
 
         // Health access, then sample export (with the folded-in plugin promo).
         tapButton("Continue Setup", in: app)
@@ -153,7 +153,7 @@ final class OnboardingJourneyUITests: XCTestCase {
         )
         app.launch()
 
-        tapButton("Start Setup", in: app)
+        tapButton("Connect Apple Health", in: app)
         XCTAssertTrue(app.buttons["Connect Apple Health"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons["Skip for Now"].exists)
         tapButton("Skip for Now", in: app)
@@ -180,20 +180,7 @@ final class OnboardingJourneyUITests: XCTestCase {
     private func openSharedSetupSettings(
         in app: XCUIApplication
     ) -> (use: XCUIElement, share: XCUIElement) {
-        if app.windows.firstMatch.frame.width > 600 {
-            let settingsSidebarItem = app.staticTexts["Settings"]
-            XCTAssertTrue(settingsSidebarItem.waitForExistence(timeout: 10))
-            settingsSidebarItem.tap()
-        } else {
-            let identifiedSettingsTab = app.buttons[UITestLaunchHelper.Tab.settings]
-            if identifiedSettingsTab.waitForExistence(timeout: 3) {
-                identifiedSettingsTab.tap()
-            } else {
-                let labeledSettingsTab = app.buttons["Settings"]
-                XCTAssertTrue(labeledSettingsTab.waitForExistence(timeout: 7))
-                labeledSettingsTab.tap()
-            }
-        }
+        UITestLaunchHelper.openSettingsTab(in: app)
 
         let configurationCard = app.descendants(matching: .any)[
             UITestLaunchHelper.SharedSetup.configurationCard

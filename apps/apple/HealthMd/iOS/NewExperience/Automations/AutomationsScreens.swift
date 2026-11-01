@@ -50,6 +50,7 @@ struct AutomationsScreen: View {
     let onRun: (UUID) -> Void
     let onPreview: (UUID) -> Void
     let onSchedulesChanged: () -> Void
+    let onOpenExportSettings: () -> Void
 
     @Environment(\.glassPalette) private var palette
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
@@ -62,11 +63,13 @@ struct AutomationsScreen: View {
         historyContent: AnyView,
         onRun: @escaping (UUID) -> Void,
         onPreview: @escaping (UUID) -> Void,
-        onSchedulesChanged: @escaping () -> Void
+        onSchedulesChanged: @escaping () -> Void,
+        onOpenExportSettings: @escaping () -> Void = {}
     ) {
         self.coordinator = coordinator
         _profileStore = ObservedObject(wrappedValue: coordinator.profileStore)
         _entryStore = ObservedObject(wrappedValue: coordinator.scheduledEntryStore)
+        self.onOpenExportSettings = onOpenExportSettings
         self.historyContent = historyContent
         self.onRun = onRun
         self.onPreview = onPreview
@@ -149,6 +152,16 @@ struct AutomationsScreen: View {
                     } label: {
                         GlassPanel {
                             GlassRow(title: String(localized: "Schedule & history")) {
+                                Image(systemName: "chevron.right").foregroundStyle(palette.muted)
+                            }
+                        }
+                    }
+                    .buttonStyle(.plain)
+
+                    // Export-wide settings that have no automation page yet, such as sleep attribution.
+                    Button(action: onOpenExportSettings) {
+                        GlassPanel {
+                            GlassRow(title: String(localized: "All export settings")) {
                                 Image(systemName: "chevron.right").foregroundStyle(palette.muted)
                             }
                         }
