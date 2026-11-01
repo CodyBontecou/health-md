@@ -1,6 +1,17 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "%@ couldn’t finish. Open Health.md to retry the remaining dates." : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"%@ konnte nicht abgeschlossen werden. Öffne Health.md, um die restlichen Daten erneut zu versuchen."}},
+      "es":{"stringUnit":{"state":"translated","value":"%@ no pudo terminar. Abre Health.md para reintentar las fechas restantes."}},
+      "fr":{"stringUnit":{"state":"translated","value":"%@ n’a pas pu se terminer. Ouvrez Health.md pour réessayer les dates restantes."}},
+      "it":{"stringUnit":{"state":"translated","value":"%@ non è stato completato. Apri Health.md per riprovare le date rimanenti."}},
+      "ja":{"stringUnit":{"state":"translated","value":"%@を完了できませんでした。Health.mdを開いて残りの日付を再試行してください。"}},
+      "ko":{"stringUnit":{"state":"translated","value":"%@을(를) 완료하지 못했습니다. Health.md를 열어 남은 날짜를 다시 시도하세요."}},
+      "nl":{"stringUnit":{"state":"translated","value":"%@ kon niet worden voltooid. Open Health.md om de resterende datums opnieuw te proberen."}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"%@ não foi concluído. Abra o Health.md para tentar novamente as datas restantes."}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"%@ 未能完成。请打开 Health.md 重试剩余日期。"}}
+    }},
     "Claim myself.md access" : {"localizations":{
       "de":{"stringUnit":{"state":"translated","value":"myself.md-Zugang beanspruchen"}},
       "es":{"stringUnit":{"state":"translated","value":"Reclamar acceso a myself.md"}},

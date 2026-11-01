@@ -188,6 +188,13 @@ struct UserNotificationExportScheduler: ExportNotificationScheduling {
             content.title = String(localized: "Health Export Needs Attention", comment: "Pending export recovery notification title")
         }
         content.body = String(localized: "Open Health.md and tap to retry the remaining health export dates.", comment: "Pending export recovery notification body")
+        if NewExperienceFeature.isEnabled, let profileName = request.profileName {
+            content.title = "Health.md"
+            content.body = String(
+                localized: "\(profileName) couldn’t finish. Open Health.md to retry the remaining dates.",
+                comment: "Liquid Glass pending export notification body with export profile name"
+            )
+        }
         content.sound = .default
         content.categoryIdentifier = ExportNotificationCategories.pendingExport
         content.threadIdentifier = ExportNotificationCategories.pendingExport

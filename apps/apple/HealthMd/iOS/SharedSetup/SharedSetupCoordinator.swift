@@ -1284,6 +1284,7 @@ struct SharedSetupFlowView: View {
                     )
                 }
             }
+            .glassFormChrome()
             .navigationTitle(
                 coordinator.v2Result == nil
                     ? "Review Shared Setup"
