@@ -73,8 +73,9 @@ final class HistoryAuthorizationJourneyUITests: XCTestCase {
         reveal(exportButton, in: app)
         exportButton.tap()
         XCTAssertTrue(app.descendants(matching: .any)[UITestLaunchHelper.Status.exportStatusBadge].waitForExistence(timeout: 10))
+        // Exporting closes the settings sheet, so the result is in the glass shell, not the export scroll.
         let execution = app.staticTexts["export.historyWarning.execution"]
-        reveal(execution, in: app)
+        XCTAssertTrue(execution.waitForExistence(timeout: 10))
         XCTAssertTrue(execution.label.contains("Rechecked for this export"))
         XCTAssertTrue(app.buttons["View Exported File"].exists)
     }

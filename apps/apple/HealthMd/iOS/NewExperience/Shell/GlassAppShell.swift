@@ -30,6 +30,8 @@ struct GlassAppShell: View {
     let onCancelExport: () -> Void
     let onBrowseExportFolder: (ExportPresentationTarget) -> Void
     let onPreviewExport: (ExportPresentationTarget) -> Void
+    /// Commits a folder chosen inside the classic export sheet.
+    let onSelectFolder: (URL) -> Void
     let executionHistoryAssessment: HealthHistoryAssessment?
     let isAssessingHistory: Bool
     let onContinueWithoutHistoryVerification: () -> Void
@@ -50,6 +52,12 @@ struct GlassAppShell: View {
     @State private var showPreview = false
     @State private var showAttention = false
     @State private var showClassicExport = false
+    /// Export tapped in the classic sheet; it runs once the sheet has gone, because a
+    /// sheet presented during the dismissal (the folder picker) would be dropped.
+    @State private var exportAfterClassicDismiss = false
+    /// The classic sheet presents its own folder picker: one attached beneath a
+    /// presented sheet cannot appear over it.
+    @State private var showClassicFolderPicker = false
     @State private var showPreviewRequirements = false
     @State private var dismissedHistoryNotice: HealthHistoryAssessment?
     @State private var resultEntry: ExportHistoryEntry?
@@ -175,8 +183,19 @@ struct GlassAppShell: View {
                 }
             ]
         )
-        .sheet(isPresented: $showClassicExport) {
+        .sheet(isPresented: $showClassicExport, onDismiss: {
+            guard exportAfterClassicDismiss else { return }
+            exportAfterClassicDismiss = false
+            onExport()
+        }) {
             NavigationStack { classicExportTab }
+                .sheet(isPresented: $showClassicFolderPicker) {
+                    FolderPicker { url in
+                        configurationProtection.performConfigurationChange { onSelectFolder(url) }
+                    }
+                    .presentationDetents([.large])
+                    .presentationDragIndicator(.visible)
+                }
                 .overlay(alignment: .topTrailing) {
                     Button(String(localized: "Close")) { showClassicExport = false }
                         .buttonStyle(.plain)
@@ -312,12 +331,12 @@ struct GlassAppShell: View {
             dateRangePreset: $dateRangePreset,
             isExporting: $isExporting,
             exportStatusMessage: $exportStatusMessage,
-            showFolderPicker: $showFolderPicker,
+            showFolderPicker: $showClassicFolderPicker,
             presentFirstExportPreview: .constant(false),
             canExport: canExport,
             onExportTapped: {
+                exportAfterClassicDismiss = true
                 showClassicExport = false
-                onExport()
             },
             historyProfileStore: profileCoordinator?.profileStore,
             executionHistoryAssessment: executionHistoryAssessment,

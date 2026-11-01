@@ -681,18 +681,12 @@ final class ExportJourneyUITests: XCTestCase {
         app.launchArguments += ["-UITestOpenClassicExport", "YES"]
         app.launch()
 
-        let macTarget = app.buttons[UITestLaunchHelper.Export.macTargetOption]
-        XCTAssertTrue(macTarget.waitForExistence(timeout: 5), "Mac target row should be visible")
-        XCTAssertTrue(waitForEnabled(macTarget), "Mac target should be enabled")
-        macTarget.tap()
-
-        let exportButton = app.buttons[UITestLaunchHelper.Export.exportButton]
-        XCTAssertTrue(exportButton.waitForExistence(timeout: 5), "Export button should be visible")
-        XCTAssertTrue(exportButton.isEnabled, "Mac target should satisfy export readiness even without local folder")
-        exportButton.tap()
-
+        // Access is now gated at the root, so the paywall appears before any Mac
+        // target or payload can be reached; the quota no longer gates one export.
         let paywallTitle = app.staticTexts[UITestLaunchHelper.Paywall.title]
-        XCTAssertTrue(paywallTitle.waitForExistence(timeout: 5), "Paywall should appear before a Mac payload is prepared when quota is exhausted")
+        XCTAssertTrue(paywallTitle.waitForExistence(timeout: 10), "Paywall should appear before a Mac payload is prepared when quota is exhausted")
+        XCTAssertFalse(app.buttons[UITestLaunchHelper.Export.macTargetOption].exists)
+        XCTAssertFalse(app.buttons[UITestLaunchHelper.Export.exportButton].exists)
     }
 
     func testPaywallShown_forMacTargetWhenQuotaExhaustedWithAnalyticsOffline() throws {
@@ -708,18 +702,12 @@ final class ExportJourneyUITests: XCTestCase {
         app.launchArguments += ["-UITestOpenClassicExport", "YES"]
         app.launch()
 
-        let macTarget = app.buttons[UITestLaunchHelper.Export.macTargetOption]
-        XCTAssertTrue(macTarget.waitForExistence(timeout: 5), "Mac target row should be visible")
-        XCTAssertTrue(waitForEnabled(macTarget), "Mac target should be enabled")
-        macTarget.tap()
-
-        let exportButton = app.buttons[UITestLaunchHelper.Export.exportButton]
-        XCTAssertTrue(exportButton.waitForExistence(timeout: 5), "Export button should be visible")
-        XCTAssertTrue(exportButton.isEnabled, "Mac target should satisfy export readiness even without local folder")
-        exportButton.tap()
-
+        // Access is now gated at the root, so the paywall appears before any Mac
+        // target or payload can be reached; the quota no longer gates one export.
         let paywallTitle = app.staticTexts[UITestLaunchHelper.Paywall.title]
-        XCTAssertTrue(paywallTitle.waitForExistence(timeout: 5), "Quota gate should beat Mac payload preparation with analytics offline")
+        XCTAssertTrue(paywallTitle.waitForExistence(timeout: 10), "Quota gate should beat Mac payload preparation with analytics offline")
+        XCTAssertFalse(app.buttons[UITestLaunchHelper.Export.macTargetOption].exists)
+        XCTAssertFalse(app.buttons[UITestLaunchHelper.Export.exportButton].exists)
     }
 
     // MARK: - Sleep Day Attribution

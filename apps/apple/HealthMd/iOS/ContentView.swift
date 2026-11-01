@@ -162,6 +162,7 @@ struct ContentView: View {
                     onCancelExport: cancelExport,
                     onBrowseExportFolder: browseExportFolder,
                     onPreviewExport: presentExportPreview,
+                    onSelectFolder: commitVaultFolderSelection,
                     executionHistoryAssessment: executionHistoryAssessment,
                     isAssessingHistory: isAssessingHistory,
                     onContinueWithoutHistoryVerification: continueWithoutHistoryVerification,
