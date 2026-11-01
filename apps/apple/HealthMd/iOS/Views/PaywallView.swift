@@ -66,25 +66,14 @@ struct PaywallView: View {
         return String(localized: "You have unlimited exports.")
     }
 
-    private var currentPlanFamilyFeatureText: String {
-        if purchaseManager.isFamilyUnlocked { return String(localized: "Family Sharing is active") }
-        if canShowFamilyUpgradeOffer { return String(localized: "Family upgrade available") }
-        return String(localized: "Family Sharing is not active")
-    }
-
     var body: some View {
-        Group {
-            if NewExperienceFeature.isEnabled {
-                glassBody.glassTheme()
-            } else {
-                legacyBody
+        glassBody
+            .glassTheme()
+            .accessibilityIdentifier(AccessibilityID.Paywall.view)
+            .task { await purchaseManager.loadProductsIfNeeded() }
+            .onChange(of: purchaseManager.isUnlocked) { _, unlocked in
+                if unlocked && !isManagingPurchase { dismiss() }
             }
-        }
-        .accessibilityIdentifier(AccessibilityID.Paywall.view)
-        .task { await purchaseManager.loadProductsIfNeeded() }
-        .onChange(of: purchaseManager.isUnlocked) { _, unlocked in
-            if unlocked && !isManagingPurchase { dismiss() }
-        }
     }
 
     private var glassPalette: GlassPalette {
@@ -115,6 +104,13 @@ struct PaywallView: View {
                             systemImage: purchaseManager.isFamilyUnlocked ? "person.3.fill" : "checkmark.seal.fill",
                             tone: .success
                         )
+                        if purchaseManager.canShowPermanentAccessNotice {
+                            GlassBanner(
+                                title: String(localized: "Your existing permanent access remains valid"),
+                                systemImage: "lock.open.fill",
+                                tone: .success
+                            )
+                        }
                         if canShowFamilyUpgradeOffer {
                             glassOption(
                                 .familyUpgrade,
@@ -216,138 +212,6 @@ struct PaywallView: View {
         .accessibilityIdentifier(identifier)
     }
 
-    private var legacyBody: some View {
-        ZStack {
-            Color.bgPrimary.ignoresSafeArea()
-
-            OnboardingPaywallLayout(onDismiss: { dismiss() }, dismissIdentifier: AccessibilityID.Paywall.dismissButton, allowsDismissal: allowsDismissal) {
-                VStack(spacing: Spacing.s6) {
-                    header
-
-                    VStack(spacing: Spacing.s3) {
-                        if isManagingPurchase {
-                            PaywallFeatureRow(icon: "archivebox.fill", text: String(localized: "Your health archive access is active"))
-                            PaywallFeatureRow(icon: "clock.fill", text: String(localized: "Unlimited automated daily notes"))
-                            PaywallFeatureRow(icon: "person.3.fill", text: currentPlanFamilyFeatureText)
-                            if purchaseManager.canShowPermanentAccessNotice {
-                                PaywallFeatureRow(icon: "lock.open.fill", text: String(localized: "Your existing permanent access remains valid"))
-                            }
-                        } else {
-                            PaywallFeatureRow(icon: "archivebox.fill", text: String(localized: "Build a permanent Apple Health archive"))
-                            PaywallFeatureRow(icon: "calendar.badge.clock", text: String(localized: "Keep scheduled health notes running without limits"))
-                            PaywallFeatureRow(icon: "lock.shield", text: String(localized: "Private local files. Choose where your exports go."))
-                            PaywallFeatureRow(icon: "person.3.fill", text: String(localized: "Individual and Apple Family Sharing plans"))
-                        }
-                    }
-
-                    ctaSection
-                }
-            }
-        }
-    }
-
-    private var header: some View {
-        OnboardingPaywallHeader(
-            title: titleText,
-            subtitle: subtitleText,
-            titleIdentifier: AccessibilityID.Paywall.title,
-            subtitleIdentifier: AccessibilityID.Paywall.subtitle
-        )
-    }
-
-    @ViewBuilder
-    private var ctaSection: some View {
-        VStack(spacing: Spacing.s3) {
-            if let error = purchaseManager.purchaseError {
-                Text(error)
-                    .font(Typography.caption())
-                    .foregroundStyle(error.contains("cody@isolated.tech") ? Color.textSecondary : Color.errorText)
-                    .multilineTextAlignment(.leading)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.horizontal, Spacing.s3)
-                    .accessibilityIdentifier(AccessibilityID.Paywall.errorMessage)
-            } else if let productLoadError = purchaseManager.productLoadError, !purchaseManager.isLoadingProducts {
-                VStack(spacing: Spacing.s2) {
-                    Text(productLoadError)
-                        .font(Typography.caption())
-                        .foregroundStyle(Color.errorText)
-                        .multilineTextAlignment(.leading)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .padding(.horizontal, Spacing.s3)
-                        .accessibilityIdentifier(AccessibilityID.Paywall.errorMessage)
-
-                    OnboardingTextAction(title: "Try Again") {
-                        Task { await purchaseManager.loadProductsIfNeeded(force: true) }
-                    }
-                    .accessibilityLabel("Try loading purchase options again")
-                }
-            }
-
-            if isManagingPurchase {
-                PaywallCurrentPlanCard(
-                    title: currentPlanTitle,
-                    detail: currentPlanDetail,
-                    icon: purchaseManager.isFamilyUnlocked ? "person.3.fill" : "checkmark.seal.fill"
-                )
-
-                if canShowFamilyUpgradeOffer {
-                    PaywallPurchaseOptionButton(
-                        title: String(localized: "Upgrade to Family Lifetime"),
-                        subtitle: String(localized: "Upgrade pricing for existing Lifetime owners"),
-                        priceLabel: purchaseButtonPriceLabel(for: .familyUpgrade),
-                        icon: "person.3.fill",
-                        badge: String(localized: "Family"),
-                        isPrimary: true,
-                        isLoading: purchaseManager.purchasingOption == .familyUpgrade || isPurchaseOptionLoading(.familyUpgrade),
-                        isDisabled: isPurchaseButtonDisabled(for: .familyUpgrade),
-                        action: { purchase(.familyUpgrade) }
-                    )
-                    .accessibilityIdentifier(AccessibilityID.Paywall.familyUnlockButton)
-                }
-            } else {
-                PaywallPricingAudiencePicker(selection: $selectedAudience)
-
-                PaywallPlanSection(title: selectedAudience.sectionTitle) {
-                    ForEach(selectedOptions) { option in
-                        PaywallPurchaseOptionButton(
-                            title: option.displayTitle,
-                            subtitle: optionSubtitle(for: option),
-                            priceLabel: purchaseButtonPriceLabel(for: option),
-                            icon: option.iconName,
-                            badge: option.badge,
-                            isPrimary: true,
-                            isLoading: purchaseManager.purchasingOption == option || isPurchaseOptionLoading(option),
-                            isDisabled: isPurchaseButtonDisabled(for: option),
-                            action: { purchase(option) }
-                        )
-                        .accessibilityIdentifier(option == .individual ? AccessibilityID.Paywall.unlockButton : (option == .family ? AccessibilityID.Paywall.familyUnlockButton : "paywall-option-\(option.rawValue)"))
-                    }
-                }
-            }
-
-            if isManagingPurchase {
-                Link("Manage Subscriptions", destination: URL(string: "https://apps.apple.com/account/subscriptions")!)
-                    .font(Typography.caption())
-            }
-
-            OnboardingTextAction(
-                title: "Restore Purchase",
-                isLoading: purchaseManager.isRestoring,
-                isDisabled: purchaseManager.isPurchasing || purchaseManager.isRestoring
-            ) {
-                Task {
-                    await purchaseManager.restore(source: .paywall(context))
-                }
-            }
-            .accessibilityIdentifier(AccessibilityID.Paywall.restoreButton)
-            .accessibilityLabel("Restore previous purchase")
-
-            if !isManagingPurchase {
-                purchaseDisclosure
-            }
-        }
-    }
-
     private var purchaseDisclosure: some View {
         OnboardingPurchaseDisclosure()
     }
@@ -422,46 +286,6 @@ struct PaywallView: View {
 
 }
 
-// MARK: - Current Plan
-
-private struct PaywallCurrentPlanCard: View {
-    @Environment(\.onboardingReadingLayout) private var reading
-    let title: String
-    let detail: String
-    let icon: String
-
-    var body: some View {
-        HStack(alignment: .top, spacing: Spacing.s3) {
-            if !reading {
-                Image(systemName: icon)
-                    .font(Typography.scaled(size: 16, weight: .semibold))
-                    .foregroundStyle(Color.accent)
-                    .frame(minWidth: 28, minHeight: 28)
-                    .accessibilityHidden(true)
-            }
-
-            VStack(alignment: .leading, spacing: Spacing.s1) {
-                Text(title)
-                    .font(Typography.headline())
-                    .foregroundStyle(Color.textPrimary)
-                    .fixedSize(horizontal: false, vertical: true)
-
-                Text(detail)
-                    .font(Typography.body())
-                    .foregroundStyle(Color.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-
-            Spacer(minLength: 0)
-        }
-        .geistCard(cornerRadius: GeistRadius.md, padding: Spacing.s4)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("Current plan: \(title). \(detail)")
-    }
-}
-
-// MARK: - Plan Section
-
 private enum PaywallPricingAudience: String, CaseIterable, Identifiable {
     case individual
     case family
@@ -480,70 +304,6 @@ private enum PaywallPricingAudience: String, CaseIterable, Identifiable {
         case .individual: return String(localized: "Individual")
         case .family: return String(localized: "Family Sharing")
         }
-    }
-}
-
-private struct PaywallPricingAudiencePicker: View {
-    @Binding var selection: PaywallPricingAudience
-
-    var body: some View {
-        OnboardingAudienceChoices(choices: PaywallPricingAudience.allCases, selection: selection, title: { $0.title }) { audience in
-            withAnimation(AnimationTimings.fast) {
-                selection = audience
-            }
-        }
-    }
-}
-
-private struct PaywallPlanSection<Content: View>: View {
-    let title: String
-    @ViewBuilder let content: () -> Content
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: Spacing.s2) {
-            Text(title)
-                .font(Typography.label())
-                .foregroundStyle(Color.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
-                .textCase(.uppercase)
-                .tracking(0.4)
-                .frame(maxWidth: .infinity, alignment: .leading)
-
-            VStack(spacing: Spacing.s3) {
-                content()
-            }
-        }
-        .padding(.top, Spacing.s2)
-    }
-}
-
-// MARK: - Feature Row
-
-private struct PaywallFeatureRow: View {
-    @Environment(\.onboardingReadingLayout) private var reading
-    let icon: String
-    let text: String
-
-    var body: some View {
-        HStack(alignment: .top, spacing: Spacing.s3) {
-            if !reading {
-                Image(systemName: icon)
-                    .font(Typography.scaled(size: 15, weight: .semibold))
-                    .foregroundStyle(Color.accent)
-                    .frame(minWidth: 28)
-                    .accessibilityHidden(true)
-            }
-
-            Text(text)
-                .font(Typography.body())
-                .foregroundStyle(Color.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
-
-            Spacer(minLength: 0)
-        }
-        .geistCard(cornerRadius: GeistRadius.md, padding: Spacing.s4)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(text)
     }
 }
 

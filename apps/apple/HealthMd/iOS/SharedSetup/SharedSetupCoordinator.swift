@@ -1343,7 +1343,7 @@ struct SharedSetupFlowView: View {
     private func v2Review(_ preview: SharedSetupV2ImportPlan) -> some View {
         let selectionAvailable = coordinator.isV2TransactionAvailable && !preview.hasInvalidItems
         return List {
-            if NewExperienceFeature.isEnabled, let summary = changeSummary(preview), !summary.rows.isEmpty {
+            if let summary = changeSummary(preview), !summary.rows.isEmpty {
                 Section("Changes") {
                     ForEach(summary.rows) { row in
                         LabeledContent(changeTitle(row.field), value: "\(row.before) → \(row.after)")

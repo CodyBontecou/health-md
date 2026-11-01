@@ -15,7 +15,6 @@ final class GlassShellJourneyUITests: XCTestCase {
             scheduleEnabled: true,
             exportResult: exportResult
         )
-        app.launchArguments += ["-NewExperienceEnabled", "YES"]
         app.launch()
         return app
     }

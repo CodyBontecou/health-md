@@ -11,7 +11,7 @@ struct MacSettingsWindow: View {
             settingsHeader
 
             Rectangle()
-                .fill(Color.glassAdaptive(.borderSubtle, \.line))
+                .fill(Color.glassAdaptive(\.line))
                 .frame(height: 1)
 
             selectedView
@@ -26,8 +26,8 @@ struct MacSettingsWindow: View {
             idealHeight: 760,
             maxHeight: .infinity
         )
-        .foregroundStyle(Color.glassAdaptive(.textPrimary, \.text))
-        .tint(Color.glassAdaptive(.accent, \.accent))
+        .foregroundStyle(Color.glassAdaptive(\.text))
+        .tint(Color.glassAdaptive(\.accent))
     }
 
     private var settingsHeader: some View {
@@ -44,7 +44,7 @@ struct MacSettingsWindow: View {
                         .font(Typography.headline())
                     Text("Configure this Mac and the local CLI")
                         .font(Typography.caption())
-                        .foregroundStyle(Color.glassAdaptive(.textMuted, \.muted))
+                        .foregroundStyle(Color.glassAdaptive(\.muted))
                         .lineLimit(1)
                 }
             }
@@ -66,15 +66,15 @@ struct MacSettingsWindow: View {
                 }
             }
             .padding(Spacing.s1)
-            .background(Color.glassAdaptive(.bgSecondary, \.surface2), in: RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous))
+            .background(Color.glassAdaptive(\.surface2), in: RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous)
-                    .strokeBorder(Color.glassAdaptive(.borderSubtle, \.line), lineWidth: 1)
+                    .strokeBorder(Color.glassAdaptive(\.line), lineWidth: 1)
             )
         }
         .padding(.horizontal, Spacing.s8)
         .padding(.vertical, Spacing.s4)
-        .background(Color.glassAdaptive(.bgPrimary, \.bg).opacity(0.96))
+        .background(Color.glassAdaptive(\.bg).opacity(0.96))
     }
 
     @ViewBuilder
@@ -116,18 +116,18 @@ private struct MacSettingsTabButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(Typography.caption().weight(.semibold))
-            .foregroundStyle(isSelected ? Color.glassAdaptive(.textPrimary, \.text) : Color.glassAdaptive(.textMuted, \.muted))
+            .foregroundStyle(isSelected ? Color.glassAdaptive(\.text) : Color.glassAdaptive(\.muted))
             .padding(.horizontal, Spacing.s3)
             .frame(height: 34)
             .background(
                 isSelected
-                    ? Color.glassAdaptive(.bgPrimary, \.bg)
-                    : (configuration.isPressed ? Color.glassAdaptive(.bgTertiary, \.surface) : Color.clear),
+                    ? Color.glassAdaptive(\.bg)
+                    : (configuration.isPressed ? Color.glassAdaptive(\.surface) : Color.clear),
                 in: RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
             )
             .overlay(
                 RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
-                    .strokeBorder(isSelected ? Color.glassAdaptive(.borderSubtle, \.line) : Color.clear, lineWidth: 1)
+                    .strokeBorder(isSelected ? Color.glassAdaptive(\.line) : Color.clear, lineWidth: 1)
             )
             .shadow(color: isSelected ? Color.black.opacity(0.08) : .clear, radius: 2, y: 1)
             .opacity(isEnabled ? 1 : 0.5)
@@ -163,12 +163,12 @@ struct MacGeneralSettingsView: View {
             Section {
                 Text("Health.md for Mac works as a local export destination. Configure formats, metrics, date ranges, filenames, write modes, and Data Detail on iPhone, then send the export to this Mac.")
                     .font(BrandTypography.body())
-                    .foregroundStyle(Color.glassAdaptive(.textSecondary, \.sec))
+                    .foregroundStyle(Color.glassAdaptive(\.sec))
                     .fixedSize(horizontal: false, vertical: true)
 
                 Text("Detailed Time-Series keeps selected timestamped samples without the canonical archive. Lossless Health Records adds the complete selected HealthKit source representation and can create much larger files.")
                     .font(BrandTypography.caption())
-                    .foregroundStyle(Color.glassAdaptive(.textMuted, \.muted))
+                    .foregroundStyle(Color.glassAdaptive(\.muted))
                     .fixedSize(horizontal: false, vertical: true)
             } header: {
                 BrandLabel("iPhone-Controlled Exports")
@@ -177,7 +177,7 @@ struct MacGeneralSettingsView: View {
             Section {
                 HStack(spacing: 8) {
                     Circle()
-                        .fill(syncService.connectionState == .connected ? Color.success : Color.glassAdaptive(.textMuted, \.muted))
+                        .fill(syncService.connectionState == .connected ? Color.success : Color.glassAdaptive(\.muted))
                         .frame(width: 8, height: 8)
                         .accessibilityHidden(true)
                     Text(connectionStatusText)
@@ -212,7 +212,7 @@ struct MacGeneralSettingsView: View {
                         Spacer()
                         Text("\(encryptedHealthContextManager.ownerDateCount)")
                             .font(BrandTypography.value())
-                            .foregroundStyle(Color.glassAdaptive(.accent, \.accent))
+                            .foregroundStyle(Color.glassAdaptive(\.accent))
                     }
 
                     if let earliest = encryptedHealthContextManager.earliestOwnerDate,
@@ -242,7 +242,7 @@ struct MacGeneralSettingsView: View {
                 } else {
                     Text("Context status is not loaded automatically, so ordinary Mac app use does not access Keychain.")
                         .font(BrandTypography.caption())
-                        .foregroundStyle(Color.glassAdaptive(.textMuted, \.muted))
+                        .foregroundStyle(Color.glassAdaptive(\.muted))
 
                     Button("Load Encrypted Context Status…") {
                         Task { await encryptedHealthContextManager.refresh() }
@@ -260,7 +260,7 @@ struct MacGeneralSettingsView: View {
             } footer: {
                 Text("This Keychain-encrypted store is independent from exported files. Retention is never automatic; deleting it does not change Apple Health on iPhone.")
                     .font(BrandTypography.caption())
-                    .foregroundStyle(Color.glassAdaptive(.textMuted, \.muted))
+                    .foregroundStyle(Color.glassAdaptive(\.muted))
             }
 
             if healthDataStore.recordCount > 0 {
@@ -270,7 +270,7 @@ struct MacGeneralSettingsView: View {
                         Spacer()
                         Text("\(healthDataStore.recordCount)")
                             .font(BrandTypography.value())
-                            .foregroundStyle(Color.glassAdaptive(.accent, \.accent))
+                            .foregroundStyle(Color.glassAdaptive(\.accent))
                     }
 
                     Button("Delete Legacy Cache", role: .destructive) {
@@ -283,7 +283,7 @@ struct MacGeneralSettingsView: View {
                 } footer: {
                     Text("New Mac-targeted exports are built on iPhone and sent directly to the selected folder. This cache is only for the old manual sync flow.")
                         .font(BrandTypography.caption())
-                        .foregroundStyle(Color.glassAdaptive(.textMuted, \.muted))
+                        .foregroundStyle(Color.glassAdaptive(\.muted))
                 }
             }
 
@@ -316,7 +316,7 @@ struct MacGeneralSettingsView: View {
                 Button("Diagnostics", systemImage: "doc.text.magnifyingglass") { showDiagnostics = true }
                     .accessibilityIdentifier("diagnostics.entry")
                 Text("Inspect local technical events and choose what to share. No automatic uploads.")
-                    .font(BrandTypography.caption()).foregroundStyle(Color.glassAdaptive(.textSecondary, \.sec))
+                    .font(BrandTypography.caption()).foregroundStyle(Color.glassAdaptive(\.sec))
             }
         }
         .sheet(isPresented: $showDiagnostics) { DiagnosticsView() }
@@ -420,7 +420,7 @@ struct MacGeneralSettingsView: View {
 struct MacSettingsBackdrop: View {
     var body: some View {
         LinearGradient(
-            colors: [Color.glassAdaptive(.bgTertiary, \.surface).opacity(0.72), Color.glassAdaptive(.bgSecondary, \.surface2)],
+            colors: [Color.glassAdaptive(\.surface).opacity(0.72), Color.glassAdaptive(\.surface2)],
             startPoint: .top,
             endPoint: .bottom
         )

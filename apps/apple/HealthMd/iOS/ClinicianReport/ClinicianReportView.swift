@@ -12,7 +12,7 @@ struct ClinicianReportView: View {
 
         var color: Color {
             switch self {
-            case .accent: Color.glassAdaptive(.accent, \.accent)
+            case .accent: Color.glassAdaptive(\.accent)
             case .success: Color.success
             case .warning: Color.warning
             case .error: Color.error
@@ -61,7 +61,7 @@ struct ClinicianReportView: View {
                     .padding(.bottom, Spacing.s6)
                 }
                 .scrollIndicators(.hidden)
-                .background(Color.glassAdaptive(.bgSecondary, \.bg).ignoresSafeArea())
+                .background(Color.glassAdaptive(\.bg).ignoresSafeArea())
                 .safeAreaInset(edge: .bottom, spacing: 0) {
                     actionBar
                 }
@@ -120,7 +120,7 @@ struct ClinicianReportView: View {
         VStack(alignment: .leading, spacing: Spacing.xs) {
             Text(copy.string(.display_name))
                 .font(.caption.weight(.medium))
-                .foregroundStyle(Color.glassAdaptive(.textSecondary, \.sec))
+                .foregroundStyle(Color.glassAdaptive(\.sec))
             TextField(copy.string(.display_name), text: Binding(
                 get: { viewModel.configuration.displayName },
                 set: viewModel.setDisplayName
@@ -132,7 +132,7 @@ struct ClinicianReportView: View {
             .accessibilityIdentifier(AccessibilityID.ClinicianReport.displayName)
             Text(copy.string(.display_name_hint))
                 .font(.caption)
-                .foregroundStyle(Color.glassAdaptive(.textSecondary, \.sec))
+                .foregroundStyle(Color.glassAdaptive(\.sec))
                 .fixedSize(horizontal: false, vertical: true)
         }
     }
@@ -141,21 +141,15 @@ struct ClinicianReportView: View {
         VStack(alignment: .leading, spacing: Spacing.s4) {
             Text(copy.string(.intro))
                 .font(.subheadline)
-                .foregroundStyle(Color.glassAdaptive(.textSecondary, \.sec))
+                .foregroundStyle(Color.glassAdaptive(\.sec))
                 .fixedSize(horizontal: false, vertical: true)
 
             // ClinicianReportG leads with the name on the report.
-            if NewExperienceFeature.isEnabled {
-                displayNameField
-            }
+            displayNameField
 
             section(title: copy.string(.period)) { periodControls }
             section(title: copy.string(.metrics)) { metricControls }
             section(title: copy.string(.detail)) { detailControls }
-
-            if !NewExperienceFeature.isEnabled {
-                displayNameField
-            }
 
             if viewModel.configuration.selectedMetrics.isEmpty {
                 noticeCard(
@@ -187,7 +181,7 @@ struct ClinicianReportView: View {
                             Text(preset.title(using: copy))
                                 .font(.subheadline.weight(.medium))
                         }
-                        .foregroundStyle(selected ? Color.glassAdaptive(.accent, \.accent) : Color.glassAdaptive(.textPrimary, \.text))
+                        .foregroundStyle(selected ? Color.glassAdaptive(\.accent) : Color.glassAdaptive(\.text))
                         .frame(maxWidth: .infinity, minHeight: 48)
                         .background(
                             selected ? Color.selectedBackground : Color.controlBackground,
@@ -196,7 +190,7 @@ struct ClinicianReportView: View {
                         .overlay(
                             RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
                                 .strokeBorder(
-                                    selected ? Color.glassAdaptive(.accent, \.accent).opacity(0.45) : Color.glassAdaptive(.borderSubtle, \.line),
+                                    selected ? Color.glassAdaptive(\.accent).opacity(0.45) : Color.glassAdaptive(\.line),
                                     lineWidth: 1
                                 )
                         )
@@ -244,7 +238,7 @@ struct ClinicianReportView: View {
                 "\(ReportMetric.allCases.count)"
             ))
             .font(.caption.weight(.medium))
-            .foregroundStyle(Color.glassAdaptive(.textSecondary, \.sec))
+            .foregroundStyle(Color.glassAdaptive(\.sec))
             .monospacedDigit()
 
             ViewThatFits(in: .horizontal) {
@@ -260,7 +254,7 @@ struct ClinicianReportView: View {
                         get: { viewModel.configuration.selectedMetrics.contains(metric) },
                         set: { _ in viewModel.toggleMetric(metric) }
                     ))
-                    .tint(Color.glassAdaptive(.accent, \.accent))
+                    .tint(Color.glassAdaptive(\.accent))
                     .frame(minHeight: 44)
                     .accessibilityIdentifier(AccessibilityID.ClinicianReport.metric(metric))
                     if metric != ReportMetric.allCases.last { Divider() }
@@ -306,7 +300,7 @@ struct ClinicianReportView: View {
                 .font(.footnote.weight(.medium))
                 .lineLimit(1)
                 .fixedSize(horizontal: true, vertical: false)
-                .foregroundStyle(isActive ? Color.glassAdaptive(.accent, \.accent) : Color.glassAdaptive(.textPrimary, \.text))
+                .foregroundStyle(isActive ? Color.glassAdaptive(\.accent) : Color.glassAdaptive(\.text))
                 .padding(.horizontal, Spacing.s3)
                 .frame(maxWidth: expands ? .infinity : nil, minHeight: 44)
                 .background(
@@ -316,7 +310,7 @@ struct ClinicianReportView: View {
                 .overlay(
                     RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
                         .strokeBorder(
-                            isActive ? Color.glassAdaptive(.accent, \.accent).opacity(0.45) : Color.glassAdaptive(.borderSubtle, \.line),
+                            isActive ? Color.glassAdaptive(\.accent).opacity(0.45) : Color.glassAdaptive(\.line),
                             lineWidth: 1
                         )
                 )
@@ -357,14 +351,14 @@ struct ClinicianReportView: View {
             HStack(alignment: .top, spacing: Spacing.sm) {
                 Image(systemName: selected ? "checkmark.circle.fill" : "circle")
                     .font(.title3)
-                    .foregroundStyle(selected ? Color.glassAdaptive(.accent, \.accent) : Color.glassAdaptive(.textSecondary, \.sec))
+                    .foregroundStyle(selected ? Color.glassAdaptive(\.accent) : Color.glassAdaptive(\.sec))
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title)
                         .font(.body.weight(.medium))
-                        .foregroundStyle(Color.glassAdaptive(.textPrimary, \.text))
+                        .foregroundStyle(Color.glassAdaptive(\.text))
                     Text(description)
                         .font(.footnote)
-                        .foregroundStyle(Color.glassAdaptive(.textSecondary, \.sec))
+                        .foregroundStyle(Color.glassAdaptive(\.sec))
                         .multilineTextAlignment(.leading)
                 }
                 Spacer(minLength: 0)
@@ -382,16 +376,16 @@ struct ClinicianReportView: View {
         VStack(alignment: .leading, spacing: Spacing.s2) {
             Text(title)
                 .font(.caption.weight(.medium))
-                .foregroundStyle(Color.glassAdaptive(.textSecondary, \.sec))
+                .foregroundStyle(Color.glassAdaptive(\.sec))
             content()
                 .padding(Spacing.s4)
                 .background(
                     RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous)
-                        .fill(Color.glassAdaptive(.bgPrimary, \.surface2))
+                        .fill(Color.glassAdaptive(\.surface2))
                 )
                 .overlay(
                     RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous)
-                        .strokeBorder(Color.glassAdaptive(.borderSubtle, \.line), lineWidth: 1)
+                        .strokeBorder(Color.glassAdaptive(\.line), lineWidth: 1)
                 )
                 .shadow(color: Color.black.opacity(0.025), radius: 2, x: 0, y: 1)
         }
@@ -421,14 +415,14 @@ struct ClinicianReportView: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .buttonBorderShape(.roundedRectangle(radius: GeistRadius.sm))
-                .tint(Color.glassAdaptive(.accent, \.accent))
+                .tint(Color.glassAdaptive(\.accent))
                 .disabled(!viewModel.canGenerateReport)
                 .accessibilityIdentifier(AccessibilityID.ClinicianReport.preview)
             }
         }
         .padding(.horizontal, Spacing.s4)
         .padding(.vertical, Spacing.s3)
-        .background(Color.glassAdaptive(.bgPrimary, \.surface2))
+        .background(Color.glassAdaptive(\.surface2))
     }
 
     @ViewBuilder
@@ -462,12 +456,12 @@ struct ClinicianReportView: View {
             }
             .buttonStyle(.borderedProminent)
             .buttonBorderShape(.roundedRectangle(radius: GeistRadius.sm))
-            .tint(Color.glassAdaptive(.accent, \.accent))
+            .tint(Color.glassAdaptive(\.accent))
             .accessibilityIdentifier(AccessibilityID.ClinicianReport.edit)
         } else {
             Button(action: viewModel.editConfiguration) {
                 Label(copy.string(.edit), systemImage: "slider.horizontal.3")
-                    .foregroundStyle(Color.glassAdaptive(.textPrimary, \.text))
+                    .foregroundStyle(Color.glassAdaptive(\.text))
                     .frame(
                         maxWidth: .infinity,
                         minHeight: 48,
@@ -479,7 +473,7 @@ struct ClinicianReportView: View {
                     )
                     .overlay(
                         RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
-                            .strokeBorder(Color.glassAdaptive(.borderDefault, \.edge), lineWidth: 1)
+                            .strokeBorder(Color.glassAdaptive(\.edge), lineWidth: 1)
                     )
                     .contentShape(RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous))
             }
@@ -505,7 +499,7 @@ struct ClinicianReportView: View {
             }
             .buttonStyle(.borderedProminent)
             .buttonBorderShape(.roundedRectangle(radius: GeistRadius.sm))
-            .tint(Color.glassAdaptive(.accent, \.accent))
+            .tint(Color.glassAdaptive(\.accent))
             .accessibilityIdentifier(AccessibilityID.ClinicianReport.share)
         } else {
             Button(action: viewModel.generatePDF) {
@@ -518,7 +512,7 @@ struct ClinicianReportView: View {
             }
             .buttonStyle(.borderedProminent)
             .buttonBorderShape(.roundedRectangle(radius: GeistRadius.sm))
-            .tint(Color.glassAdaptive(.accent, \.accent))
+            .tint(Color.glassAdaptive(\.accent))
             .disabled(!viewModel.canGeneratePDF)
             .accessibilityIdentifier(AccessibilityID.ClinicianReport.generate)
         }
@@ -528,7 +522,7 @@ struct ClinicianReportView: View {
         Label {
             Text(copy.string(.saved))
                 .font(.subheadline.weight(.medium))
-                .foregroundStyle(Color.glassAdaptive(.textPrimary, \.text))
+                .foregroundStyle(Color.glassAdaptive(\.text))
         } icon: {
             Image(systemName: "checkmark.circle.fill")
                 .foregroundStyle(Color.success)
@@ -537,7 +531,7 @@ struct ClinicianReportView: View {
         .padding(.vertical, Spacing.s3)
         .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
         .background(
-            Color.glassAdaptive(.bgPrimary, \.surface2),
+            Color.glassAdaptive(\.surface2),
             in: RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
         )
         .overlay(
@@ -573,15 +567,15 @@ struct ClinicianReportView: View {
             HStack(spacing: Spacing.sm) {
                 Text(title)
                     .font(.footnote.weight(.semibold))
-                    .foregroundStyle(Color.glassAdaptive(.textPrimary, \.text))
+                    .foregroundStyle(Color.glassAdaptive(\.text))
                 Spacer(minLength: Spacing.sm)
                 Text(clampedProgress, format: .percent.precision(.fractionLength(0)))
                     .font(.footnote.monospacedDigit())
-                    .foregroundStyle(Color.glassAdaptive(.textPrimary, \.text))
+                    .foregroundStyle(Color.glassAdaptive(\.text))
             }
             ProgressView(value: clampedProgress)
                 .progressViewStyle(.linear)
-                .tint(Color.glassAdaptive(.accent, \.accent))
+                .tint(Color.glassAdaptive(\.accent))
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(title)
@@ -608,18 +602,18 @@ struct ClinicianReportView: View {
             VStack(alignment: .leading, spacing: Spacing.xs) {
                 Text(copy.string(.preview_heading))
                     .font(.caption.weight(.medium))
-                    .foregroundStyle(Color.glassAdaptive(.textSecondary, \.sec))
+                    .foregroundStyle(Color.glassAdaptive(\.sec))
                 Text(report.title)
                     .font(.title2.weight(.semibold))
-                    .foregroundStyle(Color.glassAdaptive(.textPrimary, \.text))
+                    .foregroundStyle(Color.glassAdaptive(\.text))
                     .accessibilityAddTraits(.isHeader)
                 Text(report.dateRangeLabel)
                     .font(.subheadline.monospacedDigit())
-                    .foregroundStyle(Color.glassAdaptive(.textSecondary, \.sec))
+                    .foregroundStyle(Color.glassAdaptive(\.sec))
                 if let name = report.displayName {
                     Text(name)
                         .font(.subheadline)
-                        .foregroundStyle(Color.glassAdaptive(.textPrimary, \.text))
+                        .foregroundStyle(Color.glassAdaptive(\.text))
                 }
             }
 
@@ -633,11 +627,11 @@ struct ClinicianReportView: View {
                 VStack(alignment: .leading, spacing: Spacing.s2) {
                     Label(report.availabilityNoteTitle, systemImage: "exclamationmark.triangle.fill")
                         .font(.subheadline.weight(.medium))
-                        .foregroundStyle(Color.glassAdaptive(.textPrimary, \.text))
+                        .foregroundStyle(Color.glassAdaptive(\.text))
                     ForEach(report.warnings, id: \.self) { warning in
                         Text(warning)
                             .font(.footnote)
-                            .foregroundStyle(Color.glassAdaptive(.textSecondary, \.sec))
+                            .foregroundStyle(Color.glassAdaptive(\.sec))
                             .fixedSize(horizontal: false, vertical: true)
                     }
                 }
@@ -660,34 +654,34 @@ struct ClinicianReportView: View {
             if let unavailable = report.unavailableMeasurementsSummary {
                 Label(unavailable, systemImage: "minus.circle")
                     .font(.footnote)
-                    .foregroundStyle(Color.glassAdaptive(.textSecondary, \.sec))
+                    .foregroundStyle(Color.glassAdaptive(\.sec))
                     .fixedSize(horizontal: false, vertical: true)
             }
 
             errorCard
 
             Divider()
-                .overlay(Color.glassAdaptive(.borderSubtle, \.line))
+                .overlay(Color.glassAdaptive(\.line))
                 .padding(.top, Spacing.s2)
 
             VStack(alignment: .leading, spacing: Spacing.s2) {
                 Text(report.aboutTitle)
                     .font(.headline)
-                    .foregroundStyle(Color.glassAdaptive(.textPrimary, \.text))
+                    .foregroundStyle(Color.glassAdaptive(\.text))
                 Text(report.disclaimer)
                     .font(.footnote)
-                    .foregroundStyle(Color.glassAdaptive(.textSecondary, \.sec))
+                    .foregroundStyle(Color.glassAdaptive(\.sec))
                     .fixedSize(horizontal: false, vertical: true)
                 Text(report.attribution)
                     .font(.footnote)
-                    .foregroundStyle(Color.glassAdaptive(.textSecondary, \.sec))
+                    .foregroundStyle(Color.glassAdaptive(\.sec))
                     .fixedSize(horizontal: false, vertical: true)
                 if let practiceLine = report.practiceLine,
                    let practiceURL = ClinicianReportCopy.practiceURL.flatMap({ URL(string: "https://\($0)") }) {
                     Link(destination: practiceURL) {
                         Text(practiceLine)
                             .font(.footnote)
-                            .foregroundStyle(Color.glassAdaptive(.textSecondary, \.sec))
+                            .foregroundStyle(Color.glassAdaptive(\.sec))
                             .multilineTextAlignment(.leading)
                             .fixedSize(horizontal: false, vertical: true)
                     }
@@ -703,10 +697,10 @@ struct ClinicianReportView: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(reportSection.localizedTitle)
                     .font(.headline)
-                    .foregroundStyle(Color.glassAdaptive(.textPrimary, \.text))
+                    .foregroundStyle(Color.glassAdaptive(\.text))
                 Text(reportSection.availabilitySummary)
                     .font(.caption.monospacedDigit())
-                    .foregroundStyle(Color.glassAdaptive(.textSecondary, \.sec))
+                    .foregroundStyle(Color.glassAdaptive(\.sec))
             }
             .accessibilityElement(children: .combine)
             .accessibilityAddTraits(.isHeader)
@@ -714,26 +708,26 @@ struct ClinicianReportView: View {
             ForEach(Array(reportSection.facts.enumerated()), id: \.offset) { index, fact in
                 if index > 0 {
                     Divider()
-                        .overlay(Color.glassAdaptive(.borderSubtle, \.line))
+                        .overlay(Color.glassAdaptive(\.line))
                 }
                 ViewThatFits(in: .horizontal) {
                     HStack(alignment: .firstTextBaseline) {
                         Text(fact.label)
                             .font(.footnote.weight(.medium))
-                            .foregroundStyle(Color.glassAdaptive(.textSecondary, \.sec))
+                            .foregroundStyle(Color.glassAdaptive(\.sec))
                         Spacer(minLength: Spacing.sm)
                         Text(fact.value)
                             .font(.footnote.monospacedDigit())
-                            .foregroundStyle(Color.glassAdaptive(.textPrimary, \.text))
+                            .foregroundStyle(Color.glassAdaptive(\.text))
                             .multilineTextAlignment(.trailing)
                     }
                     VStack(alignment: .leading, spacing: 2) {
                         Text(fact.label)
                             .font(.footnote.weight(.medium))
-                            .foregroundStyle(Color.glassAdaptive(.textSecondary, \.sec))
+                            .foregroundStyle(Color.glassAdaptive(\.sec))
                         Text(fact.value)
                             .font(.footnote.monospacedDigit())
-                            .foregroundStyle(Color.glassAdaptive(.textPrimary, \.text))
+                            .foregroundStyle(Color.glassAdaptive(\.text))
                     }
                 }
             }
@@ -741,18 +735,18 @@ struct ClinicianReportView: View {
             if let detail = reportSection.detailReadingsDescription {
                 Text(detail)
                     .font(.caption)
-                    .foregroundStyle(Color.glassAdaptive(.textSecondary, \.sec))
+                    .foregroundStyle(Color.glassAdaptive(\.sec))
             }
         }
         .padding(Spacing.s4)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous)
-                .fill(Color.glassAdaptive(.bgPrimary, \.surface2))
+                .fill(Color.glassAdaptive(\.surface2))
         )
         .overlay(
             RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous)
-                .strokeBorder(Color.glassAdaptive(.borderSubtle, \.line), lineWidth: 1)
+                .strokeBorder(Color.glassAdaptive(\.line), lineWidth: 1)
         )
         .shadow(color: Color.black.opacity(0.025), radius: 2, x: 0, y: 1)
     }
@@ -765,7 +759,7 @@ struct ClinicianReportView: View {
         Label {
             Text(message)
                 .font(.footnote)
-                .foregroundStyle(Color.glassAdaptive(.textPrimary, \.text))
+                .foregroundStyle(Color.glassAdaptive(\.text))
                 .fixedSize(horizontal: false, vertical: true)
         } icon: {
             Image(systemName: systemImage)

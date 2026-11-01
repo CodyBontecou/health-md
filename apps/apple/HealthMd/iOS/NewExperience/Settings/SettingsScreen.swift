@@ -87,7 +87,7 @@ struct SettingsScreen: View {
                         row(
                             "Health.md",
                             subtitle: purchaseManager.isUnlocked
-                                ? String(localized: "Restore or manage")
+                                ? "\(purchaseManager.activePlanTitle) · \(String(localized: "Restore or manage"))"
                                 : String(localized: "Unlock Health.md")
                         ) { showPaywall = true }
                     }

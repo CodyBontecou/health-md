@@ -39,20 +39,14 @@ struct ExportedMarkdownViewer: View {
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
-    private var usesGlass: Bool { NewExperienceFeature.isEnabled }
-
     private var glassPalette: GlassPalette {
         .resolved(colorScheme: colorScheme, reduceTransparency: reduceTransparency)
     }
 
-    private var pageBackground: Color { usesGlass ? glassPalette.bg : Color.bgPrimary }
+    private var pageBackground: Color { glassPalette.bg }
 
     var body: some View {
-        if usesGlass {
-            viewer.glassTheme()
-        } else {
-            viewer
-        }
+        viewer.glassTheme()
     }
 
     private var viewer: some View {
@@ -98,23 +92,13 @@ struct ExportedMarkdownViewer: View {
     private func documentView(_ document: ExportedMarkdownDocument) -> some View {
         VStack(spacing: 0) {
             if document.hasRichPreview {
-                Group {
-                    if usesGlass {
-                        GlassSegmentedControl(
-                            segments: [
-                                .init(value: .preview, title: String(localized: "Preview")),
-                                .init(value: .source, title: String(localized: "Source"))
-                            ],
-                            selection: $displayMode
-                        )
-                    } else {
-                        Picker("File display", selection: $displayMode) {
-                            Text("Preview").tag(DisplayMode.preview)
-                            Text("Source").tag(DisplayMode.source)
-                        }
-                        .pickerStyle(.segmented)
-                    }
-                }
+                GlassSegmentedControl(
+                    segments: [
+                        .init(value: .preview, title: String(localized: "Preview")),
+                        .init(value: .source, title: String(localized: "Source"))
+                    ],
+                    selection: $displayMode
+                )
                 .padding(.horizontal, Spacing.s4)
                 .padding(.vertical, Spacing.s3)
                 .accessibilityIdentifier(AccessibilityID.ExportedFile.displayMode)
@@ -139,7 +123,7 @@ struct ExportedMarkdownViewer: View {
                 ScrollView([.horizontal, .vertical]) {
                     Text(document.source.isEmpty ? "This file is empty." : document.source)
                         .font(.system(.body, design: .monospaced))
-                        .foregroundStyle(usesGlass ? glassPalette.text : Color.textPrimary)
+                        .foregroundStyle(glassPalette.text)
                         .textSelection(.enabled)
                         .fixedSize(horizontal: true, vertical: false)
                         .padding(Spacing.s4)
@@ -376,12 +360,11 @@ private struct ExportedMarkdownRenderedView: View {
 
     @Environment(\.glassPalette) private var palette
 
-    private var usesGlass: Bool { NewExperienceFeature.isEnabled }
-    private var primaryText: Color { usesGlass ? palette.text : Color.textPrimary }
-    private var secondaryText: Color { usesGlass ? palette.sec : Color.textSecondary }
-    private var mutedText: Color { usesGlass ? palette.muted : Color.textMuted }
-    private var pageBackground: Color { usesGlass ? palette.bg : Color.bgPrimary }
-    private var blockBackground: Color { usesGlass ? palette.surface : Color.bgSecondary }
+    private var primaryText: Color { palette.text }
+    private var secondaryText: Color { palette.sec }
+    private var mutedText: Color { palette.muted }
+    private var pageBackground: Color { palette.bg }
+    private var blockBackground: Color { palette.surface }
 
     var body: some View {
         ScrollView {

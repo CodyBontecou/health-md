@@ -84,39 +84,23 @@ struct GlassBanner: View {
 }
 
 /// Glass chrome for a system `Form` whose order and wording are part of a consent flow.
-/// Does nothing with the flag off.
 private struct GlassFormChromeModifier: ViewModifier {
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
     func body(content: Content) -> some View {
-        if NewExperienceFeature.isEnabled {
-            let palette = GlassPalette.resolved(colorScheme: colorScheme, reduceTransparency: reduceTransparency)
-            content
-                .scrollContentBackground(.hidden)
-                .background(palette.bg.ignoresSafeArea())
-                .tint(palette.accent)
-                .glassTheme()
-        } else {
-            content
-        }
-    }
-}
-
-/// Gives a `Form` section the glass panel fill. Does nothing with the flag off.
-private struct GlassFormRowModifier: ViewModifier {
-    func body(content: Content) -> some View {
-        if NewExperienceFeature.isEnabled {
-            content.listRowBackground(Color.glassAdaptive(.clear, \.glassStrong))
-        } else {
-            content
-        }
+        let palette = GlassPalette.resolved(colorScheme: colorScheme, reduceTransparency: reduceTransparency)
+        content
+            .scrollContentBackground(.hidden)
+            .background(palette.bg.ignoresSafeArea())
+            .tint(palette.accent)
+            .glassTheme()
     }
 }
 
 extension View {
     func glassFormRows() -> some View {
-        modifier(GlassFormRowModifier())
+        listRowBackground(Color.glassAdaptive(\.glassStrong))
     }
 
     func glassFormChrome() -> some View {

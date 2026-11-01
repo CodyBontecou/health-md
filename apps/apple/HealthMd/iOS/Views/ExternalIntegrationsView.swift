@@ -12,20 +12,13 @@ struct ExternalIntegrationsView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: Spacing.md) {
-                    if NewExperienceFeature.isEnabled {
-                        glassContent
-                    } else {
-                        intro
-                        providersSection
-                        privacyNote
-                        troubleshootingSection
-                    }
+                    glassContent
                 }
                 .padding(.horizontal, Spacing.md)
                 .padding(.top, Spacing.md)
                 .padding(.bottom, Spacing.xl)
             }
-            .background((NewExperienceFeature.isEnabled ? glassPalette.bg : Color.bgPrimary).ignoresSafeArea())
+            .background(glassPalette.bg.ignoresSafeArea())
             .navigationTitle("Connected Apps")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

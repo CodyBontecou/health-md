@@ -11,7 +11,6 @@ final class GlassAutomationPagesUITests: XCTestCase {
             purchaseUnlocked: true,
             scheduleEnabled: true
         )
-        app.launchArguments += ["-NewExperienceEnabled", "YES"]
         app.launch()
 
         app.buttons["Automations"].tap()
@@ -43,7 +42,6 @@ final class GlassAutomationPagesUITests: XCTestCase {
             purchaseUnlocked: true,
             scheduleEnabled: true
         )
-        app.launchArguments += ["-NewExperienceEnabled", "YES"]
         app.launch()
 
         app.buttons["Settings"].tap()
@@ -69,7 +67,6 @@ final class GlassAutomationPagesUITests: XCTestCase {
             purchaseUnlocked: true,
             scheduleEnabled: true
         )
-        app.launchArguments += ["-NewExperienceEnabled", "YES"]
         app.launch()
 
         app.buttons["Settings"].tap()
@@ -102,7 +99,6 @@ final class GlassAutomationPagesUITests: XCTestCase {
             purchaseUnlocked: false,
             scheduleEnabled: true
         )
-        app.launchArguments += ["-NewExperienceEnabled", "YES"]
         app.launch()
 
         // A locked user meets the hard gate first, and it cannot be dismissed.
@@ -123,7 +119,6 @@ final class GlassAutomationPagesUITests: XCTestCase {
             purchaseUnlocked: true,
             scheduleEnabled: true
         )
-        app.launchArguments += ["-NewExperienceEnabled", "YES"]
         app.launch()
 
         app.buttons["Settings"].tap()
@@ -147,7 +142,6 @@ final class GlassAutomationPagesUITests: XCTestCase {
     func testClinicianReportAndOnboardingKeepWorkingWithTheFlagOn() {
         continueAfterFailure = false
         let onboarding = UITestLaunchHelper.configuredApp(healthAuthorized: true, showOnboarding: true, purchaseUnlocked: true)
-        onboarding.launchArguments += ["-NewExperienceEnabled", "YES"]
         onboarding.launch()
         func shot(_ name: String) {
             guard let directory = ProcessInfo.processInfo.environment["GLASS_SCREENSHOT_DIR"] else { return }
@@ -168,7 +162,6 @@ final class GlassAutomationPagesUITests: XCTestCase {
             purchaseUnlocked: true,
             scheduleEnabled: true
         )
-        app.launchArguments += ["-NewExperienceEnabled", "YES"]
         app.launch()
         app.buttons["Settings"].tap()
         let report = app.buttons["Clinician report"]
@@ -186,7 +179,6 @@ final class GlassAutomationPagesUITests: XCTestCase {
             purchaseUnlocked: true,
             scheduleEnabled: true
         )
-        app.launchArguments += ["-NewExperienceEnabled", "YES"]
         app.launch()
         XCUIDevice.shared.orientation = .landscapeLeft
         defer { XCUIDevice.shared.orientation = .portrait }
@@ -222,7 +214,6 @@ final class GlassAutomationPagesUITests: XCTestCase {
             purchaseUnlocked: true,
             scheduleEnabled: true
         )
-        app.launchArguments += ["-NewExperienceEnabled", "YES"]
         app.launch()
         app.buttons["Automations"].tap()
         let card = app.staticTexts["Default"].firstMatch
@@ -251,7 +242,6 @@ final class GlassAutomationPagesUITests: XCTestCase {
             purchaseUnlocked: true,
             scheduleEnabled: true
         )
-        app.launchArguments += ["-NewExperienceEnabled", "YES"]
         app.launch()
         app.buttons["Settings"].tap()
         let row = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Mac Destination")).firstMatch

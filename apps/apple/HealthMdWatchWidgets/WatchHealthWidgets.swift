@@ -219,11 +219,7 @@ private struct RecoveryWidgetView: View {
             RecoveryCornerView(snapshot: entry.snapshot)
         #endif
         default:
-            if WatchWidgetGlass.isEnabled {
-                GlassRecoveryRectangularView(snapshot: entry.snapshot)
-            } else {
-                RecoveryRectangularView(snapshot: entry.snapshot)
-            }
+            GlassRecoveryRectangularView(snapshot: entry.snapshot)
         }
     }
 }
@@ -614,13 +610,6 @@ private struct ActivityRectangularView: View {
     }
 }
 
-private enum WatchWidgetGlass {
-    static var isEnabled: Bool {
-        (Bundle.main.object(forInfoDictionaryKey: "NEW_EXPERIENCE_ENABLED") as? String)?
-            .trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == "yes"
-    }
-}
-
 /// WatchComplicationG: a title over one summary line.
 private struct GlassRecoveryRectangularView: View {
     let snapshot: WatchHealthSnapshot
@@ -637,31 +626,6 @@ private struct GlassRecoveryRectangularView: View {
                 .lineLimit(1)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .containerBackground(Color.black.opacity(0.12), for: .widget)
-    }
-}
-
-private struct RecoveryRectangularView: View {
-    let snapshot: WatchHealthSnapshot
-
-    var body: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "heart.text.square.fill")
-                .font(.title2)
-                .foregroundStyle(.red.gradient)
-                .frame(width: 38, height: 38)
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Recovery")
-                    .font(.headline)
-                    .widgetAccentable()
-                MetricLine(icon: "bed.double.fill", text: "\(WatchHealthFormatter.hours(snapshot.sleepHours)) sleep")
-                MetricLine(icon: "heart.fill", text: WatchHealthFormatter.bpm(snapshot.restingHeartRate))
-                MetricLine(icon: "waveform.path.ecg", text: "HRV \(WatchHealthFormatter.milliseconds(snapshot.heartRateVariabilityMS))")
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .minimumScaleFactor(0.75)
-        }
         .containerBackground(Color.black.opacity(0.12), for: .widget)
     }
 }

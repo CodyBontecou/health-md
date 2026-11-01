@@ -17,16 +17,8 @@ struct MyselfClaimView: View {
     @State private var openedClaim = false
     @Environment(\.glassPalette) private var glassPalette
 
+    /// MyselfClaimG.
     var body: some View {
-        if NewExperienceFeature.isEnabled {
-            glassBody
-        } else {
-            legacyBody
-        }
-    }
-
-    /// MyselfClaimG. Calls the same `claim()`; only the presentation differs.
-    private var glassBody: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: GlassMetrics.sectionGap) {
@@ -62,36 +54,6 @@ struct MyselfClaimView: View {
                 .padding(GlassMetrics.screenMargin)
             }
             .background(glassPalette.bg.ignoresSafeArea())
-            .navigationTitle("myself.md access")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Done") { dismiss() } } }
-        }
-    }
-
-    private var legacyBody: some View {
-        NavigationStack {
-            Form {
-                Section {
-                    Text("Your existing purchase includes complimentary lifetime access to myself.md.")
-                    Text("We’ll send your App Store purchase proof to myself.md to verify eligibility. Your health and location data stay on your device.")
-                    Text("Then sign in to choose the myself.md account that receives access. Each original purchase can be linked to one account. Family-shared access alone does not qualify; the purchaser can claim.")
-                } header: {
-                    Text("Claim free myself.md access")
-                }
-                Section {
-                    Button {
-                        Task { await claim() }
-                    } label: {
-                        if busy { ProgressView("Verifying purchase…") }
-                        else { Text(openedClaim ? "Open claim again" : "Verify purchase and continue") }
-                    }
-                    .disabled(busy)
-                    if openedClaim {
-                        Text("Finish signing in on myself.md, then sign in with the same account in the myself.md app on iOS or Android.")
-                    }
-                    if let errorMessage { Text(errorMessage).foregroundStyle(.red).accessibilityAddTraits(.updatesFrequently) }
-                }
-            }
             .navigationTitle("myself.md access")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Done") { dismiss() } } }

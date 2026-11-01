@@ -142,7 +142,6 @@ struct HealthMdApp: App {
     @StateObject private var advancedSettings: AdvancedExportSettings
     // Read/observe canonical persisted profile identity on the tablet route;
     // do not bootstrap/apply profiles or alter legacy tablet settings/authority.
-    @StateObject private var iPadHistoryProfileStore = ExportProfileStore()
     @StateObject private var apiExportSettings: APIExportSettings
     @StateObject private var agentDataGatewaySettings: AgentDataGatewaySettings
     @StateObject private var healthKitManager = HealthKitManager.shared
@@ -323,7 +322,6 @@ struct HealthMdApp: App {
             schedule.isEnabled = true
             schedulingManager.schedule = schedule
             UserDefaults.standard.set(true, forKey: "hasCompletedOnboarding")
-            UserDefaults.standard.set(true, forKey: "discordPromoDismissed")
         }
     }
 
@@ -335,7 +333,6 @@ struct HealthMdApp: App {
             healthKitManager.isAuthorized = true
             PurchaseManager.shared.setFreeExportsUsed(PurchaseManager.freeExportLimit)
             UserDefaults.standard.set(true, forKey: "hasCompletedOnboarding")
-            UserDefaults.standard.set(true, forKey: "discordPromoDismissed")
         }
     }
     #endif
@@ -406,12 +403,7 @@ struct HealthMdApp: App {
     var body: some Scene {
         WindowGroup {
             PurchaseAccessGate {
-                // The glass shell adapts to iPad, which brings profiles and every destination with it.
-                if UIDevice.current.userInterfaceIdiom == .pad && !NewExperienceFeature.isEnabled {
-                    iPadContentView(historyProfileStore: iPadHistoryProfileStore)
-                } else {
-                    ContentView()
-                }
+                ContentView()
             }
             #if DEBUG
             .scrawl()

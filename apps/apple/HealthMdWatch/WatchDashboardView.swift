@@ -1,13 +1,7 @@
 import SwiftUI
 import WidgetKit
 
-/// The Watch app's copy of the Liquid Glass flag, off by default like the iPhone app's.
 private enum WatchGlass {
-    static var isEnabled: Bool {
-        (Bundle.main.object(forInfoDictionaryKey: "NEW_EXPERIENCE_ENABLED") as? String)?
-            .trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == "yes"
-    }
-
     static let accent = Color(red: 0xCD / 255, green: 0xB6 / 255, blue: 0xFF / 255)
 }
 
@@ -158,9 +152,7 @@ struct WatchDashboardView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 10) {
-                    if WatchGlass.isEnabled {
-                        metricGrid
-                    }
+                    metricGrid
 
                     header
 
@@ -197,10 +189,6 @@ struct WatchDashboardView: View {
                         Label("Refresh", systemImage: "arrow.clockwise")
                     }
                     .disabled(viewModel.isLoading)
-
-                    if !WatchGlass.isEnabled {
-                        metricGrid
-                    }
                 }
                 .padding(.horizontal)
             }
@@ -231,9 +219,7 @@ struct WatchDashboardView: View {
         let resting = WatchMetricRow(icon: "heart.fill", title: "Resting HR", value: WatchHealthFormatter.bpm(snapshot.restingHeartRate), tint: .red)
         let hrv = WatchMetricRow(icon: "waveform.path.ecg", title: "HRV", value: WatchHealthFormatter.milliseconds(snapshot.heartRateVariabilityMS), tint: .cyan)
         let oxygen = WatchMetricRow(icon: "lungs.fill", title: "Blood Oxygen", value: WatchHealthFormatter.percent(snapshot.bloodOxygenPercent), tint: .mint)
-        return WatchGlass.isEnabled
-            ? [sleep, hrv, resting, steps, oxygen, active, exercise, stand]
-            : [steps, active, exercise, stand, sleep, resting, hrv, oxygen]
+        return [sleep, hrv, resting, steps, oxygen, active, exercise, stand]
     }
 
     private var metricGrid: some View {
@@ -253,7 +239,7 @@ private struct WatchMetricRow: View {
         HStack(spacing: 8) {
             Image(systemName: icon)
                 .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(WatchGlass.isEnabled ? WatchGlass.accent : tint)
+                .foregroundStyle(WatchGlass.accent)
                 .frame(width: 20)
 
             Text(title)
@@ -269,7 +255,7 @@ private struct WatchMetricRow: View {
         }
         .padding(.vertical, 7)
         .padding(.horizontal, 9)
-        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: WatchGlass.isEnabled ? 20 : 12, style: .continuous))
+        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
     }
 }
 

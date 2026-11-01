@@ -114,11 +114,7 @@ private struct HealthSummaryWidgetView: View {
                 case .systemMedium:
                     SummaryMediumView(snapshot: entry.snapshot)
                 default:
-                    if WidgetGlass.isEnabled {
-                        GlassSummaryWidgetTile(day: entry.snapshot.today)
-                    } else {
-                        SummarySmallView(day: entry.snapshot.today)
-                    }
+                    GlassSummaryWidgetTile(day: entry.snapshot.today)
                 }
             }
         }
@@ -151,11 +147,7 @@ private struct ActivityRingsWidgetView: View {
                 case .systemMedium:
                     ActivityMediumView(snapshot: entry.snapshot)
                 default:
-                    if WidgetGlass.isEnabled {
-                        GlassActivityWidgetTile(day: entry.snapshot.today)
-                    } else {
-                        ActivitySmallView(day: entry.snapshot.today)
-                    }
+                    GlassActivityWidgetTile(day: entry.snapshot.today)
                 }
             }
         }
@@ -181,11 +173,7 @@ private struct HeartRangeWidgetView: View {
                 case .systemLarge:
                     HeartRangeLargeView(snapshot: entry.snapshot)
                 default:
-                    if WidgetGlass.isEnabled {
-                        GlassHeartWidgetTile(day: entry.snapshot.today)
-                    } else {
-                        HeartRangeMediumView(snapshot: entry.snapshot)
-                    }
+                    GlassHeartWidgetTile(day: entry.snapshot.today)
                 }
             }
         }
@@ -881,9 +869,7 @@ private extension View {
         self
             .containerBackground(for: .widget) {
                 LinearGradient(
-                    colors: WidgetGlass.isEnabled
-                        ? [Color(.systemBackground), WidgetGlass.accent.opacity(0.12)]
-                        : [Color(.systemBackground), Color.pink.opacity(0.08), Color.indigo.opacity(0.08)],
+                    colors: [Color(.systemBackground), WidgetGlass.accent.opacity(0.12)],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 )
@@ -972,7 +958,6 @@ private extension DateFormatter {
     HealthWidgetEntry(date: .now, snapshot: .placeholder)
 }
 
-#if NEW_EXPERIENCE_WIDGETS
 /// Written by the app from the coverage ledger. Hidden until the Liquid Glass rollout.
 struct ArchiveWidgetSnapshot: Codable {
     let streak: Int
@@ -1045,4 +1030,3 @@ private struct ArchiveWidgetView: View {
         .containerBackground(.fill.tertiary, for: .widget)
     }
 }
-#endif

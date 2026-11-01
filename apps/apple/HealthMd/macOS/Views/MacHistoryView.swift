@@ -26,13 +26,13 @@ struct MacHistoryView: View {
                 VStack(spacing: 16) {
                     Image(systemName: "list.bullet.clipboard")
                         .font(.largeTitle)
-                        .foregroundStyle(Color.glassAdaptive(.textMuted, \.muted))
+                        .foregroundStyle(Color.glassAdaptive(\.muted))
                     Text("No Export History")
                         .font(BrandTypography.subheading())
-                        .foregroundStyle(Color.glassAdaptive(.textPrimary, \.text))
+                        .foregroundStyle(Color.glassAdaptive(\.text))
                     Text("Export history will appear here after your first export.")
                         .font(BrandTypography.body())
-                        .foregroundStyle(Color.glassAdaptive(.textMuted, \.muted))
+                        .foregroundStyle(Color.glassAdaptive(\.muted))
                 }
             } else {
                 GeometryReader { proxy in
@@ -94,20 +94,20 @@ struct MacHistoryView: View {
                 VStack(alignment: .leading, spacing: 3) {
                     Text(entry.summaryDescription)
                         .font(BrandTypography.bodyMedium())
-                        .foregroundStyle(Color.glassAdaptive(.textPrimary, \.text))
+                        .foregroundStyle(Color.glassAdaptive(\.text))
                         .lineLimit(2)
 
                     if !entry.isFullSuccess, let message = entry.failureListMessage {
                         Text(message)
                             .font(BrandTypography.caption())
-                            .foregroundStyle(entry.isPartialSuccess ? Color.glassAdaptive(.textSecondary, \.sec) : Color.error)
+                            .foregroundStyle(entry.isPartialSuccess ? Color.glassAdaptive(\.sec) : Color.error)
                             .lineLimit(2)
                     }
 
                     HStack(spacing: 8) {
                         Text(Self.dateFormatter.string(from: entry.timestamp))
                             .font(BrandTypography.caption())
-                            .foregroundStyle(Color.glassAdaptive(.textMuted, \.muted))
+                            .foregroundStyle(Color.glassAdaptive(\.muted))
 
                         sourceBadge(for: entry)
                     }
@@ -119,7 +119,7 @@ struct MacHistoryView: View {
                     ? "\(entry.successCount)/\(entry.totalCount)"
                     : entry.generatedFileCountCompactDescription)
                     .font(BrandTypography.value())
-                    .foregroundStyle(Color.glassAdaptive(.textMuted, \.muted))
+                    .foregroundStyle(Color.glassAdaptive(\.muted))
             }
             .padding(.vertical, 2)
             .tag(entry)
@@ -148,7 +148,7 @@ struct MacHistoryView: View {
                         statusIcon(for: entry)
                         Text(entry.localizedShortStatusDescription)
                             .font(BrandTypography.heading())
-                            .foregroundStyle(Color.glassAdaptive(.textPrimary, \.text))
+                            .foregroundStyle(Color.glassAdaptive(\.text))
                     }
                     .padding(16)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -196,19 +196,19 @@ struct MacHistoryView: View {
 
                             Text(reason.detailedDescription)
                                 .font(BrandTypography.body())
-                                .foregroundStyle(Color.glassAdaptive(.textSecondary, \.sec))
+                                .foregroundStyle(Color.glassAdaptive(\.sec))
                                 .fixedSize(horizontal: false, vertical: true)
 
                             Divider()
-                                .background(Color.glassAdaptive(.borderSubtle, \.line))
+                                .background(Color.glassAdaptive(\.line))
 
                             Label("What to do", systemImage: "wrench.and.screwdriver.fill")
                                 .font(BrandTypography.bodyMedium())
-                                .foregroundStyle(Color.glassAdaptive(.accent, \.accent))
+                                .foregroundStyle(Color.glassAdaptive(\.accent))
 
                             Text(reason.recoverySuggestion)
                                 .font(BrandTypography.body())
-                                .foregroundStyle(Color.glassAdaptive(.textPrimary, \.text))
+                                .foregroundStyle(Color.glassAdaptive(\.text))
                                 .fixedSize(horizontal: false, vertical: true)
                         }
                         .padding(16)
@@ -222,13 +222,13 @@ struct MacHistoryView: View {
                             ForEach(entry.failureDiagnosticDetails, id: \.self) { details in
                                 Text(details)
                                     .font(Typography.bodyMono())
-                                    .foregroundStyle(Color.glassAdaptive(.textSecondary, \.sec))
+                                    .foregroundStyle(Color.glassAdaptive(\.sec))
                                     .textSelection(.enabled)
                                     .fixedSize(horizontal: false, vertical: true)
                             }
                             Text("If the suggested fix does not work, include this message in your bug report after removing any private folder or server information.")
                                 .font(BrandTypography.caption())
-                                .foregroundStyle(Color.glassAdaptive(.textMuted, \.muted))
+                                .foregroundStyle(Color.glassAdaptive(\.muted))
                         }
                         .padding(16)
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -248,12 +248,12 @@ struct MacHistoryView: View {
                                         ? "info.circle"
                                         : "exclamationmark.triangle.fill")
                                         .foregroundStyle(failure.isInformational == true
-                                            ? Color.glassAdaptive(.textSecondary, \.sec)
+                                            ? Color.glassAdaptive(\.sec)
                                             : Color.warning)
                                         .font(.caption)
                                     Text(failure.localizedSummary)
                                         .font(BrandTypography.caption())
-                                        .foregroundStyle(Color.glassAdaptive(.textMuted, \.muted))
+                                        .foregroundStyle(Color.glassAdaptive(\.muted))
                                         .fixedSize(horizontal: false, vertical: true)
                                         .textSelection(.enabled)
                                 }
@@ -274,10 +274,10 @@ struct MacHistoryView: View {
                                         .font(.caption)
                                     Text(detail.dateString)
                                         .font(BrandTypography.value())
-                                        .foregroundStyle(Color.glassAdaptive(.textPrimary, \.text))
+                                        .foregroundStyle(Color.glassAdaptive(\.text))
                                     Text("— \(detail.reason.shortDescription)")
                                         .font(BrandTypography.caption())
-                                        .foregroundStyle(Color.glassAdaptive(.textMuted, \.muted))
+                                        .foregroundStyle(Color.glassAdaptive(\.muted))
                                 }
                             }
                         }
@@ -294,10 +294,10 @@ struct MacHistoryView: View {
             VStack(spacing: 12) {
                 Image(systemName: "doc.text.magnifyingglass")
                     .font(.title)
-                    .foregroundStyle(Color.glassAdaptive(.textMuted, \.muted))
+                    .foregroundStyle(Color.glassAdaptive(\.muted))
                 Text("Select an export to see details")
                     .font(BrandTypography.body())
-                    .foregroundStyle(Color.glassAdaptive(.textMuted, \.muted))
+                    .foregroundStyle(Color.glassAdaptive(\.muted))
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
@@ -316,7 +316,7 @@ struct MacHistoryView: View {
     private func sourceBadge(for entry: ExportHistoryEntry) -> some View {
         Text(entry.source.localizedDisplayName)
             .font(BrandTypography.caption())
-            .foregroundStyle(Color.glassAdaptive(.textMuted, \.muted))
+            .foregroundStyle(Color.glassAdaptive(\.muted))
             .padding(.horizontal, 8)
             .padding(.vertical, 2)
             .brandGlassPill()
@@ -327,14 +327,14 @@ struct MacHistoryView: View {
         HStack(alignment: .firstTextBaseline, spacing: 12) {
             Text(label)
                 .font(BrandTypography.body())
-                .foregroundStyle(Color.glassAdaptive(.textSecondary, \.sec))
+                .foregroundStyle(Color.glassAdaptive(\.sec))
                 .lineLimit(1)
 
             Spacer(minLength: 8)
 
             Text(value)
                 .font(BrandTypography.value())
-                .foregroundStyle(Color.glassAdaptive(.textPrimary, \.text))
+                .foregroundStyle(Color.glassAdaptive(\.text))
                 .lineLimit(1)
                 .truncationMode(.middle)
                 .multilineTextAlignment(.trailing)

@@ -2,8 +2,6 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>NEW_EXPERIENCE_ENABLED</key>
-	<string>$(NEW_EXPERIENCE_ENABLED)</string>
 	<key>CFBundleDisplayName</key>
 	<string>Health.md</string>
 	<key>CFBundleExecutable</key>

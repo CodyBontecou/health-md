@@ -73,21 +73,17 @@ private enum MacSidebarDestination: String, CaseIterable, Identifiable, Hashable
 
     /// History gets its own section in the Liquid Glass layout.
     static var visibleCases: [MacSidebarDestination] {
-        NewExperienceFeature.isEnabled ? allCases : allCases.filter { $0 != .history }
+        allCases
     }
 
     var title: String {
         switch self {
         case .home:
-            return NewExperienceFeature.isEnabled
-                ? String(localized: "Mac Destination")
-                : String(localized: "Home")
+            return String(localized: "Mac Destination")
         case .history:
             return String(localized: "History")
         case .cli:
-            return NewExperienceFeature.isEnabled
-                ? String(localized: "CLI & MCP")
-                : String(localized: "CLI")
+            return String(localized: "CLI & MCP")
         case .settings:
             return String(localized: "Settings")
         }

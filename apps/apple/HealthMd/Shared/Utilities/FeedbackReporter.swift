@@ -146,16 +146,8 @@ struct FeedbackFailureView: View {
         _draft = State(initialValue: FeedbackReportDraft(reportText: failure.reportText, strings: strings))
     }
 
-    var body: some View {
-        if NewExperienceFeature.isEnabled {
-            glassBody.glassTheme()
-        } else {
-            legacyBody
-        }
-    }
-
     /// ReportFallbackG. Still local only: edit, copy, done.
-    private var glassBody: some View {
+    var body: some View {
         GlassReportFallbackContent(
             strings: strings,
             message: failure.message,
@@ -163,6 +155,7 @@ struct FeedbackFailureView: View {
             onCopy: copyReport,
             onDone: { dismiss() }
         )
+        .glassTheme()
     }
 
     private func copyReport() {
@@ -175,42 +168,6 @@ struct FeedbackFailureView: View {
             return NSPasteboard.general.setString(text, forType: .string)
             #endif
         }
-    }
-
-    private var legacyBody: some View {
-        VStack(alignment: .leading, spacing: Spacing.s4) {
-            Text(strings.title)
-                .font(Typography.headline())
-            Text(failure.message)
-                .fixedSize(horizontal: false, vertical: true)
-            Text(strings.instructions)
-                .font(Typography.caption())
-            TextEditor(text: $draft.reportText)
-                .font(Typography.monoCaption())
-                .accessibilityLabel(strings.reportLabel)
-                .frame(minHeight: 180)
-            HStack {
-                Button(strings.copyReport) {
-                    draft.copy { text in
-                        #if os(iOS)
-                        UIPasteboard.general.string = text
-                        return true
-                        #elseif os(macOS)
-                        NSPasteboard.general.clearContents()
-                        return NSPasteboard.general.setString(text, forType: .string)
-                        #endif
-                    }
-                }
-                Text(draft.copyConfirmation)
-                    .accessibilityLabel(draft.copyAccessibilityLabel)
-                Spacer()
-                Button("Done") { dismiss() }
-            }
-        }
-        .padding(Spacing.s4)
-        #if os(macOS)
-        .frame(minWidth: 520, minHeight: 440)
-        #endif
     }
 }
 

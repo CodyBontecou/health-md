@@ -445,7 +445,8 @@ final class CoverageLedgerTests: XCTestCase {
         return store
     }
 
-    // See ScheduledExportEntryStoreTests: stores outlive each test on older runtimes.
+    // JUSTIFICATION: see ScheduledExportEntryStoreTests. Stores outlive each test on older
+    // runtimes, so deallocation cannot race the store's background writes.
     private static var retainedStores: [AnyObject] = []
 
     func testStoreRoundTripsScheduleEvents() {
@@ -492,23 +493,7 @@ final class CoverageLedgerTests: XCTestCase {
         XCTAssertEqual(store.ledger.startedAt, date(31))
     }
 
-    // MARK: - Flag and tokens
-
-    func testFlagDefaultsOffAndAcceptsOverride() {
-        XCTAssertFalse(NewExperienceFeature.isEnabled(infoDictionary: [:]))
-        XCTAssertFalse(NewExperienceFeature.isEnabled(infoDictionary: [NewExperienceFeature.flagKey: "NO"]))
-        XCTAssertTrue(NewExperienceFeature.isEnabled(infoDictionary: [NewExperienceFeature.flagKey: "YES"]))
-        XCTAssertFalse(
-            NewExperienceFeature.isEnabled(
-                infoDictionary: [NewExperienceFeature.flagKey: "YES"],
-                debugOverride: false
-            )
-        )
-    }
-
-    func testShippedBundleLeavesFlagOff() {
-        XCTAssertFalse(NewExperienceFeature.isEnabled(infoDictionary: Bundle.main.infoDictionary ?? [:]))
-    }
+    // MARK: - Tokens
 
     func testPaletteResolution() {
         XCTAssertEqual(GlassPalette.resolved(colorScheme: .dark, reduceTransparency: false), .dark)

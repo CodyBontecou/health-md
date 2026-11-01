@@ -15,7 +15,5 @@
 	</array>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>Health.md uses your local network to receive iPhone-configured exports and save them to your selected Mac folder.</string>
-	<key>NEW_EXPERIENCE_ENABLED</key>
-	<string>$(NEW_EXPERIENCE_ENABLED)</string>
 </dict>
 </plist>
