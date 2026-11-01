@@ -7,9 +7,9 @@ Los perfiles de exportación mantienen unida una configuración repetible. Admin
 
 ## Administrar y editar perfiles
 
-Abre **Ajustes → Perfiles de exportación**. La lista marca el perfil activo y permite crear, renombrar, duplicar, eliminar, activar o inspeccionar perfiles. Abre la vista de detalles para copiar su identificador estable. El último perfil no se puede eliminar.
+En el iPhone, cada perfil es una automatización: abre **Automatizaciones** para verlas, toca **+** para crear una y abre una automatización para ejecutarla, duplicarla, pausarla o editarla página a página (métricas, formatos, salida, notas diarias, entradas, programación). Su página también muestra el ID estable del perfil. **Ajustes → App y soporte → Perfiles de exportación** conserva la lista completa para cambiar nombres, eliminar y activar. En Android, abre **Ajustes → Perfiles de exportación**. El último perfil restante no se puede eliminar.
 
-La pestaña Exportar modifica el perfil activo. Activa otro antes de cambiar los ajustes si no deseas actualizar el actual.
+**Automatizaciones → Todos los ajustes de exportación** edita el perfil activo. Activa otro perfil antes de cambiar esos ajustes si no quieres actualizar el actual.
 
 Cada perfil congela las opciones necesarias para repetir una ejecución:
 
@@ -29,7 +29,7 @@ La programación se vincula por separado a la identidad estable del perfil. Camb
 
 ## Nombres, identificadores estables y automatización
 
-El nombre visible es para las personas y puede cambiar. El identificador estable permite automatizaciones resistentes a cambios de nombre. Cópialo en **Ajustes → Perfiles de exportación → ID del perfil**.
+El nombre visible es para las personas y puede cambiar. El ID estable de un perfil sirve para automatizaciones que resisten los cambios de nombre. Cópialo de la página de la automatización en **Automatizaciones** en el iPhone, o en **Ajustes → Perfiles de exportación → ID del perfil** en Android.
 
 - La app Atajos de Apple selecciona el perfil por su nombre visible; un parámetro de perfil vacío usa el perfil activo.
 - Los broadcasts de Tasker y adb en Android pueden enviar el extra `PROFILE` con un identificador estable o un nombre. Usa el identificador si el flujo debe sobrevivir a un cambio de nombre.

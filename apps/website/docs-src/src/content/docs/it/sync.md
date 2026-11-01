@@ -19,8 +19,8 @@ description: "Usa l’app complementare per macOS come destinazione locale. L’
 <ol>
 <li>Installa e apri l’app per macOS.</li>
 <li>Sul Mac, scegli una cartella di destinazione in modo che Health.md disponga dell’accesso in scrittura.</li>
-<li>Sull’iPhone, apri il pannello Sincronizzazione e abilita la connettività con il Mac.</li>
-<li>Torna al pannello Esportazione sull’iPhone, scegli <em>Mac connesso</em>, configura l’esportazione e tocca Esporta.</li>
+<li>Su iPhone, apri <strong>Impostazioni → Destinazione Mac</strong> e attivala.</li>
+<li>Scegli <em>Mac collegato</em> come destinazione di un’automazione (<strong>Automazioni → automazione → Output</strong>), poi usa <strong>Esporta ora</strong> o la pianificazione dell’automazione.</li>
 </ol>
 
 ## Che cosa viene trasferito

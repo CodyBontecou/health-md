@@ -7,9 +7,9 @@ Os perfis de exportação reúnem uma configuração reproduzível. Gerencie-os 
 
 ## Gerenciar e editar perfis
 
-Abra **Ajustes → Perfis de exportação**. A lista marca o perfil ativo e permite criar, renomear, duplicar, excluir, ativar ou inspecionar perfis. Abra os detalhes para copiar o ID estável. O último perfil não pode ser excluído.
+No iPhone, cada perfil é uma automação: abra **Automações** para vê-las, toque em **+** para criar uma e abra uma automação para executá-la, duplicá-la, pausá-la ou editá-la página por página (métricas, formatos, saída, notas diárias, entradas, agendamento). A página também mostra o ID estável do perfil. **Configurações → App e suporte → Perfis de exportação** mantém a lista completa para renomear, excluir e ativar. No Android, abra **Configurações → Perfis de exportação**. O último perfil restante não pode ser excluído.
 
-A aba Exportar edita o perfil ativo. Ative outro perfil antes de alterar as configurações se não quiser atualizar o atual.
+**Automações → Todos os ajustes de exportação** edita o perfil ativo. Ative outro perfil antes de mudar esses ajustes se não quiser atualizar o atual.
 
 Cada perfil congela as opções necessárias para reproduzir uma execução:
 
@@ -29,7 +29,7 @@ O agendamento é vinculado separadamente à identidade estável do perfil. Troca
 
 ## Nomes, IDs estáveis e automação
 
-O nome de exibição é para pessoas e pode mudar. O ID estável permite automações resistentes a renomeações. Copie-o em **Ajustes → Perfis de exportação → ID do perfil**.
+O nome de exibição é para pessoas e pode mudar. O ID estável de um perfil serve para automações que resistem a renomeações. Copie-o da página da automação em **Automações** no iPhone, ou em **Configurações → Perfis de exportação → ID do perfil** no Android.
 
 - Os Atalhos da Apple selecionam o perfil pelo nome de exibição; um parâmetro de perfil vazio usa o perfil ativo.
 - As transmissões do Tasker e do adb no Android podem fornecer o extra `PROFILE` com um ID estável ou nome. Prefira o ID em fluxos que precisam sobreviver a renomeações.

@@ -8,7 +8,7 @@ Questa pagina descrive la pianificazione di iPhone . Android prevede autorizzazi
 ## Verifica la prima esportazione pianificata
 
 1. Attiva il profilo desiderato. Controlla le sue metriche, i formati, i dettagli dei dati, il comportamento di scrittura e la destinazione. Esegui manualmente una giornata completata e controlla il file salvato o il risultato dell'endpoint prima di abilitare l'automazione.
-2. Apri pianificazione, quindi Imposta pianificazione o Gestisci pianificazione. Abilita la pianificazione, scegli Giornaliera, Settimanale o Personalizzata, imposta l'ora e inizia con una ricerca di un giorno completato. Consenti notifiche se desideri promemoria di ripristino locale.
+2. Su iPhone, apri **Automazioni**, scegli l’automazione e tocca **Pianificazione**; su Android, apri Pianificazione, quindi Configura pianificazione o Gestisci pianificazione. Attiva la pianificazione, scegli Giornaliera, Settimanale o Personalizzata, imposta l’orario e inizia con un recupero di un giorno concluso. Consenti le notifiche se vuoi promemoria di recupero locali.
 3. Controlla se la pianificazione è abilitata, l'occorrenza successiva e l'ultimo risultato. Dopo un tentativo, controlla i dettagli della cronologia e la destinazione effettiva; un'etichetta o una notifica di esecuzione successiva non costituisce una prova che i dati siano stati scritti.
 4. Controlla le date, le unità, la copertura e i dati mancanti esportati. Un file salvato non dimostra di per sé la completa acquisizione della fonte.
 

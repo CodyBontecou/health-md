@@ -1,41 +1,42 @@
 ---
 title: "내보내다"
-description: "내보내기 탭을 사용하여 HealthKit 및 볼트 연결을 확인하세요. 목적지를 선택하고 날짜 범위를 내보냅니다."
+description: "Apple Health 데이터를 지금 또는 예약에 따라 내보냅니다. 아카이브에서 준비 상태를 확인하고, 지금 내보내기에서 범위를 고르고, 자동화마다 대상을 설정하세요."
 ---
 
-<p> 내보내기 탭은 세 가지 작은 결정으로 구성됩니다. 즉, 준비 상태 확인, 대상 선택, 미리보기 또는 내보내기 전에 날짜 범위 선택입니다. </p>
+<p>iPhone의 Health.md에는 <strong>아카이브</strong>, <strong>자동화</strong>, <strong>설정</strong>의 세 탭과 둥근 <strong>지금 내보내기</strong> 버튼이 있습니다. iPad에서는 탭이 사이드바로 이동합니다.</p>
 
-## 상태 배지 읽기
- <div class="options">
- <div class="option"> <strong> 상태 배지 </strong> <p>녹색은 앱의 연결됨 설정 상태를 나타내며, 모든 범주의 읽기 권한이 확인되었다는 뜻은 아닙니다. HealthKit은 거부된 읽기 권한을 앱에 공개하지 않습니다. 배지를 탭하여 접근을 요청하세요. 아직 선택하지 않은 데이터 유형에는 iOS 권한 화면이 표시될 수 있습니다. 선택이 이미 기록된 경우 Health.md는 권한 안내를 표시합니다. Apple Health에서 범주를 확인하세요. 빈 결과는 접근 거부 또는 일치하는 데이터가 없음을 의미할 수 있습니다. <a href="/ko/docs/troubleshooting/">누락된 데이터 확인</a>.</p> </div>
- <div class="option"> <strong> 볼트 배지 </strong> <p> 녹색 점 = 볼트 폴더가 선택되었습니다. 금고를 다시 선택하거나 변경하려면 탭하세요. 레이블에는 폴더 이름이 표시됩니다. </p> </div>
- </div>
- <p> 내보내기 <em> 작업은 </em> , 출력 형식 및 선택한 대상이 준비될 때까지 비활성화된 상태로 HealthKit 됩니다. 이렇게 하면 가장 일반적인 실패 모드인 대상 없이 내보내기를 시도하는 것을 방지할 수 있습니다. </p>
+## 아카이브에서 준비 상태 확인하기
+<p><strong>아카이브</strong> 캘린더는 각 자동화가 처리한 건강 데이터 날짜를 보여 줍니다. 내보내기를 막는 문제가 있으면 상단의 <strong>확인 필요</strong> 카드에 원인이 표시됩니다.</p>
+<div class="options">
+<div class="option"><strong>Apple Health</strong><p>Health.md는 앱의 설정 상태를 보여 줄 뿐, 모든 카테고리에 대한 읽기 접근이 확인된 것은 아닙니다. HealthKit은 거부된 읽기 권한을 알려 주지 않습니다. Apple Health에서 카테고리를 확인하세요. 결과가 비어 있으면 접근이 거부되었거나 데이터가 없는 것일 수 있습니다. <a href="/ko/docs/troubleshooting/">누락된 데이터 문제 해결</a>.</p></div>
+<div class="option"><strong>폴더</strong><p><strong>설정 → 폴더</strong>에서 폴더를 선택하거나 다시 선택하세요. 폴더를 옮긴 뒤 iOS가 접근 권한을 잃으면 Health.md가 다시 선택하라고 요청합니다. 아무것도 삭제되지 않습니다.</p></div>
+</div>
 
-## 내보내기 대상 선택
- <p> 내보내기 대상 카드는 데이터가 이동되는 위치를 결정합니다. </p>
+## 자동화의 내보내기 대상 선택하기
+<p>각 자동화에는 고유한 대상이 있습니다. <strong>자동화</strong>를 열고 자동화를 선택한 다음 <strong>출력</strong>을 여세요.</p>
 
 <div class="options">
- <div class="option"> <strong> 로컬 iPhone 폴더 </strong> <p> 이 장치에서 선택한 폴더 또는 Obsidian 저장소에 직접 씁니다. </p> </div>
- <div class="option"> <strong> 연결된 Mac </strong> <p> 캡처한 일일 데이터와 정확한 설정 스냅샷을 근처 Mac 앱으로 보냅니다. iPhone 은 HealthKit 읽습니다. Mac은 선택한 형식을 렌더링하고 파일을 씁니다. </p> </div>
- <div class="option"> <strong> API 엔드포인트 </strong> <p> iPhone 에서 사용자가 구성한 HTTP(S) 엔드포인트로 직접 JSON 봉투를 게시합니다. <a href="/ko/docs/api-endpoint/"> API 엔드포인트 </a> 참조하세요. </p> </div>
- </div>
+<div class="option"><strong>로컬 폴더</strong><p>이 기기에서 선택한 폴더나 Obsidian 보관함에 직접 기록합니다.</p></div>
+<div class="option"><strong>연결된 Mac</strong><p>수집한 일별 데이터와 설정의 정확한 스냅샷을 가까운 Mac 앱으로 보냅니다. iPhone이 HealthKit을 읽고, Mac이 선택한 형식을 만들어 파일을 기록합니다.</p></div>
+<div class="option"><strong>API 엔드포인트</strong><p>JSON 봉투를 iPhone에서 직접 설정한 HTTP(S) 엔드포인트로 POST합니다. <a href="/ko/docs/api-endpoint/">API 엔드포인트 보기</a>.</p></div>
+<div class="option"><strong>Agent Data 게이트웨이</strong><p>내보낸 각 파일을 변경 없이 게이트웨이의 수집 엔드포인트에 업로드합니다.</p></div>
+</div>
 
-## 날짜 범위 선택
- <p> 날짜 사전 설정에는 일반적인 경로가 포함됩니다: </p>
+## 지금 내보내기에서 범위 선택하기
+<p><strong>지금 내보내기</strong>를 탭하고, 자동화가 여러 개라면 하나를 고른 다음 범위를 선택하세요.</p>
 
 <div class="options">
- <div class="option"> <strong> 오늘 </strong> <p> 현재 날짜를 내보냅니다. 출력 형식을 테스트하는 데 유용합니다. </p> </div>
- <div class="option"> <strong> 어제 </strong> <p> 하루가 완성되었기 때문에 가장 안전한 일일 내보내기 선택입니다. </p> </div>
- <div class="option"> <strong> 전체 시간 </strong> <p> Health.md 이 찾을 수 있는 가장 빠른 HealthKit 데이터에서 백필합니다. </p> </div>
- <div class="option"> <strong> 사용자 정의 </strong> <p> 특정 범위의 시작 날짜와 종료 날짜를 선택합니다. </p> </div>
- </div>
+<div class="option"><strong>어제</strong><p>하루가 끝났기 때문에 매일 내보내기에 가장 안전한 선택입니다.</p></div>
+<div class="option"><strong>7일 / 30일</strong><p>어제까지의 최근 1주 또는 1개월입니다. 30일 이상이면 먼저 확인을 요청합니다.</p></div>
+<div class="option"><strong>사용자 지정</strong><p>특정 범위의 시작일과 종료일을 선택합니다.</p></div>
+</div>
+<p><strong>기록 예정</strong>에는 대상과 내보내기가 다루는 대략적인 파일 수와 일수가 표시됩니다. <strong>날짜 범위 요약만</strong>은 일별 파일 대신 요약 파일 하나만 기록합니다. 오늘과 전체 기간은 <strong>자동화 → 모든 내보내기 설정</strong>에서 계속 사용할 수 있습니다.</p>
 
 ## 미리보기 또는 내보내기
- <div class="options">
- <div class="option"> <strong> 미리보기 </strong> <p> 쓰기 전에 생성될 파일과 내용을 표시합니다. </p> </div>
- <div class="option"> <strong> 내보내기 </strong> <p> 내보내기를 실행하고 기본 화면에 진행률을 표시하며 결과를 기록에 기록합니다. </p> </div>
- </div>
+<div class="options">
+<div class="option"><strong>미리보기</strong><p>무엇이든 기록하기 전에 생성될 파일과 내용을 보여 줍니다.</p></div>
+<div class="option"><strong>내보내기</strong><p>내보내기를 실행하고, 탭 막대 위에 취소 버튼과 함께 진행 상황을 표시하며, 결과를 기록과 아카이브 캘린더에 남깁니다.</p></div>
+</div>
 
 ## 데이터 세부정보 수준을 선택하세요.
 
@@ -62,11 +63,7 @@ description: "내보내기 탭을 사용하여 HealthKit 및 볼트 연결을 �
 
 ## 프로필과 신뢰할 수 있는 기록
 
-저장된 프로필은 실행을 위한 설정과 대상을 고정합니다. 프로필 인식 예약 및 자동화 기록 행은 런타임 프로필을 유지하는 반면 기록은 실제로 사용된 대상에 대한 개인 정보 보호 레이블을 유지합니다. 수동 내보내기 탭 행에서는 프로필 이름이 생략될 수 있습니다. 나중에 이름을 바꾸거나 대상을 변경해도 기존 기록은 다시 작성되지 않습니다. 참조한 프로필이 없으면 작업이 실패하며 다른 설정으로 대체하지 않습니다. [프로필 내보내기](/ko/docs/export-profiles/)를 참조하세요.
-
-## 탭바
-
-<p> 화면 하단에 있는 내보내기, 일정, 동기화, 설정 탭 4개가 전체 앱 표시 영역을 다룹니다. 다른 모든 것은 설정 내부 깊은 곳에 한두 개의 레이어가 있습니다. </p>
+저장된 프로필은 실행 시 설정과 대상을 고정합니다. 프로필을 인식하는 예약 실행과 자동화의 기록 행에는 실행 당시의 프로필이 남고, 기록에는 실제로 사용된 대상에 대한 개인정보 보호 레이블이 남습니다. 수동 내보내기 행에는 프로필 이름이 빠질 수 있습니다. 나중에 이름이나 대상을 바꿔도 기존 기록은 다시 쓰이지 않습니다. 참조한 프로필이 없으면 다른 설정으로 대체하지 않고 작업이 실패합니다. [내보내기 프로필](/ko/docs/export-profiles/)을 참고하세요.
 
 <div class="callout">
  <strong> 잠금 해제 동작. </strong>

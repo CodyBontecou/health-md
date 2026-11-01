@@ -8,7 +8,7 @@ Cette page décrit la planification iPhone . Android a des autorisations d'arri�
 ## Vérifiez la première exportation planifiée
 
 1. Activer le profil souhaité. Vérifiez ses métriques, ses formats, les détails des données, son comportement d'écriture et sa destination. Exécutez manuellement une journée complète et inspectez le fichier enregistré ou le résultat du point de terminaison avant d'activer l'automatisation.
-2. Ouvrez le programme, puis configurez le programme ou gérez le programme. Activez le calendrier, choisissez Quotidien, Hebdomadaire ou Personnalisé, définissez l'heure et commencez par une rétrospective d'une journée terminée. Autorisez les notifications si vous souhaitez des rappels de récupération locaux.
+2. Sur iPhone, ouvrez **Automatisations**, choisissez l’automatisation et touchez **Planification** ; sur Android, ouvrez Planification, puis Configurer la planification ou Gérer la planification. Activez la planification, choisissez Quotidienne, Hebdomadaire ou Personnalisée, réglez l’heure et commencez avec une période rétrospective d’un jour terminé. Autorisez les notifications si vous souhaitez des rappels de reprise locaux.
 3. Vérifiez si la planification est activée, la prochaine occurrence et le dernier résultat. Après une tentative, inspectez les détails de son historique et la destination réelle ; une étiquette ou une notification de prochaine exécution ne constitue pas une preuve que les données ont été écrites.
 4. Vérifiez les dates exportées, les unités, la couverture et les données manquantes. Un fichier enregistré ne prouve pas en soi une capture complète de la source.
 

@@ -6,98 +6,98 @@ description: "Apple Healthへのアクセスを許可し、ファイルAppで保
 指標、形式、自動化を変更する前に、小規模で検証しやすいエクスポートを作成するための手順です。Health.mdは、iOSで許可されたApple Healthのカテゴリだけを読み取り、選択したフォルダに生成ファイルを書き込みます。
 
 <div class="availability available">
-<strong>提供中 · Health.md for iPhone</strong>
-<p>最初のエクスポートは無料枠で実行できます。スケジュールなどの有料機能は後から設定できます。</p>
+<strong>提供中 · iPhone版 Health.md</strong>
+<p>エクスポートには、有効なトライアル、サブスクリプション、またはLifetimeアクセスが必要です。スケジュールなどのオートメーションは後から設定できます。</p>
 </div>
 
 ## 始める前に
 
-以下が必要です。
+始める前に、次のものが揃っていることを確認してください。
 
-- Apple Healthのデータが保存されているiPhoneに[App StoreのHealth.md](https://apps.apple.com/app/health-md/id6757763969)がインストールされていること。
-- 1つ以上のApple Healthカテゴリを読み取る権限。
-- iCloud Drive、「このiPhone内」、Obsidian Vaultなど、ファイルAppで書き込み可能な保存先。
+- Apple Healthのデータが保存されているiPhoneに[App StoreのHealth.md](https://apps.apple.com/app/health-md/id6757763969)をインストール済み
+- 少なくとも1つのApple Healthカテゴリの読み取り許可
+- 「ファイル」で書き込み可能なフォルダ（iCloud Drive、このiPhone内、またはObsidianの保管庫）
 
-最初の実行を最短で済ませるには、既定の指標とMarkdown出力を使用してください。利用可能な全履歴ではなく、**昨日**または別の1日の範囲から始めます。
+指標はデフォルトのまま、形式はMarkdownのままにします。1日分の期間として**昨日**を選択します。
 
 ## 1. iPhoneのセットアップを完了する
 
-初回起動時に**セットアップを開始**をタップし、7つのオンボーディング手順を完了します。必要なApple Healthカテゴリを許可し、サンプル出力を確認して、ファイルAppでフォルダを選択し、**準備完了**まで進みます。ロック解除の手順が表示された場合も、無料枠で続行できます。
+Health.mdのセットアップは5つの手順です。どの手順も先へ進むのを妨げません。Apple Healthへのアクセスとフォルダは、スキップして後で設定できます。
 
-オンボーディングをすでに完了している場合は、**エクスポート**タブを開き、Apple Healthとローカルフォルダの準備ができていることを確認します。保存先が見つからない、またはアクセスできない場合は、フォルダのコントロールから選び直してください。
+初回起動時に**Apple Healthに接続**をタップします。必要な健康カテゴリを許可し、サンプル出力を確認し、「ファイル」でフォルダを選んで、最後の手順まで進みます。
 
-<div class="callout">
-<strong>画像内の言語について</strong>
-<p style="margin-top:6px;">オンボーディング開始画面と、セットアップが必要な状態の画面には、英語UIの共通参照画像を使用しています。操作位置と手順の確認用です。</p>
-</div>
+セットアップ後、アプリは**アーカイブ**を表示します。Apple Healthやフォルダに対応が必要な場合は、上部の**要確認**カードに修正すべき点が表示されます。
 
 <div class="docs-screenshot-grid">
 <figure class="docs-screenshot">
-  <a href="/docs/assets/docs/iphone-first-export/onboarding-start.webp" target="_blank" rel="noopener" aria-label="オンボーディングのスクリーンショットをフルサイズで開く">
-    <img src="/docs/assets/docs/iphone-first-export/onboarding-start.webp" width="1206" height="2622" loading="lazy" alt="7ステップ中1ステップ目のHealth.mdオンボーディング開始画面。Start Setupボタンが表示されている英語版の参照画像。" />
+  <a href="/docs/assets/docs/iphone-first-export/onboarding-start.webp" target="_blank" rel="noopener" aria-label="セットアップのスクリーンショットを実寸で開く">
+    <img src="/docs/assets/docs/iphone-first-export/onboarding-start.webp" width="1206" height="2622" loading="lazy" alt="5手順中1手順目のHealth.mdセットアップ画面。3つの手順とApple Healthに接続するボタンが表示されている。" />
   </a>
-  <figcaption>Start Setupでは、アクセスを要求する前に、ローカルアーカイブ、スケジュール済みノート、フォルダモデルを説明します。このオンボーディング参照画像は英語です。</figcaption>
+  <figcaption>セットアップでは、アクセスを求める前にHealth.mdが何を読み取り、ファイルをどこに保存するかを説明します。このスクリーンショットのUIは英語のままです。</figcaption>
 </figure>
 <figure class="docs-screenshot">
-  <a href="/docs/assets/docs/iphone-first-export/export-setup-required.webp" target="_blank" rel="noopener" aria-label="セットアップが必要な状態のスクリーンショットをフルサイズで開く">
-    <img src="/docs/assets/docs/iphone-first-export/export-setup-required.webp" width="1206" height="2622" loading="lazy" alt="Healthの接続がなく、Choose Folderが使用可能で、Local iPhone Folderと日付範囲ボタンが表示されたHealth.mdのExportタブ。英語版のセットアップ参照画像。" />
+  <a href="/docs/assets/docs/iphone-first-export/export-now.webp" target="_blank" rel="noopener" aria-label="「今すぐエクスポート」のスクリーンショットを実寸で開く">
+    <img src="/docs/assets/docs/iphone-first-export/export-now.webp" width="1206" height="2622" loading="lazy" alt="Health.mdの「今すぐエクスポート」シート。昨日が選択され、期間の概要のみのスイッチ、1日分1ファイルの書き込み内容、エクスポートボタンが表示されている。" />
   </a>
-  <figcaption>準備状況のバッジにより、Healthとフォルダの未設定が明確になります。このシミュレータ画像では、意図的に両方が未完了になっています。セットアップ参照画像は英語です。</figcaption>
+  <figcaption>「今すぐエクスポート」は、開始前に書き込む内容を表示します。この参考スクリーンショットのUIも英語です。</figcaption>
 </figure>
 </div>
 
-## 2. 小規模なエクスポートを選択する
+## 2. 小さなエクスポートを選ぶ
 
-エクスポートタブで以下を行います。
+タブバーの横にある丸い**今すぐエクスポート**ボタンをタップします。続いて：
 
-1. 保存先として**iPhone内のローカルフォルダ**を選択します。
-2. **昨日**または1日のカスタム範囲を選択します。
-3. 最初の実行では既定の指標選択を維持します。
-4. **Markdown**を選択したままにします。基本的な処理が成功した後で、CSV、JSON、Obsidian Basesを追加できます。
+1. **昨日**を選択します。
+2. **期間の概要のみ**はオフのままにします。
+3. **書き込み内容**に保存先フォルダと、1日分でおよそ1ファイルと表示されていることを確認します。
 
-短い範囲にすると、権限、空のカテゴリ、保存先の問題を把握しやすくなります。また、最初の長時間リクエストを失敗したエクスポートと誤認することも防げます。
+デフォルトのオートメーションは、デフォルトの指標選択と**Markdown**を使います。変更するには、**オートメーション**を開いてオートメーションを選び、**指標**または**形式**を開きます。CSV、JSON、Obsidian Basesは、このエクスポートが成功してから追加してください。期間が短いほど、権限・空データ・フォルダの問題を見つけやすくなります。
 
 <figure class="docs-screenshot docs-screenshot-single">
-  <a href="/docs/assets/docs/ja/iphone-first-export/metric-selection.webp" target="_blank" rel="noopener" aria-label="指標選択のスクリーンショットをフルサイズで開く">
-    <img src="/docs/assets/docs/ja/iphone-first-export/metric-selection.webp" width="1206" height="2622" loading="lazy" alt="219件中217件の指標が有効で、標準指標スイッチ、検索フィールド、展開可能な睡眠、アクティビティ、心拍カテゴリが表示された「ヘルス指標」画面。" />
+  <a href="/docs/assets/docs/ja/iphone-first-export/metric-selection.webp" target="_blank" rel="noopener" aria-label="指標選択のスクリーンショットを実寸で開く">
+    <img src="/docs/assets/docs/ja/iphone-first-export/metric-selection.webp" width="1206" height="2622" loading="lazy" alt="Health.mdの指標ページ。有効な指標の数、おすすめ・すべて選択・すべて選択解除のボタン、検索欄、件数付きのカテゴリが表示されている。" />
   </a>
-  <figcaption>指標の合計数は、インストールされているアプリのバージョンと権限によって異なります。このローカライズされた画面では219件中217件の指標と標準指標が有効ですが、最初のエクスポートでこの件数まで有効にする必要はありません。</figcaption>
+  <figcaption>指標の総数はアプリのバージョンと権限によって異なります。このローカライズ版スクリーンショットでは、219件中217件の指標が有効です。</figcaption>
 </figure>
 
 ## 3. 書き込む前にプレビューする
 
-**プレビュー**をタップします。プレビューにはApple Healthへのアクセスが必要ですが、書き込み可能なローカルフォルダは不要です。そのため、読み取り権限の問題とファイルAppの問題を切り分ける際に役立ちます。
+**今すぐエクスポート**で**プレビュー**をタップします。プレビューにはApple Healthへのアクセスが必要ですが、書き込み可能なフォルダは不要です。
 
-プレビューで以下を確認します。
+フォルダを試す前に、プレビューでApple Healthの権限の問題を確認しましょう。
 
-- リクエストした日付。
-- 想定した指標名と単位。
-- データがない箇所を0で埋めず、欠損または利用不可と明示していること。
-- 選択した形式とファイル名構造。
+プレビューに次の内容が表示されることを確認します。
 
-日付、指標、形式を調整する必要がある場合は、エクスポートタブに戻ります。
+- 指定した日付
+- 想定どおりの指標名と単位
+- 誤ったゼロではなく、欠損または利用不可の値
+- 選んだ形式とファイル名の構成
+
+指標や形式を変える必要がある場合は、プレビューを閉じてオートメーションの設定を変更します。
 
 <figure class="docs-screenshot docs-screenshot-single">
-  <a href="/docs/assets/docs/ja/iphone-first-export/export-preview.webp" target="_blank" rel="noopener" aria-label="エクスポートプレビューのスクリーンショットをフルサイズで開く">
-    <img src="/docs/assets/docs/ja/iphone-first-export/export-preview.webp" width="1206" height="2622" loading="lazy" alt="1日分のエクスポート見積もり、ロールアップ期間、TestVaultの保存先、生成ファイル名を表示するHealth.mdのエクスポートプレビュー画面。" />
+  <a href="/docs/assets/docs/ja/iphone-first-export/export-preview.webp" target="_blank" rel="noopener" aria-label="エクスポートプレビューのスクリーンショットを実寸で開く">
+    <img src="/docs/assets/docs/ja/iphone-first-export/export-preview.webp" width="1206" height="2622" loading="lazy" alt="Health.mdのエクスポートプレビュー。睡眠の集計時間帯、1日分のMarkdownの見積もり、ロールアップ期間、保存先フォルダ、生成されるファイル名が表示されている。" />
   </a>
-  <figcaption>プレビューでは、出力の確認と書き込みを分けて行えます。この再現可能なドキュメント画像ではサンプルのヘルスデータを使用し、保存先としてTestVaultが選択されています。</figcaption>
+  <figcaption>この例ではサンプルの健康データを使用しています。</figcaption>
 </figure>
 
 ## 4. エクスポートして確認する
 
-**データをエクスポート**をタップします。セットアップが未完了の場合、Health.mdは不完全な書き込みを黙って開始せず、不足しているHealthまたはフォルダの要件を示します。
+**昨日分を書き出す**をタップします。セットアップが不完全な場合は、Health.mdがApple Healthまたはフォルダの不足している要件を示します。
 
-完了後、以下を行います。
+エクスポートが完了したら：
 
-1. アプリ内の結果で、書き込まれたファイル、スキップされたファイル、失敗したファイルを確認します。
-2. ファイルAppを開き、選択したフォルダに移動します。
-3. 生成されたファイルを1つ開き、日付、単位、frontmatterを確認します。
-4. トラブルシューティングのために結果の詳細を保持します。ボタンが待機状態に戻っただけで成功と判断しないでください。
+1. 結果で、書き込まれた・スキップされた・失敗したファイルを確認します。その日が**アーカイブ**のカレンダーに表示されます。
+2. 「ファイル」アプリで選んだフォルダを開きます。
+3. 生成されたファイルを1つ開き、日付・単位・フロントマターが正しいか確認します。
+4. 問題を調べる必要がある場合に備えて、結果の詳細を残しておきます。
+
+カレンダー上のカバー済みの日は概要です。日付をタップすると、その日の各オートメーションの状態を確認できます。
 
 <div class="callout">
-<strong>選択した日にデータがありませんか？</strong>
-<p style="margin-top:6px;">アクティビティや睡眠のデータがあると分かっている日を試し、Apple Healthの権限と指標選択を確認してください。許可済みの範囲が空であることと、転送または書き込みの失敗は異なります。</p>
+<strong>選んだ日にデータがない場合</strong>
+<p style="margin-top:6px;">アクティビティや睡眠のデータがある日を選んでください。そのうえでApple Healthの許可と指標の選択を確認します。期間が空であることは書き込みエラーではありません。</p>
 </div>
 
 ## 次のステップ

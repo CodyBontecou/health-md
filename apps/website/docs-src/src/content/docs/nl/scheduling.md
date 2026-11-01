@@ -8,7 +8,7 @@ Deze pagina beschrijft de planning van iPhone . Android heeft verschillende acht
 ## Controleer de eerste geplande export
 
 1. Activeer het beoogde profiel. Controleer de statistieken, formaten, gegevensdetails, schrijfgedrag en bestemming. Voer een voltooide dag handmatig uit en inspecteer het opgeslagen bestand of eindpuntresultaat voordat u automatisering inschakelt.
-2. Open Schema en stel vervolgens Schema in of Beheer Schema. Schakel het schema in, kies Dagelijks, Wekelijks of Aangepast, stel de tijd in en begin met een overzicht van één dag. Sta meldingen toe als u lokale herstelherinneringen wilt.
+2. Open op de iPhone **Automatiseringen**, kies de automatisering en tik op **Schema**; open op Android Schema en daarna Schema instellen of Schema beheren. Schakel het schema in, kies Dagelijks, Wekelijks of Aangepast, stel de tijd in en begin met een terugblik van één afgeronde dag. Sta meldingen toe als je lokale herstelherinneringen wilt.
 3. Controleer of planning is ingeschakeld, de volgende gebeurtenis en het laatste resultaat. Inspecteer na een poging de geschiedenisgegevens en de daadwerkelijke bestemming; een label of melding voor de volgende run is geen bewijs dat er gegevens zijn geschreven.
 4. Controleer de geëxporteerde data, eenheden, dekking en ontbrekende gegevens. Een opgeslagen bestand bewijst op zichzelf niet dat de bron volledig is vastgelegd.
 

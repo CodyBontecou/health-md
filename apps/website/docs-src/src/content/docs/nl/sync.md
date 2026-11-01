@@ -19,8 +19,8 @@ description: "Gebruik de macOS-app als lokale bestemming. De iPhone legt HealthK
 <ol>
 <li>Installeer en open de macOS-app.</li>
 <li>Kies op de Mac een bestemmingsmap, zodat Health.md schrijftoegang heeft.</li>
-<li>Open op de iPhone het tabblad Synchronisatie en schakel de Mac-verbinding in.</li>
-<li>Ga terug naar het tabblad Exporteren op de iPhone, kies <em>Verbonden Mac</em>, configureer de export en tik op Exporteren.</li>
+<li>Open op de iPhone <strong>Instellingen → Mac-bestemming</strong> en schakel die in.</li>
+<li>Kies <em>Verbonden Mac</em> als bestemming van een automatisering (<strong>Automatiseringen → automatisering → Uitvoer</strong>) en gebruik dan <strong>Nu exporteren</strong> of het schema van de automatisering.</li>
 </ol>
 
 ## Wat wordt overgedragen

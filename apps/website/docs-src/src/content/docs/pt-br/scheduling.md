@@ -8,7 +8,7 @@ Esta página descreve o agendamento iPhone . O Android tem diferentes permissõe
 ## Verifique a primeira exportação agendada
 
 1. Ative o perfil pretendido. Verifique suas métricas, formatos, detalhes de dados, comportamento de gravação e destino. Execute um dia concluído manualmente e inspecione o arquivo salvo ou o resultado do endpoint antes de ativar a automação.
-2. Abra Agenda e depois Configurar Agenda ou Gerenciar Agenda. Ative a programação, escolha Diário, Semanal ou Personalizado, defina o horário e comece com uma retrospectiva de um dia completo. Permita notificações se desejar lembretes de recuperação local.
+2. No iPhone, abra **Automações**, escolha a automação e toque em **Agendamento**; no Android, abra Agendamento e depois Configurar agendamento ou Gerenciar agendamento. Ative o agendamento, escolha Diário, Semanal ou Personalizado, defina o horário e comece com uma retrospectiva de um dia concluído. Permita notificações se quiser lembretes locais de recuperação.
 3. Verifica se o agendamento está habilitado, a próxima ocorrência e o último resultado. Após uma tentativa, inspecione os detalhes do histórico e o destino real; um rótulo ou notificação de próxima execução não é prova de que os dados foram gravados.
 4. Verifique as datas exportadas, unidades, cobertura e dados faltantes. Um arquivo salvo por si só não prova a captura completa da fonte.
 

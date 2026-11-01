@@ -92,7 +92,7 @@ healthmd export --last 7 \
   --destination "$HOME/Documents/HealthVault"
 ```
 
-`--profile PROFILE_ID`は`--use-device-settings`やメトリック／カテゴリセレクターと併用できず、不明なIDはライブ設定を使用せずフェイルクローズします。IDはiPhoneまたはAndroidの**設定 → エクスポートプロファイル → プロファイルID**からコピーします。自動化と保存先の動作は[エクスポートプロファイル](/ja/docs/export-profiles/)を参照してください。
+`--profile PROFILE_ID` は `--use-device-settings` や指標・カテゴリのセレクタと併用できません。不明なIDの場合は現在の設定を使わずに安全に失敗します。IDは、iPhoneでは**オートメーション**のオートメーションのページ（**プロファイル ID**）から、Androidでは**設定 → エクスポートプロファイル → プロファイル ID**からコピーします。自動化と保存先の動作は[エクスポートプロファイル](/ja/docs/export-profiles/)を参照してください。
 
 ポータブルダイレクトクライアントは、MCPラッパーなしで対応するiPhoneの型付き操作を呼び出せます。
 
