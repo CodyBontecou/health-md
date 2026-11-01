@@ -2,7 +2,9 @@ package com.healthmd.widget.data
 
 import com.healthmd.data.health.HealthConnectDataProvider
 import com.healthmd.data.health.HealthConnectWidgetReadSelection
+import com.healthmd.domain.model.AndroidCaptureContext
 import com.healthmd.domain.model.HealthData
+import com.healthmd.domain.repository.SettingsRepository
 import com.healthmd.widget.model.HealthWidgetSnapshot
 import java.time.LocalDate
 import java.time.ZoneId
@@ -23,6 +25,7 @@ interface WidgetHealthDataSource {
 /** Phone widgets intentionally use the local Health Connect source, matching iOS's HealthKit source. */
 class HealthConnectWidgetDataSource @Inject constructor(
     private val provider: HealthConnectDataProvider,
+    private val settingsRepository: SettingsRepository,
 ) : WidgetHealthDataSource {
     override suspend fun readRecentDays(
         today: LocalDate,
@@ -35,10 +38,16 @@ class HealthConnectWidgetDataSource @Inject constructor(
         val dates = (boundedDayCount - 1 downTo 0).map { offset ->
             today.minusDays(offset.toLong())
         }
+        // Snapshot the caller's zone before the settings read can suspend.
+        val captureContext = AndroidCaptureContext(
+            zoneId = zoneId,
+            sleepDayAttribution = settingsRepository.getSleepDayAttribution(),
+        )
         val fetchedByDate = provider.fetchWidgetHealthDataRange(
             dates = dates,
             selection = selection,
-            zoneId = zoneId,
+            zoneId = captureContext.zoneId,
+            sleepDayAttribution = captureContext.sleepDayAttribution,
         ).associateBy(HealthData::date)
 
         // Preserve missing dates so chart positions continue to represent calendar days.

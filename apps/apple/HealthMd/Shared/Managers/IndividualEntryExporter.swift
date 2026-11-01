@@ -90,8 +90,48 @@ final class IndividualEntryExporter {
         samples: [IndividualHealthSample],
         to baseURL: URL,
         settings: IndividualTrackingSettings,
-        formatSettings: FormatCustomization
+        formatSettings: FormatCustomization,
+        calendarTimeZone: TimeZone? = nil
     ) throws -> Int {
+        try planIndividualEntries(samples: samples, to: baseURL, settings: settings,
+            formatSettings: formatSettings, calendarTimeZone: calendarTimeZone) { fileURL, content, _ in
+            do {
+                try fileCoordinator.coordinateWriting(at: fileURL, intent: .replace,
+                    cancellationCheck: { try Task.checkCancellation() }) { coordinatedURL in
+                    let folder = coordinatedURL.deletingLastPathComponent()
+                    if !fileSystem.fileExists(atPath: folder.path) {
+                        try fileSystem.createDirectory(at: folder, withIntermediateDirectories: true)
+                    }
+                    try fileSystem.writeString(content, to: coordinatedURL, atomically: true)
+                }
+            } catch FileCoordinationError.destinationChanged { throw ExportError.destinationChanged }
+        }
+    }
+
+    /// Render one logical entry at a time without touching a destination. The
+    /// consumer can spool these exact note/route bytes into a frozen operation.
+    func planIndividualEntries(
+        samples: [IndividualHealthSample],
+        to baseURL: URL,
+        settings: IndividualTrackingSettings,
+        formatSettings: FormatCustomization,
+        calendarTimeZone: TimeZone? = nil,
+        emit: (URL, String, String) throws -> Void
+    ) throws -> Int {
+        let formatters = [dateFormatter, timeFormatter, filenameCollisionFormatter]
+        let previousTimeZones = formatters.map(\.timeZone)
+        let previousCalendars = formatters.map(\.calendar)
+        let previousLocales = formatters.map(\.locale)
+        if let calendarTimeZone {
+            formatters.forEach { $0.timeZone = calendarTimeZone; $0.calendar = Calendar(identifier: .gregorian); $0.locale = Locale(identifier: "en_US_POSIX") }
+        }
+        defer {
+            for index in formatters.indices {
+                formatters[index].timeZone = previousTimeZones[index]
+                formatters[index].calendar = previousCalendars[index]
+                formatters[index].locale = previousLocales[index]
+            }
+        }
         var filesWritten = 0
         var reservedFilePaths = Set<String>()
 
@@ -119,7 +159,10 @@ final class IndividualEntryExporter {
             // Canonical records always include their source UUID in the path. This
             // makes same-minute collisions stable across partial reruns and exports
             // where a single object is intentionally tracked under multiple metrics.
-            let filename = filename(for: sample, settings: settings)
+            let filename = filename(for: sample, settings: settings, calendarTimeZone: calendarTimeZone)
+            try ExportPathPlanner.validatePortableArtifactPaths([
+                [folderPath, filename].filter { !$0.isEmpty }.joined(separator: "/")
+            ])
             let baseFileURL = folderURL.appendingPathComponent(filename)
             let fileURL: URL
             if sample.originalUUID != nil {
@@ -149,42 +192,13 @@ final class IndividualEntryExporter {
                 routeSidecarName: routeSidecarName
             )
 
-            // Coordinate directory creation and the final atomic replacement as
-            // one provider-visible mutation of the selected entry path.
-            do {
-                try fileCoordinator.coordinateWriting(
-                    at: fileURL,
-                    intent: .replace,
-                    cancellationCheck: { try Task.checkCancellation() }
-                ) { coordinatedURL in
-                    let coordinatedFolder = coordinatedURL.deletingLastPathComponent()
-                    if !fileSystem.fileExists(atPath: coordinatedFolder.path) {
-                        try fileSystem.createDirectory(
-                            at: coordinatedFolder,
-                            withIntermediateDirectories: true
-                        )
-                    }
-                    try fileSystem.writeString(content, to: coordinatedURL, atomically: true)
-                }
-            } catch FileCoordinationError.destinationChanged {
-                throw ExportError.destinationChanged
-            }
+            try emit(fileURL, content, "text/markdown")
             if let routeSidecarName,
                let workout = sample.workout,
                let sidecarJSON = routeSidecarJSON(for: workout) {
                 let sidecarURL = fileURL.deletingLastPathComponent()
                     .appendingPathComponent(routeSidecarName)
-                do {
-                    try fileCoordinator.coordinateWriting(
-                        at: sidecarURL,
-                        intent: .replace,
-                        cancellationCheck: { try Task.checkCancellation() }
-                    ) { coordinatedURL in
-                        try fileSystem.writeString(sidecarJSON, to: coordinatedURL, atomically: true)
-                    }
-                } catch FileCoordinationError.destinationChanged {
-                    throw ExportError.destinationChanged
-                }
+                try emit(sidecarURL, sidecarJSON, "application/json")
             }
             filesWritten += 1
         }
@@ -192,7 +206,7 @@ final class IndividualEntryExporter {
         return filesWritten
     }
 
-    func filename(for sample: IndividualHealthSample, settings: IndividualTrackingSettings) -> String {
+    func filename(for sample: IndividualHealthSample, settings: IndividualTrackingSettings, calendarTimeZone: TimeZone? = nil) -> String {
         let metric = HealthMetrics.all.first(where: { $0.id == sample.metricId }) ?? HealthMetricDefinition(
             id: sample.metricId,
             name: sample.metricName,
@@ -202,7 +216,7 @@ final class IndividualEntryExporter {
             metricType: .quantity,
             aggregation: .mostRecent
         )
-        let base = settings.filename(for: metric, date: sample.timestamp, time: sample.timestamp)
+        let base = settings.filename(for: metric, date: sample.timestamp, time: sample.timestamp, calendarTimeZone: calendarTimeZone)
         guard let originalUUID = sample.originalUUID else { return base }
 
         let fileExtension = (base as NSString).pathExtension
@@ -250,8 +264,23 @@ final class IndividualEntryExporter {
     // MARK: - Content Generation
 
     /// Generate markdown content for an individual entry preview without writing it.
-    func previewEntryContent(for sample: IndividualHealthSample, formatSettings: FormatCustomization) -> String {
-        generateEntryContent(for: sample, formatSettings: formatSettings)
+    func previewEntryContent(for sample: IndividualHealthSample, formatSettings: FormatCustomization,
+                             calendarTimeZone: TimeZone? = nil) -> String {
+        let oldDateZone = dateFormatter.timeZone; let oldTimeZone = timeFormatter.timeZone
+        let oldDateCalendar = dateFormatter.calendar; let oldTimeCalendar = timeFormatter.calendar
+        let oldDateLocale = dateFormatter.locale; let oldTimeLocale = timeFormatter.locale
+        if let calendarTimeZone {
+            for formatter in [dateFormatter, timeFormatter] {
+                formatter.timeZone = calendarTimeZone; formatter.calendar = Calendar(identifier: .gregorian)
+                formatter.locale = Locale(identifier: "en_US_POSIX")
+            }
+        }
+        defer {
+            dateFormatter.timeZone = oldDateZone; timeFormatter.timeZone = oldTimeZone
+            dateFormatter.calendar = oldDateCalendar; timeFormatter.calendar = oldTimeCalendar
+            dateFormatter.locale = oldDateLocale; timeFormatter.locale = oldTimeLocale
+        }
+        return generateEntryContent(for: sample, formatSettings: formatSettings)
     }
 
     /// Generate markdown content for an individual entry
@@ -465,6 +494,9 @@ final class IndividualEntryExporter {
                 where !presentationOwnedKeys.contains(key) {
                 lines.append(formatYAMLField(key: key, value: value))
             }
+        } else if let context = canonicalFields["healthmd_capture_context_json"] {
+            lines.append(formatYAMLField(key: "entry_kind", value: "granular_compatibility"))
+            lines.append(formatYAMLField(key: "healthmd_capture_context_json", value: context))
         }
         lines.append("---")
         lines.append("")
@@ -1049,6 +1081,27 @@ final class IndividualEntryExporter {
     /// A canonical archive is authoritative: daily aggregates are never substituted
     /// for an empty, failed, unsupported, or skipped source-record query.
     func extractIndividualSamples(from healthData: HealthData, settings: IndividualTrackingSettings) -> [IndividualHealthSample] {
+        let samples = extractSourceSamples(from: healthData, settings: settings)
+        guard healthData.timeContext.sleepDayAttribution == .morningEnds else { return samples }
+        var context = ["schema_profile": "apple-v11",
+            "calendar_timezone": healthData.timeContext.calendarTimeZoneIdentifier,
+            "timestamp_timezone": "UTC", "sleep_day_attribution": "morning_ends",
+            "sleep_owner_day_rule": "session_end_date", "sleep_interval_clipping": "none"]
+        return samples.map { sample in
+            var fields = sample.additionalFields
+            if fields["entry_kind"] == nil { fields["entry_kind"] = "granular_compatibility" }
+            if sample.category == .sleep {
+                context["sleep_owner_date"] = HealthKitDailyOwnershipMetadata.ownerDate(for: healthData.date,
+                    calendarTimeZoneIdentifier: healthData.timeContext.calendarTimeZoneIdentifier)
+            } else { context.removeValue(forKey: "sleep_owner_date") }
+            fields["healthmd_capture_context_json"] = stableJSONString(context)
+            return IndividualHealthSample(metricId: sample.metricId, metricName: sample.metricName,
+                category: sample.category, timestamp: sample.timestamp, value: sample.value, unit: sample.unit,
+                source: sample.source, additionalFields: fields, originalUUID: sample.originalUUID, workout: sample.workout)
+        }
+    }
+
+    private func extractSourceSamples(from healthData: HealthData, settings: IndividualTrackingSettings) -> [IndividualHealthSample] {
         guard settings.globalEnabled else { return [] }
 
         if let archive = healthData.healthKitRecordArchive {

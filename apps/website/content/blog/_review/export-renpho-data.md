@@ -1,0 +1,12 @@
+# RENPHO export claim verification
+
+Verified 2026-10-30 by Codex (agent), method: traced. No account, health records, scale, device, actual export or product visual QA was used. Public contracts and generated samples are unchanged.
+
+## Claims
+
+- [x] Current manufacturer FAQ https://renpho.com/pages/faq-for-renpho-health-app read live: Body Fat Scale/History (also Trends/history control)/date with data/Export data/Start date/End date/Confirm. No format/schema guarantee inferred from screenshot-only results. Under 200 words paraphrased from this source.
+- [x] Manufacturer legacy manual https://renpho.com/pages/001 explicitly documents Chart history and downloadable/emailed CSV in original RENPHO app. App identity checked against legacy store ID1219889310; not reused as current Renpho Health UI, model-universal schema, or smart-tape procedure. No fabricated CSV sample.
+- [x] Current https://renpho.com/pages/apps-download-renpho says Renpho Health replaces RENPHO; Apple Health profile/Apps/Renpho Health, Body Fat Percentage/BMI/Lean Body Mass, and new measurements after saved. Article paraphrase under200words. Current page does not itself prove every weight/history/body-estimate sharing case, so actual Weight/source/day records are required before Health.md route. No guest migration/recovery guarantee.
+- [x] Current app page Google Health name does not establish universal direct Health Connect menus/categories/history; old Google Fit/Samsung references do not fill this gap. Conditional generic Health Connect entry only for records already present. No claim Android support is unavailable.
+- [x] Maintained export-apple-health-weight-data.md and its ledger trace HealthKitManager latest-end-date rule, CSVExporter/JSONExporter and unchanged summary-day.csv/json. Separate permission, picker/Summary/Metric/one day/Preview/folder flow from docs-src/src/content/docs/iphone-first-export.md. Exact sample remains owned by weight guide; no RENPHO-only filter, original-every-weigh-in, average, carry-forward, whole-history or all-scale-metrics promise.
+- [x] Maintained local destination guide/privacy policy and verified-snippets.md establish core no-account/no-server-copy-by-default scope; provider destinations follow their rules. No claim RENPHO itself is local-only. Inbound related recommendation from weight guide only; existing body unchanged. Fixed renpho_export registry entry must reach compatible collector before publishing browser asset. No measured downloads/ranking lift or new native QA claim.

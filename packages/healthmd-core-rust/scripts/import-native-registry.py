@@ -446,6 +446,8 @@ def capability_inventory(
     manifest = json.loads(CAPABILITY_MANIFEST.read_text())
     capabilities = manifest["capabilities"]
     known = set(known_capability_ids)
+    if len({item["id"] for item in capabilities}) != len(capabilities):
+        raise ValueError("duplicate product capability")
     if len(known) != len(known_capability_ids):
         raise ValueError("duplicate registry capability")
     unknown = known - {capability["id"] for capability in capabilities}
@@ -457,7 +459,7 @@ def capability_inventory(
         raise ValueError("known capabilities must preserve product-capabilities order")
     missing = metric_capability_ids - known
     if missing:
-        raise ValueError(f"metric capabilities missing from registry inventory: {sorted(missing)}")
+        raise ValueError(f"metric capabilities missing from registry inventory; new metric capability requires a reviewed registry revision: {sorted(missing)}")
     return {
         "known_capability_ids": known_capability_ids,
         "available_capability_ids_by_platform": {
@@ -473,7 +475,7 @@ def capability_inventory(
 
 
 def build_registry(
-    apple: dict[str, Any], android: dict[str, Any], known_capability_ids: list[str]
+    apple: dict[str, Any], android: dict[str, Any], known_capability_ids: list[str] | None = None
 ) -> dict[str, Any]:
     ledger = parse_frozen_crosswalk()
     apple_by_id = {metric["selection_id"]: metric for metric in apple["metrics"]}
@@ -634,13 +636,24 @@ def build_registry(
                     }
                 )
 
+    capability_baseline = json.loads(CAPABILITY_BASELINE.read_text())
+    if (capability_baseline["schema"] != "healthmd.metric_registry_capabilities"
+            or capability_baseline["schema_version"] != 1
+            or capability_baseline["registry_version"] != 1):
+        raise ValueError("Unsupported registry capability baseline")
+    baseline_ids = capability_baseline["capability_ids"]
+    if known_capability_ids is None:
+        known_capability_ids = baseline_ids
+    inventory = capability_inventory(
+        known_capability_ids, {metric["capability_id"] for metric in semantic_metrics}
+    )
+    if known_capability_ids != baseline_ids:
+        raise ValueError("Changed capability inventory requires a reviewed registry revision")
     return {
         "schema": "healthmd.metric_registry",
         "schema_version": 1,
         "registry_version": 1,
-        **capability_inventory(
-            known_capability_ids, {metric["capability_id"] for metric in semantic_metrics}
-        ),
+        **inventory,
         "categories": category_rows,
         "metrics": semantic_metrics,
         "profiles": profiles,

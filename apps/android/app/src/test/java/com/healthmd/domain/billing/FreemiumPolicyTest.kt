@@ -8,16 +8,18 @@ import java.time.ZoneOffset
 class FreemiumPolicyTest {
 
     @Test
-    fun remainingExportsUsesFiveExportLimit() {
-        assertThat(FreemiumPolicy.remainingExports(0)).isEqualTo(5)
-        assertThat(FreemiumPolicy.remainingExports(1)).isEqualTo(4)
+    fun hardPaywallHasNoLocalFreeExportAllowance() {
+        assertThat(FreemiumPolicy.FREE_EXPORT_LIMIT).isEqualTo(0)
+        assertThat(FreemiumPolicy.remainingExports(0)).isEqualTo(0)
+        assertThat(FreemiumPolicy.remainingExports(1)).isEqualTo(0)
         assertThat(FreemiumPolicy.remainingExports(10)).isEqualTo(0)
         assertThat(FreemiumPolicy.remainingExports(11)).isEqualTo(0)
     }
 
     @Test
-    fun canExportAllowsUnlockedOrUsersWithRemainingQuota() {
-        assertThat(FreemiumPolicy.canExport(isUnlocked = false, freeExportsUsed = 4)).isTrue()
+    fun canExportRequiresAnEntitlementEvenForNewUsers() {
+        assertThat(FreemiumPolicy.canExport(isUnlocked = false, freeExportsUsed = 0)).isFalse()
+        assertThat(FreemiumPolicy.canExport(isUnlocked = false, freeExportsUsed = 4)).isFalse()
         assertThat(FreemiumPolicy.canExport(isUnlocked = false, freeExportsUsed = 10)).isFalse()
         assertThat(FreemiumPolicy.canExport(isUnlocked = true, freeExportsUsed = 10)).isTrue()
     }
@@ -29,13 +31,13 @@ class FreemiumPolicyTest {
         assertThat(FreemiumPolicy.usedCountFromLegacyRemaining(0)).isEqualTo(3)
         assertThat(FreemiumPolicy.remainingExports(
             FreemiumPolicy.usedCountFromLegacyRemaining(0)
-        )).isEqualTo(2)
+        )).isEqualTo(0)
     }
 
     @Test
-    fun guidanceOnlyFollowsFirstAndThirdFreeExports() {
-        assertThat(FreemiumPolicy.guidanceMilestone(1, false)).isEqualTo(1)
-        assertThat(FreemiumPolicy.guidanceMilestone(3, false)).isEqualTo(3)
+    fun noSoftUpgradePromptsRemain() {
+        assertThat(FreemiumPolicy.guidanceMilestone(1, false)).isNull()
+        assertThat(FreemiumPolicy.guidanceMilestone(3, false)).isNull()
         for (used in listOf(0, 2, 4, 5, 7, 10)) {
             assertThat(FreemiumPolicy.guidanceMilestone(used, false)).isNull()
         }

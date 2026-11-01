@@ -1,9 +1,14 @@
 ---
-title: "Health.md MCP 서버 및 App"
-description: "로컬 샌드박스 MCP App을 통해 Codex 또는 Claude로 범위가 지정된 Apple Health 분석을 실행하고 네이티브 차트를 렌더링하며 영속 Health.md 내보내기를 시작합니다."
+title: "Claude 및 Codex용 Apple Health MCP 서버"
+description: "Mac용 Health.md로 Apple Health를 Claude 또는 Codex에 연결하세요. iPhone 요구 사항을 확인하고 로컬 컨텍스트를 쿼리하려면 설정 안내를 따르세요."
 ---
 
 Mac용 Health.md에는 서명된 `healthmd-mcp` stdio 도우미가 포함되어 있습니다. Codex, Claude 및 기타 MCP 호스트가 열린 Mac 앱을 통해 사실 기반 Apple Health 데이터를 쿼리하고, 시각화를 렌더링하고, 암호화된 로컬 컨텍스트를 새로 고치며, 승인된 영속 내보내기를 실행할 수 있습니다.
+
+<div class="callout">
+<strong>출시된 Mac 도우미로 시작하기</strong>
+<p><a href="https://apps.apple.com/us/app/health-md/id6757763969" target="_blank" rel="noopener">App Store에서 Health.md를 다운로드</a>하여 Mac과 iPhone에 설치한 다음 <a href="/ko/docs/guides/connect-agent/">설정 안내를 따르세요</a>.</p>
+</div>
 
 ```text
 Codex / Claude / another local MCP host

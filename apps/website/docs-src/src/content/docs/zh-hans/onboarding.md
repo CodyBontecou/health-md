@@ -1,22 +1,22 @@
 ---
-title: "iPhone 新手引导"
-description: "通过隐私、Apple Health、预览、文件夹和首次导出五个步骤设置 Health.md。"
+title: "iPhone入职"
+description: "通过五个步骤设置Health.md ：隐私、 Apple Health 、预览、文件夹和首次导出。"
 ---
 
-首次在 iPhone 打开 Health.md 时会显示新手引导。它说明本地优先模式，并准备 Apple Health 与由你控制的文件夹。产品分析绝不包含健康数值、指标名称、健康日期、文件、路径、凭据或用户文本。
+当您第一次在iPhone上打开Health.md时，就会显示入职信息。它解释了本地优先模型并准备Apple Health和您控制的文件夹。产品分析从不包括健康值、指标名称、健康日期、文件、路径、凭据或用户文本。
 
-<div class="availability available"><strong>现已提供 · iPhone</strong><p>五个步骤不会阻塞流程。健康访问和文件夹都可跳过并稍后修复。购买页面不再阻挡设置。</p></div>
+<div class="availability available"> <strong>现已推出 · iPhone </strong> <p>这五个步骤不会阻碍进度。健康访问和文件夹可以跳过并稍后修复。没有访问权限的用户首先选择一个计划，开始符合条件的商店支持的试用，或恢复购买。这五个设置步骤遵循根付费专区。 </p> </div>
 
-## 五个步骤
+## 五步
 
-1. **欢迎：** 开始设置，或导入当前 Share My Setup 文件。
-2. **健康访问：** 连接 Apple Health，或稍后处理。
-3. **示例：** 查看 Markdown、JSON、CSV 或 Bases，以及可选的 Obsidian 插件链接。
-4. **文件夹：** 选择 iCloud Drive、“在我的 iPhone 上”、Obsidian 仓库或其他文件提供方。
-5. **就绪：** 修复缺失连接，并打开首次导出预览。
+1. **欢迎：** 开始安装或导入当前的共享我的安装文件。
+2. **健康访问：** 连接Apple Health或选择稍后执行。
+3. **示例：** 查看Markdown 、JSON、CSV 或 Bases 以及可选的Obsidian插件链接。
+4. **文件夹：** 选择iCloud Drive 、在我的iPhone上、 Obsidian文件库或其他文件提供程序。
+5. **准备就绪：** 修复丢失的连接并打开第一个导出预览。
 
-首次免费导出完成后，引导会提示您查看每日计划，但不会自动启用计划。 第三次导出后，可关闭的终身访问提示会显示还剩两次免费操作。免费额度为五次已完成的操作。
+订阅版没有本地自由出口限额或第一次/第三次出口提醒。符合条件的每周/每年订阅包括 7 天免费试用；终身立即充电一次，无需试用。现有的付费访问权限和之前的访问权限仍然有效。早期发布的版本可以显示之前的报价。
 
-权限、指标、文件夹、格式、命名、配置文件、计划任务和 Mac 连接都可稍后更改。
+权限、指标、文件夹、格式、名称、配置文件、日程安排和 Mac 连接都可以在以后更改。
 
-<div class="related"><a href="/zh-hans/docs/iphone-first-export/"><span>下一步</span>运行并验证首次导出。</a><a href="/zh-hans/docs/paywall/"><span>方案</span>免费操作与恢复。</a><a href="/zh-hans/docs/share-my-setup/"><span>迁移设置</span>查看 QA 状态。</a></div>
+<div class="related"> <a href="/zh-hans/docs/iphone-first-export/"> <span>接下来</span>运行并验证第一个导出。 </a> <a href="/zh-hans/docs/paywall/"> <span>计划</span>审查计划、试验和恢复。 </a> <a href="/zh-hans/docs/share-my-setup/"> <span>移动设置</span>查看 QA 状态。 </a> </div>

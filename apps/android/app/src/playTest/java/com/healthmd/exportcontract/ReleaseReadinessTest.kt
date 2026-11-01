@@ -22,15 +22,15 @@ class ReleaseReadinessTest {
         }.readText()
 
     @Test
-    fun appVersion_isPreparedForMyselfClaimRelease() {
+    fun appVersion_isPreparedForPaidAccessRelease() {
         val buildGradle = readRepoFile("app/build.gradle.kts")
 
-        assertTrue(buildGradle.contains("versionCode = 42"))
-        assertTrue(buildGradle.contains("versionName = \"1.9.4\""))
+        assertTrue(buildGradle.contains("versionCode = 45"))
+        assertTrue(buildGradle.contains("versionName = \"3.5.0\""))
     }
 
     @Test
-    fun playStoreReleaseNotes_describeMyselfClaimRelease() {
+    fun playStoreReleaseNotes_describePaidAccessRelease() {
         val releaseNotePaths = listOf(
             "play-console/listing/en-US/release-notes/en-US/default.txt",
             "app/src/main/play/release-notes/en-US/default.txt",
@@ -41,13 +41,14 @@ class ReleaseReadinessTest {
 
         releaseNotesByPath.forEach { (path, releaseNotes) ->
             assertTrue("Expected $path to match the canonical Play release notes", releaseNotes == canonicalReleaseNotes)
-            assertTrue(releaseNotes.contains("v1.9.4"))
-            assertTrue(releaseNotes.contains("Google Play lifetime purchasers"))
-            assertTrue(releaseNotes.contains("complimentary lifetime access to myself.md"))
-            assertTrue(releaseNotes.contains("purchase-proof disclosure"))
-            assertTrue(releaseNotes.contains("confirm the receiving account"))
-            assertTrue(releaseNotes.contains("Health and location data stay on your device"))
-            assertTrue(releaseNotes.contains("Free or grandfathered access alone does not qualify"))
+            assertTrue(releaseNotes.contains("v3.5.0"))
+            assertTrue(releaseNotes.contains("weekly or yearly subscriptions"))
+            assertTrue(releaseNotes.contains("7-day free trial when eligible"))
+            assertTrue(releaseNotes.contains("one-time Lifetime purchase"))
+            assertTrue(releaseNotes.contains("Existing Lifetime and grandfathered access is preserved"))
+            assertTrue(releaseNotes.contains("Active access is required before setup and exports"))
+            assertTrue(releaseNotes.contains("free-export allowance is retired"))
+            assertTrue("Launch notes must not promise an unapproved Lifetime price", !releaseNotes.contains("$49.99"))
             assertTrue("Play Store release notes should stay within the 500-character limit", releaseNotes.trim().length <= 500)
         }
     }
@@ -62,8 +63,8 @@ class ReleaseReadinessTest {
         val wearManifest = readRepoFile("wear/src/main/AndroidManifest.xml")
         val wearCapabilities = readRepoFile("wear/src/main/res/values/wear.xml")
 
-        assertTrue(releaseScope.contains("\"releaseVersionName\": \"1.9.4\""))
-        assertTrue(releaseScope.contains("\"versionCode\": 42"))
+        assertTrue(releaseScope.contains("\"releaseVersionName\": \"3.5.0\""))
+        assertTrue(releaseScope.contains("\"versionCode\": 45"))
         assertTrue(releaseScope.contains("\"status\": \"deferred\""))
         assertTrue(releaseScope.contains("\"published\": false"))
         assertTrue(releaseScope.contains("\"runtimeAdvertisedByPhone\": false"))

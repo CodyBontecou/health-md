@@ -19,10 +19,14 @@ import com.healthmd.domain.exportengine.artifactIdHex
 import com.healthmd.domain.exportengine.sha256Hex as artifactSha256Hex
 import com.healthmd.domain.exportengine.testPin
 import com.healthmd.domain.model.ActivityData
+import com.healthmd.domain.model.AndroidCaptureContext
+import com.healthmd.domain.model.ExportFailureReason
 import com.healthmd.domain.model.ExportFormat
 import com.healthmd.domain.model.ExportSettings
 import com.healthmd.domain.model.ExportTarget
 import com.healthmd.domain.model.HealthData
+import com.healthmd.domain.model.SleepAttributionUnavailableException
+import com.healthmd.domain.model.SleepDayAttribution
 import com.healthmd.domain.model.WriteMode
 import com.healthmd.domain.repository.HealthRepository
 import com.healthmd.domain.repository.SettingsRepository
@@ -181,7 +185,10 @@ class ScheduledFolderExportDurabilityTest {
         val restartedRepository = repository(manager, settingsRepository, store, restartedPlanner)
         val unavailableHealth = mockk<HealthRepository>()
         every { unavailableHealth.isBeforeFirstUnlock() } answers { error("resume must not read lock state") }
-        coEvery { unavailableHealth.fetchHealthDataRange(any(), any(), any()) } answers {
+        // Today's unavailable preference cannot veto committing already-captured bytes.
+        coEvery { unavailableHealth.resolveCaptureContext(any(), any()) } returns
+            AndroidCaptureContext(ZoneId.of("Asia/Kathmandu"), SleepDayAttribution.MORNING_ENDS)
+        coEvery { unavailableHealth.fetchHealthDataRange(any(), any(), any(), any(), any(), any()) } answers {
             error("resume must not capture")
         }
 
@@ -199,6 +206,8 @@ class ScheduledFolderExportDurabilityTest {
         assertThat(destination.successfulWriteCount("health/2026-03-16.json")).isEqualTo(1)
         assertThat(destination.successfulWriteCount("health/2026-03-17.json")).isEqualTo(1)
         verify(exactly = 0) { unavailableHealth.isBeforeFirstUnlock() }
+        coVerify(exactly = 0) { unavailableHealth.resolveCaptureContext(any(), any()) }
+        coVerify(exactly = 0) { unavailableHealth.fetchHealthDataRange(any(), any(), any(), any(), any(), any()) }
         directory.deleteRecursively()
     }
 
@@ -322,7 +331,10 @@ class ScheduledFolderExportDurabilityTest {
         )
         val health = mockk<HealthRepository>()
         every { health.isBeforeFirstUnlock() } returns false
-        coEvery { health.fetchHealthDataRange(any(), any(), any()) } throws
+        coEvery { health.resolveCaptureContext(any(), any()) } answers {
+            AndroidCaptureContext(firstArg(), SleepDayAttribution.NIGHT_BEGINS)
+        }
+        coEvery { health.fetchHealthDataRange(any(), any(), any(), any(), any(), any()) } throws
             kotlinx.coroutines.CancellationException("cancel before plan")
 
         val result = ExportOrchestrator(health, repository).exportDatesDurably(
@@ -339,6 +351,81 @@ class ScheduledFolderExportDurabilityTest {
         assertThat(destination.events).isEmpty()
         assertThat(store.load(OPERATION_ID)).isEqualTo(ScheduledFolderJournalLoad.Missing)
         directory.deleteRecursively()
+    }
+
+    @Test
+    fun cancellationDuringContextResolutionDetachesNewJournalWithoutCapture() = runTest {
+        val directory = temporaryDirectory("folder-journal-context-cancel")
+        val store = ScheduledFolderExportJournalStore(directory)
+        val destination = InMemoryDurableDestination()
+        val pin = testPin(ExportEngineMode.rust)
+        val settings = durableSettings(pin)
+        val snapshotJson = AndroidExportSettingsSnapshotCodec.encodeCanonical(
+            AndroidExportSettingsSnapshot.capture(settings, pin, ZoneId.of(pin.ianaTimeZone)),
+        )
+        val date = LocalDate.of(2026, 3, 15)
+        val repository = repository(
+            destination.manager,
+            settingsRepository(),
+            store,
+            LocalDailyAggregateExportPlanner { _, _ -> error("must not render") },
+        )
+        val health = mockk<HealthRepository>()
+        coEvery { health.resolveCaptureContext(any(), any()) } throws
+            kotlinx.coroutines.CancellationException("cancel before capture")
+
+        val result = ExportOrchestrator(health, repository)
+            .exportDatesDurably(listOf(date), settings, OPERATION_ID, snapshotJson)
+
+        assertThat(result.wasCancelled).isTrue()
+        assertThat(result.successCount).isEqualTo(0)
+        assertThat(result.retryFolderOperationIds).isEmpty()
+        assertThat(result.freshCaptureRetryDates).containsExactly(date)
+        assertThat(destination.events).isEmpty()
+        assertThat(store.load(OPERATION_ID)).isEqualTo(ScheduledFolderJournalLoad.Missing)
+        verify(exactly = 0) { health.isBeforeFirstUnlock() }
+        coVerify(exactly = 0) { health.fetchHealthDataRange(any(), any(), any(), any(), any(), any()) }
+        directory.deleteRecursively()
+    }
+
+    @Test
+    fun captureContextFailuresFinalizeNewJournalWithoutCaptureOrDestinationWrites() = runTest {
+        for (failure in listOf(SleepAttributionUnavailableException(), java.io.IOException("preferences unavailable"))) {
+            val directory = temporaryDirectory("folder-journal-context-unavailable")
+            val store = ScheduledFolderExportJournalStore(directory)
+            val destination = InMemoryDurableDestination()
+            val pin = testPin(ExportEngineMode.rust)
+            val settings = durableSettings(pin)
+            val snapshotJson = AndroidExportSettingsSnapshotCodec.encodeCanonical(
+                AndroidExportSettingsSnapshot.capture(settings, pin, ZoneId.of(pin.ianaTimeZone)),
+            )
+            val date = LocalDate.of(2026, 3, 15)
+            val repository = repository(
+                destination.manager,
+                settingsRepository(),
+                store,
+                LocalDailyAggregateExportPlanner { _, _ -> error("must not render") },
+            )
+            val health = mockk<HealthRepository>()
+            coEvery { health.resolveCaptureContext(any(), any()) } throws failure
+
+            val result = ExportOrchestrator(health, repository)
+                .exportDatesDurably(listOf(date), settings, OPERATION_ID, snapshotJson)
+
+            assertThat(result.isFailure).isTrue()
+            assertThat(result.failedDateDetails.single().reason).isEqualTo(ExportFailureReason.UNKNOWN)
+            // Durable capture failures persist only the bounded reason, never exception text.
+            assertThat(result.failedDateDetails.single().errorDetails).isNull()
+            assertThat(result.retryFolderOperationIds).isEmpty()
+            assertThat(result.freshCaptureRetryDates).containsExactly(date)
+            assertThat(destination.events).isEmpty()
+            val loaded = store.load(OPERATION_ID) as ScheduledFolderJournalLoad.Found
+            assertThat(loaded.journal.phase).isEqualTo(ScheduledFolderJournalPhase.READY)
+            assertThat(loaded.journal.days).isEmpty()
+            verify(exactly = 0) { health.isBeforeFirstUnlock() }
+            coVerify(exactly = 0) { health.fetchHealthDataRange(any(), any(), any(), any(), any(), any()) }
+            directory.deleteRecursively()
+        }
     }
 
     @Test
@@ -482,6 +569,58 @@ class ScheduledFolderExportDurabilityTest {
         directory.deleteRecursively()
     }
 
+    @Test
+    fun capturingMorningJournalReopensWithItsAcceptedSourceAndFrozenSnapshot() = runTest {
+        val library = System.getenv("HEALTHMD_HOST_CORE_LIBRARY")
+        org.junit.Assume.assumeTrue(!library.isNullOrBlank())
+        System.setProperty("uniffi.component.healthmd_core_uniffi.libraryOverride", library!!)
+        val root = temporaryDirectory("morning-source-capturing")
+        try {
+            val directory = File(root, "journals")
+            val destination = InMemoryDurableDestination()
+            val outputSettings = settingsRepository()
+            val context = AndroidCaptureContext(ZoneId.of("UTC"), SleepDayAttribution.MORNING_ENDS)
+            val authority = com.healthmd.domain.model.HealthProviderCaptureAuthority(selectedProviderId = "health_connect",
+                providerIds = listOf("health_connect"), connectionIds = emptyMap())
+            val settings = ExportSettings(exportFormat = ExportFormat.JSON, exportFormats = setOf(ExportFormat.JSON),
+                executionSleepCaptureContext = context, executionSleepCaptureAuthorityIsFrozen = true,
+                executionProviderCaptureAuthority = authority, executionProviderCaptureAuthorityIsFrozen = true)
+            val pin = requireNotNull(com.healthmd.domain.exportengine.ExportEnginePinPlanner()
+                .forScheduledExport(settings, ExportTarget.DEVICE_FOLDER, context.zoneId))
+            val accepted = settings.copy(executionEnginePin = pin, executionEngineAuthorityIsFrozen = true)
+            val snapshot = AndroidExportSettingsSnapshot.capture(accepted, pin, context.zoneId)
+            val snapshotFile = File(root, "snapshot.json")
+            snapshotFile.writeText(AndroidExportSettingsSnapshotCodec.encodeCanonical(snapshot))
+            fun output(store: ScheduledFolderExportJournalStore) = ExportRepositoryImpl(destination.manager, MarkdownExporter(),
+                JsonExporter(), CsvExporter(), ObsidianBasesExporter(), outputSettings, store)
+            val day = LocalDate.of(2026, 3, 15)
+            val store = ScheduledFolderExportJournalStore(directory)
+            assertThat(output(store).beginDurableScheduledFolderOperation(OPERATION_ID, listOf(day), accepted,
+                snapshotFile.readText(), false)).isEqualTo(com.healthmd.domain.repository.DurableScheduledFolderOperationStart.New)
+            assertThat((store.load(OPERATION_ID) as ScheduledFolderJournalLoad.Found).journal.phase)
+                .isEqualTo(ScheduledFolderJournalPhase.CAPTURING)
+            val decoded = AndroidExportSettingsSnapshotCodec.decode(snapshotFile.readText())
+            val restored = decoded.restoreOnto(ExportSettings()).copy(executionEnginePin = decoded.enginePin)
+            val live = mockk<SettingsRepository>()
+            coEvery { live.getSelectedHealthProviderId() } returns "whoop"
+            val sdk = mockk<com.healthmd.data.health.HealthConnectManager>()
+            every { sdk.isBeforeFirstUnlock() } returns false
+            coEvery { sdk.fetchHealthDataRange(any(), any(), any(), any(), any(), any()) } answers {
+                firstArg<List<LocalDate>>().map { HealthData(it, activity = ActivityData(steps = 99)) }
+            }
+            val source = com.healthmd.data.health.HealthRepositoryImpl(com.healthmd.data.health.HealthProviderRegistry(
+                com.healthmd.data.health.HealthConnectDataProvider(sdk)), live)
+            val result = ExportOrchestrator(source, output(ScheduledFolderExportJournalStore(directory)))
+                .exportDatesDurably(listOf(day), restored, OPERATION_ID, snapshotFile.readText(), requireExistingJournal = true)
+            assertThat(result.isFullSuccess).isTrue()
+            coVerify(exactly = 1) { sdk.fetchHealthDataRange(any(), any(), any(), any(), any(), any()) }
+            val file = destination.manager.inspectDurableFile(FOLDER_URI, "health/$day.json") as FileExportManager.DurableFileInspection.Found
+            assertThat(String(file.content, Charsets.UTF_8)).contains("morning_ends")
+            assertThat(String(file.content, Charsets.UTF_8)).doesNotContain("providerCaptureAuthority")
+            assertThat(snapshotFile.readText()).isEqualTo(AndroidExportSettingsSnapshotCodec.encodeCanonical(decoded))
+        } finally { root.deleteRecursively() }
+    }
+
     private fun repository(
         manager: FileExportManager,
         settingsRepository: SettingsRepository,
@@ -506,7 +645,10 @@ class ScheduledFolderExportDurabilityTest {
     private fun healthRepository(dates: List<LocalDate>): HealthRepository =
         mockk<HealthRepository>().also { repository ->
             every { repository.isBeforeFirstUnlock() } returns false
-            coEvery { repository.fetchHealthDataRange(any(), any(), any()) } answers {
+            coEvery { repository.resolveCaptureContext(any(), any()) } answers {
+                AndroidCaptureContext(firstArg(), SleepDayAttribution.NIGHT_BEGINS)
+            }
+            coEvery { repository.fetchHealthDataRange(any(), any(), any(), any(), any(), any()) } answers {
                 firstArg<List<LocalDate>>().map { date ->
                     HealthData(date = date, activity = ActivityData(steps = 1_234))
                 }

@@ -69,21 +69,28 @@ struct HealthHistoryExecutionSelection: Equatable {
     let target: ExportTargetSelection
     let preset: ExportDateRangePreset
     let localDestinationURL: URL?
+    let sleepDayAttribution: SleepDayAttribution
 
     init(scope: HealthHistoryScope, settings: ExportSettingsSnapshot, target: ExportTargetSelection,
-         preset: ExportDateRangePreset, localDestinationURL: URL? = nil) {
+         preset: ExportDateRangePreset, localDestinationURL: URL? = nil,
+         sleepDayAttribution: SleepDayAttribution = .nightBegins) {
         self.scope = scope
         self.settings = settings
         self.target = target
         self.preset = preset
         self.localDestinationURL = localDestinationURL
+        self.sleepDayAttribution = sleepDayAttribution
     }
 
-    /// Use the existing request-scoped reconstruction without repinning engines,
-    /// replaying UI preferences or substituting a later selection during capture.
+    /// This selection starts new work after history assessment; it is not a
+    /// persisted operation. Preserve its options and sleep choice, then let the
+    /// owning export path admit and freeze renderer authority before capture.
     func makeCaptureSettings() -> AdvancedExportSettings {
-        let frozen = settings.makeAdvancedExportSettings()
-        frozen.exportTimeZoneOverride = TimeZone(identifier: scope.timeZoneIdentifier) ?? TimeZone(secondsFromGMT: 0)
+        let frozen = settings.makeAdvancedExportSettings(forNewConfiguration: true)
+        let timeZone = TimeZone(identifier: scope.timeZoneIdentifier) ?? TimeZone(secondsFromGMT: 0)!
+        frozen.exportTimeZoneOverride = timeZone
+        frozen.executionSleepCaptureContext = AppleSleepCaptureContext(
+            timeZone: timeZone, sleepDayAttribution: sleepDayAttribution)
         return frozen
     }
 }

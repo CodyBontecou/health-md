@@ -14,7 +14,7 @@ description: "授权访问 Apple Health，选择“文件”目标位置，预�
 
 您需要：
 
-- 在包含 Apple Health 数据的 iPhone 上安装 Health.md；
+- 在包含 Apple Health 数据的 iPhone 上安装 [App Store 中的 Health.md](https://apps.apple.com/app/health-md/id6757763969)；
 - 授予至少一个 Apple Health 类别的读取权限；
 - 一个可写入的“文件”目标位置，例如 iCloud Drive、“我的 iPhone”或 Obsidian 知识库。
 

@@ -311,6 +311,20 @@ nonisolated enum ConnectedTransferFile {
         }
     }
 
+    /// Opens the accepted source without following a replacement leaf or hard link.
+    static func openReadHandle(_ file: ConnectedTransferPreparedFile) throws -> FileHandle {
+        let descriptor = Darwin.open(file.url.path, O_RDONLY | O_NOFOLLOW | O_CLOEXEC)
+        guard descriptor >= 0 else { throw CocoaError(.fileReadNoSuchFile) }
+        var metadata = stat()
+        guard Darwin.fstat(descriptor, &metadata) == 0,
+              metadata.st_mode & S_IFMT == S_IFREG, metadata.st_nlink == 1,
+              metadata.st_size == file.totalBytes else {
+            Darwin.close(descriptor)
+            throw CocoaError(.fileReadCorruptFile)
+        }
+        return FileHandle(fileDescriptor: descriptor, closeOnDealloc: true)
+    }
+
     static func inspect(_ url: URL) throws -> ConnectedTransferPreparedFile {
         let descriptor = Darwin.open(url.path, O_RDONLY | O_NOFOLLOW | O_CLOEXEC)
         guard descriptor >= 0 else { throw CocoaError(.fileReadNoSuchFile) }

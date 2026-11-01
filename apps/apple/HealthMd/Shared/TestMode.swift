@@ -111,6 +111,33 @@ enum TestMode {
         env("UITEST_HEALTHKIT_EXPORT_PREVIEW_FIXTURES") == "true"
     }
 
+    /// Explicit synthetic QA configuration; existing preview journeys retain Lossless + range.
+    static var healthKitExportPreviewDetailPolicy: AppleExportDetailPolicy {
+        switch env("UITEST_HEALTHKIT_EXPORT_PREVIEW_DETAIL_POLICY") {
+        case "summary": .summary
+        case "detailed_time_series": .detailedTimeSeries
+        case "archive_only": .archiveOnly
+        default: .lossless
+        }
+    }
+
+    static var healthKitExportPreviewFormats: Set<ExportFormat> {
+        env("UITEST_HEALTHKIT_EXPORT_PREVIEW_FORMATS") == "all" ? Set(ExportFormat.allCases) : [.markdown]
+    }
+
+    static var healthKitExportPreviewPartialCapture: Bool {
+        useHealthKitExportPreviewFixtures && env("UITEST_HEALTHKIT_EXPORT_PREVIEW_PARTIAL_CAPTURE") == "true"
+    }
+
+    /// Explicit synthetic large-source scenario; never reads or creates HealthKit records.
+    static var healthKitExportPreviewLargeArchive: Bool {
+        useHealthKitExportPreviewFixtures && env("UITEST_HEALTHKIT_EXPORT_PREVIEW_LARGE_ARCHIVE") == "true"
+    }
+
+    static var healthKitExportPreviewRangeSummary: Bool {
+        env("UITEST_HEALTHKIT_EXPORT_PREVIEW_RANGE_SUMMARY") != "false"
+    }
+
     /// Whether UI-test launch should start with every export format deselected.
     static var noExportFormats: Bool {
         env("UITEST_NO_EXPORT_FORMATS") == "true"
@@ -134,6 +161,12 @@ enum TestMode {
     // MARK: - Private
 
     private static func env(_ key: String) -> String? {
-        ProcessInfo.processInfo.environment[key]
+        if let value = ProcessInfo.processInfo.environment[key] { return value }
+        // Argent launches use arguments; XCTest continues to supply environment values.
+        // Read this fallback only in explicit UI-test mode, never from persisted defaults.
+        guard isUITesting else { return nil }
+        let arguments = ProcessInfo.processInfo.arguments
+        guard let index = arguments.firstIndex(of: "-" + key), index + 1 < arguments.count else { return nil }
+        return arguments[index + 1]
     }
 }

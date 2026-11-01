@@ -403,6 +403,42 @@ final class ScheduledExportCoordinatorTests: XCTestCase {
                        "A new occurrence must use the edited saved profile")
     }
 
+    @MainActor
+    func testProfileAdmissionHookFreezesNewOccurrenceButNeverRebindsPendingWork() async throws {
+        let fire = date(year: 2026, month: 5, day: 18, hour: 8)
+        let store = InMemoryPendingExportStore()
+        let coordinator = makeCoordinator(store: store, scheduler: InspectableExportNotificationScheduler(), now: fire)
+        let original = makeFrozenSnapshot(pin: try makeSyntheticAppleExportEnginePin())
+        var profile = ScheduledExportCoordinator.ScheduledProfileRequestContext(profileID: UUID(), profileName: "Saved",
+            target: .localIPhoneFolder, settings: original)
+        var connection = UUID()
+        var calls = 0
+        coordinator.makeProfileSettingsSnapshot = { accepted in
+            calls += 1
+            var snapshot = accepted.settings
+            snapshot.externalProviderCaptureAuthority = ExternalProviderCaptureAuthority(connections: ["whoop": connection])
+            snapshot.sleepCaptureContext = AppleSleepCaptureContext.pinned.wrappedValue
+            XCTAssertEqual(snapshot.sleepCaptureContext?.calendarTimeZoneIdentifier, original.calendarTimeZoneIdentifier)
+            return snapshot
+        }
+        let schedule = ExportSchedule(isEnabled: true)
+        let first = try await coordinator.preparePendingScheduledExport(schedule: schedule, fireDate: fire, profile: profile)
+        let firstAuthority = first.settingsSnapshot?.externalProviderCaptureAuthority
+        XCTAssertNotNil(firstAuthority)
+        connection = UUID()
+        profile = ScheduledExportCoordinator.ScheduledProfileRequestContext(profileID: profile.profileID, profileName: "Edited",
+            target: profile.target, settings: original)
+        let retry = try await coordinator.preparePendingScheduledExport(schedule: schedule, fireDate: fire, profile: profile)
+        XCTAssertEqual(retry, first)
+        XCTAssertEqual(calls, 1)
+        let next = try await coordinator.preparePendingScheduledExport(schedule: schedule,
+            fireDate: fire.addingTimeInterval(86400), profile: profile)
+        XCTAssertEqual(calls, 2)
+        XCTAssertNotEqual(next.settingsSnapshot?.externalProviderCaptureAuthority, firstAuthority)
+        XCTAssertEqual(first.settingsSnapshot?.appleExportEnginePin, original.appleExportEnginePin)
+        XCTAssertNil(original.externalProviderCaptureAuthority)
+    }
+
     private func makeCoordinator(
         store: InMemoryPendingExportStore,
         scheduler: InspectableExportNotificationScheduler,

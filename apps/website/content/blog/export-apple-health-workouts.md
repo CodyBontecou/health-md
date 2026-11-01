@@ -8,7 +8,7 @@ category: "Workflow guide"
 related:
   - export-apple-health-steps-data
   - export-apple-health-heart-rate
-  - apple-health-to-excel
+  - export-strava-data
 draft: false
 verified: "2026-10-25"
 verified_by: "Codex (agent)"

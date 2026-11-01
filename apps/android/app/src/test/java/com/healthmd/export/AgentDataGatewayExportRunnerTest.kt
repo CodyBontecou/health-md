@@ -262,12 +262,18 @@ class AgentDataGatewayExportRunnerTest {
     @Test
     fun previewRendersWithoutContactingTheGateway() = runTest {
         val runner = runner(mapOf(day to HealthData(day, activity = ActivityData(steps = 100))))
+        val acceptedContext = com.healthmd.domain.model.AndroidCaptureContext(
+            java.time.ZoneId.of("Asia/Kathmandu"), com.healthmd.domain.model.SleepDayAttribution.NIGHT_BEGINS)
 
-        val preview = runner.previewDates(listOf(day), localSettings())
+        val preview = runner.previewDates(listOf(day), localSettings().copy(
+            executionSleepCaptureContext = acceptedContext, executionSleepCaptureAuthorityIsFrozen = true))
 
         assertThat(preview.previewedDateCount).isEqualTo(1)
         assertThat(preview.days.single().files.single().relativePath)
             .isEqualTo(localSettings().aggregateRelativePath(day, com.healthmd.domain.model.ExportFormat.JSON))
         assertThat(server.requestCount).isEqualTo(0)
+        assertThat(preview.sleepWindow?.captureContext).isEqualTo(acceptedContext)
+        assertThat(preview.sleepWindow?.startDate).isEqualTo(day)
+        assertThat(preview.sleepWindow?.endDate).isEqualTo(day)
     }
 }

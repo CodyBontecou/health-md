@@ -1,11 +1,14 @@
 #if os(iOS)
 import AuthenticationServices
 import CryptoKit
+import HealthKit
 import XCTest
 @testable import HealthMd
 
 @MainActor
 final class ExternalIntegrationManagerTests: XCTestCase {
+    // Same observation-lifetime retention used by export/scheduler tests; see lifecycle-audit.md.
+    private static var retainedRuntime: [AnyObject] = []
     private var session: URLSession!
     private var defaults: UserDefaults!
     private var suiteName: String!
@@ -348,7 +351,7 @@ final class ExternalIntegrationManagerTests: XCTestCase {
         XCTAssertLessThanOrEqual(maximumActive, 4)
     }
 
-    func testMultiDayExportActionCachesTokenAndPersistsSuccessOnce() async throws {
+    func testMultiDayExportActionChecksLiveAuthorityAndPersistsSuccessOnce() async throws {
         let token = ExternalIntegrationToken(
             accessToken: "access",
             refreshToken: "refresh",
@@ -367,7 +370,7 @@ final class ExternalIntegrationManagerTests: XCTestCase {
         _ = await manager.fetchDailyRecords(for: Self.day(2026, 7, 12))
         manager.endExportAction()
 
-        XCTAssertEqual(secureStore.tokenReadCount, 0)
+        XCTAssertGreaterThan(secureStore.tokenReadCount, 0, "Authority checks must observe other token-store instances")
         XCTAssertEqual(secureStore.accountWriteCount, 1)
         XCTAssertNotNil(tokenStore.accounts[.whoop]?.lastSuccessfulExportAt)
     }
@@ -749,6 +752,510 @@ final class ExternalIntegrationManagerTests: XCTestCase {
         ))
     }
 
+    func testCaptureOperationDoesNotAdoptLaterConnection() async throws {
+        let manager = makeManager { url in
+            let state = try XCTUnwrap(URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems?.first { $0.name == "state" }?.value)
+            return URL(string: "healthmd://oauth/callback?code=code&state=\(state)")!
+        }
+        let accepted = manager.forCaptureOperation()
+        var apiCalls = 0
+        ExternalIntegrationURLProtocolStub.setHandler { request in
+            if request.url?.path == "/v1/oauth/authorize-url" { return try Self.authorizationResponse(request) }
+            if request.url?.host == "broker.example.com" {
+                return Self.response(request, status: 200, json: ["access_token": "new-account", "refresh_token": "new-refresh"])
+            }
+            apiCalls += 1
+            return Self.response(request, status: 200, json: ["records": []])
+        }
+        await manager.connect(provider: .whoop)
+        XCTAssertTrue(manager.isConnected(.whoop))
+        XCTAssertEqual(accepted.connectedProviderCount, 0)
+        let oldRecords = await accepted.fetchDailyRecords(for: Self.day(2026, 7, 12))
+        XCTAssertTrue(oldRecords.isEmpty)
+        XCTAssertEqual(apiCalls, 0)
+        let next = manager.forCaptureOperation()
+        XCTAssertEqual(next.connectedProviderCount, 1)
+        let records = await next.fetchDailyRecords(for: Self.day(2026, 7, 12))
+        XCTAssertEqual(records.count, 1)
+        XCTAssertFalse(records[0].payloads.isEmpty)
+        XCTAssertGreaterThan(apiCalls, 0)
+    }
+
+    func testCaptureOperationRejectsReplacementAndDoesNotAcknowledgeItsAccount() async throws {
+        try tokenStore.save(token: ExternalIntegrationToken(accessToken: "original"), provider: .whoop)
+        let manager = makeManager()
+        let accepted = manager.forCaptureOperation()
+        ExternalIntegrationURLProtocolStub.setHandler { request in
+            Self.response(request, status: 200, json: ["records": []])
+        }
+        accepted.beginExportAction()
+        let first = await accepted.fetchDailyRecords(for: Self.day(2026, 7, 12))
+        XCTAssertFalse(try XCTUnwrap(first.first).payloads.isEmpty)
+        try tokenStore.save(token: ExternalIntegrationToken(accessToken: "replacement"), provider: .whoop)
+        accepted.endExportAction(succeeded: true)
+        XCTAssertNil(tokenStore.accounts[.whoop]?.lastSuccessfulExportAt,
+                     "Old accepted bytes cannot acknowledge a newly connected account")
+        var apiCalls = 0
+        ExternalIntegrationURLProtocolStub.setHandler { request in
+            apiCalls += 1
+            XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer replacement")
+            return Self.response(request, status: 200, json: ["records": []])
+        }
+        let rejected = await accepted.fetchDailyRecords(for: Self.day(2026, 7, 13))
+        XCTAssertTrue(try XCTUnwrap(rejected.first).payloads.isEmpty)
+        XCTAssertFalse(try XCTUnwrap(rejected.first).warnings.isEmpty)
+        XCTAssertEqual(apiCalls, 0)
+        let next = await manager.forCaptureOperation().fetchDailyRecords(for: Self.day(2026, 7, 13))
+        XCTAssertFalse(try XCTUnwrap(next.first).payloads.isEmpty)
+        XCTAssertGreaterThan(apiCalls, 0)
+    }
+
+    func testCaptureOperationDiscardsOldAccountResponseAfterAwait() async throws {
+        try tokenStore.save(token: ExternalIntegrationToken(accessToken: "original"), provider: .whoop)
+        let manager = makeManager()
+        let accepted = manager.forCaptureOperation()
+        let started = expectation(description: "Accepted account query reached provider")
+        let release = DispatchSemaphore(value: 0)
+        let firstRequest = ExternalConnectionFirstRequest()
+        ExternalIntegrationURLProtocolStub.setHandler { request in
+            XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer original")
+            if firstRequest.take() {
+                started.fulfill()
+                guard release.wait(timeout: .now() + 10) == .success else { throw URLError(.timedOut) }
+            }
+            return Self.response(request, status: 200, json: ["records": []])
+        }
+        accepted.beginExportAction()
+        let pending = Task { await accepted.fetchDailyRecords(for: Self.day(2026, 7, 12)) }
+        await fulfillment(of: [started], timeout: 5)
+        try tokenStore.save(token: ExternalIntegrationToken(accessToken: "replacement"), provider: .whoop)
+        release.signal()
+        let records = await pending.value
+        accepted.endExportAction(succeeded: true)
+        let record = try XCTUnwrap(records.first)
+        XCTAssertTrue(record.payloads.isEmpty, "Late bytes from the old account cannot enter this capture")
+        XCTAssertEqual(record.warnings, [ExternalIntegrationTokenStoreError.connectionChanged.localizedDescription])
+        XCTAssertNil(tokenStore.accounts[.whoop]?.lastSuccessfulExportAt)
+    }
+
+    func testStaleRefreshCannotOverwriteReplacementOrJoinItsRefresh() async throws {
+        let original = ExternalIntegrationToken(accessToken: "original", refreshToken: "original-refresh")
+        try tokenStore.save(token: original, provider: .whoop)
+        let manager = makeManager()
+        let started = expectation(description: "Original refresh reached broker")
+        let release = DispatchSemaphore(value: 0)
+        ExternalIntegrationURLProtocolStub.setHandler { request in
+            let body = try XCTUnwrap(JSONSerialization.jsonObject(with: request.externalIntegrationHTTPBody()) as? [String: Any])
+            let refresh = try XCTUnwrap(body["refresh_token"] as? String)
+            if refresh == "original-refresh" {
+                started.fulfill()
+                guard release.wait(timeout: .now() + 10) == .success else { throw URLError(.timedOut) }
+            }
+            return Self.response(request, status: 200, json: [
+                "access_token": refresh + "-rotated", "refresh_token": refresh + "-next", "expires_in": 3600
+            ])
+        }
+        let old = Task { try await manager.refreshToken(for: .whoop, replacing: original) }
+        await fulfillment(of: [started], timeout: 5)
+        let replacement = ExternalIntegrationToken(accessToken: "replacement", refreshToken: "replacement-refresh")
+        try tokenStore.save(token: replacement, provider: .whoop)
+        let fresh = Task { try await manager.refreshToken(for: .whoop, replacing: replacement) }
+        // Give the new MainActor task a chance to look up the in-flight table.
+        await Task.yield()
+        release.signal()
+        do {
+            _ = try await old.value
+            XCTFail("A stale refresh must not commit into the replacement connection")
+        } catch {
+            XCTAssertEqual(error as? ExternalIntegrationTokenStoreError, .connectionChanged)
+        }
+        let rotated = try await fresh.value
+        XCTAssertEqual(rotated.accessToken, "replacement-refresh-rotated")
+        XCTAssertEqual(tokenStore.token(for: .whoop), rotated)
+    }
+
+    func testConnectionLeaseSurvivesRotationButNotReplacementOrDisconnect() throws {
+        let original = ExternalIntegrationToken(accessToken: "original", refreshToken: "refresh")
+        try tokenStore.save(token: original, provider: .whoop)
+        let first = try XCTUnwrap(tokenStore.connectionID(for: .whoop))
+        let rotated = ExternalIntegrationToken(accessToken: "rotated", refreshToken: "next")
+        try tokenStore.saveRotatedToken(rotated, provider: .whoop, replacingConnection: first)
+        XCTAssertEqual(tokenStore.connectionID(for: .whoop), first)
+        try tokenStore.save(token: original, provider: .whoop)
+        XCTAssertNotEqual(tokenStore.connectionID(for: .whoop), first)
+        XCTAssertThrowsError(try tokenStore.saveRotatedToken(rotated, provider: .whoop, replacingConnection: first))
+        XCTAssertEqual(tokenStore.token(for: .whoop), original)
+        let replacement = try XCTUnwrap(tokenStore.connectionID(for: .whoop))
+        try tokenStore.disconnect(provider: .whoop)
+        XCTAssertNil(tokenStore.connectionID(for: .whoop))
+        XCTAssertThrowsError(try tokenStore.saveRotatedToken(rotated, provider: .whoop, replacingConnection: replacement))
+        XCTAssertNil(tokenStore.token(for: .whoop))
+        XCTAssertNil(tokenStore.accounts[.whoop])
+    }
+
+    func testConnectionAuthoritySurvivesStoreReloadAndRejectsOtherStoreReplacement() async throws {
+        let original = ExternalIntegrationToken(accessToken: "original", refreshToken: "original-refresh")
+        try tokenStore.save(token: original, provider: .whoop)
+        let id = try XCTUnwrap(tokenStore.connectionID(for: .whoop))
+        let other = ExternalIntegrationTokenStore(keychain: secureStore, userDefaults: defaults)
+        XCTAssertEqual(other.connectionID(for: .whoop), id, "Reload cannot create a different connection authority")
+        let manager = makeManager()
+        let accepted = manager.forCaptureOperation()
+        let replacement = ExternalIntegrationToken(accessToken: "replacement", refreshToken: "replacement-refresh")
+        try other.save(token: replacement, provider: .whoop)
+        var apiCalls = 0
+        ExternalIntegrationURLProtocolStub.setHandler { request in
+            apiCalls += 1
+            return Self.response(request, status: 200, json: ["records": []])
+        }
+        let records = await accepted.fetchDailyRecords(for: Self.day(2026, 7, 12))
+        XCTAssertEqual(apiCalls, 0, "An accepted old account cannot query after another store replaces it")
+        XCTAssertTrue(try XCTUnwrap(records.first).payloads.isEmpty)
+        XCTAssertFalse(try XCTUnwrap(records.first).warnings.isEmpty)
+        XCTAssertNotEqual(tokenStore.connectionID(for: .whoop), id)
+        XCTAssertEqual(tokenStore.token(for: .whoop), replacement)
+    }
+
+    func testOtherStoreRotationKeepsConnectionButRefreshesCachedCredential() throws {
+        try tokenStore.save(token: ExternalIntegrationToken(accessToken: "original", refreshToken: "first"), provider: .whoop)
+        let id = try XCTUnwrap(tokenStore.connectionID(for: .whoop))
+        let other = ExternalIntegrationTokenStore(keychain: secureStore, userDefaults: defaults)
+        let rotated = ExternalIntegrationToken(accessToken: "rotated", refreshToken: "next")
+        try other.saveRotatedToken(rotated, provider: .whoop, replacingConnection: id)
+        XCTAssertEqual(tokenStore.connectionID(for: .whoop), id)
+        XCTAssertEqual(tokenStore.token(for: .whoop), rotated)
+    }
+
+    func testStaleStoreCannotRotateOverOtherStoreReplacement() throws {
+        try tokenStore.save(token: ExternalIntegrationToken(accessToken: "original", refreshToken: "first"), provider: .whoop)
+        let id = try XCTUnwrap(tokenStore.connectionID(for: .whoop))
+        let other = ExternalIntegrationTokenStore(keychain: secureStore, userDefaults: defaults)
+        let replacement = ExternalIntegrationToken(accessToken: "replacement", refreshToken: "replacement-refresh")
+        try other.save(token: replacement, provider: .whoop)
+        XCTAssertThrowsError(try tokenStore.saveRotatedToken(
+            ExternalIntegrationToken(accessToken: "stale-rotated", refreshToken: "stale-next"),
+            provider: .whoop, replacingConnection: id)) { error in
+                XCTAssertEqual(error as? ExternalIntegrationTokenStoreError, .connectionChanged)
+            }
+        XCTAssertEqual(other.token(for: .whoop), replacement)
+        XCTAssertEqual(ExternalIntegrationTokenStore(keychain: secureStore, userDefaults: defaults).token(for: .whoop), replacement)
+    }
+
+    private func seedLegacyConnection() throws -> ExternalIntegrationToken {
+        let token = ExternalIntegrationToken(accessToken: "legacy-access", refreshToken: "legacy-refresh", scope: "offline read:cycles")
+        let account = ExternalIntegrationAccount(provider: .whoop, connectedAt: Date(timeIntervalSince1970: 42),
+            lastSuccessfulExportAt: nil, scope: token.scope, providerUserID: nil)
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        try secureStore.writeStringOrThrow(key: "externalIntegrations.token.whoop", value: String(decoding: encoder.encode(token), as: UTF8.self))
+        try secureStore.writeStringOrThrow(key: "externalIntegrations.account.whoop", value: String(decoding: encoder.encode(account), as: UTF8.self))
+        defaults.set(["whoop"], forKey: "externalIntegrations.connectedProviders")
+        return token
+    }
+
+    func testLegacyConnectionMigratesOnceAndKeepsOldTokenDecoderCompatibility() throws {
+        let legacy = try seedLegacyConnection()
+        let migrated = ExternalIntegrationTokenStore(keychain: secureStore, userDefaults: defaults)
+        let id = try XCTUnwrap(migrated.connectionID(for: .whoop))
+        XCTAssertEqual(migrated.accounts[.whoop]?.connectionID, id)
+        XCTAssertEqual(migrated.accounts[.whoop]?.connectedAt, Date(timeIntervalSince1970: 42))
+        let raw = try XCTUnwrap(secureStore.readString(key: "externalIntegrations.token.whoop"))
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        XCTAssertEqual(try decoder.decode(ExternalIntegrationToken.self, from: Data(raw.utf8)), legacy)
+        let writes = secureStore.tokenWriteCount
+        let reloaded = ExternalIntegrationTokenStore(keychain: secureStore, userDefaults: defaults)
+        XCTAssertEqual(reloaded.connectionID(for: .whoop), id)
+        XCTAssertEqual(secureStore.tokenWriteCount, writes, "Verified bindings must not migrate again")
+    }
+
+    func testFailedLegacyMigrationRemainsExplicitlyUnavailableAndCanRepair() async throws {
+        let legacy = try seedLegacyConnection()
+        secureStore.failAccountWrites = true
+        tokenStore = ExternalIntegrationTokenStore(keychain: secureStore, userDefaults: defaults)
+        XCTAssertNil(tokenStore.connectionID(for: .whoop))
+        XCTAssertEqual(tokenStore.connectedProviders, [.whoop])
+        XCTAssertEqual(tokenStore.token(for: .whoop), legacy)
+        let manager = makeManager()
+        let acceptedUnavailable = manager.forCaptureOperation()
+        XCTAssertEqual(acceptedUnavailable.connectedProviderCount, 1)
+        var calls = 0
+        ExternalIntegrationURLProtocolStub.setHandler { request in
+            calls += 1
+            return Self.response(request, status: 200, json: ["records": []])
+        }
+        let unavailable = await acceptedUnavailable.fetchDailyRecords(for: Self.day(2026, 7, 12))
+        XCTAssertTrue(try XCTUnwrap(unavailable.first).payloads.isEmpty)
+        XCTAssertFalse(try XCTUnwrap(unavailable.first).warnings.isEmpty)
+        XCTAssertEqual(calls, 0)
+        secureStore.failAccountWrites = false
+        XCTAssertNotNil(tokenStore.connectionID(for: .whoop))
+        _ = await acceptedUnavailable.fetchDailyRecords(for: Self.day(2026, 7, 12))
+        XCTAssertEqual(calls, 0, "An unavailable accepted source cannot adopt later repaired authority")
+        let next = await manager.forCaptureOperation().fetchDailyRecords(for: Self.day(2026, 7, 12))
+        XCTAssertFalse(try XCTUnwrap(next.first).payloads.isEmpty)
+        XCTAssertGreaterThan(calls, 0)
+    }
+
+    func testUnverifiedReplacementCannotBecomeCaptureAuthority() async throws {
+        try tokenStore.save(token: ExternalIntegrationToken(accessToken: "original"), provider: .whoop)
+        let manager = makeManager()
+        let accepted = manager.forCaptureOperation()
+        secureStore.failAccountWrites = true
+        secureStore.failTokenWriteNumbers = [3]
+        XCTAssertThrowsError(try tokenStore.save(token: ExternalIntegrationToken(accessToken: "uncommitted"), provider: .whoop))
+        XCTAssertNil(tokenStore.connectionID(for: .whoop))
+        ExternalIntegrationURLProtocolStub.setHandler { _ in
+            XCTFail("Unverified replacement credentials cannot query provider data")
+            throw URLError(.badServerResponse)
+        }
+        for source in [accepted, manager.forCaptureOperation()] {
+            XCTAssertEqual(source.connectedProviderCount, 1)
+            let records = await source.fetchDailyRecords(for: Self.day(2026, 7, 12))
+            XCTAssertTrue(try XCTUnwrap(records.first).payloads.isEmpty)
+            XCTAssertFalse(try XCTUnwrap(records.first).warnings.isEmpty)
+        }
+    }
+
+    func testConnectionInventoryPreservesOtherStoresAndUnknownProviderEntries() throws {
+        defaults.set(["future-provider"], forKey: "externalIntegrations.connectedProviders")
+        let other = ExternalIntegrationTokenStore(keychain: secureStore, userDefaults: defaults)
+        try tokenStore.save(token: ExternalIntegrationToken(accessToken: "whoop"), provider: .whoop)
+        try other.save(token: ExternalIntegrationToken(accessToken: "fitbit"), provider: .fitbit)
+        XCTAssertEqual(Set(defaults.stringArray(forKey: "externalIntegrations.connectedProviders") ?? []), ["future-provider", "whoop", "fitbit"])
+        try tokenStore.disconnect(provider: .whoop)
+        XCTAssertEqual(Set(defaults.stringArray(forKey: "externalIntegrations.connectedProviders") ?? []), ["future-provider", "fitbit"])
+    }
+
+    func testLateDisconnectCannotRemoveOtherStoreReplacement() async throws {
+        try tokenStore.save(token: ExternalIntegrationToken(accessToken: "original"), provider: .whoop)
+        let manager = makeManager()
+        let started = expectation(description: "Original grant revocation started")
+        let release = DispatchSemaphore(value: 0)
+        ExternalIntegrationURLProtocolStub.setHandler { request in
+            XCTAssertEqual(request.httpMethod, "DELETE")
+            XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer original")
+            started.fulfill()
+            guard release.wait(timeout: .now() + 10) == .success else { throw URLError(.timedOut) }
+            return Self.response(request, status: 204, text: "")
+        }
+        let work = Task { await manager.disconnect(provider: .whoop) }
+        await fulfillment(of: [started], timeout: 5)
+        let other = ExternalIntegrationTokenStore(keychain: secureStore, userDefaults: defaults)
+        let replacement = ExternalIntegrationToken(accessToken: "replacement")
+        try other.save(token: replacement, provider: .whoop)
+        let id = try XCTUnwrap(other.connectionID(for: .whoop))
+        release.signal()
+        await work.value
+        XCTAssertEqual(other.token(for: .whoop), replacement)
+        XCTAssertEqual(other.connectionID(for: .whoop), id)
+        XCTAssertEqual(manager.connectionStatus?.kind, .error)
+    }
+
+    func testSerializedAuthorityRestoresAcceptedGrantAndRejectsReplacement() async throws {
+        try tokenStore.save(token: ExternalIntegrationToken(accessToken: "accepted", refreshToken: "refresh"), provider: .whoop)
+        let accepted = try XCTUnwrap(makeManager().forCaptureOperation().captureAuthority)
+        let bytes = try JSONEncoder().encode(accepted)
+        let recovered = try JSONDecoder().decode(ExternalProviderCaptureAuthority.self, from: bytes)
+        let reloaded = ExternalIntegrationTokenStore(keychain: secureStore, userDefaults: defaults)
+        let manager = ExternalIntegrationManager(tokenStore: reloaded, enabledProviders: [.whoop],
+            brokerClient: ExternalOAuthBrokerClient(baseURL: URL(string: "https://broker.example")!, clientToken: "test-client", session: session),
+            apiClient: ExternalProviderAPIClient(session: session))
+        var calls = 0
+        ExternalIntegrationURLProtocolStub.setHandler { request in
+            calls += 1
+            XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer accepted")
+            return Self.response(request, status: 200, json: ["records": []])
+        }
+        let restored = try manager.forCaptureOperation(authority: recovered)
+        _ = await restored.fetchDailyRecords(for: Self.day(2026, 7, 12))
+        XCTAssertGreaterThan(calls, 0, "Reloaded accepted connection remains usable")
+        try tokenStore.save(token: ExternalIntegrationToken(accessToken: "replacement"), provider: .whoop)
+        calls = 0
+        let afterReplacement = try manager.forCaptureOperation(authority: recovered)
+        let records = await afterReplacement.fetchDailyRecords(for: Self.day(2026, 7, 12))
+        XCTAssertEqual(calls, 0)
+        XCTAssertFalse(try XCTUnwrap(records.first).warnings.isEmpty)
+        XCTAssertEqual(afterReplacement.captureAuthority, recovered)
+    }
+
+    func testRecoveredEmptyAndUnavailableAuthorityNeverAdoptsCurrentGrant() async throws {
+        try tokenStore.save(token: ExternalIntegrationToken(accessToken: "current"), provider: .whoop)
+        var calls = 0
+        ExternalIntegrationURLProtocolStub.setHandler { request in
+            calls += 1
+            return Self.response(request, status: 200, json: ["records": []])
+        }
+        let manager = makeManager()
+        let empty = try manager.forCaptureOperation(authority: ExternalProviderCaptureAuthority(connections: [:]))
+        XCTAssertEqual(empty.connectedProviderCount, 0)
+        let none = await empty.fetchDailyRecords(for: Self.day(2026, 7, 12))
+        XCTAssertTrue(none.isEmpty)
+        let missing = ExternalProviderCaptureAuthority(connections: ["whoop": nil])
+        let restored = try manager.forCaptureOperation(authority: JSONDecoder().decode(
+            ExternalProviderCaptureAuthority.self, from: JSONEncoder().encode(missing)))
+        XCTAssertEqual(restored.connectedProviderCount, 1)
+        let unavailable = await restored.fetchDailyRecords(for: Self.day(2026, 7, 12))
+        XCTAssertFalse(try XCTUnwrap(unavailable.first).warnings.isEmpty)
+        XCTAssertEqual(calls, 0)
+        XCTAssertThrowsError(try manager.forCaptureOperation(authority:
+            ExternalProviderCaptureAuthority(connections: ["unknown-future-provider": UUID()])))
+        let future = Data(#"{"version":2,"connections":{}}"#.utf8)
+        XCTAssertThrowsError(try JSONDecoder().decode(ExternalProviderCaptureAuthority.self, from: future))
+    }
+
+    func testScheduledMorningProviderRecoveryUsesJournalGrantAcrossDailyAndRangeOutput() async throws {
+        guard ConnectedAppsFeature.isEnabled else { throw XCTSkip("Requires Connected Apps test host") }
+        let zone = try XCTUnwrap(TimeZone(identifier: "Asia/Kathmandu"))
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = zone
+        let first = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 7, day: 1)))
+        let wake = try XCTUnwrap(calendar.date(byAdding: .day, value: 1, to: first))
+        let start = try XCTUnwrap(calendar.date(bySettingHour: 10, minute: 0, second: 0, of: first))
+        let end = try XCTUnwrap(calendar.date(bySettingHour: 13, minute: 0, second: 0, of: wake))
+        for profileBased in [false, true] {
+            for range in [false, true] {
+                for mutation in ["unchanged", "rotated", "replaced", "disconnected", "late_connection"] {
+                    try tokenStore.save(token: ExternalIntegrationToken(accessToken: "accepted"), provider: .whoop)
+                    let connection = try XCTUnwrap(tokenStore.connectionID(for: .whoop))
+                    let acceptsProvider = mutation != "late_connection"
+                    if !acceptsProvider { try tokenStore.disconnect(provider: .whoop) }
+                    let settings = AdvancedExportSettings(userDefaults: defaults)
+                    Self.retainedRuntime.append(settings)
+                    settings.exportFormats = Set(ExportFormat.allCases)
+                    settings.generateRangeSummary = range
+                    settings.summaryOnlyExport = false
+                    settings.detailPolicy = .summary
+                    settings.includeDataDictionary = false
+                    settings.includeMetadata = true
+                    settings.metricSelection.enabledMetrics = ["steps", "sleep_total", "sleep_core"]
+                    let scheduler = SchedulingManager(pendingExportStore: PendingExportStore(userDefaults: defaults),
+                        initialSchedule: ExportSchedule(), persistScheduleChanges: false, systemSideEffectsEnabled: false)
+                    Self.retainedRuntime.append(scheduler)
+                    let accepting = makeManager()
+                    let sync = SyncService()
+                    Self.retainedRuntime.append(contentsOf: [accepting, sync])
+                    scheduler.configureScheduledExportDependencies(syncService: sync, externalIntegrations: accepting)
+                    let context = AppleSleepCaptureContext(timeZone: zone, sleepDayAttribution: .morningEnds)
+                    settings.executionSleepCaptureContext = context
+                    let journal = PendingExportStore(userDefaults: defaults)
+                    let request: PendingExportRequest
+                    let snapshot: ExportSettingsSnapshot
+                    if profileBased {
+                        var template = ExportSettingsSnapshot.from(settings, healthSubfolder: "ProfileHealth",
+                            appleExportEnginePin: try makeSyntheticAppleExportEnginePin(),
+                            calendarTimeZoneIdentifier: zone.identifier)
+                        template.exportFormats = [.json, .csv]
+                        let storedProfile = try JSONDecoder().decode(ExportSettingsSnapshot.self,
+                            from: JSONEncoder().encode(template))
+                        XCTAssertNil(storedProfile.sleepCaptureContext)
+                        let profile = ScheduledExportCoordinator.ScheduledProfileRequestContext(profileID: UUID(),
+                            profileName: "Morning profile", target: .localIPhoneFolder, settings: storedProfile)
+                        let fire = wake.addingTimeInterval(86400 + 8 * 3600)
+                        let coordinator = ScheduledExportCoordinator(pendingExportStore: journal,
+                            exportNotificationScheduler: InspectableExportNotificationScheduler(), calendar: calendar, now: { fire })
+                        coordinator.makeProfileSettingsSnapshot = { await scheduler.makeSettingsSnapshotForNewScheduledProfileOperation($0) }
+                        request = try await AppleSleepCaptureContext.pinned.withValue(context) {
+                            try await coordinator.preparePendingScheduledExport(
+                                schedule: ExportSchedule(isEnabled: true, frequency: .weekly, lookbackDays: 2),
+                                fireDate: fire, profile: profile)
+                        }
+                        snapshot = try XCTUnwrap(request.settingsSnapshot)
+                        XCTAssertEqual(request.dates, [first, wake])
+                        XCTAssertEqual(snapshot.exportFormats, [.json, .csv], "Saved profile formats override current live settings")
+                        XCTAssertEqual(snapshot.healthSubfolder, "ProfileHealth")
+                        XCTAssertEqual(storedProfile.appleExportEnginePin, template.appleExportEnginePin,
+                                       "Accepting a new job cannot mutate the profile template")
+                    } else {
+                        snapshot = await scheduler.makeSettingsSnapshotForNewScheduledOperation(target: .localIPhoneFolder,
+                            settings: settings, calendarTimeZone: zone)
+                        request = PendingExportRequest(dates: [first, wake], source: .scheduled,
+                            exportTarget: .localIPhoneFolder, settingsSnapshot: snapshot, calendar: calendar)
+                    }
+                    XCTAssertTrue(try XCTUnwrap(snapshot.appleExportEnginePin).isWakeDate,
+                        "Scheduled provider output must acquire its qualified Morning renderer")
+                    if acceptsProvider {
+                        XCTAssertEqual(snapshot.externalProviderCaptureAuthority?.connections["whoop"] ?? nil, connection)
+                    } else { XCTAssertEqual(snapshot.externalProviderCaptureAuthority?.connections.count, 0) }
+                    try journal.upsert(request)
+                    let recovered = try XCTUnwrap(try PendingExportStore(userDefaults: defaults).loadAll().first { $0.id == request.id })
+                    let saved = try XCTUnwrap(recovered.settingsSnapshot)
+                    XCTAssertEqual(saved, snapshot)
+                    let other = ExternalIntegrationTokenStore(keychain: secureStore, userDefaults: defaults)
+                    if !acceptsProvider {
+                        try other.save(token: ExternalIntegrationToken(accessToken: "late-connection"), provider: .whoop)
+                    } else if mutation == "rotated" {
+                        try other.saveRotatedToken(ExternalIntegrationToken(accessToken: "rotated"),
+                            provider: .whoop, replacingConnection: connection)
+                    } else if mutation == "replaced" {
+                        try other.save(token: ExternalIntegrationToken(accessToken: "replacement"), provider: .whoop)
+                    } else if mutation == "disconnected" { try other.disconnect(provider: .whoop) }
+                    var calls = 0
+                    ExternalIntegrationURLProtocolStub.setHandler { request in
+                        calls += 1
+                        XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"),
+                            "Bearer " + (mutation == "rotated" ? "rotated" : "accepted"))
+                        let cycles: [[String: Any]] = request.url?.path.contains("cycle") == true
+                            ? [["id": 1, "start": "2026-07-01T00:00:00Z", "score": ["strain": 10.0]]] : []
+                        return Self.response(request, status: 200, json: ["records": cycles])
+                    }
+                    let health = FakeHealthStore()
+                    health.querySumResult = { identifier, _ in identifier == .stepCount ? 10 : nil }
+                    health.categorySampleResults[HKCategoryTypeIdentifier.sleepAnalysis.rawValue] = [
+                        CategorySampleValue(value: HKCategoryValueSleepAnalysis.asleepCore.rawValue, startDate: start, endDate: end)
+                    ]
+                    let healthManager = HealthKitManager(store: health, userDefaults: defaults)
+                    healthManager.setSleepDayAttribution(.nightBegins)
+                    settings.exportTimeZoneOverride = TimeZone(identifier: "Europe/Berlin")
+                    let vaultDefaults = FakeUserDefaults()
+                    let root = "/tmp/ScheduledMorningProvider-" + UUID().uuidString
+                    vaultDefaults.storage["obsidianVaultBookmark"] = Data("bookmark".utf8)
+                    vaultDefaults.storage["obsidianVaultPath"] = root
+                    let resolver = FakeBookmarkResolver()
+                    resolver.resolvedURL = URL(fileURLWithPath: root)
+                    let files = FakeFileSystem()
+                    let vault = VaultManager(defaults: vaultDefaults, fileSystem: files, bookmarkResolver: resolver,
+                        identityProbe: FakeVaultFolderIdentityProbe())
+                    Self.retainedRuntime.append(vault)
+                    let reopened = ExternalIntegrationManager(tokenStore: other, enabledProviders: [.whoop],
+                        brokerClient: ExternalOAuthBrokerClient(baseURL: URL(string: "https://broker.example")!,
+                            clientToken: "test-client", session: session), apiClient: ExternalProviderAPIClient(session: session))
+                    let result = await ExportOrchestrator.exportDatesBackground(recovered.dates,
+                        healthKitManager: healthManager, vaultManager: vault, settings: settings,
+                        frozenSettingsSnapshot: saved, operationSurface: .localVaultRangeWithoutSideEffects,
+                        externalIntegrations: reopened)
+                    XCTAssertEqual(result.successCount, 2, "\(range)/\(mutation): \(result.failedDateDetails)")
+                    let sidecarCount = acceptsProvider ? 2 : 0
+                    let formats = profileBased ? 2 : 4
+                    let expectedFiles = (range ? 3 : 2) * formats + sidecarCount
+                    XCTAssertEqual(result.externalRecordFileCount, sidecarCount)
+                    XCTAssertEqual(result.totalFilesWritten, expectedFiles)
+                    XCTAssertEqual(files.files.count, expectedFiles)
+                    let unavailable = ["replaced", "disconnected"].contains(mutation)
+                    XCTAssertEqual(calls, unavailable || !acceptsProvider ? 0 : 8)
+                    let sidecars = files.files.filter { $0.key.contains("/integrations/") }
+                    XCTAssertEqual(sidecars.count, sidecarCount)
+                    for text in sidecars.values {
+                        let decoder = JSONDecoder(); decoder.dateDecodingStrategy = .iso8601
+                        let record = try decoder.decode(ExternalDailyRecord.self, from: Data(text.utf8))
+                        XCTAssertEqual(record.warnings.isEmpty, !unavailable)
+                        XCTAssertFalse(text.contains("accessToken"))
+                        XCTAssertFalse(text.contains(connection.uuidString))
+                    }
+                    let daily = try files.files.filter { $0.key.hasSuffix(".json") && !$0.key.contains("/integrations/") }
+                        .map { try XCTUnwrap(JSONSerialization.jsonObject(with: Data($0.value.utf8)) as? [String: Any]) }
+                        .filter { $0["date"] as? String != nil }
+                    XCTAssertEqual(daily.count, 2)
+                    let owned = try XCTUnwrap(daily.first { $0["sleep"] != nil })
+                    XCTAssertEqual(owned["date"] as? String, "2026-07-02")
+                    XCTAssertEqual((owned["sleep"] as? [String: Any])?["totalDuration"] as? Double, 27 * 60 * 60)
+                    XCTAssertTrue(daily.allSatisfy { $0["schema_version"] as? Int == 11 })
+                    try journal.remove(id: request.id)
+                }
+            }
+        }
+    }
+
     private func makeManager(
         authenticate: (@MainActor (URL) async throws -> URL)? = nil
     ) -> ExternalIntegrationManager {
@@ -818,6 +1325,18 @@ final class ExternalIntegrationManagerTests: XCTestCase {
             )!,
             data
         )
+    }
+}
+
+private final class ExternalConnectionFirstRequest {
+    private let lock = NSLock()
+    private var isFirst = true
+    func take() -> Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        let result = isFirst
+        isFirst = false
+        return result
     }
 }
 

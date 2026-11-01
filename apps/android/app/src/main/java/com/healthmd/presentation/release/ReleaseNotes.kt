@@ -50,8 +50,8 @@ data class AndroidReleaseNotes(
                 versionName = versionName,
                 versionKey = "$versionName+$versionCode",
                 highlights = (if (BuildConfig.FLAVOR == "play") listOf(
-                    context.getString(R.string.myself_claim_intro),
-                    context.getString(R.string.myself_claim_entry_subtitle),
+                    context.getString(R.string.paywall_plan_choices),
+                    context.getString(R.string.paywall_subscription_disclosure),
                 ) else emptyList()) + listOf(
                     context.getString(R.string.release_notes_highlight_widgets),
                     context.getString(R.string.release_notes_highlight_feedback),

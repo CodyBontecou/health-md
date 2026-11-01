@@ -161,9 +161,9 @@ struct HealthMdApp: App {
     #if DEBUG
     @StateObject private var exportPerformanceLab = IPhoneExportPerformanceLabCoordinator()
     #endif
-    private let pricingAnalyticsClient = PricingAnalyticsClient.shared
 
     init() {
+        RetiredAnalyticsCleanup.run()
         // UI-test methods reuse the installed app. Seed this UserDefaults-backed value before
         // constructing its StateObject so a prior protected journey cannot leak into the next one.
         if TestMode.isUITesting {
@@ -405,7 +405,7 @@ struct HealthMdApp: App {
 
     var body: some Scene {
         WindowGroup {
-            Group {
+            PurchaseAccessGate {
                 // The glass shell adapts to iPad, which brings profiles and every destination with it.
                 if UIDevice.current.userInterfaceIdiom == .pad && !NewExperienceFeature.isEnabled {
                     iPadContentView(historyProfileStore: iPadHistoryProfileStore)
@@ -543,13 +543,14 @@ struct HealthMdApp: App {
                     )
                 }
                 directCLIService.cancelHandler = { jobID in
-                    IPhoneDirectExportCoordinator.shared.cancel(jobID: jobID)
+                    IPhoneDirectExportCoordinator.shared.cancelWithReceipt(jobID: jobID)
                 }
-                directCLIService.queryRequestHandler = { [weak directCLIService] request, channel in
+                directCLIService.queryRequestHandler = { [weak directCLIService] request, channel, protocolAuthority in
                     guard let sourceInstallationID = directCLIService?.querySourceInstallationID else { return }
                     await IPhoneDirectQueryCoordinator.shared.handle(
                         request,
                         channel: channel,
+                        protocolAuthority: protocolAuthority,
                         sourceInstallationID: sourceInstallationID,
                         healthKitManager: healthKitManager
                     )
@@ -904,11 +905,14 @@ struct HealthMdApp: App {
 
     /// Fetch health data from HealthKit for the requested dates and send to the connected Mac.
     private func handleDataRequest(dates: [Date]) async {
+        let captureContext = AppleSleepCaptureContext.resolve(attribution: healthKitManager.sleepDayAttribution)
+        do { try captureContext.requireShippedProfile() }
+        catch { syncService.lastError = error.localizedDescription; return }
         var records: [HealthData] = []
 
         for date in dates {
             do {
-                let data = try await healthKitManager.fetchHealthData(for: date)
+                let data = try await healthKitManager.fetchHealthData(for: date, captureContext: captureContext)
                 if data.hasAnyData {
                     records.append(data)
                 }
@@ -934,6 +938,9 @@ struct HealthMdApp: App {
     /// Handle a request for ALL available health data.
     /// Discovers the earliest HealthKit data date and sends data in batches with progress updates.
     private func handleAllDataRequest() async {
+        let captureContext = AppleSleepCaptureContext.resolve(attribution: healthKitManager.sleepDayAttribution)
+        do { try captureContext.requireShippedProfile() }
+        catch { syncService.lastError = error.localizedDescription; return }
         // Find the earliest date with health data
         guard let earliestDate = await healthKitManager.findEarliestHealthDataDate() else {
             // No data found — send a completion progress message
@@ -975,7 +982,7 @@ struct HealthMdApp: App {
             var records: [HealthData] = []
             for date in batchDates {
                 do {
-                    let data = try await healthKitManager.fetchHealthData(for: date)
+                    let data = try await healthKitManager.fetchHealthData(for: date, captureContext: captureContext)
                     if data.hasAnyData {
                         records.append(data)
                     }

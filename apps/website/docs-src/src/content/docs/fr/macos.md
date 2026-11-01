@@ -1,6 +1,6 @@
 ---
-title: "App macOS"
-description: "Utilisez Health.md for Mac comme destination d’export de l’iPhone, hôte local de CLI et MCP, stockage chiffré du contexte de santé, visualiseur d’historique et autorité des dossiers."
+title: "Apple Health sur Mac avec Health.md"
+description: "Exportez les données Apple Health de l’iPhone vers le Mac ou interrogez le contexte local. Installez Health.md sur les deux appareils et configurez Mac Sync."
 ---
 
 Health.md for Mac remplit deux rôles locaux :
@@ -9,6 +9,11 @@ Health.md for Mac remplit deux rôles locaux :
 2. héberger la CLI en boucle locale, l’API de requête, le contexte de santé chiffré et l’adaptateur MCP utilisés par les agents locaux.
 
 Apple Health reste sur l’iPhone. L’app Mac ne lit pas directement HealthKit.
+
+<div class="callout">
+<strong>Commencez avec votre iPhone et votre Mac</strong>
+<p><a href="https://apps.apple.com/us/app/health-md/id6757763969" target="_blank" rel="noopener">Installez Health.md sur iPhone et Mac</a>. <a href="/fr/docs/sync/">Suivez le guide de configuration de Mac Sync</a>, <a href="/blog/health-md-for-macos/">ou commencez par le tutoriel d’export d’une journée (en anglais)</a>.</p>
+</div>
 
 ## Zones principales
 <div class="options">

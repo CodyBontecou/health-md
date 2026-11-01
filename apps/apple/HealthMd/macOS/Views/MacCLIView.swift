@@ -489,7 +489,7 @@ struct MacCLIView: View {
                 )
 
                 setupStep(number: "1", title: String(localized: "Mac app runs the service"), detail: String(localized: "Health.md listens only on localhost and owns iPhone connection state."))
-                setupStep(number: "2", title: String(localized: "Helpers send JSON"), detail: String(localized: "The sandboxed `healthmd` and `healthmd-mcp` helpers call fixed localhost routes; neither reads HealthKit directly."))
+                setupStep(number: "2", title: String(localized: "Helpers send JSON"), detail: String(localized: "Bundled helpers are sandboxed. Use the Mac app's saved folder or stream JSON to stdout. For direct exports to arbitrary paths, install the standalone CLI."))
                 setupStep(number: "3", title: String(localized: "iPhone remains source of truth"), detail: String(localized: "HealthKit reads happen on your unlocked, connected iPhone."))
                 setupStep(number: "4", title: String(localized: "You opt into installation"), detail: String(localized: "The app never mutates `/usr/local/bin` or shell files without your action."))
             }

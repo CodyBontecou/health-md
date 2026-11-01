@@ -28,6 +28,9 @@ final class ScheduledExportCoordinator {
     /// Runtime-owned authority. Recheck after suspensions before checkpointing or
     /// advertising recovery; a discarded request must never be resurrected.
     var shouldRetainRequest: @MainActor (PendingExportRequest) -> Bool = { _ in true }
+    /// Resolve runtime source authority only when accepting a new profile occurrence.
+    /// Existing pending work returns before this hook and keeps its original bytes.
+    var makeProfileSettingsSnapshot: (@MainActor (ScheduledProfileRequestContext) async throws -> ExportSettingsSnapshot)?
 
     init(
         pendingExportStore: PendingExportStoring,
@@ -171,11 +174,20 @@ final class ScheduledExportCoordinator {
             try discard(existingRequest)
         }
 
+        let captureContext = AppleSleepCaptureContext.resolve(
+            timeZone: profile?.settings.calendarTimeZoneIdentifier.flatMap(TimeZone.init(identifier:)) ?? calendar.timeZone,
+            attribution: HealthKitManager.shared.sleepDayAttribution)
         let frozenSettings: ExportSettingsSnapshot?
-        if let profile {
+        if let profile, let makeProfileSettingsSnapshot {
+            frozenSettings = try await AppleSleepCaptureContext.pinned.withValue(captureContext) {
+                try await makeProfileSettingsSnapshot(profile)
+            }
+        } else if let profile {
             frozenSettings = profile.settings
         } else {
-            frozenSettings = await makeSettingsSnapshot()
+            frozenSettings = await AppleSleepCaptureContext.pinned.withValue(captureContext) {
+                await makeSettingsSnapshot()
+            }
         }
 
         let requestCalendar = frozenCalendar(
@@ -196,6 +208,7 @@ final class ScheduledExportCoordinator {
             notificationMetadata: ["notification": ExportNotificationType.pendingExport.rawValue],
             exportTarget: profile?.target ?? schedule.target,
             settingsSnapshot: frozenSettings,
+            sleepCaptureContext: frozenSettings?.sleepCaptureContext ?? captureContext,
             profileID: profile?.profileID,
             profileName: profile?.profileName,
             recoveryGeneration: profile?.recoveryGeneration ?? 0,

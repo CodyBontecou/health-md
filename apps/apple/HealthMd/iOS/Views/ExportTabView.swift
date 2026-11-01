@@ -100,9 +100,10 @@ struct ExportTabView: View {
     var body: some View {
         NavigationStack {
             ScrollViewReader { proxy in
+            GeometryReader { viewport in
             SchedulingExportScroll(showsFooter: !isExporting) {
                 VStack(spacing: Spacing.md) {
-                    heroHeader
+                    heroHeader(availableWidth: viewport.size.width)
                     #if DEBUG
                     if TestMode.isUITesting {
                         // Synthetic journey diagnostics only, not a production
@@ -112,19 +113,7 @@ struct ExportTabView: View {
                             .accessibilityIdentifier("export.synthetic.statusMessage")
                     }
                     #endif
-                    statusBadges
-                        .configurationChangesProtected()
-                    exportTargetSection
-                        .configurationChangesProtected()
-                    dateRangeSection
-                    historyWarningSection
-                    healthDataSection
-                        .id("marketing-export-health-data")
-                    formatsSection
-                    automationSection
-                    formatOptionsSection
-                    outputSection
-                    pathPreviewSection
+                    exportSections(availableWidth: viewport.size.width)
                     resetButton
                         .configurationChangesProtected()
                 }
@@ -156,6 +145,7 @@ struct ExportTabView: View {
                 proxy.scrollTo(anchor, anchor: .top)
             }
             #endif
+            }
             }
         }
         // SwiftUI owns the logical waiter; the parent-owned worker retains the
@@ -276,13 +266,18 @@ struct ExportTabView: View {
                     ? apiExportSettings.destinationSnapshot
                     : nil,
                 connectedAppsEnabled: ConnectedAppsFeature.isEnabled,
-                fetchHealthData: { date in
+                externalIntegrations: externalIntegrations,
+                fetchHealthData: { date, snapshot in
+                    let capturedSettings = snapshot.makeAdvancedExportSettings()
                     #if DEBUG
                     if TestMode.useHealthKitExportPreviewFixtures || MarketingCapture.isActive {
                         return UITestHealthKitFixtures.exportPreviewHealthData(
                             for: date,
-                            includeGranularData: advancedSettings.effectiveDetailPolicy
-                                .includesSelectedTimeSeries
+                            includeGranularData: capturedSettings.effectiveDetailPolicy
+                                .includesSelectedTimeSeries,
+                            includeLargeSourceArchive: TestMode.healthKitExportPreviewLargeArchive
+                                && capturedSettings.effectiveDetailPolicy.includesCanonicalArchive,
+                            includePartialFailures: TestMode.healthKitExportPreviewPartialCapture
                         )
                     }
                     #endif
@@ -290,9 +285,9 @@ struct ExportTabView: View {
                     do {
                         return try await healthKitManager.fetchHealthData(
                             for: date,
-                            detailPolicy: advancedSettings.effectiveDetailPolicy,
-                            metricSelection: advancedSettings.metricSelection,
-                            timeZone: advancedSettings.exportTimeZoneOverride ?? .current
+                            detailPolicy: capturedSettings.effectiveDetailPolicy,
+                            metricSelection: capturedSettings.metricSelection,
+                            timeZone: capturedSettings.exportTimeZoneOverride ?? .current
                         )
                     } catch {
                         let descriptor = HealthKitSafeLogging.failureDescriptor(
@@ -324,13 +319,40 @@ struct ExportTabView: View {
         }
     }
 
+    // MARK: - Adaptive Sections
+
+    private func exportSections(availableWidth: CGFloat) -> some View {
+        AdaptivePageColumns(availableWidth: availableWidth) {
+            VStack(spacing: Spacing.md) {
+                exportTargetSection
+                    .configurationChangesProtected()
+                dateRangeSection
+                historyWarningSection
+                healthDataSection
+                    .id("marketing-export-health-data")
+                formatsSection
+            }
+        } secondary: {
+            VStack(spacing: Spacing.md) {
+                automationSection
+                formatOptionsSection
+                outputSection
+                pathPreviewSection
+            }
+        }
+    }
+
     // MARK: - Header
 
-    private var heroHeader: some View {
-        HealthMdPageHeader(
+    private func heroHeader(availableWidth: CGFloat) -> some View {
+        AdaptivePageHeader(
+            availableWidth: availableWidth,
             title: "Export",
             subtitle: "Choose what Health.md writes from Apple Health"
-        )
+        ) {
+            statusBadges
+                .configurationChangesProtected()
+        }
     }
 
     // MARK: - Status Badges
@@ -368,12 +390,19 @@ struct ExportTabView: View {
 
         return Group {
             if usesAccessibilityLayout {
-                VStack(spacing: Spacing.md) {
+                VStack(alignment: .leading, spacing: Spacing.md) {
                     badges
                 }
             } else {
-                HStack(spacing: Spacing.md) {
-                    badges
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: Spacing.md) {
+                        badges
+                    }
+                    .fixedSize(horizontal: true, vertical: false)
+
+                    VStack(alignment: .leading, spacing: Spacing.md) {
+                        badges
+                    }
                 }
             }
         }
@@ -567,6 +596,15 @@ struct ExportTabView: View {
 
     // MARK: - Date Range
 
+    private var sleepDateGuidance: LocalizedStringKey {
+        switch healthKitManager.sleepDayAttribution {
+        case .nightBegins:
+            "Sleep covers noon on each selected date through noon the next day. For last night's sleep, choose Yesterday."
+        case .morningEnds:
+            "Whole sleep sessions belong to the date they end in the export's time zone. For last night's sleep, choose Today."
+        }
+    }
+
     private var dateRangeSection: some View {
         sectionCard(title: "Date Range") {
             VStack(spacing: Spacing.md) {
@@ -583,10 +621,11 @@ struct ExportTabView: View {
                 }
 
                 if advancedSettings.metricSelection.enabledMetricCount(for: .sleep) > 0 {
-                    Text("Sleep covers noon on each selected date through noon the next day. For last night's sleep, choose Yesterday.")
+                    Text(sleepDateGuidance)
                         .font(.footnote)
                         .foregroundStyle(Color.textSecondary)
                         .frame(maxWidth: .infinity, alignment: .leading)
+                        .accessibilityIdentifier(AccessibilityID.Export.sleepDateGuidance)
                 }
 
                 if dateRangePreset == .custom {
@@ -721,8 +760,46 @@ struct ExportTabView: View {
 
                 dataDetailInlineRow
                     .configurationChangesProtected()
+
+                rowDivider()
+
+                sleepDayAttributionInlineRow
+                    .configurationChangesProtected()
             }
         }
+    }
+
+    /// Issue #104: chooses which daily note owns a midnight-spanning sleep
+    /// session. Stored on the capturing device and applied to every capture
+    /// path (manual, scheduled, connected, direct, and App Intents).
+    private var sleepDayAttributionInlineRow: some View {
+        HStack(alignment: .top, spacing: Spacing.s3) {
+            inlineIcon("moon.zzz", isActive: healthKitManager.sleepDayAttribution == .morningEnds)
+
+            VStack(alignment: .leading, spacing: Spacing.s2) {
+                Picker("Sleep Day Attribution", selection: Binding(
+                    get: { healthKitManager.sleepDayAttribution },
+                    set: { mode in
+                        if mode.isAvailableForShippedProfiles { healthKitManager.setSleepDayAttribution(mode) }
+                    }
+                )) {
+                    ForEach(SleepDayAttribution.allCases, id: \.rawValue) { mode in
+                        Text(mode.localizedDisplayName).tag(mode)
+                            .disabled(!mode.isAvailableForShippedProfiles)
+                    }
+                }
+                .pickerStyle(.menu)
+                .font(.body.weight(.semibold))
+                .accessibilityIdentifier(AccessibilityID.Export.sleepDayAttributionPicker)
+                .accessibilityHint(healthKitManager.sleepDayAttribution.localizedDescription)
+
+                Text(healthKitManager.sleepDayAttribution.localizedDescription)
+                    .font(.footnote)
+                    .foregroundStyle(Color.textSecondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+        .padding(.vertical, Spacing.s3)
     }
 
     private var dataDetailInlineRow: some View {
@@ -1351,7 +1428,7 @@ struct ExportTabView: View {
         }
     }
 
-    private var previewExportTargetType: PricingAnalyticsExportTargetType {
+    private var previewExportTargetType: ExportPreviewTargetType {
         switch exportTargetSelection {
         case .localIPhoneFolder:
             return .localFile

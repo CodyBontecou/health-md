@@ -28,6 +28,9 @@ pub fn merge_profile_markdown(
         SemanticProfile::AndroidFrozenV4 | SemanticProfile::AndroidAnalyticalV5 => {
             android_merge(existing, generated)
         }
+        SemanticProfile::AppleHealthDataV11 | SemanticProfile::AndroidSleepV6 => {
+            return Err(RenderError::UnsupportedOperation);
+        }
     })
 }
 

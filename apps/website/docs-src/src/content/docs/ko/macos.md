@@ -1,6 +1,6 @@
 ---
-title: "macOS 앱"
-description: "Mac용 Health.md를 iPhone 내보내기 대상, 로컬 CLI 및 MCP 호스트, 암호화된 건강 컨텍스트 저장소, 기록 뷰어, 폴더 관리 주체로 사용하세요."
+title: "Health.md로 Mac에서 Apple Health 사용하기"
+description: "Health.md로 iPhone의 Apple Health 데이터를 Mac 폴더로 내보내거나 로컬 컨텍스트를 쿼리하세요. 두 기기에 앱을 설치하고 Mac Sync 설정 가이드를 따르세요."
 ---
 
 Mac용 Health.md는 두 가지 로컬 역할을 수행합니다.
@@ -9,6 +9,11 @@ Mac용 Health.md는 두 가지 로컬 역할을 수행합니다.
 2. 로컬 에이전트가 사용하는 루프백 CLI, 쿼리 API, 암호화된 건강 컨텍스트 및 MCP 어댑터를 호스팅합니다.
 
 Apple Health는 계속 iPhone에 있습니다. Mac 앱은 HealthKit을 직접 읽지 않습니다.
+
+<div class="callout">
+<strong>iPhone과 Mac에서 시작하기</strong>
+<p><a href="https://apps.apple.com/us/app/health-md/id6757763969" target="_blank" rel="noopener">iPhone과 Mac에 Health.md를 설치하세요</a>. <a href="/ko/docs/sync/">Mac Sync 설정 가이드</a> 또는 <a href="/blog/health-md-for-macos/">하루치 내보내기 안내 (영어)</a>를 따르세요.</p>
+</div>
 
 ## 주요 영역
 

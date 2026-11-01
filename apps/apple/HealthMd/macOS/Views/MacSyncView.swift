@@ -16,11 +16,7 @@ struct MacSyncView: View {
     @EnvironmentObject var healthDataStore: HealthDataStore
 
     @ObservedObject private var historyManager = SyncEventHistoryManager.shared
-    private let analytics = PricingAnalyticsClient.shared
 
-    @AppStorage("pricing.analytics.mac.setup.folder.viewed.tracked.v1") private var didTrackMacFolderStep = false
-    @AppStorage("pricing.analytics.mac.setup.folder.selected.tracked.v1") private var didTrackMacFolderSelected = false
-    @AppStorage("pricing.analytics.mac.setup.ready.tracked.v1") private var didTrackMacSetupReady = false
     @StateObject private var feedbackReporter = FeedbackReporter()
     @State private var receivingPaused = false
     @State private var showClearConfirmation = false
@@ -88,16 +84,6 @@ struct MacSyncView: View {
             if MacMarketingCapture.isActive { return }
             #endif
             syncService.startBrowsing()
-            trackMacSetupMilestones()
-        }
-        .onChange(of: vaultManager.vaultURL) { _, _ in
-            trackMacSetupMilestones()
-        }
-        .onChange(of: displayConnectionState) { _, _ in
-            trackMacSetupMilestones()
-        }
-        .onChange(of: displayRemoteCapabilities) { _, _ in
-            trackMacSetupMilestones()
         }
         .geistDialog(
             isPresented: $showClearConfirmation,
@@ -122,26 +108,6 @@ struct MacSyncView: View {
             ]
         )
     }
-
-    // MARK: - Setup analytics
-
-    private func trackMacSetupMilestones() {
-        if !didTrackMacFolderStep {
-            didTrackMacFolderStep = true
-            analytics.trackOnboardingStepViewed(.folderSetup)
-        }
-
-        if folderAccessHealthy, !didTrackMacFolderSelected {
-            didTrackMacFolderSelected = true
-            analytics.trackOnboardingFolderSelected()
-        }
-
-        if isReadyForExports, !didTrackMacSetupReady {
-            didTrackMacSetupReady = true
-            analytics.trackOnboardingStepViewed(.ready)
-        }
-    }
-
     // MARK: - Layout
 
     private func horizontalPadding(for width: CGFloat) -> CGFloat {

@@ -4,10 +4,10 @@
   "app_repository_url": "https://github.com/CodyBontecou/health-md.git",
   "source_app_commit": null,
   "source_revision_strategy": "content-addressed docs/reference tree; commit omitted to avoid same-commit self-reference",
-  "docs_reference_git_tree": "ffdff54d27e6cc869dcd177bec9f3a0f1fff1b28",
+  "docs_reference_git_tree": "74864af1c019782d4aa564ba05c0a9aba7c87c78",
   "aggregate": {
     "algorithm": "SHA-256",
-    "digest": "a119482f212a22dd3cdd05e0c4234329e801d236b78f50531105f1482313c758",
+    "digest": "f2b4589bed22c26467ff735efe3684274a23359a7766bd8b019ea414ac006787",
     "canonicalization": "For each source file sorted by path: UTF-8 path, NUL, decimal byte count, NUL, lowercase SHA-256, LF."
   },
   "schemas": [
@@ -1175,8 +1175,8 @@
     },
     {
       "path": "individual-entry-tracking.md",
-      "bytes": 9675,
-      "sha256": "883ff03c7c5ef80619b7f2a5538c3967e13bc4c94e2d2fa37352401e3cb725a1",
+      "bytes": 10688,
+      "sha256": "10113299507b673438e95b09426aa292f49026348f1da0575901d769097fe18e",
       "classification": "handwritten-markdown",
       "routes": {
         "rendered": "/docs/reference/individual-entry-tracking/",
@@ -1195,8 +1195,8 @@
     },
     {
       "path": "other-export-surfaces.md",
-      "bytes": 4958,
-      "sha256": "94ba0ac61c1b75821bc937d9479f484d0efca2cecfcbf103a040c1e7e43c97b3",
+      "bytes": 11543,
+      "sha256": "bbc645201b7db7e59fbb75e4c17fa4a2143dbe2d713972d08b8dce9268491dd0",
       "classification": "handwritten-markdown",
       "routes": {
         "rendered": "/docs/reference/other-export-surfaces/",
@@ -2106,8 +2106,8 @@
     },
     {
       "path": "src/content/docs/reference/individual-entry-tracking.md",
-      "bytes": 10244,
-      "sha256": "2b920f33b07dd1387a95840ae30fe2c6975e3d5fbd227862b3caae18fa8cddda",
+      "bytes": 11257,
+      "sha256": "7bed7b42efda7ca17df217178795c35edf0fceb9d2021169b22386fcc8fab956",
       "classification": "rendered-page",
       "route": "/docs/reference/individual-entry-tracking/"
     },
@@ -2120,8 +2120,8 @@
     },
     {
       "path": "src/content/docs/reference/other-export-surfaces.md",
-      "bytes": 5312,
-      "sha256": "ba27075508dce3035710e3520b5cc5ff471e0a15a95e03dbdb9f4a735c906c23",
+      "bytes": 11897,
+      "sha256": "67187d562bdfbf7fa62ac8af262413e3b624ec97d3c31ccd2bd86a67dc003188",
       "classification": "rendered-page",
       "route": "/docs/reference/other-export-surfaces/"
     },

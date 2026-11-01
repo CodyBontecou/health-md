@@ -26,6 +26,9 @@ import androidx.compose.ui.unit.dp
 
 import com.healthmd.R
 import com.healthmd.domain.billing.BillingError
+import com.healthmd.domain.repository.PurchaseOffer
+import com.healthmd.domain.repository.PurchasePlan
+import androidx.compose.ui.platform.LocalUriHandler
 import com.healthmd.presentation.common.*
 import com.healthmd.presentation.theme.AppColors
 import com.healthmd.presentation.theme.GeistAdaptiveLayout
@@ -48,6 +51,9 @@ fun PaywallScreen(
     onPurchase: () -> Unit,
     onRestore: () -> Unit,
     onDismiss: (() -> Unit)?,
+    offers: List<PurchaseOffer> = emptyList(),
+    onPlanPurchase: (PurchasePlan) -> Unit = { onPurchase() },
+    onRetry: () -> Unit = {},
     subtitle: String,
     isPurchasing: Boolean = false,
     isRestoring: Boolean = false,
@@ -63,6 +69,7 @@ fun PaywallScreen(
     onDebugResetState: () -> Unit = {},
 ) {
     val isLoading = isPurchasing || isRestoring
+    val uriHandler = LocalUriHandler.current
     val scrollState = rememberScrollState()
     val errorMessage = when (purchaseError) {
         BillingError.PRODUCT_UNAVAILABLE -> stringResource(R.string.billing_error_product_unavailable)
@@ -158,7 +165,7 @@ fun PaywallScreen(
             if (fullAccessIncluded) {
                 FeatureRow(Icons.Outlined.CheckCircle, stringResource(R.string.fdroid_full_access_included), !readingLayout)
             } else {
-                FeatureRow(Icons.Outlined.Payment, stringResource(R.string.paywall_one_time), !readingLayout)
+                FeatureRow(Icons.Outlined.Payment, stringResource(R.string.paywall_plan_choices), !readingLayout)
             }
         }
 
@@ -189,19 +196,44 @@ fun PaywallScreen(
         }
 
         if (purchasesAvailable) {
-            // Purchase button with live, region-correct price.
-            val buttonText = when {
-                isPurchasing -> stringResource(R.string.paywall_purchasing)
-                priceText != null -> stringResource(R.string.paywall_unlock_button_price, priceText)
-                else -> stringResource(R.string.paywall_unlock_button)
+            // Only display offers and trial eligibility supplied by Google Play.
+            offers.forEach { offer ->
+                val period = when (offer.plan) {
+                    PurchasePlan.WEEKLY -> stringResource(R.string.paywall_weekly_price, offer.localizedPriceText)
+                    PurchasePlan.YEARLY -> stringResource(R.string.paywall_yearly_price, offer.localizedPriceText)
+                    PurchasePlan.LIFETIME -> stringResource(R.string.paywall_lifetime_price, offer.localizedPriceText)
+                }
+                val label = if (offer.hasSevenDayTrial) stringResource(R.string.paywall_trial_then, period) else period
+                PrimaryButton(
+                    text = label,
+                    onClick = { onPlanPurchase(offer.plan) },
+                    isLoading = isPurchasing,
+                    enabled = !isLoading,
+                )
+                Spacer(modifier = Modifier.height(Spacing.sm))
             }
-
-            PrimaryButton(
-                text = buttonText,
-                onClick = onPurchase,
-                isLoading = isPurchasing,
-                enabled = !isLoading,
+            if (offers.isEmpty()) {
+                Text(stringResource(R.string.billing_error_product_unavailable), color = AppColors.textSecondary)
+                TextButton(onClick = onRetry, enabled = !isLoading) {
+                    Text(stringResource(R.string.paywall_retry))
+                }
+            }
+            Text(
+                stringResource(R.string.paywall_subscription_disclosure),
+                style = MaterialTheme.typography.bodySmall,
+                color = AppColors.textSecondary,
             )
+            TextButton(onClick = { uriHandler.openUri("https://play.google.com/store/account/subscriptions") }) {
+                Text(stringResource(R.string.paywall_manage_subscriptions))
+            }
+            Row {
+                TextButton(onClick = { uriHandler.openUri("https://healthmd.app/terms-of-service.html") }) {
+                    Text(stringResource(R.string.paywall_terms))
+                }
+                TextButton(onClick = { uriHandler.openUri("https://healthmd.app/privacy-policy.html") }) {
+                    Text(stringResource(R.string.paywall_privacy))
+                }
+            }
 
             Spacer(modifier = Modifier.height(Spacing.sm))
 

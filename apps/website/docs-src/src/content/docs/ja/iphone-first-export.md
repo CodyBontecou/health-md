@@ -14,7 +14,7 @@ description: "Apple Healthへのアクセスを許可し、ファイルAppで保
 
 以下が必要です。
 
-- Apple Healthのデータが保存されているiPhoneにHealth.mdがインストールされていること。
+- Apple Healthのデータが保存されているiPhoneに[App StoreのHealth.md](https://apps.apple.com/app/health-md/id6757763969)がインストールされていること。
 - 1つ以上のApple Healthカテゴリを読み取る権限。
 - iCloud Drive、「このiPhone内」、Obsidian Vaultなど、ファイルAppで書き込み可能な保存先。
 

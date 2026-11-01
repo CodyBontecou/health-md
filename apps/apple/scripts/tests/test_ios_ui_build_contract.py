@@ -313,6 +313,17 @@ class ArtifactQualificationTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "source SHA"):
             qualify(self.derived, "branch-name")
 
+    def test_owned_product_root_can_contain_double_underscores(self) -> None:
+        derived = self.derived / "owned__ui__artifacts"
+        derived.mkdir()
+        (derived / BUILD_MARKER).touch()
+        manifest, _ = make_products(derived)
+        original = manifest.read_bytes()
+        selected, receipt = qualify(derived, SOURCE_SHA)
+        self.assertEqual(selected, manifest)
+        self.assertEqual(receipt["source_sha"], SOURCE_SHA)
+        self.assertEqual(manifest.read_bytes(), original)
+
     def test_literal_double_underscores_in_build_root_are_not_placeholders(self) -> None:
         derived = self.derived.parent / "fresh__derived__data"
         derived.mkdir()
@@ -341,21 +352,8 @@ class ArtifactQualificationTests(unittest.TestCase):
         self.assertEqual(manifest.read_bytes(), original)
 
 
-def ui_steps() -> tuple[str, dict[str, str]]:
-    workflow = (REPO / ".github/workflows/apple-ci.yml").read_text()
-    job = workflow.split("  ios-ui-shards:\n", 1)[1].split("\n  test-ios-ui:", 1)[0]
-    preparation = workflow.split("  prepare-ui-artifacts:\n", 1)[1].split("\n  ios-ui-shards:", 1)[0]
-    pieces = re.split(r"^      - name: ", preparation, flags=re.MULTILINE)[1:]
-    pieces += re.split(r"^      - name: ", job, flags=re.MULTILINE)[1:]
-    return job, {piece.splitlines()[0]: piece for piece in pieces}
-
-
-def shell_body(step: str) -> str:
-    body = step.split("        run: |\n", 1)[1]
-    return "\n".join(line[10:] if line.startswith("          ") else line for line in body.splitlines())
-
-
-class WorkflowExecutionTests(unittest.TestCase):
+class DiagnosticExecutionTests(unittest.TestCase):
+    """Exercise the retained artifact and worker tools, not retired CI shell glue."""
     def setUp(self) -> None:
         self.temporary = tempfile.TemporaryDirectory()
         self.addCleanup(self.temporary.cleanup)
@@ -418,7 +416,6 @@ class WorkflowExecutionTests(unittest.TestCase):
             "  *) printf '%s\\n' 'platform=iOS Simulator,id=11111111-1111-1111-1111-111111111111';;\nesac\n"
         ))
         self.environment = dict(os.environ, PATH=f"{self.bin}:{os.environ['PATH']}", GITHUB_OUTPUT=str(self.output), MD_MOCK_CALLS=str(self.calls), MD_MOCK_DEVICE_CALLS=str(self.device_calls))
-        self.job, self.steps = ui_steps()
 
     @staticmethod
     def executable(path: Path, content: str) -> None:
@@ -426,41 +423,36 @@ class WorkflowExecutionTests(unittest.TestCase):
         path.chmod(0o755)
 
     def run_step(self, name: str, artifact: str = "", shard: int = 0) -> subprocess.CompletedProcess:
-        script = shell_body(self.steps[name])
-        script = script.replace("${{ steps.ui_artifacts.outputs.xctestrun }}", artifact)
-        script = script.replace("${{ steps.ui_artifacts.outputs.app }}", self.app if artifact else "")
-        script = script.replace("${{ steps.simulator.outputs.ios_destination }}", "platform=iOS Simulator,id=" + ("22222222-2222-2222-2222-222222222222" if shard == 3 else "11111111-1111-1111-1111-111111111111"))
-        script = script.replace("${{ steps.ui_artifacts.outputs.derived_data }}", getattr(self, "derived", ""))
-        script = script.replace("${{ needs.prepare-ui-artifacts.outputs.sha256 }}", getattr(self, "archive_sha", ""))
-        script = script.replace("${{ matrix.shard }}", str(shard))
-        script = script.replace("${{ github.run_id }}", "12").replace("${{ github.run_attempt }}", "1")
-        return subprocess.run(["bash", "-e", "-o", "pipefail", "-c", script], cwd=self.root, env=self.environment, text=True, capture_output=True)
+        self.assertEqual(name, 'Run UI smoke tests (iOS)')
+        destination = 'platform=iOS Simulator,id=' + (
+            '22222222-2222-2222-2222-222222222222' if shard == 3
+            else '11111111-1111-1111-1111-111111111111')
+        return subprocess.run([sys.executable, str(self.root / 'scripts/ios_ui_shards.py'),
+            'run', '--xctestrun', artifact, '--build-receipt', str(self.root / 'build/logs/ios-ui-build-receipt.json'),
+            '--destination', destination, '--prepared-sha256', self.archive_sha,
+            '--result', str(self.root / 'build/test-results/HealthMd-UI-Shard.xcresult'),
+            '--log', str(self.root / 'build/logs/build-ios-ui.log'),
+            '--receipt', str(self.root / 'build/logs/ui-case-receipt.json'),
+            '--shard', str(shard), '--source-sha', SOURCE_SHA, '--run-id', '12', '--attempt', '1'],
+            cwd=self.root, env=self.environment, text=True, capture_output=True)
 
     def build(self) -> str:
-        result = self.run_step("Build UI test artifacts once")
-        self.assertEqual(result.returncode, 0, result.stderr)
-        outputs = dict(line.split("=", 1) for line in self.output.read_text().splitlines())
-        self.assertEqual(set(outputs), {"xctestrun", "app", "derived_data"})
-        receipt = json.loads((self.root / "build/logs/ios-ui-build-receipt.json").read_text())
-        self.app = outputs["app"]
-        self.assertEqual(self.app, receipt["products"][0]["path"])
-        self.derived = outputs["derived_data"]
-        self.output.write_text("")
-        packed = self.run_step("Package qualified UI products and compile log")
-        self.assertEqual(packed.returncode, 0, packed.stderr)
-        self.archive_sha = dict(line.split("=", 1) for line in self.output.read_text().splitlines())["sha256"]
-        self.output.write_text("")
-        restored = self.run_step("Verify restored UI products")
-        self.assertEqual(restored.returncode, 0, restored.stderr)
-        consumer = dict(line.split("=", 1) for line in self.output.read_text().splitlines())
-        self.assertEqual(set(consumer), {"xctestrun", "app"})
-        self.app = consumer["app"]
-        return consumer["xctestrun"]
+        derived = Path(tempfile.mkdtemp(dir=self.root, prefix='synthetic-build-'))
+        (derived / BUILD_MARKER).touch()
+        make_products(derived)
+        (derived / 'compile.log').write_text('synthetic compiler diagnostics\n')
+        archive = derived.with_suffix('.tar.gz')
+        self.archive_sha = pack(derived, SOURCE_SHA, archive)
+        restored = Path(tempfile.mkdtemp(dir=self.root, prefix='restored-'))
+        manifest, receipt = restore(archive, restored, SOURCE_SHA, self.archive_sha)
+        logs = self.root / 'build/logs'
+        logs.mkdir(parents=True, exist_ok=True)
+        (logs / 'ios-ui-build-receipt.json').write_text(json.dumps(receipt))
+        self.app = receipt['products'][0]['path']
+        return str(manifest)
 
     def test_compile_once_archive_feeds_every_device_attributed_lane(self) -> None:
         from ios_ui_shards import SHARDS, DEVICE_FAMILIES
-        self.assertNotIn("Build UI test artifacts once", self.job)
-        self.assertIn("prepare-ui-artifacts", self.job.split("    steps:", 1)[0])
         artifact = self.build()
         for index in range(len(SHARDS)):
             result_path = self.root / "build/test-results/HealthMd-UI-Shard.xcresult"
@@ -476,15 +468,8 @@ class WorkflowExecutionTests(unittest.TestCase):
             owner = json.loads((self.root / "build/logs/ui-owner-shard.json").read_text())
             self.assertTrue(owner["eligible_to_continue"])
         calls = [json.loads(line) for line in self.calls.read_text().splitlines()]
-        self.assertEqual([args[0] for args in calls], ["build-for-testing"] + ["test-without-building"] * 4)
-        build = calls[0]
-        self.assertEqual(build[build.index("-destination") + 1], "generic/platform=iOS Simulator")
-        self.assertEqual(build[build.index("-configuration") + 1], "Debug-iOS")
-        self.assertEqual(build[build.index("-scheme") + 1], "HealthMd-UITests-iOS")
-        self.assertIn("ONLY_ACTIVE_ARCH=YES", build)
-        self.assertIn("COMPILER_INDEX_STORE_ENABLE=NO", build)
-        self.assertIn("ARCHS=" + os.uname().machine, build)
-        for args, expected in zip(calls[1:], SHARDS):
+        self.assertEqual([args[0] for args in calls], ["test-without-building"] * 4)
+        for args, expected in zip(calls, SHARDS):
             self.assertEqual(args[args.index("-xctestrun") + 1], artifact)
             self.assertFalse(set(args) & {"-project", "-workspace", "-scheme", "-configuration"})
             for flag, value in [("-test-timeouts-enabled", "YES"), ("-default-test-execution-time-allowance", "180"),
@@ -495,10 +480,11 @@ class WorkflowExecutionTests(unittest.TestCase):
                     if (a := json.loads(line))[:2] == ["simctl", "install"]]
         self.assertEqual([a[2] for a in installs], ["11111111-1111-1111-1111-111111111111"] * 3 + ["22222222-2222-2222-2222-222222222222"])
         self.assertTrue(all(a[3] == self.app for a in installs))
-        self.assertTrue((self.root / "build/logs/build-ios-ui-compile.log").is_file())
+        self.assertEqual((Path(artifact).parents[2] / 'compile.log').read_text(), 'synthetic compiler diagnostics\n')
 
     def test_wrong_family_or_archive_receipt_cannot_admit_native_execution(self) -> None:
         artifact = self.build()
+        self.calls.touch()
         before = self.calls.read_bytes()
         self.environment["MD_MOCK_WRONG_FAMILY"] = "1"
         result = self.run_step("Run UI smoke tests (iOS)", artifact)
@@ -529,17 +515,12 @@ class WorkflowExecutionTests(unittest.TestCase):
 
     def test_a_second_build_uses_a_new_directory_instead_of_old_artifacts(self) -> None:
         first = self.build()
-        self.output.write_text("")
         second = self.build()
         self.assertNotEqual(first, second)
         self.assertTrue(Path(first).is_file())
         self.assertTrue(Path(second).is_file())
 
-    def test_compile_and_test_failures_propagate_through_tee_and_grep(self) -> None:
-        self.environment["MD_MOCK_FAILURE"] = "build-for-testing"
-        self.assertEqual(self.run_step("Build UI test artifacts once").returncode, 73)
-        self.assertFalse(self.output.exists())
-        self.environment.pop("MD_MOCK_FAILURE")
+    def test_native_and_setup_failures_propagate_without_admitting_more_work(self) -> None:
         artifact = self.build()
         self.environment["MD_MOCK_FAILURE"] = "test-without-building"
         self.assertEqual(self.run_step("Run UI smoke tests (iOS)", artifact).returncode, 73)
@@ -553,21 +534,13 @@ class WorkflowExecutionTests(unittest.TestCase):
         self.assertFalse(owner["eligible_to_continue"])
         self.assertFalse((self.root / "build/logs/ui-case-receipt.json").exists())
 
-    def test_existing_gate_budgets_and_compile_warning_retention_are_preserved(self) -> None:
-        self.assertIn("timeout-minutes: 60", self.job)
-        self.assertIn("timeout-minutes: ${{ matrix.shard == 3 && 15 || 35 }}", self.steps["Run UI smoke tests (iOS)"])
-        for name in ("Check warnings (iOS UI)", "Upload iOS UI artifacts"):
-            self.assertIn("!cancelled()", self.steps[name])
-            self.assertIn("build/logs/build-ios-ui-compile.log", self.steps[name])
-            self.assertIn("build/logs/build-ios-ui.log", self.steps[name])
-        self.assertNotIn("continue-on-error", self.job)
-        self.assertNotIn("-retry-tests-on-failure", self.job)
-        workflow = (REPO / ".github/workflows/apple-ci.yml").read_text()
-        self.assertIn("test_ios_ui_build_contract.py", workflow)
-        self.assertIn("test_ios_ui_shards.py", workflow)
-        self.assertEqual(workflow.count("xcodebuild build-for-testing"), 1)
-        self.assertIn("--device-family iPad --create-missing", self.steps["Select newest compatible iOS Simulator"])
-        self.assertIn("PREPARE_RESULT: ${{ needs.prepare-ui-artifacts.result }}", workflow)
+    def test_diagnostic_commands_do_not_retry_or_rebuild(self) -> None:
+        from ios_ui_shards import test_command
+        command = test_command(Path('/synthetic/products.xctestrun'),
+            'platform=iOS Simulator,id=11111111-1111-1111-1111-111111111111', Path('/synthetic/result'), 0)
+        self.assertEqual(command[:2], ['xcodebuild', 'test-without-building'])
+        self.assertNotIn('-retry-tests-on-failure', command)
+        self.assertNotIn('-scheme', command)
 
 
 if __name__ == "__main__":

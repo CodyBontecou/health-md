@@ -1,82 +1,60 @@
 # Android sleep journal summary
 
-**Status:** compatibility conformance rule
+**Status:** Night begins remains the historical default; Morning ends is available in current source through explicit successor authority (the branch is not merged or released)
 
-**Rule ID:** `noon-to-noon-sleep-window-v1`
+**Shipped rule ID:** `noon-to-noon-sleep-window-v1`
 
-**Scope:** Health Connect compatibility summaries and detailed sleep records
+**Successor calculation rule:** `wake-date-sleep-window-v1` (Android-sleep-v6 only)
+
+**Scope:** Health Connect compatibility summaries and detailed records, with independently specified WHOOP aggregate capture below
 
 ## Journal-day ownership
 
-Android uses the same established sleep-summary day as Apple: the exported journal date owns the
-half-open local interval from noon on that date to noon on the following date. A session ending
-exactly at the opening noon belongs only to the preceding journal day; a session starting at that
-noon belongs to the new day.
+The exported journal date owns the half-open local interval from noon on that date to noon on the following date. A session ending exactly at opening noon belongs only to the preceding journal day; one starting at that noon belongs to the new day. This is `night_begins`, the shipped default on Apple and Android.
 
-One `ZoneId` is captured when an operation starts. Its local noons, midnights and record display
-values remain stable for the whole operation, including across daylight-saving transitions. Source
-instants and source-provided offsets are retained separately and are not replaced with the export
-zone.
+One `ZoneId` is captured when an operation starts. Its noons, midnights and display values remain stable across chunks and daylight-saving transitions. Original source instants and nullable source offsets remain separate.
 
-Health Connect sleep reads use a sleep-only interval. For requested dates `first...last`, the read
-starts at noon on `first - 1 day` and ends at noon on `last + 1 day`. The prior-day lookback protects
-the first journal day from start-filtering provider implementations; following-noon coverage
-captures the last requested night's wake. Ordinary health metrics retain their midnight windows.
+Health Connect sleep reads use a sleep-only interval. For requested dates `first...last`, the read starts at noon on `first - 1 day` and ends at noon on `last + 1 day`. The prior-day lookback protects the first journal day from start-filtering provider implementations; following-noon coverage captures the last requested night's wake. Ordinary health metrics retain their midnight windows.
+
+## Sleep Day Attribution gate (issue #104)
+
+`settings.sleep-attribution` is **available in current source** on both platforms. The exact target is **Issue #104 sleep-attribution-successor-profile-review**, documented in `apps/apple/docs/features/sleep-attribution-profile-gate.md`.
+
+`morning_ends` assigns a whole source session to the calendar date of its end, without noon clipping. It cannot ship under immutable Apple v8 or Android v4/v5 identities. Qualified development paths use explicit Apple-v11 or Android-sleep-v6 contexts and attribution metadata. The source availability gates are open; missing, unversioned or conflicting authority is still rejected rather than coerced to `night_begins`. This branch is not merged, shipped, or released. A changed preference applies only to a separately requested new operation, never to a saved explicit capture context.
+
+The owner approved Apple-v11 and Android-sleep-v6 meanings on 2026-10-29: whole-session wake-date ownership, no noon clipping, frozen export timezone and explicit attribution metadata. Unified-v9 remains an unapproved proposal. Producer, consumer, and durable-context admission are implemented in current source; merge and release qualification remain separate. An internal rule constant or unchanged structural signature does not authorize relabeling historical output.
+
+The same device-local raw values remain in DataStore (`sleep_day_attribution`) and Apple UserDefaults (`healthKit.sleepDayAttribution`). Portable Share My Setup does not import them. Apple internal durable journals now retain their operation context separately from portable/wire encoding; missing or unapproved recovery contexts remain unavailable without journal erasure. Android passes one explicit context across capture chunks and does not substitute provider-native single-day semantics after an empty authoritative range.
 
 ## Frozen summary aggregation
 
-The v4 and v5 Android compatibility profiles retain their shipped additive sleep aggregation:
+Android frozen v4 and analytical v5 retain these rules:
 
 1. Ignore zero-length and negative sessions for summary purposes.
-2. Clip each valid candidate interval to the journal window. The source record itself remains
-   unclipped.
-3. Add the elapsed duration of every overlapping session to total and in-bed time. Existing Android
-   profiles do not de-duplicate overlapping provider sessions or select a principal cluster.
-4. Set bedtime to the earliest clipped source-session start and wake to the latest clipped
-   source-session end.
-5. Clip stages to their parent session and journal window, then add every recognized stage interval
-   to its corresponding summary bucket. Overlapping provider stages remain additive.
+2. Clip each valid interval to the shipped noon-to-noon journal window. The source record itself stays unclipped.
+3. Add elapsed duration of every owned session to total and in-bed time. Existing profiles do not de-duplicate overlapping provider sessions or select a principal cluster.
+4. Bedtime is the earliest owned session start; wake is the latest owned session end.
+5. Clip stages to their parent session and journal window, then add each recognized interval to its bucket. Overlapping provider stages remain additive.
 
-Keeping this behavior is intentional. Selecting a principal session, applying a continuity
-threshold or resolving conflicting providers would change the meaning and aggregation of shipped
-summary fields. Such behavior requires a new public Android schema profile rather than a silent
-change to frozen v4/v5 output.
+The issue 96 correction remains limited to the query/ownership defect: the full overnight session is available in its noon-to-noon projection, so a nested `23:08–23:48` fragment cannot hide enclosing `22:00–05:30` boundaries.
 
-The issue 96 correction is therefore limited to the query and ownership defect: the full overnight
-session is now available in the date's noon-to-noon projection, so a nested `23:08–23:48` fragment
-cannot hide the enclosing `22:00–05:30` bedtime and wake boundaries.
+Principal-session selection, overlap de-duplication, continuity thresholds, stage-authority changes and alternate owner-day/clipping semantics all require reviewed new public profiles.
 
-## Detailed and raw fidelity
+## Proposed calculation and source fidelity
 
-All source sleep sessions associated with the journal window remain in granular output, including
-malformed sessions excluded from explicit duration and session-boundary calculations. Granular
-session and stage rows preserve their original source instants, nanoseconds, identities and nullable
-source offsets. Local clock fields are projections in the operation's captured export zone.
+Native qualification tests retain the wake-date calculation: owned sessions remain whole; afternoon naps stay on their end date; malformed records use their end date for detailed placement. Those calculations are not available to current immutable writers.
 
-Canonical raw Health Connect records continue to use their independent raw-record ownership and
-fidelity contract. Consumers reconstructing source events must use raw/detailed records rather than
-inferring them from the compatibility headline.
+Granular rows preserve original instants, nanoseconds, identities and nullable source offsets. Canonical raw Health Connect records retain their independent ownership/fidelity contract. Consumers must not reconstruct source events from the compatibility headline.
 
-## Schema decision
+## Compatibility and verification
 
-WHOOP compatibility reads use the same journal query window and explicit overlap selection, but WHOOP's API only supplies whole-session stage aggregates. Those aggregates are not prorated across noon. The [provider ledger](cloud-raw-provider-ledger.md#whoop-compatibility-sleep-journal-window) documents this provider-specific limitation; the timestamped-stage clipping rules above apply to Health Connect.
+No shipped profile version or signature fixture changes. Existing historical expectations and bytes remain authoritative. JVM controls cover noon ownership, overnight/noon-spanning sessions, additive overlap, malformed/stage-less records, DST, source offsets and proposed calculations. Repository, file, API, direct and preview controls reject missing or unversioned contexts without reads/output and retain accepted ownership after preference edits. Supported development successor paths exercise explicit versioned authority; this is separate from production enablement.
+
+WHOOP Night begins compatibility reads use the same journal query window and explicit overlap selection, but WHOOP's API only supplies whole-session stage aggregates. Those aggregates are not prorated across noon. The [provider ledger](cloud-raw-provider-ledger.md#whoop-compatibility-sleep-journal-window) documents this provider-specific limitation; the timestamped-stage clipping rules above apply to Health Connect. The [Morning ends successor path](cloud-raw-provider-ledger.md#whoop-morning-ends-successor-capture) instead selects whole WHOOP sessions by end date, preserves provider-reported aggregates and exact parent clocks, and does not fabricate a timestamped stage sequence.
 
 This change conforms Android to the already-documented noon-to-noon sleep ownership contract while
 preserving the aggregation meaning of the frozen `ios-v4` and shipped `android-analytical-v5`
 profiles. It changes no public key, JSON type, unit, label, aggregation rule or frontmatter key, so
 those profile versions and signature fixtures do not change.
 
-A principal-session rule, overlap de-duplication, continuity threshold, stage-authority rule or
-other public semantic change must use a new explicit profile/version under the existing guardrail.
-
-## Verification and device QA
-
-Pure JVM tests cover the issue reproduction, first-day lookback, additive overlapping sessions,
-empty and stage-less records, exact-noon ownership, invalid intervals, spring/fall DST, differing
-source offsets, deterministic ordering and single/range parity. Existing Markdown/Bases, JSON, CSV
-and schema-signature contract tests remain the exporter gate.
-
-Physical Health Connect QA remains a release smoke test: on the Pixel 7, import or sync an overnight
-session plus a nested short fragment, export the owning journal date as both one day and a range,
-and compare the headline and detailed records. Device QA is not required by the deterministic JVM
-suite.
+Native/device and external-consumer validation remain separate release gates. Local JVM/helper tests do not qualify physical Health Connect, VoiceOver or successor profiles.

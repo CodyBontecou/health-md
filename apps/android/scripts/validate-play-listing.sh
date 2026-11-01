@@ -9,7 +9,11 @@ if ! command -v gplay >/dev/null 2>&1; then
   exit 1
 fi
 
-python3 -m unittest discover -s scripts/tests -p 'test_*.py'
+# Listing validation is not a CI-policy/qualification sweep. Historical native
+# CI diagnostics remain available explicitly; the portable gate owns CI policy.
+python3 -m unittest \
+  scripts/tests/test_prepare_play_metadata.py \
+  scripts/tests/test_validate_play_listing.py
 
 all_metadata="$android_root/build/play-metadata/all"
 reviewed_metadata="$android_root/build/play-metadata/reviewed"

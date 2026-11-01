@@ -40,6 +40,43 @@ final class SchedulingManagerPendingExportsTests: XCTestCase {
         XCTAssertEqual(manager.notificationExportResult?.status, .success(daysExported: 2))
     }
 
+    func testMissingDurableCaptureAuthorityPreservesRequestsWithoutInvokingRunner() async throws {
+        for source in [PendingExportSource.scheduled, .shortcut] {
+            let request = PendingExportRequest(
+                dates: [date(year: 2026, month: 5, day: 12)],
+                source: source,
+                scheduledFireDate: date(year: 2026, month: 5, day: 18, hour: 8),
+                calendar: Self.calendar
+            )
+            let store = TestPendingExportStore(requests: [request])
+            let notifications = InspectableExportNotificationScheduler()
+            var runs = 0
+            let manager = makeManager(store: store, notificationScheduler: notifications) { dates, _ in
+                runs += 1
+                return ExportOrchestrator.ExportResult(
+                    successCount: dates.count,
+                    totalCount: dates.count,
+                    failedDateDetails: []
+                )
+            }
+
+            await manager.performPendingExport(requestId: request.id, source: source)
+
+            XCTAssertEqual(runs, 0)
+            let retained = try XCTUnwrap(store.loadAll().first)
+            XCTAssertEqual(retained.id, request.id)
+            XCTAssertEqual(retained.dates, request.dates)
+            XCTAssertEqual(retained.originalRequestedDates, request.originalRequestedDates)
+            XCTAssertEqual(retained.originalCalendarTimeZoneIdentifier, request.originalCalendarTimeZoneIdentifier)
+            XCTAssertNil(retained.sleepCaptureContext)
+            XCTAssertNil(retained.settingsSnapshot)
+            XCTAssertNil(manager.schedule.lastExportDate)
+            guard let result = manager.notificationExportResult, case .failure = result.status else {
+                return XCTFail("Missing durable capture authority must remain unavailable")
+            }
+        }
+    }
+
     func testNotificationTriggeredPendingExportShowsActivityBeforeRunnerStarts() async throws {
         let request = pendingRequest(
             id: "12121212-1212-1212-1212-121212121212",
@@ -1402,6 +1439,135 @@ final class SchedulingManagerPendingExportsTests: XCTestCase {
         XCTAssertEqual(try store.loadAll(), [])
     }
 
+    func testNewProfileOccurrencePreservesNightAuthorityAndNeverConvertsCalendarRollups() async throws {
+        let suite = "ScheduledNightProfile.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let settings = AdvancedExportSettings(userDefaults: defaults)
+        settings.exportFormats = [.csv]
+        settings.detailPolicy = .summary
+        settings.generateRangeSummary = false
+        settings.filenameFormat = "'profile-'yyyy-MM-dd"
+        settings.includeDataDictionary = false
+        let pin = try makeSyntheticAppleExportEnginePin(calendarTimeZoneIdentifier: "UTC")
+        let original = ExportSettingsSnapshot.from(settings, healthSubfolder: "SavedProfile", appleExportEnginePin: pin,
+            calendarTimeZoneIdentifier: "UTC")
+        let profile = ScheduledExportCoordinator.ScheduledProfileRequestContext(profileID: UUID(), profileName: "Night",
+            target: .localIPhoneFolder, settings: original)
+        let manager = makeManager(store: TestPendingExportStore(),
+            notificationScheduler: InspectableExportNotificationScheduler()) { dates, _ in
+                XCTFail("Profile preparation cannot execute an export")
+                return ExportOrchestrator.ExportResult(successCount: 0, totalCount: dates.count, failedDateDetails: [])
+            }
+        let context = AppleSleepCaptureContext(timeZone: .gmt, sleepDayAttribution: .nightBegins)
+        let snapshot = await AppleSleepCaptureContext.pinned.withValue(context) {
+            await manager.makeSettingsSnapshotForNewScheduledProfileOperation(profile)
+        }
+        XCTAssertEqual(snapshot.appleExportEnginePin, pin)
+        XCTAssertEqual(snapshot.exportFormats, original.exportFormats)
+        XCTAssertEqual(snapshot.filenameFormat, original.filenameFormat)
+        XCTAssertEqual(snapshot.healthSubfolder, "SavedProfile")
+        XCTAssertEqual(snapshot.sleepCaptureContext, context)
+        XCTAssertEqual(snapshot.externalProviderCaptureAuthority?.connections.count, 0)
+        XCTAssertNil(original.externalProviderCaptureAuthority)
+        for weekly in [false, true] {
+            var object = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(original)) as? [String: Any])
+            var oldPin = try XCTUnwrap(object["appleExportEnginePin"] as? [String: Any])
+            oldPin["profile"] = "apple_health_data_v7"
+            oldPin["public_schema_version"] = 7
+            oldPin["render_profile_revision"] = 1
+            oldPin["registry_sha256"] = AppleExportEnginePin.historicalRegistrySHA256
+            object["appleExportEnginePin"] = oldPin
+            object.removeValue(forKey: "generateRangeSummary")
+            object["generateWeeklyRollups"] = weekly
+            object["generateMonthlyRollups"] = false
+            object["generateYearlyRollups"] = false
+            let legacy = try JSONDecoder().decode(ExportSettingsSnapshot.self,
+                from: JSONSerialization.data(withJSONObject: object))
+            XCTAssertEqual(legacy.historicalCalendarRollupPeriods, weekly ? [.weekly] : [])
+            let legacyProfile = ScheduledExportCoordinator.ScheduledProfileRequestContext(profileID: UUID(), profileName: "Legacy",
+                target: .localIPhoneFolder, settings: legacy)
+            let morning = AppleSleepCaptureContext(timeZone: .gmt, sleepDayAttribution: .morningEnds)
+            let accepted = await AppleSleepCaptureContext.pinned.withValue(morning) {
+                await manager.makeSettingsSnapshotForNewScheduledProfileOperation(legacyProfile)
+            }
+            if weekly {
+                XCTAssertEqual(accepted.appleExportEnginePin, legacy.appleExportEnginePin,
+                               "Unsupported Morning output cannot discard the historical calendar authority")
+                XCTAssertEqual(accepted.operationRollupPeriods, [.weekly])
+                let encoder = JSONEncoder()
+                encoder.userInfo[ExportSettingsSnapshot.durableSleepContextEncoding] = true
+                let restarted = try JSONDecoder().decode(ExportSettingsSnapshot.self, from: encoder.encode(accepted))
+                XCTAssertEqual(restarted.operationRollupPeriods, [.weekly])
+                XCTAssertThrowsError(try restarted.recoveredSleepCaptureContext(),
+                                     "Conflicting Morning/calendar authority remains unavailable after reload")
+            } else {
+                XCTAssertTrue(try XCTUnwrap(accepted.appleExportEnginePin).isWakeDate,
+                    "A historical profile without calendar output can accept a new Morning daily operation")
+                XCTAssertTrue(accepted.operationRollupPeriods.isEmpty)
+            }
+            XCTAssertEqual(accepted.exportFormats, [.csv])
+            XCTAssertEqual(accepted.healthSubfolder, "SavedProfile")
+        }
+    }
+
+    func testScheduledSnapshotIgnoresProvidersWhenSummarySuppressesSidecars() async throws {
+        XCTAssertTrue(ConnectedAppsFeature.isEnabled, "Run with CONNECTED_APPS_WHOOP_ENABLED=YES")
+        let suite = "ScheduledMorningSummary.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let settings = AdvancedExportSettings(userDefaults: defaults)
+        settings.exportFormats = [.json]
+        settings.generateRangeSummary = true
+        settings.summaryOnlyExport = true
+        settings.detailPolicy = .summary
+        settings.includeDataDictionary = false
+        XCTAssertFalse(settings.writesExternalProviderSidecars)
+        let manager = makeManager(store: TestPendingExportStore(),
+            notificationScheduler: InspectableExportNotificationScheduler()) { dates, _ in
+                XCTFail("Snapshot admission must not start an export")
+                return ExportOrchestrator.ExportResult(successCount: 0, totalCount: dates.count, failedDateDetails: [])
+            }
+        let provider = ScheduledSummaryProviderProbe()
+        let sync = SyncService()
+        manager.configureScheduledExportDependencies(syncService: sync, externalIntegrations: provider)
+        let context = AppleSleepCaptureContext(timeZone: Self.calendar.timeZone, sleepDayAttribution: .morningEnds)
+        for target in [ExportTargetSelection.localIPhoneFolder, .agentDataGateway, .connectedMac] {
+            provider.count = 0
+            provider.countReads = 0
+            let withoutProvider = await AppleSleepCaptureContext.pinned.withValue(context) {
+                await manager.makeSettingsSnapshotForNewScheduledOperation(target: target,
+                    settings: settings, calendarTimeZone: Self.calendar.timeZone)
+            }
+            provider.count = 1
+            provider.countReads = 0
+            let withSuppressedProvider = await AppleSleepCaptureContext.pinned.withValue(context) {
+                await manager.makeSettingsSnapshotForNewScheduledOperation(target: target,
+                    settings: settings, calendarTimeZone: Self.calendar.timeZone)
+            }
+            XCTAssertTrue(withSuppressedProvider == withoutProvider,
+                          "Suppressed provider work cannot change accepted settings: \(target)")
+            XCTAssertEqual(provider.countReads, 0, "Admission must not inspect providers when sidecars are suppressed")
+            XCTAssertEqual(provider.fetches, 0)
+            if target == .localIPhoneFolder {
+                XCTAssertTrue(try XCTUnwrap(withSuppressedProvider.appleExportEnginePin).isWakeDate)
+                XCTAssertEqual(withSuppressedProvider.sleepCaptureContext, context)
+                XCTAssertEqual(withSuppressedProvider.externalProviderCaptureAuthority?.connections.count, 0)
+            }
+        }
+        settings.summaryOnlyExport = false
+        XCTAssertTrue(settings.writesExternalProviderSidecars)
+        let requiresProvider = await AppleSleepCaptureContext.pinned.withValue(context) {
+            await manager.makeSettingsSnapshotForNewScheduledOperation(target: .localIPhoneFolder,
+                settings: settings, calendarTimeZone: Self.calendar.timeZone)
+        }
+        XCTAssertTrue(try XCTUnwrap(requiresProvider.appleExportEnginePin).isWakeDate,
+                      "A durable provider selection can use the staged local Morning producer")
+        XCTAssertEqual(requiresProvider.externalProviderCaptureAuthority, provider.captureAuthority)
+        XCTAssertGreaterThan(provider.countReads, 0)
+        XCTAssertEqual(provider.fetches, 0)
+    }
+
     private func makeManager(
         store: TestPendingExportStore,
         notificationScheduler: InspectableExportNotificationScheduler,
@@ -1498,7 +1664,9 @@ final class SchedulingManagerPendingExportsTests: XCTestCase {
         exportTarget: ExportTargetSelection? = nil,
         requestCalendar: Calendar? = nil
     ) -> PendingExportRequest {
-        PendingExportRequest(
+        let calendar = requestCalendar ?? Self.calendar
+        // These fixtures represent accepted jobs, not legacy requests with absent authority.
+        return PendingExportRequest(
             id: UUID(uuidString: id)!,
             dates: dates,
             source: source,
@@ -1506,9 +1674,10 @@ final class SchedulingManagerPendingExportsTests: XCTestCase {
             createdAt: createdAt ?? date(year: 2026, month: 5, day: 18, hour: 9),
             notificationMetadata: ["notification": ExportNotificationType.pendingExport.rawValue],
             exportTarget: exportTarget,
+            sleepCaptureContext: AppleSleepCaptureContext(timeZone: calendar.timeZone, sleepDayAttribution: .nightBegins),
             apiDestinationIdentity: exportTarget == .apiEndpoint
                 ? ScheduledAPIEndpointIdentity(destination: syntheticScheduledAPIDestination(), bindingID: nil) : nil,
-            calendar: requestCalendar ?? Self.calendar
+            calendar: calendar
         )
     }
 
@@ -1571,6 +1740,25 @@ private final class TestPendingExportStore: PendingExportStoring {
 
     func notificationIdentifier(for request: PendingExportRequest) -> String {
         ExportNotificationIdentifiers.pendingExport(for: request)
+    }
+}
+@MainActor
+private final class ScheduledSummaryProviderProbe: ExternalIntegrationDailyRecordProviding {
+    var count = 1
+    var countReads = 0
+    var fetches = 0
+    let acceptedConnection = UUID()
+    var captureAuthority: ExternalProviderCaptureAuthority? {
+        ExternalProviderCaptureAuthority(connections: count > 0 ? ["whoop": acceptedConnection] : [:])
+    }
+    var connectedProviderCount: Int { countReads += 1; return count }
+    func fetchDailyRecords(for date: Date) async -> [ExternalDailyRecord] {
+        fetches += 1
+        XCTFail("Snapshot admission cannot fetch provider data")
+        return []
+    }
+    func fetchDailyRecords(for date: Date, providerIDs: Set<String>) async -> [ExternalDailyRecord] {
+        await fetchDailyRecords(for: date)
     }
 }
 #endif

@@ -16,7 +16,7 @@ Health.md writes the files to the folder that you select.
 
 Before you start, make sure that you have:
 
-- Health.md on an iPhone that contains Apple Health data
+- [Health.md from the App Store](https://apps.apple.com/app/health-md/id6757763969), installed on an iPhone that contains Apple Health data
 - Permission to read at least one Apple Health category
 - A writable Files folder in iCloud Drive, On My iPhone, or an Obsidian vault.
 

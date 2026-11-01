@@ -74,13 +74,8 @@ class ScheduleViewModel @Inject constructor(
                         hasExportFolder = !combined.folderUri.isNullOrBlank(),
                     )
                 }
-                if (settings.scheduleEnabled && !purchased) {
-                    settingsRepository.updateExportSettingsAtomically { current ->
-                        current.copy(scheduleEnabled = false)
-                    }
-                    exportScheduler.cancel()
-                    _uiState.update { it.copy(requiresUpgrade = true) }
-                }
+                // Do not erase persisted schedules while subscription access is
+                // resolving. Workers independently revalidate access before work.
                 updateNextExportDescription()
             }
         }
@@ -110,7 +105,7 @@ class ScheduleViewModel @Inject constructor(
 
         if (!distributionPolicy.fullAccessIncluded) {
             viewModelScope.launch {
-                entitlementRepository.isUnlocked
+                entitlementRepository.isPermanentlyUnlocked
                     .filter { it }
                     .collect { settingsRepository.setPurchased(true) }
             }

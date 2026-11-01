@@ -1,4 +1,5 @@
 import Compression
+import CryptoKit
 import Foundation
 
 /// A disk-backed ZIP64 writer for export archives.
@@ -461,6 +462,22 @@ nonisolated enum ZipArchiveWriter {
 
         func append(_ entry: FileEntry, cancellationCheck: @escaping () -> Bool = { false }) throws {
             try append(path: entry.requestedPath, contentsOf: entry.sourceURL, cancellationCheck: cancellationCheck)
+        }
+
+        /// Check the accepted descriptor against the bytes actually compressed,
+        /// rather than adopting a replacement file's digest before packaging.
+        func append(path: String, artifact: ExportArtifactFile,
+                    cancellationCheck: @escaping () -> Bool = { false }) throws {
+            try appendStream(path: path, cancellationCheck: cancellationCheck) { consume in
+                var hasher = SHA256()
+                try artifact.forEachChunk(chunkSize: self.chunkSize) { bytes in
+                    try Self.throwIfCancelled(cancellationCheck)
+                    hasher.update(data: bytes)
+                    try consume(bytes)
+                }
+                let digest = hasher.finalize().map { String(format: "%02x", $0) }.joined()
+                guard digest == artifact.descriptor.sha256 else { throw CocoaError(.fileReadCorruptFile) }
+            }
         }
 
         func append(

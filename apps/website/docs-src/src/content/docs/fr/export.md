@@ -1,76 +1,85 @@
 ---
-title: "Export"
-description: "L’onglet Export est l’espace de travail principal. Il indique si HealthKit et votre coffre sont connectés, vous permet de choisir une destination et lance des exports ponctuels pour la plage de dates choisie."
+title: "Exporter"
+description: "Utilisez l'onglet Exporter pour vérifier HealthKit et les connexions au coffre-fort. Sélectionnez une destination et exportez une plage de dates."
 ---
 
-<p>L’onglet Export s’organise autour de trois décisions simples : vérifier que tout est prêt, choisir une destination, puis sélectionner la plage de dates avant l’aperçu ou l’export.</p>
+<p> L'onglet Exporter est organisé en trois petites décisions : confirmer l'état de préparation, choisir une destination, puis choisir la plage de dates avant de prévisualiser ou d'exporter. </p>
 
-## Lire les badges d’état
-<div class="options">
-<div class="option"><strong>Badge Santé</strong><p>Point vert = HealthKit autorisé. Rouge = autorisation refusée. Touchez-le pour réessayer d’afficher la feuille d’autorisation iOS (cela ne fonctionne que la première fois par installation ; ensuite, iOS ne fait rien et vous devez corriger le réglage dans Réglages → Confidentialité et sécurité → Santé).</p></div>
-<div class="option"><strong>Badge Coffre</strong><p>Point vert = un dossier de coffre est sélectionné. Touchez-le pour choisir de nouveau le coffre ou en changer. Le libellé affiche le nom du dossier.</p></div>
-</div>
-<p>L’action <em>Export</em> reste désactivée tant que HealthKit, le format de sortie et la destination sélectionnée ne sont pas prêts. Cela évite l’échec le plus courant : tenter un export sans destination.</p>
+## Lire les badges d'état
+ <div class="options">
+ <div class="option"> <strong> Badge Santé </strong> <p>Le vert indique l’état de configuration Connecté de l’app, sans confirmer l’accès en lecture à chaque catégorie. HealthKit ne révèle pas les autorisations de lecture refusées. Touchez l’indicateur pour demander l’accès. iOS peut afficher une boîte de dialogue pour les types nécessitant une décision ; si les choix sont déjà enregistrés, Health.md affiche le guide des autorisations. Vérifiez les catégories dans Apple Health. Un résultat vide peut indiquer un accès refusé ou l’absence de données correspondantes. <a href="/fr/docs/troubleshooting/">Résoudre les données manquantes</a>.</p> </div>
+ <div class="option"> <strong> Badge du coffre-fort </strong> <p> Point vert = un dossier du coffre-fort est sélectionné. Appuyez pour choisir à nouveau ou modifier le coffre-fort. L'étiquette indique le nom du dossier. </p> </div>
+ </div>
+ <p> L'action <em> Export </em> reste désactivée jusqu'à ce que HealthKit , le format de sortie et la destination sélectionnée soient prêts. Cela évite le mode d’échec le plus courant : tenter d’exporter sans destination. </p>
 
-## Choisir une destination d’export
-<p>La fiche Destination de l’export détermine où vont les données :</p>
-<div class="options">
-<div class="option"><strong>Dossier local de l’iPhone</strong><p>Écrit directement dans le dossier ou le coffre Obsidian choisi sur cet appareil.</p></div>
-<div class="option"><strong>Mac connecté</strong><p>Envoie les données quotidiennes recueillies et un instantané exact des réglages à l’app Mac à proximité. L’iPhone lit HealthKit ; le Mac génère les formats sélectionnés et écrit les fichiers.</p></div>
-<div class="option"><strong>Point de terminaison API</strong><p>Envoie par POST une enveloppe d’API JSON directement depuis l’iPhone vers un point de terminaison HTTP(S) configuré par l’utilisateur. <a href="/fr/docs/api-endpoint/">Voir Point de terminaison API</a>.</p></div>
-</div>
-
-## Choisir une plage de dates
-<p>Les préréglages couvrent les cas courants :</p>
-<div class="options">
-<div class="option"><strong>Aujourd’hui</strong><p>Exporte la journée en cours. Utile pour tester la mise en forme.</p></div>
-<div class="option"><strong>Hier</strong><p>Le choix le plus sûr pour un export quotidien, car la journée est terminée.</p></div>
-<div class="option"><strong>Toute la période</strong><p>Récupère l’historique depuis les premières données HealthKit que Health.md peut trouver.</p></div>
-<div class="option"><strong>Personnalisée</strong><p>Choisissez les dates de début et de fin d’une période précise.</p></div>
-</div>
-
-## Aperçu ou export
-<div class="options">
-<div class="option"><strong>Aperçu</strong><p>Affiche les fichiers et leur contenu avant toute écriture.</p></div>
-<div class="option"><strong>Export</strong><p>Lance l’export, affiche sa progression sur l’écran principal et consigne le résultat dans l’historique.</p></div>
-</div>
-
-## Choisir le niveau de détail des données
+## Choisissez une cible d'exportation
+ <p> La carte Export Target décide où les données vont : </p>
 
 <div class="options">
-<div class="option"><strong>Résumé</strong><p>Totaux quotidiens et synthèses compacts pour la lecture, les notes et les tableaux de bord.</p></div>
-<div class="option"><strong>Série chronologique détaillée</strong><p>Échantillons et intervalles horodatés sélectionnés. Ce niveau est disponible sur Apple et Android lorsque la métrique offre un détail approprié.</p></div>
-<div class="option"><strong>Dossiers de santé sans perte</strong><p>L’archive canonique des enregistrements sources HealthKit. Ce niveau est réservé à Apple ; Android ne transforme pas les enregistrements Health Connect en archive HealthKit.</p></div>
-</div>
+ <div class="option"> <strong> Local iPhone Dossier </strong> <p> Écrit directement dans le dossier ou le coffre-fort Obsidian que vous avez choisi sur cet appareil. </p> </div>
+ <div class="option"> <strong> Mac connecté </strong> <p> Envoie les données quotidiennes capturées et un instantané des paramètres exacts à l'application Mac à proximité. Le iPhone lit HealthKit . Le Mac restitue les formats sélectionnés et écrit les fichiers. </p> </div>
+ <div class="option"> <strong> Point de terminaison API </strong> <p> POST une enveloppe JSON directement de iPhone vers un point de terminaison HTTP(S) configuré par l'utilisateur. <a href="/fr/docs/api-endpoint/"> Voir le point de terminaison de l'API </a> . </p> </div>
+ </div>
 
-## Ce que fait réellement l’export
-<ol>
-<li>Pour chaque jour de la plage, recueille les résumés sélectionnés, ajoute les échantillons compatibles pour la série chronologique détaillée et, pour les dossiers de santé sans perte, ajoute les enregistrements sources canoniques et les diagnostics de requête.</li>
-<li>Applique le format choisi (Markdown, Bases, JSON ou CSV) et le modèle.</li>
-<li>Écrit un fichier par jour dans <code>{vault}/{subfolder}/</code>, transfère les fichiers via le flux Mac connecté ou envoie par POST une enveloppe d’API JSON versionnée à votre point de terminaison API.</li>
-<li>Si <em>Suivi individuel</em> est activé, dérive de l’archive canonique les fichiers Markdown sélectionnés par entrée pour les destinations basées sur des fichiers.</li>
-<li>Si <em>Injection dans les notes quotidiennes</em> est activée, fusionne les champs récapitulatifs sélectionnés dans vos notes quotidiennes.</li>
-</ol>
-<p>JSON et CSV peuvent préserver les enregistrements canoniques. Markdown et Bases restent lisibles et présentent des diagnostics de collecte concis au lieu d’intégrer l’archive. Consultez la <a href="/fr/docs/reference/">référence complète des exports</a> pour les schémas exacts et les règles d’omission.</p>
+## Choisissez une plage de dates
+ <p> Les préréglages de date couvrent les chemins courants : </p>
 
-## Arrêter, annuler et réessayer
+<div class="options">
+ <div class="option"> <strong> Aujourd'hui </strong> <p> Exporte le jour en cours. Utile pour tester le formatage de la sortie. </p> </div>
+ <div class="option"> <strong> Hier </strong> <p> Le choix d'exportation quotidien le plus sûr car la journée est terminée. </p> </div>
+ <div class="option"> <strong> Tous les temps </strong> <p> Remplissez à partir des premières données HealthKit Health.md peut trouver. </p> </div>
+ <div class="option"> <strong> Personnalisé </strong> <p> Choisissez les dates de début et de fin pour une plage spécifique. </p> </div>
+ </div>
 
-Arrêter ou annuler met fin uniquement à la tentative en cours. Les fichiers et dates terminés sont conservés, tandis que les dates non résolues restent réessayables. L’annulation d’une tentative planifiée ne désactive pas sa récurrence.
+## Aperçu ou exportation
+ <div class="options">
+ <div class="option"> <strong> Aperçu </strong> <p> Affiche les fichiers et le contenu qui seront générés avant que quoi que ce soit ne soit écrit. </p> </div>
+ <div class="option"> <strong> Exporter </strong> <p> Exécute l'exportation, affiche la progression sur l'écran principal et enregistre le résultat dans l'historique. </p> </div>
+ </div>
+
+## Choisissez le niveau de détail des données
+
+<div class="options">
+ <div class="option"> <strong> Résumé </strong> <p> Compactez les totaux quotidiens et les cumuls pour la lecture, les notes et les tableaux de bord. </p> </div>
+ <div class="option"> <strong> Série chronologique détaillée </strong> <p> Échantillons et intervalles horodatés sélectionnés. Ce niveau est disponible sur Apple et Android lorsque la métrique choisie expose des détails appropriés. </p> </div>
+ <div class="option"> <strong> Dossiers de santé sans perte </strong> <p> L'archive canonique d'enregistrements sources HealthKit . Ce niveau est réservé à Apple. Android ne transforme pas les enregistrements Health Connect en archive HealthKit . </p> </div>
+ </div>
+
+## Ce que fait réellement « l'exportation »
+ <ol>
+ <li> Pour chaque jour de la plage, capturez les projections récapitulatives sélectionnées. Ajoutez des échantillons compatibles pour les séries chronologiques détaillées. Et, pour les dossiers de santé sans perte, ajoutez des enregistrements sources canoniques et des diagnostics de requête. </li>
+ <li> Appliquez le format et le modèle choisis ( Markdown , Bases, JSON ou CSV). </li>
+ <li> Écrivez un fichier par jour dans <code>{vault}/{subfolder}/</code> , transférez des fichiers via le flux de travail Mac connecté ou POSTez une enveloppe JSON versionnée sur votre point de terminaison API. </li>
+ <li> Si <em> Suivi individuel </em> est activé, dérivez les fichiers Markdown sélectionnés par entrée de l'archive canonique pour les cibles basées sur des fichiers. </li>
+ <li> Si <em> Injection de notes quotidiennes </em> est activée, fusionnez les champs de résumé sélectionnés dans vos notes quotidiennes. </li>
+ </ol>
+
+<p> JSON et CSV peuvent conserver les enregistrements canoniques. Markdown et Bases restent lisibles et exposent des diagnostics de capture compacts plutôt que d'intégrer l'archive. Consultez la référence d'exportation complète <a href="/fr/docs/reference/"> </a> pour connaître les schémas exacts et les règles d'omission. </p>
+
+## Arrêtez, annulez et réessayez
+
+L'arrêt ou l'annulation met fin uniquement à la tentative en cours. Les fichiers et les dates déjà terminés restent terminés, tandis que les dates non résolues restent disponibles pour une nouvelle tentative. L'annulation d'une tentative planifiée ne désactive pas sa planification récurrente.
 
 ## Profils et historique fiable
 
-Un profil enregistré fige ses réglages et sa destination pour l’exécution. Les lignes d’historique des exécutions planifiées et automatisées liées à un profil conservent le profil utilisé ; l’historique garde aussi un libellé respectueux de la confidentialité pour la destination réelle. Une ligne d’export manuel peut omettre le nom du profil. Les changements ultérieurs de nom ou de destination ne réécrivent pas l’historique existant. Une référence manquante échoue de façon sûre. Voir [Profils d’exportation](/fr/docs/export-profiles/).
+Un profil enregistré gèle ses paramètres et sa destination pour l'exécution. Les lignes de l'historique planifié et d'automatisation prenant en compte le profil conservent le profil d'exécution, tandis que l'historique conserve une étiquette de confidentialité pour la destination réellement utilisée. Une ligne de l'onglet Exportation manuelle peut omettre le nom du profil. Les changements de nom et de destination ultérieurs ne réécrivent pas l’historique existant. Si le profil référencé est introuvable, l’opération échoue sans utiliser d’autres paramètres. Voir [Exporter les profils](/fr/docs/export-profiles/).
 
-## Barre d’onglets
-<p>Les quatre onglets au bas de l’écran — Export, Planification, Synchronisation, Réglages — couvrent toute l’app. Tout le reste se trouve à un ou deux niveaux dans Réglages.</p>
-<div class="callout"><strong>Comportement du déverrouillage.</strong><p style="margin-top:6px;">Sur les plateformes Apple, l’allocation gratuite couvre 5 actions d’exportation manuelles ou planifiées. Full Access supprime cette limite et déverrouille les flux vers Mac ainsi que Raccourcis. Android offre plutôt 5 actions manuelles gratuites et exige l’achat à vie pour la planification. <a href="/fr/docs/paywall/">Consultez la page Paywall</a> pour l’achat Apple.</p></div>
+## Barre d'onglets
 
-## Pages associées
+<p> Les quatre onglets en bas de l'écran, Exportation, Planification, Synchronisation, Paramètres, couvrent toute la surface de l'application. Tout le reste réside dans une ou deux couches au plus profond des paramètres. </p>
+
+<div class="callout">
+ <strong> Comportement de déverrouillage. </strong>
+ <p style="margin-top:6px;"> Les versions de téléphone iPhone / iPad et Google Play avec abonnement nécessitent un essai actif, un abonnement, une durée de vie ou un accès permanent préservé pour les exportations et la planification. Il ne reste aucune allocation locale de libre exportation. Le compagnon Mac et la version à accès inclus F-Droid conservent leurs exceptions documentées. <a href="/fr/docs/paywall/"> Consultez la page Paywall </a> pour les détails de l'achat Apple. </p>
+ </div>
+
+## En rapport
+
 <div class="related">
-  <a href="/fr/docs/export-profiles/"><span>Profils</span>Enregistrez des destinations, réglages, planifications et identifiants d’automatisation indépendants.</a>
-<a href="/fr/docs/scheduling/"><span>Au quotidien</span>Planification — automatisez l’opération pour ne plus avoir à toucher Export.</a>
-<a href="/fr/docs/api-endpoint/"><span>Intégrer</span>Point de terminaison API — envoyez le JSON sélectionné directement à votre service.</a>
-<a href="/fr/docs/format/"><span>Personnaliser</span>Personnalisation du format — modifiez l’apparence de chaque fichier.</a>
-<a href="/fr/docs/shortcuts/"><span>Puissance</span>Shortcuts — déclenchez des exports depuis Siri, des automatisations ou d’autres apps.</a>
-<a href="/fr/docs/reference/"><span>Référence</span>Référence des exports — schémas, enregistrements canoniques, diagnostics et exemples générés.</a>
-</div>
+ <a href="/fr/docs/export-profiles/"> <span> Configurations répétables </span> Exportez les profils, enregistrez les paramètres indépendants, les destinations, les horaires et les identifiants d'automatisation stables. </a>
+ <a href="/fr/docs/scheduling/"> <span> Utilisation quotidienne </span> Planification, automatisez-la pour ne plus jamais appuyer sur Exporter. </a>
+ <a href="/fr/docs/api-endpoint/"> <span> Intégrez </span> API Endpoint, envoyez le JSON sélectionné directement à votre propre service. </a>
+ <a href="/fr/docs/format/"> <span> Personnaliser </span> Personnalisation du format, modifiez l'apparence de chaque fichier. </a>
+ <a href="/fr/docs/shortcuts/"> <span> Alimentation </span> Shortcuts , déclenchez des exportations depuis Siri , des automatisations ou d'autres applications. </a>
+ <a href="/fr/docs/reference/"> <span> Référence </span> Référence d'exportation, schémas, enregistrements canoniques, diagnostics et exemples générés. </a>
+ </div>

@@ -1,5 +1,5 @@
 use std::{
-    collections::BTreeMap,
+    collections::{BTreeMap, BTreeSet},
     fs::{self, File},
     io::{self, BufRead as _, BufReader, Read as _, Write as _},
     path::{Path, PathBuf},
@@ -26,7 +26,10 @@ use uuid::Uuid;
 
 use crate::{
     ClientError,
-    file_receiver::{GeneratedDestination, v2_write_mode},
+    file_receiver::{
+        GeneratedDestination, GeneratedNoteStage, MAXIMUM_SCOPED_NOTE_BYTES, is_source_date,
+        v2_write_mode,
+    },
     generated_path::{generated_paths_conflict, validate_generated_relative_path},
     job::JobState,
     limits::{
@@ -38,7 +41,8 @@ use crate::{
     v2_job::{V2JobStore, V2ResponseArtifact},
 };
 
-const JOURNAL_VERSION: u16 = 2;
+const LEGACY_JOURNAL_VERSION: u16 = 2;
+const JOURNAL_VERSION: u16 = 3;
 const MAXIMUM_NDJSON_LINE_BYTES: u64 = 64 * 1_024 * 1_024;
 const MAXIMUM_IN_MEMORY_JSON_BYTES: u64 = 64 * 1_024 * 1_024;
 
@@ -55,6 +59,10 @@ struct CommitPlan {
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 struct ReceiverJournal {
     version: u16,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    scoped_daily_note_version: Option<i32>,
+    #[serde(default, skip_serializing_if = "BTreeSet::is_empty")]
+    skipped_notes: BTreeSet<Uuid>,
     request: v2::ExportRequest,
     accepted: v2::ExportAccepted,
     session: TransferSession,
@@ -83,6 +91,7 @@ pub struct V2ArtifactReceipt {
 }
 
 pub struct V2ArtifactReceiver {
+    scoped_daily_note_version: Option<i32>,
     layout: StorageLayout,
     jobs: V2JobStore,
     journal: Option<ReceiverJournal>,
@@ -94,12 +103,31 @@ impl V2ArtifactReceiver {
     #[must_use]
     pub const fn new(layout: StorageLayout, jobs: V2JobStore) -> Self {
         Self {
+            scoped_daily_note_version: None,
             layout,
             jobs,
             journal: None,
             pending: None,
             deadline: None,
         }
+    }
+
+    /// Configure bilateral note support from the authenticated connection.
+    /// New jobs freeze this version; existing jobs retain their original semantics.
+    ///
+    /// # Errors
+    /// Rejects unknown versions and changes after preparing a job.
+    pub fn configure_scoped_daily_notes(
+        &mut self,
+        version: Option<i32>,
+    ) -> Result<(), ClientError> {
+        if !matches!(version, None | Some(1)) || self.journal.is_some() {
+            return Err(invalid(
+                "scoped note negotiation is unsupported or already frozen",
+            ));
+        }
+        self.scoped_daily_note_version = version;
+        Ok(())
     }
 
     pub fn set_deadline(&mut self, deadline: std::time::Instant) {
@@ -117,6 +145,11 @@ impl V2ArtifactReceiver {
         accepted: v2::ExportAccepted,
         session: TransferSession,
     ) -> Result<(), ClientError> {
+        if self.scoped_daily_note_version.is_some()
+            && request.product.product_id() != ProductId::GeneratedFilesV1
+        {
+            return Err(invalid("scoped note negotiation requires generated files"));
+        }
         let fingerprint = v2::request_fingerprint(&request)
             .map_err(|_| invalid("v2 request fingerprint failed"))?;
         if request.job_id != accepted.job_id
@@ -134,19 +167,31 @@ impl V2ArtifactReceiver {
 
         let directory = self.session_directory(request.job_id)?;
         let path = directory.join("receiver-journal.json");
+        let expected_version =
+            JOURNAL_VERSION + u16::from(self.scoped_daily_note_version.is_some());
         let journal = if path.exists() {
-            let persisted = load_journal(&path)?;
-            if persisted.version != JOURNAL_VERSION
+            let mut persisted = load_journal(&path)?;
+            if (persisted.scoped_daily_note_version.is_some()
+                && persisted.scoped_daily_note_version != self.scoped_daily_note_version)
                 || persisted.request != request
                 || persisted.accepted != accepted
                 || persisted.session != session
             {
                 return Err(invalid("durable v2 transfer session changed"));
             }
+            validate_persisted_limits(&self.layout, &persisted)?;
+            let expected_version =
+                JOURNAL_VERSION + u16::from(persisted.scoped_daily_note_version.is_some());
+            if persisted.version != expected_version {
+                persisted.version = expected_version;
+                save_journal(&self.layout, &persisted)?;
+            }
             persisted
         } else {
             let created = ReceiverJournal {
-                version: JOURNAL_VERSION,
+                version: expected_version,
+                scoped_daily_note_version: self.scoped_daily_note_version,
+                skipped_notes: BTreeSet::new(),
                 request,
                 accepted,
                 session,
@@ -185,6 +230,7 @@ impl V2ArtifactReceiver {
             .journal
             .as_mut()
             .ok_or_else(|| invalid("v2 receiver is not prepared"))?;
+        validate_note_manifest(&manifest, journal)?;
         let maximum_manifests = maximum_manifests(journal.request.product.product_id());
         if manifest.job_id != journal.request.job_id
             || !manifest_matches_product(&manifest, journal.request.product.product_id())
@@ -504,6 +550,8 @@ impl V2ArtifactReceiver {
             .clone()
             .ok_or_else(|| invalid("v2 receiver is not prepared"))?;
         validate_finalize(finalize, &journal)?;
+        // A write-phase failure must not retry an older in-memory snapshot of dispositions.
+        self.journal = None;
         let receipt = match journal.request.product.product_id() {
             ProductId::AndroidProviderNativeSnapshotV1 => self.finalize_raw_snapshot(&journal)?,
             ProductId::GeneratedFilesV1 => self.finalize_generated_files(&mut journal)?,
@@ -538,7 +586,14 @@ impl V2ArtifactReceiver {
             final_partition_sha256: finalize.final_partition_sha256.clone(),
             response_byte_count: Some(receipt.byte_count),
             response_sha256: Some(receipt.sha256),
-            message: Some("Android export validated and committed.".into()),
+            message: Some(
+                if journal.skipped_notes.is_empty() {
+                    "Android export validated and committed."
+                } else {
+                    "Android export processed with skipped notes."
+                }
+                .into(),
+            ),
         })
     }
 
@@ -724,14 +779,33 @@ impl V2ArtifactReceiver {
                 .write_mode
                 .ok_or_else(|| invalid("generated file has no write mode"))?;
             let source = assemble_artifact(&self.layout, journal, manifest, self.deadline)?;
+            if journal.skipped_notes.contains(&manifest.artifact_id) {
+                continue;
+            }
             let stage = self
                 .session_directory(journal.request.job_id)?
                 .join(format!("commit-{}.stage", manifest.artifact_id));
             let plan = if let Some(plan) = journal.commit_plans.get(&manifest.artifact_id) {
                 plan.clone()
             } else {
-                let prepared =
-                    destination.prepare_android_stage(relative_path, &source, &stage, mode)?;
+                let prepared = if let Some(policy) = &manifest.scoped_note_policy {
+                    match destination.prepare_scoped_note_stage(
+                        relative_path,
+                        &source,
+                        &stage,
+                        policy,
+                    )? {
+                        GeneratedNoteStage::Ready(prepared) => prepared,
+                        GeneratedNoteStage::SkippedMissing => {
+                            journal.skipped_notes.insert(manifest.artifact_id);
+                            journal.updated_at = Utc::now();
+                            save_journal(&self.layout, journal)?;
+                            continue;
+                        }
+                    }
+                } else {
+                    destination.prepare_android_stage(relative_path, &source, &stage, mode)?
+                };
                 let plan = CommitPlan {
                     artifact_id: manifest.artifact_id,
                     relative_path: relative_path.clone(),
@@ -774,10 +848,11 @@ impl V2ArtifactReceiver {
 
         let mut paths: Vec<_> = manifests
             .iter()
+            .filter(|manifest| !journal.skipped_notes.contains(&manifest.artifact_id))
             .filter_map(|manifest| manifest.relative_path.clone())
             .collect();
         paths.sort();
-        let payload = json!({
+        let mut payload = json!({
             "schema": "healthmd.android_direct_file_receipt",
             "schema_version": 1,
             "platform": "android",
@@ -788,6 +863,16 @@ impl V2ArtifactReceiver {
             "relative_paths": paths,
             "message": "Android export files were committed to the explicit destination."
         });
+        let mut skipped_paths: Vec<_> = manifests
+            .iter()
+            .filter(|m| journal.skipped_notes.contains(&m.artifact_id))
+            .filter_map(|m| m.relative_path.clone())
+            .collect();
+        skipped_paths.sort();
+        if !skipped_paths.is_empty() {
+            payload["skipped_relative_paths"] = json!(skipped_paths);
+            payload["message"] = json!("Android export completed with skipped notes.");
+        }
         let response_path = self
             .response_directory(journal.request.job_id)?
             .join("file-receipt.json");
@@ -832,6 +917,20 @@ impl V2ArtifactReceiver {
 }
 
 fn validate_manifest(manifest: &ArtifactManifest) -> Result<(), ClientError> {
+    if let Some(policy) = &manifest.scoped_note_policy {
+        if !policy.is_valid()
+            || manifest.byte_count > MAXIMUM_SCOPED_NOTE_BYTES
+            || manifest.kind != ArtifactKind::GeneratedFile
+            || manifest.write_mode != Some(v2::FileWriteMode::MergeMarkdownPreservingPreamble)
+            || manifest.media_type != "text/markdown; charset=utf-8"
+            || manifest
+                .relative_path
+                .as_ref()
+                .is_none_or(|path| !path.to_ascii_lowercase().ends_with(".md"))
+        {
+            return Err(invalid("scoped note policy is incompatible with artifact"));
+        }
+    }
     if manifest.job_id.is_nil()
         || manifest.artifact_id.is_nil()
         || manifest.byte_count == 0
@@ -901,6 +1000,48 @@ fn validate_manifest(manifest: &ArtifactManifest) -> Result<(), ClientError> {
     Ok(())
 }
 
+fn validate_note_manifest(
+    manifest: &ArtifactManifest,
+    journal: &ReceiverJournal,
+) -> Result<(), ClientError> {
+    let Some(policy) = &manifest.scoped_note_policy else {
+        return if journal.scoped_daily_note_version.is_some()
+            && manifest.write_mode == Some(v2::FileWriteMode::MergeMarkdownPreservingPreamble)
+        {
+            Err(invalid("negotiated note manifest has no policy"))
+        } else {
+            Ok(())
+        };
+    };
+    let range = &journal.accepted.resolved_range;
+    if journal.scoped_daily_note_version != Some(1)
+        || !policy.is_valid()
+        || !matches!(
+            policy.record_profile.as_str(),
+            "android-frozen-v4" | "android-analytical-v5" | "android-sleep-v6"
+        )
+        || !is_source_date(&range.start_date)
+        || !is_source_date(&range.end_date)
+        || policy.owner_date < range.start_date
+        || policy.owner_date > range.end_date
+        || policy.calendar_timezone != range.time_zone_id
+    {
+        return Err(invalid(
+            "scoped note policy does not match accepted authority",
+        ));
+    }
+    if let v2::DateSelection::Exact {
+        start_date,
+        end_date,
+    } = &journal.request.date_selection
+    {
+        if start_date != &range.start_date || end_date != &range.end_date {
+            return Err(invalid("scoped note range does not match request"));
+        }
+    }
+    Ok(())
+}
+
 fn manifest_matches_request(manifest: &ArtifactManifest, journal: &ReceiverJournal) -> bool {
     match &journal.request.product {
         v2::ExportProduct::AndroidProviderNativeSnapshotV1 {
@@ -952,6 +1093,14 @@ fn validate_persisted_limits(
     layout: &StorageLayout,
     journal: &ReceiverJournal,
 ) -> Result<(), ClientError> {
+    validate_journal_version(journal)?;
+    if journal.scoped_daily_note_version.is_some()
+        && journal.request.product.product_id() != ProductId::GeneratedFilesV1
+    {
+        return Err(invalid(
+            "durable scoped note negotiation requires generated files",
+        ));
+    }
     if journal.manifests.len() > maximum_manifests(journal.request.product.product_id())
         || journal.commit_plans.len() > journal.manifests.len()
         || u64::try_from(journal.committed_partitions.len()).unwrap_or(u64::MAX)
@@ -961,6 +1110,8 @@ fn validate_persisted_limits(
     }
     let manifests: Vec<_> = journal.manifests.iter().collect();
     for (index, (artifact_id, manifest)) in manifests.iter().enumerate() {
+        validate_manifest(manifest)?;
+        validate_note_manifest(manifest, journal)?;
         if **artifact_id != manifest.artifact_id
             || !manifest_matches_product(manifest, journal.request.product.product_id())
             || !manifest_matches_request(manifest, journal)
@@ -977,6 +1128,20 @@ fn validate_persisted_limits(
             }) {
                 return Err(invalid("durable generated destinations collide"));
             }
+        }
+    }
+    for artifact_id in &journal.skipped_notes {
+        let manifest = journal
+            .manifests
+            .get(artifact_id)
+            .ok_or_else(|| invalid("skipped note has no artifact"))?;
+        if journal.commit_plans.contains_key(artifact_id)
+            || manifest
+                .scoped_note_policy
+                .as_ref()
+                .is_none_or(|policy| policy.create_if_missing)
+        {
+            return Err(invalid("skipped note disposition is incompatible"));
         }
     }
     for (artifact_id, plan) in &journal.commit_plans {
@@ -2128,12 +2293,37 @@ fn raw_exclusive_end_date(value: &Value, zone: &str) -> Option<String> {
 }
 
 fn load_journal(path: &Path) -> Result<ReceiverJournal, ClientError> {
-    serde_json::from_slice(&read_bounded(
+    let journal = serde_json::from_slice(&read_bounded(
         path,
         MAXIMUM_DURABLE_JSON_BYTES,
         "v2 journal exceeds the durable metadata limit",
     )?)
-    .map_err(|_| invalid("v2 receiver journal is malformed"))
+    .map_err(|_| invalid("v2 receiver journal is malformed"))?;
+    validate_journal_version(&journal)?;
+    Ok(journal)
+}
+
+fn validate_journal_version(journal: &ReceiverJournal) -> Result<(), ClientError> {
+    if !matches!(journal.scoped_daily_note_version, None | Some(1))
+        || (journal.scoped_daily_note_version.is_none() && !journal.skipped_notes.is_empty())
+    {
+        return Err(invalid("durable scoped note version is unsupported"));
+    }
+    let expected = JOURNAL_VERSION + u16::from(journal.scoped_daily_note_version.is_some());
+    if journal.version == expected {
+        return Ok(());
+    }
+    if journal.scoped_daily_note_version.is_some()
+        || journal.version != LEGACY_JOURNAL_VERSION
+        || journal.commit_plans.keys().any(|artifact_id| {
+            journal.manifests.get(artifact_id).is_some_and(|manifest| {
+                manifest.write_mode == Some(v2::FileWriteMode::MergeMarkdownPreservingPreamble)
+            })
+        })
+    {
+        return Err(invalid("durable v2 merger version is unsupported"));
+    }
+    Ok(())
 }
 
 fn save_journal(layout: &StorageLayout, journal: &ReceiverJournal) -> Result<(), ClientError> {
@@ -2439,6 +2629,7 @@ mod tests {
             };
             let bytes = fs::read(&path).unwrap();
             let artifact = ArtifactManifest {
+                scoped_note_policy: None,
                 job_id,
                 artifact_id: Uuid::new_v4(),
                 kind: ArtifactKind::RawSnapshot,
@@ -2576,6 +2767,7 @@ mod tests {
         let artifact_id = Uuid::new_v4();
         let artifact_sha = sha256_hex(&snapshot);
         let manifest = ArtifactManifest {
+            scoped_note_policy: None,
             job_id,
             artifact_id,
             kind: ArtifactKind::RawSnapshot,
@@ -2680,12 +2872,48 @@ mod tests {
     }
 
     #[test]
-    #[allow(clippy::too_many_lines)]
     fn android_generated_file_transfer_commits_with_v2_destination_binding() {
+        check_generated_file_transfer(false, crate::test_support::NoteCase::Legacy);
+    }
+
+    #[test]
+    fn android_scoped_note_transfer_survives_restart_and_rejects_legacy_stages() {
+        check_generated_file_transfer(true, crate::test_support::NoteCase::Legacy);
+    }
+
+    #[test]
+    fn android_negotiated_notes_freeze_skips_and_bind_resume_authority() {
+        use crate::test_support::NoteCase;
+        for case in [
+            NoteCase::Existing,
+            NoteCase::SkipMissing,
+            NoteCase::CreateMissing,
+            NoteCase::RejectCapture,
+        ] {
+            check_generated_file_transfer(true, case);
+        }
+    }
+
+    #[allow(clippy::too_many_lines)]
+    fn check_generated_file_transfer(scoped: bool, case: crate::test_support::NoteCase) {
+        use crate::test_support::NoteCase;
+        let negotiated = case != NoteCase::Legacy;
+        let missing = matches!(
+            case,
+            NoteCase::SkipMissing | NoteCase::CreateMissing | NoteCase::RejectCapture
+        );
+        let version = negotiated.then_some(1);
         let temporary = TempDir::new().unwrap();
         let destination_path = temporary.path().join("destination");
         fs::create_dir(&destination_path).unwrap();
-        fs::write(destination_path.join("daily.md"), b"old").unwrap();
+        let existing = if scoped {
+            crate::test_support::personal_journal()
+        } else {
+            "old".into()
+        };
+        if !missing {
+            fs::write(destination_path.join("daily.md"), &existing).unwrap();
+        }
         let destination = GeneratedDestination::open(&destination_path).unwrap();
         let layout = StorageLayout {
             root: temporary.path().join("data"),
@@ -2745,10 +2973,41 @@ mod tests {
             partition_target_bytes: 32 * 1_024 * 1_024,
             created_at: now,
         };
-        let data = b"fresh".to_vec();
+        let data = if scoped {
+            {
+                let patch = crate::test_support::scoped_note_patch(true);
+                if case == NoteCase::RejectCapture {
+                    patch.replace("2026-07-23", "2026-07-24").into_bytes()
+                } else {
+                    patch.into_bytes()
+                }
+            }
+        } else {
+            b"fresh".to_vec()
+        };
+        let expected = if scoped {
+            crate::markdown::merge_personal_note(
+                if missing { "" } else { &existing },
+                std::str::from_utf8(&data).unwrap(),
+            )
+            .unwrap()
+            .into_bytes()
+        } else {
+            b"old\nfresh".to_vec()
+        };
         let digest = sha256_hex(&data);
         let artifact_id = Uuid::new_v4();
         let manifest = ArtifactManifest {
+            scoped_note_policy: negotiated.then(|| {
+                healthmd_protocol::notes::ScopedDailyNotePolicy {
+                    version: 1,
+                    record_profile: "android-sleep-v6".into(),
+                    owner_date: "2026-07-23".into(),
+                    calendar_timezone: "UTC".into(),
+                    create_if_missing: case == NoteCase::CreateMissing,
+                    inject_sections: true,
+                }
+            }),
             job_id,
             artifact_id,
             kind: ArtifactKind::GeneratedFile,
@@ -2761,7 +3020,11 @@ mod tests {
             sha256: digest.clone(),
             logical_checksum_sha256: None,
             relative_path: Some("daily.md".into()),
-            write_mode: Some(v2::FileWriteMode::Append),
+            write_mode: Some(if scoped {
+                v2::FileWriteMode::MergeMarkdownPreservingPreamble
+            } else {
+                v2::FileWriteMode::Append
+            }),
             snapshot_status: None,
             provider_id: None,
         };
@@ -2776,11 +3039,23 @@ mod tests {
             sha256: digest.clone(),
             previous_sha256: None,
         };
-        let mut receiver = V2ArtifactReceiver::new(layout, jobs.clone());
+        let mut receiver = V2ArtifactReceiver::new(layout.clone(), jobs.clone());
+        assert!(receiver.configure_scoped_daily_notes(Some(2)).is_err());
+        receiver.configure_scoped_daily_notes(version).unwrap();
         receiver
-            .prepare(request, accepted, session.clone())
+            .prepare(request.clone(), accepted.clone(), session.clone())
             .unwrap();
-        receiver.store_manifest(manifest).unwrap();
+        let mut unnegotiated = manifest.clone();
+        unnegotiated.scoped_note_policy = Some(healthmd_protocol::notes::ScopedDailyNotePolicy {
+            version: if negotiated { 2 } else { 1 },
+            record_profile: "android-sleep-v6".into(),
+            owner_date: "2026-07-23".into(),
+            calendar_timezone: "UTC".into(),
+            create_if_missing: false,
+            inject_sections: true,
+        });
+        assert!(receiver.store_manifest(unnegotiated).is_err());
+        receiver.store_manifest(manifest.clone()).unwrap();
         receiver
             .disposition(TransferOpen {
                 session: session.clone(),
@@ -2807,20 +3082,284 @@ mod tests {
                 partition_sha256: digest.clone(),
             })
             .unwrap();
-        receiver
-            .finalize(&TransferFinalize {
-                session_id: session.session_id,
-                job_id,
-                request_fingerprint: fingerprint,
-                total_partitions: 1,
-                total_bytes: u64::try_from(data.len()).unwrap(),
-                final_partition_sha256: Some(digest),
-            })
-            .unwrap();
+        let finalize = TransferFinalize {
+            session_id: session.session_id,
+            job_id,
+            request_fingerprint: fingerprint,
+            total_partitions: 1,
+            total_bytes: u64::try_from(data.len()).unwrap(),
+            final_partition_sha256: Some(digest),
+        };
+        assert!(receiver.configure_scoped_daily_notes(version).is_err());
+        if negotiated {
+            let original_range = receiver
+                .journal
+                .as_ref()
+                .unwrap()
+                .accepted
+                .resolved_range
+                .clone();
+            receiver
+                .journal
+                .as_mut()
+                .unwrap()
+                .accepted
+                .resolved_range
+                .end_date = "2026-07-24".into();
+            let mut outside_request = manifest.clone();
+            outside_request.artifact_id = Uuid::new_v4();
+            outside_request.relative_path = Some("outside-request.md".into());
+            outside_request
+                .scoped_note_policy
+                .as_mut()
+                .unwrap()
+                .owner_date = "2026-07-24".into();
+            assert!(
+                matches!(receiver.store_manifest(outside_request), Err(ClientError::InvalidTransfer(message))
+                if message == "scoped note range does not match request")
+            );
+            receiver.journal.as_mut().unwrap().accepted.resolved_range = original_range;
+            let mut no_capability = V2ArtifactReceiver::new(layout.clone(), jobs.clone());
+            assert!(
+                no_capability
+                    .prepare(request.clone(), accepted.clone(), session.clone())
+                    .is_err()
+            );
+            for field in [
+                "profile", "date", "clock", "policy", "mode", "media", "size",
+            ] {
+                let mut changed = manifest.clone();
+                changed.artifact_id = Uuid::new_v4();
+                changed.relative_path = Some(format!("invalid-{field}.md"));
+                match field {
+                    "profile" => {
+                        changed.scoped_note_policy.as_mut().unwrap().record_profile =
+                            "apple-v11".into();
+                    }
+                    "date" => {
+                        changed.scoped_note_policy.as_mut().unwrap().owner_date =
+                            "2026-07-24".into();
+                    }
+                    "clock" => {
+                        changed
+                            .scoped_note_policy
+                            .as_mut()
+                            .unwrap()
+                            .calendar_timezone = "America/New_York".into();
+                    }
+                    "policy" => changed.scoped_note_policy = None,
+                    "mode" => changed.write_mode = Some(v2::FileWriteMode::Overwrite),
+                    "media" => changed.media_type = "application/json".into(),
+                    "size" => changed.byte_count = MAXIMUM_SCOPED_NOTE_BYTES + 1,
+                    _ => unreachable!(),
+                }
+                assert!(receiver.store_manifest(changed).is_err());
+            }
+        }
+        if case == NoteCase::RejectCapture {
+            let error = receiver.finalize(&finalize).unwrap_err();
+            assert!(matches!(error, ClientError::InvalidTransfer(ref message)
+                if message == "scoped daily note does not match its accepted policy"));
+            assert!(!destination_path.join("daily.md").exists());
+            let path = receiver
+                .session_directory(job_id)
+                .unwrap()
+                .join("receiver-journal.json");
+            let journal = load_journal(&path).unwrap();
+            assert!(journal.skipped_notes.is_empty());
+            assert!(journal.commit_plans.is_empty());
+            return;
+        }
+        if case == NoteCase::SkipMissing {
+            let mut interrupted = receiver.journal.clone().unwrap();
+            receiver.finalize_generated_files(&mut interrupted).unwrap();
+            assert!(interrupted.skipped_notes.contains(&artifact_id));
+            assert!(interrupted.commit_plans.is_empty());
+            assert!(!destination_path.join("daily.md").exists());
+            assert!(
+                !receiver
+                    .session_directory(job_id)
+                    .unwrap()
+                    .join(format!("commit-{artifact_id}.stage"))
+                    .exists()
+            );
+            for corruption in ["unknown_id", "create", "version", "missing_version", "plan"] {
+                let mut changed = interrupted.clone();
+                match corruption {
+                    "unknown_id" => {
+                        changed.skipped_notes.insert(Uuid::new_v4());
+                    }
+                    "create" => {
+                        changed
+                            .manifests
+                            .get_mut(&artifact_id)
+                            .unwrap()
+                            .scoped_note_policy
+                            .as_mut()
+                            .unwrap()
+                            .create_if_missing = true;
+                    }
+                    "version" => {
+                        changed.scoped_daily_note_version = Some(2);
+                    }
+                    "missing_version" => {
+                        changed.scoped_daily_note_version = None;
+                    }
+                    "plan" => {
+                        changed.commit_plans.insert(
+                            artifact_id,
+                            CommitPlan {
+                                artifact_id,
+                                relative_path: "daily.md".into(),
+                                before_sha256: None,
+                                after_sha256: manifest.sha256.clone(),
+                                stage_path: receiver
+                                    .session_directory(job_id)
+                                    .unwrap()
+                                    .join(format!("commit-{artifact_id}.stage"))
+                                    .to_string_lossy()
+                                    .into(),
+                                committed: true,
+                            },
+                        );
+                    }
+                    _ => unreachable!(),
+                }
+                save_journal(&layout, &changed).unwrap();
+                let mut rejected = V2ArtifactReceiver::new(layout.clone(), jobs.clone());
+                rejected.configure_scoped_daily_notes(version).unwrap();
+                assert!(
+                    rejected
+                        .prepare(request.clone(), accepted.clone(), session.clone())
+                        .is_err()
+                );
+                assert!(!destination_path.join("daily.md").exists());
+            }
+            save_journal(&layout, &interrupted).unwrap();
+            fs::write(destination_path.join("daily.md"), b"Created after skip").unwrap();
+            let mut reopened = V2ArtifactReceiver::new(layout.clone(), jobs.clone());
+            reopened.configure_scoped_daily_notes(version).unwrap();
+            reopened
+                .prepare(request.clone(), accepted.clone(), session.clone())
+                .unwrap();
+            let partition = partition_path(&layout, job_id, 0).unwrap();
+            let saved_bytes = fs::read(&partition).unwrap();
+            fs::write(&partition, b"corrupt").unwrap();
+            let source = reopened
+                .session_directory(job_id)
+                .unwrap()
+                .join(format!("artifact-{artifact_id}.bin"));
+            fs::write(source, b"corrupt").unwrap();
+            assert!(reopened.finalize(&finalize).is_err());
+            assert_eq!(
+                fs::read(destination_path.join("daily.md")).unwrap(),
+                b"Created after skip"
+            );
+            fs::write(&partition, saved_bytes).unwrap();
+            assert!(reopened.finalize(&finalize).is_err());
+            reopened.prepare(request, accepted, session).unwrap();
+            let acknowledgement = reopened.finalize(&finalize).unwrap();
+            let receipt = reopened.receipt(job_id).unwrap();
+            let payload: Value = serde_json::from_slice(&fs::read(&receipt.path).unwrap()).unwrap();
+            assert_eq!(payload["files_written"], 0);
+            assert_eq!(payload["relative_paths"], json!([]));
+            assert_eq!(payload["skipped_relative_paths"], json!(["daily.md"]));
+            assert_eq!(reopened.finalize(&finalize).unwrap(), acknowledgement);
+            assert_eq!(
+                fs::read(destination_path.join("daily.md")).unwrap(),
+                b"Created after skip"
+            );
+            reopened.acknowledge_completion(job_id).unwrap();
+            assert_eq!(
+                V2ArtifactReceiver::new(layout, jobs)
+                    .receipt(job_id)
+                    .unwrap(),
+                receipt
+            );
+            return;
+        }
+        receiver.finalize(&finalize).unwrap();
         assert_eq!(
             fs::read(destination_path.join("daily.md")).unwrap(),
-            b"old\nfresh"
+            expected
         );
+        if !scoped {
+            let path = receiver
+                .session_directory(job_id)
+                .unwrap()
+                .join("receiver-journal.json");
+            let mut saved = load_journal(&path).unwrap();
+            let plans = saved.commit_plans.clone();
+            saved.version = LEGACY_JOURNAL_VERSION;
+            save_journal(&receiver.layout, &saved).unwrap();
+            let mut reopened = V2ArtifactReceiver::new(receiver.layout.clone(), jobs.clone());
+            reopened.configure_scoped_daily_notes(Some(1)).unwrap();
+            reopened
+                .prepare(saved.request, saved.accepted, saved.session)
+                .unwrap();
+            let upgraded = load_journal(&path).unwrap();
+            assert_eq!(upgraded.version, JOURNAL_VERSION);
+            assert_eq!(upgraded.commit_plans, plans);
+            assert_eq!(
+                fs::read(destination_path.join("daily.md")).unwrap(),
+                expected
+            );
+        }
+        if scoped {
+            let path = receiver
+                .session_directory(job_id)
+                .unwrap()
+                .join("receiver-journal.json");
+            let original = load_journal(&path).unwrap();
+            for committed in [false, true] {
+                let mut saved = original.clone();
+                saved.commit_plans.get_mut(&artifact_id).unwrap().committed = committed;
+                saved.version = LEGACY_JOURNAL_VERSION;
+                save_journal(&receiver.layout, &saved).unwrap();
+                let mut reopened = V2ArtifactReceiver::new(receiver.layout.clone(), jobs.clone());
+                reopened.configure_scoped_daily_notes(version).unwrap();
+                assert!(
+                    reopened
+                        .prepare(
+                            saved.request.clone(),
+                            saved.accepted.clone(),
+                            saved.session.clone()
+                        )
+                        .is_err()
+                );
+                assert_eq!(
+                    fs::read(destination_path.join("daily.md")).unwrap(),
+                    expected
+                );
+            }
+            let mut saved = original.clone();
+            saved.commit_plans.get_mut(&artifact_id).unwrap().committed = false;
+            save_journal(&receiver.layout, &saved).unwrap();
+            if missing {
+                fs::remove_file(destination_path.join("daily.md")).unwrap();
+            } else {
+                fs::write(destination_path.join("daily.md"), &existing).unwrap();
+            }
+            let mut reopened = V2ArtifactReceiver::new(receiver.layout.clone(), jobs.clone());
+            reopened.configure_scoped_daily_notes(version).unwrap();
+            reopened
+                .prepare(saved.request, saved.accepted, saved.session)
+                .unwrap();
+            reopened.finalize(&finalize).unwrap();
+            assert_eq!(
+                fs::read(destination_path.join("daily.md")).unwrap(),
+                expected
+            );
+            let receipt = reopened.receipt(job_id).unwrap();
+            let payload: Value = serde_json::from_slice(&fs::read(receipt.path).unwrap()).unwrap();
+            assert_eq!(payload["files_written"], 1);
+            fs::write(destination_path.join("daily.md"), b"changed by owner").unwrap();
+            assert!(reopened.finalize(&finalize).is_err());
+            assert_eq!(
+                fs::read(destination_path.join("daily.md")).unwrap(),
+                b"changed by owner"
+            );
+        }
         receiver.acknowledge_completion(job_id).unwrap();
         assert_eq!(jobs.load(job_id).unwrap().state, JobState::Completed);
     }

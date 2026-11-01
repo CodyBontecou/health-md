@@ -97,10 +97,6 @@
 	<string>$(OAUTH_BROKER_ENDPOINT_URL)</string>
 	<key>OAUTH_BROKER_CLIENT_TOKEN</key>
 	<string>$(OAUTH_BROKER_CLIENT_TOKEN)</string>
-	<key>PRICING_ANALYTICS_ENDPOINT_URL</key>
-	<string>$(PRICING_ANALYTICS_ENDPOINT_URL)</string>
-	<key>PRICING_ANALYTICS_INGEST_TOKEN</key>
-	<string>$(PRICING_ANALYTICS_INGEST_TOKEN)</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

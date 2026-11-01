@@ -44,6 +44,7 @@ import com.healthmd.domain.repository.EntitlementRepository
 import com.healthmd.domain.repository.ExportHistoryRepository
 import com.healthmd.domain.repository.ExportRepository
 import com.healthmd.domain.repository.HealthRepository
+import com.healthmd.domain.repository.forCaptureOperation
 import com.healthmd.domain.repository.SettingsRepository
 import com.healthmd.presentation.MainActivity
 import com.healthmd.rawexport.ExportMode
@@ -349,8 +350,7 @@ class ExportWorker @AssistedInject constructor(
         val historyOperationId = durableFolderOperationId ?: durableApiOperationId ?: admissionOperationId
         entitlementRepository.refresh()
         val isPurchased = distributionPolicy.fullAccessIncluded ||
-            settingsRepository.isPurchased.first() ||
-            entitlementRepository.isUnlocked.first()
+            entitlementRepository.verifyAccess()
         val dates = scheduledDates(
             settings,
             destinationFingerprint,
@@ -449,7 +449,7 @@ class ExportWorker @AssistedInject constructor(
             pendingApiOperationId == null && !canResumeStoredFolder
         ) {
             runCatchingCancellable {
-                healthRepository.hasBackgroundReadPermission()
+                healthRepository.forCaptureOperation(settings).hasBackgroundReadPermission()
             }
         } else {
             kotlin.Result.success(true)
@@ -531,6 +531,7 @@ class ExportWorker @AssistedInject constructor(
                             expectedDestinationFingerprint = destinationFingerprint,
                             durableOperationId = durableApiOperationId,
                             durableSettingsSnapshotJson = capturedSnapshotJson,
+                            requireExistingDurableOperation = pendingApiOperationId != null,
                         )
                         ExportTarget.AGENT_DATA_GATEWAY -> agentDataGatewayExportRunner.exportDates(
                             dates = dates,

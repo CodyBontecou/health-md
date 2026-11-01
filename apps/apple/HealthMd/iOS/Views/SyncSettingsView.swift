@@ -44,27 +44,23 @@ struct SyncSettingsView: View {
     }
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: Spacing.s4) {
-                syncHeader
-                configurationTargetPicker
+        GeometryReader { viewport in
+            ScrollView {
+                VStack(alignment: .leading, spacing: Spacing.s4) {
+                    syncHeader(availableWidth: viewport.size.width)
+                    configurationTargetPicker
 
-                switch configurationTarget {
-                case .macDestination:
-                    syncToggleSection
-                        .configurationChangesProtected()
-                    downloadMacSection
-                    connectionSection
-                    manualIPSection
-                    macExportFlowSection
-                    errorSection
-                case .cli:
-                    directCLISection
+                    switch configurationTarget {
+                    case .macDestination:
+                        macSections(availableWidth: viewport.size.width)
+                    case .cli:
+                        directCLISection(availableWidth: viewport.size.width)
+                    }
                 }
+                .padding(.horizontal, Spacing.s4)
+                .padding(.top, Spacing.s4)
+                .padding(.bottom, 120)
             }
-            .padding(.horizontal, Spacing.s4)
-            .padding(.top, Spacing.s4)
-            .padding(.bottom, 120)
         }
         .background(Color.bgPrimary.ignoresSafeArea())
         .scrollIndicators(.hidden)
@@ -114,14 +110,15 @@ struct SyncSettingsView: View {
 
     // MARK: - Header
 
-    private var syncHeader: some View {
-        HealthMdPageHeader(
+    private func syncHeader(availableWidth: CGFloat) -> some View {
+        AdaptivePageHeader(
+            availableWidth: availableWidth,
             title: configurationTarget == .macDestination ? "Mac Destination" : "CLI",
             subtitle: configurationTarget == .macDestination
                 ? "Let Health.md on Mac receive iPhone-configured exports over your local network."
                 : "Let the healthmd command connect while this iPhone app is open, without running the Mac app."
         ) {
-            HStack(spacing: Spacing.sm) {
+            SchedulingAdaptiveStack {
                 if configurationTarget == .macDestination {
                     SyncStatusPill(
                         text: syncEnabled ? String(localized: "Enabled") : String(localized: "Disabled"),
@@ -155,6 +152,23 @@ struct SyncSettingsView: View {
     }
 
     // MARK: - Sections
+
+    private func macSections(availableWidth: CGFloat) -> some View {
+        AdaptivePageColumns(availableWidth: availableWidth) {
+            VStack(alignment: .leading, spacing: Spacing.s4) {
+                syncToggleSection
+                    .configurationChangesProtected()
+                connectionSection
+            }
+        } secondary: {
+            VStack(alignment: .leading, spacing: Spacing.s4) {
+                downloadMacSection
+                manualIPSection
+                macExportFlowSection
+                errorSection
+            }
+        }
+    }
 
     private var syncToggleSection: some View {
         SyncCard(
@@ -400,240 +414,256 @@ struct SyncSettingsView: View {
         }
     }
 
-    private var directCLISection: some View {
+    private func directCLISection(availableWidth: CGFloat) -> some View {
         SyncCard(
             title: "Direct CLI Access",
             subtitle: "Let the healthmd command connect while this iPhone app is open, without running the Mac app."
         ) {
-            VStack(alignment: .leading, spacing: Spacing.sm) {
+            AdaptivePageColumns(
+                availableWidth: availableWidth,
+                showsSecondary: directCLIEnabled || directCLIService.lastError != nil,
+                spacing: Spacing.sm
+            ) {
+                directCLIAccessControls
+            } secondary: {
+                directCLIConnectionControls
+            }
+            .padding(.horizontal, Spacing.md)
+            .padding(.vertical, 14)
+        }
+    }
+
+    private var directCLIAccessControls: some View {
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            Toggle(isOn: Binding(
+                get: { directCLIEnabled },
+                set: { enabled in
+                    configurationProtection.performConfigurationChange {
+                        directCLIEnabled = enabled
+                        directCLIService.setEnabled(enabled)
+                    }
+                }
+            )) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Enable Direct CLI Access")
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(Color.textPrimary)
+                    Text("New commands require Health.md to be open. An active export can continue briefly in the background.")
+                        .font(.footnote)
+                        .foregroundStyle(Color.textSecondary)
+                }
+            }
+            .tint(Color.accent)
+            .accessibilityIdentifier(AccessibilityID.Sync.directCLIToggle)
+
+            if directCLIService.hasPairedCLI {
+                SyncRowDivider()
                 Toggle(isOn: Binding(
-                    get: { directCLIEnabled },
+                    get: {
+                        if case .enrolled = directWakeManager.state { return true }
+                        return false
+                    },
                     set: { enabled in
                         configurationProtection.performConfigurationChange {
-                            directCLIEnabled = enabled
-                            directCLIService.setEnabled(enabled)
+                            Task { @MainActor in
+                                if enabled {
+                                    await directWakeManager.enable()
+                                } else {
+                                    await directWakeManager.disable()
+                                }
+                            }
                         }
                     }
                 )) {
                     VStack(alignment: .leading, spacing: 3) {
-                        Text("Enable Direct CLI Access")
+                        Text("Allow paired computers to send wake requests")
                             .font(.body.weight(.semibold))
                             .foregroundStyle(Color.textPrimary)
-                        Text("New commands require Health.md to be open. An active export can continue briefly in the background.")
+                        Text("Get a notification when the CLI is waiting for this phone, so unlocking and opening Health.md finishes the same command. Requires the wake service; the CLI keeps waiting without it.")
                             .font(.footnote)
                             .foregroundStyle(Color.textSecondary)
                     }
                 }
                 .tint(Color.accent)
-                .accessibilityIdentifier(AccessibilityID.Sync.directCLIToggle)
-
-                if directCLIService.hasPairedCLI {
-                    SyncRowDivider()
-                    Toggle(isOn: Binding(
-                        get: {
-                            if case .enrolled = directWakeManager.state { return true }
-                            return false
-                        },
-                        set: { enabled in
-                            configurationProtection.performConfigurationChange {
-                                Task { @MainActor in
-                                    if enabled {
-                                        await directWakeManager.enable()
-                                    } else {
-                                        await directWakeManager.disable()
-                                    }
-                                }
-                            }
-                        }
-                    )) {
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text("Allow paired computers to send wake requests")
-                                .font(.body.weight(.semibold))
-                                .foregroundStyle(Color.textPrimary)
-                            Text("Get a notification when the CLI is waiting for this phone, so unlocking and opening Health.md finishes the same command. Requires the wake service; the CLI keeps waiting without it.")
-                                .font(.footnote)
-                                .foregroundStyle(Color.textSecondary)
-                        }
-                    }
-                    .tint(Color.accent)
-                    .disabled(directWakeManager.state == .enrolling)
-                    if case .unavailable(let reason) = directWakeManager.state {
-                        Text(reason)
-                            .font(.footnote)
-                            .foregroundStyle(Color.textSecondary)
-                    }
+                .disabled(directWakeManager.state == .enrolling)
+                if case .unavailable(let reason) = directWakeManager.state {
+                    Text(reason)
+                        .font(.footnote)
+                        .foregroundStyle(Color.textSecondary)
                 }
+            }
 
-                if directCLIService.needsPairingCode,
-                   directCLIService.pendingPairingLink == nil {
-                    SyncRowDivider()
+            if directCLIService.needsPairingCode,
+               directCLIService.pendingPairingLink == nil {
+                SyncRowDivider()
 
-                    VStack(alignment: .leading, spacing: Spacing.sm) {
+                VStack(alignment: .leading, spacing: Spacing.sm) {
+                    Button {
+                        configurationProtection.performConfigurationChange {
+                            showDirectCLIPairingScanner = true
+                        }
+                    } label: {
+                        Label("Scan Pairing QR", systemImage: "qrcode.viewfinder")
+                            .fixedSize(horizontal: false, vertical: true)
+                            .frame(minWidth: 44, maxWidth: .infinity, minHeight: 44)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(directCLIService.isConnecting)
+                    .accessibilityIdentifier(AccessibilityID.Sync.directCLIScanButton)
+                    .accessibilityHint("Opens the in-app camera scanner and pairs as soon as a valid QR is recognized")
+
+                    Text("Start pairing from healthmd or your MCP client, then scan its QR here. Health.md does not auto-pair from links opened by other apps.")
+                        .font(.footnote)
+                        .foregroundStyle(Color.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+
+            if let pairingLink = directCLIService.pendingPairingLink {
+                SyncRowDivider()
+
+                VStack(alignment: .leading, spacing: Spacing.sm) {
+                    Label("Pairing from QR", systemImage: "qrcode.viewfinder")
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(Color.textPrimary)
+                    Text(pairingHandoffMessage(for: pairingLink))
+                        .font(.footnote)
+                        .foregroundStyle(Color.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    if !directCLIService.isConnecting,
+                       directCLIService.lastError != nil {
                         Button {
-                            configurationProtection.performConfigurationChange {
-                                showDirectCLIPairingScanner = true
-                            }
+                            directCLIService.retryPendingPairingLink()
                         } label: {
-                            Label("Scan Pairing QR", systemImage: "qrcode.viewfinder")
+                            Label("Retry QR pairing", systemImage: "arrow.clockwise")
                                 .fixedSize(horizontal: false, vertical: true)
                                 .frame(minWidth: 44, maxWidth: .infinity, minHeight: 44)
                         }
                         .buttonStyle(.borderedProminent)
-                        .disabled(directCLIService.isConnecting)
-                        .accessibilityIdentifier(AccessibilityID.Sync.directCLIScanButton)
-                        .accessibilityHint("Opens the in-app camera scanner and pairs as soon as a valid QR is recognized")
-
-                        Text("Start pairing from healthmd or your MCP client, then scan its QR here. Health.md does not auto-pair from links opened by other apps.")
-                            .font(.footnote)
-                            .foregroundStyle(Color.textSecondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                }
-
-                if let pairingLink = directCLIService.pendingPairingLink {
-                    SyncRowDivider()
-
-                    VStack(alignment: .leading, spacing: Spacing.sm) {
-                        Label("Pairing from QR", systemImage: "qrcode.viewfinder")
-                            .font(.body.weight(.semibold))
-                            .foregroundStyle(Color.textPrimary)
-                        Text(pairingHandoffMessage(for: pairingLink))
-                            .font(.footnote)
-                            .foregroundStyle(Color.textSecondary)
-                            .fixedSize(horizontal: false, vertical: true)
-
-                        if !directCLIService.isConnecting,
-                           directCLIService.lastError != nil {
-                            Button {
-                                directCLIService.retryPendingPairingLink()
-                            } label: {
-                                Label("Retry QR pairing", systemImage: "arrow.clockwise")
-                                    .fixedSize(horizontal: false, vertical: true)
-                                    .frame(minWidth: 44, maxWidth: .infinity, minHeight: 44)
-                            }
-                            .buttonStyle(.borderedProminent)
-                        }
-
-                        Button(role: .cancel) {
-                            directCLIService.cancelPendingPairingLink()
-                        } label: {
-                            Text("Cancel")
-                                .fixedSize(horizontal: false, vertical: true)
-                                .frame(minWidth: 44, maxWidth: .infinity, minHeight: 44)
-                        }
-                        .buttonStyle(.bordered)
-                    }
-                }
-
-                if directCLIEnabled {
-                    SyncRowDivider()
-
-                    SyncInfoRow(
-                        icon: directCLIStatusIcon,
-                        title: directCLIStatusTitle,
-                        subtitle: directCLIStatusSubtitle,
-                        tone: directCLIService.hasPairedCLI ? .success : .muted,
-                        isLoading: directCLIService.isConnecting
-                    )
-
-                    if directCLIService.pendingPairingLink == nil {
-                        if directCLIService.needsPairingCode {
-                            Picker("Transport", selection: Binding(
-                                get: { directCLITransport },
-                                set: { value in
-                                    configurationProtection.performConfigurationChange {
-                                        directCLITransport = value
-                                        directCLIService.updateTransport(
-                                            DirectTransportKind(rawValue: value) ?? .manualIP
-                                        )
-                                    }
-                                }
-                            )) {
-                                Text("Manual IP").tag(DirectTransportKind.manualIP.rawValue)
-                                Text("Nearby").tag(DirectTransportKind.nearby.rawValue)
-                            }
-                            .pickerStyle(.segmented)
-
-                            if directCLITransport == DirectTransportKind.manualIP.rawValue {
-                                VStack(alignment: .leading, spacing: Spacing.sm) {
-                                    ReadingConnectionEntry(
-                                        title: "Mac IP or Tailscale address",
-                                        value: directCLIHost,
-                                        identifier: "reading.sync.cli-host",
-                                        focusEditor: { focusedDirectCLIField = .host }
-                                    ) {
-                                        TextField("Mac IP or Tailscale address", text: $directCLIHost)
-                                            .textInputAutocapitalization(.never)
-                                            .autocorrectionDisabled()
-                                            .keyboardType(.URL)
-                                            .focused($focusedDirectCLIField, equals: .host)
-                                    }
-
-                                    ReadingConnectionEntry(
-                                        title: "Port",
-                                        value: directCLIPort,
-                                        identifier: "reading.sync.cli-port",
-                                        focusEditor: { focusedDirectCLIField = .port }
-                                    ) {
-                                        TextField("Port", text: $directCLIPort)
-                                            .keyboardType(.numberPad)
-                                            .focused($focusedDirectCLIField, equals: .port)
-                                    }
-                                }
-                                .configurationChangesProtected()
-                            } else {
-                                Text("Nearby discovers the pairing command on the same local network. It never falls back to Manual IP.")
-                                    .font(.footnote)
-                                    .foregroundStyle(Color.textSecondary)
-                            }
-
-                            SecureField("20-digit pairing code", text: $directCLIPairingCode)
-                                .keyboardType(.numberPad)
-                                .textFieldStyle(.roundedBorder)
-                                .configurationChangesProtected()
-                            Text("Current healthmd versions use one 20-digit code on iOS and Android. Six-digit entry remains available only for a legacy CLI.")
-                                .font(.footnote)
-                                .foregroundStyle(Color.textSecondary)
-
-                            ReadingConnectionActions(
-                                primaryTitle: "Pair with healthmd",
-                                primaryIcon: "link",
-                                isEnabled: canConnectDirectCLI,
-                                onPrimary: {
-                                    configurationProtection.performConfigurationChange {
-                                        connectDirectCLI()
-                                    }
-                                }
-                            )
-                        } else {
-                            Label(
-                                "Paired with \(directCLIService.pairedCLIName ?? "healthmd CLI") via \(directCLITransportLabel). Commands connect on demand while access is enabled.",
-                                systemImage: "lock.fill"
-                            )
-                            .font(.footnote)
-                            .foregroundStyle(Color.textSecondary)
-                            .fixedSize(horizontal: false, vertical: true)
-
-                            DestructiveButton(title: "Forget Pairing") {
-                                configurationProtection.performConfigurationChange {
-                                    directCLIService.forgetPairedCLI()
-                                    directCLIPairingCode = ""
-                                }
-                            }
-                        }
                     }
 
-                }
-
-                if let directError = directCLIService.lastError {
-                    Text(directError)
-                        .font(.footnote)
-                        .foregroundStyle(Color.warning)
-                        .fixedSize(horizontal: false, vertical: true)
+                    Button(role: .cancel) {
+                        directCLIService.cancelPendingPairingLink()
+                    } label: {
+                        Text("Cancel")
+                            .fixedSize(horizontal: false, vertical: true)
+                            .frame(minWidth: 44, maxWidth: .infinity, minHeight: 44)
+                    }
+                    .buttonStyle(.bordered)
                 }
             }
-            .padding(.horizontal, Spacing.md)
-            .padding(.vertical, 14)
+        }
+    }
+
+    private var directCLIConnectionControls: some View {
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            if directCLIEnabled {
+                SyncRowDivider()
+
+                SyncInfoRow(
+                    icon: directCLIStatusIcon,
+                    title: directCLIStatusTitle,
+                    subtitle: directCLIStatusSubtitle,
+                    tone: directCLIService.hasPairedCLI ? .success : .muted,
+                    isLoading: directCLIService.isConnecting
+                )
+
+                if directCLIService.pendingPairingLink == nil {
+                    if directCLIService.needsPairingCode {
+                        Picker("Transport", selection: Binding(
+                            get: { directCLITransport },
+                            set: { value in
+                                configurationProtection.performConfigurationChange {
+                                    directCLITransport = value
+                                    directCLIService.updateTransport(
+                                        DirectTransportKind(rawValue: value) ?? .manualIP
+                                    )
+                                }
+                            }
+                        )) {
+                            Text("Manual IP").tag(DirectTransportKind.manualIP.rawValue)
+                            Text("Nearby").tag(DirectTransportKind.nearby.rawValue)
+                        }
+                        .pickerStyle(.segmented)
+
+                        if directCLITransport == DirectTransportKind.manualIP.rawValue {
+                            VStack(alignment: .leading, spacing: Spacing.sm) {
+                                ReadingConnectionEntry(
+                                    title: "Mac IP or Tailscale address",
+                                    value: directCLIHost,
+                                    identifier: "reading.sync.cli-host",
+                                    focusEditor: { focusedDirectCLIField = .host }
+                                ) {
+                                    TextField("Mac IP or Tailscale address", text: $directCLIHost)
+                                        .textInputAutocapitalization(.never)
+                                        .autocorrectionDisabled()
+                                        .keyboardType(.URL)
+                                        .focused($focusedDirectCLIField, equals: .host)
+                                }
+
+                                ReadingConnectionEntry(
+                                    title: "Port",
+                                    value: directCLIPort,
+                                    identifier: "reading.sync.cli-port",
+                                    focusEditor: { focusedDirectCLIField = .port }
+                                ) {
+                                    TextField("Port", text: $directCLIPort)
+                                        .keyboardType(.numberPad)
+                                        .focused($focusedDirectCLIField, equals: .port)
+                                }
+                            }
+                            .configurationChangesProtected()
+                        } else {
+                            Text("Nearby discovers the pairing command on the same local network. It never falls back to Manual IP.")
+                                .font(.footnote)
+                                .foregroundStyle(Color.textSecondary)
+                        }
+
+                        SecureField("20-digit pairing code", text: $directCLIPairingCode)
+                            .keyboardType(.numberPad)
+                            .textFieldStyle(.roundedBorder)
+                            .configurationChangesProtected()
+                        Text("Current healthmd versions use one 20-digit code on iOS and Android. Six-digit entry remains available only for a legacy CLI.")
+                            .font(.footnote)
+                            .foregroundStyle(Color.textSecondary)
+
+                        ReadingConnectionActions(
+                            primaryTitle: "Pair with healthmd",
+                            primaryIcon: "link",
+                            isEnabled: canConnectDirectCLI,
+                            onPrimary: {
+                                configurationProtection.performConfigurationChange {
+                                    connectDirectCLI()
+                                }
+                            }
+                        )
+                    } else {
+                        Label(
+                            "Paired with \(directCLIService.pairedCLIName ?? "healthmd CLI") via \(directCLITransportLabel). Commands connect on demand while access is enabled.",
+                            systemImage: "lock.fill"
+                        )
+                        .font(.footnote)
+                        .foregroundStyle(Color.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                        DestructiveButton(title: "Forget Pairing") {
+                            configurationProtection.performConfigurationChange {
+                                directCLIService.forgetPairedCLI()
+                                directCLIPairingCode = ""
+                            }
+                        }
+                    }
+                }
+
+            }
+
+            if let directError = directCLIService.lastError {
+                Text(directError)
+                    .font(.footnote)
+                    .foregroundStyle(Color.warning)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
     }
 

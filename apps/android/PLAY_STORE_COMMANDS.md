@@ -2,7 +2,7 @@
 
 ## Current release ownership
 
-The current Google Play release scope is **phone-only**. `release-scope.json` is the machine-readable source of truth: Android `1.9.4` publishes `:app` version code `42`, while the `:wear` artifact is deferred and is not uploaded, promoted, or advertised by the phone app.
+The current Google Play release scope is **phone-only**. `release-scope.json` is the machine-readable source of truth: Android `3.5.0` publishes `:app` version code `44`, while the `:wear` artifact is deferred and is not uploaded, promoted, or advertised by the phone app.
 
 Gradle Play Publisher remains removed. Do not upload, promote, submit review, or replace Play metadata with ad hoc Gradle, Fastlane, browser, or local API commands. The only supported mutation paths are:
 
@@ -13,7 +13,7 @@ Gradle Play Publisher remains removed. Do not upload, promote, submit review, or
 
 Both release workflows use the protected, tag-restricted `google-play` environment and short-lived Google Workload Identity Federation. The release build uses the separately tag-restricted `google-play-qa` environment only for upload signing; the private key is deleted before its exact signed AAB artifact enters the `google-play` mutation job. The environments normally allow `android/v*`; a retained `android/recovery/*` tag is permitted only for a main-reachable workflow-infrastructure fix that still binds all artifact work to the original immutable release tag. `google-play` stores the Workload Identity provider/service-account variables and does not need a long-lived Play JSON key or signing material. Generated AABs remain workflow artifacts and are never committed.
 
-The Wear workflows and evidence tools remain in the repository as dormant implementation material for the planned `1.10.0` qualification cycle. They are not part of the current release sequence and must not be dispatched for `1.9.4`.
+The Wear workflows and evidence tools remain in the repository as dormant implementation material for the planned `1.10.0` qualification cycle. They are not part of the current release sequence and must not be dispatched for `3.5.0`.
 
 ## Safe local commands
 
@@ -40,7 +40,7 @@ bundle exec fastlane android validate_wear_release
 
 1. Commit the complete source and push it to `origin/main`.
 2. Require successful Android CI for that exact SHA.
-3. Create an annotated `android/v<version>` tag at the exact main-reachable SHA.
+3. Create an annotated `android/v<version>` tag at the exact main-reachable SHA. For a new build of an already tagged version, use `android/v<version>+<versionCode>` (for example `android/v3.5.0+44`). The suffix must equal the committed phone version code; never move an existing release tag. Both phone workflows and the production announcement validate this identity. Wear remains deferred and does not use these phone rebuild tags.
 4. Let `.github/workflows/android-release.yml` re-run exact-SHA qualification and upload the phone AAB to Internal Testing.
 5. Verify that workflow's signed AAB, immutable intent, and committed-upload receipt artifacts.
 6. Dispatch `.github/workflows/android-promote-production.yml` from the exact annotated release tag with the exact version name and phone version code. Use its `release_tag` recovery input only from an annotated, main-reachable `android/recovery/*` workflow tag after an infrastructure-only fix; the checked-out product source remains the original release tag. An Internal-upload recovery also requires the successful exact-SHA Android CI run ID and attempt so the workflow can reverify all retained qualification jobs without rebuilding unchanged test inputs.

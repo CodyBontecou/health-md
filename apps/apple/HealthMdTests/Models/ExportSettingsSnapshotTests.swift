@@ -620,6 +620,200 @@ final class ExportSettingsSnapshotTests: XCTestCase {
         )
     }
 
+    @MainActor
+    func testFreshWakeDateSnapshotAcquiresItsOwnProfileAndRendersAllFormats() async throws {
+        let zone = try XCTUnwrap(TimeZone(identifier: "America/New_York"))
+        let context = AppleSleepCaptureContext(timeZone: zone, sleepDayAttribution: .morningEnds)
+        for historicalMode in ["legacy", "shadow", "rust"] {
+            for detail: AppleExportDetailPolicy in [.summary, .detailedTimeSeries] {
+                let settings = makeSimpleEngineSettings()
+                settings.exportFormats = Set(ExportFormat.allCases)
+                settings.metricSelection.enabledMetrics = ["steps"]
+                settings.detailPolicy = detail
+                settings.executionSleepCaptureContext = context
+                settings.executionSleepCaptureContextIsFrozen = true
+                let executor = SnapshotProfileRecordingCoreExecutor()
+                let snapshot = await ExportSettingsSnapshot.forNewAppleOperation(settings,
+                    healthSubfolder: "Health", calendarTimeZone: TimeZone(identifier: "UTC"),
+                    surface: .localVaultWithoutSideEffects,
+                    policyResolver: AppleExportEnginePolicyResolver(injectedOverride: historicalMode,
+                        userDefaults: nil, environment: [:]), coreExecutor: executor)
+                let pin = try XCTUnwrap(snapshot.appleExportEnginePin, "Fresh wake-date authority, \(historicalMode), \(detail)")
+                XCTAssertTrue(pin.hasExplicitWakeDateContracts)
+                XCTAssertEqual(pin.profile, "apple_health_data_v11")
+                XCTAssertEqual(pin.registryVersion, 2)
+                XCTAssertEqual(pin.calendarTimeZoneIdentifier, zone.identifier)
+                XCTAssertTrue(snapshot.appleExportEngineAuthorityIsFrozen)
+                XCTAssertEqual(try snapshot.validatedSleepCaptureContext(), context)
+                XCTAssertEqual(try snapshot.recoveredSleepCaptureContext(), context)
+                let requested = await executor.requestedProfiles
+                XCTAssertEqual(requested, [.appleHealthDataV11])
+                let day = HealthData(date: ExportFixtures.referenceDate,
+                    timeContext: ExportTimeContext(timeZone: zone, sleepDayAttribution: .morningEnds),
+                    activity: ActivityData(steps: 17))
+                let result = try await AppleLooseDailyExportPlanner(coreExecutor: executor).plan(
+                    healthData: day, settingsSnapshot: snapshot, surface: .localVaultWithoutSideEffects)
+                guard case .planned(let operation) = result else { return XCTFail("Fresh successor authority must reach its writer") }
+                XCTAssertEqual(operation.artifacts.count, 4)
+                let json = try XCTUnwrap(operation.artifacts.first { $0.format == .json }).artifact.inlineData
+                let root = try XCTUnwrap(try JSONSerialization.jsonObject(with: json) as? [String: Any])
+                XCTAssertEqual(root["schema_version"] as? Int, 11)
+                XCTAssertEqual((root["activity"] as? [String: Any])?["steps"] as? Int, 17)
+            }
+        }
+    }
+
+    @MainActor
+    func testFreshWakeDateAuthorityNeverPromotesDraftOrFrozenLegacyContexts() async throws {
+        let zone = try XCTUnwrap(TimeZone(identifier: "UTC"))
+        let context = AppleSleepCaptureContext(timeZone: zone, sleepDayAttribution: .morningEnds)
+        var object = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(context)) as? [String: Any])
+        for marker: String? in [nil, "apple-v10"] {
+            object["exportProfileID"] = marker
+            let draft = try JSONDecoder().decode(AppleSleepCaptureContext.self, from: JSONSerialization.data(withJSONObject: object))
+            let settings = makeSimpleEngineSettings()
+            settings.executionSleepCaptureContext = draft
+            let executor = SnapshotProfileRecordingCoreExecutor()
+            let snapshot = await ExportSettingsSnapshot.forNewAppleOperation(settings, healthSubfolder: "Health",
+                calendarTimeZone: zone, surface: .localVaultWithoutSideEffects, coreExecutor: executor)
+            XCTAssertNil(snapshot.appleExportEnginePin)
+            XCTAssertEqual(snapshot.sleepCaptureContext, draft)
+            let requested = await executor.requestedProfiles
+            XCTAssertTrue(requested.isEmpty)
+        }
+        let settings = makeSimpleEngineSettings()
+        settings.executionSleepCaptureContext = context
+        settings.executionSleepCaptureContextIsFrozen = true
+        settings.executionAppleExportEngineAuthorityIsFrozen = true
+        let executor = SnapshotProfileRecordingCoreExecutor()
+        let frozen = await ExportSettingsSnapshot.forNewAppleOperation(settings, healthSubfolder: "Health",
+            calendarTimeZone: zone, surface: .localVaultWithoutSideEffects, coreExecutor: executor)
+        XCTAssertNil(frozen.appleExportEnginePin)
+        let requested = await executor.requestedProfiles
+        XCTAssertTrue(requested.isEmpty)
+
+        let existingPin = try makeSyntheticAppleExportEnginePin()
+        settings.executionAppleExportEnginePin = existingPin
+        let preserved = await ExportSettingsSnapshot.forNewAppleOperation(settings, healthSubfolder: "Health",
+            calendarTimeZone: zone, surface: .localVaultWithoutSideEffects, coreExecutor: executor)
+        XCTAssertEqual(preserved.appleExportEnginePin, existingPin)
+        XCTAssertThrowsError(try preserved.validatedSleepCaptureContext())
+        let afterPreservingPin = await executor.requestedProfiles
+        XCTAssertTrue(afterPreservingPin.isEmpty)
+    }
+
+    @MainActor
+    func testExplicitNewConfigurationAcquiresFreshAuthorityWithoutUpgradingFrozenSource() async throws {
+        let zone = try XCTUnwrap(TimeZone(identifier: "America/New_York"))
+        let context = AppleSleepCaptureContext(timeZone: zone, sleepDayAttribution: .morningEnds)
+        let saved = ExportSettingsSnapshot.from(makeSimpleEngineSettings(),
+            calendarTimeZoneIdentifier: "Europe/Berlin")
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        encoder.userInfo[ExportSettingsSnapshot.durableSleepContextEncoding] = true
+        let original = try encoder.encode(saved)
+        let settings = saved.makeAdvancedExportSettings(forNewConfiguration: true)
+        Self.retainedSettings.append(settings)
+        let executor = SnapshotProfileRecordingCoreExecutor()
+        let fresh = await AppleSleepCaptureContext.pinned.withValue(context) {
+            await ExportSettingsSnapshot.forNewAppleOperation(settings, healthSubfolder: "Health",
+                calendarTimeZone: zone, surface: .localVaultWithoutSideEffects, coreExecutor: executor)
+        }
+        XCTAssertEqual(fresh.sleepCaptureContext, context)
+        XCTAssertEqual(fresh.appleExportEnginePin?.profile, "apple_health_data_v11")
+        XCTAssertEqual(fresh.appleExportEnginePin?.calendarTimeZoneIdentifier, zone.identifier)
+        XCTAssertEqual(try encoder.encode(saved), original)
+        XCTAssertNil(saved.sleepCaptureContext)
+        XCTAssertNil(saved.appleExportEnginePin)
+    }
+
+    @MainActor
+    func testFrozenMissingCaptureContextCannotBorrowAmbientWakeDateAuthority() async throws {
+        let zone = try XCTUnwrap(TimeZone(identifier: "Europe/Berlin"))
+        let ambient = AppleSleepCaptureContext(timeZone: TimeZone(identifier: "America/New_York")!,
+            sleepDayAttribution: .morningEnds)
+        let settings = makeSimpleEngineSettings()
+        settings.exportTimeZoneOverride = zone
+        settings.generateRangeSummary = true
+        settings.summaryOnlyExport = true
+        settings.executionSleepCaptureContext = nil
+        settings.executionSleepCaptureContextIsFrozen = true
+        let executor = SnapshotProfileRecordingCoreExecutor()
+        let snapshot = await AppleSleepCaptureContext.pinned.withValue(ambient) {
+            await ExportSettingsSnapshot.forNewAppleOperation(settings, healthSubfolder: "Health",
+                calendarTimeZone: TimeZone(identifier: "UTC"), surface: .localVaultRangeWithoutSideEffects,
+                policyResolver: AppleExportEnginePolicyResolver(injectedOverride: "rust",
+                    userDefaults: nil, environment: [:]), coreExecutor: executor)
+        }
+        XCTAssertNil(snapshot.sleepCaptureContext)
+        XCTAssertNil(snapshot.appleExportEnginePin)
+        XCTAssertEqual(snapshot.calendarTimeZoneIdentifier, zone.identifier)
+        let requested = await executor.requestedProfiles
+        XCTAssertTrue(requested.isEmpty)
+        XCTAssertThrowsError(try snapshot.validatedSleepCaptureContext()) {
+            XCTAssertEqual($0 as? AppleSleepCaptureContext.AvailabilityError, .missingDurableAttribution)
+        }
+    }
+
+    @MainActor
+    func testFreshWakeDatePreflightRejectsLegacySurfacesAndSideEffectsBeforeCoreAcquisition() async throws {
+        let zone = try XCTUnwrap(TimeZone(identifier: "UTC"))
+        let context = AppleSleepCaptureContext(timeZone: zone, sleepDayAttribution: .morningEnds)
+        for surface: AppleExportOperationSurface in [.legacyOnly,
+                .connectedReceivedFilesWithoutSideEffects] {
+            let settings = makeSimpleEngineSettings()
+            settings.executionSleepCaptureContext = context
+            let executor = SnapshotProfileRecordingCoreExecutor()
+            let snapshot = await ExportSettingsSnapshot.forNewAppleOperation(settings, healthSubfolder: "Health",
+                calendarTimeZone: zone, surface: surface, coreExecutor: executor)
+            XCTAssertNil(snapshot.appleExportEnginePin)
+            XCTAssertEqual(snapshot.sleepCaptureContext, context)
+            let requested = await executor.requestedProfiles
+            XCTAssertTrue(requested.isEmpty)
+        }
+        let settings = makeSimpleEngineSettings()
+        settings.executionSleepCaptureContext = context
+        settings.archiveExportFiles = true
+        let executor = SnapshotProfileRecordingCoreExecutor()
+        let archive = await ExportSettingsSnapshot.forNewAppleOperation(settings, healthSubfolder: "Health",
+            calendarTimeZone: zone, surface: .localVaultWithoutSideEffects, coreExecutor: executor)
+        XCTAssertNil(archive.appleExportEnginePin)
+        settings.archiveExportFiles = false
+        let companion = await ExportSettingsSnapshot.forNewAppleOperation(settings, healthSubfolder: "Health",
+            calendarTimeZone: zone, surface: .localVaultWithoutSideEffects,
+            hasNativeOnlyCompanionAction: true, coreExecutor: executor)
+        XCTAssertNil(companion.appleExportEnginePin)
+        let requested = await executor.requestedProfiles
+        XCTAssertTrue(requested.isEmpty)
+    }
+
+    @MainActor
+    func testFreshWakeDatePinRejectsHistoricalCoreAndFreezesSettingsBeforeSuspension() async throws {
+        let zone = try XCTUnwrap(TimeZone(identifier: "America/New_York"))
+        let context = AppleSleepCaptureContext(timeZone: zone, sleepDayAttribution: .morningEnds)
+        let settings = makeSimpleEngineSettings()
+        settings.executionSleepCaptureContext = context
+        let mismatched = SnapshotProfileRecordingCoreExecutor(returningHistoricalProfile: true)
+        let rejected = await ExportSettingsSnapshot.forNewAppleOperation(settings, healthSubfolder: "Health",
+            calendarTimeZone: zone, surface: .localVaultWithoutSideEffects, coreExecutor: mismatched)
+        XCTAssertNil(rejected.appleExportEnginePin)
+        let requested = await mismatched.requestedProfiles
+        XCTAssertEqual(requested, [.appleHealthDataV11])
+
+        settings.exportFormats = Set(ExportFormat.allCases)
+        let executor = SnapshotProfileRecordingCoreExecutor(beforeLoad: {
+            settings.executionSleepCaptureContext = AppleSleepCaptureContext(
+                timeZone: TimeZone(identifier: "Europe/Berlin")!, sleepDayAttribution: .nightBegins)
+            settings.exportFormats = [.csv]
+        })
+        let snapshot = await ExportSettingsSnapshot.forNewAppleOperation(settings, healthSubfolder: "Health",
+            calendarTimeZone: zone, surface: .localVaultWithoutSideEffects, coreExecutor: executor)
+        XCTAssertEqual(snapshot.sleepCaptureContext, context)
+        XCTAssertEqual(snapshot.exportFormats, Set(ExportFormat.allCases))
+        XCTAssertEqual(snapshot.appleExportEnginePin?.profile, "apple_health_data_v11")
+        XCTAssertEqual(snapshot.appleExportEnginePin?.calendarTimeZoneIdentifier, zone.identifier)
+    }
+
     private func makeSimpleEngineSettings() -> AdvancedExportSettings {
         let suiteName = "ExportSettingsSnapshotTests.engine.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!
@@ -720,5 +914,35 @@ nonisolated private struct SnapshotNeverCoreExecutor: AppleLooseDailyCoreExecuti
         batches: [Data]
     ) async throws -> CoreArtifactPlan {
         throw UnexpectedCall()
+    }
+}
+
+private actor SnapshotProfileRecordingCoreExecutor: AppleLooseDailyCoreExecuting {
+    private(set) var requestedProfiles: [CoreMetricRegistryProfile] = []
+    private let returningHistoricalProfile: Bool
+    private let beforeLoad: (@MainActor @Sendable () -> Void)?
+
+    init(returningHistoricalProfile: Bool = false, beforeLoad: (@MainActor @Sendable () -> Void)? = nil) {
+        self.returningHistoricalProfile = returningHistoricalProfile
+        self.beforeLoad = beforeLoad
+    }
+
+    func loadContext() async throws -> AppleLooseDailyCoreContext {
+        try await loadContext(profile: .appleHealthDataV8)
+    }
+
+    func loadContext(profile: CoreMetricRegistryProfile) async throws -> AppleLooseDailyCoreContext {
+        requestedProfiles.append(profile)
+        await beforeLoad?()
+        return try await SystemAppleLooseDailyCoreExecutor().loadContext(
+            profile: returningHistoricalProfile ? .appleHealthDataV8 : profile)
+    }
+
+    func processSemantic(configuration: Data, batches: [Data]) async throws -> Data {
+        try await SystemAppleLooseDailyCoreExecutor().processSemantic(configuration: configuration, batches: batches)
+    }
+
+    func render(configuration: Data, semanticResult: Data, batches: [Data]) async throws -> CoreArtifactPlan {
+        try await SystemAppleLooseDailyCoreExecutor().render(configuration: configuration, semanticResult: semanticResult, batches: batches)
     }
 }

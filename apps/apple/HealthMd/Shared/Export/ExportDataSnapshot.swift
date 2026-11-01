@@ -16,6 +16,7 @@ struct ExportDataSnapshot {
         let bedtime: Date?
         let wakeTime: Date?
         let stages: [SleepStageSample]
+        let sourceSessionBounds: SleepData.SourceSessionBounds?
 
         var hasData: Bool {
             totalDurationSeconds > 0 || deepSleepSeconds > 0 || remSleepSeconds > 0 ||
@@ -301,7 +302,8 @@ extension HealthData {
                 inBedSeconds: sleep.inBedTime,
                 bedtime: sleep.sessionStart,
                 wakeTime: sleep.sessionEnd,
-                stages: sleep.stages
+                stages: sleep.stages,
+                sourceSessionBounds: sleep.sourceSessionBounds
             ),
             activity: .init(
                 steps: activity.steps,

@@ -37,7 +37,7 @@ struct ConnectedMacDailyExportOperation {
     }
 
     var usesRangePlan: Bool {
-        surface == .connectedReceivedRangeWithoutSideEffects
+        surface == .connectedReceivedRangeWithoutSideEffects || surface == .connectedReceivedRangeWithProviderSidecars
     }
 
     static func resolve(
@@ -68,21 +68,39 @@ struct ConnectedMacDailyExportOperation {
                 surface: .legacyOnly
             )
         }
+        if let pin = settingsSnapshot.appleExportEnginePin, pin.isWakeDate {
+            // Ordinary wire snapshots omit private capture state. The explicit
+            // versioned pin supplies the same approved meaning and frozen clock.
+            guard supportsRangePlan, pin.hasExplicitWakeDateContracts,
+                  let zone = TimeZone(identifier: pin.calendarTimeZoneIdentifier) else {
+                throw ResolutionError.mismatchedPin
+            }
+            if settingsSnapshot.sleepCaptureContext == nil {
+                settingsSnapshot.sleepCaptureContext = AppleSleepCaptureContext(timeZone: zone, sleepDayAttribution: .morningEnds)
+            }
+            do { _ = try settingsSnapshot.recoveredSleepCaptureContext() }
+            catch { throw ResolutionError.mismatchedPin }
+        }
         let hasConfiguredRollups = settingsSnapshot.generateWeeklyRollups
             || settingsSnapshot.generateMonthlyRollups
             || settingsSnapshot.generateYearlyRollups
-        let surface: AppleExportOperationSurface = supportsRangePlan && hasConfiguredRollups
-            ? .connectedReceivedRangeWithoutSideEffects
+        let stagesWakeDate = supportsRangePlan && settingsSnapshot.appleExportEnginePin?.isWakeDate == true
+        let surface: AppleExportOperationSurface = stagesWakeDate ? .connectedReceivedRangeWithProviderSidecars
+            : supportsRangePlan && hasConfiguredRollups ? .connectedReceivedRangeWithoutSideEffects
             : .connectedReceivedFilesWithoutSideEffects
-        guard !hasNativeOnlyCompanionAction,
-              AppleLooseDailyExportPlanner.supports(
+        let composedNotes = AppleLooseDailyExportPlanner.supportsComposedWakeDateNotes(
+            settingsSnapshot: settingsSnapshot, surface: surface)
+        let renderingSnapshot = composedNotes
+            ? AppleLooseDailyExportPlanner.settingsForComposedNotes(settingsSnapshot) : settingsSnapshot
+        guard !hasNativeOnlyCompanionAction || stagesWakeDate,
+              composedNotes || AppleLooseDailyExportPlanner.supports(
                   settingsSnapshot: settingsSnapshot,
                   surface: surface
               ),
               records?.allSatisfy({ record in
                   AppleLooseDailyExportPlanner.supports(
                       healthData: record,
-                      settingsSnapshot: settingsSnapshot,
+                      settingsSnapshot: renderingSnapshot,
                       surface: surface
                   )
               }) ?? true else {
@@ -99,11 +117,15 @@ struct ConnectedMacDailyExportOperation {
         hasNativeOnlyCompanionAction: Bool
     ) throws -> ConnectedMacDailyExportOperation {
         guard isNonLegacy else { return self }
-        guard !hasNativeOnlyCompanionAction,
+        let renderingSnapshot = AppleLooseDailyExportPlanner.supportsComposedWakeDateNotes(
+            settingsSnapshot: settingsSnapshot, surface: surface)
+            ? AppleLooseDailyExportPlanner.settingsForComposedNotes(settingsSnapshot) : settingsSnapshot
+        guard !hasNativeOnlyCompanionAction || (surface == .connectedReceivedRangeWithProviderSidecars
+                && settingsSnapshot.appleExportEnginePin?.isWakeDate == true),
               records.allSatisfy({ record in
                   AppleLooseDailyExportPlanner.supports(
                       healthData: record,
-                      settingsSnapshot: settingsSnapshot,
+                      settingsSnapshot: renderingSnapshot,
                       surface: surface
                   )
               }) else {

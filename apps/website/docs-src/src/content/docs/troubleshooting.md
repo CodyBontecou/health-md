@@ -25,7 +25,7 @@ If a structured result reports `complete_empty`, keep it distinct from unsupport
 
 ## Last night's sleep is missing from Today
 
-Health.md uses a local **noon-to-noon sleep journal window** on Apple and Android. On Tuesday morning, export **Yesterday** (Monday), including sleep that began after midnight on Tuesday, or export Monday and Tuesday for both sleep and activity. If the source syncs late, repeat the sleep journal day. See [sleep-date examples](/docs/sleep-date-attribution/#sleep-date-examples).
+**Night begins (default):** Health.md uses a local **noon-to-noon sleep journal window** on Apple and Android. On Tuesday morning, export **Yesterday** (Monday), including sleep that began after midnight on Tuesday, or export Monday and Tuesday for both sleep and activity. If the source syncs late, repeat the sleep journal day. See [sleep-date examples](/docs/sleep-date-attribution/#sleep-date-examples). **Morning ends:** export the wake-up date instead: Tuesday for Monday night's sleep. Both modes use the export's time zone.
 
 ## Preview shows data, but the folder is empty
 

@@ -214,10 +214,7 @@ jobs:
             echo "::error::Committed Android versionName is not a release semantic version"
             exit 1
           fi
-          if [[ "$tag" != "android/v$version" ]]; then
-            echo "::error::Tag $tag does not match its committed Android versionName ($version)"
-            exit 1
-          fi
+          python3 apps/android/scripts/validate-phone-release-tag.py "$tag" "$version" "$version_code"
 
           sha=$(git rev-parse "$tag^{}")
           git rev-parse --verify refs/remotes/origin/main >/dev/null

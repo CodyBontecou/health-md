@@ -11,6 +11,9 @@ sourceSets {
     test {
         resources.srcDirs(
             rootProject.layout.projectDirectory.dir(
+                "../../packages/contracts/direct-protocol/scoped-notes-v1/fixtures",
+            ),
+            rootProject.layout.projectDirectory.dir(
                 "../../packages/contracts/direct-protocol/v2/fixtures",
             ),
             rootProject.layout.projectDirectory.dir(

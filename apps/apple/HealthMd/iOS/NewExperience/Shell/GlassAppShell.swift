@@ -499,12 +499,13 @@ struct GlassExportPreviewSheet: View {
             targetType: targetType,
             apiDestination: exportTargetSelection == .apiEndpoint ? apiExportSettings.destinationSnapshot : nil,
             connectedAppsEnabled: ConnectedAppsFeature.isEnabled,
-            fetchHealthData: { date in
-                try? await healthKitManager.fetchHealthData(
+            fetchHealthData: { date, snapshot in
+                let settings = snapshot.makeAdvancedExportSettings()
+                return try? await healthKitManager.fetchHealthData(
                     for: date,
-                    detailPolicy: advancedSettings.effectiveDetailPolicy,
-                    metricSelection: advancedSettings.metricSelection,
-                    timeZone: advancedSettings.exportTimeZoneOverride ?? .current
+                    detailPolicy: settings.effectiveDetailPolicy,
+                    metricSelection: settings.metricSelection,
+                    timeZone: settings.exportTimeZoneOverride ?? .current
                 )
             },
             requestHealthAuthorization: { try await healthKitManager.requestAuthorization() },
@@ -512,7 +513,7 @@ struct GlassExportPreviewSheet: View {
         )
     }
 
-    private var targetType: PricingAnalyticsExportTargetType {
+    private var targetType: ExportPreviewTargetType {
         switch exportTargetSelection {
         case .localIPhoneFolder: return .localFile
         case .connectedMac: return .connectedMac

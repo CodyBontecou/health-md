@@ -1,16 +1,16 @@
 Health.md transforme les données Android Health Connect autorisées en fichiers sous votre contrôle.
 
-EXPORTEZ LES DONNÉES HEALTH CONNECT À VOTRE FAÇON
-Créez des synthèses en Markdown, Obsidian Bases, CSV et JSON, ou des instantanés natifs du fournisseur en JSON/NDJSON. Choisissez indicateurs, période et destination, prévisualisez noms et contenu, puis exportez vers un dossier local, un coffre Obsidian, un autre fournisseur de documents Android, votre endpoint API ou une Health.md CLI associée. Health.md ne nécessite aucun compte et n’a aucun cloud de données de santé.
+EXPORTS HEALTH CONNECT
+Créez des synthèses Markdown, Obsidian Bases, CSV, JSON ou des instantanés natifs JSON/NDJSON. Prévisualisez noms et contenu ; choisissez indicateurs et dates. Exportez vers un dossier local, coffre Obsidian, fournisseur de documents Android, votre API ou une Health.md CLI associée.
 
 100+ INDICATEURS DE SANTÉ
 Exportez les données autorisées de sommeil, pas, entraînements, fréquence cardiaque, HRV, tension, glycémie, saturation en oxygène, respiration, poids, composition corporelle, nutrition, hydratation, mobilité, pleine conscience, santé reproductive et autres données Health Connect. Refuser une catégorie n’empêche pas les autres exports autorisés.
 
-PRÉVISUALISEZ, PERSONNALISEZ ET AUTOMATISEZ
-Choisissez unités, formats, modes d’écriture, dossiers et échantillons détaillés. Prévisualisez chemins et contenu avant toute écriture. Exportez manuellement ou selon un planning vers la destination choisie, puis consultez réussites et échecs dans l’historique.
+APERÇU, OPTIONS ET AUTOMATISATION
+Choisissez unités, formats, modes d’écriture, dossiers et échantillons détaillés. Prévisualisez chemins et contenu, exportez manuellement ou selon un planning et consultez réussites et échecs.
 
-VOTRE SANTÉ EN UN COUP D’ŒIL
-Quatre widgets d’accueil facultatifs affichent des synthèses autorisées d’activité, de sommeil et de cœur depuis un cache sur l’appareil. Vous contrôlez leur accès et l’actualisation en arrière-plan.
+WIDGETS SANTÉ
+Quatre widgets facultatifs affichent les synthèses autorisées d’activité, sommeil et cœur depuis le cache local. Vous contrôlez leur accès et leur actualisation en arrière-plan.
 
 DOSSIERS MÉDICAUX PERSONNELS (FHIR)
 Si l’appareil prend en charge les dossiers médicaux personnels, l’option « Dossiers médicaux (FHIR) » conserve les ressources autorisées dans la même archive sous votre contrôle. Catégories prises en charge :
@@ -42,4 +42,4 @@ CONFIDENTIALITÉ ET CONTRÔLE
 • Les autorisations peuvent être vérifiées ou révoquées à tout moment dans Health Connect
 • Les analyses internes limitées sur l’attribution des installations, l’intégration ou les tarifs n’incluent jamais de dossiers de santé, de détails sur les autorisations Health Connect, de contenu exporté, de texte de compte ni de chemins de fichiers
 
-Health.md comprend 5 actions d’export manuel gratuites. Un achat unique débloque les exports illimités et leur planification ; il n’y a aucun abonnement.
+Les exports nécessitent un essai actif, un abonnement hebdomadaire/annuel ou un accès à vie. Les nouveaux abonnés éligibles ont 7 jours gratuits, puis le renouvellement est automatique au prix affiché dans l’app, sauf résiliation avant la fin de l’essai ou de la période en cours. Gérez ou résiliez dans Google Play. L’accès à vie est facturé immédiatement en un seul paiement, sans essai. Vos accès permanents sont conservés.

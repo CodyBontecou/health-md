@@ -206,6 +206,8 @@ struct APIExportClient {
             throw APIExportClientError.invalidPayload
         }
 
+        try payloadArtifact.validateIntegrity()
+
         var request = URLRequest(url: destination.endpointURL)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -456,7 +458,8 @@ struct APIExportClient {
         exportedAt: Date,
         connectedAppsEnabled: Bool,
         calendarTimeZone: TimeZone = .current,
-        directoryURL: URL
+        directoryURL: URL,
+        captureContext: AppleSleepCaptureContext? = nil
     ) throws -> ExportArtifactFile {
         let segments = try envelopeSegments(
             recordValues: recordArtifacts.map { [.file($0)] },
@@ -466,7 +469,8 @@ struct APIExportClient {
             dateRangeEnd: dateRangeEnd,
             exportedAt: exportedAt,
             connectedAppsEnabled: connectedAppsEnabled,
-            calendarTimeZone: calendarTimeZone
+            calendarTimeZone: calendarTimeZone,
+            captureContext: captureContext
         )
         return try ExportArtifactIO.renderTemporary(
             in: directoryURL,
@@ -509,7 +513,8 @@ struct APIExportClient {
         dateRangeEnd: Date,
         exportedAt: Date,
         connectedAppsEnabled: Bool,
-        calendarTimeZone: TimeZone = .current
+        calendarTimeZone: TimeZone = .current,
+        captureContext: AppleSleepCaptureContext? = nil
     ) throws -> Int {
         try exactByteCount(envelopeSegments(
             recordValues: recordArtifacts.map { [.file($0)] },
@@ -519,7 +524,8 @@ struct APIExportClient {
             dateRangeEnd: dateRangeEnd,
             exportedAt: exportedAt,
             connectedAppsEnabled: connectedAppsEnabled,
-            calendarTimeZone: calendarTimeZone
+            calendarTimeZone: calendarTimeZone,
+            captureContext: captureContext
         ))
     }
 
@@ -532,7 +538,8 @@ struct APIExportClient {
         dateRangeEnd: Date,
         exportedAt: Date,
         connectedAppsEnabled: Bool,
-        calendarTimeZone: TimeZone
+        calendarTimeZone: TimeZone,
+        captureContext: AppleSleepCaptureContext? = nil
     ) throws -> [EnvelopeSegment] {
         func scalar(_ value: String) throws -> [EnvelopeSegment] {
             [.data(try makeJSONData(from: value))]
@@ -565,6 +572,13 @@ struct APIExportClient {
             return segments
         }
 
+        if let captureContext {
+            guard captureContext.sleepDayAttribution == .morningEnds,
+                  captureContext.exportProfileID == "apple-v11",
+                  captureContext.calendarTimeZoneIdentifier == calendarTimeZone.identifier else {
+                throw APIExportClientError.invalidPayload
+            }
+        }
         let dateRange = try object([
             ("start", try scalar(dayString(from: dateRangeStart, timeZone: calendarTimeZone))),
             ("end", try scalar(dayString(from: dateRangeEnd, timeZone: calendarTimeZone)))
@@ -573,7 +587,7 @@ struct APIExportClient {
             ("schema", try scalar("healthmd.api_export")),
             ("schema_version", integer(connectedAppsEnabled ? 2 : 1)),
             ("daily_record_schema", try scalar(HealthMdExportSchema.identifier)),
-            ("daily_record_schema_version", integer(HealthMdExportSchema.version)),
+            ("daily_record_schema_version", integer(captureContext == nil ? HealthMdExportSchema.version : 11)),
             ("exported_at", try scalar(timestampString(from: exportedAt))),
             ("source", try scalar("ios")),
             ("date_range", dateRange),
@@ -581,6 +595,16 @@ struct APIExportClient {
             ("records", array(recordValues)),
             ("failed_date_details", array(failedDateData.map { [.data($0)] }))
         ]
+        if let captureContext {
+            members.append(("daily_record_schema_profile", try scalar("apple-v11")))
+            members.append(("daily_record_time_context", try object([
+                ("calendar_timezone", try scalar(captureContext.calendarTimeZoneIdentifier)),
+                ("timestamp_timezone", try scalar("UTC")),
+                ("sleep_day_attribution", try scalar("morning_ends")),
+                ("sleep_owner_day_rule", try scalar("session_end_date")),
+                ("sleep_interval_clipping", try scalar("none"))
+            ])))
+        }
         if connectedAppsEnabled {
             members.append(contentsOf: [
                 ("external_record_schema", try scalar(ExternalDailyRecord.schema)),

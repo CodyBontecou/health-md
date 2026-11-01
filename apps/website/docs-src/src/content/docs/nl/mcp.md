@@ -1,9 +1,14 @@
 ---
-title: "Health.md MCP-server en App"
-description: "Gebruik Codex of Claude voor afgebakende analyse van Apple Health, systeemeigen grafieken en persistente Health.md-exports via een lokale gesandboxte MCP App."
+title: "Apple Health MCP-server voor Claude en Codex"
+description: "Verbind Apple Health met Claude of Codex via Health.md voor Mac. Controleer de iPhone-vereisten, bevraag de lokale context en volg de installatiehandleiding."
 ---
 
 Health.md voor Mac bevat een ondertekend stdio-hulpprogramma `healthmd-mcp`. Daarmee kunnen Codex, Claude en andere MCP-hosts feitelijke Apple Health-gegevens opvragen, visualisaties tonen, versleutelde lokale context verversen en goedgekeurde persistente exports uitvoeren via de geopende Mac-app.
+
+<div class="callout">
+<strong>Begin met het uitgebrachte Mac-hulpprogramma</strong>
+<p><a href="https://apps.apple.com/us/app/health-md/id6757763969" target="_blank" rel="noopener">Download Health.md in de App Store</a> voor je Mac en iPhone en <a href="/nl/docs/guides/connect-agent/">volg daarna de installatiehandleiding</a>.</p>
+</div>
 
 ```text
 Codex / Claude / another local MCP host

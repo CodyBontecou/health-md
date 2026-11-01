@@ -185,14 +185,7 @@ struct AgentDataGatewayExportRunner {
         uploader customUploader: Uploader? = nil,
         onProgress: ProgressHandler? = nil
     ) async -> AgentDataGatewayExportResult {
-        // Freeze the calendar before any capture or path planning, matching
-        // the folder destination's foreground freeze.
-        let calendarTimeZone = settings.exportTimeZoneOverride ?? .current
-        var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = calendarTimeZone
-        let normalizedDates = HealthKitDailyCapture.normalizedDates(dates, calendar: calendar)
-
-        guard !normalizedDates.isEmpty else {
+        guard !dates.isEmpty else {
             return AgentDataGatewayExportResult(
                 export: ExportOrchestrator.ExportResult(
                     successCount: 0,
@@ -206,6 +199,33 @@ struct AgentDataGatewayExportRunner {
                 uploads: AgentDataGatewayUploadSummary()
             )
         }
+
+        // Classification must use the same accepted values as materialization, even when
+        // the caller edits its observable settings while capture or upload is suspended.
+        let captureContext: AppleSleepCaptureContext
+        do {
+            captureContext = try healthKitManager.resolveSleepCaptureContext(settings: settings)
+        } catch {
+            return failureResult(dates: dates, message: error.localizedDescription)
+        }
+        let captureAuthorityWasFrozen = settings.executionSleepCaptureContextIsFrozen
+        let acceptedCapture: AcceptedExternalProviderFileCapture
+        do {
+            acceptedCapture = try AcceptedExternalProviderFileCapture(settings: settings,
+                context: captureContext, providers: externalIntegrations)
+        } catch {
+            return failureResult(dates: dates, message: error.localizedDescription)
+        }
+        let acceptedSnapshot = acceptedCapture.snapshot
+        let externalIntegrations = acceptedCapture.providers
+        let settings = acceptedSnapshot.makeAdvancedExportSettings()
+        // Fresh work still acquires its renderer through the ordinary folder engine;
+        // recovered work retains the original frozen context/pin admission checks.
+        settings.executionSleepCaptureContextIsFrozen = captureAuthorityWasFrozen
+        let calendarTimeZone = captureContext.timeZone
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = calendarTimeZone
+        let normalizedDates = HealthKitDailyCapture.normalizedDates(dates, calendar: calendar)
 
         guard !settings.dailyNotesOnlyModeEnabled else {
             return failureResult(
@@ -517,11 +537,15 @@ struct AgentDataGatewayExportRunner {
     private static func ingestManifest(for artifact: EligibleArtifact) throws -> AgentDataIngestManifest {
         switch artifact.family {
         case .healthDataDaily:
+            let identity = try CanonicalDailyJSONStream.schemaIdentity(sourceURL: artifact.url)
+            guard identity.schema == HealthMdExportSchema.identifier else {
+                throw CanonicalDailyJSONStream.StreamError.schemaMismatch
+            }
             return try AgentDataIngestManifestBuilder.manifest(
                 kind: .healthDataDaily,
                 platform: "apple",
                 artifactSchema: HealthMdExportSchema.identifier,
-                artifactSchemaVersion: HealthMdExportSchema.version,
+                artifactSchemaVersion: identity.version,
                 ownerDate: artifact.ownerDate,
                 physicalFormat: .json,
                 mediaType: "application/json",

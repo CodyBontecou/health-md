@@ -1,6 +1,8 @@
 package com.healthmd.domain.exportengine
 
 import com.google.common.truth.Truth.assertThat
+import com.healthmd.domain.model.AndroidCaptureContext
+import com.healthmd.domain.model.SleepDayAttribution
 import com.healthmd.data.scheduler.ScheduledProfileSnapshotFactory
 import com.healthmd.domain.model.ExportProfile
 import com.healthmd.domain.model.CompatibilitySchemaProfile
@@ -31,6 +33,8 @@ import java.time.LocalDate
 import java.time.ZoneId
 import org.junit.Assert.assertThrows
 import org.junit.Test
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 
 class AndroidExportSettingsSnapshotTest {
     @Test
@@ -54,7 +58,7 @@ class AndroidExportSettingsSnapshotTest {
 
     @Test
     fun historicalSnapshotRestorationKeepsExactFrozenAuthority() {
-        for (profile in AndroidExportProfile.entries) {
+        for (profile in listOf(AndroidExportProfile.android_frozen_v4, AndroidExportProfile.android_analytical_v5)) {
             for (mode in listOf(ExportEngineMode.rust, ExportEngineMode.shadow)) {
                 val original = syntheticExportEnginePin(mode = mode, profile = profile).copy(
                     registrySha256 = ExportEnginePin.HISTORICAL_REGISTRY_SHA256,
@@ -67,7 +71,8 @@ class AndroidExportSettingsSnapshotTest {
                 val encoded = AndroidExportSettingsSnapshotCodec.encodeCanonical(snapshot)
                 val decoded = AndroidExportSettingsSnapshotCodec.decode(encoded)
                 assertThat(decoded.restoreOnto(ExportSettings()).executionEnginePin).isNull()
-                val restored = requireNotNull(ScheduledProfileSnapshotFactory(ExportEnginePinPlanner()).restoreForRun(
+                val restored = requireNotNull(ScheduledProfileSnapshotFactory(ExportEnginePinPlanner(),
+                    io.mockk.mockk<com.healthmd.domain.repository.SettingsRepository>()).restoreForRun(
                     profile = ExportProfile(
                         id = "historical-profile", name = "Synthetic historical profile",
                         settingsSnapshotJson = encoded, target = settings.exportTarget,
@@ -82,7 +87,144 @@ class AndroidExportSettingsSnapshotTest {
         }
     }
 
+    @Test
+    fun wakeDateSnapshotRetainsExactAuthorityAcrossPreferenceAndPresentationChanges() {
+        val context = AndroidCaptureContext(ZoneId.of("Asia/Kathmandu"), SleepDayAttribution.MORNING_ENDS)
+        val pin = ExportEnginePin.create(
+            engine = ExportEngineMode.rust,
+            profile = AndroidExportProfile.android_sleep_v6,
+            ianaTimeZone = context.zoneId.id,
+            readiness = testReadiness(),
+            registry = testRegistry(AndroidExportProfile.android_sleep_v6).copy(
+                registryVersion = 2u, registrySha256 = com.healthmd.core.HEALTHMD_SLEEP_REGISTRY_SHA256,
+            ),
+        )
+        for (presentation in CompatibilitySchemaProfile.entries) {
+            val accepted = ExportSettings(executionSleepCaptureContext = context,
+                executionSleepCaptureAuthorityIsFrozen = true,
+                formatCustomization = FormatCustomization(compatibilitySchemaProfile = presentation))
+            val snapshot = AndroidExportSettingsSnapshot.capture(accepted, pin, context.zoneId)
+            val bytes = AndroidExportSettingsSnapshotCodec.encodeCanonical(snapshot)
+            val decoded = AndroidExportSettingsSnapshotCodec.decode(bytes)
+            val current = ExportSettings(executionSleepCaptureContext = AndroidCaptureContext(
+                ZoneId.of("Europe/Berlin"), SleepDayAttribution.NIGHT_BEGINS))
+            val factory = ScheduledProfileSnapshotFactory(ExportEnginePinPlanner(), io.mockk.mockk())
+            val restored = requireNotNull(factory.restoreForRun(ExportProfile(
+                id = "wake-date", name = "Synthetic wake date", settingsSnapshotJson = bytes,
+                target = ExportTarget.DEVICE_FOLDER, createdAtEpochMillis = 0L, updatedAtEpochMillis = 0L,
+            ), current, 2))
+            assertThat(decoded.exportProfile).isEqualTo(AndroidExportProfile.android_sleep_v6)
+            assertThat(restored.executionSleepCaptureContext).isEqualTo(context)
+            assertThat(restored.executionEnginePin).isEqualTo(pin)
+            assertThat(restored.executionEngineAuthorityIsFrozen).isTrue()
+            assertThat(AndroidExportSettingsSnapshotCodec.encodeCanonical(decoded)).isEqualTo(bytes)
+            for (invalid in listOf(
+                decoded.copy(enginePin = null),
+                decoded.copy(enginePin = pin.copy(registrySha256 = "0".repeat(64))),
+                decoded.copy(enginePin = pin.copy(semanticProfileRevision = 2u)),
+                decoded.copy(enginePin = pin.copy(renderProfileRevision = 1u)),
+                decoded.copy(enginePin = pin.copy(semanticInputVersion = 1u)),
+                decoded.copy(enginePin = pin.copy(engine = ExportEngineMode.shadow)),
+                decoded.copy(sleepCaptureContext = context.copy(exportProfileID = null)),
+                decoded.copy(exportProfile = AndroidExportProfile.android_frozen_v4),
+                decoded.copy(sleepCaptureContext = AndroidCaptureContext(context.zoneId, SleepDayAttribution.NIGHT_BEGINS)),
+            )) {
+                assertThat(AndroidExportSettingsSnapshotCodec.isStructurallyValid(invalid)).isFalse()
+            }
+        }
+    }
+
     private val zone = ZoneId.of("America/Los_Angeles")
+
+    @Test
+    fun providerAuthorityIsPrivateVersionedAndCannotBeAddedToHistoricalSnapshots() {
+        val context = AndroidCaptureContext(ZoneId.of("Asia/Kathmandu"), SleepDayAttribution.MORNING_ENDS)
+        val pin = ExportEnginePin.create(engine = ExportEngineMode.rust, profile = AndroidExportProfile.android_sleep_v6,
+            ianaTimeZone = context.zoneId.id, readiness = testReadiness(),
+            registry = testRegistry(AndroidExportProfile.android_sleep_v6).copy(
+                registryVersion = 2u, registrySha256 = com.healthmd.core.HEALTHMD_SLEEP_REGISTRY_SHA256))
+        val authority = com.healthmd.domain.model.HealthProviderCaptureAuthority(selectedProviderId = "whoop",
+            providerIds = listOf("whoop"), connectionIds = mapOf("whoop" to null))
+        val settings = ExportSettings(executionSleepCaptureContext = context,
+            executionProviderCaptureAuthority = authority, executionProviderCaptureAuthorityIsFrozen = true)
+        val snapshot = AndroidExportSettingsSnapshot.capture(settings, pin, context.zoneId)
+        assertThat(snapshot.version).isEqualTo(3)
+        val encoded = AndroidExportSettingsSnapshotCodec.encodeCanonical(snapshot)
+        val decoded = AndroidExportSettingsSnapshotCodec.decode(encoded)
+        val restored = decoded.restoreOnto(ExportSettings())
+        assertThat(restored.executionProviderCaptureAuthority).isEqualTo(authority)
+        assertThat(restored.executionProviderCaptureAuthorityIsFrozen).isTrue()
+        assertThat(AndroidExportSettingsSnapshotCodec.encodeCanonical(decoded)).isEqualTo(encoded)
+        assertThat(Json.encodeToString(settings)).doesNotContain("connectionIds")
+        assertThat(Json.encodeToString(restored)).doesNotContain("providerCaptureAuthority")
+        listOf(snapshot.copy(version = 2), snapshot.copy(providerCaptureAuthority = null),
+            snapshot.copy(providerCaptureAuthority = authority.copy(version = 99)), snapshot.copy(sleepCaptureContext = null))
+            .forEach { assertThat(AndroidExportSettingsSnapshotCodec.isStructurallyValid(it)).isFalse() }
+        val old = AndroidExportSettingsSnapshot.capture(settings.copy(executionProviderCaptureAuthority = null), pin, context.zoneId)
+        assertThat(old.version).isEqualTo(2)
+        val oldBytes = AndroidExportSettingsSnapshotCodec.encodeCanonical(old)
+        assertThat(oldBytes).doesNotContain("providerCaptureAuthority")
+        val oldRestored = AndroidExportSettingsSnapshotCodec.decode(oldBytes).restoreOnto(settings)
+        assertThat(oldRestored.executionProviderCaptureAuthority).isNull()
+        assertThat(oldRestored.executionProviderCaptureAuthorityIsFrozen).isTrue()
+    }
+
+    @Test
+    fun explicitNightCaptureAuthoritySurvivesCanonicalStorage() {
+        val settings = ExportSettings()
+        val original = AndroidCaptureContext(zone, SleepDayAttribution.NIGHT_BEGINS)
+        val snapshot = AndroidExportSettingsSnapshot.capture(settings, pin = null, zone = zone,
+            captureContext = original)
+        val encoded = AndroidExportSettingsSnapshotCodec.encodeCanonical(snapshot)
+        assertThat(snapshot.version).isEqualTo(2)
+        assertThat(encoded).contains("\"sleepDayAttribution\":\"night_begins\"")
+        val restored = AndroidExportSettingsSnapshotCodec.decode(encoded).restoreOnto(settings)
+        assertThat(restored.executionSleepCaptureContext).isEqualTo(original)
+        assertThat(restored.executionSleepCaptureAuthorityIsFrozen).isTrue()
+        assertThat(restored.executionSleepCaptureContext!!.zoneId.id).isEqualTo("America/Los_Angeles")
+        assertThat(AndroidExportSettingsSnapshotCodec.encodeCanonical(AndroidExportSettingsSnapshotCodec.decode(encoded)))
+            .isEqualTo(encoded)
+    }
+
+    @Test
+    fun legacySnapshotBytesRemainAuthoritativeButMissingCaptureNeverUsesCurrentPreferences() {
+        val legacy = AndroidExportSettingsSnapshot.capture(ExportSettings(), null, zone)
+        val originalBytes = AndroidExportSettingsSnapshotCodec.encodeCanonical(legacy)
+        assertThat(legacy.version).isEqualTo(1)
+        assertThat(originalBytes).doesNotContain("sleepCaptureContext")
+        val decoded = AndroidExportSettingsSnapshotCodec.decode(originalBytes)
+        assertThat(AndroidExportSettingsSnapshotCodec.encodeCanonical(decoded)).isEqualTo(originalBytes)
+        val current = ExportSettings(executionSleepCaptureContext = AndroidCaptureContext(
+            ZoneId.of("Europe/Berlin"), SleepDayAttribution.MORNING_ENDS))
+        val restored = decoded.restoreOnto(current)
+        assertThat(restored.executionSleepCaptureContext).isNull()
+        assertThat(restored.executionSleepCaptureAuthorityIsFrozen).isTrue()
+        val error = assertThrows(com.healthmd.domain.model.SleepAttributionUnavailableException::class.java) {
+            AndroidCaptureContext.recovered(restored.executionSleepCaptureContext)
+        }
+        assertThat(error.reason).isEqualTo(com.healthmd.domain.model.SleepCaptureAuthorityError.MISSING_DURABLE_ATTRIBUTION)
+    }
+
+    @Test
+    fun snapshotVersionProfileAndCapturedClockMustRemainAtomic() {
+        val context = AndroidCaptureContext(zone, SleepDayAttribution.NIGHT_BEGINS)
+        val valid = AndroidExportSettingsSnapshot.capture(ExportSettings(), null, zone, context)
+        for (invalid in listOf(
+            valid.copy(version = 1),
+            valid.copy(sleepCaptureContext = null),
+            valid.copy(ianaTimeZone = "Europe/Berlin"),
+            valid.copy(sleepCaptureContext = AndroidCaptureContext(zone, SleepDayAttribution.MORNING_ENDS)),
+        )) {
+            val error = assertThrows(AndroidExportSettingsSnapshotException::class.java) {
+                AndroidExportSettingsSnapshotCodec.encodeCanonical(invalid)
+            }
+            assertThat(error.reason).isEqualTo(AndroidExportSettingsSnapshotError.INVALID_STRUCTURE)
+        }
+        val operational = ExportSettings(executionSleepCaptureContext = context,
+            executionSleepCaptureAuthorityIsFrozen = true)
+        val settingsBytes = kotlinx.serialization.json.Json.encodeToString(ExportSettings.serializer(), operational)
+        assertThat(settingsBytes).doesNotContain("executionSleepCapture")
+    }
 
     @Test
     fun deepCanonicalRoundTripRestoresOutputAndPreservesMutablePlumbing() {

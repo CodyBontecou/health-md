@@ -37,7 +37,7 @@ class ProductCapabilityManifestTest {
         assertEquals("Capability IDs must be unique", capabilities.size, states.size)
 
         assertEquals(sharedCapabilities + androidCapabilities, idsWithState(states, "available"))
-        assertEquals(appleCapabilities + "source.private-platform-database", idsWithState(states, "unavailable"))
+        assertEquals(appleCapabilities + setOf("source.private-platform-database", "apple.ads-purchase-attribution"), idsWithState(states, "unavailable"))
         assertEquals(
             setOf(
                 "core.shared-rust-profile-engine",
@@ -66,6 +66,15 @@ class ProductCapabilityManifestTest {
             "planned",
             pushWakeCapability.getValue("classification").jsonPrimitive.content,
         )
+
+        val sleepAttributionCapability = capabilities.single {
+            it.getValue("id").jsonPrimitive.content == "settings.sleep-attribution"
+        }
+        assertEquals(
+            "shared",
+            sleepAttributionCapability.getValue("classification").jsonPrimitive.content,
+        )
+        assertTrue(sleepAttributionCapability.getValue("profiles").jsonArray.isEmpty())
 
         val claimCapability = capabilities.single {
             it.getValue("id").jsonPrimitive.content == "account.myself_lifetime_claim"
@@ -145,10 +154,11 @@ class ProductCapabilityManifestTest {
             "direct.cli_agent_wake",
             "direct.full_public_authorized_corpus",
             "diagnostics.local_bundle",
+            "settings.sleep-attribution",
         )
 
         val appleCapabilities = setOf(
-            "apple.ads-purchase-attribution",
+            "purchase.family-sharing",
             "apple.lossless-healthkit-archive",
             "apple.medication-dose-events",
             "apple.state-of-mind",
@@ -169,6 +179,7 @@ class ProductCapabilityManifestTest {
 
         val allCapabilities = sharedCapabilities + appleCapabilities + androidCapabilities + setOf(
             "source.private-platform-database",
+            "apple.ads-purchase-attribution",
             "automation.api-recovery-authority",
             "automation.include-today",
             "direct.cli_agent_push_wake",
@@ -177,6 +188,7 @@ class ProductCapabilityManifestTest {
             "setup.share-portable-configuration",
             "account.myself_lifetime_claim",
             "core.shared-rust-profile-engine",
+            "settings.sleep-attribution",
             "support.local-reporting-fallback",
         )
     }
