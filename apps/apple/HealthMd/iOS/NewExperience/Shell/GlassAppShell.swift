@@ -52,6 +52,7 @@ struct GlassAppShell: View {
     @State private var showClassicExport = false
     @State private var resultEntry: ExportHistoryEntry?
     @State private var scheduleRevision = 0
+    @State private var tabRootID = UUID()
 
     private var tab: Binding<GlassTab> {
         Binding(
@@ -63,6 +64,8 @@ struct GlassAppShell: View {
                 }
             },
             set: { newValue in
+                // Tapping the current tab returns to its root, as on a system tab bar.
+                if newValue == tab.wrappedValue { tabRootID = UUID() }
                 switch newValue {
                 case .archive: selectedTab = .export
                 case .automations: selectedTab = .schedule
@@ -94,7 +97,7 @@ struct GlassAppShell: View {
                 }
             }
             ZStack(alignment: .bottom) {
-                content
+                content.id(tabRootID)
                 VStack(spacing: 10) {
                     historyCard
                     if isExporting {

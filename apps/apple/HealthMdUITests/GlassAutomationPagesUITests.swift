@@ -242,4 +242,23 @@ final class GlassAutomationPagesUITests: XCTestCase {
         waitForExpectations(timeout: 5)
         XCTAssertFalse(app.switches["Total Sleep"].exists, "The field must leave the note once off.")
     }
+
+    func testTappingTheCurrentTabReturnsToItsRoot() {
+        continueAfterFailure = false
+        let app = UITestLaunchHelper.configuredApp(
+            healthAuthorized: true,
+            vaultSelected: true,
+            purchaseUnlocked: true,
+            scheduleEnabled: true
+        )
+        app.launchArguments += ["-NewExperienceEnabled", "YES"]
+        app.launch()
+        app.buttons["Settings"].tap()
+        let row = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Mac Destination")).firstMatch
+        XCTAssertTrue(row.waitForExistence(timeout: 5))
+        row.tap()
+        XCTAssertTrue(app.descendants(matching: .any)["glass.macDestination"].waitForExistence(timeout: 5))
+        app.buttons["Settings"].tap()
+        XCTAssertTrue(row.waitForExistence(timeout: 5), "The hub must be back on screen.")
+    }
 }

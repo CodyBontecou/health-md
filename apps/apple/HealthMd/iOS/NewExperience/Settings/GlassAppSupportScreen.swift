@@ -43,7 +43,7 @@ struct GlassAppSupportScreen: View {
 
                     GlassSectionLabel(title: String(localized: "Account"))
                     GlassPanel {
-                        row(String(localized: "Privacy Policy"), subtitle: String(localized: "Analytics never includes health values, metric names, health dates, exported files, paths, peer names, or credentials. On iPhone and iPad, Apple Ads campaign identifiers are linked to purchase outcomes to measure campaign conversion. No health data or purchase events are sent to Apple Ads.")) {
+                        row(String(localized: "Privacy Policy"), subtitle: String(localized: "View how purchases, scheduling, and optional services handle data.")) {
                             UIApplication.shared.open(privacyPolicyURL)
                         }
                         if MyselfClaimFeature.isEnabled {
