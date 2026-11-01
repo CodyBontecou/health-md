@@ -162,6 +162,7 @@ struct AutomationDetailScreen: View {
     @State private var showEditor = false
     @State private var showSchedule = false
     @State private var showMetrics = false
+    @State private var showFormats = false
 
     init(
         coordinator: ExportProfileCoordinator,
@@ -232,10 +233,11 @@ struct AutomationDetailScreen: View {
                     }
                     .buttonStyle(.plain)
                     settingRow(
-                        String(localized: "Formats & detail"),
+                        String(localized: "Formats"),
                         value: ExportProfileCardSummary.sortedFormats(profile.settings.exportFormats)
                             .map(\.localizedDisplayName).joined(separator: " · ")
-                    )
+                    ) { showFormats = true }
+                    settingRow(String(localized: "All settings"), value: "")
                     settingRow(String(localized: "Output"), value: facts.destination(profile))
                     settingRow(
                         String(localized: "Daily notes"),
@@ -290,6 +292,10 @@ struct AutomationDetailScreen: View {
             GlassMetricsScreen(coordinator: coordinator, profile: profile)
                 .glassTheme()
         }
+        .sheet(isPresented: $showFormats) {
+            GlassFormatsScreen(coordinator: coordinator, profile: profile)
+                .glassTheme()
+        }
         .sheet(isPresented: $showEditor) {
             ExportProfileEditorSheet(coordinator: coordinator, editing: profile)
                 .presentationDetents([.large])
@@ -307,9 +313,11 @@ struct AutomationDetailScreen: View {
         }
     }
 
-    private func settingRow(_ title: String, value: String) -> some View {
+    private func settingRow(_ title: String, value: String, action: (() -> Void)? = nil) -> some View {
         Button {
-            configurationProtection.performConfigurationChange { showEditor = true }
+            configurationProtection.performConfigurationChange {
+                if let action { action() } else { showEditor = true }
+            }
         } label: {
             GlassRow(title: title) {
                 Text(value).glassFont(.rowSubtitle).foregroundStyle(palette.muted).lineLimit(1)

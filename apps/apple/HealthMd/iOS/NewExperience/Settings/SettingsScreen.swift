@@ -50,7 +50,7 @@ struct SettingsScreen: View {
                         ) {
                             configurationProtection.performConfigurationChange { showFolderPicker = true }
                         }
-                        row(String(localized: "Mac and CLI"), subtitle: syncService.connectionState.rawValue) { path.append(.sync) }
+                        row(String(localized: "Mac and CLI"), subtitle: connectionText) { path.append(.sync) }
                         row(
                             String(localized: "API Endpoint"),
                             subtitle: apiExportSettings.isConfigured ? apiExportSettings.displayName : nil
@@ -118,6 +118,14 @@ struct SettingsScreen: View {
     /// Pairing links ask for the Sync tab, which now lives here.
     private func followSyncRequest() {
         if selectedTab == .sync { path = [.sync] }
+    }
+
+    private var connectionText: String {
+        switch syncService.connectionState {
+        case .connected: return String(localized: "Connected")
+        case .connecting: return String(localized: "Connecting…")
+        case .disconnected: return String(localized: "Disconnected")
+        }
     }
 
     private func sectionTitle(_ title: String) -> some View {
