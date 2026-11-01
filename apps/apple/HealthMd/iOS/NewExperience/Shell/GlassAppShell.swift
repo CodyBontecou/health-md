@@ -202,6 +202,14 @@ struct GlassAppShell: View {
             resultEntry = latest
         }
         .onChange(of: presentFirstExportPreview) { _, requested in consumeFirstPreview(requested) }
+        #if DEBUG
+        // App Store screenshots: a month of coverage with two gaps, in memory only.
+        .task(id: archiveProfiles.map(\.id)) {
+            if TestMode.isUITesting, ProcessInfo.processInfo.environment["UITEST_SEED_COVERAGE"] == "true" {
+                ledgerStore.seedScreenshotCoverage(profileIDs: archiveProfiles.map(\.id))
+            }
+        }
+        #endif
         .onAppear {
             #if DEBUG
             // Lets the classic export journeys reach the still-shipping Export settings directly.

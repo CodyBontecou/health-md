@@ -112,6 +112,7 @@ struct GlassSidebar<ID: Hashable, Accessory: View>: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityAddTraits(isSelected ? .isSelected : [])
+                .accessibilityIdentifier("glass.tab.\(String(describing: item.id))")
             }
             Spacer(minLength: 8)
             accessory
