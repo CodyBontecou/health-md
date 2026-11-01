@@ -504,11 +504,17 @@ struct GlassAppShell: View {
         let nextRun = archiveProfiles.compactMap(\.entry).filter(\.isEnabled).compactMap {
             ScheduleDateMath.calculateNextRunDate(schedule: $0.dateMathProjection, now: model.now)
         }.min()
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: model.now)
+        let recentDays = (1...14).reversed().compactMap { offset in
+            calendar.date(byAdding: .day, value: -offset, to: today)
+        }.map { model.status(on: $0, filter: nil).rawValue }
         ArchiveWidgetPublisher.publish(
             streak: stats.streak,
             archivedCount: stats.archivedCount,
             gapCount: stats.gapCount,
-            nextRun: nextRun
+            nextRun: nextRun,
+            recentDays: recentDays
         )
         WeeklyGapNotification.refresh(gapCount: model.weeklyGapCount)
     }
@@ -534,14 +540,17 @@ enum ArchiveWidgetPublisher {
         let archivedCount: Int
         let gapCount: Int
         let nextRun: Date?
+        /// "All" coverage status raw values for the 14 days before today, oldest first.
+        let recentDays: [String]
     }
 
-    static func publish(streak: Int, archivedCount: Int, gapCount: Int, nextRun: Date?) {
+    static func publish(streak: Int, archivedCount: Int, gapCount: Int, nextRun: Date?, recentDays: [String]) {
         guard let data = try? JSONEncoder().encode(Snapshot(
             streak: streak,
             archivedCount: archivedCount,
             gapCount: gapCount,
-            nextRun: nextRun
+            nextRun: nextRun,
+            recentDays: recentDays
         )) else { return }
         UserDefaults(suiteName: CoverageLedgerStore.appGroupIdentifier)?
             .set(data, forKey: "healthMdArchiveWidgetSnapshot.v1")

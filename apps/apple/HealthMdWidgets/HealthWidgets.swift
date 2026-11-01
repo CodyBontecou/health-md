@@ -958,12 +958,14 @@ private extension DateFormatter {
     HealthWidgetEntry(date: .now, snapshot: .placeholder)
 }
 
-/// Written by the app from the coverage ledger. Hidden until the Liquid Glass rollout.
+/// Written by the app from the coverage ledger.
 struct ArchiveWidgetSnapshot: Codable {
     let streak: Int
     let archivedCount: Int
     let gapCount: Int
     let nextRun: Date?
+    /// Coverage status raw values for the 14 days before today, oldest first. Absent in older snapshots.
+    let recentDays: [String]?
 
     static let key = "healthMdArchiveWidgetSnapshot.v1"
 
@@ -1012,21 +1014,103 @@ private struct ArchiveWidgetView: View {
     let entry: ArchiveWidgetEntry
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            if let next = entry.snapshot?.nextRun {
-                Text(next, style: .time).font(.caption.weight(.semibold)).foregroundStyle(.secondary)
-            }
-            Spacer(minLength: 0)
-            Text(verbatim: "\(family == .systemSmall ? entry.snapshot?.streak ?? 0 : entry.snapshot?.archivedCount ?? 0)")
-                .font(.system(size: 44, weight: .bold))
-                .minimumScaleFactor(0.6)
-            Text(family == .systemSmall ? "day streak" : "days archived")
-                .font(.caption.weight(.semibold))
-            if family == .systemMedium, let gaps = entry.snapshot?.gapCount, gaps > 0 {
-                Text("\(gaps) gap(s)").font(.caption).foregroundStyle(.orange)
+        Group {
+            if family == .systemMedium {
+                medium
+            } else {
+                small
             }
         }
+        .foregroundStyle(.white)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-        .containerBackground(.fill.tertiary, for: .widget)
+        .containerBackground(WidgetGlass.background, for: .widget)
+    }
+
+    /// WidgetSmallGlass.
+    private var small: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack {
+                AppIconMark(size: 24)
+                Spacer(minLength: 4)
+                if let next = entry.snapshot?.nextRun {
+                    Text(next, style: .time)
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(WidgetGlass.secondaryText)
+                }
+            }
+            Spacer(minLength: 0)
+            Text(verbatim: "\(entry.snapshot?.streak ?? 0)")
+                .font(.system(size: 50, weight: .bold))
+                .minimumScaleFactor(0.6)
+                .monospacedDigit()
+            Text("day streak")
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(WidgetGlass.secondaryText)
+        }
+    }
+
+    /// WidgetMediumGlass.
+    private var medium: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: 6) {
+                AppIconMark(size: 22)
+                Text("Archive").font(.subheadline.weight(.bold))
+                Spacer(minLength: 4)
+                if let next = entry.snapshot?.nextRun {
+                    Text("Next \(next, style: .time)")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(WidgetGlass.secondaryText)
+                }
+            }
+            Spacer(minLength: 0)
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text(verbatim: "\(entry.snapshot?.archivedCount ?? 0)")
+                    .font(.system(size: 42, weight: .bold))
+                    .minimumScaleFactor(0.6)
+                    .monospacedDigit()
+                Text("days in \(entry.date.formatted(.dateTime.month(.wide)))")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(WidgetGlass.secondaryText)
+                Spacer(minLength: 4)
+                if let gaps = entry.snapshot?.gapCount, gaps > 0 {
+                    Text(gaps == 1 ? "1 gap" : "\(gaps) gaps")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(WidgetGlass.coral)
+                }
+            }
+            Spacer(minLength: 0)
+            if let days = entry.snapshot?.recentDays, !days.isEmpty {
+                HStack(spacing: 0) {
+                    ForEach(Array(days.enumerated()), id: \.offset) { _, status in
+                        ArchiveWidgetDayTile(status: status)
+                            .frame(maxWidth: .infinity)
+                    }
+                }
+                .accessibilityHidden(true)
+            }
+        }
+    }
+}
+
+/// One day in the medium Archive widget strip: filled when covered, dashed coral when missing.
+private struct ArchiveWidgetDayTile: View {
+    let status: String
+
+    var body: some View {
+        let shape = RoundedRectangle(cornerRadius: 4, style: .continuous)
+        Group {
+            switch status {
+            case "complete":
+                shape.fill(WidgetGlass.covered)
+            case "partial":
+                shape.fill(WidgetGlass.covered)
+                    .overlay(shape.strokeBorder(WidgetGlass.amber, lineWidth: 1.5))
+            case "missing":
+                shape.strokeBorder(WidgetGlass.coral, style: StrokeStyle(lineWidth: 1.5, dash: [3, 2]))
+            default:
+                shape.fill(Color.white.opacity(0.08))
+            }
+        }
+        .frame(width: 14, height: 14)
     }
 }
