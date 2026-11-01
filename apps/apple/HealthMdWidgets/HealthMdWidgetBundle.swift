@@ -9,5 +9,8 @@ struct HealthMdWidgetBundle: WidgetBundle {
         HeartRangeWidget()
         SleepSummaryWidget()
         CLIExportLiveActivityWidget()
+        #if NEW_EXPERIENCE_WIDGETS
+        ArchiveWidget()
+        #endif
     }
 }

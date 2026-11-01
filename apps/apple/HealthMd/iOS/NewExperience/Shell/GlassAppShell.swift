@@ -29,6 +29,7 @@ struct GlassAppShell: View {
     let onExport: () -> Void
     let onCancelExport: () -> Void
     let onBrowseExportFolder: (ExportPresentationTarget) -> Void
+    let onPreviewExport: (ExportPresentationTarget) -> Void
     let executionHistoryAssessment: HealthHistoryAssessment?
     let isAssessingHistory: Bool
     let onContinueWithoutHistoryVerification: () -> Void
@@ -191,6 +192,7 @@ struct GlassAppShell: View {
                 onShowAttention: { showAttention = true },
                 onSetUp: { showFolderPicker = true }
             )
+            .task(id: ledgerStore.ledger) { publishWidgetSnapshot() }
         case .automations:
             if let profileCoordinator {
                 AutomationsScreen(
@@ -292,7 +294,8 @@ struct GlassAppShell: View {
             ArchiveProfile(
                 id: profile.id,
                 name: profile.name,
-                destination: destinationLabel(for: profile.target, profile: profile),
+                destination: profileCoordinator.map { AutomationFacts(coordinator: $0).destination(profile) }
+                    ?? destinationLabel(for: profile.target, profile: profile),
                 colorIndex: index,
                 entry: entries.first { $0.profileID == profile.id }
             )
@@ -351,6 +354,25 @@ struct GlassAppShell: View {
                 action: { showFolderPicker = true }
             ))
         }
+        if let latest = exportHistory.history.first(where: { $0.exportTarget == .apiEndpoint }),
+           latest.presentationStatus == .failed {
+            items.append(.init(
+                id: "endpoint",
+                title: String(localized: "Endpoint failing"),
+                message: latest.failureReasonForDisplay?.shortDescription ?? latest.summaryDescription,
+                actionTitle: String(localized: "All export settings"),
+                action: { showClassicExport = true }
+            ))
+        }
+        if profiles.contains(where: { $0.target == .connectedMac }), syncService.connectionState != .connected {
+            items.append(.init(
+                id: "mac",
+                title: String(localized: "Mac offline"),
+                message: String(localized: "Mac exports wait until your Mac is back on the same network."),
+                actionTitle: nil,
+                action: nil
+            ))
+        }
         return items
     }
 
@@ -365,7 +387,10 @@ struct GlassAppShell: View {
         case .backfill, .reExport, .retry, .refresh:
             exportRequest = ExportNowRequest(profileID: profile.id, startDate: date, endDate: date)
         case .open:
-            if let target = vaultManager.lastExportPresentationTarget {
+            if let vaultURL = vaultManager.vaultURL,
+               let file = Self.exportedFile(for: date, in: vaultURL) {
+                onPreviewExport(ExportPresentationTarget(fileURL: file, securityScopedRootURL: vaultURL))
+            } else if let target = vaultManager.lastExportPresentationTarget {
                 onBrowseExportFolder(target)
             } else if let vaultURL = vaultManager.vaultURL {
                 onBrowseExportFolder(ExportPresentationTarget(
@@ -374,6 +399,39 @@ struct GlassAppShell: View {
                 ))
             }
         }
+    }
+
+    /// Finds the date's file by its ISO date. Custom filenames without one open the folder.
+    private static func exportedFile(for date: Date, in folder: URL) -> URL? {
+        let didAccess = folder.startAccessingSecurityScopedResource()
+        defer { if didAccess { folder.stopAccessingSecurityScopedResource() } }
+        let key = CoverageDateKey.key(for: date, calendar: .current)
+        guard let files = FileManager.default.enumerator(
+            at: folder,
+            includingPropertiesForKeys: nil,
+            options: [.skipsHiddenFiles]
+        ) else { return nil }
+        var visited = 0
+        for case let url as URL in files {
+            visited += 1
+            if visited > 20_000 { return nil }
+            if url.pathExtension == "md", url.lastPathComponent.contains(key) { return url }
+        }
+        return nil
+    }
+
+    private func publishWidgetSnapshot() {
+        let model = archiveModel
+        let stats = model.stats(month: model.now, filter: nil)
+        let nextRun = archiveProfiles.compactMap(\.entry).filter(\.isEnabled).compactMap {
+            ScheduleDateMath.calculateNextRunDate(schedule: $0.dateMathProjection, now: model.now)
+        }.min()
+        ArchiveWidgetPublisher.publish(
+            streak: stats.streak,
+            archivedCount: stats.archivedCount,
+            gapCount: stats.gapCount,
+            nextRun: nextRun
+        )
     }
 
     private func resume(_ profile: ArchiveProfile) {
@@ -387,6 +445,27 @@ struct GlassAppShell: View {
     private func resolveAllTimeRange() async -> (start: Date, end: Date)? {
         guard let earliest = await healthKitManager.findEarliestHealthDataDate() else { return nil }
         return (earliest, Date())
+    }
+}
+
+/// Writes the facts the Archive widget reads from the app group. Health-free.
+enum ArchiveWidgetPublisher {
+    private struct Snapshot: Codable {
+        let streak: Int
+        let archivedCount: Int
+        let gapCount: Int
+        let nextRun: Date?
+    }
+
+    static func publish(streak: Int, archivedCount: Int, gapCount: Int, nextRun: Date?) {
+        guard let data = try? JSONEncoder().encode(Snapshot(
+            streak: streak,
+            archivedCount: archivedCount,
+            gapCount: gapCount,
+            nextRun: nextRun
+        )) else { return }
+        UserDefaults(suiteName: CoverageLedgerStore.appGroupIdentifier)?
+            .set(data, forKey: "healthMdArchiveWidgetSnapshot.v1")
     }
 }
 

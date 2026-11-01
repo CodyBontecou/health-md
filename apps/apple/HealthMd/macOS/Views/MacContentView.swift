@@ -24,7 +24,7 @@ struct MacContentView: View {
     var body: some View {
         NavigationSplitView {
             List(selection: $selection) {
-                ForEach(MacSidebarDestination.allCases) { destination in
+                ForEach(MacSidebarDestination.visibleCases) { destination in
                     Label(destination.title, systemImage: destination.systemImage)
                         .tag(destination as MacSidebarDestination?)
                 }
@@ -36,6 +36,7 @@ struct MacContentView: View {
             detailView(for: selection ?? .home)
                 .navigationTitle((selection ?? .home).title)
         }
+        .glassTheme()
         .onAppear {
             #if DEBUG
             if MacMarketingCapture.isActive { return }
@@ -51,6 +52,8 @@ struct MacContentView: View {
         switch destination {
         case .home:
             MacSyncView()
+        case .history:
+            MacHistoryView()
         case .cli:
             MacCLIView()
         case .settings:
@@ -61,15 +64,23 @@ struct MacContentView: View {
 
 private enum MacSidebarDestination: String, CaseIterable, Identifiable, Hashable {
     case home
+    case history
     case cli
     case settings
 
     var id: Self { self }
 
+    /// History gets its own section in the Liquid Glass layout.
+    static var visibleCases: [MacSidebarDestination] {
+        NewExperienceFeature.isEnabled ? allCases : allCases.filter { $0 != .history }
+    }
+
     var title: String {
         switch self {
         case .home:
             return String(localized: "Home")
+        case .history:
+            return String(localized: "History")
         case .cli:
             return String(localized: "CLI")
         case .settings:
@@ -81,6 +92,8 @@ private enum MacSidebarDestination: String, CaseIterable, Identifiable, Hashable
         switch self {
         case .home:
             return "house"
+        case .history:
+            return "clock"
         case .cli:
             return "terminal"
         case .settings:

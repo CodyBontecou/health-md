@@ -892,3 +892,78 @@ private extension DateFormatter {
 } timeline: {
     HealthWidgetEntry(date: .now, snapshot: .placeholder)
 }
+
+#if NEW_EXPERIENCE_WIDGETS
+/// Written by the app from the coverage ledger. Hidden until the Liquid Glass rollout.
+struct ArchiveWidgetSnapshot: Codable {
+    let streak: Int
+    let archivedCount: Int
+    let gapCount: Int
+    let nextRun: Date?
+
+    static let key = "healthMdArchiveWidgetSnapshot.v1"
+
+    static func load() -> ArchiveWidgetSnapshot? {
+        UserDefaults(suiteName: "group.com.codybontecou.obsidianhealth")?
+            .data(forKey: key)
+            .flatMap { try? JSONDecoder().decode(ArchiveWidgetSnapshot.self, from: $0) }
+    }
+}
+
+struct ArchiveWidgetEntry: TimelineEntry {
+    let date: Date
+    let snapshot: ArchiveWidgetSnapshot?
+}
+
+struct ArchiveWidgetProvider: TimelineProvider {
+    func placeholder(in context: Context) -> ArchiveWidgetEntry {
+        ArchiveWidgetEntry(date: .now, snapshot: nil)
+    }
+
+    func getSnapshot(in context: Context, completion: @escaping (ArchiveWidgetEntry) -> Void) {
+        completion(ArchiveWidgetEntry(date: .now, snapshot: .load()))
+    }
+
+    func getTimeline(in context: Context, completion: @escaping (Timeline<ArchiveWidgetEntry>) -> Void) {
+        let entry = ArchiveWidgetEntry(date: .now, snapshot: .load())
+        completion(Timeline(entries: [entry], policy: .after(.now.addingTimeInterval(3_600))))
+    }
+}
+
+struct ArchiveWidget: Widget {
+    static let kind = "ArchiveWidget"
+
+    var body: some WidgetConfiguration {
+        StaticConfiguration(kind: Self.kind, provider: ArchiveWidgetProvider()) { entry in
+            ArchiveWidgetView(entry: entry)
+        }
+        .configurationDisplayName("Archive")
+        .description("Your export streak and gaps.")
+        .supportedFamilies([.systemSmall, .systemMedium])
+    }
+}
+
+private struct ArchiveWidgetView: View {
+    @Environment(\.widgetFamily) private var family
+    let entry: ArchiveWidgetEntry
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            if let next = entry.snapshot?.nextRun {
+                Text(next, style: .time).font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+            }
+            Spacer(minLength: 0)
+            Text(verbatim: "\(family == .systemSmall ? entry.snapshot?.streak ?? 0 : entry.snapshot?.archivedCount ?? 0)")
+                .font(.system(size: 44, weight: .bold))
+                .minimumScaleFactor(0.6)
+            Text(family == .systemSmall ? "day streak" : "days archived")
+                .font(.caption.weight(.semibold))
+            if family == .systemMedium, let gaps = entry.snapshot?.gapCount, gaps > 0 {
+                Text("\(gaps) gap(s)").font(.caption).foregroundStyle(.orange)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+        .containerBackground(.fill.tertiary, for: .widget)
+    }
+}
+#endif

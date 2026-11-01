@@ -1,6 +1,39 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "Endpoint failing" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Endpunkt schlägt fehl"}},
+      "es":{"stringUnit":{"state":"translated","value":"Endpoint con fallos"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Point de terminaison en échec"}},
+      "it":{"stringUnit":{"state":"translated","value":"Endpoint in errore"}},
+      "ja":{"stringUnit":{"state":"translated","value":"エンドポイントでエラー"}},
+      "ko":{"stringUnit":{"state":"translated","value":"엔드포인트 오류"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Eindpunt mislukt"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Endpoint com falha"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"端点故障"}}
+    }},
+    "Mac exports wait until your Mac is back on the same network." : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Mac-Exporte warten, bis dein Mac wieder im selben Netzwerk ist."}},
+      "es":{"stringUnit":{"state":"translated","value":"Las exportaciones al Mac esperan hasta que tu Mac vuelva a la misma red."}},
+      "fr":{"stringUnit":{"state":"translated","value":"Les exportations Mac attendent que votre Mac revienne sur le même réseau."}},
+      "it":{"stringUnit":{"state":"translated","value":"Le esportazioni su Mac attendono che il Mac torni sulla stessa rete."}},
+      "ja":{"stringUnit":{"state":"translated","value":"Macが同じネットワークに戻るまでMacへの書き出しは待機します。"}},
+      "ko":{"stringUnit":{"state":"translated","value":"Mac이 같은 네트워크로 돌아올 때까지 Mac 내보내기가 대기합니다."}},
+      "nl":{"stringUnit":{"state":"translated","value":"Mac-exports wachten tot je Mac weer op hetzelfde netwerk is."}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"As exportações para o Mac aguardam até ele voltar à mesma rede."}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"Mac 导出将等待你的 Mac 回到同一网络。"}}
+    }},
+    "Mac offline" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Mac offline"}},
+      "es":{"stringUnit":{"state":"translated","value":"Mac sin conexión"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Mac hors ligne"}},
+      "it":{"stringUnit":{"state":"translated","value":"Mac offline"}},
+      "ja":{"stringUnit":{"state":"translated","value":"Macがオフライン"}},
+      "ko":{"stringUnit":{"state":"translated","value":"Mac 오프라인"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Mac offline"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Mac offline"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"Mac 离线"}}
+    }},
     "API endpoint and Agent Data gateway" : {"localizations":{
       "de":{"stringUnit":{"state":"translated","value":"API-Endpunkt und Agent Data-Gateway"}},
       "es":{"stringUnit":{"state":"translated","value":"Endpoint de API y gateway de Agent Data"}},

@@ -176,6 +176,7 @@ struct ContentView: View {
                             onExport: exportData,
                             onCancelExport: cancelExport,
                             onBrowseExportFolder: browseExportFolder,
+                            onPreviewExport: presentExportPreview,
                             executionHistoryAssessment: executionHistoryAssessment,
                             isAssessingHistory: isAssessingHistory,
                             onContinueWithoutHistoryVerification: continueWithoutHistoryVerification,
