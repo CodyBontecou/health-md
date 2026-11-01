@@ -34,6 +34,7 @@ struct MacContentView: View {
             .navigationSplitViewColumnWidth(min: 180, ideal: 220)
         } detail: {
             detailView(for: selection ?? .home)
+                .glassFormChrome()
                 .navigationTitle((selection ?? .home).title)
         }
         .glassTheme()

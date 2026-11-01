@@ -1,6 +1,16 @@
 import SwiftUI
 import WidgetKit
 
+/// The Watch app's copy of the Liquid Glass flag, off by default like the iPhone app's.
+private enum WatchGlass {
+    static var isEnabled: Bool {
+        (Bundle.main.object(forInfoDictionaryKey: "NEW_EXPERIENCE_ENABLED") as? String)?
+            .trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == "yes"
+    }
+
+    static let accent = Color(red: 0xCD / 255, green: 0xB6 / 255, blue: 0xFF / 255)
+}
+
 private enum WatchHealthAccessState: Equatable {
     case unknown
     case needsAuthorization
@@ -268,7 +278,7 @@ private struct WatchMetricRow: View {
         HStack(spacing: 8) {
             Image(systemName: icon)
                 .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(tint)
+                .foregroundStyle(WatchGlass.isEnabled ? WatchGlass.accent : tint)
                 .frame(width: 20)
 
             Text(title)
@@ -284,7 +294,7 @@ private struct WatchMetricRow: View {
         }
         .padding(.vertical, 7)
         .padding(.horizontal, 9)
-        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: WatchGlass.isEnabled ? 20 : 12, style: .continuous))
     }
 }
 

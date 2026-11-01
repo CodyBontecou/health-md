@@ -1207,6 +1207,7 @@
 				DEVELOPMENT_TEAM = 67KC823C9A;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = HealthMdWatch/Info.plist;
+				NEW_EXPERIENCE_ENABLED = NO;
 				INFOPLIST_KEY_CFBundleDisplayName = Health.md;
 				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = com.codybontecou.obsidianhealth;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -1238,6 +1239,7 @@
 				DEVELOPMENT_TEAM = 67KC823C9A;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = HealthMdWatch/Info.plist;
+				NEW_EXPERIENCE_ENABLED = NO;
 				INFOPLIST_KEY_CFBundleDisplayName = Health.md;
 				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = com.codybontecou.obsidianhealth;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -1889,6 +1891,7 @@
 				DEVELOPMENT_TEAM = 67KC823C9A;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = HealthMdWatch/Info.plist;
+				NEW_EXPERIENCE_ENABLED = NO;
 				INFOPLIST_KEY_CFBundleDisplayName = Health.md;
 				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = com.codybontecou.obsidianhealth;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -2037,6 +2040,7 @@
 				DEVELOPMENT_TEAM = 67KC823C9A;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = HealthMdWatch/Info.plist;
+				NEW_EXPERIENCE_ENABLED = NO;
 				INFOPLIST_KEY_CFBundleDisplayName = Health.md;
 				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = com.codybontecou.obsidianhealth;
 				LD_RUNPATH_SEARCH_PATHS = (
