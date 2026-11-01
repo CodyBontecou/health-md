@@ -125,6 +125,7 @@ final class ConfigurationProtectionJourneyUITests: XCTestCase {
             configurationProtectionEnabled: true,
             useHealthKitExportPreviewFixtures: true
         )
+        app.launchArguments += ["-UITestOpenClassicExport", "YES"]
         app.launch()
 
         let previewButton = app.buttons[UITestLaunchHelper.Export.previewButton]
@@ -155,6 +156,7 @@ final class ConfigurationProtectionJourneyUITests: XCTestCase {
             purchaseUnlocked: true,
             configurationProtectionEnabled: true
         )
+        app.launchArguments += ["-UITestOpenClassicExport", "YES"]
         app.launch()
 
         let filenameEditor = app.buttons[UITestLaunchHelper.Export.filenameEditorButton]
@@ -282,17 +284,13 @@ final class ConfigurationProtectionJourneyUITests: XCTestCase {
         )
         app.launch()
 
-        let settingsTab = app.tabBars.buttons["Settings"]
-        XCTAssertTrue(settingsTab.waitForExistence(timeout: 5))
-        settingsTab.tap()
+        UITestLaunchHelper.openSettingsTab(in: app)
 
         let toggle = app.switches[UITestLaunchHelper.ConfigurationProtection.toggle]
         XCTAssertTrue(toggle.waitForExistence(timeout: 5))
         toggle.tap()
 
-        let exportTab = app.tabBars.buttons["Export"]
-        XCTAssertTrue(exportTab.waitForExistence(timeout: 5))
-        exportTab.tap()
+        UITestLaunchHelper.openClassicExport(in: app)
 
         let yesterday = app.buttons[UITestLaunchHelper.Export.datePresetYesterdayButton]
         scrollUntilExists(yesterday, in: app)

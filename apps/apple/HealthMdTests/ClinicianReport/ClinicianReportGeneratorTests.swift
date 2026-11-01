@@ -147,7 +147,7 @@ final class ClinicianReportGeneratorTests: XCTestCase {
     }
 
     func testLocaleIsPinnedAcrossModelVocabularyAndPlaceholderFormatting() {
-        XCTAssertEqual(ClinicianReportCopy.Key.allCases.count, 205)
+        XCTAssertEqual(ClinicianReportCopy.Key.allCases.count, 207)
         let range = ReportDateRange(startDate: date(2026, 3, 1), endDate: date(2026, 3, 3))
         let input = ClinicianReportInput(
             configuration: ReportConfiguration(dateRange: range, selectedMetrics: [.steps]),

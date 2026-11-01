@@ -21,9 +21,7 @@ final class ScheduleSyncJourneyUITests: XCTestCase {
         app.launch()
 
         // Navigate to schedule tab — the schedule controls now live inline on the tab
-        let scheduleTab = tabButton(in: app, identifier: UITestLaunchHelper.Tab.schedule, label: "Schedule")
-        XCTAssertTrue(scheduleTab.waitForExistence(timeout: 5))
-        scheduleTab.tap()
+        XCTAssertTrue(UITestLaunchHelper.openScheduleTab(in: app))
 
         // Toggle the schedule on directly — no sheet to drill into
         let enableToggle = app.switches[UITestLaunchHelper.Schedule.enableToggle]
@@ -43,9 +41,7 @@ final class ScheduleSyncJourneyUITests: XCTestCase {
         let app = UITestLaunchHelper.scheduleEnabledApp()
         app.launch()
 
-        let scheduleTab = tabButton(in: app, identifier: UITestLaunchHelper.Tab.schedule, label: "Schedule")
-        XCTAssertTrue(scheduleTab.waitForExistence(timeout: 5))
-        scheduleTab.tap()
+        XCTAssertTrue(UITestLaunchHelper.openScheduleTab(in: app))
 
         // The adaptive frequency control uses native buttons in a container,
         // with a menu fallback; it is no longer a UIKit segmented control.
@@ -72,9 +68,7 @@ final class ScheduleSyncJourneyUITests: XCTestCase {
         app.launch()
 
         // Navigate to schedule tab
-        let scheduleTab = tabButton(in: app, identifier: UITestLaunchHelper.Tab.schedule, label: "Schedule")
-        XCTAssertTrue(scheduleTab.waitForExistence(timeout: 5))
-        scheduleTab.tap()
+        XCTAssertTrue(UITestLaunchHelper.openScheduleTab(in: app))
 
         // The toggle should be ON since configureTestMode saved to UserDefaults
         // and SchedulingManager loads from UserDefaults
@@ -90,9 +84,7 @@ final class ScheduleSyncJourneyUITests: XCTestCase {
         app.launch()
 
         // Navigate to schedule tab
-        let scheduleTab = tabButton(in: app, identifier: UITestLaunchHelper.Tab.schedule, label: "Schedule")
-        XCTAssertTrue(scheduleTab.waitForExistence(timeout: 5))
-        scheduleTab.tap()
+        XCTAssertTrue(UITestLaunchHelper.openScheduleTab(in: app))
 
         let enableToggle = app.switches[UITestLaunchHelper.Schedule.enableToggle]
         XCTAssertTrue(enableToggle.waitForExistence(timeout: 5))
@@ -105,9 +97,7 @@ final class ScheduleSyncJourneyUITests: XCTestCase {
         let app2 = UITestLaunchHelper.scheduleEnabledApp()
         app2.launch()
 
-        let scheduleTab2 = tabButton(in: app2, identifier: UITestLaunchHelper.Tab.schedule, label: "Schedule")
-        XCTAssertTrue(scheduleTab2.waitForExistence(timeout: 5))
-        scheduleTab2.tap()
+        XCTAssertTrue(UITestLaunchHelper.openScheduleTab(in: app2))
 
         let enableToggle2 = app2.switches[UITestLaunchHelper.Schedule.enableToggle]
         XCTAssertTrue(enableToggle2.waitForExistence(timeout: 5))
@@ -122,9 +112,7 @@ final class ScheduleSyncJourneyUITests: XCTestCase {
         app.launch()
 
         // Navigate to sync tab
-        let syncTab = tabButton(in: app, identifier: UITestLaunchHelper.Tab.sync, label: "Sync")
-        XCTAssertTrue(syncTab.waitForExistence(timeout: 5))
-        syncTab.tap()
+        openDestination("Mac Destination", in: app)
 
         // Verify sync toggle is visible
         let syncToggle = app.switches[UITestLaunchHelper.Sync.syncToggle]
@@ -136,9 +124,7 @@ final class ScheduleSyncJourneyUITests: XCTestCase {
         app.launch()
 
         // Navigate to sync tab
-        let syncTab = tabButton(in: app, identifier: UITestLaunchHelper.Tab.sync, label: "Sync")
-        XCTAssertTrue(syncTab.waitForExistence(timeout: 5))
-        syncTab.tap()
+        openDestination("Mac Destination", in: app)
 
         // Sync toggle should be visible
         let syncToggle = app.switches[UITestLaunchHelper.Sync.syncToggle]
@@ -157,9 +143,7 @@ final class ScheduleSyncJourneyUITests: XCTestCase {
         app.launch()
 
         // Navigate to sync tab
-        let syncTab = tabButton(in: app, identifier: UITestLaunchHelper.Tab.sync, label: "Sync")
-        XCTAssertTrue(syncTab.waitForExistence(timeout: 5))
-        syncTab.tap()
+        openDestination("Mac Destination", in: app)
 
         // Sync toggle should be visible
         let syncToggle = app.switches[UITestLaunchHelper.Sync.syncToggle]
@@ -170,24 +154,16 @@ final class ScheduleSyncJourneyUITests: XCTestCase {
         let app = UITestLaunchHelper.syncApp(state: "disconnected")
         app.launch()
 
-        let syncTab = tabButton(in: app, identifier: UITestLaunchHelper.Tab.sync, label: "Sync")
-        XCTAssertTrue(syncTab.waitForExistence(timeout: 5))
-        syncTab.tap()
+        openDestination("Mac Destination", in: app)
 
-        let targetPicker = app.segmentedControls[UITestLaunchHelper.Sync.configurationTargetPicker]
-        XCTAssertTrue(targetPicker.waitForExistence(timeout: 5), "Sync target picker should be visible at the top")
-
-        let cliSegment = targetPicker.buttons["CLI"]
-        XCTAssertTrue(cliSegment.isHittable, "CLI configuration should be selectable without scrolling")
-        cliSegment.tap()
-
+        // Mac Destination and CLI are separate Settings pages now, both one tap from Settings.
+        XCTAssertTrue(app.switches[UITestLaunchHelper.Sync.syncToggle].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.switches[UITestLaunchHelper.Sync.directCLIToggle].exists)
+        app.navigationBars.buttons.firstMatch.tap()
+        openDestination("CLI", in: app)
         let directCLIToggle = app.switches[UITestLaunchHelper.Sync.directCLIToggle]
-        XCTAssertTrue(directCLIToggle.waitForExistence(timeout: 3), "Direct CLI configuration should replace Mac configuration")
+        XCTAssertTrue(directCLIToggle.waitForExistence(timeout: 3))
         XCTAssertTrue(directCLIToggle.isHittable, "Direct CLI access toggle should be reachable without scrolling")
-        XCTAssertFalse(app.switches[UITestLaunchHelper.Sync.syncToggle].exists)
-
-        targetPicker.buttons["Mac Destination"].tap()
-        XCTAssertTrue(app.switches[UITestLaunchHelper.Sync.syncToggle].waitForExistence(timeout: 3))
     }
 
     func testSyncToggle_enablesSync() throws {
@@ -195,9 +171,7 @@ final class ScheduleSyncJourneyUITests: XCTestCase {
         app.launch()
 
         // Navigate to sync tab
-        let syncTab = tabButton(in: app, identifier: UITestLaunchHelper.Tab.sync, label: "Sync")
-        XCTAssertTrue(syncTab.waitForExistence(timeout: 5))
-        syncTab.tap()
+        openDestination("Mac Destination", in: app)
 
         // Toggle sync on
         let syncToggle = app.switches[UITestLaunchHelper.Sync.syncToggle]
@@ -220,10 +194,13 @@ final class ScheduleSyncJourneyUITests: XCTestCase {
 
     // MARK: - Helpers
 
-    private func tabButton(in app: XCUIApplication, identifier: String, label: String) -> XCUIElement {
-        let identified = app.buttons[identifier]
-        if identified.exists { return identified }
-        return app.buttons[label]
+    private func openDestination(_ title: String, in app: XCUIApplication) {
+        let settings = app.buttons["Settings"].firstMatch
+        XCTAssertTrue(settings.waitForExistence(timeout: 10))
+        settings.tap()
+        let row = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", title)).firstMatch
+        XCTAssertTrue(row.waitForExistence(timeout: 5), "\(title) must be reachable from Settings")
+        row.tap()
     }
 }
 
@@ -240,11 +217,7 @@ extension ScheduleSyncJourneyUITests {
             macDestinationPath: "/Users/cody/Health.md"
         )
         app.launch()
-        let scheduleTab: XCUIElement = app.buttons[UITestLaunchHelper.Tab.schedule].exists
-            ? app.buttons[UITestLaunchHelper.Tab.schedule]
-            : app.buttons["Schedule"]
-        XCTAssertTrue(scheduleTab.waitForExistence(timeout: 5))
-        scheduleTab.tap()
+        XCTAssertTrue(UITestLaunchHelper.openScheduleTab(in: app))
         XCTAssertTrue(app.switches[UITestLaunchHelper.Schedule.enableToggle].waitForExistence(timeout: 5))
 
         func keep(_ name: String) {

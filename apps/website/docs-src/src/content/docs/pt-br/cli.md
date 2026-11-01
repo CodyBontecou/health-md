@@ -92,7 +92,7 @@ healthmd export --last 7 \
   --destination "$HOME/Documents/HealthVault"
 ```
 
-`--profile PROFILE_ID` não pode ser combinado com `--use-device-settings` nem com seletores de métrica/categoria, e um ID desconhecido falha de forma segura em vez de usar configurações atuais. Copie o ID em **Ajustes → Perfis de exportação → ID do perfil** no iPhone ou no Android. Consulte [Perfis de exportação](/pt-br/docs/export-profiles/) para automação e comportamento do destino.
+`--profile PROFILE_ID` não pode ser combinado com `--use-device-settings` nem com seletores de métricas ou categorias, e um ID desconhecido falha com segurança em vez de usar os ajustes atuais. Copie o ID da página da automação em **Automações** no iPhone (**ID do perfil**), ou em **Configurações → Perfis de exportação → ID do perfil** no Android. Veja [Perfis de exportação](/pt-br/docs/export-profiles/) para o comportamento de automações e destinos.
 
 O cliente direto portátil pode invocar qualquer operação tipada de iPhone suportada sem envelope MCP:
 

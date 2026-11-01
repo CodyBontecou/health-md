@@ -20,7 +20,7 @@ Four home-screen widgets put today's health at a glance — a full health summar
 
 1. Long-press the iPhone home screen → **Edit → Add Widget** → search **Health.md**.
 2. Pick a widget and size, or add it from the lock screen / StandBy for accessories.
-3. The Live Activity appears automatically when a CLI export runs (Direct CLI enabled in the Sync tab).
+3. The Live Activity appears automatically when a CLI export runs (Direct CLI enabled in Settings › CLI).
 
 ## Widget families
 
@@ -40,7 +40,7 @@ Four home-screen widgets put today's health at a glance — a full health summar
 
 1. Grant Health.md the health types you want surfaced (see [HealthKit permissions](./healthkit-permissions.md)).
 2. Add the widget to your home screen or accessories.
-3. For the Live Activity: enable Direct CLI access in the Sync tab and start an export from the `healthmd` CLI.
+3. For the Live Activity: enable Direct CLI access in Settings › CLI and start an export from the `healthmd` CLI.
 
 ## Example output
 
@@ -62,7 +62,7 @@ Sleep 7h 12m     22:41 → 5:53
 |---|---|---|
 | Widget shows placeholder/empty | HealthKit permission missing or no data today | Re-check permissions in Apple Health settings |
 | Widget not refreshing | System timeline budgeting | Widgets refresh on iOS's schedule; open the app to force a snapshot |
-| No Live Activity during export | Direct CLI disabled or Live Activities off system-wide | Enable Direct CLI in Sync tab; Settings → Face ID & Passcode → Live Activities |
+| No Live Activity during export | Direct CLI disabled or Live Activities off system-wide | Enable Direct CLI in Settings › CLI; Settings → Face ID & Passcode → Live Activities |
 
 ## Video outline
 

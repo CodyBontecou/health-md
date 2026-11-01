@@ -190,7 +190,7 @@ final class PurchaseManagerTests: XCTestCase {
     func testSettingsSurfacesUseSharedPlanCopyAndGuardPermanentNotice() throws {
         let appleRoot = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
-        for path in ["HealthMd/iOS/ContentView.swift", "HealthMd/iPad/iPadSettingsView.swift", "HealthMd/iOS/Views/PaywallView.swift"] {
+        for path in ["HealthMd/iOS/NewExperience/Settings/SettingsScreen.swift", "HealthMd/iOS/Views/PaywallView.swift"] {
             let source = try String(contentsOf: appleRoot.appendingPathComponent(path), encoding: .utf8)
             XCTAssertTrue(source.contains("purchaseManager.activePlanTitle"), path)
             XCTAssertFalse(source.contains("return \"Family Lifetime active\""), path)

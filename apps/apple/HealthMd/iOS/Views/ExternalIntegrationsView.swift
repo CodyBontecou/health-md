@@ -6,21 +6,19 @@ struct ExternalIntegrationsView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var isTroubleshootingExpanded = false
     @EnvironmentObject private var configurationProtection: ConfigurationProtectionManager
+    @Environment(\.glassPalette) private var glassPalette
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: Spacing.md) {
-                    intro
-                    providersSection
-                    privacyNote
-                    troubleshootingSection
+                    glassContent
                 }
                 .padding(.horizontal, Spacing.md)
                 .padding(.top, Spacing.md)
                 .padding(.bottom, Spacing.xl)
             }
-            .background(Color.bgPrimary.ignoresSafeArea())
+            .background(glassPalette.bg.ignoresSafeArea())
             .navigationTitle("Connected Apps")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -59,6 +57,84 @@ struct ExternalIntegrationsView: View {
                 dismiss()
             }
         }
+    }
+
+    /// ConnectedAppsG. Uses the same manager calls and lock checks as the cards below.
+    @ViewBuilder private var glassContent: some View {
+        ForEach(ConnectedAppsFeature.enabledProviders) { provider in
+            GlassPanel { glassProvider(provider) }
+        }
+        GlassBanner(
+            title: String(localized: "Private by design"),
+            message: String(localized: "WHOOP data travels directly to this iPhone, and your tokens stay in Keychain. Health.md’s broker only completes secure sign-in and token refresh."),
+            systemImage: "lock.shield"
+        )
+        Text("If data is missing, WHOOP may not have scored the day yet, a permission may be missing, or WHOOP may be rate limiting requests. Reconnect after revoked or missing access, then retry the export later.")
+            .glassFont(.rowSubtitle)
+            .foregroundStyle(glassPalette.muted)
+    }
+
+    private func glassProvider(_ provider: ExternalIntegrationProvider) -> some View {
+        let connected = manager.isConnected(provider)
+        let connecting = manager.isConnectingProvider == provider
+        let disconnecting = manager.isDisconnectingProvider == provider
+        let busy = manager.isConnectingProvider != nil || manager.isDisconnectingProvider != nil
+        return VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                providerLogo(provider)
+                Spacer(minLength: 8)
+                connectionStatus(connected: connected)
+            }
+            Text(provider.summary).glassFont(.rowSubtitle).foregroundStyle(glassPalette.sec)
+            if connected,
+               let granted = manager.accounts[provider]?.scope,
+               let missing = missingScopes(for: provider, grantedScope: granted),
+               !missing.isEmpty {
+                GlassBanner(
+                    title: String(localized: "Permissions needed"),
+                    message: String(localized: "Reconnect and approve: \(missing.joined(separator: ", "))."),
+                    systemImage: "exclamationmark.triangle",
+                    tone: .warning
+                )
+            }
+            if connected {
+                Button(role: .destructive) {
+                    guard configurationProtection.performConfigurationChange({}) else { return }
+                    Task {
+                        await manager.disconnect(
+                            provider: provider,
+                            commitAllowed: { configurationProtection.performConfigurationChange({}) }
+                        )
+                    }
+                } label: {
+                    providerActionLabel(
+                        title: disconnecting ? "Disconnecting…" : "Disconnect WHOOP",
+                        isWorking: disconnecting
+                    )
+                }
+                .tint(glassPalette.coral)
+                .frame(minHeight: GlassMetrics.touchTarget)
+                .disabled(busy)
+            } else {
+                Button {
+                    guard configurationProtection.performConfigurationChange({}) else { return }
+                    Task {
+                        await manager.connect(
+                            provider: provider,
+                            commitAllowed: { configurationProtection.performConfigurationChange({}) }
+                        )
+                    }
+                } label: {
+                    providerActionLabel(
+                        title: connecting ? "Connecting…" : "Connect WHOOP",
+                        isWorking: connecting
+                    )
+                }
+                .buttonStyle(GlassPrimaryButtonStyle())
+                .disabled(busy)
+            }
+        }
+        .padding(GlassMetrics.panelPadding)
     }
 
     private var intro: some View {

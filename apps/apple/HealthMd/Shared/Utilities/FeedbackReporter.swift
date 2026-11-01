@@ -146,37 +146,66 @@ struct FeedbackFailureView: View {
         _draft = State(initialValue: FeedbackReportDraft(reportText: failure.reportText, strings: strings))
     }
 
+    /// ReportFallbackG. Still local only: edit, copy, done.
     var body: some View {
-        VStack(alignment: .leading, spacing: Spacing.s4) {
-            Text(strings.title)
-                .font(Typography.headline())
-            Text(failure.message)
-                .fixedSize(horizontal: false, vertical: true)
-            Text(strings.instructions)
-                .font(Typography.caption())
+        GlassReportFallbackContent(
+            strings: strings,
+            message: failure.message,
+            draft: $draft,
+            onCopy: copyReport,
+            onDone: { dismiss() }
+        )
+        .glassTheme()
+    }
+
+    private func copyReport() {
+        draft.copy { text in
+            #if os(iOS)
+            UIPasteboard.general.string = text
+            return true
+            #elseif os(macOS)
+            NSPasteboard.general.clearContents()
+            return NSPasteboard.general.setString(text, forType: .string)
+            #endif
+        }
+    }
+}
+
+private struct GlassReportFallbackContent: View {
+    let strings: FeedbackFallbackCopy
+    let message: String
+    @Binding var draft: FeedbackReportDraft
+    let onCopy: () -> Void
+    let onDone: () -> Void
+
+    @Environment(\.glassPalette) private var palette
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: GlassMetrics.sectionGap) {
+            Text(strings.title).glassFont(.screenTitle).foregroundStyle(palette.text)
+            Text(message).glassFont(.body).foregroundStyle(palette.sec)
+            Text(strings.instructions).glassFont(.rowSubtitle).foregroundStyle(palette.muted)
             TextEditor(text: $draft.reportText)
-                .font(Typography.monoCaption())
-                .accessibilityLabel(strings.reportLabel)
+                .glassFont(.monoBody)
+                .foregroundStyle(palette.text)
+                .scrollContentBackground(.hidden)
+                .padding(8)
                 .frame(minHeight: 180)
+                .glassSurface(cornerRadius: GlassMetrics.panelSmallRadius)
+                .accessibilityLabel(strings.reportLabel)
+            Button(strings.copyReport, action: onCopy).buttonStyle(GlassPrimaryButtonStyle())
             HStack {
-                Button(strings.copyReport) {
-                    draft.copy { text in
-                        #if os(iOS)
-                        UIPasteboard.general.string = text
-                        return true
-                        #elseif os(macOS)
-                        NSPasteboard.general.clearContents()
-                        return NSPasteboard.general.setString(text, forType: .string)
-                        #endif
-                    }
-                }
                 Text(draft.copyConfirmation)
+                    .glassFont(.caption)
+                    .foregroundStyle(palette.ok)
                     .accessibilityLabel(draft.copyAccessibilityLabel)
                 Spacer()
-                Button("Done") { dismiss() }
+                Button("Done", action: onDone).frame(minHeight: GlassMetrics.touchTarget)
             }
         }
-        .padding(Spacing.s4)
+        .padding(GlassMetrics.screenMargin)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .background(palette.bg.ignoresSafeArea())
         #if os(macOS)
         .frame(minWidth: 520, minHeight: 440)
         #endif

@@ -1,21 +1,21 @@
 import SwiftUI
 import UIKit
 
+/// ClinicianReportG. Configures, previews, and shares the on-device clinician PDF.
 struct ClinicianReportView: View {
     private enum ScrollTarget: Hashable { case top }
 
     private enum NoticeTone {
-        case accent
+        case info
         case success
         case warning
         case error
 
-        var color: Color {
+        var bannerTone: GlassBanner.Tone {
             switch self {
-            case .accent: Color.accent
-            case .success: Color.success
-            case .warning: Color.warning
-            case .error: Color.error
+            case .info: .info
+            case .success: .success
+            case .warning, .error: .warning
             }
         }
     }
@@ -24,6 +24,8 @@ struct ClinicianReportView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.locale) private var locale
+    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @EnvironmentObject private var configurationProtection: ConfigurationProtectionManager
     @State private var showShare = false
     @State private var showExportSuccess = false
@@ -31,6 +33,10 @@ struct ClinicianReportView: View {
 
     private var copy: ClinicianReportCopy { ClinicianReportCopy(locale: locale) }
     private var usesAccessibilityLayout: Bool { dynamicTypeSize.isAccessibilitySize }
+    /// Resolved here because the sheet sits outside the shell's `glassTheme()`.
+    private var palette: GlassPalette {
+        GlassPalette.resolved(colorScheme: colorScheme, reduceTransparency: reduceTransparency)
+    }
 
     init(healthKitManager: HealthKitManager, unitPreference: UnitPreference) {
         _viewModel = StateObject(wrappedValue: ClinicianReportViewModel(
@@ -56,12 +62,13 @@ struct ClinicianReportView: View {
                                 .disabled(!viewModel.isConfigurationEditable)
                         }
                     }
-                    .padding(.horizontal, Spacing.s4)
-                    .padding(.top, Spacing.s4)
-                    .padding(.bottom, Spacing.s6)
+                    .padding(.horizontal, GlassMetrics.screenMargin)
+                    .padding(.top, 8)
+                    .padding(.bottom, GlassMetrics.screenMargin)
                 }
                 .scrollIndicators(.hidden)
-                .background(Color.bgSecondary.ignoresSafeArea())
+                .tint(palette.accent)
+                .background(palette.bg.ignoresSafeArea())
                 .safeAreaInset(edge: .bottom, spacing: 0) {
                     actionBar
                 }
@@ -75,8 +82,8 @@ struct ClinicianReportView: View {
             .overlay(alignment: .top) {
                 if showExportSuccess {
                     exportSuccessToast
-                        .padding(.horizontal, Spacing.s4)
-                        .padding(.top, Spacing.s2)
+                        .padding(.horizontal, GlassMetrics.screenMargin)
+                        .padding(.top, 8)
                         .transition(.move(edge: .top).combined(with: .opacity))
                         .zIndex(1)
                 }
@@ -89,7 +96,7 @@ struct ClinicianReportView: View {
                         viewModel.cancel()
                         dismiss()
                     }
-                    .frame(minHeight: 44)
+                    .frame(minHeight: GlassMetrics.touchTarget)
                 }
             }
         }
@@ -106,45 +113,34 @@ struct ClinicianReportView: View {
         }
         .overlay(alignment: .top) {
             ConfigurationProtectionToast(configurationProtection: configurationProtection)
-                .padding(.horizontal, Spacing.s4)
-                .padding(.top, Spacing.s2)
+                .padding(.horizontal, GlassMetrics.screenMargin)
+                .padding(.top, 8)
         }
         .onChange(of: configurationProtection.settingsNavigationRequestID) { _, requestID in
             if requestID != nil {
                 dismiss()
             }
         }
+        .glassSheet(palette: palette)
+        .glassTheme()
     }
 
+    // MARK: - Configuration
+
     private var configurationContent: some View {
-        VStack(alignment: .leading, spacing: Spacing.s4) {
+        VStack(alignment: .leading, spacing: GlassMetrics.sectionGap) {
             Text(copy.string(.intro))
-                .font(.subheadline)
-                .foregroundStyle(Color.textSecondary)
+                .glassFont(.caption)
+                .fontWeight(.regular)
+                .foregroundStyle(palette.muted)
                 .fixedSize(horizontal: false, vertical: true)
+                .padding(.horizontal, 4)
 
-            section(title: copy.string(.period)) { periodControls }
-            section(title: copy.string(.metrics)) { metricControls }
-            section(title: copy.string(.detail)) { detailControls }
-
-            VStack(alignment: .leading, spacing: Spacing.xs) {
-                Text(copy.string(.display_name))
-                    .font(.caption.weight(.medium))
-                    .foregroundStyle(Color.textSecondary)
-                TextField(copy.string(.display_name), text: Binding(
-                    get: { viewModel.configuration.displayName },
-                    set: viewModel.setDisplayName
-                ))
-                .textFieldStyle(.roundedBorder)
-                .textContentType(.name)
-                .controlSize(.large)
-                .frame(minHeight: 48)
-                .accessibilityIdentifier(AccessibilityID.ClinicianReport.displayName)
-                Text(copy.string(.display_name_hint))
-                    .font(.caption)
-                    .foregroundStyle(Color.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
+            // ClinicianReportG leads with the name on the report.
+            displayNameField
+            periodSection
+            metricSection
+            detailSection
 
             if viewModel.configuration.selectedMetrics.isEmpty {
                 noticeCard(
@@ -158,180 +154,229 @@ struct ClinicianReportView: View {
         }
     }
 
-    private var periodControls: some View {
-        VStack(spacing: Spacing.sm) {
-            LazyVGrid(
-                columns: usesAccessibilityLayout
-                    ? [GridItem(.flexible())]
-                    : [GridItem(.flexible()), GridItem(.flexible())],
-                spacing: Spacing.sm
-            ) {
+    private var displayNameField: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            GlassPanel {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(copy.string(.display_name))
+                        .glassFont(.rowSubtitle)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(palette.muted)
+                    TextField(copy.string(.optional), text: Binding(
+                        get: { viewModel.configuration.displayName },
+                        set: viewModel.setDisplayName
+                    ))
+                    .accessibilityLabel(copy.string(.display_name))
+                    .textFieldStyle(.plain)
+                    .glassFont(.body)
+                    .foregroundStyle(palette.text)
+                    .textContentType(.name)
+                    .frame(minHeight: GlassMetrics.touchTarget)
+                    .accessibilityIdentifier(AccessibilityID.ClinicianReport.displayName)
+                }
+                .padding(.horizontal, GlassMetrics.panelPadding)
+                .padding(.vertical, 10)
+            }
+            footnote(copy.string(.display_name_hint))
+        }
+    }
+
+    private var periodSection: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            GlassPanel {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(copy.string(.period))
+                        .glassFont(.body)
+                        .foregroundStyle(palette.text)
+                    periodPicker
+                }
+                .padding(.horizontal, GlassMetrics.panelPadding)
+                .padding(.vertical, 12)
+
+                if viewModel.selectedPreset == .custom {
+                    rowDivider
+                    datePickerRow(
+                        copy.string(.start_date),
+                        selection: Binding(
+                            get: { viewModel.configuration.dateRange.startDate },
+                            set: { viewModel.setCustomRange(start: $0, end: viewModel.configuration.dateRange.endDate) }
+                        ),
+                        in: ...viewModel.configuration.dateRange.endDate,
+                        identifier: AccessibilityID.ClinicianReport.customStartDate
+                    )
+                    rowDivider
+                    datePickerRow(
+                        copy.string(.end_date),
+                        selection: Binding(
+                            get: { viewModel.configuration.dateRange.endDate },
+                            set: { viewModel.setCustomRange(start: viewModel.configuration.dateRange.startDate, end: $0) }
+                        ),
+                        in: viewModel.configuration.dateRange.startDate...Date(),
+                        identifier: AccessibilityID.ClinicianReport.customEndDate
+                    )
+                }
+            }
+            footnote(resolvedRangeLabel)
+                .monospacedDigit()
+        }
+    }
+
+    /// Four segments at standard sizes; chips that can wrap at accessibility sizes.
+    @ViewBuilder
+    private var periodPicker: some View {
+        if usesAccessibilityLayout {
+            VStack(alignment: .leading, spacing: 8) {
                 ForEach(ReportDateRangePreset.allCases) { preset in
                     let selected = viewModel.selectedPreset == preset
-                    Button {
+                    GlassChip(title: preset.title(using: copy), isSelected: selected) {
                         viewModel.selectPreset(preset)
-                    } label: {
-                        HStack(spacing: Spacing.xs) {
-                            Image(systemName: selected ? "checkmark.circle.fill" : "circle")
-                            Text(preset.title(using: copy))
-                                .font(.subheadline.weight(.medium))
-                        }
-                        .foregroundStyle(selected ? Color.accent : Color.textPrimary)
-                        .frame(maxWidth: .infinity, minHeight: 48)
-                        .background(
-                            selected ? Color.selectedBackground : Color.controlBackground,
-                            in: RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
-                        )
-                        .overlay(
-                            RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
-                                .strokeBorder(
-                                    selected ? Color.accent.opacity(0.45) : Color.borderSubtle,
-                                    lineWidth: 1
-                                )
-                        )
-                        .contentShape(RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous))
                     }
-                    .buttonStyle(.plain)
                     .accessibilityIdentifier(AccessibilityID.ClinicianReport.preset(preset))
                     .accessibilityValue(copy.string(selected ? .selected : .not_selected))
                 }
             }
-            if viewModel.selectedPreset == .custom {
-                Divider()
-                DatePicker(
-                    copy.string(.start_date),
-                    selection: Binding(
-                        get: { viewModel.configuration.dateRange.startDate },
-                        set: { viewModel.setCustomRange(start: $0, end: viewModel.configuration.dateRange.endDate) }
-                    ),
-                    in: ...viewModel.configuration.dateRange.endDate,
-                    displayedComponents: .date
+        } else {
+            GlassSegmentedControl(
+                segments: ReportDateRangePreset.allCases.map {
+                    GlassSegmentedControl<ReportDateRangePreset>.Segment(value: $0, title: $0.title(using: copy))
+                },
+                selection: Binding(
+                    get: { viewModel.selectedPreset },
+                    set: viewModel.selectPreset
                 )
-                .frame(minHeight: 44)
-                .accessibilityIdentifier(AccessibilityID.ClinicianReport.customStartDate)
-                Divider()
-                DatePicker(
-                    copy.string(.end_date),
-                    selection: Binding(
-                        get: { viewModel.configuration.dateRange.endDate },
-                        set: { viewModel.setCustomRange(start: viewModel.configuration.dateRange.startDate, end: $0) }
-                    ),
-                    in: viewModel.configuration.dateRange.startDate...Date(),
-                    displayedComponents: .date
-                )
-                .frame(minHeight: 44)
-                .accessibilityIdentifier(AccessibilityID.ClinicianReport.customEndDate)
-            }
+            )
+            .accessibilityElement(children: .contain)
+            .accessibilityLabel(copy.string(.period))
         }
     }
 
-    private var metricControls: some View {
-        VStack(alignment: .leading, spacing: Spacing.sm) {
-            Text(copy.format(
-                .selected_count,
-                "\(viewModel.configuration.selectedMetrics.count)",
-                "\(ReportMetric.allCases.count)"
-            ))
-            .font(.caption.weight(.medium))
-            .foregroundStyle(Color.textSecondary)
-            .monospacedDigit()
+    private func datePickerRow(
+        _ title: String,
+        selection: Binding<Date>,
+        in range: PartialRangeThrough<Date>,
+        identifier: String
+    ) -> some View {
+        DatePicker(title, selection: selection, in: range, displayedComponents: .date)
+            .glassFont(.body)
+            .foregroundStyle(palette.text)
+            .padding(.horizontal, GlassMetrics.panelPadding)
+            .frame(minHeight: GlassMetrics.rowMinHeight)
+            .accessibilityIdentifier(identifier)
+    }
 
+    private func datePickerRow(
+        _ title: String,
+        selection: Binding<Date>,
+        in range: ClosedRange<Date>,
+        identifier: String
+    ) -> some View {
+        DatePicker(title, selection: selection, in: range, displayedComponents: .date)
+            .glassFont(.body)
+            .foregroundStyle(palette.text)
+            .padding(.horizontal, GlassMetrics.panelPadding)
+            .frame(minHeight: GlassMetrics.rowMinHeight)
+            .accessibilityIdentifier(identifier)
+    }
+
+    private var resolvedRangeLabel: String {
+        let style = Date.FormatStyle(date: .abbreviated, time: .omitted).locale(locale)
+        let range = viewModel.configuration.dateRange
+        return "\(range.startDate.formatted(style)) – \(range.endDate.formatted(style))"
+    }
+
+    private var metricSection: some View {
+        VStack(alignment: .leading, spacing: GlassMetrics.sectionGap) {
             ViewThatFits(in: .horizontal) {
-                HStack(spacing: Spacing.s2) { metricSelectionButtons(expands: false) }
-                VStack(spacing: Spacing.s2) { metricSelectionButtons(expands: true) }
+                HStack(spacing: 8) { metricSelectionChips }
+                VStack(alignment: .leading, spacing: 8) { metricSelectionChips }
             }
 
-            Divider()
-
-            VStack(spacing: 0) {
-                ForEach(ReportMetric.allCases) { metric in
-                    Toggle(metric.displayName(using: copy), isOn: Binding(
-                        get: { viewModel.configuration.selectedMetrics.contains(metric) },
-                        set: { _ in viewModel.toggleMetric(metric) }
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(alignment: .firstTextBaseline) {
+                    GlassSectionLabel(title: copy.string(.include))
+                    Spacer(minLength: 8)
+                    Text(copy.format(
+                        .selected_count,
+                        "\(viewModel.configuration.selectedMetrics.count)",
+                        "\(ReportMetric.allCases.count)"
                     ))
-                    .tint(Color.accent)
-                    .frame(minHeight: 44)
-                    .accessibilityIdentifier(AccessibilityID.ClinicianReport.metric(metric))
-                    if metric != ReportMetric.allCases.last { Divider() }
+                    .glassFont(.rowSubtitle)
+                    .foregroundStyle(palette.muted)
+                    .monospacedDigit()
+                }
+                .padding(.horizontal, 20)
+
+                GlassPanel {
+                    ForEach(ReportMetric.allCases) { metric in
+                        if metric != ReportMetric.allCases.first { rowDivider }
+                        GlassToggleRow(
+                            title: metric.displayName(using: copy),
+                            isOn: Binding(
+                                get: { viewModel.configuration.selectedMetrics.contains(metric) },
+                                set: { _ in viewModel.toggleMetric(metric) }
+                            )
+                        )
+                        .accessibilityIdentifier(AccessibilityID.ClinicianReport.metric(metric))
+                    }
                 }
             }
         }
     }
 
     @ViewBuilder
-    private func metricSelectionButtons(expands: Bool) -> some View {
-        metricSelectionButton(
+    private var metricSelectionChips: some View {
+        metricSelectionChip(
             copy.string(.recommended),
             identifier: AccessibilityID.ClinicianReport.recommended,
             isActive: viewModel.configuration.selectedMetrics == ReportMetric.recommended,
-            expands: expands,
             action: viewModel.selectRecommendedMetrics
         )
-        metricSelectionButton(
+        metricSelectionChip(
             copy.string(.select_all),
             identifier: AccessibilityID.ClinicianReport.selectAll,
             isActive: viewModel.configuration.selectedMetrics.count == ReportMetric.allCases.count,
-            expands: expands,
             action: viewModel.selectAllMetrics
         )
-        metricSelectionButton(
+        metricSelectionChip(
             copy.string(.clear),
             identifier: AccessibilityID.ClinicianReport.clear,
             isActive: viewModel.configuration.selectedMetrics.isEmpty,
-            expands: expands,
             action: viewModel.clearMetrics
         )
     }
 
-    private func metricSelectionButton(
+    private func metricSelectionChip(
         _ title: String,
         identifier: String,
         isActive: Bool,
-        expands: Bool,
         action: @escaping () -> Void
     ) -> some View {
-        Button(action: action) {
-            Text(title)
-                .font(.footnote.weight(.medium))
-                .lineLimit(1)
-                .fixedSize(horizontal: true, vertical: false)
-                .foregroundStyle(isActive ? Color.accent : Color.textPrimary)
-                .padding(.horizontal, Spacing.s3)
-                .frame(maxWidth: expands ? .infinity : nil, minHeight: 44)
-                .background(
-                    isActive ? Color.selectedBackground : Color.controlBackground,
-                    in: RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
-                        .strokeBorder(
-                            isActive ? Color.accent.opacity(0.45) : Color.borderSubtle,
-                            lineWidth: 1
-                        )
-                )
-                .contentShape(RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous))
-        }
-            .buttonStyle(.plain)
+        GlassChip(title: title, isSelected: isActive, action: action)
+            .fixedSize(horizontal: true, vertical: false)
             .accessibilityIdentifier(identifier)
             .accessibilityValue(copy.string(isActive ? .selected : .not_selected))
     }
 
-    private var detailControls: some View {
-        VStack(spacing: 0) {
-            detailOption(
-                .summary,
-                title: copy.string(.summary_only),
-                description: copy.string(.summary_description)
-            )
-            Divider()
-            detailOption(
-                .summaryAndReadings,
-                title: copy.string(.summary_readings),
-                description: copy.string(.readings_description)
-            )
-            .padding(.top, Spacing.s2)
+    private var detailSection: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            GlassSectionLabel(title: copy.string(.detail))
+                .padding(.horizontal, 20)
+            GlassPanel {
+                detailOption(
+                    .summary,
+                    title: copy.string(.summary_only),
+                    description: copy.string(.summary_description)
+                )
+                rowDivider
+                detailOption(
+                    .summaryAndReadings,
+                    title: copy.string(.summary_readings),
+                    description: copy.string(.readings_description)
+                )
+            }
+            .accessibilityElement(children: .contain)
+            .accessibilityIdentifier(AccessibilityID.ClinicianReport.detail)
         }
-        .accessibilityIdentifier(AccessibilityID.ClinicianReport.detail)
     }
 
     private func detailOption(
@@ -343,23 +388,13 @@ struct ClinicianReportView: View {
         return Button {
             viewModel.setDetailLevel(level)
         } label: {
-            HStack(alignment: .top, spacing: Spacing.sm) {
+            GlassRow(title: title, subtitle: description) {
                 Image(systemName: selected ? "checkmark.circle.fill" : "circle")
                     .font(.title3)
-                    .foregroundStyle(selected ? Color.accent : Color.textSecondary)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(title)
-                        .font(.body.weight(.medium))
-                        .foregroundStyle(Color.textPrimary)
-                    Text(description)
-                        .font(.footnote)
-                        .foregroundStyle(Color.textSecondary)
-                        .multilineTextAlignment(.leading)
-                }
-                Spacer(minLength: 0)
+                    .foregroundStyle(selected ? palette.accent : palette.muted)
+                    .accessibilityHidden(true)
             }
-            .frame(maxWidth: .infinity, minHeight: 56, alignment: .leading)
-            .contentShape(Rectangle())
+            .padding(.vertical, 6)
         }
         .buttonStyle(.plain)
         .accessibilityElement(children: .combine)
@@ -367,30 +402,25 @@ struct ClinicianReportView: View {
         .accessibilityAddTraits(selected ? .isSelected : [])
     }
 
-    private func section<Content: View>(title: String, @ViewBuilder content: () -> Content) -> some View {
-        VStack(alignment: .leading, spacing: Spacing.s2) {
-            Text(title)
-                .font(.caption.weight(.medium))
-                .foregroundStyle(Color.textSecondary)
-            content()
-                .padding(Spacing.s4)
-                .background(
-                    RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous)
-                        .fill(Color.bgPrimary)
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous)
-                        .strokeBorder(Color.borderSubtle, lineWidth: 1)
-                )
-                .shadow(color: Color.black.opacity(0.025), radius: 2, x: 0, y: 1)
-        }
+    private var rowDivider: some View {
+        Divider()
+            .overlay(palette.line)
+            .padding(.horizontal, GlassMetrics.panelPadding)
     }
 
-    @ViewBuilder
-    private var actionBar: some View {
-        VStack(spacing: Spacing.sm) {
-            Divider()
+    private func footnote(_ text: String) -> some View {
+        Text(text)
+            .glassFont(.caption)
+            .fontWeight(.regular)
+            .foregroundStyle(palette.muted)
+            .fixedSize(horizontal: false, vertical: true)
+            .padding(.horizontal, 20)
+    }
 
+    // MARK: - Action bar
+
+    private var actionBar: some View {
+        VStack(spacing: 8) {
             if viewModel.isLoading {
                 progressStatus(
                     title: copy.string(.preparing),
@@ -404,20 +434,25 @@ struct ClinicianReportView: View {
             } else if let report = viewModel.report {
                 reviewActions(report)
             } else {
+                // Preparing the preview also renders the PDF, so one action covers both
+                // of ClinicianReportG's Preview and Create PDF buttons.
                 Button(action: { viewModel.generateReport(locale: locale) }) {
                     Text(copy.string(.preview))
-                        .frame(maxWidth: .infinity, minHeight: 48)
                 }
-                .buttonStyle(.borderedProminent)
-                .buttonBorderShape(.roundedRectangle(radius: GeistRadius.sm))
-                .tint(Color.accent)
+                .buttonStyle(GlassPrimaryButtonStyle())
                 .disabled(!viewModel.canGenerateReport)
                 .accessibilityIdentifier(AccessibilityID.ClinicianReport.preview)
             }
         }
-        .padding(.horizontal, Spacing.s4)
-        .padding(.vertical, Spacing.s3)
-        .background(Color.bgPrimary)
+        .padding(.horizontal, GlassMetrics.screenMargin)
+        .padding(.top, 12)
+        .padding(.bottom, 8)
+        .frame(maxWidth: .infinity)
+        .background {
+            Color.clear
+                .glassSurface(in: Rectangle(), style: .strong)
+                .ignoresSafeArea(edges: .bottom)
+        }
     }
 
     @ViewBuilder
@@ -425,12 +460,12 @@ struct ClinicianReportView: View {
         if !report.hasReportableData {
             editButton(prominent: true, fillsAvailableHeight: false)
         } else if usesAccessibilityLayout {
-            VStack(spacing: Spacing.sm) {
+            VStack(spacing: 8) {
                 primaryReviewButton(fillsAvailableHeight: false)
                 editButton(prominent: false, fillsAvailableHeight: false)
             }
         } else {
-            HStack(spacing: Spacing.sm) {
+            HStack(spacing: 8) {
                 editButton(prominent: false, fillsAvailableHeight: true)
                 primaryReviewButton(fillsAvailableHeight: true)
             }
@@ -443,34 +478,25 @@ struct ClinicianReportView: View {
         if prominent {
             Button(action: viewModel.editConfiguration) {
                 Label(copy.string(.edit), systemImage: "slider.horizontal.3")
-                    .frame(
-                        maxWidth: .infinity,
-                        minHeight: 48,
-                        maxHeight: fillsAvailableHeight ? .infinity : nil
-                    )
+                    .frame(maxHeight: fillsAvailableHeight ? .infinity : nil)
             }
-            .buttonStyle(.borderedProminent)
-            .buttonBorderShape(.roundedRectangle(radius: GeistRadius.sm))
-            .tint(Color.accent)
+            .buttonStyle(GlassPrimaryButtonStyle())
             .accessibilityIdentifier(AccessibilityID.ClinicianReport.edit)
         } else {
             Button(action: viewModel.editConfiguration) {
                 Label(copy.string(.edit), systemImage: "slider.horizontal.3")
-                    .foregroundStyle(Color.textPrimary)
+                    .glassFont(.body)
+                    .fontWeight(.medium)
+                    .foregroundStyle(palette.text)
+                    .padding(.horizontal, 12)
                     .frame(
                         maxWidth: .infinity,
-                        minHeight: 48,
+                        minHeight: GlassMetrics.primaryButtonHeight,
                         maxHeight: fillsAvailableHeight ? .infinity : nil
                     )
-                    .background(
-                        Color.controlBackground,
-                        in: RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
-                            .strokeBorder(Color.borderDefault, lineWidth: 1)
-                    )
-                    .contentShape(RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous))
+                    .background(Capsule().fill(palette.surface2))
+                    .overlay(Capsule().strokeBorder(palette.edge, lineWidth: 1))
+                    .contentShape(Capsule())
             }
             .buttonStyle(.plain)
             .accessibilityIdentifier(AccessibilityID.ClinicianReport.edit)
@@ -486,28 +512,18 @@ struct ClinicianReportView: View {
                 showShare = true
             } label: {
                 Label(copy.string(.share_or_save_pdf), systemImage: "square.and.arrow.up")
-                    .frame(
-                        maxWidth: .infinity,
-                        minHeight: 48,
-                        maxHeight: fillsAvailableHeight ? .infinity : nil
-                    )
+                    .padding(.horizontal, 12)
+                    .frame(maxHeight: fillsAvailableHeight ? .infinity : nil)
             }
-            .buttonStyle(.borderedProminent)
-            .buttonBorderShape(.roundedRectangle(radius: GeistRadius.sm))
-            .tint(Color.accent)
+            .buttonStyle(GlassPrimaryButtonStyle())
             .accessibilityIdentifier(AccessibilityID.ClinicianReport.share)
         } else {
             Button(action: viewModel.generatePDF) {
                 Label(copy.string(.generate_pdf), systemImage: "doc.richtext")
-                    .frame(
-                        maxWidth: .infinity,
-                        minHeight: 48,
-                        maxHeight: fillsAvailableHeight ? .infinity : nil
-                    )
+                    .padding(.horizontal, 12)
+                    .frame(maxHeight: fillsAvailableHeight ? .infinity : nil)
             }
-            .buttonStyle(.borderedProminent)
-            .buttonBorderShape(.roundedRectangle(radius: GeistRadius.sm))
-            .tint(Color.accent)
+            .buttonStyle(GlassPrimaryButtonStyle())
             .disabled(!viewModel.canGeneratePDF)
             .accessibilityIdentifier(AccessibilityID.ClinicianReport.generate)
         }
@@ -516,24 +532,17 @@ struct ClinicianReportView: View {
     private var exportSuccessToast: some View {
         Label {
             Text(copy.string(.saved))
-                .font(.subheadline.weight(.medium))
-                .foregroundStyle(Color.textPrimary)
+                .glassFont(.body)
+                .fontWeight(.medium)
+                .foregroundStyle(palette.text)
         } icon: {
             Image(systemName: "checkmark.circle.fill")
-                .foregroundStyle(Color.success)
+                .foregroundStyle(palette.ok)
         }
-        .padding(.horizontal, Spacing.s4)
-        .padding(.vertical, Spacing.s3)
-        .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
-        .background(
-            Color.bgPrimary,
-            in: RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
-                .strokeBorder(Color.success.opacity(0.35), lineWidth: 1)
-        )
-        .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 3)
+        .padding(.horizontal, GlassMetrics.panelPadding)
+        .padding(.vertical, 12)
+        .frame(maxWidth: .infinity, minHeight: GlassMetrics.touchTarget, alignment: .leading)
+        .glassSurface(cornerRadius: GlassMetrics.panelSmallRadius, style: .strong)
         .accessibilityIdentifier(AccessibilityID.ClinicianReport.exportSuccess)
     }
 
@@ -558,24 +567,28 @@ struct ClinicianReportView: View {
 
     private func progressStatus(title: String, progress: Double) -> some View {
         let clampedProgress = min(max(progress, 0), 1)
-        return VStack(alignment: .leading, spacing: Spacing.sm) {
-            HStack(spacing: Spacing.sm) {
+        return VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
                 Text(title)
-                    .font(.footnote.weight(.semibold))
-                    .foregroundStyle(Color.textPrimary)
-                Spacer(minLength: Spacing.sm)
+                    .glassFont(.caption)
+                    .foregroundStyle(palette.text)
+                Spacer(minLength: 8)
                 Text(clampedProgress, format: .percent.precision(.fractionLength(0)))
-                    .font(.footnote.monospacedDigit())
-                    .foregroundStyle(Color.textPrimary)
+                    .glassFont(.caption)
+                    .monospacedDigit()
+                    .foregroundStyle(palette.text)
             }
             ProgressView(value: clampedProgress)
                 .progressViewStyle(.linear)
-                .tint(Color.accent)
+                .tint(palette.accent)
         }
+        .frame(minHeight: GlassMetrics.primaryButtonHeight)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(title)
         .accessibilityValue(Text(clampedProgress, format: .percent.precision(.fractionLength(0))))
     }
+
+    // MARK: - Preview
 
     private func reportPreview(_ report: ClinicianReportData) -> some View {
         let availabilityTone: NoticeTone = if !report.hasReportableData {
@@ -583,7 +596,7 @@ struct ClinicianReportView: View {
         } else if report.unavailableSections.isEmpty {
             .success
         } else {
-            .accent
+            .info
         }
         let availabilityIcon = if !report.hasReportableData {
             "exclamationmark.triangle.fill"
@@ -593,24 +606,26 @@ struct ClinicianReportView: View {
             "info.circle.fill"
         }
 
-        return VStack(alignment: .leading, spacing: Spacing.s4) {
-            VStack(alignment: .leading, spacing: Spacing.xs) {
-                Text(copy.string(.preview_heading))
-                    .font(.caption.weight(.medium))
-                    .foregroundStyle(Color.textSecondary)
+        return VStack(alignment: .leading, spacing: GlassMetrics.sectionGap) {
+            VStack(alignment: .leading, spacing: 4) {
+                GlassSectionLabel(title: copy.string(.preview_heading))
                 Text(report.title)
-                    .font(.title2.weight(.semibold))
-                    .foregroundStyle(Color.textPrimary)
+                    .glassFont(.sentence)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(palette.text)
                     .accessibilityAddTraits(.isHeader)
                 Text(report.dateRangeLabel)
-                    .font(.subheadline.monospacedDigit())
-                    .foregroundStyle(Color.textSecondary)
+                    .glassFont(.caption)
+                    .fontWeight(.regular)
+                    .monospacedDigit()
+                    .foregroundStyle(palette.sec)
                 if let name = report.displayName {
                     Text(name)
-                        .font(.subheadline)
-                        .foregroundStyle(Color.textPrimary)
+                        .glassFont(.body)
+                        .foregroundStyle(palette.text)
                 }
             }
+            .padding(.horizontal, 4)
 
             noticeCard(
                 report.hasReportableData ? report.availabilityOverview : report.noReportableDataMessage,
@@ -619,26 +634,11 @@ struct ClinicianReportView: View {
             )
 
             if !report.warnings.isEmpty {
-                VStack(alignment: .leading, spacing: Spacing.s2) {
-                    Label(report.availabilityNoteTitle, systemImage: "exclamationmark.triangle.fill")
-                        .font(.subheadline.weight(.medium))
-                        .foregroundStyle(Color.textPrimary)
-                    ForEach(report.warnings, id: \.self) { warning in
-                        Text(warning)
-                            .font(.footnote)
-                            .foregroundStyle(Color.textSecondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                }
-                .padding(Spacing.s3)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(
-                    Color.warning.opacity(0.08),
-                    in: RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
-                        .strokeBorder(Color.warning.opacity(0.22), lineWidth: 1)
+                GlassBanner(
+                    title: report.availabilityNoteTitle,
+                    message: report.warnings.joined(separator: "\n"),
+                    systemImage: "exclamationmark.triangle.fill",
+                    tone: .warning
                 )
             }
 
@@ -648,128 +648,109 @@ struct ClinicianReportView: View {
 
             if let unavailable = report.unavailableMeasurementsSummary {
                 Label(unavailable, systemImage: "minus.circle")
-                    .font(.footnote)
-                    .foregroundStyle(Color.textSecondary)
+                    .glassFont(.rowSubtitle)
+                    .foregroundStyle(palette.muted)
                     .fixedSize(horizontal: false, vertical: true)
+                    .padding(.horizontal, 4)
             }
 
             errorCard
 
-            Divider()
-                .overlay(Color.borderSubtle)
-                .padding(.top, Spacing.s2)
-
-            VStack(alignment: .leading, spacing: Spacing.s2) {
-                Text(report.aboutTitle)
-                    .font(.headline)
-                    .foregroundStyle(Color.textPrimary)
-                Text(report.disclaimer)
-                    .font(.footnote)
-                    .foregroundStyle(Color.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                Text(report.attribution)
-                    .font(.footnote)
-                    .foregroundStyle(Color.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                if let practiceLine = report.practiceLine,
-                   let practiceURL = ClinicianReportCopy.practiceURL.flatMap({ URL(string: "https://\($0)") }) {
-                    Link(destination: practiceURL) {
-                        Text(practiceLine)
-                            .font(.footnote)
-                            .foregroundStyle(Color.textSecondary)
-                            .multilineTextAlignment(.leading)
-                            .fixedSize(horizontal: false, vertical: true)
+            GlassPanel {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(report.aboutTitle)
+                        .glassFont(.navTitle)
+                        .foregroundStyle(palette.text)
+                    Text(report.disclaimer)
+                        .glassFont(.rowSubtitle)
+                        .foregroundStyle(palette.sec)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Text(report.attribution)
+                        .glassFont(.rowSubtitle)
+                        .foregroundStyle(palette.sec)
+                        .fixedSize(horizontal: false, vertical: true)
+                    if let practiceLine = report.practiceLine,
+                       let practiceURL = ClinicianReportCopy.practiceURL.flatMap({ URL(string: "https://\($0)") }) {
+                        Link(destination: practiceURL) {
+                            Text(practiceLine)
+                                .glassFont(.rowSubtitle)
+                                .foregroundStyle(palette.accent)
+                                .multilineTextAlignment(.leading)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
                     }
                 }
+                .padding(GlassMetrics.panelPadding)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
         }
         .accessibilityIdentifier(AccessibilityID.ClinicianReport.previewContent)
     }
 
     private func reportSectionPreview(_ reportSection: MetricReportSummary) -> some View {
-        VStack(alignment: .leading, spacing: Spacing.s3) {
+        GlassPanel {
             VStack(alignment: .leading, spacing: 2) {
                 Text(reportSection.localizedTitle)
-                    .font(.headline)
-                    .foregroundStyle(Color.textPrimary)
+                    .glassFont(.navTitle)
+                    .foregroundStyle(palette.text)
                 Text(reportSection.availabilitySummary)
-                    .font(.caption.monospacedDigit())
-                    .foregroundStyle(Color.textSecondary)
+                    .glassFont(.rowSubtitle)
+                    .monospacedDigit()
+                    .foregroundStyle(palette.muted)
             }
+            .padding(.horizontal, GlassMetrics.panelPadding)
+            .padding(.top, GlassMetrics.panelPadding)
+            .padding(.bottom, 8)
             .accessibilityElement(children: .combine)
             .accessibilityAddTraits(.isHeader)
 
             ForEach(Array(reportSection.facts.enumerated()), id: \.offset) { index, fact in
-                if index > 0 {
-                    Divider()
-                        .overlay(Color.borderSubtle)
-                }
+                if index > 0 { rowDivider }
                 ViewThatFits(in: .horizontal) {
                     HStack(alignment: .firstTextBaseline) {
                         Text(fact.label)
-                            .font(.footnote.weight(.medium))
-                            .foregroundStyle(Color.textSecondary)
-                        Spacer(minLength: Spacing.sm)
+                            .glassFont(.caption)
+                            .foregroundStyle(palette.sec)
+                        Spacer(minLength: 8)
                         Text(fact.value)
-                            .font(.footnote.monospacedDigit())
-                            .foregroundStyle(Color.textPrimary)
+                            .glassFont(.caption)
+                            .fontWeight(.regular)
+                            .monospacedDigit()
+                            .foregroundStyle(palette.text)
                             .multilineTextAlignment(.trailing)
                     }
                     VStack(alignment: .leading, spacing: 2) {
                         Text(fact.label)
-                            .font(.footnote.weight(.medium))
-                            .foregroundStyle(Color.textSecondary)
+                            .glassFont(.caption)
+                            .foregroundStyle(palette.sec)
                         Text(fact.value)
-                            .font(.footnote.monospacedDigit())
-                            .foregroundStyle(Color.textPrimary)
+                            .glassFont(.caption)
+                            .fontWeight(.regular)
+                            .monospacedDigit()
+                            .foregroundStyle(palette.text)
                     }
                 }
+                .padding(.horizontal, GlassMetrics.panelPadding)
+                .frame(minHeight: GlassMetrics.touchTarget)
             }
 
             if let detail = reportSection.detailReadingsDescription {
                 Text(detail)
-                    .font(.caption)
-                    .foregroundStyle(Color.textSecondary)
+                    .glassFont(.rowSubtitle)
+                    .foregroundStyle(palette.muted)
+                    .padding(.horizontal, GlassMetrics.panelPadding)
+                    .padding(.top, 4)
             }
+
+            Color.clear.frame(height: 8)
         }
-        .padding(Spacing.s4)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous)
-                .fill(Color.bgPrimary)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous)
-                .strokeBorder(Color.borderSubtle, lineWidth: 1)
-        )
-        .shadow(color: Color.black.opacity(0.025), radius: 2, x: 0, y: 1)
     }
 
     private func noticeCard(
         _ message: String,
         systemImage: String,
-        tone: NoticeTone = .accent
+        tone: NoticeTone = .info
     ) -> some View {
-        Label {
-            Text(message)
-                .font(.footnote)
-                .foregroundStyle(Color.textPrimary)
-                .fixedSize(horizontal: false, vertical: true)
-        } icon: {
-            Image(systemName: systemImage)
-                .foregroundStyle(tone.color)
-        }
-        .padding(Spacing.s3)
-        .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
-        .background(
-            tone.color.opacity(0.08),
-            in: RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
-                .strokeBorder(tone.color.opacity(0.22), lineWidth: 1)
-        )
+        GlassBanner(title: message, systemImage: systemImage, tone: tone.bannerTone)
     }
 
     @ViewBuilder

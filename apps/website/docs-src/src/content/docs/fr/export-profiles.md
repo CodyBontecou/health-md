@@ -7,9 +7,9 @@ Les profils d’exportation regroupent une configuration reproductible. Gérez-l
 
 ## Gérer et modifier les profils
 
-Ouvrez **Réglages → Profils d’exportation**. La liste indique le profil actif et permet de créer, renommer, dupliquer, supprimer, activer ou consulter les profils. Ouvrez la fiche d’un profil pour copier son identifiant stable. Le dernier profil ne peut pas être supprimé.
+Sur iPhone, chaque profil est une automatisation : ouvrez **Automatisations** pour les voir, touchez **+** pour en créer une et ouvrez une automatisation pour l’exécuter, la dupliquer, la mettre en pause ou la modifier page par page (métriques, formats, sortie, notes quotidiennes, entrées, planification). Sa page affiche aussi l’identifiant stable du profil. **Réglages → App et assistance → Profils d’exportation** conserve la liste complète pour renommer, supprimer et activer. Sur Android, ouvrez **Réglages → Profils d’exportation**. Le dernier profil restant ne peut pas être supprimé.
 
-L’onglet Exporter modifie le profil actif. Activez-en un autre avant de changer les réglages si vous ne souhaitez pas mettre à jour le profil actuel.
+**Automatisations → Tous les réglages d’exportation** modifie le profil actif. Activez un autre profil avant de changer ces réglages si vous ne voulez pas modifier le profil actuel.
 
 Chaque profil fige les choix nécessaires pour reproduire une exécution :
 
@@ -29,7 +29,7 @@ Une planification est liée séparément à l’identité stable du profil. Chan
 
 ## Noms, identifiants stables et automatisation
 
-Le nom affiché est destiné aux personnes et peut changer. L’identifiant stable permet une automatisation qui résiste aux changements de nom. Copiez-le dans **Réglages → Profils d’exportation → ID du profil**.
+Le nom affiché est destiné aux personnes et peut changer. L’identifiant stable d’un profil sert aux automatisations insensibles aux renommages. Copiez-le depuis la page de l’automatisation dans **Automatisations** sur iPhone, ou depuis **Réglages → Profils d’exportation → Identifiant du profil** sur Android.
 
 - Raccourcis Apple sélectionne un profil par son nom affiché ; un paramètre de profil vide utilise le profil actif.
 - Les diffusions Tasker et adb sur Android peuvent fournir l’extra `PROFILE` avec un identifiant stable ou un nom. Préférez l’identifiant pour les flux qui doivent résister aux changements de nom.

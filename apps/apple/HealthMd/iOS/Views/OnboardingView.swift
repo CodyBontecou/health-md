@@ -37,7 +37,7 @@ struct OnboardingView: View {
 
     var body: some View {
         ZStack {
-            Color.bgPrimary.ignoresSafeArea()
+            Color.glassAdaptive(\.bg).ignoresSafeArea()
 
             OnboardingPageLayout(pageID: currentStep) {
                 VStack(spacing: Spacing.s4) {
@@ -76,7 +76,8 @@ struct OnboardingView: View {
     private var stepContent: some View {
         switch step {
         case .welcome:
-            WelcomeStep()
+            GlassWelcomeStep()
+                .glassTheme()
                 .transition(stepTransition)
         case .healthAccess:
             HealthAccessStep(isAuthorized: healthKitManager.isAuthorized)
@@ -108,7 +109,13 @@ struct OnboardingView: View {
             switch step {
             case .welcome:
                 VStack(spacing: Spacing.s2) {
-                    OnboardingPrimaryButton(title: String(localized: "Start Setup"), icon: "arrow.right", accessibilityHint: String(localized: "Double tap to continue"), action: advance)
+                    // The Health step still explains access and makes the request.
+                    OnboardingPrimaryButton(
+                        title: String(localized: "Connect Apple Health"),
+                        icon: "arrow.right",
+                        accessibilityHint: String(localized: "Double tap to continue"),
+                        action: advance
+                    )
                     Button {
                         sharedSetupCoordinator.beginImport(source: .onboarding)
                         isSharedSetupImporterPresented = true
@@ -117,7 +124,7 @@ struct OnboardingView: View {
                             .font(Typography.body())
                     }
                     .buttonStyle(.plain)
-                    .foregroundStyle(Color.textSecondary)
+                    .foregroundStyle(Color.glassAdaptive(\.sec))
                     .accessibilityIdentifier(AccessibilityID.SharedSetup.use)
                 }
             case .healthAccess:
@@ -254,7 +261,7 @@ struct OnboardingProgressBar: View {
         HStack(spacing: Spacing.s2) {
             ForEach(0..<total, id: \.self) { index in
                 Capsule()
-                    .fill(index <= current ? Color.geistGray1000 : Color.borderSubtle)
+                    .fill(index <= current ? Color.geistGray1000 : Color.glassAdaptive(\.line))
                     .frame(height: 3)
                     .frame(maxWidth: index == current ? 32 : .infinity)
                     .animation(AnimationTimings.standard, value: current)
@@ -269,23 +276,48 @@ struct OnboardingProgressBar: View {
 
 // MARK: - Steps
 
-private struct WelcomeStep: View {
-    var body: some View {
-        VStack(spacing: Spacing.s6) {
-            OnboardingHeader(
-                eyebrow: "Health.md",
-                title: String(localized: "Own Your Health Data"),
-                description: String(localized: "Apple Health has years of signal. Health.md turns it into private files you can keep, search, and link from Obsidian."),
-                icon: "heart.text.square.fill",
-                usesAppIcon: true
-            )
+/// OnboardingG's opening page. Later steps, including the Health request, are unchanged.
+private struct GlassWelcomeStep: View {
+    @Environment(\.glassPalette) private var palette
 
-            VStack(spacing: Spacing.s3) {
-                OnboardingFeatureRow(icon: "archivebox.fill", title: String(localized: "Build Your Archive"), description: String(localized: "Create a durable copy of sleep, HRV, workouts, vitals, medications, and more."))
-                OnboardingFeatureRow(icon: "calendar.badge.clock", title: String(localized: "Wake Up to a Daily Note"), description: String(localized: "Schedule exports so your health journal stays current automatically."))
-                OnboardingFeatureRow(icon: "lock.shield", title: String(localized: "Stay Local"), description: String(localized: "No account or health-data cloud. Files are written to folders you choose."))
+    private let privacyPolicyURL = URL(string: "https://healthmd.app/privacy-policy.html")!
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: GlassMetrics.sectionGap) {
+            Text("Make your body part of Obsidian")
+                .glassFont(.largeTitle)
+                .foregroundStyle(palette.text)
+            Text("Create a durable copy of sleep, HRV, workouts, vitals, medications and more — as files you own.")
+                .glassFont(.body)
+                .foregroundStyle(palette.sec)
+            GlassPanel {
+                step(1, "Choose what Health.md can read")
+                step(2, "Pick where your archive lives")
+                step(3, "Preview your first export")
             }
+            Text("No account or health-data cloud. Files go to folders you choose.")
+                .glassFont(.rowSubtitle)
+                .foregroundStyle(palette.muted)
+            Link("How Health.md handles data", destination: privacyPolicyURL)
+                .glassFont(.caption)
+                .foregroundStyle(palette.accent)
+                .frame(minHeight: GlassMetrics.touchTarget)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func step(_ number: Int, _ title: LocalizedStringKey) -> some View {
+        HStack(spacing: 12) {
+            Text(verbatim: "\(number)")
+                .glassFont(.caption)
+                .foregroundStyle(palette.accentInk)
+                .frame(width: 26, height: 26)
+                .background(Circle().fill(palette.accent))
+                .accessibilityHidden(true)
+            Text(title).glassFont(.body).foregroundStyle(palette.text)
+            Spacer(minLength: 0)
+        }
+        .padding(GlassMetrics.panelPadding)
     }
 }
 
@@ -356,10 +388,10 @@ private struct ObsidianPluginLinkCard: View {
             VStack(alignment: .leading, spacing: Spacing.s1) {
                 Text("Make Your Body Part of Obsidian")
                     .font(Typography.headline())
-                    .foregroundStyle(Color.textPrimary)
+                    .foregroundStyle(Color.glassAdaptive(\.text))
                 Text("Turn these files into vault-native dashboards with the free Health.md plugin.")
                     .font(Typography.body())
-                    .foregroundStyle(Color.textSecondary)
+                    .foregroundStyle(Color.glassAdaptive(\.sec))
             }
 
             Link(destination: pluginURL) {
@@ -369,11 +401,11 @@ private struct ObsidianPluginLinkCard: View {
             .accessibilityHint("Opens the Health.md Obsidian plugin page")
         }
         .padding(Spacing.s3)
-        .background(Color.bgSecondary)
+        .background(Color.glassAdaptive(\.surface2))
         .clipShape(RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous)
-                .strokeBorder(Color.borderSubtle, lineWidth: 1)
+                .strokeBorder(Color.glassAdaptive(\.line), lineWidth: 1)
         )
         .accessibilityElement(children: .contain)
     }
@@ -475,10 +507,10 @@ private struct OnboardingFeatureRow: View {
             VStack(alignment: .leading, spacing: Spacing.s1) {
                 Text(title)
                     .font(Typography.headline())
-                    .foregroundStyle(Color.textPrimary)
+                    .foregroundStyle(Color.glassAdaptive(\.text))
                 Text(description)
                     .font(Typography.body())
-                    .foregroundStyle(Color.textSecondary)
+                    .foregroundStyle(Color.glassAdaptive(\.sec))
                     .fixedSize(horizontal: false, vertical: true)
             }
 
@@ -498,22 +530,22 @@ private struct OnboardingInfoChip: View {
         HStack(spacing: Spacing.s2) {
             Image(systemName: icon)
                 .font(Typography.scaled(size: 14, weight: .semibold))
-                .foregroundStyle(Color.accent)
+                .foregroundStyle(Color.glassAdaptive(\.accent))
                 .accessibilityHidden(true)
 
             Text(title)
                 .font(Typography.bodyEmphasis())
-                .foregroundStyle(Color.textPrimary)
+                .foregroundStyle(Color.glassAdaptive(\.text))
                 .fixedSize(horizontal: false, vertical: true)
         }
         .frame(maxWidth: .infinity)
         .padding(.horizontal, Spacing.s3)
         .padding(.vertical, Spacing.s3)
-        .background(Color.bgPrimary)
+        .background(Color.glassAdaptive(\.bg))
         .clipShape(RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
-                .strokeBorder(Color.borderSubtle, lineWidth: 1)
+                .strokeBorder(Color.glassAdaptive(\.line), lineWidth: 1)
         )
         .accessibilityElement(children: .combine)
         .accessibilityLabel(title)
@@ -536,10 +568,10 @@ private struct FolderPickerCard: View {
             VStack(alignment: .leading, spacing: Spacing.s1) {
                 Text("Select Folder Now")
                     .font(Typography.headline())
-                    .foregroundStyle(Color.textPrimary)
+                    .foregroundStyle(Color.glassAdaptive(\.text))
                 Text("Choose an Obsidian vault or any Files folder on this iPhone.")
                     .font(Typography.body())
-                    .foregroundStyle(Color.textSecondary)
+                    .foregroundStyle(Color.glassAdaptive(\.sec))
                     .fixedSize(horizontal: false, vertical: true)
             }
 
@@ -571,10 +603,10 @@ private struct OnboardingStatusCard: View {
             VStack(alignment: .leading, spacing: Spacing.s1) {
                 Text(title)
                     .font(Typography.headline())
-                    .foregroundStyle(Color.textPrimary)
+                    .foregroundStyle(Color.glassAdaptive(\.text))
                 Text(description)
                     .font(Typography.body())
-                    .foregroundStyle(Color.textSecondary)
+                    .foregroundStyle(Color.glassAdaptive(\.sec))
                     .fixedSize(horizontal: false, vertical: true)
             }
 
@@ -615,12 +647,12 @@ private struct SampleExportInlinePreview: View {
             .padding(.bottom, Spacing.s2)
 
             Divider()
-                .overlay(Color.borderSubtle)
+                .overlay(Color.glassAdaptive(\.line))
 
             ScrollView(.vertical) {
                 Text(selectedFormat.content)
                     .font(Typography.monoCaption())
-                    .foregroundStyle(Color.textPrimary)
+                    .foregroundStyle(Color.glassAdaptive(\.text))
                     .multilineTextAlignment(.leading)
                     .lineLimit(nil)
                     .textSelection(.enabled)
@@ -634,11 +666,11 @@ private struct SampleExportInlinePreview: View {
             .scrollBounceBehavior(.basedOnSize)
         }
         .frame(maxWidth: .infinity, alignment: .top)
-        .background(Color.bgPrimary)
+        .background(Color.glassAdaptive(\.bg))
         .clipShape(RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous)
-                .strokeBorder(Color.borderSubtle, lineWidth: 1)
+                .strokeBorder(Color.glassAdaptive(\.line), lineWidth: 1)
         )
         .shadow(color: Color.black.opacity(0.04), radius: 12, x: 0, y: 6)
         .accessibilityElement(children: .contain)
@@ -657,12 +689,12 @@ private struct SampleExportInlinePreview: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(selectedFormat.fileName)
                     .font(Typography.monoEmphasis())
-                    .foregroundStyle(Color.textPrimary)
+                    .foregroundStyle(Color.glassAdaptive(\.text))
                     .fixedSize(horizontal: false, vertical: true)
 
                 Text(selectedFormat.subtitle)
                     .font(Typography.caption())
-                    .foregroundStyle(Color.textSecondary)
+                    .foregroundStyle(Color.glassAdaptive(\.sec))
                     .fixedSize(horizontal: false, vertical: true)
             }
             .layoutPriority(1)
@@ -673,11 +705,11 @@ private struct SampleExportInlinePreview: View {
                 // The full filename above also retains the extension in reading layout.
                 Text(selectedFormat.fileExtension)
                     .font(Typography.monoCaptionEmphasis())
-                    .foregroundStyle(Color.textSecondary)
+                    .foregroundStyle(Color.glassAdaptive(\.sec))
                     .padding(.horizontal, Spacing.s2)
                     .padding(.vertical, Spacing.s1)
-                    .background(Color.bgSecondary, in: Capsule())
-                    .overlay(Capsule().strokeBorder(Color.borderSubtle, lineWidth: 1))
+                    .background(Color.glassAdaptive(\.surface2), in: Capsule())
+                    .overlay(Capsule().strokeBorder(Color.glassAdaptive(\.line), lineWidth: 1))
             }
         }
         .accessibilityElement(children: .combine)

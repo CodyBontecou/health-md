@@ -1,6 +1,2140 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "Endpoint URL" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Endpunkt-URL"}},
+      "es":{"stringUnit":{"state":"translated","value":"URL del endpoint"}},
+      "fr":{"stringUnit":{"state":"translated","value":"URL du point de terminaison"}},
+      "it":{"stringUnit":{"state":"translated","value":"URL dell’endpoint"}},
+      "ja":{"stringUnit":{"state":"translated","value":"エンドポイントURL"}},
+      "ko":{"stringUnit":{"state":"translated","value":"엔드포인트 URL"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Endpoint-URL"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"URL do endpoint"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"端点 URL"}}
+    }},
+    "Gateway URL" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Gateway-URL"}},
+      "es":{"stringUnit":{"state":"translated","value":"URL de la pasarela"}},
+      "fr":{"stringUnit":{"state":"translated","value":"URL de la passerelle"}},
+      "it":{"stringUnit":{"state":"translated","value":"URL del gateway"}},
+      "ja":{"stringUnit":{"state":"translated","value":"ゲートウェイURL"}},
+      "ko":{"stringUnit":{"state":"translated","value":"게이트웨이 URL"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Gateway-URL"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"URL do gateway"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"网关 URL"}}
+    }},
+    "Token" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Token"}},
+      "es":{"stringUnit":{"state":"translated","value":"Token"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Jeton"}},
+      "it":{"stringUnit":{"state":"translated","value":"Token"}},
+      "ja":{"stringUnit":{"state":"translated","value":"トークン"}},
+      "ko":{"stringUnit":{"state":"translated","value":"토큰"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Token"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Token"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"令牌"}}
+    }},
+    "Not set" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Nicht festgelegt"}},
+      "es":{"stringUnit":{"state":"translated","value":"Sin configurar"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Non défini"}},
+      "it":{"stringUnit":{"state":"translated","value":"Non impostato"}},
+      "ja":{"stringUnit":{"state":"translated","value":"未設定"}},
+      "ko":{"stringUnit":{"state":"translated","value":"설정 안 됨"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Niet ingesteld"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Não definido"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"未设置"}}
+    }},
+    "Remove Endpoint" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Endpunkt entfernen"}},
+      "es":{"stringUnit":{"state":"translated","value":"Eliminar endpoint"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Supprimer le point de terminaison"}},
+      "it":{"stringUnit":{"state":"translated","value":"Rimuovi endpoint"}},
+      "ja":{"stringUnit":{"state":"translated","value":"エンドポイントを削除"}},
+      "ko":{"stringUnit":{"state":"translated","value":"엔드포인트 제거"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Endpoint verwijderen"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Remover endpoint"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"移除端点"}}
+    }},
+    "Remove Gateway" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Gateway entfernen"}},
+      "es":{"stringUnit":{"state":"translated","value":"Eliminar pasarela"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Supprimer la passerelle"}},
+      "it":{"stringUnit":{"state":"translated","value":"Rimuovi gateway"}},
+      "ja":{"stringUnit":{"state":"translated","value":"ゲートウェイを削除"}},
+      "ko":{"stringUnit":{"state":"translated","value":"게이트웨이 제거"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Gateway verwijderen"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Remover gateway"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"移除网关"}}
+    }},
+    "Optional. Stored in Keychain and sent as an Authorization header." : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Optional. Wird im Schlüsselbund gespeichert und als Authorization-Header gesendet."}},
+      "es":{"stringUnit":{"state":"translated","value":"Opcional. Se guarda en el llavero y se envía como encabezado Authorization."}},
+      "fr":{"stringUnit":{"state":"translated","value":"Facultatif. Stocké dans le trousseau et envoyé dans l’en-tête Authorization."}},
+      "it":{"stringUnit":{"state":"translated","value":"Facoltativo. Salvato nel portachiavi e inviato come intestazione Authorization."}},
+      "ja":{"stringUnit":{"state":"translated","value":"任意。キーチェーンに保存され、Authorizationヘッダーとして送信されます。"}},
+      "ko":{"stringUnit":{"state":"translated","value":"선택 사항. 키체인에 저장되며 Authorization 헤더로 전송됩니다."}},
+      "nl":{"stringUnit":{"state":"translated","value":"Optioneel. Opgeslagen in de sleutelhanger en verzonden als Authorization-header."}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Opcional. Armazenado nas Chaves e enviado como cabeçalho Authorization."}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"可选。存储在钥匙串中，并作为 Authorization 标头发送。"}}
+    }},
+    "Health.md POSTs a JSON envelope with one public Health.md JSON record per day. Re-exporting a date sends a newly fetched complete snapshot, so your endpoint can replace or upsert it." : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Health.md sendet per POST einen JSON-Umschlag mit einem öffentlichen Health.md-JSON-Datensatz pro Tag. Ein erneuter Export eines Datums sendet einen neu abgerufenen vollständigen Snapshot, damit dein Endpunkt ihn ersetzen oder aktualisieren kann."}},
+      "es":{"stringUnit":{"state":"translated","value":"Health.md envía por POST un sobre JSON con un registro JSON público de Health.md por día. Volver a exportar una fecha envía una instantánea completa obtenida de nuevo para que tu endpoint pueda reemplazarla o actualizarla."}},
+      "fr":{"stringUnit":{"state":"translated","value":"Health.md envoie par POST une enveloppe JSON contenant un enregistrement JSON public Health.md par jour. Réexporter une date envoie un instantané complet récupéré à nouveau, afin que votre point de terminaison puisse le remplacer ou le mettre à jour."}},
+      "it":{"stringUnit":{"state":"translated","value":"Health.md invia tramite POST una busta JSON con un record JSON pubblico di Health.md per giorno. Riesportare una data invia un’istantanea completa appena recuperata, così l’endpoint può sostituirla o aggiornarla."}},
+      "ja":{"stringUnit":{"state":"translated","value":"Health.mdは1日ごとに公開Health.md JSONレコードを1件含むJSONエンベロープをPOSTします。日付を再エクスポートすると、新たに取得した完全なスナップショットが送信され、エンドポイントで置き換えやアップサートができます。"}},
+      "ko":{"stringUnit":{"state":"translated","value":"Health.md는 하루에 공개 Health.md JSON 레코드 하나가 담긴 JSON 봉투를 POST로 보냅니다. 날짜를 다시 내보내면 새로 가져온 전체 스냅샷을 보내므로 엔드포인트에서 교체하거나 업서트할 수 있습니다."}},
+      "nl":{"stringUnit":{"state":"translated","value":"Health.md verstuurt via POST een JSON-envelop met één openbaar Health.md-JSON-record per dag. Een datum opnieuw exporteren stuurt een nieuw opgehaalde volledige momentopname, zodat je endpoint die kan vervangen of bijwerken."}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"O Health.md envia por POST um envelope JSON com um registro JSON público do Health.md por dia. Exportar uma data novamente envia um snapshot completo recém-obtido, para que seu endpoint possa substituí-lo ou atualizá-lo."}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"Health.md 会以 POST 方式发送一个 JSON 信封，每天包含一条公开的 Health.md JSON 记录。重新导出某个日期会发送新获取的完整快照，以便你的端点替换或更新插入。"}}
+    }},
+    "Uploads each exported artifact file unchanged to /v1/ingest using the Agent Data protocol, always including the JSON daily export. Re-uploading identical artifacts is idempotent. No token is needed in this version." : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Lädt jede exportierte Artefaktdatei unverändert über das Agent-Data-Protokoll an /v1/ingest hoch, immer einschließlich des täglichen JSON-Exports. Erneutes Hochladen identischer Artefakte ist idempotent. In dieser Version ist kein Token nötig."}},
+      "es":{"stringUnit":{"state":"translated","value":"Sube cada archivo de artefacto exportado sin cambios a /v1/ingest mediante el protocolo Agent Data, incluyendo siempre la exportación diaria en JSON. Volver a subir artefactos idénticos es idempotente. Esta versión no necesita token."}},
+      "fr":{"stringUnit":{"state":"translated","value":"Envoie chaque fichier d’artefact exporté sans modification vers /v1/ingest via le protocole Agent Data, en incluant toujours l’export JSON quotidien. Renvoyer des artefacts identiques est idempotent. Aucun jeton n’est nécessaire dans cette version."}},
+      "it":{"stringUnit":{"state":"translated","value":"Carica ogni file artefatto esportato senza modifiche su /v1/ingest con il protocollo Agent Data, includendo sempre l’esportazione JSON giornaliera. Ricaricare artefatti identici è idempotente. In questa versione non serve alcun token."}},
+      "ja":{"stringUnit":{"state":"translated","value":"エクスポートした各アーティファクトファイルを、Agent Dataプロトコルで/v1/ingestにそのままアップロードします。JSONの日次エクスポートは常に含まれます。同一アーティファクトの再アップロードは冪等です。このバージョンではトークンは不要です。"}},
+      "ko":{"stringUnit":{"state":"translated","value":"내보낸 각 아티팩트 파일을 Agent Data 프로토콜로 /v1/ingest에 그대로 업로드하며, JSON 일일 내보내기는 항상 포함됩니다. 동일한 아티팩트를 다시 업로드해도 결과는 같습니다. 이 버전에서는 토큰이 필요 없습니다."}},
+      "nl":{"stringUnit":{"state":"translated","value":"Uploadt elk geëxporteerd artefactbestand ongewijzigd naar /v1/ingest via het Agent Data-protocol, altijd inclusief de dagelijkse JSON-export. Identieke artefacten opnieuw uploaden is idempotent. In deze versie is geen token nodig."}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Envia cada arquivo de artefato exportado sem alterações para /v1/ingest usando o protocolo Agent Data, sempre incluindo a exportação diária em JSON. Reenviar artefatos idênticos é idempotente. Nenhum token é necessário nesta versão."}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"使用 Agent Data 协议将每个导出的工件文件原样上传到 /v1/ingest，并始终包含每日 JSON 导出。重新上传相同工件是幂等的。此版本无需令牌。"}}
+    }},
+    "Only send Apple Health data to gateways you control or trust. Gateway uploads use your selected metrics and Data Detail setting." : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Sende Apple Health-Daten nur an Gateways, die du kontrollierst oder denen du vertraust. Gateway-Uploads verwenden deine ausgewählten Messwerte und die Einstellung „Datendetail“."}},
+      "es":{"stringUnit":{"state":"translated","value":"Envía datos de Apple Health solo a pasarelas que controles o en las que confíes. Las subidas a la pasarela usan tus métricas seleccionadas y el ajuste de Detalle de datos."}},
+      "fr":{"stringUnit":{"state":"translated","value":"N’envoyez des données Apple Santé qu’à des passerelles que vous contrôlez ou en lesquelles vous avez confiance. Les envois à la passerelle utilisent vos mesures sélectionnées et le réglage Détail des données."}},
+      "it":{"stringUnit":{"state":"translated","value":"Invia i dati di Apple Salute solo a gateway che controlli o di cui ti fidi. I caricamenti sul gateway usano le metriche selezionate e l’impostazione Dettaglio dati."}},
+      "ja":{"stringUnit":{"state":"translated","value":"Apple Healthのデータは、自分で管理しているか信頼できるゲートウェイにのみ送信してください。ゲートウェイへのアップロードには、選択した項目とデータ詳細の設定が使われます。"}},
+      "ko":{"stringUnit":{"state":"translated","value":"Apple 건강 데이터는 직접 관리하거나 신뢰하는 게이트웨이로만 보내세요. 게이트웨이 업로드에는 선택한 항목과 데이터 세부 정보 설정이 사용됩니다."}},
+      "nl":{"stringUnit":{"state":"translated","value":"Stuur Apple Health-gegevens alleen naar gateways die je beheert of vertrouwt. Gateway-uploads gebruiken je geselecteerde metingen en de instelling Gegevensdetail."}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Envie dados do Apple Saúde apenas para gateways que você controla ou em que confia. Os envios ao gateway usam as métricas selecionadas e o ajuste Detalhe dos dados."}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"仅将 Apple 健康数据发送到你控制或信任的网关。网关上传会使用你选择的指标和数据详细程度设置。"}}
+    }},
+    "Default folder" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Standardordner"}},
+      "es":{"stringUnit":{"state":"translated","value":"Carpeta predeterminada"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Dossier par défaut"}},
+      "it":{"stringUnit":{"state":"translated","value":"Cartella predefinita"}},
+      "ja":{"stringUnit":{"state":"translated","value":"デフォルトのフォルダ"}},
+      "ko":{"stringUnit":{"state":"translated","value":"기본 폴더"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Standaardmap"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Pasta padrão"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"默认文件夹"}}
+    }},
+    "No folder chosen" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Kein Ordner gewählt"}},
+      "es":{"stringUnit":{"state":"translated","value":"No se ha elegido carpeta"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Aucun dossier choisi"}},
+      "it":{"stringUnit":{"state":"translated","value":"Nessuna cartella scelta"}},
+      "ja":{"stringUnit":{"state":"translated","value":"フォルダが選択されていません"}},
+      "ko":{"stringUnit":{"state":"translated","value":"선택한 폴더 없음"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Geen map gekozen"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Nenhuma pasta escolhida"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"未选择文件夹"}}
+    }},
+    "Automations without a folder of their own write here." : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Automationen ohne eigenen Ordner schreiben hierhin."}},
+      "es":{"stringUnit":{"state":"translated","value":"Las automatizaciones sin carpeta propia escriben aquí."}},
+      "fr":{"stringUnit":{"state":"translated","value":"Les automatisations sans dossier propre écrivent ici."}},
+      "it":{"stringUnit":{"state":"translated","value":"Le automazioni senza una cartella propria scrivono qui."}},
+      "ja":{"stringUnit":{"state":"translated","value":"専用フォルダのないオートメーションはここに書き込みます。"}},
+      "ko":{"stringUnit":{"state":"translated","value":"자체 폴더가 없는 자동화는 여기에 기록합니다."}},
+      "nl":{"stringUnit":{"state":"translated","value":"Automatiseringen zonder eigen map schrijven hierheen."}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Automações sem pasta própria gravam aqui."}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"没有专属文件夹的自动化会写入此处。"}}
+    }},
+    "Give an automation its own folder to keep its notes apart, such as a separate vault." : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Gib einer Automation einen eigenen Ordner, um ihre Notizen getrennt zu halten, etwa in einem separaten Vault."}},
+      "es":{"stringUnit":{"state":"translated","value":"Asigna a una automatización su propia carpeta para mantener sus notas aparte, como en otro vault."}},
+      "fr":{"stringUnit":{"state":"translated","value":"Donnez à une automatisation son propre dossier pour séparer ses notes, par exemple dans un autre coffre."}},
+      "it":{"stringUnit":{"state":"translated","value":"Assegna a un’automazione una cartella propria per tenere separate le sue note, ad esempio in un altro vault."}},
+      "ja":{"stringUnit":{"state":"translated","value":"オートメーションに専用フォルダを設定すると、別のVaultなどにノートを分けて保存できます。"}},
+      "ko":{"stringUnit":{"state":"translated","value":"자동화에 자체 폴더를 지정하면 별도 볼트처럼 노트를 분리해 둘 수 있습니다."}},
+      "nl":{"stringUnit":{"state":"translated","value":"Geef een automatisering een eigen map om de notities apart te houden, bijvoorbeeld in een aparte vault."}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Dê a uma automação sua própria pasta para manter as notas separadas, como em outro cofre."}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"为自动化指定专属文件夹，可将其笔记单独存放，例如放在另一个库中。"}}
+    }},
+    "Chooses where this automation writes" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Wählt, wohin diese Automation schreibt"}},
+      "es":{"stringUnit":{"state":"translated","value":"Elige dónde escribe esta automatización"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Choisit où cette automatisation écrit"}},
+      "it":{"stringUnit":{"state":"translated","value":"Sceglie dove scrive questa automazione"}},
+      "ja":{"stringUnit":{"state":"translated","value":"このオートメーションの書き込み先を選択します"}},
+      "ko":{"stringUnit":{"state":"translated","value":"이 자동화가 기록할 위치를 선택합니다"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Kiest waar deze automatisering naartoe schrijft"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Escolhe onde esta automação grava"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"选择此自动化的写入位置"}}
+    }},
+    "%lld folders" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"%lld Ordner"}},
+      "es":{"stringUnit":{"state":"translated","value":"%lld carpetas"}},
+      "fr":{"stringUnit":{"state":"translated","value":"%lld dossiers"}},
+      "it":{"stringUnit":{"state":"translated","value":"%lld cartelle"}},
+      "ja":{"stringUnit":{"state":"translated","value":"%lld個のフォルダ"}},
+      "ko":{"stringUnit":{"state":"translated","value":"폴더 %lld개"}},
+      "nl":{"stringUnit":{"state":"translated","value":"%lld mappen"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"%lld pastas"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"%lld 个文件夹"}}
+    }},
+    "Best Value" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Bestes Angebot"}},
+      "es":{"stringUnit":{"state":"translated","value":"Mejor valor"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Meilleure offre"}},
+      "it":{"stringUnit":{"state":"translated","value":"Più conveniente"}},
+      "ja":{"stringUnit":{"state":"translated","value":"最もお得"}},
+      "ko":{"stringUnit":{"state":"translated","value":"최고 가치"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Beste deal"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Melhor valor"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"最划算"}}
+    }},
+    "Start Free Trial" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Kostenlos testen"}},
+      "es":{"stringUnit":{"state":"translated","value":"Iniciar prueba gratuita"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Commencer l’essai gratuit"}},
+      "it":{"stringUnit":{"state":"translated","value":"Inizia la prova gratuita"}},
+      "ja":{"stringUnit":{"state":"translated","value":"無料トライアルを開始"}},
+      "ko":{"stringUnit":{"state":"translated","value":"무료 체험 시작"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Gratis proefperiode starten"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Iniciar teste grátis"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"开始免费试用"}}
+    }},
+    "Family plans share access through Apple Family Sharing. Existing Lifetime and earlier permanent access stay valid." : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Familienpläne teilen den Zugang über die Apple-Familienfreigabe. Bestehender Lifetime- und früherer dauerhafter Zugang bleibt gültig."}},
+      "es":{"stringUnit":{"state":"translated","value":"Los planes familiares comparten el acceso mediante En familia de Apple. El acceso Lifetime existente y el acceso permanente anterior siguen siendo válidos."}},
+      "fr":{"stringUnit":{"state":"translated","value":"Les forfaits Famille partagent l’accès via le partage familial d’Apple. Les accès Lifetime existants et les accès permanents antérieurs restent valides."}},
+      "it":{"stringUnit":{"state":"translated","value":"I piani Famiglia condividono l’accesso tramite In famiglia di Apple. L’accesso Lifetime esistente e quello permanente precedente restano validi."}},
+      "ja":{"stringUnit":{"state":"translated","value":"ファミリープランはAppleのファミリー共有でアクセスを共有します。既存のLifetimeおよび以前の永続アクセスは引き続き有効です。"}},
+      "ko":{"stringUnit":{"state":"translated","value":"가족 요금제는 Apple 가족 공유로 이용 권한을 공유합니다. 기존 Lifetime 및 이전 영구 이용 권한은 계속 유효합니다."}},
+      "nl":{"stringUnit":{"state":"translated","value":"Gezinsabonnementen delen toegang via Delen met gezin van Apple. Bestaande Lifetime- en eerdere permanente toegang blijven geldig."}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Os planos Família compartilham o acesso pelo Compartilhamento Familiar da Apple. O acesso Lifetime existente e o acesso permanente anterior continuam válidos."}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"家庭方案通过 Apple 家人共享来共享访问权限。现有 Lifetime 及早期的永久访问权限仍然有效。"}}
+    }},
+    "Changes" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Änderungen"}},
+      "es":{"stringUnit":{"state":"translated","value":"Cambios"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Modifications"}},
+      "it":{"stringUnit":{"state":"translated","value":"Modifiche"}},
+      "ja":{"stringUnit":{"state":"translated","value":"変更点"}},
+      "ko":{"stringUnit":{"state":"translated","value":"변경 사항"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Wijzigingen"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Alterações"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"更改"}}
+    }},
+    "Make your body part of Obsidian" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Mach deinen Körper zum Teil von Obsidian"}},
+      "es":{"stringUnit":{"state":"translated","value":"Haz que tu cuerpo forme parte de Obsidian"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Intégrez votre corps à Obsidian"}},
+      "it":{"stringUnit":{"state":"translated","value":"Porta il tuo corpo in Obsidian"}},
+      "ja":{"stringUnit":{"state":"translated","value":"あなたの身体をObsidianの一部に"}},
+      "ko":{"stringUnit":{"state":"translated","value":"내 몸을 Obsidian의 일부로"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Maak je lichaam onderdeel van Obsidian"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Faça do seu corpo parte do Obsidian"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"让身体数据融入 Obsidian"}}
+    }},
+    "Create a durable copy of sleep, HRV, workouts, vitals, medications and more — as files you own." : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Erstelle eine dauerhafte Kopie von Schlaf, HRV, Workouts, Vitalwerten, Medikamenten und mehr – als Dateien, die dir gehören."}},
+      "es":{"stringUnit":{"state":"translated","value":"Crea una copia duradera de sueño, VFC, entrenamientos, constantes vitales, medicamentos y más, en archivos que son tuyos."}},
+      "fr":{"stringUnit":{"state":"translated","value":"Créez une copie durable du sommeil, de la VFC, des entraînements, des constantes, des médicaments et plus encore, dans des fichiers qui vous appartiennent."}},
+      "it":{"stringUnit":{"state":"translated","value":"Crea una copia duratura di sonno, HRV, allenamenti, parametri vitali, farmaci e altro, in file di tua proprietà."}},
+      "ja":{"stringUnit":{"state":"translated","value":"睡眠、HRV、ワークアウト、バイタル、服薬などの永続的なコピーを、自分のファイルとして作成します。"}},
+      "ko":{"stringUnit":{"state":"translated","value":"수면, HRV, 운동, 활력 징후, 약물 등의 영구 사본을 내 파일로 만드세요."}},
+      "nl":{"stringUnit":{"state":"translated","value":"Maak een duurzame kopie van slaap, HRV, workouts, vitale waarden, medicijnen en meer, als bestanden van jezelf."}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Crie uma cópia duradoura de sono, VFC, treinos, sinais vitais, medicamentos e mais, em arquivos que são seus."}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"为睡眠、HRV、体能训练、生命体征、用药等创建持久副本，以您拥有的文件形式保存。"}}
+    }},
+    "Choose what Health.md can read" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Wähle, was Health.md lesen darf"}},
+      "es":{"stringUnit":{"state":"translated","value":"Elige qué puede leer Health.md"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Choisissez ce que Health.md peut lire"}},
+      "it":{"stringUnit":{"state":"translated","value":"Scegli cosa può leggere Health.md"}},
+      "ja":{"stringUnit":{"state":"translated","value":"Health.mdが読み取れる項目を選択"}},
+      "ko":{"stringUnit":{"state":"translated","value":"Health.md가 읽을 항목 선택"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Kies wat Health.md mag lezen"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Escolha o que o Health.md pode ler"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"选择 Health.md 可读取的内容"}}
+    }},
+    "Pick where your archive lives" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Wähle den Ort für dein Archiv"}},
+      "es":{"stringUnit":{"state":"translated","value":"Elige dónde vive tu archivo"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Choisissez l’emplacement de votre archive"}},
+      "it":{"stringUnit":{"state":"translated","value":"Scegli dove conservare il tuo archivio"}},
+      "ja":{"stringUnit":{"state":"translated","value":"アーカイブの保存先を選択"}},
+      "ko":{"stringUnit":{"state":"translated","value":"아카이브 위치 선택"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Kies waar je archief staat"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Escolha onde fica seu arquivo"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"选择归档的存放位置"}}
+    }},
+    "Preview your first export" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Sieh dir deinen ersten Export an"}},
+      "es":{"stringUnit":{"state":"translated","value":"Previsualiza tu primera exportación"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Prévisualisez votre première exportation"}},
+      "it":{"stringUnit":{"state":"translated","value":"Anteprima della prima esportazione"}},
+      "ja":{"stringUnit":{"state":"translated","value":"最初の書き出しをプレビュー"}},
+      "ko":{"stringUnit":{"state":"translated","value":"첫 내보내기 미리 보기"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Bekijk je eerste export"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Pré-visualize sua primeira exportação"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"预览首次导出"}}
+    }},
+    "No account or health-data cloud. Files go to folders you choose." : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Kein Konto und keine Gesundheitsdaten-Cloud. Dateien landen in Ordnern deiner Wahl."}},
+      "es":{"stringUnit":{"state":"translated","value":"Sin cuenta ni nube de datos de salud. Los archivos van a las carpetas que elijas."}},
+      "fr":{"stringUnit":{"state":"translated","value":"Ni compte ni cloud de données de santé. Les fichiers vont dans les dossiers de votre choix."}},
+      "it":{"stringUnit":{"state":"translated","value":"Nessun account né cloud per i dati sanitari. I file vanno nelle cartelle che scegli."}},
+      "ja":{"stringUnit":{"state":"translated","value":"アカウントやヘルスデータ用クラウドは不要です。ファイルは選択したフォルダに保存されます。"}},
+      "ko":{"stringUnit":{"state":"translated","value":"계정이나 건강 데이터 클라우드가 없습니다. 파일은 선택한 폴더로 저장됩니다."}},
+      "nl":{"stringUnit":{"state":"translated","value":"Geen account of gezondheidsdata-cloud. Bestanden gaan naar mappen die jij kiest."}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Sem conta nem nuvem de dados de saúde. Os arquivos vão para as pastas que você escolher."}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"无需账户或健康数据云。文件保存到您选择的文件夹。"}}
+    }},
+    "How Health.md handles data" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"So geht Health.md mit Daten um"}},
+      "es":{"stringUnit":{"state":"translated","value":"Cómo trata Health.md los datos"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Comment Health.md traite les données"}},
+      "it":{"stringUnit":{"state":"translated","value":"Come Health.md gestisce i dati"}},
+      "ja":{"stringUnit":{"state":"translated","value":"Health.mdのデータの取り扱い"}},
+      "ko":{"stringUnit":{"state":"translated","value":"Health.md의 데이터 처리 방식"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Hoe Health.md met gegevens omgaat"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Como o Health.md trata os dados"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"Health.md 如何处理数据"}}
+    }},
+    "A review helps more people own their health data." : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Eine Bewertung hilft mehr Menschen, ihre Gesundheitsdaten selbst zu besitzen."}},
+      "es":{"stringUnit":{"state":"translated","value":"Una reseña ayuda a que más personas sean dueñas de sus datos de salud."}},
+      "fr":{"stringUnit":{"state":"translated","value":"Un avis aide davantage de personnes à posséder leurs données de santé."}},
+      "it":{"stringUnit":{"state":"translated","value":"Una recensione aiuta più persone a possedere i propri dati sulla salute."}},
+      "ja":{"stringUnit":{"state":"translated","value":"レビューは、より多くの人が自分のヘルスデータを所有する助けになります。"}},
+      "ko":{"stringUnit":{"state":"translated","value":"리뷰는 더 많은 사람이 자신의 건강 데이터를 소유하도록 돕습니다."}},
+      "nl":{"stringUnit":{"state":"translated","value":"Een beoordeling helpt meer mensen hun gezondheidsgegevens zelf te bezitten."}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Uma avaliação ajuda mais pessoas a serem donas dos próprios dados de saúde."}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"您的评价能帮助更多人拥有自己的健康数据。"}}
+    }},
+    "Send feedback instead" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Stattdessen Feedback senden"}},
+      "es":{"stringUnit":{"state":"translated","value":"Enviar comentarios en su lugar"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Envoyer plutôt un commentaire"}},
+      "it":{"stringUnit":{"state":"translated","value":"Invia invece un feedback"}},
+      "ja":{"stringUnit":{"state":"translated","value":"代わりにフィードバックを送信"}},
+      "ko":{"stringUnit":{"state":"translated","value":"대신 피드백 보내기"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Stuur in plaats daarvan feedback"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Enviar feedback em vez disso"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"改为发送反馈"}}
+    }},
+    "Archive has 1 gap this week. Tap to backfill." : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Archiv hat diese Woche 1 Lücke. Tippe zum Nachholen."}},
+      "es":{"stringUnit":{"state":"translated","value":"El archivo tiene 1 hueco esta semana. Toca para completarlo."}},
+      "fr":{"stringUnit":{"state":"translated","value":"L’archive a 1 lacune cette semaine. Touchez pour la combler."}},
+      "it":{"stringUnit":{"state":"translated","value":"L’archivio ha 1 lacuna questa settimana. Tocca per recuperarla."}},
+      "ja":{"stringUnit":{"state":"translated","value":"今週のアーカイブに抜けが1件あります。タップして補完します。"}},
+      "ko":{"stringUnit":{"state":"translated","value":"이번 주 아카이브에 빈 날이 1개 있습니다. 탭하여 채우세요."}},
+      "nl":{"stringUnit":{"state":"translated","value":"Archief heeft deze week 1 gat. Tik om aan te vullen."}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"O arquivo tem 1 lacuna esta semana. Toque para preencher."}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"本周归档有 1 处缺口。轻点以补全。"}}
+    }},
+    "Archive has %lld gaps this week. Tap to backfill." : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Archiv hat diese Woche %lld Lücken. Tippe zum Nachholen."}},
+      "es":{"stringUnit":{"state":"translated","value":"El archivo tiene %lld huecos esta semana. Toca para completarlos."}},
+      "fr":{"stringUnit":{"state":"translated","value":"L’archive a %lld lacunes cette semaine. Touchez pour les combler."}},
+      "it":{"stringUnit":{"state":"translated","value":"L’archivio ha %lld lacune questa settimana. Tocca per recuperarle."}},
+      "ja":{"stringUnit":{"state":"translated","value":"今週のアーカイブに抜けが%lld件あります。タップして補完します。"}},
+      "ko":{"stringUnit":{"state":"translated","value":"이번 주 아카이브에 빈 날이 %lld개 있습니다. 탭하여 채우세요."}},
+      "nl":{"stringUnit":{"state":"translated","value":"Archief heeft deze week %lld gaten. Tik om aan te vullen."}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"O arquivo tem %lld lacunas esta semana. Toque para preencher."}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"本周归档有 %lld 处缺口。轻点以补全。"}}
+    }},
+    "Include today" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Heute einbeziehen"}},
+      "es":{"stringUnit":{"state":"translated","value":"Incluir hoy"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Inclure aujourd’hui"}},
+      "it":{"stringUnit":{"state":"translated","value":"Includi oggi"}},
+      "ja":{"stringUnit":{"state":"translated","value":"今日を含める"}},
+      "ko":{"stringUnit":{"state":"translated","value":"오늘 포함"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Vandaag opnemen"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Incluir hoje"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"包含今天"}}
+    }},
+    "End each range on today instead of yesterday. Today’s file stays partial until the day ends." : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Jeder Zeitraum endet heute statt gestern. Die heutige Datei bleibt unvollständig, bis der Tag endet."}},
+      "es":{"stringUnit":{"state":"translated","value":"Cada intervalo termina hoy en lugar de ayer. El archivo de hoy será parcial hasta que acabe el día."}},
+      "fr":{"stringUnit":{"state":"translated","value":"Chaque période se termine aujourd’hui plutôt qu’hier. Le fichier du jour reste partiel jusqu’à la fin de la journée."}},
+      "it":{"stringUnit":{"state":"translated","value":"Ogni intervallo termina oggi anziché ieri. Il file di oggi resta parziale fino alla fine della giornata."}},
+      "ja":{"stringUnit":{"state":"translated","value":"各期間を昨日ではなく今日までにします。今日のファイルは1日が終わるまで部分的なままです。"}},
+      "ko":{"stringUnit":{"state":"translated","value":"각 기간을 어제 대신 오늘로 끝냅니다. 오늘 파일은 하루가 끝날 때까지 일부만 포함됩니다."}},
+      "nl":{"stringUnit":{"state":"translated","value":"Elke periode eindigt vandaag in plaats van gisteren. Het bestand van vandaag blijft onvolledig tot de dag voorbij is."}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Cada período termina hoje em vez de ontem. O arquivo de hoje fica parcial até o fim do dia."}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"每个范围结束于今天而不是昨天。今天的文件在当天结束前都是部分数据。"}}
+    }},
+    "Recommended" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Empfohlen"}},
+      "es":{"stringUnit":{"state":"translated","value":"Recomendado"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Recommandé"}},
+      "it":{"stringUnit":{"state":"translated","value":"Consigliato"}},
+      "ja":{"stringUnit":{"state":"translated","value":"おすすめ"}},
+      "ko":{"stringUnit":{"state":"translated","value":"추천"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Aanbevolen"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Recomendado"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"推荐"}}
+    }},
+    "CLI & MCP" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"CLI und MCP"}},
+      "es":{"stringUnit":{"state":"translated","value":"CLI y MCP"}},
+      "fr":{"stringUnit":{"state":"translated","value":"CLI et MCP"}},
+      "it":{"stringUnit":{"state":"translated","value":"CLI e MCP"}},
+      "ja":{"stringUnit":{"state":"translated","value":"CLIとMCP"}},
+      "ko":{"stringUnit":{"state":"translated","value":"CLI 및 MCP"}},
+      "nl":{"stringUnit":{"state":"translated","value":"CLI en MCP"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"CLI e MCP"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"CLI 和 MCP"}}
+    }},
+    "Last export" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Letzter Export"}},
+      "es":{"stringUnit":{"state":"translated","value":"Última exportación"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Dernière exportation"}},
+      "it":{"stringUnit":{"state":"translated","value":"Ultima esportazione"}},
+      "ja":{"stringUnit":{"state":"translated","value":"前回の書き出し"}},
+      "ko":{"stringUnit":{"state":"translated","value":"마지막 내보내기"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Laatste export"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Última exportação"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"上次导出"}}
+    }},
+    "Fields in this note" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Felder in dieser Notiz"}},
+      "es":{"stringUnit":{"state":"translated","value":"Campos de esta nota"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Champs de cette note"}},
+      "it":{"stringUnit":{"state":"translated","value":"Campi di questa nota"}},
+      "ja":{"stringUnit":{"state":"translated","value":"このノートのフィールド"}},
+      "ko":{"stringUnit":{"state":"translated","value":"이 노트의 필드"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Velden in deze notitie"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Campos desta nota"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"此笔记中的字段"}}
+    }},
+    "All %lld" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Alle %lld"}},
+      "es":{"stringUnit":{"state":"translated","value":"Todas (%lld)"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Toutes (%lld)"}},
+      "it":{"stringUnit":{"state":"translated","value":"Tutte (%lld)"}},
+      "ja":{"stringUnit":{"state":"translated","value":"すべて（%lld）"}},
+      "ko":{"stringUnit":{"state":"translated","value":"전체 %lld개"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Alle %lld"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Todas (%lld)"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"全部 %lld 项"}}
+    }},
+    "%@ couldn’t finish. Open Health.md to retry the remaining dates." : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"%@ konnte nicht abgeschlossen werden. Öffne Health.md, um die restlichen Daten erneut zu versuchen."}},
+      "es":{"stringUnit":{"state":"translated","value":"%@ no pudo terminar. Abre Health.md para reintentar las fechas restantes."}},
+      "fr":{"stringUnit":{"state":"translated","value":"%@ n’a pas pu se terminer. Ouvrez Health.md pour réessayer les dates restantes."}},
+      "it":{"stringUnit":{"state":"translated","value":"%@ non è stato completato. Apri Health.md per riprovare le date rimanenti."}},
+      "ja":{"stringUnit":{"state":"translated","value":"%@を完了できませんでした。Health.mdを開いて残りの日付を再試行してください。"}},
+      "ko":{"stringUnit":{"state":"translated","value":"%@을(를) 완료하지 못했습니다. Health.md를 열어 남은 날짜를 다시 시도하세요."}},
+      "nl":{"stringUnit":{"state":"translated","value":"%@ kon niet worden voltooid. Open Health.md om de resterende datums opnieuw te proberen."}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"%@ não foi concluído. Abra o Health.md para tentar novamente as datas restantes."}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"%@ 未能完成。请打开 Health.md 重试剩余日期。"}}
+    }},
+    "Claim myself.md access" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"myself.md-Zugang beanspruchen"}},
+      "es":{"stringUnit":{"state":"translated","value":"Reclamar acceso a myself.md"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Réclamer l’accès à myself.md"}},
+      "it":{"stringUnit":{"state":"translated","value":"Richiedi l’accesso a myself.md"}},
+      "ja":{"stringUnit":{"state":"translated","value":"myself.mdのアクセスを申請"}},
+      "ko":{"stringUnit":{"state":"translated","value":"myself.md 이용권 받기"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Toegang tot myself.md claimen"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Resgatar acesso ao myself.md"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"领取 myself.md 权限"}}
+    }},
+    "Join Our Discord" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Tritt unserem Discord bei"}},
+      "es":{"stringUnit":{"state":"translated","value":"Únete a nuestro Discord"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Rejoignez notre Discord"}},
+      "it":{"stringUnit":{"state":"translated","value":"Unisciti al nostro Discord"}},
+      "ja":{"stringUnit":{"state":"translated","value":"Discordに参加"}},
+      "ko":{"stringUnit":{"state":"translated","value":"Discord 참여"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Word lid van onze Discord"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Entre no nosso Discord"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"加入我们的 Discord"}}
+    }},
+    "Safety" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Sicherheit"}},
+      "es":{"stringUnit":{"state":"translated","value":"Seguridad"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Sécurité"}},
+      "it":{"stringUnit":{"state":"translated","value":"Sicurezza"}},
+      "ja":{"stringUnit":{"state":"translated","value":"安全"}},
+      "ko":{"stringUnit":{"state":"translated","value":"안전"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Veiligheid"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Segurança"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"安全"}}
+    }},
+    "Lock configuration" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Konfiguration sperren"}},
+      "es":{"stringUnit":{"state":"translated","value":"Bloquear configuración"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Verrouiller la configuration"}},
+      "it":{"stringUnit":{"state":"translated","value":"Blocca configurazione"}},
+      "ja":{"stringUnit":{"state":"translated","value":"設定をロック"}},
+      "ko":{"stringUnit":{"state":"translated","value":"구성 잠금"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Configuratie vergrendelen"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Bloquear configuração"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"锁定配置"}}
+    }},
+    "Prevents accidental changes. Manual exports and syncs still work." : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Verhindert versehentliche Änderungen. Manuelle Exporte und Synchronisierungen funktionieren weiterhin."}},
+      "es":{"stringUnit":{"state":"translated","value":"Evita cambios accidentales. Las exportaciones y sincronizaciones manuales siguen funcionando."}},
+      "fr":{"stringUnit":{"state":"translated","value":"Empêche les modifications accidentelles. Les exportations et synchronisations manuelles restent possibles."}},
+      "it":{"stringUnit":{"state":"translated","value":"Evita modifiche accidentali. Esportazioni e sincronizzazioni manuali continuano a funzionare."}},
+      "ja":{"stringUnit":{"state":"translated","value":"誤った変更を防ぎます。手動の書き出しと同期は引き続き使えます。"}},
+      "ko":{"stringUnit":{"state":"translated","value":"실수로 변경되는 것을 막습니다. 수동 내보내기와 동기화는 계속 작동합니다."}},
+      "nl":{"stringUnit":{"state":"translated","value":"Voorkomt onbedoelde wijzigingen. Handmatige exports en synchronisaties blijven werken."}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Evita alterações acidentais. Exportações e sincronizações manuais continuam funcionando."}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"防止意外更改。手动导出和同步仍可使用。"}}
+    }},
+    "Account" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Konto"}},
+      "es":{"stringUnit":{"state":"translated","value":"Cuenta"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Compte"}},
+      "it":{"stringUnit":{"state":"translated","value":"Account"}},
+      "ja":{"stringUnit":{"state":"translated","value":"アカウント"}},
+      "ko":{"stringUnit":{"state":"translated","value":"계정"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Account"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Conta"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"账户"}}
+    }},
+    "Help" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Hilfe"}},
+      "es":{"stringUnit":{"state":"translated","value":"Ayuda"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Aide"}},
+      "it":{"stringUnit":{"state":"translated","value":"Aiuto"}},
+      "ja":{"stringUnit":{"state":"translated","value":"ヘルプ"}},
+      "ko":{"stringUnit":{"state":"translated","value":"도움말"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Help"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Ajuda"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"帮助"}}
+    }},
+    "Paired" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Gekoppelt"}},
+      "es":{"stringUnit":{"state":"translated","value":"Emparejado"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Jumelé"}},
+      "it":{"stringUnit":{"state":"translated","value":"Abbinato"}},
+      "ja":{"stringUnit":{"state":"translated","value":"ペアリング済み"}},
+      "ko":{"stringUnit":{"state":"translated","value":"페어링됨"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Gekoppeld"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Pareado"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"已配对"}}
+    }},
+    "Needs review" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Prüfung nötig"}},
+      "es":{"stringUnit":{"state":"translated","value":"Requiere revisión"}},
+      "fr":{"stringUnit":{"state":"translated","value":"À vérifier"}},
+      "it":{"stringUnit":{"state":"translated","value":"Da verificare"}},
+      "ja":{"stringUnit":{"state":"translated","value":"確認が必要"}},
+      "ko":{"stringUnit":{"state":"translated","value":"검토 필요"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Controle nodig"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Requer revisão"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"需要检查"}}
+    }},
+    "Choose folder again" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Ordner erneut wählen"}},
+      "es":{"stringUnit":{"state":"translated","value":"Elegir la carpeta de nuevo"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Choisir à nouveau le dossier"}},
+      "it":{"stringUnit":{"state":"translated","value":"Scegli di nuovo la cartella"}},
+      "ja":{"stringUnit":{"state":"translated","value":"フォルダをもう一度選択"}},
+      "ko":{"stringUnit":{"state":"translated","value":"폴더 다시 선택"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Map opnieuw kiezen"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Escolher a pasta novamente"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"重新选择文件夹"}}
+    }},
+    "iOS lost access to this folder after it was moved. Choose it again to keep exporting — nothing has been deleted." : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"iOS hat den Zugriff auf diesen Ordner verloren. Wähle ihn erneut aus, um weiter zu exportieren – es wurde nichts gelöscht."}},
+      "es":{"stringUnit":{"state":"translated","value":"iOS perdió el acceso a esta carpeta. Vuelve a elegirla para seguir exportando; no se ha eliminado nada."}},
+      "fr":{"stringUnit":{"state":"translated","value":"iOS a perdu l’accès à ce dossier. Choisissez-le à nouveau pour continuer à exporter ; rien n’a été supprimé."}},
+      "it":{"stringUnit":{"state":"translated","value":"iOS ha perso l’accesso a questa cartella. Sceglila di nuovo per continuare a esportare: non è stato eliminato nulla."}},
+      "ja":{"stringUnit":{"state":"translated","value":"iOSがこのフォルダへのアクセスを失いました。書き出しを続けるにはもう一度選択してください。何も削除されていません。"}},
+      "ko":{"stringUnit":{"state":"translated","value":"iOS가 이 폴더에 대한 접근 권한을 잃었습니다. 계속 내보내려면 다시 선택하세요. 삭제된 항목은 없습니다."}},
+      "nl":{"stringUnit":{"state":"translated","value":"iOS heeft geen toegang meer tot deze map. Kies hem opnieuw om door te gaan met exporteren; er is niets verwijderd."}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"O iOS perdeu o acesso a esta pasta. Escolha-a novamente para continuar exportando; nada foi apagado."}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"iOS 已失去对此文件夹的访问权限。请重新选择以继续导出，未删除任何内容。"}}
+    }},
+    "Used by" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Verwendet von"}},
+      "es":{"stringUnit":{"state":"translated","value":"Usado por"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Utilisé par"}},
+      "it":{"stringUnit":{"state":"translated","value":"Usato da"}},
+      "ja":{"stringUnit":{"state":"translated","value":"使用中のプロファイル"}},
+      "ko":{"stringUnit":{"state":"translated","value":"사용 중"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Gebruikt door"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Usado por"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"使用者"}}
+    }},
+    "Works best with iCloud Drive, On My iPhone, or a synced app folder. Health.md writes directly — no account needed." : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Funktioniert am besten mit iCloud Drive, „Auf meinem iPhone“ oder einem synchronisierten App-Ordner. Health.md schreibt direkt – kein Konto nötig."}},
+      "es":{"stringUnit":{"state":"translated","value":"Funciona mejor con iCloud Drive, En mi iPhone o una carpeta de app sincronizada. Health.md escribe directamente, sin cuenta."}},
+      "fr":{"stringUnit":{"state":"translated","value":"Fonctionne mieux avec iCloud Drive, Sur mon iPhone ou un dossier d’app synchronisé. Health.md écrit directement, sans compte."}},
+      "it":{"stringUnit":{"state":"translated","value":"Funziona meglio con iCloud Drive, Sul mio iPhone o una cartella di app sincronizzata. Health.md scrive direttamente, senza account."}},
+      "ja":{"stringUnit":{"state":"translated","value":"iCloud Drive、このiPhone内、または同期されたアプリフォルダに最適です。Health.mdは直接書き込むため、アカウントは不要です。"}},
+      "ko":{"stringUnit":{"state":"translated","value":"iCloud Drive, 나의 iPhone 또는 동기화된 앱 폴더에서 가장 잘 작동합니다. Health.md는 직접 기록하므로 계정이 필요 없습니다."}},
+      "nl":{"stringUnit":{"state":"translated","value":"Werkt het best met iCloud Drive, Op mijn iPhone of een gesynchroniseerde app-map. Health.md schrijft direct; geen account nodig."}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Funciona melhor com o iCloud Drive, No Meu iPhone ou uma pasta de app sincronizada. O Health.md grava diretamente, sem conta."}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"最适合 iCloud 云盘、我的 iPhone 或已同步的应用文件夹。Health.md 直接写入，无需账户。"}}
+    }},
+    "One file per health event" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Eine Datei pro Gesundheitsereignis"}},
+      "es":{"stringUnit":{"state":"translated","value":"Un archivo por evento de salud"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Un fichier par événement de santé"}},
+      "it":{"stringUnit":{"state":"translated","value":"Un file per ogni evento di salute"}},
+      "ja":{"stringUnit":{"state":"translated","value":"ヘルスイベントごとに1ファイル"}},
+      "ko":{"stringUnit":{"state":"translated","value":"건강 이벤트마다 파일 하나"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Eén bestand per gezondheidsgebeurtenis"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Um arquivo por evento de saúde"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"每个健康事件一个文件"}}
+    }},
+    "Workouts, symptoms, blood pressure, glucose, mood…" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Workouts, Symptome, Blutdruck, Glukose, Stimmung …"}},
+      "es":{"stringUnit":{"state":"translated","value":"Entrenamientos, síntomas, presión arterial, glucosa, estado de ánimo…"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Entraînements, symptômes, tension, glycémie, humeur…"}},
+      "it":{"stringUnit":{"state":"translated","value":"Allenamenti, sintomi, pressione, glucosio, umore…"}},
+      "ja":{"stringUnit":{"state":"translated","value":"ワークアウト、症状、血圧、血糖、気分など"}},
+      "ko":{"stringUnit":{"state":"translated","value":"운동, 증상, 혈압, 혈당, 기분 등"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Workouts, symptomen, bloeddruk, glucose, stemming…"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Treinos, sintomas, pressão arterial, glicose, humor…"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"体能训练、症状、血压、血糖、心情等"}}
+    }},
+    "Track" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Erfassen"}},
+      "es":{"stringUnit":{"state":"translated","value":"Registrar"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Suivre"}},
+      "it":{"stringUnit":{"state":"translated","value":"Traccia"}},
+      "ja":{"stringUnit":{"state":"translated","value":"記録"}},
+      "ko":{"stringUnit":{"state":"translated","value":"기록"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Bijhouden"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Registrar"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"记录"}}
+    }},
+    "Track all" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Alle erfassen"}},
+      "es":{"stringUnit":{"state":"translated","value":"Registrar todo"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Tout suivre"}},
+      "it":{"stringUnit":{"state":"translated","value":"Traccia tutto"}},
+      "ja":{"stringUnit":{"state":"translated","value":"すべて記録"}},
+      "ko":{"stringUnit":{"state":"translated","value":"모두 기록"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Alles bijhouden"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Registrar tudo"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"全部记录"}}
+    }},
+    "Disable all" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Alle deaktivieren"}},
+      "es":{"stringUnit":{"state":"translated","value":"Desactivar todo"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Tout désactiver"}},
+      "it":{"stringUnit":{"state":"translated","value":"Disattiva tutto"}},
+      "ja":{"stringUnit":{"state":"translated","value":"すべて無効"}},
+      "ko":{"stringUnit":{"state":"translated","value":"모두 끄기"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Alles uitschakelen"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Desativar tudo"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"全部停用"}}
+    }},
+    "Only metrics enabled in this profile appear." : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Es werden nur in diesem Profil aktivierte Messwerte angezeigt."}},
+      "es":{"stringUnit":{"state":"translated","value":"Solo aparecen las métricas activadas en este perfil."}},
+      "fr":{"stringUnit":{"state":"translated","value":"Seules les mesures activées dans ce profil apparaissent."}},
+      "it":{"stringUnit":{"state":"translated","value":"Vengono mostrate solo le metriche attive in questo profilo."}},
+      "ja":{"stringUnit":{"state":"translated","value":"このプロファイルで有効な指標のみ表示されます。"}},
+      "ko":{"stringUnit":{"state":"translated","value":"이 프로필에서 켠 지표만 표시됩니다."}},
+      "nl":{"stringUnit":{"state":"translated","value":"Alleen metingen die in dit profiel aanstaan, worden getoond."}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Só aparecem as métricas ativadas neste perfil."}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"仅显示此配置文件中已启用的指标。"}}
+    }},
+    "Pending recovery" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Ausstehende Wiederherstellung"}},
+      "es":{"stringUnit":{"state":"translated","value":"Recuperación pendiente"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Récupération en attente"}},
+      "it":{"stringUnit":{"state":"translated","value":"Recupero in sospeso"}},
+      "ja":{"stringUnit":{"state":"translated","value":"保留中の復旧"}},
+      "ko":{"stringUnit":{"state":"translated","value":"대기 중인 복구"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Herstel in behandeling"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Recuperação pendente"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"待处理的恢复"}}
+    }},
+    "iOS chooses the exact moment; runs can slip when locked or in Low Power Mode" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"iOS wählt den genauen Zeitpunkt; im gesperrten Zustand oder im Stromsparmodus können sich Läufe verschieben"}},
+      "es":{"stringUnit":{"state":"translated","value":"iOS elige el momento exacto; las ejecuciones pueden retrasarse con el dispositivo bloqueado o en modo de bajo consumo"}},
+      "fr":{"stringUnit":{"state":"translated","value":"iOS choisit le moment exact ; les exécutions peuvent être décalées si l’appareil est verrouillé ou en mode Économie d’énergie"}},
+      "it":{"stringUnit":{"state":"translated","value":"iOS sceglie il momento esatto; le esecuzioni possono slittare con il dispositivo bloccato o in modalità Risparmio energetico"}},
+      "ja":{"stringUnit":{"state":"translated","value":"正確な時刻はiOSが決定します。ロック中や低電力モードでは実行が遅れることがあります"}},
+      "ko":{"stringUnit":{"state":"translated","value":"정확한 시점은 iOS가 정합니다. 잠겨 있거나 저전력 모드일 때는 실행이 늦어질 수 있습니다"}},
+      "nl":{"stringUnit":{"state":"translated","value":"iOS kiest het exacte moment; uitvoeringen kunnen verschuiven als het toestel vergrendeld is of in de energiebesparingsmodus staat"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"O iOS escolhe o momento exato; as execuções podem atrasar com o aparelho bloqueado ou no Modo de Pouca Energia"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"具体时间由 iOS 决定；锁定时或低电量模式下，运行可能会延后"}}
+    }},
+    "Scheduled exports need an active trial, subscription or Lifetime access." : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Geplante Exporte erfordern eine aktive Testphase, ein Abo oder Lifetime-Zugang."}},
+      "es":{"stringUnit":{"state":"translated","value":"Las exportaciones programadas requieren una prueba activa, una suscripción o acceso Lifetime."}},
+      "fr":{"stringUnit":{"state":"translated","value":"Les exportations planifiées nécessitent un essai actif, un abonnement ou un accès Lifetime."}},
+      "it":{"stringUnit":{"state":"translated","value":"Le esportazioni pianificate richiedono una prova attiva, un abbonamento o l’accesso Lifetime."}},
+      "ja":{"stringUnit":{"state":"translated","value":"スケジュール書き出しには、有効なトライアル、サブスクリプション、またはLifetimeアクセスが必要です。"}},
+      "ko":{"stringUnit":{"state":"translated","value":"예약 내보내기를 사용하려면 활성 체험판, 구독 또는 Lifetime 이용권이 필요합니다."}},
+      "nl":{"stringUnit":{"state":"translated","value":"Geplande exports vereisen een actieve proefperiode, een abonnement of Lifetime-toegang."}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Exportações agendadas exigem um teste ativo, assinatura ou acesso Lifetime."}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"定时导出需要有效的试用、订阅或 Lifetime 权限。"}}
+    }},
+    "Merge into daily notes" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"In Tagesnotizen zusammenführen"}},
+      "es":{"stringUnit":{"state":"translated","value":"Combinar en notas diarias"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Fusionner dans les notes quotidiennes"}},
+      "it":{"stringUnit":{"state":"translated","value":"Unisci alle note giornaliere"}},
+      "ja":{"stringUnit":{"state":"translated","value":"デイリーノートに統合"}},
+      "ko":{"stringUnit":{"state":"translated","value":"일일 노트에 병합"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Samenvoegen in dagnotities"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Mesclar nas notas diárias"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"合并到每日笔记"}}
+    }},
+    "Selected metrics go into each note’s frontmatter" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Ausgewählte Messwerte kommen in das Frontmatter jeder Notiz"}},
+      "es":{"stringUnit":{"state":"translated","value":"Las métricas seleccionadas van al frontmatter de cada nota"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Les mesures choisies vont dans le frontmatter de chaque note"}},
+      "it":{"stringUnit":{"state":"translated","value":"Le metriche selezionate vanno nel frontmatter di ogni nota"}},
+      "ja":{"stringUnit":{"state":"translated","value":"選択した指標が各ノートのフロントマターに入ります"}},
+      "ko":{"stringUnit":{"state":"translated","value":"선택한 지표가 각 노트의 프런트매터에 들어갑니다"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Geselecteerde metingen komen in de frontmatter van elke notitie"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"As métricas selecionadas vão para o frontmatter de cada nota"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"所选指标写入每篇笔记的 frontmatter"}}
+    }},
+    "Content" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Inhalt"}},
+      "es":{"stringUnit":{"state":"translated","value":"Contenido"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Contenu"}},
+      "it":{"stringUnit":{"state":"translated","value":"Contenuto"}},
+      "ja":{"stringUnit":{"state":"translated","value":"内容"}},
+      "ko":{"stringUnit":{"state":"translated","value":"콘텐츠"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Inhoud"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Conteúdo"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"内容"}}
+    }},
+    "Add metric sections to body" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Messwertabschnitte zum Text hinzufügen"}},
+      "es":{"stringUnit":{"state":"translated","value":"Añadir secciones de métricas al cuerpo"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Ajouter des sections de mesures au corps"}},
+      "it":{"stringUnit":{"state":"translated","value":"Aggiungi sezioni di metriche al corpo"}},
+      "ja":{"stringUnit":{"state":"translated","value":"本文に指標セクションを追加"}},
+      "ko":{"stringUnit":{"state":"translated","value":"본문에 지표 섹션 추가"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Metingsecties aan de tekst toevoegen"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Adicionar seções de métricas ao corpo"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"在正文中添加指标部分"}}
+    }},
+    "App-managed sections are replaced each export" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Von der App verwaltete Abschnitte werden bei jedem Export ersetzt"}},
+      "es":{"stringUnit":{"state":"translated","value":"Las secciones gestionadas por la app se reemplazan en cada exportación"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Les sections gérées par l’app sont remplacées à chaque exportation"}},
+      "it":{"stringUnit":{"state":"translated","value":"Le sezioni gestite dall’app vengono sostituite a ogni esportazione"}},
+      "ja":{"stringUnit":{"state":"translated","value":"アプリが管理するセクションは書き出しのたびに置き換えられます"}},
+      "ko":{"stringUnit":{"state":"translated","value":"앱이 관리하는 섹션은 내보낼 때마다 교체됩니다"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Door de app beheerde secties worden bij elke export vervangen"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"As seções gerenciadas pelo app são substituídas a cada exportação"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"应用管理的部分在每次导出时都会被替换"}}
+    }},
+    "Leave off if a plugin or template creates notes" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Deaktiviert lassen, wenn ein Plug-in oder eine Vorlage Notizen erstellt"}},
+      "es":{"stringUnit":{"state":"translated","value":"Déjalo desactivado si un plugin o una plantilla crea las notas"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Laissez désactivé si un plugin ou un modèle crée les notes"}},
+      "it":{"stringUnit":{"state":"translated","value":"Lascia disattivato se le note vengono create da un plugin o un modello"}},
+      "ja":{"stringUnit":{"state":"translated","value":"プラグインやテンプレートでノートを作成する場合はオフのままにします"}},
+      "ko":{"stringUnit":{"state":"translated","value":"플러그인이나 템플릿이 노트를 만든다면 끈 상태로 두세요"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Laat uit als een plug-in of sjabloon notities aanmaakt"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Deixe desativado se um plugin ou modelo criar as notas"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"如果由插件或模板创建笔记，请保持关闭"}}
+    }},
+    "Folder organization" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Ordnerstruktur"}},
+      "es":{"stringUnit":{"state":"translated","value":"Organización de carpetas"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Organisation des dossiers"}},
+      "it":{"stringUnit":{"state":"translated","value":"Organizzazione cartelle"}},
+      "ja":{"stringUnit":{"state":"translated","value":"フォルダ構成"}},
+      "ko":{"stringUnit":{"state":"translated","value":"폴더 구성"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Maporganisatie"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Organização de pastas"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"文件夹结构"}}
+    }},
+    "Format folders are off by default so existing plugins and shortcuts keep working." : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Formatordner sind standardmäßig deaktiviert, damit bestehende Plug-ins und Kurzbefehle weiter funktionieren."}},
+      "es":{"stringUnit":{"state":"translated","value":"Las carpetas por formato están desactivadas por defecto para que los plugins y atajos existentes sigan funcionando."}},
+      "fr":{"stringUnit":{"state":"translated","value":"Les dossiers par format sont désactivés par défaut pour que les plugins et raccourcis existants continuent de fonctionner."}},
+      "it":{"stringUnit":{"state":"translated","value":"Le cartelle per formato sono disattivate per impostazione predefinita, così plugin e comandi rapidi esistenti continuano a funzionare."}},
+      "ja":{"stringUnit":{"state":"translated","value":"既存のプラグインやショートカットが動作し続けるよう、フォーマットフォルダはデフォルトでオフです。"}},
+      "ko":{"stringUnit":{"state":"translated","value":"기존 플러그인과 단축어가 계속 작동하도록 형식 폴더는 기본적으로 꺼져 있습니다."}},
+      "nl":{"stringUnit":{"state":"translated","value":"Formaatmappen staan standaard uit, zodat bestaande plug-ins en opdrachten blijven werken."}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"As pastas por formato ficam desativadas por padrão para que plugins e atalhos existentes continuem funcionando."}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"格式文件夹默认关闭，以确保现有插件和快捷指令继续正常工作。"}}
+    }},
+    "Overwrite replaces the file. Append adds to the end. Update merges new values and keeps your edits." : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Überschreiben ersetzt die Datei. Anhängen fügt am Ende hinzu. Aktualisieren führt neue Werte zusammen und behält deine Änderungen."}},
+      "es":{"stringUnit":{"state":"translated","value":"Sobrescribir reemplaza el archivo. Añadir agrega al final. Actualizar combina los valores nuevos y conserva tus cambios."}},
+      "fr":{"stringUnit":{"state":"translated","value":"Écraser remplace le fichier. Ajouter complète à la fin. Mettre à jour fusionne les nouvelles valeurs et conserve vos modifications."}},
+      "it":{"stringUnit":{"state":"translated","value":"Sovrascrivi sostituisce il file. Aggiungi scrive in fondo. Aggiorna unisce i nuovi valori e mantiene le tue modifiche."}},
+      "ja":{"stringUnit":{"state":"translated","value":"上書きはファイルを置き換えます。追加は末尾に書き足します。更新は新しい値を統合し、編集内容を保持します。"}},
+      "ko":{"stringUnit":{"state":"translated","value":"덮어쓰기는 파일을 교체합니다. 추가는 끝에 덧붙입니다. 업데이트는 새 값을 병합하고 편집 내용을 유지합니다."}},
+      "nl":{"stringUnit":{"state":"translated","value":"Overschrijven vervangt het bestand. Toevoegen schrijft aan het einde. Bijwerken voegt nieuwe waarden samen en behoudt je bewerkingen."}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Substituir troca o arquivo. Acrescentar adiciona ao final. Atualizar mescla novos valores e mantém suas edições."}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"覆盖会替换文件。追加会添加到末尾。更新会合并新值并保留你的编辑。"}}
+    }},
+    "Customize format" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Format anpassen"}},
+      "es":{"stringUnit":{"state":"translated","value":"Personalizar formato"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Personnaliser le format"}},
+      "it":{"stringUnit":{"state":"translated","value":"Personalizza formato"}},
+      "ja":{"stringUnit":{"state":"translated","value":"フォーマットをカスタマイズ"}},
+      "ko":{"stringUnit":{"state":"translated","value":"형식 사용자화"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Formaat aanpassen"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Personalizar formato"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"自定义格式"}}
+    }},
+    "Which should I use?" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Was soll ich verwenden?"}},
+      "es":{"stringUnit":{"state":"translated","value":"¿Cuál debería usar?"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Lequel choisir ?"}},
+      "it":{"stringUnit":{"state":"translated","value":"Quale dovrei usare?"}},
+      "ja":{"stringUnit":{"state":"translated","value":"どれを使えばよいですか？"}},
+      "ko":{"stringUnit":{"state":"translated","value":"어떤 것을 사용해야 하나요?"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Welke moet ik gebruiken?"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Qual devo usar?"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"我该用哪个？"}}
+    }},
+    "Data detail" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Datendetails"}},
+      "es":{"stringUnit":{"state":"translated","value":"Detalle de datos"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Détail des données"}},
+      "it":{"stringUnit":{"state":"translated","value":"Dettaglio dati"}},
+      "ja":{"stringUnit":{"state":"translated","value":"データの詳細度"}},
+      "ko":{"stringUnit":{"state":"translated","value":"데이터 세부 정보"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Gegevensdetail"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Detalhe dos dados"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"数据详细程度"}}
+    }},
+    "API and gateway uploads use this setting too." : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"API- und Gateway-Uploads verwenden diese Einstellung ebenfalls."}},
+      "es":{"stringUnit":{"state":"translated","value":"Las subidas a API y gateway también usan este ajuste."}},
+      "fr":{"stringUnit":{"state":"translated","value":"Les envois vers l’API et la passerelle utilisent aussi ce réglage."}},
+      "it":{"stringUnit":{"state":"translated","value":"Anche i caricamenti su API e gateway usano questa impostazione."}},
+      "ja":{"stringUnit":{"state":"translated","value":"APIとゲートウェイへのアップロードにもこの設定が使われます。"}},
+      "ko":{"stringUnit":{"state":"translated","value":"API 및 게이트웨이 업로드에도 이 설정이 사용됩니다."}},
+      "nl":{"stringUnit":{"state":"translated","value":"API- en gateway-uploads gebruiken deze instelling ook."}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Os envios para API e gateway também usam este ajuste."}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"API 和网关上传也使用此设置。"}}
+    }},
+    "Packaging" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Paketierung"}},
+      "es":{"stringUnit":{"state":"translated","value":"Empaquetado"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Conditionnement"}},
+      "it":{"stringUnit":{"state":"translated","value":"Pacchetto"}},
+      "ja":{"stringUnit":{"state":"translated","value":"パッケージ"}},
+      "ko":{"stringUnit":{"state":"translated","value":"패키징"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Verpakking"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Empacotamento"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"打包"}}
+    }},
+    "Skip aggregate files, ZIPs, roll-ups, entries and sidecars — settings are kept" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Überspringt Sammeldateien, ZIPs, Roll-ups, Einträge und Begleitdateien – Einstellungen bleiben erhalten"}},
+      "es":{"stringUnit":{"state":"translated","value":"Omite archivos agregados, ZIP, resúmenes, entradas y archivos auxiliares; los ajustes se conservan"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Ignore les fichiers agrégés, ZIP, synthèses, entrées et fichiers annexes ; les réglages sont conservés"}},
+      "it":{"stringUnit":{"state":"translated","value":"Salta file aggregati, ZIP, riepiloghi, voci e file collaterali; le impostazioni vengono mantenute"}},
+      "ja":{"stringUnit":{"state":"translated","value":"集計ファイル、ZIP、ロールアップ、エントリ、サイドカーをスキップします（設定は保持されます）"}},
+      "ko":{"stringUnit":{"state":"translated","value":"집계 파일, ZIP, 롤업, 항목, 사이드카를 건너뜁니다. 설정은 유지됩니다"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Slaat verzamelbestanden, zips, samenvattingen, items en sidecars over; instellingen blijven bewaard"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Ignora arquivos agregados, ZIPs, resumos, entradas e arquivos auxiliares; os ajustes são mantidos"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"跳过汇总文件、ZIP、汇总报告、条目和附属文件，设置会保留"}}
+    }},
+    "One archive instead of loose files" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Ein Archiv statt einzelner Dateien"}},
+      "es":{"stringUnit":{"state":"translated","value":"Un archivo comprimido en lugar de archivos sueltos"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Une archive au lieu de fichiers séparés"}},
+      "it":{"stringUnit":{"state":"translated","value":"Un unico archivio invece di file separati"}},
+      "ja":{"stringUnit":{"state":"translated","value":"個別ファイルではなく1つのアーカイブに"}},
+      "ko":{"stringUnit":{"state":"translated","value":"개별 파일 대신 아카이브 하나로"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Eén archief in plaats van losse bestanden"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Um arquivo compactado em vez de arquivos soltos"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"一个归档文件，而不是零散文件"}}
+    }},
+    "Write data dictionary" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Datenwörterbuch schreiben"}},
+      "es":{"stringUnit":{"state":"translated","value":"Escribir diccionario de datos"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Écrire le dictionnaire de données"}},
+      "it":{"stringUnit":{"state":"translated","value":"Scrivi dizionario dati"}},
+      "ja":{"stringUnit":{"state":"translated","value":"データ辞書を書き出す"}},
+      "ko":{"stringUnit":{"state":"translated","value":"데이터 사전 작성"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Gegevenswoordenboek schrijven"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Gravar dicionário de dados"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"写入数据字典"}}
+    }},
+    "Adds health_md_data_dictionary.md" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Fügt health_md_data_dictionary.md hinzu"}},
+      "es":{"stringUnit":{"state":"translated","value":"Añade health_md_data_dictionary.md"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Ajoute health_md_data_dictionary.md"}},
+      "it":{"stringUnit":{"state":"translated","value":"Aggiunge health_md_data_dictionary.md"}},
+      "ja":{"stringUnit":{"state":"translated","value":"health_md_data_dictionary.md を追加します"}},
+      "ko":{"stringUnit":{"state":"translated","value":"health_md_data_dictionary.md를 추가합니다"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Voegt health_md_data_dictionary.md toe"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Adiciona health_md_data_dictionary.md"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"添加 health_md_data_dictionary.md"}}
+    }},
+    "Range summaries" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Zeitraumzusammenfassungen"}},
+      "es":{"stringUnit":{"state":"translated","value":"Resúmenes de intervalo"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Synthèses de période"}},
+      "it":{"stringUnit":{"state":"translated","value":"Riepiloghi dell’intervallo"}},
+      "ja":{"stringUnit":{"state":"translated","value":"期間サマリー"}},
+      "ko":{"stringUnit":{"state":"translated","value":"기간 요약"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Periodesamenvattingen"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Resumos do período"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"范围摘要"}}
+    }},
+    "Also write a roll-up for each requested range" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Schreibt zusätzlich eine Zusammenfassung für jeden angeforderten Zeitraum"}},
+      "es":{"stringUnit":{"state":"translated","value":"Escribe también un resumen de cada intervalo solicitado"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Écrit aussi une synthèse pour chaque période demandée"}},
+      "it":{"stringUnit":{"state":"translated","value":"Scrive anche un riepilogo per ogni intervallo richiesto"}},
+      "ja":{"stringUnit":{"state":"translated","value":"要求された期間ごとにロールアップも書き出します"}},
+      "ko":{"stringUnit":{"state":"translated","value":"요청한 기간마다 롤업도 작성합니다"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Schrijft ook een samenvatting voor elke gevraagde periode"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Também grava um resumo para cada período solicitado"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"同时为每个请求的范围写入汇总"}}
+    }},
+    "Time series" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Zeitreihen"}},
+      "es":{"stringUnit":{"state":"translated","value":"Serie temporal"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Série temporelle"}},
+      "it":{"stringUnit":{"state":"translated","value":"Serie temporale"}},
+      "ja":{"stringUnit":{"state":"translated","value":"時系列"}},
+      "ko":{"stringUnit":{"state":"translated","value":"시계열"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Tijdreeks"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Série temporal"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"时间序列"}}
+    }},
+    "Best for daily notes, Obsidian browsing, and Bases tables. Nested health data is summarized or flattened for easier querying." : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Ideal für Tagesnotizen, Stöbern in Obsidian und Bases-Tabellen. Verschachtelte Gesundheitsdaten werden für einfachere Abfragen zusammengefasst oder abgeflacht."}},
+      "es":{"stringUnit":{"state":"translated","value":"Ideal para notas diarias, navegar en Obsidian y tablas de Bases. Los datos anidados se resumen o aplanan para consultarlos con facilidad."}},
+      "fr":{"stringUnit":{"state":"translated","value":"Idéal pour les notes quotidiennes, la navigation dans Obsidian et les tableaux Bases. Les données imbriquées sont résumées ou aplaties pour faciliter les requêtes."}},
+      "it":{"stringUnit":{"state":"translated","value":"Ideale per note giornaliere, navigazione in Obsidian e tabelle Bases. I dati annidati vengono riassunti o appiattiti per semplificare le query."}},
+      "ja":{"stringUnit":{"state":"translated","value":"デイリーノート、Obsidianでの閲覧、Basesテーブルに最適です。ネストされたデータは検索しやすいよう要約またはフラット化されます。"}},
+      "ko":{"stringUnit":{"state":"translated","value":"일일 노트, Obsidian 탐색, Bases 표에 가장 좋습니다. 중첩된 건강 데이터는 쉽게 조회하도록 요약되거나 평탄화됩니다."}},
+      "nl":{"stringUnit":{"state":"translated","value":"Ideaal voor dagnotities, bladeren in Obsidian en Bases-tabellen. Geneste gegevens worden samengevat of afgevlakt voor eenvoudiger zoeken."}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Ideal para notas diárias, navegação no Obsidian e tabelas do Bases. Dados aninhados são resumidos ou achatados para facilitar consultas."}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"最适合每日笔记、Obsidian 浏览和 Bases 表格。嵌套的健康数据会被汇总或展平，便于查询。"}}
+    }},
+    "Best for backups, automation, and future re-imports. Preserves workouts, route points, timestamped samples, medications, and metadata." : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Ideal für Backups, Automatisierung und spätere Re-Importe. Erhält Workouts, Routenpunkte, Messwerte mit Zeitstempel, Medikamente und Metadaten."}},
+      "es":{"stringUnit":{"state":"translated","value":"Ideal para copias de seguridad, automatización y futuras reimportaciones. Conserva entrenamientos, puntos de ruta, muestras con marca de tiempo, medicamentos y metadatos."}},
+      "fr":{"stringUnit":{"state":"translated","value":"Idéal pour les sauvegardes, l’automatisation et les réimportations futures. Conserve les entraînements, points d’itinéraire, échantillons horodatés, médicaments et métadonnées."}},
+      "it":{"stringUnit":{"state":"translated","value":"Ideale per backup, automazione e future reimportazioni. Conserva allenamenti, punti del percorso, campioni con data e ora, farmaci e metadati."}},
+      "ja":{"stringUnit":{"state":"translated","value":"バックアップ、自動化、将来の再インポートに最適です。ワークアウト、経路ポイント、タイムスタンプ付きサンプル、服薬、メタデータを保持します。"}},
+      "ko":{"stringUnit":{"state":"translated","value":"백업, 자동화, 향후 재가져오기에 가장 좋습니다. 운동, 경로 지점, 타임스탬프 샘플, 약물, 메타데이터를 보존합니다."}},
+      "nl":{"stringUnit":{"state":"translated","value":"Ideaal voor back-ups, automatisering en toekomstige herimport. Bewaart workouts, routepunten, metingen met tijdstempel, medicijnen en metadata."}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Ideal para backups, automação e futuras reimportações. Preserva treinos, pontos de rota, amostras com data e hora, medicamentos e metadados."}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"最适合备份、自动化和日后重新导入。保留体能训练、路线点、带时间戳的样本、用药和元数据。"}}
+    }},
+    "Best for spreadsheets and data analysis tools. Nested data is expanded into rows instead of preserved as objects." : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Ideal für Tabellenkalkulationen und Analysetools. Verschachtelte Daten werden in Zeilen aufgelöst, statt als Objekte erhalten zu bleiben."}},
+      "es":{"stringUnit":{"state":"translated","value":"Ideal para hojas de cálculo y herramientas de análisis. Los datos anidados se expanden en filas en lugar de conservarse como objetos."}},
+      "fr":{"stringUnit":{"state":"translated","value":"Idéal pour les tableurs et outils d’analyse. Les données imbriquées sont développées en lignes au lieu d’être conservées comme objets."}},
+      "it":{"stringUnit":{"state":"translated","value":"Ideale per fogli di calcolo e strumenti di analisi. I dati annidati vengono espansi in righe invece di essere conservati come oggetti."}},
+      "ja":{"stringUnit":{"state":"translated","value":"スプレッドシートやデータ分析ツールに最適です。ネストされたデータはオブジェクトのままではなく行に展開されます。"}},
+      "ko":{"stringUnit":{"state":"translated","value":"스프레드시트와 데이터 분석 도구에 가장 좋습니다. 중첩된 데이터는 객체로 유지되지 않고 행으로 펼쳐집니다."}},
+      "nl":{"stringUnit":{"state":"translated","value":"Ideaal voor spreadsheets en analysetools. Geneste gegevens worden uitgesplitst in rijen in plaats van als objecten bewaard."}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Ideal para planilhas e ferramentas de análise. Dados aninhados são expandidos em linhas em vez de preservados como objetos."}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"最适合电子表格和数据分析工具。嵌套数据会展开为多行，而不是保留为对象。"}}
+    }},
+    "All formats share one schema version; they differ in how you read and reuse the data." : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Alle Formate teilen eine Schemaversion; sie unterscheiden sich darin, wie du die Daten liest und weiterverwendest."}},
+      "es":{"stringUnit":{"state":"translated","value":"Todos los formatos comparten una versión de esquema; difieren en cómo lees y reutilizas los datos."}},
+      "fr":{"stringUnit":{"state":"translated","value":"Tous les formats partagent une même version de schéma ; ils diffèrent par la façon de lire et réutiliser les données."}},
+      "it":{"stringUnit":{"state":"translated","value":"Tutti i formati condividono una versione dello schema; cambiano il modo in cui leggi e riutilizzi i dati."}},
+      "ja":{"stringUnit":{"state":"translated","value":"すべてのフォーマットは同じスキーマバージョンを共有し、データの読み方と再利用の方法が異なります。"}},
+      "ko":{"stringUnit":{"state":"translated","value":"모든 형식은 하나의 스키마 버전을 공유하며, 데이터를 읽고 재사용하는 방식만 다릅니다."}},
+      "nl":{"stringUnit":{"state":"translated","value":"Alle formaten delen één schemaversie; ze verschillen in hoe je de gegevens leest en hergebruikt."}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Todos os formatos compartilham uma versão de esquema; a diferença está em como você lê e reutiliza os dados."}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"所有格式共用一个架构版本，区别在于读取和复用数据的方式。"}}
+    }},
+    "Markdown body" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Markdown-Text"}},
+      "es":{"stringUnit":{"state":"translated","value":"Cuerpo Markdown"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Corps Markdown"}},
+      "it":{"stringUnit":{"state":"translated","value":"Corpo Markdown"}},
+      "ja":{"stringUnit":{"state":"translated","value":"Markdown本文"}},
+      "ko":{"stringUnit":{"state":"translated","value":"Markdown 본문"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Markdown-tekst"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Corpo Markdown"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"Markdown 正文"}}
+    }},
+    "Dates & units" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Datum & Einheiten"}},
+      "es":{"stringUnit":{"state":"translated","value":"Fechas y unidades"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Dates et unités"}},
+      "it":{"stringUnit":{"state":"translated","value":"Date e unità"}},
+      "ja":{"stringUnit":{"state":"translated","value":"日付と単位"}},
+      "ko":{"stringUnit":{"state":"translated","value":"날짜 및 단위"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Datums en eenheden"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Datas e unidades"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"日期和单位"}}
+    }},
+    "Tap a field to rename its key." : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Tippe auf ein Feld, um seinen Schlüssel umzubenennen."}},
+      "es":{"stringUnit":{"state":"translated","value":"Toca un campo para renombrar su clave."}},
+      "fr":{"stringUnit":{"state":"translated","value":"Touchez un champ pour renommer sa clé."}},
+      "it":{"stringUnit":{"state":"translated","value":"Tocca un campo per rinominarne la chiave."}},
+      "ja":{"stringUnit":{"state":"translated","value":"フィールドをタップするとキー名を変更できます。"}},
+      "ko":{"stringUnit":{"state":"translated","value":"필드를 탭하여 키 이름을 변경하세요."}},
+      "nl":{"stringUnit":{"state":"translated","value":"Tik op een veld om de sleutel te hernoemen."}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Toque em um campo para renomear a chave."}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"轻点字段即可重命名其键。"}}
+    }},
+    "Edit template" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Vorlage bearbeiten"}},
+      "es":{"stringUnit":{"state":"translated","value":"Editar plantilla"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Modifier le modèle"}},
+      "it":{"stringUnit":{"state":"translated","value":"Modifica modello"}},
+      "ja":{"stringUnit":{"state":"translated","value":"テンプレートを編集"}},
+      "ko":{"stringUnit":{"state":"translated","value":"템플릿 편집"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Sjabloon bewerken"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Editar modelo"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"编辑模板"}}
+    }},
+    "Summary line" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Zusammenfassungszeile"}},
+      "es":{"stringUnit":{"state":"translated","value":"Línea de resumen"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Ligne de résumé"}},
+      "it":{"stringUnit":{"state":"translated","value":"Riga di riepilogo"}},
+      "ja":{"stringUnit":{"state":"translated","value":"サマリー行"}},
+      "ko":{"stringUnit":{"state":"translated","value":"요약 줄"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Samenvattingsregel"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Linha de resumo"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"摘要行"}}
+    }},
+    "Short overview under the title" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Kurzer Überblick unter dem Titel"}},
+      "es":{"stringUnit":{"state":"translated","value":"Breve resumen bajo el título"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Bref aperçu sous le titre"}},
+      "it":{"stringUnit":{"state":"translated","value":"Breve panoramica sotto il titolo"}},
+      "ja":{"stringUnit":{"state":"translated","value":"タイトルの下に短い概要"}},
+      "ko":{"stringUnit":{"state":"translated","value":"제목 아래 짧은 개요"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Kort overzicht onder de titel"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Breve visão geral abaixo do título"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"标题下方的简短概览"}}
+    }},
+    "Category emoji" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Kategorie-Emoji"}},
+      "es":{"stringUnit":{"state":"translated","value":"Emoji de categoría"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Emoji de catégorie"}},
+      "it":{"stringUnit":{"state":"translated","value":"Emoji di categoria"}},
+      "ja":{"stringUnit":{"state":"translated","value":"カテゴリの絵文字"}},
+      "ko":{"stringUnit":{"state":"translated","value":"카테고리 이모지"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Categorie-emoji"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Emoji de categoria"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"类别表情符号"}}
+    }},
+    "Bullets" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Aufzählungszeichen"}},
+      "es":{"stringUnit":{"state":"translated","value":"Viñetas"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Puces"}},
+      "it":{"stringUnit":{"state":"translated","value":"Elenchi puntati"}},
+      "ja":{"stringUnit":{"state":"translated","value":"箇条書き"}},
+      "ko":{"stringUnit":{"state":"translated","value":"글머리 기호"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Opsommingstekens"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Marcadores"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"项目符号"}}
+    }},
+    "Heading level" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Überschriftenebene"}},
+      "es":{"stringUnit":{"state":"translated","value":"Nivel de encabezado"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Niveau de titre"}},
+      "it":{"stringUnit":{"state":"translated","value":"Livello intestazione"}},
+      "ja":{"stringUnit":{"state":"translated","value":"見出しレベル"}},
+      "ko":{"stringUnit":{"state":"translated","value":"제목 수준"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Kopniveau"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Nível de título"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"标题级别"}}
+    }},
+    "Writes to" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Schreibt nach"}},
+      "es":{"stringUnit":{"state":"translated","value":"Escribe en"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Écrit dans"}},
+      "it":{"stringUnit":{"state":"translated","value":"Scrive in"}},
+      "ja":{"stringUnit":{"state":"translated","value":"書き込み先"}},
+      "ko":{"stringUnit":{"state":"translated","value":"저장 위치"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Schrijft naar"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Grava em"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"写入到"}}
+    }},
+    "Search" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Suchen"}},
+      "es":{"stringUnit":{"state":"translated","value":"Buscar"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Rechercher"}},
+      "it":{"stringUnit":{"state":"translated","value":"Cerca"}},
+      "ja":{"stringUnit":{"state":"translated","value":"検索"}},
+      "ko":{"stringUnit":{"state":"translated","value":"검색"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Zoeken"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Buscar"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"搜索"}}
+    }},
+    "Extra permissions" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Zusätzliche Berechtigungen"}},
+      "es":{"stringUnit":{"state":"translated","value":"Permisos adicionales"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Autorisations supplémentaires"}},
+      "it":{"stringUnit":{"state":"translated","value":"Autorizzazioni aggiuntive"}},
+      "ja":{"stringUnit":{"state":"translated","value":"追加の権限"}},
+      "ko":{"stringUnit":{"state":"translated","value":"추가 권한"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Extra toestemmingen"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Permissões adicionais"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"额外权限"}}
+    }},
+    "Medications and vision" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Medikamente und Sehen"}},
+      "es":{"stringUnit":{"state":"translated","value":"Medicamentos y visión"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Médicaments et vision"}},
+      "it":{"stringUnit":{"state":"translated","value":"Farmaci e vista"}},
+      "ja":{"stringUnit":{"state":"translated","value":"服薬と視力"}},
+      "ko":{"stringUnit":{"state":"translated","value":"약물 및 시력"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Medicijnen en zicht"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Medicamentos e visão"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"用药和视力"}}
+    }},
+    "Separate Apple permissions" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Separate Apple-Berechtigungen"}},
+      "es":{"stringUnit":{"state":"translated","value":"Permisos de Apple independientes"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Autorisations Apple distinctes"}},
+      "it":{"stringUnit":{"state":"translated","value":"Autorizzazioni Apple separate"}},
+      "ja":{"stringUnit":{"state":"translated","value":"個別のApple権限"}},
+      "ko":{"stringUnit":{"state":"translated","value":"별도의 Apple 권한"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Aparte Apple-toestemmingen"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Permissões separadas da Apple"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"单独的 Apple 权限"}}
+    }},
+    "Endpoint failing" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Endpunkt schlägt fehl"}},
+      "es":{"stringUnit":{"state":"translated","value":"Endpoint con fallos"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Point de terminaison en échec"}},
+      "it":{"stringUnit":{"state":"translated","value":"Endpoint in errore"}},
+      "ja":{"stringUnit":{"state":"translated","value":"エンドポイントでエラー"}},
+      "ko":{"stringUnit":{"state":"translated","value":"엔드포인트 오류"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Eindpunt mislukt"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Endpoint com falha"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"端点故障"}}
+    }},
+    "Mac exports wait until your Mac is back on the same network." : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Mac-Exporte warten, bis dein Mac wieder im selben Netzwerk ist."}},
+      "es":{"stringUnit":{"state":"translated","value":"Las exportaciones al Mac esperan hasta que tu Mac vuelva a la misma red."}},
+      "fr":{"stringUnit":{"state":"translated","value":"Les exportations Mac attendent que votre Mac revienne sur le même réseau."}},
+      "it":{"stringUnit":{"state":"translated","value":"Le esportazioni su Mac attendono che il Mac torni sulla stessa rete."}},
+      "ja":{"stringUnit":{"state":"translated","value":"Macが同じネットワークに戻るまでMacへの書き出しは待機します。"}},
+      "ko":{"stringUnit":{"state":"translated","value":"Mac이 같은 네트워크로 돌아올 때까지 Mac 내보내기가 대기합니다."}},
+      "nl":{"stringUnit":{"state":"translated","value":"Mac-exports wachten tot je Mac weer op hetzelfde netwerk is."}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"As exportações para o Mac aguardam até ele voltar à mesma rede."}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"Mac 导出将等待你的 Mac 回到同一网络。"}}
+    }},
+    "Mac offline" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Mac offline"}},
+      "es":{"stringUnit":{"state":"translated","value":"Mac sin conexión"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Mac hors ligne"}},
+      "it":{"stringUnit":{"state":"translated","value":"Mac offline"}},
+      "ja":{"stringUnit":{"state":"translated","value":"Macがオフライン"}},
+      "ko":{"stringUnit":{"state":"translated","value":"Mac 오프라인"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Mac offline"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Mac offline"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"Mac 离线"}}
+    }},
+    "API endpoint and Agent Data gateway" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"API-Endpunkt und Agent Data-Gateway"}},
+      "es":{"stringUnit":{"state":"translated","value":"Endpoint de API y gateway de Agent Data"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Point de terminaison API et passerelle Agent Data"}},
+      "it":{"stringUnit":{"state":"translated","value":"Endpoint API e gateway Agent Data"}},
+      "ja":{"stringUnit":{"state":"translated","value":"APIエンドポイントとAgent Dataゲートウェイ"}},
+      "ko":{"stringUnit":{"state":"translated","value":"API 엔드포인트 및 Agent Data 게이트웨이"}},
+      "nl":{"stringUnit":{"state":"translated","value":"API-eindpunt en Agent Data-gateway"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Endpoint de API e gateway do Agent Data"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"API 端点和 Agent Data 网关"}}
+    }},
+    "All settings" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Alle Einstellungen"}},
+      "es":{"stringUnit":{"state":"translated","value":"Todos los ajustes"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Tous les réglages"}},
+      "it":{"stringUnit":{"state":"translated","value":"Tutte le impostazioni"}},
+      "ja":{"stringUnit":{"state":"translated","value":"すべての設定"}},
+      "ko":{"stringUnit":{"state":"translated","value":"모든 설정"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Alle instellingen"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Todos os ajustes"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"所有设置"}}
+    }},
+    "App" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"App"}},
+      "es":{"stringUnit":{"state":"translated","value":"App"}},
+      "fr":{"stringUnit":{"state":"translated","value":"App"}},
+      "it":{"stringUnit":{"state":"translated","value":"App"}},
+      "ja":{"stringUnit":{"state":"translated","value":"アプリ"}},
+      "ko":{"stringUnit":{"state":"translated","value":"앱"}},
+      "nl":{"stringUnit":{"state":"translated","value":"App"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"App"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"App"}}
+    }},
+    "App & support" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"App & Support"}},
+      "es":{"stringUnit":{"state":"translated","value":"App y soporte"}},
+      "fr":{"stringUnit":{"state":"translated","value":"App et assistance"}},
+      "it":{"stringUnit":{"state":"translated","value":"App e supporto"}},
+      "ja":{"stringUnit":{"state":"translated","value":"アプリとサポート"}},
+      "ko":{"stringUnit":{"state":"translated","value":"앱 및 지원"}},
+      "nl":{"stringUnit":{"state":"translated","value":"App en ondersteuning"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"App e suporte"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"App 与支持"}}
+    }},
+    "Clinician report" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Bericht für Behandelnde"}},
+      "es":{"stringUnit":{"state":"translated","value":"Informe clínico"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Rapport clinique"}},
+      "it":{"stringUnit":{"state":"translated","value":"Report clinico"}},
+      "ja":{"stringUnit":{"state":"translated","value":"医療者向けレポート"}},
+      "ko":{"stringUnit":{"state":"translated","value":"의료진용 보고서"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Klinisch rapport"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Relatório clínico"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"临床报告"}}
+    }},
+    "Connected apps" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Verbundene Apps"}},
+      "es":{"stringUnit":{"state":"translated","value":"Apps conectadas"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Apps connectées"}},
+      "it":{"stringUnit":{"state":"translated","value":"App collegate"}},
+      "ja":{"stringUnit":{"state":"translated","value":"接続済みアプリ"}},
+      "ko":{"stringUnit":{"state":"translated","value":"연결된 앱"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Verbonden apps"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Apps conectados"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"已连接的 App"}}
+    }},
+    "Daily notes" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Tagesnotizen"}},
+      "es":{"stringUnit":{"state":"translated","value":"Notas diarias"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Notes quotidiennes"}},
+      "it":{"stringUnit":{"state":"translated","value":"Note giornaliere"}},
+      "ja":{"stringUnit":{"state":"translated","value":"デイリーノート"}},
+      "ko":{"stringUnit":{"state":"translated","value":"일일 노트"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Dagnotities"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Notas diárias"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"每日笔记"}}
+    }},
+    "Data" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Daten"}},
+      "es":{"stringUnit":{"state":"translated","value":"Datos"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Données"}},
+      "it":{"stringUnit":{"state":"translated","value":"Dati"}},
+      "ja":{"stringUnit":{"state":"translated","value":"データ"}},
+      "ko":{"stringUnit":{"state":"translated","value":"데이터"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Gegevens"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Dados"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"数据"}}
+    }},
+    "Destinations" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Ziele"}},
+      "es":{"stringUnit":{"state":"translated","value":"Destinos"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Destinations"}},
+      "it":{"stringUnit":{"state":"translated","value":"Destinazioni"}},
+      "ja":{"stringUnit":{"state":"translated","value":"書き出し先"}},
+      "ko":{"stringUnit":{"state":"translated","value":"대상"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Bestemmingen"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Destinos"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"目标位置"}}
+    }},
+    "Edit sentence" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Satz bearbeiten"}},
+      "es":{"stringUnit":{"state":"translated","value":"Editar frase"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Modifier la phrase"}},
+      "it":{"stringUnit":{"state":"translated","value":"Modifica frase"}},
+      "ja":{"stringUnit":{"state":"translated","value":"文を編集"}},
+      "ko":{"stringUnit":{"state":"translated","value":"문장 편집"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Zin bewerken"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Editar frase"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"编辑语句"}}
+    }},
+    "Every %@ at %@" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Jeden %@ um %@"}},
+      "es":{"stringUnit":{"state":"translated","value":"Cada %@ a las %@"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Chaque %@ à %@"}},
+      "it":{"stringUnit":{"state":"translated","value":"Ogni %@ alle %@"}},
+      "ja":{"stringUnit":{"state":"translated","value":"毎週%@ %@"}},
+      "ko":{"stringUnit":{"state":"translated","value":"매주 %@ %@"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Elke %@ om %@"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Toda %@ às %@"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"每%@ %@"}}
+    }},
+    "Formats & detail" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Formate & Detail"}},
+      "es":{"stringUnit":{"state":"translated","value":"Formatos y detalle"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Formats et détail"}},
+      "it":{"stringUnit":{"state":"translated","value":"Formati e dettaglio"}},
+      "ja":{"stringUnit":{"state":"translated","value":"形式と詳細度"}},
+      "ko":{"stringUnit":{"state":"translated","value":"형식 및 세부 수준"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Formaten en detail"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Formatos e detalhe"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"格式与详细程度"}}
+    }},
+    "Mac and CLI" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Mac und CLI"}},
+      "es":{"stringUnit":{"state":"translated","value":"Mac y CLI"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Mac et CLI"}},
+      "it":{"stringUnit":{"state":"translated","value":"Mac e CLI"}},
+      "ja":{"stringUnit":{"state":"translated","value":"MacとCLI"}},
+      "ko":{"stringUnit":{"state":"translated","value":"Mac 및 CLI"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Mac en CLI"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Mac e CLI"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"Mac 和 CLI"}}
+    }},
+    "More options" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Weitere Optionen"}},
+      "es":{"stringUnit":{"state":"translated","value":"Más opciones"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Plus d’options"}},
+      "it":{"stringUnit":{"state":"translated","value":"Altre opzioni"}},
+      "ja":{"stringUnit":{"state":"translated","value":"その他のオプション"}},
+      "ko":{"stringUnit":{"state":"translated","value":"추가 옵션"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Meer opties"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Mais opções"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"更多选项"}}
+    }},
+    "Next · %@" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Nächster Lauf · %@"}},
+      "es":{"stringUnit":{"state":"translated","value":"Próxima · %@"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Prochaine · %@"}},
+      "it":{"stringUnit":{"state":"translated","value":"Prossima · %@"}},
+      "ja":{"stringUnit":{"state":"translated","value":"次回・%@"}},
+      "ko":{"stringUnit":{"state":"translated","value":"다음 · %@"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Volgende · %@"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Próxima · %@"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"下次 · %@"}}
+    }},
+    "On demand" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Auf Abruf"}},
+      "es":{"stringUnit":{"state":"translated","value":"Bajo demanda"}},
+      "fr":{"stringUnit":{"state":"translated","value":"À la demande"}},
+      "it":{"stringUnit":{"state":"translated","value":"Su richiesta"}},
+      "ja":{"stringUnit":{"state":"translated","value":"必要なときに"}},
+      "ko":{"stringUnit":{"state":"translated","value":"필요할 때"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Op aanvraag"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Sob demanda"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"按需"}}
+    }},
+    "Pause" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Pausieren"}},
+      "es":{"stringUnit":{"state":"translated","value":"Pausar"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Mettre en pause"}},
+      "it":{"stringUnit":{"state":"translated","value":"Metti in pausa"}},
+      "ja":{"stringUnit":{"state":"translated","value":"一時停止"}},
+      "ko":{"stringUnit":{"state":"translated","value":"일시 중지"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Pauzeren"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Pausar"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"暂停"}}
+    }},
+    "Restore or manage" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Wiederherstellen oder verwalten"}},
+      "es":{"stringUnit":{"state":"translated","value":"Restaurar o gestionar"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Restaurer ou gérer"}},
+      "it":{"stringUnit":{"state":"translated","value":"Ripristina o gestisci"}},
+      "ja":{"stringUnit":{"state":"translated","value":"復元または管理"}},
+      "ko":{"stringUnit":{"state":"translated","value":"복원 또는 관리"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Herstellen of beheren"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Restaurar ou gerenciar"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"恢复或管理"}}
+    }},
+    "Run now" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Jetzt ausführen"}},
+      "es":{"stringUnit":{"state":"translated","value":"Ejecutar ahora"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Exécuter maintenant"}},
+      "it":{"stringUnit":{"state":"translated","value":"Esegui ora"}},
+      "ja":{"stringUnit":{"state":"translated","value":"今すぐ実行"}},
+      "ko":{"stringUnit":{"state":"translated","value":"지금 실행"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Nu uitvoeren"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Executar agora"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"立即运行"}}
+    }},
+    "Saved exports you can schedule, run from Shortcuts, or call with the CLI." : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Gespeicherte Exporte, die du planen, über Kurzbefehle ausführen oder per CLI aufrufen kannst."}},
+      "es":{"stringUnit":{"state":"translated","value":"Exportaciones guardadas que puedes programar, ejecutar desde Atajos o llamar con la CLI."}},
+      "fr":{"stringUnit":{"state":"translated","value":"Exportations enregistrées à planifier, lancer depuis Raccourcis ou appeler avec la CLI."}},
+      "it":{"stringUnit":{"state":"translated","value":"Esportazioni salvate che puoi pianificare, eseguire da Comandi o richiamare con la CLI."}},
+      "ja":{"stringUnit":{"state":"translated","value":"スケジュール設定、ショートカットからの実行、CLIからの呼び出しができる保存済みの書き出しです。"}},
+      "ko":{"stringUnit":{"state":"translated","value":"예약하거나, 단축어에서 실행하거나, CLI로 호출할 수 있는 저장된 내보내기입니다."}},
+      "nl":{"stringUnit":{"state":"translated","value":"Bewaarde exports die je kunt plannen, via Opdrachten kunt uitvoeren of met de CLI kunt aanroepen."}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Exportações salvas que você pode agendar, executar pelos Atalhos ou chamar pela CLI."}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"已保存的导出，可定时执行、从快捷指令运行或通过 CLI 调用。"}}
+    }},
+    "Schedule & history" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Zeitplan & Verlauf"}},
+      "es":{"stringUnit":{"state":"translated","value":"Programación e historial"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Planification et historique"}},
+      "it":{"stringUnit":{"state":"translated","value":"Pianificazione e cronologia"}},
+      "ja":{"stringUnit":{"state":"translated","value":"スケジュールと履歴"}},
+      "ko":{"stringUnit":{"state":"translated","value":"일정 및 기록"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Planning en geschiedenis"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Agendamento e histórico"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"计划与历史记录"}}
+    }},
+    "When" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Wann"}},
+      "es":{"stringUnit":{"state":"translated","value":"Cuándo"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Quand"}},
+      "it":{"stringUnit":{"state":"translated","value":"Quando"}},
+      "ja":{"stringUnit":{"state":"translated","value":"タイミング"}},
+      "ko":{"stringUnit":{"state":"translated","value":"시기"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Wanneer"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Quando"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"时间"}}
+    }},
+    "Where" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Wohin"}},
+      "es":{"stringUnit":{"state":"translated","value":"Dónde"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Où"}},
+      "it":{"stringUnit":{"state":"translated","value":"Dove"}},
+      "ja":{"stringUnit":{"state":"translated","value":"保存先"}},
+      "ko":{"stringUnit":{"state":"translated","value":"위치"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Waar"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Onde"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"位置"}}
+    }},
+    "leave daily notes alone" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Tagesnotizen unverändert lassen"}},
+      "es":{"stringUnit":{"state":"translated","value":"no toque las notas diarias"}},
+      "fr":{"stringUnit":{"state":"translated","value":"ne pas toucher aux notes quotidiennes"}},
+      "it":{"stringUnit":{"state":"translated","value":"lascia invariate le note giornaliere"}},
+      "ja":{"stringUnit":{"state":"translated","value":"デイリーノートは変更しない"}},
+      "ko":{"stringUnit":{"state":"translated","value":"일일 노트는 그대로 두기"}},
+      "nl":{"stringUnit":{"state":"translated","value":"laat dagnotities ongemoeid"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"não altere as notas diárias"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"不更改每日笔记"}}
+    }},
+    "the last %lld days" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"die letzten %lld Tage"}},
+      "es":{"stringUnit":{"state":"translated","value":"los últimos %lld días"}},
+      "fr":{"stringUnit":{"state":"translated","value":"les %lld derniers jours"}},
+      "it":{"stringUnit":{"state":"translated","value":"gli ultimi %lld giorni"}},
+      "ja":{"stringUnit":{"state":"translated","value":"過去%lld日分"}},
+      "ko":{"stringUnit":{"state":"translated","value":"최근 %lld일"}},
+      "nl":{"stringUnit":{"state":"translated","value":"de laatste %lld dagen"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"os últimos %lld dias"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"过去 %lld 天"}}
+    }},
+    "update my daily note" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"meine Tagesnotiz aktualisieren"}},
+      "es":{"stringUnit":{"state":"translated","value":"actualice mi nota diaria"}},
+      "fr":{"stringUnit":{"state":"translated","value":"mettre à jour ma note quotidienne"}},
+      "it":{"stringUnit":{"state":"translated","value":"aggiorna la mia nota giornaliera"}},
+      "ja":{"stringUnit":{"state":"translated","value":"デイリーノートを更新"}},
+      "ko":{"stringUnit":{"state":"translated","value":"일일 노트 업데이트"}},
+      "nl":{"stringUnit":{"state":"translated","value":"werk mijn dagnotitie bij"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"atualize minha nota diária"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"更新我的每日笔记"}}
+    }},
+    "yesterday" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"gestern"}},
+      "es":{"stringUnit":{"state":"translated","value":"ayer"}},
+      "fr":{"stringUnit":{"state":"translated","value":"hier"}},
+      "it":{"stringUnit":{"state":"translated","value":"ieri"}},
+      "ja":{"stringUnit":{"state":"translated","value":"昨日分"}},
+      "ko":{"stringUnit":{"state":"translated","value":"어제"}},
+      "nl":{"stringUnit":{"state":"translated","value":"gisteren"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"ontem"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"昨天"}}
+    }},
+    "{when}, write {range}: {metrics} to {where} as {formats}, and {note}." : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"{when} {metrics} von {range} als {formats} nach {where} schreiben und {note}."}},
+      "es":{"stringUnit":{"state":"translated","value":"{when}, escribe {range}: {metrics} en {where} como {formats}, y {note}."}},
+      "fr":{"stringUnit":{"state":"translated","value":"{when}, écrire {range} : {metrics} vers {where} en {formats}, et {note}."}},
+      "it":{"stringUnit":{"state":"translated","value":"{when}, scrivi {range}: {metrics} in {where} come {formats}, e {note}."}},
+      "ja":{"stringUnit":{"state":"translated","value":"{when}、{range}の{metrics}を{formats}で{where}に書き込み、{note}。"}},
+      "ko":{"stringUnit":{"state":"translated","value":"{when} {range}의 {metrics}을(를) {formats} 형식으로 {where}에 기록하고 {note}."}},
+      "nl":{"stringUnit":{"state":"translated","value":"{when}: schrijf {range}: {metrics} naar {where} als {formats}, en {note}."}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"{when}, grave {range}: {metrics} em {where} como {formats}, e {note}."}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"{when}，将{range}的{metrics}以 {formats} 写入 {where}，并{note}。"}}
+    }},
+    "%@ is paused. Days while paused are not counted as gaps." : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"%@ ist pausiert. Pausierte Tage zählen nicht als Lücken."}},
+      "es":{"stringUnit":{"state":"translated","value":"%@ está en pausa. Los días en pausa no cuentan como huecos."}},
+      "fr":{"stringUnit":{"state":"translated","value":"%@ est en pause. Les jours en pause ne comptent pas comme des lacunes."}},
+      "it":{"stringUnit":{"state":"translated","value":"%@ è in pausa. I giorni in pausa non contano come lacune."}},
+      "ja":{"stringUnit":{"state":"translated","value":"%@は一時停止中です。一時停止中の日は欠落として数えません。"}},
+      "ko":{"stringUnit":{"state":"translated","value":"%@이(가) 일시 중지되었습니다. 일시 중지된 날은 누락으로 계산되지 않습니다."}},
+      "nl":{"stringUnit":{"state":"translated","value":"%@ is gepauzeerd. Gepauzeerde dagen tellen niet als hiaten."}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"%@ está em pausa. Dias em pausa não contam como lacunas."}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"%@ 已暂停。暂停期间的日期不计为缺口。"}}
+    }},
+    "%@ · paused" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"%@ · pausiert"}},
+      "es":{"stringUnit":{"state":"translated","value":"%@ · en pausa"}},
+      "fr":{"stringUnit":{"state":"translated","value":"%@ · en pause"}},
+      "it":{"stringUnit":{"state":"translated","value":"%@ · in pausa"}},
+      "ja":{"stringUnit":{"state":"translated","value":"%@・一時停止中"}},
+      "ko":{"stringUnit":{"state":"translated","value":"%@ · 일시 중지됨"}},
+      "nl":{"stringUnit":{"state":"translated","value":"%@ · gepauzeerd"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"%@ · em pausa"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"%@ · 已暂停"}}
+    }},
+    "%@ · sleep counts noon → noon. For last night, choose Yesterday." : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"%@ · Schlaf zählt von Mittag bis Mittag. Für letzte Nacht wähle Gestern."}},
+      "es":{"stringUnit":{"state":"translated","value":"%@ · el sueño cuenta de mediodía a mediodía. Para anoche, elige Ayer."}},
+      "fr":{"stringUnit":{"state":"translated","value":"%@ · le sommeil compte de midi à midi. Pour la nuit dernière, choisissez Hier."}},
+      "it":{"stringUnit":{"state":"translated","value":"%@ · il sonno conta da mezzogiorno a mezzogiorno. Per la notte scorsa, scegli Ieri."}},
+      "ja":{"stringUnit":{"state":"translated","value":"%@・睡眠は正午から正午で集計します。昨夜の分は「昨日」を選択してください。"}},
+      "ko":{"stringUnit":{"state":"translated","value":"%@ · 수면은 정오부터 정오까지 집계됩니다. 어젯밤은 어제를 선택하세요."}},
+      "nl":{"stringUnit":{"state":"translated","value":"%@ · slaap telt van middag tot middag. Kies Gisteren voor afgelopen nacht."}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"%@ · o sono conta de meio-dia a meio-dia. Para a noite passada, escolha Ontem."}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"%@ · 睡眠按中午至中午计算。要查看昨晚的数据，请选择“昨天”。"}}
+    }},
+    "%@, %@; issues: %@" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"%@, %@; Probleme: %@"}},
+      "es":{"stringUnit":{"state":"translated","value":"%@, %@; problemas: %@"}},
+      "fr":{"stringUnit":{"state":"translated","value":"%@, %@ ; problèmes : %@"}},
+      "it":{"stringUnit":{"state":"translated","value":"%@, %@; problemi: %@"}},
+      "ja":{"stringUnit":{"state":"translated","value":"%@、%@、問題：%@"}},
+      "ko":{"stringUnit":{"state":"translated","value":"%@, %@, 문제: %@"}},
+      "nl":{"stringUnit":{"state":"translated","value":"%@, %@; problemen: %@"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"%@, %@; problemas: %@"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"%@，%@；问题：%@"}}
+    }},
+    "%lld gap(s)" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"%lld Lücke(n)"}},
+      "es":{"stringUnit":{"state":"translated","value":"%lld hueco(s)"}},
+      "fr":{"stringUnit":{"state":"translated","value":"%lld lacune(s)"}},
+      "it":{"stringUnit":{"state":"translated","value":"%lld lacuna/e"}},
+      "ja":{"stringUnit":{"state":"translated","value":"%lld件の欠落"}},
+      "ko":{"stringUnit":{"state":"translated","value":"누락 %lld개"}},
+      "nl":{"stringUnit":{"state":"translated","value":"%lld hiaat/hiaten"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"%lld lacuna(s)"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"%lld 个缺口"}}
+    }},
+    "%lld item(s) need a look." : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"%lld Punkt(e) brauchen Aufmerksamkeit."}},
+      "es":{"stringUnit":{"state":"translated","value":"%lld elemento(s) necesitan revisión."}},
+      "fr":{"stringUnit":{"state":"translated","value":"%lld élément(s) à vérifier."}},
+      "it":{"stringUnit":{"state":"translated","value":"%lld elemento/i da controllare."}},
+      "ja":{"stringUnit":{"state":"translated","value":"%lld件の確認が必要です。"}},
+      "ko":{"stringUnit":{"state":"translated","value":"확인이 필요한 항목 %lld개"}},
+      "nl":{"stringUnit":{"state":"translated","value":"%lld item(s) vragen aandacht."}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"%lld item(ns) precisam de atenção."}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"%lld 项需要查看。"}}
+    }},
+    "%lld of %lld on track" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"%lld von %lld im Plan"}},
+      "es":{"stringUnit":{"state":"translated","value":"%lld de %lld al día"}},
+      "fr":{"stringUnit":{"state":"translated","value":"%lld sur %lld à jour"}},
+      "it":{"stringUnit":{"state":"translated","value":"%lld su %lld in regola"}},
+      "ja":{"stringUnit":{"state":"translated","value":"%lld／%lld件 順調"}},
+      "ko":{"stringUnit":{"state":"translated","value":"%lld/%lld개 정상"}},
+      "nl":{"stringUnit":{"state":"translated","value":"%lld van %lld op schema"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"%lld de %lld em dia"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"%lld/%lld 正常"}}
+    }},
+    "%lld of %lld refreshes sent" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"%lld von %lld Aktualisierungen gesendet"}},
+      "es":{"stringUnit":{"state":"translated","value":"%lld de %lld actualizaciones enviadas"}},
+      "fr":{"stringUnit":{"state":"translated","value":"%lld actualisations envoyées sur %lld"}},
+      "it":{"stringUnit":{"state":"translated","value":"%lld aggiornamenti inviati su %lld"}},
+      "ja":{"stringUnit":{"state":"translated","value":"%lld／%lld回の更新を送信"}},
+      "ko":{"stringUnit":{"state":"translated","value":"새로 고침 %lld/%lld회 전송됨"}},
+      "nl":{"stringUnit":{"state":"translated","value":"%lld van %lld vernieuwingen verzonden"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"%lld de %lld atualizações enviadas"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"已发送 %lld/%lld 次刷新"}}
+    }},
+    "%lld running and %lld paused. “All” counts a day complete when every running automation that was due covered it." : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"%lld aktiv und %lld pausiert. „Alle“ zählt einen Tag als vollständig, wenn jede fällige aktive Automation ihn abgedeckt hat."}},
+      "es":{"stringUnit":{"state":"translated","value":"%lld activas y %lld en pausa. «Todas» cuenta un día como completo cuando lo cubrió cada automatización activa prevista."}},
+      "fr":{"stringUnit":{"state":"translated","value":"%lld actives et %lld en pause. « Toutes » compte un jour comme complet lorsque chaque automatisation active prévue l’a couvert."}},
+      "it":{"stringUnit":{"state":"translated","value":"%lld attive e %lld in pausa. «Tutte» considera completo un giorno quando ogni automazione attiva prevista lo ha coperto."}},
+      "ja":{"stringUnit":{"state":"translated","value":"実行中%lld件、一時停止中%lld件。「すべて」では、対象の実行中オートメーションがすべて対応した日を完了として数えます。"}},
+      "ko":{"stringUnit":{"state":"translated","value":"실행 중 %lld개, 일시 중지 %lld개. ‘전체’는 해당하는 실행 중 자동화가 모두 처리한 날을 완료로 계산합니다."}},
+      "nl":{"stringUnit":{"state":"translated","value":"%lld actief en %lld gepauzeerd. ‘Alle’ telt een dag als voltooid wanneer elke actieve automatisering die aan de beurt was hem heeft gedekt."}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"%lld ativas e %lld em pausa. “Todas” conta um dia como completo quando cada automação ativa prevista o cobriu."}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"%lld 个运行中，%lld 个已暂停。“全部”在所有到期的运行中自动化都覆盖某天时，才将其计为完成。"}}
+    }},
+    "%lld-day streak" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"%lld-Tage-Serie"}},
+      "es":{"stringUnit":{"state":"translated","value":"Racha de %lld días"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Série de %lld jours"}},
+      "it":{"stringUnit":{"state":"translated","value":"Serie di %lld giorni"}},
+      "ja":{"stringUnit":{"state":"translated","value":"%lld日連続"}},
+      "ko":{"stringUnit":{"state":"translated","value":"%lld일 연속"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Reeks van %lld dagen"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Sequência de %lld dias"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"连续 %lld 天"}}
+    }},
+    "%lld-week streak" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"%lld-Wochen-Serie"}},
+      "es":{"stringUnit":{"state":"translated","value":"Racha de %lld semanas"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Série de %lld semaines"}},
+      "it":{"stringUnit":{"state":"translated","value":"Serie di %lld settimane"}},
+      "ja":{"stringUnit":{"state":"translated","value":"%lld週連続"}},
+      "ko":{"stringUnit":{"state":"translated","value":"%lld주 연속"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Reeks van %lld weken"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Sequência de %lld semanas"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"连续 %lld 周"}}
+    }},
+    "1 range summary for %@" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"1 Zeitraumzusammenfassung für %@"}},
+      "es":{"stringUnit":{"state":"translated","value":"1 resumen del período para %@"}},
+      "fr":{"stringUnit":{"state":"translated","value":"1 résumé de période pour %@"}},
+      "it":{"stringUnit":{"state":"translated","value":"1 riepilogo del periodo per %@"}},
+      "ja":{"stringUnit":{"state":"translated","value":"%@の期間サマリー1件"}},
+      "ko":{"stringUnit":{"state":"translated","value":"%@ 기간 요약 1개"}},
+      "nl":{"stringUnit":{"state":"translated","value":"1 periodesamenvatting voor %@"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"1 resumo do período para %@"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"%@ 的 1 份区间摘要"}}
+    }},
+    "30 days" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"30 Tage"}},
+      "es":{"stringUnit":{"state":"translated","value":"30 días"}},
+      "fr":{"stringUnit":{"state":"translated","value":"30 jours"}},
+      "it":{"stringUnit":{"state":"translated","value":"30 giorni"}},
+      "ja":{"stringUnit":{"state":"translated","value":"30日"}},
+      "ko":{"stringUnit":{"state":"translated","value":"30일"}},
+      "nl":{"stringUnit":{"state":"translated","value":"30 dagen"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"30 dias"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"30 天"}}
+    }},
+    "7 days" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"7 Tage"}},
+      "es":{"stringUnit":{"state":"translated","value":"7 días"}},
+      "fr":{"stringUnit":{"state":"translated","value":"7 jours"}},
+      "it":{"stringUnit":{"state":"translated","value":"7 giorni"}},
+      "ja":{"stringUnit":{"state":"translated","value":"7日"}},
+      "ko":{"stringUnit":{"state":"translated","value":"7일"}},
+      "nl":{"stringUnit":{"state":"translated","value":"7 dagen"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"7 dias"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"7 天"}}
+    }},
+    "About %lld file(s) · %lld day(s)" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Ca. %lld Datei(en) · %lld Tag(e)"}},
+      "es":{"stringUnit":{"state":"translated","value":"Unos %lld archivo(s) · %lld día(s)"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Environ %lld fichier(s) · %lld jour(s)"}},
+      "it":{"stringUnit":{"state":"translated","value":"Circa %lld file · %lld giorno/i"}},
+      "ja":{"stringUnit":{"state":"translated","value":"約%lldファイル・%lld日"}},
+      "ko":{"stringUnit":{"state":"translated","value":"약 %lld개 파일 · %lld일"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Ongeveer %lld bestand(en) · %lld dag(en)"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Cerca de %lld arquivo(s) · %lld dia(s)"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"约 %lld 个文件 · %lld 天"}}
+    }},
+    "All" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Alle"}},
+      "es":{"stringUnit":{"state":"translated","value":"Todas"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Toutes"}},
+      "it":{"stringUnit":{"state":"translated","value":"Tutte"}},
+      "ja":{"stringUnit":{"state":"translated","value":"すべて"}},
+      "ko":{"stringUnit":{"state":"translated","value":"전체"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Alle"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Todas"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"全部"}}
+    }},
+    "All export settings" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Alle Exporteinstellungen"}},
+      "es":{"stringUnit":{"state":"translated","value":"Todos los ajustes de exportación"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Tous les réglages d’exportation"}},
+      "it":{"stringUnit":{"state":"translated","value":"Tutte le impostazioni di esportazione"}},
+      "ja":{"stringUnit":{"state":"translated","value":"すべての書き出し設定"}},
+      "ko":{"stringUnit":{"state":"translated","value":"모든 내보내기 설정"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Alle exportinstellingen"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Todos os ajustes de exportação"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"所有导出设置"}}
+    }},
+    "Apple Health permission" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Apple Health-Berechtigung"}},
+      "es":{"stringUnit":{"state":"translated","value":"Permiso de Apple Health"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Autorisation Apple Santé"}},
+      "it":{"stringUnit":{"state":"translated","value":"Autorizzazione Apple Salute"}},
+      "ja":{"stringUnit":{"state":"translated","value":"Appleヘルスケアの権限"}},
+      "ko":{"stringUnit":{"state":"translated","value":"Apple 건강 권한"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Apple Gezondheid-toestemming"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Permissão do Apple Saúde"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"Apple 健康权限"}}
+    }},
+    "Archive" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Archiv"}},
+      "es":{"stringUnit":{"state":"translated","value":"Archivo"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Archives"}},
+      "it":{"stringUnit":{"state":"translated","value":"Archivio"}},
+      "ja":{"stringUnit":{"state":"translated","value":"アーカイブ"}},
+      "ko":{"stringUnit":{"state":"translated","value":"아카이브"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Archief"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Arquivo"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"归档"}}
+    }},
+    "Automations" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Automationen"}},
+      "es":{"stringUnit":{"state":"translated","value":"Automatizaciones"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Automatisations"}},
+      "it":{"stringUnit":{"state":"translated","value":"Automazioni"}},
+      "ja":{"stringUnit":{"state":"translated","value":"オートメーション"}},
+      "ko":{"stringUnit":{"state":"translated","value":"자동화"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Automatiseringen"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Automações"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"自动化"}}
+    }},
+    "Backfill" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Nachtragen"}},
+      "es":{"stringUnit":{"state":"translated","value":"Completar"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Rattraper"}},
+      "it":{"stringUnit":{"state":"translated","value":"Recupera"}},
+      "ja":{"stringUnit":{"state":"translated","value":"補完"}},
+      "ko":{"stringUnit":{"state":"translated","value":"채우기"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Aanvullen"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Preencher"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"补齐"}}
+    }},
+    "Before Health.md kept coverage history." : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Bevor Health.md einen Abdeckungsverlauf führte."}},
+      "es":{"stringUnit":{"state":"translated","value":"Antes de que Health.md guardara el historial de cobertura."}},
+      "fr":{"stringUnit":{"state":"translated","value":"Avant que Health.md ne conserve l’historique de couverture."}},
+      "it":{"stringUnit":{"state":"translated","value":"Prima che Health.md conservasse la cronologia di copertura."}},
+      "ja":{"stringUnit":{"state":"translated","value":"Health.mdがカバー履歴を記録する前の日付です。"}},
+      "ko":{"stringUnit":{"state":"translated","value":"Health.md가 적용 기록을 보관하기 전입니다."}},
+      "nl":{"stringUnit":{"state":"translated","value":"Voordat Health.md dekkingsgeschiedenis bijhield."}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Antes de o Health.md manter o histórico de cobertura."}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"早于 Health.md 开始保留覆盖记录的时间。"}}
+    }},
+    "Choose the export folder again to resume exports." : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Wähle den Exportordner erneut aus, um Exporte fortzusetzen."}},
+      "es":{"stringUnit":{"state":"translated","value":"Vuelve a elegir la carpeta de exportación para reanudar las exportaciones."}},
+      "fr":{"stringUnit":{"state":"translated","value":"Choisissez à nouveau le dossier d’exportation pour reprendre les exportations."}},
+      "it":{"stringUnit":{"state":"translated","value":"Scegli di nuovo la cartella di esportazione per riprendere le esportazioni."}},
+      "ja":{"stringUnit":{"state":"translated","value":"書き出しを再開するには、書き出し先フォルダをもう一度選択してください。"}},
+      "ko":{"stringUnit":{"state":"translated","value":"내보내기를 재개하려면 내보내기 폴더를 다시 선택하세요."}},
+      "nl":{"stringUnit":{"state":"translated","value":"Kies de exportmap opnieuw om exports te hervatten."}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Escolha a pasta de exportação novamente para retomar as exportações."}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"请重新选择导出文件夹以恢复导出。"}}
+    }},
+    "Completed dates stay completed. Retry writes only the failed dates." : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Abgeschlossene Tage bleiben erhalten. „Erneut versuchen“ schreibt nur die fehlgeschlagenen Tage."}},
+      "es":{"stringUnit":{"state":"translated","value":"Las fechas completadas se conservan. Reintentar solo escribe las fechas fallidas."}},
+      "fr":{"stringUnit":{"state":"translated","value":"Les dates terminées sont conservées. Réessayer n’écrit que les dates en échec."}},
+      "it":{"stringUnit":{"state":"translated","value":"Le date completate restano tali. Riprova scrive solo le date non riuscite."}},
+      "ja":{"stringUnit":{"state":"translated","value":"完了した日付はそのまま残ります。再試行では失敗した日付のみ書き込みます。"}},
+      "ko":{"stringUnit":{"state":"translated","value":"완료된 날짜는 유지됩니다. 다시 시도하면 실패한 날짜만 기록합니다."}},
+      "nl":{"stringUnit":{"state":"translated","value":"Voltooide datums blijven behouden. Opnieuw proberen schrijft alleen de mislukte datums."}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"As datas concluídas são mantidas. Tentar novamente grava só as datas com falha."}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"已完成的日期会保留。重试仅写入失败的日期。"}}
+    }},
+    "Dates" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Daten"}},
+      "es":{"stringUnit":{"state":"translated","value":"Fechas"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Dates"}},
+      "it":{"stringUnit":{"state":"translated","value":"Date"}},
+      "ja":{"stringUnit":{"state":"translated","value":"日付"}},
+      "ko":{"stringUnit":{"state":"translated","value":"날짜"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Datums"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Datas"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"日期"}}
+    }},
+    "Each day you export fills a square on the calendar." : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Jeder exportierte Tag füllt ein Feld im Kalender."}},
+      "es":{"stringUnit":{"state":"translated","value":"Cada día que exportas llena un cuadro del calendario."}},
+      "fr":{"stringUnit":{"state":"translated","value":"Chaque jour exporté remplit une case du calendrier."}},
+      "it":{"stringUnit":{"state":"translated","value":"Ogni giorno esportato riempie una casella del calendario."}},
+      "ja":{"stringUnit":{"state":"translated","value":"書き出した日ごとにカレンダーのマスが埋まります。"}},
+      "ko":{"stringUnit":{"state":"translated","value":"내보낸 날마다 캘린더 칸이 채워집니다."}},
+      "nl":{"stringUnit":{"state":"translated","value":"Elke geëxporteerde dag vult een vakje in de kalender."}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Cada dia exportado preenche um quadrado no calendário."}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"每导出一天，就会填满日历上的一格。"}}
+    }},
+    "Export %lld days" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"%lld Tage exportieren"}},
+      "es":{"stringUnit":{"state":"translated","value":"Exportar %lld días"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Exporter %lld jours"}},
+      "it":{"stringUnit":{"state":"translated","value":"Esporta %lld giorni"}},
+      "ja":{"stringUnit":{"state":"translated","value":"%lld日分を書き出す"}},
+      "ko":{"stringUnit":{"state":"translated","value":"%lld일 내보내기"}},
+      "nl":{"stringUnit":{"state":"translated","value":"%lld dagen exporteren"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Exportar %lld dias"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"导出 %lld 天"}}
+    }},
+    "Export %lld days?" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"%lld Tage exportieren?"}},
+      "es":{"stringUnit":{"state":"translated","value":"¿Exportar %lld días?"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Exporter %lld jours ?"}},
+      "it":{"stringUnit":{"state":"translated","value":"Esportare %lld giorni?"}},
+      "ja":{"stringUnit":{"state":"translated","value":"%lld日分を書き出しますか？"}},
+      "ko":{"stringUnit":{"state":"translated","value":"%lld일을 내보낼까요?"}},
+      "nl":{"stringUnit":{"state":"translated","value":"%lld dagen exporteren?"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Exportar %lld dias?"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"要导出 %lld 天吗？"}}
+    }},
+    "Export yesterday" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Gestern exportieren"}},
+      "es":{"stringUnit":{"state":"translated","value":"Exportar ayer"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Exporter hier"}},
+      "it":{"stringUnit":{"state":"translated","value":"Esporta ieri"}},
+      "ja":{"stringUnit":{"state":"translated","value":"昨日分を書き出す"}},
+      "ko":{"stringUnit":{"state":"translated","value":"어제 내보내기"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Gisteren exporteren"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Exportar ontem"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"导出昨天"}}
+    }},
+    "Exporting…" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Wird exportiert …"}},
+      "es":{"stringUnit":{"state":"translated","value":"Exportando…"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Exportation…"}},
+      "it":{"stringUnit":{"state":"translated","value":"Esportazione…"}},
+      "ja":{"stringUnit":{"state":"translated","value":"書き出し中…"}},
+      "ko":{"stringUnit":{"state":"translated","value":"내보내는 중…"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Exporteren…"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Exportando…"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"正在导出…"}}
+    }},
+    "Folder unavailable" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Ordner nicht verfügbar"}},
+      "es":{"stringUnit":{"state":"translated","value":"Carpeta no disponible"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Dossier indisponible"}},
+      "it":{"stringUnit":{"state":"translated","value":"Cartella non disponibile"}},
+      "ja":{"stringUnit":{"state":"translated","value":"フォルダを利用できません"}},
+      "ko":{"stringUnit":{"state":"translated","value":"폴더를 사용할 수 없음"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Map niet beschikbaar"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Pasta indisponível"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"文件夹不可用"}}
+    }},
+    "Health.md can’t read your health data until you allow it." : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Health.md kann deine Gesundheitsdaten erst lesen, wenn du es erlaubst."}},
+      "es":{"stringUnit":{"state":"translated","value":"Health.md no puede leer tus datos de salud hasta que lo permitas."}},
+      "fr":{"stringUnit":{"state":"translated","value":"Health.md ne peut pas lire vos données de santé tant que vous ne l’autorisez pas."}},
+      "it":{"stringUnit":{"state":"translated","value":"Health.md non può leggere i tuoi dati sanitari finché non lo consenti."}},
+      "ja":{"stringUnit":{"state":"translated","value":"許可するまでHealth.mdはヘルスケアデータを読み取れません。"}},
+      "ko":{"stringUnit":{"state":"translated","value":"허용하기 전에는 Health.md가 건강 데이터를 읽을 수 없습니다."}},
+      "nl":{"stringUnit":{"state":"translated","value":"Health.md kan je gezondheidsgegevens pas lezen als je dat toestaat."}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"O Health.md só pode ler seus dados de saúde depois que você permitir."}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"在你允许之前，Health.md 无法读取你的健康数据。"}}
+    }},
+    "Large export." : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Großer Export."}},
+      "es":{"stringUnit":{"state":"translated","value":"Exportación grande."}},
+      "fr":{"stringUnit":{"state":"translated","value":"Exportation volumineuse."}},
+      "it":{"stringUnit":{"state":"translated","value":"Esportazione grande."}},
+      "ja":{"stringUnit":{"state":"translated","value":"大きな書き出しです。"}},
+      "ko":{"stringUnit":{"state":"translated","value":"대용량 내보내기입니다."}},
+      "nl":{"stringUnit":{"state":"translated","value":"Grote export."}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Exportação grande."}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"导出量较大。"}}
+    }},
+    "Manage" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Verwalten"}},
+      "es":{"stringUnit":{"state":"translated","value":"Gestionar"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Gérer"}},
+      "it":{"stringUnit":{"state":"translated","value":"Gestisci"}},
+      "ja":{"stringUnit":{"state":"translated","value":"管理"}},
+      "ko":{"stringUnit":{"state":"translated","value":"관리"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Beheren"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Gerenciar"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"管理"}}
+    }},
+    "Needs attention" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Aufmerksamkeit nötig"}},
+      "es":{"stringUnit":{"state":"translated","value":"Requiere atención"}},
+      "fr":{"stringUnit":{"state":"translated","value":"À vérifier"}},
+      "it":{"stringUnit":{"state":"translated","value":"Richiede attenzione"}},
+      "ja":{"stringUnit":{"state":"translated","value":"要確認"}},
+      "ko":{"stringUnit":{"state":"translated","value":"확인 필요"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Vraagt aandacht"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Requer atenção"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"需要关注"}}
+    }},
+    "Next month" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Nächster Monat"}},
+      "es":{"stringUnit":{"state":"translated","value":"Mes siguiente"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Mois suivant"}},
+      "it":{"stringUnit":{"state":"translated","value":"Mese successivo"}},
+      "ja":{"stringUnit":{"state":"translated","value":"次の月"}},
+      "ko":{"stringUnit":{"state":"translated","value":"다음 달"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Volgende maand"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Próximo mês"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"下个月"}}
+    }},
+    "No data that day" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Keine Daten an diesem Tag"}},
+      "es":{"stringUnit":{"state":"translated","value":"Sin datos ese día"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Aucune donnée ce jour-là"}},
+      "it":{"stringUnit":{"state":"translated","value":"Nessun dato quel giorno"}},
+      "ja":{"stringUnit":{"state":"translated","value":"その日のデータなし"}},
+      "ko":{"stringUnit":{"state":"translated","value":"해당 날짜 데이터 없음"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Geen gegevens op die dag"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Sem dados nesse dia"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"当天无数据"}}
+    }},
+    "No export covered this date." : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Kein Export hat dieses Datum abgedeckt."}},
+      "es":{"stringUnit":{"state":"translated","value":"Ninguna exportación cubrió esta fecha."}},
+      "fr":{"stringUnit":{"state":"translated","value":"Aucune exportation n’a couvert cette date."}},
+      "it":{"stringUnit":{"state":"translated","value":"Nessuna esportazione ha coperto questa data."}},
+      "ja":{"stringUnit":{"state":"translated","value":"この日付を対象とした書き出しはありません。"}},
+      "ko":{"stringUnit":{"state":"translated","value":"이 날짜를 포함한 내보내기가 없습니다."}},
+      "nl":{"stringUnit":{"state":"translated","value":"Geen export heeft deze datum gedekt."}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Nenhuma exportação cobriu esta data."}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"没有导出覆盖此日期。"}}
+    }},
+    "No gaps" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Keine Lücken"}},
+      "es":{"stringUnit":{"state":"translated","value":"Sin huecos"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Aucune lacune"}},
+      "it":{"stringUnit":{"state":"translated","value":"Nessuna lacuna"}},
+      "ja":{"stringUnit":{"state":"translated","value":"欠落なし"}},
+      "ko":{"stringUnit":{"state":"translated","value":"누락 없음"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Geen hiaten"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Sem lacunas"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"无缺口"}}
+    }},
+    "Not due" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Nicht fällig"}},
+      "es":{"stringUnit":{"state":"translated","value":"No previsto"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Non prévu"}},
+      "it":{"stringUnit":{"state":"translated","value":"Non previsto"}},
+      "ja":{"stringUnit":{"state":"translated","value":"対象外"}},
+      "ko":{"stringUnit":{"state":"translated","value":"예정 아님"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Niet aan de beurt"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Não previsto"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"未到期"}}
+    }},
+    "Not due on this date." : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"An diesem Datum nicht fällig."}},
+      "es":{"stringUnit":{"state":"translated","value":"No previsto en esta fecha."}},
+      "fr":{"stringUnit":{"state":"translated","value":"Non prévu à cette date."}},
+      "it":{"stringUnit":{"state":"translated","value":"Non previsto in questa data."}},
+      "ja":{"stringUnit":{"state":"translated","value":"この日付は対象外です。"}},
+      "ko":{"stringUnit":{"state":"translated","value":"이 날짜에는 예정되어 있지 않습니다."}},
+      "nl":{"stringUnit":{"state":"translated","value":"Niet aan de beurt op deze datum."}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Não previsto nesta data."}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"此日期未到期。"}}
+    }},
+    "Nothing due" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Nichts fällig"}},
+      "es":{"stringUnit":{"state":"translated","value":"Nada previsto"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Rien de prévu"}},
+      "it":{"stringUnit":{"state":"translated","value":"Niente previsto"}},
+      "ja":{"stringUnit":{"state":"translated","value":"対象なし"}},
+      "ko":{"stringUnit":{"state":"translated","value":"예정 없음"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Niets aan de beurt"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Nada previsto"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"无到期项"}}
+    }},
+    "One roll-up file; skips daily files, notes and entries" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Eine Sammeldatei; überspringt Tagesdateien, Notizen und Einträge"}},
+      "es":{"stringUnit":{"state":"translated","value":"Un archivo resumido; omite archivos diarios, notas y entradas"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Un fichier récapitulatif ; ignore les fichiers quotidiens, notes et entrées"}},
+      "it":{"stringUnit":{"state":"translated","value":"Un file riepilogativo; salta file giornalieri, note e voci"}},
+      "ja":{"stringUnit":{"state":"translated","value":"1つの集計ファイル。日別ファイル、ノート、エントリは省略します"}},
+      "ko":{"stringUnit":{"state":"translated","value":"요약 파일 1개. 일별 파일, 노트, 항목은 건너뜁니다"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Eén samenvattend bestand; slaat dagbestanden, notities en items over"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Um arquivo consolidado; ignora arquivos diários, notas e entradas"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"一个汇总文件；跳过每日文件、笔记和条目"}}
+    }},
+    "Open" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Öffnen"}},
+      "es":{"stringUnit":{"state":"translated","value":"Abrir"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Ouvrir"}},
+      "it":{"stringUnit":{"state":"translated","value":"Apri"}},
+      "ja":{"stringUnit":{"state":"translated","value":"開く"}},
+      "ko":{"stringUnit":{"state":"translated","value":"열기"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Openen"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Abrir"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"打开"}}
+    }},
+    "Paused — not counted as a gap." : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Pausiert – zählt nicht als Lücke."}},
+      "es":{"stringUnit":{"state":"translated","value":"En pausa: no cuenta como hueco."}},
+      "fr":{"stringUnit":{"state":"translated","value":"En pause : ne compte pas comme une lacune."}},
+      "it":{"stringUnit":{"state":"translated","value":"In pausa: non conta come lacuna."}},
+      "ja":{"stringUnit":{"state":"translated","value":"一時停止中：欠落として数えません。"}},
+      "ko":{"stringUnit":{"state":"translated","value":"일시 중지됨: 누락으로 계산되지 않습니다."}},
+      "nl":{"stringUnit":{"state":"translated","value":"Gepauzeerd: telt niet als hiaat."}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Em pausa: não conta como lacuna."}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"已暂停，不计为缺口。"}}
+    }},
+    "Previous month" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Vorheriger Monat"}},
+      "es":{"stringUnit":{"state":"translated","value":"Mes anterior"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Mois précédent"}},
+      "it":{"stringUnit":{"state":"translated","value":"Mese precedente"}},
+      "ja":{"stringUnit":{"state":"translated","value":"前の月"}},
+      "ko":{"stringUnit":{"state":"translated","value":"이전 달"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Vorige maand"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Mês anterior"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"上个月"}}
+    }},
+    "Re-export" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Erneut exportieren"}},
+      "es":{"stringUnit":{"state":"translated","value":"Volver a exportar"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Réexporter"}},
+      "it":{"stringUnit":{"state":"translated","value":"Esporta di nuovo"}},
+      "ja":{"stringUnit":{"state":"translated","value":"再書き出し"}},
+      "ko":{"stringUnit":{"state":"translated","value":"다시 내보내기"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Opnieuw exporteren"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Exportar novamente"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"重新导出"}}
+    }},
+    "Resume" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Fortsetzen"}},
+      "es":{"stringUnit":{"state":"translated","value":"Reanudar"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Reprendre"}},
+      "it":{"stringUnit":{"state":"translated","value":"Riprendi"}},
+      "ja":{"stringUnit":{"state":"translated","value":"再開"}},
+      "ko":{"stringUnit":{"state":"translated","value":"재개"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Hervatten"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Retomar"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"恢复"}}
+    }},
+    "Retry" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Erneut versuchen"}},
+      "es":{"stringUnit":{"state":"translated","value":"Reintentar"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Réessayer"}},
+      "it":{"stringUnit":{"state":"translated","value":"Riprova"}},
+      "ja":{"stringUnit":{"state":"translated","value":"再試行"}},
+      "ko":{"stringUnit":{"state":"translated","value":"다시 시도"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Opnieuw proberen"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Tentar novamente"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"重试"}}
+    }},
+    "Some data was skipped." : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Einige Daten wurden übersprungen."}},
+      "es":{"stringUnit":{"state":"translated","value":"Se omitieron algunos datos."}},
+      "fr":{"stringUnit":{"state":"translated","value":"Certaines données ont été ignorées."}},
+      "it":{"stringUnit":{"state":"translated","value":"Alcuni dati sono stati saltati."}},
+      "ja":{"stringUnit":{"state":"translated","value":"一部のデータをスキップしました。"}},
+      "ko":{"stringUnit":{"state":"translated","value":"일부 데이터를 건너뛰었습니다."}},
+      "nl":{"stringUnit":{"state":"translated","value":"Sommige gegevens zijn overgeslagen."}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Alguns dados foram ignorados."}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"部分数据已跳过。"}}
+    }},
+    "Still updating today." : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Wird heute noch aktualisiert."}},
+      "es":{"stringUnit":{"state":"translated","value":"Aún se actualiza hoy."}},
+      "fr":{"stringUnit":{"state":"translated","value":"Encore en cours de mise à jour aujourd’hui."}},
+      "it":{"stringUnit":{"state":"translated","value":"Ancora in aggiornamento oggi."}},
+      "ja":{"stringUnit":{"state":"translated","value":"本日分は更新中です。"}},
+      "ko":{"stringUnit":{"state":"translated","value":"오늘 데이터는 아직 업데이트 중입니다."}},
+      "nl":{"stringUnit":{"state":"translated","value":"Wordt vandaag nog bijgewerkt."}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Ainda atualizando hoje."}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"今天的数据仍在更新。"}}
+    }},
+    "This can take several minutes; keep Health.md open until it finishes." : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Das kann einige Minuten dauern. Lass Health.md geöffnet, bis es fertig ist."}},
+      "es":{"stringUnit":{"state":"translated","value":"Esto puede tardar varios minutos; mantén Health.md abierto hasta que termine."}},
+      "fr":{"stringUnit":{"state":"translated","value":"Cela peut prendre plusieurs minutes ; gardez Health.md ouvert jusqu’à la fin."}},
+      "it":{"stringUnit":{"state":"translated","value":"Può richiedere alcuni minuti; tieni Health.md aperto fino al termine."}},
+      "ja":{"stringUnit":{"state":"translated","value":"数分かかる場合があります。完了するまでHealth.mdを開いたままにしてください。"}},
+      "ko":{"stringUnit":{"state":"translated","value":"몇 분 정도 걸릴 수 있습니다. 완료될 때까지 Health.md를 열어 두세요."}},
+      "nl":{"stringUnit":{"state":"translated","value":"Dit kan enkele minuten duren. Houd Health.md open tot het klaar is."}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Isso pode levar vários minutos; mantenha o Health.md aberto até terminar."}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"这可能需要几分钟；请保持 Health.md 打开直至完成。"}}
+    }},
+    "Updating" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Wird aktualisiert"}},
+      "es":{"stringUnit":{"state":"translated","value":"Actualizando"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Mise à jour"}},
+      "it":{"stringUnit":{"state":"translated","value":"Aggiornamento"}},
+      "ja":{"stringUnit":{"state":"translated","value":"更新中"}},
+      "ko":{"stringUnit":{"state":"translated","value":"업데이트 중"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Bijwerken"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Atualizando"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"正在更新"}}
+    }},
+    "Will write" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Wird geschrieben"}},
+      "es":{"stringUnit":{"state":"translated","value":"Se escribirá"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Sera écrit"}},
+      "it":{"stringUnit":{"state":"translated","value":"Verrà scritto"}},
+      "ja":{"stringUnit":{"state":"translated","value":"書き込み内容"}},
+      "ko":{"stringUnit":{"state":"translated","value":"기록 예정"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Wordt geschreven"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Será gravado"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"将写入"}}
+    }},
+    "Write summary" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Zusammenfassung schreiben"}},
+      "es":{"stringUnit":{"state":"translated","value":"Escribir resumen"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Écrire le résumé"}},
+      "it":{"stringUnit":{"state":"translated","value":"Scrivi riepilogo"}},
+      "ja":{"stringUnit":{"state":"translated","value":"サマリーを書き込む"}},
+      "ko":{"stringUnit":{"state":"translated","value":"요약 기록"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Samenvatting schrijven"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Gravar resumo"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"写入摘要"}}
+    }},
+    "Written" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Geschrieben"}},
+      "es":{"stringUnit":{"state":"translated","value":"Escrito"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Écrit"}},
+      "it":{"stringUnit":{"state":"translated","value":"Scritto"}},
+      "ja":{"stringUnit":{"state":"translated","value":"書き込み済み"}},
+      "ko":{"stringUnit":{"state":"translated","value":"기록됨"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Geschreven"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Gravado"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"已写入"}}
+    }},
+    "Your archive starts here" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Dein Archiv beginnt hier"}},
+      "es":{"stringUnit":{"state":"translated","value":"Tu archivo empieza aquí"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Vos archives commencent ici"}},
+      "it":{"stringUnit":{"state":"translated","value":"Il tuo archivio inizia qui"}},
+      "ja":{"stringUnit":{"state":"translated","value":"アーカイブはここから始まります"}},
+      "ko":{"stringUnit":{"state":"translated","value":"아카이브가 여기서 시작됩니다"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Je archief begint hier"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Seu arquivo começa aqui"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"你的归档从这里开始"}}
+    }},
+    "days archived across automations" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"archivierte Tage über alle Automationen"}},
+      "es":{"stringUnit":{"state":"translated","value":"días archivados en las automatizaciones"}},
+      "fr":{"stringUnit":{"state":"translated","value":"jours archivés sur les automatisations"}},
+      "it":{"stringUnit":{"state":"translated","value":"giorni archiviati tra le automazioni"}},
+      "ja":{"stringUnit":{"state":"translated","value":"全オートメーションのアーカイブ日数"}},
+      "ko":{"stringUnit":{"state":"translated","value":"자동화 전체 아카이브 일수"}},
+      "nl":{"stringUnit":{"state":"translated","value":"gearchiveerde dagen over automatiseringen"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"dias arquivados nas automações"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"各自动化已归档天数"}}
+    }},
+    "days archived before pausing" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"archivierte Tage vor der Pause"}},
+      "es":{"stringUnit":{"state":"translated","value":"días archivados antes de pausar"}},
+      "fr":{"stringUnit":{"state":"translated","value":"jours archivés avant la pause"}},
+      "it":{"stringUnit":{"state":"translated","value":"giorni archiviati prima della pausa"}},
+      "ja":{"stringUnit":{"state":"translated","value":"一時停止前のアーカイブ日数"}},
+      "ko":{"stringUnit":{"state":"translated","value":"일시 중지 전 아카이브 일수"}},
+      "nl":{"stringUnit":{"state":"translated","value":"gearchiveerde dagen vóór de pauze"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"dias arquivados antes da pausa"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"暂停前已归档天数"}}
+    }},
+    "days archived in %@" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"archivierte Tage im %@"}},
+      "es":{"stringUnit":{"state":"translated","value":"días archivados en %@"}},
+      "fr":{"stringUnit":{"state":"translated","value":"jours archivés en %@"}},
+      "it":{"stringUnit":{"state":"translated","value":"giorni archiviati in %@"}},
+      "ja":{"stringUnit":{"state":"translated","value":"%@のアーカイブ日数"}},
+      "ko":{"stringUnit":{"state":"translated","value":"%@ 아카이브 일수"}},
+      "nl":{"stringUnit":{"state":"translated","value":"gearchiveerde dagen in %@"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"dias arquivados em %@"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"%@已归档天数"}}
+    }},
+    "days fully or partly sent" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"ganz oder teilweise gesendete Tage"}},
+      "es":{"stringUnit":{"state":"translated","value":"días enviados total o parcialmente"}},
+      "fr":{"stringUnit":{"state":"translated","value":"jours envoyés totalement ou en partie"}},
+      "it":{"stringUnit":{"state":"translated","value":"giorni inviati del tutto o in parte"}},
+      "ja":{"stringUnit":{"state":"translated","value":"全部または一部を送信した日数"}},
+      "ko":{"stringUnit":{"state":"translated","value":"전체 또는 일부 전송된 일수"}},
+      "nl":{"stringUnit":{"state":"translated","value":"geheel of deels verzonden dagen"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"dias enviados total ou parcialmente"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"全部或部分发送的天数"}}
+    }},
+    "iPhone folder" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"iPhone-Ordner"}},
+      "es":{"stringUnit":{"state":"translated","value":"Carpeta del iPhone"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Dossier de l’iPhone"}},
+      "it":{"stringUnit":{"state":"translated","value":"Cartella iPhone"}},
+      "ja":{"stringUnit":{"state":"translated","value":"iPhoneのフォルダ"}},
+      "ko":{"stringUnit":{"state":"translated","value":"iPhone 폴더"}},
+      "nl":{"stringUnit":{"state":"translated","value":"iPhone-map"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Pasta do iPhone"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"iPhone 文件夹"}}
+    }},
+    "weeks archived in %@" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"archivierte Wochen im %@"}},
+      "es":{"stringUnit":{"state":"translated","value":"semanas archivadas en %@"}},
+      "fr":{"stringUnit":{"state":"translated","value":"semaines archivées en %@"}},
+      "it":{"stringUnit":{"state":"translated","value":"settimane archiviate in %@"}},
+      "ja":{"stringUnit":{"state":"translated","value":"%@のアーカイブ週数"}},
+      "ko":{"stringUnit":{"state":"translated","value":"%@ 아카이브 주 수"}},
+      "nl":{"stringUnit":{"state":"translated","value":"gearchiveerde weken in %@"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"semanas arquivadas em %@"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"%@已归档周数"}}
+    }},
     "Assigns the whole sleep session to the date you wake up, using the export’s time zone." : {
       "comment" : "Sleep attribution description for the explicit wake-date export profile.",
       "localizations" : {
@@ -21301,68 +23435,68 @@
         }
       }
     },
-    "clinician_report_7_days" : {
+    "clinician_report_6_months" : {
       "comment" : "Clinician Report V1 localized vocabulary. Managed by scripts/validate-clinician-report-localizations.py.",
       "extractionState" : "manual",
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "7 Tage"
+            "value" : "6 Monate"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "7 days"
+            "value" : "6 months"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "7 días"
+            "value" : "6 meses"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "7 jours"
+            "value" : "6 mois"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "7 giorni"
+            "value" : "6 mesi"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "7日間"
+            "value" : "6か月"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "7일"
+            "value" : "6개월"
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "7 dagen"
+            "value" : "6 maanden"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "7 dias"
+            "value" : "6 meses"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "7 天"
+            "value" : "6 个月"
           }
         }
       }
@@ -21770,61 +23904,61 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Auswahl aufheben"
+            "value" : "Keine"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Clear Selection"
+            "value" : "None"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Borrar selección"
+            "value" : "Ninguno"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Effacer la sélection"
+            "value" : "Aucun"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Cancella selezione"
+            "value" : "Nessuna"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "選択を解除"
+            "value" : "なし"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "선택 해제"
+            "value" : "없음"
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Selectie wissen"
+            "value" : "Geen"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Limpar seleção"
+            "value" : "Nenhum"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "清除选择"
+            "value" : "无"
           }
         }
       }
@@ -23024,61 +25158,61 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Anzeigename (optional)"
+            "value" : "Name im Bericht"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Display Name (Optional)"
+            "value" : "Name on report"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nombre para mostrar (opcional)"
+            "value" : "Nombre en el informe"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nom affiché (facultatif)"
+            "value" : "Nom sur le rapport"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nome visualizzato (facoltativo)"
+            "value" : "Nome nel report"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "表示名（任意）"
+            "value" : "レポートに記載する名前"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "표시 이름(선택 사항)"
+            "value" : "보고서에 표시할 이름"
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Weergavenaam (optioneel)"
+            "value" : "Naam op rapport"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nome de exibição (opcional)"
+            "value" : "Nome no relatório"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "显示名称（可选）"
+            "value" : "报告上的姓名"
           }
         }
       }
@@ -25195,6 +27329,72 @@
         }
       }
     },
+    "clinician_report_include" : {
+      "comment" : "Clinician Report V1 localized vocabulary. Managed by scripts/validate-clinician-report-localizations.py.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Einbeziehen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Include"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Incluir"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Inclure"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Includi"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "含める項目"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "포함"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Opnemen"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Incluir"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "包含"
+          }
+        }
+      }
+    },
     "clinician_report_intro" : {
       "comment" : "Clinician Report V1 localized vocabulary. Managed by scripts/validate-clinician-report-localizations.py.",
       "extractionState" : "manual",
@@ -25202,61 +27402,61 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wählen Sie einen Zeitraum und Messwerte aus, sehen Sie sich eine sachliche Übersicht in der Vorschau an und erstellen Sie anschließend vollständig auf diesem Gerät eine PDF."
+            "value" : "Eine PDF-Zusammenfassung für einen Termin, erstellt auf diesem Gerät."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Choose a period and measurements, preview a factual summary, then generate a PDF entirely on this device."
+            "value" : "A PDF summary for an appointment, built on this device."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Elija un período y mediciones, previsualice un resumen objetivo y genere un PDF íntegramente en este dispositivo."
+            "value" : "Un resumen en PDF para una cita, creado en este dispositivo."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Choisissez une période et des mesures, prévisualisez un résumé factuel, puis générez un PDF entièrement sur cet appareil."
+            "value" : "Un résumé PDF pour un rendez-vous, créé sur cet appareil."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Scegli un periodo e le misurazioni, visualizza l’anteprima di un riepilogo oggettivo, quindi genera un PDF interamente su questo dispositivo."
+            "value" : "Un riepilogo PDF per un appuntamento, creato su questo dispositivo."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "期間と測定項目を選択して客観的なサマリーをプレビューし、このデバイス上だけで PDF を生成します。"
+            "value" : "診察用のPDFサマリーを、このデバイス上で作成します。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "기간과 측정 항목을 선택하고 객관적인 요약을 미리 본 다음 이 기기에서만 PDF를 생성합니다."
+            "value" : "진료 예약을 위한 PDF 요약을 이 기기에서 만듭니다."
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Kies een periode en metingen, bekijk een feitelijke samenvatting en genereer vervolgens volledig op dit apparaat een PDF."
+            "value" : "Een pdf-samenvatting voor een afspraak, gemaakt op dit apparaat."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Escolha um período e as medições, visualize um resumo objetivo e gere um PDF inteiramente neste dispositivo."
+            "value" : "Um resumo em PDF para uma consulta, criado neste dispositivo."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "选择时间段和测量项目，预览客观摘要，然后完全在此设备上生成 PDF。"
+            "value" : "在此设备上生成用于就诊的 PDF 摘要。"
           }
         }
       }
@@ -26713,6 +28913,72 @@
         }
       }
     },
+    "clinician_report_optional" : {
+      "comment" : "Clinician Report V1 localized vocabulary. Managed by scripts/validate-clinician-report-localizations.py.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Optional"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Optional"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Opcional"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Facultatif"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Facoltativo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "任意"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "선택 사항"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Optioneel"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Opcional"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "可选"
+          }
+        }
+      }
+    },
     "clinician_report_period" : {
       "comment" : "Clinician Report V1 localized vocabulary. Managed by scripts/validate-clinician-report-localizations.py.",
       "extractionState" : "manual",
@@ -26720,61 +28986,61 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Berichtszeitraum"
+            "value" : "Zeitraum"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Report Period"
+            "value" : "Period"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Período del informe"
+            "value" : "Período"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Période du rapport"
+            "value" : "Période"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Periodo del report"
+            "value" : "Periodo"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "レポート期間"
+            "value" : "期間"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "보고서 기간"
+            "value" : "기간"
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Rapportperiode"
+            "value" : "Periode"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Período do relatório"
+            "value" : "Período"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "报告时间段"
+            "value" : "时间范围"
           }
         }
       }
@@ -26918,61 +29184,61 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Bericht erstellen"
+            "value" : "PDF erstellen"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Generate Report"
+            "value" : "Create PDF"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Generar informe"
+            "value" : "Crear PDF"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Générer le rapport"
+            "value" : "Créer le PDF"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Genera report"
+            "value" : "Crea PDF"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "レポートを作成"
+            "value" : "PDFを作成"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "보고서 생성"
+            "value" : "PDF 만들기"
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Rapport genereren"
+            "value" : "Pdf maken"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Gerar relatório"
+            "value" : "Criar PDF"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "生成报告"
+            "value" : "创建 PDF"
           }
         }
       }
@@ -27314,61 +29580,61 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Alle auswählen"
+            "value" : "Alle"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Select All"
+            "value" : "All"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Seleccionar todo"
+            "value" : "Todo"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tout sélectionner"
+            "value" : "Tout"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Seleziona tutto"
+            "value" : "Tutte"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "すべて選択"
+            "value" : "すべて"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "모두 선택"
+            "value" : "모두"
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Alles selecteren"
+            "value" : "Alles"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Selecionar tudo"
+            "value" : "Todos"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "全选"
+            "value" : "全部"
           }
         }
       }

@@ -219,7 +219,7 @@ private struct RecoveryWidgetView: View {
             RecoveryCornerView(snapshot: entry.snapshot)
         #endif
         default:
-            RecoveryRectangularView(snapshot: entry.snapshot)
+            GlassRecoveryRectangularView(snapshot: entry.snapshot)
         }
     }
 }
@@ -610,27 +610,22 @@ private struct ActivityRectangularView: View {
     }
 }
 
-private struct RecoveryRectangularView: View {
+/// WatchComplicationG: a title over one summary line.
+private struct GlassRecoveryRectangularView: View {
     let snapshot: WatchHealthSnapshot
 
     var body: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "heart.text.square.fill")
-                .font(.title2)
-                .foregroundStyle(.red.gradient)
-                .frame(width: 38, height: 38)
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Recovery")
-                    .font(.headline)
-                    .widgetAccentable()
-                MetricLine(icon: "bed.double.fill", text: "\(WatchHealthFormatter.hours(snapshot.sleepHours)) sleep")
-                MetricLine(icon: "heart.fill", text: WatchHealthFormatter.bpm(snapshot.restingHeartRate))
-                MetricLine(icon: "waveform.path.ecg", text: "HRV \(WatchHealthFormatter.milliseconds(snapshot.heartRateVariabilityMS))")
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .minimumScaleFactor(0.75)
+        VStack(alignment: .leading, spacing: 2) {
+            Text("Recovery")
+                .textCase(.uppercase)
+                .font(.caption2.weight(.semibold))
+                .widgetAccentable()
+            Text("Sleep \(WatchHealthFormatter.hours(snapshot.sleepHours)) · HRV \(WatchHealthFormatter.milliseconds(snapshot.heartRateVariabilityMS))")
+                .font(.headline)
+                .minimumScaleFactor(0.7)
+                .lineLimit(1)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .containerBackground(Color.black.opacity(0.12), for: .widget)
     }
 }

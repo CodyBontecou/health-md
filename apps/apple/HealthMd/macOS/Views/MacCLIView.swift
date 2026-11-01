@@ -59,8 +59,8 @@ struct MacCLIView: View {
             }
             .background(GeistMacBackdrop())
         }
-        .foregroundStyle(Color.textPrimary)
-        .tint(Color.accent)
+        .foregroundStyle(Color.glassAdaptive(\.text))
+        .tint(Color.glassAdaptive(\.accent))
     }
 
     private func horizontalPadding(for width: CGFloat) -> CGFloat {
@@ -82,13 +82,13 @@ struct MacCLIView: View {
                     VStack(alignment: .leading, spacing: Spacing.s2) {
                         Text("Health.md CLI & MCP")
                             .font(Typography.displayLarge())
-                            .foregroundStyle(Color.textPrimary)
+                            .foregroundStyle(Color.glassAdaptive(\.text))
                             .tracking(-0.9)
                             .accessibilityAddTraits(.isHeader)
 
                         Text("Connect Codex or Claude to analyze health context, render native charts, and run approved iPhone exports while Health.md owns the connection, sandbox access, and localhost server.")
                             .font(Typography.body())
-                            .foregroundStyle(Color.textSecondary)
+                            .foregroundStyle(Color.glassAdaptive(\.sec))
                             .fixedSize(horizontal: false, vertical: true)
                             .frame(maxWidth: 720, alignment: .leading)
                     }
@@ -190,7 +190,7 @@ struct MacCLIView: View {
 
                 Text("Compatible native hosts render the interactive MCP App inline. Other Codex and Claude surfaces keep exact JSON and receive a PNG metric-chart fallback. Fresh acquisition and export mutations require approval.")
                     .font(Typography.caption())
-                    .foregroundStyle(Color.textMuted)
+                    .foregroundStyle(Color.glassAdaptive(\.muted))
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
@@ -229,10 +229,10 @@ struct MacCLIView: View {
             }
         }
         .padding(Spacing.s1)
-        .background(Color.bgSecondary, in: RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous))
+        .background(Color.glassAdaptive(\.surface2), in: RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous)
-                .strokeBorder(Color.borderSubtle, lineWidth: 1)
+                .strokeBorder(Color.glassAdaptive(\.line), lineWidth: 1)
         )
     }
 
@@ -246,7 +246,7 @@ struct MacCLIView: View {
                 } label: {
                     Image(systemName: isAgentPromptExpanded ? "chevron.down" : "chevron.right")
                         .font(Typography.caption().weight(.semibold))
-                        .foregroundStyle(Color.textMuted)
+                        .foregroundStyle(Color.glassAdaptive(\.muted))
                         .frame(width: 24, height: 24)
                 }
                 .buttonStyle(.plain)
@@ -259,10 +259,10 @@ struct MacCLIView: View {
                 VStack(alignment: .leading, spacing: Spacing.s1) {
                     Text("Agent install prompt")
                         .font(BrandTypography.bodyMedium())
-                        .foregroundStyle(Color.textPrimary)
+                        .foregroundStyle(Color.glassAdaptive(\.text))
                     Text("Copy the prompt now, or expand to preview it first.")
                         .font(Typography.caption())
-                        .foregroundStyle(Color.textMuted)
+                        .foregroundStyle(Color.glassAdaptive(\.muted))
                 }
 
                 Spacer(minLength: Spacing.s3)
@@ -279,22 +279,22 @@ struct MacCLIView: View {
                 .buttonStyle(GeistMacButtonStyle(kind: .secondary, size: .small))
             }
             .padding(Spacing.s3)
-            .background(Color.bgSecondary, in: RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous))
+            .background(Color.glassAdaptive(\.surface2), in: RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous)
-                    .strokeBorder(Color.borderSubtle, lineWidth: 1)
+                    .strokeBorder(Color.glassAdaptive(\.line), lineWidth: 1)
             )
 
             if isAgentPromptExpanded {
                 Text(agentInstallPrompt)
                     .font(Typography.mono())
-                    .foregroundStyle(Color.textSecondary)
+                    .foregroundStyle(Color.glassAdaptive(\.sec))
                     .padding(Spacing.s4)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Color.bgSecondary, in: RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous))
+                    .background(Color.glassAdaptive(\.surface2), in: RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous))
                     .overlay(
                         RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous)
-                            .strokeBorder(Color.borderSubtle, lineWidth: 1)
+                            .strokeBorder(Color.glassAdaptive(\.line), lineWidth: 1)
                     )
                     .textSelection(.enabled)
                     .transition(.opacity.combined(with: .move(edge: .top)))
@@ -312,7 +312,7 @@ struct MacCLIView: View {
                 } label: {
                     Image(systemName: isSkillsPromptExpanded ? "chevron.down" : "chevron.right")
                         .font(Typography.caption().weight(.semibold))
-                        .foregroundStyle(Color.textMuted)
+                        .foregroundStyle(Color.glassAdaptive(\.muted))
                         .frame(width: 24, height: 24)
                 }
                 .buttonStyle(.plain)
@@ -325,10 +325,10 @@ struct MacCLIView: View {
                 VStack(alignment: .leading, spacing: Spacing.s1) {
                     Text("Agent skill install prompt")
                         .font(BrandTypography.bodyMedium())
-                        .foregroundStyle(Color.textPrimary)
+                        .foregroundStyle(Color.glassAdaptive(\.text))
                     Text("Copy the prompt now, or expand to preview it first.")
                         .font(Typography.caption())
-                        .foregroundStyle(Color.textMuted)
+                        .foregroundStyle(Color.glassAdaptive(\.muted))
                 }
 
                 Spacer(minLength: Spacing.s3)
@@ -345,22 +345,22 @@ struct MacCLIView: View {
                 .buttonStyle(GeistMacButtonStyle(kind: .secondary, size: .small))
             }
             .padding(Spacing.s3)
-            .background(Color.bgSecondary, in: RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous))
+            .background(Color.glassAdaptive(\.surface2), in: RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous)
-                    .strokeBorder(Color.borderSubtle, lineWidth: 1)
+                    .strokeBorder(Color.glassAdaptive(\.line), lineWidth: 1)
             )
 
             if isSkillsPromptExpanded {
                 Text(agentSkillsInstallPrompt)
                     .font(Typography.mono())
-                    .foregroundStyle(Color.textSecondary)
+                    .foregroundStyle(Color.glassAdaptive(\.sec))
                     .padding(Spacing.s4)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Color.bgSecondary, in: RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous))
+                    .background(Color.glassAdaptive(\.surface2), in: RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous))
                     .overlay(
                         RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous)
-                            .strokeBorder(Color.borderSubtle, lineWidth: 1)
+                            .strokeBorder(Color.glassAdaptive(\.line), lineWidth: 1)
                     )
                     .textSelection(.enabled)
                     .transition(.opacity.combined(with: .move(edge: .top)))
@@ -375,35 +375,35 @@ struct MacCLIView: View {
                     HStack(alignment: .top, spacing: Spacing.s3) {
                         Image(systemName: skill.systemImage)
                             .font(.body.weight(.medium))
-                            .foregroundStyle(Color.accent)
+                            .foregroundStyle(Color.glassAdaptive(\.accent))
                             .frame(width: 24)
                         VStack(alignment: .leading, spacing: Spacing.s1) {
                             Text(skill.title)
                                 .font(BrandTypography.bodyMedium())
-                                .foregroundStyle(Color.textPrimary)
+                                .foregroundStyle(Color.glassAdaptive(\.text))
                             Text(skill.summary)
                                 .font(Typography.caption())
-                                .foregroundStyle(Color.textMuted)
+                                .foregroundStyle(Color.glassAdaptive(\.muted))
                                 .fixedSize(horizontal: false, vertical: true)
                         }
                     }
                 }
             }
             .padding(Spacing.s3)
-            .background(Color.bgSecondary, in: RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous))
+            .background(Color.glassAdaptive(\.surface2), in: RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous)
-                    .strokeBorder(Color.borderSubtle, lineWidth: 1)
+                    .strokeBorder(Color.glassAdaptive(\.line), lineWidth: 1)
             )
 
             HStack(alignment: .center, spacing: Spacing.s3) {
                 VStack(alignment: .leading, spacing: Spacing.s1) {
                     Text("Install with file picker")
                         .font(BrandTypography.bodyMedium())
-                        .foregroundStyle(Color.textPrimary)
+                        .foregroundStyle(Color.glassAdaptive(\.text))
                     Text("Choose your agent’s skills directory. Health.md creates `healthmd-cli/SKILL.md` there.")
                         .font(Typography.caption())
-                        .foregroundStyle(Color.textMuted)
+                        .foregroundStyle(Color.glassAdaptive(\.muted))
                         .fixedSize(horizontal: false, vertical: true)
                 }
 
@@ -421,10 +421,10 @@ struct MacCLIView: View {
                 .disabled(isInstallingSkills)
             }
             .padding(Spacing.s3)
-            .background(Color.bgSecondary, in: RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous))
+            .background(Color.glassAdaptive(\.surface2), in: RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous)
-                    .strokeBorder(Color.borderSubtle, lineWidth: 1)
+                    .strokeBorder(Color.glassAdaptive(\.line), lineWidth: 1)
             )
 
             commandBlock(
@@ -439,7 +439,7 @@ struct MacCLIView: View {
 
             Text("Edit `SKILLS_DIR` to match the folder your agent reads. The app installer replaces the Health.md skill folder; the shell command overwrites only `SKILL.md`.")
                 .font(Typography.caption())
-                .foregroundStyle(Color.textMuted)
+                .foregroundStyle(Color.glassAdaptive(\.muted))
                 .fixedSize(horizontal: false, vertical: true)
 
             if let skillInstallMessage {
@@ -475,7 +475,7 @@ struct MacCLIView: View {
 
             Text("If `~/.local/bin` is not on your PATH, add `export PATH=\"$HOME/.local/bin:$PATH\"` to your shell config.")
                 .font(Typography.caption())
-                .foregroundStyle(Color.textMuted)
+                .foregroundStyle(Color.glassAdaptive(\.muted))
                 .fixedSize(horizontal: false, vertical: true)
         }
     }
@@ -545,23 +545,23 @@ struct MacCLIView: View {
         VStack(alignment: .leading, spacing: Spacing.s2) {
             Image(systemName: systemImage)
                 .font(.body.weight(.medium))
-                .foregroundStyle(Color.accent)
+                .foregroundStyle(Color.glassAdaptive(\.accent))
             Text(title)
                 .font(Typography.caption())
-                .foregroundStyle(Color.textMuted)
+                .foregroundStyle(Color.glassAdaptive(\.muted))
             Text(value)
                 .font(Typography.monoCaption())
-                .foregroundStyle(Color.textPrimary)
+                .foregroundStyle(Color.glassAdaptive(\.text))
                 .lineLimit(2)
                 .truncationMode(.middle)
                 .textSelection(.enabled)
         }
         .padding(Spacing.s4)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.bgSecondary, in: RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous))
+        .background(Color.glassAdaptive(\.surface2), in: RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous)
-                .strokeBorder(Color.borderSubtle, lineWidth: 1)
+                .strokeBorder(Color.glassAdaptive(\.line), lineWidth: 1)
         )
     }
 
@@ -570,7 +570,7 @@ struct MacCLIView: View {
             HStack {
                 Text(title)
                     .font(Typography.caption())
-                    .foregroundStyle(Color.textMuted)
+                    .foregroundStyle(Color.glassAdaptive(\.muted))
                 Spacer()
                 Button {
                     copyAction()
@@ -582,10 +582,10 @@ struct MacCLIView: View {
 
             Text(command)
                 .font(Typography.mono())
-                .foregroundStyle(Color.textPrimary)
+                .foregroundStyle(Color.glassAdaptive(\.text))
                 .padding(Spacing.s3)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color.bgSecondary, in: RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous))
+                .background(Color.glassAdaptive(\.surface2), in: RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous))
                 .textSelection(.enabled)
         }
     }
@@ -595,10 +595,10 @@ struct MacCLIView: View {
             VStack(alignment: .leading, spacing: Spacing.s1) {
                 Text(title)
                     .font(BrandTypography.bodyMedium())
-                    .foregroundStyle(Color.textPrimary)
+                    .foregroundStyle(Color.glassAdaptive(\.text))
                 Text(command)
                     .font(Typography.mono())
-                    .foregroundStyle(Color.textSecondary)
+                    .foregroundStyle(Color.glassAdaptive(\.sec))
                     .textSelection(.enabled)
             }
             Spacer(minLength: Spacing.s4)
@@ -618,16 +618,16 @@ struct MacCLIView: View {
         HStack(alignment: .top, spacing: Spacing.s3) {
             Text(number)
                 .font(Typography.caption().weight(.semibold))
-                .foregroundStyle(Color.accent)
+                .foregroundStyle(Color.glassAdaptive(\.accent))
                 .frame(width: 24, height: 24)
                 .background(Color.accentSubtle, in: Circle())
             VStack(alignment: .leading, spacing: Spacing.s1) {
                 Text(title)
                     .font(BrandTypography.bodyMedium())
-                    .foregroundStyle(Color.textPrimary)
+                    .foregroundStyle(Color.glassAdaptive(\.text))
                 Text(detail)
                     .font(Typography.caption())
-                    .foregroundStyle(Color.textMuted)
+                    .foregroundStyle(Color.glassAdaptive(\.muted))
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
@@ -637,10 +637,10 @@ struct MacCLIView: View {
         VStack(alignment: .leading, spacing: Spacing.s1) {
             Text(code)
                 .font(Typography.mono())
-                .foregroundStyle(Color.textPrimary)
+                .foregroundStyle(Color.glassAdaptive(\.text))
             Text(detail)
                 .font(Typography.caption())
-                .foregroundStyle(Color.textMuted)
+                .foregroundStyle(Color.glassAdaptive(\.muted))
                 .fixedSize(horizontal: false, vertical: true)
         }
         .padding(.vertical, Spacing.s2)
@@ -887,7 +887,7 @@ private enum HealthMdAgentSkillBundle {
 private struct GeistMacBackdrop: View {
     var body: some View {
         LinearGradient(
-            colors: [Color.bgPrimary, Color.bgSecondary.opacity(0.7)],
+            colors: [Color.glassAdaptive(\.bg), Color.glassAdaptive(\.surface2).opacity(0.7)],
             startPoint: .top,
             endPoint: .bottom
         )
@@ -903,10 +903,10 @@ private struct GeistMacCard<Content: View>: View {
         content
             .padding(padding)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color.bgPrimary, in: RoundedRectangle(cornerRadius: GeistRadius.lg, style: .continuous))
+            .background(Color.glassAdaptive(\.glassStrong), in: RoundedRectangle(cornerRadius: GeistRadius.lg, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: GeistRadius.lg, style: .continuous)
-                    .strokeBorder(Color.borderSubtle, lineWidth: 1)
+                    .strokeBorder(Color.glassAdaptive(\.line), lineWidth: 1)
             )
     }
 }
@@ -933,11 +933,11 @@ private struct GeistSectionHeader<Accessory: View>: View {
             VStack(alignment: .leading, spacing: Spacing.s1) {
                 Text(title)
                     .font(Typography.headline())
-                    .foregroundStyle(Color.textPrimary)
+                    .foregroundStyle(Color.glassAdaptive(\.text))
                 if let subtitle {
                     Text(subtitle)
                         .font(Typography.caption())
-                        .foregroundStyle(Color.textMuted)
+                        .foregroundStyle(Color.glassAdaptive(\.muted))
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
@@ -959,10 +959,10 @@ private struct GeistMacButtonStyle: ButtonStyle {
             .font(Typography.caption())
             .padding(.horizontal, Spacing.s3)
             .padding(.vertical, Spacing.s2)
-            .background(configuration.isPressed ? Color.bgTertiary : Color.bgSecondary, in: RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous))
+            .background(configuration.isPressed ? Color.glassAdaptive(\.surface) : Color.glassAdaptive(\.surface2), in: RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
-                    .strokeBorder(Color.borderSubtle, lineWidth: 1)
+                    .strokeBorder(Color.glassAdaptive(\.line), lineWidth: 1)
             )
     }
 }
@@ -973,16 +973,16 @@ private struct InstallTabButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(Typography.caption().weight(.semibold))
-            .foregroundStyle(isSelected ? Color.textPrimary : Color.textMuted)
+            .foregroundStyle(isSelected ? Color.glassAdaptive(\.text) : Color.glassAdaptive(\.muted))
             .padding(.horizontal, Spacing.s3)
             .padding(.vertical, Spacing.s2)
             .background(
-                isSelected ? Color.bgPrimary : (configuration.isPressed ? Color.bgTertiary : Color.clear),
+                isSelected ? Color.glassAdaptive(\.bg) : (configuration.isPressed ? Color.glassAdaptive(\.surface) : Color.clear),
                 in: RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
             )
             .overlay(
                 RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
-                    .strokeBorder(isSelected ? Color.borderSubtle : Color.clear, lineWidth: 1)
+                    .strokeBorder(isSelected ? Color.glassAdaptive(\.line) : Color.clear, lineWidth: 1)
             )
     }
 }
@@ -1000,16 +1000,16 @@ private struct GeistStatusPill: View {
             VStack(alignment: .leading, spacing: 0) {
                 Text(title)
                     .font(Typography.label())
-                    .foregroundStyle(Color.textPrimary)
+                    .foregroundStyle(Color.glassAdaptive(\.text))
                 Text(subtitle)
                     .font(Typography.caption())
-                    .foregroundStyle(Color.textMuted)
+                    .foregroundStyle(Color.glassAdaptive(\.muted))
             }
         }
         .padding(.horizontal, Spacing.s3)
         .padding(.vertical, Spacing.s2)
-        .background(Color.bgSecondary, in: Capsule())
-        .overlay(Capsule().strokeBorder(Color.borderSubtle, lineWidth: 1))
+        .background(Color.glassAdaptive(\.surface2), in: Capsule())
+        .overlay(Capsule().strokeBorder(Color.glassAdaptive(\.line), lineWidth: 1))
     }
 }
 #endif

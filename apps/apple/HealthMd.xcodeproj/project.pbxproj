@@ -244,14 +244,6 @@
 				iOS/Views/OnboardingView.swift,
 				iOS/Views/PaywallView.swift,
 				iOS/Views/ScheduleSettingsView.swift,
-				iOS/Views/SyncSettingsView.swift,
-				iPad/iPadContentView.swift,
-				iPad/iPadExportView.swift,
-				iPad/iPadHistoryView.swift,
-				iPad/iPadScheduleView.swift,
-				iPad/iPadSettingsView.swift,
-				iPad/iPadSidebar.swift,
-				iPad/iPadSyncView.swift,
 				macOS/Info.plist,
 			);
 			target = 62CC00052F15D70300F9103F /* HealthMd-macOS */;

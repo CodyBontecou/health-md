@@ -61,6 +61,10 @@ struct ExportSchedule: Codable, Equatable {
         }
     }
 
+    /// Ends each completed-day run on the fire date instead of the day before. The window
+    /// keeps its size, and today's data is partial until the day ends. Off unless requested.
+    var includeToday: Bool
+
     /// Whether to also refresh today's file during the current day.
     var todayRefreshEnabled: Bool
 
@@ -142,6 +146,7 @@ struct ExportSchedule: Codable, Equatable {
         weekday: Int = 1,
         target: ExportTargetSelection = .localIPhoneFolder,
         lookbackDays: Int? = nil,
+        includeToday: Bool = false,
         todayRefreshEnabled: Bool = false,
         todayRefreshIntervalHours: Int = Self.defaultTodayRefreshIntervalHours,
         todayRefreshIntervalMinutes: Int? = nil,
@@ -166,6 +171,7 @@ struct ExportSchedule: Codable, Equatable {
                 customUnit: customUnit
             )
         )
+        self.includeToday = includeToday
         self.todayRefreshEnabled = todayRefreshEnabled
         self.todayRefreshIntervalHours = Self.clampedTodayRefreshIntervalHours(todayRefreshIntervalHours)
         self.todayRefreshIntervalMinutes = todayRefreshIntervalMinutes
@@ -185,6 +191,7 @@ struct ExportSchedule: Codable, Equatable {
         case weekday
         case target
         case lookbackDays
+        case includeToday
         case todayRefreshEnabled
         case todayRefreshIntervalHours
         case todayRefreshIntervalMinutes, todayRefreshRequestedV2, todayRefreshPersistenceVersion
@@ -215,6 +222,7 @@ struct ExportSchedule: Codable, Equatable {
                 customUnit: customUnit
             )
         )
+        self.includeToday = try c.decodeIfPresent(Bool.self, forKey: .includeToday) ?? false
         self.todayRefreshEnabled = try c.decodeIfPresent(Bool.self, forKey: .todayRefreshEnabled) ?? false
         let decodedTodayRefreshIntervalHours = try c.decodeIfPresent(Int.self, forKey: .todayRefreshIntervalHours)
         self.todayRefreshIntervalHours = Self.clampedTodayRefreshIntervalHours(decodedTodayRefreshIntervalHours ?? Self.defaultTodayRefreshIntervalHours)
@@ -242,6 +250,7 @@ struct ExportSchedule: Codable, Equatable {
         try c.encode(weekday, forKey: .weekday)
         try c.encode(target, forKey: .target)
         try c.encode(lookbackDays, forKey: .lookbackDays)
+        try c.encode(includeToday, forKey: .includeToday)
         try c.encode(todayRefreshIntervalHours, forKey: .todayRefreshIntervalHours)
         try c.encode(lastExportDate, forKey: .lastExportDate)
         try c.encode(lastTodayRefreshDate, forKey: .lastTodayRefreshDate)

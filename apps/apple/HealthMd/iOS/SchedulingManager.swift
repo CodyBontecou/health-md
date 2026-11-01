@@ -1226,7 +1226,8 @@ class SchedulingManager: ObservableObject {
                 targetLabel: targetLabel,
                 exportTarget: target,
                 appleExportEnginePin: request.settingsSnapshot?.appleExportEnginePin,
-                profileName: request.profileName
+                profileName: request.profileName,
+                profileID: request.profileID
             )
         }
 
@@ -3303,7 +3304,8 @@ class SchedulingManager: ObservableObject {
                     targetLabel: scheduledTargetLabel(for: target, profile: profile),
                     exportTarget: target,
                     appleExportEnginePin: settings.appleExportEnginePin,
-                    profileName: pendingRequest.profileName ?? profile.name
+                    profileName: pendingRequest.profileName ?? profile.name,
+                    profileID: profile.id
                 )
             }
         } else if result.totalCount > 0, !isExportLimitResult(result) {
@@ -3315,7 +3317,8 @@ class SchedulingManager: ObservableObject {
                 targetLabel: scheduledTargetLabel(for: target, profile: profile),
                 exportTarget: target,
                 appleExportEnginePin: settings.appleExportEnginePin,
-                profileName: pendingRequest.profileName ?? profile.name
+                profileName: pendingRequest.profileName ?? profile.name,
+                profileID: profile.id
             )
         }
     }

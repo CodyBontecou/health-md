@@ -114,7 +114,7 @@ private struct HealthSummaryWidgetView: View {
                 case .systemMedium:
                     SummaryMediumView(snapshot: entry.snapshot)
                 default:
-                    SummarySmallView(day: entry.snapshot.today)
+                    GlassSummaryWidgetTile(day: entry.snapshot.today)
                 }
             }
         }
@@ -147,7 +147,7 @@ private struct ActivityRingsWidgetView: View {
                 case .systemMedium:
                     ActivityMediumView(snapshot: entry.snapshot)
                 default:
-                    ActivitySmallView(day: entry.snapshot.today)
+                    GlassActivityWidgetTile(day: entry.snapshot.today)
                 }
             }
         }
@@ -173,7 +173,7 @@ private struct HeartRangeWidgetView: View {
                 case .systemLarge:
                     HeartRangeLargeView(snapshot: entry.snapshot)
                 default:
-                    HeartRangeMediumView(snapshot: entry.snapshot)
+                    GlassHeartWidgetTile(day: entry.snapshot.today)
                 }
             }
         }
@@ -222,6 +222,71 @@ private struct EmptyHealthWidgetView: View {
                 .font(.caption2)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+    }
+}
+
+/// WidgetSummaryG.
+private struct GlassSummaryWidgetTile: View {
+    let day: HealthWidgetDay
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text("Last night").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+            Spacer(minLength: 0)
+            Text(HealthWidgetFormat.hours(day.sleepHours))
+                .font(.system(size: 32, weight: .bold))
+                .minimumScaleFactor(0.7)
+                .monospacedDigit()
+            Text("sleep").font(.caption).foregroundStyle(.secondary)
+            Spacer(minLength: 0)
+            Text(verbatim: "HRV \(HealthWidgetFormat.milliseconds(day.heartRateVariabilityMS))")
+                .font(.caption2.weight(.medium))
+            Text("\(HealthWidgetFormat.steps(day.steps)) steps")
+                .font(.caption2.weight(.medium))
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+    }
+}
+
+/// WidgetActivityG.
+private struct GlassActivityWidgetTile: View {
+    let day: HealthWidgetDay
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Activity").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+            Spacer(minLength: 0)
+            Text(verbatim: "\(HealthWidgetFormat.whole(day.activeEnergyKilocalories)) kcal")
+                .foregroundStyle(WidgetGlass.coral)
+            Text(verbatim: "\(HealthWidgetFormat.whole(day.exerciseMinutes)) min")
+                .foregroundStyle(WidgetGlass.ok)
+            Text(verbatim: "\(day.standHours ?? 0) h")
+                .foregroundStyle(WidgetGlass.accent)
+        }
+        .font(.title3.weight(.bold))
+        .monospacedDigit()
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+    }
+}
+
+/// WidgetHeartG.
+private struct GlassHeartWidgetTile: View {
+    let day: HealthWidgetDay
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text("Heart Range").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+            Text("Today").font(.caption2).foregroundStyle(.secondary)
+            Spacer(minLength: 0)
+            Text(verbatim: "\(HealthWidgetFormat.whole(day.heartRateMin))–\(HealthWidgetFormat.whole(day.heartRateMax))")
+                .font(.system(size: 28, weight: .bold))
+                .minimumScaleFactor(0.7)
+                .monospacedDigit()
+            Text(verbatim: "bpm · average \(HealthWidgetFormat.bpm(day.averageHeartRate))")
+                .font(.caption)
+                .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
     }
@@ -804,7 +869,7 @@ private extension View {
         self
             .containerBackground(for: .widget) {
                 LinearGradient(
-                    colors: [Color(.systemBackground), Color.pink.opacity(0.08), Color.indigo.opacity(0.08)],
+                    colors: [Color(.systemBackground), WidgetGlass.accent.opacity(0.12)],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 )
@@ -891,4 +956,161 @@ private extension DateFormatter {
     HealthSummaryWidget()
 } timeline: {
     HealthWidgetEntry(date: .now, snapshot: .placeholder)
+}
+
+/// Written by the app from the coverage ledger.
+struct ArchiveWidgetSnapshot: Codable {
+    let streak: Int
+    let archivedCount: Int
+    let gapCount: Int
+    let nextRun: Date?
+    /// Coverage status raw values for the 14 days before today, oldest first. Absent in older snapshots.
+    let recentDays: [String]?
+
+    static let key = "healthMdArchiveWidgetSnapshot.v1"
+
+    static func load() -> ArchiveWidgetSnapshot? {
+        UserDefaults(suiteName: "group.com.codybontecou.obsidianhealth")?
+            .data(forKey: key)
+            .flatMap { try? JSONDecoder().decode(ArchiveWidgetSnapshot.self, from: $0) }
+    }
+}
+
+struct ArchiveWidgetEntry: TimelineEntry {
+    let date: Date
+    let snapshot: ArchiveWidgetSnapshot?
+}
+
+struct ArchiveWidgetProvider: TimelineProvider {
+    func placeholder(in context: Context) -> ArchiveWidgetEntry {
+        ArchiveWidgetEntry(date: .now, snapshot: nil)
+    }
+
+    func getSnapshot(in context: Context, completion: @escaping (ArchiveWidgetEntry) -> Void) {
+        completion(ArchiveWidgetEntry(date: .now, snapshot: .load()))
+    }
+
+    func getTimeline(in context: Context, completion: @escaping (Timeline<ArchiveWidgetEntry>) -> Void) {
+        let entry = ArchiveWidgetEntry(date: .now, snapshot: .load())
+        completion(Timeline(entries: [entry], policy: .after(.now.addingTimeInterval(3_600))))
+    }
+}
+
+struct ArchiveWidget: Widget {
+    static let kind = "ArchiveWidget"
+
+    var body: some WidgetConfiguration {
+        StaticConfiguration(kind: Self.kind, provider: ArchiveWidgetProvider()) { entry in
+            ArchiveWidgetView(entry: entry)
+        }
+        .configurationDisplayName("Archive")
+        .description("Your export streak and gaps.")
+        .supportedFamilies([.systemSmall, .systemMedium])
+    }
+}
+
+private struct ArchiveWidgetView: View {
+    @Environment(\.widgetFamily) private var family
+    let entry: ArchiveWidgetEntry
+
+    var body: some View {
+        Group {
+            if family == .systemMedium {
+                medium
+            } else {
+                small
+            }
+        }
+        .foregroundStyle(.white)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+        .containerBackground(WidgetGlass.background, for: .widget)
+    }
+
+    /// WidgetSmallGlass.
+    private var small: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack {
+                AppIconMark(size: 24)
+                Spacer(minLength: 4)
+                if let next = entry.snapshot?.nextRun {
+                    Text(next, style: .time)
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(WidgetGlass.secondaryText)
+                }
+            }
+            Spacer(minLength: 0)
+            Text(verbatim: "\(entry.snapshot?.streak ?? 0)")
+                .font(.system(size: 50, weight: .bold))
+                .minimumScaleFactor(0.6)
+                .monospacedDigit()
+            Text("day streak")
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(WidgetGlass.secondaryText)
+        }
+    }
+
+    /// WidgetMediumGlass.
+    private var medium: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: 6) {
+                AppIconMark(size: 22)
+                Text("Archive").font(.subheadline.weight(.bold))
+                Spacer(minLength: 4)
+                if let next = entry.snapshot?.nextRun {
+                    Text("Next \(next, style: .time)")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(WidgetGlass.secondaryText)
+                }
+            }
+            Spacer(minLength: 0)
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text(verbatim: "\(entry.snapshot?.archivedCount ?? 0)")
+                    .font(.system(size: 42, weight: .bold))
+                    .minimumScaleFactor(0.6)
+                    .monospacedDigit()
+                Text("days in \(entry.date.formatted(.dateTime.month(.wide)))")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(WidgetGlass.secondaryText)
+                Spacer(minLength: 4)
+                if let gaps = entry.snapshot?.gapCount, gaps > 0 {
+                    Text(gaps == 1 ? "1 gap" : "\(gaps) gaps")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(WidgetGlass.coral)
+                }
+            }
+            Spacer(minLength: 0)
+            if let days = entry.snapshot?.recentDays, !days.isEmpty {
+                HStack(spacing: 0) {
+                    ForEach(Array(days.enumerated()), id: \.offset) { _, status in
+                        ArchiveWidgetDayTile(status: status)
+                            .frame(maxWidth: .infinity)
+                    }
+                }
+                .accessibilityHidden(true)
+            }
+        }
+    }
+}
+
+/// One day in the medium Archive widget strip: filled when covered, dashed coral when missing.
+private struct ArchiveWidgetDayTile: View {
+    let status: String
+
+    var body: some View {
+        let shape = RoundedRectangle(cornerRadius: 4, style: .continuous)
+        Group {
+            switch status {
+            case "complete":
+                shape.fill(WidgetGlass.covered)
+            case "partial":
+                shape.fill(WidgetGlass.covered)
+                    .overlay(shape.strokeBorder(WidgetGlass.amber, lineWidth: 1.5))
+            case "missing":
+                shape.strokeBorder(WidgetGlass.coral, style: StrokeStyle(lineWidth: 1.5, dash: [3, 2]))
+            default:
+                shape.fill(Color.white.opacity(0.08))
+            }
+        }
+        .frame(width: 14, height: 14)
+    }
 }

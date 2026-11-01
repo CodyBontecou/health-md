@@ -86,17 +86,6 @@ final class CIQualityGateTests: XCTestCase {
 
     func testIconOnlyControls_haveExplicitAccessibilityLabels() throws {
         let criticalFiles = [
-            "HealthMd/iPad/iPadExportView.swift": [
-                ".accessibilityLabel(\"Stop export\")",
-                ".accessibilityLabel(\"Preview export\")",
-                ".accessibilityLabel(purchaseManager.canExport ? \"Export Health Data\" : \"Unlock to export\")",
-            ],
-            "HealthMd/iPad/iPadSettingsView.swift": [
-                ".accessibilityLabel(\"Join our Discord\")",
-                ".accessibilityLabel(\"Send feedback\")",
-                ".accessibilityLabel(\"Report a bug on GitHub\")",
-                ".accessibilityLabel(\"Remove placeholder field \\(key)\")",
-            ],
             "HealthMd/iOS/Views/MetricSelectionView.swift": [
                 ".accessibilityLabel(\"Metric actions\")",
                 ".accessibilityLabel(\"Clear search\")",
@@ -119,7 +108,6 @@ final class CIQualityGateTests: XCTestCase {
             "HealthMd/iOS/Components/StatusIndicator.swift": 3,
             "HealthMd/iOS/Components/SectionCard.swift": 6,
             "HealthMd/iOS/Components/ExportModal.swift": 12,
-            "HealthMd/iPad/iPadSidebar.swift": 3,
         ]
         for (relativePath, minimumHiddenCount) in criticalFiles {
             let hiddenCount = try source(relativePath).components(separatedBy: ".accessibilityHidden(true)").count - 1

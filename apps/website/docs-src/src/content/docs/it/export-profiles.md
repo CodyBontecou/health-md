@@ -7,9 +7,9 @@ I profili di esportazione riuniscono una configurazione ripetibile. Gestiscili i
 
 ## Gestire e modificare i profili
 
-Apri **Impostazioni → Profili di esportazione**. L’elenco indica il profilo attivo e consente di creare, rinominare, duplicare, eliminare, attivare o esaminare i profili. Apri i dettagli di un profilo per copiarne l’ID stabile. L’ultimo profilo non può essere eliminato.
+Su iPhone ogni profilo è un’automazione: apri **Automazioni** per vederle, tocca **+** per crearne una e apri un’automazione per eseguirla, duplicarla, metterla in pausa o modificarla pagina per pagina (metriche, formati, output, note giornaliere, voci, pianificazione). La sua pagina mostra anche l’ID stabile del profilo. **Impostazioni → App e supporto → Profili di esportazione** contiene l’elenco completo per rinominare, eliminare e attivare. Su Android, apri **Impostazioni → Profili di esportazione**. L’ultimo profilo rimasto non può essere eliminato.
 
-La scheda Esporta modifica il profilo attivo. Attivane un altro prima di cambiare le impostazioni se non vuoi aggiornare quello corrente.
+**Automazioni → Tutte le impostazioni di esportazione** modifica il profilo attivo. Attiva un altro profilo prima di cambiare queste impostazioni se non vuoi aggiornare quello attuale.
 
 Ogni profilo congela le opzioni necessarie per ripetere un’esecuzione:
 
@@ -29,7 +29,7 @@ La pianificazione è legata separatamente all’identità stabile del profilo. C
 
 ## Nomi, ID stabili e automazione
 
-Il nome visualizzato è pensato per le persone e può cambiare. L’ID stabile consente automazioni resistenti alle rinomine. Copialo in **Impostazioni → Profili di esportazione → ID profilo**.
+Il nome visualizzato è per le persone e può cambiare. L’ID stabile di un profilo serve per automazioni che non dipendono dal nome. Copialo dalla pagina dell’automazione in **Automazioni** su iPhone, oppure da **Impostazioni → Profili di esportazione → ID profilo** su Android.
 
 - I Comandi rapidi Apple selezionano un profilo tramite il nome visualizzato; un parametro profilo vuoto usa quello attivo.
 - Le trasmissioni Tasker e adb su Android possono fornire l’extra `PROFILE` con un ID stabile o un nome. Preferisci l’ID per i flussi che devono resistere alle rinomine.

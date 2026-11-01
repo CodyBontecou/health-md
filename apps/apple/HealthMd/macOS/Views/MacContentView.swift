@@ -24,7 +24,7 @@ struct MacContentView: View {
     var body: some View {
         NavigationSplitView {
             List(selection: $selection) {
-                ForEach(MacSidebarDestination.allCases) { destination in
+                ForEach(MacSidebarDestination.visibleCases) { destination in
                     Label(destination.title, systemImage: destination.systemImage)
                         .tag(destination as MacSidebarDestination?)
                 }
@@ -34,8 +34,10 @@ struct MacContentView: View {
             .navigationSplitViewColumnWidth(min: 180, ideal: 220)
         } detail: {
             detailView(for: selection ?? .home)
+                .glassFormChrome()
                 .navigationTitle((selection ?? .home).title)
         }
+        .glassTheme()
         .onAppear {
             #if DEBUG
             if MacMarketingCapture.isActive { return }
@@ -51,6 +53,8 @@ struct MacContentView: View {
         switch destination {
         case .home:
             MacSyncView()
+        case .history:
+            MacHistoryView()
         case .cli:
             MacCLIView()
         case .settings:
@@ -61,17 +65,25 @@ struct MacContentView: View {
 
 private enum MacSidebarDestination: String, CaseIterable, Identifiable, Hashable {
     case home
+    case history
     case cli
     case settings
 
     var id: Self { self }
 
+    /// History gets its own section in the Liquid Glass layout.
+    static var visibleCases: [MacSidebarDestination] {
+        allCases
+    }
+
     var title: String {
         switch self {
         case .home:
-            return String(localized: "Home")
+            return String(localized: "Mac Destination")
+        case .history:
+            return String(localized: "History")
         case .cli:
-            return String(localized: "CLI")
+            return String(localized: "CLI & MCP")
         case .settings:
             return String(localized: "Settings")
         }
@@ -81,6 +93,8 @@ private enum MacSidebarDestination: String, CaseIterable, Identifiable, Hashable
         switch self {
         case .home:
             return "house"
+        case .history:
+            return "clock"
         case .cli:
             return "terminal"
         case .settings:

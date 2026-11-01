@@ -15,158 +15,66 @@ struct MacMenuBarView: View {
     private var mutedTextColor: Color { .secondary.opacity(0.75) }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            header
+        glassBody.glassTheme()
+    }
 
-            Divider().opacity(0.3)
-
-            VStack(alignment: .leading, spacing: 6) {
-                statusRow(
-                    label: String(localized: "iPhone"),
-                    connected: syncService.connectionState == .connected,
-                    detail: syncService.connectionState == .connected
-                        ? syncService.connectedPeerName ?? String(localized: "Connected")
-                        : String(localized: "Not connected")
-                )
-
-                statusRow(
-                    label: String(localized: "Destination"),
-                    connected: folderAccessHealthy,
-                    detail: destinationDetail
-                )
-
-                statusRow(
-                    label: String(localized: "Readiness"),
-                    connected: readinessIsPositive,
-                    detail: readinessText
-                )
-
+    /// MacMenuBarG, plus the destination and settings actions the app already offers.
+    private var glassBody: some View {
+        VStack(alignment: .leading, spacing: GlassMetrics.panelPadding / 2) {
+            HStack {
+                Text("Mac Destination").font(.headline)
+                Spacer()
+                Text(readinessText)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(readinessIsPositive
+                        ? Color.glassAdaptive(\.ok)
+                        : Color.glassAdaptive(\.coral))
+            }
+            VStack(alignment: .leading, spacing: 8) {
+                glassFact(String(localized: "iPhone"), value: syncService.connectionState == .connected
+                    ? syncService.connectedPeerName ?? String(localized: "Connected")
+                    : String(localized: "Not connected"))
                 if let lastExportSummary {
-                    HStack(spacing: 4) {
-                        Image(systemName: "clock.arrow.circlepath")
-                            .font(.caption2)
-                            .foregroundStyle(mutedTextColor)
-                            .frame(width: 14)
-                            .accessibilityHidden(true)
-                        Text("Last export:")
-                            .foregroundStyle(mutedTextColor)
-                        Text(lastExportSummary)
-                            .foregroundStyle(secondaryTextColor)
-                            .lineLimit(1)
-                            .truncationMode(.tail)
-                    }
-                    .font(BrandTypography.caption())
-                    .accessibilityElement(children: .combine)
-                    .accessibilityLabel("Last Mac export")
-                    .accessibilityValue(lastExportSummary)
+                    glassFact(String(localized: "Last export"), value: lastExportSummary)
                 }
+                glassFact(String(localized: "Destination"), value: destinationDetail)
             }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 8)
+            .padding(GlassMetrics.panelPadding * 0.75)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .glassSurface(cornerRadius: GlassMetrics.iconTileRadius * 1.4)
 
-            Divider().opacity(0.3)
-
-            VStack(spacing: 2) {
-                menuAction(
-                    icon: vaultManager.hasVaultSelection ? "folder" : "folder.badge.plus",
-                    label: vaultManager.hasVaultSelection
-                        ? String(localized: "Change Destination…")
-                        : String(localized: "Choose Destination…")
-                ) {
-                    chooseDestinationFolder()
-                }
-
-                menuAction(
-                    icon: "macwindow",
-                    label: String(localized: "Open Mac Destination"),
-                    shortcut: "⌘0"
-                ) {
-                    WindowManager.shared.openMainWindow?()
-                }
-
-                menuAction(
-                    icon: "gearshape",
-                    label: String(localized: "Destination Settings…"),
-                    shortcut: "⌘,"
-                ) {
-                    openSettingsWindow()
-                }
+            menuAction(
+                icon: vaultManager.hasVaultSelection ? "folder" : "folder.badge.plus",
+                label: vaultManager.hasVaultSelection
+                    ? String(localized: "Change Destination…")
+                    : String(localized: "Choose Destination…"),
+                action: chooseDestinationFolder
+            )
+            menuAction(icon: "macwindow", label: String(localized: "Open Mac Destination"), shortcut: "⌘0") {
+                WindowManager.shared.openMainWindow?()
             }
-            .padding(.vertical, 4)
-
-            Divider().opacity(0.3)
-
-            Button {
+            menuAction(
+                icon: "gearshape",
+                label: String(localized: "Destination Settings…"),
+                shortcut: "⌘,",
+                action: openSettingsWindow
+            )
+            menuAction(icon: "power", label: String(localized: "Quit Health.md"), shortcut: "⌘Q") {
                 NSApp.terminate(nil)
-            } label: {
-                HStack {
-                    Text("Quit Health.md")
-                        .font(BrandTypography.body())
-                    Spacer()
-                    Text("⌘Q")
-                        .font(BrandTypography.caption())
-                        .foregroundStyle(mutedTextColor)
-                        .accessibilityHidden(true)
-                }
-                .frame(maxWidth: .infinity)
-                .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
-            .foregroundStyle(secondaryTextColor)
-            .padding(.horizontal, 14)
-            .padding(.vertical, 8)
-            .padding(.bottom, 4)
-            .accessibilityLabel("Quit Health.md")
-            .accessibilityHint("Keyboard shortcut: Command Q")
         }
+        .padding(12)
         .frame(width: 300)
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Health.md Mac destination menu")
     }
 
-    // MARK: - Components
-
-    private var header: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "heart.text.square.fill")
-                .foregroundStyle(Color.accent)
-                .font(.title3)
-                .accessibilityHidden(true)
-            VStack(alignment: .leading, spacing: 1) {
-                Text("health.md")
-                    .font(Typography.monoEmphasis())
-                    .foregroundStyle(primaryTextColor)
-                Text("Mac Destination")
-                    .font(BrandTypography.caption())
-                    .foregroundStyle(mutedTextColor)
-            }
-            Spacer()
+    private func glassFact(_ label: String, value: String) -> some View {
+        VStack(alignment: .leading, spacing: 1) {
+            Text(label).font(.caption).foregroundStyle(secondaryTextColor)
+            Text(value).font(.callout).lineLimit(1).truncationMode(.middle)
         }
-        .padding(.horizontal, 14)
-        .padding(.top, 14)
-        .padding(.bottom, 8)
-    }
-
-    @ViewBuilder
-    private func statusRow(label: String, connected: Bool, detail: String) -> some View {
-        HStack(spacing: 4) {
-            Circle()
-                .fill(connected ? Color.success : mutedTextColor)
-                .frame(width: 6, height: 6)
-                .accessibilityHidden(true)
-            Text(label + ":")
-                .foregroundStyle(mutedTextColor)
-            Text(detail)
-                .foregroundStyle(secondaryTextColor)
-                .lineLimit(1)
-                .truncationMode(.middle)
-        }
-        .font(BrandTypography.caption())
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(label) status")
-        .accessibilityValue(
-            String(localized: "\(connected ? String(localized: "Ready") : String(localized: "Not ready")): \(detail)")
-        )
     }
 
     @ViewBuilder

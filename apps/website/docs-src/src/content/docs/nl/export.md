@@ -1,41 +1,42 @@
 ---
 title: "Exporteren"
-description: "Gebruik het tabblad Exporteren om HealthKit en kluisverbindingen te controleren. Selecteer een bestemming en exporteer een datumbereik."
+description: "Exporteer Apple Health-gegevens nu of volgens een schema. Controleer in Archief of alles klaarstaat, kies een periode in Nu exporteren en stel per automatisering een bestemming in."
 ---
 
-<p> Het tabblad Exporteren bestaat uit drie kleine beslissingen: bevestig de gereedheid, kies een bestemming en kies vervolgens het datumbereik voordat u een voorbeeld bekijkt of exporteert. </p>
+<p>Op de iPhone heeft Health.md drie tabbladen, <strong>Archief</strong>, <strong>Automatiseringen</strong> en <strong>Instellingen</strong>, plus een ronde knop <strong>Nu exporteren</strong>. Op de iPad staan de tabbladen in een navigatiekolom.</p>
 
-## Lees de statusbadges
- <div class="options">
- <div class="option"> <strong> Gezondheidsbadge </strong> <p>Groen toont de instellingsstatus Verbonden van de app, niet bevestigde leestoegang tot elke categorie. HealthKit maakt geweigerde leesrechten niet bekend. Tik op de indicator om toegang aan te vragen. iOS kan een dialoog tonen voor typen waarvoor nog een keuze nodig is; bij al vastgelegde keuzes toont Health.md de uitleg over machtigingen. Controleer de categorieën in Apple Health. Een leeg resultaat kan geweigerde toegang of geen overeenkomende gegevens betekenen. <a href="/nl/docs/troubleshooting/">Ontbrekende gegevens onderzoeken</a>.</p> </div>
- <div class="option"> <strong> Kluisbadge </strong> <p> Groene stip = er is een kluismap geselecteerd. Tik om de kluis opnieuw te kiezen of te wijzigen. Het label toont de mapnaam. </p> </div>
- </div>
- <p> De actie <em> Exporteren </em> blijft uitgeschakeld totdat HealthKit , het uitvoerformaat en de geselecteerde bestemming gereed zijn. Dit voorkomt de meest voorkomende fout: proberen te exporteren zonder bestemming. </p>
+## Controleer in Archief of alles klaarstaat
+<p>De kalender in <strong>Archief</strong> laat zien welke gezondheidsdatums elke automatisering heeft gedekt. Als iets exports blokkeert, noemt de kaart <strong>Vraagt aandacht</strong> bovenaan de oorzaak:</p>
+<div class="options">
+<div class="option"><strong>Apple Health</strong><p>Health.md toont de configuratiestatus van de app, geen bevestigde leestoegang tot elke categorie. HealthKit verbergt geweigerde leestoestemmingen. Controleer de categorieën in Apple Health. Lege resultaten kunnen geweigerde toegang of ontbrekende gegevens betekenen. <a href="/nl/docs/troubleshooting/">Ontbrekende gegevens oplossen</a>.</p></div>
+<div class="option"><strong>Map</strong><p>Kies de map, of kies hem opnieuw, via <strong>Instellingen → Map</strong>. Verliest iOS na het verplaatsen van een map de toegang, dan vraagt Health.md je hem opnieuw te kiezen; er wordt niets verwijderd.</p></div>
+</div>
 
-## Kies een exportdoel
- <p> De kaart Exportdoel bepaalt waar de gegevens naartoe gaan: </p>
+## Kies waar een automatisering naartoe exporteert
+<p>Elke automatisering heeft een eigen bestemming. Open <strong>Automatiseringen</strong>, kies de automatisering en dan <strong>Uitvoer</strong>:</p>
 
 <div class="options">
- <div class="option"> <strong> Lokale iPhone map </strong> <p> Schrijft rechtstreeks naar de map of Obsidian kluis die u op dit apparaat hebt gekozen. </p> </div>
- <div class="option"> <strong> Verbonden Mac </strong> <p> Verzendt vastgelegde dagelijkse gegevens en een exacte momentopname van de instellingen naar de dichtstbijzijnde Mac-app. De iPhone luidt HealthKit . De Mac rendert de geselecteerde formaten en schrijft de bestanden. </p> </div>
- <div class="option"> <strong> API-eindpunt </strong> <p> POST een JSON-envelop rechtstreeks van iPhone naar een door de gebruiker geconfigureerd HTTP(S)-eindpunt. <a href="/nl/docs/api-endpoint/"> Zie API-eindpunt </a> . </p> </div>
- </div>
+<div class="option"><strong>Lokale map</strong><p>Schrijft direct naar de map of Obsidian-kluis die je op dit apparaat hebt gekozen.</p></div>
+<div class="option"><strong>Verbonden Mac</strong><p>Stuurt de vastgelegde dagelijkse gegevens en een exacte momentopname van de instellingen naar de Mac-app in de buurt. De iPhone leest HealthKit; de Mac maakt de gekozen formaten en schrijft de bestanden.</p></div>
+<div class="option"><strong>API-eindpunt</strong><p>Stuurt een JSON-envelop met POST rechtstreeks van de iPhone naar een HTTP(S)-eindpunt dat je zelf instelt. <a href="/nl/docs/api-endpoint/">Zie API-eindpunt</a>.</p></div>
+<div class="option"><strong>Agent Data-gateway</strong><p>Uploadt elk geëxporteerd bestand ongewijzigd naar het ingest-eindpunt van je gateway.</p></div>
+</div>
 
-## Kies een datumbereik
- <p> Datumvoorinstellingen dekken de gebruikelijke paden: </p>
+## Kies een periode in Nu exporteren
+<p>Tik op <strong>Nu exporteren</strong>, kies de automatisering als je er meerdere hebt, en daarna een periode:</p>
 
 <div class="options">
- <div class="option"> <strong> Vandaag </strong> <p> Exporteer de huidige dag. Handig voor het testen van de uitvoeropmaak. </p> </div>
- <div class="option"> <strong> Gisteren </strong> <p> De veiligste keuze voor dagelijkse export, omdat de dag voorbij is. </p> </div>
- <div class="option"> <strong> Altijd </strong> <p> Aanvulling vanaf de eerste HealthKit gegevens Health.md kan vinden. </p> </div>
- <div class="option"> <strong> Aangepast </strong> <p> Kies begin- en einddatums voor een specifiek bereik. </p> </div>
- </div>
+<div class="option"><strong>Gisteren</strong><p>De veiligste keuze voor dagelijkse exports, omdat de dag voorbij is.</p></div>
+<div class="option"><strong>7 dagen / 30 dagen</strong><p>De afgelopen week of maand, tot en met gisteren. Vanaf 30 dagen vraagt Health.md eerst om bevestiging.</p></div>
+<div class="option"><strong>Aangepast</strong><p>Kies een begin- en einddatum voor een bepaalde periode.</p></div>
+</div>
+<p><strong>Wordt geschreven</strong> toont de bestemming en ongeveer hoeveel bestanden en dagen de export omvat. <strong>Alleen samenvatting van het datumbereik</strong> schrijft één samenvattingsbestand in plaats van dagbestanden. Vandaag en Alles blijven beschikbaar via <strong>Automatiseringen → Alle exportinstellingen</strong>.</p>
 
 ## Voorbeeld of export
- <div class="options">
- <div class="option"> <strong> Voorbeeld </strong> <p> Toont de bestanden en inhoud die worden gegenereerd voordat er iets wordt geschreven. </p> </div>
- <div class="option"> <strong> Exporteren </strong> <p> Voert de export uit, toont de voortgang op het hoofdscherm en legt de uitkomst vast in de geschiedenis. </p> </div>
- </div>
+<div class="options">
+<div class="option"><strong>Voorbeeld</strong><p>Toont de bestanden en inhoud die worden gemaakt voordat er iets wordt geschreven.</p></div>
+<div class="option"><strong>Exporteren</strong><p>Voert de export uit, toont de voortgang boven de tabbalk met een knop Annuleren en legt het resultaat vast in de geschiedenis en in de kalender van Archief.</p></div>
+</div>
 
 ## Kies het gegevensdetailniveau
 
@@ -62,11 +63,7 @@ Als u stopt of annuleert, wordt alleen de huidige poging beëindigd. Reeds volto
 
 ## Profielen en betrouwbare geschiedenis
 
-Een opgeslagen profiel bevriest de instellingen en bestemming voor de run. Profielbewuste geplande en automatiseringsgeschiedenisrijen behouden het runtimeprofiel, terwijl de geschiedenis een privacyveilig label behoudt voor de daadwerkelijk gebruikte bestemming. In een handmatige exporttabbladrij kan de profielnaam weggelaten worden. Latere hernoemingen en bestemmingswijzigingen herschrijven de bestaande geschiedenis niet. Als het opgegeven profiel ontbreekt, mislukt de bewerking zonder andere instellingen te gebruiken. Zie [Profielen exporteren](/nl/docs/export-profiles/).
-
-## Tabbalk
-
-<p> De vier tabbladen onder aan het scherm, Exporteren, Plannen, Synchroniseren, Instellingen, bestrijken het gehele app-oppervlak. Al het andere bevindt zich een of twee lagen diep in Instellingen. </p>
+Een opgeslagen profiel legt de instellingen en de bestemming voor de uitvoering vast. Geschiedenisregels van geplande exports en automatiseringen die het profiel kennen, bewaren het gebruikte profiel, terwijl de geschiedenis een privacyvriendelijk label bewaart voor de bestemming die echt is gebruikt. Bij een regel van een handmatige export kan de profielnaam ontbreken. Latere naamswijzigingen en bestemmingswijzigingen herschrijven de bestaande geschiedenis niet. Ontbreekt een profiel waarnaar wordt verwezen, dan mislukt de bewerking zonder andere instellingen te gebruiken. Zie [Exportprofielen](/nl/docs/export-profiles/).
 
 <div class="callout">
  <strong> Ontgrendelingsgedrag. </strong>

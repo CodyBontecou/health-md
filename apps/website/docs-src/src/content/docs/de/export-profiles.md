@@ -7,9 +7,9 @@ Exportprofile bündeln eine wiederholbare Exportkonfiguration. Verwalte sie in H
 
 ## Profile verwalten und bearbeiten
 
-Öffne **Einstellungen → Exportprofile**. Die Liste kennzeichnet das aktive Profil. Dort kannst du Profile erstellen, umbenennen, duplizieren, löschen, aktivieren oder prüfen. In der Detailansicht lässt sich die stabile ID kopieren. Das letzte verbleibende Profil kann nicht gelöscht werden.
+Auf dem iPhone ist jedes Profil eine Automation: Öffne **Automationen**, um sie zu sehen, tippe auf **+**, um eine zu erstellen, und öffne eine Automation, um sie auszuführen, zu duplizieren, zu pausieren oder Seite für Seite zu bearbeiten (Metriken, Formate, Ausgabe, Tagesnotizen, Einträge, Zeitplan). Ihre Seite zeigt auch die stabile Profil-ID. **Einstellungen → App & Support → Exportprofile** enthält die vollständige Liste zum Umbenennen, Löschen und Aktivieren. Auf Android öffnest du **Einstellungen → Exportprofile**. Das letzte verbleibende Profil kann nicht gelöscht werden.
 
-Der Export-Tab bearbeitet das aktive Profil. Aktiviere vor Änderungen ein anderes Profil, wenn du das aktuelle nicht aktualisieren möchtest.
+**Automationen → Alle Exporteinstellungen** bearbeitet das aktive Profil. Aktiviere vor Änderungen ein anderes Profil, wenn du das aktuelle nicht aktualisieren möchtest.
 
 Jedes Profil fixiert die für eine wiederholbare Ausführung nötigen Optionen:
 
@@ -29,7 +29,7 @@ Ein Zeitplan ist separat an die stabile Identität des Profils gebunden. Das Wec
 
 ## Namen, stabile IDs und Automatisierung
 
-Der Anzeigename ist für Menschen und kann geändert werden. Die stabile ID eignet sich für umbenennungssichere Automatisierung. Kopiere sie unter **Einstellungen → Exportprofile → Profil-ID**.
+Der Anzeigename ist für Menschen und kann geändert werden. Die stabile ID eignet sich für umbenennungssichere Automatisierung. Kopiere sie auf dem iPhone von der Seite der Automation unter **Automationen**, auf Android unter **Einstellungen → Exportprofile → Profil-ID**.
 
 - Apple-Kurzbefehle wählen ein Profil über den Anzeigenamen; ein leerer Profilparameter verwendet das aktive Profil.
 - Android-Broadcasts über Tasker und adb können im Extra `PROFILE` eine stabile ID oder einen Namen übergeben. Nutze für umbenennungssichere Abläufe möglichst die ID.

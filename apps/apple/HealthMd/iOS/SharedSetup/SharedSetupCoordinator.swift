@@ -1017,6 +1017,17 @@ final class SharedSetupCoordinator: ObservableObject {
     /// coordinator plus the v2 sidecar's preserved extensions — and encodes
     /// canonical `schema_version: 2` bytes exclusively. A missing resolver
     /// or owner fails closed; there is no other writer to fall back to.
+    /// The active profile in shared-setup form, for the import summary. Nil hides the
+    /// summary; the full review does not depend on it.
+    func currentActiveProfileForComparison() -> SharedSetupV2.Profile? {
+        guard let data = try? exportData(appVersion: "0"),
+              let document = try? SharedSetupV2Codec.decode(data)
+        else {
+            return nil
+        }
+        return document.profiles.first { $0.bundleID == document.activeProfile }
+    }
+
     func exportData(appVersion: String, calendar: Calendar = .current) throws -> Data {
         guard let context = v2ExportContextResolver?() else {
             throw SharedSetupV2CoordinatorError.v2ExportContextUnavailable
@@ -1284,6 +1295,7 @@ struct SharedSetupFlowView: View {
                     )
                 }
             }
+            .glassFormChrome()
             .navigationTitle(
                 coordinator.v2Result == nil
                     ? "Review Shared Setup"
@@ -1304,9 +1316,41 @@ struct SharedSetupFlowView: View {
         v2ApplyMode = .add
     }
 
+    private func changeSummary(_ preview: SharedSetupV2ImportPlan) -> SharedSetupChangeSummary? {
+        guard let current = coordinator.currentActiveProfileForComparison(),
+              let incoming = preview.document.profiles.first(where: { $0.bundleID == preview.activeBundleID })
+        else {
+            return nil
+        }
+        return SharedSetupChangeSummary(
+            current: .init(current),
+            incoming: .init(incoming),
+            on: String(localized: "On"),
+            off: String(localized: "Off")
+        )
+    }
+
+    private func changeTitle(_ field: SharedSetupChangeSummary.Field) -> String {
+        switch field {
+        case .formats: return String(localized: "Formats")
+        case .dateFormat: return String(localized: "Date format")
+        case .filename: return String(localized: "Filename")
+        case .metrics: return String(localized: "Metrics")
+        case .dailyNotes: return String(localized: "Daily notes")
+        }
+    }
+
     private func v2Review(_ preview: SharedSetupV2ImportPlan) -> some View {
         let selectionAvailable = coordinator.isV2TransactionAvailable && !preview.hasInvalidItems
         return List {
+            if let summary = changeSummary(preview), !summary.rows.isEmpty {
+                Section("Changes") {
+                    ForEach(summary.rows) { row in
+                        LabeledContent(changeTitle(row.field), value: "\(row.before) → \(row.after)")
+                    }
+                }
+            }
+
             Section("Bundle overview") {
                 LabeledContent("Version", value: "2")
                 LabeledContent("Profiles", value: "\(preview.document.profiles.count)")

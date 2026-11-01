@@ -37,6 +37,7 @@ struct ScheduledExportEntry: Codable, Identifiable, Equatable {
     /// ISO weekday for weekly entries (1 = Monday … 7 = Sunday).
     var weekday: Int
     var lookbackDays: Int
+    var includeToday: Bool
     var todayRefreshEnabled: Bool
     var todayRefreshIntervalHours: Int
     var todayRefreshIntervalMinutes: Int?
@@ -70,6 +71,7 @@ struct ScheduledExportEntry: Codable, Identifiable, Equatable {
         preferredMinute: Int = 0,
         weekday: Int = 1,
         lookbackDays: Int? = nil,
+        includeToday: Bool = false,
         todayRefreshEnabled: Bool = false,
         todayRefreshIntervalHours: Int = ExportSchedule.defaultTodayRefreshIntervalHours,
         todayRefreshIntervalMinutes: Int? = nil,
@@ -95,6 +97,7 @@ struct ScheduledExportEntry: Codable, Identifiable, Equatable {
                 customUnit: customUnit
             )
         )
+        self.includeToday = includeToday
         self.todayRefreshEnabled = todayRefreshEnabled
         self.todayRefreshIntervalHours = ExportSchedule.clampedTodayRefreshIntervalHours(
             todayRefreshIntervalHours
@@ -118,6 +121,7 @@ struct ScheduledExportEntry: Codable, Identifiable, Equatable {
         case preferredMinute
         case weekday
         case lookbackDays
+        case includeToday
         case todayRefreshIntervalHours
         case lastExportDate
         case lastTodayRefreshDate
@@ -143,6 +147,7 @@ struct ScheduledExportEntry: Codable, Identifiable, Equatable {
         try c.encode(preferredMinute, forKey: .preferredMinute)
         try c.encode(weekday, forKey: .weekday)
         try c.encode(lookbackDays, forKey: .lookbackDays)
+        try c.encode(includeToday, forKey: .includeToday)
         try c.encode(todayRefreshIntervalHours, forKey: .todayRefreshIntervalHours)
         try c.encode(lastExportDate, forKey: .lastExportDate)
         try c.encode(lastTodayRefreshDate, forKey: .lastTodayRefreshDate)
@@ -168,6 +173,7 @@ struct ScheduledExportEntry: Codable, Identifiable, Equatable {
         preferredMinute = try c.decode(Int.self, forKey: .preferredMinute)
         weekday = try c.decode(Int.self, forKey: .weekday)
         lookbackDays = try c.decode(Int.self, forKey: .lookbackDays)
+        includeToday = try c.decodeIfPresent(Bool.self, forKey: .includeToday) ?? false
         todayRefreshEnabled = try c.decode(Bool.self, forKey: .todayRefreshEnabled)
         todayRefreshIntervalHours = try c.decode(Int.self, forKey: .todayRefreshIntervalHours)
         todayRefreshIntervalMinutes = try c.decodeIfPresent(Int.self, forKey: .todayRefreshIntervalMinutes)
@@ -199,6 +205,7 @@ struct ScheduledExportEntry: Codable, Identifiable, Equatable {
             weekday: weekday,
             target: .localIPhoneFolder,
             lookbackDays: lookbackDays,
+            includeToday: includeToday,
             todayRefreshEnabled: todayRefreshEnabled,
             todayRefreshIntervalHours: todayRefreshIntervalHours,
             todayRefreshIntervalMinutes: todayRefreshIntervalMinutes,
@@ -325,11 +332,17 @@ final class ScheduledExportEntryStore: ObservableObject {
                 ? stored.enabledAt : (entry.isEnabled ? now() : nil)
             entries[index] = merged
             persist()
+            if stored.isEnabled != entry.isEnabled {
+                recordCoverageTransition(profileID: entry.profileID, isEnabled: entry.isEnabled)
+            }
             return true
         }
         guard entries.count < Self.maximumScheduledEntries else { return false }
         entries.append(entry)
         persist()
+        if entry.isEnabled {
+            recordCoverageTransition(profileID: entry.profileID, isEnabled: true)
+        }
         return true
     }
 
@@ -351,7 +364,15 @@ final class ScheduledExportEntryStore: ObservableObject {
         }
         entries[index] = changed
         persist()
+        if changed.isEnabled != current.isEnabled {
+            recordCoverageTransition(profileID: profileID, isEnabled: changed.isEnabled)
+        }
         return true
+    }
+
+    /// `enabledAt` is cleared on pause, so the coverage ledger keeps the transition.
+    private func recordCoverageTransition(profileID: UUID, isEnabled: Bool) {
+        CoverageLedgerStore.shared.recordScheduleTransition(profileID: profileID, isEnabled: isEnabled)
     }
 
     /// Removes the entry bound to a profile. Deleting a profile must delete

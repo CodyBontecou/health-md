@@ -8,7 +8,7 @@ Esta página describe la programación de iPhone . Android tiene diferentes perm
 ## Verificar la primera exportación programada
 
 1. Activa el perfil deseado. Consulta sus métricas, formatos, detalle de datos, comportamiento de escritura y destino. Ejecute un día completo manualmente e inspeccione el archivo guardado o el resultado del punto final antes de habilitar la automatización.
-2. Abra Horario, luego Configurar Horario o Administrar Horario. Habilite el cronograma, elija Diario, Semanal o Personalizado, establezca la hora y comience con una vista retrospectiva del día completo. Permita notificaciones si desea recordatorios de recuperación locales.
+2. En el iPhone, abre **Automatizaciones**, elige la automatización y toca **Programación**; en Android, abre Programación y luego Configurar programación o Administrar programación. Activa la programación, elige Diaria, Semanal o Personalizada, define la hora y empieza con una revisión retroactiva de un día completo. Permite las notificaciones si quieres recordatorios locales de recuperación.
 3. Verifique si la programación está habilitada, la siguiente ocurrencia y el último resultado. Después de un intento, inspecciona los detalles de su historial y el destino real; una etiqueta o notificación de la siguiente ejecución no es prueba de que se escribieron datos.
 4. Verifique las fechas exportadas, unidades, cobertura y datos faltantes. Un archivo guardado no demuestra por sí solo una captura completa del código fuente.
 

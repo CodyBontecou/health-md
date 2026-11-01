@@ -490,6 +490,28 @@
       ]
     },
     {
+      "id": "export.coverage-calendar",
+      "name": "Archive coverage calendar",
+      "classification": "planned",
+      "summary": "Show which health dates each export profile covered, with per-date status, gaps and streaks, rather than when exports ran.",
+      "profiles": [],
+      "platforms": {
+        "apple": {
+          "state": "planned",
+          "target": "Liquid Glass experience rollout: enable the Archive calendar behind NEW_EXPERIENCE_ENABLED after coverage-map parity sign-off."
+        },
+        "android": {
+          "state": "planned",
+          "target": "Material 3 archive screen fed from Android export history, using the same per-date statuses and All aggregation rules."
+        }
+      },
+      "evidence": [
+        "apps/apple/HealthMd/Shared/Coverage/CoverageProjection.swift",
+        "apps/apple/HealthMd/Shared/Coverage/ArchiveAggregation.swift",
+        "apps/android/app/src/main/java/com/healthmd/presentation/history/HistoryViewModel.kt"
+      ]
+    },
+    {
       "id": "export.agent-data-gateway",
       "name": "Agent Data gateway export destination",
       "classification": "shared",
