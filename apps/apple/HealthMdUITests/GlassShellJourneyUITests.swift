@@ -107,6 +107,14 @@ final class GlassShellJourneyUITests: XCTestCase {
         XCTAssertGreaterThan(exportNow.frame.minX, app.windows.firstMatch.frame.width * 0.8)
     }
 
+    func testIPadLandsOnArchive() throws {
+        let app = launch()
+        // The runner reports a phone idiom even on iPad, so measure the window.
+        guard app.windows.firstMatch.frame.width > 900 else { throw XCTSkip("iPad only.") }
+        XCTAssertTrue(app.descendants(matching: .any)["glass.archive"].waitForExistence(timeout: 10))
+        shot("ipad-archive")
+    }
+
     func testFailedExportShowsResultWithRecovery() {
         let app = launch(exportResult: "fail")
         XCTAssertTrue(app.buttons["glass.exportNow"].waitForExistence(timeout: 10))

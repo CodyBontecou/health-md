@@ -11,6 +11,11 @@ enum iPadNavItem: String, CaseIterable, Identifiable {
 
     var id: Self { self }
 
+    /// With the Liquid Glass flag on, the History section shows the Archive.
+    var sidebarTitle: String {
+        self == .history && NewExperienceFeature.isEnabled ? String(localized: "Archive") : rawValue
+    }
+
     var icon: String {
         switch self {
         case .sync:     return "arrow.triangle.2.circlepath"
@@ -58,11 +63,11 @@ struct iPadSidebar: View {
                             .foregroundStyle(Color.accent)
                             .font(Typography.heading20())
                             .frame(maxWidth: .infinity, minHeight: 44)
-                            .accessibilityLabel(item.rawValue)
+                            .accessibilityLabel(item.sidebarTitle)
                             .tag(item)
                     } else {
                         Label {
-                            Text(item.rawValue)
+                            Text(item.sidebarTitle)
                                 .font(Typography.bodyEmphasis())
                         } icon: {
                             Image(systemName: item.icon)
