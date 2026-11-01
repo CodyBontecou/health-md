@@ -81,6 +81,12 @@ struct GlassScheduleSheet: View {
                                 ? String(localized: "Lookback: 1 day")
                                 : String(localized: "Lookback: \(draft.lookbackDays) days"))
                         }
+                        GlassToggleRow(
+                            title: String(localized: "Include today"),
+                            subtitle: String(localized: "End each range on today instead of yesterday. Today’s file stays partial until the day ends."),
+                            isOn: $draft.includeToday
+                        )
+                        .padding(.horizontal, -GlassMetrics.panelPadding)
                         Toggle(isOn: $draft.todayRefreshEnabled) { label(String(localized: "Today Refresh")) }
                             .toggleStyle(GlassToggleStyle())
                         if draft.todayRefreshEnabled {

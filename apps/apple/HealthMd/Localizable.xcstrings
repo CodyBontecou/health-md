@@ -1,6 +1,28 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "Include today" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Heute einbeziehen"}},
+      "es":{"stringUnit":{"state":"translated","value":"Incluir hoy"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Inclure aujourd’hui"}},
+      "it":{"stringUnit":{"state":"translated","value":"Includi oggi"}},
+      "ja":{"stringUnit":{"state":"translated","value":"今日を含める"}},
+      "ko":{"stringUnit":{"state":"translated","value":"오늘 포함"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Vandaag opnemen"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Incluir hoje"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"包含今天"}}
+    }},
+    "End each range on today instead of yesterday. Today’s file stays partial until the day ends." : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Jeder Zeitraum endet heute statt gestern. Die heutige Datei bleibt unvollständig, bis der Tag endet."}},
+      "es":{"stringUnit":{"state":"translated","value":"Cada intervalo termina hoy en lugar de ayer. El archivo de hoy será parcial hasta que acabe el día."}},
+      "fr":{"stringUnit":{"state":"translated","value":"Chaque période se termine aujourd’hui plutôt qu’hier. Le fichier du jour reste partiel jusqu’à la fin de la journée."}},
+      "it":{"stringUnit":{"state":"translated","value":"Ogni intervallo termina oggi anziché ieri. Il file di oggi resta parziale fino alla fine della giornata."}},
+      "ja":{"stringUnit":{"state":"translated","value":"各期間を昨日ではなく今日までにします。今日のファイルは1日が終わるまで部分的なままです。"}},
+      "ko":{"stringUnit":{"state":"translated","value":"각 기간을 어제 대신 오늘로 끝냅니다. 오늘 파일은 하루가 끝날 때까지 일부만 포함됩니다."}},
+      "nl":{"stringUnit":{"state":"translated","value":"Elke periode eindigt vandaag in plaats van gisteren. Het bestand van vandaag blijft onvolledig tot de dag voorbij is."}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Cada período termina hoje em vez de ontem. O arquivo de hoje fica parcial até o fim do dia."}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"每个范围结束于今天而不是昨天。今天的文件在当天结束前都是部分数据。"}}
+    }},
     "Recommended" : {"localizations":{
       "de":{"stringUnit":{"state":"translated","value":"Empfohlen"}},
       "es":{"stringUnit":{"state":"translated","value":"Recomendado"}},
