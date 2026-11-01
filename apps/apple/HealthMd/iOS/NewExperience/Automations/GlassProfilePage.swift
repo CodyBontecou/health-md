@@ -16,6 +16,23 @@ extension ExportProfileCoordinator {
     }
 }
 
+extension ExportSettingsSnapshot {
+    /// Yesterday's output paths, from the exporter's own formatter on a throwaway object.
+    var glassPreviewPaths: [String] {
+        guard let defaults = UserDefaults(suiteName: "com.healthmd.glass.output-preview") else { return [] }
+        let settings = AdvancedExportSettings(snapshot: self, userDefaults: defaults)
+        let date = Calendar.current.date(byAdding: .day, value: -1, to: Date()) ?? Date()
+        return ExportProfileCardSummary.sortedFormats(exportFormats).map { format in
+            let components = [
+                healthSubfolder,
+                settings.formatFolderPath(for: date, format: format),
+                settings.filename(for: date, format: format)
+            ]
+            return components.compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: "/")
+        }
+    }
+}
+
 /// The sheet-sized settings pages of one automation.
 enum GlassProfilePageKind: String, Identifiable {
     case metrics, formats, output, dailyNotes, entries, formatCustom

@@ -176,4 +176,40 @@ final class GlassAutomationPagesUITests: XCTestCase {
         XCTAssertTrue(app.textFields["clinicianReport.displayName"].waitForExistence(timeout: 5))
         shot("clinician")
     }
+
+    func testRegularWidthShowsAutomationsAndSettingsInTwoPanes() throws {
+        continueAfterFailure = false
+        let app = UITestLaunchHelper.configuredApp(
+            healthAuthorized: true,
+            vaultSelected: true,
+            purchaseUnlocked: true,
+            scheduleEnabled: true
+        )
+        app.launchArguments += ["-NewExperienceEnabled", "YES"]
+        app.launch()
+        XCUIDevice.shared.orientation = .landscapeLeft
+        defer { XCUIDevice.shared.orientation = .portrait }
+        sleep(1)
+        guard app.windows.firstMatch.frame.width > 900 else {
+            throw XCTSkip("This device is compact in landscape.")
+        }
+        func shot(_ name: String) {
+            guard let directory = ProcessInfo.processInfo.environment["GLASS_SCREENSHOT_DIR"] else { return }
+            let url = URL(fileURLWithPath: directory).appendingPathComponent("\(name).png")
+            try? XCUIScreen.main.screenshot().pngRepresentation.write(to: url)
+        }
+
+        app.buttons["Automations"].tap()
+        // The list and the first automation's detail are on screen together.
+        XCTAssertTrue(app.staticTexts["Default"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["Run now"].waitForExistence(timeout: 5))
+        shot("duo-automations")
+
+        app.buttons["Settings"].tap()
+        XCTAssertTrue(app.descendants(matching: .any)["glass.folderDestination"].waitForExistence(timeout: 5))
+        app.buttons["App & support"].tap()
+        XCTAssertTrue(app.descendants(matching: .any)["glass.appSupport"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["App & support"].exists, "The hub must stay beside the detail.")
+        shot("duo-settings")
+    }
 }

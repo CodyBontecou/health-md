@@ -1,6 +1,28 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "Fields in this note" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Felder in dieser Notiz"}},
+      "es":{"stringUnit":{"state":"translated","value":"Campos de esta nota"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Champs de cette note"}},
+      "it":{"stringUnit":{"state":"translated","value":"Campi di questa nota"}},
+      "ja":{"stringUnit":{"state":"translated","value":"このノートのフィールド"}},
+      "ko":{"stringUnit":{"state":"translated","value":"이 노트의 필드"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Velden in deze notitie"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Campos desta nota"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"此笔记中的字段"}}
+    }},
+    "All %lld" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Alle %lld"}},
+      "es":{"stringUnit":{"state":"translated","value":"Todas (%lld)"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Toutes (%lld)"}},
+      "it":{"stringUnit":{"state":"translated","value":"Tutte (%lld)"}},
+      "ja":{"stringUnit":{"state":"translated","value":"すべて（%lld）"}},
+      "ko":{"stringUnit":{"state":"translated","value":"전체 %lld개"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Alle %lld"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Todas (%lld)"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"全部 %lld 项"}}
+    }},
     "%@ couldn’t finish. Open Health.md to retry the remaining dates." : {"localizations":{
       "de":{"stringUnit":{"state":"translated","value":"%@ konnte nicht abgeschlossen werden. Öffne Health.md, um die restlichen Daten erneut zu versuchen."}},
       "es":{"stringUnit":{"state":"translated","value":"%@ no pudo terminar. Abre Health.md para reintentar las fechas restantes."}},

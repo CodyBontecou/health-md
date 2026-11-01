@@ -16,6 +16,7 @@ struct SettingsScreen: View {
     private enum Route: Hashable { case folder, mac, cli, appSupport }
 
     @Environment(\.glassPalette) private var palette
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @EnvironmentObject private var configurationProtection: ConfigurationProtectionManager
     @EnvironmentObject private var syncService: SyncService
     @EnvironmentObject private var directCLIService: IPhoneDirectCLIService
@@ -28,75 +29,26 @@ struct SettingsScreen: View {
     @State private var showAPI = false
     @State private var showGateway = false
 
+    private var usesTwoPanes: Bool { horizontalSizeClass == .regular }
+
+    /// In two panes the detail shows one route, so opening replaces instead of pushing.
+    private func open(_ route: Route) {
+        if usesTwoPanes { path = [route] } else { path.append(route) }
+    }
+
     var body: some View {
-        NavigationStack(path: $path) {
-            ScrollView {
-                VStack(alignment: .leading, spacing: GlassMetrics.sectionGap) {
-                    Text("Settings").glassFont(.largeTitle).foregroundStyle(palette.text)
-
-                    GlassPanel {
-                        row(
-                            "Health.md",
-                            subtitle: purchaseManager.isUnlocked
-                                ? String(localized: "Restore or manage")
-                                : String(localized: "Unlock Health.md")
-                        ) { showPaywall = true }
-                    }
-
-                    sectionTitle(String(localized: "Destinations"))
-                    GlassPanel {
-                        row(
-                            String(localized: "Folder"),
-                            subtitle: vaultManager.hasVaultSelection ? vaultManager.vaultName : nil
-                        ) { path.append(.folder) }
-                        row(String(localized: "Mac Destination"), subtitle: connectionText) { path.append(.mac) }
-                        row(
-                            String(localized: "CLI"),
-                            subtitle: directCLIService.hasPairedCLI ? String(localized: "Paired") : nil
-                        ) { path.append(.cli) }
-                        row(
-                            String(localized: "API Endpoint"),
-                            subtitle: apiExportSettings.isConfigured ? apiExportSettings.displayName : nil
-                        ) { showAPI = true }
-                        row(
-                            String(localized: "Agent Data gateway"),
-                            subtitle: gatewaySettings.isConfigured ? gatewaySettings.displayName : nil
-                        ) { showGateway = true }
-                    }
-
-                    sectionTitle(String(localized: "Data"))
-                    GlassPanel {
-                        row(String(localized: "Clinician report")) { showClinicianReport = true }
-                        if ConnectedAppsFeature.isEnabled {
-                            row(String(localized: "Connected apps")) { showIntegrations = true }
-                        }
-                    }
-
-                    sectionTitle(String(localized: "App"))
-                    GlassPanel {
-                        row(String(localized: "App & support")) { path.append(.appSupport) }
+        Group {
+            if usesTwoPanes {
+                HStack(spacing: 0) {
+                    NavigationStack { hub }
+                        .frame(width: GlassMetrics.listPaneWidth)
+                    NavigationStack {
+                        destination(path.last ?? .folder).id(path.last ?? .folder)
                     }
                 }
-                .padding(.horizontal, GlassMetrics.screenMargin)
-                .padding(.top, 12)
-                .padding(.bottom, GlassMetrics.scrollBottomInset)
-            }
-            .background(palette.bg.ignoresSafeArea())
-            .toolbar(.hidden, for: .navigationBar)
-            .navigationDestination(for: Route.self) { route in
-                switch route {
-                case .folder:
-                    GlassFolderDestinationScreen(
-                        vaultManager: vaultManager,
-                        profiles: folderProfiles,
-                        showFolderPicker: $showFolderPicker
-                    )
-                case .mac:
-                    GlassMacDestinationScreen()
-                case .cli:
-                    GlassCLIDestinationScreen()
-                case .appSupport:
-                    GlassAppSupportScreen()
+            } else {
+                NavigationStack(path: $path) {
+                    hub.navigationDestination(for: Route.self) { destination($0) }
                 }
             }
         }
@@ -123,6 +75,79 @@ struct SettingsScreen: View {
         }
         .onChange(of: configurationProtection.settingsNavigationRequestID) { _, requestID in
             if requestID != nil { path = [.appSupport] }
+        }
+    }
+
+    private var hub: some View {
+            ScrollView {
+                VStack(alignment: .leading, spacing: GlassMetrics.sectionGap) {
+                    Text("Settings").glassFont(.largeTitle).foregroundStyle(palette.text)
+
+                    GlassPanel {
+                        row(
+                            "Health.md",
+                            subtitle: purchaseManager.isUnlocked
+                                ? String(localized: "Restore or manage")
+                                : String(localized: "Unlock Health.md")
+                        ) { showPaywall = true }
+                    }
+
+                    sectionTitle(String(localized: "Destinations"))
+                    GlassPanel {
+                        row(
+                            String(localized: "Folder"),
+                            subtitle: vaultManager.hasVaultSelection ? vaultManager.vaultName : nil
+                        ) { open(.folder) }
+                        row(String(localized: "Mac Destination"), subtitle: connectionText) { open(.mac) }
+                        row(
+                            String(localized: "CLI"),
+                            subtitle: directCLIService.hasPairedCLI ? String(localized: "Paired") : nil
+                        ) { open(.cli) }
+                        row(
+                            String(localized: "API Endpoint"),
+                            subtitle: apiExportSettings.isConfigured ? apiExportSettings.displayName : nil
+                        ) { showAPI = true }
+                        row(
+                            String(localized: "Agent Data gateway"),
+                            subtitle: gatewaySettings.isConfigured ? gatewaySettings.displayName : nil
+                        ) { showGateway = true }
+                    }
+
+                    sectionTitle(String(localized: "Data"))
+                    GlassPanel {
+                        row(String(localized: "Clinician report")) { showClinicianReport = true }
+                        if ConnectedAppsFeature.isEnabled {
+                            row(String(localized: "Connected apps")) { showIntegrations = true }
+                        }
+                    }
+
+                    sectionTitle(String(localized: "App"))
+                    GlassPanel {
+                        row(String(localized: "App & support")) { open(.appSupport) }
+                    }
+                }
+                .padding(.horizontal, GlassMetrics.screenMargin)
+                .padding(.top, 12)
+                .padding(.bottom, GlassMetrics.scrollBottomInset)
+            }
+            .background(palette.bg.ignoresSafeArea())
+            .toolbar(.hidden, for: .navigationBar)
+    }
+
+    @ViewBuilder private func destination(_ route: Route) -> some View {
+        switch route {
+        case .folder:
+            GlassFolderDestinationScreen(
+                vaultManager: vaultManager,
+                profiles: folderProfiles,
+                showFolderPicker: $showFolderPicker
+            )
+        case .mac:
+            GlassMacDestinationScreen()
+        case .cli:
+            GlassCLIDestinationScreen()
+        case .appSupport:
+            GlassAppSupportScreen()
         }
     }
 

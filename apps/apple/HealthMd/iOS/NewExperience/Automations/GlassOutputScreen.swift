@@ -73,7 +73,7 @@ struct GlassOutputScreen: View {
                 .glassFont(.rowSubtitle)
                 .foregroundStyle(palette.muted)
 
-            GlassPanel { GlassPathPreview(paths: previewPaths) }
+            GlassPanel { GlassPathPreview(paths: draft.glassPreviewPaths) }
 
             if !overlappingNames.isEmpty {
                 let names = overlappingNames.joined(separator: ", ")
@@ -180,21 +180,6 @@ struct GlassOutputScreen: View {
 
     private var overlappingNames: [String] {
         coordinator.overlapPreviewNames(target: target, folderVaultID: folderVaultID, settings: draft)
-    }
-
-    /// Paths from the exporter's own formatter, run on a throwaway settings object.
-    private var previewPaths: [String] {
-        guard let defaults = UserDefaults(suiteName: "com.healthmd.glass.output-preview") else { return [] }
-        let settings = AdvancedExportSettings(snapshot: draft, userDefaults: defaults)
-        let date = Calendar.current.date(byAdding: .day, value: -1, to: Date()) ?? Date()
-        return ExportProfileCardSummary.sortedFormats(draft.exportFormats).map { format in
-            let components = [
-                draft.healthSubfolder,
-                settings.formatFolderPath(for: date, format: format),
-                settings.filename(for: date, format: format)
-            ]
-            return components.compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: "/")
-        }
     }
 
     private func save() {

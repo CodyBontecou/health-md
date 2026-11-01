@@ -52,8 +52,10 @@ struct AutomationsScreen: View {
     let onSchedulesChanged: () -> Void
 
     @Environment(\.glassPalette) private var palette
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @EnvironmentObject private var configurationProtection: ConfigurationProtectionManager
     @State private var showCreation = false
+    @State private var selectedProfileID: UUID?
 
     init(
         coordinator: ExportProfileCoordinator,
@@ -73,8 +75,44 @@ struct AutomationsScreen: View {
 
     private var facts: AutomationFacts { AutomationFacts(coordinator: coordinator) }
 
+    /// Regular width shows the list beside the selected automation.
+    private var usesTwoPanes: Bool { horizontalSizeClass == .regular }
+
+    private func detail(_ profileID: UUID) -> some View {
+        AutomationDetailScreen(
+            coordinator: coordinator,
+            profileID: profileID,
+            onRun: onRun,
+            onPreview: onPreview,
+            onSchedulesChanged: onSchedulesChanged
+        )
+    }
+
     var body: some View {
-        NavigationStack {
+        Group {
+            if usesTwoPanes {
+                HStack(spacing: 0) {
+                    NavigationStack { list }
+                        .frame(width: GlassMetrics.listPaneWidth)
+                    NavigationStack {
+                        if let id = selectedProfileID ?? profileStore.profiles.first?.id {
+                            detail(id).id(id)
+                        }
+                    }
+                }
+            } else {
+                NavigationStack { list }
+            }
+        }
+        .sheet(isPresented: $showCreation) {
+            ExportProfileEditorSheet(coordinator: coordinator)
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
+        }
+        .accessibilityIdentifier("glass.automations")
+    }
+
+    private var list: some View {
             ScrollView {
                 VStack(alignment: .leading, spacing: GlassMetrics.sectionGap) {
                     HStack {
@@ -97,18 +135,13 @@ struct AutomationsScreen: View {
                         .foregroundStyle(palette.sec)
 
                     ForEach(profileStore.profiles) { profile in
-                        NavigationLink {
-                            AutomationDetailScreen(
-                                coordinator: coordinator,
-                                profileID: profile.id,
-                                onRun: onRun,
-                                onPreview: onPreview,
-                                onSchedulesChanged: onSchedulesChanged
-                            )
-                        } label: {
-                            card(profile)
+                        if usesTwoPanes {
+                            Button { selectedProfileID = profile.id } label: { card(profile) }
+                                .buttonStyle(.plain)
+                        } else {
+                            NavigationLink { detail(profile.id) } label: { card(profile) }
+                                .buttonStyle(.plain)
                         }
-                        .buttonStyle(.plain)
                     }
 
                     NavigationLink {
@@ -128,13 +161,6 @@ struct AutomationsScreen: View {
             }
             .background(palette.bg.ignoresSafeArea())
             .toolbar(.hidden, for: .navigationBar)
-        }
-        .sheet(isPresented: $showCreation) {
-            ExportProfileEditorSheet(coordinator: coordinator)
-                .presentationDetents([.medium, .large])
-                .presentationDragIndicator(.visible)
-        }
-        .accessibilityIdentifier("glass.automations")
     }
 
     private func card(_ profile: ExportProfile) -> some View {
@@ -334,6 +360,45 @@ struct AutomationDetailScreen: View {
     }
 }
 
+/// The composer's preview: the real output path and the fields this profile selects.
+/// Values are omitted on purpose. A rendered file needs a HealthKit read, which Preview does.
+struct ComposerLivePreview: View {
+    let settings: ExportSettingsSnapshot
+    let onShowMetrics: () -> Void
+
+    @Environment(\.glassPalette) private var palette
+
+    private var fields: [String] {
+        let enabled = settings.metricSelection.enabledMetricIDs
+        return HealthMetrics.availableInCurrentBuild.filter { enabled.contains($0.id) }.map(\.localizedDisplayName)
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            GlassPanel { GlassPathPreview(paths: settings.glassPreviewPaths) }
+            HStack {
+                GlassSectionLabel(title: String(localized: "Fields in this note"))
+                Spacer()
+                Button(String(localized: "All \(fields.count)"), action: onShowMetrics)
+                    .buttonStyle(.plain)
+                    .glassFont(.caption)
+                    .foregroundStyle(palette.accent)
+                    .frame(minHeight: GlassMetrics.touchTarget)
+            }
+            GlassPanel {
+                ForEach(fields.prefix(6), id: \.self) { field in
+                    Text(field)
+                        .glassFont(.rowSubtitle)
+                        .foregroundStyle(palette.sec)
+                        .padding(.horizontal, GlassMetrics.panelPadding)
+                        .padding(.vertical, 6)
+                }
+            }
+        }
+        .accessibilityIdentifier("glass.composer.preview")
+    }
+}
+
 /// ComposeGlass, ComposeGermanG and ComposeLargeTextG.
 struct ComposerScreen: View {
     @ObservedObject var coordinator: ExportProfileCoordinator
@@ -345,6 +410,7 @@ struct ComposerScreen: View {
 
     @Environment(\.glassPalette) private var palette
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @EnvironmentObject private var configurationProtection: ConfigurationProtectionManager
     @EnvironmentObject private var schedulingManager: SchedulingManager
     @State private var showEditor = false
@@ -374,28 +440,15 @@ struct ComposerScreen: View {
     private func content(_ profile: ExportProfile) -> some View {
         let entry = entryStore.entries.first { $0.profileID == profile.id }
         let sentence = AutomationFacts(coordinator: coordinator).sentence(profile)
-        return ScrollView {
-            VStack(alignment: .leading, spacing: GlassMetrics.sectionGap) {
-                if dynamicTypeSize.isAccessibilitySize {
-                    listLayout(sentence)
-                } else {
-                    AutomationSentenceView(sentence: sentence) { handle($0, profile: profile) }
-                        .padding(GlassMetrics.panelPadding)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .glassSurface()
+        return HStack(alignment: .top, spacing: 0) {
+            composerColumn(profile: profile, sentence: sentence)
+            if horizontalSizeClass == .regular {
+                ScrollView {
+                    ComposerLivePreview(settings: profile.settings) { page = .metrics }
+                        .padding(GlassMetrics.screenMargin)
                 }
-                Button(String(localized: "Preview")) { onPreview(profile.id) }
-                    .buttonStyle(GlassPrimaryButtonStyle())
-                Button(String(localized: "All settings")) {
-                    configurationProtection.performConfigurationChange { showEditor = true }
-                }
-                .buttonStyle(.plain)
-                .glassFont(.caption)
-                .foregroundStyle(palette.accent)
-                .frame(minHeight: GlassMetrics.touchTarget)
+                .frame(maxWidth: .infinity)
             }
-            .padding(GlassMetrics.screenMargin)
-            .padding(.bottom, GlassMetrics.scrollBottomInset)
         }
         .background(palette.bg.ignoresSafeArea())
         .navigationTitle(profile.name)
@@ -416,6 +469,36 @@ struct ComposerScreen: View {
             .presentationDetents([.large])
             .presentationDragIndicator(.visible)
         }
+    }
+
+    private func composerColumn(profile: ExportProfile, sentence: AutomationSentence) -> some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: GlassMetrics.sectionGap) {
+                if dynamicTypeSize.isAccessibilitySize {
+                    listLayout(sentence)
+                } else {
+                    AutomationSentenceView(sentence: sentence) { handle($0, profile: profile) }
+                        .padding(GlassMetrics.panelPadding)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .glassSurface()
+                }
+                Button(String(localized: "Preview")) { onPreview(profile.id) }
+                    .buttonStyle(GlassPrimaryButtonStyle())
+                if horizontalSizeClass != .regular {
+                    ComposerLivePreview(settings: profile.settings) { page = .metrics }
+                }
+                Button(String(localized: "All settings")) {
+                    configurationProtection.performConfigurationChange { showEditor = true }
+                }
+                .buttonStyle(.plain)
+                .glassFont(.caption)
+                .foregroundStyle(palette.accent)
+                .frame(minHeight: GlassMetrics.touchTarget)
+            }
+            .padding(GlassMetrics.screenMargin)
+            .padding(.bottom, GlassMetrics.scrollBottomInset)
+        }
+        .frame(maxWidth: .infinity)
     }
 
     private func listLayout(_ sentence: AutomationSentence) -> some View {

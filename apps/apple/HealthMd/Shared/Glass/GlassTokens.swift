@@ -88,6 +88,7 @@ enum GlassMetrics {
     static let touchTarget: CGFloat = 44
     static let tabBarBottomOffset: CGFloat = 26
     static let scrollBottomInset: CGFloat = 120
+    static let listPaneWidth: CGFloat = 340
 
     static let switchSize = CGSize(width: 60, height: 30)
     static let switchKnobSize = CGSize(width: 38, height: 26)
