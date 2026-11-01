@@ -166,8 +166,7 @@ struct AutomationDetailScreen: View {
     @EnvironmentObject private var schedulingManager: SchedulingManager
     @State private var showEditor = false
     @State private var showSchedule = false
-    @State private var showMetrics = false
-    @State private var showFormats = false
+    @State private var page: GlassProfilePageKind?
 
     init(
         coordinator: ExportProfileCoordinator,
@@ -228,29 +227,28 @@ struct AutomationDetailScreen: View {
                 }
 
                 GlassPanel {
-                    Button {
-                        configurationProtection.performConfigurationChange { showMetrics = true }
-                    } label: {
-                        GlassRow(title: String(localized: "Metrics")) {
-                            Text(verbatim: "\(profile.settings.metricSelection.enabledMetricIDs.count)")
-                                .glassFont(.rowSubtitle)
-                                .foregroundStyle(palette.muted)
-                            Image(systemName: "chevron.right").foregroundStyle(palette.muted)
-                        }
-                    }
-                    .buttonStyle(.plain)
+                    settingRow(
+                        String(localized: "Metrics"),
+                        value: "\(profile.settings.metricSelection.enabledMetricIDs.count)"
+                    ) { page = .metrics }
                     settingRow(
                         String(localized: "Formats"),
                         value: ExportProfileCardSummary.sortedFormats(profile.settings.exportFormats)
                             .map(\.localizedDisplayName).joined(separator: " · ")
-                    ) { showFormats = true }
-                    settingRow(String(localized: "All settings"), value: "")
-                    settingRow(String(localized: "Output"), value: facts.destination(profile))
+                    ) { page = .formats }
+                    settingRow(String(localized: "Customize format"), value: "") { page = .formatCustom }
+                    settingRow(String(localized: "Output"), value: facts.destination(profile)) { page = .output }
                     settingRow(
                         String(localized: "Daily notes"),
                         value: profile.settings.dailyNoteInjection.enabled
                             ? String(localized: "On") : String(localized: "Off")
-                    )
+                    ) { page = .dailyNotes }
+                    settingRow(
+                        String(localized: "Individual entries"),
+                        value: profile.settings.individualTracking.globalEnabled
+                            ? String(localized: "On") : String(localized: "Off")
+                    ) { page = .entries }
+                    settingRow(String(localized: "All settings"), value: "")
                     Button { showSchedule = true } label: {
                         GlassRow(title: String(localized: "Schedule"), subtitle: facts.statusLine(profile)) {
                             Image(systemName: "chevron.right").foregroundStyle(palette.muted)
@@ -295,21 +293,14 @@ struct AutomationDetailScreen: View {
         .background(palette.bg.ignoresSafeArea())
         .navigationTitle(profile.name)
         .navigationBarTitleDisplayMode(.inline)
-        .sheet(isPresented: $showMetrics) {
-            GlassMetricsScreen(coordinator: coordinator, profile: profile)
-                .glassTheme()
-        }
-        .sheet(isPresented: $showFormats) {
-            GlassFormatsScreen(coordinator: coordinator, profile: profile)
-                .glassTheme()
-        }
+        .sheet(item: $page) { GlassProfilePage(kind: $0, coordinator: coordinator, profile: profile) }
         .sheet(isPresented: $showEditor) {
             ExportProfileEditorSheet(coordinator: coordinator, editing: profile)
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showSchedule) {
-            GlassScheduleSheet(profile: profile, entry: entry) { updated in
+            GlassScheduleSheet(profile: profile, entry: entry, entryStore: entryStore) { updated in
                 _ = entryStore.upsert(updated)
                 schedulingManager.refreshScheduledAutomation()
                 onSchedulesChanged()
@@ -358,7 +349,7 @@ struct ComposerScreen: View {
     @EnvironmentObject private var schedulingManager: SchedulingManager
     @State private var showEditor = false
     @State private var showSchedule = false
-    @State private var showRange = false
+    @State private var page: GlassProfilePageKind?
 
     init(
         coordinator: ExportProfileCoordinator,
@@ -409,13 +400,14 @@ struct ComposerScreen: View {
         .background(palette.bg.ignoresSafeArea())
         .navigationTitle(profile.name)
         .navigationBarTitleDisplayMode(.inline)
+        .sheet(item: $page) { GlassProfilePage(kind: $0, coordinator: coordinator, profile: profile) }
         .sheet(isPresented: $showEditor) {
             ExportProfileEditorSheet(coordinator: coordinator, editing: profile)
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showSchedule) {
-            GlassScheduleSheet(profile: profile, entry: entry) { updated in
+            GlassScheduleSheet(profile: profile, entry: entry, entryStore: entryStore) { updated in
                 _ = entryStore.upsert(updated)
                 schedulingManager.refreshScheduledAutomation()
                 onSchedulesChanged()
@@ -460,8 +452,10 @@ struct ComposerScreen: View {
             switch token {
             case .when, .range:
                 showSchedule = true
-            case .metrics, .where, .formats, .note:
-                showEditor = true
+            case .metrics: page = .metrics
+            case .where: page = .output
+            case .formats: page = .formats
+            case .note: page = .dailyNotes
             }
         }
     }

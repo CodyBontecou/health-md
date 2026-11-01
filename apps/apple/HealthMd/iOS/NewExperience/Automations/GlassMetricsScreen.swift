@@ -3,7 +3,7 @@ import SwiftUI
 
 /// MetricsG. Edits one profile's selection and saves through the same coordinator path as
 /// the profile editor. Medications and Vision keep their permission flows in the
-/// existing screen, which opens from "More options".
+/// existing screen, which opens from Extra permissions.
 struct GlassMetricsScreen: View {
     let coordinator: ExportProfileCoordinator
     let profile: ExportProfile
@@ -13,6 +13,7 @@ struct GlassMetricsScreen: View {
     @EnvironmentObject private var configurationProtection: ConfigurationProtectionManager
     @StateObject private var state: MetricSelectionState
     @State private var expanded: Set<HealthMetricCategory> = []
+    @State private var query = ""
 
     init(coordinator: ExportProfileCoordinator, profile: ExportProfile) {
         self.coordinator = coordinator
@@ -35,16 +36,32 @@ struct GlassMetricsScreen: View {
                         }
                         GlassChip(title: String(localized: "Deselect All")) { state.deselectAll() }
                     }
+                    TextField(String(localized: "Search"), text: $query)
+                        .textFieldStyle(.plain)
+                        .glassFont(.body)
+                        .foregroundStyle(palette.text)
+                        .autocorrectionDisabled()
+                        .padding(.horizontal, GlassMetrics.panelPadding)
+                        .frame(minHeight: GlassMetrics.touchTarget)
+                        .glassSurface(cornerRadius: GlassMetrics.panelSmallRadius)
                     GlassPanel {
-                        ForEach(standardCategories, id: \.self) { category in
-                            categoryRow(category)
+                        if query.isEmpty {
+                            ForEach(standardCategories, id: \.self) { category in
+                                categoryRow(category)
+                            }
+                        } else {
+                            ForEach(searchResults, id: \.id) { metricToggle($0) }
                         }
                     }
+                    GlassSectionLabel(title: String(localized: "Extra permissions"))
                     NavigationLink {
                         MetricSelectionView(selectionState: state, healthKitManager: HealthKitManager.shared)
                     } label: {
                         GlassPanel {
-                            GlassRow(title: String(localized: "More options")) {
+                            GlassRow(
+                                title: String(localized: "Medications and vision"),
+                                subtitle: String(localized: "Separate Apple permissions")
+                            ) {
                                 Image(systemName: "chevron.right").foregroundStyle(palette.muted)
                             }
                         }
@@ -94,32 +111,30 @@ struct GlassMetricsScreen: View {
         }
         .buttonStyle(.plain)
         if isExpanded {
-            ForEach(standardMetrics.filter { $0.category == category }, id: \.id) { metric in
-                Toggle(isOn: Binding(
-                    get: { state.isMetricEnabled(metric.id) },
-                    set: { state.setMetric(metric.id, enabled: $0) }
-                )) {
-                    Text(metric.localizedDisplayName).glassFont(.body).foregroundStyle(palette.sec)
-                }
-                .toggleStyle(GlassToggleStyle())
-                .padding(.horizontal, GlassMetrics.panelPadding)
-            }
+            ForEach(standardMetrics.filter { $0.category == category }, id: \.id) { metricToggle($0) }
         }
+    }
+
+    private var searchResults: [HealthMetricDefinition] {
+        standardMetrics.filter { $0.localizedDisplayName.localizedCaseInsensitiveContains(query) }
+    }
+
+    private func metricToggle(_ metric: HealthMetricDefinition) -> some View {
+        Toggle(isOn: Binding(
+            get: { state.isMetricEnabled(metric.id) },
+            set: { state.setMetric(metric.id, enabled: $0) }
+        )) {
+            Text(metric.localizedDisplayName).glassFont(.body).foregroundStyle(palette.sec)
+        }
+        .toggleStyle(GlassToggleStyle())
+        .padding(.horizontal, GlassMetrics.panelPadding)
     }
 
     private func save() {
         configurationProtection.performConfigurationChange {
             var settings = profile.settings
             settings.metricSelection = MetricSelectionSnapshot.from(state)
-            _ = coordinator.updateProfile(
-                id: profile.id,
-                name: profile.name,
-                target: profile.target,
-                folderVaultID: profile.folderVaultID,
-                apiEndpointID: profile.apiEndpointID,
-                agentDataGatewayID: coordinator.destinationStore.agentDataGatewayBinding(profileID: profile.id),
-                settings: settings
-            )
+            coordinator.saveSettings(settings, for: profile)
             dismiss()
         }
     }

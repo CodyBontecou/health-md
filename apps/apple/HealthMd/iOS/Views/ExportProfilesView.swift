@@ -1512,7 +1512,7 @@ struct ExportProfileEditorSheet: View {
 /// editor. Nothing is imported until Add; the token is stored in the
 /// destination store's Keychain-backed slot, not in the live shared endpoint
 /// settings.
-private struct ExportProfileEndpointFormSheet: View {
+struct ExportProfileEndpointFormSheet: View {
     let onAdd: (String, String, String?) -> Void
 
     @Environment(\.dismiss) private var dismiss
@@ -1591,7 +1591,7 @@ private struct ExportProfileEndpointFormSheet: View {
 /// Inline form for adding a new Agent Data gateway destination binding.
 /// Gateways carry no credential in ingestion protocol v1, so the form is a
 /// name plus one endpoint URL.
-private struct ExportProfileGatewayFormSheet: View {
+struct ExportProfileGatewayFormSheet: View {
     let onAdd: (String, String) -> Void
 
     @Environment(\.dismiss) private var dismiss

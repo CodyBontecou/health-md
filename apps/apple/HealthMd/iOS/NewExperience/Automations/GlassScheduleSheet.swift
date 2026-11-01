@@ -1,23 +1,30 @@
 #if os(iOS)
 import SwiftUI
 
-/// ScheduleG. Same fields and save path as `ProfileScheduleEditorSheet`. Discarding a
-/// pending recovery stays in Schedule & history, which owns that confirmation.
+/// ScheduleG. Same fields and save path as `ProfileScheduleEditorSheet`, plus the same
+/// pending-recovery discard as `ProfileScheduleSection`.
 struct GlassScheduleSheet: View {
     let profile: ExportProfile
+    let entryStore: ScheduledExportEntryStore
     let onSave: (ScheduledExportEntry) -> Void
 
     @Environment(\.glassPalette) private var palette
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var configurationProtection: ConfigurationProtectionManager
+    @EnvironmentObject private var schedulingManager: SchedulingManager
     @State private var draft: ScheduledExportEntry
+    @State private var showDiscardConfirmation = false
+    @State private var isDiscardingRecovery = false
+    @State private var showRecoveryError = false
 
     init(
         profile: ExportProfile,
         entry: ScheduledExportEntry?,
+        entryStore: ScheduledExportEntryStore,
         onSave: @escaping (ScheduledExportEntry) -> Void
     ) {
         self.profile = profile
+        self.entryStore = entryStore
         self.onSave = onSave
         _draft = State(initialValue: entry ?? ScheduledExportEntry(
             profileID: profile.id,
@@ -84,6 +91,31 @@ struct GlassScheduleSheet: View {
                             }
                         }
                     }
+
+                    if schedulingManager.pendingRecoveryProfileIDs.contains(profile.id) {
+                        GlassSectionLabel(title: String(localized: "Pending recovery"))
+                        GlassPanel {
+                            Button(role: .destructive) {
+                                configurationProtection.performConfigurationChange {
+                                    showDiscardConfirmation = true
+                                }
+                            } label: {
+                                GlassRow(title: String(localized: "Discard Pending Recovery")) {
+                                    Image(systemName: "trash").foregroundStyle(palette.coral)
+                                }
+                            }
+                            .buttonStyle(.plain)
+                            .disabled(isDiscardingRecovery)
+                            .accessibilityIdentifier("glass.schedule.discardRecovery")
+                        }
+                    }
+
+                    Text("iOS chooses the exact moment; runs can slip when locked or in Low Power Mode")
+                        .glassFont(.rowSubtitle)
+                        .foregroundStyle(palette.muted)
+                    Text("Scheduled exports need an active trial, subscription or Lifetime access.")
+                        .glassFont(.rowSubtitle)
+                        .foregroundStyle(palette.muted)
                 }
                 .padding(GlassMetrics.screenMargin)
             }
@@ -106,11 +138,40 @@ struct GlassScheduleSheet: View {
             }
         }
         .accessibilityIdentifier("glass.schedule")
+        .confirmationDialog(
+            "Discard Pending Recovery?",
+            isPresented: $showDiscardConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("Discard Pending Recovery", role: .destructive, action: discardRecovery)
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Discard unresolved scheduled exports for \(profile.name)? Your profile, API credentials, export history, completed files and completed-run progress stay unchanged. No export starts now; an enabled schedule waits for its next ordinary occurrence.")
+        }
+        .alert("Unable to discard pending recovery", isPresented: $showRecoveryError) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("Pending recovery could not be fully cleared. Please try again. Your profile and credentials were not removed.")
+        }
         .overlay(alignment: .top) {
             ConfigurationProtectionToast(configurationProtection: configurationProtection)
         }
         .onChange(of: configurationProtection.settingsNavigationRequestID) { _, requestID in
             if requestID != nil { dismiss() }
+        }
+    }
+
+    /// Protection may have been enabled while the confirmation was open.
+    private func discardRecovery() {
+        configurationProtection.performConfigurationChange {
+            isDiscardingRecovery = true
+            defer { isDiscardingRecovery = false }
+            do {
+                try schedulingManager.discardPendingRecovery(profileID: profile.id)
+                _ = entryStore.allEntries()
+            } catch {
+                showRecoveryError = true
+            }
         }
     }
 
