@@ -114,7 +114,11 @@ private struct HealthSummaryWidgetView: View {
                 case .systemMedium:
                     SummaryMediumView(snapshot: entry.snapshot)
                 default:
-                    SummarySmallView(day: entry.snapshot.today)
+                    if WidgetGlass.isEnabled {
+                        GlassSummaryWidgetTile(day: entry.snapshot.today)
+                    } else {
+                        SummarySmallView(day: entry.snapshot.today)
+                    }
                 }
             }
         }
@@ -147,7 +151,11 @@ private struct ActivityRingsWidgetView: View {
                 case .systemMedium:
                     ActivityMediumView(snapshot: entry.snapshot)
                 default:
-                    ActivitySmallView(day: entry.snapshot.today)
+                    if WidgetGlass.isEnabled {
+                        GlassActivityWidgetTile(day: entry.snapshot.today)
+                    } else {
+                        ActivitySmallView(day: entry.snapshot.today)
+                    }
                 }
             }
         }
@@ -173,7 +181,11 @@ private struct HeartRangeWidgetView: View {
                 case .systemLarge:
                     HeartRangeLargeView(snapshot: entry.snapshot)
                 default:
-                    HeartRangeMediumView(snapshot: entry.snapshot)
+                    if WidgetGlass.isEnabled {
+                        GlassHeartWidgetTile(day: entry.snapshot.today)
+                    } else {
+                        HeartRangeMediumView(snapshot: entry.snapshot)
+                    }
                 }
             }
         }
@@ -222,6 +234,71 @@ private struct EmptyHealthWidgetView: View {
                 .font(.caption2)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+    }
+}
+
+/// WidgetSummaryG.
+private struct GlassSummaryWidgetTile: View {
+    let day: HealthWidgetDay
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text("Last night").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+            Spacer(minLength: 0)
+            Text(HealthWidgetFormat.hours(day.sleepHours))
+                .font(.system(size: 32, weight: .bold))
+                .minimumScaleFactor(0.7)
+                .monospacedDigit()
+            Text("sleep").font(.caption).foregroundStyle(.secondary)
+            Spacer(minLength: 0)
+            Text(verbatim: "HRV \(HealthWidgetFormat.milliseconds(day.heartRateVariabilityMS))")
+                .font(.caption2.weight(.medium))
+            Text("\(HealthWidgetFormat.steps(day.steps)) steps")
+                .font(.caption2.weight(.medium))
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+    }
+}
+
+/// WidgetActivityG.
+private struct GlassActivityWidgetTile: View {
+    let day: HealthWidgetDay
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Activity").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+            Spacer(minLength: 0)
+            Text(verbatim: "\(HealthWidgetFormat.whole(day.activeEnergyKilocalories)) kcal")
+                .foregroundStyle(WidgetGlass.coral)
+            Text(verbatim: "\(HealthWidgetFormat.whole(day.exerciseMinutes)) min")
+                .foregroundStyle(WidgetGlass.ok)
+            Text(verbatim: "\(day.standHours ?? 0) h")
+                .foregroundStyle(WidgetGlass.accent)
+        }
+        .font(.title3.weight(.bold))
+        .monospacedDigit()
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+    }
+}
+
+/// WidgetHeartG.
+private struct GlassHeartWidgetTile: View {
+    let day: HealthWidgetDay
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text("Heart Range").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+            Text("Today").font(.caption2).foregroundStyle(.secondary)
+            Spacer(minLength: 0)
+            Text(verbatim: "\(HealthWidgetFormat.whole(day.heartRateMin))–\(HealthWidgetFormat.whole(day.heartRateMax))")
+                .font(.system(size: 28, weight: .bold))
+                .minimumScaleFactor(0.7)
+                .monospacedDigit()
+            Text(verbatim: "bpm · average \(HealthWidgetFormat.bpm(day.averageHeartRate))")
+                .font(.caption)
+                .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
     }
