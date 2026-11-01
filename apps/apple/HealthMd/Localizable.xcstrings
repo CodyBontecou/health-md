@@ -1,6 +1,83 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "Claim myself.md access" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"myself.md-Zugang beanspruchen"}},
+      "es":{"stringUnit":{"state":"translated","value":"Reclamar acceso a myself.md"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Réclamer l’accès à myself.md"}},
+      "it":{"stringUnit":{"state":"translated","value":"Richiedi l’accesso a myself.md"}},
+      "ja":{"stringUnit":{"state":"translated","value":"myself.mdのアクセスを申請"}},
+      "ko":{"stringUnit":{"state":"translated","value":"myself.md 이용권 받기"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Toegang tot myself.md claimen"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Resgatar acesso ao myself.md"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"领取 myself.md 权限"}}
+    }},
+    "Join Our Discord" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Tritt unserem Discord bei"}},
+      "es":{"stringUnit":{"state":"translated","value":"Únete a nuestro Discord"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Rejoignez notre Discord"}},
+      "it":{"stringUnit":{"state":"translated","value":"Unisciti al nostro Discord"}},
+      "ja":{"stringUnit":{"state":"translated","value":"Discordに参加"}},
+      "ko":{"stringUnit":{"state":"translated","value":"Discord 참여"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Word lid van onze Discord"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Entre no nosso Discord"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"加入我们的 Discord"}}
+    }},
+    "Safety" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Sicherheit"}},
+      "es":{"stringUnit":{"state":"translated","value":"Seguridad"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Sécurité"}},
+      "it":{"stringUnit":{"state":"translated","value":"Sicurezza"}},
+      "ja":{"stringUnit":{"state":"translated","value":"安全"}},
+      "ko":{"stringUnit":{"state":"translated","value":"안전"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Veiligheid"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Segurança"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"安全"}}
+    }},
+    "Lock configuration" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Konfiguration sperren"}},
+      "es":{"stringUnit":{"state":"translated","value":"Bloquear configuración"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Verrouiller la configuration"}},
+      "it":{"stringUnit":{"state":"translated","value":"Blocca configurazione"}},
+      "ja":{"stringUnit":{"state":"translated","value":"設定をロック"}},
+      "ko":{"stringUnit":{"state":"translated","value":"구성 잠금"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Configuratie vergrendelen"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Bloquear configuração"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"锁定配置"}}
+    }},
+    "Prevents accidental changes. Manual exports and syncs still work." : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Verhindert versehentliche Änderungen. Manuelle Exporte und Synchronisierungen funktionieren weiterhin."}},
+      "es":{"stringUnit":{"state":"translated","value":"Evita cambios accidentales. Las exportaciones y sincronizaciones manuales siguen funcionando."}},
+      "fr":{"stringUnit":{"state":"translated","value":"Empêche les modifications accidentelles. Les exportations et synchronisations manuelles restent possibles."}},
+      "it":{"stringUnit":{"state":"translated","value":"Evita modifiche accidentali. Esportazioni e sincronizzazioni manuali continuano a funzionare."}},
+      "ja":{"stringUnit":{"state":"translated","value":"誤った変更を防ぎます。手動の書き出しと同期は引き続き使えます。"}},
+      "ko":{"stringUnit":{"state":"translated","value":"실수로 변경되는 것을 막습니다. 수동 내보내기와 동기화는 계속 작동합니다."}},
+      "nl":{"stringUnit":{"state":"translated","value":"Voorkomt onbedoelde wijzigingen. Handmatige exports en synchronisaties blijven werken."}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Evita alterações acidentais. Exportações e sincronizações manuais continuam funcionando."}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"防止意外更改。手动导出和同步仍可使用。"}}
+    }},
+    "Account" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Konto"}},
+      "es":{"stringUnit":{"state":"translated","value":"Cuenta"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Compte"}},
+      "it":{"stringUnit":{"state":"translated","value":"Account"}},
+      "ja":{"stringUnit":{"state":"translated","value":"アカウント"}},
+      "ko":{"stringUnit":{"state":"translated","value":"계정"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Account"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Conta"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"账户"}}
+    }},
+    "Help" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Hilfe"}},
+      "es":{"stringUnit":{"state":"translated","value":"Ayuda"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Aide"}},
+      "it":{"stringUnit":{"state":"translated","value":"Aiuto"}},
+      "ja":{"stringUnit":{"state":"translated","value":"ヘルプ"}},
+      "ko":{"stringUnit":{"state":"translated","value":"도움말"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Help"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Ajuda"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"帮助"}}
+    }},
     "Paired" : {"localizations":{
       "de":{"stringUnit":{"state":"translated","value":"Gekoppelt"}},
       "es":{"stringUnit":{"state":"translated","value":"Emparejado"}},

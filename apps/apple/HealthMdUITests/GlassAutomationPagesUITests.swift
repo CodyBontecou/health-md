@@ -59,4 +59,37 @@ final class GlassAutomationPagesUITests: XCTestCase {
             app.navigationBars.buttons.firstMatch.tap()
         }
     }
+
+    func testLockBlocksEditsAndAppSupportCanTurnItOff() {
+        continueAfterFailure = false
+        let app = UITestLaunchHelper.configuredApp(
+            healthAuthorized: true,
+            vaultSelected: true,
+            purchaseUnlocked: true,
+            scheduleEnabled: true
+        )
+        app.launchArguments += ["-NewExperienceEnabled", "YES"]
+        app.launch()
+
+        app.buttons["Settings"].tap()
+        let support = app.buttons["App & support"]
+        XCTAssertTrue(support.waitForExistence(timeout: 5))
+        support.tap()
+        XCTAssertTrue(app.descendants(matching: .any)["glass.appSupport"].waitForExistence(timeout: 5))
+        let toggle = app.switches[UITestLaunchHelper.ConfigurationProtection.toggle]
+        XCTAssertTrue(toggle.waitForExistence(timeout: 5))
+        toggle.tap()
+
+        app.buttons["Automations"].tap()
+        let newProfile = app.buttons["New profile"]
+        XCTAssertTrue(newProfile.waitForExistence(timeout: 5))
+        newProfile.tap()
+        let toast = app.buttons[UITestLaunchHelper.ConfigurationProtection.toast]
+        XCTAssertTrue(toast.waitForExistence(timeout: 5))
+        toast.tap()
+
+        XCTAssertTrue(app.descendants(matching: .any)["glass.appSupport"].waitForExistence(timeout: 5))
+        XCTAssertTrue(toggle.waitForExistence(timeout: 5))
+        toggle.tap()
+    }
 }

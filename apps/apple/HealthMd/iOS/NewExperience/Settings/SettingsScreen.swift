@@ -96,15 +96,7 @@ struct SettingsScreen: View {
                 case .cli:
                     GlassCLIDestinationScreen()
                 case .appSupport:
-                    SettingsTabView(
-                        vaultManager: vaultManager,
-                        advancedSettings: advancedSettings,
-                        externalIntegrationManager: externalIntegrationManager,
-                        profileCoordinator: profileCoordinator,
-                        showFolderPicker: $showFolderPicker,
-                        showExportProfiles: $showExportProfiles,
-                        showClinicianReport: $showClinicianReport
-                    )
+                    GlassAppSupportScreen()
                 }
             }
         }
@@ -119,7 +111,12 @@ struct SettingsScreen: View {
         .sheet(isPresented: $showIntegrations) {
             ExternalIntegrationsView(manager: externalIntegrationManager)
         }
-        .onAppear(perform: followSyncRequest)
+        .onAppear {
+            followSyncRequest()
+            // The shell mounts this screen only on its tab, so a request made from
+            // another tab has already changed by the time onChange could see it.
+            if configurationProtection.settingsNavigationRequestID != nil { path = [.appSupport] }
+        }
         .onChange(of: selectedTab) { _, _ in followSyncRequest() }
         .onChange(of: directCLIService.pendingPairingLink) { _, link in
             if link != nil { path = [.cli] }
