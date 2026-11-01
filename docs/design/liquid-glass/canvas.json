@@ -570,6 +570,125 @@
    "h": 626,
    "title": "iPhone Duo · Split View (half width)",
    "radius": 36
+  },
+  "AS_iPhone_1.dc.html": {
+   "h": 956,
+   "title": "iPhone · 1 · your health, in plain text (panorama 1/3)",
+   "w": 440,
+   "x": 0,
+   "y": 21000
+  },
+  "AS_iPhone_2.dc.html": {
+   "h": 956,
+   "title": "iPhone · 2 · choose your health data (panorama 2/3)",
+   "w": 440,
+   "x": 520,
+   "y": 21000
+  },
+  "AS_iPhone_3.dc.html": {
+   "h": 956,
+   "title": "iPhone · 3 · every health day accounted for (panorama 3/3)",
+   "w": 440,
+   "x": 1040,
+   "y": 21000
+  },
+  "AS_iPhone_4.dc.html": {
+   "h": 956,
+   "title": "iPhone · 4 · 225+ health metrics",
+   "w": 440,
+   "x": 1560,
+   "y": 21000
+  },
+  "AS_iPhone_5.dc.html": {
+   "h": 956,
+   "title": "iPhone · 5 · one night, four formats",
+   "w": 440,
+   "x": 2080,
+   "y": 21000
+  },
+  "AS_iPhone_6.dc.html": {
+   "h": 956,
+   "title": "iPhone · 6 · health data, everywhere you need it",
+   "w": 440,
+   "x": 2600,
+   "y": 21000
+  },
+  "AS_iPhone_7.dc.html": {
+   "h": 956,
+   "title": "iPhone · 7 · health journal writes itself (light)",
+   "w": 440,
+   "x": 3120,
+   "y": 21000
+  },
+  "AS_iPhone_8.dc.html": {
+   "h": 956,
+   "title": "iPhone · 8 · your health data stays yours",
+   "w": 440,
+   "x": 3640,
+   "y": 21000
+  },
+  "AS_iPhone_9.dc.html": {
+   "h": 956,
+   "title": "iPhone · 9 · health data for your tools",
+   "w": 440,
+   "x": 4160,
+   "y": 21000
+  },
+  "AS_iPad_1.dc.html": {
+   "h": 1032,
+   "title": "iPad · 1 · a month of health data",
+   "w": 1376,
+   "x": 0,
+   "y": 22400
+  },
+  "AS_iPad_2.dc.html": {
+   "h": 1032,
+   "title": "iPad · 2 · choose your health data",
+   "w": 1376,
+   "x": 1456,
+   "y": 22400
+  },
+  "AS_iPad_3.dc.html": {
+   "h": 1032,
+   "title": "iPad · 3 · 225+ health metrics",
+   "w": 1376,
+   "x": 2912,
+   "y": 22400
+  },
+  "AS_Duo_1.dc.html": {
+   "h": 669,
+   "title": "Duo · 1 · fold / unfold your health",
+   "w": 951,
+   "x": 0,
+   "y": 23900
+  },
+  "AS_Duo_2.dc.html": {
+   "h": 669,
+   "title": "Duo · 2 · health and the file, side by side",
+   "w": 951,
+   "x": 1031,
+   "y": 23900
+  },
+  "AS_Duo_3.dc.html": {
+   "h": 678,
+   "title": "Duo · 3 · outer display",
+   "w": 466,
+   "x": 2062,
+   "y": 23900
+  },
+  "AS_Mac_1.dc.html": {
+   "h": 900,
+   "title": "Mac · 1 · health files on your Mac",
+   "w": 1440,
+   "x": 0,
+   "y": 25000
+  },
+  "AS_Mac_2.dc.html": {
+   "h": 900,
+   "title": "Mac · 2 · health data for your tools",
+   "w": 1440,
+   "x": 1520,
+   "y": 25000
   }
  },
  "order": [
@@ -641,7 +760,24 @@
   "DuoOuterG.dc.html",
   "DuoInnerArchiveG.dc.html",
   "DuoInnerComposeG.dc.html",
-  "DuoSplitViewG.dc.html"
+  "DuoSplitViewG.dc.html",
+  "AS_iPhone_1.dc.html",
+  "AS_iPhone_2.dc.html",
+  "AS_iPhone_3.dc.html",
+  "AS_iPhone_4.dc.html",
+  "AS_iPhone_5.dc.html",
+  "AS_iPhone_6.dc.html",
+  "AS_iPhone_7.dc.html",
+  "AS_iPhone_8.dc.html",
+  "AS_iPhone_9.dc.html",
+  "AS_iPad_1.dc.html",
+  "AS_iPad_2.dc.html",
+  "AS_iPad_3.dc.html",
+  "AS_Duo_1.dc.html",
+  "AS_Duo_2.dc.html",
+  "AS_Duo_3.dc.html",
+  "AS_Mac_1.dc.html",
+  "AS_Mac_2.dc.html"
  ],
  "notes": {
   "glass": {
@@ -748,6 +884,34 @@
    "text": "Glass — iPhone Duo (folded, unfolded, Split View)",
    "kind": "title1",
    "maxW": 3840
+  },
+  "nAS_Duo": {
+   "kind": "title1",
+   "maxW": 4600,
+   "text": "App Store · iPhone Duo — inner 951×669 @3× = 2853×2007 · outer 466×678 @3× = 1398×2034",
+   "x": 0,
+   "y": 23640
+  },
+  "nAS_Mac": {
+   "kind": "title1",
+   "maxW": 4600,
+   "text": "App Store · Mac — 1440×900, export @2× = 2880×1800",
+   "x": 0,
+   "y": 24740
+  },
+  "nAS_iPad": {
+   "kind": "title1",
+   "maxW": 4600,
+   "text": "App Store · iPad 13″ landscape — 1376×1032, export @2× = 2752×2064",
+   "x": 0,
+   "y": 22140
+  },
+  "nAS_iPhone": {
+   "kind": "title1",
+   "maxW": 4600,
+   "text": "App Store · iPhone 6.9″ — 440×956, export @3× = 1320×2868",
+   "x": 0,
+   "y": 20740
   }
  },
  "designSystems": []

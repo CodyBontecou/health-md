@@ -2,18 +2,19 @@
 
 The approved design for the next Health.md experience on iPhone, iPhone Duo, iPad, Mac, Apple Watch and widgets.
 
-- Live canvas (owner access): https://claude.ai/artifact/6jJ3ZkDhMU32MMRy3yM7LQ
-- Superseded explorations, kept for history only (do not implement): https://claude.ai/artifact/NcL9X49rtDVqaQWE9JnK1X
+- Live canvas (owner access): https://claude.ai/artifact/XTx2RFXpjT7Gxgs6SZrAxg
+- Superseded explorations, kept for history only (do not implement; on the original design account): https://claude.ai/artifact/NcL9X49rtDVqaQWE9JnK1X
 
 ## What is here
 
 | Path | Contents |
 | --- | --- |
 | `screens/*.dc.html` | One file per screen. Self-contained HTML; open in a browser for a static look, or read as source. |
+| `screens/AS_*.dc.html` | App Store screenshot boards for iPhone, iPad, iPhone Duo and Mac. They embed the product screens with `<dc-import>`. |
 | `screens/CoverageMap.dc.html` | Every `product-capabilities.json` capability and every current Apple view mapped to the screen that carries it. The zero-regression checklist. |
 | `canvas.json` | Canvas layout: which screens sit in which row (`notes` are the row titles). |
 | `tokens.json` | Colours (dark, light, Reduce Transparency), radii, spacing, type, control sizes, calendar day states. |
-| `assets/` | App icon and crystal heart used by the screens. |
+| `assets/` | App icon, crystal heart and App Store hero image used by the screens. |
 
 ## How to read a screen file
 
@@ -40,3 +41,7 @@ The approved design for the next Health.md experience on iPhone, iPhone Duo, iPa
 13. Mac: destination, history, CLI & MCP, menu bar
 14. iPad Automations & Settings, Mac Settings
 15. iPhone Duo: outer, inner Archive, inner composer, Split View
+16. App Store · iPhone 6.9″ (440×956, exported @3×)
+17. App Store · iPad 13″ landscape (1376×1032, exported @2×)
+18. App Store · iPhone Duo inner (951×669) and outer (466×678), exported @3×
+19. App Store · Mac (1440×900, exported @2×)
