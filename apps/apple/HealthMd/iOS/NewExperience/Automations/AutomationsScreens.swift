@@ -281,12 +281,13 @@ struct AutomationDetailScreen: View {
                 .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showSchedule) {
-            ProfileScheduleEditorSheet(profile: profile, entry: entry) { updated in
+            GlassScheduleSheet(profile: profile, entry: entry) { updated in
                 _ = entryStore.upsert(updated)
                 schedulingManager.refreshScheduledAutomation()
                 onSchedulesChanged()
             }
-            .presentationDetents([.medium, .large])
+            .glassTheme()
+            .presentationDetents([.large])
             .presentationDragIndicator(.visible)
         }
     }
@@ -375,12 +376,13 @@ struct ComposerScreen: View {
                 .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showSchedule) {
-            ProfileScheduleEditorSheet(profile: profile, entry: entry) { updated in
+            GlassScheduleSheet(profile: profile, entry: entry) { updated in
                 _ = entryStore.upsert(updated)
                 schedulingManager.refreshScheduledAutomation()
                 onSchedulesChanged()
             }
-            .presentationDetents([.medium, .large])
+            .glassTheme()
+            .presentationDetents([.large])
             .presentationDragIndicator(.visible)
         }
     }
