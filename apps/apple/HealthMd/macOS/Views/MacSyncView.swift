@@ -164,7 +164,6 @@ struct MacSyncView: View {
                     legacyCacheCard
                 }
             }
-            .frame(maxWidth: 760, alignment: .topLeading)
         } else if width >= 1_040 {
             HStack(alignment: .top, spacing: Spacing.s6) {
                 VStack(alignment: .leading, spacing: Spacing.s6) {
