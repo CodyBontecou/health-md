@@ -523,6 +523,11 @@ final class ExportJourneyUITests: XCTestCase {
         let endpoint = app.textFields["Agent Data gateway endpoint URL"]
         XCTAssertTrue(endpoint.waitForExistence(timeout: 5))
         endpoint.tap()
+        // Clear anything a previous run left in this simulator's settings.
+        if let existing = endpoint.value as? String, !existing.isEmpty,
+           existing != endpoint.placeholderValue {
+            endpoint.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: existing.count + 4))
+        }
         endpoint.typeText("http://127.0.0.1:8791")
         XCTAssertTrue(app.staticTexts["Ready to export to the gateway"].waitForExistence(timeout: 5))
         app.navigationBars["Agent Data Gateway"].buttons["Done"].tap()

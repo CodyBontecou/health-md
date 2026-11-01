@@ -178,7 +178,7 @@ struct GlassAppShell: View {
         .sheet(isPresented: $showClassicExport) {
             NavigationStack { classicExportTab }
                 .overlay(alignment: .topTrailing) {
-                    Button(String(localized: "Done")) { showClassicExport = false }
+                    Button(String(localized: "Close")) { showClassicExport = false }
                         .buttonStyle(.plain)
                         .glassFont(.caption)
                         .padding(.horizontal, 14)
