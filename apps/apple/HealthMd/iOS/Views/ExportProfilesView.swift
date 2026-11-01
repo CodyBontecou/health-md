@@ -1063,40 +1063,49 @@ struct ExportProfileEditorSheet: View {
         return snapshot
     }
 
+    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+
+    /// Resolved here rather than read from the environment, because this sheet
+    /// is presented from both the glass shell and the legacy profiles list.
+    private var palette: GlassPalette {
+        GlassPalette.resolved(colorScheme: colorScheme, reduceTransparency: reduceTransparency)
+    }
+
+    private static let dateTokens = ["{date}", "{year}", "{month}", "{day}", "{weekday}", "{monthName}", "{quarter}"]
+
+    private var titleText: String {
+        editingProfile == nil
+            ? String(localized: "New Profile")
+            : String(localized: "Edit Profile")
+    }
+
     var body: some View {
         NavigationStack {
-            Form {
-                identitySection
-                destinationSection
-                outputSection
-                rollupSection
-                metricsSection
-                dailyNotesSection
-                individualTrackingSection
-                overlapSection
+            ScrollView {
+                VStack(alignment: .leading, spacing: GlassMetrics.sectionGap) {
+                    identitySection
+                    destinationSection
+                    outputSection
+                    rollupSection
+                    metricsSection
+                    dailyNotesSection
+                    individualTrackingSection
+                    overlapSection
+                }
+                .padding(GlassMetrics.screenMargin)
             }
-            .navigationTitle(Text(LocalizedStringKey(editingProfile == nil ? "New Profile" : "Edit Profile")))
+            .scrollDismissesKeyboard(.interactively)
+            .tint(palette.accent)
+            .background(palette.bg.ignoresSafeArea())
+            .safeAreaInset(edge: .top, spacing: 0) { header }
+            // The root draws its own glass header; the title still names the
+            // back button of the pushed metric picker.
+            .navigationTitle(Text(titleText))
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button(LocalizedStringKey(editingProfile == nil ? "Create" : "Save")) {
-                        // The draft stays inspectable, but persisting a profile
-                        // is a configuration mutation, so the shared lock can
-                        // reject an editor that was already open when
-                        // protection was turned on.
-                        configurationProtection.performConfigurationChange {
-                            save()
-                            dismiss()
-                        }
-                    }
-                    .disabled(!canSave)
-                    .accessibilityIdentifier("export.profiles.editor.confirm")
-                }
-            }
+            .toolbar(.hidden, for: .navigationBar)
         }
+        .glassTheme()
         .sheet(isPresented: $showFolderImporter) {
             FolderPicker { url in
                 // Picking a folder persists a destination binding immediately,
@@ -1111,10 +1120,9 @@ struct ExportProfileEditorSheet: View {
             .presentationDragIndicator(.visible)
         }
         // Presentation modifiers must attach at the body's top level, not
-        // inside the Form's conditional Section: a Section re-render (for
-        // example when the destination store publishes) tears down sheets
-        // attached within it, which dismissed the endpoint form a moment
-        // after it appeared.
+        // inside a conditional section: a section re-render (for example when
+        // the destination store publishes) tears down sheets attached within
+        // it, which dismissed the endpoint form a moment after it appeared.
         .sheet(isPresented: $showEndpointForm) {
             ExportProfileEndpointFormSheet { name, url, token in
                 // Adding an endpoint persists it (and its Keychain token)
@@ -1163,6 +1171,63 @@ struct ExportProfileEditorSheet: View {
         }
     }
 
+    /// Glass header: Cancel and Create/Save capsules around the title.
+    private var header: some View {
+        ZStack {
+            Text(titleText)
+                .glassFont(.navTitle)
+                .foregroundStyle(palette.text)
+                .lineLimit(1)
+                .padding(.horizontal, 96)
+                .accessibilityAddTraits(.isHeader)
+
+            HStack {
+                Button { dismiss() } label: {
+                    Text(String(localized: "Cancel"))
+                        .glassFont(.body)
+                        .foregroundStyle(palette.text)
+                        .padding(.horizontal, 16)
+                        .frame(minHeight: 36)
+                        .background(Capsule().fill(palette.surface2))
+                        .overlay(Capsule().strokeBorder(palette.edge, lineWidth: 1))
+                        .contentShape(Capsule())
+                }
+                .buttonStyle(.plain)
+                .frame(minHeight: GlassMetrics.touchTarget)
+
+                Spacer(minLength: 8)
+
+                Button {
+                    // The draft stays inspectable, but persisting a profile
+                    // is a configuration mutation, so the shared lock can
+                    // reject an editor that was already open when
+                    // protection was turned on.
+                    configurationProtection.performConfigurationChange {
+                        save()
+                        dismiss()
+                    }
+                } label: {
+                    Text(editingProfile == nil ? String(localized: "Create") : String(localized: "Save"))
+                        .glassFont(.navTitle)
+                        .foregroundStyle(palette.accentInk)
+                        .padding(.horizontal, 18)
+                        .frame(minHeight: 36)
+                        .background(Capsule().fill(palette.accent))
+                        .contentShape(Capsule())
+                }
+                .buttonStyle(.plain)
+                .frame(minHeight: GlassMetrics.touchTarget)
+                .opacity(canSave ? 1 : 0.4)
+                .disabled(!canSave)
+                .accessibilityIdentifier("export.profiles.editor.confirm")
+            }
+        }
+        .padding(.horizontal, GlassMetrics.screenMargin)
+        .padding(.top, Spacing.s3)
+        .padding(.bottom, Spacing.s2)
+        .background(palette.bg.ignoresSafeArea(edges: .top))
+    }
+
     private func save() {
         let snapshot = savedSnapshot()
         if let editingProfile {
@@ -1190,305 +1255,322 @@ struct ExportProfileEditorSheet: View {
     // MARK: - Sections
 
     private var identitySection: some View {
-        Section {
-            TextField(
-                String(localized: "Name", comment: "Profile editor name field label"),
-                text: $name
-            )
-            .accessibilityIdentifier("export.profiles.editor.name")
-        } header: {
-            Text("Profile")
-        } footer: {
-            Text(LocalizedStringKey(editingProfile == nil
-                ? "Starts from the current export settings."
-                : "Scheduled exports pick up the new settings on their next run."))
+        VStack(alignment: .leading, spacing: 8) {
+            GlassSectionLabel(title: String(localized: "Profile"))
+            GlassPanel {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(String(localized: "Name", comment: "Profile editor name field label"))
+                        .glassFont(.caption)
+                        .foregroundStyle(palette.muted)
+                    TextField(
+                        String(localized: "Name", comment: "Profile editor name field label"),
+                        text: $name
+                    )
+                    .textFieldStyle(.plain)
+                    .glassFont(.body)
+                    .foregroundStyle(palette.text)
+                    .frame(minHeight: GlassMetrics.touchTarget)
+                    .accessibilityIdentifier("export.profiles.editor.name")
+                }
+                .padding(.horizontal, GlassMetrics.panelPadding)
+                .padding(.vertical, 10)
+            }
+            footnote(editingProfile == nil
+                ? String(localized: "Starts from the current export settings.")
+                : String(localized: "Scheduled exports pick up the new settings on their next run."))
         }
     }
 
     private var destinationSection: some View {
-        Section {
-            SchedulingChoicePicker(
-                title: String(localized: "Target", comment: "Profile editor target picker label"),
-                choices: [
-                    SchedulingChoice(value: ExportTargetSelection.localIPhoneFolder, title: "Local Folder"),
-                    SchedulingChoice(value: ExportTargetSelection.connectedMac, title: "Connected Mac"),
-                    SchedulingChoice(value: ExportTargetSelection.apiEndpoint, title: "API Endpoint"),
-                    SchedulingChoice(value: ExportTargetSelection.agentDataGateway, title: "Agent Data gateway")
-                ],
-                selection: $target
-            )
+        VStack(alignment: .leading, spacing: 8) {
+            GlassSectionLabel(title: String(localized: "Destination"))
+            GlassPanel {
+                EditorMenuRow(
+                    title: String(localized: "Target", comment: "Profile editor target picker label"),
+                    selection: $target,
+                    options: [.localIPhoneFolder, .connectedMac, .apiEndpoint, .agentDataGateway],
+                    label: Self.targetTitle,
+                    palette: palette
+                )
 
-            switch target {
-            case .localIPhoneFolder:
-                Picker(
-                    String(localized: "Folder", comment: "Profile editor folder picker label"),
-                    selection: $folderVaultID
-                ) {
-                    Text(String(
-                        localized: "Current folder (from Export tab)",
-                        comment: "Editor option using the live shared vault"
-                    ))
-                    .tag(UUID?.none)
-                    ForEach(destinationStore.vaults) { vault in
-                        Text(vault.name).tag(UUID?.some(vault.id))
-                    }
-                }
-                Button {
-                    configurationProtection.performConfigurationChange {
-                        showFolderImporter = true
-                    }
-                } label: {
-                    Label(
+                switch target {
+                case .localIPhoneFolder:
+                    rowDivider
+                    EditorMenuRow(
+                        title: String(localized: "Folder", comment: "Profile editor folder picker label"),
+                        selection: $folderVaultID,
+                        options: [nil] + destinationStore.vaults.map { Optional($0.id) },
+                        label: { id in
+                            destinationStore.vaults.first { $0.id == id }?.name
+                                ?? String(
+                                    localized: "Current folder (from Export tab)",
+                                    comment: "Editor option using the live shared vault"
+                                )
+                        },
+                        palette: palette
+                    )
+                    rowDivider
+                    addRow(
                         String(localized: "Choose New Folder…", comment: "Profile editor action opening the system folder picker"),
-                        systemImage: "folder.badge.plus"
+                        systemImage: "folder.badge.plus",
+                        identifier: "export.profiles.editor.chooseFolder"
+                    ) { showFolderImporter = true }
+                case .apiEndpoint:
+                    rowDivider
+                    EditorMenuRow(
+                        title: String(localized: "Endpoint", comment: "Profile editor endpoint picker label"),
+                        selection: $apiEndpointID,
+                        options: [nil] + destinationStore.apiEndpoints.map { Optional($0.id) },
+                        label: { id in
+                            destinationStore.apiEndpoints.first { $0.id == id }?.name
+                                ?? String(
+                                    localized: "Current endpoint (from Export tab)",
+                                    comment: "Editor option using the live API endpoint"
+                                )
+                        },
+                        palette: palette
                     )
-                }
-                .accessibilityIdentifier("export.profiles.editor.chooseFolder")
-            case .apiEndpoint:
-                Picker(
-                    String(localized: "Endpoint", comment: "Profile editor endpoint picker label"),
-                    selection: $apiEndpointID
-                ) {
-                    Text(String(
-                        localized: "Current endpoint (from Export tab)",
-                        comment: "Editor option using the live API endpoint"
-                    ))
-                    .tag(UUID?.none)
-                    ForEach(destinationStore.apiEndpoints) { endpoint in
-                        Text(endpoint.name).tag(UUID?.some(endpoint.id))
-                    }
-                }
-                Button {
-                    configurationProtection.performConfigurationChange {
-                        showEndpointForm = true
-                    }
-                } label: {
-                    Label(
+                    rowDivider
+                    addRow(
                         String(localized: "Add Endpoint…", comment: "Profile editor action adding a new API endpoint"),
-                        systemImage: "network.badge.plus"
+                        systemImage: "network.badge.plus",
+                        identifier: "export.profiles.editor.addEndpoint"
+                    ) { showEndpointForm = true }
+                case .agentDataGateway:
+                    rowDivider
+                    EditorMenuRow(
+                        title: String(localized: "Gateway", comment: "Profile editor gateway picker label"),
+                        selection: $agentDataGatewayID,
+                        options: [nil] + destinationStore.agentDataGateways.map { Optional($0.id) },
+                        label: { id in
+                            destinationStore.agentDataGateways.first { $0.id == id }?.name
+                                ?? String(
+                                    localized: "Current gateway (from Export tab)",
+                                    comment: "Editor option using the live Agent Data gateway"
+                                )
+                        },
+                        palette: palette
                     )
-                }
-                .accessibilityIdentifier("export.profiles.editor.addEndpoint")
-            case .agentDataGateway:
-                Picker(
-                    String(localized: "Gateway", comment: "Profile editor gateway picker label"),
-                    selection: $agentDataGatewayID
-                ) {
-                    Text(String(
-                        localized: "Current gateway (from Export tab)",
-                        comment: "Editor option using the live Agent Data gateway"
-                    ))
-                    .tag(UUID?.none)
-                    ForEach(destinationStore.agentDataGateways) { gateway in
-                        Text(gateway.name).tag(UUID?.some(gateway.id))
-                    }
-                }
-                Button {
-                    configurationProtection.performConfigurationChange {
-                        showGatewayForm = true
-                    }
-                } label: {
-                    Label(
+                    rowDivider
+                    addRow(
                         String(localized: "Add Gateway…", comment: "Profile editor action adding a new Agent Data gateway"),
-                        systemImage: "arrow.up.and.down.and.arrow.left.and.right"
-                    )
+                        systemImage: "arrow.up.and.down.and.arrow.left.and.right",
+                        identifier: "export.profiles.editor.addGateway"
+                    ) { showGatewayForm = true }
+                case .connectedMac:
+                    EmptyView()
                 }
-                .accessibilityIdentifier("export.profiles.editor.addGateway")
-            case .connectedMac:
-                EmptyView()
             }
-        } header: {
-            Text("Destination")
         }
     }
 
     private var outputSection: some View {
-        Section {
-            ForEach(ExportFormat.allCases, id: \.rawValue) { format in
-                Toggle(
-                    format.localizedDisplayName,
-                    isOn: Binding(
-                        get: { draft.exportFormats.contains(format) },
-                        set: { isEnabled in
-                            if isEnabled {
-                                draft.exportFormats.insert(format)
-                            } else {
-                                draft.exportFormats.remove(format)
-                            }
-                        }
-                    )
-                )
-                .disabled(draft.dailyNoteInjection.dailyNotesOnly)
-            }
-
-            Picker(
-                String(localized: "When file exists", comment: "Profile editor write mode picker label"),
-                selection: $draft.writeMode
-            ) {
-                ForEach(WriteMode.allCases, id: \.rawValue) { mode in
-                    Text(mode.localizedDisplayName).tag(mode)
+        VStack(alignment: .leading, spacing: GlassMetrics.sectionGap) {
+            VStack(alignment: .leading, spacing: 8) {
+                GlassSectionLabel(title: String(localized: "Output"))
+                GlassPanel {
+                    ForEach(Array(ExportFormat.allCases.enumerated()), id: \.element.rawValue) { index, format in
+                        if index > 0 { rowDivider }
+                        GlassToggleRow(
+                            title: format.localizedDisplayName,
+                            isOn: Binding(
+                                get: { draft.exportFormats.contains(format) },
+                                set: { isEnabled in
+                                    if isEnabled {
+                                        draft.exportFormats.insert(format)
+                                    } else {
+                                        draft.exportFormats.remove(format)
+                                    }
+                                }
+                            )
+                        )
+                        .disabled(draft.dailyNoteInjection.dailyNotesOnly)
+                        .opacity(draft.dailyNoteInjection.dailyNotesOnly ? 0.45 : 1)
+                    }
                 }
             }
 
-            TextField(
-                String(localized: "Filename template", comment: "Profile editor filename template field"),
-                text: $draft.filenameFormat
-            )
-            .font(Typography.mono())
-            .autocorrectionDisabled()
-            .textInputAutocapitalization(.never)
-
-            TextField(
-                String(localized: "Folder template", comment: "Profile editor folder template field"),
-                text: $draft.folderStructure
-            )
-            .font(Typography.mono())
-            .autocorrectionDisabled()
-            .textInputAutocapitalization(.never)
-
-            Toggle(
-                String(localized: "Format folders", comment: "Profile editor format folders toggle"),
-                isOn: $draft.organizeFormatsIntoFolders
-            )
-            Toggle(
-                String(localized: "Zip archive", comment: "Profile editor zip toggle"),
-                isOn: $draft.archiveExportFiles
-            )
-            Toggle(
-                String(localized: "Data dictionary", comment: "Profile editor data dictionary toggle"),
-                isOn: $draft.includeDataDictionary
-            )
-            Picker(
-                String(localized: "Data Detail", comment: "Profile editor data-detail picker"),
-                selection: Binding(
-                    get: { AppleExportDetailPreset(policy: draft.detailPolicy) },
-                    set: { draft.detailPolicy = $0.policy }
+            VStack(alignment: .leading, spacing: 8) {
+                GlassSectionLabel(title: String(localized: "When file exists", comment: "Profile editor write mode picker label"))
+                GlassSegmentedControl(
+                    segments: WriteMode.allCases.map { .init(value: $0, title: $0.localizedDisplayName) },
+                    selection: $draft.writeMode
                 )
-            ) {
-                Text(AppleExportDetailPreset.summary.localizedTitle)
-                    .tag(AppleExportDetailPreset.summary)
-                Text(AppleExportDetailPreset.detailedTimeSeries.localizedTitle)
-                    .tag(AppleExportDetailPreset.detailedTimeSeries)
-                Text(AppleExportDetailPreset.losslessHealthRecords.localizedTitle)
-                    .tag(AppleExportDetailPreset.losslessHealthRecords)
-                if draft.detailPolicy == .archiveOnly {
-                    Text(AppleExportDetailPreset.archiveOnly.localizedTitle)
-                        .tag(AppleExportDetailPreset.archiveOnly)
-                }
+                .accessibilityElement(children: .contain)
+                .accessibilityLabel(String(localized: "When file exists", comment: "Profile editor write mode picker label"))
             }
-            Text(AppleExportDetailPreset(policy: draft.detailPolicy).localizedDescription)
-                .font(.footnote)
-                .foregroundStyle(Color.textSecondary)
-            Toggle(
-                String(localized: "Summary only", comment: "Profile editor summary-only toggle"),
-                isOn: $draft.summaryOnlyExport
-            )
-        } header: {
-            Text("Output")
-        } footer: {
-            Text("Templates accept {date}, {year}, {month}, {day}, {weekday}, {monthName}, and {quarter}.")
+
+            GlassPanel {
+                GlassTemplateField(
+                    title: String(localized: "Filename template", comment: "Profile editor filename template field"),
+                    text: $draft.filenameFormat,
+                    tokens: Self.dateTokens
+                )
+                rowDivider
+                GlassTemplateField(
+                    title: String(localized: "Folder template", comment: "Profile editor folder template field"),
+                    text: $draft.folderStructure,
+                    tokens: Self.dateTokens
+                )
+            }
+            footnote(String(localized: "Templates accept {date}, {year}, {month}, {day}, {weekday}, {monthName}, and {quarter}."))
+
+            GlassPanel {
+                GlassToggleRow(
+                    title: String(localized: "Format folders", comment: "Profile editor format folders toggle"),
+                    isOn: $draft.organizeFormatsIntoFolders
+                )
+                rowDivider
+                GlassToggleRow(
+                    title: String(localized: "Zip archive", comment: "Profile editor zip toggle"),
+                    isOn: $draft.archiveExportFiles
+                )
+                rowDivider
+                GlassToggleRow(
+                    title: String(localized: "Data dictionary", comment: "Profile editor data dictionary toggle"),
+                    isOn: $draft.includeDataDictionary
+                )
+                rowDivider
+                EditorMenuRow(
+                    title: String(localized: "Data Detail", comment: "Profile editor data-detail picker"),
+                    selection: Binding(
+                        get: { AppleExportDetailPreset(policy: draft.detailPolicy) },
+                        set: { draft.detailPolicy = $0.policy }
+                    ),
+                    options: detailPresetOptions,
+                    label: { $0.localizedTitle },
+                    palette: palette
+                )
+                Text(AppleExportDetailPreset(policy: draft.detailPolicy).localizedDescription)
+                    .glassFont(.rowSubtitle)
+                    .foregroundStyle(palette.muted)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.horizontal, GlassMetrics.panelPadding)
+                    .padding(.bottom, 12)
+                rowDivider
+                GlassToggleRow(
+                    title: String(localized: "Summary only", comment: "Profile editor summary-only toggle"),
+                    isOn: $draft.summaryOnlyExport
+                )
+            }
         }
     }
 
+    private var detailPresetOptions: [AppleExportDetailPreset] {
+        var options: [AppleExportDetailPreset] = [.summary, .detailedTimeSeries, .losslessHealthRecords]
+        if draft.detailPolicy == .archiveOnly {
+            options.append(.archiveOnly)
+        }
+        return options
+    }
+
     private var rollupSection: some View {
-        Section {
-            Toggle(
-                String(localized: "Range summary", comment: "Profile editor range-summary toggle"),
-                isOn: $draft.generateRangeSummary
-            )
-        } header: {
-            Text("Roll-Ups")
+        VStack(alignment: .leading, spacing: 8) {
+            GlassSectionLabel(title: String(localized: "Roll-Ups"))
+            GlassPanel {
+                GlassToggleRow(
+                    title: String(localized: "Range summary", comment: "Profile editor range-summary toggle"),
+                    isOn: $draft.generateRangeSummary
+                )
+            }
         }
     }
 
     private var metricsSection: some View {
-        Section {
-            let enabled = metricState.enabledMetrics.count
-            let total = HealthMetrics.availableInCurrentBuild
-                .filter { !$0.isPendingAppleApproval && $0.availability.isAvailableOnCurrentPlatform }
-                .count
-            NavigationLink {
-                MetricSelectionView(
-                    selectionState: metricState,
-                    healthKitManager: HealthKitManager.shared
-                )
-            } label: {
-                SchedulingAdaptiveStack {
-                    Text("Health Metrics")
-                    Text(String(
-                        localized: "\(enabled) of \(total)",
-                        comment: "Enabled versus total metric count in the profile editor"
-                    ))
-                    .foregroundStyle(Color.textSecondary)
+        let enabled = metricState.enabledMetrics.count
+        let total = HealthMetrics.availableInCurrentBuild
+            .filter { !$0.isPendingAppleApproval && $0.availability.isAvailableOnCurrentPlatform }
+            .count
+        return VStack(alignment: .leading, spacing: 8) {
+            GlassSectionLabel(title: String(localized: "Metrics"))
+            GlassPanel {
+                NavigationLink {
+                    MetricSelectionView(
+                        selectionState: metricState,
+                        healthKitManager: HealthKitManager.shared
+                    )
+                } label: {
+                    GlassRow(title: String(localized: "Health Metrics")) {
+                        HStack(spacing: 8) {
+                            Text(String(
+                                localized: "\(enabled) of \(total)",
+                                comment: "Enabled versus total metric count in the profile editor"
+                            ))
+                            .glassFont(.body)
+                            .foregroundStyle(palette.sec)
+                            Image(systemName: "chevron.right")
+                                .font(.footnote.weight(.semibold))
+                                .foregroundStyle(palette.muted)
+                                .accessibilityHidden(true)
+                        }
+                    }
                 }
+                .buttonStyle(.plain)
             }
-        } header: {
-            Text("Metrics")
         }
     }
 
     private var dailyNotesSection: some View {
-        Section {
-            Toggle(
-                String(localized: "Inject into daily notes", comment: "Profile editor daily note injection toggle"),
-                isOn: $draft.dailyNoteInjection.enabled
-            )
-            Toggle(
-                String(localized: "Daily Notes only", comment: "Profile editor daily-notes-only toggle"),
-                isOn: $draft.dailyNoteInjection.dailyNotesOnly
-            )
-            if draft.dailyNoteInjection.enabled {
-                TextField(
-                    String(localized: "Notes folder", comment: "Profile editor daily notes folder field"),
-                    text: $draft.dailyNoteInjection.folderPath
+        VStack(alignment: .leading, spacing: 8) {
+            GlassSectionLabel(title: String(localized: "Daily Notes"))
+            GlassPanel {
+                GlassToggleRow(
+                    title: String(localized: "Inject into daily notes", comment: "Profile editor daily note injection toggle"),
+                    isOn: $draft.dailyNoteInjection.enabled
                 )
-                .font(Typography.mono())
-                .autocorrectionDisabled()
-                .textInputAutocapitalization(.never)
-                TextField(
-                    String(localized: "Notes filename", comment: "Profile editor daily notes filename field"),
-                    text: $draft.dailyNoteInjection.filenamePattern
+                rowDivider
+                GlassToggleRow(
+                    title: String(localized: "Daily Notes only", comment: "Profile editor daily-notes-only toggle"),
+                    isOn: $draft.dailyNoteInjection.dailyNotesOnly
                 )
-                .font(Typography.mono())
-                .autocorrectionDisabled()
-                .textInputAutocapitalization(.never)
-                Toggle(
-                    String(localized: "Create if missing", comment: "Profile editor daily notes create toggle"),
-                    isOn: $draft.dailyNoteInjection.createIfMissing
-                )
-                Toggle(
-                    String(localized: "Markdown sections", comment: "Profile editor daily notes sections toggle"),
-                    isOn: $draft.dailyNoteInjection.injectMarkdownSections
-                )
+                if draft.dailyNoteInjection.enabled {
+                    rowDivider
+                    GlassTemplateField(
+                        title: String(localized: "Notes folder", comment: "Profile editor daily notes folder field"),
+                        text: $draft.dailyNoteInjection.folderPath
+                    )
+                    rowDivider
+                    GlassTemplateField(
+                        title: String(localized: "Notes filename", comment: "Profile editor daily notes filename field"),
+                        text: $draft.dailyNoteInjection.filenamePattern
+                    )
+                    rowDivider
+                    GlassToggleRow(
+                        title: String(localized: "Create if missing", comment: "Profile editor daily notes create toggle"),
+                        isOn: $draft.dailyNoteInjection.createIfMissing
+                    )
+                    rowDivider
+                    GlassToggleRow(
+                        title: String(localized: "Markdown sections", comment: "Profile editor daily notes sections toggle"),
+                        isOn: $draft.dailyNoteInjection.injectMarkdownSections
+                    )
+                }
             }
-        } header: {
-            Text("Daily Notes")
         }
     }
 
     private var individualTrackingSection: some View {
-        Section {
-            Toggle(
-                String(localized: "Individual entries", comment: "Profile editor individual tracking toggle"),
-                isOn: $draft.individualTracking.globalEnabled
-            )
-            if draft.individualTracking.globalEnabled {
-                TextField(
-                    String(localized: "Entries folder", comment: "Profile editor entries folder field"),
-                    text: $draft.individualTracking.entriesFolder
+        VStack(alignment: .leading, spacing: 8) {
+            GlassSectionLabel(title: String(localized: "Individual Entries"))
+            GlassPanel {
+                GlassToggleRow(
+                    title: String(localized: "Individual entries", comment: "Profile editor individual tracking toggle"),
+                    isOn: $draft.individualTracking.globalEnabled
                 )
-                .font(Typography.mono())
-                .autocorrectionDisabled()
-                .textInputAutocapitalization(.never)
-                Toggle(
-                    String(localized: "Category folders", comment: "Profile editor category folders toggle"),
-                    isOn: $draft.individualTracking.useCategoryFolders
-                )
+                if draft.individualTracking.globalEnabled {
+                    rowDivider
+                    GlassTemplateField(
+                        title: String(localized: "Entries folder", comment: "Profile editor entries folder field"),
+                        text: $draft.individualTracking.entriesFolder
+                    )
+                    rowDivider
+                    GlassToggleRow(
+                        title: String(localized: "Category folders", comment: "Profile editor category folders toggle"),
+                        isOn: $draft.individualTracking.useCategoryFolders
+                    )
+                }
             }
-        } header: {
-            Text("Individual Entries")
-        } footer: {
-            Text("Per-metric entry rules are edited from the Export tab while this profile is active.")
+            footnote(String(localized: "Per-metric entry rules are edited from the Export tab while this profile is active."))
         }
     }
 
@@ -1496,15 +1578,119 @@ struct ExportProfileEditorSheet: View {
     private var overlapSection: some View {
         if !overlappingNames.isEmpty {
             let names = overlappingNames.joined(separator: ", ")
-            Section {
-                Label(String(
+            GlassBanner(
+                title: String(
                     localized: "Overlaps \(names): later runs overwrite earlier ones. Choose a different folder or filename template to keep them separate.",
                     comment: "Live editor warning that the profile's output files overlap other profiles; the interpolated value is a comma-separated profile name list"
-                ), systemImage: "exclamationmark.triangle.fill")
-                    .foregroundStyle(Color.warning)
-                    .font(Typography.caption())
-            }
+                ),
+                systemImage: "exclamationmark.triangle.fill",
+                tone: .warning
+            )
         }
+    }
+
+    // MARK: - Glass building blocks
+
+    private var rowDivider: some View {
+        Rectangle()
+            .fill(palette.line)
+            .frame(height: 1)
+            .padding(.leading, GlassMetrics.panelPadding)
+            .accessibilityHidden(true)
+    }
+
+    private func footnote(_ text: String) -> some View {
+        Text(text)
+            .glassFont(.rowSubtitle)
+            .foregroundStyle(palette.muted)
+            .fixedSize(horizontal: false, vertical: true)
+            .padding(.horizontal, 4)
+    }
+
+    /// Accent "+ Add…" row. Adding a destination persists it, so the shared
+    /// lock guards opening the form.
+    private func addRow(
+        _ title: String,
+        systemImage: String,
+        identifier: String,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button {
+            configurationProtection.performConfigurationChange(action)
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: systemImage)
+                    .font(.body.weight(.semibold))
+                    .foregroundStyle(palette.accent)
+                    .frame(width: 24)
+                    .accessibilityHidden(true)
+                Text(title)
+                    .glassFont(.body)
+                    .foregroundStyle(palette.accent)
+                Spacer(minLength: 8)
+            }
+            .padding(.horizontal, GlassMetrics.panelPadding)
+            .frame(minHeight: GlassMetrics.rowMinHeight)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(title)
+        .accessibilityIdentifier(identifier)
+    }
+
+    private static func targetTitle(_ target: ExportTargetSelection) -> String {
+        switch target {
+        case .localIPhoneFolder: return String(localized: "Local Folder")
+        case .connectedMac: return String(localized: "Connected Mac")
+        case .apiEndpoint: return String(localized: "API Endpoint")
+        case .agentDataGateway: return String(localized: "Agent Data gateway")
+        }
+    }
+}
+
+/// A labelled glass row whose current value opens a menu of choices. The value
+/// sits in the accent colour with a down chevron so it reads as tappable, and
+/// the menu marks the current choice. The whole row is one button named by its
+/// title, so VoiceOver and UI tests address it as "Target", "Folder", etc.
+private struct EditorMenuRow<Value: Hashable>: View {
+    let title: String
+    @Binding var selection: Value
+    let options: [Value]
+    let label: (Value) -> String
+    let palette: GlassPalette
+
+    var body: some View {
+        Menu {
+            Picker(title, selection: $selection) {
+                ForEach(options, id: \.self) { option in
+                    Text(label(option)).tag(option)
+                }
+            }
+            .pickerStyle(.inline)
+            .labelsHidden()
+        } label: {
+            HStack(spacing: 8) {
+                Text(title)
+                    .glassFont(.body)
+                    .foregroundStyle(palette.text)
+                Spacer(minLength: 8)
+                Text(label(selection))
+                    .glassFont(.body)
+                    .foregroundStyle(palette.accent)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                Image(systemName: "chevron.down")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(palette.accent)
+                    .accessibilityHidden(true)
+            }
+            .padding(.horizontal, GlassMetrics.panelPadding)
+            .frame(minHeight: GlassMetrics.rowMinHeight)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(title)
+        .accessibilityValue(label(selection))
     }
 }
 
@@ -1543,6 +1729,7 @@ struct ExportProfileEndpointFormSheet: View {
                 } footer: {
                     Text("Optional. Defaults to the URL.")
                 }
+                .glassFormRows()
 
                 Section {
                     TextField(
@@ -1563,7 +1750,9 @@ struct ExportProfileEndpointFormSheet: View {
                 } footer: {
                     Text("Stored in the Keychain. Optional if your endpoint doesn't require one.")
                 }
+                .glassFormRows()
             }
+            .glassFormChrome()
             .navigationTitle(Text("New Endpoint"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -1621,6 +1810,7 @@ struct ExportProfileGatewayFormSheet: View {
                 } footer: {
                     Text("Optional. Defaults to the URL.")
                 }
+                .glassFormRows()
 
                 Section {
                     TextField(
@@ -1639,7 +1829,9 @@ struct ExportProfileGatewayFormSheet: View {
                 } footer: {
                     Text("Health.md uploads each exported artifact file unchanged to this gateway's /v1/ingest endpoint using the Agent Data protocol. Gateways need no token in this version.")
                 }
+                .glassFormRows()
             }
+            .glassFormChrome()
             .navigationTitle(Text("New Gateway"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

@@ -106,12 +106,16 @@ struct ScheduleSettingsView: View {
     @ObservedObject var agentDataGatewaySettings: AgentDataGatewaySettings
     @Binding var showFolderPicker: Bool
     /// Built by ContentView when the main UI appears; forwarded so
-    /// `ProfileScheduleSection` observes the shared profile stores.
+    /// `GlassProfileScheduleList` observes the shared profile stores.
     var profileCoordinator: ExportProfileCoordinator? = nil
     @ObservedObject private var exportHistory = ExportHistoryManager.shared
     @ObservedObject private var purchaseManager = PurchaseManager.shared
 
+    @Environment(\.glassPalette) private var palette
+
     @State private var selectedEntry: ExportHistoryEntry?
+    /// History is paged in tens; "N more entries…" reveals the next page.
+    @State private var visibleHistoryCount = ScheduleSettingsView.historyPageSize
     @State private var showAPIEndpointSettings = false
     @State private var showAgentDataGatewaySettings = false
     @State private var showTodayRefreshInfo = false
@@ -308,19 +312,21 @@ struct ScheduleSettingsView: View {
     var body: some View {
         GeometryReader { viewport in
             ScrollView {
-                VStack(alignment: .leading, spacing: Spacing.s4) {
-                    heroHeader(availableWidth: viewport.size.width)
-                    scheduleSections(availableWidth: viewport.size.width)
-                }
-                .padding(.horizontal, Spacing.s4)
-                .padding(.top, Spacing.s4)
-                .padding(.bottom, 132)
+                scheduleSections(availableWidth: viewport.size.width)
+                    .padding(.horizontal, GlassMetrics.screenMargin)
+                    .padding(.top, 12)
+                    .padding(.bottom, GlassMetrics.scrollBottomInset)
             }
         }
-        .background(Color.bgSecondary.ignoresSafeArea())
-        .toolbar(.hidden, for: .navigationBar)
+        .background(palette.bg.ignoresSafeArea())
+        .tint(palette.accent)
+        // The glass shell pushes this screen from Automations, so it keeps the
+        // system back button instead of a brand header.
+        .navigationTitle(String(localized: "Schedule & history"))
+        .navigationBarTitleDisplayMode(.inline)
         .sheet(item: $selectedEntry) { entry in
             ExportHistoryDetailView(entry: entry, onRetry: retryExport)
+                .glassTheme()
         }
         .sheet(isPresented: $showAPIEndpointSettings) {
             APIExportSettingsSheet(settings: apiExportSettings)
@@ -357,15 +363,15 @@ struct ScheduleSettingsView: View {
     // MARK: - Sections
 
     private func scheduleSections(availableWidth: CGFloat) -> some View {
-        AdaptivePageColumns(availableWidth: availableWidth) {
-            VStack(alignment: .leading, spacing: Spacing.s4) {
+        AdaptivePageColumns(availableWidth: availableWidth, spacing: GlassMetrics.sectionGap) {
+            VStack(alignment: .leading, spacing: GlassMetrics.sectionGap) {
                 scheduleAutomationCard
 #if os(iOS)
                 if let profileCoordinator {
                     // Per-profile schedule toggles and cadence editors mutate
                     // profile automation, so the whole card stays inspectable
                     // but is intercepted by the shared lock.
-                    ProfileScheduleSection(coordinator: profileCoordinator)
+                    GlassProfileScheduleList(coordinator: profileCoordinator)
                         .configurationChangesProtected()
                 }
 #endif
@@ -380,35 +386,16 @@ struct ScheduleSettingsView: View {
         }
     }
 
-    private func heroHeader(availableWidth: CGFloat) -> some View {
-        AdaptivePageHeader(
-            availableWidth: availableWidth,
-            title: "Scheduled Exports",
-            subtitle: "Keep your Health.md destinations updated with recurring Apple Health exports."
-        ) {
-            SchedulingAdaptiveStack {
-                statusPill(
-                    label: schedulingManager.isSchedulingActive ? String(localized: "On") : String(localized: "Off"),
-                    icon: schedulingManager.isSchedulingActive ? "checkmark" : "pause",
-                    tint: schedulingManager.isSchedulingActive ? Color.success : Color.textMuted
-                )
-
-                if schedulingManager.isSchedulingActive, let nextExport = schedulingManager.getNextExportDescription() {
-                    statusPill(label: String(localized: "Next: \(nextExport)"), icon: "clock", tint: Color.accent)
-                }
-            }
-            .accessibilityElement(children: .combine)
-        }
-    }
-
     private var scheduleAutomationCard: some View {
-        sectionCard(title: "Automation") {
-            VStack(spacing: 0) {
+        VStack(alignment: .leading, spacing: 8) {
+            GlassSectionLabel(title: String(localized: "Automation"))
+                .accessibilityAddTraits(.isHeader)
+            GlassPanel {
                 automaticExportRow
                     .configurationChangesProtected()
 
                 if !schedulingManager.isSchedulingActive {
-                    rowDivider()
+                    glassDivider()
                     disabledScheduleRow
                 }
             }
@@ -416,59 +403,50 @@ struct ScheduleSettingsView: View {
     }
 
     private var scheduleConfigurationCard: some View {
-        sectionCard(title: "Schedule") {
-            VStack(spacing: 0) {
+        VStack(alignment: .leading, spacing: 8) {
+            GlassSectionLabel(title: String(localized: "Schedule"))
+                .accessibilityAddTraits(.isHeader)
+            GlassPanel {
                 frequencyRow
                     .configurationChangesProtected()
-                rowDivider(leading: 40)
+                glassDivider()
                 timeRow
                     .configurationChangesProtected()
-                rowDivider(leading: 40)
+                glassDivider()
                 lookbackRow
                     .configurationChangesProtected()
-                rowDivider(leading: 40)
+                glassDivider()
                 todayRefreshRow
-                rowDivider(leading: 40)
+                glassDivider()
                 backgroundGuidanceRow
             }
         }
     }
 
+    /// Glass toggle row: the next run lives in the subtitle, so the old
+    /// On/Next/Enabled pills are gone.
     private var automaticExportRow: some View {
-        VStack(alignment: .leading, spacing: Spacing.s2) {
-            VStack(alignment: .leading, spacing: Spacing.s1) {
-                Text("Automatic Export")
-                    .font(Typography.bodyEmphasis())
-                    .foregroundStyle(Color.textPrimary)
-
-                Text(automaticExportSummary)
-                    .font(Typography.caption())
-                    .foregroundStyle(Color.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-
-            statusPill(
-                label: schedulingManager.isSchedulingActive ? String(localized: "Enabled") : String(localized: "Disabled"),
-                icon: schedulingManager.isSchedulingActive ? "checkmark" : "circle",
-                tint: schedulingManager.isSchedulingActive ? Color.success : Color.textMuted
-            )
-            .accessibilityHidden(true)
-
-            Toggle(isOn: isEnabledBinding) {
+        Toggle(isOn: isEnabledBinding) {
+            VStack(alignment: .leading, spacing: 2) {
                 Text("Enable Scheduled Exports")
-                    .font(Typography.body())
+                    .glassFont(.body)
+                    .foregroundStyle(palette.text)
                     .fixedSize(horizontal: false, vertical: true)
-                    .frame(minHeight: 44)
+                Text(automaticExportSummary)
+                    .glassFont(.rowSubtitle)
+                    .foregroundStyle(palette.muted)
+                    .fixedSize(horizontal: false, vertical: true)
             }
-                .tint(Color.accent)
-                .accessibilityIdentifier(AccessibilityID.Schedule.enableToggle)
-                .accessibilityLabel("Automatic export schedule")
-                .accessibilityValue(schedulingManager.isSchedulingActive ? String(localized: "Enabled") : String(localized: "Disabled"))
-                .accessibilityHint(schedulingManager.isSchedulingActive
-                    ? String(localized: "Double tap to disable scheduled exports")
-                    : String(localized: "Double tap to enable scheduled exports"))
         }
-        .padding(.vertical, Spacing.s3)
+        .toggleStyle(GlassToggleStyle())
+        .accessibilityIdentifier(AccessibilityID.Schedule.enableToggle)
+        .accessibilityLabel("Automatic export schedule")
+        .accessibilityValue(schedulingManager.isSchedulingActive ? String(localized: "Enabled") : String(localized: "Disabled"))
+        .accessibilityHint(schedulingManager.isSchedulingActive
+            ? String(localized: "Double tap to disable scheduled exports")
+            : String(localized: "Double tap to enable scheduled exports"))
+        .padding(.horizontal, GlassMetrics.panelPadding)
+        .padding(.vertical, 8)
     }
 
     private func enableFirstProfileEntry() {
@@ -519,7 +497,7 @@ struct ScheduleSettingsView: View {
             title: "Schedule Off",
             message: String(localized: "Scheduled exports are paused. Manual exports remain available from the Export tab."),
             status: String(localized: "Manual Only"),
-            statusTint: Color.textMuted
+            tone: .paused
         )
     }
 
@@ -544,7 +522,8 @@ struct ScheduleSettingsView: View {
                 customFrequencyControls
             }
         }
-        .padding(.vertical, Spacing.s3)
+        .padding(.vertical, 12)
+        .padding(.horizontal, GlassMetrics.panelPadding)
     }
 
     private var customFrequencyControls: some View {
@@ -571,24 +550,24 @@ struct ScheduleSettingsView: View {
                     selection: customAnchorDateBinding,
                     displayedComponents: .date
                 )
-                .tint(Color.accent)
+                .tint(palette.accent)
                 .accessibilityIdentifier(AccessibilityID.Schedule.customStartDatePicker)
                 .accessibilityHint("Sets the first day and repeating phase of the custom schedule")
             }
 
             Text(customCadenceSummary)
-                .font(Typography.caption())
-                .foregroundStyle(Color.textSecondary)
+                .glassFont(.rowSubtitle)
+                .foregroundStyle(palette.muted)
                 .fixedSize(horizontal: false, vertical: true)
         }
-        .padding(Spacing.s3)
+        .padding(12)
         .background(
-            RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
-                .fill(Color.bgSecondary)
+            RoundedRectangle(cornerRadius: GlassMetrics.iconTileRadius, style: .continuous)
+                .fill(palette.surface)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
-                .strokeBorder(Color.borderSubtle, lineWidth: 1)
+            RoundedRectangle(cornerRadius: GlassMetrics.iconTileRadius, style: .continuous)
+                .strokeBorder(palette.line, lineWidth: 1)
         )
     }
 
@@ -643,7 +622,8 @@ struct ScheduleSettingsView: View {
                 periodIdentifier: AccessibilityID.Schedule.periodPicker
             )
         }
-        .padding(.vertical, Spacing.s3)
+        .padding(.vertical, 12)
+        .padding(.horizontal, GlassMetrics.panelPadding)
     }
 
     private var preferredTimeText: String {
@@ -674,36 +654,36 @@ struct ScheduleSettingsView: View {
             )
             .accessibilityHint("Adjusts how many past days each scheduled export includes")
         }
-        .padding(.vertical, Spacing.s3)
+        .padding(.vertical, 12)
+        .padding(.horizontal, GlassMetrics.panelPadding)
     }
 
     private var todayRefreshRow: some View {
-        VStack(alignment: .leading, spacing: Spacing.s3) {
-            VStack(alignment: .leading, spacing: Spacing.s2) {
-                SchedulingAdaptiveStack {
+        VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(spacing: 8) {
                     Text("Today Refresh")
-                        .font(Typography.bodyEmphasis())
-                        .foregroundStyle(Color.textPrimary)
+                        .glassFont(.body)
+                        .foregroundStyle(palette.text)
                         .fixedSize(horizontal: false, vertical: true)
                     todayRefreshInfoButton
-                }
-
-                if schedulingManager.schedule.todayRefreshEnabled {
-                    statusPill(
-                        label: ExportSchedule.todayRefreshLabel(schedulingManager.schedule.todayRefreshMinutes),
-                        icon: "clock.arrow.circlepath",
-                        tint: Color.accent
-                    )
+                    Spacer(minLength: 0)
+                    if schedulingManager.schedule.todayRefreshEnabled {
+                        StatusBadge(
+                            title: ExportSchedule.todayRefreshLabel(schedulingManager.schedule.todayRefreshMinutes),
+                            status: .inProgress
+                        )
+                    }
                 }
 
                 Toggle(isOn: todayRefreshEnabledBinding) {
                     Text("Refresh today's export")
-                        .font(Typography.body())
+                        .glassFont(.body)
+                        .foregroundStyle(palette.sec)
                         .fixedSize(horizontal: false, vertical: true)
-                        .frame(minHeight: 44)
                 }
+                    .toggleStyle(GlassToggleStyle())
                     .configurationChangesProtected()
-                    .tint(Color.accent)
                     .accessibilityIdentifier("schedule.todayRefresh.toggle")
                     .accessibilityLabel("Today Refresh")
                     .accessibilityValue(schedulingManager.schedule.todayRefreshEnabled ? String(localized: "Enabled") : String(localized: "Disabled"))
@@ -727,24 +707,24 @@ struct ScheduleSettingsView: View {
                 if schedulingManager.schedule.target == .apiEndpoint {
                     VStack(alignment: .leading, spacing: 3) {
                         Text("API Refresh Behavior")
-                            .font(Typography.bodyEmphasis())
-                            .foregroundStyle(Color.textPrimary)
+                            .glassFont(.body)
+                            .foregroundStyle(palette.text)
 
                         Text("Each refresh fetches today's data again and sends a complete JSON snapshot. The endpoint should replace or upsert its previous snapshot for the date.")
-                            .font(Typography.caption())
-                            .foregroundStyle(Color.textSecondary)
+                            .glassFont(.rowSubtitle)
+                            .foregroundStyle(palette.muted)
                             .fixedSize(horizontal: false, vertical: true)
                     }
                 } else {
                     VStack(alignment: .leading, spacing: Spacing.s2) {
                         VStack(alignment: .leading, spacing: 3) {
                             Text("When File Exists")
-                                .font(Typography.bodyEmphasis())
-                                .foregroundStyle(Color.textPrimary)
+                                .glassFont(.body)
+                                .foregroundStyle(palette.text)
 
                             Text(advancedSettings.writeMode.description)
-                                .font(Typography.caption())
-                                .foregroundStyle(Color.textSecondary)
+                                .glassFont(.rowSubtitle)
+                                .foregroundStyle(palette.muted)
                                 .fixedSize(horizontal: false, vertical: true)
                         }
 
@@ -760,7 +740,8 @@ struct ScheduleSettingsView: View {
                 }
             }
         }
-        .padding(.vertical, Spacing.s3)
+        .padding(.vertical, 12)
+        .padding(.horizontal, GlassMetrics.panelPadding)
     }
 
     private var todayRefreshInfoButton: some View {
@@ -892,164 +873,156 @@ struct ScheduleSettingsView: View {
             title: "Background Timing",
             message: String(localized: "Your iPhone must be unlocked when Health.md reads Health data. If data is locked, tap the notification to run the export."),
             status: String(localized: "iOS Managed"),
-            statusTint: Color.warning
+            tone: .partial
         )
     }
 
-    private var exportHistoryCard: some View {
-        VStack(alignment: .leading, spacing: Spacing.s2) {
-            SchedulingHistoryHeading(showsClear: !exportHistory.history.isEmpty) {
-                configurationProtection.performConfigurationChange {
-                    exportHistory.clearHistory()
-                }
-            }
+    static let historyPageSize = 10
 
-            VStack(spacing: 0) {
+    private var visibleHistory: [ExportHistoryEntry] {
+        Array(exportHistory.history.prefix(visibleHistoryCount))
+    }
+
+    private var exportHistoryCard: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            historyHeading
+
+            GlassPanel {
                 if exportHistory.history.isEmpty {
                     emptyHistoryState
                 } else {
-                    ForEach(Array(exportHistory.history.prefix(10).enumerated()), id: \.element.id) { index, entry in
+                    ForEach(Array(visibleHistory.enumerated()), id: \.element.id) { index, entry in
+                        if index > 0 {
+                            glassDivider()
+                        }
                         Button {
                             selectedEntry = entry
                         } label: {
                             ExportHistoryRow(entry: entry)
                         }
                         .buttonStyle(.plain)
-
-                        if index < min(exportHistory.history.count, 10) - 1 {
-                            rowDivider(leading: 40)
-                        }
                     }
 
-                    if exportHistory.history.count > 10 {
-                        rowDivider(leading: 40)
-                        Text("\(exportHistory.history.count - 10) more entries…")
-                            .font(Typography.caption())
-                            .foregroundStyle(Color.textSecondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.vertical, Spacing.s3)
+                    let remaining = exportHistory.history.count - visibleHistory.count
+                    if remaining > 0 {
+                        glassDivider()
+                        Button {
+                            visibleHistoryCount += Self.historyPageSize
+                        } label: {
+                            HStack(spacing: 8) {
+                                Text("\(remaining) more entries…")
+                                    .glassFont(.caption)
+                                    .foregroundStyle(palette.accent)
+                                    .fixedSize(horizontal: false, vertical: true)
+                                Spacer(minLength: 8)
+                                Image(systemName: "chevron.down")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(palette.muted)
+                                    .accessibilityHidden(true)
+                            }
+                            .padding(.horizontal, GlassMetrics.panelPadding)
+                            .frame(minHeight: GlassMetrics.rowMinHeight)
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
                     }
                 }
             }
-            .padding(Spacing.s4)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color.bgPrimary)
-            .clipShape(RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous)
-                    .strokeBorder(Color.borderSubtle, lineWidth: 1)
-            )
-            .shadow(color: Color.black.opacity(0.025), radius: 2, x: 0, y: 1)
+        }
+    }
+
+    /// Clearing is immediate, as before; the configuration lock still intercepts it.
+    private var historyHeading: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+            GlassSectionLabel(title: String(localized: "Export History"))
+                .fixedSize(horizontal: false, vertical: true)
+                .accessibilityAddTraits(.isHeader)
+            Spacer(minLength: 8)
+            if !exportHistory.history.isEmpty {
+                Button {
+                    configurationProtection.performConfigurationChange {
+                        exportHistory.clearHistory()
+                        visibleHistoryCount = Self.historyPageSize
+                    }
+                } label: {
+                    Text("Clear History")
+                        .glassFont(.caption)
+                        .foregroundStyle(palette.coral)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(minWidth: GlassMetrics.touchTarget, minHeight: GlassMetrics.touchTarget, alignment: .trailing)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Clear export history")
+                .accessibilityIdentifier("schedule.history.clear")
+            }
         }
     }
 
     private var emptyHistoryState: some View {
-        VStack(spacing: Spacing.s3) {
+        VStack(spacing: 12) {
             Image(systemName: "clock.arrow.circlepath")
                 .font(.title3.weight(.semibold))
-                .foregroundStyle(Color.textMuted)
+                .foregroundStyle(palette.muted)
                 .accessibilityHidden(true)
 
-            VStack(spacing: Spacing.s1) {
+            VStack(spacing: 4) {
                 Text("No Exports Yet")
-                    .font(Typography.headline())
-                    .foregroundStyle(Color.textPrimary)
+                    .glassFont(.navTitle)
+                    .foregroundStyle(palette.text)
 
                 Text("Run a manual export or turn on automation to start building history.")
-                    .font(Typography.caption())
-                    .foregroundStyle(Color.textSecondary)
+                    .glassFont(.rowSubtitle)
+                    .foregroundStyle(palette.muted)
                     .multilineTextAlignment(.center)
             }
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, Spacing.s8)
+        .padding(.vertical, 32)
+        .padding(.horizontal, GlassMetrics.panelPadding)
         .accessibilityElement(children: .combine)
     }
 
-    @ViewBuilder
-    private func sectionCard<Content: View>(title: String, @ViewBuilder content: () -> Content) -> some View {
-        VStack(alignment: .leading, spacing: Spacing.s2) {
-            sectionLabel(title)
-
-            VStack(spacing: 0) {
-                content()
-            }
-            .padding(Spacing.s4)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color.bgPrimary)
-            .clipShape(RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous)
-                    .strokeBorder(Color.borderSubtle, lineWidth: 1)
-            )
-            .shadow(color: Color.black.opacity(0.025), radius: 2, x: 0, y: 1)
-        }
-    }
-
-    private func sectionLabel(_ text: String) -> some View {
-        Text(LocalizedStringKey(text))
-            .font(Typography.caption())
-            .foregroundStyle(Color.textSecondary)
-            .fixedSize(horizontal: false, vertical: true)
-            .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    private func rowDivider(leading: CGFloat = 0) -> some View {
+    private func glassDivider() -> some View {
         Rectangle()
-            .fill(Color.borderSubtle)
+            .fill(palette.line)
             .frame(height: 1)
-            .padding(.leading, leading)
+            .padding(.leading, GlassMetrics.panelPadding)
+            .accessibilityHidden(true)
     }
 
     /// Titles are controlled keys; messages are resolved prose, never lookup keys.
+    /// The icon argument is kept for call-site readability; glass rows are text-only.
     private func controlHeader(icon: String, title: LocalizedStringKey, message: String) -> some View {
-        VStack(alignment: .leading, spacing: Spacing.s1) {
-            Label(title, systemImage: icon)
-                .font(Typography.bodyEmphasis())
-                .foregroundStyle(Color.textPrimary)
+        VStack(alignment: .leading, spacing: 2) {
+            Text(title)
+                .glassFont(.body)
+                .foregroundStyle(palette.text)
                 .fixedSize(horizontal: false, vertical: true)
 
             Text(message)
-                .font(Typography.caption())
-                .foregroundStyle(Color.textSecondary)
+                .glassFont(.rowSubtitle)
+                .foregroundStyle(palette.muted)
                 .fixedSize(horizontal: false, vertical: true)
         }
     }
 
+    /// Callers resolve controlled copy; interpolated values are never looked up.
     private func guidanceRow(
         icon: String,
         title: LocalizedStringKey,
         message: String,
-        status: String,
-        statusTint: Color
+        status label: String,
+        tone: CoverageStatus
     ) -> some View {
-        VStack(alignment: .leading, spacing: Spacing.s2) {
+        HStack(alignment: .top, spacing: 12) {
             controlHeader(icon: icon, title: title, message: message)
-            statusPill(label: status, icon: nil, tint: statusTint)
+            Spacer(minLength: 8)
+            StatusBadge(title: label, status: tone)
         }
-        .padding(.vertical, Spacing.s3)
+        .padding(.vertical, 12)
+        .padding(.horizontal, GlassMetrics.panelPadding)
         .accessibilityElement(children: .combine)
-    }
-
-    /// Callers resolve controlled copy; interpolated values are never looked up.
-    private func statusPill(label: String, icon: String? = nil, tint: Color) -> some View {
-        HStack(spacing: Spacing.s1) {
-            if let icon {
-                Image(systemName: icon)
-                    .font(.caption2.weight(.bold))
-                    .accessibilityHidden(true)
-            }
-
-            Text(label)
-                .font(.caption2.weight(.semibold))
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .foregroundStyle(tint == Color.success ? Color.successText : Color.textSecondary)
-        .padding(.horizontal, Spacing.s2)
-        .padding(.vertical, 4)
-        .background(tint.opacity(0.10), in: Capsule())
-        .overlay(Capsule().strokeBorder(tint.opacity(0.24), lineWidth: 1))
     }
 
     private func trackScheduleEnableAttempt() {
@@ -1295,68 +1268,281 @@ struct ScheduleSettingsView: View {
     }
 }
 
+#if os(iOS)
+// MARK: - Profile Schedules
+
+/// Glass layout of the per-profile schedule list (the former `ProfileScheduleSection`
+/// card). Same stores, toggles, editor save path, pending-recovery discard and
+/// accessibility identifiers; editing opens the glass `GlassScheduleSheet`, as the
+/// Automations detail does.
+private struct GlassProfileScheduleList: View {
+    @EnvironmentObject private var schedulingManager: SchedulingManager
+    @EnvironmentObject private var configurationProtection: ConfigurationProtectionManager
+    @ObservedObject private var profileStore: ExportProfileStore
+    @ObservedObject private var entryStore: ScheduledExportEntryStore
+    @Environment(\.glassPalette) private var palette
+    @State private var editingProfile: ExportProfile?
+    @State private var recoveryProfile: ExportProfile?
+    @State private var showDiscardConfirmation = false
+    @State private var isDiscardingRecovery = false
+    @State private var showRecoveryError = false
+
+    init(coordinator: ExportProfileCoordinator) {
+        _profileStore = ObservedObject(wrappedValue: coordinator.profileStore)
+        _entryStore = ObservedObject(wrappedValue: coordinator.scheduledEntryStore)
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            GlassSectionLabel(title: String(localized: "Profile Schedules"))
+                .accessibilityAddTraits(.isHeader)
+
+            GlassPanel {
+                ForEach(Array(profileStore.profiles.enumerated()), id: \.element.id) { index, profile in
+                    if index > 0 {
+                        Rectangle()
+                            .fill(palette.line)
+                            .frame(height: 1)
+                            .padding(.leading, GlassMetrics.panelPadding)
+                            .accessibilityHidden(true)
+                    }
+                    profileRow(profile)
+                }
+            }
+
+            if !entryStore.entries.contains(where: \.isEnabled) {
+                Text(String(
+                    localized: "No profile schedules enabled.",
+                    comment: "Profile schedule footer when nothing is enabled"
+                ))
+                .glassFont(.rowSubtitle)
+                .foregroundStyle(palette.muted)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.horizontal, 4)
+            }
+        }
+        .sheet(item: $editingProfile) { profile in
+            GlassScheduleSheet(
+                profile: profile,
+                entry: entryStore.entry(profileID: profile.id),
+                entryStore: entryStore
+            ) { entry in
+                _ = entryStore.upsert(entry)
+                schedulingManager.refreshScheduledAutomation()
+            }
+            .glassTheme()
+            .presentationDetents([.large])
+            .presentationDragIndicator(.visible)
+        }
+        .confirmationDialog("Discard Pending Recovery?", isPresented: $showDiscardConfirmation, titleVisibility: .visible) {
+            Button("Discard Pending Recovery", role: .destructive) {
+                guard let profile = recoveryProfile else { return }
+                // Protection may have been enabled while the confirmation was open.
+                configurationProtection.performConfigurationChange {
+                    isDiscardingRecovery = true
+                    defer { isDiscardingRecovery = false }
+                    do {
+                        try schedulingManager.discardPendingRecovery(profileID: profile.id)
+                        _ = entryStore.allEntries()
+                    } catch {
+                        showRecoveryError = true
+                    }
+                }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            if let profile = recoveryProfile {
+                Text("Discard unresolved scheduled exports for \(profile.name)? Your profile, API credentials, export history, completed files and completed-run progress stay unchanged. No export starts now; an enabled schedule waits for its next ordinary occurrence.")
+            }
+        }
+        .alert("Unable to discard pending recovery", isPresented: $showRecoveryError) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("Pending recovery could not be fully cleared. Please try again. Your profile and credentials were not removed.")
+        }
+    }
+
+    private func profileRow(_ profile: ExportProfile) -> some View {
+        let entry = entryStore.entry(profileID: profile.id)
+        let identifier = "schedule.profile.\(profile.id.uuidString)"
+        return VStack(alignment: .leading, spacing: 2) {
+            HStack(alignment: .center, spacing: 12) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(profile.name)
+                        .glassFont(.body)
+                        .foregroundStyle(palette.text)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .accessibilityIdentifier(identifier + ".name")
+                    Text(cadenceSummary(for: entry))
+                        .glassFont(.rowSubtitle)
+                        .foregroundStyle(palette.muted)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .accessibilityIdentifier(identifier + ".summary")
+                }
+                Spacer(minLength: 8)
+                Toggle(isOn: Binding(
+                    get: { entry?.isEnabled ?? false },
+                    set: { setEntryEnabled($0, for: profile, existing: entry) }
+                )) {
+                    EmptyView()
+                }
+                .toggleStyle(GlassToggleStyle())
+                .fixedSize()
+                .accessibilityLabel(Text("Schedule \(profile.name)"))
+                .accessibilityIdentifier(identifier + ".enabled")
+            }
+
+            HStack(spacing: 20) {
+                Button {
+                    editingProfile = profile
+                } label: {
+                    Text("Edit Schedule")
+                        .glassFont(.caption)
+                        .foregroundStyle(palette.accent)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(minHeight: GlassMetrics.touchTarget)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(Text("Edit schedule for \(profile.name)"))
+                .accessibilityIdentifier(identifier + ".edit")
+
+                if schedulingManager.pendingRecoveryProfileIDs.contains(profile.id), entry != nil {
+                    Button {
+                        configurationProtection.performConfigurationChange {
+                            recoveryProfile = profile
+                            showDiscardConfirmation = true
+                        }
+                    } label: {
+                        Text("Discard Pending Recovery")
+                            .glassFont(.caption)
+                            .foregroundStyle(palette.coral)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .frame(minHeight: GlassMetrics.touchTarget)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier(identifier + ".discardRecovery")
+                    .accessibilityLabel(Text("Discard pending recovery for \(profile.name)"))
+                    .accessibilityHint("Keeps credentials, history and completed exports. Requires confirmation.")
+                    .disabled(isDiscardingRecovery)
+                }
+            }
+        }
+        .padding(.horizontal, GlassMetrics.panelPadding)
+        .padding(.top, 10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityElement(children: .contain)
+    }
+
+    private func setEntryEnabled(
+        _ isEnabled: Bool,
+        for profile: ExportProfile,
+        existing entry: ScheduledExportEntry?
+    ) {
+        if entry != nil {
+            _ = entryStore.update(profileID: profile.id) { $0.isEnabled = isEnabled }
+        } else {
+            // Seed new entries from the legacy schedule's preferred time so a
+            // user migrating from single-schedule mode keeps their routine.
+            let legacy = schedulingManager.schedule
+            _ = entryStore.upsert(ScheduledExportEntry(
+                profileID: profile.id,
+                isEnabled: isEnabled,
+                frequency: .daily,
+                preferredHour: legacy.preferredHour,
+                preferredMinute: legacy.preferredMinute,
+                lookbackDays: 1
+            ))
+        }
+        if isEnabled {
+            Task { @MainActor in
+                _ = await schedulingManager.requestNotificationPermissions()
+            }
+        }
+        schedulingManager.refreshScheduledAutomation()
+    }
+
+    private func cadenceSummary(for entry: ScheduledExportEntry?) -> String {
+        guard let entry, entry.isEnabled else {
+            return String(localized: "Not scheduled. Tap to configure.", comment: "Profile schedule row summary when off")
+        }
+
+        let time = String(
+            format: "%d:%02d",
+            locale: Locale.current,
+            entry.preferredHour,
+            entry.preferredMinute
+        )
+        switch entry.frequency {
+        case .daily:
+            return String(localized: "Daily at \(time)", comment: "Profile schedule cadence summary")
+        case .weekly:
+            // ISO 1 = Monday … 7 = Sunday; veryShortWeekdaySymbols starts Sunday.
+            let weekday = Calendar.current.veryShortWeekdaySymbols[entry.weekday % 7]
+            return String(localized: "Weekly on \(weekday) at \(time)", comment: "Profile schedule cadence summary")
+        case .custom:
+            return ScheduleDisplayCopy.cadence(count: entry.customInterval, unit: entry.customUnit, at: time)
+        }
+    }
+}
+#endif
+
 // MARK: - Retry Progress Overlay
 
 struct RetryProgressOverlay: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.glassPalette) private var palette
     let message: String
     let progress: Double
 
     var body: some View {
         ZStack {
-            Color.black.opacity(0.28)
+            Color.black.opacity(0.4)
                 .ignoresSafeArea()
                 .accessibilityHidden(true)
 
-            VStack(spacing: Spacing.s4) {
+            VStack(spacing: 16) {
                 ZStack {
                     Circle()
-                        .stroke(Color.borderSubtle, lineWidth: 3)
+                        .stroke(palette.track, lineWidth: 3)
                         .frame(width: 56, height: 56)
 
                     Circle()
                         .trim(from: 0, to: progress)
-                        .stroke(Color.accent, style: StrokeStyle(lineWidth: 3, lineCap: .round))
+                        .stroke(palette.accent, style: StrokeStyle(lineWidth: 3, lineCap: .round))
                         .frame(width: 56, height: 56)
                         .rotationEffect(reduceMotion ? .zero : .degrees(-90))
                         .animation(reduceMotion ? nil : AnimationTimings.standard, value: progress)
 
                     Image(systemName: "arrow.clockwise")
                         .font(.body.weight(.semibold))
-                        .foregroundStyle(Color.accent)
+                        .foregroundStyle(palette.accent)
                 }
                 .accessibilityHidden(true)
 
-                VStack(spacing: Spacing.s1) {
+                VStack(spacing: 4) {
                     Text("Retrying Export")
-                        .font(Typography.headline())
-                        .foregroundStyle(Color.textPrimary)
+                        .glassFont(.navTitle)
+                        .foregroundStyle(palette.text)
 
                     Text(message)
-                        .font(Typography.caption())
-                        .foregroundStyle(Color.textSecondary)
+                        .glassFont(.rowSubtitle)
+                        .foregroundStyle(palette.sec)
                         .multilineTextAlignment(.center)
                 }
 
                 ProgressView(value: progress)
-                    .tint(Color.accent)
+                    .tint(palette.accent)
                     .frame(width: 200)
                     .accessibilityHidden(true)
 
-                Text("\(Int((progress * 100).rounded()))% Complete")
-                    .font(Typography.monoCaptionEmphasis())
-                    .foregroundStyle(Color.accent)
-                    .geistPill(tint: Color.accent)
+                StatusBadge(title: String(localized: "\(Int((progress * 100).rounded()))% Complete"), status: .inProgress)
                     .accessibilityHidden(true)
             }
-            .padding(Spacing.s6)
-            .background(Color.bgPrimary)
-            .clipShape(RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous)
-                    .strokeBorder(Color.borderSubtle, lineWidth: 1)
-            )
-            .shadow(color: Color.black.opacity(0.10), radius: 16, x: 0, y: 8)
+            .padding(24)
+            .glassSurface(cornerRadius: GlassMetrics.dialogRadius, style: .strong)
+            .padding(.horizontal, 28)
             .accessibilityElement(children: .combine)
             .accessibilityLabel("Retrying export")
             .accessibilityValue("\(message), \(Int(progress * 100)) percent complete")
@@ -1366,100 +1552,74 @@ struct RetryProgressOverlay: View {
 
 // MARK: - Export History Row
 
+/// HistoryG row: when it ran, a short muted reason, a status capsule and a
+/// chevron to the details. The full failure text stays in the details sheet
+/// and in the VoiceOver label.
 struct ExportHistoryRow: View {
     let entry: ExportHistoryEntry
 
-    private var statusColor: Color {
-        if entry.isFullSuccess {
-            return .success
-        } else if entry.isPartialSuccess {
-            return .warning
-        } else {
-            return .error
+    @Environment(\.glassPalette) private var palette
+
+    private var badgeStatus: CoverageStatus {
+        switch entry.presentationStatus {
+        case .success: return .complete
+        case .partialSuccess: return .partial
+        case .failed: return .missing
         }
     }
 
-    private var statusIcon: String { entry.statusSystemImage }
+    /// Failures lead with the plain reason; successes and partials keep the
+    /// file/day summary.
+    private var detailLine: String {
+        if entry.presentationStatus == .failed, let reason = entry.failureReasonForDisplay {
+            return reason.shortDescription
+        }
+        return entry.summaryDescription
+    }
 
-    private var statusDescription: String { entry.localizedShortStatusDescription }
+    private var metadataLine: String {
+        var parts = [entry.sourceLabelForDisplay]
+        if let profileName = entry.profileName, !profileName.isEmpty {
+            parts.append(profileName)
+        }
+        if let targetLabel = entry.targetLabel, !targetLabel.isEmpty {
+            parts.append(targetLabel)
+        }
+        return parts.joined(separator: " · ")
+    }
 
     var body: some View {
-        HStack(spacing: Spacing.s3) {
-            Image(systemName: statusIcon)
-                .font(.body.weight(.semibold))
-                .foregroundStyle(statusColor)
-                .frame(width: 28, height: 28)
-                .background(statusColor.opacity(0.10))
-                .clipShape(RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
-                        .strokeBorder(statusColor.opacity(0.20), lineWidth: 1)
-                )
-                .accessibilityHidden(true)
-
-            VStack(alignment: .leading, spacing: Spacing.s1) {
-                HStack(spacing: Spacing.s2) {
-                    Text(entry.summaryDescription)
-                        .font(Typography.bodyEmphasis())
-                        .foregroundStyle(Color.textPrimary)
-                        .lineLimit(2)
-
-                    Text(statusDescription)
-                        .font(.caption2.weight(.semibold))
-                        .foregroundStyle(statusColor)
-                        .padding(.horizontal, Spacing.s2)
-                        .padding(.vertical, 3)
-                        .background(statusColor.opacity(0.10), in: Capsule())
-                        .overlay(Capsule().strokeBorder(statusColor.opacity(0.22), lineWidth: 1))
-                }
-
-                if !entry.isFullSuccess, let message = entry.failureListMessage {
-                    Text(message)
-                        .font(Typography.caption())
-                        .foregroundStyle(entry.isPartialSuccess ? Color.textSecondary : Color.error)
-                        .lineLimit(2)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-
-                HStack(spacing: Spacing.s2) {
-                    Label(entry.sourceLabelForDisplay, systemImage: entry.sourceIconForDisplay)
-                        .labelStyle(.titleAndIcon)
-
-                    Text(formatTimestamp(entry.timestamp))
-                }
-                .font(Typography.caption())
-                .foregroundStyle(Color.textMuted)
-
-                if let profileName = entry.profileName, !profileName.isEmpty {
-                    Label {
-                        Text("Export Profile") + Text(verbatim: ": \(profileName)")
-                    } icon: {
-                        Image(systemName: "slider.horizontal.3")
-                    }
-                    .font(Typography.caption())
-                    .foregroundStyle(Color.textMuted)
+        HStack(alignment: .center, spacing: 12) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(formatTimestamp(entry.timestamp))
+                    .glassFont(.body)
+                    .foregroundStyle(palette.text)
                     .lineLimit(1)
-                }
 
-                if let targetLabel = entry.targetLabel, !targetLabel.isEmpty {
-                    Label(
-                        targetLabel,
-                        systemImage: entry.exportTarget == .localIPhoneFolder ? "folder" : "arrow.right"
-                    )
-                    .font(Typography.caption())
-                    .foregroundStyle(Color.textMuted)
+                Text(detailLine)
+                    .glassFont(.rowSubtitle)
+                    .foregroundStyle(palette.sec)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Text(metadataLine)
+                    .glassFont(.rowSubtitle)
+                    .foregroundStyle(palette.muted)
                     .lineLimit(1)
-                }
             }
 
-            Spacer(minLength: Spacing.s2)
+            Spacer(minLength: 8)
+
+            StatusBadge(title: entry.localizedShortStatusDescription, status: badgeStatus)
 
             Image(systemName: "chevron.right")
                 .font(.caption.weight(.semibold))
-                .foregroundStyle(Color.textMuted)
+                .foregroundStyle(palette.muted)
                 .accessibilityHidden(true)
         }
-        .padding(.vertical, Spacing.s3)
+        .padding(.horizontal, GlassMetrics.panelPadding)
+        .padding(.vertical, 12)
+        .frame(minHeight: GlassMetrics.rowWithSubtitleMinHeight)
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
         .accessibilityLabel(accessibilityDescription)
@@ -1489,10 +1649,7 @@ struct ExportHistoryRow: View {
     }
 
     private func formatTimestamp(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .short
-        formatter.timeStyle = .short
-        return formatter.string(from: date)
+        date.formatted(.dateTime.month(.abbreviated).day().hour().minute())
     }
 }
 
@@ -1502,6 +1659,7 @@ struct ExportHistoryDetailView: View {
     let entry: ExportHistoryEntry
     let onRetry: ((ExportHistoryEntry) -> Void)?
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.glassPalette) private var palette
 
     init(entry: ExportHistoryEntry, onRetry: ((ExportHistoryEntry) -> Void)? = nil) {
         self.entry = entry
@@ -1513,349 +1671,349 @@ struct ExportHistoryDetailView: View {
     }
 
     private var statusColor: Color {
-        if entry.isFullSuccess {
-            return .success
-        } else if entry.isPartialSuccess {
-            return .warning
-        } else {
-            return .error
+        switch entry.presentationStatus {
+        case .success: return palette.ok
+        case .partialSuccess: return palette.accent
+        case .failed: return palette.coral
         }
     }
 
     var body: some View {
         NavigationStack {
             List {
-                // Retry Section (top placement: keep the primary recovery
-                // action reachable without scrolling through long failure lists)
-                if canRetry, let onRetry = onRetry {
-                    Section {
-                        Button(action: {
-                            dismiss()
-                            onRetry(entry)
-                        }) {
-                            HStack {
-                                Image(systemName: "arrow.clockwise")
-                                Text("Retry Export")
-                            }
-                            .frame(maxWidth: .infinity)
-                            .foregroundStyle(Color.accent)
-                        }
-                        .accessibilityLabel("Retry export")
-                        .accessibilityHint(entry.failedDateDetails.isEmpty
-                            ? "Double tap to retry export for all dates"
-                            : "Double tap to retry \(entry.failedDateDetails.count) failed dates")
-                    } footer: {
-                        Text(entry.failedDateDetails.isEmpty
-                            ? "Re-export all dates from \(formatDateRange(entry.dateRangeStart, entry.dateRangeEnd))"
-                            : "Re-export \(entry.failedDateDetails.count) failed date\(entry.failedDateDetails.count == 1 ? "" : "s")"
-                        )
-                        .font(Typography.caption())
-                        .foregroundStyle(Color.textSecondary)
-                    }
-                }
-
-                // Status Section
-                Section {
-                    HStack {
-                        Text("Status")
-                            .foregroundStyle(Color.textSecondary)
-                        Spacer()
-                        Text(entry.localizedShortStatusDescription)
-                            .foregroundStyle(statusColor)
-                            .fontWeight(.medium)
-                    }
-
-                    HStack {
-                        Text("Source")
-                            .foregroundStyle(Color.textSecondary)
-                        Spacer()
-                        HStack(spacing: 4) {
-                            Image(systemName: entry.sourceIconForDisplay)
-                            Text(entry.sourceLabelForDisplay)
-                        }
-                        .foregroundStyle(Color.textPrimary)
-                    }
-
-                    if let profileName = entry.profileName, !profileName.isEmpty {
-                        historyValueRow("Export Profile", value: profileName)
-                    }
-
-                    if let targetLabel = entry.targetLabel, !targetLabel.isEmpty {
-                        if entry.exportTarget == .localIPhoneFolder {
-                            historyValueRow("Export Folder", value: targetLabel)
-                        } else {
-                            historyValueRow("Target", value: targetLabel)
-                        }
-                    }
-
-                    HStack {
-                        Text("Time")
-                            .foregroundStyle(Color.textSecondary)
-                        Spacer()
-                        Text(formatFullTimestamp(entry.timestamp))
-                            .foregroundStyle(Color.textPrimary)
-                    }
-                } header: {
-                    Text("Overview")
-                        .font(Typography.caption())
-                        .foregroundStyle(Color.textSecondary)
-                }
-
-                // Export Details Section
-                Section {
-                    HStack {
-                        Text("Date Range")
-                            .foregroundStyle(Color.textSecondary)
-                        Spacer()
-                        Text(formatDateRange(entry.dateRangeStart, entry.dateRangeEnd))
-                            .foregroundStyle(Color.textPrimary)
-                    }
-
-                    HStack {
-                        Text(entry.resultCountLabel)
-                            .foregroundStyle(Color.textSecondary)
-                        Spacer()
-                        Text(entry.resultCountDescription)
-                            .foregroundStyle(Color.textPrimary)
-                    }
-                } header: {
-                    Text("Details")
-                        .font(Typography.caption())
-                        .foregroundStyle(Color.textSecondary)
-                }
-
-                if let details = entry.operationDetails {
-                    Section {
-                        historyValueRow("Operation", value: operationLabel(details.kind))
-                        historyValueRow("Job ID", value: details.requestID.uuidString.lowercased(), monospaced: true)
-                        historyValueRow("Requested Dates", value: dateSelectionLabel(details.dateSelection))
-                        historyValueRow("Settings", value: settingsPolicyLabel(details.settingsPolicy))
-
-                        if let profile = details.profile {
-                            historyValueRow("Profile", value: profileLabel(profile))
-                        }
-                        if let detailLevel = details.detailLevel {
-                            historyValueRow("Detail", value: detailLevelLabel(detailLevel))
-                        }
-                    } header: {
-                        Text("CLI Request")
-                            .font(Typography.caption())
-                            .foregroundStyle(Color.textSecondary)
-                    } footer: {
-                        Text("History stores request scope and counts only. Exported health values are not saved in this history.")
-                            .font(Typography.caption())
-                            .foregroundStyle(Color.textMuted)
-                    }
-
-                    Section {
-                        historyValueRow(
-                            "Data Sent",
-                            value: ByteCountFormatter.string(
-                                fromByteCount: details.transferredBytes,
-                                countStyle: .file
-                            )
-                        )
-                        historyValueRow("Transfer Parts", value: "\(details.partitionCount)")
-
-                        if let recordCount = details.recordCount {
-                            historyValueRow("Records", value: "\(recordCount)")
-                        }
-                        if let sampleCount = details.sampleCount {
-                            historyValueRow("HealthKit Samples", value: "\(sampleCount)")
-                        }
-                        if details.warningDayCount > 0 {
-                            historyValueRow("Days With Warnings", value: "\(details.warningDayCount)")
-                        }
-                        if details.failedDayCount > 0 {
-                            historyValueRow("Failed or Missing Days", value: "\(details.failedDayCount)")
-                        }
-                        if details.integrityWarningCount > 0 {
-                            historyValueRow("Integrity Warnings", value: "\(details.integrityWarningCount)")
-                        }
-                        if details.partialFailureCount > 0 {
-                            historyValueRow("Partial Metric Failures", value: "\(details.partialFailureCount)")
-                        }
-                    } header: {
-                        Text("Transfer Summary")
-                            .font(Typography.caption())
-                            .foregroundStyle(Color.textSecondary)
-                    }
-
-                    if details.metricIDs.isEmpty == false ||
-                        details.categoryIDs.isEmpty == false ||
-                        details.sourceIDs.isEmpty == false ||
-                        details.objectPaths.isEmpty == false ||
-                        details.fieldPointers.isEmpty == false {
+                Group {
+                    // Retry Section (top placement: keep the primary recovery
+                    // action reachable without scrolling through long failure lists)
+                    if canRetry, let onRetry = onRetry {
                         Section {
-                            if !details.metricIDs.isEmpty {
-                                historyScopeGroup(
-                                    title: "Metrics",
-                                    values: details.metricIDs.map(metricDisplayName)
-                                )
+                            Button(action: {
+                                dismiss()
+                                onRetry(entry)
+                            }) {
+                                HStack {
+                                    Image(systemName: "arrow.clockwise")
+                                    Text("Retry Export")
+                                }
+                                .frame(maxWidth: .infinity)
+                                .foregroundStyle(palette.accent)
                             }
-                            if !details.categoryIDs.isEmpty {
-                                historyScopeGroup(
-                                    title: "Categories",
-                                    values: details.categoryIDs.map(displayToken)
-                                )
+                            .accessibilityLabel("Retry export")
+                            .accessibilityHint(entry.failedDateDetails.isEmpty
+                                ? "Double tap to retry export for all dates"
+                                : "Double tap to retry \(entry.failedDateDetails.count) failed dates")
+                        } footer: {
+                            Text(entry.failedDateDetails.isEmpty
+                                ? "Re-export all dates from \(formatDateRange(entry.dateRangeStart, entry.dateRangeEnd))"
+                                : "Re-export \(entry.failedDateDetails.count) failed date\(entry.failedDateDetails.count == 1 ? "" : "s")"
+                            )
+                            .glassFont(.rowSubtitle)
+                            .foregroundStyle(palette.muted)
+                        }
+                    }
+
+                    // Status Section
+                    Section {
+                        HStack {
+                            Text("Status")
+                                .foregroundStyle(palette.muted)
+                            Spacer()
+                            Text(entry.localizedShortStatusDescription)
+                                .foregroundStyle(statusColor)
+                                .fontWeight(.medium)
+                        }
+
+                        HStack {
+                            Text("Source")
+                                .foregroundStyle(palette.muted)
+                            Spacer()
+                            HStack(spacing: 4) {
+                                Image(systemName: entry.sourceIconForDisplay)
+                                Text(entry.sourceLabelForDisplay)
                             }
-                            if !details.sourceIDs.isEmpty {
-                                historyScopeGroup(
-                                    title: "Sources",
-                                    values: details.sourceIDs.map(displayToken)
-                                )
+                            .foregroundStyle(palette.text)
+                        }
+
+                        if let profileName = entry.profileName, !profileName.isEmpty {
+                            historyValueRow("Export Profile", value: profileName)
+                        }
+
+                        if let targetLabel = entry.targetLabel, !targetLabel.isEmpty {
+                            if entry.exportTarget == .localIPhoneFolder {
+                                historyValueRow("Export Folder", value: targetLabel)
+                            } else {
+                                historyValueRow("Target", value: targetLabel)
                             }
-                            if !details.objectPaths.isEmpty {
-                                historyScopeGroup(title: "Objects", values: details.objectPaths, monospaced: true)
+                        }
+
+                        HStack {
+                            Text("Time")
+                                .foregroundStyle(palette.muted)
+                            Spacer()
+                            Text(formatFullTimestamp(entry.timestamp))
+                                .foregroundStyle(palette.text)
+                        }
+                    } header: {
+                        Text("Overview")
+                            .glassFont(.caption)
+                            .foregroundStyle(palette.muted)
+                    }
+
+                    // Export Details Section
+                    Section {
+                        HStack {
+                            Text("Date Range")
+                                .foregroundStyle(palette.muted)
+                            Spacer()
+                            Text(formatDateRange(entry.dateRangeStart, entry.dateRangeEnd))
+                                .foregroundStyle(palette.text)
+                        }
+
+                        HStack {
+                            Text(entry.resultCountLabel)
+                                .foregroundStyle(palette.muted)
+                            Spacer()
+                            Text(entry.resultCountDescription)
+                                .foregroundStyle(palette.text)
+                        }
+                    } header: {
+                        Text("Details")
+                            .glassFont(.caption)
+                            .foregroundStyle(palette.muted)
+                    }
+
+                    if let details = entry.operationDetails {
+                        Section {
+                            historyValueRow("Operation", value: operationLabel(details.kind))
+                            historyValueRow("Job ID", value: details.requestID.uuidString.lowercased(), monospaced: true)
+                            historyValueRow("Requested Dates", value: dateSelectionLabel(details.dateSelection))
+                            historyValueRow("Settings", value: settingsPolicyLabel(details.settingsPolicy))
+
+                            if let profile = details.profile {
+                                historyValueRow("Profile", value: profileLabel(profile))
                             }
-                            if !details.fieldPointers.isEmpty {
-                                historyScopeGroup(title: "Fields", values: details.fieldPointers, monospaced: true)
+                            if let detailLevel = details.detailLevel {
+                                historyValueRow("Detail", value: detailLevelLabel(detailLevel))
                             }
                         } header: {
-                            Text("Request Scope")
-                                .font(Typography.caption())
-                                .foregroundStyle(Color.textSecondary)
+                            Text("CLI Request")
+                                .glassFont(.caption)
+                                .foregroundStyle(palette.muted)
+                        } footer: {
+                            Text("History stores request scope and counts only. Exported health values are not saved in this history.")
+                                .glassFont(.rowSubtitle)
+                                .foregroundStyle(palette.muted)
                         }
-                    }
-                } else if entry.isCLIRawDelivery {
-                    Section {
-                        historyValueRow("Operation", value: String(localized: "Raw data export"))
-                        if entry.targetLabel == "Direct CLI raw response" {
+
+                        Section {
                             historyValueRow(
-                                "Job ID",
-                                value: entry.id.uuidString.lowercased(),
-                                monospaced: true
+                                "Data Sent",
+                                value: ByteCountFormatter.string(
+                                    fromByteCount: details.transferredBytes,
+                                    countStyle: .file
+                                )
                             )
+                            historyValueRow("Transfer Parts", value: "\(details.partitionCount)")
+
+                            if let recordCount = details.recordCount {
+                                historyValueRow("Records", value: "\(recordCount)")
+                            }
+                            if let sampleCount = details.sampleCount {
+                                historyValueRow("HealthKit Samples", value: "\(sampleCount)")
+                            }
+                            if details.warningDayCount > 0 {
+                                historyValueRow("Days With Warnings", value: "\(details.warningDayCount)")
+                            }
+                            if details.failedDayCount > 0 {
+                                historyValueRow("Failed or Missing Days", value: "\(details.failedDayCount)")
+                            }
+                            if details.integrityWarningCount > 0 {
+                                historyValueRow("Integrity Warnings", value: "\(details.integrityWarningCount)")
+                            }
+                            if details.partialFailureCount > 0 {
+                                historyValueRow("Partial Metric Failures", value: "\(details.partialFailureCount)")
+                            }
+                        } header: {
+                            Text("Transfer Summary")
+                                .glassFont(.caption)
+                                .foregroundStyle(palette.muted)
                         }
-                    } header: {
-                        Text("CLI Request")
-                            .font(Typography.caption())
-                            .foregroundStyle(Color.textSecondary)
-                    } footer: {
-                        Text("This export predates detailed CLI history. New CLI exports include request scope and transfer counts here.")
-                            .font(Typography.caption())
-                            .foregroundStyle(Color.textMuted)
-                    }
-                }
 
-                // Failure explanation and next step (if applicable)
-                if let reason = entry.failureReasonForDisplay {
-                    Section {
-                        VStack(alignment: .leading, spacing: Spacing.s2) {
-                            Label(reason.shortDescription, systemImage: "exclamationmark.octagon.fill")
-                                .font(Typography.bodyEmphasis())
-                                .foregroundStyle(statusColor)
-
-                            Text(reason.detailedDescription)
-                                .font(Typography.body())
-                                .foregroundStyle(Color.textSecondary)
-                                .fixedSize(horizontal: false, vertical: true)
+                        if details.metricIDs.isEmpty == false ||
+                            details.categoryIDs.isEmpty == false ||
+                            details.sourceIDs.isEmpty == false ||
+                            details.objectPaths.isEmpty == false ||
+                            details.fieldPointers.isEmpty == false {
+                            Section {
+                                if !details.metricIDs.isEmpty {
+                                    historyScopeGroup(
+                                        title: "Metrics",
+                                        values: details.metricIDs.map(metricDisplayName)
+                                    )
+                                }
+                                if !details.categoryIDs.isEmpty {
+                                    historyScopeGroup(
+                                        title: "Categories",
+                                        values: details.categoryIDs.map(displayToken)
+                                    )
+                                }
+                                if !details.sourceIDs.isEmpty {
+                                    historyScopeGroup(
+                                        title: "Sources",
+                                        values: details.sourceIDs.map(displayToken)
+                                    )
+                                }
+                                if !details.objectPaths.isEmpty {
+                                    historyScopeGroup(title: "Objects", values: details.objectPaths, monospaced: true)
+                                }
+                                if !details.fieldPointers.isEmpty {
+                                    historyScopeGroup(title: "Fields", values: details.fieldPointers, monospaced: true)
+                                }
+                            } header: {
+                                Text("Request Scope")
+                                    .glassFont(.caption)
+                                    .foregroundStyle(palette.muted)
+                            }
                         }
-                        .padding(.vertical, Spacing.s1)
-                    } header: {
-                        Text(entry.isPartialSuccess ? "Why some dates did not export" : "Why it failed")
-                            .font(Typography.caption())
-                            .foregroundStyle(Color.textSecondary)
-                    }
-
-                    Section {
-                        Label {
-                            Text(reason.recoverySuggestion)
-                                .font(Typography.body())
-                                .foregroundStyle(Color.textPrimary)
-                                .fixedSize(horizontal: false, vertical: true)
-                        } icon: {
-                            Image(systemName: "wrench.and.screwdriver.fill")
-                                .foregroundStyle(Color.accent)
+                    } else if entry.isCLIRawDelivery {
+                        Section {
+                            historyValueRow("Operation", value: String(localized: "Raw data export"))
+                            if entry.targetLabel == "Direct CLI raw response" {
+                                historyValueRow(
+                                    "Job ID",
+                                    value: entry.id.uuidString.lowercased(),
+                                    monospaced: true
+                                )
+                            }
+                        } header: {
+                            Text("CLI Request")
+                                .glassFont(.caption)
+                                .foregroundStyle(palette.muted)
+                        } footer: {
+                            Text("This export predates detailed CLI history. New CLI exports include request scope and transfer counts here.")
+                                .glassFont(.rowSubtitle)
+                                .foregroundStyle(palette.muted)
                         }
-                        .padding(.vertical, Spacing.s1)
-                    } header: {
-                        Text("What to do")
-                            .font(Typography.caption())
-                            .foregroundStyle(Color.textSecondary)
                     }
-                }
 
-                if !entry.failureDiagnosticDetails.isEmpty {
-                    Section {
-                        ForEach(entry.failureDiagnosticDetails, id: \.self) { details in
-                            Text(details)
-                                .font(Typography.bodyMono())
-                                .foregroundStyle(Color.textSecondary)
-                                .textSelection(.enabled)
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
-                    } header: {
-                        Text("Technical details")
-                            .font(Typography.caption())
-                            .foregroundStyle(Color.textSecondary)
-                    } footer: {
-                        Text("If the suggested fix does not work, include this message in your bug report after removing any private folder or server information.")
-                            .font(Typography.caption())
-                            .foregroundStyle(Color.textMuted)
-                    }
-                }
+                    // Failure explanation and next step (if applicable)
+                    if let reason = entry.failureReasonForDisplay {
+                        Section {
+                            VStack(alignment: .leading, spacing: Spacing.s2) {
+                                Label(reason.shortDescription, systemImage: "exclamationmark.octagon.fill")
+                                    .font(Typography.bodyEmphasis())
+                                    .foregroundStyle(statusColor)
 
-                if !entry.partialFailures.isEmpty {
-                    Section {
-                        ForEach(Array(entry.partialFailures.enumerated()), id: \.offset) { _, failure in
-                            HStack(alignment: .top) {
-                                Image(systemName: failure.isInformational == true
-                                    ? "info.circle"
-                                    : "exclamationmark.triangle.fill")
-                                    .foregroundStyle(failure.isInformational == true
-                                        ? Color.textSecondary
-                                        : Color.warning)
-                                Text(failure.summary)
-                                    .font(Typography.caption())
-                                    .foregroundStyle(Color.textSecondary)
+                                Text(reason.detailedDescription)
+                                    .font(Typography.body())
+                                    .foregroundStyle(palette.muted)
                                     .fixedSize(horizontal: false, vertical: true)
-                                    .textSelection(.enabled)
                             }
+                            .padding(.vertical, Spacing.s1)
+                        } header: {
+                            Text(entry.isPartialSuccess ? "Why some dates did not export" : "Why it failed")
+                                .glassFont(.caption)
+                                .foregroundStyle(palette.muted)
                         }
-                    } header: {
-                        // Informational omissions (for example an optional
-                        // WorkoutKit plan this device cannot decode) do not
-                        // reduce the export below full success, so the section
-                        // reads as notes rather than warnings.
-                        Text(LocalizedStringKey(
-                            entry.isFullSuccess ? "Export Notes" : "Partial Export Warnings"
-                        ))
-                            .font(Typography.caption())
-                            .foregroundStyle(Color.textSecondary)
-                    }
-                }
 
-                // Failed Dates Section (if applicable). Capped like the
-                // Android history detail so large failures stay scrollable;
-                // retry counts and actions still reflect the full list.
-                if !entry.failedDateDetails.isEmpty {
-                    Section {
-                        ForEach(entry.failedDateDetails.prefix(8), id: \.date) { detail in
-                            HStack {
-                                Text(detail.dateString)
-                                    .foregroundStyle(Color.textPrimary)
-                                    .font(Typography.bodyMono())
-                                Spacer()
-                                Text(detail.reason.shortDescription)
-                                    .font(Typography.caption())
-                                    .foregroundStyle(Color.error)
+                        Section {
+                            Label {
+                                Text(reason.recoverySuggestion)
+                                    .font(Typography.body())
+                                    .foregroundStyle(palette.text)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            } icon: {
+                                Image(systemName: "wrench.and.screwdriver.fill")
+                                    .foregroundStyle(palette.accent)
                             }
+                            .padding(.vertical, Spacing.s1)
+                        } header: {
+                            Text("What to do")
+                                .glassFont(.caption)
+                                .foregroundStyle(palette.muted)
                         }
-                        if entry.failedDateDetails.count > 8 {
-                            Text("+\(entry.failedDateDetails.count - 8) more")
-                                .font(Typography.caption())
-                                .foregroundStyle(Color.textMuted)
+                    }
+
+                    if !entry.failureDiagnosticDetails.isEmpty {
+                        Section {
+                            ForEach(entry.failureDiagnosticDetails, id: \.self) { details in
+                                Text(details)
+                                    .font(Typography.bodyMono())
+                                    .foregroundStyle(palette.muted)
+                                    .textSelection(.enabled)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                        } header: {
+                            Text("Technical details")
+                                .glassFont(.caption)
+                                .foregroundStyle(palette.muted)
+                        } footer: {
+                            Text("If the suggested fix does not work, include this message in your bug report after removing any private folder or server information.")
+                                .glassFont(.rowSubtitle)
+                                .foregroundStyle(palette.muted)
                         }
-                    } header: {
-                        Text("Failed Dates")
-                            .font(Typography.caption())
-                            .foregroundStyle(Color.textSecondary)
+                    }
+
+                    if !entry.partialFailures.isEmpty {
+                        Section {
+                            ForEach(Array(entry.partialFailures.enumerated()), id: \.offset) { _, failure in
+                                HStack(alignment: .top) {
+                                    Image(systemName: failure.isInformational == true
+                                        ? "info.circle"
+                                        : "exclamationmark.triangle.fill")
+                                        .foregroundStyle(failure.isInformational == true
+                                            ? palette.muted
+                                            : palette.coral)
+                                    Text(failure.summary)
+                                        .glassFont(.caption)
+                                        .foregroundStyle(palette.muted)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                        .textSelection(.enabled)
+                                }
+                            }
+                        } header: {
+                            // Informational omissions (for example an optional
+                            // WorkoutKit plan this device cannot decode) do not
+                            // reduce the export below full success, so the section
+                            // reads as notes rather than warnings.
+                            Text(LocalizedStringKey(
+                                entry.isFullSuccess ? "Export Notes" : "Partial Export Warnings"
+                            ))
+                                .glassFont(.caption)
+                                .foregroundStyle(palette.muted)
+                        }
+                    }
+
+                    // Failed Dates Section (if applicable). Capped like the
+                    // Android history detail so large failures stay scrollable;
+                    // retry counts and actions still reflect the full list.
+                    if !entry.failedDateDetails.isEmpty {
+                        Section {
+                            ForEach(entry.failedDateDetails.prefix(8), id: \.date) { detail in
+                                HStack {
+                                    Text(detail.dateString)
+                                        .foregroundStyle(palette.text)
+                                        .font(Typography.bodyMono())
+                                    Spacer()
+                                    Text(detail.reason.shortDescription)
+                                        .glassFont(.caption)
+                                        .foregroundStyle(palette.coral)
+                                }
+                            }
+                            if entry.failedDateDetails.count > 8 {
+                                Text("+\(entry.failedDateDetails.count - 8) more")
+                                    .glassFont(.caption)
+                                    .foregroundStyle(palette.muted)
+                            }
+                        } header: {
+                            Text("Failed Dates")
+                                .glassFont(.caption)
+                                .foregroundStyle(palette.muted)
+                        }
                     }
                 }
+                .glassFormRows()
             }
-            .scrollContentBackground(.hidden)
-            .background(Color.bgPrimary)
+            .glassFormChrome()
             .navigationTitle("Export Details")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -1863,7 +2021,7 @@ struct ExportHistoryDetailView: View {
                     Button("Done") {
                         dismiss()
                     }
-                    .foregroundStyle(Color.accent)
+                    .foregroundStyle(palette.accent)
                 }
             }
         }
@@ -1876,11 +2034,11 @@ struct ExportHistoryDetailView: View {
     ) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: Spacing.s3) {
             Text(label)
-                .foregroundStyle(Color.textSecondary)
+                .foregroundStyle(palette.muted)
             Spacer(minLength: Spacing.s3)
             Text(value)
                 .font(monospaced ? Typography.bodyMono() : Typography.body())
-                .foregroundStyle(Color.textPrimary)
+                .foregroundStyle(palette.text)
                 .multilineTextAlignment(.trailing)
                 .textSelection(.enabled)
         }
@@ -1895,7 +2053,7 @@ struct ExportHistoryDetailView: View {
             ForEach(values, id: \.self) { value in
                 Text(value)
                     .font(monospaced ? Typography.bodyMono() : Typography.body())
-                    .foregroundStyle(Color.textSecondary)
+                    .foregroundStyle(palette.muted)
                     .textSelection(.enabled)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
@@ -1905,7 +2063,7 @@ struct ExportHistoryDetailView: View {
                 Text("(\(values.count))")
             }
         }
-        .foregroundStyle(Color.textPrimary)
+        .foregroundStyle(palette.text)
     }
 
     private func operationLabel(_ kind: ExportHistoryOperationDetails.Kind) -> String {

@@ -94,8 +94,11 @@ struct VaultIcon: View {
 
 // MARK: - Export Toast
 
+/// The export result toast, styled to the Liquid Glass designs. It only uses tokens the
+/// isolated accessibility host compiles, so its glass colours are mirrored here.
 struct ExportStatusBadge: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.accessibilityVoiceOverEnabled) private var voiceOverEnabled
 
     enum StatusType {
         case success(String)
@@ -112,69 +115,100 @@ struct ExportStatusBadge: View {
 
     @State private var isVisible = false
     @State private var offset: CGFloat = 80
+    @State private var dragOffset: CGFloat = 0
     @State private var isDismissing = false
 
     private var hasExportActions: Bool {
         onPreview != nil || onBrowseFolder != nil
     }
 
+    /// Seconds before the toast leaves on its own; nil keeps it until dismissed. A toast
+    /// that opens details when tapped stays, as its owner manages its expiry.
+    private var resolvedAutoDismissDelay: TimeInterval? {
+        // Give VoiceOver users and UI tests the time they need; they can still dismiss.
+        guard onTap == nil, !voiceOverEnabled,
+              !ProcessInfo.processInfo.arguments.contains("--uitesting") else { return nil }
+        switch status {
+        case .success: return 6
+        case .warning, .error: return 10
+        }
+    }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: Spacing.s2) {
-            HStack {
+        VStack(alignment: .leading, spacing: Spacing.s3) {
+            HStack(alignment: .top, spacing: Spacing.s3) {
                 Image(systemName: statusIcon)
-                    .font(.body.weight(.semibold))
+                    .font(.system(size: 15, weight: .bold))
                     .foregroundStyle(statusColor)
+                    .frame(width: 32, height: 32)
+                    .background(Circle().fill(statusColor.opacity(0.18)))
                     .accessibilityHidden(true)
+
+                VStack(alignment: .leading, spacing: 3) {
+                    statusMessage
+
+                    if hasExportActions, let exportFileName {
+                        Text(exportFileName)
+                            .font(.system(size: 12.5, design: .monospaced))
+                            .foregroundStyle(Self.muted)
+                            .lineLimit(2)
+                            .truncationMode(.middle)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .accessibilityLabel("Exported file: \(exportFileName)")
+                    }
+                }
+
                 Spacer(minLength: Spacing.s2)
+
                 Button(action: dismiss) {
                     Image(systemName: "xmark")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(Color.textSecondary)
-                        .padding(Spacing.s2)
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(Self.muted)
+                        .frame(width: 28, height: 28)
+                        .background(Circle().fill(Self.surface))
                         .frame(minWidth: 44, minHeight: 44)
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+                .padding(.top, -6)
+                .padding(.trailing, -8)
                 .accessibilityLabel("Dismiss export status")
             }
 
-            VStack(alignment: .leading, spacing: Spacing.s2) {
-                statusMessage
-
-                if hasExportActions {
-                    if let exportFileName {
-                        Text(exportFileName)
-                            .font(Typography.label())
-                            .foregroundStyle(Color.textSecondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .accessibilityLabel("Exported file: \(exportFileName)")
+            if hasExportActions {
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: Spacing.s2) {
+                        exportActionButtons
                     }
-
-                    ViewThatFits(in: .horizontal) {
-                        HStack(spacing: Spacing.s3) {
-                            exportActionButtons
-                        }
-                        VStack(alignment: .leading, spacing: Spacing.s2) {
-                            exportActionButtons
-                        }
+                    VStack(alignment: .leading, spacing: Spacing.s2) {
+                        exportActionButtons
                     }
                 }
             }
-
         }
-        .padding(Spacing.s4)
+        .padding(.horizontal, Spacing.s4)
+        .padding(.vertical, 14)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.bgPrimary)
-        .clipShape(RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous)
-                .strokeBorder(statusColor.opacity(0.35), lineWidth: 1)
+        .background(
+            RoundedRectangle(cornerRadius: Self.radius, style: .continuous)
+                .fill(.regularMaterial)
+                .overlay(
+                    RoundedRectangle(cornerRadius: Self.radius, style: .continuous)
+                        .fill(Self.glass)
+                )
                 .accessibilityHidden(true)
         )
-        .shadow(color: Color.black.opacity(0.08), radius: 10, x: 0, y: 6)
+        .overlay(
+            RoundedRectangle(cornerRadius: Self.radius, style: .continuous)
+                .strokeBorder(Self.edge, lineWidth: 1)
+                .accessibilityHidden(true)
+        )
+        .shadow(color: Color.black.opacity(0.18), radius: 18, x: 0, y: 8)
         .opacity(isVisible ? 1 : 0)
-        .offset(y: reduceMotion ? 0 : offset)
+        .offset(y: (reduceMotion ? 0 : offset) + dragOffset)
         .contentShape(Rectangle())
+        .gesture(swipeToDismiss)
+        .accessibilityAction(named: Text("Dismiss export status"), dismiss)
         .onAppear {
             withOptionalMotionAnimation(AnimationTimings.standard) {
                 isVisible = true
@@ -182,6 +216,28 @@ struct ExportStatusBadge: View {
             }
             UIAccessibility.post(notification: .announcement, argument: message)
         }
+        .task(id: resolvedAutoDismissDelay) {
+            guard let delay = resolvedAutoDismissDelay else { return }
+            try? await Task.sleep(for: .seconds(delay))
+            guard !Task.isCancelled else { return }
+            dismiss()
+        }
+    }
+
+    /// Swipe down (or sideways) to send the toast away early.
+    private var swipeToDismiss: some Gesture {
+        DragGesture(minimumDistance: 12)
+            .onChanged { value in
+                dragOffset = max(0, value.translation.height)
+            }
+            .onEnded { value in
+                if value.translation.height > 40 || abs(value.translation.width) > 80
+                    || value.predictedEndTranslation.height > 120 {
+                    dismiss()
+                } else {
+                    withOptionalMotionAnimation(AnimationTimings.standard) { dragOffset = 0 }
+                }
+            }
     }
 
     @ViewBuilder
@@ -203,6 +259,7 @@ struct ExportStatusBadge: View {
             .accessibilityHint("Review export issues")
         } else {
             statusMessageText
+                .padding(.top, 6)
                 .accessibilityIdentifier(AccessibilityID.Status.exportStatusBadge)
                 .accessibilityValue(statusAccessibilityValue)
         }
@@ -210,8 +267,8 @@ struct ExportStatusBadge: View {
 
     private var statusMessageText: some View {
         Text(message)
-            .font(Typography.bodyEmphasis())
-            .foregroundStyle(Color.textPrimary)
+            .font(.system(size: 15, weight: .semibold))
+            .foregroundStyle(Self.text)
             .fixedSize(horizontal: false, vertical: true)
             .multilineTextAlignment(.leading)
     }
@@ -221,26 +278,33 @@ struct ExportStatusBadge: View {
         if let onPreview {
             Button(action: onPreview) {
                 Label("View Exported File", systemImage: "doc.text.magnifyingglass")
-                    .font(Typography.label())
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(Self.accentInk)
                     .fixedSize(horizontal: false, vertical: true)
+                    .padding(.horizontal, 14)
+                    .frame(minHeight: 36)
+                    .background(Capsule().fill(Self.accent))
                     .frame(minWidth: 44, minHeight: 44, alignment: .leading)
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .foregroundStyle(Color.successText)
             .accessibilityIdentifier("export.preview-file")
         }
 
         if let onBrowseFolder {
             Button(action: onBrowseFolder) {
                 Label("Browse Export Folder", systemImage: "folder")
-                    .font(Typography.label())
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(Self.text)
                     .fixedSize(horizontal: false, vertical: true)
+                    .padding(.horizontal, 14)
+                    .frame(minHeight: 36)
+                    .background(Capsule().fill(Self.surface))
+                    .overlay(Capsule().strokeBorder(Self.edge, lineWidth: 1))
                     .frame(minWidth: 44, minHeight: 44, alignment: .leading)
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .foregroundStyle(Color.textSecondary)
             .accessibilityIdentifier("export.browse-folder")
         }
     }
@@ -253,17 +317,16 @@ struct ExportStatusBadge: View {
 
     private var statusIcon: String {
         switch status {
-        case .success: return "checkmark.circle.fill"
-        case .warning: return "exclamationmark.triangle.fill"
-        case .error: return "exclamationmark.circle.fill"
+        case .success: return "checkmark"
+        case .warning: return "exclamationmark"
+        case .error: return "xmark"
         }
     }
 
     private var statusColor: Color {
         switch status {
-        case .success: return .success
-        case .warning: return .orange
-        case .error: return .error
+        case .success: return Self.ok
+        case .warning, .error: return Self.coral
         }
     }
 
@@ -295,6 +358,34 @@ struct ExportStatusBadge: View {
         } else {
             withAnimation(animation, updates)
         }
+    }
+
+    // Mirrors of `GlassPalette` (docs/design/liquid-glass/tokens.json) for this host-free view.
+    private static let radius: CGFloat = 26
+    private static let text = glassColor(light: 0x14101D, dark: 0xFFFFFF)
+    private static let muted = glassColor(light: 0x575070, dark: 0xB3ABC6)
+    private static let accent = glassColor(light: 0x6A3FE0, dark: 0xCDB6FF)
+    private static let accentInk = glassColor(light: 0xFFFFFF, dark: 0x1A0F33)
+    private static let ok = glassColor(light: 0x15803D, dark: 0x8BF0B4)
+    private static let coral = glassColor(light: 0xB93C0A, dark: 0xFFA184)
+    private static let surface = glassColor(light: 0xFFFFFF, lightAlpha: 0.85, dark: 0xFFFFFF, darkAlpha: 0.18)
+    private static let glass = glassColor(light: 0xFFFFFF, lightAlpha: 0.72, dark: 0xFFFFFF, darkAlpha: 0.08)
+    private static let edge = glassColor(light: 0x14101D, lightAlpha: 0.08, dark: 0xFFFFFF, darkAlpha: 0.14)
+
+    private static func glassColor(
+        light: UInt32, lightAlpha: CGFloat = 1, dark: UInt32, darkAlpha: CGFloat = 1
+    ) -> Color {
+        func rgb(_ hex: UInt32, _ alpha: CGFloat) -> UIColor {
+            UIColor(
+                red: CGFloat((hex >> 16) & 0xFF) / 255,
+                green: CGFloat((hex >> 8) & 0xFF) / 255,
+                blue: CGFloat(hex & 0xFF) / 255,
+                alpha: alpha
+            )
+        }
+        return Color(uiColor: UIColor { traits in
+            traits.userInterfaceStyle == .dark ? rgb(dark, darkAlpha) : rgb(light, lightAlpha)
+        })
     }
 }
 

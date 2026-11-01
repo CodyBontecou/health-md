@@ -23,14 +23,17 @@ struct ArchiveScreen: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: GlassMetrics.sectionGap) {
-                Text("Archive")
-                    .glassFont(.largeTitle)
-                    .foregroundStyle(palette.text)
+                HStack(alignment: .center) {
+                    Text("Archive")
+                        .glassFont(.largeTitle)
+                        .foregroundStyle(palette.text)
+                    Spacer(minLength: 8)
+                    if !needsSetup && attentionCount > 0 { attentionButton }
+                }
 
                 if needsSetup {
                     EmptyArchiveCard(onSetUp: onSetUp)
                 } else {
-                    if attentionCount > 0 { attentionBanner }
                     chips
                     statsPanel
                     if let profile = filteredProfile, profile.isPaused { pausedNote(profile) }
@@ -59,16 +62,30 @@ struct ArchiveScreen: View {
         .accessibilityIdentifier("glass.archive")
     }
 
-    private var attentionBanner: some View {
+    /// A compact header button; the full list opens in AttentionScreen.
+    private var attentionButton: some View {
         Button(action: onShowAttention) {
-            GlassBanner(
-                title: String(localized: "Needs attention"),
-                message: String(localized: "\(attentionCount) item(s) need a look."),
-                systemImage: "exclamationmark.triangle",
-                tone: .warning
-            )
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundStyle(palette.coral)
+                .frame(width: GlassMetrics.touchTarget, height: GlassMetrics.touchTarget)
+                .glassSurface(in: Circle(), isInteractive: true)
+                .overlay(alignment: .topTrailing) {
+                    Text(verbatim: "\(attentionCount)")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundStyle(palette.accentInk)
+                        .padding(.horizontal, 5)
+                        .frame(minWidth: 18, minHeight: 18)
+                        .background(Capsule().fill(palette.coral))
+                        .offset(x: 4, y: -4)
+                        .accessibilityHidden(true)
+                }
+                .contentShape(Circle())
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(String(localized: "Needs attention"))
+        .accessibilityValue(String(localized: "\(attentionCount) item(s) need a look."))
+        .accessibilityIdentifier("glass.archive.attention")
     }
 
     private var chips: some View {
@@ -405,23 +422,47 @@ struct AttentionScreen: View {
             ScrollView {
                 VStack(spacing: 12) {
                     ForEach(items) { item in
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text(item.title).glassFont(.navTitle).foregroundStyle(palette.text)
-                            Text(item.message).glassFont(.rowSubtitle).foregroundStyle(palette.sec)
-                            if let actionTitle = item.actionTitle, let action = item.action {
-                                Button(actionTitle) {
-                                    dismiss()
-                                    action()
+                        // Fixable problems are coral; items that only explain a wait use the accent.
+                        let tone = item.action == nil ? palette.accent : palette.coral
+                        HStack(alignment: .top, spacing: 12) {
+                            Image(systemName: item.action == nil ? "info.circle" : "exclamationmark.circle")
+                                .font(.system(size: 18, weight: .semibold))
+                                .foregroundStyle(tone)
+                                .padding(.top, 1)
+                                .accessibilityHidden(true)
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text(item.title)
+                                    .font(.system(size: 15, weight: .semibold))
+                                    .foregroundStyle(palette.text)
+                                Text(item.message)
+                                    .font(.system(size: 14))
+                                    .foregroundStyle(palette.sec)
+                                    .fixedSize(horizontal: false, vertical: true)
+                                if let actionTitle = item.actionTitle, let action = item.action {
+                                    Button(actionTitle) {
+                                        dismiss()
+                                        action()
+                                    }
+                                    .buttonStyle(.plain)
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .foregroundStyle(palette.text)
+                                    .padding(.horizontal, 14)
+                                    .frame(height: 32)
+                                    .background(Capsule().fill(palette.surface2))
+                                    .overlay(Capsule().strokeBorder(palette.edge, lineWidth: 1))
+                                    .frame(minHeight: GlassMetrics.touchTarget)
                                 }
-                                .buttonStyle(.plain)
-                                .glassFont(.caption)
-                                .foregroundStyle(palette.accent)
-                                .frame(minHeight: GlassMetrics.touchTarget)
                             }
+                            Spacer(minLength: 0)
                         }
-                        .padding(GlassMetrics.panelPadding)
+                        .padding(.horizontal, GlassMetrics.panelPadding)
+                        .padding(.vertical, 14)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .glassSurface(cornerRadius: GlassMetrics.panelSmallRadius)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: GlassMetrics.panelSmallRadius, style: .continuous)
+                                .strokeBorder(tone.opacity(0.8), lineWidth: 1)
+                        )
                     }
                 }
                 .padding(GlassMetrics.screenMargin)

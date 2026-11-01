@@ -96,7 +96,7 @@ struct SettingsScreen: View {
                     GlassPanel {
                         row(
                             String(localized: "Folder"),
-                            subtitle: vaultManager.hasVaultSelection ? vaultManager.vaultName : nil
+                            subtitle: folderSubtitle
                         ) { open(.folder) }
                         row(String(localized: "Mac Destination"), subtitle: connectionText) { open(.mac) }
                         row(
@@ -139,7 +139,7 @@ struct SettingsScreen: View {
         case .folder:
             GlassFolderDestinationScreen(
                 vaultManager: vaultManager,
-                profiles: folderProfiles,
+                coordinator: profileCoordinator,
                 showFolderPicker: $showFolderPicker
             )
         case .mac:
@@ -156,10 +156,15 @@ struct SettingsScreen: View {
         if selectedTab == .sync { path = directCLIService.pendingPairingLink == nil ? [.mac] : [.cli] }
     }
 
-    private var folderProfiles: [ExportProfile] {
-        (profileCoordinator?.profileStore.profiles ?? []).filter {
-            $0.target == .localIPhoneFolder && $0.folderVaultID == nil
-        }
+    /// Folder automations can each write to their own folder, so summarise how many are in use.
+    private var folderSubtitle: String? {
+        let profiles = (profileCoordinator?.profileStore.profiles ?? []).filter { $0.target == .localIPhoneFolder }
+        let ownFolders = Set(profiles.compactMap(\.folderVaultID))
+        let usesDefault = profiles.isEmpty || profiles.contains { $0.folderVaultID == nil }
+        let count = ownFolders.count + (usesDefault && vaultManager.hasVaultSelection ? 1 : 0)
+        if count > 1 { return String(localized: "\(count) folders") }
+        if usesDefault { return vaultManager.hasVaultSelection ? vaultManager.vaultName : nil }
+        return profileCoordinator?.destinationStore.vault(id: ownFolders.first)?.name
     }
 
     private var connectionText: String {
