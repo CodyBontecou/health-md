@@ -903,7 +903,7 @@ private struct GeistMacCard<Content: View>: View {
         content
             .padding(padding)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color.glassAdaptive(.bgPrimary, \.bg), in: RoundedRectangle(cornerRadius: GeistRadius.lg, style: .continuous))
+            .background(Color.glassAdaptive(.bgPrimary, \.glassStrong), in: RoundedRectangle(cornerRadius: GeistRadius.lg, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: GeistRadius.lg, style: .continuous)
                     .strokeBorder(Color.glassAdaptive(.borderSubtle, \.line), lineWidth: 1)

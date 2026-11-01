@@ -152,7 +152,20 @@ struct MacSyncView: View {
 
     @ViewBuilder
     private func dashboardGrid(width: CGFloat) -> some View {
-        if width >= 1_040 {
+        if NewExperienceFeature.isEnabled {
+            // MacHomeG: one column of readiness, manual IP, then activity.
+            VStack(alignment: .leading, spacing: Spacing.s6) {
+                destinationCard
+                systemStatusCard
+                manualIPConnectionCard
+                activityCard
+                setupStepsCard
+                if healthDataStore.recordCount > 0 {
+                    legacyCacheCard
+                }
+            }
+            .frame(maxWidth: 760, alignment: .topLeading)
+        } else if width >= 1_040 {
             HStack(alignment: .top, spacing: Spacing.s6) {
                 VStack(alignment: .leading, spacing: Spacing.s6) {
                     destinationCard
@@ -1429,7 +1442,7 @@ private struct GeistMacCard<Content: View>: View {
         content
             .padding(padding)
             .frame(maxWidth: .infinity, alignment: .topLeading)
-            .background(Color.glassAdaptive(.bgPrimary, \.bg), in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+            .background(Color.glassAdaptive(.bgPrimary, \.glassStrong), in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                     .strokeBorder(Color.glassAdaptive(.borderSubtle, \.line), lineWidth: 1)
