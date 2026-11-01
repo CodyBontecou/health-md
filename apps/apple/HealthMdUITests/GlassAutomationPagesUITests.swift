@@ -33,4 +33,30 @@ final class GlassAutomationPagesUITests: XCTestCase {
             XCTAssertTrue(row.waitForExistence(timeout: 5), title)
         }
     }
+
+    func testDestinationPagesOpenFromSettings() {
+        continueAfterFailure = false
+        let app = UITestLaunchHelper.configuredApp(
+            healthAuthorized: true,
+            vaultSelected: true,
+            purchaseUnlocked: true,
+            scheduleEnabled: true
+        )
+        app.launchArguments += ["-NewExperienceEnabled", "YES"]
+        app.launch()
+
+        app.buttons["Settings"].tap()
+        let pages = [("Folder", "glass.folderDestination"), ("Mac Destination", "glass.macDestination"), ("CLI", "glass.cliDestination")]
+        for (title, identifier) in pages {
+            let row = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", title)).firstMatch
+            XCTAssertTrue(row.waitForExistence(timeout: 5), title)
+            row.tap()
+            XCTAssertTrue(app.descendants(matching: .any)[identifier].waitForExistence(timeout: 5), title)
+            if let directory = ProcessInfo.processInfo.environment["GLASS_SCREENSHOT_DIR"] {
+                let url = URL(fileURLWithPath: directory).appendingPathComponent("dest-\(title).png")
+                try? XCUIScreen.main.screenshot().pngRepresentation.write(to: url)
+            }
+            app.navigationBars.buttons.firstMatch.tap()
+        }
+    }
 }

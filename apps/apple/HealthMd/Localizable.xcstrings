@@ -1,6 +1,72 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "Paired" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Gekoppelt"}},
+      "es":{"stringUnit":{"state":"translated","value":"Emparejado"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Jumelé"}},
+      "it":{"stringUnit":{"state":"translated","value":"Abbinato"}},
+      "ja":{"stringUnit":{"state":"translated","value":"ペアリング済み"}},
+      "ko":{"stringUnit":{"state":"translated","value":"페어링됨"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Gekoppeld"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Pareado"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"已配对"}}
+    }},
+    "Needs review" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Prüfung nötig"}},
+      "es":{"stringUnit":{"state":"translated","value":"Requiere revisión"}},
+      "fr":{"stringUnit":{"state":"translated","value":"À vérifier"}},
+      "it":{"stringUnit":{"state":"translated","value":"Da verificare"}},
+      "ja":{"stringUnit":{"state":"translated","value":"確認が必要"}},
+      "ko":{"stringUnit":{"state":"translated","value":"검토 필요"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Controle nodig"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Requer revisão"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"需要检查"}}
+    }},
+    "Choose folder again" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Ordner erneut wählen"}},
+      "es":{"stringUnit":{"state":"translated","value":"Elegir la carpeta de nuevo"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Choisir à nouveau le dossier"}},
+      "it":{"stringUnit":{"state":"translated","value":"Scegli di nuovo la cartella"}},
+      "ja":{"stringUnit":{"state":"translated","value":"フォルダをもう一度選択"}},
+      "ko":{"stringUnit":{"state":"translated","value":"폴더 다시 선택"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Map opnieuw kiezen"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Escolher a pasta novamente"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"重新选择文件夹"}}
+    }},
+    "iOS lost access to this folder after it was moved. Choose it again to keep exporting — nothing has been deleted." : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"iOS hat den Zugriff auf diesen Ordner verloren. Wähle ihn erneut aus, um weiter zu exportieren – es wurde nichts gelöscht."}},
+      "es":{"stringUnit":{"state":"translated","value":"iOS perdió el acceso a esta carpeta. Vuelve a elegirla para seguir exportando; no se ha eliminado nada."}},
+      "fr":{"stringUnit":{"state":"translated","value":"iOS a perdu l’accès à ce dossier. Choisissez-le à nouveau pour continuer à exporter ; rien n’a été supprimé."}},
+      "it":{"stringUnit":{"state":"translated","value":"iOS ha perso l’accesso a questa cartella. Sceglila di nuovo per continuare a esportare: non è stato eliminato nulla."}},
+      "ja":{"stringUnit":{"state":"translated","value":"iOSがこのフォルダへのアクセスを失いました。書き出しを続けるにはもう一度選択してください。何も削除されていません。"}},
+      "ko":{"stringUnit":{"state":"translated","value":"iOS가 이 폴더에 대한 접근 권한을 잃었습니다. 계속 내보내려면 다시 선택하세요. 삭제된 항목은 없습니다."}},
+      "nl":{"stringUnit":{"state":"translated","value":"iOS heeft geen toegang meer tot deze map. Kies hem opnieuw om door te gaan met exporteren; er is niets verwijderd."}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"O iOS perdeu o acesso a esta pasta. Escolha-a novamente para continuar exportando; nada foi apagado."}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"iOS 已失去对此文件夹的访问权限。请重新选择以继续导出，未删除任何内容。"}}
+    }},
+    "Used by" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Verwendet von"}},
+      "es":{"stringUnit":{"state":"translated","value":"Usado por"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Utilisé par"}},
+      "it":{"stringUnit":{"state":"translated","value":"Usato da"}},
+      "ja":{"stringUnit":{"state":"translated","value":"使用中のプロファイル"}},
+      "ko":{"stringUnit":{"state":"translated","value":"사용 중"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Gebruikt door"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Usado por"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"使用者"}}
+    }},
+    "Works best with iCloud Drive, On My iPhone, or a synced app folder. Health.md writes directly — no account needed." : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Funktioniert am besten mit iCloud Drive, „Auf meinem iPhone“ oder einem synchronisierten App-Ordner. Health.md schreibt direkt – kein Konto nötig."}},
+      "es":{"stringUnit":{"state":"translated","value":"Funciona mejor con iCloud Drive, En mi iPhone o una carpeta de app sincronizada. Health.md escribe directamente, sin cuenta."}},
+      "fr":{"stringUnit":{"state":"translated","value":"Fonctionne mieux avec iCloud Drive, Sur mon iPhone ou un dossier d’app synchronisé. Health.md écrit directement, sans compte."}},
+      "it":{"stringUnit":{"state":"translated","value":"Funziona meglio con iCloud Drive, Sul mio iPhone o una cartella di app sincronizzata. Health.md scrive direttamente, senza account."}},
+      "ja":{"stringUnit":{"state":"translated","value":"iCloud Drive、このiPhone内、または同期されたアプリフォルダに最適です。Health.mdは直接書き込むため、アカウントは不要です。"}},
+      "ko":{"stringUnit":{"state":"translated","value":"iCloud Drive, 나의 iPhone 또는 동기화된 앱 폴더에서 가장 잘 작동합니다. Health.md는 직접 기록하므로 계정이 필요 없습니다."}},
+      "nl":{"stringUnit":{"state":"translated","value":"Werkt het best met iCloud Drive, Op mijn iPhone of een gesynchroniseerde app-map. Health.md schrijft direct; geen account nodig."}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Funciona melhor com o iCloud Drive, No Meu iPhone ou uma pasta de app sincronizada. O Health.md grava diretamente, sem conta."}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"最适合 iCloud 云盘、我的 iPhone 或已同步的应用文件夹。Health.md 直接写入，无需账户。"}}
+    }},
     "One file per health event" : {"localizations":{
       "de":{"stringUnit":{"state":"translated","value":"Eine Datei pro Gesundheitsereignis"}},
       "es":{"stringUnit":{"state":"translated","value":"Un archivo por evento de salud"}},

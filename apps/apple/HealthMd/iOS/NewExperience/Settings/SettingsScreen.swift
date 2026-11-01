@@ -13,11 +13,12 @@ struct SettingsScreen: View {
     @Binding var showExportProfiles: Bool
     @Binding var showClinicianReport: Bool
 
-    private enum Route: Hashable { case sync, appSupport }
+    private enum Route: Hashable { case folder, mac, cli, appSupport }
 
     @Environment(\.glassPalette) private var palette
     @EnvironmentObject private var configurationProtection: ConfigurationProtectionManager
     @EnvironmentObject private var syncService: SyncService
+    @EnvironmentObject private var directCLIService: IPhoneDirectCLIService
     @EnvironmentObject private var apiExportSettings: APIExportSettings
     @EnvironmentObject private var gatewaySettings: AgentDataGatewaySettings
     @ObservedObject private var purchaseManager = PurchaseManager.shared
@@ -47,10 +48,12 @@ struct SettingsScreen: View {
                         row(
                             String(localized: "Folder"),
                             subtitle: vaultManager.hasVaultSelection ? vaultManager.vaultName : nil
-                        ) {
-                            configurationProtection.performConfigurationChange { showFolderPicker = true }
-                        }
-                        row(String(localized: "Mac and CLI"), subtitle: connectionText) { path.append(.sync) }
+                        ) { path.append(.folder) }
+                        row(String(localized: "Mac Destination"), subtitle: connectionText) { path.append(.mac) }
+                        row(
+                            String(localized: "CLI"),
+                            subtitle: directCLIService.hasPairedCLI ? String(localized: "Paired") : nil
+                        ) { path.append(.cli) }
                         row(
                             String(localized: "API Endpoint"),
                             subtitle: apiExportSettings.isConfigured ? apiExportSettings.displayName : nil
@@ -82,8 +85,16 @@ struct SettingsScreen: View {
             .toolbar(.hidden, for: .navigationBar)
             .navigationDestination(for: Route.self) { route in
                 switch route {
-                case .sync:
-                    SyncSettingsView()
+                case .folder:
+                    GlassFolderDestinationScreen(
+                        vaultManager: vaultManager,
+                        profiles: folderProfiles,
+                        showFolderPicker: $showFolderPicker
+                    )
+                case .mac:
+                    GlassMacDestinationScreen()
+                case .cli:
+                    GlassCLIDestinationScreen()
                 case .appSupport:
                     SettingsTabView(
                         vaultManager: vaultManager,
@@ -110,6 +121,9 @@ struct SettingsScreen: View {
         }
         .onAppear(perform: followSyncRequest)
         .onChange(of: selectedTab) { _, _ in followSyncRequest() }
+        .onChange(of: directCLIService.pendingPairingLink) { _, link in
+            if link != nil { path = [.cli] }
+        }
         .onChange(of: configurationProtection.settingsNavigationRequestID) { _, requestID in
             if requestID != nil { path = [.appSupport] }
         }
@@ -117,7 +131,13 @@ struct SettingsScreen: View {
 
     /// Pairing links ask for the Sync tab, which now lives here.
     private func followSyncRequest() {
-        if selectedTab == .sync { path = [.sync] }
+        if selectedTab == .sync { path = directCLIService.pendingPairingLink == nil ? [.mac] : [.cli] }
+    }
+
+    private var folderProfiles: [ExportProfile] {
+        (profileCoordinator?.profileStore.profiles ?? []).filter {
+            $0.target == .localIPhoneFolder && $0.folderVaultID == nil
+        }
     }
 
     private var connectionText: String {
