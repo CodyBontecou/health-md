@@ -32,8 +32,10 @@ final class GlassShellJourneyUITests: XCTestCase {
         shot("archive")
 
         app.buttons["Automations"].tap()
+        XCTAssertTrue(app.descendants(matching: .any)["glass.automations"].waitForExistence(timeout: 5))
         shot("automations")
         app.buttons["Settings"].tap()
+        XCTAssertTrue(app.descendants(matching: .any)["glass.settings"].waitForExistence(timeout: 5))
         shot("settings")
         app.buttons["Archive"].tap()
 
@@ -54,6 +56,25 @@ final class GlassShellJourneyUITests: XCTestCase {
         shot("after-export")
     }
 
+    func testComposerAndAppSupportAreReachable() {
+        let app = launch()
+        XCTAssertTrue(app.buttons["Automations"].waitForExistence(timeout: 10))
+        app.buttons["Automations"].tap()
+        app.buttons.containing(NSPredicate(format: "label CONTAINS %@", "Default")).firstMatch.tap()
+        XCTAssertTrue(app.buttons["Run now"].waitForExistence(timeout: 5))
+        shot("automation-detail")
+        let edit = app.buttons.containing(NSPredicate(format: "label BEGINSWITH %@", "Edit sentence")).firstMatch
+        edit.tap()
+        XCTAssertTrue(app.buttons["All settings"].waitForExistence(timeout: 5))
+        shot("composer")
+        app.navigationBars.buttons.firstMatch.tap()
+        app.navigationBars.buttons.firstMatch.tap()
+        app.buttons["Settings"].tap()
+        app.buttons["App & support"].tap()
+        sleep(1)
+        shot("app-support")
+    }
+
     func testFailedExportShowsResultWithRecovery() {
         let app = launch(exportResult: "fail")
         XCTAssertTrue(app.buttons["glass.exportNow"].waitForExistence(timeout: 10))
@@ -61,7 +82,7 @@ final class GlassShellJourneyUITests: XCTestCase {
         let confirm = app.buttons["glass.exportNow.confirm"]
         XCTAssertTrue(confirm.waitForExistence(timeout: 5))
         confirm.tap()
-        sleep(3)
+        XCTAssertTrue(app.staticTexts["No Health Data Found"].waitForExistence(timeout: 10))
         shot("export-failed")
     }
 }

@@ -41,6 +41,7 @@ struct GlassAppShell: View {
     @EnvironmentObject private var apiExportSettings: APIExportSettings
     @EnvironmentObject private var agentDataGatewaySettings: AgentDataGatewaySettings
     @EnvironmentObject private var configurationProtection: ConfigurationProtectionManager
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @ObservedObject private var ledgerStore = CoverageLedgerStore.shared
     @ObservedObject private var exportHistory = ExportHistoryManager.shared
 
@@ -49,7 +50,6 @@ struct GlassAppShell: View {
     @State private var showAttention = false
     @State private var showClassicExport = false
     @State private var resultEntry: ExportHistoryEntry?
-    @State private var scheduleStore = ScheduledExportEntryStore()
     @State private var scheduleRevision = 0
 
     private var tab: Binding<GlassTab> {
@@ -71,25 +71,40 @@ struct GlassAppShell: View {
         )
     }
 
+    /// Unfolded iPhone Duo: navigation moves to a right-side rail.
+    private var usesRail: Bool { horizontalSizeClass == .regular }
+
     var body: some View {
-        ZStack(alignment: .bottom) {
-            content
-            VStack(spacing: 10) {
-                historyCard
-                if isExporting {
-                    ExportMomentView(
-                        progress: exportProgress,
-                        message: exportStatusMessage,
-                        onCancel: onCancelExport
-                    )
+        HStack(spacing: 0) {
+            ZStack(alignment: .bottom) {
+                content
+                VStack(spacing: 10) {
+                    historyCard
+                    if isExporting {
+                        ExportMomentView(
+                            progress: exportProgress,
+                            message: exportStatusMessage,
+                            onCancel: onCancelExport
+                        )
+                    }
+                    if !usesRail {
+                        FloatingTabBar(
+                            items: Self.navigationItems,
+                            selection: tab,
+                            accessoryTitle: String(localized: "Export now")
+                        ) {
+                            exportRequest = ExportNowRequest()
+                        }
+                    }
                 }
-                FloatingTabBar(
-                    items: Self.navigationItems,
-                    selection: tab,
-                    accessoryTitle: String(localized: "Export now")
-                ) {
-                    exportRequest = ExportNowRequest()
+            }
+            if usesRail {
+                NavigationRail(items: Self.navigationItems, selection: tab) {
+                    ExportNowAccessoryButton(title: String(localized: "Export now")) {
+                        exportRequest = ExportNowRequest()
+                    }
                 }
+                .padding(8)
             }
         }
         .ignoresSafeArea(.keyboard)
@@ -177,36 +192,44 @@ struct GlassAppShell: View {
                 onSetUp: { showFolderPicker = true }
             )
         case .automations:
-            ScheduleTabView(
-                vaultManager: vaultManager,
-                advancedSettings: advancedSettings,
-                apiExportSettings: apiExportSettings,
-                showFolderPicker: $showFolderPicker,
-                profileCoordinator: profileCoordinator
-            )
-            .safeAreaInset(edge: .top) { classicExportLink }
-            .safeAreaPadding(.bottom, GlassMetrics.tabBarHeight + GlassMetrics.tabBarBottomOffset)
-        case .settings:
-            VStack(spacing: 0) {
-                SettingsTabView(
-                    vaultManager: vaultManager,
-                    advancedSettings: advancedSettings,
-                    externalIntegrationManager: externalIntegrationManager,
-                    profileCoordinator: profileCoordinator,
-                    showFolderPicker: $showFolderPicker,
-                    showExportProfiles: $showExportProfiles,
-                    showClinicianReport: $showClinicianReport
+            if let profileCoordinator {
+                AutomationsScreen(
+                    coordinator: profileCoordinator,
+                    historyContent: AnyView(scheduleDetails),
+                    onRun: { exportRequest = ExportNowRequest(profileID: $0) },
+                    onSchedulesChanged: { scheduleRevision += 1 }
                 )
             }
-            .safeAreaPadding(.bottom, GlassMetrics.tabBarHeight + GlassMetrics.tabBarBottomOffset)
+        case .settings:
+            SettingsScreen(
+                vaultManager: vaultManager,
+                advancedSettings: advancedSettings,
+                externalIntegrationManager: externalIntegrationManager,
+                profileCoordinator: profileCoordinator,
+                selectedTab: $selectedTab,
+                showFolderPicker: $showFolderPicker,
+                showExportProfiles: $showExportProfiles,
+                showClinicianReport: $showClinicianReport,
+                onOpenExportSettings: { showClassicExport = true }
+            )
         }
     }
 
-    private var classicExportLink: some View {
-        Button(String(localized: "All export settings")) { showClassicExport = true }
-            .buttonStyle(.plain)
-            .font(.system(size: 14, weight: .semibold))
-            .frame(minHeight: GlassMetrics.touchTarget)
+    /// Interim home for the Schedule tab's history, retry and the full Export tab.
+    private var scheduleDetails: some View {
+        ScheduleSettingsView(
+            vaultManager: vaultManager,
+            advancedSettings: advancedSettings,
+            apiExportSettings: apiExportSettings,
+            agentDataGatewaySettings: agentDataGatewaySettings,
+            showFolderPicker: $showFolderPicker,
+            profileCoordinator: profileCoordinator
+        )
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button(String(localized: "All export settings")) { showClassicExport = true }
+            }
+        }
     }
 
     private var classicExportTab: some View {
@@ -264,7 +287,7 @@ struct GlassAppShell: View {
 
     private var archiveProfiles: [ArchiveProfile] {
         _ = scheduleRevision
-        let entries = scheduleStore.allEntries()
+        let entries = profileCoordinator?.scheduledEntryStore.allEntries() ?? []
         return profiles.enumerated().map { index, profile in
             ArchiveProfile(
                 id: profile.id,
@@ -355,7 +378,8 @@ struct GlassAppShell: View {
 
     private func resume(_ profile: ArchiveProfile) {
         configurationProtection.performConfigurationChange {
-            scheduleStore.update(profileID: profile.id) { $0.isEnabled = true }
+            profileCoordinator?.scheduledEntryStore.update(profileID: profile.id) { $0.isEnabled = true }
+            schedulingManager.refreshScheduledAutomation()
             scheduleRevision += 1
         }
     }

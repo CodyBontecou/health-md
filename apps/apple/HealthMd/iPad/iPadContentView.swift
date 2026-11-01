@@ -156,7 +156,11 @@ struct iPadContentView: View {
                         .environmentObject(schedulingManager)
                         .environmentObject(healthKitManager)
                     case .history:
-                        iPadHistoryView()
+                        if NewExperienceFeature.isEnabled {
+                            iPadArchiveHost { selectedTab = .export }
+                        } else {
+                            iPadHistoryView()
+                        }
                     case .settings:
                         iPadSettingsView(
                             vaultManager: vaultManager,
