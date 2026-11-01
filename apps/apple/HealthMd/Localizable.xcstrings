@@ -1,6 +1,83 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "Make your body part of Obsidian" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Mach deinen Körper zum Teil von Obsidian"}},
+      "es":{"stringUnit":{"state":"translated","value":"Haz que tu cuerpo forme parte de Obsidian"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Intégrez votre corps à Obsidian"}},
+      "it":{"stringUnit":{"state":"translated","value":"Porta il tuo corpo in Obsidian"}},
+      "ja":{"stringUnit":{"state":"translated","value":"あなたの身体をObsidianの一部に"}},
+      "ko":{"stringUnit":{"state":"translated","value":"내 몸을 Obsidian의 일부로"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Maak je lichaam onderdeel van Obsidian"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Faça do seu corpo parte do Obsidian"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"让身体数据融入 Obsidian"}}
+    }},
+    "Create a durable copy of sleep, HRV, workouts, vitals, medications and more — as files you own." : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Erstelle eine dauerhafte Kopie von Schlaf, HRV, Workouts, Vitalwerten, Medikamenten und mehr – als Dateien, die dir gehören."}},
+      "es":{"stringUnit":{"state":"translated","value":"Crea una copia duradera de sueño, VFC, entrenamientos, constantes vitales, medicamentos y más, en archivos que son tuyos."}},
+      "fr":{"stringUnit":{"state":"translated","value":"Créez une copie durable du sommeil, de la VFC, des entraînements, des constantes, des médicaments et plus encore, dans des fichiers qui vous appartiennent."}},
+      "it":{"stringUnit":{"state":"translated","value":"Crea una copia duratura di sonno, HRV, allenamenti, parametri vitali, farmaci e altro, in file di tua proprietà."}},
+      "ja":{"stringUnit":{"state":"translated","value":"睡眠、HRV、ワークアウト、バイタル、服薬などの永続的なコピーを、自分のファイルとして作成します。"}},
+      "ko":{"stringUnit":{"state":"translated","value":"수면, HRV, 운동, 활력 징후, 약물 등의 영구 사본을 내 파일로 만드세요."}},
+      "nl":{"stringUnit":{"state":"translated","value":"Maak een duurzame kopie van slaap, HRV, workouts, vitale waarden, medicijnen en meer, als bestanden van jezelf."}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Crie uma cópia duradoura de sono, VFC, treinos, sinais vitais, medicamentos e mais, em arquivos que são seus."}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"为睡眠、HRV、体能训练、生命体征、用药等创建持久副本，以您拥有的文件形式保存。"}}
+    }},
+    "Choose what Health.md can read" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Wähle, was Health.md lesen darf"}},
+      "es":{"stringUnit":{"state":"translated","value":"Elige qué puede leer Health.md"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Choisissez ce que Health.md peut lire"}},
+      "it":{"stringUnit":{"state":"translated","value":"Scegli cosa può leggere Health.md"}},
+      "ja":{"stringUnit":{"state":"translated","value":"Health.mdが読み取れる項目を選択"}},
+      "ko":{"stringUnit":{"state":"translated","value":"Health.md가 읽을 항목 선택"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Kies wat Health.md mag lezen"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Escolha o que o Health.md pode ler"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"选择 Health.md 可读取的内容"}}
+    }},
+    "Pick where your archive lives" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Wähle den Ort für dein Archiv"}},
+      "es":{"stringUnit":{"state":"translated","value":"Elige dónde vive tu archivo"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Choisissez l’emplacement de votre archive"}},
+      "it":{"stringUnit":{"state":"translated","value":"Scegli dove conservare il tuo archivio"}},
+      "ja":{"stringUnit":{"state":"translated","value":"アーカイブの保存先を選択"}},
+      "ko":{"stringUnit":{"state":"translated","value":"아카이브 위치 선택"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Kies waar je archief staat"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Escolha onde fica seu arquivo"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"选择归档的存放位置"}}
+    }},
+    "Preview your first export" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Sieh dir deinen ersten Export an"}},
+      "es":{"stringUnit":{"state":"translated","value":"Previsualiza tu primera exportación"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Prévisualisez votre première exportation"}},
+      "it":{"stringUnit":{"state":"translated","value":"Anteprima della prima esportazione"}},
+      "ja":{"stringUnit":{"state":"translated","value":"最初の書き出しをプレビュー"}},
+      "ko":{"stringUnit":{"state":"translated","value":"첫 내보내기 미리 보기"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Bekijk je eerste export"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Pré-visualize sua primeira exportação"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"预览首次导出"}}
+    }},
+    "No account or health-data cloud. Files go to folders you choose." : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Kein Konto und keine Gesundheitsdaten-Cloud. Dateien landen in Ordnern deiner Wahl."}},
+      "es":{"stringUnit":{"state":"translated","value":"Sin cuenta ni nube de datos de salud. Los archivos van a las carpetas que elijas."}},
+      "fr":{"stringUnit":{"state":"translated","value":"Ni compte ni cloud de données de santé. Les fichiers vont dans les dossiers de votre choix."}},
+      "it":{"stringUnit":{"state":"translated","value":"Nessun account né cloud per i dati sanitari. I file vanno nelle cartelle che scegli."}},
+      "ja":{"stringUnit":{"state":"translated","value":"アカウントやヘルスデータ用クラウドは不要です。ファイルは選択したフォルダに保存されます。"}},
+      "ko":{"stringUnit":{"state":"translated","value":"계정이나 건강 데이터 클라우드가 없습니다. 파일은 선택한 폴더로 저장됩니다."}},
+      "nl":{"stringUnit":{"state":"translated","value":"Geen account of gezondheidsdata-cloud. Bestanden gaan naar mappen die jij kiest."}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Sem conta nem nuvem de dados de saúde. Os arquivos vão para as pastas que você escolher."}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"无需账户或健康数据云。文件保存到您选择的文件夹。"}}
+    }},
+    "How Health.md handles data" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"So geht Health.md mit Daten um"}},
+      "es":{"stringUnit":{"state":"translated","value":"Cómo trata Health.md los datos"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Comment Health.md traite les données"}},
+      "it":{"stringUnit":{"state":"translated","value":"Come Health.md gestisce i dati"}},
+      "ja":{"stringUnit":{"state":"translated","value":"Health.mdのデータの取り扱い"}},
+      "ko":{"stringUnit":{"state":"translated","value":"Health.md의 데이터 처리 방식"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Hoe Health.md met gegevens omgaat"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Como o Health.md trata os dados"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"Health.md 如何处理数据"}}
+    }},
     "A review helps more people own their health data." : {"localizations":{
       "de":{"stringUnit":{"state":"translated","value":"Eine Bewertung hilft mehr Menschen, ihre Gesundheitsdaten selbst zu besitzen."}},
       "es":{"stringUnit":{"state":"translated","value":"Una reseña ayuda a que más personas sean dueñas de sus datos de salud."}},

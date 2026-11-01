@@ -76,8 +76,14 @@ struct OnboardingView: View {
     private var stepContent: some View {
         switch step {
         case .welcome:
-            WelcomeStep()
-                .transition(stepTransition)
+            Group {
+                if NewExperienceFeature.isEnabled {
+                    GlassWelcomeStep().glassTheme()
+                } else {
+                    WelcomeStep()
+                }
+            }
+            .transition(stepTransition)
         case .healthAccess:
             HealthAccessStep(isAuthorized: healthKitManager.isAuthorized)
                 .transition(stepTransition)
@@ -108,7 +114,15 @@ struct OnboardingView: View {
             switch step {
             case .welcome:
                 VStack(spacing: Spacing.s2) {
-                    OnboardingPrimaryButton(title: String(localized: "Start Setup"), icon: "arrow.right", accessibilityHint: String(localized: "Double tap to continue"), action: advance)
+                    // The Health step still explains access and makes the request.
+                    OnboardingPrimaryButton(
+                        title: NewExperienceFeature.isEnabled
+                            ? String(localized: "Connect Apple Health")
+                            : String(localized: "Start Setup"),
+                        icon: "arrow.right",
+                        accessibilityHint: String(localized: "Double tap to continue"),
+                        action: advance
+                    )
                     Button {
                         sharedSetupCoordinator.beginImport(source: .onboarding)
                         isSharedSetupImporterPresented = true
@@ -268,6 +282,51 @@ struct OnboardingProgressBar: View {
 }
 
 // MARK: - Steps
+
+/// OnboardingG's opening page. Later steps, including the Health request, are unchanged.
+private struct GlassWelcomeStep: View {
+    @Environment(\.glassPalette) private var palette
+
+    private let privacyPolicyURL = URL(string: "https://healthmd.app/privacy-policy.html")!
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: GlassMetrics.sectionGap) {
+            Text("Make your body part of Obsidian")
+                .glassFont(.largeTitle)
+                .foregroundStyle(palette.text)
+            Text("Create a durable copy of sleep, HRV, workouts, vitals, medications and more — as files you own.")
+                .glassFont(.body)
+                .foregroundStyle(palette.sec)
+            GlassPanel {
+                step(1, "Choose what Health.md can read")
+                step(2, "Pick where your archive lives")
+                step(3, "Preview your first export")
+            }
+            Text("No account or health-data cloud. Files go to folders you choose.")
+                .glassFont(.rowSubtitle)
+                .foregroundStyle(palette.muted)
+            Link("How Health.md handles data", destination: privacyPolicyURL)
+                .glassFont(.caption)
+                .foregroundStyle(palette.accent)
+                .frame(minHeight: GlassMetrics.touchTarget)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func step(_ number: Int, _ title: LocalizedStringKey) -> some View {
+        HStack(spacing: 12) {
+            Text(verbatim: "\(number)")
+                .glassFont(.caption)
+                .foregroundStyle(palette.accentInk)
+                .frame(width: 26, height: 26)
+                .background(Circle().fill(palette.accent))
+                .accessibilityHidden(true)
+            Text(title).glassFont(.body).foregroundStyle(palette.text)
+            Spacer(minLength: 0)
+        }
+        .padding(GlassMetrics.panelPadding)
+    }
+}
 
 private struct WelcomeStep: View {
     var body: some View {

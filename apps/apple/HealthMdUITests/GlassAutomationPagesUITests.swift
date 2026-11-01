@@ -146,7 +146,7 @@ final class GlassAutomationPagesUITests: XCTestCase {
 
     func testClinicianReportAndOnboardingKeepWorkingWithTheFlagOn() {
         continueAfterFailure = false
-        let onboarding = UITestLaunchHelper.configuredApp(healthAuthorized: true, showOnboarding: true)
+        let onboarding = UITestLaunchHelper.configuredApp(healthAuthorized: true, showOnboarding: true, purchaseUnlocked: true)
         onboarding.launchArguments += ["-NewExperienceEnabled", "YES"]
         onboarding.launch()
         func shot(_ name: String) {
@@ -154,8 +154,12 @@ final class GlassAutomationPagesUITests: XCTestCase {
             let url = URL(fileURLWithPath: directory).appendingPathComponent("\(name).png")
             try? XCUIScreen.main.screenshot().pngRepresentation.write(to: url)
         }
-        sleep(3)
+        let connect = onboarding.buttons["Connect Apple Health"]
+        XCTAssertTrue(connect.waitForExistence(timeout: 10))
         shot("onboarding")
+        connect.tap()
+        // The request still happens on the Health step, after its explanation.
+        XCTAssertTrue(onboarding.staticTexts["Choose What Health.md Can Read"].waitForExistence(timeout: 5))
         onboarding.terminate()
 
         let app = UITestLaunchHelper.configuredApp(
