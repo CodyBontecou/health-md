@@ -804,7 +804,9 @@ private extension View {
         self
             .containerBackground(for: .widget) {
                 LinearGradient(
-                    colors: [Color(.systemBackground), Color.pink.opacity(0.08), Color.indigo.opacity(0.08)],
+                    colors: WidgetGlass.isEnabled
+                        ? [Color(.systemBackground), WidgetGlass.accent.opacity(0.12)]
+                        : [Color(.systemBackground), Color.pink.opacity(0.08), Color.indigo.opacity(0.08)],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 )

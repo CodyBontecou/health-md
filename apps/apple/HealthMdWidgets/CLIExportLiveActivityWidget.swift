@@ -6,7 +6,7 @@ struct CLIExportLiveActivityWidget: Widget {
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: CLIExportActivityAttributes.self) { context in
             CLIExportLockScreenView(context: context)
-                .activityBackgroundTint(Color(red: 0.055, green: 0.067, blue: 0.09))
+                .activityBackgroundTint(WidgetGlass.isEnabled ? WidgetGlass.background : Color(red: 0.055, green: 0.067, blue: 0.09))
                 .activitySystemActionForegroundColor(.white)
         } dynamicIsland: { context in
             DynamicIsland {
@@ -212,6 +212,14 @@ private extension CLIExportActivityAttributes.ContentState {
     }
 
     var phaseColor: Color {
+        if WidgetGlass.isEnabled {
+            switch phase {
+            case .failed, .cancelled: return WidgetGlass.coral
+            case .completed: return WidgetGlass.ok
+            case .completedWithWarnings, .paused: return WidgetGlass.amber
+            case .preparing, .capturing, .transferring: return WidgetGlass.accent
+            }
+        }
         switch phase {
         case .failed, .cancelled: return .red
         case .completed: return .green
@@ -223,4 +231,19 @@ private extension CLIExportActivityAttributes.ContentState {
     var formattedBytes: String {
         ByteCountFormatter.string(fromByteCount: committedBytes, countStyle: .file)
     }
+}
+
+/// The extension's copy of the Liquid Glass flag. Same build setting as the app, so both
+/// flip together. Colours are the dark tokens, because these surfaces are dark.
+enum WidgetGlass {
+    static var isEnabled: Bool {
+        (Bundle.main.object(forInfoDictionaryKey: "NEW_EXPERIENCE_ENABLED") as? String)?
+            .trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == "yes"
+    }
+
+    static let background = Color(red: 0x0E / 255, green: 0x0E / 255, blue: 0x11 / 255)
+    static let accent = Color(red: 0xCD / 255, green: 0xB6 / 255, blue: 0xFF / 255)
+    static let ok = Color(red: 0x8B / 255, green: 0xF0 / 255, blue: 0xB4 / 255)
+    static let coral = Color(red: 0xFF / 255, green: 0xA1 / 255, blue: 0x84 / 255)
+    static let amber = Color(red: 0xF2 / 255, green: 0xB2 / 255, blue: 0x66 / 255)
 }
