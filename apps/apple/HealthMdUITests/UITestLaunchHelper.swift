@@ -85,13 +85,6 @@ enum UITestLaunchHelper {
 
     // MARK: - Accessibility Identifiers (mirrored from AccessibilityID)
 
-    enum Tab {
-        static let export = "tab.export"
-        static let schedule = "tab.schedule"
-        static let sync = "tab.sync"
-        static let settings = "tab.settings"
-    }
-
     enum Export {
         static let contentScroll = "export.content.scroll"
         static let exportButton = "export.exportButton"
@@ -153,7 +146,6 @@ enum UITestLaunchHelper {
     }
 
     enum Sync {
-        static let configurationTargetPicker = "sync.configurationTargetPicker"
         static let syncToggle = "sync.syncToggle"
         static let connectionStatus = "sync.connectionStatus"
         static let manualSyncButton = "sync.manualSyncButton"

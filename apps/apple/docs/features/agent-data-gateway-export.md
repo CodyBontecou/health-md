@@ -47,7 +47,7 @@ Gateways carry no credential in ingestion protocol v1, so configuration is exact
 
 ## Where it runs
 
-The destination participates in every trigger surface the existing destinations use: manual export from the Export tab, scheduled exports, and profile-bound runs (the profile editor binds a saved gateway like a saved API endpoint). Shared Setup v2 bundles never include Agent Data gateway profiles: the v2 destination grammar has no gateway kind, and gateway configuration is excluded rather than approximated as another destination.
+The destination participates in every trigger surface the existing destinations use: manual export (Export now, or Automations › All export settings), scheduled exports, and profile-bound runs (the profile editor binds a saved gateway like a saved API endpoint). Shared Setup v2 bundles never include Agent Data gateway profiles: the v2 destination grammar has no gateway kind, and gateway configuration is excluded rather than approximated as another destination.
 
 ## Results and history
 

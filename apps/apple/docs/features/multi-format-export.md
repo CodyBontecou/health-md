@@ -55,7 +55,7 @@ Preview and status use a rough text-export compression projection, not an exact 
 
 ## Zipping one export run
 
-Enable **Zip Export Files** (Export tab → Output) to write the selected formats for a run into a single compressed ZIP archive (DEFLATE) instead of loose files. The toggle is disabled while Daily Notes-only mode is on. Unzip yields exactly the files the same run would have written loose.
+Enable **Zip Export Files** (an automation's Formats page, or Automations › All export settings → Output) to write the selected formats for a run into a single compressed ZIP archive (DEFLATE) instead of loose files. The toggle is disabled while Daily Notes-only mode is on. Unzip yields exactly the files the same run would have written loose.
 
 ## Tips
 

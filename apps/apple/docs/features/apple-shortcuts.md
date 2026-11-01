@@ -65,7 +65,7 @@ All actions are available in the Shortcuts app even if they do not have multiple
 5. Turn off “Ask Before Running” if you want it fully automatic.
 6. Save the automation.
 
-This is the simplest Shortcuts equivalent of the Schedule tab.
+This is the simplest Shortcuts equivalent of an automation's schedule.
 
 ## Setup: catch up the last N days
 
@@ -159,7 +159,7 @@ When a folder export Shortcut encounters locked HealthKit data, Health.md preser
 - Use **Get Health Summary** when another Shortcut needs values, not files.
 - Use **Get Last Export Status** to inspect the latest recorded result; it does not represent a pending locked-device request.
 - Keep Health.md configured first; Shortcuts depend on the app’s saved settings.
-- Select an API Endpoint profile to upload from a Shortcut. Use the Export or Schedule tab to send files to Connected Mac.
+- Select an API Endpoint profile to upload from a Shortcut. Use Export now or a scheduled automation to send files to Connected Mac.
 
 ## Troubleshooting
 
@@ -186,7 +186,7 @@ When a folder export Shortcut encounters locked HealthKit data, Health.md preser
   2. Build a one-tap **Export Yesterday** shortcut.
   3. Build a **Time of Day** automation for every morning.
   4. Run **Export Last N Days** for backfill.
-  5. Show an API Endpoint profile upload, and explain that Connected Mac remains an Export/Schedule tab destination.
+  5. Show an API Endpoint profile upload, and explain that Connected Mac remains a destination for Export now and scheduled automations.
   6. Use **Get Health Summary** and show the returned fields.
   7. Use **Get Last Export Status** to create a failure notification.
 - **Key screenshot/recording moments:** Shortcuts action list, Export Last N Days parameter, Health Summary variables, successful export dialog.

@@ -32,7 +32,7 @@ This is the recovery path for real-world automation issues: locked phones, missi
 
 - At least one manual or scheduled export has run.
 - HealthKit permission granted for retrying health data.
-- A vault/folder selected and accessible for local retries. Mac-target history is informational; retry Mac exports from the Export tab after fixing Mac readiness.
+- A vault/folder selected and accessible for local retries. Mac-target history is informational; rerun Mac exports with Export now after fixing Mac readiness.
 - Free export quota remaining or Full Access unlocked.
 - The iPhone should be unlocked when retrying.
 
@@ -44,7 +44,7 @@ There is no separate setup. Export History is recorded automatically after expor
 2. Run a manual export or enable scheduled exports.
 3. Return to **Schedule → Export History**.
 4. Tap an entry to inspect its date range, source, target, files written, success count, and failed dates.
-5. Retry failed local iPhone dates after fixing the underlying issue, or rerun Mac-target exports from the Export tab.
+5. Retry failed local iPhone dates after fixing the underlying issue, or rerun Mac-target exports with Export now.
 
 ## Example status messages
 
@@ -69,7 +69,7 @@ History keeps the newest entries first and stores up to 50 recent attempts.
 - If a failure repeats, copy **Technical details** into the bug report after removing any private folder or server information.
 - If the phone was locked, unlock it before retrying.
 - If folder access changed in Files or iCloud Drive, re-select the vault before retrying.
-- If a Mac-target export failed, fix the Mac Destination readiness issue first, then rerun from the iPhone Export tab.
+- If a Mac-target export failed, fix the Mac Destination readiness issue first, then rerun with Export now on iPhone.
 - Use Export History retry after locked-device or folder-access issues so missed scheduled days can be written after you fix the cause.
 
 ## Troubleshooting
@@ -81,7 +81,7 @@ History keeps the newest entries first and stores up to 50 recent attempts.
 | History says Vault access denied | Security-scoped folder permission was lost | Re-select the folder in Health.md. |
 | History says No health data | Apple Health has no samples for that date or permission is missing | Check Health permissions and Apple Health data for the date. |
 | Retry fails again | Root issue was not fixed | Open the failed-date details and address the shown reason. |
-| Mac export entry has no Retry button | Mac exports require an interactive connected Mac target | Open the Export tab, choose Connected Mac, and run the export again after fixing Mac readiness. |
+| Mac export entry has no Retry button | Mac exports require an interactive connected Mac target | Use Export now with a Connected Mac automation and run the export again after fixing Mac readiness. |
 | Old entry disappeared | History is capped | Newer entries replace older ones after the 50-entry limit. |
 
 ## Video outline
