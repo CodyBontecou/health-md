@@ -1,6 +1,17 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "Changes" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Änderungen"}},
+      "es":{"stringUnit":{"state":"translated","value":"Cambios"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Modifications"}},
+      "it":{"stringUnit":{"state":"translated","value":"Modifiche"}},
+      "ja":{"stringUnit":{"state":"translated","value":"変更点"}},
+      "ko":{"stringUnit":{"state":"translated","value":"변경 사항"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Wijzigingen"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Alterações"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"更改"}}
+    }},
     "Make your body part of Obsidian" : {"localizations":{
       "de":{"stringUnit":{"state":"translated","value":"Mach deinen Körper zum Teil von Obsidian"}},
       "es":{"stringUnit":{"state":"translated","value":"Haz que tu cuerpo forme parte de Obsidian"}},
