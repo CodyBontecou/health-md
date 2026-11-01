@@ -140,9 +140,11 @@ struct AutomationsScreen: View {
                     ForEach(profileStore.profiles) { profile in
                         if usesTwoPanes {
                             Button { selectedProfileID = profile.id } label: { card(profile) }
+                                .accessibilityIdentifier("glass.automation.card")
                                 .buttonStyle(.plain)
                         } else {
                             NavigationLink { detail(profile.id) } label: { card(profile) }
+                                .accessibilityIdentifier("glass.automation.card")
                                 .buttonStyle(.plain)
                         }
                     }
@@ -270,6 +272,7 @@ struct AutomationDetailScreen: View {
                         String(localized: "Metrics"),
                         value: "\(profile.settings.metricSelection.enabledMetricIDs.count)"
                     ) { page = .metrics }
+                    .accessibilityIdentifier("glass.automation.metrics")
                     settingRow(
                         String(localized: "Formats"),
                         value: ExportProfileCardSummary.sortedFormats(profile.settings.exportFormats)

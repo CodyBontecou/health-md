@@ -30,17 +30,19 @@ struct GlassMetricsScreen: View {
                     Text(verbatim: "\(state.totalEnabledCount)")
                         .glassFont(.heroNumber)
                         .foregroundStyle(palette.text)
-                    HStack(spacing: 8) {
-                        GlassChip(title: String(localized: "Recommended")) {
-                            state.deselectAll()
-                            standardMetrics
-                                .filter { Self.recommendedCategories.contains($0.category) }
-                                .forEach { state.setMetric($0.id, enabled: true) }
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            GlassChip(title: String(localized: "Recommended")) {
+                                state.deselectAll()
+                                standardMetrics
+                                    .filter { Self.recommendedCategories.contains($0.category) }
+                                    .forEach { state.setMetric($0.id, enabled: true) }
+                            }
+                            GlassChip(title: String(localized: "Select All")) {
+                                standardMetrics.forEach { state.setMetric($0.id, enabled: true) }
+                            }
+                            GlassChip(title: String(localized: "Deselect All")) { state.deselectAll() }
                         }
-                        GlassChip(title: String(localized: "Select All")) {
-                            standardMetrics.forEach { state.setMetric($0.id, enabled: true) }
-                        }
-                        GlassChip(title: String(localized: "Deselect All")) { state.deselectAll() }
                     }
                     TextField(String(localized: "Search"), text: $query)
                         .textFieldStyle(.plain)

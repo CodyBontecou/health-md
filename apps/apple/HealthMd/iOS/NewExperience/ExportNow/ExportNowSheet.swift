@@ -193,6 +193,7 @@ struct ExportNowSheet: View {
                         .frame(minHeight: GlassMetrics.touchTarget)
                 }
                 .buttonStyle(.plain)
+                .accessibilityIdentifier("glass.exportNow.preview")
             }
             Text(destinationLabel).glassFont(.monoBody).foregroundStyle(palette.muted)
             Text(summaryText).glassFont(.body).foregroundStyle(palette.text)

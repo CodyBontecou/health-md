@@ -148,5 +148,6 @@ private struct GlassNavigationButton<ID: Hashable>: View {
         }
         .buttonStyle(.plain)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
+        .accessibilityIdentifier("glass.tab.\(String(describing: item.id))")
     }
 }
