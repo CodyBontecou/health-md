@@ -158,6 +158,10 @@ struct WatchDashboardView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 10) {
+                    if WatchGlass.isEnabled {
+                        metricGrid
+                    }
+
                     header
 
                     if viewModel.isLoading {
@@ -194,7 +198,9 @@ struct WatchDashboardView: View {
                     }
                     .disabled(viewModel.isLoading)
 
-                    metricGrid
+                    if !WatchGlass.isEnabled {
+                        metricGrid
+                    }
                 }
                 .padding(.horizontal)
             }
@@ -214,56 +220,25 @@ struct WatchDashboardView: View {
         }
     }
 
+    /// WatchDashboardG leads with these; the rest stay reachable below them.
+    private var metricRows: [WatchMetricRow] {
+        let snapshot = viewModel.snapshot
+        let steps = WatchMetricRow(icon: "figure.walk", title: "Steps", value: WatchHealthFormatter.steps(snapshot.steps), tint: .green)
+        let active = WatchMetricRow(icon: "flame.fill", title: "Active", value: "\(WatchHealthFormatter.wholeNumber(snapshot.activeEnergyKilocalories)) kcal", tint: .orange)
+        let exercise = WatchMetricRow(icon: "timer", title: "Exercise", value: "\(WatchHealthFormatter.wholeNumber(snapshot.exerciseMinutes)) min", tint: .yellow)
+        let stand = WatchMetricRow(icon: "figure.stand", title: "Stand", value: WatchHealthFormatter.standHours(snapshot.standHours), tint: .blue)
+        let sleep = WatchMetricRow(icon: "bed.double.fill", title: "Sleep", value: WatchHealthFormatter.hours(snapshot.sleepHours), tint: .indigo)
+        let resting = WatchMetricRow(icon: "heart.fill", title: "Resting HR", value: WatchHealthFormatter.bpm(snapshot.restingHeartRate), tint: .red)
+        let hrv = WatchMetricRow(icon: "waveform.path.ecg", title: "HRV", value: WatchHealthFormatter.milliseconds(snapshot.heartRateVariabilityMS), tint: .cyan)
+        let oxygen = WatchMetricRow(icon: "lungs.fill", title: "Blood Oxygen", value: WatchHealthFormatter.percent(snapshot.bloodOxygenPercent), tint: .mint)
+        return WatchGlass.isEnabled
+            ? [sleep, hrv, resting, steps, oxygen, active, exercise, stand]
+            : [steps, active, exercise, stand, sleep, resting, hrv, oxygen]
+    }
+
     private var metricGrid: some View {
         VStack(spacing: 8) {
-            WatchMetricRow(
-                icon: "figure.walk",
-                title: "Steps",
-                value: WatchHealthFormatter.steps(viewModel.snapshot.steps),
-                tint: .green
-            )
-            WatchMetricRow(
-                icon: "flame.fill",
-                title: "Active",
-                value: "\(WatchHealthFormatter.wholeNumber(viewModel.snapshot.activeEnergyKilocalories)) kcal",
-                tint: .orange
-            )
-            WatchMetricRow(
-                icon: "timer",
-                title: "Exercise",
-                value: "\(WatchHealthFormatter.wholeNumber(viewModel.snapshot.exerciseMinutes)) min",
-                tint: .yellow
-            )
-            WatchMetricRow(
-                icon: "figure.stand",
-                title: "Stand",
-                value: WatchHealthFormatter.standHours(viewModel.snapshot.standHours),
-                tint: .blue
-            )
-            WatchMetricRow(
-                icon: "bed.double.fill",
-                title: "Sleep",
-                value: WatchHealthFormatter.hours(viewModel.snapshot.sleepHours),
-                tint: .indigo
-            )
-            WatchMetricRow(
-                icon: "heart.fill",
-                title: "Resting HR",
-                value: WatchHealthFormatter.bpm(viewModel.snapshot.restingHeartRate),
-                tint: .red
-            )
-            WatchMetricRow(
-                icon: "waveform.path.ecg",
-                title: "HRV",
-                value: WatchHealthFormatter.milliseconds(viewModel.snapshot.heartRateVariabilityMS),
-                tint: .cyan
-            )
-            WatchMetricRow(
-                icon: "lungs.fill",
-                title: "Blood Oxygen",
-                value: WatchHealthFormatter.percent(viewModel.snapshot.bloodOxygenPercent),
-                tint: .mint
-            )
+            ForEach(metricRows, id: \.title) { $0 }
         }
     }
 }
