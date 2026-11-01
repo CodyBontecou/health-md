@@ -96,7 +96,8 @@ final class GlassShellJourneyUITests: XCTestCase {
         XCTAssertTrue(exportNow.waitForExistence(timeout: 10))
         sleep(1)
         shot("regular-width")
-        guard app.windows.firstMatch.frame.width > 800 else {
+        // Pro is 874 pt wide and compact in landscape; Pro Max is 956 pt and regular.
+        guard app.windows.firstMatch.frame.width > 900 else {
             throw XCTSkip("This device is compact in landscape.")
         }
         XCTAssertGreaterThan(exportNow.frame.minX, app.windows.firstMatch.frame.width * 0.8)
