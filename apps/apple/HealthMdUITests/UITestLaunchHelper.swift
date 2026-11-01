@@ -199,7 +199,9 @@ enum UITestLaunchHelper {
         showsPostOnboardingPaywall: Bool = false
     ) -> XCUIApplication {
         let app = XCUIApplication()
-        app.launchArguments = ["--uitesting"]
+        // Classic journeys pin the old UI until those views are deleted. Glass journeys
+        // append YES after this, and the last value wins.
+        app.launchArguments = ["--uitesting", "-NewExperienceEnabled", "NO"]
         app.launchEnvironment = [
             "UITEST_HEALTH_AUTHORIZED": healthAuthorized ? "true" : "false",
             "UITEST_HAS_COMPLETED_ONBOARDING": showOnboarding ? "false" : "true",
