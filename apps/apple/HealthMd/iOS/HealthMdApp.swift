@@ -406,7 +406,8 @@ struct HealthMdApp: App {
     var body: some Scene {
         WindowGroup {
             Group {
-                if UIDevice.current.userInterfaceIdiom == .pad {
+                // The glass shell adapts to iPad, which brings profiles and every destination with it.
+                if UIDevice.current.userInterfaceIdiom == .pad && !NewExperienceFeature.isEnabled {
                     iPadContentView(historyProfileStore: iPadHistoryProfileStore)
                 } else {
                     ContentView()

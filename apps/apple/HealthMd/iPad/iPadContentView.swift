@@ -16,7 +16,7 @@ struct iPadContentView: View {
         @EnvironmentObject var configurationProtection: ConfigurationProtectionManager
     @StateObject private var vaultManager = VaultManager()
 
-    @State private var selectedTab: iPadNavItem? = NewExperienceFeature.isEnabled ? .history : .export
+    @State private var selectedTab: iPadNavItem? = .export
     @State private var columnVisibility: NavigationSplitViewVisibility = .all
     @State private var startDate = Date()
     @State private var endDate = Date()
@@ -156,11 +156,7 @@ struct iPadContentView: View {
                         .environmentObject(schedulingManager)
                         .environmentObject(healthKitManager)
                     case .history:
-                        if NewExperienceFeature.isEnabled {
-                            iPadArchiveHost { selectedTab = .export }
-                        } else {
-                            iPadHistoryView()
-                        }
+                        iPadHistoryView()
                     case .settings:
                         iPadSettingsView(
                             vaultManager: vaultManager,

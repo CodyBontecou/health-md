@@ -119,6 +119,11 @@ final class GlassShellJourneyUITests: XCTestCase {
         guard app.windows.firstMatch.frame.width > 900 else { throw XCTSkip("iPad only.") }
         XCTAssertTrue(app.descendants(matching: .any)["glass.archive"].waitForExistence(timeout: 10))
         shot("ipad-archive")
+        // iPad now runs the shared shell, so Automations carries profiles.
+        app.buttons["Automations"].tap()
+        XCTAssertTrue(app.descendants(matching: .any)["glass.automations"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Default"].waitForExistence(timeout: 5))
+        shot("ipad-automations")
     }
 
     func testFailedExportShowsResultWithRecovery() {
