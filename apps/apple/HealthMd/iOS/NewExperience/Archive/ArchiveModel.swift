@@ -41,6 +41,15 @@ struct ArchiveModel {
         profiles.map { .init(profileID: $0.id, status: day($0, on: date).status) }
     }
 
+    /// Missing dates among the last 7 completed days, under the "All" rules.
+    var weeklyGapCount: Int {
+        let today = calendar.startOfDay(for: now)
+        return (1...7).filter { offset in
+            guard let date = calendar.date(byAdding: .day, value: -offset, to: today) else { return false }
+            return status(on: date, filter: nil) == .missing
+        }.count
+    }
+
     /// The status of a date under a filter. `nil` means "All".
     func status(on date: Date, filter: UUID?) -> CoverageStatus {
         if let filter, let profile = profiles.first(where: { $0.id == filter }) {

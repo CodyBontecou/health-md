@@ -436,6 +436,7 @@ struct GlassAppShell: View {
             gapCount: stats.gapCount,
             nextRun: nextRun
         )
+        WeeklyGapNotification.refresh(gapCount: model.weeklyGapCount)
     }
 
     private func resume(_ profile: ArchiveProfile) {

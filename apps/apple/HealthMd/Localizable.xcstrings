@@ -1,6 +1,28 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "Archive has 1 gap this week. Tap to backfill." : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Archiv hat diese Woche 1 Lücke. Tippe zum Nachholen."}},
+      "es":{"stringUnit":{"state":"translated","value":"El archivo tiene 1 hueco esta semana. Toca para completarlo."}},
+      "fr":{"stringUnit":{"state":"translated","value":"L’archive a 1 lacune cette semaine. Touchez pour la combler."}},
+      "it":{"stringUnit":{"state":"translated","value":"L’archivio ha 1 lacuna questa settimana. Tocca per recuperarla."}},
+      "ja":{"stringUnit":{"state":"translated","value":"今週のアーカイブに抜けが1件あります。タップして補完します。"}},
+      "ko":{"stringUnit":{"state":"translated","value":"이번 주 아카이브에 빈 날이 1개 있습니다. 탭하여 채우세요."}},
+      "nl":{"stringUnit":{"state":"translated","value":"Archief heeft deze week 1 gat. Tik om aan te vullen."}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"O arquivo tem 1 lacuna esta semana. Toque para preencher."}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"本周归档有 1 处缺口。轻点以补全。"}}
+    }},
+    "Archive has %lld gaps this week. Tap to backfill." : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Archiv hat diese Woche %lld Lücken. Tippe zum Nachholen."}},
+      "es":{"stringUnit":{"state":"translated","value":"El archivo tiene %lld huecos esta semana. Toca para completarlos."}},
+      "fr":{"stringUnit":{"state":"translated","value":"L’archive a %lld lacunes cette semaine. Touchez pour les combler."}},
+      "it":{"stringUnit":{"state":"translated","value":"L’archivio ha %lld lacune questa settimana. Tocca per recuperarle."}},
+      "ja":{"stringUnit":{"state":"translated","value":"今週のアーカイブに抜けが%lld件あります。タップして補完します。"}},
+      "ko":{"stringUnit":{"state":"translated","value":"이번 주 아카이브에 빈 날이 %lld개 있습니다. 탭하여 채우세요."}},
+      "nl":{"stringUnit":{"state":"translated","value":"Archief heeft deze week %lld gaten. Tik om aan te vullen."}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"O arquivo tem %lld lacunas esta semana. Toque para preencher."}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"本周归档有 %lld 处缺口。轻点以补全。"}}
+    }},
     "Include today" : {"localizations":{
       "de":{"stringUnit":{"state":"translated","value":"Heute einbeziehen"}},
       "es":{"stringUnit":{"state":"translated","value":"Incluir hoy"}},
