@@ -1,6 +1,17 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "CLI & MCP" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"CLI & MCP"}},
+      "es":{"stringUnit":{"state":"translated","value":"CLI y MCP"}},
+      "fr":{"stringUnit":{"state":"translated","value":"CLI et MCP"}},
+      "it":{"stringUnit":{"state":"translated","value":"CLI e MCP"}},
+      "ja":{"stringUnit":{"state":"translated","value":"CLIとMCP"}},
+      "ko":{"stringUnit":{"state":"translated","value":"CLI 및 MCP"}},
+      "nl":{"stringUnit":{"state":"translated","value":"CLI en MCP"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"CLI e MCP"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"CLI 和 MCP"}}
+    }},
     "Last export" : {"localizations":{
       "de":{"stringUnit":{"state":"translated","value":"Letzter Export"}},
       "es":{"stringUnit":{"state":"translated","value":"Última exportación"}},

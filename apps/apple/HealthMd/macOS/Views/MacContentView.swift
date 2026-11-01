@@ -79,11 +79,15 @@ private enum MacSidebarDestination: String, CaseIterable, Identifiable, Hashable
     var title: String {
         switch self {
         case .home:
-            return String(localized: "Home")
+            return NewExperienceFeature.isEnabled
+                ? String(localized: "Mac Destination")
+                : String(localized: "Home")
         case .history:
             return String(localized: "History")
         case .cli:
-            return String(localized: "CLI")
+            return NewExperienceFeature.isEnabled
+                ? String(localized: "CLI & MCP")
+                : String(localized: "CLI")
         case .settings:
             return String(localized: "Settings")
         }

@@ -1298,6 +1298,7 @@
 				DEVELOPMENT_TEAM = 67KC823C9A;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = HealthMdWatchWidgets/Info.plist;
+				NEW_EXPERIENCE_ENABLED = NO;
 				INFOPLIST_KEY_CFBundleDisplayName = Health.md;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -1644,6 +1645,7 @@
 				DEVELOPMENT_TEAM = 67KC823C9A;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = HealthMdWatchWidgets/Info.plist;
+				NEW_EXPERIENCE_ENABLED = NO;
 				INFOPLIST_KEY_CFBundleDisplayName = Health.md;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -1790,6 +1792,7 @@
 				DEVELOPMENT_TEAM = 67KC823C9A;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = HealthMdWatchWidgets/Info.plist;
+				NEW_EXPERIENCE_ENABLED = NO;
 				INFOPLIST_KEY_CFBundleDisplayName = Health.md;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -1840,6 +1843,7 @@
 				DEVELOPMENT_TEAM = 67KC823C9A;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = HealthMdWatchWidgets/Info.plist;
+				NEW_EXPERIENCE_ENABLED = NO;
 				INFOPLIST_KEY_CFBundleDisplayName = Health.md;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",

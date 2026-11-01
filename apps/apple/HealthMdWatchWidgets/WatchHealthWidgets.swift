@@ -219,7 +219,11 @@ private struct RecoveryWidgetView: View {
             RecoveryCornerView(snapshot: entry.snapshot)
         #endif
         default:
-            RecoveryRectangularView(snapshot: entry.snapshot)
+            if WatchWidgetGlass.isEnabled {
+                GlassRecoveryRectangularView(snapshot: entry.snapshot)
+            } else {
+                RecoveryRectangularView(snapshot: entry.snapshot)
+            }
         }
     }
 }
@@ -606,6 +610,33 @@ private struct ActivityRectangularView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .minimumScaleFactor(0.75)
         }
+        .containerBackground(Color.black.opacity(0.12), for: .widget)
+    }
+}
+
+private enum WatchWidgetGlass {
+    static var isEnabled: Bool {
+        (Bundle.main.object(forInfoDictionaryKey: "NEW_EXPERIENCE_ENABLED") as? String)?
+            .trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == "yes"
+    }
+}
+
+/// WatchComplicationG: a title over one summary line.
+private struct GlassRecoveryRectangularView: View {
+    let snapshot: WatchHealthSnapshot
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text("Recovery")
+                .textCase(.uppercase)
+                .font(.caption2.weight(.semibold))
+                .widgetAccentable()
+            Text("Sleep \(WatchHealthFormatter.hours(snapshot.sleepHours)) · HRV \(WatchHealthFormatter.milliseconds(snapshot.heartRateVariabilityMS))")
+                .font(.headline)
+                .minimumScaleFactor(0.7)
+                .lineLimit(1)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .containerBackground(Color.black.opacity(0.12), for: .widget)
     }
 }
