@@ -92,4 +92,29 @@ final class GlassAutomationPagesUITests: XCTestCase {
         XCTAssertTrue(toggle.waitForExistence(timeout: 5))
         toggle.tap()
     }
+
+    func testGlassPaywallOffersPurchaseAndRestore() {
+        continueAfterFailure = false
+        let app = UITestLaunchHelper.configuredApp(
+            healthAuthorized: true,
+            vaultSelected: true,
+            purchaseUnlocked: false,
+            scheduleEnabled: true
+        )
+        app.launchArguments += ["-NewExperienceEnabled", "YES"]
+        app.launch()
+
+        let settings = app.buttons["Settings"]
+        XCTAssertTrue(settings.waitForExistence(timeout: 10))
+        settings.tap()
+        let account = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Health.md")).firstMatch
+        XCTAssertTrue(account.waitForExistence(timeout: 5))
+        account.tap()
+        XCTAssertTrue(app.buttons[UITestLaunchHelper.Paywall.restoreButton].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons[UITestLaunchHelper.Paywall.unlockButton].exists)
+        if let directory = ProcessInfo.processInfo.environment["GLASS_SCREENSHOT_DIR"] {
+            let url = URL(fileURLWithPath: directory).appendingPathComponent("paywall.png")
+            try? XCUIScreen.main.screenshot().pngRepresentation.write(to: url)
+        }
+    }
 }

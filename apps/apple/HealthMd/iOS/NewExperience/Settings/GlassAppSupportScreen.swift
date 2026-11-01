@@ -98,7 +98,7 @@ struct GlassAppSupportScreen: View {
             MailComposeView(onCompletion: feedbackReporter.completeMail)
         }
         .feedbackFailureSheet($feedbackReporter.failure)
-        .sheet(isPresented: $showMyselfClaim) { MyselfClaimView(app: "health.md") }
+        .sheet(isPresented: $showMyselfClaim) { MyselfClaimView(app: "health.md").glassTheme() }
         .sheet(isPresented: $showDiagnostics) { DiagnosticsView() }
         .geistDialog(
             isPresented: $showDebugAlert,

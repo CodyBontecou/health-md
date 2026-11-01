@@ -5,6 +5,8 @@ import StoreKit
 struct PaywallView: View {
     @ObservedObject private var purchaseManager = PurchaseManager.shared
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @State private var didTrackPaywallShown = false
     @State private var selectedAudience: PaywallPricingAudience = .individual
 
@@ -84,6 +86,139 @@ struct PaywallView: View {
     }
 
     var body: some View {
+        Group {
+            if NewExperienceFeature.isEnabled {
+                glassBody.glassTheme()
+            } else {
+                legacyBody
+            }
+        }
+        .accessibilityIdentifier(AccessibilityID.Paywall.view)
+        .onAppear { trackPaywallShownOnce() }
+        .task { await purchaseManager.loadProductsIfNeeded() }
+        .onChange(of: purchaseManager.isUnlocked) { _, unlocked in
+            if unlocked && !isManagingPurchase { dismiss() }
+        }
+    }
+
+    private var glassPalette: GlassPalette {
+        .resolved(colorScheme: colorScheme, reduceTransparency: reduceTransparency)
+    }
+
+    /// PaywallG, bound to the products `PurchaseManager` really sells. Purchase, restore,
+    /// analytics and disclosure paths are the ones the existing paywall uses.
+    private var glassBody: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: GlassMetrics.sectionGap) {
+                    Text(titleText)
+                        .glassFont(.largeTitle)
+                        .foregroundStyle(glassPalette.text)
+                        .accessibilityIdentifier(AccessibilityID.Paywall.title)
+                    Text(subtitleText)
+                        .glassFont(.body)
+                        .foregroundStyle(glassPalette.sec)
+                        .accessibilityIdentifier(AccessibilityID.Paywall.subtitle)
+
+                    glassError
+
+                    if isManagingPurchase {
+                        GlassBanner(
+                            title: currentPlanTitle,
+                            message: currentPlanDetail,
+                            systemImage: purchaseManager.isFamilyUnlocked ? "person.3.fill" : "checkmark.seal.fill",
+                            tone: .success
+                        )
+                        if canShowFamilyUpgradeOffer {
+                            glassOption(
+                                .familyUpgrade,
+                                title: "Upgrade to Family Lifetime",
+                                subtitle: "Upgrade pricing for existing Lifetime owners",
+                                identifier: AccessibilityID.Paywall.familyUnlockButton
+                            )
+                        }
+                    } else {
+                        GlassSegmentedControl(
+                            segments: PaywallPricingAudience.allCases.map {
+                                .init(value: $0, title: String(localized: String.LocalizationValue($0.title)))
+                            },
+                            selection: $selectedAudience
+                        )
+                        ForEach(selectedOptions) { option in
+                            glassOption(
+                                option,
+                                title: option.displayTitle,
+                                subtitle: option.displaySubtitle,
+                                identifier: option == .individual
+                                    ? AccessibilityID.Paywall.unlockButton
+                                    : AccessibilityID.Paywall.familyUnlockButton
+                            )
+                        }
+                    }
+
+                    Button(LocalizedStringKey("Restore Purchase")) {
+                        Task { await purchaseManager.restore(source: .paywall(context)) }
+                    }
+                    .buttonStyle(.plain)
+                    .glassFont(.caption)
+                    .foregroundStyle(glassPalette.accent)
+                    .frame(maxWidth: .infinity, minHeight: GlassMetrics.touchTarget)
+                    .disabled(purchaseManager.isPurchasing || purchaseManager.isRestoring)
+                    .accessibilityIdentifier(AccessibilityID.Paywall.restoreButton)
+                    .accessibilityLabel("Restore previous purchase")
+
+                    if !isManagingPurchase { purchaseDisclosure }
+                }
+                .padding(GlassMetrics.screenMargin)
+            }
+            .background(glassPalette.bg.ignoresSafeArea())
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(String(localized: "Close")) { dismiss() }
+                        .accessibilityIdentifier(AccessibilityID.Paywall.dismissButton)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder private var glassError: some View {
+        if let error = purchaseManager.purchaseError {
+            GlassBanner(title: error, systemImage: "exclamationmark.triangle", tone: .warning)
+                .accessibilityIdentifier(AccessibilityID.Paywall.errorMessage)
+        } else if let productLoadError = purchaseManager.productLoadError, !purchaseManager.isLoadingProducts {
+            GlassBanner(title: productLoadError, systemImage: "exclamationmark.triangle", tone: .warning)
+                .accessibilityIdentifier(AccessibilityID.Paywall.errorMessage)
+            Button(LocalizedStringKey("Try Again")) {
+                Task { await purchaseManager.loadProductsIfNeeded(force: true) }
+            }
+            .frame(minHeight: GlassMetrics.touchTarget)
+            .accessibilityLabel("Try loading purchase options again")
+        }
+    }
+
+    private func glassOption(
+        _ option: HealthMdPurchaseOption,
+        title: String,
+        subtitle: String,
+        identifier: String
+    ) -> some View {
+        let isLoading = purchaseManager.purchasingOption == option || isPurchaseOptionLoading(option)
+        return Button { purchase(option) } label: {
+            GlassPanel {
+                GlassRow(title: String(localized: String.LocalizationValue(title)), subtitle: String(localized: String.LocalizationValue(subtitle))) {
+                    if isLoading { ProgressView() }
+                    if let price = purchaseButtonPriceLabel(for: option) {
+                        Text(price).glassFont(.navTitle).foregroundStyle(glassPalette.accent)
+                    }
+                }
+            }
+        }
+        .buttonStyle(.plain)
+        .disabled(isPurchaseButtonDisabled(for: option))
+        .accessibilityIdentifier(identifier)
+    }
+
+    private var legacyBody: some View {
         ZStack {
             Color.bgPrimary.ignoresSafeArea()
 
@@ -108,12 +243,6 @@ struct PaywallView: View {
                     ctaSection
                 }
             }
-        }
-        .accessibilityIdentifier(AccessibilityID.Paywall.view)
-        .onAppear { trackPaywallShownOnce() }
-        .task { await purchaseManager.loadProductsIfNeeded() }
-        .onChange(of: purchaseManager.isUnlocked) { _, unlocked in
-            if unlocked && !isManagingPurchase { dismiss() }
         }
     }
 

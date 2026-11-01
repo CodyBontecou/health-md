@@ -109,7 +109,7 @@ struct SettingsScreen: View {
             GlassGatewayDestinationSheet(settings: gatewaySettings).glassTheme()
         }
         .sheet(isPresented: $showIntegrations) {
-            ExternalIntegrationsView(manager: externalIntegrationManager)
+            ExternalIntegrationsView(manager: externalIntegrationManager).glassTheme()
         }
         .onAppear {
             followSyncRequest()
