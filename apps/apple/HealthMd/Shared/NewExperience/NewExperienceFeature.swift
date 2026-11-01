@@ -19,7 +19,10 @@ enum NewExperienceFeature {
 
     private static var debugOverride: Bool? {
         #if DEBUG
-        UserDefaults.standard.object(forKey: debugOverrideKey) as? Bool
+        // Launch arguments arrive as strings, which `bool(forKey:)` understands.
+        UserDefaults.standard.object(forKey: debugOverrideKey) == nil
+            ? nil
+            : UserDefaults.standard.bool(forKey: debugOverrideKey)
         #else
         nil
         #endif

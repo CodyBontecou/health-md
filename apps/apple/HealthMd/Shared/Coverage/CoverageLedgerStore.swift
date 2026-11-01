@@ -1,9 +1,10 @@
+import Combine
 import Foundation
 import os
 
 /// Owns the persisted ledger. Coverage is presentation data, so every failure here is
 /// logged and contained. Recording must never affect the export that triggered it.
-final class CoverageLedgerStore {
+final class CoverageLedgerStore: ObservableObject {
     /// `nonisolated deinit`: see `ExportProfileStore` for the iOS 26.2 runtime reason.
     nonisolated deinit {}
 
@@ -15,7 +16,7 @@ final class CoverageLedgerStore {
         fileURL: TestMode.suppressesRuntimeServices ? nil : defaultFileURL()
     )
 
-    private(set) var ledger: CoverageLedger
+    @Published private(set) var ledger: CoverageLedger
 
     private let fileURL: URL?
     private let now: () -> Date

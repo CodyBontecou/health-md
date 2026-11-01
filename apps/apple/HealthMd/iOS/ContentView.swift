@@ -141,7 +141,7 @@ struct ContentView: View {
             Color.bgPrimary.ignoresSafeArea()
 
             VStack(spacing: 0) {
-                if !discordPromoDismissed {
+                if !discordPromoDismissed && !NewExperienceFeature.isEnabled {
                     DiscordPromoBanner {
                         withOptionalMotionAnimation(AnimationTimings.standard) {
                             discordPromoDismissed = true
@@ -153,74 +153,105 @@ struct ContentView: View {
                     .transition(reduceMotion ? .opacity : .move(edge: .top).combined(with: .opacity))
                 }
 
-                TabView(selection: $selectedTab) {
-                    ExportTabView(
-                        healthKitManager: healthKitManager,
-                        vaultManager: vaultManager,
-                        syncService: syncService,
-                        advancedSettings: advancedSettings,
-                        apiExportSettings: apiExportSettings,
-                        agentDataGatewaySettings: agentDataGatewaySettings,
-                        externalIntegrations: ConnectedAppsFeature.isEnabled
-                            ? externalIntegrationManager
-                            : nil,
-                        exportTargetSelection: $exportTargetSelection,
-                        startDate: $startDate,
-                        endDate: $endDate,
-                        dateRangePreset: $dateRangePreset,
-                        isExporting: $isExporting,
-                        exportStatusMessage: $exportStatusMessage,
-                        showFolderPicker: $showFolderPicker,
-                        presentFirstExportPreview: $presentFirstExportPreview,
-                        onFirstExportPreviewDismissed: { handleFirstExportPreviewClosed() },
-                        canExport: canExport,
-                        onExportTapped: exportData,
-                        historyProfileStore: profileCoordinator?.profileStore,
-                        executionHistoryAssessment: executionHistoryAssessment,
-                        isAssessingHistory: isAssessingHistory,
-                        onContinueWithoutHistoryVerification: continueWithoutHistoryVerification,
-                        onCancelHistoryVerification: invalidateExecutionHistory
-                    )
-                    .tabItem {
-                        Label("Export", systemImage: "arrow.up.doc.fill")
-                    }
-                    .tag(NavTab.export)
+                Group {
+                    if NewExperienceFeature.isEnabled {
+                        GlassAppShell(
+                            selectedTab: $selectedTab,
+                            vaultManager: vaultManager,
+                            externalIntegrationManager: externalIntegrationManager,
+                            profileCoordinator: profileCoordinator,
+                            exportTargetSelection: $exportTargetSelection,
+                            startDate: $startDate,
+                            endDate: $endDate,
+                            dateRangePreset: $dateRangePreset,
+                            isExporting: $isExporting,
+                            exportProgress: exportProgress,
+                            exportStatusMessage: $exportStatusMessage,
+                            showFolderPicker: $showFolderPicker,
+                            showExportProfiles: $showExportProfiles,
+                            showClinicianReport: $showClinicianReport,
+                            presentFirstExportPreview: $presentFirstExportPreview,
+                            onFirstExportPreviewDismissed: { handleFirstExportPreviewClosed() },
+                            canExport: canExport,
+                            onExport: exportData,
+                            onCancelExport: cancelExport,
+                            onBrowseExportFolder: browseExportFolder,
+                            executionHistoryAssessment: executionHistoryAssessment,
+                            isAssessingHistory: isAssessingHistory,
+                            onContinueWithoutHistoryVerification: continueWithoutHistoryVerification,
+                            onCancelHistoryVerification: invalidateExecutionHistory
+                        )
+                    } else {
+                        TabView(selection: $selectedTab) {
+                            ExportTabView(
+                                healthKitManager: healthKitManager,
+                                vaultManager: vaultManager,
+                                syncService: syncService,
+                                advancedSettings: advancedSettings,
+                                apiExportSettings: apiExportSettings,
+                                agentDataGatewaySettings: agentDataGatewaySettings,
+                                externalIntegrations: ConnectedAppsFeature.isEnabled
+                                    ? externalIntegrationManager
+                                    : nil,
+                                exportTargetSelection: $exportTargetSelection,
+                                startDate: $startDate,
+                                endDate: $endDate,
+                                dateRangePreset: $dateRangePreset,
+                                isExporting: $isExporting,
+                                exportStatusMessage: $exportStatusMessage,
+                                showFolderPicker: $showFolderPicker,
+                                presentFirstExportPreview: $presentFirstExportPreview,
+                                onFirstExportPreviewDismissed: { handleFirstExportPreviewClosed() },
+                                canExport: canExport,
+                                onExportTapped: exportData,
+                                historyProfileStore: profileCoordinator?.profileStore,
+                                executionHistoryAssessment: executionHistoryAssessment,
+                                isAssessingHistory: isAssessingHistory,
+                                onContinueWithoutHistoryVerification: continueWithoutHistoryVerification,
+                                onCancelHistoryVerification: invalidateExecutionHistory
+                            )
+                            .tabItem {
+                                Label("Export", systemImage: "arrow.up.doc.fill")
+                            }
+                            .tag(NavTab.export)
 
-                    ScheduleTabView(
-                        vaultManager: vaultManager,
-                        advancedSettings: advancedSettings,
-                        apiExportSettings: apiExportSettings,
-                        showFolderPicker: $showFolderPicker,
-                        profileCoordinator: profileCoordinator
-                    )
-                    .environmentObject(schedulingManager)
-                    .environmentObject(healthKitManager)
-                        .tabItem {
-                            Label("Schedule", systemImage: "clock.fill")
+                            ScheduleTabView(
+                                vaultManager: vaultManager,
+                                advancedSettings: advancedSettings,
+                                apiExportSettings: apiExportSettings,
+                                showFolderPicker: $showFolderPicker,
+                                profileCoordinator: profileCoordinator
+                            )
+                            .environmentObject(schedulingManager)
+                            .environmentObject(healthKitManager)
+                                .tabItem {
+                                    Label("Schedule", systemImage: "clock.fill")
+                                }
+                                .tag(NavTab.schedule)
+
+                            NavigationStack {
+                                SyncSettingsView()
+                            }
+                            .tabItem {
+                                Label("Sync", systemImage: "arrow.triangle.2.circlepath")
+                            }
+                            .tag(NavTab.sync)
+
+                            SettingsTabView(
+                                vaultManager: vaultManager,
+                                advancedSettings: advancedSettings,
+                                externalIntegrationManager: externalIntegrationManager,
+                                profileCoordinator: profileCoordinator,
+                                showFolderPicker: $showFolderPicker,
+                                showExportProfiles: $showExportProfiles,
+                                showClinicianReport: $showClinicianReport
+                            )
+                            .tabItem {
+                                Label("Settings", systemImage: "gearshape.fill")
+                            }
+                            .tag(NavTab.settings)
                         }
-                        .tag(NavTab.schedule)
-
-                    NavigationStack {
-                        SyncSettingsView()
                     }
-                    .tabItem {
-                        Label("Sync", systemImage: "arrow.triangle.2.circlepath")
-                    }
-                    .tag(NavTab.sync)
-
-                    SettingsTabView(
-                        vaultManager: vaultManager,
-                        advancedSettings: advancedSettings,
-                        externalIntegrationManager: externalIntegrationManager,
-                        profileCoordinator: profileCoordinator,
-                        showFolderPicker: $showFolderPicker,
-                        showExportProfiles: $showExportProfiles,
-                        showClinicianReport: $showClinicianReport
-                    )
-                    .tabItem {
-                        Label("Settings", systemImage: "gearshape.fill")
-                    }
-                    .tag(NavTab.settings)
                 }
                 .tint(Color.accent)
                 .task { ensureProfileCoordinator() }

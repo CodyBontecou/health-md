@@ -54,6 +54,7 @@ struct ExportNowAccessoryButton: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel(title)
+        .accessibilityIdentifier("glass.exportNow")
     }
 }
 
