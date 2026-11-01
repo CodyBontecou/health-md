@@ -161,6 +161,7 @@ struct AutomationDetailScreen: View {
     @EnvironmentObject private var schedulingManager: SchedulingManager
     @State private var showEditor = false
     @State private var showSchedule = false
+    @State private var showMetrics = false
 
     init(
         coordinator: ExportProfileCoordinator,
@@ -219,7 +220,17 @@ struct AutomationDetailScreen: View {
                 }
 
                 GlassPanel {
-                    settingRow(String(localized: "Metrics"), value: "\(profile.settings.metricSelection.enabledMetricIDs.count)")
+                    Button {
+                        configurationProtection.performConfigurationChange { showMetrics = true }
+                    } label: {
+                        GlassRow(title: String(localized: "Metrics")) {
+                            Text(verbatim: "\(profile.settings.metricSelection.enabledMetricIDs.count)")
+                                .glassFont(.rowSubtitle)
+                                .foregroundStyle(palette.muted)
+                            Image(systemName: "chevron.right").foregroundStyle(palette.muted)
+                        }
+                    }
+                    .buttonStyle(.plain)
                     settingRow(
                         String(localized: "Formats & detail"),
                         value: ExportProfileCardSummary.sortedFormats(profile.settings.exportFormats)
@@ -275,6 +286,10 @@ struct AutomationDetailScreen: View {
         .background(palette.bg.ignoresSafeArea())
         .navigationTitle(profile.name)
         .navigationBarTitleDisplayMode(.inline)
+        .sheet(isPresented: $showMetrics) {
+            GlassMetricsScreen(coordinator: coordinator, profile: profile)
+                .glassTheme()
+        }
         .sheet(isPresented: $showEditor) {
             ExportProfileEditorSheet(coordinator: coordinator, editing: profile)
                 .presentationDetents([.large])

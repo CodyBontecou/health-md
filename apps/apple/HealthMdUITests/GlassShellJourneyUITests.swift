@@ -67,6 +67,10 @@ final class GlassShellJourneyUITests: XCTestCase {
         XCTAssertTrue(app.navigationBars.buttons["Save"].waitForExistence(timeout: 5))
         shot("schedule")
         app.navigationBars.buttons["Save"].tap()
+        app.buttons.containing(NSPredicate(format: "label BEGINSWITH %@", "Metrics")).firstMatch.tap()
+        XCTAssertTrue(app.navigationBars.buttons["Save"].waitForExistence(timeout: 5))
+        shot("metrics")
+        app.navigationBars.buttons["Save"].tap()
         let edit = app.buttons.containing(NSPredicate(format: "label BEGINSWITH %@", "Edit sentence")).firstMatch
         edit.tap()
         XCTAssertTrue(app.buttons["All settings"].waitForExistence(timeout: 5))
