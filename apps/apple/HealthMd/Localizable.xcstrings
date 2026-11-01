@@ -23215,68 +23215,68 @@
         }
       }
     },
-    "clinician_report_7_days" : {
+    "clinician_report_6_months" : {
       "comment" : "Clinician Report V1 localized vocabulary. Managed by scripts/validate-clinician-report-localizations.py.",
       "extractionState" : "manual",
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "7 Tage"
+            "value" : "6 Monate"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "7 days"
+            "value" : "6 months"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "7 días"
+            "value" : "6 meses"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "7 jours"
+            "value" : "6 mois"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "7 giorni"
+            "value" : "6 mesi"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "7日間"
+            "value" : "6か月"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "7일"
+            "value" : "6개월"
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "7 dagen"
+            "value" : "6 maanden"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "7 dias"
+            "value" : "6 meses"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "7 天"
+            "value" : "6 个月"
           }
         }
       }
