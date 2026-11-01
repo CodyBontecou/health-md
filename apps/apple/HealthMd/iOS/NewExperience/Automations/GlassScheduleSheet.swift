@@ -90,10 +90,19 @@ struct GlassScheduleSheet: View {
                         Toggle(isOn: $draft.todayRefreshEnabled) { label(String(localized: "Today Refresh")) }
                             .toggleStyle(GlassToggleStyle())
                         if draft.todayRefreshEnabled {
-                            Picker(String(localized: "Refresh Interval"), selection: $draft.todayRefreshMinutes) {
-                                ForEach(ExportSchedule.todayRefreshMinuteOptions, id: \.self) { minutes in
-                                    Text(ExportSchedule.todayRefreshLabel(minutes)).tag(minutes)
+                            // A menu picker outside a Form shows only its value, so label the row.
+                            HStack {
+                                label(String(localized: "Refresh Interval"))
+                                Spacer(minLength: 8)
+                                Picker(String(localized: "Refresh Interval"), selection: $draft.todayRefreshMinutes) {
+                                    ForEach(ExportSchedule.todayRefreshMinuteOptions, id: \.self) { minutes in
+                                        Text(ExportSchedule.todayRefreshLabel(minutes)).tag(minutes)
+                                    }
                                 }
+                                .pickerStyle(.menu)
+                                .labelsHidden()
+                                .accessibilityValue(ExportSchedule.todayRefreshLabel(draft.todayRefreshMinutes))
+                                .accessibilityIdentifier("glass.schedule.refreshInterval")
                             }
                         }
                     }

@@ -265,7 +265,7 @@ final class ExportProfilesJourneyUITests: XCTestCase {
             // The glass switch is one accessible element: the whole row toggles it.
             if refresh.value as? String == "0" { refresh.tap() }
             XCTAssertEqual(refresh.value as? String, "1", "refresh should be enabled")
-            let interval = app.buttons["Refresh Interval"].firstMatch
+            let interval = app.buttons["glass.schedule.refreshInterval"]
             if !interval.isHittable { form.swipeUp() }
             XCTAssertTrue(interval.waitUntilExists(timeout: 5), "minute interval menu should appear when refresh is enabled")
             interval.tap()
@@ -274,7 +274,7 @@ final class ExportProfilesJourneyUITests: XCTestCase {
             XCTAssertTrue(enabledToggle.waitForNonExistence(timeout: 5))
             editSchedule.tap()
             XCTAssertTrue(enabledToggle.waitUntilExists(timeout: 5))
-            let savedInterval = app.buttons["Refresh Interval"].firstMatch
+            let savedInterval = app.buttons["glass.schedule.refreshInterval"]
             if !savedInterval.isHittable { app.scrollViews["glass.schedule.content"].swipeUp() }
             XCTAssertTrue(savedInterval.waitUntilExists(timeout: 5))
             XCTAssertEqual(savedInterval.value as? String, label)
