@@ -199,6 +199,11 @@ struct GlassAppShell: View {
                     coordinator: profileCoordinator,
                     historyContent: AnyView(scheduleDetails),
                     onRun: { exportRequest = ExportNowRequest(profileID: $0) },
+                    onPreview: { profileID in
+                        // The preview renders the live settings, so load this profile first.
+                        _ = profileCoordinator.activate(profileID: profileID)
+                        showPreview = true
+                    },
                     onSchedulesChanged: { scheduleRevision += 1 }
                 )
             }

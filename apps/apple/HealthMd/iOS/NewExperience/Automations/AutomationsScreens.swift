@@ -48,6 +48,7 @@ struct AutomationsScreen: View {
     @ObservedObject private var entryStore: ScheduledExportEntryStore
     let historyContent: AnyView
     let onRun: (UUID) -> Void
+    let onPreview: (UUID) -> Void
     let onSchedulesChanged: () -> Void
 
     @Environment(\.glassPalette) private var palette
@@ -58,6 +59,7 @@ struct AutomationsScreen: View {
         coordinator: ExportProfileCoordinator,
         historyContent: AnyView,
         onRun: @escaping (UUID) -> Void,
+        onPreview: @escaping (UUID) -> Void,
         onSchedulesChanged: @escaping () -> Void
     ) {
         self.coordinator = coordinator
@@ -65,6 +67,7 @@ struct AutomationsScreen: View {
         _entryStore = ObservedObject(wrappedValue: coordinator.scheduledEntryStore)
         self.historyContent = historyContent
         self.onRun = onRun
+        self.onPreview = onPreview
         self.onSchedulesChanged = onSchedulesChanged
     }
 
@@ -99,6 +102,7 @@ struct AutomationsScreen: View {
                                 coordinator: coordinator,
                                 profileID: profile.id,
                                 onRun: onRun,
+                                onPreview: onPreview,
                                 onSchedulesChanged: onSchedulesChanged
                             )
                         } label: {
@@ -154,6 +158,7 @@ struct AutomationDetailScreen: View {
     @ObservedObject private var entryStore: ScheduledExportEntryStore
     let profileID: UUID
     let onRun: (UUID) -> Void
+    let onPreview: (UUID) -> Void
     let onSchedulesChanged: () -> Void
 
     @Environment(\.glassPalette) private var palette
@@ -168,6 +173,7 @@ struct AutomationDetailScreen: View {
         coordinator: ExportProfileCoordinator,
         profileID: UUID,
         onRun: @escaping (UUID) -> Void,
+        onPreview: @escaping (UUID) -> Void,
         onSchedulesChanged: @escaping () -> Void
     ) {
         self.coordinator = coordinator
@@ -175,6 +181,7 @@ struct AutomationDetailScreen: View {
         _entryStore = ObservedObject(wrappedValue: coordinator.scheduledEntryStore)
         self.profileID = profileID
         self.onRun = onRun
+        self.onPreview = onPreview
         self.onSchedulesChanged = onSchedulesChanged
     }
 
@@ -193,7 +200,7 @@ struct AutomationDetailScreen: View {
                 VStack(alignment: .leading, spacing: 12) {
                     AutomationSentenceView(sentence: facts.sentence(profile))
                     NavigationLink {
-                        ComposerScreen(coordinator: coordinator, profileID: profile.id, onSchedulesChanged: onSchedulesChanged)
+                        ComposerScreen(coordinator: coordinator, profileID: profile.id, onPreview: onPreview, onSchedulesChanged: onSchedulesChanged)
                     } label: {
                         Text(verbatim: String(localized: "Edit sentence") + " →")
                             .glassFont(.caption)
@@ -342,6 +349,7 @@ struct ComposerScreen: View {
     @ObservedObject private var profileStore: ExportProfileStore
     @ObservedObject private var entryStore: ScheduledExportEntryStore
     let profileID: UUID
+    let onPreview: (UUID) -> Void
     let onSchedulesChanged: () -> Void
 
     @Environment(\.glassPalette) private var palette
@@ -352,11 +360,17 @@ struct ComposerScreen: View {
     @State private var showSchedule = false
     @State private var showRange = false
 
-    init(coordinator: ExportProfileCoordinator, profileID: UUID, onSchedulesChanged: @escaping () -> Void) {
+    init(
+        coordinator: ExportProfileCoordinator,
+        profileID: UUID,
+        onPreview: @escaping (UUID) -> Void,
+        onSchedulesChanged: @escaping () -> Void
+    ) {
         self.coordinator = coordinator
         _profileStore = ObservedObject(wrappedValue: coordinator.profileStore)
         _entryStore = ObservedObject(wrappedValue: coordinator.scheduledEntryStore)
         self.profileID = profileID
+        self.onPreview = onPreview
         self.onSchedulesChanged = onSchedulesChanged
     }
 
@@ -379,6 +393,8 @@ struct ComposerScreen: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .glassSurface()
                 }
+                Button(String(localized: "Preview")) { onPreview(profile.id) }
+                    .buttonStyle(GlassPrimaryButtonStyle())
                 Button(String(localized: "All settings")) {
                     configurationProtection.performConfigurationChange { showEditor = true }
                 }
