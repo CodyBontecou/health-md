@@ -15,7 +15,8 @@ final class GlassAutomationPagesUITests: XCTestCase {
         app.launch()
 
         app.buttons["Automations"].tap()
-        let card = app.staticTexts["Default"]
+        // At regular width the name is in both panes, and the detail is already open.
+        let card = app.staticTexts["Default"].firstMatch
         XCTAssertTrue(card.waitForExistence(timeout: 10))
         card.tap()
 
@@ -93,7 +94,7 @@ final class GlassAutomationPagesUITests: XCTestCase {
         toggle.tap()
     }
 
-    func testGlassPaywallOffersPurchaseAndRestore() {
+    func testLockedUserMeetsTheGlassHardPaywall() {
         continueAfterFailure = false
         let app = UITestLaunchHelper.configuredApp(
             healthAuthorized: true,
@@ -104,13 +105,9 @@ final class GlassAutomationPagesUITests: XCTestCase {
         app.launchArguments += ["-NewExperienceEnabled", "YES"]
         app.launch()
 
-        let settings = app.buttons["Settings"]
-        XCTAssertTrue(settings.waitForExistence(timeout: 10))
-        settings.tap()
-        let account = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Health.md")).firstMatch
-        XCTAssertTrue(account.waitForExistence(timeout: 5))
-        account.tap()
-        XCTAssertTrue(app.buttons[UITestLaunchHelper.Paywall.restoreButton].waitForExistence(timeout: 5))
+        // A locked user meets the hard gate first, and it cannot be dismissed.
+        XCTAssertTrue(app.buttons[UITestLaunchHelper.Paywall.restoreButton].waitForExistence(timeout: 10))
+        XCTAssertFalse(app.buttons[UITestLaunchHelper.Paywall.dismissButton].exists)
         XCTAssertTrue(app.buttons[UITestLaunchHelper.Paywall.unlockButton].exists)
         if let directory = ProcessInfo.processInfo.environment["GLASS_SCREENSHOT_DIR"] {
             let url = URL(fileURLWithPath: directory).appendingPathComponent("paywall.png")
