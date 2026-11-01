@@ -112,6 +112,8 @@ struct ExportStatusBadge: View {
     var onPreview: (() -> Void)? = nil
     var onBrowseFolder: (() -> Void)? = nil
     var onTap: (() -> Void)? = nil
+    /// Hosts that inspect the toast over time, such as the accessibility harness, turn this off.
+    var autoDismisses = true
 
     @State private var isVisible = false
     @State private var offset: CGFloat = 80
@@ -126,7 +128,7 @@ struct ExportStatusBadge: View {
     /// that opens details when tapped stays, as its owner manages its expiry.
     private var resolvedAutoDismissDelay: TimeInterval? {
         // Give VoiceOver users and UI tests the time they need; they can still dismiss.
-        guard onTap == nil, !voiceOverEnabled,
+        guard autoDismisses, onTap == nil, !voiceOverEnabled,
               !ProcessInfo.processInfo.arguments.contains("--uitesting") else { return nil }
         switch status {
         case .success: return 6

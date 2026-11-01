@@ -23904,61 +23904,61 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Auswahl aufheben"
+            "value" : "Keine"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Clear Selection"
+            "value" : "None"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Borrar selección"
+            "value" : "Ninguno"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Effacer la sélection"
+            "value" : "Aucun"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Cancella selezione"
+            "value" : "Nessuna"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "選択を解除"
+            "value" : "なし"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "선택 해제"
+            "value" : "없음"
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Selectie wissen"
+            "value" : "Geen"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Limpar seleção"
+            "value" : "Nenhum"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "清除选择"
+            "value" : "无"
           }
         }
       }
@@ -25158,61 +25158,61 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Anzeigename (optional)"
+            "value" : "Name im Bericht"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Display Name (Optional)"
+            "value" : "Name on report"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nombre para mostrar (opcional)"
+            "value" : "Nombre en el informe"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nom affiché (facultatif)"
+            "value" : "Nom sur le rapport"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nome visualizzato (facoltativo)"
+            "value" : "Nome nel report"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "表示名（任意）"
+            "value" : "レポートに記載する名前"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "표시 이름(선택 사항)"
+            "value" : "보고서에 표시할 이름"
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Weergavenaam (optioneel)"
+            "value" : "Naam op rapport"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nome de exibição (opcional)"
+            "value" : "Nome no relatório"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "显示名称（可选）"
+            "value" : "报告上的姓名"
           }
         }
       }
@@ -27329,6 +27329,72 @@
         }
       }
     },
+    "clinician_report_include" : {
+      "comment" : "Clinician Report V1 localized vocabulary. Managed by scripts/validate-clinician-report-localizations.py.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Einbeziehen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Include"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Incluir"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Inclure"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Includi"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "含める項目"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "포함"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Opnemen"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Incluir"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "包含"
+          }
+        }
+      }
+    },
     "clinician_report_intro" : {
       "comment" : "Clinician Report V1 localized vocabulary. Managed by scripts/validate-clinician-report-localizations.py.",
       "extractionState" : "manual",
@@ -27336,61 +27402,61 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wählen Sie einen Zeitraum und Messwerte aus, sehen Sie sich eine sachliche Übersicht in der Vorschau an und erstellen Sie anschließend vollständig auf diesem Gerät eine PDF."
+            "value" : "Eine PDF-Zusammenfassung für einen Termin, erstellt auf diesem Gerät."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Choose a period and measurements, preview a factual summary, then generate a PDF entirely on this device."
+            "value" : "A PDF summary for an appointment, built on this device."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Elija un período y mediciones, previsualice un resumen objetivo y genere un PDF íntegramente en este dispositivo."
+            "value" : "Un resumen en PDF para una cita, creado en este dispositivo."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Choisissez une période et des mesures, prévisualisez un résumé factuel, puis générez un PDF entièrement sur cet appareil."
+            "value" : "Un résumé PDF pour un rendez-vous, créé sur cet appareil."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Scegli un periodo e le misurazioni, visualizza l’anteprima di un riepilogo oggettivo, quindi genera un PDF interamente su questo dispositivo."
+            "value" : "Un riepilogo PDF per un appuntamento, creato su questo dispositivo."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "期間と測定項目を選択して客観的なサマリーをプレビューし、このデバイス上だけで PDF を生成します。"
+            "value" : "診察用のPDFサマリーを、このデバイス上で作成します。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "기간과 측정 항목을 선택하고 객관적인 요약을 미리 본 다음 이 기기에서만 PDF를 생성합니다."
+            "value" : "진료 예약을 위한 PDF 요약을 이 기기에서 만듭니다."
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Kies een periode en metingen, bekijk een feitelijke samenvatting en genereer vervolgens volledig op dit apparaat een PDF."
+            "value" : "Een pdf-samenvatting voor een afspraak, gemaakt op dit apparaat."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Escolha um período e as medições, visualize um resumo objetivo e gere um PDF inteiramente neste dispositivo."
+            "value" : "Um resumo em PDF para uma consulta, criado neste dispositivo."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "选择时间段和测量项目，预览客观摘要，然后完全在此设备上生成 PDF。"
+            "value" : "在此设备上生成用于就诊的 PDF 摘要。"
           }
         }
       }
@@ -28847,6 +28913,72 @@
         }
       }
     },
+    "clinician_report_optional" : {
+      "comment" : "Clinician Report V1 localized vocabulary. Managed by scripts/validate-clinician-report-localizations.py.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Optional"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Optional"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Opcional"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Facultatif"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Facoltativo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "任意"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "선택 사항"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Optioneel"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Opcional"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "可选"
+          }
+        }
+      }
+    },
     "clinician_report_period" : {
       "comment" : "Clinician Report V1 localized vocabulary. Managed by scripts/validate-clinician-report-localizations.py.",
       "extractionState" : "manual",
@@ -28854,61 +28986,61 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Berichtszeitraum"
+            "value" : "Zeitraum"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Report Period"
+            "value" : "Period"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Período del informe"
+            "value" : "Período"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Période du rapport"
+            "value" : "Période"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Periodo del report"
+            "value" : "Periodo"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "レポート期間"
+            "value" : "期間"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "보고서 기간"
+            "value" : "기간"
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Rapportperiode"
+            "value" : "Periode"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Período do relatório"
+            "value" : "Período"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "报告时间段"
+            "value" : "时间范围"
           }
         }
       }
@@ -29052,61 +29184,61 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Bericht erstellen"
+            "value" : "PDF erstellen"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Generate Report"
+            "value" : "Create PDF"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Generar informe"
+            "value" : "Crear PDF"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Générer le rapport"
+            "value" : "Créer le PDF"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Genera report"
+            "value" : "Crea PDF"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "レポートを作成"
+            "value" : "PDFを作成"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "보고서 생성"
+            "value" : "PDF 만들기"
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Rapport genereren"
+            "value" : "Pdf maken"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Gerar relatório"
+            "value" : "Criar PDF"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "生成报告"
+            "value" : "创建 PDF"
           }
         }
       }
@@ -29448,61 +29580,61 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Alle auswählen"
+            "value" : "Alle"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Select All"
+            "value" : "All"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Seleccionar todo"
+            "value" : "Todo"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tout sélectionner"
+            "value" : "Tout"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Seleziona tutto"
+            "value" : "Tutte"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "すべて選択"
+            "value" : "すべて"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "모두 선택"
+            "value" : "모두"
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Alles selecteren"
+            "value" : "Alles"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Selecionar tudo"
+            "value" : "Todos"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "全选"
+            "value" : "全部"
           }
         }
       }

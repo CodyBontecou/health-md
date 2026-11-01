@@ -162,10 +162,11 @@ struct ClinicianReportView: View {
                         .glassFont(.rowSubtitle)
                         .fontWeight(.semibold)
                         .foregroundStyle(palette.muted)
-                    TextField(copy.string(.display_name), text: Binding(
+                    TextField(copy.string(.optional), text: Binding(
                         get: { viewModel.configuration.displayName },
                         set: viewModel.setDisplayName
                     ))
+                    .accessibilityLabel(copy.string(.display_name))
                     .textFieldStyle(.plain)
                     .glassFont(.body)
                     .foregroundStyle(palette.text)
@@ -292,7 +293,7 @@ struct ClinicianReportView: View {
 
             VStack(alignment: .leading, spacing: 6) {
                 HStack(alignment: .firstTextBaseline) {
-                    GlassSectionLabel(title: copy.string(.metrics))
+                    GlassSectionLabel(title: copy.string(.include))
                     Spacer(minLength: 8)
                     Text(copy.format(
                         .selected_count,

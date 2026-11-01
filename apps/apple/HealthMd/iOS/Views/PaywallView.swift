@@ -10,7 +10,7 @@ struct PaywallView: View {
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @State private var selectedAudience: PaywallPricingAudience = .individual
-    @State private var selectedOption: HealthMdPurchaseOption = .yearly
+    @State private var selectedOption: HealthMdPurchaseOption = .weekly
 
     private let context: PaywallContext
     private let allowsDismissal: Bool
@@ -44,11 +44,11 @@ struct PaywallView: View {
 
     /// Display order follows the design: recommended plan first, Lifetime last.
     private var individualOptions: [HealthMdPurchaseOption] {
-        [.yearly, .weekly, .individual]
+        [.weekly, .yearly, .individual]
     }
 
     private var familyOptions: [HealthMdPurchaseOption] {
-        [.familyYearly, .familyWeekly, .family]
+        [.familyWeekly, .familyYearly, .family]
     }
 
     private var selectedOptions: [HealthMdPurchaseOption] {

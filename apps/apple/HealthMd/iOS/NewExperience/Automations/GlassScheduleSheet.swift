@@ -125,6 +125,7 @@ struct GlassScheduleSheet: View {
                 }
                 .padding(GlassMetrics.screenMargin)
             }
+            .accessibilityIdentifier("glass.schedule.content")
             .tint(palette.accent)
             .background(palette.bg.ignoresSafeArea())
             .navigationTitle(profile.name)

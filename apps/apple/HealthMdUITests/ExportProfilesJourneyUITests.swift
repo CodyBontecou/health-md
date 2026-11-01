@@ -256,14 +256,14 @@ final class ExportProfilesJourneyUITests: XCTestCase {
             XCTAssertTrue(enabledToggle.waitForNonExistence(timeout: 5), "previous editor must finish dismissing")
             editSchedule.tap()
             XCTAssertTrue(enabledToggle.waitUntilExists(timeout: 5), "editor must reopen before editing refresh")
-            let form = app.collectionViews.firstMatch
+            // The glass schedule sheet scrolls in a plain ScrollView, not a Form list.
+            let form = app.scrollViews["glass.schedule.content"]
             let refresh = app.switches["Today Refresh"].firstMatch
             if !refresh.isHittable { form.swipeUp() }
             XCTAssertTrue(refresh.waitUntilExists(timeout: 5))
             XCTAssertTrue(refresh.isHittable, "refresh control must be visible before tapping")
-            // SwiftUI exposes a full-width row and a nested native switch. Tap the
-            // switch itself; the empty center of the row does not toggle it.
-            if refresh.value as? String == "0" { refresh.switches.firstMatch.tap() }
+            // The glass switch is one accessible element: the whole row toggles it.
+            if refresh.value as? String == "0" { refresh.tap() }
             XCTAssertEqual(refresh.value as? String, "1", "refresh should be enabled")
             let interval = app.buttons["Refresh Interval"].firstMatch
             if !interval.isHittable { form.swipeUp() }
@@ -275,7 +275,7 @@ final class ExportProfilesJourneyUITests: XCTestCase {
             editSchedule.tap()
             XCTAssertTrue(enabledToggle.waitUntilExists(timeout: 5))
             let savedInterval = app.buttons["Refresh Interval"].firstMatch
-            if !savedInterval.isHittable { app.collectionViews.firstMatch.swipeUp() }
+            if !savedInterval.isHittable { app.scrollViews["glass.schedule.content"].swipeUp() }
             XCTAssertTrue(savedInterval.waitUntilExists(timeout: 5))
             XCTAssertEqual(savedInterval.value as? String, label)
             let screenshot = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
