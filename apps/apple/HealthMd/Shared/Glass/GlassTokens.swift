@@ -212,3 +212,19 @@ extension Color {
         Color(.sRGB, red: 1, green: 1, blue: 1, opacity: opacity)
     }
 }
+
+#if os(iOS)
+import UIKit
+
+extension Color {
+    /// `legacy` with the flag off; the matching glass token with it on, for both appearances.
+    /// Lets a large existing flow take the glass palette without touching its logic.
+    static func glassAdaptive(_ legacy: Color, _ token: KeyPath<GlassPalette, Color>) -> Color {
+        guard NewExperienceFeature.isEnabled else { return legacy }
+        return Color(uiColor: UIColor { traits in
+            let palette: GlassPalette = traits.userInterfaceStyle == .dark ? .dark : .light
+            return UIColor(palette[keyPath: token])
+        })
+    }
+}
+#endif

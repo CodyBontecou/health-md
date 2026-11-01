@@ -146,4 +146,34 @@ final class GlassAutomationPagesUITests: XCTestCase {
         // Share stays unreachable until a bundle is prepared and reviewed.
         XCTAssertFalse(app.buttons["diagnostics.share"].exists)
     }
+
+    func testClinicianReportAndOnboardingKeepWorkingWithTheFlagOn() {
+        continueAfterFailure = false
+        let onboarding = UITestLaunchHelper.configuredApp(healthAuthorized: true, showOnboarding: true)
+        onboarding.launchArguments += ["-NewExperienceEnabled", "YES"]
+        onboarding.launch()
+        func shot(_ name: String) {
+            guard let directory = ProcessInfo.processInfo.environment["GLASS_SCREENSHOT_DIR"] else { return }
+            let url = URL(fileURLWithPath: directory).appendingPathComponent("\(name).png")
+            try? XCUIScreen.main.screenshot().pngRepresentation.write(to: url)
+        }
+        sleep(3)
+        shot("onboarding")
+        onboarding.terminate()
+
+        let app = UITestLaunchHelper.configuredApp(
+            healthAuthorized: true,
+            vaultSelected: true,
+            purchaseUnlocked: true,
+            scheduleEnabled: true
+        )
+        app.launchArguments += ["-NewExperienceEnabled", "YES"]
+        app.launch()
+        app.buttons["Settings"].tap()
+        let report = app.buttons["Clinician report"]
+        XCTAssertTrue(report.waitForExistence(timeout: 5))
+        report.tap()
+        XCTAssertTrue(app.textFields["clinicianReport.displayName"].waitForExistence(timeout: 5))
+        shot("clinician")
+    }
 }
