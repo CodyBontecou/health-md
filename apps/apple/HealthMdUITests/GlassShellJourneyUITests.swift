@@ -83,6 +83,21 @@ final class GlassShellJourneyUITests: XCTestCase {
         shot("app-support")
     }
 
+    /// Pro Max landscape has regular width, like an unfolded iPhone Duo.
+    func testRegularWidthUsesRailAndTwoPanes() throws {
+        let app = launch()
+        XCUIDevice.shared.orientation = .landscapeLeft
+        defer { XCUIDevice.shared.orientation = .portrait }
+        let exportNow = app.buttons["glass.exportNow"]
+        XCTAssertTrue(exportNow.waitForExistence(timeout: 10))
+        sleep(1)
+        shot("regular-width")
+        guard app.windows.firstMatch.frame.width > 800 else {
+            throw XCTSkip("This device is compact in landscape.")
+        }
+        XCTAssertGreaterThan(exportNow.frame.minX, app.windows.firstMatch.frame.width * 0.8)
+    }
+
     func testFailedExportShowsResultWithRecovery() {
         let app = launch(exportResult: "fail")
         XCTAssertTrue(app.buttons["glass.exportNow"].waitForExistence(timeout: 10))

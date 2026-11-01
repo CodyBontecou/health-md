@@ -18,7 +18,7 @@ struct SettingsScreen: View {
 
     @Environment(\.glassPalette) private var palette
     @EnvironmentObject private var configurationProtection: ConfigurationProtectionManager
-    @EnvironmentObject private var directCLIService: IPhoneDirectCLIService
+    @EnvironmentObject private var syncService: SyncService
     @ObservedObject private var purchaseManager = PurchaseManager.shared
     @State private var path: [Route] = []
     @State private var showPaywall = false
@@ -47,7 +47,7 @@ struct SettingsScreen: View {
                         ) {
                             configurationProtection.performConfigurationChange { showFolderPicker = true }
                         }
-                        row(String(localized: "Mac and CLI")) { path.append(.sync) }
+                        row(String(localized: "Mac and CLI"), subtitle: syncService.connectionState.rawValue) { path.append(.sync) }
                         row(String(localized: "API endpoint and Agent Data gateway"), action: onOpenExportSettings)
                     }
 

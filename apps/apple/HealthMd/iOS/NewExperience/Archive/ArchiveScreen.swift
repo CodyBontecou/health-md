@@ -12,6 +12,7 @@ struct ArchiveScreen: View {
     let onSetUp: () -> Void
 
     @Environment(\.glassPalette) private var palette
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var filter: UUID?
     @State private var month = Date()
     @State private var selectedDate = Calendar.current.startOfDay(for: Date())
@@ -33,9 +34,21 @@ struct ArchiveScreen: View {
                     chips
                     statsPanel
                     if let profile = filteredProfile, profile.isPaused { pausedNote(profile) }
-                    calendarPanel
-                    dayCard
-                    sentenceCard
+                    if horizontalSizeClass == .regular {
+                        // Unfolded iPhone Duo and iPad: calendar beside its day.
+                        HStack(alignment: .top, spacing: GlassMetrics.sectionGap) {
+                            calendarPanel.frame(maxWidth: .infinity)
+                            VStack(spacing: GlassMetrics.sectionGap) {
+                                dayCard
+                                sentenceCard
+                            }
+                            .frame(maxWidth: .infinity)
+                        }
+                    } else {
+                        calendarPanel
+                        dayCard
+                        sentenceCard
+                    }
                 }
             }
             .padding(.horizontal, GlassMetrics.screenMargin)
