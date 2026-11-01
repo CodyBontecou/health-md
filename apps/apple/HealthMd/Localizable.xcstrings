@@ -2,7 +2,7 @@
   "sourceLanguage" : "en",
   "strings" : {
     "CLI & MCP" : {"localizations":{
-      "de":{"stringUnit":{"state":"translated","value":"CLI & MCP"}},
+      "de":{"stringUnit":{"state":"translated","value":"CLI und MCP"}},
       "es":{"stringUnit":{"state":"translated","value":"CLI y MCP"}},
       "fr":{"stringUnit":{"state":"translated","value":"CLI et MCP"}},
       "it":{"stringUnit":{"state":"translated","value":"CLI e MCP"}},
