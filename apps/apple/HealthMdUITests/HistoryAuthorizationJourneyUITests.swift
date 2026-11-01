@@ -121,13 +121,14 @@ final class HistoryAuthorizationJourneyUITests: XCTestCase {
         let exportButton = app.buttons[UITestLaunchHelper.Export.exportButton]
         XCTAssertTrue(exportButton.waitForExistence(timeout: 5))
         exportButton.tap()
+        // Exporting closes the settings sheet; the glass shell hosts the history check.
         let continueButton = app.buttons["export.historyWarning.continueUnverified"]
-        reveal(continueButton, in: app)
+        XCTAssertTrue(continueButton.waitForExistence(timeout: 10))
         continueButton.tap()
         let status = app.descendants(matching: .any)[UITestLaunchHelper.Status.exportStatusBadge]
         XCTAssertTrue(status.waitForExistence(timeout: 10))
         let execution = app.staticTexts["export.historyWarning.execution"]
-        reveal(execution, in: app)
+        XCTAssertTrue(execution.waitForExistence(timeout: 10))
         XCTAssertTrue(execution.label.contains("without a completed history assessment"))
         XCTAssertFalse(execution.label.contains("Rechecked"))
         XCTAssertFalse(app.buttons["export.historyWarning.cancelCheck"].exists)

@@ -51,6 +51,7 @@ struct GlassAppShell: View {
     @State private var showAttention = false
     @State private var showClassicExport = false
     @State private var showPreviewRequirements = false
+    @State private var dismissedHistoryNotice: HealthHistoryAssessment?
     @State private var resultEntry: ExportHistoryEntry?
     @State private var scheduleRevision = 0
     @State private var tabRootID = UUID()
@@ -330,6 +331,29 @@ struct GlassAppShell: View {
                     continueUnverified: onContinueWithoutHistoryVerification,
                     cancel: onCancelHistoryVerification
                 )
+            }
+            .padding(GlassMetrics.panelPadding)
+            .glassSurface(cornerRadius: GlassMetrics.panelSmallRadius, style: .strong)
+            .padding(.horizontal, GlassMetrics.screenMargin)
+        } else if let assessment = executionHistoryAssessment,
+                  assessment.needsWarning,
+                  dismissedHistoryNotice != assessment {
+            // After an export runs, say how far its history was checked, as the Export tab did.
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Text(assessment.warningTitle)
+                        .glassFont(.navTitle)
+                    Spacer()
+                    Button {
+                        dismissedHistoryNotice = assessment
+                    } label: {
+                        Image(systemName: "xmark")
+                    }
+                    .accessibilityLabel(String(localized: "Dismiss"))
+                }
+                HealthHistoryDisclosureContent(assessment: assessment, isExecution: true) {
+                    if let url = URL(string: "x-apple-health://") { UIApplication.shared.open(url) }
+                }
             }
             .padding(GlassMetrics.panelPadding)
             .glassSurface(cornerRadius: GlassMetrics.panelSmallRadius, style: .strong)

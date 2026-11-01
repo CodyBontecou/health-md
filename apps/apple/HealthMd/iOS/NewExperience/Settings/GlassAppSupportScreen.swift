@@ -42,6 +42,7 @@ struct GlassAppSupportScreen: View {
                     GlassPanel {
                         row(String(localized: "Export Profiles"), action: onManageProfiles)
                             .accessibilityIdentifier("export.profiles.entry")
+                            .accessibilityValue(String(localized: "Configured"))
                     }
                     SharedSetupConfigurationCard(coordinator: sharedSetupCoordinator)
                         .padding(GlassMetrics.panelPadding)
