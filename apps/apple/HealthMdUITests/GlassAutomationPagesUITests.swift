@@ -209,4 +209,33 @@ final class GlassAutomationPagesUITests: XCTestCase {
         XCTAssertTrue(app.buttons["App & support"].exists, "The hub must stay beside the detail.")
         shot("duo-settings")
     }
+
+    func testComposerFieldToggleSavesAndUpdatesTheCount() {
+        continueAfterFailure = false
+        let app = UITestLaunchHelper.configuredApp(
+            healthAuthorized: true,
+            vaultSelected: true,
+            purchaseUnlocked: true,
+            scheduleEnabled: true
+        )
+        app.launchArguments += ["-NewExperienceEnabled", "YES"]
+        app.launch()
+        app.buttons["Automations"].tap()
+        let card = app.staticTexts["Default"].firstMatch
+        XCTAssertTrue(card.waitForExistence(timeout: 10))
+        card.tap()
+        app.buttons["Edit sentence →"].tap()
+
+        let all = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "All 2")).firstMatch
+        XCTAssertTrue(all.waitForExistence(timeout: 5))
+        let before = all.label
+        let field = app.switches["Total Sleep"]
+        XCTAssertTrue(field.waitForExistence(timeout: 5))
+        field.tap()
+
+        let changed = NSPredicate(format: "label != %@", before)
+        expectation(for: changed, evaluatedWith: all)
+        waitForExpectations(timeout: 5)
+        XCTAssertFalse(app.switches["Total Sleep"].exists, "The field must leave the note once off.")
+    }
 }

@@ -31,6 +31,12 @@ struct GlassMetricsScreen: View {
                         .glassFont(.heroNumber)
                         .foregroundStyle(palette.text)
                     HStack(spacing: 8) {
+                        GlassChip(title: String(localized: "Recommended")) {
+                            state.deselectAll()
+                            standardMetrics
+                                .filter { Self.recommendedCategories.contains($0.category) }
+                                .forEach { state.setMetric($0.id, enabled: true) }
+                        }
                         GlassChip(title: String(localized: "Select All")) {
                             standardMetrics.forEach { state.setMetric($0.id, enabled: true) }
                         }
@@ -84,6 +90,12 @@ struct GlassMetricsScreen: View {
         }
         .accessibilityIdentifier("glass.metrics")
     }
+
+    /// The core archive. Never includes categories that need a separate Apple permission,
+    /// because `standardMetrics` already excludes them.
+    private static let recommendedCategories: Set<HealthMetricCategory> = [
+        .sleep, .activity, .heart, .vitals, .bodyMeasurements, .workouts
+    ]
 
     /// Same filter as the existing screen. Permission-gated metrics are never bulk-enabled.
     private var standardMetrics: [HealthMetricDefinition] {

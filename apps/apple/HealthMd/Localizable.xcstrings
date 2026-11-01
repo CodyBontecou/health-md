@@ -1,6 +1,17 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "Recommended" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Empfohlen"}},
+      "es":{"stringUnit":{"state":"translated","value":"Recomendado"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Recommandé"}},
+      "it":{"stringUnit":{"state":"translated","value":"Consigliato"}},
+      "ja":{"stringUnit":{"state":"translated","value":"おすすめ"}},
+      "ko":{"stringUnit":{"state":"translated","value":"추천"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Aanbevolen"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Recomendado"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"推荐"}}
+    }},
     "CLI & MCP" : {"localizations":{
       "de":{"stringUnit":{"state":"translated","value":"CLI und MCP"}},
       "es":{"stringUnit":{"state":"translated","value":"CLI y MCP"}},

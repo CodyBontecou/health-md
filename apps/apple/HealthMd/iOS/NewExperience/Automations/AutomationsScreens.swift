@@ -360,17 +360,19 @@ struct AutomationDetailScreen: View {
     }
 }
 
-/// The composer's preview: the real output path and the fields this profile selects.
-/// Values are omitted on purpose. A rendered file needs a HealthKit read, which Preview does.
+/// The composer's preview: the real output path and the fields this profile selects, which
+/// can be switched off in place. Values are omitted on purpose: a rendered file needs a
+/// HealthKit read, which Preview does.
 struct ComposerLivePreview: View {
     let settings: ExportSettingsSnapshot
     let onShowMetrics: () -> Void
+    let onDisableField: (String) -> Void
 
     @Environment(\.glassPalette) private var palette
 
-    private var fields: [String] {
+    private var fields: [HealthMetricDefinition] {
         let enabled = settings.metricSelection.enabledMetricIDs
-        return HealthMetrics.availableInCurrentBuild.filter { enabled.contains($0.id) }.map(\.localizedDisplayName)
+        return HealthMetrics.availableInCurrentBuild.filter { enabled.contains($0.id) }
     }
 
     var body: some View {
@@ -386,12 +388,11 @@ struct ComposerLivePreview: View {
                     .frame(minHeight: GlassMetrics.touchTarget)
             }
             GlassPanel {
-                ForEach(fields.prefix(6), id: \.self) { field in
-                    Text(field)
-                        .glassFont(.rowSubtitle)
-                        .foregroundStyle(palette.sec)
-                        .padding(.horizontal, GlassMetrics.panelPadding)
-                        .padding(.vertical, 6)
+                ForEach(fields.prefix(6), id: \.id) { field in
+                    GlassToggleRow(
+                        title: field.localizedDisplayName,
+                        isOn: Binding(get: { true }, set: { if !$0 { onDisableField(field.id) } })
+                    )
                 }
             }
         }
@@ -444,7 +445,11 @@ struct ComposerScreen: View {
             composerColumn(profile: profile, sentence: sentence)
             if horizontalSizeClass == .regular {
                 ScrollView {
-                    ComposerLivePreview(settings: profile.settings) { page = .metrics }
+                    ComposerLivePreview(
+                        settings: profile.settings,
+                        onShowMetrics: { page = .metrics },
+                        onDisableField: { disableField($0, profile: profile) }
+                    )
                         .padding(GlassMetrics.screenMargin)
                 }
                 .frame(maxWidth: .infinity)
@@ -471,6 +476,17 @@ struct ComposerScreen: View {
         }
     }
 
+    private func disableField(_ metricID: String, profile: ExportProfile) {
+        configurationProtection.performConfigurationChange {
+            let state = MetricSelectionState()
+            profile.settings.metricSelection.apply(to: state)
+            state.setMetric(metricID, enabled: false)
+            var settings = profile.settings
+            settings.metricSelection = MetricSelectionSnapshot.from(state)
+            coordinator.saveSettings(settings, for: profile)
+        }
+    }
+
     private func composerColumn(profile: ExportProfile, sentence: AutomationSentence) -> some View {
         ScrollView {
             VStack(alignment: .leading, spacing: GlassMetrics.sectionGap) {
@@ -485,7 +501,11 @@ struct ComposerScreen: View {
                 Button(String(localized: "Preview")) { onPreview(profile.id) }
                     .buttonStyle(GlassPrimaryButtonStyle())
                 if horizontalSizeClass != .regular {
-                    ComposerLivePreview(settings: profile.settings) { page = .metrics }
+                    ComposerLivePreview(
+                        settings: profile.settings,
+                        onShowMetrics: { page = .metrics },
+                        onDisableField: { disableField($0, profile: profile) }
+                    )
                 }
                 Button(String(localized: "All settings")) {
                     configurationProtection.performConfigurationChange { showEditor = true }
