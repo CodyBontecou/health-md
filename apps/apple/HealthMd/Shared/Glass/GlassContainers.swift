@@ -103,7 +103,22 @@ private struct GlassFormChromeModifier: ViewModifier {
     }
 }
 
+/// Gives a `Form` section the glass panel fill. Does nothing with the flag off.
+private struct GlassFormRowModifier: ViewModifier {
+    func body(content: Content) -> some View {
+        if NewExperienceFeature.isEnabled {
+            content.listRowBackground(Color.glassAdaptive(.clear, \.glassStrong))
+        } else {
+            content
+        }
+    }
+}
+
 extension View {
+    func glassFormRows() -> some View {
+        modifier(GlassFormRowModifier())
+    }
+
     func glassFormChrome() -> some View {
         modifier(GlassFormChromeModifier())
     }

@@ -71,6 +71,7 @@ struct DiagnosticsView: View {
                     Button("Clear All Diagnostics", role: .destructive) { confirmClear = true }
                         .accessibilityIdentifier("diagnostics.clear")
                 }
+                .glassFormRows()
                 Section("Select Events") {
                     Picker("Time Range", selection: $hours) {
                         Text("Last Hour").tag(1); Text("Last 24 Hours").tag(24); Text("Last 7 Days").tag(168)
@@ -98,6 +99,7 @@ struct DiagnosticsView: View {
                     Text("Showing the newest 100 matching events. The bundle includes the selected snapshot, up to 10,000 events; any truncation is disclosed.")
                         .font(Typography.caption()).foregroundStyle(Color.textSecondary)
                 }
+                .glassFormRows()
                 Section("Optional Attachments") {
                     Text("Add any existing files, including health exports or screenshots. Original bytes are copied unchanged and are NOT scrubbed. Source filenames are included. No new health reads are made. Limit: 50 files / 100 MiB.")
                         .font(Typography.caption()).foregroundStyle(Color.textSecondary)
@@ -111,6 +113,7 @@ struct DiagnosticsView: View {
                         }
                     }
                 }
+                .glassFormRows()
                 Section("Prepare and Review") {
                     Button(busy ? "Preparing…" : "Prepare Bundle") { prepare() }
                         .accessibilityIdentifier("diagnostics.prepare")
@@ -135,6 +138,7 @@ struct DiagnosticsView: View {
                     }
                     if let error { Text(error).foregroundStyle(Color.error).textSelection(.enabled) }
                 }
+                .glassFormRows()
             }
             .glassFormChrome()
             .disabled(busy)

@@ -116,6 +116,27 @@ struct ClinicianReportView: View {
         }
     }
 
+    private var displayNameField: some View {
+        VStack(alignment: .leading, spacing: Spacing.xs) {
+            Text(copy.string(.display_name))
+                .font(.caption.weight(.medium))
+                .foregroundStyle(Color.glassAdaptive(.textSecondary, \.sec))
+            TextField(copy.string(.display_name), text: Binding(
+                get: { viewModel.configuration.displayName },
+                set: viewModel.setDisplayName
+            ))
+            .textFieldStyle(.roundedBorder)
+            .textContentType(.name)
+            .controlSize(.large)
+            .frame(minHeight: 48)
+            .accessibilityIdentifier(AccessibilityID.ClinicianReport.displayName)
+            Text(copy.string(.display_name_hint))
+                .font(.caption)
+                .foregroundStyle(Color.glassAdaptive(.textSecondary, \.sec))
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
     private var configurationContent: some View {
         VStack(alignment: .leading, spacing: Spacing.s4) {
             Text(copy.string(.intro))
@@ -123,27 +144,17 @@ struct ClinicianReportView: View {
                 .foregroundStyle(Color.glassAdaptive(.textSecondary, \.sec))
                 .fixedSize(horizontal: false, vertical: true)
 
+            // ClinicianReportG leads with the name on the report.
+            if NewExperienceFeature.isEnabled {
+                displayNameField
+            }
+
             section(title: copy.string(.period)) { periodControls }
             section(title: copy.string(.metrics)) { metricControls }
             section(title: copy.string(.detail)) { detailControls }
 
-            VStack(alignment: .leading, spacing: Spacing.xs) {
-                Text(copy.string(.display_name))
-                    .font(.caption.weight(.medium))
-                    .foregroundStyle(Color.glassAdaptive(.textSecondary, \.sec))
-                TextField(copy.string(.display_name), text: Binding(
-                    get: { viewModel.configuration.displayName },
-                    set: viewModel.setDisplayName
-                ))
-                .textFieldStyle(.roundedBorder)
-                .textContentType(.name)
-                .controlSize(.large)
-                .frame(minHeight: 48)
-                .accessibilityIdentifier(AccessibilityID.ClinicianReport.displayName)
-                Text(copy.string(.display_name_hint))
-                    .font(.caption)
-                    .foregroundStyle(Color.glassAdaptive(.textSecondary, \.sec))
-                    .fixedSize(horizontal: false, vertical: true)
+            if !NewExperienceFeature.isEnabled {
+                displayNameField
             }
 
             if viewModel.configuration.selectedMetrics.isEmpty {
