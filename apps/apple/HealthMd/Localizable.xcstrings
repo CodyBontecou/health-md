@@ -1,6 +1,28 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "A review helps more people own their health data." : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Eine Bewertung hilft mehr Menschen, ihre Gesundheitsdaten selbst zu besitzen."}},
+      "es":{"stringUnit":{"state":"translated","value":"Una reseña ayuda a que más personas sean dueñas de sus datos de salud."}},
+      "fr":{"stringUnit":{"state":"translated","value":"Un avis aide davantage de personnes à posséder leurs données de santé."}},
+      "it":{"stringUnit":{"state":"translated","value":"Una recensione aiuta più persone a possedere i propri dati sulla salute."}},
+      "ja":{"stringUnit":{"state":"translated","value":"レビューは、より多くの人が自分のヘルスデータを所有する助けになります。"}},
+      "ko":{"stringUnit":{"state":"translated","value":"리뷰는 더 많은 사람이 자신의 건강 데이터를 소유하도록 돕습니다."}},
+      "nl":{"stringUnit":{"state":"translated","value":"Een beoordeling helpt meer mensen hun gezondheidsgegevens zelf te bezitten."}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Uma avaliação ajuda mais pessoas a serem donas dos próprios dados de saúde."}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"您的评价能帮助更多人拥有自己的健康数据。"}}
+    }},
+    "Send feedback instead" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Stattdessen Feedback senden"}},
+      "es":{"stringUnit":{"state":"translated","value":"Enviar comentarios en su lugar"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Envoyer plutôt un commentaire"}},
+      "it":{"stringUnit":{"state":"translated","value":"Invia invece un feedback"}},
+      "ja":{"stringUnit":{"state":"translated","value":"代わりにフィードバックを送信"}},
+      "ko":{"stringUnit":{"state":"translated","value":"대신 피드백 보내기"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Stuur in plaats daarvan feedback"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Enviar feedback em vez disso"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"改为发送反馈"}}
+    }},
     "Archive has 1 gap this week. Tap to backfill." : {"localizations":{
       "de":{"stringUnit":{"state":"translated","value":"Archiv hat diese Woche 1 Lücke. Tippe zum Nachholen."}},
       "es":{"stringUnit":{"state":"translated","value":"El archivo tiene 1 hueco esta semana. Toca para completarlo."}},

@@ -13,6 +13,7 @@ struct GlassAppSupportScreen: View {
     @State private var showMailCompose = false
     @State private var showMyselfClaim = false
     @State private var showDiagnostics = false
+    @State private var showReview = false
     @State private var debugResult = ""
     @State private var showDebugAlert = false
     @State private var isRunningDebug = false
@@ -62,6 +63,7 @@ struct GlassAppSupportScreen: View {
                             }
                         }
                         row(String(localized: "Report a Bug")) { feedbackReporter.open(.github) }
+                        row(String(localized: "Help us grow")) { showReview = true }
                         row(String(localized: "Diagnostics")) { showDiagnostics = true }
                     }
 
@@ -100,6 +102,17 @@ struct GlassAppSupportScreen: View {
         .feedbackFailureSheet($feedbackReporter.failure)
         .sheet(isPresented: $showMyselfClaim) { MyselfClaimView(app: "health.md").glassTheme() }
         .sheet(isPresented: $showDiagnostics) { DiagnosticsView() }
+        .sheet(isPresented: $showReview) {
+            GlassReviewScreen {
+                showReview = false
+                if FeedbackHelper.canSendMail {
+                    showMailCompose = true
+                } else {
+                    feedbackReporter.open(.email)
+                }
+            }
+            .glassTheme()
+        }
         .geistDialog(
             isPresented: $showDebugAlert,
             title: Text("Receipt Verification"),
