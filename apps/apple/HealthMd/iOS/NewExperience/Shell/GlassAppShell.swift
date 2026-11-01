@@ -73,10 +73,26 @@ struct GlassAppShell: View {
     }
 
     /// Unfolded iPhone Duo: navigation moves to a right-side rail.
-    private var usesRail: Bool { horizontalSizeClass == .regular }
+    private var usesRail: Bool { horizontalSizeClass == .regular && !isPad }
+
+    /// iPad uses a leading sidebar at regular width. Split View stays compact.
+    private var usesSidebar: Bool { horizontalSizeClass == .regular && isPad }
+
+    private var isPad: Bool { UIDevice.current.userInterfaceIdiom == .pad }
+
+    private var exportNowButton: some View {
+        ExportNowAccessoryButton(title: String(localized: "Export now")) {
+            exportRequest = ExportNowRequest()
+        }
+    }
 
     var body: some View {
         HStack(spacing: 0) {
+            if usesSidebar {
+                GlassSidebar(title: "Health.md", items: Self.navigationItems, selection: tab) {
+                    exportNowButton
+                }
+            }
             ZStack(alignment: .bottom) {
                 content
                 VStack(spacing: 10) {
@@ -88,7 +104,7 @@ struct GlassAppShell: View {
                             onCancel: onCancelExport
                         )
                     }
-                    if !usesRail {
+                    if !usesRail && !usesSidebar {
                         FloatingTabBar(
                             items: Self.navigationItems,
                             selection: tab,
@@ -100,12 +116,8 @@ struct GlassAppShell: View {
                 }
             }
             if usesRail {
-                NavigationRail(items: Self.navigationItems, selection: tab) {
-                    ExportNowAccessoryButton(title: String(localized: "Export now")) {
-                        exportRequest = ExportNowRequest()
-                    }
-                }
-                .padding(8)
+                NavigationRail(items: Self.navigationItems, selection: tab) { exportNowButton }
+                    .padding(8)
             }
         }
         .ignoresSafeArea(.keyboard)
