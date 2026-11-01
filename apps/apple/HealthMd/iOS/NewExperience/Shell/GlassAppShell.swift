@@ -211,8 +211,7 @@ struct GlassAppShell: View {
                 selectedTab: $selectedTab,
                 showFolderPicker: $showFolderPicker,
                 showExportProfiles: $showExportProfiles,
-                showClinicianReport: $showClinicianReport,
-                onOpenExportSettings: { showClassicExport = true }
+                showClinicianReport: $showClinicianReport
             )
         }
     }

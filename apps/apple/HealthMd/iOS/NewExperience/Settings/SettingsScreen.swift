@@ -12,17 +12,20 @@ struct SettingsScreen: View {
     @Binding var showFolderPicker: Bool
     @Binding var showExportProfiles: Bool
     @Binding var showClinicianReport: Bool
-    let onOpenExportSettings: () -> Void
 
     private enum Route: Hashable { case sync, appSupport }
 
     @Environment(\.glassPalette) private var palette
     @EnvironmentObject private var configurationProtection: ConfigurationProtectionManager
     @EnvironmentObject private var syncService: SyncService
+    @EnvironmentObject private var apiExportSettings: APIExportSettings
+    @EnvironmentObject private var gatewaySettings: AgentDataGatewaySettings
     @ObservedObject private var purchaseManager = PurchaseManager.shared
     @State private var path: [Route] = []
     @State private var showPaywall = false
     @State private var showIntegrations = false
+    @State private var showAPI = false
+    @State private var showGateway = false
 
     var body: some View {
         NavigationStack(path: $path) {
@@ -48,7 +51,14 @@ struct SettingsScreen: View {
                             configurationProtection.performConfigurationChange { showFolderPicker = true }
                         }
                         row(String(localized: "Mac and CLI"), subtitle: syncService.connectionState.rawValue) { path.append(.sync) }
-                        row(String(localized: "API endpoint and Agent Data gateway"), action: onOpenExportSettings)
+                        row(
+                            String(localized: "API Endpoint"),
+                            subtitle: apiExportSettings.isConfigured ? apiExportSettings.displayName : nil
+                        ) { showAPI = true }
+                        row(
+                            String(localized: "Agent Data gateway"),
+                            subtitle: gatewaySettings.isConfigured ? gatewaySettings.displayName : nil
+                        ) { showGateway = true }
                     }
 
                     sectionTitle(String(localized: "Data"))
@@ -89,6 +99,12 @@ struct SettingsScreen: View {
         }
         .accessibilityIdentifier("glass.settings")
         .sheet(isPresented: $showPaywall) { PaywallView(context: .settings) }
+        .sheet(isPresented: $showAPI) {
+            GlassAPIDestinationSheet(settings: apiExportSettings).glassTheme()
+        }
+        .sheet(isPresented: $showGateway) {
+            GlassGatewayDestinationSheet(settings: gatewaySettings).glassTheme()
+        }
         .sheet(isPresented: $showIntegrations) {
             ExternalIntegrationsView(manager: externalIntegrationManager)
         }
