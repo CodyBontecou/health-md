@@ -136,6 +136,7 @@ struct DiagnosticsView: View {
                     if let error { Text(error).foregroundStyle(Color.error).textSelection(.enabled) }
                 }
             }
+            .glassFormChrome()
             .disabled(busy)
             .navigationTitle("Diagnostics")
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Done") { dismiss() } } }

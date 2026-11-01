@@ -117,4 +117,33 @@ final class GlassAutomationPagesUITests: XCTestCase {
             try? XCUIScreen.main.screenshot().pngRepresentation.write(to: url)
         }
     }
+
+    func testDiagnosticsOpensFromAppSupportWithItsSafeguards() {
+        continueAfterFailure = false
+        let app = UITestLaunchHelper.configuredApp(
+            healthAuthorized: true,
+            vaultSelected: true,
+            purchaseUnlocked: true,
+            scheduleEnabled: true
+        )
+        app.launchArguments += ["-NewExperienceEnabled", "YES"]
+        app.launch()
+
+        app.buttons["Settings"].tap()
+        app.buttons["App & support"].tap()
+        let diagnostics = app.buttons["Diagnostics"]
+        var swipes = 0
+        while !diagnostics.isHittable && swipes < 5 {
+            app.swipeUp()
+            swipes += 1
+        }
+        diagnostics.tap()
+        XCTAssertTrue(app.switches["diagnostics.enabled"].waitForExistence(timeout: 5))
+        if let directory = ProcessInfo.processInfo.environment["GLASS_SCREENSHOT_DIR"] {
+            let url = URL(fileURLWithPath: directory).appendingPathComponent("diagnostics.png")
+            try? XCUIScreen.main.screenshot().pngRepresentation.write(to: url)
+        }
+        // Share stays unreachable until a bundle is prepared and reviewed.
+        XCTAssertFalse(app.buttons["diagnostics.share"].exists)
+    }
 }
