@@ -15,6 +15,73 @@ struct MacMenuBarView: View {
     private var mutedTextColor: Color { .secondary.opacity(0.75) }
 
     var body: some View {
+        if NewExperienceFeature.isEnabled {
+            glassBody.glassTheme()
+        } else {
+            legacyBody
+        }
+    }
+
+    /// MacMenuBarG, plus the destination and settings actions the app already offers.
+    private var glassBody: some View {
+        VStack(alignment: .leading, spacing: GlassMetrics.panelPadding / 2) {
+            HStack {
+                Text("Mac Destination").font(.headline)
+                Spacer()
+                Text(readinessText)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(readinessIsPositive
+                        ? Color.glassAdaptive(.green, \.ok)
+                        : Color.glassAdaptive(.secondary, \.coral))
+            }
+            VStack(alignment: .leading, spacing: 8) {
+                glassFact(String(localized: "iPhone"), value: syncService.connectionState == .connected
+                    ? syncService.connectedPeerName ?? String(localized: "Connected")
+                    : String(localized: "Not connected"))
+                if let lastExportSummary {
+                    glassFact(String(localized: "Last export"), value: lastExportSummary)
+                }
+                glassFact(String(localized: "Destination"), value: destinationDetail)
+            }
+            .padding(GlassMetrics.panelPadding * 0.75)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .glassSurface(cornerRadius: GlassMetrics.iconTileRadius * 1.4)
+
+            menuAction(
+                icon: vaultManager.hasVaultSelection ? "folder" : "folder.badge.plus",
+                label: vaultManager.hasVaultSelection
+                    ? String(localized: "Change Destination…")
+                    : String(localized: "Choose Destination…"),
+                action: chooseDestinationFolder
+            )
+            menuAction(icon: "macwindow", label: String(localized: "Open Mac Destination"), shortcut: "⌘0") {
+                WindowManager.shared.openMainWindow?()
+            }
+            menuAction(
+                icon: "gearshape",
+                label: String(localized: "Destination Settings…"),
+                shortcut: "⌘,",
+                action: openSettingsWindow
+            )
+            menuAction(icon: "power", label: String(localized: "Quit Health.md"), shortcut: "⌘Q") {
+                NSApp.terminate(nil)
+            }
+        }
+        .padding(12)
+        .frame(width: 300)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Health.md Mac destination menu")
+    }
+
+    private func glassFact(_ label: String, value: String) -> some View {
+        VStack(alignment: .leading, spacing: 1) {
+            Text(label).font(.caption).foregroundStyle(secondaryTextColor)
+            Text(value).font(.callout).lineLimit(1).truncationMode(.middle)
+        }
+        .accessibilityElement(children: .combine)
+    }
+
+    private var legacyBody: some View {
         VStack(alignment: .leading, spacing: 0) {
             header
 

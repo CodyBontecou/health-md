@@ -19,22 +19,22 @@ struct MacVaultFolderSection: View {
             HStack {
                 if vaultManager.hasVaultSelection {
                     Image(systemName: vaultManager.vaultURL == nil ? "folder.badge.exclamationmark" : "folder.fill")
-                        .foregroundStyle(vaultManager.vaultURL == nil ? Color.warning : Color.accent)
+                        .foregroundStyle(vaultManager.vaultURL == nil ? Color.warning : Color.glassAdaptive(.accent, \.accent))
                     VStack(alignment: .leading, spacing: 2) {
                         Text(vaultManager.vaultName)
                             .font(BrandTypography.bodyMedium())
                         Text(vaultManager.pathForDisplay ?? vaultManager.vaultAvailabilityText)
                             .font(BrandTypography.caption())
-                            .foregroundStyle(Color.textMuted)
+                            .foregroundStyle(Color.glassAdaptive(.textMuted, \.muted))
                             .lineLimit(1)
                             .truncationMode(.middle)
                     }
                 } else {
                     Image(systemName: "folder")
-                        .foregroundStyle(Color.textMuted)
+                        .foregroundStyle(Color.glassAdaptive(.textMuted, \.muted))
                     Text("No folder selected")
                         .font(BrandTypography.body())
-                        .foregroundStyle(Color.textMuted)
+                        .foregroundStyle(Color.glassAdaptive(.textMuted, \.muted))
                 }
                 Spacer()
                 Button(
@@ -46,7 +46,7 @@ struct MacVaultFolderSection: View {
                         vaultManager.setVaultFolder(url)
                     }
                 }
-                .tint(Color.accent)
+                .tint(Color.glassAdaptive(.accent, \.accent))
             }
 
             if showSubfolder, vaultManager.vaultURL != nil {

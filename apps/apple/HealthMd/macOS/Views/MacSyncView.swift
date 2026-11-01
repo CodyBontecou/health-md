@@ -58,7 +58,13 @@ struct MacSyncView: View {
                     .frame(maxWidth: 1_200, alignment: .topLeading)
                     .frame(maxWidth: .infinity, alignment: .top)
                 }
-                .background(GeistMacBackdrop())
+                .background {
+                    if NewExperienceFeature.isEnabled {
+                        Color.glassAdaptive(.clear, \.bg).ignoresSafeArea()
+                    } else {
+                        GeistMacBackdrop()
+                    }
+                }
                 #if DEBUG
                 .task {
                     guard MacMarketingCapture.isActive,
@@ -69,8 +75,8 @@ struct MacSyncView: View {
                 #endif
             }
         }
-        .foregroundStyle(Color.textPrimary)
-        .tint(Color.accent)
+        .foregroundStyle(Color.glassAdaptive(.textPrimary, \.text))
+        .tint(Color.glassAdaptive(.accent, \.accent))
         .feedbackFailureSheet($feedbackReporter.failure)
         .animation(
             reduceMotion ? nil : AnimationTimings.standard,
@@ -193,31 +199,31 @@ struct MacSyncView: View {
                                 .clipShape(RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous))
                                 .overlay(
                                     RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
-                                        .strokeBorder(Color.borderSubtle, lineWidth: 1)
+                                        .strokeBorder(Color.glassAdaptive(.borderSubtle, \.line), lineWidth: 1)
                                 )
                                 .accessibilityHidden(true)
 
                             VStack(alignment: .leading, spacing: 0) {
                                 Text("health.md")
                                     .font(Typography.headline())
-                                    .foregroundStyle(Color.textPrimary)
+                                    .foregroundStyle(Color.glassAdaptive(.textPrimary, \.text))
                                     .tracking(-0.2)
                                 Text("Mac Destination")
                                     .font(Typography.caption())
-                                    .foregroundStyle(Color.textMuted)
+                                    .foregroundStyle(Color.glassAdaptive(.textMuted, \.muted))
                             }
                         }
 
                         VStack(alignment: .leading, spacing: Spacing.s2) {
                             Text(readinessHeroTitle)
                                 .font(Typography.displayLarge())
-                                .foregroundStyle(Color.textPrimary)
+                                .foregroundStyle(Color.glassAdaptive(.textPrimary, \.text))
                                 .tracking(-0.9)
                                 .accessibilityAddTraits(.isHeader)
 
                             Text("Receive Health.md exports from your iPhone and save Markdown, JSON, or CSV files directly into your destination folder.")
                                 .font(Typography.body())
-                                .foregroundStyle(Color.textSecondary)
+                                .foregroundStyle(Color.glassAdaptive(.textSecondary, \.sec))
                                 .fixedSize(horizontal: false, vertical: true)
                                 .frame(maxWidth: 640, alignment: .leading)
                         }
@@ -251,7 +257,7 @@ struct MacSyncView: View {
                         detail: displayConnectionState == .connected
                             ? String(localized: "Local network")
                             : String(localized: "Open Health.md on iPhone"),
-                        color: displayConnectionState == .connected ? Color.success : Color.textMuted
+                        color: displayConnectionState == .connected ? Color.success : Color.glassAdaptive(.textMuted, \.muted)
                     )
 
                     GeistMetricTile(
@@ -273,7 +279,7 @@ struct MacSyncView: View {
                         title: String(localized: "Storage"),
                         value: storageSummary.shortFree,
                         detail: String(localized: "\(storageSummary.usedPercentText) used"),
-                        color: Color.textSecondary
+                        color: Color.glassAdaptive(.textSecondary, \.sec)
                     )
                 }
             }
@@ -314,7 +320,7 @@ struct MacSyncView: View {
                 HStack(alignment: .center, spacing: Spacing.s4) {
                     Image(systemName: exportPhaseIcon(progress.phase))
                         .font(.title3.weight(.semibold))
-                        .foregroundStyle(Color.accent)
+                        .foregroundStyle(Color.glassAdaptive(.accent, \.accent))
                         .frame(width: 48, height: 48)
                         .background(
                             Color.accentSubtle,
@@ -322,7 +328,7 @@ struct MacSyncView: View {
                         )
                         .overlay(
                             RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous)
-                                .strokeBorder(Color.accent.opacity(0.25), lineWidth: 1)
+                                .strokeBorder(Color.glassAdaptive(.accent, \.accent).opacity(0.25), lineWidth: 1)
                         )
                         .accessibilityHidden(true)
 
@@ -330,21 +336,21 @@ struct MacSyncView: View {
                         HStack(spacing: Spacing.s2) {
                             Text(exportPhaseTitle(progress.phase))
                                 .font(Typography.heading20())
-                                .foregroundStyle(Color.textPrimary)
+                                .foregroundStyle(Color.glassAdaptive(.textPrimary, \.text))
                                 .accessibilityAddTraits(.isHeader)
 
                             Text(String(localized: "In Progress"))
                                 .font(Typography.label())
-                                .foregroundStyle(Color.accent)
+                                .foregroundStyle(Color.glassAdaptive(.accent, \.accent))
                                 .padding(.horizontal, Spacing.s2)
                                 .padding(.vertical, 3)
                                 .background(Color.accentSubtle, in: Capsule())
-                                .overlay(Capsule().strokeBorder(Color.accent.opacity(0.25), lineWidth: 1))
+                                .overlay(Capsule().strokeBorder(Color.glassAdaptive(.accent, \.accent).opacity(0.25), lineWidth: 1))
                         }
 
                         Text(localizedProgressMessage(progress))
                             .font(Typography.body())
-                            .foregroundStyle(Color.textSecondary)
+                            .foregroundStyle(Color.glassAdaptive(.textSecondary, \.sec))
                             .lineLimit(2)
                             .fixedSize(horizontal: false, vertical: true)
                     }
@@ -354,7 +360,7 @@ struct MacSyncView: View {
                     if progress.totalDays > 0 {
                         Text(String(localized: "\(percentage) percent complete"))
                             .font(.system(size: 30, weight: .semibold, design: .rounded))
-                            .foregroundStyle(Color.textPrimary)
+                            .foregroundStyle(Color.glassAdaptive(.textPrimary, \.text))
                             .monospacedDigit()
                     } else {
                         VStack(alignment: .trailing, spacing: Spacing.s1) {
@@ -362,7 +368,7 @@ struct MacSyncView: View {
                                 .controlSize(.small)
                             Text(String(localized: "In Progress"))
                                 .font(Typography.caption())
-                                .foregroundStyle(Color.textMuted)
+                                .foregroundStyle(Color.glassAdaptive(.textMuted, \.muted))
                         }
                         .accessibilityElement(children: .combine)
                         .accessibilityLabel(String(localized: "Export in Progress"))
@@ -374,13 +380,13 @@ struct MacSyncView: View {
                 if progress.totalDays > 0 {
                     ProgressView(value: clampedProgress)
                         .progressViewStyle(.linear)
-                        .tint(Color.accent)
+                        .tint(Color.glassAdaptive(.accent, \.accent))
                         .accessibilityLabel(String(localized: "Export progress"))
                         .accessibilityValue(String(localized: "\(percentage) percent complete"))
                 } else {
                     ProgressView()
                         .progressViewStyle(.linear)
-                        .tint(Color.accent)
+                        .tint(Color.glassAdaptive(.accent, \.accent))
                         .accessibilityLabel(String(localized: "Export in Progress"))
                 }
 
@@ -394,7 +400,7 @@ struct MacSyncView: View {
                             icon: "calendar",
                             title: String(localized: "Source days processed"),
                             value: "\(min(max(progress.processedDays, 0), progress.totalDays)) / \(progress.totalDays)",
-                            color: Color.textSecondary
+                            color: Color.glassAdaptive(.textSecondary, \.sec)
                         )
                     }
 
@@ -402,7 +408,7 @@ struct MacSyncView: View {
                         icon: "doc.on.doc",
                         title: String(localized: "Files Exported"),
                         value: "\(max(progress.filesWritten, 0))",
-                        color: progress.filesWritten > 0 ? Color.success : Color.textSecondary
+                        color: progress.filesWritten > 0 ? Color.success : Color.glassAdaptive(.textSecondary, \.sec)
                     )
 
                     GeistInfoChip(
@@ -411,14 +417,14 @@ struct MacSyncView: View {
                         value: vaultManager.hasVaultSelection
                             ? vaultManager.vaultName
                             : String(localized: "Mac folder"),
-                        color: Color.textSecondary
+                        color: Color.glassAdaptive(.textSecondary, \.sec)
                     )
                 }
             }
         }
         .overlay(
             RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous)
-                .strokeBorder(Color.accent.opacity(0.28), lineWidth: 1)
+                .strokeBorder(Color.glassAdaptive(.accent, \.accent).opacity(0.28), lineWidth: 1)
         )
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier(AccessibilityID.Mac.exportActivity)
@@ -437,19 +443,19 @@ struct MacSyncView: View {
             ForEach(Array(steps.enumerated()), id: \.offset) { index, step in
                 let isComplete = index < currentIndex
                 let isCurrent = index == currentIndex
-                let stepColor = isComplete ? Color.success : (isCurrent ? Color.accent : Color.textMuted)
+                let stepColor = isComplete ? Color.success : (isCurrent ? Color.glassAdaptive(.accent, \.accent) : Color.glassAdaptive(.textMuted, \.muted))
 
                 VStack(spacing: Spacing.s2) {
                     HStack(spacing: 0) {
                         Rectangle()
                             .fill(index == 0
                                   ? Color.clear
-                                  : (index <= currentIndex ? Color.success.opacity(0.65) : Color.borderDefault))
+                                  : (index <= currentIndex ? Color.success.opacity(0.65) : Color.glassAdaptive(.borderDefault, \.edge)))
                             .frame(height: 2)
 
                         ZStack {
                             Circle()
-                                .fill(isComplete || isCurrent ? stepColor.opacity(0.14) : Color.bgSecondary)
+                                .fill(isComplete || isCurrent ? stepColor.opacity(0.14) : Color.glassAdaptive(.bgSecondary, \.surface2))
                             Circle()
                                 .strokeBorder(stepColor.opacity(isComplete || isCurrent ? 0.75 : 0.35), lineWidth: 1)
                             Image(systemName: isComplete ? "checkmark" : step.icon)
@@ -461,7 +467,7 @@ struct MacSyncView: View {
                         Rectangle()
                             .fill(index == steps.count - 1
                                   ? Color.clear
-                                  : (index < currentIndex ? Color.success.opacity(0.65) : Color.borderDefault))
+                                  : (index < currentIndex ? Color.success.opacity(0.65) : Color.glassAdaptive(.borderDefault, \.edge)))
                             .frame(height: 2)
                     }
 
@@ -575,12 +581,12 @@ struct MacSyncView: View {
                     VStack(alignment: .leading, spacing: Spacing.s1) {
                         Text(folderTitle)
                             .font(Typography.headline())
-                            .foregroundStyle(Color.textPrimary)
+                            .foregroundStyle(Color.glassAdaptive(.textPrimary, \.text))
                             .lineLimit(1)
 
                         Text(folderSubtitle)
                             .font(Typography.caption())
-                            .foregroundStyle(Color.textSecondary)
+                            .foregroundStyle(Color.glassAdaptive(.textSecondary, \.sec))
                             .lineLimit(2)
                             .truncationMode(.middle)
                     }
@@ -603,7 +609,7 @@ struct MacSyncView: View {
                         value: vaultManager.hasVaultSelection
                             ? (vaultManager.vaultURL == nil ? vaultManager.vaultAvailabilityText : (folderExists ? String(localized: "Ready") : String(localized: "Missing")))
                             : String(localized: "Required"),
-                        color: folderExists ? Color.textSecondary : Color.warning
+                        color: folderExists ? Color.glassAdaptive(.textSecondary, \.sec) : Color.warning
                     )
 
                     GeistInfoChip(
@@ -619,14 +625,14 @@ struct MacSyncView: View {
                         icon: "internaldrive",
                         title: storageSummary.shortFree,
                         value: String(localized: "\(storageSummary.usedPercentText) used"),
-                        color: Color.textSecondary
+                        color: Color.glassAdaptive(.textSecondary, \.sec)
                     )
 
                     GeistInfoChip(
                         icon: "checkmark.seal",
                         title: volumeKind,
                         value: storageSummary.volumeLabel,
-                        color: Color.textSecondary
+                        color: Color.glassAdaptive(.textSecondary, \.sec)
                     )
                 }
 
@@ -687,10 +693,10 @@ struct MacSyncView: View {
                     VStack(alignment: .leading, spacing: Spacing.s1) {
                         Text("Last Check")
                             .font(Typography.caption())
-                            .foregroundStyle(Color.textMuted)
+                            .foregroundStyle(Color.glassAdaptive(.textMuted, \.muted))
                         Text(lastCheckText)
                             .font(Typography.bodyEmphasis())
-                            .foregroundStyle(Color.textPrimary)
+                            .foregroundStyle(Color.glassAdaptive(.textPrimary, \.text))
                     }
 
                     Spacer()
@@ -730,10 +736,10 @@ struct MacSyncView: View {
                     VStack(alignment: .leading, spacing: Spacing.s1) {
                         Text("Allow Manual IP Connections")
                             .font(Typography.bodyEmphasis())
-                            .foregroundStyle(Color.textPrimary)
+                            .foregroundStyle(Color.glassAdaptive(.textPrimary, \.text))
                         Text(manualIPServerStatusText)
                             .font(Typography.caption())
-                            .foregroundStyle(Color.textMuted)
+                            .foregroundStyle(Color.glassAdaptive(.textMuted, \.muted))
                     }
                 }
                 .toggleStyle(.switch)
@@ -746,10 +752,10 @@ struct MacSyncView: View {
                             VStack(alignment: .leading, spacing: Spacing.s1) {
                                 Text("Pairing Code")
                                     .font(Typography.label())
-                                    .foregroundStyle(Color.textMuted)
+                                    .foregroundStyle(Color.glassAdaptive(.textMuted, \.muted))
                                 Text(syncService.manualIPPairingCode ?? String(localized: "Generate a code"))
                                     .font(.system(size: 28, weight: .bold, design: .monospaced))
-                                    .foregroundStyle(Color.textPrimary)
+                                    .foregroundStyle(Color.glassAdaptive(.textPrimary, \.text))
                                     .textSelection(.enabled)
                             }
 
@@ -768,7 +774,7 @@ struct MacSyncView: View {
                         if let expiry = syncService.manualIPPairingCodeExpiresAt {
                             Text("Expires at \(expiry.formatted(date: .omitted, time: .shortened)).")
                                 .font(Typography.caption())
-                                .foregroundStyle(Color.textMuted)
+                                .foregroundStyle(Color.glassAdaptive(.textMuted, \.muted))
                         }
                     }
 
@@ -777,7 +783,7 @@ struct MacSyncView: View {
                     VStack(alignment: .leading, spacing: Spacing.s2) {
                         Text("Enter one of these addresses on iPhone. Port: \(SyncService.manualIPPort)")
                             .font(Typography.caption())
-                            .foregroundStyle(Color.textMuted)
+                            .foregroundStyle(Color.glassAdaptive(.textMuted, \.muted))
 
                         if syncService.manualIPAddresses.isEmpty {
                             Text("No non-loopback IPv4 addresses found. Check Tailscale or Wi‑Fi and refresh.")
@@ -787,13 +793,13 @@ struct MacSyncView: View {
                             ForEach(syncService.manualIPAddresses) { address in
                                 HStack(spacing: Spacing.s2) {
                                     Image(systemName: address.isLikelyTailscale ? "lock.icloud" : "network")
-                                        .foregroundStyle(address.isLikelyTailscale ? Color.success : Color.textMuted)
+                                        .foregroundStyle(address.isLikelyTailscale ? Color.success : Color.glassAdaptive(.textMuted, \.muted))
                                         .frame(width: 18)
                                         .accessibilityHidden(true)
 
                                     Text(address.displayName)
                                         .font(.system(.body, design: .monospaced))
-                                        .foregroundStyle(Color.textPrimary)
+                                        .foregroundStyle(Color.glassAdaptive(.textPrimary, \.text))
                                         .lineLimit(1)
                                         .textSelection(.enabled)
 
@@ -847,13 +853,13 @@ struct MacSyncView: View {
         HStack(spacing: Spacing.s3) {
             Text(String(number))
                 .font(Typography.label())
-                .foregroundStyle(Color.bgPrimary)
+                .foregroundStyle(Color.glassAdaptive(.bgPrimary, \.bg))
                 .frame(width: 24, height: 24)
-                .background(Color.accent, in: Circle())
+                .background(Color.glassAdaptive(.accent, \.accent), in: Circle())
 
             Text(text)
                 .font(Typography.body())
-                .foregroundStyle(Color.textSecondary)
+                .foregroundStyle(Color.glassAdaptive(.textSecondary, \.sec))
                 .lineLimit(2)
         }
     }
@@ -912,10 +918,10 @@ struct MacSyncView: View {
                 VStack(alignment: .leading, spacing: Spacing.s1) {
                     Text("Receiver Error")
                         .font(Typography.bodyEmphasis())
-                        .foregroundStyle(Color.textPrimary)
+                        .foregroundStyle(Color.glassAdaptive(.textPrimary, \.text))
                     Text(error)
                         .font(Typography.body())
-                        .foregroundStyle(Color.textSecondary)
+                        .foregroundStyle(Color.glassAdaptive(.textSecondary, \.sec))
                         .fixedSize(horizontal: false, vertical: true)
                 }
 
@@ -975,7 +981,7 @@ struct MacSyncView: View {
         switch displayConnectionState {
         case .connected: return Color.success
         case .connecting: return Color.warning
-        case .disconnected: return Color.textMuted
+        case .disconnected: return Color.glassAdaptive(.textMuted, \.muted)
         }
     }
 
@@ -1029,7 +1035,7 @@ struct MacSyncView: View {
     private var readinessColor: Color {
         switch readinessState {
         case .ready: return Color.success
-        case .active: return Color.accent
+        case .active: return Color.glassAdaptive(.accent, \.accent)
         case .paused, .attention: return Color.warning
         }
     }
@@ -1213,7 +1219,7 @@ struct MacSyncView: View {
                 trailing: progress.filesWritten > 0
                     ? String(localized: "\(progress.filesWritten) files")
                     : nil,
-                color: Color.accent
+                color: Color.glassAdaptive(.accent, \.accent)
             ))
         }
 
@@ -1263,7 +1269,7 @@ struct MacSyncView: View {
                     ? String(localized: "Discovery paused")
                     : String(localized: "Listening for Health.md"),
                 trailing: nil,
-                color: Color.accent
+                color: Color.glassAdaptive(.accent, \.accent)
             ))
         }
 
@@ -1279,7 +1285,7 @@ struct MacSyncView: View {
         case .dataReceived:
             title = String(localized: "Export Received")
             icon = "tray.and.arrow.down.fill"
-            color = Color.accent
+            color = Color.glassAdaptive(.accent, \.accent)
         case .progressComplete:
             title = String(localized: "Sync Complete")
             icon = "checkmark.seal.fill"
@@ -1399,7 +1405,7 @@ struct MacSyncView: View {
 
 private struct GeistMacBackdrop: View {
     var body: some View {
-        Color.bgSecondary
+        Color.glassAdaptive(.bgSecondary, \.surface2)
             .ignoresSafeArea()
     }
 }
@@ -1423,10 +1429,10 @@ private struct GeistMacCard<Content: View>: View {
         content
             .padding(padding)
             .frame(maxWidth: .infinity, alignment: .topLeading)
-            .background(Color.bgPrimary, in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+            .background(Color.glassAdaptive(.bgPrimary, \.bg), in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                    .strokeBorder(Color.borderSubtle, lineWidth: 1)
+                    .strokeBorder(Color.glassAdaptive(.borderSubtle, \.line), lineWidth: 1)
             )
             .shadow(color: Color.black.opacity(0.04), radius: 2, x: 0, y: 2)
     }
@@ -1452,12 +1458,12 @@ private struct GeistSectionHeader<Accessory: View>: View {
             VStack(alignment: .leading, spacing: Spacing.s1) {
                 Text(title)
                     .font(Typography.headline())
-                    .foregroundStyle(Color.textPrimary)
+                    .foregroundStyle(Color.glassAdaptive(.textPrimary, \.text))
                     .tracking(-0.2)
                 if let subtitle {
                     Text(subtitle)
                         .font(Typography.caption())
-                        .foregroundStyle(Color.textMuted)
+                        .foregroundStyle(Color.glassAdaptive(.textMuted, \.muted))
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
@@ -1480,7 +1486,7 @@ private extension GeistSectionHeader where Accessory == EmptyView {
 private struct GeistDivider: View {
     var body: some View {
         Rectangle()
-            .fill(Color.borderSubtle)
+            .fill(Color.glassAdaptive(.borderSubtle, \.line))
             .frame(height: 1)
     }
 }
@@ -1520,16 +1526,16 @@ private struct GeistMacButtonStyle: ButtonStyle {
 
     private var foregroundColor: Color {
         switch kind {
-        case .primary: return Color.bgPrimary
-        case .secondary, .tertiary: return Color.textPrimary
-        case .danger: return Color.bgPrimary
+        case .primary: return Color.glassAdaptive(.bgPrimary, \.bg)
+        case .secondary, .tertiary: return Color.glassAdaptive(.textPrimary, \.text)
+        case .danger: return Color.glassAdaptive(.bgPrimary, \.bg)
         }
     }
 
     private var borderColor: Color {
         switch kind {
-        case .primary: return Color.accent
-        case .secondary: return Color.borderSubtle
+        case .primary: return Color.glassAdaptive(.accent, \.accent)
+        case .secondary: return Color.glassAdaptive(.borderSubtle, \.line)
         case .tertiary: return Color.clear
         case .danger: return Color.error
         }
@@ -1542,7 +1548,7 @@ private struct GeistMacButtonStyle: ButtonStyle {
     private func backgroundColor(configuration: Configuration) -> Color {
         switch kind {
         case .primary:
-            return Color.accent.opacity(configuration.isPressed ? 0.84 : 1)
+            return Color.glassAdaptive(.accent, \.accent).opacity(configuration.isPressed ? 0.84 : 1)
         case .secondary:
             return configuration.isPressed ? Color.controlPressed : Color.controlBackground
         case .tertiary:
@@ -1570,12 +1576,12 @@ private struct GeistStatusPill: View {
             VStack(alignment: .leading, spacing: 0) {
                 Text(title)
                     .font(compact ? Typography.caption() : Typography.bodyEmphasis())
-                    .foregroundStyle(Color.textPrimary)
+                    .foregroundStyle(Color.glassAdaptive(.textPrimary, \.text))
                     .lineLimit(1)
                 if let subtitle, !compact {
                     Text(subtitle)
                         .font(Typography.caption())
-                        .foregroundStyle(Color.textMuted)
+                        .foregroundStyle(Color.glassAdaptive(.textMuted, \.muted))
                         .lineLimit(1)
                 }
             }
@@ -1606,25 +1612,25 @@ private struct GeistMetricTile: View {
             VStack(alignment: .leading, spacing: Spacing.s1) {
                 Text(title)
                     .font(Typography.caption())
-                    .foregroundStyle(Color.textMuted)
+                    .foregroundStyle(Color.glassAdaptive(.textMuted, \.muted))
                 Text(value)
                     .font(Typography.bodyEmphasis())
-                    .foregroundStyle(Color.textPrimary)
+                    .foregroundStyle(Color.glassAdaptive(.textPrimary, \.text))
                     .lineLimit(2)
                     .fixedSize(horizontal: false, vertical: true)
                 Text(detail)
                     .font(Typography.caption())
-                    .foregroundStyle(Color.textSecondary)
+                    .foregroundStyle(Color.glassAdaptive(.textSecondary, \.sec))
                     .lineLimit(2)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
         .padding(Spacing.s4)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.bgSecondary, in: RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous))
+        .background(Color.glassAdaptive(.bgSecondary, \.surface2), in: RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
-                .strokeBorder(Color.borderSubtle, lineWidth: 1)
+                .strokeBorder(Color.glassAdaptive(.borderSubtle, \.line), lineWidth: 1)
         )
         .accessibilityElement(children: .combine)
     }
@@ -1647,7 +1653,7 @@ private struct GeistInfoChip: View {
             VStack(alignment: .leading, spacing: 1) {
                 Text(title)
                     .font(Typography.caption())
-                    .foregroundStyle(Color.textSecondary)
+                    .foregroundStyle(Color.glassAdaptive(.textSecondary, \.sec))
                     .lineLimit(2)
                     .fixedSize(horizontal: false, vertical: true)
                 Text(value)
@@ -1659,10 +1665,10 @@ private struct GeistInfoChip: View {
         }
         .padding(Spacing.s3)
         .frame(maxWidth: .infinity, alignment: .topLeading)
-        .background(Color.bgSecondary, in: RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous))
+        .background(Color.glassAdaptive(.bgSecondary, \.surface2), in: RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
-                .strokeBorder(Color.borderSubtle, lineWidth: 1)
+                .strokeBorder(Color.glassAdaptive(.borderSubtle, \.line), lineWidth: 1)
         )
         .accessibilityElement(children: .combine)
     }
@@ -1679,21 +1685,21 @@ private struct SystemStatusBlock: View {
         HStack(alignment: .top, spacing: Spacing.s3) {
             ZStack {
                 RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
-                    .fill(Color.bgSecondary)
+                    .fill(Color.glassAdaptive(.bgSecondary, \.surface2))
                     .frame(width: 36, height: 36)
                 Image(systemName: icon)
                     .font(.body.weight(.medium))
-                    .foregroundStyle(Color.textSecondary)
+                    .foregroundStyle(Color.glassAdaptive(.textSecondary, \.sec))
                     .accessibilityHidden(true)
             }
 
             VStack(alignment: .leading, spacing: Spacing.s1) {
                 Text(title)
                     .font(Typography.caption())
-                    .foregroundStyle(Color.textMuted)
+                    .foregroundStyle(Color.glassAdaptive(.textMuted, \.muted))
                 Text(value)
                     .font(Typography.bodyEmphasis())
-                    .foregroundStyle(Color.textPrimary)
+                    .foregroundStyle(Color.glassAdaptive(.textPrimary, \.text))
                 Text(badge)
                     .font(Typography.caption())
                     .foregroundStyle(color)
@@ -1705,10 +1711,10 @@ private struct SystemStatusBlock: View {
         }
         .padding(Spacing.s4)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.bgSecondary, in: RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous))
+        .background(Color.glassAdaptive(.bgSecondary, \.surface2), in: RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
-                .strokeBorder(Color.borderSubtle, lineWidth: 1)
+                .strokeBorder(Color.glassAdaptive(.borderSubtle, \.line), lineWidth: 1)
         )
         .accessibilityElement(children: .combine)
     }
@@ -1724,7 +1730,7 @@ private struct StorageUsageBar: View {
                     Capsule()
                         .fill(Color.geistGray200)
                     Capsule()
-                        .fill(Color.accent)
+                        .fill(Color.glassAdaptive(.accent, \.accent))
                         .frame(width: max(8, proxy.size.width * summary.usedFraction))
                 }
             }
@@ -1738,7 +1744,7 @@ private struct StorageUsageBar: View {
                 Text(summary.usedPercentText)
             }
             .font(Typography.caption())
-            .foregroundStyle(Color.textMuted)
+            .foregroundStyle(Color.glassAdaptive(.textMuted, \.muted))
         }
     }
 }
@@ -1784,7 +1790,7 @@ private struct ActivityTimelineRow: View {
 
                 if !isLast {
                     Rectangle()
-                        .fill(Color.borderSubtle)
+                        .fill(Color.glassAdaptive(.borderSubtle, \.line))
                         .frame(width: 1, height: 52)
                 }
             }
@@ -1793,32 +1799,32 @@ private struct ActivityTimelineRow: View {
                 HStack(alignment: .firstTextBaseline, spacing: Spacing.s2) {
                     Text(item.title)
                         .font(Typography.bodyEmphasis())
-                        .foregroundStyle(Color.textPrimary)
+                        .foregroundStyle(Color.glassAdaptive(.textPrimary, \.text))
                         .lineLimit(1)
 
                     Spacer(minLength: Spacing.s2)
 
                     Text(item.timestamp, style: .time)
                         .font(Typography.caption())
-                        .foregroundStyle(Color.textMuted)
+                        .foregroundStyle(Color.glassAdaptive(.textMuted, \.muted))
                         .accessibilityLabel(dateFormatter.string(from: item.timestamp))
                 }
 
                 Text(item.headline)
                     .font(Typography.caption())
-                    .foregroundStyle(Color.textSecondary)
+                    .foregroundStyle(Color.glassAdaptive(.textSecondary, \.sec))
                     .lineLimit(2)
 
                 HStack(alignment: .firstTextBaseline, spacing: Spacing.s2) {
                     Text(item.detail)
                         .font(Typography.caption())
-                        .foregroundStyle(Color.textMuted)
+                        .foregroundStyle(Color.glassAdaptive(.textMuted, \.muted))
                         .lineLimit(2)
                     Spacer(minLength: 0)
                     if let trailing = item.trailing {
                         Text(trailing)
                             .font(Typography.monoCaption())
-                            .foregroundStyle(Color.textMuted)
+                            .foregroundStyle(Color.glassAdaptive(.textMuted, \.muted))
                             .lineLimit(1)
                     }
                 }

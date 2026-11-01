@@ -1,6 +1,17 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "Last export" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Letzter Export"}},
+      "es":{"stringUnit":{"state":"translated","value":"Última exportación"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Dernière exportation"}},
+      "it":{"stringUnit":{"state":"translated","value":"Ultima esportazione"}},
+      "ja":{"stringUnit":{"state":"translated","value":"前回の書き出し"}},
+      "ko":{"stringUnit":{"state":"translated","value":"마지막 내보내기"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Laatste export"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Última exportação"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"上次导出"}}
+    }},
     "Fields in this note" : {"localizations":{
       "de":{"stringUnit":{"state":"translated","value":"Felder in dieser Notiz"}},
       "es":{"stringUnit":{"state":"translated","value":"Campos de esta nota"}},
