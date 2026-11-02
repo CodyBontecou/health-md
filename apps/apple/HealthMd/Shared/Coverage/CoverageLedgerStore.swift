@@ -97,25 +97,19 @@ final class CoverageLedgerStore: ObservableObject {
 
     #if DEBUG
     /// UI-test screenshots only. The store is in memory under UI testing, so nothing persists.
+    /// The pattern lives in the month before the current one (`CoverageScreenshotFixture`).
     func seedScreenshotCoverage(profileIDs: [UUID]) {
         guard TestMode.isUITesting else { return }
         let profileIDs = profileIDs.isEmpty ? ExportProfileStore().profiles.map(\.id) : profileIDs
-        guard !profileIDs.isEmpty else { return }
-        let calendar = calendar()
-        let today = calendar.startOfDay(for: now())
-        guard let start = calendar.date(byAdding: .day, value: -40, to: today) else { return }
-        var seeded = CoverageLedger(startedAt: start)
-        seeded.didSeedFromHistory = true
-        for offset in 1...40 where offset != 6 && offset != 7 {
-            guard let date = calendar.date(byAdding: .day, value: -offset, to: today) else { continue }
-            var record = CoverageDateRecord(updatedAt: date)
-            record.settledOutcome = offset == 3 ? .partial : .complete
-            record.filesWritten = 1
-            record.lastWriter = .schedule
-            for profileID in profileIDs {
-                seeded.profiles[profileID, default: [:]][CoverageDateKey.key(for: date, calendar: calendar)] = record
-            }
+        let entries = ScheduledExportEntryStore()
+        let profiles = profileIDs.map {
+            (id: $0, kind: CoverageScreenshotFixture.Kind(entry: entries.entry(profileID: $0)))
         }
+        guard let seeded = CoverageScreenshotFixture.ledger(
+            profiles: profiles,
+            now: now(),
+            calendar: calendar()
+        ) else { return }
         ledger = seeded
     }
     #endif

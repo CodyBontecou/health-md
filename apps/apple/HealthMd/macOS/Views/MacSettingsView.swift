@@ -1,327 +1,105 @@
 #if os(macOS)
 import SwiftUI
 
-// MARK: - Settings Window (⌘,) — Branded
+// MARK: - Settings Window (⌘,)
 
+/// The ⌘, window shows the same MacSettingsG page as the sidebar's Settings destination.
+/// CLI & MCP lives in the main window's sidebar.
 struct MacSettingsWindow: View {
-    @State private var selection: MacSettingsDestination = .general
-
     var body: some View {
-        VStack(spacing: 0) {
-            settingsHeader
-
-            Rectangle()
-                .fill(Color.glassAdaptive(\.line))
-                .frame(height: 1)
-
-            selectedView
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-        }
-        .background(MacSettingsBackdrop())
-        .frame(
-            minWidth: 880,
-            idealWidth: 1_100,
-            maxWidth: .infinity,
-            minHeight: 640,
-            idealHeight: 760,
-            maxHeight: .infinity
-        )
-        .foregroundStyle(Color.glassAdaptive(\.text))
-        .tint(Color.glassAdaptive(\.accent))
-    }
-
-    private var settingsHeader: some View {
-        HStack(spacing: Spacing.s6) {
-            HStack(spacing: Spacing.s3) {
-                Image(systemName: "gearshape.fill")
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(Color.primary)
-                    .frame(width: 36, height: 36)
-                    .accessibilityHidden(true)
-
-                VStack(alignment: .leading, spacing: 1) {
-                    Text("Settings")
-                        .font(Typography.headline())
-                    Text("Configure this Mac and the local CLI")
-                        .font(Typography.caption())
-                        .foregroundStyle(Color.glassAdaptive(\.muted))
-                        .lineLimit(1)
-                }
-            }
-
-            Spacer(minLength: Spacing.s4)
-
-            HStack(spacing: Spacing.s1) {
-                ForEach(MacSettingsDestination.allCases) { destination in
-                    Button {
-                        withAnimation(AnimationTimings.fast) {
-                            selection = destination
-                        }
-                    } label: {
-                        Label(destination.title, systemImage: destination.systemImage)
-                            .labelStyle(.titleAndIcon)
-                    }
-                    .buttonStyle(MacSettingsTabButtonStyle(isSelected: selection == destination))
-                    .accessibilityAddTraits(selection == destination ? .isSelected : [])
-                }
-            }
-            .padding(Spacing.s1)
-            .background(Color.glassAdaptive(\.surface2), in: RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous)
-                    .strokeBorder(Color.glassAdaptive(\.line), lineWidth: 1)
-            )
-        }
-        .padding(.horizontal, Spacing.s8)
-        .padding(.vertical, Spacing.s4)
-        .background(Color.glassAdaptive(\.bg).opacity(0.96))
-    }
-
-    @ViewBuilder
-    private var selectedView: some View {
-        switch selection {
-        case .general:
-            MacGeneralSettingsView()
-        case .cli:
-            MacCLIView()
-        }
-    }
-}
-
-private enum MacSettingsDestination: String, CaseIterable, Identifiable {
-    case general
-    case cli
-
-    var id: Self { self }
-
-    var title: String {
-        switch self {
-        case .general: return String(localized: "General")
-        case .cli: return String(localized: "CLI")
-        }
-    }
-
-    var systemImage: String {
-        switch self {
-        case .general: return "gearshape"
-        case .cli: return "terminal"
-        }
-    }
-}
-
-private struct MacSettingsTabButtonStyle: ButtonStyle {
-    @Environment(\.isEnabled) private var isEnabled
-    let isSelected: Bool
-
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .font(Typography.caption().weight(.semibold))
-            .foregroundStyle(isSelected ? Color.glassAdaptive(\.text) : Color.glassAdaptive(\.muted))
-            .padding(.horizontal, Spacing.s3)
-            .frame(height: 34)
-            .background(
-                isSelected
-                    ? Color.glassAdaptive(\.bg)
-                    : (configuration.isPressed ? Color.glassAdaptive(\.surface) : Color.clear),
-                in: RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
-                    .strokeBorder(isSelected ? Color.glassAdaptive(\.line) : Color.clear, lineWidth: 1)
-            )
-            .shadow(color: isSelected ? Color.black.opacity(0.08) : .clear, radius: 2, y: 1)
-            .opacity(isEnabled ? 1 : 0.5)
+        MacGeneralSettingsView()
+            .frame(minWidth: 640, idealWidth: 760, maxWidth: .infinity, minHeight: 560, idealHeight: 680, maxHeight: .infinity)
+            .glassTheme()
     }
 }
 
 // MARK: - Sidebar Settings View
 
+/// MacSettingsG in the main window's sidebar; the ⌘, window shows the same page.
 struct MacDetailSettingsView: View {
     var body: some View {
-        MacSettingsWindow()
+        MacGeneralSettingsView()
             .navigationTitle("Settings")
     }
 }
 
 // MARK: - General Settings
 
+/// Keys for Mac-only presentation preferences.
+enum MacPresentationPreferences {
+    /// Read by the `MenuBarExtra` scene's `isInserted` binding.
+    static let showsMenuBarExtraKey = "showsMenuBarExtra"
+}
+
+/// MacSettingsG: Exports, Storage, Privacy and General. Connection, folder and encrypted query
+/// context live on the Mac destination and CLI & MCP pages.
 struct MacGeneralSettingsView: View {
-    @EnvironmentObject var vaultManager: VaultManager
-    @EnvironmentObject var syncService: SyncService
     @EnvironmentObject var healthDataStore: HealthDataStore
-    @EnvironmentObject var encryptedHealthContextManager: MacEncryptedHealthContextManager
-    @StateObject private var feedbackReporter = FeedbackReporter()
+    @AppStorage(MacPresentationPreferences.showsMenuBarExtraKey) private var showsMenuBarExtra = true
+    @State private var launchesAtLogin = SchedulingManager.shared.isLoginItemEnabled
     @State private var showClearConfirmation = false
-    @State private var showEncryptedContextDeleteConfirmation = false
     @State private var showDiagnostics = false
-    @State private var showRetentionConfirmation = false
-    @State private var retentionBoundary = Date()
-    private let privacyPolicyURL = URL(string: "https://healthmd.app/privacy-policy.html")!
 
     var body: some View {
-        Form {
-            Section {
-                Text("Health.md for Mac works as a local export destination. Configure formats, metrics, date ranges, filenames, write modes, and Data Detail on iPhone, then send the export to this Mac.")
-                    .font(BrandTypography.body())
-                    .foregroundStyle(Color.glassAdaptive(\.sec))
-                    .fixedSize(horizontal: false, vertical: true)
+        MacGlassPage {
+            MacGlassPageHeader(
+                title: String(localized: "Settings"),
+                subtitle: String(localized: "Health.md for Mac is a local export destination. Formats, metrics, date ranges, filenames, write modes and Data Detail are set on iPhone.")
+            )
 
-                Text("Detailed Time-Series keeps selected timestamped samples without the canonical archive. Lossless Health Records adds the complete selected HealthKit source representation and can create much larger files.")
-                    .font(BrandTypography.caption())
-                    .foregroundStyle(Color.glassAdaptive(\.muted))
-                    .fixedSize(horizontal: false, vertical: true)
-            } header: {
-                BrandLabel("iPhone-Controlled Exports")
+            MacGlassSection(title: String(localized: "Exports")) {
+                MacGlassRow(String(localized: "Data Detail"), value: String(localized: "Set on iPhone"))
+                MacGlassDivider()
+                MacGlassRow(String(localized: "Detailed time series"), value: String(localized: "Timestamped samples, no canonical archive"))
+                MacGlassDivider()
+                MacGlassRow(String(localized: "Lossless health records"), value: String(localized: "Adds the HealthKit source · larger files"))
             }
 
-            Section {
-                HStack(spacing: 8) {
-                    Circle()
-                        .fill(syncService.connectionState == .connected ? Color.success : Color.glassAdaptive(\.muted))
-                        .frame(width: 8, height: 8)
-                        .accessibilityHidden(true)
-                    Text(connectionStatusText)
-                        .font(BrandTypography.bodyMedium())
-                    Spacer()
-                }
-                .accessibilityElement(children: .combine)
-                .accessibilityLabel("Connection status")
-                .accessibilityValue(connectionStatusText)
-
-                HStack {
-                    Text("Readiness")
-                    Spacer()
-                    Text(readinessText)
-                        .font(BrandTypography.value())
-                        .foregroundStyle(readinessColor)
-                        .multilineTextAlignment(.trailing)
-                }
-                .accessibilityElement(children: .combine)
-                .accessibilityLabel("Mac export readiness")
-                .accessibilityValue(readinessText)
-            } header: {
-                BrandLabel("Status")
-            }
-
-            MacVaultFolderSection(showSubfolder: false, showClearButton: true)
-
-            Section {
-                if encryptedHealthContextManager.hasLoadedStatus {
-                    HStack {
-                        Text("Encrypted context days")
-                        Spacer()
-                        Text("\(encryptedHealthContextManager.ownerDateCount)")
-                            .font(BrandTypography.value())
-                            .foregroundStyle(Color.glassAdaptive(\.accent))
-                    }
-
-                    if let earliest = encryptedHealthContextManager.earliestOwnerDate,
-                       let latest = encryptedHealthContextManager.latestOwnerDate {
-                        LabeledContent("Owner-date range") {
-                            Text(earliest == latest ? earliest : "\(earliest) – \(latest)")
-                                .font(Typography.mono())
+            MacGlassSection(title: String(localized: "Storage")) {
+                MacGlassRow(
+                    String(localized: "Cached legacy records"),
+                    value: String(localized: "\(healthDataStore.recordCount) · old manual sync only")
+                )
+                MacGlassDivider()
+                MacGlassRow(title: String(localized: "Delete legacy synced data")) {
+                    // MacSettingsG: "—" when nothing is cached, otherwise the delete action.
+                    if healthDataStore.recordCount > 0 {
+                        Button(String(localized: "Delete…")) {
+                            showClearConfirmation = true
                         }
+                        .buttonStyle(MacGlassRowButtonStyle(tone: .coral))
+                        .accessibilityHint("Removes cached Health data from the old Mac sync flow")
+                    } else {
+                        MacGlassValue("—", tone: .coral)
+                            .accessibilityLabel(String(localized: "Nothing to delete"))
                     }
-
-                    DatePicker(
-                        "Delete days before",
-                        selection: $retentionBoundary,
-                        displayedComponents: .date
-                    )
-                    Button("Delete Older Context…") {
-                        showRetentionConfirmation = true
-                    }
-                    .disabled(encryptedHealthContextManager.isWorking
-                        || encryptedHealthContextManager.ownerDateCount == 0)
-
-                    Button("Delete All Encrypted Context…", role: .destructive) {
-                        showEncryptedContextDeleteConfirmation = true
-                    }
-                    .disabled(encryptedHealthContextManager.isWorking
-                        || encryptedHealthContextManager.ownerDateCount == 0)
-                } else {
-                    Text("Context status is not loaded automatically, so ordinary Mac app use does not access Keychain.")
-                        .font(BrandTypography.caption())
-                        .foregroundStyle(Color.glassAdaptive(\.muted))
-
-                    Button("Load Encrypted Context Status…") {
-                        Task { await encryptedHealthContextManager.refresh() }
-                    }
-                    .disabled(encryptedHealthContextManager.isWorking)
-                }
-
-                if let error = encryptedHealthContextManager.lastError {
-                    Text(error)
-                        .font(BrandTypography.caption())
-                        .foregroundStyle(Color.error)
-                }
-            } header: {
-                BrandLabel("Local Query Context")
-            } footer: {
-                Text("This Keychain-encrypted store is independent from exported files. Retention is never automatic; deleting it does not change Apple Health on iPhone.")
-                    .font(BrandTypography.caption())
-                    .foregroundStyle(Color.glassAdaptive(\.muted))
-            }
-
-            if healthDataStore.recordCount > 0 {
-                Section {
-                    HStack {
-                        Text("Cached legacy records")
-                        Spacer()
-                        Text("\(healthDataStore.recordCount)")
-                            .font(BrandTypography.value())
-                            .foregroundStyle(Color.glassAdaptive(\.accent))
-                    }
-
-                    Button("Delete Legacy Cache", role: .destructive) {
-                        showClearConfirmation = true
-                    }
-                    .tint(Color.error)
-                    .accessibilityHint("Removes cached Health data from the old Mac sync flow")
-                } header: {
-                    BrandLabel("Legacy Cache")
-                } footer: {
-                    Text("New Mac-targeted exports are built on iPhone and sent directly to the selected folder. This cache is only for the old manual sync flow.")
-                        .font(BrandTypography.caption())
-                        .foregroundStyle(Color.glassAdaptive(\.muted))
                 }
             }
 
-            Section {
-                Text("This version does not collect custom usage analytics or advertising attribution.")
-                    .font(BrandTypography.bodyMedium())
-                    .fixedSize(horizontal: false, vertical: true)
-
-                Link("View Privacy Policy", destination: privacyPolicyURL)
-            } header: {
-                BrandLabel("Privacy")
-            }
-
-            Section {
-                Button {
-                    feedbackReporter.open(.email)
-                } label: {
-                    Label("Send Feedback", systemImage: "envelope")
-                }
-
-                Button {
-                    feedbackReporter.open(.github)
-                } label: {
-                    Label("Report a Bug on GitHub", systemImage: "ladybug")
-                }
-            } header: {
-                BrandLabel("Feedback")
-            }
-            Section {
-                Button("Diagnostics", systemImage: "doc.text.magnifyingglass") { showDiagnostics = true }
+            MacGlassSection(title: String(localized: "Privacy")) {
+                MacGlassRow(String(localized: "Analytics"), value: String(localized: "None collected"))
+                MacGlassDivider()
+                MacGlassRow(title: String(localized: "Diagnostics")) {
+                    Button(String(localized: "Inspect local events · no automatic uploads")) {
+                        showDiagnostics = true
+                    }
+                    .buttonStyle(MacGlassRowButtonStyle())
                     .accessibilityIdentifier("diagnostics.entry")
-                Text("Inspect local technical events and choose what to share. No automatic uploads.")
-                    .font(BrandTypography.caption()).foregroundStyle(Color.glassAdaptive(\.sec))
+                }
+            }
+
+            MacGlassSection(title: String(localized: "General")) {
+                MacGlassRow(title: String(localized: "Launch at login")) {
+                    MacGlassOnOffButton(title: String(localized: "Launch at login"), isOn: launchAtLoginBinding)
+                }
+                MacGlassDivider()
+                MacGlassRow(title: String(localized: "Show in menu bar")) {
+                    MacGlassOnOffButton(title: String(localized: "Show in menu bar"), isOn: $showsMenuBarExtra)
+                }
             }
         }
+        .onAppear { launchesAtLogin = SchedulingManager.shared.isLoginItemEnabled }
         .sheet(isPresented: $showDiagnostics) { DiagnosticsView() }
-        .formStyle(.grouped)
-        .feedbackFailureSheet($feedbackReporter.failure)
         .geistDialog(
             isPresented: $showClearConfirmation,
             title: Text("Delete Legacy Synced Data?"),
@@ -333,98 +111,22 @@ struct MacGeneralSettingsView: View {
                 }
             ]
         )
-        .geistDialog(
-            isPresented: $showEncryptedContextDeleteConfirmation,
-            title: Text("Delete All Encrypted Query Context?"),
-            message: Text("This removes every compact context day and its dedicated Keychain key. Exported files and Apple Health remain unchanged."),
-            actions: [
-                .cancel(),
-                .destructive("Delete All") {
-                    Task { await encryptedHealthContextManager.deleteAll() }
+    }
+
+    /// Registers or unregisters the app with `SMAppService`, then reads back the real status
+    /// so a refused registration (for example, pending approval) is not shown as on.
+    private var launchAtLoginBinding: Binding<Bool> {
+        Binding(
+            get: { launchesAtLogin },
+            set: { enabled in
+                if enabled {
+                    SchedulingManager.shared.enableLoginItem()
+                } else {
+                    SchedulingManager.shared.disableLoginItem()
                 }
-            ]
+                launchesAtLogin = SchedulingManager.shared.isLoginItemEnabled
+            }
         )
-        .geistDialog(
-            isPresented: $showRetentionConfirmation,
-            title: Text("Delete Context Before \(retentionOwnerDate)?"),
-            message: Text("Every encrypted owner day earlier than this date will be permanently removed. The boundary date and newer days remain."),
-            actions: [
-                .cancel(),
-                .destructive("Delete Older Days") {
-                    let boundary = retentionOwnerDate
-                    Task { await encryptedHealthContextManager.delete(before: boundary) }
-                }
-            ]
-        )
-    }
-
-    private var retentionOwnerDate: String {
-        let calendar = Calendar.current
-        let components = calendar.dateComponents([.year, .month, .day], from: retentionBoundary)
-        return String(
-            format: "%04d-%02d-%02d",
-            components.year ?? 1970,
-            components.month ?? 1,
-            components.day ?? 1
-        )
-    }
-
-    private var folderAccessHealthy: Bool {
-        vaultManager.vaultURL != nil && vaultManager.canAccessSelectedVaultFolder()
-    }
-
-    private var connectionStatusText: String {
-        #if DEBUG
-        if MacMarketingCapture.isActive {
-            let peerName = String(localized: "iPhone")
-            return String(localized: "Connected to \(peerName)")
-        }
-        #endif
-        guard syncService.connectionState == .connected else {
-            return String(localized: "Not connected")
-        }
-        let peerName = syncService.connectedPeerName ?? String(localized: "iPhone")
-        return String(localized: "Connected to \(peerName)")
-    }
-
-    private var readinessText: String {
-        #if DEBUG
-        if MacMarketingCapture.isActive { return String(localized: "Ready") }
-        #endif
-        if syncService.isSyncing { return String(localized: "Receiving export") }
-        if syncService.connectionState != .connected { return String(localized: "Connect iPhone") }
-        if !iPhoneSupportsMacExports { return String(localized: "Update iPhone app") }
-        if !vaultManager.hasVaultSelection { return String(localized: "Choose folder") }
-        if !folderAccessHealthy { return vaultManager.vaultAvailabilityText }
-        return String(localized: "Ready")
-    }
-
-    private var readinessColor: Color {
-        iPhoneSupportsMacExports && folderAccessHealthy && !syncService.isSyncing
-            ? Color.success
-            : Color.warning
-    }
-
-    private var iPhoneSupportsMacExports: Bool {
-        #if DEBUG
-        if MacMarketingCapture.isActive { return true }
-        #endif
-        guard syncService.connectionState == .connected else { return false }
-        guard let capabilities = syncService.remoteCapabilities else { return false }
-        return capabilities.platform == .iOS && capabilities.isCompatibleWithMacExportJobs
-    }
-}
-
-// MARK: - Settings Background
-
-struct MacSettingsBackdrop: View {
-    var body: some View {
-        LinearGradient(
-            colors: [Color.glassAdaptive(\.surface).opacity(0.72), Color.glassAdaptive(\.surface2)],
-            startPoint: .top,
-            endPoint: .bottom
-        )
-        .ignoresSafeArea()
     }
 }
 

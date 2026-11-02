@@ -121,18 +121,19 @@ nonisolated enum HealthMdPurchaseOption: String, CaseIterable, Identifiable, Sen
         switch self {
         case .family: return String(localized: "Pay once and share with up to 5 family members")
         case .familyUpgrade: return String(localized: "Upgrade pricing for existing Lifetime owners")
-        default: return String(localized: "Pay once for unlimited private exports")
+        default: return String(localized: "One purchase, charged today")
         }
     }
 
     var badge: String? { isFamilyPlan ? String(localized: "Family") : nil }
     var iconName: String { isFamilyPlan ? "person.3.fill" : "person.fill" }
 
+    /// PaywallG price-column suffix: only the weekly price carries one ("/wk"); the yearly
+    /// period is in the trial subtitle and one-time purchases say "charged today".
     var priceSuffix: String {
         switch self {
-        case .weekly, .familyWeekly: return String(localized: "/week")
-        case .yearly, .familyYearly: return String(localized: "/year")
-        default: return String(localized: " once")
+        case .weekly, .familyWeekly: return String(localized: "/wk")
+        default: return ""
         }
     }
 }

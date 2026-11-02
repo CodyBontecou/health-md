@@ -39,6 +39,8 @@ struct ContentView: View {
     @State private var isTestExportWaitingForCompletion = false
     @State private var isRequestingHealthAuthorization = false
     @State private var isAssessingHistory = false
+    /// The history check timed out and the export waits for Continue or Cancel.
+    @State private var historyCheckAwaitsDecision = false
     @State private var executionHistoryAssessment: HealthHistoryAssessment?
     @State private var historyExecutionCoordinator = HealthHistoryAssessmentCoordinator()
     @State private var historyExecutionWorker = HealthHistoryAssessmentWorker()
@@ -165,6 +167,7 @@ struct ContentView: View {
                     onSelectFolder: commitVaultFolderSelection,
                     executionHistoryAssessment: executionHistoryAssessment,
                     isAssessingHistory: isAssessingHistory,
+                    historyCheckAwaitsDecision: historyCheckAwaitsDecision,
                     onContinueWithoutHistoryVerification: continueWithoutHistoryVerification,
                     onCancelHistoryVerification: invalidateExecutionHistory
                 )
@@ -290,7 +293,7 @@ struct ContentView: View {
             }
         }
         .sheet(isPresented: $showPaywall) {
-            PaywallView(context: currentPaywallContext)
+            PaywallView(context: currentPaywallContext, profileCoordinator: profileCoordinator)
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
         }
@@ -299,7 +302,7 @@ struct ContentView: View {
                 hasSeenPostOnboardingPaywall = true
             }
         }) {
-            PaywallView(context: .onboarding)
+            PaywallView(context: .onboarding, profileCoordinator: profileCoordinator)
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
         }
@@ -336,7 +339,7 @@ struct ContentView: View {
             )
         }
         .sheet(isPresented: $showUpgradePromptPaywall) {
-            PaywallView(context: .upgradePrompt)
+            PaywallView(context: .upgradePrompt, profileCoordinator: profileCoordinator)
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
         }
@@ -361,12 +364,7 @@ struct ContentView: View {
                 }
             }
         }
-        .sheet(isPresented: $showClinicianReport) {
-            ClinicianReportView(
-                healthKitManager: healthKitManager,
-                unitPreference: advancedSettings.formatCustomization.unitPreference
-            )
-        }
+        // ClinicianReportG is pushed inside Settings; `showClinicianReport` asks it to open.
         #if DEBUG
         .sheet(isPresented: $showMarketingMetricSelection) {
             MarketingSheetWrapper {
@@ -402,7 +400,7 @@ struct ContentView: View {
             }
         }
         .sheet(isPresented: $showMarketingPaywall) {
-            PaywallView(context: .export)
+            PaywallView(context: .export, profileCoordinator: profileCoordinator)
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
                 .onReceive(NotificationCenter.default.publisher(for: MarketingCapture.dismissSheetNotification)) { _ in
@@ -464,6 +462,14 @@ struct ContentView: View {
         .keepsScreenAwake(while: isExporting)
         .onReceive(syncService.$latestMacExportMessage.compactMap { $0 }) { message in
             handleMacExportMessage(message)
+        }
+        // MacDestG shows the range of the Mac export this iPhone started.
+        .onChange(of: [activeMacExportJobID?.uuidString, activeMacExportStartDate?.description, activeMacExportEndDate?.description]) { _, _ in
+            MacExportRequestRange.shared.update(
+                jobID: activeMacExportJobID,
+                startDate: activeMacExportStartDate,
+                endDate: activeMacExportEndDate
+            )
         }
         .onReceive(corpusRecoveryManager.$activeSnapshot) { snapshot in
             handleCorpusRecoverySnapshot(snapshot)
@@ -1003,6 +1009,8 @@ struct ContentView: View {
            let sourceID = coordinator.profileStore.activeProfileID {
             _ = coordinator.duplicateProfile(id: sourceID)
         }
+        // App Store screenshots: the four automations the boards show.
+        coordinator.seedScreenshotFixtureProfilesIfNeeded()
         #endif
         profileCoordinator = coordinator
         bindHistoryProfilePublications(coordinator.profileStore)
@@ -1164,6 +1172,7 @@ struct ContentView: View {
                 // stays retained. Keep Continue/Cancel reachable until the user
                 // chooses; a timeout must never admit capture automatically.
                 awaitingUserDecision = true
+                historyCheckAwaitsDecision = true
                 historyExecutionTask = nil
                 exportStatusMessage = "History check did not complete. Continue without verification or cancel."
                 return
@@ -1178,6 +1187,7 @@ struct ContentView: View {
         pendingHistorySelection = nil
         pendingHistoryRequestID = nil
         isAssessingHistory = false
+        historyCheckAwaitsDecision = false
         historyExecutionTask = nil
     }
 

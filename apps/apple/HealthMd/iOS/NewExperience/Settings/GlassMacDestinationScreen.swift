@@ -11,6 +11,7 @@ struct GlassMacDestinationScreen: View {
     @AppStorage("manualIPLastHost") private var manualMacHost = ""
     @AppStorage("manualIPLastPort") private var manualMacPort = String(SyncService.manualIPPort)
     @State private var manualPairingCode = ""
+    @ObservedObject private var requestRange = MacExportRequestRange.shared
 
     private let macAppURL = URL(string: "https://apps.apple.com/us/app/health-md/id6757763969")!
 
@@ -27,8 +28,8 @@ struct GlassMacDestinationScreen: View {
             VStack(alignment: .leading, spacing: GlassMetrics.sectionGap) {
                 GlassPanel {
                     GlassToggleRow(
-                        title: String(localized: "Enable Mac Destination"),
-                        subtitle: String(localized: "Advertise this iPhone on your local network so Health.md on Mac can connect."),
+                        title: String(localized: "Mac destination"),
+                        subtitle: String(localized: "Advertise this iPhone on your local network"),
                         isOn: $syncEnabled
                     )
                     .accessibilityIdentifier(AccessibilityID.Sync.syncToggle)
@@ -38,18 +39,24 @@ struct GlassMacDestinationScreen: View {
                 if syncEnabled {
                     statusPanel
                     manualIPPanel
-                } else {
+                }
+
+                GlassPanel {
                     Link(destination: macAppURL) {
-                        GlassPanel {
-                            GlassRow(
-                                title: String(localized: "Health.md for macOS"),
-                                subtitle: String(localized: "Download from the App Store")
-                            ) {
-                                Image(systemName: "arrow.up.right").foregroundStyle(palette.muted)
+                        GlassRow(title: String(localized: "Get Health.md for Mac")) {
+                            GlassIconTile(systemImage: "desktopcomputer", color: .settingsTileBlue)
+                        } trailing: {
+                            HStack(spacing: 8) {
+                                Text("App Store").glassFont(.body).foregroundStyle(palette.muted)
+                                Image(systemName: "arrow.up.right")
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .foregroundStyle(palette.muted)
+                                    .accessibilityHidden(true)
                             }
                         }
                     }
                     .buttonStyle(.plain)
+                    .accessibilityIdentifier("glass.macDestination.getMacApp")
                 }
 
                 if let error = syncService.lastError {
@@ -71,7 +78,7 @@ struct GlassMacDestinationScreen: View {
         }
         .scrollDismissesKeyboard(.interactively)
         .background(palette.bg.ignoresSafeArea())
-        .navigationTitle(String(localized: "Mac Destination"))
+        .navigationTitle(String(localized: "Health.md for Mac"))
         .navigationBarTitleDisplayMode(.inline)
         .accessibilityIdentifier("glass.macDestination")
         .onAppear {
@@ -114,45 +121,92 @@ struct GlassMacDestinationScreen: View {
             .accessibilityElement(children: .combine)
             .accessibilityIdentifier(AccessibilityID.Sync.connectionStatus)
             if syncService.connectionState == .connected {
-                GlassRow(title: destinationTitle, subtitle: destinationSubtitle) { EmptyView() }
-                    .accessibilityElement(children: .combine)
-                if syncService.macDestinationStatus?.activeJobID != nil {
+                if let activeJobID = syncService.macDestinationStatus?.activeJobID {
+                    progressRow(activeJobID)
                     Button(role: .destructive) {
-                        guard let jobID = syncService.macDestinationStatus?.activeJobID else { return }
-                        syncService.send(.macExportCancel(jobID: jobID))
+                        syncService.send(.macExportCancel(jobID: activeJobID))
                     } label: {
-                        GlassRow(title: String(localized: "Cancel Active Mac Export")) {
+                        GlassRow(title: String(localized: "Cancel Mac export")) {
                             Image(systemName: "xmark.circle.fill").foregroundStyle(palette.coral)
                         }
                     }
                     .buttonStyle(.plain)
+                } else {
+                    GlassRow(title: destinationTitle, subtitle: destinationSubtitle) { EmptyView() }
+                        .accessibilityElement(children: .combine)
                 }
             }
         }
     }
 
+    /// Live progress of the Mac's active job, from the same progress messages the export
+    /// screen uses. The Mac reports days written; the dates come from the job this iPhone
+    /// started, and are left out for a job it did not start.
+    private func progressRow(_ jobID: UUID) -> some View {
+        let progress: MacExportProgress? = {
+            if case .macExportProgress(let progress) = syncService.latestMacExportMessage,
+               progress.jobID == jobID, progress.totalDays > 0 {
+                return progress
+            }
+            return nil
+        }()
+        return VStack(alignment: .leading, spacing: 8) {
+            Text(progressText(progress, range: requestRange.rangeText(for: jobID)))
+            .glassFont(.body)
+            .foregroundStyle(palette.text)
+            if let progress {
+                ProgressView(value: min(max(progress.fractionComplete, 0), 1))
+                    .tint(palette.accent)
+            } else {
+                ProgressView().progressViewStyle(.linear).tint(palette.accent)
+            }
+        }
+        .padding(GlassMetrics.panelPadding)
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("glass.macDestination.progress")
+    }
+
+    private func progressText(_ progress: MacExportProgress?, range: String?) -> String {
+        switch (progress, range) {
+        case let (progress?, range?):
+            return String(localized: "Exporting \(range) to the Mac… \(progress.processedDays) of \(progress.totalDays)")
+        case let (progress?, nil):
+            return String(localized: "Exporting to the Mac… \(progress.processedDays) of \(progress.totalDays)")
+        case let (nil, range?):
+            return String(localized: "Exporting \(range) to the Mac…")
+        case (nil, nil):
+            return String(localized: "Exporting to the Mac…")
+        }
+    }
+
     private var manualIPPanel: some View {
         VStack(alignment: .leading, spacing: 8) {
-            GlassSectionLabel(title: String(localized: "Connect by IP Address"))
+            GlassSectionLabel(title: String(localized: "Connect by IP"))
             GlassPanel {
-                VStack(spacing: 12) {
-                    TextField("Mac Tailscale IP or hostname", text: $manualMacHost)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
-                        .keyboardType(.URL)
-                    TextField("Port", text: $manualMacPort)
+                VStack(alignment: .leading, spacing: 0) {
+                    labelledField(String(localized: "Mac IP or Tailscale address")) {
+                        TextField(String("100.64.0.12"), text: $manualMacHost)
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled()
+                            .keyboardType(.URL)
+                            .accessibilityLabel(String(localized: "Mac IP or Tailscale address"))
+                    }
+                    labelledField(String(localized: "Port"), showsDivider: true) {
+                        TextField(String(SyncService.manualIPPort), text: $manualMacPort)
+                            .keyboardType(.numberPad)
+                            .accessibilityLabel(String(localized: "Port"))
+                    }
+                    labelledField(String(localized: "Pairing code"), showsDivider: true) {
+                        SecureField(
+                            syncService.hasSavedManualIPConnection
+                                ? String(localized: "Pairing code (not required)")
+                                : String(localized: "From Mac → Manual IP"),
+                            text: $manualPairingCode
+                        )
                         .keyboardType(.numberPad)
-                    SecureField(
-                        syncService.hasSavedManualIPConnection ? "Pairing code (not required)" : "Pairing code",
-                        text: $manualPairingCode
-                    )
-                    .keyboardType(.numberPad)
-                    .accessibilityLabel("Pairing code")
+                        .accessibilityLabel(String(localized: "Pairing code"))
+                    }
                 }
-                .textFieldStyle(.plain)
-                .glassFont(.body)
-                .foregroundStyle(palette.text)
-                .padding(GlassMetrics.panelPadding)
                 .configurationChangesProtected()
 
                 if syncService.hasSavedManualIPConnection {
@@ -177,15 +231,41 @@ struct GlassMacDestinationScreen: View {
                 }
                 .padding(GlassMetrics.panelPadding)
             }
-            Text("On your Mac, open Mac Destination, enable Manual IP Connections, and generate a pairing code.")
+            Text("On the Mac, open Mac Destination, enable Manual IP Connections and generate a pairing code.")
                 .glassFont(.rowSubtitle)
                 .foregroundStyle(palette.muted)
         }
     }
 
+    /// MacDestG's field: caption above, input below.
+    private func labelledField<Field: View>(
+        _ label: String,
+        showsDivider: Bool = false,
+        @ViewBuilder field: () -> Field
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(label).glassFont(.caption).foregroundStyle(palette.muted)
+                .accessibilityHidden(true)
+            field()
+                .textFieldStyle(.plain)
+                .glassFont(.body)
+                .foregroundStyle(palette.text)
+                .frame(minHeight: 28)
+        }
+        .padding(.horizontal, GlassMetrics.panelPadding)
+        .padding(.vertical, 10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .overlay(alignment: .top) {
+            if showsDivider {
+                Rectangle().fill(palette.line).frame(height: 1)
+                    .padding(.horizontal, GlassMetrics.panelPadding)
+            }
+        }
+    }
+
     private var connectionTitle: String {
         switch syncService.connectionState {
-        case .connected: return String(localized: "Connected to \(syncService.connectedPeerName ?? "Mac")")
+        case .connected: return syncService.connectedPeerName ?? String(localized: "Connected to Mac")
         case .connecting: return String(localized: "Connecting…")
         case .disconnected: return String(localized: "Waiting for Mac")
         }
@@ -195,8 +275,8 @@ struct GlassMacDestinationScreen: View {
         switch syncService.connectionState {
         case .connected:
             return syncService.activeTransport == .manualIP
-                ? String(localized: "Connected by manual IP / Tailscale; check destination readiness below")
-                : String(localized: "Connected locally; check destination readiness below")
+                ? String(localized: "Connected · manual IP")
+                : String(localized: "Connected · same network")
         case .connecting:
             return syncService.activeTransport == .manualIP
                 ? String(localized: "Connecting to the entered Mac address…")
@@ -240,7 +320,7 @@ struct GlassMacDestinationScreen: View {
             if let path = syncService.macDestinationStatus?.destinationPathForDisplay {
                 return String(localized: "Exports will be written to \(path)")
             }
-            return String(localized: "Select Connected Mac in the Export tab.")
+            return String(localized: "Choose Connected Mac as the destination on an automation’s Output page.")
         }
         guard let capabilities = syncService.remoteCapabilities else {
             return String(localized: "Waiting for destination status from Mac.")

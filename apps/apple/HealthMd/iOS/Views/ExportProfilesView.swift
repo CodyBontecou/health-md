@@ -1018,8 +1018,10 @@ struct ExportProfileEditorSheet: View {
             // Creation defaults mirror what a plain duplicate would produce,
             // so the overlap warning starts honest.
             _name = State(initialValue: coordinator.suggestedProfileName())
-            _target = State(initialValue: coordinator.activeTarget ?? .localIPhoneFolder)
-            let active = coordinator.profileStore.activeProfile
+            // FolderDestG's "Default destination": start from the default folder instead.
+            let usesDefaultFolder = NewAutomationDestinationPreference.usesDefaultFolder()
+            _target = State(initialValue: usesDefaultFolder ? .localIPhoneFolder : coordinator.activeTarget ?? .localIPhoneFolder)
+            let active = usesDefaultFolder ? nil : coordinator.profileStore.activeProfile
             _folderVaultID = State(initialValue: active?.folderVaultID)
             _apiEndpointID = State(initialValue: active?.apiEndpointID)
             _agentDataGatewayID = State(initialValue: active.flatMap {

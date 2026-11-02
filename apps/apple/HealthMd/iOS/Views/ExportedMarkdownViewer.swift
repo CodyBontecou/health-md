@@ -1,5 +1,6 @@
 import Foundation
 import SwiftUI
+import UniformTypeIdentifiers
 
 /// Routes Markdown around Quick Look because iOS can classify the `.md` extension
 /// as a game ROM instead of a text document.
@@ -29,8 +30,11 @@ struct ExportedMarkdownViewer: View {
     }
 
     let target: ExportPresentationTarget
+    /// FileViewerG is a pushed page (Back, no Done). The current call sites (export
+    /// result, status banner, folder browser) are modal, so by default the viewer hosts
+    /// itself in a stack with a Back-styled dismiss; pass `false` to push it.
+    var presentedModally = true
 
-    @Environment(\.dismiss) private var dismiss
     @State private var document: ExportedMarkdownDocument?
     @State private var errorMessage: String?
     @State private var isLoading = true
@@ -46,11 +50,21 @@ struct ExportedMarkdownViewer: View {
     private var pageBackground: Color { glassPalette.bg }
 
     var body: some View {
-        viewer.glassTheme()
+        Group {
+            if presentedModally {
+                GlassModalBackStack(backIdentifier: AccessibilityID.ExportedFile.done) { page }
+            } else {
+                page
+            }
+        }
+        .glassTheme()
+        .accessibilityIdentifier(AccessibilityID.ExportedFile.viewer)
+        .task(id: loadRequestID) {
+            await loadDocument()
+        }
     }
 
-    private var viewer: some View {
-        NavigationStack {
+    private var page: some View {
             Group {
                 if isLoading {
                     ProgressView("Loading exported file…")
@@ -76,16 +90,17 @@ struct ExportedMarkdownViewer: View {
             .navigationTitle(target.fileURL.lastPathComponent)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
-                        .accessibilityIdentifier(AccessibilityID.ExportedFile.done)
+                if let document {
+                    ToolbarItem(placement: .confirmationAction) {
+                        let item = ExportedMarkdownShareItem(name: target.fileURL.lastPathComponent, source: document.source)
+                        ShareLink(item: item, preview: SharePreview(item.name)) {
+                            Text("Share")
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .accessibilityIdentifier("exportedFile.share")
+                    }
                 }
             }
-        }
-        .accessibilityIdentifier(AccessibilityID.ExportedFile.viewer)
-        .task(id: loadRequestID) {
-            await loadDocument()
-        }
     }
 
     @ViewBuilder
@@ -107,15 +122,15 @@ struct ExportedMarkdownViewer: View {
                     "This export is too large for rich preview. The complete source is shown instead.",
                     systemImage: "doc.text"
                 )
-                .font(.footnote)
-                .foregroundStyle(Color.textSecondary)
+                .glassFont(.caption)
+                .foregroundStyle(glassPalette.sec)
                 .padding(Spacing.s3)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color.bgSecondary)
+                .background(glassPalette.surface2)
                 .accessibilityIdentifier(AccessibilityID.ExportedFile.largeFileNotice)
             }
 
-            Divider()
+            Rectangle().fill(glassPalette.line).frame(height: 1)
 
             if displayMode == .preview, document.hasRichPreview {
                 ExportedMarkdownRenderedView(blocks: document.blocks)
@@ -180,6 +195,18 @@ struct ExportedMarkdownViewer: View {
             errorMessage = error.localizedDescription
             isLoading = false
         }
+    }
+}
+
+/// FileViewerG Share: the loaded file's exact text under its original filename. Built
+/// from the bytes already read, so sharing needs no further folder access.
+nonisolated struct ExportedMarkdownShareItem: Transferable, Sendable {
+    let name: String
+    let source: String
+
+    static var transferRepresentation: some TransferRepresentation {
+        DataRepresentation(exportedContentType: .plainText) { item in Data(item.source.utf8) }
+            .suggestedFileName { $0.name }
     }
 }
 

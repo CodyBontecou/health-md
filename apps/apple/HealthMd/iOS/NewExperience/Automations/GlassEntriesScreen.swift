@@ -21,32 +21,16 @@ struct GlassEntriesScreen: View {
     }
 
     var body: some View {
-        GlassSettingsSheet(
-            title: String(localized: "Individual entries"),
-            onSave: { coordinator.saveSettings(draft, for: profile) }
-        ) {
+        GlassSettingsPage(title: String(localized: "Individual entries")) {
             GlassPanel {
                 GlassToggleRow(
                     title: String(localized: "One file per health event"),
                     subtitle: String(localized: "Workouts, symptoms, blood pressure, glucose, mood…"),
                     isOn: $draft.individualTracking.globalEnabled
                 )
+                .accessibilityIdentifier("glass.entries.enabled")
             }
             if draft.individualTracking.globalEnabled {
-                GlassSectionLabel(title: String(localized: "Output"))
-                GlassPanel {
-                    GlassTemplateField(title: String(localized: "Folder"), text: $draft.individualTracking.entriesFolder)
-                    GlassTemplateField(
-                        title: String(localized: "Filename"),
-                        text: $draft.individualTracking.filenameTemplate,
-                        tokens: ["{date}", "{time}", "{metric}", "{category}"]
-                    )
-                    GlassToggleRow(
-                        title: String(localized: "Group by category"),
-                        isOn: $draft.individualTracking.useCategoryFolders
-                    )
-                }
-
                 GlassSectionLabel(title: String(localized: "Track"))
                 HStack(spacing: 8) {
                     GlassChip(title: String(localized: "Track all")) { setAll(true) }
@@ -62,8 +46,52 @@ struct GlassEntriesScreen: View {
                 Text("Only metrics enabled in this profile appear.")
                     .glassFont(.rowSubtitle)
                     .foregroundStyle(palette.muted)
+                    .padding(.horizontal, 20)
+
+                GlassSectionLabel(title: String(localized: "Output"))
+                GlassPanel {
+                    GlassTemplateField(title: String(localized: "Folder"), text: $draft.individualTracking.entriesFolder)
+                    GlassTemplateField(
+                        title: String(localized: "Filename"),
+                        text: $draft.individualTracking.filenameTemplate,
+                        tokens: ["{date}", "{time}", "{metric}", "{category}"]
+                    )
+                    GlassToggleRow(
+                        title: String(localized: "Group by category"),
+                        isOn: $draft.individualTracking.useCategoryFolders
+                    )
+                }
+
+                if let example {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("Example").glassFont(.caption).foregroundStyle(palette.muted)
+                        Text(verbatim: [example.path, example.frontmatter].compactMap { $0 }.joined(separator: "\n"))
+                            .font(.system(size: 12.5, design: .monospaced))
+                            .lineSpacing(4)
+                            .foregroundStyle(palette.text)
+                            .textSelection(.enabled)
+                    }
+                    .padding(GlassMetrics.panelPadding)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .glassSurface()
+                    .accessibilityElement(children: .combine)
+                }
             }
         }
+        .glassAutosave(
+            draft,
+            revert: { draft = $0 },
+            save: { coordinator.saveSettings($0, for: profile) }
+        )
+    }
+
+    /// Path and frontmatter for an entry of the first tracked metric, written today.
+    private var example: IndividualEntryExample? {
+        IndividualEntryExample.make(
+            settings: draft.individualTracking,
+            enabledMetricIDs: draft.metricSelection.enabledMetricIDs,
+            date: Date()
+        )
     }
 
     private func binding(_ id: String) -> Binding<Bool> {

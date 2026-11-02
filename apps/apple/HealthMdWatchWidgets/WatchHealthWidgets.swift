@@ -213,7 +213,7 @@ private struct RecoveryWidgetView: View {
         case .accessoryCircular:
             RecoveryCircularView(snapshot: entry.snapshot)
         case .accessoryInline:
-            Label("Sleep \(WatchHealthFormatter.hours(entry.snapshot.sleepHours)) · HRV \(WatchHealthFormatter.milliseconds(entry.snapshot.heartRateVariabilityMS))", systemImage: "bed.double.fill")
+            Label("Sleep \(WatchHealthFormatter.hours(entry.snapshot.sleepHours)) · HRV \(WatchHealthFormatter.wholeNumber(entry.snapshot.heartRateVariabilityMS))", systemImage: "bed.double.fill")
         #if os(watchOS)
         case .accessoryCorner:
             RecoveryCornerView(snapshot: entry.snapshot)
@@ -610,20 +610,27 @@ private struct ActivityRectangularView: View {
     }
 }
 
-/// WatchComplicationG: a title over one summary line.
+/// WatchComplicationG: the 26 pt crystal heart beside a title over one summary line.
 private struct GlassRecoveryRectangularView: View {
     let snapshot: WatchHealthSnapshot
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text("Recovery")
-                .textCase(.uppercase)
-                .font(.caption2.weight(.semibold))
-                .widgetAccentable()
-            Text("Sleep \(WatchHealthFormatter.hours(snapshot.sleepHours)) · HRV \(WatchHealthFormatter.milliseconds(snapshot.heartRateVariabilityMS))")
-                .font(.headline)
-                .minimumScaleFactor(0.7)
-                .lineLimit(1)
+        HStack(spacing: 10) {
+            Image("HealthCrystalHeart")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 26, height: 26)
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 0) {
+                Text("RECOVERY")
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundStyle(Color(red: 0xCD / 255, green: 0xB6 / 255, blue: 0xFF / 255))
+                    .widgetAccentable()
+                Text("Sleep \(WatchHealthFormatter.hours(snapshot.sleepHours)) · HRV \(WatchHealthFormatter.wholeNumber(snapshot.heartRateVariabilityMS))")
+                    .font(.system(size: 15, weight: .bold))
+                    .minimumScaleFactor(0.7)
+                    .lineLimit(1)
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .containerBackground(Color.black.opacity(0.12), for: .widget)

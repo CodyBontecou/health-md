@@ -52,11 +52,11 @@ def apple_catalog_value(value: str) -> str:
     return re.sub(r"%(\d+)\$s", r"%\1$@", value)
 
 
-# This generic label predates the report and belongs to the native Shared Setup
-# sheet. Keep its exception tied to the actual localized consumer, rather than
-# enrolling an iOS-only control in the macOS translation inventory.
+# This generic label predates the report. The Shared Setup sheet now uses Back
+# (ImportSetupG); the feedback fallback sheet (ReportFallbackG) still closes with it.
+# Keep its exception tied to the actual localized consumer.
 REVIEWED_SHARED_UI_OWNERS = {
-    "Close": ("HealthMd/iOS/SharedSetup/SharedSetupCoordinator.swift", 'Button("Close")'),
+    "Close": ("HealthMd/Shared/Utilities/FeedbackReporter.swift", 'String(localized: "Close")'),
 }
 
 

@@ -11,6 +11,9 @@ final class ScheduleSyncJourneyUITests: XCTestCase {
 
     // MARK: - Schedule Journey
 
+    /// ScheduleG's "Run on a schedule": the former master switch, per automation.
+    private static let scheduleSwitch = "glass.schedule.enabled"
+
     func testScheduleToggle_enableAndConfigure() throws {
         let app = UITestLaunchHelper.configuredApp(
             healthAuthorized: true,
@@ -20,19 +23,19 @@ final class ScheduleSyncJourneyUITests: XCTestCase {
         )
         app.launch()
 
-        // Navigate to schedule tab — the schedule controls now live inline on the tab
+        // Open the first automation's schedule (ScheduleG)
         XCTAssertTrue(UITestLaunchHelper.openScheduleTab(in: app))
 
-        // Toggle the schedule on directly — no sheet to drill into
-        let enableToggle = app.switches[UITestLaunchHelper.Schedule.enableToggle]
-        XCTAssertTrue(enableToggle.waitForExistence(timeout: 5), "Schedule toggle should be visible inline")
+        // Turn the automation's schedule on
+        let enableToggle = app.switches[Self.scheduleSwitch]
+        XCTAssertTrue(enableToggle.waitForExistence(timeout: 5), "Run on a schedule should be visible")
 
         let toggleVal = enableToggle.value as? String
         if toggleVal != "1" && toggleVal != "Enabled" {
             enableToggle.tap()
         }
 
-        // Verify the toggle is now on; changes auto-persist to SchedulingManager.schedule
+        // Verify the switch is now on; ScheduleG saves as it changes
         let newVal = enableToggle.value as? String
         XCTAssertTrue(newVal == "1" || newVal == "Enabled", "Toggle should be enabled after tap")
     }
@@ -43,36 +46,27 @@ final class ScheduleSyncJourneyUITests: XCTestCase {
 
         XCTAssertTrue(UITestLaunchHelper.openScheduleTab(in: app))
 
-        // The adaptive frequency control uses native buttons in a container,
-        // with a menu fallback; it is no longer a UIKit segmented control.
-        let frequencyPicker = app.descendants(matching: .any)[UITestLaunchHelper.Schedule.frequencyPicker].firstMatch
-        for _ in 0..<4 where !frequencyPicker.exists {
-            app.swipeUp()
-        }
-        XCTAssertTrue(frequencyPicker.waitForExistence(timeout: 5), "Frequency picker should be visible")
-
-        let customSegment = frequencyPicker.buttons["Custom"]
-        XCTAssertTrue(customSegment.exists, "Custom should be a frequency option")
+        // ScheduleG's Repeat control is a glass segmented control of native buttons.
+        let customSegment = app.buttons["Custom"].firstMatch
+        XCTAssertTrue(customSegment.waitForExistence(timeout: 5), "Custom should be a frequency option")
         customSegment.tap()
 
-        let interval = app.descendants(matching: .any)[UITestLaunchHelper.Schedule.customIntervalStepper]
-        let unit = app.descendants(matching: .any)[UITestLaunchHelper.Schedule.customUnitPicker]
-        let startDate = app.descendants(matching: .any)[UITestLaunchHelper.Schedule.customStartDatePicker]
+        let interval = app.staticTexts["Every"].firstMatch
+        let startDate = app.buttons["glass.schedule.starting"]
         XCTAssertTrue(interval.waitForExistence(timeout: 3), "Custom interval should appear")
-        XCTAssertTrue(unit.exists, "Custom interval unit should appear")
-        XCTAssertTrue(startDate.exists, "Custom start date should appear")
+        XCTAssertTrue(startDate.waitForExistence(timeout: 3), "Custom start date should appear")
     }
 
     func testScheduleStatus_showsActiveWhenEnabled() throws {
         let app = UITestLaunchHelper.scheduleEnabledApp()
         app.launch()
 
-        // Navigate to schedule tab
+        // Open the first automation's schedule (ScheduleG)
         XCTAssertTrue(UITestLaunchHelper.openScheduleTab(in: app))
 
         // The toggle should be ON since configureTestMode saved to UserDefaults
         // and SchedulingManager loads from UserDefaults
-        let enableToggle = app.switches[UITestLaunchHelper.Schedule.enableToggle]
+        let enableToggle = app.switches[Self.scheduleSwitch]
         XCTAssertTrue(enableToggle.waitForExistence(timeout: 5))
         let toggleValue = enableToggle.value as? String
         XCTAssertTrue(toggleValue == "1" || toggleValue == "Enabled", "Schedule toggle should be ON when schedule enabled via test mode")
@@ -83,10 +77,10 @@ final class ScheduleSyncJourneyUITests: XCTestCase {
         let app = UITestLaunchHelper.scheduleEnabledApp()
         app.launch()
 
-        // Navigate to schedule tab
+        // Open the first automation's schedule (ScheduleG)
         XCTAssertTrue(UITestLaunchHelper.openScheduleTab(in: app))
 
-        let enableToggle = app.switches[UITestLaunchHelper.Schedule.enableToggle]
+        let enableToggle = app.switches[Self.scheduleSwitch]
         XCTAssertTrue(enableToggle.waitForExistence(timeout: 5))
         let val1 = enableToggle.value as? String
         XCTAssertTrue(val1 == "1" || val1 == "Enabled", "Schedule toggle should be ON on first launch")
@@ -99,7 +93,7 @@ final class ScheduleSyncJourneyUITests: XCTestCase {
 
         XCTAssertTrue(UITestLaunchHelper.openScheduleTab(in: app2))
 
-        let enableToggle2 = app2.switches[UITestLaunchHelper.Schedule.enableToggle]
+        let enableToggle2 = app2.switches[Self.scheduleSwitch]
         XCTAssertTrue(enableToggle2.waitForExistence(timeout: 5))
         let val2 = enableToggle2.value as? String
         XCTAssertTrue(val2 == "1" || val2 == "Enabled", "Schedule toggle should be ON after relaunch")
@@ -131,8 +125,8 @@ final class ScheduleSyncJourneyUITests: XCTestCase {
         XCTAssertTrue(syncToggle.waitForExistence(timeout: 5), "Sync toggle should be visible")
 
         // The page header confirms the connected Mac destination view is active.
-        let pageTitle = app.staticTexts["Mac Destination"]
-        XCTAssertTrue(pageTitle.waitForExistence(timeout: 3), "Mac Destination page title should be visible")
+        let pageTitle = app.staticTexts["Health.md for Mac"]
+        XCTAssertTrue(pageTitle.waitForExistence(timeout: 3), "Health.md for Mac page title should be visible")
 
         // The sync toggle is interactive — verify its accessibility is correct
         XCTAssertTrue(syncToggle.isHittable, "Sync toggle should be hittable")
@@ -198,7 +192,10 @@ final class ScheduleSyncJourneyUITests: XCTestCase {
         let settings = app.buttons["Settings"].firstMatch
         XCTAssertTrue(settings.waitForExistence(timeout: 10))
         settings.tap()
-        let row = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", title)).firstMatch
+        // Row titles follow live state (a connected Mac shows its name), so use identifiers.
+        let identifiers = ["Mac Destination": "glass.settings.mac", "CLI": "glass.settings.cli"]
+        let row = identifiers[title].map { app.buttons[$0] }
+            ?? app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", title)).firstMatch
         XCTAssertTrue(row.waitForExistence(timeout: 5), "\(title) must be reachable from Settings")
         row.tap()
     }
@@ -218,7 +215,7 @@ extension ScheduleSyncJourneyUITests {
         )
         app.launch()
         XCTAssertTrue(UITestLaunchHelper.openScheduleTab(in: app))
-        XCTAssertTrue(app.switches[UITestLaunchHelper.Schedule.enableToggle].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.switches[Self.scheduleSwitch].waitForExistence(timeout: 5))
 
         func keep(_ name: String) {
             let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())

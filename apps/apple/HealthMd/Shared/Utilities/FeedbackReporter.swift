@@ -19,9 +19,13 @@ final class FeedbackReporter: ObservableObject {
     }
 
     struct Failure: Identifiable {
+        /// Which handoff failed; picks the sheet title.
+        enum Kind { case generic, emailHandoff, mailQueue, githubHandoff }
+
         let id = UUID()
         let message: String
         let reportText: String
+        var kind: Kind = .generic
     }
 
     @Published var failure: Failure?
@@ -62,16 +66,48 @@ final class FeedbackReporter: ObservableObject {
 
     private func makeFailure(_ route: Route, mailCompletion: Bool) -> Failure {
         let message: String
+        let kind: Failure.Kind
         if mailCompletion {
             message = strings.mailQueueFailure
+            kind = .mailQueue
         } else if route == .email {
             message = strings.emailHandoffFailure
+            kind = .emailHandoff
         } else {
             message = strings.githubHandoffFailure
+            kind = .githubHandoff
         }
-        let body = route == .github ? FeedbackHelper.issueBody : "\n\n\(FeedbackHelper.diagnosticsBlock)"
-        let text = "To: \(FeedbackHelper.supportEmail)\nGitHub: https://github.com/\(FeedbackHelper.githubRepo)/issues/new\nSubject: Health.md Feedback\n\n\(body)"
-        return Failure(message: message, reportText: text)
+        // ReportFallbackG's template, then where the report goes, which the user still needs.
+        let destination = route == .github
+            ? "GitHub: https://github.com/\(FeedbackHelper.githubRepo)/issues/new"
+            : "To: \(FeedbackHelper.supportEmail)"
+        let text = Self.reportTemplate(
+            appVersion: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "?",
+            platform: Self.platformDescription,
+            strings: strings
+        ) + "\n\n" + destination
+        return Failure(message: message, reportText: text, kind: kind)
+    }
+
+    /// ReportFallbackG's prefilled report: a version line, three prompts and the reminder.
+    static func reportTemplate(appVersion: String, platform: String, strings: FeedbackFallbackCopy) -> String {
+        [
+            "Health.md \(appVersion) · \(platform)",
+            strings.problemPrompt,
+            strings.expectedPrompt,
+            strings.stepsPrompt,
+            strings.privateDetailsReminder,
+        ].joined(separator: "\n")
+    }
+
+    /// "iOS 26.1", "iPadOS 26.1" or "macOS 26.1". No device model or identifiers.
+    static var platformDescription: String {
+        #if os(iOS)
+        return "\(UIDevice.current.systemName) \(UIDevice.current.systemVersion)"
+        #else
+        let version = ProcessInfo.processInfo.operatingSystemVersion
+        return "macOS \(version.majorVersion).\(version.minorVersion).\(version.patchVersion)"
+        #endif
     }
 
     private static func openURL(_ url: URL, completion: @escaping Completion) {
@@ -103,8 +139,34 @@ struct FeedbackFallbackCopy {
     var instructions: String {
         String(localized: "Edit the report, then copy it before closing. Nothing is sent automatically. Avoid including private health data.", bundle: bundle, locale: locale)
     }
-    var reportLabel: String { String(localized: "Feedback report", bundle: bundle, locale: locale) }
-    var copyReport: String { String(localized: "Copy Report", bundle: bundle, locale: locale) }
+    /// ReportFallbackG sheet title for the handoff that failed.
+    func title(for kind: FeedbackReporter.Failure.Kind) -> String {
+        switch kind {
+        case .generic: return title
+        case .emailHandoff: return String(localized: "Couldn’t open Mail", bundle: bundle, locale: locale)
+        case .mailQueue: return String(localized: "Mail couldn’t send", bundle: bundle, locale: locale)
+        case .githubHandoff: return String(localized: "Couldn’t open GitHub", bundle: bundle, locale: locale)
+        }
+    }
+    var localOnly: String {
+        #if os(macOS)
+        String(localized: "Your report wasn’t sent. Copy it into any app, or edit it first — nothing leaves this Mac until you share it.", bundle: bundle, locale: locale)
+        #else
+        String(localized: "Your report wasn’t sent. Copy it into any app, or edit it first — nothing leaves this iPhone until you share it.", bundle: bundle, locale: locale)
+        #endif
+    }
+    var problemPrompt: String { String(localized: "Problem:", bundle: bundle, locale: locale) }
+    var expectedPrompt: String { String(localized: "What I expected:", bundle: bundle, locale: locale) }
+    var stepsPrompt: String { String(localized: "Steps to reproduce:", bundle: bundle, locale: locale) }
+    var privateDetailsReminder: String {
+        String(localized: "(Remove any private folder or server details before sharing.)", bundle: bundle, locale: locale)
+    }
+    var attachDiagnostics: String { String(localized: "Attach diagnostics summary", bundle: bundle, locale: locale) }
+    var attachDiagnosticsCaption: String { String(localized: "No health values, paths or credentials", bundle: bundle, locale: locale) }
+    var share: String { String(localized: "Share…", bundle: bundle, locale: locale) }
+    /// ReportFallbackG names the editor "Report text".
+    var reportLabel: String { String(localized: "Report text", bundle: bundle, locale: locale) }
+    var copyReport: String { String(localized: "Copy report", bundle: bundle, locale: locale) }
     var copied: String { String(localized: "Copied", bundle: bundle, locale: locale) }
     var reportCopied: String { String(localized: "Report copied", bundle: bundle, locale: locale) }
 }
@@ -146,10 +208,11 @@ struct FeedbackFailureView: View {
         _draft = State(initialValue: FeedbackReportDraft(reportText: failure.reportText, strings: strings))
     }
 
-    /// ReportFallbackG. Still local only: edit, copy, done.
+    /// ReportFallbackG. Still local only: edit, copy or share, done.
     var body: some View {
         GlassReportFallbackContent(
             strings: strings,
+            title: strings.title(for: failure.kind),
             message: failure.message,
             draft: $draft,
             onCopy: copyReport,
@@ -171,44 +234,127 @@ struct FeedbackFailureView: View {
     }
 }
 
+/// Adds or removes the diagnostics summary block in the editable report, so what is
+/// copied or shared is always exactly what the editor shows.
+enum FeedbackDiagnosticsAttachment {
+    static func attaching(_ summary: String, to report: String) -> String {
+        report.contains(summary) ? report : report + "\n\n" + summary
+    }
+
+    static func detaching(_ summary: String, from report: String) -> String {
+        if let range = report.range(of: "\n\n" + summary) ?? report.range(of: summary) {
+            var result = report
+            result.removeSubrange(range)
+            return result
+        }
+        return report
+    }
+}
+
 private struct GlassReportFallbackContent: View {
     let strings: FeedbackFallbackCopy
+    let title: String
     let message: String
     @Binding var draft: FeedbackReportDraft
     let onCopy: () -> Void
     let onDone: () -> Void
 
     @Environment(\.glassPalette) private var palette
+    @State private var attachSummary = false
+    @State private var attachedSummary: String?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: GlassMetrics.sectionGap) {
-            Text(strings.title).glassFont(.screenTitle).foregroundStyle(palette.text)
-            Text(message).glassFont(.body).foregroundStyle(palette.sec)
-            Text(strings.instructions).glassFont(.rowSubtitle).foregroundStyle(palette.muted)
-            TextEditor(text: $draft.reportText)
-                .glassFont(.monoBody)
-                .foregroundStyle(palette.text)
-                .scrollContentBackground(.hidden)
-                .padding(8)
-                .frame(minHeight: 180)
-                .glassSurface(cornerRadius: GlassMetrics.panelSmallRadius)
-                .accessibilityLabel(strings.reportLabel)
-            Button(strings.copyReport, action: onCopy).buttonStyle(GlassPrimaryButtonStyle())
+        VStack(spacing: 0) {
             HStack {
+                Button(String(localized: "Close"), action: onDone)
+                    .foregroundStyle(palette.sec)
+                    .frame(minWidth: 70, minHeight: GlassMetrics.touchTarget, alignment: .leading)
+                Spacer(minLength: 8)
+                Text(title)
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(palette.text)
+                    .lineLimit(1)
+                    .accessibilityAddTraits(.isHeader)
+                Spacer(minLength: 8)
+                Color.clear.frame(width: 70, height: 1)
+            }
+            .padding(.horizontal, GlassMetrics.screenMargin)
+            .padding(.top, 8)
+
+            ScrollView {
+                VStack(alignment: .leading, spacing: GlassMetrics.sectionGap) {
+                    Text(strings.localOnly)
+                        .font(.system(size: 14))
+                        .foregroundStyle(palette.muted)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.horizontal, 4)
+                    TextEditor(text: $draft.reportText)
+                        .glassFont(.monoBody)
+                        .foregroundStyle(palette.text)
+                        .scrollContentBackground(.hidden)
+                        .padding(8)
+                        .frame(minHeight: 260)
+                        .glassSurface()
+                        .accessibilityLabel(strings.reportLabel)
+                    GlassPanel {
+                        Toggle(isOn: $attachSummary) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(strings.attachDiagnostics).glassFont(.body).foregroundStyle(palette.text)
+                                Text(strings.attachDiagnosticsCaption).glassFont(.rowSubtitle).foregroundStyle(palette.muted)
+                            }
+                        }
+                        .toggleStyle(GlassToggleStyle())
+                        .padding(.horizontal, GlassMetrics.panelPadding)
+                        .padding(.vertical, 8)
+                        .accessibilityIdentifier("feedback.attachDiagnostics")
+                    }
+                }
+                .padding(.horizontal, GlassMetrics.screenMargin)
+                .padding(.vertical, 8)
+            }
+
+            VStack(spacing: 8) {
+                Button(strings.copyReport, action: onCopy).buttonStyle(GlassPrimaryButtonStyle())
+                ShareLink(item: draft.reportText) {
+                    Text(strings.share)
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundStyle(palette.text)
+                        .frame(maxWidth: .infinity, minHeight: 46)
+                        .background(Capsule().fill(palette.surface2))
+                        .overlay(Capsule().strokeBorder(palette.edge, lineWidth: 1))
+                        .contentShape(Capsule())
+                }
+                .buttonStyle(.plain)
                 Text(draft.copyConfirmation)
                     .glassFont(.caption)
                     .foregroundStyle(palette.ok)
                     .accessibilityLabel(draft.copyAccessibilityLabel)
-                Spacer()
-                Button("Done", action: onDone).frame(minHeight: GlassMetrics.touchTarget)
             }
+            .padding(.horizontal, GlassMetrics.screenMargin)
+            .padding(.top, 12)
+            .padding(.bottom, 8)
+            .background { Color.clear.glassSurface(in: Rectangle()).ignoresSafeArea(edges: .bottom) }
         }
-        .padding(GlassMetrics.screenMargin)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(palette.bg.ignoresSafeArea())
+        .onChange(of: attachSummary) { _, attach in updateSummary(attach) }
         #if os(macOS)
-        .frame(minWidth: 520, minHeight: 440)
+        .frame(minWidth: 520, minHeight: 560)
         #endif
+    }
+
+    private func updateSummary(_ attach: Bool) {
+        if attach {
+            Task {
+                let summary = await Task.detached { DiagnosticSummary.current() }.value
+                guard attachSummary else { return }
+                attachedSummary = summary
+                draft.reportText = FeedbackDiagnosticsAttachment.attaching(summary, to: draft.reportText)
+            }
+        } else if let summary = attachedSummary {
+            draft.reportText = FeedbackDiagnosticsAttachment.detaching(summary, from: draft.reportText)
+            attachedSummary = nil
+        }
     }
 }
 

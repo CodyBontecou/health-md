@@ -30,10 +30,12 @@ struct ClinicianReportView: View {
     @State private var showShare = false
     @State private var showExportSuccess = false
     @State private var exportSuccessPresentationID = UUID()
+    /// Create PDF goes straight to sharing once the PDF is ready; Preview stops at the preview.
+    @State private var sharesWhenReady = false
 
     private var copy: ClinicianReportCopy { ClinicianReportCopy(locale: locale) }
     private var usesAccessibilityLayout: Bool { dynamicTypeSize.isAccessibilitySize }
-    /// Resolved here because the sheet sits outside the shell's `glassTheme()`.
+    /// Resolved here so the page matches the glass palette wherever it is pushed.
     private var palette: GlassPalette {
         GlassPalette.resolved(colorScheme: colorScheme, reduceTransparency: reduceTransparency)
     }
@@ -46,61 +48,51 @@ struct ClinicianReportView: View {
     }
 
     var body: some View {
-        NavigationStack {
-            ScrollViewReader { proxy in
-                ScrollView {
-                    Color.clear
-                        .frame(height: 0)
-                        .id(ScrollTarget.top)
+        ScrollViewReader { proxy in
+            ScrollView {
+                Color.clear
+                    .frame(height: 0)
+                    .id(ScrollTarget.top)
 
-                    Group {
-                        if let report = viewModel.report, !viewModel.isRendering {
-                            reportPreview(report)
-                        } else {
-                            configurationContent
-                                .configurationChangesProtected()
-                                .disabled(!viewModel.isConfigurationEditable)
-                        }
-                    }
-                    .padding(.horizontal, GlassMetrics.screenMargin)
-                    .padding(.top, 8)
-                    .padding(.bottom, GlassMetrics.screenMargin)
-                }
-                .scrollIndicators(.hidden)
-                .tint(palette.accent)
-                .background(palette.bg.ignoresSafeArea())
-                .safeAreaInset(edge: .bottom, spacing: 0) {
-                    actionBar
-                }
-                .onChange(of: viewModel.report != nil && !viewModel.isRendering) { _, _ in
-                    Task { @MainActor in
-                        await Task.yield()
-                        proxy.scrollTo(ScrollTarget.top, anchor: .top)
+                Group {
+                    if let report = viewModel.report, !viewModel.isRendering {
+                        reportPreview(report)
+                    } else {
+                        configurationContent
+                            .configurationChangesProtected()
+                            .disabled(!viewModel.isConfigurationEditable)
                     }
                 }
+                .padding(.horizontal, GlassMetrics.screenMargin)
+                .padding(.top, 8)
+                .padding(.bottom, GlassMetrics.screenMargin)
             }
-            .overlay(alignment: .top) {
-                if showExportSuccess {
-                    exportSuccessToast
-                        .padding(.horizontal, GlassMetrics.screenMargin)
-                        .padding(.top, 8)
-                        .transition(.move(edge: .top).combined(with: .opacity))
-                        .zIndex(1)
-                }
+            .scrollIndicators(.hidden)
+            .tint(palette.accent)
+            .background(palette.bg.ignoresSafeArea())
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                actionBar
             }
-            .navigationTitle(copy.string(.title))
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button(copy.string(.close)) {
-                        viewModel.cancel()
-                        dismiss()
-                    }
-                    .frame(minHeight: GlassMetrics.touchTarget)
+            .onChange(of: viewModel.report != nil && !viewModel.isRendering) { _, _ in
+                Task { @MainActor in
+                    await Task.yield()
+                    proxy.scrollTo(ScrollTarget.top, anchor: .top)
                 }
             }
         }
-        .interactiveDismissDisabled(viewModel.isBusy)
+        .overlay(alignment: .top) {
+            if showExportSuccess {
+                exportSuccessToast
+                    .padding(.horizontal, GlassMetrics.screenMargin)
+                    .padding(.top, 8)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                    .zIndex(1)
+            }
+        }
+        // ClinicianReportG is a pushed page: Back (system) pops and cancels any
+        // in-flight build; there is no Close. The PDF keeps `clinician_report_title`.
+        .navigationTitle(String(localized: "Clinician report"))
+        .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $showShare) {
             if let artifact = viewModel.artifact {
                 ClinicianReportShareSheet(artifact: artifact) { completed in
@@ -116,12 +108,26 @@ struct ClinicianReportView: View {
                 .padding(.horizontal, GlassMetrics.screenMargin)
                 .padding(.top, 8)
         }
+        .onChange(of: viewModel.artifact != nil) { _, ready in
+            guard ready, sharesWhenReady else { return }
+            sharesWhenReady = false
+            showExportSuccess = false
+            exportSuccessPresentationID = UUID()
+            showShare = true
+        }
+        .onChange(of: viewModel.isBusy) { _, busy in
+            // A cancelled or failed Create PDF must not open the share sheet later.
+            if !busy, viewModel.artifact == nil { sharesWhenReady = false }
+        }
         .onChange(of: configurationProtection.settingsNavigationRequestID) { _, requestID in
             if requestID != nil {
                 dismiss()
             }
         }
-        .glassSheet(palette: palette)
+        .onDisappear {
+            // Leaving with Back abandons a build in progress, as Close did.
+            if !showShare { viewModel.cancel() }
+        }
         .glassTheme()
     }
 
@@ -129,7 +135,7 @@ struct ClinicianReportView: View {
 
     private var configurationContent: some View {
         VStack(alignment: .leading, spacing: GlassMetrics.sectionGap) {
-            Text(copy.string(.intro))
+            Text(introText)
                 .glassFont(.caption)
                 .fontWeight(.regular)
                 .foregroundStyle(palette.muted)
@@ -140,6 +146,7 @@ struct ClinicianReportView: View {
             displayNameField
             periodSection
             metricSection
+            // Not on the board, but the summary-or-readings choice has no other home.
             detailSection
 
             if viewModel.configuration.selectedMetrics.isEmpty {
@@ -177,24 +184,17 @@ struct ClinicianReportView: View {
                 .padding(.horizontal, GlassMetrics.panelPadding)
                 .padding(.vertical, 10)
             }
-            footnote(copy.string(.display_name_hint))
         }
     }
 
     private var periodSection: some View {
         VStack(alignment: .leading, spacing: 6) {
-            GlassPanel {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text(copy.string(.period))
-                        .glassFont(.body)
-                        .foregroundStyle(palette.text)
-                    periodPicker
-                }
-                .padding(.horizontal, GlassMetrics.panelPadding)
-                .padding(.vertical, 12)
+            GlassSectionLabel(title: copy.string(.period))
+                .padding(.horizontal, 20)
+            periodPicker
 
-                if viewModel.selectedPreset == .custom {
-                    rowDivider
+            if viewModel.selectedPreset == .custom {
+                GlassPanel {
                     datePickerRow(
                         copy.string(.start_date),
                         selection: Binding(
@@ -228,17 +228,18 @@ struct ClinicianReportView: View {
             VStack(alignment: .leading, spacing: 8) {
                 ForEach(ReportDateRangePreset.allCases) { preset in
                     let selected = viewModel.selectedPreset == preset
-                    GlassChip(title: preset.title(using: copy), isSelected: selected) {
+                    GlassChip(title: chipTitle(preset), isSelected: selected) {
                         viewModel.selectPreset(preset)
                     }
                     .accessibilityIdentifier(AccessibilityID.ClinicianReport.preset(preset))
+                    .accessibilityLabel(preset.title(using: copy))
                     .accessibilityValue(copy.string(selected ? .selected : .not_selected))
                 }
             }
         } else {
             GlassSegmentedControl(
                 segments: ReportDateRangePreset.allCases.map {
-                    GlassSegmentedControl<ReportDateRangePreset>.Segment(value: $0, title: $0.title(using: copy))
+                    GlassSegmentedControl<ReportDateRangePreset>.Segment(value: $0, title: chipTitle($0))
                 },
                 selection: Binding(
                     get: { viewModel.selectedPreset },
@@ -278,6 +279,49 @@ struct ClinicianReportView: View {
             .accessibilityIdentifier(identifier)
     }
 
+    /// ClinicianReportG's short period labels ("30 d / 90 d / 6 mo"). The full names stay
+    /// in the report vocabulary and are what VoiceOver reads for the chips.
+    private func chipTitle(_ preset: ReportDateRangePreset) -> String {
+        switch preset {
+        case .days30: return String(localized: "30 d", comment: "Clinician report period chip: 30 days")
+        case .days90: return String(localized: "90 d", comment: "Clinician report period chip: 90 days")
+        case .months6: return String(localized: "6 mo", comment: "Clinician report period chip: 6 months")
+        case .custom: return preset.title(using: copy)
+        }
+    }
+
+    /// ClinicianReportG says "built on this iPhone"; other devices keep the report wording.
+    private var introText: String {
+        UIDevice.current.userInterfaceIdiom == .phone
+            ? String(localized: "A PDF summary for an appointment, built on this iPhone.")
+            : copy.string(.intro)
+    }
+
+    /// ClinicianReportG's order: the board's metrics first, then the rest in report order.
+    private static let metricDisplayOrder: [ReportMetric] = {
+        let leading: [ReportMetric] = [.restingHeartRate, .sleepDuration, .bloodPressure, .weight, .steps]
+        return leading + ReportMetric.allCases.filter { !leading.contains($0) }
+    }()
+
+    /// ClinicianReportG's on-screen labels, in sentence case ("Resting heart rate", "Sleep").
+    /// UI-only: the PDF keeps the shared report copy (`clinician_report_metric_*`), which is
+    /// part of the cross-platform report contract.
+    static func listLabel(for metric: ReportMetric) -> String {
+        switch metric {
+        case .bloodPressure: return String(localized: "Blood pressure")
+        case .restingHeartRate: return String(localized: "Resting heart rate")
+        case .heartRate: return String(localized: "Heart rate")
+        case .weight: return String(localized: "Weight")
+        case .bloodGlucose: return String(localized: "Blood glucose")
+        case .oxygenSaturation: return String(localized: "Oxygen saturation")
+        case .respiratoryRate: return String(localized: "Respiratory rate")
+        case .bodyTemperature: return String(localized: "Body temperature")
+        case .sleepDuration: return String(localized: "Sleep")
+        case .steps: return String(localized: "Steps")
+        case .workouts: return String(localized: "Workouts")
+        }
+    }
+
     private var resolvedRangeLabel: String {
         let style = Date.FormatStyle(date: .abbreviated, time: .omitted).locale(locale)
         let range = viewModel.configuration.dateRange
@@ -292,25 +336,14 @@ struct ClinicianReportView: View {
             }
 
             VStack(alignment: .leading, spacing: 6) {
-                HStack(alignment: .firstTextBaseline) {
-                    GlassSectionLabel(title: copy.string(.include))
-                    Spacer(minLength: 8)
-                    Text(copy.format(
-                        .selected_count,
-                        "\(viewModel.configuration.selectedMetrics.count)",
-                        "\(ReportMetric.allCases.count)"
-                    ))
-                    .glassFont(.rowSubtitle)
-                    .foregroundStyle(palette.muted)
-                    .monospacedDigit()
-                }
-                .padding(.horizontal, 20)
+                GlassSectionLabel(title: copy.string(.include))
+                    .padding(.horizontal, 20)
 
                 GlassPanel {
-                    ForEach(ReportMetric.allCases) { metric in
-                        if metric != ReportMetric.allCases.first { rowDivider }
+                    ForEach(Self.metricDisplayOrder) { metric in
+                        if metric != Self.metricDisplayOrder.first { rowDivider }
                         GlassToggleRow(
-                            title: metric.displayName(using: copy),
+                            title: Self.listLabel(for: metric),
                             isOn: Binding(
                                 get: { viewModel.configuration.selectedMetrics.contains(metric) },
                                 set: { _ in viewModel.toggleMetric(metric) }
@@ -434,14 +467,7 @@ struct ClinicianReportView: View {
             } else if let report = viewModel.report {
                 reviewActions(report)
             } else {
-                // Preparing the preview also renders the PDF, so one action covers both
-                // of ClinicianReportG's Preview and Create PDF buttons.
-                Button(action: { viewModel.generateReport(locale: locale) }) {
-                    Text(copy.string(.preview))
-                }
-                .buttonStyle(GlassPrimaryButtonStyle())
-                .disabled(!viewModel.canGenerateReport)
-                .accessibilityIdentifier(AccessibilityID.ClinicianReport.preview)
+                configurationActions
             }
         }
         .padding(.horizontal, GlassMetrics.screenMargin)
@@ -452,6 +478,45 @@ struct ClinicianReportView: View {
             Color.clear
                 .glassSurface(in: Rectangle(), style: .strong)
                 .ignoresSafeArea(edges: .bottom)
+        }
+    }
+
+    /// ClinicianReportG's pair: Preview shows the report first; Create PDF goes on to share it.
+    /// Both prepare the same report, which also renders the PDF.
+    @ViewBuilder
+    private var configurationActions: some View {
+        let preview = Button {
+            sharesWhenReady = false
+            viewModel.generateReport(locale: locale)
+        } label: {
+            Text(String(localized: "Preview"))
+                .glassFont(.body)
+                .fontWeight(.medium)
+                .foregroundStyle(palette.text)
+                .padding(.horizontal, 12)
+                .frame(maxWidth: .infinity, minHeight: GlassMetrics.primaryButtonHeight)
+                .background(Capsule().fill(palette.surface2))
+                .overlay(Capsule().strokeBorder(palette.edge, lineWidth: 1))
+                .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
+        .disabled(!viewModel.canGenerateReport)
+        .accessibilityIdentifier("clinicianReport.previewOnly")
+
+        let create = Button {
+            sharesWhenReady = true
+            viewModel.generateReport(locale: locale)
+        } label: {
+            Text(copy.string(.preview))
+        }
+        .buttonStyle(GlassPrimaryButtonStyle())
+        .disabled(!viewModel.canGenerateReport)
+        .accessibilityIdentifier(AccessibilityID.ClinicianReport.preview)
+
+        if usesAccessibilityLayout {
+            VStack(spacing: 8) { create; preview }
+        } else {
+            HStack(spacing: 8) { preview; create }
         }
     }
 

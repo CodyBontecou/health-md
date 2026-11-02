@@ -11,16 +11,21 @@ struct PaywallView: View {
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @State private var selectedAudience: PaywallPricingAudience = .individual
     @State private var selectedOption: HealthMdPurchaseOption = .weekly
+    @State private var showClinicAccess = false
 
     private let context: PaywallContext
     private let allowsDismissal: Bool
+    /// Lets "Clinic invitation?" offer the user's automations as the clinic destination.
+    private let profileCoordinator: ExportProfileCoordinator?
 
     init(
         context: PaywallContext = .export,
-        allowsDismissal: Bool = true
+        allowsDismissal: Bool = true,
+        profileCoordinator: ExportProfileCoordinator? = nil
     ) {
         self.context = context
         self.allowsDismissal = allowsDismissal
+        self.profileCoordinator = profileCoordinator
     }
 
     // MARK: - State
@@ -30,12 +35,12 @@ struct PaywallView: View {
     }
 
     private var titleText: String {
-        isManagingPurchase ? String(localized: "Purchases & Family") : String(localized: "Keep Your Health Archive Growing")
+        isManagingPurchase ? String(localized: "Purchases & Family") : String(localized: "Build a permanent Apple Health archive")
     }
 
     private var subtitleText: String {
         if isManagingPurchase { return currentPlanTitle }
-        return String(localized: "Choose a subscription or Lifetime access to begin your private health archive. Eligible subscriptions include a 7-day free trial.")
+        return String(localized: "Private local files. Unlimited automated daily notes.")
     }
 
     private var currentPlanTitle: String {
@@ -126,6 +131,17 @@ struct PaywallView: View {
             }
             .background(glassPalette.bg.ignoresSafeArea())
             .safeAreaInset(edge: .bottom, spacing: 0) { purchaseBar }
+            .sheet(isPresented: $showClinicAccess) {
+                NavigationStack {
+                    GlassClinicAccessScreen(coordinator: profileCoordinator)
+                        .toolbar {
+                            ToolbarItem(placement: .cancellationAction) {
+                                Button(String(localized: "Done")) { showClinicAccess = false }
+                            }
+                        }
+                }
+                .glassTheme()
+            }
             .toolbar {
                 // The access gate presents this without dismissal: it is a hard paywall.
                 if allowsDismissal {
@@ -204,7 +220,7 @@ struct PaywallView: View {
                 ForEach(selectedOptions) { option in
                     PaywallPlanCard(
                         title: option.displayTitle,
-                        badge: Self.isRecommended(option) ? String(localized: "Best Value") : nil,
+                        badge: Self.isRecommended(option) ? String(localized: "Best value") : nil,
                         subtitle: optionSubtitle(for: option),
                         price: purchaseButtonPriceLabel(for: option),
                         isSelected: selectedOption == option,
@@ -259,7 +275,7 @@ struct PaywallView: View {
             HStack(spacing: 18) {
                 restoreButton
                 Link(
-                    String(localized: "Manage Subscriptions"),
+                    String(localized: "Manage subscriptions"),
                     destination: URL(string: "https://apps.apple.com/account/subscriptions")!
                 )
                 .glassFont(.caption)
@@ -267,6 +283,14 @@ struct PaywallView: View {
                 .frame(minHeight: GlassMetrics.touchTarget)
             }
             .frame(maxWidth: .infinity)
+            if PracticeFeaturePolicy.current.isEnabled {
+                Button(String(localized: "Clinic invitation?")) { showClinicAccess = true }
+                    .buttonStyle(.plain)
+                    .glassFont(.caption)
+                    .foregroundStyle(glassPalette.muted)
+                    .frame(minHeight: GlassMetrics.touchTarget)
+                    .accessibilityIdentifier("paywall.clinicInvitation")
+            }
         }
         .padding(.horizontal, GlassMetrics.screenMargin)
         .padding(.top, 12)
@@ -305,7 +329,7 @@ struct PaywallView: View {
                 if purchaseManager.isRestoring {
                     ProgressView().controlSize(.small).tint(glassPalette.accent)
                 }
-                Text(LocalizedStringKey("Restore Purchase"))
+                Text(String(localized: "Restore"))
             }
         }
         .buttonStyle(.plain)
@@ -319,7 +343,7 @@ struct PaywallView: View {
 
     private func checkoutTitle(for option: HealthMdPurchaseOption) -> String {
         if option == .familyUpgrade { return String(localized: "Upgrade to Family Lifetime") }
-        if isTrialEligible(option) { return String(localized: "Start Free Trial") }
+        if isTrialEligible(option) { return String(localized: "Start free trial") }
         return String(localized: "Continue")
     }
 
@@ -361,9 +385,11 @@ struct PaywallView: View {
     private func optionSubtitle(for option: HealthMdPurchaseOption) -> String {
         guard isTrialEligible(option),
               let price = displayPrice(for: option) else { return option.displaySubtitle }
+        // PaywallG wording, plus the auto-renew disclosure the App Store requires.
+        // The weekly price is beside the subtitle ("/wk"), as on the board.
         return option == .weekly || option == .familyWeekly
-            ? String(localized: "7 days free, then \(price) per week. Auto-renews; cancel anytime.")
-            : String(localized: "7 days free, then \(price) per year. Auto-renews; cancel anytime.")
+            ? String(localized: "7-day free trial. Auto-renews; cancel anytime.")
+            : String(localized: "7-day free trial, then \(price)/year. Auto-renews; cancel anytime.")
     }
 
     private func purchaseButtonPriceLabel(for option: HealthMdPurchaseOption) -> String? {

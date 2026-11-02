@@ -1,7 +1,7 @@
 import XCTest
 
-/// Flag-on reach test for the automation sub-pages. Each one opens from the hub and cancels
-/// without saving.
+/// Flag-on reach test for the automation sub-pages. Each one is pushed from the hub and
+/// goes back without changing anything (the pages save as they change).
 final class GlassAutomationPagesUITests: XCTestCase {
     func testEveryAutomationPageOpensFromTheHub() {
         continueAfterFailure = false
@@ -23,13 +23,14 @@ final class GlassAutomationPagesUITests: XCTestCase {
             let row = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", title)).firstMatch
             XCTAssertTrue(row.waitForExistence(timeout: 5), title)
             row.tap()
-            let cancel = app.buttons["Cancel"]
-            XCTAssertTrue(cancel.waitForExistence(timeout: 5), title)
+            let bar = app.navigationBars[title]
+            XCTAssertTrue(bar.waitForExistence(timeout: 5), title)
+            XCTAssertFalse(bar.buttons["Save"].exists, "\(title) saves as it changes")
             if let directory = ProcessInfo.processInfo.environment["GLASS_SCREENSHOT_DIR"] {
                 let url = URL(fileURLWithPath: directory).appendingPathComponent("page-\(title).png")
                 try? XCUIScreen.main.screenshot().pngRepresentation.write(to: url)
             }
-            cancel.tap()
+            bar.buttons.firstMatch.tap()
             XCTAssertTrue(row.waitForExistence(timeout: 5), title)
         }
     }
@@ -45,9 +46,9 @@ final class GlassAutomationPagesUITests: XCTestCase {
         app.launch()
 
         app.buttons["Settings"].tap()
-        let pages = [("Folder", "glass.folderDestination"), ("Mac Destination", "glass.macDestination"), ("CLI", "glass.cliDestination")]
+        let pages = [("folder", "glass.folderDestination"), ("mac", "glass.macDestination"), ("cli", "glass.cliDestination")]
         for (title, identifier) in pages {
-            let row = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", title)).firstMatch
+            let row = app.buttons["glass.settings.\(title)"]
             XCTAssertTrue(row.waitForExistence(timeout: 5), title)
             row.tap()
             XCTAssertTrue(app.descendants(matching: .any)[identifier].waitForExistence(timeout: 5), title)
@@ -70,7 +71,7 @@ final class GlassAutomationPagesUITests: XCTestCase {
         app.launch()
 
         app.buttons["Settings"].tap()
-        let support = app.buttons["App & support"]
+        let support = app.buttons["glass.settings.appSupport"]
         XCTAssertTrue(support.waitForExistence(timeout: 5))
         support.tap()
         XCTAssertTrue(app.descendants(matching: .any)["glass.appSupport"].waitForExistence(timeout: 5))
@@ -122,7 +123,7 @@ final class GlassAutomationPagesUITests: XCTestCase {
         app.launch()
 
         app.buttons["Settings"].tap()
-        app.buttons["App & support"].tap()
+        app.buttons["glass.settings.appSupport"].tap()
         let diagnostics = app.buttons["Diagnostics"]
         var swipes = 0
         while !diagnostics.isHittable && swipes < 5 {
@@ -244,7 +245,7 @@ final class GlassAutomationPagesUITests: XCTestCase {
         )
         app.launch()
         app.buttons["Settings"].tap()
-        let row = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Mac Destination")).firstMatch
+        let row = app.buttons["glass.settings.mac"]
         XCTAssertTrue(row.waitForExistence(timeout: 5))
         row.tap()
         XCTAssertTrue(app.descendants(matching: .any)["glass.macDestination"].waitForExistence(timeout: 5))

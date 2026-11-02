@@ -16,7 +16,6 @@ struct OnboardingView: View {
     @State private var currentStep = 0
     @State private var direction: TransitionDirection = .forward
     @State private var isRequestingHealthAuthorization = false
-    @State private var isSharedSetupImporterPresented = false
 
     private let totalSteps = OnboardingStep.allCases.count
     private let sampleExportStepIndex = OnboardingStep.sampleExport.rawValue
@@ -42,7 +41,7 @@ struct OnboardingView: View {
             OnboardingPageLayout(pageID: currentStep) {
                 VStack(spacing: Spacing.s4) {
                     topBar
-                    OnboardingProgressBar(current: currentStep, total: totalSteps)
+                    OnboardingProgressBar(current: step.phase.rawValue, total: OnboardingPhase.allCases.count)
                 }
             } content: {
                 stepContent
@@ -52,10 +51,6 @@ struct OnboardingView: View {
                     .transition(.opacity)
             }
         }
-        .sharedSetupFileImporter(
-            isPresented: $isSharedSetupImporterPresented,
-            coordinator: sharedSetupCoordinator
-        )
         .onChange(of: vaultManager.vaultURL) { _, folderURL in
             if folderURL != nil {
             }
@@ -64,8 +59,8 @@ struct OnboardingView: View {
 
     private var topBar: some View {
         OnboardingNavigationHeader(
-            current: currentStep,
-            total: totalSteps,
+            current: step.phase.rawValue,
+            total: OnboardingPhase.allCases.count,
             canGoBack: canGoBack,
             showsMark: step != .welcome,
             onBack: goBack
@@ -108,25 +103,14 @@ struct OnboardingView: View {
         VStack(spacing: Spacing.s3) {
             switch step {
             case .welcome:
-                VStack(spacing: Spacing.s2) {
-                    // The Health step still explains access and makes the request.
-                    OnboardingPrimaryButton(
-                        title: String(localized: "Connect Apple Health"),
-                        icon: "arrow.right",
-                        accessibilityHint: String(localized: "Double tap to continue"),
-                        action: advance
-                    )
-                    Button {
-                        sharedSetupCoordinator.beginImport(source: .onboarding)
-                        isSharedSetupImporterPresented = true
-                    } label: {
-                        Label("Use a Shared Setup", systemImage: "doc.badge.gearshape")
-                            .font(Typography.body())
-                    }
-                    .buttonStyle(.plain)
-                    .foregroundStyle(Color.glassAdaptive(\.sec))
-                    .accessibilityIdentifier(AccessibilityID.SharedSetup.use)
-                }
+                // The Health step still explains access and makes the request. Importing a
+                // shared setup lives in Settings › More (ImportSetupG), not on the welcome board.
+                OnboardingPrimaryButton(
+                    title: String(localized: "Connect Apple Health"),
+                    icon: "arrow.right",
+                    accessibilityHint: String(localized: "Double tap to continue"),
+                    action: advance
+                )
             case .healthAccess:
                 if healthKitManager.isAuthorized {
                     OnboardingPrimaryButton(title: String(localized: "Continue Setup"), icon: "arrow.right", action: advance)
@@ -233,17 +217,36 @@ struct OnboardingView: View {
 
 }
 
-/// The onboarding flow is intentionally short: welcome → health access →
-/// sample export (with the Obsidian-plugin promo folded in) → folder → ready.
+/// The onboarding flow is intentionally short: welcome → health access → folder →
+/// sample export (with the Obsidian-plugin promo folded in) → ready, matching
+/// OnboardingG's phase order (read → archive location → preview).
 /// The unlock paywall no longer blocks onboarding; it surfaces once, after the
 /// first real export preview closes (see the post-onboarding paywall in
 /// ContentView), alongside the 3rd/7th-export soft prompts.
 private enum OnboardingStep: Int, CaseIterable {
     case welcome
     case healthAccess
-    case sampleExport
     case folder
+    case sampleExport
     case ready
+
+    /// The welcome page's three phases, which the progress bar and "Step x of 3" count.
+    var phase: OnboardingPhase {
+        switch self {
+        case .welcome, .healthAccess: return .read
+        case .folder: return .archive
+        case .sampleExport, .ready: return .preview
+        }
+    }
+}
+
+/// OnboardingG's three phases: choose what Health.md can read, pick where the archive
+/// lives (the sample file shows what will be written there), then preview the first
+/// export, which the ready step leads to.
+enum OnboardingPhase: Int, CaseIterable {
+    case read
+    case archive
+    case preview
 }
 
 private enum TransitionDirection {
@@ -253,24 +256,26 @@ private enum TransitionDirection {
 
 // MARK: - Progress
 
+/// OnboardingG's progress: one 24-point pill for the current phase, 6-point dots for the rest.
 struct OnboardingProgressBar: View {
     let current: Int
     let total: Int
 
     var body: some View {
-        HStack(spacing: Spacing.s2) {
+        HStack(spacing: 6) {
             ForEach(0..<total, id: \.self) { index in
                 Capsule()
-                    .fill(index <= current ? Color.geistGray1000 : Color.glassAdaptive(\.line))
-                    .frame(height: 3)
-                    .frame(maxWidth: index == current ? 32 : .infinity)
+                    .fill(index == current ? Color.glassAdaptive(\.accent) : Color.glassAdaptive(\.line))
+                    .frame(width: index == current ? 24 : 6, height: 6)
                     .animation(AnimationTimings.standard, value: current)
                     .accessibilityHidden(true)
             }
         }
+        .padding(.horizontal, 4)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Onboarding progress")
-        .accessibilityValue("Step \(current + 1) of \(total)")
+        .accessibilityLabel(Text("Setup progress"))
+        .accessibilityValue(Text("Step \(current + 1) of \(total)"))
     }
 }
 
@@ -284,6 +289,16 @@ private struct GlassWelcomeStep: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: GlassMetrics.sectionGap) {
+            // OnboardingG's hero: the crystal heart on a 168-point glass tile.
+            Image("HealthCrystalHeart")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 104, height: 104)
+                .frame(width: 168, height: 168)
+                .glassSurface(cornerRadius: 48)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 24)
+                .accessibilityHidden(true)
             Text("Make your body part of Obsidian")
                 .glassFont(.largeTitle)
                 .foregroundStyle(palette.text)

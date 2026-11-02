@@ -15,6 +15,12 @@ struct GlassCLIDestinationScreen: View {
     @AppStorage(IPhoneDirectCLIService.transportKey) private var directCLITransport = DirectTransportKind.manualIP.rawValue
     @State private var pairingCode = ""
     @State private var showScanner = false
+    @State private var showsCodeEntry = false
+    @ObservedObject private var history = ExportHistoryManager.shared
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @State private var enterCodeAfterScanner = false
+    @FocusState private var pairingCodeFocused: Bool
+    private let pairingMethods = DirectCLIPairingMethodStore()
 
     private var shouldStartRuntimeServices: Bool {
         #if DEBUG
@@ -29,47 +35,55 @@ struct GlassCLIDestinationScreen: View {
             VStack(alignment: .leading, spacing: GlassMetrics.sectionGap) {
                 GlassPanel {
                     GlassToggleRow(
-                        title: String(localized: "Enable Direct CLI Access"),
-                        subtitle: String(localized: "New commands require Health.md to be open. An active export can continue briefly in the background."),
+                        title: String(localized: "Direct CLI access"),
+                        subtitle: String(localized: "healthmd connects while Health.md is open"),
                         isOn: enabled
                     )
                     .accessibilityIdentifier(AccessibilityID.Sync.directCLIToggle)
                 }
+                note(String(localized: "New commands need the app open. An active export can finish briefly in the background."))
 
                 if directCLIService.needsPairingCode, directCLIService.pendingPairingLink == nil {
                     Button {
                         configurationProtection.performConfigurationChange { showScanner = true }
                     } label: {
-                        Label("Scan Pairing QR", systemImage: "qrcode.viewfinder")
+                        Label(String(localized: "Scan pairing QR"), systemImage: "qrcode.viewfinder")
                     }
                     .buttonStyle(GlassPrimaryButtonStyle())
                     .disabled(directCLIService.isConnecting)
                     .accessibilityIdentifier(AccessibilityID.Sync.directCLIScanButton)
                     .accessibilityHint("Opens the in-app camera scanner and pairs as soon as a valid QR is recognized")
-                    Text("Start pairing from healthmd or your MCP client, then scan its QR here. Health.md does not auto-pair from links opened by other apps.")
-                        .glassFont(.rowSubtitle)
-                        .foregroundStyle(palette.muted)
+                    if directCLIEnabled, horizontalSizeClass == .regular, !showsCodeEntry {
+                        Button(String(localized: "Enter 20-digit code")) { showsCodeEntry = true }
+                            .glassFont(.body)
+                            .foregroundStyle(palette.accent)
+                            .frame(maxWidth: .infinity, minHeight: GlassMetrics.touchTarget)
+                            .glassSurface(cornerRadius: GlassMetrics.panelSmallRadius)
+                            .accessibilityIdentifier("glass.cli.enterCode")
+                    }
                 }
 
                 if let link = directCLIService.pendingPairingLink { handoffPanel(link) }
 
                 if directCLIEnabled {
-                    GlassPanel {
-                        GlassRow(title: statusTitle, subtitle: statusSubtitle) {
-                            if directCLIService.isConnecting { ProgressView() }
+                    if directCLIService.isConnected || directCLIService.isConnecting {
+                        GlassPanel {
+                            GlassRow(title: statusTitle, subtitle: statusSubtitle) {
+                                if directCLIService.isConnecting { ProgressView() }
+                            }
+                            .accessibilityElement(children: .combine)
                         }
-                        .accessibilityElement(children: .combine)
                     }
-                    if directCLIService.pendingPairingLink == nil {
-                        if directCLIService.needsPairingCode {
-                            manualPairing
-                        } else {
-                            pairedPanel
-                        }
+                    if directCLIService.pendingPairingLink == nil,
+                       directCLIService.needsPairingCode,
+                       horizontalSizeClass != .regular || showsCodeEntry {
+                        manualPairing
                     }
                 }
 
-                if directCLIService.hasPairedCLI { wakePanel }
+                if directCLIService.hasPairedCLI { pairedSection }
+
+                note(String(localized: "Nearby discovers pairing on the same network and never falls back to Manual IP. Health.md never auto-pairs from links opened by other apps."))
 
                 if let error = directCLIService.lastError {
                     GlassBanner(title: error, systemImage: "exclamationmark.triangle", tone: .warning)
@@ -81,21 +95,28 @@ struct GlassCLIDestinationScreen: View {
         }
         .scrollDismissesKeyboard(.interactively)
         .background(palette.bg.ignoresSafeArea())
-        .navigationTitle(String(localized: "CLI"))
+        .navigationTitle(String(localized: "healthmd CLI"))
         .navigationBarTitleDisplayMode(.inline)
         .accessibilityIdentifier("glass.cliDestination")
         .onAppear {
             if directCLIEnabled && shouldStartRuntimeServices { directCLIService.setEnabled(true) }
+            if directCLIService.pendingPairingLink != nil { pairingMethods.noteAttempt(.qr) }
+        }
+        .onChange(of: directCLIService.pendingPairingLink) { _, link in
+            // Scanned in Health.md or opened from the camera, a pairing link is a QR pairing.
+            if link != nil { pairingMethods.noteAttempt(.qr) }
         }
         .onChange(of: directCLIService.isConnected) { _, connected in
             if connected { pairingCode = "" }
         }
-        .fullScreenCover(isPresented: $showScanner) {
-            DirectCLIPairingScannerView { link in
+        .fullScreenCover(isPresented: $showScanner, onDismiss: {
+            if enterCodeAfterScanner { enterCodeAfterScanner = false; showsCodeEntry = true; pairingCodeFocused = true }
+        }) {
+            DirectCLIPairingScannerView(onPairingLink: { link in
                 configurationProtection.performConfigurationChange {
                     directCLIService.handleScannedPairingLink(link)
                 }
-            }
+            }, onEnterCode: { enterCodeAfterScanner = true })
         }
     }
 
@@ -170,8 +191,9 @@ struct GlassCLIDestinationScreen: View {
                 ],
                 selection: transport
             )
+            GlassSectionLabel(title: String(localized: "Or enter code"))
             GlassPanel {
-                VStack(spacing: 12) {
+                VStack(alignment: .leading, spacing: 12) {
                     if directCLITransport == DirectTransportKind.manualIP.rawValue {
                         TextField("Mac IP or Tailscale address", text: $directCLIHost)
                             .textInputAutocapitalization(.never)
@@ -182,6 +204,10 @@ struct GlassCLIDestinationScreen: View {
                     }
                     SecureField("20-digit pairing code", text: $pairingCode)
                         .keyboardType(.numberPad)
+                        .focused($pairingCodeFocused)
+                    Text("Six-digit codes still work with older CLI versions.")
+                        .font(.system(size: 12))
+                        .foregroundStyle(palette.muted)
                 }
                 .textFieldStyle(.plain)
                 .glassFont(.body)
@@ -195,52 +221,87 @@ struct GlassCLIDestinationScreen: View {
                 .disabled(!canConnect)
                 .padding(GlassMetrics.panelPadding)
             }
-            if directCLITransport == DirectTransportKind.nearby.rawValue {
-                Text("Nearby discovers the pairing command on the same local network. It never falls back to Manual IP.")
-                    .glassFont(.rowSubtitle)
-                    .foregroundStyle(palette.muted)
-            }
-            Text("Current healthmd versions use one 20-digit code on iOS and Android. Six-digit entry remains available only for a legacy CLI.")
-                .glassFont(.rowSubtitle)
-                .foregroundStyle(palette.muted)
         }
     }
 
-    private var pairedPanel: some View {
-        GlassPanel {
-            Text("Paired with \(directCLIService.pairedCLIName ?? "healthmd CLI") via \(transportLabel). Commands connect on demand while access is enabled.")
-                .glassFont(.rowSubtitle)
-                .foregroundStyle(palette.muted)
-                .padding(GlassMetrics.panelPadding)
-            Button(role: .destructive) {
-                configurationProtection.performConfigurationChange {
-                    directCLIService.forgetPairedCLI()
-                    pairingCode = ""
+    private var pairedSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            GlassSectionLabel(title: String(localized: "Paired"))
+            GlassPanel {
+                GlassRow(
+                    title: directCLIService.pairedCLIName ?? String(localized: "healthmd CLI"),
+                    subtitle: pairedSubtitle
+                ) {
+                    GlassSettingsBadge(title: String(localized: "Paired"), tone: directCLIEnabled ? .ok : .off)
                 }
-            } label: {
-                GlassRow(title: String(localized: "Forget Pairing")) {
-                    Image(systemName: "trash").foregroundStyle(palette.coral)
+                .accessibilityElement(children: .combine)
+                GlassToggleRow(
+                    title: String(localized: "Wake requests"),
+                    subtitle: horizontalSizeClass == .regular
+                        ? String(localized: "Notify me when the CLI is waiting")
+                        : String(localized: "Notify me when the CLI is waiting for this phone"),
+                    isOn: wake
+                )
+                .disabled(directWakeManager.state == .enrolling)
+                .overlay(alignment: .top) { divider }
+                if case .unavailable(let reason) = directWakeManager.state {
+                    Text(reason)
+                        .glassFont(.rowSubtitle)
+                        .foregroundStyle(palette.muted)
+                        .padding(.horizontal, GlassMetrics.panelPadding)
+                        .padding(.bottom, 8)
                 }
+                Button(role: .destructive) {
+                    configurationProtection.performConfigurationChange {
+                        directCLIService.forgetPairedCLI()
+                        pairingMethods.forget()
+                        pairingCode = ""
+                    }
+                } label: {
+                    Text("Forget pairing")
+                        .glassFont(.body)
+                        .foregroundStyle(palette.coral)
+                        .frame(maxWidth: .infinity, minHeight: GlassMetrics.rowMinHeight, alignment: .leading)
+                        .padding(.horizontal, GlassMetrics.panelPadding)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .overlay(alignment: .top) { divider }
             }
-            .buttonStyle(.plain)
         }
     }
 
-    private var wakePanel: some View {
-        GlassPanel {
-            GlassToggleRow(
-                title: String(localized: "Allow paired computers to send wake requests"),
-                subtitle: String(localized: "Get a notification when the CLI is waiting for this phone, so unlocking and opening Health.md finishes the same command. Requires the wake service; the CLI keeps waiting without it."),
-                isOn: wake
-            )
-            .disabled(directWakeManager.state == .enrolling)
-            if case .unavailable(let reason) = directWakeManager.state {
-                Text(reason)
-                    .glassFont(.rowSubtitle)
-                    .foregroundStyle(palette.muted)
-                    .padding(GlassMetrics.panelPadding)
-            }
+    /// "Paired via QR · last used today". The phone records when it paired, how (from the
+    /// attempt that made the pairing) and the direct exports it served, not status-only commands.
+    private var pairedSubtitle: String? {
+        let pairedAt = directCLIService.pairedCLIPairedAt
+        let method: String? = switch pairingMethods.method(forPairingAt: pairedAt) {
+        case .qr: String(localized: "Paired via QR")
+        case .code: String(localized: "Paired via code")
+        case nil: nil
         }
+        // Pairing is itself a use, so the later of the two is the honest "last used".
+        let lastUsed = [
+            SettingsDestinationActivity.lastDirectCLIRequest(in: history.history),
+            pairedAt,
+        ].compactMap { $0 }.max()
+        let lastUsedText = lastUsed.map {
+            String(localized: "last used \(SettingsDestinationActivity.relativeDayText($0))")
+        }
+        let parts = [method, lastUsedText].compactMap { $0 }
+        return parts.isEmpty ? nil : parts.joined(separator: " · ")
+    }
+
+    private var divider: some View {
+        Rectangle().fill(palette.line).frame(height: 1)
+            .padding(.horizontal, GlassMetrics.panelPadding)
+    }
+
+    private func note(_ text: String) -> some View {
+        Text(text)
+            .glassFont(.rowSubtitle)
+            .foregroundStyle(palette.muted)
+            .padding(.horizontal, 4)
     }
 
     private func handoffMessage(_ link: IPhoneDirectCLIPairingLink) -> String {
@@ -276,10 +337,6 @@ struct GlassCLIDestinationScreen: View {
         return String(localized: "Scan a fresh QR from healthmd above, or choose the same transport and enter its one-time code manually.")
     }
 
-    private var transportLabel: String {
-        directCLITransport == DirectTransportKind.nearby.rawValue ? String(localized: "Nearby") : String(localized: "Manual IP")
-    }
-
     private var canConnect: Bool {
         let hasHost = !directCLIHost.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         let digits = ManualIPSyncSecurity.normalizedPairingCode(pairingCode).utf8.count
@@ -290,6 +347,7 @@ struct GlassCLIDestinationScreen: View {
     }
 
     private func connect() {
+        if directCLIService.needsPairingCode { pairingMethods.noteAttempt(.code) }
         let port = UInt16(directCLIPort.trimmingCharacters(in: .whitespacesAndNewlines))
             ?? HealthMdDirectProtocol.defaultManualIPPort
         directCLIPort = String(port)

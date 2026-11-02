@@ -138,6 +138,7 @@ final class ProductCapabilityManifestTests: XCTestCase {
         "apple.typed-whoop-provider-section",
         "automation.api-recovery-authority",
         "automation.include-today",
+        "automation.run-overlap-policy",
         "direct.cli_agent_push_wake",
         "export.range-summary",
         "support.local-reporting-fallback",

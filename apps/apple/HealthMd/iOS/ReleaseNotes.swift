@@ -3,6 +3,44 @@ import Notelet
 
 // MARK: - In-app release notes
 
+/// One version's in-app release notes. Health.md renders these itself (`GlassWhatsNewScreen`);
+/// Notelet is kept only for its persisted "latest seen version" key so upgrades from
+/// earlier builds keep their seen state.
+struct HealthMdVersionNotes {
+    enum MediaKind { case image, video }
+
+    struct Row {
+        let symbolSystemName: String
+        let title: LocalizedStringResource
+        let description: LocalizedStringResource
+
+        init(symbolSystemName: String, title: LocalizedStringResource, description: LocalizedStringResource) {
+            self.symbolSystemName = symbolSystemName
+            self.title = title
+            self.description = description
+        }
+    }
+
+    enum Item {
+        case media(kind: MediaKind, url: URL, title: LocalizedStringResource, description: LocalizedStringResource)
+        case list(title: LocalizedStringResource, rows: [Row])
+    }
+
+    let version: String
+    let items: [Item]
+
+    /// Every item as a row, in order. Media items keep their title and description.
+    var rows: [Row] {
+        items.flatMap { item -> [Row] in
+            switch item {
+            case .list(_, let rows): return rows
+            case .media(let kind, _, let title, let description):
+                return [Row(symbolSystemName: kind == .video ? "play.rectangle" : "photo", title: title, description: description)]
+            }
+        }
+    }
+}
+
 enum HealthMdReleaseNotes {
     private static var fileTypeFoldersVideoURL: URL {
         Bundle.main.url(
@@ -25,7 +63,7 @@ enum HealthMdReleaseNotes {
         ) ?? Bundle.main.bundleURL
     }
 
-    static let notes: [NoteletVersionNotes] = [
+    static let notes: [HealthMdVersionNotes] = [
         .init(
             version: "3.5.0",
             items: [
@@ -971,18 +1009,42 @@ enum HealthMdReleaseNotes {
         )
     ]
 
-    static var presentedVersion: NoteletPresentedVersion? {
-        guard !TestMode.isUITesting || TestMode.showsReleaseNotes else { return nil }
+    /// Whether release notes may present in this launch (never during capture or
+    /// ordinary UI tests).
+    static var isPresentationAllowed: Bool {
+        guard !TestMode.isUITesting || TestMode.showsReleaseNotes else { return false }
 
         #if DEBUG
-        guard !MarketingCapture.isActive else { return nil }
+        guard !MarketingCapture.isActive else { return false }
         #endif
 
-        return .current
+        return true
+    }
+
+    static var currentAppVersion: String {
+        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0"
+    }
+
+    /// Notes for the running version, or nil when this version has none.
+    static func notes(for version: String) -> HealthMdVersionNotes? {
+        notes.first { $0.version == version }
+    }
+
+    /// The current version's notes when they have not been seen yet.
+    static func unseenCurrentNotes(
+        version: String = currentAppVersion,
+        latestSeenVersion: String? = NoteletStorage.getLatestSeenAppVersion()
+    ) -> HealthMdVersionNotes? {
+        guard latestSeenVersion != version, let notes = notes(for: version), !notes.rows.isEmpty else { return nil }
+        return notes
+    }
+
+    static func markCurrentVersionAsSeen() {
+        NoteletStorage.markCurrentVersionAsSeen()
     }
 
     /// First-run onboarding already introduces the current app version. Mark it
-    /// seen before replacing onboarding with the export UI so Notelet cannot
+    /// seen before replacing onboarding with the export UI so release notes cannot
     /// race and replace the requested first-export preview.
     static func markCurrentVersionAsSeenAfterOnboarding() {
         NoteletStorage.markCurrentVersionAsSeen()
@@ -992,20 +1054,31 @@ enum HealthMdReleaseNotes {
         guard TestMode.isUITesting else { return }
         NoteletStorage.resetSeenVersion()
     }
+}
 
-    static let configuration = NoteletConfiguration(
-        nextButtonLabel: "Next",
-        doneButtonLabel: "Done",
-        accentColor: .accent
-    )
+private struct HealthMdReleaseNotesSheet: ViewModifier {
+    @State private var presented: HealthMdVersionNotes?
+
+    func body(content: Content) -> some View {
+        content
+            .onAppear {
+                guard presented == nil, HealthMdReleaseNotes.isPresentationAllowed else { return }
+                presented = HealthMdReleaseNotes.unseenCurrentNotes()
+            }
+            .sheet(
+                isPresented: Binding(get: { presented != nil }, set: { if !$0 { presented = nil } }),
+                onDismiss: HealthMdReleaseNotes.markCurrentVersionAsSeen
+            ) {
+                if let presented {
+                    GlassWhatsNewScreen(notes: presented) { self.presented = nil }
+                }
+            }
+    }
 }
 
 extension View {
+    /// Presents the glass What's New sheet once per app version.
     func healthMdReleaseNotesSheet() -> some View {
-        noteletSheet(
-            notes: HealthMdReleaseNotes.notes,
-            version: HealthMdReleaseNotes.presentedVersion,
-            configuration: HealthMdReleaseNotes.configuration
-        )
+        modifier(HealthMdReleaseNotesSheet())
     }
 }

@@ -2,8 +2,18 @@
 import SwiftUI
 
 /// OutputG: where an automation writes, how files are named, and what happens to a file
-/// that already exists. New destinations reuse the profile editor's forms.
+/// that already exists. New destinations reuse the profile editor's forms. A pushed page
+/// that saves as it changes.
 struct GlassOutputScreen: View {
+    /// Everything this page saves, compared as one value for autosave.
+    private struct Draft: Equatable {
+        var target: ExportTargetSelection
+        var folderVaultID: UUID?
+        var apiEndpointID: UUID?
+        var gatewayID: UUID?
+        var settings: ExportSettingsSnapshot
+    }
+
     @ObservedObject var coordinator: ExportProfileCoordinator
     @ObservedObject private var destinationStore: ProfileDestinationStore
     let profile: ExportProfile
@@ -33,7 +43,7 @@ struct GlassOutputScreen: View {
     }
 
     var body: some View {
-        GlassSettingsSheet(title: String(localized: "Output"), onSave: save) {
+        GlassSettingsPage(title: String(localized: "Output")) {
             GlassSectionLabel(title: String(localized: "Where"))
             GlassPanel {
                 GlassMenuRow(
@@ -43,14 +53,12 @@ struct GlassOutputScreen: View {
                     label: Self.targetTitle
                 )
                 destinationBinding
-            }
-
-            GlassPanel {
                 GlassTemplateField(title: String(localized: "Subfolder"), text: subfolder)
                 GlassTemplateField(
                     title: String(localized: "Folder organization"),
                     text: $draft.folderStructure,
-                    tokens: Self.dateTokens
+                    tokens: Self.dateTokens,
+                    placeholder: String(localized: "Flat")
                 )
                 GlassTemplateField(
                     title: String(localized: "Filename"),
@@ -59,21 +67,31 @@ struct GlassOutputScreen: View {
                 )
                 GlassToggleRow(
                     title: String(localized: "Format folders"),
-                    subtitle: String(localized: "Format folders are off by default so existing plugins and shortcuts keep working."),
                     isOn: $draft.organizeFormatsIntoFolders
                 )
             }
 
-            GlassSectionLabel(title: String(localized: "When file exists"))
-            GlassSegmentedControl(
-                segments: WriteMode.allCases.map { .init(value: $0, title: $0.localizedDisplayName) },
-                selection: $draft.writeMode
-            )
-            Text("Overwrite replaces the file. Append adds to the end. Update merges new values and keeps your edits.")
-                .glassFont(.rowSubtitle)
-                .foregroundStyle(palette.muted)
+            GlassPanel {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("When a file exists").glassFont(.body).foregroundStyle(palette.text)
+                    GlassSegmentedControl(
+                        segments: WriteMode.allCases.map { .init(value: $0, title: $0.localizedDisplayName) },
+                        selection: $draft.writeMode
+                    )
+                    Text("Overwrite replaces the file. Append adds to the end. Update merges new values and keeps your edits.")
+                        .glassFont(.rowSubtitle)
+                        .foregroundStyle(palette.muted)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .padding(.horizontal, GlassMetrics.panelPadding)
+                .padding(.vertical, 12)
+            }
 
             GlassPanel { GlassPathPreview(paths: draft.glassPreviewPaths) }
+            Text("Format folders are off by default so existing plugins and shortcuts keep working.")
+                .glassFont(.rowSubtitle)
+                .foregroundStyle(palette.muted)
+                .padding(.horizontal, 4)
 
             if !overlappingNames.isEmpty {
                 let names = overlappingNames.joined(separator: ", ")
@@ -84,6 +102,7 @@ struct GlassOutputScreen: View {
                 )
             }
         }
+        .glassAutosave(currentDraft, revert: restore, save: save)
         .sheet(isPresented: $showFolderImporter) {
             FolderPicker { url in
                 configurationProtection.performConfigurationChange {
@@ -122,7 +141,7 @@ struct GlassOutputScreen: View {
                 options: [nil] + destinationStore.vaults.map { Optional($0.id) },
                 label: { id in
                     destinationStore.vaults.first { $0.id == id }?.name
-                        ?? String(localized: "Current folder (from Export tab)")
+                        ?? String(localized: "Folder from Settings")
                 }
             )
             addRow(String(localized: "Choose New Folder…")) { showFolderImporter = true }
@@ -133,7 +152,7 @@ struct GlassOutputScreen: View {
                 options: [nil] + destinationStore.apiEndpoints.map { Optional($0.id) },
                 label: { id in
                     destinationStore.apiEndpoints.first { $0.id == id }?.name
-                        ?? String(localized: "Current endpoint (from Export tab)")
+                        ?? String(localized: "Endpoint from Settings")
                 }
             )
             addRow(String(localized: "Add Endpoint…")) { showEndpointForm = true }
@@ -144,7 +163,7 @@ struct GlassOutputScreen: View {
                 options: [nil] + destinationStore.agentDataGateways.map { Optional($0.id) },
                 label: { id in
                     destinationStore.agentDataGateways.first { $0.id == id }?.name
-                        ?? String(localized: "Current gateway (from Export tab)")
+                        ?? String(localized: "Gateway from Settings")
                 }
             )
             addRow(String(localized: "Add Gateway…")) { showGatewayForm = true }
@@ -164,7 +183,7 @@ struct GlassOutputScreen: View {
 
     private static func targetTitle(_ target: ExportTargetSelection) -> String {
         switch target {
-        case .localIPhoneFolder: return String(localized: "Local Folder")
+        case .localIPhoneFolder: return String(localized: "Vault on this iPhone")
         case .connectedMac: return String(localized: "Connected Mac")
         case .apiEndpoint: return String(localized: "API Endpoint")
         case .agentDataGateway: return String(localized: "Agent Data gateway")
@@ -182,15 +201,34 @@ struct GlassOutputScreen: View {
         coordinator.overlapPreviewNames(target: target, folderVaultID: folderVaultID, settings: draft)
     }
 
-    private func save() {
+    private var currentDraft: Draft {
+        Draft(
+            target: target,
+            folderVaultID: folderVaultID,
+            apiEndpointID: apiEndpointID,
+            gatewayID: gatewayID,
+            settings: draft
+        )
+    }
+
+    private func restore(_ saved: Draft) {
+        target = saved.target
+        folderVaultID = saved.folderVaultID
+        apiEndpointID = saved.apiEndpointID
+        gatewayID = saved.gatewayID
+        draft = saved.settings
+    }
+
+    private func save(_ value: Draft) {
+        let name = coordinator.profileStore.profile(id: profile.id)?.name ?? profile.name
         _ = coordinator.updateProfile(
             id: profile.id,
-            name: profile.name,
-            target: target,
-            folderVaultID: target == .localIPhoneFolder ? folderVaultID : nil,
-            apiEndpointID: target == .apiEndpoint ? apiEndpointID : nil,
-            agentDataGatewayID: target == .agentDataGateway ? gatewayID : nil,
-            settings: draft
+            name: name,
+            target: value.target,
+            folderVaultID: value.target == .localIPhoneFolder ? value.folderVaultID : nil,
+            apiEndpointID: value.target == .apiEndpoint ? value.apiEndpointID : nil,
+            agentDataGatewayID: value.target == .agentDataGateway ? value.gatewayID : nil,
+            settings: value.settings
         )
     }
 }

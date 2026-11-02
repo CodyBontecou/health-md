@@ -60,11 +60,13 @@ struct CLIExportLiveActivityWidget: Widget {
     }
 }
 
+/// LiveActivityG: title and percentage, the progress bar, then "<dates> · to <target>"
+/// beside the Reading → Sending steps. The status message stays in the Dynamic Island.
 private struct CLIExportLockScreenView: View {
     let context: ActivityViewContext<CLIExportActivityAttributes>
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 10) {
                 Image("WidgetAppIcon")
                     .resizable()
@@ -73,19 +75,13 @@ private struct CLIExportLockScreenView: View {
                     .accessibilityHidden(true)
 
                 Text(context.state.title)
-                    .font(.subheadline.weight(.bold))
+                    .font(.system(size: 14, weight: .bold))
                     .lineLimit(1)
 
                 Spacer(minLength: 8)
 
                 CLIExportProgressSummary(state: context.state)
             }
-
-            Text(context.state.message)
-                .font(.caption)
-                .foregroundStyle(WidgetGlass.secondaryText)
-                .lineLimit(2)
-                .privacySensitive()
 
             CLIExportProgressBar(state: context.state)
 
@@ -94,12 +90,9 @@ private struct CLIExportLockScreenView: View {
                     .lineLimit(1)
                     .privacySensitive()
                 Spacer(minLength: 8)
-                Text(context.attributes.sourceLabel)
-                    .lineLimit(1)
-                Text(context.state.shortStatus)
-                    .foregroundStyle(context.state.phaseColor)
+                CLIExportStepIndicator(state: context.state)
             }
-            .font(.caption)
+            .font(.system(size: 12))
             .foregroundStyle(WidgetGlass.secondaryText)
         }
         .foregroundStyle(.white)
@@ -107,20 +100,69 @@ private struct CLIExportLockScreenView: View {
     }
 }
 
+/// "Reading → Sending": the step in progress is bright, the other is dimmed. Phases outside
+/// the two steps show their status instead.
+private struct CLIExportStepIndicator: View {
+    let state: CLIExportActivityAttributes.ContentState
+
+    var body: some View {
+        switch state.phase {
+        case .capturing, .transferring:
+            HStack(spacing: 4) {
+                Text("Reading")
+                    .foregroundStyle(state.phase == .capturing ? Color.white : WidgetGlass.secondaryText)
+                    .fontWeight(state.phase == .capturing ? .semibold : .regular)
+                Text(verbatim: "→")
+                    .accessibilityHidden(true)
+                Text("Sending")
+                    .foregroundStyle(state.phase == .transferring ? Color.white : WidgetGlass.secondaryText)
+                    .fontWeight(state.phase == .transferring ? .semibold : .regular)
+            }
+            .lineLimit(1)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(state.phase == .capturing ? Text("Step 1 of 2, reading") : Text("Step 2 of 2, sending"))
+        default:
+            Text(state.shortStatus)
+                .foregroundStyle(state.phaseColor)
+                .lineLimit(1)
+        }
+    }
+}
+
 private extension ActivityViewContext<CLIExportActivityAttributes> {
-    /// "3 of 7 days · to Mac" as in LiveActivityG; days are left out until the total is known.
+    /// "Oct 24 – 30 · to <computer-name>" as in LiveActivityG. Without a known date range the
+    /// day count stands in, and is left out until the total is known.
     var footerTarget: String {
         var parts: [String] = []
-        if state.totalDays > 0 {
-            parts.append("\(min(state.processedDays, state.totalDays)) of \(state.totalDays) days")
+        if let range = CLIExportLiveActivityFormat.dateRange(
+            start: attributes.dateRangeStart,
+            end: attributes.dateRangeEnd
+        ) {
+            parts.append(range)
+        } else if state.totalDays > 0 {
+            parts.append(String(localized: "\(min(state.processedDays, state.totalDays)) of \(state.totalDays) days"))
         }
-        if state.committedBytes > 0 {
-            parts.append(state.formattedBytes)
-        } else if state.committedPartitions > 0 {
-            parts.append("\(state.committedPartitions) sent")
-        }
-        parts.append("to \(attributes.targetLabel)")
+        parts.append(String(localized: "to \(attributes.targetLabel)"))
         return parts.joined(separator: " · ")
+    }
+}
+
+enum CLIExportLiveActivityFormat {
+    /// "Oct 24 – 30", or "Oct 24" for one day, in the current locale.
+    static func dateRange(start: Date?, end: Date?, calendar: Calendar = .current) -> String? {
+        guard let start, let end else { return nil }
+        let lower = min(start, end)
+        let upper = max(start, end)
+        let formatter = DateIntervalFormatter()
+        formatter.calendar = calendar
+        formatter.dateTemplate = "MMMd"
+        if calendar.isDate(lower, inSameDayAs: upper) {
+            let single = DateFormatter()
+            single.calendar = calendar
+            single.setLocalizedDateFormatFromTemplate("MMMd")
+            return single.string(from: lower)
+        }
+        return formatter.string(from: lower, to: upper)
     }
 }
 
@@ -157,7 +199,7 @@ private struct CLIExportProgressSummary: View {
     var body: some View {
         if let fraction = state.fractionComplete {
             Text("\(Int((fraction * 100).rounded()))%")
-                .font(.system(.subheadline, design: .monospaced).weight(.semibold))
+                .font(.system(size: 14, weight: .semibold, design: .monospaced))
                 .foregroundStyle(state.phaseColor)
         } else {
             Image(systemName: state.phase == .paused ? "pause.fill" : "ellipsis")
@@ -244,4 +286,62 @@ enum WidgetGlass {
     static let amber = Color(red: 0xF2 / 255, green: 0xB2 / 255, blue: 0x66 / 255)
     static let covered = Color(red: 0x3B / 255, green: 0x30 / 255, blue: 0x58 / 255)
     static let secondaryText = Color(red: 0xDA / 255, green: 0xD4 / 255, blue: 0xE8 / 255)
+    static let muted = Color(red: 0xB3 / 255, green: 0xAB / 255, blue: 0xC6 / 255)
+    static let hrv = Color(red: 0x5E / 255, green: 0xD3 / 255, blue: 0xB0 / 255)
+
+    /// WidgetActivityG ring and label colours.
+    static let moveRing = Color(red: 0xFF / 255, green: 0x5A / 255, blue: 0x7A / 255)
+    static let moveText = Color(red: 0xFF / 255, green: 0x7A / 255, blue: 0x93 / 255)
+    static let exercise = Color(red: 0xA6 / 255, green: 0xF2 / 255, blue: 0x5F / 255)
+    static let stand = Color(red: 0x5E / 255, green: 0xD3 / 255, blue: 0xF2 / 255)
+
+    /// The glass panel's fill, edge and top highlight (`rgba(255,255,255,…)` in the boards).
+    static let panelFill = Color.white.opacity(0.06)
+    static let panelEdge = Color.white.opacity(0.12)
+    static let panelHighlight = Color.white.opacity(0.22)
+    static let panelLowlight = Color.white.opacity(0.06)
+    static let rowFill = Color.white.opacity(0.06)
+}
+
+/// The boards' glass panel, approximated for WidgetKit. Widgets cannot sample what is behind
+/// them, so the 26 pt backdrop blur becomes a translucent white fill over the dark base; the
+/// 1 pt edge and the inset top highlight are drawn as strokes on the container shape.
+struct WidgetGlassPanelBackground: View {
+    var body: some View {
+        ZStack {
+            WidgetGlass.background
+            ContainerRelativeShape()
+                .fill(WidgetGlass.panelFill)
+            ContainerRelativeShape()
+                .strokeBorder(WidgetGlass.panelEdge, lineWidth: 1)
+            ContainerRelativeShape()
+                .inset(by: 1)
+                .strokeBorder(
+                    LinearGradient(
+                        stops: [
+                            .init(color: WidgetGlass.panelHighlight, location: 0),
+                            .init(color: .clear, location: 0.18),
+                            .init(color: .clear, location: 0.82),
+                            .init(color: WidgetGlass.panelLowlight, location: 1)
+                        ],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    ),
+                    lineWidth: 1
+                )
+        }
+    }
+}
+
+/// The crystal heart used as the brand mark on the glass widgets.
+struct WidgetCrystalHeart: View {
+    let size: CGFloat
+
+    var body: some View {
+        Image("HealthCrystalHeart")
+            .resizable()
+            .scaledToFit()
+            .frame(width: size, height: size)
+            .accessibilityHidden(true)
+    }
 }

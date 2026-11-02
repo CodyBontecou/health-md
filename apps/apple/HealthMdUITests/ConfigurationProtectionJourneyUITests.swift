@@ -100,12 +100,16 @@ final class ConfigurationProtectionJourneyUITests: XCTestCase {
         return isVisible()
     }
 
+    /// Opens the legacy Export Profiles management sheet. Automations now own profile
+    /// management (AutomationsGlass), so App & support no longer links here; the sheet
+    /// stays reachable for these journeys through a debug launch argument.
     private func openProfilesManagementSheet(_ app: XCUIApplication) {
-        UITestLaunchHelper.openSettingsTab(in: app)
-
-        let profilesRow = app.buttons["export.profiles.entry"]
-        XCTAssertTrue(profilesRow.waitForExistence(timeout: 5), "Export Profiles row should exist in Settings")
-        profilesRow.tap()
+        app.terminate()
+        app.launchArguments += ["-UITestOpenExportProfiles", "YES"]
+        app.launch()
+        let settings = app.buttons["Settings"].firstMatch
+        XCTAssertTrue(settings.waitForExistence(timeout: 10))
+        settings.tap()
 
         XCTAssertTrue(
             app.navigationBars["Export Profiles"].waitForExistence(timeout: 5),
@@ -256,22 +260,20 @@ final class ConfigurationProtectionJourneyUITests: XCTestCase {
         )
         app.launch()
 
-        guard UITestLaunchHelper.openScheduleTab(in: app) else { return }
+        // The automation's schedule (ScheduleG) carries the former Schedule tab's switches.
+        guard UITestLaunchHelper.openAutomation(in: app) else { return }
 
-        let card = app.staticTexts["Profile Schedules"]
-        XCTAssertTrue(card.waitForExistence(timeout: 5), "Profile Schedules card should exist")
-
-        let protectedRegion = app.buttons[UITestLaunchHelper.ConfigurationProtection.protectedRegion]
-            .firstMatch
-        XCTAssertTrue(
-            protectedRegion.waitForExistence(timeout: 3),
-            "The per-profile schedules card must sit inside the shared lock"
-        )
-        protectedRegion.tap()
+        let schedule = app.buttons["glass.automation.schedule"]
+        XCTAssertTrue(schedule.waitForExistence(timeout: 5), "The automation's schedule row should exist")
+        schedule.tap()
         XCTAssertTrue(
             app.buttons[UITestLaunchHelper.ConfigurationProtection.toast]
                 .waitForExistence(timeout: 3),
             "Tapping a profile schedule row must surface the blocked-change toast"
+        )
+        XCTAssertFalse(
+            app.switches["glass.schedule.enabled"].exists,
+            "The lock must keep the schedule editor closed"
         )
     }
 
@@ -290,14 +292,11 @@ final class ConfigurationProtectionJourneyUITests: XCTestCase {
         XCTAssertTrue(toggle.waitForExistence(timeout: 5))
         toggle.tap()
 
-        UITestLaunchHelper.openClassicExport(in: app)
-
-        let yesterday = app.buttons[UITestLaunchHelper.Export.datePresetYesterdayButton]
-        scrollUntilExists(yesterday, in: app)
-        XCTAssertTrue(yesterday.waitForExistence(timeout: 5))
-        XCTAssertTrue(yesterday.isEnabled, "Configuration controls should be enabled after protection is turned off")
-        XCTAssertFalse(app.buttons[UITestLaunchHelper.ConfigurationProtection.protectedRegion].firstMatch.exists)
-        yesterday.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+        // With the lock off, a configuration control opens instead of raising the toast.
+        guard UITestLaunchHelper.openScheduleTab(in: app) else { return }
+        let scheduleSwitch = app.switches["glass.schedule.enabled"]
+        XCTAssertTrue(scheduleSwitch.waitForExistence(timeout: 5))
+        XCTAssertTrue(scheduleSwitch.isEnabled, "Configuration controls should be enabled after protection is turned off")
         XCTAssertFalse(app.buttons[UITestLaunchHelper.ConfigurationProtection.toast].waitForExistence(timeout: 1))
     }
 }

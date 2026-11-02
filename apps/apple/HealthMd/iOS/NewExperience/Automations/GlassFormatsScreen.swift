@@ -1,13 +1,15 @@
 #if os(iOS)
 import SwiftUI
 
-/// FormatsG: formats, data detail and packaging, saved through the profile editor's
-/// coordinator path.
+/// FormatsG: formats, data detail and packaging. A pushed page that saves as it changes,
+/// through the profile editor's coordinator path.
 struct GlassFormatsScreen: View {
     let coordinator: ExportProfileCoordinator
     let profile: ExportProfile
 
     @Environment(\.glassPalette) private var palette
+    @EnvironmentObject private var healthKitManager: HealthKitManager
+    @EnvironmentObject private var configurationProtection: ConfigurationProtectionManager
     @State private var draft: ExportSettingsSnapshot
     @State private var showHelp = false
 
@@ -18,22 +20,47 @@ struct GlassFormatsScreen: View {
     }
 
     var body: some View {
-        GlassSettingsSheet(
-            title: String(localized: "Formats"),
-            canSave: draft.hasFileDestinationOutput,
-            onSave: { coordinator.saveSettings(draft, for: profile) }
-        ) {
+        GlassSettingsPage(title: String(localized: "Formats")) {
+            GlassSectionLabel(title: String(localized: "Formats"))
             GlassPanel {
                 ForEach(ExportFormat.allCases, id: \.self) { format in
-                    GlassToggleRow(title: format.localizedDisplayName, isOn: binding(format))
-                        .disabled(draft.dailyNotesOnlyModeEnabled)
+                    GlassToggleRow(
+                        title: format.localizedDisplayName,
+                        subtitle: Self.formatDescription(format),
+                        isOn: binding(format)
+                    )
+                    .disabled(draft.dailyNotesOnlyModeEnabled)
+                    .accessibilityIdentifier("glass.formats.format.\(String(describing: format))")
+                }
+                Button { showHelp = true } label: {
+                    GlassRow(title: String(localized: "Which should I use?")) {
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(palette.muted)
+                            .accessibilityHidden(true)
+                    }
+                }
+                .buttonStyle(.plain)
+            }
+
+            // Not on the board: the old Export tab's Markdown options, kept with the format
+            // they shape (CoverageMap maps that tab's settings to FormatsG).
+            if draft.exportFormats.contains(.markdown) && !draft.dailyNotesOnlyModeEnabled {
+                GlassPanel {
+                    GlassToggleRow(
+                        title: String(localized: "Include frontmatter metadata"),
+                        subtitle: String(localized: "Adds YAML metadata at the top of markdown files"),
+                        isOn: $draft.includeMetadata
+                    )
+                    .accessibilityIdentifier("glass.formats.includeMetadata")
+                    GlassToggleRow(
+                        title: String(localized: "Group by category"),
+                        subtitle: String(localized: "Organizes health data under category headings"),
+                        isOn: $draft.groupByCategory
+                    )
+                    .accessibilityIdentifier("glass.formats.groupByCategory")
                 }
             }
-            Button(String(localized: "Which should I use?")) { showHelp = true }
-                .buttonStyle(.plain)
-                .glassFont(.caption)
-                .foregroundStyle(palette.accent)
-                .frame(minHeight: GlassMetrics.touchTarget)
 
             if !draft.hasFileDestinationOutput {
                 GlassBanner(
@@ -43,19 +70,29 @@ struct GlassFormatsScreen: View {
                 )
             }
 
-            GlassSectionLabel(title: String(localized: "Data detail"))
-            GlassSegmentedControl(segments: detailSegments, selection: detail)
-            Text(AppleExportDetailPreset(policy: draft.detailPolicy).localizedDescription)
-                .glassFont(.rowSubtitle)
-                .foregroundStyle(palette.muted)
+            GlassPanel {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(String(localized: "Data detail")).glassFont(.body).foregroundStyle(palette.text)
+                    GlassSegmentedControl(segments: detailSegments, selection: detail)
+                    Text(AppleExportDetailPreset(policy: draft.detailPolicy).localizedDescription)
+                        .glassFont(.rowSubtitle)
+                        .foregroundStyle(palette.muted)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .padding(.horizontal, GlassMetrics.panelPadding)
+                .padding(.vertical, 12)
+                Rectangle().fill(palette.line).frame(height: 1).accessibilityHidden(true)
+                sleepDayRow
+            }
             Text("API and gateway uploads use this setting too.")
                 .glassFont(.rowSubtitle)
                 .foregroundStyle(palette.muted)
+                .padding(.horizontal, 20)
 
             GlassSectionLabel(title: String(localized: "Packaging"))
             GlassPanel {
                 GlassToggleRow(
-                    title: String(localized: "Daily Notes only"),
+                    title: String(localized: "Daily notes only"),
                     subtitle: String(localized: "Skip aggregate files, ZIPs, roll-ups, entries and sidecars — settings are kept"),
                     isOn: dailyNotesOnly
                 )
@@ -74,14 +111,68 @@ struct GlassFormatsScreen: View {
                     subtitle: String(localized: "Also write a roll-up for each requested range"),
                     isOn: $draft.generateRangeSummary
                 )
-                GlassToggleRow(
-                    title: String(localized: "Summary only"),
-                    isOn: $draft.summaryOnlyExport
-                )
+                // Not on the board as its own row: it only applies to range roll-ups, so it
+                // stays reachable beneath Range summaries instead of being dropped.
+                if draft.generateRangeSummary || draft.summaryOnlyExport {
+                    GlassToggleRow(
+                        title: String(localized: "Range summary only"),
+                        subtitle: String(localized: "Skips daily export files and writes only the enabled roll-up summaries"),
+                        isOn: $draft.summaryOnlyExport
+                    )
+                    .padding(.leading, 16)
+                }
             }
         }
+        .glassAutosave(
+            draft,
+            isValid: draft.hasFileDestinationOutput,
+            invalidReason: String(localized: "Select at least one export format, or enable Daily Notes Only."),
+            revert: { draft = $0 },
+            save: { coordinator.saveSettings($0, for: profile) }
+        )
         .sheet(isPresented: $showHelp) {
             GlassFormatHelpScreen().glassTheme()
+        }
+    }
+
+    /// Issue #104: which date owns a midnight-spanning sleep session. Not on the board; the
+    /// old Export tab kept it beside data detail. It is stored on this iPhone, applies to
+    /// every capture path and automation, and saves at once rather than with the profile.
+    private var sleepDayRow: some View {
+        GlassRow(
+            title: String(localized: "Sleep day"),
+            subtitle: healthKitManager.sleepDayAttribution.localizedDescription
+                + " " + String(localized: "Applies to every automation on this iPhone.")
+        ) {
+            Picker(String(localized: "Sleep day"), selection: Binding(
+                get: { healthKitManager.sleepDayAttribution },
+                set: { mode in
+                    guard mode.isAvailableForShippedProfiles else { return }
+                    configurationProtection.performConfigurationChange {
+                        healthKitManager.setSleepDayAttribution(mode)
+                    }
+                }
+            )) {
+                ForEach(SleepDayAttribution.allCases, id: \.rawValue) { mode in
+                    Text(mode.localizedDisplayName).tag(mode)
+                        .disabled(!mode.isAvailableForShippedProfiles)
+                }
+            }
+            .pickerStyle(.menu)
+            .labelsHidden()
+            .tint(palette.muted)
+            .accessibilityLabel(String(localized: "Sleep day"))
+            .accessibilityIdentifier(AccessibilityID.Export.sleepDayAttributionPicker)
+        }
+    }
+
+    /// Per-format subtitles from FormatsG.
+    private static func formatDescription(_ format: ExportFormat) -> String {
+        switch format {
+        case .markdown: return String(localized: "Readable notes with flat properties")
+        case .obsidianBases: return String(localized: "Database views in Obsidian")
+        case .json: return String(localized: "Complete structured data")
+        case .csv: return String(localized: "Spreadsheet-friendly rows")
         }
     }
 
@@ -135,7 +226,7 @@ struct GlassFormatHelpScreen: View {
         let title: LocalizedStringKey
         let subtitle: LocalizedStringKey
         let sample: String
-        let bestFor: LocalizedStringKey
+        let bestFor: String
         var id: String { sample }
     }
 
@@ -147,19 +238,19 @@ struct GlassFormatHelpScreen: View {
             title: "Markdown & Obsidian Bases",
             subtitle: "Readable notes and flat properties",
             sample: "sleep_total_hours: 7.2\nsteps: 8412",
-            bestFor: "Best for daily notes, Obsidian browsing, and Bases tables. Nested health data is summarized or flattened for easier querying."
+            bestFor: String(localized: "Obsidian, journaling, Bases views")
         ),
         Item(
             title: "JSON",
             subtitle: "Complete structured data",
             sample: "{ \"sleep\": { \"total_hours\": 7.2 } }",
-            bestFor: "Best for backups, automation, and future re-imports. Preserves workouts, route points, timestamped samples, medications, and metadata."
+            bestFor: String(localized: "Scripts, agents, long-term archives")
         ),
         Item(
             title: "CSV",
             subtitle: "Spreadsheet-friendly rows",
             sample: "date,metric,value\n2026-10-30,steps,8412",
-            bestFor: "Best for spreadsheets and data analysis tools. Nested data is expanded into rows instead of preserved as objects."
+            bestFor: String(localized: "Numbers, Excel, pandas")
         )
     ]
 
@@ -176,7 +267,9 @@ struct GlassFormatHelpScreen: View {
                             Text(item.title).glassFont(.navTitle).foregroundStyle(palette.text)
                             Text(item.subtitle).glassFont(.rowSubtitle).foregroundStyle(palette.muted)
                             Text(verbatim: item.sample).glassFont(.monoBody).foregroundStyle(palette.sec)
-                            Text(item.bestFor).glassFont(.rowSubtitle).foregroundStyle(palette.sec)
+                            (Text(String(localized: "Best for")).bold() + Text(verbatim: " · " + item.bestFor))
+                                .glassFont(.rowSubtitle)
+                                .foregroundStyle(palette.sec)
                         }
                         .padding(GlassMetrics.panelPadding)
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -186,7 +279,7 @@ struct GlassFormatHelpScreen: View {
                 .padding(GlassMetrics.screenMargin)
             }
             .background(palette.bg.ignoresSafeArea())
-            .navigationTitle(String(localized: "Formats"))
+            .navigationTitle(String(localized: "Export formats"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {

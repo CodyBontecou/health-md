@@ -1,4 +1,72 @@
 import SwiftUI
+#if canImport(UIKit)
+import UIKit
+#endif
+
+/// Calendar sizing per board. Phone windows (ArchiveGlass, split view, folded) keep the
+/// 44 pt standard; a regular-width phone (DuoInnerArchiveG) uses 56 pt tiles and iPad at
+/// regular width (iPadArchiveG) 64 pt tiles with the day number in the top corner.
+enum CalendarDensity: Equatable {
+    case standard
+    case wide
+    case pad
+
+    /// Mirrors `GlassWindowClass`: regular width is `.pad` on iPad and `.unfolded` on a phone.
+    static func resolve(isPad: Bool, isRegularWidth: Bool) -> CalendarDensity {
+        guard isRegularWidth else { return .standard }
+        return isPad ? .pad : .wide
+    }
+
+    var tileHeight: CGFloat {
+        switch self {
+        case .standard: return GlassMetrics.touchTarget
+        case .wide: return 56
+        case .pad: return 64
+        }
+    }
+
+    var tileRadius: CGFloat {
+        switch self {
+        case .standard: return GlassMetrics.calendarTileRadius
+        case .wide: return 11
+        case .pad: return 14
+        }
+    }
+
+    var dayFontSize: CGFloat { self == .pad ? 15 : 14 }
+
+    var gridSpacing: CGFloat {
+        switch self {
+        case .standard: return 6
+        case .wide: return 5
+        case .pad: return 8
+        }
+    }
+
+    /// iPad spells weekdays ("Sun"); narrower layouts use initials ("S").
+    var usesShortWeekdaySymbols: Bool { self == .pad }
+
+    /// Day number placement: centered, or top-trailing with 8 pt insets on iPad.
+    var numberAlignment: Alignment { self == .pad ? .topTrailing : .center }
+}
+
+/// Resolves `CalendarDensity` from the window's size class and device idiom.
+private struct CalendarDensityReader: DynamicProperty {
+    #if os(iOS)
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    #endif
+
+    var density: CalendarDensity {
+        #if os(iOS)
+        CalendarDensity.resolve(
+            isPad: UIDevice.current.userInterfaceIdiom == .pad,
+            isRegularWidth: horizontalSizeClass == .regular
+        )
+        #else
+        .standard
+        #endif
+    }
+}
 
 struct IssueDotsView: View {
     struct Dot: Identifiable {
@@ -45,25 +113,21 @@ struct CalendarDayTile: View {
     @Environment(\.glassPalette) private var palette
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var isBreathing = false
+    private var densityReader = CalendarDensityReader()
+
+    private var density: CalendarDensity { densityReader.density }
 
     private var shape: RoundedRectangle {
-        RoundedRectangle(cornerRadius: GlassMetrics.calendarTileRadius, style: .continuous)
+        RoundedRectangle(cornerRadius: density.tileRadius, style: .continuous)
     }
 
     private var breathes: Bool { status == .inProgress && !isSelected && !reduceMotion }
 
     var body: some View {
         Button(action: action) {
-            VStack(spacing: 4) {
-                Text(verbatim: "\(day)")
-                    .font(.system(size: 14, weight: isSelected ? .bold : .semibold))
-                    .monospacedDigit()
-                if !dots.isEmpty {
-                    IssueDotsView(dots: dots, hasOverflow: hasOverflow, overflowColor: palette.muted)
-                }
-            }
+            content
             .foregroundStyle(numberColor)
-            .frame(maxWidth: .infinity, minHeight: GlassMetrics.touchTarget)
+            .frame(maxWidth: .infinity, minHeight: density.tileHeight)
             .background(background)
             .overlay(alignment: .bottom) { partialBar }
             .clipShape(shape)
@@ -80,9 +144,31 @@ struct CalendarDayTile: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel(accessibilityText)
+        .accessibilityIdentifier("glass.calendar.day.\(day)")
         .accessibilityAddTraits(isSelected ? .isSelected : [])
         .onAppear(perform: updateBreathing)
         .onChange(of: breathes) { _, _ in updateBreathing() }
+    }
+
+    @ViewBuilder private var content: some View {
+        let number = Text(verbatim: "\(day)")
+            .font(.system(size: density.dayFontSize, weight: isSelected ? .bold : .semibold))
+            .monospacedDigit()
+        let issueDots = IssueDotsView(dots: dots, hasOverflow: hasOverflow, overflowColor: palette.muted)
+        if density == .pad {
+            // iPadArchiveG: the number sits in the top corner; issue dots along the bottom.
+            number
+                .frame(maxWidth: .infinity, minHeight: density.tileHeight - 16, alignment: density.numberAlignment)
+                .overlay(alignment: .bottomLeading) {
+                    if !dots.isEmpty { issueDots }
+                }
+                .padding(8)
+        } else {
+            VStack(spacing: 4) {
+                number
+                if !dots.isEmpty { issueDots }
+            }
+        }
     }
 
     private func updateBreathing() {
@@ -161,14 +247,18 @@ struct MonthCalendarGrid<Tile: View>: View {
     @ViewBuilder let tile: (Date) -> Tile
 
     @Environment(\.glassPalette) private var palette
+    private var densityReader = CalendarDensityReader()
 
     var body: some View {
-        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: 7), spacing: 6) {
-            ForEach(Self.weekdaySymbols(calendar: calendar).indices, id: \.self) { index in
-                Text(Self.weekdaySymbols(calendar: calendar)[index])
-                    .glassFont(.caption)
-                    .foregroundStyle(palette.muted)
-                    .accessibilityHidden(true)
+        let density = densityReader.density
+        let symbols = Self.weekdaySymbols(calendar: calendar, short: density.usesShortWeekdaySymbols)
+        let spacing = density.gridSpacing
+        LazyVGrid(
+            columns: Array(repeating: GridItem(.flexible(), spacing: spacing), count: 7),
+            spacing: spacing
+        ) {
+            ForEach(symbols.indices, id: \.self) { index in
+                weekdayHeader(symbols[index], density: density)
             }
             ForEach(Self.cells(month: month, calendar: calendar).indices, id: \.self) { index in
                 if let date = Self.cells(month: month, calendar: calendar)[index] {
@@ -177,6 +267,15 @@ struct MonthCalendarGrid<Tile: View>: View {
                     Color.clear.frame(height: 1).accessibilityHidden(true)
                 }
             }
+        }
+    }
+
+    @ViewBuilder private func weekdayHeader(_ symbol: String, density: CalendarDensity) -> some View {
+        let header = Text(symbol).foregroundStyle(palette.muted).accessibilityHidden(true)
+        switch density {
+        case .standard: header.glassFont(.caption)
+        case .wide: header.font(.system(size: 11, weight: .semibold))
+        case .pad: header.font(.system(size: 12, weight: .semibold))
         }
     }
 
@@ -194,8 +293,10 @@ struct MonthCalendarGrid<Tile: View>: View {
         return Array(repeating: nil, count: blanks) + days
     }
 
-    static func weekdaySymbols(calendar: Calendar) -> [String] {
-        let symbols = calendar.veryShortStandaloneWeekdaySymbols
+    static func weekdaySymbols(calendar: Calendar, short: Bool = false) -> [String] {
+        let symbols = short
+            ? calendar.shortStandaloneWeekdaySymbols
+            : calendar.veryShortStandaloneWeekdaySymbols
         let first = calendar.firstWeekday - 1
         return Array(symbols[first...] + symbols[..<first])
     }

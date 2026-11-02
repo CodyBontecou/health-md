@@ -16,7 +16,8 @@ enum UITestLaunchHelper {
         line: UInt = #line
     ) {
         guard openTab("Settings", in: app, file: file, line: line) else { return }
-        let row = app.buttons["App & support"]
+        // iPhone shows "Help & diagnostics", iPad "App & support"; both carry this identifier.
+        let row = app.buttons["glass.settings.appSupport"]
         guard row.waitForExistence(timeout: 10) else {
             XCTFail("App & support must be reachable from Settings", file: file, line: line)
             return
@@ -24,35 +25,39 @@ enum UITestLaunchHelper {
         row.tap()
     }
 
-    /// Schedules and history live under Automations › Schedule & history.
+    /// Opens ScheduleG for the first automation: Automations › automation › Schedule.
+    /// AutomationsGlass has no "Schedule & history" row; each automation's schedule
+    /// carries the former master switch, and the Archive carries history and retry.
     static func openScheduleTab(
         in app: XCUIApplication,
         file: StaticString = #filePath,
         line: UInt = #line
     ) -> Bool {
-        guard openTab("Automations", in: app, file: file, line: line) else { return false }
-        let row = app.buttons["Schedule & history"]
+        guard openAutomation(in: app, file: file, line: line) else { return false }
+        let row = app.buttons["glass.automation.schedule"]
         guard row.waitForExistence(timeout: 10) else {
-            XCTFail("Schedule & history must be reachable from Automations", file: file, line: line)
+            XCTFail("Schedule must be reachable from the automation", file: file, line: line)
             return false
         }
         row.tap()
         return true
     }
 
-    /// The classic Export settings open from Automations.
-    static func openClassicExport(
+    /// Opens the first automation's detail (AutomationDetailG) from Automations.
+    @discardableResult
+    static func openAutomation(
         in app: XCUIApplication,
         file: StaticString = #filePath,
         line: UInt = #line
-    ) {
-        guard openTab("Automations", in: app, file: file, line: line) else { return }
-        let button = app.buttons["All export settings"]
-        guard button.waitForExistence(timeout: 10) else {
-            XCTFail("All export settings must be reachable", file: file, line: line)
-            return
+    ) -> Bool {
+        guard openTab("Automations", in: app, file: file, line: line) else { return false }
+        let card = app.buttons["glass.automation.card"].firstMatch
+        guard card.waitForExistence(timeout: 10) else {
+            XCTFail("An automation must be listed under Automations", file: file, line: line)
+            return false
         }
-        button.tap()
+        card.tap()
+        return true
     }
 
     private static func openTab(

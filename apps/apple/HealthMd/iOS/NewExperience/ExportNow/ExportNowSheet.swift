@@ -19,6 +19,43 @@ enum ExportNowRange: Hashable {
         case .custom: return nil
         }
     }
+
+    /// The completed days a preset covers, ending yesterday. Nil for custom.
+    func dates(now: Date, calendar: Calendar) -> (start: Date, end: Date)? {
+        guard let days = dayCount else { return nil }
+        let today = calendar.startOfDay(for: now)
+        guard let end = calendar.date(byAdding: .day, value: -1, to: today),
+              let start = calendar.date(byAdding: .day, value: -days, to: today) else { return nil }
+        return (start, end)
+    }
+}
+
+/// ExportNowG's "Will write" line: "About 14 files · 7 days · daily notes updated".
+/// Pure. The file count stays "About": no-data days, roll-ups, sidecars and the data
+/// dictionary make the real number differ from days × formats.
+enum ExportNowWillWrite {
+    static func summary(
+        dayCount: Int,
+        formatCount: Int,
+        summaryOnly: Bool,
+        dailyNotesOnly: Bool,
+        updatesDailyNotes: Bool,
+        rangeText: String,
+        locale: Locale = .current
+    ) -> String {
+        if summaryOnly { return String(localized: "1 range summary for \(rangeText)") }
+        let days = max(dayCount, 1)
+        var parts: [String] = []
+        if !dailyNotesOnly {
+            let files = days * max(formatCount, 1)
+            parts.append(files == 1 ? String(localized: "About 1 file") : String(localized: "About \(files) files"))
+        }
+        parts.append(ScheduleSheetCopy.count(days, unit: .day, locale: locale))
+        if updatesDailyNotes || dailyNotesOnly {
+            parts.append(String(localized: "daily notes updated"))
+        }
+        return parts.joined(separator: " · ")
+    }
 }
 
 /// ExportNowG. Runs through the same `exportData` path as the existing Export tab. It closes
@@ -34,14 +71,18 @@ struct ExportNowSheet: View {
     let activeProfileID: UUID?
     let onSelectProfile: (UUID) -> Void
     let resolveAllTime: () async -> (start: Date, end: Date)?
-    let onPreview: () -> Void
+    /// ExportPreviewG, pushed inside this sheet. It gets the action its Export runs.
+    let preview: (_ onExport: @escaping () -> Void) -> AnyView
     let onExport: () -> Void
+    /// LargeConfirmG: the sheet closes first and the shell asks over the Archive.
+    let onConfirmLargeExport: (ExportScaleGuard.Scale) -> Void
 
     @Environment(\.glassPalette) private var palette
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var configurationProtection: ConfigurationProtectionManager
+    @EnvironmentObject private var healthKitManager: HealthKitManager
     @State private var range: ExportNowRange = .yesterday
-    @State private var pendingScale: ExportScaleGuard.Scale?
+    @State private var showPreview = false
 
     private var calendar: Calendar { .current }
 
@@ -85,26 +126,13 @@ struct ExportNowSheet: View {
                     Button(String(localized: "Cancel")) { dismiss() }
                 }
             }
+            .navigationDestination(isPresented: $showPreview) {
+                // Export from the preview runs the same checks as this sheet's button.
+                preview(exportTapped)
+            }
         }
         .glassSheet(palette: palette)
         .onAppear(perform: applyRequest)
-        .geistDialog(
-            isPresented: Binding(
-                get: { pendingScale != nil },
-                set: { if !$0 { pendingScale = nil } }
-            ),
-            title: Text("Export \(pendingScale?.dayCount ?? 0) days?"),
-            message: Text(largeConfirmationMessage),
-            actions: [
-                .cancel {
-                    pendingScale = nil
-                },
-                .action("Export Anyway") {
-                    pendingScale = nil
-                    closeAndExport()
-                }
-            ]
-        )
     }
 
     private var profileChips: some View {
@@ -150,7 +178,15 @@ struct ExportNowSheet: View {
                     GlassChip(title: ExportDateRangePreset.allTime.title) { selectAllTime() }
                 }
             }
-            Text("\(rangeText) · sleep counts noon → noon. For last night, choose Yesterday.")
+            // The sleep day setting (FormatsG) decides which date holds last night.
+            Group {
+                switch healthKitManager.sleepDayAttribution {
+                case .nightBegins:
+                    Text("\(rangeText) · sleep counts noon → noon. For last night, choose Yesterday.")
+                case .morningEnds:
+                    Text("\(rangeText) · sleep counts on the day you wake. For last night, choose Today.")
+                }
+            }
                 .glassFont(.rowSubtitle)
                 .foregroundStyle(palette.muted)
         }
@@ -184,8 +220,7 @@ struct ExportNowSheet: View {
                 sectionTitle(String(localized: "Will write"))
                 Spacer()
                 Button {
-                    dismiss()
-                    onPreview()
+                    showPreview = true
                 } label: {
                     Text(verbatim: String(localized: "Preview") + " →")
                         .glassFont(.caption)
@@ -216,11 +251,24 @@ struct ExportNowSheet: View {
     }
 
     private var summaryText: String {
-        if advancedSettings.summaryOnlyExport {
-            return String(localized: "1 range summary for \(rangeText)")
+        ExportNowWillWrite.summary(
+            dayCount: dayCount,
+            formatCount: advancedSettings.exportFormats.count,
+            summaryOnly: advancedSettings.summaryOnlyExport,
+            dailyNotesOnly: advancedSettings.dailyNotesOnlyModeEnabled,
+            updatesDailyNotes: updatesDailyNotes,
+            rangeText: rangeText
+        )
+    }
+
+    /// Daily notes are files in a folder; an API or gateway profile never touches them.
+    private var updatesDailyNotes: Bool {
+        guard advancedSettings.dailyNoteInjection.enabled else { return false }
+        if let active = profiles.first(where: { $0.id == activeProfileID }),
+           case .endpoint = active.outputPath {
+            return false
         }
-        let files = dayCount * max(advancedSettings.exportFormats.count, 1)
-        return String(localized: "About \(files) file(s) · \(dayCount) day(s)")
+        return true
     }
 
     private var ctaTitle: String {
@@ -228,11 +276,6 @@ struct ExportNowSheet: View {
         return range == .yesterday
             ? String(localized: "Export yesterday")
             : String(localized: "Export \(dayCount) days")
-    }
-
-    private var largeConfirmationMessage: String {
-        guard let scale = pendingScale else { return "" }
-        return String(localized: "This export covers \(scale.dayCount) days and writes about \(scale.estimatedFileCount) files. Exports this large can take a long time to finish.")
     }
 
     private func applyRequest() {
@@ -249,22 +292,17 @@ struct ExportNowSheet: View {
         }
     }
 
+    /// The sheet's dates are a one-off choice for this run, not saved configuration,
+    /// so Lock configuration never blocks them.
     private func select(_ newRange: ExportNowRange) {
-        configurationProtection.performConfigurationChange {
-            range = newRange
-            guard let days = newRange.dayCount else {
-                dateRangePreset = .custom
-                return
-            }
-            if days == 1 {
-                selectPreset(.yesterday)
-                return
-            }
+        range = newRange
+        guard let dates = newRange.dates(now: Date(), calendar: calendar) else {
             dateRangePreset = .custom
-            let today = calendar.startOfDay(for: Date())
-            endDate = calendar.date(byAdding: .day, value: -1, to: today) ?? today
-            startDate = calendar.date(byAdding: .day, value: -days, to: today) ?? today
+            return
         }
+        dateRangePreset = newRange == .yesterday ? .yesterday : .custom
+        startDate = dates.start
+        endDate = dates.end
     }
 
     private func selectPreset(_ preset: ExportDateRangePreset) {
@@ -293,7 +331,9 @@ struct ExportNowSheet: View {
         )
         switch verdict {
         case .proceed: closeAndExport()
-        case .confirm(let scale): pendingScale = scale
+        case .confirm(let scale):
+            dismiss()
+            onConfirmLargeExport(scale)
         }
     }
 

@@ -655,6 +655,28 @@
       ]
     },
     {
+      "id": "automation.run-overlap-policy",
+      "name": "Choose what happens when an automation's runs overlap",
+      "classification": "planned",
+      "summary": "Per-automation choice between queueing a new scheduled occurrence behind the running one or skipping it while one is in progress. Skipped days remain eligible for the next due evaluation.",
+      "profiles": [],
+      "platforms": {
+        "apple": {
+          "state": "available"
+        },
+        "android": {
+          "state": "planned",
+          "target": "Add a per-profile Queue/Skip choice to the Android automation detail and map it onto ScheduledProfileExportWorker's unique-work policy (APPEND_OR_REPLACE for Queue, KEEP for Skip) instead of the fixed REPLACE in ExportScheduler, with scheduler tests for both policies."
+        }
+      },
+      "evidence": [
+        "apps/apple/HealthMd/Shared/Models/ProfileRunOverlapPolicy.swift",
+        "apps/apple/HealthMd/iOS/SchedulingManager.swift",
+        "apps/apple/HealthMd/iOS/NewExperience/Automations/AutomationsScreens.swift",
+        "apps/android/app/src/main/java/com/healthmd/data/scheduler/ExportScheduler.kt"
+      ]
+    },
+    {
       "id": "apple.hearing-and-symptoms",
       "name": "HealthKit hearing and symptom records",
       "classification": "apple_only",

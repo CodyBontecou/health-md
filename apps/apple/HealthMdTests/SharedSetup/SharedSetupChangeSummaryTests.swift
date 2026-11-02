@@ -33,4 +33,17 @@ final class SharedSetupChangeSummaryTests: XCTestCase {
         let second = Facts(formats: ["csv", "json"], dateFormat: "iso8601", filename: "{date}", metricCount: 1, dailyNotes: false)
         XCTAssertTrue(SharedSetupChangeSummary(current: first, incoming: second, on: "On", off: "Off").rows.isEmpty)
     }
+
+    func testTodayRefreshRowSitsBeforeDailyNotesAndUsesTheLabel() {
+        var incoming = base
+        incoming.todayRefreshMinutes = 180
+        incoming.dailyNotes = true
+        let rows = SharedSetupChangeSummary(
+            current: base, incoming: incoming, on: "On", off: "Off",
+            todayRefreshLabel: { "Every \($0 / 60) h" }
+        ).rows
+        XCTAssertEqual(rows.map(\.field), [.todayRefresh, .dailyNotes])
+        XCTAssertEqual(rows[0].before, "Off")
+        XCTAssertEqual(rows[0].after, "Every 3 h")
+    }
 }

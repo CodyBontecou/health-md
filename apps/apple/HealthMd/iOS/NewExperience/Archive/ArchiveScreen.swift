@@ -1,111 +1,315 @@
 #if os(iOS)
 import SwiftUI
 
+/// Which board the Archive follows for the current window.
+enum ArchiveLayout: Equatable {
+    /// ArchiveGlass: the iPhone column.
+    case phone
+    /// DuoOuterG: the outer display of a phone that unfolds.
+    case folded
+    /// DuoSplitViewG: a narrow window beside another app.
+    case splitView
+    /// DuoInnerArchiveG: calendar beside the day, profiles as chips.
+    case wide
+    /// iPadArchiveG: as wide, with profiles in the sidebar and Export now in the header.
+    case pad
+
+    init(_ window: GlassWindowClass) {
+        switch window {
+        case .phone: self = .phone
+        case .folded: self = .folded
+        case .splitView: self = .splitView
+        case .unfolded: self = .wide
+        case .pad: self = .pad
+        }
+    }
+
+    var isWide: Bool { self == .wide || self == .pad }
+}
+
+/// Setup progress for EmptyArchiveG's checklist.
+struct ArchiveSetupState: Equatable {
+    let isHealthConnected: Bool
+}
+
 struct ArchiveScreen: View {
     let model: ArchiveModel
+    var layout: ArchiveLayout = .phone
+    @Binding var filter: UUID?
     let needsSetup: Bool
+    let setup: ArchiveSetupState
     let attentionCount: Int
     let onAction: (ArchiveProfile, ArchiveAggregation.DayAction, Date) -> Void
     let onResume: (ArchiveProfile) -> Void
     let onManageAutomations: () -> Void
+    let onEditAutomation: (ArchiveProfile) -> Void
     let onShowAttention: () -> Void
+    let onConnectHealth: () -> Void
     let onSetUp: () -> Void
+    let onBackfill: () -> Void
+    let onExportNow: () -> Void
 
     @Environment(\.glassPalette) private var palette
-    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
-    @State private var filter: UUID?
     @State private var month = Date()
     @State private var selectedDate = Calendar.current.startOfDay(for: Date())
 
     private var calendar: Calendar { model.calendar }
     private var filteredProfile: ArchiveProfile? { model.profiles.first { $0.id == filter } }
+    private var shownProfiles: [ArchiveProfile] { filteredProfile.map { [$0] } ?? model.profiles }
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: GlassMetrics.sectionGap) {
-                HStack(alignment: .center) {
-                    Text("Archive")
-                        .glassFont(.largeTitle)
-                        .foregroundStyle(palette.text)
-                    Spacer(minLength: 8)
-                    if !needsSetup && attentionCount > 0 { attentionButton }
-                }
-
+            Group {
                 if needsSetup {
-                    EmptyArchiveCard(onSetUp: onSetUp)
+                    VStack(alignment: .leading, spacing: 14) {
+                        titleRow(String(localized: "Archive"), size: 34, showsHeart: true)
+                        EmptyArchiveCard(
+                            setup: setup,
+                            onConnectHealth: onConnectHealth,
+                            onChooseFolder: onSetUp,
+                            onBackfill: onBackfill
+                        )
+                    }
                 } else {
-                    chips
-                    statsPanel
-                    if let profile = filteredProfile, profile.isPaused { pausedNote(profile) }
-                    if horizontalSizeClass == .regular {
-                        // Unfolded iPhone Duo and iPad: calendar beside its day.
-                        HStack(alignment: .top, spacing: GlassMetrics.sectionGap) {
-                            calendarPanel.frame(maxWidth: .infinity)
-                            VStack(spacing: GlassMetrics.sectionGap) {
-                                dayCard
-                                sentenceCard
-                            }
-                            .frame(maxWidth: .infinity)
-                        }
-                    } else {
-                        calendarPanel
-                        dayCard
-                        sentenceCard
+                    switch layout {
+                    case .phone: phoneBody
+                    case .folded: foldedBody
+                    case .splitView: splitBody
+                    case .wide, .pad: wideBody
                     }
                 }
             }
-            .padding(.horizontal, GlassMetrics.screenMargin)
-            .padding(.top, 12)
-            .padding(.bottom, GlassMetrics.scrollBottomInset)
+            .padding(.horizontal, layout.isWide ? 22 : GlassMetrics.screenMargin)
+            .padding(.top, layout == .splitView ? 20 : 12)
+            .padding(.bottom, layout.isWide ? 22 : GlassMetrics.scrollBottomInset)
         }
         .background(palette.bg.ignoresSafeArea())
         .accessibilityIdentifier("glass.archive")
     }
 
-    /// A compact header button; the full list opens in AttentionScreen.
-    private var attentionButton: some View {
+    // MARK: - Layouts
+
+    /// ArchiveGlass (iPhone).
+    private var phoneBody: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            titleRow(String(localized: "Archive"), size: 34, showsHeart: true)
+            chips(compact: false)
+            statsPanel
+            pausedNoteIfNeeded
+            calendarPanel
+            dayCard
+            sentenceCard
+        }
+    }
+
+    /// DuoOuterG: the outer display keeps the month and says the inner one shows more.
+    /// This layout only follows a phone that has been unfolded, so the day card and the
+    /// automation sentence stay one unfold away (DuoInnerArchiveG), and the phone column
+    /// keeps them for phones that do not fold.
+    private var foldedBody: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            titleRow(String(localized: "Archive"), size: 30, showsHeart: true)
+            chips(compact: true)
+            compactStatsPanel
+            pausedNoteIfNeeded
+            calendarPanel
+            Text("Unfold for the calendar and day detail side by side.")
+                .font(.system(size: 12))
+                .foregroundStyle(palette.muted)
+                .padding(.horizontal, 4)
+        }
+    }
+
+    /// DuoSplitViewG: chips, calendar and the selected day only.
+    private var splitBody: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            titleRow(String(localized: "Archive"), size: 28, showsHeart: attentionCount > 0)
+            chips(compact: true)
+            pausedNoteIfNeeded
+            calendarPanel
+            compactDayPanel(showsSummary: false, fillsHeight: false)
+        }
+    }
+
+    /// DuoInnerArchiveG and iPadArchiveG: the month beside its day.
+    private var wideBody: some View {
+        VStack(alignment: .leading, spacing: layout == .pad ? 16 : 12) {
+            wideHeader
+            if layout == .wide { chips(compact: true) }
+            pausedNoteIfNeeded
+            HStack(alignment: .top, spacing: layout == .pad ? 16 : 14) {
+                calendarPanel
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                compactDayPanel(showsSummary: true, fillsHeight: true)
+                    .frame(width: layout == .pad ? 320 : 250)
+                    .frame(maxHeight: .infinity, alignment: .top)
+            }
+            .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    // MARK: - Header
+
+    private func titleRow(_ title: String, size: CGFloat, showsHeart: Bool) -> some View {
+        HStack(alignment: .center) {
+            Text(title)
+                .font(.system(size: size, weight: .bold))
+                .tracking(size >= 34 ? -0.6 : 0)
+                .foregroundStyle(palette.text)
+                .accessibilityAddTraits(.isHeader)
+            Spacer(minLength: 8)
+            if showsHeart { heartButton }
+        }
+        .padding(.horizontal, layout == .phone ? 4 : 0)
+    }
+
+    /// The crystal-heart "Health.md" button. It opens Needs attention and carries its count.
+    private var heartButton: some View {
         Button(action: onShowAttention) {
-            Image(systemName: "exclamationmark.triangle.fill")
-                .font(.system(size: 17, weight: .semibold))
-                .foregroundStyle(palette.coral)
+            Image("HealthCrystalHeart")
+                .resizable()
+                .scaledToFit()
+                .frame(width: layout == .phone ? 24 : 22, height: layout == .phone ? 24 : 22)
                 .frame(width: GlassMetrics.touchTarget, height: GlassMetrics.touchTarget)
-                .glassSurface(in: Circle(), isInteractive: true)
+                .glassSurface(in: Circle(), style: .strong, isInteractive: true)
                 .overlay(alignment: .topTrailing) {
-                    Text(verbatim: "\(attentionCount)")
-                        .font(.system(size: 11, weight: .bold))
-                        .foregroundStyle(palette.accentInk)
-                        .padding(.horizontal, 5)
-                        .frame(minWidth: 18, minHeight: 18)
-                        .background(Capsule().fill(palette.coral))
-                        .offset(x: 4, y: -4)
-                        .accessibilityHidden(true)
+                    if attentionCount > 0 {
+                        Text(verbatim: "\(attentionCount)")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundStyle(palette.accentInk)
+                            .padding(.horizontal, 5)
+                            .frame(minWidth: 18, minHeight: 18)
+                            .background(Capsule().fill(palette.coral))
+                            .offset(x: 4, y: -4)
+                            .accessibilityHidden(true)
+                    }
                 }
                 .contentShape(Circle())
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(String(localized: "Needs attention"))
-        .accessibilityValue(String(localized: "\(attentionCount) item(s) need a look."))
+        .accessibilityLabel(Text(verbatim: "Health.md"))
+        .accessibilityValue(attentionCount > 0
+            ? String(localized: "\(attentionCount) item(s) need a look.")
+            : String(localized: "Nothing needs attention"))
         .accessibilityIdentifier("glass.archive.attention")
     }
 
-    private var chips: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
-                GlassChip(title: String(localized: "All"), isSelected: filter == nil) { filter = nil }
-                ForEach(model.profiles) { profile in
-                    GlassChip(
-                        title: profile.isPaused
-                            ? String(localized: "\(profile.name) · paused")
-                            : profile.name,
-                        dotColor: palette.profileColor(at: profile.colorIndex),
-                        isSelected: filter == profile.id
-                    ) { filter = profile.id }
+    private var wideHeader: some View {
+        let stats = model.stats(month: month, filter: filter)
+        let isWeekly = model.isWeeklyFilter(filter)
+        return HStack(alignment: .center, spacing: 12) {
+            ViewThatFits(in: .horizontal) {
+                HStack(alignment: .firstTextBaseline, spacing: 14) {
+                    monthTitle
+                    inlineStats(stats, isWeekly: isWeekly)
+                }
+                VStack(alignment: .leading, spacing: 4) {
+                    monthTitle
+                    inlineStats(stats, isWeekly: isWeekly)
                 }
             }
-            .padding(.horizontal, GlassMetrics.screenMargin)
+            Spacer(minLength: 8)
+            monthButton(String(localized: "Previous month"), image: "chevron.left", offset: -1)
+            monthButton(String(localized: "Next month"), image: "chevron.right", offset: 1)
+            if attentionCount > 0 { heartButton }
+            if layout == .pad {
+                Button(action: onExportNow) {
+                    Text("Export now")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(palette.accentInk)
+                        .padding(.horizontal, 20)
+                        .frame(height: GlassMetrics.touchTarget)
+                        .background(Capsule().fill(palette.accent))
+                        .contentShape(Capsule())
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("glass.exportNow")
+            }
         }
-        .padding(.horizontal, -GlassMetrics.screenMargin)
     }
+
+    private var monthTitle: some View {
+        Text(month.formatted(.dateTime.month(.wide).year()))
+            .font(.system(size: layout == .pad ? 34 : 30, weight: .bold))
+            .foregroundStyle(palette.text)
+            .lineLimit(1)
+            .accessibilityAddTraits(.isHeader)
+    }
+
+    /// "27 days · 10-day streak · 3 gaps"; the gap count jumps to the first gap.
+    private func inlineStats(_ stats: ArchiveAggregation.Stats, isWeekly: Bool) -> some View {
+        HStack(spacing: 0) {
+            Text(isWeekly
+                ? String(localized: "\(stats.archivedCount) weeks")
+                : String(localized: "\(stats.archivedCount) days"))
+            Text(verbatim: " · ")
+            Text(streakText(stats, isWeekly: isWeekly))
+            Text(verbatim: " · ")
+            gapButton(stats, weight: .semibold)
+        }
+        .font(.system(size: layout == .pad ? 15 : 13))
+        .foregroundStyle(palette.muted)
+        .lineLimit(1)
+    }
+
+    private func streakText(_ stats: ArchiveAggregation.Stats, isWeekly: Bool) -> String {
+        isWeekly
+            ? String(localized: "\(stats.streak)-week streak")
+            : String(localized: "\(stats.streak)-day streak")
+    }
+
+    private func gapButton(_ stats: ArchiveAggregation.Stats, weight: Font.Weight) -> some View {
+        Button {
+            guard let gap = stats.earliestGap else { return }
+            select(gap)
+        } label: {
+            Text(stats.gapCount == 0
+                ? String(localized: "No gaps")
+                : String(localized: "\(stats.gapCount) gap(s)"))
+                .fontWeight(weight)
+                .foregroundStyle(stats.gapCount == 0 ? palette.ok : palette.coral)
+        }
+        .buttonStyle(.plain)
+        .disabled(stats.gapCount == 0)
+    }
+
+    private func select(_ date: Date) {
+        selectedDate = date
+        if !calendar.isDate(date, equalTo: month, toGranularity: .month) { month = date }
+    }
+
+    // MARK: - Chips
+
+    private func chips(compact: Bool) -> some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: compact ? 6 : 8) {
+                chip(String(localized: "All"), color: nil, id: nil, compact: compact)
+                ForEach(model.profiles) { profile in
+                    chip(
+                        profile.isPaused && !compact
+                            ? String(localized: "\(profile.name) · paused")
+                            : profile.name,
+                        color: palette.profileColor(at: profile.colorIndex),
+                        id: profile.id,
+                        compact: compact
+                    )
+                }
+            }
+            .padding(.horizontal, layout.isWide ? 22 : GlassMetrics.screenMargin)
+        }
+        .padding(.horizontal, layout.isWide ? -22 : -GlassMetrics.screenMargin)
+    }
+
+    @ViewBuilder
+    private func chip(_ title: String, color: Color?, id: UUID?, compact: Bool) -> some View {
+        if compact {
+            CompactArchiveChip(title: title, dotColor: color, isSelected: filter == id) { filter = id }
+        } else {
+            GlassChip(title: title, dotColor: color, isSelected: filter == id) { filter = id }
+        }
+    }
+
+    // MARK: - Stats
 
     private var statsPanel: some View {
         let stats = model.stats(month: month, filter: filter)
@@ -120,29 +324,55 @@ struct ArchiveScreen: View {
                     .fontWeight(.semibold)
                     .foregroundStyle(palette.text)
                 HStack(spacing: 12) {
-                    Text(isWeekly
-                        ? String(localized: "\(stats.streak)-week streak")
-                        : String(localized: "\(stats.streak)-day streak"))
-                        .foregroundStyle(palette.sec)
-                    Button {
-                        guard let gap = stats.earliestGap else { return }
-                        selectedDate = gap
-                    } label: {
-                        Text(stats.gapCount == 0
-                            ? String(localized: "No gaps")
-                            : String(localized: "\(stats.gapCount) gap(s)"))
-                            .foregroundStyle(stats.gapCount == 0 ? palette.ok : palette.coral)
-                    }
-                    .buttonStyle(.plain)
-                    .disabled(stats.gapCount == 0)
+                    Text(streakText(stats, isWeekly: isWeekly)).foregroundStyle(palette.muted)
+                    gapButton(stats, weight: .semibold)
                 }
-                .glassFont(.caption)
+                .font(.system(size: 13))
             }
             Spacer(minLength: 0)
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 18)
         .glassSurface()
+    }
+
+    /// DuoOuterG's smaller stats row.
+    private var compactStatsPanel: some View {
+        let stats = model.stats(month: month, filter: filter)
+        let isWeekly = model.isWeeklyFilter(filter)
+        return HStack(spacing: 12) {
+            Text(verbatim: "\(stats.archivedCount)")
+                .font(.system(size: 44, weight: .bold))
+                .tracking(-2)
+                .monospacedDigit()
+                .foregroundStyle(palette.text)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(compactStatsLabel(isWeekly: isWeekly))
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(palette.text)
+                HStack(spacing: 0) {
+                    Text(streakText(stats, isWeekly: isWeekly))
+                    Text(verbatim: " · ")
+                    gapButton(stats, weight: .semibold)
+                }
+                .font(.system(size: 12))
+                .foregroundStyle(palette.muted)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
+        .glassSurface()
+    }
+
+    /// DuoOuterG's shorter label: "days archived".
+    private func compactStatsLabel(isWeekly: Bool) -> String {
+        if isWeekly { return String(localized: "weeks archived") }
+        if let profile = filteredProfile {
+            if profile.hasTodayRefresh { return String(localized: "days fully or partly sent") }
+            if profile.isPaused { return String(localized: "days archived before pausing") }
+        }
+        return String(localized: "days archived")
     }
 
     private func statsLabel(isWeekly: Bool) -> String {
@@ -156,54 +386,61 @@ struct ArchiveScreen: View {
         return String(localized: "days archived in \(monthName)")
     }
 
+    @ViewBuilder private var pausedNoteIfNeeded: some View {
+        if let profile = filteredProfile, profile.isPaused { pausedNote(profile) }
+    }
+
     private func pausedNote(_ profile: ArchiveProfile) -> some View {
         HStack(alignment: .top, spacing: 10) {
             Image(systemName: "pause.circle")
+                .font(.system(size: 17))
                 .foregroundStyle(palette.muted)
+                .padding(.top, 1)
                 .accessibilityHidden(true)
-            Text("\(profile.name) is paused. Days while paused are not counted as gaps.")
+            Text(ArchiveCopy.pausedNote(profile))
                 .font(.system(size: 14))
                 .foregroundStyle(palette.sec)
                 .frame(maxWidth: .infinity, alignment: .leading)
+                .fixedSize(horizontal: false, vertical: true)
             Button(String(localized: "Resume")) { onResume(profile) }
                 .buttonStyle(.plain)
-                .glassFont(.caption)
-                .foregroundStyle(palette.accent)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(palette.text)
+                .padding(.horizontal, 12)
+                .frame(height: 30)
+                .background(Capsule().fill(palette.surface2))
+                .overlay(Capsule().strokeBorder(palette.edge, lineWidth: 1))
                 .frame(minHeight: GlassMetrics.touchTarget)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
-        .glassSurface(cornerRadius: GlassMetrics.panelSmallRadius)
+        .glassSurface(cornerRadius: 18)
     }
+
+    // MARK: - Calendar
 
     private var calendarPanel: some View {
         VStack(alignment: .leading, spacing: 10) {
-            HStack {
-                Text(month.formatted(.dateTime.month(.wide).year()))
-                    .font(.system(size: 17, weight: .bold))
-                    .foregroundStyle(palette.text)
-                Spacer()
-                monthButton(
-                    String(localized: "Previous month"),
-                    image: "chevron.left",
-                    offset: -1,
-                    isEnabled: canShowMonth(offset: -1)
-                )
-                monthButton(
-                    String(localized: "Next month"),
-                    image: "chevron.right",
-                    offset: 1,
-                    isEnabled: canShowMonth(offset: 1)
-                )
+            if !layout.isWide {
+                HStack {
+                    Text(month.formatted(.dateTime.month(.wide).year()))
+                        .font(.system(size: 17, weight: .bold))
+                        .foregroundStyle(palette.text)
+                    Spacer()
+                    monthButton(String(localized: "Previous month"), image: "chevron.left", offset: -1)
+                    monthButton(String(localized: "Next month"), image: "chevron.right", offset: 1)
+                }
+                .padding(.horizontal, 6)
             }
             MonthCalendarGrid(month: month, calendar: calendar) { date in
                 tile(for: date)
             }
-            legend
+            // Only the iPhone board carries a legend; the wide boards rely on the badges.
+            if layout == .phone { legend }
         }
-        .padding(.horizontal, 12)
-        .padding(.top, 16)
-        .padding(.bottom, 14)
+        .padding(.horizontal, layout == .splitView ? 10 : 12)
+        .padding(.top, layout.isWide ? 12 : 16)
+        .padding(.bottom, layout.isWide ? 12 : 14)
         .glassSurface()
     }
 
@@ -250,16 +487,15 @@ struct ArchiveScreen: View {
         return calendar.compare(target, to: oldest, toGranularity: .month) != .orderedAscending
     }
 
-    private func monthButton(
-        _ label: String,
-        image: String,
-        offset: Int,
-        isEnabled: Bool
-    ) -> some View {
-        Button {
+    private func monthButton(_ label: String, image: String, offset: Int) -> some View {
+        let isEnabled = canShowMonth(offset: offset)
+        return Button {
             month = calendar.date(byAdding: .month, value: offset, to: month) ?? month
         } label: {
             Image(systemName: image)
+                .font(.system(size: 15, weight: .semibold))
+                .frame(width: 32, height: 32)
+                .background(Circle().fill(isEnabled ? palette.surface2 : palette.surface))
                 .frame(width: GlassMetrics.touchTarget, height: GlassMetrics.touchTarget)
                 .contentShape(Rectangle())
                 .foregroundStyle(isEnabled ? palette.text : palette.muted.opacity(0.5))
@@ -267,6 +503,7 @@ struct ArchiveScreen: View {
         .buttonStyle(.plain)
         .disabled(!isEnabled)
         .accessibilityLabel(label)
+        .accessibilityIdentifier(offset < 0 ? "glass.archive.previousMonth" : "glass.archive.nextMonth")
     }
 
     private var legend: some View {
@@ -290,115 +527,392 @@ struct ArchiveScreen: View {
         }
     }
 
-    private var dayCard: some View {
-        let shown = filteredProfile.map { [$0] } ?? model.profiles
+    // MARK: - Day
+
+    private var dayTitle: String {
+        selectedDate.formatted(.dateTime.weekday(.wide).month(.abbreviated).day())
+    }
+
+    private var daySummary: String {
         let counts = ArchiveAggregation.onTrack(model.profileDays(on: selectedDate))
-        return GlassPanel {
-            HStack {
-                Text(selectedDate.formatted(.dateTime.weekday(.wide).month(.abbreviated).day()))
-                    .glassFont(.navTitle)
+        return counts.due == 0
+            ? String(localized: "Nothing due")
+            : String(localized: "\(counts.onTrack) of \(counts.due) on track")
+    }
+
+    private var dayCard: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(alignment: .firstTextBaseline) {
+                Text(dayTitle)
+                    .font(.system(size: 18, weight: .bold))
                     .foregroundStyle(palette.text)
                 Spacer()
                 if filter == nil {
-                    Text(counts.due == 0
-                        ? String(localized: "Nothing due")
-                        : String(localized: "\(counts.onTrack) of \(counts.due) on track"))
-                        .glassFont(.caption)
+                    Text(daySummary)
+                        .font(.system(size: 13, weight: .semibold))
                         .foregroundStyle(palette.muted)
                 }
             }
-            .padding(.horizontal, GlassMetrics.panelPadding)
-            .padding(.vertical, 14)
+            .padding(.bottom, 6)
 
-            ForEach(shown) { profile in
-                Divider().overlay(palette.line)
+            ForEach(shownProfiles) { profile in
                 dayRow(profile)
+                    .overlay(alignment: .top) { Rectangle().fill(palette.line).frame(height: 1) }
             }
         }
+        .padding(.horizontal, 18)
+        .padding(.top, 16)
+        .padding(.bottom, 8)
+        .glassSurface()
     }
 
+    /// ArchiveGlass day row: name and badge, then the dated path, its note and the fix.
     private func dayRow(_ profile: ArchiveProfile) -> some View {
         let day = model.day(profile, on: selectedDate)
-        let action = ArchiveAggregation.action(for: day.status, hasTodayRefresh: profile.hasTodayRefresh)
-        return HStack(alignment: .top, spacing: 12) {
-            Circle()
-                .fill(palette.profileColor(at: profile.colorIndex))
-                .frame(width: 8, height: 8)
-                .padding(.top, 7)
-                .accessibilityHidden(true)
-            VStack(alignment: .leading, spacing: 3) {
-                HStack(spacing: 8) {
-                    Text(profile.name).glassFont(.body).fontWeight(.semibold).foregroundStyle(palette.text)
-                    StatusBadge(title: ArchiveCopy.title(for: day.status), status: day.status)
-                }
-                Text(profile.destination)
-                    .glassFont(.monoBody)
-                    .foregroundStyle(palette.muted)
-                    .lineLimit(1)
-                Text(ArchiveCopy.note(for: day, profile: profile))
-                    .glassFont(.rowSubtitle)
-                    .foregroundStyle(palette.sec)
+        let action = model.action(profile, day: day)
+        return VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 10) {
+                Circle()
+                    .fill(palette.profileColor(at: profile.colorIndex))
+                    .frame(width: 8, height: 8)
+                    .accessibilityHidden(true)
+                Text(profile.name)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(palette.text)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                StatusBadge(title: ArchiveCopy.title(for: day.status), status: day.status)
             }
-            Spacer(minLength: 8)
-            if let action {
-                Button(ArchiveCopy.title(for: action.action)) {
-                    onAction(profile, action.action, selectedDate)
+            HStack(spacing: 10) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(verbatim: model.pathLine(profile, day: day))
+                        .font(.system(size: 12, design: .monospaced))
+                        .foregroundStyle(palette.sec)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                    Text(ArchiveCopy.note(for: day, profile: profile, calendar: calendar))
+                        .font(.system(size: 13))
+                        .foregroundStyle(palette.muted)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
-                .buttonStyle(.plain)
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(action.isProminent ? palette.accentInk : palette.text)
-                .padding(.horizontal, 14)
-                .frame(height: 34)
-                .background(Capsule().fill(action.isProminent ? palette.accent : palette.surface2))
-                .overlay(Capsule().strokeBorder(palette.edge, lineWidth: 1))
-                .frame(minHeight: GlassMetrics.touchTarget)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                if let action {
+                    Button(ArchiveCopy.title(for: action.action)) {
+                        onAction(profile, action.action, selectedDate)
+                    }
+                    .buttonStyle(.plain)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(action.isProminent ? palette.accentInk : palette.text)
+                    .padding(.horizontal, 14)
+                    .frame(height: 34)
+                    .background(Capsule().fill(action.isProminent ? palette.accent : palette.surface2))
+                    .overlay(Capsule().strokeBorder(palette.edge, lineWidth: 1))
+                    .frame(minHeight: GlassMetrics.touchTarget)
+                }
             }
+            .padding(.leading, 18)
         }
-        .padding(.horizontal, GlassMetrics.panelPadding)
         .padding(.vertical, 12)
     }
 
+    /// The day as the Duo and iPad boards show it: name, badge and note, with one fix below.
+    private func compactDayPanel(showsSummary: Bool, fillsHeight: Bool) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text(dayTitle)
+                .font(.system(size: layout == .pad ? 20 : (layout == .splitView ? 16 : 19), weight: .bold))
+                .foregroundStyle(palette.text)
+            if showsSummary && filter == nil {
+                Text(daySummary)
+                    .font(.system(size: 13))
+                    .foregroundStyle(palette.muted)
+                    .padding(.top, 2)
+            }
+            Spacer().frame(height: showsSummary ? 8 : 4)
+            ForEach(shownProfiles) { profile in
+                compactDayRow(profile)
+                    .overlay(alignment: .top) { Rectangle().fill(palette.line).frame(height: 1) }
+            }
+            if fillsHeight { Spacer(minLength: 10) }
+            // DuoSplitViewG shows rows and badges only; the fix stays on the other layouts.
+            if layout != .splitView, let primary = primaryDayAction {
+                Button(String(localized: "\(ArchiveCopy.title(for: primary.action)) \(primary.profile.name)")) {
+                    onAction(primary.profile, primary.action, selectedDate)
+                }
+                .buttonStyle(GlassPrimaryButtonStyle())
+                .padding(.top, 10)
+            }
+        }
+        .padding(.horizontal, layout.isWide ? 16 : 16)
+        .padding(.vertical, layout.isWide ? 16 : 12)
+        .frame(maxWidth: .infinity, maxHeight: fillsHeight ? .infinity : nil, alignment: .topLeading)
+        .glassSurface()
+    }
+
+    private func compactDayRow(_ profile: ArchiveProfile) -> some View {
+        let day = model.day(profile, on: selectedDate)
+        return VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 8) {
+                Circle()
+                    .fill(palette.profileColor(at: profile.colorIndex))
+                    .frame(width: 8, height: 8)
+                    .accessibilityHidden(true)
+                Text(profile.name)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(palette.text)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                StatusBadge(title: ArchiveCopy.title(for: day.status), status: day.status)
+            }
+            Text(ArchiveCopy.note(for: day, profile: profile, calendar: calendar))
+                .font(.system(size: 13))
+                .foregroundStyle(palette.muted)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.leading, 16)
+        }
+        .padding(.vertical, 11)
+        .accessibilityElement(children: .combine)
+    }
+
+    /// The fix the wide boards put under the day: the first gap to close, or the
+    /// selected automation's own action.
+    private var primaryDayAction: (profile: ArchiveProfile, action: ArchiveAggregation.DayAction)? {
+        let rows = shownProfiles.compactMap { profile -> (ArchiveProfile, ArchiveAggregation.DayRowAction)? in
+            model.action(profile, day: model.day(profile, on: selectedDate)).map { (profile, $0) }
+        }
+        if let prominent = rows.first(where: { $0.1.isProminent }) { return (prominent.0, prominent.1.action) }
+        if filter != nil, let only = rows.first { return (only.0, only.1.action) }
+        return nil
+    }
+
+    // MARK: - Sentence
+
+    /// The automation's sentence, then "Paused since Oct 22." while it is paused.
+    static func sentenceText(_ profile: ArchiveProfile) -> String {
+        let sentence = profile.sentence ?? profile.destination
+        guard profile.isPaused else { return sentence }
+        guard let since = profile.pausedSince else { return sentence + " " + String(localized: "Paused.") }
+        let date = since.formatted(.dateTime.month(.abbreviated).day())
+        return sentence + " " + String(localized: "Paused since \(date).")
+    }
+
+    /// "Automations · Manage", or the selected automation's sentence with Edit.
     private var sentenceCard: some View {
         let paused = model.profiles.filter(\.isPaused).count
-        return HStack {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(String(localized: "Automations"))
-                    .glassFont(.caption)
-                    .foregroundStyle(palette.muted)
-                Text("\(model.profiles.count - paused) running and \(paused) paused. “All” counts a day complete when every running automation that was due covered it.")
-                    .glassFont(.rowSubtitle)
-                    .foregroundStyle(palette.sec)
+        let profile = filteredProfile
+        return Button {
+            if let profile { onEditAutomation(profile) } else { onManageAutomations() }
+        } label: {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Text(profile.map { String(localized: "\($0.name) automation") }
+                        ?? String(localized: "Automations"))
+                        .foregroundStyle(palette.muted)
+                    Spacer()
+                    Text(profile == nil ? String(localized: "Manage") : String(localized: "Edit"))
+                        .foregroundStyle(palette.accent)
+                }
+                .font(.system(size: 13, weight: .semibold))
+                Group {
+                    if let profile {
+                        Text(verbatim: Self.sentenceText(profile))
+                    } else {
+                        Text("\(model.profiles.count - paused) running and \(paused) paused. “All” counts a day complete when every running automation that was due covered it.")
+                    }
+                }
+                .font(.system(size: 17))
+                .lineSpacing(4)
+                .foregroundStyle(palette.sec)
+                .multilineTextAlignment(.leading)
+                .fixedSize(horizontal: false, vertical: true)
             }
-            Spacer(minLength: 8)
-            Button(String(localized: "Manage"), action: onManageAutomations)
-                .buttonStyle(.plain)
-                .glassFont(.caption)
-                .foregroundStyle(palette.accent)
-                .frame(minHeight: GlassMetrics.touchTarget)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 20)
+            .padding(.vertical, 18)
+            .glassSurface()
+            .contentShape(RoundedRectangle(cornerRadius: GlassMetrics.panelRadius, style: .continuous))
         }
-        .padding(GlassMetrics.panelPadding)
-        .glassSurface(cornerRadius: GlassMetrics.panelSmallRadius)
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("glass.archive.sentence")
+    }
+}
+
+/// iPadArchiveG's sidebar "Profiles" list. It picks the Archive filter, as the chips do.
+struct ArchiveSidebarProfiles: View {
+    let profiles: [ArchiveProfile]
+    @Binding var filter: UUID?
+
+    @Environment(\.glassPalette) private var palette
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            GlassSidebarHeading(title: String(localized: "Profiles"))
+            GlassSidebarListRow(
+                title: String(localized: "All"),
+                dotColor: palette.text,
+                isSelected: filter == nil
+            ) { filter = nil }
+            ForEach(profiles) { profile in
+                GlassSidebarListRow(
+                    title: profile.isPaused ? String(localized: "\(profile.name) · paused") : profile.name,
+                    dotColor: palette.profileColor(at: profile.colorIndex),
+                    isSelected: filter == profile.id
+                ) { filter = profile.id }
+            }
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("glass.sidebar.profiles")
+    }
+}
+
+/// The 32 pt profile chip of the Duo boards.
+private struct CompactArchiveChip: View {
+    let title: String
+    var dotColor: Color?
+    var isSelected = false
+    let action: () -> Void
+
+    @Environment(\.glassPalette) private var palette
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 6) {
+                if let dotColor {
+                    Circle().fill(dotColor).frame(width: 7, height: 7).accessibilityHidden(true)
+                }
+                Text(title).lineLimit(1)
+            }
+            .font(.system(size: 13, weight: .semibold))
+            .foregroundStyle(isSelected ? palette.accentInk : palette.text)
+            .padding(.horizontal, 12)
+            .frame(height: 32)
+            .background(Capsule().fill(isSelected ? palette.accent : palette.surface2))
+            .overlay(Capsule().strokeBorder(palette.edge, lineWidth: 1))
+            .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
+        .frame(minHeight: GlassMetrics.touchTarget)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }
 
 /// EmptyArchiveG: shown until Health access and a destination exist.
 struct EmptyArchiveCard: View {
-    let onSetUp: () -> Void
+    let setup: ArchiveSetupState
+    let onConnectHealth: () -> Void
+    let onChooseFolder: () -> Void
+    let onBackfill: () -> Void
 
     @Environment(\.glassPalette) private var palette
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Your archive starts here").glassFont(.screenTitle).foregroundStyle(palette.text)
-            Text("Each day you export fills a square on the calendar.")
-                .glassFont(.body)
-                .foregroundStyle(palette.sec)
-            Button(String(localized: "Choose folder"), action: onSetUp)
-                .buttonStyle(GlassPrimaryButtonStyle())
-                .padding(.top, 8)
+        VStack(spacing: 14) {
+            VStack(spacing: 10) {
+                Image("HealthCrystalHeart")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 64, height: 64)
+                    .accessibilityHidden(true)
+                Text("Your archive starts here")
+                    .font(.system(size: 20, weight: .bold))
+                    .foregroundStyle(palette.text)
+                Text("Each day you export fills a square on the calendar. Two steps first:")
+                    .font(.system(size: 15))
+                    .lineSpacing(3)
+                    .foregroundStyle(palette.sec)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.horizontal, 20)
+            .padding(.vertical, 28)
+            .glassSurface()
+
+            VStack(spacing: 0) {
+                step(
+                    String(localized: "Connect Apple Health"),
+                    subtitle: String(localized: "Choose what Health.md may read"),
+                    systemImage: "heart.fill",
+                    tile: .glassHex(0xE5484D),
+                    badge: setup.isHealthConnected ? .done : .next,
+                    action: onConnectHealth
+                )
+                step(
+                    String(localized: "Choose a folder"),
+                    subtitle: String(localized: "Your Obsidian vault or any Files folder"),
+                    systemImage: "folder.fill",
+                    tile: .glassHex(0x6B3FE0),
+                    badge: setup.isHealthConnected ? .next : nil,
+                    showsDivider: true,
+                    action: onChooseFolder
+                )
+                step(
+                    String(localized: "Backfill history"),
+                    subtitle: String(localized: "Optional — export past months in one go"),
+                    systemImage: "bolt.fill",
+                    tile: .glassHex(0x3D5BFF),
+                    badge: nil,
+                    showsDivider: true,
+                    action: onBackfill
+                )
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 4)
+            .glassSurface()
+
+            Button(
+                setup.isHealthConnected
+                    ? String(localized: "Choose folder")
+                    : String(localized: "Connect Apple Health"),
+                action: setup.isHealthConnected ? onChooseFolder : onConnectHealth
+            )
+            .buttonStyle(GlassPrimaryButtonStyle())
+            .accessibilityIdentifier("glass.archive.setUp")
         }
-        .padding(GlassMetrics.panelPadding + 4)
-        .glassSurface()
+    }
+
+    private enum Badge { case done, next }
+
+    private func step(
+        _ title: String,
+        subtitle: String,
+        systemImage: String,
+        tile: Color,
+        badge: Badge?,
+        showsDivider: Bool = false,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            HStack(spacing: 12) {
+                Image(systemName: systemImage)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(width: 32, height: 32)
+                    .background(RoundedRectangle(cornerRadius: GlassMetrics.iconTileRadius, style: .continuous).fill(tile))
+                    .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title).font(.system(size: 16)).foregroundStyle(palette.text)
+                    Text(subtitle).font(.system(size: 12.5)).foregroundStyle(palette.muted)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                if let badge {
+                    Text(badge == .done ? String(localized: "Done") : String(localized: "Next"))
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(badge == .done ? palette.ok : palette.accent)
+                        .padding(.horizontal, 9)
+                        .padding(.vertical, 3)
+                        .background(Capsule().fill(palette.surface2))
+                }
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(palette.muted)
+                    .accessibilityHidden(true)
+            }
+            .padding(.vertical, 6)
+            .frame(minHeight: GlassMetrics.rowWithSubtitleMinHeight)
+            .contentShape(Rectangle())
+            .overlay(alignment: .top) {
+                if showsDivider { Rectangle().fill(palette.line).frame(height: 1) }
+            }
+        }
+        .buttonStyle(.plain)
     }
 }
 
@@ -421,6 +935,26 @@ struct AttentionScreen: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 12) {
+                    if items.isEmpty {
+                        VStack(spacing: 10) {
+                            Image("HealthCrystalHeart")
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: 48, height: 48)
+                                .accessibilityHidden(true)
+                            Text("Nothing needs attention")
+                                .font(.system(size: 17, weight: .semibold))
+                                .foregroundStyle(palette.text)
+                            Text("Health.md will list problems here, each with its fix.")
+                                .font(.system(size: 14))
+                                .foregroundStyle(palette.sec)
+                                .multilineTextAlignment(.center)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 28)
+                        .padding(.horizontal, GlassMetrics.panelPadding)
+                        .glassSurface(cornerRadius: GlassMetrics.panelSmallRadius)
+                    }
                     ForEach(items) { item in
                         // Fixable problems are coral; items that only explain a wait use the accent.
                         let tone = item.action == nil ? palette.accent : palette.coral
@@ -436,6 +970,7 @@ struct AttentionScreen: View {
                                     .foregroundStyle(palette.text)
                                 Text(item.message)
                                     .font(.system(size: 14))
+                                    .lineSpacing(3)
                                     .foregroundStyle(palette.sec)
                                     .fixedSize(horizontal: false, vertical: true)
                                 if let actionTitle = item.actionTitle, let action = item.action {
@@ -465,17 +1000,16 @@ struct AttentionScreen: View {
                         )
                     }
                 }
-                .padding(GlassMetrics.screenMargin)
+                .padding(.horizontal, GlassMetrics.screenMargin)
+                .padding(.top, 4)
+                .padding(.bottom, 40)
             }
             .background(palette.bg.ignoresSafeArea())
+            // AttentionG: the title alone; the sheet closes by its drag indicator.
             .navigationTitle(String(localized: "Needs attention"))
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button(String(localized: "Done")) { dismiss() }
-                }
-            }
         }
+        .presentationDragIndicator(.visible)
     }
 }
 #endif

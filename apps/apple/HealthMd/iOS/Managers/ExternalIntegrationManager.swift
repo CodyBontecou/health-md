@@ -64,6 +64,13 @@ final class ExternalIntegrationManager: NSObject, ObservableObject, ExternalInte
         self.authenticate = authenticate
         self.accounts = tokenStore.accounts.filter { enabledProviders.contains($0.key) }
         super.init()
+        #if DEBUG
+        // App Store screenshots: a listed WHOOP connection with no token (display only).
+        if accounts.isEmpty, enabledProviders.contains(.whoop),
+           let fixture = AppStoreScreenshotFixtures.connectedWHOOPAccount {
+            accounts = [.whoop: fixture]
+        }
+        #endif
     }
 
     var connectedProviderCount: Int { tokenStore.connectedProviders.intersection(enabledProviders).count }
@@ -343,7 +350,8 @@ final class ExternalIntegrationManager: NSObject, ObservableObject, ExternalInte
                         provider: provider,
                         date: date,
                         token: token,
-                        calendar: calendar
+                        calendar: calendar,
+                        whoopResources: WHOOPExportResourceSelection.stored()
                     )
                     guard shouldKeepFetchResult(for: provider, connectionID: connectionID) else {
                         throw ExternalIntegrationTokenStoreError.connectionChanged
@@ -361,7 +369,8 @@ final class ExternalIntegrationManager: NSObject, ObservableObject, ExternalInte
                         provider: provider,
                         date: date,
                         token: token,
-                        calendar: calendar
+                        calendar: calendar,
+                        whoopResources: WHOOPExportResourceSelection.stored()
                     )
                     guard shouldKeepFetchResult(for: provider, connectionID: connectionID) else {
                         throw ExternalIntegrationTokenStoreError.connectionChanged

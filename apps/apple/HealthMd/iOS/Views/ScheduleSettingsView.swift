@@ -1322,13 +1322,16 @@ private struct GlassProfileScheduleList: View {
             }
         }
         .sheet(item: $editingProfile) { profile in
-            GlassScheduleSheet(
-                profile: profile,
-                entry: entryStore.entry(profileID: profile.id),
-                entryStore: entryStore
-            ) { entry in
-                _ = entryStore.upsert(entry)
-                schedulingManager.refreshScheduledAutomation()
+            // ScheduleG saves as it changes; the sheet host adds Done.
+            GlassPageSheet {
+                GlassScheduleSheet(
+                    profile: profile,
+                    entry: entryStore.entry(profileID: profile.id),
+                    entryStore: entryStore
+                ) { entry in
+                    _ = entryStore.upsert(entry)
+                    schedulingManager.refreshScheduledAutomation()
+                }
             }
             .glassTheme()
             .presentationDetents([.large])

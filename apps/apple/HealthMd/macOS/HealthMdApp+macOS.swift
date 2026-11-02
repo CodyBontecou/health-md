@@ -283,6 +283,7 @@ struct HealthMdApp: App {
     @StateObject private var iphoneExportRequestCoordinator = MacIPhoneExportRequestCoordinator()
     @StateObject private var contextAutomationCoordinator = MacContextAutomationCoordinator()
     @StateObject private var controlServer = HealthMdControlServer()
+    @AppStorage(MacPresentationPreferences.showsMenuBarExtraKey) private var showsMenuBarExtra = true
     private let macExportJobExecutor = MacExportJobExecutor()
     private let encryptedHealthContextStore: EncryptedHealthContextStore
     private let encryptedHealthContextQueryExecutor: EncryptedHealthContextQueryExecutor
@@ -328,10 +329,11 @@ struct HealthMdApp: App {
                 .environmentObject(syncService)
                 .environmentObject(healthDataStore)
                 .environmentObject(encryptedHealthContextManager)
+                .environmentObject(controlServer)
                 .frame(minWidth: 1_100, minHeight: 680)
                 .tint(Color.accent)
                 #if DEBUG
-                .preferredColorScheme(MacMarketingCapture.isActive ? .light : nil)
+                .preferredColorScheme(MacMarketingCapture.isActive ? MacMarketingCapture.colorScheme : nil)
                 #endif
                 .task {
                     #if DEBUG
@@ -340,6 +342,8 @@ struct HealthMdApp: App {
                             syncService: syncService,
                             vaultManager: vaultManager
                         )
+                        // The CLI pane reports the real localhost server, so run it for the capture.
+                        setupControlServer()
                         await MacMarketingCapture.captureWindowAndTerminate(
                             syncService: syncService,
                             vaultManager: vaultManager
@@ -390,9 +394,15 @@ struct HealthMdApp: App {
         .commands {
             CommandGroup(replacing: .newItem) { }
             MainWindowCommands()
+            MacHelpCommands()
         }
 
-        MenuBarExtra("Health.md", systemImage: "heart.text.square") {
+        Window(String(localized: "CLI & MCP Reference"), id: MacCLIReferenceView.windowID) {
+            MacCLIReferenceView()
+        }
+        .defaultSize(width: 760, height: 760)
+
+        MenuBarExtra("Health.md", systemImage: "heart.text.square", isInserted: $showsMenuBarExtra) {
             MacMenuBarView()
                 .environmentObject(schedulingManager)
                 .environmentObject(vaultManager)
@@ -411,6 +421,7 @@ struct HealthMdApp: App {
                 .environmentObject(syncService)
                 .environmentObject(healthDataStore)
                 .environmentObject(encryptedHealthContextManager)
+                .environmentObject(controlServer)
                 .tint(Color.accent)
         }
     }

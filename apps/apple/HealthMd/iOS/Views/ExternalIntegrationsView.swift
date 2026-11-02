@@ -7,26 +7,21 @@ struct ExternalIntegrationsView: View {
     @State private var isTroubleshootingExpanded = false
     @EnvironmentObject private var configurationProtection: ConfigurationProtectionManager
     @Environment(\.glassPalette) private var glassPalette
+    @State private var whoopResources = WHOOPExportResourceSelection.stored()
 
+    /// ConnectedAppsG is a pushed page (Back, no Done); the caller supplies the stack.
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: Spacing.md) {
-                    glassContent
-                }
-                .padding(.horizontal, Spacing.md)
-                .padding(.top, Spacing.md)
-                .padding(.bottom, Spacing.xl)
+        ScrollView {
+            VStack(alignment: .leading, spacing: Spacing.md) {
+                glassContent
             }
-            .background(glassPalette.bg.ignoresSafeArea())
-            .navigationTitle("Connected Apps")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") { dismiss() }
-                }
-            }
+            .padding(.horizontal, Spacing.md)
+            .padding(.top, Spacing.md)
+            .padding(.bottom, Spacing.xl)
         }
+        .background(glassPalette.bg.ignoresSafeArea())
+        .navigationTitle("Connected apps")
+        .navigationBarTitleDisplayMode(.inline)
         .safeAreaInset(edge: .bottom, spacing: 0) {
             if hasBottomStatus {
                 VStack(spacing: Spacing.s2) {
@@ -62,30 +57,81 @@ struct ExternalIntegrationsView: View {
     /// ConnectedAppsG. Uses the same manager calls and lock checks as the cards below.
     @ViewBuilder private var glassContent: some View {
         ForEach(ConnectedAppsFeature.enabledProviders) { provider in
-            GlassPanel { glassProvider(provider) }
+            glassProvider(provider)
         }
-        GlassBanner(
-            title: String(localized: "Private by design"),
-            message: String(localized: "WHOOP data travels directly to this iPhone, and your tokens stay in Keychain. Health.md’s broker only completes secure sign-in and token refresh."),
-            systemImage: "lock.shield"
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: "lock.shield").foregroundStyle(glassPalette.accent).accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Private by design")
+                    .font(.system(size: 15, weight: .semibold)).foregroundStyle(glassPalette.text)
+                Text("Data comes straight to this iPhone; tokens stay in Keychain. Health.md’s broker only completes sign-in and token refresh.")
+                    .font(.system(size: 14)).foregroundStyle(glassPalette.sec)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 16).padding(.vertical, 14)
+        .glassSurface(cornerRadius: GlassMetrics.panelSmallRadius)
+        .overlay(
+            RoundedRectangle(cornerRadius: GlassMetrics.panelSmallRadius, style: .continuous)
+                .strokeBorder(glassPalette.accent, lineWidth: 1)
         )
-        Text("If data is missing, WHOOP may not have scored the day yet, a permission may be missing, or WHOOP may be rate limiting requests. Reconnect after revoked or missing access, then retry the export later.")
-            .glassFont(.rowSubtitle)
+        .accessibilityElement(children: .combine)
+        (Text("Missing data?").fontWeight(.semibold).foregroundColor(glassPalette.sec)
+            + Text(verbatim: " ")
+            + Text("WHOOP may not have scored the day yet, a permission may be missing, or requests may be rate-limited."))
+            .font(.system(size: 13))
             .foregroundStyle(glassPalette.muted)
+            .fixedSize(horizontal: false, vertical: true)
+            .padding(.horizontal, 4)
     }
 
+    @ViewBuilder
     private func glassProvider(_ provider: ExternalIntegrationProvider) -> some View {
         let connected = manager.isConnected(provider)
         let connecting = manager.isConnectingProvider == provider
         let disconnecting = manager.isDisconnectingProvider == provider
         let busy = manager.isConnectingProvider != nil || manager.isDisconnectingProvider != nil
-        return VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                providerLogo(provider)
-                Spacer(minLength: 8)
-                connectionStatus(connected: connected)
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 12) {
+                Image(systemName: provider.iconName)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(width: 32, height: 32)
+                    .background(
+                        RoundedRectangle(cornerRadius: GlassMetrics.iconTileRadius, style: .continuous)
+                            .fill(Color.glassHex(0x222228))
+                    )
+                    .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(verbatim: provider.displayName)
+                        .font(.system(size: 17, weight: .bold))
+                        .foregroundStyle(glassPalette.text)
+                    Text(ConnectedAppsStatusText.status(
+                        connected: connected,
+                        lastSync: manager.accounts[provider]?.lastSuccessfulExportAt
+                    ))
+                    .font(.system(size: 13))
+                    .foregroundStyle(connected ? glassPalette.ok : glassPalette.muted)
+                }
+                Spacer(minLength: 0)
             }
-            Text(provider.summary).glassFont(.rowSubtitle).foregroundStyle(glassPalette.sec)
+            .accessibilityElement(children: .combine)
+            if provider == .whoop {
+                // Toggles (aria-pressed on the board): each chip turns one WHOOP resource
+                // on or off for exports; the fetcher and section builder honour the set.
+                ConnectedAppsChipFlow(spacing: 8) {
+                    ForEach(ConnectedAppsStatusText.whoopSnapshotResources, id: \.self) { resource in
+                        whoopResourceChip(resource)
+                    }
+                }
+                Text("Added as its own section next to Apple Health. WHOOP HRV is RMSSD and stays separate from Apple’s SDNN.")
+                    .font(.system(size: 13))
+                    .foregroundStyle(glassPalette.muted)
+                    .fixedSize(horizontal: false, vertical: true)
+            } else {
+                Text(provider.summary).glassFont(.rowSubtitle).foregroundStyle(glassPalette.sec)
+            }
             if connected,
                let granted = manager.accounts[provider]?.scope,
                let missing = missingScopes(for: provider, grantedScope: granted),
@@ -97,33 +143,9 @@ struct ExternalIntegrationsView: View {
                     tone: .warning
                 )
             }
-            if connected {
-                Button(role: .destructive) {
-                    guard configurationProtection.performConfigurationChange({}) else { return }
-                    Task {
-                        await manager.disconnect(
-                            provider: provider,
-                            commitAllowed: { configurationProtection.performConfigurationChange({}) }
-                        )
-                    }
-                } label: {
-                    providerActionLabel(
-                        title: disconnecting ? "Disconnecting…" : "Disconnect WHOOP",
-                        isWorking: disconnecting
-                    )
-                }
-                .tint(glassPalette.coral)
-                .frame(minHeight: GlassMetrics.touchTarget)
-                .disabled(busy)
-            } else {
+            if !connected {
                 Button {
-                    guard configurationProtection.performConfigurationChange({}) else { return }
-                    Task {
-                        await manager.connect(
-                            provider: provider,
-                            commitAllowed: { configurationProtection.performConfigurationChange({}) }
-                        )
-                    }
+                    connect(provider)
                 } label: {
                     providerActionLabel(
                         title: connecting ? "Connecting…" : "Connect WHOOP",
@@ -134,7 +156,89 @@ struct ExternalIntegrationsView: View {
                 .disabled(busy)
             }
         }
-        .padding(GlassMetrics.panelPadding)
+        .padding(18)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .glassSurface()
+
+        if connected {
+            VStack(alignment: .leading, spacing: 6) {
+                GlassPanel {
+                    Button {
+                        connect(provider)
+                    } label: {
+                        GlassRow(title: connecting ? String(localized: "Connecting…") : String(localized: "Reconnect")) {
+                            if connecting { ProgressView().controlSize(.small) }
+                        }
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(busy)
+                    Rectangle().fill(glassPalette.line).frame(height: 1).padding(.horizontal, GlassMetrics.panelPadding)
+                    Button(role: .destructive) {
+                        guard configurationProtection.performConfigurationChange({}) else { return }
+                        Task {
+                            await manager.disconnect(
+                                provider: provider,
+                                commitAllowed: { configurationProtection.performConfigurationChange({}) }
+                            )
+                        }
+                    } label: {
+                        HStack {
+                            Text(LocalizedStringKey(disconnecting ? "Disconnecting…" : "Disconnect WHOOP"))
+                                .glassFont(.body)
+                                .foregroundStyle(glassPalette.coral)
+                            Spacer(minLength: 8)
+                            if disconnecting { ProgressView().controlSize(.small) }
+                        }
+                        .padding(.horizontal, GlassMetrics.panelPadding)
+                        .frame(minHeight: GlassMetrics.rowMinHeight)
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(busy)
+                }
+                Text("Disconnecting revokes access before credentials are removed from this iPhone.")
+                    .font(.system(size: 13))
+                    .foregroundStyle(glassPalette.muted)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.horizontal, 20)
+            }
+        }
+    }
+
+    private func whoopResourceChip(_ resource: WHOOPResourceName) -> some View {
+        let isOn = whoopResources.contains(resource)
+        return Button {
+            let next = WHOOPExportResourceSelection.toggled(resource, in: whoopResources)
+            guard next != whoopResources else { return }
+            _ = configurationProtection.performConfigurationChange {
+                WHOOPExportResourceSelection.store(next)
+                whoopResources = next
+            }
+        } label: {
+            Text(ConnectedAppsStatusText.snapshotTitle(resource))
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(isOn ? glassPalette.accentInk : glassPalette.text)
+                .padding(.horizontal, 14)
+                .frame(height: 34)
+                .background(Capsule().fill(isOn ? glassPalette.accent : glassPalette.surface2))
+                .overlay(Capsule().strokeBorder(glassPalette.edge, lineWidth: 1))
+                .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
+        .frame(minHeight: 44)
+        .accessibilityAddTraits(isOn ? .isSelected : [])
+        .accessibilityHint(String(localized: "Includes this WHOOP data in exports"))
+        .accessibilityIdentifier("connectedApps.whoop.\(resource.rawValue)")
+    }
+
+    private func connect(_ provider: ExternalIntegrationProvider) {
+        guard configurationProtection.performConfigurationChange({}) else { return }
+        Task {
+            await manager.connect(
+                provider: provider,
+                commitAllowed: { configurationProtection.performConfigurationChange({}) }
+            )
+        }
     }
 
     private var intro: some View {

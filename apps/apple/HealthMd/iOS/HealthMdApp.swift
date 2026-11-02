@@ -117,6 +117,12 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
                 await SchedulingManager.shared.performNotificationTriggeredExport(payload: pendingExportPayload)
                 completionHandler()
             }
+        } else if WeeklyGapNotification.isBackfillTap(userInfo: request.content.userInfo) {
+            // NotificationsG: "Tap to backfill" opens the Archive with this week's gaps.
+            Task { @MainActor in
+                WeeklyGapBackfillRouter.shared.requestBackfill()
+                completionHandler()
+            }
         } else {
             // Recovery notifications all carry a pending-export payload with a
             // stable request ID; anything else (result banners from older

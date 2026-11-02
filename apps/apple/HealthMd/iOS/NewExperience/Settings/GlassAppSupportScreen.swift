@@ -1,12 +1,13 @@
 #if os(iOS)
+#if DEBUG
+import Notelet
+#endif
 import SwiftUI
 
 /// SettingsMoreG. Same actions as `SettingsTabView`, including the lock's navigation
 /// request, which must be consumed here or the blocked-change toast keeps redirecting.
 struct GlassAppSupportScreen: View {
     private enum Anchor { case protection }
-
-    var onManageProfiles: () -> Void = {}
 
     @EnvironmentObject private var sharedSetupCoordinator: SharedSetupCoordinator
     @EnvironmentObject private var configurationProtection: ConfigurationProtectionManager
@@ -16,9 +17,12 @@ struct GlassAppSupportScreen: View {
     @State private var showMyselfClaim = false
     @State private var showDiagnostics = false
     @State private var showReview = false
+    /// "Send feedback instead" waits for the review sheet to close before presenting Mail.
+    @State private var feedbackAfterReview = false
     @State private var debugResult = ""
     @State private var showDebugAlert = false
     @State private var isRunningDebug = false
+    @State private var confirmingReplay = false
 
     private let discordURL = URL(string: "https://discord.gg/RaQYS4t6gn")!
     private let privacyPolicyURL = URL(string: "https://healthmd.app/privacy-policy.html")!
@@ -39,52 +43,92 @@ struct GlassAppSupportScreen: View {
                     .id(Anchor.protection)
 
                     GlassSectionLabel(title: String(localized: "Configuration"))
+                    // Automations (export profiles) are managed in the Automations tab (AutomationsGlass).
+                    GlassSharedSetupRows(coordinator: sharedSetupCoordinator)
                     GlassPanel {
-                        row(String(localized: "Export Profiles"), action: onManageProfiles)
-                            .accessibilityIdentifier("export.profiles.entry")
-                            .accessibilityValue(String(localized: "Configured"))
+                        GlassClearExportHistoryRow()
                     }
-                    SharedSetupConfigurationCard(coordinator: sharedSetupCoordinator)
-                        .padding(GlassMetrics.panelPadding)
-                        .glassSurface()
 
                     GlassSectionLabel(title: String(localized: "Account"))
                     GlassPanel {
-                        row(String(localized: "Privacy Policy"), subtitle: String(localized: "View how purchases, scheduling, and optional services handle data.")) {
+                        GlassSettingsRow(
+                            title: String(localized: "Privacy policy"),
+                            subtitle: String(localized: "No analytics"),
+                            systemImage: "hand.raised.fill",
+                            tile: .settingsTileBlue
+                        ) {
                             UIApplication.shared.open(privacyPolicyURL)
                         }
                         if MyselfClaimFeature.isEnabled {
-                            row(String(localized: "Claim myself.md access")) { showMyselfClaim = true }
-                                .accessibilityIdentifier("settings-myself-claim")
+                            GlassSettingsRow(
+                                title: String(localized: "Claim myself.md access"),
+                                systemImage: "person.crop.circle.badge.checkmark",
+                                tile: .settingsTileGreen,
+                                showsDivider: true
+                            ) { showMyselfClaim = true }
+                            .accessibilityIdentifier("settings-myself-claim")
                         }
                     }
 
                     GlassSectionLabel(title: String(localized: "Help"))
                     GlassPanel {
-                        row(String(localized: "Join Our Discord")) { UIApplication.shared.open(discordURL) }
-                        row(String(localized: "Send Feedback")) {
+                        GlassSettingsRow(
+                            title: String(localized: "Join our Discord"),
+                            systemImage: "bubble.left.fill",
+                            tile: .settingsTileDiscord
+                        ) { UIApplication.shared.open(discordURL) }
+                        GlassSettingsRow(
+                            title: String(localized: "Send feedback"),
+                            systemImage: "envelope.fill",
+                            tile: .settingsTileGreen,
+                            showsDivider: true
+                        ) {
                             if FeedbackHelper.canSendMail {
                                 showMailCompose = true
                             } else {
                                 feedbackReporter.open(.email)
                             }
                         }
-                        row(String(localized: "Report a Bug")) { feedbackReporter.open(.github) }
-                        row(String(localized: "Help us grow")) { showReview = true }
-                        row(String(localized: "Diagnostics")) { showDiagnostics = true }
+                        GlassSettingsRow(
+                            title: String(localized: "Report a bug"),
+                            systemImage: "ladybug.fill",
+                            tile: .settingsTileRed,
+                            value: "GitHub",
+                            showsDivider: true
+                        ) { feedbackReporter.open(.github) }
+                        GlassSettingsRow(
+                            title: String(localized: "Help us grow"),
+                            systemImage: "star.fill",
+                            tile: .settingsTileOrange,
+                            showsDivider: true
+                        ) { showReview = true }
+                        GlassSettingsRow(
+                            title: String(localized: "Diagnostics"),
+                            systemImage: "stethoscope",
+                            tile: .settingsTileGray,
+                            showsDivider: true
+                        ) { showDiagnostics = true }
+                        GlassSettingsRow(
+                            title: String(localized: "Replay onboarding"),
+                            systemImage: "heart.fill",
+                            tile: .settingsTilePurple,
+                            showsDivider: true
+                        ) { confirmingReplay = true }
+                        .accessibilityIdentifier("settings.replayOnboarding")
                     }
 
                     #if DEBUG
-                    GlassSectionLabel(title: String(localized: "Developer Tools"))
+                    GlassSectionLabel(title: String(localized: "Developer · debug builds only"))
                     GlassPanel {
-                        row(
-                            isRunningDebug ? String(localized: "Running…") : String(localized: "Verify Receipt"),
-                            subtitle: String(localized: "Test worker ↔ Apple end-to-end"),
+                        GlassSettingsRow(
+                            title: isRunningDebug ? String(localized: "Running…") : String(localized: "Test worker ↔ Apple end-to-end"),
                             action: runReceiptVerification
                         )
-                        row(String(localized: "Replay Onboarding")) {
-                            UserDefaults.standard.set(false, forKey: "hasCompletedOnboarding")
-                            debugResult = "Onboarding will replay now."
+                        GlassSettingsRow(title: String(localized: "Reset onboarding state"), showsDivider: true) {
+                            // Fresh-install state: onboarding and the release note it marks as seen.
+                            UserDefaults.standard.removeObject(forKey: "hasCompletedOnboarding")
+                            NoteletStorage.resetSeenVersion()
+                            debugResult = "Onboarding state reset. Onboarding will show now."
                             showDebugAlert = true
                         }
                     }
@@ -107,18 +151,28 @@ struct GlassAppSupportScreen: View {
             MailComposeView(onCompletion: feedbackReporter.completeMail)
         }
         .feedbackFailureSheet($feedbackReporter.failure)
-        .sheet(isPresented: $showMyselfClaim) { MyselfClaimView(app: "health.md").glassTheme() }
-        .sheet(isPresented: $showDiagnostics) { DiagnosticsView() }
-        .sheet(isPresented: $showReview) {
+        // MyselfClaimG and DiagnosticsG are pushed pages with Back (no Done).
+        .navigationDestination(isPresented: $showMyselfClaim) {
+            MyselfClaimView(app: "health.md", presentedModally: false).glassTheme()
+        }
+        .navigationDestination(isPresented: $showDiagnostics) { DiagnosticsView() }
+        .sheet(isPresented: $showReview, onDismiss: openFeedbackAfterReview) {
             GlassReviewScreen {
+                feedbackAfterReview = true
                 showReview = false
-                if FeedbackHelper.canSendMail {
-                    showMailCompose = true
-                } else {
-                    feedbackReporter.open(.email)
-                }
             }
             .glassTheme()
+        }
+        .confirmationDialog(
+            String(localized: "Replay onboarding?"),
+            isPresented: $confirmingReplay,
+            titleVisibility: .visible
+        ) {
+            Button(String(localized: "Replay onboarding")) {
+                UserDefaults.standard.set(false, forKey: "hasCompletedOnboarding")
+            }
+        } message: {
+            Text("Your automations, destinations and exported files stay as they are.")
         }
         .geistDialog(
             isPresented: $showDebugAlert,
@@ -133,6 +187,17 @@ struct GlassAppSupportScreen: View {
             get: { configurationProtection.isEnabled },
             set: { configurationProtection.setEnabled($0) }
         )
+    }
+
+    /// One sheet at a time: Mail (or the mail fallback) opens once the review sheet is gone.
+    private func openFeedbackAfterReview() {
+        guard feedbackAfterReview else { return }
+        feedbackAfterReview = false
+        if FeedbackHelper.canSendMail {
+            showMailCompose = true
+        } else {
+            feedbackReporter.open(.email)
+        }
     }
 
     private func consumeNavigationRequest(_ requestID: UUID?, _ proxy: ScrollViewProxy) {
@@ -155,13 +220,5 @@ struct GlassAppSupportScreen: View {
         }
     }
 
-    private func row(_ title: String, subtitle: String? = nil, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            GlassRow(title: title, subtitle: subtitle) {
-                Image(systemName: "chevron.right").foregroundStyle(palette.muted)
-            }
-        }
-        .buttonStyle(.plain)
-    }
 }
 #endif

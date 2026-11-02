@@ -45,3 +45,22 @@ The approved design for the next Health.md experience on iPhone, iPhone Duo, iPa
 17. App Store · iPad 13″ landscape (1376×1032, exported @2×)
 18. App Store · iPhone Duo inner (951×669) and outer (466×678), exported @3×
 19. App Store · Mac (1440×900, exported @2×)
+
+## Accepted differences from the boards
+
+The shipping app follows every board except where the board would need data the app does not have, would break a policy, or shows a placeholder. Keep these unless the underlying reason changes:
+
+- **PaywallG:** Weekly is listed and selected first (owner decision); subscription subtitles keep an auto-renew and cancel-anytime note.
+- **ExportNowG:** the "Will write" count starts with "About", because days without data, roll-ups and the data dictionary make the file count an estimate.
+- **NotificationsG:** the Direct CLI wake push says "Your CLI is waiting. Open Health.md to continue on [computer]". The payload must not name the request kind (`apps/wake` privacy test), so "finish the export" is not used.
+- **HistoryWarnG:** says "older dates" because the unfinished history check has no cutoff date.
+- **AttentionG:** names a denied metric only for Medications. HealthKit does not reveal other read denials.
+- **AutomationDetailG:** "Use in Shortcuts" names the app's real App Intent.
+- **ClinicianReportG:** no Heart rate variability row. The report's 11-metric set is a cross-platform contract (`apps/apple/docs/features/clinician-report-v1.md`).
+- **ClinicAccessG** and the paywall's "Clinic invitation?": built, local-only, and shown only when `PracticeFeaturePolicy` is enabled, which it is not in production.
+- **ReviewG:** shows a real published review without a storefront label.
+- **iPadArchiveG / DuoInnerArchiveG:** the header keeps previous/next month chevrons. They are the only month navigation on those layouts, and coverage history spans several months.
+- **iPhone Duo boards:** "unfolded" is detected as a regular-width phone window with a short side of at least 500 pt; the outer-screen hint appears only after that state has been seen.
+- **AutomationsGlass / AS_iPhone_7:** the Agent feed refreshes Today every 3 hours. Today Refresh offers 30 minutes, 1, 3, 6 and 12 hours (`ExportSchedule.todayRefreshMinuteOptions`), so the board's "Every 2 hours" is not a real setting.
+- **App Store boards:** produced by `apps/apple/scripts/app-store-screenshots/compose.swift` from real captures (runbook: `apps/apple/screenshots/macos/README.md`). Duo slides need a real device; the AS_iPhone_7 widget insert is a manual crop.
+- Rows that exist in the app but not on a board stay where `CoverageMap.dc.html` places their capability, so no capability is lost. Three entry rows have no board home and stay where they are: Clinician report (Settings › Data), Clear export history (App & support › Configuration) and Help us grow (App & support › Help, opens ReviewG).
