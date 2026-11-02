@@ -1,5 +1,6 @@
 #if DEBUG && os(macOS)
 import AppKit
+import SwiftUI
 import HealthMdConnectionCore
 
 /// Deterministic, DEBUG-only state and window capture used by the Mac App Store
@@ -12,10 +13,12 @@ enum MacMarketingCapture {
         case readiness
         case activity
         case settings
+        /// The CLI & MCP pane (AS_Mac_2).
+        case cli
 
         var scrollTarget: String? {
             switch self {
-            case .sync, .settings:
+            case .sync, .settings, .cli:
                 return nil
             case .destination:
                 return "marketing-destination"
@@ -40,8 +43,25 @@ enum MacMarketingCapture {
     }
 
     static var initialSidebarDestination: String {
-        screen == .settings ? "settings" : "home"
+        switch screen {
+        case .settings: return "settings"
+        case .cli: return "cli"
+        default: return "home"
+        }
     }
+
+    /// The App Store boards show the dark glass UI; `-MacMarketingAppearance light` keeps the
+    /// earlier light set reproducible. Scoped to this DEBUG capture path only.
+    static var isDarkAppearance: Bool {
+        argumentValue(for: "-MacMarketingAppearance") != "light"
+    }
+
+    static var colorScheme: ColorScheme {
+        isDarkAppearance ? .dark : .light
+    }
+
+    /// The boards frame a 1100 × 720 pt window, captured at 2× (2200 × 1440 px).
+    static let windowSize = CGSize(width: 1_100, height: 720)
 
     static var scrollTarget: String? {
         screen.scrollTarget
@@ -53,7 +73,7 @@ enum MacMarketingCapture {
     ) {
         guard isActive else { return }
 
-        NSApp.appearance = NSAppearance(named: .aqua)
+        NSApp.appearance = NSAppearance(named: isDarkAppearance ? .darkAqua : .aqua)
         vaultManager.setMarketingCaptureVault()
 
         syncService.connectionState = .connected
@@ -88,7 +108,10 @@ enum MacMarketingCapture {
             return
         }
 
-        window.setContentSize(NSSize(width: 1_100, height: 700))
+        // Size the whole window, title bar included, to the board's window frame.
+        window.setContentSize(NSSize(width: windowSize.width, height: windowSize.height))
+        let chromeHeight = window.frame.height - windowSize.height
+        window.setContentSize(NSSize(width: windowSize.width, height: windowSize.height - chromeHeight))
         window.center()
         NSApp.activate(ignoringOtherApps: true)
         window.makeKeyAndOrderFront(nil)
@@ -129,53 +152,71 @@ enum MacMarketingCapture {
         }
     }
 
-    private static func fixtureEvents() -> [SyncEvent] {
-        var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = .current
+    // MARK: - MacHomeG fixture values (AS_Mac_1)
 
-        func date(day: Int, hour: Int, minute: Int) -> Date {
-            var components = DateComponents()
-            components.calendar = calendar
-            components.timeZone = calendar.timeZone
-            components.year = 2026
-            components.month = 8
-            components.day = day
-            components.hour = hour
-            components.minute = minute
-            return components.date!
+    /// Today at the given time in the capture's calendar.
+    private static func today(hour: Int, minute: Int) -> Date {
+        Calendar.current.date(bySettingHour: hour, minute: minute, second: 0, of: Date()) ?? Date()
+    }
+
+    /// "Last export: Today 11:02 PM · 1 file". In memory only; the user's export history is
+    /// never read or written by the capture.
+    static var lastExport: ExportHistoryEntry {
+        let day = Calendar.current.startOfDay(for: Date())
+        return ExportHistoryEntry(
+            id: UUID(uuidString: "00000000-0000-0000-0000-000000000501")!,
+            timestamp: today(hour: 23, minute: 2),
+            source: .macAgent,
+            success: true,
+            dateRangeStart: day,
+            dateRangeEnd: day,
+            successCount: 1,
+            totalCount: 1,
+            exportTarget: .connectedMac,
+            fileCount: 1
+        )
+    }
+
+    /// The manual IP section shows these fixed addresses (a private LAN address and a
+    /// CGNAT/Tailscale-range address), never the capturing Mac's real interfaces. The
+    /// live server is not started for the capture.
+    static let manualIPAddresses = ["192.168.1.24", "100.64.0.12"]
+    static let manualIPPairingCode = "4821"
+    static var manualIPPairingCodeExpiresAt: Date { today(hour: 23, minute: 40) }
+
+    // MARK: - MacCLIG fixture values (AS_Mac_2)
+
+    /// The encrypted query context status the CLI pane shows during a capture. The capture
+    /// never opens the Keychain-backed store; the count is the board's sample.
+    static let encryptedContextDayCount = 30
+
+    /// MacHomeG's Activity rows, relative to the capture date and consistent with
+    /// `lastExport`: "11:02 PM · Received <today> from Demo iPhone · 1 file", then yesterday,
+    /// then nine days ago, one written file each.
+    private static func fixtureEvents() -> [SyncEvent] {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+
+        func event(id: Int, daysAgo: Int, hour: Int, minute: Int, bytes: Int) -> SyncEvent {
+            let day = calendar.date(byAdding: .day, value: -daysAgo, to: today) ?? today
+            let timestamp = calendar.date(bySettingHour: hour, minute: minute, second: 0, of: day) ?? day
+            return SyncEvent(
+                id: UUID(uuidString: String(format: "00000000-0000-0000-0000-%012d", id))!,
+                timestamp: timestamp,
+                peerName: "Demo iPhone",
+                kind: .macExportSucceeded,
+                recordCount: 1,
+                payloadByteEstimate: bytes,
+                dateRangeStart: day,
+                dateRangeEnd: day
+            )
         }
 
         return [
-            SyncEvent(
-                id: UUID(uuidString: "00000000-0000-0000-0000-000000000401")!,
-                timestamp: date(day: 8, hour: 10, minute: 30),
-                peerName: "Demo iPhone",
-                kind: .macExportSucceeded,
-                recordCount: 12,
-                payloadByteEstimate: 184_320,
-                dateRangeStart: date(day: 1, hour: 12, minute: 0),
-                dateRangeEnd: date(day: 7, hour: 12, minute: 0)
-            ),
-            SyncEvent(
-                id: UUID(uuidString: "00000000-0000-0000-0000-000000000402")!,
-                timestamp: date(day: 7, hour: 10, minute: 30),
-                peerName: "Demo iPhone",
-                kind: .macExportSucceeded,
-                recordCount: 4,
-                payloadByteEstimate: 61_440,
-                dateRangeStart: date(day: 6, hour: 12, minute: 0),
-                dateRangeEnd: date(day: 6, hour: 12, minute: 0)
-            ),
-            SyncEvent(
-                id: UUID(uuidString: "00000000-0000-0000-0000-000000000403")!,
-                timestamp: date(day: 6, hour: 10, minute: 30),
-                peerName: "Demo iPhone",
-                kind: .macExportSucceeded,
-                recordCount: 4,
-                payloadByteEstimate: 58_368,
-                dateRangeStart: date(day: 5, hour: 12, minute: 0),
-                dateRangeEnd: date(day: 5, hour: 12, minute: 0)
-            )
+            // Matches `lastExport` (today 11:02 PM, today's data, 1 file).
+            event(id: 401, daysAgo: 0, hour: 23, minute: 2, bytes: 15_360),
+            event(id: 402, daysAgo: 1, hour: 23, minute: 4, bytes: 14_848),
+            event(id: 403, daysAgo: 9, hour: 23, minute: 1, bytes: 15_104)
         ]
     }
 
