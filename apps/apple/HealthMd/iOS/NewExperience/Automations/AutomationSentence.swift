@@ -296,9 +296,17 @@ struct AutomationSentence: Equatable {
             second: 0,
             of: Date()
         ) ?? Date()
-        var style = Date.FormatStyle(date: .omitted, time: .omitted, locale: locale, calendar: calendar, timeZone: calendar.timeZone)
-        style = style.hour(.defaultDigits(amPM: .omitted)).minute(.twoDigits)
-        return date.formatted(style)
+        // The locale's own hour pattern ("h:mm a", "HH:mm", "a h:mm"), minus the AM/PM field.
+        // `.defaultDigits(amPM: .omitted)` switches some platforms to a 24-hour clock instead.
+        let pattern = DateFormatter.dateFormat(fromTemplate: "jmm", options: 0, locale: locale) ?? "HH:mm"
+        let formatter = DateFormatter()
+        formatter.locale = locale
+        formatter.calendar = calendar
+        formatter.timeZone = calendar.timeZone
+        formatter.dateFormat = pattern
+            .replacingOccurrences(of: "a", with: "")
+            .trimmingCharacters(in: .whitespaces.union(CharacterSet(charactersIn: "\u{202F}\u{00A0}")))
+        return formatter.string(from: date)
     }
 
     // MARK: - Range

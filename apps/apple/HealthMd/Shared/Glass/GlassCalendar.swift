@@ -8,6 +8,8 @@ import UIKit
 /// regular width (iPadArchiveG) 64 pt tiles with the day number in the top corner.
 enum CalendarDensity: Equatable {
     case standard
+    /// DuoOuterG: the folded outer display's compact month (36 pt tiles).
+    case folded
     case wide
     case pad
 
@@ -20,6 +22,7 @@ enum CalendarDensity: Equatable {
     var tileHeight: CGFloat {
         switch self {
         case .standard: return GlassMetrics.touchTarget
+        case .folded: return 36
         case .wide: return 56
         case .pad: return 64
         }
@@ -28,17 +31,23 @@ enum CalendarDensity: Equatable {
     var tileRadius: CGFloat {
         switch self {
         case .standard: return GlassMetrics.calendarTileRadius
-        case .wide: return 11
+        case .folded, .wide: return 11
         case .pad: return 14
         }
     }
 
-    var dayFontSize: CGFloat { self == .pad ? 15 : 14 }
+    var dayFontSize: CGFloat {
+        switch self {
+        case .pad: return 15
+        case .folded: return 12
+        case .standard, .wide: return 14
+        }
+    }
 
     var gridSpacing: CGFloat {
         switch self {
         case .standard: return 6
-        case .wide: return 5
+        case .folded, .wide: return 5
         case .pad: return 8
         }
     }
@@ -50,20 +59,34 @@ enum CalendarDensity: Equatable {
     var numberAlignment: Alignment { self == .pad ? .topTrailing : .center }
 }
 
+private struct CalendarDensityOverrideKey: EnvironmentKey {
+    static let defaultValue: CalendarDensity? = nil
+}
+
+extension EnvironmentValues {
+    /// A layout that knows its board's density (the folded Duo display) sets it here.
+    var calendarDensityOverride: CalendarDensity? {
+        get { self[CalendarDensityOverrideKey.self] }
+        set { self[CalendarDensityOverrideKey.self] = newValue }
+    }
+}
+
 /// Resolves `CalendarDensity` from the window's size class and device idiom.
 private struct CalendarDensityReader: DynamicProperty {
     #if os(iOS)
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     #endif
+    @Environment(\.calendarDensityOverride) private var override
 
     var density: CalendarDensity {
+        if let override { return override }
         #if os(iOS)
-        CalendarDensity.resolve(
+        return CalendarDensity.resolve(
             isPad: UIDevice.current.userInterfaceIdiom == .pad,
             isRegularWidth: horizontalSizeClass == .regular
         )
         #else
-        .standard
+        return .standard
         #endif
     }
 }
@@ -274,7 +297,7 @@ struct MonthCalendarGrid<Tile: View>: View {
         let header = Text(symbol).foregroundStyle(palette.muted).accessibilityHidden(true)
         switch density {
         case .standard: header.glassFont(.caption)
-        case .wide: header.font(.system(size: 11, weight: .semibold))
+        case .folded, .wide: header.font(.system(size: 11, weight: .semibold))
         case .pad: header.font(.system(size: 12, weight: .semibold))
         }
     }

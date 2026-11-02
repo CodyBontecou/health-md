@@ -139,8 +139,9 @@ final class AutomationSentenceTests: XCTestCase {
             settings(formats: [.csv], metricCount: 225, note: false),
             entry: entry, destination: "Files/Exports", style: .summary
         )
-        let when = String(localized: "Every \(ExportProfileCadenceSummary.weekdayName(7, locale: locale)) at \(ExportProfileCadenceSummary.timeLabel(hour: 8, minute: 0, locale: locale, calendar: calendar))")
-        XCTAssertEqual(result.plainText, "\(when), write the last 7 days as CSV to Files/Exports.")
+        // Time formats may put a narrow no-break space before AM/PM.
+        let plain = result.plainText.replacingOccurrences(of: "\u{202F}", with: " ")
+        XCTAssertEqual(plain, "Every Sunday at 8:00 AM, write the last 7 days as CSV to Files/Exports.")
     }
 
     func testRefreshSummarySendsToday() {

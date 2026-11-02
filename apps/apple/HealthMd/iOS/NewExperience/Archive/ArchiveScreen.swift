@@ -113,6 +113,7 @@ struct ArchiveScreen: View {
             compactStatsPanel
             pausedNoteIfNeeded
             calendarPanel
+                .environment(\.calendarDensityOverride, .folded)
             Text("Unfold for the calendar and day detail side by side.")
                 .font(.system(size: 12))
                 .foregroundStyle(palette.muted)
