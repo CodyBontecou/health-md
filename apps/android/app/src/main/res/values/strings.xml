@@ -317,6 +317,7 @@
     <string name="detail_choice_sessions">Sessions</string>
     <string name="detail_choice_detailed">Detailed</string>
     <string name="detail_group_sleep_hint">Sessions lists each sleep session with full date and time. Detailed adds sleep stages.</string>
+    <string name="detail_expansion_schema_hint">Detailed Activity, Nutrition, or Body adds each source record and switches analytical JSON, CSV, and Markdown exports to schema 7.</string>
 
     <!-- Sleep day attribution (issue #104) -->
     <string name="sleep_attribution_title">Sleep Day Attribution</string>

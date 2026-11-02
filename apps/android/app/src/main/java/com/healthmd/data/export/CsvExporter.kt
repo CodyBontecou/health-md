@@ -87,12 +87,22 @@ class CsvExporter {
             } else {
                 local.toIso8601()
             }
+        val profile = DailyRecordSchemaProfile.forWriter(customization, detail)
+        val analyticalV7 = profile.writesDetailExpansion
+        // android-analytical-v7 record rows: one per source record, canonical units, exact start.
+        fun StringBuilder.appendExpansionRows(category: String, metric: String, unit: String,
+            samples: List<TimestampedSample>, scale: Double = 1.0) {
+            for (sample in samples) {
+                append(row(dateString, category, metric, sample.value * scale, unit,
+                    machineTimestamp(sample.time, sample.exactTime)))
+            }
+        }
 
         return buildString {
             // T1-08: always 6 columns
             append("Date,Category,Metric,Value,Unit,Timestamp\n")
             if (customization.compatibilitySchemaProfile == CompatibilitySchemaProfile.ANDROID_ANALYTICAL_V5) {
-                append(row(dateString, "Metadata", "Schema Profile", "android-analytical-v5", ""))
+                append(row(dateString, "Metadata", "Schema Profile", profile.publicProfileId, ""))
             }
             data.compatibilityProvenance?.let { provenance ->
                 append(row(dateString, "Metadata", "Merge Policy", provenance.mergePolicyId, ""))
@@ -196,6 +206,13 @@ class CsvExporter {
                     }
                     for (entry in a.activityIntensityEntries) {
                         append(row(dateString, "Activity", "${entry.intensity.replaceFirstChar { it.titlecase() }} Activity", entry.duration.inWholeMinutes, "minutes", machineTimestamp(entry.startTime, entry.exactStartTime)))
+                    }
+                    if (analyticalV7) {
+                        appendExpansionRows("Activity", "Active Calories Sample", "kcal", a.activeCaloriesSamples)
+                        appendExpansionRows("Activity", "Total Calories Sample", "kcal", a.totalCaloriesSamples)
+                        appendExpansionRows("Activity", "Distance Sample", "meters", a.distanceSamples)
+                        appendExpansionRows("Activity", "Flights Climbed Sample", "count", a.floorsSamples)
+                        appendExpansionRows("Activity", "Elevation Gained Sample", "meters", a.elevationSamples)
                     }
                 }
             }
@@ -313,6 +330,14 @@ class CsvExporter {
                     b.bodyWaterMass?.let { append(row(dateString, "Body", "Body Water Mass", formatInvariant("%.1f", converter.convertWeight(it)), weightUnit)) }
                     b.boneMass?.let { append(row(dateString, "Body", "Bone Mass", formatInvariant("%.1f", converter.convertWeight(it)), weightUnit)) }
                 }
+                if (analyticalV7 && detail.body) {
+                    appendExpansionRows("Body", "Weight Sample", "kg", b.weightSamples)
+                    appendExpansionRows("Body", "Height Sample", "meters", b.heightSamples)
+                    appendExpansionRows("Body", "Body Fat Percentage Sample", "percent", b.bodyFatSamples, scale = 100.0)
+                    appendExpansionRows("Body", "Lean Body Mass Sample", "kg", b.leanBodyMassSamples)
+                    appendExpansionRows("Body", "Bone Mass Sample", "kg", b.boneMassSamples)
+                    appendExpansionRows("Body", "Body Water Mass Sample", "kg", b.bodyWaterMassSamples)
+                }
             }
 
             // ── Nutrition ─────────────────────────────────────────────────────────────────────
@@ -370,6 +395,9 @@ class CsvExporter {
                     meal.name?.let { append(row(dateString, "Nutrition", "Meal Name", it, "", timestamp)) }
                     meal.mealType?.let { append(row(dateString, "Nutrition", "Meal Type", it, "", timestamp)) }
                     meal.energyFromFat?.let { append(row(dateString, "Nutrition", "Meal Energy From Fat", it, "kcal", timestamp)) }
+                }
+                if (analyticalV7 && detail.nutrition) {
+                    appendExpansionRows("Nutrition", "Water Sample", "L", n.hydrationSamples)
                 }
             }
 

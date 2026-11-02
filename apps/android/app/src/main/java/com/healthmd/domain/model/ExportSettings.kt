@@ -225,9 +225,31 @@ data class ExportSettings(
                 group to choice
             }.toMap()
 
-    /** Detail sections the export writes. */
-    fun exportDetailSelection(): ExportDetailSelection =
-        ExportDetailSelection.resolve(includeGranularData, typedDetailOverrides())
+    /**
+     * Detail sections the export writes. [ExportDetailSelection.analyticalExpansion] is kept only
+     * when this operation resolves to `android-analytical-v7`, so capture never reads arrays a
+     * frozen v4 or wake-date v6 record cannot carry.
+     */
+    fun exportDetailSelection(): ExportDetailSelection {
+        val resolved = ExportDetailSelection.resolve(includeGranularData, typedDetailOverrides())
+        if (!resolved.analyticalExpansion) return resolved
+        val profile = DailyRecordSchemaProfile.resolve(
+            formatCustomization.compatibilitySchemaProfile,
+            resolved,
+            executionSleepCaptureContext?.sleepDayAttribution,
+        )
+        return if (profile.writesDetailExpansion) resolved else resolved.copy(analyticalExpansion = false)
+    }
+
+    /**
+     * Public daily-record profile of local compatibility files for this operation. API v1 output
+     * is separately frozen to v4 by [FormatCustomization.forFrozenApiV4].
+     */
+    fun dailyRecordSchemaProfile(): DailyRecordSchemaProfile = DailyRecordSchemaProfile.resolve(
+        formatCustomization.compatibilitySchemaProfile,
+        exportDetailSelection(),
+        executionSleepCaptureContext?.sleepDayAttribution,
+    )
 
     /**
      * Detail sections capture reads: exported detail plus source detail that individual-entry

@@ -15,7 +15,9 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import com.healthmd.R
+import com.healthmd.domain.model.CompatibilitySchemaProfile
 import com.healthmd.domain.model.DataTypeSelection
+import com.healthmd.domain.model.ExportDetailSelection
 import com.healthmd.domain.model.ExportDetailChoice
 import com.healthmd.domain.model.ExportDetailGroup
 import com.healthmd.domain.model.ExportSettings
@@ -39,6 +41,7 @@ private fun DataTypeSelection.includes(group: ExportDetailGroup): Boolean = when
     ExportDetailGroup.REPRODUCTIVE_HEALTH -> reproductiveHealth
     ExportDetailGroup.MINDFULNESS -> mindfulness
     ExportDetailGroup.WORKOUTS -> workouts
+    ExportDetailGroup.BODY -> body
 }
 
 /**
@@ -96,6 +99,17 @@ fun ExportDetailOverridesSection(
                 )
             }
         }
+        if (settings.formatCustomization.compatibilitySchemaProfile == CompatibilitySchemaProfile.ANDROID_ANALYTICAL_V5 &&
+            groups.any { it in ExportDetailSelection.ANALYTICAL_EXPANSION_GROUPS }
+        ) {
+            Spacer(modifier = Modifier.height(Spacing.sm))
+            Text(
+                stringResource(R.string.detail_expansion_schema_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = AppColors.textMuted,
+                modifier = Modifier.testTag("detail_expansion_schema_hint"),
+            )
+        }
     }
 }
 
@@ -109,6 +123,7 @@ private fun ExportDetailGroup.labelRes(): Int = when (this) {
     ExportDetailGroup.REPRODUCTIVE_HEALTH -> R.string.metric_category_reproductive
     ExportDetailGroup.MINDFULNESS -> R.string.metric_category_mindfulness
     ExportDetailGroup.WORKOUTS -> R.string.metric_category_workouts
+    ExportDetailGroup.BODY -> R.string.metric_category_body
 }
 
 private fun ExportDetailChoice?.labelRes(): Int = when (this) {

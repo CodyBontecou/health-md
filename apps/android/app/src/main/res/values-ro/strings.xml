@@ -552,6 +552,7 @@
     <string name="detail_choice_sessions">Sesiuni</string>
     <string name="detail_choice_detailed">Detaliat</string>
     <string name="detail_group_sleep_hint">Sesiuni listează fiecare sesiune de somn cu data și ora complete. Detaliat adaugă fazele somnului.</string>
+    <string name="detail_expansion_schema_hint">Detaliat pentru Activitate, Nutriție sau Corp adaugă fiecare înregistrare sursă și trece exporturile analitice JSON, CSV și Markdown la schema 7.</string>
     <string name="sleep_attribution_title">Atribuirea zilei de somn</string>
     <string name="sleep_attribution_night_begins">Începe noaptea</string>
     <string name="sleep_attribution_morning_ends">Se termină dimineața</string>

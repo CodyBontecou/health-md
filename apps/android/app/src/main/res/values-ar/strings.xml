@@ -582,6 +582,7 @@
     <string name="detail_choice_sessions">الجلسات</string>
     <string name="detail_choice_detailed">مفصّل</string>
     <string name="detail_group_sleep_hint">تعرض الجلسات كل جلسة نوم بالتاريخ والوقت الكاملين. ويضيف المفصّل مراحل النوم.</string>
+    <string name="detail_expansion_schema_hint">يضيف الخيار المفصّل للنشاط أو التغذية أو الجسم كل سجل مصدر، ويحوّل تصديرات JSON وCSV وMarkdown التحليلية إلى المخطط 7.</string>
     <string name="sleep_attribution_title">إسناد نوم اليوم</string>
     <string name="sleep_attribution_night_begins">تبدأ في الليل</string>
     <string name="sleep_attribution_morning_ends">تنتهي في الصباح</string>

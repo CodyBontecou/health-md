@@ -267,6 +267,7 @@
     <string name="detail_choice_sessions">セッション</string>
     <string name="detail_choice_detailed">詳細</string>
     <string name="detail_group_sleep_hint">「セッション」は各睡眠セッションを完全な日付と時刻で一覧表示します。「詳細」は睡眠ステージを追加します。</string>
+    <string name="detail_expansion_schema_hint">アクティビティ、栄養、身体で「詳細」を選ぶと各ソース記録が追加され、分析用の JSON・CSV・Markdown エクスポートがスキーマ 7 に切り替わります。</string>
     <string name="sleep_attribution_title">睡眠日の帰属</string>
     <string name="sleep_attribution_night_begins">就寝時刻で</string>
     <string name="sleep_attribution_morning_ends">起床時刻で</string>

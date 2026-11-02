@@ -552,6 +552,7 @@
     <string name="detail_choice_sessions">Sesiones</string>
     <string name="detail_choice_detailed">Detallado</string>
     <string name="detail_group_sleep_hint">Sesiones enumera cada sesión de sueño con fecha y hora completas. Detallado añade las fases del sueño.</string>
+    <string name="detail_expansion_schema_hint">Detallado en Actividad, Nutrición o Cuerpo añade cada registro de origen y cambia las exportaciones analíticas JSON, CSV y Markdown al esquema 7.</string>
     <string name="sleep_attribution_title">Atribución del día de sueño</string>
     <string name="sleep_attribution_night_begins">Comienza de noche</string>
     <string name="sleep_attribution_morning_ends">Termina de mañana</string>

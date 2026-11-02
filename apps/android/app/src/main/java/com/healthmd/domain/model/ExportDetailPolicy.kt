@@ -21,7 +21,9 @@ enum class ExportDetailGroup(val wireId: String) {
     @SerialName("mobility") MOBILITY("mobility"),
     @SerialName("reproductive_health") REPRODUCTIVE_HEALTH("reproductive_health"),
     @SerialName("mindfulness") MINDFULNESS("mindfulness"),
-    @SerialName("workouts") WORKOUTS("workouts");
+    @SerialName("workouts") WORKOUTS("workouts"),
+    /** Body measurements. Only `android-analytical-v7` has a detail projection for it. */
+    @SerialName("body") BODY("body");
 
     /** Choices this group can honor on Android, ordered from least to most detail. */
     val supportedChoices: List<ExportDetailChoice>
@@ -69,20 +71,28 @@ data class ExportDetailSelection(
     val reproductiveHealth: Boolean = false,
     val mindfulness: Boolean = false,
     val workouts: Boolean = false,
+    val body: Boolean = false,
     /**
      * Readable sleep-session list in Markdown/Bases. Only an explicit sleep override enables it, so
      * historical global-detail Markdown stays byte-identical; JSON keeps using [sleepSessions].
      */
     val sleepSessionList: Boolean = false,
+    /**
+     * An explicit `detailed` override exists for a group whose new interval records the shipped
+     * analytical v5 grammar cannot represent (activity, nutrition, body). With the analytical
+     * profile this selects `android-analytical-v7`; see [DailyRecordSchemaProfile]. The uniform
+     * default never sets it, so historical global-detail exports stay byte-identical v5.
+     */
+    val analyticalExpansion: Boolean = false,
 ) {
     /** True when any group emits detail; replaces legacy `includeGranularData` reads. */
     val any: Boolean
         get() = sleepSessions || sleepStages || activity || heart || vitals || nutrition ||
-            mobility || reproductiveHealth || mindfulness || workouts
+            mobility || reproductiveHealth || mindfulness || workouts || body
 
     /** True when every group emits full detail, i.e. the historical global-on behavior. */
     val isUniformDetailed: Boolean
-        get() = copy(sleepSessionList = false) == UNIFORM_DETAILED
+        get() = copy(sleepSessionList = false, analyticalExpansion = false) == UNIFORM_DETAILED
 
     fun choice(group: ExportDetailGroup): ExportDetailChoice = when (group) {
         ExportDetailGroup.SLEEP -> when {
@@ -106,6 +116,8 @@ data class ExportDetailSelection(
         reproductiveHealth = reproductiveHealth || other.reproductiveHealth,
         mindfulness = mindfulness || other.mindfulness,
         workouts = workouts || other.workouts,
+        body = body || other.body,
+        analyticalExpansion = analyticalExpansion || other.analyticalExpansion,
     )
 
     private fun flag(group: ExportDetailGroup): Boolean = when (group) {
@@ -118,10 +130,18 @@ data class ExportDetailSelection(
         ExportDetailGroup.REPRODUCTIVE_HEALTH -> reproductiveHealth
         ExportDetailGroup.MINDFULNESS -> mindfulness
         ExportDetailGroup.WORKOUTS -> workouts
+        ExportDetailGroup.BODY -> body
     }
 
     companion object {
         val SUMMARY = ExportDetailSelection()
+
+        /** Groups whose explicit `detailed` override requests `android-analytical-v7`. */
+        val ANALYTICAL_EXPANSION_GROUPS: Set<ExportDetailGroup> = setOf(
+            ExportDetailGroup.ACTIVITY,
+            ExportDetailGroup.NUTRITION,
+            ExportDetailGroup.BODY,
+        )
         val UNIFORM_DETAILED = ExportDetailSelection(
             sleepSessions = true,
             sleepStages = true,
@@ -133,6 +153,7 @@ data class ExportDetailSelection(
             reproductiveHealth = true,
             mindfulness = true,
             workouts = true,
+            body = true,
         )
 
         /** Exact projection of the historical global Boolean. */
@@ -163,6 +184,8 @@ data class ExportDetailSelection(
                 reproductiveHealth = detailed(ExportDetailGroup.REPRODUCTIVE_HEALTH),
                 mindfulness = detailed(ExportDetailGroup.MINDFULNESS),
                 workouts = detailed(ExportDetailGroup.WORKOUTS),
+                body = detailed(ExportDetailGroup.BODY),
+                analyticalExpansion = ANALYTICAL_EXPANSION_GROUPS.any { overrides[it] == ExportDetailChoice.DETAILED },
             )
         }
     }

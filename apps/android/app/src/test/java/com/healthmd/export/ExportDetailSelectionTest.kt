@@ -292,6 +292,25 @@ class ExportDetailSelectionTest {
     }
 
     @Test
+    fun bodyIsASharedGroupAndOnlyExplicitExpansionOverridesRequestV7() {
+        assertThat(ExportDetailGroup.fromWireId("body")).isEqualTo(ExportDetailGroup.BODY)
+        assertThat(ExportDetailOverrides.validated(mapOf("body" to "detailed")))
+            .containsExactly(ExportDetailGroup.BODY, ExportDetailChoice.DETAILED)
+        assertThat(ExportDetailOverrides.validated(mapOf("body" to "sessions"))).isNull()
+        assertThat(ExportDetailSelection.UNIFORM_DETAILED.body).isTrue()
+        assertThat(ExportDetailSelection.UNIFORM_DETAILED.analyticalExpansion).isFalse()
+        for (group in ExportDetailGroup.entries) {
+            val explicit = ExportDetailSelection.resolve(false, mapOf(group to ExportDetailChoice.DETAILED))
+            assertThat(explicit.analyticalExpansion)
+                .isEqualTo(group in setOf(ExportDetailGroup.ACTIVITY, ExportDetailGroup.NUTRITION, ExportDetailGroup.BODY))
+            assertThat(explicit.choice(group)).isEqualTo(ExportDetailChoice.DETAILED)
+        }
+        val bodyOnly = ExportDetailSelection.resolve(true, mapOf(ExportDetailGroup.BODY to ExportDetailChoice.DETAILED))
+        assertThat(bodyOnly.isUniformDetailed).isTrue()
+        assertThat(bodyOnly.analyticalExpansion).isTrue()
+    }
+
+    @Test
     fun uniformDetailedRequiresEveryGroup() {
         assertThat(ExportDetailSelection.uniform(true).isUniformDetailed).isTrue()
         assertThat(sleepDetailedOnly.exportDetailSelection().isUniformDetailed).isFalse()

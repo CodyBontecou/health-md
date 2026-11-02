@@ -275,6 +275,7 @@
     <string name="detail_choice_sessions">Сеанстар</string>
     <string name="detail_choice_detailed">Толық</string>
     <string name="detail_group_sleep_hint">«Сеанстар» әр ұйқы сеансын толық күні мен уақытымен көрсетеді. «Толық» ұйқы кезеңдерін қосады.</string>
+    <string name="detail_expansion_schema_hint">Белсенділік, тамақтану немесе дене үшін «Толық» әр бастапқы жазбаны қосып, аналитикалық JSON, CSV және Markdown экспорттарын 7-схемаға ауыстырады.</string>
     <string name="sleep_attribution_title">Ұйықтау күнін белгілеу</string>
     <string name="sleep_attribution_night_begins">Түн басталады</string>
     <string name="sleep_attribution_morning_ends">Таң аяқталады</string>

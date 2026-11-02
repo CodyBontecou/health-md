@@ -127,6 +127,20 @@ class JsonExporter {
         }
     }
 
+    /** android-analytical-v7 interval/instant record arrays, modeled on `stepSamples`. */
+    private fun JsonObjectBuilder.putExpansionSamples(name: String, samples: List<TimestampedSample>) {
+        if (samples.isEmpty()) return
+        putJsonArray(name) {
+            for (sample in samples) {
+                addJsonObject {
+                    put("timestamp", sample.time.toIso8601())
+                    put("value", sample.value)
+                    putSampleContext(sample, includeExact = true)
+                }
+            }
+        }
+    }
+
     fun export(
         data: HealthData,
         customization: FormatCustomization = FormatCustomization(),
@@ -179,14 +193,18 @@ class JsonExporter {
         val includeAndroidNativeFields = customization.includeAndroidNativeFields
         val analyticalV5 = nativeSuccessor || customization.compatibilitySchemaProfile == CompatibilitySchemaProfile.ANDROID_ANALYTICAL_V5
         val emitAndroidNativeFields = includeAndroidNativeFields || analyticalV5
+        // Wake-date (nativeSuccessor) output is android-sleep-v6 and never carries v7 arrays.
+        val profile = if (nativeSuccessor) DailyRecordSchemaProfile.ANDROID_SLEEP_V6
+            else DailyRecordSchemaProfile.forWriter(customization, detail)
+        val analyticalV7 = profile.writesDetailExpansion
 
         val json = buildJsonObject {
             put("date", dateString)
             put("type", "health-data")
             put("units", customization.unitPreference.name.lowercase())
             if (analyticalV5 && !nativeSuccessor) {
-                put("schemaProfile", "android-analytical-v5")
-                put("schemaVersion", 5)
+                put("schemaProfile", profile.publicProfileId)
+                put("schemaVersion", profile.schemaVersion)
             }
             data.compatibilityProvenance?.let { provenance ->
                 putJsonObject("metadata") {
@@ -359,7 +377,8 @@ class JsonExporter {
                     downhillSnowSportsDistance != null
             } || data.mobility.vo2Max != null ||
                 (detail.mobility && data.mobility.vo2MaxMeasurementMethod != null) ||
-                (detail.activity && (data.activity.stepSamples.isNotEmpty() || data.activity.activityIntensityEntries.isNotEmpty()))
+                (detail.activity && (data.activity.stepSamples.isNotEmpty() || data.activity.activityIntensityEntries.isNotEmpty())) ||
+                (analyticalV7 && detail.activity && data.activity.hasDetailExpansion)
             if (activityHasIosKeys || (includeAndroidNativeFields && data.activity.hasData)) {
                 putJsonObject("activity") {
                     val a = data.activity
@@ -442,6 +461,13 @@ class JsonExporter {
                                 }
                             }
                         }
+                    }
+                    if (analyticalV7 && detail.activity) {
+                        putExpansionSamples("activeCaloriesSamples", a.activeCaloriesSamples)
+                        putExpansionSamples("totalCaloriesSamples", a.totalCaloriesSamples)
+                        putExpansionSamples("distanceSamples", a.distanceSamples)
+                        putExpansionSamples("floorsSamples", a.floorsSamples)
+                        putExpansionSamples("elevationSamples", a.elevationSamples)
                     }
                 }
             }
@@ -634,7 +660,7 @@ class JsonExporter {
             // ── Body ───────────────────────────────────────────────────────────────────────────
             val bodyHasIosKeys = with(data.body) {
                 weight != null || height != null || bmi != null || bodyFatPercentage != null || leanBodyMass != null
-            }
+            } || (analyticalV7 && detail.body && data.body.hasDetailExpansion)
             if (bodyHasIosKeys || (includeAndroidNativeFields && data.body.hasData)) {
                 putJsonObject("body") {
                     val b = data.body
@@ -650,6 +676,14 @@ class JsonExporter {
                         b.bodyWaterMass?.let { put("bodyWaterMass", it) }
                         b.boneMass?.let { put("boneMass", it) }
                     }
+                    if (analyticalV7 && detail.body) {
+                        putExpansionSamples("weightSamples", b.weightSamples)
+                        putExpansionSamples("heightSamples", b.heightSamples)
+                        putExpansionSamples("bodyFatSamples", b.bodyFatSamples)
+                        putExpansionSamples("leanBodyMassSamples", b.leanBodyMassSamples)
+                        putExpansionSamples("boneMassSamples", b.boneMassSamples)
+                        putExpansionSamples("bodyWaterMassSamples", b.bodyWaterMassSamples)
+                    }
                 }
             }
 
@@ -661,6 +695,7 @@ class JsonExporter {
                     water != null || caffeine != null
             }
             if (nutritionHasIosKeys || (detail.nutrition && data.nutrition.meals.isNotEmpty()) ||
+                (analyticalV7 && detail.nutrition && data.nutrition.hydrationSamples.isNotEmpty()) ||
                 (includeAndroidNativeFields && data.nutrition.hasData)
             ) {
                 putJsonObject("nutrition") {
@@ -731,6 +766,9 @@ class JsonExporter {
                                 }
                             }
                         }
+                    }
+                    if (analyticalV7 && detail.nutrition) {
+                        putExpansionSamples("hydrationSamples", n.hydrationSamples)
                     }
                 }
             }

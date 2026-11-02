@@ -267,6 +267,7 @@
     <string name="detail_choice_sessions">会话</string>
     <string name="detail_choice_detailed">详细</string>
     <string name="detail_group_sleep_hint">“会话”会以完整日期和时间列出每个睡眠会话。“详细”还会添加睡眠阶段。</string>
+    <string name="detail_expansion_schema_hint">为“活动”“营养”或“身体”选择“详细”会添加每条来源记录，并将分析型 JSON、CSV 和 Markdown 导出切换到架构 7。</string>
     <string name="sleep_attribution_title">睡眠归属日</string>
     <string name="sleep_attribution_night_begins">以入睡当晚为准</string>
     <string name="sleep_attribution_morning_ends">以醒来早晨为准</string>

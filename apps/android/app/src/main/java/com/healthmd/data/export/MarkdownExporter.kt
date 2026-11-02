@@ -25,7 +25,7 @@ class MarkdownExporter {
 
         val markdown = buildString {
             if (includeMetadata) {
-                append(buildFrontmatter(data, dateString, customization))
+                append(buildFrontmatter(data, dateString, customization, detail))
             }
             data.compatibilityProvenance?.let { provenance ->
                 append("> All-connected provenance: attempted=${provenance.providerIdsAttempted.joinToString(",")}")
@@ -79,13 +79,14 @@ class MarkdownExporter {
         data: HealthData,
         dateString: String,
         customization: FormatCustomization,
+        detail: ExportDetailSelection,
     ): String = buildString {
         val fmConfig = customization.frontmatterConfig
         val converter = customization.unitConverter
 
         append("---\n")
         if (customization.compatibilitySchemaProfile == CompatibilitySchemaProfile.ANDROID_ANALYTICAL_V5) {
-            append("healthmd_schema_profile: android-analytical-v5\n")
+            append("healthmd_schema_profile: ${DailyRecordSchemaProfile.forWriter(customization, detail).publicProfileId}\n")
         }
         if (fmConfig.includeDate) {
             append("${fmConfig.customDateKey}: $dateString\n")
@@ -151,6 +152,14 @@ class MarkdownExporter {
                     append("| ${customization.timeFormat.format(sample.time)} | ${sample.value.toInt()} |\n")
                 }
             }
+            if (detail.activity && DailyRecordSchemaProfile.forWriter(customization, detail).writesDetailExpansion) {
+                val a = data.activity
+                appendExpansionTable("Active Calories (kcal)", a.activeCaloriesSamples, customization)
+                appendExpansionTable("Total Calories (kcal)", a.totalCaloriesSamples, customization)
+                appendExpansionTable("Distance (m)", a.distanceSamples, customization)
+                appendExpansionTable("Flights Climbed", a.floorsSamples, customization)
+                appendExpansionTable("Elevation Gained (m)", a.elevationSamples, customization)
+            }
         }
         if (data.heart.hasData) {
             append("\n$headerPrefix ${emojis.heart}Heart\n\n")
@@ -179,10 +188,22 @@ class MarkdownExporter {
         if (data.body.hasData) {
             append("\n$headerPrefix ${emojis.body}Body\n\n")
             append(bodyMetrics(data.body, bullet, converter))
+            if (detail.body && DailyRecordSchemaProfile.forWriter(customization, detail).writesDetailExpansion) {
+                val b = data.body
+                appendExpansionTable("Weight (kg)", b.weightSamples, customization)
+                appendExpansionTable("Height (m)", b.heightSamples, customization)
+                appendExpansionTable("Body Fat (%)", b.bodyFatSamples, customization, scale = 100.0)
+                appendExpansionTable("Lean Body Mass (kg)", b.leanBodyMassSamples, customization)
+                appendExpansionTable("Bone Mass (kg)", b.boneMassSamples, customization)
+                appendExpansionTable("Body Water Mass (kg)", b.bodyWaterMassSamples, customization)
+            }
         }
         if (data.nutrition.hasData) {
             append("\n$headerPrefix ${emojis.nutrition}Nutrition\n\n")
             append(nutritionMetrics(data.nutrition, bullet, converter))
+            if (detail.nutrition && DailyRecordSchemaProfile.forWriter(customization, detail).writesDetailExpansion) {
+                appendExpansionTable("Water (L)", data.nutrition.hydrationSamples, customization)
+            }
         }
         if (data.mobility.hasData) {
             append("\n$headerPrefix ${emojis.mobility}Mobility\n\n")
@@ -207,6 +228,25 @@ class MarkdownExporter {
         if (data.workouts.isNotEmpty()) {
             append("\n$headerPrefix ${emojis.workouts}Workouts\n\n")
             append(workoutsMarkdown(data.workouts, bullet, customization))
+        }
+    }
+
+    /**
+     * android-analytical-v7 record table, one row per source record. Canonical units; values keep
+     * up to three decimals so small records (for example 0.25 L) are not rounded away.
+     */
+    private fun StringBuilder.appendExpansionTable(
+        valueHeader: String,
+        samples: List<TimestampedSample>,
+        customization: FormatCustomization,
+        scale: Double = 1.0,
+    ) {
+        if (samples.isEmpty()) return
+        append("\n| Time | $valueHeader |\n|------|${"-".repeat(valueHeader.length + 2)}|\n")
+        for (sample in samples) {
+            val value = java.math.BigDecimal.valueOf(sample.value * scale)
+                .setScale(3, java.math.RoundingMode.HALF_UP).stripTrailingZeros().toPlainString()
+            append("| ${customization.timeFormat.format(sample.time)} | $value |\n")
         }
     }
 

@@ -11,7 +11,9 @@ import com.healthmd.domain.model.CompatibilitySchemaProfile
 import com.healthmd.domain.model.CustomFrontmatterField
 import com.healthmd.domain.model.DailyNoteInjectionSettings
 import com.healthmd.domain.model.DateFormatPreference
+import com.healthmd.domain.model.DailyRecordSchemaProfile
 import com.healthmd.domain.model.DataTypeSelection
+import com.healthmd.domain.model.ExportDetailSelection
 import com.healthmd.domain.model.ExportDetailOverrides
 import com.healthmd.domain.model.ExportFormat
 import com.healthmd.domain.model.ExportSettings
@@ -491,6 +493,9 @@ object AndroidExportSettingsSnapshotCodec {
             if (!ExportEnginePinCodec.isStructurallyValid(pin)) return false
             if (pin.profile != snapshot.exportProfile) return false
             if (pin.ianaTimeZone != snapshot.ianaTimeZone) return false
+            // android-analytical-v7 is native-writer-only; its operations are always legacy.
+            if (snapshot.exportProfile == AndroidExportProfile.android_analytical_v5 &&
+                snapshot.resolvesAnalyticalV7()) return false
         }
 
         when (snapshot.scheduledExportTarget) {
@@ -525,6 +530,16 @@ private fun ExportSettings.expectedScheduledExportProfile(context: AndroidCaptur
     } else {
         formatCustomization.compatibilitySchemaProfile.toAndroidExportProfile()
     }
+
+/** Local-file profile of the frozen operation; uses the same resolution as live settings. */
+private fun AndroidExportSettingsSnapshot.resolvesAnalyticalV7(): Boolean {
+    val overrides = detailOverrides?.let(ExportDetailOverrides::validated) ?: emptyMap()
+    return DailyRecordSchemaProfile.resolve(
+        formatCustomization.compatibilitySchemaProfile,
+        ExportDetailSelection.resolve(includeGranularData, overrides),
+        sleepCaptureContext?.sleepDayAttribution,
+    ).requiresLegacyEngine
+}
 
 private fun AndroidExportSettingsSnapshot.expectedOperationProfile(): AndroidExportProfile =
     if (sleepCaptureContext?.sleepDayAttribution == SleepDayAttribution.MORNING_ENDS) {

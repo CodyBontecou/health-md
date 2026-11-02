@@ -287,6 +287,7 @@
     <string name="detail_choice_sessions">সেশন</string>
     <string name="detail_choice_detailed">বিস্তারিত</string>
     <string name="detail_group_sleep_hint">সেশন প্রতিটি ঘুমের সেশন সম্পূর্ণ তারিখ ও সময়সহ দেখায়। বিস্তারিত ঘুমের ধাপও যোগ করে।</string>
+    <string name="detail_expansion_schema_hint">কার্যকলাপ, পুষ্টি বা শরীরের জন্য বিস্তারিত প্রতিটি উৎস রেকর্ড যোগ করে এবং বিশ্লেষণমূলক JSON, CSV ও Markdown এক্সপোর্টকে স্কিমা 7-এ বদলে দেয়।</string>
     <string name="sleep_attribution_title">ঘুমের দিন নির্ধারণ</string>
     <string name="sleep_attribution_night_begins">রাত শুরু</string>
     <string name="sleep_attribution_morning_ends">সকাল শেষ</string>

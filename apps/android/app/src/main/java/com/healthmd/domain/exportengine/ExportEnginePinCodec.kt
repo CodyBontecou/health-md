@@ -134,6 +134,8 @@ class ExportEnginePinPlanner @Inject constructor() {
             // API v1 is permanently profile-frozen even when local files use analytical v5.
             policyResolver.resolveApiV1()
         } else {
+            // android-analytical-v7 is native-writer-only: no pin means explicit legacy.
+            if (settings.dailyRecordSchemaProfile().requiresLegacyEngine) return null
             policyResolver.resolveLocal(settings.localExportProfile())
         }
         return pinBeforeCapture(policy, zoneId)
@@ -148,6 +150,7 @@ class ExportEnginePinPlanner @Inject constructor() {
             ) return null
             return pinBeforeCapture(wakeDatePolicy(), zoneId)
         }
+        if (settings.dailyRecordSchemaProfile().requiresLegacyEngine) return null
         return pinBeforeCapture(policyResolver.resolveLocal(settings.localExportProfile()), zoneId)
     }
 
@@ -181,6 +184,8 @@ class ExportEnginePinPlanner @Inject constructor() {
         val expectedProfile = if (target == ExportTarget.API_ENDPOINT) {
             AndroidExportProfile.android_frozen_v4
         } else {
+            // A Rust pin can never render android-analytical-v7.
+            if (settings.dailyRecordSchemaProfile().requiresLegacyEngine) return false
             settings.localExportProfile()
         }
         return pin.profile == expectedProfile

@@ -287,6 +287,7 @@
     <string name="detail_choice_sessions">सत्र</string>
     <string name="detail_choice_detailed">विस्तृत</string>
     <string name="detail_group_sleep_hint">सत्र हर नींद सत्र को पूरी तारीख और समय के साथ सूचीबद्ध करता है। विस्तृत में नींद के चरण भी जुड़ते हैं।</string>
+    <string name="detail_expansion_schema_hint">गतिविधि, पोषण या शरीर के लिए विस्तृत हर स्रोत रिकॉर्ड जोड़ता है और विश्लेषणात्मक JSON, CSV और Markdown निर्यात को स्कीमा 7 पर बदल देता है।</string>
     <string name="sleep_attribution_title">नींद दिन निर्धारण</string>
     <string name="sleep_attribution_night_begins">रात शुरू</string>
     <string name="sleep_attribution_morning_ends">सुबह खत्म</string>

@@ -542,6 +542,7 @@
     <string name="detail_choice_sessions">Sitzungen</string>
     <string name="detail_choice_detailed">Detailliert</string>
     <string name="detail_group_sleep_hint">Sitzungen listet jede Schlafsitzung mit vollständigem Datum und Uhrzeit. Detailliert fügt Schlafphasen hinzu.</string>
+    <string name="detail_expansion_schema_hint">Detailliert bei Aktivität, Ernährung oder Körper fügt jeden Quelldatensatz hinzu und stellt analytische JSON-, CSV- und Markdown-Exporte auf Schema 7 um.</string>
     <string name="sleep_attribution_title">Zuordnung des Schlaftags</string>
     <string name="sleep_attribution_night_begins">Nachtbeginn</string>
     <string name="sleep_attribution_morning_ends">Morgenende</string>

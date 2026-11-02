@@ -420,6 +420,12 @@ class AndroidDailyAggregateExportPlanner(
         if (suppliedPin != null && suppliedPin.profile != selectedProfile) {
             return LocalDailyAggregatePlanningResult.Failed(suppliedPin.engine)
         }
+        if (!isWakeDate && settings.dailyRecordSchemaProfile().requiresLegacyEngine) {
+            // android-analytical-v7 has no Rust registry/render profile. Only the native writers
+            // may render it; a durable Rust or shadow pin is refused rather than relabeled.
+            return if (suppliedPin != null) LocalDailyAggregatePlanningResult.Failed(suppliedPin.engine)
+            else LocalDailyAggregatePlanningResult.Legacy
+        }
         val expectedTarget = when (selectedProfile) {
             AndroidExportProfile.android_frozen_v4 -> ExportEnginePolicyTarget.ANDROID_FROZEN_V4
             AndroidExportProfile.android_analytical_v5 -> ExportEnginePolicyTarget.ANDROID_ANALYTICAL_V5

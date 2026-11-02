@@ -287,6 +287,7 @@
     <string name="detail_choice_sessions">ਸੈਸ਼ਨ</string>
     <string name="detail_choice_detailed">ਵਿਸਥਾਰਪੂਰਵਕ</string>
     <string name="detail_group_sleep_hint">ਸੈਸ਼ਨ ਹਰ ਨੀਂਦ ਸੈਸ਼ਨ ਨੂੰ ਪੂਰੀ ਮਿਤੀ ਅਤੇ ਸਮੇਂ ਨਾਲ ਦਿਖਾਉਂਦਾ ਹੈ। ਵਿਸਥਾਰਪੂਰਵਕ ਨੀਂਦ ਦੇ ਪੜਾਅ ਵੀ ਜੋੜਦਾ ਹੈ।</string>
+    <string name="detail_expansion_schema_hint">ਗਤੀਵਿਧੀ, ਪੋਸ਼ਣ ਜਾਂ ਸਰੀਰ ਲਈ ਵਿਸਥਾਰਪੂਰਵਕ ਹਰ ਸਰੋਤ ਰਿਕਾਰਡ ਜੋੜਦਾ ਹੈ ਅਤੇ ਵਿਸ਼ਲੇਸ਼ਣਾਤਮਕ JSON, CSV ਅਤੇ Markdown ਨਿਰਯਾਤਾਂ ਨੂੰ ਸਕੀਮਾ 7 ਵਿੱਚ ਬਦਲਦਾ ਹੈ।</string>
     <string name="sleep_attribution_title">ਸੌਣ ਦਿਨ ਦੀ ਨਿਰਧਾਰਤਾ</string>
     <string name="sleep_attribution_night_begins">ਰਾਤ ਸ਼ੁਰੂ</string>
     <string name="sleep_attribution_morning_ends">ਸਵੇਰ ਸਮਾਪਤ</string>

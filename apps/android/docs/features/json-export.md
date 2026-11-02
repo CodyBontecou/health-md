@@ -56,6 +56,15 @@ Frozen v4 files look the same minus the `schemaProfile`/`schemaVersion` marker p
 |---|---|
 | **Frozen v4** (default for saved settings) | Byte-stable shape consumed by the Obsidian plugin, the compatibility API export, and existing scripts. Never changes. |
 | **Android analytical v5** (default for new installs) | Adds Android-native values and exact source details on top of v4 — everything v4 consumers expect, plus more. |
+| **Android analytical v7** (`schemaVersion: 7`) | Analytical v5 plus one entry per Health Connect record for calories, distance, floors, elevation, hydration, and body measurements. Not a separate setting: it is written only when the analytical profile is active and **Detail by category** explicitly sets Activity, Nutrition, or Body to Detailed. The global time-series switch alone keeps v5. Morning ends exports stay `android-sleep-v6` and never include these records. |
+
+Analytical v7 arrays (each entry: `timestamp`, `value`, `source`, `metadata`, `exactTime`, `exactEndTime` for intervals, `identity`; values in the units of the daily summaries):
+
+- `activity`: `activeCaloriesSamples`, `totalCaloriesSamples` (kcal), `distanceSamples`, `elevationSamples` (meters), `floorsSamples` (floors).
+- `nutrition`: `hydrationSamples` (liters).
+- `body`: `weightSamples`, `leanBodyMassSamples`, `boneMassSamples`, `bodyWaterMassSamples` (kg), `heightSamples` (meters), `bodyFatSamples` (fraction 0–1). Body records are instantaneous and carry no `exactEndTime`.
+
+Each record belongs to the day containing its start. Records are not deduplicated, interpolated, or resampled. CSV adds one `… Sample` row per record (canonical units, exact start in the Timestamp column) and Markdown adds a record table per array. Obsidian Bases and daily notes keep the v5 identity because they carry no record arrays. v7 is written by the on-device writers only.
 
 Two additional switches control extra keys: **legacy Android aliases** re-adds pre-parity key names, and **Android native fields** emits values that have no frozen v4 equivalent. The API endpoint export always embeds frozen v4 regardless of your local profile.
 

@@ -562,6 +562,7 @@
     <string name="detail_choice_sessions">Сеанси</string>
     <string name="detail_choice_detailed">Детально</string>
     <string name="detail_group_sleep_hint">«Сеанси» перелічує кожен сеанс сну з повною датою й часом. «Детально» додає фази сну.</string>
+    <string name="detail_expansion_schema_hint">«Детально» для активності, харчування або тіла додає кожен вихідний запис і переводить аналітичні експорти JSON, CSV і Markdown на схему 7.</string>
     <string name="sleep_attribution_title">Належність сну до дня</string>
     <string name="sleep_attribution_night_begins">Ніч початку</string>
     <string name="sleep_attribution_morning_ends">Ранок завершення</string>
