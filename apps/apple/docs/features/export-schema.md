@@ -45,6 +45,12 @@ Version 8 carries forward the complete lossless source representation and v7 sum
 
 Clinical Health Records access is temporarily absent from current App Store builds. Those builds omit the managed entitlements, privacy prompt, metric-selection categories, direct-query catalog entries, and clinical capture. The v8 schema retains its clinical/FHIR/CDA/verifiable variants so historical files stay decodable and the capability can return in a future schema-compatible release.
 
+## Version 12 compatibility detail successor
+
+`apple-v12` (`schema_version: 12`, `schema_profile: apple-v12`) is the Night begins v8 grammar plus per-category `detailSamples` arrays. It is written only when **Detail by Category** explicitly sets Activity, Nutrition, Mobility, Reproductive Health, Mindfulness, Body, or Vitals to Detailed; Data Detail presets and sleep, heart, or workout overrides keep v8 bytes. Morning ends keeps apple-v11 without the arrays. Daily notes, rollups, and the data dictionary keep v8.
+
+Each `detailSamples` entry is one HealthKit sample owned by the day containing its start: `metric`, `healthKitType`, `timestamp`, `endDate` (UTC, nanosecond RFC 3339), `value` and `unit` (summary units; percentages are fractions 0–1 labelled `%`) or `categoryValue`, and `sourceUUID`/`source` when known. Vitals entries cover temperature and spirometry only; existing vitals arrays are unchanged. CSV adds one `<Label> Detail Sample` row per entry and a `schema_profile` metadata row; Markdown adds a collapsed `Detail Samples` table per category. The signature is `HealthMdTests/Fixtures/Export/export_schema_signature_v12.json`; `make update-export-schema-signature` refreshes both signatures. Consumers should branch on `schema_version` and `schema_profile`, and may treat v12 as v8 plus `detailSamples`. See [per-category export detail](../../../../docs/features/per-group-export-detail.md).
+
 ## Summary, provider, and source layers
 
 A v8 daily record has three complementary layers:

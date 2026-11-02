@@ -50,7 +50,7 @@
 |---|---|---|---|---|
 | Markdown export | ✅ `markdown-export.md` | ✅ `markdown-export.md` | shared | Same template tiers and frontmatter workflow. |
 | Obsidian Bases export | ✅ `obsidian-bases.md` | ✅ `obsidian-bases.md` | shared | |
-| JSON export | ✅ `json-export.md` | ✅ `json-export.md` | platform-distinct | Same `healthmd.health_data` family, independently versioned: Apple v8 (+ typed WHOOP section), Android frozen v4 + analytical v5. Proposed unified v9. |
+| JSON export | ✅ `json-export.md` | ✅ `json-export.md` | platform-distinct | Same `healthmd.health_data` family, independently versioned: Apple v8 (+ typed WHOOP section), Android frozen v4 + analytical v5; per-record detail successors Apple v12 and Android analytical v7 (selected by an explicit Detailed category override). Proposed unified v9. |
 | CSV export | ✅ `csv-export.md` | ✅ `csv-export.md` | shared | |
 | NDJSON raw output | — (raw via CLI `--raw-format ndjson`) | ✅ `raw-snapshots.md` | android_only | Raw snapshot artifact format. |
 | Filename templates | ✅ `filename-templates.md` | ✅ `filename-templates.md` | shared | Same placeholder vocabulary. |

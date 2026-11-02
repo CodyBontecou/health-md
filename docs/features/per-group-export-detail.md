@@ -19,13 +19,29 @@ Capability classifications live in [`product-capabilities.json`](../../packages/
 | Per-category overrides | `ExportSettings.detailOverrides` | `compatibilityDetailOverrides` |
 | Resolved selection | `ExportDetailSelection` | `AppleExportDetailPolicy.includesSelectedTimeSeries(for:)` |
 
-The category IDs are shared wire values: `sleep`, `activity`, `heart`, `vitals`, `nutrition`, `mobility`, `reproductive_health`, `mindfulness`, `workouts`. The choice IDs are `summary`, `sessions`, and `detailed`.
+The category IDs are shared wire values: `sleep`, `activity`, `heart`, `vitals`, `nutrition`, `mobility`, `reproductive_health`, `mindfulness`, `workouts`, `body`. The choice IDs are `summary`, `sessions`, and `detailed`.
 
 - **Summary:** daily aggregates only.
 - **Sessions:** individual source sessions without nested samples. Sleep only, and Android only.
 - **Detailed:** every detail section the category supports, including nested samples such as sleep stages.
 
 Each platform offers only the choices it can honor. Missing overrides reproduce the previous global setting exactly.
+
+### Successor profiles
+
+Some records have no place in the shipped grammars. An explicit **Detailed** override for such a category selects an additive successor profile (`export.compatibility-detail-expansion`):
+
+| Platform | Selected by an explicit Detailed override for | Profile | Adds |
+|---|---|---|---|
+| Apple | activity, nutrition, mobility, reproductive_health, mindfulness, body, vitals | `apple-v12` (`schema_version: 12`, `schema_profile: apple-v12`) | `<category>.detailSamples` |
+| Android | activity, nutrition, body (analytical profile only) | `android-analytical-v7` (`schemaVersion: 7`, `schemaProfile: android-analytical-v7`) | per-record interval arrays |
+
+- The uniform default (Detailed Time-Series / Lossless on Apple, `includeGranularData` on Android) never selects a successor, so those exports keep apple-v8 / analytical v5 bytes exactly. Sleep, heart and workout overrides also keep the shipped profile.
+- Frozen v4 never upgrades. Morning ends keeps apple-v11 / android-sleep-v6 and neither captures nor writes the successor arrays.
+- Daily notes, scoped direct notes, rollups, the Apple data dictionary, and Android Obsidian Bases keep the shipped identity because they carry no sample arrays. Apple Markdown and Bases frontmatter of a v12 day carry the v12 header.
+- Both successors are written only by the native writers. The Rust engine never renders detailed daily records (Apple refuses detail in the Rust planner; Android v7 resolves to the Kotlin writers and refuses Rust pins), so no shared-core registry, UniFFI, CLI, or direct-protocol profile changed.
+- Each entry is one source record: source start (and end, for intervals), unit, and identity are kept. Nothing is interpolated, resampled, or deduplicated, so sample sums can exceed the deduplicated daily totals.
+- Connected Macs must advertise `supportsAppleV12DetailExpansion` before receiving a v12 job or an override outside sleep/heart/vitals/workouts.
 
 ## Native capability inventory
 
@@ -48,15 +64,15 @@ Health Connect reads are paged (`pageToken`, 1,000 per page), run in 7-day chunk
 | Category | Health Connect types | Summary | Records | Samples / intervals | Nested | Notes |
 |---|---|---|---|---|---|---|
 | sleep | `SleepSessionRecord` | total, stages, bedtime/wake envelope | **Exported**: `sleepSessions` (JSON); Markdown session table | — | **Exported**: `sleepStages` (stage intervals) | Sessions are always read, because summaries need them. Stages are emitted only for `detailed`. The Markdown table appears only for an explicit sleep override. |
-| activity | `StepsRecord`, `ActivityIntensityRecord`, calories, distance, floors, elevation, wheelchair pushes | daily aggregates | — | **Exported**: `stepSamples` (intervals; `exactEndTime` kept), `activityIntensity` | — | Calorie, distance, floors and elevation records are source-only. They are aggregated per day; their compatibility interval projection is not implemented yet (`planned`). |
+| activity | `StepsRecord`, `ActivityIntensityRecord`, calories, distance, floors, elevation, wheelchair pushes | daily aggregates | — | **Exported**: `stepSamples` (intervals; `exactEndTime` kept), `activityIntensity`; v7 adds `activeCaloriesSamples`, `totalCaloriesSamples`, `distanceSamples`, `floorsSamples`, `elevationSamples` | — | The v7 arrays are written only by `android-analytical-v7`. Wheelchair pushes remain source-only. |
 | heart | `HeartRateRecord`, `HeartRateVariabilityRmssdRecord`, `RestingHeartRateRecord` | avg/min/max, RMSSD, resting | — | **Exported**: `heartRateSamples` (series children), `hrvSamples` | — | Resting heart rate records are summarized only (latest). RMSSD stays distinct from Apple SDNN. |
 | vitals | blood pressure, SpO₂, glucose, respiratory rate, body/basal/skin temperature | avg/min/max | — | **Exported**: one sample array per type, plus `skinTemperatureDeltas` (native fields) | — | Blood-pressure records are read only when detail is requested or summaries need them. |
-| nutrition | `NutritionRecord`, `HydrationRecord` | daily totals | **Exported**: `meals` | — | — | CSV meal rows always exist; detail switches to exact machine timestamps. Hydration records are source-only (`planned`). |
+| nutrition | `NutritionRecord`, `HydrationRecord` | daily totals | **Exported**: `meals` | v7: **Exported** `hydrationSamples` (liters) | — | CSV meal rows always exist; detail switches to exact machine timestamps. |
 | mobility | speed, cadence, power, `Vo2MaxRecord` | averages | — | — | **Exported**: `vo2MaxMeasurementMethod` | Mobility series are exported only as workout detail. |
 | reproductive_health | menstruation period/flow, cervical mucus, ovulation, intermenstrual bleeding, sexual activity | daily values | **Exported**: `menstruationPeriods` | — | — | |
 | mindfulness | `MindfulnessSessionRecord` | minutes, count | **Exported**: `sessions` | — | — | |
 | workouts | `ExerciseSessionRecord`, `ExerciseRoute`, correlated series | per-workout totals | always (laps/segments/splits) | **Exported**: `route`, `timeSeries` (HR, speed, cadence, power, elevation) | exact intervals (v5) | Route reads require per-session consent. Consent is requested only when workouts are selected. |
-| body | weight, height, fat, lean/bone/water mass | latest/avg | source-only | — | — | Records are summarized only. No compatibility record projection exists (`planned`). |
+| body | weight, height, fat, lean/bone/water mass | latest/avg | — | v7: **Exported** `weightSamples`, `heightSamples`, `bodyFatSamples` (fraction 0–1), `leanBodyMassSamples`, `boneMassSamples`, `bodyWaterMassSamples` (instants, no end) | — | Governed by the `body` group. |
 | planned workouts / medical resources | `PlannedExerciseSessionRecord`, PHR | records always | — | — | — | Not governed by detail. Plan exact intervals follow `workouts`. |
 
 ### Apple (HealthKit)
@@ -67,9 +83,10 @@ HealthKit queries use `HKSampleQueryDescriptor` with no limit and `CancellationE
 |---|---|---|---|---|---|---|
 | sleep | `sleepAnalysis` category samples | union-based totals, stages, bedtime/wake | **Unavailable as sessions**: HealthKit has no session object | **Exported**: `sleepStages` (category intervals, window-clipped) | — | Choices are Summary and Detailed. Wake-date mode merges intervals for ownership internally; that derivation is not exported as source sessions. |
 | heart | heart rate, HRV SDNN, resting, walking, recovery, AFib burden | stats / most recent | — | **Exported**: `heartRateSamples`, `hrvSamples` | — | |
-| vitals | respiratory rate, SpO₂, BP correlations, glucose, temperatures, spirometry | stats / most recent | — | **Exported**: SpO₂, glucose, respiratory, BP samples | — | Temperature and spirometry samples are source-only (canonical archive). Their compatibility projection is `planned`. |
+| vitals | respiratory rate, SpO₂, BP correlations, glucose, temperatures, spirometry | stats / most recent | — | **Exported**: SpO₂, glucose, respiratory, BP samples; v12 adds temperature and spirometry `detailSamples` | — | Inhaler usage and electrodermal activity remain source-only (canonical archive). |
 | workouts | `HKWorkout`, events, route, associated series | per-workout | always | **Exported**: laps, splits, route, `timeSeries` | — | Follows the `workouts` override (Summary or Detailed). Summary keeps per-workout totals and drops laps, splits, route and series. Capture always reads workout detail; the sanitizer removes it. |
-| activity, nutrition, mobility, mindfulness, reproductive, hearing, symptoms, medications, other | quantity/category samples | statistics | source-only (canonical archive) | source-only (canonical archive) | — | Compatibility sample projections are not implemented (`planned`). Lossless already exposes the native records. |
+| activity, nutrition, mobility, mindfulness, reproductive, body | quantity/category samples | statistics | — | v12: **Exported** `detailSamples` (one entry per sample: `metric`, `healthKitType`, `timestamp`, `endDate`, `value`+`unit` or `categoryValue`, `sourceUUID`, `source`) | — | Units are the summary units; percentages are fractions 0–1 labelled `%`, as in the canonical archive. Mindful sessions are category intervals. |
+| hearing, symptoms, medications, other | quantity/category samples | statistics | source-only (canonical archive) | source-only (canonical archive) | — | No compatibility projection. Lossless exposes the native records. |
 
 ## Capture
 
@@ -86,7 +103,7 @@ When a category's summary itself requires source records, those records are stil
 
 | Format | Behavior |
 |---|---|
-| JSON | Emits a subset of the existing optional detail arrays, per category. No keys were added, so frozen Android v4 / analytical v5 and Apple v8 grammars are unchanged. |
+| JSON | Under the shipped profiles, emits a subset of the existing optional detail arrays, per category; frozen Android v4 / analytical v5 and Apple v8 grammars are unchanged. The successor arrays appear only in apple-v12 / android-analytical-v7 records. |
 | CSV | Emits a subset of the existing detail rows. Sleep sessions are not added as CSV rows: adding them would change the frozen row grammar and needs a reviewed profile. |
 | Markdown | Existing sample tables follow their category. An explicit sleep override (Sessions or Detailed, Android) adds a session table with full local date, time, source offset, and an elapsed duration that is safe across DST. The previous global setting keeps byte-identical output. |
 | Obsidian Bases | Frontmatter only. Unchanged. |
@@ -101,13 +118,13 @@ When a category's summary itself requires source records, those records are stil
   - Existing snapshot bytes and fingerprints are unchanged. Older builds reject Android snapshots that carry overrides (fail closed).
   - Older Macs are refused before transfer by the `supportsPerGroupExportDetail` capability.
 - **Shared Setup v2.** This contract is byte-frozen and cannot represent overrides. Setup files carry the default level only. The native fields are classified `prohibited` in the field-coverage inventories. Portable overrides require a reviewed Shared Setup successor.
-- **Public schemas.** No export schema version, signature fixture, direct-protocol version, or CLI option changed. The CLI and direct protocols expose only the separate summary/lossless archive scope.
+- **Public schemas.** The shipped profiles and their signature fixtures are unchanged. The successors have their own contracts and fixtures (`healthmd.health_data.apple_detail` v12, `healthmd.health_data.android_analytical_detail` v7 in the [contracts manifest](../../packages/contracts/manifest.json)). No direct-protocol version or CLI option changed; the CLI and direct protocols expose only the separate summary/lossless archive scope.
 - **Android sleep aggregates.** The frozen v4/v5 behavior is unchanged: totals use whole-session duration, and the bedtime/wake pair spans disconnected sessions. Correcting either requires a new reviewed profile; see the open follow-up in the capability inventory.
 
 ## Remaining work
 
-- Apple compatibility projections for activity, nutrition, mobility, mindfulness, reproductive, and temperature/spirometry samples. These add public keys, so they need a reviewed successor profile; `healthmd.health_data` v9 is reserved for the [unified proposal](../../packages/contracts/proposals/unified-health-data-v9/contract.md) and cannot be used for an Apple-only bump.
-- Android source-only interval projections for calories, distance, floors, elevation, hydration, and body records.
+- Successor detail under Morning ends (a reviewed successor of apple-v11 / android-sleep-v6).
+- Folding the successor arrays into the [unified v9 proposal](../../packages/contracts/proposals/unified-health-data-v9/contract.md).
 - Shared Setup successor field for portable overrides.
 - CSV sleep-session rows and Bases session counts behind a reviewed profile.
 - Device verification of the new settings UI on both platforms.

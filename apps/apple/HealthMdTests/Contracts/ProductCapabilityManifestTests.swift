@@ -12,7 +12,7 @@ final class ProductCapabilityManifestTests: XCTestCase {
         XCTAssertEqual(inventory.schemaVersion, 1)
         XCTAssertEqual(
             Set(inventory.outputProfiles.map(\.id)),
-            ["apple-v8", "android-frozen-v4", "android-analytical-v5"]
+            ["apple-v8", "android-frozen-v4", "android-analytical-v5", "apple-v12", "android-analytical-v7"]
         )
 
         let states = Dictionary(uniqueKeysWithValues: inventory.capabilities.map {
@@ -32,7 +32,6 @@ final class ProductCapabilityManifestTests: XCTestCase {
             Self.ids(with: .planned, in: states),
             [
                 "core.shared-rust-profile-engine",
-                "export.compatibility-detail-expansion",
                 "export.coverage-calendar",
                 "setup.share-portable-configuration",
             ]
@@ -113,6 +112,7 @@ final class ProductCapabilityManifestTests: XCTestCase {
         "export.mindfulness-sessions",
         "export.selected-time-series-detail",
         "export.per-group-detail-selection",
+        "export.compatibility-detail-expansion",
         "export.completed-workouts",
         "export.mobility-and-performance",
         "export.profiles",
@@ -161,7 +161,7 @@ final class ProductCapabilityManifestTests: XCTestCase {
         sharedCapabilities
             .union(appleCapabilities)
             .union(androidCapabilities)
-            .union(["source.private-platform-database", "apple.ads-purchase-attribution", "core.shared-rust-profile-engine", "export.compatibility-detail-expansion", "export.coverage-calendar", "setup.share-portable-configuration"])
+            .union(["source.private-platform-database", "apple.ads-purchase-attribution", "core.shared-rust-profile-engine", "export.coverage-calendar", "setup.share-portable-configuration"])
     }
 
     private enum ManifestError: Error {
