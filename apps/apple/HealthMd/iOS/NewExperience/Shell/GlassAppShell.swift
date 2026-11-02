@@ -56,6 +56,8 @@ struct GlassAppShell: View {
     /// Export tapped in the classic sheet; it runs once the sheet has gone, because a
     /// sheet presented during the dismissal (the folder picker) would be dropped.
     @State private var exportAfterClassicDismiss = false
+    /// Counts exports requested from the classic sheet; each runs once it has closed.
+    @State private var classicExportRequest = 0
     /// The classic sheet presents its own folder picker: one attached beneath a
     /// presented sheet cannot appear over it.
     @State private var showClassicFolderPicker = false
@@ -287,7 +289,10 @@ struct GlassAppShell: View {
         .sheet(isPresented: $showClassicExport, onDismiss: {
             guard exportAfterClassicDismiss else { return }
             exportAfterClassicDismiss = false
-            onExport()
+            // The dismissal handler can belong to the body that presented the sheet,
+            // whose `onExport` still sees the destination chosen before the sheet's
+            // edits. Run the export from the current body instead.
+            classicExportRequest += 1
         }) {
             NavigationStack { classicExportTab }
                 .sheet(isPresented: $showClassicFolderPicker) {
@@ -337,6 +342,7 @@ struct GlassAppShell: View {
             }
         }
         .onChange(of: presentFirstExportPreview) { _, requested in consumeFirstPreview(requested) }
+        .onChange(of: classicExportRequest) { _, _ in onExport() }
         .onChange(of: gapBackfillRouter.pendingRequest, initial: true) { _, _ in consumeGapBackfillRequest() }
         #if DEBUG
         // App Store screenshots: a month of coverage with two gaps, in memory only.

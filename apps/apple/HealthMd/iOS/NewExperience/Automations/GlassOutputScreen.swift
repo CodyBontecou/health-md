@@ -198,7 +198,12 @@ struct GlassOutputScreen: View {
     }
 
     private var overlappingNames: [String] {
-        coordinator.overlapPreviewNames(target: target, folderVaultID: folderVaultID, settings: draft)
+        coordinator.overlapPreviewNames(
+            target: target,
+            folderVaultID: folderVaultID,
+            settings: draft,
+            editingProfileID: profile.id
+        )
     }
 
     private var currentDraft: Draft {

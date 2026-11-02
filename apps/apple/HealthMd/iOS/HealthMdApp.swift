@@ -380,6 +380,12 @@ struct HealthMdApp: App {
             forKey: SharedSetupV2ProfileTransaction.undoKey
         )
 
+        // A folder chosen through Files in an earlier journey must not reach onboarding,
+        // which renders before ContentView applies UITEST_VAULT_SELECTED.
+        if !TestMode.vaultSelected {
+            VaultManager().clearVaultFolder()
+        }
+
         // Capture the existing sync service and use the canonical singletons,
         // not StateObject wrappers whose scene storage may not be installed yet.
         Task { @MainActor in

@@ -579,14 +579,16 @@ final class ExportProfileCoordinator: ObservableObject {
     }
 
     /// Overlap preview with an explicit settings override — the profile
-    /// editor passes its draft so the warning tracks in-progress edits.
+    /// editor passes its draft so the warning tracks in-progress edits, and the
+    /// edited profile's ID so its saved copy is not reported as an overlap.
     func overlapPreviewNames(
         target: ExportTargetSelection,
         folderVaultID: UUID?,
-        settings: ExportSettingsSnapshot
+        settings: ExportSettingsSnapshot,
+        editingProfileID: UUID? = nil
     ) -> [String] {
         let candidateID = UUID()
-        let identities = profilePathIdentities() + [
+        let identities = profilePathIdentities().filter { $0.profileID != editingProfileID } + [
             ExportProfileOverlapDetector.ProfilePathIdentity(
                 profileID: candidateID,
                 name: "",

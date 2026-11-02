@@ -29,11 +29,13 @@ final class OnboardingJourneyUITests: XCTestCase {
         tapButton("Continue Setup", in: app)
         tapButton("Create My First Export", in: app)
 
-        let markdownRow = app.descendants(matching: .any)[
-            UITestLaunchHelper.ExportPreview.markdownFileRow
+        // ExportPreviewG renders the only selected format inline; the format
+        // switcher (and its per-file identifiers) appears only for several files.
+        let renderedFile = app.descendants(matching: .any)[
+            UITestLaunchHelper.ExportPreview.fileContent
         ]
         XCTAssertTrue(
-            markdownRow.waitForExistence(timeout: 15),
+            renderedFile.waitForExistence(timeout: 15),
             "Completing onboarding should open the preconfigured first-export preview instead of unseen release notes."
         )
         XCTAssertFalse(

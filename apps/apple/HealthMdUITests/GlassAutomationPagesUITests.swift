@@ -19,8 +19,13 @@ final class GlassAutomationPagesUITests: XCTestCase {
         XCTAssertTrue(card.waitForExistence(timeout: 10))
         card.tap()
 
-        for title in ["Metrics", "Formats", "Customize format", "Output", "Daily notes", "Individual entries"] {
-            let row = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", title)).firstMatch
+        // AutomationDetailG rows read "Formats & detail" and "Format"; the pages keep their titles.
+        let pages = [
+            ("metrics", "Metrics"), ("formats", "Formats"), ("formatCustom", "Customize format"),
+            ("output", "Output"), ("dailyNotes", "Daily notes"), ("entries", "Individual entries"),
+        ]
+        for (identifier, title) in pages {
+            let row = app.buttons["glass.automation.\(identifier)"].firstMatch
             XCTAssertTrue(row.waitForExistence(timeout: 5), title)
             row.tap()
             let bar = app.navigationBars[title]
@@ -80,7 +85,8 @@ final class GlassAutomationPagesUITests: XCTestCase {
         toggle.tap()
 
         app.buttons["Automations"].tap()
-        let newProfile = app.buttons["New profile"]
+        // AutomationsGlass names the add action "New automation".
+        let newProfile = app.buttons["New automation"]
         XCTAssertTrue(newProfile.waitForExistence(timeout: 5))
         newProfile.tap()
         let toast = app.buttons[UITestLaunchHelper.ConfigurationProtection.toast]
@@ -184,8 +190,12 @@ final class GlassAutomationPagesUITests: XCTestCase {
         XCUIDevice.shared.orientation = .landscapeLeft
         defer { XCUIDevice.shared.orientation = .portrait }
         sleep(1)
-        guard app.windows.firstMatch.frame.width > 900 else {
-            throw XCTSkip("This device is compact in landscape.")
+        // iPadAutomationsG / iPadSettingsG: two panes are iPad-only. A regular-width phone
+        // (Pro Max landscape, unfolded Duo) keeps the phone column. The runner reports a
+        // phone idiom even on iPad, so measure the window's short side.
+        let window = app.windows.firstMatch.frame
+        guard window.width > 900, min(window.width, window.height) >= 600 else {
+            throw XCTSkip("Two panes are iPad-only; this device keeps the phone column.")
         }
         func shot(_ name: String) {
             guard let directory = ProcessInfo.processInfo.environment["GLASS_SCREENSHOT_DIR"] else { return }
@@ -201,9 +211,10 @@ final class GlassAutomationPagesUITests: XCTestCase {
 
         app.buttons["Settings"].tap()
         XCTAssertTrue(app.descendants(matching: .any)["glass.folderDestination"].waitForExistence(timeout: 5))
-        app.buttons["App & support"].tap()
+        let appSupport = app.buttons["glass.settings.appSupport"]
+        appSupport.tap()
         XCTAssertTrue(app.descendants(matching: .any)["glass.appSupport"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.buttons["App & support"].exists, "The hub must stay beside the detail.")
+        XCTAssertTrue(appSupport.exists, "The hub must stay beside the detail.")
         shot("duo-settings")
     }
 
@@ -222,17 +233,29 @@ final class GlassAutomationPagesUITests: XCTestCase {
         card.tap()
         app.buttons["Edit sentence →"].tap()
 
-        let all = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "All 2")).firstMatch
-        XCTAssertTrue(all.waitForExistence(timeout: 5))
-        let before = all.label
-        let field = app.switches["Total Sleep"]
+        // ComposeGlass: field checks are staged until Save and stay listed so they can be
+        // undone; Save commits them and the automation's metric count follows.
+        let count = NSPredicate(format: "label ENDSWITH %@", " metrics")
+        let composerCount = app.buttons.matching(count).firstMatch
+        XCTAssertTrue(composerCount.waitForExistence(timeout: 5))
+        let before = composerCount.label
+        let field = app.buttons["Total Sleep"].firstMatch
         XCTAssertTrue(field.waitForExistence(timeout: 5))
+        XCTAssertEqual(field.value as? String, "On")
         field.tap()
-
-        let changed = NSPredicate(format: "label != %@", before)
-        expectation(for: changed, evaluatedWith: all)
+        expectation(for: NSPredicate(format: "value == %@", "Off"), evaluatedWith: field)
         waitForExpectations(timeout: 5)
-        XCTAssertFalse(app.switches["Total Sleep"].exists, "The field must leave the note once off.")
+
+        app.buttons["glass.composer.save"].tap()
+        XCTAssertTrue(app.buttons["Run now"].waitForExistence(timeout: 5))
+        let detailCount = app.staticTexts.matching(count).firstMatch
+        XCTAssertTrue(detailCount.waitForExistence(timeout: 5))
+        XCTAssertNotEqual(detailCount.label, before, "Saving an unchecked field must update the count.")
+
+        // The saved note no longer lists the field.
+        app.buttons["Edit sentence →"].tap()
+        XCTAssertTrue(app.buttons["glass.composer.save"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["Total Sleep"].exists, "The field must leave the note once saved off.")
     }
 
     func testTappingTheCurrentTabReturnsToItsRoot() {

@@ -184,6 +184,12 @@ final class ExportJourneyUITests: XCTestCase {
         }
         app.buttons["Browse"].firstMatch.tap()
         let setupFiles = app.collectionViews["File View"]
+        // Files may reopen at its Locations list instead of the last folder; that is
+        // system picker state, so step into On My iPhone (vault setup only).
+        let onMyIPhone = app.cells["DOC.sidebar.item.On My iPhone"]
+        if !setupFiles.waitForExistence(timeout: 5), onMyIPhone.exists {
+            onMyIPhone.tap()
+        }
         guard setupFiles.waitForExistence(timeout: 10) else {
             XCTFail("Vault setup must render the local Files provider")
             return

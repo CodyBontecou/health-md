@@ -237,6 +237,18 @@ extension ScheduleSyncJourneyUITests {
         Thread.sleep(forTimeInterval: 0.7)
         keep("schedule-destination-medium-scroll")
 
-        XCTAssertTrue(app.buttons["schedule.target.api"].exists, "Scheduled API target should exist")
+        // ScheduleG has no destination list: an automation's destination is chosen in
+        // Output (OutputG "Where"), which its scheduled runs use.
+        app.navigationBars["Schedule"].buttons.firstMatch.tap()
+        let output = app.buttons["glass.automation.output"]
+        XCTAssertTrue(output.waitForExistence(timeout: 5))
+        output.tap()
+        let destination = app.buttons.matching(
+            NSPredicate(format: "label BEGINSWITH %@", "Destination")
+        ).firstMatch
+        XCTAssertTrue(destination.waitForExistence(timeout: 5), "Output must offer a destination choice")
+        destination.tap()
+        keep("output-destination-menu")
+        XCTAssertTrue(app.buttons["API Endpoint"].waitForExistence(timeout: 5), "Scheduled API target should exist")
     }
 }

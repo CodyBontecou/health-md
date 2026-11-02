@@ -1053,7 +1053,8 @@ struct ExportProfileEditorSheet: View {
         coordinator.overlapPreviewNames(
             target: target,
             folderVaultID: folderVaultID,
-            settings: savedSnapshot()
+            settings: savedSnapshot(),
+            editingProfileID: editingProfileID
         )
     }
 
