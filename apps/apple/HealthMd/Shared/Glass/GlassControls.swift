@@ -58,12 +58,14 @@ struct GlassSegmentedControl<Value: Hashable>: View {
 
     let segments: [Segment]
     @Binding var selection: Value
+    /// When set, segment `n` gets the identifier `<prefix>.<n>`, so UI tests need no labels.
+    var accessibilityIdentifierPrefix: String?
 
     @Environment(\.glassPalette) private var palette
 
     var body: some View {
         HStack(spacing: 0) {
-            ForEach(segments) { segment in
+            ForEach(Array(segments.enumerated()), id: \.element.id) { index, segment in
                 let isSelected = segment.value == selection
                 Button {
                     selection = segment.value
@@ -80,6 +82,7 @@ struct GlassSegmentedControl<Value: Hashable>: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityAddTraits(isSelected ? .isSelected : [])
+                .accessibilityIdentifier(accessibilityIdentifierPrefix.map { "\($0).\(index)" } ?? "")
             }
         }
         .background(Capsule().fill(palette.surface))

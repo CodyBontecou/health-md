@@ -330,7 +330,7 @@ struct HealthMdApp: App {
                 .environmentObject(healthDataStore)
                 .environmentObject(encryptedHealthContextManager)
                 .environmentObject(controlServer)
-                .frame(minWidth: 1_100, minHeight: 680)
+                .frame(minWidth: 1_100, minHeight: Self.mainWindowMinHeight)
                 .tint(Color.accent)
                 #if DEBUG
                 .preferredColorScheme(MacMarketingCapture.isActive ? MacMarketingCapture.colorScheme : nil)
@@ -1283,6 +1283,15 @@ struct HealthMdApp: App {
         guard let date = formatter.date(from: value),
               formatter.string(from: date) == value else { return nil }
         return date
+    }
+
+    /// The App Store capture sizes the whole window to 720 pt, title bar and toolbar included,
+    /// so its content must be allowed below the normal minimum.
+    private static var mainWindowMinHeight: CGFloat {
+        #if DEBUG
+        if MacMarketingCapture.isActive { return 600 }
+        #endif
+        return 680
     }
 
     private func setupControlServer() {

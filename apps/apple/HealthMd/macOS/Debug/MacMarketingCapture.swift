@@ -77,7 +77,7 @@ enum MacMarketingCapture {
         vaultManager.setMarketingCaptureVault()
 
         syncService.connectionState = .connected
-        syncService.connectedPeerName = "Demo iPhone"
+        syncService.connectedPeerName = peerName
         syncService.remoteCapabilities = SyncPeerCapabilities.current(platform: .iOS)
         syncService.lastError = nil
         syncService.isSyncing = false
@@ -120,6 +120,10 @@ enum MacMarketingCapture {
         // fixture after the real window is settled, then capture the stable UI.
         configure(syncService: syncService, vaultManager: vaultManager)
         try? await Task.sleep(for: .milliseconds(600))
+        // A late session callback can still reset the connection; set it once more just
+        // before capturing so the paired-iPhone rows read as on the boards.
+        configure(syncService: syncService, vaultManager: vaultManager)
+        try? await Task.sleep(for: .milliseconds(150))
 
         guard let windowImage = CGWindowListCreateImage(
             .null,
@@ -182,6 +186,7 @@ enum MacMarketingCapture {
     /// live server is not started for the capture.
     static let manualIPAddresses = ["192.168.1.24", "100.64.0.12"]
     static let manualIPPairingCode = "4821"
+    static let peerName = "Demo iPhone"
     static var manualIPPairingCodeExpiresAt: Date { today(hour: 23, minute: 40) }
 
     // MARK: - MacCLIG fixture values (AS_Mac_2)

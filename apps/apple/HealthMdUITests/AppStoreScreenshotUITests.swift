@@ -19,7 +19,13 @@ import XCTest
 /// `screenshots/macos/README.md` is the runbook (simulators, status bar, command sequence).
 final class AppStoreScreenshotUITests: XCTestCase {
     private var directory: String? { ProcessInfo.processInfo.environment["APPSTORE_SCREENSHOT_DIR"] }
-    private var isPad: Bool { UIDevice.current.userInterfaceIdiom == .pad }
+    /// The UI-test runner can report a phone idiom on iPad, so the simulator's model decides.
+    private var isPad: Bool {
+        if let model = ProcessInfo.processInfo.environment["SIMULATOR_MODEL_IDENTIFIER"] {
+            return model.hasPrefix("iPad")
+        }
+        return UIDevice.current.userInterfaceIdiom == .pad
+    }
     private var deviceName: String {
         ProcessInfo.processInfo.environment["APPSTORE_DEVICE"] ?? (isPad ? "ipad" : "iphone")
     }
@@ -27,13 +33,13 @@ final class AppStoreScreenshotUITests: XCTestCase {
     override func setUp() {
         super.setUp()
         guard directory != nil else { return }
-        XCUIDevice.shared.appearance = .dark
-        if isPad { XCUIDevice.shared.orientation = .landscapeLeft }
+        // Dark appearance is set on the simulator before the run (`simctl ui <id> appearance dark`);
+        // XCUIDevice.appearance does not apply on every runtime.
+        XCUIDevice.shared.orientation = isPad ? .landscapeLeft : .portrait
     }
 
     override func tearDown() {
         if directory != nil {
-            XCUIDevice.shared.appearance = .unspecified
             if isPad { XCUIDevice.shared.orientation = .portrait }
         }
         super.tearDown()
@@ -140,21 +146,9 @@ final class AppStoreScreenshotUITests: XCTestCase {
     /// Custom), without localized copy: in the sheet, above its confirm button, the range row is
     /// the lowest selected control, below the selected automation chip.
     private func selectExportNowRange(_ app: XCUIApplication, index: Int) {
-        let confirmTop = app.buttons["glass.exportNow.confirm"].frame.minY
-        let inSheet = NSPredicate(format: "NOT (identifier BEGINSWITH 'glass.tab.')")
-        let selected = app.buttons.matching(inSheet)
-            .matching(NSPredicate(format: "isSelected == true")).allElementsBoundByIndex
-            .filter { $0.frame.maxY < confirmTop }
-        guard let current = selected.max(by: { $0.frame.minY < $1.frame.minY }) else {
-            XCTFail("Missing selected Dates segment")
-            return
-        }
-        let row = app.buttons.matching(inSheet).allElementsBoundByIndex
-            .filter { abs($0.frame.midY - current.frame.midY) < 2 && $0.frame.height > 0 }
-            .sorted { $0.frame.minX < $1.frame.minX }
-        XCTAssertGreaterThan(row.count, index, "Missing Dates segment \(index)")
-        guard row.count > index else { return }
-        row[index].tap()
+        let segment = app.buttons["glass.exportNow.range.\(index)"]
+        XCTAssertTrue(segment.waitForExistence(timeout: 5), "Missing Dates segment \(index)")
+        segment.tap()
     }
 
     private func switchOn(_ app: XCUIApplication, _ identifier: String) {

@@ -76,10 +76,8 @@ struct MacCLIView: View {
             MacGlassDivider()
             MacGlassRow(
                 String(localized: "Paired iPhone"),
-                value: syncService.connectionState == .connected
-                    ? (syncService.connectedPeerName ?? String(localized: "iPhone"))
-                    : String(localized: "Not connected"),
-                tone: syncService.connectionState == .connected ? .muted : .warning
+                value: displayPairedIPhone ?? String(localized: "Not connected"),
+                tone: displayPairedIPhone != nil ? .muted : .warning
             )
         }
     }
@@ -198,6 +196,16 @@ struct MacCLIView: View {
 
     private var hasDeletableContext: Bool {
         displayContextDayCount > 0
+    }
+
+    /// The connected iPhone's name, or nil when none is connected. The capture fixture's
+    /// session can be reset by a late callback, so capture shows its fixed peer name.
+    private var displayPairedIPhone: String? {
+        #if DEBUG
+        if MacMarketingCapture.isActive { return MacMarketingCapture.peerName }
+        #endif
+        guard syncService.connectionState == .connected else { return nil }
+        return syncService.connectedPeerName ?? String(localized: "iPhone")
     }
 
     // MARK: Encrypted context display state (the capture fixture never opens the Keychain store)

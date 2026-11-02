@@ -29,6 +29,8 @@ extension ExportProfileCoordinator {
         base.metricSelection = .from(MetricSelectionState())
         // ExportNowG writes daily files ("14 files · 7 days"), not a range summary.
         base.summaryOnlyExport = false
+        // Only Daily updates the daily note (AutomationsGlass).
+        base.dailyNoteInjection.enabled = false
 
         // ComposeGlass / DuoInnerComposeG: Markdown + Bases, daily notes on.
         var dailySettings = base
@@ -38,8 +40,9 @@ extension ExportProfileCoordinator {
         _ = updateProfile(
             id: daily.id,
             name: "Daily",
-            target: daily.target,
-            folderVaultID: daily.folderVaultID,
+            target: .localIPhoneFolder,
+            // ComposeGlass / AutomationsGlass: "to Vault/Health".
+            folderVaultID: screenshotFolderID(["Vault", "Health"]) ?? daily.folderVaultID,
             apiEndpointID: daily.apiEndpointID,
             settings: dailySettings
         )
@@ -59,7 +62,7 @@ extension ExportProfileCoordinator {
             name: "Weekly CSV",
             settings: csv,
             target: .localIPhoneFolder,
-            folderVaultID: screenshotExportsFolderID() ?? daily.folderVaultID
+            folderVaultID: screenshotFolderID(["Files", "Exports"]) ?? daily.folderVaultID
         )
         scheduledEntryStore.upsert(ScheduledExportEntry(
             profileID: weekly.id,
@@ -106,22 +109,23 @@ extension ExportProfileCoordinator {
             preferredHour: 23,
             preferredMinute: 0
         ))
+
+        // Re-activate Daily so the app adopts its Vault/Health folder, as choosing it would.
+        _ = activate(profileID: daily.id)
     }
 
-    /// `<Documents>/Files/Exports`, created on demand and saved as a destination named by
-    /// that path. Nil when the folder cannot be created or bookmarked.
-    private func screenshotExportsFolderID() -> UUID? {
+    /// `<Documents>/<components>`, created on demand and saved as a destination named by
+    /// that path (e.g. "Vault/Health"). Nil when the folder cannot be created or bookmarked.
+    private func screenshotFolderID(_ components: [String]) -> UUID? {
         guard let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else {
             return nil
         }
-        let folder = documents
-            .appendingPathComponent("Files", isDirectory: true)
-            .appendingPathComponent("Exports", isDirectory: true)
+        let folder = components.reduce(documents) { $0.appendingPathComponent($1, isDirectory: true) }
         do {
             try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
             let bookmark = try folder.bookmarkData()
             return destinationStore.upsertVault(
-                name: "Files/Exports",
+                name: components.joined(separator: "/"),
                 standardizedPath: folder.standardizedFileURL.path,
                 bookmarkData: bookmark
             ).id

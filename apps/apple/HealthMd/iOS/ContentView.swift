@@ -517,6 +517,15 @@ struct ContentView: View {
                     advancedSettings.metricSelection.enabledMetrics = ["steps"]
                 }
                 advancedSettings.archiveExportFiles = TestMode.archiveExports
+                #if DEBUG
+                // App Store fixtures: the test vault above replaced the active automation's
+                // folder; adopt it again so Export now names Vault/Health as the boards do.
+                if ExportProfileCoordinator.wantsScreenshotFixtureProfiles,
+                   let coordinator = profileCoordinator,
+                   let activeID = coordinator.profileStore.activeProfileID {
+                    _ = coordinator.activate(profileID: activeID)
+                }
+                #endif
             }
 
             restoreInteractiveCorpusExportIfNeeded()

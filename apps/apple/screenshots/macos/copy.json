@@ -40,10 +40,10 @@
         },
         "de-DE": {
           "headline": [
-            "Deine Gesundheitsdateien,",
+            "Deine Daten,",
             "{auf deinem Mac.}"
           ],
-          "caption": "Tägliche Dateien zu Schlaf, Herz und Aktivität landen im Ordner deiner Wahl."
+          "caption": "Schlaf, Herz und Aktivität – täglich im Ordner deiner Wahl."
         },
         "es-ES": {
           "headline": [
@@ -54,10 +54,10 @@
         },
         "fr-FR": {
           "headline": [
-            "Vos fichiers de santé,",
+            "Vos fichiers santé,",
             "{sur votre Mac.}"
           ],
-          "caption": "Les fichiers quotidiens de sommeil, cœur et activité arrivent dans le dossier de votre choix."
+          "caption": "Sommeil, cœur et activité, chaque jour dans le dossier choisi."
         },
         "it": {
           "headline": [
@@ -68,10 +68,10 @@
         },
         "ja": {
           "headline": [
-            "ヘルスケアファイルを、",
+            "健康データを、",
             "{あなたのMacに。}"
           ],
-          "caption": "睡眠、心拍、アクティビティの日次ファイルが、選んだフォルダに届きます。"
+          "caption": "睡眠、心拍、アクティビティの記録が、毎日選んだフォルダに届きます。"
         },
         "ko": {
           "headline": [
@@ -82,17 +82,17 @@
         },
         "nl-NL": {
           "headline": [
-            "Je gezondheidsbestanden,",
+            "Je eigen data,",
             "{op je Mac.}"
           ],
-          "caption": "Dagelijkse bestanden met slaap, hart en activiteit komen in een map naar keuze."
+          "caption": "Slaap, hart en activiteit, elke dag in een map naar keuze."
         },
         "pt-BR": {
           "headline": [
-            "Seus arquivos de saúde,",
+            "Seus dados de saúde,",
             "{no seu Mac.}"
           ],
-          "caption": "Arquivos diários de sono, coração e atividade chegam à pasta que você escolher."
+          "caption": "Sono, coração e atividade, todo dia na pasta que você escolher."
         },
         "zh-Hans": {
           "headline": [
@@ -122,7 +122,7 @@
         "de-DE": {
           "headline": [
             "Stell Fragen an",
-            "{deine eigenen Gesundheitsdaten.}"
+            "{deine eigenen Daten.}"
           ],
           "caption": "CLI und MCP auf deinem Mac, mit Exporten, die du auf dem iPhone freigibst."
         },
@@ -136,7 +136,7 @@
         "fr-FR": {
           "headline": [
             "Interrogez",
-            "{vos propres données de santé.}"
+            "{vos propres données.}"
           ],
           "caption": "CLI et MCP sur votre Mac, avec des exports que vous approuvez sur l’iPhone."
         },
@@ -150,7 +150,7 @@
         "ja": {
           "headline": [
             "問いかけよう、",
-            "{自分のヘルスケアデータに。}"
+            "{自分のデータに。}"
           ],
           "caption": "Mac上のCLIとMCPで。書き出しはiPhoneで承認します。"
         },
@@ -164,7 +164,7 @@
         "nl-NL": {
           "headline": [
             "Stel vragen aan",
-            "{je eigen gezondheidsgegevens.}"
+            "{je eigen data.}"
           ],
           "caption": "CLI en MCP op je Mac, met exports die je op je iPhone goedkeurt."
         },

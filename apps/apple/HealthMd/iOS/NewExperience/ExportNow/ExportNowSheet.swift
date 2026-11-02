@@ -162,7 +162,8 @@ struct ExportNowSheet: View {
                     .init(value: .last30, title: String(localized: "30 days")),
                     .init(value: .custom, title: ExportDateRangePreset.custom.title)
                 ],
-                selection: Binding(get: { range }, set: select)
+                selection: Binding(get: { range }, set: select),
+                accessibilityIdentifierPrefix: "glass.exportNow.range"
             )
             if range == .custom {
                 VStack(spacing: 0) {
