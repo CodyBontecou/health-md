@@ -334,6 +334,76 @@
       ]
     },
     {
+      "id": "export.per-group-detail-selection",
+      "name": "Per-category export detail",
+      "classification": "shared",
+      "summary": "Choose a default compatibility detail level and override it per category (sleep, heart, vitals, and on Android also activity, nutrition, mobility, reproductive health, mindfulness, and workouts) without changing metric selection, daily summaries, file organization, or raw/canonical archives. Missing overrides reproduce the historical global switch exactly; Apple offers only categories its compatibility projection gates.",
+      "profiles": [
+        "apple-v8",
+        "android-frozen-v4",
+        "android-analytical-v5"
+      ],
+      "platforms": {
+        "apple": {
+          "state": "available"
+        },
+        "android": {
+          "state": "available"
+        }
+      },
+      "evidence": [
+        "docs/features/per-group-export-detail.md",
+        "apps/android/app/src/main/java/com/healthmd/domain/model/ExportDetailPolicy.kt",
+        "apps/android/app/src/test/java/com/healthmd/export/ExportDetailSelectionTest.kt",
+        "apps/apple/HealthMd/Shared/Models/ExportSettingsSnapshot.swift",
+        "apps/apple/HealthMdTests/Models/ExportDetailOverridesTests.swift"
+      ]
+    },
+    {
+      "id": "export.sleep-session-detail",
+      "name": "Individual sleep sessions",
+      "classification": "android_only",
+      "summary": "Export each source sleep session (for example a nap and an overnight sleep) separately from stage intervals, including a Markdown session table with full date, time, and source offset.",
+      "profiles": [
+        "android-frozen-v4",
+        "android-analytical-v5"
+      ],
+      "platforms": {
+        "apple": {
+          "state": "unavailable",
+          "reason": "HealthKit exposes sleep as category-value intervals without a source session object; Health.md does not derive or label sessions it cannot read. Sleep stage intervals remain available as Detailed sleep."
+        },
+        "android": {
+          "state": "available"
+        }
+      },
+      "evidence": [
+        "docs/features/per-group-export-detail.md",
+        "apps/android/app/src/main/java/com/healthmd/data/health/SleepJournalSummary.kt",
+        "apps/android/app/src/test/java/com/healthmd/export/ExportDetailSelectionTest.kt"
+      ]
+    },
+    {
+      "id": "export.compatibility-detail-expansion",
+      "name": "Expanded native compatibility detail",
+      "classification": "planned",
+      "summary": "Compatibility projections for natively exposed records that are currently summarized only: Apple activity, nutrition, mobility, mindfulness, reproductive, temperature and spirometry samples plus a workouts override; Android calorie, distance, floors, elevation, hydration, and body records. Each projection must keep source timestamps, intervals, units, and identity without inventing points.",
+      "profiles": [],
+      "platforms": {
+        "apple": {
+          "state": "planned",
+          "target": "Apple per-category detail follow-up: add start-owned compatibility sample arrays for the listed HealthKit types behind their category override, with a reviewed HealthMdExportSchema version bump and signature fixture."
+        },
+        "android": {
+          "state": "planned",
+          "target": "Android per-category detail follow-up: add interval projections for the listed Health Connect records in a reviewed analytical profile successor, never in frozen v4/v5 bytes."
+        }
+      },
+      "evidence": [
+        "docs/features/per-group-export-detail.md"
+      ]
+    },
+    {
       "id": "export.completed-workouts",
       "name": "Completed workouts",
       "classification": "shared",

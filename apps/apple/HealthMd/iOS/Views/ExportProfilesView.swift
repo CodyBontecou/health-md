@@ -1438,7 +1438,7 @@ struct ExportProfileEditorSheet: View {
                     title: String(localized: "Data Detail", comment: "Profile editor data-detail picker"),
                     selection: Binding(
                         get: { AppleExportDetailPreset(policy: draft.detailPolicy) },
-                        set: { draft.detailPolicy = $0.policy }
+                        set: { draft.detailPolicy = draft.detailPolicy.replacingBase(with: $0.policy) }
                     ),
                     options: detailPresetOptions,
                     label: { $0.localizedTitle },
@@ -1450,6 +1450,19 @@ struct ExportProfileEditorSheet: View {
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.horizontal, GlassMetrics.panelPadding)
                     .padding(.bottom, 12)
+                ForEach(ExportDetailGroup.appleSupported, id: \.self) { group in
+                    rowDivider
+                    EditorMenuRow(
+                        title: group.localizedTitle,
+                        selection: Binding(
+                            get: { draft.detailPolicy.compatibilityDetailOverrides[group] },
+                            set: { draft.detailPolicy = draft.detailPolicy.settingCompatibilityDetail($0, for: group) }
+                        ),
+                        options: [nil] + group.appleSupportedChoices.map(Optional.some),
+                        label: { $0?.localizedTitle ?? String(localized: "Default", comment: "Export detail follows the Data Detail preset") },
+                        palette: palette
+                    )
+                }
                 rowDivider
                 GlassToggleRow(
                     title: String(localized: "Summary only", comment: "Profile editor summary-only toggle"),
@@ -1461,7 +1474,7 @@ struct ExportProfileEditorSheet: View {
 
     private var detailPresetOptions: [AppleExportDetailPreset] {
         var options: [AppleExportDetailPreset] = [.summary, .detailedTimeSeries, .losslessHealthRecords]
-        if draft.detailPolicy == .archiveOnly {
+        if draft.detailPolicy.basePolicy == .archiveOnly {
             options.append(.archiveOnly)
         }
         return options

@@ -272,11 +272,13 @@ class HealthConnectManager(
         dates: List<LocalDate>,
         includeGranularData: Boolean,
         zoneId: ZoneId = ZoneId.systemDefault(),
+        detail: ExportDetailSelection = ExportDetailSelection.uniform(includeGranularData),
     ) {
         val run = currentCoroutineContext()[InteractiveRouteConsent] ?: return
         try {
             val sortedDates = dates.distinct().sorted()
-            val chunkDays = if (includeGranularData) GRANULAR_READ_CHUNK_DAYS else RANGE_READ_CHUNK_DAYS
+            // Must mirror fetchHealthDataRange chunking so consent and capture windows agree.
+            val chunkDays = if (detail.any) GRANULAR_READ_CHUNK_DAYS else RANGE_READ_CHUNK_DAYS
             val boundedWindows = mutableListOf<MutableList<LocalDate>>()
             for (date in sortedDates) {
                 val current = boundedWindows.lastOrNull()
@@ -331,13 +333,15 @@ class HealthConnectManager(
         zoneId: ZoneId = ZoneId.systemDefault(),
         pinnedCalendarDays: Boolean = false,
         sleepDayAttribution: SleepDayAttribution = SleepDayAttribution.DEFAULT,
+        detail: ExportDetailSelection = ExportDetailSelection.uniform(includeGranularData),
     ): List<HealthData> {
         if (dates.isEmpty()) return emptyList()
 
         val requestedDates = dates.toSet()
         val dataByDate = dates.associateWith { HealthData(it) }.toMutableMap()
         val sortedDates = requestedDates.sorted()
-        val chunkDays = if (includeGranularData) GRANULAR_READ_CHUNK_DAYS else RANGE_READ_CHUNK_DAYS
+        // Per-group detail: a summarized group never pays for another group's sample reads.
+        val chunkDays = if (detail.any) GRANULAR_READ_CHUNK_DAYS else RANGE_READ_CHUNK_DAYS
 
         // Interactive compatibility exports complete their global consent-only pass before this
         // canonical capture. Newest-first traversal remains useful for direct range callers.
@@ -369,25 +373,25 @@ class HealthConnectManager(
             applyMobilityAggregates(dataByDate, chunkDates, localRange, selection)
 
             if (selection.sleep) {
-                applySleepRange(dataByDate, chunkDates, zoneId, includeGranularData, sleepDayAttribution = sleepDayAttribution)
+                applySleepRange(dataByDate, chunkDates, zoneId, detail.sleepStages, sleepDayAttribution = sleepDayAttribution)
             }
             if (selection.activity || selection.workouts || selection.heart || selection.mobility) {
-                applyExerciseRange(dataByDate, chunkDates, instantRange, selection, includeGranularData, zoneId, sleepDayAttribution)
+                applyExerciseRange(dataByDate, chunkDates, instantRange, selection, detail.workouts, zoneId, sleepDayAttribution)
             }
-            if (selection.activity && includeGranularData) {
+            if (selection.activity && detail.activity) {
                 applyStepSamplesRange(dataByDate, chunkDates, instantRange, zoneId)
                 applyActivityIntensityRange(dataByDate, chunkDates, instantRange, zoneId)
             }
             if (selection.heart) {
-                applyHeartRangeReads(dataByDate, chunkDates, instantRange, includeGranularData, zoneId)
+                applyHeartRangeReads(dataByDate, chunkDates, instantRange, detail.heart, zoneId)
             }
             if (selection.vitals) {
-                applyVitalsRangeReads(dataByDate, chunkDates, instantRange, includeGranularData, zoneId)
+                applyVitalsRangeReads(dataByDate, chunkDates, instantRange, detail.vitals, zoneId)
             }
             if (selection.body) {
                 applyBodyRangeReads(dataByDate, chunkDates, instantRange, zoneId)
             }
-            if (selection.nutrition && includeGranularData) {
+            if (selection.nutrition && detail.nutrition) {
                 applyNutritionMealRange(dataByDate, chunkDates, instantRange, zoneId)
             }
             if (selection.reproductiveHealth) {

@@ -12,6 +12,7 @@ import com.healthmd.domain.model.CustomFrontmatterField
 import com.healthmd.domain.model.DailyNoteInjectionSettings
 import com.healthmd.domain.model.DateFormatPreference
 import com.healthmd.domain.model.DataTypeSelection
+import com.healthmd.domain.model.ExportDetailOverrides
 import com.healthmd.domain.model.ExportFormat
 import com.healthmd.domain.model.ExportSettings
 import com.healthmd.domain.model.ExportTarget
@@ -87,6 +88,12 @@ data class AndroidExportSettingsSnapshot(
     val sleepCaptureContext: AndroidCaptureContext? = null,
     /** Private snapshot-v3 account authority. Absent historical snapshots never acquire it. */
     val providerCaptureAuthority: HealthProviderCaptureAuthority? = null,
+    /**
+     * Per-group detail overrides of [includeGranularData] (wire IDs). Null whenever there is no
+     * override so every pre-existing snapshot keeps its exact canonical bytes. Older builds reject
+     * the unknown key and fail closed instead of silently dropping the requested detail.
+     */
+    val detailOverrides: Map<String, String>? = null,
 ) {
     /**
      * Applies only frozen output choices. Current folder grants, endpoint URL/credentials, schedule
@@ -132,6 +139,7 @@ data class AndroidExportSettingsSnapshot(
             dailyNoteInjection = frozen.dailyNoteInjection,
             individualTracking = frozen.individualTracking,
             includeGranularData = frozen.includeGranularData,
+            detailOverrides = frozen.detailOverrides.orEmpty(),
             exportTarget = frozen.exportTarget,
             scheduledExportTarget = frozen.scheduledExportTarget,
             subfolder = frozen.subfolder,
@@ -188,6 +196,8 @@ data class AndroidExportSettingsSnapshot(
                 dailyNoteInjection = settings.dailyNoteInjection.immutableDeepCopy(),
                 individualTracking = settings.individualTracking.immutableDeepCopy(),
                 includeGranularData = settings.includeGranularData,
+                detailOverrides = ExportDetailOverrides.normalized(settings.typedDetailOverrides())
+                    .takeIf { it.isNotEmpty() },
                 exportTarget = settings.exportTarget,
                 scheduledExportTarget = settings.scheduledExportTarget,
                 apiEndpointIdentitySha256 = if (
@@ -460,6 +470,10 @@ object AndroidExportSettingsSnapshotCodec {
             }
             else -> return false
         }
+        snapshot.detailOverrides?.let { raw ->
+            val typed = ExportDetailOverrides.validated(raw) ?: return false
+            if (raw.isEmpty() || ExportDetailOverrides.normalized(typed) != raw) return false
+        }
         if (snapshot.ianaTimeZone.length > MAX_TIME_ZONE_CHARACTERS) return false
         if (ZoneId.of(snapshot.ianaTimeZone).id != snapshot.ianaTimeZone) return false
         if (snapshot.rawSnapshot.pageSize !in RawSnapshotSettings.MIN_PAGE_SIZE..RawSnapshotSettings.MAX_PAGE_SIZE) {
@@ -534,6 +548,7 @@ private fun AndroidExportSettingsSnapshot.immutableDeepCopy(): AndroidExportSett
     metricSelection = metricSelection.immutableDeepCopy(),
     dailyNoteInjection = dailyNoteInjection.immutableDeepCopy(),
     individualTracking = individualTracking.immutableDeepCopy(),
+    detailOverrides = detailOverrides?.let { Collections.unmodifiableMap(LinkedHashMap(it.toSortedMap())) },
 )
 
 private fun FormatCustomization.immutableDeepCopy(): FormatCustomization = copy(

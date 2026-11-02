@@ -152,7 +152,17 @@ data class ExportSettings(
     val metricSelection: MetricSelectionState = MetricSelectionState(),
     val dailyNoteInjection: DailyNoteInjectionSettings = DailyNoteInjectionSettings(),
     val individualTracking: IndividualTrackingSettings = IndividualTrackingSettings(),
+    /**
+     * Default detail level for every [ExportDetailGroup]. Historical global switch; its persisted
+     * meaning is unchanged when [detailOverrides] is empty.
+     */
     val includeGranularData: Boolean = false,
+    /**
+     * Per-group detail overrides keyed by [ExportDetailGroup.wireId] with
+     * [ExportDetailChoice.wireId] values. Missing on all pre-override settings, which therefore
+     * keep their exact previous detail.
+     */
+    val detailOverrides: Map<String, String> = emptyMap(),
     /** Destination for exports started from the Export screen. */
     val exportTarget: ExportTarget = ExportTarget.DEVICE_FOLDER,
     /** Destination captured when WorkManager creates a scheduled export run. */
@@ -205,8 +215,38 @@ data class ExportSettings(
     fun effectiveDataTypeSelection(): DataTypeSelection =
         metricSelection.toDataTypeSelection().intersect(dataTypes)
 
-    fun shouldFetchGranularData(): Boolean =
-        includeGranularData || individualTracking.requiresGranularData
+    /** Typed overrides; unknown entries from a newer build are ignored rather than guessed. */
+    fun typedDetailOverrides(): Map<ExportDetailGroup, ExportDetailChoice> =
+        ExportDetailOverrides.validated(detailOverrides)
+            ?: detailOverrides.mapNotNull { (key, value) ->
+                val group = ExportDetailGroup.fromWireId(key) ?: return@mapNotNull null
+                val choice = ExportDetailChoice.fromWireId(value)?.takeIf { it in group.supportedChoices }
+                    ?: return@mapNotNull null
+                group to choice
+            }.toMap()
+
+    /** Detail sections the export writes. */
+    fun exportDetailSelection(): ExportDetailSelection =
+        ExportDetailSelection.resolve(includeGranularData, typedDetailOverrides())
+
+    /**
+     * Detail sections capture reads: exported detail plus source detail that individual-entry
+     * tracking needs internally. Tracking-only detail is never written to compatibility files.
+     */
+    fun captureDetailSelection(): ExportDetailSelection =
+        exportDetailSelection() union individualTracking.requiredDetailSelection()
+
+    fun shouldFetchGranularData(): Boolean = captureDetailSelection().any
+
+    /**
+     * Sets one group's explicit choice; null returns it to the default. Explicit choices are kept
+     * even when they equal the current default, so changing the default never moves them.
+     */
+    fun withDetailChoice(group: ExportDetailGroup, choice: ExportDetailChoice?): ExportSettings {
+        val updated = typedDetailOverrides().toMutableMap()
+        if (choice == null || choice !in group.supportedChoices) updated.remove(group) else updated[group] = choice
+        return copy(detailOverrides = ExportDetailOverrides.normalized(updated))
+    }
 
     fun formatFilename(date: LocalDate): String =
         applyDatePlaceholders(filenameFormat, date)

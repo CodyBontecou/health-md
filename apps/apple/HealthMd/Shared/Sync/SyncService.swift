@@ -246,6 +246,10 @@ final class SyncService: NSObject, ObservableObject {
                remoteCapabilities?.supportsSplitExportDetailPolicy != true {
                 return "Update Health.md on Mac to use this data detail setting"
             }
+            if detailPolicy.hasDetailOverrides,
+               remoteCapabilities?.supportsPerGroupExportDetail != true {
+                return "Update Health.md on Mac to use this data detail setting"
+            }
             if detailPolicy.includesCanonicalArchive {
                 return "Update Health.md on Mac to export Lossless Health Records"
             }

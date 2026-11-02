@@ -260,6 +260,13 @@
     </plurals>
     <string name="granular_data_title">詳細な時系列を含める</string>
     <string name="granular_data_description">心拍数や睡眠段階などのタイムスタンプ付きサンプルを互換性エクスポートに追加します。 API の完全なコピーの場合は、Raw API Snapshot を使用します。</string>
+    <string name="detail_overrides_title">カテゴリ別の詳細</string>
+    <string name="detail_overrides_description">カテゴリごとに既定値を上書きします。「概要」は日ごとの合計のみを保持し、日次サマリーは変わりません。</string>
+    <string name="detail_choice_default">既定</string>
+    <string name="detail_choice_summary">概要</string>
+    <string name="detail_choice_sessions">セッション</string>
+    <string name="detail_choice_detailed">詳細</string>
+    <string name="detail_group_sleep_hint">「セッション」は各睡眠セッションを完全な日付と時刻で一覧表示します。「詳細」は睡眠ステージを追加します。</string>
     <string name="sleep_attribution_title">睡眠日の帰属</string>
     <string name="sleep_attribution_night_begins">就寝時刻で</string>
     <string name="sleep_attribution_morning_ends">起床時刻で</string>

@@ -555,6 +555,13 @@
     <string name="feedback_no_app_available">Нет приложения, позволяющего открыть эту ссылку.</string>
     <string name="granular_data_title">Включить подробные временные ряды</string>
     <string name="granular_data_description">Добавляйте в экспорт совместимости образцы с отметками времени, например частоту сердечных сокращений и стадии сна. Для полной копии API используйте необработанный снимок API.</string>
+    <string name="detail_overrides_title">Детализация по категориям</string>
+    <string name="detail_overrides_description">Переопределите значение по умолчанию для отдельных категорий. «Сводка» сохраняет только дневные итоги; дневные сводки не меняются.</string>
+    <string name="detail_choice_default">По умолчанию</string>
+    <string name="detail_choice_summary">Сводка</string>
+    <string name="detail_choice_sessions">Сеансы</string>
+    <string name="detail_choice_detailed">Подробно</string>
+    <string name="detail_group_sleep_hint">«Сеансы» перечисляет каждый сеанс сна с полной датой и временем. «Подробно» добавляет фазы сна.</string>
     <string name="sleep_attribution_title">Принадлежность сна дню</string>
     <string name="sleep_attribution_night_begins">Ночь начала</string>
     <string name="sleep_attribution_morning_ends">Утро окончания</string>

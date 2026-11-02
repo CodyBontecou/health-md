@@ -78,6 +78,7 @@ private class HealthRepositoryAgentDataGatewayCaptureSource(
                 dates = dates,
                 dataTypes = effectiveSelection,
                 includeGranularData = settings.shouldFetchGranularData(),
+                detail = settings.captureDetailSelection(),
                 zoneId = requireNotNull(settings.executionSleepCaptureContext).zoneId,
             )
         }
@@ -90,6 +91,7 @@ private class HealthRepositoryAgentDataGatewayCaptureSource(
             dates = listOf(date),
             dataTypes = effectiveSelection,
             includeGranularData = settings.shouldFetchGranularData(),
+            detail = settings.captureDetailSelection(),
             zoneId = context.zoneId,
             sleepDayAttributionOverride = context.explicitSleepDayAttributionOverride,
         ).firstOrNull() ?: HealthData(date)
@@ -495,6 +497,7 @@ class AgentDataGatewayExportRunner private constructor(
             data = data,
             customization = settings.formatCustomization,
             includeGranularData = settings.includeGranularData,
+            detail = settings.exportDetailSelection(),
         ).encodeToByteArray()
         val relativePath = settings.aggregateRelativePath(ownerDate, ExportFormat.JSON)
         return AgentDataPreparedArtifact(

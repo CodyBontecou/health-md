@@ -68,6 +68,7 @@
 |---|---|---|---|---|
 | Individual entry tracking | ✅ `individual-entry-tracking.md` | ✅ `individual-entry-tracking.md` | shared | Workouts / sleep stages / vitals timestamped files. |
 | Workout details | ✅ `workout-details.md` | ✅ `workout-details.md` | shared | Android correlates by time window; page documents HC limitations honestly. |
+| Per-category export detail | ✅ `time-series-data.md` | ✅ `csv-export.md` | shared | Default level plus per-category overrides ([per-group-export-detail.md](per-group-export-detail.md)); Android-only sleep sessions (`export.sleep-session-detail`). |
 | Lossless source archive | ✅ `time-series-data.md` (`healthmd.healthkit_records` v1) | — | apple_only | Health Connect records are not HealthKit objects; UUID/relationship semantics cannot exist (`apple.lossless-healthkit-archive`). |
 | Raw API snapshots | — | ✅ `raw-snapshots.md` (+ contract docs) | android_only | Separate archival product: immutable provider-native JSON/NDJSON + manifests/checksums; Fitbit/Oura/WHOOP/Withings provider bytes. |
 | Raw changes backend | — | 🔧 `raw-changes-v1.md` | android_only | Change tokens + deletion tombstones. |

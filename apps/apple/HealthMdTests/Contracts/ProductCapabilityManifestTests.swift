@@ -32,6 +32,7 @@ final class ProductCapabilityManifestTests: XCTestCase {
             Self.ids(with: .planned, in: states),
             [
                 "core.shared-rust-profile-engine",
+                "export.compatibility-detail-expansion",
                 "export.coverage-calendar",
                 "setup.share-portable-configuration",
             ]
@@ -111,6 +112,7 @@ final class ProductCapabilityManifestTests: XCTestCase {
         "export.nutrient-totals",
         "export.mindfulness-sessions",
         "export.selected-time-series-detail",
+        "export.per-group-detail-selection",
         "export.completed-workouts",
         "export.mobility-and-performance",
         "export.profiles",
@@ -152,13 +154,14 @@ final class ProductCapabilityManifestTests: XCTestCase {
         "android.nutrition-meals",
         "android.contextual-source-fields",
         "android.skin-temperature",
+        "export.sleep-session-detail",
     ]
 
     private static var allCapabilities: Set<String> {
         sharedCapabilities
             .union(appleCapabilities)
             .union(androidCapabilities)
-            .union(["source.private-platform-database", "apple.ads-purchase-attribution", "core.shared-rust-profile-engine", "export.coverage-calendar", "setup.share-portable-configuration"])
+            .union(["source.private-platform-database", "apple.ads-purchase-attribution", "core.shared-rust-profile-engine", "export.compatibility-detail-expansion", "export.coverage-calendar", "setup.share-portable-configuration"])
     }
 
     private enum ManifestError: Error {

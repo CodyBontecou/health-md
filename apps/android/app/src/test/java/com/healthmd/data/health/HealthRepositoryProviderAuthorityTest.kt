@@ -26,7 +26,7 @@ class HealthRepositoryProviderAuthorityTest {
         coEvery { settings.getSelectedHealthProviderId() } returns "whoop"
         coEvery { sdk.isAvailable() } returns true
         coEvery { sdk.hasAllPermissions() } returns true
-        coEvery { sdk.fetchHealthDataRange(any(), any(), any(), any(), any(), any()) } answers {
+        coEvery { sdk.fetchHealthDataRange(any(), any(), any(), any(), any(), any(), any()) } answers {
             firstArg<List<LocalDate>>().map { HealthData(it, activity = ActivityData(steps = 99)) }
         }
     }
@@ -51,7 +51,7 @@ class HealthRepositoryProviderAuthorityTest {
             connectionIds = mapOf("whoop" to null))
         assertThat(runCatching { repository.restoreProviderAuthority(authority) }.exceptionOrNull())
             .isInstanceOf(IllegalArgumentException::class.java)
-        coVerify(exactly = 0) { sdk.fetchHealthDataRange(any(), any(), any(), any(), any(), any()) }
+        coVerify(exactly = 0) { sdk.fetchHealthDataRange(any(), any(), any(), any(), any(), any(), any()) }
     }
 
     @Test

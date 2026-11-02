@@ -763,6 +763,11 @@ struct ExportTabView: View {
 
                 rowDivider()
 
+                ExportDetailOverridesSection(policy: $advancedSettings.detailPolicy)
+                    .configurationChangesProtected()
+
+                rowDivider()
+
                 sleepDayAttributionInlineRow
                     .configurationChangesProtected()
             }
@@ -849,7 +854,7 @@ struct ExportTabView: View {
             "Data Detail",
             selection: Binding(
                 get: { AppleExportDetailPreset(policy: advancedSettings.detailPolicy) },
-                set: { advancedSettings.detailPolicy = $0.policy }
+                set: { advancedSettings.detailPolicy = advancedSettings.detailPolicy.replacingBase(with: $0.policy) }
             )
         ) {
             ForEach(presets) { preset in

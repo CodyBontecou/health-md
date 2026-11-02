@@ -268,6 +268,13 @@
     </plurals>
     <string name="granular_data_title">Егжей-тегжейлі уақыт қатарларын қосу</string>
     <string name="granular_data_description">Үйлесімділік экспорттарына жүрек соғу жиілігі мен ұйқы кезеңдері сияқты уақыт белгісі бар үлгілерді қосады. API деректерінің толық көшірмесі үшін «Өңделмеген API снапшоты» пішімін пайдаланыңыз.</string>
+    <string name="detail_overrides_title">Санат бойынша егжей-тегжей</string>
+    <string name="detail_overrides_description">Жеке санаттар үшін әдепкі мәнді қайта анықтаңыз. «Қорытынды» тек күндік жиынтықтарды сақтайды; күндік қорытындылар өзгермейді.</string>
+    <string name="detail_choice_default">Әдепкі</string>
+    <string name="detail_choice_summary">Қорытынды</string>
+    <string name="detail_choice_sessions">Сеанстар</string>
+    <string name="detail_choice_detailed">Толық</string>
+    <string name="detail_group_sleep_hint">«Сеанстар» әр ұйқы сеансын толық күні мен уақытымен көрсетеді. «Толық» ұйқы кезеңдерін қосады.</string>
     <string name="sleep_attribution_title">Ұйықтау күнін белгілеу</string>
     <string name="sleep_attribution_night_begins">Түн басталады</string>
     <string name="sleep_attribution_morning_ends">Таң аяқталады</string>

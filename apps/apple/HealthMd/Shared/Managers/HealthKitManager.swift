@@ -1053,7 +1053,7 @@ final class HealthKitManager: ObservableObject {
                 for: date,
                 attribution: Self.effectiveSleepDayAttribution,
                 timeZone: Self.effectiveFetchTimeZone,
-                includeDetailedTimeSeries: detailPolicy.includesSelectedTimeSeries
+                includeDetailedTimeSeries: detailPolicy.includesSelectedTimeSeries(for: .sleep)
             )
         }
         async let activityTask = fetchIfEnabled(fetchScope.activity, fallback: ActivityData()) {
@@ -1062,7 +1062,7 @@ final class HealthKitManager: ObservableObject {
         async let heartTask = fetchIfEnabled(fetchScope.heart, fallback: HeartData()) {
             try await fetchHeartData(
                 for: date,
-                includeDetailedTimeSeries: detailPolicy.includesSelectedTimeSeries,
+                includeDetailedTimeSeries: detailPolicy.includesSelectedTimeSeries(for: .heart),
                 fetchScope: fetchScope
             )
         }
@@ -1070,7 +1070,7 @@ final class HealthKitManager: ObservableObject {
         async let vitalsTask = fetchIfEnabled(shouldFetchVitals, fallback: VitalsFetchResult()) {
             try await fetchVitalsData(
                 for: date,
-                includeDetailedTimeSeries: detailPolicy.includesSelectedTimeSeries,
+                includeDetailedTimeSeries: detailPolicy.includesSelectedTimeSeries(for: .vitals),
                 fetchScope: fetchScope
             )
         }

@@ -132,16 +132,18 @@ class JsonExporter {
         customization: FormatCustomization = FormatCustomization(),
         includeGranularData: Boolean = false,
         captureContext: AndroidCaptureContext? = null,
-    ): String = render(data, customization, includeGranularData, captureContext, includeSleepRecords = true, includeWorkoutRecords = true)
+        detail: ExportDetailSelection = ExportDetailSelection.uniform(includeGranularData),
+    ): String = render(data, customization, detail, captureContext, includeSleepRecords = true, includeWorkoutRecords = true)
 
     /** Aggregate projection retains original data for source authority and summary validation. */
     internal fun exportForNativeComposition(data: HealthData, customization: FormatCustomization,
         includeGranularData: Boolean, captureContext: AndroidCaptureContext,
-        composeSleepRecords: Boolean, composeWorkoutRecords: Boolean): String =
-        render(data, customization, includeGranularData, captureContext,
+        composeSleepRecords: Boolean, composeWorkoutRecords: Boolean,
+        detail: ExportDetailSelection = ExportDetailSelection.uniform(includeGranularData)): String =
+        render(data, customization, detail, captureContext,
             includeSleepRecords = !composeSleepRecords, includeWorkoutRecords = !composeWorkoutRecords)
 
-    private fun render(data: HealthData, customization: FormatCustomization, includeGranularData: Boolean,
+    private fun render(data: HealthData, customization: FormatCustomization, detail: ExportDetailSelection,
         captureContext: AndroidCaptureContext?, includeSleepRecords: Boolean, includeWorkoutRecords: Boolean): String {
         val authority = captureContext?.let(::WakeDateJsonDocument)
         val effectiveCustomization = if (authority == null) customization else customization.copy(
@@ -149,10 +151,10 @@ class JsonExporter {
             dateFormat = DateFormatPreference.ISO8601,
         )
         if (authority == null) return Json { prettyPrint = true }.encodeToString(
-            JsonElement.serializer(), nativePayload(data, effectiveCustomization, includeGranularData, false),
+            JsonElement.serializer(), nativePayload(data, effectiveCustomization, detail, false),
         )
         return try {
-            val payload = nativePayload(data, effectiveCustomization, includeGranularData, true, includeSleepRecords, includeWorkoutRecords)
+            val payload = nativePayload(data, effectiveCustomization, detail, true, includeSleepRecords, includeWorkoutRecords)
             Json { prettyPrint = true }.encodeToString(JsonElement.serializer(),
                 authority.finish(payload, data, effectiveCustomization.includeAndroidNativeFields))
         } catch (error: RuntimeException) {
@@ -166,7 +168,7 @@ class JsonExporter {
     private fun nativePayload(
         data: HealthData,
         customization: FormatCustomization,
-        includeGranularData: Boolean,
+        detail: ExportDetailSelection,
         nativeSuccessor: Boolean,
         includeSleepRecords: Boolean = true,
         includeWorkoutRecords: Boolean = true,
@@ -313,7 +315,7 @@ class JsonExporter {
                     }
 
                     // T0-01/02/03/04: renamed array + ISO timestamps + durationSeconds
-                    if (includeGranularData && includeSleepRecords && s.stages.isNotEmpty()) {
+                    if (detail.sleepStages && includeSleepRecords && s.stages.isNotEmpty()) {
                         putJsonArray("sleepStages") {
                             for (stage in s.stages) {
                                 addJsonObject {
@@ -330,7 +332,7 @@ class JsonExporter {
                             }
                         }
                     }
-                    if (includeGranularData && includeSleepRecords && s.sessions.isNotEmpty()) {
+                    if (detail.sleepSessions && includeSleepRecords && s.sessions.isNotEmpty()) {
                         putJsonArray("sleepSessions") {
                             for (session in s.sessions) {
                                 addJsonObject {
@@ -356,8 +358,8 @@ class JsonExporter {
                     swimmingStrokes != null || wheelchairDistance != null ||
                     downhillSnowSportsDistance != null
             } || data.mobility.vo2Max != null ||
-                (includeGranularData && data.mobility.vo2MaxMeasurementMethod != null) ||
-                (includeGranularData && (data.activity.stepSamples.isNotEmpty() || data.activity.activityIntensityEntries.isNotEmpty()))
+                (detail.mobility && data.mobility.vo2MaxMeasurementMethod != null) ||
+                (detail.activity && (data.activity.stepSamples.isNotEmpty() || data.activity.activityIntensityEntries.isNotEmpty()))
             if (activityHasIosKeys || (includeAndroidNativeFields && data.activity.hasData)) {
                 putJsonObject("activity") {
                     val a = data.activity
@@ -399,11 +401,11 @@ class JsonExporter {
                     a.vigorousActivityMinutes?.let { put("vigorousActivityMinutes", it) }
                     // T0-10: vo2Max under activity (iOS canonical placement)
                     data.mobility.vo2Max?.let { put("vo2Max", it) }
-                    if (includeGranularData) {
+                    if (detail.mobility) {
                         data.mobility.vo2MaxMeasurementMethod?.let { put("vo2MaxMeasurementMethod", it) }
                     }
 
-                    if (includeGranularData && a.stepSamples.isNotEmpty()) {
+                    if (detail.activity && a.stepSamples.isNotEmpty()) {
                         putJsonArray("stepSamples") {
                             for (sample in a.stepSamples) {
                                 addJsonObject {
@@ -426,7 +428,7 @@ class JsonExporter {
                             }
                         }
                     }
-                    if (includeGranularData && a.activityIntensityEntries.isNotEmpty()) {
+                    if (detail.activity && a.activityIntensityEntries.isNotEmpty()) {
                         putJsonArray("activityIntensity") {
                             for (entry in a.activityIntensityEntries) {
                                 addJsonObject {
@@ -461,7 +463,7 @@ class JsonExporter {
                 restingHeartRate != null || averageHeartRate != null || walkingHeartRateAverage != null ||
                     hrv != null || heartRateMin != null || heartRateMax != null
             }
-            if (heartHasSummary || (includeGranularData && (data.heart.samples.isNotEmpty() || data.heart.hrvSamples.isNotEmpty()))) {
+            if (heartHasSummary || (detail.heart && (data.heart.samples.isNotEmpty() || data.heart.hrvSamples.isNotEmpty()))) {
                 putJsonObject("heart") {
                     val h = data.heart
                     h.restingHeartRate?.let { put("restingHeartRate", it) }
@@ -471,7 +473,7 @@ class JsonExporter {
                     h.heartRateMax?.let { put("heartRateMax", it) }
                     h.hrv?.let { put("hrv", it) }
 
-                    if (includeGranularData && h.samples.isNotEmpty()) {
+                    if (detail.heart && h.samples.isNotEmpty()) {
                         putJsonArray("heartRateSamples") {
                             for (sample in h.samples) {
                                 addJsonObject {
@@ -484,7 +486,7 @@ class JsonExporter {
                             }
                         }
                     }
-                    if (includeGranularData && h.hrvSamples.isNotEmpty()) {
+                    if (detail.heart && h.hrvSamples.isNotEmpty()) {
                         putJsonArray("hrvSamples") {
                             for (sample in h.hrvSamples) {
                                 addJsonObject {
@@ -515,7 +517,7 @@ class JsonExporter {
                     bodyTemperatureSamples.isNotEmpty() || basalBodyTemperatureSamples.isNotEmpty() ||
                     (emitAndroidNativeFields && skinTemperatureDeltas.isNotEmpty())
             }
-            if (vitalsHasSummary || (includeGranularData && vitalsHasSamples)) {
+            if (vitalsHasSummary || (detail.vitals && vitalsHasSamples)) {
                 putJsonObject("vitals") {
                     val v = data.vitals
 
@@ -584,7 +586,7 @@ class JsonExporter {
                         v.skinTemperatureBaseline?.let { put("skinTemperatureBaseline", it) }
                     }
 
-                    if (includeGranularData) {
+                    if (detail.vitals) {
                         fun JsonObjectBuilder.putTimestampedSamples(name: String, samples: List<TimestampedSample>) {
                             if (samples.isEmpty()) return
                             putJsonArray(name) {
@@ -658,7 +660,7 @@ class JsonExporter {
                     fiber != null || sugar != null || sodium != null || cholesterol != null ||
                     water != null || caffeine != null
             }
-            if (nutritionHasIosKeys || (includeGranularData && data.nutrition.meals.isNotEmpty()) ||
+            if (nutritionHasIosKeys || (detail.nutrition && data.nutrition.meals.isNotEmpty()) ||
                 (includeAndroidNativeFields && data.nutrition.hasData)
             ) {
                 putJsonObject("nutrition") {
@@ -710,7 +712,7 @@ class JsonExporter {
                     n.cholesterol?.let { put("cholesterol", it) }
                     n.water?.let { put("water", it) }
                     n.caffeine?.let { put("caffeine", it) }
-                    if (includeGranularData && n.meals.isNotEmpty()) {
+                    if (detail.nutrition && n.meals.isNotEmpty()) {
                         putJsonArray("meals") {
                             for (meal in n.meals) {
                                 addJsonObject {
@@ -776,7 +778,7 @@ class JsonExporter {
             val mobilityHasIosKeys = data.mobility.walkingSpeed != null ||
                 data.mobility.runningSpeed != null ||
                 data.mobility.runningPowerAvg != null ||
-                (includeGranularData && data.mobility.vo2MaxMeasurementMethod != null)
+                (detail.mobility && data.mobility.vo2MaxMeasurementMethod != null)
             if (mobilityHasIosKeys || ((includeLegacyAliases || includeAndroidNativeFields) && data.mobility.hasData)) {
                 putJsonObject("mobility") {
                     val m = data.mobility
@@ -798,7 +800,7 @@ class JsonExporter {
                         if (includeLegacyAliases) put("runningPowerAvg", it)
                     }
                     if (includeAndroidNativeFields) m.runningPowerMax?.let { put("runningPowerMax", it) }
-                    if (includeGranularData) {
+                    if (detail.mobility) {
                         m.vo2MaxMeasurementMethod?.let { put("vo2MaxMeasurementMethod", it) }
                     }
                 }
@@ -837,7 +839,7 @@ class JsonExporter {
                         put("menstruationPeriodDuration", it.inWholeSeconds)
                         put("menstruationPeriodDays", it.inWholeHours / 24.0)
                     }
-                    if (includeGranularData && r.menstruationPeriods.isNotEmpty()) {
+                    if (detail.reproductiveHealth && r.menstruationPeriods.isNotEmpty()) {
                         putJsonArray("menstruationPeriods") {
                             for (period in r.menstruationPeriods) {
                                 addJsonObject {
@@ -864,7 +866,7 @@ class JsonExporter {
                     // T1-03: renamed from `mindfulnessMinutes` to match iOS `mindfulMinutes`
                     data.mindfulness.mindfulnessMinutes?.let { put("mindfulMinutes", it) }
                     data.mindfulness.mindfulSessions?.let { put("mindfulSessions", it) }
-                    if (includeGranularData && data.mindfulness.sessions.isNotEmpty()) {
+                    if (detail.mindfulness && data.mindfulness.sessions.isNotEmpty()) {
                         putJsonArray("sessions") {
                             for (session in data.mindfulness.sessions) {
                                 addJsonObject {
@@ -906,7 +908,7 @@ class JsonExporter {
                             put("stepCount", plan.stepCount)
                             if (plan.blockDescriptions.isNotEmpty()) putJsonArray("blockDescriptions") { plan.blockDescriptions.forEach { add(it) } }
                             putMetadataObject("metadata", plan.metadata)
-                            if (analyticalV5 && (includeGranularData || nativeSuccessor)) putExactInterval(plan.exactStartTime, plan.exactEndTime, plan.identity)
+                            if (analyticalV5 && (detail.workouts || nativeSuccessor)) putExactInterval(plan.exactStartTime, plan.exactEndTime, plan.identity)
                         }
                     }
                 }
@@ -966,7 +968,7 @@ class JsonExporter {
                                     }
                                 }
                             }
-                            if (analyticalV5 && (includeGranularData || nativeSuccessor)) {
+                            if (analyticalV5 && (detail.workouts || nativeSuccessor)) {
                                 putExactInterval(workout.exactStartTime, workout.exactEndTime, workout.identity)
                                 if (workout.correlatedSourceIds.isNotEmpty()) {
                                     putJsonObject("correlatedSourceIds") {
@@ -1054,7 +1056,7 @@ class JsonExporter {
                                                 if (includeLegacyAliases) put("length", it)
                                                 put("distance", it)
                                             }
-                                            if (analyticalV5 && (includeGranularData || nativeSuccessor)) putExactInterval(lap.exactStartTime, lap.exactEndTime, lap.identity)
+                                            if (analyticalV5 && (detail.workouts || nativeSuccessor)) putExactInterval(lap.exactStartTime, lap.exactEndTime, lap.identity)
                                         }
                                     }
                                 }
@@ -1074,7 +1076,7 @@ class JsonExporter {
                                                 if (includeLegacyAliases) put("averageHeartRate", it)
                                                 put("avgHeartRate", if (nativeSuccessor) JsonPrimitive(it) else JsonPrimitive(it.roundToInt()))
                                             }
-                                            if (analyticalV5 && (includeGranularData || nativeSuccessor)) putExactInterval(split.exactStartTime, split.exactEndTime, split.identity)
+                                            if (analyticalV5 && (detail.workouts || nativeSuccessor)) putExactInterval(split.exactStartTime, split.exactEndTime, split.identity)
                                         }
                                     }
                                 }
@@ -1091,12 +1093,12 @@ class JsonExporter {
                                             )
                                             put("type", segment.type)
                                             segment.repetitions?.let { put("repetitions", it) }
-                                            if (analyticalV5 && (includeGranularData || nativeSuccessor)) putExactInterval(segment.exactStartTime, segment.exactEndTime, segment.identity)
+                                            if (analyticalV5 && (detail.workouts || nativeSuccessor)) putExactInterval(segment.exactStartTime, segment.exactEndTime, segment.identity)
                                         }
                                     }
                                 }
                             }
-                            if (includeGranularData && workout.route.isNotEmpty()) {
+                            if (detail.workouts && workout.route.isNotEmpty()) {
                                 putJsonArray("route") {
                                     for (point in workout.route) {
                                         addJsonObject {
@@ -1114,7 +1116,7 @@ class JsonExporter {
                                     }
                                 }
                             }
-                            if (includeGranularData) {
+                            if (detail.workouts) {
                                 val legacyCadenceSamples = (workout.cyclingCadenceSamples + workout.stepsCadenceSamples)
                                     .sortedBy { it.time }
                                 val hasCadenceSeries = if (analyticalV5) {

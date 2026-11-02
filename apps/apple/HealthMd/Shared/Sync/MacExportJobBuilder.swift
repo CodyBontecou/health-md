@@ -23,14 +23,22 @@ enum ConnectedExportDetailPolicy {
         detailPolicy: AppleExportDetailPolicy
     ) -> HealthData {
         var sanitized = record
-        if !detailPolicy.includesSelectedTimeSeries {
+        // Each group follows its own resolved detail. Workout detail has no Apple
+        // per-group override and keeps following the default compatibility level.
+        if !detailPolicy.includesSelectedTimeSeries(for: .sleep) {
             sanitized.sleep.stages = []
+        }
+        if !detailPolicy.includesSelectedTimeSeries(for: .heart) {
             sanitized.heart.heartRateSamples = []
             sanitized.heart.hrvSamples = []
+        }
+        if !detailPolicy.includesSelectedTimeSeries(for: .vitals) {
             sanitized.vitals.bloodOxygenSamples = []
             sanitized.vitals.bloodGlucoseSamples = []
             sanitized.vitals.respiratoryRateSamples = []
             sanitized.vitals.bloodPressureSamples = []
+        }
+        if !detailPolicy.compatibilityDetail.includesSelectedTimeSeries {
             sanitized.workouts = sanitized.workouts.map(summaryOnlyWorkout)
         }
         if !detailPolicy.includesCanonicalArchive {

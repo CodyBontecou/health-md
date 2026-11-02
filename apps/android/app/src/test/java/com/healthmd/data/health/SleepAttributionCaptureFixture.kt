@@ -76,7 +76,7 @@ internal class SleepAttributionCaptureFixture(allConnected: Boolean = false) {
                 sessions, listOf(date), zone, true, SleepDayAttribution.NIGHT_BEGINS,
             ).getValue(date))
         }
-        coEvery { manager.fetchHealthDataRange(any(), any(), any(), any(), any(), any()) } answers {
+        coEvery { manager.fetchHealthDataRange(any(), any(), any(), any(), any(), any(), any()) } answers {
             val dates = firstArg<List<LocalDate>>()
             val types = arg<DataTypeSelection>(1)
             val granular = arg<Boolean>(2)

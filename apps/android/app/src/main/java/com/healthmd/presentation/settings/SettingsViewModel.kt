@@ -184,6 +184,8 @@ class SettingsViewModel @Inject constructor(
     fun updateSubfolder(subfolder: String) = update { it.copy(subfolder = subfolder) }
     fun updateFolderOrganization(org: FolderOrganization) = update { it.copy(folderOrganization = org) }
     fun updateIncludeGranularData(include: Boolean) = update { it.copy(includeGranularData = include) }
+    fun updateDetailChoice(group: ExportDetailGroup, choice: ExportDetailChoice?) =
+        update { it.withDetailChoice(group, choice) }
 
     fun updateSleepDayAttribution(mode: SleepDayAttribution) {
         viewModelScope.launch {

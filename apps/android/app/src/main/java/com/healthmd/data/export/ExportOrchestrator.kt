@@ -137,6 +137,7 @@ class ExportOrchestrator(
                     dates = dates,
                     dataTypes = effectiveSelection,
                     includeGranularData = settings.shouldFetchGranularData(),
+                    detail = settings.captureDetailSelection(),
                     zoneId = captureContext.zoneId,
                 )
             } catch (_: CancellationException) {
@@ -167,6 +168,7 @@ class ExportOrchestrator(
                     dates = chunk,
                     dataTypes = effectiveSelection,
                     includeGranularData = settings.shouldFetchGranularData(),
+                    detail = settings.captureDetailSelection(),
                     zoneId = captureContext.zoneId,
                     sleepDayAttributionOverride = captureContext.explicitSleepDayAttributionOverride,
                 ).associateBy { it.date }
@@ -316,6 +318,7 @@ class ExportOrchestrator(
                         dates = listOf(date),
                         dataTypes = effectiveSelection,
                         includeGranularData = settings.shouldFetchGranularData(),
+                        detail = settings.captureDetailSelection(),
                         zoneId = captureContext.zoneId,
                         sleepDayAttributionOverride = captureContext.explicitSleepDayAttributionOverride,
                     ).firstOrNull() ?: HealthData(date)

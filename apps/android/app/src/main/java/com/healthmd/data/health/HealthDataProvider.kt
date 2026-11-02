@@ -1,6 +1,7 @@
 package com.healthmd.data.health
 
 import com.healthmd.domain.model.DataTypeSelection
+import com.healthmd.domain.model.ExportDetailSelection
 import com.healthmd.domain.model.HealthData
 import com.healthmd.domain.model.SleepDayAttribution
 import java.time.LocalDate
@@ -29,6 +30,8 @@ interface HealthDataProvider {
         zoneId: ZoneId = ZoneId.systemDefault(),
         pinnedCalendarDays: Boolean = false,
         sleepDayAttribution: SleepDayAttribution,
+        /** Per-group capture detail. Defaults to the exact projection of [includeGranularData]. */
+        detail: ExportDetailSelection = ExportDetailSelection.uniform(includeGranularData),
     ): List<HealthData> = dates.map { date ->
         fetchHealthData(date).filtered(dataTypes)
     }
@@ -38,6 +41,7 @@ interface HealthDataProvider {
         dataTypes: DataTypeSelection = DataTypeSelection(),
         includeGranularData: Boolean = false,
         zoneId: ZoneId = ZoneId.systemDefault(),
+        detail: ExportDetailSelection = ExportDetailSelection.uniform(includeGranularData),
     ) = Unit
 
     suspend fun isAvailable(): Boolean

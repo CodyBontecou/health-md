@@ -280,6 +280,13 @@
     </plurals>
     <string name="granular_data_title">বিস্তারিত সময়-সিরিজ অন্তর্ভুক্ত করুন</string>
     <string name="granular_data_description">সামঞ্জস্য রপ্তানিতে হার্ট রেট এবং ঘুমের পর্যায়ের মতো টাইমস্ট্যাম্পযুক্ত নমুনাগুলি যোগ করুন। একটি API-সম্পূর্ণ অনুলিপির জন্য, Raw API Snapshot ব্যবহার করুন।</string>
+    <string name="detail_overrides_title">বিভাগ অনুযায়ী বিস্তারিত</string>
+    <string name="detail_overrides_description">নির্দিষ্ট বিভাগের জন্য ডিফল্ট পরিবর্তন করুন। সারাংশ শুধু দৈনিক মোট রাখে; দৈনিক সারাংশ কখনও বদলায় না।</string>
+    <string name="detail_choice_default">ডিফল্ট</string>
+    <string name="detail_choice_summary">সারাংশ</string>
+    <string name="detail_choice_sessions">সেশন</string>
+    <string name="detail_choice_detailed">বিস্তারিত</string>
+    <string name="detail_group_sleep_hint">সেশন প্রতিটি ঘুমের সেশন সম্পূর্ণ তারিখ ও সময়সহ দেখায়। বিস্তারিত ঘুমের ধাপও যোগ করে।</string>
     <string name="sleep_attribution_title">ঘুমের দিন নির্ধারণ</string>
     <string name="sleep_attribution_night_begins">রাত শুরু</string>
     <string name="sleep_attribution_morning_ends">সকাল শেষ</string>

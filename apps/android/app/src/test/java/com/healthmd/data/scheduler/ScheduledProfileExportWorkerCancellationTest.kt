@@ -630,7 +630,7 @@ class ScheduledProfileExportWorkerCancellationTest {
                     coVerify(exactly = 1) { settingsRepository.getSleepDayAttribution() }
                     coVerify(exactly = 1) { settingsRepository.getSelectedHealthProviderId() }
                 }
-                coVerify(exactly = 0) { sdk.fetchHealthDataRange(any(), any(), any(), any(), any(), any()) }
+                coVerify(exactly = 0) { sdk.fetchHealthDataRange(any(), any(), any(), any(), any(), any(), any()) }
             } finally { dataScope.coroutineContext[kotlinx.coroutines.Job]?.cancel(); root.deleteRecursively() }
         }
     }

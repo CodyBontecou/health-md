@@ -1,6 +1,7 @@
 package com.healthmd.data.health
 
 import com.healthmd.domain.model.DataTypeSelection
+import com.healthmd.domain.model.ExportDetailSelection
 import com.healthmd.domain.model.HealthData
 import com.healthmd.domain.model.SleepDayAttribution
 import java.time.LocalDate
@@ -21,6 +22,7 @@ class HealthConnectDataProvider(
         zoneId: ZoneId,
         pinnedCalendarDays: Boolean,
         sleepDayAttribution: SleepDayAttribution,
+        detail: ExportDetailSelection,
     ): List<HealthData> =
         healthConnectManager.fetchHealthDataRange(
             dates,
@@ -29,6 +31,7 @@ class HealthConnectDataProvider(
             zoneId,
             pinnedCalendarDays,
             sleepDayAttribution,
+            detail,
         )
 
     override suspend fun authorizeExerciseRouteConsent(
@@ -36,9 +39,10 @@ class HealthConnectDataProvider(
         dataTypes: DataTypeSelection,
         includeGranularData: Boolean,
         zoneId: ZoneId,
+        detail: ExportDetailSelection,
     ) {
         if (dataTypes.workouts) {
-            healthConnectManager.authorizeExerciseRouteConsent(dates, includeGranularData, zoneId)
+            healthConnectManager.authorizeExerciseRouteConsent(dates, includeGranularData, zoneId, detail)
         }
     }
 

@@ -286,6 +286,9 @@ struct SyncPeerCapabilities: Codable, Equatable {
     /// Whether this peer preserves the two-dimensional compatibility-series /
     /// canonical-archive policy instead of interpreting the legacy combined Boolean.
     let supportsSplitExportDetailPolicy: Bool
+    /// Whether this peer honors per-group compatibility detail overrides. Older peers ignore the
+    /// unknown snapshot key, so jobs with overrides are rejected before transfer instead.
+    let supportsPerGroupExportDetail: Bool
     /// Canonical `healthmd.healthkit_records` archive schema versions this peer can produce/consume.
     let canonicalArchiveSchemaVersions: [Int]
     /// Versioned strict CLI raw-result envelope schema versions this peer can produce/consume.
@@ -324,6 +327,7 @@ struct SyncPeerCapabilities: Codable, Equatable {
         case connectedTransferBinaryFrameVersions
         case connectedTransferMaximumInFlightChunks
         case supportsSplitExportDetailPolicy
+        case supportsPerGroupExportDetail
         case canonicalArchiveSchemaVersions
         case canonicalRawResultSchemaVersions
     }
@@ -362,7 +366,8 @@ struct SyncPeerCapabilities: Codable, Equatable {
         supportsDurableConnectedExportRecovery: Bool = false,
         connectedTransferBinaryFrameVersions: [Int] = [],
         connectedTransferMaximumInFlightChunks: Int = 1,
-        supportsSplitExportDetailPolicy: Bool = false
+        supportsSplitExportDetailPolicy: Bool = false,
+        supportsPerGroupExportDetail: Bool = false
     ) {
         self.protocolVersion = protocolVersion
         self.appVersion = appVersion
@@ -401,6 +406,7 @@ struct SyncPeerCapabilities: Codable, Equatable {
             8
         )
         self.supportsSplitExportDetailPolicy = supportsSplitExportDetailPolicy
+        self.supportsPerGroupExportDetail = supportsPerGroupExportDetail
         self.canonicalArchiveSchemaVersions = Array(Set(canonicalArchiveSchemaVersions)).sorted()
         self.canonicalRawResultSchemaVersions = Array(Set(canonicalRawResultSchemaVersions)).sorted()
     }
@@ -483,6 +489,10 @@ struct SyncPeerCapabilities: Codable, Equatable {
         supportsSplitExportDetailPolicy = try container.decodeIfPresent(
             Bool.self,
             forKey: .supportsSplitExportDetailPolicy
+        ) ?? false
+        supportsPerGroupExportDetail = try container.decodeIfPresent(
+            Bool.self,
+            forKey: .supportsPerGroupExportDetail
         ) ?? false
         canonicalArchiveSchemaVersions = try container.decodeIfPresent(
             [Int].self,
@@ -596,6 +606,7 @@ struct SyncPeerCapabilities: Codable, Equatable {
             && (!dailyNotesOnlyExportEnabled || supportsDailyNoteOnlyExports)
             && (!dataDictionarySuppressionRequested || supportsDataDictionaryExportPreference)
             && (detailPolicy.isLegacyRepresentable || supportsSplitExportDetailPolicy)
+            && (!detailPolicy.hasDetailOverrides || supportsPerGroupExportDetail)
             && (!detailPolicy.includesCanonicalArchive || (
                 supportsSizeBoundedConnectedTransfers
                     && canonicalArchiveSchemaVersions.contains(
@@ -642,7 +653,8 @@ struct SyncPeerCapabilities: Codable, Equatable {
             supportsDurableConnectedExportRecovery: true,
             connectedTransferBinaryFrameVersions: [ConnectedTransferBinaryFrame.currentVersion],
             connectedTransferMaximumInFlightChunks: 4,
-            supportsSplitExportDetailPolicy: true
+            supportsSplitExportDetailPolicy: true,
+            supportsPerGroupExportDetail: true
         )
     }
 }
