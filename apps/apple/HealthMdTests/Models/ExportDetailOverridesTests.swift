@@ -33,9 +33,10 @@ final class ExportDetailOverridesTests: XCTestCase {
     }
 
     func testUnsupportedAppleChoicesAreNeverStored() {
-        // HealthKit has no source sleep sessions, and Apple gates only sleep/heart/vitals.
+        // HealthKit has no source sleep sessions, and Apple gates only sleep/heart/vitals/workouts.
         XCTAssertFalse(AppleExportDetailPolicy.summary.settingCompatibilityDetail(.sessions, for: .sleep).hasDetailOverrides)
-        XCTAssertFalse(AppleExportDetailPolicy.summary.settingCompatibilityDetail(.detailed, for: .workouts).hasDetailOverrides)
+        XCTAssertFalse(AppleExportDetailPolicy.summary.settingCompatibilityDetail(.sessions, for: .workouts).hasDetailOverrides)
+        XCTAssertFalse(AppleExportDetailPolicy.summary.settingCompatibilityDetail(.detailed, for: .activity).hasDetailOverrides)
     }
 
     func testPresetsDescribeTheDefaultAndKeepExplicitChoices() {
@@ -83,7 +84,7 @@ final class ExportDetailOverridesTests: XCTestCase {
         settings.detailPolicy = sleepDetailedOnly
         let encoded = try JSONEncoder().encode(ExportSettingsSnapshot.from(settings))
         var object = try XCTUnwrap(JSONSerialization.jsonObject(with: encoded) as? [String: Any])
-        for tampered in [["sleep": "sessions"], ["workouts": "detailed"], ["future": "detailed"], ["sleep": "verbose"]] {
+        for tampered in [["sleep": "sessions"], ["activity": "detailed"], ["workouts": "sessions"], ["future": "detailed"], ["sleep": "verbose"]] {
             object["compatibilityDetailOverrides"] = tampered
             let data = try JSONSerialization.data(withJSONObject: object)
             XCTAssertThrowsError(try JSONDecoder().decode(ExportSettingsSnapshot.self, from: data))
@@ -128,6 +129,39 @@ final class ExportDetailOverridesTests: XCTestCase {
         XCTAssertTrue(sanitized.heart.heartRateSamples.isEmpty)
         XCTAssertTrue(sanitized.heart.hrvSamples.isEmpty)
         XCTAssertTrue(sanitized.vitals.bloodOxygenSamples.isEmpty)
+    }
+
+    func testWorkoutOverrideSelectsWorkoutDetailIndependently() throws {
+        let start = Date(timeIntervalSince1970: 1_790_000_000)
+        var record = HealthData(date: start)
+        record.heart.heartRateSamples = [TimeSample(timestamp: start, value: 61)]
+        record.workouts = [WorkoutData(
+            workoutType: .running,
+            startTime: start,
+            duration: 600,
+            calories: 100,
+            distance: 1_000,
+            route: [RoutePoint(
+                timestamp: start, latitude: 1, longitude: 2, altitudeMeters: nil,
+                speedMps: nil, courseDegrees: nil, horizontalAccuracyMeters: nil
+            )],
+            timeSeries: WorkoutTimeSeries(heartRate: [TimeSeriesSample(timestamp: start, value: 120)])
+        )]
+
+        let workoutsOnly = AppleExportDetailPolicy.summary.settingCompatibilityDetail(.detailed, for: .workouts)
+        let detailed = ConnectedExportDetailPolicy.sanitized(record, detailPolicy: workoutsOnly)
+        XCTAssertEqual(detailed.workouts.first?.route.count, 1)
+        XCTAssertFalse(try XCTUnwrap(detailed.workouts.first).timeSeries.isEmpty)
+        XCTAssertTrue(detailed.heart.heartRateSamples.isEmpty)
+
+        let workoutsSummary = AppleExportDetailPolicy.detailedTimeSeries.settingCompatibilityDetail(.summary, for: .workouts)
+        let summarized = ConnectedExportDetailPolicy.sanitized(record, detailPolicy: workoutsSummary)
+        let workout = try XCTUnwrap(summarized.workouts.first)
+        XCTAssertTrue(workout.route.isEmpty && workout.timeSeries.isEmpty)
+        // Per-workout totals never change with detail.
+        XCTAssertEqual(workout.calories, 100)
+        XCTAssertEqual(workout.distance, 1_000)
+        XCTAssertEqual(summarized.heart.heartRateSamples.count, 1)
     }
 
     func testMacPeersWithoutPerGroupSupportAreRefused() throws {

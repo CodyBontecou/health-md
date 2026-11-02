@@ -337,7 +337,7 @@
       "id": "export.per-group-detail-selection",
       "name": "Per-category export detail",
       "classification": "shared",
-      "summary": "Choose a default compatibility detail level and override it per category (sleep, heart, vitals, and on Android also activity, nutrition, mobility, reproductive health, mindfulness, and workouts) without changing metric selection, daily summaries, file organization, or raw/canonical archives. Missing overrides reproduce the historical global switch exactly; Apple offers only categories its compatibility projection gates.",
+      "summary": "Choose a default compatibility detail level and override it per category (sleep, heart, vitals, workouts, and on Android also activity, nutrition, mobility, reproductive health, and mindfulness) without changing metric selection, daily summaries, file organization, or raw/canonical archives. Missing overrides reproduce the historical global switch exactly; Apple offers only categories its compatibility projection gates.",
       "profiles": [
         "apple-v8",
         "android-frozen-v4",
@@ -387,12 +387,12 @@
       "id": "export.compatibility-detail-expansion",
       "name": "Expanded native compatibility detail",
       "classification": "planned",
-      "summary": "Compatibility projections for natively exposed records that are currently summarized only: Apple activity, nutrition, mobility, mindfulness, reproductive, temperature and spirometry samples plus a workouts override; Android calorie, distance, floors, elevation, hydration, and body records. Each projection must keep source timestamps, intervals, units, and identity without inventing points.",
+      "summary": "Compatibility projections for natively exposed records that are currently summarized only: Apple activity, nutrition, mobility, mindfulness, reproductive, temperature and spirometry samples; Android calorie, distance, floors, elevation, hydration, and body records. Each projection must keep source timestamps, intervals, units, and identity without inventing points.",
       "profiles": [],
       "platforms": {
         "apple": {
           "state": "planned",
-          "target": "Apple per-category detail follow-up: add start-owned compatibility sample arrays for the listed HealthKit types behind their category override, with a reviewed HealthMdExportSchema version bump and signature fixture."
+          "target": "Apple per-category detail follow-up: add start-owned compatibility sample arrays for the listed HealthKit types behind their category override in a reviewed successor profile with its own signature fixture; healthmd.health_data v9 is reserved for the unified proposal. The workouts override shipped with export.per-group-detail-selection."
         },
         "android": {
           "state": "planned",

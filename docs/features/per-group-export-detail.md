@@ -68,7 +68,7 @@ HealthKit queries use `HKSampleQueryDescriptor` with no limit and `CancellationE
 | sleep | `sleepAnalysis` category samples | union-based totals, stages, bedtime/wake | **Unavailable as sessions**: HealthKit has no session object | **Exported**: `sleepStages` (category intervals, window-clipped) | — | Choices are Summary and Detailed. Wake-date mode merges intervals for ownership internally; that derivation is not exported as source sessions. |
 | heart | heart rate, HRV SDNN, resting, walking, recovery, AFib burden | stats / most recent | — | **Exported**: `heartRateSamples`, `hrvSamples` | — | |
 | vitals | respiratory rate, SpO₂, BP correlations, glucose, temperatures, spirometry | stats / most recent | — | **Exported**: SpO₂, glucose, respiratory, BP samples | — | Temperature and spirometry samples are source-only (canonical archive). Their compatibility projection is `planned`. |
-| workouts | `HKWorkout`, events, route, associated series | per-workout | always | always: laps, splits, route, `timeSeries` | — | Not governed by compatibility detail on Apple. The connected sanitizer follows the default only. A per-category override is `planned`. |
+| workouts | `HKWorkout`, events, route, associated series | per-workout | always | **Exported**: laps, splits, route, `timeSeries` | — | Follows the `workouts` override (Summary or Detailed). Summary keeps per-workout totals and drops laps, splits, route and series. Capture always reads workout detail; the sanitizer removes it. |
 | activity, nutrition, mobility, mindfulness, reproductive, hearing, symptoms, medications, other | quantity/category samples | statistics | source-only (canonical archive) | source-only (canonical archive) | — | Compatibility sample projections are not implemented (`planned`). Lossless already exposes the native records. |
 
 ## Capture
@@ -106,7 +106,7 @@ When a category's summary itself requires source records, those records are stil
 
 ## Remaining work
 
-- Apple compatibility projections for activity, nutrition, mobility, mindfulness, reproductive, temperature/spirometry samples, and a workouts override.
+- Apple compatibility projections for activity, nutrition, mobility, mindfulness, reproductive, and temperature/spirometry samples. These add public keys, so they need a reviewed successor profile; `healthmd.health_data` v9 is reserved for the [unified proposal](../../packages/contracts/proposals/unified-health-data-v9/contract.md) and cannot be used for an Apple-only bump.
 - Android source-only interval projections for calories, distance, floors, elevation, hydration, and body records.
 - Shared Setup successor field for portable overrides.
 - CSV sleep-session rows and Bases session counts behind a reviewed profile.

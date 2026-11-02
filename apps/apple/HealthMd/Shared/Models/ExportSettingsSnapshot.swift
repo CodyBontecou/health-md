@@ -26,10 +26,10 @@ nonisolated enum ExportDetailGroup: String, Codable, CaseIterable, Sendable, Com
     case mindfulness
     case workouts
 
-    /// Groups whose compatibility detail HealthKit capture can select independently on Apple.
-    /// Workout laps/route/series are not governed by compatibility detail on Apple, and the other
-    /// groups have no compatibility sample projection yet (see the capability inventory).
-    static let appleSupported: [ExportDetailGroup] = [.sleep, .heart, .vitals]
+    /// Groups whose compatibility detail Apple exports can select independently. Workouts select
+    /// between per-workout totals and their existing laps/route/series detail. The other groups
+    /// have no compatibility sample projection yet (see the capability inventory).
+    static let appleSupported: [ExportDetailGroup] = [.sleep, .heart, .vitals, .workouts]
 
     /// Choices Apple can honor. HealthKit exposes sleep category intervals, not source sessions,
     /// so Apple never offers `sessions`.
