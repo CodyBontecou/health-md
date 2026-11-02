@@ -317,10 +317,9 @@ struct AutomationSentence: Equatable {
         let isMultiDay: Bool
 
         static func make(_ entry: ScheduledExportEntry?, style: Style) -> DateRange {
-            let lookback = entry?.lookbackDays ?? 1
-            let today = (style == .summary && entry?.todayRefreshEnabled == true)
-                || (lookback <= 1 && entry?.includeToday == true)
-            if today {
+            // Include Today adds today to the look-back days.
+            let lookback = (entry?.lookbackDays ?? 1) + (entry?.includeToday == true ? 1 : 0)
+            if style == .summary && entry?.todayRefreshEnabled == true {
                 return DateRange(text: String(localized: "today"), listText: String(localized: "Today"), isMultiDay: false)
             }
             if lookback <= 1 {

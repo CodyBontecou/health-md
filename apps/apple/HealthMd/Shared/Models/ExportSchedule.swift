@@ -61,8 +61,8 @@ struct ExportSchedule: Codable, Equatable {
         }
     }
 
-    /// Ends each completed-day run on the fire date instead of the day before. The window
-    /// keeps its size, and today's data is partial until the day ends. Off unless requested.
+    /// Extends each completed-day run through the fire date. The look-back days before it
+    /// stay in the window, so the next run rewrites today's partial file. Off unless requested.
     var includeToday: Bool
 
     /// Whether to also refresh today's file during the current day.

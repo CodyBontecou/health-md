@@ -26,7 +26,7 @@ final class IncludeTodayScheduleTests: XCTestCase {
         )
     }
 
-    func testOnSlidesTheWindowWithoutChangingItsSize() throws {
+    func testOnAddsTodayAndKeepsTheLookBackDays() throws {
         let calendar = try utcCalendar()
         var schedule = ExportSchedule(frequency: .daily, lookbackDays: 3)
         schedule.includeToday = true
@@ -36,8 +36,26 @@ final class IncludeTodayScheduleTests: XCTestCase {
                 fireDate: try date(10, hour: 8, in: calendar),
                 calendar: calendar
             ),
-            [try date(8, in: calendar), try date(9, in: calendar), try date(10, in: calendar)]
+            [try date(7, in: calendar), try date(8, in: calendar), try date(9, in: calendar), try date(10, in: calendar)]
         )
+    }
+
+    func testOneDayLookBackRewritesYesterdaysPartialFile() throws {
+        let calendar = try utcCalendar()
+        var schedule = ExportSchedule(frequency: .daily, lookbackDays: 1)
+        schedule.includeToday = true
+        let first = ScheduleDateMath.scheduledExportDates(
+            schedule: schedule,
+            fireDate: try date(10, hour: 8, in: calendar),
+            calendar: calendar
+        )
+        let next = ScheduleDateMath.scheduledExportDates(
+            schedule: schedule,
+            fireDate: try date(11, hour: 8, in: calendar),
+            calendar: calendar
+        )
+        XCTAssertEqual(first, [try date(9, in: calendar), try date(10, in: calendar)])
+        XCTAssertTrue(next.contains(try date(10, in: calendar)), "The next run completes the partial day.")
     }
 
     func testCatchUpStaysOnCompletedDays() throws {
