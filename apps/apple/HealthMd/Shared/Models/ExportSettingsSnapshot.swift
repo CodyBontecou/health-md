@@ -25,11 +25,22 @@ nonisolated enum ExportDetailGroup: String, Codable, CaseIterable, Sendable, Com
     case reproductiveHealth = "reproductive_health"
     case mindfulness
     case workouts
+    case body
 
-    /// Groups whose compatibility detail Apple exports can select independently. Workouts select
-    /// between per-workout totals and their existing laps/route/series detail. The other groups
-    /// have no compatibility sample projection yet (see the capability inventory).
-    static let appleSupported: [ExportDetailGroup] = [.sleep, .heart, .vitals, .workouts]
+    /// Groups whose compatibility detail Apple exports can select independently. Sleep, heart,
+    /// vitals and workouts select their apple-v8 detail arrays. Activity, nutrition, mobility,
+    /// reproductive health, mindfulness, body and the vitals temperature/spirometry types are
+    /// projected only by the apple-v12 successor (`AppleExportDetailPolicy.selectsAppleV12`).
+    static let appleSupported: [ExportDetailGroup] = allCases
+
+    /// Groups an apple-v8 peer already understands as override keys.
+    static let appleV8OverrideGroups: Set<ExportDetailGroup> = [.sleep, .heart, .vitals, .workouts]
+
+    /// Groups whose explicit `detailed` override selects the apple-v12 successor because their
+    /// `detailSamples` cannot be represented by apple-v8.
+    static let appleV12ExpansionGroups: Set<ExportDetailGroup> = [
+        .activity, .nutrition, .mobility, .reproductiveHealth, .mindfulness, .body, .vitals,
+    ]
 
     /// Choices Apple can honor. HealthKit exposes sleep category intervals, not source sessions,
     /// so Apple never offers `sessions`.
@@ -165,6 +176,35 @@ nonisolated struct AppleExportDetailPolicy: Codable, Equatable, Sendable {
         case .summary?: return false
         case nil: return compatibilityDetail.includesSelectedTimeSeries
         }
+    }
+
+    /// True when an explicit `detailed` override on an expansion group selects the apple-v12
+    /// successor. Uniform presets (Detailed Time-Series, Lossless) never select it, so their
+    /// output stays apple-v8 byte-for-byte. Morning ends keeps apple-v11; see
+    /// `selectsAppleV12(sleepDayAttribution:)`.
+    var selectsAppleV12: Bool {
+        compatibilityDetailOverrides.contains { group, choice in
+            choice == .detailed && ExportDetailGroup.appleV12ExpansionGroups.contains(group)
+        }
+    }
+
+    /// apple-v12 is a Night begins successor. Under Morning ends the profile stays apple-v11 and
+    /// expansion detail is neither captured nor written.
+    func selectsAppleV12(sleepDayAttribution: SleepDayAttribution?) -> Bool {
+        selectsAppleV12 && sleepDayAttribution != .morningEnds
+    }
+
+    /// Whether `group` captures and writes apple-v12 `detailSamples`.
+    func includesDetailSamples(for group: ExportDetailGroup, sleepDayAttribution: SleepDayAttribution?) -> Bool {
+        ExportDetailGroup.appleV12ExpansionGroups.contains(group)
+            && selectsAppleV12(sleepDayAttribution: sleepDayAttribution)
+            && includesSelectedTimeSeries(for: group)
+    }
+
+    /// Overrides an apple-v8-only per-group peer cannot decode or render.
+    var requiresAppleV12PeerSupport: Bool {
+        selectsAppleV12
+            || compatibilityDetailOverrides.keys.contains { !ExportDetailGroup.appleV8OverrideGroups.contains($0) }
     }
 
     static let summary = AppleExportDetailPolicy(

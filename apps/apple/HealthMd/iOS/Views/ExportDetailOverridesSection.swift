@@ -30,6 +30,10 @@ struct ExportDetailOverridesSection: View {
                     .accessibilityIdentifier("export-detail-\(group.rawValue)")
                 }
             }
+            Text(ExportDetailGroup.appleV12Footnote)
+                .font(.footnote)
+                .foregroundStyle(Color.textSecondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(.vertical, Spacing.s3)
         .accessibilityElement(children: .contain)
@@ -55,7 +59,18 @@ extension ExportDetailGroup {
         case .reproductiveHealth: String(localized: "Reproductive Health", comment: "Export detail category")
         case .mindfulness: String(localized: "Mindfulness", comment: "Export detail category")
         case .workouts: String(localized: "Workouts", comment: "Export detail category")
+        case .body: String(localized: "Body", comment: "Export detail category")
         }
+    }
+}
+
+extension ExportDetailGroup {
+    /// Shown under the per-category pickers wherever they appear.
+    static var appleV12Footnote: String {
+        String(
+            localized: "Detailed Activity, Nutrition, Mobility, Reproductive Health, Mindfulness, Body, or Vitals adds individual samples and switches files to schema 12. Unavailable with Morning ends.",
+            comment: "Footnote under per-category export detail pickers"
+        )
     }
 }
 

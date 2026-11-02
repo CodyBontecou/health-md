@@ -473,11 +473,13 @@ struct DailyNoteInjector {
     }
 
     private static func buildInjectionContent(
-        healthData: HealthData,
+        healthData capturedHealthData: HealthData,
         settings: DailyNoteInjectionSettings,
         customization: FormatCustomization,
         metricSelection: MetricSelectionState
     ) -> InjectionContent? {
+        // Daily notes keep the apple-v8 grammar; apple-v12 detail samples never enter a note.
+        let healthData = capturedHealthData.withoutDetailExpansion()
         let allMetrics = healthData.allMetricsDictionary(using: customization.unitConverter, timeFormat: customization.timeFormat)
         let fmConfig = customization.frontmatterConfig
         let allowedKeys = frontmatterKeys(enabledIn: metricSelection)

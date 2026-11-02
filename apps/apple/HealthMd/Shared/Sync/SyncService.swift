@@ -250,6 +250,10 @@ final class SyncService: NSObject, ObservableObject {
                remoteCapabilities?.supportsPerGroupExportDetail != true {
                 return "Update Health.md on Mac to use this data detail setting"
             }
+            if detailPolicy.requiresAppleV12PeerSupport,
+               remoteCapabilities?.supportsAppleV12DetailExpansion != true {
+                return "Update Health.md on Mac to use this data detail setting"
+            }
             if detailPolicy.includesCanonicalArchive {
                 return "Update Health.md on Mac to export Lossless Health Records"
             }

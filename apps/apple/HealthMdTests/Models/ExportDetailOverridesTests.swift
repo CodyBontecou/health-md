@@ -33,10 +33,16 @@ final class ExportDetailOverridesTests: XCTestCase {
     }
 
     func testUnsupportedAppleChoicesAreNeverStored() {
-        // HealthKit has no source sleep sessions, and Apple gates only sleep/heart/vitals/workouts.
+        // HealthKit has no source sleep sessions; Apple offers Summary/Detailed for every group.
         XCTAssertFalse(AppleExportDetailPolicy.summary.settingCompatibilityDetail(.sessions, for: .sleep).hasDetailOverrides)
         XCTAssertFalse(AppleExportDetailPolicy.summary.settingCompatibilityDetail(.sessions, for: .workouts).hasDetailOverrides)
-        XCTAssertFalse(AppleExportDetailPolicy.summary.settingCompatibilityDetail(.detailed, for: .activity).hasDetailOverrides)
+        XCTAssertFalse(AppleExportDetailPolicy.summary.settingCompatibilityDetail(.sessions, for: .activity).hasDetailOverrides)
+        XCTAssertEqual(
+            AppleExportDetailPolicy.summary.settingCompatibilityDetail(.detailed, for: .body).compatibilityDetailOverrides,
+            [.body: .detailed]
+        )
+        XCTAssertEqual(ExportDetailGroup.appleSupported, ExportDetailGroup.allCases)
+        XCTAssertEqual(ExportDetailGroup.body.rawValue, "body")
     }
 
     func testPresetsDescribeTheDefaultAndKeepExplicitChoices() {
@@ -84,7 +90,7 @@ final class ExportDetailOverridesTests: XCTestCase {
         settings.detailPolicy = sleepDetailedOnly
         let encoded = try JSONEncoder().encode(ExportSettingsSnapshot.from(settings))
         var object = try XCTUnwrap(JSONSerialization.jsonObject(with: encoded) as? [String: Any])
-        for tampered in [["sleep": "sessions"], ["activity": "detailed"], ["workouts": "sessions"], ["future": "detailed"], ["sleep": "verbose"]] {
+        for tampered in [["sleep": "sessions"], ["activity": "sessions"], ["body": "sessions"], ["workouts": "sessions"], ["future": "detailed"], ["sleep": "verbose"]] {
             object["compatibilityDetailOverrides"] = tampered
             let data = try JSONSerialization.data(withJSONObject: object)
             XCTAssertThrowsError(try JSONDecoder().decode(ExportSettingsSnapshot.self, from: data))

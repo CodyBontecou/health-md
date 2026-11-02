@@ -1463,6 +1463,12 @@ struct ExportProfileEditorSheet: View {
                         palette: palette
                     )
                 }
+                Text(ExportDetailGroup.appleV12Footnote)
+                    .glassFont(.rowSubtitle)
+                    .foregroundStyle(palette.muted)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.horizontal, GlassMetrics.panelPadding)
+                    .padding(.vertical, 12)
                 rowDivider
                 GlassToggleRow(
                     title: String(localized: "Summary only", comment: "Profile editor summary-only toggle"),

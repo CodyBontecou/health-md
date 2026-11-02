@@ -346,7 +346,8 @@ struct APIExportClient {
             dateRangeEnd: dateRangeEnd,
             exportedAt: exportedAt,
             connectedAppsEnabled: connectedAppsEnabled ?? ConnectedAppsFeature.isEnabled,
-            calendarTimeZone: settings.exportTimeZoneOverride ?? .current
+            calendarTimeZone: settings.exportTimeZoneOverride ?? .current,
+            dailyRecordsUseAppleV12: try dailyRecordsUseAppleV12(records)
         )
     }
 
@@ -396,6 +397,14 @@ struct APIExportClient {
         }
     }
 
+    /// One envelope declares one daily-record identity. Every record of an operation shares
+    /// the sanitized detail policy, so a mixed batch is an invalid payload rather than a guess.
+    static func dailyRecordsUseAppleV12(_ records: [HealthData]) throws -> Bool {
+        let flags = Set(records.map(\.exportsAppleV12DetailExpansion))
+        guard flags.count <= 1 else { throw APIExportClientError.invalidPayload }
+        return flags.first ?? false
+    }
+
     private enum EnvelopeSegment {
         case data(Data)
         case file(ExportArtifactFile)
@@ -426,7 +435,8 @@ struct APIExportClient {
         dateRangeEnd: Date,
         exportedAt: Date,
         connectedAppsEnabled: Bool,
-        calendarTimeZone: TimeZone = .current
+        calendarTimeZone: TimeZone = .current,
+        dailyRecordsUseAppleV12: Bool = false
     ) throws -> Data {
         let segments = try envelopeSegments(
             recordValues: recordData.map { [.data($0)] },
@@ -436,7 +446,8 @@ struct APIExportClient {
             dateRangeEnd: dateRangeEnd,
             exportedAt: exportedAt,
             connectedAppsEnabled: connectedAppsEnabled,
-            calendarTimeZone: calendarTimeZone
+            calendarTimeZone: calendarTimeZone,
+            dailyRecordsUseAppleV12: dailyRecordsUseAppleV12
         )
         let byteCount = try exactByteCount(segments)
         let sink = MemoryExportByteSink(
@@ -459,7 +470,8 @@ struct APIExportClient {
         connectedAppsEnabled: Bool,
         calendarTimeZone: TimeZone = .current,
         directoryURL: URL,
-        captureContext: AppleSleepCaptureContext? = nil
+        captureContext: AppleSleepCaptureContext? = nil,
+        dailyRecordsUseAppleV12: Bool = false
     ) throws -> ExportArtifactFile {
         let segments = try envelopeSegments(
             recordValues: recordArtifacts.map { [.file($0)] },
@@ -470,7 +482,8 @@ struct APIExportClient {
             exportedAt: exportedAt,
             connectedAppsEnabled: connectedAppsEnabled,
             calendarTimeZone: calendarTimeZone,
-            captureContext: captureContext
+            captureContext: captureContext,
+            dailyRecordsUseAppleV12: dailyRecordsUseAppleV12
         )
         return try ExportArtifactIO.renderTemporary(
             in: directoryURL,
@@ -514,7 +527,8 @@ struct APIExportClient {
         exportedAt: Date,
         connectedAppsEnabled: Bool,
         calendarTimeZone: TimeZone = .current,
-        captureContext: AppleSleepCaptureContext? = nil
+        captureContext: AppleSleepCaptureContext? = nil,
+        dailyRecordsUseAppleV12: Bool = false
     ) throws -> Int {
         try exactByteCount(envelopeSegments(
             recordValues: recordArtifacts.map { [.file($0)] },
@@ -525,7 +539,8 @@ struct APIExportClient {
             exportedAt: exportedAt,
             connectedAppsEnabled: connectedAppsEnabled,
             calendarTimeZone: calendarTimeZone,
-            captureContext: captureContext
+            captureContext: captureContext,
+            dailyRecordsUseAppleV12: dailyRecordsUseAppleV12
         ))
     }
 
@@ -539,7 +554,8 @@ struct APIExportClient {
         exportedAt: Date,
         connectedAppsEnabled: Bool,
         calendarTimeZone: TimeZone,
-        captureContext: AppleSleepCaptureContext? = nil
+        captureContext: AppleSleepCaptureContext? = nil,
+        dailyRecordsUseAppleV12: Bool = false
     ) throws -> [EnvelopeSegment] {
         func scalar(_ value: String) throws -> [EnvelopeSegment] {
             [.data(try makeJSONData(from: value))]
@@ -579,6 +595,12 @@ struct APIExportClient {
                 throw APIExportClientError.invalidPayload
             }
         }
+        // apple-v12 is a Night begins successor; it never shares an envelope with apple-v11.
+        if dailyRecordsUseAppleV12, captureContext != nil {
+            throw APIExportClientError.invalidPayload
+        }
+        let dailyRecordSchemaVersion = captureContext != nil ? 11
+            : dailyRecordsUseAppleV12 ? AppleDetailExpansionSchema.version : HealthMdExportSchema.version
         let dateRange = try object([
             ("start", try scalar(dayString(from: dateRangeStart, timeZone: calendarTimeZone))),
             ("end", try scalar(dayString(from: dateRangeEnd, timeZone: calendarTimeZone)))
@@ -587,7 +609,7 @@ struct APIExportClient {
             ("schema", try scalar("healthmd.api_export")),
             ("schema_version", integer(connectedAppsEnabled ? 2 : 1)),
             ("daily_record_schema", try scalar(HealthMdExportSchema.identifier)),
-            ("daily_record_schema_version", integer(captureContext == nil ? HealthMdExportSchema.version : 11)),
+            ("daily_record_schema_version", integer(dailyRecordSchemaVersion)),
             ("exported_at", try scalar(timestampString(from: exportedAt))),
             ("source", try scalar("ios")),
             ("date_range", dateRange),
@@ -595,6 +617,9 @@ struct APIExportClient {
             ("records", array(recordValues)),
             ("failed_date_details", array(failedDateData.map { [.data($0)] }))
         ]
+        if dailyRecordsUseAppleV12 {
+            members.append(("daily_record_schema_profile", try scalar(AppleDetailExpansionSchema.profile)))
+        }
         if let captureContext {
             members.append(("daily_record_schema_profile", try scalar("apple-v11")))
             members.append(("daily_record_time_context", try object([
