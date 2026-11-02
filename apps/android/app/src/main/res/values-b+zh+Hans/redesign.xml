@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="nav_archive">归档</string>
+    <string name="nav_automations">自动化</string>
+    <string name="export_now_title">立即导出</string>
+    <string name="archive_filter_all">全部</string>
+    <string name="archive_filter_current_settings">当前设置</string>
+    <string name="archive_stat_archived">已归档天数</string>
+    <string name="archive_stat_streak">当前连续天数</string>
+    <string name="archive_stat_gaps">缺口</string>
+    <string name="archive_show_gap">显示第一个缺口</string>
+    <string name="archive_previous_month">上个月</string>
+    <string name="archive_next_month">下个月</string>
+    <string name="archive_legend_complete">完整</string>
+    <string name="archive_legend_partial">部分</string>
+    <string name="archive_legend_missing">缺失</string>
+    <string name="archive_legend_not_exported">未导出</string>
+    <string name="archive_legend_today">今天</string>
+    <string name="archive_day_on_track">%1$d / %2$d 按计划完成</string>
+    <string name="archive_day_nothing">此日期没有导出内容</string>
+    <string name="archive_day_status">%1$s，%2$s</string>
+    <string name="archive_row_last_export">上次导出：%1$s</string>
+    <string name="archive_action_backfill">补导</string>
+    <string name="archive_empty_title">你的归档从这里开始</string>
+    <string name="archive_empty_body">每导出一天，日历上就会填满一格。导出一次即可开始。</string>
+    <string name="automations_subtitle">已保存的导出，可定时运行、从自动化应用启动，或通过 healthmd CLI 运行。</string>
+    <string name="automations_profiles_title">导出配置文件</string>
+    <string name="automations_profiles_body">创建、编辑并切换已保存的导出配置。</string>
+    <string name="automation_sentence_daily">每天 %1$s 导出到%2$s。</string>
+    <string name="automation_sentence_weekly">每周%1$s %2$s 导出到%3$s。</string>
+    <string name="automation_sentence_monthly">每月 %1$s 导出到%2$s。</string>
+    <string name="automation_sentence_custom">按自定义计划在 %1$s 导出到%2$s。</string>
+    <string name="automation_sentence_manual">按需导出到%1$s。</string>
+    <string name="automation_destination_selected_folder">所选文件夹</string>
+    <string name="settings_section_destinations">目标位置</string>
+    <string name="settings_section_data">数据</string>
+    <string name="settings_section_app">应用</string>
+    <string name="settings_destination_folder_title">导出文件夹</string>
+    <string name="settings_destination_folder_subtitle">在“立即导出”中选择 Health.md 写入的文件夹。</string>
+    <string name="settings_destination_api_title">API 端点和 Agent Data 网关</string>
+    <string name="settings_destination_api_subtitle">在“自动化”中设置上传到你的服务器或数据接收网关。</string>
+</resources>

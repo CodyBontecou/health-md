@@ -318,8 +318,6 @@
     <string name="export_progress_title">جارٍ تصدير البيانات الصحية</string>
 
     <!-- Navigation labels -->
-    <string name="nav_export">تصدير</string>
-    <string name="nav_schedule">الجدولة</string>
     <string name="nav_history">السجل</string>
     <string name="nav_settings">الإعدادات</string>
 

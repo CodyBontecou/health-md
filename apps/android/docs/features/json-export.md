@@ -19,7 +19,7 @@ Writes one structured JSON document per day under the `healthmd.health_data` con
 
 ## Where to find it
 
-1. Enable **JSON** in **Export Format** on the Export tab.
+1. Enable **JSON** in **Export Format** on the Export now screen.
 2. Export; one `.json` file appears per day at your destination.
 
 ## Prerequisites

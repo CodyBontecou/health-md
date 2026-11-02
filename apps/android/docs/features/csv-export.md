@@ -18,7 +18,7 @@ Writes spreadsheet-friendly CSV with one row per metric — and, when granular d
 
 ## Where to find it
 
-1. Enable **CSV** in **Export Format** on the Export tab.
+1. Enable **CSV** in **Export Format** on the Export now screen.
 2. Export; one `.csv` file appears per day at your destination.
 
 ## Prerequisites

@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="nav_archive">संग्रह</string>
+    <string name="nav_automations">ऑटोमेशन</string>
+    <string name="export_now_title">अभी निर्यात करें</string>
+    <string name="archive_filter_all">सभी</string>
+    <string name="archive_filter_current_settings">मौजूदा सेटिंग्स</string>
+    <string name="archive_stat_archived">संग्रहित दिन</string>
+    <string name="archive_stat_streak">मौजूदा सिलसिला</string>
+    <string name="archive_stat_gaps">अंतराल</string>
+    <string name="archive_show_gap">पहला अंतराल दिखाएँ</string>
+    <string name="archive_previous_month">पिछला महीना</string>
+    <string name="archive_next_month">अगला महीना</string>
+    <string name="archive_legend_complete">पूर्ण</string>
+    <string name="archive_legend_partial">आंशिक</string>
+    <string name="archive_legend_missing">छूटा हुआ</string>
+    <string name="archive_legend_not_exported">निर्यात नहीं हुआ</string>
+    <string name="archive_legend_today">आज</string>
+    <string name="archive_day_on_track">%2$d में से %1$d योजना के अनुसार</string>
+    <string name="archive_day_nothing">इस तारीख के लिए कुछ निर्यात नहीं हुआ</string>
+    <string name="archive_day_status">%1$s, %2$s</string>
+    <string name="archive_row_last_export">अंतिम निर्यात %1$s</string>
+    <string name="archive_action_backfill">पूरा करें</string>
+    <string name="archive_empty_title">आपका संग्रह यहाँ से शुरू होता है</string>
+    <string name="archive_empty_body">आपके द्वारा निर्यात किया गया हर दिन कैलेंडर का एक खाना भरता है। शुरू करने के लिए एक बार निर्यात करें।</string>
+    <string name="automations_subtitle">सहेजे गए निर्यात जिन्हें आप शेड्यूल कर सकते हैं, ऑटोमेशन ऐप्स से शुरू कर सकते हैं, या healthmd CLI से चला सकते हैं।</string>
+    <string name="automations_profiles_title">निर्यात प्रोफ़ाइल</string>
+    <string name="automations_profiles_body">सहेजे गए निर्यात कॉन्फ़िगरेशन बनाएँ, संपादित करें और उनके बीच बदलें।</string>
+    <string name="automation_sentence_daily">हर दिन %1$s बजे %2$s में निर्यात करें।</string>
+    <string name="automation_sentence_weekly">हर हफ़्ते %1$s को %2$s बजे %3$s में निर्यात करें।</string>
+    <string name="automation_sentence_monthly">हर महीने %1$s बजे %2$s में निर्यात करें।</string>
+    <string name="automation_sentence_custom">कस्टम शेड्यूल पर %1$s बजे %2$s में निर्यात करें।</string>
+    <string name="automation_sentence_manual">ज़रूरत पड़ने पर %1$s में निर्यात करें।</string>
+    <string name="automation_destination_selected_folder">चुना गया फ़ोल्डर</string>
+    <string name="settings_section_destinations">गंतव्य</string>
+    <string name="settings_section_data">डेटा</string>
+    <string name="settings_section_app">ऐप</string>
+    <string name="settings_destination_folder_title">निर्यात फ़ोल्डर</string>
+    <string name="settings_destination_folder_subtitle">अभी निर्यात करें में वह फ़ोल्डर चुनें जिसमें Health.md लिखता है।</string>
+    <string name="settings_destination_api_title">API एंडपॉइंट और Agent Data गेटवे</string>
+    <string name="settings_destination_api_subtitle">ऑटोमेशन में अपने सर्वर या इनजेशन गेटवे पर अपलोड सेट करें।</string>
+</resources>

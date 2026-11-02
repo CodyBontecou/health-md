@@ -65,7 +65,7 @@ One export action for a three-day range with Markdown + JSON enabled writes six 
 - **Suggested title:** Your First Health Connect → Markdown Export
 - **Hook:** "Pick days, pick formats, one button."
 - **Demo flow:**
-  1. Export tab, pick Yesterday.
+  1. Export now screen, pick Yesterday.
   2. Toggle Markdown + Obsidian Bases.
   3. Preview quickly, then Export and open in Obsidian.
 - **Key screenshot/recording moments:** date options, format toggles, progress dialog, Open with Obsidian.

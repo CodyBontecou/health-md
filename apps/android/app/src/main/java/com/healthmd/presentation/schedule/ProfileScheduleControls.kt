@@ -59,6 +59,7 @@ internal object ProfileScheduleTags {
     const val REFRESH = "profileSchedule.dialog.refresh"
     const val REFRESH_INTERVAL = "profileSchedule.dialog.refreshInterval"
     const val MENU = ".menu"
+    const val SENTENCE = "profileSchedule.row.sentence"
 }
 
 /** No surrounding editor click: reading text and independent actions have their own space. */
@@ -74,8 +75,14 @@ internal fun ProfileScheduleRowContent(
 ) {
     Column(modifier.fillMaxWidth().testTag(ProfileScheduleTags.ROW),
         verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-        Text(row.profile.name, style = MaterialTheme.typography.bodyLarge, color = AppColors.textPrimary,
+        Text(row.profile.name, style = MaterialTheme.typography.titleMedium, color = AppColors.textPrimary,
             modifier = Modifier.fillMaxWidth().testTag(ProfileScheduleTags.NAME))
+        // The automation as a sentence, as on the cross-platform Automations screen.
+        Text(
+            automationSentence(row.profile, row.entry),
+            style = GeistType.copy18, color = AppColors.textPrimary,
+            modifier = Modifier.fillMaxWidth().testTag(ProfileScheduleTags.SENTENCE),
+        )
         Text(
             cadenceSummary(row.entry, todayRefreshSummary(row.entry)),
             style = MaterialTheme.typography.bodySmall, color = AppColors.textSecondary,

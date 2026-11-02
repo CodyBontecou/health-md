@@ -88,6 +88,8 @@ import java.util.Locale
 fun ScheduleScreen(
     viewModel: ScheduleViewModel = hiltViewModel(),
     onNavigateToPaywall: () -> Unit = {},
+    /** Entry to the saved export profiles, shown at the top of Automations. */
+    profilesEntry: (@Composable () -> Unit)? = null,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val historyViewModel: HistoryViewModel = hiltViewModel()
@@ -340,13 +342,21 @@ fun ScheduleScreen(
         Spacer(modifier = Modifier.height(Spacing.md))
 
         Text(
-            text = stringResource(R.string.section_schedule),
+            text = stringResource(R.string.nav_automations),
             style = MaterialTheme.typography.headlineMedium,
             color = AppColors.textPrimary,
             modifier = Modifier.fillMaxWidth(),
         )
+        Text(
+            text = stringResource(R.string.automations_subtitle),
+            style = MaterialTheme.typography.bodyMedium,
+            color = AppColors.textSecondary,
+            modifier = Modifier.fillMaxWidth(),
+        )
 
         Spacer(modifier = Modifier.height(Spacing.sm))
+
+        profilesEntry?.invoke()
 
         ProfileSchedulesSection(viewModel = profileSchedulesViewModel)
 
@@ -606,7 +616,8 @@ fun ScheduleScreen(
             )
         }
 
-        Spacer(modifier = Modifier.height(Spacing.xl))
+        // Clears the floating Export now action on compact layouts.
+        Spacer(modifier = Modifier.height(Spacing.xl + Spacing.xxl))
     }
 
     if (showAPISettings) {

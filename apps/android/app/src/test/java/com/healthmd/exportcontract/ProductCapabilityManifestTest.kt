@@ -174,6 +174,8 @@ class ProductCapabilityManifestTest {
             "android.nutrition-meals",
             "android.contextual-source-fields",
             "android.skin-temperature",
+            // Lands on Android first; Apple is planned with the Liquid Glass Archive.
+            "export.coverage-calendar",
         )
 
         val allCapabilities = sharedCapabilities + appleCapabilities + androidCapabilities + setOf(

@@ -25,6 +25,8 @@ description: "Configura Health.md per Android. Esporta i dati Health Connect , s
 
 Health.md per Android trasforma Health Connect in un diario sanitario locale. Scegli le metriche di cui hai bisogno e visualizza l'anteprima dell'output. Quindi esporta i file in una cartella locale, Obsidian vault, cartella del provider sincronizzato o provider di documenti Android scrivibili.
 
+L’app ha tre schede. **Archivio** è un calendario delle date di salute coperte dalle tue esportazioni, con le lacune che puoi recuperare. **Automazioni** raccoglie i profili di esportazione e le pianificazioni. **Impostazioni** raccoglie destinazioni, dati e opzioni dell’app. Il pulsante **Esporta ora** avvia un’esportazione singola da qualsiasi scheda tranne Impostazioni.
+
 <div class="options">
  <div class="option"> <strong> Health Connect source </strong> <p> Legge attività, sonno, cuore, parametri vitali, misurazioni corporee, alimentazione, allenamenti e altre categorie tramite le API Health Connect integrate nel dispositivo Android. </p> </div>
  <div class="option"> <strong> Obsidian -output nativo </strong> <p> Scrive note giornaliere, YAML/frontmatter, Obsidian Note base-friendly, voci individuali e JSON compatibili con Health.md Obsidian plugin. </p> </div>

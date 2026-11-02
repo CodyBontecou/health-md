@@ -2,26 +2,36 @@ package com.healthmd.presentation.navigation
 
 import androidx.annotation.StringRes
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.FileUpload
-import androidx.compose.material.icons.outlined.History
-import androidx.compose.material.icons.outlined.Schedule
+import androidx.compose.material.icons.outlined.Autorenew
+import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.healthmd.R
 
+/** Top-level destinations: Archive, Automations and Settings. Export now is a global action. */
 enum class NavDestination(
     val route: String,
     val icon: ImageVector,
     @StringRes val label: Int,
 ) {
-    EXPORT("export", Icons.Outlined.FileUpload, R.string.nav_export),
-    SCHEDULE("schedule", Icons.Outlined.Schedule, R.string.nav_schedule),
-    HISTORY("history", Icons.Outlined.History, R.string.nav_history),
+    ARCHIVE("archive", Icons.Outlined.CalendarMonth, R.string.nav_archive),
+
+    // Keeps the "schedule" route so notification and recovery deep links still land here.
+    AUTOMATIONS("schedule", Icons.Outlined.Autorenew, R.string.nav_automations),
     SETTINGS("settings", Icons.Outlined.Settings, R.string.nav_settings),
+    ;
+
+    companion object {
+        /** The schedule controls now live in Automations. */
+        val SCHEDULE: NavDestination get() = AUTOMATIONS
+    }
 }
 
 // Sub-screen routes (not in bottom nav)
 object SubRoutes {
+    /** The full export screen, opened from the global Export now action. */
+    const val EXPORT_NOW = "export"
+    const val HISTORY = "history"
     const val ONBOARDING = "onboarding"
     const val METRIC_SELECTION = "metric_selection"
     const val FORMAT_CUSTOMIZATION = "format_customization"

@@ -579,8 +579,6 @@
     <!-- Export progress dialog -->
     <string name="export_progress_title">স্বাস্থ্য ডেটা রপ্তানি করা হচ্ছে</string>
     <!-- Navigation labels -->
-    <string name="nav_export">রপ্তানি</string>
-    <string name="nav_schedule">সময়সূচী</string>
     <string name="nav_history">ইতিহাস</string>
     <string name="nav_settings">সেটিংস</string>
     <string name="shortcut_export_short">রপ্তানি</string>

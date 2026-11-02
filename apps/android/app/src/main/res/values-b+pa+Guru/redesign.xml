@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="nav_archive">ਪੁਰਾਲੇਖ</string>
+    <string name="nav_automations">ਆਟੋਮੇਸ਼ਨ</string>
+    <string name="export_now_title">ਹੁਣੇ ਨਿਰਯਾਤ ਕਰੋ</string>
+    <string name="archive_filter_all">ਸਾਰੇ</string>
+    <string name="archive_filter_current_settings">ਮੌਜੂਦਾ ਸੈਟਿੰਗਾਂ</string>
+    <string name="archive_stat_archived">ਪੁਰਾਲੇਖ ਕੀਤੇ ਦਿਨ</string>
+    <string name="archive_stat_streak">ਮੌਜੂਦਾ ਲੜੀ</string>
+    <string name="archive_stat_gaps">ਖਾਲੀ ਥਾਵਾਂ</string>
+    <string name="archive_show_gap">ਪਹਿਲੀ ਖਾਲੀ ਥਾਂ ਦਿਖਾਓ</string>
+    <string name="archive_previous_month">ਪਿਛਲਾ ਮਹੀਨਾ</string>
+    <string name="archive_next_month">ਅਗਲਾ ਮਹੀਨਾ</string>
+    <string name="archive_legend_complete">ਪੂਰਾ</string>
+    <string name="archive_legend_partial">ਅੰਸ਼ਕ</string>
+    <string name="archive_legend_missing">ਗੁੰਮ</string>
+    <string name="archive_legend_not_exported">ਨਿਰਯਾਤ ਨਹੀਂ ਹੋਇਆ</string>
+    <string name="archive_legend_today">ਅੱਜ</string>
+    <string name="archive_day_on_track">%2$d ਵਿੱਚੋਂ %1$d ਯੋਜਨਾ ਅਨੁਸਾਰ</string>
+    <string name="archive_day_nothing">ਇਸ ਤਾਰੀਖ ਲਈ ਕੁਝ ਵੀ ਨਿਰਯਾਤ ਨਹੀਂ ਹੋਇਆ</string>
+    <string name="archive_day_status">%1$s, %2$s</string>
+    <string name="archive_row_last_export">ਆਖਰੀ ਨਿਰਯਾਤ %1$s</string>
+    <string name="archive_action_backfill">ਪੂਰਾ ਕਰੋ</string>
+    <string name="archive_empty_title">ਤੁਹਾਡਾ ਪੁਰਾਲੇਖ ਇੱਥੋਂ ਸ਼ੁਰੂ ਹੁੰਦਾ ਹੈ</string>
+    <string name="archive_empty_body">ਤੁਹਾਡੇ ਵੱਲੋਂ ਨਿਰਯਾਤ ਕੀਤਾ ਹਰ ਦਿਨ ਕੈਲੰਡਰ ਦਾ ਇੱਕ ਖਾਨਾ ਭਰਦਾ ਹੈ। ਸ਼ੁਰੂ ਕਰਨ ਲਈ ਇੱਕ ਵਾਰ ਨਿਰਯਾਤ ਕਰੋ।</string>
+    <string name="automations_subtitle">ਸੰਭਾਲੇ ਨਿਰਯਾਤ ਜਿਨ੍ਹਾਂ ਨੂੰ ਤੁਸੀਂ ਸਮਾਂ-ਸੂਚੀਬੱਧ ਕਰ ਸਕਦੇ ਹੋ, ਆਟੋਮੇਸ਼ਨ ਐਪਾਂ ਤੋਂ ਸ਼ੁਰੂ ਕਰ ਸਕਦੇ ਹੋ, ਜਾਂ healthmd CLI ਨਾਲ ਚਲਾ ਸਕਦੇ ਹੋ।</string>
+    <string name="automations_profiles_title">ਨਿਰਯਾਤ ਪ੍ਰੋਫਾਈਲ</string>
+    <string name="automations_profiles_body">ਸੰਭਾਲੀਆਂ ਨਿਰਯਾਤ ਸੰਰਚਨਾਵਾਂ ਬਣਾਓ, ਸੋਧੋ ਅਤੇ ਬਦਲੋ।</string>
+    <string name="automation_sentence_daily">ਹਰ ਰੋਜ਼ %1$s ਵਜੇ %2$s ਵਿੱਚ ਨਿਰਯਾਤ ਕਰੋ।</string>
+    <string name="automation_sentence_weekly">ਹਰ ਹਫ਼ਤੇ %1$s ਨੂੰ %2$s ਵਜੇ %3$s ਵਿੱਚ ਨਿਰਯਾਤ ਕਰੋ।</string>
+    <string name="automation_sentence_monthly">ਹਰ ਮਹੀਨੇ %1$s ਵਜੇ %2$s ਵਿੱਚ ਨਿਰਯਾਤ ਕਰੋ।</string>
+    <string name="automation_sentence_custom">ਕਸਟਮ ਸਮਾਂ-ਸੂਚੀ ਅਨੁਸਾਰ %1$s ਵਜੇ %2$s ਵਿੱਚ ਨਿਰਯਾਤ ਕਰੋ।</string>
+    <string name="automation_sentence_manual">ਲੋੜ ਪੈਣ ਤੇ %1$s ਵਿੱਚ ਨਿਰਯਾਤ ਕਰੋ।</string>
+    <string name="automation_destination_selected_folder">ਚੁਣਿਆ ਫੋਲਡਰ</string>
+    <string name="settings_section_destinations">ਮੰਜ਼ਿਲਾਂ</string>
+    <string name="settings_section_data">ਡਾਟਾ</string>
+    <string name="settings_section_app">ਐਪ</string>
+    <string name="settings_destination_folder_title">ਨਿਰਯਾਤ ਫੋਲਡਰ</string>
+    <string name="settings_destination_folder_subtitle">ਹੁਣੇ ਨਿਰਯਾਤ ਕਰੋ ਵਿੱਚ ਉਹ ਫੋਲਡਰ ਚੁਣੋ ਜਿਸ ਵਿੱਚ Health.md ਲਿਖਦਾ ਹੈ।</string>
+    <string name="settings_destination_api_title">API ਐਂਡਪੁਆਇੰਟ ਅਤੇ Agent Data ਗੇਟਵੇ</string>
+    <string name="settings_destination_api_subtitle">ਆਟੋਮੇਸ਼ਨ ਵਿੱਚ ਆਪਣੇ ਸਰਵਰ ਜਾਂ ਇਨਜੈਸ਼ਨ ਗੇਟਵੇ ਤੇ ਅਪਲੋਡ ਸੈੱਟ ਕਰੋ।</string>
+</resources>

@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="nav_archive">Archief</string>
+    <string name="nav_automations">Automatiseringen</string>
+    <string name="export_now_title">Nu exporteren</string>
+    <string name="archive_filter_all">Alles</string>
+    <string name="archive_filter_current_settings">Huidige instellingen</string>
+    <string name="archive_stat_archived">Gearchiveerde dagen</string>
+    <string name="archive_stat_streak">Huidige reeks</string>
+    <string name="archive_stat_gaps">Hiaten</string>
+    <string name="archive_show_gap">Eerste hiaat tonen</string>
+    <string name="archive_previous_month">Vorige maand</string>
+    <string name="archive_next_month">Volgende maand</string>
+    <string name="archive_legend_complete">Volledig</string>
+    <string name="archive_legend_partial">Gedeeltelijk</string>
+    <string name="archive_legend_missing">Ontbreekt</string>
+    <string name="archive_legend_not_exported">Niet geëxporteerd</string>
+    <string name="archive_legend_today">Vandaag</string>
+    <string name="archive_day_on_track">%1$d van %2$d op schema</string>
+    <string name="archive_day_nothing">Niets geëxporteerd voor deze datum</string>
+    <string name="archive_day_status">%1$s, %2$s</string>
+    <string name="archive_row_last_export">Laatste export %1$s</string>
+    <string name="archive_action_backfill">Aanvullen</string>
+    <string name="archive_empty_title">Je archief begint hier</string>
+    <string name="archive_empty_body">Elke dag die je exporteert vult een vakje in de kalender. Exporteer één keer om te beginnen.</string>
+    <string name="automations_subtitle">Opgeslagen exports die je kunt plannen, vanuit automatiseringsapps kunt starten of met de healthmd-CLI kunt uitvoeren.</string>
+    <string name="automations_profiles_title">Exportprofielen</string>
+    <string name="automations_profiles_body">Maak, bewerk en wissel tussen opgeslagen exportconfiguraties.</string>
+    <string name="automation_sentence_daily">Elke dag om %1$s exporteren naar %2$s.</string>
+    <string name="automation_sentence_weekly">Elke week op %1$s om %2$s exporteren naar %3$s.</string>
+    <string name="automation_sentence_monthly">Elke maand om %1$s exporteren naar %2$s.</string>
+    <string name="automation_sentence_custom">Volgens een eigen planning om %1$s exporteren naar %2$s.</string>
+    <string name="automation_sentence_manual">Op verzoek exporteren naar %1$s.</string>
+    <string name="automation_destination_selected_folder">de geselecteerde map</string>
+    <string name="settings_section_destinations">Bestemmingen</string>
+    <string name="settings_section_data">Gegevens</string>
+    <string name="settings_section_app">App</string>
+    <string name="settings_destination_folder_title">Exportmap</string>
+    <string name="settings_destination_folder_subtitle">Kies in Nu exporteren de map waarin Health.md schrijft.</string>
+    <string name="settings_destination_api_title">API-endpoint en Agent Data-gateway</string>
+    <string name="settings_destination_api_subtitle">Stel in Automatiseringen uploads naar je server of een ingestiegateway in.</string>
+</resources>

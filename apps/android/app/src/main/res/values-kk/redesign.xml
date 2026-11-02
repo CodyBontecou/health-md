@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="nav_archive">Мұрағат</string>
+    <string name="nav_automations">Автоматтандырулар</string>
+    <string name="export_now_title">Қазір экспорттау</string>
+    <string name="archive_filter_all">Барлығы</string>
+    <string name="archive_filter_current_settings">Ағымдағы параметрлер</string>
+    <string name="archive_stat_archived">Мұрағаттағы күндер</string>
+    <string name="archive_stat_streak">Ағымдағы серия</string>
+    <string name="archive_stat_gaps">Олқылықтар</string>
+    <string name="archive_show_gap">Бірінші олқылықты көрсету</string>
+    <string name="archive_previous_month">Алдыңғы ай</string>
+    <string name="archive_next_month">Келесі ай</string>
+    <string name="archive_legend_complete">Толық</string>
+    <string name="archive_legend_partial">Ішінара</string>
+    <string name="archive_legend_missing">Жоқ</string>
+    <string name="archive_legend_not_exported">Экспортталмаған</string>
+    <string name="archive_legend_today">Бүгін</string>
+    <string name="archive_day_on_track">Жоспар бойынша: %1$d / %2$d</string>
+    <string name="archive_day_nothing">Бұл күнге ештеңе экспортталмады</string>
+    <string name="archive_day_status">%1$s, %2$s</string>
+    <string name="archive_row_last_export">Соңғы экспорт: %1$s</string>
+    <string name="archive_action_backfill">Толықтыру</string>
+    <string name="archive_empty_title">Мұрағатыңыз осы жерден басталады</string>
+    <string name="archive_empty_body">Экспортталған әр күн күнтізбедегі бір ұяшықты толтырады. Бастау үшін бір рет экспорттаңыз.</string>
+    <string name="automations_subtitle">Жоспарлауға, автоматтандыру қолданбаларынан іске қосуға немесе healthmd CLI арқылы орындауға болатын сақталған экспорттар.</string>
+    <string name="automations_profiles_title">Экспорт профильдері</string>
+    <string name="automations_profiles_body">Сақталған экспорт конфигурацияларын жасаңыз, өңдеңіз және ауыстырыңыз.</string>
+    <string name="automation_sentence_daily">Күн сайын %1$s кезінде %2$s ішіне экспорттау.</string>
+    <string name="automation_sentence_weekly">Апта сайын (%1$s) %2$s кезінде %3$s ішіне экспорттау.</string>
+    <string name="automation_sentence_monthly">Ай сайын %1$s кезінде %2$s ішіне экспорттау.</string>
+    <string name="automation_sentence_custom">Жеке кесте бойынша %1$s кезінде %2$s ішіне экспорттау.</string>
+    <string name="automation_sentence_manual">Сұраныс бойынша %1$s ішіне экспорттау.</string>
+    <string name="automation_destination_selected_folder">таңдалған қалта</string>
+    <string name="settings_section_destinations">Мақсаттар</string>
+    <string name="settings_section_data">Деректер</string>
+    <string name="settings_section_app">Қолданба</string>
+    <string name="settings_destination_folder_title">Экспорт қалтасы</string>
+    <string name="settings_destination_folder_subtitle">Health.md жазатын қалтаны «Қазір экспорттау» бөлімінде таңдаңыз.</string>
+    <string name="settings_destination_api_title">API соңғы нүктесі және Agent Data шлюзі</string>
+    <string name="settings_destination_api_subtitle">Серверге немесе қабылдау шлюзіне жүктеуді «Автоматтандырулар» бөлімінде баптаңыз.</string>
+</resources>

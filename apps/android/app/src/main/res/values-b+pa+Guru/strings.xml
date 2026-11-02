@@ -579,8 +579,6 @@
     <!-- Export progress dialog -->
     <string name="export_progress_title">ਸਿਹਤ ਡੇਟਾ ਨਿਰਯਾਤ ਕੀਤਾ ਜਾ ਰਿਹਾ ਹੈ</string>
     <!-- Navigation labels -->
-    <string name="nav_export">ਨਿਰਯਾਤ</string>
-    <string name="nav_schedule">ਸਮਾਂ-ਸਾਰਣੀ</string>
     <string name="nav_history">ਇਤਿਹਾਸ</string>
     <string name="nav_settings">ਸੈਟਿੰਗਜ਼</string>
     <string name="shortcut_export_short">ਨਿਰਯਾਤ</string>

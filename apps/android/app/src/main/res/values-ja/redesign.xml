@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="nav_archive">アーカイブ</string>
+    <string name="nav_automations">オートメーション</string>
+    <string name="export_now_title">今すぐエクスポート</string>
+    <string name="archive_filter_all">すべて</string>
+    <string name="archive_filter_current_settings">現在の設定</string>
+    <string name="archive_stat_archived">アーカイブ済みの日数</string>
+    <string name="archive_stat_streak">現在の連続日数</string>
+    <string name="archive_stat_gaps">欠落</string>
+    <string name="archive_show_gap">最初の欠落を表示</string>
+    <string name="archive_previous_month">前の月</string>
+    <string name="archive_next_month">次の月</string>
+    <string name="archive_legend_complete">完了</string>
+    <string name="archive_legend_partial">一部</string>
+    <string name="archive_legend_missing">欠落</string>
+    <string name="archive_legend_not_exported">未エクスポート</string>
+    <string name="archive_legend_today">今日</string>
+    <string name="archive_day_on_track">%2$d 件中 %1$d 件が予定どおり</string>
+    <string name="archive_day_nothing">この日付にはエクスポートされたものがありません</string>
+    <string name="archive_day_status">%1$s、%2$s</string>
+    <string name="archive_row_last_export">前回のエクスポート：%1$s</string>
+    <string name="archive_action_backfill">補完</string>
+    <string name="archive_empty_title">アーカイブはここから始まります</string>
+    <string name="archive_empty_body">エクスポートした日ごとにカレンダーのマスが埋まります。まず一度エクスポートしてください。</string>
+    <string name="automations_subtitle">スケジュール実行、オートメーションアプリからの起動、healthmd CLI での実行ができる保存済みエクスポートです。</string>
+    <string name="automations_profiles_title">エクスポートプロファイル</string>
+    <string name="automations_profiles_body">保存済みのエクスポート設定を作成、編集、切り替えます。</string>
+    <string name="automation_sentence_daily">毎日 %1$s に %2$s へエクスポートします。</string>
+    <string name="automation_sentence_weekly">毎週%1$sの %2$s に %3$s へエクスポートします。</string>
+    <string name="automation_sentence_monthly">毎月 %1$s に %2$s へエクスポートします。</string>
+    <string name="automation_sentence_custom">カスタムスケジュールで %1$s に %2$s へエクスポートします。</string>
+    <string name="automation_sentence_manual">必要なときに %1$s へエクスポートします。</string>
+    <string name="automation_destination_selected_folder">選択したフォルダ</string>
+    <string name="settings_section_destinations">保存先</string>
+    <string name="settings_section_data">データ</string>
+    <string name="settings_section_app">アプリ</string>
+    <string name="settings_destination_folder_title">エクスポートフォルダ</string>
+    <string name="settings_destination_folder_subtitle">「今すぐエクスポート」で Health.md が書き込むフォルダを選びます。</string>
+    <string name="settings_destination_api_title">API エンドポイントと Agent Data ゲートウェイ</string>
+    <string name="settings_destination_api_subtitle">「オートメーション」で、サーバーまたは取り込みゲートウェイへのアップロードを設定します。</string>
+</resources>

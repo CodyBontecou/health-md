@@ -107,6 +107,8 @@ fun ExportScreen(
     onNavigateToSchedule: () -> Unit = {},
     onNavigateToUpgrade: () -> Unit = onNavigateToPaywall,
     sleepDayAttribution: SleepDayAttribution = SleepDayAttribution.DEFAULT,
+    /** Set when Export now opens over the Archive; shows Back and the screen title. */
+    onBack: (() -> Unit)? = null,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -430,9 +432,30 @@ fun ExportScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(Spacing.md),
         ) {
+        if (onBack != null) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+            ) {
+                IconButton(onClick = onBack) {
+                    Icon(
+                        Icons.AutoMirrored.Outlined.ArrowBack,
+                        contentDescription = stringResource(R.string.back),
+                        tint = AppColors.textPrimary,
+                    )
+                }
+                Text(
+                    text = stringResource(R.string.export_now_title),
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = AppColors.textPrimary,
+                )
+            }
+        } else {
         Spacer(modifier = Modifier.height(Spacing.md))
+        }
 
-        Row(
+        if (onBack == null) Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),

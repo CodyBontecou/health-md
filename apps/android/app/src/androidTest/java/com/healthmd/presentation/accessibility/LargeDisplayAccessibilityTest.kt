@@ -268,7 +268,7 @@ class LargeDisplayAccessibilityTest(private val display: AccessibilityDisplayCas
             TestViewport {
                 AppNavigationLayout(
                     destinations = NavDestination.entries,
-                    currentRoute = NavDestination.EXPORT.route,
+                    currentRoute = NavDestination.ARCHIVE.route,
                     onNavigate = { actions += it.route },
                 ) { modifier ->
                     Column(modifier = modifier.verticalScroll(rememberScrollState())) {
@@ -295,12 +295,12 @@ class LargeDisplayAccessibilityTest(private val display: AccessibilityDisplayCas
             tab.performTouchInput { click() }
         }
         assertEquals(listOf(LAST_ACTION) + NavDestination.entries.map { it.route }, actions)
-        if (display.width < 601 && GeistAdaptiveLayout.wrapNavigation(display.width - 16f, display.fontScale, 4)) {
-            val export = node(R.string.nav_export).getUnclippedBoundsInRoot()
-            val schedule = node(R.string.nav_schedule).getUnclippedBoundsInRoot()
-            val history = node(R.string.nav_history).getUnclippedBoundsInRoot()
-            assertEquals("First row has two wide tabs", export.top, schedule.top)
-            assertTrue("Remaining tabs use a second row", history.top >= export.bottom)
+        if (display.width < 601 && GeistAdaptiveLayout.wrapNavigation(display.width - 16f, display.fontScale, NavDestination.entries.size)) {
+            val archive = node(R.string.nav_archive).getUnclippedBoundsInRoot()
+            val automations = node(R.string.nav_automations).getUnclippedBoundsInRoot()
+            val settings = node(R.string.nav_settings).getUnclippedBoundsInRoot()
+            assertEquals("First row has two wide tabs", archive.top, automations.top)
+            assertTrue("Remaining tabs use a second row", settings.top >= archive.bottom)
         }
     }
 
@@ -362,7 +362,7 @@ class LargeDisplayAccessibilityTest(private val display: AccessibilityDisplayCas
         val actions = mutableListOf<String>()
         compose.setContent {
             TestViewport {
-                AppNavigationLayout(NavDestination.entries, NavDestination.EXPORT.route, {}) { modifier ->
+                AppNavigationLayout(NavDestination.entries, NavDestination.ARCHIVE.route, {}) { modifier ->
                     Box(modifier) {
                         FloatingExportActionBar(
                             isPurchased = false,

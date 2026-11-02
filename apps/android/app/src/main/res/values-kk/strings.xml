@@ -554,8 +554,6 @@
     <string name="debug_toggle_unlock">Құлып күйін ауыстыру</string>
     <string name="debug_reset_state">Күйді қалпына келтіру</string>
     <string name="export_progress_title">Денсаулық деректері экспортталуда</string>
-    <string name="nav_export">Экспорт</string>
-    <string name="nav_schedule">Кесте</string>
     <string name="nav_history">Тарих</string>
     <string name="nav_settings">Параметрлер</string>
     <string name="shortcut_export_short">Экспорттау</string>

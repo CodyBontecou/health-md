@@ -638,8 +638,6 @@
     <string name="export_progress_title">Exporting Health Data</string>
 
     <!-- Navigation labels -->
-    <string name="nav_export">Export</string>
-    <string name="nav_schedule">Schedule</string>
     <string name="nav_history">History</string>
     <string name="nav_settings">Settings</string>
     <string name="shortcut_export_short">Export</string>

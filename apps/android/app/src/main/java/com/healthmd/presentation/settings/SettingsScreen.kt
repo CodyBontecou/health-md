@@ -56,6 +56,8 @@ fun SettingsScreen(
     onNavigateToDirectCli: () -> Unit = {},
     onNavigateToSharedSetup: () -> Unit = {},
     onNavigateToDiagnostics: () -> Unit = {},
+    onNavigateToExportNow: () -> Unit = {},
+    onNavigateToAutomations: () -> Unit = {},
 ) {
     val isPurchased by viewModel.isPurchased.collectAsStateWithLifecycle()
     val distributionPolicy = viewModel.distributionPolicy
@@ -162,14 +164,6 @@ fun SettingsScreen(
             }
         }
 
-        ConfigurationProtectionSettingsCard(
-            enabled = protectionEnabled,
-            onEnabledChange = viewModel::setPreventAccidentalChanges,
-            modifier = Modifier
-                .bringIntoViewRequester(protectionRequester)
-                .testTag(ConfigurationProtectionTestTags.SECTION),
-        )
-
         // Premium upgrade (show at top for free users)
         if (!isPurchased && distributionPolicy.purchasesAvailable) {
             SettingsNavigationCard(
@@ -179,9 +173,6 @@ fun SettingsScreen(
                 onClick = onNavigateToPaywall,
             )
         }
-
-        Spacer(modifier = Modifier.height(Spacing.sm))
-
         if (BuildConfig.MYSELF_CLAIM_ENABLED && distributionPolicy.purchasesAvailable) {
             SettingsNavigationCard(
                 title = stringResource(R.string.myself_claim_entry),
@@ -192,15 +183,37 @@ fun SettingsScreen(
             )
         }
 
-        WidgetSettingsCard()
-        if (distributionPolicy.wearSyncAvailable) {
-            DistributionWearSettingsCard()
-        }
+        // Grouped as on the cross-platform Settings screen: Destinations, Data, App.
+        SectionLabel(stringResource(R.string.settings_section_destinations))
+        SettingsNavigationCard(
+            title = stringResource(R.string.settings_destination_folder_title),
+            subtitle = stringResource(R.string.settings_destination_folder_subtitle),
+            icon = Icons.Outlined.Folder,
+            onClick = onNavigateToExportNow,
+        )
+        SettingsNavigationCard(
+            title = stringResource(R.string.direct_cli_title),
+            subtitle = stringResource(R.string.settings_direct_cli_subtitle),
+            icon = Icons.Outlined.Computer,
+            onClick = onNavigateToDirectCli,
+        )
+        SettingsNavigationCard(
+            title = stringResource(R.string.settings_destination_api_title),
+            subtitle = stringResource(R.string.settings_destination_api_subtitle),
+            icon = Icons.Outlined.Cloud,
+            onClick = onNavigateToAutomations,
+        )
 
+        SectionLabel(stringResource(R.string.settings_section_data))
         // Profiles & Reports: occasional-use export configuration surfaces that
         // moved off the Export screen so daily export controls come first.
         ExportProfilesEntryCard(onOpen = onNavigateToExportProfiles)
-
+        if (whoopProviders.isNotEmpty()) {
+            HealthProviderSupportSection(
+                providers = whoopProviders,
+                onOpenProvider = { providerDialog = it },
+            )
+        }
         SettingsNavigationCard(
             title = stringResource(R.string.clinician_report_title),
             subtitle = stringResource(R.string.clinician_report_entry_subtitle),
@@ -208,7 +221,6 @@ fun SettingsScreen(
             onClick = onNavigateToClinicianReport,
             modifier = Modifier.testTag("clinician_report_entry"),
         )
-
         SettingsNavigationCard(
             title = stringResource(R.string.shared_setup_title),
             subtitle = stringResource(R.string.shared_setup_settings_detail),
@@ -216,20 +228,18 @@ fun SettingsScreen(
             onClick = onNavigateToSharedSetup,
         )
 
-        if (whoopProviders.isNotEmpty()) {
-            HealthProviderSupportSection(
-                providers = whoopProviders,
-                onOpenProvider = { providerDialog = it },
-            )
-        }
-
-        SettingsNavigationCard(
-            title = stringResource(R.string.direct_cli_title),
-            subtitle = stringResource(R.string.settings_direct_cli_subtitle),
-            icon = Icons.Outlined.Computer,
-            onClick = onNavigateToDirectCli,
+        SectionLabel(stringResource(R.string.settings_section_app))
+        ConfigurationProtectionSettingsCard(
+            enabled = protectionEnabled,
+            onEnabledChange = viewModel::setPreventAccidentalChanges,
+            modifier = Modifier
+                .bringIntoViewRequester(protectionRequester)
+                .testTag(ConfigurationProtectionTestTags.SECTION),
         )
-
+        WidgetSettingsCard()
+        if (distributionPolicy.wearSyncAvailable) {
+            DistributionWearSettingsCard()
+        }
         SettingsNavigationCard(
             title = stringResource(R.string.diagnostics_title),
             subtitle = stringResource(R.string.diagnostics_entry),

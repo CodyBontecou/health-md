@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="nav_archive">Arhivă</string>
+    <string name="nav_automations">Automatizări</string>
+    <string name="export_now_title">Exportați acum</string>
+    <string name="archive_filter_all">Toate</string>
+    <string name="archive_filter_current_settings">Setările curente</string>
+    <string name="archive_stat_archived">Zile arhivate</string>
+    <string name="archive_stat_streak">Serie curentă</string>
+    <string name="archive_stat_gaps">Goluri</string>
+    <string name="archive_show_gap">Afișați primul gol</string>
+    <string name="archive_previous_month">Luna anterioară</string>
+    <string name="archive_next_month">Luna următoare</string>
+    <string name="archive_legend_complete">Complet</string>
+    <string name="archive_legend_partial">Parțial</string>
+    <string name="archive_legend_missing">Lipsește</string>
+    <string name="archive_legend_not_exported">Neexportat</string>
+    <string name="archive_legend_today">Astăzi</string>
+    <string name="archive_day_on_track">%1$d din %2$d la zi</string>
+    <string name="archive_day_nothing">Nu s-a exportat nimic pentru această dată</string>
+    <string name="archive_day_status">%1$s, %2$s</string>
+    <string name="archive_row_last_export">Ultimul export %1$s</string>
+    <string name="archive_action_backfill">Recuperați</string>
+    <string name="archive_empty_title">Arhiva dvs. începe aici</string>
+    <string name="archive_empty_body">Fiecare zi exportată umple un pătrat din calendar. Exportați o dată pentru a începe.</string>
+    <string name="automations_subtitle">Exporturi salvate pe care le puteți programa, porni din aplicații de automatizare sau rula cu CLI-ul healthmd.</string>
+    <string name="automations_profiles_title">Profiluri de export</string>
+    <string name="automations_profiles_body">Creați, editați și comutați între configurațiile de export salvate.</string>
+    <string name="automation_sentence_daily">În fiecare zi la %1$s, exportați în %2$s.</string>
+    <string name="automation_sentence_weekly">În fiecare săptămână, %1$s la %2$s, exportați în %3$s.</string>
+    <string name="automation_sentence_monthly">În fiecare lună la %1$s, exportați în %2$s.</string>
+    <string name="automation_sentence_custom">După un program personalizat la %1$s, exportați în %2$s.</string>
+    <string name="automation_sentence_manual">Exportați la cerere în %1$s.</string>
+    <string name="automation_destination_selected_folder">dosarul selectat</string>
+    <string name="settings_section_destinations">Destinații</string>
+    <string name="settings_section_data">Date</string>
+    <string name="settings_section_app">Aplicație</string>
+    <string name="settings_destination_folder_title">Dosar de export</string>
+    <string name="settings_destination_folder_subtitle">Alegeți în Exportați acum dosarul în care scrie Health.md.</string>
+    <string name="settings_destination_api_title">Endpoint API și gateway Agent Data</string>
+    <string name="settings_destination_api_subtitle">Configurați în Automatizări încărcările pe serverul dvs. sau într-un gateway de ingestie.</string>
+</resources>

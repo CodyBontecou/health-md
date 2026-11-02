@@ -303,8 +303,6 @@
     <string name="export_progress_title">Se exportă datele de sănătate</string>
 
     <!-- Navigation labels -->
-    <string name="nav_export">Export</string>
-    <string name="nav_schedule">Programare</string>
     <string name="nav_history">Istoric</string>
     <string name="nav_settings">Setări</string>
 

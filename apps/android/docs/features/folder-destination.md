@@ -64,7 +64,7 @@ My Vault/
 - **Suggested title:** Point Health.md at Your Obsidian Vault (or Any Folder)
 - **Hook:** "One folder. Every export lands there."
 - **Demo flow:**
-  1. Export tab → Export Folder → Select.
+  1. Export now screen → Export Folder → Select.
   2. Pick an Obsidian vault folder in the picker.
   3. Export a day and open the file in Obsidian.
 - **Key screenshot/recording moments:** system picker, folder name on the card, file opening in Obsidian.

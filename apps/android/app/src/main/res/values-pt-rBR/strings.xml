@@ -386,8 +386,6 @@
     <string name="export_progress_title">Exportando Dados de Saúde</string>
 
     <!-- Navigation labels -->
-    <string name="nav_export">Exportar</string>
-    <string name="nav_schedule">Agendamento</string>
     <string name="nav_history">Histórico</string>
     <string name="nav_settings">Configurações</string>
 

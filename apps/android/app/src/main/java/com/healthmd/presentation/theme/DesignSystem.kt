@@ -8,8 +8,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 
 /**
- * Compose tokens for the governing Vercel Geist specifications in DESIGN.md and
- * DESIGN.dark.md. Screen code should consume these tokens instead of inventing values.
+ * Compose tokens for the governing Health.md Material 3 specifications in DESIGN.md and
+ * DESIGN.dark.md. The `Geist*` identifiers are legacy names kept so screens migrate
+ * without churn. Screen code should consume these tokens instead of inventing values.
  */
 @Immutable
 data class GeistColorScale(
@@ -35,6 +36,12 @@ data class GeistColors(
     val brandSubtle: Color,
     val brandBorder: Color,
     val brandOnPrimary: Color,
+    val brandOnSubtle: Color,
+    val secondaryContainer: Color,
+    val onSecondaryContainer: Color,
+    val coverageComplete: Color,
+    val onCoverageComplete: Color,
+    val coverageMissing: Color,
     val gray: GeistColorScale,
     val grayAlpha: GeistColorScale,
     val blue: GeistColorScale,
@@ -58,17 +65,23 @@ data class GeistColors(
 
 internal val GeistLightColors = GeistColors(
     isDark = false,
-    background100 = Color(0xFFFFFFFF),
-    background200 = Color(0xFFFAFAFA),
-    brandPrimary = Color(0xFF66488F),
-    brandHover = Color(0xFF463176),
-    brandSubtle = Color(0xFFF4EFF7),
-    brandBorder = Color(0xFFC5ADD9),
-    brandOnPrimary = Color.White,
+    background100 = Color(0xFFFEF7FF),
+    background200 = Color(0xFFF8F1FA),
+    brandPrimary = Color(0xFF6A3FE0),
+    brandHover = Color(0xFF4F2FA8),
+    brandSubtle = Color(0xFFE9DDFF),
+    brandBorder = Color(0xFFCDB6FF),
+    brandOnPrimary = Color(0xFFFFFFFF),
+    brandOnSubtle = Color(0xFF23005C),
+    secondaryContainer = Color(0xFFE8DEF8),
+    onSecondaryContainer = Color(0xFF1D192B),
+    coverageComplete = Color(0xFFDCCFFA),
+    onCoverageComplete = Color(0xFF2D1F4F),
+    coverageMissing = Color(0xFFB93C0A),
     gray = GeistColorScale(
-        Color(0xFFF2F2F2), Color(0xFFEBEBEB), Color(0xFFE6E6E6), Color(0xFFEAEAEA),
-        Color(0xFFC9C9C9), Color(0xFFA8A8A8), Color(0xFF8F8F8F), Color(0xFF7D7D7D),
-        Color(0xFF4D4D4D), Color(0xFF171717),
+        Color(0xFFF2ECF4), Color(0xFFECE6EE), Color(0xFFE6E0E9), Color(0xFFE0DAE2),
+        Color(0xFFCAC4D0), Color(0xFFAEA9B4), Color(0xFF7A757F), Color(0xFF605D66),
+        Color(0xFF49454F), Color(0xFF1D1B20),
     ),
     grayAlpha = GeistColorScale(
         Color(0x0D000000), Color(0x15000000), Color(0x1A000000), Color(0x14000000),
@@ -114,17 +127,23 @@ internal val GeistLightColors = GeistColors(
 
 internal val GeistDarkColors = GeistColors(
     isDark = true,
-    background100 = Color(0xFF000000),
-    background200 = Color(0xFF000000),
-    brandPrimary = Color(0xFFC5ADD9),
-    brandHover = Color(0xFFDFD5E8),
-    brandSubtle = Color(0xFF241946),
-    brandBorder = Color(0xFF463176),
-    brandOnPrimary = Color(0xFF241946),
+    background100 = Color(0xFF141218),
+    background200 = Color(0xFF1D1B20),
+    brandPrimary = Color(0xFFCDB6FF),
+    brandHover = Color(0xFFE9DDFF),
+    brandSubtle = Color(0xFF4F2FA8),
+    brandBorder = Color(0xFF6A3FE0),
+    brandOnPrimary = Color(0xFF2A1260),
+    brandOnSubtle = Color(0xFFF1E8FF),
+    secondaryContainer = Color(0xFF4A4458),
+    onSecondaryContainer = Color(0xFFE8DEF8),
+    coverageComplete = Color(0xFF3B3058),
+    onCoverageComplete = Color(0xFFFFFFFF),
+    coverageMissing = Color(0xFFFFA184),
     gray = GeistColorScale(
-        Color(0xFF1A1A1A), Color(0xFF1F1F1F), Color(0xFF292929), Color(0xFF2E2E2E),
-        Color(0xFF454545), Color(0xFF878787), Color(0xFF8F8F8F), Color(0xFF7D7D7D),
-        Color(0xFFA0A0A0), Color(0xFFEDEDED),
+        Color(0xFF211F26), Color(0xFF2B2930), Color(0xFF36343B), Color(0xFF3B383E),
+        Color(0xFF49454F), Color(0xFF625F68), Color(0xFF948F99), Color(0xFFAEA9B4),
+        Color(0xFFCAC4D0), Color(0xFFE6E0E9),
     ),
     grayAlpha = GeistColorScale(
         Color(0x12FFFFFF), Color(0x17FFFFFF), Color(0x21FFFFFF), Color(0x24FFFFFF),
@@ -183,9 +202,12 @@ object GeistSpacing {
 }
 
 object GeistRadii {
-    val small = 6.dp
-    val medium = 12.dp
-    val large = 16.dp
+    val extraSmall = 4.dp
+    val small = 8.dp
+    val medium = 16.dp
+    val large = 28.dp
+    /** Outer corners of a grouped list; inner rows use [extraSmall]. */
+    val listGroup = 20.dp
     val full = 9999.dp
 }
 
@@ -195,6 +217,8 @@ object GeistSizes {
     val controlLarge = 48.dp
     val minimumTouchTarget = 48.dp
     val scannerFrame = 260.dp
+    /** Single-column screens center at this width on tablets and unfolded foldables. */
+    val readableContentMaxWidth = 840.dp
     const val dialogMaxHeightFraction = 0.9f
 }
 
@@ -232,8 +256,8 @@ object Spacing {
 }
 
 object Radii {
-    val card = GeistRadii.small
-    val button = GeistRadii.small
+    val card = GeistRadii.listGroup
+    val button = GeistRadii.full
     val badge = GeistRadii.full
     val navBar = GeistRadii.medium
     val icon = GeistRadii.full
@@ -277,5 +301,9 @@ object AppColors {
     val warning: Color @Composable get() = LocalGeistColors.current.warning
     val warningSubtle: Color @Composable get() = LocalGeistColors.current.amber.c100
     val warningBorder: Color @Composable get() = LocalGeistColors.current.amber.c400
+
+    val secondaryContainer: Color @Composable get() = LocalGeistColors.current.secondaryContainer
+    val onSecondaryContainer: Color @Composable get() = LocalGeistColors.current.onSecondaryContainer
+    val onAccentSubtle: Color @Composable get() = LocalGeistColors.current.brandOnSubtle
 
 }

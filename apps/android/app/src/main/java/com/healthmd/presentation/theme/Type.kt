@@ -8,11 +8,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import com.healthmd.R
 
+/** Bundled Geist Sans, kept for surfaces outside the Compose tree (widgets, PDF reports). */
 val GeistSans = FontFamily(
     Font(R.font.geist_regular, FontWeight.Normal),
     Font(R.font.geist_medium, FontWeight.Medium),
     Font(R.font.geist_semibold, FontWeight.SemiBold),
 )
+
+/** UI copy follows the platform sans-serif (Roboto), the user's system font, per DESIGN.md. */
+val AppSans: FontFamily = FontFamily.SansSerif
 
 val GeistMono = FontFamily(
     Font(R.font.geist_mono_regular, FontWeight.Normal),
@@ -25,7 +29,7 @@ private fun geistSans(
     weight: FontWeight = FontWeight.Normal,
     letterSpacing: Float = 0f,
 ) = TextStyle(
-    fontFamily = GeistSans,
+    fontFamily = AppSans,
     fontSize = size.sp,
     fontWeight = weight,
     lineHeight = lineHeight.sp,
@@ -43,45 +47,45 @@ private fun geistMono(
     fontFeatureSettings = "tnum",
 )
 
-/** Exact reusable typography tokens from DESIGN.md and DESIGN.dark.md. */
+/** Exact reusable typography tokens from DESIGN.md and DESIGN.dark.md (Material 3 scale). */
 object GeistType {
-    val heading72 = geistSans(72, 72, FontWeight.SemiBold, -4.32f)
-    val heading64 = geistSans(64, 64, FontWeight.SemiBold, -3.84f)
-    val heading56 = geistSans(56, 56, FontWeight.SemiBold, -3.36f)
-    val heading48 = geistSans(48, 56, FontWeight.SemiBold, -2.88f)
-    val heading40 = geistSans(40, 48, FontWeight.SemiBold, -2.4f)
-    val heading32 = geistSans(32, 40, FontWeight.SemiBold, -1.28f)
-    val heading24 = geistSans(24, 32, FontWeight.SemiBold, -0.96f)
-    val heading20 = geistSans(20, 26, FontWeight.SemiBold, -0.4f)
-    val heading16 = geistSans(16, 24, FontWeight.SemiBold, -0.32f)
-    val heading14 = geistSans(14, 20, FontWeight.SemiBold, -0.28f)
+    val heading72 = geistSans(72, 80, FontWeight.Medium, -0.5f)
+    val heading64 = geistSans(64, 72, FontWeight.Medium, -0.5f)
+    val heading56 = geistSans(56, 64, FontWeight.Medium, -0.25f)
+    val heading48 = geistSans(48, 56, FontWeight.Medium)
+    val heading40 = geistSans(40, 48, FontWeight.Medium)
+    val heading32 = geistSans(32, 40, FontWeight.Medium)
+    val heading24 = geistSans(24, 32, FontWeight.Medium)
+    val heading20 = geistSans(20, 28, FontWeight.Medium)
+    val heading16 = geistSans(16, 24, FontWeight.SemiBold, 0.15f)
+    val heading14 = geistSans(14, 20, FontWeight.SemiBold, 0.1f)
 
-    val button16 = geistSans(16, 20, FontWeight.Medium)
-    val button14 = geistSans(14, 20, FontWeight.Medium)
-    val button12 = geistSans(12, 16, FontWeight.Medium)
+    val button16 = geistSans(16, 24, FontWeight.SemiBold)
+    val button14 = geistSans(14, 20, FontWeight.SemiBold, 0.1f)
+    val button12 = geistSans(12, 16, FontWeight.SemiBold, 0.5f)
 
     val label20 = geistSans(20, 32)
     val label20Mono = geistMono(20, 32)
-    val label18 = geistSans(18, 20)
-    val label16 = geistSans(16, 20)
-    val label14 = geistSans(14, 20)
-    val label13 = geistSans(13, 16)
-    val label12 = geistSans(12, 16)
+    val label18 = geistSans(18, 24)
+    val label16 = geistSans(16, 24, letterSpacing = 0.15f)
+    val label14 = geistSans(14, 20, letterSpacing = 0.25f)
+    val label13 = geistSans(13, 18, letterSpacing = 0.25f)
+    val label12 = geistSans(12, 16, FontWeight.Medium, 0.4f)
     val label14Mono = geistMono(14, 20)
     val label13Mono = geistMono(13, 20)
     val label12Mono = geistMono(12, 16)
 
     val copy24 = geistSans(24, 36)
-    val copy20 = geistSans(20, 36)
+    val copy20 = geistSans(20, 32)
     val copy18 = geistSans(18, 28)
-    val copy16 = geistSans(16, 24)
-    val copy14 = geistSans(14, 20)
-    val copy13 = geistSans(13, 18)
+    val copy16 = geistSans(16, 24, letterSpacing = 0.5f)
+    val copy14 = geistSans(14, 20, letterSpacing = 0.25f)
+    val copy13 = geistSans(13, 18, letterSpacing = 0.25f)
     val copy14Mono = geistMono(14, 20)
     val copy13Mono = geistMono(13, 18)
 }
 
-/** Material role mapping used by existing screens; every role resolves to a Geist token. */
+/** Material role mapping used by every screen; each role resolves to a named token. */
 val Typography = Typography(
     displayLarge = GeistType.heading56,
     displayMedium = GeistType.heading48,

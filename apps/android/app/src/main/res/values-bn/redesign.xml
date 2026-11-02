@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="nav_archive">আর্কাইভ</string>
+    <string name="nav_automations">অটোমেশন</string>
+    <string name="export_now_title">এখনই রপ্তানি করুন</string>
+    <string name="archive_filter_all">সব</string>
+    <string name="archive_filter_current_settings">বর্তমান সেটিংস</string>
+    <string name="archive_stat_archived">আর্কাইভ করা দিন</string>
+    <string name="archive_stat_streak">বর্তমান ধারা</string>
+    <string name="archive_stat_gaps">ফাঁক</string>
+    <string name="archive_show_gap">প্রথম ফাঁক দেখান</string>
+    <string name="archive_previous_month">আগের মাস</string>
+    <string name="archive_next_month">পরের মাস</string>
+    <string name="archive_legend_complete">সম্পূর্ণ</string>
+    <string name="archive_legend_partial">আংশিক</string>
+    <string name="archive_legend_missing">অনুপস্থিত</string>
+    <string name="archive_legend_not_exported">রপ্তানি হয়নি</string>
+    <string name="archive_legend_today">আজ</string>
+    <string name="archive_day_on_track">%2$d-এর মধ্যে %1$d পরিকল্পনা অনুযায়ী</string>
+    <string name="archive_day_nothing">এই তারিখের জন্য কিছু রপ্তানি হয়নি</string>
+    <string name="archive_day_status">%1$s, %2$s</string>
+    <string name="archive_row_last_export">শেষ রপ্তানি %1$s</string>
+    <string name="archive_action_backfill">পূরণ করুন</string>
+    <string name="archive_empty_title">আপনার আর্কাইভ এখান থেকে শুরু</string>
+    <string name="archive_empty_body">আপনার রপ্তানি করা প্রতিটি দিন ক্যালেন্ডারের একটি ঘর পূরণ করে। শুরু করতে একবার রপ্তানি করুন।</string>
+    <string name="automations_subtitle">সংরক্ষিত রপ্তানি যা আপনি সময়সূচি করতে, অটোমেশন অ্যাপ থেকে চালু করতে বা healthmd CLI দিয়ে চালাতে পারেন।</string>
+    <string name="automations_profiles_title">রপ্তানি প্রোফাইল</string>
+    <string name="automations_profiles_body">সংরক্ষিত রপ্তানি কনফিগারেশন তৈরি, সম্পাদনা ও পরিবর্তন করুন।</string>
+    <string name="automation_sentence_daily">প্রতিদিন %1$s-এ %2$s-এ রপ্তানি করুন।</string>
+    <string name="automation_sentence_weekly">প্রতি সপ্তাহে %1$s %2$s-এ %3$s-এ রপ্তানি করুন।</string>
+    <string name="automation_sentence_monthly">প্রতি মাসে %1$s-এ %2$s-এ রপ্তানি করুন।</string>
+    <string name="automation_sentence_custom">কাস্টম সময়সূচিতে %1$s-এ %2$s-এ রপ্তানি করুন।</string>
+    <string name="automation_sentence_manual">প্রয়োজনে %1$s-এ রপ্তানি করুন।</string>
+    <string name="automation_destination_selected_folder">নির্বাচিত ফোল্ডার</string>
+    <string name="settings_section_destinations">গন্তব্য</string>
+    <string name="settings_section_data">ডেটা</string>
+    <string name="settings_section_app">অ্যাপ</string>
+    <string name="settings_destination_folder_title">রপ্তানি ফোল্ডার</string>
+    <string name="settings_destination_folder_subtitle">এখনই রপ্তানি করুন-এ সেই ফোল্ডার বেছে নিন যেখানে Health.md লেখে।</string>
+    <string name="settings_destination_api_title">API এন্ডপয়েন্ট ও Agent Data গেটওয়ে</string>
+    <string name="settings_destination_api_subtitle">অটোমেশনে আপনার সার্ভার বা ইনজেশন গেটওয়েতে আপলোড সেট করুন।</string>
+</resources>

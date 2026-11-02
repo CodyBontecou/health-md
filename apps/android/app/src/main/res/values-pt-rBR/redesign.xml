@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="nav_archive">Arquivo</string>
+    <string name="nav_automations">Automações</string>
+    <string name="export_now_title">Exportar agora</string>
+    <string name="archive_filter_all">Tudo</string>
+    <string name="archive_filter_current_settings">Configurações atuais</string>
+    <string name="archive_stat_archived">Dias arquivados</string>
+    <string name="archive_stat_streak">Sequência atual</string>
+    <string name="archive_stat_gaps">Lacunas</string>
+    <string name="archive_show_gap">Mostrar a primeira lacuna</string>
+    <string name="archive_previous_month">Mês anterior</string>
+    <string name="archive_next_month">Próximo mês</string>
+    <string name="archive_legend_complete">Completo</string>
+    <string name="archive_legend_partial">Parcial</string>
+    <string name="archive_legend_missing">Faltando</string>
+    <string name="archive_legend_not_exported">Não exportado</string>
+    <string name="archive_legend_today">Hoje</string>
+    <string name="archive_day_on_track">%1$d de %2$d em dia</string>
+    <string name="archive_day_nothing">Nada foi exportado para esta data</string>
+    <string name="archive_day_status">%1$s, %2$s</string>
+    <string name="archive_row_last_export">Última exportação %1$s</string>
+    <string name="archive_action_backfill">Recuperar</string>
+    <string name="archive_empty_title">Seu arquivo começa aqui</string>
+    <string name="archive_empty_body">Cada dia exportado preenche um quadrado do calendário. Exporte uma vez para começar.</string>
+    <string name="automations_subtitle">Exportações salvas que você pode agendar, iniciar em apps de automação ou executar com a CLI healthmd.</string>
+    <string name="automations_profiles_title">Perfis de exportação</string>
+    <string name="automations_profiles_body">Crie, edite e alterne entre configurações de exportação salvas.</string>
+    <string name="automation_sentence_daily">Todos os dias às %1$s, exportar para %2$s.</string>
+    <string name="automation_sentence_weekly">Toda semana, %1$s às %2$s, exportar para %3$s.</string>
+    <string name="automation_sentence_monthly">Todo mês às %1$s, exportar para %2$s.</string>
+    <string name="automation_sentence_custom">Em um agendamento personalizado às %1$s, exportar para %2$s.</string>
+    <string name="automation_sentence_manual">Exportar para %1$s sob demanda.</string>
+    <string name="automation_destination_selected_folder">a pasta selecionada</string>
+    <string name="settings_section_destinations">Destinos</string>
+    <string name="settings_section_data">Dados</string>
+    <string name="settings_section_app">App</string>
+    <string name="settings_destination_folder_title">Pasta de exportação</string>
+    <string name="settings_destination_folder_subtitle">Escolha em Exportar agora a pasta onde o Health.md grava.</string>
+    <string name="settings_destination_api_title">Endpoint de API e gateway Agent Data</string>
+    <string name="settings_destination_api_subtitle">Configure em Automações os envios para seu servidor ou um gateway de ingestão.</string>
+</resources>

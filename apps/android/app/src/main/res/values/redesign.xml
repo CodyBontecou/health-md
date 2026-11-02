@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="nav_archive">Archive</string>
+    <string name="nav_automations">Automations</string>
+    <string name="export_now_title">Export now</string>
+    <string name="archive_filter_all">All</string>
+    <string name="archive_filter_current_settings">Current settings</string>
+    <string name="archive_stat_archived">Days archived</string>
+    <string name="archive_stat_streak">Current streak</string>
+    <string name="archive_stat_gaps">Gaps</string>
+    <string name="archive_show_gap">Show first gap</string>
+    <string name="archive_previous_month">Previous month</string>
+    <string name="archive_next_month">Next month</string>
+    <string name="archive_legend_complete">Complete</string>
+    <string name="archive_legend_partial">Partial</string>
+    <string name="archive_legend_missing">Missing</string>
+    <string name="archive_legend_not_exported">Not exported</string>
+    <string name="archive_legend_today">Today</string>
+    <string name="archive_day_on_track">%1$d of %2$d on track</string>
+    <string name="archive_day_nothing">Nothing exported for this date</string>
+    <string name="archive_day_status">%1$s, %2$s</string>
+    <string name="archive_row_last_export">Last export %1$s</string>
+    <string name="archive_action_backfill">Backfill</string>
+    <string name="archive_empty_title">Your archive starts here</string>
+    <string name="archive_empty_body">Each day you export fills a square on the calendar. Export once to begin.</string>
+    <string name="automations_subtitle">Saved exports you can schedule, start from automation apps, or run with the healthmd CLI.</string>
+    <string name="automations_profiles_title">Export profiles</string>
+    <string name="automations_profiles_body">Create, edit, and switch between saved export configurations.</string>
+    <string name="automation_sentence_daily">Every day at %1$s, export to %2$s.</string>
+    <string name="automation_sentence_weekly">Every week on %1$s at %2$s, export to %3$s.</string>
+    <string name="automation_sentence_monthly">Every month at %1$s, export to %2$s.</string>
+    <string name="automation_sentence_custom">On a custom schedule at %1$s, export to %2$s.</string>
+    <string name="automation_sentence_manual">Run on demand and export to %1$s.</string>
+    <string name="automation_destination_selected_folder">the selected folder</string>
+    <string name="settings_section_destinations">Destinations</string>
+    <string name="settings_section_data">Data</string>
+    <string name="settings_section_app">App</string>
+    <string name="settings_destination_folder_title">Export folder</string>
+    <string name="settings_destination_folder_subtitle">Choose the folder Health.md writes to in Export now.</string>
+    <string name="settings_destination_api_title">API endpoint and Agent Data gateway</string>
+    <string name="settings_destination_api_subtitle">Set up uploads to your server or an ingestion gateway in Automations.</string>
+</resources>

@@ -378,8 +378,6 @@
     <string name="export_progress_title">Gezondheidsgegevens worden geëxporteerd</string>
 
     <!-- Navigation labels -->
-    <string name="nav_export">Export</string>
-    <string name="nav_schedule">Planning</string>
     <string name="nav_history">Geschiedenis</string>
     <string name="nav_settings">Instellingen</string>
 

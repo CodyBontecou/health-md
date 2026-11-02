@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="nav_archive">Архів</string>
+    <string name="nav_automations">Автоматизації</string>
+    <string name="export_now_title">Експортувати</string>
+    <string name="archive_filter_all">Усі</string>
+    <string name="archive_filter_current_settings">Поточні налаштування</string>
+    <string name="archive_stat_archived">Днів в архіві</string>
+    <string name="archive_stat_streak">Поточна серія</string>
+    <string name="archive_stat_gaps">Пропуски</string>
+    <string name="archive_show_gap">Показати перший пропуск</string>
+    <string name="archive_previous_month">Попередній місяць</string>
+    <string name="archive_next_month">Наступний місяць</string>
+    <string name="archive_legend_complete">Повністю</string>
+    <string name="archive_legend_partial">Частково</string>
+    <string name="archive_legend_missing">Пропущено</string>
+    <string name="archive_legend_not_exported">Не експортовано</string>
+    <string name="archive_legend_today">Сьогодні</string>
+    <string name="archive_day_on_track">За планом: %1$d з %2$d</string>
+    <string name="archive_day_nothing">За цю дату нічого не експортовано</string>
+    <string name="archive_day_status">%1$s, %2$s</string>
+    <string name="archive_row_last_export">Останній експорт: %1$s</string>
+    <string name="archive_action_backfill">Надолужити</string>
+    <string name="archive_empty_title">Тут починається ваш архів</string>
+    <string name="archive_empty_body">Кожен експортований день заповнює клітинку календаря. Виконайте експорт один раз, щоб почати.</string>
+    <string name="automations_subtitle">Збережені експорти, які можна запланувати, запустити з програм автоматизації або виконати через healthmd CLI.</string>
+    <string name="automations_profiles_title">Профілі експорту</string>
+    <string name="automations_profiles_body">Створюйте, змінюйте й перемикайте збережені конфігурації експорту.</string>
+    <string name="automation_sentence_daily">Щодня о %1$s — експорт до %2$s.</string>
+    <string name="automation_sentence_weekly">Щотижня (%1$s) о %2$s — експорт до %3$s.</string>
+    <string name="automation_sentence_monthly">Щомісяця о %1$s — експорт до %2$s.</string>
+    <string name="automation_sentence_custom">За власним розкладом о %1$s — експорт до %2$s.</string>
+    <string name="automation_sentence_manual">Експорт до %1$s на вимогу.</string>
+    <string name="automation_destination_selected_folder">вибраної папки</string>
+    <string name="settings_section_destinations">Призначення</string>
+    <string name="settings_section_data">Дані</string>
+    <string name="settings_section_app">Застосунок</string>
+    <string name="settings_destination_folder_title">Папка експорту</string>
+    <string name="settings_destination_folder_subtitle">Виберіть у розділі «Експортувати» папку, до якої записує Health.md.</string>
+    <string name="settings_destination_api_title">API-ендпоінт і шлюз Agent Data</string>
+    <string name="settings_destination_api_subtitle">Налаштуйте в розділі «Автоматизації» надсилання на ваш сервер або до шлюзу приймання даних.</string>
+</resources>

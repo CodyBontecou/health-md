@@ -648,13 +648,13 @@ fun ExportProfilesEntryCard(
         Spacer(modifier = Modifier.width(Spacing.sm))
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = "Export Profiles",
+                text = stringResource(R.string.automations_profiles_title),
                 style = MaterialTheme.typography.titleMedium,
                 color = AppColors.textPrimary,
             )
             Text(
                 text = when {
-                    uiState.rows.isEmpty() -> "Save multiple export configurations and run them on their own schedules."
+                    uiState.rows.isEmpty() -> stringResource(R.string.automations_profiles_body)
                     else -> {
                         val active = uiState.activeProfileName ?: "—"
                         val count = uiState.rows.size

@@ -164,6 +164,8 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
                 applicationContext.getString(R.string.action_cancel_export),
                 ScheduledExportCancelReceiver.pendingIntent(applicationContext, id),
             )
+            // An indeterminate bar marks the run as in progress; Cancel stays available.
+            .setProgress(0, 0, true)
             .setOngoing(true)
             .build()
         val foregroundServiceType = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {

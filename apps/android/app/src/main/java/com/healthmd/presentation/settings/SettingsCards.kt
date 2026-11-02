@@ -19,6 +19,7 @@ import com.healthmd.R
 import com.healthmd.presentation.common.ConfigurationProtectionTestTags
 import com.healthmd.presentation.common.GeistCard
 import com.healthmd.presentation.common.GeistCardClickable
+import com.healthmd.presentation.common.GeistIconCircle
 import com.healthmd.presentation.common.SectionLabel
 import com.healthmd.presentation.theme.AppColors
 import com.healthmd.presentation.theme.GeistAdaptiveLayout
@@ -84,8 +85,10 @@ internal fun SettingsNavigationCard(
         val arrow = if (external) Icons.Outlined.ArrowOutward else Icons.AutoMirrored.Outlined.ArrowForwardIos
         GeistCardClickable(onClick = onClick, modifier = modifier, padding = Spacing.md) {
             if (!reading) {
-                Icon(icon, contentDescription = null, tint = AppColors.accent, modifier = Modifier.size(Spacing.lg))
-                Spacer(Modifier.width(Spacing.sm))
+                GeistIconCircle(size = GeistSizes.control) {
+                    Icon(icon, contentDescription = null, tint = AppColors.textSecondary, modifier = Modifier.size(Spacing.lg))
+                }
+                Spacer(Modifier.width(Spacing.md))
             }
             Column(Modifier.weight(1f)) {
                 Row(

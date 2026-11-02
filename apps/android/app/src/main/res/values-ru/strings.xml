@@ -308,8 +308,6 @@
     <string name="export_progress_title">Экспорт данных о здоровье</string>
 
     <!-- Navigation labels -->
-    <string name="nav_export">Экспорт</string>
-    <string name="nav_schedule">Расписание</string>
     <string name="nav_history">История</string>
     <string name="nav_settings">Параметры</string>
 

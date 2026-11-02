@@ -19,11 +19,11 @@ Apple and Android should expose the same capability, terminology, settings seman
 
 ## Design System — Required
 
-`DESIGN.md` and `DESIGN.dark.md` are the governing visual specifications for this app. They preserve Vercel’s Geist light and dark systems with the documented Health.md brand accent layer.
+`DESIGN.md` and `DESIGN.dark.md` are the governing visual specifications for this app. They define the Health.md Material 3 light and dark systems: a fixed brand-seeded tonal palette, tonal surfaces, and the Archive / Automations / Settings navigation with a global Export now action.
 
-- Use named Compose tokens from `presentation/theme`; do not add ad hoc colors, spacing, type sizes, radii, shadows, or motion values.
+- Use named Compose tokens from `presentation/theme`; do not add ad hoc colors, spacing, type sizes, radii, shadows, or motion values. The `Geist*` Kotlin identifiers are legacy names for these tokens.
 - Support both documented themes and follow the system appearance. Do not use Material dynamic color.
-- Use bundled Geist Sans for UI/copy and Geist Mono for code, paths, dates, and tabular data.
+- Use the platform sans-serif (Roboto) for UI/copy and bundled Geist Mono for code, paths, dates, and tabular data.
 - Update the governing documents first before intentionally deviating from a token.
 
 ## Local Build & Deploy

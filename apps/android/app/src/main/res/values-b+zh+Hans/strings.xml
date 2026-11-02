@@ -543,8 +543,6 @@
     <string name="debug_toggle_unlock">切换解锁</string>
     <string name="debug_reset_state">复位状态</string>
     <string name="export_progress_title">正在导出健康数据</string>
-    <string name="nav_export">导出</string>
-    <string name="nav_schedule">计划</string>
     <string name="nav_history">历史</string>
     <string name="nav_settings">设置</string>
     <string name="shortcut_export_short">导出</string>

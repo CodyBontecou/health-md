@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="nav_archive">الأرشيف</string>
+    <string name="nav_automations">الأتمتة</string>
+    <string name="export_now_title">التصدير الآن</string>
+    <string name="archive_filter_all">الكل</string>
+    <string name="archive_filter_current_settings">الإعدادات الحالية</string>
+    <string name="archive_stat_archived">الأيام المؤرشفة</string>
+    <string name="archive_stat_streak">السلسلة الحالية</string>
+    <string name="archive_stat_gaps">الفجوات</string>
+    <string name="archive_show_gap">إظهار أول فجوة</string>
+    <string name="archive_previous_month">الشهر السابق</string>
+    <string name="archive_next_month">الشهر التالي</string>
+    <string name="archive_legend_complete">مكتمل</string>
+    <string name="archive_legend_partial">جزئي</string>
+    <string name="archive_legend_missing">مفقود</string>
+    <string name="archive_legend_not_exported">لم يُصدَّر</string>
+    <string name="archive_legend_today">اليوم</string>
+    <string name="archive_day_on_track">%1$d من %2$d حسب الخطة</string>
+    <string name="archive_day_nothing">لم يُصدَّر شيء لهذا التاريخ</string>
+    <string name="archive_day_status">%1$s، %2$s</string>
+    <string name="archive_row_last_export">آخر تصدير %1$s</string>
+    <string name="archive_action_backfill">استكمال</string>
+    <string name="archive_empty_title">يبدأ أرشيفك هنا</string>
+    <string name="archive_empty_body">كل يوم تصدّره يملأ مربعًا في التقويم. صدّر مرة واحدة للبدء.</string>
+    <string name="automations_subtitle">عمليات تصدير محفوظة يمكنك جدولتها أو تشغيلها من تطبيقات الأتمتة أو عبر healthmd CLI.</string>
+    <string name="automations_profiles_title">ملفات تعريف التصدير</string>
+    <string name="automations_profiles_body">أنشئ إعدادات التصدير المحفوظة وعدّلها وبدّل بينها.</string>
+    <string name="automation_sentence_daily">كل يوم في %1$s، صدّر إلى %2$s.</string>
+    <string name="automation_sentence_weekly">كل أسبوع يوم %1$s في %2$s، صدّر إلى %3$s.</string>
+    <string name="automation_sentence_monthly">كل شهر في %1$s، صدّر إلى %2$s.</string>
+    <string name="automation_sentence_custom">وفق جدول مخصص في %1$s، صدّر إلى %2$s.</string>
+    <string name="automation_sentence_manual">صدّر إلى %1$s عند الطلب.</string>
+    <string name="automation_destination_selected_folder">المجلد المحدد</string>
+    <string name="settings_section_destinations">الوجهات</string>
+    <string name="settings_section_data">البيانات</string>
+    <string name="settings_section_app">التطبيق</string>
+    <string name="settings_destination_folder_title">مجلد التصدير</string>
+    <string name="settings_destination_folder_subtitle">اختر في «التصدير الآن» المجلد الذي يكتب فيه Health.md.</string>
+    <string name="settings_destination_api_title">نقطة نهاية API وبوابة Agent Data</string>
+    <string name="settings_destination_api_subtitle">اضبط في «الأتمتة» الرفع إلى خادمك أو إلى بوابة استيعاب.</string>
+</resources>

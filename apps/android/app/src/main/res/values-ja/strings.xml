@@ -543,8 +543,6 @@
     <string name="debug_toggle_unlock">ロック解除の切り替え</string>
     <string name="debug_reset_state">状態をリセット</string>
     <string name="export_progress_title">健康データをエクスポート中</string>
-    <string name="nav_export">エクスポート</string>
-    <string name="nav_schedule">スケジュール</string>
     <string name="nav_history">履歴</string>
     <string name="nav_settings">設定</string>
     <string name="shortcut_export_short">エクスポート</string>

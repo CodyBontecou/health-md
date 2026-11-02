@@ -579,8 +579,6 @@
     <!-- Export progress dialog -->
     <string name="export_progress_title">स्वास्थ्य डेटा निर्यात किया जा रहा है</string>
     <!-- Navigation labels -->
-    <string name="nav_export">निर्यात</string>
-    <string name="nav_schedule">अनुसूची</string>
     <string name="nav_history">इतिहास</string>
     <string name="nav_settings">सेटिंग्स</string>
     <string name="shortcut_export_short">निर्यात करें</string>

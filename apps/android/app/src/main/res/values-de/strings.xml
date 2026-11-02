@@ -378,8 +378,6 @@
     <string name="export_progress_title">Gesundheitsdaten werden exportiert</string>
 
     <!-- Navigation labels -->
-    <string name="nav_export">Export</string>
-    <string name="nav_schedule">Zeitplan</string>
     <string name="nav_history">Verlauf</string>
     <string name="nav_settings">Einstellungen</string>
 

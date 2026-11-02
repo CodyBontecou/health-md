@@ -490,6 +490,27 @@
       ]
     },
     {
+      "id": "export.coverage-calendar",
+      "name": "Archive coverage calendar",
+      "classification": "planned",
+      "summary": "Show which health dates each export profile covered, with per-date status, gaps and streaks, rather than when exports ran.",
+      "profiles": [],
+      "platforms": {
+        "apple": {
+          "state": "planned",
+          "target": "Liquid Glass experience rollout: the Archive calendar built on apps/apple/HealthMd/Shared/Coverage lands with the Liquid Glass branch."
+        },
+        "android": {
+          "state": "available"
+        }
+      },
+      "evidence": [
+        "apps/android/app/src/main/java/com/healthmd/presentation/archive/ArchiveCoverage.kt",
+        "apps/android/app/src/main/java/com/healthmd/presentation/archive/ArchiveScreen.kt",
+        "apps/android/app/src/test/java/com/healthmd/presentation/archive/ArchiveCoverageTest.kt"
+      ]
+    },
+    {
       "id": "export.agent-data-gateway",
       "name": "Agent Data gateway export destination",
       "classification": "shared",

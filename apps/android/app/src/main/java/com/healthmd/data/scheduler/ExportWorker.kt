@@ -185,6 +185,8 @@ class ExportWorker @AssistedInject constructor(
                 applicationContext.getString(R.string.action_cancel_export),
                 ScheduledExportCancelReceiver.pendingIntent(applicationContext, id),
             )
+            // An indeterminate bar marks the run as in progress; Cancel stays available.
+            .setProgress(0, 0, true)
             .setOngoing(true)
             .build()
         val foregroundServiceType = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -663,7 +665,7 @@ class ExportWorker @AssistedInject constructor(
                         localizedDate(endDate),
                     )
                 },
-                if (result.isFullSuccess) NavDestination.EXPORT.route else NavDestination.SCHEDULE.route,
+                if (result.isFullSuccess) NavDestination.ARCHIVE.route else NavDestination.SCHEDULE.route,
                 promptRecovery = !result.isFullSuccess,
             )
 
@@ -939,7 +941,7 @@ class ExportWorker @AssistedInject constructor(
             .build()
 
         val manager = applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        val notificationId = if (route == NavDestination.EXPORT.route) {
+        val notificationId = if (route == NavDestination.ARCHIVE.route) {
             EXPORT_RESULT_NOTIFICATION_ID
         } else {
             SCHEDULE_RESULT_NOTIFICATION_ID

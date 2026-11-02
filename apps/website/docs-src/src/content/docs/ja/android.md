@@ -25,6 +25,8 @@ description: "Android 用にHealth.mdセットアップします。 Health Conne
 
 Android 用Health.mdは、 Health Connectローカルファーストの健康ジャーナルに変えます。必要なメトリクスを選択し、出力をプレビューします。次に、ファイルをローカル フォルダー、 Obsidianボールト、同期されたプロバイダー フォルダー、または書き込み可能な Android ドキュメント プロバイダーにエクスポートします。
 
+アプリには 3 つのタブがあります。**アーカイブ**は、エクスポートで記録済みの健康データの日付を示すカレンダーで、欠落した日を補完できます。**オートメーション**にはエクスポートプロファイルとスケジュールがあります。**設定**には保存先、データ、アプリのオプションがあります。**今すぐエクスポート**ボタンを使うと、設定以外のどのタブからでも 1 回限りのエクスポートを開始できます。
+
 <div class="options">
  <div class="option"> <strong> Health Connectソース</strong> <p> Android のオンデバイスHealth Connect API を介して、アクティビティ、睡眠、心臓、バイタル、身体測定、栄養、トレーニング、その他のカテゴリを読み取ります。 </p> </div>
  <div class="option"> <strong> Obsidianネイティブ出力</strong> <p>毎日のメモ、YAML/frontmatter、 Obsidian Bases フレンドリーなメモ、個々のエントリ、およびHealth.md Obsidianプラグインと互換性のある JSON を書き込みます。 </p> </div>

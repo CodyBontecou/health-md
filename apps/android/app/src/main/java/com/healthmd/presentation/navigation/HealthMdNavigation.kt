@@ -10,6 +10,9 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.outlined.FileUpload
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
@@ -43,6 +46,8 @@ import com.healthmd.presentation.clinicianreport.ClinicianReportScreen
 import com.healthmd.presentation.export.ExportProfilesScreen
 import com.healthmd.presentation.export.ExportScreen
 import com.healthmd.presentation.history.HistoryScreen
+import com.healthmd.presentation.archive.ArchiveScreen
+import com.healthmd.presentation.export.ExportProfilesEntryCard
 import com.healthmd.presentation.metrics.MetricSelectionScreen
 import com.healthmd.presentation.common.ConfigurationProtectionToast
 import com.healthmd.presentation.common.ConfigurationProtectionUi
@@ -237,9 +242,10 @@ fun HealthMdNavigation(
     } else {
         emptyList()
     }
-    val knownStartRoutes = NavDestination.entries.map { it.route } + paywallStartRoutes + debugStartRoutes
+    val knownStartRoutes = NavDestination.entries.map { it.route } +
+        listOf(SubRoutes.EXPORT_NOW, SubRoutes.HISTORY) + paywallStartRoutes + debugStartRoutes
     val startDestination = if (shouldSkipOnboarding) {
-        initialRoute?.takeIf { it in knownStartRoutes } ?: NavDestination.EXPORT.route
+        initialRoute?.takeIf { it in knownStartRoutes } ?: NavDestination.ARCHIVE.route
     } else {
         SubRoutes.ONBOARDING
     }
@@ -286,6 +292,11 @@ fun HealthMdNavigation(
         AppNavigationLayout(
             destinations = if (showMainNav) NavDestination.entries else emptyList(),
             currentRoute = currentRoute,
+            onExportNow = if (showMainNav && currentRoute != NavDestination.SETTINGS.route) {
+                { navController.navigate(SubRoutes.EXPORT_NOW) { launchSingleTop = true } }
+            } else {
+                null
+            },
             onNavigate = { dest ->
                 navController.navigate(dest.route) {
                     popUpTo(navController.graph.findStartDestination().id) {
@@ -306,7 +317,7 @@ fun HealthMdNavigation(
                 val isDebugMarketingCapture = BuildConfig.DEBUG && initialRoute == SubRoutes.ONBOARDING
                 OnboardingScreen(
                     onComplete = {
-                        navController.navigate(NavDestination.EXPORT.route) {
+                        navController.navigate(NavDestination.ARCHIVE.route) {
                             popUpTo(SubRoutes.ONBOARDING) { inclusive = true }
                         }
                     },
@@ -316,8 +327,19 @@ fun HealthMdNavigation(
                 )
             }
 
-            composable(NavDestination.EXPORT.route) {
+            composable(NavDestination.ARCHIVE.route) {
+                ArchiveScreen(
+                    onExportNow = { navController.navigate(SubRoutes.EXPORT_NOW) { launchSingleTop = true } },
+                    onOpenHistory = { navController.navigate(SubRoutes.HISTORY) { launchSingleTop = true } },
+                )
+            }
+            composable(SubRoutes.EXPORT_NOW) {
                 ExportScreen(
+                    onBack = {
+                        if (!navController.popBackStack()) {
+                            navController.navigate(NavDestination.ARCHIVE.route) { launchSingleTop = true }
+                        }
+                    },
                     sleepDayAttribution = sleepDayAttribution,
                     onNavigateToPaywall = {
                         if (settingsViewModel.distributionPolicy.purchasesAvailable) {
@@ -334,17 +356,25 @@ fun HealthMdNavigation(
                 )
             }
             composable(NavDestination.SCHEDULE.route) {
-                ScheduleScreen(
+                ReadableWidth { ScheduleScreen(
                     onNavigateToPaywall = {
                         if (settingsViewModel.distributionPolicy.purchasesAvailable) {
                             navController.navigate(PaywallEntryPoint.SCHEDULE.route)
                         }
                     },
-                )
+                    profilesEntry = {
+                        ExportProfilesEntryCard(onOpen = { navController.navigate(SubRoutes.EXPORT_PROFILES) })
+                    },
+                ) }
             }
-            composable(NavDestination.HISTORY.route) { HistoryScreen() }
+            composable(SubRoutes.HISTORY) {
+                SubScreenFrame(
+                    title = stringResource(R.string.nav_history),
+                    onBack = { navController.popBackStack() },
+                ) { HistoryScreen() }
+            }
             composable(NavDestination.SETTINGS.route) {
-                SettingsScreen(
+                ReadableWidth { SettingsScreen(
                     viewModel = settingsViewModel,
                     protectionSettingsRequestId = protectionSettingsRequestId,
                     onNavigateToPaywall = {
@@ -362,7 +392,15 @@ fun HealthMdNavigation(
                     onNavigateToDirectCli = { navController.navigate(SubRoutes.DIRECT_CLI) },
                     onNavigateToSharedSetup = { navController.navigate(SubRoutes.SHARED_SETUP) },
                     onNavigateToDiagnostics = { navController.navigate(SubRoutes.DIAGNOSTICS) },
-                )
+                    onNavigateToExportNow = { navController.navigate(SubRoutes.EXPORT_NOW) { launchSingleTop = true } },
+                    onNavigateToAutomations = {
+                        navController.navigate(NavDestination.AUTOMATIONS.route) {
+                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
+                ) }
             }
 
             if (BuildConfig.MYSELF_CLAIM_ENABLED && settingsViewModel.distributionPolicy.purchasesAvailable) {
@@ -723,6 +761,7 @@ internal fun AppNavigationLayout(
     destinations: List<NavDestination>,
     currentRoute: String?,
     onNavigate: (NavDestination) -> Unit,
+    onExportNow: (() -> Unit)? = null,
     content: @Composable (Modifier) -> Unit,
 ) {
     BoxWithConstraints(
@@ -735,6 +774,7 @@ internal fun AppNavigationLayout(
                     destinations = destinations,
                     currentRoute = currentRoute,
                     onNavigate = onNavigate,
+                    onExportNow = onExportNow,
                 )
             }
             Scaffold(
@@ -751,6 +791,11 @@ internal fun AppNavigationLayout(
                         )
                     }
                 },
+                floatingActionButton = {
+                    if (onExportNow != null && !useNavigationRail) {
+                        ExportNowButton(onClick = onExportNow, expanded = true)
+                    }
+                },
             ) { padding ->
                 content(Modifier.fillMaxSize().padding(padding).consumeWindowInsets(padding))
             }
@@ -763,18 +808,22 @@ private fun AdaptiveNavigationRail(
     destinations: List<NavDestination>,
     currentRoute: String?,
     onNavigate: (NavDestination) -> Unit,
+    onExportNow: (() -> Unit)?,
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalGeistColors.current
     NavigationRail(
         modifier = modifier
             .fillMaxHeight()
-            .width(80.dp)
-            .background(colors.background100)
-            .border(width = 1.dp, color = colors.grayAlpha.c400)
+            .width(96.dp)
             .verticalScroll(rememberScrollState()),
         containerColor = colors.background100,
         contentColor = colors.primary,
+        header = if (onExportNow != null) {
+            { ExportNowButton(onClick = onExportNow, expanded = false) }
+        } else {
+            null
+        },
     ) {
         Spacer(modifier = Modifier.height(Spacing.lg))
         destinations.forEach { destination ->
@@ -791,10 +840,10 @@ private fun AdaptiveNavigationRail(
                 },
                 label = { Text(label, style = GeistType.button12) },
                 colors = NavigationRailItemDefaults.colors(
-                    selectedIconColor = colors.accent,
+                    selectedIconColor = colors.onSecondaryContainer,
                     selectedTextColor = colors.primary,
-                    indicatorColor = colors.gray.c100,
-                    unselectedIconColor = colors.disabled,
+                    indicatorColor = colors.secondaryContainer,
+                    unselectedIconColor = colors.secondary,
                     unselectedTextColor = colors.secondary,
                 ),
             )
@@ -814,11 +863,10 @@ private fun FloatingNavBar(
     BoxWithConstraints(
         modifier = modifier
             .fillMaxWidth()
-            .background(colors.background100)
-            .border(width = 1.dp, color = colors.grayAlpha.c400)
+            .background(colors.gray.c100)
             .navigationBarsPadding()
-            .heightIn(min = 64.dp)
-            .padding(Spacing.xs),
+            .heightIn(min = 80.dp)
+            .padding(horizontal = Spacing.xs, vertical = Spacing.sm),
     ) {
         val wrapTabs = GeistAdaptiveLayout.wrapNavigation(
             maxWidth.value, LocalDensity.current.fontScale, destinations.size,
@@ -858,14 +906,13 @@ private fun NavBarTab(
 ) {
     val colors = LocalGeistColors.current
     val contentColor = if (selected) colors.primary else colors.secondary
-    val background = if (selected) colors.gray.c100 else Color.Transparent
+    val indicator = if (selected) colors.secondaryContainer else Color.Transparent
     val label = stringResource(destination.label)
 
     Column(
         modifier = modifier
             .fillMaxHeight()
             .heightIn(min = GeistSizes.minimumTouchTarget)
-            .background(background, RoundedCornerShape(GeistRadii.small))
             .selectable(
                 selected = selected,
                 onClick = onClick,
@@ -876,19 +923,92 @@ private fun NavBarTab(
         verticalArrangement = Arrangement.Center,
     ) {
         if (!textOnly) {
-            Icon(
-                destination.icon,
-                contentDescription = null,
-                tint = if (selected) colors.accent else contentColor,
-                modifier = Modifier.size(20.dp),
-            )
+            Box(
+                modifier = Modifier
+                    .size(width = 64.dp, height = 32.dp)
+                    .background(indicator, RoundedCornerShape(GeistRadii.full)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    destination.icon,
+                    contentDescription = null,
+                    tint = if (selected) colors.onSecondaryContainer else contentColor,
+                    modifier = Modifier.size(24.dp),
+                )
+            }
             Spacer(modifier = Modifier.height(Spacing.xxs))
         }
         Text(
             label,
             color = contentColor,
-            style = GeistType.button12,
+            style = if (selected) GeistType.button12 else GeistType.label12,
             textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+            modifier = if (textOnly) {
+                Modifier
+                    .background(indicator, RoundedCornerShape(GeistRadii.full))
+                    .padding(horizontal = Spacing.sm, vertical = Spacing.xxs)
+            } else {
+                Modifier
+            },
         )
+    }
+}
+
+/** The global Export now action: extended on compact layouts, an icon FAB atop the rail. */
+@Composable
+private fun ExportNowButton(onClick: () -> Unit, expanded: Boolean) {
+    val colors = LocalGeistColors.current
+    val label = stringResource(R.string.export_now_title)
+    if (expanded) {
+        ExtendedFloatingActionButton(
+            onClick = onClick,
+            icon = { Icon(Icons.Outlined.FileUpload, contentDescription = null) },
+            text = { Text(label, style = GeistType.button14) },
+            containerColor = colors.brandSubtle,
+            contentColor = colors.brandOnSubtle,
+            shape = RoundedCornerShape(GeistRadii.medium),
+        )
+    } else {
+        FloatingActionButton(
+            onClick = onClick,
+            containerColor = colors.brandSubtle,
+            contentColor = colors.brandOnSubtle,
+            shape = RoundedCornerShape(GeistRadii.medium),
+        ) {
+            Icon(Icons.Outlined.FileUpload, contentDescription = label)
+        }
+    }
+}
+
+/** A sub-screen with Back and a title above content that has no header of its own. */
+@Composable
+private fun SubScreenFrame(
+    title: String,
+    onBack: () -> Unit,
+    content: @Composable () -> Unit,
+) {
+    Column(Modifier.fillMaxSize()) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.xxs, vertical = Spacing.xs),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            IconButton(onClick = onBack) {
+                Icon(
+                    Icons.AutoMirrored.Outlined.ArrowBack,
+                    contentDescription = stringResource(R.string.back),
+                    tint = AppColors.textPrimary,
+                )
+            }
+            Text(title, style = MaterialTheme.typography.headlineSmall, color = AppColors.textPrimary)
+        }
+        Box(Modifier.weight(1f)) { content() }
+    }
+}
+
+/** Centers single-column screens at a readable width on tablets and unfolded foldables. */
+@Composable
+private fun ReadableWidth(content: @Composable () -> Unit) {
+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
+        Box(Modifier.widthIn(max = GeistSizes.readableContentMaxWidth).fillMaxSize()) { content() }
     }
 }

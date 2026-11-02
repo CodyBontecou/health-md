@@ -1,30 +1,38 @@
 ---
-version: alpha
-name: Geist
-description: Vercel’s Geist design system, Light theme (the Dark theme is documented at /design.dark.md).
+version: beta
+name: Health.md Material 3
+description: Health.md’s Material 3 design system for Android, Light theme (the Dark theme is documented at /design.dark.md).
 colors:
-  primary: "#171717"
-  secondary: "#4d4d4d"
-  tertiary: "#66488f"
-  neutral: "#f2f2f2"
-  # Health.md brand accents derived from the faceted purple app icon.
-  brand-primary: "#66488f"
-  brand-hover: "#463176"
-  brand-subtle: "#f4eff7"
-  brand-border: "#c5add9"
+  primary: "#1d1b20"
+  secondary: "#49454f"
+  tertiary: "#6a3fe0"
+  neutral: "#f2ecf4"
+  # Health.md brand tonal palette, seeded from the faceted purple app icon.
+  brand-primary: "#6a3fe0"
+  brand-hover: "#4f2fa8"
+  brand-subtle: "#e9ddff"
+  brand-border: "#cdb6ff"
   brand-on-primary: "#ffffff"
-  background-100: "#ffffff"
-  background-200: "#fafafa"
-  gray-100: "#f2f2f2"
-  gray-200: "#ebebeb"
-  gray-300: "#e6e6e6"
-  gray-400: "#eaeaea"
-  gray-500: "#c9c9c9"
-  gray-600: "#a8a8a8"
-  gray-700: "#8f8f8f"
-  gray-800: "#7d7d7d"
-  gray-900: "#4d4d4d"
-  gray-1000: "#171717"
+  brand-on-subtle: "#23005c"
+  # Tonal neutral surfaces. background-* are surfaces; gray-* are containers, outlines and text.
+  background-100: "#fef7ff"
+  background-200: "#f8f1fa"
+  gray-100: "#f2ecf4"
+  gray-200: "#ece6ee"
+  gray-300: "#e6e0e9"
+  gray-400: "#e0dae2"
+  gray-500: "#cac4d0"
+  gray-600: "#aea9b4"
+  gray-700: "#7a757f"
+  gray-800: "#605d66"
+  gray-900: "#49454f"
+  gray-1000: "#1d1b20"
+  # Material roles without a gray step, and Archive coverage day states.
+  secondary-container: "#e8def8"
+  on-secondary-container: "#1d192b"
+  coverage-complete: "#dccffa"
+  on-coverage-complete: "#2d1f4f"
+  coverage-missing: "#b93c0a"
   gray-alpha-100: "#0000000d"
   gray-alpha-200: "#00000015"
   gray-alpha-300: "#0000001a"
@@ -178,170 +186,191 @@ colors:
   pink-1000-p3: "oklch(26% 0.0977 359)"
 typography:
   heading-72:
-    fontFamily: Geist Sans
+    fontFamily: Roboto (system sans-serif)
     fontSize: 72px
-    fontWeight: 600
-    lineHeight: 72px
-    letterSpacing: -4.32px
+    fontWeight: 500
+    lineHeight: 80px
+    letterSpacing: -0.5px
   heading-64:
-    fontFamily: Geist Sans
+    fontFamily: Roboto (system sans-serif)
     fontSize: 64px
-    fontWeight: 600
-    lineHeight: 64px
-    letterSpacing: -3.84px
+    fontWeight: 500
+    lineHeight: 72px
+    letterSpacing: -0.5px
   heading-56:
-    fontFamily: Geist Sans
+    fontFamily: Roboto (system sans-serif)
     fontSize: 56px
-    fontWeight: 600
-    lineHeight: 56px
-    letterSpacing: -3.36px
+    fontWeight: 500
+    lineHeight: 64px
+    letterSpacing: -0.25px
   heading-48:
-    fontFamily: Geist Sans
+    fontFamily: Roboto (system sans-serif)
     fontSize: 48px
-    fontWeight: 600
+    fontWeight: 500
     lineHeight: 56px
-    letterSpacing: -2.88px
+    letterSpacing: 0px
   heading-40:
-    fontFamily: Geist Sans
+    fontFamily: Roboto (system sans-serif)
     fontSize: 40px
-    fontWeight: 600
+    fontWeight: 500
     lineHeight: 48px
-    letterSpacing: -2.4px
+    letterSpacing: 0px
   heading-32:
-    fontFamily: Geist Sans
+    fontFamily: Roboto (system sans-serif)
     fontSize: 32px
-    fontWeight: 600
+    fontWeight: 500
     lineHeight: 40px
-    letterSpacing: -1.28px
+    letterSpacing: 0px
   heading-24:
-    fontFamily: Geist Sans
+    fontFamily: Roboto (system sans-serif)
     fontSize: 24px
-    fontWeight: 600
+    fontWeight: 500
     lineHeight: 32px
-    letterSpacing: -0.96px
+    letterSpacing: 0px
   heading-20:
-    fontFamily: Geist Sans
+    fontFamily: Roboto (system sans-serif)
     fontSize: 20px
-    fontWeight: 600
-    lineHeight: 26px
-    letterSpacing: -0.4px
+    fontWeight: 500
+    lineHeight: 28px
+    letterSpacing: 0px
   heading-16:
-    fontFamily: Geist Sans
+    fontFamily: Roboto (system sans-serif)
     fontSize: 16px
     fontWeight: 600
     lineHeight: 24px
-    letterSpacing: -0.32px
+    letterSpacing: 0.15px
   heading-14:
-    fontFamily: Geist Sans
+    fontFamily: Roboto (system sans-serif)
     fontSize: 14px
     fontWeight: 600
     lineHeight: 20px
-    letterSpacing: -0.28px
+    letterSpacing: 0.1px
   button-16:
-    fontFamily: Geist Sans
+    fontFamily: Roboto (system sans-serif)
     fontSize: 16px
-    fontWeight: 500
-    lineHeight: 20px
+    fontWeight: 600
+    lineHeight: 24px
+    letterSpacing: 0px
   button-14:
-    fontFamily: Geist Sans
+    fontFamily: Roboto (system sans-serif)
     fontSize: 14px
-    fontWeight: 500
+    fontWeight: 600
     lineHeight: 20px
+    letterSpacing: 0.1px
   button-12:
-    fontFamily: Geist Sans
+    fontFamily: Roboto (system sans-serif)
     fontSize: 12px
-    fontWeight: 500
+    fontWeight: 600
     lineHeight: 16px
+    letterSpacing: 0.5px
   label-20:
-    fontFamily: Geist Sans
+    fontFamily: Roboto (system sans-serif)
     fontSize: 20px
     fontWeight: 400
     lineHeight: 32px
+    letterSpacing: 0px
+  label-18:
+    fontFamily: Roboto (system sans-serif)
+    fontSize: 18px
+    fontWeight: 400
+    lineHeight: 24px
+    letterSpacing: 0px
+  label-16:
+    fontFamily: Roboto (system sans-serif)
+    fontSize: 16px
+    fontWeight: 400
+    lineHeight: 24px
+    letterSpacing: 0.15px
+  label-14:
+    fontFamily: Roboto (system sans-serif)
+    fontSize: 14px
+    fontWeight: 400
+    lineHeight: 20px
+    letterSpacing: 0.25px
+  label-13:
+    fontFamily: Roboto (system sans-serif)
+    fontSize: 13px
+    fontWeight: 400
+    lineHeight: 18px
+    letterSpacing: 0.25px
+  label-12:
+    fontFamily: Roboto (system sans-serif)
+    fontSize: 12px
+    fontWeight: 500
+    lineHeight: 16px
+    letterSpacing: 0.4px
+  copy-24:
+    fontFamily: Roboto (system sans-serif)
+    fontSize: 24px
+    fontWeight: 400
+    lineHeight: 36px
+    letterSpacing: 0px
+  copy-20:
+    fontFamily: Roboto (system sans-serif)
+    fontSize: 20px
+    fontWeight: 400
+    lineHeight: 32px
+    letterSpacing: 0px
+  copy-18:
+    fontFamily: Roboto (system sans-serif)
+    fontSize: 18px
+    fontWeight: 400
+    lineHeight: 28px
+    letterSpacing: 0px
+  copy-16:
+    fontFamily: Roboto (system sans-serif)
+    fontSize: 16px
+    fontWeight: 400
+    lineHeight: 24px
+    letterSpacing: 0.5px
+  copy-14:
+    fontFamily: Roboto (system sans-serif)
+    fontSize: 14px
+    fontWeight: 400
+    lineHeight: 20px
+    letterSpacing: 0.25px
+  copy-13:
+    fontFamily: Roboto (system sans-serif)
+    fontSize: 13px
+    fontWeight: 400
+    lineHeight: 18px
+    letterSpacing: 0.25px
   label-20-mono:
     fontFamily: Geist Mono
     fontSize: 20px
     fontWeight: 400
     lineHeight: 32px
-  label-18:
-    fontFamily: Geist Sans
-    fontSize: 18px
-    fontWeight: 400
-    lineHeight: 20px
-  label-16:
-    fontFamily: Geist Sans
-    fontSize: 16px
-    fontWeight: 400
-    lineHeight: 20px
-  label-14:
-    fontFamily: Geist Sans
-    fontSize: 14px
-    fontWeight: 400
-    lineHeight: 20px
+    fontFeature: tnum
   label-14-mono:
     fontFamily: Geist Mono
     fontSize: 14px
     fontWeight: 400
     lineHeight: 20px
-  label-13:
-    fontFamily: Geist Sans
-    fontSize: 13px
-    fontWeight: 400
-    lineHeight: 16px
+    fontFeature: tnum
   label-13-mono:
     fontFamily: Geist Mono
     fontSize: 13px
     fontWeight: 400
     lineHeight: 20px
-  label-12:
-    fontFamily: Geist Sans
-    fontSize: 12px
-    fontWeight: 400
-    lineHeight: 16px
+    fontFeature: tnum
   label-12-mono:
     fontFamily: Geist Mono
     fontSize: 12px
     fontWeight: 400
     lineHeight: 16px
-  copy-24:
-    fontFamily: Geist Sans
-    fontSize: 24px
-    fontWeight: 400
-    lineHeight: 36px
-  copy-20:
-    fontFamily: Geist Sans
-    fontSize: 20px
-    fontWeight: 400
-    lineHeight: 36px
-  copy-18:
-    fontFamily: Geist Sans
-    fontSize: 18px
-    fontWeight: 400
-    lineHeight: 28px
-  copy-16:
-    fontFamily: Geist Sans
-    fontSize: 16px
-    fontWeight: 400
-    lineHeight: 24px
-  copy-14:
-    fontFamily: Geist Sans
-    fontSize: 14px
-    fontWeight: 400
-    lineHeight: 20px
+    fontFeature: tnum
   copy-14-mono:
     fontFamily: Geist Mono
     fontSize: 14px
     fontWeight: 400
     lineHeight: 20px
-  copy-13:
-    fontFamily: Geist Sans
-    fontSize: 13px
-    fontWeight: 400
-    lineHeight: 18px
+    fontFeature: tnum
   copy-13-mono:
     fontFamily: Geist Mono
     fontSize: 13px
     fontWeight: 400
     lineHeight: 18px
+    fontFeature: tnum
 spacing:
   1: 4px
   2: 8px
@@ -352,115 +381,101 @@ spacing:
   10: 40px
   16: 64px
   24: 96px
-  base: 4px
 rounded:
-  sm: 6px
-  md: 12px
-  lg: 16px
+  xs: 4px
+  sm: 8px
+  md: 16px
+  lg: 28px
   full: 9999px
 components:
   button-primary:
-    backgroundColor: "{colors.primary}"
-    textColor: "{colors.background-100}"
+    backgroundColor: "{colors.brand-primary}"
+    textColor: "{colors.brand-on-primary}"
     typography: "{typography.button-14}"
-    rounded: "{rounded.sm}"
-    padding: "0 10px"
-    height: 40px
-  button-secondary:
-    backgroundColor: "{colors.background-100}"
-    textColor: "{colors.primary}"
-    typography: "{typography.button-14}"
-    rounded: "{rounded.sm}"
-    padding: "0 10px"
-    height: 40px
-  button-tertiary:
-    textColor: "{colors.primary}"
-    typography: "{typography.button-14}"
-    rounded: "{rounded.sm}"
-    padding: "0 10px"
-    height: 40px
-  button-error:
-    backgroundColor: "{colors.red-800}"
-    textColor: "#ffffff"
-    typography: "{typography.button-14}"
-    rounded: "{rounded.sm}"
-    padding: "0 10px"
-    height: 40px
-  button-small:
-    typography: "{typography.button-14}"
-    rounded: "{rounded.sm}"
-    padding: "0 6px"
-    height: 32px
-  button-large:
-    typography: "{typography.button-16}"
-    rounded: "{rounded.sm}"
-    padding: "0 14px"
+    rounded: "{rounded.full}"
+    padding: "0 24px"
     height: 48px
-  input:
-    backgroundColor: "{colors.background-100}"
-    textColor: "{colors.primary}"
-    typography: "{typography.label-14}"
-    rounded: "{rounded.sm}"
+  button-tonal:
+    backgroundColor: "{colors.secondary-container}"
+    textColor: "{colors.on-secondary-container}"
+    typography: "{typography.button-14}"
+    rounded: "{rounded.full}"
+    padding: "0 16px"
+    height: 40px
+  button-outlined:
+    textColor: "{colors.brand-primary}"
+    borderColor: "{colors.gray-500}"
+    typography: "{typography.button-14}"
+    rounded: "{rounded.full}"
+    padding: "0 16px"
+    height: 40px
+  button-text:
+    textColor: "{colors.brand-primary}"
+    typography: "{typography.button-14}"
+    rounded: "{rounded.full}"
     padding: "0 12px"
     height: 40px
-  input-small:
-    typography: "{typography.label-14}"
-    rounded: "{rounded.sm}"
-    padding: "0 12px"
-    height: 32px
-  input-large:
-    typography: "{typography.label-16}"
-    rounded: "{rounded.sm}"
-    padding: "0 12px"
-    height: 48px
-  dialog:
-    backgroundColor: "{colors.background-100}"
+  extended-fab:
+    backgroundColor: "{colors.brand-subtle}"
+    textColor: "{colors.brand-on-subtle}"
+    typography: "{typography.button-14}"
     rounded: "{rounded.md}"
-    horizontalInset: "{spacing.4}"
+    padding: "0 20px 0 16px"
+    height: 56px
+  filter-chip:
+    selectedBackgroundColor: "{colors.secondary-container}"
+    selectedTextColor: "{colors.on-secondary-container}"
+    borderColor: "{colors.gray-500}"
+    typography: "{typography.button-14}"
+    rounded: "{rounded.sm}"
+    height: 32px
+  card:
+    backgroundColor: "{colors.background-200}"
+    rounded: "{rounded.lg}"
+    padding: 20px
+  list-group:
+    backgroundColor: "{colors.background-200}"
+    outerRadius: 20px
+    innerRadius: 4px
+    gap: 2px
+  navigation-bar:
+    backgroundColor: "{colors.gray-100}"
+    indicatorColor: "{colors.secondary-container}"
+    height: 80px
+  input:
+    textColor: "{colors.primary}"
+    borderColor: "{colors.gray-700}"
+    typography: "{typography.label-16}"
+    rounded: "{rounded.xs}"
+    padding: "0 16px"
+    height: 56px
+  dialog:
+    backgroundColor: "{colors.gray-200}"
+    rounded: "{rounded.lg}"
+    horizontalInset: "{spacing.10}"
     verticalInset: "{spacing.10}"
-    maxWidth: 601px
-    maxHeight: 90vh
 ---
-
-# Geist
+# Health.md Material 3
 
 ## Overview
 
-Geist is Vercel’s design system for building consistent, developer-focused interfaces. The aesthetic is minimal and high-contrast: plenty of whitespace, restrained color, and content set on near-neutral surfaces. Prioritize readability and accessibility, and use color to signal state or hierarchy rather than decoration.
+Health.md on Android follows Material 3 with a fixed, brand-seeded tonal palette. Hierarchy comes from tonal surfaces and shape rather than borders: pages sit on `background-100`, grouped content sits on `background-200` cards with large rounded corners, and the brand purple marks primary actions, selection and focus. The layout mirrors the cross-platform Health.md experience: an **Archive** coverage calendar, **Automations** described as sentences, and **Settings** grouped lists, with **Export now** as a persistent floating action.
 
-This is the Light theme. The Dark theme uses the same token names with different values and lives at `/design.dark.md`. Colors are sRGB hex with Display P3 equivalents.
+This is the Light theme. The Dark theme uses the same token names with different values and lives at `/design.dark.md`. Both themes follow the system appearance. Do not use Material dynamic color or launcher wallpaper colors.
 
 ## Colors
 
-Each non-background scale runs 10 steps (`100`–`1000`), and the step encodes intent, not just lightness:
+`background-100` is the page surface and `background-200` the card and list-group surface. The `gray-*` steps are tonal containers and text: `gray-100`–`gray-300` are container fills (navigation bar, chips, inputs), `gray-500` is the outline-variant used for dividers and chip borders, `gray-700` is the outline and the disabled-text token, `gray-900` is secondary text and `gray-1000` primary text. `gray-alpha-*` remain for translucent overlays and scrims. The `brand-*` tonal palette carries primary actions (`brand-primary` on `brand-on-primary`), primary containers such as the Export now button and hero cards (`brand-subtle` on `brand-on-subtle`), and selection. `secondary-container` fills selected chips, segmented buttons, navigation indicators and tonal buttons. Semantic accents keep their meaning: `green` success, `red` errors, `amber` warnings, plus `blue`, `teal`, `purple` and `pink` for automation identity and charts.
 
-- `100` default background
-- `200` hover background
-- `300` active background
-- `400` default border
-- `500` hover border
-- `600` active border
-- `700` solid fill, high contrast
-- `800` solid fill, hover
-- `900` secondary text and icons
-- `1000` primary text and icons
-
-`background-100` is the primary page and card surface; `background-200` is a secondary surface for subtle separation. The `gray-alpha-*` tokens are translucent, so they layer over any background; use them for borders, dividers, overlays, and hover states. Solid `gray-*` holds its contrast on any surface, so use it for text and opaque fills. Accent scales carry meaning: the Health.md `brand-*` purples for primary actions, links, selection, and focus; `green` for success; `red` for errors; `amber` for warnings; plus `blue`, `teal`, `purple`, and `pink`. Use the hex tokens everywhere; each accent scale also ships a `*-p3` wide-gamut value in `oklch()` for Display P3 screens. The Dark theme redefines the same names at `/design.dark.md`.
+Archive coverage uses dedicated day states: complete days fill with `coverage-complete` and `on-coverage-complete` text; partial days use `gray-300` with a 3px `brand-primary` bottom bar; missing days use a 1.5px dashed `coverage-missing` outline and number; today has a 2px `brand-primary` outline; dates with nothing due render at 38% opacity. Color never carries meaning alone: every day exposes its status in its accessibility label and the legend names each state.
 
 ## Typography
 
-Geist Sans sets UI and prose; Geist Mono sets code, data, and tabular figures. Both are open-source. The `typography` tokens above carry concrete `fontFamily`, `fontSize`, `fontWeight`, `lineHeight`, and `letterSpacing`:
-
-- Headings, `heading-72` through `heading-14`, title pages and sections; `letterSpacing` tightens as the size grows.
-- Labels, `label-20` through `label-12`, carry single-line, scannable text: navigation, form labels, table headers, metadata.
-- Copy, `copy-24` through `copy-13`, set multi-line body text with a taller `lineHeight`.
-- Buttons, `button-16` through `button-12`, are medium-weight labels for buttons and compact controls.
-
-`copy-14` and `label-14` cover most text. The `-mono` tokens pair Geist Mono with the same metrics; prefer tabular figures when numbers need to align.
+UI copy uses the platform sans-serif (Roboto on Android), which follows the user’s system font and scale. Geist Mono stays bundled for code, paths, identifiers, dates in tables and tabular numbers. Weights are 400 for copy, 500 for headlines and 600 for titles, buttons and emphasized labels. Large numbers in stats use `heading-56` with tabular figures.
 
 ## Layout
 
-Spacing follows a 4px scale: 4, 8, 12, 16, 24, 32, 40, 64, 96px. Keep a three-step rhythm: 8px inside a group, 16px between groups, 32–40px between sections. Cards use 24px padding, 16px when compact and 32px for hero areas. Center content in a 1200px column with side padding that grows at wider breakpoints, and make every layout work on mobile and desktop. Breakpoints are `sm` 401px, `md` 601px, `lg` 961px, `xl` 1200px, and `2xl` 1400px.
+Spacing follows a 4px scale: 4, 8, 12, 16, 24, 32, 40, 64, 96px. Screens use a 16px side gutter; cards use 20px padding (16px compact). Group settings rows in list groups whose first and last rows take 20px outer corners and inner rows 4px corners with 2px gaps. Breakpoints are `sm` 401px, `md` 601px, `lg` 961px, `xl` 1200px and `2xl` 1400px: below `md` the app uses a bottom navigation bar and an extended Export now button; from `md` up it uses a navigation rail with the Export now button at the top of the rail, the Archive shows the calendar beside the selected day, and single-column screens such as Automations and Settings center at a readable 840px width.
 
 ### Android text and display scaling
 
@@ -481,63 +496,40 @@ Spacing follows a 4px scale: 4, 8, 12, 16, 24, 32, 40, 64, 96px. Keep a three-st
 
 ## Elevation & Depth
 
-Hierarchy comes from tonal surfaces and borders first, so shadows stay subtle. Apply these `box-shadow` values for the light theme:
+Surfaces are tonal; avoid borders around cards. Only floating actions are elevated. Apply this `box-shadow` for the light theme:
 
-- Raised cards: `0 2px 2px rgba(0, 0, 0, 0.04)`
-- Popovers and menus: `0 1px 1px rgba(0, 0, 0, 0.02), 0 4px 8px -4px rgba(0, 0, 0, 0.04), 0 16px 24px -8px rgba(0, 0, 0, 0.06)`
-- Modals and dialogs: `0 1px 1px rgba(0, 0, 0, 0.02), 0 8px 16px -4px rgba(0, 0, 0, 0.04), 0 24px 32px -8px rgba(0, 0, 0, 0.06)`
+- Floating action (Export now): `0 1px 3px rgba(0, 0, 0, 0.3), 0 4px 8px 3px rgba(0, 0, 0, 0.15)`
 
-Tooltips take the lightest of these. Pair each elevation with the matching radius below.
+Bottom sheets and dialogs use tonal containers (`gray-200`) over the scrim rather than heavy shadows.
 
 ## Motion
 
-Use motion only when it clarifies a change, never for decoration. Most interactions should feel instant: a duration of `0ms` is often the snappiest and best choice, and the call is context-dependent. When motion genuinely helps, such as revealing or moving an element, keep it short and physical with the easing `cubic-bezier(0.175, 0.885, 0.32, 1.1)`: roughly 150ms for state changes, 200ms for popovers and tooltips, and 300ms for overlays and modals. Avoid long, looping, or attention-grabbing animation, and honor `prefers-reduced-motion` by dropping nonessential motion.
+Use Material standard easing. State changes take 150ms, popovers 200ms and sheets or overlays 300ms. Respect the system animation scale and never animate content the user is reading.
 
 ## Shapes
 
-Radii stay tight: 6px for everyday surfaces and controls, 12px for menus and modals, 16px for fullscreen surfaces. Reserve 9999px for pills, avatars, and circular controls. Keep one radius family per view rather than mixing rounded and sharp corners.
+Corners scale with component size: `rounded.xs` (4px) for text fields, `rounded.sm` (8px) for chips and badges, `rounded.md` (16px) for floating actions and calendar days, `rounded.lg` (28px) for cards, sheets and dialogs, and `rounded.full` for buttons, switches and navigation indicators.
 
 ## Components
 
-The `components` tokens above give ready-to-use values per element (`backgroundColor`, `textColor`, `rounded`, `height`) drawn from this theme:
-
-- Primary button: solid `gray-1000` fill with a `background-100` label, for the single most important action on a view.
-- Secondary button: `background-100` fill with a translucent `gray-alpha-400` border.
-- Tertiary button: transparent fill with `gray-1000` text for low-emphasis actions; it tints with `gray-alpha` on hover.
-- Error button: solid `red-800` fill with white text, for destructive actions.
-- Input: `background-100` fill, translucent border, 6px radius.
-- Dialog: `background-100` fill, translucent border, 12px radius, fixed header and footer, and a scrollable body. Keep it within the `md` breakpoint and 90% of the available height so system navigation stays clear.
-- Camera QR scanner: use the scoped, theme-independent `scanner-scrim` (`rgba(0, 0, 0, 0.7)`) and `scanner-content` (`#ffffff`) tokens over the live preview, with a 260px square frame and a 4px frame border. Camera-unavailable states return to the normal theme surface and text tokens.
-
-The variant tokens are the default medium (40px) size. Use the `button-small`/`input-small` (32px) and `button-large`/`input-large` (48px) tokens for the other sizes; large buttons step up to `button-16`. Hover and active states step up the scale: a `100` fill becomes `200` on hover and `300` on active, and borders move from `400` to `500` to `600`. Disabled uses a `gray-100` fill, `gray-700` text, and a not-allowed cursor. Focus shows a two-layer ring (`box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px #66488f`): a 2px gap in the surface color, then a 2px `brand-primary` ring.
+Primary actions are filled pill buttons (48dp tall when they are the screen’s main action). Secondary actions are tonal or outlined pills; low-emphasis actions are text buttons. Switches show a check in the thumb when on. Filter chips select an automation and show a check when selected. Segmented buttons choose one value from two to five options. Top app bars use `heading-24` titles on top-level screens and `heading-20` on sub-screens. Focus shows a two-layer ring (`box-shadow: 0 0 0 2px #fef7ff, 0 0 0 4px #6a3fe0`). All touch targets are at least 48dp.
 
 ## Voice & Content
 
-Copy is part of the design; keep it precise and free of filler.
-
-- Use Title Case for labels, buttons, titles, and tabs; sentence case for body, helper text, and toasts.
-- Name actions with a verb and a noun (`Deploy Project`, `Delete Member`), never `Confirm`, `OK`, or a bare verb.
-- Write errors as what happened plus what to do next: `Build failed. Bundle exceeds 50 MB. Reduce it or raise the limit.`
-- Toasts name the specific thing that changed, drop the trailing period, and never say `successfully`: `Project deleted`, not `Successfully deleted the project.`
-- Empty states point to the first action: `No deployments yet. Push to your Git repository to create one.`
-- Use the present participle with an ellipsis for in-progress states: `Deploying…`, `Saving…`.
-- Use numerals (`3 projects`), curly quotes, and the ellipsis character; skip `please` and marketing superlatives.
+Write in plain sentences. Describe automations as sentences (“Every morning at 7:30, write yesterday’s metrics to Vault/Health”). Name things the way the user sees them: Archive, Automations, Settings, Export now. Never show health values in previews, notifications or widgets that could be seen on a locked screen.
 
 ## Do's and Don'ts
 
-- Use the gray scale to rank information: `1000` for primary text, `900` for secondary, `700` for disabled.
-- Keep solid accent color for state and the single most important action on a view.
-- Hold WCAG AA contrast (4.5:1 for body text).
-- Show the focus ring on every interactive element at `:focus-visible`, and never remove an outline without a visible replacement.
-- Apply the typography tokens instead of setting font size, line height, or weight by hand.
-- Don’t signal state with color alone; pair it with an icon or text label.
-- Don’t use `background-200` as a general fill; it is for subtle separation only.
-- Don’t mix rounded and sharp corners, or more than two font weights, in one view.
-- Don’t swap `gray-*` for `background-*`; they are separate scales.
+- Do use the named Compose tokens in `presentation/theme`; never introduce ad hoc colors, spacing, type sizes or radii.
+- Do pair every status color with text or an icon.
+- Do keep one filled primary action per screen; the Export now button is the global one.
+- Don’t add borders to cards or tonal containers.
+- Don’t use dynamic color, gradients or decorative glows.
+- Don’t shrink text to make a layout fit; let rows grow and wrap.
 
 ## Wear OS surfaces
 
-Wear OS is a scoped platform adaptation of Geist. The watch app uses Wear Compose components, rotary scrolling, edge-safe round layouts, and a black primary surface to respect OLED and ambient constraints. Named watch tokens are `WearSpacing` (4/8/12/16/24dp), `WearType` (12/14/16/20sp), `WearShape` (6/12/full), and `WearColors` (the Geist dark surface/text plus Health.md purple, green, amber, and red semantics). Bundled Geist Sans remains the app font; Tiles and complications may use host/platform typography because those remote renderers do not support bundled fonts. Tile and complication content is glanceable, local-cache-only, never described as real-time, and always pairs color with text. Health values are hidden after 24 hours; values 4–24 hours old include a localized age marker.
+Wear OS is a scoped platform adaptation that keeps its own Geist-derived watch tokens. The watch app uses Wear Compose components, rotary scrolling, edge-safe round layouts, and a black primary surface to respect OLED and ambient constraints. Named watch tokens are `WearSpacing` (4/8/12/16/24dp), `WearType` (12/14/16/20sp), `WearShape` (6/12/full), and `WearColors` (the Geist dark surface/text plus Health.md purple, green, amber, and red semantics). The watch app keeps bundled Geist Sans; Tiles and complications may use host/platform typography because those remote renderers do not support bundled fonts. Tile and complication content is glanceable, local-cache-only, never described as real-time, and always pairs color with text. Health values are hidden after 24 hours; values 4–24 hours old include a localized age marker.
 
 The dashboard mirrors the watchOS dashboard composition: one row per metric rendered as an icon chip on the dark surface (`gray-100`, `WearShape.md`), with the metric tint applied to the icon only, the localized label in muted text, and the value emphasized in text-color semibold tabular figures. Per-metric tint tokens reference the existing dark accent scales and never introduce new hex values: steps `green-900`, move energy `amber-900`, exercise `amber-700`, sleep `purple-900`, resting heart rate `red-900`, average heart rate `red-700`, HRV `teal-900`, and blood oxygen `teal-700`. Icons come from the Compose Material icon set because bundled Geist has no icon glyphs; icon tint always pairs with the text label so color never carries meaning alone. Stand hours have no Health Connect equivalent and stay absent from Wear surfaces.
 
@@ -545,9 +537,9 @@ The dashboard mirrors the watchOS dashboard composition: one row per metric rend
 
 Home-screen widgets use Jetpack Glance and remain part of this design system even though they are rendered through Android `RemoteViews` rather than the app’s Compose tree.
 
-- Use the light and dark values from the named Geist color tokens through day/night `ColorProvider` values. Do not adopt launcher wallpaper colors or Material dynamic color.
+- Use the light and dark values from the named widget color tokens through day/night `ColorProvider` values. Do not adopt launcher wallpaper colors or Material dynamic color.
 - Use the existing 4px spacing scale, `rounded.md` outer surfaces, and the semantic accent scales for activity, heart, and sleep charts. Bitmap chart artwork must receive token colors rather than define its own palette.
-- Glance cannot reliably load bundled app font resources in a remote host. Widget text may therefore use Android’s platform sans-serif and monospace families as a scoped platform exception; keep the documented Geist type sizes, weights, hierarchy, and tabular-number intent.
+- Glance cannot reliably load bundled app font resources in a remote host. Widget text may therefore use Android’s platform sans-serif and monospace families as a scoped platform exception; keep the documented widget type sizes, weights, hierarchy, and tabular-number intent.
 - Treat compact, wide, medium, and tall-large widget layouts as responsive compositions, not fixed phone breakpoints. Content must tolerate launcher padding, OEM cell geometry, and user resizing without clipping.
 - Small widget captions use the named `gray-900` token rather than the lower-contrast disabled token, preserving at least 4.5:1 contrast in light and dark themes.
 - Picker previews use synthetic data. Health measurements never appear in preview assets.
