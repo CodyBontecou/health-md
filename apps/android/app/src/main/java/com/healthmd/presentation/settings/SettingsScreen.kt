@@ -56,7 +56,7 @@ fun SettingsScreen(
     onNavigateToDirectCli: () -> Unit = {},
     onNavigateToSharedSetup: () -> Unit = {},
     onNavigateToDiagnostics: () -> Unit = {},
-    onNavigateToExportNow: () -> Unit = {},
+    onNavigateToFolderDestination: () -> Unit = {},
     onNavigateToAutomations: () -> Unit = {},
 ) {
     val isPurchased by viewModel.isPurchased.collectAsStateWithLifecycle()
@@ -189,7 +189,7 @@ fun SettingsScreen(
             title = stringResource(R.string.settings_destination_folder_title),
             subtitle = stringResource(R.string.settings_destination_folder_subtitle),
             icon = Icons.Outlined.Folder,
-            onClick = onNavigateToExportNow,
+            onClick = onNavigateToFolderDestination,
         )
         SettingsNavigationCard(
             title = stringResource(R.string.direct_cli_title),

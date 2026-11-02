@@ -90,6 +90,8 @@ fun ScheduleScreen(
     onNavigateToPaywall: () -> Unit = {},
     /** Entry to the saved export profiles, shown at the top of Automations. */
     profilesEntry: (@Composable () -> Unit)? = null,
+    /** Opens an automation's detail hub (a pane on wide layouts, a screen on phones). */
+    onOpenAutomation: ((String) -> Unit)? = null,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val historyViewModel: HistoryViewModel = hiltViewModel()
@@ -358,7 +360,7 @@ fun ScheduleScreen(
 
         profilesEntry?.invoke()
 
-        ProfileSchedulesSection(viewModel = profileSchedulesViewModel)
+        ProfileSchedulesSection(viewModel = profileSchedulesViewModel, onOpenDetails = onOpenAutomation)
 
         ScheduleSectionLabel(stringResource(R.string.automatic_export_title))
 

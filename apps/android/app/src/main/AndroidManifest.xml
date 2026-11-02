@@ -181,6 +181,18 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/sleep_widget_info" />
         </receiver>
+        <!-- Coverage-only Archive widget: export history, never health values. -->
+        <receiver
+            android:name=".widget.glance.ArchiveWidgetReceiver"
+            android:exported="false"
+            android:label="@string/widget_archive_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/archive_widget_info" />
+        </receiver>
         <receiver
             android:name=".widget.glance.HealthWidgetLocaleChangeReceiver"
             android:exported="false">

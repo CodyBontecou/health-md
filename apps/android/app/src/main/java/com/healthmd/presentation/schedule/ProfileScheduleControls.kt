@@ -60,6 +60,7 @@ internal object ProfileScheduleTags {
     const val REFRESH_INTERVAL = "profileSchedule.dialog.refreshInterval"
     const val MENU = ".menu"
     const val SENTENCE = "profileSchedule.row.sentence"
+    const val DETAILS = "profileSchedule.row.details"
 }
 
 /** No surrounding editor click: reading text and independent actions have their own space. */
@@ -72,6 +73,7 @@ internal fun ProfileScheduleRowContent(
     onDiscardRecovery: () -> Unit,
     discardEnabled: Boolean = true,
     modifier: Modifier = Modifier,
+    onOpenDetails: (() -> Unit)? = null,
 ) {
     Column(modifier.fillMaxWidth().testTag(ProfileScheduleTags.ROW),
         verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
@@ -83,6 +85,14 @@ internal fun ProfileScheduleRowContent(
             style = GeistType.copy18, color = AppColors.textPrimary,
             modifier = Modifier.fillMaxWidth().testTag(ProfileScheduleTags.SENTENCE),
         )
+        if (onOpenDetails != null) {
+            val detailsDescription = stringResource(R.string.automation_detail_details_named, row.profile.name)
+            TextButton(
+                onClick = onOpenDetails,
+                modifier = Modifier.heightIn(min = GeistSizes.minimumTouchTarget)
+                    .testTag(ProfileScheduleTags.DETAILS).semantics { contentDescription = detailsDescription },
+            ) { Text(stringResource(R.string.automation_detail_details)) }
+        }
         Text(
             cadenceSummary(row.entry, todayRefreshSummary(row.entry)),
             style = MaterialTheme.typography.bodySmall, color = AppColors.textSecondary,

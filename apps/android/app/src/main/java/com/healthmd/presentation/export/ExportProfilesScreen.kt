@@ -36,6 +36,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -99,8 +100,13 @@ internal fun attemptExportProfileDetailChange(
 fun ExportProfilesScreen(
     onBack: () -> Unit,
     viewModel: ExportProfilesViewModel = hiltViewModel(),
+    /** Opens this profile's detail once the screen appears. */
+    initialDetailProfileId: String? = null,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    LaunchedEffect(initialDetailProfileId) {
+        if (initialDetailProfileId != null) viewModel.openDetail(initialDetailProfileId)
+    }
     val protection = LocalConfigurationProtection.current
     val attemptProfileChange: (() -> Unit) -> Unit = { action ->
         if (protection.enabled) protection.onBlockedChange() else action()

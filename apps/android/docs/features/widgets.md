@@ -9,6 +9,8 @@ Health.md provides four resizable Android home-screen widgets backed directly by
 | Heart Range | — | Seven-day minimum/average/maximum chart | Chart, average, resting heart rate, HRV | Expanded chart and metric tiles |
 | Sleep | Last sleep duration and window | Seven-day sleep bars | Last sleep, seven-day average, bedtime, wake time | Expanded seven-day chart and timing |
 
+A fifth widget, **Archive**, shows export coverage rather than health data: the current streak, gaps in the last 30 days, and the last 7 (compact) or 14 (wide) days as coverage squares, using the [Archive](./archive.md) rules. It reads only local export history, needs no Health Connect setup, re-renders whenever export history changes (`ArchiveGlanceWidget.refresh` from the history repository), and opens the app on tap. Like the health widgets it stays home-screen-only.
+
 Android launcher dimensions vary. These names describe responsive compositions rather than guaranteed cell measurements. Compact cards switch to dense text-first layouts at larger font scales or when stale-status copy must fit.
 
 ## Platform parity

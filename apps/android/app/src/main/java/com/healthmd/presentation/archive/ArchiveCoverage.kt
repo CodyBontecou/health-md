@@ -93,6 +93,10 @@ object ArchiveCoverage {
         }
     }
 
+    /** "All" for one date across every profile in [entries]. */
+    fun aggregateDay(entries: List<ExportHistoryEntry>, date: LocalDate, today: LocalDate): CoverageStatus =
+        aggregate(profiles(entries).map { status(entries, it, date, today) }, isToday = date == today)
+
     /** "x of y on track" over due profiles; an update in progress counts as on track. */
     fun onTrack(days: List<ArchiveProfileDay>): Pair<Int, Int> {
         val due = days.map { it.status }.filter(::isDue)

@@ -72,6 +72,28 @@ class WidgetManifestContractTest {
     }
 
     @Test
+    fun `archive widget is a non-exported coverage-only provider without health setup`() {
+        val manifest = sourceFile("app/src/main/AndroidManifest.xml").readText()
+        val declaration = Regex(
+            "<receiver[^>]*android:name=\"[^\"]*ArchiveWidgetReceiver\"[\\s\\S]*?</receiver>"
+        ).find(manifest)?.value
+        assertThat(declaration).isNotNull()
+        assertThat(declaration).contains("android:exported=\"false\"")
+        assertThat(declaration).contains("android.appwidget.action.APPWIDGET_UPDATE")
+
+        val base = providerAttributes(sourceFile("app/src/main/res/xml/archive_widget_info.xml"))
+        // Coverage needs no Health Connect access, so there is no setup activity.
+        assertThat(base["configure"]).isNull()
+        assertThat(base["updatePeriodMillis"]).isEqualTo("0")
+        assertThat(base["previewImage"]).isEqualTo("@drawable/widget_archive_preview")
+        val api31 = providerAttributes(sourceFile("app/src/main/res/xml-v31/archive_widget_info.xml"))
+        assertThat(api31["previewLayout"]).isNotNull()
+        val api36 = providerAttributes(sourceFile("app/src/main/res/xml-v36/archive_widget_info.xml"))
+        assertThat(api36["widgetCategory"]).isEqualTo("home_screen|not_keyguard")
+        assertThat(sourceFile("app/src/main/res/drawable-nodpi/widget_archive_preview.png").length()).isGreaterThan(0L)
+    }
+
+    @Test
     fun `picker previews are synthetic local assets`() {
         listOf(
             "widget_health_summary_preview.png",

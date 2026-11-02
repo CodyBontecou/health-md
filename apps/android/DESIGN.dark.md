@@ -543,4 +543,5 @@ Home-screen widgets use Jetpack Glance and remain part of this design system eve
 - Treat compact, wide, medium, and tall-large widget layouts as responsive compositions, not fixed phone breakpoints. Content must tolerate launcher padding, OEM cell geometry, and user resizing without clipping.
 - Small widget captions use the named `gray-900` token rather than the lower-contrast disabled token, preserving at least 4.5:1 contrast in light and dark themes.
 - Picker previews use synthetic data. Health measurements never appear in preview assets.
+- The Archive widget uses the coverage day-state tokens and shows coverage only, never health values.
 - Health widgets are home-screen-only while Android lacks an equivalent to WidgetKit sensitive-content redaction. Do not expose measurement-bearing providers to keyguard hosts.

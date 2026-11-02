@@ -43,7 +43,14 @@ object SubRoutes {
     const val DIRECT_CLI = "direct_cli"
     const val SHARED_SETUP = "shared_setup"
     const val EXPORT_PROFILES = "export_profiles"
+    /** The profiles screen opened on one profile's detail. */
+    const val EXPORT_PROFILE = "export_profiles/{profileId}"
+    /** The automation detail hub on compact layouts; wide layouts show it as a pane. */
+    const val AUTOMATION_DETAIL = "automation/{profileId}"
+    fun exportProfile(profileId: String): String = "export_profiles/$profileId"
+    fun automationDetail(profileId: String): String = "automation/$profileId"
     const val DIAGNOSTICS = "diagnostics"
+    const val FOLDER_DESTINATION = "folder_destination"
     const val MYSELF_CLAIM = "myself_claim"
     const val PAYWALL = "paywall"
 }

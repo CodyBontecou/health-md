@@ -48,6 +48,8 @@ import com.healthmd.presentation.export.ExportScreen
 import com.healthmd.presentation.history.HistoryScreen
 import com.healthmd.presentation.archive.ArchiveScreen
 import com.healthmd.presentation.export.ExportProfilesEntryCard
+import com.healthmd.presentation.schedule.AutomationDetailPane
+import com.healthmd.presentation.common.GeistCard
 import com.healthmd.presentation.metrics.MetricSelectionScreen
 import com.healthmd.presentation.common.ConfigurationProtectionToast
 import com.healthmd.presentation.common.ConfigurationProtectionUi
@@ -356,16 +358,45 @@ fun HealthMdNavigation(
                 )
             }
             composable(NavDestination.SCHEDULE.route) {
-                ReadableWidth { ScheduleScreen(
-                    onNavigateToPaywall = {
-                        if (settingsViewModel.distributionPolicy.purchasesAvailable) {
-                            navController.navigate(PaywallEntryPoint.SCHEDULE.route)
+                var selectedAutomation by rememberSaveable { mutableStateOf<String?>(null) }
+                BoxWithConstraints(Modifier.fillMaxSize()) {
+                    val twoPane = maxWidth >= GeistSizes.readableContentMaxWidth
+                    val schedule: @Composable () -> Unit = {
+                        ScheduleScreen(
+                            onNavigateToPaywall = {
+                                if (settingsViewModel.distributionPolicy.purchasesAvailable) {
+                                    navController.navigate(PaywallEntryPoint.SCHEDULE.route)
+                                }
+                            },
+                            profilesEntry = {
+                                ExportProfilesEntryCard(onOpen = { navController.navigate(SubRoutes.EXPORT_PROFILES) })
+                            },
+                            onOpenAutomation = { id ->
+                                if (twoPane) {
+                                    selectedAutomation = id
+                                } else {
+                                    navController.navigate(SubRoutes.automationDetail(id)) { launchSingleTop = true }
+                                }
+                            },
+                        )
+                    }
+                    if (twoPane) {
+                        // List and detail side by side on tablets and unfolded foldables.
+                        Row(Modifier.fillMaxSize()) {
+                            Box(Modifier.weight(1f)) { schedule() }
+                            Box(Modifier.weight(1f).padding(Spacing.md)) {
+                                GeistCard(padding = Spacing.xxs) {
+                                    AutomationDetailPane(
+                                        profileId = selectedAutomation,
+                                        onEditProfile = { id -> navController.navigate(SubRoutes.exportProfile(id)) },
+                                    )
+                                }
+                            }
                         }
-                    },
-                    profilesEntry = {
-                        ExportProfilesEntryCard(onOpen = { navController.navigate(SubRoutes.EXPORT_PROFILES) })
-                    },
-                ) }
+                    } else {
+                        ReadableWidth { schedule() }
+                    }
+                }
             }
             composable(SubRoutes.HISTORY) {
                 SubScreenFrame(
@@ -374,33 +405,68 @@ fun HealthMdNavigation(
                 ) { HistoryScreen() }
             }
             composable(NavDestination.SETTINGS.route) {
-                ReadableWidth { SettingsScreen(
-                    viewModel = settingsViewModel,
-                    protectionSettingsRequestId = protectionSettingsRequestId,
-                    onNavigateToPaywall = {
-                        if (settingsViewModel.distributionPolicy.purchasesAvailable) {
-                            navController.navigate(PaywallEntryPoint.UPGRADE.route)
+                var settingsDetail by rememberSaveable { mutableStateOf<String?>(null) }
+                BoxWithConstraints(Modifier.fillMaxSize()) {
+                    val twoPane = maxWidth >= GeistSizes.readableContentMaxWidth
+                    // On wide layouts sub-screens open beside Settings instead of over it.
+                    val open: (String) -> Unit = { route ->
+                        if (twoPane) settingsDetail = route else navController.navigate(route) { launchSingleTop = true }
+                    }
+                    val list: @Composable () -> Unit = {
+                        SettingsScreen(
+                            viewModel = settingsViewModel,
+                            protectionSettingsRequestId = protectionSettingsRequestId,
+                            onNavigateToPaywall = {
+                                if (settingsViewModel.distributionPolicy.purchasesAvailable) {
+                                    navController.navigate(PaywallEntryPoint.UPGRADE.route)
+                                }
+                            },
+                            onNavigateToMyselfClaim = {
+                                if (BuildConfig.MYSELF_CLAIM_ENABLED && settingsViewModel.distributionPolicy.purchasesAvailable) {
+                                    navController.navigate(SubRoutes.MYSELF_CLAIM) { launchSingleTop = true }
+                                }
+                            },
+                            onNavigateToExportProfiles = { open(SubRoutes.EXPORT_PROFILES) },
+                            onNavigateToClinicianReport = { open(SubRoutes.CLINICIAN_REPORT) },
+                            onNavigateToDirectCli = { open(SubRoutes.DIRECT_CLI) },
+                            onNavigateToSharedSetup = { navController.navigate(SubRoutes.SHARED_SETUP) },
+                            onNavigateToDiagnostics = { open(SubRoutes.DIAGNOSTICS) },
+                            onNavigateToFolderDestination = { open(SubRoutes.FOLDER_DESTINATION) },
+                            onNavigateToAutomations = {
+                                navController.navigate(NavDestination.AUTOMATIONS.route) {
+                                    popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                                    launchSingleTop = true
+                                    restoreState = true
+                                }
+                            },
+                        )
+                    }
+                    if (twoPane) {
+                        Row(Modifier.fillMaxSize()) {
+                            Box(Modifier.weight(1f)) { list() }
+                            Box(Modifier.weight(1f).padding(Spacing.md)) {
+                                GeistCard(padding = Spacing.xxs) {
+                                    val close = { settingsDetail = null }
+                                    when (settingsDetail) {
+                                        SubRoutes.EXPORT_PROFILES -> ExportProfilesScreen(onBack = close)
+                                        SubRoutes.CLINICIAN_REPORT -> ClinicianReportScreen(onBack = close)
+                                        SubRoutes.DIRECT_CLI -> DirectCliScreen(onBack = close)
+                                        SubRoutes.DIAGNOSTICS -> DiagnosticsScreen(onBack = close)
+                                        else -> FolderDestinationScreen()
+                                    }
+                                }
+                            }
                         }
-                    },
-                    onNavigateToMyselfClaim = {
-                        if (BuildConfig.MYSELF_CLAIM_ENABLED && settingsViewModel.distributionPolicy.purchasesAvailable) {
-                            navController.navigate(SubRoutes.MYSELF_CLAIM) { launchSingleTop = true }
-                        }
-                    },
-                    onNavigateToExportProfiles = { navController.navigate(SubRoutes.EXPORT_PROFILES) },
-                    onNavigateToClinicianReport = { navController.navigate(SubRoutes.CLINICIAN_REPORT) },
-                    onNavigateToDirectCli = { navController.navigate(SubRoutes.DIRECT_CLI) },
-                    onNavigateToSharedSetup = { navController.navigate(SubRoutes.SHARED_SETUP) },
-                    onNavigateToDiagnostics = { navController.navigate(SubRoutes.DIAGNOSTICS) },
-                    onNavigateToExportNow = { navController.navigate(SubRoutes.EXPORT_NOW) { launchSingleTop = true } },
-                    onNavigateToAutomations = {
-                        navController.navigate(NavDestination.AUTOMATIONS.route) {
-                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
-                            launchSingleTop = true
-                            restoreState = true
-                        }
-                    },
-                ) }
+                    } else {
+                        ReadableWidth { list() }
+                    }
+                }
+            }
+            composable(SubRoutes.FOLDER_DESTINATION) {
+                SubScreenFrame(
+                    title = stringResource(R.string.settings_destination_folder_title),
+                    onBack = { navController.popBackStack() },
+                ) { ReadableWidth { FolderDestinationScreen() } }
             }
 
             if (BuildConfig.MYSELF_CLAIM_ENABLED && settingsViewModel.distributionPolicy.purchasesAvailable) {
@@ -415,6 +481,26 @@ fun HealthMdNavigation(
             }
             composable(SubRoutes.EXPORT_PROFILES) {
                 ExportProfilesScreen(onBack = { navController.popBackStack() })
+            }
+            composable(SubRoutes.EXPORT_PROFILE) { entry ->
+                ExportProfilesScreen(
+                    onBack = { navController.popBackStack() },
+                    initialDetailProfileId = entry.arguments?.getString("profileId"),
+                )
+            }
+            composable(SubRoutes.AUTOMATION_DETAIL) { entry ->
+                val profileId = entry.arguments?.getString("profileId")
+                SubScreenFrame(
+                    title = stringResource(R.string.nav_automations),
+                    onBack = { navController.popBackStack() },
+                ) {
+                    ReadableWidth {
+                        AutomationDetailPane(
+                            profileId = profileId,
+                            onEditProfile = { id -> navController.navigate(SubRoutes.exportProfile(id)) },
+                        )
+                    }
+                }
             }
             composable(SubRoutes.DIRECT_CLI) {
                 DirectCliScreen(onBack = { navController.popBackStack() })

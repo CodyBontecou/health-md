@@ -4,7 +4,7 @@
 
 - **Audience and task:** People who export on a schedule and want to see, at a glance, which health dates are already in their archive and which need a backfill.
 - **Canonical location:** This guide owns the Android Archive. The shared capability is `export.coverage-calendar` in [product-capabilities.json](../../../../packages/contracts/product-capabilities.json); the Apple Archive lands with the Liquid Glass experience.
-- **Source and tests:** `app/src/main/java/com/healthmd/presentation/archive/` (`ArchiveCoverage.kt` rules, `ArchiveViewModel.kt`, `ArchiveScreen.kt`); `app/src/test/java/com/healthmd/presentation/archive/ArchiveCoverageTest.kt`. On-device rendering has not been verified by automated UI tests.
+- **Source and tests:** `app/src/main/java/com/healthmd/presentation/archive/` (`ArchiveCoverage.kt` rules, `ArchiveViewModel.kt`, `ArchiveScreen.kt`) and `widget/glance/ArchiveGlanceWidget.kt`; `ArchiveCoverageTest.kt` and `ArchiveWidgetSummaryTest.kt`. On-device rendering has not been verified by automated UI tests.
 
 ## What it does
 
@@ -26,6 +26,8 @@ Each export profile is its own lane; runs without a profile form the **Current s
 2. Tap a day to see each lane's state and its last export time.
 3. Use the chips to focus one profile, and **Show first gap** to jump to the earliest missing date in the month.
 4. Open **History** from the Archive for the full run log and retries ([Export history and retry](./export-history-retry.md)).
+
+The **Archive** home-screen widget shows the same coverage at a glance; see [Home-screen widgets](./widgets.md).
 
 ## Limitations and troubleshooting
 
