@@ -100,34 +100,23 @@ class LocalRunnerTests(unittest.TestCase):
             self.assertEqual(str(self.root / 'apps/apple/build/local-test-derived-data' / platform), derived[-1])
         self.assertEqual(2, len(set(derived)))
 
-    def test_default_parallel_run_preserves_every_gate_and_separates_xcode_databases(self):
-        result, calls = self.run_make('test', LATCH='1')
+    def test_default_runs_only_the_portable_entrypoint(self):
+        result, calls = self.run_make('test')
+        self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+        self.assertEqual([['scripts/ci/run.py']], [c['args'] for c in calls if c['event'] == 'start'])
+
+    def test_explicit_component_diagnostic_keeps_all_gates_and_separate_xcode_paths(self):
+        result, calls = self.run_make('test-components')
         self.assertEqual(0, result.returncode, result.stdout + result.stderr)
         self.assert_all_gates(calls)
-        active = maximum = 0
-        for call in calls:
-            active += 1 if call['event'] == 'start' else -1
-            maximum = max(active, maximum)
-        self.assertEqual(0, active)
-        self.assertEqual(4, maximum)
 
-    def test_serial_override_runs_same_commands_without_overlap(self):
-        result, calls = self.run_make('test', 'TEST_JOBS=1')
-        self.assertEqual(0, result.returncode, result.stdout + result.stderr)
-        self.assert_all_gates(calls)
-        active = maximum = 0
-        for call in calls:
-            active += 1 if call['event'] == 'start' else -1
-            maximum = max(active, maximum)
-        self.assertEqual(1, maximum)
-
-    def test_failed_component_or_native_pipeline_fails_after_other_gates_finish(self):
+    def test_component_and_native_failures_propagate(self):
         for failure in ('contracts', 'ios', 'macos'):
             with self.subTest(failure=failure):
                 (self.root / 'calls.jsonl').unlink(missing_ok=True)
-                result, calls = self.run_make('test', FAIL_JOB=failure)
+                target = 'test-contracts' if failure == 'contracts' else 'test-apple'
+                result, _ = self.run_make(target, FAIL_JOB=failure)
                 self.assertNotEqual(0, result.returncode)
-                self.assert_all_gates(calls)
 
     def test_direct_component_invocation_keeps_default_xcode_paths(self):
         result, calls = self.run_make('-C', 'apps/apple', 'test-ios')
@@ -136,15 +125,15 @@ class LocalRunnerTests(unittest.TestCase):
         self.assertNotIn('-derivedDataPath', native['args'])
 
     def test_optional_gradle_arguments_reach_android_gate(self):
-        result, calls = self.run_make('test', 'ANDROID_TEST_ARGS=--init-script scripts/ci-gradle.init.gradle')
+        result, calls = self.run_make('test-android', 'ANDROID_TEST_ARGS=--init-script scripts/ci-gradle.init.gradle')
         self.assertEqual(0, result.returncode, result.stdout + result.stderr)
         android = next(c for c in calls if c['job'] == 'gradlew:apps/android')
         self.assertEqual(ANDROID_TASKS + ['--init-script', 'scripts/ci-gradle.init.gradle'], android['args'])
 
-    def test_invalid_job_count_runs_no_gates(self):
-        result, calls = self.run_make('test', 'TEST_JOBS=invalid')
+    def test_portable_runner_failure_is_not_hidden_by_make(self):
+        result, calls = self.run_make('test', FAIL_JOB='registry:scripts/ci/run.py')
         self.assertNotEqual(0, result.returncode)
-        self.assertEqual([], calls)
+        self.assertEqual(1, len([c for c in calls if c['event'] == 'start']))
 
 
 if __name__ == '__main__':

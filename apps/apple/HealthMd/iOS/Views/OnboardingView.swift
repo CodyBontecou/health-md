@@ -12,18 +12,9 @@ struct OnboardingView: View {
     @ObservedObject private var purchaseManager = PurchaseManager.shared
     @EnvironmentObject var sharedSetupCoordinator: SharedSetupCoordinator
     let onComplete: () -> Void
-    private let analytics = PricingAnalyticsClient.shared
 
     @State private var currentStep = 0
     @State private var direction: TransitionDirection = .forward
-    @AppStorage("pricing.analytics.onboarding.started.tracked.v1") private var didPersistentlyTrackOnboardingStarted = false
-    @AppStorage("pricing.analytics.onboarding.steps.tracked.v1") private var persistedTrackedStepRawValues = ""
-    @AppStorage("pricing.analytics.onboarding.skips.tracked.v1") private var persistedSkippedStepRawValues = ""
-    @AppStorage("pricing.analytics.onboarding.folder.selected.tracked.v1") private var didPersistentlyTrackFolderSelected = false
-    @AppStorage("pricing.analytics.health.authorization.statuses.tracked.v1") private var persistedTrackedHealthAuthorizationStatusRawValues = ""
-    @State private var didTrackOnboardingStarted = false
-    @State private var trackedStepViews: Set<PricingAnalyticsOnboardingStep> = []
-    @State private var didTrackFolderSelected = false
     @State private var isRequestingHealthAuthorization = false
     @State private var isSharedSetupImporterPresented = false
 
@@ -65,15 +56,8 @@ struct OnboardingView: View {
             isPresented: $isSharedSetupImporterPresented,
             coordinator: sharedSetupCoordinator
         )
-        .onAppear {
-            trackInitialOnboardingAnalytics()
-        }
-        .onChange(of: currentStep) { _, stepIndex in
-            trackStepViewed(for: stepIndex)
-        }
         .onChange(of: vaultManager.vaultURL) { _, folderURL in
             if folderURL != nil {
-                trackFolderSelectedIfNeeded()
             }
         }
     }
@@ -193,7 +177,6 @@ struct OnboardingView: View {
 
     private func advance() {
         if currentStep >= totalSteps - 1 {
-            analytics.trackOnboardingCompleted(quotaState: purchaseManager.analyticsQuotaState)
             onComplete()
             return
         }
@@ -217,11 +200,6 @@ struct OnboardingView: View {
         }
     }
 
-    private var healthAuthorizationAnalyticsStatus: PricingAnalyticsAuthorizationStatus {
-        guard healthKitManager.isHealthDataAvailable else { return .unavailable }
-        return healthKitManager.isAuthorized ? .authorized : .notAuthorized
-    }
-
     private func requestHealthAuthorization(advanceWhenConnected: Bool) {
         guard !isRequestingHealthAuthorization else { return }
         isRequestingHealthAuthorization = true
@@ -230,140 +208,22 @@ struct OnboardingView: View {
             defer { isRequestingHealthAuthorization = false }
             do {
                 _ = try await healthKitManager.requestAuthorization()
-                trackHealthAuthorizationCompletedIfNeeded(status: healthAuthorizationAnalyticsStatus)
                 if advanceWhenConnected && healthKitManager.isAuthorized {
                     advance()
                 }
             } catch {
-                trackHealthAuthorizationCompletedIfNeeded(status: .unknown)
             }
         }
     }
 
     private func skipHealthAccess() {
-        trackOnboardingSkipIfNeeded(.healthAccess)
         advance()
     }
 
     private func skipFolderSetup() {
-        trackOnboardingSkipIfNeeded(.folderSetup)
         advance()
     }
 
-    private func trackInitialOnboardingAnalytics() {
-        guard !didTrackOnboardingStarted else { return }
-        didTrackOnboardingStarted = true
-        if !didPersistentlyTrackOnboardingStarted {
-            didPersistentlyTrackOnboardingStarted = true
-            analytics.trackOnboardingStarted(quotaState: purchaseManager.analyticsQuotaState)
-        }
-        trackStepViewed(for: currentStep)
-    }
-
-    private func trackStepViewed(for index: Int) {
-        guard let step = onboardingStep(for: index) else { return }
-
-        if step == .healthAccess {
-            if healthKitManager.isAuthorized {
-                trackHealthAuthorizationCompletedIfNeeded(status: .authorized)
-            } else if !healthKitManager.isHealthDataAvailable {
-                trackHealthAuthorizationCompletedIfNeeded(status: .unavailable)
-            }
-        }
-        if step == .folderSetup, vaultManager.vaultURL != nil {
-            trackFolderSelectedIfNeeded()
-        }
-
-        guard !trackedStepViews.contains(step),
-              !persistedTrackedSteps.contains(step) else { return }
-        trackedStepViews.insert(step)
-        persistTrackedStep(step)
-        analytics.trackOnboardingStepViewed(step, quotaState: purchaseManager.analyticsQuotaState)
-    }
-
-    private var persistedTrackedSteps: Set<PricingAnalyticsOnboardingStep> {
-        Set(persistedTrackedStepRawValues
-            .split(separator: ",")
-            .compactMap { PricingAnalyticsOnboardingStep(rawValue: String($0)) })
-    }
-
-    private var persistedSkippedSteps: Set<PricingAnalyticsOnboardingStep> {
-        Set(persistedSkippedStepRawValues
-            .split(separator: ",")
-            .compactMap { PricingAnalyticsOnboardingStep(rawValue: String($0)) })
-    }
-
-    private var persistedTrackedHealthAuthorizationStatusRawValueSet: Set<String> {
-        Set(persistedTrackedHealthAuthorizationStatusRawValues
-            .split(separator: ",")
-            .map(String.init))
-    }
-
-    private func persistTrackedStep(_ step: PricingAnalyticsOnboardingStep) {
-        var steps = persistedTrackedSteps
-        steps.insert(step)
-        persistedTrackedStepRawValues = steps
-            .map(\.rawValue)
-            .sorted()
-            .joined(separator: ",")
-    }
-
-    private func trackOnboardingSkipIfNeeded(_ step: PricingAnalyticsOnboardingStep) {
-        guard !persistedSkippedSteps.contains(step) else { return }
-
-        var steps = persistedSkippedSteps
-        steps.insert(step)
-        persistedSkippedStepRawValues = steps
-            .map(\.rawValue)
-            .sorted()
-            .joined(separator: ",")
-
-        switch step {
-        case .healthAccess:
-            analytics.trackOnboardingHealthSkipped(quotaState: purchaseManager.analyticsQuotaState)
-        case .folderSetup:
-            analytics.trackOnboardingFolderSkipped(quotaState: purchaseManager.analyticsQuotaState)
-        default:
-            break
-        }
-    }
-
-    private func trackHealthAuthorizationCompletedIfNeeded(status: PricingAnalyticsAuthorizationStatus) {
-        let rawValue = status.rawValue
-        let trackedStatuses = persistedTrackedHealthAuthorizationStatusRawValueSet
-        guard !trackedStatuses.contains(rawValue) else { return }
-
-        // Once authorization succeeds, suppress later transient failures from
-        // repeated taps or callback retries. Earlier unknown/not-authorized
-        // attempts may still be followed by one useful authorized event.
-        if trackedStatuses.contains(PricingAnalyticsAuthorizationStatus.authorized.rawValue),
-           rawValue != PricingAnalyticsAuthorizationStatus.authorized.rawValue {
-            return
-        }
-
-        var updatedStatuses = trackedStatuses
-        updatedStatuses.insert(rawValue)
-        persistedTrackedHealthAuthorizationStatusRawValues = updatedStatuses.sorted().joined(separator: ",")
-        analytics.trackHealthAuthorizationCompleted(status: status)
-    }
-
-    private func trackFolderSelectedIfNeeded() {
-        guard !didTrackFolderSelected, !didPersistentlyTrackFolderSelected else { return }
-        didTrackFolderSelected = true
-        didPersistentlyTrackFolderSelected = true
-        analytics.trackOnboardingFolderSelected(quotaState: purchaseManager.analyticsQuotaState)
-    }
-
-    private func onboardingStep(for index: Int) -> PricingAnalyticsOnboardingStep? {
-        switch index {
-        case OnboardingStep.welcome.rawValue: return .welcome
-        case OnboardingStep.healthAccess.rawValue: return .healthAccess
-        case sampleExportStepIndex: return .sampleExport
-        case folderStepIndex: return .folderSetup
-        case readyStepIndex: return .ready
-        default: return nil
-        }
-    }
 }
 
 /// The onboarding flow is intentionally short: welcome → health access →

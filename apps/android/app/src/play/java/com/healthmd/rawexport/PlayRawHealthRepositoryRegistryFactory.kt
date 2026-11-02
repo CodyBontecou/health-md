@@ -1,12 +1,8 @@
 package com.healthmd.rawexport
 
 import com.healthmd.data.health.providers.cloud.CloudHealthApiClient
-import com.healthmd.data.health.providers.cloud.CloudNativeRawPageProvider
 import com.healthmd.data.health.providers.cloud.CloudRawMetrics
-import com.healthmd.data.health.providers.cloud.FitbitCloudDataProvider
-import com.healthmd.data.health.providers.cloud.OuraCloudDataProvider
 import com.healthmd.data.health.providers.cloud.WhoopCloudDataProvider
-import com.healthmd.data.health.providers.cloud.WithingsCloudDataProvider
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 
@@ -14,26 +10,11 @@ object PlayRawHealthRepositoryRegistryFactory {
     fun create(
         healthConnectRepository: RawHealthRepository,
         apiClient: CloudHealthApiClient,
-        fitbit: FitbitCloudDataProvider,
-        withings: WithingsCloudDataProvider,
-        oura: OuraCloudDataProvider,
         whoop: WhoopCloudDataProvider,
     ): RawHealthRepositoryRegistry {
-        val cloudProviders: List<CloudNativeRawPageProvider> = listOf(fitbit, withings, oura, whoop)
-        val additionalRepositories = buildMap {
-            cloudProviders.forEach { source ->
-                put(
-                    source.rawProviderId,
-                    CloudRawHealthDataProvider(source, apiClient),
-                )
-            }
-            listOf("polar", "samsung_health", "huawei_health", "garmin").forEach { providerId ->
-                put(providerId, UnsupportedRawHealthRepository(providerId))
-            }
-        }
         return RawHealthRepositoryRegistry.withAdditionalRepositories(
             healthConnectRepository,
-            additionalRepositories,
+            mapOf(whoop.rawProviderId to CloudRawHealthDataProvider(whoop, apiClient)),
         )
     }
 }

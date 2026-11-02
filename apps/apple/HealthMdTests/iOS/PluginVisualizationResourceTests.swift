@@ -2,21 +2,18 @@ import Foundation
 import XCTest
 
 final class PluginVisualizationResourceTests: XCTestCase {
-    private let pinnedPluginRevision = "f1c07d1cdbc0af9c51c5e7169304722a3129f48c"
-
+    private let pinnedPluginRevision = "3cd58b04a28ef83ed143ae1598e2108bf931356c"
     func testOnboardingResourcesMatchPinnedWebsitePluginAndSamples() throws {
         let root = try repositoryRoot()
         let website = root.appendingPathComponent("apps/website")
+        let externalSources = try XCTUnwrap(JSONSerialization.jsonObject(
+            with: Data(contentsOf: website.appendingPathComponent("external-sources.json"))
+        ) as? [String: Any])
+        let plugin = try XCTUnwrap(externalSources["obsidian_plugin"] as? [String: Any])
+        XCTAssertEqual(plugin["revision"] as? String, pinnedPluginRevision)
         let resources = root.appendingPathComponent(
             "apps/apple/HealthMd/iOS/Resources/PluginVisualization"
         )
-
-        let sourceData = try Data(contentsOf: website.appendingPathComponent("external-sources.json"))
-        let sources = try XCTUnwrap(
-            JSONSerialization.jsonObject(with: sourceData) as? [String: Any]
-        )
-        let plugin = try XCTUnwrap(sources["obsidian_plugin"] as? [String: Any])
-        XCTAssertEqual(plugin["revision"] as? String, pinnedPluginRevision)
 
         let websiteBundle = try Data(
             contentsOf: website.appendingPathComponent("assets/healthmd-plugin-visualizations.js")

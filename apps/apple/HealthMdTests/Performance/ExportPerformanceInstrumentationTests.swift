@@ -477,7 +477,9 @@ final class ExportPerformanceInstrumentationTests: XCTestCase {
         }
 
         sampler.startSampling()
-        wait(for: [sampledPeak], timeout: 1)
+        // The utility-priority timer has no one-second scheduling guarantee on
+        // a busy runner. Await its observed peak before taking the final sample.
+        wait(for: [sampledPeak], timeout: 10)
         let footprint = sampler.stopSampling()
 
         XCTAssertEqual(footprint?.startBytes, 10)

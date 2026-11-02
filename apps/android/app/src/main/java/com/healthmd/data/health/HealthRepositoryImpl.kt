@@ -1,29 +1,76 @@
 package com.healthmd.data.health
 
+import com.healthmd.domain.model.AndroidCaptureContext
+import com.healthmd.domain.model.HealthProviderCaptureAuthority
+import com.healthmd.domain.repository.RestorableHealthRepository
 import com.healthmd.domain.model.DataTypeSelection
 import com.healthmd.domain.model.HealthData
 import com.healthmd.domain.model.ProviderFailureProvenance
+import com.healthmd.domain.model.SleepDayAttributionOverride
 import com.healthmd.domain.repository.HealthRepository
+import com.healthmd.domain.repository.OperationScopedHealthRepository
 import com.healthmd.domain.repository.SettingsRepository
 import com.healthmd.util.runCatchingCancellable
 import java.time.LocalDate
 import java.time.ZoneId
 
-class HealthRepositoryImpl(
+class HealthRepositoryImpl private constructor(
     private val providerRegistry: HealthProviderRegistry,
     private val settingsRepository: SettingsRepository,
-) : HealthRepository {
+    private val acceptedProviders: ProviderSelection?,
+) : HealthRepository, OperationScopedHealthRepository, RestorableHealthRepository {
+
+    constructor(providerRegistry: HealthProviderRegistry, settingsRepository: SettingsRepository) :
+        this(providerRegistry, settingsRepository, null)
+
+    private data class ProviderSelection(val selectedId: String, val connectedIds: List<String>)
+
+    override suspend fun forCaptureOperation(): HealthRepository {
+        if (acceptedProviders != null) return this
+        val selectedId = settingsRepository.getSelectedHealthProviderId()
+        val connectedIds = if (selectedId == HealthDataMerger.ALL_CONNECTED_PROVIDER_ID)
+            settingsRepository.getConnectedHealthProviderIds().distinct().sorted() else emptyList()
+        val acceptedIds = if (selectedId == HealthDataMerger.ALL_CONNECTED_PROVIDER_ID) connectedIds.toSet() else setOf(selectedId)
+        val boundRegistry = providerRegistry.forCaptureOperation(acceptedIds)
+        return HealthRepositoryImpl(boundRegistry, settingsRepository, ProviderSelection(selectedId, connectedIds))
+    }
+
+    override suspend fun captureProviderAuthority(): HealthProviderCaptureAuthority {
+        val accepted = forCaptureOperation() as HealthRepositoryImpl
+        val selection = requireNotNull(accepted.acceptedProviders)
+        val ids = if (selection.selectedId == HealthDataMerger.ALL_CONNECTED_PROVIDER_ID)
+            selection.connectedIds else listOf(selection.selectedId)
+        return HealthProviderCaptureAuthority(selectedProviderId = selection.selectedId, providerIds = ids,
+            connectionIds = accepted.providerRegistry.acceptedConnectionIds(ids)).validatedCopy()
+    }
+
+    override suspend fun restoreProviderAuthority(authority: HealthProviderCaptureAuthority): HealthRepository {
+        val frozen = authority.validatedCopy()
+        if (acceptedProviders != null) {
+            require(captureProviderAuthority() == frozen) { "Provider capture authority cannot be replaced" }
+            return this
+        }
+        require(frozen.selectedProviderId == HealthDataMerger.ALL_CONNECTED_PROVIDER_ID ||
+            providerRegistry.containsProvider(frozen.selectedProviderId)) { "Accepted provider is unavailable" }
+        val registry = providerRegistry.restoringConnections(frozen.connectionIds)
+        val connectedIds = if (frozen.selectedProviderId == HealthDataMerger.ALL_CONNECTED_PROVIDER_ID)
+            frozen.providerIds else emptyList()
+        return HealthRepositoryImpl(registry, settingsRepository, ProviderSelection(frozen.selectedProviderId, connectedIds))
+    }
+
+    private suspend fun selectedProviderId(): String =
+        acceptedProviders?.selectedId ?: settingsRepository.getSelectedHealthProviderId()
 
     private suspend fun activeProvider(): HealthDataProvider {
-        val selectedProviderId = settingsRepository.getSelectedHealthProviderId()
+        val selectedProviderId = selectedProviderId()
         return providerRegistry.providerFor(selectedProviderId)
     }
 
     private suspend fun shouldUseAllConnected(): Boolean =
-        settingsRepository.getSelectedHealthProviderId() == HealthDataMerger.ALL_CONNECTED_PROVIDER_ID
+        selectedProviderId() == HealthDataMerger.ALL_CONNECTED_PROVIDER_ID
 
     private suspend fun configuredProviderIds(): List<String> =
-        settingsRepository.getConnectedHealthProviderIds().distinct().sorted()
+        acceptedProviders?.connectedIds ?: settingsRepository.getConnectedHealthProviderIds().distinct().sorted()
 
     private fun configuredProviders(connectedProviderIds: List<String>): List<HealthDataProvider> {
         val connectedIds = connectedProviderIds.toSet()
@@ -73,21 +120,27 @@ class HealthRepositoryImpl(
         return ready to failures
     }
 
-    override suspend fun fetchHealthData(date: LocalDate): HealthData {
-        if (!shouldUseAllConnected()) return activeProvider().fetchHealthData(date)
-        val attemptedIds = configuredProviderIds()
-        val (providers, failures) = providerReadiness(attemptedIds, configuredProviders(attemptedIds))
-        val successful = providers.mapNotNull { provider ->
-            runCatchingCancellable { provider.fetchHealthData(date) }
-                .fold(
-                    onSuccess = { HealthDataMerger.ProviderData(provider.providerId, it) },
-                    onFailure = {
-                        failures += it.toFailure(provider.providerId, "fetchHealthData")
-                        null
-                    },
-                )
+    override suspend fun resolveCaptureContext(
+        zoneId: ZoneId,
+        sleepDayAttributionOverride: SleepDayAttributionOverride,
+    ): AndroidCaptureContext {
+        // Capture the zone argument before the settings read can suspend. An ambient
+        // timezone change during that read must not split one operation's boundaries.
+        val capturedZoneId = zoneId
+        val attribution = when (sleepDayAttributionOverride) {
+            SleepDayAttributionOverride.StoredPreference -> settingsRepository.getSleepDayAttribution()
+            is SleepDayAttributionOverride.Value -> sleepDayAttributionOverride.attribution
         }
-        return HealthDataMerger.mergeAllConnected(date, attemptedIds, successful, failures)
+        return AndroidCaptureContext(capturedZoneId, attribution).also { it.requireShippedProfile() }
+    }
+
+    override suspend fun fetchHealthData(date: LocalDate): HealthData {
+        val context = resolveCaptureContext()
+        return fetchHealthDataRange(
+            dates = listOf(date),
+            zoneId = context.zoneId,
+            sleepDayAttributionOverride = context.explicitSleepDayAttributionOverride,
+        ).firstOrNull() ?: HealthData(date)
     }
 
     override suspend fun fetchHealthDataRange(
@@ -96,17 +149,23 @@ class HealthRepositoryImpl(
         includeGranularData: Boolean,
         zoneId: ZoneId,
         pinnedCalendarDays: Boolean,
+        sleepDayAttributionOverride: SleepDayAttributionOverride,
     ): List<HealthData> {
-        if (!shouldUseAllConnected()) {
-            return activeProvider().fetchHealthDataRange(
+        if (dates.isEmpty()) return emptyList()
+        val context = resolveCaptureContext(zoneId, sleepDayAttributionOverride)
+        val captureZoneId = context.zoneId
+        val attribution = context.sleepDayAttribution
+        val selectedId = selectedProviderId()
+        if (selectedId != HealthDataMerger.ALL_CONNECTED_PROVIDER_ID) {
+            return providerRegistry.providerFor(selectedId).fetchHealthDataRange(
                 dates,
                 dataTypes,
                 includeGranularData,
-                zoneId,
+                captureZoneId,
                 pinnedCalendarDays,
+                attribution,
             )
         }
-        if (dates.isEmpty()) return emptyList()
         val attemptedIds = configuredProviderIds()
         val (providers, readinessFailures) = providerReadiness(attemptedIds, configuredProviders(attemptedIds))
         val failuresByDate = dates.associateWith { readinessFailures.toMutableList() }.toMutableMap()
@@ -118,8 +177,9 @@ class HealthRepositoryImpl(
                     dates,
                     dataTypes,
                     includeGranularData,
-                    zoneId,
+                    captureZoneId,
                     pinnedCalendarDays,
+                    attribution,
                 )
             }
                 .onSuccess { records ->

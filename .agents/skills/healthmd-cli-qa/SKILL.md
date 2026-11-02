@@ -22,7 +22,7 @@ Validate the Rust CLI, portable Rust MCP server, and iPhone/Android direct servi
 1. Independently locked shared-core and CLI Rust format/build/lint/workspace tests.
 2. Swift-generated protocol-v1 export and protocol-v3 query fixture conformance from `healthmd-protocol`.
 3. Connectivity package, focused direct-service/query/export tests, and iOS build.
-4. Local CLI/MCP help, initialize/tools/resources, and offline trust smoke.
+4. Hermetic CLI/MCP discovery smoke; automated signed-release credential upgrade probes.
 5. Live LAN pair/status/raw/extract/file/durability plus every direct MCP query/export/UI/PNG path.
 6. Live Tailscale network coverage.
 7. macOS/Linux/Windows release matrix with both packaged binaries.
@@ -67,7 +67,7 @@ python3 scripts/update-mcp-shared-assets.py --check
 
 Never run these as one Cargo workspace or rewrite both lockfiles. The focused protocol test validates the canonical `packages/contracts/direct-protocol/v1/fixtures/swift-reference.json` through its byte-identical Rust packaging mirror: pairing proofs, Swift encoding, request fingerprints, and transfer frames. Changes to cryptographic transcripts, canonical JSON, enum layout, UUID/date encoding, or frames require protocol-version analysis. Never regenerate this fixture from Rust just to silence failure.
 
-CI must pass on macOS, Ubuntu, and Windows. Verify release checksums plus `healthmd --version`, `healthmd --help`, idempotent isolated `healthmd setup codex --skip-pairing`, same-binary and compatibility-launcher MCP handshakes, and isolated `healthmd direct devices`. `HEALTHMD_CLI_DATA_DIR` changes file state but does not namespace native credentials.
+Release qualification must cover macOS, Ubuntu, and Windows. Verify release checksums, discovery/setup, and same-binary and compatibility-launcher MCP handshakes. Keep native credential upgrade checks in the automated signed-release pipeline; local smoke requires no disposable account or Keychain setup. `HEALTHMD_CLI_DATA_DIR` changes file state but does not namespace native credentials.
 
 ## iPhone-side gate
 
@@ -97,10 +97,13 @@ The portable client does not require a macOS app build. If public exporter/metri
 
 ## Offline CLI smoke
 
-Run `python3 scripts/smoke-cli.py` from `apps/cli` with Python 3.11+. This is the same
-health-free harness used by the native CI matrix: temporary state/Codex configuration,
-registry-backed complete/read-only catalogs, compatibility-launcher parity, and no device
-contact. For flag, output, or catalog changes, follow the [consumer checklist](../../../apps/cli/docs/qa.md#cli-change-consumers).
+Run `python3 scripts/smoke-cli.py` from `apps/cli` with Python 3.11+ for hermetic discovery:
+temporary file/Codex state, registry-backed complete/read-only catalogs, compatibility-launcher
+parity, and no credentials or device contact. No disposable account or native Keychain setup is
+needed. Signed-release credential upgrade probes remain automated and separate; follow
+[release QA](../../../apps/cli/docs/qa.md#automated-gate).
+For flag, output, or catalog changes, follow the
+[consumer checklist](../../../apps/cli/docs/qa.md#cli-change-consumers).
 
 
 ```bash
@@ -117,7 +120,6 @@ NO_COLOR=1 TERM=dumb timeout 15 healthmd direct unpair </dev/null
 NO_COLOR=1 TERM=dumb timeout 15 healthmd direct reset-trust </dev/null
 NO_COLOR=1 TERM=dumb timeout 15 healthmd mcp </dev/null
 NO_COLOR=1 TERM=dumb timeout 15 healthmd setup </dev/null
-NO_COLOR=1 TERM=dumb timeout 30 healthmd direct devices </dev/null
 ```
 
 Pass:
@@ -280,7 +282,8 @@ Verify private state/output permissions and checksums. Do not describe unsigned 
 - Rust fmt/build/lint/tests: pass/fail
 - Swift protocol fixture: pass/fail
 - iOS build/direct tests: pass/fail
-- Local CLI smoke: pass/fail
+- Hermetic CLI smoke: pass/fail
+- Automated signed-release credential upgrade probes: pass/fail/not run
 - Live LAN: pass/fail/not run
 - Live Tailscale: pass/fail/not run
 - Platforms: macOS/Linux/Windows

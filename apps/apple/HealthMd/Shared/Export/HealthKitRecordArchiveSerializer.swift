@@ -1,4 +1,5 @@
 import Foundation
+import CryptoKit
 
 /// Deterministic public serialization for the lossless HealthKit record archive.
 ///
@@ -280,6 +281,25 @@ nonisolated enum CanonicalRFC3339UTC {
         )
         let prefix = whole.hasSuffix("Z") ? String(whole.dropLast()) : whole
         return String(format: "%@.%09dZ", prefix, nanoseconds)
+    }
+
+    /// Successor-only UTC encoding. Splitting Foundation's reference interval first avoids
+    /// losing one fractional bit when adding the Unix epoch offset near a calendar boundary.
+    /// A source Date that cannot round-trip through the public nanosecond grammar is unavailable.
+    static func stringPreservingReferencePrecision(from date: Date) -> String? {
+        let interval = date.timeIntervalSinceReferenceDate
+        guard interval.isFinite else { return nil }
+        var wholeSeconds = floor(interval)
+        var nanoseconds = Int(((interval - wholeSeconds) * 1_000_000_000).rounded())
+        if nanoseconds == 1_000_000_000 {
+            wholeSeconds += 1
+            nanoseconds = 0
+        }
+        let wholeDate = Date(timeIntervalSinceReferenceDate: wholeSeconds)
+        guard wholeDate.addingTimeInterval(Double(nanoseconds) / 1_000_000_000) == date else { return nil }
+        let whole = cachedFormatterForCurrentThread().string(from: wholeDate)
+        guard whole.count == 20, whole.hasSuffix("Z") else { return nil }
+        return String(format: "%@.%09dZ", String(whole.dropLast()), nanoseconds)
     }
 
     /// Parses only timestamps emitted by `string(from:)` and verifies that Foundation's
@@ -1054,6 +1074,28 @@ nonisolated enum ExportDiagnosticSerializer {
         return string
     }
 
+    static func write(_ failure: ExportPartialFailure, to sink: ExportByteSink) throws {
+        let stream = try CanonicalJSONStreamEncoder(sink: sink, formatting: .compactCanonical)
+        try stream.encode(CanonicalPartialFailure(failure))
+    }
+
+    static func lazyDiagnostics(_ failures: [ExportPartialFailure]) -> [String: Any] {
+        ["partial_failures": FoundationJSONLazyArray(sorted(failures)) { try jsonObject(for: $0) }]
+    }
+
+    static func writeMarkdownSection(_ failures: [ExportPartialFailure], headerPrefix: String,
+        to sink: ExportByteSink) throws {
+        guard !failures.isEmpty else { return }
+        try sink.write(Data("\n\(headerPrefix) Capture Diagnostics\n\n| Native Partial Failure (JSON) |\n|---|\n".utf8))
+        for failure in sorted(failures) {
+            try sink.write(Data("| `".utf8))
+            let escaped = MarkdownJSONCodeCellSink(output: sink)
+            try write(failure, to: escaped)
+            _ = try escaped.finish()
+            try sink.write(Data("` |\n".utf8))
+        }
+    }
+
     static func sorted(_ failures: [ExportPartialFailure]) -> [ExportPartialFailure] {
         failures.sorted { lhs, rhs in
             if lhs.date != rhs.date { return lhs.date < rhs.date }
@@ -1099,5 +1141,44 @@ nonisolated private struct CanonicalPartialFailure: Encodable {
         case dataType = "data_type"
         case dateRangeDescription = "date_range_description"
         case errorDescription = "error_description"
+    }
+}
+
+/// Retains canonical JSON values inside a Markdown code cell without table/HTML delimiters.
+nonisolated final class MarkdownJSONCodeCellSink: ExportByteSink {
+    private let output: ExportByteSink
+    private var hasher = SHA256()
+    private var count: UInt64 = 0
+    private var completed: ExportArtifactDescriptor?
+    init(output: ExportByteSink) { self.output = output }
+    var byteCount: UInt64 { count }
+
+    func write(_ data: Data) throws {
+        guard completed == nil else { throw ExportArtifactIOError.alreadyFinished }
+        var escaped = Data()
+        escaped.reserveCapacity(data.count)
+        for byte in data {
+            switch byte {
+            case 0x7c: escaped.append(contentsOf: "\\u007c".utf8)
+            case 0x60: escaped.append(contentsOf: "\\u0060".utf8)
+            case 0x3c: escaped.append(contentsOf: "\\u003c".utf8)
+            case 0x3e: escaped.append(contentsOf: "\\u003e".utf8)
+            case 0x26: escaped.append(contentsOf: "\\u0026".utf8)
+            default: escaped.append(byte)
+            }
+        }
+        let total = count.addingReportingOverflow(UInt64(escaped.count))
+        guard !total.overflow else { throw ExportArtifactIOError.byteCountOverflow }
+        try output.write(escaped)
+        hasher.update(data: escaped)
+        count = total.partialValue
+    }
+
+    func finish() throws -> ExportArtifactDescriptor {
+        if let completed { return completed }
+        let result = ExportArtifactDescriptor(byteCount: count,
+            sha256: hasher.finalize().map { String(format: "%02x", $0) }.joined(), mediaType: "application/json")
+        completed = result
+        return result
     }
 }

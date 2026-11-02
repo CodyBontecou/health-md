@@ -998,7 +998,7 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
             let mut connection = self
                 .accept_compatible(&listener, None, Some(selected), overall_remaining)
                 .await?;
-            let (peer, _wake_enrollment, _) = exchange_hello(
+            let (peer, _wake_enrollment, extensions) = exchange_hello(
                 &mut connection.channel,
                 self.identity.installation_id,
                 connection.device.platform,
@@ -1053,8 +1053,14 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
             if remaining.is_zero() {
                 return Err(ClientError::TimedOut);
             }
-            self.process_android_export(&mut connection.channel, &request, &jobs, remaining)
-                .await
+            self.process_android_export(
+                &mut connection.channel,
+                &request,
+                &jobs,
+                remaining,
+                extensions.scoped_daily_note_version,
+            )
+            .await
         }
         .await;
 
@@ -1205,7 +1211,7 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
             let mut connection = self
                 .accept_compatible(&listener, None, Some(selected), timeout)
                 .await?;
-            let (peer, _wake_enrollment, history_observation_version) = exchange_hello(
+            let (peer, _wake_enrollment, extensions) = exchange_hello(
                 &mut connection.channel,
                 self.identity.installation_id,
                 connection.device.platform,
@@ -1229,7 +1235,7 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
                 .await?;
             self.process_raw_export(
                 &mut connection.channel,
-                history_observation_version,
+                extensions.history_observation_version,
                 &request,
                 &jobs,
                 negotiation.partition_target_bytes,
@@ -1350,7 +1356,7 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
             let mut connection = self
                 .accept_compatible(&listener, None, Some(selected), timeout)
                 .await?;
-            let (peer, _wake_enrollment, history_observation_version) = exchange_hello(
+            let (peer, _wake_enrollment, extensions) = exchange_hello(
                 &mut connection.channel,
                 self.identity.installation_id,
                 connection.device.platform,
@@ -1374,7 +1380,7 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
                 .await?;
             self.process_file_export(
                 &mut connection.channel,
-                history_observation_version,
+                extensions,
                 &request,
                 &jobs,
                 negotiation.partition_target_bytes,
@@ -1836,7 +1842,7 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
     async fn process_file_export(
         &self,
         channel: &mut SecureChannel,
-        history_observation_version: Option<i32>,
+        extensions: NegotiatedExportExtensions,
         request: &ExportRequest,
         jobs: &JobStore,
         partition_target_bytes: i64,
@@ -1844,6 +1850,8 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
     ) -> Result<FileExportReceipt, ClientError> {
         let deadline = Instant::now() + timeout;
         let mut receiver = FileReceiver::new(self.layout.clone(), jobs.clone());
+        receiver.configure_scoped_daily_notes(extensions.scoped_daily_note_version)?;
+        let history_observation_version = extensions.history_observation_version;
         let mut accepted = None;
         let mut finalized: Option<FileExportReceipt> = None;
         let mut cancellation_sent = false;
@@ -2193,10 +2201,14 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
         request: &v2::ExportRequest,
         jobs: &V2JobStore,
         timeout: Duration,
+        scoped_daily_note_version: Option<i32>,
     ) -> Result<V2ArtifactReceipt, ClientError> {
         let deadline = Instant::now() + timeout;
         let mut accepted: Option<v2::ExportAccepted> = None;
         let mut receiver = V2ArtifactReceiver::new(self.layout.clone(), jobs.clone());
+        if request.product.product_id() == v2::ProductId::GeneratedFilesV1 {
+            receiver.configure_scoped_daily_notes(scoped_daily_note_version)?;
+        }
         receiver.set_deadline(deadline.into_std());
         let mut cancellation_sent = false;
         let mut final_acknowledged =
@@ -2641,6 +2653,12 @@ async fn bind_listener(port: u16) -> Result<TcpListener, ClientError> {
         .map_err(connection_error)
 }
 
+#[derive(Clone, Copy, Default)]
+struct NegotiatedExportExtensions {
+    history_observation_version: Option<i32>,
+    scoped_daily_note_version: Option<i32>,
+}
+
 async fn exchange_hello(
     channel: &mut SecureChannel,
     installation_id: SwiftUuid,
@@ -2649,19 +2667,28 @@ async fn exchange_hello(
     (
         PeerCapabilities,
         Option<healthmd_protocol::wire::WakeEnrollment>,
-        Option<i32>,
+        NegotiatedExportExtensions,
     ),
     ClientError,
 > {
-    let local = PeerCapabilities::portable_cli_for_source(installation_id, source_platform);
-    channel
-        .send(&DirectMessage::Hello(Unlabeled::from(local.clone())))
-        .await?;
     let DirectMessage::Hello(Unlabeled { value: peer }) =
         receive_message(channel, Duration::from_secs(10)).await?
     else {
         return Err(ClientError::UnexpectedMessage);
     };
+    // Both mobile implementations send their hello immediately. Read it first so a legacy
+    // strict Android decoder never receives an extension field it cannot understand.
+    let mut local = PeerCapabilities::portable_cli_for_source(installation_id, source_platform);
+    if peer
+        .scoped_daily_note_versions
+        .as_ref()
+        .is_some_and(|versions| versions.contains(&1))
+    {
+        local.scoped_daily_note_versions = Some(vec![1]);
+    }
+    channel
+        .send(&DirectMessage::Hello(Unlabeled::from(local.clone())))
+        .await?;
     // RFC-0005 P2: a phone that advertised wake support sends exactly one enrollment as the very
     // next message; a phone that did not advertise must never send one, so any stray enrollment
     // later in a stream fails closed as an unexpected message.
@@ -2674,8 +2701,11 @@ async fn exchange_hello(
         } else {
             None
         };
-    let history_observation_version = local.negotiated_export_history_observation_version(&peer);
-    Ok((peer, enrollment, history_observation_version))
+    let extensions = NegotiatedExportExtensions {
+        history_observation_version: local.negotiated_export_history_observation_version(&peer),
+        scoped_daily_note_version: local.negotiated_scoped_daily_note_version(&peer),
+    };
+    Ok((peer, enrollment, extensions))
 }
 
 async fn receive_message(

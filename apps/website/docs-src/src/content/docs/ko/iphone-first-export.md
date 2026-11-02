@@ -14,7 +14,7 @@ description: "Apple Health 접근을 허용하고, 파일 앱의 대상 폴더�
 
 다음이 필요합니다.
 
-- Apple Health 데이터가 있는 iPhone에 설치된 Health.md
+- Apple Health 데이터가 있는 iPhone에 설치된 [App Store의 Health.md](https://apps.apple.com/app/health-md/id6757763969)
 - 하나 이상의 Apple Health 카테고리를 읽을 수 있는 권한
 - iCloud Drive, 나의 iPhone 또는 Obsidian 보관함과 같이 쓰기 가능한 파일 대상 폴더
 

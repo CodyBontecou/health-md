@@ -1,250 +1,131 @@
 # Google Play Billing Integration Guide
 
-This document covers Google Play Billing for the `play` Android variant. The `fdroid` variant does not compile Billing and receives included full access through the channel-neutral entitlement boundary. Console/account changes, device installation and purchase testing require explicit authorization; these instructions are not evidence that a live transaction or restoration was qualified.
+This guide covers the `play` Android variant. F-Droid does not compile Billing and retains included full access. Source implementation is not evidence of console setup, approval, or a qualified live transaction. Store mutations, device installation, sandbox purchases, and release workflows require explicit authorization.
 
-## Architecture Overview
+## Product configuration
 
-The billing implementation uses a clean architecture pattern:
+The approved future US Individual launch targets are **$0.99 weekly**, **$29.99 yearly**, and **$49.99 Lifetime**. Live Lifetime remains **$19.99 US** under the hold below. Eligible subscriptions include a **seven-day free trial**. Lifetime is charged immediately. Android offers no Family plans and no monthly subscription. The cross-platform decision and Apple setup are recorded in the [paid-access rollout](../apple/docs/experiments/subscription-pricing-rollout.md).
 
-```
-UI Layer (PaywallScreen)
-    ↓
-ViewModel (PaywallViewModel)
-    ↓
-EntitlementRepository + PurchaseRepository interfaces
-    ↓
-Play implementation (BillingRepositoryImpl)
-    ↓
-Google Play Billing Client
-```
+**Internal-testing release:** Android 3.5.0 build 44 is available on Internal Testing and includes the seven-day trial phase fix; it supersedes build 43 on that track. Upload through the protected `android-release.yml` workflow, then qualify real Play purchases with license-test accounts before production promotion. The Internal Testing upload does not activate subscription products or change any product price.
 
-### Components
+**Live-price hold:** these are launch targets. Leave the existing live lifetime product's price and regional pricing unchanged until the subscription-containing app is live and the owner explicitly approves the coordinated cutover. Draft subscription products, prices, and trials may be prepared in advance; do not activate, submit, publish, or release as a side effect of setup. Follow the rollout guide's live-price hold when resuming Console work.
 
-1. **EntitlementRepository / PurchaseRepository** (`app/src/main/java/com/healthmd/domain/repository/`)
-   - Keep entitlement checks independent from store operations
-   - `isUnlocked`: `StateFlow` tracking full-access entitlement
-   - `refresh()`: refreshes a channel-backed entitlement or does nothing for included access
-   - `launchPurchase()` / `restorePurchase()`: purchase actions exposed only when `isAvailable`
-   - No Google Play SDK object crosses either interface
+Configure draft products in Google Play Console under Monetize → Products:
 
-2. **BillingRepositoryImpl** (`app/src/play/java/com/healthmd/data/billing/BillingRepositoryImpl.kt`)
-   - Concrete implementation using Google Play Billing Client v8.3+
-   - Handles product queries, purchase flow, and acknowledgment
-   - Uses Billing-managed service reconnection with bounded transient-operation retries
-   - Automatically acknowledges purchases (required for security)
+| Product ID | Type | Base-plan period | US launch target |
+|---|---|---|---:|
+| `health_md_premium_weekly` | Auto-renewing subscription | `P1W` | $0.99 |
+| `health_md_premium_yearly` | Auto-renewing subscription | `P1Y` | $29.99 |
+| `health_md_premium_lifetime` | Non-consumable INAPP | — | $49.99 |
 
-3. **PaywallViewModel** (`presentation/paywall/PaywallViewModel.kt`)
-   - Manages paywall UI state
-   - Handles coroutine lifecycle
-   - Auto-dismisses paywall on successful purchase
+On October 30, 2026 (October 31 UTC), the owner-authorized Android Internal Testing and Pixel 7 license-test preparation activated both subscription products: `health_md_premium_weekly` has active base plan `weekly` at US $0.99, and `health_md_premium_yearly` has active base plan `yearly` at US $29.99. Both `trial-7d` offers are **Active**. Fresh Console readback showed one active base plan and one offer per product. Each plan/offer retains its 175-country/region configuration. Trial eligibility remains **New customer acquisition → Never had any subscription** in this app, with one **Free trial → 7 days** phase before the recurring base price. Activation makes these products purchasable; it does not establish successful purchase qualification or publish a new app binary.
 
-4. **PaywallScreen** (`presentation/paywall/PaywallScreen.kt`)
-   - Beautiful Compose UI with feature list
-   - Purchase and restore buttons
-   - Error messaging support
+The existing `health_md_premium_lifetime` product remains **Active** at US **$19.99**. All 177 rendered pricing/tax/availability rows were byte-identical before and after subscription activation; its product ID, purchase option, regional prices and availability were not changed. The $49.99 Lifetime target remains on hold.
 
-The Play repository and `BillingClient` are Hilt singletons with process lifetime. Screen ViewModels call the channel-neutral `refresh()` methods and must never call `BillingClient.endConnection()`: Google marks a closed client as terminal, and closing it when onboarding or the schedule screen is removed would break purchases elsewhere until the app process restarted. After initial setup, later refresh calls request one deduplicated product-and-purchase refresh rather than opening another manual connection. After a service disconnect, normal Billing API calls trigger Billing 8 reconnection; the disconnect callback clears stale product details while preserving cached entitlement state.
+The annotated [`android/v3.5.0` tag](https://github.com/CodyBontecou/health-md/tree/android/v3.5.0) identifies phone version code 43 at `caa49a72326ed1b9b055f0e5090b781c210a411f`. The protected [Internal Testing workflow](https://github.com/CodyBontecou/health-md/actions/runs/41148643889) completed its second attempt and uploaded code 43 to `internal`. The retained intent and committed-upload receipts agree on source, code, track and AAB SHA-256 `e1be952bf4ff0b1828d648230e3b6debb145a307dc021d5b3d2fde8ce1f93307`; the upload certificate is the registered signer. Console confirmed **Available to internal testers**. No production promotion occurred. The code-43 runtime results and follow-up qualification gaps are recorded below.
 
-## Setup Instructions
+The follow-up annotated [`android/v3.5.0+44` tag](https://github.com/CodyBontecou/health-md/tree/android/v3.5.0%2B44) identifies code 44 at `f32b00988da87da7a7ab7e46a9850f42f82697d2`. Its protected [Internal Testing workflow](https://github.com/CodyBontecou/health-md/actions/runs/41154938163) passed on attempt 2 and retained matching intent/committed-upload receipts for AAB SHA-256 `2ee5a4655af0a1c54436271ecd7fb21d6b528a59d7fddb37fb706a88331089ae`, using the same registered upload signer. Console confirmed code 44 **Available to internal testers**. The Pixel then updated normally through Google Play to 3.5.0/code 44, with Play as installer/initiator and base plus arm64, English and xxhdpi splits. The installed base APK's app-signing certificate SHA-256 matched `48441e648ea657cc2b215965ff8ce372ec4b4935cc99def8a5addc76759e154a`. No fallback APK installation was used for code 44. Production remains unchanged.
 
-### Step 1: Create Product in Google Play Console
+Play Store delivery can lag a committed internal release. Console's code-43 bundle Downloads view provides the Play-signed universal APK for exact-build runtime checks; verify package, version/code and certificate before installation, and distinguish this artifact path from store-delivered split-APK qualification. Clearing app data does not remove Play-owned entitlements. Use a license-test account without permanent access for subscription and fresh-user gate checks; qualify existing permanent owners separately. Confirm the purchase sheet explicitly identifies a test purchase and a test payment method before completing a transaction.
 
-1. Go to [Google Play Console](https://play.google.com/console)
-2. Select your app → **Monetize** → **Products** → **In-app products**
-3. Create a new product with:
-   - **Product ID**: `health_md_premium_lifetime` (must match `PRODUCT_ID` in code)
-   - **Product type**: In-app product (one-time purchase)
-   - **Title**: "Health MD Premium"
-   - **Description**: "Unlimited exports and scheduled backups"
-   - **Price**: configure the approved price in Play Console; the app displays Play's returned localized price.
+A Play-signed release cannot update a debug-signed installation in place. Back up needed local state and obtain data-reset approval before replacement; Android Keystore credentials may require sign-in afterward.
 
-**Important**: The product ID in the code MUST exactly match the product ID in Google Play Console.
+Configure an eligible seven-day free-trial offer on each subscription, followed by the infinitely recurring paid phase. The Billing SDK may represent the week as `P7D` or `P1W`; finite free phases have one cycle, while non-recurring phases have zero cycles. The app selects only an eligible seven-day trial or its paid base plan, and shows the localized price returned by Play. No fallback US price or fabricated trial is used. Product/base-plan/offer activation and regional availability must be verified in Console before shipping the hard gate.
 
-### Step 2: Update Product ID (if using different name)
+**Never rename the existing lifetime ID.** Existing paid and previously grandfathered permanent owners retain access and restoration. No custom family accounts, invitations, or cross-store entitlement transfer are included.
 
-If you use a different product ID, update:
+## Architecture
 
-**File**: `app/src/play/java/com/healthmd/data/billing/BillingRepositoryImpl.kt`
+`HealthMdNavigation` owns the root hard gate before tracking/setup. `PaywallScreen` displays typed `PurchaseOffer` values from `PaywallViewModel`; no Play SDK type crosses the channel-neutral `PurchaseRepository` and `EntitlementRepository` boundaries.
 
-```kotlin
-private const val PRODUCT_ID = "health_md_premium_lifetime"  // ← Update this
-```
+`BillingRepositoryImpl` and its BillingClient v8.3+ are application-scoped Hilt singletons. Screen ViewModels refresh them; they must never call `BillingClient.endConnection()`. A closed BillingClient is terminal. Billing-managed reconnection and bounded transient retries are preserved. Product details are reloaded before a purchase; changed displayed terms require another explicit tap. A purchase launch itself is never automatically retried.
 
-### Step 3: Build and Test
+The repository queries both INAPP and SUBS, accepts matching `PURCHASED` products, and asynchronously acknowledges unacknowledged purchases. Pending/canceled/unknown products do not unlock. Acknowledgment must complete within Google's window to avoid automatic refund.
 
-The implementation is fully integrated. Build the app:
+Only permanent unlocks populate the old `isPurchased` flag and lifetime SharedPreferences cache. Subscription access is session-local, refreshed on foregrounding and periodically while the process is alive. Headless workers, automation, recovery, Direct CLI, and foreground export admission query current Play access. Successful complete ownership snapshots remove expired subscription access and clear both persisted Lifetime flags when Play no longer reports Lifetime ownership. Previously grandfathered grants remain independent of store product ownership. Failed queries and partial purchase callbacks do not revoke a cached Lifetime grant; verification failures fail closed for subscription-only users. Existing lifetime/legacy caches remain usable offline. Subscription-only users need Play connectivity after process restart; there is no invented offline grace period.
+
+Do not erase a saved schedule while subscription access is still resolving. Workers separately enforce access before execution. F-Droid uses its stable included-access repository and no simulated buy/restore flow.
+
+## Security and privacy
+
+This retains the existing client-side Billing trust boundary; accepting Play `PURCHASED` results is **not server-side signature verification**. A purchase-verification backend/RTDN lifecycle service is not introduced here. Do not persist subscription tokens as permanent access or expose them in telemetry. Health data never enters billing or pricing analytics.
+
+The separate myself.md claim path continues to require fresh lifetime purchase evidence; an ordinary subscription does not establish that lifetime benefit.
+
+## Focused local checks
+
+From `apps/android`:
 
 ```bash
-./gradlew :app:assemblePlayDebug
+./gradlew :app:testPlayDebugUnitTest --tests 'com.healthmd.domain.billing.FreemiumPolicyTest' --tests 'com.healthmd.data.billing.*Test' --max-workers=2
 ```
 
-Or install on connected device:
+Use root `make plan-native` / `make verify-native` for queued native integration compilation. Compilation does not verify purchases, navigation, or expiry behavior.
 
-```bash
-./gradlew :app:installPlayDebug
-```
+## Authorized store/device qualification
 
-### Step 4: Test Purchases (Development)
+Use an internal testing track and Google Play license-test accounts. Product IDs, package/signature, product availability, store account, and region must match Console. Do not substitute legacy `android.test.*` product IDs for qualification of real subscription offers.
 
-For testing without real transactions, use Google's test product IDs:
+Verify on the exact release build:
 
-- `android.test.purchased` - Will pass purchase
-- `android.test.canceled` - Will cancel purchase  
-- `android.test.refunded` - Will refund purchase
-- `android.test.item_unavailable` - Product unavailable
+- Fresh and old free installs hit the hard gate; Back/deep links cannot expose tracking.
+- Existing lifetime owners and grandfathered users retain access after upgrade/restart/restore.
+- Eligible and ineligible weekly/yearly offers show the correct trial, total renewal amount, cadence, and localized price.
+- Successful, pending, canceled, failed, and already-owned purchases; acknowledgment retry and restore.
+- Trial expiry, cancellation through the paid-through date, renewal, subscription expiry, refund/revocation, and process restart.
+- Store disconnect, offline restart, missing products, and explicit retry without a false unlock.
+- Foreground export, scheduled work, automation, recovery, and Direct CLI enforce access.
+- Manage Subscriptions, Terms, Privacy, accessibility, and F-Droid's included-access behavior.
 
-**Note**: Test product IDs only work with test accounts added to your Play Console.
-
-To use test accounts:
-1. Go to Play Console → **Settings** → **License testing**
-2. Add test Gmail accounts
-3. Sign in with test account on test device
-
-### Step 5: Integration Points
-
-#### In Navigation
-
-The paywall is wired up in `HealthMdNavigation.kt`:
-
-```kotlin
-composable(SubRoutes.PAYWALL) {
-    val paywallViewModel: PaywallViewModel = hiltViewModel()
-    val isPurchased by paywallViewModel.isUnlocked.collectAsStateWithLifecycle()
-    val context = androidx.compose.ui.platform.LocalContext.current
-
-    // Auto-dismiss on successful purchase
-    LaunchedEffect(isPurchased) {
-        if (isPurchased) {
-            navController.popBackStack()
-        }
-    }
-
-    PaywallScreen(
-        onPurchase = {
-            val activity = context as? android.app.Activity
-            if (activity != null) {
-                paywallViewModel.launchPurchaseFlow(activity)
-            }
-        },
-        onRestore = { paywallViewModel.restorePurchases() },
-        onDismiss = { navController.popBackStack() },
-    )
-}
-```
-
-#### To Check Purchase Status Anywhere
-
-```kotlin
-@Inject
-lateinit var entitlementRepository: EntitlementRepository
-
-val isPurchased = entitlementRepository.isUnlocked.collectAsStateWithLifecycle()
-
-// Show paywall if not purchased
-if (!isPurchased.value) {
-    navController.navigate(SubRoutes.PAYWALL)
-}
-```
-
-### Current Status: Premium Features
-
-Look for uses of `onNavigateToPaywall` in the codebase to see where paywalls are triggered:
-
-```bash
-grep -r "onNavigateToPaywall" app/src/main/java/
-```
-
-Update these screens to check `isPurchased` and show paywall for premium features.
-
-## Purchase Flow Diagram
-
-```
-User taps "Unlock"
-    ↓
-PaywallViewModel.launchPurchaseFlow()
-    ↓
-Query product details from Play Store
-    ↓
-Launch billing UI (user completes payment)
-    ↓
-onPurchasesUpdated callback fires
-    ↓
-Accept matching PURCHASED product and cache entitlement
-    ↓
-Asynchronously acknowledge unacknowledged purchase (required!)
-    ↓
-PaywallScreen auto-dismisses
-    ↓
-Feature unlocked
-```
-
-## Important: Acknowledge Purchases
-
-The code accepts matching products in the `PURCHASED` state, caches entitlement, and asynchronously acknowledges unacknowledged purchases. This is not server-side signature verification. Acknowledgment remains **required** by Google:
-
-```kotlin
-private fun onPurchasesUpdated(billingResult: BillingResult, purchases: List<Purchase>?) {
-    purchases?.forEach { purchase ->
-        if (purchase.purchaseState == Purchase.PurchaseState.PURCHASED &&
-            !purchase.isAcknowledged
-        ) {
-            // Acknowledge purchase (REQUIRED)
-            val params = AcknowledgePurchaseParams.newBuilder()
-                .setPurchaseToken(purchase.purchaseToken)
-                .build()
-            billingClient.acknowledgePurchase(params) { ... }
-        }
-    }
-}
-```
-
-**Failure to acknowledge** results in automatic refunds after 3 days.
-
-## Security Considerations
-
-1. **Signature Verification**: For production, consider verifying purchase signatures server-side
-2. **Fraud Detection**: Monitor unusual purchase patterns in Play Console
-3. **Network Security**: Uses HTTPS to Google's servers (handled by BillingClient)
+Retain exact-build evidence and use the canonical [Play release guide](PLAY_STORE_SETUP.md). This guide does not authorize publication.
 
 ## Troubleshooting
 
-### "Product not found"
-- ✅ Product ID in code doesn't match Play Console
-- ✅ App not published (use internal test track)
-- ✅ Wait 15 minutes for Play Console changes to sync
-
-### Purchase button does nothing
-- ✅ Not signed in to Google Play Store account
-- ✅ Billing library not initialized (`connect()` not called)
-- ✅ Activity not passed to `launchPurchaseFlow()`
-
-### Crashes on purchase
-- ✅ Check Logcat: `BillingClient` or `BillingRepository` errors
-- ✅ Make sure Activity is instanceof `android.app.Activity`
-
-## Monitoring
-
-Purchases are logged with Timber:
-
-```
-D/BillingRepository: Billing client ready
-D/BillingRepository: Purchase acknowledged
-D/BillingRepository: Purchases queried
-```
-
-Watch logs in Logcat: `adb logcat | grep BillingRepository`
-
-## Qualification checklist
-
-These are tasks, not completion receipts. Use the canonical [Play release guide](PLAY_STORE_SETUP.md) for publication; this integration guide does not authorize a release.
-
-- Confirm the configured product and approved localized price.
-- Prepare authorized sandbox accounts and device testing.
-- Verify purchase, acknowledgment retries, restoration and premium-feature gating.
-- Retain exact-build qualification evidence before the canonical release workflow.
+- **Product unavailable:** check exact IDs/types, active base plans/offers, test-track publication, account/territory eligibility, signature, and propagation delay.
+- **Purchase does not open:** verify an Activity is supplied, Billing setup succeeds, and fresh offer details are available. Surface an explicit retry instead of retrying a charge automatically.
+- **No previous purchase:** use the purchasing Google account and Restore Purchase; an expired subscription does not grant permanent access.
+- **No controls on F-Droid:** expected; full access is included.
 
 ## References
 
-- [Google Play Billing Library Documentation](https://developer.android.com/google/play/billing)
-- [Play Billing Integration Test Checklist](https://developer.android.com/google/play/billing/test)
-- [Security Best Practices](https://developer.android.com/google/play/billing/security)
+- [Billing integration](https://developer.android.com/google/play/billing/integrate)
+- [Subscription lifecycle](https://developer.android.com/google/play/billing/lifecycle/subscriptions)
+- [Testing](https://developer.android.com/google/play/billing/test)
+- [Security](https://developer.android.com/google/play/billing/security)
+
+### Trial-offer qualification follow-up
+
+On the authorized license-test Pixel, code 43 displayed the three correct US prices and preserved the mandatory gate after a canceled test purchase. Weekly's store sheet omitted the trial even after Billing Lab trial eligibility was enabled and the Play cache cleared. The billing account was confirmed in the payment-method sheet. A completed no-charge Weekly purchase unlocked onboarding, survived process restart, and automatically restored after clearing only the unconfigured QA app state. Play advanced the next payment by five minutes, confirming a test renewal. Cancellation preserved access through the paid period; after Play no longer reported the subscription, resuming Health.md restored the mandatory gate. Restore then reported no previous purchase and stayed locked (six-step replay passed). These checks used the Play-generated signed universal code-43 APK, not ordinary store-delivered splits. The saved foreground screenshot also shows the mandatory paywall before leaving the app or reading back Play state, verifying automatic foreground relock. A live accessibility wait returned a stale onboarding hierarchy despite that screenshot, so its failed wait is an automation false negative; use the runner full hierarchy and screenshots to corroborate subsequent state transitions.
+
+The Android offer filter rejected equivalent `P1W` seven-day phases and non-recurring phases with zero cycles. Build 44 accepts `P1W` and `P7D` only when the free phase represents exactly one week, and uses the same predicate for trial disclosure and offer selection. Regression tests reproduce the rejection before the fix. On the normally Play-delivered code 44, both subscription buttons showed seven days free. The actual Weekly sheet included the three-minute sandbox trial and US $0.99/five-minute test renewal, with an explicit no-charge test instrument. Its trial-entry/cancellation replay passed (15 steps), the Weekly trial purchase unlocked access (12 steps), and access restored after clearing the unconfigured QA app state (three-step replay). These runtime results confirm the fix resolves the missing-trial symptom. The immutable code-43 tag and upload evidence remain unchanged. Lifetime's live price remains US $19.99.
+
+### Code-44 device qualification
+
+These checks used the normally Play-delivered 3.5.0/code 44 on the authorized Pixel 7 and no-charge license-test instruments. No health permissions were granted and no health data was read or exported.
+
+| Surface | Result |
+| --- | --- |
+| Delivery and identity | Normal internal-track Play update; version/code, split delivery and Play app-signing certificate verified |
+| Eligible offers | Both seven-day trial labels and their localized prices verified; actual Weekly/Yearly sheets showed the three-minute sandbox trial and $0.99/five-minute or $29.99/30-minute renewal terms |
+| Weekly lifecycle | Trial purchase, reset-state restore, trial-to-paid conversion, cancellation through the paid period and automatic foreground expiry verified |
+| Expired access | Back/relaunch stayed gated; expired Restore returned no previous purchase after scrolling the control fully into view |
+| Yearly lifecycle | Trial purchase, cancellation while in trial and automatic foreground expiry verified; paid Yearly renewal remains unrun |
+| Pending Lifetime | Slow-decline test instrument did not grant access across QA data reset/restart; product became purchasable again afterward |
+| Declined Lifetime | Google displayed its explicit always-denied test-instrument error; dismissal/restart preserved the gate |
+| Successful Lifetime | US $19.99 test purchase unlocked access; after a five-minute wait, clearing the unconfigured QA state restored access from Play and restart retained it (six-step run) |
+
+Automation caveats are retained with the exact-build evidence: the live trimmed accessibility projection sometimes returned stale nodes, and `scroll-to` considered a partly visible Restore button reachable. Full runner hierarchy checks and screenshots corroborated transitions; the initial combined expiry/restore run failed at the missed Restore tap, and the recovered Restore fragment passed. Do not describe that combined run as a clean full replay.
+
+Production remains on hold for the unrun qualification matrix, including paid Yearly renewal, refund/revocation, offline/store-loss behavior, existing permanent-owner upgrade cases and device-level headless/export/automation admission. Passing portable billing/admission regressions and native compilation do not replace those runtime checks. No production promotion or Lifetime price cutover is included.
+
+Both sandbox subscriptions were canceled during qualification. The QA account now owns a test Lifetime purchase, so future unentitled-user checks require a tester without permanent access or deliberate revocation of that exact test order followed by clearing only disposable QA state. Preserve legitimate existing purchases. The Pixel retains normally Play-installed code 44; the original debug app's private backup remains outside the temporary release worktree.
+
+### Revocation and automation qualification follow-up
+
+On October 31, 2026, cached Lifetime access on Play-delivered code 44 survived an offline process restart (three-step replay); Wi-Fi was restored afterward. The owner then refunded the exact no-charge Lifetime QA order with **Remove entitlement** selected. Console confirmed the order refunded. Code 44 still admitted the same installation past the root gate after repeated restarts. A no-data explicit automation export reached `NO_FOLDER_SELECTED` instead of rejecting revoked access; no Health Connect read permissions were granted and no health data was read or exported. These are release blockers, not passing revocation qualification.
+
+The repository regression reproduced a successful empty Play ownership query returning Restore success from the old Lifetime cache. The follow-up candidate uses version code **45**, retaining marketing version **3.5.0**, and reconciles both permanent-access flags on a successful complete query while preserving grandfathered and offline grants. Foreground export, automation, scheduled work, recovery and Direct CLI ask the entitlement repository before admitting work instead of bypassing it with the historical Settings flag. Existing permanent owners must still qualify on the replacement signed build.
+
+The same device automation probe returned default result code `0` to its ordered-broadcast caller. `goAsync()` detaches the receiver's result; asynchronous responses must be written through that invocation's retained `PendingResult` before finishing it. The candidate carries that result explicitly through each automation path, without changing action names, extras or result-code meanings.
+
+Code 45 is not qualified by these source changes or host tests. Retain the code-44 failure evidence and repeat same-installation revocation, ordered-broadcast admission, subscription-only offline/recovery, paid Yearly renewal and remaining owner-upgrade cases on the signed replacement. Lifetime's live price and regional mappings remain unchanged; production promotion remains on hold.

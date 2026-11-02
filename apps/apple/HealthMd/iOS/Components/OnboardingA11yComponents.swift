@@ -87,19 +87,22 @@ struct OnboardingPaywallLayout<Content: View>: View {
     @Environment(\.dynamicTypeSize) private var textSize
     let onDismiss: () -> Void
     let dismissIdentifier: String
+    var allowsDismissal: Bool = true
     @ViewBuilder let content: () -> Content
 
     var body: some View {
         GeometryReader { geometry in
             let reading = OnboardingReadingLayout.isNeeded(size: geometry.size, textSize: textSize)
             VStack(spacing: 0) {
-                HStack {
-                    Spacer(minLength: 0)
-                    OnboardingDismissButton(action: onDismiss)
-                        .accessibilityIdentifier(dismissIdentifier)
+                if allowsDismissal {
+                    HStack {
+                        Spacer(minLength: 0)
+                        OnboardingDismissButton(action: onDismiss)
+                            .accessibilityIdentifier(dismissIdentifier)
+                    }
+                    .padding(.horizontal, Spacing.s4)
+                    .padding(.top, Spacing.s2)
                 }
-                .padding(.horizontal, Spacing.s4)
-                .padding(.top, Spacing.s2)
 
                 ScrollView {
                     content()
@@ -651,7 +654,7 @@ struct PaywallPurchaseOptionButton: View {
 struct OnboardingPurchaseDisclosure: View {
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.s2) {
-            Text("Lifetime plans are one-time purchases charged to your Apple ID.")
+            Text("Eligible subscriptions include a 7-day free trial, then renew automatically at the displayed price unless canceled at least 24 hours before the trial or current period ends. Payment is charged to your Apple ID. Manage or cancel in App Store subscriptions. Lifetime plans are charged immediately as one-time purchases with no trial. Deleting the app or buying Lifetime does not cancel an existing subscription.")
                 .font(Typography.caption())
                 .foregroundStyle(Color.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)

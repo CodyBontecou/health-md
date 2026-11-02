@@ -2732,6 +2732,31 @@ const fn command_name(command: &Command) -> &'static str {
 mod tests {
     use super::*;
 
+    #[test]
+    fn ingest_gateway_defaults_to_loopback_8791_and_accepts_explicit_bind() {
+        for (extra, expected) in [
+            (vec![], "127.0.0.1:8791"),
+            (vec!["--bind", "127.0.0.1:48401"], "127.0.0.1:48401"),
+        ] {
+            let mut args = vec![
+                "healthmd",
+                "data",
+                "ingest-serve",
+                "--database",
+                "/private/agent.sqlite",
+            ];
+            args.extend(extra);
+            let cli = Cli::try_parse_from(args).unwrap();
+            let Command::Data(DataArgs {
+                command: Some(DataCommand::IngestServe(options)),
+            }) = cli.command
+            else {
+                panic!("expected ingest-serve arguments");
+            };
+            assert_eq!(options.bind.to_string(), expected);
+        }
+    }
+
     fn empty_dates() -> DateArgs {
         DateArgs {
             yesterday: false,

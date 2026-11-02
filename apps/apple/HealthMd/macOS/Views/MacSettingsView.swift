@@ -288,22 +288,13 @@ struct MacGeneralSettingsView: View {
             }
 
             Section {
-                Text("Health.md collects limited product events using a random app-install identifier for setup, export-shape, and purchase-flow analytics.")
+                Text("This version does not collect custom usage analytics or advertising attribution.")
                     .font(BrandTypography.bodyMedium())
-                    .fixedSize(horizontal: false, vertical: true)
-
-                Text("Analytics never includes health values, metric names, health dates, exported files, paths, peer names, or credentials. On iPhone and iPad, Apple Ads campaign identifiers are linked to purchase outcomes to measure campaign conversion. No health data or purchase events are sent to Apple Ads.")
-                    .font(BrandTypography.caption())
-                    .foregroundStyle(Color.textMuted)
                     .fixedSize(horizontal: false, vertical: true)
 
                 Link("View Privacy Policy", destination: privacyPolicyURL)
             } header: {
-                BrandLabel("Privacy & Analytics")
-            } footer: {
-                Text("Analytics events are automatically deleted within 13 months.")
-                    .font(BrandTypography.caption())
-                    .foregroundStyle(Color.textMuted)
+                BrandLabel("Privacy")
             }
 
             Section {

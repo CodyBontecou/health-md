@@ -418,6 +418,41 @@ struct iPadExportView: View {
 
                     dataDetailPickerRow
                         .configurationChangesProtected()
+
+                    Divider().background(Color.borderSubtle)
+
+                    // Issue #104: which daily note owns a midnight-spanning
+                    // sleep session. Stored on the capturing device and applied
+                    // to every capture path.
+                    HStack(alignment: .top, spacing: Spacing.s3) {
+                        Image(systemName: "moon.zzz")
+                            .foregroundStyle(Color.accent)
+                            .frame(width: 24)
+                            .accessibilityHidden(true)
+
+                        VStack(alignment: .leading, spacing: Spacing.s1) {
+                            Picker("Sleep Day Attribution", selection: Binding(
+                                get: { healthKitManager.sleepDayAttribution },
+                                set: { mode in
+                                    if mode.isAvailableForShippedProfiles { healthKitManager.setSleepDayAttribution(mode) }
+                                }
+                            )) {
+                                ForEach(SleepDayAttribution.allCases, id: \.rawValue) { mode in
+                                    Text(mode.localizedDisplayName).tag(mode)
+                                        .disabled(!mode.isAvailableForShippedProfiles)
+                                }
+                            }
+                            .pickerStyle(.menu)
+                            .font(Typography.bodyEmphasis())
+                            .accessibilityLabel("Sleep Day Attribution")
+                            .accessibilityHint(healthKitManager.sleepDayAttribution.localizedDescription)
+
+                            Text(healthKitManager.sleepDayAttribution.localizedDescription)
+                                .font(Typography.caption())
+                                .foregroundStyle(Color.textMuted)
+                        }
+                    }
+                    .configurationChangesProtected()
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(Spacing.s4)
@@ -832,13 +867,17 @@ struct iPadExportView: View {
                 destinationRootName: nil,
                 dateRangePreset: dateRangePreset,
                 targetType: .localFile,
-                fetchHealthData: { date in
+                fetchHealthData: { date, snapshot in
+                    let capturedSettings = snapshot.makeAdvancedExportSettings()
                     #if DEBUG
                     if TestMode.useHealthKitExportPreviewFixtures {
                         return UITestHealthKitFixtures.exportPreviewHealthData(
                             for: date,
-                            includeGranularData: advancedSettings.effectiveDetailPolicy
-                                .includesSelectedTimeSeries
+                            includeGranularData: capturedSettings.effectiveDetailPolicy
+                                .includesSelectedTimeSeries,
+                            includeLargeSourceArchive: TestMode.healthKitExportPreviewLargeArchive
+                                && capturedSettings.effectiveDetailPolicy.includesCanonicalArchive,
+                            includePartialFailures: TestMode.healthKitExportPreviewPartialCapture
                         )
                     }
                     #endif
@@ -846,8 +885,9 @@ struct iPadExportView: View {
                     do {
                         return try await healthKitManager.fetchHealthData(
                             for: date,
-                            detailPolicy: advancedSettings.effectiveDetailPolicy,
-                            metricSelection: advancedSettings.metricSelection
+                            detailPolicy: capturedSettings.effectiveDetailPolicy,
+                            metricSelection: capturedSettings.metricSelection,
+                            timeZone: capturedSettings.exportTimeZoneOverride ?? .current
                         )
                     } catch {
                         let descriptor = HealthKitSafeLogging.failureDescriptor(

@@ -260,6 +260,13 @@
     </plurals>
     <string name="granular_data_title">包括详细的时间序列</string>
     <string name="granular_data_description">将带有时间戳的样本（例如心率和睡眠阶段）添加到兼容性导出中。对于 API 完整副本，请使用 Raw API Snapshot。</string>
+    <string name="sleep_attribution_title">睡眠归属日</string>
+    <string name="sleep_attribution_night_begins">以入睡当晚为准</string>
+    <string name="sleep_attribution_morning_ends">以醒来早晨为准</string>
+    <string name="sleep_attribution_night_begins_description">睡眠使用每日日记中从正午到次日正午的时间窗口。这是默认设置，与之前的导出一致。</string>
+    <string name="sleep_attribution_morning_ends_description">当前导出配置不支持“以醒来早晨为准”。如需开始新的导出，请选择“以入睡当晚为准”。</string>
+    <string name="sleep_attribution_morning_ends_wake_description">将整个睡眠时段归入醒来当天，使用导出的时区。</string>
+
     <string name="metric_selection_title">健康指标</string>
     <string name="search_metrics_hint">搜索指标…</string>
     <string name="select_all">全选</string>
@@ -519,7 +526,7 @@
     <string name="export_notification_unknown_error">未知错误</string>
     <string name="paywall_title">解锁 Health.md</string>
     <string name="paywall_subtitle">您已使用 5 次免费导出</string>
-    <string name="paywall_unlimited_exports">无限导出，永久有效</string>
+    <string name="paywall_unlimited_exports">无限导出</string>
     <string name="paywall_scheduled_exports">自动计划导出</string>
     <string name="paywall_future_features">包含所有未来功能</string>
     <string name="paywall_one_time">一次性购买 — 无订阅</string>
@@ -585,7 +592,7 @@
     <string name="privacy_category_history_permissions">READ_HEALTH_DATA_HISTORY</string>
     <string name="privacy_category_history_exports">仅用于 90 天或全部时间等大型手动导出，以便 Health.md 读取标准 30 天范围之前的 Health Connect 数据</string>
     <string name="privacy_policy_direct_cli">仅当您显式配对并连接到计算机后，才会进行 Direct CLI 导出。健康记录通过经过身份验证的加密连接发送，私下保留最多 7 天以进行可恢复传输，并在您取消或忘记配对时尽快删除。</string>
-    <string name="privacy_policy_footer">Health.md 不运营健康数据云。第一方活动归因可能会发送随机应用程序生成的安装/事件 UUIDs 和经过验证的活动元数据，而不是健康数据、原始引荐来源网址、设备 ID、导出、帐户或路径。</string>
+    <string name="privacy_policy_footer">此版本不收集自定义使用情况分析或广告归因数据。购买、定时任务和可选服务有单独的隐私说明。</string>
     <string name="feedback_email_subject">Health.md 反馈</string>
     <string name="feedback_send_chooser">发送反馈</string>
     <string name="section_export_type">导出类型</string>
@@ -693,7 +700,7 @@
     <string name="onboarding_skip">跳过</string>
     <string name="onboarding_back">后退</string>
     <string name="export_failure_paywall_label">需要解锁</string>
-    <string name="export_guidance_paywall">预定导出需要终身解锁。打开付费专区以解锁无限的导出和调度。</string>
+    <string name="export_guidance_paywall">定时导出需要有效的试用或订阅，或终身访问权限。打开购买页面以查看访问选项。</string>
     <string name="export_source_retry">重试</string>
     <string name="export_source_shortcut">捷径</string>
     <string name="export_source_remote">远程</string>
@@ -1274,4 +1281,28 @@
     <string name="post_export_upgrade_action">查看终身访问</string>
     <string name="post_export_manual_action">继续手动导出</string>
     <string name="post_export_continue_free">继续免费使用</string>
+    <string name="export_sleep_date_guidance">睡眠涵盖每个所选日期的中午到次日中午。要查看昨晚的睡眠，请选择“昨天”。</string>
+    <string name="export_sleep_preview_window">睡眠时间窗口：%1$s中午至%2$s中午（%3$s）。</string>
+    <string name="export_sleep_preview_guidance">如果缺少睡眠数据，请尝试前一天。即使原始记录的日期是今天，早晨的睡眠也可能显示在前一天的摘要中。查询失败会单独列出；结果为空也可能表示无法读取数据。</string>
+    <string name="whoop_connection_description">连接WHOOP以导出恢复、负荷、睡眠、锻炼和身体测量数据。登录通过浏览器进行；Health.md将令牌加密保存在此设备上。断开连接会删除此设备上保存的连接。</string>
+    <string name="whoop_connect">连接WHOOP</string>
+    <string name="whoop_sources_description">连接WHOOP以直接从提供商导出，或继续使用Health Connect获取本地记录。</string>
+    <string name="whoop_sign_in_failed">无法开始WHOOP登录。请检查连接并重试。</string>
+    <string name="whoop_use_health_connect">使用Health Connect导出</string>
+    <string name="whoop_reconnect">重新连接WHOOP</string>
+    <string name="whoop_disconnect">断开WHOOP连接</string>
+    <string name="whoop_use_for_exports">使用WHOOP导出</string>
+    <string name="paywall_access_subtitle">选择订阅或终身访问，开始建立您的私人健康档案。符合条件的订阅包含7天免费试用。</string>
+    <string name="paywall_access_active_title">您的访问权限已生效</string>
+    <string name="paywall_access_active_body">继续设置以连接健康数据，并选择私人档案的保存位置。</string>
+    <string name="paywall_plan_choices">按周、按年或终身访问</string>
+    <string name="paywall_weekly_price">%1$s / 周</string>
+    <string name="paywall_yearly_price">%1$s / 年</string>
+    <string name="paywall_lifetime_price">终身 — 一次性支付%1$s</string>
+    <string name="paywall_trial_then">免费试用7天，之后%1$s</string>
+    <string name="paywall_retry">重试</string>
+    <string name="paywall_manage_subscriptions">管理订阅</string>
+    <string name="paywall_terms">条款</string>
+    <string name="paywall_privacy">隐私</string>
+    <string name="paywall_subscription_disclosure">符合条件的订阅包含7天免费试用，之后按显示的价格自动续订，除非在试用期或当前计费周期结束前取消。请在Google Play中管理或取消。终身访问将在购买时立即一次性收费。现有付费访问权限将予以保留。 一生没有考验。删除应用程序或购买终身不会取消现有订阅。</string>
 </resources>

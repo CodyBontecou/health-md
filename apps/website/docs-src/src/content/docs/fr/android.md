@@ -1,92 +1,92 @@
 ---
-title: Application Android
-description: Configurez Health.md for Android et exportez les données Health Connect vers Markdown, Obsidian Bases, JSON et CSV, choisissez des dossiers avec Storage Access Framework, planifiez des exports et automatisez-les avec Tasker ou adb.
+title: "Application Android"
+description: "Configurez Health.md pour Android. Exportez les données Health Connect , sélectionnez les dossiers Storage Access Framework, planifiez les exportations et automatisez avec Tasker ou adb."
 ---
 
 <div class="docs-hero">
-  <p class="docs-eyebrow">De Health Connect aux fichiers privés</p>
-  <p>Health.md for Android lit Health Connect sur l’appareil et écrit des fichiers Markdown, Obsidian Bases, JSON ou CSV dans les dossiers de votre choix. Ce flux d’export vers un dossier ne nécessite aucun compte Health.md, aucun cloud de données de santé ni abonnement.</p>
-  <div class="docs-actions">
-    <a class="docs-button" href="https://play.google.com/store/apps/details?id=com.healthmd.android" target="_blank" rel="noopener">Disponible sur Google Play</a>
-    <a class="docs-button-secondary" href="#distribution-status">État de publication sur F-Droid</a>
-    <a class="docs-button-secondary" href="/fr/docs/export/">Lire la documentation sur les exports</a>
-  </div>
-  <p id="distribution-status">La publication dans le catalogue F-Droid est en attente. La version Android actuelle est disponible sur Google Play.</p>
-</div>
+ <p class="docs-eyebrow"> Health Connect dans des fichiers privés </p>
+ <p> Health.md pour Android lit Health Connect sur l'appareil et écrit Markdown , Obsidian Bases, JSON ou CSV dans les dossiers de votre choix. Ce workflow d'exportation de dossiers ne nécessite aucun compte Health.md . Les options d'accès Google Play et l'accès inclus F-Droid sont décrites ci-dessous. </p>
+ <div class="docs-actions">
+ <a class="docs-button" href="https://play.google.com/store/apps/details?id=com.healthmd.android" target="_blank" rel="noopener"> Continuer Google Play </a>
+ <a class="docs-button-secondary" href="#distribution-status"> F-Droid statut de publication </a>
+ <a class="docs-button-secondary" href="/fr/docs/export/"> Lire les documents d'exportation </a>
+ </div>
+ <p id="distribution-status"> F-Droid la publication du catalogue est en attente. Obtenez la version actuelle d'Android sur Google Play . </p>
+ </div>
 
 <div class="reference-stats">
-<div><strong>106</strong><span>métriques Health Connect sélectionnables</span></div>
-<div><strong>4</strong><span>formats d’export</span></div>
-<div><strong>5</strong><span>actions gratuites d’export manuel</span></div>
-<div><strong>0</strong><span>compte cloud Health.md requis</span></div>
-</div>
+ <div> <strong> 106 </strong> <span> métriques Health Connect sélectionnables </span> </div>
+ <div> <strong> 4 </strong> <span> formats d'exportation </span> </div>
+ <div> <strong> 2 </strong> <span> Canaux de distribution Android </span> </div>
+ <div> <strong> 0 </strong> <span> Health.md comptes cloud requis </span> </div>
+ </div>
 
-## Fonctionnement de l’application Android
+## Que fait l'application Android
 
-Health.md for Android transforme les données Health Connect en journal de santé local. Choisissez les métriques qui vous intéressent, prévisualisez le résultat, puis exportez des fichiers propres vers un dossier local, un coffre Obsidian, un dossier de fournisseur synchronisé ou tout fournisseur de documents Android qui accorde un accès en écriture.
+Health.md pour Android transforme Health Connect en un premier journal de santé local. Choisissez les métriques dont vous avez besoin et prévisualisez le résultat. Exportez ensuite les fichiers vers un dossier local, un coffre-fort Obsidian , un dossier de fournisseur synchronisé ou un fournisseur de documents Android inscriptibles.
 
 <div class="options">
-  <div class="option"><strong>Source Health Connect</strong><p>Lit l’activité, le sommeil, les données cardiaques, les signes vitaux, les mesures corporelles, la nutrition, les entraînements et d’autres catégories au moyen des API Health Connect intégrées à Android.</p></div>
-  <div class="option"><strong>Sortie native pour Obsidian</strong><p>Écrit des notes quotidiennes, du YAML/frontmatter, des notes adaptées à Obsidian Bases, des entrées individuelles et du JSON compatible avec l’extension Obsidian de Health.md.</p></div>
-  <div class="option"><strong>Stockage natif Android</strong><p>Utilise Storage Access Framework afin que vous puissiez choisir des dossiers proposés par le stockage local, Obsidian, Google Drive, OneDrive, Syncthing ou un autre fournisseur.</p></div>
-</div>
+ <div class="option"> <strong> Health Connect source </strong> <p> Lit l'activité, le sommeil, le cœur, les signes vitaux, les mensurations corporelles, la nutrition, les entraînements et d'autres catégories via les API Health Connect d'Android sur l'appareil. </p> </div>
+ <div class="option"> <strong> Obsidian -sortie native </strong> <p> Écrit des notes quotidiennes, YAML/frontmatter, Obsidian Notes conviviales pour les bases, entrées individuelles et JSON compatible avec le plugin Health.md Obsidian . </p> </div>
+ <div class="option"> <strong> Stockage natif Android </strong> <p> Utilise le Storage Access Framework afin que vous puissiez choisir les dossiers exposés par le stockage local, Obsidian , Google Drive, OneDrive, Syncthing ou un autre fournisseur. </p> </div>
+ </div>
 
-## Prérequis
+## Exigences
 
-- Android 9 / API 28 ou version ultérieure.
-- Un appareil ou émulateur compatible avec Health Connect.
-- Des données Health Connect provenant d’applications Android, d’appareils portables ou de services qui écrivent dans Health Connect.
-- Un dossier ou un fournisseur de documents qui autorise l’écriture des exports.
+- Android 9/API 28 ou version ultérieure.
+- Un appareil ou un émulateur compatible Health Connect .
+- Health Connect données provenant d'applications, d'appareils portables ou de services Android qui écrivent sur Health Connect .
+- Un fournisseur de dossier ou de document qui autorise l'accès en écriture pour les exportations.
 
-## Premier export
+## Première exportation
 
-1. Installez Health.md depuis Google Play.
-2. Ouvrez la configuration de **Health Connect** et accordez uniquement l’accès aux catégories que Health.md doit exporter.
-3. Choisissez la destination d’export avec le sélecteur de dossiers d’Android.
-4. Choisissez les formats : Markdown, Obsidian Bases, JSON, CSV ou toute combinaison de ces formats.
-5. Sélectionnez les métriques et la plage de dates.
-6. Prévisualisez le résultat.
-7. Lancez l’export et vérifiez les fichiers générés dans votre dossier ou votre coffre.
+1. Installez la version actuelle Health.md à partir de Google Play .
+2. Ouvrez la configuration ** Health Connect ** et accordez uniquement les catégories que vous souhaitez que Health.md exporte.
+3. Choisissez la destination d'exportation via le sélecteur de dossiers d'Android.
+4. Choisissez les formats : Markdown , Obsidian Bases, JSON, CSV ou toute combinaison.
+5. Sélectionnez les mesures et la plage de dates.
+6. Prévisualisez la sortie.
+7. Appuyez sur Exporter et vérifiez les fichiers générés dans votre dossier ou votre coffre-fort.
 
-L’offre gratuite comprend 5 actions d’export manuel, ce qui vous permet de tester les autorisations, l’accès au dossier, les formats et votre flux de travail Obsidian avant de débloquer les exports illimités.
+La version du téléphone Google Play compatible avec l'abonnement nécessite un essai actif, un abonnement, un accès à vie ou un accès permanent préservé pour les exportations manuelles. Les abonnements éligibles incluent un essai de 7 jours ; La vie n’a pas d’épreuve. La version F-Droid inclut un accès illimité sans flux d'achat ni de restauration.
 
 ## Destinations sur Android
 
-Android n’utilise pas la destination sur le réseau local iPhone → Mac. Il s’appuie plutôt sur Storage Access Framework d’Android.
+Android n'utilise pas la destination de réseau local iPhone → Mac. Au lieu de cela, il s'appuie sur le framework d'accès au stockage d'Android.
 
-| Destination | Prise en charge sur Android |
-|---|---|
-| Dossier local de l’appareil | Pris en charge par le sélecteur de dossiers |
-| Coffre Obsidian | Pris en charge lorsque le dossier du coffre est proposé par le sélecteur Android |
-| Google Drive, OneDrive, Syncthing, Obsidian Sync et fournisseurs similaires | Pris en charge lorsque le fournisseur propose des dossiers accessibles en écriture |
-| Destination sur le réseau local iPhone/Mac | Spécifique aux plateformes Apple ; non utilisée par Android |
+| Destination | Statut Android |
+| --- | --- |
+| Dossier de périphérique local | Pris en charge via le sélecteur de dossiers |
+| coffre-fort Obsidian | Pris en charge lorsque le dossier du coffre-fort est exposé au sélecteur d'Android |
+| Google Drive, OneDrive, Syncthing, Obsidian Sync et fournisseurs similaires | Pris en charge lorsque le fournisseur expose des dossiers inscriptibles |
+| iPhone /Destination réseau local Mac | Spécifique à la plateforme Apple ; non utilisé par Android |
 
-Si un fournisseur ne propose pas de dossiers accessibles en écriture dans le sélecteur Android, Health.md ne peut pas y écrire directement en toute sécurité. Choisissez un dossier de fournisseur qui accorde un accès persistant en écriture, ou exportez localement et synchronisez avec l’outil de votre choix.
+Si un fournisseur n'expose pas les dossiers inscriptibles via le sélecteur d'Android, Health.md ne peut pas y écrire directement en toute sécurité. Choisissez un dossier fournisseur qui accorde un accès en écriture persistant ou exportez localement et synchronisez avec votre outil préféré.
 
-## Formats
+## ##Formats
 
-Comme l’application Apple, l’application Android produit des fichiers dans des formats courants :
+L'application Android partage les mêmes objectifs de fichiers simples que l'application Apple :
 
-| Format | Utilisation |
-|---|---|
-| Markdown | Résumés de santé quotidiens lisibles, modèles et notes |
-| Obsidian Bases | Notes axées sur le frontmatter, interrogeables dans les vues de base de données Obsidian |
-| JSON | Charges utiles quotidiennes structurées pour les scripts, tableaux de bord, notebooks et l’extension Obsidian de Health.md |
-| CSV | Flux de travail de tableur et d’analyse |
+| Format | Utilisez-le pour |
+| --- | --- |
+| Markdown | Résumés, modèles et notes de santé quotidiens lisibles |
+| Obsidian Bases | Notes de première ligne qui peuvent être interrogées dans les vues de la base de données Obsidian |
+| JSON | Charges utiles quotidiennes structurées pour les scripts, les tableaux de bord, les blocs-notes et le plugin Health.md Obsidian |
+| CSV | Workflows de feuilles de calcul et d’analyse |
 
-Les exports JSON d’Android sont conçus pour être compatibles avec les visualisations Health.md dans Obsidian. Les exports Markdown et Bases utilisent le même flux de travail axé sur le frontmatter que celui décrit dans le [guide des formats](/fr/docs/format/).
+Les exportations Android JSON sont conçues pour être compatibles avec les visualisations Obsidian de Health.md . Les exportations Markdown et Bases utilisent le même flux de travail axé sur le sujet documenté dans le [guide des formats](/fr/docs/format/).
 
 ## Planification et automatisation
 
-Les exports planifiés exigent l’achat à vie unique. Lorsque vous accordez l’accès Alarmes et rappels d’Android, les exports planifiés utilisent une alarme exacte à déclenchement unique, avec une tâche WorkManager persistante comme solution de secours. Sans accès aux alarmes exactes, WorkManager devient le planificateur principal : l’heure choisie est donc un objectif, et non une garantie stricte. Health.md enregistre l’historique des exports, peut récupérer les dates planifiées manquées et vous permet de réessayer les exécutions échouées.
+Dans la version du téléphone Google Play compatible avec l'abonnement, les exportations planifiées nécessitent un essai actif, un abonnement, une durée de vie ou un accès permanent préservé ; ils sont inclus dans la version F-Droid . Ils utilisent une alarme exacte ponctuelle lorsque vous accordez l'accès aux alarmes et aux rappels d'Android, avec un travail durable WorkManager comme sauvegarde. Sans accès à l'alarme exacte, WorkManager devient le planificateur principal, de sorte que l'heure sélectionnée est un objectif plutôt qu'une garantie ferme. Health.md enregistre l'historique des exportations, peut récupérer les dates planifiées manquées et vous permet de réessayer les exécutions ayant échoué.
 
-Pour Tasker, adb ou d’autres outils d’automatisation, Health.md expose des intents de diffusion qui doivent toujours être explicites. Les appelants externes doivent cibler directement le composant récepteur :
+Pour Tasker, adb ou d'autres outils d'automatisation, Health.md expose les intentions de diffusion explicites uniquement. Les appelants externes doivent s'adresser directement au composant récepteur :
 
 ```text
 com.healthmd.android/com.healthmd.automation.AutomationReceiver
 ```
 
-Exemples :
+Exemples :
 
 ```bash
 adb shell am broadcast \
@@ -105,58 +105,60 @@ adb shell am broadcast \
   --es com.healthmd.android.extra.END_DATE 2026-03-07
 ```
 
-L’automatisation utilise par défaut le profil actif avec sa destination, ses formats, ses métriques, sa comptabilisation et son historique figés. Un extra `PROFILE` peut sélectionner un profil stable par identifiant ou nom ; une référence inconnue échoue de façon sûre au lieu d’utiliser les réglages actuels. Les exécutions planifiées restent aussi liées à leur profil. Voir [Profils d’exportation](/fr/docs/export-profiles/).
+L'automatisation utilise le profil actif par défaut, y compris sa destination gelée, ses formats, ses métriques, sa comptabilité et son historique. Un supplément `PROFILE` fourni peut sélectionner un identifiant ou un nom de profil stable. Une référence inconnue échoue à la fermeture au lieu d'utiliser les paramètres actuels. Les exécutions planifiées restent également liées à leur profil. Voir [Exporter les profils](/fr/docs/export-profiles/).
 
-### Conditions d’arrière-plan et annulation planifiée
+### Préparation en arrière-plan et annulation programmée
 
-- Autorisez les lectures Health Connect en arrière-plan pour les exports sans surveillance ; sinon, ouvrez Health.md pour terminer la lecture.
-- Gardez les notifications actives pour afficher le travail, le service au premier plan et les invites de reprise.
-- Accordez Alarmes et rappels uniquement pour une alarme exacte. Sans cet accès, le travail reste persistant mais l’heure est approximative.
-- Annuler une exécution planifiée arrête seulement cette tentative. Les dates terminées restent acquises, les autres sont réessayables et la récurrence reste active.
+- Autoriser les lectures Health Connect en arrière-plan pour les exportations sans surveillance. Sinon, ouvrez Health.md pour terminer la lecture des données de santé.
+- Gardez les notifications activées afin qu'Android puisse afficher le travail actif, l'état du service de premier plan, les résultats et les actions de récupération.
+- Accordez des alarmes et des rappels uniquement lorsque vous souhaitez une planification exacte des alarmes. Sans cela, un travail durable WorkManager reste disponible mais la durée choisie est approximative.
+- L'annulation d'une exécution planifiée arrête uniquement cette tentative. Les dates terminées restent terminées, les dates non résolues peuvent être réessayées et la planification récurrente reste activée.
 
 ## Sources de santé
 
-Health Connect est la source utilisée par défaut pour les exports locaux. L’application Android comprend également un espace de configuration des sources de santé pour des écosystèmes tels que Samsung Health, Huawei Health, Fitbit, Garmin, Withings, Oura, Polar et WHOOP. Lorsque ces écosystèmes écrivent dans Health Connect, Health.md peut exporter les enregistrements Health Connect obtenus. Les imports directs depuis des fournisseurs cloud nécessitent l’autorisation du fournisseur et peuvent imposer des contraintes supplémentaires de configuration ou de disponibilité.
+Health Connect est le chemin d'exportation local dans les deux canaux. La version Google Play comprend également une zone de configuration des sources de santé pour des écosystèmes tels que Samsung Health, Huawei Health, Fitbit, Garmin, Withings, Oura, Polar et WHOOP. Lorsque ces écosystèmes écrivent dans Health Connect , l'une ou l'autre des versions peut exporter les enregistrements Health Connect résultants. Les importations directes du fournisseur de cloud et les rappels OAuth sont uniquement en lecture. Le catalogue du fournisseur F-Droid contient uniquement Health Connect .
 
-Google Fit est volontairement exclu des fournisseurs pris en charge, car Health Connect est la couche de données de santé recommandée sur Android.
+Google Fit est intentionnellement exclu de la surface du fournisseur pris en charge, car Health Connect est la couche de données de santé préférée d'Android.
 
-### Pas quotidiens locaux exacts
+### Étapes exactes du jour local
 
-Les pas quotidiens utilisent les limites exactes du jour local avec fuseau horaire. Health.md découpe les intervalles Health Connect à minuit local avant agrégation ; voyages et changements d’heure ne déplacent donc pas les pas.
+Les totaux quotidiens des étapes utilisent les limites exactes du jour local et du zonage. Avant l'agrégation, Health.md coupe et divise les intervalles Health Connect qui se chevauchent à minuit local. Ainsi, les changements de déplacement et d’heure d’été ne déplacent pas les étapes vers le mauvais jour.
 
-## Tarification et restauration
+## Distribution, tarification et commutation
 
-- L’application Android comprend 5 actions gratuites d’export manuel.
-- Les exports illimités et l’automatisation planifiée se débloquent par un achat à vie unique avec Google Play Billing.
-- Il n’y a ni abonnement ni frais récurrents.
-- Google Play affiche le prix local en vigueur avant l’achat.
-- La restauration de l’achat utilise le compte Google ayant servi à acheter Premium.
+- ** Google Play :** la version téléphonique avec abonnement propose des abonnements individuels hebdomadaires/annuels et à vie. Les nouveaux abonnés éligibles bénéficient d'un essai de 7 jours, puis renouvellent automatiquement au prix affiché jusqu'à annulation via Google Play . La durée de vie est facturée une fois immédiatement, sans essai. Il ne reste aucune allocation locale de libre exportation. L'accès permanent existant est conservé. Restaurer l'achat utilise le compte Google d'achat ; la suppression de l'application ou l'achat de Lifetime n'annule pas un abonnement. Les versions plus anciennes peuvent afficher l'allocation précédente. La version actuelle est uniquement disponible sur téléphone. Le compagnon Wear OS est reporté à un cycle de qualification ultérieur.
+- ** F-Droid :** l'accès illimité est inclus. Il n’y a pas de compteur gratuit, de dépendance de facturation, de paywall, d’achat ou de restauration.
+- ** Portée F-Droid :** Health Connect uniquement, sans intégration Wear OS, OAuth direct du fournisseur de cloud, examen Play, attribution ou télémétrie d'intégration Health.md .
+- **Résultat partagé :** les deux canaux utilisent la même capture Health Connect , les mêmes exportateurs, schémas, actions d'automatisation et protocole de périphérique direct.
+- **Changement :** Google Play et F-Droid utilisent des clés de signature différentes, donc pour changer de chaîne, il faut d'abord désinstaller l'application.
 
-Après une déconnexion temporaire de Google Play Billing, Health.md se reconnecte et actualise automatiquement le droit. Premium ne disparaît pas définitivement ; utilisez Restaurer l’achat seulement si le compte reste non résolu après le retour du réseau.
+Un changement de canal ne migre pas les achats, les paramètres, l'historique, les informations d'identification ou l'état du transfert privé. Les fichiers exportés restent dans la destination que vous avez choisie.
+
+Si Google Play Billing se déconnecte de manière transitoire, la version Play se reconnecte et actualise automatiquement l’état des droits. Une perte de service temporaire ne supprime pas définitivement Premium. Utilisez Restaurer l'achat uniquement si le compte n'est toujours pas résolu après le retour de la connectivité.
 
 ## Modèle de confidentialité
 
-Health.md for Android traite les données en priorité sur l’appareil :
+Health.md pour Android est d'abord local :
 
-- Les enregistrements Health Connect sont lus sur votre appareil Android.
-- Les exports sont écrits directement dans les dossiers de votre choix.
-- Par défaut, les exports vers un dossier et les requêtes directes sur l’appareil ne créent pas de copie sur les serveurs Health.md.
-- Les paramètres et l’historique des exports restent sur l’appareil.
-- La facturation est gérée par Google Play.
-- Les dossiers associés à un fournisseur se synchronisent selon les conditions propres à ce fournisseur.
+- Les enregistrements -  Health Connect sont lus sur votre appareil Android.
+- Les exportations sont écrites directement dans les dossiers que vous choisissez.
+- Les exportations de dossiers principaux et les requêtes directes sur les périphériques ne créent pas de copie du serveur Health.md par défaut.
+- Les paramètres et l'historique des exportations restent sur l'appareil.
+- La facturation est gérée par Google Play dans la version Play. F-Droid inclut un accès illimité sans facturation et ne contient aucun code de télémétrie Health.md ni identité/état de télémétrie.
+- Les dossiers sauvegardés par le fournisseur sont synchronisés selon les propres conditions de ce fournisseur.
 
-Pour la configuration locale la plus stricte, effectuez des exports manuels vers un dossier local de l’appareil et laissez désactivés les exports planifiés et la synchronisation avec un fournisseur.
+Si vous souhaitez la configuration locale la plus stricte, exécutez des exportations manuelles vers un dossier de périphérique local et laissez les exportations planifiées et la synchronisation sauvegardée par le fournisseur désactivées.
 
 Le pilote Health.md Cloud, distinct et facultatif, est réservé à un seul propriétaire et conserve uniquement les exports API envoyés volontairement. Il n’y a pas d’inscription publique ni de synchronisation automatique des appareils ; ce flux de dossiers n’envoie rien au pilote. La [politique de confidentialité](/privacy-policy.html) décrit la conservation, la suppression, le quota et les risques de perte sans sauvegarde.
 
-## Documentation associée
+## Documents associés
 
 <div class="related">
-  <a href="/fr/docs/export-profiles/"><span>Profils</span>Enregistrez des destinations, réglages de sortie, planifications et identifiants d’automatisation stables indépendants.</a>
-  <a href="/fr/docs/export/"><span>Export</span>Flux d’export manuel, plages de dates, aperçus, historique et fichiers produits.</a>
-  <a href="/fr/docs/metrics/"><span>Métriques</span>Fonctionnement de la sélection des métriques et des catégories dans Health.md.</a>
-  <a href="/fr/docs/format/"><span>Formats</span>Markdown, Bases, JSON, CSV, unités, noms de fichiers et frontmatter.</a>
-  <a href="/fr/docs/visualizations-roadmap/"><span>Obsidian</span>Comment les fichiers JSON et Markdown exportés alimentent les visualisations Health.md.</a>
-</div>
+ <a href="/fr/docs/export-profiles/"> <span> Profils </span> Enregistrez des destinations indépendantes, des paramètres de sortie, des programmes et des ID d'automatisation stables. </a>
+ <a href="/fr/docs/export/"> <span> Exportation </span> Flux d'exportation manuel, plages de dates, aperçus, historique et sortie de fichier. </a>
+ <a href="/fr/docs/metrics/"> <span> Métriques </span> Comment fonctionnent la sélection et les catégories de métriques dans Health.md . </a>
+ <a href="/fr/docs/format/"> <span> Formats </span> Markdown , bases, JSON, CSV, unités, noms de fichiers et frontmatter. </a>
+ <a href="/fr/docs/visualizations-roadmap/"> <span> Obsidian </span> Comment JSON exporté et Markdown alimentent les visualisations Health.md . </a>
+ </div>
 
-<p style="margin-top:48px; color:var(--sl-color-gray-3); font-size:14px;">Dernière mise à jour : 2026-10-04</p>
+<p style="margin-top:48px; color:var(--sl-color-gray-3); font-size:14px;"> Dernière mise à jour le 04/10/2026 </p>

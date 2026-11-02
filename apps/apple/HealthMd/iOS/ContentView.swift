@@ -352,9 +352,6 @@ struct ContentView: View {
             if !TestMode.isUITesting {
                 hasSeenPostOnboardingPaywall = true
             }
-            PricingAnalyticsClient.shared.trackOnboardingContinueFreeTapped(
-                quotaState: purchaseManager.analyticsQuotaState
-            )
         }) {
             PaywallView(context: .onboarding)
                 .presentationDetents([.large])
@@ -380,21 +377,15 @@ struct ContentView: View {
             ExportUpgradePrompt(
                 milestone: purchaseManager.pendingUpgradePrompt ?? 0,
                 onSchedule: {
-                    let quotaState = purchaseManager.analyticsQuotaState
                     purchaseManager.consumeUpgradePrompt()
-                    PricingAnalyticsClient.shared.trackUpgradePromptTapped(quotaState: quotaState)
                     presentScheduleAfterExportGuidance = true
                 },
                 onUpgrade: {
-                    let quotaState = purchaseManager.analyticsQuotaState
                     purchaseManager.consumeUpgradePrompt()
-                    PricingAnalyticsClient.shared.trackUpgradePromptTapped(quotaState: quotaState)
                     presentPaywallAfterUpgradePrompt = true
                 },
                 onDismiss: {
-                    let quotaState = purchaseManager.analyticsQuotaState
                     purchaseManager.consumeUpgradePrompt()
-                    PricingAnalyticsClient.shared.trackUpgradePromptDismissed(quotaState: quotaState)
                 }
             )
         }
@@ -562,12 +553,10 @@ struct ContentView: View {
                     vaultManager.clearVaultFolder()
                 }
                 if TestMode.useHealthKitExportPreviewFixtures {
-                    advancedSettings.exportFormats = [.markdown]
-                    advancedSettings.detailPolicy = .lossless
+                    advancedSettings.exportFormats = TestMode.healthKitExportPreviewFormats
+                    advancedSettings.detailPolicy = TestMode.healthKitExportPreviewDetailPolicy
                     advancedSettings.metricSelection.selectAll()
-                    advancedSettings.generateWeeklyRollups = true
-                    advancedSettings.generateMonthlyRollups = true
-                    advancedSettings.generateYearlyRollups = true
+                    advancedSettings.generateRangeSummary = TestMode.healthKitExportPreviewRangeSummary
                 }
                 if TestMode.noExportFormats {
                     advancedSettings.exportFormats = []
@@ -955,29 +944,11 @@ struct ContentView: View {
         showError = true
     }
 
-    private var currentPaywallContext: PricingAnalyticsPaywallContext {
+    private var currentPaywallContext: PaywallContext {
         exportTargetSelection == .connectedMac ? .macTarget : .export
     }
 
-    private var currentExportTargetType: PricingAnalyticsExportTargetType {
-        switch exportTargetSelection {
-        case .localIPhoneFolder:
-            return .localFile
-        case .connectedMac:
-            return .connectedMac
-        case .apiEndpoint:
-            return .apiEndpoint
-        case .agentDataGateway:
-            return .agentDataGateway
-        }
-    }
-
     private func presentExportPaywall() {
-        PricingAnalyticsClient.shared.trackExportBlockedByQuota(
-            context: currentPaywallContext,
-            targetType: currentExportTargetType,
-            quotaState: purchaseManager.analyticsQuotaState
-        )
         showPaywall = true
     }
 
@@ -1012,28 +983,7 @@ struct ContentView: View {
     /// consumed the milestone by the time this runs, making this a no-op.
     private func handleUpgradePromptSwipeDismissIfNeeded() {
         guard purchaseManager.pendingUpgradePrompt != nil else { return }
-        let quotaState = purchaseManager.analyticsQuotaState
         purchaseManager.consumeUpgradePrompt()
-        PricingAnalyticsClient.shared.trackUpgradePromptDismissed(quotaState: quotaState)
-    }
-
-    private func trackSuccessfulExport(
-        targetType: PricingAnalyticsExportTargetType,
-        startDate: Date,
-        endDate: Date
-    ) {
-        let metadata = PricingAnalyticsExportMetadata(
-            targetType: targetType,
-            formatCount: advancedSettings.exportFormats.count,
-            metricCount: advancedSettings.metricSelection.totalEnabledCount,
-            dateRangePreset: dateRangePreset,
-            startDate: startDate,
-            endDate: endDate
-        )
-        PricingAnalyticsClient.shared.trackExportSucceeded(
-            metadata: metadata,
-            quotaState: purchaseManager.analyticsQuotaState
-        )
     }
 
     // MARK: - Auto-Sync
@@ -1343,7 +1293,8 @@ struct ContentView: View {
     private var interactiveHistorySelection: HealthHistoryExecutionSelection {
         HealthHistoryExecutionSelection(scope: interactiveHistoryScope,
             settings: ExportSettingsSnapshot.from(advancedSettings, appleExportEngineAuthorityIsFrozen: false),
-            target: exportTargetSelection, preset: dateRangePreset)
+            target: exportTargetSelection, preset: dateRangePreset,
+            sleepDayAttribution: healthKitManager.sleepDayAttribution)
     }
 
     private var interactiveHistoryScope: HealthHistoryScope {
@@ -1472,11 +1423,6 @@ struct ContentView: View {
             // Count this as one export action against the free quota.
             if result.successCount > 0 {
                 purchaseManager.recordExportUse(offerGuidance: result.isFullSuccess)
-                trackSuccessfulExport(
-                    targetType: .localFile,
-                    startDate: normalizedStartDate,
-                    endDate: normalizedEndDate
-                )
             }
 
             if result.wasCancelled {
@@ -1626,11 +1572,6 @@ struct ContentView: View {
 
             if result.successCount > 0 {
                 purchaseManager.recordExportUse(offerGuidance: result.isFullSuccess)
-                trackSuccessfulExport(
-                    targetType: .apiEndpoint,
-                    startDate: normalizedStartDate,
-                    endDate: normalizedEndDate
-                )
             }
 
             let providerRecordDescription = result.externalRecordFileCount == 0
@@ -1747,11 +1688,6 @@ struct ContentView: View {
 
             if result.successCount > 0 {
                 purchaseManager.recordExportUse(offerGuidance: result.isFullSuccess)
-                trackSuccessfulExport(
-                    targetType: .agentDataGateway,
-                    startDate: normalizedStartDate,
-                    endDate: normalizedEndDate
-                )
             }
 
             if result.wasCancelled {
@@ -1833,6 +1769,7 @@ struct ContentView: View {
                 let dateFormatter = DateFormatter()
                 dateFormatter.dateFormat = "yyyy-MM-dd"
                 let providerTimeZone = advancedSettings.exportTimeZoneOverride ?? .current
+                let captureContext = try healthKitManager.resolveSleepCaptureContext(settings: advancedSettings, timeZone: providerTimeZone)
                 var providerCalendar = Calendar(identifier: .gregorian)
                 providerCalendar.timeZone = providerTimeZone
                 let externalRecordFetcher: MacExportJobBuilder.ExternalDailyRecordFetcher?
@@ -1864,6 +1801,7 @@ struct ContentView: View {
                         negotiation: negotiation,
                         healthKitManager: healthKitManager,
                         externalRecordFetcher: externalRecordFetcher,
+                        externalIntegrations: externalIntegrationManager,
                         syncService: syncService,
                         progress: { update in
                             exportStatusMessage = update.message
@@ -1887,6 +1825,7 @@ struct ContentView: View {
                             destinationName: destinationName,
                             dateFormatter: dateFormatter,
                             externalRecordFetcher: externalRecordFetcher,
+                            captureContext: captureContext,
                             selection: selection,
                             frozenSettings: advancedSettings
                         )
@@ -1908,7 +1847,8 @@ struct ContentView: View {
                             for: date,
                             detailPolicy: detailPolicy,
                             metricSelection: advancedSettings.metricSelection,
-                            timeZone: providerTimeZone
+                            timeZone: providerTimeZone,
+                            captureContext: captureContext
                         )
                     },
                     fetchExternalDailyRecords: externalRecordFetcher,
@@ -2043,6 +1983,7 @@ struct ContentView: View {
         destinationName: String,
         dateFormatter: DateFormatter,
         externalRecordFetcher: MacExportJobBuilder.ExternalDailyRecordFetcher?,
+        captureContext: AppleSleepCaptureContext,
         selection: HealthHistoryExecutionSelection,
         frozenSettings: AdvancedExportSettings
     ) async throws {
@@ -2152,7 +2093,8 @@ struct ContentView: View {
                         for: date,
                         detailPolicy: detailPolicy,
                         metricSelection: advancedSettings.metricSelection,
-                        timeZone: sourceTimeZone
+                        timeZone: sourceTimeZone,
+                        captureContext: captureContext
                     )
                     var record = ConnectedExportDetailPolicy.sanitized(
                         fetchedRecord,
@@ -2514,11 +2456,6 @@ struct ContentView: View {
             if result.successCount > 0, !macExportQuotaRecorded {
                 purchaseManager.recordExportUse(offerGuidance: exportResult.isFullSuccess)
                 macExportQuotaRecorded = true
-                trackSuccessfulExport(
-                    targetType: .connectedMac,
-                    startDate: normalizedStartDate,
-                    endDate: normalizedEndDate
-                )
             }
         }
 
@@ -3009,14 +2946,11 @@ struct SettingsTabView: View {
     }
 
     private var purchaseSettingsSubtitle: String {
-        if purchaseManager.isFamilyUnlocked {
-            return "Family Lifetime active"
-        }
         if purchaseManager.canBuyFamilyUpgrade {
             return "Full access active — family upgrade available"
         }
         if purchaseManager.isUnlocked {
-            return "Full access active"
+            return purchaseManager.activePlanTitle
         }
         return unlockSubtitle
     }
@@ -3043,44 +2977,37 @@ struct SettingsTabView: View {
 
     var body: some View {
         ScrollViewReader { proxy in
-            ScrollView {
-                VStack(alignment: .leading, spacing: Spacing.s4) {
-                    settingsHeader
-                    configurationProtectionSection
-                    accountAndStorageSection
-                    profilesAndReportsSection
-                    sharedSetupSection
-                privacyAndAnalyticsSection
-                if ConnectedAppsFeature.isEnabled {
-                    connectedAppsSection
-                }
-                supportSection
-                debugToolsSection
-            }
-                .padding(.horizontal, Spacing.s4)
-                .padding(.top, Spacing.s4)
-                .padding(.bottom, 120)
-            }
-            .background(Color.bgPrimary.ignoresSafeArea())
-            .scrollIndicators(.hidden)
-            .onAppear {
-                guard let requestID = configurationProtection.settingsNavigationRequestID else { return }
-                Task { @MainActor in
-                    await Task.yield()
-                    withAnimation(AnimationTimings.smooth) {
-                        proxy.scrollTo(AccessibilityID.ConfigurationProtection.section, anchor: .center)
+            GeometryReader { viewport in
+                ScrollView {
+                    VStack(alignment: .leading, spacing: Spacing.s4) {
+                        settingsHeader(availableWidth: viewport.size.width)
+                        settingsSections(availableWidth: viewport.size.width)
                     }
-                    configurationProtection.consumeSettingsNavigationRequest(requestID)
+                    .padding(.horizontal, Spacing.s4)
+                    .padding(.top, Spacing.s4)
+                    .padding(.bottom, 120)
                 }
-            }
-            .onChange(of: configurationProtection.settingsNavigationRequestID) { _, requestID in
-                guard let requestID else { return }
-                Task { @MainActor in
-                    await Task.yield()
-                    withAnimation(AnimationTimings.smooth) {
-                        proxy.scrollTo(AccessibilityID.ConfigurationProtection.section, anchor: .center)
+                .background(Color.bgPrimary.ignoresSafeArea())
+                .scrollIndicators(.hidden)
+                .onAppear {
+                    guard let requestID = configurationProtection.settingsNavigationRequestID else { return }
+                    Task { @MainActor in
+                        await Task.yield()
+                        withAnimation(AnimationTimings.smooth) {
+                            proxy.scrollTo(AccessibilityID.ConfigurationProtection.section, anchor: .center)
+                        }
+                        configurationProtection.consumeSettingsNavigationRequest(requestID)
                     }
-                    configurationProtection.consumeSettingsNavigationRequest(requestID)
+                }
+                .onChange(of: configurationProtection.settingsNavigationRequestID) { _, requestID in
+                    guard let requestID else { return }
+                    Task { @MainActor in
+                        await Task.yield()
+                        withAnimation(AnimationTimings.smooth) {
+                            proxy.scrollTo(AccessibilityID.ConfigurationProtection.section, anchor: .center)
+                        }
+                        configurationProtection.consumeSettingsNavigationRequest(requestID)
+                    }
                 }
             }
         }
@@ -3110,8 +3037,29 @@ struct SettingsTabView: View {
         )
     }
 
-    private var settingsHeader: some View {
-        HealthMdPageHeader(
+    private func settingsSections(availableWidth: CGFloat) -> some View {
+        AdaptivePageColumns(availableWidth: availableWidth) {
+            VStack(alignment: .leading, spacing: Spacing.s4) {
+                configurationProtectionSection
+                accountAndStorageSection
+                profilesAndReportsSection
+                sharedSetupSection
+            }
+        } secondary: {
+            VStack(alignment: .leading, spacing: Spacing.s4) {
+                privacyAndAnalyticsSection
+                if ConnectedAppsFeature.isEnabled {
+                    connectedAppsSection
+                }
+                supportSection
+                debugToolsSection
+            }
+        }
+    }
+
+    private func settingsHeader(availableWidth: CGFloat) -> some View {
+        AdaptivePageHeader(
+            availableWidth: availableWidth,
             title: "Settings",
             subtitle: "Manage access, storage, and support for Health.md."
         ) {
@@ -3121,7 +3069,7 @@ struct SettingsTabView: View {
                         settingsHeaderStatusPills
                     }
                 } else {
-                    HStack(spacing: Spacing.sm) {
+                    SchedulingAdaptiveStack {
                         settingsHeaderStatusPills
                     }
                 }
@@ -3240,13 +3188,13 @@ struct SettingsTabView: View {
 
     private var privacyAndAnalyticsSection: some View {
         SettingsSectionCard(
-            title: "Privacy & Analytics",
-            subtitle: "Health.md collects limited product events using a random app-install identifier for setup, export-shape, and purchase-flow analytics."
+            title: "Privacy",
+            subtitle: "This version does not collect custom usage analytics or advertising attribution."
         ) {
             SettingsRow(
                 icon: "hand.raised.fill",
                 title: "Privacy Policy",
-                subtitle: "Analytics never includes health values, metric names, health dates, exported files, paths, peer names, or credentials. On iPhone and iPad, Apple Ads campaign identifiers are linked to purchase outcomes to measure campaign conversion. No health data or purchase events are sent to Apple Ads.",
+                subtitle: "View how purchases, scheduling, and optional services handle data.",
                 isActive: true,
                 accessibilityHint: "Double tap to open the Health.md privacy policy",
                 action: { UIApplication.shared.open(privacyPolicyURL) }

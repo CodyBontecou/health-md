@@ -14,6 +14,7 @@ use healthmd_protocol::{
     },
 };
 use secrecy::{ExposeSecret as _, SecretString};
+use serde_json::json;
 use tempfile::TempDir;
 use tokio::{net::TcpStream, sync::oneshot};
 
@@ -179,6 +180,7 @@ fn mobile_capabilities(
 ) -> PeerCapabilities {
     PeerCapabilities {
         export_history_observation_versions: None,
+        scoped_daily_note_versions: None,
         protocol_versions: versions,
         platform,
         installation_id: trust.installation_id,
@@ -237,8 +239,6 @@ async fn pair_fake_ios(client: &DirectClient<MemoryCredentials>) -> FakeMobileTr
             None,
         )
         .await;
-        let hello = receive_cli_hello(&mut channel).await;
-        assert_eq!(hello.export_history_observation_versions, None);
         channel
             .send(&DirectMessage::Hello(Unlabeled::from(mobile_capabilities(
                 &trust,
@@ -248,6 +248,9 @@ async fn pair_fake_ios(client: &DirectClient<MemoryCredentials>) -> FakeMobileTr
             ))))
             .await
             .unwrap();
+        let hello = receive_cli_hello(&mut channel).await;
+        assert_eq!(hello.export_history_observation_versions, None);
+
         trust
     };
     let (paired, trust) = tokio::join!(pair, peer);
@@ -258,8 +261,6 @@ async fn pair_fake_ios(client: &DirectClient<MemoryCredentials>) -> FakeMobileTr
 async fn respond_with_ios_status(port: u16, trust: &FakeMobileTrust, app_active: bool) {
     let (mut channel, reconnect) =
         connect_fake_mobile(port, 1, &trust.display_name, None, Some(trust)).await;
-    let hello = receive_cli_hello(&mut channel).await;
-    assert_eq!(hello.export_history_observation_versions, Some(vec![1]));
     channel
         .send(&DirectMessage::Hello(Unlabeled::from(mobile_capabilities(
             &reconnect,
@@ -269,6 +270,9 @@ async fn respond_with_ios_status(port: u16, trust: &FakeMobileTrust, app_active:
         ))))
         .await
         .unwrap();
+    let hello = receive_cli_hello(&mut channel).await;
+    assert_eq!(hello.export_history_observation_versions, Some(vec![1]));
+
     let SecurePayload::Message(message) = channel.receive().await.unwrap() else {
         panic!("expected status request");
     };
@@ -312,7 +316,6 @@ async fn pair_fake_android(client: &DirectClient<MemoryCredentials>) -> FakeMobi
             None,
         )
         .await;
-        let _ = receive_cli_hello(&mut channel).await;
         channel
             .send(&DirectMessage::Hello(Unlabeled::from(mobile_capabilities(
                 &trust,
@@ -322,6 +325,8 @@ async fn pair_fake_android(client: &DirectClient<MemoryCredentials>) -> FakeMobi
             ))))
             .await
             .unwrap();
+        let _ = receive_cli_hello(&mut channel).await;
+
         channel
             .send_v2(&v2::Envelope::new(v2::Message::SourceHello(
                 android_source_hello(&trust),
@@ -338,7 +343,6 @@ async fn pair_fake_android(client: &DirectClient<MemoryCredentials>) -> FakeMobi
 async fn respond_with_android_status(port: u16, trust: &FakeMobileTrust, app_active: bool) {
     let (mut channel, reconnect) =
         connect_fake_mobile(port, 2, &trust.display_name, None, Some(trust)).await;
-    let _ = receive_cli_hello(&mut channel).await;
     channel
         .send(&DirectMessage::Hello(Unlabeled::from(mobile_capabilities(
             &reconnect,
@@ -348,6 +352,8 @@ async fn respond_with_android_status(port: u16, trust: &FakeMobileTrust, app_act
         ))))
         .await
         .unwrap();
+    let _ = receive_cli_hello(&mut channel).await;
+
     let source_hello = android_source_hello(&reconnect);
     channel
         .send_v2(&v2::Envelope::new(v2::Message::SourceHello(
@@ -396,10 +402,6 @@ async fn fake_ios_peer_pairs_shared_v3_then_reconnects_with_v1_for_a_query() {
             None,
         )
         .await;
-        let cli = receive_cli_hello(&mut channel).await;
-        assert_eq!(cli.platform, PeerPlatform::Cli);
-        assert!(cli.protocol_versions.contains(&1));
-        assert!(cli.protocol_versions.contains(&3));
         channel
             .send(&DirectMessage::Hello(Unlabeled::from(mobile_capabilities(
                 &trust,
@@ -409,6 +411,11 @@ async fn fake_ios_peer_pairs_shared_v3_then_reconnects_with_v1_for_a_query() {
             ))))
             .await
             .unwrap();
+        let cli = receive_cli_hello(&mut channel).await;
+        assert_eq!(cli.platform, PeerPlatform::Cli);
+        assert!(cli.protocol_versions.contains(&1));
+        assert!(cli.protocol_versions.contains(&3));
+
         trust
     };
     let (paired, trust) = tokio::join!(pair, peer);
@@ -444,7 +451,6 @@ async fn fake_ios_peer_pairs_shared_v3_then_reconnects_with_v1_for_a_query() {
     let peer = async {
         let (mut channel, reconnect) =
             connect_fake_mobile(query_port, 1, &trust.display_name, None, Some(&trust)).await;
-        let _ = receive_cli_hello(&mut channel).await;
         let mut query_capabilities = DirectQueryCapabilities::current();
         query_capabilities.maximum_page_items = 10;
         query_capabilities.maximum_page_bytes = 32_768;
@@ -457,6 +463,8 @@ async fn fake_ios_peer_pairs_shared_v3_then_reconnects_with_v1_for_a_query() {
             ))))
             .await
             .unwrap();
+        let _ = receive_cli_hello(&mut channel).await;
+
         let SecurePayload::Message(message) = channel.receive().await.unwrap() else {
             panic!("expected query request");
         };
@@ -537,8 +545,6 @@ async fn fake_android_peer_pairs_v2_without_downgrading_to_v1() {
             None,
         )
         .await;
-        let cli = receive_cli_hello(&mut channel).await;
-        assert!(cli.protocol_versions.contains(&2));
         channel
             .send(&DirectMessage::Hello(Unlabeled::from(mobile_capabilities(
                 &trust,
@@ -548,6 +554,9 @@ async fn fake_android_peer_pairs_v2_without_downgrading_to_v1() {
             ))))
             .await
             .unwrap();
+        let cli = receive_cli_hello(&mut channel).await;
+        assert!(cli.protocol_versions.contains(&2));
+
         channel
             .send_v2(&v2::Envelope::new(v2::Message::SourceHello(
                 v2::SourceHello {
@@ -593,7 +602,6 @@ async fn respond_with_ios_status_enrolled(
 ) {
     let (mut channel, reconnect) =
         connect_fake_mobile(port, 1, &trust.display_name, None, Some(trust)).await;
-    let _ = receive_cli_hello(&mut channel).await;
     let mut capabilities = mobile_capabilities(
         &reconnect,
         PeerPlatform::Ios,
@@ -606,6 +614,8 @@ async fn respond_with_ios_status_enrolled(
         .send(&DirectMessage::Hello(Unlabeled::from(capabilities)))
         .await
         .unwrap();
+    let _ = receive_cli_hello(&mut channel).await;
+
     if let Some(enrollment) = enrollment {
         channel
             .send(&DirectMessage::WakeEnrollment(Unlabeled::from(
@@ -759,7 +769,6 @@ async fn wake_enrollment_without_advertised_support_fails_closed() {
     let rogue = async {
         let (mut channel, reconnect) =
             connect_fake_mobile(port, 1, &trust.display_name, None, Some(&trust)).await;
-        let _ = receive_cli_hello(&mut channel).await;
         channel
             .send(&DirectMessage::Hello(Unlabeled::from(mobile_capabilities(
                 &reconnect,
@@ -769,6 +778,8 @@ async fn wake_enrollment_without_advertised_support_fails_closed() {
             ))))
             .await
             .unwrap();
+        let _ = receive_cli_hello(&mut channel).await;
+
         channel
             .send(&DirectMessage::WakeEnrollment(Unlabeled::from(
                 fake_enrollment("wake-rogue"),
@@ -952,9 +963,8 @@ async fn wake_window_deadline_covers_authenticated_status_exchange() {
         (result, started.elapsed())
     };
     let peer = async {
-        let (mut channel, _) =
+        let (_channel, _) =
             connect_fake_mobile(port, 1, &trust.display_name, None, Some(&trust)).await;
-        let _ = receive_cli_hello(&mut channel).await;
         tokio::time::sleep(Duration::from_millis(1_500)).await;
     };
     let ((result, elapsed), ()) = tokio::join!(wait, peer);
@@ -1111,7 +1121,6 @@ async fn ios_only_pairing_rejects_android_and_removes_new_trust() {
             None,
         )
         .await;
-        let _ = receive_cli_hello(&mut channel).await;
         channel
             .send(&DirectMessage::Hello(Unlabeled::from(mobile_capabilities(
                 &trust,
@@ -1121,6 +1130,7 @@ async fn ios_only_pairing_rejects_android_and_removes_new_trust() {
             ))))
             .await
             .unwrap();
+        let _ = receive_cli_hello(&mut channel).await;
     };
     let (result, ()) = tokio::join!(pair, peer);
     assert!(matches!(result, Err(ClientError::Authentication(_))));
@@ -1164,7 +1174,7 @@ async fn unknown_platform_reconnect_cannot_upgrade_its_neutral_history_hello() {
             .await
             .unwrap();
             validate_iphone_peer(&connection.channel, &peer).unwrap();
-            assert_eq!(selected_history_version, None);
+            assert_eq!(selected_history_version.history_observation_version, None);
             if file_mode {
                 client
                     .process_file_export(
@@ -1181,7 +1191,7 @@ async fn unknown_platform_reconnect_cannot_upgrade_its_neutral_history_hello() {
                 client
                     .process_raw_export(
                         &mut connection.channel,
-                        selected_history_version,
+                        selected_history_version.history_observation_version,
                         &request,
                         &jobs,
                         262_144,
@@ -1194,8 +1204,6 @@ async fn unknown_platform_reconnect_cannot_upgrade_its_neutral_history_hello() {
         let peer = async {
             let (mut channel, reconnect) =
                 connect_fake_mobile(port, 3, &trust.display_name, None, Some(&trust)).await;
-            let local = receive_cli_hello(&mut channel).await;
-            assert_eq!(local.export_history_observation_versions, None);
             let mut capabilities =
                 mobile_capabilities(&reconnect, PeerPlatform::Ios, vec![1, 3], None);
             capabilities.export_history_observation_versions = Some(vec![1]);
@@ -1203,6 +1211,9 @@ async fn unknown_platform_reconnect_cannot_upgrade_its_neutral_history_hello() {
                 .send(&DirectMessage::Hello(Unlabeled::from(capabilities)))
                 .await
                 .unwrap();
+            let local = receive_cli_hello(&mut channel).await;
+            assert_eq!(local.export_history_observation_versions, None);
+
             channel
                 .send(&DirectMessage::ExportAccepted(Unlabeled::from(accepted)))
                 .await
@@ -1262,4 +1273,536 @@ fn rebound_history_acceptance_fixture(
     let accepted: healthmd_protocol::models::ExportAccepted =
         serde_json::from_value(accepted).unwrap();
     (request, accepted)
+}
+
+#[tokio::test]
+async fn note_hello_offer_is_conditional_for_ios_and_strict_android_peers() {
+    for platform in [PeerPlatform::Ios, PeerPlatform::Android] {
+        for versions in [
+            None,
+            Some(vec![]),
+            Some(vec![1]),
+            Some(vec![2]),
+            Some(vec![1, 2]),
+        ] {
+            let temporary = TempDir::new().unwrap();
+            let client = test_client(&temporary);
+            let (sender, receiver) = oneshot::channel();
+            let pair = client.pair(
+                "123456",
+                "12345678901234567890",
+                0,
+                Duration::from_secs(5),
+                move |port| sender.send(port).unwrap(),
+            );
+            let peer = async {
+                let port = receiver.await.unwrap();
+                let pairing = if platform == PeerPlatform::Ios { 3 } else { 2 };
+                let (mut channel, trust) = connect_fake_mobile(
+                    port,
+                    pairing,
+                    "Scoped note source",
+                    Some("12345678901234567890"),
+                    None,
+                )
+                .await;
+                let mut capabilities = mobile_capabilities(
+                    &trust,
+                    platform,
+                    if platform == PeerPlatform::Ios {
+                        vec![1, 3]
+                    } else {
+                        vec![2]
+                    },
+                    None,
+                );
+                capabilities.scoped_daily_note_versions = versions.clone();
+                channel
+                    .send(&DirectMessage::Hello(Unlabeled::from(capabilities)))
+                    .await
+                    .unwrap();
+                let cli = receive_cli_hello(&mut channel).await;
+                let expected = versions
+                    .as_ref()
+                    .is_some_and(|v| v.contains(&1))
+                    .then(|| vec![1]);
+                assert_eq!(cli.scoped_daily_note_versions, expected);
+                if expected.is_none() {
+                    let encoded = serde_json::to_value(&cli).unwrap();
+                    assert!(encoded.get("scopedDailyNoteVersions").is_none());
+                    if platform == PeerPlatform::Android {
+                        let known = [
+                            "protocolVersions",
+                            "platform",
+                            "installationID",
+                            "supportedRawProfiles",
+                            "supportsDurableJobs",
+                            "supportsCanonicalExtraction",
+                            "transfer",
+                            "query",
+                            "wake",
+                        ];
+                        assert!(
+                            encoded
+                                .as_object()
+                                .unwrap()
+                                .keys()
+                                .all(|key| known.contains(&key.as_str()))
+                        );
+                    }
+                }
+                if platform == PeerPlatform::Android {
+                    channel
+                        .send_v2(&v2::Envelope::new(v2::Message::SourceHello(
+                            android_source_hello(&trust),
+                        )))
+                        .await
+                        .unwrap();
+                }
+            };
+            let (paired, ()) = tokio::join!(pair, peer);
+            paired.unwrap();
+        }
+    }
+}
+
+#[tokio::test]
+#[allow(clippy::too_many_lines)]
+async fn public_ios_file_export_negotiates_and_returns_a_truthful_missing_note_skip() {
+    use healthmd_protocol::{
+        models as ios,
+        notes::ScopedDailyNotePolicy,
+        transfer::{encode_binary_chunk, request_fingerprint, sha256_hex},
+    };
+    let temporary = TempDir::new().unwrap();
+    let client = test_client(&temporary);
+    let trust = pair_fake_ios(&client).await;
+    let destination = temporary.path().join("vault");
+    fs::create_dir(&destination).unwrap();
+    let request = ios::ExportRequest {
+        protocol_version: 1,
+        job_id: SwiftUuid(Uuid::new_v4()),
+        created_at: Utc::now().with_nanosecond(0).unwrap(),
+        date_selection: ios::DateSelection::Exact(ios::ExactDateSelection {
+            start: "2026-07-23".into(),
+            end: "2026-07-23".into(),
+        }),
+        settings_policy: ios::SettingsPolicy::CurrentIphoneSettings,
+        profile_reference: None,
+        response_mode: ios::ResponseMode::WriteFiles,
+        raw_profile: None,
+        canonical_selection: None,
+        destination: Some(ios::ExportDestination {
+            root_path: destination.to_string_lossy().into(),
+        }),
+    };
+    let probe = std::net::TcpListener::bind(("127.0.0.1", 0)).unwrap();
+    let port = probe.local_addr().unwrap().port();
+    drop(probe);
+    let export = client.export_files(
+        request.clone(),
+        Some(trust.installation_id.0),
+        port,
+        Duration::from_secs(5),
+    );
+    let peer = async {
+        let (mut channel, reconnect) =
+            connect_fake_mobile(port, 1, &trust.display_name, None, Some(&trust)).await;
+        let mut capabilities = mobile_capabilities(&reconnect, PeerPlatform::Ios, vec![1, 3], None);
+        capabilities.scoped_daily_note_versions = Some(vec![1]);
+        channel
+            .send(&DirectMessage::Hello(Unlabeled::from(capabilities)))
+            .await
+            .unwrap();
+        let cli = receive_cli_hello(&mut channel).await;
+        assert_eq!(cli.scoped_daily_note_versions, Some(vec![1]));
+        let DirectMessage::ExportRequest(Unlabeled { value: received }) =
+            receive_message(&mut channel, Duration::from_secs(5))
+                .await
+                .unwrap()
+        else {
+            panic!("expected export request")
+        };
+        assert_eq!(received, request);
+        let binding = ios::PeerBinding {
+            source_installation_id: reconnect.installation_id,
+            destination_installation_id: cli.installation_id,
+        };
+        let accepted = ios::ExportAccepted {
+            job_id: request.job_id,
+            accepted_at: request.created_at,
+            peer_binding: binding.clone(),
+            resolved_date_identifiers: vec!["2026-07-23".into()],
+            source_device_name: "Synthetic iPhone".into(),
+            source_time_zone_identifier: "UTC".into(),
+            resolved_canonical_selection: None,
+            history_observation: None,
+        };
+        let session = ios::TransferSession {
+            protocol_version: 1,
+            session_id: SwiftUuid(Uuid::new_v4()),
+            job_id: request.job_id,
+            request_fingerprint: request_fingerprint(&request).unwrap(),
+            peer_binding: binding,
+            partition_target_bytes: 48 * 1024 * 1024,
+            created_at: request.created_at,
+        };
+        let data = crate::test_support::scoped_note_patch(false).into_bytes();
+        let digest = sha256_hex(&data);
+        let file_id = SwiftUuid(Uuid::new_v4());
+        let manifest = ios::FileManifest {
+            job_id: request.job_id,
+            file_id,
+            relative_path: "Daily/2026-07-23.md".into(),
+            byte_count: i64::try_from(data.len()).unwrap(),
+            sha256: digest.clone(),
+            write_mode: ios::FileWriteMode::MergeMarkdownPreservingPreamble,
+            scoped_note_policy: Some(ScopedDailyNotePolicy {
+                version: 1,
+                record_profile: "apple-v11".into(),
+                owner_date: "2026-07-23".into(),
+                calendar_timezone: "UTC".into(),
+                create_if_missing: false,
+                inject_sections: true,
+            }),
+        };
+        let transfer_id = SwiftUuid(Uuid::new_v4());
+        let partition = ios::TransferPartition {
+            index: 0,
+            transfer_id,
+            source_dates: vec![file_id.0.to_string()],
+            byte_count: manifest.byte_count,
+            chunk_count: 1,
+            sha256: digest.clone(),
+            previous_sha256: None,
+            item_segment: Some(ios::TransferItemSegment {
+                item_id: file_id.0.to_string(),
+                offset: 0,
+                item_byte_count: manifest.byte_count,
+                is_final_segment: true,
+            }),
+        };
+        for message in [
+            DirectMessage::ExportAccepted(Unlabeled::from(accepted)),
+            DirectMessage::TransferSession(Unlabeled::from(session.clone())),
+            DirectMessage::FileManifest(Unlabeled::from(manifest)),
+            DirectMessage::TransferOpen(Unlabeled::from(ios::TransferOpen {
+                session: session.clone(),
+                partition,
+            })),
+        ] {
+            channel.send(&message).await.unwrap();
+        }
+        assert!(matches!(
+            receive_message(&mut channel, Duration::from_secs(5))
+                .await
+                .unwrap(),
+            DirectMessage::TransferDisposition(_)
+        ));
+        let chunk = ios::TransferChunk {
+            transfer_id,
+            sequence: 1,
+            data: data.clone(),
+            sha256: digest.clone(),
+        };
+        channel
+            .send_binary_transfer_frame(&encode_binary_chunk(&chunk).unwrap())
+            .await
+            .unwrap();
+        assert!(matches!(
+            receive_message(&mut channel, Duration::from_secs(5))
+                .await
+                .unwrap(),
+            DirectMessage::TransferChunkAcknowledgement(_)
+        ));
+        channel
+            .send(&DirectMessage::TransferPartitionComplete(Unlabeled::from(
+                ios::TransferPartitionComplete {
+                    session_id: session.session_id,
+                    job_id: request.job_id,
+                    partition_index: 0,
+                    transfer_id,
+                    partition_sha256: digest.clone(),
+                },
+            )))
+            .await
+            .unwrap();
+        assert!(matches!(
+            receive_message(&mut channel, Duration::from_secs(5))
+                .await
+                .unwrap(),
+            DirectMessage::TransferPartitionAcknowledgement(_)
+        ));
+        channel
+            .send(&DirectMessage::TransferFinalize(Unlabeled::from(
+                ios::TransferFinalize {
+                    session_id: session.session_id,
+                    job_id: request.job_id,
+                    request_fingerprint: session.request_fingerprint.clone(),
+                    total_partitions: 1,
+                    total_bytes: i64::try_from(data.len()).unwrap(),
+                    final_partition_sha256: Some(digest),
+                    outcome: Some(ios::ExportOutcome {
+                        status: "success".into(),
+                        success_count: 1,
+                        total_count: 1,
+                        failed_date_identifiers: vec![],
+                    }),
+                },
+            )))
+            .await
+            .unwrap();
+        let DirectMessage::TransferFinalAcknowledgement(Unlabeled { value: ack }) =
+            receive_message(&mut channel, Duration::from_secs(5))
+                .await
+                .unwrap()
+        else {
+            panic!("expected final acknowledgement")
+        };
+        assert!(ack.accepted);
+        channel
+            .send(&DirectMessage::CompletionConfirmed(ios::JobIdPayload {
+                job_id: request.job_id,
+            }))
+            .await
+            .unwrap();
+    };
+    let (result, ()) = tokio::join!(export, peer);
+    let receipt = result.unwrap().receipt;
+    assert_eq!(receipt.payload.files_written, 0);
+    assert!(receipt.payload.relative_paths.is_empty());
+    assert_eq!(
+        receipt.payload.skipped_relative_paths,
+        ["Daily/2026-07-23.md"]
+    );
+    assert!(!destination.join("Daily").exists());
+}
+
+#[tokio::test]
+#[allow(clippy::too_many_lines)]
+async fn public_android_file_export_negotiates_and_returns_a_truthful_missing_note_skip() {
+    use healthmd_protocol::{
+        models as ios,
+        notes::ScopedDailyNotePolicy,
+        transfer::{encode_binary_chunk, sha256_hex},
+    };
+    let temporary = TempDir::new().unwrap();
+    let client = test_client(&temporary);
+    let trust = pair_fake_android(&client).await;
+    let destination = temporary.path().join("vault");
+    fs::create_dir(&destination).unwrap();
+    let now = Utc::now().with_nanosecond(0).unwrap();
+    let request = v2::ExportRequest {
+        job_id: Uuid::new_v4(),
+        created_at: now,
+        expires_at: now + chrono::Duration::days(7),
+        source_installation_id: trust.installation_id.0,
+        date_selection: v2::DateSelection::Exact {
+            start_date: "2026-07-23".into(),
+            end_date: "2026-07-23".into(),
+        },
+        product: v2::ExportProduct::GeneratedFilesV1 {
+            settings_policy: v2::SettingsPolicy::SavedDeviceSettings,
+            profile_reference: None,
+        },
+        destination: Some(v2::DestinationBinding {
+            binding_sha256: GeneratedDestination::open(&destination)
+                .unwrap()
+                .binding_sha256()
+                .unwrap(),
+            display_name: "Synthetic vault".into(),
+        }),
+    };
+    let probe = std::net::TcpListener::bind(("127.0.0.1", 0)).unwrap();
+    let port = probe.local_addr().unwrap().port();
+    drop(probe);
+    let export = client.export_android(
+        request.clone(),
+        Some(destination.clone()),
+        Some(trust.installation_id.0),
+        port,
+        Duration::from_secs(5),
+    );
+    let peer = async {
+        let (mut channel, reconnect) =
+            connect_fake_mobile(port, 2, &trust.display_name, None, Some(&trust)).await;
+        let mut capabilities =
+            mobile_capabilities(&reconnect, PeerPlatform::Android, vec![2], None);
+        capabilities.scoped_daily_note_versions = Some(vec![1]);
+        channel
+            .send(&DirectMessage::Hello(Unlabeled::from(capabilities)))
+            .await
+            .unwrap();
+        let cli = receive_cli_hello(&mut channel).await;
+        assert_eq!(cli.scoped_daily_note_versions, Some(vec![1]));
+        let mut source = android_source_hello(&reconnect);
+        source.products.push(v2::ProductCapability {
+            product_id: v2::ProductId::GeneratedFilesV1,
+            artifact_schema: v2::ArtifactSchema {
+                id: "healthmd.generated-files".into(),
+                major: 1,
+            },
+            formats: vec![v2::ArtifactFormat::Markdown],
+            providers: vec![],
+            settings_policies: vec![v2::SettingsPolicy::SavedDeviceSettings],
+            supports_resume: true,
+        });
+        channel
+            .send_v2(&v2::Envelope::new(v2::Message::SourceHello(source)))
+            .await
+            .unwrap();
+        let v2::Message::ExportRequest(received) = channel.receive_v2().await.unwrap().message
+        else {
+            panic!("expected export request")
+        };
+        assert_eq!(received, request);
+        let binding = v2::PeerBinding {
+            source_installation_id: reconnect.installation_id.0,
+            destination_installation_id: cli.installation_id.0,
+        };
+        let accepted = v2::ExportAccepted {
+            job_id: request.job_id,
+            accepted_at: now,
+            peer_binding: binding.clone(),
+            product_id: v2::ProductId::GeneratedFilesV1,
+            resolved_range: v2::ResolvedRange {
+                start_date: "2026-07-23".into(),
+                end_date: "2026-07-23".into(),
+                time_zone_id: "UTC".into(),
+            },
+            provider_id: None,
+            settings_snapshot_sha256: Some("2".repeat(64)),
+            request_fingerprint: v2::request_fingerprint(&request).unwrap(),
+        };
+        let session = v2::TransferSession {
+            session_id: Uuid::new_v4(),
+            job_id: request.job_id,
+            request_fingerprint: v2::request_fingerprint(&request).unwrap(),
+            peer_binding: binding,
+            partition_target_bytes: 48 * 1024 * 1024,
+            created_at: now,
+        };
+        let data = crate::test_support::scoped_note_patch(true).into_bytes();
+        let digest = sha256_hex(&data);
+        let artifact_id = Uuid::new_v4();
+        let manifest = v2::ArtifactManifest {
+            job_id: request.job_id,
+            artifact_id,
+            kind: v2::ArtifactKind::GeneratedFile,
+            schema: v2::ArtifactSchema {
+                id: "healthmd.generated-files".into(),
+                major: 1,
+            },
+            media_type: "text/markdown; charset=utf-8".into(),
+            byte_count: u64::try_from(data.len()).unwrap(),
+            sha256: digest.clone(),
+            logical_checksum_sha256: None,
+            relative_path: Some("Daily/2026-07-23.md".into()),
+            write_mode: Some(v2::FileWriteMode::MergeMarkdownPreservingPreamble),
+            scoped_note_policy: Some(ScopedDailyNotePolicy {
+                version: 1,
+                record_profile: "android-sleep-v6".into(),
+                owner_date: "2026-07-23".into(),
+                calendar_timezone: "UTC".into(),
+                create_if_missing: false,
+                inject_sections: true,
+            }),
+            snapshot_status: None,
+            provider_id: None,
+        };
+        let transfer_id = Uuid::new_v4();
+        let partition = v2::TransferPartition {
+            index: 0,
+            transfer_id,
+            artifact_id,
+            artifact_offset: 0,
+            byte_count: manifest.byte_count,
+            chunk_count: 1,
+            sha256: digest.clone(),
+            previous_sha256: None,
+        };
+        for message in [
+            v2::Message::ExportAccepted(accepted),
+            v2::Message::TransferSession(session.clone()),
+            v2::Message::ArtifactManifest(manifest),
+            v2::Message::TransferOpen(v2::TransferOpen {
+                session: session.clone(),
+                partition,
+            }),
+        ] {
+            channel.send_v2(&v2::Envelope::new(message)).await.unwrap();
+        }
+        assert!(matches!(
+            channel.receive_v2().await.unwrap().message,
+            v2::Message::TransferDisposition(_)
+        ));
+        let chunk = ios::TransferChunk {
+            transfer_id: SwiftUuid(transfer_id),
+            sequence: 1,
+            data: data.clone(),
+            sha256: digest.clone(),
+        };
+        channel
+            .send_binary_transfer_frame(&encode_binary_chunk(&chunk).unwrap())
+            .await
+            .unwrap();
+        assert!(matches!(
+            channel.receive_v2().await.unwrap().message,
+            v2::Message::TransferChunkAcknowledgement(_)
+        ));
+        channel
+            .send_v2(&v2::Envelope::new(v2::Message::TransferPartitionComplete(
+                v2::TransferPartitionComplete {
+                    session_id: session.session_id,
+                    job_id: request.job_id,
+                    partition_index: 0,
+                    transfer_id,
+                    partition_sha256: digest.clone(),
+                },
+            )))
+            .await
+            .unwrap();
+        assert!(matches!(
+            channel.receive_v2().await.unwrap().message,
+            v2::Message::TransferPartitionAcknowledgement(_)
+        ));
+        channel
+            .send_v2(&v2::Envelope::new(v2::Message::TransferFinalize(
+                v2::TransferFinalize {
+                    session_id: session.session_id,
+                    job_id: request.job_id,
+                    request_fingerprint: session.request_fingerprint.clone(),
+                    total_partitions: 1,
+                    total_bytes: u64::try_from(data.len()).unwrap(),
+                    final_partition_sha256: Some(digest),
+                },
+            )))
+            .await
+            .unwrap();
+        let v2::Message::TransferFinalAcknowledgement(ack) =
+            channel.receive_v2().await.unwrap().message
+        else {
+            panic!("expected final acknowledgement")
+        };
+        assert!(ack.accepted);
+        channel
+            .send_v2(&v2::Envelope::new(v2::Message::CompletionConfirmed(
+                v2::JobPayload {
+                    job_id: request.job_id,
+                },
+            )))
+            .await
+            .unwrap();
+    };
+    let (result, ()) = tokio::join!(export, peer);
+    let receipt = result.unwrap().receipt;
+    let value: serde_json::Value =
+        serde_json::from_slice(&fs::read(receipt.path).unwrap()).unwrap();
+    assert_eq!(value["files_written"], 0);
+    assert_eq!(value["relative_paths"], json!([]));
+    assert_eq!(
+        value["skipped_relative_paths"],
+        json!(["Daily/2026-07-23.md"])
+    );
+    assert!(!destination.join("Daily").exists());
 }

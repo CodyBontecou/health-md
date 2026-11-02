@@ -13,3 +13,5 @@ python3 -m unittest discover -s apps/apple/scripts/tests -p 'test_merge_reviewed
 python3 packages/contracts/validate.py --product-parity-only
 python3 packages/healthmd-core-rust/scripts/import-native-registry.py --check
 python3 packages/healthmd-core-rust/scripts/generate-registry-adapters.py --check
+
+python3 packages/healthmd-core-rust/scripts/update-package-fixtures.py --check

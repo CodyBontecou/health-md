@@ -3,22 +3,22 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Export Apple Health Data — CSV, JSON, Markdown &amp; Obsidian | Health.md</title>
-  <meta name="description" content="Export Apple Health data to CSV, JSON, Markdown, or your Obsidian vault. Pick your metrics and date range first — no Xcode, no scripts, no giant XML to wrangle.">
+  <title>Export Apple Health Data to CSV &amp; More | Health.md</title>
+  <meta name="description" content="Export selected Apple Health metrics and dates to CSV, JSON, Markdown, or Obsidian. Save files locally with Health.md on iPhone.">
   <link rel="canonical" href="https://healthmd.app/apple-health-export/">
   <meta name="robots" content="index,follow">
   <meta name="theme-color" content="#fafaf8">
 
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="Health.md">
-  <meta property="og:title" content="Export Apple Health Data — CSV, JSON, Markdown &amp; Obsidian">
-  <meta property="og:description" content="Pick your metrics and date range, then export Apple Health data straight to CSV, JSON, Markdown, or your Obsidian vault. No Xcode, no scripts.">
+  <meta property="og:title" content="Export Apple Health Data to CSV &amp; More | Health.md">
+  <meta property="og:description" content="Export selected Apple Health metrics and dates to CSV, JSON, Markdown, or Obsidian. Save files locally with Health.md on iPhone.">
   <meta property="og:url" content="https://healthmd.app/apple-health-export/">
   <meta property="og:image" content="https://healthmd.app/assets/app-icon/icon_1024x1024.png">
   <meta property="og:locale" content="en_US">
   <meta name="twitter:card" content="summary">
-  <meta name="twitter:title" content="Export Apple Health Data — CSV, JSON, Markdown &amp; Obsidian">
-  <meta name="twitter:description" content="Your Apple Health data, exported your way: CSV, JSON, Markdown, or Obsidian. No Xcode, no scripts.">
+  <meta name="twitter:title" content="Export Apple Health Data to CSV &amp; More | Health.md">
+  <meta name="twitter:description" content="Export selected Apple Health metrics and dates to CSV, JSON, Markdown, or Obsidian. Save files locally with Health.md on iPhone.">
   <meta name="twitter:image" content="https://healthmd.app/assets/app-icon/icon_1024x1024.png">
 
   <link rel="icon" href="/favicon.ico" sizes="any">
@@ -36,8 +36,8 @@
         "@type": "WebPage",
         "@id": "https://healthmd.app/apple-health-export/#page",
         "url": "https://healthmd.app/apple-health-export/",
-        "name": "Export Apple Health Data — CSV, JSON, Markdown & Obsidian",
-        "description": "Export Apple Health data to CSV, JSON, Markdown, or your Obsidian vault. Pick your metrics and date range first — no Xcode, no scripts, no giant XML to wrangle.",
+        "name": "Export Apple Health Data to CSV & More | Health.md",
+        "description": "Export selected Apple Health metrics and dates to CSV, JSON, Markdown, or Obsidian. Save files locally with Health.md on iPhone.",
         "inLanguage": "en",
         "publisher": { "@id": "https://healthmd.app/about/#organization" }
       },
@@ -124,12 +124,9 @@
         <h1 id="export-title">How to export Apple Health data</h1>
         <p class="about-value-prop"><strong>Health.md turns the Apple Health records you authorize into CSV, JSON, Markdown, or Obsidian files you control — with the metrics and date range you choose.</strong></p>
         <p class="about-intro">No Xcode project. No scripts. No giant XML to wrangle first.</p>
-        <div class="hero-actions" role="group" aria-label="Download Health.md">
+        <div class="hero-actions" role="group" aria-label="Download Health.md for iPhone">
           <a class="hero-store-badge hero-store-badge-apple" href="https://apps.apple.com/us/app/health-md/id6757763969" target="_blank" rel="noopener">
             <img src="/assets/store-badges/download-on-app-store.svg" width="120" height="40" decoding="async" alt="Download Health.md on the App Store">
-          </a>
-          <a class="hero-store-badge hero-store-badge-google" href="https://play.google.com/store/apps/details?id=com.healthmd.android" target="_blank" rel="noopener">
-            <img src="/assets/store-badges/get-it-on-google-play.png" width="646" height="250" decoding="async" alt="Get Health.md on Google Play">
           </a>
         </div>
       </div>
@@ -163,7 +160,18 @@
           <p>Already have Apple's archive? Follow the <a href="/blog/apple-health-xml-export/">Apple Health XML guide</a> to open <code>export.xml</code> and choose an archive conversion or a fresh CSV export.</p>
           <p>Already tried an export? If records are missing or the file is empty, follow the <a href="/docs/troubleshooting/">Apple Health export troubleshooting checklist</a> before exporting a larger range.</p>
           <p>Choosing an export app? <a href="/blog/health-md-vs-health-auto-export/">Compare Health.md and Health Auto Export</a> for notes, CSV files, destination integrations, and automation.</p>
-          <p>Using Android? Start with the <a href="/health-connect-export/">Health Connect export guide</a>. Available records and export detail differ by platform.</p>
+          <h3 id="source-guides">Choose your source app</h3>
+          <p>Check which records your source app has written to Apple Health before exporting. These guides distinguish the app's own downloads from the records available through Apple Health.</p>
+          <ul>
+            <li><a href="/blog/export-oura-data/">Oura export guide</a>: account downloads, membership requirements and shared record coverage.</li>
+            <li><a href="/blog/export-whoop-data/">WHOOP export guide</a>: native CSV and Apple Health sharing limits, including HRV.</li>
+            <li><a href="/blog/export-withings-data/">Withings export guide</a>: native CSV and the current account eligibility rules for sharing.</li>
+            <li><a href="/blog/export-strava-data/">Strava export guide</a>: activity files or shared workouts, including route restrictions.</li>
+            <li><a href="/blog/export-cronometer-data/">Cronometer export guide</a>: native diary CSV and selected shared nutrient records.</li>
+            <li><a href="/blog/export-myfitnesspal-data/">MyFitnessPal export guide</a>: native CSV, free website reports and shared meal-summary limits.</li>
+            <li><a href="/blog/export-polar-flow-data/">Polar Flow export guide</a>: training files, archive exclusions and workout heart-rate sharing.</li>
+          </ul>
+          <p>Using Android? Start with the <a href="/health-connect-export/">Health Connect export guide</a> or <a href="https://play.google.com/store/apps/details?id=com.healthmd.android" target="_blank" rel="noopener">get Health.md on Google Play</a>. Available records and export detail differ by platform.</p>
         </section>
 
         <section class="about-section" id="how-it-works">
@@ -244,6 +252,7 @@
         <section class="about-section" id="keep-going">
           <p class="section-kicker">Keep going</p>
           <h2>What to do with your export</h2>
+          <p>For a daily weight table, follow the <a href="/blog/export-apple-health-weight-data/">Apple Health weight export guide</a>. It explains the latest-record rule, units, and when to choose original measurement records instead.</p>
           <div class="about-card-grid">
             <div class="about-card">
               <h3>Create a PDF report</h3>

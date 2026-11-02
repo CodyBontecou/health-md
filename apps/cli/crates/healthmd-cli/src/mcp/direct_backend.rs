@@ -837,6 +837,19 @@ fn export_success(payload: &FileReceiptPayload) -> Value {
         "failed_date_identifier_count": payload.failed_date_identifiers.len(),
         "failed_date_identifiers_truncated": payload.failed_date_identifiers.len() > MAXIMUM_RECEIPT_PATHS
     });
+    if !payload.skipped_relative_paths.is_empty() {
+        receipt["message"] = json!("Health.md completed the export with skipped notes.");
+        receipt["skipped_relative_paths"] = json!(
+            payload
+                .skipped_relative_paths
+                .iter()
+                .take(MAXIMUM_RECEIPT_PATHS)
+                .collect::<Vec<_>>()
+        );
+        receipt["skipped_relative_path_count"] = json!(payload.skipped_relative_paths.len());
+        receipt["skipped_relative_paths_truncated"] =
+            json!(payload.skipped_relative_paths.len() > MAXIMUM_RECEIPT_PATHS);
+    }
     attach_history_observation(&mut receipt, payload.history_observation.as_ref());
     if let Some(sidecar) = &payload.history_sidecar {
         receipt["history_sidecar"] = json!(sidecar);
@@ -1222,6 +1235,11 @@ mod tests {
             "relative_paths":["daily.md"],"success_count":1,"total_count":1,"failed_date_identifiers":[]});
         let legacy: FileReceiptPayload = serde_json::from_value(value.clone()).unwrap();
         assert!(export_success(&legacy).get("history_observation").is_none());
+        assert!(
+            export_success(&legacy)
+                .get("skipped_relative_paths")
+                .is_none()
+        );
         value["history_observation"] = json!({
             "schema":"healthmd.export_history_observation", "schema_version":1,
             "observation_id":Uuid::new_v4(), "operation_id":value["job_id"],
@@ -1242,6 +1260,21 @@ mod tests {
         assert_eq!(receipt["history_sidecar"], value["history_sidecar"]);
         assert_eq!(receipt["files_written"], 1);
         assert_eq!(receipt["status"], "success");
+        value["skipped_relative_paths"] = json!(
+            (0..300)
+                .map(|i| format!("Daily/skipped-{i}.md"))
+                .collect::<Vec<_>>()
+        );
+        let skipped: FileReceiptPayload = serde_json::from_value(value).unwrap();
+        let receipt = export_success(&skipped);
+        assert_eq!(receipt["skipped_relative_path_count"], 300);
+        assert_eq!(
+            receipt["skipped_relative_paths"].as_array().unwrap().len(),
+            256
+        );
+        assert_eq!(receipt["skipped_relative_paths_truncated"], true);
+        assert_eq!(receipt["relative_paths"], json!(["daily.md"]));
+        assert_eq!(receipt["files_written"], 1);
     }
 
     #[test]

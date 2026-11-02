@@ -684,6 +684,7 @@ final class IPhoneExportPerformanceLabCoordinator: ObservableObject {
             negotiation: negotiation,
             healthKitManager: healthKitManager,
             externalRecordFetcher: externalFetcher,
+            externalIntegrations: externalIntegrations,
             syncService: syncService,
             origin: .interactiveIPhone
         )

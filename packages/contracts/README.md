@@ -20,6 +20,13 @@ The package is licensed under the [GNU Affero General Public License v3.0 only](
 | [`shared-setup/v2`](shared-setup/v2/contract.md) | Public bounded Apple/Android portable named-profile setup bundle with registry-backed alias union, exact v2 platform extensions, non-operative destination/schedule intent, and language-neutral Add/Replace/Undo transaction semantics; version 2 is the one and only profile version |
 | [`agent-data/v1`](agent-data/v1/contract.md) | Public read-only grant, query, and response contracts plus phone-to-gateway ingestion manifest and health-free receipt contracts, shared by local and future hosted agent data stores |
 
+## Scoped direct notes (staged)
+
+[Direct scoped daily-note writes v1](direct-protocol/scoped-notes-v1/contract.md) defines bilateral
+capability negotiation, frozen per-note policy, capture binding, and host-owned skip/install
+recovery. Portable CLI negotiation and receiver behavior are staged; native producers do not
+advertise the extension yet.
+
 ## History evidence (staged)
 
 | Path | Purpose |
@@ -55,6 +62,7 @@ Run the package checks from the repository root:
 
 ```bash
 python3 packages/contracts/validate.py
+python3 -m unittest discover -s packages/contracts -p test_validate_sleep_attribution.py
 # or
 make test-contracts
 
@@ -111,3 +119,5 @@ Canonical fixtures contain synthetic protocol values only; never add health reco
 Do not regenerate a fixture merely to make a failing consumer pass.
 
 The independently published Rust crates keep protocol, semantic, and render differential fixture mirrors inside their Cargo packages so release archives remain self-contained. `validate.py` requires those mirrors to be byte-identical to the canonical assets. Android's in-repository Gradle module consumes the canonical v2 fixture directly.
+
+The deferred [sleep-attribution successor](sleep-attribution/v1/contract.md) inventories three synthetic Android-to-core v2 interoperability fixtures (the original handoff/plan pair plus a metadata-off exact-summary plan) with reviewed hashes. Validation checks the schemas and cross-stage authority, batch sequencing, artifact identity and content integrity. This bounded evidence does not enable Morning ends, qualify all successor grammars, or change historical profile inventories/signatures.

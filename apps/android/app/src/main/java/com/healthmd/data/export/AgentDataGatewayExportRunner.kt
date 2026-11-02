@@ -2,6 +2,12 @@ package com.healthmd.data.export
 
 import com.healthmd.data.health.isLikelyHealthConnectRateLimit
 import com.healthmd.data.isHealthConnectRateLimit
+import com.healthmd.domain.exportengine.ExportEnginePinCodec
+import com.healthmd.domain.exportengine.ExportEnginePinPlanner
+import com.healthmd.domain.model.AndroidCaptureContext
+import com.healthmd.domain.model.SleepDayAttribution
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import com.healthmd.domain.exportengine.AndroidDailyAggregateExportPlanner
 import com.healthmd.domain.exportengine.LocalDailyAggregateExportPlanner
 import com.healthmd.domain.exportengine.LocalDailyAggregatePlanningResult
@@ -13,6 +19,7 @@ import com.healthmd.domain.model.AgentDataGatewayEndpoint
 import com.healthmd.domain.model.ExportFailureReason
 import com.healthmd.domain.model.ExportFormat
 import com.healthmd.domain.model.ExportPreview
+import com.healthmd.domain.model.ExportPreviewSleepWindow
 import com.healthmd.domain.model.ExportPreviewDay
 import com.healthmd.domain.model.ExportPreviewFile
 import com.healthmd.domain.model.ExportResult
@@ -21,6 +28,7 @@ import com.healthmd.domain.model.ExportTarget
 import com.healthmd.domain.model.FailedDateDetail
 import com.healthmd.domain.model.HealthData
 import com.healthmd.domain.repository.HealthRepository
+import com.healthmd.domain.repository.forCaptureOperation
 import com.healthmd.rawexport.allowsInteractiveRouteConsent
 import java.time.LocalDate
 import java.time.ZoneId
@@ -39,9 +47,28 @@ interface AgentDataGatewayCaptureSource {
     suspend fun capture(date: LocalDate, settings: ExportSettings): HealthData
 }
 
+/** Resolve the device preference once, before consent or any provider capture. */
+internal interface OperationScopedAgentDataGatewayCaptureSource : AgentDataGatewayCaptureSource {
+    suspend fun forCaptureOperation(): AgentDataGatewayCaptureSource = this
+    suspend fun forCaptureOperation(settings: ExportSettings): AgentDataGatewayCaptureSource {
+        check(settings.executionProviderCaptureAuthority == null && !settings.executionProviderCaptureAuthorityIsFrozen) {
+            "This source cannot restore accepted provider authority"
+        }
+        return forCaptureOperation()
+    }
+    suspend fun resolveCaptureContext(zoneId: ZoneId): AndroidCaptureContext
+}
+
 private class HealthRepositoryAgentDataGatewayCaptureSource(
     private val healthRepository: HealthRepository,
-) : AgentDataGatewayCaptureSource {
+) : OperationScopedAgentDataGatewayCaptureSource {
+    override suspend fun forCaptureOperation(): AgentDataGatewayCaptureSource =
+        HealthRepositoryAgentDataGatewayCaptureSource(healthRepository.forCaptureOperation())
+    override suspend fun forCaptureOperation(settings: ExportSettings): AgentDataGatewayCaptureSource =
+        HealthRepositoryAgentDataGatewayCaptureSource(healthRepository.forCaptureOperation(settings))
+    override suspend fun resolveCaptureContext(zoneId: ZoneId): AndroidCaptureContext =
+        healthRepository.resolveCaptureContext(zoneId)
+
     override fun isBeforeFirstUnlock(): Boolean = healthRepository.isBeforeFirstUnlock()
 
     override suspend fun authorizeExerciseRouteConsent(dates: List<LocalDate>, settings: ExportSettings) {
@@ -51,27 +78,23 @@ private class HealthRepositoryAgentDataGatewayCaptureSource(
                 dates = dates,
                 dataTypes = effectiveSelection,
                 includeGranularData = settings.shouldFetchGranularData(),
-                zoneId = settings.executionEnginePin?.ianaTimeZone?.let(ZoneId::of)
-                    ?: ZoneId.systemDefault(),
+                zoneId = requireNotNull(settings.executionSleepCaptureContext).zoneId,
             )
         }
     }
 
     override suspend fun capture(date: LocalDate, settings: ExportSettings): HealthData {
+        val context = AndroidCaptureContext.recovered(settings.executionSleepCaptureContext)
         val effectiveSelection = settings.effectiveDataTypeSelection()
         val captured = healthRepository.fetchHealthDataRange(
             dates = listOf(date),
             dataTypes = effectiveSelection,
             includeGranularData = settings.shouldFetchGranularData(),
+            zoneId = context.zoneId,
+            sleepDayAttributionOverride = context.explicitSleepDayAttributionOverride,
         ).firstOrNull() ?: HealthData(date)
-        val filtered = captured
-            .filtered(effectiveSelection)
-            .filtered(settings.metricSelection)
-        if (filtered.hasAnyData) return filtered
-
-        return healthRepository.fetchHealthData(date)
-            .filtered(effectiveSelection)
-            .filtered(settings.metricSelection)
+        // A successful empty range is valid absence, not permission to recapture under today's settings.
+        return captured.filtered(effectiveSelection).filtered(settings.metricSelection, context)
     }
 }
 
@@ -154,14 +177,31 @@ class AgentDataGatewayExportRunner private constructor(
             return configurationFailure(normalizedDates, ExportFailureReason.INVALID_API_ENDPOINT)
         }
 
+        if (captureSource.isBeforeFirstUnlock()) {
+            return configurationFailure(normalizedDates, ExportFailureReason.DEVICE_LOCKED)
+        }
+        val (capturedSettings, operationSource) = try {
+            val frozen = snapshotForCapture(settings.frozenForAPIAction())
+            val scopedSource = captureSource as? OperationScopedAgentDataGatewayCaptureSource
+            check(scopedSource != null || (frozen.executionProviderCaptureAuthority == null &&
+                !frozen.executionProviderCaptureAuthorityIsFrozen)) { "This source cannot restore accepted provider authority" }
+            val source = scopedSource?.forCaptureOperation(frozen) ?: captureSource
+            frozen to source
+        } catch (_: CancellationException) {
+            return cancelledResult(normalizedDates, emptyList())
+        } catch (error: Throwable) {
+            if (error.isFatalExportEngineFailure()) throw error
+            return configurationFailure(normalizedDates, ExportFailureReason.UNKNOWN)
+        }
+
         var successCount = 0
         val failures = mutableListOf<FailedDateDetail>()
         val outcomes = mutableListOf<AgentDataArtifactOutcome>()
         var lastStatusCode: Int? = null
 
-        if (coroutineContext.allowsInteractiveRouteConsent() && !captureSource.isBeforeFirstUnlock()) {
+        if (coroutineContext.allowsInteractiveRouteConsent() && !operationSource.isBeforeFirstUnlock()) {
             try {
-                captureSource.authorizeExerciseRouteConsent(normalizedDates, settings)
+                operationSource.authorizeExerciseRouteConsent(normalizedDates, capturedSettings)
             } catch (_: CancellationException) {
                 return cancelledResult(normalizedDates, outcomes)
             } catch (_: Exception) {
@@ -178,13 +218,13 @@ class AgentDataGatewayExportRunner private constructor(
             }
             onProgress?.invoke(index + 1, normalizedDates.size, date.toString())
 
-            if (captureSource.isBeforeFirstUnlock()) {
+            if (operationSource.isBeforeFirstUnlock()) {
                 failures += FailedDateDetail(date, ExportFailureReason.DEVICE_LOCKED)
                 continue
             }
 
             val data = try {
-                captureSource.capture(date, settings)
+                operationSource.capture(date, capturedSettings)
             } catch (error: CancellationException) {
                 throw error
             } catch (error: SecurityException) {
@@ -201,7 +241,7 @@ class AgentDataGatewayExportRunner private constructor(
             }
 
             val artifacts = try {
-                renderDailyJsonArtifacts(data, settings)
+                renderDailyJsonArtifacts(data, capturedSettings)
             } catch (error: Throwable) {
                 if (error is CancellationException) throw error
                 if (error.isFatalExportEngineFailure()) throw error
@@ -298,6 +338,24 @@ class AgentDataGatewayExportRunner private constructor(
         if (previewCandidates.isEmpty()) {
             return ExportPreview(0, 0, false, emptyList())
         }
+        if (captureSource.isBeforeFirstUnlock()) {
+            return ExportPreview(normalizedDates.size, 0, normalizedDates.size > previewCandidates.size,
+                previewCandidates.map { ExportPreviewDay(it, failureReason = ExportFailureReason.DEVICE_LOCKED) })
+        }
+        val (capturedSettings, operationSource) = try {
+            val frozen = snapshotForCapture(settings.frozenForAPIAction())
+            val scopedSource = captureSource as? OperationScopedAgentDataGatewayCaptureSource
+            check(scopedSource != null || (frozen.executionProviderCaptureAuthority == null &&
+                !frozen.executionProviderCaptureAuthorityIsFrozen)) { "This source cannot restore accepted provider authority" }
+            val source = scopedSource?.forCaptureOperation(frozen) ?: captureSource
+            frozen to source
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Throwable) {
+            if (error.isFatalExportEngineFailure()) throw error
+            return ExportPreview(normalizedDates.size, 0, false,
+                previewCandidates.map { ExportPreviewDay(it, failureReason = ExportFailureReason.UNKNOWN) })
+        }
         val days = mutableListOf<ExportPreviewDay>()
         var attemptedDateCount = 0
         for (date in previewCandidates) {
@@ -306,15 +364,15 @@ class AgentDataGatewayExportRunner private constructor(
             attemptedDateCount++
             onProgress?.invoke(attemptedDateCount, previewCandidates.size, date.toString())
 
-            val previewDay = if (captureSource.isBeforeFirstUnlock()) {
+            val previewDay = if (operationSource.isBeforeFirstUnlock()) {
                 ExportPreviewDay(date = date, failureReason = ExportFailureReason.DEVICE_LOCKED)
             } else {
                 try {
-                    val data = captureSource.capture(date, settings)
+                    val data = operationSource.capture(date, capturedSettings)
                     if (!data.hasAnyData) {
                         ExportPreviewDay(date = date, failureReason = ExportFailureReason.NO_HEALTH_DATA)
                     } else {
-                        val artifacts = renderDailyJsonArtifacts(data, settings)
+                        val artifacts = renderDailyJsonArtifacts(data, capturedSettings)
                         if (artifacts.isEmpty()) {
                             ExportPreviewDay(
                                 date = date,
@@ -351,7 +409,39 @@ class AgentDataGatewayExportRunner private constructor(
             previewedDateCount = days.count { it.hasOutput },
             isTruncated = normalizedDates.size > attemptedDateCount,
             days = days,
+            sleepWindow = ExportPreviewSleepWindow.capture(normalizedDates, capturedSettings,
+                capturedSettings.executionSleepCaptureContext),
         )
+    }
+
+    private suspend fun snapshotForCapture(settings: ExportSettings): ExportSettings {
+        val zone = settings.executionSleepCaptureContext?.zoneId
+            ?: settings.executionEnginePin?.ianaTimeZone?.let(ZoneId::of) ?: ZoneId.systemDefault()
+        val context = if (settings.executionSleepCaptureAuthorityIsFrozen || settings.executionSleepCaptureContext != null) {
+            AndroidCaptureContext.recovered(settings.executionSleepCaptureContext)
+        } else (captureSource as? OperationScopedAgentDataGatewayCaptureSource)?.resolveCaptureContext(zone)
+            ?.also { it.requireShippedProfile() }
+        var captured = if (context == null) settings else settings.copy(
+            executionSleepCaptureContext = context, executionSleepCaptureAuthorityIsFrozen = true)
+        val planner = ExportEnginePinPlanner()
+        captured.executionEnginePin?.let { pin ->
+            require(ExportEnginePinCodec.isStructurallyValid(pin) && pin.ianaTimeZone == zone.id) {
+                "Gateway renderer authority is incompatible"
+            }
+        }
+        if (context?.sleepDayAttribution == SleepDayAttribution.MORNING_ENDS) {
+            val pin = captured.executionEnginePin ?: if (captured.executionEngineAuthorityIsFrozen) null else
+                withContext(Dispatchers.Default) { planner.forScheduledExport(captured, ExportTarget.AGENT_DATA_GATEWAY, zone) }
+            require(pin != null && planner.persistedPinAppliesToScheduledExport(captured, ExportTarget.AGENT_DATA_GATEWAY, pin)) {
+                "Gateway capture and renderer authority are incompatible"
+            }
+            captured = captured.copy(executionEnginePin = pin, executionEngineAuthorityIsFrozen = true)
+        } else if (captured.executionEnginePin != null) {
+            require(planner.persistedPinAppliesToScheduledExport(captured, ExportTarget.AGENT_DATA_GATEWAY, captured.executionEnginePin)) {
+                "Gateway capture and renderer authority are incompatible"
+            }
+        }
+        return captured
     }
 
     /**
@@ -364,9 +454,13 @@ class AgentDataGatewayExportRunner private constructor(
         settings: ExportSettings,
     ): List<AgentDataPreparedArtifact> {
         val ownerDate = data.date
-        return when (val selection = dailyAggregatePlanner.plan(data, settings)) {
-            LocalDailyAggregatePlanningResult.Legacy ->
+        return when (val selection = dailyAggregatePlanner.plan(data, settings.copy(exportTarget = ExportTarget.DEVICE_FOLDER))) {
+            LocalDailyAggregatePlanningResult.Legacy -> {
+                require(settings.executionSleepCaptureContext?.sleepDayAttribution != SleepDayAttribution.MORNING_ENDS) {
+                    "Gateway successor cannot use historical rendering"
+                }
                 legacyDailyJsonArtifact(data, settings, ownerDate)?.let { listOf(it) }.orEmpty()
+            }
             is LocalDailyAggregatePlanningResult.Failed -> emptyList()
             is LocalDailyAggregatePlanningResult.Planned ->
                 selection.plan.items.asSequence()

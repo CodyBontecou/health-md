@@ -39,6 +39,8 @@ import java.time.ZoneId
 import java.time.ZoneOffset
 import kotlin.reflect.KClass
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
+import kotlin.time.Duration.Companion.nanoseconds
 import kotlin.time.Duration.Companion.minutes
 
 @OptIn(ExperimentalPersonalHealthRecordApi::class)
@@ -328,6 +330,7 @@ class HealthConnectManager(
         includeGranularData: Boolean,
         zoneId: ZoneId = ZoneId.systemDefault(),
         pinnedCalendarDays: Boolean = false,
+        sleepDayAttribution: SleepDayAttribution = SleepDayAttribution.DEFAULT,
     ): List<HealthData> {
         if (dates.isEmpty()) return emptyList()
 
@@ -366,10 +369,10 @@ class HealthConnectManager(
             applyMobilityAggregates(dataByDate, chunkDates, localRange, selection)
 
             if (selection.sleep) {
-                applySleepRange(dataByDate, chunkDates, zoneId, includeGranularData)
+                applySleepRange(dataByDate, chunkDates, zoneId, includeGranularData, sleepDayAttribution = sleepDayAttribution)
             }
             if (selection.activity || selection.workouts || selection.heart || selection.mobility) {
-                applyExerciseRange(dataByDate, chunkDates, instantRange, selection, includeGranularData, zoneId)
+                applyExerciseRange(dataByDate, chunkDates, instantRange, selection, includeGranularData, zoneId, sleepDayAttribution)
             }
             if (selection.activity && includeGranularData) {
                 applyStepSamplesRange(dataByDate, chunkDates, instantRange, zoneId)
@@ -423,6 +426,7 @@ class HealthConnectManager(
         dates: List<LocalDate>,
         selection: HealthConnectWidgetReadSelection,
         zoneId: ZoneId = ZoneId.systemDefault(),
+        sleepDayAttribution: SleepDayAttribution = SleepDayAttribution.DEFAULT,
     ): List<HealthData> {
         if (dates.isEmpty()) return emptyList()
         require(selection.hasAny) { "At least one widget health record family is required." }
@@ -452,6 +456,7 @@ class HealthConnectManager(
                     zone,
                     includeGranularData = false,
                     strictReads = true,
+                    sleepDayAttribution = sleepDayAttribution,
                 )
             }
             if (selection.heartRate) {
@@ -929,12 +934,14 @@ class HealthConnectManager(
         zone: ZoneId,
         includeGranularData: Boolean,
         strictReads: Boolean = false,
+        sleepDayAttribution: SleepDayAttribution = SleepDayAttribution.DEFAULT,
     ) {
         for ((date, sleep) in readSleepData(
             requestedDates = requestedDates,
             zone = zone,
             includeGranularData = includeGranularData,
             strictReads = strictReads,
+            sleepDayAttribution = sleepDayAttribution,
         )) {
             if (!sleep.hasData) continue
             dataByDate.update(date) { current -> current.copy(sleep = sleep) }
@@ -946,6 +953,7 @@ class HealthConnectManager(
         zone: ZoneId,
         includeGranularData: Boolean,
         strictReads: Boolean = false,
+        sleepDayAttribution: SleepDayAttribution = SleepDayAttribution.DEFAULT,
     ): Map<LocalDate, SleepData> {
         val queryInterval = SleepJournalSummary.queryInterval(requestedDates, zone)
         val timeRange = TimeRangeFilter.between(queryInterval.start, queryInterval.endExclusive)
@@ -959,6 +967,7 @@ class HealthConnectManager(
             requestedDates = requestedDates,
             zone = zone,
             includeGranularData = includeGranularData,
+            attribution = sleepDayAttribution,
         )
     }
 
@@ -1016,6 +1025,7 @@ class HealthConnectManager(
         selection: DataTypeSelection,
         includeGranularData: Boolean,
         zone: ZoneId,
+        attribution: SleepDayAttribution,
     ) {
         val sessionsByDate = readRecordsOrEmpty(ExerciseSessionRecord::class, timeRange)
             .groupBy { it.startTime.atZone(zone).toLocalDate() }
@@ -1039,7 +1049,8 @@ class HealthConnectManager(
             // Routes are a persistent precise-location grant. Do not ask when the selected
             // compatibility output does not include workouts and therefore cannot consume them.
             val grantedRoutes = if (selection.workouts) requestGrantedExerciseRoutes(sessions) else emptyMap()
-            val workouts = sessions.map { buildWorkoutData(it, zone, sources, includeGranularData, grantedRoutes) }
+            val workouts = sessions.map { buildWorkoutData(it, zone, sources, includeGranularData, grantedRoutes,
+                preserveExactIntervals = attribution == SleepDayAttribution.MORNING_ENDS) }
             val minutes = sessions.sumOf {
                 java.time.Duration.between(it.startTime, it.endTime).toMinutes().toDouble()
             }
@@ -2941,6 +2952,7 @@ class HealthConnectManager(
         sources: WorkoutSourceRecords,
         includeGranularData: Boolean,
         grantedRoutes: Map<String, ExerciseRoute> = emptyMap(),
+        preserveExactIntervals: Boolean = false,
     ): WorkoutData {
         val duration = java.time.Duration.between(session.startTime, session.endTime)
         val heartSamples = sources.heartRateRecords
@@ -3071,8 +3083,9 @@ class HealthConnectManager(
             routePoints,
             heartSamples,
             WORKOUT_SPLIT_DISTANCE_METERS,
+            capturedZone = if (preserveExactIntervals) zone else null,
         )
-            .ifEmpty { laps.deriveLapSplits(heartSamples) }
+            .ifEmpty { laps.deriveLapSplits(heartSamples, preserveExactIntervals) }
         val workoutIdentity = session.metadata.toExactSourceIdentity(
             "health_connect_workout",
             session.exerciseType,
@@ -3088,7 +3101,8 @@ class HealthConnectManager(
             endTime = LocalDateTime.ofInstant(session.endTime, zone),
             isIndoor = inferIsIndoor(session.exerciseType),
             metadata = session.serializedWorkoutMetadata(),
-            duration = duration.toMillis().milliseconds,
+            duration = if (preserveExactIntervals) duration.seconds.seconds + duration.nano.nanoseconds
+                else duration.toMillis().milliseconds,
             calories = calories,
             distance = distance,
             elevationGained = elevation,
@@ -3472,16 +3486,24 @@ class HealthConnectManager(
 
     private fun List<WorkoutLapData>.deriveLapSplits(
         heartSamples: List<TimestampedSample>,
+        preserveExactIntervals: Boolean,
     ): List<WorkoutSplitData> = mapIndexedNotNull { index, lap ->
-        val duration = java.time.Duration.between(lap.startTime, lap.endTime)
+        val duration = if (preserveExactIntervals) java.time.Duration.between(
+            requireNotNull(lap.exactStartTime) { "native workout lap start is unavailable" }.instant(),
+            requireNotNull(lap.exactEndTime) { "native workout lap end is unavailable" }.instant())
+            else java.time.Duration.between(lap.startTime, lap.endTime)
         if (duration.isNegative || duration.isZero) return@mapIndexedNotNull null
         WorkoutSplitData(
             index = index + 1,
             startTime = lap.startTime,
             endTime = lap.endTime,
-            duration = duration.toMillis().milliseconds,
+            duration = if (preserveExactIntervals) duration.seconds.seconds + duration.nano.nanoseconds
+                else duration.toMillis().milliseconds,
             distance = lap.length,
-            averageHeartRate = heartSamples.averageBetween(lap.startTime, lap.endTime),
+            averageHeartRate = if (preserveExactIntervals) heartSamples.filter { sample ->
+                val instant = requireNotNull(sample.exactTime) { "native workout sample clock is unavailable" }.instant()
+                !instant.isBefore(requireNotNull(lap.exactStartTime).instant()) && !instant.isAfter(requireNotNull(lap.exactEndTime).instant())
+            }.map { it.value }.averageOrNull() else heartSamples.averageBetween(lap.startTime, lap.endTime),
             exactStartTime = lap.exactStartTime,
             exactEndTime = lap.exactEndTime,
             identity = syntheticChildIdentity("workout_split_from_lap", lap.identity?.syntheticId, index + 1),

@@ -2,7 +2,7 @@ import CryptoKit
 import Foundation
 import HealthMdCoreRust
 
-/// Deterministic Apple post-capture adapter for `healthmd.semantic_input` v1.
+/// Deterministic Apple post-capture adapter for historical v1 and explicit wake-date v2.
 ///
 /// HealthKit is never queried here. Existing `HealthData` values are frozen once, represented as
 /// SDK aggregate facts, and sent in coarse batches. Public rendering remains native through M4.
@@ -20,6 +20,8 @@ nonisolated enum HealthMdSemanticInputAdapter {
         case limitExceeded
         case invalidSessionResult
         case serializationFailed
+        case invalidCaptureAuthority
+        case unavailableWakeDateQuantity
     }
 
     struct ExtensionLocation: Sendable, Equatable {
@@ -51,10 +53,17 @@ nonisolated enum HealthMdSemanticInputAdapter {
         calendarTimeZoneIdentifier: String,
         retainPlatformExtensions: Bool,
         rollupPeriods: [HealthRollupPeriod],
-        requestedRange: HealthRollupRangeRequest? = nil
+        requestedRange: HealthRollupRangeRequest? = nil,
+        captureContext: AppleSleepCaptureContext? = nil
     ) throws -> Data {
-        guard AppleExportEnginePin.supportsRegistry(registry)
-        else { throw AdapterError.invalidRegistry }
+        let inputVersion = try validatedInputVersion(registry: registry,
+            calendarTimeZoneIdentifier: calendarTimeZoneIdentifier, captureContext: captureContext)
+        guard inputVersion == semanticInputVersion || (rollupPeriods.isEmpty && requestedRange == nil)
+                || (inputVersion == AppleExportEnginePin.wakeDateHandoffVersion
+                    && registry.profileId == AppleExportEnginePin.wakeDateProfileID
+                    && rollupPeriods == [.range] && requestedRange != nil) else {
+            throw AdapterError.invalidSessionResult
+        }
         guard calendarTimeZoneIdentifier == "UTC"
                 || TimeZone.knownTimeZoneIdentifiers.contains(calendarTimeZoneIdentifier)
         else { throw AdapterError.invalidTimeZone }
@@ -75,7 +84,9 @@ nonisolated enum HealthMdSemanticInputAdapter {
             }
         }
         let containsRange = rollupPeriods.contains(.range)
-        guard !containsRange || registry.profileId == "apple_health_data_v8",
+        guard !containsRange || registry.profileId == "apple_health_data_v8"
+                || (inputVersion == AppleExportEnginePin.wakeDateHandoffVersion
+                    && registry.profileId == AppleExportEnginePin.wakeDateProfileID),
               containsRange == (requestedRange != nil),
               !containsRange || rollupPeriods == [.range],
               requestedRange?.calendarTimeZoneIdentifier == nil
@@ -87,9 +98,9 @@ nonisolated enum HealthMdSemanticInputAdapter {
         let semanticProfileRevision: UInt32 = containsRange ? 2 : 1
         var payload: [String: Any] = [
             "schema": "healthmd.semantic_session_config",
-            "semantic_input_version": semanticInputVersion,
-            "canonical_model_version": canonicalModelVersion,
-            "registry_version": registryVersion,
+            "semantic_input_version": inputVersion,
+            "canonical_model_version": inputVersion,
+            "registry_version": registry.registryVersion,
             "registry_sha256": registry.registrySha256,
             "profile_revision": semanticProfileRevision,
             "session_id": sessionID,
@@ -126,11 +137,16 @@ nonisolated enum HealthMdSemanticInputAdapter {
         registry: CoreMetricRegistrySnapshot,
         customization: FormatCustomization,
         calendarTimeZoneIdentifier: String,
-        startingSourceOrdinal: UInt64 = 0
+        startingSourceOrdinal: UInt64 = 0,
+        captureContext: AppleSleepCaptureContext? = nil,
+        includeArchiveExtensions: Bool = true
     ) throws -> EncodedBatch {
-        guard AppleExportEnginePin.supportsRegistry(registry) else {
-            throw AdapterError.invalidRegistry
-        }
+        let inputVersion = try validatedInputVersion(registry: registry,
+            calendarTimeZoneIdentifier: calendarTimeZoneIdentifier, captureContext: captureContext)
+        guard healthData.allSatisfy({
+            ($0.timeContext.sleepDayAttribution ?? .nightBegins)
+                == (inputVersion == semanticInputVersion ? .nightBegins : .morningEnds)
+        }) else { throw AdapterError.invalidCaptureAuthority }
         guard (calendarTimeZoneIdentifier == "UTC"
                 || TimeZone.knownTimeZoneIdentifiers.contains(calendarTimeZoneIdentifier)),
               let calendarTimeZone = TimeZone(identifier: calendarTimeZoneIdentifier),
@@ -171,6 +187,15 @@ nonisolated enum HealthMdSemanticInputAdapter {
             let day = capturedDay.day
             let snapshot = day.exportSnapshot(customization: customization)
             let ownerDate = capturedDay.ownerDate
+            if inputVersion != semanticInputVersion, day.sleep.hasData || !day.sleep.stages.isEmpty {
+                let bounds = day.sleep.sourceSessionBounds
+                    ?? .init(start: day.sleep.sessionStart, end: day.sleep.sessionEnd)
+                guard let start = bounds.start, let end = bounds.end,
+                      start.timeIntervalSince1970.isFinite, end.timeIntervalSince1970.isFinite,
+                      start < end, ownerDateString(end, timeZone: calendarTimeZone) == ownerDate else {
+                    throw AdapterError.invalidCaptureAuthority
+                }
+            }
             let exactDay = try exactTimestamp(day.date, calendarTimeZone: calendarTimeZone)
             for output in registry.outputs {
                 guard output.surface == "flat",
@@ -196,14 +221,16 @@ nonisolated enum HealthMdSemanticInputAdapter {
                     "aggregation": "pass_through",
                     "start": exactDay,
                     "end": NSNull(),
-                    "value": try semanticValue(
+                    "value": try inputVersion == semanticInputVersion ? semanticValue(
                         raw,
                         unit: output.unit,
                         outputKey: output.key,
                         day: day,
                         calendarTimeZone: calendarTimeZone
-                    ),
-                    "weight": NSNull(),
+                    ) : wakeDateValue(raw, outputKey: output.key, unit: output.unit,
+                        day: day, mindfulness: snapshot.mindfulness, calendarTimeZone: calendarTimeZone),
+                    "weight": try registry.registryVersion == HealthMdWorkoutRangeRegistryContract.registryVersion
+                        ? workoutRangeWeight(outputKey: output.key, day: day) : NSNull(),
                     "attributes": [:],
                     "extensions": [],
                 ])
@@ -213,6 +240,7 @@ nonisolated enum HealthMdSemanticInputAdapter {
                 guard archive.dailyOwnership.ownerDate == ownerDate,
                       archive.dailyOwnership.calendarTimeZoneIdentifier == calendarTimeZoneIdentifier
                 else { throw AdapterError.invalidArchiveOwnership }
+                guard includeArchiveExtensions else { continue }
                 let extensionSources: [(ExtensionLocation.Collection, Int, String, [String], HealthKitRecordInclusionReason)] =
                     archive.records.enumerated().map {
                         (.healthKitRecord, $0.offset, $0.element.originalUUID.uuidString, $0.element.selectedMetricIDs, $0.element.includedBecause)
@@ -265,7 +293,7 @@ nonisolated enum HealthMdSemanticInputAdapter {
 
         let data = try canonicalJSON([
             "schema": "healthmd.semantic_input",
-            "semantic_input_version": semanticInputVersion,
+            "semantic_input_version": inputVersion,
             "session_id": sessionID,
             "batch_index": batchIndex,
             "final_batch": finalBatch,
@@ -289,8 +317,12 @@ nonisolated enum HealthMdSemanticInputAdapter {
         registry: CoreMetricRegistrySnapshot,
         customization: FormatCustomization,
         calendarTimeZoneIdentifier: String,
-        startingSourceOrdinal: UInt64 = 0
+        startingSourceOrdinal: UInt64 = 0,
+        captureContext: AppleSleepCaptureContext? = nil,
+        includeArchiveExtensions: Bool = true
     ) throws -> [EncodedBatch] {
+        let inputVersion = try validatedInputVersion(registry: registry,
+            calendarTimeZoneIdentifier: calendarTimeZoneIdentifier, captureContext: captureContext)
         guard healthData.count <= HealthRollupRangeRequest.maximumDays else {
             throw AdapterError.limitExceeded
         }
@@ -325,7 +357,9 @@ nonisolated enum HealthMdSemanticInputAdapter {
                 registry: registry,
                 customization: customization,
                 calendarTimeZoneIdentifier: calendarTimeZoneIdentifier,
-                startingSourceOrdinal: sourceOrdinal
+                startingSourceOrdinal: sourceOrdinal,
+                captureContext: captureContext,
+                includeArchiveExtensions: includeArchiveExtensions
             )
             guard let object = try JSONSerialization.jsonObject(with: encodedDay.data) as? [String: Any],
                   let records = object["records"] as? [[String: Any]],
@@ -417,6 +451,7 @@ nonisolated enum HealthMdSemanticInputAdapter {
 
         let batches = try payloads.enumerated().map { offset, payload in
             var object = payload.0
+            object["semantic_input_version"] = inputVersion
             let (batchIndex, overflow) = firstBatchIndex.addingReportingOverflow(UInt32(offset))
             guard !overflow else { throw AdapterError.limitExceeded }
             object["batch_index"] = batchIndex
@@ -491,6 +526,288 @@ nonisolated enum HealthMdSemanticInputAdapter {
         } catch {
             throw AdapterError.serializationFailed
         }
+    }
+
+    @MainActor
+    private static func validatedInputVersion(
+        registry: CoreMetricRegistrySnapshot,
+        calendarTimeZoneIdentifier: String,
+        captureContext: AppleSleepCaptureContext?
+    ) throws -> UInt32 {
+        if registry.profileId == AppleExportEnginePin.wakeDateProfileID {
+            guard registry.publicProfileId == "apple-v11",
+                  registry.publicSchema == HealthMdExportSchema.identifier,
+                  registry.publicSchemaVersion == 11, registry.profileRevision == 1,
+                  AppleExportEnginePin.isSupportedWakeDateRegistry(
+                    version: registry.registryVersion, sha256: registry.registrySha256) else {
+                throw AdapterError.invalidRegistry
+            }
+            guard let captureContext, captureContext.sleepDayAttribution == .morningEnds,
+                  captureContext.exportProfileID == "apple-v11",
+                  TimeZone(identifier: calendarTimeZoneIdentifier)?.identifier
+                      == captureContext.calendarTimeZoneIdentifier else {
+                throw AdapterError.invalidCaptureAuthority
+            }
+            return AppleExportEnginePin.wakeDateHandoffVersion
+        }
+        guard AppleExportEnginePin.supportsRegistry(registry) else {
+            throw AdapterError.invalidRegistry
+        }
+        guard captureContext == nil || (captureContext?.sleepDayAttribution == .nightBegins
+            && TimeZone(identifier: calendarTimeZoneIdentifier)?.identifier
+                == captureContext?.calendarTimeZoneIdentifier) else {
+            throw AdapterError.invalidCaptureAuthority
+        }
+        return semanticInputVersion
+    }
+
+    /// Successor numerical facts come from captured typed quantities, before display rounding.
+    /// Historical strings still determine field presence and carry structured text projections.
+    @MainActor
+    private static func wakeDateValue(
+        _ raw: String, outputKey: String, unit: String, day: HealthData,
+        mindfulness: ExportDataSnapshot.Mindfulness, calendarTimeZone: TimeZone
+    ) throws -> [String: Any] {
+        let mood = mindfulness
+        let integer: Int? = switch outputKey {
+        case "steps": day.activity.steps
+        case "stand_hours": day.activity.standHours
+        case "flights_climbed": day.activity.flightsClimbed
+        case "swimming_strokes": day.activity.swimmingStrokes
+        case "wheelchair_pushes": day.activity.pushCount
+        case "mindful_sessions": day.mindfulness.mindfulSessions
+        case "mood_entries": mood.stateOfMindEntries.count
+        case "daily_mood_count": mood.dailyMoods.count
+        case "momentary_emotion_count": mood.momentaryEmotions.count
+        case "average_mood_percent": mood.averageValencePercent
+        case "daily_mood_percent": mood.averageDailyMoodValence.map { Int((($0 + 1) / 2) * 100) }
+        case "sexual_activity": day.reproductiveHealth.sexualActivityCount
+        case "intermenstrual_bleeding": day.reproductiveHealth.intermenstrualBleedingCount
+        case "toothbrushing": day.other.toothbrushingCount
+        case "handwashing": day.other.handwashingCount
+        case "workout_count": day.workouts.isEmpty ? nil : day.workouts.count
+        case "medication_count": day.medications?.medications.count
+        case "active_medication_count": day.medications?.activeMedications.count
+        case "archived_medication_count": day.medications?.archivedMedications.count
+        case "medication_dose_count": day.medications?.doseEvents.count
+        case "medication_taken_count": day.medications?.takenDoseEvents.count
+        case "medication_skipped_count": day.medications?.skippedDoseEvents.count
+        default: day.symptoms.counts[outputKey]
+        }
+        if let integer {
+            return ["value_type": "number", "number": ["representation": "signed_integer", "decimal": String(integer)],
+                "unit": ["id": internalUnitID(unit)]]
+        }
+        let quantity: Double?
+        switch outputKey {
+        case "workout_minutes": quantity = day.workouts.reduce(0) { $0 + $1.duration } / 60
+        case "workout_calories": quantity = day.workouts.compactMap(\.calories).reduce(0, +)
+        case "workout_distance_km": quantity = day.workouts.compactMap(\.distance).reduce(0, +) / 1_000
+        case "workout_distance_mi": quantity = day.workouts.compactMap(\.distance).reduce(0, +) / 1_609.344
+        case "workout_avg_heart_rate": quantity = weightedWorkoutValue(day.workouts, value: \.avgHeartRate)
+        case "workout_max_heart_rate": quantity = day.workouts.compactMap(\.maxHeartRate).max()
+        case "workout_min_heart_rate": quantity = day.workouts.compactMap(\.minHeartRate).min()
+        case "workout_running_cadence": quantity = weightedWorkoutValue(day.workouts.filter { $0.workoutType == .running }, value: \.avgRunningCadence)
+        case "workout_running_stride_length": quantity = weightedWorkoutValue(day.workouts.filter { $0.workoutType == .running }, value: \.avgStrideLength)
+        case "workout_running_ground_contact": quantity = weightedWorkoutValue(day.workouts.filter { $0.workoutType == .running }, value: \.avgGroundContactTime)
+        case "workout_running_vertical_oscillation": quantity = weightedWorkoutValue(day.workouts.filter { $0.workoutType == .running }, value: \.avgVerticalOscillation)
+        case "workout_cycling_cadence": quantity = weightedWorkoutValue(day.workouts.filter { $0.workoutType == .cycling }, value: \.avgCyclingCadence)
+        case "workout_avg_power": quantity = weightedWorkoutValue(day.workouts, value: \.avgPower)
+        case "workout_max_power": quantity = day.workouts.compactMap(\.maxPower).max()
+        case "workouts":
+            return ["value_type": "text_list", "items": Array(Set(day.workouts.map {
+                $0.workoutTypeName.lowercased().replacingOccurrences(of: " ", with: "-")
+            })).sorted()]
+        case "sleep_total_hours": quantity = day.sleep.totalDuration / 3_600
+        case "sleep_deep_hours": quantity = day.sleep.deepSleep / 3_600
+        case "sleep_rem_hours": quantity = day.sleep.remSleep / 3_600
+        case "sleep_core_hours": quantity = day.sleep.coreSleep / 3_600
+        case "sleep_awake_hours": quantity = day.sleep.awakeTime / 3_600
+        case "sleep_in_bed_hours": quantity = day.sleep.inBedTime / 3_600
+        case "active_calories": quantity = day.activity.activeCalories
+        case "basal_calories": quantity = day.activity.basalEnergyBurned
+        case "exercise_minutes": quantity = day.activity.exerciseMinutes
+        case "stand_time_minutes": quantity = day.activity.standTimeMinutes
+        case "swimming_m": quantity = day.activity.swimmingDistance
+        case "vo2_max_age_seconds": quantity = day.activity.vo2MaxAgeSeconds
+        case "move_minutes": quantity = day.activity.moveTime
+        case "physical_effort": quantity = day.activity.physicalEffort
+        case "resting_heart_rate": quantity = day.heart.restingHeartRate
+        case "walking_heart_rate": quantity = day.heart.walkingHeartRateAverage
+        case "average_heart_rate": quantity = day.heart.averageHeartRate
+        case "heart_rate_min": quantity = day.heart.heartRateMin
+        case "heart_rate_max": quantity = day.heart.heartRateMax
+        case "hrv_ms": quantity = day.heart.hrv
+        case "heart_rate_recovery": quantity = day.heart.heartRateRecovery
+        case "afib_burden_percent": quantity = day.heart.atrialFibrillationBurden.map { $0 * 100 }
+        case "respiratory_rate": quantity = day.vitals.respiratoryRateAvg
+        case "respiratory_rate_avg": quantity = day.vitals.respiratoryRateAvg
+        case "respiratory_rate_min": quantity = day.vitals.respiratoryRateMin
+        case "respiratory_rate_max": quantity = day.vitals.respiratoryRateMax
+        case "blood_oxygen": quantity = day.vitals.bloodOxygenAvg.map { $0 * 100 }
+        case "blood_oxygen_avg": quantity = day.vitals.bloodOxygenAvg.map { $0 * 100 }
+        case "blood_oxygen_min": quantity = day.vitals.bloodOxygenMin.map { $0 * 100 }
+        case "blood_oxygen_max": quantity = day.vitals.bloodOxygenMax.map { $0 * 100 }
+        case "body_temperature": quantity = day.vitals.bodyTemperatureAvg
+        case "body_temperature_avg": quantity = day.vitals.bodyTemperatureAvg
+        case "body_temperature_min": quantity = day.vitals.bodyTemperatureMin
+        case "body_temperature_max": quantity = day.vitals.bodyTemperatureMax
+        case "blood_pressure_systolic": quantity = day.vitals.bloodPressureSystolicAvg
+        case "blood_pressure_systolic_avg": quantity = day.vitals.bloodPressureSystolicAvg
+        case "blood_pressure_systolic_min": quantity = day.vitals.bloodPressureSystolicMin
+        case "blood_pressure_systolic_max": quantity = day.vitals.bloodPressureSystolicMax
+        case "blood_pressure_diastolic": quantity = day.vitals.bloodPressureDiastolicAvg
+        case "blood_pressure_diastolic_avg": quantity = day.vitals.bloodPressureDiastolicAvg
+        case "blood_pressure_diastolic_min": quantity = day.vitals.bloodPressureDiastolicMin
+        case "blood_pressure_diastolic_max": quantity = day.vitals.bloodPressureDiastolicMax
+        case "blood_glucose": quantity = day.vitals.bloodGlucoseAvg
+        case "blood_glucose_avg": quantity = day.vitals.bloodGlucoseAvg
+        case "blood_glucose_min": quantity = day.vitals.bloodGlucoseMin
+        case "blood_glucose_max": quantity = day.vitals.bloodGlucoseMax
+        case "basal_body_temperature": quantity = day.vitals.basalBodyTemperature
+        case "wrist_temperature": quantity = day.vitals.wristTemperature
+        case "electrodermal_activity": quantity = day.vitals.electrodermalActivity
+        case "forced_vital_capacity_l": quantity = day.vitals.forcedVitalCapacity
+        case "fev1_l": quantity = day.vitals.forcedExpiratoryVolume1
+        case "peak_expiratory_flow": quantity = day.vitals.peakExpiratoryFlowRate
+        case "inhaler_usage": quantity = day.vitals.inhalerUsage
+        case "weight_kg": quantity = day.body.weight
+        case "height_m": quantity = day.body.height
+        case "bmi": quantity = day.body.bmi
+        case "body_fat_percent": quantity = day.body.bodyFatPercentage.map { $0 * 100 }
+        case "lean_body_mass_kg": quantity = day.body.leanBodyMass
+        case "waist_circumference_cm": quantity = day.body.waistCircumference.map { $0 * 100 }
+        case "dietary_calories": quantity = day.nutrition.dietaryEnergy
+        case "protein_g": quantity = day.nutrition.protein
+        case "carbohydrates_g": quantity = day.nutrition.carbohydrates
+        case "fat_g": quantity = day.nutrition.fat
+        case "saturated_fat_g": quantity = day.nutrition.saturatedFat
+        case "fiber_g": quantity = day.nutrition.fiber
+        case "sugar_g": quantity = day.nutrition.sugar
+        case "sodium_mg": quantity = day.nutrition.sodium
+        case "cholesterol_mg": quantity = day.nutrition.cholesterol
+        case "water_l": quantity = day.nutrition.water
+        case "caffeine_mg": quantity = day.nutrition.caffeine
+        case "monounsaturated_fat_g": quantity = day.nutrition.monounsaturatedFat
+        case "polyunsaturated_fat_g": quantity = day.nutrition.polyunsaturatedFat
+        case "mindful_minutes": quantity = day.mindfulness.mindfulMinutes
+        case "walking_speed": quantity = day.mobility.walkingSpeed
+        case "step_length_cm": quantity = day.mobility.walkingStepLength.map { $0 * 100 }
+        case "double_support_percent": quantity = day.mobility.walkingDoubleSupportPercentage.map { $0 * 100 }
+        case "walking_asymmetry_percent": quantity = day.mobility.walkingAsymmetryPercentage.map { $0 * 100 }
+        case "stair_ascent_speed": quantity = day.mobility.stairAscentSpeed
+        case "stair_descent_speed": quantity = day.mobility.stairDescentSpeed
+        case "six_min_walk_m": quantity = day.mobility.sixMinuteWalkDistance
+        case "walking_steadiness_percent": quantity = day.mobility.walkingSteadiness.map { $0 * 100 }
+        case "running_speed": quantity = day.mobility.runningSpeed
+        case "running_stride_length_m": quantity = day.mobility.runningStrideLength
+        case "running_ground_contact_ms": quantity = day.mobility.runningGroundContactTime
+        case "running_vertical_oscillation_cm": quantity = day.mobility.runningVerticalOscillation
+        case "running_power_w": quantity = day.mobility.runningPower
+        case "headphone_audio_db": quantity = day.hearing.headphoneAudioLevel
+        case "environmental_sound_db": quantity = day.hearing.environmentalSoundLevel
+        case "cycling_speed": quantity = day.cyclingPerformance.cyclingSpeed
+        case "cycling_power_w": quantity = day.cyclingPerformance.cyclingPower
+        case "cycling_cadence_rpm": quantity = day.cyclingPerformance.cyclingCadence
+        case "cycling_ftp_w": quantity = day.cyclingPerformance.cyclingFTP
+        case "vitamin_a_ug": quantity = day.vitamins.vitaminA
+        case "vitamin_b6_mg": quantity = day.vitamins.vitaminB6
+        case "vitamin_b12_ug": quantity = day.vitamins.vitaminB12
+        case "vitamin_c_mg": quantity = day.vitamins.vitaminC
+        case "vitamin_d_ug": quantity = day.vitamins.vitaminD
+        case "vitamin_e_mg": quantity = day.vitamins.vitaminE
+        case "vitamin_k_ug": quantity = day.vitamins.vitaminK
+        case "thiamin_mg": quantity = day.vitamins.thiamin
+        case "riboflavin_mg": quantity = day.vitamins.riboflavin
+        case "niacin_mg": quantity = day.vitamins.niacin
+        case "folate_ug": quantity = day.vitamins.folate
+        case "biotin_ug": quantity = day.vitamins.biotin
+        case "pantothenic_acid_mg": quantity = day.vitamins.pantothenicAcid
+        case "calcium_mg": quantity = day.minerals.calcium
+        case "iron_mg": quantity = day.minerals.iron
+        case "potassium_mg": quantity = day.minerals.potassium
+        case "magnesium_mg": quantity = day.minerals.magnesium
+        case "phosphorus_mg": quantity = day.minerals.phosphorus
+        case "zinc_mg": quantity = day.minerals.zinc
+        case "selenium_ug": quantity = day.minerals.selenium
+        case "copper_mg": quantity = day.minerals.copper
+        case "manganese_mg": quantity = day.minerals.manganese
+        case "chromium_ug": quantity = day.minerals.chromium
+        case "molybdenum_ug": quantity = day.minerals.molybdenum
+        case "chloride_mg": quantity = day.minerals.chloride
+        case "iodine_ug": quantity = day.minerals.iodine
+        case "uv_exposure": quantity = day.other.uvExposure
+        case "time_in_daylight_min": quantity = day.other.timeInDaylight
+        case "number_of_falls": quantity = day.other.numberOfFalls
+        case "blood_alcohol_percent": quantity = day.other.bloodAlcoholContent
+        case "alcoholic_beverages": quantity = day.other.alcoholicBeverages
+        case "insulin_delivery_iu": quantity = day.other.insulinDelivery
+        case "water_temperature": quantity = day.other.waterTemperature
+        case "underwater_depth_m": quantity = day.other.underwaterDepth
+        case "vo2_max": quantity = day.activity.vo2Max
+        case "walking_running_km": quantity = day.activity.walkingRunningDistance.map { $0 / 1_000 }
+        case "walking_running_mi": quantity = day.activity.walkingRunningDistance.map { $0 / 1_609.344 }
+        case "cycling_km": quantity = day.activity.cyclingDistance.map { $0 / 1_000 }
+        case "cycling_mi": quantity = day.activity.cyclingDistance.map { $0 / 1_609.344 }
+        case "wheelchair_km": quantity = day.activity.wheelchairDistance.map { $0 / 1_000 }
+        case "wheelchair_mi": quantity = day.activity.wheelchairDistance.map { $0 / 1_609.344 }
+        case "downhill_snow_km": quantity = day.activity.downhillSnowSportsDistance.map { $0 / 1_000 }
+        case "downhill_snow_mi": quantity = day.activity.downhillSnowSportsDistance.map { $0 / 1_609.344 }
+        case "average_mood_valence": quantity = mood.averageValence
+        case "sleep_bedtime", "sleep_wake":
+            guard let instant = outputKey == "sleep_bedtime" ? day.sleep.sessionStart : day.sleep.sessionEnd else {
+                throw AdapterError.unavailableWakeDateQuantity
+            }
+            var calendar = Calendar(identifier: .gregorian)
+            calendar.timeZone = calendarTimeZone
+            let parts = calendar.dateComponents([.hour, .minute], from: instant)
+            guard let hour = parts.hour, let minute = parts.minute else {
+                throw AdapterError.unavailableWakeDateQuantity
+            }
+            return try binary64(Double(hour * 60 + minute), unitID: "time_of_day_minute")
+        case "vo2_max_carried_forward":
+            guard let flag = day.activity.vo2MaxCarriedForward else { throw AdapterError.unavailableWakeDateQuantity }
+            return ["value_type": "boolean", "boolean": flag]
+        case "vo2_max_source_uuid", "vo2_max_source_start", "vo2_max_source_end",
+             "menstrual_flow", "ovulation_test", "cervical_mucus", "medication_details", "medication_dose_events":
+            return ["value_type": "text", "text": raw]
+        case "mood_labels", "mood_associations", "medications":
+            guard let items = listValues(raw) else { throw AdapterError.unavailableWakeDateQuantity }
+            return ["value_type": "text_list", "items": items]
+        default: throw AdapterError.unavailableWakeDateQuantity
+        }
+        guard let quantity else { throw AdapterError.unavailableWakeDateQuantity }
+        return try binary64(quantity, unitID: internalUnitID(unit))
+    }
+
+    /// The denominator belongs to each measured workout quantity, independently of visible duration.
+    private static func workoutRangeWeight(outputKey: String, day: HealthData) throws -> Any {
+        let workouts: [WorkoutData]
+        let value: KeyPath<WorkoutData, Double?>
+        switch outputKey {
+        case "workout_avg_heart_rate": workouts = day.workouts; value = \.avgHeartRate
+        case "workout_avg_power": workouts = day.workouts; value = \.avgPower
+        case "workout_running_cadence": workouts = day.workouts.filter { $0.workoutType == .running }; value = \.avgRunningCadence
+        case "workout_running_stride_length": workouts = day.workouts.filter { $0.workoutType == .running }; value = \.avgStrideLength
+        case "workout_running_ground_contact": workouts = day.workouts.filter { $0.workoutType == .running }; value = \.avgGroundContactTime
+        case "workout_running_vertical_oscillation": workouts = day.workouts.filter { $0.workoutType == .running }; value = \.avgVerticalOscillation
+        case "workout_cycling_cadence": workouts = day.workouts.filter { $0.workoutType == .cycling }; value = \.avgCyclingCadence
+        default: return NSNull()
+        }
+        let duration = workouts.filter { $0[keyPath: value] != nil }.reduce(0) { $0 + $1.duration }
+        guard duration.isFinite, duration > 0 else { throw AdapterError.unavailableWakeDateQuantity }
+        return try binary64(duration, unitID: "second")["number"] ?? NSNull()
+    }
+
+    /// Retains the native duration-weighted reducer without historical display rounding.
+    private static func weightedWorkoutValue(_ workouts: [WorkoutData], value: KeyPath<WorkoutData, Double?>) -> Double? {
+        let pairs = workouts.compactMap { workout -> (Double, Double)? in
+            guard let value = workout[keyPath: value] else { return nil }
+            return (value, workout.duration)
+        }
+        let weight = pairs.reduce(0) { $0 + $1.1 }
+        guard !pairs.isEmpty, weight > 0 else { return nil }
+        return pairs.reduce(0) { $0 + $1.0 * $1.1 } / weight
     }
 
     private static func semanticValue(

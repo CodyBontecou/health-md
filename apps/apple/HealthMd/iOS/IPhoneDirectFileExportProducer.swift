@@ -49,29 +49,48 @@ final class IPhoneDirectFileExportProducer {
         category: "IPhoneDirectFileExportProducer"
     )
 
-    private let fileManager = FileManager.default
-    private var cancelledJobIDs: Set<UUID> = []
+    private let fileManager: FileManager
+
+    init(fileManager: FileManager = .default) {
+        self.fileManager = fileManager
+    }
 
     func canCancel(jobID: UUID) -> Bool {
         guard let journal = try? loadJournal(jobID: jobID) else { return false }
         return journal.state != "completed"
     }
 
-    func cancel(jobID: UUID) {
-        cancelledJobIDs.insert(jobID)
-        if var journal = try? loadJournal(jobID: jobID) {
+    func cancel(jobID: UUID, expectedOwnership: AppleExportJournalCheckpoint? = nil,
+                protocolAuthority: AppleDirectProtocolAuthority = .shared) throws -> IPhoneDirectCancellationReceipt? {
+        guard var journal = try loadJournal(jobID: jobID), journal.state != "completed" else { return nil }
+        if let expectedOwnership {
+            guard expectedOwnership.generation == journal.checkpoint.generation,
+                  expectedOwnership.completionIdentity == journal.checkpoint.completionIdentity,
+                  expectedOwnership.journalURL == journal.checkpoint.journalURL,
+                  expectedOwnership.publicationLockURL == journal.checkpoint.publicationLockURL else { return nil }
+        }
+        let cancellationAuthority = protocolAuthority.makeSessionAuthority()
+        try cancellationAuthority.beginOperation(pin: journal.version >= IPhoneDirectFileJournal.directProtocolPinVersion
+            ? journal.appleDirectProtocolPin : nil)
+        let owner = journal.checkpoint
+        try owner.commitCancellation(operation: {
             journal.state = "cancelled"
             journal.updatedAt = Date()
-            try? saveJournal(journal)
-        }
+            try saveJournal(&journal)
+        }, onCommitted: {})
+        return IPhoneDirectCancellationReceipt(jobID: jobID, ownership: journal.checkpoint,
+            protocolAuthority: cancellationAuthority.frozenForCurrentOperation())
     }
 
-    func pause(jobID: UUID) {
-        guard var journal = try? loadJournal(jobID: jobID),
-              journal.state != "completed", journal.state != "cancelled" else { return }
-        journal.state = "paused"
-        journal.updatedAt = Date()
-        try? saveJournal(journal)
+    func pause(jobID: UUID, ownership: AppleExportJournalCheckpoint) -> Bool {
+        (try? ownership.withGenerationOwnership {
+            guard var journal = try loadJournal(jobID: jobID),
+                  journal.state != "completed", journal.state != "cancelled" else { return false }
+            journal.state = "paused"
+            journal.updatedAt = Date()
+            try saveJournal(&journal)
+            return true
+        }) ?? false
     }
 
     func run(
@@ -82,6 +101,7 @@ final class IPhoneDirectFileExportProducer {
         protocolAuthority: AppleDirectProtocolAuthority,
         healthKitManager: HealthKitManager,
         externalIntegrations: ExternalIntegrationDailyRecordProviding?,
+        didAcquireOwnership: (AppleExportJournalCheckpoint) throws -> HealthKitQueryExecutionController,
         historyAdmission: HealthHistoryExportAdmission
     ) async throws -> Bool {
         #if DEBUG
@@ -91,7 +111,7 @@ final class IPhoneDirectFileExportProducer {
         )
         var jobPerformanceOutcome = ExportPerformanceSpanOutcome.failure
         defer {
-            if Task.isCancelled || cancelledJobIDs.contains(request.jobID) {
+            if Task.isCancelled || IPhoneDirectCancellationScope.isCancelled(jobID: request.jobID) {
                 jobPerformanceOutcome = .cancelled
             }
             jobPerformanceSpan.finish(outcome: jobPerformanceOutcome)
@@ -108,18 +128,21 @@ final class IPhoneDirectFileExportProducer {
                 "Direct file exports require an explicit validated desktop destination."
             )
         }
-        if cancelledJobIDs.contains(request.jobID) {
+        if IPhoneDirectCancellationScope.isCancelled(jobID: request.jobID) {
             throw IPhoneDirectFileProducerError.cancelled
         }
         try enforceBlockedProfileGate(for: request)
         let historyObservationVersion = channel.exportHistoryObservationVersion
-        let persistedJournal = try loadJournalIfPresent(jobID: request.jobID)
+        let persistedJournal = try loadJournal(jobID: request.jobID)
         if let persisted = persistedJournal {
             guard IPhoneDirectFileJournal.isSupportedVersion(persisted.version) else {
                 throw IPhoneDirectFileProducerError.requestChanged
             }
+            guard persisted.scopedDailyNoteVersion == nil || persisted.scopedDailyNoteVersion == channel.scopedDailyNoteVersion else {
+                throw DirectScopedDailyNotePolicy.ValidationError.invalidPolicy
+            }
             try HealthHistoryExportAdmission.validateResume(request: request, accepted: persisted.accepted,
-                session: persisted.session, historyRequired: persisted.version >= IPhoneDirectFileJournal.historyObservationVersion,
+                session: persisted.session, historyRequired: persisted.requiresHistoryObservation,
                 negotiatedVersion: historyObservationVersion)
             guard persisted.accepted.historyObservation == nil
                     || persisted.originalCalendarTimeZoneIdentifier == persisted.settingsSnapshot.calendarTimeZoneIdentifier else {
@@ -133,10 +156,15 @@ final class IPhoneDirectFileExportProducer {
         }
         // The profile gate must run before even beginning an external-provider
         // export action; a blocked durable resume performs no health-data work.
-        externalIntegrations?.beginExportAction()
+        // New work accepts a grant view before preparation can suspend. Recovery
+        // resolves only the saved selection after validating the durable request.
+        let newProviders = persistedJournal == nil && request.canonicalSelection == nil && ConnectedAppsFeature.isEnabled
+            ? externalIntegrations?.forCaptureOperation() : nil
         var externalExportSucceeded = false
-        defer { externalIntegrations?.endExportAction(succeeded: externalExportSucceeded) }
+        let operationAuthority: AppleDirectProtocolAuthority
         let journal: IPhoneDirectFileJournal
+        var incomingProtocolLease: IPhoneDirectIncomingProtocolLease?
+        defer { incomingProtocolLease?.close() }
         if let persisted = persistedJournal {
             guard IPhoneDirectFileJournal.isSupportedVersion(persisted.version),
                   persisted.request == request,
@@ -150,173 +178,201 @@ final class IPhoneDirectFileExportProducer {
                 pin: persisted.version >= IPhoneDirectFileJournal.directProtocolPinVersion
                     ? persisted.appleDirectProtocolPin : nil
             )
-            guard persisted.session.requestFingerprint == (try protocolAuthority.requestFingerprint(request)) else {
+            operationAuthority = protocolAuthority.frozenForCurrentOperation()
+            incomingProtocolLease = channel.retainIncomingProtocolAuthority(operationAuthority)
+            IPhoneDirectCancellationScope.current?.bindProtocolAuthority(operationAuthority)
+            guard persisted.session.requestFingerprint == (try operationAuthority.requestFingerprint(request)) else {
                 throw IPhoneDirectFileProducerError.requestChanged
             }
             journal = persisted
         } else {
             let protocolPin = try protocolAuthority.pinForNewOperation()
             try protocolAuthority.beginOperation(pin: protocolPin)
-            let prepared = try await measureDirectFilePhase("prepare") {
+            operationAuthority = protocolAuthority.frozenForCurrentOperation()
+            incomingProtocolLease = channel.retainIncomingProtocolAuthority(operationAuthority)
+            IPhoneDirectCancellationScope.current?.bindProtocolAuthority(operationAuthority)
+            var prepared = try await measureDirectFilePhase("prepare") {
                 try await prepare(
                     request,
                     peerBinding: peerBinding,
                     negotiation: negotiation,
                     protocolPin: protocolPin,
-                    protocolAuthority: protocolAuthority,
+                    protocolAuthority: operationAuthority,
                     healthKitManager: healthKitManager,
-                    connectedProviderCount: externalIntegrations?.connectedProviderCount ?? 0,
+                    providers: newProviders,
                     historyObservationVersion: historyObservationVersion,
+                    scopedDailyNoteVersion: channel.scopedDailyNoteVersion,
                     historyAdmission: historyAdmission
                 )
             }
             try checkCancellation(request.jobID)
+            try saveJournal(&prepared, freshAdmission: true)
             journal = prepared
-            try saveJournal(prepared)
         }
 
-        try await channel.send(.exportAccepted(journal.accepted))
-        var current = journal
-        current.state = "preparing"
-        if current.capturedDays.count < current.transferDates.count {
-            current = try await measureDirectFilePhase("capture") {
-                try await captureRemaining(
-                    current,
-                    channel: channel,
-                    healthKitManager: healthKitManager,
-                    externalIntegrations: externalIntegrations
-                )
-            }
-        }
-        if current.capturedDays.contains(where: { !$0.historyFactsRecorded }) {
-            current = try measureDirectFileSynchronousPhase("history-backfill") {
-                try backfillCapturedDayHistoryFacts(current)
-            }
-        }
-        if !current.generationCompleted {
-            current = try await measureDirectFilePhase("render") {
-                try await generateFiles(current, channel: channel)
-            }
-        }
-        if current.partitions.isEmpty,
-           current.generatedFiles.contains(where: { $0.manifest.byteCount > 0 }) {
-            current.partitions = try measureDirectFileSynchronousPhase("partition-build") {
-                try buildPartitions(current)
-            }
-            current.updatedAt = Date()
-            try saveJournal(current)
-        }
-        current.state = "transferring"
-        current.updatedAt = Date()
-        try saveJournal(current)
-
-        try await channel.send(.transferSession(current.session))
-        for file in current.generatedFiles.sorted(by: { $0.manifest.relativePath < $1.manifest.relativePath }) {
-            try await channel.send(.fileManifest(file.manifest))
-        }
-        try await measureDirectFilePhase("transfer") {
-            try await transferPartitions(
-                &current,
-                channel: channel,
-                protocolAuthority: protocolAuthority,
-                maximumInFlightChunks: negotiation.maximumInFlightChunks
-            )
-        }
-        let reconciliation = try Self.terminalReconciliation(for: current)
-        let failedDates = reconciliation.retryableFailedDateIdentifiers
-        let successCount = reconciliation.successCount
-        let outcome = try DirectExportOutcome(
-            status: reconciliation.isFullSuccess ? "success" : "partial_success",
-            successCount: successCount,
-            totalCount: current.requestedDates.count,
-            failedDateIdentifiers: failedDates
-        )
-        let finalize = try DirectTransferFinalize(
-            sessionID: current.session.sessionID,
-            jobID: request.jobID,
-            requestFingerprint: current.session.requestFingerprint,
-            totalPartitions: current.partitions.count,
-            totalBytes: current.partitions.reduce(0) { $0 + $1.byteCount },
-            finalPartitionSHA256: current.partitions.last?.sha256,
-            outcome: outcome
-        )
-        let finalAcknowledgementMessage = try await measureDirectFilePhase("final-ack") {
-            try await channel.send(.transferFinalize(finalize))
-            return try await receiveMessage(channel, jobID: request.jobID)
-        }
-        guard case .transferFinalAcknowledgement(let acknowledgement) = finalAcknowledgementMessage,
-        acknowledgement.accepted,
-        acknowledgement.sessionID == current.session.sessionID,
-        acknowledgement.jobID == request.jobID,
-        acknowledgement.totalPartitions == finalize.totalPartitions,
-        acknowledgement.totalBytes == finalize.totalBytes,
-        acknowledgement.finalPartitionSHA256 == finalize.finalPartitionSHA256 else {
-            throw IPhoneDirectFileProducerError.unexpectedResponse
-        }
-
-        current.state = "completed"
-        current.updatedAt = Date()
-        let shouldRecordCompletion = !current.completionRecorded
-        if shouldRecordCompletion {
-            if successCount > 0 {
-                try PurchaseManager.shared.recordExportUse(jobID: request.jobID)
-            }
-            let retryableFailedDateDetails = current.capturedDays.compactMap { day -> FailedDateDetail? in
-                guard day.isRequestedDate, !day.succeeded else { return nil }
-                return FailedDateDetail(
-                    date: day.sourceDate,
-                    reason: day.failureReason ?? .healthKitError
-                )
-            }
-            let terminalNoDataSet = Set(current.terminalNoDataDateIdentifiers)
-            let terminalNoDataDetails = current.capturedDays.compactMap { day -> FailedDateDetail? in
-                guard day.isRequestedDate,
-                      terminalNoDataSet.contains(day.sourceDateIdentifier) else { return nil }
-                return FailedDateDetail(
-                    date: day.sourceDate,
-                    reason: .noHealthData,
-                    errorDetails: "No roll-up summary data was available for the selected period."
-                )
-            }
-            // Day-level informational notes ride alongside range-level derived
-            // warnings so Export History shows them as export notes while the
-            // status stays a full success (they never degrade it).
-            var recordedPartialFailures = current.derivedOutputPartialFailures
-            for day in current.capturedDays where day.isRequestedDate {
-                for note in day.informationalFailures ?? [] where !recordedPartialFailures.contains(note) {
-                    recordedPartialFailures.append(note)
+        let acceptedProviders = try Self.providersForRemainingCapture(snapshot: journal.settingsSnapshot,
+            needsCapture: journal.capturedDays.count < journal.transferDates.count,
+            providers: persistedJournal == nil ? newProviders : externalIntegrations)
+        acceptedProviders?.beginExportAction()
+        defer { acceptedProviders?.endExportAction(succeeded: externalExportSucceeded) }
+        let channel = channel.retainingProtocolAuthority(operationAuthority)
+        let queryController = try didAcquireOwnership(journal.checkpoint)
+        return try await HealthKitQueryExecutionController.withController(queryController) {
+            try await sendMessage(.exportAccepted(journal.accepted), journal: journal, channel: channel)
+            var current = journal
+            current.state = "preparing"
+            if current.capturedDays.count < current.transferDates.count {
+                current = try await measureDirectFilePhase("capture") {
+                    try await captureRemaining(
+                        current,
+                        channel: channel,
+                        healthKitManager: healthKitManager,
+                        externalIntegrations: acceptedProviders
+                    )
                 }
             }
-            let result = ExportOrchestrator.ExportResult(
+            if current.capturedDays.contains(where: { !$0.historyFactsRecorded }) {
+                current = try measureDirectFileSynchronousPhase("history-backfill") {
+                    try backfillCapturedDayHistoryFacts(current)
+                }
+            }
+            if !current.generationCompleted {
+                current = try await measureDirectFilePhase("render") {
+                    try await generateFiles(current, channel: channel)
+                }
+            }
+            if current.partitions.isEmpty,
+               current.generatedFiles.contains(where: { $0.manifest.byteCount > 0 }) {
+                current.partitions = try measureDirectFileSynchronousPhase("partition-build") {
+                    try buildPartitions(current)
+                }
+                current.updatedAt = Date()
+                try saveJournal(&current)
+            }
+            try validateRetainedArtifacts(current)
+            current.state = "transferring"
+            current.updatedAt = Date()
+            try saveJournal(&current)
+
+            try await sendMessage(.transferSession(current.session), journal: current, channel: channel)
+            for file in current.generatedFiles.sorted(by: { $0.manifest.relativePath < $1.manifest.relativePath }) {
+                try await sendMessage(.fileManifest(file.manifest), journal: current, channel: channel)
+            }
+            try await measureDirectFilePhase("transfer") {
+                try await transferPartitions(
+                    &current,
+                    channel: channel,
+                    protocolAuthority: operationAuthority,
+                    maximumInFlightChunks: negotiation.maximumInFlightChunks
+                )
+            }
+            let reconciliation = try Self.terminalReconciliation(for: current)
+            let failedDates = reconciliation.retryableFailedDateIdentifiers
+            let successCount = reconciliation.successCount
+            let outcome = try DirectExportOutcome(
+                status: reconciliation.isFullSuccess ? "success" : "partial_success",
                 successCount: successCount,
                 totalCount: current.requestedDates.count,
-                failedDateDetails: retryableFailedDateDetails + terminalNoDataDetails,
-                partialFailures: recordedPartialFailures,
-                formatsPerDate: reconciliation.effectiveFormatsPerDate,
-                completedDates: terminalNoDataDetails.map(\.date)
+                failedDateIdentifiers: failedDates
             )
-            ExportOrchestrator.recordResult(
-                result,
-                source: .macAgent,
-                dateRangeStart: current.requestedDates.first ?? request.createdAt,
-                dateRangeEnd: current.requestedDates.last ?? request.createdAt,
-                targetLabel: destination.rootPath,
-                fileCount: current.generatedFiles.count,
-                idempotencyKey: request.jobID,
-                appleExportEnginePin: current.appleExportEnginePin,
-                operationDetails: historyOperationDetails(for: current)
+            let finalize = try DirectTransferFinalize(
+                sessionID: current.session.sessionID,
+                jobID: request.jobID,
+                requestFingerprint: current.session.requestFingerprint,
+                totalPartitions: current.partitions.count,
+                totalBytes: current.partitions.reduce(0) { $0 + $1.byteCount },
+                finalPartitionSHA256: current.partitions.last?.sha256,
+                outcome: outcome
             )
-            current.completionRecorded = true
+            let finalAcknowledgementMessage = try await measureDirectFilePhase("final-ack") {
+                try await sendMessage(.transferFinalize(finalize), journal: current, channel: channel)
+                return try await receiveMessage(channel, jobID: request.jobID, checkpoint: current.checkpoint)
+            }
+            guard case .transferFinalAcknowledgement(let acknowledgement) = finalAcknowledgementMessage,
+            acknowledgement.accepted,
+            acknowledgement.sessionID == current.session.sessionID,
+            acknowledgement.jobID == request.jobID,
+            acknowledgement.totalPartitions == finalize.totalPartitions,
+            acknowledgement.totalBytes == finalize.totalBytes,
+            acknowledgement.finalPartitionSHA256 == finalize.finalPartitionSHA256 else {
+                throw IPhoneDirectFileProducerError.unexpectedResponse
+            }
+
+            let completionOwnership = current.checkpoint
+            guard let completionIdentity = completionOwnership.completionIdentity else {
+                throw IPhoneDirectFileProducerError.requestChanged
+            }
+            do {
+                try completionOwnership.withCheckpointOwnership {
+                    try validateRetainedArtifacts(current)
+                    current.state = "completed"
+                    current.updatedAt = Date()
+                    let shouldRecordCompletion = !current.completionRecorded
+                    if shouldRecordCompletion {
+                        if successCount > 0 {
+                            try PurchaseManager.shared.recordExportUse(jobID: completionIdentity)
+                        }
+                        let retryableFailedDateDetails = current.capturedDays.compactMap { day -> FailedDateDetail? in
+                            guard day.isRequestedDate, !day.succeeded else { return nil }
+                            return FailedDateDetail(
+                                date: day.sourceDate,
+                                reason: day.failureReason ?? .healthKitError
+                            )
+                        }
+                        let terminalNoDataSet = Set(current.terminalNoDataDateIdentifiers)
+                        let terminalNoDataDetails = current.capturedDays.compactMap { day -> FailedDateDetail? in
+                            guard day.isRequestedDate,
+                                  terminalNoDataSet.contains(day.sourceDateIdentifier) else { return nil }
+                            return FailedDateDetail(
+                                date: day.sourceDate,
+                                reason: .noHealthData,
+                                errorDetails: "No roll-up summary data was available for the selected period."
+                            )
+                        }
+                        // Day-level informational notes ride alongside range-level derived
+                        // warnings so Export History shows them as export notes while the
+                        // status stays a full success (they never degrade it).
+                        var recordedPartialFailures = current.derivedOutputPartialFailures
+                        for day in current.capturedDays where day.isRequestedDate {
+                            for note in day.informationalFailures ?? [] where !recordedPartialFailures.contains(note) {
+                                recordedPartialFailures.append(note)
+                            }
+                        }
+                        let result = ExportOrchestrator.ExportResult(
+                            successCount: successCount,
+                            totalCount: current.requestedDates.count,
+                            failedDateDetails: retryableFailedDateDetails + terminalNoDataDetails,
+                            partialFailures: recordedPartialFailures,
+                            formatsPerDate: reconciliation.effectiveFormatsPerDate,
+                            completedDates: terminalNoDataDetails.map(\.date)
+                        )
+                        ExportOrchestrator.recordResult(
+                            result,
+                            source: .macAgent,
+                            dateRangeStart: current.requestedDates.first ?? request.createdAt,
+                            dateRangeEnd: current.requestedDates.last ?? request.createdAt,
+                            targetLabel: destination.rootPath,
+                            fileCount: current.generatedFiles.count,
+                            idempotencyKey: completionIdentity,
+                            appleExportEnginePin: current.appleExportEnginePin,
+                            operationDetails: historyOperationDetails(for: current)
+                        )
+                        current.completionRecorded = true
+                    }
+                    // Both side effects use the retained completion identity, so a crash before this journal
+                    // save retries them without double charging or duplicating history.
+                    try saveJournal(&current)
+                }
+            } catch let error as POSIXError where error.code == .EAGAIN {
+                throw IPhoneDirectFileProducerError.requestChanged
+            }
+            try await sendMessage(.completionConfirmed(jobID: request.jobID), journal: current, channel: channel)
+            externalExportSucceeded = true
+            #if DEBUG
+            jobPerformanceOutcome = .success
+            #endif
+            return reconciliation.isFullSuccess
         }
-        // Both side effects are keyed by job ID, so a crash before this journal
-        // save retries them without double charging or duplicating history.
-        try saveJournal(current)
-        try await channel.send(.completionConfirmed(jobID: request.jobID))
-        externalExportSucceeded = true
-        #if DEBUG
-        jobPerformanceOutcome = .success
-        #endif
-        return reconciliation.isFullSuccess
     }
 
     private func prepare(
@@ -326,8 +382,9 @@ final class IPhoneDirectFileExportProducer {
         protocolPin: AppleDirectProtocolPin?,
         protocolAuthority: AppleDirectProtocolAuthority,
         healthKitManager: HealthKitManager,
-        connectedProviderCount: Int,
+        providers: (any ExternalIntegrationDailyRecordProviding)?,
         historyObservationVersion: Int?,
+        scopedDailyNoteVersion: Int?,
         historyAdmission: HealthHistoryExportAdmission
     ) async throws -> IPhoneDirectFileJournal {
         let sourceTimeZone = TimeZone.current
@@ -343,6 +400,20 @@ final class IPhoneDirectFileExportProducer {
             savedSettings: baseSettings
         )
         settings.exportTimeZoneOverride = sourceTimeZone
+        settings.executionSleepCaptureContext = try healthKitManager.resolveSleepCaptureContext(settings: settings)
+        guard settings.executionSleepCaptureContext?.sleepDayAttribution != .morningEnds
+            || !settings.dailyNoteInjection.enabled || scopedDailyNoteVersion == 1 else {
+            throw DirectScopedDailyNotePolicy.ValidationError.invalidPolicy
+        }
+        let selectedProviders = request.canonicalSelection == nil && settings.writesExternalProviderSidecars ? providers : nil
+        let connectedProviderCount = selectedProviders?.connectedProviderCount ?? 0
+        settings.executionExternalProviderCaptureAuthority = selectedProviders?.captureAuthority
+            ?? (connectedProviderCount == 0 ? ExternalProviderCaptureAuthority(connections: [:]) : nil)
+        settings.executionExternalProviderCaptureAuthorityIsFrozen = true
+        if settings.executionSleepCaptureContext?.sleepDayAttribution == .morningEnds,
+           settings.executionExternalProviderCaptureAuthority == nil {
+            throw ExternalProviderCaptureAuthority.RecoveryError.unavailable
+        }
         guard healthKitManager.isAuthorized else {
             throw IPhoneDirectFileProducerError.healthKitNotAuthorized
         }
@@ -421,7 +492,10 @@ final class IPhoneDirectFileExportProducer {
             createdAt: Date()
         )
         return IPhoneDirectFileJournal(
-            version: observation == nil ? IPhoneDirectFileJournal.derivedOutputReconciliationVersion : IPhoneDirectFileJournal.historyObservationVersion,
+            version: scopedDailyNoteVersion == 1
+                ? (observation == nil ? IPhoneDirectFileJournal.scopedNoteVersion : IPhoneDirectFileJournal.scopedNoteHistoryVersion)
+                : (observation == nil ? IPhoneDirectFileJournal.derivedOutputReconciliationVersion : IPhoneDirectFileJournal.historyObservationVersion),
+            scopedDailyNoteVersion: scopedDailyNoteVersion,
             request: request,
             accepted: accepted,
             session: session,
@@ -444,9 +518,30 @@ final class IPhoneDirectFileExportProducer {
         )
     }
 
-    /// Selects whole-operation authority before the durable renderer pin is captured. Provider
-    /// sidecars are native companion artifacts, so a request that can produce them is explicitly
-    /// legacy rather than discovering the incompatibility after capture with a Rust pin.
+    /// Prepared artifacts replay without source access. Missing successor authority
+    /// cannot borrow a new login while an unfinished capture resumes.
+    static func providersForRemainingCapture(
+        snapshot: ExportSettingsSnapshot,
+        needsCapture: Bool,
+        providers: (any ExternalIntegrationDailyRecordProviding)?
+    ) throws -> (any ExternalIntegrationDailyRecordProviding)? {
+        guard needsCapture else { return nil }
+        if let authority = snapshot.externalProviderCaptureAuthority {
+            guard !authority.connections.isEmpty else { return nil }
+            guard let providers else { throw ExternalProviderCaptureAuthority.RecoveryError.unavailable }
+            let accepted = try providers.forCaptureOperation(authority: authority)
+            guard accepted.captureAuthority == authority else { throw ExternalProviderCaptureAuthority.RecoveryError.unavailable }
+            return accepted
+        }
+        guard snapshot.sleepCaptureContext?.sleepDayAttribution != .morningEnds else {
+            throw ExternalProviderCaptureAuthority.RecoveryError.unavailable
+        }
+        return providers?.forCaptureOperation()
+    }
+
+    /// Selects whole-operation authority before the durable renderer pin is captured.
+    /// Morning provider sidecars use the staged successor writer; Night sidecars
+    /// retain their historical native renderer.
     static func operationSurfaceForNewGeneratedFileJob(
         request: DirectExportRequest,
         settings: AdvancedExportSettings,
@@ -457,7 +552,8 @@ final class IPhoneDirectFileExportProducer {
               settings.writesExternalProviderSidecars else {
             return .directGeneratedFilesWithoutSideEffects
         }
-        return .legacyOnly
+        return settings.executionSleepCaptureContext?.sleepDayAttribution == .morningEnds
+            ? .directGeneratedFilesWithProviderSidecars : .legacyOnly
     }
 
     struct RangePlanningInput {
@@ -577,11 +673,12 @@ final class IPhoneDirectFileExportProducer {
             identifier: journal.accepted.sourceTimeZoneIdentifier
         ) ?? .current
         settings.exportTimeZoneOverride = sourceTimeZone
+        let captureContext = try healthKitManager.resolveSleepCaptureContext(settings: settings)
         var sourceCalendar = Calendar(identifier: .gregorian)
         sourceCalendar.timeZone = sourceTimeZone
         let requestedSet = Set(journal.requestedDates.map { sourceCalendar.startOfDay(for: $0) })
         for index in journal.capturedDays.count..<journal.transferDates.count {
-            try checkCancellation(journal.request.jobID)
+            try checkCancellation(journal)
             let date = journal.transferDates[index]
             let identifier = Self.sourceDateFormatter(timeZone: sourceTimeZone).string(from: date)
             let preparedRequestedDays = journal.capturedDays.filter(\.isRequestedDate).count
@@ -596,6 +693,7 @@ final class IPhoneDirectFileExportProducer {
                     message: "Capturing \(identifier) for CLI file export…"
                 ),
                 phase: .capturing,
+                journal: journal,
                 channel: channel
             )
             let isRequested = requestedSet.contains(sourceCalendar.startOfDay(for: date))
@@ -632,14 +730,15 @@ final class IPhoneDirectFileExportProducer {
                         metricSelection: metricSelection,
                         timeZone: TimeZone(
                             identifier: journal.accepted.sourceTimeZoneIdentifier
-                        )
+                        ),
+                        captureContext: captureContext
                     )
                 },
                 fetchExternalDailyRecords: externalFetcher
             )
             // Cancellation may arrive while HealthKit is awaiting its query.
             // Re-check before this task can overwrite the durable cancelled tombstone.
-            try checkCancellation(journal.request.jobID)
+            try checkCancellation(journal)
             let payload = ConnectedCorpusHealthDayPayload(
                 sourceDate: date,
                 isRequestedDate: isRequested,
@@ -648,7 +747,7 @@ final class IPhoneDirectFileExportProducer {
                 failure: outcome.failure
             )
             let relativePath = String(format: "captured-%08d.citem", index)
-            let url = try jobDirectory(journal.request.jobID).appendingPathComponent(relativePath)
+            let url = try jobDirectory(for: journal).appendingPathComponent(relativePath)
             let encodedPayload = try measureDirectFileSynchronousPhase("spool-encode") {
                 try ConnectedCorpusApplicationItemCodec.encode(
                     payload,
@@ -705,7 +804,7 @@ final class IPhoneDirectFileExportProducer {
                 historyFactsRecorded: true
             ))
             journal.updatedAt = Date()
-            try saveJournal(journal)
+            try saveJournal(&journal)
             let updatedPreparedRequestedDays = Self.preparedRequestedDayCount(
                 in: journal.capturedDays
             )
@@ -720,6 +819,7 @@ final class IPhoneDirectFileExportProducer {
                     message: "Prepared \(updatedPreparedRequestedDays) of \(journal.requestedDates.count) requested days for file generation."
                 ),
                 phase: .capturing,
+                journal: journal,
                 channel: channel
             )
         }
@@ -738,7 +838,7 @@ final class IPhoneDirectFileExportProducer {
 
         for index in journal.capturedDays.indices where !journal.capturedDays[index].historyFactsRecorded {
             let day = journal.capturedDays[index]
-            let url = try jobDirectory(journal.request.jobID).appendingPathComponent(day.relativePath)
+            let url = try jobDirectory(for: journal).appendingPathComponent(day.relativePath)
             let payload = try decoder.decode(
                 ConnectedCorpusHealthDayPayload.self,
                 from: Data(contentsOf: url)
@@ -775,8 +875,71 @@ final class IPhoneDirectFileExportProducer {
             )
         }
         journal.updatedAt = Date()
-        try saveJournal(journal)
+        try saveJournal(&journal)
         return journal
+    }
+
+    /// Plans every direct daily/range artifact and provider sidecar before staging writes.
+    /// The transfer manifest is built only after this complete materialization commits.
+    static func materializePinnedGeneratedFiles(
+        journal: IPhoneDirectFileJournal,
+        payloads: [ConnectedCorpusHealthDayPayload],
+        settingsSnapshot: ExportSettingsSnapshot,
+        vault: VaultManager,
+        onCoverageGaps: ([ExportPartialFailure]) -> Void = { _ in }
+    ) async throws -> AppleLooseDailyRangeMaterialization? {
+        let settings = settingsSnapshot.makeAdvancedExportSettings()
+        let input = try rangePlanningInput(capturedDays: journal.capturedDays, payloads: payloads,
+            settings: settings, settingsSnapshot: settingsSnapshot)
+        guard !input.records.isEmpty, input.hasAnyData,
+              let zone = journal.originalCalendarTimeZoneIdentifier,
+              settingsSnapshot.calendarTimeZoneIdentifier == zone,
+              settingsSnapshot.healthSubfolder == journal.healthSubfolder,
+              journal.appleExportEnginePin == settingsSnapshot.appleExportEnginePin else {
+            throw IPhoneDirectFileProducerError.invalidSpool
+        }
+        for (day, payload) in zip(journal.capturedDays, payloads) {
+            let exported = payload.externalDailyRecords.filter(\.shouldExport)
+            guard exported.count == day.externalRecordCount,
+                  exported.allSatisfy({ day.isRequestedDate && $0.date == day.sourceDateIdentifier }) else {
+                throw IPhoneDirectFileProducerError.invalidSpool
+            }
+        }
+        let external = payloads.flatMap { $0.externalDailyRecords.filter(\.shouldExport) }
+        let surface: AppleExportOperationSurface
+        if !external.isEmpty {
+            guard journal.appleExportEnginePin?.isWakeDate == true,
+                  settings.writesExternalProviderSidecars,
+                  let authority = settingsSnapshot.externalProviderCaptureAuthority,
+                  external.allSatisfy({ authority.connections.keys.contains($0.provider.id)
+                      && ((authority.connections[$0.provider.id] ?? nil) != nil || $0.payloads.isEmpty) }) else {
+                throw IPhoneDirectFileProducerError.invalidSpool
+            }
+            surface = .directGeneratedFilesWithProviderSidecars
+        } else { surface = .directGeneratedFilesWithoutSideEffects }
+        let range = try settingsSnapshot.generateRangeSummary ? HealthRollupRangeRequest(
+            ownerDateIdentifiers: Set(journal.originalRequestedDates.map {
+                HealthKitDailyOwnershipMetadata.ownerDate(for: $0, calendarTimeZoneIdentifier: zone)
+            }), calendarTimeZoneIdentifier: zone) : nil
+        guard let materialized = try await vault.materializeHealthDataRange(input.records,
+            settingsSnapshot: settingsSnapshot, operationSurface: surface,
+            dailyOutputOwnerDates: input.dailyOutputOwnerDates, requestedRange: range,
+            operationIdentity: AppleExportOperationIdentity(requestID: journal.request.jobID.uuidString.lowercased(),
+                sessionID: journal.session.sessionID.uuidString.lowercased(), capturedAt: journal.session.createdAt,
+                calendarTimeZoneIdentifier: zone)) else { return nil }
+        var individualEntries: [AppleLooseDailyIndividualEntry] = []
+        var coverageGaps: [ExportPartialFailure] = []
+        if settings.writesIndividualEntryFiles {
+            for record in input.records where input.dailyOutputOwnerDates.contains(
+                HealthKitDailyOwnershipMetadata.ownerDate(for: record.date, calendarTimeZoneIdentifier: zone)) {
+                let entries = try vault.materializeIndividualEntries(record, settingsSnapshot: settingsSnapshot)
+                individualEntries += entries.files
+                coverageGaps += entries.partialFailures
+            }
+        }
+        onCoverageGaps(coverageGaps)
+        return try materialized.addingProviderSidecars(vault.materializeExternalDailyRecords(external,
+            healthSubfolder: journal.healthSubfolder)).addingIndividualEntries(individualEntries)
     }
 
     private func generateFiles(
@@ -784,7 +947,7 @@ final class IPhoneDirectFileExportProducer {
         channel: IPhoneDirectExportConnection
     ) async throws -> IPhoneDirectFileJournal {
         var journal = supplied
-        let staging = try stagingDirectory(journal.request.jobID)
+        let staging = try stagingDirectory(for: journal)
         if fileManager.fileExists(atPath: staging.path) { try fileManager.removeItem(at: staging) }
         try fileManager.createDirectory(
             at: staging,
@@ -832,7 +995,7 @@ final class IPhoneDirectFileExportProducer {
             archiveDates: journal.originalRequestedDates
         )
         let payloadURLs = try journal.capturedDays.map {
-            try jobDirectory(journal.request.jobID).appendingPathComponent($0.relativePath)
+            try jobDirectory(for: journal).appendingPathComponent($0.relativePath)
         }
         // Capture journals already persist the count of exportable provider records. Use that
         // lightweight fact for operation-wide authority instead of decoding every potentially
@@ -841,11 +1004,12 @@ final class IPhoneDirectFileExportProducer {
             $0.externalRecordCount > 0
         }
         let operationSurface: AppleExportOperationSurface = hasProviderSidecars
-            ? .legacyOnly
+            ? (journal.appleExportEnginePin?.isWakeDate == true ? .directGeneratedFilesWithProviderSidecars : .legacyOnly)
             : .directGeneratedFilesWithoutSideEffects
         let originallySummaryOnly = journal.settingsSnapshot.makeAdvancedExportSettings()
             .summaryOnlyModeEnabled
         var hasAnyRequestedData = false
+        var scopedNotePolicies: [String: DirectScopedDailyNotePolicy] = [:]
         if journal.appleExportEnginePin != nil {
             // Current range planning still consumes complete records. Keep this materialization
             // confined to pinned range authority; Swift legacy generation remains one-day bounded.
@@ -856,9 +1020,9 @@ final class IPhoneDirectFileExportProducer {
             }
             // A renderer pin is operation-wide. Materialize every selected daily file and roll-up
             // from the immutable spool in one M4/M5 range plan before generated artifact writes
-            // begin. Provider sidecars discovered after pin capture fail closed instead of
-            // silently mixing native and Rust authority.
-            guard operationSurface == .directGeneratedFilesWithoutSideEffects else {
+            // begin. Morning provider sidecars join this same validated materialization.
+            guard operationSurface == .directGeneratedFilesWithoutSideEffects
+                    || operationSurface == .directGeneratedFilesWithProviderSidecars else {
                 throw AppleLooseDailyExportPlannerError.rustPlanningFailed
             }
             let rangeInput = try Self.rangePlanningInput(
@@ -869,36 +1033,47 @@ final class IPhoneDirectFileExportProducer {
             )
             hasAnyRequestedData = rangeInput.hasAnyData
             if !rangeInput.records.isEmpty && rangeInput.hasAnyData {
-                try checkCancellation(journal.request.jobID)
-                let calendarTimeZoneIdentifier = originalCalendarTimeZoneIdentifier
-                let requestedRange = try effectiveSettingsSnapshot.generateRangeSummary
-                    ? HealthRollupRangeRequest(
-                        ownerDateIdentifiers: Set(journal.originalRequestedDates.map {
-                            HealthKitDailyOwnershipMetadata.ownerDate(
-                                for: $0,
-                                calendarTimeZoneIdentifier: calendarTimeZoneIdentifier
-                            )
-                        }),
-                        calendarTimeZoneIdentifier: calendarTimeZoneIdentifier
-                    )
-                    : nil
-                guard try await vault.exportHealthDataRange(
-                    rangeInput.records,
-                    settingsSnapshot: effectiveSettingsSnapshot,
-                    operationSurface: operationSurface,
-                    dailyOutputOwnerDates: rangeInput.dailyOutputOwnerDates,
-                    requestedRange: requestedRange,
-                    operationIdentity: AppleExportOperationIdentity(
-                        requestID: journal.request.jobID.uuidString.lowercased(),
-                        sessionID: journal.session.sessionID.uuidString.lowercased(),
-                        capturedAt: journal.session.createdAt,
-                        calendarTimeZoneIdentifier: calendarTimeZoneIdentifier
-                    ),
-                    writeDataDictionary: true
-                ) != nil else {
+                try checkCancellation(journal)
+                let destination = try vault.freezeHealthDataRangeDestination()
+                var coverageGaps: [ExportPartialFailure] = []
+                guard let materialized = try await Self.materializePinnedGeneratedFiles(journal: journal,
+                    payloads: payloads, settingsSnapshot: effectiveSettingsSnapshot, vault: vault,
+                    onCoverageGaps: { coverageGaps = $0 }) else {
                     throw AppleLooseDailyExportPlannerError.rustPlanningFailed
                 }
-                try checkCancellation(journal.request.jobID)
+                journal.derivedOutputPartialFailures += coverageGaps.filter { !journal.derivedOutputPartialFailures.contains($0) }
+                // The receiving desktop owns note existence. Stage the accepted patch even for
+                // existing-only notes; never merge it into the phone's empty staging vault.
+                for note in materialized.dailyNotes {
+                    guard journal.scopedDailyNoteVersion == 1 else { throw DirectScopedDailyNotePolicy.ValidationError.invalidPolicy }
+                    let policy = try DirectScopedDailyNotePolicy(recordProfile: "apple-v11",
+                        ownerDate: HealthKitDailyOwnershipMetadata.ownerDate(for: note.ownerDate,
+                            calendarTimeZoneIdentifier: note.identity.calendarTimeZoneIdentifier),
+                        calendarTimezone: note.identity.calendarTimeZoneIdentifier,
+                        createIfMissing: settings.dailyNoteInjection.createIfMissing,
+                        injectSections: settings.dailyNoteInjection.injectMarkdownSections)
+                    let target = try generatedFileURL(relativePath: note.relativePath, under: staging)
+                    try fileManager.createDirectory(at: target.deletingLastPathComponent(), withIntermediateDirectories: true)
+                    try Data(note.directPatch.utf8).write(to: target, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
+                    scopedNotePolicies[note.relativePath] = policy
+                }
+                let filesOnly = AppleLooseDailyRangeMaterialization(operation: materialized.operation,
+                    dataDictionary: materialized.dataDictionary, result: materialized.result,
+                    providerSidecars: materialized.providerSidecars, individualEntries: materialized.individualEntries)
+                if settings.archiveModeEnabled {
+                    let archive = try await vault.materializeHealthDataRangeArchive(filesOnly,
+                        settingsSnapshot: effectiveSettingsSnapshot,
+                        startDate: journal.originalRequestedDates.min() ?? journal.requestedDates[0],
+                        endDate: journal.originalRequestedDates.max() ?? journal.requestedDates[0])
+                    try archive.artifact.validateIntegrity()
+                    let target = try generatedFileURL(relativePath: archive.relativePath, under: staging)
+                    try fileManager.createDirectory(at: target.deletingLastPathComponent(), withIntermediateDirectories: true)
+                    try fileManager.copyItem(at: archive.artifact.url, to: target)
+                    try fileManager.setAttributes([.protectionKey: FileProtectionType.completeUntilFirstUserAuthentication], ofItemAtPath: target.path)
+                } else {
+                    _ = try await vault.commitHealthDataRangeMaterialization(filesOnly, destination: destination)
+                }
+                try checkCancellation(journal)
             }
             for (index, day) in journal.capturedDays.enumerated() where day.isRequestedDate {
                 try await sendGeneratedProgress(
@@ -911,7 +1086,7 @@ final class IPhoneDirectFileExportProducer {
         } else {
             var wroteDictionary = false
             for (index, day) in journal.capturedDays.enumerated() where day.isRequestedDate {
-                try checkCancellation(journal.request.jobID)
+                try checkCancellation(journal)
                 let payload = try measureDirectFileSynchronousPhase("spool-decode-day") {
                     try decodeCapturedPayload(from: payloadURLs[index])
                 }
@@ -967,18 +1142,18 @@ final class IPhoneDirectFileExportProducer {
                             historyFactsRecorded: day.historyFactsRecorded
                         )
                         journal.updatedAt = Date()
-                        try saveJournal(journal)
+                        try saveJournal(&journal)
                     }
                     wroteDictionary = true
                 } catch ExportError.noHealthData {
                     // A successfully captured empty day is not a failed HealthKit day.
                 }
-                try checkCancellation(journal.request.jobID)
+                try checkCancellation(journal)
                 _ = try await vault.exportExternalDailyRecords(
                     payload.externalDailyRecords,
                     healthSubfolder: journal.healthSubfolder
                 )
-                try checkCancellation(journal.request.jobID)
+                try checkCancellation(journal)
                 try await sendGeneratedProgress(
                     journal: journal,
                     day: day,
@@ -1003,12 +1178,12 @@ final class IPhoneDirectFileExportProducer {
                 startDate: immutableRangeStart,
                 endDate: immutableRangeEnd,
                 healthSubfolder: journal.healthSubfolder,
-                archiveWorkDirectoryURL: try jobDirectory(journal.request.jobID)
+                archiveWorkDirectoryURL: try jobDirectory(for: journal)
                     .appendingPathComponent("archive-work", isDirectory: true),
                 unavailableRollupDates: unavailable,
                 writeDataDictionary: !wroteDictionary,
-                cancellationCheck: { [weak self] in
-                    self?.cancelledJobIDs.contains(journal.request.jobID) == true
+                cancellationCheck: { [invocation = IPhoneDirectCancellationScope.current] in
+                    invocation?.isCancelled == true
                 }
             )
         }
@@ -1019,7 +1194,28 @@ final class IPhoneDirectFileExportProducer {
         } else {
             journal.terminalNoDataDateIdentifiers = []
         }
-        try checkCancellation(journal.request.jobID)
+        if journal.scopedDailyNoteVersion == 1 && settings.dailyNoteInjection.enabled && !originallySummaryOnly
+            && journal.appleExportEnginePin?.isWakeDate != true {
+            for (index, day) in journal.capturedDays.enumerated() where day.isRequestedDate {
+                let payload = try decodeCapturedPayload(from: payloadURLs[index])
+                guard let record = payload.record,
+                      let patch = try DailyNoteInjector.prepareDirectNightPatch(healthData: record,
+                        settings: settings.dailyNoteInjection, customization: settings.formatCustomization,
+                        metricSelection: settings.metricSelection) else { continue }
+                let path = ExportPathPlanner.dailyNoteRelativePath(settings: settings.dailyNoteInjection,
+                    date: record.date, timeZone: sourceTimeZone)
+                let target = try generatedFileURL(relativePath: path, under: staging)
+                try fileManager.createDirectory(at: target.deletingLastPathComponent(), withIntermediateDirectories: true)
+                try Data(patch.utf8).write(to: target, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
+                scopedNotePolicies[path] = try DirectScopedDailyNotePolicy(recordProfile: "apple-v8",
+                    ownerDate: HealthKitDailyOwnershipMetadata.ownerDate(for: record.date,
+                        calendarTimeZoneIdentifier: sourceTimeZone.identifier),
+                    calendarTimezone: sourceTimeZone.identifier,
+                    createIfMissing: settings.dailyNoteInjection.createIfMissing,
+                    injectSections: settings.dailyNoteInjection.injectMarkdownSections)
+            }
+        }
+        try checkCancellation(journal)
         let dailyNotePaths = Set(journal.requestedDates.map {
             ExportPathPlanner.dailyNoteRelativePath(
                 settings: settings.dailyNoteInjection,
@@ -1059,13 +1255,14 @@ final class IPhoneDirectFileExportProducer {
                 relativePath: relativePath,
                 byteCount: inspected.totalBytes,
                 sha256: inspected.sha256,
-                writeMode: writeMode
+                writeMode: writeMode,
+                scopedNotePolicy: scopedNotePolicies[relativePath]
             )
             return IPhoneDirectGeneratedFile(manifest: manifest, relativePath: relativePath)
         }.sorted { $0.manifest.relativePath < $1.manifest.relativePath }
         journal.generationCompleted = true
         journal.updatedAt = Date()
-        try saveJournal(journal)
+        try saveJournal(&journal)
         return journal
     }
 
@@ -1081,7 +1278,7 @@ final class IPhoneDirectFileExportProducer {
         index _: Int,
         channel: IPhoneDirectExportConnection
     ) async throws {
-        try checkCancellation(journal.request.jobID)
+        try checkCancellation(journal)
         // Generation is a second preparation stage over the already captured spool. Keep the
         // public requested-day frontier at the durable captured count instead of restarting it
         // from one and making progress regress from total/total to 1/total.
@@ -1097,6 +1294,7 @@ final class IPhoneDirectFileExportProducer {
                 message: "Generated export files for \(day.sourceDateIdentifier)."
             ),
             phase: .capturing,
+            journal: journal,
             channel: channel
         )
     }
@@ -1104,7 +1302,7 @@ final class IPhoneDirectFileExportProducer {
     private func buildPartitions(_ journal: IPhoneDirectFileJournal) throws -> [DirectTransferPartition] {
         var partitions: [DirectTransferPartition] = []
         var previous: String?
-        let staging = try stagingDirectory(journal.request.jobID)
+        let staging = try stagingDirectory(for: journal)
         for file in journal.generatedFiles {
             let url = try generatedFileURL(relativePath: file.relativePath, under: staging)
             var offset: Int64 = 0
@@ -1145,14 +1343,13 @@ final class IPhoneDirectFileExportProducer {
         maximumInFlightChunks: Int
     ) async throws {
         for descriptor in journal.partitions {
-            try checkCancellation(journal.request.jobID)
-            try await channel.send(.transferOpen(try DirectTransferOpen(
-                session: journal.session,
-                partition: descriptor
-            )))
+            try checkCancellation(journal)
+            let open = try DirectTransferOpen(session: journal.session, partition: descriptor)
+            try await sendMessage(.transferOpen(open), journal: journal, channel: channel)
             guard case .transferDisposition(let disposition) = try await receiveMessage(
                 channel,
-                jobID: journal.request.jobID
+                jobID: journal.request.jobID,
+                checkpoint: journal.checkpoint
             ),
             disposition.sessionID == journal.session.sessionID,
             disposition.jobID == journal.request.jobID,
@@ -1176,10 +1373,11 @@ final class IPhoneDirectFileExportProducer {
                     transferID: descriptor.transferID,
                     partitionSHA256: descriptor.sha256
                 )
-                try await channel.send(.transferPartitionComplete(complete))
+                try await sendMessage(.transferPartitionComplete(complete), journal: journal, channel: channel)
                 guard case .transferPartitionAcknowledgement(let acknowledgement) = try await receiveMessage(
                     channel,
-                    jobID: journal.request.jobID
+                    jobID: journal.request.jobID,
+                    checkpoint: journal.checkpoint
                 ), acknowledgement.accepted,
                 acknowledgement.partitionIndex == descriptor.index,
                 acknowledgement.transferID == descriptor.transferID,
@@ -1192,7 +1390,7 @@ final class IPhoneDirectFileExportProducer {
                 .prefix(journal.committedPartitionCount)
                 .reduce(0) { $0 + $1.byteCount }
             journal.updatedAt = Date()
-            try saveJournal(journal)
+            try saveJournal(&journal)
             try await sendProgress(
                 DirectExportProgress(
                     jobID: journal.request.jobID,
@@ -1204,6 +1402,7 @@ final class IPhoneDirectFileExportProducer {
                     message: "Sent file part \(descriptor.index + 1) of \(journal.partitions.count) to the CLI."
                 ),
                 phase: .transferring,
+                journal: journal,
                 channel: channel
             )
         }
@@ -1223,7 +1422,8 @@ final class IPhoneDirectFileExportProducer {
               let segment = descriptor.itemSegment else {
             throw IPhoneDirectFileProducerError.invalidSpool
         }
-        let staging = try stagingDirectory(journal.request.jobID)
+        try checkCancellation(journal)
+        let staging = try stagingDirectory(for: journal)
         let url = try generatedFileURL(relativePath: file.relativePath, under: staging)
         let handle = try FileHandle(forReadingFrom: url)
         _ = Darwin.fcntl(handle.fileDescriptor, F_NOCACHE, 1)
@@ -1237,7 +1437,7 @@ final class IPhoneDirectFileExportProducer {
         while remaining > 0 || !inFlight.isEmpty {
             while remaining > 0,
                   inFlight.count < window {
-                try checkCancellation(journal.request.jobID)
+                try checkCancellation(journal)
                 let count = Int(min(Int64(DirectTransferLimits.chunkBytes), remaining))
                 guard let data = try handle.read(upToCount: count), data.count == count else {
                     throw IPhoneDirectFileProducerError.invalidSpool
@@ -1248,9 +1448,11 @@ final class IPhoneDirectFileExportProducer {
                     data: data,
                     sha256: DirectTransferFile.sha256Hex(data)
                 )
-                try await channel.sendBinaryTransferFrame(
-                    try protocolAuthority.encodeTransferChunk(chunk)
-                )
+                try await sendWhileOwned(jobID: journal.request.jobID, checkpoint: journal.checkpoint) {
+                    try await channel.sendBinaryTransferFrame(
+                        try protocolAuthority.encodeTransferChunk(chunk), ownership: journal.checkpoint
+                    )
+                }
                 inFlight.append((sequence: chunk.sequence, sha256: chunk.sha256))
                 remaining -= Int64(data.count)
                 sequence += 1
@@ -1259,7 +1461,8 @@ final class IPhoneDirectFileExportProducer {
             let expected = inFlight.removeFirst()
             guard case .transferChunkAcknowledgement(let acknowledgement) = try await receiveMessage(
                 channel,
-                jobID: journal.request.jobID
+                jobID: journal.request.jobID,
+                checkpoint: journal.checkpoint
             ), acknowledgement.accepted,
             acknowledgement.transferID == descriptor.transferID,
             acknowledgement.sequence == expected.sequence,
@@ -1276,31 +1479,80 @@ final class IPhoneDirectFileExportProducer {
         ))
     }
 
+    private func sendMessage(
+        _ message: DirectMessage,
+        journal: IPhoneDirectFileJournal,
+        channel: IPhoneDirectExportConnection
+    ) async throws {
+        try await sendWhileOwned(jobID: journal.request.jobID, checkpoint: journal.checkpoint) {
+            try await channel.send(message, ownership: journal.checkpoint)
+        }
+    }
+
+    private func sendWhileOwned(
+        jobID: UUID,
+        checkpoint: AppleExportJournalCheckpoint,
+        operation: @MainActor () async throws -> Void
+    ) async throws {
+        do {
+            try await checkpoint.continueWhileOwned {
+                try checkCancellation(jobID)
+                try await operation()
+                try checkCancellation(jobID)
+            }
+        } catch AppleExportJournalCheckpoint.ContinuationError.superseded {
+            throw IPhoneDirectFileProducerError.requestChanged
+        }
+    }
+
     private func sendProgress(
         _ progress: DirectExportProgress,
         phase: CLIExportActivityTracker.Phase,
+        journal: IPhoneDirectFileJournal,
         channel: IPhoneDirectExportConnection
     ) async throws {
-        CLIExportActivityTracker.shared.update(
-            jobID: progress.jobID,
-            source: .direct,
-            phase: phase,
-            processedDays: progress.processedDays,
-            totalDays: progress.totalDays,
-            currentDate: progress.currentDate,
-            committedPartitions: progress.committedPartitions,
-            committedBytes: progress.committedBytes,
-            message: progress.message
-        )
-        try await channel.send(.exportProgress(progress))
+        guard progress.jobID == journal.request.jobID else {
+            throw IPhoneDirectFileProducerError.requestChanged
+        }
+        do {
+            try journal.checkpoint.withGenerationOwnership {
+                try checkCancellation(progress.jobID)
+                if let admissionID = IPhoneDirectCancellationScope.current?.activityAdmissionID,
+                   CLIExportActivityTracker.shared.admissionID != admissionID { return }
+                CLIExportActivityTracker.shared.update(
+                    jobID: progress.jobID,
+                    source: .direct,
+                    phase: phase,
+                    processedDays: progress.processedDays,
+                    totalDays: progress.totalDays,
+                    currentDate: progress.currentDate,
+                    committedPartitions: progress.committedPartitions,
+                    committedBytes: progress.committedBytes,
+                    message: progress.message
+                )
+            }
+        } catch let error as POSIXError where error.code == .EAGAIN {
+            throw IPhoneDirectFileProducerError.requestChanged
+        }
+        try await sendMessage(.exportProgress(progress), journal: journal, channel: channel)
     }
 
     private func receiveMessage(
         _ channel: IPhoneDirectExportConnection,
-        jobID: UUID
+        jobID: UUID,
+        checkpoint: AppleExportJournalCheckpoint
     ) async throws -> DirectMessage {
-        try checkCancellation(jobID)
-        let message = try await channel.receive()
+        let message: DirectMessage
+        do {
+            message = try await checkpoint.continueWhileOwned {
+                try checkCancellation(jobID)
+                let response = try await channel.receive()
+                try checkCancellation(jobID)
+                return response
+            }
+        } catch AppleExportJournalCheckpoint.ContinuationError.superseded {
+            throw IPhoneDirectFileProducerError.requestChanged
+        }
         if case .cancel(let cancelledID) = message, cancelledID == jobID {
             throw IPhoneDirectFileProducerError.cancelled
         }
@@ -1366,7 +1618,7 @@ final class IPhoneDirectFileExportProducer {
         guard !SharedSetupV2ExecutionGate().isExecutionBlocked(profileID: profile.id) else {
             throw IPhoneDirectFileProducerError.profileRequiresRebind
         }
-        return profile.settings.makeAdvancedExportSettings()
+        return profile.settings.makeAdvancedExportSettings(forNewConfiguration: true)
     }
 
     /// Check every invocation, including durable resumes, before any journal,
@@ -1571,68 +1823,71 @@ final class IPhoneDirectFileExportProducer {
         return candidate
     }
 
+    private func validateGeneration(_ checkpoint: AppleExportJournalCheckpoint) throws {
+        do { try checkpoint.validateGeneration(fileManager: fileManager) }
+        catch { throw IPhoneDirectFileProducerError.requestChanged }
+    }
+
+    private func checkCancellation(_ journal: IPhoneDirectFileJournal) throws {
+        try validateGeneration(journal.checkpoint)
+        try checkCancellation(journal.request.jobID)
+    }
+
     private func checkCancellation(_ jobID: UUID) throws {
-        if Task.isCancelled || cancelledJobIDs.contains(jobID) {
+        if Task.isCancelled || IPhoneDirectCancellationScope.isCancelled(jobID: jobID) {
             throw IPhoneDirectFileProducerError.cancelled
         }
     }
 
-    private func jobDirectory(_ jobID: UUID) throws -> URL {
-        let applicationSupport = try fileManager.url(
-            for: .applicationSupportDirectory,
-            in: .userDomainMask,
-            appropriateFor: nil,
-            create: true
-        )
-        let directory = applicationSupport
-            .appendingPathComponent("Health.md", isDirectory: true)
-            .appendingPathComponent("DirectCLIOutbound", isDirectory: true)
-            .appendingPathComponent("v1", isDirectory: true)
-            .appendingPathComponent(jobID.uuidString.lowercased(), isDirectory: true)
-            .appendingPathComponent("files", isDirectory: true)
-        try fileManager.createDirectory(
-            at: directory,
-            withIntermediateDirectories: true,
-            attributes: [
-                .posixPermissions: 0o700,
-                .protectionKey: FileProtectionType.completeUntilFirstUserAuthentication
-            ]
-        )
-        return directory
+    private func jobStorage(createSupport: Bool = false) throws -> AppleDirectJobStorage {
+        AppleDirectJobStorage(support: try fileManager.url(for: .applicationSupportDirectory,
+            in: .userDomainMask, appropriateFor: nil, create: createSupport), fileManager: fileManager)
     }
 
-    private func stagingDirectory(_ jobID: UUID) throws -> URL {
-        try jobDirectory(jobID).appendingPathComponent("generated", isDirectory: true)
+    private func jobDirectory(for journal: IPhoneDirectFileJournal) throws -> URL {
+        try jobStorage().boundDirectory(jobID: journal.request.jobID, kind: .files,
+            snapshot: journal.settingsSnapshot, checkpoint: journal.checkpoint).1
     }
 
-    private func saveJournal(_ journal: IPhoneDirectFileJournal) throws {
+    private func stagingDirectory(for journal: IPhoneDirectFileJournal) throws -> URL {
+        try jobDirectory(for: journal).appendingPathComponent("generated", isDirectory: true)
+    }
+
+    private func saveJournal(_ journal: inout IPhoneDirectFileJournal, freshAdmission: Bool = false) throws {
         let encoder = JSONEncoder()
+        encoder.userInfo[ExportSettingsSnapshot.durableSleepContextEncoding] = true
         encoder.dateEncodingStrategy = .iso8601
         encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
-        try protectedAtomicWrite(
-            encoder.encode(journal),
-            to: try journalURL(jobID: journal.request.jobID)
-        )
+        let storage = try jobStorage(createSupport: freshAdmission)
+        let data = try encoder.encode(journal)
+        do {
+            _ = try storage.namespace(for: journal.settingsSnapshot)
+            let admission = freshAdmission ? try storage.beginAdmission() : nil
+            defer { admission?.close() }
+            let location = freshAdmission
+                ? try storage.prepareDirectory(jobID: journal.request.jobID, kind: .files, snapshot: journal.settingsSnapshot)
+                : try storage.boundDirectory(jobID: journal.request.jobID, kind: .files,
+                    snapshot: journal.settingsSnapshot, checkpoint: journal.checkpoint)
+            try journal.checkpoint.publish(data, to: location.1.appendingPathComponent("journal.json"),
+                freshAdmission: freshAdmission, lockURL: storage.lock(location.0),
+                durabilityRoot: storage.support, fileManager: fileManager,
+                attributes: [.posixPermissions: 0o600,
+                    .protectionKey: FileProtectionType.completeUntilFirstUserAuthentication])
+        } catch let error as POSIXError where error.code == .EAGAIN || (freshAdmission && error.code == .EEXIST) {
+            throw IPhoneDirectFileProducerError.requestChanged
+        }
     }
 
-    private func journalURL(jobID: UUID) throws -> URL {
-        try jobDirectory(jobID).appendingPathComponent("journal.json")
+    private func loadJournal(jobID: UUID) throws -> IPhoneDirectFileJournal? {
+        try jobStorage().loadGeneratedJournal(jobID: jobID)
     }
 
-    private func loadJournalIfPresent(jobID: UUID) throws -> IPhoneDirectFileJournal? {
-        let url = try journalURL(jobID: jobID)
-        guard fileManager.fileExists(atPath: url.path) else { return nil }
-        // Never replace captured bytes merely because metadata cannot decode.
-        return try loadJournal(jobID: jobID)
-    }
-
-    private func loadJournal(jobID: UUID) throws -> IPhoneDirectFileJournal {
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
-        return try decoder.decode(
-            IPhoneDirectFileJournal.self,
-            from: Data(contentsOf: try journalURL(jobID: jobID))
-        )
+    private func validateRetainedArtifacts(_ journal: IPhoneDirectFileJournal) throws {
+        let storage = try jobStorage()
+        guard try storage.namespace(for: journal.settingsSnapshot) == .wakeDate else { return }
+        let directory = try storage.boundDirectory(jobID: journal.request.jobID, kind: .files,
+            snapshot: journal.settingsSnapshot, checkpoint: journal.checkpoint).1
+        try storage.validateGeneratedArtifacts(journal, in: directory)
     }
 
     private func decodeCapturedPayload(
@@ -1664,7 +1919,9 @@ final class IPhoneDirectFileExportProducer {
             attributes: [
                 .posixPermissions: 0o600,
                 .protectionKey: FileProtectionType.completeUntilFirstUserAuthentication
-            ]
+            ],
+            directoryDurability: .required(upTo: try fileManager.url(
+                for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true))
         ) { temporaryURL in
             let input = try FileHandle(forReadingFrom: source)
             let output = try FileHandle(forWritingTo: temporaryURL)
@@ -1680,21 +1937,6 @@ final class IPhoneDirectFileExportProducer {
             }
             try output.synchronize()
             try output.close()
-        }
-    }
-
-    private func protectedAtomicWrite(_ data: Data, to destination: URL) throws {
-        let temporary = destination.deletingLastPathComponent()
-            .appendingPathComponent(".\(destination.lastPathComponent).\(UUID().uuidString).tmp")
-        try data.write(to: temporary, options: .atomic)
-        try fileManager.setAttributes([
-            .posixPermissions: 0o600,
-            .protectionKey: FileProtectionType.completeUntilFirstUserAuthentication
-        ], ofItemAtPath: temporary.path)
-        if fileManager.fileExists(atPath: destination.path) {
-            _ = try fileManager.replaceItemAt(destination, withItemAt: temporary)
-        } else {
-            try fileManager.moveItem(at: temporary, to: destination)
         }
     }
 

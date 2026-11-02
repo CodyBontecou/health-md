@@ -219,21 +219,15 @@ struct iPadContentView: View {
                 ExportUpgradePrompt(
                     milestone: purchaseManager.pendingUpgradePrompt ?? 0,
                     onSchedule: {
-                        let quotaState = purchaseManager.analyticsQuotaState
                         purchaseManager.consumeUpgradePrompt()
-                        PricingAnalyticsClient.shared.trackUpgradePromptTapped(quotaState: quotaState)
                         presentScheduleAfterExportGuidance = true
                     },
                     onUpgrade: {
-                        let quotaState = purchaseManager.analyticsQuotaState
                         purchaseManager.consumeUpgradePrompt()
-                        PricingAnalyticsClient.shared.trackUpgradePromptTapped(quotaState: quotaState)
                         presentPaywallAfterUpgradePrompt = true
                     },
                     onDismiss: {
-                        let quotaState = purchaseManager.analyticsQuotaState
                         purchaseManager.consumeUpgradePrompt()
-                        PricingAnalyticsClient.shared.trackUpgradePromptDismissed(quotaState: quotaState)
                     }
                 )
             }
@@ -293,12 +287,10 @@ struct iPadContentView: View {
                         vaultManager.clearVaultFolder()
                     }
                     if TestMode.useHealthKitExportPreviewFixtures {
-                        advancedSettings.exportFormats = [.markdown]
-                        advancedSettings.detailPolicy = .lossless
+                        advancedSettings.exportFormats = TestMode.healthKitExportPreviewFormats
+                        advancedSettings.detailPolicy = TestMode.healthKitExportPreviewDetailPolicy
                         advancedSettings.metricSelection.selectAll()
-                        advancedSettings.generateWeeklyRollups = true
-                        advancedSettings.generateMonthlyRollups = true
-                        advancedSettings.generateYearlyRollups = true
+                        advancedSettings.generateRangeSummary = TestMode.healthKitExportPreviewRangeSummary
                     }
                 }
                 await refreshDateRangeSelectionForOpening(isInitialLaunch: true)
@@ -440,11 +432,6 @@ struct iPadContentView: View {
     }
 
     private func presentExportPaywall() {
-        PricingAnalyticsClient.shared.trackExportBlockedByQuota(
-            context: .export,
-            targetType: .localFile,
-            quotaState: purchaseManager.analyticsQuotaState
-        )
         showPaywall = true
     }
 
@@ -453,24 +440,7 @@ struct iPadContentView: View {
     /// paths have already consumed the milestone by then, making this a no-op.
     private func handleUpgradePromptSwipeDismissIfNeeded() {
         guard purchaseManager.pendingUpgradePrompt != nil else { return }
-        let quotaState = purchaseManager.analyticsQuotaState
         purchaseManager.consumeUpgradePrompt()
-        PricingAnalyticsClient.shared.trackUpgradePromptDismissed(quotaState: quotaState)
-    }
-
-    private func trackSuccessfulExport(startDate: Date, endDate: Date) {
-        let metadata = PricingAnalyticsExportMetadata(
-            targetType: .localFile,
-            formatCount: advancedSettings.exportFormats.count,
-            metricCount: advancedSettings.metricSelection.totalEnabledCount,
-            dateRangePreset: dateRangePreset,
-            startDate: startDate,
-            endDate: endDate
-        )
-        PricingAnalyticsClient.shared.trackExportSucceeded(
-            metadata: metadata,
-            quotaState: purchaseManager.analyticsQuotaState
-        )
     }
 
     // MARK: - Auto-Sync
@@ -541,7 +511,8 @@ struct iPadContentView: View {
             profileID: profileID, rangeSemantics: .ownerDates)
         return HealthHistoryExecutionSelection(scope: scope,
             settings: ExportSettingsSnapshot.from(advancedSettings, appleExportEngineAuthorityIsFrozen: false),
-            target: .localIPhoneFolder, preset: dateRangePreset, localDestinationURL: vaultManager.vaultURL)
+            target: .localIPhoneFolder, preset: dateRangePreset, localDestinationURL: vaultManager.vaultURL,
+            sleepDayAttribution: healthKitManager.sleepDayAttribution)
     }
 
     private func clearPendingHistoryCheck() {
@@ -716,10 +687,6 @@ struct iPadContentView: View {
             // Count this as one export action against the free quota.
             if result.successCount > 0 {
                 purchaseManager.recordExportUse(offerGuidance: result.isFullSuccess)
-                trackSuccessfulExport(
-                    startDate: normalizedStartDate,
-                    endDate: normalizedEndDate
-                )
             }
 
             if result.successCount > 0,

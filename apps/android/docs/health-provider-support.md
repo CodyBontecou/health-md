@@ -4,18 +4,20 @@ Health.md uses Health Connect as the default Android export path because it keep
 
 The Play build has a provider catalog and export-provider abstraction so additional ecosystems can be surfaced in the UI and wired into the same `HealthData` export pipeline without changing exporters. The F-Droid catalog intentionally contains only Health Connect; direct cloud-provider definitions, package queries, OAuth callback components, token stores, credentials, and adapters are not part of that variant.
 
-## Supported catalog
+WHOOP is the only enabled direct third-party integration in the Play build. Other providers remain disabled even if credentials are supplied or an older installation retains tokens. Health Connect remains available; records synced into it by other apps remain readable as native Health Connect data.
+
+## Provider rollout
 
 | Provider | Current path | Channel / direct-import status |
 |---|---|---|
 | Health Connect | Android system/on-device API | Export-ready in Play and F-Droid |
-| Samsung Health | Prefer Samsung Health → Health Connect sharing | Play catalog guidance only; direct SDK requires vendor approval/configuration |
-| Huawei Health | HMS Health Kit / Huawei ecosystem | Play catalog guidance only; requires HMS setup |
-| Fitbit | Fitbit Web API | Play only; OAuth adapter uses public PKCE with `FITBIT_CLIENT_ID` or `FITBIT_TOKEN_BROKER_URL` |
-| Garmin Connect | Garmin Health API | Play catalog only; partner approval/backend sync required |
-| Withings | Withings public API | Play only; OAuth adapter uses public PKCE with `WITHINGS_CLIENT_ID` or `WITHINGS_TOKEN_BROKER_URL` |
-| Oura | Oura Cloud API | Play only; OAuth adapter uses public PKCE with `OURA_CLIENT_ID` or `OURA_TOKEN_BROKER_URL` |
-| Polar Flow | Polar AccessLink | Play catalog only; AccessLink transaction cache still required |
+| Samsung Health | Prefer Samsung Health → Health Connect sharing | Disabled; not registered for direct connection or export |
+| Huawei Health | HMS Health Kit / Huawei ecosystem | Disabled; not registered for direct connection or export |
+| Fitbit | Fitbit Web API | Disabled; not registered for direct connection or export |
+| Garmin Connect | Garmin Health API | Disabled; not registered for direct connection or export |
+| Withings | Withings public API | Disabled; not registered for direct connection or export |
+| Oura | Oura Cloud API | Disabled; not registered for direct connection or export |
+| Polar Flow | Polar AccessLink | Disabled; not registered for direct connection or export |
 | WHOOP | WHOOP API v2 | Play only; configure `WHOOP_CLIENT_ID` and a confidential-client `WHOOP_TOKEN_BROKER_URL`; no client secret in the APK |
 
 Google Fit is intentionally excluded because Google Fit APIs are legacy/deprecated and Health Connect is the preferred Android path.
@@ -28,7 +30,7 @@ Google Fit is intentionally excluded because Google Fit APIs are legacy/deprecat
 - `HealthProviderCatalog` powers Settings → Health sources. `PlayHealthProviderDefinitions` and the Play manifest own direct definitions and vendor package queries; F-Droid constructs the catalog from the shared Health Connect definition only.
 - `OAuthAuthorizationManager` implements browser OAuth, PKCE, token exchange/refresh, and encrypted token storage via `EncryptedOAuthTokenStore`.
 - OAuth client secrets are intentionally not exposed through `BuildConfig`; mobile builds use public PKCE client IDs or a provider-specific token broker URL.
-- Compatibility exports still let `FitbitCloudDataProvider`, `WithingsCloudDataProvider`, `OuraCloudDataProvider`, and `WhoopCloudDataProvider` map cloud responses into normalized `HealthData`.
+- Production compatibility and raw export registries register only Health Connect and WHOOP. Other adapter implementations remain dormant and retain synthetic mapping tests.
 - Raw API Snapshots use separate provider-native page methods on those same adapters and the same protected OAuth client. Each exact successful page is exported as `provider_payload`; normalized `HealthData` is never used as raw.
 - Fitbit/Withings endpoint plans explicitly do not paginate; Oura/WHOOP next tokens are capped and cycle-detected. WHOOP v2 recovery is an independent paginated collection using the same fixed time window and `limit=25` as cycles, sleep, and workouts. Summary endpoints declare `serverAggregation=true`.
 - `PolarCloudDataProvider` is raw `unsupported` until an AccessLink transaction cache/native adapter exists. Direct Samsung, Huawei, and Garmin are also raw `unsupported`; no provider falls back to Health Connect.
@@ -46,7 +48,7 @@ The in-app diagnostics and JVM test harness verify the pieces that do not requir
 - The same fixture suite includes a partial-failure check so one cloud endpoint error does not wipe otherwise readable sections for the day.
 - `WhoopCloudDataProviderTest` verifies v2 pagination, current-day-only compatibility body profiles, UUID identity, native sport names, DST-safe bounds/duration, partial-page preservation, and cancellation. `CloudNativeRawSnapshotTest` verifies independent recovery selection, bounded paging, safe metadata and exact bytes.
 - WHOOP OAuth requests only `offline read:cycles read:recovery read:sleep read:workout read:body_measurement`, matching iOS without `read:profile`. State is exactly eight characters; refresh sends `scope=offline` and rejects a missing rotated refresh token before replacing stored credentials.
-- `HealthProviderCatalogTest` guards the provider catalog and keeps Google Fit package/scopes out of the supported-provider surface.
+- `HealthProviderCatalogTest` and `HealthProviderRolloutTest` guard WHOOP-only catalog, OAuth, and export registration.
 - Settings → Health diagnostics can share a redacted provider report for beta testers without exposing health measurements or token values.
 - `OAuthCredentialSafetyTest` guards against adding provider client-secret fields to the Android APK.
 - `HealthProviderDiagnosticsReportTest` guards the redacted share-text format.

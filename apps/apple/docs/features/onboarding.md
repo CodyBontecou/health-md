@@ -11,14 +11,14 @@
 
 Onboarding walks new iPhone users through the minimum setup needed to export Apple Health data. The current flow has five non-blocking steps: welcome, Health access, sample output plus the optional Obsidian plugin link, folder setup, and ready. Health access and folder selection can both be skipped and repaired later.
 
-The unlock paywall no longer occupies an onboarding step. After onboarding opens the first real export preview, an eligible locked user receives a one-time, dismissible offer after that preview closes. After the first completed free export, a dismissible guide opens the Schedule tab for review without enabling a schedule. After the third, a dismissible Lifetime offer shows two free actions remaining. The hard quota is five successful export actions. Existing usage is retained; users who already used five or more actions have no free actions remaining.
+A root hard paywall now precedes setup/tracking for unpaid users. Choose Individual or native Apple Family Sharing weekly/yearly/Lifetime access, or restore an existing purchase. Eligible subscriptions include a seven-day store-backed trial; Lifetime is charged immediately. Existing paid and previously grandfathered owners retain access. There is no local free-export allowance or first/third-export upsell. See the [paid-access rollout](../experiments/subscription-pricing-rollout.md) for prices, product IDs, and release prerequisites.
 
 ## Who it is for
 
 - First-time Health.md users.
 - Obsidian users choosing an export folder.
 - Users importing a current Share My Setup file.
-- Users evaluating the free allowance before Individual or Family Lifetime Full Access.
+- Users starting a store-backed trial or setting up existing paid access.
 
 ## Where to find it
 
@@ -31,12 +31,12 @@ Onboarding appears automatically on first launch. The same setup can later be ch
 
 ## Setup
 
-1. Open Health.md and tap **Start Setup**, or choose **Use a Shared Setup**.
+1. Open Health.md, choose a paid plan/trial or restore existing access, then tap **Start Setup** or **Use a Shared Setup**.
 2. Connect Apple Health or explicitly choose **Skip for Now**.
 3. Review sample Markdown/JSON/CSV/Bases output and the compact optional Obsidian plugin link.
 4. Choose an Obsidian vault, iCloud Drive, another Files provider, or **Skip for Now**.
 5. On Ready, repair a missing Health/folder connection if desired and tap **Create My First Export**.
-6. Review and close the normal export preview. If eligible, the one-time post-onboarding Full Access offer appears after dismissal and can itself be dismissed.
+6. Review and close the normal export preview, then export using your active access.
 
 ## Example result
 
@@ -44,14 +44,14 @@ Onboarding appears automatically on first launch. The same setup can later be ch
 Health Data: Connected
 Export Folder: MyVault
 Default export path: MyVault/Health/2026-05-12.md
-Free export allowance: 10 successful actions
+Access: Active trial, subscription, or Lifetime
 ```
 
 ## Tips
 
 - Pick the Obsidian vault itself if exported files should appear directly in Obsidian.
 - Folder setup and Health access are recoverable; onboarding never traps a user after a denied permission or cancelled Files picker.
-- The purchase offer is non-blocking. Dismissing it preserves the free allowance.
+- Setup permissions can be skipped, but unpaid users cannot dismiss the root purchase gate to begin tracking. Restore remains available.
 - Share My Setup transfers preferences only; the imported destination must still be rebound locally.
 - Configure Connected Mac after onboarding if the files should be written on macOS.
 
@@ -61,15 +61,15 @@ Free export allowance: 10 successful actions
 |---|---|---|
 | Export asks for a folder | Folder setup was skipped or access was revoked | Use the Export vault badge to choose the intended Files folder. |
 | Health access is not connected | Permission was skipped, denied, or limited | Review Apple Health → Apps → Health.md and enable the intended reads. |
-| A paywall appears after preview | One-time post-onboarding offer | Dismiss it to continue with free exports or choose a Lifetime option. |
-| Guidance appears after the 1st or 3rd export | Scheduling guide, then a Lifetime offer | Dismiss it; remaining free exports are unchanged. |
+| A paywall appears on launch | No active access was found | Choose a plan or restore purchases using the purchasing Apple ID. |
+| Access ends after a trial | Trial/subscription expired | Manage the subscription or choose Lifetime; existing exported files remain yours. |
 | No data appears | Source data or permission is missing for the requested range | Check Apple Health, Health.md permission, and the date owner for overnight sleep. |
 
 ## Video outline
 
 - **Suggested title:** Set Up Health.md in 60 Seconds
 - **Hook:** “Turn Apple Health into files you own.”
-- **Demo flow:** welcome → Health access → sample/plugin link → folder → ready → first preview → optional non-blocking offer.
+- **Demo flow:** purchase/restore → welcome → Health access → sample/plugin link → folder → ready → first preview.
 - **Key captures:** five-step progress, Health permission, sample format picker, folder choice, Ready repair actions, first preview.
 - **CTA:** Continue with a one-day verified export.
 
@@ -77,8 +77,8 @@ Free export allowance: 10 successful actions
 
 - `OnboardingStep` contains exactly five cases: `welcome`, `healthAccess`, `sampleExport`, `folder`, and `ready`.
 - The Obsidian plugin promo is folded into `SampleExportStep`; it is not a separate gate.
-- The unlock step was removed. `ContentView` and `iPadContentView` arm a one-time post-onboarding offer that fires after the first preview closes.
+- `PurchaseAccessGate` in the app root gates both iPhone and iPad content; existing paid access skips the paywall. Historical post-preview code does not trigger for unlocked users.
 - Setup steps intentionally do not gate advancement. Health and folder skips remain coarse analytics events with no health values or paths.
 - The Ready CTA raises the one-shot first-preview request consumed by the normal Export surface.
-- `PurchaseManager.upgradePromptMilestones` contains 3 and 7; those prompts are distinct from the hard quota block at 10.
-- Existing unlocked users do not receive the offer.
+- `PurchaseManager.freeExportLimit` is zero and `upgradePromptMilestones` is empty. Trial eligibility and duration come from StoreKit.
+- Existing unlocked users do not receive the root purchase offer. Store product setup and device/sandbox qualification are separate from source implementation.

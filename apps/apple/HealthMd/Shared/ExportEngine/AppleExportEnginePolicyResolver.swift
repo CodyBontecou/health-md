@@ -83,19 +83,53 @@ nonisolated struct AppleExportEnginePolicyResolver: Sendable {
         requestedMode frozenRequestedMode: ExportEngineMode? = nil,
         coreExecutor: any AppleLooseDailyCoreExecuting = SystemAppleLooseDailyCoreExecutor()
     ) async -> AppleExportEnginePin? {
+        await pinForProfile(calendarTimeZoneIdentifier: calendarTimeZoneIdentifier,
+            profile: .appleHealthDataV8,
+            requestedMode: frozenRequestedMode ?? requestedModeForNewOperation(profile: .appleHealthDataV8),
+            coreExecutor: coreExecutor)
+    }
+
+    /// The independently versioned wake-date profile has one renderer authority.
+    /// Production capture availability remains with the sleep context; historical
+    /// Apple-v8 rollout overrides cannot retag or select this successor.
+    func pinForNewWakeDateOperation(
+        calendarTimeZoneIdentifier: String,
+        expectedRegistryVersion: UInt32 = HealthMdSleepProfileContract.registryVersion,
+        coreExecutor: any AppleLooseDailyCoreExecuting = SystemAppleLooseDailyCoreExecutor()
+    ) async -> AppleExportEnginePin? {
+        await pinForProfile(calendarTimeZoneIdentifier: calendarTimeZoneIdentifier,
+            profile: .appleHealthDataV11, requestedMode: .rust,
+            expectedRegistryVersion: expectedRegistryVersion, coreExecutor: coreExecutor)
+    }
+
+    private func pinForProfile(
+        calendarTimeZoneIdentifier: String,
+        profile: CoreMetricRegistryProfile,
+        requestedMode: ExportEngineMode,
+        expectedRegistryVersion: UInt32? = nil,
+        coreExecutor: any AppleLooseDailyCoreExecuting
+    ) async -> AppleExportEnginePin? {
         // Legacy authority persists as nil without loading the packaged core. Capture the request
         // once so a mutable internal override can never split one operation's authority decision.
-        let requestedMode = frozenRequestedMode
-            ?? requestedModeForNewOperation(profile: .appleHealthDataV8)
+        guard profile == .appleHealthDataV8 || profile == .appleHealthDataV11 else { return nil }
+        let expectedProfileID = profile == .appleHealthDataV11
+            ? AppleExportEnginePin.wakeDateProfileID : AppleExportEnginePin.profileID
         guard requestedMode != .legacy,
-              AppleExportEnginePin.isIANAIdentifier(calendarTimeZoneIdentifier),
-              let context = try? await coreExecutor.loadContext(),
-              AppleExportEnginePin.coreIsCompatible(
-                  buildInfo: context.buildInfo,
-                  registrySnapshot: context.registry
-              ) else {
-            return nil
-        }
+              profile != .appleHealthDataV11 || requestedMode == .rust,
+              AppleExportEnginePin.isIANAIdentifier(calendarTimeZoneIdentifier) else { return nil }
+        let context: AppleLooseDailyCoreContext
+        do {
+            if let expectedRegistryVersion {
+                context = try await coreExecutor.loadContext(profile: profile,
+                    expectedRegistryVersion: expectedRegistryVersion)
+            } else {
+                context = try await coreExecutor.loadContext(profile: profile)
+            }
+        } catch { return nil }
+        guard context.registry.profileId == expectedProfileID else { return nil }
+        // Pin construction validates the selected profile's complete contract.
+        // Successors require Rust; a historical/legacy compatibility probe cannot
+        // establish their authority or substitute a different returned registry.
         return try? AppleExportEnginePin(
             engine: requestedMode,
             calendarTimeZoneIdentifier: calendarTimeZoneIdentifier,

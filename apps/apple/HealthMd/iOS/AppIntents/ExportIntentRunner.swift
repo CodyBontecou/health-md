@@ -59,7 +59,6 @@ enum ExportIntentRunner {
     struct Dependencies {
         var refreshPurchaseStatus: () async -> Void
         var canExport: () -> Bool
-        var trackExportBlockedByQuota: (PricingAnalyticsExportTargetType) -> Void
         var hasVaultAccess: () -> Bool
         var requiresVaultReselection: () -> Bool
         var refreshVaultAccess: () -> Void
@@ -71,7 +70,7 @@ enum ExportIntentRunner {
         /// Phase 4: profile-scoped runs build request settings from the
         /// profile's frozen snapshot instead of live settings.
         var makeSettingsForProfile: (ExportProfile) -> AdvancedExportSettings = { profile in
-            AdvancedExportSettings(snapshot: profile.settings, userDefaults: .standard)
+            profile.settings.makeAdvancedExportSettings(userDefaults: .standard, forNewConfiguration: true)
         }
         /// Phase 4: adopt a profile's destinations (persisted vault keys +
         /// API endpoint) before a run; call with nil to adopt the active
@@ -100,7 +99,6 @@ enum ExportIntentRunner {
         var exportDatesBackground: ([Date], AdvancedExportSettings) async -> ExportOrchestrator.ExportResult
         var recordResult: (ExportOrchestrator.ExportResult, ExportSource, Date, Date, String?, String?, ExportTargetSelection) -> Void
         var recordExportUse: () -> Void
-        var trackExportSucceeded: (PricingAnalyticsExportMetadata) -> Void
         var updateScheduleLastExport: () -> Void
         var pendingExportStore: PendingExportStoring
         var exportNotificationScheduler: ExportNotificationScheduling
@@ -118,13 +116,7 @@ enum ExportIntentRunner {
                 canExport: {
                     PurchaseManager.shared.canExport
                 },
-                trackExportBlockedByQuota: { targetType in
-                    PricingAnalyticsClient.shared.trackExportBlockedByQuota(
-                        context: .shortcut,
-                        targetType: targetType,
-                        quotaState: PurchaseManager.shared.analyticsQuotaState
-                    )
-                },
+
                 hasVaultAccess: {
                     vaultManager.hasVaultAccess
                 },
@@ -146,7 +138,7 @@ enum ExportIntentRunner {
                     settings
                 },
                 makeSettingsForProfile: { profile in
-                    AdvancedExportSettings(snapshot: profile.settings, userDefaults: .standard)
+                    profile.settings.makeAdvancedExportSettings(userDefaults: .standard, forNewConfiguration: true)
                 },
                 adoptProfileDestinations: { profile in
                     ExportIntentRunner.adoptDestinationsForIntentRun(profile)
@@ -178,12 +170,7 @@ enum ExportIntentRunner {
                 recordExportUse: {
                     PurchaseManager.shared.recordExportUse()
                 },
-                trackExportSucceeded: { metadata in
-                    PricingAnalyticsClient.shared.trackExportSucceeded(
-                        metadata: metadata,
-                        quotaState: PurchaseManager.shared.analyticsQuotaState
-                    )
-                },
+
                 updateScheduleLastExport: {
                     var schedule = SchedulingManager.shared.schedule
                     schedule.updateLastExport()
@@ -273,6 +260,17 @@ enum ExportIntentRunner {
         profileName: String? = nil,
         dependencies: Dependencies
     ) async -> Outcome {
+        let context = AppleSleepCaptureContext.resolve(timeZone: dependencies.calendar.timeZone,
+                                                       attribution: HealthKitManager.shared.sleepDayAttribution)
+        do { try context.requireShippedProfile() }
+        catch { return .failure(reason: error.localizedDescription) }
+        return await AppleSleepCaptureContext.pinned.withValue(context) {
+            await runWithCaptureContext(dates: dates, source: source, profileName: profileName, dependencies: dependencies)
+        }
+    }
+
+    private static func runWithCaptureContext(dates: [Date], source: ExportSource,
+                                             profileName: String?, dependencies: Dependencies) async -> Outcome {
         guard !dates.isEmpty else {
             return .failure(reason: "No dates to export")
         }
@@ -295,7 +293,6 @@ enum ExportIntentRunner {
         }
         let isAPIExport = runProfile?.target == .apiEndpoint
         let exportTarget: ExportTargetSelection = isAPIExport ? .apiEndpoint : .localIPhoneFolder
-        let analyticsTarget: PricingAnalyticsExportTargetType = isAPIExport ? .apiEndpoint : .localFile
         // API runs resolve immutable destination snapshots and need no global adoption.
         if let runProfile, !isAPIExport {
             dependencies.adoptProfileDestinations(runProfile)
@@ -328,7 +325,6 @@ enum ExportIntentRunner {
         await dependencies.refreshPurchaseStatus()
 
         guard dependencies.canExport() else {
-            dependencies.trackExportBlockedByQuota(analyticsTarget)
             return .paywall
         }
 
@@ -364,14 +360,6 @@ enum ExportIntentRunner {
             }
             if result.successCount > 0 {
                 dependencies.recordExportUse()
-                dependencies.trackExportSucceeded(PricingAnalyticsExportMetadata(
-                    targetType: analyticsTarget,
-                    formatCount: settings.exportFormats.count,
-                    metricCount: settings.metricSelection.totalEnabledCount,
-                    dateRangePreset: PricingAnalyticsDateRangePreset.custom,
-                    startDate: sortedDates.first!,
-                    endDate: sortedDates.last!
-                ))
             }
             return .cancelled(
                 remainingDates: result.remainingDates(
@@ -443,15 +431,6 @@ enum ExportIntentRunner {
         )
 
         dependencies.recordExportUse()
-        let metadata = PricingAnalyticsExportMetadata(
-            targetType: analyticsTarget,
-            formatCount: settings.exportFormats.count,
-            metricCount: settings.metricSelection.totalEnabledCount,
-            dateRangePreset: PricingAnalyticsDateRangePreset.custom,
-            startDate: sortedDates.first!,
-            endDate: sortedDates.last!
-        )
-        dependencies.trackExportSucceeded(metadata)
 
         // Only mark the schedule's lastExport when yesterday was part of this
         // run — otherwise an arbitrary back-fill export would suppress the
@@ -492,6 +471,7 @@ enum ExportIntentRunner {
             dates: dates,
             source: .shortcut,
             notificationMetadata: ["notification": ExportNotificationType.pendingExport.rawValue],
+            sleepCaptureContext: AppleSleepCaptureContext.pinned.wrappedValue,
             calendar: dependencies.calendar
         )
 

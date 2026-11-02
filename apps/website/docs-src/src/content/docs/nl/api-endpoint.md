@@ -1,9 +1,22 @@
 ---
-title: "API-eindpunt"
-description: "Stuur geselecteerde Apple Health-gegevens als JSON rechtstreeks vanaf de iPhone naar je eigen HTTP(S)-eindpunt."
+title: "Exporteer Apple Health-JSON naar je eigen API"
+description: "Stuur geselecteerde Apple Health-gegevens als JSON van iPhone naar je eigen endpoint met Health.md. Bekijk de installatie, voorbeelden en verzoeklimieten."
 ---
 
 <p>API-eindpunt is een exportbestemming waarmee je gegevens van Health.md naar je eigen server, webhook, database, dashboard of automatisering stuurt. De iPhone blijft Apple Health uitlezen. In plaats van bestanden te schrijven, stuurt de app JSON met een POST-verzoek naar het eindpunt dat je configureert.</p>
+
+## Kies je API-workflow
+
+| Je doel | Begin hier |
+| --- | --- |
+| Geselecteerde gegevens naar je server sturen | Volg deze handleiding. De iPhone stuurt een JSON-POST naar de ingestelde URL. |
+| Gegevens lokaal op een Mac opvragen | <a href="/nl/docs/agent-api/">Lokale loopback-query-API</a>. Houd deze API op deze Mac; stel hem niet beschikbaar op het netwerk. |
+| Een iOS-gezondheidsapp bouwen | <a href="https://developer.apple.com/documentation/healthkit" target="_blank" rel="noopener">Apple HealthKit-documentatie voor ontwikkelaars</a>. |
+
+<div class="callout">
+<strong>Begin met één dag</strong>
+<p><a href="https://apps.apple.com/us/app/health-md/id6757763969" target="_blank" rel="noopener">Installeer Health.md op je iPhone</a>. <a href="/docs/reference/generated/automation/api-export-v1.json">Bekijk het fictieve JSON-voorbeeld</a> voordat je de ontvanger instelt.</p>
+</div>
 
 <div class="callout">
 <strong>Let op je privacy.</strong>

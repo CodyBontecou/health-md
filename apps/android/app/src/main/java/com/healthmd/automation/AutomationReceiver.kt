@@ -44,6 +44,19 @@ import timber.log.Timber
 import java.time.LocalDate
 import javax.inject.Inject
 
+internal typealias AutomationResultPublisher = (Int, String, Bundle) -> Unit
+
+/** goAsync detaches the receiver's result; the retained PendingResult owns the response. */
+internal fun automationResultPublisher(pendingResult: BroadcastReceiver.PendingResult): AutomationResultPublisher =
+    { code, message, extras ->
+        try {
+            pendingResult.setResult(code, message, extras)
+        } catch (_: IllegalStateException) {
+            // Result delivery is best-effort; durable history/export state is independent.
+            Timber.d("Automation result not deliverable (broadcast finalized): %s", message)
+        }
+    }
+
 internal fun resolveAutomationProfileReference(
     profiles: List<ExportProfile>,
     reference: String,
@@ -83,20 +96,21 @@ class AutomationReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
         val pendingResult = goAsync()
+        val publishResult = automationResultPublisher(pendingResult)
         CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
             try {
                 when (intent.action) {
-                    ACTION_EXPORT_YESTERDAY -> runExport(context, listOf(LocalDate.now().minusDays(1)), profileReference(intent))
+                    ACTION_EXPORT_YESTERDAY -> runExport(context, listOf(LocalDate.now().minusDays(1)), profileReference(intent), publishResult)
                     ACTION_EXPORT_LAST_DAYS -> {
                         val days = intent.getIntExtra(EXTRA_DAYS, 1).coerceIn(1, 365)
                         val end = LocalDate.now().minusDays(1)
                         val start = end.minusDays((days - 1).toLong())
-                        runExport(context, ExportOrchestrator.dateRange(start, end), profileReference(intent))
+                        runExport(context, ExportOrchestrator.dateRange(start, end), profileReference(intent), publishResult)
                     }
                     ACTION_EXPORT_DATE -> {
                         val date = intent.getStringExtra(EXTRA_DATE)?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
                             ?: LocalDate.now().minusDays(1)
-                        runExport(context, listOf(date), profileReference(intent))
+                        runExport(context, listOf(date), profileReference(intent), publishResult)
                     }
                     ACTION_EXPORT_RANGE -> {
                         val start = intent.getStringExtra(EXTRA_START_DATE)?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
@@ -104,10 +118,10 @@ class AutomationReceiver : BroadcastReceiver() {
                         if (start == null || end == null || end.isBefore(start)) {
                             publishResult(RESULT_INVALID_INPUT, PROTOCOL_INVALID_DATE_RANGE, Bundle.EMPTY)
                         } else {
-                            runExport(context, ExportOrchestrator.dateRange(start, end), profileReference(intent))
+                            runExport(context, ExportOrchestrator.dateRange(start, end), profileReference(intent), publishResult)
                         }
                     }
-                    ACTION_GET_LAST_STATUS -> publishLastStatus()
+                    ACTION_GET_LAST_STATUS -> publishLastStatus(publishResult)
                     else -> publishResult(
                         RESULT_INVALID_INPUT,
                         "$PROTOCOL_UNKNOWN_ACTION_PREFIX${intent.action}",
@@ -123,9 +137,14 @@ class AutomationReceiver : BroadcastReceiver() {
         }
     }
 
-    private suspend fun runExport(context: Context, dates: List<LocalDate>, profileReference: String? = null) =
+    private suspend fun runExport(
+        context: Context,
+        dates: List<LocalDate>,
+        profileReference: String?,
+        publishResult: AutomationResultPublisher,
+    ) =
         ExportAwakeCoordinator.shared.whileExporting {
-            runExportWhileAwake(context, dates, profileReference)
+            runExportWhileAwake(context, dates, profileReference, publishResult)
         }
 
     /**
@@ -198,7 +217,12 @@ class AutomationReceiver : BroadcastReceiver() {
         return runCatching { snapshot.restoreOnto(current) }.getOrNull()
     }
 
-    private suspend fun runExportWhileAwake(context: Context, dates: List<LocalDate>, profileReference: String? = null) {
+    private suspend fun runExportWhileAwake(
+        context: Context,
+        dates: List<LocalDate>,
+        profileReference: String?,
+        publishResult: AutomationResultPublisher,
+    ) {
         if (dates.isEmpty()) {
             publishResult(RESULT_INVALID_INPUT, PROTOCOL_NO_DATES_REQUESTED, Bundle.EMPTY)
             return
@@ -212,7 +236,7 @@ class AutomationReceiver : BroadcastReceiver() {
                 totalCount = dates.size,
                 failedDateDetails = emptyList(),
             )
-            publishExportResult(result, "$PROTOCOL_PROFILE_NOT_FOUND:$profileReference")
+            publishExportResult(result, "$PROTOCOL_PROFILE_NOT_FOUND:$profileReference", publishResult)
             return
         } catch (_: AutomationProfileRebindRequired) {
             val result = ExportResult(
@@ -220,7 +244,7 @@ class AutomationReceiver : BroadcastReceiver() {
                 totalCount = dates.size,
                 failedDateDetails = dates.map { FailedDateDetail(it, ExportFailureReason.UNKNOWN) },
             )
-            publishExportResult(result, PROTOCOL_PROFILE_REBIND_REQUIRED)
+            publishExportResult(result, PROTOCOL_PROFILE_REBIND_REQUIRED, publishResult)
             return
         }
         val profile = profileSettingsAndName.profile
@@ -245,15 +269,14 @@ class AutomationReceiver : BroadcastReceiver() {
                 invalidProfile,
                 invalidProfile.target,
             )
-            publishExportResult(result, PROTOCOL_PROFILE_SNAPSHOT_INVALID)
+            publishExportResult(result, PROTOCOL_PROFILE_SNAPSHOT_INVALID, publishResult)
             return
         }
         val settings = profileSettingsAndName.settings ?: currentSettings
         val target = profile?.target ?: settings.exportTarget
         entitlementRepository.refresh()
         val isPurchased = distributionPolicy.fullAccessIncluded ||
-            settingsRepository.isPurchased.first() ||
-            entitlementRepository.isUnlocked.first()
+            entitlementRepository.verifyAccess()
         val freeExportsRemaining = settingsRepository.getFreeExportsRemaining()
         // A folder-bound profile satisfies the destination requirement on its own.
         val folderUri = settingsRepository.getExportFolderUri()
@@ -275,7 +298,7 @@ class AutomationReceiver : BroadcastReceiver() {
                 profile,
                 target,
             )
-            publishExportResult(result, PROTOCOL_UNLOCK_REQUIRED)
+            publishExportResult(result, PROTOCOL_UNLOCK_REQUIRED, publishResult)
             return
         }
 
@@ -295,7 +318,7 @@ class AutomationReceiver : BroadcastReceiver() {
                 profile,
                 target,
             )
-            publishExportResult(result, PROTOCOL_NO_EXPORT_FOLDER)
+            publishExportResult(result, PROTOCOL_NO_EXPORT_FOLDER, publishResult)
             return
         }
 
@@ -315,7 +338,7 @@ class AutomationReceiver : BroadcastReceiver() {
                 profile,
                 target,
             )
-            publishExportResult(result, PROTOCOL_HEALTH_PERMISSIONS_MISSING)
+            publishExportResult(result, PROTOCOL_HEALTH_PERMISSIONS_MISSING, publishResult)
             return
         }
 
@@ -353,10 +376,10 @@ class AutomationReceiver : BroadcastReceiver() {
             settingsRepository.recordFreeExportUse()
         }
 
-        publishExportResult(result, protocolDaysExported(result.successCount, result.totalCount))
+        publishExportResult(result, protocolDaysExported(result.successCount, result.totalCount), publishResult)
     }
 
-    private suspend fun publishLastStatus() {
+    private suspend fun publishLastStatus(publishResult: AutomationResultPublisher) {
         val entry = exportHistoryRepository.getAllEntries().first().firstOrNull()
         if (entry == null) {
             publishResult(RESULT_SUCCESS, PROTOCOL_NO_EXPORT_HISTORY, Bundle.EMPTY)
@@ -441,7 +464,11 @@ class AutomationReceiver : BroadcastReceiver() {
     private fun protocolDaysExported(successCount: Int, totalCount: Int): String =
         "$successCount/$totalCount days exported"
 
-    private fun publishExportResult(result: ExportResult, message: String) {
+    private fun publishExportResult(
+        result: ExportResult,
+        message: String,
+        publishResult: AutomationResultPublisher,
+    ) {
         publishResult(
             if (result.isFailure) RESULT_FAILURE else RESULT_SUCCESS,
             message,
@@ -452,24 +479,6 @@ class AutomationReceiver : BroadcastReceiver() {
                 putStringArray(EXTRA_FAILED_DATES, result.failedDateDetails.map { it.date.toString() }.toTypedArray())
             },
         )
-    }
-
-    /**
-     * Sets the ordered-broadcast result when it is still pending. Non-ordered broadcasts (e.g.
-     * plain `adb shell am broadcast`) finalize their result before an async goAsync body resumes,
-     * and `setResult*` then throws — historically crashing the app from the catch path. Result
-     * delivery is best-effort: the durable side effects (export, history, pending work) never
-     * depend on it.
-     */
-    private fun publishResult(code: Int, message: String, extras: Bundle) {
-        try {
-            resultCode = code
-            resultData = message
-            setResultExtras(extras)
-        } catch (_: IllegalStateException) {
-            Timber.d("Automation result not deliverable (broadcast finalized): %s", message)
-        }
-        Timber.d("Automation result: %s (%s)", message, code)
     }
 
     private fun profileReference(intent: Intent): String? =

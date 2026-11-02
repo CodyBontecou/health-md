@@ -90,7 +90,55 @@
       }
     ]
   },
-  "subscriptionGroups": [],
+  "subscriptionGroups": [
+    {
+      "id": "healthmd-pro",
+      "name": "Health.md Pro",
+      "localizations": [],
+      "subscriptions": [
+        {
+          "adHocOffers": [], "codeOffers": [], "winbackOffers": [],
+          "displayPrice": "0.99", "familyShareable": false,
+          "groupNumber": 2, "internalID": "healthmd-weekly",
+          "introductoryOffer": {"internalID": "trial-weekly", "paymentMode": "free", "subscriptionPeriod": "P1W"},
+          "localizations": [{"description": "Unlimited private exports, billed weekly.", "displayName": "Health.md Weekly", "locale": "en_US"}],
+          "productID": "com.codybontecou.obsidianhealth.pro.weekly",
+          "recurringSubscriptionPeriod": "P1W", "referenceName": "Individual Weekly",
+          "subscriptionGroupID": "healthmd-pro", "type": "RecurringSubscription"
+        },
+        {
+          "adHocOffers": [], "codeOffers": [], "winbackOffers": [],
+          "displayPrice": "29.99", "familyShareable": false,
+          "groupNumber": 2, "internalID": "healthmd-yearly",
+          "introductoryOffer": {"internalID": "trial-yearly", "paymentMode": "free", "subscriptionPeriod": "P1W"},
+          "localizations": [{"description": "Unlimited private exports, billed yearly.", "displayName": "Health.md Yearly", "locale": "en_US"}],
+          "productID": "com.codybontecou.obsidianhealth.pro.yearly.v2",
+          "recurringSubscriptionPeriod": "P1Y", "referenceName": "Individual Yearly",
+          "subscriptionGroupID": "healthmd-pro", "type": "RecurringSubscription"
+        },
+        {
+          "adHocOffers": [], "codeOffers": [], "winbackOffers": [],
+          "displayPrice": "1.99", "familyShareable": true,
+          "groupNumber": 1, "internalID": "healthmd-family-weekly",
+          "introductoryOffer": {"internalID": "trial-family-weekly", "paymentMode": "free", "subscriptionPeriod": "P1W"},
+          "localizations": [{"description": "Unlimited private exports for your Apple Family, billed weekly.", "displayName": "Health.md Family Weekly", "locale": "en_US"}],
+          "productID": "com.codybontecou.obsidianhealth.pro.family.weekly",
+          "recurringSubscriptionPeriod": "P1W", "referenceName": "Family Weekly",
+          "subscriptionGroupID": "healthmd-pro", "type": "RecurringSubscription"
+        },
+        {
+          "adHocOffers": [], "codeOffers": [], "winbackOffers": [],
+          "displayPrice": "49.99", "familyShareable": true,
+          "groupNumber": 1, "internalID": "healthmd-family-yearly",
+          "introductoryOffer": {"internalID": "trial-family-yearly", "paymentMode": "free", "subscriptionPeriod": "P1W"},
+          "localizations": [{"description": "Unlimited private exports for your Apple Family, billed yearly.", "displayName": "Health.md Family Yearly", "locale": "en_US"}],
+          "productID": "com.codybontecou.obsidianhealth.pro.family.yearly.v2",
+          "recurringSubscriptionPeriod": "P1Y", "referenceName": "Family Yearly",
+          "subscriptionGroupID": "healthmd-pro", "type": "RecurringSubscription"
+        }
+      ]
+    }
+  ],
   "version": {
     "major": 4,
     "minor": 0

@@ -543,9 +543,9 @@ class LargeDisplayAccessibilityTest(private val display: AccessibilityDisplayCas
         awaitNativeKeyboardVisibility(false)
         compose.runOnIdle { assertEquals("Retain the five-digit limit", 12345, state.value.cadenceValue) }
         field.assertTextContains(formatInteger(12345, locale))
-        // Keyboard dismissal can change the short viewport and its scroll offset.
-        // Measure the editor only after bringing it back into view, as above.
-        field.performScrollTo().assertFullyVisible()
+        // IME dismissal can change the scroll position. Measure the reachable field,
+        // with the same visibility precondition as the initial text-fit assertion.
+        field.performScrollTo().assertFullyVisible().assertMinimumTouchTarget()
         assertTextFits(field, GeistType.label20Mono.fontSize)
 
         val dates = compose.onNodeWithTag(ScheduleControlTags.DATE_WINDOW)

@@ -375,7 +375,7 @@
     <!-- Paywall screen -->
     <string name="paywall_title">Desbloquear Health.md</string>
     <string name="paywall_subtitle">Has usado tus 5 exportaciones gratuitas</string>
-    <string name="paywall_unlimited_exports">Exportaciones ilimitadas para siempre</string>
+    <string name="paywall_unlimited_exports">Exportaciones ilimitadas</string>
     <string name="paywall_scheduled_exports">Exportaciones programadas automáticas</string>
     <string name="paywall_future_features">Todas las características futuras incluidas</string>
     <string name="paywall_one_time">Pago único \u2014 sin suscripción</string>
@@ -545,6 +545,13 @@
     <string name="feedback_no_app_available">No hay ninguna aplicación disponible para abrir este enlace.</string>
     <string name="granular_data_title">Incluir series de tiempo detalladas</string>
     <string name="granular_data_description">Añade muestras con marca de tiempo, como la frecuencia cardíaca y las fases del sueño, a las exportaciones de compatibilidad. Para obtener una copia completa de la API, usa una instantánea bruta de la API.</string>
+    <string name="sleep_attribution_title">Atribución del día de sueño</string>
+    <string name="sleep_attribution_night_begins">Comienza de noche</string>
+    <string name="sleep_attribution_morning_ends">Termina de mañana</string>
+    <string name="sleep_attribution_night_begins_description">El sueño usa el intervalo de mediodía a mediodía de la nota diaria. Es la opción predeterminada y coincide con exportaciones anteriores.</string>
+    <string name="sleep_attribution_morning_ends_description">Termina de mañana no está disponible para los perfiles de exportación actuales. Elige Comienza de noche para una nueva exportación.</string>
+    <string name="sleep_attribution_morning_ends_wake_description">Asigna toda la sesión de sueño a la fecha en que despiertas, según la zona horaria de la exportación.</string>
+
     <string name="metric_category_cycling">Ciclismo</string>
     <string name="metric_category_medications">Medicamentos</string>
     <string name="metric_category_other">Otro</string>
@@ -711,7 +718,7 @@
     <string name="privacy_category_history_permissions">READ_HEALTH_DATA_HISTORY</string>
     <string name="privacy_category_history_exports">Se usa solo para exportaciones manuales grandes, como las de 90 días o de todo el historial, para que Health.md pueda leer datos de Health Connect anteriores al intervalo estándar de 30 días.</string>
     <string name="privacy_policy_direct_cli">Las exportaciones de Direct CLI solo se realizan después de emparejar y conectar explícitamente su computadora. Los registros de salud se envían mediante una conexión autenticada y cifrada, se conservan de forma privada durante un máximo de siete días para permitir reanudar la transferencia y se eliminan antes si cancela u olvida el emparejamiento.</string>
-    <string name="privacy_policy_footer">Health.md no opera una nube de datos de salud. La atribución de campañas propia de Health.md puede enviar UUID aleatorios de instalación o evento generados por la aplicación y metadatos de campaña validados, pero nunca datos de salud, referentes sin procesar, identificadores de dispositivo, exportaciones, cuentas ni rutas.</string>
+    <string name="privacy_policy_footer">Esta versión no recopila análisis de uso propios ni atribución publicitaria. Las compras, la programación y los servicios opcionales tienen avisos de privacidad separados.</string>
     <string name="section_export_type">Tipo de exportación</string>
     <string name="export_type_compatibility">Exportación de compatibilidad</string>
     <string name="export_type_compatibility_description">Archivos diarios Markdown, Bases, JSON o CSV para flujos de trabajo Health.md existentes</string>
@@ -782,7 +789,7 @@
     <string name="onboarding_skip">Omitir</string>
     <string name="onboarding_back">Atrás</string>
     <string name="export_failure_paywall_label">Desbloqueo requerido</string>
-    <string name="export_guidance_paywall">Las exportaciones programadas requieren el desbloqueo de por vida. Abra la pantalla de compra para desbloquear las exportaciones y la programación ilimitadas.</string>
+    <string name="export_guidance_paywall">Las exportaciones programadas requieren una prueba o suscripción activa, o acceso de por vida. Abre la pantalla de compra para ver las opciones de acceso.</string>
     <string name="export_source_retry">Reintento</string>
     <string name="export_source_shortcut">Atajo</string>
     <string name="export_source_remote">Remoto</string>
@@ -1499,4 +1506,28 @@
     <string name="post_export_upgrade_action">Ver acceso de por vida</string>
     <string name="post_export_manual_action">Seguir exportando manualmente</string>
     <string name="post_export_continue_free">Continuar gratis</string>
+    <string name="export_sleep_date_guidance">El sueño abarca desde el mediodía de cada fecha seleccionada hasta el mediodía siguiente. Para el sueño de anoche, elige Ayer.</string>
+    <string name="export_sleep_preview_window">Ventana de sueño: del %1$s al mediodía al %2$s al mediodía (%3$s).</string>
+    <string name="export_sleep_preview_guidance">Si falta el sueño, prueba la fecha anterior. El sueño de la mañana puede aparecer en ese resumen aunque los registros originales tengan la fecha de hoy. Los errores de consulta se indican por separado; un resultado vacío también puede significar que no hay acceso de lectura.</string>
+    <string name="whoop_connection_description">Conecta WHOOP para exportar recuperación, esfuerzo, sueño, entrenamientos y medidas corporales. El inicio de sesión usa el navegador; Health.md guarda los tokens cifrados en este dispositivo. Desconectar elimina la conexión guardada en este dispositivo.</string>
+    <string name="whoop_connect">Conectar WHOOP</string>
+    <string name="whoop_sources_description">Conecta WHOOP para exportar directamente del proveedor o sigue usando Health Connect para los registros locales.</string>
+    <string name="whoop_sign_in_failed">No se pudo iniciar la sesión de WHOOP. Comprueba la conexión e inténtalo de nuevo.</string>
+    <string name="whoop_use_health_connect">Usar Health Connect para exportar</string>
+    <string name="whoop_reconnect">Volver a conectar WHOOP</string>
+    <string name="whoop_disconnect">Desconectar WHOOP</string>
+    <string name="whoop_use_for_exports">Usar WHOOP para exportar</string>
+    <string name="paywall_access_subtitle">Elige una suscripción o acceso de por vida para crear tu archivo de salud privado. Las suscripciones elegibles incluyen una prueba gratuita de 7 días.</string>
+    <string name="paywall_access_active_title">Tu acceso está activo</string>
+    <string name="paywall_access_active_body">Continúa la configuración para conectar tus datos de salud y elegir dónde guardar tu archivo privado.</string>
+    <string name="paywall_plan_choices">Acceso semanal, anual o de por vida</string>
+    <string name="paywall_weekly_price">%1$s / semana</string>
+    <string name="paywall_yearly_price">%1$s / año</string>
+    <string name="paywall_lifetime_price">De por vida — %1$s una vez</string>
+    <string name="paywall_trial_then">7 días gratis, después %1$s</string>
+    <string name="paywall_retry">Intentar de nuevo</string>
+    <string name="paywall_manage_subscriptions">Gestionar suscripciones</string>
+    <string name="paywall_terms">Condiciones</string>
+    <string name="paywall_privacy">Privacidad</string>
+    <string name="paywall_subscription_disclosure">Las suscripciones elegibles incluyen una prueba gratuita de 7 días y después se renuevan automáticamente al precio mostrado, salvo que se cancelen antes de terminar la prueba o el período actual. Gestiona o cancela en Google Play. El acceso de por vida se cobra inmediatamente como pago único. Se conserva el acceso de pago existente. La vida no tiene juicio. Eliminar la aplicación o comprar Lifetime no cancela una suscripción existente.</string>
 </resources>

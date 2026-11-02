@@ -1,6 +1,6 @@
 ---
-title: "macOS 应用"
-description: "将 Health.md Mac 版用作 iPhone 导出目标、本地 CLI 和 MCP 主机、加密健康上下文存储、历史记录查看器及文件夹权限管理方。"
+title: "通过 Health.md 在 Mac 上使用 Apple Health"
+description: "使用 Health.md 将 iPhone 上的 Apple Health 数据导出到 Mac 文件夹，或查询本地上下文。在两台设备上安装应用，然后按照指南设置 Mac Sync。"
 ---
 
 Health.md Mac 版有两个本地用途：
@@ -9,6 +9,11 @@ Health.md Mac 版有两个本地用途：
 2. 托管本地智能体使用的环回 CLI、查询 API、加密健康上下文和 MCP 适配器。
 
 Apple Health 仍位于 iPhone 上。Mac 应用不会直接读取 HealthKit。
+
+<div class="callout">
+<strong>从 iPhone 和 Mac 开始</strong>
+<p><a href="https://apps.apple.com/us/app/health-md/id6757763969" target="_blank" rel="noopener">在 iPhone 和 Mac 上安装 Health.md</a>。参阅<a href="/zh-hans/docs/sync/">Mac Sync 设置指南</a>，或按照<a href="/blog/health-md-for-macos/">单日导出教程（英语）</a>操作。</p>
+</div>
 
 ## 主要区域
 

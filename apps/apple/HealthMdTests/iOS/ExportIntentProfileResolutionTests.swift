@@ -160,7 +160,6 @@ final class ExportIntentProfileResolutionTests: XCTestCase {
         let ghostDependencies = ExportIntentRunner.Dependencies(
                 refreshPurchaseStatus: {},
                 canExport: { true },
-                trackExportBlockedByQuota: { _ in },
                 hasVaultAccess: {
                     vaultEvents.append("hasAccess")
                     return true
@@ -189,7 +188,6 @@ final class ExportIntentProfileResolutionTests: XCTestCase {
                 },
                 recordResult: { _, _, _, _, _, _, _ in },
                 recordExportUse: {},
-                trackExportSucceeded: { _ in },
                 updateScheduleLastExport: {},
                 pendingExportStore: InMemoryPendingExportStore(),
                 exportNotificationScheduler: InspectableExportNotificationScheduler(),
@@ -237,7 +235,6 @@ final class ExportIntentProfileResolutionTests: XCTestCase {
             XCTAssertEqual(recorder.historyProfileNames, ["Morning API"])
             XCTAssertEqual(recorder.historyTargets, [.apiEndpoint])
             XCTAssertEqual(recorder.historyTargetLabels, [apiDestination.displayName])
-            XCTAssertEqual(recorder.analyticsTargets, [.apiEndpoint])
             XCTAssertEqual(recorder.exportUseCount, 1)
             XCTAssertTrue(recorder.adopted.isEmpty)
             XCTAssertFalse(recorder.restored)
@@ -277,12 +274,9 @@ final class ExportIntentProfileResolutionTests: XCTestCase {
         store.add(name: "API", settings: makeSnapshot(), target: .apiEndpoint)
         let recorder = ProfileRunRecorder()
         var dependencies = apiDependencies(recorder: recorder)
-        var blockedTargets: [PricingAnalyticsExportTargetType] = []
         dependencies.canExport = { false }
-        dependencies.trackExportBlockedByQuota = { blockedTargets.append($0) }
         let outcome = await ExportIntentRunner.run(dates: [Date()], dependencies: dependencies)
         guard case .paywall = outcome else { return XCTFail("Expected quota gate") }
-        XCTAssertEqual(blockedTargets, [.apiEndpoint])
         XCTAssertTrue(recorder.apiDates.isEmpty)
         XCTAssertEqual(recorder.exportUseCount, 0)
     }
@@ -300,7 +294,6 @@ final class ExportIntentProfileResolutionTests: XCTestCase {
         guard case .failure = outcome else { return XCTFail("Expected locked API failure") }
         XCTAssertEqual(recorder.historyTargets, [.apiEndpoint])
         XCTAssertEqual(recorder.exportUseCount, 0)
-        XCTAssertTrue(recorder.analyticsTargets.isEmpty)
         XCTAssertTrue(try dependencies.pendingExportStore.loadAll().isEmpty)
     }
 
@@ -319,7 +312,6 @@ final class ExportIntentProfileResolutionTests: XCTestCase {
         XCTAssertEqual(exported, 1)
         XCTAssertEqual(total, 2)
         XCTAssertEqual(recorder.historyTargets, [.apiEndpoint])
-        XCTAssertEqual(recorder.analyticsTargets, [.apiEndpoint])
         XCTAssertEqual(recorder.exportUseCount, 1)
     }
 
@@ -336,7 +328,6 @@ final class ExportIntentProfileResolutionTests: XCTestCase {
         let outcome = await ExportIntentRunner.run(dates: dates, dependencies: dependencies)
         guard case .cancelled = outcome else { return XCTFail("Expected cancellation") }
         XCTAssertEqual(recorder.historyTargets, [.apiEndpoint])
-        XCTAssertEqual(recorder.analyticsTargets, [.apiEndpoint])
         XCTAssertEqual(recorder.exportUseCount, 1)
     }
 
@@ -402,7 +393,6 @@ private final class ProfileRunRecorder {
     var historyProfileNames: [String?] = []
     var historyTargets: [ExportTargetSelection] = []
     var historyTargetLabels: [String?] = []
-    var analyticsTargets: [PricingAnalyticsExportTargetType] = []
     var exportUseCount = 0
     var apiDates: [[Date]] = []
     var apiDestinations: [APIExportDestinationSnapshot] = []
@@ -411,7 +401,6 @@ private final class ProfileRunRecorder {
         let dependencies = ExportIntentRunner.Dependencies(
             refreshPurchaseStatus: {},
             canExport: { true },
-            trackExportBlockedByQuota: { _ in },
             hasVaultAccess: { true },
             requiresVaultReselection: { false },
             refreshVaultAccess: {},
@@ -442,7 +431,6 @@ private final class ProfileRunRecorder {
                 self?.historyTargetLabels.append(label)
             },
             recordExportUse: { [weak self] in self?.exportUseCount += 1 },
-            trackExportSucceeded: { [weak self] in self?.analyticsTargets.append($0.targetType) },
             updateScheduleLastExport: {},
             pendingExportStore: InMemoryPendingExportStore(),
             exportNotificationScheduler: InspectableExportNotificationScheduler(),

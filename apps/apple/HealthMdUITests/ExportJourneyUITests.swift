@@ -312,6 +312,9 @@ final class ExportJourneyUITests: XCTestCase {
             purchaseUnlocked: true,
             useHealthKitExportPreviewFixtures: true
         )
+        // The installed app retains the owner's choice between journeys.
+        // This fixture verifies the historical Night begins output explicitly.
+        app.launchArguments += ["-healthKit.sleepDayAttribution", "night_begins"]
         app.launch()
 
         let previewButton = app.buttons[UITestLaunchHelper.Export.previewButton]
@@ -690,6 +693,75 @@ final class ExportJourneyUITests: XCTestCase {
         XCTAssertTrue(paywallTitle.waitForExistence(timeout: 5), "Quota gate should beat Mac payload preparation with analytics offline")
     }
 
+    // MARK: - Sleep Day Attribution
+
+    func testSleepAttribution_morningEndsCanBeSelected() throws {
+        let app = UITestLaunchHelper.firstRunExportApp()
+        // The argument domain isolates the starting preference from earlier journeys.
+        app.launchArguments += ["-healthKit.sleepDayAttribution", "night_begins"]
+        app.launch()
+
+        let picker = sleepDayAttributionPicker(in: app)
+        XCTAssertTrue(accessibilityText(of: picker).contains("Night begins"))
+        picker.tap()
+
+        let morningEnds = app.buttons["Morning ends"]
+        XCTAssertTrue(morningEnds.waitForExistence(timeout: 3))
+        XCTAssertTrue(morningEnds.isEnabled)
+        morningEnds.tap()
+        XCTAssertTrue(waitForAccessibilityText(of: picker, containing: "Morning ends").contains("Morning ends"))
+        picker.tap()
+        XCTAssertTrue(app.buttons["Night begins"].isEnabled)
+        XCTAssertTrue(app.buttons["Morning ends"].isSelected)
+    }
+
+    func testSleepAttribution_morningEndsPreviewsDefaultLosslessAndRangeSettings() throws {
+        let app = UITestLaunchHelper.configuredApp(healthAuthorized: true, vaultSelected: true,
+            purchaseUnlocked: true, useHealthKitExportPreviewFixtures: true)
+        app.launchArguments += ["-healthKit.sleepDayAttribution", "morning_ends"]
+        app.launch()
+        let preview = app.buttons[UITestLaunchHelper.Export.previewButton]
+        XCTAssertTrue(preview.waitForExistence(timeout: 5))
+        preview.tap()
+        let row = app.descendants(matching: .any)[UITestLaunchHelper.ExportPreview.markdownFileRow]
+        XCTAssertTrue(row.waitForExistence(timeout: 15), "Default Morning ends preview must acquire its successor renderer")
+        row.tap()
+        let content = app.staticTexts[UITestLaunchHelper.ExportPreview.fileContent]
+        XCTAssertTrue(content.waitForExistence(timeout: 5))
+        XCTAssertTrue(content.label.contains("apple-v11"))
+        XCTAssertTrue(content.label.contains("morning_ends"))
+    }
+
+    func testSleepAttribution_storedMorningEndsRemainsVisibleAndCanChangeToNightBegins() throws {
+        let app = UITestLaunchHelper.firstRunExportApp()
+        app.launchArguments += ["-healthKit.sleepDayAttribution", "morning_ends"]
+        app.launch()
+
+        let picker = sleepDayAttributionPicker(in: app)
+        XCTAssertTrue(
+            accessibilityText(of: picker).contains("Morning ends"),
+            "A stored preference must not be silently replaced"
+        )
+        let explanation = app.staticTexts.matching(
+            NSPredicate(format: "label CONTAINS %@", "Assigns the whole sleep session")
+        ).firstMatch
+        XCTAssertTrue(explanation.exists)
+        picker.tap()
+
+        let morningEnds = app.buttons["Morning ends"]
+        XCTAssertTrue(morningEnds.waitForExistence(timeout: 3))
+        XCTAssertTrue(morningEnds.isEnabled)
+        XCTAssertTrue(morningEnds.isSelected, "The stored choice should still be identified as selected")
+        let nightBegins = app.buttons["Night begins"]
+        XCTAssertTrue(nightBegins.isEnabled)
+        nightBegins.tap()
+
+        XCTAssertTrue(waitForAccessibilityText(of: picker, containing: "Night begins").contains("Night begins"))
+        XCTAssertTrue(app.staticTexts.matching(
+            NSPredicate(format: "label CONTAINS %@", "noon-to-noon window")
+        ).firstMatch.exists)
+    }
+
     // MARK: - Date Range Presets
 
     func testDateRangePresets_visibleAndCustomPickersHiddenByDefault() throws {
@@ -811,6 +883,16 @@ final class ExportJourneyUITests: XCTestCase {
         let identified = app.buttons[identifier]
         if identified.exists { return identified }
         return app.buttons[label]
+    }
+
+    private func sleepDayAttributionPicker(in app: XCUIApplication) -> XCUIElement {
+        // Reveal an anchor below the picker so it clears the sticky export action bar.
+        scrollUntilHittable(app.buttons["How export formats work"], in: app, swipingUp: true)
+        let picker = app.buttons[UITestLaunchHelper.Export.sleepDayAttributionPicker]
+        XCTAssertTrue(picker.waitForExistence(timeout: 5))
+        XCTAssertTrue(picker.isHittable)
+        XCTAssertLessThan(picker.frame.maxY, app.buttons[UITestLaunchHelper.Export.exportButton].frame.minY)
+        return picker
     }
 
     private func accessibilityText(of element: XCUIElement) -> String {

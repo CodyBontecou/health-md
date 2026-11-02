@@ -77,6 +77,7 @@ jobs:
           key: portable-ci-v2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('packages/healthmd-core-rust/Cargo.lock', 'apps/cli/Cargo.lock') }}-${{ github.sha }}
           restore-keys: |
             portable-ci-v2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('packages/healthmd-core-rust/Cargo.lock', 'apps/cli/Cargo.lock') }}-
+            portable-ci-v2-${{ runner.os }}-${{ runner.arch }}-
           path: |
             ~/.cargo/registry
             ~/.cargo/git

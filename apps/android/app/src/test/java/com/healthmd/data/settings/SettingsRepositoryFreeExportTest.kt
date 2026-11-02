@@ -7,7 +7,7 @@ import org.junit.Test
 class SettingsRepositoryFreeExportTest {
 
     @Test
-    fun freshInstallStartsWithAllFreeExports() {
+    fun freshInstallPreservesZeroUsageWithoutGrantingAccess() {
         val used = resolveFreeExportsUsed(currentUsed = null, legacyRemaining = null)
 
         assertThat(used).isEqualTo(0)
@@ -19,15 +19,16 @@ class SettingsRepositoryFreeExportTest {
     fun currentUsedCounterTakesPrecedenceAndIsSanitized() {
         assertThat(resolveFreeExportsUsed(currentUsed = 4, legacyRemaining = 0)).isEqualTo(4)
         assertThat(resolveFreeExportsUsed(currentUsed = -1, legacyRemaining = 0)).isEqualTo(0)
-        assertThat(resolveFreeExportsUsed(currentUsed = 99, legacyRemaining = 3))
-            .isEqualTo(FreemiumPolicy.FREE_EXPORT_LIMIT)
+        // The historical ledger still clamps at five; the new allowance is zero.
+        assertThat(resolveFreeExportsUsed(currentUsed = 99, legacyRemaining = 3)).isEqualTo(5)
     }
 
     @Test
-    fun exhaustedLegacyThreeExportQuotaReceivesOnlyTheNewAllowance() {
+    fun legacyUsageIsPreservedWithoutGrantingAFreeAllowance() {
         val used = resolveFreeExportsUsed(currentUsed = null, legacyRemaining = 0)
 
         assertThat(used).isEqualTo(3)
-        assertThat(FreemiumPolicy.remainingExports(used)).isEqualTo(2)
+        assertThat(FreemiumPolicy.remainingExports(used)).isEqualTo(0)
+        assertThat(FreemiumPolicy.canExport(isUnlocked = false, freeExportsUsed = used)).isFalse()
     }
 }

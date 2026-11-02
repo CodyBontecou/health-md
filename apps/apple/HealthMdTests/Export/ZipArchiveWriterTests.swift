@@ -1,5 +1,7 @@
 import Compression
 import Darwin
+import HealthKit
+import Testing
 import XCTest
 import zlib
 @testable import HealthMd
@@ -493,7 +495,403 @@ final class ZipArchiveWriterTests: XCTestCase {
     }
 }
 
-private enum ZIP64TestReader {
+@MainActor
+struct MorningArchiveTests {
+    // STATIC RETENTION JUSTIFICATION: Isolated synthetic observation fixtures;
+    // see docs/testing/lifecycle-audit.md for the nested-observation teardown issue.
+    private static var retained: [AnyObject] = []
+
+    @Test(arguments: ["daily", "range", "summary"], [false, true])
+    func productionMorningArchiveKeepsAcceptedProfileAndWholeSession(mode: String, recovered: Bool) async throws {
+        let f = try fixture(mode: mode)
+        defer { f.cleanup() }
+        let snapshot = await ExportSettingsSnapshot.forNewAppleOperation(f.settings, healthSubfolder: "Health",
+            calendarTimeZone: f.context.timeZone, surface: .localVaultRangeWithoutSideEffects)
+        #expect(try #require(snapshot.appleExportEnginePin).isWakeDate)
+        let progress: (Int, Int, String) -> Void = { _, _, _ in
+            f.settings.archiveExportFiles = false
+            f.settings.exportFormats = [.json]
+            f.settings.metricSelection.enabledMetrics = ["steps"]
+            f.settings.exportTimeZoneOverride = .gmt
+            f.manager.setSleepDayAttribution(.nightBegins)
+            f.vault.healthSubfolder = "Changed"
+        }
+        let result: ExportOrchestrator.ExportResult
+        if recovered {
+            result = await ExportOrchestrator.exportDatesBackground(f.dates, healthKitManager: f.manager,
+                vaultManager: f.vault, settings: f.settings, frozenSettingsSnapshot: snapshot,
+                operationSurface: .localVaultRangeWithoutSideEffects, onProgress: progress)
+        } else {
+            result = await ExportOrchestrator.exportDates(f.dates, healthKitManager: f.manager,
+                vaultManager: f.vault, settings: f.settings, onProgress: progress)
+        }
+        #expect(result.didCompleteAllRequestedDates, "\(result.failedDateDetails) / \(result.partialFailures)")
+        #expect(result.archiveCount == 1)
+        #expect(result.totalFilesWritten == 1)
+        let zip = f.root.appendingPathComponent("Health/Health.md Export 2026-03-07_to_2026-03-08.zip")
+        let entries = try ZIP64TestReader.entries(in: Data(contentsOf: zip))
+        #expect(entries[HealthMdExportSchema.dataDictionaryFilename] != nil)
+        let daily = entries.filter { !$0.key.contains("/") && $0.key != HealthMdExportSchema.dataDictionaryFilename }
+        #expect(daily.count == (mode == "summary" ? 0 : 8))
+        #expect(entries.keys.filter { $0.contains("Rollups/Range/") }.count == (mode == "daily" ? 0 : 4))
+        if mode != "summary" {
+            let wakeBytes = try #require(entries["2026-03-08.json"]?.data)
+            let wake = try #require(JSONSerialization.jsonObject(with: wakeBytes) as? [String: Any])
+            #expect(wake["schema_version"] as? Int == 11)
+            #expect(wake["schema_profile"] as? String == "apple-v11")
+            let context = try #require(wake["time_context"] as? [String: Any])
+            #expect(context["calendar_timezone"] as? String == "America/New_York")
+            #expect(context["sleep_day_attribution"] as? String == "morning_ends")
+            let sleep = try #require(wake["sleep"] as? [String: Any])
+            #expect(sleep["totalDuration"] as? Double == 26 * 3600 + 0.5)
+            let first = try #require(entries["2026-03-07.json"]?.data)
+            let previous = try #require(JSONSerialization.jsonObject(with: first) as? [String: Any])
+            #expect((previous["sleep"] as? [String: Any])?["totalDuration"] as? Double != 26 * 3600 + 0.5)
+        }
+        let files = try #require(FileManager.default.enumerator(at: f.root, includingPropertiesForKeys: [.isRegularFileKey]))
+            .allObjects.compactMap { $0 as? URL }.filter { (try? $0.resourceValues(forKeys: [.isRegularFileKey]).isRegularFile) == true }
+        #expect(files.map { $0.resolvingSymlinksInPath().path } == [zip.resolvingSymlinksInPath().path])
+    }
+
+    @Test func acceptedMaterializationIsPackagedByteForByte() async throws {
+        let f = try fixture(mode: "daily")
+        defer { f.cleanup() }
+        f.settings.executionExternalProviderCaptureAuthority = .init(connections: ["whoop": UUID()])
+        let snapshot = await ExportSettingsSnapshot.forNewAppleOperation(f.settings, healthSubfolder: "Health",
+            calendarTimeZone: f.context.timeZone, surface: .localVaultRangeWithoutSideEffects)
+        var records: [HealthData] = []
+        for date in f.dates {
+            records.append(try await f.manager.fetchHealthData(for: date, detailPolicy: .detailedTimeSeries,
+                metricSelection: f.settings.metricSelection, timeZone: f.context.timeZone, captureContext: f.context))
+        }
+        let provider = ExternalDailyRecord(provider: .whoop, date: "2026-03-08", fetchedAt: f.dates[1],
+            payloads: [.init(name: "cycles", endpoint: "https://synthetic.invalid", statusCode: 200,
+                data: .object(["synthetic": .string("accepted-provider-bytes")]))])
+        let materialized = try #require(try await f.vault.materializeHealthDataRange(records,
+            settingsSnapshot: snapshot, operationSurface: .localVaultRangeWithoutSideEffects))
+            .addingProviderSidecars(try f.vault.materializeExternalDailyRecords([provider], healthSubfolder: "Health"))
+        var expected: [String: Data] = [:]
+        for file in materialized.operation.artifacts {
+            expected[String(file.artifact.relativePath.dropFirst("Health/".count))] = try file.artifact.content.materializedData()
+        }
+        if let dictionary = materialized.dataDictionary {
+            expected[String(dictionary.relativePath.dropFirst("Health/".count))] = dictionary.data
+        }
+        for file in materialized.providerSidecars {
+            expected[String(file.relativePath.dropFirst("Health/".count))] = try file.artifact.materializedData()
+        }
+        let before = try FileManager.default.contentsOfDirectory(atPath: f.root.path)
+        let frozenArchive = try await f.vault.materializeHealthDataRangeArchive(materialized, settingsSnapshot: snapshot,
+            startDate: f.dates[0], endDate: f.dates[1])
+        #expect(try FileManager.default.contentsOfDirectory(atPath: f.root.path) == before)
+        #expect(frozenArchive.relativePath == "Health/Health.md Export 2026-03-07_to_2026-03-08.zip")
+        #expect(frozenArchive.artifact.descriptor.mediaType == "application/zip")
+        #expect(try ZIP64TestReader.entries(in: frozenArchive.artifact.materializedData()).mapValues(\.data) == expected)
+        let archive = try #require(try await f.vault.commitHealthDataRangeArchive(materialized,
+            destination: f.vault.freezeHealthDataRangeDestination(), settingsSnapshot: snapshot,
+            startDate: f.dates[0], endDate: f.dates[1]))
+        let actual = try ZIP64TestReader.entries(in: Data(contentsOf: archive.fileURL)).mapValues(\.data)
+        #expect(actual == expected)
+        #expect(expected.count == 10)
+    }
+
+    @Test(arguments: ["same", "swap", "truncate", "symlink", "cancel"])
+    func zipConsumesExactAcceptedFileDescriptor(mode: String) throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("MorningZipIntegrity-\(UUID())")
+        defer { try? FileManager.default.removeItem(at: root) }
+        let bytes = Data(repeating: 0x41, count: 100_003)
+        let file = try ExportArtifactIO.renderTemporary(in: root, prefix: "accepted", mediaType: "application/json") {
+            try $0.write(bytes)
+        }
+        let zip = root.appendingPathComponent("export.zip")
+        let old = Data("old committed archive".utf8)
+        try old.write(to: zip)
+        let writer = try ZipArchiveWriter.begin(to: zip, checkpointURL: root.appendingPathComponent("checkpoint"), chunkSize: 8192)
+        if mode == "swap" { try Data(repeating: 0x42, count: bytes.count).write(to: file.url) }
+        if mode == "truncate" { try Data("short".utf8).write(to: file.url) }
+        if mode == "symlink" {
+            let other = root.appendingPathComponent("other")
+            try bytes.write(to: other)
+            try FileManager.default.removeItem(at: file.url)
+            try FileManager.default.createSymbolicLink(at: file.url, withDestinationURL: other)
+        }
+        if mode == "same" {
+            try writer.append(path: "accepted.json", artifact: file)
+            try writer.finish()
+            #expect(try ZIP64TestReader.entries(in: Data(contentsOf: zip))["accepted.json"]?.data == bytes)
+        } else {
+            #expect(throws: (any Error).self) {
+                try writer.append(path: "accepted.json", artifact: file, cancellationCheck: { mode == "cancel" })
+            }
+            writer.abandon()
+            #expect(try Data(contentsOf: zip) == old)
+        }
+    }
+
+    @Test(arguments: ["cancel", "destination", "corrupt", "duplicate"])
+    func failedAcceptedArchivePreservesPreviousZip(mode: String) async throws {
+        let f = try fixture(mode: "daily")
+        defer { f.cleanup() }
+        let snapshot = await ExportSettingsSnapshot.forNewAppleOperation(f.settings, healthSubfolder: "Health",
+            calendarTimeZone: f.context.timeZone, surface: .localVaultRangeWithoutSideEffects)
+        var records: [HealthData] = []
+        for date in f.dates {
+            records.append(try await f.manager.fetchHealthData(for: date, detailPolicy: .detailedTimeSeries,
+                metricSelection: f.settings.metricSelection, timeZone: f.context.timeZone, captureContext: f.context))
+        }
+        var materialized = try #require(try await f.vault.materializeHealthDataRange(records,
+            settingsSnapshot: snapshot, operationSurface: .localVaultRangeWithoutSideEffects))
+        let destination = try f.vault.freezeHealthDataRangeDestination()
+        let zip = f.root.appendingPathComponent("Health/Health.md Export 2026-03-07_to_2026-03-08.zip")
+        try FileManager.default.createDirectory(at: zip.deletingLastPathComponent(), withIntermediateDirectories: true)
+        let old = Data("previous committed archive".utf8)
+        try old.write(to: zip)
+        if mode == "destination" {
+            let other = f.root.appendingPathComponent("Rebound")
+            try FileManager.default.createDirectory(at: other, withIntermediateDirectories: true)
+            f.vault.vaultURL = other
+        }
+        if mode == "corrupt" {
+            let file = try #require(materialized.operation.artifacts.compactMap { planned -> ExportArtifactFile? in
+                if case .file(let file) = planned.artifact.content { return file }; return nil
+            }.first)
+            try Data(repeating: 0x5a, count: Int(file.descriptor.byteCount)).write(to: file.url)
+        }
+        if mode == "duplicate" {
+            let file = try ExportArtifactIO.renderTemporary(in: f.root.appendingPathComponent("private"),
+                prefix: "duplicate", mediaType: "application/json") { try $0.write(Data("{}".utf8)) }
+            materialized = materialized.addingProviderSidecars([
+                .init(relativePath: try #require(materialized.operation.artifacts.first?.artifact.relativePath), artifact: file)])
+        }
+        let accepted = materialized
+        let task = Task {
+            if mode == "cancel" { withUnsafeCurrentTask { $0?.cancel() } }
+            return try await f.vault.commitHealthDataRangeArchive(accepted, destination: destination,
+                settingsSnapshot: snapshot, startDate: f.dates[0], endDate: f.dates[1])
+        }
+        await #expect(throws: (any Error).self) { try await task.value }
+        #expect(try Data(contentsOf: zip) == old)
+    }
+
+    fileprivate struct Fixture {
+        let root: URL
+        let suite: String
+        let defaults: UserDefaults
+        let settings: AdvancedExportSettings
+        let manager: HealthKitManager
+        let store: FakeHealthStore
+        let vault: VaultManager
+        let context: AppleSleepCaptureContext
+        let dates: [Date]
+        func cleanup() { try? FileManager.default.removeItem(at: root); defaults.removePersistentDomain(forName: suite) }
+    }
+    fileprivate func fixture(mode: String) throws -> Fixture {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("MorningArchive-\(UUID())").resolvingSymlinksInPath()
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        let suite = "MorningArchive-\(UUID())"
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        let settings = AdvancedExportSettings(userDefaults: defaults)
+        settings.exportFormats = Set(ExportFormat.allCases); settings.archiveExportFiles = true
+        settings.includeDataDictionary = true; settings.generateRangeSummary = mode != "daily"
+        settings.summaryOnlyExport = mode == "summary"; settings.detailPolicy = .detailedTimeSeries
+        settings.dailyNoteInjection.enabled = false; settings.individualTracking.globalEnabled = false
+        settings.filenameFormat = "{date}"; settings.folderStructure = ""; settings.organizeFormatsIntoFolders = false
+        settings.metricSelection.enabledMetrics = ["steps", "sleep_total", "sleep_core", "sleep_bedtime", "sleep_wake"]
+        let zone = try #require(TimeZone(identifier: "America/New_York"))
+        let context = AppleSleepCaptureContext(timeZone: zone, sleepDayAttribution: .morningEnds)
+        settings.exportTimeZoneOverride = zone; settings.executionSleepCaptureContext = context
+        settings.executionExternalProviderCaptureAuthority = .init(connections: [:])
+        var calendar = Calendar(identifier: .gregorian); calendar.timeZone = zone
+        let first = try #require(calendar.date(from: DateComponents(year: 2026, month: 3, day: 7)))
+        let wake = try #require(calendar.date(byAdding: .day, value: 1, to: first))
+        let start = try #require(calendar.date(bySettingHour: 10, minute: 0, second: 0, of: first))
+        let end = try #require(calendar.date(bySettingHour: 13, minute: 0, second: 0, of: wake)).addingTimeInterval(0.5)
+        let store = FakeHealthStore(); store.statisticsSums[HKQuantityTypeIdentifier.stepCount.rawValue] = 42
+        store.categorySampleResults[HKCategoryTypeIdentifier.sleepAnalysis.rawValue] = [
+            .init(value: HKCategoryValueSleepAnalysis.asleepCore.rawValue, startDate: start, endDate: end)]
+        let manager = HealthKitManager(store: store, userDefaults: defaults)
+        manager.setSleepDayAttribution(.morningEnds)
+        let bookmarks = FakeBookmarkResolver(); bookmarks.accessGranted = true
+        let vault = VaultManager(defaults: FakeUserDefaults(), fileSystem: SystemFileSystem(), bookmarkResolver: bookmarks)
+        vault.healthSubfolder = "Health"; vault.setVaultFolder(root)
+        Self.retained += [settings, manager, vault]
+        return Fixture(root: root, suite: suite, defaults: defaults, settings: settings, manager: manager, store: store,
+            vault: vault, context: context, dates: [first, wake])
+    }
+}
+
+@MainActor
+struct MorningIndividualEntryTests {
+    @Test func stagedNotesAndRoutesMatchWriterAndRestoreBorrowedCalendar() throws {
+        let f = try MorningArchiveTests().fixture(mode: "daily")
+        defer { f.cleanup() }
+        let settings = f.settings.individualTracking
+        settings.globalEnabled = true; settings.setTrackIndividually("workouts", enabled: true)
+        let instant = f.dates[1].addingTimeInterval(12 * 3600)
+        let route = [RoutePoint(timestamp: instant, latitude: 1, longitude: 2, altitudeMeters: nil,
+            speedMps: nil, courseDegrees: nil, horizontalAccuracyMeters: nil)]
+        let workout = WorkoutData(workoutType: .running, startTime: instant, duration: 1800,
+            calories: 100, distance: 1000, route: route)
+        let sample = IndividualHealthSample(metricId: "workouts", metricName: "Workouts", category: .workouts,
+            timestamp: instant, value: 1800.0, unit: "seconds", workout: workout)
+        let fileSystem = FakeFileSystem()
+        let exporter = IndividualEntryExporter(fileSystem: fileSystem)
+        let legacyPreview = exporter.previewEntryContent(for: sample, formatSettings: f.settings.formatCustomization)
+        let root = URL(fileURLWithPath: "/__individual_planner_control__")
+        var planned: [String: String] = [:]
+        let logicalCount = try exporter.planIndividualEntries(samples: [sample], to: root, settings: settings,
+            formatSettings: f.settings.formatCustomization, calendarTimeZone: f.context.timeZone) { url, content, _ in
+            planned[url.path] = content
+        }
+        #expect(logicalCount == 1)
+        #expect(planned.count == 2)
+        #expect(fileSystem.files.isEmpty)
+        #expect(planned.keys.contains { $0.hasSuffix("2026_03_08_1300_workouts.md") })
+        #expect(try exporter.exportIndividualEntries(samples: [sample], to: root, settings: settings,
+            formatSettings: f.settings.formatCustomization, calendarTimeZone: f.context.timeZone) == logicalCount)
+        #expect(fileSystem.files == planned)
+        #expect(exporter.previewEntryContent(for: sample, formatSettings: f.settings.formatCustomization) == legacyPreview)
+        #expect(exporter.previewEntryContent(for: sample, formatSettings: f.settings.formatCustomization,
+            calendarTimeZone: f.context.timeZone).contains("time: \"13:00\""))
+    }
+
+    @Test(arguments: ["folder", "filename"])
+    func unsafeIndividualPathsFailBeforeDestinationEffects(mode: String) throws {
+        let f = try MorningArchiveTests().fixture(mode: "daily")
+        defer { f.cleanup() }
+        let settings = f.settings.individualTracking
+        settings.globalEnabled = true; settings.setTrackIndividually("steps", enabled: true)
+        if mode == "folder" { settings.entriesFolder = "../../escape" }
+        else { settings.filenameTemplate = "../escape" }
+        let sample = IndividualHealthSample(metricId: "steps", metricName: "Steps", category: .activity,
+            timestamp: f.dates[1], value: 42, unit: "steps")
+        let files = FakeFileSystem()
+        let exporter = IndividualEntryExporter(fileSystem: files)
+        #expect(throws: (any Error).self) {
+            try exporter.exportIndividualEntries(samples: [sample], to: URL(fileURLWithPath: "/__unsafe_individual_control__"),
+                settings: settings, formatSettings: f.settings.formatCustomization, calendarTimeZone: f.context.timeZone)
+        }
+        #expect(files.files.isEmpty)
+        #expect(files.directories.isEmpty)
+    }
+
+    @Test(arguments: ["daily", "range", "zip", "summary", "workout"], [false, true])
+    func productionIndividualEntriesKeepAcceptedClockAndWholeSleep(mode: String, recovered: Bool) async throws {
+        let f = try MorningArchiveTests().fixture(mode: "daily")
+        defer { f.cleanup() }
+        f.settings.archiveExportFiles = mode == "zip"
+        f.settings.generateRangeSummary = mode == "range" || mode == "summary"
+        f.settings.summaryOnlyExport = mode == "summary"
+        f.settings.individualTracking.globalEnabled = true
+        f.settings.individualTracking.setTrackIndividually("sleep_total", enabled: true)
+        f.settings.individualTracking.setTrackIndividually("steps", enabled: true)
+        if mode == "workout" {
+            f.settings.metricSelection.enabledMetrics.insert("workouts")
+            f.settings.individualTracking.setTrackIndividually("workouts", enabled: true)
+            let start = f.dates[1].addingTimeInterval(12 * 3600)
+            f.store.workoutResults = [.init(activityType: HKWorkoutActivityType.running.rawValue, duration: 1800,
+                startDate: start, endDate: start.addingTimeInterval(1800), totalEnergyBurned: 100, totalDistance: 1000)]
+        }
+        let requestedDates = mode == "workout" ? [f.dates[1]] : f.dates
+        let snapshot = await ExportSettingsSnapshot.forNewAppleOperation(f.settings, healthSubfolder: "Health",
+            calendarTimeZone: f.context.timeZone, surface: .localVaultRangeWithoutSideEffects)
+        #expect(try #require(snapshot.appleExportEnginePin).isWakeDate)
+        let progress: (Int, Int, String) -> Void = { _, _, _ in
+            f.settings.individualTracking.globalEnabled = false
+            f.settings.individualTracking.entriesFolder = "Changed"
+            f.settings.exportTimeZoneOverride = .gmt
+            f.manager.setSleepDayAttribution(.nightBegins)
+        }
+        let result: ExportOrchestrator.ExportResult
+        if recovered {
+            result = await ExportOrchestrator.exportDatesBackground(requestedDates, healthKitManager: f.manager,
+                vaultManager: f.vault, settings: f.settings, frozenSettingsSnapshot: snapshot,
+                operationSurface: .localVaultRangeWithoutSideEffects, onProgress: progress)
+        } else {
+            result = await ExportOrchestrator.exportDates(requestedDates, healthKitManager: f.manager,
+                vaultManager: f.vault, settings: f.settings, onProgress: progress)
+        }
+        #expect(result.didCompleteAllRequestedDates, "\(result.failedDateDetails) / \(result.partialFailures)")
+        let files: [String: Data]
+        if mode == "zip" {
+            let url = f.root.appendingPathComponent("Health/Health.md Export 2026-03-07_to_2026-03-08.zip")
+            files = try ZIP64TestReader.entries(in: Data(contentsOf: url)).mapValues(\.data)
+            #expect(result.totalFilesWritten == 1)
+        } else {
+            let all = try #require(FileManager.default.enumerator(at: f.root, includingPropertiesForKeys: [.isRegularFileKey]))
+                .allObjects.compactMap { $0 as? URL }.filter { (try? $0.resourceValues(forKeys: [.isRegularFileKey]).isRegularFile) == true }
+            files = try Dictionary(uniqueKeysWithValues: all.map { ($0.path, try Data(contentsOf: $0)) })
+            #expect(result.totalFilesWritten == files.count)
+        }
+        let entries = files.filter { $0.key.contains("entries/") }
+        if ["daily", "workout"].contains(mode), !recovered,
+           let directory = ProcessInfo.processInfo.environment["HEALTHMD_INDIVIDUAL_ENTRY_FIXTURE_DIR"] {
+            let output = URL(fileURLWithPath: directory, isDirectory: true)
+                .appendingPathComponent(mode == "workout" ? "workouts" : "basic", isDirectory: true)
+            let root = f.root.resolvingSymlinksInPath().path + "/"
+            for (path, bytes) in files {
+                let resolved = URL(fileURLWithPath: path).resolvingSymlinksInPath().path
+                guard resolved.hasPrefix(root) else { throw CocoaError(.fileReadInvalidFileName) }
+                let target = output.appendingPathComponent(String(resolved.dropFirst(root.count)))
+                try FileManager.default.createDirectory(at: target.deletingLastPathComponent(), withIntermediateDirectories: true)
+                try bytes.write(to: target)
+            }
+        }
+        #expect(!files.keys.contains { $0.contains("Changed") })
+        if mode == "summary" {
+            #expect(entries.isEmpty)
+            #expect(result.individualEntryFileCount == 0)
+        } else {
+            #expect(!entries.isEmpty)
+            if mode != "zip" { #expect(result.individualEntryFileCount == entries.count) }
+            let wake = try #require(entries.first { $0.key.hasSuffix("2026_03_08_0000_sleep_total.md") })
+            let text = try #require(String(data: wake.value, encoding: .utf8))
+            #expect(text.contains("date: 2026-03-08\n"))
+            let valueLine = try #require(text.components(separatedBy: "\n").first { $0.hasPrefix("value: ") })
+            #expect(try #require(Double(valueLine.dropFirst(7).replacingOccurrences(of: "\"", with: ""))) >= 26)
+            let line = try #require(text.components(separatedBy: "\n").first { $0.hasPrefix("healthmd_capture_context_json: ") })
+            let quoted = Data(line.dropFirst("healthmd_capture_context_json: ".count).utf8)
+            let json = try #require(JSONSerialization.jsonObject(with: quoted, options: [.fragmentsAllowed]) as? String)
+            let context = try #require(JSONSerialization.jsonObject(with: Data(json.utf8)) as? [String: String])
+            #expect(context["schema_profile"] == "apple-v11")
+            #expect(context["calendar_timezone"] == "America/New_York")
+            #expect(context["sleep_owner_date"] == "2026-03-08")
+            #expect(context["sleep_interval_clipping"] == "none")
+        }
+    }
+
+    @Test func identicalIndividualSourcesDeduplicateAndConflictsReject() async throws {
+        let f = try MorningArchiveTests().fixture(mode: "daily")
+        defer { f.cleanup() }
+        let snapshot = await ExportSettingsSnapshot.forNewAppleOperation(f.settings, healthSubfolder: "Health",
+            calendarTimeZone: f.context.timeZone, surface: .localVaultRangeWithoutSideEffects)
+        let record = try await f.manager.fetchHealthData(for: f.dates[1], detailPolicy: .summary,
+            metricSelection: f.settings.metricSelection, timeZone: f.context.timeZone, captureContext: f.context)
+        let materialized = try #require(try await f.vault.materializeHealthDataRange([record],
+            settingsSnapshot: snapshot, operationSurface: .localVaultRangeWithoutSideEffects))
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("IndividualDedup-\(UUID())")
+        defer { try? FileManager.default.removeItem(at: root) }
+        let first = try ExportArtifactIO.renderTemporary(in: root, prefix: "first", mediaType: "text/markdown") {
+            try $0.write(Data("accepted".utf8))
+        }
+        let same = try ExportArtifactIO.renderTemporary(in: root, prefix: "same", mediaType: "text/markdown") {
+            try $0.write(Data("accepted".utf8))
+        }
+        let different = try ExportArtifactIO.renderTemporary(in: root, prefix: "different", mediaType: "text/markdown") {
+            try $0.write(Data("conflict".utf8))
+        }
+        let path = "Health/entries/accepted.md"
+        let accepted = try materialized.addingIndividualEntries([
+            .init(relativePath: path, artifact: first), .init(relativePath: path, artifact: same)])
+        #expect(accepted.individualEntries.count == 1)
+        #expect(accepted.result.individualEntryFileCount == 1)
+        #expect(throws: AppleExactDestinationError.self) {
+            try accepted.addingIndividualEntries([.init(relativePath: path, artifact: different)])
+        }
+    }
+}
+
+enum ZIP64TestReader {
     struct Entry: Equatable {
         let method: UInt16
         let compressedSize: UInt64
@@ -742,4 +1140,628 @@ private extension Data {
     func uint64LE(at offset: Int) -> UInt64 {
         UInt64(uint32LE(at: offset)) | (UInt64(uint32LE(at: offset + 4)) << 32)
     }
+}
+
+@MainActor
+struct MorningDailyNoteTests {
+    @Test(arguments: [false, true])
+    func preparedInjectionScopesAuthorityAndPreservesPersonalContent(sections: Bool) async throws {
+        let f = try MorningArchiveTests().fixture(mode: "daily")
+        defer { f.cleanup() }
+        f.settings.archiveExportFiles = false
+        var snapshot = await ExportSettingsSnapshot.forNewAppleOperation(f.settings, healthSubfolder: "Health",
+            calendarTimeZone: f.context.timeZone, surface: .localVaultRangeWithoutSideEffects)
+        snapshot.dailyNoteInjection.enabled = true
+        snapshot.dailyNoteInjection.folderPath = "Journal"
+        snapshot.dailyNoteInjection.createIfMissing = true
+        snapshot.dailyNoteInjection.injectMarkdownSections = sections
+        snapshot.detailPolicy = .lossless
+        snapshot.formatCustomization.frontmatterConfig.keyStyle = .camelCase
+        snapshot.formatCustomization.frontmatterConfig.customFields = ["Daily steps": "incorrect custom value"]
+        // This custom field is disabled in full-note frontmatter. Injection is
+        // governed by metric selection and must still honor its accepted alias.
+        if let index = snapshot.formatCustomization.frontmatterConfig.fields.firstIndex(where: { $0.originalKey == "steps" }) {
+            snapshot.formatCustomization.frontmatterConfig.fields[index].customKey = "Daily steps"
+            snapshot.formatCustomization.frontmatterConfig.fields[index].isEnabled = false
+        }
+        let settings = snapshot.makeAdvancedExportSettings()
+        let record = try await f.manager.fetchHealthData(for: f.dates[1], detailPolicy: .detailedTimeSeries,
+            metricSelection: f.settings.metricSelection, timeZone: f.context.timeZone, captureContext: f.context)
+        let prepared = try await f.vault.prepareWakeDateDailyNote(record, settingsSnapshot: snapshot)
+        let personal = "---\ntitle: My journal\nsleep_deep_hours: 9 # historical field\n---\n# Personal title\nKeep my introduction.\n\n## Thoughts\nMy own section.\n"
+        let base = f.root.appendingPathComponent("Journal/2026-03-08.md")
+        try FileManager.default.createDirectory(at: base.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try personal.write(to: base, atomically: true, encoding: .utf8)
+        let destination = try f.vault.freezeHealthDataRangeDestination()
+        let result = DailyNoteInjector.inject(healthData: record, into: f.root,
+            settings: settings.dailyNoteInjection, customization: settings.formatCustomization,
+            metricSelection: settings.metricSelection, calendarTimeZone: f.context.timeZone,
+            preparedContent: prepared, destinationBinding: destination.binding)
+        guard case .updated = result else { Issue.record("Expected prepared injection: \(result)"); return }
+        let note = try String(contentsOf: base, encoding: .utf8)
+        #expect(note.contains("title: My journal\n"))
+        #expect(note.contains("sleep_deep_hours: 9 # historical field\n"))
+        #expect(note.contains("# Personal title\nKeep my introduction."))
+        #expect(note.contains("## Thoughts\nMy own section."))
+        #expect(note.contains("Daily steps: 42"))
+        #expect(!note.contains("schema_profile: apple-v11"))
+        let properties = try #require(MarkdownMerger.frontmatterProperties(named: ["healthmd_daily_injection_v1"], in: note))
+        #expect(properties.count == 1)
+        let value = try #require(properties.first?.split(separator: ":", maxSplits: 1).last)
+        let decoded = try JSONDecoder().decode(String.self, from: Data(value.trimmingCharacters(in: .whitespacesAndNewlines).utf8))
+        let envelope = try #require(JSONSerialization.jsonObject(with: Data(decoded.utf8)) as? [String: Any])
+        let nativeJSON = try #require(envelope["record_json"] as? String)
+        let native = try #require(JSONSerialization.jsonObject(with: Data(nativeJSON.utf8)) as? [String: Any])
+        #expect(native["schema_profile"] as? String == "apple-v11")
+        #expect(native["healthkit_record_archive"] == nil)
+        let sleep = try #require(native["sleep"] as? [String: Any])
+        #expect(sleep["totalDuration"] as? Double == 93600.5)
+        #expect(sleep["deepSleep"] == nil)
+        #expect(note.contains("##") && (!sections || note.contains("Sleep")))
+        guard case .preview(let preview) = DailyNoteInjector.preview(healthData: record, base: .existingContent(personal),
+            settings: settings.dailyNoteInjection, customization: settings.formatCustomization,
+            metricSelection: settings.metricSelection, calendarTimeZone: f.context.timeZone, preparedContent: prepared) else {
+            Issue.record("Expected exact prepared preview"); return
+        }
+        #expect(preview.content == note)
+        if let directory = ProcessInfo.processInfo.environment["HEALTHMD_DAILY_NOTE_FIXTURE_DIR"] {
+            let output = URL(fileURLWithPath: directory, isDirectory: true)
+            try FileManager.default.createDirectory(at: output, withIntermediateDirectories: true)
+            try Data(note.utf8).write(to: output.appendingPathComponent(sections ? "sections.md" : "frontmatter.md"))
+            try Data(nativeJSON.utf8).write(to: output.appendingPathComponent(sections ? "sections.json" : "frontmatter.json"))
+        }
+        // Changing the captured clock or injection settings cannot retarget a
+        // previously prepared patch or create an empty destination file.
+        let wrongRoot = f.root.appendingPathComponent("Rejected")
+        let wrong = DailyNoteInjector.inject(healthData: record, into: wrongRoot,
+            settings: settings.dailyNoteInjection, customization: settings.formatCustomization,
+            metricSelection: settings.metricSelection, calendarTimeZone: .gmt, preparedContent: prepared)
+        guard case .failed = wrong else { Issue.record("Expected clock mismatch"); return }
+        #expect(!FileManager.default.fileExists(atPath: wrongRoot.path))
+        if !sections {
+            let nightContext = AppleSleepCaptureContext(timeZone: f.context.timeZone, sleepDayAttribution: .nightBegins)
+            let night = try await f.manager.fetchHealthData(for: f.dates[1], detailPolicy: .summary,
+                metricSelection: settings.metricSelection, timeZone: f.context.timeZone, captureContext: nightContext)
+            let replaced = DailyNoteInjector.inject(healthData: night, into: f.root,
+                settings: settings.dailyNoteInjection, customization: settings.formatCustomization,
+                metricSelection: settings.metricSelection, calendarTimeZone: f.context.timeZone,
+                destinationBinding: destination.binding)
+            guard case .updated = replaced else { Issue.record("Expected Night begins replacement"); return }
+            let updated = try String(contentsOf: base, encoding: .utf8)
+            #expect(updated.contains("healthmd_injection_kind: daily_capture_v1\n"))
+            #expect(!updated.contains("healthmd_daily_injection_v1: null\n"))
+            #expect(updated.contains("sleep_deep_hours: 9 # historical field\n"))
+            #expect(updated.contains("healthmd_daily_capture"))
+            if let directory = ProcessInfo.processInfo.environment["HEALTHMD_DAILY_NOTE_FIXTURE_DIR"] {
+                try Data(updated.utf8).write(to: URL(fileURLWithPath: directory).appendingPathComponent("night-replacement.md"))
+            }
+        }
+    }
+
+    @Test func morningInjectionWithoutAcceptedPlanFailsBeforeCreatingFile() async throws {
+        let f = try MorningArchiveTests().fixture(mode: "daily")
+        defer { f.cleanup() }
+        let record = try await f.manager.fetchHealthData(for: f.dates[1], detailPolicy: .summary,
+            metricSelection: f.settings.metricSelection, timeZone: f.context.timeZone, captureContext: f.context)
+        f.settings.dailyNoteInjection.enabled = true
+        f.settings.dailyNoteInjection.createIfMissing = true
+        let result = DailyNoteInjector.inject(healthData: record, into: f.root,
+            settings: f.settings.dailyNoteInjection, customization: f.settings.formatCustomization,
+            metricSelection: f.settings.metricSelection, calendarTimeZone: f.context.timeZone)
+        guard case .failed = result else { Issue.record("Expected missing-plan failure"); return }
+        #expect((try FileManager.default.contentsOfDirectory(atPath: f.root.path)).isEmpty)
+    }
+}
+
+@MainActor
+struct DailyNoteAttributionTransitionTests {
+    @Test(arguments: ["0-0-steps", "0-1-steps", "1-0-steps", "1-1-steps",
+        "0-0-sleep", "0-1-sleep", "1-0-sleep", "1-1-sleep",
+        "0-0-both", "0-1-both", "1-0-both", "1-1-both"])
+    func attributionAndSectionChangesKeepOnlyTheNewCaptureAuthoritative(mode: String) async throws {
+        let f = try MorningArchiveTests().fixture(mode: "daily")
+        defer { f.cleanup() }
+        let parts = mode.split(separator: "-")
+        f.settings.archiveExportFiles = false
+        var snapshot = await ExportSettingsSnapshot.forNewAppleOperation(f.settings, healthSubfolder: "Health",
+            calendarTimeZone: f.context.timeZone, surface: .localVaultRangeWithoutSideEffects)
+        snapshot.dailyNoteInjection.enabled = true
+        snapshot.dailyNoteInjection.folderPath = "Journal"
+        snapshot.dailyNoteInjection.createIfMissing = true
+        snapshot.dailyNoteInjection.injectMarkdownSections = parts[0] == "1"
+        let settings = snapshot.makeAdvancedExportSettings()
+        let morning = try await f.manager.fetchHealthData(for: f.dates[1], detailPolicy: .detailedTimeSeries,
+            metricSelection: settings.metricSelection, timeZone: f.context.timeZone, captureContext: f.context)
+        let prepared = try await f.vault.prepareWakeDateDailyNote(morning, settingsSnapshot: snapshot)
+        let path = f.root.appendingPathComponent("Journal/2026-03-08.md")
+        let personal = "---\ndate: 2026-03-08\ntitle: Personal\nsleep_deep_hours: 9 # unselected history\n---\nMy introduction.\n\n## Thoughts\nPreserve this text.\n"
+        try FileManager.default.createDirectory(at: path.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try Data(personal.utf8).write(to: path)
+        let destination = try f.vault.freezeHealthDataRangeDestination()
+        let first = DailyNoteInjector.inject(healthData: morning, into: f.root, settings: settings.dailyNoteInjection,
+            customization: settings.formatCustomization, metricSelection: settings.metricSelection,
+            calendarTimeZone: f.context.timeZone, preparedContent: prepared, destinationBinding: destination.binding)
+        guard case .updated = first else { Issue.record("Expected Morning injection"); return }
+        let firstContent = try String(contentsOf: path, encoding: .utf8)
+
+        let nightSettings = snapshot.makeAdvancedExportSettings()
+        nightSettings.dailyNoteInjection.injectMarkdownSections = parts[1] == "1"
+        nightSettings.metricSelection.enabledMetrics = parts[2] == "steps" ? ["steps"]
+            : parts[2] == "sleep" ? ["sleep_total", "sleep_core"] : ["steps", "sleep_total", "sleep_core"]
+        let nightContext = AppleSleepCaptureContext(timeZone: f.context.timeZone, sleepDayAttribution: .nightBegins)
+        let night = try await f.manager.fetchHealthData(for: f.dates[1], detailPolicy: .detailedTimeSeries,
+            metricSelection: nightSettings.metricSelection, timeZone: f.context.timeZone, captureContext: nightContext)
+        let result = DailyNoteInjector.inject(healthData: night, into: f.root, settings: nightSettings.dailyNoteInjection,
+            customization: nightSettings.formatCustomization, metricSelection: nightSettings.metricSelection,
+            calendarTimeZone: f.context.timeZone, destinationBinding: destination.binding)
+        guard case .updated = result else { Issue.record("Expected scoped Night injection"); return }
+        let nightContent = try String(contentsOf: path, encoding: .utf8)
+        let nightJSON = try captureJSON(nightContent)
+        let nightRecord = try #require(JSONSerialization.jsonObject(with: Data(nightJSON.utf8)) as? [String: Any])
+        #expect(nightRecord["schema_version"] as? Int == 8)
+        #expect(nightRecord["schema_profile"] == nil)
+        #expect(nightRecord["healthkit_record_archive"] == nil)
+        #expect((nightRecord["time_context"] as? [String: String])?["calendar_timezone"] == f.context.calendarTimeZoneIdentifier)
+        let sleep = nightRecord["sleep"] as? [String: Any]
+        let activity = nightRecord["activity"] as? [String: Any]
+        #expect(sleep?["deepSleep"] == nil)
+        if parts[2] == "steps" {
+            #expect((sleep?["totalDuration"] as? Double ?? 0) == 0)
+            #expect(nightContent.contains("sleep_total_hours:"), "The old personal property remains outside the new capture")
+        } else {
+            #expect(sleep?["totalDuration"] as? Double == 3600.5)
+        }
+        if parts[2] == "sleep" { #expect(activity?["steps"] == nil) }
+        else { #expect(activity?["steps"] as? Int == 42) }
+        let stages = sleep?["sleepStages"] as? [[String: Any]] ?? []
+        if parts[1] == "1", parts[2] != "steps" {
+            #expect(stages.count == 1, "Selected current Night details must stay in the scoped record")
+            #expect(stages.first?["durationSeconds"] as? Double == 3600.5)
+        } else { #expect(stages.isEmpty) }
+        if parts[0] == "1", parts[1] == "0" {
+            #expect(nightContent.contains("## Sleep Stage Details"), "Sections disabled: preserve the user's existing body")
+        }
+        #expect(nightContent.contains("sleep_deep_hours: 9 # unselected history"))
+        #expect(nightContent.contains("## Thoughts\nPreserve this text."))
+        guard case .preview(let preview) = DailyNoteInjector.preview(healthData: night, base: .existingContent(firstContent),
+            settings: nightSettings.dailyNoteInjection, customization: nightSettings.formatCustomization,
+            metricSelection: nightSettings.metricSelection, calendarTimeZone: f.context.timeZone) else {
+            Issue.record("Expected scoped Night preview"); return
+        }
+        #expect(preview.content == nightContent)
+
+        // The reverse transition restores whole-session ownership, including
+        // its fractional source duration, without adopting retained old facts.
+        let restored = DailyNoteInjector.inject(healthData: morning, into: f.root, settings: settings.dailyNoteInjection,
+            customization: settings.formatCustomization, metricSelection: settings.metricSelection,
+            calendarTimeZone: f.context.timeZone, preparedContent: prepared, destinationBinding: destination.binding)
+        guard case .updated = restored else { Issue.record("Expected Morning restoration"); return }
+        let restoredContent = try String(contentsOf: path, encoding: .utf8)
+        let restoredJSON = try captureJSON(restoredContent)
+        let restoredRecord = try #require(JSONSerialization.jsonObject(with: Data(restoredJSON.utf8)) as? [String: Any])
+        #expect(restoredRecord["schema_profile"] as? String == "apple-v11")
+        #expect((restoredRecord["sleep"] as? [String: Any])?["totalDuration"] as? Double == 93600.5)
+        #expect(restoredContent.contains("sleep_deep_hours: 9 # unselected history"))
+        if let directory = ProcessInfo.processInfo.environment["HEALTHMD_DAILY_NOTE_TRANSITION_FIXTURE_DIR"] {
+            let output = URL(fileURLWithPath: directory, isDirectory: true)
+            try FileManager.default.createDirectory(at: output, withIntermediateDirectories: true)
+            for (name, content) in ["night-\(mode).md": nightContent, "night-\(mode).json": nightJSON,
+                "restored-\(mode).md": restoredContent, "restored-\(mode).json": restoredJSON] {
+                try Data(content.utf8).write(to: output.appendingPathComponent(name))
+            }
+        }
+    }
+
+    private func captureJSON(_ note: String) throws -> String {
+        let properties = try #require(MarkdownMerger.frontmatterProperties(named: ["healthmd_daily_injection_v1"], in: note))
+        #expect(properties.count == 1)
+        let value = try #require(properties.first?.split(separator: ":", maxSplits: 1).last)
+        let string = try JSONDecoder().decode(String.self, from: Data(value.trimmingCharacters(in: .whitespacesAndNewlines).utf8))
+        let envelope = try #require(JSONSerialization.jsonObject(with: Data(string.utf8)) as? [String: Any])
+        return try #require(envelope["record_json"] as? String)
+    }
+}
+
+
+@MainActor
+struct MorningLocalNoteCompositionTests {
+    @Test func summaryOnlySuppressesSavedNotesWithDefaultDailyOwnerSelection() async throws {
+        let f = try MorningArchiveTests().fixture(mode: "summary")
+        defer { f.cleanup() }
+        f.settings.archiveExportFiles = false
+        f.settings.dailyNoteInjection.enabled = true
+        f.settings.dailyNoteInjection.folderPath = "Journal"
+        let snapshot = await ExportSettingsSnapshot.forNewAppleOperation(f.settings, healthSubfolder: "Health",
+            calendarTimeZone: f.context.timeZone, surface: .localVaultRangeWithoutSideEffects)
+        let record = try await f.manager.fetchHealthData(for: f.dates[1], detailPolicy: .summary,
+            metricSelection: f.settings.metricSelection, timeZone: f.context.timeZone, captureContext: f.context)
+        let requested = try HealthRollupRangeRequest(startDate: f.dates[0], endDate: f.dates[1],
+            calendarTimeZoneIdentifier: f.context.calendarTimeZoneIdentifier)
+        let materialized = try #require(try await f.vault.materializeHealthDataRange([record], settingsSnapshot: snapshot,
+            operationSurface: .localVaultRangeWithoutSideEffects, requestedRange: requested))
+        #expect(materialized.dailyNotes.isEmpty)
+        #expect(materialized.operation.artifacts.allSatisfy { $0.kind == .rollup })
+        let result = try await f.vault.commitHealthDataRangeMaterialization(materialized,
+            destination: f.vault.freezeHealthDataRangeDestination())
+        #expect(result.dailyNoteUpdatedCount == 0 && result.dailyNoteSkippedCount == 0)
+        #expect(!FileManager.default.fileExists(atPath: f.root.appendingPathComponent("Journal").path))
+    }
+
+    @Test(arguments: ["commit", "skip", "edit-before", "edit-after", "hook-before", "hook-after",
+        "corrupt", "path", "clock", "version", "scope-owner", "symlink", "rebound"])
+    func durableNotesReplayAcceptedBytesWithoutOverwritingEdits(mode: String) async throws {
+        let f = try MorningArchiveTests().fixture(mode: "daily")
+        defer { f.cleanup() }
+        f.settings.archiveExportFiles = false
+        f.settings.dailyNoteInjection.enabled = true
+        f.settings.dailyNoteInjection.createIfMissing = mode != "skip"
+        f.settings.dailyNoteInjection.folderPath = "Journal"
+        let snapshot = await ExportSettingsSnapshot.forNewAppleOperation(f.settings, healthSubfolder: "Health",
+            calendarTimeZone: f.context.timeZone, surface: .localVaultRangeWithoutSideEffects)
+        let record = try await f.manager.fetchHealthData(for: f.dates[1], detailPolicy: .detailedTimeSeries,
+            metricSelection: f.settings.metricSelection, timeZone: f.context.timeZone, captureContext: f.context)
+        let prepared = try await f.vault.prepareWakeDateDailyNote(record, settingsSnapshot: snapshot)
+        let destination = try f.vault.freezeHealthDataRangeDestination()
+        let journal = f.root.appendingPathComponent(prepared.relativePath)
+        try FileManager.default.createDirectory(at: journal.deletingLastPathComponent(), withIntermediateDirectories: true)
+        let personal = "---\r\nnotes: |\r\n  Personal journal\r\n---\r\nMy introduction.\r\n"
+        if mode != "skip" { try personal.write(to: journal, atomically: true, encoding: .utf8) }
+        let accepted = try f.vault.prepareDurableDailyNote(prepared, destination: destination)
+        var bytes = try JSONEncoder().encode(accepted)
+        if ["corrupt", "path", "clock", "version", "scope-owner"].contains(mode) {
+            var object = try #require(JSONSerialization.jsonObject(with: bytes) as? [String: Any])
+            if mode == "corrupt" { object["content"] = Data("Corrupt note".utf8).base64EncodedString() }
+            if mode == "path" { object["relativePath"] = "Changed/2026-03-08.md" }
+            if mode == "version" { object["version"] = 2 }
+            if mode == "clock" {
+                var identity = try #require(object["identity"] as? [String: Any])
+                identity["calendarTimeZoneIdentifier"] = "UTC"; object["identity"] = identity
+            }
+            if mode == "scope-owner" {
+                let content = try #require(accepted.content)
+                let changed = Data(String(decoding: content, as: UTF8.self)
+                    .replacingOccurrences(of: "2026-03-08", with: "2000-01-01").utf8)
+                object["content"] = changed.base64EncodedString()
+                object["contentSHA256"] = NativeExportArtifact.sha256(of: changed)
+            }
+            bytes = try JSONSerialization.data(withJSONObject: object)
+        }
+        let restored = try JSONDecoder().decode(DailyNoteInjector.DurableWrite.self, from: bytes)
+        f.settings.dailyNoteInjection.enabled = false
+        f.settings.dailyNoteInjection.folderPath = "Changed"
+        f.settings.exportTimeZoneOverride = .gmt
+        let commit = {
+            try f.vault.commitDurableDailyNote(restored, pin: prepared.pin, identity: prepared.identity,
+                injectionSettings: DailyNoteInjector.capturedSettings(prepared),
+                allowedOwnerDates: ["2026-03-08"], destination: destination)
+        }
+        let edited = "User edit after preparation.\r\n"
+        if mode == "edit-after" { _ = try commit() }
+        if mode == "skip" || mode == "edit-before" || mode == "edit-after" {
+            try edited.write(to: journal, atomically: true, encoding: .utf8)
+        }
+        if mode == "hook-before" { f.vault.productionDestinationWillCommitForTesting = { try edited.write(to: journal, atomically: true, encoding: .utf8) } }
+        if mode == "hook-after" { f.vault.productionDestinationDidValidateForTesting = { try edited.write(to: journal, atomically: true, encoding: .utf8) } }
+        if mode == "symlink" {
+            let foreign = f.root.appendingPathComponent("foreign.md")
+            try edited.write(to: foreign, atomically: true, encoding: .utf8)
+            try FileManager.default.removeItem(at: journal)
+            try FileManager.default.createSymbolicLink(at: journal, withDestinationURL: foreign)
+        }
+        let moved = f.root.appendingPathExtension("moved")
+        defer { try? FileManager.default.removeItem(at: moved) }
+        if mode == "rebound" {
+            try FileManager.default.moveItem(at: f.root, to: moved)
+            try FileManager.default.createDirectory(at: journal.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try edited.write(to: journal, atomically: true, encoding: .utf8)
+        }
+        if mode == "commit" {
+            if case .updated = try commit() {} else { Issue.record("Expected committed note") }
+            #expect(try Data(contentsOf: journal) == accepted.content)
+            if case .updated = try commit() {} else { Issue.record("Expected exact replay") }
+            #expect(try Data(contentsOf: journal) == accepted.content)
+        } else if mode == "skip" {
+            if case .skipped = try commit() {} else { Issue.record("Expected retained skip") }
+            #expect(try String(contentsOf: journal, encoding: .utf8) == edited)
+        } else {
+            #expect(throws: (any Error).self) { _ = try commit() }
+            let expected = ["edit-before", "edit-after", "hook-before", "hook-after", "symlink", "rebound"].contains(mode) ? edited : personal
+            #expect(try String(contentsOf: journal, encoding: .utf8) == expected)
+        }
+        #expect(!FileManager.default.fileExists(atPath: f.root.appendingPathComponent("Changed").path))
+    }
+
+    @Test(arguments: [false, true], [false, true])
+    func archivesComposeSeparateFrozenNotesAndReportOutcomes(recovered: Bool, create: Bool) async throws {
+        let f = try MorningArchiveTests().fixture(mode: "range")
+        defer { f.cleanup() }
+        f.settings.dailyNoteInjection.enabled = true
+        f.settings.dailyNoteInjection.createIfMissing = create
+        f.settings.dailyNoteInjection.folderPath = "Journal"
+        let original = await ExportSettingsSnapshot.forNewAppleOperation(f.settings, healthSubfolder: "Health",
+            calendarTimeZone: f.context.timeZone, surface: .localVaultRangeWithoutSideEffects)
+        #expect(try #require(original.appleExportEnginePin).isWakeDate)
+        let encoder = JSONEncoder(); encoder.userInfo[ExportSettingsSnapshot.durableSleepContextEncoding] = true
+        let decoder = JSONDecoder(); decoder.userInfo[ExportSettingsSnapshot.durableSleepContextEncoding] = true
+        let snapshot = try decoder.decode(ExportSettingsSnapshot.self, from: encoder.encode(original))
+        let journal = f.root.appendingPathComponent("Journal/2026-03-08.md")
+        try FileManager.default.createDirectory(at: journal.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try "---\r\ndate: 1999-01-01\r\nnotes: |\r\n  Personal journal\r\nsleep_deep_hours: 9\r\n---\r\nMy text.\r\n".write(to: journal, atomically: true, encoding: .utf8)
+        let progress: (Int, Int, String) -> Void = { _, _, _ in
+            f.settings.archiveExportFiles = false
+            f.settings.dailyNoteInjection.enabled = false
+            f.settings.dailyNoteInjection.folderPath = "Changed"
+            f.settings.exportTimeZoneOverride = .gmt
+            f.manager.setSleepDayAttribution(.nightBegins)
+        }
+        let result: ExportOrchestrator.ExportResult
+        if recovered {
+            result = await ExportOrchestrator.exportDatesBackground(f.dates, healthKitManager: f.manager,
+                vaultManager: f.vault, settings: f.settings, frozenSettingsSnapshot: snapshot,
+                operationSurface: .localVaultRangeWithoutSideEffects, onProgress: progress)
+        } else {
+            result = await ExportOrchestrator.exportDates(f.dates, healthKitManager: f.manager,
+                vaultManager: f.vault, settings: f.settings, onProgress: progress)
+        }
+        #expect(result.didCompleteAllRequestedDates, "\(result.failedDateDetails) / \(result.partialFailures)")
+        #expect(result.archiveCount == 1)
+        #expect(result.totalFilesWritten == 1)
+        #expect(result.dailyNoteUpdateCount == (create ? 2 : 1))
+        #expect(result.dailyNoteSkipCount == (create ? 0 : 1))
+        let zip = f.root.appendingPathComponent("Health/Health.md Export 2026-03-07_to_2026-03-08.zip")
+        let entries = try ZIP64TestReader.entries(in: Data(contentsOf: zip))
+        #expect(!entries.keys.contains(where: { $0.contains("Journal") }))
+        #expect(entries.count == 13)
+        let note = try String(contentsOf: journal, encoding: .utf8)
+        #expect(note.contains("Personal journal\r\n"))
+        let properties = try #require(MarkdownMerger.frontmatterProperties(named: ["healthmd_daily_injection_v1"], in: note))
+        let quoted = try #require(properties.first?.split(separator: ":", maxSplits: 1).last)
+        let decoded = try JSONDecoder().decode(String.self, from: Data(quoted.trimmingCharacters(in: .whitespacesAndNewlines).utf8))
+        let envelope = try #require(JSONSerialization.jsonObject(with: Data(decoded.utf8)) as? [String: Any])
+        let capture = try #require(envelope["record_json"] as? String)
+        let record = try #require(JSONSerialization.jsonObject(with: Data(capture.utf8)) as? [String: Any])
+        #expect(record["date"] as? String == "2026-03-08")
+        #expect((record["sleep"] as? [String: Any])?["totalDuration"] as? Double == 93600.5)
+        try retainFixture(note, name: "archive-create-\(create)-recovered-\(recovered)")
+        #expect(!FileManager.default.fileExists(atPath: f.root.appendingPathComponent("Changed").path))
+    }
+
+    @Test(arguments: ["role", "symlink", "collision"])
+    func invalidArchiveNotesRejectBeforeReplacingZip(mode: String) async throws {
+        let f = try MorningArchiveTests().fixture(mode: "daily")
+        defer { f.cleanup() }
+        f.settings.dailyNoteInjection.enabled = true
+        f.settings.dailyNoteInjection.createIfMissing = true
+        let zipRelative = "Health/Health.md Export 2026-03-07_to_2026-03-08.zip"
+        f.settings.dailyNoteInjection.folderPath = mode == "collision" ? zipRelative : "Journal"
+        let snapshot = await ExportSettingsSnapshot.forNewAppleOperation(f.settings, healthSubfolder: "Health",
+            calendarTimeZone: f.context.timeZone, surface: .localVaultRangeWithoutSideEffects)
+        let record = try await f.manager.fetchHealthData(for: f.dates[1], detailPolicy: .summary,
+            metricSelection: f.settings.metricSelection, timeZone: f.context.timeZone, captureContext: f.context)
+        let materialized = try #require(try await f.vault.materializeHealthDataRange([record], settingsSnapshot: snapshot,
+            operationSurface: .localVaultRangeWithoutSideEffects))
+        let zip = f.root.appendingPathComponent(zipRelative)
+        try FileManager.default.createDirectory(at: zip.deletingLastPathComponent(), withIntermediateDirectories: true)
+        let old = Data("Previous archive".utf8); try old.write(to: zip)
+        if mode != "collision" {
+            let note = f.root.appendingPathComponent("Journal/2026-03-08.md")
+            try FileManager.default.createDirectory(at: note.deletingLastPathComponent(), withIntermediateDirectories: true)
+            if mode == "role" { try "---\nschema: healthmd.health_data\n---\nFull export".write(to: note, atomically: true, encoding: .utf8) }
+            else { try FileManager.default.createSymbolicLink(at: note, withDestinationURL: zip) }
+        }
+        let destination = try f.vault.freezeHealthDataRangeDestination()
+        await #expect(throws: (any Error).self) {
+            try await f.vault.commitHealthDataRangeArchive(materialized, destination: destination,
+                settingsSnapshot: snapshot, startDate: f.dates[0], endDate: f.dates[1])
+        }
+        #expect(try Data(contentsOf: zip) == old)
+    }
+
+    @Test func previewReadsOnlyBoundRegularNotesWithinLimit() throws {
+        let f = try MorningArchiveTests().fixture(mode: "daily")
+        defer { f.cleanup() }
+        let destination = try f.vault.freezeHealthDataRangeDestination()
+        let relative = "Journal/2026-03-08.md"
+        let note = f.root.appendingPathComponent(relative)
+        #expect(try f.vault.readDailyNoteForPreview(relativePath: relative, destination: destination) == nil)
+        #expect(try FileManager.default.contentsOfDirectory(atPath: f.root.path).isEmpty)
+        try FileManager.default.createDirectory(at: note.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try "Personal note\r\n".write(to: note, atomically: true, encoding: .utf8)
+        #expect(try f.vault.readDailyNoteForPreview(relativePath: relative, destination: destination) == "Personal note\r\n")
+        let outside = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: outside) }
+        try "Outside synthetic note".write(to: outside, atomically: true, encoding: .utf8)
+        try FileManager.default.removeItem(at: note)
+        try FileManager.default.createSymbolicLink(at: note, withDestinationURL: outside)
+        #expect(throws: (any Error).self) { try f.vault.readDailyNoteForPreview(relativePath: relative, destination: destination) }
+        try FileManager.default.removeItem(at: note)
+        #expect(FileManager.default.createFile(atPath: note.path, contents: Data()))
+        let file = try FileHandle(forWritingTo: note)
+        try file.truncate(atOffset: UInt64(8 * 1024 * 1024 + 1))
+        try file.close()
+        #expect(throws: CocoaError(.fileReadTooLarge)) { try f.vault.readDailyNoteForPreview(relativePath: relative, destination: destination) }
+        let moved = f.root.deletingLastPathComponent().appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: moved) }
+        try FileManager.default.moveItem(at: f.root, to: moved)
+        try FileManager.default.createDirectory(at: note.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try "Replacement note".write(to: note, atomically: true, encoding: .utf8)
+        #expect(throws: (any Error).self) { try f.vault.readDailyNoteForPreview(relativePath: relative, destination: destination) }
+        #expect(try String(contentsOf: note, encoding: .utf8) == "Replacement note")
+    }
+
+    @Test(arguments: [false, true], [false, true])
+    func localMaterializationCarriesOnlyFrozenNotesAndConfiguredFiles(notesOnly: Bool, sections: Bool) async throws {
+        let f = try MorningArchiveTests().fixture(mode: "daily")
+        defer { f.cleanup() }
+        f.settings.archiveExportFiles = notesOnly
+        f.settings.exportFormats = notesOnly ? [] : [.json, .markdown]
+        f.settings.generateRangeSummary = notesOnly
+        f.settings.individualTracking.globalEnabled = notesOnly
+        f.settings.dailyNoteInjection.enabled = true
+        f.settings.dailyNoteInjection.dailyNotesOnly = notesOnly
+        f.settings.dailyNoteInjection.folderPath = "Journal"
+        f.settings.dailyNoteInjection.createIfMissing = true
+        f.settings.dailyNoteInjection.injectMarkdownSections = sections
+        let snapshot = await ExportSettingsSnapshot.forNewAppleOperation(f.settings, healthSubfolder: "Health",
+            calendarTimeZone: f.context.timeZone, surface: .localVaultRangeWithoutSideEffects)
+        #expect(try #require(snapshot.appleExportEnginePin).isWakeDate)
+        let record = try await f.manager.fetchHealthData(for: f.dates[1], detailPolicy: .detailedTimeSeries,
+            metricSelection: f.settings.metricSelection, timeZone: f.context.timeZone, captureContext: f.context)
+        let journal = f.root.appendingPathComponent("Journal/2026-03-08.md")
+        try FileManager.default.createDirectory(at: journal.deletingLastPathComponent(), withIntermediateDirectories: true)
+        let personal = "---\r\ndate: 1999-01-01\r\nnotes: |\r\n  Keep my personal journal\r\nsleep_deep_hours: 9 # history\r\n---\r\nMy introduction.\r\n"
+        try personal.write(to: journal, atomically: true, encoding: .utf8)
+        let destination = try f.vault.freezeHealthDataRangeDestination()
+        let materialized = try #require(try await f.vault.materializeHealthDataRange([record], settingsSnapshot: snapshot,
+            operationSurface: .localVaultRangeWithoutSideEffects))
+        #expect(materialized.dailyNotes.count == 1)
+        #expect(materialized.operation.artifacts.count == (notesOnly ? 0 : 2))
+        #expect((materialized.dataDictionary != nil) == !notesOnly)
+        #expect(materialized.individualEntries.isEmpty)
+        #expect(try String(contentsOf: journal, encoding: .utf8) == personal)
+        let prepared = try #require(materialized.dailyNotes.first)
+        let expected = try DailyNoteInjector.mergePrepared(prepared, existing: personal)
+        f.settings.dailyNoteInjection.folderPath = "Changed"
+        f.settings.exportTimeZoneOverride = .gmt
+        f.settings.metricSelection.enabledMetrics = ["weight"]
+        let result = try await f.vault.commitHealthDataRangeMaterialization(materialized, destination: destination)
+        #expect(result.dailyNoteUpdatedDates == [record.date])
+        #expect(result.dailyNoteSkippedDates.isEmpty)
+        #expect(result.totalFileCount == (notesOnly ? 0 : 3))
+        #expect(try String(contentsOf: journal, encoding: .utf8) == expected)
+        try retainFixture(expected, name: "local-\(notesOnly ? "only" : "normal")-sections-\(sections)")
+        #expect(expected.contains("notes: |\r\n  Keep my personal journal\r\n"))
+        #expect(expected.contains("sleep_deep_hours: 9 # history\r\n"))
+        #expect(!FileManager.default.fileExists(atPath: f.root.appendingPathComponent("Changed").path))
+        if notesOnly { #expect(try FileManager.default.contentsOfDirectory(atPath: f.root.path) == ["Journal"]) }
+    }
+
+    @Test(arguments: [false, true])
+    func missingNotesAndInvalidRolesAreResolvedBeforeWriting(create: Bool) async throws {
+        let f = try MorningArchiveTests().fixture(mode: "daily")
+        defer { f.cleanup() }
+        f.settings.archiveExportFiles = false
+        f.settings.dailyNoteInjection.enabled = true
+        f.settings.dailyNoteInjection.dailyNotesOnly = true
+        f.settings.dailyNoteInjection.createIfMissing = create
+        f.settings.dailyNoteInjection.folderPath = "Journal"
+        f.settings.exportFormats = []
+        let snapshot = await ExportSettingsSnapshot.forNewAppleOperation(f.settings, healthSubfolder: "Health",
+            calendarTimeZone: f.context.timeZone, surface: .localVaultRangeWithoutSideEffects)
+        let record = try await f.manager.fetchHealthData(for: f.dates[1], detailPolicy: .summary,
+            metricSelection: f.settings.metricSelection, timeZone: f.context.timeZone, captureContext: f.context)
+        let destination = try f.vault.freezeHealthDataRangeDestination()
+        let materialized = try #require(try await f.vault.materializeHealthDataRange([record], settingsSnapshot: snapshot,
+            operationSurface: .localVaultRangeWithoutSideEffects))
+        #expect(try FileManager.default.contentsOfDirectory(atPath: f.root.path).isEmpty)
+        let result = try await f.vault.commitHealthDataRangeMaterialization(materialized, destination: destination)
+        #expect(result.dailyNoteUpdatedCount == (create ? 1 : 0))
+        #expect(result.dailyNoteSkippedCount == (create ? 0 : 1))
+        #expect(result.totalFileCount == 0)
+        if !create { #expect(try FileManager.default.contentsOfDirectory(atPath: f.root.path).isEmpty) }
+        var normal = snapshot
+        normal.dailyNoteInjection.dailyNotesOnly = false
+        normal.exportFormats = [.json]
+        let journal = f.root.appendingPathComponent("Journal/2026-03-08.md")
+        try FileManager.default.createDirectory(at: journal.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try "---\nschema: healthmd.health_data\n---\nOriginal export".write(to: journal, atomically: true, encoding: .utf8)
+        let invalid = try #require(try await f.vault.materializeHealthDataRange([record], settingsSnapshot: normal,
+            operationSurface: .localVaultRangeWithoutSideEffects))
+        do { _ = try await f.vault.commitHealthDataRangeMaterialization(invalid, destination: destination); Issue.record("Expected role rejection") }
+        catch { }
+        #expect(!FileManager.default.fileExists(atPath: f.root.appendingPathComponent("Health").path))
+        #expect(try String(contentsOf: journal, encoding: .utf8) == "---\nschema: healthmd.health_data\n---\nOriginal export")
+    }
+
+    @Test func notesFromAnotherOperationCannotBeCommitted() async throws {
+        let f = try MorningArchiveTests().fixture(mode: "daily")
+        defer { f.cleanup() }
+        f.settings.archiveExportFiles = false
+        f.settings.dailyNoteInjection.enabled = true
+        f.settings.dailyNoteInjection.dailyNotesOnly = true
+        f.settings.dailyNoteInjection.createIfMissing = true
+        let snapshot = await ExportSettingsSnapshot.forNewAppleOperation(f.settings, healthSubfolder: "Health",
+            calendarTimeZone: f.context.timeZone, surface: .localVaultRangeWithoutSideEffects)
+        let record = try await f.manager.fetchHealthData(for: f.dates[1], detailPolicy: .summary,
+            metricSelection: f.settings.metricSelection, timeZone: f.context.timeZone, captureContext: f.context)
+        let first = try #require(try await f.vault.materializeHealthDataRange([record], settingsSnapshot: snapshot,
+            operationSurface: .localVaultRangeWithoutSideEffects))
+        let other = try #require(try await f.vault.materializeHealthDataRange([record], settingsSnapshot: snapshot,
+            operationSurface: .localVaultRangeWithoutSideEffects))
+        let mixed = AppleLooseDailyRangeMaterialization(operation: other.operation, dataDictionary: nil,
+            result: other.result, dailyNotes: first.dailyNotes)
+        let destination = try f.vault.freezeHealthDataRangeDestination()
+        await #expect(throws: (any Error).self) {
+            try await f.vault.commitHealthDataRangeMaterialization(mixed, destination: destination)
+        }
+        #expect(try FileManager.default.contentsOfDirectory(atPath: f.root.path).isEmpty)
+    }
+
+    @Test(arguments: [false, true], [false, true])
+    func foregroundAndRestoredOperationsUseCapturedModeAndClock(notesOnly: Bool, recovered: Bool) async throws {
+        let f = try MorningArchiveTests().fixture(mode: "daily")
+        defer { f.cleanup() }
+        f.settings.archiveExportFiles = false
+        f.settings.exportFormats = notesOnly ? [] : [.json]
+        f.settings.dailyNoteInjection.enabled = true
+        f.settings.dailyNoteInjection.dailyNotesOnly = notesOnly
+        f.settings.dailyNoteInjection.createIfMissing = true
+        f.settings.dailyNoteInjection.folderPath = "Journal"
+        let original = await ExportSettingsSnapshot.forNewAppleOperation(f.settings, healthSubfolder: "Health",
+            calendarTimeZone: f.context.timeZone, surface: .localVaultRangeWithoutSideEffects)
+        let portable = try JSONDecoder().decode(ExportSettingsSnapshot.self, from: JSONEncoder().encode(original))
+        #expect(portable.sleepCaptureContext == nil)
+        #expect(throws: AppleSleepCaptureContext.AvailabilityError.missingDurableAttribution) {
+            try portable.validatedSleepCaptureContext()
+        }
+        let encoder = JSONEncoder()
+        encoder.userInfo[ExportSettingsSnapshot.durableSleepContextEncoding] = true
+        let decoder = JSONDecoder()
+        decoder.userInfo[ExportSettingsSnapshot.durableSleepContextEncoding] = true
+        let snapshot = try decoder.decode(ExportSettingsSnapshot.self, from: encoder.encode(original))
+        #expect(snapshot.externalProviderCaptureAuthority?.connections.isEmpty == true)
+        let progress: (Int, Int, String) -> Void = { _, _, _ in
+            f.settings.dailyNoteInjection.enabled = false
+            f.settings.dailyNoteInjection.folderPath = "Changed"
+            f.settings.exportTimeZoneOverride = .gmt
+            f.manager.setSleepDayAttribution(.nightBegins)
+        }
+        let result: ExportOrchestrator.ExportResult
+        if recovered {
+            result = await ExportOrchestrator.exportDatesBackground([f.dates[1]], healthKitManager: f.manager,
+                vaultManager: f.vault, settings: f.settings, frozenSettingsSnapshot: snapshot,
+                operationSurface: .localVaultRangeWithoutSideEffects, onProgress: progress)
+        } else {
+            result = await ExportOrchestrator.exportDates([f.dates[1]], healthKitManager: f.manager,
+                vaultManager: f.vault, settings: f.settings, onProgress: progress)
+        }
+        #expect(result.successCount == 1, "\(result.failedDateDetails) / \(result.partialFailures)")
+        #expect(result.dailyNoteUpdateCount == 1)
+        #expect(result.totalFilesWritten == (notesOnly ? 0 : 2))
+        #expect(result.didCompleteAllRequestedDates)
+        let note = try String(contentsOf: f.root.appendingPathComponent("Journal/2026-03-08.md"), encoding: .utf8)
+        let properties = try #require(MarkdownMerger.frontmatterProperties(named: ["healthmd_daily_injection_v1"], in: note))
+        let quoted = try #require(properties.first?.split(separator: ":", maxSplits: 1).last)
+        let decoded = try JSONDecoder().decode(String.self, from: Data(quoted.trimmingCharacters(in: .whitespacesAndNewlines).utf8))
+        let envelope = try #require(JSONSerialization.jsonObject(with: Data(decoded.utf8)) as? [String: Any])
+        let json = try #require(envelope["record_json"] as? String)
+        let captured = try #require(JSONSerialization.jsonObject(with: Data(json.utf8)) as? [String: Any])
+        #expect((captured["time_context"] as? [String: String])?["calendar_timezone"] == "America/New_York")
+        #expect((captured["sleep"] as? [String: Any])?["totalDuration"] as? Double == 93600.5)
+        try retainFixture(note, name: "orchestrator-\(notesOnly ? "only" : "normal")-recovered-\(recovered)")
+        #expect(!FileManager.default.fileExists(atPath: f.root.appendingPathComponent("Changed").path))
+    }
+    private func retainFixture(_ note: String, name: String) throws {
+        guard let directory = ProcessInfo.processInfo.environment["HEALTHMD_LOCAL_NOTE_FIXTURE_DIR"] else { return }
+        let properties = try #require(MarkdownMerger.frontmatterProperties(named: ["healthmd_daily_injection_v1"], in: note))
+        let quoted = try #require(properties.first?.split(separator: ":", maxSplits: 1).last)
+        let decoded = try JSONDecoder().decode(String.self, from: Data(quoted.trimmingCharacters(in: .whitespacesAndNewlines).utf8))
+        let envelope = try #require(JSONSerialization.jsonObject(with: Data(decoded.utf8)) as? [String: Any])
+        let record = try #require(envelope["record_json"] as? String)
+        let root = URL(fileURLWithPath: directory, isDirectory: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        try Data(note.utf8).write(to: root.appendingPathComponent(name + ".md"))
+        try Data(record.utf8).write(to: root.appendingPathComponent(name + ".json"))
+    }
+
 }
