@@ -29,7 +29,7 @@ export const HMAC_RE = /^[0-9a-f]{64}$/;
 /** Nonce: ≥128 bits, lowercase hex. */
 export const NONCE_RE = /^[0-9a-f]{32,128}$/;
 
-export const FALLBACK_NOTIFICATION_BODY = "A paired computer is requesting data. Tap to continue.";
+export const FALLBACK_NOTIFICATION_BODY = "Your CLI is waiting. Open Health.md to continue.";
 export const NOTIFICATION_TITLE = "Health.md";
 export const NOTIFICATION_CATEGORY = "HEALTHMD_DIRECT_WAKE";
 export const PEER_LABEL_MAX_BYTES = 128;
@@ -111,7 +111,7 @@ export function sanitizePeerLabel(value: unknown): string | null {
 }
 
 export function notificationBody(peerLabel: string | null): string {
-  return peerLabel ? `${peerLabel} is requesting data. Tap to continue.` : FALLBACK_NOTIFICATION_BODY;
+  return peerLabel ? `Your CLI is waiting. Open Health.md to continue on ${peerLabel}.` : FALLBACK_NOTIFICATION_BODY;
 }
 
 export function notificationPayload(peerLabel: string | null): Record<string, unknown> {

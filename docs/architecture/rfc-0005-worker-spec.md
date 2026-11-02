@@ -81,7 +81,7 @@ Notification payload:
   "aps": {
     "alert": {
       "title": "Health.md",
-      "body": "{peerLabel} is requesting data. Tap to continue."
+      "body": "Your CLI is waiting. Open Health.md to continue on {peerLabel}."
     },
     "sound": "default",
     "category": "HEALTHMD_DIRECT_WAKE"
@@ -90,8 +90,8 @@ Notification payload:
 }
 ```
 
-- If `peerLabel` cannot be carried safely, fall back to `"A paired computer is requesting data.
-  Tap to continue."` and record the fallback reason in an access log that contains no identity
+- If `peerLabel` cannot be carried safely, fall back to `"Your CLI is waiting. Open Health.md
+  to continue."` and record the fallback reason in an access log that contains no identity
   beyond `wakeId`.
 - Tap routing (unlock → foreground → Direct CLI Access screen) is implemented by the iOS app's
   `UNUserNotificationCenterDelegate`; the worker only delivers the notification.
