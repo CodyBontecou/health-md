@@ -64,7 +64,7 @@ Analytical v7 arrays (each entry: `timestamp`, `value`, `source`, `metadata`, `e
 - `nutrition`: `hydrationSamples` (liters).
 - `body`: `weightSamples`, `leanBodyMassSamples`, `boneMassSamples`, `bodyWaterMassSamples` (kg), `heightSamples` (meters), `bodyFatSamples` (fraction 0–1). Body records are instantaneous and carry no `exactEndTime`.
 
-Each record belongs to the day containing its start. Records are not deduplicated, interpolated, or resampled. CSV adds one `… Sample` row per record (canonical units, exact start in the Timestamp column) and Markdown adds a record table per array. Obsidian Bases and daily notes keep the v5 identity because they carry no record arrays. v7 is written by the on-device writers only.
+Each record belongs to the day containing its start. Records are not deduplicated, interpolated, or resampled, so a day's records can sum to more than its total (overlapping origins) or less (a record that starts the previous day still counts toward this day's aggregate); use the daily totals for totals. CSV adds one `… Sample` row per record (canonical units, exact start in the Timestamp column) and Markdown adds a record table per array. Obsidian Bases and daily notes keep the v5 identity because they carry no record arrays. v7 is written by the on-device writers only.
 
 Two additional switches control extra keys: **legacy Android aliases** re-adds pre-parity key names, and **Android native fields** emits values that have no frozen v4 equivalent. The API endpoint export always embeds frozen v4 regardless of your local profile.
 

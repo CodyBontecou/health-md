@@ -40,7 +40,11 @@ Some records have no place in the shipped grammars. An explicit **Detailed** ove
 - Frozen v4 never upgrades. Morning ends keeps apple-v11 / android-sleep-v6 and neither captures nor writes the successor arrays.
 - Daily notes, scoped direct notes, rollups, the Apple data dictionary, and Android Obsidian Bases keep the shipped identity because they carry no sample arrays. Apple Markdown and Bases frontmatter of a v12 day carry the v12 header.
 - Both successors are written only by the native writers. The Rust engine never renders detailed daily records (Apple refuses detail in the Rust planner; Android v7 resolves to the Kotlin writers and refuses Rust pins), so no shared-core registry, UniFFI, CLI, or direct-protocol profile changed.
-- Each entry is one source record: source start (and end, for intervals), unit, and identity are kept. Nothing is interpolated, resampled, or deduplicated, so sample sums can exceed the deduplicated daily totals.
+- Each entry is one source record: source start (and end, for intervals), unit, and identity are kept. Nothing is interpolated, resampled, or deduplicated.
+- **Sample sums are not daily totals.** Summing a day's entries can give more or less than its summary value, and both are correct:
+  - *More:* overlapping sources (for example a phone and a watch) each keep their records, while the summary is deduplicated across sources.
+  - *Less:* a record belongs only to the day it starts, while the summary counts the part of every record that overlaps the day. A long record that starts before local midnight, such as a provider's hourly or daily step block, appears in the previous day's array but still contributes to this day's total.
+  - Use the summary value for totals. Use the entries for timing, source, and record identity; to reproduce a total, read the neighbouring days' entries and clip each interval to the day.
 - Connected Macs must advertise `supportsAppleV12DetailExpansion` before receiving a v12 job or an override outside sleep/heart/vitals/workouts.
 
 ## Native capability inventory
