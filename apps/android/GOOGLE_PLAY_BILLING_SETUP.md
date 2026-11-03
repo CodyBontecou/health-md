@@ -4,7 +4,7 @@ This guide covers the `play` Android variant. F-Droid does not compile Billing a
 
 ## Product configuration
 
-The approved future US Individual launch targets are **$0.99 weekly**, **$29.99 yearly**, and **$49.99 Lifetime**. Live Lifetime remains **$19.99 US** under the hold below. Eligible subscriptions include a **seven-day free trial**. Lifetime is charged immediately. Android offers no Family plans and no monthly subscription. The cross-platform decision and Apple setup are recorded in the [paid-access rollout](../apple/docs/experiments/subscription-pricing-rollout.md).
+The approved future US Individual launch targets are **$0.99 weekly**, **$29.99 yearly**, and **$49.99 Lifetime**. Live Lifetime remains **$19.99 US** under the hold below, although Apple moved its Lifetime to $49.99 US (observed November 3, 2026). Eligible subscriptions include a **seven-day free trial**. Lifetime is charged immediately. Android offers no Family plans and no monthly subscription. The cross-platform decision and Apple setup are recorded in the [paid-access rollout](../apple/docs/experiments/subscription-pricing-rollout.md).
 
 **Internal-testing release:** Android 3.5.0 build 44 is available on Internal Testing and includes the seven-day trial phase fix; it supersedes build 43 on that track. Upload through the protected `android-release.yml` workflow, then qualify real Play purchases with license-test accounts before production promotion. The Internal Testing upload does not activate subscription products or change any product price.
 
