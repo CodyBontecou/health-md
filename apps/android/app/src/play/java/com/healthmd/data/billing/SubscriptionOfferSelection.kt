@@ -19,6 +19,11 @@ internal fun selectSubscriptionOffer(
     }.sortedByDescending { it.pricingPhases.pricingPhaseList.size }.firstOrNull()
 }
 
-/** Play may express a seven-day trial in days or as one week. */
+/** Play may express one week as P1W or P7D; a non-recurring phase has zero cycles. */
 internal fun ProductDetails.PricingPhase.isSevenDayFreeTrial(): Boolean =
-    priceAmountMicros == 0L && billingPeriod in setOf("P7D", "P1W") && billingCycleCount == 1
+    priceAmountMicros == 0L && billingPeriod in setOf("P7D", "P1W") &&
+        when (recurrenceMode) {
+            ProductDetails.RecurrenceMode.FINITE_RECURRING -> billingCycleCount == 1
+            ProductDetails.RecurrenceMode.NON_RECURRING -> billingCycleCount == 0
+            else -> false
+        }

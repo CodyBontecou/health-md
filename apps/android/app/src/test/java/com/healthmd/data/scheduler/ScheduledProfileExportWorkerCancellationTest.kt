@@ -268,6 +268,7 @@ class ScheduledProfileExportWorkerCancellationTest {
         val healthRepository = mockk<HealthRepository>(relaxed = true)
         coEvery { healthRepository.hasBackgroundReadPermission() } returns true
         val snapshotFactory = mockk<ScheduledProfileSnapshotFactory>(relaxed = true)
+        coEvery { snapshotFactory.captureForNewOccurrence(any(), any(), any(), any()) } answers { firstArg() }
         every { snapshotFactory.restoreForRun(profile, settings, 1) } returns settings
         val apiRunner = mockk<APIEndpointExportRunner>(relaxed = true)
         coEvery {
@@ -278,6 +279,7 @@ class ScheduledProfileExportWorkerCancellationTest {
                 expectedDestinationFingerprint = null,
                 durableOperationId = any(),
                 durableSettingsSnapshotJson = profile.settingsSnapshotJson,
+                requireExistingDurableOperation = any(),
             )
         } coAnswers {
             val dates = firstArg<List<LocalDate>>()
@@ -352,7 +354,7 @@ class ScheduledProfileExportWorkerCancellationTest {
             coVerify(exactly = 1) {
                 harness.rawRunner.exportRange(any(), any(), harness.runSettings, target, null, false)
             }
-            coVerify(exactly = 0) { harness.apiRunner.exportDates(any(), any(), any(), any(), any(), any()) }
+            coVerify(exactly = 0) { harness.apiRunner.exportDates(any(), any(), any(), any(), any(), any(), any()) }
             coVerify(exactly = 0) { harness.exportRepository.exportHealthData(any(), any()) }
             if (target == ExportTarget.DEVICE_FOLDER) {
                 coVerify(exactly = 1) { harness.settingsRepository.saveExportFolderUri("content://synthetic/profile") }
@@ -435,7 +437,7 @@ class ScheduledProfileExportWorkerCancellationTest {
         assertThat(harness.rawEnd.captured).isEqualTo(pending.ownerDates.single())
         assertThat(harness.history.captured.profileName).isEqualTo("Frozen raw profile")
         coVerify(exactly = 1) { harness.entryStore.recordSuccess(any(), 1_000L, pending.id, 0L) }
-        coVerify(exactly = 0) { harness.apiRunner.exportDates(any(), any(), any(), any(), any(), any()) }
+        coVerify(exactly = 0) { harness.apiRunner.exportDates(any(), any(), any(), any(), any(), any(), any()) }
     }
 
     @Test
@@ -506,7 +508,7 @@ class ScheduledProfileExportWorkerCancellationTest {
 
         coVerify(exactly = 0) { harness.healthRepository.hasBackgroundReadPermission() }
         coVerify(exactly = 0) { harness.rawRunner.exportRange(any(), any(), any(), any(), any(), any()) }
-        coVerify(exactly = 0) { harness.apiRunner.exportDates(any(), any(), any(), any(), any(), any()) }
+        coVerify(exactly = 0) { harness.apiRunner.exportDates(any(), any(), any(), any(), any(), any(), any()) }
     }
 
     @Test
@@ -524,6 +526,113 @@ class ScheduledProfileExportWorkerCancellationTest {
 
         coVerify(exactly = 0) { harness.entryStore.recordRetry(any(), any(), any(), any(), any()) }
         coVerify(exactly = 0) { harness.entryStore.recordRefreshSuccess(any(), any(), any()) }
+    }
+
+    @Test
+    fun `Morning admission precedes source permission and retry keeps its frozen profile`() = runTest {
+        val library = System.getenv("HEALTHMD_HOST_CORE_LIBRARY")
+        org.junit.Assume.assumeTrue(!library.isNullOrBlank())
+        System.setProperty("uniffi.component.healthmd_core_uniffi.libraryOverride", library!!)
+        for (discardDuringAcceptance in listOf(false, true)) {
+            val root = java.nio.file.Files.createTempDirectory("morning-profile-worker-").toFile()
+            val dataScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO)
+            try {
+                val context = ApplicationProvider.getApplicationContext<Context>()
+                val dataStore = androidx.datastore.preferences.core.PreferenceDataStoreFactory.create(scope = dataScope,
+                    produceFile = { java.io.File(root, "entries.preferences_pb") })
+                val entries = ScheduledProfileEntryStore(dataStore, context)
+                val today = LocalDate.now(ZoneId.of("UTC"))
+                val entry = ScheduledProfileEntry(profileId = "morning-worker", isEnabled = true,
+                    anchorEpochDay = today.toEpochDay(), hour = 0, lookbackDays = 1, zoneId = "UTC")
+                entries.upsert(entry)
+                val endpoint = "https://original.example.invalid/health"
+                val output = ExportSettings(exportFormat = com.healthmd.domain.model.ExportFormat.JSON,
+                    exportFormats = setOf(com.healthmd.domain.model.ExportFormat.JSON),
+                    exportTarget = ExportTarget.API_ENDPOINT, scheduledExportTarget = ExportTarget.API_ENDPOINT, apiEndpointUrl = endpoint)
+                val original = ExportProfile(id = entry.profileId, name = "Original Morning", target = ExportTarget.API_ENDPOINT,
+                    apiEndpointUrl = endpoint, settingsSnapshotJson = com.healthmd.domain.exportengine.AndroidExportSettingsSnapshotCodec.encodeCanonical(
+                        com.healthmd.domain.exportengine.AndroidExportSettingsSnapshot.capture(output, null, ZoneId.of("UTC"))),
+                    createdAtEpochMillis = 1L, updatedAtEpochMillis = 1L)
+                var storedProfile = original
+                var preference = com.healthmd.domain.model.SleepDayAttribution.MORNING_ENDS
+                var selected = "health_connect"
+                val settingsRepository = mockk<SettingsRepository>(relaxed = true)
+                coEvery { settingsRepository.getExportSettings() } returns output.copy(
+                    exportFormat = com.healthmd.domain.model.ExportFormat.CSV, exportFormats = setOf(com.healthmd.domain.model.ExportFormat.CSV))
+                coEvery { settingsRepository.getSleepDayAttribution() } answers { preference }
+                coEvery { settingsRepository.getSelectedHealthProviderId() } coAnswers {
+                    val accepted = selected
+                    selected = "whoop"
+                    if (discardDuringAcceptance) entries.discardPendingRecovery(entry.profileId)
+                    accepted
+                }
+                every { settingsRepository.isPurchased } returns flowOf(true)
+                val profiles = mockk<ExportProfileRepository>(relaxed = true)
+                coEvery { profiles.profileById(entry.profileId) } answers { storedProfile }
+                val sdk = mockk<com.healthmd.data.health.HealthConnectManager>(relaxed = true)
+                var permissionChecks = 0
+                coEvery { sdk.hasBackgroundReadPermission() } coAnswers {
+                    permissionChecks++
+                    val admitted = requireNotNull(entries.entry(entry.profileId)).pendingExports.single()
+                    assertThat(com.healthmd.domain.exportengine.AndroidExportSettingsSnapshotCodec.decode(admitted.settingsSnapshotJson).version).isEqualTo(3)
+                    true
+                }
+                val cloud = mockk<com.healthmd.data.health.HealthDataProvider>(relaxed = true)
+                every { cloud.providerId } returns "whoop"
+                coEvery { cloud.hasBackgroundReadPermission() } returns false
+                val source = com.healthmd.data.health.HealthRepositoryImpl(com.healthmd.data.health.HealthProviderRegistry(
+                    com.healthmd.data.health.HealthConnectDataProvider(sdk), listOf(cloud)), settingsRepository)
+                val factory = ScheduledProfileSnapshotFactory(com.healthmd.domain.exportengine.ExportEnginePinPlanner(), settingsRepository)
+                val api = mockk<APIEndpointExportRunner>(relaxed = true)
+                var apiCalls = 0
+                var acceptedJson: String? = null
+                coEvery { api.exportDates(any(), any(), any(), any(), any(), any(), any()) } coAnswers {
+                    apiCalls++
+                    assertThat(arg<Boolean>(6)).isEqualTo(apiCalls > 1)
+                    val dates = firstArg<List<LocalDate>>()
+                    val frozen = secondArg<ExportSettings>()
+                    val snapshotJson = arg<String?>(5)
+                    assertThat(frozen.exportFormats).containsExactly(com.healthmd.domain.model.ExportFormat.JSON)
+                    assertThat(frozen.apiEndpointUrl).isEqualTo(endpoint)
+                    assertThat(frozen.executionSleepCaptureContext?.sleepDayAttribution).isEqualTo(com.healthmd.domain.model.SleepDayAttribution.MORNING_ENDS)
+                    assertThat(frozen.executionProviderCaptureAuthority?.selectedProviderId).isEqualTo("health_connect")
+                    if (apiCalls == 1) {
+                        acceptedJson = snapshotJson
+                        assertThat(entries.entry(entry.profileId)?.pendingExports?.single()?.settingsSnapshotJson).isEqualTo(snapshotJson)
+                        ExportResult(0, dates.size, dates.map { FailedDateDetail(it, ExportFailureReason.UNKNOWN) },
+                            retryOperationIds = dates.associateWith { "prepared-morning-profile" })
+                    } else {
+                        assertThat(snapshotJson).isEqualTo(acceptedJson)
+                        ExportResult(dates.size, dates.size)
+                    }
+                }
+                fun newWorker() = worker(profileId = entry.profileId, settingsRepository = settingsRepository,
+                    healthRepository = source, exportHistoryRepository = mockk(relaxed = true), apiEndpointExportRunner = api,
+                    profileRepository = profiles, entryStore = entries, snapshotFactory = factory, profileScheduler = mockk(relaxed = true))
+                assertThat(newWorker().doWork()).isEqualTo(ListenableWorker.Result.retry())
+                if (discardDuringAcceptance) {
+                    assertThat(permissionChecks).isEqualTo(0)
+                    assertThat(apiCalls).isEqualTo(0)
+                    assertThat(entries.entry(entry.profileId)?.pendingExports).isEmpty()
+                    assertThat(entries.entry(entry.profileId)?.recoveryGeneration).isEqualTo(1L)
+                } else {
+                    assertThat(permissionChecks).isEqualTo(1)
+                    assertThat(apiCalls).isEqualTo(1)
+                    val pending = requireNotNull(entries.entry(entry.profileId)).pendingExports.single()
+                    assertThat(pending.durableOperationId).isEqualTo("prepared-morning-profile")
+                    preference = com.healthmd.domain.model.SleepDayAttribution.NIGHT_BEGINS
+                    storedProfile = original.copy(name = "Edited", target = ExportTarget.DEVICE_FOLDER, apiEndpointUrl = null)
+                    coEvery { sdk.hasBackgroundReadPermission() } returns false
+                    assertThat(newWorker().doWork()).isEqualTo(ListenableWorker.Result.success())
+                    assertThat(apiCalls).isEqualTo(2)
+                    assertThat(entries.entry(entry.profileId)?.pendingExports).isEmpty()
+                    assertThat(original.settingsSnapshotJson).isEqualTo(storedProfile.settingsSnapshotJson)
+                    coVerify(exactly = 1) { settingsRepository.getSleepDayAttribution() }
+                    coVerify(exactly = 1) { settingsRepository.getSelectedHealthProviderId() }
+                }
+                coVerify(exactly = 0) { sdk.fetchHealthDataRange(any(), any(), any(), any(), any(), any()) }
+            } finally { dataScope.coroutineContext[kotlinx.coroutines.Job]?.cancel(); root.deleteRecursively() }
+        }
     }
 
     private fun rawHarness(
@@ -566,6 +675,7 @@ class ScheduledProfileExportWorkerCancellationTest {
         val healthRepository = mockk<HealthRepository>(relaxed = true)
         coEvery { healthRepository.hasBackgroundReadPermission() } returns true
         val snapshotFactory = mockk<ScheduledProfileSnapshotFactory>(relaxed = true)
+        coEvery { snapshotFactory.captureForNewOccurrence(any(), any(), any(), any()) } answers { firstArg() }
         every { snapshotFactory.restoreForRun(any(), any(), any()) } returns settings
         val rawRunner = mockk<RawSnapshotService>(relaxed = true)
         val rawStart = slot<LocalDate>()
@@ -657,6 +767,7 @@ class ScheduledProfileExportWorkerCancellationTest {
         val healthRepository = mockk<HealthRepository>(relaxed = true)
         coEvery { healthRepository.hasBackgroundReadPermission() } returns true
         val snapshotFactory = mockk<ScheduledProfileSnapshotFactory>(relaxed = true)
+        coEvery { snapshotFactory.captureForNewOccurrence(any(), any(), any(), any()) } answers { firstArg() }
         every { snapshotFactory.restoreForRun(profile, settings, 2) } returns settings
         val exportedDates = slot<List<LocalDate>>()
         val exportStarted = CompletableDeferred<Unit>()
@@ -669,6 +780,7 @@ class ScheduledProfileExportWorkerCancellationTest {
                 expectedDestinationFingerprint = null,
                 durableOperationId = any(),
                 durableSettingsSnapshotJson = profile.settingsSnapshotJson,
+                requireExistingDurableOperation = any(),
             )
         } coAnswers {
             val dates = exportedDates.captured
@@ -754,7 +866,7 @@ class ScheduledProfileExportWorkerCancellationTest {
                 snapshotFactory = snapshotFactory,
                 folderAdoption = folderAdoption,
                 profileScheduler = Lazy { profileScheduler },
-                entitlementRepository = FakeBillingRepository(),
+                entitlementRepository = FakeBillingRepository(initialUnlocked = true),
                 distributionPolicy = DistributionPolicy.play(),
             )
         }

@@ -133,6 +133,7 @@ private struct DirectFileReceiveJournal: Codable, Equatable {
     }
     var hasValidHistoryVersion: Bool {
         version == Self.version(for: accepted)
+            && manifests.values.allSatisfy { $0.scopedNotePolicy == nil }
             && (accepted.historyObservation.map { $0.matches(request: request, accepted: accepted, session: session) } ?? true)
     }
     let version: Int
@@ -242,6 +243,8 @@ public actor DirectFileReceiver {
     }
 
     public func store(manifest: DirectExportFileManifest) throws {
+        // The compatibility Swift receiver does not negotiate the portable note extension.
+        guard manifest.scopedNotePolicy == nil else { throw DirectFileReceiverError.manifestChanged }
         guard var journal else { throw DirectFileReceiverError.incompleteTransfer }
         _ = try DirectExportFileManifest(
             jobID: manifest.jobID,

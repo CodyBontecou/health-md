@@ -32,6 +32,75 @@ struct ExportPreviewScope: Equatable {
     }
 }
 
+/// One accepted preview owns its capture settings, scope and destination presentation.
+@MainActor
+struct ExportPreviewOperationConfiguration {
+    let snapshot: ExportSettingsSnapshot
+    fileprivate let settings: AdvancedExportSettings
+    let healthSubfolder: String
+    let destinationRootName: String
+    let vaultURL: URL?
+    let dailyNoteDestination: AppleLooseDailyRangeDestination?
+    let scope: ExportPreviewScope
+
+    init(snapshot: ExportSettingsSnapshot, destinationRootName: String, vaultURL: URL?,
+        maximumRenderedDates: Int = 5, dailyNoteDestination: AppleLooseDailyRangeDestination? = nil) {
+        self.snapshot = snapshot
+        self.settings = snapshot.makeAdvancedExportSettings()
+        self.healthSubfolder = snapshot.healthSubfolder ?? ""
+        self.destinationRootName = destinationRootName
+        self.vaultURL = vaultURL
+        self.dailyNoteDestination = dailyNoteDestination
+        self.scope = ExportPreviewScope.make(selectedFormats: snapshot.exportFormats,
+            losslessEnabled: snapshot.detailPolicy.includesCanonicalArchive,
+            defaultMaximumRenderedDates: maximumRenderedDates)
+    }
+
+    func fetchRecord(for date: Date,
+        using fetch: (Date, ExportSettingsSnapshot) async -> HealthData?) async -> HealthData? {
+        await fetch(date, snapshot)
+    }
+
+    func matchesVault(_ currentURL: URL?) -> Bool {
+        guard let vaultURL, let currentURL else { return false }
+        return vaultURL.standardizedFileURL == currentURL.standardizedFileURL
+    }
+
+    func displayFolderPath(relativePath: String) -> String {
+        ([destinationRootName] + relativePath.split(separator: "/").map(String.init)).joined(separator: "/") + "/"
+    }
+
+    func aggregateFolderPath(for date: Date, format: ExportFormat? = nil) -> String {
+        displayFolderPath(relativePath: ExportPathPlanner.aggregateFolderRelativePath(
+            healthSubfolder: healthSubfolder, settings: settings, date: date, format: format))
+    }
+
+    func aggregateSummaryFolderPath(for date: Date) -> String {
+        guard settings.organizeFormatsIntoFolders else { return aggregateFolderPath(for: date) }
+        return displayFolderPath(relativePath: [healthSubfolder, "{format}", settings.formatFolderPath(for: date) ?? ""]
+            .filter { !$0.isEmpty }.joined(separator: "/"))
+    }
+
+    func rollupFolderPath(for period: HealthRollupPeriod?, format: ExportFormat? = nil) -> String {
+        let relativePath = period.map {
+            HealthRollupExporter.relativeFolderPath(healthSubfolder: healthSubfolder,
+                period: $0, format: format, settings: settings)
+        } ?? [healthSubfolder, "Rollups"].filter { !$0.isEmpty }.joined(separator: "/")
+        return displayFolderPath(relativePath: relativePath)
+    }
+
+    func dailyNoteFolderPath(for date: Date) -> String {
+        let path = ExportPathPlanner.dailyNoteRelativePath(settings: settings.dailyNoteInjection,
+            date: date, timeZone: settings.exportTimeZoneOverride ?? .current)
+        return displayFolderPath(relativePath: path.split(separator: "/").dropLast().joined(separator: "/"))
+    }
+
+    func dailyNoteURL(for date: Date) -> URL? {
+        vaultURL.map { ExportPathPlanner.dailyNoteURL(vaultURL: $0, settings: settings.dailyNoteInjection,
+            date: date, timeZone: settings.exportTimeZoneOverride ?? .current) }
+    }
+}
+
 // MARK: - Export Preview
 // Shows the user a dry-run of what will be written to their vault for the
 // current date range, format selection, and customization settings — actual
@@ -51,7 +120,8 @@ struct ExportPreviewView: View {
     let targetType: ExportPreviewTargetType
     let apiDestination: APIExportDestinationSnapshot?
     let connectedAppsEnabled: Bool
-    let fetchHealthData: (Date) async -> HealthData?
+    let externalIntegrations: (any ExternalIntegrationDailyRecordProviding)?
+    let fetchHealthData: (Date, ExportSettingsSnapshot) async -> HealthData?
     let fetchExternalDailyRecords: APIEndpointExportRunner.ExternalDailyRecordFetcher?
     let requestHealthAuthorization: (@MainActor () async throws -> HealthKitManager.AuthorizationRequestOutcome)?
     let onExport: (() -> Void)?
@@ -69,7 +139,8 @@ struct ExportPreviewView: View {
         targetType: ExportPreviewTargetType,
         apiDestination: APIExportDestinationSnapshot? = nil,
         connectedAppsEnabled: Bool = false,
-        fetchHealthData: @escaping (Date) async -> HealthData?,
+        externalIntegrations: (any ExternalIntegrationDailyRecordProviding)? = nil,
+        fetchHealthData: @escaping (Date, ExportSettingsSnapshot) async -> HealthData?,
         fetchExternalDailyRecords: APIEndpointExportRunner.ExternalDailyRecordFetcher? = nil,
         requestHealthAuthorization: (@MainActor () async throws -> HealthKitManager.AuthorizationRequestOutcome)? = nil,
         onExport: (() -> Void)? = nil,
@@ -86,6 +157,7 @@ struct ExportPreviewView: View {
         self.targetType = targetType
         self.apiDestination = apiDestination
         self.connectedAppsEnabled = connectedAppsEnabled
+        self.externalIntegrations = externalIntegrations
         self.fetchHealthData = fetchHealthData
         self.fetchExternalDailyRecords = fetchExternalDailyRecords
         self.requestHealthAuthorization = requestHealthAuthorization
@@ -100,6 +172,7 @@ struct ExportPreviewView: View {
     @State private var datePreviews: [DatePreview] = []
     @State private var partialFailures: [ExportPartialFailure] = []
     @State private var isLoading = true
+    @State private var capturedSleepAttribution: SleepDayAttribution = .nightBegins
     @State private var totalDateCount = 0
     @State private var renderedDayPreviewCount = 0
     @State private var estimatedExportSize: ExportPreviewSizeEstimate?
@@ -128,12 +201,18 @@ struct ExportPreviewView: View {
                 }
             }
             .safeAreaInset(edge: .top) {
-                if !isLoading && settings.metricSelection.enabledMetricCount(for: .sleep) > 0 {
+                if !isLoading && !sleepWindowDescription.isEmpty
+                    && settings.metricSelection.enabledMetricCount(for: .sleep) > 0 {
                     VStack(alignment: .leading, spacing: Spacing.s1) {
                         Text(sleepWindowDescription)
                             .font(.footnote.weight(.semibold))
-                        Text("If sleep is missing, try the preceding date. Morning sleep can appear in that date's summary even when its raw records are dated today. Query failures are listed separately; an empty result can also mean read access is unavailable.")
-                            .font(.footnote)
+                        if capturedSleepAttribution == .morningEnds {
+                            Text(capturedSleepAttribution.localizedDescription)
+                                .font(.footnote)
+                        } else {
+                            Text("If sleep is missing, try the preceding date. Morning sleep can appear in that date's summary even when its raw records are dated today. Query failures are listed separately; an empty result can also mean read access is unavailable.")
+                                .font(.footnote)
+                        }
                     }
                     .foregroundStyle(Color.textSecondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -201,6 +280,9 @@ struct ExportPreviewView: View {
     // MARK: - States
 
     private func makeSleepWindowDescription(calendar: Calendar) -> String {
+        if capturedSleepAttribution == .morningEnds {
+            return "\(SleepDayAttribution.morningEnds.localizedDisplayName): \(rangeDescription(dates: [startDate, endDate], timeZone: calendar.timeZone)) (\(calendar.timeZone.identifier))."
+        }
         let start = HealthKitManager.sleepWindow(for: startDate, calendar: calendar).start
         let end = HealthKitManager.sleepWindow(for: endDate, calendar: calendar).end
         let formatter = DateFormatter()
@@ -670,14 +752,6 @@ struct ExportPreviewView: View {
         return record
     }
 
-    private var previewScope: ExportPreviewScope {
-        ExportPreviewScope.make(
-            selectedFormats: settings.exportFormats,
-            losslessEnabled: settings.effectiveDetailPolicy.includesCanonicalArchive,
-            defaultMaximumRenderedDates: Self.maxRenderedDates
-        )
-    }
-
     @MainActor
     private func buildPreviews() async {
         isLoading = true
@@ -687,16 +761,81 @@ struct ExportPreviewView: View {
         estimatedExportSize = nil
         onSizeEstimateUpdated?(nil)
 
-        let frozenTimeZone = settings.exportTimeZoneOverride ?? .current
+        let captureAuthorityWasFrozen = settings.executionSleepCaptureContextIsFrozen
+        let acceptedRootName = destinationRootName ?? vaultManager.vaultName
+        let acceptedVaultURL = vaultManager.vaultURL
+        let acceptedTimeZone = settings.exportTimeZoneOverride ?? .current
+        let acceptedCapture: AcceptedExternalProviderFileCapture
+        do {
+            let context = try HealthKitManager.shared.resolveSleepCaptureContext(settings: settings)
+            let includesProviders = connectedAppsEnabled && (targetType == .apiEndpoint || settings.writesExternalProviderSidecars)
+            // A legacy closure does not identify an account and cannot authorize
+            // Morning capture. Real app callers supply the provider adapter.
+            if includesProviders && context.sleepDayAttribution == .morningEnds
+                && externalIntegrations == nil && fetchExternalDailyRecords != nil {
+                throw ExternalProviderCaptureAuthority.RecoveryError.unavailable
+            }
+            acceptedCapture = try AcceptedExternalProviderFileCapture(settings: settings, context: context,
+                healthSubfolder: vaultManager.healthSubfolder, includesProviders: includesProviders,
+                providers: externalIntegrations)
+        } catch {
+            partialFailures = [ExportPartialFailure(date: startDate, dataType: "Export preview",
+                dateRangeDescription: Self.dateLabelFormatter.string(from: startDate),
+                errorDescription: error.localizedDescription)]
+            isLoading = false
+            return
+        }
+        let fetchExternalDailyRecords: APIEndpointExportRunner.ExternalDailyRecordFetcher?
+        if let providers = acceptedCapture.providers,
+           let context = acceptedCapture.snapshot.sleepCaptureContext,
+           providers.connectedProviderCount > 0 {
+            var calendar = Calendar(identifier: .gregorian)
+            calendar.timeZone = context.timeZone
+            fetchExternalDailyRecords = { await providers.fetchDailyRecords(for: $0, calendar: calendar) }
+        } else {
+            fetchExternalDailyRecords = acceptedCapture.snapshot.sleepCaptureContext?.sleepDayAttribution == .nightBegins
+                && externalIntegrations == nil && connectedAppsEnabled ? self.fetchExternalDailyRecords : nil
+        }
+        acceptedCapture.providers?.beginExportAction()
+        defer { acceptedCapture.providers?.endExportAction(succeeded: false) }
+        let acceptedNoteDestination: AppleLooseDailyRangeDestination?
+        if targetType == .localFile, acceptedVaultURL != nil,
+           acceptedCapture.snapshot.sleepCaptureContext?.sleepDayAttribution == .morningEnds,
+           acceptedCapture.snapshot.dailyNoteInjection.enabled {
+            let candidate = try? vaultManager.freezeHealthDataRangeDestination()
+            acceptedNoteDestination = candidate?.rootURL.standardizedFileURL == acceptedVaultURL?.standardizedFileURL ? candidate : nil
+        } else { acceptedNoteDestination = nil }
+        let acceptedSettings = acceptedCapture.snapshot.makeAdvancedExportSettings()
+        // A fresh preview freezes its provider/capture selection before renderer admission.
+        // Reconstructing those settings must not turn it into a resumed legacy operation.
+        acceptedSettings.executionSleepCaptureContextIsFrozen = captureAuthorityWasFrozen
+        let operationSnapshot = await ExportSettingsSnapshot.forNewAppleOperation(
+            acceptedSettings, healthSubfolder: acceptedCapture.snapshot.healthSubfolder,
+            calendarTimeZone: acceptedTimeZone,
+            surface: targetType == .apiEndpoint ? .apiEndpoint : .preview)
+        let frozenTimeZone = operationSnapshot.sleepCaptureContext?.timeZone
+            ?? operationSnapshot.calendarTimeZoneIdentifier.flatMap(TimeZone.init(identifier:)) ?? acceptedTimeZone
         var frozenCalendar = Calendar(identifier: .gregorian)
         frozenCalendar.timeZone = frozenTimeZone
-        sleepWindowDescription = makeSleepWindowDescription(calendar: frozenCalendar)
-        let dates = ExportOrchestrator.dateRange(
-            from: startDate,
-            to: endDate,
-            calendar: frozenCalendar
-        )
+        capturedSleepAttribution = operationSnapshot.sleepCaptureContext?.sleepDayAttribution ?? .nightBegins
+        sleepWindowDescription = operationSnapshot.sleepCaptureContext == nil
+            ? "" : makeSleepWindowDescription(calendar: frozenCalendar)
+        let dates = ExportOrchestrator.dateRange(from: startDate, to: endDate, calendar: frozenCalendar)
         totalDateCount = dates.count
+        let captureContext: AppleSleepCaptureContext
+        do {
+            captureContext = try operationSnapshot.recoveredSleepCaptureContext()
+        } catch {
+            partialFailures = [ExportPartialFailure(date: startDate, dataType: "Export preview",
+                dateRangeDescription: Self.dateLabelFormatter.string(from: startDate),
+                errorDescription: "The selected renderer could not prepare this preview.")]
+            isLoading = false
+            return
+        }
+        let configuration = ExportPreviewOperationConfiguration(snapshot: operationSnapshot,
+            destinationRootName: acceptedRootName, vaultURL: acceptedVaultURL,
+            maximumRenderedDates: Self.maxRenderedDates, dailyNoteDestination: acceptedNoteDestination)
+        let settings = configuration.settings
 
         guard settings.hasFileDestinationOutput,
               !(settings.dailyNotesOnlyModeEnabled
@@ -709,7 +848,7 @@ struct ExportPreviewView: View {
         // collecting up to the scope's date limit. Lossless previews intentionally
         // stop after one day, while still showing every selected format, so inspecting
         // an all-time export does not perform several complete canonical captures.
-        let scope = previewScope
+        let scope = configuration.scope
         var built: [DatePreview] = []
         var rollupInputs: [HealthData] = []
         var sizeSamples: [ExportPreviewSizeSample] = []
@@ -722,14 +861,16 @@ struct ExportPreviewView: View {
             if attempts >= Self.maxFetchAttempts { break }
             attempts += 1
 
-            guard let healthData = await Self.fetchPreviewRecord(
+            guard let healthData = await AppleSleepCaptureContext.pinned.withValue(captureContext, operation: {
+                await Self.fetchPreviewRecord(
                 for: date,
                 targetType: targetType,
                 connectedAppsEnabled: connectedAppsEnabled,
                 writesExternalProviderSidecars: settings.writesExternalProviderSidecars,
-                fetchHealthData: fetchHealthData,
+                fetchHealthData: { date in await configuration.fetchRecord(for: date, using: fetchHealthData) },
                 fetchExternalDailyRecords: fetchExternalDailyRecords
-            ) else { continue }
+            )
+            }) else { continue }
             warnings.append(contentsOf: healthData.partialFailures)
             guard healthData.filtered(by: settings.metricSelection).hasAnyData else { continue }
             rollupInputs.append(healthData)
@@ -744,25 +885,17 @@ struct ExportPreviewView: View {
 
             if settings.summaryOnlyModeEnabled { continue }
 
-            let plannedContentByFormat: [ExportFormat: String]?
-            if targetType == .localFile {
+            let plannedContentByFormat: [ExportFormat: ExportPreviewDisplayContent]?
+            if targetType == .localFile && !settings.dailyNotesOnlyModeEnabled {
                 do {
-                    let snapshot = ExportSettingsSnapshot.from(
-                        settings,
-                        healthSubfolder: vaultManager.healthSubfolder,
-                        appleExportEngineAuthorityIsFrozen: false,
-                        calendarTimeZoneIdentifier: settings.exportTimeZoneOverride?.identifier
-                            ?? healthData.timeContext.calendarTimeZoneIdentifier
-                    )
                     if let artifacts = try await AppleLooseDailyExportPreviewPlanner.artifacts(
                         healthData: healthData,
-                        settingsSnapshot: snapshot,
+                        settingsSnapshot: operationSnapshot,
                         planner: appleLooseDailyPlanner
                     ) {
-                        var content: [ExportFormat: String] = [:]
+                        var content: [ExportFormat: ExportPreviewDisplayContent] = [:]
                         for artifact in artifacts {
-                            guard let rendered = String(data: artifact.data, encoding: .utf8),
-                                  content.updateValue(rendered, forKey: artifact.format) == nil else {
+                            guard content.updateValue(.make(from: artifact.preview), forKey: artifact.format) == nil else {
                                 throw AppleLooseDailyExportPlannerError.rustPlanningFailed
                             }
                         }
@@ -790,8 +923,8 @@ struct ExportPreviewView: View {
             }
 
             let folderPath = settings.dailyNotesOnlyModeEnabled
-                ? dailyNoteFolderPath(for: date)
-                : previewFolderSummaryPath(for: date)
+                ? configuration.dailyNoteFolderPath(for: date)
+                : configuration.aggregateSummaryFolderPath(for: date)
             var files = (settings.dailyNotesOnlyModeEnabled ? [] : scope.formats)
                 .map { format -> FilePreview in
                     let filename = settings.filename(for: date, format: format)
@@ -799,25 +932,26 @@ struct ExportPreviewView: View {
                     if let plannedContentByFormat {
                         // The plan was validated as complete above; a selected shadow/Rust preview
                         // never reaches the legacy nonthrowing renderer.
-                        content = plannedContentByFormat[format]!
+                        content = plannedContentByFormat[format]!.text
                     } else {
                         content = healthData.export(format: format, settings: settings)
                     }
                     return FilePreview(
                         id: "\(date.timeIntervalSince1970)-\(format.rawValue)",
                         filename: filename,
-                        folderPath: previewFolderPath(for: date, format: format),
+                        folderPath: configuration.aggregateFolderPath(for: date, format: format),
                         kind: .exportFormat(format),
-                        content: content
+                        content: content,
+                        preparedDisplayContent: plannedContentByFormat?[format]
                     )
                 }
 
-            if let collisionWarning = dailyNoteCollisionWarning(for: healthData.date) {
+            if let collisionWarning = dailyNoteCollisionWarning(for: healthData.date, configuration: configuration) {
                 warnings.append(collisionWarning)
             }
 
             if scope.includesSupplementalFiles {
-                if let dailyNotePreview = dailyNoteInjectionPreview(for: healthData) {
+                if let dailyNotePreview = await dailyNoteInjectionPreview(for: healthData, configuration: configuration) {
                     if let file = dailyNotePreview.file {
                         files.append(file)
                     }
@@ -828,10 +962,9 @@ struct ExportPreviewView: View {
 
                 files.append(contentsOf: individualEntryPreviews(
                     for: healthData,
-                    baseFolderPath: previewFolderPath(
-                        for: date,
-                        format: settings.organizeFormatsIntoFolders ? .markdown : nil
-                    )
+                    baseFolderPath: configuration.aggregateFolderPath(
+                        for: date, format: settings.organizeFormatsIntoFolders ? .markdown : nil),
+                    configuration: configuration
                 ))
             }
 
@@ -913,9 +1046,20 @@ struct ExportPreviewView: View {
         } catch {
             requestedRange = nil
         }
-        let rollupSection = targetType == .apiEndpoint
-            ? nil
-            : requestedRange.flatMap { rollupSummaryPreviewSection(for: rollupInputs, requestedRange: $0) }
+        var rollupSection: DatePreview?
+        if targetType != .apiEndpoint, let requestedRange {
+            do {
+                rollupSection = try await rollupSummaryPreviewSection(for: rollupInputs,
+                    requestedRange: requestedRange, configuration: configuration)
+            } catch is CancellationError {
+                isLoading = false
+                return
+            } catch {
+                warnings.append(ExportPartialFailure(date: dates.first ?? startDate,
+                    dataType: "Range Summary", dateRangeDescription: rangeDescription(dates: dates, timeZone: frozenTimeZone),
+                    errorDescription: "The selected renderer could not prepare this preview."))
+            }
+        }
         if scope.includesSupplementalFiles, let rollupSection {
             built.insert(rollupSection, at: 0)
         }
@@ -952,7 +1096,7 @@ struct ExportPreviewView: View {
             sampledRollupFileCount: sampledRollupFiles.count,
             projectedRollupFileCount: rollupProjection.fileCount,
             minimumProjectedRollupByteCount: rollupProjection.byteCount,
-            fixedByteCount: fixedExportByteCount,
+            fixedByteCount: fixedExportByteCount(settings: settings),
             projectedProcessingDayCount: max(dates.count, rollupProjection.sourceDateCount),
             archiveMode: settings.archiveModeEnabled
         )
@@ -985,7 +1129,7 @@ struct ExportPreviewView: View {
         }
     }
 
-    private var fixedExportByteCount: Int {
+    private func fixedExportByteCount(settings: AdvancedExportSettings) -> Int {
         guard targetType != .apiEndpoint, settings.writesDataDictionary else { return 0 }
         return ExportDataDictionarySizeEstimator.byteCount(using: settings.formatCustomization)
     }
@@ -1006,9 +1150,32 @@ struct ExportPreviewView: View {
 
     private func rollupSummaryPreviewSection(
         for healthData: [HealthData],
-        requestedRange: HealthRollupRangeRequest
-    ) -> DatePreview? {
-        guard HealthRollupExporter.isEnabled(settings: settings) else { return nil }
+        requestedRange: HealthRollupRangeRequest,
+        configuration: ExportPreviewOperationConfiguration
+    ) async throws -> DatePreview? {
+        let settingsSnapshot = configuration.snapshot
+        let settings = configuration.settings
+        guard HealthRollupExporter.isEnabled(settings: settings), !healthData.isEmpty else { return nil }
+        if settingsSnapshot.sleepCaptureContext?.sleepDayAttribution == .morningEnds {
+            guard let planner = appleLooseDailyPlanner as? any AppleLooseDailyRangeExportPlanning else {
+                throw AppleLooseDailyExportPlannerError.rustPlanningFailed
+            }
+            let artifacts = try await AppleLooseDailyExportPreviewPlanner.rangeArtifacts(
+                healthData: healthData, requestedRange: requestedRange,
+                settingsSnapshot: settingsSnapshot, planner: planner)
+            let previews = try await AppleLooseDailyExportPreviewPlanner.textPreviews(for: artifacts.map(\.artifact))
+            let files = try zip(artifacts, previews).map { planned, preview -> FilePreview in
+                guard let filename = planned.artifact.relativePath.split(separator: "/").last else {
+                    throw AppleLooseDailyExportPlannerError.rustPlanningFailed
+                }
+                let folder = planned.artifact.relativePath.split(separator: "/").dropLast().joined(separator: "/")
+                return FilePreview(id: planned.artifact.id, filename: String(filename), folderPath: configuration.displayFolderPath(relativePath: folder),
+                    kind: .rollupSummary(.range, planned.format), content: ExportPreviewDisplayContent.make(from: preview).text,
+                    preparedDisplayContent: .make(from: preview))
+            }
+            return DatePreview(id: Date.distantFuture, date: Date.distantFuture,
+                dateLabel: "Roll-up summaries", folderPath: configuration.rollupFolderPath(for: nil), files: files)
+        }
 
         let summaries = HealthRollupExporter.makeSummaries(
             from: healthData,
@@ -1019,13 +1186,13 @@ struct ExportPreviewView: View {
 
         let files = HealthRollupExporter.outputTargets(
             for: summaries,
-            healthSubfolder: vaultManager.healthSubfolder,
+            healthSubfolder: configuration.healthSubfolder,
             settings: settings
         ).map { target in
             FilePreview(
                 id: "rollup-\(target.summary.period.rawValue)-\(target.summary.periodID)-\(target.format.rawValue)",
                 filename: target.filename,
-                folderPath: previewRollupFolderPath(for: target.summary.period, format: target.format),
+                folderPath: configuration.rollupFolderPath(for: target.summary.period, format: target.format),
                 kind: .rollupSummary(target.summary.period, target.format),
                 content: target.content
             )
@@ -1035,15 +1202,17 @@ struct ExportPreviewView: View {
             id: Date.distantFuture,
             date: Date.distantFuture,
             dateLabel: "Roll-up summaries",
-            folderPath: previewRollupFolderPath(for: nil),
+            folderPath: configuration.rollupFolderPath(for: nil),
             files: files
         )
     }
 
     private func individualEntryPreviews(
         for healthData: HealthData,
-        baseFolderPath: String
+        baseFolderPath: String,
+        configuration: ExportPreviewOperationConfiguration
     ) -> [FilePreview] {
+        let settings = configuration.settings
         guard settings.writesIndividualEntryFiles else { return [] }
 
         let exporter = IndividualEntryExporter()
@@ -1067,10 +1236,12 @@ struct ExportPreviewView: View {
                 aggregation: .mostRecent
             )
             let entryFolderPath = settings.individualTracking.folderPath(for: metric)
-            let filename = exporter.filename(for: sample, settings: settings.individualTracking)
+            let filename = exporter.filename(for: sample, settings: settings.individualTracking,
+                calendarTimeZone: settings.exportTimeZoneOverride)
             let content = exporter.previewEntryContent(
                 for: sample,
-                formatSettings: settings.formatCustomization
+                formatSettings: settings.formatCustomization,
+                calendarTimeZone: settings.exportTimeZoneOverride
             )
 
             return FilePreview(
@@ -1089,12 +1260,14 @@ struct ExportPreviewView: View {
         case unreadable(Error)
     }
 
-    private func dailyNoteInjectionPreview(for healthData: HealthData) -> (file: FilePreview?, warning: ExportPartialFailure?)? {
+    private func dailyNoteInjectionPreview(for healthData: HealthData,
+        configuration: ExportPreviewOperationConfiguration) async -> (file: FilePreview?, warning: ExportPartialFailure?)? {
+        let settings = configuration.settings
         let dailyNoteSettings = settings.dailyNoteInjection
         guard dailyNoteSettings.enabled else { return nil }
 
         let previewBase: DailyNoteInjector.InjectionPreviewBase
-        switch dailyNotePreviewBase(for: healthData.date) {
+        switch dailyNotePreviewBase(for: healthData.date, configuration: configuration) {
         case .resolved(let base):
             previewBase = base
         case .missing:
@@ -1102,7 +1275,7 @@ struct ExportPreviewView: View {
                 nil,
                 warning(
                     for: healthData.date,
-                    message: "Daily note not found and Create note if missing is off: \(dailyNoteSettings.previewPath(for: healthData.date))"
+                    message: "Daily note not found and Create note if missing is off: \(dailyNoteSettings.previewPath(for: healthData.date, timeZone: settings.exportTimeZoneOverride ?? .current))"
                 )
             )
         case .unreadable(let error):
@@ -1115,13 +1288,19 @@ struct ExportPreviewView: View {
             )
         }
 
+        let prepared: DailyNoteInjector.PreparedContent?
+        if healthData.timeContext.sleepDayAttribution == .morningEnds {
+            do { prepared = try await vaultManager.prepareWakeDateDailyNote(healthData, settingsSnapshot: configuration.snapshot) }
+            catch { return (nil, warning(for: healthData.date, message: "The selected renderer could not prepare this daily note.")) }
+        } else { prepared = nil }
         let result = DailyNoteInjector.preview(
             healthData: healthData,
             base: previewBase,
             settings: dailyNoteSettings,
             customization: settings.formatCustomization,
             metricSelection: settings.metricSelection,
-            calendarTimeZone: settings.exportTimeZoneOverride ?? .current
+            calendarTimeZone: settings.exportTimeZoneOverride ?? .current,
+            preparedContent: prepared
         )
 
         switch result {
@@ -1130,9 +1309,10 @@ struct ExportPreviewView: View {
                 FilePreview(
                     id: "\(healthData.date.timeIntervalSince1970)-daily-note-injection",
                     filename: preview.filename,
-                    folderPath: dailyNoteFolderPath(for: healthData.date),
+                    folderPath: configuration.dailyNoteFolderPath(for: healthData.date),
                     kind: .dailyNoteInjection,
-                    content: preview.content
+                    content: ExportPreviewDisplayContent.make(from: preview.content).text,
+                    preparedDisplayContent: .make(from: preview.content)
                 ),
                 nil
             )
@@ -1141,13 +1321,28 @@ struct ExportPreviewView: View {
         }
     }
 
-    private func dailyNotePreviewBase(for date: Date) -> DailyNotePreviewBaseResolution {
-        let dailyNoteSettings = settings.dailyNoteInjection
+    private func dailyNotePreviewBase(for date: Date,
+        configuration: ExportPreviewOperationConfiguration) -> DailyNotePreviewBaseResolution {
+        let dailyNoteSettings = configuration.settings.dailyNoteInjection
 
-        guard targetType == .localFile, let localURL = localDailyNoteURL(for: date) else {
+        guard targetType == .localFile, let localURL = configuration.dailyNoteURL(for: date) else {
             return .resolved(.emptyDocument)
         }
 
+        guard configuration.matchesVault(vaultManager.vaultURL) else {
+            return .unreadable(FileCoordinationError.destinationChanged)
+        }
+        if configuration.snapshot.sleepCaptureContext?.sleepDayAttribution == .morningEnds {
+            guard let destination = configuration.dailyNoteDestination else { return .unreadable(ExportError.destinationChanged) }
+            do {
+                let path = ExportPathPlanner.dailyNoteRelativePath(settings: dailyNoteSettings, date: date,
+                    timeZone: configuration.settings.exportTimeZoneOverride ?? .current)
+                if let content = try vaultManager.readDailyNoteForPreview(relativePath: path, destination: destination) {
+                    return .resolved(.existingContent(content))
+                }
+                return dailyNoteSettings.createIfMissing ? .resolved(.emptyDocument) : .missing
+            } catch { return .unreadable(error) }
+        }
         guard let accessLease = vaultManager.beginVaultAccess() else {
             return .unreadable(ExportError.accessDenied)
         }
@@ -1164,33 +1359,12 @@ struct ExportPreviewView: View {
         return dailyNoteSettings.createIfMissing ? .resolved(.emptyDocument) : .missing
     }
 
-    private func localDailyNoteURL(for date: Date) -> URL? {
-        guard let vaultURL = vaultManager.vaultURL else { return nil }
-
-        return ExportPathPlanner.dailyNoteURL(
-            vaultURL: vaultURL,
-            settings: settings.dailyNoteInjection,
-            date: date,
-            timeZone: settings.exportTimeZoneOverride ?? .current
-        )
-    }
-
-    private func dailyNoteFolderPath(for date: Date) -> String {
-        let relativePath = ExportPathPlanner.dailyNoteRelativePath(
-            settings: settings.dailyNoteInjection,
-            date: date,
-            timeZone: settings.exportTimeZoneOverride ?? .current
-        )
-        let folderComponents = relativePath.split(separator: "/").dropLast().map(String.init)
-        var components: [String] = [destinationRootName ?? vaultManager.vaultName]
-        components.append(contentsOf: folderComponents)
-        return components.joined(separator: "/") + "/"
-    }
-
-    private func dailyNoteCollisionWarning(for date: Date) -> ExportPartialFailure? {
+    private func dailyNoteCollisionWarning(for date: Date,
+        configuration: ExportPreviewOperationConfiguration) -> ExportPartialFailure? {
+        let settings = configuration.settings
         guard !settings.dailyNotesOnlyModeEnabled else { return nil }
         guard let collision = ExportPathPlanner.dailyNoteExportCollision(
-            healthSubfolder: vaultManager.healthSubfolder,
+            healthSubfolder: configuration.healthSubfolder,
             settings: settings,
             date: date
         ) else {
@@ -1208,57 +1382,6 @@ struct ExportPreviewView: View {
         )
     }
 
-    private func previewRollupFolderPath(for period: HealthRollupPeriod?, format: ExportFormat? = nil) -> String {
-        var components: [String] = [destinationRootName ?? vaultManager.vaultName]
-        let relativeFolderPath: String
-        if let period {
-            relativeFolderPath = HealthRollupExporter.relativeFolderPath(
-                healthSubfolder: vaultManager.healthSubfolder,
-                period: period,
-                format: format,
-                settings: settings
-            )
-        } else {
-            relativeFolderPath = [vaultManager.healthSubfolder, "Rollups"]
-                .flatMap { $0.split(separator: "/").map(String.init) }
-                .joined(separator: "/")
-        }
-        if !relativeFolderPath.isEmpty {
-            components.append(relativeFolderPath)
-        }
-        return components.joined(separator: "/") + "/"
-    }
-
-    private func previewFolderPath(for date: Date, format: ExportFormat? = nil) -> String {
-        let relativeFolderPath = ExportPathPlanner.aggregateFolderRelativePath(
-            healthSubfolder: vaultManager.healthSubfolder,
-            settings: settings,
-            date: date,
-            format: format
-        )
-        var components: [String] = [destinationRootName ?? vaultManager.vaultName]
-        if !relativeFolderPath.isEmpty {
-            components.append(relativeFolderPath)
-        }
-        return components.joined(separator: "/") + "/"
-    }
-
-    private func previewFolderSummaryPath(for date: Date) -> String {
-        guard settings.organizeFormatsIntoFolders else {
-            return previewFolderPath(for: date)
-        }
-
-        var components: [String] = [destinationRootName ?? vaultManager.vaultName]
-        if !vaultManager.healthSubfolder.isEmpty {
-            components.append(vaultManager.healthSubfolder)
-        }
-        components.append("{format}")
-        if let dateFolder = settings.formatFolderPath(for: date) {
-            components.append(dateFolder)
-        }
-        return components.joined(separator: "/") + "/"
-    }
-
     private static let dateLabelFormatter: DateFormatter = {
         let f = DateFormatter()
         f.dateFormat = "EEE, MMM d, yyyy"
@@ -1272,7 +1395,7 @@ private struct FileContentView: View {
     let file: FilePreview
 
     private var displayContent: ExportPreviewDisplayContent {
-        ExportPreviewDisplayContent.make(from: file.content)
+        file.preparedDisplayContent ?? ExportPreviewDisplayContent.make(from: file.content)
     }
 
     var body: some View {
@@ -1321,6 +1444,13 @@ struct ExportPreviewDisplayContent: Equatable {
     var isTruncated: Bool { omittedByteCount > 0 }
     var originalSizeLabel: String { Self.sizeLabel(for: originalByteCount) }
     var omittedSizeLabel: String { Self.sizeLabel(for: omittedByteCount) }
+
+    static func make(from preview: ExportArtifactTextPreview) -> ExportPreviewDisplayContent {
+        guard preview.omittedByteCount > 0 else { return make(from: preview.head) }
+        let marker = "\n\n… Preview truncated: \(sizeLabel(for: preview.omittedByteCount)) omitted from the middle of this \(sizeLabel(for: preview.originalByteCount)) file. …\n\n"
+        return ExportPreviewDisplayContent(text: preview.head + marker + preview.tail,
+            originalByteCount: preview.originalByteCount, omittedByteCount: preview.omittedByteCount)
+    }
 
     static func make(
         from content: String,
@@ -1429,7 +1559,9 @@ private struct FilePreview: Identifiable {
     let kind: PreviewFileKind
     let content: String
 
-    var byteCount: Int { content.utf8.count }
+    var preparedDisplayContent: ExportPreviewDisplayContent? = nil
+
+    var byteCount: Int { preparedDisplayContent?.originalByteCount ?? content.utf8.count }
 
     var sizeLabel: String {
         let bytes = byteCount

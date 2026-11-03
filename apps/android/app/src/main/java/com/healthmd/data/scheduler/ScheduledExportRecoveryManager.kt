@@ -442,7 +442,6 @@ class ScheduledExportRecoveryManager @Inject constructor(
         val settings = settingsRepository.getExportSettings()
         entitlementRepository.refresh()
         return distributionPolicy.fullAccessIncluded ||
-            settingsRepository.isPurchased.first() ||
             entitlementRepository.verifyExportAccess(settings.exportTarget, settings.apiEndpointUrl.takeIf { settings.exportMode == com.healthmd.rawexport.ExportMode.COMPATIBILITY })
     }
 

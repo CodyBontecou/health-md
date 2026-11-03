@@ -2,6 +2,7 @@ package com.healthmd.data.health.oauth
 
 import android.content.Intent
 import android.net.Uri
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
@@ -153,17 +154,38 @@ class OAuthAuthorizationManager(
         return OAuthCallbackResult(providerId = config.providerId, token = token)
     }
 
+    suspend fun connectionId(providerId: String): String? = tokenStore.getCredential(providerId)?.connectionId
+
     suspend fun validAccessToken(providerId: String): OAuthToken? {
-        val token = tokenStore.getToken(providerId) ?: return null
-        if (!token.isExpired()) return token
-        val refreshToken = token.refreshToken ?: return token
+        val accepted = tokenStore.getCredential(providerId) ?: return null
+        return validAccessToken(providerId, accepted.connectionId)
+    }
+
+    suspend fun validAccessToken(providerId: String, connectionId: String): OAuthToken? {
+        val credential = tokenStore.getCredential(providerId)?.takeIf { it.connectionId == connectionId } ?: return null
+        val token = credential.token
+        if (!token.isExpired() || token.refreshToken == null) return token
         val config = configRegistry.get(providerId) ?: return token
-        return runCatching {
-            refreshToken(config, refreshToken)
-        }.getOrElse { token }
+        return try {
+            refreshCredential(config, credential)
+        } catch (cancellation: CancellationException) {
+            throw cancellation
+        } catch (_: Exception) {
+            // An overlapping rotation may have won; replacement/disconnect must not
+            // return either the stale credential or the replacement account's token.
+            tokenStore.getCredential(providerId)?.takeIf { it.connectionId == connectionId }?.token
+        }
     }
 
     suspend fun refreshToken(config: OAuthProviderConfig, refreshToken: String): OAuthToken {
+        val credential = tokenStore.getCredential(config.providerId)
+            ?.takeIf { it.token.refreshToken == refreshToken }
+            ?: throw SecurityException("Provider connection changed")
+        return refreshCredential(config, credential)
+    }
+
+    private suspend fun refreshCredential(config: OAuthProviderConfig, credential: OAuthCredential): OAuthToken {
+        val refreshToken = credential.token.refreshToken ?: throw SecurityException("Provider connection changed")
         val token = exchangeToken(
             config = config,
             params = buildMap {
@@ -177,7 +199,9 @@ class OAuthAuthorizationManager(
                 if (config.providerId == "whoop") put("scope", "offline")
             }
         )
-        tokenStore.saveToken(token)
+        if (!tokenStore.saveRotatedToken(token, replacing = credential)) {
+            throw SecurityException("Provider connection changed")
+        }
         return token
     }
 

@@ -3007,6 +3007,14 @@ public enum CoreMetricRegistryProfile: Equatable, Hashable {
      * Historical Apple `healthmd.health_data` v7; appended to retain existing FFI discriminants.
      */
     case appleHealthDataV7
+    /**
+     * Apple wake-date daily v11, selected explicitly from registry v2.
+     */
+    case appleHealthDataV11
+    /**
+     * Android wake-date daily v6, selected explicitly from registry v2.
+     */
+    case androidSleepV6
 
 
 
@@ -3036,6 +3044,10 @@ public struct FfiConverterTypeCoreMetricRegistryProfile: FfiConverterRustBuffer 
         
         case 4: return .appleHealthDataV7
         
+        case 5: return .appleHealthDataV11
+        
+        case 6: return .androidSleepV6
+        
         default: throw UniffiInternalError.unexpectedEnumCase
         }
     }
@@ -3058,6 +3070,14 @@ public struct FfiConverterTypeCoreMetricRegistryProfile: FfiConverterRustBuffer 
         
         case .appleHealthDataV7:
             writeInt(&buf, Int32(4))
+        
+        
+        case .appleHealthDataV11:
+            writeInt(&buf, Int32(5))
+        
+        
+        case .androidSleepV6:
+            writeInt(&buf, Int32(6))
         
         }
     }
@@ -4328,6 +4348,23 @@ public func mergeRenderedMarkdown(existing: String, generated: String)throws  ->
 })
 }
 /**
+ * Merge a capture-scoped personal-note patch without changing whole-export behavior.
+ *
+ * # Errors
+ * Returns bounded capture/YAML/size failures or a contained panic.
+ */
+public func mergeScopedDailyNote(profile: CoreMetricRegistryProfile, existing: String, patch: String, injectSections: Bool)throws  -> String  {
+    return try  FfiConverterString.lift(try rustCallWithError(FfiConverterTypeHealthmdRenderError_lift) {
+        uniffiCallStatus in
+    uniffi_healthmd_core_uniffi_fn_func_merge_scoped_daily_note(
+        FfiConverterTypeCoreMetricRegistryProfile_lower(profile),
+        FfiConverterString.lower(existing),
+        FfiConverterString.lower(patch),
+        FfiConverterBool.lower(injectSections),uniffiCallStatus
+    )
+})
+}
+/**
  * Negotiate two owned capability records with the existing pure Rust algorithm.
  *
  * # Errors
@@ -4339,6 +4376,45 @@ public func negotiateDirectTransfer(local: CoreDirectTransferCapabilities, peer:
     uniffi_healthmd_core_uniffi_fn_func_negotiate_direct_transfer(
         FfiConverterTypeCoreDirectTransferCapabilities_lower(local),
         FfiConverterTypeCoreDirectTransferCapabilities_lower(peer),uniffiCallStatus
+    )
+})
+}
+/**
+ * Scope unchanged historical Android JSON with an explicit captured local clock.
+ *
+ * # Errors
+ * Returns bounded profile/clock/YAML/size failures or a contained panic.
+ */
+public func prepareScopedAndroidNightNote(profile: CoreMetricRegistryProfile, recordJson: String, calendarTimezone: String, bases: String, markdown: String, selectedProperties: [String], injectSections: Bool)throws  -> String  {
+    return try  FfiConverterString.lift(try rustCallWithError(FfiConverterTypeHealthmdRenderError_lift) {
+        uniffiCallStatus in
+    uniffi_healthmd_core_uniffi_fn_func_prepare_scoped_android_night_note(
+        FfiConverterTypeCoreMetricRegistryProfile_lower(profile),
+        FfiConverterString.lower(recordJson),
+        FfiConverterString.lower(calendarTimezone),
+        FfiConverterString.lower(bases),
+        FfiConverterString.lower(markdown),
+        FfiConverterSequenceString.lower(selectedProperties),
+        FfiConverterBool.lower(injectSections),uniffiCallStatus
+    )
+})
+}
+/**
+ * Project accepted rendered artifacts into one independently versioned note patch.
+ *
+ * # Errors
+ * Returns bounded capture/YAML/size failures or a contained panic.
+ */
+public func prepareScopedDailyNote(profile: CoreMetricRegistryProfile, recordJson: String, bases: String, markdown: String, selectedProperties: [String], injectSections: Bool)throws  -> String  {
+    return try  FfiConverterString.lift(try rustCallWithError(FfiConverterTypeHealthmdRenderError_lift) {
+        uniffiCallStatus in
+    uniffi_healthmd_core_uniffi_fn_func_prepare_scoped_daily_note(
+        FfiConverterTypeCoreMetricRegistryProfile_lower(profile),
+        FfiConverterString.lower(recordJson),
+        FfiConverterString.lower(bases),
+        FfiConverterString.lower(markdown),
+        FfiConverterSequenceString.lower(selectedProperties),
+        FfiConverterBool.lower(injectSections),uniffiCallStatus
     )
 })
 }
@@ -4464,7 +4540,16 @@ private let initializationResult: InitializationResult = {
     if (uniffi_healthmd_core_uniffi_checksum_func_merge_rendered_markdown() != 52449) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_healthmd_core_uniffi_checksum_func_merge_scoped_daily_note() != 24416) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_healthmd_core_uniffi_checksum_func_negotiate_direct_transfer() != 2073) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_healthmd_core_uniffi_checksum_func_prepare_scoped_android_night_note() != 45811) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_healthmd_core_uniffi_checksum_func_prepare_scoped_daily_note() != 59530) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_healthmd_core_uniffi_checksum_func_run_self_test() != 469) {

@@ -670,7 +670,7 @@ enum IPhoneExportRequestSettingsResolver {
         for request: IPhoneExportRequest,
         savedSettings: AdvancedExportSettings
     ) -> AdvancedExportSettings {
-        let settings = ExportSettingsSnapshot.from(savedSettings).makeAdvancedExportSettings()
+        let settings = ExportSettingsSnapshot.from(savedSettings).makeAdvancedExportSettings(forNewConfiguration: true)
 
         switch request.settingsPolicy {
         case .currentIPhoneSettings:

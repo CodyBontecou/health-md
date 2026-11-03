@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Resolve and revalidate Apple release provenance without store credentials.
 
-Workflow-only recovery runs newer main workflow code, but qualification and
-archives always use the original tag commit. Nothing rewrites release tags.
+Recovery runs newer main workflow code, but qualification and archives always
+use the original tag commit. Store recovery requires a workflow-only diff;
+Mac asset-only repair can follow later product changes. Nothing rewrites tags.
 """
 
 from __future__ import annotations
@@ -109,7 +110,11 @@ def resolve() -> dict[str, str]:
         require_ancestor(sha, workflow_sha)
         changed = git("diff", "--name-only", "--no-renames", "-z", sha, workflow_sha).split("\0")
         product_changes = [path for path in changed if path and not path.startswith(RECOVERY_PATHS)]
-        if product_changes:
+        # Only the macOS resolver supplies this flag, derived from both
+        # skip_asc_upload and skip_asc_submit. Its workflow cannot upload or
+        # submit to ASC in this mode; qualification/archives still use sha.
+        asset_only = os.environ.get("RELEASE_ASSET_ONLY") == "true"
+        if product_changes and not asset_only:
             raise PolicyError("Recovery must be workflow-only; create a new release for source changes:\n"
                               + "\n".join(product_changes))
     return {"sha": sha, "workflow_sha": workflow_sha, "tag": tag, "tag_object": tag_object,

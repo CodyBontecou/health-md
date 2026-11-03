@@ -2,6 +2,7 @@ package com.healthmd.data.health
 
 import com.healthmd.domain.model.DataTypeSelection
 import com.healthmd.domain.model.HealthData
+import com.healthmd.domain.model.SleepDayAttribution
 import java.time.LocalDate
 import java.time.ZoneId
 
@@ -17,12 +18,17 @@ interface HealthDataProvider {
 
     suspend fun fetchHealthData(date: LocalDate): HealthData
 
+    /**
+     * [sleepDayAttribution] is the capture-entry value already resolved by the
+     * repository. Providers must not reinterpret NIGHT_BEGINS as a settings sentinel.
+     */
     suspend fun fetchHealthDataRange(
         dates: List<LocalDate>,
         dataTypes: DataTypeSelection = DataTypeSelection(),
         includeGranularData: Boolean = false,
         zoneId: ZoneId = ZoneId.systemDefault(),
         pinnedCalendarDays: Boolean = false,
+        sleepDayAttribution: SleepDayAttribution,
     ): List<HealthData> = dates.map { date ->
         fetchHealthData(date).filtered(dataTypes)
     }
@@ -40,4 +46,15 @@ interface HealthDataProvider {
     suspend fun hasBackgroundReadPermission(): Boolean
     suspend fun getEarliestDataDate(): LocalDate?
     fun isBeforeFirstUnlock(): Boolean
+}
+
+/** Optional source-identity binding; SDK providers without account state keep their existing view. */
+interface OperationScopedHealthDataProvider {
+    suspend fun forCaptureOperation(): HealthDataProvider
+}
+
+/** Account-backed sources can expose and restore an opaque accepted grant without reading health. */
+interface RestorableHealthDataProvider {
+    suspend fun acceptedConnectionId(): String?
+    fun forAcceptedConnection(connectionId: String?): HealthDataProvider
 }

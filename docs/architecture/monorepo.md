@@ -54,7 +54,7 @@ The separately reviewed contracts workstream centralizes language-neutral direct
 
 Repository-root workflows detect affected paths and invoke component jobs. A final always-running gate reports the aggregate result. Changes to shared contracts run Apple, Android, CLI, website, and relevant external-integration checks. Changes under `packages/healthmd-core-rust` run the core gate and every Apple, Android, CLI, and website consumer gate.
 
-The shared-core workspace is not a fifth product release. `healthmd-protocol` is staged from that workspace before the exact-version CLI crates during the protected CLI crates.io workflow.
+The shared-core workspace is not a fifth product release. `healthmd-core` and `healthmd-protocol` are staged from that workspace before the exact-version CLI crates during the protected CLI crates.io workflow.
 
 Component release workflows use non-overlapping tag patterns:
 

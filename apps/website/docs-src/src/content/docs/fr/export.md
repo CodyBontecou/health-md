@@ -7,7 +7,7 @@ description: "Utilisez l'onglet Exporter pour vérifier HealthKit et les connexi
 
 ## Lire les badges d'état
  <div class="options">
- <div class="option"> <strong> Badge Santé </strong> <p> Un point vert signifie que HealthKit est autorisé. Un point rouge signifie que l'accès n'est pas accordé. Appuyez pour réessayer la feuille d'autorisation iOS. La feuille n'apparaît qu'une seule fois par installation. Après cela, ouvrez Paramètres → Confidentialité et confidentialité. Sécurité → Santé. </p> </div>
+ <div class="option"> <strong> Badge Santé </strong> <p>Le vert indique l’état de configuration Connecté de l’app, sans confirmer l’accès en lecture à chaque catégorie. HealthKit ne révèle pas les autorisations de lecture refusées. Touchez l’indicateur pour demander l’accès. iOS peut afficher une boîte de dialogue pour les types nécessitant une décision ; si les choix sont déjà enregistrés, Health.md affiche le guide des autorisations. Vérifiez les catégories dans Apple Health. Un résultat vide peut indiquer un accès refusé ou l’absence de données correspondantes. <a href="/fr/docs/troubleshooting/">Résoudre les données manquantes</a>.</p> </div>
  <div class="option"> <strong> Badge du coffre-fort </strong> <p> Point vert = un dossier du coffre-fort est sélectionné. Appuyez pour choisir à nouveau ou modifier le coffre-fort. L'étiquette indique le nom du dossier. </p> </div>
  </div>
  <p> L'action <em> Export </em> reste désactivée jusqu'à ce que HealthKit , le format de sortie et la destination sélectionnée soient prêts. Cela évite le mode d’échec le plus courant : tenter d’exporter sans destination. </p>
@@ -62,7 +62,7 @@ L'arrêt ou l'annulation met fin uniquement à la tentative en cours. Les fichie
 
 ## Profils et historique fiable
 
-Un profil enregistré gèle ses paramètres et sa destination pour l'exécution. Les lignes de l'historique planifié et d'automatisation prenant en compte le profil conservent le profil d'exécution, tandis que l'historique conserve une étiquette de confidentialité pour la destination réellement utilisée. Une ligne de l'onglet Exportation manuelle peut omettre le nom du profil. Les changements de nom et de destination ultérieurs ne réécrivent pas l’historique existant. Les références de profil manquantes échouent au lieu de revenir en arrière. Voir [Exporter les profils](/fr/docs/export-profiles/).
+Un profil enregistré gèle ses paramètres et sa destination pour l'exécution. Les lignes de l'historique planifié et d'automatisation prenant en compte le profil conservent le profil d'exécution, tandis que l'historique conserve une étiquette de confidentialité pour la destination réellement utilisée. Une ligne de l'onglet Exportation manuelle peut omettre le nom du profil. Les changements de nom et de destination ultérieurs ne réécrivent pas l’historique existant. Si le profil référencé est introuvable, l’opération échoue sans utiliser d’autres paramètres. Voir [Exporter les profils](/fr/docs/export-profiles/).
 
 ## Barre d'onglets
 

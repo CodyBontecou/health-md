@@ -296,12 +296,10 @@ struct iPadContentView: View {
                         vaultManager.clearVaultFolder()
                     }
                     if TestMode.useHealthKitExportPreviewFixtures {
-                        advancedSettings.exportFormats = [.markdown]
-                        advancedSettings.detailPolicy = .lossless
+                        advancedSettings.exportFormats = TestMode.healthKitExportPreviewFormats
+                        advancedSettings.detailPolicy = TestMode.healthKitExportPreviewDetailPolicy
                         advancedSettings.metricSelection.selectAll()
-                        advancedSettings.generateWeeklyRollups = true
-                        advancedSettings.generateMonthlyRollups = true
-                        advancedSettings.generateYearlyRollups = true
+                        advancedSettings.generateRangeSummary = TestMode.healthKitExportPreviewRangeSummary
                     }
                 }
                 await refreshDateRangeSelectionForOpening(isInitialLaunch: true)
@@ -522,7 +520,8 @@ struct iPadContentView: View {
             profileID: profileID, rangeSemantics: .ownerDates)
         return HealthHistoryExecutionSelection(scope: scope,
             settings: ExportSettingsSnapshot.from(advancedSettings, appleExportEngineAuthorityIsFrozen: false),
-            target: .localIPhoneFolder, preset: dateRangePreset, localDestinationURL: vaultManager.vaultURL)
+            target: .localIPhoneFolder, preset: dateRangePreset, localDestinationURL: vaultManager.vaultURL,
+            sleepDayAttribution: healthKitManager.sleepDayAttribution)
     }
 
     private func clearPendingHistoryCheck() {

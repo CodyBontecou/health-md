@@ -268,6 +268,7 @@ fun HealthMdNavigation(
     // One graph-scoped owner exposes the device-local protection preference, toast, and
     // navigation request to every in-app configuration surface.
     val settings by settingsViewModel.settings.collectAsStateWithLifecycle()
+    val sleepDayAttribution by settingsViewModel.sleepDayAttribution.collectAsStateWithLifecycle()
     val protectionEnabled by settingsViewModel.preventAccidentalChanges.collectAsStateWithLifecycle()
     val blockedChangeToastId by settingsViewModel.blockedChangeToastId.collectAsStateWithLifecycle()
     val protectionSettingsRequestId by settingsViewModel.protectionSettingsRequestId.collectAsStateWithLifecycle()
@@ -338,6 +339,7 @@ fun HealthMdNavigation(
 
             composable(NavDestination.EXPORT.route) {
                 ExportScreen(
+                    sleepDayAttribution = sleepDayAttribution,
                     onNavigateToPaywall = {
                         if (settingsViewModel.distributionPolicy.purchasesAvailable) {
                             navController.navigate(PaywallEntryPoint.EXPORT_LIMIT.route)
@@ -427,6 +429,7 @@ fun HealthMdNavigation(
             composable(SubRoutes.ADVANCED_SETTINGS) {
                 AdvancedSettingsScreen(
                     settings = settings,
+                    sleepDayAttribution = sleepDayAttribution,
                     onNavigateToMetrics = { navController.navigate(SubRoutes.METRIC_SELECTION) },
                     onNavigateToFormatCustomization = { navController.navigate(SubRoutes.FORMAT_CUSTOMIZATION) },
                     onNavigateToDailyNoteInjection = { navController.navigate(SubRoutes.DAILY_NOTE_INJECTION) },
@@ -434,6 +437,11 @@ fun HealthMdNavigation(
                     onIncludeGranularDataChanged = {
                         settingsViewModel.performConfigurationChange {
                             settingsViewModel.updateIncludeGranularData(it)
+                        }
+                    },
+                    onSleepDayAttributionChanged = {
+                        settingsViewModel.performConfigurationChange {
+                            settingsViewModel.updateSleepDayAttribution(it)
                         }
                     },
                     onBack = { navController.popBackStack() },

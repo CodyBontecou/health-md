@@ -75,39 +75,43 @@ enum ConnectedCorpusDurableSender {
             )
         }
 
+        var receipt = try store.operationReceipt(for: journal)
+
         func checkStillActive() throws {
+            try receipt.validate()
             if isExplicitlyCancelled() { throw CancellationError() }
             try Task.checkCancellation()
         }
 
-        func publish(_ next: ConnectedCorpusOutboundJournal) {
-            onCheckpoint?(next)
+        func publish(_ next: ConnectedCorpusOutboundJournal) throws {
+            receipt = try store.operationReceipt(for: next)
+            try receipt.withOwnership {
+                ConnectedCorpusOperationReceipt.pinned.withValue(receipt) { onCheckpoint?(next) }
+            }
         }
 
         func pause(_ message: String) throws -> Never {
-            let paused = try store.updateState(
-                jobID: configuration.jobID,
-                state: .paused,
-                message: message
-            )
-            publish(paused)
+            let paused = try receipt.withOwnership {
+                try store.updateState(jobID: configuration.jobID, state: .paused, message: message)
+            }
+            try publish(paused)
             throw DurableSenderError.paused(message)
         }
 
         func reject(_ message: String) throws -> Never {
-            let failed = try store.updateState(
-                jobID: configuration.jobID,
-                state: .failed,
-                message: message
-            )
-            publish(failed)
+            let failed = try receipt.withOwnership {
+                try store.updateState(jobID: configuration.jobID, state: .failed, message: message)
+            }
+            try publish(failed)
             throw DurableSenderError.rejected(message)
         }
 
         do {
             while true {
                 try checkStillActive()
-                guard let refreshed = try store.load(jobID: configuration.jobID) else {
+                guard let refreshed = try receipt.withOwnership(operation: {
+                    try store.load(jobID: configuration.jobID)
+                }) else {
                     throw ConnectedCorpusOutboundStoreError.jobNotFound
                 }
                 journal = refreshed
@@ -122,32 +126,40 @@ enum ConnectedCorpusDurableSender {
                     )
                 }
 
-                if let partition = try store.preparedPendingPartition(for: journal) {
+                if let partition = try receipt.withOwnership(operation: {
+                    try store.preparedPendingPartition(for: journal)
+                }) {
+                    guard let expectedPending = journal.pendingPartition else {
+                        throw ConnectedCorpusOutboundStoreError.invalidCommit
+                    }
                     let accepted = try await sendPendingPartition(
                         partition,
                         journal: journal,
                         configuration: configuration,
                         transport: transport,
+                        receipt: receipt,
                         checkStillActive: checkStillActive,
                         onValidatedPartitionProgress: onValidatedPartitionProgress
                     )
                     switch accepted {
                     case .accepted:
                         try afterReceiverAcceptedPartition?()
-                        journal = try store.commitPendingPartition(jobID: configuration.jobID)
-                        publish(journal)
+                        journal = try receipt.withOwnership {
+                            try store.commitPendingPartition(jobID: configuration.jobID, expected: expectedPending)
+                        }
+                        try publish(journal)
                         continue
                     case .paused(let message):
                         try pause(message)
                     case .rejected(let message):
                         try reject(message)
                     case .cancelled:
-                        try? store.cancel(jobID: configuration.jobID)
+                        try? receipt.withOwnership(allowExpired: true) { try store.cancel(jobID: configuration.jobID) }
                         throw CancellationError()
                     }
                 }
 
-                let sources = try store.spoolItems(for: journal)
+                let sources = try receipt.withOwnership { try store.spoolItems(for: journal) }
                 let allItemsProduced = journal.nextItemIndex == journal.totalItemCount
                 if !sources.isEmpty,
                    (allItemsProduced || ConnectedCorpusDurablePartitionBuilder.shouldFlush(
@@ -163,8 +175,10 @@ enum ConnectedCorpusDurableSender {
                         sources: sources
                     )
                     do {
-                        journal = try store.adoptPendingPartition(partition, jobID: journal.jobID)
-                        publish(journal)
+                        journal = try receipt.withOwnership {
+                            try store.adoptPendingPartition(partition, jobID: journal.jobID)
+                        }
+                        try publish(journal)
                     } catch {
                         partition.remove()
                         throw error
@@ -175,15 +189,15 @@ enum ConnectedCorpusDurableSender {
                 if !allItemsProduced {
                     let itemIndex = journal.nextItemIndex
                     let sourceDate = journal.exportManifest.transferDates[itemIndex]
-                    journal = try store.updateState(
-                        jobID: journal.jobID,
-                        state: .preparing,
-                        message: "Preparing day \(itemIndex + 1) of \(journal.totalItemCount)…",
-                        currentDate: sourceDate
-                    )
-                    publish(journal)
+                    journal = try receipt.withOwnership {
+                        try store.updateState(jobID: journal.jobID, state: .preparing,
+                            message: "Preparing day \(itemIndex + 1) of \(journal.totalItemCount)…", currentDate: sourceDate)
+                    }
+                    try publish(journal)
                     try checkStillActive()
-                    let item = try await produceItem(itemIndex, sourceDate)
+                    let item = try await receipt.continueWhileOwned(onRejectedResult: { $0.remove() }) {
+                        try await produceItem(itemIndex, sourceDate)
+                    }
                     do {
                         try checkStillActive()
                     } catch {
@@ -191,12 +205,10 @@ enum ConnectedCorpusDurableSender {
                         throw error
                     }
                     do {
-                        journal = try store.adoptItem(
-                            item,
-                            expectedIndex: itemIndex,
-                            jobID: journal.jobID
-                        )
-                        publish(journal)
+                        journal = try receipt.withOwnership {
+                            try store.adoptItem(item, expectedIndex: itemIndex, jobID: journal.jobID)
+                        }
+                        try publish(journal)
                     } catch {
                         item.remove()
                         throw error
@@ -209,12 +221,11 @@ enum ConnectedCorpusDurableSender {
                         "Durable sender reached finalization with uncommitted item bytes."
                     )
                 }
-                journal = try store.updateState(
-                    jobID: journal.jobID,
-                    state: .finalizing,
-                    message: "Finalizing durable connected export…"
-                )
-                publish(journal)
+                journal = try receipt.withOwnership {
+                    try store.updateState(jobID: journal.jobID, state: .finalizing,
+                        message: "Finalizing durable connected export…")
+                }
+                try publish(journal)
                 let finalize = ConnectedCorpusTransferFinalize(
                     sessionID: journal.sessionID,
                     jobID: journal.jobID,
@@ -223,10 +234,9 @@ enum ConnectedCorpusDurableSender {
                     totalByteCount: journal.committedByteCount,
                     finalPartitionSHA256: journal.lastCommittedPartitionSHA256
                 )
-                guard let acknowledgement = await transport.finalize(
-                    finalize,
-                    configuration.finalizationAttemptTimeout
-                ) else {
+                guard let acknowledgement = try await receipt.continueWhileOwned(operation: {
+                    await transport.finalize(finalize, configuration.finalizationAttemptTimeout)
+                }) else {
                     try pause("Waiting for the Mac to reconnect and finalize the export.")
                 }
                 guard acknowledgement.accepted,
@@ -236,16 +246,15 @@ enum ConnectedCorpusDurableSender {
                       acknowledgement.finalPartitionSHA256 == journal.lastCommittedPartitionSHA256 else {
                     try reject("Mac returned an invalid durable final acknowledgement.")
                 }
-                journal = try store.complete(
-                    jobID: journal.jobID,
-                    acknowledgement: acknowledgement
-                )
-                publish(journal)
+                journal = try receipt.withOwnership {
+                    try store.complete(jobID: journal.jobID, acknowledgement: acknowledgement)
+                }
+                try publish(journal)
                 return Result(sessionID: journal.sessionID, acknowledgement: acknowledgement)
             }
         } catch is CancellationError {
             if isExplicitlyCancelled() {
-                try? store.cancel(jobID: configuration.jobID)
+                try? receipt.withOwnership(allowExpired: true) { try store.cancel(jobID: configuration.jobID) }
                 throw CancellationError()
             }
             try pause("Export paused while the iPhone app was interrupted. Reopen it to resume.")
@@ -254,20 +263,19 @@ enum ConnectedCorpusDurableSender {
         } catch let error as ConnectedCorpusOutboundStoreError {
             switch error {
             case .expired:
-                try? store.cancel(jobID: configuration.jobID, expired: true)
+                try? receipt.withOwnership(allowExpired: true) { try store.cancel(jobID: configuration.jobID, expired: true) }
                 throw DurableSenderError.rejected("The durable export checkpoint expired.")
             case .missingFile, .corruptFile, .invalidCommit, .invalidJournal:
-                _ = try? store.updateState(
-                    jobID: configuration.jobID,
-                    state: .failed,
-                    message: "Durable export checkpoint is incomplete or corrupt."
-                )
+                _ = try? receipt.withOwnership {
+                    try store.updateState(jobID: configuration.jobID, state: .failed,
+                        message: "Durable export checkpoint is incomplete or corrupt.")
+                }
                 throw DurableSenderError.corruptCheckpoint(
                     "Durable export checkpoint is incomplete or corrupt."
                 )
             case .requestChanged, .peerChanged:
                 try reject("Durable export identity changed; refusing unsafe resume.")
-            case .jobNotFound:
+            case .jobNotFound, .checkpointSuperseded:
                 throw error
             }
         } catch {
@@ -287,6 +295,7 @@ enum ConnectedCorpusDurableSender {
         journal: ConnectedCorpusOutboundJournal,
         configuration: Configuration,
         transport: ConnectedCorpusSender.Transport,
+        receipt: ConnectedCorpusOperationReceipt,
         checkStillActive: () throws -> Void,
         onValidatedPartitionProgress: ((
             _ descriptor: ConnectedCorpusPartitionDescriptor,
@@ -302,7 +311,9 @@ enum ConnectedCorpusDurableSender {
                 partition: partition.descriptor,
                 exportManifest: journal.exportManifest
             )
-            guard let disposition = await transport.open(open) else {
+            guard let disposition = try await receipt.continueWhileOwned(operation: {
+                await transport.open(open)
+            }) else {
                 lastPauseMessage = "Waiting for the Mac to reconnect and resume partition \(partition.descriptor.index + 1)."
                 if attempt + 1 < configuration.maximumImmediateAttempts {
                     try await retryPause(configuration.retryDelayNanoseconds, checkStillActive)
@@ -327,7 +338,7 @@ enum ConnectedCorpusDurableSender {
                 guard disposition.nextPartitionIndex == partition.descriptor.index else {
                     return .rejected("Mac requested a different durable partition sequence.")
                 }
-                let transferResult = await transport.sendPartition(
+                let transferResult = try await receipt.continueWhileOwned { await transport.sendPartition(
                     partition.file,
                     ConnectedTransferManifest(
                         kind: .connectedCorpusPartitionV1,
@@ -337,9 +348,11 @@ enum ConnectedCorpusDurableSender {
                     ),
                     partition.transferID,
                     { accepted, total in
-                        onValidatedPartitionProgress?(partition.descriptor, accepted, total)
+                        try? receipt.withOwnership {
+                            onValidatedPartitionProgress?(partition.descriptor, accepted, total)
+                        }
                     }
-                )
+                ) }
                 switch transferResult {
                 case .success(let acknowledgement):
                     guard acknowledgement.accepted,

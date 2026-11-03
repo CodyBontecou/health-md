@@ -102,7 +102,9 @@ data class ExportUiState(
     val profileExecutionIssue: ExportProfileExecutionIssue? = null,
 ) {
     val requiresHistoricalReadPermission: Boolean
-        get() = ExportHistoryAccess.requiresHistoricalReadPermission(
+        // The earliest readable sample may already be clipped by Health Connect's
+        // history window. It cannot establish the full range requested by All Time.
+        get() = allTimeSelected || ExportHistoryAccess.requiresHistoricalReadPermission(
             startDate = startDate,
             endDate = endDate,
             firstPermissionGrantDate = firstHealthPermissionGrantDate,
@@ -497,7 +499,7 @@ class ExportViewModel @Inject constructor(
         exportJob = viewModelScope.launch {
             val settings = settingsRepository.getExportSettings()
             if (!distributionPolicy.fullAccessIncluded &&
-                !settingsRepository.isPurchased.first() && !entitlementRepository.verifyExportAccess(
+                !entitlementRepository.verifyExportAccess(
                     settings.exportTarget, settings.apiEndpointUrl.takeIf { settings.exportMode == ExportMode.COMPATIBILITY })) {
                 _uiState.update { it.copy(isPurchased = false) }
                 return@launch

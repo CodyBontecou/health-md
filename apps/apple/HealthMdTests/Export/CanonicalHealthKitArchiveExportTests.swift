@@ -16,6 +16,35 @@ final class CanonicalHealthKitArchiveExportTests: XCTestCase {
         return customization
     }()
 
+    func testStreamedPartialFailuresMatchCanonicalJSONAndRemainSafeMarkdownCodeCells() throws {
+        let failures = [
+            ExportPartialFailure(date: ExportFixtures.referenceDate.addingTimeInterval(0.1255),
+                dataType: "sleep | <source>", dateRangeDescription: "synthetic, \"range\"", errorDescription: "line1\nline2 `quoted` & 🌙"),
+            ExportPartialFailure(date: ExportFixtures.referenceDate,
+                dataType: "activity", dateRangeDescription: "one day", errorDescription: "synthetic failure")
+        ]
+        for failure in failures {
+            let sink = MemoryExportByteSink(mediaType: "application/json")
+            try ExportDiagnosticSerializer.write(failure, to: sink)
+            _ = try sink.finish()
+            XCTAssertEqual(String(decoding: sink.data, as: UTF8.self), try ExportDiagnosticSerializer.string(for: failure))
+        }
+        let sink = MemoryExportByteSink(mediaType: "text/markdown")
+        try ExportDiagnosticSerializer.writeMarkdownSection(failures, headerPrefix: "###", to: sink)
+        _ = try sink.finish()
+        let text = String(decoding: sink.data, as: UTF8.self)
+        XCTAssertTrue(text.contains("### Capture Diagnostics"))
+        let rows = text.components(separatedBy: "\n").filter { $0.hasPrefix("| `{") }
+        XCTAssertEqual(rows.count, 2)
+        for (row, failure) in zip(rows, ExportDiagnosticSerializer.sorted(failures)) {
+            XCTAssertEqual(row.filter { $0 == "|" }.count, 2)
+            XCTAssertEqual(row.filter { $0 == "`" }.count, 2)
+            let bytes = Data(row.dropFirst(3).dropLast(3).utf8)
+            let actual = try XCTUnwrap(try JSONSerialization.jsonObject(with: bytes) as? NSDictionary)
+            XCTAssertEqual(actual, try ExportDiagnosticSerializer.jsonObject(for: failure) as NSDictionary)
+        }
+    }
+
     func testWorkoutTableSuppressionRetainsCanonicalSourceArchive() throws {
         let data = ExportFixtures.losslessDay
         let archive = try XCTUnwrap(data.healthKitRecordArchive)

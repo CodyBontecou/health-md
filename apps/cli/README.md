@@ -376,6 +376,7 @@ empty or inaccessible type is never silently reported as exported.
   across resume.
 - Partition and response SHA-256 digests are checked before acknowledgement.
 - Generated paths reject traversal and symlink destinations; destination changes fail closed.
+- Daily-note updates reject destination frontmatter declaring a complete Health.md daily or roll-up export. Ambiguous schema keys or unterminated frontmatter fail before installation; use a personal journal note for this update mode.
 - Health payloads are assembled on private disk spools and are never written to logs.
 - Durable jobs expire after seven days.
 

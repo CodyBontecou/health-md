@@ -28,6 +28,12 @@ fn raw_and_file_checkpoints_reject_changed_or_removed_observations() {
             mut session,
         } = serde_json::from_str(include_str!("fixtures/export-history-direct-job-v1.json"))
             .unwrap();
+        // The fixture freezes wire evidence, not a live seven-day durable-job lease.
+        // Rebase only runtime admission timestamps so this remains a resume test.
+        request.created_at =
+            chrono::DateTime::from_timestamp(chrono::Utc::now().timestamp(), 0).unwrap();
+        session.created_at = request.created_at;
+        accepted.accepted_at = request.created_at;
         let temporary = TempDir::new().unwrap();
         let destination = temporary.path().join("vault");
         std::fs::create_dir(&destination).unwrap();

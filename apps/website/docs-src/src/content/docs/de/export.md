@@ -7,7 +7,7 @@ description: "Verwenden Sie die Registerkarte „Exportieren“, um HealthKit un
 
 ## Lesen Sie die Status-Badges
  <div class="options">
- <div class="option"> <strong> Gesundheits-Badge </strong> <p> Ein grüner Punkt bedeutet, dass HealthKit autorisiert ist. Ein roter Punkt bedeutet, dass der Zugriff nicht gewährt wird. Tippen Sie, um das iOS-Berechtigungsblatt erneut zu versuchen. Das Blatt erscheint nur einmal pro Installation. Öffnen Sie anschließend Einstellungen → Datenschutz &amp; Sicherheit → Gesundheit. </p> </div>
+ <div class="option"> <strong> Gesundheits-Badge </strong> <p>Grün zeigt den Einrichtungsstatus „Verbunden“, nicht den bestätigten Lesezugriff auf jede Kategorie. HealthKit legt verweigerte Leserechte nicht offen. Tippen Sie auf das Badge, um Zugriff anzufragen. Für noch nicht entschiedene Kategorien kann iOS einen Dialog anzeigen; bei bereits gespeicherten Entscheidungen zeigt Health.md die Berechtigungshilfe. Prüfen Sie die Kategorien in Apple Health. Ein leeres Ergebnis kann verweigerten Zugriff oder fehlende passende Daten bedeuten. <a href="/de/docs/troubleshooting/">Fehlende Daten prüfen</a>.</p> </div>
  <div class="option"> <strong> Tresor-Abzeichen </strong> <p> Grüner Punkt = ein Tresorordner ist ausgewählt. Tippen Sie, um den Tresor erneut auszuwählen oder zu ändern. Die Beschriftung zeigt den Ordnernamen. </p> </div>
  </div>
  <p> Die Aktion <em> Export </em> bleibt deaktiviert, bis HealthKit , das Ausgabeformat und das ausgewählte Ziel bereit sind. Dies verhindert den häufigsten Fehlermodus: den Versuch, ohne Ziel zu exportieren. </p>
@@ -17,7 +17,7 @@ description: "Verwenden Sie die Registerkarte „Exportieren“, um HealthKit un
 
 <div class="options">
  <div class="option"> <strong> Lokaler iPhone Ordner </strong> <p> Schreibt direkt in den Ordner oder Obsidian Tresor, den Sie auf diesem Gerät ausgewählt haben. </p> </div>
- <div class="option"> <strong> Verbundener Mac </strong> <p> Sendet erfasste Tagesdaten und einen genauen Einstellungs-Snapshot an die nahegelegene Mac-App. Der iPhone lautet HealthKit . Der Mac rendert die ausgewählten Formate und schreibt die Dateien. </p> </div>
+ <div class="option"> <strong> Verbundener Mac </strong> <p> Sendet erfasste Tagesdaten und einen genauen Einstellungs-Snapshot an die nahegelegene Mac-App. Das iPhone liest die Daten aus HealthKit. Der Mac rendert die ausgewählten Formate und schreibt die Dateien. </p> </div>
  <div class="option"> <strong> API-Endpunkt </strong> <p> POSTET einen JSON-Umschlag direkt von iPhone an einen vom Benutzer konfigurierten HTTP(S)-Endpunkt. <a href="/de/docs/api-endpoint/"> Siehe API-Endpunkt </a> . </p> </div>
  </div>
 
@@ -47,22 +47,22 @@ description: "Verwenden Sie die Registerkarte „Exportieren“, um HealthKit un
 
 ## Was „Exportieren“ tatsächlich bewirkt
  <ol>
- <li> Erfassen Sie für jeden Tag im Bereich ausgewählte zusammenfassende Prognosen. Fügen Sie kompatible Beispiele für detaillierte Zeitreihen hinzu. Und für verlustfreie Gesundheitsakten können Sie kanonische Quelldatensätze hinzufügen und Diagnosen abfragen. </li>
+ <li> Für jeden Tag im Zeitraum werden ausgewählte Tageszusammenfassungen erfasst. Detaillierte Zeitreihen ergänzen verfügbare Messwerte und Intervalle. Verlustfreie Gesundheitsakten ergänzen kanonische Quelldatensätze und Abfragediagnostik. </li>
  <li> Wenden Sie das von Ihnen gewählte Format ( Markdown , Bases, JSON oder CSV) und die Vorlage an. </li>
  <li> Schreiben Sie eine Datei pro Tag in <code>{vault}/{subfolder}/</code> , übertragen Sie Dateien über den verbundenen Mac-Workflow oder POSTEN Sie einen versionierten JSON-Umschlag an Ihren API-Endpunkt. </li>
  <li> Wenn <em> Einzelverfolgung </em> aktiviert ist, leiten Sie ausgewählte Markdown Dateien pro Eintrag aus dem kanonischen Archiv für dateibasierte Ziele ab. </li>
  <li> Wenn <em> Daily Note Injection </em> aktiviert ist, führen Sie ausgewählte Zusammenfassungsfelder in Ihre täglichen Notizen ein. </li>
  </ol>
 
-<p> JSON und CSV können kanonische Datensätze beibehalten. Markdown und Bases bleiben lesbar und stellen eine kompakte Erfassungsdiagnose bereit, anstatt das Archiv einzubetten. Genaue Schemata und Auslassungsregeln finden Sie in der vollständigen Exportreferenz <a href="/de/docs/reference/"> </a> . </p>
+<p> JSON und CSV können kanonische Datensätze beibehalten. Markdown und Bases bleiben lesbar und stellen eine kompakte Erfassungsdiagnose bereit, anstatt das Archiv einzubetten. Genaue Schemata und Auslassungsregeln finden Sie in der <a href="/de/docs/reference/">vollständigen Exportreferenz</a>. </p>
 
 ## Anhalten, abbrechen und erneut versuchen
 
-Durch Stoppen oder Abbrechen wird nur der aktuelle Versuch beendet. Bereits abgeschlossene Dateien und Termine bleiben abgeschlossen, während ungelöste Termine weiterhin für einen erneuten Versuch verfügbar sind. Durch das Abbrechen eines geplanten Versuchs wird dessen wiederkehrender Zeitplan nicht deaktiviert.
+Durch Stoppen oder Abbrechen wird nur der aktuelle Versuch beendet. Bereits abgeschlossene Dateien und Tage bleiben abgeschlossen; noch offene Tage können erneut versucht werden. Durch das Abbrechen eines geplanten Versuchs wird dessen wiederkehrender Zeitplan nicht deaktiviert.
 
-## Profile und vertrauenswürdige Geschichte
+## Profile und verlässlicher Exportverlauf
 
-Ein gespeichertes Profil friert seine Einstellungen und das Ziel für den Lauf ein. Profilbewusste geplante und Automatisierungsverlaufszeilen behalten das Laufzeitprofil bei, während der Verlauf eine datenschutzsichere Bezeichnung für das tatsächlich verwendete Ziel beibehält. In einer manuellen Export-Tab-Zeile kann der Profilname weggelassen werden. Spätere Umbenennungen und Zieländerungen schreiben den vorhandenen Verlauf nicht neu. Fehlende Profilverweise werden nicht geschlossen, sondern zurückgesetzt. Siehe [Profile exportieren](/de/docs/export-profiles/).
+Ein gespeichertes Profil friert seine Einstellungen und das Ziel für den Lauf ein. Profilbewusste geplante und Automatisierungsverlaufszeilen behalten das Laufzeitprofil bei, während der Verlauf eine datenschutzsichere Bezeichnung für das tatsächlich verwendete Ziel beibehält. In einer manuellen Export-Tab-Zeile kann der Profilname weggelassen werden. Spätere Umbenennungen und Zieländerungen schreiben den vorhandenen Verlauf nicht neu. Fehlende Profilreferenzen führen zu einem Fehler; Health.md verwendet dann keine Ersatzeinstellungen. Siehe [Profile exportieren](/de/docs/export-profiles/).
 
 ## Tab-Leiste
 

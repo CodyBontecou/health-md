@@ -8,7 +8,7 @@ category: "Workflow guide"
 related:
   - apple-health-to-google-sheets
   - export-apple-health-steps-data
-  - export-apple-health-data-pdf
+  - apple-health-to-notion
 draft: false
 verified: "2026-10-27"
 verified_by: "Codex (agent)"

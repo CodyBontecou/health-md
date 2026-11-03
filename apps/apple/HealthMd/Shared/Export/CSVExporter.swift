@@ -1,7 +1,7 @@
 import CryptoKit
 import Foundation
 
-nonisolated private final class CSVStreamAccumulator {
+nonisolated fileprivate final class CSVStreamAccumulator {
     private let writer: BufferedExportByteWriter
     private var deferredError: Error?
 
@@ -249,14 +249,8 @@ extension HealthData {
             to csv: inout CSVStreamAccumulator,
             render: (ExportByteSink) throws -> Void
         ) throws {
-            let prefix = [snapshot.dateString, category, metric]
-                .map(csvSafe)
-                .joined(separator: ",")
-            try csv.appendThrowing(prefix + ",\"")
-            let jsonSink = CSVQuotedJSONFieldSink(csv: csv)
-            try render(jsonSink)
-            _ = try jsonSink.finish()
-            try csv.appendThrowing("\",\(csvSafe(unit)),\(csvSafe(timestamp))\n")
+            try HealthKitArchiveCSVProjection.appendCanonicalJSONRow(date: snapshot.dateString,
+                category: category, metric: metric, unit: unit, timestamp: timestamp, to: &csv, render: render)
         }
 
         var csv = try CSVStreamAccumulator(sink: sink)
@@ -276,58 +270,7 @@ extension HealthData {
         )
 
         if let archive = snapshot.healthKitRecordArchive {
-            let manifestTimestamp = CanonicalRFC3339UTC.string(from: archive.dailyOwnership.intervalStart)
-            try appendCanonicalJSONRow(
-                category: "Raw HealthKit",
-                metric: "Archive Manifest",
-                unit: "json",
-                timestamp: manifestTimestamp,
-                to: &csv
-            ) { try HealthKitRecordArchiveSerializer.writeManifest(archive, to: $0) }
-
-            // HealthKitRecordArchive normalizes records in every initializer.
-            // Stream each canonical JSON field through CSV quote escaping rather
-            // than retaining a second full JSON String per dense record.
-            for record in archive.records {
-                try appendCanonicalJSONRow(
-                    category: "Raw HealthKit",
-                    metric: "Raw HealthKit Record",
-                    unit: "json",
-                    timestamp: CanonicalRFC3339UTC.string(from: record.startDate),
-                    to: &csv
-                ) { try HealthKitRecordArchiveSerializer.writeRecord(record, to: $0) }
-            }
-
-            for record in HealthKitRecordArchiveSerializer.sortedExternalRecords(archive.externalRecords) {
-                try appendCanonicalJSONRow(
-                    category: "Raw HealthKit",
-                    metric: "Raw HealthKit External Record",
-                    unit: "json",
-                    timestamp: manifestTimestamp,
-                    to: &csv
-                ) { try HealthKitRecordArchiveSerializer.writeExternalRecord(record, to: $0) }
-            }
-
-            for result in HealthKitRecordArchiveSerializer.sortedQueryResults(archive.queryResults)
-                where result.status == .failure || result.status == .cancelled {
-                try appendCanonicalJSONRow(
-                    category: "Raw HealthKit",
-                    metric: "Query Failure",
-                    unit: "json",
-                    timestamp: CanonicalRFC3339UTC.string(from: result.interval.startDate),
-                    to: &csv
-                ) { try HealthKitRecordArchiveSerializer.writeQueryResult(result, to: $0) }
-            }
-
-            for warning in HealthKitRecordArchiveSerializer.sortedWarnings(archive.integrityWarnings) {
-                try appendCanonicalJSONRow(
-                    category: "Raw HealthKit",
-                    metric: "Integrity Warning",
-                    unit: "json",
-                    timestamp: manifestTimestamp,
-                    to: &csv
-                ) { try HealthKitRecordArchiveSerializer.writeIntegrityWarning(warning, to: $0) }
-            }
+            try HealthKitArchiveCSVProjection.append(archive: archive, date: snapshot.dateString, to: &csv)
         }
 
         for failure in ExportDiagnosticSerializer.sorted(snapshot.partialFailures) {
@@ -994,114 +937,8 @@ extension HealthData {
             }
         }
 
-        // WHOOP typed provider section. Fetch time is intentionally never used
-        // as the CSV measurement timestamp.
         if let whoop = snapshot.providers?.whoop {
-            let cycleTimestamp = whoop.cycles.count == 1 ? whoop.cycles.first?.startTime ?? "" : ""
-            let sleepTimestamp = whoop.sleep.count == 1 ? whoop.sleep.first?.startTime ?? "" : ""
-            let workoutTimestamp = whoop.workouts.count == 1 ? whoop.workouts.first?.startTime ?? "" : ""
-            for scalar in whoop.flatScalars {
-                let timestamp: String
-                switch scalar.definition.category {
-                case "WHOOP Cycle": timestamp = cycleTimestamp
-                case "WHOOP Sleep": timestamp = sleepTimestamp
-                case "WHOOP Workout": timestamp = workoutTimestamp
-                default: timestamp = ""
-                }
-                appendCSVRow(
-                    category: scalar.definition.category,
-                    metric: scalar.definition.displayName.replacingOccurrences(of: "WHOOP ", with: ""),
-                    value: scalar.value,
-                    unit: scalar.definition.unit,
-                    timestamp: timestamp,
-                    to: &csv
-                )
-            }
-
-            for result in whoop.resources {
-                try appendCanonicalJSONRow(
-                    category: "WHOOP Capture",
-                    metric: "Resource Result",
-                    unit: "json",
-                    timestamp: "",
-                    to: &csv
-                ) { sink in
-                    let encoder = try CanonicalJSONStreamEncoder(sink: sink, formatting: .compactCanonical)
-                    try encoder.encode(result)
-                }
-            }
-            for warning in whoop.warnings {
-                try appendCanonicalJSONRow(
-                    category: "WHOOP Capture",
-                    metric: "Warning",
-                    unit: "json",
-                    timestamp: "",
-                    to: &csv
-                ) { sink in
-                    let encoder = try CanonicalJSONStreamEncoder(sink: sink, formatting: .compactCanonical)
-                    try encoder.encode(warning)
-                }
-            }
-            for record in whoop.cycles {
-                try appendCanonicalJSONRow(
-                    category: "WHOOP Cycle",
-                    metric: "Cycle Record",
-                    unit: "json",
-                    timestamp: record.startTime,
-                    to: &csv
-                ) { sink in
-                    let encoder = try CanonicalJSONStreamEncoder(sink: sink, formatting: .compactCanonical)
-                    try encoder.encode(record)
-                }
-            }
-            for record in whoop.recoveries {
-                try appendCanonicalJSONRow(
-                    category: "WHOOP Recovery",
-                    metric: "Recovery Record",
-                    unit: "json",
-                    timestamp: "",
-                    to: &csv
-                ) { sink in
-                    let encoder = try CanonicalJSONStreamEncoder(sink: sink, formatting: .compactCanonical)
-                    try encoder.encode(record)
-                }
-            }
-            for record in whoop.sleep {
-                try appendCanonicalJSONRow(
-                    category: "WHOOP Sleep",
-                    metric: "Sleep Record",
-                    unit: "json",
-                    timestamp: record.startTime,
-                    to: &csv
-                ) { sink in
-                    let encoder = try CanonicalJSONStreamEncoder(sink: sink, formatting: .compactCanonical)
-                    try encoder.encode(record)
-                }
-            }
-            for record in whoop.workouts {
-                try appendCanonicalJSONRow(
-                    category: "WHOOP Workout",
-                    metric: "Workout Record",
-                    unit: "json",
-                    timestamp: record.startTime,
-                    to: &csv
-                ) { sink in
-                    let encoder = try CanonicalJSONStreamEncoder(sink: sink, formatting: .compactCanonical)
-                    try encoder.encode(record)
-                }
-            }
-            if let body = whoop.body {
-                try appendCanonicalJSONRow(
-                    category: "WHOOP Body",
-                    metric: "Body Snapshot",
-                    unit: "json",
-                    timestamp: "",
-                    to: &csv
-                ) { sink in
-                    let encoder = try CanonicalJSONStreamEncoder(sink: sink, formatting: .compactCanonical)
-                    try encoder.encode(body)
-                }
-            }
+            try WHOOPCSVProjection.append(whoop, ownerDate: snapshot.dateString, to: &csv)
         }
 
         // Other
@@ -1112,5 +949,305 @@ extension HealthData {
         }
 
         try csv.finish()
+    }
+}
+
+/// Independently versioned canonical source rows; no daily schema/summary serialization.
+nonisolated enum HealthKitArchiveCSVProjection {
+    static func writeMindfulness(_ projection: AppleWakeDateMindfulnessProjection, ownerDate: String,
+        to sink: ExportByteSink) throws {
+        guard projection.hasRecords else { return }
+        var csv = try CSVStreamAccumulator(sink: sink)
+        try projection.records().forEach { value in
+            guard let sample = value as? [String: Any], let timestamp = sample["timestamp"] as? String else {
+                throw AppleWakeDateMindfulnessProjection.ProjectionError.invalidAggregate
+            }
+            try appendCanonicalJSONRow(date: ownerDate, category: "Native Detail", metric: "Mindfulness Record",
+                unit: "json", timestamp: timestamp, to: &csv) { output in
+                try HealthKitRecordArchiveSerializer.writeDailyJSONObject(["metric": "state_of_mind", "sample": sample],
+                    archive: nil, to: output, outputFormatting: [.sortedKeys, .withoutEscapingSlashes])
+            }
+        }
+        try csv.finish()
+    }
+
+    static func writeWorkouts(_ projection: AppleWakeDateWorkoutProjection, ownerDate: String,
+        to sink: ExportByteSink) throws {
+        guard projection.hasRecords else { return }
+        var csv = try CSVStreamAccumulator(sink: sink)
+        try projection.records().forEach { value in
+            guard let sample = value as? [String: Any], let timestamp = sample["startTimeISO"] as? String else {
+                throw AppleWakeDateWorkoutProjection.ProjectionError.invalidAggregate
+            }
+            try appendCanonicalJSONRow(date: ownerDate, category: "Native Detail", metric: "Workout",
+                unit: "json", timestamp: timestamp, to: &csv) { output in
+                try HealthKitRecordArchiveSerializer.writeDailyJSONObject(["metric": "workout", "sample": sample],
+                    archive: nil, to: output, outputFormatting: [.sortedKeys, .withoutEscapingSlashes])
+            }
+        }
+        try csv.finish()
+    }
+
+    static func writeCorrelations(_ projection: AppleWakeDateCorrelationProjection, ownerDate: String,
+        to sink: ExportByteSink) throws {
+        var csv = try CSVStreamAccumulator(sink: sink)
+        for sample in projection.samples {
+            let object = try projection.record(sample)
+            guard let fields = object["sample"] as? [String: Any], let timestamp = fields["timestamp"] as? String else {
+                throw AppleWakeDateCorrelationProjection.ProjectionError.invalidSample
+            }
+            try appendCanonicalJSONRow(date: ownerDate, category: "Native Detail", metric: "Blood Pressure Correlation",
+                unit: "json", timestamp: timestamp, to: &csv) { output in
+                try HealthKitRecordArchiveSerializer.writeDailyJSONObject(object, archive: nil, to: output,
+                    outputFormatting: [.sortedKeys, .withoutEscapingSlashes])
+            }
+        }
+        try csv.finish()
+    }
+
+    static func writeSleepStages(_ projection: AppleWakeDateSleepStageProjection, ownerDate: String,
+        to sink: ExportByteSink) throws {
+        var csv = try CSVStreamAccumulator(sink: sink)
+        for stage in projection.stages {
+            let object = try projection.object(stage)
+            guard let timestamp = object["startDate"] as? String else { throw AppleWakeDateSleepStageProjection.ProjectionError.invalidStage }
+            try appendCanonicalJSONRow(date: ownerDate, category: "Sleep Detail", metric: "Sleep Stage",
+                unit: "seconds", timestamp: timestamp, to: &csv) { output in
+                try HealthKitRecordArchiveSerializer.writeDailyJSONObject(object, archive: nil, to: output,
+                    outputFormatting: [.sortedKeys, .withoutEscapingSlashes])
+            }
+        }
+        try csv.finish()
+    }
+
+    static func writeQuantities(_ quantities: AppleWakeDateQuantityProjection, ownerDate: String,
+        to sink: ExportByteSink) throws {
+        var csv = try CSVStreamAccumulator(sink: sink)
+        for item in quantities.series {
+            for sample in item.samples {
+                let object = try AppleWakeDateQuantityProjection.recordObject(sample, series: item)
+                let fields = object["sample"] as? [String: Any]
+                guard let timestamp = fields?["timestamp"] as? String else { throw AppleWakeDateQuantityProjection.ProjectionError.invalidSample }
+                try appendCanonicalJSONRow(date: ownerDate, category: "Native Detail", metric: "Quantity Sample",
+                    unit: "json", timestamp: timestamp, to: &csv) { output in
+                    try HealthKitRecordArchiveSerializer.writeDailyJSONObject(object, archive: nil, to: output,
+                        outputFormatting: [.sortedKeys, .withoutEscapingSlashes])
+                }
+            }
+        }
+        try csv.finish()
+    }
+
+    static func write(archive: HealthKitRecordArchive, ownerDate: String, to sink: ExportByteSink) throws {
+        var csv = try CSVStreamAccumulator(sink: sink)
+        try append(archive: archive, date: ownerDate, to: &csv)
+        try csv.finish()
+    }
+
+    static func writePartialFailures(_ failures: [ExportPartialFailure], ownerDate: String,
+        to sink: ExportByteSink) throws {
+        var csv = try CSVStreamAccumulator(sink: sink)
+        for failure in ExportDiagnosticSerializer.sorted(failures) {
+            try appendCanonicalJSONRow(date: ownerDate, category: "Diagnostics", metric: "Partial Failure",
+                unit: "json", timestamp: CanonicalRFC3339UTC.string(from: failure.date), to: &csv) {
+                try ExportDiagnosticSerializer.write(failure, to: $0)
+            }
+        }
+        try csv.finish()
+    }
+
+    fileprivate static func appendCanonicalJSONRow(date: String, category: String,
+        metric: String, unit: String, timestamp: String, to csv: inout CSVStreamAccumulator,
+        render: (ExportByteSink) throws -> Void) throws {
+        let prefix = [date, category, metric].map(CSVFieldEscaper.escape).joined(separator: ",")
+        try csv.appendThrowing(prefix + ",\"")
+        let jsonSink = CSVQuotedJSONFieldSink(csv: csv)
+        try render(jsonSink)
+        _ = try jsonSink.finish()
+        try csv.appendThrowing("\",\(CSVFieldEscaper.escape(unit)),\(CSVFieldEscaper.escape(timestamp))\n")
+    }
+
+    fileprivate static func append(archive: HealthKitRecordArchive, date: String,
+        to csv: inout CSVStreamAccumulator) throws {
+        let manifestTimestamp = CanonicalRFC3339UTC.string(from: archive.dailyOwnership.intervalStart)
+        try appendCanonicalJSONRow(date: date,
+            category: "Raw HealthKit",
+            metric: "Archive Manifest",
+            unit: "json",
+            timestamp: manifestTimestamp,
+            to: &csv
+        ) { try HealthKitRecordArchiveSerializer.writeManifest(archive, to: $0) }
+
+        // HealthKitRecordArchive normalizes records in every initializer.
+        // Stream each canonical JSON field through CSV quote escaping rather
+        // than retaining a second full JSON String per dense record.
+        for record in archive.records {
+            try appendCanonicalJSONRow(date: date,
+                category: "Raw HealthKit",
+                metric: "Raw HealthKit Record",
+                unit: "json",
+                timestamp: CanonicalRFC3339UTC.string(from: record.startDate),
+                to: &csv
+            ) { try HealthKitRecordArchiveSerializer.writeRecord(record, to: $0) }
+        }
+
+        for record in HealthKitRecordArchiveSerializer.sortedExternalRecords(archive.externalRecords) {
+            try appendCanonicalJSONRow(date: date,
+                category: "Raw HealthKit",
+                metric: "Raw HealthKit External Record",
+                unit: "json",
+                timestamp: manifestTimestamp,
+                to: &csv
+            ) { try HealthKitRecordArchiveSerializer.writeExternalRecord(record, to: $0) }
+        }
+
+        for result in HealthKitRecordArchiveSerializer.sortedQueryResults(archive.queryManifest.results)
+            where result.status == .failure || result.status == .cancelled {
+            try appendCanonicalJSONRow(date: date,
+                category: "Raw HealthKit",
+                metric: "Query Failure",
+                unit: "json",
+                timestamp: CanonicalRFC3339UTC.string(from: result.interval.startDate),
+                to: &csv
+            ) { try HealthKitRecordArchiveSerializer.writeQueryResult(result, to: $0) }
+        }
+
+        for warning in HealthKitRecordArchiveSerializer.sortedWarnings(archive.integrityWarnings) {
+            try appendCanonicalJSONRow(date: date,
+                category: "Raw HealthKit",
+                metric: "Integrity Warning",
+                unit: "json",
+                timestamp: manifestTimestamp,
+                to: &csv
+            ) { try HealthKitRecordArchiveSerializer.writeIntegrityWarning(warning, to: $0) }
+        }
+    }
+}
+
+/// The existing typed WHOOP rows, independent of the daily writer/schema.
+nonisolated enum WHOOPCSVProjection {
+    static func write(_ providers: HealthProviderSections, ownerDate: String, to sink: ExportByteSink) throws {
+        guard let whoop = providers.whoop else { return }
+        var csv = try CSVStreamAccumulator(sink: sink)
+        try append(whoop, ownerDate: ownerDate, to: &csv)
+        try csv.finish()
+    }
+
+    fileprivate static func append(_ whoop: WHOOPDailyProviderSection, ownerDate: String,
+        to csv: inout CSVStreamAccumulator) throws {
+        func appendCSVRow(category: String, metric: String, value: String, unit: String = "",
+            timestamp: String = "", to csv: inout CSVStreamAccumulator) {
+            csv += [ownerDate, category, metric, value, unit, timestamp].map(CSVFieldEscaper.escape).joined(separator: ",") + "\n"
+        }
+        func appendCanonicalJSONRow(category: String, metric: String, unit: String, timestamp: String,
+            to csv: inout CSVStreamAccumulator, render: (ExportByteSink) throws -> Void) throws {
+            try HealthKitArchiveCSVProjection.appendCanonicalJSONRow(date: ownerDate, category: category,
+                metric: metric, unit: unit, timestamp: timestamp, to: &csv, render: render)
+        }
+        let cycleTimestamp = whoop.cycles.count == 1 ? whoop.cycles.first?.startTime ?? "" : ""
+        let sleepTimestamp = whoop.sleep.count == 1 ? whoop.sleep.first?.startTime ?? "" : ""
+        let workoutTimestamp = whoop.workouts.count == 1 ? whoop.workouts.first?.startTime ?? "" : ""
+        for scalar in whoop.flatScalars {
+            let timestamp: String
+            switch scalar.definition.category {
+            case "WHOOP Cycle": timestamp = cycleTimestamp
+            case "WHOOP Sleep": timestamp = sleepTimestamp
+            case "WHOOP Workout": timestamp = workoutTimestamp
+            default: timestamp = ""
+            }
+            appendCSVRow(
+                category: scalar.definition.category,
+                metric: scalar.definition.displayName.replacingOccurrences(of: "WHOOP ", with: ""),
+                value: scalar.value,
+                unit: scalar.definition.unit,
+                timestamp: timestamp,
+                to: &csv
+            )
+        }
+
+        for result in whoop.resources {
+            try appendCanonicalJSONRow(
+                category: "WHOOP Capture",
+                metric: "Resource Result",
+                unit: "json",
+                timestamp: "",
+                to: &csv
+            ) { sink in
+                let encoder = try CanonicalJSONStreamEncoder(sink: sink, formatting: .compactCanonical)
+                try encoder.encode(result)
+            }
+        }
+        for warning in whoop.warnings {
+            try appendCanonicalJSONRow(
+                category: "WHOOP Capture",
+                metric: "Warning",
+                unit: "json",
+                timestamp: "",
+                to: &csv
+            ) { sink in
+                let encoder = try CanonicalJSONStreamEncoder(sink: sink, formatting: .compactCanonical)
+                try encoder.encode(warning)
+            }
+        }
+        for record in whoop.cycles {
+            try appendCanonicalJSONRow(
+                category: "WHOOP Cycle",
+                metric: "Cycle Record",
+                unit: "json",
+                timestamp: record.startTime,
+                to: &csv
+            ) { sink in
+                let encoder = try CanonicalJSONStreamEncoder(sink: sink, formatting: .compactCanonical)
+                try encoder.encode(record)
+            }
+        }
+        for record in whoop.recoveries {
+            try appendCanonicalJSONRow(
+                category: "WHOOP Recovery",
+                metric: "Recovery Record",
+                unit: "json",
+                timestamp: "",
+                to: &csv
+            ) { sink in
+                let encoder = try CanonicalJSONStreamEncoder(sink: sink, formatting: .compactCanonical)
+                try encoder.encode(record)
+            }
+        }
+        for record in whoop.sleep {
+            try appendCanonicalJSONRow(
+                category: "WHOOP Sleep",
+                metric: "Sleep Record",
+                unit: "json",
+                timestamp: record.startTime,
+                to: &csv
+            ) { sink in
+                let encoder = try CanonicalJSONStreamEncoder(sink: sink, formatting: .compactCanonical)
+                try encoder.encode(record)
+            }
+        }
+        for record in whoop.workouts {
+            try appendCanonicalJSONRow(
+                category: "WHOOP Workout",
+                metric: "Workout Record",
+                unit: "json",
+                timestamp: record.startTime,
+                to: &csv
+            ) { sink in
+                let encoder = try CanonicalJSONStreamEncoder(sink: sink, formatting: .compactCanonical)
+                try encoder.encode(record)
+            }
+        }
+        if let body = whoop.body {
+            try appendCanonicalJSONRow(
+                category: "WHOOP Body",
+                metric: "Body Snapshot",
+                unit: "json",
+                timestamp: "",
+                to: &csv
+            ) { sink in
+                let encoder = try CanonicalJSONStreamEncoder(sink: sink, formatting: .compactCanonical)
+                try encoder.encode(body)
+            }
+        }
     }
 }

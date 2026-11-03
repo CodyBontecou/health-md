@@ -7,7 +7,7 @@ description: "Utilizza la scheda Esporta per verificare le connessioni HealthKit
 
 ## Leggi i badge di stato
  <div class="options">
- <div class="option"> <strong> Badge sanitario </strong> <p> Un punto verde significa che HealthKit è autorizzato. Un punto rosso significa che l'accesso non è concesso. Tocca per riprovare il foglio di autorizzazione iOS. Il foglio viene visualizzato solo una volta per installazione. Successivamente, apri Impostazioni → Privacy e privacy. Sicurezza → Salute. </p> </div>
+ <div class="option"> <strong> Badge sanitario </strong> <p>Il verde indica lo stato di configurazione Connesso dell’app, non conferma l’accesso in lettura a ogni categoria. HealthKit non rivela i permessi di lettura negati. Tocca l’indicatore per richiedere l’accesso. iOS può mostrare una finestra per i tipi che richiedono una decisione; se le scelte sono già registrate, Health.md mostra la guida ai permessi. Controlla le categorie in Apple Health. Un risultato vuoto può indicare accesso negato o assenza di dati corrispondenti. <a href="/it/docs/troubleshooting/">Risolvere i dati mancanti</a>.</p> </div>
  <div class="option"> <strong> Badge del deposito </strong> <p> Punto verde = è selezionata una cartella del deposito. Tocca per selezionare nuovamente o modificare il deposito. L'etichetta mostra il nome della cartella. </p> </div>
  </div>
  <p> L'azione <em> Esporta </em> rimane disabilitata finché HealthKit , il formato di output e la destinazione selezionata non sono pronti. Ciò impedisce la modalità di errore più comune: tentare di esportare senza destinazione. </p>
@@ -62,7 +62,7 @@ L'interruzione o l'annullamento termina solo il tentativo corrente. I file e le 
 
 ## Profili e storia affidabile
 
-Un profilo salvato blocca le impostazioni e la destinazione della corsa. Le righe della cronologia pianificata e di automazione sensibile al profilo mantengono il profilo di runtime, mentre la cronologia conserva un'etichetta sicura per la privacy per la destinazione effettivamente utilizzata. Una riga manuale della scheda Esporta può omettere il nome del profilo. Le successive ridenominazioni e modifiche della destinazione non riscrivono la cronologia esistente. I riferimenti al profilo mancanti non riescono a chiudersi invece di eseguire il fallback. Vedere [Esporta profili](/it/docs/export-profiles/).
+Un profilo salvato blocca le impostazioni e la destinazione della corsa. Le righe della cronologia pianificata e di automazione sensibile al profilo mantengono il profilo di runtime, mentre la cronologia conserva un'etichetta sicura per la privacy per la destinazione effettivamente utilizzata. Una riga manuale della scheda Esporta può omettere il nome del profilo. Le successive ridenominazioni e modifiche della destinazione non riscrivono la cronologia esistente. Se il profilo indicato manca, l’operazione non viene eseguita e non vengono usate impostazioni alternative. Vedere [Esporta profili](/it/docs/export-profiles/).
 
 ## Barra delle schede
 

@@ -90,7 +90,9 @@ and source vocabulary shared by the browser and campaign Worker. It currently
 covers the homepage (all ten locales), export/CSV/Android/AI hubs, the guides hub,
 Obsidian workflows, the Health Auto Export comparison, the XML archive explainer,
 the Mac destination walkthrough, and the named spreadsheet, metric, PDF, and AI acquisition
-guides. Other pages, including account and health-data routes, are excluded.
+guides. The fixed registry also includes the Python walkthrough, blood-pressure
+and weight guides, the named source-app export guides, and the Home Assistant
+workflow chooser. Other pages, including account and health-data routes, are excluded.
 Add genuine acquisition pages to that owner rather than sending arbitrary URLs.
 
 The events are:
@@ -149,8 +151,13 @@ wrangler d1 execute healthmd-campaigns --remote --command "SELECT page, action, 
 
 ### Rollout order
 
-Deploy only reviewed, committed source. The collector and migration must precede
-the website so that the browser can reach the endpoint:
+Deploy only reviewed, committed source. Registry-only releases must preserve the
+live collector’s unrelated routes. If main contains an unapproved install-ingestion
+retirement, use a reviewed compatibility release based on the live collector
+baseline; do not activate that retirement through a website-counter update.
+
+The collector and migration must precede the website so that the browser can reach
+the endpoint:
 
 ```bash
 cd apps/website/cloudflare/attribution-worker

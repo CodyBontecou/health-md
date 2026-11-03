@@ -1,12 +1,14 @@
 package com.healthmd.data.storage
 
 import android.content.Context
+import com.healthmd.domain.exportengine.AndroidExportProfile
 import com.healthmd.domain.exportengine.ExportEngineMode
 import com.healthmd.domain.exportengine.ExportEnginePinCodec
 import com.healthmd.domain.model.ExportFailureReason
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
 import java.io.FileOutputStream
+import java.io.RandomAccessFile
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
@@ -16,6 +18,7 @@ import java.util.Base64
 import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -100,10 +103,17 @@ class ScheduledFolderExportJournalStore private constructor(
         ::syncDirectoryOnAndroid,
     )
 
-    internal constructor(directory: File, @Suppress("UNUSED_PARAMETER") testOnly: Unit = Unit) :
-        this(directory, { true })
+    internal constructor(
+        directory: File,
+        @Suppress("UNUSED_PARAMETER") testOnly: Unit = Unit,
+        directorySync: (File) -> Boolean = { true },
+    ) : this(directory, directorySync)
 
-    private val mutex = Mutex()
+    // Historical binaries only know DIRECTORY_NAME. Successor journals keep the
+    // same immutable grammar but are never exposed in that directory on creation.
+    private val successorDirectory = File(directory.parentFile, "${directory.name}.sleep-attribution-v1")
+    private val journalDirectories get() = listOf(directory, successorDirectory)
+
     private val json = Json {
         encodeDefaults = true
         explicitNulls = true
@@ -113,69 +123,153 @@ class ScheduledFolderExportJournalStore private constructor(
 
     internal suspend fun load(operationId: String): ScheduledFolderJournalLoad =
         withContext(Dispatchers.IO) {
-            mutex.withLock {
-                if (!validOperationId(operationId)) return@withLock ScheduledFolderJournalLoad.Corrupt
-                purgeTemporaryFiles()
-                val file = fileFor(operationId)
-                if (!file.exists()) return@withLock ScheduledFolderJournalLoad.Missing
-                if (!file.isFile || file.length() !in 1..MAX_JOURNAL_FILE_BYTES) {
-                    return@withLock ScheduledFolderJournalLoad.Corrupt
-                }
-                val journal = runCatching {
-                    json.decodeFromString<ScheduledFolderExportJournal>(file.readText())
-                }.getOrNull() ?: return@withLock ScheduledFolderJournalLoad.Corrupt
-                if (!isStructurallyValid(journal) || journal.operationId != operationId) {
-                    ScheduledFolderJournalLoad.Corrupt
-                } else {
-                    ScheduledFolderJournalLoad.Found(journal)
-                }
+            withJournalLock {
+                if (!validOperationId(operationId)) return@withJournalLock ScheduledFolderJournalLoad.Corrupt
+                journalDirectories.forEach(::purgeTemporaryFiles)
+                loadLocked(operationId)
             }
         }
 
     internal suspend fun save(journal: ScheduledFolderExportJournal): Boolean =
         withContext(Dispatchers.IO) {
-            mutex.withLock {
-                if (!isStructurallyValid(journal)) return@withLock false
-                if (!directory.exists() && !directory.mkdirs()) return@withLock false
-                purgeTemporaryFiles()
-                val target = fileFor(journal.operationId)
-                val temporary = File(directory, ".${target.name}.${System.nanoTime()}.tmp")
-                try {
-                    val encodedBytes = json.encodeToString(journal)
-                        .toByteArray(StandardCharsets.UTF_8)
-                    check(encodedBytes.size <= MAX_JOURNAL_FILE_BYTES)
-                    FileOutputStream(temporary).use { output ->
-                        output.write(encodedBytes)
-                        output.flush()
-                        output.fd.sync()
+            try {
+                withJournalLock {
+                    if (!isStructurallyValid(journal)) return@withJournalLock false
+                    val existing = loadLocked(journal.operationId)
+                    if (existing == ScheduledFolderJournalLoad.Corrupt) return@withJournalLock false
+                    if (existing is ScheduledFolderJournalLoad.Found &&
+                        !preservesAuthority(existing.journal, journal)
+                    ) return@withJournalLock false
+                    val targetDirectory = if (existing is ScheduledFolderJournalLoad.Found) {
+                        // Preserve a draft journal's original location; do not migrate its bytes.
+                        journalDirectories.single { fileFor(journal.operationId, it).exists() }
+                    } else {
+                        val pin = ExportEnginePinCodec.decodeOrNull(journal.enginePinJson) ?: return@withJournalLock false
+                        if (pin.profile == AndroidExportProfile.android_sleep_v6) successorDirectory else directory
                     }
+                    if (!targetDirectory.exists() && !targetDirectory.mkdirs()) return@withJournalLock false
+                    // The new directory name must be durable before its first accepted job.
+                    // Repeat on retry even if mkdir succeeded before a previous sync failed.
+                    val parent = targetDirectory.parentFile ?: return@withJournalLock false
+                    if (!directorySync(parent)) return@withJournalLock false
+                    purgeTemporaryFiles(targetDirectory)
+                    val target = fileFor(journal.operationId, targetDirectory)
+                    val temporary = File(targetDirectory, ".${target.name}.${System.nanoTime()}.tmp")
                     try {
-                        Files.move(
-                            temporary.toPath(),
-                            target.toPath(),
-                            StandardCopyOption.ATOMIC_MOVE,
-                            StandardCopyOption.REPLACE_EXISTING,
-                        )
-                    } catch (_: java.nio.file.AtomicMoveNotSupportedException) {
-                        Files.move(
-                            temporary.toPath(),
-                            target.toPath(),
-                            StandardCopyOption.REPLACE_EXISTING,
-                        )
+                        val encodedBytes = json.encodeToString(journal)
+                            .toByteArray(StandardCharsets.UTF_8)
+                        check(encodedBytes.size <= MAX_JOURNAL_FILE_BYTES)
+                        FileOutputStream(temporary).use { output ->
+                            output.write(encodedBytes)
+                            output.flush()
+                            output.fd.sync()
+                        }
+                        try {
+                            Files.move(
+                                temporary.toPath(),
+                                target.toPath(),
+                                StandardCopyOption.ATOMIC_MOVE,
+                                StandardCopyOption.REPLACE_EXISTING,
+                            )
+                        } catch (_: java.nio.file.AtomicMoveNotSupportedException) {
+                            Files.move(
+                                temporary.toPath(),
+                                target.toPath(),
+                                StandardCopyOption.REPLACE_EXISTING,
+                            )
+                        }
+                        check(directorySync(targetDirectory))
+                        true
+                    } catch (_: Exception) {
+                        false
+                    } finally {
+                        if (temporary.exists()) temporary.delete()
                     }
-                    check(directorySync(directory))
-                    true
-                } catch (_: Exception) {
-                    false
-                } finally {
-                    if (temporary.exists()) temporary.delete()
                 }
+            } catch (error: CancellationException) {
+                throw error
+            } catch (_: Exception) {
+                false
             }
         }
 
     internal suspend fun discard(operationId: String) = withContext(Dispatchers.IO) {
-        mutex.withLock {
-            if (validOperationId(operationId)) runCatching { fileFor(operationId).delete() }
+        withJournalLock {
+            if (validOperationId(operationId)) {
+                journalDirectories.forEach { location -> runCatching { fileFor(operationId, location).delete() } }
+            }
+        }
+    }
+
+    /// One transaction spans both historical and successor namespaces. The
+    /// process mutex avoids overlapping JVM file locks; the persistent file
+    /// lock serializes cooperating app processes. Never unlink the lock inode.
+    private suspend fun <T> withJournalLock(block: () -> T): T = transactionMutex.withLock {
+        val parent = directory.absoluteFile.parentFile ?: error("Missing journal parent")
+        check(parent.isDirectory || parent.mkdirs())
+        RandomAccessFile(File(parent, ".${directory.name}.journal.lock"), "rw").use { file ->
+            file.channel.lock().use { block() }
+        }
+    }
+
+    private fun loadLocked(operationId: String): ScheduledFolderJournalLoad {
+        val files = journalDirectories.map { fileFor(operationId, it) }.filter { it.exists() }
+        if (files.isEmpty()) return ScheduledFolderJournalLoad.Missing
+        if (files.size != 1) return ScheduledFolderJournalLoad.Corrupt
+        val file = files.single()
+        if (!file.isFile || file.length() !in 1..MAX_JOURNAL_FILE_BYTES) return ScheduledFolderJournalLoad.Corrupt
+        val journal = runCatching {
+            json.decodeFromString<ScheduledFolderExportJournal>(file.readText())
+        }.getOrNull() ?: return ScheduledFolderJournalLoad.Corrupt
+        if (!isStructurallyValid(journal) || journal.operationId != operationId ||
+            (file.parentFile == successorDirectory &&
+                ExportEnginePinCodec.decodeOrNull(journal.enginePinJson)?.profile != AndroidExportProfile.android_sleep_v6)
+        ) return ScheduledFolderJournalLoad.Corrupt
+        return ScheduledFolderJournalLoad.Found(journal)
+    }
+
+    private fun preservesAuthority(
+        existing: ScheduledFolderExportJournal,
+        next: ScheduledFolderExportJournal,
+    ): Boolean = existing.enginePinJson == next.enginePinJson &&
+        existing.settingsSnapshotSha256 == next.settingsSnapshotSha256 &&
+        existing.folderUri == next.folderUri && existing.ownerDates == next.ownerDates &&
+        (existing.phase != ScheduledFolderJournalPhase.READY ||
+            (next.phase == ScheduledFolderJournalPhase.READY && existing.planSha256 == next.planSha256 &&
+                preservesArtifactFrontier(existing, next)))
+
+    private fun preservesArtifactFrontier(
+        existing: ScheduledFolderExportJournal,
+        next: ScheduledFolderExportJournal,
+    ): Boolean {
+        val previousArtifacts = existing.days.flatMap { it.artifacts }
+        val nextArtifacts = next.days.flatMap { it.artifacts }
+        return previousArtifacts.size == nextArtifacts.size &&
+            previousArtifacts.zip(nextArtifacts).all { (previous, following) ->
+                previous.artifactId == following.artifactId && preservesArtifactCheckpoint(previous, following)
+            }
+    }
+
+    private fun preservesArtifactCheckpoint(
+        previous: ScheduledFolderJournalArtifact,
+        next: ScheduledFolderJournalArtifact,
+    ): Boolean {
+        if (previous.state == next.state) return previous.documentId == next.documentId
+        return when (previous.state) {
+            ScheduledFolderArtifactState.PREPARED -> next.state == ScheduledFolderArtifactState.BINDING
+            ScheduledFolderArtifactState.BINDING -> if (previous.documentId == null) {
+                next.state == ScheduledFolderArtifactState.STAGING_BOUND
+            } else {
+                next.state == ScheduledFolderArtifactState.BOUND && previous.documentId == next.documentId
+            }
+            ScheduledFolderArtifactState.STAGING_BOUND ->
+                next.state == ScheduledFolderArtifactState.STAGING_WRITTEN && previous.documentId == next.documentId
+            // SAF promotion can return a new document identity. The writer verifies
+            // the exact staged bytes and rename result before persisting this step.
+            ScheduledFolderArtifactState.STAGING_WRITTEN -> next.state == ScheduledFolderArtifactState.BOUND
+            ScheduledFolderArtifactState.BOUND ->
+                next.state == ScheduledFolderArtifactState.ACKNOWLEDGED && previous.documentId == next.documentId
+            ScheduledFolderArtifactState.ACKNOWLEDGED -> false
         }
     }
 
@@ -267,14 +361,14 @@ class ScheduledFolderExportJournalStore private constructor(
         return true
     }
 
-    private fun purgeTemporaryFiles() {
-        directory.listFiles { file -> file.name.startsWith('.') && file.name.endsWith(".tmp") }
+    private fun purgeTemporaryFiles(location: File) {
+        location.listFiles { file -> file.name.startsWith('.') && file.name.endsWith(".tmp") }
             ?.take(MAX_TEMP_FILES_TO_PURGE)
             ?.forEach { file -> runCatching { file.delete() } }
     }
 
-    private fun fileFor(operationId: String): File =
-        File(directory, "${sha256Hex(operationId.toByteArray(StandardCharsets.UTF_8))}.json")
+    private fun fileFor(operationId: String, location: File): File =
+        File(location, "${sha256Hex(operationId.toByteArray(StandardCharsets.UTF_8))}.json")
 
     private fun validOperationId(value: String): Boolean = value.matches(OPERATION_ID)
 
@@ -295,6 +389,7 @@ class ScheduledFolderExportJournalStore private constructor(
     private fun String.hasControl(): Boolean = any(Char::isISOControl)
 
     companion object {
+        private val transactionMutex = Mutex()
         private const val DIRECTORY_NAME = "scheduled-folder-export-v1"
         private const val MAX_JOURNAL_FILE_BYTES = 48_000_000
         private const val MAX_TEMP_FILES_TO_PURGE = 64

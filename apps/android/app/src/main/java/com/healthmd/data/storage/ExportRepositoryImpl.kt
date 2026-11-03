@@ -2,6 +2,7 @@ package com.healthmd.data.storage
 
 import com.healthmd.data.export.CsvExporter
 import com.healthmd.data.export.DailyNoteInjector
+import com.healthmd.data.export.PreparedWakeDateDailyNote
 import com.healthmd.data.export.IndividualEntryExporter
 import com.healthmd.data.export.InjectionResult
 import com.healthmd.data.export.JsonExporter
@@ -9,6 +10,13 @@ import com.healthmd.data.export.MarkdownExporter
 import com.healthmd.data.export.MarkdownMerger
 import com.healthmd.data.export.ObsidianBasesExporter
 import com.healthmd.domain.exportengine.AndroidDailyAggregateExportPlanner
+import com.healthmd.domain.exportengine.AndroidExportProfile
+import com.healthmd.domain.exportengine.DailyAggregateExportIds
+import com.healthmd.domain.exportengine.FrozenDailyAggregateExportRequest
+import com.healthmd.domain.exportengine.portableArtifactPathKey
+import com.healthmd.domain.exportengine.validateRelativePath
+import com.healthmd.domain.exportengine.frozenCopy
+import com.healthmd.domain.exportengine.immutableWakeDateSource
 import com.healthmd.domain.exportengine.AndroidExportSettingsSnapshot
 import com.healthmd.domain.exportengine.AndroidExportSettingsSnapshotCodec
 import com.healthmd.domain.exportengine.ExportArtifactPlan
@@ -18,6 +26,7 @@ import com.healthmd.domain.exportengine.LocalDailyAggregateExportPlanner
 import com.healthmd.domain.exportengine.LocalDailyAggregatePlanningResult
 import com.healthmd.domain.exportengine.ExportEngineMode
 import com.healthmd.domain.exportengine.ExportEnginePinCodec
+import com.healthmd.domain.exportengine.ExportEnginePinPlanner
 import com.healthmd.domain.exportengine.ProductionDailyAggregateNativePlanBuilder
 import com.healthmd.domain.exportengine.ShadowExportDiagnosticSink
 import com.healthmd.domain.exportengine.isFatalExportEngineFailure
@@ -34,6 +43,7 @@ import com.healthmd.domain.model.ExportSettings
 import com.healthmd.domain.model.ExportResult
 import com.healthmd.domain.model.FailedDateDetail
 import com.healthmd.domain.model.HealthData
+import com.healthmd.domain.model.SleepDayAttribution
 import com.healthmd.domain.model.ExportTarget
 import com.healthmd.domain.model.WriteMode as SettingsWriteMode
 import com.healthmd.domain.repository.DurableScheduledFolderOperationStart
@@ -43,6 +53,8 @@ import java.nio.charset.StandardCharsets
 import java.time.LocalDate
 import java.time.ZoneId
 import java.util.Base64
+import java.util.Collections
+import java.util.UUID
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.ensureActive
@@ -76,6 +88,13 @@ class ExportRepositoryImpl(
     private val stagedScheduledFolderOperations = mutableMapOf<String, StagedScheduledFolderOperation>()
 
     override suspend fun exportHealthData(data: HealthData, settings: ExportSettings): Boolean {
+        if (settings.hasWakeDateNote()) return exportWakeDateNote(data, settings)
+        val (frozenData, frozenSettings) = try { freezeNightNoteInput(data, settings) }
+        catch (error: Throwable) { rethrowCancellationOrFatal(error); return false }
+        return exportCapturedHealthData(frozenData, frozenSettings)
+    }
+
+    private suspend fun exportCapturedHealthData(data: HealthData, settings: ExportSettings): Boolean {
         val folderUri = settingsRepository.getExportFolderUri() ?: return false
         if (settings.selectedExportFormats.isEmpty()) return false
 
@@ -90,7 +109,7 @@ class ExportRepositoryImpl(
                 exportLegacy(folderUri, data, settings)
             is LocalDailyAggregatePlanningResult.Failed -> false
             is LocalDailyAggregatePlanningResult.Planned ->
-                commitAuthoritativePlan(folderUri, selection.plan)
+                commitPlanAndIndividualEntries(folderUri, data, settings, selection.plan)
         }
     }
 
@@ -609,6 +628,13 @@ class ExportRepositoryImpl(
     )
 
     override suspend fun previewHealthData(data: HealthData, settings: ExportSettings): ExportPreviewDay {
+        if (settings.hasWakeDateNote()) return previewWakeDateNote(data, settings)
+        val (frozenData, frozenSettings) = try { freezeNightNoteInput(data, settings) }
+        catch (error: Throwable) { rethrowCancellationOrFatal(error); return planningFailurePreview(data) }
+        return previewCapturedHealthData(frozenData, frozenSettings)
+    }
+
+    private suspend fun previewCapturedHealthData(data: HealthData, settings: ExportSettings): ExportPreviewDay {
         // Match iOS preview behavior: a destination is required to write an export, but not
         // to inspect the files Health.md would generate. Without a folder, write-mode previews
         // use a new-file baseline because there is no existing destination file to merge.
@@ -631,11 +657,136 @@ class ExportRepositoryImpl(
             LocalDailyAggregatePlanningResult.Legacy ->
                 previewLegacy(folderUri, data, settings)
             is LocalDailyAggregatePlanningResult.Failed -> planningFailurePreview(data)
-            is LocalDailyAggregatePlanningResult.Planned -> previewPlan(data, selection)
+            is LocalDailyAggregatePlanningResult.Planned -> previewPlan(data, selection, settings, folderUri)
         }
     }
 
-    private fun exportLegacy(
+    private fun freezeNightNoteInput(data: HealthData, settings: ExportSettings): Pair<HealthData,ExportSettings> {
+        if (!settings.dailyNoteInjection.enabled ||
+            settings.executionSleepCaptureContext?.sleepDayAttribution != SleepDayAttribution.NIGHT_BEGINS) return data to settings
+        validateRelativePath(settings.dailyNoteInjection.resolvedPath(data.date))
+        return data.immutableWakeDateSource() to settings.copy(
+            exportFormats=Collections.unmodifiableSet(settings.exportFormats.toSet()),
+            formatCustomization=settings.formatCustomization.frozenCopy(),
+            metricSelection=settings.metricSelection.copy(enabledMetrics=Collections.unmodifiableSet(settings.metricSelection.enabledMetrics.toSet())),
+            executionSleepCaptureContext=settings.executionSleepCaptureContext.copy(),
+            dailyNoteInjection=settings.dailyNoteInjection.copy(enabledMetrics=Collections.unmodifiableSet(settings.dailyNoteInjection.enabledMetrics.toSet())),
+            individualTracking=settings.individualTracking.copy(
+                enabledMetrics=Collections.unmodifiableSet(settings.individualTracking.enabledMetrics.toSet()),
+                metricConfigs=Collections.unmodifiableMap(settings.individualTracking.metricConfigs.toMap())))
+    }
+
+    private fun ExportSettings.hasWakeDateNote(): Boolean = dailyNoteInjection.enabled &&
+        executionSleepCaptureContext?.sleepDayAttribution == SleepDayAttribution.MORNING_ENDS
+
+    /** Capture before any destination lookup or renderer suspension. */
+    private fun freezeWakeDateNote(data: HealthData, settings: ExportSettings): Pair<HealthData, ExportSettings> {
+        require(ExportEnginePinPlanner.supportsWakeDateDailyNote(settings) &&
+            (!settings.executionEngineAuthorityIsFrozen || settings.executionEnginePin != null))
+        val request = FrozenDailyAggregateExportRequest.capture(data, settings,
+            AndroidExportProfile.android_sleep_v6, ExportEngineMode.rust,
+            DailyAggregateExportIds(UUID.randomUUID().toString(), UUID.randomUUID().toString()))
+        return request.data to settings.copy(
+            exportFormats = Collections.unmodifiableSet(settings.exportFormats.toSet()),
+            formatCustomization = request.customization, metricSelection = request.metricSelection,
+            executionSleepCaptureContext = request.captureContext,
+            dailyNoteInjection = settings.dailyNoteInjection.copy(
+                enabledMetrics = Collections.unmodifiableSet(settings.dailyNoteInjection.enabledMetrics.toSet())))
+    }
+
+    private data class WakeDateNoteOutput(
+        val aggregate: LocalDailyAggregatePlanningResult.Planned,
+        val note: PreparedWakeDateDailyNote,
+        val original: FileExportManager.DurableFileInspection,
+        val result: InjectionResult,
+        val content: String?,
+    )
+
+    private suspend fun materializeWakeDateNote(
+        data: HealthData, settings: ExportSettings, folderUri: String?,
+    ): WakeDateNoteOutput {
+        val note = PreparedWakeDateDailyNote.prepare(data, settings,
+            DailyAggregateExportIds(UUID.randomUUID().toString(), UUID.randomUUID().toString()))
+        val aggregate = dailyAggregatePlanner.plan(data, settings.copy(
+            dailyNoteInjection = settings.dailyNoteInjection.copy(enabled = false),
+            executionEnginePin = note.pin, executionEngineAuthorityIsFrozen = true))
+        require(aggregate is LocalDailyAggregatePlanningResult.Planned &&
+            aggregate.mode == ExportEngineMode.rust && aggregate.plan.profile == note.pin.profile)
+        val noteKey = portableArtifactPathKey(note.relativePath)
+        require(aggregate.plan.items.none { portableArtifactPathKey(it.relativePath) == noteKey }) {
+            "daily note path conflicts with aggregate output"
+        }
+        val original = folderUri?.let { fileExportManager.inspectDurableFile(it, note.relativePath) }
+            ?: FileExportManager.DurableFileInspection.Missing
+        val existing = when (original) {
+            FileExportManager.DurableFileInspection.Missing -> null
+            is FileExportManager.DurableFileInspection.Found -> original.content.decodeToString(throwOnInvalidSequence = true)
+            else -> error("daily note destination is unavailable")
+        }
+        val (result, content) = dailyNoteInjector.injectPrepared(existing, note)
+        require(result != InjectionResult.FAILED)
+        return WakeDateNoteOutput(aggregate, note, original, result, content)
+    }
+
+    private suspend fun exportWakeDateNote(data: HealthData, settings: ExportSettings): Boolean = try {
+        val (frozenData, frozenSettings) = freezeWakeDateNote(data, settings)
+        val folderUri = settingsRepository.getExportFolderUri()
+        if (folderUri == null) false else {
+            val output = materializeWakeDateNote(frozenData, frozenSettings, folderUri)
+            if (settingsRepository.getExportFolderUri() != folderUri) false
+            else if (!commitPlanAndIndividualEntries(folderUri, frozenData, frozenSettings, output.aggregate.plan, output.note.relativePath)) false
+            else if (output.result == InjectionResult.SKIPPED) true
+            else if (settingsRepository.getExportFolderUri() != folderUri) false
+            else commitScopedNote(folderUri, output.note.relativePath, output.original, output.content)
+        }
+    } catch (error: Throwable) {
+        rethrowCancellationOrFatal(error)
+        false
+    }
+
+    private fun commitScopedNote(folderUri: String, relativePath: String,
+        original: FileExportManager.DurableFileInspection, content: String?): Boolean {
+        val latest = fileExportManager.inspectDurableFile(folderUri, relativePath)
+        val expectedId = when (original) {
+            FileExportManager.DurableFileInspection.Missing -> {
+                if (latest != FileExportManager.DurableFileInspection.Missing) return false
+                null
+            }
+            is FileExportManager.DurableFileInspection.Found -> {
+                if (latest !is FileExportManager.DurableFileInspection.Found ||
+                    latest.documentId != original.documentId || !latest.content.contentEquals(original.content)) return false
+                original.documentId
+            }
+            else -> return false
+        }
+        if (content == null) return false
+        val bound = fileExportManager.bindDurableFile(folderUri, relativePath, "text/markdown",
+            expectedDocumentId = expectedId, requireMissing = expectedId == null) ?: return false
+        return fileExportManager.overwriteDurableBoundFile(folderUri, relativePath,
+            bound.documentId, content.encodeToByteArray())
+    }
+
+    private suspend fun previewWakeDateNote(data: HealthData, settings: ExportSettings): ExportPreviewDay = try {
+        val (frozenData, frozenSettings) = freezeWakeDateNote(data, settings)
+        val folderUri = settingsRepository.getExportFolderUri()
+        val output = materializeWakeDateNote(frozenData, frozenSettings, folderUri)
+        val preview = previewPlan(frozenData, output.aggregate, frozenSettings, folderUri)
+        preview.copy(sideEffects = preview.sideEffects + listOf(ExportPreviewSideEffect(
+            type = ExportPreviewSideEffectType.DAILY_NOTE, relativePath = output.note.relativePath,
+            action = when (output.result) {
+                InjectionResult.CREATED -> ExportPreviewSideEffectAction.CREATE_DAILY_NOTE
+                InjectionResult.UPDATED -> ExportPreviewSideEffectAction.UPDATE_DAILY_NOTE
+                InjectionResult.SKIPPED -> ExportPreviewSideEffectAction.SKIP_DAILY_NOTE
+                InjectionResult.FAILED -> ExportPreviewSideEffectAction.DAILY_NOTE_FAILED
+            },
+            byteCount = output.content?.encodeToByteArray()?.size ?: 0,
+            content = output.content, wouldWrite = output.content != null)))
+    } catch (error: Throwable) {
+        rethrowCancellationOrFatal(error)
+        planningFailurePreview(data)
+    }
+
+    private suspend fun exportLegacy(
         folderUri: String,
         data: HealthData,
         settings: ExportSettings,
@@ -643,6 +794,14 @@ class ExportRepositoryImpl(
         val writeMode = settings.writeMode.toFileWriteMode()
         val aggregateFiles = buildAggregateFiles(data, settings)
         if (aggregateFiles.isEmpty()) return false
+        val sideEffects = buildSideEffects(folderUri, data, settings)
+        if (sideEffects.any { it.action == ExportPreviewSideEffectAction.DAILY_NOTE_FAILED }) return false
+        if (sideEffects.any { it.scopedNoteBaseline != null }) {
+            val paths = aggregateFiles.map { it.relativePath } + sideEffects.filter { it.wouldWrite }.map { it.relativePath }
+            try { paths.forEach(::validateRelativePath) } catch (_: IllegalArgumentException) { return false }
+            if (paths.map(::portableArtifactPathKey).distinct().size != paths.size ||
+                settingsRepository.getExportFolderUri() != folderUri) return false
+        }
 
         val aggregateSuccess = aggregateFiles.all { planned ->
             fileExportManager.writeFile(
@@ -655,8 +814,12 @@ class ExportRepositoryImpl(
             )
         }
 
-        val sideEffectSuccess = buildSideEffects(folderUri, data, settings).all { planned ->
-            if (!planned.wouldWrite) {
+        if (!aggregateSuccess) return false
+        val sideEffectSuccess = sideEffects.all { planned ->
+            if (planned.scopedNoteBaseline != null) {
+                settingsRepository.getExportFolderUri() == folderUri &&
+                    commitScopedNote(folderUri, planned.relativePath, planned.scopedNoteBaseline, planned.content)
+            } else if (!planned.wouldWrite) {
                 true
             } else {
                 fileExportManager.writeFileAtRelativePath(
@@ -692,9 +855,18 @@ class ExportRepositoryImpl(
             )
         }
 
-        val sideEffects = buildSideEffects(folderUri, data, settings).map { planned ->
+        val plannedSideEffects = buildSideEffects(folderUri, data, settings)
+        if (plannedSideEffects.any { it.action == ExportPreviewSideEffectAction.DAILY_NOTE_FAILED }) {
+            return planningFailurePreview(data)
+        }
+        if (plannedSideEffects.any { it.scopedNoteBaseline != null }) {
+            val paths = files.map { it.relativePath } + plannedSideEffects.filter { it.wouldWrite }.map { it.relativePath }
+            try { paths.forEach(::validateRelativePath) } catch (_: IllegalArgumentException) { return planningFailurePreview(data) }
+            if (paths.map(::portableArtifactPathKey).distinct().size != paths.size) return planningFailurePreview(data)
+        }
+        val sideEffects = plannedSideEffects.map { planned ->
             val previewContent = planned.content?.let { content ->
-                if (planned.wouldWrite) {
+                if (planned.wouldWrite && planned.scopedNoteBaseline == null) {
                     contentAfterWriteMode(
                         folderUri = folderUri,
                         relativePath = planned.relativePath,
@@ -728,7 +900,24 @@ class ExportRepositoryImpl(
         )
     }
 
-    private fun commitAuthoritativePlan(folderUri: String, plan: ExportArtifactPlan): Boolean {
+    private fun distinctOutputPaths(plan: ExportArtifactPlan, extras: List<String>): Boolean {
+        val paths = plan.items.map { it.relativePath } + extras
+        return try {
+            paths.forEach(::validateRelativePath)
+            paths.map(::portableArtifactPathKey).distinct().size == paths.size
+        } catch (_: IllegalArgumentException) { false }
+    }
+
+    private fun commitPlanAndIndividualEntries(folderUri: String, data: HealthData, settings: ExportSettings,
+        plan: ExportArtifactPlan, notePath: String? = null): Boolean {
+        val entries = individualEntrySideEffects(data, settings)
+        if (!distinctOutputPaths(plan, entries.map { it.relativePath } + listOfNotNull(notePath))) return false
+        if (!commitAuthoritativePlan(folderUri, plan, settings.writeMode)) return false
+        return entries.all { entry -> fileExportManager.writeFileAtRelativePath(folderUri, entry.relativePath,
+            entry.content.orEmpty(), settings.writeMode.toFileWriteMode()) }
+    }
+
+    private fun commitAuthoritativePlan(folderUri: String, plan: ExportArtifactPlan, writeMode: SettingsWriteMode): Boolean {
         val barrier = ExportCommitBarrier()
         val writes = plan.items.map { item ->
             if (item.writeMode != ExportArtifactWriteMode.overwrite) {
@@ -752,7 +941,7 @@ class ExportRepositoryImpl(
                     folderUriString = folderUri,
                     relativePath = write.relativePath,
                     content = write.content,
-                    writeMode = FileExportManager.WriteMode.OVERWRITE,
+                    writeMode = writeMode.toFileWriteMode(),
                 )
             } catch (error: Throwable) {
                 if (error is CancellationException || error.isFatalExportEngineFailure()) {
@@ -778,22 +967,29 @@ class ExportRepositoryImpl(
     private fun previewPlan(
         data: HealthData,
         selection: LocalDailyAggregatePlanningResult.Planned,
+        settings: ExportSettings, folderUri: String?,
     ): ExportPreviewDay {
         if (selection.plan.items.size != selection.formats.size) return planningFailurePreview(data)
         val files = selection.plan.items.zip(selection.formats).map { (item, format) ->
             val bytes = item.content
             val content = bytes.decodeToString()
             if (!content.encodeToByteArray().contentEquals(bytes)) return planningFailurePreview(data)
+            val preview = contentAfterWriteMode(folderUri, item.relativePath, format.fileExtension, content, settings)
             ExportPreviewFile(
                 format = format,
                 relativePath = item.relativePath,
-                byteCount = bytes.size,
-                content = content,
+                byteCount = preview.encodeToByteArray().size,
+                content = preview,
             )
         }
+        val entries = individualEntrySideEffects(data, settings)
+        if (!distinctOutputPaths(selection.plan, entries.map { it.relativePath })) return planningFailurePreview(data)
         return ExportPreviewDay(
             date = data.date,
             files = files,
+            sideEffects = entries.map { entry -> ExportPreviewSideEffect(type = entry.type, relativePath = entry.relativePath,
+                action = entry.action, content = contentAfterWriteMode(folderUri, entry.relativePath, "md", entry.content.orEmpty(), settings),
+                wouldWrite = true) },
             issues = if (files.isEmpty()) {
                 listOf(ExportPreviewIssue(ExportPreviewIssueKind.NO_FILES_WRITTEN))
             } else {
@@ -882,12 +1078,28 @@ class ExportRepositoryImpl(
         if (!injectionSettings.enabled) return null
 
         val relativePath = injectionSettings.resolvedPath(data.date)
-        val existing = folderUri?.let { fileExportManager.readFileAtRelativePath(it, relativePath) }
+        fun failed() = PlannedSideEffect(ExportPreviewSideEffectType.DAILY_NOTE,relativePath,
+            ExportPreviewSideEffectAction.DAILY_NOTE_FAILED,null,false)
+        val strictNight = settings.executionSleepCaptureContext?.sleepDayAttribution == SleepDayAttribution.NIGHT_BEGINS
+        val baseline = if (strictNight && folderUri != null) {
+            try { validateRelativePath(relativePath); fileExportManager.inspectDurableFile(folderUri,relativePath) }
+            catch (error: Exception) { rethrowCancellationOrFatal(error); return failed() }
+        } else null
+        val existing = try { when (baseline) {
+            null -> folderUri?.let { fileExportManager.readFileAtRelativePath(it, relativePath) }
+            FileExportManager.DurableFileInspection.Missing -> null
+            is FileExportManager.DurableFileInspection.Found -> baseline.content.decodeToString(throwOnInvalidSequence=true)
+            else -> return failed()
+        } } catch (error: Exception) { rethrowCancellationOrFatal(error); return failed() }
+        val scoped = existing?.let(dailyNoteInjector::hasScopedCapture) == true
         val (result, content) = dailyNoteInjector.inject(
             existingContent = existing,
             data = data,
             settings = injectionSettings,
             customization = settings.formatCustomization,
+            metricSelection = settings.metricSelection,
+            captureContext = settings.executionSleepCaptureContext,
+            includeGranularData = settings.includeGranularData,
         )
 
         return PlannedSideEffect(
@@ -901,6 +1113,7 @@ class ExportRepositoryImpl(
             },
             content = content,
             wouldWrite = result == InjectionResult.UPDATED || result == InjectionResult.CREATED,
+            scopedNoteBaseline = baseline.takeIf { scoped },
         )
     }
 
@@ -1058,6 +1271,7 @@ class ExportRepositoryImpl(
         val action: ExportPreviewSideEffectAction,
         val content: String?,
         val wouldWrite: Boolean,
+        val scopedNoteBaseline: FileExportManager.DurableFileInspection? = null,
     )
 
     private fun rethrowCancellationOrFatal(error: Throwable) {

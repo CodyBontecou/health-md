@@ -32,6 +32,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.healthmd.R
+import com.healthmd.domain.model.SleepDayAttribution
 import com.healthmd.presentation.common.GeistCard
 import com.healthmd.presentation.common.SectionLabel
 import com.healthmd.presentation.theme.AppColors
@@ -72,6 +73,7 @@ internal object ExportDateControlTags {
     const val PRESETS = "export.dateRange.presets"
     const val START_DATE = "export.dateRange.start"
     const val END_DATE = "export.dateRange.end"
+    const val SLEEP_GUIDANCE = "export.dateRange.sleepGuidance"
     fun preset(option: DateRangeOption) = "export.dateRange.preset.${option.name}"
 }
 
@@ -85,6 +87,7 @@ internal fun DateRangeSelectionSection(
     onStartDateClick: () -> Unit,
     onEndDateClick: () -> Unit,
     showSleepGuidance: Boolean = false,
+    sleepDayAttribution: SleepDayAttribution = SleepDayAttribution.DEFAULT,
 ) {
     val options = listOf(
         DateRangeOption.Today to stringResource(R.string.date_option_today),
@@ -115,10 +118,11 @@ internal fun DateRangeSelectionSection(
 
             if (showSleepGuidance) {
                 Text(
-                    text = stringResource(R.string.export_sleep_date_guidance),
+                    text = stringResource(if (sleepDayAttribution == SleepDayAttribution.MORNING_ENDS)
+                        R.string.export_sleep_date_guidance_morning_ends else R.string.export_sleep_date_guidance),
                     style = MaterialTheme.typography.bodySmall,
                     color = AppColors.textSecondary,
-                    modifier = Modifier.padding(top = Spacing.md),
+                    modifier = Modifier.padding(top = Spacing.md).testTag(ExportDateControlTags.SLEEP_GUIDANCE),
                 )
             }
 

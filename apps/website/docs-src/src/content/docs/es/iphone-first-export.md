@@ -14,7 +14,7 @@ Sigue esta guía para producir una exportación pequeña y verificable antes de 
 
 Necesitas:
 
-- Health.md instalado en un iPhone que contenga datos de Apple Health;
+- [Health.md en el App Store](https://apps.apple.com/app/health-md/id6757763969) instalado en un iPhone que contenga datos de Apple Health;
 - permiso para leer al menos una categoría de Apple Health;
 - un destino de Archivos con permiso de escritura, como iCloud Drive, En mi iPhone o una bóveda de Obsidian.
 
