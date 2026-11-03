@@ -43,6 +43,12 @@ The owner updated the Apple Lifetime prices in App Store Connect. An `asc iap pr
 
 Each schedule lists 175 manual territory prices with no start or end date. The readback did not audit non-US price points against the October 25 regional schedule, and it does not record when the owner made the change; use the ASC price history for the effective date. Product IDs, types, Family Sharing flags and `APPROVED` states are unchanged. Google Play's `health_md_premium_lifetime` remains $19.99 US.
 
+### Android production promotion — November 3, 2026
+
+On the owner's instruction, the protected [Android Promote production workflow](https://github.com/CodyBontecou/health-md/actions/runs/41649394400) promoted the exact Internal Testing artifact for `android/v3.5.0+45` (`a296ffeae821b6f94291ac8fed605d3f32153c5a`, version 3.5.0, code 45) to the production track at full rollout and submitted it for review. Its verification step read back `RELEASE_LIFECYCLE_STATE_IN_REVIEW`; the promotion receipt is retained with that run. Production served 1.9.4 (ten free exports, $19.99 Lifetime only) until this release is approved.
+
+The owner accepted the remaining code-45 qualification gaps recorded in the [Android billing guide](../../../android/GOOGLE_PLAY_BILLING_SETUP.md) and [PR #289](https://github.com/CodyBontecou/health-md/pull/289): genuine pre-cutoff grandfathered installations, older paid Lifetime owner upgrades, and injected ownership-query failures were not exercised on a device. After Google approves the release, the owner will raise `health_md_premium_lifetime` to $49.99 US in Play Console; record that readback here when it lands.
+
 ## Entitlement preservation
 
 Keep every existing paid-app and lifetime entitlement, including restore/reinstall/device migration and family-shared lifetime transactions. Preserve the previously granted legacy cohort; do not expand the cutoff to all current free installs.
