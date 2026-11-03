@@ -430,6 +430,10 @@ Geist is Vercel’s design system for building consistent, developer-focused int
 
 This is the Dark theme. The Light theme uses the same token names with different values and lives at `/design.md`. Colors are sRGB hex with Display P3 equivalents.
 
+## Signal paywall accessibility
+
+The Signal carousel keeps its footer fixed at standard text sizes in tall windows. At the reading font scale or in a window shorter than the small breakpoint, the carousel and footer share a scrolling column. Each carousel page retains one viewport of reading space and its own scrolling content. Purchase, Restore, and legal links must remain reachable without reducing text size or hiding disclosures.
+
 ## Colors
 
 Each non-background scale runs 10 steps (`100`–`1000`), and the step encodes intent, not just lightness:

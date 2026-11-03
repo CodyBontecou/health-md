@@ -2,7 +2,7 @@
 
 ## Current release ownership
 
-The current Google Play release scope is **phone-only**. `release-scope.json` is the machine-readable source of truth: Android `3.5.0` publishes `:app` version code `44`, while the `:wear` artifact is deferred and is not uploaded, promoted, or advertised by the phone app.
+The current Google Play release scope is **phone-only**. `release-scope.json` is the machine-readable source of truth: Android `3.5.0` publishes `:app` version code `46`, while the `:wear` artifact is deferred and is not uploaded, promoted, or advertised by the phone app.
 
 Gradle Play Publisher remains removed. Do not upload, promote, submit review, or replace Play metadata with ad hoc Gradle, Fastlane, browser, or local API commands. The only supported mutation paths are:
 

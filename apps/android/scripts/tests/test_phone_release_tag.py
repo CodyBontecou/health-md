@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Exercise the actual release-tag validator and promotion shell with local Git."""
 import os
+import json
 from pathlib import Path
 import shutil
 import subprocess
@@ -44,8 +45,12 @@ class PhoneReleaseTagTest(unittest.TestCase):
             shutil.copy(VALIDATOR, android / "scripts" / VALIDATOR.name)
             (android / "app").mkdir()
             (android / "app/build.gradle.kts").write_text('versionName = "3.5.0"\nversionCode = 44\n')
-            scope = (ROOT / "apps/android/release-scope.json").read_text()
-            (android / "release-scope.json").write_text(scope)
+            scope = json.loads((ROOT / "apps/android/release-scope.json").read_text())
+            # This isolated repository always represents build 44, independently
+            # of the current product release candidate.
+            scope["releaseVersionName"] = "3.5.0"
+            scope["googlePlay"]["phone"]["versionCode"] = 44
+            (android / "release-scope.json").write_text(json.dumps(scope))
             git("add", ".")
             git("commit", "-m", "source")
             sha = git("rev-parse", "HEAD")

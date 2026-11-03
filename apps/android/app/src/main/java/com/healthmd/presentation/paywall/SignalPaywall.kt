@@ -12,6 +12,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -94,6 +95,8 @@ import com.healthmd.R
 import com.healthmd.domain.repository.PurchaseOffer
 import com.healthmd.domain.repository.PurchasePlan
 import com.healthmd.presentation.theme.AppColors
+import com.healthmd.presentation.theme.GeistAdaptiveLayout
+import com.healthmd.presentation.theme.GeistBreakpoints
 import com.healthmd.presentation.theme.GeistRadii
 import com.healthmd.presentation.theme.GeistSizes
 import com.healthmd.presentation.theme.GeistType
@@ -143,106 +146,116 @@ internal fun SignalPaywallCarousel(
     val scope = rememberCoroutineScope()
     fun goTo(page: Int) { scope.launch { pagerState.animateScrollToPage(page) } }
 
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .background(AppColors.bgPrimary),
-    ) {
-        if (onDismiss != null) {
-            Row(
-                modifier = Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = Spacing.xs),
-                horizontalArrangement = Arrangement.End,
-            ) {
-                IconButton(onClick = onDismiss, enabled = !isBusy) {
-                    Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.close), tint = AppColors.textSecondary)
-                }
-            }
-        } else {
-            Spacer(Modifier.statusBarsPadding())
-        }
-
-        HorizontalPager(state = pagerState, modifier = Modifier.weight(1f).fillMaxWidth()) { page ->
-            Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-                when (slides[page]) {
-                    SignalSlide.ARCHIVE -> ArchiveSlide()
-                    SignalSlide.TRIAL -> TrialSlide(trialOffer)
-                    SignalSlide.PLANS -> PlansSlide(
-                        offers = orderedOffers,
-                        selected = selected,
-                        onSelect = { selectedPlan = it },
-                        enabled = !isBusy,
-                    )
-                }
-            }
-        }
-
-        HorizontalDivider(color = AppColors.borderSubtle)
+    BoxWithConstraints(modifier.fillMaxSize()) {
+        val scrollWholePaywall = LocalDensity.current.fontScale >= GeistAdaptiveLayout.readingFontScale ||
+            maxHeight.value < GeistBreakpoints.small
+        val pageHeight = maxHeight
         Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .background(AppColors.bgSecondary)
-                .navigationBarsPadding()
-                .padding(horizontal = Spacing.lg, vertical = Spacing.xs),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+                .fillMaxSize()
+                .background(AppColors.bgPrimary)
+                .then(if (scrollWholePaywall) Modifier.verticalScroll(rememberScrollState()) else Modifier),
         ) {
-            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs), modifier = Modifier.fillMaxWidth()) {
-                slides.forEachIndexed { index, slide ->
-                    SignalStep(
-                        number = index + 1,
-                        title = stringResource(slide.titleRes),
-                        isReached = index <= pagerState.currentPage,
-                        isCurrent = index == pagerState.currentPage,
-                        onClick = { goTo(index) },
-                        modifier = Modifier.weight(1f),
-                    )
+            if (onDismiss != null) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = Spacing.xs),
+                    horizontalArrangement = Arrangement.End,
+                ) {
+                    IconButton(onClick = onDismiss, enabled = !isBusy) {
+                        Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.close), tint = AppColors.textSecondary)
+                    }
+                }
+            } else {
+                Spacer(Modifier.statusBarsPadding())
+            }
+
+            HorizontalPager(
+                state = pagerState,
+                modifier = (if (scrollWholePaywall) Modifier.height(pageHeight) else Modifier.weight(1f)).fillMaxWidth(),
+            ) { page ->
+                Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+                    when (slides[page]) {
+                        SignalSlide.ARCHIVE -> ArchiveSlide()
+                        SignalSlide.TRIAL -> TrialSlide(trialOffer)
+                        SignalSlide.PLANS -> PlansSlide(
+                            offers = orderedOffers,
+                            selected = selected,
+                            onSelect = { selectedPlan = it },
+                            enabled = !isBusy,
+                        )
+                    }
                 }
             }
 
-            if (errorMessage != null) {
-                Text(errorMessage, style = GeistType.copy13, color = AppColors.error, textAlign = TextAlign.Center)
-            }
-            Text(
-                text = selected?.let { footerLine(it) } ?: stringResource(R.string.billing_error_product_unavailable),
-                style = GeistType.copy13,
-                color = AppColors.textSecondary,
-                textAlign = TextAlign.Center,
-            )
-            // Without offers the primary action retries the catalog instead of sitting disabled.
-            Button(
-                onClick = { if (selected != null) onPlanPurchase(selected.plan) else onRetry() },
-                enabled = !isBusy,
-                modifier = Modifier.fillMaxWidth().heightIn(min = GeistSizes.controlLarge + Spacing.xs),
-                shape = CircleShape,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = AppColors.accent,
-                    contentColor = AppColors.onAccent,
-                    disabledContainerColor = AppColors.borderSubtle,
-                    disabledContentColor = AppColors.textSecondary,
-                ),
+            HorizontalDivider(color = AppColors.borderSubtle)
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(AppColors.bgSecondary)
+                    .navigationBarsPadding()
+                    .padding(horizontal = Spacing.lg, vertical = Spacing.xs),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(Spacing.xs),
             ) {
-                if (isPurchasing) {
-                    CircularProgressIndicator(Modifier.size(20.dp), color = AppColors.onAccent, strokeWidth = 2.dp)
-                } else {
-                    Text(ctaText(selected), style = GeistType.button16, textAlign = TextAlign.Center)
-                }
-            }
-            val uriHandler = LocalUriHandler.current
-            // The same links on every slide keep the footer from shifting between pages.
-            FlowRow(horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxWidth()) {
-                if (isRestoring) {
-                    Row(Modifier.heightIn(min = GeistSizes.minimumTouchTarget), verticalAlignment = Alignment.CenterVertically) {
-                        CircularProgressIndicator(Modifier.size(16.dp), color = AppColors.accent, strokeWidth = 2.dp)
-                        Spacer(Modifier.size(Spacing.xs))
-                        Text(stringResource(R.string.paywall_restoring), style = GeistType.button14, color = AppColors.accent)
+                Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs), modifier = Modifier.fillMaxWidth()) {
+                    slides.forEachIndexed { index, slide ->
+                        SignalStep(
+                            number = index + 1,
+                            title = stringResource(slide.titleRes),
+                            isReached = index <= pagerState.currentPage,
+                            isCurrent = index == pagerState.currentPage,
+                            onClick = { goTo(index) },
+                            modifier = Modifier.weight(1f),
+                        )
                     }
-                } else {
-                    SignalLink(stringResource(R.string.paywall_restore), enabled = !isBusy, onClick = onRestore)
                 }
-                SignalLink(stringResource(R.string.paywall_terms)) { uriHandler.openUri("https://healthmd.app/terms-of-service.html") }
-                SignalLink(stringResource(R.string.paywall_privacy)) { uriHandler.openUri("https://healthmd.app/privacy-policy.html") }
+
+                if (errorMessage != null) {
+                    Text(errorMessage, style = GeistType.copy13, color = AppColors.error, textAlign = TextAlign.Center)
+                }
+                Text(
+                    text = selected?.let { footerLine(it) } ?: stringResource(R.string.billing_error_product_unavailable),
+                    style = GeistType.copy13,
+                    color = AppColors.textSecondary,
+                    textAlign = TextAlign.Center,
+                )
+                // Without offers the primary action retries the catalog instead of sitting disabled.
+                Button(
+                    onClick = { if (selected != null) onPlanPurchase(selected.plan) else onRetry() },
+                    enabled = !isBusy,
+                    modifier = Modifier.fillMaxWidth().heightIn(min = GeistSizes.controlLarge + Spacing.xs),
+                    shape = CircleShape,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = AppColors.accent,
+                        contentColor = AppColors.onAccent,
+                        disabledContainerColor = AppColors.borderSubtle,
+                        disabledContentColor = AppColors.textSecondary,
+                    ),
+                ) {
+                    if (isPurchasing) {
+                        CircularProgressIndicator(Modifier.size(20.dp), color = AppColors.onAccent, strokeWidth = 2.dp)
+                    } else {
+                        Text(ctaText(selected), style = GeistType.button16, textAlign = TextAlign.Center)
+                    }
+                }
+                val uriHandler = LocalUriHandler.current
+                // The same links on every slide keep the footer from shifting between pages.
+                FlowRow(horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxWidth()) {
+                    if (isRestoring) {
+                        Row(Modifier.heightIn(min = GeistSizes.minimumTouchTarget), verticalAlignment = Alignment.CenterVertically) {
+                            CircularProgressIndicator(Modifier.size(16.dp), color = AppColors.accent, strokeWidth = 2.dp)
+                            Spacer(Modifier.size(Spacing.xs))
+                            Text(stringResource(R.string.paywall_restoring), style = GeistType.button14, color = AppColors.accent)
+                        }
+                    } else {
+                        SignalLink(stringResource(R.string.paywall_restore), enabled = !isBusy, onClick = onRestore)
+                    }
+                    SignalLink(stringResource(R.string.paywall_terms)) { uriHandler.openUri("https://healthmd.app/terms-of-service.html") }
+                    SignalLink(stringResource(R.string.paywall_privacy)) { uriHandler.openUri("https://healthmd.app/privacy-policy.html") }
+                }
             }
         }
+
     }
 
     LaunchedEffect(slides.size) {
