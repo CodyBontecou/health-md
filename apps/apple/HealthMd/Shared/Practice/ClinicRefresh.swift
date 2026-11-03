@@ -5,7 +5,7 @@ import Darwin
 #endif
 
 /// Native-local records only. No credential, health payload or externally supplied URL is stored.
-struct ClinicRefreshRequest: Codable, Equatable {
+struct ClinicRefreshRequest: Codable, Equatable, Sendable {
     let requestID: String
     let subjectID: String
     let deviceID: String
@@ -15,12 +15,46 @@ struct ClinicRefreshRequest: Codable, Equatable {
     let start: Date
     let end: Date
     let expiresAt: Date
+    /// Explicit patient-approved owner-day interval. Nil retains exact timestamp semantics.
+    let ownerDayZone: String?
+    init(requestID: String, subjectID: String, deviceID: String, connectionID: String, profileID: String,
+         revision: String, start: Date, end: Date, expiresAt: Date, ownerDayZone: String? = nil) {
+        self.requestID = requestID; self.subjectID = subjectID; self.deviceID = deviceID; self.connectionID = connectionID
+        self.profileID = profileID; self.revision = revision; self.start = start; self.end = end
+        self.expiresAt = expiresAt; self.ownerDayZone = ownerDayZone
+    }
 
     func validate(now: Date) throws {
         guard [requestID, subjectID, deviceID, connectionID, profileID, revision].allSatisfy({
             !$0.isEmpty && $0.utf8.count <= 200 && !$0.unicodeScalars.contains(where: { CharacterSet.controlCharacters.contains($0) })
-        }), start < end, end <= now, end.timeIntervalSince(start) <= 366 * 86400,
-        expiresAt > now else { throw ClinicNativeError.unavailable }
+        }), start < end, start <= now, expiresAt > now else { throw ClinicNativeError.unavailable }
+        if let ownerDayZone {
+            guard !ownerDayZone.isEmpty, ownerDayZone.utf8.count <= 100, let zone = TimeZone(identifier: ownerDayZone) else { throw ClinicNativeError.unavailable }
+            var calendar = Calendar(identifier: .gregorian); calendar.timeZone = zone
+            guard calendar.startOfDay(for: start) == start, calendar.startOfDay(for: end) == end,
+                  let tomorrow = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: now)), end <= tomorrow,
+                  let days = calendar.dateComponents([.day], from: start, to: end).day, (1...366).contains(days)
+            else { throw ClinicNativeError.unavailable }
+        } else {
+            guard end <= now, end.timeIntervalSince(start) <= 366 * 86400 else { throw ClinicNativeError.unavailable }
+        }
+    }
+    /// Existing exporters own complete days. Never round a timestamp request or change its approved zone.
+    func ownerDates(timeZoneIdentifier: String, now: Date = Date()) throws -> [Date] {
+        try validate(now: now)
+        if let ownerDayZone, ownerDayZone != timeZoneIdentifier { throw ClinicNativeError.profileChanged }
+        guard let zone = TimeZone(identifier: timeZoneIdentifier) else { throw ClinicNativeError.unavailable }
+        var calendar = Calendar(identifier: .gregorian); calendar.timeZone = zone
+        guard calendar.startOfDay(for: start) == start, calendar.startOfDay(for: end) == end
+        else { throw ClinicNativeError.unavailable }
+        var dates: [Date] = []; var day = start
+        while day < end {
+            dates.append(day)
+            guard dates.count <= 366, let next = calendar.date(byAdding: .day, value: 1, to: day), next > day
+            else { throw ClinicNativeError.unavailable }
+            day = next
+        }
+        return dates
     }
 }
 
@@ -28,9 +62,9 @@ enum ClinicNativeError: Error { case unavailable, interrupted, profileChanged, i
 
 protocol ClinicStoredRecord: Codable { var storageVersion: Int { get } }
 
-struct ClinicRefreshRecord: ClinicStoredRecord, Equatable {
+struct ClinicRefreshRecord: ClinicStoredRecord, Equatable, Sendable {
     var storageVersion = 1
-    enum State: String, Codable { case requested, executing, uploaded, failed }
+    enum State: String, Codable, Sendable { case requested, executing, uploaded, failed }
     let request: ClinicRefreshRequest
     var state: State
     var exportID: String?
@@ -63,6 +97,7 @@ final class ClinicPrivateStore {
         let hash = SHA256.hash(data: Data(key.utf8)).map { String(format: "%02x", $0) }.joined()
         return root.appendingPathComponent(hash + ".json")
     }
+    func executionIdentity(_ key: String) -> String { path(key).standardizedFileURL.resolvingSymlinksInPath().path }
     func load<T: ClinicStoredRecord>(_ type: T.Type, key: String) throws -> T? {
         let file = path(key)
         guard manager.fileExists(atPath: file.path) || (try? manager.attributesOfItem(atPath: file.path)[.type]) != nil else { return nil }
@@ -105,6 +140,12 @@ final class ClinicPrivateStore {
 /// Production has no adapter and remains behind the existing unqualified Practice gate.
 @MainActor
 final class ClinicForegroundRefresh {
+    private final class ActiveExecution {
+        let request: ClinicRefreshRequest
+        var waiters: [CheckedContinuation<ClinicRefreshRecord, Error>] = []
+        init(_ request: ClinicRefreshRequest) { self.request = request }
+    }
+    private static var active: [String: ActiveExecution] = [:]
     private let store: ClinicPrivateStore
     private let enabled: () -> Bool
     init(store: ClinicPrivateStore, enabled: @escaping () -> Bool = { PracticeFeaturePolicy.current.isEnabled }) {
@@ -120,8 +161,35 @@ final class ClinicForegroundRefresh {
     ) async throws -> ClinicRefreshRecord {
         guard enabled() else { throw ClinicNativeError.unavailable }
         let key = ["refresh", request.subjectID, request.deviceID, request.requestID].joined(separator: "\u{0}")
-        // Reauthorize acknowledgment replay, but do not require Health permission or an unexpired request to report existing bytes.
+        // Retry callers authenticate independently. The owner alone executes and reports outcomes.
         try await authenticate()
+        let identity = store.executionIdentity(key)
+        if let execution = Self.active[identity] {
+            guard execution.request == request else { throw ClinicNativeError.profileChanged }
+            return try await withCheckedThrowingContinuation { execution.waiters.append($0) }
+        }
+        let execution = ActiveExecution(request)
+        Self.active[identity] = execution
+        do {
+            let result = try await runOwned(request: request, key: key, now: now, authenticate: authenticate,
+                                            authorize: authorize, export: export, report: report)
+            Self.active.removeValue(forKey: identity)
+            for waiter in execution.waiters { waiter.resume(returning: result) }
+            return result
+        } catch {
+            Self.active.removeValue(forKey: identity)
+            for waiter in execution.waiters { waiter.resume(throwing: error) }
+            throw error
+        }
+    }
+    private func runOwned(
+        request: ClinicRefreshRequest, key: String, now: @escaping @MainActor () -> Date,
+        authenticate: @escaping @MainActor () async throws -> Void,
+        authorize: @escaping @MainActor () async throws -> Void,
+        export: @MainActor (_ check: @escaping @MainActor () async throws -> Void) async throws -> String,
+        report: @MainActor (ClinicRefreshRecord) async throws -> Void
+    ) async throws -> ClinicRefreshRecord {
+        // No live in-process owner exists here. An executing record therefore denotes interrupted work.
         if var old = try store.load(ClinicRefreshRecord.self, key: key), old.state != .requested {
             guard old.request == request else { throw ClinicNativeError.profileChanged }
             if old.state == .executing { old.state = .failed; try store.save(old, key: key) }

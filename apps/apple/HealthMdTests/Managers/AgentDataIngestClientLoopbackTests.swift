@@ -24,6 +24,8 @@ enum GatewayBehavior {
     case reject(AgentDataIngestRejectionCode)
     /// Answer a non-2xx transport-level rejection.
     case transportStatus(Int)
+    /// Test-only redirect response shared by endpoint-binding wire regressions.
+    case transportRedirect(Int, String)
     /// Accept the connection, read nothing, and close without a receipt.
     case closeWithoutReceipt
     /// Behave per-request from a queue; the last entry repeats.
@@ -318,6 +320,8 @@ final class LoopbackGateway: @unchecked Sendable {
             )
         case .transportStatus(let status):
             respond(connection, status: status, body: Data("{\"code\":\"gateway\",\"message\":\"transport\"}".utf8))
+        case .transportRedirect(let status, let location):
+            respond(connection, status: status, body: Data(), headers: ["Location": location])
         case .closeWithoutReceipt:
             connection.cancel()
         case .scripted:
@@ -325,10 +329,11 @@ final class LoopbackGateway: @unchecked Sendable {
         }
     }
 
-    private func respond(_ connection: NWConnection, status: Int, body: Data) {
+    private func respond(_ connection: NWConnection, status: Int, body: Data, headers: [String: String] = [:]) {
         var head = "HTTP/1.1 \(status) \(status == 200 ? "OK" : "Error")\r\n"
         head += "Content-Length: \(body.count)\r\n"
         head += "Content-Type: application/json\r\n"
+        for (name, value) in headers { head += "\(name): \(value)\r\n" }
         head += "Connection: close\r\n\r\n"
         var payload = Data(head.utf8)
         payload.append(body)

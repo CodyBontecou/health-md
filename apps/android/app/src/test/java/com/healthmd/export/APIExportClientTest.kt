@@ -3,6 +3,8 @@ package com.healthmd.export
 import com.google.common.truth.Truth.assertThat
 import com.healthmd.data.export.APIExportClient
 import com.healthmd.data.export.APIExportClientException
+import com.healthmd.data.export.APIExportUploader
+import com.healthmd.data.export.APIExportUploadResult
 import com.healthmd.data.export.APIExportRequestHeader
 import com.healthmd.domain.model.ExportFailureReason
 import kotlinx.coroutines.test.runTest
@@ -149,4 +151,43 @@ class APIExportClientTest {
         assertThat(redirectedRequest.getHeader("Authorization")).isEqualTo("Bearer secret")
         assertThat(redirectedRequest.body.readUtf8()).contains("healthmd.api_export")
     }
+    @Test
+    fun endpointBoundUploadRejects307And308WithoutSendingToRedirectTarget() = runTest {
+        val target = MockWebServer(); target.start()
+        try {
+            for (status in listOf(307, 308)) {
+                for (location in listOf(server.url("/unreviewed").toString(), target.url("/unreviewed").toString())) {
+                    val before = server.requestCount
+                    server.enqueue(MockResponse().setResponseCode(status).addHeader("Location", location))
+                    val error = runCatching {
+                        client.uploadEndpointBound(server.url("/approved").toString(), "{\"synthetic\":true}",
+                            "Bearer synthetic", emptyList())
+                    }.exceptionOrNull() as APIExportClientException
+                    assertThat(error.statusCode).isEqualTo(status)
+                    assertThat(error.failureReason).isEqualTo(ExportFailureReason.API_REJECTED)
+                    assertThat(error.retryable).isFalse()
+                    assertThat(server.requestCount).isEqualTo(before + 1)
+                    assertThat(server.takeRequest().path).isEqualTo("/approved")
+                    assertThat(target.requestCount).isEqualTo(0)
+                }
+            }
+        } finally { target.shutdown() }
+    }
+
+    @Test
+    fun endpointBoundUploadFailsClosedForUploaderWithoutRedirectGuarantee() = runTest {
+        var uploads = 0
+        val uploader = object : APIExportUploader {
+            override suspend fun upload(endpointUrl: String, payload: String, authorizationHeader: String?,
+                requestHeaders: List<APIExportRequestHeader>): APIExportUploadResult {
+                uploads++; return APIExportUploadResult(204)
+            }
+        }
+        val error = runCatching {
+            uploader.uploadEndpointBound("https://synthetic.invalid/approved", "{}", null, emptyList())
+        }.exceptionOrNull() as APIExportClientException
+        assertThat(error.failureReason).isEqualTo(ExportFailureReason.INVALID_API_ENDPOINT)
+        assertThat(error.retryable).isFalse(); assertThat(uploads).isEqualTo(0)
+    }
+
 }

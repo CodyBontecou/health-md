@@ -121,19 +121,14 @@ class ClinicAndroidExportAdapter(
         check(request.subjectId == review.subjectId && request.deviceId == review.deviceId && request.connectionId == review.connectionId
             && request.profileId == approval.profileId && request.revision == review.revision) { "unavailable" }
         val zone = ZoneId.of(review.zoneId)
-        val start = Instant.ofEpochMilli(request.startMillis).atZone(zone)
-        val end = Instant.ofEpochMilli(request.endMillis).atZone(zone)
-        check(start.toLocalDate().atStartOfDay(zone).toInstant() == start.toInstant()
-            && end.toLocalDate().atStartOfDay(zone).toInstant() == end.toInstant()) { "partial_day_scope_unsupported" }
-        val dates = generateSequence(start.toLocalDate()) { it.plusDays(1) }.takeWhile { it < end.toLocalDate() }.take(367).toList()
-        check(dates.isNotEmpty() && dates.size <= 366) { "unavailable" }
+        val dates = request.ownerDates(zone)
         val profile = checkNotNull(profiles.profileById(approval.profileId)) { "profile_changed" }
         check(profile.target == ExportTarget.API_ENDPOINT && profile.settingsSnapshotJson == review.settingsSnapshotJson
             && profile.apiEndpointUrl == review.endpointUrl && !profiles.isSharedSetupV2Blocked(profile.id)) { "profile_changed" }
         val restored = checkNotNull(snapshots.applyForActivation(profile, settings.getExportSettings())) { "invalid_snapshot" }
         // The runner resolves its own device calendar. Reject a changed zone rather than widening the approved interval.
         check(ZoneId.systemDefault() == zone) { "timezone_changed" }
-        val result = runner.exportDates(dates, restored, expectedDestinationFingerprint = approval.destinationFingerprint,
+        val result = runner.exportDates(dates, restored, expectedDestinationFingerprint = approval.destinationFingerprint, rejectRedirects = true,
             authorityCheck = {
                 authorityCheck()
                 val latest = profiles.profileById(profile.id)

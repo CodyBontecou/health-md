@@ -25,6 +25,11 @@ interface APIExportUploader {
         authorizationHeader: String?,
         requestHeaders: List<APIExportRequestHeader>,
     ): APIExportUploadResult
+    /** Default implementations fail closed; only a transport that rejects redirects may opt in. */
+    suspend fun uploadEndpointBound(endpointUrl: String, payload: String, authorizationHeader: String?,
+        requestHeaders: List<APIExportRequestHeader>): APIExportUploadResult = throw APIExportClientException(
+            ExportFailureReason.INVALID_API_ENDPOINT, false, message = "Endpoint-bound upload is unavailable.")
+
 }
 
 data class APIExportUploadResult(
@@ -43,12 +48,20 @@ class APIExportClientException(
 class APIExportClient @Inject constructor(
     private val client: OkHttpClient,
 ) : APIExportUploader {
+    private val endpointBoundClient by lazy { client.newBuilder().followRedirects(false).followSslRedirects(false).build() }
+    override suspend fun uploadEndpointBound(endpointUrl: String, payload: String, authorizationHeader: String?,
+        requestHeaders: List<APIExportRequestHeader>): APIExportUploadResult =
+        uploadWithClient(endpointBoundClient, endpointUrl, payload, authorizationHeader, requestHeaders)
+
     override suspend fun upload(
         endpointUrl: String,
         payload: String,
         authorizationHeader: String?,
         requestHeaders: List<APIExportRequestHeader>,
-    ): APIExportUploadResult = withContext(Dispatchers.IO) {
+    ): APIExportUploadResult = uploadWithClient(client, endpointUrl, payload, authorizationHeader, requestHeaders)
+
+    private suspend fun uploadWithClient(transport: OkHttpClient, endpointUrl: String, payload: String,
+        authorizationHeader: String?, requestHeaders: List<APIExportRequestHeader>): APIExportUploadResult = withContext(Dispatchers.IO) {
         val normalized = APIExportEndpoint.normalizedOrNull(endpointUrl)
             ?: throw APIExportClientException(
                 failureReason = ExportFailureReason.INVALID_API_ENDPOINT,
@@ -84,7 +97,7 @@ class APIExportClient @Inject constructor(
             }
             .build()
 
-        val call = client.newCall(request)
+        val call = transport.newCall(request)
         val response = try {
             // Wire cooperative cancellation to the exact OkHttp call so a user cancellation
             // aborts the in-flight upload immediately instead of waiting for the read timeout.

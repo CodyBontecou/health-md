@@ -85,8 +85,14 @@ permission remain separate from this payment decision.
 ### Fresh export and correlated status
 
 The clinic supplies a request ID, approved connection and explicit half-open UTC
-interval, ending no later than the request time and spanning at most 366 days.
-The broker freezes that scope and permits only one pending request per connection.
+interval. Timestamp scope ends no later than request time and spans at most 366 days.
+An explicit `ownerDayZone` instead identifies patient-approved complete owner days in
+that timezone, at most 366 days, including the current day through its next midnight.
+This permits fresh current-day capture with existing daily exporters. It is never
+inferred from or substituted for a timestamp interval. The exact bounds, timezone,
+selected metrics and full profile options must be shown for patient review by the
+future authenticated mapper/presenter. These are internal synthetic/native semantics,
+not a published SetClinic API contract. The broker freezes that scope and permits only one pending request per connection.
 The same ID with different scope conflicts; a retry of the same ID returns the
 same result. A new ID requests fresh capture even for an unchanged interval.
 Requests expire after five minutes, including while running. These conservative
@@ -106,8 +112,11 @@ clinic-confirmed `processed`; upload never implies clinic processing or clinical
 review. Receipts bind request, connection, profile revision, destination and exact
 interval. The local journal records execution before side effects and persists
 upload evidence before acknowledgment. An acknowledgment retry replays only the
-receipt. An interrupted execution is terminal and requires checking history and a
-new request ID, preventing a blind second export. Cancellation/revocation/expiry
+receipt. A journal marked executing with no live process owner is terminal and requires
+checking history and a new request ID, preventing a blind second export. Concurrent
+native coordinator instances for the same private journal and exact request join
+the live operation and receive its result or error; they neither declare a live
+export interrupted nor export/report it twice. Different frozen scope conflicts. Cancellation/revocation/expiry
 stop remaining work; existing files are retained, and late receipts remain visible
 without resurrecting work or changing a terminal state into processing success.
 The adapter must enforce cancellation before each publication, including retries.
@@ -158,12 +167,25 @@ backup-excluded protected files; Android callers must use app-private
 These files contain local identity/routing metadata and settings, never health payloads
 or credentials. They are native clinical-boundary state, never Shared Setup content.
 
-The adapters require whole calendar-day boundaries in the approved zone and reject
-partial-day scope. Android also rejects a changed device zone because its existing
-runner resolves the current device calendar; Apple restores the reviewed calendar.
+The adapters require complete owner-day boundaries in the approved profile zone.
+Explicit `ownerDayZone` requests may include today through its approved next-midnight
+boundary; arbitrary future dates, partial-day owner scope and changed zones fail
+closed. DST boundaries use calendar days, including a 25-hour fall-back day.
+Timestamp intervals remain exact: midnight-to-now is valid broker scope but cannot
+be executed by these daily adapters and is never rounded up. Supporting that exact
+cutoff needs bounded HealthKit/Health Connect and connected-provider capture,
+including daily aggregates and sleep attribution; current exporters do not provide
+that boundary. The external contract must choose explicit owner days or require
+that further bounded capture work. Android also rejects a changed device zone
+because its existing runner resolves the current device calendar; Apple restores
+the reviewed calendar.
 Fresh capture goes through the same native API runners as manual export. Optional
 runner authority callbacks check before each day and every upload/retry; default
-callbacks preserve all existing callers. Profile changes, imported-profile execution
+callbacks preserve all existing callers. Clinic uploads reject all HTTP redirects,
+including 307/308, on memory/file body paths on Apple and on Android's endpoint-bound
+uploader. No second target has patient consent; custom Android uploaders without an
+endpoint-bound implementation fail closed. Consumer redirect behavior is preserved.
+Profile changes, imported-profile execution
 blocks, destination/credential rotation and mismatched account/device/connection
 cannot silently retarget a request. Locked Health data, foreground state, sharing
 consent and entitlement must be supplied by the trusted native session/gate adapter;
@@ -214,3 +236,11 @@ clinical-service ownership/security/BAA gates above and the unapproved mobile co
 recorded in the component README. Selecting a base URL, auth header or production
 backend without those inputs would invent the missing contract. The commercial/store
 entitlement route is a separate decision and remains disabled.
+
+Native inbox cancellation and revocation use independent controls while export is
+busy. Confirmed controls fence later snapshots/completions and same-session reloads;
+an export failure or cancellation cannot restore sharing. The transport must update
+the trusted native authority used by the runner checks, so remaining publication and
+retries stop. Already transmitted bytes cannot be recalled. Suspended-export tests
+cover both controls, late errors, cancellation and late completion; separate native
+coordinator tests check revocation before publication and terminal retry behavior.

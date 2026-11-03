@@ -51,6 +51,8 @@ protocol ClinicInboxTransport: AnyObject {
     func applySetup(id: String, reviewedDigest: String) async throws
     func export(id: String) async throws
     func reportReceipt(id: String) async throws
+    /// Commit cancellation/revocation to trusted native authority before returning. Queue any
+    /// remote acknowledgment separately; a remote round trip must not defer stopping local work.
     func cancel(id: String) async throws
     func revoke(connectionID: String) async throws
 }
@@ -72,6 +74,7 @@ final class ClinicInboxModel {
     private(set) var review: ClinicInboxReview?
     private(set) var loading = false
     private(set) var busy = false
+    private(set) var controls: Set<String> = []
     private(set) var unavailable = false
     private(set) var error = false
     var consent = false
@@ -80,35 +83,43 @@ final class ClinicInboxModel {
     private let now: () -> Date
     private var loadedSession: String?
     private var generation = 0
+    private var mutationEpoch = 0
+    private var cancelledRequests: Set<String> = []
+    private var revokedConnections: Set<String> = []
     init(transport: any ClinicInboxTransport = UnavailableClinicInboxTransport(),
          enabled: @escaping () -> Bool = { PracticeFeaturePolicy.current.isEnabled }, now: @escaping () -> Date = Date.init) {
         self.transport = transport; self.enabled = enabled; self.now = now
     }
     var canApply: Bool {
         guard let review else { return false }
-        return consent && !busy && !error && review.expiresAt > now() && !review.metrics.isEmpty && !review.digest.isEmpty
+        return consent && !busy && controls.isEmpty && !error && review.expiresAt > now() && !review.metrics.isEmpty && !review.digest.isEmpty
             && loadedSession != nil && loadedSession == transport.sessionID && enabled()
     }
     func clear() {
         generation += 1; snapshot = ClinicInboxSnapshot(); review = nil; consent = false
-        loadedSession = nil; loading = false; busy = false; error = false
+        loadedSession = nil; loading = false; busy = false; controls = []; error = false
+        cancelledRequests = []; revokedConnections = []; mutationEpoch += 1
     }
     func dismissReview() { review = nil; consent = false }
     func openReview(_ id: String) {
-        guard !busy else { return }
+        guard !busy, controls.isEmpty else { return }
         guard loadedSession == transport.sessionID, loadedSession != nil else { clear(); return }
         review = snapshot.reviews.first { $0.id == id && $0.expiresAt > now() }; consent = false
     }
     func load() async {
-        guard !busy else { return }
+        guard !busy, controls.isEmpty else { return }
+        // Keep confirmed control fences across same-account reloads, including stale service reads.
+        let sameSession = loadedSession != nil && loadedSession == transport.sessionID
+        let cancellations = cancelledRequests; let revocations = revokedConnections
         clear(); unavailable = false
+        if sameSession { cancelledRequests = cancellations; revokedConnections = revocations }
         guard enabled(), let session = transport.sessionID else { unavailable = true; return }
         let ticket = generation; loading = true
         do {
             let result = try await transport.load()
             guard ticket == generation else { return }
             guard session == transport.sessionID, !Task.isCancelled else { clear(); return }
-            snapshot = result; loadedSession = session; loading = false
+            publish(result); loadedSession = session; loading = false
         } catch is CancellationError { if ticket == generation { clear() } }
         catch { if ticket == generation { clear(); self.error = true } }
     }
@@ -127,31 +138,74 @@ final class ClinicInboxModel {
     }
     func cancel(_ id: String) async {
         guard snapshot.refreshes.contains(where: { $0.id == id && [.requested, .running].contains($0.status) }) else { return }
-        _ = await perform { try await self.transport.cancel(id: id) }
+        await control(key: "cancel:" + id, cancelID: id) { try await self.transport.cancel(id: id) }
     }
     func revoke(_ connectionID: String) async {
         guard snapshot.refreshes.contains(where: { $0.connectionID == connectionID && $0.sharingActive }) else { return }
-        _ = await perform { try await self.transport.revoke(connectionID: connectionID) }
+        await control(key: "revoke:" + connectionID, connectionID: connectionID) { try await self.transport.revoke(connectionID: connectionID) }
     }
     private func perform(_ operation: @MainActor () async throws -> Void) async -> Bool {
-        guard !busy, !error else { return false }
+        guard !busy, !error, controls.isEmpty else { return false }
         guard enabled(), let session = loadedSession, session == transport.sessionID else { clear(); return false }
-        let ticket = generation; busy = true; error = false
+        let ticket = generation; let epoch = mutationEpoch; busy = true; error = false
         do {
             try await operation()
             guard ticket == generation else { return false }
-            guard session == transport.sessionID, !Task.isCancelled else { clear(); return false }
+            guard session == transport.sessionID else { clear(); return false }
+            if Task.isCancelled { busy = false; if epoch == mutationEpoch { clear() }; return false }
             let result = try await transport.load()
             guard ticket == generation else { return false }
-            guard session == transport.sessionID, !Task.isCancelled else { clear(); return false }
-            snapshot = result; busy = false; dismissReview(); return true
-        } catch is CancellationError { if ticket == generation { clear() }; return false }
+            guard session == transport.sessionID else { clear(); return false }
+            if Task.isCancelled { busy = false; if epoch == mutationEpoch { clear() }; return false }
+            if epoch == mutationEpoch { publish(result) }; busy = false; dismissReview(); return true
+        } catch is CancellationError {
+            if ticket == generation { busy = false; if epoch == mutationEpoch || session != transport.sessionID { clear() } }
+            return false
+        }
         catch {
             guard ticket == generation else { return false }
-            if session == transport.sessionID { busy = false; self.error = true }
+            if session == transport.sessionID { busy = false; if epoch == mutationEpoch { self.error = true } }
             else { clear() }
             return false
         }
+    }
+    /// Control requests never wait for export's busy flag. Their transport updates the native
+    /// consent/request authority so the export check stops the next publication or retry.
+    private func control(key: String, cancelID: String? = nil, connectionID: String? = nil,
+                         operation: @MainActor () async throws -> Void) async {
+        guard !controls.contains(key) else { return }
+        guard enabled(), let session = loadedSession, session == transport.sessionID else { clear(); return }
+        let ticket = generation; mutationEpoch += 1; let epoch = mutationEpoch
+        controls.insert(key); error = false
+        defer { if ticket == generation { controls.remove(key) } }
+        do {
+            try await operation()
+            guard ticket == generation else { return }
+            guard session == transport.sessionID else { clear(); return }
+            if let cancelID { cancelledRequests.insert(cancelID) }
+            if let connectionID { revokedConnections.insert(connectionID) }
+            publish(snapshot)
+            let result = try await transport.load()
+            guard ticket == generation else { return }
+            guard session == transport.sessionID else { clear(); return }
+            if epoch == mutationEpoch { publish(result) }
+        } catch {
+            if ticket == generation {
+                if session == transport.sessionID { self.error = true } else { clear() }
+            }
+        }
+    }
+    private func publish(_ value: ClinicInboxSnapshot) {
+        var reconciled = value
+        for index in reconciled.refreshes.indices {
+            if cancelledRequests.contains(reconciled.refreshes[index].id),
+               [.requested, .running].contains(reconciled.refreshes[index].status) { reconciled.refreshes[index].status = .cancelled }
+            if revokedConnections.contains(reconciled.refreshes[index].connectionID) {
+                reconciled.refreshes[index].sharingActive = false
+                if [.requested, .running].contains(reconciled.refreshes[index].status) { reconciled.refreshes[index].status = .revoked }
+            }
+        }
+        snapshot = reconciled
     }
 }
 

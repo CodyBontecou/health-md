@@ -26,6 +26,8 @@ interface ClinicInboxTransport {
     suspend fun applySetup(id: String, reviewedDigest: String)
     suspend fun export(id: String)
     suspend fun reportReceipt(id: String)
+    /** Commit to trusted native authority before returning; queue remote acknowledgment separately.
+     * A remote round trip must not defer stopping local work. */
     suspend fun cancel(id: String)
     suspend fun revoke(connectionId: String)
 }
@@ -41,7 +43,7 @@ object UnavailableClinicInboxTransport : ClinicInboxTransport {
 data class ClinicInboxState(
     val snapshot: ClinicInboxSnapshot = ClinicInboxSnapshot(), val review: ClinicInboxReview? = null,
     val consent: Boolean = false, val loading: Boolean = false, val busy: Boolean = false,
-    val unavailable: Boolean = false, val error: Boolean = false,
+    val unavailable: Boolean = false, val error: Boolean = false, val controls: Set<String> = emptySet(),
 )
 /** Feature-local controller. Call on the UI dispatcher; no export occurs on loading or navigation. */
 class ClinicInboxController(
@@ -53,22 +55,28 @@ class ClinicInboxController(
     val state: StateFlow<ClinicInboxState> = mutable
     private var loadedSession: String? = null
     private var generation = 0
+    private var mutationEpoch = 0
+    private val cancelledRequests = mutableSetOf<String>()
+    private val revokedConnections = mutableSetOf<String>()
     val canApply: Boolean get() = state.value.let { value ->
-        value.review?.let { value.consent && !value.busy && !value.error && it.expiresAtMillis > now() && it.metrics.isNotEmpty()
+        value.review?.let { value.consent && !value.busy && value.controls.isEmpty() && !value.error && it.expiresAtMillis > now() && it.metrics.isNotEmpty()
             && it.digest.isNotEmpty() && loadedSession != null && loadedSession == transport.sessionId && enabled() } ?: false
     }
-    fun clear() { generation++; loadedSession = null; mutable.value = ClinicInboxState() }
+    fun clear() { generation++; mutationEpoch++; loadedSession = null; mutable.value = ClinicInboxState(); cancelledRequests.clear(); revokedConnections.clear() }
     fun dismissReview() { mutable.value = state.value.copy(review = null, consent = false) }
     fun setConsent(value: Boolean) { mutable.value = state.value.copy(consent = value) }
     fun openReview(id: String) {
         if (loadedSession == null || loadedSession != transport.sessionId) { clear(); return }
-        if (!state.value.busy) mutable.value = state.value.copy(review = state.value.snapshot.reviews.firstOrNull {
+        if (!state.value.busy && state.value.controls.isEmpty()) mutable.value = state.value.copy(review = state.value.snapshot.reviews.firstOrNull {
             it.id == id && it.expiresAtMillis > now()
         }, consent = false)
     }
     suspend fun load() {
-        if (state.value.busy) return
+        if (state.value.busy || state.value.controls.isNotEmpty()) return
+        val sameSession = loadedSession != null && loadedSession == transport.sessionId
+        val cancellations = cancelledRequests.toSet(); val revocations = revokedConnections.toSet()
         clear()
+        if (sameSession) { cancelledRequests += cancellations; revokedConnections += revocations }
         val session = transport.sessionId
         if (!enabled() || session == null) { mutable.value = state.value.copy(unavailable = true); return }
         val ticket = generation; mutable.value = state.value.copy(loading = true)
@@ -76,7 +84,7 @@ class ClinicInboxController(
             val result = transport.load().frozenCopy()
             if (ticket != generation) return
             if (session != transport.sessionId) { clear(); return }
-            loadedSession = session; mutable.value = ClinicInboxState(snapshot = result)
+            loadedSession = session; publish(result); mutable.value = state.value.copy(loading = false)
         } catch (_: CancellationException) { if (ticket == generation) clear() }
         catch (_: Exception) { if (ticket == generation) { clear(); mutable.value = state.value.copy(error = true) } }
     }
@@ -96,17 +104,17 @@ class ClinicInboxController(
     }
     suspend fun cancel(id: String) {
         if (state.value.snapshot.refreshes.none { it.id == id && it.status in listOf(ClinicInboxStatus.REQUESTED, ClinicInboxStatus.RUNNING) }) return
-        perform { transport.cancel(id) }
+        control("cancel:$id", cancelId = id) { transport.cancel(id) }
     }
     suspend fun revoke(connectionId: String) {
         if (state.value.snapshot.refreshes.none { it.connectionId == connectionId && it.sharingActive }) return
-        perform { transport.revoke(connectionId) }
+        control("revoke:$connectionId", connectionId = connectionId) { transport.revoke(connectionId) }
     }
     private suspend fun perform(operation: suspend () -> Unit): Boolean {
         val session = loadedSession
-        if (state.value.busy || state.value.error) return false
+        if (state.value.busy || state.value.error || state.value.controls.isNotEmpty()) return false
         if (!enabled() || session == null || session != transport.sessionId) { clear(); return false }
-        val ticket = generation; mutable.value = state.value.copy(busy = true, error = false)
+        val ticket = generation; val epoch = mutationEpoch; mutable.value = state.value.copy(busy = true, error = false)
         try {
             operation()
             if (ticket != generation) return false
@@ -114,14 +122,53 @@ class ClinicInboxController(
             val result = transport.load().frozenCopy()
             if (ticket != generation) return false
             if (session != transport.sessionId) { clear(); return false }
-            mutable.value = ClinicInboxState(snapshot = result); return true
-        } catch (_: CancellationException) { if (ticket == generation) clear(); return false }
+            if (epoch == mutationEpoch) publish(result)
+            mutable.value = state.value.copy(busy = false, review = null, consent = false); return true
+        } catch (_: CancellationException) {
+            if (ticket == generation) {
+                mutable.value = state.value.copy(busy = false)
+                if (epoch == mutationEpoch || session != transport.sessionId) clear()
+            }
+            return false
+        }
         catch (_: Exception) {
             if (ticket != generation) return false
-            if (session == transport.sessionId) mutable.value = state.value.copy(busy = false, error = true)
+            if (session == transport.sessionId) mutable.value = state.value.copy(busy = false, error = if (epoch == mutationEpoch) true else state.value.error)
             else clear()
             return false
         }
+    }
+    private suspend fun control(key: String, cancelId: String? = null, connectionId: String? = null, operation: suspend () -> Unit) {
+        val session = loadedSession
+        if (key in state.value.controls) return
+        if (!enabled() || session == null || session != transport.sessionId) { clear(); return }
+        val ticket = generation; mutationEpoch++; val epoch = mutationEpoch
+        mutable.value = state.value.copy(controls = state.value.controls + key, error = false)
+        try {
+            operation()
+            if (ticket != generation) return
+            if (session != transport.sessionId) { clear(); return }
+            if (cancelId != null) cancelledRequests += cancelId
+            if (connectionId != null) revokedConnections += connectionId
+            publish(state.value.snapshot)
+            val result = transport.load().frozenCopy()
+            if (ticket != generation) return
+            if (session != transport.sessionId) { clear(); return }
+            if (epoch == mutationEpoch) publish(result)
+        } catch (_: Exception) {
+            if (ticket == generation) {
+                if (session == transport.sessionId) mutable.value = state.value.copy(error = true) else clear()
+            }
+        }
+        finally { if (ticket == generation) mutable.value = state.value.copy(controls = state.value.controls - key) }
+    }
+    private fun publish(snapshot: ClinicInboxSnapshot) {
+        mutable.value = state.value.copy(snapshot = snapshot.copy(refreshes = snapshot.refreshes.map { row ->
+            val cancelled = if (row.id in cancelledRequests && row.status in listOf(ClinicInboxStatus.REQUESTED, ClinicInboxStatus.RUNNING)) row.copy(status = ClinicInboxStatus.CANCELLED) else row
+            if (row.connectionId in revokedConnections) cancelled.copy(sharingActive = false,
+                status = if (cancelled.status in listOf(ClinicInboxStatus.REQUESTED, ClinicInboxStatus.RUNNING)) ClinicInboxStatus.REVOKED else cancelled.status)
+            else cancelled
+        }).frozenCopy())
     }
 }
 

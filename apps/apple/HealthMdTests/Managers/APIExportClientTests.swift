@@ -7,6 +7,42 @@ final class APIExportClientTests: XCTestCase {
     // observation state that can crash during test-process teardown on macOS 26.
     private static var retainedSettings: [AdvancedExportSettings] = []
 
+    func testClinicClientRejectsRedirectsForMemoryAndFileBodies() async throws {
+        for status in [307, 308] {
+            for fileBody in [false, true] {
+                let target = try LoopbackGateway(behavior: .transportStatus(204)); try target.start(); defer { target.stop() }
+                let source = try LoopbackGateway(behavior: .transportRedirect(status, target.url + "/unreviewed"))
+                try source.start(); defer { source.stop() }
+                let endpoint = URL(string: source.url + "/approved")!
+                let destination = APIExportDestinationSnapshot(endpointURL: endpoint, authorizationHeaderValue: "Bearer synthetic",
+                    displayName: "Synthetic loopback", redactedEndpointDescription: source.url)
+                let client = APIExportClient(clinicConfiguration: .ephemeral)
+                do {
+                    if fileBody {
+                        let artifact = try ExportArtifactIO.renderTemporary(prefix: "clinic-synthetic", mediaType: "application/json") {
+                            try $0.write(Data("{\"synthetic\":true}".utf8))
+                        }
+                        _ = try await client.upload(payloadArtifact: artifact, destination: destination)
+                    } else { _ = try await client.upload(payload: Data("{\"synthetic\":true}".utf8), destination: destination) }
+                    XCTFail("unapproved redirect")
+                } catch APIExportClientError.serverRejected(let code, _) { XCTAssertEqual(code, status) }
+                XCTAssertEqual(source.capturedRequests.count, 1)
+                XCTAssertEqual(source.capturedRequests.first?.path, "/approved")
+                XCTAssertTrue(target.capturedRequests.isEmpty)
+            }
+        }
+    }
+    func testConsumerClientRetainsExistingRedirectBehavior() async throws {
+        let target = try LoopbackGateway(behavior: .transportStatus(204)); try target.start(); defer { target.stop() }
+        let source = try LoopbackGateway(behavior: .transportRedirect(307, target.url + "/collect"))
+        try source.start(); defer { source.stop() }
+        let result = try await APIExportClient().upload(payload: Data("{\"synthetic\":true}".utf8),
+            destination: APIExportDestinationSnapshot(endpointURL: URL(string: source.url + "/redirect")!,
+                authorizationHeaderValue: nil, displayName: "Synthetic", redactedEndpointDescription: source.url))
+        XCTAssertEqual(result.statusCode, 204); XCTAssertEqual(target.capturedRequests.count, 1)
+        XCTAssertEqual(target.capturedRequests.first?.method, "POST")
+    }
+
     func testWHOOPSidecarsUseAPIEnvelopeV2AndAreRedacted() throws {
         let date = Self.day(2026, 7, 13)
         var healthData = HealthData(date: date)

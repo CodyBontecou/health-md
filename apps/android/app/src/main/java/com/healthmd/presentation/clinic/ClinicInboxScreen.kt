@@ -113,12 +113,12 @@ fun ClinicInboxScreen(controller: ClinicInboxController = remember { ClinicInbox
                     Text(stringResource(statusResource(item.status)), modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
                     if (item.receiptPending) {
                         Text(stringResource(R.string.clinic_receipt_pending))
-                        SecondaryButton(text = stringResource(R.string.clinic_report), onClick = { scope.launch { controller.reportReceipt(item.id) } }, enabled = !state.busy && !state.error)
+                        SecondaryButton(text = stringResource(R.string.clinic_report), onClick = { scope.launch { controller.reportReceipt(item.id) } }, enabled = !state.busy && !state.error && state.controls.isEmpty())
                     }
-                    if (item.status == ClinicInboxStatus.REQUESTED && item.sharingActive) PrimaryButton(text = stringResource(R.string.clinic_export), onClick = { scope.launch { controller.export(item.id) } }, enabled = !state.busy && !state.error)
-                    if (item.status in listOf(ClinicInboxStatus.REQUESTED, ClinicInboxStatus.RUNNING)) SecondaryButton(text = stringResource(R.string.clinic_cancel_work), onClick = { scope.launch { controller.cancel(item.id) } }, enabled = !state.busy && !state.error)
+                    if (item.status == ClinicInboxStatus.REQUESTED && item.sharingActive) PrimaryButton(text = stringResource(R.string.clinic_export), onClick = { scope.launch { controller.export(item.id) } }, enabled = !state.busy && !state.error && state.controls.isEmpty())
+                    if (item.status in listOf(ClinicInboxStatus.REQUESTED, ClinicInboxStatus.RUNNING)) SecondaryButton(text = stringResource(R.string.clinic_cancel_work), onClick = { scope.launch { controller.cancel(item.id) } }, enabled = "cancel:${item.id}" !in state.controls)
                     if (!item.sharingActive && item.status != ClinicInboxStatus.REVOKED) Text(stringResource(R.string.clinic_revoked))
-                    if (item.sharingActive) SecondaryButton(text = stringResource(R.string.clinic_stop), onClick = { revoke = item.connectionId }, enabled = !state.busy && !state.error)
+                    if (item.sharingActive) SecondaryButton(text = stringResource(R.string.clinic_stop), onClick = { revoke = item.connectionId }, enabled = "revoke:${item.connectionId}" !in state.controls)
                 }
             }
         }

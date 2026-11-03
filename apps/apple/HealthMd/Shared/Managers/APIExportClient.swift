@@ -78,6 +78,15 @@ struct APIExportClient {
         self.maximumResponseBytes = max(1, maximumResponseBytes)
     }
 
+    /// Clinic consent binds one exact endpoint. No redirect target has been approved by this request.
+    init(clinicConfiguration: URLSessionConfiguration,
+         maximumResponseBytes: Int = APIExportClient.defaultMaximumResponseBytes) {
+        self.responseLoader = BoundedURLSessionDataLoader(configuration: clinicConfiguration,
+            redirectHandler: Self.rejectClinicRedirect)
+        self.maximumResponseBytes = max(1, maximumResponseBytes)
+    }
+    nonisolated static func rejectClinicRedirect(_ response: HTTPURLResponse, _ request: URLRequest) -> URLRequest? { nil }
+
     init(
         session: URLSession,
         maximumResponseBytes: Int = APIExportClient.defaultMaximumResponseBytes

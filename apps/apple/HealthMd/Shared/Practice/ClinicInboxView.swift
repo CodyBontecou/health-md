@@ -45,20 +45,19 @@ struct ClinicInboxView: View {
                         status(item.status).font(.subheadline)
                         if item.receiptPending {
                             Text("Upload saved on this phone. Clinic status confirmation is pending.").foregroundStyle(.secondary)
-                            Button("Retry status report") { Task { await model.reportReceipt(item.id) } }
+                            Button("Retry status report") { Task { await model.reportReceipt(item.id) } }.disabled(model.busy || model.error || !model.controls.isEmpty)
                         }
                         if item.status == .requested && item.sharingActive {
-                            Button("Export now") { Task { await model.export(item.id) } }
+                            Button("Export now") { Task { await model.export(item.id) } }.disabled(model.busy || model.error || !model.controls.isEmpty)
                         }
                         if [.requested, .running].contains(item.status) {
-                            Button("Cancel remaining work", role: .destructive) { Task { await model.cancel(item.id) } }
+                            Button("Cancel remaining work", role: .destructive) { Task { await model.cancel(item.id) } }.disabled(model.controls.contains("cancel:" + item.id))
                         }
                         if !item.sharingActive && item.status != .revoked { Text("Sharing stopped") }
                         if item.sharingActive {
-                            Button("Stop sharing with this clinic", role: .destructive) { revoking = item }
+                            Button("Stop sharing with this clinic", role: .destructive) { revoking = item }.disabled(model.controls.contains("revoke:" + item.connectionID))
                         }
                     }
-                    .disabled(model.busy || model.error)
                 }
             }
         }

@@ -259,6 +259,7 @@ class APIEndpointExportRunner private constructor(
         durableOperationId: String? = null,
         durableSettingsSnapshotJson: String? = null,
         requireExistingDurableOperation: Boolean = false,
+        rejectRedirects: Boolean = false,
         authorityCheck: suspend () -> Unit = {},
     ): ExportResult {
         authorityCheck()
@@ -309,6 +310,7 @@ class APIEndpointExportRunner private constructor(
                     requestConfiguration = requestConfiguration,
                     invocationDates = normalizedDates,
                     authorityCheck = authorityCheck,
+                    rejectRedirects = rejectRedirects,
                 )
             }
             // Prepared-work retries never turn missing spool state into a new health capture.
@@ -404,7 +406,7 @@ class APIEndpointExportRunner private constructor(
                 rethrowCancellationOrFatal(error)
                 return preparationFailure(normalizedDates)
             }
-            return commitDurable(durable, requestConfiguration, normalizedDates, authorityCheck)
+            return commitDurable(durable, requestConfiguration, normalizedDates, authorityCheck, rejectRedirects)
         }
 
         return commit(
@@ -414,6 +416,7 @@ class APIEndpointExportRunner private constructor(
             records = capture.records,
             failedDateDetails = capture.failedDateDetails,
             authorityCheck = authorityCheck,
+            rejectRedirects = rejectRedirects,
         )
     }
 
@@ -759,6 +762,7 @@ class APIEndpointExportRunner private constructor(
         requestConfiguration: APIExportRequestConfiguration,
         invocationDates: List<LocalDate>,
         authorityCheck: suspend () -> Unit = {},
+        rejectRedirects: Boolean = false,
     ): ExportResult {
         val store = operationStore ?: return preparationFailure(operation.requestedDates)
         var frontier = operation.acknowledgedBatchCount
@@ -777,6 +781,7 @@ class APIEndpointExportRunner private constructor(
                     requestConfiguration = requestConfiguration,
                     maxAttempts = attempts,
                     authorityCheck = authorityCheck,
+                    rejectRedirects = rejectRedirects,
                 )
                 lastStatusCode = upload.statusCode
                 // Acknowledgement is persisted before the next body. If the process dies after the
@@ -870,6 +875,7 @@ class APIEndpointExportRunner private constructor(
         records: List<HealthData>,
         failedDateDetails: List<FailedDateDetail>,
         authorityCheck: suspend () -> Unit = {},
+        rejectRedirects: Boolean = false,
     ): ExportResult {
         val barrier = ExportCommitBarrier()
         barrier.markMaterialized()
@@ -890,6 +896,7 @@ class APIEndpointExportRunner private constructor(
                     requestConfiguration = requestConfiguration,
                     maxAttempts = attempts,
                     authorityCheck = authorityCheck,
+                    rejectRedirects = rejectRedirects,
                 )
                 lastStatusCode = result.statusCode
             }
@@ -929,11 +936,14 @@ class APIEndpointExportRunner private constructor(
         requestConfiguration: APIExportRequestConfiguration,
         maxAttempts: Int,
         authorityCheck: suspend () -> Unit = {},
+        rejectRedirects: Boolean = false,
     ): APIExportUploadResult {
         var attempt = 1
         while (true) {
             authorityCheck()
             try {
+                if (rejectRedirects) return uploader.uploadEndpointBound(requestConfiguration.endpointUrl,
+                    body.bytes.decodeToString(), requestConfiguration.authorizationHeader, requestConfiguration.requestHeaders)
                 return uploader.upload(
                     endpointUrl = requestConfiguration.endpointUrl,
                     payload = body.bytes.decodeToString(),

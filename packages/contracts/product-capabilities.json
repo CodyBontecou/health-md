@@ -1086,7 +1086,7 @@
       "id": "clinic.patient-integration",
       "name": "Patient-confirmed clinic integration",
       "classification": "planned",
-      "summary": "Synthetic Practice workflows, standalone native review/inbox screens with dormant injectable transport, and gated onboarding/foreground API export adapters with durable local journals. No production transport or entitlement provider is installed.",
+      "summary": "Synthetic Practice workflows, standalone dormant native review/inbox screens, and gated onboarding/foreground API export adapters with durable journals. Explicit owner-day scopes support current-day capture; concurrent calls coalesce, cancellation/revocation remain available during export, and clinic uploads reject redirects. No production transport or entitlement provider is installed.",
       "platforms": {
         "apple": {
           "state": "planned",
@@ -1110,7 +1110,8 @@
         "apps/apple/HealthMd/Shared/Practice/ClinicInbox.swift",
         "apps/apple/HealthMd/Shared/Practice/ClinicInboxView.swift",
         "apps/android/app/src/main/java/com/healthmd/domain/practice/ClinicInbox.kt",
-        "apps/android/app/src/main/java/com/healthmd/presentation/clinic/ClinicInboxScreen.kt"
+        "apps/android/app/src/main/java/com/healthmd/presentation/clinic/ClinicInboxScreen.kt",
+        "apps/practice/src/clinic/contracts.ts"
       ],
       "profiles": []
     }

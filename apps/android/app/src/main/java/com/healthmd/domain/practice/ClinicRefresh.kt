@@ -8,18 +8,44 @@ import java.io.FileOutputStream
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 import java.security.MessageDigest
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
+import java.time.temporal.ChronoUnit
 import java.util.concurrent.ConcurrentHashMap
+import kotlinx.coroutines.CompletableDeferred
 
 /** Native-local metadata only; never a credential, health payload or imported setup. */
 data class ClinicRefreshRequest(
     val requestId: String, val subjectId: String, val deviceId: String, val connectionId: String,
     val profileId: String, val revision: String, val startMillis: Long, val endMillis: Long, val expiresAtMillis: Long,
+    /** Explicit patient-approved owner days; null retains exact timestamp bounds. */
+    val ownerDayZone: String? = null,
 ) {
     fun validate(now: Long) {
         require(listOf(requestId, subjectId, deviceId, connectionId, profileId, revision).all {
             it.isNotEmpty() && it.toByteArray(Charsets.UTF_8).size <= 200 && it.none(Char::isISOControl)
         }) { "unavailable" }
-        require(startMillis < endMillis && endMillis <= now && endMillis - startMillis in 1..(366L * 86_400_000) && expiresAtMillis > now) { "unavailable" }
+        require(startMillis < endMillis && startMillis <= now && expiresAtMillis > now) { "unavailable" }
+        if (ownerDayZone != null) {
+            require(ownerDayZone.isNotEmpty() && ownerDayZone.toByteArray(Charsets.UTF_8).size <= 100) { "unavailable" }
+            val zone = ZoneId.of(ownerDayZone)
+            val start = Instant.ofEpochMilli(startMillis).atZone(zone); val end = Instant.ofEpochMilli(endMillis).atZone(zone)
+            val today = Instant.ofEpochMilli(now).atZone(zone).toLocalDate()
+            require(start.toLocalDate().atStartOfDay(zone).toInstant() == start.toInstant()
+                && end.toLocalDate().atStartOfDay(zone).toInstant() == end.toInstant()
+                && end.toLocalDate() <= today.plusDays(1)
+                && ChronoUnit.DAYS.between(start.toLocalDate(), end.toLocalDate()) in 1..366) { "unavailable" }
+        } else require(endMillis <= now && endMillis - startMillis in 1..(366L * 86_400_000)) { "unavailable" }
+    }
+    /** No implicit rounding of a timestamp request, and no replacement of its approved zone. */
+    fun ownerDates(zone: ZoneId, now: Long = System.currentTimeMillis()): List<LocalDate> {
+        validate(now); check(ownerDayZone == null || ownerDayZone == zone.id) { "timezone_changed" }
+        val start = Instant.ofEpochMilli(startMillis).atZone(zone); val end = Instant.ofEpochMilli(endMillis).atZone(zone)
+        check(start.toLocalDate().atStartOfDay(zone).toInstant() == start.toInstant()
+            && end.toLocalDate().atStartOfDay(zone).toInstant() == end.toInstant()) { "partial_day_scope_unsupported" }
+        val dates = generateSequence(start.toLocalDate()) { it.plusDays(1) }.takeWhile { it < end.toLocalDate() }.take(367).toList()
+        check(dates.isNotEmpty() && dates.size <= 366) { "unavailable" }; return dates
     }
 }
 data class ClinicRefreshRecord(val request: ClinicRefreshRequest, val state: State, val exportId: String? = null, val uploadedAtMillis: Long? = null) {
@@ -29,7 +55,27 @@ data class ClinicRefreshRecord(val request: ClinicRefreshRequest, val state: Sta
 /** Must be rooted in app-private noBackupFilesDir. Atomic replace and fsync precede export/report side effects.
  * The per-directory lock protects multiple coordinator instances; corrupt entries fail closed. */
 class ClinicRefreshJournal(private val root: File) {
-    companion object { private val locks = ConcurrentHashMap<String, Any>() }
+    companion object {
+        private val locks = ConcurrentHashMap<String, Any>()
+        private val active = ConcurrentHashMap<String, ActiveExecution>()
+    }
+    private class ActiveExecution(val request: ClinicRefreshRequest) {
+        val outcome = CompletableDeferred<Result<ClinicRefreshRecord>>()
+    }
+    suspend fun singleFlight(request: ClinicRefreshRequest, operation: suspend () -> ClinicRefreshRecord): ClinicRefreshRecord {
+        val identity = file(request).canonicalPath
+        val execution = ActiveExecution(request)
+        val existing = active.putIfAbsent(identity, execution)
+        if (existing != null) {
+            check(existing.request == request) { "profile_changed" }
+            return existing.outcome.await().getOrThrow()
+        }
+        try {
+            return operation().also { execution.outcome.complete(Result.success(it)) }
+        } catch (error: Throwable) {
+            execution.outcome.complete(Result.failure(error)); throw error
+        } finally { active.remove(identity, execution) }
+    }
     private val lock = locks.computeIfAbsent(root.canonicalPath) { Any() }
     init {
         check(root.mkdirs() || root.isDirectory)
@@ -46,9 +92,10 @@ class ClinicRefreshJournal(private val root: File) {
         check(!Files.isSymbolicLink(file.toPath()) && file.isFile && file.length() <= 16_384) { "invalid_journal" }
         try {
             DataInputStream(FileInputStream(file)).use { input ->
-                check(input.readInt() == 1) { "invalid_journal" }
+                val version = input.readInt(); check(version in 1..2) { "invalid_journal" }
                 val stored = ClinicRefreshRequest(input.readUTF(), input.readUTF(), input.readUTF(), input.readUTF(),
-                    input.readUTF(), input.readUTF(), input.readLong(), input.readLong(), input.readLong())
+                    input.readUTF(), input.readUTF(), input.readLong(), input.readLong(), input.readLong(),
+                    if (version == 2) input.readUTF().takeIf(String::isNotEmpty) else null)
                 val state = ClinicRefreshRecord.State.valueOf(input.readUTF())
                 val exportId = input.readUTF().takeIf(String::isNotEmpty)
                 val time = input.readLong().takeIf { it >= 0 }
@@ -69,10 +116,10 @@ class ClinicRefreshJournal(private val root: File) {
         try {
             FileOutputStream(temporary).use { file ->
                 val out = DataOutputStream(file)
-                out.writeInt(1)
+                out.writeInt(2)
                 with(record.request) {
                     listOf(requestId, subjectId, deviceId, connectionId, profileId, revision).forEach(out::writeUTF)
-                    out.writeLong(startMillis); out.writeLong(endMillis); out.writeLong(expiresAtMillis)
+                    out.writeLong(startMillis); out.writeLong(endMillis); out.writeLong(expiresAtMillis); out.writeUTF(ownerDayZone.orEmpty())
                 }
                 out.writeUTF(record.state.name); out.writeUTF(record.exportId.orEmpty()); out.writeLong(record.uploadedAtMillis ?: -1)
                 out.flush(); file.fd.sync()
@@ -95,6 +142,13 @@ class ClinicForegroundRefresh(
         report: suspend (ClinicRefreshRecord) -> Unit,
     ): ClinicRefreshRecord {
         check(enabled()) { "unavailable" }; authenticate()
+        return journal.singleFlight(request) { runOwned(request, now, authenticate, authorize, export, report) }
+    }
+    private suspend fun runOwned(
+        request: ClinicRefreshRequest, now: () -> Long, authenticate: suspend () -> Unit, authorize: suspend () -> Unit,
+        export: suspend (check: suspend () -> Unit) -> String, report: suspend (ClinicRefreshRecord) -> Unit,
+    ): ClinicRefreshRecord {
+        // Only a journal with no live in-process owner is eligible for restart recovery.
         val existing = journal.load(request)
         if (existing != null && existing.state != ClinicRefreshRecord.State.REQUESTED) {
             val recovered = if (existing.state == ClinicRefreshRecord.State.EXECUTING) existing.copy(state = ClinicRefreshRecord.State.FAILED) else existing

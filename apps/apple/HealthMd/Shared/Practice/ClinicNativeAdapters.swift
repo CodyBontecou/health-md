@@ -116,21 +116,14 @@ struct ClinicAppleExportAdapter {
               profile.settings == approval.settings, executionAllowed(profile.id), let endpointID = profile.apiEndpointID,
               let endpoint = destination(endpointID), ClinicNativeOnboarding.isBoundHTTPS(endpoint),
               approval.destinationIdentity.matches(endpoint, bindingID: endpointID),
-              let zoneID = approval.settings.calendarTimeZoneIdentifier, let zone = TimeZone(identifier: zoneID)
+              let zoneID = approval.settings.calendarTimeZoneIdentifier, TimeZone(identifier: zoneID) != nil
         else { throw ClinicNativeError.profileChanged }
-        var calendar = Calendar(identifier: .gregorian); calendar.timeZone = zone
-        guard calendar.startOfDay(for: request.start) == request.start, calendar.startOfDay(for: request.end) == request.end
-        else { throw ClinicNativeError.unavailable }
-        var dates: [Date] = []; var day = request.start
-        while day < request.end {
-            dates.append(day)
-            guard dates.count <= 366, let next = calendar.date(byAdding: .day, value: 1, to: day), next > day
-            else { throw ClinicNativeError.unavailable }
-            day = next
-        }
+        let dates = try request.ownerDates(timeZoneIdentifier: zoneID)
         let settings = approval.settings.makeAdvancedExportSettings(forNewConfiguration: true)
+        let client = APIExportClient(clinicConfiguration: .ephemeral)
         let result = await APIEndpointExportRunner.export(dates: dates, healthKitManager: healthKit, settings: settings,
             destination: endpoint, externalIntegrations: externalIntegrations,
+            upload: { batch, destination in try await client.upload(payloadArtifact: batch.bodyArtifact, destination: destination) },
             authorityCheck: {
                 try await check()
                 guard let current = profiles.profiles.first(where: { $0.id == approval.profileID }),

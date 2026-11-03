@@ -19,7 +19,11 @@ export function requireClinic(condition: unknown, code: string): asserts conditi
 export type ClinicActor = { role: "clinic"; subjectId: string; clinicId: string };
 export type PatientActor = { role: "patient"; subjectId: string; deviceId: string };
 export type Actor = ClinicActor | PatientActor;
-export interface Range { start: string; end: string }
+export interface Range {
+  start: string; end: string;
+  /** Explicit reviewed owner-day scope; never an implicit rounding of timestamps. */
+  ownerDayZone?: string;
+}
 export interface SetupIntent {
   patientId: string;
   destinationId: string;
@@ -82,11 +86,26 @@ export function exactKeys(value: unknown, keys: readonly string[]): asserts valu
   requireClinic(Object.keys(value).every(key => keys.includes(key)), "invalid_input");
 }
 export function validateRange(value: unknown, now: number): asserts value is Range {
-  exactKeys(value, ["start", "end"]);
+  exactKeys(value, ["start", "end", "ownerDayZone"]);
   for (const key of ["start", "end"]) {
     const text = value[key];
     requireClinic(typeof text === "string" && Number.isFinite(Date.parse(text)) && /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z$/.test(text) && new Date(text).toISOString() === text, "invalid_range");
   }
   const start = Date.parse(value.start as string); const end = Date.parse(value.end as string);
-  requireClinic(end > start && end <= now && end - start <= 366 * 86_400_000, "invalid_range");
+  requireClinic(end > start && start <= now, "invalid_range");
+  if ("ownerDayZone" in value) {
+    requireClinic(validOwnerDays(start, end, value.ownerDayZone, now), "invalid_range");
+  } else requireClinic(end <= now && end - start <= 366 * 86_400_000, "invalid_range");
+}
+function validOwnerDays(start: number, end: number, zone: unknown, now: number): boolean {
+  if (typeof zone !== "string" || zone.length === 0 || zone.length > 100) return false;
+  try {
+    const format = new Intl.DateTimeFormat("en-CA", { timeZone: zone, year: "numeric", month: "2-digit", day: "2-digit",
+      hour: "2-digit", minute: "2-digit", second: "2-digit", fractionalSecondDigits: 3, hourCycle: "h23" });
+    const fields = (time: number) => Object.fromEntries(format.formatToParts(time).map(part => [part.type, part.value]));
+    const day = (f: Record<string, string>) => Date.UTC(Number(f.year), Number(f.month) - 1, Number(f.day)) / 86_400_000;
+    const midnight = (f: Record<string, string>) => f.hour === "00" && f.minute === "00" && f.second === "00" && f.fractionalSecond === "000";
+    const first = fields(start); const last = fields(end); const count = day(last) - day(first);
+    return midnight(first) && midnight(last) && count >= 1 && count <= 366 && day(last) <= day(fields(now)) + 1;
+  } catch { return false; }
 }

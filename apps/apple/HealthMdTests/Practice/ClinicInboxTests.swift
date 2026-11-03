@@ -80,6 +80,36 @@ final class ClinicInboxTests: XCTestCase {
         XCTAssertTrue(model.error); XCTAssertEqual(transport.base.exports, 1)
     }
 
+    func testCancelAndRevokeRemainAvailableDuringSuspendedExport() async {
+        for (revoke, outcome) in [(false, 0), (true, 0), (false, 1), (true, 1), (false, 2), (true, 2)] {
+            let transport = ExportSuspendedClinicInboxTransport(now: now)
+            transport.lateOutcome = outcome
+            let model = ClinicInboxModel(transport: transport, enabled: { true }, now: { self.now })
+            await model.load()
+            let operation = Task { await model.export("refresh_synthetic") }
+            while transport.pending == nil { await Task.yield() }
+            XCTAssertTrue(model.busy)
+            if revoke { await model.revoke("connection_synthetic") } else { await model.cancel("refresh_synthetic") }
+            XCTAssertTrue(transport.stopped)
+            XCTAssertEqual(model.snapshot.refreshes.first?.status, revoke ? .revoked : .cancelled)
+            transport.pending?.resume(); await operation.value
+            XCTAssertEqual(transport.publications, 0)
+            XCTAssertEqual(model.snapshot.refreshes.first?.status, revoke ? .revoked : .cancelled)
+            if revoke { XCTAssertFalse(model.snapshot.refreshes.first?.sharingActive ?? true) }
+            XCTAssertFalse(model.busy); XCTAssertFalse(model.error)
+            await model.load() // stale same-session reload must also retain confirmed controls
+            await model.export("refresh_synthetic"); XCTAssertEqual(transport.attempts, 1)
+        }
+    }
+
+    func testAccountChangeDuringControlClearsOldSnapshot() async {
+        let transport = ExportSuspendedClinicInboxTransport(now: now)
+        transport.changeAccountOnControl = true
+        let model = ClinicInboxModel(transport: transport, enabled: { true }, now: { self.now })
+        await model.load(); await model.revoke("connection_synthetic")
+        XCTAssertTrue(model.snapshot.refreshes.isEmpty); XCTAssertTrue(model.controls.isEmpty)
+    }
+
 }
 
 
@@ -102,4 +132,29 @@ private final class SuspendedClinicInboxTransport: ClinicInboxTransport {
     func reportReceipt(id: String) async throws { try await base.reportReceipt(id: id) }
     func cancel(id: String) async throws { try await base.cancel(id: id) }
     func revoke(connectionID: String) async throws { try await base.revoke(connectionID: connectionID) }
+}
+
+@MainActor
+private final class ExportSuspendedClinicInboxTransport: ClinicInboxTransport {
+    let base: SyntheticClinicInboxTransport
+    var sessionID: String? { base.sessionID }
+    var pending: CheckedContinuation<Void, Never>?
+    var stopped = false; var publications = 0; var attempts = 0; var lateOutcome = 0; var changeAccountOnControl = false
+    init(now: Date) { base = SyntheticClinicInboxTransport(now: now) }
+    // Intentionally stale read: confirmed local controls must survive late snapshots.
+    func load() async throws -> ClinicInboxSnapshot { base.value }
+    func applySetup(id: String, reviewedDigest: String) async throws { }
+    func export(id: String) async throws {
+        attempts += 1
+        await withCheckedContinuation { pending = $0 }
+        if stopped {
+            if lateOutcome == 0 { throw ClinicInboxError.unavailable }
+            if lateOutcome == 1 { throw CancellationError() }
+            return
+        }
+        publications += 1
+    }
+    func reportReceipt(id: String) async throws { }
+    func cancel(id: String) async throws { stopped = true }
+    func revoke(connectionID: String) async throws { stopped = true; if changeAccountOnControl { base.sessionID = nil } }
 }

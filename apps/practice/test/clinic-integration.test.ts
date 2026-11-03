@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { ClinicAccessPolicy, SyntheticClinicLicenses } from "../src/clinic/access";
 import { SyntheticClinicBroker } from "../src/clinic/broker";
-import { CLINIC_CONTRACT, clinicHandoffs, parseClinicHandoff, type ApprovedConnection, type ClinicActor,
+import { CLINIC_CONTRACT, clinicHandoffs, parseClinicHandoff, validateRange, type ApprovedConnection, type ClinicActor,
   type PatientActor, type Range, type SetupIntent, type UploadReceipt } from "../src/clinic/contracts";
 import { PatientClinicExports, SyntheticExportJournal, type ApprovedExportAdapter } from "../src/clinic/foreground-exports";
 
@@ -231,5 +231,33 @@ describe("review and lifecycle stability", () => {
     const f = await fixture(); await f.runner.run(patient, f.request().id);
     const second = f.request("second_synthetic"); expect((await f.runner.run(patient, second.id)).state).toBe("uploaded");
     expect(f.exporter).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("explicit clinic owner-day scope", () => {
+  it("supports fresh current-day capture without changing timestamp consent", () => {
+    const now = Date.parse("2026-11-03T12:34:56.000Z");
+    const today = { start: "2026-11-03T00:00:00.000Z", end: "2026-11-04T00:00:00.000Z", ownerDayZone: "UTC" };
+    expect(() => validateRange(today, now)).not.toThrow();
+    expect(() => validateRange({ start: today.start, end: today.end }, now)).toThrow("invalid_range");
+    expect(() => validateRange({ ...today, end: new Date(now).toISOString() }, now)).toThrow("invalid_range");
+    // Exact timestamp scopes remain exact, including midnight-to-now. Native daily capture must reject rather than round them.
+    expect(() => validateRange({ start: today.start, end: new Date(now).toISOString() }, now)).not.toThrow();
+    for (const changed of [{ ownerDayZone: "invalid_synthetic" }, { ownerDayZone: "America/New_York" },
+      { end: "2026-11-05T00:00:00.000Z" }, { start: "2026-11-03T00:00:00.001Z" }]) {
+      expect(() => validateRange({ ...today, ...changed }, now)).toThrow("invalid_range");
+    }
+  });
+  it("keeps DST owner-day boundaries and receipt correlation frozen", async () => {
+    const now = Date.parse("2026-11-01T17:00:00.000Z");
+    expect(() => validateRange({ start: "2026-11-01T04:00:00.000Z", end: "2026-11-02T05:00:00.000Z", ownerDayZone: "America/New_York" }, now)).not.toThrow();
+    const f = await fixture();
+    const request = f.broker.requestRefresh(clinic, { requestId: "day_synthetic", connectionId: f.connection.id,
+      range: { start: "2026-11-03T00:00:00.000Z", end: "2026-11-04T00:00:00.000Z", ownerDayZone: "UTC" } });
+    await f.runner.run(patient, request.id);
+    expect(f.exporter).toHaveBeenCalledWith(expect.objectContaining({ range: request.range }), expect.any(Function));
+    const result = f.broker.status(clinic, request.id);
+    expect(result.state).toBe("uploaded");
+    expect(() => f.broker.uploaded(patient, request.id, { ...result.receipt!, range: { ...request.range, ownerDayZone: "Etc/UTC" } })).toThrow("invalid_receipt");
   });
 });
