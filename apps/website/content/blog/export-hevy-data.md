@@ -12,7 +12,7 @@ category: "Workflow guide"
 related:
   - export-apple-health-workouts
   - export-health-connect-to-obsidian
-  - export-polar-flow-data
+  - export-strong-data
 draft: false
 tags:
   - hevy
