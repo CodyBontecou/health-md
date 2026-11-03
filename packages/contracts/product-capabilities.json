@@ -1081,6 +1081,30 @@
         "apps/android/app/src/main/java/com/healthmd/domain/repository/PurchaseRepository.kt"
       ],
       "profiles": []
+    },
+    {
+      "id": "clinic.patient-integration",
+      "name": "Patient-confirmed clinic integration",
+      "classification": "planned",
+      "summary": "Synthetic Practice onboarding, clinic entitlement provider seam and foreground refresh/receipt lifecycle. No deployed clinic service or native mobile adapter is enabled.",
+      "platforms": {
+        "apple": {
+          "state": "planned",
+          "target": "Bind the synthetic clinic contract to an approved authenticated clinic service, patient review UI, secure endpoint binding, existing native export runner and durable receipt journal; qualify store entitlement route and foreground/device behavior before activation."
+        },
+        "android": {
+          "state": "planned",
+          "target": "Bind the synthetic clinic contract to an approved authenticated clinic service, patient review UI, secure endpoint binding, existing native export runner and durable receipt journal; qualify store entitlement route and foreground/device behavior before activation."
+        }
+      },
+      "evidence": [
+        "apps/practice/src/clinic/broker.ts",
+        "apps/practice/src/clinic/access.ts",
+        "apps/practice/src/clinic/foreground-exports.ts",
+        "apps/practice/test/clinic-integration.test.ts",
+        "apps/practice/docs/architecture.md"
+      ],
+      "profiles": []
     }
   ]
 }

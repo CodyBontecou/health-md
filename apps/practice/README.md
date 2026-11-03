@@ -54,6 +54,10 @@ The response must report `"mode":"synthetic"`, use `Cache-Control: no-store`, an
 
 See `docs/architecture.md`, `docs/threat-model.md`, and the proposed repository ADR at `docs/architecture/adr-0003-practice-clinical-boundary.md`.
 
+## SetClinic integration model
+
+`src/clinic/` provides executable synthetic onboarding/review, clinic-paid entitlement and foreground refresh/receipt flows. It is not mounted as an HTTP API or included in the native apps. See [architecture and remaining integration gates](docs/architecture.md#setclinic-integration-simulator). Existing mobile links and production remain blocked.
+
 ## Browser and qualification evidence
 
 The default PR gate runs `scripts/ci/practice.sh`: unit/API security regressions, type checks, a production asset build, and synthetic/security checks. The browser/qualification pipeline is an explicit diagnostic, not a default PR gate.
