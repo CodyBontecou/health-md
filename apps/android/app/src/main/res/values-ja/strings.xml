@@ -210,7 +210,6 @@
     <string name="configuration_protection_blocked_action">設定の変更がブロックされている理由を表示</string>
     <string name="configuration_protection_open_setting">設定を開く</string>
     <string name="section_health_sources">健康データソース</string>
-    <string name="health_sources_description">Health Connect はローカルのエクスポート元です。対応アプリが Health Connect に書き込んだデータを Health.md でエクスポートできます。</string>
     <string name="health_provider_status_installed">インストール済み</string>
     <string name="health_provider_status_selected">選択済み</string>
     <string name="health_provider_status_ready_to_connect">接続の準備ができました</string>
@@ -529,11 +528,7 @@
     <string name="paywall_unlimited_exports">無制限のエクスポート</string>
     <string name="paywall_scheduled_exports">自動スケジュール済みエクスポート</string>
     <string name="paywall_future_features">今後追加されるすべての機能を利用可能</string>
-    <string name="paywall_one_time">一回限りの支払い — サブスクリプションなし</string>
-    <string name="paywall_unlock_button">Health.mdをロック解除</string>
-    <string name="paywall_unlock_button_price">%s でロックを解除</string>
     <string name="paywall_restore">購入を復元</string>
-    <string name="paywall_purchasing">処理中\u2026</string>
     <string name="paywall_restoring">復元中\u2026</string>
     <string name="debug_purchase_title">デバッグコントロール</string>
     <string name="debug_current_state">現在の状態: %s</string>
@@ -1286,6 +1281,9 @@
     <string name="export_sleep_date_guidance">睡眠は選択した各日の正午から翌日の正午までを対象とします。昨夜の睡眠には「昨日」を選択してください。</string>
     <string name="export_sleep_preview_window">睡眠の時間枠：%1$sの正午から%2$sの正午まで（%3$s）。</string>
     <string name="export_sleep_preview_guidance">睡眠がない場合は前日を試してください。元の記録が今日の日付でも、朝の睡眠は前日の概要に含まれることがあります。クエリエラーは別途表示されます。結果が空の場合、読み取りアクセスが利用できない可能性もあります。</string>
+    <string name="export_sleep_date_guidance_morning_ends">睡眠セッション全体は、エクスポートのタイムゾーンで終了した日付に含まれます。昨夜の睡眠には「今日」を選択してください。</string>
+    <string name="export_sleep_preview_window_morning_ends">睡眠の終了日：%1$s〜%2$s（%3$s）。</string>
+    <string name="export_sleep_preview_guidance_morning_ends">睡眠セッション全体は、このエクスポートのタイムゾーンでの終了日に含まれ、正午で区切られません。クエリエラーは別途表示されます。結果が空の場合、読み取りアクセスが利用できない可能性もあります。</string>
     <string name="whoop_connection_description">WHOOPに接続して、回復、負荷、睡眠、ワークアウト、身体測定値をエクスポートできます。ログインにはブラウザを使用し、Health.mdはトークンをこのデバイスに暗号化して保存します。接続を解除すると、このデバイスに保存された接続が削除されます。</string>
     <string name="whoop_connect">WHOOPに接続</string>
     <string name="whoop_sources_description">WHOOPに接続してプロバイダーから直接エクスポートするか、ローカルの記録に引き続きHealth Connectを使用できます。</string>
@@ -1297,6 +1295,8 @@
     <string name="paywall_access_subtitle">サブスクリプションまたは永久アクセスを選んで、プライベートな健康アーカイブを始めましょう。対象のサブスクリプションには7日間の無料トライアルが含まれます。</string>
     <string name="paywall_access_active_title">アクセスは有効です</string>
     <string name="paywall_access_active_body">設定を続けて健康データを接続し、プライベートアーカイブの保存先を選択してください。</string>
+    <string name="clinic_access_active_title">クリニックのアクセスは有効です</string>
+    <string name="clinic_access_active_body">クリニックが承認済みエンドポイントへの配信をスポンサーしています。共有する内容はあなたが選びます。その他のエクスポート先には、ご自身の Health.md アクセスが必要です。</string>
     <string name="paywall_plan_choices">週額、年額、または永久アクセス</string>
     <string name="paywall_weekly_price">%1$s / 週</string>
     <string name="paywall_yearly_price">%1$s / 年</string>
@@ -1307,4 +1307,30 @@
     <string name="paywall_terms">利用規約</string>
     <string name="paywall_privacy">プライバシー</string>
     <string name="paywall_subscription_disclosure">対象のサブスクリプションには7日間の無料トライアルが含まれ、トライアルまたは現在の期間が終了する前に解約しない限り、表示価格で自動更新されます。管理や解約はGoogle Playで行えます。永久アクセスは一回払いで直ちに請求されます。既存の有料アクセスは維持されます。 生涯に試練はない。アプリを削除したり、ライフタイムを購入したりしても、既存のサブスクリプションはキャンセルされません。</string>
+
+    <!-- Signal carousel paywall -->
+    <string name="paywall_signal_title">鼓動のひとつひとつを、記録に。</string>
+    <string name="paywall_signal_lede">Health.mdは、ヘルスコネクトのデータを毎日のMarkdownノートにして、選んだフォルダに保存します。</string>
+    <string name="paywall_signal_example">例</string>
+    <string name="paywall_signal_trial_title">7日間、無料でどうぞ。</string>
+    <string name="paywall_signal_day_today">今日</string>
+    <string name="paywall_signal_day_today_body">エクスポート、スケジュール、オートメーションが無制限。</string>
+    <string name="paywall_signal_day_cancel">いつでも解約可能</string>
+    <string name="paywall_signal_day_cancel_body">トライアル終了前にGoogle Playで解約してください。</string>
+    <string name="paywall_signal_day_end">トライアル終了</string>
+    <string name="paywall_signal_day_end_body">その後は%1$s。</string>
+    <string name="paywall_signal_plans_title">プランを選ぶ。</string>
+    <string name="paywall_signal_best_value">いちばんお得</string>
+    <string name="paywall_signal_free_week">7日間無料</string>
+    <string name="paywall_signal_lifetime_detail">今日1回だけのお支払い。更新なし。</string>
+    <string name="paywall_signal_subscription_detail">自動更新。Google Playでいつでも解約できます。</string>
+    <string name="paywall_signal_cta_trial">7日間の無料トライアルを開始</string>
+    <string name="paywall_signal_cta_subscribe">登録する</string>
+    <string name="paywall_signal_cta_lifetime">買い切りで購入</string>
+    <string name="paywall_signal_step_archive">アーカイブ</string>
+    <string name="paywall_signal_step_trial">トライアル</string>
+    <string name="paywall_signal_step_plans">プラン</string>
+    <string name="paywall_signal_plan_weekly">週額</string>
+    <string name="paywall_signal_plan_yearly">年額</string>
+    <string name="paywall_signal_plan_lifetime">買い切り</string>
 </resources>

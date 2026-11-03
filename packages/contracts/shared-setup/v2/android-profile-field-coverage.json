@@ -1257,6 +1257,14 @@
       "evidence": "Canonical semantic IDs are the sole portable metric selection authority."
     },
     {
+      "source_type": "MetricSelectionState",
+      "serialized_field": "nativeDetailMetricIds",
+      "coverage_kind": "descriptor",
+      "disposition": "prohibited",
+      "contract_path": null,
+      "evidence": "Exact native-record capture authority must not cross devices through frozen Shared Setup v2. SharedSetupV2Mapper.mapProfile projects enabledMetrics only and excludes this device-local opt-in."
+    },
+    {
       "source_type": "MetricTrackingConfig",
       "serialized_field": "customFolder",
       "coverage_kind": "descriptor",

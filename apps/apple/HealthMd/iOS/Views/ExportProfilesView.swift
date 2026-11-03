@@ -975,6 +975,8 @@ struct ExportProfileDetailView: View {
 /// recomputing against the draft — so nothing is saved until Create/Save,
 /// and overlap is visible while choices can still change.
 struct ExportProfileEditorSheet: View {
+    @ObservedObject private var clinic = ClinicSponsorshipManager.shared
+    @ObservedObject private var purchases = PurchaseManager.shared
     @ObservedObject var coordinator: ExportProfileCoordinator
     @ObservedObject private var profileStore: ExportProfileStore
     @ObservedObject private var destinationStore: ProfileDestinationStore
@@ -1299,7 +1301,12 @@ struct ExportProfileEditorSheet: View {
             }
         } header: {
             Text("Destination")
+        } footer: {
+            if clinic.status.active && !purchases.canExport {
+                Text("Your clinic manages this destination. Use Clinic access to select it or manage sharing. Other destinations require your own Health.md access.")
+            }
         }
+        .disabled(clinic.status.active && !purchases.canExport)
     }
 
     private var outputSection: some View {

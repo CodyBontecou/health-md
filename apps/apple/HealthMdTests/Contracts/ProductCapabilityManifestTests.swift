@@ -100,6 +100,7 @@ final class ProductCapabilityManifestTests: XCTestCase {
     }
 
     private static let sharedCapabilities: Set<String> = [
+        "account.clinic-sponsored-access",
         "account.myself_lifetime_claim",
             "purchase.free-export-journey",
         "export.daily-files",
@@ -129,6 +130,7 @@ final class ProductCapabilityManifestTests: XCTestCase {
 
     private static let appleCapabilities: Set<String> = [
         "purchase.family-sharing",
+        "support.native-review-introduction",
         "apple.lossless-healthkit-archive",
         "apple.medication-dose-events",
         "apple.state-of-mind",

@@ -362,10 +362,10 @@ final class IPhoneExportRequestHandler: ObservableObject {
             return
         }
 
-        if request.responseMode != .contextStore {
-            await PurchaseManager.shared.refreshStatus()
-        }
-        guard request.responseMode == .contextStore || PurchaseManager.shared.canExport else {
+        // A context-store response also releases health data to another device.
+        // Clinic navigation access never authorizes this personal-only destination.
+        await PurchaseManager.shared.refreshStatus()
+        guard PurchaseManager.shared.canExport else {
             syncService.send(.iphoneExportRejected(IPhoneExportFailure(
                 jobID: request.jobID,
                 reason: .exportLimitReached,

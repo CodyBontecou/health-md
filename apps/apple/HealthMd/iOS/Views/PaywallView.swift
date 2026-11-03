@@ -5,7 +5,6 @@ import StoreKit
 struct PaywallView: View {
     @ObservedObject private var purchaseManager = PurchaseManager.shared
     @Environment(\.dismiss) private var dismiss
-    @State private var selectedAudience: PaywallPricingAudience = .individual
 
     private let context: PaywallContext
     private let allowsDismissal: Bool
@@ -35,21 +34,6 @@ struct PaywallView: View {
         purchaseManager.activePlanTitle
     }
 
-    private var individualOptions: [HealthMdPurchaseOption] {
-        [.weekly, .yearly, .individual]
-    }
-
-    private var familyOptions: [HealthMdPurchaseOption] {
-        [.familyWeekly, .familyYearly, .family]
-    }
-
-    private var selectedOptions: [HealthMdPurchaseOption] {
-        switch selectedAudience {
-        case .individual: return individualOptions
-        case .family: return familyOptions
-        }
-    }
-
     private var canShowFamilyUpgradeOffer: Bool {
         isManagingPurchase && purchaseManager.canBuyFamilyUpgrade
     }
@@ -71,6 +55,45 @@ struct PaywallView: View {
     }
 
     var body: some View {
+        Group {
+            if isManagingPurchase {
+                managementLayout
+            } else {
+                SignalPaywallCarousel(
+                    purchaseManager: purchaseManager,
+                    pricing: signalPricing,
+                    allowsDismissal: allowsDismissal,
+                    onDismiss: { dismiss() },
+                    onPurchase: purchase,
+                    onRestore: restore
+                ) {
+                    purchaseStatus
+                }
+            }
+        }
+        // A container keeps child identifiers (restore, purchase, dismiss) addressable.
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier(AccessibilityID.Paywall.view)
+        .task { await purchaseManager.loadProductsIfNeeded() }
+        .onChange(of: purchaseManager.isUnlocked) { _, unlocked in
+            if unlocked && !isManagingPurchase { dismiss() }
+        }
+    }
+
+    private var signalPricing: SignalPaywallCarousel<AnyView>.Pricing {
+        .init(
+            priceLabel: purchaseButtonPriceLabel(for:),
+            weeklyEquivalent: weeklyEquivalentPrice(for:),
+            isTrialEligible: isTrialEligible,
+            footerLine: { option in
+                option.isSubscription ? optionSubtitle(for: option) : (purchaseButtonPriceLabel(for: option) ?? option.displaySubtitle)
+            },
+            isLoading: isPurchaseOptionLoading,
+            isDisabled: isPurchaseButtonDisabled(for:)
+        )
+    }
+
+    private var managementLayout: some View {
         ZStack {
             Color.bgPrimary.ignoresSafeArea()
 
@@ -79,29 +102,17 @@ struct PaywallView: View {
                     header
 
                     VStack(spacing: Spacing.s3) {
-                        if isManagingPurchase {
-                            PaywallFeatureRow(icon: "archivebox.fill", text: String(localized: "Your health archive access is active"))
-                            PaywallFeatureRow(icon: "clock.fill", text: String(localized: "Unlimited automated daily notes"))
-                            PaywallFeatureRow(icon: "person.3.fill", text: currentPlanFamilyFeatureText)
-                            if purchaseManager.canShowPermanentAccessNotice {
-                                PaywallFeatureRow(icon: "lock.open.fill", text: String(localized: "Your existing permanent access remains valid"))
-                            }
-                        } else {
-                            PaywallFeatureRow(icon: "archivebox.fill", text: String(localized: "Build a permanent Apple Health archive"))
-                            PaywallFeatureRow(icon: "calendar.badge.clock", text: String(localized: "Keep scheduled health notes running without limits"))
-                            PaywallFeatureRow(icon: "lock.shield", text: String(localized: "Private local files. Choose where your exports go."))
-                            PaywallFeatureRow(icon: "person.3.fill", text: String(localized: "Individual and Apple Family Sharing plans"))
+                        PaywallFeatureRow(icon: "archivebox.fill", text: String(localized: "Your health archive access is active"))
+                        PaywallFeatureRow(icon: "clock.fill", text: String(localized: "Unlimited automated daily notes"))
+                        PaywallFeatureRow(icon: "person.3.fill", text: currentPlanFamilyFeatureText)
+                        if purchaseManager.canShowPermanentAccessNotice {
+                            PaywallFeatureRow(icon: "lock.open.fill", text: String(localized: "Your existing permanent access remains valid"))
                         }
                     }
 
                     ctaSection
                 }
             }
-        }
-        .accessibilityIdentifier(AccessibilityID.Paywall.view)
-        .task { await purchaseManager.loadProductsIfNeeded() }
-        .onChange(of: purchaseManager.isUnlocked) { _, unlocked in
-            if unlocked && !isManagingPurchase { dismiss() }
         }
     }
 
@@ -114,9 +125,9 @@ struct PaywallView: View {
         )
     }
 
-    @ViewBuilder
-    private var ctaSection: some View {
-        VStack(spacing: Spacing.s3) {
+    /// Store errors and catalog retry, shared by the carousel and management layout.
+    private var purchaseStatus: AnyView {
+        AnyView(Group {
             if let error = purchaseManager.purchaseError {
                 Text(error)
                     .font(Typography.caption())
@@ -141,75 +152,49 @@ struct PaywallView: View {
                     .accessibilityLabel("Try loading purchase options again")
                 }
             }
+        })
+    }
 
-            if isManagingPurchase {
-                PaywallCurrentPlanCard(
-                    title: currentPlanTitle,
-                    detail: currentPlanDetail,
-                    icon: purchaseManager.isFamilyUnlocked ? "person.3.fill" : "checkmark.seal.fill"
+    private var ctaSection: some View {
+        VStack(spacing: Spacing.s3) {
+            purchaseStatus
+
+            PaywallCurrentPlanCard(
+                title: currentPlanTitle,
+                detail: currentPlanDetail,
+                icon: purchaseManager.isFamilyUnlocked ? "person.3.fill" : "checkmark.seal.fill"
+            )
+
+            if canShowFamilyUpgradeOffer {
+                PaywallPurchaseOptionButton(
+                    title: String(localized: "Upgrade to Family Lifetime"),
+                    subtitle: String(localized: "Upgrade pricing for existing Lifetime owners"),
+                    priceLabel: purchaseButtonPriceLabel(for: .familyUpgrade),
+                    icon: "person.3.fill",
+                    badge: String(localized: "Family"),
+                    isPrimary: true,
+                    isLoading: purchaseManager.purchasingOption == .familyUpgrade || isPurchaseOptionLoading(.familyUpgrade),
+                    isDisabled: isPurchaseButtonDisabled(for: .familyUpgrade),
+                    action: { purchase(.familyUpgrade) }
                 )
-
-                if canShowFamilyUpgradeOffer {
-                    PaywallPurchaseOptionButton(
-                        title: String(localized: "Upgrade to Family Lifetime"),
-                        subtitle: String(localized: "Upgrade pricing for existing Lifetime owners"),
-                        priceLabel: purchaseButtonPriceLabel(for: .familyUpgrade),
-                        icon: "person.3.fill",
-                        badge: String(localized: "Family"),
-                        isPrimary: true,
-                        isLoading: purchaseManager.purchasingOption == .familyUpgrade || isPurchaseOptionLoading(.familyUpgrade),
-                        isDisabled: isPurchaseButtonDisabled(for: .familyUpgrade),
-                        action: { purchase(.familyUpgrade) }
-                    )
-                    .accessibilityIdentifier(AccessibilityID.Paywall.familyUnlockButton)
-                }
-            } else {
-                PaywallPricingAudiencePicker(selection: $selectedAudience)
-
-                PaywallPlanSection(title: selectedAudience.sectionTitle) {
-                    ForEach(selectedOptions) { option in
-                        PaywallPurchaseOptionButton(
-                            title: option.displayTitle,
-                            subtitle: optionSubtitle(for: option),
-                            priceLabel: purchaseButtonPriceLabel(for: option),
-                            icon: option.iconName,
-                            badge: option.badge,
-                            isPrimary: true,
-                            isLoading: purchaseManager.purchasingOption == option || isPurchaseOptionLoading(option),
-                            isDisabled: isPurchaseButtonDisabled(for: option),
-                            action: { purchase(option) }
-                        )
-                        .accessibilityIdentifier(option == .individual ? AccessibilityID.Paywall.unlockButton : (option == .family ? AccessibilityID.Paywall.familyUnlockButton : "paywall-option-\(option.rawValue)"))
-                    }
-                }
+                .accessibilityIdentifier(AccessibilityID.Paywall.familyUnlockButton)
             }
 
-            if isManagingPurchase {
-                Link("Manage Subscriptions", destination: URL(string: "https://apps.apple.com/account/subscriptions")!)
-                    .font(Typography.caption())
-            }
+            Link("Manage Subscriptions", destination: URL(string: "https://apps.apple.com/account/subscriptions")!)
+                .font(Typography.caption())
 
             OnboardingTextAction(
                 title: "Restore Purchase",
                 isLoading: purchaseManager.isRestoring,
                 isDisabled: purchaseManager.isPurchasing || purchaseManager.isRestoring
             ) {
-                Task {
-                    await purchaseManager.restore(source: .paywall(context))
-                }
+                restore()
             }
             .accessibilityIdentifier(AccessibilityID.Paywall.restoreButton)
             .accessibilityLabel("Restore previous purchase")
-
-            if !isManagingPurchase {
-                purchaseDisclosure
-            }
         }
     }
 
-    private var purchaseDisclosure: some View {
-        OnboardingPurchaseDisclosure()
-    }
 
     private func displayPrice(for option: HealthMdPurchaseOption) -> String? {
         #if DEBUG
@@ -230,8 +215,7 @@ struct PaywallView: View {
     }
 
     private func optionSubtitle(for option: HealthMdPurchaseOption) -> String {
-        guard option.isSubscription,
-              purchaseManager.trialEligibleProductIDs.contains(option.productID),
+        guard isTrialEligible(option),
               let price = displayPrice(for: option) else { return option.displaySubtitle }
         return option == .weekly || option == .familyWeekly
             ? String(localized: "7 days free, then \(price) per week. Auto-renews; cancel anytime.")
@@ -273,9 +257,33 @@ struct PaywallView: View {
         return purchaseManager.product(for: option) != nil
     }
 
+    private func isTrialEligible(_ option: HealthMdPurchaseOption) -> Bool {
+        guard option.isSubscription else { return false }
+        #if DEBUG
+        if MarketingCapture.usesStaticPurchasePrices { return true }
+        #endif
+        return purchaseManager.trialEligibleProductIDs.contains(option.productID)
+    }
+
+    /// Yearly plans show their weekly cost; StoreKit supplies the locale-correct format.
+    private func weeklyEquivalentPrice(for option: HealthMdPurchaseOption) -> String? {
+        guard option == .yearly || option == .familyYearly else { return nil }
+        #if DEBUG
+        if MarketingCapture.usesStaticPurchasePrices { return option == .yearly ? "$0.58" : "$0.96" }
+        #endif
+        guard let product = purchaseManager.product(for: option) else { return nil }
+        return (product.price / 52).formatted(product.priceFormatStyle)
+    }
+
     private func purchase(_ option: HealthMdPurchaseOption) {
         Task {
             await purchaseManager.purchase(option, source: .paywall(context))
+        }
+    }
+
+    private func restore() {
+        Task {
+            await purchaseManager.restore(source: .paywall(context))
         }
     }
 
@@ -319,63 +327,6 @@ private struct PaywallCurrentPlanCard: View {
     }
 }
 
-// MARK: - Plan Section
-
-private enum PaywallPricingAudience: String, CaseIterable, Identifiable {
-    case individual
-    case family
-
-    var id: String { rawValue }
-
-    var title: String {
-        switch self {
-        case .individual: return String(localized: "Individual")
-        case .family: return String(localized: "Family")
-        }
-    }
-
-    var sectionTitle: String {
-        switch self {
-        case .individual: return String(localized: "Individual")
-        case .family: return String(localized: "Family Sharing")
-        }
-    }
-}
-
-private struct PaywallPricingAudiencePicker: View {
-    @Binding var selection: PaywallPricingAudience
-
-    var body: some View {
-        OnboardingAudienceChoices(choices: PaywallPricingAudience.allCases, selection: selection, title: { $0.title }) { audience in
-            withAnimation(AnimationTimings.fast) {
-                selection = audience
-            }
-        }
-    }
-}
-
-private struct PaywallPlanSection<Content: View>: View {
-    let title: String
-    @ViewBuilder let content: () -> Content
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: Spacing.s2) {
-            Text(title)
-                .font(Typography.label())
-                .foregroundStyle(Color.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
-                .textCase(.uppercase)
-                .tracking(0.4)
-                .frame(maxWidth: .infinity, alignment: .leading)
-
-            VStack(spacing: Spacing.s3) {
-                content()
-            }
-        }
-        .padding(.top, Spacing.s2)
-    }
-}
-
 // MARK: - Feature Row
 
 private struct PaywallFeatureRow: View {
@@ -410,24 +361,34 @@ private struct PaywallFeatureRow: View {
 /// dismiss gesture or a deep link. Restore and store errors remain available.
 struct PurchaseAccessGate<Content: View>: View {
     @ObservedObject private var purchases = PurchaseManager.shared
+    @ObservedObject private var clinic = ClinicSponsorshipManager.shared
+    @State private var showClinicAccess = false
     @Environment(\.scenePhase) private var scenePhase
     @ViewBuilder let content: () -> Content
 
     var body: some View {
         Group {
-            if purchases.isUnlocked || (TestMode.isUITesting && TestMode.purchaseUnlocked) {
+            if purchases.isUnlocked || clinic.status.active || (TestMode.isUITesting && TestMode.purchaseUnlocked) {
                 content()
             } else if purchases.isCheckingAccess && !TestMode.isUITesting {
                 ProgressView("Checking purchases…")
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .background(Color.bgPrimary)
             } else {
-                PaywallView(context: .onboarding, allowsDismissal: false)
+                VStack(spacing: Spacing.s2) {
+                    PaywallView(context: .onboarding, allowsDismissal: false)
+                    if clinic.status.configured {
+                        Button("Have a clinic invitation?") { showClinicAccess = true }
+                            .accessibilityIdentifier("clinic-invitation-entry")
+                            .padding(.bottom, Spacing.s4)
+                    }
+                }
             }
         }
+        .sheet(isPresented: $showClinicAccess) { ClinicAccessView() }
         .onChange(of: scenePhase) { _, phase in
             guard phase == .active, !TestMode.suppressesRuntimeServices else { return }
-            Task { await purchases.refreshStatus() }
+            Task { await purchases.refreshStatus(); await clinic.refresh() }
         }
     }
 }

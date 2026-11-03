@@ -1224,10 +1224,23 @@ final class HealthKitManager: ObservableObject {
         }
 
         if detailPolicy.includesCanonicalArchive {
+            // A full archive preset keeps its historical scope. Per-metric native detail
+            // narrows only the archive query; daily summary selection remains unchanged.
+            let archiveSelection: MetricSelectionState?
+            if !detailPolicy.healthKitSourceArchive.includesCanonicalArchive,
+               let detailIDs = detailPolicy.nativeDetailMetricIDs {
+                let selection = MetricSelectionState()
+                selection.enabledMetrics = detailIDs.intersection(metricSelection?.enabledMetrics ?? detailIDs)
+                selection.enabledCategories = Set(HealthMetrics.all
+                    .filter { selection.enabledMetrics.contains($0.id) }.map { $0.category.rawValue })
+                archiveSelection = selection
+            } else {
+                archiveSelection = metricSelection
+            }
             let archiveResult = try await fetchHealthKitRecordArchive(
                 for: date,
                 timeContext: timeContext,
-                metricSelection: metricSelection
+                metricSelection: archiveSelection
             )
             healthData.healthKitRecordArchive = archiveResult.archive
             healthData.healthKitRecordCaptureStatus = archiveResult.archive.captureStatus

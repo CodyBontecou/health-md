@@ -378,8 +378,6 @@
     <string name="paywall_unlimited_exports">Exportações ilimitadas</string>
     <string name="paywall_scheduled_exports">Exportações agendadas automatizadas</string>
     <string name="paywall_future_features">Todos os recursos futuros inclusos</string>
-    <string name="paywall_one_time">Pagamento único — sem assinatura</string>
-    <string name="paywall_unlock_button">Desbloquear Health.md</string>
     <string name="paywall_restore">Restaurar Compra</string>
 
     <!-- Export progress dialog -->
@@ -527,7 +525,6 @@
     <string name="debug_requires_history_permission">O intervalo precisa de histórico</string>
     <string name="debug_first_permission_grant">Primeira concessão de permissão</string>
     <string name="section_health_sources">Fontes de saúde</string>
-    <string name="health_sources_description">O Health Connect é a fonte de exportação local. O Health.md pode exportar os dados que aplicativos compatíveis gravam no Health Connect.</string>
     <string name="health_provider_status_installed">Instalado</string>
     <string name="health_provider_status_selected">Selecionado</string>
     <string name="health_provider_status_ready_to_connect">Pronto para conectar</string>
@@ -664,8 +661,6 @@
     <string name="release_notes_highlight_templates">O pareamento manual com endereço, porta e código de 20 dígitos continua funcionando, inclusive com versões mais antigas da CLI.</string>
     <string name="release_notes_highlight_workouts">Inclui correções de confiabilidade e compatibilidade na configuração, nas exportações, nos agendamentos e nas conexões.</string>
     <string name="export_notification_background_permission_required">As exportações agendadas precisam de acesso em segundo plano do Health Connect. Abra Health.md &gt; Agendamento para ativá-lo.</string>
-    <string name="paywall_unlock_button_price">Desbloquear por %s</string>
-    <string name="paywall_purchasing">Processando…</string>
     <string name="paywall_restoring">Restaurando…</string>
     <string name="debug_purchase_title">Controles de depuração</string>
     <string name="debug_current_state">Estado atual: %s</string>
@@ -1509,6 +1504,9 @@
     <string name="export_sleep_date_guidance">O sono abrange do meio-dia de cada data selecionada ao meio-dia seguinte. Para o sono da última noite, escolha Ontem.</string>
     <string name="export_sleep_preview_window">Janela de sono: de %1$s ao meio-dia a %2$s ao meio-dia (%3$s).</string>
     <string name="export_sleep_preview_guidance">Se o sono estiver ausente, tente a data anterior. O sono da manhã pode aparecer nesse resumo mesmo quando os registros brutos têm a data de hoje. Falhas de consulta são listadas separadamente; um resultado vazio também pode indicar que o acesso de leitura está indisponível.</string>
+    <string name="export_sleep_date_guidance_morning_ends">Sessões de sono completas pertencem à data em que terminam no fuso horário da exportação. Para o sono da noite passada, escolha Hoje.</string>
+    <string name="export_sleep_preview_window_morning_ends">Datas de término do sono: %1$s a %2$s (%3$s).</string>
+    <string name="export_sleep_preview_guidance_morning_ends">Sessões de sono completas pertencem à data de término no fuso horário desta exportação, sem corte ao meio-dia. Falhas de consulta são listadas separadamente; um resultado vazio também pode indicar que o acesso de leitura está indisponível.</string>
     <string name="whoop_connection_description">Conecte o WHOOP para exportar recuperação, esforço, sono, treinos e medidas corporais. O login usa seu navegador; o Health.md armazena os tokens criptografados neste dispositivo. Desconectar remove a conexão salva neste dispositivo.</string>
     <string name="whoop_connect">Conectar WHOOP</string>
     <string name="whoop_sources_description">Conecte o WHOOP para exportar diretamente do provedor ou continue usando o Health Connect para registros locais.</string>
@@ -1520,6 +1518,8 @@
     <string name="paywall_access_subtitle">Escolha uma assinatura ou acesso vitalício para começar seu arquivo de saúde privado. Assinaturas elegíveis incluem um teste gratuito de 7 dias.</string>
     <string name="paywall_access_active_title">Seu acesso está ativo</string>
     <string name="paywall_access_active_body">Continue a configuração para conectar seus dados de saúde e escolher onde salvar seu arquivo privado.</string>
+    <string name="clinic_access_active_title">Seu acesso pela clínica está ativo</string>
+    <string name="clinic_access_active_body">Sua clínica patrocina o envio para o endpoint aprovado dela. Você escolhe o que compartilhar. Outros destinos de exportação exigem seu próprio acesso ao Health.md.</string>
     <string name="paywall_plan_choices">Acesso semanal, anual ou vitalício</string>
     <string name="paywall_weekly_price">%1$s / semana</string>
     <string name="paywall_yearly_price">%1$s / ano</string>
@@ -1530,4 +1530,30 @@
     <string name="paywall_terms">Termos</string>
     <string name="paywall_privacy">Privacidade</string>
     <string name="paywall_subscription_disclosure">Assinaturas elegíveis incluem um teste gratuito de 7 dias e depois são renovadas automaticamente pelo preço exibido, a menos que sejam canceladas antes do fim do teste ou do período atual. Gerencie ou cancele no Google Play. O acesso vitalício é cobrado imediatamente como compra única. O acesso pago existente é mantido. Lifetime não tem julgamento. Excluir o aplicativo ou comprar o Lifetime não cancela uma assinatura existente.</string>
+
+    <!-- Signal carousel paywall -->
+    <string name="paywall_signal_title">Cada batida do coração, registrada.</string>
+    <string name="paywall_signal_lede">O Health.md transforma o Health Connect em uma nota Markdown para cada dia, salva na pasta que você escolher.</string>
+    <string name="paywall_signal_example">Exemplo</string>
+    <string name="paywall_signal_trial_title">Sete dias por nossa conta.</string>
+    <string name="paywall_signal_day_today">Hoje</string>
+    <string name="paywall_signal_day_today_body">Exportações, agendamentos e automações ilimitados.</string>
+    <string name="paywall_signal_day_cancel">Cancele quando quiser</string>
+    <string name="paywall_signal_day_cancel_body">Cancele no Google Play antes do fim do teste.</string>
+    <string name="paywall_signal_day_end">Fim do teste</string>
+    <string name="paywall_signal_day_end_body">Depois, %1$s.</string>
+    <string name="paywall_signal_plans_title">Escolha seu caminho.</string>
+    <string name="paywall_signal_best_value">Melhor custo-benefício</string>
+    <string name="paywall_signal_free_week">7 dias grátis</string>
+    <string name="paywall_signal_lifetime_detail">Pagamento único hoje. Sem renovação.</string>
+    <string name="paywall_signal_subscription_detail">Renova automaticamente. Cancele quando quiser no Google Play.</string>
+    <string name="paywall_signal_cta_trial">Começar teste grátis de 7 dias</string>
+    <string name="paywall_signal_cta_subscribe">Assinar</string>
+    <string name="paywall_signal_cta_lifetime">Comprar vitalício</string>
+    <string name="paywall_signal_step_archive">Arquivo</string>
+    <string name="paywall_signal_step_trial">Teste</string>
+    <string name="paywall_signal_step_plans">Planos</string>
+    <string name="paywall_signal_plan_weekly">Semanal</string>
+    <string name="paywall_signal_plan_yearly">Anual</string>
+    <string name="paywall_signal_plan_lifetime">Vitalício</string>
 </resources>

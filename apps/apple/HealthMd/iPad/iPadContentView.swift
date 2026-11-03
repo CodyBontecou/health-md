@@ -26,6 +26,7 @@ struct iPadContentView: View {
     @State private var showDestinationChangedAlert = false
     @State private var presentFirstExportPreview = false
     @State private var isExporting = false
+    @State private var reviewMilestonePending = false
     @State private var exportProgress: Double = 0.0
     @State private var exportStatusMessage = ""
     @State private var partialExportNotice: PartialExportNotice?
@@ -276,7 +277,15 @@ struct iPadContentView: View {
                     }
                 ]
             )
-            .healthMdReleaseNotesSheet()
+            .healthMdReleaseNotesSheet(
+                reviewMilestonePending: $reviewMilestonePending,
+                canPresentReview: hasCompletedOnboarding && selectedTab == .export && !isExporting
+                    && !isAssessingHistory && !showFolderPicker && !showError
+                    && !showDestinationChangedAlert && !showPaywall && !showUpgradePromptPaywall
+                    && !presentFirstExportPreview && partialExportNotice == nil
+                    && purchaseManager.pendingUpgradePrompt == nil
+                    && schedulingManager.notificationExportResult == nil
+            )
             .keepsScreenAwake(while: isExporting)
             .task {
                 refreshHistoryProfileIdentity()
@@ -707,6 +716,9 @@ struct iPadContentView: View {
                     exportStatusMessage = String(localized: "Export cancelled", comment: "Export was cancelled")
                 }
             } else if result.isFullSuccess {
+                if ReviewManager.shared.recordSuccessfulExport(), purchaseManager.pendingUpgradePrompt == nil {
+                    reviewMilestonePending = true
+                }
                 let noteSuffix = result.localizedInformationalNoteSummary.map { " \($0)" } ?? ""
                 exportStatusMessage = advancedSettings.dailyNotesOnlyModeEnabled
                     ? "Updated \(result.dailyNoteUpdateCount) daily note\(result.dailyNoteUpdateCount == 1 ? "" : "s")"

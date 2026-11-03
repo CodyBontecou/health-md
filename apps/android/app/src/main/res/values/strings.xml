@@ -254,7 +254,6 @@
     <string name="configuration_protection_blocked_action">Show why configuration changes are blocked</string>
     <string name="configuration_protection_open_setting">Open setting</string>
     <string name="section_health_sources">Health sources</string>
-    <string name="health_sources_description">Health Connect is the local export source. Data that supported apps write to Health Connect can be exported by Health.md.</string>
     <string name="health_provider_status_installed">Installed</string>
     <string name="health_provider_status_selected">Selected</string>
     <string name="health_provider_status_ready_to_connect">Ready to connect</string>
@@ -618,11 +617,7 @@
     <string name="paywall_unlimited_exports">Unlimited exports</string>
     <string name="paywall_scheduled_exports">Automated scheduled exports</string>
     <string name="paywall_future_features">All future features included</string>
-    <string name="paywall_one_time">One-time payment \u2014 no subscription</string>
-    <string name="paywall_unlock_button">Unlock Health.md</string>
-    <string name="paywall_unlock_button_price">Unlock for %s</string>
     <string name="paywall_restore">Restore Purchase</string>
-    <string name="paywall_purchasing">Processing\u2026</string>
     <string name="paywall_restoring">Restoring\u2026</string>
 
     <!-- Debug purchase controls -->
@@ -1536,4 +1531,32 @@
     <string name="post_export_upgrade_action">See lifetime access</string>
     <string name="post_export_manual_action">Keep exporting manually</string>
     <string name="post_export_continue_free">Continue free</string>
+    <string name="clinic_access_active_title">Your clinic access is active</string>
+    <string name="clinic_access_active_body">Your clinic sponsors delivery to its approved endpoint. You choose what to share. Other export destinations require your own Health.md access.</string>
+
+    <!-- Signal carousel paywall -->
+    <string name="paywall_signal_title">Every heartbeat, written down.</string>
+    <string name="paywall_signal_lede">Health.md turns Health Connect into a Markdown note for every day, saved to the folder you choose.</string>
+    <string name="paywall_signal_example">Example</string>
+    <string name="paywall_signal_trial_title">Seven days, on us.</string>
+    <string name="paywall_signal_day_today">Today</string>
+    <string name="paywall_signal_day_today_body">Unlimited exports, schedules, and automations.</string>
+    <string name="paywall_signal_day_cancel">Cancel anytime</string>
+    <string name="paywall_signal_day_cancel_body">Cancel in Google Play before the trial ends.</string>
+    <string name="paywall_signal_day_end">Trial ends</string>
+    <string name="paywall_signal_day_end_body">Then %1$s.</string>
+    <string name="paywall_signal_plans_title">Pick a path.</string>
+    <string name="paywall_signal_best_value">Best value</string>
+    <string name="paywall_signal_free_week">7 days free</string>
+    <string name="paywall_signal_lifetime_detail">Pay once today. Never renews.</string>
+    <string name="paywall_signal_subscription_detail">Renews automatically. Cancel anytime in Google Play.</string>
+    <string name="paywall_signal_cta_trial">Start 7-day free trial</string>
+    <string name="paywall_signal_cta_subscribe">Subscribe</string>
+    <string name="paywall_signal_cta_lifetime">Buy Lifetime</string>
+    <string name="paywall_signal_step_archive">Archive</string>
+    <string name="paywall_signal_step_trial">Trial</string>
+    <string name="paywall_signal_step_plans">Plans</string>
+    <string name="paywall_signal_plan_weekly">Weekly</string>
+    <string name="paywall_signal_plan_yearly">Yearly</string>
+    <string name="paywall_signal_plan_lifetime">Lifetime</string>
 </resources>

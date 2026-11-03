@@ -2,6 +2,19 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>ClinicLicensing</key>
+	<dict>
+		<key>URL</key>
+		<string>$(CLINIC_LICENSING_URL)</string>
+		<key>Issuer</key>
+		<string>$(CLINIC_LICENSING_ISSUER)</string>
+		<key>KeyID</key>
+		<string>$(CLINIC_LICENSING_KEY_ID)</string>
+		<key>TrustedKeysJSON</key>
+		<string>$(CLINIC_LICENSING_TRUSTED_KEYS_JSON)</string>
+		<key>PublicKeyDER</key>
+		<string>$(CLINIC_LICENSING_PUBLIC_KEY_DER)</string>
+	</dict>
 	<key>BGTaskSchedulerPermittedIdentifiers</key>
 	<array>
 		<string>com.codybontecou.healthmd.dataexport</string>

@@ -370,8 +370,6 @@
     <string name="paywall_unlimited_exports">Onbeperkte exports</string>
     <string name="paywall_scheduled_exports">Automatische geplande exports</string>
     <string name="paywall_future_features">Alle toekomstige functies inbegrepen</string>
-    <string name="paywall_one_time">Eenmalige betaling — geen abonnement</string>
-    <string name="paywall_unlock_button">Health.md ontgrendelen</string>
     <string name="paywall_restore">Aankoop herstellen</string>
 
     <!-- Export progress dialog -->
@@ -517,7 +515,6 @@
     <string name="debug_requires_history_permission">Bereik heeft geschiedenis nodig</string>
     <string name="debug_first_permission_grant">Eerste toestemming verleend</string>
     <string name="section_health_sources">Gezondheidsbronnen</string>
-    <string name="health_sources_description">Health Connect is de lokale exportbron. Health.md kan gegevens exporteren die ondersteunde apps naar Health Connect schrijven.</string>
     <string name="health_provider_status_installed">Geïnstalleerd</string>
     <string name="health_provider_status_selected">Geselecteerd</string>
     <string name="health_provider_status_ready_to_connect">Klaar om te verbinden</string>
@@ -653,8 +650,6 @@
     <string name="release_notes_highlight_templates">Handmatig koppelen met adres, poort en 20-cijferige code werkt nog steeds, ook met oudere CLI-versies.</string>
     <string name="release_notes_highlight_workouts">Bevat betrouwbaarheids- en compatibiliteitsoplossingen voor configuratie, exports, planningen en verbindingen.</string>
     <string name="export_notification_background_permission_required">Geplande exports hebben achtergrondtoegang voor Health Connect nodig. Open Health.md &gt; Planning om dit in te schakelen.</string>
-    <string name="paywall_unlock_button_price">Ontgrendel voor %s</string>
-    <string name="paywall_purchasing">Verwerken\u2026</string>
     <string name="paywall_restoring">Herstellen\u2026</string>
     <string name="debug_purchase_title">Debug-opties</string>
     <string name="debug_current_state">Huidige status: %s</string>
@@ -1461,6 +1456,9 @@
     <string name="export_sleep_date_guidance">Slaap loopt van twaalf uur ’s middags op elke gekozen datum tot twaalf uur ’s middags de volgende dag. Kies Gisteren voor de slaap van afgelopen nacht.</string>
     <string name="export_sleep_preview_window">Slaapvenster: %1$s om twaalf uur ’s middags tot %2$s om twaalf uur ’s middags (%3$s).</string>
     <string name="export_sleep_preview_guidance">Ontbreekt slaap? Probeer de vorige datum. Ochtendslaap kan in die samenvatting staan, ook als de ruwe records van vandaag zijn. Queryfouten worden apart vermeld; een leeg resultaat kan ook betekenen dat leestoegang ontbreekt.</string>
+    <string name="export_sleep_date_guidance_morning_ends">Volledige slaapsessies horen bij de datum waarop ze eindigen in de tijdzone van de export. Kies Vandaag voor de slaap van afgelopen nacht.</string>
+    <string name="export_sleep_preview_window_morning_ends">Einddatums van slaap: %1$s tot %2$s (%3$s).</string>
+    <string name="export_sleep_preview_guidance_morning_ends">Volledige slaapsessies horen bij hun einddatum in de tijdzone van deze export, zonder afkapping om 12:00. Queryfouten worden apart vermeld; een leeg resultaat kan ook betekenen dat leestoegang ontbreekt.</string>
     <string name="whoop_connection_description">Verbind WHOOP om herstel, belasting, slaap, trainingen en lichaamsmetingen te exporteren. Aanmelden gebeurt in je browser; Health.md bewaart tokens versleuteld op dit apparaat. Verbreken verwijdert de opgeslagen verbinding op dit apparaat.</string>
     <string name="whoop_connect">WHOOP verbinden</string>
     <string name="whoop_sources_description">Verbind WHOOP voor rechtstreekse providerexports of blijf Health Connect gebruiken voor lokale records.</string>
@@ -1472,6 +1470,8 @@
     <string name="paywall_access_subtitle">Kies een abonnement of levenslange toegang om je privégezondheidsarchief te beginnen. In aanmerking komende abonnementen bevatten een gratis proefperiode van 7 dagen.</string>
     <string name="paywall_access_active_title">Je toegang is actief</string>
     <string name="paywall_access_active_body">Ga verder met instellen om je gezondheidsgegevens te verbinden en te kiezen waar je je privéarchief bewaart.</string>
+    <string name="clinic_access_active_title">Je kliniektoegang is actief</string>
+    <string name="clinic_access_active_body">Je kliniek sponsort de levering aan haar goedgekeurde endpoint. Jij kiest wat je deelt. Voor andere exportbestemmingen heb je je eigen Health.md-toegang nodig.</string>
     <string name="paywall_plan_choices">Wekelijkse, jaarlijkse of levenslange toegang</string>
     <string name="paywall_weekly_price">%1$s / week</string>
     <string name="paywall_yearly_price">%1$s / jaar</string>
@@ -1482,4 +1482,30 @@
     <string name="paywall_terms">Voorwaarden</string>
     <string name="paywall_privacy">Privacy</string>
     <string name="paywall_subscription_disclosure">In aanmerking komende abonnementen bevatten een gratis proefperiode van 7 dagen en worden daarna automatisch verlengd tegen de getoonde prijs, tenzij je opzegt voordat de proefperiode of huidige periode eindigt. Beheer of annuleer in Google Play. Levenslange toegang wordt direct als eenmalige aankoop in rekening gebracht. Bestaande betaalde toegang blijft behouden. Levenslang kent geen proces. Het verwijderen van de app of het kopen van Lifetime annuleert een bestaand abonnement niet.</string>
+
+    <!-- Signal carousel paywall -->
+    <string name="paywall_signal_title">Elke hartslag, op papier.</string>
+    <string name="paywall_signal_lede">Health.md maakt van Health Connect elke dag een Markdown-notitie, opgeslagen in de map die je kiest.</string>
+    <string name="paywall_signal_example">Voorbeeld</string>
+    <string name="paywall_signal_trial_title">Zeven dagen van ons.</string>
+    <string name="paywall_signal_day_today">Vandaag</string>
+    <string name="paywall_signal_day_today_body">Onbeperkt exporteren, plannen en automatiseren.</string>
+    <string name="paywall_signal_day_cancel">Altijd opzegbaar</string>
+    <string name="paywall_signal_day_cancel_body">Zeg op in Google Play voordat de proefperiode eindigt.</string>
+    <string name="paywall_signal_day_end">Proefperiode eindigt</string>
+    <string name="paywall_signal_day_end_body">Daarna %1$s.</string>
+    <string name="paywall_signal_plans_title">Kies je route.</string>
+    <string name="paywall_signal_best_value">Beste deal</string>
+    <string name="paywall_signal_free_week">7 dagen gratis</string>
+    <string name="paywall_signal_lifetime_detail">Eén keer betalen, vandaag. Geen verlenging.</string>
+    <string name="paywall_signal_subscription_detail">Wordt automatisch verlengd. Altijd opzegbaar in Google Play.</string>
+    <string name="paywall_signal_cta_trial">Start 7 dagen gratis</string>
+    <string name="paywall_signal_cta_subscribe">Abonneren</string>
+    <string name="paywall_signal_cta_lifetime">Levenslang kopen</string>
+    <string name="paywall_signal_step_archive">Archief</string>
+    <string name="paywall_signal_step_trial">Proef</string>
+    <string name="paywall_signal_step_plans">Abonnementen</string>
+    <string name="paywall_signal_plan_weekly">Wekelijks</string>
+    <string name="paywall_signal_plan_yearly">Jaarlijks</string>
+    <string name="paywall_signal_plan_lifetime">Levenslang</string>
 </resources>

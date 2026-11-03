@@ -85,7 +85,17 @@ fun ExportTargetSelector(
     onTargetSelected: (ExportTarget) -> Unit,
     modifier: Modifier = Modifier,
     gatewaySubtitle: String? = null,
+    managedClinicEndpoint: String? = null,
 ) {
+    if (managedClinicEndpoint != null) {
+        Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+            Text("Clinic destination", style = GeistType.heading16, color = AppColors.textPrimary)
+            Text(managedClinicEndpoint, style = GeistType.copy13Mono, color = AppColors.textSecondary)
+            Text("Your clinic manages this destination. Use Clinic access to select it or manage sharing. Other destinations require your own Health.md access.",
+                style = GeistType.copy13, color = AppColors.textSecondary)
+        }
+        return
+    }
     Column(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(Spacing.xs),
@@ -155,7 +165,22 @@ fun APIExportSettingsDialog(
     onSave: (endpointUrl: String, authorization: String?, requestHeaders: String?) -> Unit,
     onClearAuthorization: () -> Unit,
     onClearRequestHeaders: () -> Unit,
+    managedClinicEndpoint: String? = null,
 ) {
+    if (managedClinicEndpoint != null) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = onDismiss,
+            title = { Text("Clinic destination", style = GeistType.heading16) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(GeistSpacing.space4)) {
+                    Text(managedClinicEndpoint, style = GeistType.copy13Mono)
+                    Text("Your clinic manages this destination. Use Clinic access to select it or manage sharing. Other destinations require your own Health.md access.", style = GeistType.copy14)
+                }
+            },
+            confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.export_preview_done)) } },
+        )
+        return
+    }
     val colors = LocalGeistColors.current
     val dialogShape = RoundedCornerShape(GeistRadii.medium)
     var endpointUrl by remember { mutableStateOf(initialEndpointUrl) }

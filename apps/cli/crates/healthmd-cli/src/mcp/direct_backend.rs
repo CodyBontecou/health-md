@@ -1131,6 +1131,14 @@ fn pairing_backend_error(error: PairingCoordinatorError) -> BackendError {
 }
 
 fn backend_error(error: &ClientError, job_id: Option<Uuid>) -> BackendError {
+    if let ClientError::ExportRejected(rejection) = error {
+        let mut mapped = BackendError::new("healthmd_export_rejected", rejection.to_string())
+            .retryable(rejection.retryable);
+        if let Some(job_id) = job_id {
+            mapped = mapped.with_job_id(job_id);
+        }
+        return mapped;
+    }
     let (code, message, retryable) = match error {
         ClientError::DeviceSelectionRequired(devices) if devices.is_empty() => (
             "healthmd_not_paired",
@@ -1227,6 +1235,38 @@ fn backend_error(error: &ClientError, job_id: Option<Uuid>) -> BackendError {
 mod tests {
     use super::*;
     use healthmd_client::direct::WakeEnrollment;
+
+    #[test]
+    fn android_export_rejection_is_not_mcp_integrity_failure() {
+        use healthmd_protocol::v2::{ErrorCode, ExportPhase};
+        let job_id = Uuid::new_v4();
+        for (code, retryable) in [(ErrorCode::QuotaExhausted, false), (ErrorCode::Busy, true)] {
+            let mapped = backend_error(
+                &ClientError::ExportRejected(healthmd_client::ExportRejection {
+                    code,
+                    phase: ExportPhase::Preparing,
+                    retryable,
+                }),
+                Some(job_id),
+            );
+            assert_eq!(mapped.code, "healthmd_export_rejected");
+            assert_eq!(mapped.retryable, retryable);
+            assert_eq!(mapped.job_id, Some(job_id));
+            assert!(mapped.message.contains("preparing"));
+            if code == ErrorCode::QuotaExhausted {
+                assert!(mapped.message.contains("quota_exhausted"));
+                assert!(mapped.message.contains("billing"));
+            }
+            assert!(!mapped.message.contains("integrity"));
+        }
+        let corrupt = backend_error(
+            &ClientError::InvalidTransfer("digest mismatch".into()),
+            Some(job_id),
+        );
+        assert_eq!(corrupt.code, "healthmd_integrity_error");
+        let malformed = backend_error(&ClientError::MalformedPacket, Some(job_id));
+        assert_eq!(malformed.code, "healthmd_protocol_error");
+    }
 
     #[test]
     fn file_receipt_preserves_optional_frozen_history() {

@@ -226,7 +226,6 @@
     <string name="configuration_protection_blocked_action">ਵੇਖੋ ਕਿ ਕੌਂਫਿਗਰੇਸ਼ਨ ਤਬਦੀਲੀਆਂ ਕਿਉਂ ਬਲੌਕ ਹਨ</string>
     <string name="configuration_protection_open_setting">ਸੈਟਿੰਗ ਖੋਲ੍ਹੋ</string>
     <string name="section_health_sources">ਸਿਹਤ ਸਰੋਤ</string>
-    <string name="health_sources_description">Health Connect ਲੋਕਲ ਐਕਸਪੋਰਟ ਸਰੋਤ ਹੈ। ਸਮਰਥਿਤ ਐਪਾਂ ਵੱਲੋਂ Health Connect ਵਿੱਚ ਲਿਖਿਆ ਡੇਟਾ Health.md ਰਾਹੀਂ ਐਕਸਪੋਰਟ ਕੀਤਾ ਜਾ ਸਕਦਾ ਹੈ।</string>
     <string name="health_provider_status_installed">ਇੰਸਟਾਲ ਹੈ</string>
     <string name="health_provider_status_selected">ਚੁਣਿਆ ਗਿਆ</string>
     <string name="health_provider_status_ready_to_connect">ਜੁੜਨ ਲਈ ਤਿਆਰ ਹੈ</string>
@@ -562,11 +561,7 @@
     <string name="paywall_unlimited_exports">ਅਨੰਤ ਨਿਰਯਾਤ</string>
     <string name="paywall_scheduled_exports">ਸਵੈਚਲਿਤ ਅਨੁਸੂਚਿਤ ਨਿਰਯਾਤ</string>
     <string name="paywall_future_features">ਭਵਿੱਖ ਦੀਆਂ ਸਾਰੀਆਂ ਵਿਸ਼ੇਸ਼ਤਾਵਾਂ ਸ਼ਾਮਲ</string>
-    <string name="paywall_one_time">ਇੱਕ-ਮੁਸ਼ਤ ਭੁਗਤਾਨ \u2014 ਕੋਈ ਸਬਸਕ੍ਰਿਪਸ਼ਨ ਨਹੀਂ</string>
-    <string name="paywall_unlock_button">Health.md ਅਨਲਾਕ ਕਰੋ</string>
-    <string name="paywall_unlock_button_price">%s ਲਈ ਅਨਲੌਕ ਕਰੋ</string>
     <string name="paywall_restore">ਖਰੀਦ ਬਹਾਲ ਕਰੋ</string>
-    <string name="paywall_purchasing">ਪ੍ਰੋਸੈਸਿੰਗ \u2026</string>
     <string name="paywall_restoring">ਬਹਾਲ ਕੀਤਾ ਜਾ ਰਿਹਾ ਹੈ\u2026</string>
     <!-- Debug purchase controls -->
     <string name="debug_purchase_title">ਡੀਬੱਗ ਕੰਟਰੋਲ</string>
@@ -1435,6 +1430,9 @@
     <string name="export_sleep_date_guidance">ਨੀਂਦ ਦੀ ਮਿਆਦ ਹਰ ਚੁਣੀ ਤਾਰੀਖ ਦੀ ਦੁਪਹਿਰ ਤੋਂ ਅਗਲੇ ਦਿਨ ਦੀ ਦੁਪਹਿਰ ਤੱਕ ਹੁੰਦੀ ਹੈ। ਪਿਛਲੀ ਰਾਤ ਦੀ ਨੀਂਦ ਲਈ ਬੀਤਿਆ ਕੱਲ੍ਹ ਚੁਣੋ।</string>
     <string name="export_sleep_preview_window">ਨੀਂਦ ਦੀ ਮਿਆਦ: %1$s ਦੀ ਦੁਪਹਿਰ ਤੋਂ %2$s ਦੀ ਦੁਪਹਿਰ ਤੱਕ (%3$s)।</string>
     <string name="export_sleep_preview_guidance">ਜੇ ਨੀਂਦ ਦੇ ਡਾਟੇ ਦੀ ਘਾਟ ਹੈ, ਤਾਂ ਪਿਛਲੀ ਤਾਰੀਖ ਅਜ਼ਮਾਓ। ਮੂਲ ਰਿਕਾਰਡ ਅੱਜ ਦੇ ਹੋਣ ਦੇ ਬਾਵਜੂਦ ਸਵੇਰ ਦੀ ਨੀਂਦ ਉਸ ਤਾਰੀਖ ਦੇ ਸਾਰ ਵਿੱਚ ਹੋ ਸਕਦੀ ਹੈ। ਕਿਊਰੀ ਦੀਆਂ ਅਸਫਲਤਾਵਾਂ ਵੱਖਰੀਆਂ ਦਿਖਾਈਆਂ ਜਾਂਦੀਆਂ ਹਨ; ਖਾਲੀ ਨਤੀਜੇ ਦਾ ਮਤਲਬ ਪੜ੍ਹਨ ਦੀ ਪਹੁੰਚ ਉਪਲਬਧ ਨਾ ਹੋਣਾ ਵੀ ਹੋ ਸਕਦਾ ਹੈ।</string>
+    <string name="export_sleep_date_guidance_morning_ends">ਪੂਰੇ ਨੀਂਦ ਸੈਸ਼ਨ ਐਕਸਪੋਰਟ ਦੇ ਸਮਾਂ ਖੇਤਰ ਵਿੱਚ ਉਸ ਤਾਰੀਖ ਦੇ ਹੁੰਦੇ ਹਨ ਜਿਸ ਦਿਨ ਉਹ ਖਤਮ ਹੁੰਦੇ ਹਨ। ਪਿਛਲੀ ਰਾਤ ਦੀ ਨੀਂਦ ਲਈ ਅੱਜ ਚੁਣੋ।</string>
+    <string name="export_sleep_preview_window_morning_ends">ਨੀਂਦ ਖਤਮ ਹੋਣ ਦੀਆਂ ਤਾਰੀਖਾਂ: %1$s ਤੋਂ %2$s (%3$s)।</string>
+    <string name="export_sleep_preview_guidance_morning_ends">ਪੂਰੇ ਨੀਂਦ ਸੈਸ਼ਨ ਇਸ ਐਕਸਪੋਰਟ ਦੇ ਸਮਾਂ ਖੇਤਰ ਵਿੱਚ ਆਪਣੀ ਖਤਮ ਹੋਣ ਦੀ ਤਾਰੀਖ ਦੇ ਹੁੰਦੇ ਹਨ, ਦੁਪਹਿਰ ਵੇਲੇ ਕੱਟੇ ਬਿਨਾਂ। ਕਿਊਰੀ ਦੀਆਂ ਅਸਫਲਤਾਵਾਂ ਵੱਖਰੀਆਂ ਦਿਖਾਈਆਂ ਜਾਂਦੀਆਂ ਹਨ; ਖਾਲੀ ਨਤੀਜੇ ਦਾ ਮਤਲਬ ਪੜ੍ਹਨ ਦੀ ਪਹੁੰਚ ਉਪਲਬਧ ਨਾ ਹੋਣਾ ਵੀ ਹੋ ਸਕਦਾ ਹੈ।</string>
     <string name="whoop_connection_description">ਰਿਕਵਰੀ, ਮਿਹਨਤ, ਨੀਂਦ, ਕਸਰਤਾਂ ਅਤੇ ਸਰੀਰਕ ਮਾਪ ਨਿਰਯਾਤ ਕਰਨ ਲਈ WHOOP ਕਨੈਕਟ ਕਰੋ। ਸਾਈਨ-ਇਨ ਤੁਹਾਡੇ ਬ੍ਰਾਊਜ਼ਰ ਰਾਹੀਂ ਹੁੰਦਾ ਹੈ; Health.md ਟੋਕਨਾਂ ਨੂੰ ਇਸ ਡਿਵਾਈਸ ਉੱਤੇ ਇਨਕ੍ਰਿਪਟ ਕਰਕੇ ਰੱਖਦਾ ਹੈ। ਡਿਸਕਨੈਕਟ ਕਰਨ ਨਾਲ ਇਸ ਡਿਵਾਈਸ ਦਾ ਸੰਭਾਲਿਆ ਕਨੈਕਸ਼ਨ ਹਟ ਜਾਂਦਾ ਹੈ।</string>
     <string name="whoop_connect">WHOOP ਕਨੈਕਟ ਕਰੋ</string>
     <string name="whoop_sources_description">ਪ੍ਰਦਾਤਾ ਤੋਂ ਸਿੱਧੇ ਨਿਰਯਾਤ ਲਈ WHOOP ਕਨੈਕਟ ਕਰੋ ਜਾਂ ਸਥਾਨਕ ਰਿਕਾਰਡਾਂ ਲਈ Health Connect ਵਰਤਣਾ ਜਾਰੀ ਰੱਖੋ।</string>
@@ -1446,6 +1444,8 @@
     <string name="paywall_access_subtitle">ਆਪਣਾ ਨਿੱਜੀ ਸਿਹਤ ਆਰਕਾਈਵ ਸ਼ੁਰੂ ਕਰਨ ਲਈ ਗਾਹਕੀ ਜਾਂ ਉਮਰ ਭਰ ਦੀ ਪਹੁੰਚ ਚੁਣੋ। ਯੋਗ ਗਾਹਕੀਆਂ ਵਿੱਚ 7 ਦਿਨਾਂ ਦੀ ਮੁਫ਼ਤ ਅਜ਼ਮਾਇਸ਼ ਸ਼ਾਮਲ ਹੈ।</string>
     <string name="paywall_access_active_title">ਤੁਹਾਡੀ ਪਹੁੰਚ ਸਰਗਰਮ ਹੈ</string>
     <string name="paywall_access_active_body">ਆਪਣਾ ਸਿਹਤ ਡਾਟਾ ਜੋੜਨ ਅਤੇ ਨਿੱਜੀ ਆਰਕਾਈਵ ਸੰਭਾਲਣ ਦੀ ਥਾਂ ਚੁਣਨ ਲਈ ਸੈੱਟਅੱਪ ਜਾਰੀ ਰੱਖੋ।</string>
+    <string name="clinic_access_active_title">ਤੁਹਾਡੀ ਕਲੀਨਿਕ ਪਹੁੰਚ ਸਰਗਰਮ ਹੈ</string>
+    <string name="clinic_access_active_body">ਤੁਹਾਡਾ ਕਲੀਨਿਕ ਆਪਣੇ ਮਨਜ਼ੂਰਸ਼ੁਦਾ ਐਂਡਪੁਆਇੰਟ ਤੱਕ ਡਿਲੀਵਰੀ ਸਪਾਂਸਰ ਕਰਦਾ ਹੈ। ਕੀ ਸਾਂਝਾ ਕਰਨਾ ਹੈ, ਇਹ ਤੁਸੀਂ ਚੁਣਦੇ ਹੋ। ਹੋਰ ਐਕਸਪੋਰਟ ਮੰਜ਼ਿਲਾਂ ਲਈ ਤੁਹਾਡੀ ਆਪਣੀ Health.md ਪਹੁੰਚ ਲੋੜੀਂਦੀ ਹੈ।</string>
     <string name="paywall_plan_choices">ਹਫ਼ਤਾਵਾਰੀ, ਸਾਲਾਨਾ ਜਾਂ ਉਮਰ ਭਰ ਦੀ ਪਹੁੰਚ</string>
     <string name="paywall_weekly_price">%1$s / ਹਫ਼ਤਾ</string>
     <string name="paywall_yearly_price">%1$s / ਸਾਲ</string>
@@ -1456,4 +1456,30 @@
     <string name="paywall_terms">ਸ਼ਰਤਾਂ</string>
     <string name="paywall_privacy">ਪਰਦੇਦਾਰੀ</string>
     <string name="paywall_subscription_disclosure">ਯੋਗ ਗਾਹਕੀਆਂ ਵਿੱਚ 7 ਦਿਨਾਂ ਦੀ ਮੁਫ਼ਤ ਅਜ਼ਮਾਇਸ਼ ਸ਼ਾਮਲ ਹੈ, ਫਿਰ ਅਜ਼ਮਾਇਸ਼ ਜਾਂ ਮੌਜੂਦਾ ਮਿਆਦ ਖ਼ਤਮ ਹੋਣ ਤੋਂ ਪਹਿਲਾਂ ਰੱਦ ਨਾ ਕਰਨ ਉੱਤੇ ਦਿਖਾਈ ਕੀਮਤ ਉੱਤੇ ਆਪਣੇ ਆਪ ਨਵੀਆਂ ਹੁੰਦੀਆਂ ਹਨ। Google Play ਵਿੱਚ ਪ੍ਰਬੰਧਨ ਜਾਂ ਰੱਦ ਕਰੋ। ਉਮਰ ਭਰ ਦੀ ਪਹੁੰਚ ਲਈ ਤੁਰੰਤ ਇੱਕ ਵਾਰ ਭੁਗਤਾਨ ਲਿਆ ਜਾਂਦਾ ਹੈ। ਮੌਜੂਦਾ ਭੁਗਤਾਨ ਕੀਤੀ ਪਹੁੰਚ ਬਰਕਰਾਰ ਰਹਿੰਦੀ ਹੈ। ਉਮਰ ਭਰ ਦਾ ਕੋਈ ਅਜ਼ਮਾਇਸ਼ ਨਹੀਂ ਹੈ। ਐਪ ਨੂੰ ਮਿਟਾਉਣਾ ਜਾਂ ਲਾਈਫਟਾਈਮ ਖਰੀਦਣਾ ਮੌਜੂਦਾ ਗਾਹਕੀ ਨੂੰ ਰੱਦ ਨਹੀਂ ਕਰਦਾ ਹੈ।</string>
+
+    <!-- Signal carousel paywall -->
+    <string name="paywall_signal_title">ਹਰ ਧੜਕਣ, ਲਿਖੀ ਹੋਈ।</string>
+    <string name="paywall_signal_lede">Health.md, Health Connect ਦੇ ਡਾਟੇ ਨੂੰ ਹਰ ਦਿਨ ਲਈ ਇੱਕ Markdown ਨੋਟ ਵਿੱਚ ਬਦਲ ਕੇ ਤੁਹਾਡੇ ਚੁਣੇ ਫੋਲਡਰ ਵਿੱਚ ਸੰਭਾਲਦਾ ਹੈ।</string>
+    <string name="paywall_signal_example">ਉਦਾਹਰਨ</string>
+    <string name="paywall_signal_trial_title">ਸੱਤ ਦਿਨ, ਸਾਡੇ ਵੱਲੋਂ।</string>
+    <string name="paywall_signal_day_today">ਅੱਜ</string>
+    <string name="paywall_signal_day_today_body">ਅਨੰਤ ਨਿਰਯਾਤ, ਸਮਾਂ-ਸੂਚੀਆਂ ਅਤੇ ਆਟੋਮੇਸ਼ਨ।</string>
+    <string name="paywall_signal_day_cancel">ਕਦੇ ਵੀ ਰੱਦ ਕਰੋ</string>
+    <string name="paywall_signal_day_cancel_body">ਅਜ਼ਮਾਇਸ਼ ਖ਼ਤਮ ਹੋਣ ਤੋਂ ਪਹਿਲਾਂ Google Play ਵਿੱਚ ਰੱਦ ਕਰੋ।</string>
+    <string name="paywall_signal_day_end">ਅਜ਼ਮਾਇਸ਼ ਖ਼ਤਮ</string>
+    <string name="paywall_signal_day_end_body">ਫਿਰ %1$s।</string>
+    <string name="paywall_signal_plans_title">ਆਪਣਾ ਰਾਹ ਚੁਣੋ।</string>
+    <string name="paywall_signal_best_value">ਸਭ ਤੋਂ ਵਧੀਆ ਮੁੱਲ</string>
+    <string name="paywall_signal_free_week">7 ਦਿਨ ਮੁਫ਼ਤ</string>
+    <string name="paywall_signal_lifetime_detail">ਅੱਜ ਇੱਕ ਵਾਰ ਭੁਗਤਾਨ ਕਰੋ। ਕੋਈ ਨਵੀਨੀਕਰਨ ਨਹੀਂ।</string>
+    <string name="paywall_signal_subscription_detail">ਆਪਣੇ-ਆਪ ਨਵਿਆਇਆ ਜਾਂਦਾ ਹੈ। Google Play ਵਿੱਚ ਕਦੇ ਵੀ ਰੱਦ ਕਰੋ।</string>
+    <string name="paywall_signal_cta_trial">7 ਦਿਨਾਂ ਦੀ ਮੁਫ਼ਤ ਅਜ਼ਮਾਇਸ਼ ਸ਼ੁਰੂ ਕਰੋ</string>
+    <string name="paywall_signal_cta_subscribe">ਗਾਹਕੀ ਲਓ</string>
+    <string name="paywall_signal_cta_lifetime">ਉਮਰ ਭਰ ਲਈ ਖ਼ਰੀਦੋ</string>
+    <string name="paywall_signal_step_archive">ਪੁਰਾਲੇਖ</string>
+    <string name="paywall_signal_step_trial">ਅਜ਼ਮਾਇਸ਼</string>
+    <string name="paywall_signal_step_plans">ਪਲਾਨ</string>
+    <string name="paywall_signal_plan_weekly">ਹਫ਼ਤਾਵਾਰੀ</string>
+    <string name="paywall_signal_plan_yearly">ਸਾਲਾਨਾ</string>
+    <string name="paywall_signal_plan_lifetime">ਉਮਰ ਭਰ</string>
 </resources>

@@ -85,8 +85,9 @@ struct ContentView: View {
     @State private var activeMacExportEndDate: Date?
     @AppStorage("discordPromoDismissed") private var discordPromoDismissed = false
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
-    @Environment(\.requestReview) private var requestReview
+    @State private var reviewMilestonePending = false
     @ObservedObject private var purchaseManager = PurchaseManager.shared
+    @ObservedObject private var clinicSponsorship = ClinicSponsorshipManager.shared
 
     init() {
         let savedDateRange = Self.initialDateRangeSelection()
@@ -312,6 +313,10 @@ struct ContentView: View {
             }
         }
         .animation(reduceMotion ? nil : AnimationTimings.standard, value: isExporting)
+        .onChange(of: clinicSponsorship.destinationSelectionRequestID) { _, _ in
+            applyRequestedClinicDestination()
+        }
+        .task { applyRequestedClinicDestination() }
         .sheet(isPresented: $showFolderPicker) {
             FolderPicker { url in
                 configurationProtection.performConfigurationChange {
@@ -597,7 +602,10 @@ struct ContentView: View {
             invalidateExecutionHistory()
             saveDateRangeSelection()
         }
-        .healthMdReleaseNotesSheet()
+        .healthMdReleaseNotesSheet(
+            reviewMilestonePending: $reviewMilestonePending,
+            canPresentReview: canPresentReviewIntroduction
+        )
         .onDisappear {
             invalidateExecutionHistory()
             historyProfilePublicationObserver.unbind()
@@ -607,6 +615,16 @@ struct ContentView: View {
             releaseExportFolderBrowserAccess()
         }
         } // else (main app)
+    }
+
+    private var canPresentReviewIntroduction: Bool {
+        hasCompletedOnboarding && selectedTab == .export && !isExporting
+            && !isAssessingHistory && !showFolderPicker && !showError
+            && !showDestinationChangedAlert && !showPaywall && !showPostOnboardingPaywall
+            && !showUpgradePromptPaywall && purchaseManager.pendingUpgradePrompt == nil
+            && !presentFirstExportPreview && markdownPreview == nil && quickLookURL == nil
+            && exportFolderBrowserPresentation == nil && !showExportProfiles && !showClinicianReport
+            && partialExportNotice == nil && schedulingManager.notificationExportResult == nil
     }
 
     // MARK: - Marketing Capture
@@ -1068,6 +1086,29 @@ struct ContentView: View {
         return coordinator
     }
 
+    private func applyRequestedClinicDestination() {
+        guard let requestID = clinicSponsorship.destinationSelectionRequestID,
+              let endpoint = clinicSponsorship.status.endpoint,
+              clinicSponsorship.authorizeCached(endpoint: endpoint) == .allowedClinicDestination else { return }
+        let coordinator = ensureProfileCoordinator()
+        let name = clinicSponsorship.status.clinicName ?? "Clinic"
+        guard let endpointID = coordinator.importAPIEndpointSelection(name: name,
+            endpointURLString: endpoint, bearerToken: nil) else { return }
+        if let existing = coordinator.profileStore.profiles.first(where: {
+            $0.target == .apiEndpoint && $0.apiEndpointID == endpointID
+        }) {
+            guard coordinator.activate(profileID: existing.id) else { return }
+        } else {
+            var snapshot = ExportSettingsSnapshot.from(advancedSettings)
+            snapshot.exportFormats = [.json]
+            snapshot.dailyNoteInjection.enabled = false
+            guard coordinator.createProfile(name: name, target: .apiEndpoint,
+                apiEndpointID: endpointID, settings: snapshot) != nil else { return }
+        }
+        exportTargetSelection = .apiEndpoint
+        clinicSponsorship.consumeDestinationRequest(requestID)
+    }
+
     private func bindHistoryProfilePublications(_ store: ExportProfileStore) {
         historyProfilePublicationObserver.bind(store) {
             invalidateExecutionHistory(reason: "profile_semantic_change")
@@ -1150,7 +1191,9 @@ struct ContentView: View {
 
         // Keep the established quota behavior once Health and output setup are
         // complete; target validation happens after access is available.
-        guard purchaseManager.canExport else {
+        let clinicAllowed = exportTargetSelection == .apiEndpoint &&
+            clinicSponsorship.authorizeCached(endpoint: apiExportSettings.endpointURLString) == .allowedClinicDestination
+        guard purchaseManager.canExport || clinicAllowed else {
             presentExportPaywall()
             return
         }
@@ -1268,7 +1311,9 @@ struct ContentView: View {
 
     private func beginInteractiveCapture(_ selection: HealthHistoryExecutionSelection) {
         guard selection == interactiveHistorySelection else { return }
-        guard purchaseManager.canExport else { presentExportPaywall(); return }
+        let clinicAllowed = selection.target == .apiEndpoint && clinicSponsorship.authorizeCached(
+            endpoint: apiExportSettings.endpointURLString) == .allowedClinicDestination
+        guard purchaseManager.canExport || clinicAllowed else { presentExportPaywall(); return }
         guard !ensureProfileCoordinator().isActiveProfileExecutionBlocked,
               canExport, advancedSettings.hasFileDestinationOutput else {
             presentExportConfigurationError("Export setup changed. Review the destination and settings before exporting.")
@@ -1457,8 +1502,7 @@ struct ContentView: View {
                 startStatusDismissTimer()
 
                 if ReviewManager.shared.recordSuccessfulExport(), purchaseManager.pendingUpgradePrompt == nil {
-                    ReviewManager.shared.didRequestReview()
-                    requestReview()
+                    reviewMilestonePending = true
                 }
             } else if result.isPartialSuccess {
                 let isCompletedDailyNoteSkip = advancedSettings.dailyNotesOnlyModeEnabled
@@ -1501,12 +1545,13 @@ struct ContentView: View {
     private func exportDataToAPIEndpoint(_ selection: HealthHistoryExecutionSelection) {
         let advancedSettings = selection.makeCaptureSettings()
         let dateRange = (startDate: selection.scope.startDate, endDate: selection.scope.endDate)
-        guard purchaseManager.canExport else {
-            presentExportPaywall()
-            return
-        }
         guard let apiDestination = apiExportSettings.destinationSnapshot else {
             presentExportConfigurationError("Configure a valid API endpoint before exporting.")
+            return
+        }
+        guard purchaseManager.canExport || clinicSponsorship.authorizeCached(
+            endpoint: apiDestination.endpointURL.absoluteString) == .allowedClinicDestination else {
+            presentExportPaywall()
             return
         }
 
@@ -1590,8 +1635,7 @@ struct ContentView: View {
                 startStatusDismissTimer()
 
                 if ReviewManager.shared.recordSuccessfulExport(), purchaseManager.pendingUpgradePrompt == nil {
-                    ReviewManager.shared.didRequestReview()
-                    requestReview()
+                    reviewMilestonePending = true
                 }
             } else if result.isPartialSuccess {
                 partialExportNotice = PartialExportNotice(result: result)
@@ -1702,8 +1746,7 @@ struct ContentView: View {
                 startStatusDismissTimer()
 
                 if ReviewManager.shared.recordSuccessfulExport(), purchaseManager.pendingUpgradePrompt == nil {
-                    ReviewManager.shared.didRequestReview()
-                    requestReview()
+                    reviewMilestonePending = true
                 }
             } else if result.isPartialSuccess {
                 partialExportNotice = PartialExportNotice(result: result)
@@ -2501,8 +2544,7 @@ struct ContentView: View {
             startStatusDismissTimer()
 
             if ReviewManager.shared.recordSuccessfulExport(), purchaseManager.pendingUpgradePrompt == nil {
-                ReviewManager.shared.didRequestReview()
-                requestReview()
+                reviewMilestonePending = true
             }
         case .partialSuccess:
             let isCompletedDailyNoteSkip = completionSettings.dailyNotesOnlyModeEnabled
@@ -2915,6 +2957,8 @@ struct SettingsTabView: View {
     @Environment(\.locale) private var locale
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @ObservedObject private var purchaseManager = PurchaseManager.shared
+    @ObservedObject private var clinicSponsorship = ClinicSponsorshipManager.shared
+    @State private var showClinicAccess = false
     @Binding var showFolderPicker: Bool
     @Binding var showExportProfiles: Bool
     @Binding var showClinicianReport: Bool
@@ -3024,6 +3068,7 @@ struct SettingsTabView: View {
                 .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showDiagnostics) { DiagnosticsView() }
+        .sheet(isPresented: $showClinicAccess) { ClinicAccessView() }
         .sheet(isPresented: $showExternalIntegrations) {
             ExternalIntegrationsView(manager: externalIntegrationManager)
                 .presentationDetents([.large])
@@ -3106,6 +3151,14 @@ struct SettingsTabView: View {
             title: "Account & Storage",
             subtitle: "Choose where exports go and manage your access."
         ) {
+            if clinicSponsorship.status.configured {
+                SettingsRow(icon: "cross.case", title: "Clinic access",
+                    subtitle: clinicSponsorship.status.clinicName ?? "Accept an invitation or manage sharing",
+                    isActive: clinicSponsorship.status.active,
+                    accessibilityIdentifier: "settings-clinic-access",
+                    action: { showClinicAccess = true })
+                SettingsRowDivider()
+            }
             SettingsRow(
                 icon: purchaseSettingsIcon,
                 title: purchaseSettingsTitle,

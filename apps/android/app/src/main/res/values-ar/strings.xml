@@ -310,8 +310,6 @@
     <string name="paywall_unlimited_exports">عمليات تصدير غير محدودة</string>
     <string name="paywall_scheduled_exports">عمليات تصدير تلقائية مجدولة</string>
     <string name="paywall_future_features">جميع الميزات المستقبلية مضمنة</string>
-    <string name="paywall_one_time">دفعة واحدة \u2014 بلا اشتراك</string>
-    <string name="paywall_unlock_button">إلغاء قفل Health.md</string>
     <string name="paywall_restore">استعادة عملية الشراء</string>
 
     <!-- Export progress dialog -->
@@ -557,7 +555,6 @@
     <string name="debug_requires_history_permission">النطاق يحتاج إلى إذن السجل</string>
     <string name="debug_first_permission_grant">أول منح للإذن</string>
     <string name="section_health_sources">مصادر البيانات الصحية</string>
-    <string name="health_sources_description">Health Connect هو مصدر التصدير المحلي. يستطيع Health.md تصدير البيانات التي تكتبها التطبيقات المدعومة في Health Connect.</string>
     <string name="health_provider_status_installed">تم التثبيت</string>
     <string name="health_provider_status_selected">محدّد</string>
     <string name="health_provider_status_ready_to_connect">جاهز للاتصال</string>
@@ -697,8 +694,6 @@
     <string name="release_notes_highlight_templates">لا يزال الربط اليدوي عبر العنوان والمنفذ والرمز المكوّن من 20 رقمًا يعمل، بما في ذلك مع إصدارات CLI الأقدم.</string>
     <string name="release_notes_highlight_workouts">يتضمن إصلاحات للموثوقية والتوافق في الإعداد والتصدير والجداول والاتصالات.</string>
     <string name="export_notification_background_permission_required">تحتاج عمليات التصدير المجدولة إلى وصول Health Connect في الخلفية. افتح قسم «الجدولة» في Health.md لتفعيله.</string>
-    <string name="paywall_unlock_button_price">إلغاء القفل مقابل %s</string>
-    <string name="paywall_purchasing">جارٍ إتمام الشراء\u2026</string>
     <string name="paywall_restoring">جارٍ الاستعادة\u2026</string>
     <string name="debug_purchase_title">عناصر تحكم تصحيح الأخطاء</string>
     <string name="debug_current_state">الحالة الحالية: %s</string>
@@ -1654,6 +1649,9 @@
     <string name="export_sleep_date_guidance">يشمل النوم الفترة من ظهر كل تاريخ محدد حتى ظهر اليوم التالي. لنوم الليلة الماضية، اختر أمس.</string>
     <string name="export_sleep_preview_window">نافذة النوم: من ظهر %1$s إلى ظهر %2$s (%3$s).</string>
     <string name="export_sleep_preview_guidance">إذا كانت بيانات النوم مفقودة، جرّب التاريخ السابق. قد يظهر نوم الصباح في ملخص ذلك التاريخ حتى لو كانت السجلات الخام مؤرخة اليوم. تُعرض أخطاء الاستعلام بشكل منفصل؛ وقد تعني النتيجة الفارغة أيضًا عدم توفر إذن القراءة.</string>
+    <string name="export_sleep_date_guidance_morning_ends">تُنسب جلسات النوم كاملةً إلى التاريخ الذي تنتهي فيه حسب المنطقة الزمنية للتصدير. لنوم الليلة الماضية، اختر اليوم.</string>
+    <string name="export_sleep_preview_window_morning_ends">تواريخ انتهاء النوم: من %1$s إلى %2$s (%3$s).</string>
+    <string name="export_sleep_preview_guidance_morning_ends">تُنسب جلسات النوم كاملةً إلى تاريخ انتهائها حسب المنطقة الزمنية لهذا التصدير، دون اقتطاع عند الظهر. تُعرض أخطاء الاستعلام بشكل منفصل؛ وقد تعني النتيجة الفارغة أيضًا عدم توفر إذن القراءة.</string>
     <string name="whoop_connection_description">اربط WHOOP لتصدير التعافي والإجهاد والنوم والتمارين وقياسات الجسم. يتم تسجيل الدخول عبر متصفحك؛ ويخزن Health.md الرموز مشفرة على هذا الجهاز. يؤدي قطع الاتصال إلى إزالة الاتصال المحفوظ على هذا الجهاز.</string>
     <string name="whoop_connect">ربط WHOOP</string>
     <string name="whoop_sources_description">اربط WHOOP للتصدير مباشرة من مزود البيانات، أو واصل استخدام Health Connect للسجلات المحلية.</string>
@@ -1665,6 +1663,8 @@
     <string name="paywall_access_subtitle">اختر اشتراكًا أو وصولًا مدى الحياة لبدء أرشيفك الصحي الخاص. تتضمن الاشتراكات المؤهلة تجربة مجانية لمدة 7 أيام.</string>
     <string name="paywall_access_active_title">وصولك نشط</string>
     <string name="paywall_access_active_body">تابع الإعداد لربط بياناتك الصحية واختيار مكان حفظ أرشيفك الخاص.</string>
+    <string name="clinic_access_active_title">وصولك عبر العيادة نشط</string>
+    <string name="clinic_access_active_body">ترعى عيادتك التسليم إلى نقطة النهاية المعتمدة لديها. أنت من يختار ما تشاركه. تتطلب وجهات التصدير الأخرى وصولك الخاص إلى Health.md.</string>
     <string name="paywall_plan_choices">وصول أسبوعي أو سنوي أو مدى الحياة</string>
     <string name="paywall_weekly_price">%1$s / أسبوع</string>
     <string name="paywall_yearly_price">%1$s / سنة</string>
@@ -1675,4 +1675,30 @@
     <string name="paywall_terms">الشروط</string>
     <string name="paywall_privacy">الخصوصية</string>
     <string name="paywall_subscription_disclosure">تتضمن الاشتراكات المؤهلة تجربة مجانية لمدة 7 أيام، ثم تتجدد تلقائيًا بالسعر المعروض ما لم تُلغَ قبل انتهاء التجربة أو الفترة الحالية. يمكنك الإدارة أو الإلغاء في Google Play. يُحصّل ثمن الوصول مدى الحياة فورًا كعملية شراء لمرة واحدة. يظل الوصول المدفوع الحالي محفوظًا. العمر ليس لديه محاكمة. لا يؤدي حذف التطبيق أو شراء مدى الحياة إلى إلغاء الاشتراك الحالي.</string>
+
+    <!-- Signal carousel paywall -->
+    <string name="paywall_signal_title">كل نبضة قلب، مدوّنة.</string>
+    <string name="paywall_signal_lede">يحوّل Health.md بيانات Health Connect إلى ملاحظة Markdown لكل يوم، ويحفظها في المجلد الذي تختاره.</string>
+    <string name="paywall_signal_example">مثال</string>
+    <string name="paywall_signal_trial_title">سبعة أيام على حسابنا.</string>
+    <string name="paywall_signal_day_today">اليوم</string>
+    <string name="paywall_signal_day_today_body">عمليات تصدير وجداول وأتمتة بلا حدود.</string>
+    <string name="paywall_signal_day_cancel">ألغِ في أي وقت</string>
+    <string name="paywall_signal_day_cancel_body">ألغِ الاشتراك من Google Play قبل انتهاء الفترة التجريبية.</string>
+    <string name="paywall_signal_day_end">انتهاء الفترة التجريبية</string>
+    <string name="paywall_signal_day_end_body">بعدها %1$s.</string>
+    <string name="paywall_signal_plans_title">اختر طريقك.</string>
+    <string name="paywall_signal_best_value">الأفضل قيمة</string>
+    <string name="paywall_signal_free_week">7 أيام مجانًا</string>
+    <string name="paywall_signal_lifetime_detail">ادفع مرة واحدة اليوم. بلا تجديد.</string>
+    <string name="paywall_signal_subscription_detail">يتجدد تلقائيًا. ألغِ في أي وقت من Google Play.</string>
+    <string name="paywall_signal_cta_trial">ابدأ تجربة مجانية لمدة 7 أيام</string>
+    <string name="paywall_signal_cta_subscribe">اشترك</string>
+    <string name="paywall_signal_cta_lifetime">اشترِ مدى الحياة</string>
+    <string name="paywall_signal_step_archive">الأرشيف</string>
+    <string name="paywall_signal_step_trial">التجربة</string>
+    <string name="paywall_signal_step_plans">الخطط</string>
+    <string name="paywall_signal_plan_weekly">أسبوعي</string>
+    <string name="paywall_signal_plan_yearly">سنوي</string>
+    <string name="paywall_signal_plan_lifetime">مدى الحياة</string>
 </resources>

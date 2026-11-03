@@ -335,7 +335,7 @@ struct ProfileScheduleEditorSheet: View {
                 } header: {
                     Text("Scope")
                 } footer: {
-                    Text("Refresh windows are best effort; iOS may delay background runs. Each run exports the profile's metrics and formats to its own destination. A run consumes one of the 5 free export actions unless you have Full Access.")
+                    Text("Refresh windows are best effort; iOS may delay background runs. Each run exports the profile's metrics and formats to its own destination. Scheduled exports require an active trial or subscription, or Lifetime access.")
                 }
             }
             .navigationTitle(profile.name)
