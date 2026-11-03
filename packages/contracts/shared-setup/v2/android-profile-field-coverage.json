@@ -1260,9 +1260,9 @@
       "source_type": "MetricSelectionState",
       "serialized_field": "nativeDetailMetricIds",
       "coverage_kind": "descriptor",
-      "disposition": "local_only",
+      "disposition": "prohibited",
       "contract_path": null,
-      "evidence": "Device-local opt-in to exact native records. SharedSetupV2Mapper.mapProfile projects enabledMetrics only; this selection is neither exported nor restored by the unchanged Shared Setup v2 contract."
+      "evidence": "Exact native-record capture authority must not cross devices through frozen Shared Setup v2. SharedSetupV2Mapper.mapProfile projects enabledMetrics only and excludes this device-local opt-in."
     },
     {
       "source_type": "MetricTrackingConfig",
