@@ -147474,6 +147474,266 @@
         }
       }
     },
+    "7 days free" : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"7 Tage gratis"}},
+        "es": {"stringUnit":{"state":"translated","value":"7 días gratis"}},
+        "fr": {"stringUnit":{"state":"translated","value":"7 jours offerts"}},
+        "it": {"stringUnit":{"state":"translated","value":"7 giorni gratis"}},
+        "ja": {"stringUnit":{"state":"translated","value":"7日間無料"}},
+        "ko": {"stringUnit":{"state":"translated","value":"7일 무료"}},
+        "nl": {"stringUnit":{"state":"translated","value":"7 dagen gratis"}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"7 dias grátis"}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"7 天免费"}}
+      }
+    },
+    "About %@ a week" : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Etwa %@ pro Woche"}},
+        "es": {"stringUnit":{"state":"translated","value":"Unos %@ a la semana"}},
+        "fr": {"stringUnit":{"state":"translated","value":"Environ %@ par semaine"}},
+        "it": {"stringUnit":{"state":"translated","value":"Circa %@ a settimana"}},
+        "ja": {"stringUnit":{"state":"translated","value":"1週間あたり約%@"}},
+        "ko": {"stringUnit":{"state":"translated","value":"주당 약 %@"}},
+        "nl": {"stringUnit":{"state":"translated","value":"Ongeveer %@ per week"}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Cerca de %@ por semana"}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"约每周 %@"}}
+      }
+    },
+    "Archive" : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Archiv"}},
+        "es": {"stringUnit":{"state":"translated","value":"Archivo"}},
+        "fr": {"stringUnit":{"state":"translated","value":"Archive"}},
+        "it": {"stringUnit":{"state":"translated","value":"Archivio"}},
+        "ja": {"stringUnit":{"state":"translated","value":"アーカイブ"}},
+        "ko": {"stringUnit":{"state":"translated","value":"아카이브"}},
+        "nl": {"stringUnit":{"state":"translated","value":"Archief"}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Arquivo"}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"归档"}}
+      }
+    },
+    "Best value" : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Bestes Angebot"}},
+        "es": {"stringUnit":{"state":"translated","value":"Mejor precio"}},
+        "fr": {"stringUnit":{"state":"translated","value":"Meilleure offre"}},
+        "it": {"stringUnit":{"state":"translated","value":"Più conveniente"}},
+        "ja": {"stringUnit":{"state":"translated","value":"いちばんお得"}},
+        "ko": {"stringUnit":{"state":"translated","value":"최고 혜택"}},
+        "nl": {"stringUnit":{"state":"translated","value":"Beste deal"}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Melhor custo-benefício"}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"最超值"}}
+      }
+    },
+    "Buy Lifetime" : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Dauerzugriff kaufen"}},
+        "es": {"stringUnit":{"state":"translated","value":"Comprar de por vida"}},
+        "fr": {"stringUnit":{"state":"translated","value":"Acheter l’accès à vie"}},
+        "it": {"stringUnit":{"state":"translated","value":"Acquista a vita"}},
+        "ja": {"stringUnit":{"state":"translated","value":"買い切りで購入"}},
+        "ko": {"stringUnit":{"state":"translated","value":"평생 이용권 구매"}},
+        "nl": {"stringUnit":{"state":"translated","value":"Levenslang kopen"}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Comprar vitalício"}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"购买终身版"}}
+      }
+    },
+    "Cancel anytime" : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Jederzeit kündbar"}},
+        "es": {"stringUnit":{"state":"translated","value":"Cancela cuando quieras"}},
+        "fr": {"stringUnit":{"state":"translated","value":"Résiliable à tout moment"}},
+        "it": {"stringUnit":{"state":"translated","value":"Annulla quando vuoi"}},
+        "ja": {"stringUnit":{"state":"translated","value":"いつでも解約可能"}},
+        "ko": {"stringUnit":{"state":"translated","value":"언제든 해지 가능"}},
+        "nl": {"stringUnit":{"state":"translated","value":"Altijd opzegbaar"}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Cancele quando quiser"}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"随时取消"}}
+      }
+    },
+    "Cancel in App Store subscriptions at least 24 hours before the trial ends." : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Kündige in den App Store-Abos mindestens 24 Stunden vor Ende der Testphase."}},
+        "es": {"stringUnit":{"state":"translated","value":"Cancela en las suscripciones del App Store al menos 24 horas antes de que termine la prueba."}},
+        "fr": {"stringUnit":{"state":"translated","value":"Résiliez dans les abonnements de l’App Store au moins 24 heures avant la fin de l’essai."}},
+        "it": {"stringUnit":{"state":"translated","value":"Annulla negli abbonamenti dell’App Store almeno 24 ore prima della fine della prova."}},
+        "ja": {"stringUnit":{"state":"translated","value":"トライアル終了の24時間前までに、App Storeのサブスクリプションから解約してください。"}},
+        "ko": {"stringUnit":{"state":"translated","value":"체험 기간이 끝나기 최소 24시간 전에 App Store 구독에서 해지하세요."}},
+        "nl": {"stringUnit":{"state":"translated","value":"Zeg op via App Store-abonnementen, minstens 24 uur voordat de proefperiode eindigt."}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Cancele nas assinaturas da App Store pelo menos 24 horas antes do fim do teste."}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"请在试用结束前至少 24 小时，在 App Store 订阅中取消。"}}
+      }
+    },
+    "Every heartbeat, written down." : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Jeder Herzschlag, festgehalten."}},
+        "es": {"stringUnit":{"state":"translated","value":"Cada latido, por escrito."}},
+        "fr": {"stringUnit":{"state":"translated","value":"Chaque battement, consigné."}},
+        "it": {"stringUnit":{"state":"translated","value":"Ogni battito, messo per iscritto."}},
+        "ja": {"stringUnit":{"state":"translated","value":"鼓動のひとつひとつを、記録に。"}},
+        "ko": {"stringUnit":{"state":"translated","value":"모든 심장 박동을 기록으로."}},
+        "nl": {"stringUnit":{"state":"translated","value":"Elke hartslag, op papier."}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Cada batida do coração, registrada."}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"每一次心跳，都有记录。"}}
+      }
+    },
+    "Example" : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Beispiel"}},
+        "es": {"stringUnit":{"state":"translated","value":"Ejemplo"}},
+        "fr": {"stringUnit":{"state":"translated","value":"Exemple"}},
+        "it": {"stringUnit":{"state":"translated","value":"Esempio"}},
+        "ja": {"stringUnit":{"state":"translated","value":"例"}},
+        "ko": {"stringUnit":{"state":"translated","value":"예시"}},
+        "nl": {"stringUnit":{"state":"translated","value":"Voorbeeld"}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Exemplo"}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"示例"}}
+      }
+    },
+    "Health.md turns Apple Health into a Markdown note for every day, saved to the folder you choose." : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Health.md macht aus Apple Health jeden Tag eine Markdown-Notiz – gespeichert im Ordner deiner Wahl."}},
+        "es": {"stringUnit":{"state":"translated","value":"Health.md convierte Apple Health en una nota Markdown para cada día, guardada en la carpeta que elijas."}},
+        "fr": {"stringUnit":{"state":"translated","value":"Health.md transforme Apple Health en une note Markdown pour chaque jour, enregistrée dans le dossier de votre choix."}},
+        "it": {"stringUnit":{"state":"translated","value":"Health.md trasforma Apple Salute in una nota Markdown per ogni giorno, salvata nella cartella che scegli."}},
+        "ja": {"stringUnit":{"state":"translated","value":"Health.mdは、Appleヘルスケアのデータを毎日のMarkdownノートにして、選んだフォルダに保存します。"}},
+        "ko": {"stringUnit":{"state":"translated","value":"Health.md는 Apple 건강 앱의 데이터를 매일 Markdown 노트로 만들어 원하는 폴더에 저장합니다."}},
+        "nl": {"stringUnit":{"state":"translated","value":"Health.md maakt van Apple Gezondheid elke dag een Markdown-notitie, opgeslagen in de map die je kiest."}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"O Health.md transforma o app Saúde da Apple em uma nota Markdown para cada dia, salva na pasta que você escolher."}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"Health.md 将 Apple“健康”数据变成每天一篇 Markdown 笔记，保存到你选择的文件夹。"}}
+      }
+    },
+    "Pick a path." : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Wähle deinen Weg."}},
+        "es": {"stringUnit":{"state":"translated","value":"Elige tu camino."}},
+        "fr": {"stringUnit":{"state":"translated","value":"Choisissez votre voie."}},
+        "it": {"stringUnit":{"state":"translated","value":"Scegli il tuo percorso."}},
+        "ja": {"stringUnit":{"state":"translated","value":"プランを選ぶ。"}},
+        "ko": {"stringUnit":{"state":"translated","value":"나에게 맞는 길을 고르세요."}},
+        "nl": {"stringUnit":{"state":"translated","value":"Kies je route."}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Escolha seu caminho."}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"选一条路。"}}
+      }
+    },
+    "Plans" : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Tarife"}},
+        "es": {"stringUnit":{"state":"translated","value":"Planes"}},
+        "fr": {"stringUnit":{"state":"translated","value":"Offres"}},
+        "it": {"stringUnit":{"state":"translated","value":"Piani"}},
+        "ja": {"stringUnit":{"state":"translated","value":"プラン"}},
+        "ko": {"stringUnit":{"state":"translated","value":"요금제"}},
+        "nl": {"stringUnit":{"state":"translated","value":"Abonnementen"}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Planos"}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"方案"}}
+      }
+    },
+    "See all plans" : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Alle Tarife"}},
+        "es": {"stringUnit":{"state":"translated","value":"Ver todos los planes"}},
+        "fr": {"stringUnit":{"state":"translated","value":"Voir toutes les offres"}},
+        "it": {"stringUnit":{"state":"translated","value":"Vedi tutti i piani"}},
+        "ja": {"stringUnit":{"state":"translated","value":"すべてのプランを見る"}},
+        "ko": {"stringUnit":{"state":"translated","value":"모든 요금제 보기"}},
+        "nl": {"stringUnit":{"state":"translated","value":"Alle abonnementen bekijken"}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Ver todos os planos"}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"查看所有方案"}}
+      }
+    },
+    "Seven days, on us." : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Sieben Tage geschenkt."}},
+        "es": {"stringUnit":{"state":"translated","value":"Siete días por nuestra cuenta."}},
+        "fr": {"stringUnit":{"state":"translated","value":"Sept jours offerts."}},
+        "it": {"stringUnit":{"state":"translated","value":"Sette giorni offerti da noi."}},
+        "ja": {"stringUnit":{"state":"translated","value":"7日間、無料でどうぞ。"}},
+        "ko": {"stringUnit":{"state":"translated","value":"7일은 저희가 쏩니다."}},
+        "nl": {"stringUnit":{"state":"translated","value":"Zeven dagen van ons."}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Sete dias por nossa conta."}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"七天，我们请客。"}}
+      }
+    },
+    "Start 7-day free trial" : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"7 Tage gratis testen"}},
+        "es": {"stringUnit":{"state":"translated","value":"Empezar prueba gratis de 7 días"}},
+        "fr": {"stringUnit":{"state":"translated","value":"Essayer gratuitement 7 jours"}},
+        "it": {"stringUnit":{"state":"translated","value":"Inizia la prova gratuita di 7 giorni"}},
+        "ja": {"stringUnit":{"state":"translated","value":"7日間の無料トライアルを開始"}},
+        "ko": {"stringUnit":{"state":"translated","value":"7일 무료 체험 시작"}},
+        "nl": {"stringUnit":{"state":"translated","value":"Start 7 dagen gratis"}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Começar teste grátis de 7 dias"}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"开始 7 天免费试用"}}
+      }
+    },
+    "Subscribe" : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Abonnieren"}},
+        "es": {"stringUnit":{"state":"translated","value":"Suscribirse"}},
+        "fr": {"stringUnit":{"state":"translated","value":"S’abonner"}},
+        "it": {"stringUnit":{"state":"translated","value":"Abbonati"}},
+        "ja": {"stringUnit":{"state":"translated","value":"登録する"}},
+        "ko": {"stringUnit":{"state":"translated","value":"구독하기"}},
+        "nl": {"stringUnit":{"state":"translated","value":"Abonneren"}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Assinar"}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"订阅"}}
+      }
+    },
+    "Then %@." : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Danach %@."}},
+        "es": {"stringUnit":{"state":"translated","value":"Después, %@."}},
+        "fr": {"stringUnit":{"state":"translated","value":"Ensuite, %@."}},
+        "it": {"stringUnit":{"state":"translated","value":"Poi %@."}},
+        "ja": {"stringUnit":{"state":"translated","value":"その後は%@。"}},
+        "ko": {"stringUnit":{"state":"translated","value":"이후 %@."}},
+        "nl": {"stringUnit":{"state":"translated","value":"Daarna %@."}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Depois, %@."}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"之后 %@。"}}
+      }
+    },
+    "Trial" : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Testphase"}},
+        "es": {"stringUnit":{"state":"translated","value":"Prueba"}},
+        "fr": {"stringUnit":{"state":"translated","value":"Essai"}},
+        "it": {"stringUnit":{"state":"translated","value":"Prova"}},
+        "ja": {"stringUnit":{"state":"translated","value":"トライアル"}},
+        "ko": {"stringUnit":{"state":"translated","value":"체험"}},
+        "nl": {"stringUnit":{"state":"translated","value":"Proef"}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Teste"}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"试用"}}
+      }
+    },
+    "Trial ends" : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Testphase endet"}},
+        "es": {"stringUnit":{"state":"translated","value":"Fin de la prueba"}},
+        "fr": {"stringUnit":{"state":"translated","value":"Fin de l’essai"}},
+        "it": {"stringUnit":{"state":"translated","value":"Fine della prova"}},
+        "ja": {"stringUnit":{"state":"translated","value":"トライアル終了"}},
+        "ko": {"stringUnit":{"state":"translated","value":"체험 종료"}},
+        "nl": {"stringUnit":{"state":"translated","value":"Proefperiode eindigt"}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Fim do teste"}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"试用结束"}}
+      }
+    },
+    "Unlimited exports, schedules, and automations." : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Unbegrenzte Exporte, Zeitpläne und Automationen."}},
+        "es": {"stringUnit":{"state":"translated","value":"Exportaciones, programaciones y automatizaciones ilimitadas."}},
+        "fr": {"stringUnit":{"state":"translated","value":"Exports, planifications et automatisations illimités."}},
+        "it": {"stringUnit":{"state":"translated","value":"Esportazioni, pianificazioni e automazioni illimitate."}},
+        "ja": {"stringUnit":{"state":"translated","value":"エクスポート、スケジュール、オートメーションが無制限。"}},
+        "ko": {"stringUnit":{"state":"translated","value":"무제한 내보내기, 일정, 자동화."}},
+        "nl": {"stringUnit":{"state":"translated","value":"Onbeperkt exporteren, plannen en automatiseren."}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Exportações, agendamentos e automações ilimitados."}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"无限次导出、计划和自动化。"}}
+      }
+    },
     "You have unlimited exports." : {
       "localizations" : {
         "de" : {

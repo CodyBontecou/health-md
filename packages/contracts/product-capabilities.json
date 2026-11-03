@@ -39,6 +39,50 @@
   ],
   "capabilities": [
     {
+      "id": "account.clinic-sponsored-access",
+      "name": "Clinic-sponsored destination access",
+      "classification": "shared",
+      "summary": "Build-configured manually activated flat clinic sponsorship, proof-bound recoverable enrollment, signed installation-bound access, separate patient sharing consent and endpoint-scoped credentials. Sponsorship permits only approved API delivery and never sets personal purchase flags. Includes a production deployment package; disabled in unconfigured builds, with the isolated licensing service deployed and native store qualification pending.",
+      "profiles": [],
+      "platforms": {
+        "apple": {
+          "state": "available"
+        },
+        "android": {
+          "state": "available"
+        }
+      },
+      "evidence": [
+        "packages/contracts/clinic-sponsorship/v1/contract.md",
+        "apps/licensing/src/service.mjs",
+        "apps/apple/HealthMd/Shared/Managers/ClinicSponsorshipManager.swift",
+        "apps/android/app/src/main/java/com/healthmd/data/billing/ClinicSponsorshipManager.kt"
+      ]
+    },
+    {
+      "id": "support.native-review-introduction",
+      "name": "Optional introduction to native store reviews",
+      "classification": "planned",
+      "summary": "An optional purple review introduction for established users after successful export milestones or major/minor release notes. Feedback and dismissal remain available to everyone. Cooldowns record introductions and request attempts, never submitted ratings. No health data or new analytics are collected. iPhone and iPad use StoreKit for rating entry; explicit written-review actions open the App Store. The macOS companion does not present mobile review introductions.",
+      "profiles": [],
+      "platforms": {
+        "apple": {
+          "state": "available"
+        },
+        "android": {
+          "state": "planned",
+          "target": "Android review-introduction follow-up: adapt the optional purple introduction to Google Play review guidance, retain the 120-day attempt cooldown and F-Droid unavailable behavior, and wire release-note completion before enabling it."
+        }
+      },
+      "evidence": [
+        "apps/apple/HealthMd/iOS/Views/ReviewIntroductionView.swift",
+        "apps/apple/HealthMd/iOS/ReleaseNotes.swift",
+        "apps/apple/HealthMd/Shared/Utilities/ReviewManager.swift",
+        "apps/apple/HealthMdTests/Utilities/ReviewIntroductionPolicyTests.swift",
+        "apps/android/app/src/main/java/com/healthmd/domain/export/ReviewPromptPolicy.kt"
+      ]
+    },
+    {
       "id": "apple.ads-purchase-attribution",
       "name": "Apple Ads purchase attribution",
       "classification": "unavailable",

@@ -143,6 +143,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		C11C00000000000000000001 /* NativeLicensing.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = NativeLicensing.xcconfig; path = ../licensing/deploy/NativeLicensing.xcconfig; sourceTree = SOURCE_ROOT; };
 		A90000000000000000000001 /* healthmd-mcp */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = "healthmd-mcp"; sourceTree = BUILT_PRODUCTS_DIR; };
 		A90000000000000000000002 /* main.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = "mcp-main.swift"; path = "Sources/healthmd-mcp/main.swift"; sourceTree = "<group>"; };
 		A90000000000000000000003 /* HealthMdMCPServer.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Sources/HealthMdMCPCore/HealthMdMCPServer.swift; sourceTree = "<group>"; };
@@ -441,6 +442,7 @@
 		624B99E62F15D70300F9103F = {
 			isa = PBXGroup;
 			children = (
+				C11C00000000000000000001 /* NativeLicensing.xcconfig */,
 				624B99F12F15D70300F9103F /* HealthMd */,
 				62A1B0032F50A00100000003 /* HealthMdTests */,
 				624B99F02F15D70300F9103F /* Products */,
@@ -1313,6 +1315,7 @@
 		};
 		624B99F82F15D70500F9103F /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = C11C00000000000000000001 /* NativeLicensing.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
@@ -1379,6 +1382,7 @@
 		};
 		624B99F92F15D70500F9103F /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = C11C00000000000000000001 /* NativeLicensing.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
@@ -1661,6 +1665,7 @@
 		};
 		6C18C8B2947E48198BC2435C /* Debug-iOS */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = C11C00000000000000000001 /* NativeLicensing.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
@@ -1907,6 +1912,7 @@
 		};
 		9CEC71EEDC5D476DB4D246EF /* Release-iOS */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = C11C00000000000000000001 /* NativeLicensing.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;

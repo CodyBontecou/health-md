@@ -87,11 +87,21 @@ fun HealthMdNavigation(
     // Root boundary, outside NavHost: Back/deep links cannot expose tracking
     // without a store entitlement. F-Droid keeps its included-access policy.
     val accessViewModel: PaywallViewModel = hiltViewModel()
+    val clinicAccessViewModel: com.healthmd.presentation.clinic.ClinicAccessViewModel = hiltViewModel()
+    val clinicStatus by clinicAccessViewModel.status.collectAsStateWithLifecycle()
+    var showClinicEnrollment by remember { mutableStateOf(false) }
+    if (showClinicEnrollment) {
+        com.healthmd.presentation.clinic.ClinicAccessScreen(
+            onDone = { showClinicEnrollment = false }, viewModel = clinicAccessViewModel)
+        return
+    }
+
     val accessUnlocked by accessViewModel.accessState.collectAsStateWithLifecycle()
+    val personalAccess by accessViewModel.isUnlocked.collectAsStateWithLifecycle()
     val accessOwner = LocalLifecycleOwner.current
     DisposableEffect(accessOwner, accessViewModel) {
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) accessViewModel.refreshAccess()
+            if (event == Lifecycle.Event.ON_RESUME) { accessViewModel.refreshAccess(); clinicAccessViewModel.refresh() }
         }
         accessOwner.lifecycle.addObserver(observer)
         onDispose { accessOwner.lifecycle.removeObserver(observer) }
@@ -108,6 +118,15 @@ fun HealthMdNavigation(
         val restoring by accessViewModel.isRestoring.collectAsStateWithLifecycle()
         val error by accessViewModel.purchaseError.collectAsStateWithLifecycle()
         val context = LocalContext.current
+        Scaffold(containerColor = AppColors.bgPrimary, bottomBar = {
+            if (clinicStatus.configured) {
+                TextButton(onClick = { showClinicEnrollment = true },
+                    modifier = Modifier.fillMaxWidth().navigationBarsPadding()) {
+                    Text("Have a clinic invitation?")
+                }
+            }
+        }) { padding ->
+            Box(Modifier.fillMaxSize().padding(padding)) {
         PaywallScreen(
             onPurchase = {},
             onPlanPurchase = { plan ->
@@ -123,6 +142,8 @@ fun HealthMdNavigation(
             purchaseError = error,
             onClearError = accessViewModel::clearError,
         )
+            }
+        }
         return
     }
 
@@ -343,10 +364,16 @@ fun HealthMdNavigation(
                 )
             }
             composable(NavDestination.HISTORY.route) { HistoryScreen() }
+            composable("clinic-access") {
+                com.healthmd.presentation.clinic.ClinicAccessScreen(
+                    onDone = { navController.popBackStack() }, viewModel = clinicAccessViewModel)
+            }
             composable(NavDestination.SETTINGS.route) {
                 SettingsScreen(
                     viewModel = settingsViewModel,
                     protectionSettingsRequestId = protectionSettingsRequestId,
+                    clinicAccessAvailable = clinicStatus.configured,
+                    onNavigateToClinicAccess = { navController.navigate("clinic-access") },
                     onNavigateToPaywall = {
                         if (settingsViewModel.distributionPolicy.purchasesAvailable) {
                             navController.navigate(PaywallEntryPoint.UPGRADE.route)
@@ -392,7 +419,12 @@ fun HealthMdNavigation(
                 )
             }
             composable(SubRoutes.CLINICIAN_REPORT) {
-                ClinicianReportScreen(onBack = { navController.popBackStack() })
+                if (personalAccess) {
+                    ClinicianReportScreen(onBack = { navController.popBackStack() })
+                } else {
+                    Text("Your own Health.md access is required to save or share a report.",
+                        modifier = Modifier.padding(com.healthmd.presentation.theme.Spacing.md))
+                }
             }
             composable(SubRoutes.ADVANCED_SETTINGS) {
                 AdvancedSettingsScreen(

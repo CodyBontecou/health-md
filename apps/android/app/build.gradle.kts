@@ -20,6 +20,15 @@ fun configuredValue(name: String): String =
         .orElse(providers.environmentVariable(name))
         .getOrElse("")
 
+// Public trust defaults shared with Xcode; properties/env can override for isolated QA builds.
+val clinicLicensingDefaults = Properties().apply {
+    rootProject.file("../licensing/deploy/NativeLicensing.xcconfig").inputStream().use { load(it) }
+}
+fun configuredClinicValue(name: String): String =
+    providers.gradleProperty(name)
+        .orElse(providers.environmentVariable(name))
+        .getOrElse(clinicLicensingDefaults.getProperty(name).orEmpty().replace("$()", ""))
+
 fun configuredEngineMode(name: String): String =
     configuredValue(name).takeIf { it == "legacy" || it == "shadow" || it == "rust" }
         ?: "legacy"
@@ -59,6 +68,10 @@ android {
 
         // Explicit opt-in; absent or malformed values keep claim entry points disabled.
         buildConfigField("boolean", "MYSELF_CLAIM_ENABLED", "false")
+        // Trust is baked into the app build, never supplied by a clinic invitation.
+        for (name in listOf("CLINIC_LICENSING_URL", "CLINIC_LICENSING_ISSUER", "CLINIC_LICENSING_KEY_ID", "CLINIC_LICENSING_PUBLIC_KEY_DER", "CLINIC_LICENSING_TRUSTED_KEYS_JSON")) {
+            buildConfigField("String", name, configuredClinicValue(name).asBuildConfigString())
+        }
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 

@@ -1402,6 +1402,9 @@
     <string name="export_sleep_date_guidance">Ұйқы таңдалған күннің түскі уақытынан келесі күннің түскі уақытына дейінгі аралықты қамтиды. Өткен түнгі ұйқы үшін «Кеше» параметрін таңдаңыз.</string>
     <string name="export_sleep_preview_window">Ұйқы аралығы: %1$s түскі уақытынан %2$s түскі уақытына дейін (%3$s).</string>
     <string name="export_sleep_preview_guidance">Ұйқы деректері болмаса, алдыңғы күнді таңдаңыз. Бастапқы жазбалар бүгінгі күнмен белгіленсе де, таңғы ұйқы сол күннің қорытындысында болуы мүмкін. Сұрау қателері бөлек көрсетіледі; бос нәтиже оқу рұқсатының қолжетімсіз екенін де білдіруі мүмкін.</string>
+    <string name="export_sleep_date_guidance_morning_ends">Толық ұйқы сеанстары экспорттың уақыт белдеуінде аяқталған күнге жатады. Өткен түнгі ұйқы үшін Бүгінді таңдаңыз.</string>
+    <string name="export_sleep_preview_window_morning_ends">Ұйқының аяқталу күндері: %1$s – %2$s (%3$s).</string>
+    <string name="export_sleep_preview_guidance_morning_ends">Толық ұйқы сеанстары осы экспорттың уақыт белдеуіндегі аяқталу күніне жатады, түсте кесілмейді. Сұрау қателері бөлек көрсетіледі; бос нәтиже оқу рұқсатының қолжетімсіз екенін де білдіруі мүмкін.</string>
     <string name="whoop_connection_description">Қалпына келу, жүктеме, ұйқы, жаттығулар мен дене өлшемдерін экспорттау үшін WHOOP қызметін қосыңыз. Кіру браузер арқылы орындалады; Health.md токендерді осы құрылғыда шифрлап сақтайды. Ажырату осы құрылғыда сақталған қосылымды жояды.</string>
     <string name="whoop_connect">WHOOP қызметін қосу</string>
     <string name="whoop_sources_description">Провайдерден тікелей экспорттау үшін WHOOP қызметін қосыңыз немесе жергілікті жазбалар үшін Health Connect қолдануды жалғастырыңыз.</string>
@@ -1413,6 +1416,8 @@
     <string name="paywall_access_subtitle">Жеке денсаулық мұрағатын бастау үшін жазылымды немесе өмір бойы қолжетімділікті таңдаңыз. Тиісті жазылымдарға 7 күндік тегін сынақ мерзімі кіреді.</string>
     <string name="paywall_access_active_title">Қолжетімділігіңіз белсенді</string>
     <string name="paywall_access_active_body">Денсаулық деректерін қосып, жеке мұрағатты сақтау орнын таңдау үшін баптауды жалғастырыңыз.</string>
+    <string name="clinic_access_active_title">Клиника арқылы қолжетімділігіңіз белсенді</string>
+    <string name="clinic_access_active_body">Клиникаңыз мақұлданған соңғы нүктесіне жеткізуге демеушілік етеді. Нені бөлісуді өзіңіз таңдайсыз. Басқа экспорт бағыттары үшін өз Health.md қолжетімділігіңіз қажет.</string>
     <string name="paywall_plan_choices">Апталық, жылдық немесе өмір бойы қолжетімділік</string>
     <string name="paywall_weekly_price">%1$s / апта</string>
     <string name="paywall_yearly_price">%1$s / жыл</string>
@@ -1423,4 +1428,30 @@
     <string name="paywall_terms">Шарттар</string>
     <string name="paywall_privacy">Құпиялық</string>
     <string name="paywall_subscription_disclosure">Тиісті жазылымдарға 7 күндік тегін сынақ мерзімі кіреді, одан кейін сынақ немесе ағымдағы кезең аяқталмай тұрып бас тартпасаңыз, көрсетілген бағамен автоматты түрде жаңартылады. Google Play арқылы басқарыңыз немесе бас тартыңыз. Өмір бойы қолжетімділік үшін төлем бірден бір рет алынады. Бұрынғы ақылы қолжетімділік сақталады. Өмір бойы сынақ болмайды. Қолданбаны жою немесе Lifetime сатып алу бұрыннан бар жазылымнан бас тартпайды.</string>
+
+    <!-- Signal carousel paywall -->
+    <string name="paywall_signal_title">Әр жүрек соғысы — жазулы.</string>
+    <string name="paywall_signal_lede">Health.md Health Connect деректерін күн сайынғы Markdown жазбасына айналдырып, өзіңіз таңдаған қалтаға сақтайды.</string>
+    <string name="paywall_signal_example">Мысал</string>
+    <string name="paywall_signal_trial_title">Жеті күн — біздің есебімізден.</string>
+    <string name="paywall_signal_day_today">Бүгін</string>
+    <string name="paywall_signal_day_today_body">Шексіз экспорт, кесте және автоматтандыру.</string>
+    <string name="paywall_signal_day_cancel">Кез келген уақытта бас тарту</string>
+    <string name="paywall_signal_day_cancel_body">Сынақ мерзімі аяқталмай тұрып, Google Play-де бас тартыңыз.</string>
+    <string name="paywall_signal_day_end">Сынақ мерзімінің соңы</string>
+    <string name="paywall_signal_day_end_body">Содан кейін %1$s.</string>
+    <string name="paywall_signal_plans_title">Өз жолыңызды таңдаңыз.</string>
+    <string name="paywall_signal_best_value">Ең тиімді</string>
+    <string name="paywall_signal_free_week">7 күн тегін</string>
+    <string name="paywall_signal_lifetime_detail">Бүгін бір рет төлейсіз. Жаңартылмайды.</string>
+    <string name="paywall_signal_subscription_detail">Автоматты түрде жаңартылады. Google Play-де кез келген уақытта бас тартуға болады.</string>
+    <string name="paywall_signal_cta_trial">7 күндік тегін сынақты бастау</string>
+    <string name="paywall_signal_cta_subscribe">Жазылу</string>
+    <string name="paywall_signal_cta_lifetime">Өмір бойына сатып алу</string>
+    <string name="paywall_signal_step_archive">Мұрағат</string>
+    <string name="paywall_signal_step_trial">Сынақ</string>
+    <string name="paywall_signal_step_plans">Жоспарлар</string>
+    <string name="paywall_signal_plan_weekly">Апта сайын</string>
+    <string name="paywall_signal_plan_yearly">Жыл сайын</string>
+    <string name="paywall_signal_plan_lifetime">Өмір бойы</string>
 </resources>

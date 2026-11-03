@@ -670,10 +670,17 @@ extension HealthMetrics {
 class MetricSelectionState: ObservableObject, Codable {
     @Published var enabledMetrics: Set<String>
     @Published var enabledCategories: Set<String>
+    @Published var nativeDetailMetricIDs: Set<String> = []
+
+    var effectiveNativeDetailMetricIDs: Set<String> {
+        nativeDetailMetricIDs.intersection(enabledMetrics)
+            .intersection(HealthKitRecordCatalog.cataloguedMetricIDs)
+    }
 
     enum CodingKeys: String, CodingKey {
         case enabledMetrics
         case enabledCategories
+        case nativeDetailMetricIDs
     }
 
     init() {
@@ -745,12 +752,16 @@ class MetricSelectionState: ObservableObject, Codable {
 
         enabledMetrics = decoded.subtracting(pendingMetricIds).subtracting(unavailableMetricIds)
         enabledCategories = decodedCategories.subtracting(pendingCategoryNames)
+        nativeDetailMetricIDs = try container.decodeIfPresent(Set<String>.self, forKey: .nativeDetailMetricIDs) ?? []
     }
 
     func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(enabledMetrics, forKey: .enabledMetrics)
         try container.encode(enabledCategories, forKey: .enabledCategories)
+        if !nativeDetailMetricIDs.isEmpty {
+            try container.encode(nativeDetailMetricIDs, forKey: .nativeDetailMetricIDs)
+        }
     }
 
     func isMetricEnabled(_ metricId: String) -> Bool {

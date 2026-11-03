@@ -244,7 +244,7 @@ class ScheduledExportRecoveryManager @Inject constructor(
                         }
                     } else when (target) {
                         ExportTarget.DEVICE_FOLDER -> {
-                            val orchestrator = ExportOrchestrator(healthRepository, exportRepository)
+                            val orchestrator = ExportOrchestrator(healthRepository, exportRepository, rawSnapshotService)
                             if (durableFolderOperationId != null && settingsSnapshotJson != null) {
                                 orchestrator.exportDatesDurably(
                                     dates = targetDates,
@@ -439,9 +439,10 @@ class ScheduledExportRecoveryManager @Inject constructor(
     )
 
     private suspend fun hasFullAccess(): Boolean {
+        val settings = settingsRepository.getExportSettings()
         entitlementRepository.refresh()
         return distributionPolicy.fullAccessIncluded ||
-            entitlementRepository.verifyAccess()
+            entitlementRepository.verifyExportAccess(settings.exportTarget, settings.apiEndpointUrl.takeIf { settings.exportMode == com.healthmd.rawexport.ExportMode.COMPATIBILITY })
     }
 
     private suspend fun inspectPendingRecoveryIgnoringLock(): ScheduledExportRecoveryStatus {

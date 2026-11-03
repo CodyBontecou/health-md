@@ -1461,6 +1461,9 @@
     <string name="export_sleep_date_guidance">Schlaf umfasst den Zeitraum von mittags am gewählten Datum bis mittags am Folgetag. Wähle für die letzte Nacht „Gestern“.</string>
     <string name="export_sleep_preview_window">Schlaffenster: %1$s mittags bis %2$s mittags (%3$s).</string>
     <string name="export_sleep_preview_guidance">Wenn Schlaf fehlt, versuche das vorherige Datum. Morgendlicher Schlaf kann dort zusammengefasst sein, obwohl die Rohdaten von heute sind. Abfragefehler werden separat aufgeführt; ein leeres Ergebnis kann auch auf fehlenden Lesezugriff hinweisen.</string>
+    <string name="export_sleep_date_guidance_morning_ends">Ganze Schlafphasen gehören zu dem Datum, an dem sie in der Zeitzone des Exports enden. Wähle für die letzte Nacht „Heute“.</string>
+    <string name="export_sleep_preview_window_morning_ends">Schlafende-Daten: %1$s bis %2$s (%3$s).</string>
+    <string name="export_sleep_preview_guidance_morning_ends">Ganze Schlafphasen gehören zu ihrem Enddatum in der Zeitzone dieses Exports, ohne Kappung zur Mittagszeit. Abfragefehler werden separat aufgeführt; ein leeres Ergebnis kann auch auf fehlenden Lesezugriff hinweisen.</string>
     <string name="whoop_connection_description">Verbinde WHOOP, um Erholung, Belastung, Schlaf, Trainings und Körpermessungen zu exportieren. Die Anmeldung erfolgt im Browser; Health.md speichert Tokens verschlüsselt auf diesem Gerät. Beim Trennen wird die gespeicherte Verbindung auf diesem Gerät entfernt.</string>
     <string name="whoop_connect">WHOOP verbinden</string>
     <string name="whoop_sources_description">Verbinde WHOOP für direkte Anbieterexporte oder nutze Health Connect weiterhin für lokale Datensätze.</string>
@@ -1472,6 +1475,8 @@
     <string name="paywall_access_subtitle">Wähle ein Abo oder lebenslangen Zugriff für dein privates Gesundheitsarchiv. Berechtigte Abos bieten eine kostenlose 7-tägige Testphase.</string>
     <string name="paywall_access_active_title">Dein Zugriff ist aktiv</string>
     <string name="paywall_access_active_body">Fahre mit der Einrichtung fort, um deine Gesundheitsdaten zu verbinden und den Speicherort deines privaten Archivs auszuwählen.</string>
+    <string name="clinic_access_active_title">Dein Klinikzugang ist aktiv</string>
+    <string name="clinic_access_active_body">Deine Klinik übernimmt die Übermittlung an ihren freigegebenen Endpunkt. Du entscheidest, was du teilst. Andere Exportziele erfordern deinen eigenen Health.md-Zugriff.</string>
     <string name="paywall_plan_choices">Wöchentlicher, jährlicher oder lebenslanger Zugriff</string>
     <string name="paywall_weekly_price">%1$s / Woche</string>
     <string name="paywall_yearly_price">%1$s / Jahr</string>
@@ -1482,4 +1487,30 @@
     <string name="paywall_terms">Nutzungsbedingungen</string>
     <string name="paywall_privacy">Datenschutz</string>
     <string name="paywall_subscription_disclosure">Berechtigte Abos bieten eine kostenlose 7-tägige Testphase und verlängern sich danach automatisch zum angezeigten Preis, sofern sie nicht vor Ende der Testphase oder des aktuellen Zeitraums gekündigt werden. Verwaltung und Kündigung erfolgen in Google Play. Lebenslanger Zugriff wird sofort einmalig berechnet. Bestehender bezahlter Zugriff bleibt erhalten. Lifetime hat keine Testversion. Durch das Löschen der App oder den Kauf von Lifetime wird ein bestehendes Abonnement nicht gekündigt.</string>
+
+    <!-- Signal carousel paywall -->
+    <string name="paywall_signal_title">Jeder Herzschlag, festgehalten.</string>
+    <string name="paywall_signal_lede">Health.md macht aus Health Connect jeden Tag eine Markdown-Notiz – gespeichert im Ordner deiner Wahl.</string>
+    <string name="paywall_signal_example">Beispiel</string>
+    <string name="paywall_signal_trial_title">Sieben Tage geschenkt.</string>
+    <string name="paywall_signal_day_today">Heute</string>
+    <string name="paywall_signal_day_today_body">Unbegrenzte Exporte, Zeitpläne und Automationen.</string>
+    <string name="paywall_signal_day_cancel">Jederzeit kündbar</string>
+    <string name="paywall_signal_day_cancel_body">Kündige vor Ende der Testphase in Google Play.</string>
+    <string name="paywall_signal_day_end">Testphase endet</string>
+    <string name="paywall_signal_day_end_body">Danach %1$s.</string>
+    <string name="paywall_signal_plans_title">Wähle deinen Weg.</string>
+    <string name="paywall_signal_best_value">Bestes Angebot</string>
+    <string name="paywall_signal_free_week">7 Tage gratis</string>
+    <string name="paywall_signal_lifetime_detail">Heute einmal zahlen. Keine Verlängerung.</string>
+    <string name="paywall_signal_subscription_detail">Verlängert sich automatisch. Jederzeit in Google Play kündbar.</string>
+    <string name="paywall_signal_cta_trial">7 Tage gratis testen</string>
+    <string name="paywall_signal_cta_subscribe">Abonnieren</string>
+    <string name="paywall_signal_cta_lifetime">Dauerzugriff kaufen</string>
+    <string name="paywall_signal_step_archive">Archiv</string>
+    <string name="paywall_signal_step_trial">Testphase</string>
+    <string name="paywall_signal_step_plans">Tarife</string>
+    <string name="paywall_signal_plan_weekly">Wöchentlich</string>
+    <string name="paywall_signal_plan_yearly">Jährlich</string>
+    <string name="paywall_signal_plan_lifetime">Dauerzugriff</string>
 </resources>

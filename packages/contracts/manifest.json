@@ -6,7 +6,7 @@
       "id": "healthmd.product_capabilities",
       "version": 1,
       "path": "packages/contracts/product-capabilities.json",
-      "sha256": "a97fbdbabe8c969aeac1c6f1790cd9eeb29de2a67447f7d6330bcd35666642ab",
+      "sha256": "80ed3a8620a86124222cde506c98b8da9e6cb6506878a0d384b5a45ee7acf285",
       "implementations": [
         "packages/contracts/validate.py",
         "apps/apple/HealthMdTests/Contracts/ProductCapabilityManifestTests.swift",
@@ -775,6 +775,47 @@
           "path": "packages/contracts/rollup-summary/v11/fixtures/range-v11.md",
           "sha256": "48bc6d302a2aefcdf1c9956ec1fcc5db3b2f0b15f1b05ed0d39f1e2223f6b9e3",
           "provenance": "Actual shared-core v11 range artifact from synthetic SDK aggregate facts and real semantic/render sessions; independently asserted DST bounds, successful empty-day coverage and whole-session quantities. Native execution/consumer qualification remains pending.",
+          "mirrors": []
+        }
+      ]
+    },
+    {
+      "id": "healthmd.clinic-sponsored-access",
+      "version": 1,
+      "status": "canonical",
+      "summary": "Installation-bound clinic grants, proof-bound enrollment recovery and destination-aware admission with manual billing; no health payload schema changes.",
+      "specification": "packages/contracts/clinic-sponsorship/v1/contract.md",
+      "authorities": [
+        "packages/contracts/clinic-sponsorship/v1/contract.md"
+      ],
+      "implementations": [
+        "apps/licensing/src/service.mjs",
+        "apps/apple/HealthMd/Shared/Models/ClinicExportAuthorization.swift",
+        "apps/apple/HealthMd/Shared/Models/ClinicGrantVerifier.swift",
+        "apps/android/app/src/main/java/com/healthmd/domain/billing/ClinicExportAuthorization.kt",
+        "apps/android/app/src/main/java/com/healthmd/domain/billing/ClinicGrantVerifier.kt"
+      ],
+      "consumers": [
+        "scripts/tests/test_clinic_export_authorization.py",
+        "apps/android/app/src/test/java/com/healthmd/domain/billing/ClinicExportAuthorizationTest.kt",
+        "apps/licensing/test/service.test.mjs",
+        "apps/licensing/test/production.test.mjs",
+        "apps/android/app/src/test/java/com/healthmd/domain/billing/ClinicSponsorshipRecoveryTest.kt"
+      ],
+      "documentation": [
+        "apps/licensing/README.md"
+      ],
+      "fixtures": [
+        {
+          "path": "packages/contracts/clinic-sponsorship/v1/authorization-fixtures.json",
+          "sha256": "38eecc4bb9355676ef314e46576855b47826c2714677ff8ffcf4de80037bd120",
+          "provenance": "Synthetic authorization and ephemeral P-256 verification vectors; no private signing key or live patient data.",
+          "mirrors": []
+        },
+        {
+          "path": "packages/contracts/clinic-sponsorship/v1/verification-fixtures.json",
+          "sha256": "310ae896331c3f1c0e15088bae9756bb7d1cd89005c4b75454219f1ed766b9e5",
+          "provenance": "Synthetic authorization and ephemeral P-256 verification vectors; no private signing key or live patient data.",
           "mirrors": []
         }
       ]

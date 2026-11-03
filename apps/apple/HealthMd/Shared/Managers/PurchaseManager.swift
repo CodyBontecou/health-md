@@ -284,6 +284,12 @@ final class PurchaseManager: ObservableObject {
         return canExport
     }
 
+    #if DEBUG
+    /// Isolate real sandbox purchases from this device's preserved legacy grant.
+    /// StoreKit entitlements still resolve normally; no saved state is erased.
+    var sandboxPurchaseQAEnabled = ProcessInfo.processInfo.arguments.contains("-SandboxPurchasesQA")
+    #endif
+
     // MARK: - Injected Dependencies
 
     private let keychain: KeychainStoring
@@ -570,7 +576,8 @@ final class PurchaseManager: ObservableObject {
         //   UserDefaults.standard.set("1.6.0", forKey: "debugOriginalAppVersion")
         //   UserDefaults.standard.set(1577836800.0, forKey: "debugOriginalPurchaseDate")  // optional, ms since 1970
         // Remove by setting to nil or removing the key.
-        if UserDefaults.standard.string(forKey: "debugOriginalAppVersion") != nil {
+        if !sandboxPurchaseQAEnabled,
+           UserDefaults.standard.string(forKey: "debugOriginalAppVersion") != nil {
             // The version string itself is no longer used for the decision —
             // grandfathering is purely date-based. Set `debugOriginalPurchaseDate`
             // (seconds since 1970) to test specific dates; defaults to a
@@ -597,7 +604,8 @@ final class PurchaseManager: ObservableObject {
         //
         // Hardcode in init() temporarily:
         //   UserDefaults.standard.set(true, forKey: "debugSkipToServerVerification")
-        if UserDefaults.standard.bool(forKey: "debugSkipToServerVerification") {
+        if !sandboxPurchaseQAEnabled,
+           UserDefaults.standard.bool(forKey: "debugSkipToServerVerification") {
             if await verifyLegacyWithServer() {
                 keychain.writeInt(key: serverVerifiedLegacyKey, value: 1)
                 isLegacyUser = true
@@ -634,6 +642,16 @@ final class PurchaseManager: ObservableObject {
             recordUnlockedEntitlement(entitlement)
             return
         }
+
+        #if DEBUG
+        // A fresh sandbox tester on a long-lived QA phone must be able to test
+        // subscription-only access while retaining the phone's legacy rights.
+        if sandboxPurchaseQAEnabled {
+            activeEntitlementExpiration = nil
+            isUnlocked = false
+            return
+        }
+        #endif
 
         // 2. Server-verified legacy path: a previous call to verifyLegacyWithServer()
         //    confirmed this device originally purchased before v1.7.0 and cached the
@@ -919,7 +937,8 @@ final class PurchaseManager: ObservableObject {
         // Honor the refreshStatus() debug override: when forcing a specific
         // install state for testing, don't let the silent worker check
         // re-unlock the user from a real prior purchase on this Apple ID.
-        if UserDefaults.standard.string(forKey: "debugOriginalAppVersion") != nil {
+        if sandboxPurchaseQAEnabled ||
+           UserDefaults.standard.string(forKey: "debugOriginalAppVersion") != nil {
             return
         }
         #endif
@@ -946,6 +965,9 @@ final class PurchaseManager: ObservableObject {
     /// 2. Legacy receipt file (works on App Store installs only)
     /// Returns `false` on any failure so the caller falls back gracefully.
     private func verifyLegacyWithServer() async -> Bool {
+        #if DEBUG
+        guard !sandboxPurchaseQAEnabled else { return false }
+        #endif
         // Approach 1: Send AppTransaction JWS to the worker.
         // Available on both TestFlight and App Store. The worker decodes the
         // signed payload and checks originalAppVersion without needing Apple's

@@ -15,6 +15,8 @@ export default defineConfig({
   outputDir: "test-results",
   use: {
     baseURL,
+    channel: "chrome",
+    launchOptions: { chromiumSandbox: true },
     serviceWorkers: "block",
     ignoreHTTPSErrors: true,
     screenshot: "only-on-failure",

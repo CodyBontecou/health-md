@@ -62,6 +62,7 @@ struct ExportTabView: View {
     @Environment(\.scenePhase) private var scenePhase
 
     @ObservedObject private var purchaseManager = PurchaseManager.shared
+    @ObservedObject private var clinicSponsorship = ClinicSponsorshipManager.shared
     @State private var showHealthPermissionsGuide = false
     @State private var showPreviewRequirementsPrompt = false
     @State private var showFilenameEditor = false
@@ -1205,8 +1206,12 @@ struct ExportTabView: View {
     // MARK: - Floating Export Bar
 
     private var floatingExportBar: some View {
-        SchedulingExportFooter(
-            freeExportsRemaining: !purchaseManager.isUnlocked && canExport ? purchaseManager.freeExportsRemaining : nil,
+        let clinicCovered = exportTargetSelection == .apiEndpoint && clinicSponsorship.status.active &&
+            clinicSponsorship.status.sharingAuthorized &&
+            ClinicExportAuthorization.canonicalClinicEndpoint(apiExportSettings.endpointURLString) ==
+            clinicSponsorship.status.endpoint.flatMap(ClinicExportAuthorization.canonicalClinicEndpoint)
+        return SchedulingExportFooter(
+            freeExportsRemaining: !purchaseManager.isUnlocked && !clinicCovered && canExport ? purchaseManager.freeExportsRemaining : nil,
             freeExportsIdentifier: AccessibilityID.Export.freeExportsLabel
         ) {
             SchedulingExportActions(
@@ -1752,6 +1757,8 @@ struct ExportTabView: View {
 }
 
 struct ExportTargetSectionView: View {
+    @ObservedObject private var clinic = ClinicSponsorshipManager.shared
+    @ObservedObject private var purchases = PurchaseManager.shared
     @Binding var selection: ExportTargetSelection
     let title: String
     let localTitle: String
@@ -1814,6 +1821,12 @@ struct ExportTargetSectionView: View {
             sectionLabel(title)
             VStack(spacing: 0) {
                 VStack(spacing: Spacing.sm) {
+                    if clinic.status.active && !purchases.canExport {
+                        Text("Clinic destination").font(Typography.body())
+                        Text(clinic.status.endpoint ?? "").font(.footnote.monospaced())
+                        Text("Your clinic manages this destination. Use Clinic access to select it or manage sharing. Other destinations require your own Health.md access.")
+                            .font(.footnote).foregroundStyle(Color.textMuted)
+                    } else {
                     ExportTargetOptionRow(
                         title: localTitle,
                         icon: localIcon,
@@ -1867,6 +1880,7 @@ struct ExportTargetSectionView: View {
                     ) {
                         selection = .agentDataGateway
                         onOpenGatewaySettings?()
+                    }
                     }
                 }
             }
@@ -1983,12 +1997,20 @@ private struct ExportTargetOptionRow: View {
 }
 
 struct APIExportSettingsSheet: View {
+    @ObservedObject private var clinic = ClinicSponsorshipManager.shared
+    @ObservedObject private var purchases = PurchaseManager.shared
     @ObservedObject var settings: APIExportSettings
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var configurationProtection: ConfigurationProtectionManager
     var body: some View {
         NavigationStack {
             Form {
+                if clinic.status.active && !purchases.canExport {
+                    Section("Clinic destination") {
+                        Text(clinic.status.endpoint ?? "").font(.footnote.monospaced())
+                        Text("Your clinic manages this destination. Use Clinic access to select it or manage sharing. Other destinations require your own Health.md access.")
+                    }
+                } else {
                 Section {
                     TextField(
                         "https://api.example.com/healthmd",
@@ -2020,6 +2042,7 @@ struct APIExportSettingsSheet: View {
                     }
                 } footer: {
                     Text("Only send Apple Health data to endpoints you control or trust. API exports use your selected metrics and Data Detail setting.")
+                }
                 }
             }
             .navigationTitle("API Export")

@@ -87,6 +87,21 @@ fun PaywallScreen(
         }
     }
 
+    // Store-backed purchase flow tells its story as a carousel; included access keeps the summary below.
+    if (purchasesAvailable && !fullAccessIncluded) {
+        SignalPaywallCarousel(
+            offers = offers,
+            onPlanPurchase = onPlanPurchase,
+            onRestore = onRestore,
+            onRetry = onRetry,
+            onDismiss = onDismiss,
+            isPurchasing = isPurchasing,
+            isRestoring = isRestoring,
+            errorMessage = errorMessage,
+        )
+        return
+    }
+
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
     val readingLayout = GeistAdaptiveLayout.readingFirst(
         maxWidth.value, maxHeight.value, LocalDensity.current.fontScale,

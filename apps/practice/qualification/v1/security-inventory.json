@@ -3503,6 +3503,13 @@
         "GET"
       ],
       "classification": "asset"
+    },
+    {
+      "path": "/favicon.ico",
+      "methods": [
+        "GET"
+      ],
+      "classification": "asset"
     }
   ]
 }

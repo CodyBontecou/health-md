@@ -43,6 +43,8 @@ fun OnboardingScreen(
     }
     val readyPageIndex = pages.indexOf(OnboardingPage.READY)
     val isUnlocked by paywallViewModel.isUnlocked.collectAsStateWithLifecycle()
+    val appAccess by paywallViewModel.accessState.collectAsStateWithLifecycle()
+    val clinicSponsored = appAccess == true && !isUnlocked
     val isPurchasing by paywallViewModel.isPurchasing.collectAsStateWithLifecycle()
     val isRestoring by paywallViewModel.isRestoring.collectAsStateWithLifecycle()
     val purchaseError by paywallViewModel.purchaseError.collectAsStateWithLifecycle()
@@ -204,8 +206,8 @@ fun OnboardingScreen(
                 folderName = folderDisplayName,
                 onSelectFolder = { folderPickerLauncher.launch(null) },
             )
-            OnboardingPage.PLAY_ACCESS -> if (isUnlocked) {
-                ActiveAccessPage()
+            OnboardingPage.PLAY_ACCESS -> if (isUnlocked || clinicSponsored) {
+                ActiveAccessPage(clinicSponsored = clinicSponsored)
             } else PaywallScreen(
                 onPurchase = {
                     (context as? Activity)?.let { activity ->

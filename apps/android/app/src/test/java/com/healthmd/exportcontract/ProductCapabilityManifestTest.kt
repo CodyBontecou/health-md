@@ -49,6 +49,7 @@ class ProductCapabilityManifestTest {
                 "export.range-summary",
                 "setup.share-portable-configuration",
                 "support.local-reporting-fallback",
+                "support.native-review-introduction",
             ),
             idsWithState(states, "planned"),
         )
@@ -131,6 +132,7 @@ class ProductCapabilityManifestTest {
 
     private companion object {
         val sharedCapabilities = setOf(
+        "account.clinic-sponsored-access",
             "purchase.free-export-journey",
             "account.myself_lifetime_claim",
             "export.daily-files",
@@ -179,6 +181,7 @@ class ProductCapabilityManifestTest {
         )
 
         val allCapabilities = sharedCapabilities + appleCapabilities + androidCapabilities + setOf(
+            "support.native-review-introduction",
             "source.private-platform-database",
             "apple.ads-purchase-attribution",
             "automation.api-recovery-authority",

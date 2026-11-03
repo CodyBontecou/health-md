@@ -59,6 +59,9 @@ enum ExportIntentRunner {
     struct Dependencies {
         var refreshPurchaseStatus: () async -> Void
         var canExport: () -> Bool
+        var clinicExportAccess: (String) async -> Bool = { endpoint in
+            await ClinicSponsorshipManager.shared.authorizeExport(endpoint: endpoint)
+        }
         var hasVaultAccess: () -> Bool
         var requiresVaultReselection: () -> Bool
         var refreshVaultAccess: () -> Void
@@ -324,7 +327,10 @@ enum ExportIntentRunner {
 
         await dependencies.refreshPurchaseStatus()
 
-        guard dependencies.canExport() else {
+        let clinicAllowed = if let endpoint = apiDestination?.endpointURL.absoluteString {
+            await dependencies.clinicExportAccess(endpoint)
+        } else { false }
+        guard dependencies.canExport() || clinicAllowed else {
             return .paywall
         }
 

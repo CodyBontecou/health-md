@@ -1284,6 +1284,9 @@
     <string name="export_sleep_date_guidance">睡眠涵盖每个所选日期的中午到次日中午。要查看昨晚的睡眠，请选择“昨天”。</string>
     <string name="export_sleep_preview_window">睡眠时间窗口：%1$s中午至%2$s中午（%3$s）。</string>
     <string name="export_sleep_preview_guidance">如果缺少睡眠数据，请尝试前一天。即使原始记录的日期是今天，早晨的睡眠也可能显示在前一天的摘要中。查询失败会单独列出；结果为空也可能表示无法读取数据。</string>
+    <string name="export_sleep_date_guidance_morning_ends">完整的睡眠时段按导出时区归入其结束的日期。如需查看昨晚的睡眠，请选择今天。</string>
+    <string name="export_sleep_preview_window_morning_ends">睡眠结束日期：%1$s 至 %2$s（%3$s）。</string>
+    <string name="export_sleep_preview_guidance_morning_ends">完整的睡眠时段按此导出的时区归入其结束日期，不在中午截断。查询失败会单独列出；结果为空也可能表示无法读取数据。</string>
     <string name="whoop_connection_description">连接WHOOP以导出恢复、负荷、睡眠、锻炼和身体测量数据。登录通过浏览器进行；Health.md将令牌加密保存在此设备上。断开连接会删除此设备上保存的连接。</string>
     <string name="whoop_connect">连接WHOOP</string>
     <string name="whoop_sources_description">连接WHOOP以直接从提供商导出，或继续使用Health Connect获取本地记录。</string>
@@ -1295,6 +1298,8 @@
     <string name="paywall_access_subtitle">选择订阅或终身访问，开始建立您的私人健康档案。符合条件的订阅包含7天免费试用。</string>
     <string name="paywall_access_active_title">您的访问权限已生效</string>
     <string name="paywall_access_active_body">继续设置以连接健康数据，并选择私人档案的保存位置。</string>
+    <string name="clinic_access_active_title">您的诊所访问权限已生效</string>
+    <string name="clinic_access_active_body">您的诊所赞助向其已批准端点的传送。分享哪些内容由您决定。其他导出目标需要您自己的 Health.md 访问权限。</string>
     <string name="paywall_plan_choices">按周、按年或终身访问</string>
     <string name="paywall_weekly_price">%1$s / 周</string>
     <string name="paywall_yearly_price">%1$s / 年</string>
@@ -1305,4 +1310,30 @@
     <string name="paywall_terms">条款</string>
     <string name="paywall_privacy">隐私</string>
     <string name="paywall_subscription_disclosure">符合条件的订阅包含7天免费试用，之后按显示的价格自动续订，除非在试用期或当前计费周期结束前取消。请在Google Play中管理或取消。终身访问将在购买时立即一次性收费。现有付费访问权限将予以保留。 一生没有考验。删除应用程序或购买终身不会取消现有订阅。</string>
+
+    <!-- Signal carousel paywall -->
+    <string name="paywall_signal_title">每一次心跳，都有记录。</string>
+    <string name="paywall_signal_lede">Health.md 将 Health Connect 数据变成每天一篇 Markdown 笔记，保存到你选择的文件夹。</string>
+    <string name="paywall_signal_example">示例</string>
+    <string name="paywall_signal_trial_title">七天，我们请客。</string>
+    <string name="paywall_signal_day_today">今天</string>
+    <string name="paywall_signal_day_today_body">无限次导出、计划和自动化。</string>
+    <string name="paywall_signal_day_cancel">随时取消</string>
+    <string name="paywall_signal_day_cancel_body">请在试用结束前在 Google Play 中取消。</string>
+    <string name="paywall_signal_day_end">试用结束</string>
+    <string name="paywall_signal_day_end_body">之后 %1$s。</string>
+    <string name="paywall_signal_plans_title">选一条路。</string>
+    <string name="paywall_signal_best_value">最超值</string>
+    <string name="paywall_signal_free_week">7 天免费</string>
+    <string name="paywall_signal_lifetime_detail">今天一次付清，永不续订。</string>
+    <string name="paywall_signal_subscription_detail">自动续订。可随时在 Google Play 中取消。</string>
+    <string name="paywall_signal_cta_trial">开始 7 天免费试用</string>
+    <string name="paywall_signal_cta_subscribe">订阅</string>
+    <string name="paywall_signal_cta_lifetime">购买终身版</string>
+    <string name="paywall_signal_step_archive">归档</string>
+    <string name="paywall_signal_step_trial">试用</string>
+    <string name="paywall_signal_step_plans">方案</string>
+    <string name="paywall_signal_plan_weekly">按周</string>
+    <string name="paywall_signal_plan_yearly">按年</string>
+    <string name="paywall_signal_plan_lifetime">终身</string>
 </resources>
