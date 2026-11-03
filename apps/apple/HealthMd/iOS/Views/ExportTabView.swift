@@ -62,6 +62,7 @@ struct ExportTabView: View {
     @Environment(\.scenePhase) private var scenePhase
 
     @ObservedObject private var purchaseManager = PurchaseManager.shared
+    @ObservedObject private var clinicSponsorship = ClinicSponsorshipManager.shared
     @State private var showHealthPermissionsGuide = false
     @State private var showPreviewRequirementsPrompt = false
     @State private var showFilenameEditor = false
@@ -100,9 +101,10 @@ struct ExportTabView: View {
     var body: some View {
         NavigationStack {
             ScrollViewReader { proxy in
+            GeometryReader { viewport in
             SchedulingExportScroll(showsFooter: !isExporting) {
                 VStack(spacing: Spacing.md) {
-                    heroHeader
+                    heroHeader(availableWidth: viewport.size.width)
                     #if DEBUG
                     if TestMode.isUITesting {
                         // Synthetic journey diagnostics only, not a production
@@ -112,19 +114,7 @@ struct ExportTabView: View {
                             .accessibilityIdentifier("export.synthetic.statusMessage")
                     }
                     #endif
-                    statusBadges
-                        .configurationChangesProtected()
-                    exportTargetSection
-                        .configurationChangesProtected()
-                    dateRangeSection
-                    historyWarningSection
-                    healthDataSection
-                        .id("marketing-export-health-data")
-                    formatsSection
-                    automationSection
-                    formatOptionsSection
-                    outputSection
-                    pathPreviewSection
+                    exportSections(availableWidth: viewport.size.width)
                     resetButton
                         .configurationChangesProtected()
                 }
@@ -156,6 +146,7 @@ struct ExportTabView: View {
                 proxy.scrollTo(anchor, anchor: .top)
             }
             #endif
+            }
             }
         }
         // SwiftUI owns the logical waiter; the parent-owned worker retains the
@@ -324,13 +315,40 @@ struct ExportTabView: View {
         }
     }
 
+    // MARK: - Adaptive Sections
+
+    private func exportSections(availableWidth: CGFloat) -> some View {
+        AdaptivePageColumns(availableWidth: availableWidth) {
+            VStack(spacing: Spacing.md) {
+                exportTargetSection
+                    .configurationChangesProtected()
+                dateRangeSection
+                historyWarningSection
+                healthDataSection
+                    .id("marketing-export-health-data")
+                formatsSection
+            }
+        } secondary: {
+            VStack(spacing: Spacing.md) {
+                automationSection
+                formatOptionsSection
+                outputSection
+                pathPreviewSection
+            }
+        }
+    }
+
     // MARK: - Header
 
-    private var heroHeader: some View {
-        HealthMdPageHeader(
+    private func heroHeader(availableWidth: CGFloat) -> some View {
+        AdaptivePageHeader(
+            availableWidth: availableWidth,
             title: "Export",
             subtitle: "Choose what Health.md writes from Apple Health"
-        )
+        ) {
+            statusBadges
+                .configurationChangesProtected()
+        }
     }
 
     // MARK: - Status Badges
@@ -368,12 +386,19 @@ struct ExportTabView: View {
 
         return Group {
             if usesAccessibilityLayout {
-                VStack(spacing: Spacing.md) {
+                VStack(alignment: .leading, spacing: Spacing.md) {
                     badges
                 }
             } else {
-                HStack(spacing: Spacing.md) {
-                    badges
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: Spacing.md) {
+                        badges
+                    }
+                    .fixedSize(horizontal: true, vertical: false)
+
+                    VStack(alignment: .leading, spacing: Spacing.md) {
+                        badges
+                    }
                 }
             }
         }
@@ -1128,8 +1153,12 @@ struct ExportTabView: View {
     // MARK: - Floating Export Bar
 
     private var floatingExportBar: some View {
-        SchedulingExportFooter(
-            freeExportsRemaining: !purchaseManager.isUnlocked && canExport ? purchaseManager.freeExportsRemaining : nil,
+        let clinicCovered = exportTargetSelection == .apiEndpoint && clinicSponsorship.status.active &&
+            clinicSponsorship.status.sharingAuthorized &&
+            ClinicExportAuthorization.canonicalClinicEndpoint(apiExportSettings.endpointURLString) ==
+            clinicSponsorship.status.endpoint.flatMap(ClinicExportAuthorization.canonicalClinicEndpoint)
+        return SchedulingExportFooter(
+            freeExportsRemaining: !purchaseManager.isUnlocked && !clinicCovered && canExport ? purchaseManager.freeExportsRemaining : nil,
             freeExportsIdentifier: AccessibilityID.Export.freeExportsLabel
         ) {
             SchedulingExportActions(
@@ -1351,7 +1380,7 @@ struct ExportTabView: View {
         }
     }
 
-    private var previewExportTargetType: PricingAnalyticsExportTargetType {
+    private var previewExportTargetType: ExportPreviewTargetType {
         switch exportTargetSelection {
         case .localIPhoneFolder:
             return .localFile
@@ -1675,6 +1704,8 @@ struct ExportTabView: View {
 }
 
 struct ExportTargetSectionView: View {
+    @ObservedObject private var clinic = ClinicSponsorshipManager.shared
+    @ObservedObject private var purchases = PurchaseManager.shared
     @Binding var selection: ExportTargetSelection
     let title: String
     let localTitle: String
@@ -1737,6 +1768,12 @@ struct ExportTargetSectionView: View {
             sectionLabel(title)
             VStack(spacing: 0) {
                 VStack(spacing: Spacing.sm) {
+                    if clinic.status.active && !purchases.canExport {
+                        Text("Clinic destination").font(Typography.body())
+                        Text(clinic.status.endpoint ?? "").font(.footnote.monospaced())
+                        Text("Your clinic manages this destination. Use Clinic access to select it or manage sharing. Other destinations require your own Health.md access.")
+                            .font(.footnote).foregroundStyle(Color.textMuted)
+                    } else {
                     ExportTargetOptionRow(
                         title: localTitle,
                         icon: localIcon,
@@ -1790,6 +1827,7 @@ struct ExportTargetSectionView: View {
                     ) {
                         selection = .agentDataGateway
                         onOpenGatewaySettings?()
+                    }
                     }
                 }
             }
@@ -1906,12 +1944,20 @@ private struct ExportTargetOptionRow: View {
 }
 
 struct APIExportSettingsSheet: View {
+    @ObservedObject private var clinic = ClinicSponsorshipManager.shared
+    @ObservedObject private var purchases = PurchaseManager.shared
     @ObservedObject var settings: APIExportSettings
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var configurationProtection: ConfigurationProtectionManager
     var body: some View {
         NavigationStack {
             Form {
+                if clinic.status.active && !purchases.canExport {
+                    Section("Clinic destination") {
+                        Text(clinic.status.endpoint ?? "").font(.footnote.monospaced())
+                        Text("Your clinic manages this destination. Use Clinic access to select it or manage sharing. Other destinations require your own Health.md access.")
+                    }
+                } else {
                 Section {
                     TextField(
                         "https://api.example.com/healthmd",
@@ -1943,6 +1989,7 @@ struct APIExportSettingsSheet: View {
                     }
                 } footer: {
                     Text("Only send Apple Health data to endpoints you control or trust. API exports use your selected metrics and Data Detail setting.")
+                }
                 }
             }
             .navigationTitle("API Export")

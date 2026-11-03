@@ -6,7 +6,7 @@
       "id": "healthmd.product_capabilities",
       "version": 1,
       "path": "packages/contracts/product-capabilities.json",
-      "sha256": "0aa6e87a269b6b9b53978968756a9d064665d85003b0b131405a454f41272e25",
+      "sha256": "80b018d08c470511dcec277b3f8b3802b5e9f4263735ff6d3997bad5d6d71afd",
       "implementations": [
         "packages/contracts/validate.py",
         "apps/apple/HealthMdTests/Contracts/ProductCapabilityManifestTests.swift",
@@ -26,6 +26,47 @@
     }
   ],
   "contracts": [
+    {
+      "id": "healthmd.clinic-sponsored-access",
+      "version": 1,
+      "status": "canonical",
+      "summary": "Installation-bound clinic grants, proof-bound enrollment recovery and destination-aware admission with manual billing; no health payload schema changes.",
+      "specification": "packages/contracts/clinic-sponsorship/v1/contract.md",
+      "authorities": [
+        "packages/contracts/clinic-sponsorship/v1/contract.md"
+      ],
+      "implementations": [
+        "apps/licensing/src/service.mjs",
+        "apps/apple/HealthMd/Shared/Models/ClinicExportAuthorization.swift",
+        "apps/apple/HealthMd/Shared/Models/ClinicGrantVerifier.swift",
+        "apps/android/app/src/main/java/com/healthmd/domain/billing/ClinicExportAuthorization.kt",
+        "apps/android/app/src/main/java/com/healthmd/domain/billing/ClinicGrantVerifier.kt"
+      ],
+      "consumers": [
+        "scripts/tests/test_clinic_export_authorization.py",
+        "apps/android/app/src/test/java/com/healthmd/domain/billing/ClinicExportAuthorizationTest.kt",
+        "apps/licensing/test/service.test.mjs",
+        "apps/licensing/test/production.test.mjs",
+        "apps/android/app/src/test/java/com/healthmd/domain/billing/ClinicSponsorshipRecoveryTest.kt"
+      ],
+      "documentation": [
+        "apps/licensing/README.md"
+      ],
+      "fixtures": [
+        {
+          "path": "packages/contracts/clinic-sponsorship/v1/authorization-fixtures.json",
+          "sha256": "38eecc4bb9355676ef314e46576855b47826c2714677ff8ffcf4de80037bd120",
+          "provenance": "Synthetic authorization and ephemeral P-256 verification vectors; no private signing key or live patient data.",
+          "mirrors": []
+        },
+        {
+          "path": "packages/contracts/clinic-sponsorship/v1/verification-fixtures.json",
+          "sha256": "310ae896331c3f1c0e15088bae9756bb7d1cd89005c4b75454219f1ed766b9e5",
+          "provenance": "Synthetic authorization and ephemeral P-256 verification vectors; no private signing key or live patient data.",
+          "mirrors": []
+        }
+      ]
+    },
     {
       "id": "healthmd.diagnostics",
       "version": 1,
@@ -683,13 +724,12 @@
       "id": "healthmd.campaign_attribution",
       "version": 1,
       "status": "deferred",
-      "summary": "First-party Android campaign-install payload accepted by the website Worker; schema extraction is deferred.",
+      "summary": "Historical Android campaign-install contract; the candidate removes its app producer and replaces ingestion with a discard responder. Website redirects and counters remain separate.",
       "authorities": [
-        "apps/android/app/src/play/java/com/healthmd/data/attribution/CampaignAttributionModels.kt",
+        "apps/android/docs/campaign-attribution.md",
         "apps/website/cloudflare/attribution-worker/src/worker.js"
       ],
       "consumers": [
-        "apps/android/app/src/playTest/java/com/healthmd/data/attribution/OkHttpCampaignAttributionReporterTest.kt",
         "apps/website/test/attribution-worker.test.mjs"
       ],
       "documentation": [

@@ -161,9 +161,9 @@ struct HealthMdApp: App {
     #if DEBUG
     @StateObject private var exportPerformanceLab = IPhoneExportPerformanceLabCoordinator()
     #endif
-    private let pricingAnalyticsClient = PricingAnalyticsClient.shared
 
     init() {
+        RetiredAnalyticsCleanup.run()
         // UI-test methods reuse the installed app. Seed this UserDefaults-backed value before
         // constructing its StateObject so a prior protected journey cannot leak into the next one.
         if TestMode.isUITesting {
@@ -405,7 +405,7 @@ struct HealthMdApp: App {
 
     var body: some Scene {
         WindowGroup {
-            Group {
+            PurchaseAccessGate {
                 if UIDevice.current.userInterfaceIdiom == .pad {
                     iPadContentView(historyProfileStore: iPadHistoryProfileStore)
                 } else {
@@ -569,7 +569,7 @@ struct HealthMdApp: App {
                     } else if !healthKitManager.isAuthorized {
                         message = "Authorize Health access before starting a direct export."
                     } else if !PurchaseManager.shared.canExport {
-                        message = "Export limit reached. Unlock Full Access to continue."
+                        message = "Active access is required. Start an eligible trial, subscribe, buy Lifetime, or restore a purchase."
                     } else if exportInProgress || queryInProgress {
                         message = "Another direct operation is already active."
                     } else {

@@ -46,6 +46,10 @@ Daily Note Injection und API-Endpoint-Übersichten nutzen dasselbe Fenster. Bei 
 
 Rohe oder kanonische Datensätze behalten ursprüngliche Zeitstempel und eigene Zuordnungsregeln. Rekonstruiere Sitzungen nicht aus einer Tagessumme und addiere Quellintervalle nicht als zusätzlichen Schlaf dazu.
 
+Auf Apple ordnet das Roharchiv Datensätze anhand ihres Beginns dem lokalen Kalendertag von Mitternacht bis Mitternacht zu. Die Schlafzusammenfassung schneidet Intervalle dagegen auf das Fenster von Mittag bis Mittag zu. Eine erfolgreiche Sleep-Analysis-Abfrage kann daher morgendliche Datensätze enthalten, während die Zusammenfassung dieses Datums leer ist. Exportiere den vorherigen Journaltag und prüfe `time_context.calendar_timezone`. Beispielsweise gehören Datensätze vom 22. September, 04:03–11:52 UTC, in UTC vollständig zur Zusammenfassung des 21. September; in Europe/Lisbon liegen die letzten 52 Minuten nach lokalem Mittag und tragen stattdessen zum 22. September bei.
+
+Schlafphasen benötigen keinen ausdrücklichen `inBed`-Datensatz: Fehlt er, verwendet Apple die Vereinigung der verfügbaren Schlafphasen, ohne eine Bettzeitdauer zu erfinden. Fehlgeschlagene Abfragen sollten unter `diagnostics.partial_failures` erscheinen; eine erfolgreiche Abfrage ohne passende Intervalle ist eine gültige Abwesenheit. Der Ruhepuls verwendet eine separate Kalendertagsabfrage und benötigt eine tatsächliche Ruhepulsmessung; Schlafphasen oder Leseberechtigung allein liefern sie nicht.
+
 `healthmd_sleep_sessions` benötigt eine unterstützte **Apple Health**-CLI/MCP-Konfiguration. Typisierte Android-MCP-Abfragen werden derzeit nicht unterstützt. Siehe [Plattformfähigkeiten](/de/docs/guides/platform-features/) und [MCP](/de/docs/mcp/).
 
 Weitere Hilfe: [Zeitpläne](/de/docs/scheduling/), [Fehlersuche](/de/docs/troubleshooting/) und [Exportformate](/de/docs/format/).

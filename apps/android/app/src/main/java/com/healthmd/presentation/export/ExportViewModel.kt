@@ -94,6 +94,7 @@ data class ExportUiState(
     val allTimeSelected: Boolean = false,
     val freeExportsRemaining: Int = FreemiumPolicy.FREE_EXPORT_LIMIT,
     val isPurchased: Boolean = false,
+    val clinicDestinationAuthorized: Boolean = false,
     val apiAuthorizationConfigured: Boolean = false,
     val apiRequestHeadersConfigured: Boolean = false,
     val apiConfigurationError: APIConfigurationIssue? = null,
@@ -192,6 +193,15 @@ class ExportViewModel @Inject constructor(
         entitlementRepository.refresh()
 
         viewModelScope.launch {
+            combine(settingsRepository.exportSettings, entitlementRepository.sponsoredEndpoint) { settings, endpoint ->
+                settings.exportTarget == ExportTarget.API_ENDPOINT &&
+                    settings.exportMode == ExportMode.COMPATIBILITY && endpoint != null &&
+                    com.healthmd.domain.billing.ClinicExportAuthorization.canonicalClinicEndpoint(settings.apiEndpointUrl) ==
+                    com.healthmd.domain.billing.ClinicExportAuthorization.canonicalClinicEndpoint(endpoint)
+            }.collect { authorized -> _uiState.update { it.copy(clinicDestinationAuthorized = authorized) } }
+        }
+
+        viewModelScope.launch {
             // Combine persisted purchase state with live billing state — user is considered
             // purchased if either source confirms it (handles offline / just-purchased cases)
             val isPurchasedFlow = combine(
@@ -232,7 +242,7 @@ class ExportViewModel @Inject constructor(
         // Persist confirmed purchases to DataStore so the state survives offline / app restarts
         if (!distributionPolicy.fullAccessIncluded) {
             viewModelScope.launch {
-                entitlementRepository.isUnlocked
+                entitlementRepository.isPermanentlyUnlocked
                     .filter { it }
                     .collect { settingsRepository.setPurchased(true) }
             }
@@ -463,7 +473,7 @@ class ExportViewModel @Inject constructor(
         if (currentState.isExporting || currentState.isPreviewing || exportJob?.isActive == true) return
 
         // Block export if free tier is exhausted
-        if (!currentState.isPurchased && currentState.freeExportsRemaining <= 0) return
+        if (!currentState.isPurchased && !currentState.clinicDestinationAuthorized && currentState.freeExportsRemaining <= 0) return
 
         if (!ExportTargetReadiness.canExport(
                 hasHealthPermissions = currentState.hasPermissions,
@@ -485,6 +495,13 @@ class ExportViewModel @Inject constructor(
         dismissJob?.cancel()
         val awakeActivityId = ExportAwakeCoordinator.shared.beginActivity()
         exportJob = viewModelScope.launch {
+            val settings = settingsRepository.getExportSettings()
+            if (!distributionPolicy.fullAccessIncluded &&
+                !settingsRepository.isPurchased.first() && !entitlementRepository.verifyExportAccess(
+                    settings.exportTarget, settings.apiEndpointUrl.takeIf { settings.exportMode == ExportMode.COMPATIBILITY })) {
+                _uiState.update { it.copy(isPurchased = false) }
+                return@launch
+            }
             _uiState.update {
                 it.copy(
                     isExporting = true,
@@ -495,7 +512,6 @@ class ExportViewModel @Inject constructor(
                 )
             }
 
-            val settings = settingsRepository.getExportSettings()
             val dates = ExportOrchestrator.dateRange(_uiState.value.startDate, _uiState.value.endDate)
             if (activeProfileRequiresRebind()) {
                 val failedDates = if (settings.exportMode == ExportMode.RAW_SNAPSHOT) {
@@ -549,7 +565,7 @@ class ExportViewModel @Inject constructor(
                 )).also { _uiState.update { state -> state.copy(exportProgress = 1) } }
             } else when (settings.exportTarget) {
                 ExportTarget.DEVICE_FOLDER -> withInteractiveRouteConsent {
-                    ExportOrchestrator(healthRepository, exportRepository)
+                    ExportOrchestrator(healthRepository, exportRepository, rawSnapshotExportRunner)
                         .exportDates(dates, settings, progress)
                         .copy(target = ExportTarget.DEVICE_FOLDER)
                 }
@@ -751,7 +767,7 @@ class ExportViewModel @Inject constructor(
                         isRangeArtifact = true,
                     )).also { _uiState.update { state -> state.copy(exportProgress = 1) } }
                 } else when (settings.exportTarget) {
-                    ExportTarget.DEVICE_FOLDER -> ExportOrchestrator(healthRepository, exportRepository)
+                    ExportTarget.DEVICE_FOLDER -> ExportOrchestrator(healthRepository, exportRepository, rawSnapshotExportRunner)
                         .previewDates(dates, settings, onProgress = progress)
                     ExportTarget.API_ENDPOINT -> apiEndpointExportRunner?.previewDates(
                         dates = dates,

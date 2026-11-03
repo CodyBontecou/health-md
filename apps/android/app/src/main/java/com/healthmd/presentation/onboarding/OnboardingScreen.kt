@@ -43,6 +43,8 @@ fun OnboardingScreen(
     }
     val readyPageIndex = pages.indexOf(OnboardingPage.READY)
     val isUnlocked by paywallViewModel.isUnlocked.collectAsStateWithLifecycle()
+    val appAccess by paywallViewModel.accessState.collectAsStateWithLifecycle()
+    val clinicSponsored = appAccess == true && !isUnlocked
     val isPurchasing by paywallViewModel.isPurchasing.collectAsStateWithLifecycle()
     val isRestoring by paywallViewModel.isRestoring.collectAsStateWithLifecycle()
     val purchaseError by paywallViewModel.purchaseError.collectAsStateWithLifecycle()
@@ -115,18 +117,6 @@ fun OnboardingScreen(
         pageCount = { pages.size },
     )
 
-    LaunchedEffect(Unit) {
-        viewModel.recordInitialOnboarding()
-    }
-
-    // Only settled pages are milestones; transient pages crossed during a fling are not recorded.
-    // Welcome is recorded sequentially after the start event so cohort ordering is deterministic.
-    LaunchedEffect(pagerState.settledPage) {
-        if (pagerState.settledPage != 0) {
-            viewModel.recordSettledPage(pages[pagerState.settledPage])
-        }
-    }
-
     // Key auto-advance to the settled page. currentPage changes around the halfway
     // point of an animation, which would cancel this effect and leave the pager mid-swipe.
     LaunchedEffect(uiState.hasPermissions, pagerState.settledPage, allowAutomaticAdvance) {
@@ -166,9 +156,6 @@ fun OnboardingScreen(
             }
         },
         onContinue = {
-            if (pages[pagerState.currentPage] == OnboardingPage.PLAY_ACCESS && !isUnlocked) {
-                viewModel.recordContinueFreeTapped()
-            }
             coroutineScope.launch {
                 if (pagerState.currentPage < pages.lastIndex) {
                     pagerState.animateScrollToPage(pagerState.currentPage + 1)
@@ -176,11 +163,6 @@ fun OnboardingScreen(
             }
         },
         onSkip = {
-            when (pages[pagerState.currentPage]) {
-                OnboardingPage.HEALTH_ACCESS -> viewModel.recordHealthSkipped()
-                OnboardingPage.FOLDER_SETUP -> viewModel.recordFolderSkipped()
-                else -> Unit
-            }
             coroutineScope.launch {
                 pagerState.animateScrollToPage(pagerState.currentPage + 1)
             }
@@ -224,9 +206,10 @@ fun OnboardingScreen(
                 folderName = folderDisplayName,
                 onSelectFolder = { folderPickerLauncher.launch(null) },
             )
-            OnboardingPage.PLAY_ACCESS -> PaywallScreen(
+            OnboardingPage.PLAY_ACCESS -> if (isUnlocked || clinicSponsored) {
+                ActiveAccessPage(clinicSponsored = clinicSponsored)
+            } else PaywallScreen(
                 onPurchase = {
-                    viewModel.recordPurchaseTapped()
                     (context as? Activity)?.let { activity ->
                         advanceAfterUnlock = !isUnlocked
                         paywallViewModel.launchPurchaseFlow(activity)

@@ -46,6 +46,10 @@ Daily Note Injection 和 API Endpoint 摘要使用相同窗口。源数据晚到
 
 原始或规范记录保留原始时间戳，并有各自的归属规则。不要从每日总量重建会话，也不要把源时间区间作为额外睡眠加到总量上。
 
+在 Apple 上，原始归档按记录的开始时间，将其分配到本地午夜至次日午夜的日期。睡眠摘要则将区间裁剪到中午至次日中午的窗口。因此，成功的 Sleep Analysis 查询可能包含早晨的记录，而该日期的睡眠摘要仍为空。请导出前一天，并检查 `time_context.calendar_timezone`。例如，9 月 22 日 04:03–11:52 UTC 的记录在 UTC 时区完全属于 9 月 21 日的摘要；在 Europe/Lisbon 时区，最后 52 分钟在当地中午之后，因此计入 9 月 22 日。
+
+睡眠阶段并不要求显式的 `inBed` 记录：缺少时，Apple 摘要使用现有睡眠阶段区间的并集，但不会凭空生成卧床时长。查询失败应显示在 `diagnostics.partial_failures` 中；查询成功但没有符合条件的区间，则是有效的数据缺失。静息心率使用独立的日历日查询，需要实际的静息心率测量值，不能仅凭睡眠阶段或读取权限生成。
+
 `healthmd_sleep_sessions` 需要受支持的 **Apple Health** CLI/MCP 配置。Android 类型化 MCP 查询目前不受支持。请参阅[平台能力](/zh-hans/docs/guides/platform-features/)和 [MCP](/zh-hans/docs/mcp/)。
 
 另见[计划导出](/zh-hans/docs/scheduling/)、[故障排查](/zh-hans/docs/troubleshooting/)和[导出格式](/zh-hans/docs/format/)。

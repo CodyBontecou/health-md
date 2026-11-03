@@ -70,7 +70,7 @@ A saved profile freezes its settings and destination for the run. Profile-aware 
 
 <div class="callout">
 <strong>Unlock behavior.</strong>
-<p style="margin-top:6px;">On Apple platforms, the free allowance covers 5 manual or scheduled export actions. Full Access removes that limit and unlocks Mac destination workflows and Shortcuts. Android instead offers 5 free manual actions and requires its lifetime unlock for scheduling. <a href="/docs/paywall/">See the Paywall page</a> for Apple purchase details.</p>
+<p style="margin-top:6px;">The subscription-enabled iPhone/iPad and Google Play phone releases require active trial, subscription, Lifetime, or preserved permanent access for exports and scheduling. No local free-export allowance remains. The Mac companion and F-Droid included-access build retain their documented exceptions. <a href="/docs/paywall/">See the Paywall page</a> for Apple purchase details.</p>
 </div>
 
 ## Related

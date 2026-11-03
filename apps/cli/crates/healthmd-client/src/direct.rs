@@ -1077,6 +1077,7 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
                 if matches!(
                     error,
                     ClientError::InvalidTransfer(_)
+                        | ClientError::ExportRejected(_)
                         | ClientError::Cancelled
                         | ClientError::JobNotResumable(_, _)
                 ) {
@@ -2305,9 +2306,11 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
                         return if value.code == v2::ErrorCode::Cancelled {
                             Err(ClientError::Cancelled)
                         } else {
-                            Err(ClientError::InvalidTransfer(
-                                "Android rejected the direct export".into(),
-                            ))
+                            Err(ClientError::ExportRejected(crate::ExportRejection {
+                                code: value.code,
+                                phase: value.phase,
+                                retryable: value.retryable,
+                            }))
                         };
                     }
                     v2::Message::TransferSession(session) => {

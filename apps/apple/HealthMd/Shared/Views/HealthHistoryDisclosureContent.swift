@@ -51,7 +51,7 @@ struct HealthHistoryDisclosureContent: View {
         case .limited(let boundary):
             Text("\(type.id): sample end boundary \(assessment.boundaryDescription(boundary)). Earlier starts are preserved.")
         case .apiUnavailable:
-            Text("\(type.id): history assessment requires OS 27. This does not mean health data is unavailable.")
+            Text("\(type.id): history access could not be checked. Readable health data can still be exported.")
         case .assessmentFailed:
             Text("\(type.id): history assessment failed; readable data may still be available.")
         case .unknown:

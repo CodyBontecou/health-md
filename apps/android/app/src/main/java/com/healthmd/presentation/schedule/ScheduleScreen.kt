@@ -90,6 +90,10 @@ fun ScheduleScreen(
     onNavigateToPaywall: () -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val clinicAccess: com.healthmd.presentation.clinic.ClinicAccessViewModel = hiltViewModel()
+    val clinicStatus by clinicAccess.status.collectAsStateWithLifecycle()
+    val independentAccess by clinicAccess.independentAccess.collectAsStateWithLifecycle()
+    val managedClinicEndpoint = clinicStatus.endpoint.takeIf { clinicStatus.active && !independentAccess }
     val historyViewModel: HistoryViewModel = hiltViewModel()
     val historyUiState by historyViewModel.uiState.collectAsStateWithLifecycle()
     val profileSchedulesViewModel: ProfileSchedulesViewModel = hiltViewModel()
@@ -411,6 +415,7 @@ fun ScheduleScreen(
 
         ConfigurationProtectedRegion(modifier = Modifier.fillMaxWidth()) {
         ExportTargetSelector(
+            managedClinicEndpoint = managedClinicEndpoint,
             selectedTarget = uiState.selectedTarget,
             folderSubtitle = if (uiState.hasExportFolder) {
                 stringResource(R.string.schedule_target_folder_ready)
@@ -498,7 +503,7 @@ fun ScheduleScreen(
             )
         }
 
-        if (!uiState.isPurchased) {
+        if (!uiState.isPurchased && !uiState.clinicDestinationAuthorized) {
             WarningCard(
                 title = stringResource(R.string.schedule_unlock_required_title),
                 body = stringResource(R.string.schedule_unlock_required_body),
@@ -611,6 +616,7 @@ fun ScheduleScreen(
 
     if (showAPISettings) {
         APIExportSettingsDialog(
+            managedClinicEndpoint = managedClinicEndpoint,
             initialEndpointUrl = uiState.apiEndpointUrl,
             authorizationConfigured = uiState.apiAuthorizationConfigured,
             requestHeadersConfigured = uiState.apiRequestHeadersConfigured,

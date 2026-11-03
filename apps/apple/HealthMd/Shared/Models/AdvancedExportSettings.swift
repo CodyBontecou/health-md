@@ -386,7 +386,9 @@ class AdvancedExportSettings: ObservableObject {
         get {
             AppleExportDetailPolicy(
                 compatibilityDetail: compatibilityDetail,
-                healthKitSourceArchive: healthKitSourceArchivePolicy
+                healthKitSourceArchive: healthKitSourceArchivePolicy,
+                nativeDetailMetricIDs: metricSelection.effectiveNativeDetailMetricIDs.isEmpty ? nil
+                    : metricSelection.effectiveNativeDetailMetricIDs
             )
         }
         set {

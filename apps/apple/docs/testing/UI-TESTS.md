@@ -9,8 +9,8 @@ UI tests use synthetic launch state, not simulator Health data or production pur
 | Work | Reference |
 | --- | --- |
 | Deterministic launch environment and accessibility IDs | [`UITestLaunchHelper.swift`](../../HealthMdUITests/UITestLaunchHelper.swift) |
-| Onboarding, first preview, post-onboarding paywall, and shared setup | [`OnboardingJourneyUITests.swift`](../../HealthMdUITests/OnboardingJourneyUITests.swift) |
-| Quota/paywall anchors and swipe-down dismissal | [`PaywallJourneyUITests.swift`](../../HealthMdUITests/PaywallJourneyUITests.swift) |
+| Paid-access onboarding, first preview, root gate, and shared setup | [`OnboardingJourneyUITests.swift`](../../HealthMdUITests/OnboardingJourneyUITests.swift) |
+| Mandatory root paywall, dismissal resistance, foregrounding, and paid access | [`PaywallJourneyUITests.swift`](../../HealthMdUITests/PaywallJourneyUITests.swift) |
 | Export preview, result, and cancellation | [`ExportJourneyUITests.swift`](../../HealthMdUITests/ExportJourneyUITests.swift) |
 | Launch-state reset | `configureTestMode()` in [`HealthMdApp.swift`](../../HealthMd/iOS/HealthMdApp.swift) |
 | Broader test/coverage gates | [CI quality gates](CI-QUALITY-GATES.md) |
@@ -23,10 +23,12 @@ resets persisted onboarding/profile state at launch; an installed app is reused 
 For a new UserDefaults-backed feature, establish/reset its requested state there as well.
 Test both alone and after another journey to expose inherited-state failures.
 
-For onboarding, set `showOnboarding: true`. For the post-onboarding paywall, also set
-`showsPostOnboardingPaywall: true`; close the first preview before expecting the paywall.
-Use `analyticsTransport: "offline"` for deterministic analytics isolation. The representative
-journey tests show these configurations and the expected navigation sequence.
+For setup after access has been granted, set `showOnboarding: true` and
+`purchaseUnlocked: true`. With `purchaseUnlocked: false`, the root paywall must
+appear before setup, even with zero historical exports. `PaywallJourneyUITests`
+checks the mandatory wall, dismissal resistance and foregrounding. The historical
+post-onboarding test selector remains for consumers but now asserts the root wall.
+Legacy analytics transport arguments do not enable collection in the current candidate.
 
 Export preview tests can use deterministic HealthKit-like fixtures:
 
@@ -45,7 +47,7 @@ reading simulator Health data.
 
 ## Run a focused journey
 
-Choose an available simulator with `xcrun simctl list devices available`. Use an unused result
+Choose an available simulator through Argent `list-devices`. Use an unused result
 bundle path for each run so earlier failure evidence remains available.
 
 ```bash
@@ -55,7 +57,7 @@ xcodebuild test \
   -scheme HealthMd-UITests-iOS \
   -destination 'platform=iOS Simulator,name=iPhone 17' \
   -resultBundlePath build/ui-tests/onboarding.xcresult \
-  -only-testing:HealthMdUITests/OnboardingJourneyUITests/testPostOnboardingPaywallAppearsAfterFirstPreviewCloses
+  -only-testing:HealthMdUITests/PaywallJourneyUITests/testFreshInstallRequiresAccessBeforeSetup
 ```
 
 For the preview fixture recipe, select

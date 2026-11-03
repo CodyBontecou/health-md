@@ -71,6 +71,7 @@ internal fun hasInvalidAutomationProfileSnapshot(
 class AutomationReceiver : BroadcastReceiver() {
 
     @Inject lateinit var healthRepository: HealthRepository
+    @Inject lateinit var rawSnapshotService: com.healthmd.data.export.RawSnapshotService
     @Inject lateinit var exportRepository: ExportRepository
     @Inject lateinit var settingsRepository: SettingsRepository
     @Inject lateinit var exportHistoryRepository: ExportHistoryRepository
@@ -253,7 +254,7 @@ class AutomationReceiver : BroadcastReceiver() {
         entitlementRepository.refresh()
         val isPurchased = distributionPolicy.fullAccessIncluded ||
             settingsRepository.isPurchased.first() ||
-            entitlementRepository.isUnlocked.first()
+            entitlementRepository.verifyExportAccess(target, settings.apiEndpointUrl.takeIf { settings.exportMode == com.healthmd.rawexport.ExportMode.COMPATIBILITY })
         val freeExportsRemaining = settingsRepository.getFreeExportsRemaining()
         // A folder-bound profile satisfies the destination requirement on its own.
         val folderUri = settingsRepository.getExportFolderUri()
@@ -321,7 +322,7 @@ class AutomationReceiver : BroadcastReceiver() {
 
         val result = when (target) {
             ExportTarget.DEVICE_FOLDER -> {
-                val orchestrator = ExportOrchestrator(healthRepository, exportRepository)
+                val orchestrator = ExportOrchestrator(healthRepository, exportRepository, rawSnapshotService)
                 // Per-profile folder: adopt the resolved profile's binding around the run.
                 profile?.let {
                     profileFolderAdoption.withProfileFolder(it) {

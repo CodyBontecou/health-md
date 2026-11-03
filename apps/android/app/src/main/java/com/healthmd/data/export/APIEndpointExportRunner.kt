@@ -147,6 +147,8 @@ class APIEndpointExportRunner private constructor(
         operationStore = null,
     )
 
+    private var nativeDetailService: RawSnapshotService? = null
+
     /** Production/Dagger constructor adds the app-private durable scheduled-operation store. */
     @Inject
     internal constructor(
@@ -157,6 +159,7 @@ class APIEndpointExportRunner private constructor(
         credentialStore: APIExportCredentialStore,
         operationStore: FileAPIExportOperationStore,
         diagnosticSink: ShadowExportDiagnosticSink,
+        rawSnapshotService: RawSnapshotService,
     ) : this(
         captureSource = HealthRepositoryAPIExportCaptureSource(healthRepository),
         envelopeBuilder = envelopeBuilder,
@@ -174,7 +177,9 @@ class APIEndpointExportRunner private constructor(
         maxEncodedBytes = FrozenAPIExportRequest.DEFAULT_MAX_API_BATCH_BYTES,
         nonLegacyUploadAttempts = DEFAULT_NON_LEGACY_UPLOAD_ATTEMPTS,
         operationStore = operationStore,
-    )
+    ) {
+        nativeDetailService = rawSnapshotService
+    }
 
     /** Focused JVM-test seam; credentials remain separate from every planner input. */
     internal constructor(
@@ -215,6 +220,16 @@ class APIEndpointExportRunner private constructor(
     )
 
     suspend fun exportDates(
+        dates: List<LocalDate>,
+        settings: ExportSettings,
+        onProgress: ((current: Int, total: Int, dateString: String) -> Unit)? = null,
+        expectedDestinationFingerprint: String? = null,
+        durableOperationId: String? = null,
+        durableSettingsSnapshotJson: String? = null,
+    ): ExportResult = exportDatesWithoutNativeDetails(dates, settings, onProgress, expectedDestinationFingerprint, durableOperationId, durableSettingsSnapshotJson)
+        .withNativeMetricDetails(dates, settings, nativeDetailService, expectedDestinationFingerprint)
+
+    private suspend fun exportDatesWithoutNativeDetails(
         dates: List<LocalDate>,
         settings: ExportSettings,
         onProgress: ((current: Int, total: Int, dateString: String) -> Unit)? = null,

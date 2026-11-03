@@ -1,85 +1,85 @@
 ---
 title: "Exporteren"
-description: "Het tabblad Exporteren is het centrale scherm. Je ziet er of HealthKit en je kluis verbonden zijn, kiest een bestemming en voert een eenmalige export uit voor het gewenste datumbereik."
+description: "Gebruik het tabblad Exporteren om HealthKit en kluisverbindingen te controleren. Selecteer een bestemming en exporteer een datumbereik."
 ---
 
-<p>Op het tabblad Exporteren neem je drie beslissingen: controleer of alles gereed is, kies een bestemming en stel het datumbereik in voordat je een voorbeeld bekijkt of de export uitvoert.</p>
+<p> Het tabblad Exporteren bestaat uit drie kleine beslissingen: bevestig de gereedheid, kies een bestemming en kies vervolgens het datumbereik voordat u een voorbeeld bekijkt of exporteert. </p>
 
-## Statusbadges controleren
-<div class="options">
-<div class="option"><strong>Gezondheidsbadge</strong><p>Een groene stip betekent dat HealthKit toestemming heeft. Rood betekent dat toegang niet is verleend. Tik erop om het iOS-toestemmingsvenster opnieuw te openen. Dat werkt alleen de eerste keer na een installatie. Daarna reageert iOS niet en moet je de toegang aanpassen via Instellingen → Privacy en beveiliging → Gezondheid.</p></div>
-<div class="option"><strong>Kluisbadge</strong><p>Een groene stip betekent dat er een kluismap is geselecteerd. Tik erop om de kluis opnieuw te kiezen of te wijzigen. Het label toont de mapnaam.</p></div>
-</div>
-<p>De actie <em>Exporteren</em> blijft uitgeschakeld totdat HealthKit, het uitvoerformaat en de gekozen bestemming gereed zijn. Zo voorkom je de meest voorkomende fout: exporteren zonder bestemming.</p>
+## Lees de statusbadges
+ <div class="options">
+ <div class="option"> <strong> Gezondheidsbadge </strong> <p> Een groene stip betekent dat HealthKit is geautoriseerd. Een rode stip betekent dat er geen toegang wordt verleend. Tik om het iOS-toestemmingsblad opnieuw te proberen. Het blad verschijnt slechts één keer per installatie. Open daarna Instellingen → Privacy &amp; Beveiliging → Gezondheid. </p> </div>
+ <div class="option"> <strong> Kluisbadge </strong> <p> Groene stip = er is een kluismap geselecteerd. Tik om de kluis opnieuw te kiezen of te wijzigen. Het label toont de mapnaam. </p> </div>
+ </div>
+ <p> De actie <em> Exporteren </em> blijft uitgeschakeld totdat HealthKit , het uitvoerformaat en de geselecteerde bestemming gereed zijn. Dit voorkomt de meest voorkomende fout: proberen te exporteren zonder bestemming. </p>
 
-## Een exportbestemming kiezen
-<p>De kaart Exportbestemming bepaalt waar de gegevens naartoe gaan:</p>
-
-<div class="options">
-<div class="option"><strong>Lokale iPhone-map</strong><p>Schrijft rechtstreeks naar de map of Obsidian-kluis die je op dit apparaat hebt gekozen.</p></div>
-<div class="option"><strong>Verbonden Mac</strong><p>Stuurt de vastgelegde dagelijkse gegevens en een exacte momentopname van de instellingen naar de Mac-app in de buurt. De iPhone leest HealthKit; de Mac maakt de gekozen formaten en schrijft de bestanden.</p></div>
-<div class="option"><strong>API-eindpunt</strong><p>Stuurt met een POST-verzoek rechtstreeks vanaf de iPhone een JSON-envelop naar een HTTP(S)-eindpunt dat je zelf configureert. <a href="/nl/docs/api-endpoint/">Lees meer over het API-eindpunt</a>.</p></div>
-</div>
-
-## Een datumbereik kiezen
-<p>De voorinstellingen dekken de meestgebruikte bereiken:</p>
+## Kies een exportdoel
+ <p> De kaart Exportdoel bepaalt waar de gegevens naartoe gaan: </p>
 
 <div class="options">
-<div class="option"><strong>Vandaag</strong><p>Exporteert de huidige dag. Handig om de uitvoeropmaak te testen.</p></div>
-<div class="option"><strong>Gisteren</strong><p>De veiligste keuze voor een dagelijkse export, omdat de dag compleet is.</p></div>
-<div class="option"><strong>Alle gegevens</strong><p>Vult de export aan vanaf de oudste HealthKit-gegevens die Health.md kan vinden.</p></div>
-<div class="option"><strong>Aangepast</strong><p>Stel een begin- en einddatum in voor een specifiek bereik.</p></div>
-</div>
+ <div class="option"> <strong> Lokale iPhone map </strong> <p> Schrijft rechtstreeks naar de map of Obsidian kluis die u op dit apparaat hebt gekozen. </p> </div>
+ <div class="option"> <strong> Verbonden Mac </strong> <p> Verzendt vastgelegde dagelijkse gegevens en een exacte momentopname van de instellingen naar de dichtstbijzijnde Mac-app. De iPhone luidt HealthKit . De Mac rendert de geselecteerde formaten en schrijft de bestanden. </p> </div>
+ <div class="option"> <strong> API-eindpunt </strong> <p> POST een JSON-envelop rechtstreeks van iPhone naar een door de gebruiker geconfigureerd HTTP(S)-eindpunt. <a href="/nl/docs/api-endpoint/"> Zie API-eindpunt </a> . </p> </div>
+ </div>
 
-## Voorbeeld bekijken of exporteren
-<div class="options">
-<div class="option"><strong>Voorbeeld</strong><p>Toont de bestanden en inhoud die Health.md gaat maken voordat er iets wordt geschreven.</p></div>
-<div class="option"><strong>Exporteren</strong><p>Voert de export uit, toont de voortgang op het hoofdscherm en legt het resultaat vast in de geschiedenis.</p></div>
-</div>
-
-## Het niveau van gegevensdetail kiezen
+## Kies een datumbereik
+ <p> Datumvoorinstellingen dekken de gebruikelijke paden: </p>
 
 <div class="options">
-<div class="option"><strong>Samenvatting</strong><p>Compacte dagtotalen en overzichten voor lezen, notities en dashboards.</p></div>
-<div class="option"><strong>Gedetailleerde tijdreeks</strong><p>Geselecteerde tijdgestempelde metingen en intervallen. Dit niveau is beschikbaar op Apple en Android als de meetwaarde geschikt detail biedt.</p></div>
-<div class="option"><strong>Verliesvrije gezondheidsrecords</strong><p>Het canonieke archief met HealthKit-bronrecords. Dit niveau is alleen voor Apple; Android zet Health Connect-records niet om in een HealthKit-archief.</p></div>
-</div>
+ <div class="option"> <strong> Vandaag </strong> <p> Exporteer de huidige dag. Handig voor het testen van de uitvoeropmaak. </p> </div>
+ <div class="option"> <strong> Gisteren </strong> <p> De veiligste keuze voor dagelijkse export, omdat de dag voorbij is. </p> </div>
+ <div class="option"> <strong> Altijd </strong> <p> Aanvulling vanaf de eerste HealthKit gegevens Health.md kan vinden. </p> </div>
+ <div class="option"> <strong> Aangepast </strong> <p> Kies begin- en einddatums voor een specifiek bereik. </p> </div>
+ </div>
 
-## Wat er tijdens een export gebeurt
-<ol>
-<li>Voor elke dag in het bereik legt Health.md de gekozen samenvattingen vast, voegt het compatibele metingen toe voor Gedetailleerde tijdreeks en voegt het bij Verliesvrije gezondheidsrecords canonieke bronrecords en querydiagnostiek toe.</li>
-<li>De app past het gekozen formaat (Markdown, Bases, JSON of CSV) en de gekozen sjabloon toe.</li>
-<li>De app schrijft één bestand per dag naar <code>{vault}/{subfolder}/</code>, draagt bestanden over via de verbonden Mac-workflow of stuurt een JSON-envelop met versiebeheer naar je API-eindpunt.</li>
-<li>Als <em>Individueel bijhouden</em> is ingeschakeld, leidt de app voor bestandsbestemmingen de gekozen Markdown-bestanden per vermelding af uit het canonieke archief.</li>
-<li>Als <em>Invoegen in dagelijkse notities</em> is ingeschakeld, voegt de app de gekozen samenvattingsvelden samen met je dagelijkse notities.</li>
-</ol>
+## Voorbeeld of export
+ <div class="options">
+ <div class="option"> <strong> Voorbeeld </strong> <p> Toont de bestanden en inhoud die worden gegenereerd voordat er iets wordt geschreven. </p> </div>
+ <div class="option"> <strong> Exporteren </strong> <p> Voert de export uit, toont de voortgang op het hoofdscherm en legt de uitkomst vast in de geschiedenis. </p> </div>
+ </div>
 
-<p>JSON en CSV kunnen canonieke records behouden. Markdown en Bases blijven leesbaar en tonen compacte diagnostiek over de vastlegging in plaats van het archief in te sluiten. In de <a href="/nl/docs/reference/">volledige exportreferentie</a> staan de exacte schema's en regels voor weglatingen.</p>
+## Kies het gegevensdetailniveau
 
-## Stoppen, annuleren en opnieuw proberen
+<div class="options">
+ <div class="option"> <strong> Samenvatting </strong> <p> Compacte dagelijkse totalen en overzichten voor lezen, notities en dashboards. </p> </div>
+ <div class="option"> <strong> Gedetailleerde tijdreeksen </strong> <p> Geselecteerde tijdstempels en intervallen. Dit niveau is beschikbaar op zowel Apple als Android wanneer de gekozen statistiek geschikte details blootlegt. </p> </div>
+ <div class="option"> <strong> Gezondheidsgegevens zonder verlies </strong> <p> Het canonieke HealthKit bronrecordarchief. Dit niveau is alleen voor Apple. Android zet Health Connect records niet om in een HealthKit archief. </p> </div>
+ </div>
 
-Stoppen of annuleren beëindigt alleen de huidige poging. Voltooide bestanden en datums blijven behouden; open datums kunnen opnieuw worden geprobeerd. Een geplande poging annuleren schakelt het terugkerende schema niet uit.
+## Wat 'exporteren' eigenlijk doet
+ <ol>
+ <li> Leg voor elke dag in het bereik geselecteerde samenvattende projecties vast. Voeg compatibele samples toe voor gedetailleerde tijdreeksen. En voor Lossless Health Records kunt u canonieke bronrecords en querydiagnostiek toevoegen. </li>
+ <li> Pas het door u gekozen formaat toe ( Markdown , Bases, JSON of CSV) en sjabloon. </li>
+ <li> Schrijf één bestand per dag naar <code>{vault}/{subfolder}/</code> , breng bestanden over via de aangesloten Mac-workflow of POST een JSON-envelop met versiebeheer naar uw API-eindpunt. </li>
+ <li> Als <em> Individuele tracking </em> is ingeschakeld, leidt u geselecteerde Markdown bestanden per invoer af uit het canonieke archief voor op bestanden gebaseerde doelen. </li>
+ <li> Als <em> Dagelijkse notitie-injectie </em> is ingeschakeld, voegt u de geselecteerde overzichtsvelden samen met uw dagelijkse notities. </li>
+ </ol>
+
+<p> JSON en CSV kunnen canonieke records bewaren. Markdown en Bases blijven leesbaar en bieden compacte vastlegdiagnostiek in plaats van het archief in te sluiten. Zie de <a href="/nl/docs/reference/"> volledige exportreferentie </a> voor exacte schema's en weglatingsregels. </p>
+
+## Stop, annuleer en probeer het opnieuw
+
+Als u stopt of annuleert, wordt alleen de huidige poging beëindigd. Reeds voltooide bestanden en datums blijven voltooid, terwijl onopgeloste datums beschikbaar blijven om opnieuw te proberen. Als u een geplande poging annuleert, wordt het terugkerende schema ervan niet uitgeschakeld.
 
 ## Profielen en betrouwbare geschiedenis
 
-Een opgeslagen profiel bevriest de instellingen en bestemming voor de uitvoering. Geschiedenisrijen van profielgebonden geplande en geautomatiseerde uitvoeringen bewaren het gebruikte profiel; de geschiedenis bewaart ook een privacyvriendelijk label van de werkelijke bestemming. Een handmatige exportregel kan de profielnaam weglaten. Latere wijzigingen aan naam of bestemming herschrijven bestaande geschiedenis niet. Ontbrekende profielverwijzingen stoppen veilig. Zie [Exportprofielen](/nl/docs/export-profiles/).
+Een opgeslagen profiel bevriest de instellingen en bestemming voor de run. Profielbewuste geplande en automatiseringsgeschiedenisrijen behouden het runtimeprofiel, terwijl de geschiedenis een privacyveilig label behoudt voor de daadwerkelijk gebruikte bestemming. In een handmatige exporttabbladrij kan de profielnaam weggelaten worden. Latere hernoemingen en bestemmingswijzigingen herschrijven de bestaande geschiedenis niet. Ontbrekende profielreferenties worden niet gesloten in plaats van terug te vallen. Zie [Profielen exporteren](/nl/docs/export-profiles/).
 
-## Tabbladbalk
+## Tabbalk
 
-<p>De vier tabbladen onderaan het scherm, Exporteren, Schema, Synchronisatie en Instellingen, omvatten de hele app. Alle overige opties vind je één of twee niveaus dieper onder Instellingen.</p>
+<p> De vier tabbladen onder aan het scherm, Exporteren, Plannen, Synchroniseren, Instellingen, bestrijken het gehele app-oppervlak. Al het andere bevindt zich een of twee lagen diep in Instellingen. </p>
 
 <div class="callout">
-<strong>Wat Full Access ontgrendelt.</strong>
-<p style="margin-top:6px;">Op Apple-platforms geldt de gratis ruimte voor 5 handmatige of geplande exportacties. Full Access heft die limiet op en ontgrendelt Mac-bestemmingsworkflows en Opdrachten. Android biedt daarentegen 5 gratis handmatige acties en vereist de eenmalige aankoop voor planning. Lees de <a href="/nl/docs/paywall/">pagina over Full Access</a> voor de Apple-aankoop.</p>
-</div>
+ <strong> Ontgrendelingsgedrag. </strong>
+ <p style="margin-top:6px;"> De telefoonversies iPhone / iPad en Google Play waarvoor een abonnement is vereist, vereisen een actieve proefversie, abonnement, levenslange of behouden permanente toegang voor export en planning. Er blijft geen lokale vrije-exportvergoeding over. De Mac-companion en F-Droid build met inbegrepen toegang behouden hun gedocumenteerde uitzonderingen. <a href="/nl/docs/paywall/"> Zie de Paywall-pagina </a> voor Apple-aankoopgegevens. </p>
+ </div>
 
-## Gerelateerde documentatie
+## Verwant
 
 <div class="related">
-  <a href="/nl/docs/export-profiles/"><span>Profielen</span>Bewaar onafhankelijke bestemmingen, instellingen, planningen en automatiserings-ID’s.</a>
-  <a href="/nl/docs/scheduling/"><span>Dagelijks gebruik</span>Planning: automatiseer de export zodat je niet meer op Exporteren hoeft te tikken.</a>
-  <a href="/nl/docs/api-endpoint/"><span>Integratie</span>API-eindpunt: stuur geselecteerde JSON rechtstreeks naar je eigen dienst.</a>
-  <a href="/nl/docs/format/"><span>Aanpassen</span>Formaataanpassing: bepaal hoe elk bestand eruitziet.</a>
-  <a href="/nl/docs/shortcuts/"><span>Automatisering</span>Shortcuts: start exports met Siri, automatiseringen of andere apps.</a>
-  <a href="/nl/docs/reference/"><span>Referentie</span>Exportreferentie: schema's, canonieke records, diagnostiek en gegenereerde voorbeelden.</a>
-</div>
+ <a href="/nl/docs/export-profiles/"> <span> Herhaalbare instellingen </span> Exporteer profielen, sla onafhankelijke instellingen, bestemmingen, schema's en stabiele automatiserings-ID's op. </a>
+ <a href="/nl/docs/scheduling/"> <span> Dagelijks gebruik </span> Plannen, automatiseer dit zodat je nooit meer op Exporteren tikt. </a>
+ <a href="/nl/docs/api-endpoint/"> <span> Integreer </span> API Endpoint, stuur geselecteerde JSON rechtstreeks naar uw eigen service. </a>
+ <a href="/nl/docs/format/"> <span> Aanpassen </span> Formaataanpassing, verander hoe elk bestand eruit ziet. </a>
+ <a href="/nl/docs/shortcuts/"> <span> Power </span> Shortcuts , activeer exports van Siri , automatiseringen of andere apps. </a>
+ <a href="/nl/docs/reference/"> <span> Referentie </span> Exportreferentie, schema's, canonieke records, diagnostiek en gegenereerde voorbeelden. </a>
+ </div>

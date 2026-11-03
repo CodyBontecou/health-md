@@ -4,6 +4,13 @@ All notable changes to Health.md will be documented in this file.
 
 ## [Unreleased]
 
+## [3.5.0] - Unreleased
+
+### Changed
+- Weekly and yearly subscription options with a seven-day free trial for eligible customers, alongside one-time Lifetime access; Apple Family plans use native Family Sharing.
+- On iPhone and iPad, active trial, subscription, or permanent access is required before setup and exports. Existing Lifetime and grandfathered access is preserved; the macOS companion remains free.
+- Purchase-status labels and scheduling guidance distinguish subscriptions from Lifetime access.
+
 ## [3.4.5] - 2026-10-28
 
 ### Added

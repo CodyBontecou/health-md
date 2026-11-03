@@ -881,7 +881,7 @@ class DirectCliCoordinator @Inject constructor(
         entitlementRepository.refresh()
         return distributionPolicy.fullAccessIncluded ||
             settingsRepository.isPurchased.first() ||
-            entitlementRepository.isUnlocked.first()
+            entitlementRepository.verifyAccess()
     }
 
     private suspend fun resolveDates(

@@ -97,6 +97,8 @@ class AgentDataGatewayExportRunner private constructor(
     private val dailyAggregatePlanner: LocalDailyAggregateExportPlanner,
 ) {
 
+    private var nativeDetailService: RawSnapshotService? = null
+
     /** Production/Dagger constructor builds the shared folder-parity planner. */
     @Inject
     constructor(
@@ -107,6 +109,7 @@ class AgentDataGatewayExportRunner private constructor(
         csvExporter: CsvExporter,
         obsidianBasesExporter: ObsidianBasesExporter,
         diagnosticSink: ShadowExportDiagnosticSink = ShadowExportDiagnosticSink { },
+        rawSnapshotService: RawSnapshotService,
     ) : this(
         captureSource = HealthRepositoryAgentDataGatewayCaptureSource(healthRepository),
         gatewayClient = gatewayClient,
@@ -120,7 +123,9 @@ class AgentDataGatewayExportRunner private constructor(
             ),
             diagnosticSink = diagnosticSink,
         ),
-    )
+    ) {
+        nativeDetailService = rawSnapshotService
+    }
 
     /** Focused JVM-test seam with an injected capture source and planner. */
     internal constructor(
@@ -137,6 +142,14 @@ class AgentDataGatewayExportRunner private constructor(
     )
 
     suspend fun exportDates(
+        dates: List<LocalDate>,
+        settings: ExportSettings,
+        onProgress: ((current: Int, total: Int, dateString: String) -> Unit)? = null,
+        expectedDestinationFingerprint: String? = null,
+    ): ExportResult = exportDatesWithoutNativeDetails(dates, settings, onProgress, expectedDestinationFingerprint)
+        .withNativeMetricDetails(dates, settings, nativeDetailService, expectedDestinationFingerprint)
+
+    private suspend fun exportDatesWithoutNativeDetails(
         dates: List<LocalDate>,
         settings: ExportSettings,
         onProgress: ((current: Int, total: Int, dateString: String) -> Unit)? = null,

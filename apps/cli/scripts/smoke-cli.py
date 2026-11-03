@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Run the same health-free CLI/MCP smoke locally and in the native CI matrix.
+"""Run hermetic CLI/MCP discovery smoke.
 
-Requires Python 3.11+ for TOML validation. Builds only the CLI workspace, uses
-throwaway state/Codex directories, and never pairs or requests health data.
+Requires Python 3.11+. Uses temporary file/Codex state and only credential-free
+operations; never pairs, opens native credentials, or contacts a device. Native
+credential upgrade checks belong to the automated signed-release probes.
 """
 
 from __future__ import annotations
@@ -61,53 +62,6 @@ def check_tools(actual: list[dict], expected: list[dict]) -> None:
             require(served[name].get("_meta", {}).get(key) == value, f"MCP approval metadata drift: {name}")
 
 
-def check_devices(runner: str, code: int, payload: dict) -> None:
-    if code == 0:
-        require(payload.get("schema") == "healthmd.direct_devices", "unexpected devices schema")
-        require(payload.get("devices") == [], "smoke state must not contain paired devices")
-    else:
-        # Headless Linux can legitimately lack an unlocked Secret Service.
-        require(runner == "Linux" and code == 1,
-                f"{runner} native credential smoke failed (exit {code}); see docs/qa.md#native-credential-blockers")
-        require(payload.get("error") == "direct_storage_unavailable", "native credentials did not fail closed")
-
-
-def check_doctor(result: dict, *, read_only: bool) -> None:
-    require(set(result) == {"content", "isError"}, "unexpected doctor MCP envelope")
-    require(isinstance(result["isError"], bool), "doctor isError must be boolean")
-    require(len(result["content"]) == 1, "doctor must return one health-free content item")
-    content = result["content"][0]
-    require(set(content) == {"type", "text"} and content["type"] == "text", "unexpected doctor content")
-    doctor = json.loads(content["text"])
-    if result["isError"]:
-        errors = {
-            "healthmd_not_paired", "healthmd_device_ambiguous", "healthmd_timeout",
-            "healthmd_response_too_large", "healthmd_protocol_error",
-            "healthmd_pairing_required", "healthmd_unavailable",
-        }
-        require(set(doctor) == {"error", "message"}, "unexpected doctor error fields")
-        require(doctor["error"] in errors, "unexpected doctor error code")
-    else:
-        fields = {
-            "schema", "schema_version", "status", "ready", "message", "device_name",
-            "application_protocol_version", "port", "app_active",
-            "protected_data_available", "export_in_progress", "query_in_progress",
-            "can_trigger_file_exports", "can_trigger_queries", "active_job_id",
-            "active_query_request_id", "query_capabilities", "next_tool", "wake",
-        }
-        require(set(doctor) <= fields, "unexpected doctor readiness fields")
-        require(doctor.get("schema") == "healthmd.direct_readiness" and doctor.get("schema_version") == 1, "unexpected readiness schema")
-        require(doctor.get("status") in {"ready", "unavailable", "not_paired", "query_unsupported"}, "unexpected readiness status")
-        require(isinstance(doctor.get("ready"), bool) and doctor["ready"] == (doctor["status"] == "ready"), "inconsistent readiness flag")
-        if doctor["status"] == "not_paired" and not read_only:
-            require(doctor.get("next_tool") == "healthmd_pairing_start", "missing local pairing guidance")
-        if "wake" in doctor:
-            require(doctor["wake"]["enrollment"] == {"mode": "wait_only", "state": "unavailable"}, "fresh state must not report wake enrollment")
-            require(isinstance(doctor["wake"]["timeout_seconds"], int), "unexpected wake timeout")
-            require(isinstance(doctor["wake"]["enabled"], bool), "unexpected wake flag")
-    require(isinstance(doctor.get("message"), str) and bool(doctor["message"]), "missing doctor message")
-
-
 def requests(hidden: list[str] | None = None) -> list[dict]:
     result = [
         {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {
@@ -118,7 +72,6 @@ def requests(hidden: list[str] | None = None) -> list[dict]:
         {"jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {}},
         {"jsonrpc": "2.0", "id": 3, "method": "resources/list", "params": {}},
         {"jsonrpc": "2.0", "id": 4, "method": "tools/call", "params": {"name": "healthmd_capabilities", "arguments": {}}},
-        {"jsonrpc": "2.0", "id": 5, "method": "tools/call", "params": {"name": "healthmd_doctor", "arguments": {}}},
     ]
     for name in hidden or []:
         result.append({"jsonrpc": "2.0", "id": len(result) + 1, "method": "tools/call", "params": {"name": name, "arguments": {}}})
@@ -221,9 +174,10 @@ def check_session(responses: dict, catalog: list[dict], *, read_only: bool = Fal
     capabilities = json.loads(capability_text)
     require("requires_mac_app" not in capabilities, "obsolete Mac-app capability field")
     require(capabilities["query_tool_guidance"]["sleep"] == "healthmd_sleep_sessions", "missing typed sleep guidance")
-    check_doctor(responses[5]["result"], read_only=read_only)
+    expected_count = 4 + (len(tool_index(catalog).keys() - served.keys()) if read_only else 0)
+    require(set(responses) == set(range(1, expected_count + 1)), "unexpected MCP smoke response inventory")
     if read_only:
-        for identifier in range(6, len(responses) + 1):
+        for identifier in range(5, len(responses) + 1):
             require(responses[identifier].get("error") == {"code": -32602, "message": "Unknown tool"}, "read-only MCP accepted a local-only operation")
 
 
@@ -233,7 +187,7 @@ def run(command: list[str], env: dict, *, success: bool = True) -> subprocess.Co
     return result
 
 
-def smoke(binary: Path, compatibility: Path, runner: str) -> tuple[int, int]:
+def smoke(binary: Path, compatibility: Path) -> tuple[int, int]:
     import tomllib  # Python 3.11+, also used by release/CI scripts.
 
     with tempfile.TemporaryDirectory(prefix="healthmd-cli-smoke-") as temporary:
@@ -254,8 +208,6 @@ def smoke(binary: Path, compatibility: Path, runner: str) -> tuple[int, int]:
         schema = json.loads(run([executable, "mcp", "schema", "healthmd_sleep_sessions"], env).stdout)
         require(schema["schema"] == "healthmd.mcp_tool_schema", "unexpected typed schema envelope")
         require(schema["tool"] == tool_index(expected)["healthmd_sleep_sessions"], "typed schema differs from the catalog")
-        devices = subprocess.run([executable, "direct", "devices"], cwd=ROOT, env=env, stdin=subprocess.DEVNULL, capture_output=True, timeout=30)
-        check_devices(runner, devices.returncode, json.loads(devices.stdout))
         setup = json.loads(run([executable, "setup", "codex", "--skip-pairing"], env).stdout)
         require(setup["schema"] == "healthmd.codex_setup" and setup["configuration"]["same_executable_identity"] is True, "unexpected Codex setup receipt")
         config_path = root / "codex/config.toml"
@@ -265,9 +217,10 @@ def smoke(binary: Path, compatibility: Path, runner: str) -> tuple[int, int]:
         require(config["tools"]["healthmd_export_files"]["approval_mode"] == "prompt", "missing export approval")
         run([executable, "setup", "codex", "--skip-pairing"], env)
         require(config_path.read_bytes() == original, "Codex setup is not idempotent")
-        responses = run_stdio_server([executable, "mcp", "serve"], requests(), env)
+        messages = requests()
+        responses = run_stdio_server([executable, "mcp", "serve"], messages, env)
         check_session(responses, expected)
-        compatibility_responses = run_stdio_server([launcher], requests(), env)
+        compatibility_responses = run_stdio_server([launcher], messages, env)
         require(compatibility_responses == responses, "compatibility launcher differs from same-binary MCP")
         read_only = read_only_catalog(expected)
         hidden = sorted(tool_index(expected).keys() - tool_index(read_only).keys())
@@ -285,7 +238,7 @@ def main() -> int:
     parser.add_argument("--runner", choices=("Linux", "macOS", "Windows"), default=native_runner)
     arguments = parser.parse_args()
     require(native_runner is not None, "unsupported host platform for native CLI smoke")
-    require(arguments.runner == native_runner, "--runner must match the host platform; native credential checks cannot be bypassed")
+    require(arguments.runner == native_runner, "--runner must match the host platform")
     if sys.version_info < (3, 11):
         parser.error("Python 3.11+ is required (for example, python3.14 scripts/smoke-cli.py)")
     require(arguments.skip_build or (arguments.binary is None and arguments.compatibility is None), "custom binaries require --skip-build")
@@ -297,7 +250,7 @@ def main() -> int:
     suffix = ".exe" if arguments.runner == "Windows" else ""
     binary = (arguments.binary or target / "debug" / f"healthmd{suffix}").resolve()
     compatibility = (arguments.compatibility or binary.with_name(f"healthmd-mcp{suffix}")).resolve()
-    complete, read_only = smoke(binary, compatibility, arguments.runner)
+    complete, read_only = smoke(binary, compatibility)
     if not arguments.skip_build:
         # These optional builds occur only after default-binary/catalog validation.
         for feature in ("streamable-http", "oauth-resource-server"):
@@ -305,7 +258,7 @@ def main() -> int:
         subprocess.run(["cargo", "build", "--quiet", "--locked", "--bin", "healthmd", "--all-features"], cwd=ROOT, check=True)
         result = subprocess.run([str(binary), "mcp", "serve-hosted", "--help"], cwd=ROOT, capture_output=True, timeout=30)
         require(result.returncode != 0, "optional build exposes removed serve-hosted")
-    print(f"CLI/MCP smoke passed ({arguments.runner}): {complete} complete, {read_only} read-only tools; no device contact")
+    print(f"Hermetic CLI/MCP smoke passed ({arguments.runner}): {complete} complete, {read_only} read-only tools; no credentials or device contact")
     return 0
 
 

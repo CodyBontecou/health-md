@@ -8,6 +8,7 @@ The package is licensed under the [GNU Affero General Public License v3.0 only](
 
 | Path | Purpose |
 |---|---|
+| [`clinic-sponsorship/v1`](clinic-sponsorship/v1/contract.md) | Unpublished manual clinic pilot: signed grants, explicit patient consent and destination-aware export admission |
 | [`manifest.json`](manifest.json) | Contract versions, ownership, consumers, fixture provenance, and integrity hashes |
 | [`product-capabilities.json`](product-capabilities.json) | Machine-readable Apple/Android capability and output-profile inventory |
 | [`../healthmd-core-rust/crates/healthmd-core/registry/metric-registry-v1.json`](../healthmd-core-rust/crates/healthmd-core/registry/metric-registry-v1.json) | Rust-owned ordered metric/profile inventory pinned by `manifest.json` |

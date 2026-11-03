@@ -1,6 +1,7 @@
 package com.healthmd.presentation
 
 import com.healthmd.BuildConfig
+import com.healthmd.presentation.paywall.StaticPurchasePreview
 import android.content.Intent
 import android.os.Bundle
 import android.view.WindowManager
@@ -72,6 +73,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        StaticPurchasePreview.configure(intent.getBooleanExtra(StaticPurchasePreview.EXTRA, false))
         handledMyselfClaimIntent = savedInstanceState?.getBoolean(STATE_HANDLED_MYSELF_CLAIM) == true
         val alreadyHandledExternalIntent =
             savedInstanceState?.getBoolean(STATE_HANDLED_EXTERNAL_INTENT) == true

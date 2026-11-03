@@ -1,250 +1,84 @@
 # Google Play Billing Integration Guide
 
-This document covers Google Play Billing for the `play` Android variant. The `fdroid` variant does not compile Billing and receives included full access through the channel-neutral entitlement boundary. Console/account changes, device installation and purchase testing require explicit authorization; these instructions are not evidence that a live transaction or restoration was qualified.
+This guide covers the `play` Android variant. F-Droid does not compile Billing and retains included full access. Source implementation is not evidence of console setup, approval, or a qualified live transaction. Store mutations, device installation, sandbox purchases, and release workflows require explicit authorization.
 
-## Architecture Overview
+## Product configuration
 
-The billing implementation uses a clean architecture pattern:
+The approved US Individual prices are **$0.99 weekly**, **$29.99 yearly**, and **$49.99 Lifetime**. Eligible subscriptions include a **seven-day free trial**. Lifetime is charged immediately. Android offers no Family plans and no monthly subscription. The cross-platform decision and Apple setup are recorded in the [paid-access rollout](../apple/docs/experiments/subscription-pricing-rollout.md).
 
-```
-UI Layer (PaywallScreen)
-    ↓
-ViewModel (PaywallViewModel)
-    ↓
-EntitlementRepository + PurchaseRepository interfaces
-    ↓
-Play implementation (BillingRepositoryImpl)
-    ↓
-Google Play Billing Client
-```
+**Live-price hold:** these are launch targets. Leave the existing live lifetime product's price and regional pricing unchanged until the subscription-containing app is live and the owner explicitly approves the coordinated cutover. Draft subscription products, prices, and trials may be prepared in advance; do not activate, submit, publish, or release as a side effect of setup. Follow the rollout guide's live-price hold when resuming Console work.
 
-### Components
+Configure draft products in Google Play Console under Monetize → Products:
 
-1. **EntitlementRepository / PurchaseRepository** (`app/src/main/java/com/healthmd/domain/repository/`)
-   - Keep entitlement checks independent from store operations
-   - `isUnlocked`: `StateFlow` tracking full-access entitlement
-   - `refresh()`: refreshes a channel-backed entitlement or does nothing for included access
-   - `launchPurchase()` / `restorePurchase()`: purchase actions exposed only when `isAvailable`
-   - No Google Play SDK object crosses either interface
+| Product ID | Type | Base-plan period | US launch target |
+|---|---|---|---:|
+| `health_md_premium_weekly` | Auto-renewing subscription | `P1W` | $0.99 |
+| `health_md_premium_yearly` | Auto-renewing subscription | `P1Y` | $29.99 |
+| `health_md_premium_lifetime` | Non-consumable INAPP | — | $49.99 |
 
-2. **BillingRepositoryImpl** (`app/src/play/java/com/healthmd/data/billing/BillingRepositoryImpl.kt`)
-   - Concrete implementation using Google Play Billing Client v8.3+
-   - Handles product queries, purchase flow, and acknowledgment
-   - Uses Billing-managed service reconnection with bounded transient-operation retries
-   - Automatically acknowledges purchases (required for security)
+As of October 29, 2026, both subscription products are configured in Console but remain unavailable for purchase: `health_md_premium_weekly` has base plan `weekly`, and `health_md_premium_yearly` has base plan `yearly`. Each base plan and its `trial-7d` offer is **Draft**, and both products show **zero active base plans**. Console lists 175 countries/regions for each plan and offer, with converted prices on these new drafts only. The saved US prices are $0.99 weekly and $29.99 yearly. Trial eligibility is **New customer acquisition → Never had any subscription** in this app; each offer has one **Free trial → 7 days** phase before the recurring base price.
 
-3. **PaywallViewModel** (`presentation/paywall/PaywallViewModel.kt`)
-   - Manages paywall UI state
-   - Handles coroutine lifecycle
-   - Auto-dismisses paywall on successful purchase
+The existing `health_md_premium_lifetime` product was inspected read-only: US $19.99, with its entire rendered country/price/tax/availability table identical before and after draft setup. Its price, regional overrides, active state, and product ID were not changed. No products were activated and no review, publication, or release action was taken. Later activation and exact-build sandbox qualification remain separately authorized release gates.
 
-4. **PaywallScreen** (`presentation/paywall/PaywallScreen.kt`)
-   - Beautiful Compose UI with feature list
-   - Purchase and restore buttons
-   - Error messaging support
+Configure an eligible `P7D` free-trial offer on each subscription with one free cycle followed by the infinitely recurring paid phase. The app selects only an eligible seven-day trial or its paid base plan, and shows the localized price returned by Play. No fallback US price or fabricated trial is used. Product/base-plan/offer activation and regional availability must be verified in Console before shipping the hard gate.
 
-The Play repository and `BillingClient` are Hilt singletons with process lifetime. Screen ViewModels call the channel-neutral `refresh()` methods and must never call `BillingClient.endConnection()`: Google marks a closed client as terminal, and closing it when onboarding or the schedule screen is removed would break purchases elsewhere until the app process restarted. After initial setup, later refresh calls request one deduplicated product-and-purchase refresh rather than opening another manual connection. After a service disconnect, normal Billing API calls trigger Billing 8 reconnection; the disconnect callback clears stale product details while preserving cached entitlement state.
+**Never rename the existing lifetime ID.** Existing paid and previously grandfathered permanent owners retain access and restoration. No custom family accounts, invitations, or cross-store entitlement transfer are included.
 
-## Setup Instructions
+## Architecture
 
-### Step 1: Create Product in Google Play Console
+`HealthMdNavigation` owns the root hard gate before tracking/setup. `PaywallScreen` displays typed `PurchaseOffer` values from `PaywallViewModel`; no Play SDK type crosses the channel-neutral `PurchaseRepository` and `EntitlementRepository` boundaries.
 
-1. Go to [Google Play Console](https://play.google.com/console)
-2. Select your app → **Monetize** → **Products** → **In-app products**
-3. Create a new product with:
-   - **Product ID**: `health_md_premium_lifetime` (must match `PRODUCT_ID` in code)
-   - **Product type**: In-app product (one-time purchase)
-   - **Title**: "Health MD Premium"
-   - **Description**: "Unlimited exports and scheduled backups"
-   - **Price**: configure the approved price in Play Console; the app displays Play's returned localized price.
+`BillingRepositoryImpl` and its BillingClient v8.3+ are application-scoped Hilt singletons. Screen ViewModels refresh them; they must never call `BillingClient.endConnection()`. A closed BillingClient is terminal. Billing-managed reconnection and bounded transient retries are preserved. Product details are reloaded before a purchase; changed displayed terms require another explicit tap. A purchase launch itself is never automatically retried.
 
-**Important**: The product ID in the code MUST exactly match the product ID in Google Play Console.
+The repository queries both INAPP and SUBS, accepts matching `PURCHASED` products, and asynchronously acknowledges unacknowledged purchases. Pending/canceled/unknown products do not unlock. Acknowledgment must complete within Google's window to avoid automatic refund.
 
-### Step 2: Update Product ID (if using different name)
+Only permanent unlocks populate the old `isPurchased` flag and lifetime SharedPreferences cache. Subscription access is session-local, refreshed on foregrounding and periodically while the process is alive. Headless workers, automation, recovery, Direct CLI, and foreground export admission query current Play access. Empty successful snapshots remove subscription access; verification failures fail closed for subscription-only users. Existing lifetime/legacy caches remain usable offline. Subscription-only users need Play connectivity after process restart; there is no invented offline grace period.
 
-If you use a different product ID, update:
+Do not erase a saved schedule while subscription access is still resolving. Workers separately enforce access before execution. F-Droid uses its stable included-access repository and no simulated buy/restore flow.
 
-**File**: `app/src/play/java/com/healthmd/data/billing/BillingRepositoryImpl.kt`
+## Security and privacy
 
-```kotlin
-private const val PRODUCT_ID = "health_md_premium_lifetime"  // ← Update this
-```
+This retains the existing client-side Billing trust boundary; accepting Play `PURCHASED` results is **not server-side signature verification**. A purchase-verification backend/RTDN lifecycle service is not introduced here. Do not persist subscription tokens as permanent access or expose them in telemetry. Health data never enters billing or pricing analytics.
 
-### Step 3: Build and Test
+The separate myself.md claim path continues to require fresh lifetime purchase evidence; an ordinary subscription does not establish that lifetime benefit.
 
-The implementation is fully integrated. Build the app:
+## Focused local checks
+
+From `apps/android`:
 
 ```bash
-./gradlew :app:assemblePlayDebug
+./gradlew :app:testPlayDebugUnitTest --tests 'com.healthmd.domain.billing.FreemiumPolicyTest' --tests 'com.healthmd.data.billing.*Test' --max-workers=2
 ```
 
-Or install on connected device:
+Use root `make plan-native` / `make verify-native` for queued native integration compilation. Compilation does not verify purchases, navigation, or expiry behavior.
 
-```bash
-./gradlew :app:installPlayDebug
-```
+## Authorized store/device qualification
 
-### Step 4: Test Purchases (Development)
+Use an internal testing track and Google Play license-test accounts. Product IDs, package/signature, product availability, store account, and region must match Console. Do not substitute legacy `android.test.*` product IDs for qualification of real subscription offers.
 
-For testing without real transactions, use Google's test product IDs:
+Verify on the exact release build:
 
-- `android.test.purchased` - Will pass purchase
-- `android.test.canceled` - Will cancel purchase  
-- `android.test.refunded` - Will refund purchase
-- `android.test.item_unavailable` - Product unavailable
+- Fresh and old free installs hit the hard gate; Back/deep links cannot expose tracking.
+- Existing lifetime owners and grandfathered users retain access after upgrade/restart/restore.
+- Eligible and ineligible weekly/yearly offers show the correct trial, total renewal amount, cadence, and localized price.
+- Successful, pending, canceled, failed, and already-owned purchases; acknowledgment retry and restore.
+- Trial expiry, cancellation through the paid-through date, renewal, subscription expiry, refund/revocation, and process restart.
+- Store disconnect, offline restart, missing products, and explicit retry without a false unlock.
+- Foreground export, scheduled work, automation, recovery, and Direct CLI enforce access.
+- Manage Subscriptions, Terms, Privacy, accessibility, and F-Droid's included-access behavior.
 
-**Note**: Test product IDs only work with test accounts added to your Play Console.
-
-To use test accounts:
-1. Go to Play Console → **Settings** → **License testing**
-2. Add test Gmail accounts
-3. Sign in with test account on test device
-
-### Step 5: Integration Points
-
-#### In Navigation
-
-The paywall is wired up in `HealthMdNavigation.kt`:
-
-```kotlin
-composable(SubRoutes.PAYWALL) {
-    val paywallViewModel: PaywallViewModel = hiltViewModel()
-    val isPurchased by paywallViewModel.isUnlocked.collectAsStateWithLifecycle()
-    val context = androidx.compose.ui.platform.LocalContext.current
-
-    // Auto-dismiss on successful purchase
-    LaunchedEffect(isPurchased) {
-        if (isPurchased) {
-            navController.popBackStack()
-        }
-    }
-
-    PaywallScreen(
-        onPurchase = {
-            val activity = context as? android.app.Activity
-            if (activity != null) {
-                paywallViewModel.launchPurchaseFlow(activity)
-            }
-        },
-        onRestore = { paywallViewModel.restorePurchases() },
-        onDismiss = { navController.popBackStack() },
-    )
-}
-```
-
-#### To Check Purchase Status Anywhere
-
-```kotlin
-@Inject
-lateinit var entitlementRepository: EntitlementRepository
-
-val isPurchased = entitlementRepository.isUnlocked.collectAsStateWithLifecycle()
-
-// Show paywall if not purchased
-if (!isPurchased.value) {
-    navController.navigate(SubRoutes.PAYWALL)
-}
-```
-
-### Current Status: Premium Features
-
-Look for uses of `onNavigateToPaywall` in the codebase to see where paywalls are triggered:
-
-```bash
-grep -r "onNavigateToPaywall" app/src/main/java/
-```
-
-Update these screens to check `isPurchased` and show paywall for premium features.
-
-## Purchase Flow Diagram
-
-```
-User taps "Unlock"
-    ↓
-PaywallViewModel.launchPurchaseFlow()
-    ↓
-Query product details from Play Store
-    ↓
-Launch billing UI (user completes payment)
-    ↓
-onPurchasesUpdated callback fires
-    ↓
-Accept matching PURCHASED product and cache entitlement
-    ↓
-Asynchronously acknowledge unacknowledged purchase (required!)
-    ↓
-PaywallScreen auto-dismisses
-    ↓
-Feature unlocked
-```
-
-## Important: Acknowledge Purchases
-
-The code accepts matching products in the `PURCHASED` state, caches entitlement, and asynchronously acknowledges unacknowledged purchases. This is not server-side signature verification. Acknowledgment remains **required** by Google:
-
-```kotlin
-private fun onPurchasesUpdated(billingResult: BillingResult, purchases: List<Purchase>?) {
-    purchases?.forEach { purchase ->
-        if (purchase.purchaseState == Purchase.PurchaseState.PURCHASED &&
-            !purchase.isAcknowledged
-        ) {
-            // Acknowledge purchase (REQUIRED)
-            val params = AcknowledgePurchaseParams.newBuilder()
-                .setPurchaseToken(purchase.purchaseToken)
-                .build()
-            billingClient.acknowledgePurchase(params) { ... }
-        }
-    }
-}
-```
-
-**Failure to acknowledge** results in automatic refunds after 3 days.
-
-## Security Considerations
-
-1. **Signature Verification**: For production, consider verifying purchase signatures server-side
-2. **Fraud Detection**: Monitor unusual purchase patterns in Play Console
-3. **Network Security**: Uses HTTPS to Google's servers (handled by BillingClient)
+Retain exact-build evidence and use the canonical [Play release guide](PLAY_STORE_SETUP.md). This guide does not authorize publication.
 
 ## Troubleshooting
 
-### "Product not found"
-- ✅ Product ID in code doesn't match Play Console
-- ✅ App not published (use internal test track)
-- ✅ Wait 15 minutes for Play Console changes to sync
-
-### Purchase button does nothing
-- ✅ Not signed in to Google Play Store account
-- ✅ Billing library not initialized (`connect()` not called)
-- ✅ Activity not passed to `launchPurchaseFlow()`
-
-### Crashes on purchase
-- ✅ Check Logcat: `BillingClient` or `BillingRepository` errors
-- ✅ Make sure Activity is instanceof `android.app.Activity`
-
-## Monitoring
-
-Purchases are logged with Timber:
-
-```
-D/BillingRepository: Billing client ready
-D/BillingRepository: Purchase acknowledged
-D/BillingRepository: Purchases queried
-```
-
-Watch logs in Logcat: `adb logcat | grep BillingRepository`
-
-## Qualification checklist
-
-These are tasks, not completion receipts. Use the canonical [Play release guide](PLAY_STORE_SETUP.md) for publication; this integration guide does not authorize a release.
-
-- Confirm the configured product and approved localized price.
-- Prepare authorized sandbox accounts and device testing.
-- Verify purchase, acknowledgment retries, restoration and premium-feature gating.
-- Retain exact-build qualification evidence before the canonical release workflow.
+- **Product unavailable:** check exact IDs/types, active base plans/offers, test-track publication, account/territory eligibility, signature, and propagation delay.
+- **Purchase does not open:** verify an Activity is supplied, Billing setup succeeds, and fresh offer details are available. Surface an explicit retry instead of retrying a charge automatically.
+- **No previous purchase:** use the purchasing Google account and Restore Purchase; an expired subscription does not grant permanent access.
+- **No controls on F-Droid:** expected; full access is included.
 
 ## References
 
-- [Google Play Billing Library Documentation](https://developer.android.com/google/play/billing)
-- [Play Billing Integration Test Checklist](https://developer.android.com/google/play/billing/test)
-- [Security Best Practices](https://developer.android.com/google/play/billing/security)
+- [Billing integration](https://developer.android.com/google/play/billing/integrate)
+- [Subscription lifecycle](https://developer.android.com/google/play/billing/lifecycle/subscriptions)
+- [Testing](https://developer.android.com/google/play/billing/test)
+- [Security](https://developer.android.com/google/play/billing/security)

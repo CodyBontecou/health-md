@@ -37,7 +37,7 @@ class ProductCapabilityManifestTest {
         assertEquals("Capability IDs must be unique", capabilities.size, states.size)
 
         assertEquals(sharedCapabilities + androidCapabilities, idsWithState(states, "available"))
-        assertEquals(appleCapabilities + "source.private-platform-database", idsWithState(states, "unavailable"))
+        assertEquals(appleCapabilities + setOf("source.private-platform-database", "apple.ads-purchase-attribution"), idsWithState(states, "unavailable"))
         assertEquals(
             setOf(
                 "core.shared-rust-profile-engine",
@@ -47,6 +47,7 @@ class ProductCapabilityManifestTest {
                 "export.range-summary",
                 "setup.share-portable-configuration",
                 "support.local-reporting-fallback",
+                "support.native-review-introduction",
             ),
             idsWithState(states, "planned"),
         )
@@ -120,6 +121,7 @@ class ProductCapabilityManifestTest {
 
     private companion object {
         val sharedCapabilities = setOf(
+        "account.clinic-sponsored-access",
             "purchase.free-export-journey",
             "account.myself_lifetime_claim",
             "export.daily-files",
@@ -147,7 +149,7 @@ class ProductCapabilityManifestTest {
         )
 
         val appleCapabilities = setOf(
-            "apple.ads-purchase-attribution",
+            "purchase.family-sharing",
             "apple.lossless-healthkit-archive",
             "apple.medication-dose-events",
             "apple.state-of-mind",
@@ -167,7 +169,9 @@ class ProductCapabilityManifestTest {
         )
 
         val allCapabilities = sharedCapabilities + appleCapabilities + androidCapabilities + setOf(
+            "support.native-review-introduction",
             "source.private-platform-database",
+            "apple.ads-purchase-attribution",
             "automation.api-recovery-authority",
             "automation.include-today",
             "direct.cli_agent_push_wake",

@@ -84,6 +84,69 @@ fun HealthMdNavigation(
     myselfClaimRequestId: Long = 0L,
     scheduledRecoveryPromptRequestId: Long = 0L,
 ) {
+    // Root boundary, outside NavHost: Back/deep links cannot expose tracking
+    // without a store entitlement. F-Droid keeps its included-access policy.
+    val accessViewModel: PaywallViewModel = hiltViewModel()
+    val clinicAccessViewModel: com.healthmd.presentation.clinic.ClinicAccessViewModel = hiltViewModel()
+    val clinicStatus by clinicAccessViewModel.status.collectAsStateWithLifecycle()
+    var showClinicEnrollment by remember { mutableStateOf(false) }
+    if (showClinicEnrollment) {
+        com.healthmd.presentation.clinic.ClinicAccessScreen(
+            onDone = { showClinicEnrollment = false }, viewModel = clinicAccessViewModel)
+        return
+    }
+
+    val accessUnlocked by accessViewModel.accessState.collectAsStateWithLifecycle()
+    val personalAccess by accessViewModel.isUnlocked.collectAsStateWithLifecycle()
+    val accessOwner = LocalLifecycleOwner.current
+    DisposableEffect(accessOwner, accessViewModel) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) { accessViewModel.refreshAccess(); clinicAccessViewModel.refresh() }
+        }
+        accessOwner.lifecycle.addObserver(observer)
+        onDispose { accessOwner.lifecycle.removeObserver(observer) }
+    }
+    if (accessViewModel.purchasesAvailable && accessUnlocked == null) {
+        Box(Modifier.fillMaxSize().background(AppColors.bgPrimary), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator(color = AppColors.accent)
+        }
+        return
+    }
+    if (accessViewModel.purchasesAvailable && accessUnlocked != true) {
+        val offers by accessViewModel.offers.collectAsStateWithLifecycle()
+        val purchasing by accessViewModel.isPurchasing.collectAsStateWithLifecycle()
+        val restoring by accessViewModel.isRestoring.collectAsStateWithLifecycle()
+        val error by accessViewModel.purchaseError.collectAsStateWithLifecycle()
+        val context = LocalContext.current
+        Scaffold(containerColor = AppColors.bgPrimary, bottomBar = {
+            if (clinicStatus.configured) {
+                TextButton(onClick = { showClinicEnrollment = true },
+                    modifier = Modifier.fillMaxWidth().navigationBarsPadding()) {
+                    Text("Have a clinic invitation?")
+                }
+            }
+        }) { padding ->
+            Box(Modifier.fillMaxSize().padding(padding)) {
+        PaywallScreen(
+            onPurchase = {},
+            onPlanPurchase = { plan ->
+                (context as? android.app.Activity)?.let { accessViewModel.launchPurchaseFlow(it, plan) }
+            },
+            offers = offers,
+            onRetry = accessViewModel::refreshAccess,
+            onRestore = accessViewModel::restorePurchases,
+            onDismiss = null,
+            subtitle = stringResource(R.string.paywall_access_subtitle),
+            isPurchasing = purchasing,
+            isRestoring = restoring,
+            purchaseError = error,
+            onClearError = accessViewModel::clearError,
+        )
+            }
+        }
+        return
+    }
+
     val navController = rememberNavController()
     val coroutineScope = rememberCoroutineScope()
     val appContext = LocalContext.current
@@ -299,10 +362,16 @@ fun HealthMdNavigation(
                 )
             }
             composable(NavDestination.HISTORY.route) { HistoryScreen() }
+            composable("clinic-access") {
+                com.healthmd.presentation.clinic.ClinicAccessScreen(
+                    onDone = { navController.popBackStack() }, viewModel = clinicAccessViewModel)
+            }
             composable(NavDestination.SETTINGS.route) {
                 SettingsScreen(
                     viewModel = settingsViewModel,
                     protectionSettingsRequestId = protectionSettingsRequestId,
+                    clinicAccessAvailable = clinicStatus.configured,
+                    onNavigateToClinicAccess = { navController.navigate("clinic-access") },
                     onNavigateToPaywall = {
                         if (settingsViewModel.distributionPolicy.purchasesAvailable) {
                             navController.navigate(PaywallEntryPoint.UPGRADE.route)
@@ -348,7 +417,12 @@ fun HealthMdNavigation(
                 )
             }
             composable(SubRoutes.CLINICIAN_REPORT) {
-                ClinicianReportScreen(onBack = { navController.popBackStack() })
+                if (personalAccess) {
+                    ClinicianReportScreen(onBack = { navController.popBackStack() })
+                } else {
+                    Text("Your own Health.md access is required to save or share a report.",
+                        modifier = Modifier.padding(com.healthmd.presentation.theme.Spacing.md))
+                }
             }
             composable(SubRoutes.ADVANCED_SETTINGS) {
                 AdvancedSettingsScreen(
@@ -432,6 +506,7 @@ fun HealthMdNavigation(
                         val isRestoring by paywallViewModel.isRestoring.collectAsStateWithLifecycle()
                         val purchaseError by paywallViewModel.purchaseError.collectAsStateWithLifecycle()
                         val priceText by paywallViewModel.priceText.collectAsStateWithLifecycle()
+                        val offers by paywallViewModel.offers.collectAsStateWithLifecycle()
                         val debugUnlockOverride by paywallViewModel.debugUnlockOverride.collectAsStateWithLifecycle()
                         val context = LocalContext.current
 
@@ -449,9 +524,14 @@ fun HealthMdNavigation(
                                     paywallViewModel.launchPurchaseFlow(activity)
                                 }
                             },
+                            offers = offers,
+                            onPlanPurchase = { plan ->
+                                (context as? android.app.Activity)?.let { paywallViewModel.launchPurchaseFlow(it, plan) }
+                            },
+                            onRetry = paywallViewModel::refreshAccess,
                             onRestore = { paywallViewModel.restorePurchases() },
                             onDismiss = { navController.popBackStack() },
-                            subtitle = stringResource(entryPoint.subtitleResource),
+                            subtitle = stringResource(R.string.paywall_access_subtitle),
                             isPurchasing = isPurchasing,
                             isRestoring = isRestoring,
                             priceText = priceText,

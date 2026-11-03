@@ -1,5 +1,7 @@
 # Local-First Privacy
 
+> Unpublished candidate update: custom in-app analytics and attribution have been removed. Historical analytics below describe earlier builds/services. Essential services remain. Prices are unchanged; nothing is deployed, submitted, or released.
+
 ## Status
 
 - **Docs status:** draft

@@ -59,7 +59,9 @@ enum ExportIntentRunner {
     struct Dependencies {
         var refreshPurchaseStatus: () async -> Void
         var canExport: () -> Bool
-        var trackExportBlockedByQuota: (PricingAnalyticsExportTargetType) -> Void
+        var clinicExportAccess: (String) async -> Bool = { endpoint in
+            await ClinicSponsorshipManager.shared.authorizeExport(endpoint: endpoint)
+        }
         var hasVaultAccess: () -> Bool
         var requiresVaultReselection: () -> Bool
         var refreshVaultAccess: () -> Void
@@ -100,7 +102,6 @@ enum ExportIntentRunner {
         var exportDatesBackground: ([Date], AdvancedExportSettings) async -> ExportOrchestrator.ExportResult
         var recordResult: (ExportOrchestrator.ExportResult, ExportSource, Date, Date, String?, String?, ExportTargetSelection) -> Void
         var recordExportUse: () -> Void
-        var trackExportSucceeded: (PricingAnalyticsExportMetadata) -> Void
         var updateScheduleLastExport: () -> Void
         var pendingExportStore: PendingExportStoring
         var exportNotificationScheduler: ExportNotificationScheduling
@@ -118,13 +119,7 @@ enum ExportIntentRunner {
                 canExport: {
                     PurchaseManager.shared.canExport
                 },
-                trackExportBlockedByQuota: { targetType in
-                    PricingAnalyticsClient.shared.trackExportBlockedByQuota(
-                        context: .shortcut,
-                        targetType: targetType,
-                        quotaState: PurchaseManager.shared.analyticsQuotaState
-                    )
-                },
+
                 hasVaultAccess: {
                     vaultManager.hasVaultAccess
                 },
@@ -178,12 +173,7 @@ enum ExportIntentRunner {
                 recordExportUse: {
                     PurchaseManager.shared.recordExportUse()
                 },
-                trackExportSucceeded: { metadata in
-                    PricingAnalyticsClient.shared.trackExportSucceeded(
-                        metadata: metadata,
-                        quotaState: PurchaseManager.shared.analyticsQuotaState
-                    )
-                },
+
                 updateScheduleLastExport: {
                     var schedule = SchedulingManager.shared.schedule
                     schedule.updateLastExport()
@@ -295,7 +285,6 @@ enum ExportIntentRunner {
         }
         let isAPIExport = runProfile?.target == .apiEndpoint
         let exportTarget: ExportTargetSelection = isAPIExport ? .apiEndpoint : .localIPhoneFolder
-        let analyticsTarget: PricingAnalyticsExportTargetType = isAPIExport ? .apiEndpoint : .localFile
         // API runs resolve immutable destination snapshots and need no global adoption.
         if let runProfile, !isAPIExport {
             dependencies.adoptProfileDestinations(runProfile)
@@ -327,8 +316,10 @@ enum ExportIntentRunner {
 
         await dependencies.refreshPurchaseStatus()
 
-        guard dependencies.canExport() else {
-            dependencies.trackExportBlockedByQuota(analyticsTarget)
+        let clinicAllowed = if let endpoint = apiDestination?.endpointURL.absoluteString {
+            await dependencies.clinicExportAccess(endpoint)
+        } else { false }
+        guard dependencies.canExport() || clinicAllowed else {
             return .paywall
         }
 
@@ -364,14 +355,6 @@ enum ExportIntentRunner {
             }
             if result.successCount > 0 {
                 dependencies.recordExportUse()
-                dependencies.trackExportSucceeded(PricingAnalyticsExportMetadata(
-                    targetType: analyticsTarget,
-                    formatCount: settings.exportFormats.count,
-                    metricCount: settings.metricSelection.totalEnabledCount,
-                    dateRangePreset: PricingAnalyticsDateRangePreset.custom,
-                    startDate: sortedDates.first!,
-                    endDate: sortedDates.last!
-                ))
             }
             return .cancelled(
                 remainingDates: result.remainingDates(
@@ -443,15 +426,6 @@ enum ExportIntentRunner {
         )
 
         dependencies.recordExportUse()
-        let metadata = PricingAnalyticsExportMetadata(
-            targetType: analyticsTarget,
-            formatCount: settings.exportFormats.count,
-            metricCount: settings.metricSelection.totalEnabledCount,
-            dateRangePreset: PricingAnalyticsDateRangePreset.custom,
-            startDate: sortedDates.first!,
-            endDate: sortedDates.last!
-        )
-        dependencies.trackExportSucceeded(metadata)
 
         // Only mark the schedule's lastExport when yesterday was part of this
         // run — otherwise an arbitrary back-fill export would suppress the

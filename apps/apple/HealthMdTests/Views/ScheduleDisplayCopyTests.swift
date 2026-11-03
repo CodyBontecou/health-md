@@ -5,6 +5,52 @@ import XCTest
 nonisolated final class ScheduleDisplayCopyTests: XCTestCase {
     private let languages = ["en", "de", "es", "fr", "it", "ja", "ko", "nl", "pt-BR", "zh-Hans"]
 
+    private let accessFooter = "Refresh windows are best effort; iOS may delay background runs. Each run exports the profile's metrics and formats to its own destination. Scheduled exports require an active trial or subscription, or Lifetime access."
+    private let retryAccessRequired = "Retrying this export requires an active trial or subscription, or Lifetime access."
+
+    func testSchedulingAccessCopyIncludesTrialSubscriptionAndLifetimeInEveryLocale() throws {
+        let terms = [
+            "en": ["active trial", "subscription", "Lifetime access"],
+            "de": ["Testphase", "Abo", "lebenslangen Zugriff"],
+            "es": ["prueba", "suscripción", "por vida"],
+            "fr": ["essai", "abonnement", "à vie"],
+            "it": ["prova", "abbonamento", "a vita"],
+            "ja": ["トライアル", "サブスクリプション", "永久アクセス"],
+            "ko": ["체험", "구독", "평생 이용 권한"],
+            "nl": ["proefperiode", "abonnement", "levenslange toegang"],
+            "pt-BR": ["teste", "assinatura", "vitalício"],
+            "zh-Hans": ["试用", "订阅", "终身访问权限"],
+        ]
+        XCTAssertEqual(Set(terms.keys), Set(languages))
+        for language in languages {
+            let resource = try bundle(language)
+            for message in [accessFooter, retryAccessRequired] {
+                let actual = resource.localizedString(forKey: message, value: nil, table: nil)
+                for term in try XCTUnwrap(terms[language]) {
+                    XCTAssertTrue(actual.contains(term), "\(language): missing \(term) in \(actual)")
+                }
+                XCTAssertFalse(actual.contains("5"), "\(language): obsolete free-export allowance")
+                if language != "en" { XCTAssertNotEqual(actual, message, "Missing translation: \(language)") }
+            }
+        }
+    }
+
+    func testSchedulingViewsUseCurrentAccessCopyWithoutChangingRetryAdmission() throws {
+        let appleRoot = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+        let editor = try String(contentsOf: appleRoot.appendingPathComponent("HealthMd/iOS/Views/ProfileScheduleSection.swift"), encoding: .utf8)
+        let retry = try String(contentsOf: appleRoot.appendingPathComponent("HealthMd/iOS/Views/ScheduleSettingsView.swift"), encoding: .utf8)
+        XCTAssertTrue(editor.contains("Text(\"\(accessFooter)\")"))
+        XCTAssertFalse(editor.contains("5 free export actions"))
+        XCTAssertTrue(retry.contains("retryErrorMessage = String(localized: \"\(retryAccessRequired)\")"))
+        XCTAssertFalse(retry.contains("Free export limit reached"))
+        let admission = try XCTUnwrap(retry.range(of: "guard purchaseManager.canExport else"))
+        let message = try XCTUnwrap(retry.range(of: retryAccessRequired))
+        let vaultCheck = try XCTUnwrap(retry.range(of: "vaultManager.refreshVaultAccess()", range: message.upperBound..<retry.endIndex))
+        XCTAssertLessThan(admission.lowerBound, message.lowerBound)
+        XCTAssertLessThan(message.lowerBound, vaultCheck.lowerBound)
+    }
+
     private func bundle(_ language: String) throws -> Bundle {
         let path = [Bundle.main, Bundle(for: Self.self)].compactMap { $0.path(forResource: language, ofType: "lproj") }.first
         return try XCTUnwrap(path.flatMap(Bundle.init(path:)), "Missing compiled locale: \(language)")

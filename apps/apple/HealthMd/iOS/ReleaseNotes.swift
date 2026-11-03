@@ -25,7 +25,32 @@ enum HealthMdReleaseNotes {
         ) ?? Bundle.main.bundleURL
     }
 
-    static let notes: [NoteletVersionNotes] = [
+    static let notes: [ReleaseVersionNotes] = [
+        .init(
+            version: "3.5.0",
+            items: [
+                .list(
+                    title: "More ways to access Health.md",
+                    rows: [
+                        .init(
+                            symbolSystemName: "calendar",
+                            title: "Weekly, yearly, or Lifetime",
+                            description: "Choose a subscription or a one-time Lifetime purchase. Eligible subscriptions include a 7-day free trial."
+                        ),
+                        .init(
+                            symbolSystemName: "checkmark.seal",
+                            title: "Existing access is preserved",
+                            description: "Existing Lifetime purchases and grandfathered access remain valid, including eligible Family Sharing."
+                        ),
+                        .init(
+                            symbolSystemName: "lock",
+                            title: "Clearer access terms",
+                            description: "On iPhone and iPad, an active trial, subscription, or Lifetime access is required before setup and exports. Purchase status and scheduling guidance now reflect your plan."
+                        )
+                    ]
+                )
+            ]
+        ),
         .init(
             version: "3.4.5",
             items: [
@@ -958,6 +983,14 @@ enum HealthMdReleaseNotes {
         guard !MarketingCapture.isActive else { return nil }
         #endif
 
+        if !TestMode.isUITesting {
+            let current = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? ""
+            guard ReviewManager.shouldPresentReleaseNotes(
+                current: current,
+                lastSeen: NoteletStorage.getLatestSeenAppVersion()
+            ) else { return nil }
+        }
+
         return .current
     }
 
@@ -978,14 +1011,91 @@ enum HealthMdReleaseNotes {
         doneButtonLabel: "Done",
         accentColor: .accent
     )
+
+    static var noteletNotes: [NoteletVersionNotes] {
+        notes.map { notes in
+            NoteletVersionNotes(version: notes.version, items: notes.items.map { item in
+                switch item {
+                case .list(let title, let rows):
+                    return .list(title: title, rows: rows.map {
+                        .init(symbolSystemName: $0.symbolSystemName, title: $0.title, description: $0.description)
+                    })
+                case .media(let kind, let url, let title, let description):
+                    return .media(kind: kind == .image ? .image : .video,
+                                  url: url, title: title, description: description)
+                }
+            })
+        }
+    }
+
 }
 
 extension View {
-    func healthMdReleaseNotesSheet() -> some View {
-        noteletSheet(
-            notes: HealthMdReleaseNotes.notes,
-            version: HealthMdReleaseNotes.presentedVersion,
-            configuration: HealthMdReleaseNotes.configuration
+    func healthMdReleaseNotesSheet(
+        reviewMilestonePending: Binding<Bool> = .constant(false),
+        canPresentReview: Bool = true
+    ) -> some View {
+        modifier(HealthMdReleaseNotesModifier(
+            reviewMilestonePending: reviewMilestonePending,
+            canPresentReview: canPresentReview
+        ))
+    }
+}
+
+private struct HealthMdReleaseNotesModifier: ViewModifier {
+    private struct Introduction: Identifiable { let id = UUID() }
+
+    @Binding var reviewMilestonePending: Bool
+    let canPresentReview: Bool
+    @Environment(\.scenePhase) private var scenePhase
+    @State private var introduction: Introduction?
+    @State private var pendingReleaseVersion: String?
+
+    func body(content: Content) -> some View {
+        content
+            .noteletSheet(
+                notes: HealthMdReleaseNotes.noteletNotes,
+                version: HealthMdReleaseNotes.presentedVersion,
+                onDismiss: releaseNotesDidDismiss,
+                configuration: HealthMdReleaseNotes.configuration
+            )
+            .sheet(item: $introduction) { _ in
+                ReviewIntroductionView()
+                    .presentationDetents([.large])
+            }
+            .onChange(of: reviewMilestonePending) { _, _ in presentIntroductionIfPossible() }
+            .onChange(of: pendingReleaseVersion) { _, _ in presentIntroductionIfPossible() }
+            .onChange(of: canPresentReview) { _, _ in presentIntroductionIfPossible() }
+            .onChange(of: scenePhase) { _, _ in presentIntroductionIfPossible() }
+    }
+
+    private var pendingReleaseNotes: ReleaseVersionNotes? {
+        ReleaseVersionNotes.pending(
+            currentVersion: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "",
+            lastSeenVersion: NoteletStorage.getLatestSeenAppVersion(),
+            isEnabled: HealthMdReleaseNotes.presentedVersion != nil,
+            catalog: HealthMdReleaseNotes.notes
         )
+    }
+
+    private func releaseNotesDidDismiss() {
+        // Notelet saves the seen version before invoking this callback.
+        pendingReleaseVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String
+    }
+
+    private func presentIntroductionIfPossible() {
+        guard !TestMode.isUITesting else { return }
+        #if DEBUG
+        guard !MarketingCapture.isActive else { return }
+        #endif
+        guard canPresentReview, scenePhase == .active, introduction == nil,
+              reviewMilestonePending || pendingReleaseVersion != nil else { return }
+        // What's New owns the first sheet. Never compete with unseen release notes.
+        guard pendingReleaseNotes == nil else { return }
+        let releaseVersion = pendingReleaseVersion
+        pendingReleaseVersion = nil
+        reviewMilestonePending = false
+        guard ReviewManager.shared.claimIntroduction(forRelease: releaseVersion) else { return }
+        introduction = Introduction()
     }
 }

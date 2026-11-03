@@ -241,7 +241,7 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
         entitlementRepository.refresh()
         val isPurchased = distributionPolicy.fullAccessIncluded ||
             settingsRepository.isPurchased.first() ||
-            entitlementRepository.isUnlocked.first()
+            entitlementRepository.verifyExportAccess(profile.target, settings.apiEndpointUrl.takeIf { settings.exportMode == com.healthmd.rawexport.ExportMode.COMPATIBILITY })
         if (!isPurchased) {
             // Scheduled automation is a purchased capability on Android; record and stop.
             recordHistory(
@@ -314,7 +314,7 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
                             if (settings.exportMode == ExportMode.RAW_SNAPSHOT) {
                                 exportRawDates(dates, settings, target)
                             } else if (useDurableFolder) {
-                                ExportOrchestrator(healthRepository, exportRepository)
+                                ExportOrchestrator(healthRepository, exportRepository, rawSnapshotExportRunner)
                                     .exportDatesDurably(
                                         dates = dates,
                                         settings = settings,
@@ -327,7 +327,7 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
                                         ),
                                     )
                             } else {
-                                ExportOrchestrator(healthRepository, exportRepository)
+                                ExportOrchestrator(healthRepository, exportRepository, rawSnapshotExportRunner)
                                     .exportDates(dates, settings)
                             }.copy(target = ExportTarget.DEVICE_FOLDER)
                         }

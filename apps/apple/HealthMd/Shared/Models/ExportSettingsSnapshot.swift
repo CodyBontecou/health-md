@@ -27,6 +27,8 @@ nonisolated enum HealthKitSourceArchivePolicy: String, Codable, CaseIterable, Se
 nonisolated struct AppleExportDetailPolicy: Codable, Equatable, Sendable {
     var compatibilityDetail: ExportCompatibilityDetail
     var healthKitSourceArchive: HealthKitSourceArchivePolicy
+    /// Nil preserves the historical policy. These IDs request only native source detail.
+    var nativeDetailMetricIDs: Set<String>? = nil
 
     static let summary = AppleExportDetailPolicy(
         compatibilityDetail: .summary,
@@ -50,7 +52,7 @@ nonisolated struct AppleExportDetailPolicy: Codable, Equatable, Sendable {
     }
 
     var includesCanonicalArchive: Bool {
-        healthKitSourceArchive.includesCanonicalArchive
+        healthKitSourceArchive.includesCanonicalArchive || !(nativeDetailMetricIDs?.isEmpty ?? true)
     }
 
     var hasAnyDetail: Bool {
@@ -170,7 +172,9 @@ struct ExportSettingsSnapshot: Codable, Equatable {
         get {
             AppleExportDetailPolicy(
                 compatibilityDetail: compatibilityDetail,
-                healthKitSourceArchive: healthKitSourceArchivePolicy
+                healthKitSourceArchive: healthKitSourceArchivePolicy,
+                nativeDetailMetricIDs: metricSelection.nativeDetailMetricIDs.isEmpty ? nil
+                    : metricSelection.nativeDetailMetricIDs.intersection(metricSelection.enabledMetricIDs)
             )
         }
         set {
@@ -852,16 +856,43 @@ struct DailyNoteInjectionSnapshot: Codable, Equatable {
 struct MetricSelectionSnapshot: Codable, Equatable {
     var enabledMetricIDs: Set<String>
     var enabledCategoryIDs: Set<String>
+    var nativeDetailMetricIDs: Set<String> = []
+
+    enum CodingKeys: String, CodingKey { case enabledMetricIDs, enabledCategoryIDs, nativeDetailMetricIDs }
+
+    init(enabledMetricIDs: Set<String>, enabledCategoryIDs: Set<String>, nativeDetailMetricIDs: Set<String> = []) {
+        self.enabledMetricIDs = enabledMetricIDs
+        self.enabledCategoryIDs = enabledCategoryIDs
+        self.nativeDetailMetricIDs = nativeDetailMetricIDs
+    }
+
+    init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        enabledMetricIDs = try values.decode(Set<String>.self, forKey: .enabledMetricIDs)
+        enabledCategoryIDs = try values.decode(Set<String>.self, forKey: .enabledCategoryIDs)
+        nativeDetailMetricIDs = try values.decodeIfPresent(Set<String>.self, forKey: .nativeDetailMetricIDs) ?? []
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var values = encoder.container(keyedBy: CodingKeys.self)
+        try values.encode(enabledMetricIDs, forKey: .enabledMetricIDs)
+        try values.encode(enabledCategoryIDs, forKey: .enabledCategoryIDs)
+        if !nativeDetailMetricIDs.isEmpty {
+            try values.encode(nativeDetailMetricIDs, forKey: .nativeDetailMetricIDs)
+        }
+    }
 
     static func from(_ selection: MetricSelectionState) -> MetricSelectionSnapshot {
         MetricSelectionSnapshot(
             enabledMetricIDs: selection.enabledMetrics,
-            enabledCategoryIDs: selection.enabledCategories
+            enabledCategoryIDs: selection.enabledCategories,
+            nativeDetailMetricIDs: selection.nativeDetailMetricIDs
         )
     }
 
     func apply(to selection: MetricSelectionState) {
         selection.enabledMetrics = enabledMetricIDs
         selection.enabledCategories = enabledCategoryIDs
+        selection.nativeDetailMetricIDs = nativeDetailMetricIDs
     }
 }

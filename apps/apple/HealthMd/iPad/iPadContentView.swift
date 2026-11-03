@@ -26,6 +26,7 @@ struct iPadContentView: View {
     @State private var showDestinationChangedAlert = false
     @State private var presentFirstExportPreview = false
     @State private var isExporting = false
+    @State private var reviewMilestonePending = false
     @State private var exportProgress: Double = 0.0
     @State private var exportStatusMessage = ""
     @State private var partialExportNotice: PartialExportNotice?
@@ -219,21 +220,15 @@ struct iPadContentView: View {
                 ExportUpgradePrompt(
                     milestone: purchaseManager.pendingUpgradePrompt ?? 0,
                     onSchedule: {
-                        let quotaState = purchaseManager.analyticsQuotaState
                         purchaseManager.consumeUpgradePrompt()
-                        PricingAnalyticsClient.shared.trackUpgradePromptTapped(quotaState: quotaState)
                         presentScheduleAfterExportGuidance = true
                     },
                     onUpgrade: {
-                        let quotaState = purchaseManager.analyticsQuotaState
                         purchaseManager.consumeUpgradePrompt()
-                        PricingAnalyticsClient.shared.trackUpgradePromptTapped(quotaState: quotaState)
                         presentPaywallAfterUpgradePrompt = true
                     },
                     onDismiss: {
-                        let quotaState = purchaseManager.analyticsQuotaState
                         purchaseManager.consumeUpgradePrompt()
-                        PricingAnalyticsClient.shared.trackUpgradePromptDismissed(quotaState: quotaState)
                     }
                 )
             }
@@ -282,7 +277,15 @@ struct iPadContentView: View {
                     }
                 ]
             )
-            .healthMdReleaseNotesSheet()
+            .healthMdReleaseNotesSheet(
+                reviewMilestonePending: $reviewMilestonePending,
+                canPresentReview: hasCompletedOnboarding && selectedTab == .export && !isExporting
+                    && !isAssessingHistory && !showFolderPicker && !showError
+                    && !showDestinationChangedAlert && !showPaywall && !showUpgradePromptPaywall
+                    && !presentFirstExportPreview && partialExportNotice == nil
+                    && purchaseManager.pendingUpgradePrompt == nil
+                    && schedulingManager.notificationExportResult == nil
+            )
             .keepsScreenAwake(while: isExporting)
             .task {
                 refreshHistoryProfileIdentity()
@@ -440,11 +443,6 @@ struct iPadContentView: View {
     }
 
     private func presentExportPaywall() {
-        PricingAnalyticsClient.shared.trackExportBlockedByQuota(
-            context: .export,
-            targetType: .localFile,
-            quotaState: purchaseManager.analyticsQuotaState
-        )
         showPaywall = true
     }
 
@@ -453,24 +451,7 @@ struct iPadContentView: View {
     /// paths have already consumed the milestone by then, making this a no-op.
     private func handleUpgradePromptSwipeDismissIfNeeded() {
         guard purchaseManager.pendingUpgradePrompt != nil else { return }
-        let quotaState = purchaseManager.analyticsQuotaState
         purchaseManager.consumeUpgradePrompt()
-        PricingAnalyticsClient.shared.trackUpgradePromptDismissed(quotaState: quotaState)
-    }
-
-    private func trackSuccessfulExport(startDate: Date, endDate: Date) {
-        let metadata = PricingAnalyticsExportMetadata(
-            targetType: .localFile,
-            formatCount: advancedSettings.exportFormats.count,
-            metricCount: advancedSettings.metricSelection.totalEnabledCount,
-            dateRangePreset: dateRangePreset,
-            startDate: startDate,
-            endDate: endDate
-        )
-        PricingAnalyticsClient.shared.trackExportSucceeded(
-            metadata: metadata,
-            quotaState: purchaseManager.analyticsQuotaState
-        )
     }
 
     // MARK: - Auto-Sync
@@ -716,10 +697,6 @@ struct iPadContentView: View {
             // Count this as one export action against the free quota.
             if result.successCount > 0 {
                 purchaseManager.recordExportUse(offerGuidance: result.isFullSuccess)
-                trackSuccessfulExport(
-                    startDate: normalizedStartDate,
-                    endDate: normalizedEndDate
-                )
             }
 
             if result.successCount > 0,
@@ -740,6 +717,9 @@ struct iPadContentView: View {
                     exportStatusMessage = String(localized: "Export cancelled", comment: "Export was cancelled")
                 }
             } else if result.isFullSuccess {
+                if ReviewManager.shared.recordSuccessfulExport(), purchaseManager.pendingUpgradePrompt == nil {
+                    reviewMilestonePending = true
+                }
                 let noteSuffix = result.localizedInformationalNoteSummary.map { " \($0)" } ?? ""
                 exportStatusMessage = advancedSettings.dailyNotesOnlyModeEnabled
                     ? "Updated \(result.dailyNoteUpdateCount) daily note\(result.dailyNoteUpdateCount == 1 ? "" : "s")"

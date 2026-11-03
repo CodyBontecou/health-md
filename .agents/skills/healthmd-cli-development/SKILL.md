@@ -208,7 +208,7 @@ cargo test --workspace --all-features --locked
 cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
 rustup run 1.85.0 cargo check --workspace --all-features --locked
 python3 scripts/update-mcp-shared-assets.py --check
-python3 scripts/smoke-cli.py   # Python 3.11+; same health-free smoke as native CI
+python3 scripts/smoke-cli.py   # Python 3.11+; hermetic discovery, no native credentials
 dist plan --allow-dirty
 cargo run --bin healthmd -- --help
 cargo run --bin healthmd -- export
@@ -222,6 +222,9 @@ cargo run --bin healthmd -- mcp serve --help
 cargo run --bin healthmd -- mcp schema healthmd_sleep_sessions
 cargo run --bin healthmd-mcp -- --help
 ```
+
+Local smoke needs no native credential setup or disposable OS account. The automated signed-release
+credential upgrade probes remain separate; see [release QA](../../../apps/cli/docs/qa.md#automated-gate).
 
 App/iPhone:
 
