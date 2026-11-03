@@ -259,7 +259,9 @@ class APIEndpointExportRunner private constructor(
         durableOperationId: String? = null,
         durableSettingsSnapshotJson: String? = null,
         requireExistingDurableOperation: Boolean = false,
+        authorityCheck: suspend () -> Unit = {},
     ): ExportResult {
+        authorityCheck()
         val normalizedDates = dates.distinct().sorted()
         if (normalizedDates.isEmpty()) {
             return ExportResult(0, 0, target = com.healthmd.domain.model.ExportTarget.API_ENDPOINT)
@@ -306,6 +308,7 @@ class APIEndpointExportRunner private constructor(
                     operation = existing,
                     requestConfiguration = requestConfiguration,
                     invocationDates = normalizedDates,
+                    authorityCheck = authorityCheck,
                 )
             }
             // Prepared-work retries never turn missing spool state into a new health capture.
@@ -342,6 +345,7 @@ class APIEndpointExportRunner private constructor(
             onProgress,
             captureContext = captureContext,
             source = snapshot.source,
+            authorityCheck = authorityCheck,
         )
         if (capture.wasCancelled) {
             return cancelledResult(normalizedDates, capture.failedDateDetails)
@@ -400,7 +404,7 @@ class APIEndpointExportRunner private constructor(
                 rethrowCancellationOrFatal(error)
                 return preparationFailure(normalizedDates)
             }
-            return commitDurable(durable, requestConfiguration, normalizedDates)
+            return commitDurable(durable, requestConfiguration, normalizedDates, authorityCheck)
         }
 
         return commit(
@@ -409,6 +413,7 @@ class APIEndpointExportRunner private constructor(
             requestedDates = normalizedDates,
             records = capture.records,
             failedDateDetails = capture.failedDateDetails,
+            authorityCheck = authorityCheck,
         )
     }
 
@@ -612,6 +617,7 @@ class APIEndpointExportRunner private constructor(
         stopAfterRecordCount: Int? = null,
         captureContext: AndroidCaptureContext? = null,
         source: APIExportCaptureSource,
+        authorityCheck: suspend () -> Unit = {},
     ): CaptureResult {
         val operationSource = source as? OperationScopedAPIExportCaptureSource
         val resolvedCaptureContext = try {
@@ -623,6 +629,7 @@ class APIEndpointExportRunner private constructor(
         val failures = mutableListOf<FailedDateDetail>()
         val attempted = mutableListOf<LocalDate>()
         for ((index, date) in dates.withIndex()) {
+            authorityCheck()
             if (stopAfterRecordCount != null && records.size >= stopAfterRecordCount) break
             try {
                 coroutineContext.ensureActive()
@@ -751,6 +758,7 @@ class APIEndpointExportRunner private constructor(
         operation: DurableAPIExportOperation,
         requestConfiguration: APIExportRequestConfiguration,
         invocationDates: List<LocalDate>,
+        authorityCheck: suspend () -> Unit = {},
     ): ExportResult {
         val store = operationStore ?: return preparationFailure(operation.requestedDates)
         var frontier = operation.acknowledgedBatchCount
@@ -768,6 +776,7 @@ class APIEndpointExportRunner private constructor(
                     body = PreparedAPIBody(batch.relativePath, batch.bytes),
                     requestConfiguration = requestConfiguration,
                     maxAttempts = attempts,
+                    authorityCheck = authorityCheck,
                 )
                 lastStatusCode = upload.statusCode
                 // Acknowledgement is persisted before the next body. If the process dies after the
@@ -860,6 +869,7 @@ class APIEndpointExportRunner private constructor(
         requestedDates: List<LocalDate>,
         records: List<HealthData>,
         failedDateDetails: List<FailedDateDetail>,
+        authorityCheck: suspend () -> Unit = {},
     ): ExportResult {
         val barrier = ExportCommitBarrier()
         barrier.markMaterialized()
@@ -879,6 +889,7 @@ class APIEndpointExportRunner private constructor(
                     body = body,
                     requestConfiguration = requestConfiguration,
                     maxAttempts = attempts,
+                    authorityCheck = authorityCheck,
                 )
                 lastStatusCode = result.statusCode
             }
@@ -917,9 +928,11 @@ class APIEndpointExportRunner private constructor(
         body: PreparedAPIBody,
         requestConfiguration: APIExportRequestConfiguration,
         maxAttempts: Int,
+        authorityCheck: suspend () -> Unit = {},
     ): APIExportUploadResult {
         var attempt = 1
         while (true) {
+            authorityCheck()
             try {
                 return uploader.upload(
                     endpointUrl = requestConfiguration.endpointUrl,

@@ -258,8 +258,11 @@ struct APIEndpointExportRunner {
         comparisonOptions: NativeExportComparisonOptions = NativeExportComparisonOptions(),
         diagnosticSink: @escaping EngineDiagnosticSink = ShadowExportEvidenceRecorder.productionSink,
         upload: PreparedUploader? = nil,
+        authorityCheck: (@MainActor () async throws -> Void)? = nil,
         onProgress: ProgressHandler? = nil
     ) async -> ExportOrchestrator.ExportResult {
+        do { try await authorityCheck?() }
+        catch { return failureResult(dates: dates, reason: .unknown, message: "Clinic export authority is unavailable.") }
         let awakeActivityID = UUID()
         IdleTimerCoordinator.shared.beginActivity(awakeActivityID)
         defer { IdleTimerCoordinator.shared.endActivity(awakeActivityID) }
@@ -313,7 +316,8 @@ struct APIEndpointExportRunner {
             var providerCalendar = Calendar(identifier: .gregorian)
             providerCalendar.timeZone = calendarTimeZone
             externalFetcher = { date in
-                await providers.fetchDailyRecords(
+                do { try await authorityCheck?() } catch { return [] }
+                return await providers.fetchDailyRecords(
                     for: date,
                     calendar: providerCalendar
                 )
@@ -332,7 +336,8 @@ struct APIEndpointExportRunner {
                     calendarTimeZone: calendarTimeZone,
                     connectedAppsEnabled: connectedAppsEnabled,
                     fetchHealthData: { date, detailPolicy, metricSelection in
-                        try await healthKitManager.fetchHealthData(
+                        try await authorityCheck?()
+                        return try await healthKitManager.fetchHealthData(
                             for: date,
                             detailPolicy: detailPolicy,
                             metricSelection: metricSelection,
@@ -341,8 +346,10 @@ struct APIEndpointExportRunner {
                         )
                     },
                     fetchExternalDailyRecords: externalFetcher,
-                    upload: upload ?? { batch, destination in
-                        try await apiClient.upload(
+                    upload: { batch, destination in
+                        try await authorityCheck?()
+                        if let upload { return try await upload(batch, destination) }
+                        return try await apiClient.upload(
                             payloadArtifact: batch.bodyArtifact,
                             destination: destination
                         )

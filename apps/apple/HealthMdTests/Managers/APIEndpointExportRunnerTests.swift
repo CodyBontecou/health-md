@@ -23,6 +23,21 @@ final class APIEndpointExportRunnerTests: XCTestCase {
         super.tearDown()
     }
 
+    func testClinicAuthorityDenialStopsBeforeNativeCapture() async throws {
+        let settings = AdvancedExportSettings(userDefaults: defaults)
+        Self.retainedSettings.append(settings)
+        let endpoint = APIExportDestinationSnapshot(endpointURL: try XCTUnwrap(URL(string: "https://practice.invalid/synthetic")),
+            authorizationHeaderValue: "synthetic", displayName: "Synthetic", redactedEndpointDescription: "Synthetic")
+        var uploads = 0
+        let result = await APIEndpointExportRunner.export(dates: [Date()], healthKitManager: HealthKitManager(userDefaults: defaults),
+            settings: settings, destination: endpoint, upload: { _, _ in
+                uploads += 1
+                return APIExportUploadResult(statusCode: 202, responseBodyPreview: nil)
+            }, authorityCheck: { throw ClinicNativeError.unavailable })
+        XCTAssertEqual(result.successCount, 0)
+        XCTAssertEqual(uploads, 0)
+    }
+
     func testDailyNotesOnlyRejectsAPIDestinationWithoutFetchingOrUploading() async {
         let exportDate = date(year: 2026, month: 5, day: 10)
         let settings = AdvancedExportSettings(userDefaults: defaults)

@@ -13,6 +13,7 @@ export const repositoryRecursiveRoots = Object.freeze([
   "apps/apple/HealthMd/Shared/Practice",
   "apps/apple/HealthMdTests/Practice",
   "apps/android/app/src/main/java/com/healthmd/domain/practice",
+  "apps/android/app/src/main/java/com/healthmd/data/practice",
   "apps/android/app/src/test/java/com/healthmd/domain/practice",
 ]);
 export const repositoryFiles = Object.freeze([

@@ -39,7 +39,7 @@ Identity/MFA vendor and session design, production CSRF/session implementation, 
 three requested SetClinic workflows. Run `npx vitest run test/clinic-integration.test.ts`
 from this component for executable examples. Nothing in this module is mounted on
 an HTTP endpoint, imported into the portal bundle, or wired into either native app.
-It creates no credentials, makes no network request and activates no paid access.
+The simulator creates no credentials, makes no network request and activates no paid access. Dormant native adapters now live in the Apple Practice and Android Practice/data packages; no app bootstrap, URL handler or presenter installs them.
 The existing invitation claim/acceptance API remains independent: its fixed-date
 clinical instructions are not generalized into arbitrary metric or export consent.
 The model reuses its canonical JSON and SHA-256 review primitives.
@@ -96,10 +96,7 @@ synthetic limits need a reviewed production contract.
 local profile/destination snapshot, consent, entitlement and Health-data availability
 before starting and through an injected check before every capture/publication/retry.
 The adapter must call the existing native exporter; this module contains no renderer,
-uploader or wearable synchronization implementation. The intended Apple seam is
-`APIEndpointExportRunner.export` with a reviewed frozen destination, and the Android
-seam is the existing `ExportRepository`/API destination pipeline. Their adapters are
-**planned**, not implemented or runtime-verified here. Locked HealthKit data can be
+uploader or wearable synchronization implementation. The Apple adapter uses `APIEndpointExportRunner.export` with a reviewed frozen destination; the Android adapter uses `APIEndpointExportRunner.exportDates` with the existing destination fingerprint and snapshot restore. Dormant adapters now call `APIEndpointExportRunner` on both platforms and retain the full saved native profile snapshot. App/service integration and device qualification remain planned. The Android `ExportRepository` filesystem pipeline is not a clinic API transport. Locked HealthKit data can be
 unavailable even after permission was requested. Foreground execution is the only
 mode modeled; background wake would be best effort. The existing notification-only
 Wake Worker is not a clinic request store or health transport.
@@ -124,11 +121,10 @@ processing; only the clinic actor can explicitly record processing.
   authorization delivery, upload idempotency and receipt/processing semantics.
   Credentials must be bound to the reviewed endpoint in secure native storage,
   never URL/imported fields. The simulator uses only the relative same-origin hint `/synthetic-upload`; no uploader is mounted there. Native HTTPS endpoint binding remains a separate reviewed contract.
-- Implement the Apple and Android review UI, authenticated inbox and existing-export
+- Install the Apple and Android review UI, authenticated inbox and dormant existing-export
   adapters against that contract. Both platforms remain `planned` in the capability
   inventory. Preserve native OS permissions and independent consumer purchases.
-- Replace resettable stores and the synthetic journal with authoritative isolated
-  persistence and crash-safe local journaling. Actor values must come from validated
+- Replace the resettable service stores with authoritative isolated persistence and qualify the native crash-safe journals. Actor values must come from validated
   sessions; callers cannot select their role, clinic, patient or device in JSON.
   `ClinicFactories.authenticate` is a trusted test injection, not an identity provider.
   The model bounds retained setups to 100 and refresh requests to 1,000, fails closed
@@ -138,3 +134,47 @@ processing; only the clinic actor can explicitly record processing.
 - Qualify foreground lifecycle, locked data, secure auth, crash recovery, retries,
   patient revocation and physical devices; retain all existing Practice production
   security/privacy/BAA/ownership gates. No deployment or real patient data is authorized.
+
+
+### Dormant native adapters and durable local records
+
+Apple `Shared/Practice/ClinicNativeAdapters.swift` and Android
+`data/practice/ClinicNativeAdapters.kt` accept a locally mapped full profile snapshot
+from a future authenticated enrollment adapter. Preview binds the exact reviewed
+settings, clinic, endpoint and schedule; Apply checks the review and current secure
+destination identity, reserves a durable setup intent, adds a separate native profile,
+and stores a disabled schedule. Existing active profiles and output options remain
+intact. No credential is read from an imported bundle or written by onboarding.
+An interrupted Apply is blocked on retry so it cannot silently create duplicate
+profiles; recovery must inspect the saved profile before another enrollment.
+
+`ClinicRefresh.swift` and `ClinicRefresh.kt` persist the complete native-local request
+scope before export gates, execution before capture, and upload evidence before
+reporting. A restarted coordinator replays an upload receipt without recapture;
+interrupted execution becomes a terminal failure. Corruption, unknown versions,
+symlinks, changed scope and capacity exhaustion fail closed. Apple uses atomic,
+backup-excluded protected files; Android callers must use app-private
+`Context.noBackupFilesDir` storage, atomic replacement, file sync and directory sync.
+These files contain local identity/routing metadata and settings, never health payloads
+or credentials. They are native clinical-boundary state, never Shared Setup content.
+
+The adapters require whole calendar-day boundaries in the approved zone and reject
+partial-day scope. Android also rejects a changed device zone because its existing
+runner resolves the current device calendar; Apple restores the reviewed calendar.
+Fresh capture goes through the same native API runners as manual export. Optional
+runner authority callbacks check before each day and every upload/retry; default
+callbacks preserve all existing callers. Profile changes, imported-profile execution
+blocks, destination/credential rotation and mismatched account/device/connection
+cannot silently retarget a request. Locked Health data, foreground state, sharing
+consent and entitlement must be supplied by the trusted native session/gate adapter;
+they remain independent. The clinic entitlement route defaults disabled even when a
+provider says a grant exists. No notification or wearable sync implementation is added.
+
+Both native entry points default to the existing unqualified Practice feature policy,
+so merely compiling these adapters does not expose them. The remaining exact external
+input is an authenticated enrollment/inbox/refresh/status/receipt contract and its
+endpoint-bound auth delivery. Without it, installing a transport or automatically
+binding a SetClinic endpoint would invent authority. Review/inbox presentation,
+revocation reporting, backend durability and production entitlement activation remain
+uninstalled. Source-matched Swift/Kotlin domain tests cover the local journal/state
+machine; they do not establish HealthKit/Health Connect or full native app behavior.

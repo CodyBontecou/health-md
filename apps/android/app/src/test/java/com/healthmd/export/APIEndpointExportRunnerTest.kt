@@ -388,6 +388,35 @@ class APIEndpointExportRunnerTest {
         assertThat(preview.sleepWindow?.endDate).isEqualTo(date)
     }
 
+    @Test
+    fun clinicAuthorityDenialStopsBeforeCaptureOrUpload() = runTest {
+        val date = LocalDate.of(2026, 7, 10)
+        val uploader = CapturingUploader()
+        val runner = runner(mapOf(date to HealthData(date, activity = ActivityData(steps = 100))), uploader)
+        var checks = 0
+        try {
+            runner.exportDates(listOf(date), ExportSettings(apiEndpointUrl = "https://practice.invalid/synthetic"),
+                authorityCheck = { checks++; error("revoked_synthetic") })
+            throw AssertionError("Authority denial must stop the request")
+        } catch (error: IllegalStateException) {
+            assertThat(error.message).isEqualTo("revoked_synthetic")
+        }
+        assertThat(checks).isEqualTo(1)
+        assertThat(uploader.calls).isEqualTo(0)
+    }
+
+    @Test
+    fun clinicRevocationAfterCapturePreventsPublication() = runTest {
+        val date = LocalDate.of(2026, 7, 10)
+        val uploader = CapturingUploader()
+        val runner = runner(mapOf(date to HealthData(date, activity = ActivityData(steps = 100))), uploader)
+        var allowed = true
+        val result = runner.exportDates(listOf(date), ExportSettings(apiEndpointUrl = "https://practice.invalid/synthetic"),
+            onProgress = { _, _, _ -> allowed = false }, authorityCheck = { check(allowed) })
+        assertThat(result.successCount).isEqualTo(0)
+        assertThat(uploader.calls).isEqualTo(0)
+    }
+
     private fun runner(
         dataByDate: Map<LocalDate, HealthData>,
         uploader: APIExportUploader,

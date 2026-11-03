@@ -1086,15 +1086,15 @@
       "id": "clinic.patient-integration",
       "name": "Patient-confirmed clinic integration",
       "classification": "planned",
-      "summary": "Synthetic Practice onboarding, clinic entitlement provider seam and foreground refresh/receipt lifecycle. No deployed clinic service or native mobile adapter is enabled.",
+      "summary": "Synthetic Practice flows and dormant native onboarding/foreground API export adapters with durable local request/receipt records. No authenticated clinic transport, presenter or production entitlement provider is installed.",
       "platforms": {
         "apple": {
           "state": "planned",
-          "target": "Bind the synthetic clinic contract to an approved authenticated clinic service, patient review UI, secure endpoint binding, existing native export runner and durable receipt journal; qualify store entitlement route and foreground/device behavior before activation."
+          "target": "Install the dormant native adapters behind an approved authenticated enrollment/inbox/refresh/receipt contract and patient review UI; qualify endpoint-bound auth, durable recovery, foreground/device behavior and the store entitlement route before activation."
         },
         "android": {
           "state": "planned",
-          "target": "Bind the synthetic clinic contract to an approved authenticated clinic service, patient review UI, secure endpoint binding, existing native export runner and durable receipt journal; qualify store entitlement route and foreground/device behavior before activation."
+          "target": "Install the dormant native adapters behind an approved authenticated enrollment/inbox/refresh/receipt contract and patient review UI; qualify endpoint-bound auth, durable recovery, foreground/device behavior and the store entitlement route before activation."
         }
       },
       "evidence": [
@@ -1102,7 +1102,11 @@
         "apps/practice/src/clinic/access.ts",
         "apps/practice/src/clinic/foreground-exports.ts",
         "apps/practice/test/clinic-integration.test.ts",
-        "apps/practice/docs/architecture.md"
+        "apps/practice/docs/architecture.md",
+        "apps/apple/HealthMd/Shared/Practice/ClinicRefresh.swift",
+        "apps/apple/HealthMd/Shared/Practice/ClinicNativeAdapters.swift",
+        "apps/android/app/src/main/java/com/healthmd/domain/practice/ClinicRefresh.kt",
+        "apps/android/app/src/main/java/com/healthmd/data/practice/ClinicNativeAdapters.kt"
       ],
       "profiles": []
     }
