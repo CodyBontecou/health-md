@@ -39,7 +39,7 @@ Identity/MFA vendor and session design, production CSRF/session implementation, 
 three requested SetClinic workflows. Run `npx vitest run test/clinic-integration.test.ts`
 from this component for executable examples. Nothing in this module is mounted on
 an HTTP endpoint, imported into the portal bundle, or wired into either native app.
-The simulator creates no credentials, makes no network request and activates no paid access. Dormant native adapters now live in the Apple Practice and Android Practice/data packages; no app bootstrap, URL handler or presenter installs them.
+The simulator creates no credentials, makes no network request and activates no paid access. Dormant native adapters now live in the Apple Practice and Android Practice/data packages; no app bootstrap or URL handler installs them. Standalone native review/inbox screens now consume an injectable presentation transport that defaults unavailable.
 The existing invitation claim/acceptance API remains independent: its fixed-date
 clinical instructions are not generalized into arbitrary metric or export consent.
 The model reuses its canonical JSON and SHA-256 review primitives.
@@ -121,8 +121,8 @@ processing; only the clinic actor can explicitly record processing.
   authorization delivery, upload idempotency and receipt/processing semantics.
   Credentials must be bound to the reviewed endpoint in secure native storage,
   never URL/imported fields. The simulator uses only the relative same-origin hint `/synthetic-upload`; no uploader is mounted there. Native HTTPS endpoint binding remains a separate reviewed contract.
-- Install the Apple and Android review UI, authenticated inbox and dormant existing-export
-  adapters against that contract. Both platforms remain `planned` in the capability
+- Qualify and install the implemented Apple and Android review/inbox screens and dormant existing-export
+  adapters against that authenticated contract. Both platforms remain `planned` in the capability
   inventory. Preserve native OS permissions and independent consumer purchases.
 - Replace the resettable service stores with authoritative isolated persistence and qualify the native crash-safe journals. Actor values must come from validated
   sessions; callers cannot select their role, clinic, patient or device in JSON.
@@ -174,7 +174,43 @@ Both native entry points default to the existing unqualified Practice feature po
 so merely compiling these adapters does not expose them. The remaining exact external
 input is an authenticated enrollment/inbox/refresh/status/receipt contract and its
 endpoint-bound auth delivery. Without it, installing a transport or automatically
-binding a SetClinic endpoint would invent authority. Review/inbox presentation,
-revocation reporting, backend durability and production entitlement activation remain
-uninstalled. Source-matched Swift/Kotlin domain tests cover the local journal/state
+binding a SetClinic endpoint would invent authority. The native review/inbox screens and their controllers are implemented with explicitly injected synthetic previews. Authenticated network transport, app-route activation, backend durability and production entitlement activation remain uninstalled. Source-matched Swift/Kotlin domain tests cover the local journal/state
 machine; they do not establish HealthKit/Health Connect or full native app behavior.
+
+
+### Native review and refresh inbox presentation
+
+Apple `ClinicInboxView.swift` and Android `presentation/clinic/ClinicInboxScreen.kt`
+provide standalone clinic inbox/review screens using native Form/List and existing
+Geist components. `ClinicInbox.swift` / `ClinicInbox.kt` own the flow state across
+loading, review, explicit consent, Apply, export, cancellation, receipt reporting and
+withdrawal of sharing consent. Only an explicit patient action starts export.
+The screens show clinic, profile, destination, selected metrics, export option facts,
+paused schedule intent, review expiry, and separate access/Health permission notices.
+Uploaded and explicitly clinic-processed states remain distinct. An unacknowledged
+upload has a receipt-report action that cannot initiate another export.
+
+The injected presentation port is an internal native interface, not a proposed HTTP
+API. A future qualified mapper must derive all display facts and the exact review
+digest from the same local full snapshot used by `ClinicNativeOnboarding.preview`;
+a remote label or client Boolean is never application authority. The default port
+has no session, credentials, URL or network implementation. Explicit synthetic fixtures
+and IDE previews exercise the whole UI/controller flow without Health or billing reads.
+
+Controllers reject expired review, missing consent and changed account context.
+Reload/dismiss/background clears review and consent; stale asynchronous results cannot
+replace newer state. Busy actions coalesce, and uncertain side effects require reload
+before retry. The host must clear the controller on account change and connect its
+transport actions to the existing native authorization/journal/export adapters. Production
+route activation remains gated by `PracticeFeaturePolicy.current`, whose qualification
+attestation is still absent. UI strings currently have the English source/fallback;
+localization and rendered accessibility/layout qualification are release work.
+
+No new product decision was needed to implement these screens. The exact remaining
+transport decision is which authenticated service owns clinic enrollment, pending
+refreshes, cancellation/revocation and receipt/status persistence, plus its endpoint-bound
+auth and upload/idempotency/processing contract. This is blocked by the existing
+clinical-service ownership/security/BAA gates above and the unapproved mobile contract
+recorded in the component README. Selecting a base URL, auth header or production
+backend without those inputs would invent the missing contract. The commercial/store
+entitlement route is a separate decision and remains disabled.

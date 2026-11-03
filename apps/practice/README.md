@@ -56,7 +56,7 @@ See `docs/architecture.md`, `docs/threat-model.md`, and the proposed repository 
 
 ## SetClinic integration model
 
-`src/clinic/` provides executable synthetic onboarding/review, clinic-paid entitlement and foreground refresh/receipt flows. It is not mounted as an HTTP API. Dormant Apple/Android adapters reuse the native API export runners and persist local request/receipt records, but no native app bootstrap, authenticated transport or presenter installs them. See [architecture and remaining integration gates](docs/architecture.md#setclinic-integration-simulator). Existing mobile links and production remain blocked.
+`src/clinic/` provides executable synthetic onboarding/review, clinic-paid entitlement and foreground refresh/receipt flows. It is not mounted as an HTTP API. Dormant Apple/Android adapters reuse the native API export runners and persist local request/receipt records, and standalone native review/inbox screens have synthetic previews and injectable transport. No app bootstrap, URL handler or authenticated network transport installs this flow. See [architecture and remaining integration gates](docs/architecture.md#setclinic-integration-simulator). Existing mobile links and production remain blocked.
 
 ## Browser and qualification evidence
 

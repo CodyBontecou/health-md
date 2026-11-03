@@ -1086,15 +1086,15 @@
       "id": "clinic.patient-integration",
       "name": "Patient-confirmed clinic integration",
       "classification": "planned",
-      "summary": "Synthetic Practice flows and dormant native onboarding/foreground API export adapters with durable local request/receipt records. No authenticated clinic transport, presenter or production entitlement provider is installed.",
+      "summary": "Synthetic Practice workflows, standalone native review/inbox screens with dormant injectable transport, and gated onboarding/foreground API export adapters with durable local journals. No production transport or entitlement provider is installed.",
       "platforms": {
         "apple": {
           "state": "planned",
-          "target": "Install the dormant native adapters behind an approved authenticated enrollment/inbox/refresh/receipt contract and patient review UI; qualify endpoint-bound auth, durable recovery, foreground/device behavior and the store entitlement route before activation."
+          "target": "Qualify and install the implemented native review/inbox screens and adapters behind an approved authenticated enrollment/inbox/refresh/receipt service contract; verify SDK/UI/device behavior, endpoint-bound auth and durable recovery before activation. The clinic entitlement/store route remains separately gated."
         },
         "android": {
           "state": "planned",
-          "target": "Install the dormant native adapters behind an approved authenticated enrollment/inbox/refresh/receipt contract and patient review UI; qualify endpoint-bound auth, durable recovery, foreground/device behavior and the store entitlement route before activation."
+          "target": "Qualify and install the implemented native review/inbox screens and adapters behind an approved authenticated enrollment/inbox/refresh/receipt service contract; verify SDK/UI/device behavior, endpoint-bound auth and durable recovery before activation. The clinic entitlement/store route remains separately gated."
         }
       },
       "evidence": [
@@ -1106,7 +1106,11 @@
         "apps/apple/HealthMd/Shared/Practice/ClinicRefresh.swift",
         "apps/apple/HealthMd/Shared/Practice/ClinicNativeAdapters.swift",
         "apps/android/app/src/main/java/com/healthmd/domain/practice/ClinicRefresh.kt",
-        "apps/android/app/src/main/java/com/healthmd/data/practice/ClinicNativeAdapters.kt"
+        "apps/android/app/src/main/java/com/healthmd/data/practice/ClinicNativeAdapters.kt",
+        "apps/apple/HealthMd/Shared/Practice/ClinicInbox.swift",
+        "apps/apple/HealthMd/Shared/Practice/ClinicInboxView.swift",
+        "apps/android/app/src/main/java/com/healthmd/domain/practice/ClinicInbox.kt",
+        "apps/android/app/src/main/java/com/healthmd/presentation/clinic/ClinicInboxScreen.kt"
       ],
       "profiles": []
     }
