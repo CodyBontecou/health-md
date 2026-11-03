@@ -1509,6 +1509,9 @@
     <string name="export_sleep_date_guidance">El sueño abarca desde el mediodía de cada fecha seleccionada hasta el mediodía siguiente. Para el sueño de anoche, elige Ayer.</string>
     <string name="export_sleep_preview_window">Ventana de sueño: del %1$s al mediodía al %2$s al mediodía (%3$s).</string>
     <string name="export_sleep_preview_guidance">Si falta el sueño, prueba la fecha anterior. El sueño de la mañana puede aparecer en ese resumen aunque los registros originales tengan la fecha de hoy. Los errores de consulta se indican por separado; un resultado vacío también puede significar que no hay acceso de lectura.</string>
+    <string name="export_sleep_date_guidance_morning_ends">Las sesiones de sueño completas pertenecen a la fecha en que terminan en la zona horaria de la exportación. Para el sueño de anoche, elige Hoy.</string>
+    <string name="export_sleep_preview_window_morning_ends">Fechas de fin del sueño: del %1$s al %2$s (%3$s).</string>
+    <string name="export_sleep_preview_guidance_morning_ends">Las sesiones de sueño completas pertenecen a su fecha de fin en la zona horaria de esta exportación, sin recorte al mediodía. Los errores de consulta se indican por separado; un resultado vacío también puede significar que no hay acceso de lectura.</string>
     <string name="whoop_connection_description">Conecta WHOOP para exportar recuperación, esfuerzo, sueño, entrenamientos y medidas corporales. El inicio de sesión usa el navegador; Health.md guarda los tokens cifrados en este dispositivo. Desconectar elimina la conexión guardada en este dispositivo.</string>
     <string name="whoop_connect">Conectar WHOOP</string>
     <string name="whoop_sources_description">Conecta WHOOP para exportar directamente del proveedor o sigue usando Health Connect para los registros locales.</string>
@@ -1520,6 +1523,8 @@
     <string name="paywall_access_subtitle">Elige una suscripción o acceso de por vida para crear tu archivo de salud privado. Las suscripciones elegibles incluyen una prueba gratuita de 7 días.</string>
     <string name="paywall_access_active_title">Tu acceso está activo</string>
     <string name="paywall_access_active_body">Continúa la configuración para conectar tus datos de salud y elegir dónde guardar tu archivo privado.</string>
+    <string name="clinic_access_active_title">Tu acceso de la clínica está activo</string>
+    <string name="clinic_access_active_body">Tu clínica patrocina el envío a su endpoint aprobado. Tú eliges qué compartir. Otros destinos de exportación requieren tu propio acceso a Health.md.</string>
     <string name="paywall_plan_choices">Acceso semanal, anual o de por vida</string>
     <string name="paywall_weekly_price">%1$s / semana</string>
     <string name="paywall_yearly_price">%1$s / año</string>

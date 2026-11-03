@@ -1654,6 +1654,9 @@
     <string name="export_sleep_date_guidance">يشمل النوم الفترة من ظهر كل تاريخ محدد حتى ظهر اليوم التالي. لنوم الليلة الماضية، اختر أمس.</string>
     <string name="export_sleep_preview_window">نافذة النوم: من ظهر %1$s إلى ظهر %2$s (%3$s).</string>
     <string name="export_sleep_preview_guidance">إذا كانت بيانات النوم مفقودة، جرّب التاريخ السابق. قد يظهر نوم الصباح في ملخص ذلك التاريخ حتى لو كانت السجلات الخام مؤرخة اليوم. تُعرض أخطاء الاستعلام بشكل منفصل؛ وقد تعني النتيجة الفارغة أيضًا عدم توفر إذن القراءة.</string>
+    <string name="export_sleep_date_guidance_morning_ends">تُنسب جلسات النوم كاملةً إلى التاريخ الذي تنتهي فيه حسب المنطقة الزمنية للتصدير. لنوم الليلة الماضية، اختر اليوم.</string>
+    <string name="export_sleep_preview_window_morning_ends">تواريخ انتهاء النوم: من %1$s إلى %2$s (%3$s).</string>
+    <string name="export_sleep_preview_guidance_morning_ends">تُنسب جلسات النوم كاملةً إلى تاريخ انتهائها حسب المنطقة الزمنية لهذا التصدير، دون اقتطاع عند الظهر. تُعرض أخطاء الاستعلام بشكل منفصل؛ وقد تعني النتيجة الفارغة أيضًا عدم توفر إذن القراءة.</string>
     <string name="whoop_connection_description">اربط WHOOP لتصدير التعافي والإجهاد والنوم والتمارين وقياسات الجسم. يتم تسجيل الدخول عبر متصفحك؛ ويخزن Health.md الرموز مشفرة على هذا الجهاز. يؤدي قطع الاتصال إلى إزالة الاتصال المحفوظ على هذا الجهاز.</string>
     <string name="whoop_connect">ربط WHOOP</string>
     <string name="whoop_sources_description">اربط WHOOP للتصدير مباشرة من مزود البيانات، أو واصل استخدام Health Connect للسجلات المحلية.</string>
@@ -1665,6 +1668,8 @@
     <string name="paywall_access_subtitle">اختر اشتراكًا أو وصولًا مدى الحياة لبدء أرشيفك الصحي الخاص. تتضمن الاشتراكات المؤهلة تجربة مجانية لمدة 7 أيام.</string>
     <string name="paywall_access_active_title">وصولك نشط</string>
     <string name="paywall_access_active_body">تابع الإعداد لربط بياناتك الصحية واختيار مكان حفظ أرشيفك الخاص.</string>
+    <string name="clinic_access_active_title">وصولك عبر العيادة نشط</string>
+    <string name="clinic_access_active_body">ترعى عيادتك التسليم إلى نقطة النهاية المعتمدة لديها. أنت من يختار ما تشاركه. تتطلب وجهات التصدير الأخرى وصولك الخاص إلى Health.md.</string>
     <string name="paywall_plan_choices">وصول أسبوعي أو سنوي أو مدى الحياة</string>
     <string name="paywall_weekly_price">%1$s / أسبوع</string>
     <string name="paywall_yearly_price">%1$s / سنة</string>

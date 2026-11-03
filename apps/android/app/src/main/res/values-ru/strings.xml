@@ -1563,6 +1563,9 @@
     <string name="export_sleep_date_guidance">Сон охватывает период с полудня выбранной даты до полудня следующего дня. Для сна прошлой ночи выберите «Вчера».</string>
     <string name="export_sleep_preview_window">Окно сна: с полудня %1$s до полудня %2$s (%3$s).</string>
     <string name="export_sleep_preview_guidance">Если сон отсутствует, попробуйте предыдущую дату. Утренний сон может попасть в её сводку, даже если исходные записи датированы сегодняшним днём. Ошибки запросов указаны отдельно; пустой результат также может означать отсутствие доступа на чтение.</string>
+    <string name="export_sleep_date_guidance_morning_ends">Сеансы сна целиком относятся к дате их окончания в часовом поясе экспорта. Для сна прошлой ночи выберите «Сегодня».</string>
+    <string name="export_sleep_preview_window_morning_ends">Даты окончания сна: с %1$s по %2$s (%3$s).</string>
+    <string name="export_sleep_preview_guidance_morning_ends">Сеансы сна целиком относятся к дате окончания в часовом поясе этого экспорта, без обрезки в полдень. Ошибки запросов указаны отдельно; пустой результат также может означать отсутствие доступа на чтение.</string>
     <string name="whoop_connection_description">Подключите WHOOP для экспорта восстановления, нагрузки, сна, тренировок и измерений тела. Вход выполняется в браузере; Health.md хранит токены на этом устройстве в зашифрованном виде. Отключение удаляет сохранённое подключение на этом устройстве.</string>
     <string name="whoop_connect">Подключить WHOOP</string>
     <string name="whoop_sources_description">Подключите WHOOP для прямого экспорта от поставщика или продолжайте использовать Health Connect для локальных записей.</string>
@@ -1574,6 +1577,8 @@
     <string name="paywall_access_subtitle">Выберите подписку или пожизненный доступ для создания личного архива здоровья. Для подходящих подписок доступен бесплатный пробный период на 7 дней.</string>
     <string name="paywall_access_active_title">Ваш доступ активен</string>
     <string name="paywall_access_active_body">Продолжите настройку, чтобы подключить данные о здоровье и выбрать место для личного архива.</string>
+    <string name="clinic_access_active_title">Доступ через клинику активен</string>
+    <string name="clinic_access_active_body">Ваша клиника спонсирует доставку на свою одобренную конечную точку. Вы сами выбираете, чем делиться. Для других мест экспорта нужен ваш собственный доступ к Health.md.</string>
     <string name="paywall_plan_choices">Недельный, годовой или пожизненный доступ</string>
     <string name="paywall_weekly_price">%1$s / неделя</string>
     <string name="paywall_yearly_price">%1$s / год</string>

@@ -1461,6 +1461,9 @@
     <string name="export_sleep_date_guidance">Schlaf umfasst den Zeitraum von mittags am gewählten Datum bis mittags am Folgetag. Wähle für die letzte Nacht „Gestern“.</string>
     <string name="export_sleep_preview_window">Schlaffenster: %1$s mittags bis %2$s mittags (%3$s).</string>
     <string name="export_sleep_preview_guidance">Wenn Schlaf fehlt, versuche das vorherige Datum. Morgendlicher Schlaf kann dort zusammengefasst sein, obwohl die Rohdaten von heute sind. Abfragefehler werden separat aufgeführt; ein leeres Ergebnis kann auch auf fehlenden Lesezugriff hinweisen.</string>
+    <string name="export_sleep_date_guidance_morning_ends">Ganze Schlafphasen gehören zu dem Datum, an dem sie in der Zeitzone des Exports enden. Wähle für die letzte Nacht „Heute“.</string>
+    <string name="export_sleep_preview_window_morning_ends">Schlafende-Daten: %1$s bis %2$s (%3$s).</string>
+    <string name="export_sleep_preview_guidance_morning_ends">Ganze Schlafphasen gehören zu ihrem Enddatum in der Zeitzone dieses Exports, ohne Kappung zur Mittagszeit. Abfragefehler werden separat aufgeführt; ein leeres Ergebnis kann auch auf fehlenden Lesezugriff hinweisen.</string>
     <string name="whoop_connection_description">Verbinde WHOOP, um Erholung, Belastung, Schlaf, Trainings und Körpermessungen zu exportieren. Die Anmeldung erfolgt im Browser; Health.md speichert Tokens verschlüsselt auf diesem Gerät. Beim Trennen wird die gespeicherte Verbindung auf diesem Gerät entfernt.</string>
     <string name="whoop_connect">WHOOP verbinden</string>
     <string name="whoop_sources_description">Verbinde WHOOP für direkte Anbieterexporte oder nutze Health Connect weiterhin für lokale Datensätze.</string>
@@ -1472,6 +1475,8 @@
     <string name="paywall_access_subtitle">Wähle ein Abo oder lebenslangen Zugriff für dein privates Gesundheitsarchiv. Berechtigte Abos bieten eine kostenlose 7-tägige Testphase.</string>
     <string name="paywall_access_active_title">Dein Zugriff ist aktiv</string>
     <string name="paywall_access_active_body">Fahre mit der Einrichtung fort, um deine Gesundheitsdaten zu verbinden und den Speicherort deines privaten Archivs auszuwählen.</string>
+    <string name="clinic_access_active_title">Dein Klinikzugang ist aktiv</string>
+    <string name="clinic_access_active_body">Deine Klinik übernimmt die Übermittlung an ihren freigegebenen Endpunkt. Du entscheidest, was du teilst. Andere Exportziele erfordern deinen eigenen Health.md-Zugriff.</string>
     <string name="paywall_plan_choices">Wöchentlicher, jährlicher oder lebenslanger Zugriff</string>
     <string name="paywall_weekly_price">%1$s / Woche</string>
     <string name="paywall_yearly_price">%1$s / Jahr</string>
