@@ -1564,4 +1564,9 @@
     <string name="paywall_signal_plan_weekly">Weekly</string>
     <string name="paywall_signal_plan_yearly">Yearly</string>
     <string name="paywall_signal_plan_lifetime">Lifetime</string>
+    <string name="clinic_sync_channel_name">Clinic sync requests</string>
+    <string name="clinic_sync_request_body">Your clinic is asking for your latest health data. Tap to send it.</string>
+    <string name="clinic_sync_result_sent">Your latest data was sent to your clinic.</string>
+    <string name="clinic_sync_result_failed">Could not send your data to your clinic. Open Health.md and try again.</string>
+    <string name="clinic_sync_result_profile_missing">Open Clinic access in Health.md and choose Use clinic destination first.</string>
 </resources>

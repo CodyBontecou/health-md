@@ -230,6 +230,7 @@
 				iOS/ClinicianReport/ClinicianReportShareSheet.swift,
 				iOS/ClinicianReport/ClinicianReportView.swift,
 				iOS/ClinicianReport/ClinicianReportViewModel.swift,
+				iOS/ClinicSyncDoorbellManager.swift,
 				iOS/ContentView.swift,
 				iOS/HealthMdApp.swift,
 				iOS/IPhoneExportRequestHandler.swift,

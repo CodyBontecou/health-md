@@ -1561,4 +1561,9 @@
     <string name="paywall_signal_plan_weekly">Hebdomadaire</string>
     <string name="paywall_signal_plan_yearly">Annuel</string>
     <string name="paywall_signal_plan_lifetime">À vie</string>
+    <string name="clinic_sync_channel_name">Demandes de synchronisation de la clinique</string>
+    <string name="clinic_sync_request_body">Votre clinique demande vos dernières données de santé. Touchez pour les envoyer.</string>
+    <string name="clinic_sync_result_sent">Vos dernières données ont été envoyées à votre clinique.</string>
+    <string name="clinic_sync_result_failed">Impossible d\'envoyer vos données à la clinique. Ouvrez Health.md et réessayez.</string>
+    <string name="clinic_sync_result_profile_missing">Ouvrez l\'accès clinique dans Health.md et choisissez d\'abord Utiliser la destination de la clinique.</string>
 </resources>

@@ -6,7 +6,7 @@
       "id": "healthmd.product_capabilities",
       "version": 1,
       "path": "packages/contracts/product-capabilities.json",
-      "sha256": "80ed3a8620a86124222cde506c98b8da9e6cb6506878a0d384b5a45ee7acf285",
+      "sha256": "6c55ed9f20cd5693d89de1de0e1d01e133f847f5cc110c779a15e5c2539e0c8e",
       "implementations": [
         "packages/contracts/validate.py",
         "apps/apple/HealthMdTests/Contracts/ProductCapabilityManifestTests.swift",
@@ -793,14 +793,20 @@
         "apps/apple/HealthMd/Shared/Models/ClinicExportAuthorization.swift",
         "apps/apple/HealthMd/Shared/Models/ClinicGrantVerifier.swift",
         "apps/android/app/src/main/java/com/healthmd/domain/billing/ClinicExportAuthorization.kt",
-        "apps/android/app/src/main/java/com/healthmd/domain/billing/ClinicGrantVerifier.kt"
+        "apps/android/app/src/main/java/com/healthmd/domain/billing/ClinicGrantVerifier.kt",
+        "apps/wake/src/state.ts",
+        "apps/apple/HealthMd/iOS/ClinicSyncDoorbellManager.swift",
+        "apps/android/app/src/main/java/com/healthmd/data/clinicsync/ClinicSyncDoorbell.kt"
       ],
       "consumers": [
         "scripts/tests/test_clinic_export_authorization.py",
         "apps/android/app/src/test/java/com/healthmd/domain/billing/ClinicExportAuthorizationTest.kt",
         "apps/licensing/test/service.test.mjs",
         "apps/licensing/test/production.test.mjs",
-        "apps/android/app/src/test/java/com/healthmd/domain/billing/ClinicSponsorshipRecoveryTest.kt"
+        "apps/android/app/src/test/java/com/healthmd/domain/billing/ClinicSponsorshipRecoveryTest.kt",
+        "apps/android/app/src/test/java/com/healthmd/data/clinicsync/ClinicSyncDoorbellManagerTest.kt",
+        "apps/apple/HealthMdTests/Wake/ClinicSyncDoorbellManagerTests.swift",
+        "apps/wake/src/delegated-sync.test.ts"
       ],
       "documentation": [
         "apps/licensing/README.md"
@@ -816,6 +822,12 @@
           "path": "packages/contracts/clinic-sponsorship/v1/verification-fixtures.json",
           "sha256": "310ae896331c3f1c0e15088bae9756bb7d1cd89005c4b75454219f1ed766b9e5",
           "provenance": "Synthetic authorization and ephemeral P-256 verification vectors; no private signing key or live patient data.",
+          "mirrors": []
+        },
+        {
+          "path": "packages/contracts/clinic-sponsorship/v1/sync-doorbell-fixtures.json",
+          "sha256": "f7dc46a6a05839ca5d0407701a0d557d30fabd28b9f38b553b676ec0c8b30684",
+          "provenance": "Synthetic clinic sync doorbell messages, RFC-0005 wake request HMAC vector and push payloads; fictional key and identifiers, no patient data.",
           "mirrors": []
         }
       ]

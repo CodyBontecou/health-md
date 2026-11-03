@@ -1513,4 +1513,9 @@
     <string name="paywall_signal_plan_weekly">Wöchentlich</string>
     <string name="paywall_signal_plan_yearly">Jährlich</string>
     <string name="paywall_signal_plan_lifetime">Dauerzugriff</string>
+    <string name="clinic_sync_channel_name">Synchronisierungsanfragen der Klinik</string>
+    <string name="clinic_sync_request_body">Deine Klinik bittet um deine neuesten Gesundheitsdaten. Tippe, um sie zu senden.</string>
+    <string name="clinic_sync_result_sent">Deine neuesten Daten wurden an deine Klinik gesendet.</string>
+    <string name="clinic_sync_result_failed">Deine Daten konnten nicht an die Klinik gesendet werden. Öffne Health.md und versuche es erneut.</string>
+    <string name="clinic_sync_result_profile_missing">Öffne den Klinikzugang in Health.md und wähle zuerst Klinikziel verwenden.</string>
 </resources>

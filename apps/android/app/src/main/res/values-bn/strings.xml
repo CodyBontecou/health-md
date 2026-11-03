@@ -1487,4 +1487,9 @@
     <string name="paywall_signal_plan_weekly">সাপ্তাহিক</string>
     <string name="paywall_signal_plan_yearly">বার্ষিক</string>
     <string name="paywall_signal_plan_lifetime">আজীবন</string>
+    <string name="clinic_sync_channel_name">ক্লিনিকের সিঙ্ক অনুরোধ</string>
+    <string name="clinic_sync_request_body">আপনার ক্লিনিক আপনার সর্বশেষ স্বাস্থ্য ডেটা চাইছে। পাঠাতে ট্যাপ করুন।</string>
+    <string name="clinic_sync_result_sent">আপনার সর্বশেষ ডেটা আপনার ক্লিনিকে পাঠানো হয়েছে।</string>
+    <string name="clinic_sync_result_failed">আপনার ডেটা ক্লিনিকে পাঠানো যায়নি। Health.md খুলে আবার চেষ্টা করুন।</string>
+    <string name="clinic_sync_result_profile_missing">Health.md-এ ক্লিনিক অ্যাক্সেস খুলুন এবং প্রথমে ক্লিনিকের গন্তব্য ব্যবহার করুন বেছে নিন।</string>
 </resources>

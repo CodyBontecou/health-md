@@ -148,6 +148,56 @@ class APIExportClient @Inject constructor(
         }
     }
 
+    /**
+     * Sends a clinic control message (never health data) to the approved clinic endpoint with
+     * the same binding, credential and redirect rejection as clinic uploads. Personal
+     * destinations never receive control messages.
+     */
+    suspend fun sendClinicControlMessage(
+        endpointUrl: String,
+        messageType: String,
+        body: String,
+    ) = withContext(Dispatchers.IO) {
+        val canonical = com.healthmd.domain.billing.ClinicExportAuthorization.canonicalClinicEndpoint(endpointUrl)
+        val sponsored = entitlements.sponsoredEndpoint.value?.let {
+            com.healthmd.domain.billing.ClinicExportAuthorization.canonicalClinicEndpoint(it)
+        }
+        if (canonical == null || canonical != sponsored ||
+            !entitlements.verifyExportAccess(com.healthmd.domain.model.ExportTarget.API_ENDPOINT, canonical)) {
+            throw APIExportClientException(ExportFailureReason.PAYWALL_REQUIRED, false,
+                message = "This destination is not an approved clinic endpoint.")
+        }
+        val request = Request.Builder()
+            .url(canonical)
+            .post(body.toRequestBody(JSON_MEDIA_TYPE))
+            .header("Accept", "application/json")
+            .header("User-Agent", "Health.md Android API Export")
+            .header("X-HealthMd-Message", messageType)
+            .apply { entitlements.clinicUploadAuthorization(canonical)?.let { header("Authorization", it) } }
+            .build()
+        val call = client.newBuilder().followRedirects(false).followSslRedirects(false).build().newCall(request)
+        val response = try {
+            suspendCancellableCoroutine<Response> { continuation ->
+                continuation.invokeOnCancellation { call.cancel() }
+                call.enqueue(object : Callback {
+                    override fun onResponse(call: Call, response: Response) = continuation.resume(response)
+                    override fun onFailure(call: Call, error: IOException) = continuation.resumeWithException(error)
+                })
+            }
+        } catch (error: IOException) {
+            kotlin.coroutines.coroutineContext.ensureActive()
+            throw APIExportClientException(ExportFailureReason.NETWORK_ERROR, true,
+                message = "Could not reach the clinic endpoint.", cause = error)
+        }
+        response.use {
+            if (!it.isSuccessful) {
+                throw APIExportClientException(ExportFailureReason.API_REJECTED,
+                    it.code == 408 || it.code == 429 || it.code >= 500, it.code,
+                    message = "Clinic endpoint returned HTTP ${it.code}.")
+            }
+        }
+    }
+
     private fun responsePreview(response: okhttp3.Response): String? {
         val reader = response.body?.charStream() ?: return null
         val buffer = CharArray(MAX_RESPONSE_PREVIEW_CHARS + 1)

@@ -167,6 +167,48 @@ struct APIExportClient {
         return try await upload(payload: body, destination: destination)
     }
 
+    /// Sends a clinic control message (never health data) to the approved clinic
+    /// endpoint with the same binding, credential and redirect rejection as clinic
+    /// uploads. Personal destinations never receive control messages.
+    @MainActor
+    func sendClinicControlMessage(
+        _ body: Data,
+        messageType: String,
+        endpoint: URL
+    ) async throws {
+        guard !body.isEmpty else { throw APIExportClientError.invalidPayload }
+        let access = await authorizeAccess(endpoint)
+        let clinic = clinicContext(endpoint)
+        guard access.isAllowed, clinic.managed else { throw APIExportClientError.accessDenied }
+
+        var request = URLRequest(url: endpoint)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.setValue("Health.md iOS API Export", forHTTPHeaderField: "User-Agent")
+        request.setValue(messageType, forHTTPHeaderField: "X-HealthMd-Message")
+        if let credential = clinic.authorization {
+            request.setValue(credential, forHTTPHeaderField: "Authorization")
+        }
+        request.httpBody = body
+
+        let response: URLResponse
+        do {
+            (_, response) = try await clinicResponseLoader.data(for: request, maximumBytes: maximumResponseBytes)
+        } catch let error as BoundedURLSessionDataLoaderError {
+            switch error {
+            case .responseTooLarge(let statusCode, let maximumBytes, _):
+                throw APIExportClientError.responseTooLarge(statusCode: statusCode, maximumBytes: maximumBytes)
+            }
+        }
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw APIExportClientError.invalidResponse
+        }
+        guard (200..<300).contains(httpResponse.statusCode) else {
+            throw APIExportClientError.serverRejected(statusCode: httpResponse.statusCode, body: nil)
+        }
+    }
+
     /// Uploads an already encoded API envelope. The runner uses this overload
     /// so the payload measured for byte-aware batching is exactly the payload
     /// placed on the wire.

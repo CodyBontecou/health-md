@@ -40,6 +40,7 @@ class ProductCapabilityManifestTest {
         assertEquals(appleCapabilities + setOf("source.private-platform-database", "apple.ads-purchase-attribution"), idsWithState(states, "unavailable"))
         assertEquals(
             setOf(
+                "account.clinic-sync-requests",
                 "core.shared-rust-profile-engine",
                 "automation.api-recovery-authority",
                 "automation.include-today",
@@ -182,6 +183,7 @@ class ProductCapabilityManifestTest {
 
         val allCapabilities = sharedCapabilities + appleCapabilities + androidCapabilities + setOf(
             "support.native-review-introduction",
+            "account.clinic-sync-requests",
             "source.private-platform-database",
             "apple.ads-purchase-attribution",
             "automation.api-recovery-authority",

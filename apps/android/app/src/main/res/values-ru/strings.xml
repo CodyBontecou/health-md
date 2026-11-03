@@ -1615,4 +1615,9 @@
     <string name="paywall_signal_plan_weekly">Еженедельно</string>
     <string name="paywall_signal_plan_yearly">Ежегодно</string>
     <string name="paywall_signal_plan_lifetime">Навсегда</string>
+    <string name="clinic_sync_channel_name">Запросы синхронизации от клиники</string>
+    <string name="clinic_sync_request_body">Ваша клиника запрашивает ваши последние данные о здоровье. Нажмите, чтобы отправить их.</string>
+    <string name="clinic_sync_result_sent">Ваши последние данные отправлены в клинику.</string>
+    <string name="clinic_sync_result_failed">Не удалось отправить данные в клинику. Откройте Health.md и повторите попытку.</string>
+    <string name="clinic_sync_result_profile_missing">Откройте доступ клиники в Health.md и сначала выберите «Использовать назначение клиники».</string>
 </resources>

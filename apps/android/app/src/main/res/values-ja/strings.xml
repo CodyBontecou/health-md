@@ -1338,4 +1338,9 @@
     <string name="paywall_signal_plan_weekly">週額</string>
     <string name="paywall_signal_plan_yearly">年額</string>
     <string name="paywall_signal_plan_lifetime">買い切り</string>
+    <string name="clinic_sync_channel_name">クリニックの同期リクエスト</string>
+    <string name="clinic_sync_request_body">クリニックが最新のヘルスケアデータを求めています。タップして送信します。</string>
+    <string name="clinic_sync_result_sent">最新のデータをクリニックに送信しました。</string>
+    <string name="clinic_sync_result_failed">データをクリニックに送信できませんでした。Health.mdを開いてもう一度お試しください。</string>
+    <string name="clinic_sync_result_profile_missing">Health.mdでクリニックアクセスを開き、先に「クリニックの送信先を使用」を選んでください。</string>
 </resources>

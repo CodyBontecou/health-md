@@ -37,7 +37,10 @@ class MainActivity : ComponentActivity() {
     companion object {
         const val EXTRA_START_ROUTE = "com.healthmd.START_ROUTE"
         const val EXTRA_PROMPT_SCHEDULED_RECOVERY = "com.healthmd.PROMPT_SCHEDULED_RECOVERY"
+        /** Wake id of a tapped clinic sync request notification. */
+        const val EXTRA_CLINIC_SYNC_WAKE_ID = "com.healthmd.CLINIC_SYNC_WAKE_ID"
         private const val STATE_HANDLED_MYSELF_CLAIM = "myselfClaim.handledIntent"
+        private const val STATE_HANDLED_CLINIC_SYNC = "clinicSync.handledIntent"
         private const val STATE_HANDLED_EXTERNAL_INTENT = "sharedSetup.handledExternalIntent"
         private const val STATE_SHARED_SETUP_PROCESS_ID = "sharedSetup.processInstanceID"
         private const val STATE_EXTERNAL_DOCUMENT_BYTES = "sharedSetup.externalDocumentBytes"
@@ -45,6 +48,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private var handledMyselfClaimIntent = false
+    private var handledClinicSyncIntent = false
     private var myselfClaimRequestId by mutableStateOf(0L)
     private var startRoute by mutableStateOf<String?>(null)
     private var scheduledRecoveryPromptRequestId by mutableStateOf(0L)
@@ -71,10 +75,14 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var distributionRuntime: DistributionRuntime
 
+    @Inject
+    lateinit var clinicSyncDoorbell: com.healthmd.data.clinicsync.ClinicSyncDoorbellManager
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         StaticPurchasePreview.configure(intent.getBooleanExtra(StaticPurchasePreview.EXTRA, false))
         handledMyselfClaimIntent = savedInstanceState?.getBoolean(STATE_HANDLED_MYSELF_CLAIM) == true
+        handledClinicSyncIntent = savedInstanceState?.getBoolean(STATE_HANDLED_CLINIC_SYNC) == true
         val alreadyHandledExternalIntent =
             savedInstanceState?.getBoolean(STATE_HANDLED_EXTERNAL_INTENT) == true
         val restoredExternalBytes = savedInstanceState?.getByteArray(STATE_EXTERNAL_DOCUMENT_BYTES)
@@ -122,6 +130,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onSaveInstanceState(outState: Bundle) {
         outState.putBoolean(STATE_HANDLED_MYSELF_CLAIM, handledMyselfClaimIntent)
+        outState.putBoolean(STATE_HANDLED_CLINIC_SYNC, handledClinicSyncIntent)
         outState.putBoolean(STATE_HANDLED_EXTERNAL_INTENT, handledExternalIntent)
         if (handledExternalIntent) {
             outState.putString(STATE_SHARED_SETUP_PROCESS_ID, sharedSetupCoordinator.processInstanceID)
@@ -164,10 +173,16 @@ class MainActivity : ComponentActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         handledMyselfClaimIntent = false
+        handledClinicSyncIntent = false
         handleLaunchIntent(intent, acceptExternalDocument = true)
     }
 
     private fun handleLaunchIntent(intent: Intent?, acceptExternalDocument: Boolean) {
+        // A clinic sync tap runs once; Activity recreation restores the handled flag.
+        intent?.getStringExtra(EXTRA_CLINIC_SYNC_WAKE_ID)?.takeIf { !handledClinicSyncIntent }?.let { wakeId ->
+            handledClinicSyncIntent = true
+            lifecycleScope.launch { clinicSyncDoorbell.handleSyncRequestTap(wakeId) }
+        }
         // Claim links must never enter Shared Setup's document importer. Reject noncanonical
         // variants here as well; presenting a disclosure never authorizes a proof upload.
         if (intent?.data?.scheme == "healthmd") {

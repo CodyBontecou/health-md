@@ -1487,4 +1487,9 @@
     <string name="paywall_signal_plan_weekly">ਹਫ਼ਤਾਵਾਰੀ</string>
     <string name="paywall_signal_plan_yearly">ਸਾਲਾਨਾ</string>
     <string name="paywall_signal_plan_lifetime">ਉਮਰ ਭਰ</string>
+    <string name="clinic_sync_channel_name">ਕਲੀਨਿਕ ਦੀਆਂ ਸਿੰਕ ਬੇਨਤੀਆਂ</string>
+    <string name="clinic_sync_request_body">ਤੁਹਾਡਾ ਕਲੀਨਿਕ ਤੁਹਾਡਾ ਨਵੀਨਤਮ ਸਿਹਤ ਡਾਟਾ ਮੰਗ ਰਿਹਾ ਹੈ। ਭੇਜਣ ਲਈ ਟੈਪ ਕਰੋ।</string>
+    <string name="clinic_sync_result_sent">ਤੁਹਾਡਾ ਨਵੀਨਤਮ ਡਾਟਾ ਤੁਹਾਡੇ ਕਲੀਨਿਕ ਨੂੰ ਭੇਜ ਦਿੱਤਾ ਗਿਆ।</string>
+    <string name="clinic_sync_result_failed">ਤੁਹਾਡਾ ਡਾਟਾ ਕਲੀਨਿਕ ਨੂੰ ਨਹੀਂ ਭੇਜਿਆ ਜਾ ਸਕਿਆ। Health.md ਖੋਲ੍ਹੋ ਅਤੇ ਦੁਬਾਰਾ ਕੋਸ਼ਿਸ਼ ਕਰੋ।</string>
+    <string name="clinic_sync_result_profile_missing">Health.md ਵਿੱਚ ਕਲੀਨਿਕ ਪਹੁੰਚ ਖੋਲ੍ਹੋ ਅਤੇ ਪਹਿਲਾਂ ਕਲੀਨਿਕ ਮੰਜ਼ਿਲ ਵਰਤੋ ਚੁਣੋ।</string>
 </resources>

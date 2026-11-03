@@ -60,6 +60,30 @@
       ]
     },
     {
+      "id": "account.clinic-sync-requests",
+      "name": "Clinic sync requests",
+      "classification": "planned",
+      "summary": "A patient with clinic-sponsored sharing may separately allow the clinic to request a sync. The phone registers a delegated doorbell with the notification-only wake service and delivers its key only to the approved clinic endpoint; a ring shows fixed, device-localized copy and only the patient's tap runs a clinic export of yesterday and today. The wake service receives no clinic metadata. Implemented on both platforms; disabled until push credentials are configured, with physical-device notification QA pending.",
+      "profiles": [],
+      "platforms": {
+        "apple": {
+          "state": "planned",
+          "target": "Complete APNs delivery, tap-to-export, revocation, and VoiceOver testing on a TestFlight build against the deployed wake service."
+        },
+        "android": {
+          "state": "planned",
+          "target": "Configure Firebase for the Play build, then complete FCM delivery, Android 13+ notification permission, tap-to-export, revocation, and TalkBack testing on supported devices."
+        }
+      },
+      "evidence": [
+        "packages/contracts/clinic-sponsorship/v1/contract.md",
+        "packages/contracts/clinic-sponsorship/v1/sync-doorbell-fixtures.json",
+        "apps/wake/src/wake.ts",
+        "apps/apple/HealthMd/iOS/ClinicSyncDoorbellManager.swift",
+        "apps/android/app/src/main/java/com/healthmd/data/clinicsync/ClinicSyncDoorbellManager.kt"
+      ]
+    },
+    {
       "id": "support.native-review-introduction",
       "name": "Optional introduction to native store reviews",
       "classification": "planned",

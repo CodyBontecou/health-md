@@ -1561,4 +1561,9 @@
     <string name="paywall_signal_plan_weekly">Săptămânal</string>
     <string name="paywall_signal_plan_yearly">Anual</string>
     <string name="paywall_signal_plan_lifetime">Pe viață</string>
+    <string name="clinic_sync_channel_name">Solicitări de sincronizare de la clinică</string>
+    <string name="clinic_sync_request_body">Clinica ta solicită cele mai recente date de sănătate. Atinge pentru a le trimite.</string>
+    <string name="clinic_sync_result_sent">Cele mai recente date au fost trimise clinicii tale.</string>
+    <string name="clinic_sync_result_failed">Datele nu au putut fi trimise clinicii. Deschide Health.md și încearcă din nou.</string>
+    <string name="clinic_sync_result_profile_missing">Deschide accesul clinicii în Health.md și alege mai întâi Folosește destinația clinicii.</string>
 </resources>

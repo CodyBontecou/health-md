@@ -91,10 +91,49 @@ Foreground refresh, periodic status evaluation and secure-store recovery update 
 Clinics cannot silently change an endpoint through the pilot API; a changed clinic/destination/policy
 binding requires fresh sharing consent and clears the prior upload credential.
 
+## Clinic sync requests (delegated doorbell)
+
+A patient may separately allow the clinic to request a sync. The toggle starts off, requires
+active sponsorship and authorized sharing, and asks for notification permission. Enabling it
+creates a random 32-byte doorbell key on the phone and registers only its SHA-256 with the
+RFC-0005 wake service as a `delegated-sync` doorbell (APNs on iPhone, FCM on Android). The wake
+service receives an opaque install identifier, the push token and the key hash; it never
+receives clinic, sponsorship, destination, endpoint or patient metadata. Only then does the phone
+deliver the doorbell to the approved clinic endpoint, with the same endpoint binding, upload
+credential and redirect rejection as clinic uploads:
+
+```http
+POST <approved clinic endpoint>
+Content-Type: application/json
+X-HealthMd-Message: clinic-sync-doorbell.v1
+
+{"type":"healthmd.clinic_sync_doorbell","version":1,"action":"enroll",
+ "wakeService":"https://healthmd-wake.costream.workers.dev",
+ "wakeId":"<opaque>","wakeKey":"<base64url 32 bytes, no padding>"}
+```
+
+Clinics distinguish this message by the header or `type`; it carries no health data. A clinic
+rings the doorbell with `POST <wakeService>/wake/request` and the RFC-0005 HMAC (key
+`SHA-256(wakeKey)`, message `"healthmd.wake.v1" ‖ nonce ‖ timestamp`); see
+`sync-doorbell-fixtures.json`. `peerLabel` is ignored: notification copy is fixed and localized
+on the phone, so a clinic cannot put text in front of the patient. Dedupe (30 s) and the hourly
+budget (6) apply per doorbell. `404 wake_unknown` means the patient revoked it; discard it.
+
+Turning the toggle off, revoking sharing, disconnecting, or any change of clinic, destination,
+policy or endpoint binding unregisters the doorbell at the wake service before local state is
+cleared, and best-effort sends `{"type":"healthmd.clinic_sync_doorbell","version":1,"action":"revoke","wakeId":"<opaque>"}`.
+A new binding requires the patient to enable it again.
+
+Tapping the notification foregrounds Health.md. The phone accepts only a doorbell it currently
+holds, then exports yesterday and today through the clinic profile, re-authorizing the grant and
+sharing choice exactly like any other clinic upload. A ring never grants access, changes
+settings, or uploads without that tap. Silent background execution is not part of v1.
+
 ## Qualification and service boundary
 
 Clinic membership metadata requires an independently reviewed service boundary. It must not
-enter analytics, the notification-only wake service, or the synthetic-only Practice runtime.
+enter analytics, the notification-only wake service, or the synthetic-only Practice runtime;
+delegated doorbells give the wake service no clinic metadata.
 The service receives no health exports. The production package separates patient HTTPS ingress
 from host-loopback operator/admin control, with bounded requests/rates, file-mounted secrets,
 aggregate-only logs, SQLite integrity checks and encrypted hourly backups. A disaster restore

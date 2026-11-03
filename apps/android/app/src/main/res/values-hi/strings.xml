@@ -1487,4 +1487,9 @@
     <string name="paywall_signal_plan_weekly">साप्ताहिक</string>
     <string name="paywall_signal_plan_yearly">वार्षिक</string>
     <string name="paywall_signal_plan_lifetime">आजीवन</string>
+    <string name="clinic_sync_channel_name">क्लिनिक के सिंक अनुरोध</string>
+    <string name="clinic_sync_request_body">आपका क्लिनिक आपका नवीनतम स्वास्थ्य डेटा मांग रहा है। भेजने के लिए टैप करें।</string>
+    <string name="clinic_sync_result_sent">आपका नवीनतम डेटा आपके क्लिनिक को भेज दिया गया।</string>
+    <string name="clinic_sync_result_failed">आपका डेटा क्लिनिक को नहीं भेजा जा सका। Health.md खोलें और फिर से कोशिश करें।</string>
+    <string name="clinic_sync_result_profile_missing">Health.md में क्लिनिक एक्सेस खोलें और पहले क्लिनिक गंतव्य का उपयोग करें चुनें।</string>
 </resources>

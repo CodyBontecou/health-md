@@ -132,6 +132,10 @@ android {
             buildConfigField("String", "WHOOP_TOKEN_BROKER_URL", configuredValue("WHOOP_TOKEN_BROKER_URL").asBuildConfigString())
             buildConfigField("String", "WHOOP_HEALTHMD_BROKER_URL", configuredValue("WHOOP_HEALTHMD_BROKER_URL").asBuildConfigString())
             buildConfigField("String", "WHOOP_HEALTHMD_BROKER_CLIENT_TOKEN", configuredValue("WHOOP_HEALTHMD_BROKER_CLIENT_TOKEN").asBuildConfigString())
+            // Clinic sync requests over FCM. Empty values keep the transport unavailable.
+            for (name in listOf("FIREBASE_PROJECT_ID", "FIREBASE_APPLICATION_ID", "FIREBASE_API_KEY", "FIREBASE_SENDER_ID")) {
+                buildConfigField("String", name, configuredValue(name).asBuildConfigString())
+            }
             signingConfig = signingConfigs.getByName("release")
         }
         create("fdroid") {
@@ -270,6 +274,7 @@ dependencies {
     add("playImplementation", libs.billing.ktx)
     add("playImplementation", libs.play.review)
     add("playImplementation", libs.play.review.ktx)
+    add("playImplementation", libs.firebase.messaging)
 
     // Tagged, on-device PDF authoring. The port is Apache-2.0. Its obsolete
     // Bouncy Castle transitives are excluded because direct-protocol already supplies bcprov-jdk18on.

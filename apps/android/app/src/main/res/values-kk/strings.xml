@@ -1454,4 +1454,9 @@
     <string name="paywall_signal_plan_weekly">Апта сайын</string>
     <string name="paywall_signal_plan_yearly">Жыл сайын</string>
     <string name="paywall_signal_plan_lifetime">Өмір бойы</string>
+    <string name="clinic_sync_channel_name">Клиникадан синхрондау сұраулары</string>
+    <string name="clinic_sync_request_body">Клиникаңыз денсаулығыңыз туралы соңғы деректерді сұрап отыр. Жіберу үшін түртіңіз.</string>
+    <string name="clinic_sync_result_sent">Соңғы деректеріңіз клиникаға жіберілді.</string>
+    <string name="clinic_sync_result_failed">Деректерді клиникаға жіберу мүмкін болмады. Health.md қолданбасын ашып, қайталап көріңіз.</string>
+    <string name="clinic_sync_result_profile_missing">Health.md ішінде клиника қолжетімділігін ашып, алдымен «Клиника мекенжайын пайдалану» опциясын таңдаңыз.</string>
 </resources>

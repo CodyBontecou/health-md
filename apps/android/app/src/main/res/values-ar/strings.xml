@@ -1706,4 +1706,9 @@
     <string name="paywall_signal_plan_weekly">أسبوعي</string>
     <string name="paywall_signal_plan_yearly">سنوي</string>
     <string name="paywall_signal_plan_lifetime">مدى الحياة</string>
+    <string name="clinic_sync_channel_name">طلبات المزامنة من العيادة</string>
+    <string name="clinic_sync_request_body">تطلب عيادتك أحدث بياناتك الصحية. اضغط لإرسالها.</string>
+    <string name="clinic_sync_result_sent">تم إرسال أحدث بياناتك إلى عيادتك.</string>
+    <string name="clinic_sync_result_failed">تعذر إرسال بياناتك إلى العيادة. افتح Health.md وحاول مرة أخرى.</string>
+    <string name="clinic_sync_result_profile_missing">افتح وصول العيادة في Health.md واختر استخدام وجهة العيادة أولاً.</string>
 </resources>

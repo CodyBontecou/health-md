@@ -142,7 +142,8 @@ Rows are keyed to the pairing, not the install; unpair removes the row regardles
   [packages/contracts/direct-protocol/v1/protocol.md](../../packages/contracts/direct-protocol/v1/protocol.md).
 - CLI-side credential storage and the bounded wake POST live in `apps/cli`; current `main` includes
   the client in every desktop build and uses this Worker's URL by default.
-- Android/FCM transport remains P3; the current Worker sends APNs only.
+- Android Direct CLI wake over FCM remains P3. FCM is used only for delegated sync doorbells
+  (amendment below); `platform: "fcm"` with `purpose: "direct-cli"` is rejected.
 - The Worker does not alter the frozen receipt-verifier's `/devices/register`, verification, or
   scheduled-export paths.
 
@@ -164,3 +165,30 @@ log (decisions 5–6):
    own D1 `healthmd-wake` database, own APNs secret bindings); the receipt-verifier stays frozen
    and untouched. Its original four commits were imported unsquashed into `apps/wake` on 2026-09-04.
    Supersedes the original "extends the existing worker" framing and RFC-0005 decision 3.
+
+## Amendment (2026-11-03): delegated sync doorbells and the FCM transport
+
+Clinic sync requests (clinic-sponsorship contract, "Clinic sync requests") reuse this doorbell
+without making the Worker aware of clinics:
+
+1. **Registration purpose.** `POST /wake/register` accepts optional `platform` (`apns` default,
+   or `fcm`) and `purpose` (`direct-cli` default, or `delegated-sync`). A delegated doorbell is
+   held by whoever the phone delivered the raw key to; the Worker stores only the opaque install
+   identity, push token and key hash, never the holder's name, endpoint or membership. Delegated
+   registrations reject `peerLabel`. Rotation keeps the original platform and purpose
+   (`409 wake_target_mismatch` otherwise). Migration `0002` adds both columns with defaults that
+   preserve every existing Direct CLI row.
+2. **Requests.** `/wake/request` keeps the same HMAC, timestamp, replay, dedupe and hourly budget.
+   For delegated doorbells a request's `peerLabel` is ignored, so the holder can never choose the
+   text a patient sees.
+3. **Payloads.** APNs uses fixed, device-localized copy: `title-loc-key`
+   `HEALTHMD_SYNC_REQUEST_TITLE`, `loc-key` `HEALTHMD_SYNC_REQUEST_BODY`, category
+   `HEALTHMD_SYNC_REQUEST`, and `healthmd: {kind: "delegated-sync-request", wakeId}`. FCM sends a
+   high-priority data-only message `{kind, wakeId}`; the Android app always posts the visible,
+   localized notification itself. Only the patient's tap starts an export.
+4. **FCM credentials.** `FCM_SERVICE_ACCOUNT_JSON` (a messaging-only service account) is a
+   Wrangler secret. Without it, FCM doorbells return `503 fcm_not_configured`; APNs behavior is
+   unchanged.
+
+Pinned vectors live in `packages/contracts/clinic-sponsorship/v1/sync-doorbell-fixtures.json` and
+are asserted by `apps/wake/src/delegated-sync.test.ts` and both native test suites.

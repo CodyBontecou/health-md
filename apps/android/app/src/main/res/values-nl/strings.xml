@@ -1513,4 +1513,9 @@
     <string name="paywall_signal_plan_weekly">Wekelijks</string>
     <string name="paywall_signal_plan_yearly">Jaarlijks</string>
     <string name="paywall_signal_plan_lifetime">Levenslang</string>
+    <string name="clinic_sync_channel_name">Synchronisatieverzoeken van de kliniek</string>
+    <string name="clinic_sync_request_body">Je kliniek vraagt om je nieuwste gezondheidsgegevens. Tik om ze te versturen.</string>
+    <string name="clinic_sync_result_sent">Je nieuwste gegevens zijn naar je kliniek verstuurd.</string>
+    <string name="clinic_sync_result_failed">Je gegevens konden niet naar je kliniek worden verstuurd. Open Health.md en probeer het opnieuw.</string>
+    <string name="clinic_sync_result_profile_missing">Open Klinische toegang in Health.md en kies eerst Klinische bestemming gebruiken.</string>
 </resources>
