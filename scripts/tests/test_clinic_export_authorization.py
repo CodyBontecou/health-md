@@ -23,7 +23,8 @@ class ClinicExportAuthorizationTests(unittest.TestCase):
         self.assertTrue({'personal-survives-revocation', 'expired', 'download', 'no-consent',
                          'stale-policy', 'suffix-host', 'missing-binding', 'encoded-path'} <= set(ids))
 
-    @unittest.skipUnless(shutil.which('swiftc'), 'Swift host toolchain required')
+    # The verifier and keychain seam import CryptoKit and Security, which only Apple SDKs ship.
+    @unittest.skipUnless(shutil.which('xcrun'), 'Apple Swift toolchain required')
     def test_swift_production_policy_matches_shared_cases(self):
         harness = r'''
 import Foundation
