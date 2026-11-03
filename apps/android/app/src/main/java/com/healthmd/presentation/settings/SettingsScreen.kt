@@ -184,7 +184,7 @@ fun SettingsScreen(
         }
 
         // Grouped as on the cross-platform Settings screen: Destinations, Data, App.
-        SectionLabel(stringResource(R.string.settings_section_destinations))
+        SectionLabel(stringResource(R.string.settings_section_destinations), modifier = Modifier.fillMaxWidth())
         SettingsNavigationCard(
             title = stringResource(R.string.settings_destination_folder_title),
             subtitle = stringResource(R.string.settings_destination_folder_subtitle),
@@ -204,7 +204,7 @@ fun SettingsScreen(
             onClick = onNavigateToAutomations,
         )
 
-        SectionLabel(stringResource(R.string.settings_section_data))
+        SectionLabel(stringResource(R.string.settings_section_data), modifier = Modifier.fillMaxWidth())
         // Profiles & Reports: occasional-use export configuration surfaces that
         // moved off the Export screen so daily export controls come first.
         ExportProfilesEntryCard(onOpen = onNavigateToExportProfiles)
@@ -228,7 +228,7 @@ fun SettingsScreen(
             onClick = onNavigateToSharedSetup,
         )
 
-        SectionLabel(stringResource(R.string.settings_section_app))
+        SectionLabel(stringResource(R.string.settings_section_app), modifier = Modifier.fillMaxWidth())
         ConfigurationProtectionSettingsCard(
             enabled = protectionEnabled,
             onEnabledChange = viewModel::setPreventAccidentalChanges,

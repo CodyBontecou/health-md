@@ -7,6 +7,7 @@ import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.healthmd.R
+import java.time.LocalDate
 
 /** Top-level destinations: Archive, Automations and Settings. Export now is a global action. */
 enum class NavDestination(
@@ -31,6 +32,9 @@ enum class NavDestination(
 object SubRoutes {
     /** The full export screen, opened from the global Export now action. */
     const val EXPORT_NOW = "export"
+    /** Export now preset to one date, opened by Backfill in the Archive. */
+    const val EXPORT_BACKFILL = "export/backfill/{date}"
+    fun exportBackfill(date: LocalDate): String = "export/backfill/$date"
     const val HISTORY = "history"
     const val ONBOARDING = "onboarding"
     const val METRIC_SELECTION = "metric_selection"

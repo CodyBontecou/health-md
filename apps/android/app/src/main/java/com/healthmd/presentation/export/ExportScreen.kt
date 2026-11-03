@@ -39,6 +39,7 @@ import androidx.compose.material.icons.outlined.UploadFile
 import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -109,6 +110,8 @@ fun ExportScreen(
     sleepDayAttribution: SleepDayAttribution = SleepDayAttribution.DEFAULT,
     /** Set when Export now opens over the Archive; shows Back and the screen title. */
     onBack: (() -> Unit)? = null,
+    /** Presets the range to this one date (Backfill from the Archive), once per entry. */
+    backfillDate: LocalDate? = null,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -261,6 +264,14 @@ fun ExportScreen(
                 allTimeSelected = uiState.allTimeSelected,
             )
         )
+    }
+    var backfillApplied by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(backfillDate) {
+        if (backfillDate != null && !backfillApplied) {
+            viewModel.setDateRange(backfillDate, backfillDate)
+            selectedDateRangeOption = DateRangeOption.Custom
+            backfillApplied = true
+        }
     }
 
     var showDebugPanel by remember { mutableStateOf(false) }

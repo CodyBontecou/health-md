@@ -333,29 +333,35 @@ fun HealthMdNavigation(
                 ArchiveScreen(
                     onExportNow = { navController.navigate(SubRoutes.EXPORT_NOW) { launchSingleTop = true } },
                     onOpenHistory = { navController.navigate(SubRoutes.HISTORY) { launchSingleTop = true } },
+                    onBackfill = { date -> navController.navigate(SubRoutes.exportBackfill(date)) },
                 )
             }
-            composable(SubRoutes.EXPORT_NOW) {
-                ExportScreen(
-                    onBack = {
-                        if (!navController.popBackStack()) {
-                            navController.navigate(NavDestination.ARCHIVE.route) { launchSingleTop = true }
-                        }
-                    },
-                    sleepDayAttribution = sleepDayAttribution,
-                    onNavigateToPaywall = {
-                        if (settingsViewModel.distributionPolicy.purchasesAvailable) {
-                            navController.navigate(PaywallEntryPoint.EXPORT_LIMIT.route)
-                        }
-                    },
-                    onNavigateToAdvancedSettings = { navController.navigate(SubRoutes.ADVANCED_SETTINGS) },
-                    onNavigateToSchedule = { navController.navigate(NavDestination.SCHEDULE.route) { launchSingleTop = true } },
-                    onNavigateToUpgrade = {
-                        if (settingsViewModel.distributionPolicy.purchasesAvailable) {
-                            navController.navigate(PaywallEntryPoint.UPGRADE.route)
-                        }
-                    },
-                )
+            // Backfill shares Export now; its route carries the one date to preset.
+            listOf(SubRoutes.EXPORT_NOW, SubRoutes.EXPORT_BACKFILL).forEach { route ->
+                composable(route) { entry ->
+                    ExportScreen(
+                        backfillDate = entry.arguments?.getString("date")
+                            ?.let { runCatching { LocalDate.parse(it) }.getOrNull() },
+                        onBack = {
+                            if (!navController.popBackStack()) {
+                                navController.navigate(NavDestination.ARCHIVE.route) { launchSingleTop = true }
+                            }
+                        },
+                        sleepDayAttribution = sleepDayAttribution,
+                        onNavigateToPaywall = {
+                            if (settingsViewModel.distributionPolicy.purchasesAvailable) {
+                                navController.navigate(PaywallEntryPoint.EXPORT_LIMIT.route)
+                            }
+                        },
+                        onNavigateToAdvancedSettings = { navController.navigate(SubRoutes.ADVANCED_SETTINGS) },
+                        onNavigateToSchedule = { navController.navigate(NavDestination.SCHEDULE.route) { launchSingleTop = true } },
+                        onNavigateToUpgrade = {
+                            if (settingsViewModel.distributionPolicy.purchasesAvailable) {
+                                navController.navigate(PaywallEntryPoint.UPGRADE.route)
+                            }
+                        },
+                    )
+                }
             }
             composable(NavDestination.SCHEDULE.route) {
                 var selectedAutomation by rememberSaveable { mutableStateOf<String?>(null) }

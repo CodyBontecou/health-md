@@ -14,7 +14,7 @@ The Archive is the first tab. It shows one month as a calendar of health dates â
 | --- | --- |
 | Complete | A run wrote this date. |
 | Partial | Health Connect had no data for the date, or a partial run did not record which dates failed. |
-| Missing | Every run that covered the date failed for it. Backfill opens Export now. |
+| Missing | Every run that covered the date failed for it. Backfill opens Export now set to that date. |
 | Not exported | Nothing in history covered the date, or it is in the future. |
 | Today | An export may still update today. |
 

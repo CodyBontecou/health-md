@@ -86,6 +86,8 @@ private val TWO_PANE_MIN_WIDTH = GeistBreakpoints.medium.dp
 fun ArchiveScreen(
     onExportNow: () -> Unit,
     onOpenHistory: () -> Unit,
+    /** Opens Export now preset to one missing date. */
+    onBackfill: (LocalDate) -> Unit,
     viewModel: ArchiveViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -127,14 +129,14 @@ fun ArchiveScreen(
                         Box(Modifier.weight(1.4f)) { calendar() }
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(GeistSpacing.space3)) {
                             ArchiveStatsCard(stats = state.month.stats, onShowGap = viewModel::jumpToGap)
-                            ArchiveDayCard(state = state, onExportNow = onExportNow)
+                            ArchiveDayCard(state = state, onBackfill = onBackfill)
                         }
                     }
                 } else {
                     Column(verticalArrangement = Arrangement.spacedBy(GeistSpacing.space3)) {
                         ArchiveStatsCard(stats = state.month.stats, onShowGap = viewModel::jumpToGap)
                         calendar()
-                        ArchiveDayCard(state = state, onExportNow = onExportNow)
+                        ArchiveDayCard(state = state, onBackfill = onBackfill)
                     }
                 }
             }
@@ -444,7 +446,7 @@ private fun LegendItem(status: CoverageStatus) {
 }
 
 @Composable
-private fun ArchiveDayCard(state: ArchiveUiState, onExportNow: () -> Unit) {
+private fun ArchiveDayCard(state: ArchiveUiState, onBackfill: (LocalDate) -> Unit) {
     val colors = LocalGeistColors.current
     val rows = state.selectedDay
     val (onTrack, due) = ArchiveCoverage.onTrack(rows)
@@ -492,7 +494,7 @@ private fun ArchiveDayCard(state: ArchiveUiState, onExportNow: () -> Unit) {
                 }
                 if (row.status == CoverageStatus.MISSING) {
                     Button(
-                        onClick = onExportNow,
+                        onClick = { onBackfill(state.selection.selectedDate) },
                         shape = CircleShape,
                         colors = ButtonDefaults.buttonColors(
                             containerColor = colors.brandPrimary,
