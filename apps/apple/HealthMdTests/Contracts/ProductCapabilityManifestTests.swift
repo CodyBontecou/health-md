@@ -31,6 +31,7 @@ final class ProductCapabilityManifestTests: XCTestCase {
         XCTAssertEqual(
             Self.ids(with: .planned, in: states),
             [
+                "account.clinic-sync-requests",
                 "core.shared-rust-profile-engine",
                 "export.coverage-calendar",
                 "setup.share-portable-configuration",
@@ -101,6 +102,7 @@ final class ProductCapabilityManifestTests: XCTestCase {
     }
 
     private static let sharedCapabilities: Set<String> = [
+        "account.clinic-sponsored-access",
         "account.myself_lifetime_claim",
             "purchase.free-export-journey",
         "export.daily-files",
@@ -132,6 +134,7 @@ final class ProductCapabilityManifestTests: XCTestCase {
 
     private static let appleCapabilities: Set<String> = [
         "purchase.family-sharing",
+        "support.native-review-introduction",
         "apple.lossless-healthkit-archive",
         "apple.medication-dose-events",
         "apple.state-of-mind",
@@ -161,7 +164,7 @@ final class ProductCapabilityManifestTests: XCTestCase {
         sharedCapabilities
             .union(appleCapabilities)
             .union(androidCapabilities)
-            .union(["source.private-platform-database", "apple.ads-purchase-attribution", "core.shared-rust-profile-engine", "export.coverage-calendar", "setup.share-portable-configuration"])
+            .union(["source.private-platform-database", "apple.ads-purchase-attribution", "core.shared-rust-profile-engine", "export.coverage-calendar", "setup.share-portable-configuration", "account.clinic-sync-requests"])
     }
 
     private enum ManifestError: Error {

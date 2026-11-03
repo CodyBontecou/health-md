@@ -55,13 +55,27 @@ class PaywallViewModelTest {
         coVerify(exactly = 1) { settings.setPurchased(true) }
     }
 
+    @Test fun sponsorshipAdmitsNavigationWithoutPersonalExportRightsOrLifetimePersistence() = runTest {
+        val settings = mockk<SettingsRepository>(relaxed = true)
+        every { settings.isPurchased } returns MutableStateFlow(false)
+        val model = model(settings, MutableStateFlow(false), MutableStateFlow(false), MutableStateFlow(true))
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { model.accessState.collect {} }
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { model.isUnlocked.collect {} }
+        advanceUntilIdle()
+        assertThat(model.accessState.value).isTrue()
+        assertThat(model.isUnlocked.value).isFalse()
+        coVerify(exactly = 0) { settings.setPurchased(any()) }
+    }
+
     private fun model(
         settings: SettingsRepository,
         live: MutableStateFlow<Boolean>,
         permanent: MutableStateFlow<Boolean>,
+        appAccess: MutableStateFlow<Boolean> = live,
     ): PaywallViewModel {
         val entitlement = mockk<EntitlementRepository>(relaxed = true)
         every { entitlement.isUnlocked } returns live
+        every { entitlement.canEnterApp } returns appAccess
         every { entitlement.isPermanentlyUnlocked } returns permanent
         val purchases = mockk<PurchaseRepository>(relaxed = true)
         every { purchases.isAvailable } returns true

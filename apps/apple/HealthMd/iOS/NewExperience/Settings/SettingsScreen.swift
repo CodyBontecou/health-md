@@ -24,6 +24,10 @@ struct SettingsScreen: View {
     @EnvironmentObject private var gatewaySettings: AgentDataGatewaySettings
     @EnvironmentObject private var healthKitManager: HealthKitManager
     @ObservedObject private var purchaseManager = PurchaseManager.shared
+    @ObservedObject private var clinicSponsorship = ClinicSponsorshipManager.shared
+
+    /// Clinic access appears when this build has reviewed clinic licensing configuration.
+    private var showsClinicAccess: Bool { clinicSponsorship.status.configured }
     @State private var path: [Route] = []
     @State private var showPaywall = false
     @AppStorage("syncEnabled") private var syncEnabled = false
@@ -160,9 +164,10 @@ struct SettingsScreen: View {
                                 showsDivider: !usesTwoPanes
                             ) { open(.connectedApps) }
                         }
-                        if PracticeFeaturePolicy.current.isEnabled {
+                        if showsClinicAccess {
                             GlassSettingsRow(
                                 title: String(localized: "Clinic access"),
+                                subtitle: clinicSponsorship.status.clinicName,
                                 systemImage: "cross.case.fill", tile: .settingsTileGreen,
                                 showsDivider: !usesTwoPanes || ConnectedAppsFeature.isEnabled
                             ) { open(.clinic) }
@@ -172,7 +177,7 @@ struct SettingsScreen: View {
                             title: String(localized: "Clinician report"),
                             systemImage: "doc.text.fill", tile: .settingsTileGray,
                             showsDivider: !usesTwoPanes || ConnectedAppsFeature.isEnabled
-                                || PracticeFeaturePolicy.current.isEnabled
+                                || showsClinicAccess
                         ) { open(.clinicianReport) }
                         if usesTwoPanes {
                             GlassSettingsRow(
@@ -236,11 +241,11 @@ struct SettingsScreen: View {
             GlassGatewayDestinationSheet(
                 settings: gatewaySettings,
                 presentedAsSheet: false,
-                onOpenClinicAccess: PracticeFeaturePolicy.current.isEnabled ? { open(.clinic) } : nil
+                onOpenClinicAccess: showsClinicAccess ? { open(.clinic) } : nil
             )
         case .clinic:
-            // Fail closed: a stale route never shows the screen once the gate is off.
-            if PracticeFeaturePolicy.current.isEnabled {
+            // Fail closed: a stale route never shows the screen once clinic licensing is off.
+            if showsClinicAccess {
                 GlassClinicAccessScreen(coordinator: profileCoordinator)
             }
         case .appSupport:

@@ -350,7 +350,7 @@ class ExportWorker @AssistedInject constructor(
         val historyOperationId = durableFolderOperationId ?: durableApiOperationId ?: admissionOperationId
         entitlementRepository.refresh()
         val isPurchased = distributionPolicy.fullAccessIncluded ||
-            entitlementRepository.verifyAccess()
+            entitlementRepository.verifyExportAccess(capturedTarget, settings.apiEndpointUrl.takeIf { settings.exportMode == com.healthmd.rawexport.ExportMode.COMPATIBILITY })
         val dates = scheduledDates(
             settings,
             destinationFingerprint,
@@ -511,7 +511,7 @@ class ExportWorker @AssistedInject constructor(
                         )
                     } else when (settings.scheduledExportTarget) {
                         ExportTarget.DEVICE_FOLDER -> {
-                            val orchestrator = ExportOrchestrator(healthRepository, exportRepository)
+                            val orchestrator = ExportOrchestrator(healthRepository, exportRepository, rawSnapshotExportRunner)
                             if (durableFolderOperationId != null && capturedSnapshotJson != null) {
                                 orchestrator.exportDatesDurably(
                                     dates = dates,

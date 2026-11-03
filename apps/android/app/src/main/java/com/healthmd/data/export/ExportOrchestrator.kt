@@ -18,6 +18,7 @@ import kotlin.coroutines.coroutineContext
 class ExportOrchestrator(
     private val healthRepository: HealthRepository,
     private val exportRepository: ExportRepository,
+    private val nativeDetailService: RawSnapshotService? = null,
 ) {
     suspend fun exportDates(
         dates: List<LocalDate>,
@@ -27,7 +28,7 @@ class ExportOrchestrator(
         dates = dates,
         settings = settings,
         onProgress = onProgress,
-    )
+    ).withNativeMetricDetails(dates, settings, nativeDetailService)
 
     suspend fun exportDatesDurably(
         dates: List<LocalDate>,
@@ -43,7 +44,7 @@ class ExportOrchestrator(
         durableSettingsSnapshotJson = durableSettingsSnapshotJson,
         requireExistingJournal = requireExistingJournal,
         onProgress = onProgress,
-    )
+    ).withNativeMetricDetails(dates, settings, nativeDetailService)
 
     private suspend fun exportDatesInternal(
         dates: List<LocalDate>,

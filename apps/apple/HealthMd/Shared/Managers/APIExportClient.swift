@@ -10,6 +10,7 @@ struct APIExportUploadResult {
 }
 
 enum APIExportClientError: LocalizedError {
+    case accessDenied
     case invalidEndpoint
     case invalidPayload
     case invalidResponse
@@ -18,6 +19,8 @@ enum APIExportClientError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
+        case .accessDenied:
+            return "This destination is not covered by your access."
         case .invalidEndpoint:
             return "Configure a valid HTTP or HTTPS API endpoint before exporting."
         case .invalidPayload:
@@ -36,6 +39,8 @@ enum APIExportClientError: LocalizedError {
 }
 
 struct APIExportClient {
+    typealias AccessAuthorizer = @MainActor (URL) async -> ClinicExportDecision
+    typealias ClinicContext = @MainActor (URL) -> (managed: Bool, authorization: String?)
     nonisolated static let defaultMaximumResponseBytes = 64 * 1_024
     #if DEBUG
     static let debugPinnedCertificateSHA256Key =
@@ -43,11 +48,20 @@ struct APIExportClient {
     #endif
 
     private let responseLoader: BoundedURLSessionDataLoader
+    private let clinicResponseLoader: BoundedURLSessionDataLoader
+    private let authorizeAccess: AccessAuthorizer
+    private let clinicContext: ClinicContext
     private let maximumResponseBytes: Int
 
     init(
-        maximumResponseBytes: Int = APIExportClient.defaultMaximumResponseBytes
+        maximumResponseBytes: Int = APIExportClient.defaultMaximumResponseBytes,
+        authorizeAccess: @escaping AccessAuthorizer = APIExportClient.productionAuthorization,
+        clinicContext: @escaping ClinicContext = APIExportClient.productionClinicContext
     ) {
+        self.authorizeAccess = authorizeAccess
+        self.clinicContext = clinicContext
+        self.clinicResponseLoader = BoundedURLSessionDataLoader(configuration: .ephemeral,
+            redirectHandler: { _, _ in nil })
         #if DEBUG
         if ExportPerformanceInstrumentation.currentRunContext?.target == .apiEndpoint,
            let endpointValue = UserDefaults.standard.string(
@@ -80,10 +94,32 @@ struct APIExportClient {
 
     init(
         session: URLSession,
-        maximumResponseBytes: Int = APIExportClient.defaultMaximumResponseBytes
+        maximumResponseBytes: Int = APIExportClient.defaultMaximumResponseBytes,
+        authorizeAccess: @escaping AccessAuthorizer = APIExportClient.productionAuthorization,
+        clinicContext: @escaping ClinicContext = APIExportClient.productionClinicContext
     ) {
+        self.authorizeAccess = authorizeAccess
+        self.clinicContext = clinicContext
+        self.clinicResponseLoader = BoundedURLSessionDataLoader(configuration: session.configuration,
+            redirectHandler: { _, _ in nil })
         self.responseLoader = BoundedURLSessionDataLoader(session: session)
         self.maximumResponseBytes = max(1, maximumResponseBytes)
+    }
+
+    @MainActor
+    private static func productionClinicContext(_ endpoint: URL) -> (managed: Bool, authorization: String?) {
+        let clinic = ClinicSponsorshipManager.shared
+        return (clinic.authorizeCached(endpoint: endpoint.absoluteString).isAllowed,
+                clinic.uploadAuthorization(endpoint: endpoint.absoluteString))
+    }
+
+    @MainActor
+    private static func productionAuthorization(_ endpoint: URL) async -> ClinicExportDecision {
+        await PurchaseManager.shared.refreshStatus()
+        if PurchaseManager.shared.canExport { return .allowedPersonal }
+        let clinic = ClinicSponsorshipManager.shared
+        await clinic.refresh()
+        return clinic.authorizeCached(endpoint: endpoint.absoluteString)
     }
 
     @MainActor
@@ -131,22 +167,73 @@ struct APIExportClient {
         return try await upload(payload: body, destination: destination)
     }
 
+    /// Sends a clinic control message (never health data) to the approved clinic
+    /// endpoint with the same binding, credential and redirect rejection as clinic
+    /// uploads. Personal destinations never receive control messages.
+    @MainActor
+    func sendClinicControlMessage(
+        _ body: Data,
+        messageType: String,
+        endpoint: URL
+    ) async throws {
+        guard !body.isEmpty else { throw APIExportClientError.invalidPayload }
+        let access = await authorizeAccess(endpoint)
+        let clinic = clinicContext(endpoint)
+        guard access.isAllowed, clinic.managed else { throw APIExportClientError.accessDenied }
+
+        var request = URLRequest(url: endpoint)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.setValue("Health.md iOS API Export", forHTTPHeaderField: "User-Agent")
+        request.setValue(messageType, forHTTPHeaderField: "X-HealthMd-Message")
+        if let credential = clinic.authorization {
+            request.setValue(credential, forHTTPHeaderField: "Authorization")
+        }
+        request.httpBody = body
+
+        let response: URLResponse
+        do {
+            (_, response) = try await clinicResponseLoader.data(for: request, maximumBytes: maximumResponseBytes)
+        } catch let error as BoundedURLSessionDataLoaderError {
+            switch error {
+            case .responseTooLarge(let statusCode, let maximumBytes, _):
+                throw APIExportClientError.responseTooLarge(statusCode: statusCode, maximumBytes: maximumBytes)
+            }
+        }
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw APIExportClientError.invalidResponse
+        }
+        guard (200..<300).contains(httpResponse.statusCode) else {
+            throw APIExportClientError.serverRejected(statusCode: httpResponse.statusCode, body: nil)
+        }
+    }
+
     /// Uploads an already encoded API envelope. The runner uses this overload
     /// so the payload measured for byte-aware batching is exactly the payload
     /// placed on the wire.
+    @MainActor
     func upload(
         payload: Data,
         destination: APIExportDestinationSnapshot
     ) async throws -> APIExportUploadResult {
         guard !payload.isEmpty else { throw APIExportClientError.invalidPayload }
+        let access = await authorizeAccess(destination.endpointURL)
+        guard access.isAllowed else { throw APIExportClientError.accessDenied }
+        let clinic = clinicContext(destination.endpointURL)
+        let managedClinic = clinic.managed
+        let loader = access == .allowedClinicDestination || managedClinic ? clinicResponseLoader : responseLoader
 
         var request = URLRequest(url: destination.endpointURL)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         request.setValue("Health.md iOS API Export", forHTTPHeaderField: "User-Agent")
-        if let authorization = destination.authorizationHeaderValue {
+        if access == .allowedPersonal, !managedClinic, let authorization = destination.authorizationHeaderValue {
             request.setValue(authorization, forHTTPHeaderField: "Authorization")
+        }
+        if let credential = clinic.authorization {
+            request.setValue(credential, forHTTPHeaderField: "Authorization")
         }
         #if DEBUG
         if let context = ExportPerformanceInstrumentation.currentRunContext,
@@ -162,7 +249,7 @@ struct APIExportClient {
         let data: Data
         let response: URLResponse
         do {
-            (data, response) = try await responseLoader.data(
+            (data, response) = try await loader.data(
                 for: request,
                 maximumBytes: maximumResponseBytes
             )
@@ -184,7 +271,7 @@ struct APIExportClient {
             throw APIExportClientError.invalidResponse
         }
 
-        let responsePreview = Self.responsePreview(from: data)
+        let responsePreview = access == .allowedPersonal && !managedClinic ? Self.responsePreview(from: data) : nil
         guard (200..<300).contains(httpResponse.statusCode) else {
             throw APIExportClientError.serverRejected(
                 statusCode: httpResponse.statusCode,
@@ -198,6 +285,7 @@ struct APIExportClient {
         )
     }
 
+    @MainActor
     func upload(
         payloadArtifact: ExportArtifactFile,
         destination: APIExportDestinationSnapshot
@@ -205,6 +293,11 @@ struct APIExportClient {
         guard payloadArtifact.descriptor.byteCount > 0 else {
             throw APIExportClientError.invalidPayload
         }
+        let access = await authorizeAccess(destination.endpointURL)
+        guard access.isAllowed else { throw APIExportClientError.accessDenied }
+        let clinic = clinicContext(destination.endpointURL)
+        let managedClinic = clinic.managed
+        let loader = access == .allowedClinicDestination || managedClinic ? clinicResponseLoader : responseLoader
 
         try payloadArtifact.validateIntegrity()
 
@@ -213,8 +306,11 @@ struct APIExportClient {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         request.setValue("Health.md iOS API Export", forHTTPHeaderField: "User-Agent")
-        if let authorization = destination.authorizationHeaderValue {
+        if access == .allowedPersonal, !managedClinic, let authorization = destination.authorizationHeaderValue {
             request.setValue(authorization, forHTTPHeaderField: "Authorization")
+        }
+        if let credential = clinic.authorization {
+            request.setValue(credential, forHTTPHeaderField: "Authorization")
         }
         #if DEBUG
         if let context = ExportPerformanceInstrumentation.currentRunContext,
@@ -229,7 +325,7 @@ struct APIExportClient {
         let data: Data
         let response: URLResponse
         do {
-            (data, response) = try await responseLoader.upload(
+            (data, response) = try await loader.upload(
                 for: request,
                 fromFile: payloadArtifact.url,
                 maximumBytes: maximumResponseBytes
@@ -251,7 +347,7 @@ struct APIExportClient {
         guard let httpResponse = response as? HTTPURLResponse else {
             throw APIExportClientError.invalidResponse
         }
-        let responsePreview = Self.responsePreview(from: data)
+        let responsePreview = access == .allowedPersonal && !managedClinic ? Self.responsePreview(from: data) : nil
         guard (200..<300).contains(httpResponse.statusCode) else {
             throw APIExportClientError.serverRejected(
                 statusCode: httpResponse.statusCode,

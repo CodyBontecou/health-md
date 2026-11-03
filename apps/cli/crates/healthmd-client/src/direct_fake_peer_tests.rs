@@ -1276,6 +1276,147 @@ fn rebound_history_acceptance_fixture(
 }
 
 #[tokio::test]
+#[allow(clippy::too_many_lines)]
+async fn android_export_rejection_preserves_reason_and_terminal_state() {
+    for (generated, malformed) in [(false, false), (true, false), (true, true)] {
+        let temporary = TempDir::new().unwrap();
+        let client = test_client(&temporary);
+        let trust = pair_fake_android(&client).await;
+        let destination = temporary.path().join("destination");
+        std::fs::create_dir(&destination).unwrap();
+        let created_at = Utc::now().with_nanosecond(0).unwrap();
+        let request = v2::ExportRequest {
+            job_id: Uuid::new_v4(),
+            created_at,
+            expires_at: created_at + chrono::Duration::seconds(JOB_LIFETIME_SECONDS),
+            source_installation_id: trust.installation_id.0,
+            date_selection: v2::DateSelection::Exact {
+                start_date: "2026-07-01".into(),
+                end_date: "2026-07-01".into(),
+            },
+            product: if generated {
+                v2::ExportProduct::GeneratedFilesV1 {
+                    settings_policy: v2::SettingsPolicy::RequestedScope,
+                    profile_reference: None,
+                }
+            } else {
+                v2::ExportProduct::AndroidProviderNativeSnapshotV1 {
+                    provider_id: "health_connect".into(),
+                    format: v2::RawSnapshotFormat::Json,
+                    scope: v2::RawSnapshotScope::AllAuthorizedSupportedData,
+                    include_exercise_routes: false,
+                }
+            },
+            destination: generated.then(|| v2::DestinationBinding {
+                binding_sha256: "a".repeat(64),
+                display_name: "destination".into(),
+            }),
+        };
+        let probe = tokio::net::TcpListener::bind(("127.0.0.1", 0))
+            .await
+            .unwrap();
+        let port = probe.local_addr().unwrap().port();
+        drop(probe);
+        let export = client.export_android(
+            request.clone(),
+            generated.then(|| destination.clone()),
+            Some(trust.installation_id.0),
+            port,
+            Duration::from_secs(5),
+        );
+        let peer = async {
+            let (mut channel, reconnect) =
+                connect_fake_mobile(port, 2, &trust.display_name, None, Some(&trust)).await;
+            channel
+                .send(&DirectMessage::Hello(Unlabeled::from(mobile_capabilities(
+                    &reconnect,
+                    PeerPlatform::Android,
+                    vec![2],
+                    None,
+                ))))
+                .await
+                .unwrap();
+            let _ = receive_cli_hello(&mut channel).await;
+            let mut hello = android_source_hello(&reconnect);
+            if generated {
+                hello.products[0].product_id = v2::ProductId::GeneratedFilesV1;
+            }
+            channel
+                .send_v2(&v2::Envelope::new(v2::Message::SourceHello(hello)))
+                .await
+                .unwrap();
+            assert_eq!(
+                channel.receive_v2().await.unwrap().message,
+                v2::Message::ExportRequest(request.clone())
+            );
+            channel
+                .send_v2(&v2::Envelope::new(v2::Message::ExportRejected(
+                    v2::ExportFailure {
+                        job_id: Some(request.job_id),
+                        code: v2::ErrorCode::QuotaExhausted,
+                        phase: v2::ExportPhase::Preparing,
+                        retryable: false,
+                        public_message: if malformed {
+                            "x".repeat(513)
+                        } else {
+                            "synthetic-private-peer-message".into()
+                        },
+                        details: std::collections::BTreeMap::from([(
+                            "private".into(),
+                            vec!["synthetic-private-detail".into()],
+                        )]),
+                    },
+                )))
+                .await
+                .unwrap();
+        };
+        let (result, ()) = tokio::join!(export, peer);
+        let error = result.unwrap_err();
+        assert_eq!(std::fs::read_dir(&destination).unwrap().count(), 0);
+        if malformed {
+            assert!(matches!(error, ClientError::ExportPaused(_)));
+            let record = client.v2_job_record(request.job_id).unwrap();
+            assert_eq!(record.state, JobState::Paused);
+            assert!(record.failure.is_none());
+            assert_eq!(record.committed_bytes, 0);
+            assert_eq!(record.committed_partitions, 0);
+            continue;
+        }
+        assert!(matches!(
+            error,
+            ClientError::ExportRejected(crate::ExportRejection {
+                code: v2::ErrorCode::QuotaExhausted,
+                phase: v2::ExportPhase::Preparing,
+                retryable: false,
+            })
+        ));
+        assert!(!error.to_string().contains("synthetic-private"));
+        let record = client.v2_job_record(request.job_id).unwrap();
+        assert_eq!(record.state, JobState::Failed);
+        assert_eq!(record.committed_bytes, 0);
+        assert_eq!(record.committed_partitions, 0);
+        let failure = record.failure.unwrap();
+        assert_eq!(failure.code, v2::ErrorCode::QuotaExhausted);
+        assert_eq!(failure.phase, v2::ExportPhase::Preparing);
+        assert!(!failure.retryable);
+        assert!(failure.details.is_empty());
+        assert!(!failure.public_message.contains("synthetic-private"));
+        assert_eq!(std::fs::read_dir(&destination).unwrap().count(), 0);
+        assert!(matches!(
+            client
+                .resume_android(
+                    request.job_id,
+                    Some(trust.installation_id.0),
+                    port,
+                    Duration::from_secs(1)
+                )
+                .await,
+            Err(ClientError::JobNotResumable(_, _))
+        ));
+    }
+}
+
+#[tokio::test]
 async fn note_hello_offer_is_conditional_for_ios_and_strict_android_peers() {
     for platform in [PeerPlatform::Ios, PeerPlatform::Android] {
         for versions in [

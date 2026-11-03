@@ -1,6 +1,39 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "Accept invitation" : {"localizations": {"de": {"stringUnit": {"state": "translated", "value": "Einladung annehmen"}}, "es": {"stringUnit": {"state": "translated", "value": "Aceptar invitación"}}, "fr": {"stringUnit": {"state": "translated", "value": "Accepter l’invitation"}}, "it": {"stringUnit": {"state": "translated", "value": "Accetta invito"}}, "ja": {"stringUnit": {"state": "translated", "value": "招待を受け入れる"}}, "ko": {"stringUnit": {"state": "translated", "value": "초대 수락"}}, "nl": {"stringUnit": {"state": "translated", "value": "Uitnodiging accepteren"}}, "pt-BR": {"stringUnit": {"state": "translated", "value": "Aceitar convite"}}, "zh-Hans": {"stringUnit": {"state": "translated", "value": "接受邀请"}}}},
+    "Allow sync requests from this clinic" : {"localizations": {"de": {"stringUnit": {"state": "translated", "value": "Synchronisierungsanfragen dieser Klinik erlauben"}}, "es": {"stringUnit": {"state": "translated", "value": "Permitir solicitudes de sincronización de esta clínica"}}, "fr": {"stringUnit": {"state": "translated", "value": "Autoriser les demandes de synchronisation de cette clinique"}}, "it": {"stringUnit": {"state": "translated", "value": "Consenti richieste di sincronizzazione da questa clinica"}}, "ja": {"stringUnit": {"state": "translated", "value": "このクリニックからの同期リクエストを許可"}}, "ko": {"stringUnit": {"state": "translated", "value": "이 병원의 동기화 요청 허용"}}, "nl": {"stringUnit": {"state": "translated", "value": "Synchronisatieverzoeken van deze kliniek toestaan"}}, "pt-BR": {"stringUnit": {"state": "translated", "value": "Permitir pedidos de sincronização desta clínica"}}, "zh-Hans": {"stringUnit": {"state": "translated", "value": "允许此诊所发送同步请求"}}}},
+    "Clinic access is not configured in this version of Health.md." : {"localizations": {"de": {"stringUnit": {"state": "translated", "value": "Klinikzugang ist in dieser Version von Health.md nicht eingerichtet."}}, "es": {"stringUnit": {"state": "translated", "value": "El acceso de clínica no está configurado en esta versión de Health.md."}}, "fr": {"stringUnit": {"state": "translated", "value": "L’accès clinique n’est pas configuré dans cette version de Health.md."}}, "it": {"stringUnit": {"state": "translated", "value": "L’accesso clinica non è configurato in questa versione di Health.md."}}, "ja": {"stringUnit": {"state": "translated", "value": "このバージョンのHealth.mdではクリニックアクセスが設定されていません。"}}, "ko": {"stringUnit": {"state": "translated", "value": "이 버전의 Health.md에는 병원 접근이 설정되어 있지 않습니다."}}, "nl": {"stringUnit": {"state": "translated", "value": "Kliniektoegang is niet ingesteld in deze versie van Health.md."}}, "pt-BR": {"stringUnit": {"state": "translated", "value": "O acesso da clínica não está configurado nesta versão do Health.md."}}, "zh-Hans": {"stringUnit": {"state": "translated", "value": "此版本的 Health.md 未配置诊所访问。"}}}},
+    "Clinic invitation" : {"localizations": {"de": {"stringUnit": {"state": "translated", "value": "Klinikeinladung"}}, "es": {"stringUnit": {"state": "translated", "value": "Invitación de la clínica"}}, "fr": {"stringUnit": {"state": "translated", "value": "Invitation de la clinique"}}, "it": {"stringUnit": {"state": "translated", "value": "Invito della clinica"}}, "ja": {"stringUnit": {"state": "translated", "value": "クリニックの招待"}}, "ko": {"stringUnit": {"state": "translated", "value": "병원 초대"}}, "nl": {"stringUnit": {"state": "translated", "value": "Uitnodiging van kliniek"}}, "pt-BR": {"stringUnit": {"state": "translated", "value": "Convite da clínica"}}, "zh-Hans": {"stringUnit": {"state": "translated", "value": "诊所邀请"}}}},
+    "Clinic-sponsored sharing will stop. Your own purchased access and local health data remain available." : {"localizations": {"de": {"stringUnit": {"state": "translated", "value": "Das von der Klinik gesponserte Teilen wird beendet. Dein selbst gekaufter Zugang und deine lokalen Gesundheitsdaten bleiben verfügbar."}}, "es": {"stringUnit": {"state": "translated", "value": "El uso compartido patrocinado por la clínica se detendrá. Tu acceso comprado y tus datos de salud locales seguirán disponibles."}}, "fr": {"stringUnit": {"state": "translated", "value": "Le partage parrainé par la clinique s’arrêtera. Votre accès acheté et vos données de santé locales restent disponibles."}}, "it": {"stringUnit": {"state": "translated", "value": "La condivisione sponsorizzata dalla clinica si interromperà. Il tuo accesso acquistato e i dati sanitari locali restano disponibili."}}, "ja": {"stringUnit": {"state": "translated", "value": "クリニック提供の共有は停止します。ご自身で購入したアクセスとローカルのヘルスケアデータは引き続き利用できます。"}}, "ko": {"stringUnit": {"state": "translated", "value": "병원이 후원하는 공유가 중단됩니다. 직접 구매한 이용 권한과 기기의 건강 데이터는 계속 사용할 수 있습니다."}}, "nl": {"stringUnit": {"state": "translated", "value": "Delen dat door de kliniek wordt gesponsord stopt. Je eigen gekochte toegang en lokale gezondheidsgegevens blijven beschikbaar."}}, "pt-BR": {"stringUnit": {"state": "translated", "value": "O compartilhamento patrocinado pela clínica será interrompido. Seu acesso comprado e seus dados de saúde locais continuam disponíveis."}}, "zh-Hans": {"stringUnit": {"state": "translated", "value": "诊所赞助的共享将停止。你自己购买的访问权限和本地健康数据仍然可用。"}}}},
+    "Could not configure the clinic connection. Please try again." : {"localizations": {"de": {"stringUnit": {"state": "translated", "value": "Die Klinikverbindung konnte nicht eingerichtet werden. Bitte versuche es erneut."}}, "es": {"stringUnit": {"state": "translated", "value": "No se pudo configurar la conexión con la clínica. Inténtalo de nuevo."}}, "fr": {"stringUnit": {"state": "translated", "value": "Impossible de configurer la connexion à la clinique. Veuillez réessayer."}}, "it": {"stringUnit": {"state": "translated", "value": "Impossibile configurare il collegamento con la clinica. Riprova."}}, "ja": {"stringUnit": {"state": "translated", "value": "クリニックとの接続を設定できませんでした。もう一度お試しください。"}}, "ko": {"stringUnit": {"state": "translated", "value": "병원 연결을 설정할 수 없습니다. 다시 시도해 주세요."}}, "nl": {"stringUnit": {"state": "translated", "value": "De verbinding met de kliniek kon niet worden ingesteld. Probeer het opnieuw."}}, "pt-BR": {"stringUnit": {"state": "translated", "value": "Não foi possível configurar a conexão com a clínica. Tente novamente."}}, "zh-Hans": {"stringUnit": {"state": "translated", "value": "无法配置诊所连接。请重试。"}}}},
+    "Could not save the upload token. Please try again." : {"localizations": {"de": {"stringUnit": {"state": "translated", "value": "Das Upload-Token konnte nicht gespeichert werden. Bitte versuche es erneut."}}, "es": {"stringUnit": {"state": "translated", "value": "No se pudo guardar el token de carga. Inténtalo de nuevo."}}, "fr": {"stringUnit": {"state": "translated", "value": "Impossible d’enregistrer le jeton d’envoi. Veuillez réessayer."}}, "it": {"stringUnit": {"state": "translated", "value": "Impossibile salvare il token di caricamento. Riprova."}}, "ja": {"stringUnit": {"state": "translated", "value": "アップロードトークンを保存できませんでした。もう一度お試しください。"}}, "ko": {"stringUnit": {"state": "translated", "value": "업로드 토큰을 저장할 수 없습니다. 다시 시도해 주세요."}}, "nl": {"stringUnit": {"state": "translated", "value": "Het uploadtoken kon niet worden opgeslagen. Probeer het opnieuw."}}, "pt-BR": {"stringUnit": {"state": "translated", "value": "Não foi possível salvar o token de envio. Tente novamente."}}, "zh-Hans": {"stringUnit": {"state": "translated", "value": "无法保存上传令牌。请重试。"}}}},
+    "Could not save your sharing choice. Please try again." : {"localizations": {"de": {"stringUnit": {"state": "translated", "value": "Deine Freigabeauswahl konnte nicht gespeichert werden. Bitte versuche es erneut."}}, "es": {"stringUnit": {"state": "translated", "value": "No se pudo guardar tu elección de uso compartido. Inténtalo de nuevo."}}, "fr": {"stringUnit": {"state": "translated", "value": "Impossible d’enregistrer votre choix de partage. Veuillez réessayer."}}, "it": {"stringUnit": {"state": "translated", "value": "Impossibile salvare la tua scelta di condivisione. Riprova."}}, "ja": {"stringUnit": {"state": "translated", "value": "共有の選択を保存できませんでした。もう一度お試しください。"}}, "ko": {"stringUnit": {"state": "translated", "value": "공유 선택을 저장할 수 없습니다. 다시 시도해 주세요."}}, "nl": {"stringUnit": {"state": "translated", "value": "Je deelkeuze kon niet worden opgeslagen. Probeer het opnieuw."}}, "pt-BR": {"stringUnit": {"state": "translated", "value": "Não foi possível salvar sua escolha de compartilhamento. Tente novamente."}}, "zh-Hans": {"stringUnit": {"state": "translated", "value": "无法保存你的共享选择。请重试。"}}}},
+    "Could not update clinic access. Check your connection, or retry your saved enrollment." : {"localizations": {"de": {"stringUnit": {"state": "translated", "value": "Der Klinikzugang konnte nicht aktualisiert werden. Prüfe deine Verbindung oder wiederhole die gespeicherte Anmeldung."}}, "es": {"stringUnit": {"state": "translated", "value": "No se pudo actualizar el acceso de la clínica. Revisa tu conexión o reintenta tu inscripción guardada."}}, "fr": {"stringUnit": {"state": "translated", "value": "Impossible de mettre à jour l’accès clinique. Vérifiez votre connexion ou relancez votre inscription enregistrée."}}, "it": {"stringUnit": {"state": "translated", "value": "Impossibile aggiornare l’accesso clinica. Controlla la connessione o riprova l’iscrizione salvata."}}, "ja": {"stringUnit": {"state": "translated", "value": "クリニックアクセスを更新できませんでした。接続を確認するか、保存済みの登録を再試行してください。"}}, "ko": {"stringUnit": {"state": "translated", "value": "병원 접근을 업데이트할 수 없습니다. 연결을 확인하거나 저장된 등록을 다시 시도하세요."}}, "nl": {"stringUnit": {"state": "translated", "value": "Kliniektoegang kon niet worden bijgewerkt. Controleer je verbinding of probeer je opgeslagen inschrijving opnieuw."}}, "pt-BR": {"stringUnit": {"state": "translated", "value": "Não foi possível atualizar o acesso da clínica. Verifique sua conexão ou tente novamente a inscrição salva."}}, "zh-Hans": {"stringUnit": {"state": "translated", "value": "无法更新诊所访问。请检查网络连接，或重试已保存的注册。"}}}},
+    "Enrollment recovery" : {"localizations": {"de": {"stringUnit": {"state": "translated", "value": "Anmeldung wiederherstellen"}}, "es": {"stringUnit": {"state": "translated", "value": "Recuperación de la inscripción"}}, "fr": {"stringUnit": {"state": "translated", "value": "Reprise de l’inscription"}}, "it": {"stringUnit": {"state": "translated", "value": "Ripristino iscrizione"}}, "ja": {"stringUnit": {"state": "translated", "value": "登録の復旧"}}, "ko": {"stringUnit": {"state": "translated", "value": "등록 복구"}}, "nl": {"stringUnit": {"state": "translated", "value": "Inschrijving herstellen"}}, "pt-BR": {"stringUnit": {"state": "translated", "value": "Recuperação da inscrição"}}, "zh-Hans": {"stringUnit": {"state": "translated", "value": "恢复注册"}}}},
+    "Invitation code" : {"localizations": {"de": {"stringUnit": {"state": "translated", "value": "Einladungscode"}}, "es": {"stringUnit": {"state": "translated", "value": "Código de invitación"}}, "fr": {"stringUnit": {"state": "translated", "value": "Code d’invitation"}}, "it": {"stringUnit": {"state": "translated", "value": "Codice di invito"}}, "ja": {"stringUnit": {"state": "translated", "value": "招待コード"}}, "ko": {"stringUnit": {"state": "translated", "value": "초대 코드"}}, "nl": {"stringUnit": {"state": "translated", "value": "Uitnodigingscode"}}, "pt-BR": {"stringUnit": {"state": "translated", "value": "Código de convite"}}, "zh-Hans": {"stringUnit": {"state": "translated", "value": "邀请码"}}}},
+    "Retry enrollment" : {"localizations": {"de": {"stringUnit": {"state": "translated", "value": "Anmeldung wiederholen"}}, "es": {"stringUnit": {"state": "translated", "value": "Reintentar inscripción"}}, "fr": {"stringUnit": {"state": "translated", "value": "Relancer l’inscription"}}, "it": {"stringUnit": {"state": "translated", "value": "Riprova iscrizione"}}, "ja": {"stringUnit": {"state": "translated", "value": "登録を再試行"}}, "ko": {"stringUnit": {"state": "translated", "value": "등록 다시 시도"}}, "nl": {"stringUnit": {"state": "translated", "value": "Inschrijving opnieuw proberen"}}, "pt-BR": {"stringUnit": {"state": "translated", "value": "Tentar inscrição novamente"}}, "zh-Hans": {"stringUnit": {"state": "translated", "value": "重试注册"}}}},
+    "Stored securely, used only for this clinic’s endpoint." : {"localizations": {"de": {"stringUnit": {"state": "translated", "value": "Sicher gespeichert, nur für den Endpunkt dieser Klinik verwendet."}}, "es": {"stringUnit": {"state": "translated", "value": "Se guarda de forma segura y solo se usa para el endpoint de esta clínica."}}, "fr": {"stringUnit": {"state": "translated", "value": "Stocké en sécurité, utilisé uniquement pour l’endpoint de cette clinique."}}, "it": {"stringUnit": {"state": "translated", "value": "Archiviato in modo sicuro, usato solo per l’endpoint di questa clinica."}}, "ja": {"stringUnit": {"state": "translated", "value": "安全に保存され、このクリニックのエンドポイントにのみ使用されます。"}}, "ko": {"stringUnit": {"state": "translated", "value": "안전하게 저장되며 이 병원의 엔드포인트에만 사용됩니다."}}, "nl": {"stringUnit": {"state": "translated", "value": "Veilig opgeslagen, alleen gebruikt voor het endpoint van deze kliniek."}}, "pt-BR": {"stringUnit": {"state": "translated", "value": "Armazenado com segurança e usado apenas para o endpoint desta clínica."}}, "zh-Hans": {"stringUnit": {"state": "translated", "value": "安全存储，仅用于此诊所的端点。"}}}},
+    "Sync requests" : {"localizations": {"de": {"stringUnit": {"state": "translated", "value": "Synchronisierungsanfragen"}}, "es": {"stringUnit": {"state": "translated", "value": "Solicitudes de sincronización"}}, "fr": {"stringUnit": {"state": "translated", "value": "Demandes de synchronisation"}}, "it": {"stringUnit": {"state": "translated", "value": "Richieste di sincronizzazione"}}, "ja": {"stringUnit": {"state": "translated", "value": "同期リクエスト"}}, "ko": {"stringUnit": {"state": "translated", "value": "동기화 요청"}}, "nl": {"stringUnit": {"state": "translated", "value": "Synchronisatieverzoeken"}}, "pt-BR": {"stringUnit": {"state": "translated", "value": "Pedidos de sincronização"}}, "zh-Hans": {"stringUnit": {"state": "translated", "value": "同步请求"}}}},
+    "Unlock your phone and try again. Clinic access could not be read securely." : {"localizations": {"de": {"stringUnit": {"state": "translated", "value": "Entsperre dein iPhone und versuche es erneut. Der Klinikzugang konnte nicht sicher gelesen werden."}}, "es": {"stringUnit": {"state": "translated", "value": "Desbloquea tu teléfono e inténtalo de nuevo. No se pudo leer el acceso de la clínica de forma segura."}}, "fr": {"stringUnit": {"state": "translated", "value": "Déverrouillez votre téléphone et réessayez. L’accès clinique n’a pas pu être lu en sécurité."}}, "it": {"stringUnit": {"state": "translated", "value": "Sblocca il telefono e riprova. Non è stato possibile leggere l’accesso clinica in modo sicuro."}}, "ja": {"stringUnit": {"state": "translated", "value": "iPhoneのロックを解除してもう一度お試しください。クリニックアクセスを安全に読み取れませんでした。"}}, "ko": {"stringUnit": {"state": "translated", "value": "휴대폰 잠금을 해제하고 다시 시도하세요. 병원 접근 정보를 안전하게 읽을 수 없습니다."}}, "nl": {"stringUnit": {"state": "translated", "value": "Ontgrendel je telefoon en probeer het opnieuw. Kliniektoegang kon niet veilig worden gelezen."}}, "pt-BR": {"stringUnit": {"state": "translated", "value": "Desbloqueie o telefone e tente novamente. Não foi possível ler o acesso da clínica com segurança."}}, "zh-Hans": {"stringUnit": {"state": "translated", "value": "请解锁手机后重试。无法安全读取诊所访问信息。"}}}},
+    "Updating clinic access…" : {"localizations": {"de": {"stringUnit": {"state": "translated", "value": "Klinikzugang wird aktualisiert …"}}, "es": {"stringUnit": {"state": "translated", "value": "Actualizando el acceso de la clínica…"}}, "fr": {"stringUnit": {"state": "translated", "value": "Mise à jour de l’accès clinique…"}}, "it": {"stringUnit": {"state": "translated", "value": "Aggiornamento dell’accesso clinica…"}}, "ja": {"stringUnit": {"state": "translated", "value": "クリニックアクセスを更新中…"}}, "ko": {"stringUnit": {"state": "translated", "value": "병원 접근 업데이트 중…"}}, "nl": {"stringUnit": {"state": "translated", "value": "Kliniektoegang bijwerken…"}}, "pt-BR": {"stringUnit": {"state": "translated", "value": "Atualizando o acesso da clínica…"}}, "zh-Hans": {"stringUnit": {"state": "translated", "value": "正在更新诊所访问…"}}}},
+    "Your clinic can send a notification asking for your latest data. Nothing is sent until you tap it; then yesterday and today are shared with this clinic. Turning this off stops new requests." : {"localizations": {"de": {"stringUnit": {"state": "translated", "value": "Deine Klinik kann dir eine Mitteilung senden und um deine neuesten Daten bitten. Es wird nichts gesendet, bevor du darauf tippst; dann werden gestern und heute mit dieser Klinik geteilt. Wenn du dies ausschaltest, kommen keine neuen Anfragen mehr."}}, "es": {"stringUnit": {"state": "translated", "value": "Tu clínica puede enviarte una notificación para pedir tus datos más recientes. No se envía nada hasta que la tocas; entonces se comparten ayer y hoy con esta clínica. Si lo desactivas, dejarán de llegar solicitudes."}}, "fr": {"stringUnit": {"state": "translated", "value": "Votre clinique peut vous envoyer une notification pour demander vos dernières données. Rien n’est envoyé tant que vous ne la touchez pas ; hier et aujourd’hui sont alors partagés avec cette clinique. Désactiver cette option arrête les nouvelles demandes."}}, "it": {"stringUnit": {"state": "translated", "value": "La tua clinica può inviarti una notifica per chiedere i tuoi dati più recenti. Non viene inviato nulla finché non la tocchi; poi ieri e oggi vengono condivisi con questa clinica. Disattivando questa opzione si interrompono le nuove richieste."}}, "ja": {"stringUnit": {"state": "translated", "value": "クリニックは最新データを求める通知を送ることができます。通知をタップするまで何も送信されません。タップすると昨日と今日のデータがこのクリニックと共有されます。オフにすると新しいリクエストは届きません。"}}, "ko": {"stringUnit": {"state": "translated", "value": "병원은 최신 데이터를 요청하는 알림을 보낼 수 있습니다. 알림을 탭하기 전에는 아무것도 전송되지 않으며, 탭하면 어제와 오늘의 데이터가 이 병원과 공유됩니다. 끄면 새 요청이 중단됩니다."}}, "nl": {"stringUnit": {"state": "translated", "value": "Je kliniek kan een melding sturen met de vraag om je nieuwste gegevens. Er wordt niets verstuurd tot je erop tikt; dan worden gisteren en vandaag met deze kliniek gedeeld. Als je dit uitzet, stoppen nieuwe verzoeken."}}, "pt-BR": {"stringUnit": {"state": "translated", "value": "Sua clínica pode enviar uma notificação pedindo seus dados mais recentes. Nada é enviado até você tocar nela; então ontem e hoje são compartilhados com esta clínica. Desativar isso interrompe novos pedidos."}}, "zh-Hans": {"stringUnit": {"state": "translated", "value": "你的诊所可以发送通知，请求你最新的数据。在你轻点通知之前不会发送任何内容；轻点后会与此诊所共享昨天和今天的数据。关闭后将不再接收新的请求。"}}}},
+    "Your clinic can sponsor delivery to its approved endpoint. You choose what to share. Other export destinations require your own Health.md access." : {"localizations": {"de": {"stringUnit": {"state": "translated", "value": "Deine Klinik kann die Übermittlung an ihren freigegebenen Endpunkt sponsern. Du entscheidest, was geteilt wird. Andere Exportziele erfordern deinen eigenen Health.md-Zugang."}}, "es": {"stringUnit": {"state": "translated", "value": "Tu clínica puede patrocinar el envío a su endpoint aprobado. Tú eliges qué compartir. Otros destinos de exportación requieren tu propio acceso a Health.md."}}, "fr": {"stringUnit": {"state": "translated", "value": "Votre clinique peut parrainer l’envoi vers son endpoint approuvé. Vous choisissez ce que vous partagez. Les autres destinations d’exportation nécessitent votre propre accès Health.md."}}, "it": {"stringUnit": {"state": "translated", "value": "La tua clinica può sponsorizzare l’invio al suo endpoint approvato. Scegli tu cosa condividere. Le altre destinazioni di esportazione richiedono un tuo accesso a Health.md."}}, "ja": {"stringUnit": {"state": "translated", "value": "クリニックは承認済みのエンドポイントへの送信を提供できます。共有する内容はあなたが選びます。その他の書き出し先にはご自身のHealth.mdアクセスが必要です。"}}, "ko": {"stringUnit": {"state": "translated", "value": "병원은 승인된 엔드포인트로의 전송을 후원할 수 있습니다. 공유할 항목은 직접 선택합니다. 다른 내보내기 대상에는 본인의 Health.md 이용 권한이 필요합니다."}}, "nl": {"stringUnit": {"state": "translated", "value": "Je kliniek kan levering aan haar goedgekeurde endpoint sponsoren. Jij kiest wat je deelt. Andere exportbestemmingen vereisen je eigen Health.md-toegang."}}, "pt-BR": {"stringUnit": {"state": "translated", "value": "Sua clínica pode patrocinar o envio para o endpoint aprovado dela. Você escolhe o que compartilhar. Outros destinos de exportação exigem seu próprio acesso ao Health.md."}}, "zh-Hans": {"stringUnit": {"state": "translated", "value": "你的诊所可以赞助向其批准的端点发送数据。由你决定共享哪些内容。其他导出目标需要你自己的 Health.md 访问权限。"}}}},
+    "Your invitation is saved securely. Retry to finish enrollment; you do not need a new code." : {"localizations": {"de": {"stringUnit": {"state": "translated", "value": "Deine Einladung ist sicher gespeichert. Versuche es erneut, um die Anmeldung abzuschließen; du brauchst keinen neuen Code."}}, "es": {"stringUnit": {"state": "translated", "value": "Tu invitación está guardada de forma segura. Reintenta para terminar la inscripción; no necesitas un código nuevo."}}, "fr": {"stringUnit": {"state": "translated", "value": "Votre invitation est enregistrée en sécurité. Réessayez pour terminer l’inscription ; aucun nouveau code n’est nécessaire."}}, "it": {"stringUnit": {"state": "translated", "value": "Il tuo invito è salvato in modo sicuro. Riprova per completare l’iscrizione; non serve un nuovo codice."}}, "ja": {"stringUnit": {"state": "translated", "value": "招待は安全に保存されています。再試行して登録を完了してください。新しいコードは不要です。"}}, "ko": {"stringUnit": {"state": "translated", "value": "초대가 안전하게 저장되어 있습니다. 다시 시도해 등록을 완료하세요. 새 코드는 필요하지 않습니다."}}, "nl": {"stringUnit": {"state": "translated", "value": "Je uitnodiging is veilig opgeslagen. Probeer opnieuw om de inschrijving te voltooien; je hebt geen nieuwe code nodig."}}, "pt-BR": {"stringUnit": {"state": "translated", "value": "Seu convite está salvo com segurança. Tente novamente para concluir a inscrição; você não precisa de um novo código."}}, "zh-Hans": {"stringUnit": {"state": "translated", "value": "你的邀请已安全保存。重试即可完成注册，无需新的邀请码。"}}}},
+    "Have a clinic invitation?" : {"localizations": {"de": {"stringUnit": {"state": "translated", "value": "Hast du eine Klinikeinladung?"}}, "es": {"stringUnit": {"state": "translated", "value": "¿Tienes una invitación de una clínica?"}}, "fr": {"stringUnit": {"state": "translated", "value": "Vous avez une invitation d’une clinique ?"}}, "it": {"stringUnit": {"state": "translated", "value": "Hai un invito da una clinica?"}}, "ja": {"stringUnit": {"state": "translated", "value": "クリニックからの招待をお持ちですか？"}}, "ko": {"stringUnit": {"state": "translated", "value": "병원 초대를 받으셨나요?"}}, "nl": {"stringUnit": {"state": "translated", "value": "Heb je een uitnodiging van een kliniek?"}}, "pt-BR": {"stringUnit": {"state": "translated", "value": "Tem um convite da clínica?"}}, "zh-Hans": {"stringUnit": {"state": "translated", "value": "有诊所邀请？"}}}},
+    "Allow sharing with this clinic first." : {"localizations": {"de": {"stringUnit": {"state": "translated", "value": "Erlaube zuerst das Teilen mit dieser Klinik."}}, "es": {"stringUnit": {"state": "translated", "value": "Primero permite compartir con esta clínica."}}, "fr": {"stringUnit": {"state": "translated", "value": "Autorisez d’abord le partage avec cette clinique."}}, "it": {"stringUnit": {"state": "translated", "value": "Consenti prima la condivisione con questa clinica."}}, "ja": {"stringUnit": {"state": "translated", "value": "先にこのクリニックとの共有を許可してください。"}}, "ko": {"stringUnit": {"state": "translated", "value": "먼저 이 병원과의 공유를 허용하세요."}}, "nl": {"stringUnit": {"state": "translated", "value": "Sta eerst delen met deze kliniek toe."}}, "pt-BR": {"stringUnit": {"state": "translated", "value": "Primeiro permita o compartilhamento com esta clínica."}}, "zh-Hans": {"stringUnit": {"state": "translated", "value": "请先允许与此诊所共享。"}}}},
+    "Notification permission was not granted. Allow notifications for Health.md in Settings." : {"localizations": {"de": {"stringUnit": {"state": "translated", "value": "Die Mitteilungsberechtigung wurde nicht erteilt. Erlaube Mitteilungen für Health.md in den Einstellungen."}}, "es": {"stringUnit": {"state": "translated", "value": "No se concedió el permiso de notificaciones. Permite las notificaciones de Health.md en Ajustes."}}, "fr": {"stringUnit": {"state": "translated", "value": "L’autorisation des notifications n’a pas été accordée. Autorisez les notifications de Health.md dans Réglages."}}, "it": {"stringUnit": {"state": "translated", "value": "L’autorizzazione alle notifiche non è stata concessa. Consenti le notifiche per Health.md in Impostazioni."}}, "ja": {"stringUnit": {"state": "translated", "value": "通知が許可されていません。「設定」でHealth.mdの通知を許可してください。"}}, "ko": {"stringUnit": {"state": "translated", "value": "알림 권한이 허용되지 않았습니다. 설정에서 Health.md 알림을 허용하세요."}}, "nl": {"stringUnit": {"state": "translated", "value": "Toestemming voor meldingen is niet gegeven. Sta meldingen voor Health.md toe in Instellingen."}}, "pt-BR": {"stringUnit": {"state": "translated", "value": "A permissão de notificações não foi concedida. Permita notificações do Health.md em Ajustes."}}, "zh-Hans": {"stringUnit": {"state": "translated", "value": "未授予通知权限。请在“设置”中允许 Health.md 的通知。"}}}},
+    "Notifications are not ready yet. Try again in a moment." : {"localizations": {"de": {"stringUnit": {"state": "translated", "value": "Mitteilungen sind noch nicht bereit. Versuche es gleich noch einmal."}}, "es": {"stringUnit": {"state": "translated", "value": "Las notificaciones aún no están listas. Inténtalo de nuevo en un momento."}}, "fr": {"stringUnit": {"state": "translated", "value": "Les notifications ne sont pas encore prêtes. Réessayez dans un instant."}}, "it": {"stringUnit": {"state": "translated", "value": "Le notifiche non sono ancora pronte. Riprova tra poco."}}, "ja": {"stringUnit": {"state": "translated", "value": "通知の準備がまだできていません。しばらくしてからもう一度お試しください。"}}, "ko": {"stringUnit": {"state": "translated", "value": "알림이 아직 준비되지 않았습니다. 잠시 후 다시 시도하세요."}}, "nl": {"stringUnit": {"state": "translated", "value": "Meldingen zijn nog niet klaar. Probeer het zo opnieuw."}}, "pt-BR": {"stringUnit": {"state": "translated", "value": "As notificações ainda não estão prontas. Tente novamente em instantes."}}, "zh-Hans": {"stringUnit": {"state": "translated", "value": "通知尚未就绪。请稍后重试。"}}}},
+    "The request key could not be generated." : {"localizations": {"de": {"stringUnit": {"state": "translated", "value": "Der Anfrageschlüssel konnte nicht erzeugt werden."}}, "es": {"stringUnit": {"state": "translated", "value": "No se pudo generar la clave de solicitud."}}, "fr": {"stringUnit": {"state": "translated", "value": "La clé de demande n’a pas pu être générée."}}, "it": {"stringUnit": {"state": "translated", "value": "Impossibile generare la chiave di richiesta."}}, "ja": {"stringUnit": {"state": "translated", "value": "リクエストキーを生成できませんでした。"}}, "ko": {"stringUnit": {"state": "translated", "value": "요청 키를 생성할 수 없습니다."}}, "nl": {"stringUnit": {"state": "translated", "value": "De verzoeksleutel kon niet worden aangemaakt."}}, "pt-BR": {"stringUnit": {"state": "translated", "value": "Não foi possível gerar a chave de pedido."}}, "zh-Hans": {"stringUnit": {"state": "translated", "value": "无法生成请求密钥。"}}}},
+    "The notification service is not available. Try again later." : {"localizations": {"de": {"stringUnit": {"state": "translated", "value": "Der Mitteilungsdienst ist nicht verfügbar. Versuche es später erneut."}}, "es": {"stringUnit": {"state": "translated", "value": "El servicio de notificaciones no está disponible. Inténtalo más tarde."}}, "fr": {"stringUnit": {"state": "translated", "value": "Le service de notifications n’est pas disponible. Réessayez plus tard."}}, "it": {"stringUnit": {"state": "translated", "value": "Il servizio di notifiche non è disponibile. Riprova più tardi."}}, "ja": {"stringUnit": {"state": "translated", "value": "通知サービスを利用できません。後でもう一度お試しください。"}}, "ko": {"stringUnit": {"state": "translated", "value": "알림 서비스를 사용할 수 없습니다. 나중에 다시 시도하세요."}}, "nl": {"stringUnit": {"state": "translated", "value": "De meldingsdienst is niet beschikbaar. Probeer het later opnieuw."}}, "pt-BR": {"stringUnit": {"state": "translated", "value": "O serviço de notificações não está disponível. Tente novamente mais tarde."}}, "zh-Hans": {"stringUnit": {"state": "translated", "value": "通知服务不可用。请稍后重试。"}}}},
+    "Your clinic could not be reached. Try again later." : {"localizations": {"de": {"stringUnit": {"state": "translated", "value": "Deine Klinik ist nicht erreichbar. Versuche es später erneut."}}, "es": {"stringUnit": {"state": "translated", "value": "No se pudo contactar con tu clínica. Inténtalo más tarde."}}, "fr": {"stringUnit": {"state": "translated", "value": "Votre clinique est injoignable. Réessayez plus tard."}}, "it": {"stringUnit": {"state": "translated", "value": "Impossibile raggiungere la tua clinica. Riprova più tardi."}}, "ja": {"stringUnit": {"state": "translated", "value": "クリニックに接続できませんでした。後でもう一度お試しください。"}}, "ko": {"stringUnit": {"state": "translated", "value": "병원에 연결할 수 없습니다. 나중에 다시 시도하세요."}}, "nl": {"stringUnit": {"state": "translated", "value": "Je kliniek is niet bereikbaar. Probeer het later opnieuw."}}, "pt-BR": {"stringUnit": {"state": "translated", "value": "Não foi possível contatar sua clínica. Tente novamente mais tarde."}}, "zh-Hans": {"stringUnit": {"state": "translated", "value": "无法连接到你的诊所。请稍后重试。"}}}},
+    "Unlock your phone and try again. The request key could not be stored securely." : {"localizations": {"de": {"stringUnit": {"state": "translated", "value": "Entsperre dein iPhone und versuche es erneut. Der Anfrageschlüssel konnte nicht sicher gespeichert werden."}}, "es": {"stringUnit": {"state": "translated", "value": "Desbloquea tu teléfono e inténtalo de nuevo. No se pudo guardar la clave de solicitud de forma segura."}}, "fr": {"stringUnit": {"state": "translated", "value": "Déverrouillez votre téléphone et réessayez. La clé de demande n’a pas pu être stockée en sécurité."}}, "it": {"stringUnit": {"state": "translated", "value": "Sblocca il telefono e riprova. Non è stato possibile salvare la chiave di richiesta in modo sicuro."}}, "ja": {"stringUnit": {"state": "translated", "value": "iPhoneのロックを解除してもう一度お試しください。リクエストキーを安全に保存できませんでした。"}}, "ko": {"stringUnit": {"state": "translated", "value": "휴대폰 잠금을 해제하고 다시 시도하세요. 요청 키를 안전하게 저장할 수 없습니다."}}, "nl": {"stringUnit": {"state": "translated", "value": "Ontgrendel je telefoon en probeer het opnieuw. De verzoeksleutel kon niet veilig worden opgeslagen."}}, "pt-BR": {"stringUnit": {"state": "translated", "value": "Desbloqueie o telefone e tente novamente. Não foi possível armazenar a chave de pedido com segurança."}}, "zh-Hans": {"stringUnit": {"state": "translated", "value": "请解锁手机后重试。无法安全存储请求密钥。"}}}},
+    "Clinic sharing is off, so nothing was sent." : {"localizations": {"de": {"stringUnit": {"state": "translated", "value": "Das Teilen mit der Klinik ist aus, daher wurde nichts gesendet."}}, "es": {"stringUnit": {"state": "translated", "value": "El uso compartido con la clínica está desactivado, así que no se envió nada."}}, "fr": {"stringUnit": {"state": "translated", "value": "Le partage avec la clinique est désactivé, rien n’a donc été envoyé."}}, "it": {"stringUnit": {"state": "translated", "value": "La condivisione con la clinica è disattivata, quindi non è stato inviato nulla."}}, "ja": {"stringUnit": {"state": "translated", "value": "クリニックとの共有がオフのため、何も送信されませんでした。"}}, "ko": {"stringUnit": {"state": "translated", "value": "병원 공유가 꺼져 있어 아무것도 전송되지 않았습니다."}}, "nl": {"stringUnit": {"state": "translated", "value": "Delen met de kliniek staat uit, dus er is niets verstuurd."}}, "pt-BR": {"stringUnit": {"state": "translated", "value": "O compartilhamento com a clínica está desativado, então nada foi enviado."}}, "zh-Hans": {"stringUnit": {"state": "translated", "value": "与诊所的共享已关闭，因此未发送任何内容。"}}}},
+    "Open Health.md and choose “Use clinic destination” in Clinic access first." : {"localizations": {"de": {"stringUnit": {"state": "translated", "value": "Öffne Health.md und wähle zuerst „Klinikziel verwenden“ im Klinikzugang."}}, "es": {"stringUnit": {"state": "translated", "value": "Abre Health.md y elige primero “Usar destino de la clínica” en Acceso de la clínica."}}, "fr": {"stringUnit": {"state": "translated", "value": "Ouvrez Health.md et choisissez d’abord « Utiliser la destination de la clinique » dans Accès clinique."}}, "it": {"stringUnit": {"state": "translated", "value": "Apri Health.md e scegli prima “Usa destinazione clinica” in Accesso clinica."}}, "ja": {"stringUnit": {"state": "translated", "value": "Health.mdを開き、先に「クリニックアクセス」で「クリニックの送信先を使用」を選んでください。"}}, "ko": {"stringUnit": {"state": "translated", "value": "Health.md를 열고 먼저 병원 접근에서 ‘병원 대상 사용’을 선택하세요."}}, "nl": {"stringUnit": {"state": "translated", "value": "Open Health.md en kies eerst ‘Klinische bestemming gebruiken’ in Kliniektoegang."}}, "pt-BR": {"stringUnit": {"state": "translated", "value": "Abra o Health.md e escolha primeiro “Usar destino da clínica” no acesso da clínica."}}, "zh-Hans": {"stringUnit": {"state": "translated", "value": "请打开 Health.md，先在“诊所访问”中选择“使用诊所目标”。"}}}},
+    "Your latest data was sent to your clinic." : {"localizations": {"de": {"stringUnit": {"state": "translated", "value": "Deine neuesten Daten wurden an deine Klinik gesendet."}}, "es": {"stringUnit": {"state": "translated", "value": "Tus datos más recientes se enviaron a tu clínica."}}, "fr": {"stringUnit": {"state": "translated", "value": "Vos dernières données ont été envoyées à votre clinique."}}, "it": {"stringUnit": {"state": "translated", "value": "I tuoi dati più recenti sono stati inviati alla tua clinica."}}, "ja": {"stringUnit": {"state": "translated", "value": "最新のデータをクリニックに送信しました。"}}, "ko": {"stringUnit": {"state": "translated", "value": "최신 데이터가 병원으로 전송되었습니다."}}, "nl": {"stringUnit": {"state": "translated", "value": "Je nieuwste gegevens zijn naar je kliniek verstuurd."}}, "pt-BR": {"stringUnit": {"state": "translated", "value": "Seus dados mais recentes foram enviados à sua clínica."}}, "zh-Hans": {"stringUnit": {"state": "translated", "value": "你的最新数据已发送给诊所。"}}}},
+    "Another export profile is named “%@”. Rename it, then try again." : {"localizations": {"de": {"stringUnit": {"state": "translated", "value": "Ein anderes Exportprofil heißt „%@“. Benenne es um und versuche es erneut."}}, "es": {"stringUnit": {"state": "translated", "value": "Otro perfil de exportación se llama “%@”. Cámbiale el nombre e inténtalo de nuevo."}}, "fr": {"stringUnit": {"state": "translated", "value": "Un autre profil d’exportation s’appelle « %@ ». Renommez-le, puis réessayez."}}, "it": {"stringUnit": {"state": "translated", "value": "Un altro profilo di esportazione si chiama “%@”. Rinominalo, poi riprova."}}, "ja": {"stringUnit": {"state": "translated", "value": "別の書き出しプロファイルの名前も「%@」です。名前を変更してからもう一度お試しください。"}}, "ko": {"stringUnit": {"state": "translated", "value": "다른 내보내기 프로필의 이름도 ‘%@’입니다. 이름을 바꾼 후 다시 시도하세요."}}, "nl": {"stringUnit": {"state": "translated", "value": "Een ander exportprofiel heet ‘%@’. Geef het een andere naam en probeer het opnieuw."}}, "pt-BR": {"stringUnit": {"state": "translated", "value": "Outro perfil de exportação se chama “%@”. Renomeie-o e tente novamente."}}, "zh-Hans": {"stringUnit": {"state": "translated", "value": "另一个导出配置也名为“%@”。请重命名后重试。"}}, "en": {"stringUnit": {"state": "translated", "value": "Another export profile is named “%@”. Rename it, then try again."}}}},
+    "HEALTHMD_SYNC_REQUEST_BODY" : {"comment": "Clinic sync request push notification body (APNs loc-key). The clinic's server can only ring; this fixed copy is all the patient sees.", "extractionState": "manual", "localizations": {"en": {"stringUnit": {"state": "translated", "value": "Your clinic is asking for your latest health data. Tap to send it."}}, "de": {"stringUnit": {"state": "translated", "value": "Deine Klinik bittet um deine neuesten Gesundheitsdaten. Tippe, um sie zu senden."}}, "es": {"stringUnit": {"state": "translated", "value": "Tu clínica solicita tus datos de salud más recientes. Toca para enviarlos."}}, "fr": {"stringUnit": {"state": "translated", "value": "Votre clinique demande vos dernières données de santé. Touchez pour les envoyer."}}, "it": {"stringUnit": {"state": "translated", "value": "La tua clinica chiede i tuoi dati sanitari più recenti. Tocca per inviarli."}}, "ja": {"stringUnit": {"state": "translated", "value": "クリニックが最新のヘルスケアデータを求めています。タップして送信します。"}}, "ko": {"stringUnit": {"state": "translated", "value": "병원에서 최신 건강 데이터를 요청했습니다. 탭하여 보내세요."}}, "nl": {"stringUnit": {"state": "translated", "value": "Je kliniek vraagt om je nieuwste gezondheidsgegevens. Tik om ze te versturen."}}, "pt-BR": {"stringUnit": {"state": "translated", "value": "Sua clínica está pedindo seus dados de saúde mais recentes. Toque para enviá-los."}}, "zh-Hans": {"stringUnit": {"state": "translated", "value": "你的诊所正在请求你最新的健康数据。轻点即可发送。"}}}},
+    "HEALTHMD_SYNC_REQUEST_TITLE" : {"comment": "Clinic sync request push notification title (APNs title-loc-key).", "extractionState": "manual", "localizations": {"en": {"stringUnit": {"state": "translated", "value": "Health.md"}}, "de": {"stringUnit": {"state": "translated", "value": "Health.md"}}, "es": {"stringUnit": {"state": "translated", "value": "Health.md"}}, "fr": {"stringUnit": {"state": "translated", "value": "Health.md"}}, "it": {"stringUnit": {"state": "translated", "value": "Health.md"}}, "ja": {"stringUnit": {"state": "translated", "value": "Health.md"}}, "ko": {"stringUnit": {"state": "translated", "value": "Health.md"}}, "nl": {"stringUnit": {"state": "translated", "value": "Health.md"}}, "pt-BR": {"stringUnit": {"state": "translated", "value": "Health.md"}}, "zh-Hans": {"stringUnit": {"state": "translated", "value": "Health.md"}}}},
     "Endpoint URL" : {"localizations":{
       "de":{"stringUnit":{"state":"translated","value":"Endpunkt-URL"}},
       "es":{"stringUnit":{"state":"translated","value":"URL del endpoint"}},
@@ -147474,6 +147507,240 @@
         }
       }
     },
+    "7 days free" : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"7 Tage gratis"}},
+        "es": {"stringUnit":{"state":"translated","value":"7 días gratis"}},
+        "fr": {"stringUnit":{"state":"translated","value":"7 jours offerts"}},
+        "it": {"stringUnit":{"state":"translated","value":"7 giorni gratis"}},
+        "ja": {"stringUnit":{"state":"translated","value":"7日間無料"}},
+        "ko": {"stringUnit":{"state":"translated","value":"7일 무료"}},
+        "nl": {"stringUnit":{"state":"translated","value":"7 dagen gratis"}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"7 dias grátis"}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"7 天免费"}}
+      }
+    },
+    "About %@ a week" : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Etwa %@ pro Woche"}},
+        "es": {"stringUnit":{"state":"translated","value":"Unos %@ a la semana"}},
+        "fr": {"stringUnit":{"state":"translated","value":"Environ %@ par semaine"}},
+        "it": {"stringUnit":{"state":"translated","value":"Circa %@ a settimana"}},
+        "ja": {"stringUnit":{"state":"translated","value":"1週間あたり約%@"}},
+        "ko": {"stringUnit":{"state":"translated","value":"주당 약 %@"}},
+        "nl": {"stringUnit":{"state":"translated","value":"Ongeveer %@ per week"}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Cerca de %@ por semana"}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"约每周 %@"}}
+      }
+    },
+    "Buy Lifetime" : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Dauerzugriff kaufen"}},
+        "es": {"stringUnit":{"state":"translated","value":"Comprar de por vida"}},
+        "fr": {"stringUnit":{"state":"translated","value":"Acheter l’accès à vie"}},
+        "it": {"stringUnit":{"state":"translated","value":"Acquista a vita"}},
+        "ja": {"stringUnit":{"state":"translated","value":"買い切りで購入"}},
+        "ko": {"stringUnit":{"state":"translated","value":"평생 이용권 구매"}},
+        "nl": {"stringUnit":{"state":"translated","value":"Levenslang kopen"}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Comprar vitalício"}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"购买终身版"}}
+      }
+    },
+    "Cancel anytime" : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Jederzeit kündbar"}},
+        "es": {"stringUnit":{"state":"translated","value":"Cancela cuando quieras"}},
+        "fr": {"stringUnit":{"state":"translated","value":"Résiliable à tout moment"}},
+        "it": {"stringUnit":{"state":"translated","value":"Annulla quando vuoi"}},
+        "ja": {"stringUnit":{"state":"translated","value":"いつでも解約可能"}},
+        "ko": {"stringUnit":{"state":"translated","value":"언제든 해지 가능"}},
+        "nl": {"stringUnit":{"state":"translated","value":"Altijd opzegbaar"}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Cancele quando quiser"}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"随时取消"}}
+      }
+    },
+    "Cancel in App Store subscriptions at least 24 hours before the trial ends." : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Kündige in den App Store-Abos mindestens 24 Stunden vor Ende der Testphase."}},
+        "es": {"stringUnit":{"state":"translated","value":"Cancela en las suscripciones del App Store al menos 24 horas antes de que termine la prueba."}},
+        "fr": {"stringUnit":{"state":"translated","value":"Résiliez dans les abonnements de l’App Store au moins 24 heures avant la fin de l’essai."}},
+        "it": {"stringUnit":{"state":"translated","value":"Annulla negli abbonamenti dell’App Store almeno 24 ore prima della fine della prova."}},
+        "ja": {"stringUnit":{"state":"translated","value":"トライアル終了の24時間前までに、App Storeのサブスクリプションから解約してください。"}},
+        "ko": {"stringUnit":{"state":"translated","value":"체험 기간이 끝나기 최소 24시간 전에 App Store 구독에서 해지하세요."}},
+        "nl": {"stringUnit":{"state":"translated","value":"Zeg op via App Store-abonnementen, minstens 24 uur voordat de proefperiode eindigt."}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Cancele nas assinaturas da App Store pelo menos 24 horas antes do fim do teste."}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"请在试用结束前至少 24 小时，在 App Store 订阅中取消。"}}
+      }
+    },
+    "Every heartbeat, written down." : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Jeder Herzschlag, festgehalten."}},
+        "es": {"stringUnit":{"state":"translated","value":"Cada latido, por escrito."}},
+        "fr": {"stringUnit":{"state":"translated","value":"Chaque battement, consigné."}},
+        "it": {"stringUnit":{"state":"translated","value":"Ogni battito, messo per iscritto."}},
+        "ja": {"stringUnit":{"state":"translated","value":"鼓動のひとつひとつを、記録に。"}},
+        "ko": {"stringUnit":{"state":"translated","value":"모든 심장 박동을 기록으로."}},
+        "nl": {"stringUnit":{"state":"translated","value":"Elke hartslag, op papier."}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Cada batida do coração, registrada."}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"每一次心跳，都有记录。"}}
+      }
+    },
+    "Example" : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Beispiel"}},
+        "es": {"stringUnit":{"state":"translated","value":"Ejemplo"}},
+        "fr": {"stringUnit":{"state":"translated","value":"Exemple"}},
+        "it": {"stringUnit":{"state":"translated","value":"Esempio"}},
+        "ja": {"stringUnit":{"state":"translated","value":"例"}},
+        "ko": {"stringUnit":{"state":"translated","value":"예시"}},
+        "nl": {"stringUnit":{"state":"translated","value":"Voorbeeld"}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Exemplo"}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"示例"}}
+      }
+    },
+    "Health.md turns Apple Health into a Markdown note for every day, saved to the folder you choose." : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Health.md macht aus Apple Health jeden Tag eine Markdown-Notiz – gespeichert im Ordner deiner Wahl."}},
+        "es": {"stringUnit":{"state":"translated","value":"Health.md convierte Apple Health en una nota Markdown para cada día, guardada en la carpeta que elijas."}},
+        "fr": {"stringUnit":{"state":"translated","value":"Health.md transforme Apple Health en une note Markdown pour chaque jour, enregistrée dans le dossier de votre choix."}},
+        "it": {"stringUnit":{"state":"translated","value":"Health.md trasforma Apple Salute in una nota Markdown per ogni giorno, salvata nella cartella che scegli."}},
+        "ja": {"stringUnit":{"state":"translated","value":"Health.mdは、Appleヘルスケアのデータを毎日のMarkdownノートにして、選んだフォルダに保存します。"}},
+        "ko": {"stringUnit":{"state":"translated","value":"Health.md는 Apple 건강 앱의 데이터를 매일 Markdown 노트로 만들어 원하는 폴더에 저장합니다."}},
+        "nl": {"stringUnit":{"state":"translated","value":"Health.md maakt van Apple Gezondheid elke dag een Markdown-notitie, opgeslagen in de map die je kiest."}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"O Health.md transforma o app Saúde da Apple em uma nota Markdown para cada dia, salva na pasta que você escolher."}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"Health.md 将 Apple“健康”数据变成每天一篇 Markdown 笔记，保存到你选择的文件夹。"}}
+      }
+    },
+    "Pick a path." : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Wähle deinen Weg."}},
+        "es": {"stringUnit":{"state":"translated","value":"Elige tu camino."}},
+        "fr": {"stringUnit":{"state":"translated","value":"Choisissez votre voie."}},
+        "it": {"stringUnit":{"state":"translated","value":"Scegli il tuo percorso."}},
+        "ja": {"stringUnit":{"state":"translated","value":"プランを選ぶ。"}},
+        "ko": {"stringUnit":{"state":"translated","value":"나에게 맞는 길을 고르세요."}},
+        "nl": {"stringUnit":{"state":"translated","value":"Kies je route."}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Escolha seu caminho."}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"选一条路。"}}
+      }
+    },
+    "Plans" : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Tarife"}},
+        "es": {"stringUnit":{"state":"translated","value":"Planes"}},
+        "fr": {"stringUnit":{"state":"translated","value":"Offres"}},
+        "it": {"stringUnit":{"state":"translated","value":"Piani"}},
+        "ja": {"stringUnit":{"state":"translated","value":"プラン"}},
+        "ko": {"stringUnit":{"state":"translated","value":"요금제"}},
+        "nl": {"stringUnit":{"state":"translated","value":"Abonnementen"}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Planos"}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"方案"}}
+      }
+    },
+    "See all plans" : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Alle Tarife"}},
+        "es": {"stringUnit":{"state":"translated","value":"Ver todos los planes"}},
+        "fr": {"stringUnit":{"state":"translated","value":"Voir toutes les offres"}},
+        "it": {"stringUnit":{"state":"translated","value":"Vedi tutti i piani"}},
+        "ja": {"stringUnit":{"state":"translated","value":"すべてのプランを見る"}},
+        "ko": {"stringUnit":{"state":"translated","value":"모든 요금제 보기"}},
+        "nl": {"stringUnit":{"state":"translated","value":"Alle abonnementen bekijken"}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Ver todos os planos"}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"查看所有方案"}}
+      }
+    },
+    "Seven days, on us." : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Sieben Tage geschenkt."}},
+        "es": {"stringUnit":{"state":"translated","value":"Siete días por nuestra cuenta."}},
+        "fr": {"stringUnit":{"state":"translated","value":"Sept jours offerts."}},
+        "it": {"stringUnit":{"state":"translated","value":"Sette giorni offerti da noi."}},
+        "ja": {"stringUnit":{"state":"translated","value":"7日間、無料でどうぞ。"}},
+        "ko": {"stringUnit":{"state":"translated","value":"7일은 저희가 쏩니다."}},
+        "nl": {"stringUnit":{"state":"translated","value":"Zeven dagen van ons."}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Sete dias por nossa conta."}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"七天，我们请客。"}}
+      }
+    },
+    "Start 7-day free trial" : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"7 Tage gratis testen"}},
+        "es": {"stringUnit":{"state":"translated","value":"Empezar prueba gratis de 7 días"}},
+        "fr": {"stringUnit":{"state":"translated","value":"Essayer gratuitement 7 jours"}},
+        "it": {"stringUnit":{"state":"translated","value":"Inizia la prova gratuita di 7 giorni"}},
+        "ja": {"stringUnit":{"state":"translated","value":"7日間の無料トライアルを開始"}},
+        "ko": {"stringUnit":{"state":"translated","value":"7일 무료 체험 시작"}},
+        "nl": {"stringUnit":{"state":"translated","value":"Start 7 dagen gratis"}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Começar teste grátis de 7 dias"}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"开始 7 天免费试用"}}
+      }
+    },
+    "Subscribe" : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Abonnieren"}},
+        "es": {"stringUnit":{"state":"translated","value":"Suscribirse"}},
+        "fr": {"stringUnit":{"state":"translated","value":"S’abonner"}},
+        "it": {"stringUnit":{"state":"translated","value":"Abbonati"}},
+        "ja": {"stringUnit":{"state":"translated","value":"登録する"}},
+        "ko": {"stringUnit":{"state":"translated","value":"구독하기"}},
+        "nl": {"stringUnit":{"state":"translated","value":"Abonneren"}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Assinar"}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"订阅"}}
+      }
+    },
+    "Then %@." : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Danach %@."}},
+        "es": {"stringUnit":{"state":"translated","value":"Después, %@."}},
+        "fr": {"stringUnit":{"state":"translated","value":"Ensuite, %@."}},
+        "it": {"stringUnit":{"state":"translated","value":"Poi %@."}},
+        "ja": {"stringUnit":{"state":"translated","value":"その後は%@。"}},
+        "ko": {"stringUnit":{"state":"translated","value":"이후 %@."}},
+        "nl": {"stringUnit":{"state":"translated","value":"Daarna %@."}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Depois, %@."}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"之后 %@。"}}
+      }
+    },
+    "Trial" : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Testphase"}},
+        "es": {"stringUnit":{"state":"translated","value":"Prueba"}},
+        "fr": {"stringUnit":{"state":"translated","value":"Essai"}},
+        "it": {"stringUnit":{"state":"translated","value":"Prova"}},
+        "ja": {"stringUnit":{"state":"translated","value":"トライアル"}},
+        "ko": {"stringUnit":{"state":"translated","value":"체험"}},
+        "nl": {"stringUnit":{"state":"translated","value":"Proef"}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Teste"}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"试用"}}
+      }
+    },
+    "Trial ends" : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Testphase endet"}},
+        "es": {"stringUnit":{"state":"translated","value":"Fin de la prueba"}},
+        "fr": {"stringUnit":{"state":"translated","value":"Fin de l’essai"}},
+        "it": {"stringUnit":{"state":"translated","value":"Fine della prova"}},
+        "ja": {"stringUnit":{"state":"translated","value":"トライアル終了"}},
+        "ko": {"stringUnit":{"state":"translated","value":"체험 종료"}},
+        "nl": {"stringUnit":{"state":"translated","value":"Proefperiode eindigt"}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Fim do teste"}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"试用结束"}}
+      }
+    },
+    "Unlimited exports, schedules, and automations." : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Unbegrenzte Exporte, Zeitpläne und Automationen."}},
+        "es": {"stringUnit":{"state":"translated","value":"Exportaciones, programaciones y automatizaciones ilimitadas."}},
+        "fr": {"stringUnit":{"state":"translated","value":"Exports, planifications et automatisations illimités."}},
+        "it": {"stringUnit":{"state":"translated","value":"Esportazioni, pianificazioni e automazioni illimitate."}},
+        "ja": {"stringUnit":{"state":"translated","value":"エクスポート、スケジュール、オートメーションが無制限。"}},
+        "ko": {"stringUnit":{"state":"translated","value":"무제한 내보내기, 일정, 자동화."}},
+        "nl": {"stringUnit":{"state":"translated","value":"Onbeperkt exporteren, plannen en automatiseren."}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Exportações, agendamentos e automações ilimitados."}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"无限次导出、计划和自动化。"}}
+      }
+    },
     "You have unlimited exports." : {
       "localizations" : {
         "de" : {
@@ -149249,19 +149516,6 @@
         "nl": {"stringUnit":{"state":"translated","value":"Gebeurtenissen"}},
         "pt-BR": {"stringUnit":{"state":"translated","value":"Eventos"}},
         "zh-Hans": {"stringUnit":{"state":"translated","value":"事件"}}
-      }
-    },
-    "Example" : {
-      "localizations" : {
-        "de": {"stringUnit":{"state":"translated","value":"Beispiel"}},
-        "es": {"stringUnit":{"state":"translated","value":"Ejemplo"}},
-        "fr": {"stringUnit":{"state":"translated","value":"Exemple"}},
-        "it": {"stringUnit":{"state":"translated","value":"Esempio"}},
-        "ja": {"stringUnit":{"state":"translated","value":"例"}},
-        "ko": {"stringUnit":{"state":"translated","value":"예시"}},
-        "nl": {"stringUnit":{"state":"translated","value":"Voorbeeld"}},
-        "pt-BR": {"stringUnit":{"state":"translated","value":"Exemplo"}},
-        "zh-Hans": {"stringUnit":{"state":"translated","value":"示例"}}
       }
     },
     "Export a portable setup — no health data or credentials" : {

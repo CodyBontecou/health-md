@@ -1,0 +1,43 @@
+{
+    admin off
+    # Reverse-proxy errors can include client addresses/headers. No request/access logging.
+    log default {
+        level ERROR
+        output discard
+    }
+    servers {
+        timeouts {
+            read_header 5s
+            read_body 10s
+            write 20s
+            idle 30s
+        }
+    }
+}
+{$LICENSING_DOMAIN} {
+    request_body {
+        max_size 16384
+    }
+    header {
+        Strict-Transport-Security "max-age=31536000"
+        Cache-Control "no-store"
+        X-Content-Type-Options "nosniff"
+        -Server
+    }
+    @public path /v2/invitations/redeem /v1/sponsorship/refresh /v1/sponsorship/disconnect /healthz /readyz
+    handle @public {
+        reverse_proxy licensing:8792 {
+            header_up Host {$LICENSING_DOMAIN}
+            header_up X-Licensing-Ingress-Key {file./run/secrets/ingress_key}
+            header_up X-Licensing-Client-IP {remote_host}
+            header_up -Forwarded
+            transport http {
+                dial_timeout 3s
+                response_header_timeout 15s
+            }
+        }
+    }
+    handle {
+        respond 404
+    }
+}

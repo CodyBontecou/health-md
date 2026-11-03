@@ -1659,7 +1659,10 @@ class SchedulingManager: ObservableObject {
             return blockedResult
         }
 
-        guard scheduledExportQuotaAccess(quotaJobID) else {
+        let clinicAllowed = if let endpoint = resolvedAPIDestination?.endpointURL.absoluteString {
+            await ClinicSponsorshipManager.shared.authorizeExport(endpoint: endpoint)
+        } else { false }
+        guard scheduledExportQuotaAccess(quotaJobID) || clinicAllowed else {
             logger.info("Scheduled export skipped — free export limit reached")
             return scheduledFailureResult(
                 dates: dates,

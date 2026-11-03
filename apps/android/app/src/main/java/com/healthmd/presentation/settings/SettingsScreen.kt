@@ -56,6 +56,8 @@ fun SettingsScreen(
     onNavigateToDirectCli: () -> Unit = {},
     onNavigateToSharedSetup: () -> Unit = {},
     onNavigateToDiagnostics: () -> Unit = {},
+    clinicAccessAvailable: Boolean = false,
+    onNavigateToClinicAccess: () -> Unit = {},
 ) {
     val isPurchased by viewModel.isPurchased.collectAsStateWithLifecycle()
     val distributionPolicy = viewModel.distributionPolicy
@@ -169,6 +171,11 @@ fun SettingsScreen(
                 .bringIntoViewRequester(protectionRequester)
                 .testTag(ConfigurationProtectionTestTags.SECTION),
         )
+
+        if (clinicAccessAvailable) {
+            SettingsNavigationCard(title = "Clinic access", subtitle = "Manage sponsorship and sharing",
+                icon = Icons.Outlined.Settings, onClick = onNavigateToClinicAccess)
+        }
 
         // Premium upgrade (show at top for free users)
         if (!isPurchased && distributionPolicy.purchasesAvailable) {

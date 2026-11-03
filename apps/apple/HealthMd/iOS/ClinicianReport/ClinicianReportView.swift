@@ -20,6 +20,7 @@ struct ClinicianReportView: View {
         }
     }
 
+    @ObservedObject private var purchases = PurchaseManager.shared
     @StateObject private var viewModel: ClinicianReportViewModel
     @Environment(\.dismiss) private var dismiss
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
@@ -48,6 +49,13 @@ struct ClinicianReportView: View {
     }
 
     var body: some View {
+        Group {
+            if purchases.canExport { reportContent }
+            else { PaywallView(context: .settings) }
+        }
+    }
+
+    private var reportContent: some View {
         ScrollViewReader { proxy in
             ScrollView {
                 Color.clear

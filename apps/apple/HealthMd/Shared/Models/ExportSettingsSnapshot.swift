@@ -77,21 +77,26 @@ nonisolated struct AppleExportDetailPolicy: Codable, Equatable, Sendable {
     /// Explicit per-group compatibility detail. Empty reproduces the historical uniform policy
     /// exactly. Only `ExportDetailGroup.appleSupported` groups with Apple choices are honored.
     var compatibilityDetailOverrides: [ExportDetailGroup: ExportDetailChoice] = [:]
+    /// Nil preserves the historical policy. These IDs request only native source detail.
+    var nativeDetailMetricIDs: Set<String>? = nil
 
     init(
         compatibilityDetail: ExportCompatibilityDetail,
         healthKitSourceArchive: HealthKitSourceArchivePolicy,
-        compatibilityDetailOverrides: [ExportDetailGroup: ExportDetailChoice] = [:]
+        compatibilityDetailOverrides: [ExportDetailGroup: ExportDetailChoice] = [:],
+        nativeDetailMetricIDs: Set<String>? = nil
     ) {
         self.compatibilityDetail = compatibilityDetail
         self.healthKitSourceArchive = healthKitSourceArchive
         self.compatibilityDetailOverrides = Self.supportedOverrides(compatibilityDetailOverrides)
+        self.nativeDetailMetricIDs = nativeDetailMetricIDs
     }
 
     enum CodingKeys: String, CodingKey {
         case compatibilityDetail
         case healthKitSourceArchive
         case compatibilityDetailOverrides
+        case nativeDetailMetricIDs
     }
 
     init(from decoder: Decoder) throws {
@@ -101,6 +106,7 @@ nonisolated struct AppleExportDetailPolicy: Codable, Equatable, Sendable {
         compatibilityDetailOverrides = try Self.decodeOverrides(
             container.decodeIfPresent([String: String].self, forKey: .compatibilityDetailOverrides)
         )
+        nativeDetailMetricIDs = try container.decodeIfPresent(Set<String>.self, forKey: .nativeDetailMetricIDs)
     }
 
     func encode(to encoder: Encoder) throws {
@@ -110,6 +116,7 @@ nonisolated struct AppleExportDetailPolicy: Codable, Equatable, Sendable {
         if !compatibilityDetailOverrides.isEmpty {
             try container.encode(overridesWireValue, forKey: .compatibilityDetailOverrides)
         }
+        try container.encodeIfPresent(nativeDetailMetricIDs, forKey: .nativeDetailMetricIDs)
     }
 
     /// Wire form keyed by group raw value. Unknown or unsupported entries fail decoding so a
@@ -144,7 +151,11 @@ nonisolated struct AppleExportDetailPolicy: Codable, Equatable, Sendable {
 
     /// The uniform policy without per-group overrides; presets and legacy bridges use it.
     var basePolicy: AppleExportDetailPolicy {
-        AppleExportDetailPolicy(compatibilityDetail: compatibilityDetail, healthKitSourceArchive: healthKitSourceArchive)
+        AppleExportDetailPolicy(
+            compatibilityDetail: compatibilityDetail,
+            healthKitSourceArchive: healthKitSourceArchive,
+            nativeDetailMetricIDs: nativeDetailMetricIDs
+        )
     }
 
     var hasDetailOverrides: Bool { !compatibilityDetailOverrides.isEmpty }
@@ -154,7 +165,8 @@ nonisolated struct AppleExportDetailPolicy: Codable, Equatable, Sendable {
         AppleExportDetailPolicy(
             compatibilityDetail: preset.compatibilityDetail,
             healthKitSourceArchive: preset.healthKitSourceArchive,
-            compatibilityDetailOverrides: compatibilityDetailOverrides
+            compatibilityDetailOverrides: compatibilityDetailOverrides,
+            nativeDetailMetricIDs: nativeDetailMetricIDs
         )
     }
 
@@ -165,7 +177,8 @@ nonisolated struct AppleExportDetailPolicy: Codable, Equatable, Sendable {
         return AppleExportDetailPolicy(
             compatibilityDetail: compatibilityDetail,
             healthKitSourceArchive: healthKitSourceArchive,
-            compatibilityDetailOverrides: overrides
+            compatibilityDetailOverrides: overrides,
+            nativeDetailMetricIDs: nativeDetailMetricIDs
         )
     }
 
@@ -231,7 +244,7 @@ nonisolated struct AppleExportDetailPolicy: Codable, Equatable, Sendable {
     }
 
     var includesCanonicalArchive: Bool {
-        healthKitSourceArchive.includesCanonicalArchive
+        healthKitSourceArchive.includesCanonicalArchive || !(nativeDetailMetricIDs?.isEmpty ?? true)
     }
 
     var hasAnyDetail: Bool {
@@ -368,7 +381,9 @@ struct ExportSettingsSnapshot: Codable, Equatable {
             AppleExportDetailPolicy(
                 compatibilityDetail: compatibilityDetail,
                 healthKitSourceArchive: healthKitSourceArchivePolicy,
-                compatibilityDetailOverrides: compatibilityDetailOverrides
+                compatibilityDetailOverrides: compatibilityDetailOverrides,
+                nativeDetailMetricIDs: metricSelection.nativeDetailMetricIDs.isEmpty ? nil
+                    : metricSelection.nativeDetailMetricIDs.intersection(metricSelection.enabledMetricIDs)
             )
         }
         set {
@@ -1169,16 +1184,43 @@ nonisolated struct DailyNoteInjectionSnapshot: Codable, Equatable, Sendable {
 struct MetricSelectionSnapshot: Codable, Equatable {
     var enabledMetricIDs: Set<String>
     var enabledCategoryIDs: Set<String>
+    var nativeDetailMetricIDs: Set<String> = []
+
+    enum CodingKeys: String, CodingKey { case enabledMetricIDs, enabledCategoryIDs, nativeDetailMetricIDs }
+
+    init(enabledMetricIDs: Set<String>, enabledCategoryIDs: Set<String>, nativeDetailMetricIDs: Set<String> = []) {
+        self.enabledMetricIDs = enabledMetricIDs
+        self.enabledCategoryIDs = enabledCategoryIDs
+        self.nativeDetailMetricIDs = nativeDetailMetricIDs
+    }
+
+    init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        enabledMetricIDs = try values.decode(Set<String>.self, forKey: .enabledMetricIDs)
+        enabledCategoryIDs = try values.decode(Set<String>.self, forKey: .enabledCategoryIDs)
+        nativeDetailMetricIDs = try values.decodeIfPresent(Set<String>.self, forKey: .nativeDetailMetricIDs) ?? []
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var values = encoder.container(keyedBy: CodingKeys.self)
+        try values.encode(enabledMetricIDs, forKey: .enabledMetricIDs)
+        try values.encode(enabledCategoryIDs, forKey: .enabledCategoryIDs)
+        if !nativeDetailMetricIDs.isEmpty {
+            try values.encode(nativeDetailMetricIDs, forKey: .nativeDetailMetricIDs)
+        }
+    }
 
     static func from(_ selection: MetricSelectionState) -> MetricSelectionSnapshot {
         MetricSelectionSnapshot(
             enabledMetricIDs: selection.enabledMetrics,
-            enabledCategoryIDs: selection.enabledCategories
+            enabledCategoryIDs: selection.enabledCategories,
+            nativeDetailMetricIDs: selection.nativeDetailMetricIDs
         )
     }
 
     func apply(to selection: MetricSelectionState) {
         selection.enabledMetrics = enabledMetricIDs
         selection.enabledCategories = enabledCategoryIDs
+        selection.nativeDetailMetricIDs = nativeDetailMetricIDs
     }
 }

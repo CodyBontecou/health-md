@@ -1544,4 +1544,37 @@
     <string name="post_export_upgrade_action">See lifetime access</string>
     <string name="post_export_manual_action">Keep exporting manually</string>
     <string name="post_export_continue_free">Continue free</string>
+    <string name="clinic_access_active_title">Your clinic access is active</string>
+    <string name="clinic_access_active_body">Your clinic sponsors delivery to its approved endpoint. You choose what to share. Other export destinations require your own Health.md access.</string>
+
+    <!-- Signal carousel paywall -->
+    <string name="paywall_signal_title">Every heartbeat, written down.</string>
+    <string name="paywall_signal_lede">Health.md turns Health Connect into a Markdown note for every day, saved to the folder you choose.</string>
+    <string name="paywall_signal_example">Example</string>
+    <string name="paywall_signal_trial_title">Seven days, on us.</string>
+    <string name="paywall_signal_day_today">Today</string>
+    <string name="paywall_signal_day_today_body">Unlimited exports, schedules, and automations.</string>
+    <string name="paywall_signal_day_cancel">Cancel anytime</string>
+    <string name="paywall_signal_day_cancel_body">Cancel in Google Play before the trial ends.</string>
+    <string name="paywall_signal_day_end">Trial ends</string>
+    <string name="paywall_signal_day_end_body">Then %1$s.</string>
+    <string name="paywall_signal_plans_title">Pick a path.</string>
+    <string name="paywall_signal_best_value">Best value</string>
+    <string name="paywall_signal_free_week">7 days free</string>
+    <string name="paywall_signal_lifetime_detail">Pay once today. Never renews.</string>
+    <string name="paywall_signal_subscription_detail">Renews automatically. Cancel anytime in Google Play.</string>
+    <string name="paywall_signal_cta_trial">Start 7-day free trial</string>
+    <string name="paywall_signal_cta_subscribe">Subscribe</string>
+    <string name="paywall_signal_cta_lifetime">Buy Lifetime</string>
+    <string name="paywall_signal_step_archive">Archive</string>
+    <string name="paywall_signal_step_trial">Trial</string>
+    <string name="paywall_signal_step_plans">Plans</string>
+    <string name="paywall_signal_plan_weekly">Weekly</string>
+    <string name="paywall_signal_plan_yearly">Yearly</string>
+    <string name="paywall_signal_plan_lifetime">Lifetime</string>
+    <string name="clinic_sync_channel_name">Clinic sync requests</string>
+    <string name="clinic_sync_request_body">Your clinic is asking for your latest health data. Tap to send it.</string>
+    <string name="clinic_sync_result_sent">Your latest data was sent to your clinic.</string>
+    <string name="clinic_sync_result_failed">Could not send your data to your clinic. Open Health.md and try again.</string>
+    <string name="clinic_sync_result_profile_missing">Open Clinic access in Health.md and choose Use clinic destination first.</string>
 </resources>

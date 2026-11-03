@@ -29,9 +29,11 @@ object BillingModule {
         MyselfClaimPurchaseSource { repository.myselfClaimPurchaseToken() }
 
     @Provides
+    @Singleton
     fun provideEntitlementRepository(
         repository: BillingRepositoryImpl,
-    ): EntitlementRepository = repository
+        clinic: com.healthmd.data.billing.ClinicSponsorshipManager,
+    ): EntitlementRepository = com.healthmd.data.billing.ClinicAwareEntitlementRepository(repository, clinic)
 
     @Provides
     fun providePurchaseRepository(

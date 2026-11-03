@@ -21,6 +21,13 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
                 intentIdentifiers: [],
                 options: []
             ),
+            // Clinic sync requests: copy is localized on device; only the tap runs an export.
+            UNNotificationCategory(
+                identifier: ClinicSyncDoorbellManager.notificationCategory,
+                actions: [],
+                intentIdentifiers: [],
+                options: []
+            ),
         ])
         return true
     }
@@ -34,6 +41,7 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
                 await SchedulingManager.shared.performCatchUpExportIfNeeded()
                 IPhoneCorpusExportRecoveryManager.shared.applicationDidBecomeActive()
                 WidgetCenter.shared.reloadAllTimelines()
+                await ClinicSyncDoorbellManager.shared.reconcile()
             }
         }
     }
@@ -110,7 +118,13 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         let request = response.notification.request
         let pendingExportPayload = PendingExportNotificationPayload(userInfo: request.content.userInfo)
 
-        if let pendingExportPayload = pendingExportPayload {
+        if let wakeID = ClinicSyncDoorbellManager.requestedWakeID(from: request.content.userInfo) {
+            DiagnosticRecorder.shared.record(.notificationTapped, fields: [.trigger: .text("clinic_sync_request")])
+            Task { @MainActor in
+                await ClinicSyncDoorbellManager.shared.handleSyncRequestTap(wakeID: wakeID)
+                completionHandler()
+            }
+        } else if let pendingExportPayload = pendingExportPayload {
             DiagnosticRecorder.shared.record(.notificationTapped, fields: [.operationId: .text(pendingExportPayload.requestID.uuidString.lowercased()), .trigger: .text("notification")])
             Task { @MainActor in
                 await SchedulingManager.shared.waitForScheduledExportDependencies()
@@ -575,7 +589,7 @@ struct HealthMdApp: App {
                     } else if !healthKitManager.isAuthorized {
                         message = "Authorize Health access before starting a direct export."
                     } else if !PurchaseManager.shared.canExport {
-                        message = "Export limit reached. Unlock Full Access to continue."
+                        message = "Active access is required. Start an eligible trial, subscribe, buy Lifetime, or restore a purchase."
                     } else if exportInProgress || queryInProgress {
                         message = "Another direct operation is already active."
                     } else {

@@ -2,20 +2,20 @@
 import SwiftUI
 import StoreKit
 
-/// PaywallG: plan picker plus a pinned glass purchase bar. Every purchase, restore and
-/// disclosure path is the one `PurchaseManager` already exposes; this view only lays it out.
+/// Locked: the Signal purchase story (`SignalPaywallCarousel`) in the glass theme.
+/// Unlocked from Settings: glass plan management with a pinned purchase bar. Every
+/// purchase, restore and disclosure path is the one `PurchaseManager` already exposes.
 struct PaywallView: View {
     @ObservedObject private var purchaseManager = PurchaseManager.shared
+    @ObservedObject private var clinic = ClinicSponsorshipManager.shared
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
-    @State private var selectedAudience: PaywallPricingAudience = .individual
-    @State private var selectedOption: HealthMdPurchaseOption = .weekly
     @State private var showClinicAccess = false
 
     private let context: PaywallContext
     private let allowsDismissal: Bool
-    /// Lets "Clinic invitation?" offer the user's automations as the clinic destination.
+    /// Lets Clinic access offer the user's automations as the clinic destination.
     private let profileCoordinator: ExportProfileCoordinator?
 
     init(
@@ -34,33 +34,8 @@ struct PaywallView: View {
         context == .settings && purchaseManager.isUnlocked
     }
 
-    private var titleText: String {
-        isManagingPurchase ? String(localized: "Purchases & Family") : String(localized: "Build a permanent Apple Health archive")
-    }
-
-    private var subtitleText: String {
-        if isManagingPurchase { return currentPlanTitle }
-        return String(localized: "Private local files. Unlimited automated daily notes.")
-    }
-
     private var currentPlanTitle: String {
         purchaseManager.activePlanTitle
-    }
-
-    /// Display order follows the design: recommended plan first, Lifetime last.
-    private var individualOptions: [HealthMdPurchaseOption] {
-        [.weekly, .yearly, .individual]
-    }
-
-    private var familyOptions: [HealthMdPurchaseOption] {
-        [.familyWeekly, .familyYearly, .family]
-    }
-
-    private var selectedOptions: [HealthMdPurchaseOption] {
-        switch selectedAudience {
-        case .individual: return individualOptions
-        case .family: return familyOptions
-        }
     }
 
     private var canShowFamilyUpgradeOffer: Bool {
@@ -77,12 +52,6 @@ struct PaywallView: View {
         return String(localized: "You have unlimited exports.")
     }
 
-    /// The option the pinned button buys, or nil when there is nothing to buy here.
-    private var checkoutOption: HealthMdPurchaseOption? {
-        if isManagingPurchase { return canShowFamilyUpgradeOffer ? .familyUpgrade : nil }
-        return selectedOption
-    }
-
     private var isBusy: Bool {
         purchaseManager.isPurchasing || purchaseManager.isRestoring
     }
@@ -94,36 +63,80 @@ struct PaywallView: View {
     // MARK: - Body
 
     var body: some View {
-        glassBody
+        Group {
+            if isManagingPurchase {
+                managementLayout
+            } else {
+                SignalPaywallCarousel(
+                    purchaseManager: purchaseManager,
+                    pricing: signalPricing,
+                    allowsDismissal: allowsDismissal,
+                    onDismiss: { dismiss() },
+                    onPurchase: purchase,
+                    onRestore: restore
+                ) {
+                    purchaseStatus
+                }
+            }
+        }
+        .glassTheme()
+        // A container keeps child identifiers (restore, purchase, dismiss) addressable.
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier(AccessibilityID.Paywall.view)
+        .task { await purchaseManager.loadProductsIfNeeded() }
+        .onChange(of: purchaseManager.isUnlocked) { _, unlocked in
+            if unlocked && !isManagingPurchase { dismiss() }
+        }
+        .sheet(isPresented: $showClinicAccess) {
+            NavigationStack {
+                GlassClinicAccessScreen(coordinator: profileCoordinator)
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button(String(localized: "Done")) { showClinicAccess = false }
+                        }
+                    }
+            }
             .glassTheme()
-            .accessibilityIdentifier(AccessibilityID.Paywall.view)
-            .task { await purchaseManager.loadProductsIfNeeded() }
-            .onChange(of: purchaseManager.isUnlocked) { _, unlocked in
-                if unlocked && !isManagingPurchase { dismiss() }
-            }
-            .onChange(of: selectedAudience) { _, audience in
-                selectedOption = Self.option(matching: selectedOption, in: audience)
-            }
+        }
     }
 
-    private var glassBody: some View {
+    private var signalPricing: SignalPaywallCarousel<AnyView>.Pricing {
+        .init(
+            priceLabel: purchaseButtonPriceLabel(for:),
+            weeklyEquivalent: weeklyEquivalentPrice(for:),
+            isTrialEligible: isTrialEligible,
+            footerLine: { option in
+                option.isSubscription ? optionSubtitle(for: option) : (purchaseButtonPriceLabel(for: option) ?? option.displaySubtitle)
+            },
+            isLoading: isPurchaseOptionLoading,
+            isDisabled: isPurchaseButtonDisabled(for:)
+        )
+    }
+
+    /// Store errors, catalog retry and the clinic invitation entry, shown in the carousel footer.
+    private var purchaseStatus: AnyView {
+        AnyView(VStack(alignment: .leading, spacing: 4) {
+            glassError
+            if clinic.status.configured && !clinic.status.active {
+                Button(String(localized: "Have a clinic invitation?")) { showClinicAccess = true }
+                    .buttonStyle(.plain)
+                    .glassFont(.caption)
+                    .foregroundStyle(glassPalette.muted)
+                    .frame(maxWidth: .infinity, minHeight: GlassMetrics.touchTarget)
+                    .accessibilityIdentifier("clinic-invitation-entry")
+            }
+        })
+    }
+
+    // MARK: - Unlocked: plan management
+
+    private var managementLayout: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: GlassMetrics.sectionGap) {
                     header
                     glassError
-
-                    if isManagingPurchase {
-                        managementContent
-                    } else {
-                        planPicker
-                        Text("Family plans share access through Apple Family Sharing. Existing Lifetime and earlier permanent access stay valid.")
-                            .glassFont(.rowSubtitle)
-                            .foregroundStyle(glassPalette.muted)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .padding(.horizontal, 4)
-                        PaywallGlassDisclosure()
-                    }
+                    managementContent
                 }
                 .padding(.horizontal, GlassMetrics.screenMargin)
                 .padding(.top, 8)
@@ -131,19 +144,7 @@ struct PaywallView: View {
             }
             .background(glassPalette.bg.ignoresSafeArea())
             .safeAreaInset(edge: .bottom, spacing: 0) { purchaseBar }
-            .sheet(isPresented: $showClinicAccess) {
-                NavigationStack {
-                    GlassClinicAccessScreen(coordinator: profileCoordinator)
-                        .toolbar {
-                            ToolbarItem(placement: .cancellationAction) {
-                                Button(String(localized: "Done")) { showClinicAccess = false }
-                            }
-                        }
-                }
-                .glassTheme()
-            }
             .toolbar {
-                // The access gate presents this without dismissal: it is a hard paywall.
                 if allowsDismissal {
                     ToolbarItem(placement: .cancellationAction) {
                         Button(String(localized: "Close")) { dismiss() }
@@ -155,8 +156,6 @@ struct PaywallView: View {
         }
     }
 
-    // MARK: - Header
-
     private var header: some View {
         VStack(spacing: 12) {
             Image("AppIconImage")
@@ -165,12 +164,12 @@ struct PaywallView: View {
                 .frame(width: 76, height: 76)
                 .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
                 .accessibilityHidden(true)
-            Text(titleText)
+            Text(String(localized: "Purchases & Family"))
                 .glassFont(.screenTitle)
                 .foregroundStyle(glassPalette.text)
                 .accessibilityAddTraits(.isHeader)
                 .accessibilityIdentifier(AccessibilityID.Paywall.title)
-            Text(subtitleText)
+            Text(currentPlanTitle)
                 .glassFont(.body)
                 .foregroundStyle(glassPalette.sec)
                 .accessibilityIdentifier(AccessibilityID.Paywall.subtitle)
@@ -180,8 +179,6 @@ struct PaywallView: View {
         .frame(maxWidth: .infinity)
         .padding(.top, 8)
     }
-
-    // MARK: - Errors
 
     @ViewBuilder private var glassError: some View {
         if let error = purchaseManager.purchaseError {
@@ -204,40 +201,6 @@ struct PaywallView: View {
         }
     }
 
-    // MARK: - Locked: plan picker
-
-    private var planPicker: some View {
-        VStack(alignment: .leading, spacing: GlassMetrics.sectionGap) {
-            GlassSegmentedControl(
-                segments: PaywallPricingAudience.allCases.map { .init(value: $0, title: $0.title) },
-                selection: $selectedAudience
-            )
-            .disabled(isBusy)
-            .accessibilityElement(children: .contain)
-            .accessibilityLabel(Text("Plan type"))
-
-            VStack(spacing: 10) {
-                ForEach(selectedOptions) { option in
-                    PaywallPlanCard(
-                        title: option.displayTitle,
-                        badge: Self.isRecommended(option) ? String(localized: "Best value") : nil,
-                        subtitle: optionSubtitle(for: option),
-                        price: purchaseButtonPriceLabel(for: option),
-                        isSelected: selectedOption == option,
-                        isLoading: isPurchaseOptionLoading(option)
-                    ) {
-                        selectedOption = option
-                    }
-                    .disabled(isBusy)
-                }
-            }
-            .accessibilityElement(children: .contain)
-            .accessibilityLabel(Text(selectedAudience.sectionTitle))
-        }
-    }
-
-    // MARK: - Unlocked: plan management
-
     @ViewBuilder private var managementContent: some View {
         GlassBanner(
             title: currentPlanTitle,
@@ -259,21 +222,42 @@ struct PaywallView: View {
                 subtitle: String(localized: "Upgrade pricing for existing Lifetime owners"),
                 price: purchaseButtonPriceLabel(for: .familyUpgrade),
                 isSelected: true,
-                isLoading: isPurchaseOptionLoading(.familyUpgrade),
-                action: nil
+                isLoading: isPurchaseOptionLoading(.familyUpgrade)
             )
         }
     }
 
-    // MARK: - Pinned purchase bar
-
     private var purchaseBar: some View {
         VStack(spacing: 8) {
-            if let option = checkoutOption {
-                checkoutButton(for: option)
+            if canShowFamilyUpgradeOffer {
+                Button { purchase(.familyUpgrade) } label: {
+                    HStack(spacing: 8) {
+                        if purchaseManager.purchasingOption == .familyUpgrade {
+                            ProgressView().tint(glassPalette.accentInk)
+                        }
+                        Text(String(localized: "Upgrade to Family Lifetime"))
+                    }
+                }
+                .buttonStyle(GlassPrimaryButtonStyle())
+                .disabled(isPurchaseButtonDisabled(for: .familyUpgrade))
+                .accessibilityIdentifier(AccessibilityID.Paywall.familyUnlockButton)
             }
             HStack(spacing: 18) {
-                restoreButton
+                Button(action: restore) {
+                    HStack(spacing: 6) {
+                        if purchaseManager.isRestoring {
+                            ProgressView().controlSize(.small).tint(glassPalette.accent)
+                        }
+                        Text(String(localized: "Restore"))
+                    }
+                }
+                .buttonStyle(.plain)
+                .glassFont(.caption)
+                .foregroundStyle(glassPalette.accent)
+                .frame(minHeight: GlassMetrics.touchTarget)
+                .disabled(isBusy)
+                .accessibilityIdentifier(AccessibilityID.Paywall.restoreButton)
+                .accessibilityLabel("Restore previous purchase")
                 Link(
                     String(localized: "Manage subscriptions"),
                     destination: URL(string: "https://apps.apple.com/account/subscriptions")!
@@ -283,14 +267,6 @@ struct PaywallView: View {
                 .frame(minHeight: GlassMetrics.touchTarget)
             }
             .frame(maxWidth: .infinity)
-            if PracticeFeaturePolicy.current.isEnabled {
-                Button(String(localized: "Clinic invitation?")) { showClinicAccess = true }
-                    .buttonStyle(.plain)
-                    .glassFont(.caption)
-                    .foregroundStyle(glassPalette.muted)
-                    .frame(minHeight: GlassMetrics.touchTarget)
-                    .accessibilityIdentifier("paywall.clinicInvitation")
-            }
         }
         .padding(.horizontal, GlassMetrics.screenMargin)
         .padding(.top, 12)
@@ -303,59 +279,6 @@ struct PaywallView: View {
                 }
                 .ignoresSafeArea(edges: .bottom)
         }
-    }
-
-    private func checkoutButton(for option: HealthMdPurchaseOption) -> some View {
-        let isInFlight = purchaseManager.purchasingOption == option
-        return Button { purchase(option) } label: {
-            HStack(spacing: 8) {
-                if isInFlight {
-                    ProgressView().tint(glassPalette.accentInk)
-                }
-                Text(checkoutTitle(for: option))
-            }
-        }
-        .buttonStyle(GlassPrimaryButtonStyle())
-        .disabled(isPurchaseButtonDisabled(for: option))
-        .accessibilityIdentifier(checkoutIdentifier(for: option))
-        .accessibilityValue(checkoutAccessibilityValue(for: option))
-    }
-
-    private var restoreButton: some View {
-        Button {
-            Task { await purchaseManager.restore(source: .paywall(context)) }
-        } label: {
-            HStack(spacing: 6) {
-                if purchaseManager.isRestoring {
-                    ProgressView().controlSize(.small).tint(glassPalette.accent)
-                }
-                Text(String(localized: "Restore"))
-            }
-        }
-        .buttonStyle(.plain)
-        .glassFont(.caption)
-        .foregroundStyle(glassPalette.accent)
-        .frame(minHeight: GlassMetrics.touchTarget)
-        .disabled(isBusy)
-        .accessibilityIdentifier(AccessibilityID.Paywall.restoreButton)
-        .accessibilityLabel("Restore previous purchase")
-    }
-
-    private func checkoutTitle(for option: HealthMdPurchaseOption) -> String {
-        if option == .familyUpgrade { return String(localized: "Upgrade to Family Lifetime") }
-        if isTrialEligible(option) { return String(localized: "Start free trial") }
-        return String(localized: "Continue")
-    }
-
-    /// Existing identifiers move to the single purchase button: individual plans use the
-    /// unlock button ID, family plans and the Family Lifetime upgrade the family one.
-    private func checkoutIdentifier(for option: HealthMdPurchaseOption) -> String {
-        option.isFamilyPlan ? AccessibilityID.Paywall.familyUnlockButton : AccessibilityID.Paywall.unlockButton
-    }
-
-    private func checkoutAccessibilityValue(for option: HealthMdPurchaseOption) -> String {
-        guard let price = purchaseButtonPriceLabel(for: option) else { return option.displayTitle }
-        return "\(option.displayTitle), \(price)"
     }
 
     // MARK: - Pricing
@@ -378,18 +301,12 @@ struct PaywallView: View {
         return purchaseManager.product(for: option)?.displayPrice
     }
 
-    private func isTrialEligible(_ option: HealthMdPurchaseOption) -> Bool {
-        option.isSubscription && purchaseManager.trialEligibleProductIDs.contains(option.productID)
-    }
-
     private func optionSubtitle(for option: HealthMdPurchaseOption) -> String {
         guard isTrialEligible(option),
               let price = displayPrice(for: option) else { return option.displaySubtitle }
-        // PaywallG wording, plus the auto-renew disclosure the App Store requires.
-        // The weekly price is beside the subtitle ("/wk"), as on the board.
         return option == .weekly || option == .familyWeekly
-            ? String(localized: "7-day free trial. Auto-renews; cancel anytime.")
-            : String(localized: "7-day free trial, then \(price)/year. Auto-renews; cancel anytime.")
+            ? String(localized: "7 days free, then \(price) per week. Auto-renews; cancel anytime.")
+            : String(localized: "7 days free, then \(price) per year. Auto-renews; cancel anytime.")
     }
 
     private func purchaseButtonPriceLabel(for option: HealthMdPurchaseOption) -> String? {
@@ -425,37 +342,40 @@ struct PaywallView: View {
         return purchaseManager.product(for: option) != nil
     }
 
+    private func isTrialEligible(_ option: HealthMdPurchaseOption) -> Bool {
+        guard option.isSubscription else { return false }
+        #if DEBUG
+        if MarketingCapture.usesStaticPurchasePrices { return true }
+        #endif
+        return purchaseManager.trialEligibleProductIDs.contains(option.productID)
+    }
+
+    /// Yearly plans show their weekly cost; StoreKit supplies the locale-correct format.
+    private func weeklyEquivalentPrice(for option: HealthMdPurchaseOption) -> String? {
+        guard option == .yearly || option == .familyYearly else { return nil }
+        #if DEBUG
+        if MarketingCapture.usesStaticPurchasePrices { return option == .yearly ? "$0.58" : "$0.96" }
+        #endif
+        guard let product = purchaseManager.product(for: option) else { return nil }
+        return (product.price / 52).formatted(product.priceFormatStyle)
+    }
+
     private func purchase(_ option: HealthMdPurchaseOption) {
         Task {
             await purchaseManager.purchase(option, source: .paywall(context))
         }
     }
 
-    // MARK: - Selection mapping
-
-    private static func isRecommended(_ option: HealthMdPurchaseOption) -> Bool {
-        option == .yearly || option == .familyYearly
-    }
-
-    /// Keeps the chosen cadence (yearly, weekly, lifetime) when switching audience.
-    private static func option(
-        matching option: HealthMdPurchaseOption,
-        in audience: PaywallPricingAudience
-    ) -> HealthMdPurchaseOption {
-        switch (option, audience) {
-        case (.weekly, .family), (.familyWeekly, .family): return .familyWeekly
-        case (.weekly, .individual), (.familyWeekly, .individual): return .weekly
-        case (.individual, .family), (.family, .family), (.familyUpgrade, .family): return .family
-        case (.individual, .individual), (.family, .individual), (.familyUpgrade, .individual): return .individual
-        case (_, .family): return .familyYearly
-        case (_, .individual): return .yearly
+    private func restore() {
+        Task {
+            await purchaseManager.restore(source: .paywall(context))
         }
     }
 }
 
 // MARK: - Plan card
 
-/// A selectable plan in the radio group: radio, title (and badge), terms, price.
+/// The Family Lifetime upgrade summary in plan management (the pinned button buys it).
 private struct PaywallPlanCard: View {
     let title: String
     let badge: String?
@@ -463,8 +383,6 @@ private struct PaywallPlanCard: View {
     let price: String?
     let isSelected: Bool
     let isLoading: Bool
-    /// Nil renders the card as a non-interactive summary (the pinned button buys it).
-    let action: (() -> Void)?
 
     @Environment(\.glassPalette) private var palette
     @Environment(\.isEnabled) private var isEnabled
@@ -472,17 +390,6 @@ private struct PaywallPlanCard: View {
     private let radius: CGFloat = 22
 
     var body: some View {
-        if let action {
-            Button(action: action) { card }
-                .buttonStyle(.plain)
-                .accessibilityElement(children: .combine)
-                .accessibilityAddTraits(isSelected ? [.isSelected] : [])
-        } else {
-            card.accessibilityElement(children: .combine)
-        }
-    }
-
-    private var card: some View {
         HStack(spacing: 12) {
             Circle()
                 .strokeBorder(isSelected ? palette.accent : palette.muted, lineWidth: isSelected ? 7 : 2)
@@ -526,73 +433,16 @@ private struct PaywallPlanCard: View {
             RoundedRectangle(cornerRadius: radius, style: .continuous)
                 .strokeBorder(isSelected ? palette.accent : Color.clear, lineWidth: 2)
         }
-        .contentShape(RoundedRectangle(cornerRadius: radius, style: .continuous))
         .opacity(isEnabled ? 1 : 0.6)
-    }
-}
-
-// MARK: - Disclosure
-
-/// Glass rendering of `OnboardingPurchaseDisclosure`: identical required terms copy and links.
-private struct PaywallGlassDisclosure: View {
-    @Environment(\.glassPalette) private var palette
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Eligible subscriptions include a 7-day free trial, then renew automatically at the displayed price unless canceled at least 24 hours before the trial or current period ends. Payment is charged to your Apple ID. Manage or cancel in App Store subscriptions. Lifetime plans are charged immediately as one-time purchases with no trial. Deleting the app or buying Lifetime does not cancel an existing subscription.")
-                .glassFont(.rowSubtitle)
-                .foregroundStyle(palette.muted)
-                .fixedSize(horizontal: false, vertical: true)
-            // Keep these independent links, including in VoiceOver traversal.
-            HStack(spacing: 18) {
-                Link(destination: URL(string: "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/")!) {
-                    linkLabel("Terms")
-                }
-                Link(destination: URL(string: "https://healthmd.app/privacy-policy.html")!) {
-                    linkLabel("Privacy")
-                }
-            }
-        }
-        .multilineTextAlignment(.leading)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 4)
-        .accessibilityElement(children: .contain)
-    }
-
-    private func linkLabel(_ title: LocalizedStringKey) -> some View {
-        Text(title)
-            .glassFont(.caption)
-            .foregroundStyle(palette.accent)
-            .underline()
-            .frame(minHeight: GlassMetrics.touchTarget)
-    }
-}
-
-private enum PaywallPricingAudience: String, CaseIterable, Identifiable {
-    case individual
-    case family
-
-    var id: String { rawValue }
-
-    var title: String {
-        switch self {
-        case .individual: return String(localized: "Individual")
-        case .family: return String(localized: "Family")
-        }
-    }
-
-    var sectionTitle: String {
-        switch self {
-        case .individual: return String(localized: "Individual")
-        case .family: return String(localized: "Family Sharing")
-        }
+        .accessibilityElement(children: .combine)
     }
 }
 
 /// Root access boundary: unpaid users cannot reach tracking/setup through a
-/// dismiss gesture or a deep link. Restore and store errors remain available.
+/// dismiss gesture or a deep link. Restore, store errors and clinic enrollment remain available.
 struct PurchaseAccessGate<Content: View>: View {
     @ObservedObject private var purchases = PurchaseManager.shared
+    @ObservedObject private var clinic = ClinicSponsorshipManager.shared
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
@@ -600,7 +450,7 @@ struct PurchaseAccessGate<Content: View>: View {
 
     var body: some View {
         Group {
-            if purchases.isUnlocked || (TestMode.isUITesting && TestMode.purchaseUnlocked) {
+            if purchases.isUnlocked || clinic.status.active || (TestMode.isUITesting && TestMode.purchaseUnlocked) {
                 content()
             } else if purchases.isCheckingAccess && !TestMode.isUITesting {
                 ProgressView("Checking purchases…")
@@ -615,7 +465,7 @@ struct PurchaseAccessGate<Content: View>: View {
         }
         .onChange(of: scenePhase) { _, phase in
             guard phase == .active, !TestMode.suppressesRuntimeServices else { return }
-            Task { await purchases.refreshStatus() }
+            Task { await purchases.refreshStatus(); await clinic.refresh() }
         }
     }
 }

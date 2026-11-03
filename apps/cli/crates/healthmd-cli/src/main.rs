@@ -2612,6 +2612,12 @@ fn map_direct_file_error(error: ClientError) -> CommandError {
 
 #[allow(clippy::needless_pass_by_value)]
 fn map_direct_client_error(error: ClientError) -> CommandError {
+    if let ClientError::ExportRejected(rejection) = &error {
+        return CommandError {
+            code: "direct_export_rejected",
+            message: rejection.to_string(),
+        };
+    }
     let code = match error {
         ClientError::JobNotFound => "job_not_found",
         ClientError::JobExpired => "job_expired",
@@ -3487,6 +3493,30 @@ mod tests {
             options.oauth_issuer.unwrap().as_str(),
             "https://auth.health.md/"
         );
+    }
+
+    #[test]
+    fn android_export_rejection_is_not_cli_receipt_corruption() {
+        use healthmd_protocol::v2::{ErrorCode, ExportPhase};
+        for map in [map_direct_file_error, map_direct_client_error] {
+            let mapped = map(ClientError::ExportRejected(
+                healthmd_client::ExportRejection {
+                    code: ErrorCode::QuotaExhausted,
+                    phase: ExportPhase::Preparing,
+                    retryable: false,
+                },
+            ));
+            assert_eq!(mapped.code, "direct_export_rejected");
+            assert!(mapped.message.contains("quota_exhausted"));
+            assert!(mapped.message.contains("preparing"));
+            assert!(mapped.message.contains("retryable: false"));
+            assert!(mapped.message.contains("billing"));
+            assert!(!mapped.message.contains("integrity"));
+        }
+        let corrupt = map_direct_file_error(ClientError::InvalidTransfer("digest mismatch".into()));
+        assert_eq!(corrupt.code, "invalid_direct_file_receipt");
+        let malformed = map_direct_client_error(ClientError::MalformedPacket);
+        assert_ne!(malformed.code, "direct_export_rejected");
     }
 
     #[test]

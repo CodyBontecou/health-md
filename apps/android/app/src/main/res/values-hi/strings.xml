@@ -1443,6 +1443,9 @@
     <string name="export_sleep_date_guidance">नींद की अवधि हर चुनी हुई तारीख की दोपहर से अगले दिन की दोपहर तक होती है। पिछली रात की नींद के लिए बीता हुआ कल चुनें।</string>
     <string name="export_sleep_preview_window">नींद की अवधि: %1$s की दोपहर से %2$s की दोपहर तक (%3$s)।</string>
     <string name="export_sleep_preview_guidance">अगर नींद का डेटा नहीं है, तो पिछली तारीख आज़माएँ। सुबह की नींद उस तारीख के सारांश में दिख सकती है, भले ही मूल रिकॉर्ड आज के हों। क्वेरी की विफलताएँ अलग से दिखाई जाती हैं; खाली परिणाम का मतलब पढ़ने की अनुमति उपलब्ध न होना भी हो सकता है।</string>
+    <string name="export_sleep_date_guidance_morning_ends">पूरे नींद सत्र एक्सपोर्ट के टाइम ज़ोन में उस तारीख के होते हैं जिस दिन वे समाप्त होते हैं। पिछली रात की नींद के लिए आज चुनें।</string>
+    <string name="export_sleep_preview_window_morning_ends">नींद समाप्ति की तारीखें: %1$s से %2$s (%3$s)।</string>
+    <string name="export_sleep_preview_guidance_morning_ends">पूरे नींद सत्र इस एक्सपोर्ट के टाइम ज़ोन में अपनी समाप्ति तारीख के होते हैं, दोपहर पर काटे बिना। क्वेरी की विफलताएँ अलग से दिखाई जाती हैं; खाली परिणाम का मतलब पढ़ने की अनुमति उपलब्ध न होना भी हो सकता है।</string>
     <string name="whoop_connection_description">रिकवरी, तनाव, नींद, वर्कआउट और शारीरिक माप निर्यात करने के लिए WHOOP कनेक्ट करें। साइन-इन आपके ब्राउज़र में होता है; Health.md टोकन को इस डिवाइस पर एन्क्रिप्ट करके रखता है। डिस्कनेक्ट करने से इस डिवाइस का सहेजा गया कनेक्शन हट जाता है।</string>
     <string name="whoop_connect">WHOOP कनेक्ट करें</string>
     <string name="whoop_sources_description">सीधे प्रदाता से निर्यात करने के लिए WHOOP कनेक्ट करें या स्थानीय रिकॉर्ड के लिए Health Connect का उपयोग जारी रखें।</string>
@@ -1454,6 +1457,8 @@
     <string name="paywall_access_subtitle">अपना निजी स्वास्थ्य संग्रह शुरू करने के लिए सदस्यता या आजीवन एक्सेस चुनें। योग्य सदस्यताओं में 7 दिन का मुफ़्त ट्रायल शामिल है।</string>
     <string name="paywall_access_active_title">आपका एक्सेस सक्रिय है</string>
     <string name="paywall_access_active_body">अपने स्वास्थ्य डेटा को कनेक्ट करने और निजी संग्रह सहेजने की जगह चुनने के लिए सेटअप जारी रखें।</string>
+    <string name="clinic_access_active_title">आपका क्लिनिक एक्सेस सक्रिय है</string>
+    <string name="clinic_access_active_body">आपका क्लिनिक अपने स्वीकृत एंडपॉइंट तक डिलीवरी प्रायोजित करता है। क्या साझा करना है, यह आप चुनते हैं। अन्य एक्सपोर्ट गंतव्यों के लिए आपका अपना Health.md एक्सेस ज़रूरी है।</string>
     <string name="paywall_plan_choices">साप्ताहिक, वार्षिक या आजीवन एक्सेस</string>
     <string name="paywall_weekly_price">%1$s / सप्ताह</string>
     <string name="paywall_yearly_price">%1$s / वर्ष</string>
@@ -1464,4 +1469,35 @@
     <string name="paywall_terms">शर्तें</string>
     <string name="paywall_privacy">गोपनीयता</string>
     <string name="paywall_subscription_disclosure">योग्य सदस्यताओं में 7 दिन का मुफ़्त ट्रायल शामिल है, जिसके बाद दिखाए गए मूल्य पर अपने आप नवीनीकरण होता है, जब तक ट्रायल या मौजूदा अवधि समाप्त होने से पहले रद्द न किया जाए। Google Play में प्रबंधित करें या रद्द करें। आजीवन एक्सेस का एकमुश्त भुगतान तुरंत लिया जाता है। मौजूदा सशुल्क एक्सेस बरकरार रहता है। जीवन भर का कोई परीक्षण नहीं है. ऐप को हटाने या लाइफटाइम खरीदने से मौजूदा सदस्यता रद्द नहीं होती है।</string>
+
+    <!-- Signal carousel paywall -->
+    <string name="paywall_signal_title">हर धड़कन, लिखी हुई।</string>
+    <string name="paywall_signal_lede">Health.md, Health Connect के डेटा को हर दिन के लिए एक Markdown नोट में बदलकर आपके चुने हुए फ़ोल्डर में सहेजता है।</string>
+    <string name="paywall_signal_example">उदाहरण</string>
+    <string name="paywall_signal_trial_title">सात दिन, हमारी तरफ़ से।</string>
+    <string name="paywall_signal_day_today">आज</string>
+    <string name="paywall_signal_day_today_body">असीमित निर्यात, शेड्यूल और ऑटोमेशन।</string>
+    <string name="paywall_signal_day_cancel">कभी भी रद्द करें</string>
+    <string name="paywall_signal_day_cancel_body">ट्रायल खत्म होने से पहले Google Play में रद्द करें।</string>
+    <string name="paywall_signal_day_end">ट्रायल खत्म</string>
+    <string name="paywall_signal_day_end_body">इसके बाद %1$s।</string>
+    <string name="paywall_signal_plans_title">अपना रास्ता चुनें।</string>
+    <string name="paywall_signal_best_value">सबसे किफ़ायती</string>
+    <string name="paywall_signal_free_week">7 दिन मुफ़्त</string>
+    <string name="paywall_signal_lifetime_detail">आज एक बार भुगतान करें। कोई नवीनीकरण नहीं।</string>
+    <string name="paywall_signal_subscription_detail">अपने-आप नवीनीकृत होता है। Google Play में कभी भी रद्द करें।</string>
+    <string name="paywall_signal_cta_trial">7 दिन का मुफ़्त ट्रायल शुरू करें</string>
+    <string name="paywall_signal_cta_subscribe">सदस्यता लें</string>
+    <string name="paywall_signal_cta_lifetime">आजीवन खरीदें</string>
+    <string name="paywall_signal_step_archive">संग्रह</string>
+    <string name="paywall_signal_step_trial">ट्रायल</string>
+    <string name="paywall_signal_step_plans">प्लान</string>
+    <string name="paywall_signal_plan_weekly">साप्ताहिक</string>
+    <string name="paywall_signal_plan_yearly">वार्षिक</string>
+    <string name="paywall_signal_plan_lifetime">आजीवन</string>
+    <string name="clinic_sync_channel_name">क्लिनिक के सिंक अनुरोध</string>
+    <string name="clinic_sync_request_body">आपका क्लिनिक आपका नवीनतम स्वास्थ्य डेटा मांग रहा है। भेजने के लिए टैप करें।</string>
+    <string name="clinic_sync_result_sent">आपका नवीनतम डेटा आपके क्लिनिक को भेज दिया गया।</string>
+    <string name="clinic_sync_result_failed">आपका डेटा क्लिनिक को नहीं भेजा जा सका। Health.md खोलें और फिर से कोशिश करें।</string>
+    <string name="clinic_sync_result_profile_missing">Health.md में क्लिनिक एक्सेस खोलें और पहले क्लिनिक गंतव्य का उपयोग करें चुनें।</string>
 </resources>

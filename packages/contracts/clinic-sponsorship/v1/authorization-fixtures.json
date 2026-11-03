@@ -1,0 +1,631 @@
+{
+  "schema": "healthmd.clinic_export_authorization.fixtures",
+  "version": 1,
+  "cases": [
+    {
+      "id": "clinic-delivery",
+      "independent_access": false,
+      "now_ms": 1000000,
+      "grant": {
+        "clinic_id": "fictional-clinic",
+        "destination_id": "primary",
+        "policy_version": 1,
+        "endpoint": "https://intake.clinic.example/upload",
+        "issued_at_ms": 900000,
+        "expires_at_ms": 1500000,
+        "revoked": false
+      },
+      "request": {
+        "direct_delivery": true,
+        "clinic_id": "fictional-clinic",
+        "destination_id": "primary",
+        "policy_version": 1,
+        "endpoint": "https://intake.clinic.example/upload",
+        "sharing_authorized": true
+      },
+      "expected": "allowed_clinic_destination"
+    },
+    {
+      "id": "personal-without-clinic",
+      "independent_access": true,
+      "now_ms": 1000000,
+      "grant": null,
+      "request": {
+        "direct_delivery": true,
+        "clinic_id": "fictional-clinic",
+        "destination_id": "primary",
+        "policy_version": 1,
+        "endpoint": "https://intake.clinic.example/upload",
+        "sharing_authorized": true
+      },
+      "expected": "allowed_personal"
+    },
+    {
+      "id": "personal-survives-revocation",
+      "independent_access": true,
+      "now_ms": 1000000,
+      "grant": {
+        "clinic_id": "fictional-clinic",
+        "destination_id": "primary",
+        "policy_version": 1,
+        "endpoint": "https://intake.clinic.example/upload",
+        "issued_at_ms": 900000,
+        "expires_at_ms": 1500000,
+        "revoked": true
+      },
+      "request": {
+        "direct_delivery": true,
+        "clinic_id": "fictional-clinic",
+        "destination_id": "primary",
+        "policy_version": 1,
+        "endpoint": "https://intake.clinic.example/upload",
+        "sharing_authorized": true
+      },
+      "expected": "allowed_personal"
+    },
+    {
+      "id": "no-grant",
+      "independent_access": false,
+      "now_ms": 1000000,
+      "grant": null,
+      "request": {
+        "direct_delivery": true,
+        "clinic_id": "fictional-clinic",
+        "destination_id": "primary",
+        "policy_version": 1,
+        "endpoint": "https://intake.clinic.example/upload",
+        "sharing_authorized": true
+      },
+      "expected": "blocked_access_expired"
+    },
+    {
+      "id": "expired",
+      "independent_access": false,
+      "now_ms": 1000000,
+      "grant": {
+        "clinic_id": "fictional-clinic",
+        "destination_id": "primary",
+        "policy_version": 1,
+        "endpoint": "https://intake.clinic.example/upload",
+        "issued_at_ms": 900000,
+        "expires_at_ms": 1000000,
+        "revoked": false
+      },
+      "request": {
+        "direct_delivery": true,
+        "clinic_id": "fictional-clinic",
+        "destination_id": "primary",
+        "policy_version": 1,
+        "endpoint": "https://intake.clinic.example/upload",
+        "sharing_authorized": true
+      },
+      "expected": "blocked_access_expired"
+    },
+    {
+      "id": "future-issued",
+      "independent_access": false,
+      "now_ms": 1000000,
+      "grant": {
+        "clinic_id": "fictional-clinic",
+        "destination_id": "primary",
+        "policy_version": 1,
+        "endpoint": "https://intake.clinic.example/upload",
+        "issued_at_ms": 1000001,
+        "expires_at_ms": 1500000,
+        "revoked": false
+      },
+      "request": {
+        "direct_delivery": true,
+        "clinic_id": "fictional-clinic",
+        "destination_id": "primary",
+        "policy_version": 1,
+        "endpoint": "https://intake.clinic.example/upload",
+        "sharing_authorized": true
+      },
+      "expected": "blocked_access_expired"
+    },
+    {
+      "id": "negative-issued",
+      "independent_access": false,
+      "now_ms": 1000000,
+      "grant": {
+        "clinic_id": "fictional-clinic",
+        "destination_id": "primary",
+        "policy_version": 1,
+        "endpoint": "https://intake.clinic.example/upload",
+        "issued_at_ms": -1,
+        "expires_at_ms": 1500000,
+        "revoked": false
+      },
+      "request": {
+        "direct_delivery": true,
+        "clinic_id": "fictional-clinic",
+        "destination_id": "primary",
+        "policy_version": 1,
+        "endpoint": "https://intake.clinic.example/upload",
+        "sharing_authorized": true
+      },
+      "expected": "blocked_access_expired"
+    },
+    {
+      "id": "revoked",
+      "independent_access": false,
+      "now_ms": 1000000,
+      "grant": {
+        "clinic_id": "fictional-clinic",
+        "destination_id": "primary",
+        "policy_version": 1,
+        "endpoint": "https://intake.clinic.example/upload",
+        "issued_at_ms": 900000,
+        "expires_at_ms": 1500000,
+        "revoked": true
+      },
+      "request": {
+        "direct_delivery": true,
+        "clinic_id": "fictional-clinic",
+        "destination_id": "primary",
+        "policy_version": 1,
+        "endpoint": "https://intake.clinic.example/upload",
+        "sharing_authorized": true
+      },
+      "expected": "blocked_access_expired"
+    },
+    {
+      "id": "overlong",
+      "independent_access": false,
+      "now_ms": 1000000,
+      "grant": {
+        "clinic_id": "fictional-clinic",
+        "destination_id": "primary",
+        "policy_version": 1,
+        "endpoint": "https://intake.clinic.example/upload",
+        "issued_at_ms": 900000,
+        "expires_at_ms": 605700001,
+        "revoked": false
+      },
+      "request": {
+        "direct_delivery": true,
+        "clinic_id": "fictional-clinic",
+        "destination_id": "primary",
+        "policy_version": 1,
+        "endpoint": "https://intake.clinic.example/upload",
+        "sharing_authorized": true
+      },
+      "expected": "blocked_access_expired"
+    },
+    {
+      "id": "download",
+      "independent_access": false,
+      "now_ms": 1000000,
+      "grant": {
+        "clinic_id": "fictional-clinic",
+        "destination_id": "primary",
+        "policy_version": 1,
+        "endpoint": "https://intake.clinic.example/upload",
+        "issued_at_ms": 900000,
+        "expires_at_ms": 1500000,
+        "revoked": false
+      },
+      "request": {
+        "direct_delivery": false,
+        "clinic_id": "fictional-clinic",
+        "destination_id": "primary",
+        "policy_version": 1,
+        "endpoint": "https://intake.clinic.example/upload",
+        "sharing_authorized": true
+      },
+      "expected": "blocked_destination_not_permitted"
+    },
+    {
+      "id": "other-clinic",
+      "independent_access": false,
+      "now_ms": 1000000,
+      "grant": {
+        "clinic_id": "fictional-clinic",
+        "destination_id": "primary",
+        "policy_version": 1,
+        "endpoint": "https://intake.clinic.example/upload",
+        "issued_at_ms": 900000,
+        "expires_at_ms": 1500000,
+        "revoked": false
+      },
+      "request": {
+        "direct_delivery": true,
+        "clinic_id": "other",
+        "destination_id": "primary",
+        "policy_version": 1,
+        "endpoint": "https://intake.clinic.example/upload",
+        "sharing_authorized": true
+      },
+      "expected": "blocked_destination_not_permitted"
+    },
+    {
+      "id": "missing-binding",
+      "independent_access": false,
+      "now_ms": 1000000,
+      "grant": {
+        "clinic_id": "fictional-clinic",
+        "destination_id": "primary",
+        "policy_version": 1,
+        "endpoint": "https://intake.clinic.example/upload",
+        "issued_at_ms": 900000,
+        "expires_at_ms": 1500000,
+        "revoked": false
+      },
+      "request": {
+        "direct_delivery": true,
+        "clinic_id": "fictional-clinic",
+        "destination_id": null,
+        "policy_version": 1,
+        "endpoint": "https://intake.clinic.example/upload",
+        "sharing_authorized": true
+      },
+      "expected": "blocked_destination_not_permitted"
+    },
+    {
+      "id": "stale-policy",
+      "independent_access": false,
+      "now_ms": 1000000,
+      "grant": {
+        "clinic_id": "fictional-clinic",
+        "destination_id": "primary",
+        "policy_version": 1,
+        "endpoint": "https://intake.clinic.example/upload",
+        "issued_at_ms": 900000,
+        "expires_at_ms": 1500000,
+        "revoked": false
+      },
+      "request": {
+        "direct_delivery": true,
+        "clinic_id": "fictional-clinic",
+        "destination_id": "primary",
+        "policy_version": 2,
+        "endpoint": "https://intake.clinic.example/upload",
+        "sharing_authorized": true
+      },
+      "expected": "blocked_destination_not_permitted"
+    },
+    {
+      "id": "other-endpoint",
+      "independent_access": false,
+      "now_ms": 1000000,
+      "grant": {
+        "clinic_id": "fictional-clinic",
+        "destination_id": "primary",
+        "policy_version": 1,
+        "endpoint": "https://intake.clinic.example/upload",
+        "issued_at_ms": 900000,
+        "expires_at_ms": 1500000,
+        "revoked": false
+      },
+      "request": {
+        "direct_delivery": true,
+        "clinic_id": "fictional-clinic",
+        "destination_id": "primary",
+        "policy_version": 1,
+        "endpoint": "https://other.example/upload",
+        "sharing_authorized": true
+      },
+      "expected": "blocked_destination_not_permitted"
+    },
+    {
+      "id": "other-path",
+      "independent_access": false,
+      "now_ms": 1000000,
+      "grant": {
+        "clinic_id": "fictional-clinic",
+        "destination_id": "primary",
+        "policy_version": 1,
+        "endpoint": "https://intake.clinic.example/upload",
+        "issued_at_ms": 900000,
+        "expires_at_ms": 1500000,
+        "revoked": false
+      },
+      "request": {
+        "direct_delivery": true,
+        "clinic_id": "fictional-clinic",
+        "destination_id": "primary",
+        "policy_version": 1,
+        "endpoint": "https://intake.clinic.example/other",
+        "sharing_authorized": true
+      },
+      "expected": "blocked_destination_not_permitted"
+    },
+    {
+      "id": "query",
+      "independent_access": false,
+      "now_ms": 1000000,
+      "grant": {
+        "clinic_id": "fictional-clinic",
+        "destination_id": "primary",
+        "policy_version": 1,
+        "endpoint": "https://intake.clinic.example/upload",
+        "issued_at_ms": 900000,
+        "expires_at_ms": 1500000,
+        "revoked": false
+      },
+      "request": {
+        "direct_delivery": true,
+        "clinic_id": "fictional-clinic",
+        "destination_id": "primary",
+        "policy_version": 1,
+        "endpoint": "https://intake.clinic.example/upload?next=other",
+        "sharing_authorized": true
+      },
+      "expected": "blocked_destination_not_permitted"
+    },
+    {
+      "id": "fragment",
+      "independent_access": false,
+      "now_ms": 1000000,
+      "grant": {
+        "clinic_id": "fictional-clinic",
+        "destination_id": "primary",
+        "policy_version": 1,
+        "endpoint": "https://intake.clinic.example/upload",
+        "issued_at_ms": 900000,
+        "expires_at_ms": 1500000,
+        "revoked": false
+      },
+      "request": {
+        "direct_delivery": true,
+        "clinic_id": "fictional-clinic",
+        "destination_id": "primary",
+        "policy_version": 1,
+        "endpoint": "https://intake.clinic.example/upload#x",
+        "sharing_authorized": true
+      },
+      "expected": "blocked_destination_not_permitted"
+    },
+    {
+      "id": "http",
+      "independent_access": false,
+      "now_ms": 1000000,
+      "grant": {
+        "clinic_id": "fictional-clinic",
+        "destination_id": "primary",
+        "policy_version": 1,
+        "endpoint": "https://intake.clinic.example/upload",
+        "issued_at_ms": 900000,
+        "expires_at_ms": 1500000,
+        "revoked": false
+      },
+      "request": {
+        "direct_delivery": true,
+        "clinic_id": "fictional-clinic",
+        "destination_id": "primary",
+        "policy_version": 1,
+        "endpoint": "http://intake.clinic.example/upload",
+        "sharing_authorized": true
+      },
+      "expected": "blocked_destination_not_permitted"
+    },
+    {
+      "id": "userinfo",
+      "independent_access": false,
+      "now_ms": 1000000,
+      "grant": {
+        "clinic_id": "fictional-clinic",
+        "destination_id": "primary",
+        "policy_version": 1,
+        "endpoint": "https://intake.clinic.example/upload",
+        "issued_at_ms": 900000,
+        "expires_at_ms": 1500000,
+        "revoked": false
+      },
+      "request": {
+        "direct_delivery": true,
+        "clinic_id": "fictional-clinic",
+        "destination_id": "primary",
+        "policy_version": 1,
+        "endpoint": "https://secret@intake.clinic.example/upload",
+        "sharing_authorized": true
+      },
+      "expected": "blocked_destination_not_permitted"
+    },
+    {
+      "id": "encoded-path",
+      "independent_access": false,
+      "now_ms": 1000000,
+      "grant": {
+        "clinic_id": "fictional-clinic",
+        "destination_id": "primary",
+        "policy_version": 1,
+        "endpoint": "https://intake.clinic.example/upload",
+        "issued_at_ms": 900000,
+        "expires_at_ms": 1500000,
+        "revoked": false
+      },
+      "request": {
+        "direct_delivery": true,
+        "clinic_id": "fictional-clinic",
+        "destination_id": "primary",
+        "policy_version": 1,
+        "endpoint": "https://intake.clinic.example/%75pload",
+        "sharing_authorized": true
+      },
+      "expected": "blocked_destination_not_permitted"
+    },
+    {
+      "id": "dot-segment",
+      "independent_access": false,
+      "now_ms": 1000000,
+      "grant": {
+        "clinic_id": "fictional-clinic",
+        "destination_id": "primary",
+        "policy_version": 1,
+        "endpoint": "https://intake.clinic.example/upload",
+        "issued_at_ms": 900000,
+        "expires_at_ms": 1500000,
+        "revoked": false
+      },
+      "request": {
+        "direct_delivery": true,
+        "clinic_id": "fictional-clinic",
+        "destination_id": "primary",
+        "policy_version": 1,
+        "endpoint": "https://intake.clinic.example/x/../upload",
+        "sharing_authorized": true
+      },
+      "expected": "blocked_destination_not_permitted"
+    },
+    {
+      "id": "suffix-host",
+      "independent_access": false,
+      "now_ms": 1000000,
+      "grant": {
+        "clinic_id": "fictional-clinic",
+        "destination_id": "primary",
+        "policy_version": 1,
+        "endpoint": "https://intake.clinic.example/upload",
+        "issued_at_ms": 900000,
+        "expires_at_ms": 1500000,
+        "revoked": false
+      },
+      "request": {
+        "direct_delivery": true,
+        "clinic_id": "fictional-clinic",
+        "destination_id": "primary",
+        "policy_version": 1,
+        "endpoint": "https://intake.clinic.example.attacker.example/upload",
+        "sharing_authorized": true
+      },
+      "expected": "blocked_destination_not_permitted"
+    },
+    {
+      "id": "missing-endpoint",
+      "independent_access": false,
+      "now_ms": 1000000,
+      "grant": {
+        "clinic_id": "fictional-clinic",
+        "destination_id": "primary",
+        "policy_version": 1,
+        "endpoint": "https://intake.clinic.example/upload",
+        "issued_at_ms": 900000,
+        "expires_at_ms": 1500000,
+        "revoked": false
+      },
+      "request": {
+        "direct_delivery": true,
+        "clinic_id": "fictional-clinic",
+        "destination_id": "primary",
+        "policy_version": 1,
+        "endpoint": null,
+        "sharing_authorized": true
+      },
+      "expected": "blocked_destination_not_permitted"
+    },
+    {
+      "id": "no-consent",
+      "independent_access": false,
+      "now_ms": 1000000,
+      "grant": {
+        "clinic_id": "fictional-clinic",
+        "destination_id": "primary",
+        "policy_version": 1,
+        "endpoint": "https://intake.clinic.example/upload",
+        "issued_at_ms": 900000,
+        "expires_at_ms": 1500000,
+        "revoked": false
+      },
+      "request": {
+        "direct_delivery": true,
+        "clinic_id": "fictional-clinic",
+        "destination_id": "primary",
+        "policy_version": 1,
+        "endpoint": "https://intake.clinic.example/upload",
+        "sharing_authorized": false
+      },
+      "expected": "blocked_sharing_not_authorized"
+    },
+    {
+      "id": "canonical-default-port",
+      "independent_access": false,
+      "now_ms": 1000000,
+      "grant": {
+        "clinic_id": "fictional-clinic",
+        "destination_id": "primary",
+        "policy_version": 1,
+        "endpoint": "https://intake.clinic.example/upload",
+        "issued_at_ms": 900000,
+        "expires_at_ms": 1500000,
+        "revoked": false
+      },
+      "request": {
+        "direct_delivery": true,
+        "clinic_id": "fictional-clinic",
+        "destination_id": "primary",
+        "policy_version": 1,
+        "endpoint": "HTTPS://INTAKE.CLINIC.EXAMPLE:443/upload",
+        "sharing_authorized": true
+      },
+      "expected": "allowed_clinic_destination"
+    }
+  ],
+  "endpoints": [
+    {
+      "input": "https://clinic.example",
+      "expected": "https://clinic.example/"
+    },
+    {
+      "input": "https://clinic.example:443/upload",
+      "expected": "https://clinic.example/upload"
+    },
+    {
+      "input": "https://clinic.example:8443/upload",
+      "expected": "https://clinic.example:8443/upload"
+    },
+    {
+      "input": "https://clinic.example:0/upload",
+      "expected": null
+    },
+    {
+      "input": "https://clinic.example:65536/upload",
+      "expected": null
+    },
+    {
+      "input": "https://clinic..example/upload",
+      "expected": null
+    },
+    {
+      "input": "https://-clinic.example/upload",
+      "expected": null
+    },
+    {
+      "input": "https://clinic.example./upload",
+      "expected": null
+    },
+    {
+      "input": "https://127.0.0.1/upload",
+      "expected": null
+    },
+    {
+      "input": "https://clinic.example//upload",
+      "expected": null
+    },
+    {
+      "input": "https://clinic.example/./upload",
+      "expected": null
+    },
+    {
+      "input": "https://clinic.example/upload\n",
+      "expected": null
+    },
+    {
+      "input": "https://clinic.example\\@other.example/upload",
+      "expected": null
+    },
+    {
+      "input": "https://clinic.example/upload?",
+      "expected": null
+    },
+    {
+      "input": "https://clinic.example/%2fupload",
+      "expected": null
+    },
+    {
+      "input": " https://clinic.example/upload",
+      "expected": null
+    }
+  ]
+}
