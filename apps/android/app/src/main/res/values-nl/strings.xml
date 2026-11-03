@@ -370,8 +370,6 @@
     <string name="paywall_unlimited_exports">Onbeperkte exports</string>
     <string name="paywall_scheduled_exports">Automatische geplande exports</string>
     <string name="paywall_future_features">Alle toekomstige functies inbegrepen</string>
-    <string name="paywall_one_time">Eenmalige betaling — geen abonnement</string>
-    <string name="paywall_unlock_button">Health.md ontgrendelen</string>
     <string name="paywall_restore">Aankoop herstellen</string>
 
     <!-- Export progress dialog -->
@@ -517,7 +515,6 @@
     <string name="debug_requires_history_permission">Bereik heeft geschiedenis nodig</string>
     <string name="debug_first_permission_grant">Eerste toestemming verleend</string>
     <string name="section_health_sources">Gezondheidsbronnen</string>
-    <string name="health_sources_description">Health Connect is de lokale exportbron. Health.md kan gegevens exporteren die ondersteunde apps naar Health Connect schrijven.</string>
     <string name="health_provider_status_installed">Geïnstalleerd</string>
     <string name="health_provider_status_selected">Geselecteerd</string>
     <string name="health_provider_status_ready_to_connect">Klaar om te verbinden</string>
@@ -653,8 +650,6 @@
     <string name="release_notes_highlight_templates">Handmatig koppelen met adres, poort en 20-cijferige code werkt nog steeds, ook met oudere CLI-versies.</string>
     <string name="release_notes_highlight_workouts">Bevat betrouwbaarheids- en compatibiliteitsoplossingen voor configuratie, exports, planningen en verbindingen.</string>
     <string name="export_notification_background_permission_required">Geplande exports hebben achtergrondtoegang voor Health Connect nodig. Open Health.md &gt; Planning om dit in te schakelen.</string>
-    <string name="paywall_unlock_button_price">Ontgrendel voor %s</string>
-    <string name="paywall_purchasing">Verwerken\u2026</string>
     <string name="paywall_restoring">Herstellen\u2026</string>
     <string name="debug_purchase_title">Debug-opties</string>
     <string name="debug_current_state">Huidige status: %s</string>

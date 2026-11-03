@@ -378,8 +378,6 @@
     <string name="paywall_unlimited_exports">Exports illimités</string>
     <string name="paywall_scheduled_exports">Exports planifiés automatisés</string>
     <string name="paywall_future_features">Toutes les futures fonctionnalités incluses</string>
-    <string name="paywall_one_time">Paiement unique — pas d\'abonnement</string>
-    <string name="paywall_unlock_button">Débloquer Health.md</string>
     <string name="paywall_restore">Restaurer l\'achat</string>
 
     <!-- Export progress dialog -->
@@ -527,7 +525,6 @@
     <string name="debug_requires_history_permission">La plage nécessite l’historique</string>
     <string name="debug_first_permission_grant">Octroi de la première autorisation</string>
     <string name="section_health_sources">Sources de santé</string>
-    <string name="health_sources_description">Health Connect est la source d’exportation locale. Health.md peut exporter les données que les applications compatibles écrivent dans Health Connect.</string>
     <string name="health_provider_status_installed">Installé</string>
     <string name="health_provider_status_selected">Choisi</string>
     <string name="health_provider_status_ready_to_connect">Prêt à se connecter</string>
@@ -664,8 +661,6 @@
     <string name="release_notes_highlight_templates">Le jumelage manuel avec l’adresse, le port et le code à 20 chiffres fonctionne toujours, y compris avec les anciennes versions du CLI.</string>
     <string name="release_notes_highlight_workouts">Inclut des correctifs de fiabilité et de compatibilité pour la configuration, les exports, les planifications et les connexions.</string>
     <string name="export_notification_background_permission_required">Les exportations planifiées nécessitent un accès en arrière-plan à Health Connect. Ouvrez Health.md &gt; Planification pour l\'activer.</string>
-    <string name="paywall_unlock_button_price">Déverrouiller pour %s</string>
-    <string name="paywall_purchasing">Traitement\u2026</string>
     <string name="paywall_restoring">Restauration…</string>
     <string name="debug_purchase_title">Contrôles de débogage</string>
     <string name="debug_current_state">État actuel : %s</string>

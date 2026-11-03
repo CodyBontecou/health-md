@@ -378,8 +378,6 @@
     <string name="paywall_unlimited_exports">Exportaciones ilimitadas</string>
     <string name="paywall_scheduled_exports">Exportaciones programadas automáticas</string>
     <string name="paywall_future_features">Todas las características futuras incluidas</string>
-    <string name="paywall_one_time">Pago único \u2014 sin suscripción</string>
-    <string name="paywall_unlock_button">Desbloquear Health.md</string>
     <string name="paywall_restore">Restaurar Compra</string>
 
     <!-- Export progress dialog -->
@@ -527,7 +525,6 @@
     <string name="debug_requires_history_permission">El intervalo requiere historial</string>
     <string name="debug_first_permission_grant">Primera concesión de permiso</string>
     <string name="section_health_sources">Fuentes de salud</string>
-    <string name="health_sources_description">Health Connect es la fuente de exportación local. Health.md puede exportar los datos que las aplicaciones compatibles escriben en Health Connect.</string>
     <string name="health_provider_status_installed">Instalado</string>
     <string name="health_provider_status_selected">Seleccionado</string>
     <string name="health_provider_status_ready_to_connect">Listo para conectarse</string>
@@ -664,8 +661,6 @@
     <string name="release_notes_highlight_templates">El emparejamiento manual con dirección, puerto y código de 20 dígitos sigue funcionando, incluso con versiones anteriores de la CLI.</string>
     <string name="release_notes_highlight_workouts">Incluye correcciones de fiabilidad y compatibilidad en la configuración, las exportaciones, los horarios y las conexiones.</string>
     <string name="export_notification_background_permission_required">Las exportaciones programadas necesitan acceso en segundo plano a Health Connect. Abra Health.md &gt; Programación para habilitarlo.</string>
-    <string name="paywall_unlock_button_price">Desbloquear por %s</string>
-    <string name="paywall_purchasing">Procesando\u2026</string>
     <string name="paywall_restoring">Restaurando\u2026</string>
     <string name="debug_purchase_title">Controles de depuración</string>
     <string name="debug_current_state">Estado actual: %s</string>

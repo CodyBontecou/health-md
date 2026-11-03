@@ -210,7 +210,6 @@
     <string name="configuration_protection_blocked_action">查看配置更改被阻止的原因</string>
     <string name="configuration_protection_open_setting">打开设置</string>
     <string name="section_health_sources">健康来源</string>
-    <string name="health_sources_description">Health Connect 是本地导出来源。受支持的应用写入 Health Connect 的数据可由 Health.md 导出。</string>
     <string name="health_provider_status_installed">已安装</string>
     <string name="health_provider_status_selected">已选择</string>
     <string name="health_provider_status_ready_to_connect">准备连接</string>
@@ -529,11 +528,7 @@
     <string name="paywall_unlimited_exports">无限导出</string>
     <string name="paywall_scheduled_exports">自动计划导出</string>
     <string name="paywall_future_features">包含所有未来功能</string>
-    <string name="paywall_one_time">一次性购买 — 无订阅</string>
-    <string name="paywall_unlock_button">解锁 Health.md</string>
-    <string name="paywall_unlock_button_price">解锁%s</string>
     <string name="paywall_restore">恢复购买</string>
-    <string name="paywall_purchasing">处理中\u2026</string>
     <string name="paywall_restoring">正在恢复\u2026</string>
     <string name="debug_purchase_title">调试控制</string>
     <string name="debug_current_state">当前状态：%s</string>

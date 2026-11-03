@@ -226,7 +226,6 @@
     <string name="configuration_protection_blocked_action">देखें कि कॉन्फ़िगरेशन बदलाव क्यों ब्लॉक हैं</string>
     <string name="configuration_protection_open_setting">सेटिंग खोलें</string>
     <string name="section_health_sources">स्वास्थ्य सूत्र</string>
-    <string name="health_sources_description">Health Connect स्थानीय एक्सपोर्ट स्रोत है। समर्थित ऐप Health Connect में जो डेटा लिखते हैं, उसे Health.md एक्सपोर्ट कर सकता है।</string>
     <string name="health_provider_status_installed">स्थापित</string>
     <string name="health_provider_status_selected">चयनित</string>
     <string name="health_provider_status_ready_to_connect">कनेक्ट करने के लिए तैयार</string>
@@ -562,11 +561,7 @@
     <string name="paywall_unlimited_exports">असीमित निर्यात</string>
     <string name="paywall_scheduled_exports">स्वचालित निर्धारित निर्यात</string>
     <string name="paywall_future_features">सभी भविष्य की सुविधाएं शामिल हैं</string>
-    <string name="paywall_one_time">एकबारी भुगतान \u2014 कोई सदस्यता नहीं</string>
-    <string name="paywall_unlock_button">Health.md अनलॉक करें</string>
-    <string name="paywall_unlock_button_price">%s के लिए अनलॉक करें</string>
     <string name="paywall_restore">खरीदारी पुनर्स्थापित करें</string>
-    <string name="paywall_purchasing">प्रसंस्करण\u2026</string>
     <string name="paywall_restoring">पुनर्स्थापित करना\u2026</string>
     <!-- Debug purchase controls -->
     <string name="debug_purchase_title">डिबग नियंत्रण</string>

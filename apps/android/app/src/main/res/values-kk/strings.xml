@@ -216,7 +216,6 @@
     <string name="configuration_protection_blocked_action">Конфигурация өзгерістерінің неге бұғатталғанын көрсету</string>
     <string name="configuration_protection_open_setting">Параметрді ашу</string>
     <string name="section_health_sources">Денсаулық деректерінің көздері</string>
-    <string name="health_sources_description">Health Connect — жергілікті экспорт көзі. Қолдау көрсетілетін қолданбалар Health Connect жүйесіне жазған деректерді Health.md экспорттай алады.</string>
     <string name="health_provider_status_installed">Орнатылған</string>
     <string name="health_provider_status_selected">Таңдалған</string>
     <string name="health_provider_status_ready_to_connect">Қосылуға дайын</string>
@@ -540,11 +539,7 @@
     <string name="paywall_unlimited_exports">Шексіз экспорттар</string>
     <string name="paywall_scheduled_exports">Автоматты жоспарланған экспорттар</string>
     <string name="paywall_future_features">Барлық болашақ ерекшеліктер қосылған</string>
-    <string name="paywall_one_time">Бір реттік төлем — жазылымсыз</string>
-    <string name="paywall_unlock_button">Health.md құлпын ашу</string>
-    <string name="paywall_unlock_button_price">%s бағасына құлпын ашу</string>
     <string name="paywall_restore">Сатып алуды қалпына келтіру</string>
-    <string name="paywall_purchasing">Өңдеу\u2026</string>
     <string name="paywall_restoring">Қалпына келтірілуде\u2026</string>
     <string name="debug_purchase_title">Түзету режимінің басқару элементтері</string>
     <string name="debug_current_state">Ағымдағы күй: %s</string>

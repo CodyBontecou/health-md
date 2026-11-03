@@ -300,8 +300,6 @@
     <string name="paywall_unlimited_exports">Необмежені експорти</string>
     <string name="paywall_scheduled_exports">Автоматизовані заплановані експорти</string>
     <string name="paywall_future_features">Усі майбутні функції включені</string>
-    <string name="paywall_one_time">Одноразовий платіж — без підписки</string>
-    <string name="paywall_unlock_button">Розблокувати Health.md</string>
     <string name="paywall_restore">Відновити покупку</string>
 
     <!-- Export progress dialog -->
@@ -537,7 +535,6 @@
     <string name="debug_requires_history_permission">Діапазон потребує історії</string>
     <string name="debug_first_permission_grant">Перше надання дозволу</string>
     <string name="section_health_sources">Джерела здоров\'я</string>
-    <string name="health_sources_description">Health Connect — локальне джерело експорту. Health.md може експортувати дані, які підтримувані застосунки записують у Health Connect.</string>
     <string name="health_provider_status_installed">Установлено</string>
     <string name="health_provider_status_selected">Вибрано</string>
     <string name="health_provider_status_ready_to_connect">Готово до підключення</string>
@@ -675,8 +672,6 @@
     <string name="release_notes_highlight_templates">Ручне з\'єднання за адресою, портом і 20-значним кодом досі працює, зокрема зі старішими версіями CLI.</string>
     <string name="release_notes_highlight_workouts">Додано виправлення надійності та сумісності для налаштування, експорту, розкладів і підключень.</string>
     <string name="export_notification_background_permission_required">Для запланованого експорту потрібен фоновий доступ Health Connect. Відкрийте Health.md &gt; Розклад, щоб увімкнути його.</string>
-    <string name="paywall_unlock_button_price">Розблокувати за %s</string>
-    <string name="paywall_purchasing">Обробка\u2026</string>
     <string name="paywall_restoring">Відновлення\u2026</string>
     <string name="debug_purchase_title">Елементи управління налагодженням</string>
     <string name="debug_current_state">Поточний стан: %s</string>
