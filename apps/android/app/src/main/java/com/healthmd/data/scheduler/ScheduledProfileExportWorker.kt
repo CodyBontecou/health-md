@@ -140,34 +140,7 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
     override suspend fun getForegroundInfo(): ForegroundInfo {
         ScheduledExportCancellationCoordinator.prepare(id)
         val notificationID = ScheduledExportCancellationCoordinator.foregroundNotificationID(id)
-        val openAppIntent = Intent(applicationContext, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-            putExtra(MainActivity.EXTRA_START_ROUTE, NavDestination.SCHEDULE.route)
-        }
-        val contentIntent = PendingIntent.getActivity(
-            applicationContext,
-            notificationID,
-            openAppIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
-        )
-        val notification = NotificationCompat.Builder(
-            applicationContext,
-            HealthMdApplication.EXPORT_CHANNEL_ID,
-        )
-            .setSmallIcon(android.R.drawable.ic_menu_save)
-            .setContentTitle(applicationContext.getString(R.string.export_progress_title))
-            .setContentText(applicationContext.getString(R.string.automatic_export_subtitle))
-            .setPriority(NotificationCompat.PRIORITY_LOW)
-            .setContentIntent(contentIntent)
-            .addAction(
-                0,
-                applicationContext.getString(R.string.action_cancel_export),
-                ScheduledExportCancelReceiver.pendingIntent(applicationContext, id),
-            )
-            // An indeterminate bar marks the run as in progress; Cancel stays available.
-            .setProgress(0, 0, true)
-            .setOngoing(true)
-            .build()
+        val notification = ScheduledExportProgressNotification.build(applicationContext, id, notificationID)
         val foregroundServiceType = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
         } else 0
@@ -339,6 +312,7 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
         }
         val result = try {
             ScheduledExportCancellationCoordinator.run(id) {
+                    val exportProgress = ScheduledExportProgressNotification.updater(applicationContext, id)
                 when (target) {
                     ExportTarget.DEVICE_FOLDER ->
                         // Per-profile folder: adopt the profile's binding around the run (the live
@@ -353,6 +327,7 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
                                         settings = settings,
                                         durableFolderOperationId = durableOperationId,
                                         durableSettingsSnapshotJson = snapshotJson,
+                                        onProgress = exportProgress,
                                         requireExistingJournal = shouldRequireExistingProfileFolderJournal(
                                             pendingOperationId = pendingOperationId,
                                             isPendingResidual = due.pendingExport != null,
@@ -361,7 +336,7 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
                                     )
                             } else {
                                 ExportOrchestrator(healthRepository, exportRepository)
-                                    .exportDates(dates, settings)
+                                    .exportDates(dates, settings, onProgress = exportProgress)
                             }.copy(target = ExportTarget.DEVICE_FOLDER)
                         }
 
@@ -374,6 +349,7 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
                             apiEndpointExportRunner.exportDates(
                                 dates = dates,
                                 settings = settings.copy(exportTarget = ExportTarget.API_ENDPOINT),
+                                onProgress = exportProgress,
                                 durableOperationId = durableOperationId,
                                 durableSettingsSnapshotJson = snapshotJson,
                                 requireExistingDurableOperation = pendingOperationId != null,
@@ -384,6 +360,7 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
                         agentDataGatewayExportRunner.exportDates(
                             dates = dates,
                             settings = settings.copy(exportTarget = ExportTarget.AGENT_DATA_GATEWAY),
+                            onProgress = exportProgress,
                         )
                 }
             }

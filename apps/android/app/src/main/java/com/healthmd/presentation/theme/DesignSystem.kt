@@ -261,6 +261,8 @@ object Radii {
     val badge = GeistRadii.full
     val navBar = GeistRadii.medium
     val icon = GeistRadii.full
+    /** Outlined text fields (`rounded.xs`). */
+    val textField = GeistRadii.extraSmall
 }
 
 /**

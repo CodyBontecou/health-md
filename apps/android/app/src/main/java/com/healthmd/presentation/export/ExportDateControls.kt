@@ -14,6 +14,7 @@ import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -160,33 +161,34 @@ private fun DateRangeOptionButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    // Segmented-button styling: secondary container with a check when selected, outlined otherwise.
+    val colors = com.healthmd.presentation.theme.LocalGeistColors.current
     val shape = RoundedCornerShape(Radii.button)
-    Column(
+    Row(
         modifier = modifier
             .heightIn(min = GeistSizes.minimumTouchTarget)
             .clip(shape)
-            .background(if (selected) AppColors.accentSubtle else Color.Transparent)
-            .then(if (selected) Modifier.border(1.dp, AppColors.accentBorder, shape) else Modifier)
+            .background(if (selected) colors.secondaryContainer else Color.Transparent)
+            .border(1.dp, if (selected) colors.secondaryContainer else colors.gray.c700, shape)
             .selectable(selected = selected, role = Role.RadioButton, onClick = onClick)
             .padding(horizontal = Spacing.sm, vertical = Spacing.xs),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(Spacing.xs, Alignment.CenterVertically),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.xs, Alignment.CenterHorizontally),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         // Selection remains visible without taking any width away from the essential label.
         if (selected) {
             Icon(
-                imageVector = Icons.Filled.CheckCircle,
+                imageVector = Icons.Filled.Check,
                 contentDescription = null,
-                tint = AppColors.accent,
-                modifier = Modifier.size(Spacing.lg),
+                tint = colors.onSecondaryContainer,
+                modifier = Modifier.size(18.dp),
             )
         }
         Text(
             text = text,
-            color = if (selected) AppColors.accent else AppColors.textSecondary,
-            style = MaterialTheme.typography.titleMedium,
+            color = if (selected) colors.onSecondaryContainer else colors.primary,
+            style = com.healthmd.presentation.theme.GeistType.button14,
             textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth(),
         )
     }
 }

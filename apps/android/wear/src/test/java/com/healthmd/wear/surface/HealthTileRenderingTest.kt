@@ -6,6 +6,7 @@ import androidx.wear.protolayout.DimensionBuilders
 import androidx.wear.protolayout.LayoutElementBuilders
 import com.google.common.truth.Truth.assertThat
 import com.healthmd.wear.WearColors
+import com.healthmd.wear.WearSize
 import com.healthmd.wear.WearSpacing
 import com.healthmd.wear.WearType
 import com.healthmd.wear.sync.WearSnapshotRepository
@@ -95,7 +96,7 @@ class HealthTileRenderingTest {
         ))
 
         val root = requireNotNull(requireNotNull(buildTile(context, false, 192, now).tileTimeline)
-            .timelineEntries.first().layout).root as LayoutElementBuilders.Column
+            .timelineEntries.first().layout).root as LayoutElementBuilders.Box
         val semantics = requireNotNull(requireNotNull(root.modifiers).semantics)
         assertThat(semantics.role).isEqualTo(androidx.wear.protolayout.ModifiersBuilders.SEMANTICS_ROLE_BUTTON)
         assertThat(requireNotNull(semantics.contentDescription).value).contains("Daily Activity")
@@ -136,8 +137,9 @@ class HealthTileRenderingTest {
     }
 
     @Test fun `tile layout consumes the named renderer-neutral Wear tokens`() {
-        val compact = tileRoot(screenWidthDp = 192)
-        val large = tileRoot(screenWidthDp = 220)
+        putCurrentActivity()
+        val compact = tileContent(screenWidthDp = 192)
+        val large = tileContent(screenWidthDp = 220)
 
         assertThat(requireNotNull(requireNotNull(requireNotNull(compact.modifiers).padding).start).value)
             .isEqualTo(WearSpacing.lgDp)
@@ -145,20 +147,88 @@ class HealthTileRenderingTest {
             .isEqualTo(WearSpacing.xlDp)
 
         val contents = compact.contents
-        val title = contents[0] as LayoutElementBuilders.Text
-        val firstSpacer = contents[1] as LayoutElementBuilders.Spacer
-        val value = contents[2] as LayoutElementBuilders.Text
-        val secondSpacer = contents[3] as LayoutElementBuilders.Spacer
-        val footer = contents[4] as LayoutElementBuilders.Text
+        val icon = contents[0] as LayoutElementBuilders.Image
+        val title = contents[2] as LayoutElementBuilders.Text
+        val value = contents[4] as LayoutElementBuilders.Text
+        val footer = contents[6] as LayoutElementBuilders.Text
+        listOf(1, 3, 5).forEach { index ->
+            val spacer = contents[index] as LayoutElementBuilders.Spacer
+            assertThat((spacer.height as DimensionBuilders.DpProp).value).isEqualTo(WearSpacing.smDp)
+        }
 
+        assertThat(requireNotNull(icon.resourceId).value).isEqualTo(Metric.ACTIVITY.tileIconId)
+        assertThat(requireNotNull(requireNotNull(icon.colorFilter).tint).argb).isEqualTo(WearColors.metricStepsArgb.toInt())
+        assertThat((icon.width as DimensionBuilders.DpProp).value).isEqualTo(WearSize.iconDp)
         assertThat(requireNotNull(requireNotNull(title.fontStyle).size).value).isEqualTo(WearType.titleSp)
         assertThat(requireNotNull(requireNotNull(title.fontStyle).color).argb).isEqualTo(WearColors.primaryArgb.toInt())
-        assertThat(requireNotNull(requireNotNull(value.fontStyle).size).value).isEqualTo(WearType.bodySp)
+        // A displayable measurement uses the display size; status copy stays at body size.
+        assertThat(requireNotNull(requireNotNull(value.fontStyle).size).value).isEqualTo(WearType.displaySp)
         assertThat(requireNotNull(requireNotNull(value.fontStyle).color).argb).isEqualTo(WearColors.textArgb.toInt())
         assertThat(requireNotNull(requireNotNull(footer.fontStyle).size).value).isEqualTo(WearType.captionSp)
         assertThat(requireNotNull(requireNotNull(footer.fontStyle).color).argb).isEqualTo(WearColors.mutedArgb.toInt())
-        assertThat((firstSpacer.height as DimensionBuilders.DpProp).value).isEqualTo(WearSpacing.smDp)
-        assertThat((secondSpacer.height as DimensionBuilders.DpProp).value).isEqualTo(WearSpacing.smDp)
+    }
+
+    @Test fun `daily activity draws a step progress ring only beside a real step count`() {
+        val now = System.currentTimeMillis()
+        putCurrentActivity(now, steps = 5_000)
+        val arcs = tileRootBox(recovery = false, now = now).contents.filterIsInstance<LayoutElementBuilders.Arc>()
+        assertThat(arcs).hasSize(2)
+        val track = arcs[0].contents.single() as LayoutElementBuilders.ArcLine
+        val progress = arcs[1].contents.single() as LayoutElementBuilders.ArcLine
+        assertThat(requireNotNull(track.length).value).isEqualTo(360f)
+        assertThat(requireNotNull(track.color).argb).isEqualTo(WearColors.surfaceArgb.toInt())
+        assertThat(requireNotNull(progress.length).value).isEqualTo(180f)
+        assertThat(requireNotNull(progress.color).argb).isEqualTo(WearColors.metricStepsArgb.toInt())
+        assertThat(requireNotNull(progress.thickness).value).isEqualTo(WearSize.progressStrokeDp)
+
+        // Recovery has no goal ring, and Daily Activity without steps does not imply zero progress.
+        assertThat(tileRootBox(recovery = true, now = now).contents.filterIsInstance<LayoutElementBuilders.Arc>()).isEmpty()
+        WearSnapshotRepository.clear(context)
+        putCurrentActivity(now, steps = null)
+        assertThat(tileRootBox(recovery = false, now = now).contents.filterIsInstance<LayoutElementBuilders.Arc>()).isEmpty()
+    }
+
+    @Test fun `progress ring clamps above-goal steps`() {
+        val lines = progressRing(2.5f).map { (it as LayoutElementBuilders.Arc).contents.single() as LayoutElementBuilders.ArcLine }
+        assertThat(requireNotNull(lines.last().length).value).isEqualTo(360f)
+        assertThat(progressRing(0f)).hasSize(1)
+    }
+
+    @Test fun `stale tile footer states data age in the warning role`() {
+        val now = System.currentTimeMillis()
+        WearSnapshotRepository.apply(context, WearHealthSnapshot(
+            sequence = now,
+            capturedAtEpochMillis = now - 3 * 3_600_000L - WearHealthSnapshot.CURRENT_MILLIS,
+            capturedZoneId = "UTC",
+            days = listOf(WearHealthDay(localDate(now), sleepMinutes = 450.0, hrvRmssdMillis = 46.0)),
+        ))
+        val content = tileRootBox(recovery = true, now = now).contents.last() as LayoutElementBuilders.Column
+        val footer = content.contents.last() as LayoutElementBuilders.Text
+        assertThat(requireNotNull(footer.text).value).contains("ago")
+        assertThat(requireNotNull(requireNotNull(footer.fontStyle).color).argb).isEqualTo(WearColors.warningArgb.toInt())
+        val icon = content.contents.first() as LayoutElementBuilders.Image
+        assertThat(requireNotNull(icon.resourceId).value).isEqualTo(Metric.RECOVERY.tileIconId)
+    }
+
+    @Test fun `setup tile shows the phone badge and body-size guidance without values`() {
+        val content = tileRootBox(recovery = false, now = System.currentTimeMillis()).contents.single() as LayoutElementBuilders.Column
+        val badge = content.contents.first() as LayoutElementBuilders.Box
+        val background = requireNotNull(requireNotNull(badge.modifiers).background)
+        assertThat(requireNotNull(background.color).argb).isEqualTo(WearColors.primaryContainerArgb.toInt())
+        val glyph = badge.contents.single() as LayoutElementBuilders.Image
+        assertThat(requireNotNull(glyph.resourceId).value).isEqualTo(TILE_ICON_PHONE)
+        val message = content.contents[4] as LayoutElementBuilders.Text
+        assertThat(requireNotNull(message.text).value).contains("finish setup")
+        assertThat(requireNotNull(requireNotNull(message.fontStyle).size).value).isEqualTo(WearType.bodySp)
+    }
+
+    @Test fun `tile resources map every referenced image id`() {
+        val resources = tileResources()
+        assertThat(resources.version).isEqualTo(TILE_RESOURCES_VERSION)
+        assertThat(resources.idToImageMapping.keys)
+            .containsExactlyElementsIn(Metric.entries.map { it.tileIconId } + TILE_ICON_PHONE)
+        val tile = buildTile(context, recovery = false, screenWidthDp = 192)
+        assertThat(tile.resourcesVersion).isEqualTo(TILE_RESOURCES_VERSION)
     }
 
     @Test fun `tile timeline replaces measurements at stale expiry and captured-zone midnight`() {
@@ -213,11 +283,24 @@ class HealthTileRenderingTest {
         assertThat(sixHourText).contains("7.5")
     }
 
-    private fun tileRoot(screenWidthDp: Int): LayoutElementBuilders.Column =
+    private fun putCurrentActivity(now: Long = System.currentTimeMillis(), steps: Int? = 8420) {
+        WearSnapshotRepository.apply(context, WearHealthSnapshot(
+            sequence = now,
+            capturedAtEpochMillis = now,
+            capturedZoneId = "UTC",
+            days = listOf(WearHealthDay(localDate(now), steps = steps, exerciseMinutes = 34.0, sleepMinutes = 450.0)),
+        ))
+    }
+
+    private fun tileRootBox(recovery: Boolean, now: Long, screenWidthDp: Int = 192): LayoutElementBuilders.Box =
         requireNotNull(
-            requireNotNull(buildTile(context, recovery = false, screenWidthDp = screenWidthDp).tileTimeline)
+            requireNotNull(buildTile(context, recovery = recovery, screenWidthDp = screenWidthDp, now = now).tileTimeline)
                 .timelineEntries.first().layout,
-        ).root as LayoutElementBuilders.Column
+        ).root as LayoutElementBuilders.Box
+
+    private fun tileContent(screenWidthDp: Int): LayoutElementBuilders.Column =
+        tileRootBox(recovery = false, now = System.currentTimeMillis(), screenWidthDp = screenWidthDp)
+            .contents.last() as LayoutElementBuilders.Column
 
     private fun localDate(at: Long): String =
         Instant.ofEpochMilli(at).atZone(ZoneId.of("UTC")).toLocalDate().toString()

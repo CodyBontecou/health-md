@@ -70,6 +70,8 @@
 
     <!-- Notifications for export status -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Android 16 status-bar chip for the ongoing Direct CLI transfer; no health values. -->
+    <uses-permission android:name="android.permission.POST_PROMOTED_NOTIFICATIONS" />
 
     <!-- QR onboarding is optional; manual host, port, and code entry always remains available. -->
     <uses-feature

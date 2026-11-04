@@ -275,7 +275,7 @@ class ScheduledProfileExportWorkerCancellationTest {
             apiRunner.exportDates(
                 dates = any(),
                 settings = any(),
-                onProgress = null,
+                onProgress = any(),
                 expectedDestinationFingerprint = null,
                 durableOperationId = any(),
                 durableSettingsSnapshotJson = profile.settingsSnapshotJson,
@@ -776,7 +776,7 @@ class ScheduledProfileExportWorkerCancellationTest {
             apiRunner.exportDates(
                 dates = capture(exportedDates),
                 settings = any(),
-                onProgress = null,
+                onProgress = any(),
                 expectedDestinationFingerprint = null,
                 durableOperationId = any(),
                 durableSettingsSnapshotJson = profile.settingsSnapshotJson,

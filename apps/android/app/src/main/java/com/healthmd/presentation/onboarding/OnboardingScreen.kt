@@ -233,6 +233,8 @@ fun OnboardingScreen(
                 onDebugResetState = paywallViewModel::debugResetPurchaseState,
                 purchasesAvailable = paywallViewModel.purchasesAvailable,
                 fullAccessIncluded = distributionPolicy.fullAccessIncluded,
+                // Onboarding is already a pager; nested swipe areas would fight it.
+                carousel = false,
             )
             OnboardingPage.INCLUDED_ACCESS -> IncludedAccessPage()
             OnboardingPage.READY -> ReadyPage()

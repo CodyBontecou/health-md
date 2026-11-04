@@ -33,6 +33,10 @@ import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.dialog
+import androidx.compose.ui.window.DialogProperties
+import com.healthmd.presentation.export.ExportNowSheet
+import com.healthmd.presentation.export.ExportProfileSelector
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.healthmd.BuildConfig
@@ -47,8 +51,10 @@ import com.healthmd.presentation.export.ExportProfilesScreen
 import com.healthmd.presentation.export.ExportScreen
 import com.healthmd.presentation.history.HistoryScreen
 import com.healthmd.presentation.archive.ArchiveScreen
+import com.healthmd.presentation.archive.DayPageScreen
 import com.healthmd.presentation.export.ExportProfilesEntryCard
 import com.healthmd.presentation.schedule.AutomationDetailPane
+import com.healthmd.presentation.schedule.composer.AutomationComposerScreen
 import com.healthmd.presentation.common.GeistCard
 import com.healthmd.presentation.metrics.MetricSelectionScreen
 import com.healthmd.presentation.common.ConfigurationProtectionToast
@@ -138,7 +144,10 @@ fun HealthMdNavigation(
     val appContext = LocalContext.current
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
-    val currentRoute = currentDestination?.route
+    // Export now is a sheet over the screen it opened from; navigation follows that screen.
+    val currentRoute = currentDestination?.route.let { route ->
+        if (route in EXPORT_SHEET_ROUTES) navController.previousBackStackEntry?.destination?.route else route
+    }
 
     // Resolve the initial route once. A folder selected during onboarding is persisted to
     // settings, but must not turn into a live signal that rebuilds the navigation graph.
@@ -246,10 +255,18 @@ fun HealthMdNavigation(
     }
     val knownStartRoutes = NavDestination.entries.map { it.route } +
         listOf(SubRoutes.EXPORT_NOW, SubRoutes.HISTORY) + paywallStartRoutes + debugStartRoutes
+    val requestedStart = initialRoute?.takeIf { it in knownStartRoutes }
+    // A dialog destination cannot start the graph: open the Archive, then the Export now sheet.
     val startDestination = if (shouldSkipOnboarding) {
-        initialRoute?.takeIf { it in knownStartRoutes } ?: NavDestination.ARCHIVE.route
+        requestedStart?.takeIf { it !in EXPORT_SHEET_ROUTES } ?: NavDestination.ARCHIVE.route
     } else {
         SubRoutes.ONBOARDING
+    }
+    LaunchedEffect(shouldSkipOnboarding, requestedStart) {
+        if (shouldSkipOnboarding && requestedStart in EXPORT_SHEET_ROUTES) {
+            navController.currentBackStackEntryFlow.first()
+            navController.navigate(SubRoutes.EXPORT_NOW) { launchSingleTop = true }
+        }
     }
 
     // One graph-scoped owner exposes the device-local protection preference, toast, and
@@ -334,33 +351,58 @@ fun HealthMdNavigation(
                     onExportNow = { navController.navigate(SubRoutes.EXPORT_NOW) { launchSingleTop = true } },
                     onOpenHistory = { navController.navigate(SubRoutes.HISTORY) { launchSingleTop = true } },
                     onBackfill = { date -> navController.navigate(SubRoutes.exportBackfill(date)) },
+                    onOpenDay = { date -> navController.navigate(SubRoutes.archiveDay(date)) { launchSingleTop = true } },
+                    onOpenAutomations = {
+                        navController.navigate(NavDestination.AUTOMATIONS.route) {
+                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
+                )
+            }
+            composable(SubRoutes.ARCHIVE_DAY) {
+                DayPageScreen(
+                    onBack = { navController.popBackStack() },
+                    onReexport = { date -> navController.navigate(SubRoutes.exportBackfill(date)) },
                 )
             }
             // Backfill shares Export now; its route carries the one date to preset.
             listOf(SubRoutes.EXPORT_NOW, SubRoutes.EXPORT_BACKFILL).forEach { route ->
-                composable(route) { entry ->
+                dialog(
+                    route = route,
+                    dialogProperties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
+                ) { entry ->
+                    val closeSheet: () -> Unit = {
+                        if (!navController.popBackStack()) {
+                            navController.navigate(NavDestination.ARCHIVE.route) { launchSingleTop = true }
+                        }
+                    }
+                    ExportNowSheet(onDismiss = closeSheet) {
                     ExportScreen(
+                        asSheet = true,
+                        profileSelector = { ExportProfileSelector() },
                         backfillDate = entry.arguments?.getString("date")
                             ?.let { runCatching { LocalDate.parse(it) }.getOrNull() },
-                        onBack = {
-                            if (!navController.popBackStack()) {
-                                navController.navigate(NavDestination.ARCHIVE.route) { launchSingleTop = true }
-                            }
-                        },
+                        onBack = closeSheet,
                         sleepDayAttribution = sleepDayAttribution,
                         onNavigateToPaywall = {
                             if (settingsViewModel.distributionPolicy.purchasesAvailable) {
-                                navController.navigate(PaywallEntryPoint.EXPORT_LIMIT.route)
+                                navController.navigate(PaywallEntryPoint.EXPORT_LIMIT.route) { popUpTo(route) { inclusive = true } }
                             }
                         },
-                        onNavigateToAdvancedSettings = { navController.navigate(SubRoutes.ADVANCED_SETTINGS) },
-                        onNavigateToSchedule = { navController.navigate(NavDestination.SCHEDULE.route) { launchSingleTop = true } },
+                        onNavigateToAdvancedSettings = { navController.navigate(SubRoutes.ADVANCED_SETTINGS) { popUpTo(route) { inclusive = true } } },
+                        onNavigateToSchedule = { navController.navigate(NavDestination.SCHEDULE.route) {
+                            popUpTo(route) { inclusive = true }
+                            launchSingleTop = true
+                        } },
                         onNavigateToUpgrade = {
                             if (settingsViewModel.distributionPolicy.purchasesAvailable) {
-                                navController.navigate(PaywallEntryPoint.UPGRADE.route)
+                                navController.navigate(PaywallEntryPoint.UPGRADE.route) { popUpTo(route) { inclusive = true } }
                             }
                         },
                     )
+                    }
                 }
             }
             composable(NavDestination.SCHEDULE.route) {
@@ -395,6 +437,7 @@ fun HealthMdNavigation(
                                     AutomationDetailPane(
                                         profileId = selectedAutomation,
                                         onEditProfile = { id -> navController.navigate(SubRoutes.exportProfile(id)) },
+                                        onCompose = { id -> navController.navigate(SubRoutes.automationCompose(id)) { launchSingleTop = true } },
                                     )
                                 }
                             }
@@ -504,8 +547,15 @@ fun HealthMdNavigation(
                         AutomationDetailPane(
                             profileId = profileId,
                             onEditProfile = { id -> navController.navigate(SubRoutes.exportProfile(id)) },
+                            onCompose = { id -> navController.navigate(SubRoutes.automationCompose(id)) { launchSingleTop = true } },
                         )
                     }
+                }
+            }
+            composable(SubRoutes.AUTOMATION_COMPOSE) { entry ->
+                val profileId = entry.arguments?.getString("profileId")
+                if (profileId != null) {
+                    AutomationComposerScreen(profileId = profileId, onBack = { navController.popBackStack() })
                 }
             }
             composable(SubRoutes.DIRECT_CLI) {
@@ -846,6 +896,9 @@ private fun localizedRecoveryDate(date: LocalDate): String {
     return android.text.format.DateFormat.getMediumDateFormat(LocalContext.current)
         .format(Date.from(instant))
 }
+
+/** Export now routes shown as a sheet over the current screen. */
+private val EXPORT_SHEET_ROUTES = setOf(SubRoutes.EXPORT_NOW, SubRoutes.EXPORT_BACKFILL)
 
 /** Reserve the measured navigation size, including wrapped labels, rather than a fixed inset. */
 @Composable

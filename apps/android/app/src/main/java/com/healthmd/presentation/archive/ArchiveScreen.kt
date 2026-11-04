@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -82,15 +83,158 @@ import java.util.Locale
 /** From the `md` breakpoint (with the navigation rail) the calendar sits beside the day. */
 private val TWO_PANE_MIN_WIDTH = GeistBreakpoints.medium.dp
 
+/** Content width from which the side column takes its full 400dp (tablets, landscape). */
+private val LARGE_SIDE_BREAKPOINT = 920.dp
+
 @Composable
 fun ArchiveScreen(
     onExportNow: () -> Unit,
     onOpenHistory: () -> Unit,
     /** Opens Export now preset to one missing date. */
     onBackfill: (LocalDate) -> Unit,
+    /** Opens the day page: the file Health.md writes for one date. */
+    onOpenDay: (LocalDate) -> Unit = {},
+    /** Opens Automations from the large-screen summary card. */
+    onOpenAutomations: () -> Unit = {},
     viewModel: ArchiveViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+        if (maxWidth >= TWO_PANE_MIN_WIDTH && !(state.isLoaded && !state.hasHistory)) {
+            ArchiveLargeLayout(
+                state = state,
+                sideWidth = if (maxWidth >= LARGE_SIDE_BREAKPOINT) 400.dp else 300.dp,
+                viewModel = viewModel,
+                onBackfill = onBackfill,
+                onOpenDay = onOpenDay,
+                onOpenHistory = onOpenHistory,
+                onOpenAutomations = onOpenAutomations,
+            )
+            return@BoxWithConstraints
+        }
+        ArchiveCompactLayout(
+            state = state,
+            viewModel = viewModel,
+            onExportNow = onExportNow,
+            onOpenHistory = onOpenHistory,
+            onBackfill = onBackfill,
+            onOpenDay = onOpenDay,
+        )
+    }
+}
+
+/**
+ * Tablets and unfolded foldables: the calendar fills the main pane with the filter chips and
+ * month controls inside it; stats, the selected day and an Automations summary sit beside it.
+ */
+@Composable
+private fun ArchiveLargeLayout(
+    state: ArchiveUiState,
+    sideWidth: androidx.compose.ui.unit.Dp,
+    viewModel: ArchiveViewModel,
+    onBackfill: (LocalDate) -> Unit,
+    onOpenDay: (LocalDate) -> Unit,
+    onOpenHistory: () -> Unit,
+    onOpenAutomations: () -> Unit,
+) {
+    val colors = LocalGeistColors.current
+    Row(
+        modifier = Modifier.fillMaxSize().padding(GeistSpacing.space4),
+        horizontalArrangement = Arrangement.spacedBy(GeistSpacing.space4),
+    ) {
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxHeight()
+                .clip(RoundedCornerShape(GeistRadii.large))
+                .background(colors.gray.c100)
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = GeistSpacing.space4, vertical = GeistSpacing.space4),
+            verticalArrangement = Arrangement.spacedBy(GeistSpacing.space3),
+        ) {
+            Text(
+                text = stringResource(R.string.nav_archive),
+                style = MaterialTheme.typography.headlineMedium,
+                color = colors.primary,
+                modifier = Modifier.padding(horizontal = GeistSpacing.space1),
+            )
+            if (state.month.profiles.size > 1) {
+                ArchiveFilterChips(
+                    profiles = state.month.profiles,
+                    selected = state.selection.filter,
+                    onSelect = viewModel::selectFilter,
+                )
+            }
+            ArchiveCalendarCard(
+                state = state,
+                onPrevious = viewModel::showPreviousMonth,
+                onNext = viewModel::showNextMonth,
+                onSelect = viewModel::selectDate,
+                cellMinHeight = 64.dp,
+                framed = false,
+            )
+        }
+        Column(
+            modifier = Modifier.width(sideWidth).fillMaxHeight().verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(GeistSpacing.space3),
+        ) {
+            ArchiveStatsCard(stats = state.month.stats, onShowGap = viewModel::jumpToGap)
+            ArchiveDayCard(state = state, onBackfill = onBackfill, onOpenDay = onOpenDay)
+            GeistCardClickable(onClick = onOpenAutomations) {
+                Column(Modifier.weight(1f)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = stringResource(R.string.nav_automations),
+                            style = GeistType.heading14,
+                            color = colors.primary,
+                            modifier = Modifier.weight(1f),
+                        )
+                        Text(
+                            text = stringResource(R.string.archive_automations_manage),
+                            style = GeistType.button14,
+                            color = colors.brandPrimary,
+                        )
+                    }
+                    Text(
+                        text = stringResource(R.string.archive_automations_card_body),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = colors.secondary,
+                    )
+                }
+            }
+            ArchiveHistoryCard(onOpenHistory)
+        }
+    }
+}
+
+@Composable
+private fun ArchiveHistoryCard(onOpenHistory: () -> Unit) {
+    GeistCardClickable(onClick = onOpenHistory) {
+        Icon(Icons.Outlined.History, contentDescription = null, tint = LocalGeistColors.current.secondary)
+        Spacer(Modifier.width(GeistSpacing.space4))
+        Text(
+            text = stringResource(R.string.nav_history),
+            style = MaterialTheme.typography.bodyLarge,
+            color = LocalGeistColors.current.primary,
+            modifier = Modifier.weight(1f),
+        )
+        Icon(
+            Icons.AutoMirrored.Outlined.KeyboardArrowRight,
+            contentDescription = null,
+            tint = LocalGeistColors.current.secondary,
+        )
+    }
+}
+
+@Composable
+private fun ArchiveCompactLayout(
+    state: ArchiveUiState,
+    viewModel: ArchiveViewModel,
+    onExportNow: () -> Unit,
+    onOpenHistory: () -> Unit,
+    onBackfill: (LocalDate) -> Unit,
+    onOpenDay: (LocalDate) -> Unit,
+) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -114,48 +258,18 @@ fun ArchiveScreen(
                     onSelect = viewModel::selectFilter,
                 )
             }
-            BoxWithConstraints {
-                val calendar: @Composable () -> Unit = {
-                    ArchiveCalendarCard(
-                        state = state,
-                        onPrevious = viewModel::showPreviousMonth,
-                        onNext = viewModel::showNextMonth,
-                        onSelect = viewModel::selectDate,
-                    )
-                }
-                if (maxWidth >= TWO_PANE_MIN_WIDTH) {
-                    // Tablets and unfolded foldables: the calendar beside the stats and day.
-                    Row(horizontalArrangement = Arrangement.spacedBy(GeistSpacing.space4)) {
-                        Box(Modifier.weight(1.4f)) { calendar() }
-                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(GeistSpacing.space3)) {
-                            ArchiveStatsCard(stats = state.month.stats, onShowGap = viewModel::jumpToGap)
-                            ArchiveDayCard(state = state, onBackfill = onBackfill)
-                        }
-                    }
-                } else {
-                    Column(verticalArrangement = Arrangement.spacedBy(GeistSpacing.space3)) {
-                        ArchiveStatsCard(stats = state.month.stats, onShowGap = viewModel::jumpToGap)
-                        calendar()
-                        ArchiveDayCard(state = state, onBackfill = onBackfill)
-                    }
-                }
+            Column(verticalArrangement = Arrangement.spacedBy(GeistSpacing.space3)) {
+                ArchiveStatsCard(stats = state.month.stats, onShowGap = viewModel::jumpToGap)
+                ArchiveCalendarCard(
+                    state = state,
+                    onPrevious = viewModel::showPreviousMonth,
+                    onNext = viewModel::showNextMonth,
+                    onSelect = viewModel::selectDate,
+                )
+                ArchiveDayCard(state = state, onBackfill = onBackfill, onOpenDay = onOpenDay)
             }
         }
-        GeistCardClickable(onClick = onOpenHistory) {
-            Icon(Icons.Outlined.History, contentDescription = null, tint = LocalGeistColors.current.secondary)
-            Spacer(Modifier.width(GeistSpacing.space4))
-            Text(
-                text = stringResource(R.string.nav_history),
-                style = MaterialTheme.typography.bodyLarge,
-                color = LocalGeistColors.current.primary,
-                modifier = Modifier.weight(1f),
-            )
-            Icon(
-                Icons.AutoMirrored.Outlined.KeyboardArrowRight,
-                contentDescription = null,
-                tint = LocalGeistColors.current.secondary,
-            )
-        }
+        ArchiveHistoryCard(onOpenHistory)
         // Clears the floating Export now action on compact layouts.
         Spacer(Modifier.height(GeistSpacing.space24))
     }
@@ -278,12 +392,18 @@ private fun ArchiveCalendarCard(
     onPrevious: () -> Unit,
     onNext: () -> Unit,
     onSelect: (LocalDate) -> Unit,
+    cellMinHeight: androidx.compose.ui.unit.Dp = GeistSizes.minimumTouchTarget,
+    /** False when the calendar already sits inside a tonal pane on large screens. */
+    framed: Boolean = true,
 ) {
     val colors = LocalGeistColors.current
     val locale = currentLocale()
     val firstDayOfWeek = WeekFields.of(locale).firstDayOfWeek
     val month = state.month.month
-    GeistCard(padding = GeistSpacing.space4) {
+    val frame: @Composable (@Composable () -> Unit) -> Unit = { body ->
+        if (framed) GeistCard(padding = GeistSpacing.space4) { body() } else Column { body() }
+    }
+    frame {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
                 text = month.format(DateTimeFormatter.ofPattern("LLLL yyyy", locale)),
@@ -332,6 +452,7 @@ private fun ArchiveCalendarCard(
                                 day = day,
                                 selected = day.date == state.selection.selectedDate,
                                 profiles = state.month.profiles,
+                                minHeight = cellMinHeight,
                                 onClick = { onSelect(day.date) },
                             )
                         }
@@ -359,6 +480,7 @@ private fun DayCell(
     day: ArchiveDay,
     selected: Boolean,
     profiles: List<ArchiveProfile>,
+    minHeight: androidx.compose.ui.unit.Dp = GeistSizes.minimumTouchTarget,
     onClick: () -> Unit,
 ) {
     val colors = LocalGeistColors.current
@@ -376,7 +498,7 @@ private fun DayCell(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .heightIn(min = GeistSizes.minimumTouchTarget)
+            .heightIn(min = minHeight)
             .then(if (selected) Modifier.border(2.dp, colors.primary, shape) else Modifier)
             .padding(if (selected) 3.dp else 0.dp)
             .clip(shape)
@@ -446,7 +568,11 @@ private fun LegendItem(status: CoverageStatus) {
 }
 
 @Composable
-private fun ArchiveDayCard(state: ArchiveUiState, onBackfill: (LocalDate) -> Unit) {
+private fun ArchiveDayCard(
+    state: ArchiveUiState,
+    onBackfill: (LocalDate) -> Unit,
+    onOpenDay: (LocalDate) -> Unit,
+) {
     val colors = LocalGeistColors.current
     val rows = state.selectedDay
     val (onTrack, due) = ArchiveCoverage.onTrack(rows)
@@ -469,8 +595,17 @@ private fun ArchiveDayCard(state: ArchiveUiState, onBackfill: (LocalDate) -> Uni
         )
         rows.forEach { row ->
             Spacer(Modifier.height(GeistSpacing.space3))
+            val openDayLabel = stringResource(R.string.day_page_open)
             Row(
-                modifier = Modifier.fillMaxWidth().heightIn(min = GeistSizes.minimumTouchTarget),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = GeistSizes.minimumTouchTarget)
+                    .clip(RoundedCornerShape(GeistRadii.small))
+                    .clickable(
+                        enabled = row.status != CoverageStatus.NOT_DUE,
+                        role = Role.Button,
+                        onClickLabel = openDayLabel,
+                    ) { onOpenDay(state.selection.selectedDate) },
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(GeistSpacing.space3),
             ) {
@@ -492,7 +627,7 @@ private fun ArchiveDayCard(state: ArchiveUiState, onBackfill: (LocalDate) -> Uni
                         )
                     }
                 }
-                if (row.status == CoverageStatus.MISSING) {
+                if (row.status == CoverageStatus.MISSING || row.status == CoverageStatus.PARTIAL) {
                     Button(
                         onClick = { onBackfill(state.selection.selectedDate) },
                         shape = CircleShape,
@@ -501,7 +636,12 @@ private fun ArchiveDayCard(state: ArchiveUiState, onBackfill: (LocalDate) -> Uni
                             contentColor = colors.brandOnPrimary,
                         ),
                     ) {
-                        Text(stringResource(R.string.archive_action_backfill), style = GeistType.button14)
+                        Text(
+                            stringResource(
+                                if (row.status == CoverageStatus.PARTIAL) R.string.archive_action_reexport else R.string.archive_action_backfill,
+                            ),
+                            style = GeistType.button14,
+                        )
                     }
                 }
             }

@@ -535,7 +535,7 @@ private fun EditorTextField(
             unfocusedTextColor = AppColors.textPrimary,
             cursorColor = AppColors.accent,
         ),
-        shape = RoundedCornerShape(Radii.card),
+        shape = RoundedCornerShape(Radii.textField),
     )
 }
 

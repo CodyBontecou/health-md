@@ -239,7 +239,7 @@ fun ClinicianReportScreen(
                 supportingText = { Text(stringResource(R.string.clinician_report_display_name_hint)) },
                 singleLine = true,
                 colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = AppColors.accent, unfocusedBorderColor = AppColors.borderDefault),
-                shape = RoundedCornerShape(Radii.card),
+                shape = RoundedCornerShape(Radii.textField),
             )
 
             state.errorMessage?.let { StatusCard(it, AppColors.errorSubtle, AppColors.error) }

@@ -31,6 +31,7 @@ import androidx.compose.material.icons.automirrored.outlined.Launch
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Description
+import androidx.compose.material.icons.outlined.Download
 import androidx.compose.material.icons.outlined.ExpandLess
 import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material.icons.outlined.Folder
@@ -55,6 +56,8 @@ import com.healthmd.R
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -112,6 +115,10 @@ fun ExportScreen(
     onBack: (() -> Unit)? = null,
     /** Presets the range to this one date (Backfill from the Archive), once per entry. */
     backfillDate: LocalDate? = null,
+    /** Shown as the Export now bottom sheet: a title row with Close instead of Back. */
+    asSheet: Boolean = false,
+    /** Optional control under the sheet title, such as the profile segmented buttons. */
+    profileSelector: (@Composable () -> Unit)? = null,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -373,7 +380,27 @@ fun ExportScreen(
             hasSelectedFormat &&
             !uiState.isExporting &&
             !uiState.isPreviewing
-    val exportButtonClick = if (hitExportLimit) onNavigateToPaywall else viewModel::startExport
+    var confirmLargeExport by rememberSaveable { mutableStateOf(false) }
+    val requestedExportDays = remember(uiState.startDate, uiState.endDate) {
+        java.time.temporal.ChronoUnit.DAYS.between(uiState.startDate, uiState.endDate).toInt() + 1
+    }
+    val exportButtonClick: () -> Unit = when {
+        hitExportLimit -> onNavigateToPaywall
+        // A long range writes many files and takes minutes: confirm before starting.
+        isLargeExport(requestedExportDays, uiState.settings.exportMode) -> { { confirmLargeExport = true } }
+        else -> viewModel::startExport
+    }
+    if (confirmLargeExport) {
+        LargeExportConfirmDialog(
+            days = requestedExportDays,
+            files = requestedExportDays * uiState.exportFormats.size.coerceAtLeast(1),
+            onConfirm = {
+                confirmLargeExport = false
+                viewModel.startExport()
+            },
+            onDismiss = { confirmLargeExport = false },
+        )
+    }
 
     uiState.postExportMilestone?.takeIf { !uiState.isPurchased }?.let { milestone ->
         PostExportGuidanceDialog(
@@ -437,13 +464,33 @@ fun ExportScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = Spacing.md)
                 .padding(
-                    top = Spacing.lg,
+                    top = if (asSheet) 0.dp else Spacing.lg,
                     bottom = floatingActionBarHeight + Spacing.lg,
                 ),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(Spacing.md),
         ) {
-        if (onBack != null) {
+        if (asSheet && onBack != null) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = stringResource(R.string.export_now_title),
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = AppColors.textPrimary,
+                    modifier = Modifier.weight(1f).semantics { heading() },
+                )
+                IconButton(onClick = onBack) {
+                    Icon(
+                        Icons.Outlined.Close,
+                        contentDescription = stringResource(R.string.close),
+                        tint = AppColors.textSecondary,
+                    )
+                }
+            }
+            profileSelector?.invoke()
+        } else if (onBack != null) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
@@ -1224,8 +1271,6 @@ fun ExportScreen(
     if (showOpenDialog) {
         AlertDialog(
             onDismissRequest = { showOpenDialog = false },
-            containerColor = AppColors.bgSecondary,
-            tonalElevation = 0.dp,
             title = {
                 Text(
                     stringResource(R.string.open_folder),
@@ -1769,8 +1814,6 @@ private fun ExportPreviewDialog(
 
     AlertDialog(
         onDismissRequest = closePreview,
-        containerColor = AppColors.bgSecondary,
-        tonalElevation = 0.dp,
         title = {
             selectedFile?.let { file ->
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -2391,3 +2434,38 @@ private fun ExportPreviewSideEffectAction.localizedAction(): String = stringReso
         ExportPreviewSideEffectAction.WRITE_INDIVIDUAL_ENTRY -> R.string.export_preview_action_write_individual_entry
     }
 )
+
+/** Ranges longer than this ask before exporting; raw snapshots are one artifact and do not. */
+internal const val LARGE_EXPORT_DAY_THRESHOLD = 90
+
+internal fun isLargeExport(days: Int, mode: ExportMode): Boolean =
+    mode != ExportMode.RAW_SNAPSHOT && days > LARGE_EXPORT_DAY_THRESHOLD
+
+@Composable
+private fun LargeExportConfirmDialog(days: Int, files: Int, onConfirm: () -> Unit, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = { Icon(Icons.Outlined.Download, contentDescription = null) },
+        title = {
+            Text(
+                pluralStringResource(R.plurals.large_export_title, days, days),
+                textAlign = TextAlign.Center,
+            )
+        },
+        text = {
+            Text(
+                pluralStringResource(R.plurals.large_export_body, files, files),
+                style = MaterialTheme.typography.bodyMedium,
+                color = AppColors.textSecondary,
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Text(pluralStringResource(R.plurals.large_export_confirm, days, days))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
+        },
+    )
+}

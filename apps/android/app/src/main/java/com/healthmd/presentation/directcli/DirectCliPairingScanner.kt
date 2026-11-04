@@ -60,6 +60,17 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.healthmd.R
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.outlined.FlashlightOff
+import androidx.compose.material.icons.outlined.FlashlightOn
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.IconToggleButton
+import androidx.compose.ui.unit.dp
+import com.healthmd.presentation.theme.GeistDarkColors
+import com.healthmd.presentation.theme.GeistRadii
+import com.healthmd.presentation.theme.GeistType
 import com.healthmd.presentation.theme.AppColors
 import com.healthmd.presentation.theme.GeistSizes
 import com.healthmd.presentation.theme.Spacing
@@ -178,8 +189,12 @@ fun DirectCliPairingScanner(
                 )
                 else -> {
                     Box(modifier = Modifier.fillMaxSize()) {
+                        var torchOn by rememberSaveable { mutableStateOf(false) }
+                        var torchAvailable by remember { mutableStateOf(false) }
                         CameraPreview(
                             modifier = Modifier.fillMaxSize(),
+                            torchOn = torchOn,
+                            onTorchAvailable = { torchAvailable = it },
                             onPayload = { payload ->
                                 if (!accepted) {
                                     val link = DirectCliPairingLink.parse(payload)
@@ -196,29 +211,15 @@ fun DirectCliPairingScanner(
                             },
                         )
 
-                        Box(
-                            modifier = Modifier
-                                .align(Alignment.Center)
-                                .size(GeistSizes.scannerFrame)
-                                .border(
-                                    BorderStroke(Spacing.xxs, AppColors.scannerContent),
-                                    MaterialTheme.shapes.large,
-                                ),
-                        )
+                        ViewfinderCorners(Modifier.align(Alignment.Center).size(GeistSizes.scannerFrame))
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .background(AppColors.scannerScrim)
-                                .padding(horizontal = Spacing.sm, vertical = Spacing.xs)
+                                .padding(horizontal = Spacing.xxs, vertical = Spacing.xs)
                                 .align(Alignment.TopCenter),
-                            horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Text(
-                                text = stringResource(R.string.direct_cli_scan_qr),
-                                color = AppColors.scannerContent,
-                                style = MaterialTheme.typography.titleLarge,
-                            )
                             IconButton(onClick = onDismiss) {
                                 Icon(
                                     imageVector = Icons.Default.Close,
@@ -226,28 +227,67 @@ fun DirectCliPairingScanner(
                                     tint = AppColors.scannerContent,
                                 )
                             }
+                            Text(
+                                text = stringResource(R.string.direct_cli_scan_qr),
+                                color = AppColors.scannerContent,
+                                style = MaterialTheme.typography.titleLarge,
+                                modifier = Modifier.weight(1f),
+                            )
+                            if (torchAvailable) {
+                                val torchLabel = stringResource(
+                                    if (torchOn) R.string.direct_cli_torch_off else R.string.direct_cli_torch_on,
+                                )
+                                IconToggleButton(
+                                    checked = torchOn,
+                                    onCheckedChange = { torchOn = it },
+                                    colors = IconButtonDefaults.iconToggleButtonColors(
+                                        contentColor = AppColors.scannerContent,
+                                        checkedContainerColor = ScannerAccent,
+                                        checkedContentColor = ScannerOnAccent,
+                                    ),
+                                ) {
+                                    Icon(
+                                        imageVector = if (torchOn) Icons.Outlined.FlashlightOn else Icons.Outlined.FlashlightOff,
+                                        contentDescription = torchLabel,
+                                    )
+                                }
+                            }
                         }
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .background(AppColors.scannerScrim)
+                                .navigationBarsPadding()
                                 .padding(Spacing.lg)
                                 .align(Alignment.BottomCenter),
-                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(Spacing.md),
                         ) {
                             Text(
                                 text = cameraError ?: scanMessage ?: scanHint,
                                 color = AppColors.scannerContent,
                                 style = MaterialTheme.typography.bodyLarge,
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                modifier = Modifier.fillMaxWidth(),
                             )
-                            if (cameraError != null) {
-                                Spacer(Modifier.height(Spacing.sm))
-                                OutlinedButton(onClick = onDismiss) {
-                                    Text(
-                                        stringResource(R.string.back),
-                                        color = AppColors.scannerContent,
-                                    )
-                                }
+                            Text(
+                                text = stringResource(R.string.direct_cli_scanner_privacy),
+                                color = AppColors.scannerContent,
+                                style = MaterialTheme.typography.bodyMedium,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .background(AppColors.scannerContent.copy(alpha = 0.10f), RoundedCornerShape(GeistRadii.medium))
+                                    .padding(horizontal = Spacing.md, vertical = Spacing.sm),
+                            )
+                            OutlinedButton(
+                                onClick = onDismiss,
+                                modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp),
+                                shape = RoundedCornerShape(GeistRadii.full),
+                            ) {
+                                Text(
+                                    stringResource(R.string.direct_cli_enter_code_instead),
+                                    color = ScannerAccent,
+                                    style = GeistType.button16,
+                                )
                             }
                         }
                     }
@@ -260,9 +300,16 @@ fun DirectCliPairingScanner(
 @Composable
 private fun CameraPreview(
     modifier: Modifier,
+    torchOn: Boolean,
+    onTorchAvailable: (Boolean) -> Unit,
     onPayload: (String) -> Unit,
     onError: () -> Unit,
 ) {
+    var camera by remember { mutableStateOf<androidx.camera.core.Camera?>(null) }
+    val currentOnTorchAvailable by rememberUpdatedState(onTorchAvailable)
+    LaunchedEffect(camera, torchOn) {
+        camera?.let { bound -> if (bound.cameraInfo.hasFlashUnit()) bound.cameraControl.enableTorch(torchOn) }
+    }
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val currentOnPayload by rememberUpdatedState(onPayload)
@@ -297,12 +344,12 @@ private fun CameraPreview(
                 runCatching {
                     providerFuture.get().also { resolved ->
                         provider = resolved
-                        resolved.bindToLifecycle(
+                        camera = resolved.bindToLifecycle(
                             lifecycleOwner,
                             CameraSelector.DEFAULT_BACK_CAMERA,
                             preview,
                             analysis,
-                        )
+                        ).also { bound -> currentOnTorchAvailable(bound.cameraInfo.hasFlashUnit()) }
                     }
                 }.onFailure { currentOnError() }
             }
@@ -311,6 +358,7 @@ private fun CameraPreview(
         onDispose {
             active = false
             analysis.clearAnalyzer()
+            camera = null
             provider?.unbind(preview, analysis)
             analysisExecutor.shutdownNow()
         }
@@ -423,5 +471,46 @@ private class QrCodeAnalyzer(
             }
             else -> Luminance(source, width, height)
         }
+    }
+}
+
+/** The scanner is always shown over the camera, so it keeps the dark theme's accent. */
+private val ScannerAccent get() = GeistDarkColors.brandPrimary
+private val ScannerOnAccent get() = GeistDarkColors.brandOnPrimary
+
+/** Rounded corner brackets marking where the QR code should sit. */
+@Composable
+private fun ViewfinderCorners(modifier: Modifier) {
+    androidx.compose.foundation.Canvas(modifier) {
+        val stroke = 4.dp.toPx()
+        val arm = 56.dp.toPx()
+        val radius = GeistRadii.large.toPx()
+        val half = stroke / 2
+        val w = size.width
+        val h = size.height
+        fun corner(path: androidx.compose.ui.graphics.Path) = drawPath(
+            path,
+            ScannerAccent,
+            style = androidx.compose.ui.graphics.drawscope.Stroke(width = stroke),
+        )
+        fun bracket(x0: Float, y0: Float, sx: Float, sy: Float) {
+            val path = androidx.compose.ui.graphics.Path().apply {
+                moveTo(x0, y0 + sy * arm)
+                lineTo(x0, y0 + sy * radius)
+                quadraticTo(x0, y0, x0 + sx * radius, y0)
+                lineTo(x0 + sx * arm, y0)
+            }
+            corner(path)
+        }
+        bracket(half, half, 1f, 1f)
+        bracket(w - half, half, -1f, 1f)
+        bracket(half, h - half, 1f, -1f)
+        bracket(w - half, h - half, -1f, -1f)
+        drawLine(
+            ScannerAccent.copy(alpha = 0.7f),
+            start = androidx.compose.ui.geometry.Offset(24.dp.toPx(), h / 2),
+            end = androidx.compose.ui.geometry.Offset(w - 24.dp.toPx(), h / 2),
+            strokeWidth = 2.dp.toPx(),
+        )
     }
 }

@@ -4,7 +4,7 @@
 
 - **Audience and task:** People who export on a schedule and want to see, at a glance, which health dates are already in their archive and which need a backfill.
 - **Canonical location:** This guide owns the Android Archive. The shared capability is `export.coverage-calendar` in [product-capabilities.json](../../../../packages/contracts/product-capabilities.json); the Apple Archive lands with the Liquid Glass experience.
-- **Source and tests:** `app/src/main/java/com/healthmd/presentation/archive/` (`ArchiveCoverage.kt` rules, `ArchiveViewModel.kt`, `ArchiveScreen.kt`) and `widget/glance/ArchiveGlanceWidget.kt`; `ArchiveCoverageTest.kt` and `ArchiveWidgetSummaryTest.kt`. On-device rendering has not been verified by automated UI tests.
+- **Source and tests:** `app/src/main/java/com/healthmd/presentation/archive/` (`ArchiveCoverage.kt` rules, `ArchiveViewModel.kt`, `ArchiveScreen.kt`, and the day page in `DayPageScreen.kt`/`DayPageViewModel.kt`) and `widget/glance/ArchiveGlanceWidget.kt`; `ArchiveCoverageTest.kt` and `ArchiveWidgetSummaryTest.kt`. On-device rendering has not been verified by automated UI tests.
 
 ## What it does
 
@@ -23,9 +23,12 @@ Each export profile is its own lane; runs without a profile form the **Current s
 ## Setup and use
 
 1. Export once from **Export now**, or let an automation run. The calendar fills from export history.
-2. Tap a day to see each lane's state and its last export time.
-3. Use the chips to focus one profile, and **Show first gap** to jump to the earliest missing date in the month.
-4. Open **History** from the Archive for the full run log and retries ([Export history and retry](./export-history-retry.md)).
+2. Tap a day to see each lane's state and its last export time. **Backfill** a missing lane or **Re-export** a partial one.
+3. Tap a lane to open the day page: the file Health.md writes for that date, line by line, with **Share file** and **Re-export**. It is a dry run with the current export settings, the same one Export now previews, so it reflects today's Health Connect data and writes nothing. Raw snapshot mode has no single day file.
+4. Use the chips to focus one profile, and **Show first gap** to jump to the earliest missing date in the month.
+5. Open **History** from the Archive for the full run log and retries ([Export history and retry](./export-history-retry.md)).
+
+On tablets and unfolded foldables the calendar fills the main pane, with the chips and month controls inside it; the stats, the selected day, an **Automations** summary and History sit in a side column.
 
 The **Archive** home-screen widget shows the same coverage at a glance; see [Home-screen widgets](./widgets.md).
 
@@ -34,6 +37,7 @@ The **Archive** home-screen widget shows the same coverage at a glance; see [Hom
 - Coverage merges outcomes so a later failure never hides a file an earlier run wrote. It does not inspect the folder: a file you deleted by hand still shows as complete.
 - Android has no paused-schedule ledger, so the Archive has no paused state; a paused automation's dates show as not exported.
 - Clearing export history clears the calendar.
+- The day page does not read the written file back from the folder (history does not record file paths); it regenerates the file from current data and settings, so it can differ from what an earlier run wrote or from a profile's own settings.
 
 ## Maintainer rationale
 

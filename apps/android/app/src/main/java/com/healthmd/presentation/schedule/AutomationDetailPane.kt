@@ -62,6 +62,8 @@ fun AutomationDetailPane(
     profileId: String?,
     onEditProfile: (String) -> Unit,
     modifier: Modifier = Modifier,
+    /** Opens the sentence composer for this automation. */
+    onCompose: ((String) -> Unit)? = null,
     profilesViewModel: ExportProfilesViewModel = hiltViewModel(),
     schedulesViewModel: ProfileSchedulesViewModel = hiltViewModel(),
 ) {
@@ -95,6 +97,7 @@ fun AutomationDetailPane(
         onEditProfile = { onEditProfile(row.profile.id) },
         onEditSchedule = { guarded { editingSchedule = true } },
         onMakeActive = { guarded { profilesViewModel.activate(row.profile.id) } },
+        onCompose = onCompose?.let { open -> { open(row.profile.id) } },
         modifier = modifier,
     )
 
@@ -119,6 +122,7 @@ private fun AutomationDetailContent(
     onEditProfile: () -> Unit,
     onEditSchedule: () -> Unit,
     onMakeActive: () -> Unit,
+    onCompose: (() -> Unit)?,
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalGeistColors.current
@@ -153,6 +157,11 @@ private fun AutomationDetailContent(
                     shape = RoundedCornerShape(GeistRadii.full),
                     colors = ButtonDefaults.buttonColors(containerColor = colors.brandPrimary, contentColor = colors.brandOnPrimary),
                 ) { Text(stringResource(R.string.automation_detail_make_active), style = GeistType.button14) }
+            }
+            if (onCompose != null) {
+                OutlinedButton(onClick = onCompose, shape = RoundedCornerShape(GeistRadii.full)) {
+                    Text(stringResource(R.string.composer_edit_sentence), style = GeistType.button14, color = colors.brandPrimary)
+                }
             }
             OutlinedButton(onClick = onEditSchedule, shape = RoundedCornerShape(GeistRadii.full)) {
                 Text(stringResource(R.string.automation_detail_edit_schedule), style = GeistType.button14, color = colors.brandPrimary)

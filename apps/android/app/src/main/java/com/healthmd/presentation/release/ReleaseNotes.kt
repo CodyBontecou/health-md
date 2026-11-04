@@ -72,7 +72,6 @@ fun ReleaseNotesDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        containerColor = AppColors.bgTertiary,
         title = {
             Text(
                 text = stringResource(R.string.release_notes_title, notes.versionName),

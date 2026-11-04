@@ -35,6 +35,9 @@ object SubRoutes {
     /** Export now preset to one date, opened by Backfill in the Archive. */
     const val EXPORT_BACKFILL = "export/backfill/{date}"
     fun exportBackfill(date: LocalDate): String = "export/backfill/$date"
+    /** The day page: the file Health.md writes for one Archive date. */
+    const val ARCHIVE_DAY = "archive/day/{date}"
+    fun archiveDay(date: LocalDate): String = "archive/day/$date"
     const val HISTORY = "history"
     const val ONBOARDING = "onboarding"
     const val METRIC_SELECTION = "metric_selection"
@@ -53,6 +56,9 @@ object SubRoutes {
     const val AUTOMATION_DETAIL = "automation/{profileId}"
     fun exportProfile(profileId: String): String = "export_profiles/$profileId"
     fun automationDetail(profileId: String): String = "automation/$profileId"
+    /** The automation composer: the profile as one editable sentence with a live file preview. */
+    const val AUTOMATION_COMPOSE = "automation/{profileId}/compose"
+    fun automationCompose(profileId: String): String = "automation/$profileId/compose"
     const val DIAGNOSTICS = "diagnostics"
     const val FOLDER_DESTINATION = "folder_destination"
     const val MYSELF_CLAIM = "myself_claim"

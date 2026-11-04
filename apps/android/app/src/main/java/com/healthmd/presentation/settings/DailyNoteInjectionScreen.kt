@@ -102,7 +102,7 @@ fun DailyNoteInjectionScreen(
                         unfocusedTextColor = AppColors.textPrimary,
                         cursorColor = AppColors.accent,
                     ),
-                    shape = RoundedCornerShape(Radii.card),
+                    shape = RoundedCornerShape(Radii.textField),
                     singleLine = true,
                 )
                 Spacer(modifier = Modifier.height(Spacing.xs))
@@ -128,7 +128,7 @@ fun DailyNoteInjectionScreen(
                         unfocusedTextColor = AppColors.textPrimary,
                         cursorColor = AppColors.accent,
                     ),
-                    shape = RoundedCornerShape(Radii.card),
+                    shape = RoundedCornerShape(Radii.textField),
                     singleLine = true,
                 )
                 Spacer(modifier = Modifier.height(Spacing.xs))

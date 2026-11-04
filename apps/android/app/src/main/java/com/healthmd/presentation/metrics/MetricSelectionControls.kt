@@ -98,7 +98,7 @@ internal fun MetricSelectionSearchField(
                 unfocusedTextColor = AppColors.textPrimary,
                 cursorColor = AppColors.accent,
             ),
-            shape = RoundedCornerShape(Radii.card),
+            shape = RoundedCornerShape(Radii.textField),
             singleLine = true,
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
             keyboardActions = KeyboardActions(onSearch = { focusManager.clearFocus(); keyboard?.hide() }),

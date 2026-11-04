@@ -270,7 +270,7 @@ private fun FormatCustomizationTemplateEditor(
             unfocusedTextColor = AppColors.textPrimary,
             cursorColor = AppColors.accent,
         ),
-        shape = RoundedCornerShape(Radii.card),
+        shape = RoundedCornerShape(Radii.textField),
     )
     Spacer(modifier = Modifier.height(Spacing.xs))
     // Keep reset immediately after the editor, rather than beyond a long token reference.

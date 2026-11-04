@@ -47,4 +47,14 @@
     <string name="wear_preview_placeholder">ਝਲਕ; ਕੋਈ ਸਿਹਤ ਮੁੱਲ ਨਹੀਂ</string>
     <string name="wear_complication_description">%1$s, %2$s, %3$s</string>
     <string name="wear_complication_long">%1$s %2$s · %3$s</string>
+    <string name="wear_short_activity">ਸਰਗਰਮੀ</string>
+    <string name="wear_short_recovery">ਸਿਹਤਯਾਬੀ</string>
+    <string name="wear_short_steps">ਕਦਮ</string>
+    <string name="wear_short_move">ਹਰਕਤ</string>
+    <string name="wear_short_exercise">ਕਸਰਤ</string>
+    <string name="wear_short_sleep">ਨੀਂਦ</string>
+    <string name="wear_short_resting_hr">ਆਰਾਮ</string>
+    <string name="wear_short_average_hr">ਔਸਤ HR</string>
+    <string name="wear_short_hrv">HRV</string>
+    <string name="wear_short_blood_oxygen">SpO₂</string>
 </resources>
