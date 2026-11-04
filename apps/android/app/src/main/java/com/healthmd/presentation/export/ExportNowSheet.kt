@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -52,6 +51,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.healthmd.R
+import com.healthmd.presentation.common.dialogNavigationBarsPadding
 import com.healthmd.presentation.common.LocalConfigurationProtection
 import com.healthmd.presentation.theme.GeistRadii
 import com.healthmd.presentation.theme.GeistSpacing
@@ -96,7 +96,7 @@ fun ExportNowSheet(onDismiss: () -> Unit, content: @Composable () -> Unit) {
             shape = RoundedCornerShape(topStart = GeistRadii.large, topEnd = GeistRadii.large),
             color = colors.background200,
         ) {
-            Column(Modifier.navigationBarsPadding().imePadding()) {
+            Column(Modifier.dialogNavigationBarsPadding().imePadding()) {
                 val handleLabel = stringResource(R.string.close)
                 Box(
                     Modifier

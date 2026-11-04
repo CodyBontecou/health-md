@@ -61,6 +61,7 @@ import kotlinx.coroutines.test.TestDispatcher
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.Rule
@@ -125,6 +126,38 @@ class ExportViewModelTest {
         assertThat(exportRepository.exportCalls).isEqualTo(0)
         assertThat(historyRepository.entries).isEmpty()
         assertThat(viewModel.uiState.value.isExporting).isFalse()
+    }
+
+    @Test
+    fun exportMomentStartsFromTheNewRunNotTheLastOne() = runTest {
+        val healthRepository = FakeHealthRepository(hasPermissions = true)
+        val viewModel = createViewModel(
+            healthRepository = healthRepository,
+            exportRepository = FakeExportRepository(),
+            exportHistoryRepository = FakeExportHistoryRepository(),
+        )
+        advanceUntilIdle()
+
+        val today = LocalDate.now()
+        viewModel.setStartDate(today)
+        viewModel.setEndDate(today)
+        viewModel.startExport()
+        advanceUntilIdle()
+        assertThat(viewModel.uiState.value.exportProgressDate).isEqualTo(today)
+
+        val gate = kotlinx.coroutines.CompletableDeferred<Unit>()
+        healthRepository.fetchGate = gate
+        viewModel.setStartDate(today.minusDays(6))
+        viewModel.startExport()
+        runCurrent()
+
+        val state = viewModel.uiState.value
+        assertThat(state.isExporting).isTrue()
+        assertThat(state.exportProgress).isEqualTo(0)
+        assertThat(state.exportTotal).isEqualTo(7)
+        assertThat(state.exportProgressDate).isNull()
+        gate.complete(Unit)
+        advanceUntilIdle()
     }
 
     @Test
@@ -771,6 +804,9 @@ private class FakeHealthRepository(
     var fetchCalls = 0
         private set
 
+    /** When set, each fetch waits on it, holding an export mid-run. */
+    var fetchGate: kotlinx.coroutines.CompletableDeferred<Unit>? = null
+
     override suspend fun resolveCaptureContext(
         zoneId: ZoneId,
         sleepDayAttributionOverride: SleepDayAttributionOverride,
@@ -782,6 +818,7 @@ private class FakeHealthRepository(
 
     override suspend fun fetchHealthData(date: LocalDate): HealthData {
         fetchCalls++
+        fetchGate?.await()
         return HealthData(
             date = date,
             activity = ActivityData(steps = 1),

@@ -495,6 +495,11 @@ class ExportViewModel @Inject constructor(
             _uiState.update {
                 it.copy(
                     isExporting = true,
+                    // The moment opens on this run, not the last run's "1 / 1 day".
+                    exportProgress = 0,
+                    exportTotal = (java.time.temporal.ChronoUnit.DAYS.between(it.startDate, it.endDate).toInt() + 1)
+                        .coerceAtLeast(1),
+                    exportProgressDate = null,
                     lastResult = null,
                     preview = null,
                     exportedFolderUri = null,

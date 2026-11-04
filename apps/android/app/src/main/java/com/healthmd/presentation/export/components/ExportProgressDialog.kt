@@ -11,6 +11,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import com.healthmd.presentation.common.dialogNavigationBarsPadding
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Path
@@ -125,6 +126,7 @@ fun ExportProgressDialog(
             }
             Column(
                 modifier = Modifier
+                    .dialogNavigationBarsPadding()
                     .padding(start = GeistSpacing.space4, end = GeistSpacing.space4, bottom = GeistSpacing.space6)
                     .widthIn(max = GeistSizes.readableContentMaxWidth)
                     .fillMaxWidth()

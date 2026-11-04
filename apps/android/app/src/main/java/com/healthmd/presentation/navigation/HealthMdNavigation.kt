@@ -408,7 +408,9 @@ fun HealthMdNavigation(
             composable(NavDestination.SCHEDULE.route) {
                 var selectedAutomation by rememberSaveable { mutableStateOf<String?>(null) }
                 BoxWithConstraints(Modifier.fillMaxSize()) {
-                    val twoPane = maxWidth >= GeistSizes.readableContentMaxWidth
+                    // Same split point as the Archive, so an unfolded foldable in landscape
+                    // (about 760 dp beside the rail) shows list and detail together.
+                    val twoPane = maxWidth >= GeistBreakpoints.medium.dp
                     val schedule: @Composable () -> Unit = {
                         ScheduleScreen(
                             onNavigateToPaywall = {

@@ -44,7 +44,9 @@ private fun geistMono(
     fontSize = size.sp,
     fontWeight = FontWeight.Normal,
     lineHeight = lineHeight.sp,
-    fontFeatureSettings = "tnum",
+    // Mono shows file text verbatim: Geist Mono's contextual ligatures would draw a
+    // frontmatter "---" as one dash, so only tabular figures stay on.
+    fontFeatureSettings = "tnum, liga 0, calt 0",
 )
 
 /** Exact reusable typography tokens from DESIGN.md and DESIGN.dark.md (Material 3 scale). */

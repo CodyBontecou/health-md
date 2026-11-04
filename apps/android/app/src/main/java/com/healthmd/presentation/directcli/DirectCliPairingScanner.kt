@@ -61,7 +61,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.healthmd.R
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.navigationBarsPadding
+import com.healthmd.presentation.common.dialogNavigationBarsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.outlined.FlashlightOff
 import androidx.compose.material.icons.outlined.FlashlightOn
@@ -257,7 +257,7 @@ fun DirectCliPairingScanner(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .background(AppColors.scannerScrim)
-                                .navigationBarsPadding()
+                                .dialogNavigationBarsPadding()
                                 .padding(Spacing.lg)
                                 .align(Alignment.BottomCenter),
                             verticalArrangement = Arrangement.spacedBy(Spacing.md),
