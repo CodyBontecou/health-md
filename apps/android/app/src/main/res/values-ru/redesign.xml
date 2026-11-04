@@ -180,4 +180,26 @@
     <string name="widget_archive_preview_month_value">24</string>
     <string name="widget_archive_preview_month_detail">дня за октябрь</string>
     <string name="widget_archive_preview_gaps">2 пропуска</string>
+    <string name="day_page_export_day">Экспортировать этот день</string>
+    <string name="moment_see_in_archive">Открыть в архиве</string>
+    <string name="export_now_more_options">Другие параметры</string>
+    <string name="automations_profiles_summary">Активен: %1$s · %2$s · %3$s</string>
+    <plurals name="moment_done_days">
+        <item quantity="one">Записан %1$d день</item>
+        <item quantity="few">Записано %1$d дня</item>
+        <item quantity="many">Записано %1$d дней</item>
+        <item quantity="other">Записано %1$d дня</item>
+    </plurals>
+    <plurals name="automations_profiles_count">
+        <item quantity="one">%1$d профиль</item>
+        <item quantity="few">%1$d профиля</item>
+        <item quantity="many">%1$d профилей</item>
+        <item quantity="other">%1$d профиля</item>
+    </plurals>
+    <plurals name="automations_profiles_scheduled">
+        <item quantity="one">по расписанию: %1$d</item>
+        <item quantity="few">по расписанию: %1$d</item>
+        <item quantity="many">по расписанию: %1$d</item>
+        <item quantity="other">по расписанию: %1$d</item>
+    </plurals>
 </resources>

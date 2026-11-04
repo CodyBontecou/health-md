@@ -175,4 +175,23 @@
     <string name="widget_archive_preview_month_value">24</string>
     <string name="widget_archive_preview_month_detail">jours en octobre</string>
     <string name="widget_archive_preview_gaps">2 lacunes</string>
+    <string name="day_page_export_day">Exporter ce jour</string>
+    <string name="moment_see_in_archive">Voir dans l’archive</string>
+    <string name="export_now_more_options">Plus d’options</string>
+    <string name="automations_profiles_summary">Actif : %1$s · %2$s · %3$s</string>
+    <plurals name="moment_done_days">
+        <item quantity="one">%1$d jour écrit</item>
+        <item quantity="many">%1$d de jours écrits</item>
+        <item quantity="other">%1$d jours écrits</item>
+    </plurals>
+    <plurals name="automations_profiles_count">
+        <item quantity="one">%1$d profil</item>
+        <item quantity="many">%1$d de profils</item>
+        <item quantity="other">%1$d profils</item>
+    </plurals>
+    <plurals name="automations_profiles_scheduled">
+        <item quantity="one">%1$d planifié</item>
+        <item quantity="many">%1$d de planifiés</item>
+        <item quantity="other">%1$d planifiés</item>
+    </plurals>
 </resources>

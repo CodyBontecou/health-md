@@ -170,4 +170,20 @@
     <string name="widget_archive_preview_month_value">24</string>
     <string name="widget_archive_preview_month_detail">ਦਿਨ, ਅਕਤੂਬਰ ਵਿੱਚ</string>
     <string name="widget_archive_preview_gaps">2 ਖਾਲੀ ਥਾਵਾਂ</string>
+    <string name="day_page_export_day">ਇਹ ਦਿਨ ਐਕਸਪੋਰਟ ਕਰੋ</string>
+    <string name="moment_see_in_archive">ਆਰਕਾਈਵ ਵਿੱਚ ਦੇਖੋ</string>
+    <string name="export_now_more_options">ਹੋਰ ਵਿਕਲਪ</string>
+    <string name="automations_profiles_summary">ਸਰਗਰਮ: %1$s · %2$s · %3$s</string>
+    <plurals name="moment_done_days">
+        <item quantity="one">%1$d ਦਿਨ ਲਿਖਿਆ ਗਿਆ</item>
+        <item quantity="other">%1$d ਦਿਨ ਲਿਖੇ ਗਏ</item>
+    </plurals>
+    <plurals name="automations_profiles_count">
+        <item quantity="one">%1$d ਪ੍ਰੋਫਾਈਲ</item>
+        <item quantity="other">%1$d ਪ੍ਰੋਫਾਈਲ</item>
+    </plurals>
+    <plurals name="automations_profiles_scheduled">
+        <item quantity="one">%1$d ਨਿਯਤ</item>
+        <item quantity="other">%1$d ਨਿਯਤ</item>
+    </plurals>
 </resources>

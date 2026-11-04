@@ -385,6 +385,15 @@ fun HealthMdNavigation(
                         backfillDate = entry.arguments?.getString("date")
                             ?.let { runCatching { LocalDate.parse(it) }.getOrNull() },
                         onBack = closeSheet,
+                        onSeeInArchive = {
+                            // Close the sheet onto the Archive: back to it when it is below, else open it.
+                            if (!navController.popBackStack(NavDestination.ARCHIVE.route, inclusive = false)) {
+                                navController.navigate(NavDestination.ARCHIVE.route) {
+                                    popUpTo(navController.graph.findStartDestination().id)
+                                    launchSingleTop = true
+                                }
+                            }
+                        },
                         sleepDayAttribution = sleepDayAttribution,
                         onNavigateToPaywall = {
                             if (settingsViewModel.distributionPolicy.purchasesAvailable) {

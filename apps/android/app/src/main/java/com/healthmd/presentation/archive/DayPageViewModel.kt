@@ -4,7 +4,9 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.healthmd.data.export.ExportOrchestrator
+import com.healthmd.domain.model.ExportHistoryEntry
 import com.healthmd.domain.model.ExportPreviewFile
+import com.healthmd.domain.repository.ExportHistoryRepository
 import com.healthmd.domain.repository.ExportRepository
 import com.healthmd.domain.repository.HealthRepository
 import com.healthmd.domain.repository.SettingsRepository
@@ -16,6 +18,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -34,6 +37,11 @@ data class DayPageUiState(
     val date: LocalDate,
     val content: DayPageContent = DayPageContent.Loading,
     val selectedIndex: Int = 0,
+    /**
+     * Whether an export wrote this date. Until one does, the page is only a preview, so it
+     * offers "Export this day" and no Share or Re-export.
+     */
+    val isWritten: Boolean = false,
 ) {
     val selectedFile: ExportPreviewFile?
         get() = (content as? DayPageContent.Files)?.files?.getOrNull(selectedIndex)
@@ -49,6 +57,7 @@ class DayPageViewModel @Inject constructor(
     private val healthRepository: HealthRepository,
     private val exportRepository: ExportRepository,
     private val settingsRepository: SettingsRepository,
+    private val exportHistoryRepository: ExportHistoryRepository,
 ) : ViewModel() {
     private val date: LocalDate = savedStateHandle.get<String>(DATE_ARGUMENT)
         ?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
@@ -78,7 +87,10 @@ class DayPageViewModel @Inject constructor(
             } catch (_: Exception) {
                 DayPageContent.Failed
             }
-            _uiState.update { it.copy(content = content, selectedIndex = 0) }
+            val isWritten = runCatching {
+                isWritten(exportHistoryRepository.getAllEntries().first(), date)
+            }.getOrDefault(false)
+            _uiState.update { it.copy(content = content, selectedIndex = 0, isWritten = isWritten) }
         }
     }
 
@@ -88,6 +100,17 @@ class DayPageViewModel @Inject constructor(
 
     companion object {
         const val DATE_ARGUMENT = "date"
+
+        /**
+         * Written when any profile's export completed the date, fully or partly. The day after
+         * stands in for "today" so today's own written file counts rather than "in progress".
+         */
+        internal fun isWritten(entries: List<ExportHistoryEntry>, date: LocalDate): Boolean =
+            ArchiveCoverage.profiles(entries).any { profile ->
+                ArchiveCoverage.status(entries, profile, date, today = date.plusDays(1)).let {
+                    it == CoverageStatus.COMPLETE || it == CoverageStatus.PARTIAL
+                }
+            }
 
         internal fun dayPageContent(files: List<ExportPreviewFile>, failed: Boolean): DayPageContent = when {
             files.isNotEmpty() -> DayPageContent.Files(files)

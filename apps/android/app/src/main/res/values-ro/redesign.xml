@@ -175,4 +175,23 @@
     <string name="widget_archive_preview_month_value">24</string>
     <string name="widget_archive_preview_month_detail">zile în octombrie</string>
     <string name="widget_archive_preview_gaps">2 goluri</string>
+    <string name="day_page_export_day">Exportă această zi</string>
+    <string name="moment_see_in_archive">Vezi în arhivă</string>
+    <string name="export_now_more_options">Mai multe opțiuni</string>
+    <string name="automations_profiles_summary">Activ: %1$s · %2$s · %3$s</string>
+    <plurals name="moment_done_days">
+        <item quantity="one">%1$d zi scrisă</item>
+        <item quantity="few">%1$d zile scrise</item>
+        <item quantity="other">%1$d de zile scrise</item>
+    </plurals>
+    <plurals name="automations_profiles_count">
+        <item quantity="one">%1$d profil</item>
+        <item quantity="few">%1$d profiluri</item>
+        <item quantity="other">%1$d de profiluri</item>
+    </plurals>
+    <plurals name="automations_profiles_scheduled">
+        <item quantity="one">%1$d programat</item>
+        <item quantity="few">%1$d programate</item>
+        <item quantity="other">%1$d programate</item>
+    </plurals>
 </resources>

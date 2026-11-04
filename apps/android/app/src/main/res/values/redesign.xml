@@ -170,4 +170,20 @@
     <string name="widget_archive_preview_month_value">24</string>
     <string name="widget_archive_preview_month_detail">days in October</string>
     <string name="widget_archive_preview_gaps">2 gaps</string>
+    <string name="day_page_export_day">Export this day</string>
+    <string name="moment_see_in_archive">See in archive</string>
+    <string name="export_now_more_options">More options</string>
+    <string name="automations_profiles_summary">Active: %1$s · %2$s · %3$s</string>
+    <plurals name="moment_done_days">
+        <item quantity="one">%1$d day written</item>
+        <item quantity="other">%1$d days written</item>
+    </plurals>
+    <plurals name="automations_profiles_count">
+        <item quantity="one">%1$d profile</item>
+        <item quantity="other">%1$d profiles</item>
+    </plurals>
+    <plurals name="automations_profiles_scheduled">
+        <item quantity="one">%1$d scheduled</item>
+        <item quantity="other">%1$d scheduled</item>
+    </plurals>
 </resources>

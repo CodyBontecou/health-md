@@ -170,4 +170,20 @@
     <string name="widget_archive_preview_month_value">24</string>
     <string name="widget_archive_preview_month_detail">दिन, अक्टूबर में</string>
     <string name="widget_archive_preview_gaps">2 अंतराल</string>
+    <string name="day_page_export_day">यह दिन निर्यात करें</string>
+    <string name="moment_see_in_archive">संग्रह में देखें</string>
+    <string name="export_now_more_options">और विकल्प</string>
+    <string name="automations_profiles_summary">सक्रिय: %1$s · %2$s · %3$s</string>
+    <plurals name="moment_done_days">
+        <item quantity="one">%1$d दिन लिखा गया</item>
+        <item quantity="other">%1$d दिन लिखे गए</item>
+    </plurals>
+    <plurals name="automations_profiles_count">
+        <item quantity="one">%1$d प्रोफ़ाइल</item>
+        <item quantity="other">%1$d प्रोफ़ाइल</item>
+    </plurals>
+    <plurals name="automations_profiles_scheduled">
+        <item quantity="one">%1$d शेड्यूल</item>
+        <item quantity="other">%1$d शेड्यूल</item>
+    </plurals>
 </resources>

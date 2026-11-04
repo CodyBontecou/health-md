@@ -119,6 +119,8 @@ fun ExportScreen(
     asSheet: Boolean = false,
     /** Optional control under the sheet title, such as the profile segmented buttons. */
     profileSelector: (@Composable () -> Unit)? = null,
+    /** "See in archive" on the finished Export moment; null hides it. */
+    onSeeInArchive: (() -> Unit)? = null,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -418,15 +420,32 @@ fun ExportScreen(
         )
     }
 
-    if (uiState.isExporting) {
+    // The moment stays up, full, after a run that wrote every day; partial, failed and
+    // cancelled runs go straight to the result below, which explains them.
+    var sawExport by remember { mutableStateOf(false) }
+    var finishedRun by remember { mutableStateOf<ExportResult?>(null) }
+    LaunchedEffect(uiState.isExporting, uiState.lastResult) {
+        if (uiState.isExporting) {
+            sawExport = true
+            finishedRun = null
+        } else if (sawExport) {
+            sawExport = false
+            finishedRun = uiState.lastResult?.takeIf(::momentShowsDone)
+        }
+    }
+    val doneRun = finishedRun
+    if (uiState.isExporting || doneRun != null) {
         ExportProgressDialog(
-            current = uiState.exportProgress,
-            total = uiState.exportTotal,
-            currentDate = uiState.exportProgressDate,
+            current = doneRun?.successCount ?: uiState.exportProgress,
+            total = doneRun?.totalCount ?: uiState.exportTotal,
+            currentDate = if (doneRun != null) null else uiState.exportProgressDate,
             rangeStart = uiState.startDate,
             rangeEnd = uiState.endDate,
             exportMode = uiState.settings.exportMode,
             onCancel = { viewModel.cancelExport() },
+            isDone = doneRun != null,
+            onSeeInArchive = onSeeInArchive?.let { open -> { finishedRun = null; open() } },
+            onClose = { finishedRun = null },
         )
     }
 
@@ -745,6 +764,36 @@ fun ExportScreen(
         )
         }
 
+        // The sheet leads with profile, dates and the action; where and how it writes sits
+        // under "More options", open from the start when the destination still needs setup.
+        var showMoreOptions by rememberSaveable { mutableStateOf(!asSheet) }
+        val destinationReady by rememberUpdatedState(uiState.destinationReady)
+        if (asSheet) {
+            LaunchedEffect(Unit) {
+                // Settings load just after the sheet opens; then show the options if the
+                // destination still needs setup, since Export stays disabled until it has one.
+                kotlinx.coroutines.delay(800)
+                if (!destinationReady) showMoreOptions = true
+            }
+            ExportMoreOptionsToggle(
+                expanded = showMoreOptions,
+                summary = listOf(
+                    stringResource(
+                        when (uiState.selectedTarget) {
+                            ExportTarget.DEVICE_FOLDER -> R.string.export_preview_device_destination
+                            ExportTarget.API_ENDPOINT -> R.string.export_preview_api_destination
+                            ExportTarget.AGENT_DATA_GATEWAY -> R.string.export_preview_gateway_destination
+                        },
+                    ),
+                    uiState.folderName.takeIf { uiState.selectedTarget == ExportTarget.DEVICE_FOLDER },
+                    uiState.exportFormats.sortedBy { it.ordinal }.map { it.localizedDisplayName() }
+                        .joinToString(" + ")
+                        .takeIf { uiState.settings.exportMode != ExportMode.RAW_SNAPSHOT && it.isNotBlank() },
+                ).filterNotNull().joinToString(" · "),
+                onToggle = { showMoreOptions = !showMoreOptions },
+            )
+        }
+        if (showMoreOptions || !asSheet) {
         val apiFormatLabel = if (uiState.settings.exportMode == ExportMode.RAW_SNAPSHOT) {
             stringResource(
                 if (uiState.settings.rawSnapshot.format == com.healthmd.rawexport.RawExportFormat.JSON) {
@@ -971,6 +1020,7 @@ fun ExportScreen(
                     fontWeight = FontWeight.Medium,
                 )
             }
+        }
         }
         }
 
@@ -2468,4 +2518,36 @@ private fun LargeExportConfirmDialog(days: Int, files: Int, onConfirm: () -> Uni
             TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
         },
     )
+}
+
+/** A run that wrote every requested day ends on the moment's done state. */
+internal fun momentShowsDone(result: ExportResult): Boolean =
+    !result.wasCancelled && result.totalCount > 0 && result.successCount == result.totalCount &&
+        result.failedDateDetails.isEmpty() && result.exportMode != ExportMode.RAW_SNAPSHOT
+
+/** "More options" with where and how the export writes; expands to every control. */
+@Composable
+private fun ExportMoreOptionsToggle(expanded: Boolean, summary: String, onToggle: () -> Unit) {
+    val title = stringResource(R.string.export_now_more_options)
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(Radii.card))
+            .clickable(onClickLabel = title, onClick = onToggle)
+            .semantics(mergeDescendants = true) {}
+            .padding(vertical = Spacing.sm, horizontal = Spacing.xs),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.titleSmall, color = AppColors.textPrimary)
+            if (summary.isNotBlank()) {
+                Text(summary, style = MaterialTheme.typography.bodySmall, color = AppColors.textSecondary)
+            }
+        }
+        Icon(
+            imageVector = if (expanded) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore,
+            contentDescription = null,
+            tint = AppColors.textSecondary,
+        )
+    }
 }

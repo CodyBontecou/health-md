@@ -10,6 +10,7 @@ import com.healthmd.data.scheduler.ScheduledProfileCadenceUnit
 import com.healthmd.data.scheduler.ScheduledProfileEntry
 import com.healthmd.domain.model.ExportProfile
 import com.healthmd.domain.model.ExportTarget
+import com.healthmd.presentation.common.LocalAppFolderName
 import java.net.URI
 import java.time.DayOfWeek
 import java.time.LocalTime
@@ -36,6 +37,12 @@ object AutomationSentence {
         ExportTarget.AGENT_DATA_GATEWAY -> host(profile.agentDataGatewayUrl)
     }
 
+    /** [destination], else the app's export folder for a device-folder profile without its own. */
+    fun destination(profile: ExportProfile, appFolderName: String?): String? =
+        destination(profile) ?: appFolderName?.takeIf {
+            profile.target == ExportTarget.DEVICE_FOLDER && profile.folderUri == null && it.isNotBlank()
+        }
+
     private fun host(url: String?): String? =
         url?.let { runCatching { URI(it.trim()).host }.getOrNull() }?.takeIf { it.isNotBlank() }
 }
@@ -45,7 +52,7 @@ object AutomationSentence {
 internal fun automationSentence(profile: ExportProfile, entry: ScheduledProfileEntry?): String {
     val context = LocalContext.current
     val locale = LocalConfiguration.current.locales[0] ?: Locale.getDefault()
-    val destination = AutomationSentence.destination(profile)
+    val destination = AutomationSentence.destination(profile, LocalAppFolderName.current)
         ?: stringResource(R.string.automation_destination_selected_folder)
     val time = entry?.let {
         val pattern = DateFormat.getBestDateTimePattern(locale, if (DateFormat.is24HourFormat(context)) "Hm" else "hm")

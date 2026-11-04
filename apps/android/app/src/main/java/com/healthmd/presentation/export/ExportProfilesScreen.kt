@@ -46,6 +46,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
@@ -665,7 +666,12 @@ fun ExportProfilesEntryCard(
                         val active = uiState.activeProfileName ?: "—"
                         val count = uiState.rows.size
                         val scheduled = uiState.rows.count { it.entry?.isEnabled == true }
-                        "Active: $active · $count profile(s) · $scheduled scheduled"
+                        stringResource(
+                            R.string.automations_profiles_summary,
+                            active,
+                            pluralStringResource(R.plurals.automations_profiles_count, count, count),
+                            pluralStringResource(R.plurals.automations_profiles_scheduled, scheduled, scheduled),
+                        )
                     }
                 },
                 style = MaterialTheme.typography.bodySmall,

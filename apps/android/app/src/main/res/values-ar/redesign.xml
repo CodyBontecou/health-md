@@ -190,4 +190,32 @@
     <string name="widget_archive_preview_month_value">24</string>
     <string name="widget_archive_preview_month_detail">يومًا في أكتوبر</string>
     <string name="widget_archive_preview_gaps">فجوتان</string>
+    <string name="day_page_export_day">تصدير هذا اليوم</string>
+    <string name="moment_see_in_archive">عرض في الأرشيف</string>
+    <string name="export_now_more_options">خيارات إضافية</string>
+    <string name="automations_profiles_summary">النشط: %1$s · %2$s · %3$s</string>
+    <plurals name="moment_done_days">
+        <item quantity="zero">%1$d يوم مكتوب</item>
+        <item quantity="one">%1$d يوم مكتوب</item>
+        <item quantity="two">%1$d يومان مكتوبان</item>
+        <item quantity="few">%1$d أيام مكتوبة</item>
+        <item quantity="many">%1$d يومًا مكتوبًا</item>
+        <item quantity="other">%1$d يوم مكتوب</item>
+    </plurals>
+    <plurals name="automations_profiles_count">
+        <item quantity="zero">%1$d ملف تعريف</item>
+        <item quantity="one">%1$d ملف تعريف</item>
+        <item quantity="two">%1$d ملفا تعريف</item>
+        <item quantity="few">%1$d ملفات تعريف</item>
+        <item quantity="many">%1$d ملف تعريف</item>
+        <item quantity="other">%1$d ملف تعريف</item>
+    </plurals>
+    <plurals name="automations_profiles_scheduled">
+        <item quantity="zero">%1$d مجدول</item>
+        <item quantity="one">%1$d مجدول</item>
+        <item quantity="two">%1$d مجدول</item>
+        <item quantity="few">%1$d مجدول</item>
+        <item quantity="many">%1$d مجدول</item>
+        <item quantity="other">%1$d مجدول</item>
+    </plurals>
 </resources>

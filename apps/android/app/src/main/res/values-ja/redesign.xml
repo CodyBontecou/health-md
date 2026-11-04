@@ -165,4 +165,17 @@
     <string name="widget_archive_preview_month_value">24</string>
     <string name="widget_archive_preview_month_detail">日（10月）</string>
     <string name="widget_archive_preview_gaps">欠落 2 件</string>
+    <string name="day_page_export_day">この日をエクスポート</string>
+    <string name="moment_see_in_archive">アーカイブで見る</string>
+    <string name="export_now_more_options">その他のオプション</string>
+    <string name="automations_profiles_summary">アクティブ: %1$s · %2$s · %3$s</string>
+    <plurals name="moment_done_days">
+        <item quantity="other">%1$d日分を書き込みました</item>
+    </plurals>
+    <plurals name="automations_profiles_count">
+        <item quantity="other">%1$d件のプロファイル</item>
+    </plurals>
+    <plurals name="automations_profiles_scheduled">
+        <item quantity="other">%1$d件をスケジュール済み</item>
+    </plurals>
 </resources>

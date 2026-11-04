@@ -34,6 +34,7 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.healthmd.R
+import com.healthmd.presentation.common.LocalAppFolderName
 import com.healthmd.presentation.common.GeistCard
 import com.healthmd.presentation.common.LocalConfigurationProtection
 import com.healthmd.presentation.common.SectionLabel
@@ -176,7 +177,8 @@ private fun AutomationDetailContent(
             val snapshot = row.snapshot
             FactRow(
                 stringResource(R.string.automation_detail_destination),
-                AutomationSentence.destination(profile) ?: stringResource(R.string.automation_destination_selected_folder),
+                AutomationSentence.destination(profile, LocalAppFolderName.current)
+                    ?: stringResource(R.string.automation_destination_selected_folder),
             )
             FactRow(
                 stringResource(R.string.automation_detail_formats),

@@ -66,4 +66,13 @@ class AutomationSentenceTest {
         )
         assertNull(AutomationSentence.destination(profile(ExportTarget.API_ENDPOINT, api = "not a url")))
     }
+
+    @Test
+    fun `a device folder profile without its own folder names the app's export folder`() {
+        assertEquals("Documents", AutomationSentence.destination(profile(), appFolderName = "Documents"))
+        // Its own folder still wins, and endpoints never borrow the folder name.
+        assertEquals("Vault", AutomationSentence.destination(profile(folder = "Vault"), appFolderName = "Documents"))
+        assertNull(AutomationSentence.destination(profile(ExportTarget.API_ENDPOINT, api = "not a url"), appFolderName = "Documents"))
+        assertNull(AutomationSentence.destination(profile(), appFolderName = null))
+    }
 }

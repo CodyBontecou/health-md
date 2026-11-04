@@ -78,7 +78,8 @@ fun DayPageScreen(
     }
     val shareFile = state.selectedFile
     val shareTitle = stringResource(R.string.day_page_share)
-    val share: (() -> Unit)? = shareFile?.let { file ->
+    // An unwritten date is only a preview: nothing to share, and exporting it is the action.
+    val share: (() -> Unit)? = shareFile?.takeIf { state.isWritten }?.let { file ->
         {
             val send = Intent(Intent.ACTION_SEND)
                 .setType("text/plain")
@@ -136,25 +137,37 @@ fun DayPageScreen(
                 .padding(GeistSpacing.space4),
             horizontalArrangement = Arrangement.spacedBy(GeistSpacing.space2),
         ) {
-            FilledTonalButton(
-                onClick = { onReexport(state.date) },
-                modifier = Modifier.weight(1f).heightIn(min = 56.dp),
-                shape = RoundedCornerShape(GeistRadii.full),
-                colors = ButtonDefaults.filledTonalButtonColors(
-                    containerColor = colors.secondaryContainer,
-                    contentColor = colors.onSecondaryContainer,
-                ),
-            ) { Text(stringResource(R.string.archive_action_reexport), style = GeistType.button16) }
-            Button(
-                onClick = { share?.invoke() },
-                enabled = share != null,
-                modifier = Modifier.weight(1.4f).heightIn(min = 56.dp),
-                shape = RoundedCornerShape(GeistRadii.full),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = colors.brandPrimary,
-                    contentColor = colors.brandOnPrimary,
-                ),
-            ) { Text(shareTitle, style = GeistType.button16) }
+            if (state.isWritten) {
+                FilledTonalButton(
+                    onClick = { onReexport(state.date) },
+                    modifier = Modifier.weight(1f).heightIn(min = 56.dp),
+                    shape = RoundedCornerShape(GeistRadii.full),
+                    colors = ButtonDefaults.filledTonalButtonColors(
+                        containerColor = colors.secondaryContainer,
+                        contentColor = colors.onSecondaryContainer,
+                    ),
+                ) { Text(stringResource(R.string.archive_action_reexport), style = GeistType.button16) }
+                Button(
+                    onClick = { share?.invoke() },
+                    enabled = share != null,
+                    modifier = Modifier.weight(1.4f).heightIn(min = 56.dp),
+                    shape = RoundedCornerShape(GeistRadii.full),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = colors.brandPrimary,
+                        contentColor = colors.brandOnPrimary,
+                    ),
+                ) { Text(shareTitle, style = GeistType.button16) }
+            } else {
+                Button(
+                    onClick = { onReexport(state.date) },
+                    modifier = Modifier.weight(1f).heightIn(min = 56.dp),
+                    shape = RoundedCornerShape(GeistRadii.full),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = colors.brandPrimary,
+                        contentColor = colors.brandOnPrimary,
+                    ),
+                ) { Text(stringResource(R.string.day_page_export_day), style = GeistType.button16) }
+            }
         }
     }
 }

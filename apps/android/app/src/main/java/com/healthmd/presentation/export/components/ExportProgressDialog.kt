@@ -57,6 +57,13 @@ fun ExportProgressDialog(
     rangeEnd: LocalDate,
     exportMode: ExportMode,
     onCancel: () -> Unit,
+    /**
+     * Set once a run finished with every day written: the moment holds its full heart and
+     * offers "See in archive" and Close before the sheet shows the detailed result.
+     */
+    isDone: Boolean = false,
+    onSeeInArchive: (() -> Unit)? = null,
+    onClose: () -> Unit = {},
 ) {
     val colors = LocalGeistColors.current
     val locale = LocalConfiguration.current.locales[0]
@@ -73,6 +80,7 @@ fun ExportProgressDialog(
         pluralStringResource(R.plurals.export_progress_state_days, total, current, total)
     }
     val headline = when {
+        isDone -> pluralStringResource(R.plurals.moment_done_days, total, total)
         isRaw -> stringResource(R.string.export_selected_range, localizedRangeStart, localizedRangeEnd)
         localizedCurrentDate != null -> stringResource(R.string.moment_writing, localizedCurrentDate)
         else -> stringResource(R.string.export_progress_title)
@@ -82,7 +90,7 @@ fun ExportProgressDialog(
     } else {
         pluralStringResource(R.plurals.export_progress_days_count, total, current, total)
     }
-    val fraction = if (total > 0) (current.toFloat() / total).coerceIn(0f, 1f) else null
+    val fraction = if (isDone) 1f else if (total > 0) (current.toFloat() / total).coerceIn(0f, 1f) else null
     val animatedFraction by animateFloatAsState(
         targetValue = fraction ?: 0f,
         animationSpec = tween(GeistMotion.overlay),
@@ -90,9 +98,9 @@ fun ExportProgressDialog(
     )
 
     Dialog(
-        onDismissRequest = {},
+        onDismissRequest = { if (isDone) onClose() },
         properties = DialogProperties(
-            dismissOnBackPress = false,
+            dismissOnBackPress = isDone,
             dismissOnClickOutside = false,
             usePlatformDefaultWidth = false,
         ),
@@ -168,16 +176,42 @@ fun ExportProgressDialog(
                     )
                 }
                 Text(
-                    text = progressStateDescription + " " + stringResource(R.string.moment_keep_open),
+                    text = if (isDone) progressStateDescription else progressStateDescription + " " + stringResource(R.string.moment_keep_open),
                     style = MaterialTheme.typography.bodyMedium,
                     color = colors.secondary,
                 )
-                OutlinedButton(
-                    onClick = onCancel,
-                    modifier = Modifier.fillMaxWidth().heightIn(min = GeistSizes.controlLarge),
-                    shape = RoundedCornerShape(GeistRadii.full),
-                ) {
-                    Text(stringResource(R.string.action_cancel_export), style = GeistType.button14, color = colors.brandPrimary)
+                if (isDone) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(GeistSpacing.space2)) {
+                        if (onSeeInArchive != null) {
+                            Button(
+                                onClick = onSeeInArchive,
+                                modifier = Modifier.weight(1f).heightIn(min = GeistSizes.controlLarge),
+                                shape = RoundedCornerShape(GeistRadii.full),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = colors.brandPrimary,
+                                    contentColor = colors.brandOnPrimary,
+                                ),
+                            ) { Text(stringResource(R.string.moment_see_in_archive), style = GeistType.button14) }
+                        }
+                        FilledTonalButton(
+                            onClick = onClose,
+                            modifier = Modifier.then(if (onSeeInArchive == null) Modifier.weight(1f) else Modifier)
+                                .heightIn(min = GeistSizes.controlLarge),
+                            shape = RoundedCornerShape(GeistRadii.full),
+                            colors = ButtonDefaults.filledTonalButtonColors(
+                                containerColor = colors.secondaryContainer,
+                                contentColor = colors.onSecondaryContainer,
+                            ),
+                        ) { Text(stringResource(R.string.close), style = GeistType.button14) }
+                    }
+                } else {
+                    OutlinedButton(
+                        onClick = onCancel,
+                        modifier = Modifier.fillMaxWidth().heightIn(min = GeistSizes.controlLarge),
+                        shape = RoundedCornerShape(GeistRadii.full),
+                    ) {
+                        Text(stringResource(R.string.action_cancel_export), style = GeistType.button14, color = colors.brandPrimary)
+                    }
                 }
             }
         }

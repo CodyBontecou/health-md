@@ -180,4 +180,26 @@
     <string name="widget_archive_preview_month_value">24</string>
     <string name="widget_archive_preview_month_detail">дні за жовтень</string>
     <string name="widget_archive_preview_gaps">2 пропуски</string>
+    <string name="day_page_export_day">Експортувати цей день</string>
+    <string name="moment_see_in_archive">Переглянути в архіві</string>
+    <string name="export_now_more_options">Інші параметри</string>
+    <string name="automations_profiles_summary">Активний: %1$s · %2$s · %3$s</string>
+    <plurals name="moment_done_days">
+        <item quantity="one">Записано %1$d день</item>
+        <item quantity="few">Записано %1$d дні</item>
+        <item quantity="many">Записано %1$d днів</item>
+        <item quantity="other">Записано %1$d дня</item>
+    </plurals>
+    <plurals name="automations_profiles_count">
+        <item quantity="one">%1$d профіль</item>
+        <item quantity="few">%1$d профілі</item>
+        <item quantity="many">%1$d профілів</item>
+        <item quantity="other">%1$d профілю</item>
+    </plurals>
+    <plurals name="automations_profiles_scheduled">
+        <item quantity="one">за розкладом: %1$d</item>
+        <item quantity="few">за розкладом: %1$d</item>
+        <item quantity="many">за розкладом: %1$d</item>
+        <item quantity="other">за розкладом: %1$d</item>
+    </plurals>
 </resources>

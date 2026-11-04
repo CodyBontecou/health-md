@@ -19,6 +19,7 @@ import com.healthmd.data.scheduler.ScheduledProfileScheduler
 import com.healthmd.data.settings.ExportProfileCoordinator
 import com.healthmd.distribution.DistributionRuntime
 import com.healthmd.domain.repository.SettingsRepository
+import com.healthmd.presentation.common.ProvideAppFolderName
 import com.healthmd.presentation.common.ProvideHostNavigationBarInset
 import com.healthmd.presentation.theme.HealthMdTheme
 import com.healthmd.presentation.navigation.HealthMdNavigation
@@ -109,13 +110,15 @@ class MainActivity : ComponentActivity() {
         setContent {
             HealthMdTheme {
                 ProvideHostNavigationBarInset {
-                    HealthMdNavigation(
-                        settingsRepository = settingsRepository,
-                        sharedSetupCoordinator = sharedSetupCoordinator,
-                        initialRoute = startRoute,
-                        myselfClaimRequestId = myselfClaimRequestId,
-                        scheduledRecoveryPromptRequestId = scheduledRecoveryPromptRequestId,
-                    )
+                    ProvideAppFolderName(settingsRepository.exportFolderUri) {
+                        HealthMdNavigation(
+                            settingsRepository = settingsRepository,
+                            sharedSetupCoordinator = sharedSetupCoordinator,
+                            initialRoute = startRoute,
+                            myselfClaimRequestId = myselfClaimRequestId,
+                            scheduledRecoveryPromptRequestId = scheduledRecoveryPromptRequestId,
+                        )
+                    }
                 }
             }
         }

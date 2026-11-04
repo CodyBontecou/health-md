@@ -170,4 +170,20 @@
     <string name="widget_archive_preview_month_value">24</string>
     <string name="widget_archive_preview_month_detail">dagen in oktober</string>
     <string name="widget_archive_preview_gaps">2 hiaten</string>
+    <string name="day_page_export_day">Deze dag exporteren</string>
+    <string name="moment_see_in_archive">Bekijken in archief</string>
+    <string name="export_now_more_options">Meer opties</string>
+    <string name="automations_profiles_summary">Actief: %1$s · %2$s · %3$s</string>
+    <plurals name="moment_done_days">
+        <item quantity="one">%1$d dag geschreven</item>
+        <item quantity="other">%1$d dagen geschreven</item>
+    </plurals>
+    <plurals name="automations_profiles_count">
+        <item quantity="one">%1$d profiel</item>
+        <item quantity="other">%1$d profielen</item>
+    </plurals>
+    <plurals name="automations_profiles_scheduled">
+        <item quantity="one">%1$d gepland</item>
+        <item quantity="other">%1$d gepland</item>
+    </plurals>
 </resources>

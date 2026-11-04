@@ -170,4 +170,20 @@
     <string name="widget_archive_preview_month_value">২৪</string>
     <string name="widget_archive_preview_month_detail">দিন, অক্টোবর মাসে</string>
     <string name="widget_archive_preview_gaps">২টি ফাঁক</string>
+    <string name="day_page_export_day">এই দিনটি এক্সপোর্ট করুন</string>
+    <string name="moment_see_in_archive">আর্কাইভে দেখুন</string>
+    <string name="export_now_more_options">আরও বিকল্প</string>
+    <string name="automations_profiles_summary">সক্রিয়: %1$s · %2$s · %3$s</string>
+    <plurals name="moment_done_days">
+        <item quantity="one">%1$d দিন লেখা হয়েছে</item>
+        <item quantity="other">%1$d দিন লেখা হয়েছে</item>
+    </plurals>
+    <plurals name="automations_profiles_count">
+        <item quantity="one">%1$d প্রোফাইল</item>
+        <item quantity="other">%1$d প্রোফাইল</item>
+    </plurals>
+    <plurals name="automations_profiles_scheduled">
+        <item quantity="one">%1$d নির্ধারিত</item>
+        <item quantity="other">%1$d নির্ধারিত</item>
+    </plurals>
 </resources>

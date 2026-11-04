@@ -69,6 +69,7 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.healthmd.R
+import com.healthmd.presentation.common.LocalAppFolderName
 import com.healthmd.data.scheduler.ScheduledProfileEntry
 import com.healthmd.domain.model.ExportFormat
 import com.healthmd.domain.model.ExportTarget
@@ -367,7 +368,9 @@ private fun composerValues(draft: ExportProfileEditorDraft, entry: ScheduledProf
     val metricCount = draft.settings.metricSelection.enabledCount
     val formats = ExportFormat.entries.filter { it in draft.settings.exportFormats }
         .map { it.localizedDisplayName() }.joinToString(" + ")
-    val where = destinationLabel(draft) ?: stringResource(R.string.automation_destination_selected_folder)
+    val where = destinationLabel(draft)
+        ?: LocalAppFolderName.current?.takeIf { draft.target == ExportTarget.DEVICE_FOLDER && draft.folderUri == null }
+        ?: stringResource(R.string.automation_destination_selected_folder)
     val values = mapOf(
         ComposerToken.WHEN to whenText,
         ComposerToken.RANGE to range,
