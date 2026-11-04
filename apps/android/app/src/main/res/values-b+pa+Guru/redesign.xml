@@ -63,4 +63,15 @@
     <string name="folder_destination_profiles">ਆਪਣੇ ਫੋਲਡਰ ਵਾਲੇ ਆਟੋਮੇਸ਼ਨ</string>
     <string name="widget_archive_name">ਪੁਰਾਲੇਖ</string>
     <string name="widget_archive_description">ਤੁਹਾਡੀ ਨਿਰਯਾਤ ਕਵਰੇਜ: ਮੌਜੂਦਾ ਲੜੀ, ਖਾਲੀ ਥਾਵਾਂ ਅਤੇ ਪਿਛਲੇ ਦੋ ਹਫ਼ਤੇ।</string>
+    <string name="widget_archive_wide_name">ਪੁਰਾਲੇਖ ਝਾਤ</string>
+    <string name="widget_archive_wide_description">ਇਸ ਮਹੀਨੇ ਪੁਰਾਲੇਖ ਕੀਤੇ ਦਿਨ, ਅਗਲੀ ਨਿਰਧਾਰਤ ਚਲਾਈ, ਹੁਣੇ ਨਿਰਯਾਤ ਕਰੋ ਅਤੇ ਪਿਛਲੇ ਦੋ ਹਫ਼ਤੇ।</string>
+    <string name="widget_archive_next_run">ਅਗਲਾ %1$s</string>
+    <string name="widget_archive_empty_body">ਆਪਣੀ ਲੜੀ ਸ਼ੁਰੂ ਕਰਨ ਲਈ ਇੱਕ ਵਾਰ ਨਿਰਯਾਤ ਕਰੋ।</string>
+    <string name="widget_archive_preview_next_time">ਸਵੇਰੇ 7:30</string>
+    <string name="widget_archive_preview_next">ਅਗਲਾ ਸਵੇਰੇ 7:30</string>
+    <string name="widget_archive_preview_streak_value">11</string>
+    <string name="widget_archive_preview_streak_detail">ਦਿਨ ਲਗਾਤਾਰ · 2 ਖਾਲੀ ਥਾਵਾਂ</string>
+    <string name="widget_archive_preview_month_value">24</string>
+    <string name="widget_archive_preview_month_detail">ਦਿਨ, ਅਕਤੂਬਰ ਵਿੱਚ</string>
+    <string name="widget_archive_preview_gaps">2 ਖਾਲੀ ਥਾਵਾਂ</string>
 </resources>

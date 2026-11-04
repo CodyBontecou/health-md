@@ -1673,4 +1673,28 @@
     <string name="paywall_terms">الشروط</string>
     <string name="paywall_privacy">الخصوصية</string>
     <string name="paywall_subscription_disclosure">تتضمن الاشتراكات المؤهلة تجربة مجانية لمدة 7 أيام، ثم تتجدد تلقائيًا بالسعر المعروض ما لم تُلغَ قبل انتهاء التجربة أو الفترة الحالية. يمكنك الإدارة أو الإلغاء في Google Play. يُحصّل ثمن الوصول مدى الحياة فورًا كعملية شراء لمرة واحدة. يظل الوصول المدفوع الحالي محفوظًا. العمر ليس لديه محاكمة. لا يؤدي حذف التطبيق أو شراء مدى الحياة إلى إلغاء الاشتراك الحالي.</string>
+    <plurals name="widget_archive_streak_label">
+        <item quantity="zero">يوم متتالٍ</item>
+        <item quantity="one">يوم متتالٍ</item>
+        <item quantity="two">يومان متتاليان</item>
+        <item quantity="few">أيام متتالية</item>
+        <item quantity="many">يومًا متتاليًا</item>
+        <item quantity="other">يوم متتالٍ</item>
+    </plurals>
+    <plurals name="widget_archive_gaps">
+        <item quantity="zero">%1$s فجوات</item>
+        <item quantity="one">فجوة واحدة (%1$s)</item>
+        <item quantity="two">فجوتان (%1$s)</item>
+        <item quantity="few">%1$s فجوات</item>
+        <item quantity="many">%1$s فجوة</item>
+        <item quantity="other">%1$s فجوة</item>
+    </plurals>
+    <plurals name="widget_archive_days_in_month">
+        <item quantity="zero">يوم في %1$s</item>
+        <item quantity="one">يوم في %1$s</item>
+        <item quantity="two">يومان في %1$s</item>
+        <item quantity="few">أيام في %1$s</item>
+        <item quantity="many">يومًا في %1$s</item>
+        <item quantity="other">يوم في %1$s</item>
+    </plurals>
 </resources>

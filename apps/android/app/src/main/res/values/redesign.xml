@@ -63,4 +63,15 @@
     <string name="folder_destination_profiles">Automations with their own folder</string>
     <string name="widget_archive_name">Archive</string>
     <string name="widget_archive_description">Your export coverage: current streak, gaps and the last two weeks.</string>
+    <string name="widget_archive_wide_name">Archive overview</string>
+    <string name="widget_archive_wide_description">This month\'s archived days, the next scheduled run, Export now and the last two weeks.</string>
+    <string name="widget_archive_next_run">Next %1$s</string>
+    <string name="widget_archive_empty_body">Export once to start your streak.</string>
+    <string name="widget_archive_preview_next_time">7:30 AM</string>
+    <string name="widget_archive_preview_next">Next 7:30 AM</string>
+    <string name="widget_archive_preview_streak_value">11</string>
+    <string name="widget_archive_preview_streak_detail">day streak · 2 gaps</string>
+    <string name="widget_archive_preview_month_value">24</string>
+    <string name="widget_archive_preview_month_detail">days in October</string>
+    <string name="widget_archive_preview_gaps">2 gaps</string>
 </resources>

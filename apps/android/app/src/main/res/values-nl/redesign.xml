@@ -63,4 +63,15 @@
     <string name="folder_destination_profiles">Automatiseringen met een eigen map</string>
     <string name="widget_archive_name">Archief</string>
     <string name="widget_archive_description">Je exportdekking: huidige reeks, hiaten en de afgelopen twee weken.</string>
+    <string name="widget_archive_wide_name">Archiefoverzicht</string>
+    <string name="widget_archive_wide_description">Gearchiveerde dagen deze maand, de volgende geplande run, Nu exporteren en de afgelopen twee weken.</string>
+    <string name="widget_archive_next_run">Volgende %1$s</string>
+    <string name="widget_archive_empty_body">Exporteer één keer om je reeks te starten.</string>
+    <string name="widget_archive_preview_next_time">7:30</string>
+    <string name="widget_archive_preview_next">Volgende 7:30</string>
+    <string name="widget_archive_preview_streak_value">11</string>
+    <string name="widget_archive_preview_streak_detail">dagen op rij · 2 hiaten</string>
+    <string name="widget_archive_preview_month_value">24</string>
+    <string name="widget_archive_preview_month_detail">dagen in oktober</string>
+    <string name="widget_archive_preview_gaps">2 hiaten</string>
 </resources>

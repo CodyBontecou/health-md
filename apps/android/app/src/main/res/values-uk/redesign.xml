@@ -63,4 +63,15 @@
     <string name="folder_destination_profiles">Автоматизації з власною папкою</string>
     <string name="widget_archive_name">Архів</string>
     <string name="widget_archive_description">Охоплення експорту: поточна серія, пропуски й останні два тижні.</string>
+    <string name="widget_archive_wide_name">Огляд архіву</string>
+    <string name="widget_archive_wide_description">Дні в архіві за цей місяць, наступний запуск за розкладом, «Експортувати» та останні два тижні.</string>
+    <string name="widget_archive_next_run">Далі %1$s</string>
+    <string name="widget_archive_empty_body">Виконайте експорт, щоб почати серію.</string>
+    <string name="widget_archive_preview_next_time">7:30</string>
+    <string name="widget_archive_preview_next">Далі 7:30</string>
+    <string name="widget_archive_preview_streak_value">11</string>
+    <string name="widget_archive_preview_streak_detail">днів поспіль · 2 пропуски</string>
+    <string name="widget_archive_preview_month_value">24</string>
+    <string name="widget_archive_preview_month_detail">дні за жовтень</string>
+    <string name="widget_archive_preview_gaps">2 пропуски</string>
 </resources>

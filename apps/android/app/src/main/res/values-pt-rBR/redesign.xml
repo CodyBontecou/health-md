@@ -63,4 +63,15 @@
     <string name="folder_destination_profiles">Automações com pasta própria</string>
     <string name="widget_archive_name">Arquivo</string>
     <string name="widget_archive_description">Sua cobertura de exportação: sequência atual, lacunas e as duas últimas semanas.</string>
+    <string name="widget_archive_wide_name">Visão geral do arquivo</string>
+    <string name="widget_archive_wide_description">Dias arquivados neste mês, a próxima execução agendada, Exportar agora e as últimas duas semanas.</string>
+    <string name="widget_archive_next_run">Próxima %1$s</string>
+    <string name="widget_archive_empty_body">Exporte uma vez para começar sua sequência.</string>
+    <string name="widget_archive_preview_next_time">7:30</string>
+    <string name="widget_archive_preview_next">Próxima 7:30</string>
+    <string name="widget_archive_preview_streak_value">11</string>
+    <string name="widget_archive_preview_streak_detail">dias seguidos · 2 lacunas</string>
+    <string name="widget_archive_preview_month_value">24</string>
+    <string name="widget_archive_preview_month_detail">dias em outubro</string>
+    <string name="widget_archive_preview_gaps">2 lacunas</string>
 </resources>

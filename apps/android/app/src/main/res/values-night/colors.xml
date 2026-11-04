@@ -8,4 +8,8 @@
     <color name="widget_preview_activity">#FFFF9300</color>
     <color name="widget_preview_heart">#FFFF565F</color>
     <color name="widget_preview_sleep">#FFC472FB</color>
+    <color name="widget_preview_archive_surface">#FF2B2930</color>
+    <color name="widget_preview_archive_surface_highest">#FF36343B</color>
+    <color name="widget_preview_coverage_complete">#FF3B3058</color>
+    <color name="widget_preview_coverage_missing">#FFFFA184</color>
 </resources>

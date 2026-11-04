@@ -1528,4 +1528,19 @@
     <string name="paywall_terms">Condiții</string>
     <string name="paywall_privacy">Confidențialitate</string>
     <string name="paywall_subscription_disclosure">Abonamentele eligibile includ o perioadă de probă gratuită de 7 zile, apoi se reînnoiesc automat la prețul afișat, dacă nu sunt anulate înainte de sfârșitul perioadei de probă sau al perioadei curente. Gestionează sau anulează în Google Play. Accesul pe viață se plătește imediat, o singură dată. Accesul plătit existent se păstrează. Viața nu are nicio încercare. Ștergerea aplicației sau cumpărarea Lifetime nu anulează un abonament existent.</string>
+    <plurals name="widget_archive_streak_label">
+        <item quantity="one">zi la rând</item>
+        <item quantity="few">zile la rând</item>
+        <item quantity="other">de zile la rând</item>
+    </plurals>
+    <plurals name="widget_archive_gaps">
+        <item quantity="one">%1$s gol</item>
+        <item quantity="few">%1$s goluri</item>
+        <item quantity="other">%1$s de goluri</item>
+    </plurals>
+    <plurals name="widget_archive_days_in_month">
+        <item quantity="one">zi în %1$s</item>
+        <item quantity="few">zile în %1$s</item>
+        <item quantity="other">de zile în %1$s</item>
+    </plurals>
 </resources>

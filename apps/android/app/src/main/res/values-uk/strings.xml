@@ -1582,4 +1582,22 @@
     <string name="paywall_terms">Умови</string>
     <string name="paywall_privacy">Конфіденційність</string>
     <string name="paywall_subscription_disclosure">Відповідні підписки включають безкоштовний пробний період на 7 днів, а потім автоматично поновлюються за вказаною ціною, якщо їх не скасувати до завершення пробного або поточного періоду. Керуйте або скасуйте в Google Play. Довічний доступ оплачується відразу одним платежем. Наявний платний доступ зберігається. Довічне судження не має. Видалення програми або купівля Lifetime не скасовує існуючу підписку.</string>
+    <plurals name="widget_archive_streak_label">
+        <item quantity="one">день поспіль</item>
+        <item quantity="few">дні поспіль</item>
+        <item quantity="many">днів поспіль</item>
+        <item quantity="other">дня поспіль</item>
+    </plurals>
+    <plurals name="widget_archive_gaps">
+        <item quantity="one">%1$s пропуск</item>
+        <item quantity="few">%1$s пропуски</item>
+        <item quantity="many">%1$s пропусків</item>
+        <item quantity="other">%1$s пропуску</item>
+    </plurals>
+    <plurals name="widget_archive_days_in_month">
+        <item quantity="one">день за %1$s</item>
+        <item quantity="few">дні за %1$s</item>
+        <item quantity="many">днів за %1$s</item>
+        <item quantity="other">дня за %1$s</item>
+    </plurals>
 </resources>

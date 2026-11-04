@@ -1305,4 +1305,13 @@
     <string name="paywall_terms">利用規約</string>
     <string name="paywall_privacy">プライバシー</string>
     <string name="paywall_subscription_disclosure">対象のサブスクリプションには7日間の無料トライアルが含まれ、トライアルまたは現在の期間が終了する前に解約しない限り、表示価格で自動更新されます。管理や解約はGoogle Playで行えます。永久アクセスは一回払いで直ちに請求されます。既存の有料アクセスは維持されます。 生涯に試練はない。アプリを削除したり、ライフタイムを購入したりしても、既存のサブスクリプションはキャンセルされません。</string>
+    <plurals name="widget_archive_streak_label">
+        <item quantity="other">日連続</item>
+    </plurals>
+    <plurals name="widget_archive_gaps">
+        <item quantity="other">欠落 %1$s 件</item>
+    </plurals>
+    <plurals name="widget_archive_days_in_month">
+        <item quantity="other">日（%1$s）</item>
+    </plurals>
 </resources>

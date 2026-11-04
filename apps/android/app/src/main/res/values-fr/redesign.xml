@@ -63,4 +63,15 @@
     <string name="folder_destination_profiles">Automatisations avec leur propre dossier</string>
     <string name="widget_archive_name">Archive</string>
     <string name="widget_archive_description">Votre couverture d’export : série en cours, lacunes et deux dernières semaines.</string>
+    <string name="widget_archive_wide_name">Aperçu de l\'archive</string>
+    <string name="widget_archive_wide_description">Jours archivés ce mois-ci, prochaine exécution planifiée, Exporter maintenant et les deux dernières semaines.</string>
+    <string name="widget_archive_next_run">Prochaine %1$s</string>
+    <string name="widget_archive_empty_body">Exportez une fois pour lancer votre série.</string>
+    <string name="widget_archive_preview_next_time">7:30</string>
+    <string name="widget_archive_preview_next">Prochaine 7:30</string>
+    <string name="widget_archive_preview_streak_value">11</string>
+    <string name="widget_archive_preview_streak_detail">jours d\'affilée · 2 lacunes</string>
+    <string name="widget_archive_preview_month_value">24</string>
+    <string name="widget_archive_preview_month_detail">jours en octobre</string>
+    <string name="widget_archive_preview_gaps">2 lacunes</string>
 </resources>

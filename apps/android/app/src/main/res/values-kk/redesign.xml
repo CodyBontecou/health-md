@@ -63,4 +63,15 @@
     <string name="folder_destination_profiles">Өз қалтасы бар автоматтандырулар</string>
     <string name="widget_archive_name">Мұрағат</string>
     <string name="widget_archive_description">Экспорт қамтуы: ағымдағы серия, олқылықтар және соңғы екі апта.</string>
+    <string name="widget_archive_wide_name">Мұрағатқа шолу</string>
+    <string name="widget_archive_wide_description">Осы айда мұрағатталған күндер, келесі жоспарланған іске қосу, Қазір экспорттау және соңғы екі апта.</string>
+    <string name="widget_archive_next_run">Келесі %1$s</string>
+    <string name="widget_archive_empty_body">Серияны бастау үшін бір рет экспорттаңыз.</string>
+    <string name="widget_archive_preview_next_time">07:30</string>
+    <string name="widget_archive_preview_next">Келесі 07:30</string>
+    <string name="widget_archive_preview_streak_value">11</string>
+    <string name="widget_archive_preview_streak_detail">күн қатарынан · 2 олқылық</string>
+    <string name="widget_archive_preview_month_value">24</string>
+    <string name="widget_archive_preview_month_detail">күн, қазан айында</string>
+    <string name="widget_archive_preview_gaps">2 олқылық</string>
 </resources>

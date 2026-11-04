@@ -9,4 +9,8 @@
     <color name="widget_preview_activity">#FFAA4D00</color>
     <color name="widget_preview_heart">#FFD8001B</color>
     <color name="widget_preview_sleep">#FF7D00CC</color>
+    <color name="widget_preview_archive_surface">#FFECE6EE</color>
+    <color name="widget_preview_archive_surface_highest">#FFE6E0E9</color>
+    <color name="widget_preview_coverage_complete">#FFDCCFFA</color>
+    <color name="widget_preview_coverage_missing">#FFB93C0A</color>
 </resources>
