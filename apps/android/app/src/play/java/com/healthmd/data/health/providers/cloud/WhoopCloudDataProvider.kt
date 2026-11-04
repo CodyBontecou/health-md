@@ -1,5 +1,6 @@
 package com.healthmd.data.health.providers.cloud
 
+import com.healthmd.domain.model.ExportDetailSelection
 import com.healthmd.domain.model.ActivityData
 import com.healthmd.domain.model.BodyData
 import com.healthmd.domain.model.HeartData
@@ -146,6 +147,8 @@ class WhoopCloudDataProvider(
         zoneId: ZoneId,
         pinnedCalendarDays: Boolean,
         sleepDayAttribution: SleepDayAttribution,
+        // WHOOP records are always summarized; per-group detail is decided by writers.
+        detail: ExportDetailSelection,
     ): List<HealthData> {
         AndroidCaptureContext(zoneId, sleepDayAttribution).requireShippedProfile()
         val today = LocalDate.now((clock ?: Clock.systemUTC()).withZone(zoneId))

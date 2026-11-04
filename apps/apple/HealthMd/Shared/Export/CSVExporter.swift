@@ -256,7 +256,12 @@ extension HealthData {
         var csv = try CSVStreamAccumulator(sink: sink)
         csv += "Date,Category,Metric,Value,Unit,Timestamp\n"
         csv += "\(snapshot.dateString),Metadata,schema,\(HealthMdExportSchema.identifier),,\n"
-        csv += "\(snapshot.dateString),Metadata,schema_version,\(HealthMdExportSchema.version),,\n"
+        if snapshot.detailExpansion != nil {
+            csv += "\(snapshot.dateString),Metadata,schema_version,\(AppleDetailExpansionSchema.version),,\n"
+            csv += "\(snapshot.dateString),Metadata,schema_profile,\(AppleDetailExpansionSchema.profile),,\n"
+        } else {
+            csv += "\(snapshot.dateString),Metadata,schema_version,\(HealthMdExportSchema.version),,\n"
+        }
         csv += "\(snapshot.dateString),Metadata,unit_system,metric,,\n"
         csv += "\(snapshot.dateString),Metadata,time_context.calendar_timezone,\(csvSafe(snapshot.timeContext.calendarTimeZoneIdentifier)),,\n"
         csv += "\(snapshot.dateString),Metadata,time_context.timestamp_timezone,\(ExportTimeContext.timestampTimeZoneIdentifier),,\n"
@@ -945,6 +950,26 @@ extension HealthData {
         if snapshot.otherHealth.hasData {
             for m in snapshot.metricsForCategory(.other) {
                 csv += "\(snapshot.dateString),Other,\(m.label),\(m.value),\(structuredUnitsByKey[m.key] ?? "")\n"
+            }
+        }
+
+        // apple-v12: one row per HealthKit source sample, after every apple-v8 row. Quantity
+        // samples carry value/unit; category samples carry their stable value and unit
+        // `category`. The timestamp is the exact UTC start instant.
+        if let expansion = snapshot.detailExpansion {
+            for entry in ExportDataSnapshot.DetailExpansion.orderedGroups {
+                for sample in expansion.samples(for: entry.group) {
+                    let label = AppleDetailSampleCatalog.entry(forHealthKitType: sample.healthKitType)?.label
+                        ?? sample.metric
+                    appendCSVRow(
+                        category: entry.title,
+                        metric: "\(label) Detail Sample",
+                        value: sample.value.map(csvNumber) ?? sample.categoryValue ?? "",
+                        unit: sample.unit ?? "category",
+                        timestamp: CanonicalRFC3339UTC.string(from: sample.startDate),
+                        to: &csv
+                    )
+                }
             }
         }
 

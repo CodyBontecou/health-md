@@ -995,7 +995,7 @@ class HostCoreDailyAggregatePlannerTest {
                 resolutions++
                 AndroidCaptureContext(arg<ZoneId>(0), stored).also { accepted = it }
             }
-            coEvery { repository.fetchHealthDataRange(any(), any(), any(), any(), any(), any()) } coAnswers {
+            coEvery { repository.fetchHealthDataRange(any(), any(), any(), any(), any(), any(), any()) } coAnswers {
                 val context = checkNotNull(accepted)
                 assertThat(arg<ZoneId>(3)).isEqualTo(context.zoneId)
                 val policy = arg<com.healthmd.domain.model.SleepDayAttributionOverride>(5)
@@ -1060,7 +1060,7 @@ class HostCoreDailyAggregatePlannerTest {
         val date = LocalDate.of(2026, 11, 1)
         val repository = mockk<com.healthmd.domain.repository.HealthRepository>()
         io.mockk.every { repository.isBeforeFirstUnlock() } returns false
-        coEvery { repository.fetchHealthDataRange(any(), any(), any(), any(), any(), any()) } returns emptyList()
+        coEvery { repository.fetchHealthDataRange(any(), any(), any(), any(), any(), any(), any()) } returns emptyList()
         val client = mockk<com.healthmd.data.export.AgentDataGatewayUploadClient>()
         val runner = com.healthmd.data.export.AgentDataGatewayExportRunner(repository, client, com.healthmd.data.export.JsonExporter(),
             com.healthmd.data.export.MarkdownExporter(), com.healthmd.data.export.CsvExporter(), com.healthmd.data.export.ObsidianBasesExporter())
@@ -1074,7 +1074,7 @@ class HostCoreDailyAggregatePlannerTest {
         assertThat(missing.days.single().failureReason).isEqualTo(com.healthmd.domain.model.ExportFailureReason.UNKNOWN)
         val draft = runner.previewDates(listOf(date), settings.copy(executionSleepCaptureContext = settings.executionSleepCaptureContext!!.copy(exportProfileID = null)))
         assertThat(draft.days.single().failureReason).isEqualTo(com.healthmd.domain.model.ExportFailureReason.UNKNOWN)
-        io.mockk.coVerify(exactly = 1) { repository.fetchHealthDataRange(any(), any(), any(), any(), any(), any()) }
+        io.mockk.coVerify(exactly = 1) { repository.fetchHealthDataRange(any(), any(), any(), any(), any(), any(), any()) }
         io.mockk.coVerify(exactly = 0) { repository.resolveCaptureContext(any(), any()) }
         io.mockk.coVerify(exactly = 0) { repository.fetchHealthData(any()) }
         io.mockk.coVerify(exactly = 0) { client.upload(any(), any(), any()) }
@@ -1090,7 +1090,7 @@ class HostCoreDailyAggregatePlannerTest {
         io.mockk.every { repository.isBeforeFirstUnlock() } returns false
         var arrivals = 0
         val barrier = kotlinx.coroutines.CompletableDeferred<Unit>()
-        coEvery { repository.fetchHealthDataRange(any(), any(), any(), any(), any(), any()) } coAnswers {
+        coEvery { repository.fetchHealthDataRange(any(), any(), any(), any(), any(), any(), any()) } coAnswers {
             val owner = arg<List<LocalDate>>(0).single()
             val expected = contexts.getValue(owner)
             assertThat(arg<ZoneId>(3)).isEqualTo(expected.zoneId)
@@ -1138,7 +1138,7 @@ class HostCoreDailyAggregatePlannerTest {
         io.mockk.every { repository.isBeforeFirstUnlock() } returns true
         val locked = runner.previewDates(listOf(date), settings(morning).copy(executionSleepCaptureContext = null))
         assertThat(locked.days.single().failureReason).isEqualTo(com.healthmd.domain.model.ExportFailureReason.DEVICE_LOCKED)
-        io.mockk.coVerify(exactly = 3) { repository.fetchHealthDataRange(any(), any(), any(), any(), any(), any()) }
+        io.mockk.coVerify(exactly = 3) { repository.fetchHealthDataRange(any(), any(), any(), any(), any(), any(), any()) }
     }
 
     @Test
@@ -1173,7 +1173,7 @@ class HostCoreDailyAggregatePlannerTest {
         assertThat(sleep.getValue("wakeTimeISO")).isEqualTo(native.getValue("wakeTimeISO"))
         assertThat(record.getValue("summary").jsonObject.getValue("sleep").jsonObject["sleep_light_hours"]).isNull()
         val repository = mockk<com.healthmd.domain.repository.HealthRepository>()
-        coEvery { repository.fetchHealthDataRange(any(), any(), any(), any(), any(), any()) } coAnswers {
+        coEvery { repository.fetchHealthDataRange(any(), any(), any(), any(), any(), any(), any()) } coAnswers {
             assertThat(arg<ZoneId>(3)).isEqualTo(context.zoneId)
             assertThat(arg<com.healthmd.domain.model.SleepDayAttributionOverride>(5)).isEqualTo(context.explicitSleepDayAttributionOverride)
             request.records

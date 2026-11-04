@@ -146,6 +146,7 @@ class DirectGeneratedFilesProducer private constructor(
                     dates = chunk,
                     dataTypes = effectiveSelection,
                     includeGranularData = capturedSettings.shouldFetchGranularData(),
+                    detail = capturedSettings.captureDetailSelection(),
                     zoneId = captureContext.zoneId,
                     sleepDayAttributionOverride = captureContext.explicitSleepDayAttributionOverride,
                 ).associateBy(HealthData::date)
@@ -288,7 +289,7 @@ class DirectGeneratedFilesProducer private constructor(
         if (scopedNoteVersion == 1) {
             val profile = if (settings.formatCustomization.compatibilitySchemaProfile == com.healthmd.domain.model.CompatibilitySchemaProfile.ANDROID_ANALYTICAL_V5) "android-analytical-v5" else "android-frozen-v4"
             val patch = dailyNoteInjector.prepareScopedNightPatch(data, injection, settings.formatCustomization,
-                settings.metricSelection, context, settings.includeGranularData)
+                settings.metricSelection, context, detail = settings.exportDetailSelection())
             return listOf(PlannedContent(injection.resolvedPath(data.date), patch.encodeToByteArray(),
                 ArtifactFormat.MARKDOWN, FileWriteMode.MERGE_MARKDOWN_PRESERVING_PREAMBLE,
                 ScopedDailyNotePolicy(1, profile, data.date.toString(), context.zoneId.id,
@@ -336,16 +337,19 @@ class DirectGeneratedFilesProducer private constructor(
             groupByCategory = settings.groupByCategory,
             customization = settings.formatCustomization,
             includeGranularData = settings.includeGranularData,
+            detail = settings.exportDetailSelection(),
         )
         ExportFormat.JSON -> jsonExporter.export(
             data = data,
             customization = settings.formatCustomization,
             includeGranularData = settings.includeGranularData,
+            detail = settings.exportDetailSelection(),
         )
         ExportFormat.CSV -> csvExporter.export(
             data = data,
             customization = settings.formatCustomization,
             includeGranularData = settings.includeGranularData,
+            detail = settings.exportDetailSelection(),
         )
         ExportFormat.OBSIDIAN_BASES -> obsidianBasesExporter.export(
             data = data,

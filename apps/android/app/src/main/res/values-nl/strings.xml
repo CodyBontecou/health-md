@@ -535,6 +535,14 @@
     <string name="feedback_no_app_available">Geen app beschikbaar om deze link te openen</string>
     <string name="granular_data_title">Gedetailleerde tijdreeksen opnemen</string>
     <string name="granular_data_description">Voeg meetwaarden met tijdstempel, zoals hartslag en slaapfasen, toe aan compatibiliteitsexports. Gebruik de ruwe API-snapshot voor een API-volledige kopie.</string>
+    <string name="detail_overrides_title">Detail per categorie</string>
+    <string name="detail_overrides_description">Overschrijf de standaard voor afzonderlijke categorieën. Samenvatting bewaart alleen dagtotalen; dagelijkse samenvattingen veranderen nooit.</string>
+    <string name="detail_choice_default">Standaard</string>
+    <string name="detail_choice_summary">Samenvatting</string>
+    <string name="detail_choice_sessions">Sessies</string>
+    <string name="detail_choice_detailed">Gedetailleerd</string>
+    <string name="detail_group_sleep_hint">Sessies toont elke slaapsessie met volledige datum en tijd. Gedetailleerd voegt slaapfasen toe.</string>
+    <string name="detail_expansion_schema_hint">Gedetailleerd voor Activiteit, Voeding of Lichaam voegt elk bronrecord toe en zet analytische JSON-, CSV- en Markdown-exports om naar schema 7.</string>
     <string name="sleep_attribution_title">Toewijzing slaapdag</string>
     <string name="sleep_attribution_night_begins">Nacht begint</string>
     <string name="sleep_attribution_morning_ends">Ochtend eindigt</string>

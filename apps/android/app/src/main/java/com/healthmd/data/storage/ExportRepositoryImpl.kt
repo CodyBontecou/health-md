@@ -1043,6 +1043,7 @@ class ExportRepositoryImpl(
             groupByCategory = settings.groupByCategory,
             customization = settings.formatCustomization,
             includeGranularData = settings.includeGranularData,
+            detail = settings.exportDetailSelection(),
         )
         ExportFormat.OBSIDIAN_BASES -> obsidianBasesExporter.export(
             data = data,
@@ -1052,11 +1053,13 @@ class ExportRepositoryImpl(
             data = data,
             customization = settings.formatCustomization,
             includeGranularData = settings.includeGranularData,
+            detail = settings.exportDetailSelection(),
         )
         ExportFormat.CSV -> csvExporter.export(
             data = data,
             customization = settings.formatCustomization,
             includeGranularData = settings.includeGranularData,
+            detail = settings.exportDetailSelection(),
         )
     }
 
@@ -1100,6 +1103,7 @@ class ExportRepositoryImpl(
             metricSelection = settings.metricSelection,
             captureContext = settings.executionSleepCaptureContext,
             includeGranularData = settings.includeGranularData,
+            detail = settings.exportDetailSelection(),
         )
 
         return PlannedSideEffect(

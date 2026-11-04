@@ -8,6 +8,7 @@ import com.healthmd.data.export.ObsidianBasesExporter
 import com.healthmd.domain.model.AndroidCaptureContext
 import com.healthmd.domain.model.CompatibilitySchemaProfile
 import com.healthmd.domain.model.SleepDayAttribution
+import com.healthmd.domain.model.ExportDetailSelection
 import com.healthmd.domain.model.ExportFormat
 import com.healthmd.domain.model.ExportSettings
 import com.healthmd.domain.model.ExportTarget
@@ -72,6 +73,8 @@ class FrozenDailyAggregateExportRequest private constructor(
     val includeGranularData: Boolean,
     val suppliedPin: ExportEnginePin?,
     val captureContext: AndroidCaptureContext?,
+    /** Per-group detail written by this operation; defaults to the historical Boolean projection. */
+    val detail: ExportDetailSelection = ExportDetailSelection.uniform(includeGranularData),
 ) {
     val formats: List<ExportFormat> = Collections.unmodifiableList(formats.toList())
     private val storedRelativePaths: Map<ExportFormat, String> =
@@ -128,6 +131,7 @@ class FrozenDailyAggregateExportRequest private constructor(
                 includeGranularData = settings.includeGranularData,
                 suppliedPin = settings.executionEnginePin,
                 captureContext = context,
+                detail = settings.exportDetailSelection(),
             )
         }
     }
@@ -156,6 +160,7 @@ class ProductionDailyAggregateNativePlanBuilder(
                     groupByCategory = request.groupByCategory,
                     customization = request.customization,
                     includeGranularData = request.includeGranularData,
+                    detail = request.detail,
                 )
                 ExportFormat.OBSIDIAN_BASES -> obsidianBasesExporter.export(
                     data = request.data,
@@ -165,11 +170,13 @@ class ProductionDailyAggregateNativePlanBuilder(
                     data = request.data,
                     customization = request.customization,
                     includeGranularData = request.includeGranularData,
+                    detail = request.detail,
                 )
                 ExportFormat.CSV -> csvExporter.export(
                     data = request.data,
                     customization = request.customization,
                     includeGranularData = request.includeGranularData,
+                    detail = request.detail,
                 )
             }.encodeToByteArray()
             val relativePath = request.relativePath(format)
@@ -297,6 +304,7 @@ class HealthMdRustDailyAggregatePlanner(
                 groupByCategory = request.groupByCategory,
                 includePlatformExtensions = false,
                 includeGranularData = request.includeGranularData,
+                detail = request.detail,
                 rawCaptureStatus = "not_requested",
                 writeMode = "overwrite",
                 useEmoji = markdown.useEmoji,
@@ -411,6 +419,12 @@ class AndroidDailyAggregateExportPlanner(
         } else settings.formatCustomization.compatibilitySchemaProfile.toExportProfile()
         if (suppliedPin != null && suppliedPin.profile != selectedProfile) {
             return LocalDailyAggregatePlanningResult.Failed(suppliedPin.engine)
+        }
+        if (!isWakeDate && settings.dailyRecordSchemaProfile().requiresLegacyEngine) {
+            // android-analytical-v7 has no Rust registry/render profile. Only the native writers
+            // may render it; a durable Rust or shadow pin is refused rather than relabeled.
+            return if (suppliedPin != null) LocalDailyAggregatePlanningResult.Failed(suppliedPin.engine)
+            else LocalDailyAggregatePlanningResult.Legacy
         }
         val expectedTarget = when (selectedProfile) {
             AndroidExportProfile.android_frozen_v4 -> ExportEnginePolicyTarget.ANDROID_FROZEN_V4

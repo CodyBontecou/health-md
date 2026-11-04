@@ -227,6 +227,39 @@ class DailyAggregateExportPlannerTest {
     }
 
     @Test
+    fun analyticalV7IsNativeWriterOnlyAndRefusesRustPins() = runTest {
+        var rustCalls = 0
+        var nativeCalls = 0
+        val planner = AndroidDailyAggregateExportPlanner(
+            nativePlanner = DailyAggregateNativePlanBuilder { nativeCalls += 1; error("v7 has no native plan") },
+            policyResolver = LocalExportEnginePolicyResolver { profile -> resolved(ExportEngineMode.rust, profile) },
+            rustPlanner = DailyAggregateRustPlanner { rustCalls += 1; error("v7 has no Rust profile") },
+            idSource = fixedIds(),
+        )
+        val analytical = simpleSettings().copy(
+            formatCustomization = com.healthmd.domain.model.FormatCustomization.analyticalDefault(),
+        )
+        val v7 = analytical.withDetailChoice(
+            com.healthmd.domain.model.ExportDetailGroup.BODY,
+            com.healthmd.domain.model.ExportDetailChoice.DETAILED,
+        )
+        assertThat(v7.dailyRecordSchemaProfile())
+            .isEqualTo(com.healthmd.domain.model.DailyRecordSchemaProfile.ANDROID_ANALYTICAL_V7)
+        assertThat(planner.plan(day, v7)).isEqualTo(LocalDailyAggregatePlanningResult.Legacy)
+        // A durable Rust pin can never render v7: it fails instead of relabeling the output.
+        val pinned = planner.plan(day, v7.copy(
+            executionEnginePin = testPin(ExportEngineMode.rust, AndroidExportProfile.android_analytical_v5),
+            executionEngineAuthorityIsFrozen = true,
+        ))
+        assertThat(pinned).isInstanceOf(LocalDailyAggregatePlanningResult.Failed::class.java)
+        assertThat(rustCalls).isEqualTo(0)
+        assertThat(nativeCalls).isEqualTo(0)
+        // The uniform default still plans v5 through the configured engine.
+        assertThat(analytical.copy(includeGranularData = true).dailyRecordSchemaProfile())
+            .isEqualTo(com.healthmd.domain.model.DailyRecordSchemaProfile.ANDROID_ANALYTICAL_V5)
+    }
+
+    @Test
     fun shadowComparesButAlwaysReturnsNativeIncludingRustFailure() = runTest {
         val diagnostics = mutableListOf<ShadowExportDiagnostic>()
         var failRust = false

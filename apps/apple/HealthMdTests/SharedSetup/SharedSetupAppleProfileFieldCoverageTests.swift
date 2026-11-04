@@ -267,6 +267,17 @@ final class SharedSetupAppleProfileFieldCoverageTests: XCTestCase {
         ),
     ]
 
+    // Per-group compatibility detail was added after the v3 ledger froze. Frozen
+    // Shared Setup v2 cannot represent it, so setup files carry only the default level.
+    private static let perGroupDetailFields: [CoverageLedger.Field] = [
+        .init(
+            sourceType: "ExportSettingsSnapshot", field: "compatibilityDetailOverrides",
+            fieldKind: .stored, serializedKey: "compatibilityDetailOverrides",
+            disposition: .prohibited, contractPath: nil,
+            reason: "Per-group detail overrides cannot be represented by frozen Shared Setup v2 compatibility_detail; portable adoption requires a reviewed successor."
+        ),
+    ]
+
     private func loadLedger() throws -> CoverageLedger {
         let historical = try JSONDecoder().decode(
             CoverageLedger.self,
@@ -277,6 +288,7 @@ final class SharedSetupAppleProfileFieldCoverageTests: XCTestCase {
             targetContract: historical.targetContract, fieldKinds: historical.fieldKinds,
             dispositions: historical.dispositions,
             fields: historical.fields + Self.sleepCapturePersistenceFields + Self.localSchedulePreferenceFields
+                + Self.perGroupDetailFields
         )
     }
 
@@ -404,6 +416,7 @@ final class SharedSetupAppleProfileFieldCoverageTests: XCTestCase {
             appleExportEngineAuthorityIsFrozen: true,
             calendarTimeZoneIdentifier: "America/Los_Angeles"
         )
+        snapshot.compatibilityDetailOverrides = [.sleep: .detailed]
         snapshot.externalProviderCaptureAuthority = ExternalProviderCaptureAuthority(connections: ["whoop": UUID()])
         snapshot.sleepCaptureContext = AppleSleepCaptureContext(
             timeZone: TimeZone(identifier: "America/Los_Angeles")!, sleepDayAttribution: .nightBegins

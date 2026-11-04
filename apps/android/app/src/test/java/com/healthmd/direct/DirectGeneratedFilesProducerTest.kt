@@ -43,7 +43,7 @@ class DirectGeneratedFilesProducerTest {
         val healthData = HealthData(date = date, activity = ActivityData(steps = 12_345))
         coEvery { repository.resolveCaptureContext(any(), any()) } returns
             AndroidCaptureContext(ZoneId.of("UTC"), SleepDayAttribution.NIGHT_BEGINS)
-        coEvery { repository.fetchHealthDataRange(any(), any(), any(), any(), any(), any()) } returns listOf(healthData)
+        coEvery { repository.fetchHealthDataRange(any(), any(), any(), any(), any(), any(), any()) } returns listOf(healthData)
         val producer = DirectGeneratedFilesProducer(
             healthRepository = repository,
             markdownExporter = MarkdownExporter(),
@@ -173,7 +173,7 @@ class DirectGeneratedFilesProducerTest {
         val healthData = HealthData(date = date, activity = ActivityData(steps = 12_345))
         coEvery { repository.resolveCaptureContext(any(), any()) } returns
             AndroidCaptureContext(ZoneId.of("UTC"), SleepDayAttribution.NIGHT_BEGINS)
-        coEvery { repository.fetchHealthDataRange(any(), any(), any(), any(), any(), any()) } returns listOf(healthData)
+        coEvery { repository.fetchHealthDataRange(any(), any(), any(), any(), any(), any(), any()) } returns listOf(healthData)
         val relativePath = "Health/2026-07-23.md"
         val mediaType = "text/markdown; charset=utf-8"
         val item = ExportArtifactPlanItem(

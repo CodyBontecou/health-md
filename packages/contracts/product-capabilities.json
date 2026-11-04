@@ -35,6 +35,26 @@
       "public_schema_version": 5,
       "compatibility": "additive",
       "comparison": "byte_for_byte"
+    },
+    {
+      "id": "apple-v12",
+      "name": "Apple v12 compatibility detail",
+      "platform": "apple",
+      "contract_id": "healthmd.health_data.apple_detail",
+      "public_schema": "healthmd.health_data",
+      "public_schema_version": 12,
+      "compatibility": "additive",
+      "comparison": "byte_for_byte"
+    },
+    {
+      "id": "android-analytical-v7",
+      "name": "Android analytical v7 compatibility detail",
+      "platform": "android",
+      "contract_id": "healthmd.health_data.android_analytical_detail",
+      "public_schema": "healthmd.health_data",
+      "public_schema_version": 7,
+      "compatibility": "additive",
+      "comparison": "byte_for_byte"
     }
   ],
   "capabilities": [
@@ -399,6 +419,82 @@
       "evidence": [
         "apps/apple/docs/features/time-series-data.md",
         "apps/android/docs/features/csv-export.md"
+      ]
+    },
+    {
+      "id": "export.per-group-detail-selection",
+      "name": "Per-category export detail",
+      "classification": "shared",
+      "summary": "Choose a default compatibility detail level and override it per category (sleep, activity, heart, vitals, nutrition, mobility, reproductive health, mindfulness, workouts, and body) without changing metric selection, daily summaries, file organization, or raw/canonical archives. Missing overrides reproduce the historical global switch exactly. An explicit Detailed override for a category whose records the shipped profile cannot represent selects the export.compatibility-detail-expansion successor profile; other overrides keep the shipped profiles.",
+      "profiles": [
+        "apple-v8",
+        "android-frozen-v4",
+        "android-analytical-v5"
+      ],
+      "platforms": {
+        "apple": {
+          "state": "available"
+        },
+        "android": {
+          "state": "available"
+        }
+      },
+      "evidence": [
+        "docs/features/per-group-export-detail.md",
+        "apps/android/app/src/main/java/com/healthmd/domain/model/ExportDetailPolicy.kt",
+        "apps/android/app/src/test/java/com/healthmd/export/ExportDetailSelectionTest.kt",
+        "apps/apple/HealthMd/Shared/Models/ExportSettingsSnapshot.swift",
+        "apps/apple/HealthMdTests/Models/ExportDetailOverridesTests.swift"
+      ]
+    },
+    {
+      "id": "export.sleep-session-detail",
+      "name": "Individual sleep sessions",
+      "classification": "android_only",
+      "summary": "Export each source sleep session (for example a nap and an overnight sleep) separately from stage intervals, including a Markdown session table with full date, time, and source offset.",
+      "profiles": [
+        "android-frozen-v4",
+        "android-analytical-v5"
+      ],
+      "platforms": {
+        "apple": {
+          "state": "unavailable",
+          "reason": "HealthKit exposes sleep as category-value intervals without a source session object; Health.md does not derive or label sessions it cannot read. Sleep stage intervals remain available as Detailed sleep."
+        },
+        "android": {
+          "state": "available"
+        }
+      },
+      "evidence": [
+        "docs/features/per-group-export-detail.md",
+        "apps/android/app/src/main/java/com/healthmd/data/health/SleepJournalSummary.kt",
+        "apps/android/app/src/test/java/com/healthmd/export/ExportDetailSelectionTest.kt"
+      ]
+    },
+    {
+      "id": "export.compatibility-detail-expansion",
+      "name": "Expanded native compatibility detail",
+      "classification": "shared",
+      "summary": "Per-record compatibility detail for natively exposed records that shipped profiles only summarize, written in additive successor profiles selected only by an explicit Detailed category override: apple-v12 adds start-owned detailSamples for HealthKit activity, nutrition, mobility, mindfulness, reproductive, body, temperature and spirometry samples; android-analytical-v7 adds Health Connect calorie, distance, floors, elevation, hydration and body record arrays. Each entry keeps its source timestamps, interval, unit and identity; no points are interpolated or deduplicated. The record types are platform_distinct (HealthKit samples vs Health Connect records) and are never presented as parity. Morning ends (apple-v11, android-sleep-v6), frozen v4, daily notes and Bases frontmatter keep their shipped profiles.",
+      "profiles": [
+        "apple-v12",
+        "android-analytical-v7"
+      ],
+      "platforms": {
+        "apple": {
+          "state": "available"
+        },
+        "android": {
+          "state": "available"
+        }
+      },
+      "evidence": [
+        "docs/features/per-group-export-detail.md",
+        "apps/apple/HealthMd/Shared/Models/DetailSample.swift",
+        "apps/apple/HealthMdTests/Export/AppleV12DetailExpansionTests.swift",
+        "apps/android/app/src/main/java/com/healthmd/domain/model/DailyRecordSchemaProfile.kt",
+        "apps/android/app/src/test/java/com/healthmd/export/AnalyticalV7ExportTest.kt",
+        "apps/android/app/src/test/java/com/healthmd/data/health/HealthConnectAnalyticalV7CaptureTest.kt"
       ]
     },
     {

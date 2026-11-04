@@ -9,6 +9,7 @@ import com.healthmd.data.health.HealthRepositoryImpl
 import com.healthmd.data.health.SleepAttributionCaptureFixture
 import com.healthmd.domain.exportengine.AndroidExportSettingsSnapshot
 import com.healthmd.domain.exportengine.AndroidExportSettingsSnapshotCodec
+import com.healthmd.domain.model.ExportDetailSelection
 import com.healthmd.domain.model.ActivityData
 import com.healthmd.domain.model.AndroidCaptureContext
 import com.healthmd.domain.model.DataTypeSelection
@@ -59,7 +60,7 @@ class ExportOrchestratorRangeTest {
             val preview = orchestrator.previewDates(dates, settings)
             assertThat(preview.previewedDateCount).isEqualTo(0)
             io.mockk.coVerify(exactly = 0) { health.resolveCaptureContext(any(), any()) }
-            io.mockk.coVerify(exactly = 0) { health.fetchHealthDataRange(any(), any(), any(), any(), any(), any()) }
+            io.mockk.coVerify(exactly = 0) { health.fetchHealthDataRange(any(), any(), any(), any(), any(), any(), any()) }
             io.mockk.coVerify(exactly = 0) { destination.exportHealthData(any(), any()) }
             io.mockk.coVerify(exactly = 0) { destination.previewHealthData(any(), any()) }
         }
@@ -78,7 +79,7 @@ class ExportOrchestratorRangeTest {
         val health = mockk<HealthRepository>()
         every { health.isBeforeFirstUnlock() } returns false
         coEvery { health.resolveCaptureContext(any(), any()) } throws IllegalStateException("must not consult live capture preferences")
-        coEvery { health.fetchHealthDataRange(any(), any(), any(), any(), any(), any()) } answers {
+        coEvery { health.fetchHealthDataRange(any(), any(), any(), any(), any(), any(), any()) } answers {
             assertThat(arg<ZoneId>(3)).isEqualTo(ZoneId.of("Asia/Kathmandu"))
             assertThat(arg<SleepDayAttributionOverride>(5)).isEqualTo(SleepDayAttributionOverride.Value(SleepDayAttribution.NIGHT_BEGINS))
             firstArg<List<LocalDate>>().map { dataFor(it) }
@@ -98,7 +99,7 @@ class ExportOrchestratorRangeTest {
         val health = mockk<HealthRepository>()
         every { health.isBeforeFirstUnlock() } returns false
         coEvery { health.resolveCaptureContext(any(), any()) } returns context
-        coEvery { health.fetchHealthDataRange(any(), any(), any(), any(), any(), any()) } answers {
+        coEvery { health.fetchHealthDataRange(any(), any(), any(), any(), any(), any(), any()) } answers {
             assertThat(arg<ZoneId>(3)).isEqualTo(context.zoneId)
             assertThat(arg<SleepDayAttributionOverride>(5)).isEqualTo(context.explicitSleepDayAttributionOverride)
             firstArg<List<LocalDate>>().map { dataFor(it) }
@@ -128,7 +129,7 @@ class ExportOrchestratorRangeTest {
                 val health = mockk<HealthRepository>()
                 every { health.isBeforeFirstUnlock() } returns false
                 coEvery { health.resolveCaptureContext(any(), any()) } answers { liveContext }
-                coEvery { health.fetchHealthDataRange(any(), any(), any(), any(), any(), any()) } answers {
+                coEvery { health.fetchHealthDataRange(any(), any(), any(), any(), any(), any(), any()) } answers {
                     assertThat(arg<ZoneId>(3)).isEqualTo(accepted.zoneId)
                     assertThat(arg<SleepDayAttributionOverride>(5)).isEqualTo(accepted.explicitSleepDayAttributionOverride)
                     firstArg<List<LocalDate>>().map { dataFor(it) }
@@ -355,7 +356,7 @@ class ExportOrchestratorRangeTest {
             every { registry.providerFor("health_connect") } returns provider
             every { registry.primaryExportProvider() } returns provider
             every { manager.isBeforeFirstUnlock() } returns false
-            coEvery { manager.fetchHealthDataRange(any(), any(), any(), any(), any(), any()) } answers {
+            coEvery { manager.fetchHealthDataRange(any(), any(), any(), any(), any(), any(), any()) } answers {
                 val requested = firstArg<List<LocalDate>>()
                 val zone = arg<ZoneId>(3)
                 val attribution = arg<SleepDayAttribution>(5)
@@ -419,7 +420,7 @@ class ExportOrchestratorRangeTest {
             }
             assertThat(destination.exported).isEmpty()
             assertThat(destination.previewed).isEmpty()
-            io.mockk.coVerify(exactly = 0) { health.fetchHealthDataRange(any(), any(), any(), any(), any(), any()) }
+            io.mockk.coVerify(exactly = 0) { health.fetchHealthDataRange(any(), any(), any(), any(), any(), any(), any()) }
         }
     }
 
@@ -431,12 +432,12 @@ class ExportOrchestratorRangeTest {
             val calls = mutableListOf<String>()
             val manager = mockk<HealthConnectManager>()
             every { manager.isBeforeFirstUnlock() } returns false
-            coEvery { manager.fetchHealthDataRange(any(), any(), any(), any(), any(), any()) } answers {
+            coEvery { manager.fetchHealthDataRange(any(), any(), any(), any(), any(), any(), any()) } answers {
                 calls += "health_connect"
                 firstArg<List<LocalDate>>().map { HealthData(it, activity = ActivityData(steps = 10)) }
             }
             val alternate = mockk<com.healthmd.data.health.HealthDataProvider>()
-            coEvery { alternate.fetchHealthDataRange(any(), any(), any(), any(), any(), any()) } answers {
+            coEvery { alternate.fetchHealthDataRange(any(), any(), any(), any(), any(), any(), any()) } answers {
                 calls += "whoop"
                 firstArg<List<LocalDate>>().map { HealthData(it, activity = ActivityData(steps = 999)) }
             }
@@ -591,6 +592,7 @@ class ExportOrchestratorRangeTest {
             zoneId: ZoneId,
             pinnedCalendarDays: Boolean,
             sleepDayAttributionOverride: SleepDayAttributionOverride,
+            detail: ExportDetailSelection,
         ): List<HealthData> {
             rangeCalls++
             rangeCallSizes += dates.size
@@ -619,6 +621,7 @@ class ExportOrchestratorRangeTest {
             dataTypes: DataTypeSelection,
             includeGranularData: Boolean,
             zoneId: ZoneId,
+            detail: ExportDetailSelection,
         ) {
             authorizedDateScopes += dates.toList()
             routeConsentGateway?.requestRoutes(

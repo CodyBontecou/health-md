@@ -50,6 +50,14 @@
     },
     {
       "source_type": "AndroidExportSettingsSnapshot",
+      "serialized_field": "detailOverrides",
+      "coverage_kind": "descriptor",
+      "disposition": "prohibited",
+      "contract_path": null,
+      "evidence": "Per-group detail overrides cannot be represented by frozen Shared Setup v2 compatibility_detail; setup files carry only the default level. Portable adoption requires a reviewed Shared Setup successor."
+    },
+    {
+      "source_type": "AndroidExportSettingsSnapshot",
       "serialized_field": "enginePin",
       "coverage_kind": "descriptor",
       "disposition": "prohibited",
@@ -663,6 +671,14 @@
       "disposition": "platform_extension",
       "contract_path": "profiles[].platform_extensions.android.export.legacy_data_types",
       "evidence": "Broad legacy data-type filters are preserved exactly in the Android extension."
+    },
+    {
+      "source_type": "ExportSettings",
+      "serialized_field": "detailOverrides",
+      "coverage_kind": "descriptor",
+      "disposition": "prohibited",
+      "contract_path": null,
+      "evidence": "Per-group detail overrides cannot be represented by frozen Shared Setup v2 compatibility_detail; setup files carry only the default level. Portable adoption requires a reviewed Shared Setup successor."
     },
     {
       "source_type": "ExportSettings",

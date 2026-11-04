@@ -1,5 +1,6 @@
 package com.healthmd.presentation.export
 
+import com.healthmd.presentation.settings.ExportDetailOverridesSection
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -304,6 +305,10 @@ fun ExportProfileEditorDialog(
                     label = "Detailed time-series",
                     checked = draft.settings.includeGranularData,
                     onCheckedChange = { value -> updateSettings { it.copy(includeGranularData = value) } },
+                )
+                ExportDetailOverridesSection(
+                    settings = draft.settings,
+                    onDetailChoiceChanged = { group, choice -> updateSettings { it.withDetailChoice(group, choice) } },
                 )
 
                 EditorSectionLabel("Metrics")

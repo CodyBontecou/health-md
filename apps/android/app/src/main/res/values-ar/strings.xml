@@ -575,6 +575,14 @@
     <string name="feedback_no_app_available">لا يوجد تطبيق متاح لفتح هذا الرابط</string>
     <string name="granular_data_title">تضمين سلاسل زمنية مفصّلة</string>
     <string name="granular_data_description">أضف عينات مؤرخة زمنيًا، مثل معدل ضربات القلب ومراحل النوم، إلى عمليات تصدير التوافق. وللحصول على نسخة مكتملة عبر API، استخدم لقطة API خام.</string>
+    <string name="detail_overrides_title">التفاصيل حسب الفئة</string>
+    <string name="detail_overrides_description">تجاوز الإعداد الافتراضي لفئات محددة. يحتفظ الملخص بالمجاميع اليومية فقط؛ ولا تتغير الملخصات اليومية أبدًا.</string>
+    <string name="detail_choice_default">افتراضي</string>
+    <string name="detail_choice_summary">ملخص</string>
+    <string name="detail_choice_sessions">الجلسات</string>
+    <string name="detail_choice_detailed">مفصّل</string>
+    <string name="detail_group_sleep_hint">تعرض الجلسات كل جلسة نوم بالتاريخ والوقت الكاملين. ويضيف المفصّل مراحل النوم.</string>
+    <string name="detail_expansion_schema_hint">يضيف الخيار المفصّل للنشاط أو التغذية أو الجسم كل سجل مصدر، ويحوّل تصديرات JSON وCSV وMarkdown التحليلية إلى المخطط 7.</string>
     <string name="sleep_attribution_title">إسناد نوم اليوم</string>
     <string name="sleep_attribution_night_begins">تبدأ في الليل</string>
     <string name="sleep_attribution_morning_ends">تنتهي في الصباح</string>

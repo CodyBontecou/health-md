@@ -188,7 +188,7 @@ class ScheduledFolderExportDurabilityTest {
         // Today's unavailable preference cannot veto committing already-captured bytes.
         coEvery { unavailableHealth.resolveCaptureContext(any(), any()) } returns
             AndroidCaptureContext(ZoneId.of("Asia/Kathmandu"), SleepDayAttribution.MORNING_ENDS)
-        coEvery { unavailableHealth.fetchHealthDataRange(any(), any(), any(), any(), any(), any()) } answers {
+        coEvery { unavailableHealth.fetchHealthDataRange(any(), any(), any(), any(), any(), any(), any()) } answers {
             error("resume must not capture")
         }
 
@@ -207,7 +207,7 @@ class ScheduledFolderExportDurabilityTest {
         assertThat(destination.successfulWriteCount("health/2026-03-17.json")).isEqualTo(1)
         verify(exactly = 0) { unavailableHealth.isBeforeFirstUnlock() }
         coVerify(exactly = 0) { unavailableHealth.resolveCaptureContext(any(), any()) }
-        coVerify(exactly = 0) { unavailableHealth.fetchHealthDataRange(any(), any(), any(), any(), any(), any()) }
+        coVerify(exactly = 0) { unavailableHealth.fetchHealthDataRange(any(), any(), any(), any(), any(), any(), any()) }
         directory.deleteRecursively()
     }
 
@@ -334,7 +334,7 @@ class ScheduledFolderExportDurabilityTest {
         coEvery { health.resolveCaptureContext(any(), any()) } answers {
             AndroidCaptureContext(firstArg(), SleepDayAttribution.NIGHT_BEGINS)
         }
-        coEvery { health.fetchHealthDataRange(any(), any(), any(), any(), any(), any()) } throws
+        coEvery { health.fetchHealthDataRange(any(), any(), any(), any(), any(), any(), any()) } throws
             kotlinx.coroutines.CancellationException("cancel before plan")
 
         val result = ExportOrchestrator(health, repository).exportDatesDurably(
@@ -384,7 +384,7 @@ class ScheduledFolderExportDurabilityTest {
         assertThat(destination.events).isEmpty()
         assertThat(store.load(OPERATION_ID)).isEqualTo(ScheduledFolderJournalLoad.Missing)
         verify(exactly = 0) { health.isBeforeFirstUnlock() }
-        coVerify(exactly = 0) { health.fetchHealthDataRange(any(), any(), any(), any(), any(), any()) }
+        coVerify(exactly = 0) { health.fetchHealthDataRange(any(), any(), any(), any(), any(), any(), any()) }
         directory.deleteRecursively()
     }
 
@@ -423,7 +423,7 @@ class ScheduledFolderExportDurabilityTest {
             assertThat(loaded.journal.phase).isEqualTo(ScheduledFolderJournalPhase.READY)
             assertThat(loaded.journal.days).isEmpty()
             verify(exactly = 0) { health.isBeforeFirstUnlock() }
-            coVerify(exactly = 0) { health.fetchHealthDataRange(any(), any(), any(), any(), any(), any()) }
+            coVerify(exactly = 0) { health.fetchHealthDataRange(any(), any(), any(), any(), any(), any(), any()) }
             directory.deleteRecursively()
         }
     }
@@ -605,7 +605,7 @@ class ScheduledFolderExportDurabilityTest {
             coEvery { live.getSelectedHealthProviderId() } returns "whoop"
             val sdk = mockk<com.healthmd.data.health.HealthConnectManager>()
             every { sdk.isBeforeFirstUnlock() } returns false
-            coEvery { sdk.fetchHealthDataRange(any(), any(), any(), any(), any(), any()) } answers {
+            coEvery { sdk.fetchHealthDataRange(any(), any(), any(), any(), any(), any(), any()) } answers {
                 firstArg<List<LocalDate>>().map { HealthData(it, activity = ActivityData(steps = 99)) }
             }
             val source = com.healthmd.data.health.HealthRepositoryImpl(com.healthmd.data.health.HealthProviderRegistry(
@@ -613,7 +613,7 @@ class ScheduledFolderExportDurabilityTest {
             val result = ExportOrchestrator(source, output(ScheduledFolderExportJournalStore(directory)))
                 .exportDatesDurably(listOf(day), restored, OPERATION_ID, snapshotFile.readText(), requireExistingJournal = true)
             assertThat(result.isFullSuccess).isTrue()
-            coVerify(exactly = 1) { sdk.fetchHealthDataRange(any(), any(), any(), any(), any(), any()) }
+            coVerify(exactly = 1) { sdk.fetchHealthDataRange(any(), any(), any(), any(), any(), any(), any()) }
             val file = destination.manager.inspectDurableFile(FOLDER_URI, "health/$day.json") as FileExportManager.DurableFileInspection.Found
             assertThat(String(file.content, Charsets.UTF_8)).contains("morning_ends")
             assertThat(String(file.content, Charsets.UTF_8)).doesNotContain("providerCaptureAuthority")
@@ -648,7 +648,7 @@ class ScheduledFolderExportDurabilityTest {
             coEvery { repository.resolveCaptureContext(any(), any()) } answers {
                 AndroidCaptureContext(firstArg(), SleepDayAttribution.NIGHT_BEGINS)
             }
-            coEvery { repository.fetchHealthDataRange(any(), any(), any(), any(), any(), any()) } answers {
+            coEvery { repository.fetchHealthDataRange(any(), any(), any(), any(), any(), any(), any()) } answers {
                 firstArg<List<LocalDate>>().map { date ->
                     HealthData(date = date, activity = ActivityData(steps = 1_234))
                 }

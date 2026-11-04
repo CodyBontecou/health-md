@@ -280,6 +280,14 @@
     </plurals>
     <string name="granular_data_title">विस्तृत समय-श्रृंखला शामिल करें</string>
     <string name="granular_data_description">संगतता निर्यात में हृदय गति और नींद के चरण जैसे टाइमस्टैम्प वाले नमूने जोड़ें। API-पूर्ण प्रतिलिपि के लिए, Raw API Snapshot का उपयोग करें।</string>
+    <string name="detail_overrides_title">श्रेणी के अनुसार विवरण</string>
+    <string name="detail_overrides_description">अलग-अलग श्रेणियों के लिए डिफ़ॉल्ट बदलें। सारांश केवल दैनिक योग रखता है; दैनिक सारांश कभी नहीं बदलते।</string>
+    <string name="detail_choice_default">डिफ़ॉल्ट</string>
+    <string name="detail_choice_summary">सारांश</string>
+    <string name="detail_choice_sessions">सत्र</string>
+    <string name="detail_choice_detailed">विस्तृत</string>
+    <string name="detail_group_sleep_hint">सत्र हर नींद सत्र को पूरी तारीख और समय के साथ सूचीबद्ध करता है। विस्तृत में नींद के चरण भी जुड़ते हैं।</string>
+    <string name="detail_expansion_schema_hint">गतिविधि, पोषण या शरीर के लिए विस्तृत हर स्रोत रिकॉर्ड जोड़ता है और विश्लेषणात्मक JSON, CSV और Markdown निर्यात को स्कीमा 7 पर बदल देता है।</string>
     <string name="sleep_attribution_title">नींद दिन निर्धारण</string>
     <string name="sleep_attribution_night_begins">रात शुरू</string>
     <string name="sleep_attribution_morning_ends">सुबह खत्म</string>

@@ -26,7 +26,7 @@ class HealthRepositorySleepAttributionTest {
         val manager = mockk<HealthConnectManager>()
         coEvery { manager.isAvailable() } returns true
         coEvery { manager.hasAllPermissions() } answers { permission }
-        coEvery { manager.fetchHealthDataRange(any(), any(), any(), any(), any(), any()) } answers {
+        coEvery { manager.fetchHealthDataRange(any(), any(), any(), any(), any(), any(), any()) } answers {
             firstArg<List<LocalDate>>().map { HealthData(it, activity = ActivityData(steps = 10)) }
         }
         val alternate = mockk<HealthDataProvider>()
@@ -47,8 +47,8 @@ class HealthRepositorySleepAttributionTest {
             sleepDayAttributionOverride = SleepDayAttributionOverride.Value(SleepDayAttribution.MORNING_ENDS)).single()
         assertThat(revoked.activity.steps).isNull()
         assertThat(revoked.compatibilityProvenance?.providerFailures?.single()?.errorType).isEqualTo("PermissionDenied")
-        coVerify(exactly = 1) { manager.fetchHealthDataRange(any(), any(), any(), any(), any(), any()) }
-        coVerify(exactly = 0) { alternate.fetchHealthDataRange(any(), any(), any(), any(), any(), any()) }
+        coVerify(exactly = 1) { manager.fetchHealthDataRange(any(), any(), any(), any(), any(), any(), any()) }
+        coVerify(exactly = 0) { alternate.fetchHealthDataRange(any(), any(), any(), any(), any(), any(), any()) }
         coVerify(exactly = 1) { preferences.getSelectedHealthProviderId() }
         coVerify(exactly = 1) { preferences.getConnectedHealthProviderIds() }
     }

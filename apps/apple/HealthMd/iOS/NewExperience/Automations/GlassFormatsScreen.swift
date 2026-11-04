@@ -82,6 +82,11 @@ struct GlassFormatsScreen: View {
                 .padding(.horizontal, GlassMetrics.panelPadding)
                 .padding(.vertical, 12)
                 Rectangle().fill(palette.line).frame(height: 1).accessibilityHidden(true)
+                ExportDetailOverridesSection(policy: $draft.detailPolicy)
+                    .glassFont(.body)
+                    .foregroundStyle(palette.text)
+                    .padding(.horizontal, GlassMetrics.panelPadding)
+                Rectangle().fill(palette.line).frame(height: 1).accessibilityHidden(true)
                 sleepDayRow
             }
             Text("API and gateway uploads use this setting too.")
@@ -179,7 +184,7 @@ struct GlassFormatsScreen: View {
     /// Archive Only stays selectable only for profiles that already use it.
     private var detailSegments: [GlassSegmentedControl<AppleExportDetailPreset>.Segment] {
         var presets: [AppleExportDetailPreset] = [.summary, .detailedTimeSeries, .losslessHealthRecords]
-        if draft.detailPolicy == .archiveOnly { presets.append(.archiveOnly) }
+        if draft.detailPolicy.basePolicy == .archiveOnly { presets.append(.archiveOnly) }
         return presets.map { .init(value: $0, title: Self.shortTitle($0)) }
     }
 
@@ -195,7 +200,7 @@ struct GlassFormatsScreen: View {
     private var detail: Binding<AppleExportDetailPreset> {
         Binding(
             get: { AppleExportDetailPreset(policy: draft.detailPolicy) },
-            set: { draft.detailPolicy = $0.policy }
+            set: { draft.detailPolicy = draft.detailPolicy.replacingBase(with: $0.policy) }
         )
     }
 

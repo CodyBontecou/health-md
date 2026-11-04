@@ -64,6 +64,12 @@ REQUIRED_OUTPUT_PROFILES = {
         "healthmd.health_data.android_analytical",
         5,
     ),
+    "apple-v12": ("apple", "healthmd.health_data.apple_detail", 12),
+    "android-analytical-v7": (
+        "android",
+        "healthmd.health_data.android_analytical_detail",
+        7,
+    ),
 }
 SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 HEX_RE = re.compile(r"^[0-9a-f]+$")

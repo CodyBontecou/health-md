@@ -46,6 +46,15 @@ description: "Export Apple Health data now or on a schedule. Check readiness on 
 <div class="option"><strong>Lossless Health Records</strong><p>The canonical HealthKit source-record archive. This level is Apple-only. Android does not turn Health Connect records into a HealthKit archive.</p></div>
 </div>
 
+### Detail by category
+
+The Data Detail level is the default. Under **Detail by category** you can override it for individual categories. For example, you can export detailed sleep while heart rate, steps, and vitals stay summarized. Overrides change only which detail sections are written. They never change metric selection, daily totals, file names, or archives.
+
+- **Android:** sleep offers **Sessions**, which lists each Health Connect sleep session (for example a nap and an overnight sleep) with full date, time, and offset, without stage intervals. **Detailed** adds sleep stages.
+- **Apple:** sleep, heart, and vitals can be overridden. HealthKit records sleep as stage intervals rather than sessions, so Apple offers Summary or Detailed sleep.
+
+Shared setup files carry only the default level; per-category choices stay on the device or profile where you set them.
+
 ## What "exporting" actually does
 <ol>
 <li>For each day in the range, capture selected summary projections. Add compatible samples for Detailed Time-Series. And, for Lossless Health Records, add canonical source records and query diagnostics.</li>
