@@ -164,4 +164,15 @@
         <item quantity="few">%1$d măsurători</item>
         <item quantity="other">%1$d de măsurători</item>
     </plurals>
+    <string name="widget_archive_wide_name">Prezentare arhivă</string>
+    <string name="widget_archive_wide_description">Zilele arhivate luna aceasta, următoarea rulare programată, Exportați acum și ultimele două săptămâni.</string>
+    <string name="widget_archive_next_run">Următoarea %1$s</string>
+    <string name="widget_archive_empty_body">Exportați o dată pentru a începe seria.</string>
+    <string name="widget_archive_preview_next_time">07:30</string>
+    <string name="widget_archive_preview_next">Următoarea 07:30</string>
+    <string name="widget_archive_preview_streak_value">11</string>
+    <string name="widget_archive_preview_streak_detail">zile la rând · 2 goluri</string>
+    <string name="widget_archive_preview_month_value">24</string>
+    <string name="widget_archive_preview_month_detail">zile în octombrie</string>
+    <string name="widget_archive_preview_gaps">2 goluri</string>
 </resources>

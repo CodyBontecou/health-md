@@ -154,4 +154,15 @@
     <plurals name="composer_metrics">
         <item quantity="other">%1$d 项指标</item>
     </plurals>
+    <string name="widget_archive_wide_name">归档概览</string>
+    <string name="widget_archive_wide_description">本月已归档天数、下次计划运行、立即导出，以及最近两周。</string>
+    <string name="widget_archive_next_run">下次 %1$s</string>
+    <string name="widget_archive_empty_body">导出一次即可开始连续记录。</string>
+    <string name="widget_archive_preview_next_time">7:30</string>
+    <string name="widget_archive_preview_next">下次 7:30</string>
+    <string name="widget_archive_preview_streak_value">11</string>
+    <string name="widget_archive_preview_streak_detail">连续天数 · 2 处缺口</string>
+    <string name="widget_archive_preview_month_value">24</string>
+    <string name="widget_archive_preview_month_detail">天（10月）</string>
+    <string name="widget_archive_preview_gaps">2 处缺口</string>
 </resources>

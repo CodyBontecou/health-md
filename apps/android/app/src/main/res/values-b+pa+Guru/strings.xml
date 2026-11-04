@@ -1454,4 +1454,17 @@
     <string name="paywall_terms">ਸ਼ਰਤਾਂ</string>
     <string name="paywall_privacy">ਪਰਦੇਦਾਰੀ</string>
     <string name="paywall_subscription_disclosure">ਯੋਗ ਗਾਹਕੀਆਂ ਵਿੱਚ 7 ਦਿਨਾਂ ਦੀ ਮੁਫ਼ਤ ਅਜ਼ਮਾਇਸ਼ ਸ਼ਾਮਲ ਹੈ, ਫਿਰ ਅਜ਼ਮਾਇਸ਼ ਜਾਂ ਮੌਜੂਦਾ ਮਿਆਦ ਖ਼ਤਮ ਹੋਣ ਤੋਂ ਪਹਿਲਾਂ ਰੱਦ ਨਾ ਕਰਨ ਉੱਤੇ ਦਿਖਾਈ ਕੀਮਤ ਉੱਤੇ ਆਪਣੇ ਆਪ ਨਵੀਆਂ ਹੁੰਦੀਆਂ ਹਨ। Google Play ਵਿੱਚ ਪ੍ਰਬੰਧਨ ਜਾਂ ਰੱਦ ਕਰੋ। ਉਮਰ ਭਰ ਦੀ ਪਹੁੰਚ ਲਈ ਤੁਰੰਤ ਇੱਕ ਵਾਰ ਭੁਗਤਾਨ ਲਿਆ ਜਾਂਦਾ ਹੈ। ਮੌਜੂਦਾ ਭੁਗਤਾਨ ਕੀਤੀ ਪਹੁੰਚ ਬਰਕਰਾਰ ਰਹਿੰਦੀ ਹੈ। ਉਮਰ ਭਰ ਦਾ ਕੋਈ ਅਜ਼ਮਾਇਸ਼ ਨਹੀਂ ਹੈ। ਐਪ ਨੂੰ ਮਿਟਾਉਣਾ ਜਾਂ ਲਾਈਫਟਾਈਮ ਖਰੀਦਣਾ ਮੌਜੂਦਾ ਗਾਹਕੀ ਨੂੰ ਰੱਦ ਨਹੀਂ ਕਰਦਾ ਹੈ।</string>
+    <!-- The streak number is drawn separately above this label, so the label takes no argument. -->
+    <plurals name="widget_archive_streak_label" tools:ignore="ImpliedQuantity">
+        <item quantity="one">ਦਿਨ ਲਗਾਤਾਰ</item>
+        <item quantity="other">ਦਿਨ ਲਗਾਤਾਰ</item>
+    </plurals>
+    <plurals name="widget_archive_gaps">
+        <item quantity="one">%1$s ਖਾਲੀ ਥਾਂ</item>
+        <item quantity="other">%1$s ਖਾਲੀ ਥਾਵਾਂ</item>
+    </plurals>
+    <plurals name="widget_archive_days_in_month">
+        <item quantity="one">ਦਿਨ, %1$s ਵਿੱਚ</item>
+        <item quantity="other">ਦਿਨ, %1$s ਵਿੱਚ</item>
+    </plurals>
 </resources>

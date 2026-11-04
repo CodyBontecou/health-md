@@ -159,4 +159,15 @@
         <item quantity="one">%1$dটি মেট্রিক</item>
         <item quantity="other">%1$dটি মেট্রিক</item>
     </plurals>
+    <string name="widget_archive_wide_name">আর্কাইভ সংক্ষিপ্ত বিবরণ</string>
+    <string name="widget_archive_wide_description">এই মাসে আর্কাইভ করা দিন, পরবর্তী নির্ধারিত রান, এখনই রপ্তানি করুন এবং গত দুই সপ্তাহ।</string>
+    <string name="widget_archive_next_run">পরবর্তী %1$s</string>
+    <string name="widget_archive_empty_body">আপনার ধারা শুরু করতে একবার রপ্তানি করুন।</string>
+    <string name="widget_archive_preview_next_time">সকাল ৭:৩০</string>
+    <string name="widget_archive_preview_next">পরবর্তী সকাল ৭:৩০</string>
+    <string name="widget_archive_preview_streak_value">১১</string>
+    <string name="widget_archive_preview_streak_detail">দিন টানা · ২টি ফাঁক</string>
+    <string name="widget_archive_preview_month_value">২৪</string>
+    <string name="widget_archive_preview_month_detail">দিন, অক্টোবর মাসে</string>
+    <string name="widget_archive_preview_gaps">২টি ফাঁক</string>
 </resources>

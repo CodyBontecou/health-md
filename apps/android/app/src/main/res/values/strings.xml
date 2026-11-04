@@ -1534,4 +1534,17 @@
     <string name="post_export_upgrade_action">See lifetime access</string>
     <string name="post_export_manual_action">Keep exporting manually</string>
     <string name="post_export_continue_free">Continue free</string>
+    <!-- The streak number is drawn separately above this label, so the label takes no argument. -->
+    <plurals name="widget_archive_streak_label" tools:ignore="ImpliedQuantity">
+        <item quantity="one">day streak</item>
+        <item quantity="other">day streak</item>
+    </plurals>
+    <plurals name="widget_archive_gaps">
+        <item quantity="one">%1$s gap</item>
+        <item quantity="other">%1$s gaps</item>
+    </plurals>
+    <plurals name="widget_archive_days_in_month">
+        <item quantity="one">day in %1$s</item>
+        <item quantity="other">days in %1$s</item>
+    </plurals>
 </resources>

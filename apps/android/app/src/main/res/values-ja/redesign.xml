@@ -154,4 +154,15 @@
     <plurals name="composer_metrics">
         <item quantity="other">%1$d 個の指標</item>
     </plurals>
+    <string name="widget_archive_wide_name">アーカイブ概要</string>
+    <string name="widget_archive_wide_description">今月アーカイブした日数、次回の予定実行、今すぐエクスポート、直近2週間。</string>
+    <string name="widget_archive_next_run">次回 %1$s</string>
+    <string name="widget_archive_empty_body">一度エクスポートすると連続記録が始まります。</string>
+    <string name="widget_archive_preview_next_time">7:30</string>
+    <string name="widget_archive_preview_next">次回 7:30</string>
+    <string name="widget_archive_preview_streak_value">11</string>
+    <string name="widget_archive_preview_streak_detail">日連続 · 欠落 2 件</string>
+    <string name="widget_archive_preview_month_value">24</string>
+    <string name="widget_archive_preview_month_detail">日（10月）</string>
+    <string name="widget_archive_preview_gaps">欠落 2 件</string>
 </resources>

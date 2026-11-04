@@ -179,4 +179,15 @@
         <item quantity="many">%1$d مقياسًا</item>
         <item quantity="other">%1$d مقياس</item>
     </plurals>
+    <string name="widget_archive_wide_name">نظرة عامة على الأرشيف</string>
+    <string name="widget_archive_wide_description">الأيام المؤرشفة هذا الشهر، والتشغيل المجدول التالي، والتصدير الآن، وآخر أسبوعين.</string>
+    <string name="widget_archive_next_run">التالي %1$s</string>
+    <string name="widget_archive_empty_body">صدِّر مرة واحدة لتبدأ سلسلتك.</string>
+    <string name="widget_archive_preview_next_time">7:30 ص</string>
+    <string name="widget_archive_preview_next">التالي 7:30 ص</string>
+    <string name="widget_archive_preview_streak_value">11</string>
+    <string name="widget_archive_preview_streak_detail">يومًا متتاليًا · فجوتان</string>
+    <string name="widget_archive_preview_month_value">24</string>
+    <string name="widget_archive_preview_month_detail">يومًا في أكتوبر</string>
+    <string name="widget_archive_preview_gaps">فجوتان</string>
 </resources>

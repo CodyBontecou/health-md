@@ -1528,4 +1528,20 @@
     <string name="paywall_terms">Conditions</string>
     <string name="paywall_privacy">Confidentialité</string>
     <string name="paywall_subscription_disclosure">Les abonnements éligibles incluent un essai gratuit de 7 jours, puis se renouvellent automatiquement au prix affiché, sauf annulation avant la fin de l’essai ou de la période en cours. Gérez ou annulez dans Google Play. L’accès à vie est facturé immédiatement en un seul paiement. Les accès payants existants sont conservés. La vie n’a pas d’épreuve. La suppression de l\'application ou l\'achat de Lifetime n\'annule pas un abonnement existant.</string>
+    <!-- The streak number is drawn separately above this label, so the label takes no argument. -->
+    <plurals name="widget_archive_streak_label" tools:ignore="ImpliedQuantity">
+        <item quantity="one">jour d\'affilée</item>
+        <item quantity="many">de jours d\'affilée</item>
+        <item quantity="other">jours d\'affilée</item>
+    </plurals>
+    <plurals name="widget_archive_gaps">
+        <item quantity="one">%1$s lacune</item>
+        <item quantity="many">%1$s de lacunes</item>
+        <item quantity="other">%1$s lacunes</item>
+    </plurals>
+    <plurals name="widget_archive_days_in_month">
+        <item quantity="one">jour en %1$s</item>
+        <item quantity="many">de jours en %1$s</item>
+        <item quantity="other">jours en %1$s</item>
+    </plurals>
 </resources>

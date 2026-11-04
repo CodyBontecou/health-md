@@ -4,7 +4,7 @@
 
 - **Audience and task:** People who export on a schedule and want to see, at a glance, which health dates are already in their archive and which need a backfill.
 - **Canonical location:** This guide owns the Android Archive. The shared capability is `export.coverage-calendar` in [product-capabilities.json](../../../../packages/contracts/product-capabilities.json); the Apple Archive lands with the Liquid Glass experience.
-- **Source and tests:** `app/src/main/java/com/healthmd/presentation/archive/` (`ArchiveCoverage.kt` rules, `ArchiveViewModel.kt`, `ArchiveScreen.kt`, and the day page in `DayPageScreen.kt`/`DayPageViewModel.kt`) and `widget/glance/ArchiveGlanceWidget.kt`; `ArchiveCoverageTest.kt` and `ArchiveWidgetSummaryTest.kt`. On-device rendering has not been verified by automated UI tests.
+- **Source and tests:** `app/src/main/java/com/healthmd/presentation/archive/` (`ArchiveCoverage.kt` rules, `ArchiveViewModel.kt`, `ArchiveScreen.kt`, and the day page in `DayPageScreen.kt`/`DayPageViewModel.kt`) and `widget/glance/ArchiveGlanceWidget.kt`; `ArchiveCoverageTest.kt`, `ArchiveWidgetSummaryTest.kt` and `ArchiveWidgetGlanceTest.kt`. On-device rendering has not been verified by automated UI tests.
 
 ## What it does
 
@@ -30,7 +30,7 @@ Each export profile is its own lane; runs without a profile form the **Current s
 
 On tablets and unfolded foldables the calendar fills the main pane, with the chips and month controls inside it; the stats, the selected day, an **Automations** summary and History sit in a side column.
 
-The **Archive** home-screen widget shows the same coverage at a glance; see [Home-screen widgets](./widgets.md).
+The **Archive** and **Archive overview** home-screen widgets show the same coverage at a glance; see [Home-screen widgets](./widgets.md).
 
 ## Limitations and troubleshooting
 

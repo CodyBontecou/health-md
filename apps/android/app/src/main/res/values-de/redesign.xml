@@ -159,4 +159,15 @@
         <item quantity="one">%1$d Messwert</item>
         <item quantity="other">%1$d Messwerte</item>
     </plurals>
+    <string name="widget_archive_wide_name">Archivübersicht</string>
+    <string name="widget_archive_wide_description">Archivierte Tage dieses Monats, nächste geplante Ausführung, Jetzt exportieren und die letzten zwei Wochen.</string>
+    <string name="widget_archive_next_run">Nächste %1$s</string>
+    <string name="widget_archive_empty_body">Exportieren Sie einmal, um Ihre Serie zu starten.</string>
+    <string name="widget_archive_preview_next_time">07:30</string>
+    <string name="widget_archive_preview_next">Nächste 07:30</string>
+    <string name="widget_archive_preview_streak_value">11</string>
+    <string name="widget_archive_preview_streak_detail">Tage in Folge · 2 Lücken</string>
+    <string name="widget_archive_preview_month_value">24</string>
+    <string name="widget_archive_preview_month_detail">Tage im Oktober</string>
+    <string name="widget_archive_preview_gaps">2 Lücken</string>
 </resources>
