@@ -317,7 +317,7 @@ final class ExportHistoryTests: XCTestCase {
         )
 
         XCTAssertEqual(entry.resultCountLabel, "Generated Files")
-        XCTAssertEqual(entry.generatedFileCountCompactDescription, "40 generated file(s)")
+        XCTAssertEqual(entry.generatedFileCountCompactDescription, "40 generated files")
         XCTAssertEqual(entry.dataDayCountDescription, "1 of 1 data day(s)")
         XCTAssertEqual(entry.resultCountDescription, "40 generated file(s) · 1 of 1 data day(s)")
         XCTAssertEqual(entry.summaryDescription, "Exported 40 generated file(s) from 1 data day(s)")

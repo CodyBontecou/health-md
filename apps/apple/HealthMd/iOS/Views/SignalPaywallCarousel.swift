@@ -260,8 +260,20 @@ struct SignalPaywallCarousel<Status: View>: View {
             .disabled(pricing.isDisabled(selected))
             .accessibilityIdentifier("paywall.purchaseButton")
 
+            // One row, else two rows of two, before a column of four: on short panels such as
+            // the iPhone Duo cover a four-row column pushed the sheet over most of the slide.
             ViewThatFits(in: .horizontal) {
                 HStack(spacing: Spacing.s1) { footerLinks }
+                VStack(spacing: Spacing.s1) {
+                    HStack(spacing: Spacing.s1) {
+                        seeAllPlansLink
+                        restoreLink
+                    }
+                    HStack(spacing: Spacing.s1) {
+                        termsLink
+                        privacyLink
+                    }
+                }
                 VStack(spacing: Spacing.s1) { footerLinks }
             }
         }
@@ -282,6 +294,14 @@ struct SignalPaywallCarousel<Status: View>: View {
     /// until the Plans slide is showing.
     @ViewBuilder
     private var footerLinks: some View {
+        seeAllPlansLink
+        restoreLink
+        termsLink
+        privacyLink
+    }
+
+    @ViewBuilder
+    private var seeAllPlansLink: some View {
         if slide != .plans {
             Button {
                 withAnimation(AnimationTimings.smooth) { slide = .plans }
@@ -291,13 +311,22 @@ struct SignalPaywallCarousel<Status: View>: View {
             .buttonStyle(.plain)
             .accessibilityIdentifier("paywall.seeAllPlans")
         }
+    }
+
+    private var restoreLink: some View {
         SignalFooterLink(title: String(localized: "Restore Purchase"), isLoading: purchaseManager.isRestoring, action: onRestore)
             .disabled(purchaseManager.isPurchasing || purchaseManager.isRestoring)
             .accessibilityIdentifier(AccessibilityID.Paywall.restoreButton)
             .accessibilityLabel("Restore previous purchase")
+    }
+
+    private var termsLink: some View {
         Link(destination: URL(string: "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/")!) {
             SignalFooterLinkLabel(title: String(localized: "Terms"))
         }
+    }
+
+    private var privacyLink: some View {
         Link(destination: URL(string: "https://healthmd.app/privacy-policy.html")!) {
             SignalFooterLinkLabel(title: String(localized: "Privacy"))
         }
