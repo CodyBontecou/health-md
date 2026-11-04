@@ -119,6 +119,26 @@ class ArchiveCoverageTest {
     }
 
     @Test
+    fun `the month card carries the current streak across the month boundary`() {
+        val today = LocalDate.of(2026, 11, 3)
+        val gap = LocalDate.of(2026, 10, 5)
+        val entries = listOf(
+            entry(
+                start = LocalDate.of(2026, 10, 1),
+                end = LocalDate.of(2026, 11, 2),
+                success = 32,
+                total = 33,
+                failed = listOf(FailedDateDetail(gap, ExportFailureReason.UNKNOWN)),
+            ),
+        )
+        val november = ArchiveCoverage.month(entries, YearMonth.of(2026, 11), today, filter = null)
+        assertEquals(2, november.stats.archivedCount)
+        // Oct 6 through Nov 2, not just Nov 1 and 2; the widget reads the same number.
+        assertEquals(28, november.stats.streak)
+        assertEquals(28, ArchiveCoverage.currentStreak(entries, today))
+    }
+
+    @Test
     fun `month aggregates profiles with issue dots and a filter shows one profile`() {
         val gap = LocalDate.of(2026, 10, 19)
         val entries = listOf(

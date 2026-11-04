@@ -188,8 +188,37 @@ object ArchiveCoverage {
             month = month,
             profiles = profiles,
             days = days,
-            stats = stats(days.map { it.date to it.status }, today),
+            // Archived days and gaps belong to the shown month; the streak is the current one,
+            // the same number the Archive widget shows, so it does not reset on the 1st.
+            stats = stats(days.map { it.date to it.status }, today)
+                .copy(streak = currentStreak(entries, today, filter)),
         )
+    }
+
+    /**
+     * The current streak: back from yesterday across month boundaries to the first gap,
+     * skipping dates with nothing due, and never before the earliest export.
+     */
+    fun currentStreak(entries: List<ExportHistoryEntry>, today: LocalDate, filter: ArchiveProfile? = null): Int {
+        val earliest = entries.minOfOrNull { it.dateRangeStart } ?: return 0
+        val lanes = filter?.let(::listOf) ?: profiles(entries)
+        var streak = 0
+        var date = today.minusDays(1)
+        while (!date.isBefore(earliest)) {
+            val statuses = lanes.map { status(entries, it, date, today) }
+            val status = if (filter != null) {
+                statuses.firstOrNull() ?: CoverageStatus.NOT_DUE
+            } else {
+                aggregate(statuses, isToday = false)
+            }
+            when (status) {
+                CoverageStatus.COMPLETE, CoverageStatus.PARTIAL -> streak += 1
+                CoverageStatus.MISSING -> return streak
+                CoverageStatus.NOT_DUE, CoverageStatus.IN_PROGRESS -> Unit
+            }
+            date = date.minusDays(1)
+        }
+        return streak
     }
 
     private fun isDue(status: CoverageStatus): Boolean = status != CoverageStatus.NOT_DUE

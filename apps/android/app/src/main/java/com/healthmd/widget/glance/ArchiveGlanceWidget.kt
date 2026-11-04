@@ -113,14 +113,13 @@ data class ArchiveWidgetSummary(
                 val date = today.minusDays(back)
                 date to ArchiveCoverage.aggregateDay(entries, date, today)
             }
-            val stats = ArchiveCoverage.stats(days, today)
             val month = YearMonth.from(today)
             val monthStats = ArchiveCoverage.stats(
                 days.filter { YearMonth.from(it.first) == month },
                 today,
             )
             return ArchiveWidgetSummary(
-                streak = stats.streak,
+                streak = ArchiveCoverage.currentStreak(entries, today),
                 gapCount = days.takeLast(GAP_WINDOW_DAYS).count { it.second == CoverageStatus.MISSING },
                 recentDays = days.takeLast(RECENT_DAYS).map { (date, status) -> ArchiveWidgetDay(date, status) },
                 hasHistory = entries.isNotEmpty(),
@@ -348,12 +347,14 @@ private fun ColumnScope.ArchiveSmallBody(context: Context, summary: ArchiveWidge
     }
     Spacer(GlanceModifier.defaultWeight())
     // Two rows of seven, oldest first, so the newest week sits on the bottom row.
+    // Gaps are padding, not Spacers: Glance drops a Row's children past ten.
     summary.recentDays.chunked(7).forEachIndexed { rowIndex, week ->
         if (rowIndex > 0) Spacer(GlanceModifier.height(4.dp))
         Row(modifier = GlanceModifier.fillMaxWidth()) {
             week.forEachIndexed { index, day ->
-                if (index > 0) Spacer(GlanceModifier.width(4.dp))
-                ArchiveCell(day.status, height = 12.dp, radius = 4.dp, modifier = GlanceModifier.defaultWeight())
+                Box(GlanceModifier.defaultWeight().padding(start = if (index > 0) 4.dp else 0.dp)) {
+                    ArchiveCell(day.status, height = 12.dp, radius = 4.dp, modifier = GlanceModifier.fillMaxWidth())
+                }
             }
         }
     }
@@ -393,20 +394,25 @@ private fun ColumnScope.ArchiveWideBody(context: Context, summary: ArchiveWidget
         }
     }
     Spacer(GlanceModifier.defaultWeight())
+    // One row per week inside the strip: Glance drops a Row's children past ten, which showed
+    // only the oldest five of the fourteen days.
     Row(modifier = GlanceModifier.fillMaxWidth()) {
-        summary.recentDays.forEachIndexed { index, day ->
-            if (index > 0) Spacer(GlanceModifier.width(5.dp))
-            Column(
-                modifier = GlanceModifier.defaultWeight(),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                ArchiveCell(day.status, height = 18.dp, radius = 6.dp, modifier = GlanceModifier.fillMaxWidth())
-                Spacer(GlanceModifier.height(4.dp))
-                Text(
-                    text = formatCount(day.date.dayOfMonth, locale),
-                    style = ArchiveTextStyles.dayNumber,
-                    maxLines = 1,
-                )
+        summary.recentDays.chunked(7).forEachIndexed { weekIndex, week ->
+            Row(modifier = GlanceModifier.defaultWeight().padding(start = if (weekIndex > 0) 5.dp else 0.dp)) {
+                week.forEachIndexed { index, day ->
+                    Column(
+                        modifier = GlanceModifier.defaultWeight().padding(start = if (index > 0) 5.dp else 0.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        ArchiveCell(day.status, height = 18.dp, radius = 6.dp, modifier = GlanceModifier.fillMaxWidth())
+                        Spacer(GlanceModifier.height(4.dp))
+                        Text(
+                            text = formatCount(day.date.dayOfMonth, locale),
+                            style = ArchiveTextStyles.dayNumber,
+                            maxLines = 1,
+                        )
+                    }
+                }
             }
         }
     }
