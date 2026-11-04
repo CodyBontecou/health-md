@@ -48,10 +48,19 @@ struct ArchiveScreen: View {
     let onSetUp: () -> Void
     let onBackfill: () -> Void
     let onExportNow: () -> Void
+    /// Reads a day's written file for the readable day card; nil when it cannot be read.
+    var loadDayFile: (ArchiveProfile, Date) async -> ArchiveDayFile? = { _, _ in nil }
+    /// Pushes the day page for a date, on the given automation's tab.
+    var onOpenDay: (Date, UUID?) -> Void = { _, _ in }
 
     @Environment(\.glassPalette) private var palette
     @State private var month = Date()
     @State private var selectedDate = Calendar.current.startOfDay(for: Date())
+    /// Archive B: the iPhone leads with a week strip and a readable day; Month shows
+    /// the full calendar. The choice is remembered.
+    @AppStorage("glass.archive.showsMonth") private var showsMonth = false
+    @State private var dayFile: ArchiveDayFile?
+    @State private var dayFileKey: DayFileKey?
 
     private var calendar: Calendar { model.calendar }
     private var filteredProfile: ArchiveProfile? { model.profiles.first { $0.id == filter } }
@@ -89,16 +98,29 @@ struct ArchiveScreen: View {
 
     // MARK: - Layouts
 
-    /// ArchiveGlass (iPhone).
-    private var phoneBody: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            titleRow(String(localized: "Archive"), size: 34, showsHeart: true)
-            chips(compact: false)
-            statsPanel
-            pausedNoteIfNeeded
-            calendarPanel
-            dayCard
-            sentenceCard
+    /// ArchiveGlass (iPhone): Archive B's week strip and readable day, or the month.
+    @ViewBuilder private var phoneBody: some View {
+        if showsMonth {
+            VStack(alignment: .leading, spacing: 14) {
+                titleRow(String(localized: "Archive"), size: 34, showsHeart: true)
+                chips(compact: false)
+                statsPanel
+                pausedNoteIfNeeded
+                calendarPanel
+                dayCard
+                sentenceCard
+            }
+        } else {
+            VStack(alignment: .leading, spacing: 14) {
+                titleRow(String(localized: "Archive"), size: 34, showsHeart: true)
+                if model.profiles.count > 1 { chips(compact: false) }
+                nextRunCard
+                pausedNoteIfNeeded
+                weekPanel
+                readableDayCard
+                sentenceCard
+            }
+            .task(id: dayFileRequest) { await loadLeadFile() }
         }
     }
 
@@ -430,6 +452,12 @@ struct ArchiveScreen: View {
                     Spacer()
                     monthButton(String(localized: "Previous month"), image: "chevron.left", offset: -1)
                     monthButton(String(localized: "Next month"), image: "chevron.right", offset: 1)
+                    if layout == .phone {
+                        viewModeButton(String(localized: "Week")) {
+                            showsMonth = false
+                            month = selectedDate
+                        }
+                    }
                 }
                 .padding(.horizontal, 6)
             }
@@ -681,6 +709,379 @@ struct ArchiveScreen: View {
         if let prominent = rows.first(where: { $0.1.isProminent }) { return (prominent.0, prominent.1.action) }
         if filter != nil, let only = rows.first { return (only.0, only.1.action) }
         return nil
+    }
+
+    // MARK: - Week (Archive B)
+
+    private struct DayFileKey: Hashable {
+        let profileID: UUID
+        let date: Date
+        let status: CoverageStatus
+        let recordedAt: Date?
+    }
+
+    private var leadProfile: ArchiveProfile? { model.leadProfile(filter: filter) }
+
+    /// What the readable day card should read: the lead automation's own file for
+    /// the selected date, when it has one on this device.
+    private var dayFileRequest: DayFileKey? {
+        guard let lead = leadProfile else { return nil }
+        let day = model.day(lead, on: selectedDate)
+        guard day.status == .complete || day.status == .partial || day.status == .inProgress,
+              model.canOpen(lead, on: selectedDate) else { return nil }
+        return DayFileKey(profileID: lead.id, date: selectedDate, status: day.status, recordedAt: day.record?.updatedAt)
+    }
+
+    private func loadLeadFile() async {
+        guard let request = dayFileRequest,
+              let lead = model.profiles.first(where: { $0.id == request.profileID }) else {
+            dayFile = nil
+            dayFileKey = nil
+            return
+        }
+        if dayFileKey != request { dayFile = nil }
+        let file = await loadDayFile(lead, request.date)
+        guard !Task.isCancelled else { return }
+        dayFile = file
+        dayFileKey = request
+    }
+
+    /// "Next run · Daily · tomorrow at 7:30", with the streak and the gap count.
+    private var nextRunCard: some View {
+        let stats = model.stats(month: month, filter: filter)
+        let isWeekly = model.isWeeklyFilter(filter)
+        let next = model.nextRun
+        return HStack(spacing: 14) {
+            Image(systemName: "clock")
+                .font(.system(size: 20, weight: .medium))
+                .foregroundStyle(palette.accent)
+                .frame(width: 44, height: 44)
+                .background(Circle().fill(palette.accent.opacity(0.30)))
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 3) {
+                Text("Next run")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(palette.muted)
+                Group {
+                    if let next {
+                        Text(verbatim: "\(next.profile.name) · \(ArchiveNextRun.whenText(next.date, now: model.now, calendar: calendar))")
+                    } else {
+                        Text("Nothing scheduled")
+                    }
+                }
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundStyle(palette.text)
+                .lineLimit(2)
+                .minimumScaleFactor(0.85)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .accessibilityElement(children: .combine)
+            VStack(alignment: .trailing, spacing: 3) {
+                Text(streakText(stats, isWeekly: isWeekly))
+                    .foregroundStyle(palette.sec)
+                gapButton(stats, weight: .semibold)
+            }
+            .font(.system(size: 13, weight: .semibold))
+            .lineLimit(1)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
+        .glassSurface()
+        .accessibilityIdentifier("glass.archive.nextRun")
+    }
+
+    private var weekDays: [Date] { model.week(containing: selectedDate) }
+
+    private var weekTitle: String {
+        guard let first = weekDays.first, let last = weekDays.last else { return "" }
+        return (first..<last).formatted(.interval.month(.abbreviated).day())
+    }
+
+    private func canShowWeek(offset: Int) -> Bool {
+        guard let target = calendar.date(byAdding: .weekOfYear, value: offset, to: selectedDate) else { return false }
+        if offset > 0 {
+            return calendar.compare(target, to: model.now, toGranularity: .weekOfYear) != .orderedDescending
+        }
+        guard let oldest = calendar.date(byAdding: .day, value: -CoverageLedger.retentionDays, to: model.now) else {
+            return false
+        }
+        return calendar.compare(target, to: oldest, toGranularity: .weekOfYear) != .orderedAscending
+    }
+
+    /// Moves a week and keeps the same weekday selected, never past today.
+    private func moveWeek(_ offset: Int) {
+        guard let target = calendar.date(byAdding: .weekOfYear, value: offset, to: selectedDate) else { return }
+        let today = calendar.startOfDay(for: model.now)
+        select(min(calendar.startOfDay(for: target), today))
+    }
+
+    private func weekButton(_ label: String, image: String, offset: Int) -> some View {
+        let isEnabled = canShowWeek(offset: offset)
+        return Button { moveWeek(offset) } label: {
+            Image(systemName: image)
+                .font(.system(size: 15, weight: .semibold))
+                .frame(width: 32, height: 32)
+                .background(Circle().fill(isEnabled ? palette.surface2 : palette.surface))
+                .frame(width: GlassMetrics.touchTarget, height: GlassMetrics.touchTarget)
+                .contentShape(Rectangle())
+                .foregroundStyle(isEnabled ? palette.text : palette.muted.opacity(0.5))
+        }
+        .buttonStyle(.plain)
+        .disabled(!isEnabled)
+        .accessibilityLabel(label)
+        .accessibilityIdentifier(offset < 0 ? "glass.archive.previousWeek" : "glass.archive.nextWeek")
+    }
+
+    /// The Month and Week switch beside the calendar's navigation.
+    private func viewModeButton(_ title: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(palette.sec)
+                .padding(.horizontal, 12)
+                .frame(height: 32)
+                .background(Capsule().fill(palette.surface))
+                .frame(minHeight: GlassMetrics.touchTarget)
+                .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("glass.archive.viewMode")
+    }
+
+    private var weekPanel: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 2) {
+                Text(weekTitle)
+                    .font(.system(size: 17, weight: .bold))
+                    .foregroundStyle(palette.text)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                    .accessibilityAddTraits(.isHeader)
+                Spacer(minLength: 4)
+                weekButton(String(localized: "Previous week"), image: "chevron.left", offset: -1)
+                weekButton(String(localized: "Next week"), image: "chevron.right", offset: 1)
+                viewModeButton(String(localized: "Month")) {
+                    month = selectedDate
+                    showsMonth = true
+                }
+            }
+            .padding(.horizontal, 6)
+            HStack(spacing: 6) {
+                ForEach(weekDays, id: \.self) { date in
+                    weekTile(for: date)
+                }
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 14)
+        .glassSurface()
+    }
+
+    private func weekTile(for date: Date) -> some View {
+        let isFuture = calendar.startOfDay(for: date) > calendar.startOfDay(for: model.now)
+        let status: CoverageStatus = isFuture ? .notDue : model.status(on: date, filter: filter)
+        let symbols = calendar.shortWeekdaySymbols
+        let weekday = symbols[(calendar.component(.weekday, from: date) - 1) % symbols.count]
+        return CalendarDayTile(
+            day: calendar.component(.day, from: date),
+            status: status,
+            isSelected: calendar.isDate(date, inSameDayAs: selectedDate),
+            weekdayLabel: weekday,
+            accessibilityText: ArchiveCopy.tileAccessibility(
+                date: date,
+                status: status,
+                model: model,
+                showsIssues: filter == nil
+            )
+        ) {
+            guard !isFuture else { return }
+            select(calendar.startOfDay(for: date))
+        }
+    }
+
+    /// Archive B's readable day: the lead automation's file with its headline values,
+    /// a dashed card for a gap, then one line for every other automation.
+    private var readableDayCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            if let lead = leadProfile {
+                let day = model.day(lead, on: selectedDate)
+                HStack(alignment: .firstTextBaseline) {
+                    Text(dayTitle)
+                        .font(.system(size: 18, weight: .bold))
+                        .foregroundStyle(palette.text)
+                    Spacer()
+                    StatusBadge(title: ArchiveCopy.title(for: day.status), status: day.status)
+                }
+                .padding(.horizontal, 2)
+                leadDetail(lead, day: day)
+                let others = model.profiles.filter { $0.id != lead.id && filter == nil }
+                if !others.isEmpty {
+                    VStack(spacing: 0) {
+                        ForEach(others) { otherRow($0) }
+                    }
+                }
+            } else {
+                Text(dayTitle)
+                    .font(.system(size: 18, weight: .bold))
+                    .foregroundStyle(palette.text)
+            }
+        }
+        .padding(16)
+        .glassSurface()
+        .accessibilityIdentifier("glass.archive.day")
+    }
+
+    @ViewBuilder
+    private func leadDetail(_ lead: ArchiveProfile, day: CoverageDay) -> some View {
+        let action = model.action(lead, day: day)
+        if day.status == .missing {
+            VStack(alignment: .leading, spacing: 12) {
+                Text(ArchiveCopy.note(for: day, profile: lead, calendar: calendar))
+                    .font(.system(size: 15))
+                    .lineSpacing(3)
+                    .foregroundStyle(palette.sec)
+                    .fixedSize(horizontal: false, vertical: true)
+                if let action {
+                    Button(String(localized: "\(ArchiveCopy.title(for: action.action)) this day")) {
+                        onAction(lead, action.action, selectedDate)
+                    }
+                    .buttonStyle(.plain)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(palette.accentInk)
+                    .padding(.horizontal, 18)
+                    .frame(height: 40)
+                    .background(Capsule().fill(palette.accent))
+                    .frame(minHeight: GlassMetrics.touchTarget)
+                    .accessibilityIdentifier("glass.archive.day.fix")
+                }
+            }
+            .padding(14)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .overlay(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .strokeBorder(palette.coral, style: StrokeStyle(lineWidth: 1.5, dash: [5, 4]))
+            )
+        } else {
+            VStack(alignment: .leading, spacing: 10) {
+                Text(verbatim: model.pathLine(lead, day: day))
+                    .font(.system(size: 12, design: .monospaced))
+                    .foregroundStyle(palette.sec)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                    .padding(.horizontal, 2)
+                let tiles = dayFileKey == dayFileRequest ? dayFile.map { ArchiveDayTiles.tiles(fromMarkdown: $0.source) } ?? [] : []
+                if tiles.isEmpty {
+                    HStack(spacing: 10) {
+                        Text(ArchiveCopy.note(for: day, profile: lead, calendar: calendar))
+                            .font(.system(size: 14))
+                            .foregroundStyle(palette.muted)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .fixedSize(horizontal: false, vertical: true)
+                        if let action, action.action != .open {
+                            Button(ArchiveCopy.title(for: action.action)) {
+                                onAction(lead, action.action, selectedDate)
+                            }
+                            .buttonStyle(.plain)
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(action.isProminent ? palette.accentInk : palette.text)
+                            .padding(.horizontal, 14)
+                            .frame(height: 34)
+                            .background(Capsule().fill(action.isProminent ? palette.accent : palette.surface2))
+                            .overlay(Capsule().strokeBorder(palette.edge, lineWidth: 1))
+                            .frame(minHeight: GlassMetrics.touchTarget)
+                        }
+                    }
+                    .padding(.horizontal, 2)
+                } else {
+                    LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)], spacing: 8) {
+                        ForEach(tiles) { metricTile($0) }
+                    }
+                }
+                if day.status != .notDue, day.status != .paused {
+                    Button { onOpenDay(selectedDate, lead.id) } label: {
+                        HStack(spacing: 8) {
+                            Text(dayFile != nil && dayFileKey == dayFileRequest
+                                ? String(localized: "Read the whole note")
+                                : String(localized: "See this day"))
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 13, weight: .bold))
+                                .accessibilityHidden(true)
+                        }
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(palette.text)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 48)
+                        .background(Capsule().fill(palette.surface2))
+                        .overlay(Capsule().strokeBorder(palette.edge, lineWidth: 1))
+                        .contentShape(Capsule())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("glass.archive.day.read")
+                }
+            }
+        }
+    }
+
+    private func metricTile(_ tile: ArchiveDayTile) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(tile.label)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(palette.muted)
+                .lineLimit(1)
+            HStack(alignment: .firstTextBaseline, spacing: 4) {
+                Text(verbatim: tile.value)
+                    .font(.system(size: 24, weight: .bold))
+                    .tracking(-0.6)
+                    .monospacedDigit()
+                    .foregroundStyle(palette.text)
+                if !tile.unit.isEmpty {
+                    Text(verbatim: tile.unit)
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(palette.muted)
+                }
+            }
+            .lineLimit(1)
+            .minimumScaleFactor(0.7)
+            Text(verbatim: tile.key)
+                .font(.system(size: 11, design: .monospaced))
+                .foregroundStyle(palette.muted)
+                .lineLimit(1)
+                .truncationMode(.middle)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(palette.surface))
+        .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).strokeBorder(palette.edge, lineWidth: 1))
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text(verbatim: "\(tile.label), \(tile.value) \(tile.unit)"))
+    }
+
+    /// One line per other automation; it opens the day page on that automation.
+    private func otherRow(_ profile: ArchiveProfile) -> some View {
+        let day = model.day(profile, on: selectedDate)
+        return Button { onOpenDay(selectedDate, profile.id) } label: {
+            HStack(spacing: 10) {
+                Circle()
+                    .fill(palette.profileColor(at: profile.colorIndex))
+                    .frame(width: 8, height: 8)
+                    .accessibilityHidden(true)
+                Text(profile.name)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(palette.text)
+                Spacer(minLength: 8)
+                Text(ArchiveCopy.note(for: day, profile: profile, calendar: calendar))
+                    .font(.system(size: 13))
+                    .foregroundStyle(day.status == .missing ? palette.coral : palette.muted)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+            }
+            .frame(minHeight: 48)
+            .contentShape(Rectangle())
+            .overlay(alignment: .top) { Rectangle().fill(palette.line).frame(height: 1) }
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(Text(verbatim: "\(profile.name), \(ArchiveCopy.title(for: day.status)), \(ArchiveCopy.note(for: day, profile: profile, calendar: calendar))"))
     }
 
     // MARK: - Sentence

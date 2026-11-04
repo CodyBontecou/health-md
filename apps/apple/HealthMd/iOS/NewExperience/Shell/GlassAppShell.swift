@@ -73,6 +73,8 @@ struct GlassAppShell: View {
     @State private var editingAutomation: AutomationEditRequest?
     /// FileViewerG: a day's written file pushes from the Archive with Back.
     @State private var archiveFile: ArchiveFileRoute?
+    /// DayPage: a date's files, pushed from the Archive's readable day.
+    @State private var archiveDay: ArchiveDayRoute?
     /// GatewayDestG's "Clinic destination · Managed" link, Practice-gated.
     @State private var showGatewayClinicAccess = false
     @State private var endpointSheet: EndpointSheetRequest?
@@ -97,7 +99,11 @@ struct GlassAppShell: View {
             },
             set: { newValue in
                 // Tapping the current tab returns to its root, as on a system tab bar.
-                if newValue == tab.wrappedValue { tabRootID = UUID() }
+                if newValue == tab.wrappedValue {
+                    tabRootID = UUID()
+                    archiveDay = nil
+                    archiveFile = nil
+                }
                 switch newValue {
                 case .archive: selectedTab = .export
                 case .automations: selectedTab = .schedule
@@ -166,7 +172,8 @@ struct GlassAppShell: View {
                 content.id(tabRootID)
                 VStack(spacing: 10) {
                     historyCard
-                    if !usesRail && !usesSidebar {
+                    // DayPage carries its own bottom actions in the tab bar's place.
+                    if !usesRail && !usesSidebar && !(tab.wrappedValue == .archive && archiveDay != nil) {
                         FloatingTabBar(
                             items: Self.navigationItems,
                             selection: tab,
@@ -454,13 +461,24 @@ struct GlassAppShell: View {
                     onConnectHealth: connectHealth,
                     onSetUp: { showFolderPicker = true },
                     onBackfill: { exportRequest = ExportNowRequest() },
-                    onExportNow: { exportRequest = ExportNowRequest() }
+                    onExportNow: { exportRequest = ExportNowRequest() },
+                    loadDayFile: loadArchiveDayFile,
+                    onOpenDay: { archiveDay = ArchiveDayRoute(date: $0, profileID: $1) }
                 )
                 .task(id: ledgerStore.ledger) { publishWidgetSnapshot() }
                 .navigationTitle(String(localized: "Archive"))
                 .toolbar(.hidden, for: .navigationBar)
                 .navigationDestination(item: $editingAutomation) { request in
                     archiveComposer(request)
+                }
+                .navigationDestination(item: $archiveDay) { route in
+                    ArchiveDayPage(
+                        model: archiveModel,
+                        date: route.date,
+                        profileID: route.profileID,
+                        loadDayFile: loadArchiveDayFile,
+                        onAction: handleDayAction
+                    )
                 }
                 .navigationDestination(item: $archiveFile) { route in
                     ExportedMarkdownViewer(
@@ -918,16 +936,9 @@ struct GlassAppShell: View {
     /// FileViewerG: the automation's own file for the date, from its own folder and
     /// format. A missing file opens its folder; the disk is read off the main actor.
     private func openArchiveFile(_ profile: ArchiveProfile, on date: Date) {
-        guard archiveModel.canOpen(profile, on: date),
-              let relativePath = profile.outputPath?.relativeFilePath(on: date) else { return }
-        let folderVaultID = profiles.first { $0.id == profile.id }?.folderVaultID
-        let bookmark = profileCoordinator?.destinationStore.vault(id: folderVaultID)?.bookmarkData
-        // A profile without its own folder writes to the app's saved folder.
-        let fallbackRoot = folderVaultID == nil ? vaultManager.vaultURL : nil
+        guard let relativePath = profile.outputPath?.relativeFilePath(on: date) else { return }
         Task {
-            let result = await Task.detached(priority: .userInitiated) {
-                ArchiveFileLocation.locate(relativePath: relativePath, bookmarkData: bookmark, fallbackRootURL: fallbackRoot)
-            }.value
+            guard let result = await locateArchiveFile(profile, on: date) else { return }
             switch result.location {
             case .file(let file):
                 if ExportFilePreviewRoute.route(for: file) == .inAppMarkdown {
@@ -946,6 +957,35 @@ struct GlassAppShell: View {
                 showFolderPicker = true
             }
         }
+    }
+
+    /// Where the automation's file for the date is, read off the main actor. Nil when the
+    /// automation has no file of its own on this device for that date.
+    private func locateArchiveFile(
+        _ profile: ArchiveProfile,
+        on date: Date
+    ) async -> (location: ArchiveFileLocation, rootURL: URL?)? {
+        guard archiveModel.canOpen(profile, on: date),
+              let relativePath = profile.outputPath?.relativeFilePath(on: date) else { return nil }
+        let folderVaultID = profiles.first { $0.id == profile.id }?.folderVaultID
+        let bookmark = profileCoordinator?.destinationStore.vault(id: folderVaultID)?.bookmarkData
+        // A profile without its own folder writes to the app's saved folder.
+        let fallbackRoot = folderVaultID == nil ? vaultManager.vaultURL : nil
+        return await Task.detached(priority: .userInitiated) {
+            ArchiveFileLocation.locate(relativePath: relativePath, bookmarkData: bookmark, fallbackRootURL: fallbackRoot)
+        }.value
+    }
+
+    /// The day's text file for the readable day and DayPage. Only text the app can show
+    /// inline (Markdown, CSV, JSON) is read.
+    private func loadArchiveDayFile(_ profile: ArchiveProfile, on date: Date) async -> ArchiveDayFile? {
+        guard let result = await locateArchiveFile(profile, on: date),
+              case .file(let file) = result.location,
+              ["md", "markdown", "csv", "json", "txt"].contains(file.pathExtension.lowercased()) else { return nil }
+        let root = result.rootURL
+        return await Task.detached(priority: .userInitiated) {
+            ArchiveDayFile.read(fileURL: file, rootURL: root)
+        }.value
     }
 
     /// Finds the date's file by its ISO date. Custom filenames without one open the folder.

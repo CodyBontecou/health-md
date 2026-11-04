@@ -65,6 +65,9 @@ final class AppStoreScreenshotUITests: XCTestCase {
         // ComposeGlass: the Daily automation writes Markdown + Bases.
         app.launchEnvironment["UITEST_HEALTHKIT_EXPORT_PREVIEW_FORMATS"] = "markdown+bases"
         app.launchEnvironment["UITEST_SEED_COVERAGE"] = "true"
+        // The App Store boards show the ArchiveGlass month; the iPhone opens on Archive B's
+        // week strip unless Month was chosen. Argument domain: nothing is persisted.
+        app.launchArguments += ["-glass.archive.showsMonth", "YES"]
         if deviceName == "duo" {
             // DuoOuterG's unfold invitation appears once this phone has shown its unfolded
             // layout, so either capture order works. Argument domain: nothing is persisted.

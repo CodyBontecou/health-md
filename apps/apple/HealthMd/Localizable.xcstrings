@@ -153690,6 +153690,292 @@
         "pt-BR": {"stringUnit":{"state":"translated","value":"Salvar as alterações desta automação?"}},
         "zh-Hans": {"stringUnit":{"state":"translated","value":"要保存对此自动化的更改吗？"}}
       }
+    },
+    "%@ this day" : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"%@ für diesen Tag"}},
+        "es": {"stringUnit":{"state":"translated","value":"%@ este día"}},
+        "fr": {"stringUnit":{"state":"translated","value":"%@ ce jour"}},
+        "it": {"stringUnit":{"state":"translated","value":"%@ questo giorno"}},
+        "ja": {"stringUnit":{"state":"translated","value":"この日を%@"}},
+        "ko": {"stringUnit":{"state":"translated","value":"이 날짜 %@"}},
+        "nl": {"stringUnit":{"state":"translated","value":"%@ voor deze dag"}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"%@ este dia"}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"%@这一天"}}
+      }
+    },
+    "Family Sharing shares access, not health data, with up to 5 others." : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Die Familienfreigabe teilt den Zugang, nicht die Gesundheitsdaten, mit bis zu 5 weiteren Personen."}},
+        "es": {"stringUnit":{"state":"translated","value":"En Compartir en familia se comparte el acceso, no los datos de salud, con hasta 5 personas más."}},
+        "fr": {"stringUnit":{"state":"translated","value":"Le partage familial partage l’accès, pas les données de santé, avec jusqu’à 5 autres personnes."}},
+        "it": {"stringUnit":{"state":"translated","value":"In In famiglia si condivide l’accesso, non i dati sulla salute, con un massimo di altre 5 persone."}},
+        "ja": {"stringUnit":{"state":"translated","value":"ファミリー共有で共有されるのはアクセス権だけで、健康データは共有されません。最大5人と共有できます。"}},
+        "ko": {"stringUnit":{"state":"translated","value":"가족 공유는 건강 데이터가 아닌 접근 권한만 최대 5명과 공유합니다."}},
+        "nl": {"stringUnit":{"state":"translated","value":"Delen met gezin deelt toegang, geen gezondheidsgegevens, met maximaal 5 anderen."}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"O Compartilhamento Familiar compartilha o acesso, não os dados de saúde, com até 5 outras pessoas."}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"家人共享只共享访问权限，不共享健康数据，最多可与另外 5 人共享。"}}
+      }
+    },
+    "Family · up to 6" : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Familie · bis zu 6"}},
+        "es": {"stringUnit":{"state":"translated","value":"Familia · hasta 6"}},
+        "fr": {"stringUnit":{"state":"translated","value":"Famille · jusqu’à 6"}},
+        "it": {"stringUnit":{"state":"translated","value":"Famiglia · fino a 6"}},
+        "ja": {"stringUnit":{"state":"translated","value":"ファミリー · 最大6人"}},
+        "ko": {"stringUnit":{"state":"translated","value":"가족 · 최대 6명"}},
+        "nl": {"stringUnit":{"state":"translated","value":"Gezin · tot 6"}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Família · até 6"}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"家人 · 最多 6 人"}}
+      }
+    },
+    "Just me" : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Nur ich"}},
+        "es": {"stringUnit":{"state":"translated","value":"Solo yo"}},
+        "fr": {"stringUnit":{"state":"translated","value":"Moi seul"}},
+        "it": {"stringUnit":{"state":"translated","value":"Solo io"}},
+        "ja": {"stringUnit":{"state":"translated","value":"自分だけ"}},
+        "ko": {"stringUnit":{"state":"translated","value":"나만"}},
+        "nl": {"stringUnit":{"state":"translated","value":"Alleen ik"}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Só eu"}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"仅我自己"}}
+      }
+    },
+    "Long file: the first lines are shown. Open it to read the rest." : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Lange Datei: Die ersten Zeilen werden angezeigt. Öffne sie, um den Rest zu lesen."}},
+        "es": {"stringUnit":{"state":"translated","value":"Archivo largo: se muestran las primeras líneas. Ábrelo para leer el resto."}},
+        "fr": {"stringUnit":{"state":"translated","value":"Fichier long : les premières lignes sont affichées. Ouvrez-le pour lire la suite."}},
+        "it": {"stringUnit":{"state":"translated","value":"File lungo: vengono mostrate le prime righe. Aprilo per leggere il resto."}},
+        "ja": {"stringUnit":{"state":"translated","value":"長いファイルのため、最初の行だけを表示しています。残りはファイルを開いて読んでください。"}},
+        "ko": {"stringUnit":{"state":"translated","value":"긴 파일이라 처음 몇 줄만 표시합니다. 나머지는 파일을 열어 읽으세요."}},
+        "nl": {"stringUnit":{"state":"translated","value":"Lang bestand: de eerste regels worden getoond. Open het om de rest te lezen."}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Arquivo longo: as primeiras linhas são mostradas. Abra-o para ler o restante."}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"文件较长：仅显示开头几行。打开文件以阅读其余内容。"}}
+      }
+    },
+    "Next run" : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Nächster Lauf"}},
+        "es": {"stringUnit":{"state":"translated","value":"Próxima ejecución"}},
+        "fr": {"stringUnit":{"state":"translated","value":"Prochaine exécution"}},
+        "it": {"stringUnit":{"state":"translated","value":"Prossima esecuzione"}},
+        "ja": {"stringUnit":{"state":"translated","value":"次回の実行"}},
+        "ko": {"stringUnit":{"state":"translated","value":"다음 실행"}},
+        "nl": {"stringUnit":{"state":"translated","value":"Volgende run"}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Próxima execução"}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"下次运行"}}
+      }
+    },
+    "Next week" : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Nächste Woche"}},
+        "es": {"stringUnit":{"state":"translated","value":"Semana siguiente"}},
+        "fr": {"stringUnit":{"state":"translated","value":"Semaine suivante"}},
+        "it": {"stringUnit":{"state":"translated","value":"Settimana successiva"}},
+        "ja": {"stringUnit":{"state":"translated","value":"次の週"}},
+        "ko": {"stringUnit":{"state":"translated","value":"다음 주"}},
+        "nl": {"stringUnit":{"state":"translated","value":"Volgende week"}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Próxima semana"}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"下一周"}}
+      }
+    },
+    "No file was written for this date." : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Für dieses Datum wurde keine Datei geschrieben."}},
+        "es": {"stringUnit":{"state":"translated","value":"No se escribió ningún archivo para esta fecha."}},
+        "fr": {"stringUnit":{"state":"translated","value":"Aucun fichier n’a été écrit pour cette date."}},
+        "it": {"stringUnit":{"state":"translated","value":"Nessun file è stato scritto per questa data."}},
+        "ja": {"stringUnit":{"state":"translated","value":"この日付のファイルは書き出されていません。"}},
+        "ko": {"stringUnit":{"state":"translated","value":"이 날짜에는 기록된 파일이 없습니다."}},
+        "nl": {"stringUnit":{"state":"translated","value":"Er is geen bestand geschreven voor deze datum."}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Nenhum arquivo foi gravado para esta data."}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"此日期没有写入文件。"}}
+      }
+    },
+    "Nothing scheduled" : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Nichts geplant"}},
+        "es": {"stringUnit":{"state":"translated","value":"Nada programado"}},
+        "fr": {"stringUnit":{"state":"translated","value":"Rien de planifié"}},
+        "it": {"stringUnit":{"state":"translated","value":"Niente in programma"}},
+        "ja": {"stringUnit":{"state":"translated","value":"予定なし"}},
+        "ko": {"stringUnit":{"state":"translated","value":"예약된 항목 없음"}},
+        "nl": {"stringUnit":{"state":"translated","value":"Niets gepland"}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Nada agendado"}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"没有计划"}}
+      }
+    },
+    "Nothing was due on this date." : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"An diesem Datum war nichts fällig."}},
+        "es": {"stringUnit":{"state":"translated","value":"No había nada pendiente en esta fecha."}},
+        "fr": {"stringUnit":{"state":"translated","value":"Rien n’était prévu à cette date."}},
+        "it": {"stringUnit":{"state":"translated","value":"Non c’era nulla in programma in questa data."}},
+        "ja": {"stringUnit":{"state":"translated","value":"この日付に予定されていたものはありません。"}},
+        "ko": {"stringUnit":{"state":"translated","value":"이 날짜에는 예정된 항목이 없었습니다."}},
+        "nl": {"stringUnit":{"state":"translated","value":"Er stond niets gepland op deze datum."}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Nada estava previsto para esta data."}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"此日期没有到期的项目。"}}
+      }
+    },
+    "Open file" : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Datei öffnen"}},
+        "es": {"stringUnit":{"state":"translated","value":"Abrir archivo"}},
+        "fr": {"stringUnit":{"state":"translated","value":"Ouvrir le fichier"}},
+        "it": {"stringUnit":{"state":"translated","value":"Apri file"}},
+        "ja": {"stringUnit":{"state":"translated","value":"ファイルを開く"}},
+        "ko": {"stringUnit":{"state":"translated","value":"파일 열기"}},
+        "nl": {"stringUnit":{"state":"translated","value":"Bestand openen"}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Abrir arquivo"}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"打开文件"}}
+      }
+    },
+    "Own it" : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Gehört dir"}},
+        "es": {"stringUnit":{"state":"translated","value":"Tuyo para siempre"}},
+        "fr": {"stringUnit":{"state":"translated","value":"À vous pour de bon"}},
+        "it": {"stringUnit":{"state":"translated","value":"Tuo per sempre"}},
+        "ja": {"stringUnit":{"state":"translated","value":"買い切り"}},
+        "ko": {"stringUnit":{"state":"translated","value":"평생 소유"}},
+        "nl": {"stringUnit":{"state":"translated","value":"Voor altijd van jou"}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Seu para sempre"}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"永久拥有"}}
+      }
+    },
+    "Previous week" : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Vorherige Woche"}},
+        "es": {"stringUnit":{"state":"translated","value":"Semana anterior"}},
+        "fr": {"stringUnit":{"state":"translated","value":"Semaine précédente"}},
+        "it": {"stringUnit":{"state":"translated","value":"Settimana precedente"}},
+        "ja": {"stringUnit":{"state":"translated","value":"前の週"}},
+        "ko": {"stringUnit":{"state":"translated","value":"이전 주"}},
+        "nl": {"stringUnit":{"state":"translated","value":"Vorige week"}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Semana anterior"}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"上一周"}}
+      }
+    },
+    "Read the whole note" : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Ganze Notiz lesen"}},
+        "es": {"stringUnit":{"state":"translated","value":"Leer la nota completa"}},
+        "fr": {"stringUnit":{"state":"translated","value":"Lire la note entière"}},
+        "it": {"stringUnit":{"state":"translated","value":"Leggi la nota intera"}},
+        "ja": {"stringUnit":{"state":"translated","value":"ノート全体を読む"}},
+        "ko": {"stringUnit":{"state":"translated","value":"노트 전체 읽기"}},
+        "nl": {"stringUnit":{"state":"translated","value":"Hele notitie lezen"}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Ler a nota inteira"}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"阅读完整笔记"}}
+      }
+    },
+    "Reading the file…" : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Datei wird gelesen …"}},
+        "es": {"stringUnit":{"state":"translated","value":"Leyendo el archivo…"}},
+        "fr": {"stringUnit":{"state":"translated","value":"Lecture du fichier…"}},
+        "it": {"stringUnit":{"state":"translated","value":"Lettura del file…"}},
+        "ja": {"stringUnit":{"state":"translated","value":"ファイルを読み込み中…"}},
+        "ko": {"stringUnit":{"state":"translated","value":"파일을 읽는 중…"}},
+        "nl": {"stringUnit":{"state":"translated","value":"Bestand lezen…"}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Lendo o arquivo…"}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"正在读取文件…"}}
+      }
+    },
+    "See this day" : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Diesen Tag ansehen"}},
+        "es": {"stringUnit":{"state":"translated","value":"Ver este día"}},
+        "fr": {"stringUnit":{"state":"translated","value":"Voir ce jour"}},
+        "it": {"stringUnit":{"state":"translated","value":"Vedi questo giorno"}},
+        "ja": {"stringUnit":{"state":"translated","value":"この日を見る"}},
+        "ko": {"stringUnit":{"state":"translated","value":"이 날짜 보기"}},
+        "nl": {"stringUnit":{"state":"translated","value":"Deze dag bekijken"}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Ver este dia"}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"查看这一天"}}
+      }
+    },
+    "Share file" : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Datei teilen"}},
+        "es": {"stringUnit":{"state":"translated","value":"Compartir archivo"}},
+        "fr": {"stringUnit":{"state":"translated","value":"Partager le fichier"}},
+        "it": {"stringUnit":{"state":"translated","value":"Condividi file"}},
+        "ja": {"stringUnit":{"state":"translated","value":"ファイルを共有"}},
+        "ko": {"stringUnit":{"state":"translated","value":"파일 공유"}},
+        "nl": {"stringUnit":{"state":"translated","value":"Bestand delen"}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Compartilhar arquivo"}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"共享文件"}}
+      }
+    },
+    "The file for this date isn’t in the folder any more." : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Die Datei für dieses Datum ist nicht mehr im Ordner."}},
+        "es": {"stringUnit":{"state":"translated","value":"El archivo de esta fecha ya no está en la carpeta."}},
+        "fr": {"stringUnit":{"state":"translated","value":"Le fichier de cette date n’est plus dans le dossier."}},
+        "it": {"stringUnit":{"state":"translated","value":"Il file di questa data non è più nella cartella."}},
+        "ja": {"stringUnit":{"state":"translated","value":"この日付のファイルはフォルダにもうありません。"}},
+        "ko": {"stringUnit":{"state":"translated","value":"이 날짜의 파일이 더 이상 폴더에 없습니다."}},
+        "nl": {"stringUnit":{"state":"translated","value":"Het bestand voor deze datum staat niet meer in de map."}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"O arquivo desta data não está mais na pasta."}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"此日期的文件已不在文件夹中。"}}
+      }
+    },
+    "This automation doesn’t write a file of its own for each date." : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Diese Automation schreibt keine eigene Datei pro Datum."}},
+        "es": {"stringUnit":{"state":"translated","value":"Esta automatización no escribe un archivo propio para cada fecha."}},
+        "fr": {"stringUnit":{"state":"translated","value":"Cette automatisation n’écrit pas de fichier propre pour chaque date."}},
+        "it": {"stringUnit":{"state":"translated","value":"Questa automazione non scrive un file proprio per ogni data."}},
+        "ja": {"stringUnit":{"state":"translated","value":"このオートメーションは日付ごとのファイルを書き出しません。"}},
+        "ko": {"stringUnit":{"state":"translated","value":"이 자동화는 날짜별로 자체 파일을 기록하지 않습니다."}},
+        "nl": {"stringUnit":{"state":"translated","value":"Deze automatisering schrijft geen eigen bestand per datum."}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Esta automação não grava um arquivo próprio para cada data."}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"此自动化不会为每个日期单独写入文件。"}}
+      }
+    },
+    "This automation writes somewhere this iPhone can’t read, so the file isn’t shown here." : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Diese Automation schreibt an einen Ort, den dieses iPhone nicht lesen kann, daher wird die Datei hier nicht angezeigt."}},
+        "es": {"stringUnit":{"state":"translated","value":"Esta automatización escribe en un lugar que este iPhone no puede leer, así que el archivo no se muestra aquí."}},
+        "fr": {"stringUnit":{"state":"translated","value":"Cette automatisation écrit à un endroit que cet iPhone ne peut pas lire ; le fichier n’est donc pas affiché ici."}},
+        "it": {"stringUnit":{"state":"translated","value":"Questa automazione scrive in un luogo che questo iPhone non può leggere, quindi il file non viene mostrato qui."}},
+        "ja": {"stringUnit":{"state":"translated","value":"このオートメーションはこのiPhoneから読めない場所に書き出すため、ここにはファイルを表示できません。"}},
+        "ko": {"stringUnit":{"state":"translated","value":"이 자동화는 이 iPhone이 읽을 수 없는 위치에 기록하므로 여기에서 파일을 표시할 수 없습니다."}},
+        "nl": {"stringUnit":{"state":"translated","value":"Deze automatisering schrijft naar een plek die deze iPhone niet kan lezen, dus het bestand wordt hier niet getoond."}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Esta automação grava em um local que este iPhone não consegue ler, então o arquivo não é mostrado aqui."}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"此自动化写入的位置这台 iPhone 无法读取，因此这里不显示文件。"}}
+      }
+    },
+    "today at %@" : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"heute um %@"}},
+        "es": {"stringUnit":{"state":"translated","value":"hoy a las %@"}},
+        "fr": {"stringUnit":{"state":"translated","value":"aujourd’hui à %@"}},
+        "it": {"stringUnit":{"state":"translated","value":"oggi alle %@"}},
+        "ja": {"stringUnit":{"state":"translated","value":"今日 %@"}},
+        "ko": {"stringUnit":{"state":"translated","value":"오늘 %@"}},
+        "nl": {"stringUnit":{"state":"translated","value":"vandaag om %@"}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"hoje às %@"}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"今天 %@"}}
+      }
+    },
+    "tomorrow at %@" : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"morgen um %@"}},
+        "es": {"stringUnit":{"state":"translated","value":"mañana a las %@"}},
+        "fr": {"stringUnit":{"state":"translated","value":"demain à %@"}},
+        "it": {"stringUnit":{"state":"translated","value":"domani alle %@"}},
+        "ja": {"stringUnit":{"state":"translated","value":"明日 %@"}},
+        "ko": {"stringUnit":{"state":"translated","value":"내일 %@"}},
+        "nl": {"stringUnit":{"state":"translated","value":"morgen om %@"}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"amanhã às %@"}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"明天 %@"}}
+      }
     }
   },
   "version" : "1.0"

@@ -130,6 +130,8 @@ struct CalendarDayTile: View {
     var isSelected = false
     var dots: [IssueDotsView.Dot] = []
     var hasOverflow = false
+    /// Archive B's week strip: the weekday above a larger number on a 60 pt tile.
+    var weekdayLabel: String?
     let accessibilityText: String
     let action: () -> Void
 
@@ -141,8 +143,10 @@ struct CalendarDayTile: View {
     private var density: CalendarDensity { densityReader.density }
 
     private var shape: RoundedRectangle {
-        RoundedRectangle(cornerRadius: density.tileRadius, style: .continuous)
+        RoundedRectangle(cornerRadius: weekdayLabel == nil ? density.tileRadius : 14, style: .continuous)
     }
+
+    private var tileHeight: CGFloat { weekdayLabel == nil ? density.tileHeight : 60 }
 
     private var breathes: Bool { status == .inProgress && !isSelected && !reduceMotion }
 
@@ -150,7 +154,7 @@ struct CalendarDayTile: View {
         Button(action: action) {
             content
             .foregroundStyle(numberColor)
-            .frame(maxWidth: .infinity, minHeight: density.tileHeight)
+            .frame(maxWidth: .infinity, minHeight: tileHeight)
             .background(background)
             .overlay(alignment: .bottom) { partialBar }
             .clipShape(shape)
@@ -178,7 +182,17 @@ struct CalendarDayTile: View {
             .font(.system(size: density.dayFontSize, weight: isSelected ? .bold : .semibold))
             .monospacedDigit()
         let issueDots = IssueDotsView(dots: dots, hasOverflow: hasOverflow, overflowColor: palette.muted)
-        if density == .pad {
+        if let weekdayLabel {
+            VStack(spacing: 3) {
+                Text(weekdayLabel)
+                    .font(.system(size: 11, weight: .semibold))
+                    .opacity(0.75)
+                Text(verbatim: "\(day)")
+                    .font(.system(size: 17, weight: .bold))
+                    .monospacedDigit()
+                if !dots.isEmpty { issueDots }
+            }
+        } else if density == .pad {
             // iPadArchiveG: the number sits in the top corner; issue dots along the bottom.
             number
                 .frame(maxWidth: .infinity, minHeight: density.tileHeight - 16, alignment: density.numberAlignment)

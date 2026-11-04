@@ -146,6 +146,9 @@ struct SignalPaywallCarousel<Status: View>: View {
                 SignalDayRow(day: 5, title: String(localized: "Cancel anytime"), detail: String(localized: "Cancel in App Store subscriptions at least 24 hours before the trial ends."))
                 SignalDayRow(day: 7, title: String(localized: "Trial ends"), detail: trialEndDetail)
             }
+            if let review = AppStoreReview.verifiedExcerpts.first(where: { $0.rating == 5 }) {
+                SignalReviewCard(review: review)
+            }
         }
     }
 
@@ -173,7 +176,7 @@ struct SignalPaywallCarousel<Status: View>: View {
                         title: option.displayTitle,
                         detail: planDetail(for: option),
                         price: pricing.priceLabel(option) ?? String(localized: "Loading…"),
-                        badge: option == .yearly || option == .familyYearly ? String(localized: "Best value") : nil,
+                        badge: badge(for: option),
                         isSelected: option == selected
                     ) {
                         withAnimation(AnimationTimings.fast) { selection[audience] = option }
@@ -183,6 +186,12 @@ struct SignalPaywallCarousel<Status: View>: View {
                 }
             }
             .padding(.leading, SignalPlanBranches.cardInset)
+            if audience == .family {
+                Text("Family Sharing shares access, not health data, with up to 5 others.")
+                    .glassFont(.rowSubtitle)
+                    .foregroundStyle(palette.sec)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
             Text("Eligible subscriptions include a 7-day free trial, then renew automatically at the displayed price unless canceled at least 24 hours before the trial or current period ends. Payment is charged to your Apple ID. Manage or cancel in App Store subscriptions. Lifetime plans are charged immediately as one-time purchases with no trial. Deleting the app or buying Lifetime does not cancel an existing subscription.")
                 .glassFont(.rowSubtitle)
                 .foregroundStyle(palette.sec)
@@ -191,6 +200,13 @@ struct SignalPaywallCarousel<Status: View>: View {
         .backgroundPreferenceValue(SignalPlanAnchors.self) { anchors in
             SignalPlanBranches(anchors: anchors, selected: options.firstIndex(of: selected) ?? 0)
         }
+    }
+
+    /// Yearly is the best value; Lifetime is the plan you own outright.
+    private func badge(for option: HealthMdPurchaseOption) -> String? {
+        if option == .yearly || option == .familyYearly { return String(localized: "Best value") }
+        if !option.isSubscription { return String(localized: "Own it") }
+        return nil
     }
 
     private func planDetail(for option: HealthMdPurchaseOption) -> String {
@@ -262,10 +278,19 @@ struct SignalPaywallCarousel<Status: View>: View {
         }
     }
 
-    /// The same links on every slide keep the footer from shifting between pages;
-    /// the step tabs above already jump to Plans.
+    /// Restore, Terms and Privacy stay on every slide; "See all plans" joins them
+    /// until the Plans slide is showing.
     @ViewBuilder
     private var footerLinks: some View {
+        if slide != .plans {
+            Button {
+                withAnimation(AnimationTimings.smooth) { slide = .plans }
+            } label: {
+                SignalFooterLinkLabel(title: String(localized: "See all plans"))
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("paywall.seeAllPlans")
+        }
         SignalFooterLink(title: String(localized: "Restore Purchase"), isLoading: purchaseManager.isRestoring, action: onRestore)
             .disabled(purchaseManager.isPurchasing || purchaseManager.isRestoring)
             .accessibilityIdentifier(AccessibilityID.Paywall.restoreButton)
@@ -302,8 +327,8 @@ private enum SignalAudience: String, CaseIterable, Identifiable, Hashable {
 
     var title: String {
         switch self {
-        case .individual: return String(localized: "Individual")
-        case .family: return String(localized: "Family")
+        case .individual: return String(localized: "Just me")
+        case .family: return String(localized: "Family · up to 6")
         }
     }
 
@@ -697,6 +722,32 @@ private struct SignalDayRow: View {
             Spacer(minLength: 0)
         }
         .accessibilityElement(children: .combine)
+    }
+}
+
+/// A short verified App Store review under the trial timeline.
+private struct SignalReviewCard: View {
+    @Environment(\.glassPalette) private var palette
+    let review: AppStoreReview
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Spacing.s1) {
+            Text(verbatim: "“\(review.body)”")
+                .glassFont(.body)
+                .fontWeight(.semibold)
+                .foregroundStyle(palette.text)
+                .fixedSize(horizontal: false, vertical: true)
+            Text(verbatim: "\(String(repeating: "★", count: review.rating)) · \(review.author) · App Store")
+                .glassFont(.monoBody)
+                .foregroundStyle(palette.muted)
+                .lineLimit(1)
+        }
+        .padding(.horizontal, Spacing.s4)
+        .padding(.vertical, Spacing.s3)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .glassSurface(cornerRadius: 22)
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("paywall.review")
     }
 }
 
