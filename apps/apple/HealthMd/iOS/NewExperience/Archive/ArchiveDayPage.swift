@@ -188,6 +188,9 @@ struct ArchiveDayPage: View {
             return String(localized: "This automation writes somewhere this iPhone can’t read, so the file isn’t shown here.")
         }
         switch day.status {
+        case .inProgress where day.record == nil:
+            // Nothing has run for today yet, so no file was ever there to go missing.
+            return String(localized: "Today’s file isn’t written yet.")
         case .complete, .partial, .inProgress:
             return model.canOpen(profile, on: date)
                 ? String(localized: "The file for this date isn’t in the folder any more.")

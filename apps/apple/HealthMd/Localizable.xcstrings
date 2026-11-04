@@ -1520,15 +1520,27 @@
       "zh-Hans":{"stringUnit":{"state":"translated","value":"%@，%@；问题：%@"}}
     }},
     "%lld gap(s)" : {"localizations":{
-      "de":{"stringUnit":{"state":"translated","value":"%lld Lücke(n)"}},
-      "es":{"stringUnit":{"state":"translated","value":"%lld hueco(s)"}},
-      "fr":{"stringUnit":{"state":"translated","value":"%lld lacune(s)"}},
-      "it":{"stringUnit":{"state":"translated","value":"%lld lacuna/e"}},
+      "de":{"variations":{"plural":{"one":{"stringUnit":{"state":"translated","value":"%lld Lücke"}},"other":{"stringUnit":{"state":"translated","value":"%lld Lücken"}}}}},
+      "en":{"variations":{"plural":{"one":{"stringUnit":{"state":"translated","value":"%lld gap"}},"other":{"stringUnit":{"state":"translated","value":"%lld gaps"}}}}},
+      "es":{"variations":{"plural":{"one":{"stringUnit":{"state":"translated","value":"%lld hueco"}},"other":{"stringUnit":{"state":"translated","value":"%lld huecos"}}}}},
+      "fr":{"variations":{"plural":{"one":{"stringUnit":{"state":"translated","value":"%lld lacune"}},"other":{"stringUnit":{"state":"translated","value":"%lld lacunes"}}}}},
+      "it":{"variations":{"plural":{"one":{"stringUnit":{"state":"translated","value":"%lld lacuna"}},"other":{"stringUnit":{"state":"translated","value":"%lld lacune"}}}}},
       "ja":{"stringUnit":{"state":"translated","value":"%lld件の欠落"}},
       "ko":{"stringUnit":{"state":"translated","value":"누락 %lld개"}},
-      "nl":{"stringUnit":{"state":"translated","value":"%lld hiaat/hiaten"}},
-      "pt-BR":{"stringUnit":{"state":"translated","value":"%lld lacuna(s)"}},
+      "nl":{"variations":{"plural":{"one":{"stringUnit":{"state":"translated","value":"%lld hiaat"}},"other":{"stringUnit":{"state":"translated","value":"%lld hiaten"}}}}},
+      "pt-BR":{"variations":{"plural":{"one":{"stringUnit":{"state":"translated","value":"%lld lacuna"}},"other":{"stringUnit":{"state":"translated","value":"%lld lacunas"}}}}},
       "zh-Hans":{"stringUnit":{"state":"translated","value":"%lld 个缺口"}}
+    }},
+    "Today’s file isn’t written yet." : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Die Datei für heute ist noch nicht geschrieben."}},
+      "es":{"stringUnit":{"state":"translated","value":"El archivo de hoy aún no se ha escrito."}},
+      "fr":{"stringUnit":{"state":"translated","value":"Le fichier d’aujourd’hui n’est pas encore écrit."}},
+      "it":{"stringUnit":{"state":"translated","value":"Il file di oggi non è ancora stato scritto."}},
+      "ja":{"stringUnit":{"state":"translated","value":"今日のファイルはまだ書き込まれていません。"}},
+      "ko":{"stringUnit":{"state":"translated","value":"오늘 파일은 아직 작성되지 않았습니다."}},
+      "nl":{"stringUnit":{"state":"translated","value":"Het bestand van vandaag is nog niet geschreven."}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"O arquivo de hoje ainda não foi gravado."}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"今天的文件尚未写入。"}}
     }},
     "%lld item(s) need a look." : {"localizations":{
       "de":{"stringUnit":{"state":"translated","value":"%lld Punkt(e) brauchen Aufmerksamkeit."}},

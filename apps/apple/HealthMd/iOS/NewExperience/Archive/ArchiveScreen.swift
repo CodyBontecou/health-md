@@ -750,7 +750,7 @@ struct ArchiveScreen: View {
     private var nextRunCard: some View {
         let stats = model.stats(month: month, filter: filter)
         let isWeekly = model.isWeeklyFilter(filter)
-        let next = model.nextRun
+        let next = model.nextRun(filter: filter)
         return HStack(spacing: 14) {
             Image(systemName: "clock")
                 .font(.system(size: 20, weight: .medium))
@@ -1069,13 +1069,17 @@ struct ArchiveScreen: View {
                 Text(profile.name)
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(palette.text)
+                    .layoutPriority(1)
                 Spacer(minLength: 8)
+                // Wraps rather than cutting "Not due — covered by Sunday’s file." on a phone.
                 Text(ArchiveCopy.note(for: day, profile: profile, calendar: calendar))
                     .font(.system(size: 13))
                     .foregroundStyle(day.status == .missing ? palette.coral : palette.muted)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
+                    .multilineTextAlignment(.trailing)
+                    .lineLimit(3)
+                    .fixedSize(horizontal: false, vertical: true)
             }
+            .padding(.vertical, 6)
             .frame(minHeight: 48)
             .contentShape(Rectangle())
             .overlay(alignment: .top) { Rectangle().fill(palette.line).frame(height: 1) }

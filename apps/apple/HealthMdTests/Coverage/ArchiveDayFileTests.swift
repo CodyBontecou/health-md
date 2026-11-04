@@ -93,6 +93,25 @@ final class ArchiveDayFileTests: XCTestCase {
         XCTAssertTrue(ArchiveNextRun.whenText(date(31, hour: 7), now: now, calendar: calendar).hasPrefix("tomorrow at"))
     }
 
+    func testNextRunFollowsTheArchiveFilter() {
+        let early = UUID(), late = UUID()
+        func profile(_ id: UUID, _ name: String, hour: Int) -> ArchiveProfile {
+            ArchiveProfile(
+                id: id, name: name, destination: "Vault/Health", colorIndex: 0,
+                entry: ScheduledExportEntry(profileID: id, isEnabled: true, frequency: .daily, preferredHour: hour)
+            )
+        }
+        let model = ArchiveModel(
+            profiles: [profile(late, "Daily", hour: 9), profile(early, "Agent feed", hour: 6)],
+            ledger: CoverageLedger(startedAt: date(1)),
+            now: date(30, hour: 12),
+            calendar: calendar
+        )
+        XCTAssertEqual(model.nextRun()?.profile.id, early)
+        // Filtered to Daily, the card names Daily's run, not the earliest of all.
+        XCTAssertEqual(model.nextRun(filter: late)?.profile.id, late)
+    }
+
     private func date(_ day: Int, hour: Int = 12) -> Date {
         calendar.date(from: DateComponents(year: 2026, month: 10, day: day, hour: hour))!
     }
