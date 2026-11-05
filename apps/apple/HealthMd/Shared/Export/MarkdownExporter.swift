@@ -111,7 +111,7 @@ extension HealthData {
                     label,
                     value,
                     sample.unit ?? "",
-                    sample.source ?? "",
+                    sample.sourceName ?? sample.source ?? "",
                 ].map(markdownTableCell)
                 markdown += "| " + cells.joined(separator: " | ") + " |\n"
             }
@@ -745,11 +745,20 @@ extension HealthData {
         }
         if !snapshot.sleep.stages.isEmpty {
             markdown += "\n<details>\n<summary>Sleep Stages Timeline (\(snapshot.sleep.stages.count) intervals)</summary>\n\n"
-            markdown += "| Time | Stage | Duration |\n|------|-------|----------|\n"
+            // apple-v12 adds a Source column; the apple-v8 table is unchanged.
+            let attributesSources = snapshot.detailExpansion != nil
+            markdown += attributesSources
+                ? "| Time | Stage | Duration | Source |\n|------|-------|----------|--------|\n"
+                : "| Time | Stage | Duration |\n|------|-------|----------|\n"
             for stage in snapshot.sleep.stages {
                 let time = snapshot.formatCalendarTime(stage.startDate)
                 let duration = stage.endDate.timeIntervalSince(stage.startDate)
-                markdown += "| \(time) | \(stage.stage) | \(formatDuration(duration)) |\n"
+                if attributesSources {
+                    let source = markdownTableCell(stage.sourceName ?? stage.source ?? "")
+                    markdown += "| \(time) | \(stage.stage) | \(formatDuration(duration)) | \(source) |\n"
+                } else {
+                    markdown += "| \(time) | \(stage.stage) | \(formatDuration(duration)) |\n"
+                }
             }
             markdown += "\n</details>\n"
         }

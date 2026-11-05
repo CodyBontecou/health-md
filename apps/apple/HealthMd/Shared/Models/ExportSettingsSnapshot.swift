@@ -42,6 +42,11 @@ nonisolated enum ExportDetailGroup: String, Codable, CaseIterable, Sendable, Com
         .activity, .nutrition, .mobility, .reproductiveHealth, .mindfulness, .body, .vitals,
     ]
 
+    /// Groups whose explicit `detailed` override selects apple-v12. Sleep has no
+    /// `detailSamples`; under apple-v12 its `sleepStages` entries carry source attribution
+    /// (`sourceUUID`, `source`, `sourceName`) that apple-v8 cannot represent.
+    static let appleV12SelectingGroups: Set<ExportDetailGroup> = appleV12ExpansionGroups.union([.sleep])
+
     /// Choices Apple can honor. HealthKit exposes sleep category intervals, not source sessions,
     /// so Apple never offers `sessions`.
     var appleSupportedChoices: [ExportDetailChoice] { [.summary, .detailed] }
@@ -191,13 +196,13 @@ nonisolated struct AppleExportDetailPolicy: Codable, Equatable, Sendable {
         }
     }
 
-    /// True when an explicit `detailed` override on an expansion group selects the apple-v12
+    /// True when an explicit `detailed` override on an expansion group or sleep selects the apple-v12
     /// successor. Uniform presets (Detailed Time-Series, Lossless) never select it, so their
     /// output stays apple-v8 byte-for-byte. Morning ends keeps apple-v11; see
     /// `selectsAppleV12(sleepDayAttribution:)`.
     var selectsAppleV12: Bool {
         compatibilityDetailOverrides.contains { group, choice in
-            choice == .detailed && ExportDetailGroup.appleV12ExpansionGroups.contains(group)
+            choice == .detailed && ExportDetailGroup.appleV12SelectingGroups.contains(group)
         }
     }
 

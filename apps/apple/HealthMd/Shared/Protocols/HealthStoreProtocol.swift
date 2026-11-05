@@ -25,6 +25,8 @@ nonisolated struct CategorySampleValue: Sendable {
     let metadata: [String: String]
     let uuid: UUID?
     let sourceBundleIdentifier: String?
+    /// `HKSource.name`, the user-visible app or device name (for example "Withings").
+    let sourceName: String?
 
     init(
         value: Int,
@@ -32,7 +34,8 @@ nonisolated struct CategorySampleValue: Sendable {
         endDate: Date,
         metadata: [String: String] = [:],
         uuid: UUID? = nil,
-        sourceBundleIdentifier: String? = nil
+        sourceBundleIdentifier: String? = nil,
+        sourceName: String? = nil
     ) {
         self.value = value
         self.startDate = startDate
@@ -40,6 +43,7 @@ nonisolated struct CategorySampleValue: Sendable {
         self.metadata = metadata
         self.uuid = uuid
         self.sourceBundleIdentifier = sourceBundleIdentifier
+        self.sourceName = sourceName
     }
 }
 
@@ -51,6 +55,8 @@ nonisolated struct QuantitySampleValue: Sendable {
     let endDate: Date
     let metadata: [String: String]
     let sourceBundleIdentifier: String?
+    /// `HKSource.name`, the user-visible app or device name.
+    let sourceName: String?
 
     init(
         uuid: UUID? = nil,
@@ -58,7 +64,8 @@ nonisolated struct QuantitySampleValue: Sendable {
         startDate: Date,
         endDate: Date,
         metadata: [String: String] = [:],
-        sourceBundleIdentifier: String? = nil
+        sourceBundleIdentifier: String? = nil,
+        sourceName: String? = nil
     ) {
         self.uuid = uuid
         self.value = value
@@ -66,6 +73,7 @@ nonisolated struct QuantitySampleValue: Sendable {
         self.endDate = endDate
         self.metadata = metadata
         self.sourceBundleIdentifier = sourceBundleIdentifier
+        self.sourceName = sourceName
     }
 }
 

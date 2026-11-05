@@ -256,9 +256,23 @@ enum ExportFixtures {
         data.mobility.detailSamples = [quantity("walking_speed", "WalkingSpeed", 10, 10.1, 1.4, "m/s")]
         data.reproductiveHealth = ReproductiveHealthData(menstrualFlow: "medium")
         data.reproductiveHealth.detailSamples = [category("menstrual_flow", "MenstrualFlow", 0, 24, "medium")]
+        // Two overlapping sources for the same night: apple-v12 attributes each stage.
+        data.sleep.stages = [
+            SleepStageSample(stage: "core", startDate: at(1), endDate: at(2),
+                             sourceUUID: appleV12SleepWatchUUID,
+                             source: "com.apple.health.7F3C2A10-0000-0000-0000-000000000000",
+                             sourceName: "Apple Watch"),
+            SleepStageSample(stage: "deep", startDate: at(1.5), endDate: at(2.5),
+                             sourceUUID: appleV12SleepMatUUID,
+                             source: "com.withings.wiScaleNG",
+                             sourceName: "Withings"),
+        ]
         data.compatibilityDetailProfile = .appleV12
         return data
     }
+
+    static let appleV12SleepWatchUUID = UUID(uuidString: "00000000-0000-0000-0000-0000000000B1")!
+    static let appleV12SleepMatUUID = UUID(uuidString: "00000000-0000-0000-0000-0000000000B2")!
 
     // MARK: - Fully Populated Day with Granular Data
 

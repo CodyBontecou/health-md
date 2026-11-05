@@ -49,6 +49,9 @@ enum ConnectedExportDetailPolicy {
         }
         sanitized.compatibilityDetailProfile = detailPolicy.selectsAppleV12(sleepDayAttribution: attribution)
             ? .appleV12 : nil
+        if sanitized.compatibilityDetailProfile == nil {
+            sanitized.stripSleepStageSourceAttribution()
+        }
         if !detailPolicy.includesCanonicalArchive {
             sanitized.healthKitRecordArchive = nil
             sanitized.healthKitRecordCaptureStatus = .notRequested

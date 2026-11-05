@@ -1,5 +1,5 @@
 {
-  "fingerprint" : "6347d5f6eb5d13609ac05678834f0b5c688dc6a871a6d9aaca09b64a244c1158",
+  "fingerprint" : "5f83942495982dff26e275749981ea278bbde81f517a4a4d508768c818e29c14",
   "payload" : {
     "csvHeader" : [
       "Date",
@@ -7,7 +7,8 @@
       "Metric",
       "Value",
       "Unit",
-      "Timestamp"
+      "Timestamp",
+      "Source"
     ],
     "csvRowContracts" : [
       {
@@ -563,6 +564,18 @@
       },
       {
         "category" : "Sleep",
+        "hasTimestamp" : true,
+        "metric" : "Sleep Stage",
+        "unit" : "seconds"
+      },
+      {
+        "category" : "Sleep",
+        "hasTimestamp" : true,
+        "metric" : "Sleep Stage",
+        "unit" : "seconds"
+      },
+      {
+        "category" : "Sleep",
         "hasTimestamp" : false,
         "metric" : "Total Duration",
         "unit" : "seconds"
@@ -860,6 +873,15 @@
       "$.sleep.inBedTimeFormatted:string",
       "$.sleep.remSleep:number",
       "$.sleep.remSleepFormatted:string",
+      "$.sleep.sleepStages:array",
+      "$.sleep.sleepStages[].durationSeconds:number",
+      "$.sleep.sleepStages[].endDate:string",
+      "$.sleep.sleepStages[].source:string",
+      "$.sleep.sleepStages[].sourceName:string",
+      "$.sleep.sleepStages[].sourceUUID:string",
+      "$.sleep.sleepStages[].stage:string",
+      "$.sleep.sleepStages[].startDate:string",
+      "$.sleep.sleepStages[]:object",
       "$.sleep.totalDuration:number",
       "$.sleep.totalDurationFormatted:string",
       "$.sleep:object",

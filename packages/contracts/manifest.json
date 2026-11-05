@@ -6,7 +6,7 @@
       "id": "healthmd.product_capabilities",
       "version": 1,
       "path": "packages/contracts/product-capabilities.json",
-      "sha256": "4f9d4acdab58363b07583b43dcc25a1208be8d37ece050ba175cbf99ceb47b06",
+      "sha256": "75ce4c1fa5a62f6adf42405fc81d880b4e9c546841f671ba79c9c758a3e5587c",
       "implementations": [
         "packages/contracts/validate.py",
         "apps/apple/HealthMdTests/Contracts/ProductCapabilityManifestTests.swift",
@@ -508,7 +508,7 @@
       "id": "healthmd.health_data.apple_detail",
       "version": 12,
       "status": "inventory_only",
-      "summary": "Apple apple-v12 compatibility detail successor: the Night begins apple-v8 grammar plus start-owned per-category detailSamples, selected only by an explicit detailed override for an expansion category. apple-v8 bytes are unchanged.",
+      "summary": "Apple apple-v12 compatibility detail successor: the Night begins apple-v8 grammar plus start-owned per-category detailSamples and per-stage sleep source attribution, selected only by an explicit detailed override for an expansion category or sleep. apple-v8 bytes are unchanged.",
       "authorities": [
         "apps/apple/HealthMd/Shared/Models/DetailSample.swift",
         "apps/apple/HealthMd/Shared/Models/ExportSettingsSnapshot.swift",
@@ -521,7 +521,7 @@
       "fixtures": [
         {
           "path": "apps/apple/HealthMdTests/Fixtures/Export/export_schema_signature_v12.json",
-          "sha256": "fde123ffad53c4d2d485ee6d1214a5c3def0e72c5d90d20a1e9cd71f9c49e98e",
+          "sha256": "a56f4e7aabd2d074e32bf8201ca8e7191ef573cf4b35343374cf1a83274f3efa",
           "provenance": "Reviewed apple-v12 signature generated from the synthetic detail-expansion fixture day by the Apple export schema signature tests.",
           "mirrors": []
         }
