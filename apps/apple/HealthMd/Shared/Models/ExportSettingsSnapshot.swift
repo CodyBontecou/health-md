@@ -329,6 +329,18 @@ nonisolated enum AppleExportDetailPreset: String, CaseIterable, Identifiable, Se
         }
     }
 
+    /// Guidance shown under archive-bearing presets so users exporting long
+    /// ranges choose the lighter preset up front instead of meeting the
+    /// large-export memory warning at confirmation time.
+    var localizedLongRangeNote: String? {
+        switch self {
+        case .summary, .detailedTimeSeries:
+            nil
+        case .losslessHealthRecords, .archiveOnly:
+            String(localized: "Exporting months or years? Detailed Time-Series keeps timestamped samples without the source archive and is much faster and lighter for long ranges.", comment: "Data-detail note recommending Detailed Time-Series for long export ranges")
+        }
+    }
+
     init(policy fullPolicy: AppleExportDetailPolicy) {
         // Presets describe the default level; per-group overrides are edited separately.
         let policy = fullPolicy.basePolicy

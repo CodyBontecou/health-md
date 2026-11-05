@@ -78,6 +78,12 @@ struct GlassFormatsScreen: View {
                         .glassFont(.rowSubtitle)
                         .foregroundStyle(palette.muted)
                         .fixedSize(horizontal: false, vertical: true)
+                    if let longRangeNote = AppleExportDetailPreset(policy: draft.detailPolicy).localizedLongRangeNote {
+                        Label(longRangeNote, systemImage: "lightbulb")
+                            .glassFont(.rowSubtitle)
+                            .foregroundStyle(palette.muted)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
                 }
                 .padding(.horizontal, GlassMetrics.panelPadding)
                 .padding(.vertical, 12)

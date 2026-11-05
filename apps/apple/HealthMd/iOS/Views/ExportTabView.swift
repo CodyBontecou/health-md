@@ -841,6 +841,14 @@ struct ExportTabView: View {
                     .font(.footnote)
                     .foregroundStyle(Color.textSecondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
+
+                if let longRangeNote = selectedPreset.localizedLongRangeNote {
+                    Label(longRangeNote, systemImage: "lightbulb")
+                        .font(.footnote)
+                        .foregroundStyle(Color.textSecondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
         }
         .padding(.vertical, Spacing.s3)

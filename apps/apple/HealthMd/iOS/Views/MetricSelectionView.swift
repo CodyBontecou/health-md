@@ -385,10 +385,10 @@ struct MetricSelectionView: View {
                 icon: category.icon,
                 isExpanded: isExpanded,
                 accessibilityLabel: String(localized: "\(category.displayName), \(enabledCount) of \(totalCount) metrics enabled"),
-                onExpand: { toggleExpanded(category) }
-            ) {
-                categoryStatusPill(for: category)
-            }
+                onExpand: { toggleExpanded(category) },
+                status: { categoryStatusPill(for: category) },
+                accessory: { categoryToggleButton(for: category) }
+            )
 
             if category == .medications {
                 rowDivider
@@ -459,7 +459,11 @@ struct MetricSelectionView: View {
         return Button {
             toggleCategory(category)
         } label: {
-            categoryStatusPill(for: category)
+            Image(systemName: categoryToggleSymbol(for: category))
+                .font(.title3.weight(.semibold))
+                .foregroundStyle(categoryStatusTint(for: category))
+                .frame(minWidth: 44, minHeight: 44)
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .disabled(isUnavailable)
@@ -467,6 +471,17 @@ struct MetricSelectionView: View {
         .accessibilityLabel("Toggle all \(category.displayName) metrics")
         .accessibilityValue(categoryToggleAccessibilityValue(for: category))
         .accessibilityHint("Double tap to toggle all metrics in this category")
+    }
+
+    /// Checkbox-style symbol for the bulk toggle, distinct from the status pill.
+    private func categoryToggleSymbol(for category: HealthMetricCategory) -> String {
+        if selectionState.isCategoryFullyEnabled(category) {
+            return "checkmark.square.fill"
+        }
+        if selectionState.isCategoryPartiallyEnabled(category) {
+            return "minus.square.fill"
+        }
+        return "square"
     }
 
     private func categoryStatusPill(for category: HealthMetricCategory) -> some View {

@@ -153690,6 +153690,19 @@
         "pt-BR": {"stringUnit":{"state":"translated","value":"Salvar as alterações desta automação?"}},
         "zh-Hans": {"stringUnit":{"state":"translated","value":"要保存对此自动化的更改吗？"}}
       }
+    },
+    "Exporting months or years? Detailed Time-Series keeps timestamped samples without the source archive and is much faster and lighter for long ranges." : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Exportieren Sie Monate oder Jahre? Detaillierte Zeitreihen behalten Zeitstempel-Messwerte ohne das Quellarchiv und sind bei langen Zeiträumen deutlich schneller und schlanker."}},
+        "es": {"stringUnit":{"state":"translated","value":"¿Exportas meses o años? Series temporales detalladas conserva las muestras con marca de tiempo sin el archivo de origen y es mucho más rápida y ligera para rangos largos."}},
+        "fr": {"stringUnit":{"state":"translated","value":"Vous exportez des mois ou des années ? Séries chronologiques détaillées conserve les échantillons horodatés sans l’archive source et est bien plus rapide et légère pour les longues périodes."}},
+        "it": {"stringUnit":{"state":"translated","value":"Esporti mesi o anni? Serie temporali dettagliate mantiene i campioni con data e ora senza l’archivio di origine ed è molto più veloce e leggera per intervalli lunghi."}},
+        "ja": {"stringUnit":{"state":"translated","value":"数か月や数年分を書き出しますか？「詳細な時系列」はソースアーカイブを含めずにタイムスタンプ付きのサンプルを保持するため、長い期間でもはるかに高速で軽量です。"}},
+        "ko": {"stringUnit":{"state":"translated","value":"몇 개월 또는 몇 년 분량을 내보내나요? 상세 시계열은 원본 아카이브 없이 타임스탬프가 있는 샘플을 유지하므로 긴 기간에서 훨씬 빠르고 가볍습니다."}},
+        "nl": {"stringUnit":{"state":"translated","value":"Exporteer je maanden of jaren? Gedetailleerde tijdreeksen behoudt metingen met tijdstempel zonder het bronarchief en is veel sneller en lichter voor lange periodes."}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Exportando meses ou anos? Séries temporais detalhadas mantém amostras com data e hora sem o arquivo de origem e é muito mais rápida e leve para períodos longos."}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"要导出数月或数年的数据？“详细时间序列”保留带时间戳的样本，但不包含源归档，在长时间范围内速度更快、文件更小。"}}
+      }
     }
   },
   "version" : "1.0"
