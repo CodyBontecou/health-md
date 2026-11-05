@@ -28,8 +28,11 @@ done
 touch "$UPDATE_MARKER"
 trap 'rm -f "$UPDATE_MARKER"' EXIT
 
+# xcodebuild forwards only TEST_RUNNER_-prefixed variables into the test process,
+# so the rewrite permission is passed in that form (the update itself uses the marker).
 UPDATE_EXPORT_SCHEMA_SIGNATURE=1 \
 ALLOW_UNSHIPPED_SCHEMA_SIGNATURE_REWRITE="${ALLOW_UNSHIPPED_SCHEMA_SIGNATURE_REWRITE:-0}" \
+TEST_RUNNER_ALLOW_UNSHIPPED_SCHEMA_SIGNATURE_REWRITE="${ALLOW_UNSHIPPED_SCHEMA_SIGNATURE_REWRITE:-0}" \
 xcodebuild test \
   -project HealthMd.xcodeproj \
   -scheme HealthMd-Tests-macOS \

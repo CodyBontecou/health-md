@@ -1127,6 +1127,15 @@
       "disposition": "prohibited",
       "contract_path": null,
       "reason": "Decoded pending-operation calendar authority is local recovery state. It has no new wire key; only known v7 jobs re-encode the existing historical calendar keys. New preferences and Shared Setup must never acquire it."
+    },
+    {
+      "source_type": "MetricSelectionSnapshot",
+      "field": "nativeDetailMetricIDs",
+      "field_kind": "stored",
+      "serialized_key": "nativeDetailMetricIDs",
+      "disposition": "local_only",
+      "contract_path": null,
+      "reason": "Per-metric native source detail requests are preserved in native profiles and frozen jobs (encoded only when non-empty) but are not an allowlisted Shared Setup v2 field. Shared Setup imports keep none, reproducing the historical policy; portable adoption requires an explicit contract review."
     }
   ]
 }

@@ -117,9 +117,9 @@ These deterministic synthetic artifacts are copied byte-for-byte from the author
 | `automation/mac-export-job.json` | 27691 | `eb4c6c34810ec641f5abc40cb246a52d7127c48fccf7b086879de9561539fee1` | — | [Download](/docs/reference/generated/automation/mac-export-job.json) |
 | `automation/mac-export-result-partial.json` | 1034 | `f9c8630140c1d961e93a40cc887133da30c1c757a0dd651f81b932f9ae05c201` | — | [Download](/docs/reference/generated/automation/mac-export-result-partial.json) |
 | `automation/mac-export-result-success.json` | 585 | `b9a72e7f9eb09520595467270d1954d373491d1620ee738da2043361a56ab03b` | — | [Download](/docs/reference/generated/automation/mac-export-result-success.json) |
-| `automation/manifest.json` | 6337 | `cae3da8ad44c397296f9b6260e80a189d04fd3567bd5b87abe28875275535d0f` | — | [Download](/docs/reference/generated/automation/manifest.json) |
-| `automation/message-fields.md` | 134280 | `eb22fe94883624cd88bd97f464fd0fc7fe8c79c14d1873846553b0cf1fdeba14` | [Open page](/docs/reference/generated/automation/message-fields/) | [Download](/docs/reference/generated/automation/message-fields.md) |
-| `automation/peer-capabilities.json` | 1722 | `5b792b5cc67b3a78b99a5f171a584d4ddbc2b10b936fcb8caa07c6b474a2399e` | — | [Download](/docs/reference/generated/automation/peer-capabilities.json) |
+| `automation/manifest.json` | 6337 | `a61955f2c7e4ae93bbd4c93320cc6c610fc52084dbbf7872e071c8e8fe29d8b6` | — | [Download](/docs/reference/generated/automation/manifest.json) |
+| `automation/message-fields.md` | 134641 | `73de6e440d09b74496414a5d3dab43707f3b82e330d8fdeed113f11324017d0a` | [Open page](/docs/reference/generated/automation/message-fields/) | [Download](/docs/reference/generated/automation/message-fields.md) |
+| `automation/peer-capabilities.json` | 1809 | `f9d50aa621b4e83322035e400b68743187693d80191e7cd84b21989db30202dc` | — | [Download](/docs/reference/generated/automation/peer-capabilities.json) |
 | `automation/raw-result-complete.json` | 3240 | `d82df3876394ac05761c2fdc44db41b6b4021ebc8b4becba20bf51793c25f6c6` | — | [Download](/docs/reference/generated/automation/raw-result-complete.json) |
 | `automation/raw-result-partial.json` | 5280 | `311e1f6b6225226b0a3000aab2322114e47067bfc36a54cc78f7a9e3a0482d33` | — | [Download](/docs/reference/generated/automation/raw-result-partial.json) |
 | `automation/transfer-acknowledgement.json` | 213 | `c83bbf4756dd8a07760f199c39ecb3cc5f712b3f3802f6d26a7d286caf08a62e` | — | [Download](/docs/reference/generated/automation/transfer-acknowledgement.json) |

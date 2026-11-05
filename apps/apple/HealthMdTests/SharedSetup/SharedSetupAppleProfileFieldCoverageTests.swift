@@ -32,7 +32,8 @@ final class SharedSetupAppleProfileFieldCoverageTests: XCTestCase {
         let historicalIdentities = Set((v1Rows + v2Rows).map {
             "\($0["source_type"] ?? "").\($0["field"] ?? "")"
         })
-        XCTAssertEqual(currentRows.count, historicalIdentities.count + 1)
+        // Two rows postdate v1/v2: the recovery calendar authority and per-metric native detail.
+        XCTAssertEqual(currentRows.count, historicalIdentities.count + 2)
         let recovery = try XCTUnwrap(try loadLedger().fields.first {
             $0.sourceType == "ExportSettingsSnapshot" && $0.field == "historicalCalendarRollupPeriods"
         })
@@ -40,6 +41,13 @@ final class SharedSetupAppleProfileFieldCoverageTests: XCTestCase {
         XCTAssertEqual(recovery.disposition, .prohibited)
         XCTAssertNil(recovery.serializedKey)
         XCTAssertNil(recovery.contractPath)
+
+        let nativeDetail = try XCTUnwrap(try loadLedger().fields.first {
+            $0.sourceType == "MetricSelectionSnapshot" && $0.field == "nativeDetailMetricIDs"
+        })
+        XCTAssertEqual(nativeDetail.fieldKind, .stored)
+        XCTAssertEqual(nativeDetail.disposition, .localOnly)
+        XCTAssertNil(nativeDetail.contractPath)
     }
 
     func testLedgerExactlyCoversCurrentStoredAndEncodedFields() throws {
@@ -387,7 +395,9 @@ final class SharedSetupAppleProfileFieldCoverageTests: XCTestCase {
         )
         let metricSelection = MetricSelectionSnapshot(
             enabledMetricIDs: ["steps"],
-            enabledCategoryIDs: ["activity"]
+            enabledCategoryIDs: ["activity"],
+            // Non-empty so the conditionally encoded key appears in the inventory.
+            nativeDetailMetricIDs: ["steps"]
         )
         let enginePin = try makeSyntheticAppleExportEnginePin(
             calendarTimeZoneIdentifier: "America/Los_Angeles"
