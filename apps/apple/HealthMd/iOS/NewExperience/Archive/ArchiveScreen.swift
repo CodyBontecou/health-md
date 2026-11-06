@@ -550,12 +550,28 @@ struct ArchiveScreen: View {
         .accessibilityIdentifier(offset < 0 ? "glass.archive.previousMonth" : "glass.archive.nextMonth")
     }
 
+    /// ArchiveGlass's legend: each swatch draws its tile state (fill, accent underline,
+    /// dashed coral outline, plain outline).
     private var legend: some View {
         HStack(spacing: 14) {
-            legendItem(.complete) { palette.fill }
-            legendItem(.partial) { palette.partial }
-            legendItem(.missing) { palette.coral.opacity(0.35) }
-            legendItem(.notDue) { palette.line }
+            legendItem(.complete) {
+                RoundedRectangle(cornerRadius: 3).fill(palette.fill)
+            }
+            legendItem(.partial) {
+                RoundedRectangle(cornerRadius: 3)
+                    .fill(palette.partial)
+                    .overlay(alignment: .bottom) { Rectangle().fill(palette.accent).frame(height: 3) }
+                    .clipShape(RoundedRectangle(cornerRadius: 3))
+            }
+            legendItem(.missing) {
+                RoundedRectangle(cornerRadius: 3)
+                    .strokeBorder(palette.coral, style: StrokeStyle(lineWidth: 1.5, dash: [2.5, 1.5]))
+            }
+            legendItem(.notDue) {
+                RoundedRectangle(cornerRadius: 3)
+                    .strokeBorder(palette.line, lineWidth: 1)
+                    .opacity(0.6)
+            }
         }
         .font(.system(size: 11, weight: .medium))
         .foregroundStyle(palette.muted)
@@ -564,9 +580,9 @@ struct ArchiveScreen: View {
         .accessibilityHidden(true)
     }
 
-    private func legendItem(_ status: CoverageStatus, fill: () -> Color) -> some View {
+    private func legendItem<Swatch: View>(_ status: CoverageStatus, @ViewBuilder swatch: () -> Swatch) -> some View {
         HStack(spacing: 5) {
-            RoundedRectangle(cornerRadius: 3).fill(fill()).frame(width: 10, height: 10)
+            swatch().frame(width: 10, height: 10)
             Text(ArchiveCopy.title(for: status)).lineLimit(1)
         }
     }
