@@ -47,16 +47,20 @@ struct SettingsScreen: View {
     var body: some View {
         Group {
             if usesTwoPanes {
-                HStack(spacing: 0) {
-                    NavigationStack { hub }
+                // iPadSettingsG: the list and the detail each in a bordered glass pane.
+                HStack(spacing: 16) {
+                    NavigationStack { paneHub }
                         .frame(width: GlassMetrics.listPaneWidth)
+                        .glassPane()
                     NavigationStack {
-                        destination(path.last ?? .folder).id(path.last ?? .folder)
+                        paneDetail(path.last ?? .folder).id(path.last ?? .folder)
                     }
+                    .glassPane()
                 }
+                .padding(16)
             } else {
                 NavigationStack(path: $path) {
-                    hub.navigationDestination(for: Route.self) { destination($0) }
+                    hub.glassTabRoot().navigationDestination(for: Route.self) { destination($0) }
                 }
             }
         }
@@ -221,6 +225,144 @@ struct SettingsScreen: View {
             }
             .background(palette.bg.ignoresSafeArea())
             .toolbar(.hidden, for: .navigationBar)
+    }
+
+    // MARK: - iPad panes
+
+    private var paneRoute: Route { path.last ?? .folder }
+
+    /// iPadSettingsG's middle column: the plan, then plain rows with a status word and a
+    /// highlight on the open one (no cards, icon tiles or chevrons).
+    private var paneHub: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 14) {
+                planRow
+                paneSection(String(localized: "Destinations"))
+                paneRow(.folder, title: folderTitle, subtitle: folderSubtitle, badge: folderBadge)
+                    .accessibilityIdentifier("glass.settings.folder")
+                paneRow(.mac, title: macTitle, subtitle: String(localized: "Health.md for Mac"), badge: macBadge)
+                    .accessibilityIdentifier("glass.settings.mac")
+                paneRow(
+                    .cli,
+                    title: String(localized: "healthmd CLI"),
+                    subtitle: directCLIService.hasPairedCLI ? String(localized: "1 paired computer") : nil,
+                    badge: cliBadge
+                )
+                .accessibilityIdentifier("glass.settings.cli")
+                paneRow(.api, title: String(localized: "API endpoint"), subtitle: apiSubtitle,
+                        badge: .readiness(apiExportSettings.isConfigured))
+                    .accessibilityIdentifier("glass.settings.api")
+                paneRow(.gateway, title: String(localized: "Agent Data gateway"), subtitle: gatewaySubtitle,
+                        badge: .readiness(gatewaySettings.isConfigured))
+                    .accessibilityIdentifier("glass.settings.gateway")
+                paneSection(String(localized: "Data & app"))
+                if ConnectedAppsFeature.isEnabled {
+                    paneRow(.connectedApps, title: String(localized: "Connected apps"), subtitle: connectedAppsValue)
+                }
+                if showsClinicAccess {
+                    paneRow(.clinic, title: String(localized: "Clinic access"), subtitle: clinicSponsorship.status.clinicName)
+                        .accessibilityIdentifier("glass.settings.clinic")
+                }
+                paneRow(.clinicianReport, title: String(localized: "Clinician report"))
+                paneRow(.appSupport, title: String(localized: "App & support"),
+                        subtitle: String(localized: "Lock, setup, privacy, help"))
+                    .accessibilityIdentifier("glass.settings.appSupport")
+            }
+            .padding(16)
+        }
+        .toolbar(.hidden, for: .navigationBar)
+    }
+
+    private func paneSection(_ title: String) -> some View {
+        Text(title)
+            .font(.system(size: 13, weight: .semibold))
+            .foregroundStyle(palette.muted)
+            .padding(.horizontal, 12)
+            .padding(.top, 6)
+            .accessibilityAddTraits(.isHeader)
+    }
+
+    private func paneRow(
+        _ route: Route,
+        title: String,
+        subtitle: String? = nil,
+        badge: GlassSettingsBadgeState? = nil
+    ) -> some View {
+        Button { open(route) } label: {
+            HStack(spacing: 10) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(palette.text)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.85)
+                    if let subtitle, !subtitle.isEmpty {
+                        Text(subtitle)
+                            .font(.system(size: 12))
+                            .foregroundStyle(palette.muted)
+                            .lineLimit(1)
+                    }
+                }
+                Spacer(minLength: 8)
+                if let badge {
+                    Text(badge.title)
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(paneBadgeColor(badge.tone))
+                        .lineLimit(1)
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .frame(maxWidth: .infinity, minHeight: GlassMetrics.touchTarget, alignment: .leading)
+            .modifier(GlassPaneRowBackground(isSelected: paneRoute == route))
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func paneBadgeColor(_ tone: GlassSettingsBadgeTone) -> Color {
+        switch tone {
+        case .ok: return palette.ok
+        case .attention: return palette.coral
+        case .off: return palette.muted
+        }
+    }
+
+    /// The detail pane's root leads with a 22 pt left-aligned heading instead of a small
+    /// centred navigation title. API and gateway keep their bar for Save.
+    @ViewBuilder private func paneDetail(_ route: Route) -> some View {
+        let heading = GlassPaneHeading(title: paneTitle(route))
+            .padding(.horizontal, GlassMetrics.screenMargin)
+            .padding(.top, 16)
+            .padding(.bottom, 4)
+        switch route {
+        case .api, .gateway:
+            if #available(iOS 18.0, *) {
+                destination(route)
+                    .toolbar(removing: .title)
+                    .safeAreaInset(edge: .top, spacing: 0) { heading }
+            } else {
+                destination(route)
+            }
+        default:
+            destination(route)
+                .toolbar(.hidden, for: .navigationBar)
+                .safeAreaInset(edge: .top, spacing: 0) { heading }
+        }
+    }
+
+    private func paneTitle(_ route: Route) -> String {
+        switch route {
+        case .folder: return folderTitle
+        case .mac: return String(localized: "Health.md for Mac")
+        case .cli: return String(localized: "healthmd CLI")
+        case .api: return String(localized: "API endpoint")
+        case .gateway: return String(localized: "Agent Data gateway")
+        case .clinic: return String(localized: "Clinic access")
+        case .appSupport: return String(localized: "App & support")
+        case .connectedApps: return String(localized: "Connected apps")
+        case .clinicianReport: return String(localized: "Clinician report")
+        case .metrics: return String(localized: "Default metrics")
+        }
     }
 
     @ViewBuilder private func destination(_ route: Route) -> some View {

@@ -244,3 +244,39 @@ private struct GlassNavigationButton<ID: Hashable>: View {
         .accessibilityIdentifier("glass.tab.\(String(describing: item.id))")
     }
 }
+
+// MARK: - Tab roots
+
+/// Reports whether a tab's root page is on screen, keyed by a per-page ID.
+struct GlassTabRootVisibilityAction {
+    var report: (UUID, Bool) -> Void = { _, _ in }
+}
+
+private struct GlassTabRootVisibilityKey: EnvironmentKey {
+    static let defaultValue = GlassTabRootVisibilityAction()
+}
+
+extension EnvironmentValues {
+    var glassTabRootVisibility: GlassTabRootVisibilityAction {
+        get { self[GlassTabRootVisibilityKey.self] }
+        set { self[GlassTabRootVisibilityKey.self] = newValue }
+    }
+}
+
+private struct GlassTabRootMarker: ViewModifier {
+    @Environment(\.glassTabRootVisibility) private var visibility
+    @State private var id = UUID()
+
+    func body(content: Content) -> some View {
+        content
+            .onAppear { visibility.report(id, true) }
+            .onDisappear { visibility.report(id, false) }
+    }
+}
+
+extension View {
+    /// Marks the root page of a tab's navigation stack. The floating tab bar and its
+    /// Export now button show only while a root page is on screen, so a pushed page's
+    /// bottom actions are never covered (the boards hide the bar on pushed pages).
+    func glassTabRoot() -> some View { modifier(GlassTabRootMarker()) }
+}

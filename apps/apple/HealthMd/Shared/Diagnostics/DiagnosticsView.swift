@@ -162,8 +162,11 @@ struct DiagnosticsView: View {
 
     private func pillGroup<Value: Hashable>(_ title: String, _ options: [(Value, String)], _ selection: Binding<Value>, _ palette: GlassPalette) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(title).glassFont(.body).foregroundStyle(palette.text)
+            Text(title).glassFont(.body).foregroundStyle(palette.text).accessibilityHidden(true)
+            // A label on the bare control would replace every segment's own name, so
+            // VoiceOver could not tell which option is selected.
             GlassSegmentedControl(segments: options.map { GlassSegmentedControl<Value>.Segment(value: $0.0, title: $0.1) }, selection: selection)
+                .accessibilityElement(children: .contain)
                 .accessibilityLabel(title)
         }
         .padding(.horizontal, GlassMetrics.panelPadding).padding(.vertical, 12)
@@ -256,8 +259,10 @@ struct DiagnosticsView: View {
             preview = DiagnosticTextPreview(title: event.event_id.rawValue, text: event.jsonLine)
         } label: {
             HStack(alignment: .firstTextBaseline, spacing: 6) {
+                // 12-hour times ("11:26 AM") are wider than DiagnosticsG's 24-hour ones.
                 Text(verbatim: DiagnosticEventDisplay.timeLabel(event.timestamp))
-                    .foregroundStyle(palette.muted).frame(width: 52, alignment: .leading)
+                    .lineLimit(1).minimumScaleFactor(0.75)
+                    .foregroundStyle(palette.muted).frame(width: 64, alignment: .leading)
                 Text(verbatim: DiagnosticEventDisplay.severityLabel(event.severity))
                     .foregroundStyle(DiagnosticEventDisplay.needsAttention(event.severity) ? palette.coral : palette.sec)
                     .frame(width: 46, alignment: .leading)

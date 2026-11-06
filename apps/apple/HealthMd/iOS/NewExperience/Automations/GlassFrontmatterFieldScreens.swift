@@ -105,8 +105,7 @@ struct GlassFrontmatterGroupScreen: View {
             .accessibilityHint(Text("Rename \(field.originalKey)"))
 
             Toggle(isOn: binding(field)) { EmptyView() }
-                .toggleStyle(GlassToggleStyle())
-                .labelsHidden()
+                .toggleStyle(GlassToggleStyle(labelsHidden: true))
                 .accessibilityLabel(Text(verbatim: field.outputKey))
         }
         .padding(.horizontal, GlassMetrics.panelPadding)

@@ -277,9 +277,11 @@ struct AutomationsScreen: View {
     var body: some View {
         Group {
             if usesTwoPanes {
-                HStack(spacing: 0) {
+                // iPadAutomationsG: the list and the composer each in a bordered glass pane.
+                HStack(spacing: 16) {
                     NavigationStack { list }
-                        .frame(width: GlassMetrics.listPaneWidth)
+                        .frame(width: 300)
+                        .glassPane()
                     // iPadAutomationsG: the selected automation opens as the composer.
                     NavigationStack {
                         if let id = paneProfileID {
@@ -294,13 +296,15 @@ struct AutomationsScreen: View {
                             .id(id)
                         }
                     }
+                    .glassPane()
                 }
+                .padding(16)
             } else {
-                NavigationStack { list }
+                NavigationStack { list.glassTabRoot() }
             }
         }
         .sheet(isPresented: $showCreation) {
-            ExportProfileEditorSheet(coordinator: coordinator)
+            ExportProfileEditorSheet(coordinator: coordinator, usesAutomationWording: true)
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
         }
@@ -335,7 +339,11 @@ struct AutomationsScreen: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 12) {
                     HStack {
-                        Text("Automations").glassFont(.largeTitle).foregroundStyle(palette.text)
+                        if usesTwoPanes {
+                            GlassPaneHeading(title: String(localized: "Automations"))
+                        } else {
+                            Text("Automations").glassFont(.largeTitle).foregroundStyle(palette.text)
+                        }
                         Spacer()
                         Button {
                             configurationProtection.performConfigurationChange { showCreation = true }
@@ -360,7 +368,7 @@ struct AutomationsScreen: View {
 
                     ForEach(profileStore.profiles) { profile in
                         if usesTwoPanes {
-                            Button { select(profile.id) } label: { compactCard(profile) }
+                            Button { select(profile.id) } label: { paneRow(profile) }
                                 .accessibilityIdentifier("glass.automation.card")
                                 .buttonStyle(.plain)
                         } else {
@@ -371,11 +379,11 @@ struct AutomationsScreen: View {
                         }
                     }
                 }
-                .padding(.horizontal, GlassMetrics.screenMargin)
-                .padding(.top, 12)
-                .padding(.bottom, GlassMetrics.scrollBottomInset)
+                .padding(.horizontal, usesTwoPanes ? 16 : GlassMetrics.screenMargin)
+                .padding(.top, usesTwoPanes ? 16 : 12)
+                .padding(.bottom, usesTwoPanes ? 16 : GlassMetrics.scrollBottomInset)
             }
-            .background(palette.bg.ignoresSafeArea())
+            .background((usesTwoPanes ? Color.clear : palette.bg).ignoresSafeArea())
             .toolbar(.hidden, for: .navigationBar)
     }
 
@@ -416,8 +424,7 @@ struct AutomationsScreen: View {
             )) {
                 Text(profile.name)
             }
-            .labelsHidden()
-            .toggleStyle(GlassToggleStyle())
+            .toggleStyle(GlassToggleStyle(labelsHidden: true))
             .fixedSize()
             .padding(.top, 10)
             .padding(.trailing, 20)
@@ -460,26 +467,45 @@ struct AutomationsScreen: View {
         .contentShape(Rectangle())
     }
 
-    /// iPadAutomationsG's list row: name, next run, and "when → where".
-    private func compactCard(_ profile: ExportProfile) -> some View {
+    /// iPadAutomationsG's list row: a plain row (no card) with the profile dot, name,
+    /// next run, and "when → where"; the open automation is highlighted.
+    private func paneRow(_ profile: ExportProfile) -> some View {
         let sentence = facts.sentence(profile)
         let isSelected = paneProfileID == profile.id
+        let index = profileStore.profiles.firstIndex { $0.id == profile.id } ?? 0
+        var line = AttributedString(sentence.values[.when] ?? "")
+        line.foregroundColor = palette.sec
+        line.font = .system(size: 13)
+        var arrow = AttributedString(" → ")
+        arrow.foregroundColor = palette.sec
+        var destination = AttributedString(sentence.values[.where] ?? "")
+        destination.foregroundColor = palette.text
+        destination.font = .system(size: 14, weight: .medium, design: .monospaced)
+        line.append(arrow)
+        line.append(destination)
         return VStack(alignment: .leading, spacing: 6) {
-            HStack(alignment: .firstTextBaseline) {
-                Text(profile.name).glassFont(.navTitle).foregroundStyle(palette.text)
+            HStack(spacing: 8) {
+                Circle()
+                    .fill(palette.profileColor(at: index))
+                    .frame(width: 8, height: 8)
+                    .accessibilityHidden(true)
+                Text(profile.name)
+                    .font(.system(size: 15, weight: .bold))
+                    .foregroundStyle(palette.text)
+                    .lineLimit(1)
                 Spacer(minLength: 8)
-                Text(facts.shortStatus(profile)).glassFont(.caption).foregroundStyle(palette.muted)
+                Text(facts.shortStatus(profile))
+                    .font(.system(size: 12))
+                    .foregroundStyle(palette.muted)
+                    .lineLimit(1)
             }
-            Text(verbatim: "\(sentence.values[.when] ?? "") → \(sentence.values[.where] ?? "")")
-                .glassFont(.rowSubtitle)
-                .foregroundStyle(palette.sec)
+            Text(line)
                 .lineLimit(2)
         }
-        .padding(GlassMetrics.panelPadding)
+        .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .glassSurface(style: isSelected ? .strong : .regular)
-        .contentShape(Rectangle())
-        .accessibilityAddTraits(isSelected ? .isSelected : [])
+        .modifier(GlassPaneRowBackground(isSelected: isSelected, cornerRadius: 18))
+        .accessibilityElement(children: .combine)
     }
 }
 
@@ -562,19 +588,21 @@ struct AutomationDetailScreen: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .glassSurface()
 
+                // AutomationDetailG: three equal neutral buttons.
                 HStack(spacing: 8) {
-                    GlassChip(title: String(localized: "Run now"), isSelected: true) { onRun(profile.id) }
-                    GlassChip(title: String(localized: "Duplicate")) {
+                    Button(String(localized: "Run now")) { onRun(profile.id) }
+                    Button(String(localized: "Duplicate")) {
                         configurationProtection.performConfigurationChange {
                             _ = coordinator.duplicateProfile(id: profile.id)
                         }
                     }
                     if let entry {
-                        GlassChip(title: entry.isEnabled ? String(localized: "Pause") : String(localized: "Resume")) {
+                        Button(entry.isEnabled ? String(localized: "Pause") : String(localized: "Resume")) {
                             setEnabled(!entry.isEnabled, profileID: profile.id)
                         }
                     }
                 }
+                .buttonStyle(GlassSecondaryButtonStyle())
 
                 let overlapping = coordinator.overlappingProfileNames(for: profile.id)
                 if !overlapping.isEmpty {
@@ -1102,15 +1130,11 @@ struct ComposerScreen: View {
                 )
             } label: { allSettingsLabel }
             .buttonStyle(.plain)
-            .accessibilityElement(children: .ignore)
-            .accessibilityLabel(String(localized: "All settings"))
-            .accessibilityAddTraits(.isButton)
+            .accessibilityIdentifier("glass.automation.allSettings")
         } else {
             Button { dismiss() } label: { allSettingsLabel }
                 .buttonStyle(.plain)
-                .accessibilityElement(children: .ignore)
-                .accessibilityLabel(String(localized: "All settings"))
-                .accessibilityAddTraits(.isButton)
+                .accessibilityIdentifier("glass.automation.allSettings")
         }
     }
 
@@ -1123,11 +1147,18 @@ struct ComposerScreen: View {
                 .foregroundStyle(palette.muted)
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
+                // The button reads as "All settings" once; the list of what it holds
+                // is a visual hint only.
+                .accessibilityHidden(true)
         }
         .padding(.horizontal, 18)
         .frame(minHeight: 52)
         .glassSurface()
         .contentShape(Rectangle())
+        // Glass hosts its content in its own accessibility container, so the label is
+        // collapsed here, outside it, to one "All settings" element.
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(String(localized: "All settings"))
     }
 
     private func listLayout(_ sentence: AutomationSentence) -> some View {

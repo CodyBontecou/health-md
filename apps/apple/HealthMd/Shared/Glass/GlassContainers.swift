@@ -107,3 +107,59 @@ extension View {
         modifier(GlassFormChromeModifier())
     }
 }
+
+// MARK: - iPad panes
+
+/// iPadAutomationsG and iPadSettingsG: each column sits in its own bordered glass panel.
+private struct GlassPaneModifier: ViewModifier {
+    @Environment(\.glassPalette) private var palette
+
+    func body(content: Content) -> some View {
+        let shape = RoundedRectangle(cornerRadius: GlassMetrics.paneRadius, style: .continuous)
+        content
+            .clipShape(shape)
+            // Pane screens paint `bg` themselves, so the list pane does too: both columns
+            // read the same, separated by the panes' edges.
+            .background(shape.fill(palette.bg))
+            .overlay(shape.strokeBorder(palette.line, lineWidth: 1))
+    }
+}
+
+/// The 22 pt bold heading that leads an iPad pane ("Automations", "healthmd CLI").
+struct GlassPaneHeading: View {
+    let title: String
+
+    @Environment(\.glassPalette) private var palette
+
+    var body: some View {
+        Text(title)
+            .font(.system(size: 22, weight: .bold))
+            .foregroundStyle(palette.text)
+            .lineLimit(2)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .accessibilityAddTraits(.isHeader)
+    }
+}
+
+/// One plain row of an iPad list pane: no card, a rounded highlight when selected.
+struct GlassPaneRowBackground: ViewModifier {
+    let isSelected: Bool
+    var cornerRadius: CGFloat = 14
+
+    @Environment(\.glassPalette) private var palette
+
+    func body(content: Content) -> some View {
+        content
+            .background(
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    // `line` reads on light glass too, as in the sidebar.
+                    .fill(isSelected ? palette.line : Color.clear)
+            )
+            .contentShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+            .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+}
+
+extension View {
+    func glassPane() -> some View { modifier(GlassPaneModifier()) }
+}
