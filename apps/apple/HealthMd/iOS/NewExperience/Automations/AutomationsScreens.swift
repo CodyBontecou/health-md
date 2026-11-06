@@ -300,7 +300,7 @@ struct AutomationsScreen: View {
             }
         }
         .sheet(isPresented: $showCreation) {
-            ExportProfileEditorSheet(coordinator: coordinator)
+            ExportProfileEditorSheet(coordinator: coordinator, usesAutomationWording: true)
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
         }

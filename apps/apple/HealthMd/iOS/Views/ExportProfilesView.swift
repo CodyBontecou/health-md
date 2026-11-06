@@ -985,6 +985,8 @@ struct ExportProfileEditorSheet: View {
 
     /// Nil = creation mode; the profile being edited otherwise.
     private let editingProfileID: UUID?
+    /// The Liquid Glass shell calls profiles "automations"; the legacy list keeps "profile".
+    private let usesAutomationWording: Bool
 
     @State private var name: String
     @State private var target: ExportTargetSelection
@@ -1002,9 +1004,11 @@ struct ExportProfileEditorSheet: View {
 
     init(
         coordinator: ExportProfileCoordinator,
-        editing profile: ExportProfile? = nil
+        editing profile: ExportProfile? = nil,
+        usesAutomationWording: Bool = false
     ) {
         self.coordinator = coordinator
+        self.usesAutomationWording = usesAutomationWording
         _profileStore = ObservedObject(wrappedValue: coordinator.profileStore)
         _destinationStore = ObservedObject(wrappedValue: coordinator.destinationStore)
         editingProfileID = profile?.id
@@ -1080,7 +1084,8 @@ struct ExportProfileEditorSheet: View {
     private static let dateTokens = ["{date}", "{year}", "{month}", "{day}", "{weekday}", "{monthName}", "{quarter}"]
 
     private var titleText: String {
-        editingProfile == nil
+        if usesAutomationWording && editingProfile == nil { return String(localized: "New automation") }
+        return editingProfile == nil
             ? String(localized: "New Profile")
             : String(localized: "Edit Profile")
     }
@@ -1261,7 +1266,7 @@ struct ExportProfileEditorSheet: View {
 
     private var identitySection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            GlassSectionLabel(title: String(localized: "Profile"))
+            GlassSectionLabel(title: usesAutomationWording ? String(localized: "Automation") : String(localized: "Profile"))
             GlassPanel {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(String(localized: "Name", comment: "Profile editor name field label"))
