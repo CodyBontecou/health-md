@@ -15,6 +15,32 @@ struct GlassPrimaryButtonStyle: ButtonStyle {
     }
 }
 
+/// A neutral full-width button (AutomationDetailG's Run now / Duplicate / Pause):
+/// 46pt capsule on `surface2` with an edge and a top highlight.
+struct GlassSecondaryButtonStyle: ButtonStyle {
+    @Environment(\.glassPalette) private var palette
+    @Environment(\.isEnabled) private var isEnabled
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .glassFont(.body)
+            .fontWeight(.medium)
+            .foregroundStyle(palette.text)
+            .lineLimit(1)
+            .minimumScaleFactor(0.75)
+            .padding(.horizontal, 8)
+            .frame(maxWidth: .infinity, minHeight: 46)
+            .background(Capsule().fill(palette.surface2))
+            .overlay(Capsule().strokeBorder(palette.edge, lineWidth: 1))
+            .overlay(alignment: .top) {
+                Capsule().strokeBorder(palette.hi, lineWidth: 1)
+                    .mask(LinearGradient(colors: [.black, .clear], startPoint: .top, endPoint: .center))
+            }
+            .opacity(isEnabled ? (configuration.isPressed ? 0.7 : 1) : 0.4)
+            .contentShape(Capsule())
+    }
+}
+
 struct GlassToggleStyle: ToggleStyle {
     /// Draws only the switch. A custom style cannot read `.labelsHidden()`, so a switch
     /// whose label is shown beside it asks for this; the label still names it to VoiceOver.

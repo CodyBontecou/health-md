@@ -561,19 +561,21 @@ struct AutomationDetailScreen: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .glassSurface()
 
+                // AutomationDetailG: three equal neutral buttons.
                 HStack(spacing: 8) {
-                    GlassChip(title: String(localized: "Run now"), isSelected: true) { onRun(profile.id) }
-                    GlassChip(title: String(localized: "Duplicate")) {
+                    Button(String(localized: "Run now")) { onRun(profile.id) }
+                    Button(String(localized: "Duplicate")) {
                         configurationProtection.performConfigurationChange {
                             _ = coordinator.duplicateProfile(id: profile.id)
                         }
                     }
                     if let entry {
-                        GlassChip(title: entry.isEnabled ? String(localized: "Pause") : String(localized: "Resume")) {
+                        Button(entry.isEnabled ? String(localized: "Pause") : String(localized: "Resume")) {
                             setEnabled(!entry.isEnabled, profileID: profile.id)
                         }
                     }
                 }
+                .buttonStyle(GlassSecondaryButtonStyle())
 
                 let overlapping = coordinator.overlappingProfileNames(for: profile.id)
                 if !overlapping.isEmpty {
