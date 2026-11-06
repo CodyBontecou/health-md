@@ -1155,6 +1155,10 @@ struct ComposerScreen: View {
         .frame(minHeight: 52)
         .glassSurface()
         .contentShape(Rectangle())
+        // Glass hosts its content in its own accessibility container, so the label is
+        // collapsed here, outside it, to one "All settings" element.
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(String(localized: "All settings"))
     }
 
     private func listLayout(_ sentence: AutomationSentence) -> some View {
