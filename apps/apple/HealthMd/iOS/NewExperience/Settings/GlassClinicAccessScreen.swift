@@ -26,8 +26,10 @@ struct GlassClinicAccessScreen: View {
                 if !status.configured {
                     note(String(localized: "Clinic access is not configured in this version of Health.md."))
                 } else if status.storageUnavailable {
-                    GlassBanner(title: String(localized: "Unlock your phone and try again. Clinic access could not be read securely."),
-                                systemImage: "lock", tone: .warning)
+                    // A Keychain read or write failure, not a locked phone: the record is
+                    // readable after first unlock, so "unlock your phone" was misleading.
+                    GlassBanner(title: String(localized: "Clinic access could not be read securely. Try again later."),
+                                systemImage: "exclamationmark.triangle", tone: .warning)
                 } else if status.active {
                     sharingSection
                     uploadTokenSection
