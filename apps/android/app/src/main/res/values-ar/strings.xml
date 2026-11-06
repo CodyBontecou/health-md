@@ -310,8 +310,6 @@
     <string name="paywall_unlimited_exports">عمليات تصدير غير محدودة</string>
     <string name="paywall_scheduled_exports">عمليات تصدير تلقائية مجدولة</string>
     <string name="paywall_future_features">جميع الميزات المستقبلية مضمنة</string>
-    <string name="paywall_one_time">دفعة واحدة \u2014 بلا اشتراك</string>
-    <string name="paywall_unlock_button">إلغاء قفل Health.md</string>
     <string name="paywall_restore">استعادة عملية الشراء</string>
 
     <!-- Export progress dialog -->
@@ -555,7 +553,6 @@
     <string name="debug_requires_history_permission">النطاق يحتاج إلى إذن السجل</string>
     <string name="debug_first_permission_grant">أول منح للإذن</string>
     <string name="section_health_sources">مصادر البيانات الصحية</string>
-    <string name="health_sources_description">Health Connect هو مصدر التصدير المحلي. يستطيع Health.md تصدير البيانات التي تكتبها التطبيقات المدعومة في Health Connect.</string>
     <string name="health_provider_status_installed">تم التثبيت</string>
     <string name="health_provider_status_selected">محدّد</string>
     <string name="health_provider_status_ready_to_connect">جاهز للاتصال</string>
@@ -703,8 +700,6 @@
     <string name="release_notes_highlight_templates">لا يزال الربط اليدوي عبر العنوان والمنفذ والرمز المكوّن من 20 رقمًا يعمل، بما في ذلك مع إصدارات CLI الأقدم.</string>
     <string name="release_notes_highlight_workouts">يتضمن إصلاحات للموثوقية والتوافق في الإعداد والتصدير والجداول والاتصالات.</string>
     <string name="export_notification_background_permission_required">تحتاج عمليات التصدير المجدولة إلى وصول Health Connect في الخلفية. افتح قسم «الجدولة» في Health.md لتفعيله.</string>
-    <string name="paywall_unlock_button_price">إلغاء القفل مقابل %s</string>
-    <string name="paywall_purchasing">جارٍ إتمام الشراء\u2026</string>
     <string name="paywall_restoring">جارٍ الاستعادة\u2026</string>
     <string name="debug_purchase_title">عناصر تحكم تصحيح الأخطاء</string>
     <string name="debug_current_state">الحالة الحالية: %s</string>

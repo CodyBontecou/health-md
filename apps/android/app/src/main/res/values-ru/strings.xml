@@ -300,8 +300,6 @@
     <string name="paywall_unlimited_exports">Неограниченные экспорты</string>
     <string name="paywall_scheduled_exports">Автоматизированные запланированные экспорты</string>
     <string name="paywall_future_features">Все будущие функции включены</string>
-    <string name="paywall_one_time">Единовременная оплата — без подписки</string>
-    <string name="paywall_unlock_button">Разблокировать Health.md</string>
     <string name="paywall_restore">Восстановить покупку</string>
 
     <!-- Export progress dialog -->
@@ -535,7 +533,6 @@
     <string name="debug_requires_history_permission">Для диапазона нужен доступ к истории</string>
     <string name="debug_first_permission_grant">Первое разрешение</string>
     <string name="section_health_sources">Источники здоровья</string>
-    <string name="health_sources_description">Health Connect — локальный источник экспорта. Health.md может экспортировать данные, которые поддерживаемые приложения записывают в Health Connect.</string>
     <string name="health_provider_status_installed">Установлено</string>
     <string name="health_provider_status_selected">Выбрано</string>
     <string name="health_provider_status_ready_to_connect">Готов к подключению</string>
@@ -681,8 +678,6 @@
     <string name="release_notes_highlight_templates">Ручное сопряжение по адресу, порту и 20-значному коду по-прежнему работает, в том числе со старыми версиями CLI.</string>
     <string name="release_notes_highlight_workouts">Включены исправления надёжности и совместимости для настройки, экспорта, расписаний и подключений.</string>
     <string name="export_notification_background_permission_required">Для запланированного экспорта требуется фоновый доступ Health Connect. Откройте Health.md &gt; Расписание, чтобы включить его.</string>
-    <string name="paywall_unlock_button_price">Разблокировать за %s</string>
-    <string name="paywall_purchasing">Обработка\u2026</string>
     <string name="paywall_restoring">Восстановление\u2026</string>
     <string name="debug_purchase_title">Элементы управления отладкой</string>
     <string name="debug_current_state">Текущее состояние: %s</string>

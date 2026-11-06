@@ -226,7 +226,6 @@
     <string name="configuration_protection_blocked_action">কেন কনফিগারেশন পরিবর্তন ব্লক করা হয়েছে তা দেখুন</string>
     <string name="configuration_protection_open_setting">সেটিং খুলুন</string>
     <string name="section_health_sources">স্বাস্থ্য সূত্র</string>
-    <string name="health_sources_description">Health Connect হলো লোকাল এক্সপোর্টের উৎস। সমর্থিত অ্যাপ Health Connect-এ যে ডেটা লেখে, Health.md তা এক্সপোর্ট করতে পারে।</string>
     <string name="health_provider_status_installed">ইনস্টল করা হয়েছে</string>
     <string name="health_provider_status_selected">নির্বাচিত</string>
     <string name="health_provider_status_ready_to_connect">সংযোগ করতে প্রস্তুত</string>
@@ -570,11 +569,7 @@
     <string name="paywall_unlimited_exports">সীমাহীন রপ্তানি</string>
     <string name="paywall_scheduled_exports">স্বয়ংক্রিয় নির্ধারিত রপ্তানি</string>
     <string name="paywall_future_features">সমস্ত ভবিষ্যত বৈশিষ্ট্য অন্তর্ভুক্ত</string>
-    <string name="paywall_one_time">এককালীন পেমেন্ট \u2014 কোনো সাবস্ক্রিপশন নেই</string>
-    <string name="paywall_unlock_button">Health.md আনলক করুন</string>
-    <string name="paywall_unlock_button_price">%s এর জন্য আনলক করুন</string>
     <string name="paywall_restore">ক্রয় পুনরুদ্ধার করুন</string>
-    <string name="paywall_purchasing">প্রক্রিয়াকরণ \u2026</string>
     <string name="paywall_restoring">পুনরুদ্ধার করা হচ্ছে\u2026</string>
     <!-- Debug purchase controls -->
     <string name="debug_purchase_title">ডিবাগ কন্ট্রোল</string>

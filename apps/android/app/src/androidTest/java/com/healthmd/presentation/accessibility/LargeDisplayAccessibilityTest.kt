@@ -42,6 +42,8 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.UiDevice
+import com.healthmd.domain.repository.PurchaseOffer
+import com.healthmd.domain.repository.PurchasePlan
 import com.healthmd.R
 import com.healthmd.presentation.common.*
 import com.healthmd.domain.model.ScheduleCadenceUnit
@@ -130,6 +132,12 @@ class LargeDisplayAccessibilityTest(private val display: AccessibilityDisplayCas
         @Parameterized.Parameters(name = "{0}")
         fun displays() = accessibilityDisplays()
     }
+
+    private val trialOffers = listOf(
+        PurchaseOffer(PurchasePlan.WEEKLY.productId, "$0.99", PurchasePlan.WEEKLY, true),
+        PurchaseOffer(PurchasePlan.YEARLY.productId, "$29.99", PurchasePlan.YEARLY, true),
+        PurchaseOffer(PurchasePlan.LIFETIME.productId, "$19.99", PurchasePlan.LIFETIME),
+    )
 
     private fun configuration(base: Configuration) = Configuration(base).apply {
         screenWidthDp = display.width
@@ -222,6 +230,8 @@ class LargeDisplayAccessibilityTest(private val display: AccessibilityDisplayCas
                             },
                         )
                         OnboardingPage.PLAY_ACCESS -> PaywallScreen(
+                            offers = trialOffers,
+                            onPlanPurchase = { actions += "purchase" },
                             onPurchase = { actions += "purchase" },
                             onRestore = { actions += "restore" },
                             onDismiss = null,
@@ -248,8 +258,8 @@ class LargeDisplayAccessibilityTest(private val display: AccessibilityDisplayCas
         tap(R.string.onboarding_storage_select_button)
         scrollAndTap(R.string.export_folder_change)
         tap(R.string.onboarding_continue)
-        scrollAndTap(R.string.paywall_unlock_button)
-        scrollAndTap(R.string.paywall_restore)
+        tapPaywallAction(R.string.paywall_cta_trial)
+        tapPaywallAction(R.string.paywall_restore)
         tap(R.string.onboarding_continue)
         // The included-access channel's final feature is also reachable at the largest scales.
         compose.onNodeWithText(text(R.string.fdroid_onboarding_no_play_services))
@@ -404,6 +414,8 @@ class LargeDisplayAccessibilityTest(private val display: AccessibilityDisplayCas
                 AppNavigationLayout(emptyList(), null, {}) { modifier ->
                     Box(modifier) {
                         PaywallScreen(
+                            offers = trialOffers,
+                            onPlanPurchase = { actions += "purchase" },
                             onPurchase = { actions += "purchase" },
                             onRestore = { actions += "restore" },
                             onDismiss = { actions += "close" },
@@ -413,10 +425,10 @@ class LargeDisplayAccessibilityTest(private val display: AccessibilityDisplayCas
                 }
             }
         }
-        scrollAndTap(R.string.paywall_unlock_button)
-        scrollAndTap(R.string.paywall_restore)
-        compose.onNodeWithContentDescription(text(R.string.close))
-            .performScrollTo().assertFullyVisible().performTouchInput { click() }
+        tapPaywallAction(R.string.paywall_cta_trial)
+        tapPaywallAction(R.string.paywall_restore)
+        revealPaywallAction(hasContentDescription(text(R.string.close)))
+            .performTouchInput { click() }
         assertEquals(listOf("purchase", "restore", "close"), actions)
     }
 
@@ -726,6 +738,18 @@ class LargeDisplayAccessibilityTest(private val display: AccessibilityDisplayCas
         val filename = "${display.width}x${display.height}-${display.fontScale}-${display.language}-${display.dark}-$name.png"
         val bitmap = compose.onNodeWithTag(VIEWPORT).captureToImage().asAndroidBitmap()
         File(directory, filename).outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
+    }
+
+    private fun revealPaywallAction(matcher: SemanticsMatcher): SemanticsNodeInteraction {
+        val target = compose.onNode(matcher)
+        if (compose.onAllNodes(matcher and hasAnyAncestor(hasScrollAction())).fetchSemanticsNodes().isNotEmpty()) {
+            target.performScrollTo()
+        }
+        return target.assertFullyVisible()
+    }
+
+    private fun tapPaywallAction(id: Int) {
+        revealPaywallAction(hasText(text(id)) and hasClickAction()).performTouchInput { click() }
     }
 
     private fun node(id: Int) = compose.onNode(hasText(text(id)) and hasClickAction())

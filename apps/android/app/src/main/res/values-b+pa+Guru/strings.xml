@@ -226,7 +226,6 @@
     <string name="configuration_protection_blocked_action">ਵੇਖੋ ਕਿ ਕੌਂਫਿਗਰੇਸ਼ਨ ਤਬਦੀਲੀਆਂ ਕਿਉਂ ਬਲੌਕ ਹਨ</string>
     <string name="configuration_protection_open_setting">ਸੈਟਿੰਗ ਖੋਲ੍ਹੋ</string>
     <string name="section_health_sources">ਸਿਹਤ ਸਰੋਤ</string>
-    <string name="health_sources_description">Health Connect ਲੋਕਲ ਐਕਸਪੋਰਟ ਸਰੋਤ ਹੈ। ਸਮਰਥਿਤ ਐਪਾਂ ਵੱਲੋਂ Health Connect ਵਿੱਚ ਲਿਖਿਆ ਡੇਟਾ Health.md ਰਾਹੀਂ ਐਕਸਪੋਰਟ ਕੀਤਾ ਜਾ ਸਕਦਾ ਹੈ।</string>
     <string name="health_provider_status_installed">ਇੰਸਟਾਲ ਹੈ</string>
     <string name="health_provider_status_selected">ਚੁਣਿਆ ਗਿਆ</string>
     <string name="health_provider_status_ready_to_connect">ਜੁੜਨ ਲਈ ਤਿਆਰ ਹੈ</string>
@@ -570,11 +569,7 @@
     <string name="paywall_unlimited_exports">ਅਨੰਤ ਨਿਰਯਾਤ</string>
     <string name="paywall_scheduled_exports">ਸਵੈਚਲਿਤ ਅਨੁਸੂਚਿਤ ਨਿਰਯਾਤ</string>
     <string name="paywall_future_features">ਭਵਿੱਖ ਦੀਆਂ ਸਾਰੀਆਂ ਵਿਸ਼ੇਸ਼ਤਾਵਾਂ ਸ਼ਾਮਲ</string>
-    <string name="paywall_one_time">ਇੱਕ-ਮੁਸ਼ਤ ਭੁਗਤਾਨ \u2014 ਕੋਈ ਸਬਸਕ੍ਰਿਪਸ਼ਨ ਨਹੀਂ</string>
-    <string name="paywall_unlock_button">Health.md ਅਨਲਾਕ ਕਰੋ</string>
-    <string name="paywall_unlock_button_price">%s ਲਈ ਅਨਲੌਕ ਕਰੋ</string>
     <string name="paywall_restore">ਖਰੀਦ ਬਹਾਲ ਕਰੋ</string>
-    <string name="paywall_purchasing">ਪ੍ਰੋਸੈਸਿੰਗ \u2026</string>
     <string name="paywall_restoring">ਬਹਾਲ ਕੀਤਾ ਜਾ ਰਿਹਾ ਹੈ\u2026</string>
     <!-- Debug purchase controls -->
     <string name="debug_purchase_title">ਡੀਬੱਗ ਕੰਟਰੋਲ</string>

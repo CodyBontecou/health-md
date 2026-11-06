@@ -2,4 +2,5 @@ v3.5.0 — More ways to access Health.md
 • Choose weekly or yearly subscriptions with a 7-day free trial when eligible, or a one-time Lifetime purchase.
 • Existing Lifetime and grandfathered access is preserved.
 • Active access is required before setup and exports; the free-export allowance is retired.
-• Clearer purchase status, scheduling guidance, and renewal terms.
+• New Signal paywall introduces your archive, trial, and plan choices.
+• Improved purchase restoration and revoked-access handling.

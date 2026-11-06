@@ -254,7 +254,6 @@
     <string name="configuration_protection_blocked_action">Show why configuration changes are blocked</string>
     <string name="configuration_protection_open_setting">Open setting</string>
     <string name="section_health_sources">Health sources</string>
-    <string name="health_sources_description">Health Connect is the local export source. Data that supported apps write to Health Connect can be exported by Health.md.</string>
     <string name="health_provider_status_installed">Installed</string>
     <string name="health_provider_status_selected">Selected</string>
     <string name="health_provider_status_ready_to_connect">Ready to connect</string>
@@ -626,11 +625,7 @@
     <string name="paywall_unlimited_exports">Unlimited exports</string>
     <string name="paywall_scheduled_exports">Automated scheduled exports</string>
     <string name="paywall_future_features">All future features included</string>
-    <string name="paywall_one_time">One-time payment \u2014 no subscription</string>
-    <string name="paywall_unlock_button">Unlock Health.md</string>
-    <string name="paywall_unlock_button_price">Unlock for %s</string>
     <string name="paywall_restore">Restore Purchase</string>
-    <string name="paywall_purchasing">Processing\u2026</string>
     <string name="paywall_restoring">Restoring\u2026</string>
 
     <!-- Debug purchase controls -->

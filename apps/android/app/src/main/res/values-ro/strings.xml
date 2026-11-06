@@ -295,8 +295,6 @@
     <string name="paywall_unlimited_exports">Exporturi nelimitate</string>
     <string name="paywall_scheduled_exports">Exporturi programate automatizate</string>
     <string name="paywall_future_features">Toate caracteristicile viitoare incluse</string>
-    <string name="paywall_one_time">Plată unică — fără abonament</string>
-    <string name="paywall_unlock_button">Deblocați Health.md</string>
     <string name="paywall_restore">Restaurați Achiziția</string>
 
     <!-- Export progress dialog -->
@@ -525,7 +523,6 @@
     <string name="debug_requires_history_permission">Intervalul necesită acces la istoric</string>
     <string name="debug_first_permission_grant">Prima acordare a permisiunii</string>
     <string name="section_health_sources">Surse de sănătate</string>
-    <string name="health_sources_description">Health Connect este sursa locală de export. Health.md poate exporta datele pe care aplicațiile compatibile le scriu în Health Connect.</string>
     <string name="health_provider_status_installed">Instalat</string>
     <string name="health_provider_status_selected">Selectat</string>
     <string name="health_provider_status_ready_to_connect">Gata de conectare</string>
@@ -670,8 +667,6 @@
     <string name="release_notes_highlight_templates">Asocierea manuală cu adresă, port și cod din 20 de cifre funcționează în continuare, inclusiv cu versiuni CLI mai vechi.</string>
     <string name="release_notes_highlight_workouts">Include remedieri de fiabilitate și compatibilitate pentru configurare, exporturi, programări și conexiuni.</string>
     <string name="export_notification_background_permission_required">Exporturile programate necesită acces în fundal la Health Connect. Deschideți Health.md &gt; Programare pentru a-l activa.</string>
-    <string name="paywall_unlock_button_price">Deblocați pentru %s</string>
-    <string name="paywall_purchasing">Se procesează\u2026</string>
     <string name="paywall_restoring">Se restabilește\u2026</string>
     <string name="debug_purchase_title">Controale de depanare</string>
     <string name="debug_current_state">Starea curentă: %s</string>

@@ -370,8 +370,6 @@
     <string name="paywall_unlimited_exports">Unbegrenzte Exporte</string>
     <string name="paywall_scheduled_exports">Automatische Exporte nach Zeitplan</string>
     <string name="paywall_future_features">Alle zukünftigen Funktionen enthalten</string>
-    <string name="paywall_one_time">Einmalige Zahlung — kein Abonnement</string>
-    <string name="paywall_unlock_button">Health.md freischalten</string>
     <string name="paywall_restore">Kauf wiederherstellen</string>
 
     <!-- Export progress dialog -->
@@ -515,7 +513,6 @@
     <string name="debug_requires_history_permission">Bereich benötigt Verlaufzugriff</string>
     <string name="debug_first_permission_grant">Erste Berechtigungserteilung</string>
     <string name="section_health_sources">Gesundheitsquellen</string>
-    <string name="health_sources_description">Health Connect ist die lokale Exportquelle. Daten, die unterstützte Apps in Health Connect schreiben, können von Health.md exportiert werden.</string>
     <string name="health_provider_status_installed">Installiert</string>
     <string name="health_provider_status_selected">Ausgewählt</string>
     <string name="health_provider_status_ready_to_connect">Bereit zum Verbinden</string>
@@ -659,8 +656,6 @@
     <string name="release_notes_highlight_templates">Manuelles Koppeln mit Computeradresse, Port und 20-stelligem Code funktioniert weiterhin, auch mit älteren CLI-Versionen.</string>
     <string name="release_notes_highlight_workouts">Enthält Zuverlässigkeits- und Kompatibilitätskorrekturen für Einrichtung, Exporte, Zeitpläne und Verbindungen.</string>
     <string name="export_notification_background_permission_required">Geplante Exporte benötigen Health Connect-Hintergrundzugriff. Öffnen Sie Health.md &gt; Zeitplan, um ihn zu aktivieren.</string>
-    <string name="paywall_unlock_button_price">Für %s freischalten</string>
-    <string name="paywall_purchasing">Verarbeitung…</string>
     <string name="paywall_restoring">Wird wiederhergestellt…</string>
     <string name="debug_purchase_title">Debug-Steuerelemente</string>
     <string name="debug_current_state">Aktueller Status: %s</string>

@@ -83,6 +83,23 @@ class SharedSetupV2CodecMapperTest {
         assertEquals(1, requireV2(codec.decode(portable)).profiles.size)
     }
 
+    @Test
+    fun `native detail capture opt-in never enters frozen portable setup`() {
+        val fixture = mappedFixture()
+        val profilesWithNativeDetail = fixture.profiles.map { profile ->
+            val snapshot = AndroidExportSettingsSnapshotCodec.decode(profile.settingsSnapshotJson)
+            val modified = snapshot.copy(metricSelection = snapshot.metricSelection.copy(
+                nativeDetailMetricIds = snapshot.metricSelection.enabledMetrics,
+            ))
+            profile.copy(settingsSnapshotJson = AndroidExportSettingsSnapshotCodec.encodeCanonical(modified))
+        }
+        val activeProfile = fixture.profiles.first().id
+        val original = codec.encode(mapper.export(fixture.profiles, activeProfile, fixture.schedules, APP_VERSION))
+        val modified = codec.encode(mapper.export(profilesWithNativeDetail, activeProfile, fixture.schedules, APP_VERSION))
+        assertArrayEquals(original, modified)
+        assertFalse(modified.decodeToString().contains("nativeDetailMetricIds"))
+    }
+
     private val registry = FixtureRegistry
     private val codec = SharedSetupV2Codec(registry)
     private val mapper = SharedSetupV2Mapper(registry)
