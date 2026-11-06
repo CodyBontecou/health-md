@@ -56,7 +56,7 @@ struct SettingsScreen: View {
                 }
             } else {
                 NavigationStack(path: $path) {
-                    hub.navigationDestination(for: Route.self) { destination($0) }
+                    hub.glassTabRoot().navigationDestination(for: Route.self) { destination($0) }
                 }
             }
         }

@@ -71,6 +71,9 @@ struct GlassAppShell: View {
     @State private var archiveFilter: UUID?
     @State private var windowSize: CGSize = .zero
     @State private var editingAutomation: AutomationEditRequest?
+    /// Tab root pages on screen. The floating tab bar shows only over a root page, as
+    /// on the boards: pushed pages keep their bottom actions uncovered.
+    @State private var visibleTabRoots: Set<UUID> = []
     /// FileViewerG: a day's written file pushes from the Archive with Back.
     @State private var archiveFile: ArchiveFileRoute?
     /// DayPage: a date's files, pushed from the Archive's readable day.
@@ -170,10 +173,14 @@ struct GlassAppShell: View {
             }
             ZStack(alignment: .bottom) {
                 content.id(tabRootID)
+                    .environment(\.glassTabRootVisibility, GlassTabRootVisibilityAction { id, isVisible in
+                        if isVisible { visibleTabRoots.insert(id) } else { visibleTabRoots.remove(id) }
+                    })
                 VStack(spacing: 10) {
                     historyCard
-                    // DayPage carries its own bottom actions in the tab bar's place.
-                    if !usesRail && !usesSidebar && !(tab.wrappedValue == .archive && archiveDay != nil) {
+                    // Pushed pages (DayPage, details, sub-pages) carry their own bottom
+                    // actions in the tab bar's place.
+                    if !usesRail && !usesSidebar && !visibleTabRoots.isEmpty {
                         FloatingTabBar(
                             items: Self.navigationItems,
                             selection: tab,
@@ -466,6 +473,7 @@ struct GlassAppShell: View {
                     onOpenDay: { archiveDay = ArchiveDayRoute(date: $0, profileID: $1) }
                 )
                 .task(id: ledgerStore.ledger) { publishWidgetSnapshot() }
+                .glassTabRoot()
                 .navigationTitle(String(localized: "Archive"))
                 .toolbar(.hidden, for: .navigationBar)
                 .navigationDestination(item: $editingAutomation) { request in

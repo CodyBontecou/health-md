@@ -296,7 +296,7 @@ struct AutomationsScreen: View {
                     }
                 }
             } else {
-                NavigationStack { list }
+                NavigationStack { list.glassTabRoot() }
             }
         }
         .sheet(isPresented: $showCreation) {
