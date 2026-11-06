@@ -193,6 +193,27 @@ struct ExportDataSnapshot {
         }
     }
 
+    /// apple-v12 per-category source samples. `nil` for every apple-v8/apple-v11 day, which
+    /// keeps their bytes unchanged; non-nil (possibly with empty groups) for an apple-v12 day.
+    struct DetailExpansion {
+        let groups: [(group: ExportDetailGroup, samples: [DetailSample])]
+
+        /// Writer order and JSON category keys.
+        static let orderedGroups: [(group: ExportDetailGroup, jsonKey: String, title: String)] = [
+            (.activity, "activity", "Activity"),
+            (.vitals, "vitals", "Vitals"),
+            (.body, "body", "Body"),
+            (.nutrition, "nutrition", "Nutrition"),
+            (.mindfulness, "mindfulness", "Mindfulness"),
+            (.mobility, "mobility", "Mobility"),
+            (.reproductiveHealth, "reproductiveHealth", "Reproductive Health"),
+        ]
+
+        func samples(for group: ExportDetailGroup) -> [DetailSample] {
+            groups.first { $0.group == group }?.samples ?? []
+        }
+    }
+
     let date: Date
     let dateString: String
     let timeContext: ExportTimeContext
@@ -231,6 +252,7 @@ struct ExportDataSnapshot {
     let symptoms: SymptomsData
     let medications: MedicationsData
     let otherHealth: OtherHealthData
+    let detailExpansion: DetailExpansion?
 }
 
 // MARK: - Structured Metric Rendering Helpers
@@ -418,7 +440,12 @@ extension HealthData {
             minerals: minerals,
             symptoms: symptoms,
             medications: medications ?? MedicationsData(),
-            otherHealth: other
+            otherHealth: other,
+            detailExpansion: exportsAppleV12DetailExpansion
+                ? ExportDataSnapshot.DetailExpansion(groups: ExportDataSnapshot.DetailExpansion.orderedGroups.map {
+                    ($0.group, DetailSample.sortedForExport(detailSamples(for: $0.group)))
+                })
+                : nil
         )
     }
 }

@@ -71,6 +71,7 @@ class CsvExporter {
         data: HealthData,
         customization: FormatCustomization = FormatCustomization(),
         includeGranularData: Boolean = false,
+        detail: ExportDetailSelection = ExportDetailSelection.uniform(includeGranularData),
     ): String {
         val dateString = customization.dateFormat.format(data.date)
         val converter = customization.unitConverter
@@ -86,12 +87,22 @@ class CsvExporter {
             } else {
                 local.toIso8601()
             }
+        val profile = DailyRecordSchemaProfile.forWriter(customization, detail)
+        val analyticalV7 = profile.writesDetailExpansion
+        // android-analytical-v7 record rows: one per source record, canonical units, exact start.
+        fun StringBuilder.appendExpansionRows(category: String, metric: String, unit: String,
+            samples: List<TimestampedSample>, scale: Double = 1.0) {
+            for (sample in samples) {
+                append(row(dateString, category, metric, sample.value * scale, unit,
+                    machineTimestamp(sample.time, sample.exactTime)))
+            }
+        }
 
         return buildString {
             // T1-08: always 6 columns
             append("Date,Category,Metric,Value,Unit,Timestamp\n")
             if (customization.compatibilitySchemaProfile == CompatibilitySchemaProfile.ANDROID_ANALYTICAL_V5) {
-                append(row(dateString, "Metadata", "Schema Profile", "android-analytical-v5", ""))
+                append(row(dateString, "Metadata", "Schema Profile", profile.publicProfileId, ""))
             }
             data.compatibilityProvenance?.let { provenance ->
                 append(row(dateString, "Metadata", "Merge Policy", provenance.mergePolicyId, ""))
@@ -150,7 +161,7 @@ class CsvExporter {
                 bedtime?.let { append(row(dateString, "Sleep", "Bedtime", customization.timeFormat.format(it), "time")) }
                 wakeTime?.let { append(row(dateString, "Sleep", "Wake Time", customization.timeFormat.format(it), "time")) }
 
-                if (includeGranularData) {
+                if (detail.sleepStages) {
                     for (stage in s.stages) {
                         // T0-11 + SLEEP: iOS-aligned format
                         val durSec = java.time.Duration.between(stage.startTime, stage.endTime).seconds
@@ -187,7 +198,7 @@ class CsvExporter {
                     append(row(dateString, "Activity", "Cardio Fitness (VO2 Max)",
                         formatInvariant("%.1f", it), "mL/kg/min"))
                 }
-                if (includeGranularData) {
+                if (detail.activity) {
                     for (sample in a.stepSamples) {
                         // T0-11: ISO 8601 timestamp
                         append(row(dateString, "Activity", "Steps Sample",
@@ -195,6 +206,13 @@ class CsvExporter {
                     }
                     for (entry in a.activityIntensityEntries) {
                         append(row(dateString, "Activity", "${entry.intensity.replaceFirstChar { it.titlecase() }} Activity", entry.duration.inWholeMinutes, "minutes", machineTimestamp(entry.startTime, entry.exactStartTime)))
+                    }
+                    if (analyticalV7) {
+                        appendExpansionRows("Activity", "Active Calories Sample", "kcal", a.activeCaloriesSamples)
+                        appendExpansionRows("Activity", "Total Calories Sample", "kcal", a.totalCaloriesSamples)
+                        appendExpansionRows("Activity", "Distance Sample", "meters", a.distanceSamples)
+                        appendExpansionRows("Activity", "Flights Climbed Sample", "count", a.floorsSamples)
+                        appendExpansionRows("Activity", "Elevation Gained Sample", "meters", a.elevationSamples)
                     }
                 }
             }
@@ -222,7 +240,7 @@ class CsvExporter {
                 h.heartRateMax?.let { append(row(dateString, "Heart", "Max Heart Rate", it, "bpm")) }
                 // T1-12: HRV (was HRV (RMSSD))
                 h.hrv?.let { append(row(dateString, "Heart", "HRV", it, "ms")) }
-                if (includeGranularData) {
+                if (detail.heart) {
                     for (sample in h.samples) {
                         // T0-11: ISO 8601
                         append(row(dateString, "Heart", "Heart Rate Sample",
@@ -273,7 +291,7 @@ class CsvExporter {
                     append(row(dateString, "Vitals", "Skin Temperature Delta",
                         formatInvariant("%.2f", it), "\u00B0C"))
                 }
-                if (includeGranularData) {
+                if (detail.vitals) {
                     for (sample in v.bloodOxygenSamples) {
                         // T0-11: ISO 8601; T1-13: `Blood Oxygen Sample` (was `SpO2 Sample`)
                         append(row(dateString, "Vitals", "Blood Oxygen Sample",
@@ -311,6 +329,14 @@ class CsvExporter {
                 if (includeAndroidNativeFields) {
                     b.bodyWaterMass?.let { append(row(dateString, "Body", "Body Water Mass", formatInvariant("%.1f", converter.convertWeight(it)), weightUnit)) }
                     b.boneMass?.let { append(row(dateString, "Body", "Bone Mass", formatInvariant("%.1f", converter.convertWeight(it)), weightUnit)) }
+                }
+                if (analyticalV7 && detail.body) {
+                    appendExpansionRows("Body", "Weight Sample", "kg", b.weightSamples)
+                    appendExpansionRows("Body", "Height Sample", "meters", b.heightSamples)
+                    appendExpansionRows("Body", "Body Fat Percentage Sample", "percent", b.bodyFatSamples, scale = 100.0)
+                    appendExpansionRows("Body", "Lean Body Mass Sample", "kg", b.leanBodyMassSamples)
+                    appendExpansionRows("Body", "Bone Mass Sample", "kg", b.boneMassSamples)
+                    appendExpansionRows("Body", "Body Water Mass Sample", "kg", b.bodyWaterMassSamples)
                 }
             }
 
@@ -365,10 +391,13 @@ class CsvExporter {
                 n.water?.let { append(row(dateString, "Nutrition", "Water", it, "L")) }
                 n.caffeine?.let { append(row(dateString, "Nutrition", "Caffeine", it, "mg")) }
                 n.meals.forEach { meal ->
-                    val timestamp = if (includeGranularData) machineTimestamp(meal.startTime, meal.exactStartTime) else meal.startTime.toIso8601()
+                    val timestamp = if (detail.nutrition) machineTimestamp(meal.startTime, meal.exactStartTime) else meal.startTime.toIso8601()
                     meal.name?.let { append(row(dateString, "Nutrition", "Meal Name", it, "", timestamp)) }
                     meal.mealType?.let { append(row(dateString, "Nutrition", "Meal Type", it, "", timestamp)) }
                     meal.energyFromFat?.let { append(row(dateString, "Nutrition", "Meal Energy From Fat", it, "kcal", timestamp)) }
+                }
+                if (analyticalV7 && detail.nutrition) {
+                    appendExpansionRows("Nutrition", "Water Sample", "L", n.hydrationSamples)
                 }
             }
 
@@ -460,7 +489,7 @@ class CsvExporter {
             if (data.mindfulness.hasData) {
                 data.mindfulness.mindfulnessMinutes?.let { append(row(dateString, "Mindfulness", "Mindful Minutes", it, "minutes")) }
                 data.mindfulness.mindfulSessions?.let { append(row(dateString, "Mindfulness", "Mindful Sessions", it, "count")) }
-                if (includeGranularData) {
+                if (detail.mindfulness) {
                     for (session in data.mindfulness.sessions) {
                         val timestamp = machineTimestamp(session.startTime, session.exactStartTime)
                         session.sessionType?.let { append(row(dateString, "Mindfulness", "Session Type", it, "", timestamp)) }
@@ -472,7 +501,7 @@ class CsvExporter {
 
             // ── Planned Workouts ──────────────────────────────────────────────────────────────
             for (plan in data.plannedWorkouts) {
-                val exactTimestamp = if (includeGranularData && analyticalV5) plan.exactStartTime?.toIso8601().orEmpty() else ""
+                val exactTimestamp = if (detail.workouts && analyticalV5) plan.exactStartTime?.toIso8601().orEmpty() else ""
                 append(row(dateString, "Planned Workouts", "${plan.workoutType.displayName()} Start Time", customization.timeFormat.format(plan.startTime), "time", exactTimestamp))
                 append(row(dateString, "Planned Workouts", "${plan.workoutType.displayName()} Duration", plan.duration.inWholeSeconds, "seconds"))
                 append(row(dateString, "Planned Workouts", "${plan.workoutType.displayName()} Has Explicit Time", plan.hasExplicitTime, "boolean"))
@@ -492,10 +521,10 @@ class CsvExporter {
             for (workout in data.workouts) {
                 val timeStr = customization.timeFormat.format(workout.startTime)
                 val name = workout.workoutType.displayName()
-                val exactStart = if (includeGranularData && analyticalV5) workout.exactStartTime?.toIso8601().orEmpty() else ""
+                val exactStart = if (detail.workouts && analyticalV5) workout.exactStartTime?.toIso8601().orEmpty() else ""
                 append(row(dateString, "Workouts", "$name Start Time", timeStr, "time", exactStart))
                 workout.endTime?.let {
-                    val exactEnd = if (includeGranularData && analyticalV5) workout.exactEndTime?.toIso8601().orEmpty() else ""
+                    val exactEnd = if (detail.workouts && analyticalV5) workout.exactEndTime?.toIso8601().orEmpty() else ""
                     append(row(dateString, "Workouts", "$name End Time", customization.timeFormat.format(it), "time", exactEnd))
                 }
                 workout.isIndoor?.let { append(row(dateString, "Workouts", "$name Indoor", it, "boolean")) }
@@ -545,23 +574,23 @@ class CsvExporter {
                     if (workout.route.isNotEmpty()) append(row(dateString, "Workouts", "$name Route Points", workout.route.size, "count"))
                 }
                 for ((index, lap) in workout.laps.withIndex()) {
-                    val timestamp = if (includeGranularData) machineTimestamp(lap.startTime, lap.exactStartTime) else lap.startTime.toIso8601()
+                    val timestamp = if (detail.workouts) machineTimestamp(lap.startTime, lap.exactStartTime) else lap.startTime.toIso8601()
                     append(row(dateString, "Workouts", "$name Lap ${index + 1} Duration", java.time.Duration.between(lap.startTime, lap.endTime).seconds, "seconds", timestamp))
                     lap.length?.let { append(row(dateString, "Workouts", "$name Lap ${index + 1} Distance", it, "meters", timestamp)) }
                 }
                 for (split in workout.splits) {
-                    val timestamp = if (includeGranularData) machineTimestamp(split.startTime, split.exactStartTime) else split.startTime.toIso8601()
+                    val timestamp = if (detail.workouts) machineTimestamp(split.startTime, split.exactStartTime) else split.startTime.toIso8601()
                     append(row(dateString, "Workouts", "$name Split ${split.index} Duration", split.duration.inWholeSeconds, "seconds", timestamp))
                     split.distance?.let { append(row(dateString, "Workouts", "$name Split ${split.index} Distance", it, "meters", timestamp)) }
                     split.averageHeartRate?.let { append(row(dateString, "Workouts", "$name Split ${split.index} Average Heart Rate", it, "bpm", timestamp)) }
                 }
                 for (segment in workout.segments) {
                     segment.repetitions?.let {
-                        val timestamp = if (includeGranularData) machineTimestamp(segment.startTime, segment.exactStartTime) else segment.startTime.toIso8601()
+                        val timestamp = if (detail.workouts) machineTimestamp(segment.startTime, segment.exactStartTime) else segment.startTime.toIso8601()
                         append(row(dateString, "Workouts", "$name ${segment.type} Repetitions", it, "count", timestamp))
                     }
                 }
-                if (includeGranularData) {
+                if (detail.workouts) {
                     for (point in workout.route) {
                         val timestamp = machineTimestamp(point.time, point.exactTime)
                         append(row(dateString, "Workouts", "$name Route Point", "${point.latitude};${point.longitude}", "lat;lon", timestamp))

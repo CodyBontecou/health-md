@@ -533,6 +533,14 @@
     <string name="feedback_no_app_available">Keine App zum Öffnen dieses Links verfügbar</string>
     <string name="granular_data_title">Detaillierte Zeitreihen einbeziehen</string>
     <string name="granular_data_description">Fügen Sie zeitgestempelte Messwerte wie Herzfrequenz und Schlafphasen zu Kompatibilitätsexporten hinzu. Für eine API-vollständige Kopie verwenden Sie den API-Rohdaten-Snapshot.</string>
+    <string name="detail_overrides_title">Detailgrad nach Kategorie</string>
+    <string name="detail_overrides_description">Überschreibe die Standardeinstellung für einzelne Kategorien. Zusammenfassung behält nur Tageswerte; Tageszusammenfassungen ändern sich nie.</string>
+    <string name="detail_choice_default">Standard</string>
+    <string name="detail_choice_summary">Zusammenfassung</string>
+    <string name="detail_choice_sessions">Sitzungen</string>
+    <string name="detail_choice_detailed">Detailliert</string>
+    <string name="detail_group_sleep_hint">Sitzungen listet jede Schlafsitzung mit vollständigem Datum und Uhrzeit. Detailliert fügt Schlafphasen hinzu.</string>
+    <string name="detail_expansion_schema_hint">Detailliert bei Aktivität, Ernährung oder Körper fügt jeden Quelldatensatz hinzu und stellt analytische JSON-, CSV- und Markdown-Exporte auf Schema 7 um.</string>
     <string name="sleep_attribution_title">Zuordnung des Schlaftags</string>
     <string name="sleep_attribution_night_begins">Nachtbeginn</string>
     <string name="sleep_attribution_morning_ends">Morgenende</string>

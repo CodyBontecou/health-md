@@ -50,7 +50,7 @@
 |---|---|---|---|---|
 | Markdown export | ✅ `markdown-export.md` | ✅ `markdown-export.md` | shared | Same template tiers and frontmatter workflow. |
 | Obsidian Bases export | ✅ `obsidian-bases.md` | ✅ `obsidian-bases.md` | shared | |
-| JSON export | ✅ `json-export.md` | ✅ `json-export.md` | platform-distinct | Same `healthmd.health_data` family, independently versioned: Apple v8 (+ typed WHOOP section), Android frozen v4 + analytical v5. Proposed unified v9. |
+| JSON export | ✅ `json-export.md` | ✅ `json-export.md` | platform-distinct | Same `healthmd.health_data` family, independently versioned: Apple v8 (+ typed WHOOP section), Android frozen v4 + analytical v5; per-record detail successors Apple v12 and Android analytical v7 (selected by an explicit Detailed category override). Proposed unified v9. |
 | CSV export | ✅ `csv-export.md` | ✅ `csv-export.md` | shared | |
 | NDJSON raw output | — (raw via CLI `--raw-format ndjson`) | ✅ `raw-snapshots.md` | android_only | Raw snapshot artifact format. |
 | Filename templates | ✅ `filename-templates.md` | ✅ `filename-templates.md` | shared | Same placeholder vocabulary. |
@@ -68,6 +68,7 @@
 |---|---|---|---|---|
 | Individual entry tracking | ✅ `individual-entry-tracking.md` | ✅ `individual-entry-tracking.md` | shared | Workouts / sleep stages / vitals timestamped files. |
 | Workout details | ✅ `workout-details.md` | ✅ `workout-details.md` | shared | Android correlates by time window; page documents HC limitations honestly. |
+| Per-category export detail | ✅ `time-series-data.md` | ✅ `csv-export.md` | shared | Default level plus per-category overrides ([per-group-export-detail.md](per-group-export-detail.md)); Android-only sleep sessions (`export.sleep-session-detail`). |
 | Lossless source archive | ✅ `time-series-data.md` (`healthmd.healthkit_records` v1) | — | apple_only | Health Connect records are not HealthKit objects; UUID/relationship semantics cannot exist (`apple.lossless-healthkit-archive`). |
 | Raw API snapshots | — | ✅ `raw-snapshots.md` (+ contract docs) | android_only | Separate archival product: immutable provider-native JSON/NDJSON + manifests/checksums; Fitbit/Oura/WHOOP/Withings provider bytes. |
 | Raw changes backend | — | 🔧 `raw-changes-v1.md` | android_only | Change tokens + deletion tombstones. |

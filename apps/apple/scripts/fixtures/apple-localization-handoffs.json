@@ -35,12 +35,8 @@
     "required": ["ScheduleDisplayCopy.cadenceStartingSummary(", "ScheduleDisplayCopy.unitChoiceLabel($0)", "String(localized: \"Double tap to enable scheduled exports\")", "String(localized: \"Double tap to disable scheduled exports\")", "String(localized: \"Double tap to enable Today Refresh\")", "String(localized: \"Double tap to disable Today Refresh\")", "return String(localized: \"Scheduled exports upload artifacts to \\(settings.displayName).\")", "return String(localized: \"Scheduled JSON exports POST to \\(apiExportSettings.displayName). Tap to edit.\")"],
     "forbidden": ["label(for:", "? \"disable\" : \"enable\""]
   },
-  "HealthMd/iOS/Views/SyncSettingsView.swift": {
-    "required": ["let port = String(pairingLink.port)", "String(localized: \"Step \\(number): \\(text)\")", "String(localized: \"Open Health.md on Mac and choose a destination folder\")", "return status.lastError ?? syncService.macExportReadinessMessage", "String(localized: \"Double tap to enable this Mac as an export destination\")", "String(localized: \"Double tap to disable this Mac as an export destination\")"],
-    "forbidden": ["? \"disable\" : \"enable\"", "LocalizedStringKey(subtitle)", "LocalizedStringKey(text)", "LocalizedStringKey(pairingLink.host)"]
-  },
   "HealthMd/iOS/Views/ExportProfilesView.swift": {
-    "required": ["ScheduleDisplayCopy.cadence(count: interval, unit: unit, at: cadence.timeLabel)", "Button(LocalizedStringKey(editingProfile == nil ? \"Create\" : \"Save\"))"],
+    "required": ["ScheduleDisplayCopy.cadence(count: interval, unit: unit, at: cadence.timeLabel)", "Text(editingProfile == nil ? String(localized: \"Create\") : String(localized: \"Save\"))"],
     "forbidden": ["label(for:", "LocalizedStringKey(profile.name)"]
   }
 }

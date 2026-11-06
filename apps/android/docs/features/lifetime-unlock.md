@@ -11,7 +11,7 @@
 
 Health.md has one channel-neutral entitlement outcome: access to unlimited manual exports, scheduled exports, automation, recovery, and Direct CLI export.
 
-- **Google Play:** a hard paywall before tracking/setup. Choose Individual weekly ($0.99 US), yearly ($29.99 US), or Lifetime ($49.99 US). Eligible subscriptions include a seven-day store-backed free trial; Lifetime is charged immediately. Existing paid and grandfathered permanent access is retained. Android has no Family plans.
+- **Google Play:** a hard paywall before tracking/setup. Choose Individual weekly ($0.99 US), yearly ($29.99 US), or Lifetime ($19.99 US live; $49.99 US launch target, matching Apple, pending the Play cutover). Eligible subscriptions include a seven-day store-backed free trial; Lifetime is charged immediately. Existing paid and grandfathered permanent access is retained. Android has no Family plans.
 - **F-Droid:** full access is included. There is no free counter, paywall, product lookup, purchase, or restore action.
 
 The distribution difference does not change export formats, bytes, schemas, or direct-device protocol behavior.

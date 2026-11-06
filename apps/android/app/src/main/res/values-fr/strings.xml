@@ -543,6 +543,14 @@
     <string name="feedback_no_app_available">Aucune application disponible pour ouvrir ce lien</string>
     <string name="granular_data_title">Inclure des séries chronologiques détaillées</string>
     <string name="granular_data_description">Ajoutez aux exportations de compatibilité des échantillons horodatés, comme la fréquence cardiaque et les phases de sommeil. Pour obtenir une copie complète de l’API, utilisez un instantané brut de l’API.</string>
+    <string name="detail_overrides_title">Détail par catégorie</string>
+    <string name="detail_overrides_description">Remplacez la valeur par défaut pour certaines catégories. Résumé ne conserve que les totaux quotidiens ; les résumés quotidiens ne changent jamais.</string>
+    <string name="detail_choice_default">Par défaut</string>
+    <string name="detail_choice_summary">Résumé</string>
+    <string name="detail_choice_sessions">Sessions</string>
+    <string name="detail_choice_detailed">Détaillé</string>
+    <string name="detail_group_sleep_hint">Sessions liste chaque session de sommeil avec la date et l’heure complètes. Détaillé ajoute les phases de sommeil.</string>
+    <string name="detail_expansion_schema_hint">Détaillé pour Activité, Nutrition ou Corps ajoute chaque enregistrement source et fait passer les exports analytiques JSON, CSV et Markdown au schéma 7.</string>
     <string name="sleep_attribution_title">Attribution du jour de sommeil</string>
     <string name="sleep_attribution_night_begins">Début de nuit</string>
     <string name="sleep_attribution_morning_ends">Fin au matin</string>

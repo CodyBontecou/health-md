@@ -543,6 +543,14 @@
     <string name="feedback_no_app_available">Nicio aplicație disponibilă pentru a deschide acest link</string>
     <string name="granular_data_title">Includeți serii temporale detaliate</string>
     <string name="granular_data_description">Adăugați în exporturile de compatibilitate mostre cu marcaj temporal, precum frecvența cardiacă și etapele somnului. Pentru o copie completă a datelor API, utilizați Raw API Snapshot.</string>
+    <string name="detail_overrides_title">Detaliu pe categorie</string>
+    <string name="detail_overrides_description">Suprascrie valoarea implicită pentru anumite categorii. Rezumat păstrează doar totalurile zilnice; rezumatele zilnice nu se schimbă niciodată.</string>
+    <string name="detail_choice_default">Implicit</string>
+    <string name="detail_choice_summary">Rezumat</string>
+    <string name="detail_choice_sessions">Sesiuni</string>
+    <string name="detail_choice_detailed">Detaliat</string>
+    <string name="detail_group_sleep_hint">Sesiuni listează fiecare sesiune de somn cu data și ora complete. Detaliat adaugă fazele somnului.</string>
+    <string name="detail_expansion_schema_hint">Detaliat pentru Activitate, Nutriție sau Corp adaugă fiecare înregistrare sursă și trece exporturile analitice JSON, CSV și Markdown la schema 7.</string>
     <string name="sleep_attribution_title">Atribuirea zilei de somn</string>
     <string name="sleep_attribution_night_begins">Începe noaptea</string>
     <string name="sleep_attribution_morning_ends">Se termină dimineața</string>

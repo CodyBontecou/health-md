@@ -703,6 +703,11 @@ fun HealthMdNavigation(
                             settingsViewModel.updateIncludeGranularData(it)
                         }
                     },
+                    onDetailChoiceChanged = { group, choice ->
+                        settingsViewModel.performConfigurationChange {
+                            settingsViewModel.updateDetailChoice(group, choice)
+                        }
+                    },
                     onSleepDayAttributionChanged = {
                         settingsViewModel.performConfigurationChange {
                             settingsViewModel.updateSleepDayAttribution(it)

@@ -206,7 +206,8 @@ struct APIEndpointExportRunner {
                 exportedAt: exportedAt,
                 connectedAppsEnabled: connectedAppsEnabled,
                 calendarTimeZone: calendarTimeZone,
-                captureContext: captureContext
+                captureContext: captureContext,
+                dailyRecordsUseAppleV12: try APIExportClient.dailyRecordsUseAppleV12(records)
             )
         }
 
@@ -224,7 +225,8 @@ struct APIEndpointExportRunner {
                 connectedAppsEnabled: connectedAppsEnabled,
                 calendarTimeZone: calendarTimeZone,
                 directoryURL: artifactDirectory,
-                captureContext: captureContext
+                captureContext: captureContext,
+                dailyRecordsUseAppleV12: try APIExportClient.dailyRecordsUseAppleV12(records)
             )
             return PreparedBatch(
                 requestedDates: requestedDates,

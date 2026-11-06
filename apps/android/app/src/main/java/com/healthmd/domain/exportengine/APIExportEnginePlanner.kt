@@ -309,6 +309,7 @@ class HealthMdRustAPIExportPlanner(
                     groupByCategory = request.settings.groupByCategory,
                     includePlatformExtensions = false,
                     includeGranularData = request.settings.includeGranularData,
+                    detail = request.settings.exportDetailSelection(),
                     rawCaptureStatus = "not_requested",
                     writeMode = "overwrite",
                     api = HealthMdRenderInputAdapter.ApiOptions(

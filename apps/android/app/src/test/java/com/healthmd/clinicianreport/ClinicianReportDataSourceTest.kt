@@ -67,7 +67,7 @@ class ClinicianReportDataSourceTest {
         coEvery { settings.getSleepDayAttribution() } returns SleepDayAttribution.DEFAULT
         every { registry.providerFor("health_connect") } returns provider
         coEvery {
-            manager.fetchHealthDataRange(any(), any(), true, pinnedZone, true, any())
+            manager.fetchHealthDataRange(any(), any(), true, pinnedZone, true, any(), any())
         } answers {
             firstArg<List<LocalDate>>().map { date -> HealthData(date) }
         }
@@ -79,7 +79,7 @@ class ClinicianReportDataSourceTest {
         )
 
         coVerify(exactly = 1) {
-            manager.fetchHealthDataRange(listOf(day), any(), true, pinnedZone, true, SleepDayAttribution.DEFAULT)
+            manager.fetchHealthDataRange(listOf(day), any(), true, pinnedZone, true, SleepDayAttribution.DEFAULT, any())
         }
     }
 
@@ -91,7 +91,7 @@ class ClinicianReportDataSourceTest {
         coEvery { settings.getSelectedHealthProviderId() } returns "health_connect"
         coEvery { settings.getSleepDayAttribution() } returns SleepDayAttribution.MORNING_ENDS
         every { registry.providerFor("health_connect") } returns provider
-        coEvery { manager.fetchHealthDataRange(any(), any(), any(), any(), any(), any()) } answers {
+        coEvery { manager.fetchHealthDataRange(any(), any(), any(), any(), any(), any(), any()) } answers {
             firstArg<List<LocalDate>>().map(::HealthData)
         }
         val repository = HealthRepositoryImpl(registry, settings)
@@ -130,7 +130,7 @@ class ClinicianReportDataSourceTest {
             }
             every { registry.providerFor("health_connect") } returns provider
             coEvery {
-                manager.fetchHealthDataRange(any(), any(), false, capturedZone, false, SleepDayAttribution.NIGHT_BEGINS)
+                manager.fetchHealthDataRange(any(), any(), false, capturedZone, false, SleepDayAttribution.NIGHT_BEGINS, any())
             } returns listOf(HealthData(day, sleep = SleepData(totalDuration = 1.minutes)))
             val repository = HealthRepositoryImpl(registry, settings)
 
@@ -138,7 +138,7 @@ class ClinicianReportDataSourceTest {
 
             assertThat(captured.sleep.totalDuration).isEqualTo(1.minutes)
             coVerify(exactly = 1) {
-                manager.fetchHealthDataRange(any(), any(), false, capturedZone, false, SleepDayAttribution.NIGHT_BEGINS)
+                manager.fetchHealthDataRange(any(), any(), false, capturedZone, false, SleepDayAttribution.NIGHT_BEGINS, any())
             }
         } finally {
             TimeZone.setDefault(previous)
@@ -273,6 +273,7 @@ class ClinicianReportDataSourceTest {
             zoneId: ZoneId,
             pinnedCalendarDays: Boolean,
             sleepDayAttributionOverride: SleepDayAttributionOverride,
+            detail: ExportDetailSelection,
         ): List<HealthData> {
             requestedTypes = dataTypes
             requestedDates = dates

@@ -382,11 +382,31 @@ class AdvancedExportSettings: ObservableObject {
         didSet { save() }
     }
 
+    /// Explicit per-group compatibility detail; groups without an entry follow
+    /// `compatibilityDetail`. Missing on all pre-override installs.
+    @Published var compatibilityDetailOverrides: [ExportDetailGroup: ExportDetailChoice] {
+        didSet { save() }
+    }
+
+    /// Sets one group's explicit detail, or returns it to the default with `nil`.
+    func setCompatibilityDetail(_ choice: ExportDetailChoice?, for group: ExportDetailGroup) {
+        var updated = compatibilityDetailOverrides
+        if let choice, ExportDetailGroup.appleSupported.contains(group), group.appleSupportedChoices.contains(choice) {
+            updated[group] = choice
+        } else {
+            updated.removeValue(forKey: group)
+        }
+        if updated != compatibilityDetailOverrides {
+            compatibilityDetailOverrides = updated
+        }
+    }
+
     var detailPolicy: AppleExportDetailPolicy {
         get {
             AppleExportDetailPolicy(
                 compatibilityDetail: compatibilityDetail,
                 healthKitSourceArchive: healthKitSourceArchivePolicy,
+                compatibilityDetailOverrides: compatibilityDetailOverrides,
                 nativeDetailMetricIDs: metricSelection.effectiveNativeDetailMetricIDs.isEmpty ? nil
                     : metricSelection.effectiveNativeDetailMetricIDs
             )
@@ -397,6 +417,9 @@ class AdvancedExportSettings: ObservableObject {
             }
             if healthKitSourceArchivePolicy != newValue.healthKitSourceArchive {
                 healthKitSourceArchivePolicy = newValue.healthKitSourceArchive
+            }
+            if compatibilityDetailOverrides != newValue.compatibilityDetailOverrides {
+                compatibilityDetailOverrides = newValue.compatibilityDetailOverrides
             }
         }
     }
@@ -462,6 +485,7 @@ class AdvancedExportSettings: ObservableObject {
     private let healthKitSourceArchivePolicyKey =
         "advancedExportSettings.healthKitSourceArchivePolicy"
     private let includeGranularDataKey = "advancedExportSettings.includeGranularData"
+    private let compatibilityDetailOverridesKey = "advancedExportSettings.compatibilityDetailOverrides"
     private let generateRangeSummaryKey = "advancedExportSettings.generateRangeSummary"
     private let legacyGenerateWeeklyRollupsKey = "advancedExportSettings.generateWeeklyRollups"
     private let legacyGenerateMonthlyRollupsKey = "advancedExportSettings.generateMonthlyRollups"
@@ -621,6 +645,7 @@ class AdvancedExportSettings: ObservableObject {
         self.dailyNoteInjection = dailyNoteInjection
         compatibilityDetail = snapshot.compatibilityDetail
         healthKitSourceArchivePolicy = snapshot.healthKitSourceArchivePolicy
+        compatibilityDetailOverrides = snapshot.compatibilityDetailOverrides
         generateRangeSummary = snapshot.generateRangeSummary
         historicalCalendarRollupPeriods = snapshot.historicalCalendarRollupPeriods
         executionAppleExportEnginePin = snapshot.appleExportEnginePin
@@ -819,6 +844,16 @@ class AdvancedExportSettings: ObservableObject {
             ?? legacyDetailPolicy.healthKitSourceArchive
         self.compatibilityDetail = loadedCompatibilityDetail
         self.healthKitSourceArchivePolicy = loadedHealthKitSourceArchivePolicy
+        // Missing means no per-group override, i.e. the exact previous uniform detail.
+        // Entries a newer build wrote but this build cannot honor are dropped, never guessed.
+        let storedOverrides = userDefaults.dictionary(forKey: compatibilityDetailOverridesKey) as? [String: String] ?? [:]
+        self.compatibilityDetailOverrides = storedOverrides.reduce(into: [:]) { result, entry in
+            guard let group = ExportDetailGroup(rawValue: entry.key),
+                  let choice = ExportDetailChoice(rawValue: entry.value),
+                  ExportDetailGroup.appleSupported.contains(group),
+                  group.appleSupportedChoices.contains(choice) else { return }
+            result[group] = choice
+        }
         userDefaults.set(loadedCompatibilityDetail.rawValue, forKey: compatibilityDetailKey)
         userDefaults.set(
             loadedHealthKitSourceArchivePolicy.rawValue,
@@ -1044,6 +1079,11 @@ class AdvancedExportSettings: ObservableObject {
             detailPolicy.legacyIncludeGranularData,
             forKey: includeGranularDataKey
         )
+        if compatibilityDetailOverrides.isEmpty {
+            userDefaults.removeObject(forKey: compatibilityDetailOverridesKey)
+        } else {
+            userDefaults.set(detailPolicy.overridesWireValue, forKey: compatibilityDetailOverridesKey)
+        }
 
         // New live settings persist only the range-summary key.
         userDefaults.set(generateRangeSummary, forKey: generateRangeSummaryKey)

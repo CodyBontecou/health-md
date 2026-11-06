@@ -221,6 +221,45 @@ enum ExportFixtures {
         return data
     }
 
+    // MARK: - apple-v12 Detail Expansion Day
+
+    static let appleV12SourceUUID = UUID(uuidString: "00000000-0000-0000-0000-0000000000a1")!
+
+    /// `fullDay` plus one `detailSamples` entry for every apple-v12 category, including a
+    /// category sample and a sample without source provenance. Marked apple-v12.
+    static var appleV12DetailDay: HealthData {
+        var data = fullDay
+        func at(_ hour: Double) -> Date { referenceDate.addingTimeInterval(hour * 3600) }
+        func quantity(_ metric: String, _ type: String, _ start: Double, _ end: Double,
+                      _ value: Double, _ unit: String, uuid: UUID? = appleV12SourceUUID,
+                      source: String? = "com.apple.health") -> DetailSample {
+            DetailSample(metric: metric, healthKitType: "HKQuantityTypeIdentifier\(type)",
+                         startDate: at(start), endDate: at(end), value: value, unit: unit,
+                         sourceUUID: uuid, source: source)
+        }
+        func category(_ metric: String, _ type: String, _ start: Double, _ end: Double,
+                      _ value: String) -> DetailSample {
+            DetailSample(metric: metric, healthKitType: "HKCategoryTypeIdentifier\(type)",
+                         startDate: at(start), endDate: at(end), categoryValue: value,
+                         sourceUUID: appleV12SourceUUID, source: "com.apple.health")
+        }
+        data.activity.detailSamples = [
+            quantity("steps", "StepCount", 8, 8.25, 1_200, "count"),
+            category("stand_hours", "AppleStandHour", 9, 10, "stood"),
+        ]
+        data.vitals.detailSamples = [
+            quantity("body_temperature", "BodyTemperature", 7, 7, 36.6, "degC", uuid: nil, source: nil),
+        ]
+        data.body.detailSamples = [quantity("weight", "BodyMass", 7.5, 7.5, 75, "kg")]
+        data.nutrition.detailSamples = [quantity("dietary_water", "DietaryWater", 12, 12, 0.5, "L")]
+        data.mindfulness.detailSamples = [category("mindful_sessions", "MindfulSession", 6, 6.25, "not_applicable")]
+        data.mobility.detailSamples = [quantity("walking_speed", "WalkingSpeed", 10, 10.1, 1.4, "m/s")]
+        data.reproductiveHealth = ReproductiveHealthData(menstrualFlow: "medium")
+        data.reproductiveHealth.detailSamples = [category("menstrual_flow", "MenstrualFlow", 0, 24, "medium")]
+        data.compatibilityDetailProfile = .appleV12
+        return data
+    }
+
     // MARK: - Fully Populated Day with Granular Data
 
     /// Same as fullDay but with time-series sample arrays populated.

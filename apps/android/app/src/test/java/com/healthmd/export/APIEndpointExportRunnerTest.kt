@@ -13,6 +13,7 @@ import com.healthmd.data.health.HealthConnectManager
 import com.healthmd.data.health.HealthProviderRegistry
 import com.healthmd.data.health.HealthRepositoryImpl
 import com.healthmd.data.health.SleepAttributionCaptureFixture
+import com.healthmd.domain.model.ExportDetailSelection
 import com.healthmd.domain.model.ActivityData
 import com.healthmd.domain.model.AndroidCaptureContext
 import com.healthmd.domain.model.DataTypeSelection
@@ -126,12 +127,12 @@ class APIEndpointExportRunnerTest {
             every { registry.providerFor("health_connect") } returns provider
             every { registry.primaryExportProvider() } returns provider
             every { manager.isBeforeFirstUnlock() } returns false
-            coEvery { manager.authorizeExerciseRouteConsent(any(), any(), any()) } answers {
+            coEvery { manager.authorizeExerciseRouteConsent(any(), any(), any(), any()) } answers {
                 consentZones += arg<ZoneId>(2)
                 storedAttribution = SleepDayAttribution.MORNING_ENDS
                 TimeZone.setDefault(TimeZone.getTimeZone(changedZone))
             }
-            coEvery { manager.fetchHealthDataRange(any(), any(), any(), any(), any(), any()) } answers {
+            coEvery { manager.fetchHealthDataRange(any(), any(), any(), any(), any(), any(), any()) } answers {
                 val date = firstArg<List<LocalDate>>().single()
                 val zone = arg<ZoneId>(3)
                 val attribution = arg<SleepDayAttribution>(5)
@@ -415,6 +416,7 @@ class APIEndpointExportRunnerTest {
                 zoneId: ZoneId,
                 pinnedCalendarDays: Boolean,
                 sleepDayAttributionOverride: SleepDayAttributionOverride,
+                detail: ExportDetailSelection,
             ): List<HealthData> {
                 rangeFlags?.add(includeGranularData)
                 return dates.map { rangeDataByDate.getValue(it).filtered(dataTypes) }

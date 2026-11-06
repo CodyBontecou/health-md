@@ -310,6 +310,14 @@
     </plurals>
     <string name="granular_data_title">Include Detailed Time-Series</string>
     <string name="granular_data_description">Add timestamped samples such as heart rate and sleep stages to compatibility exports. For an API-complete copy, use Raw API Snapshot.</string>
+    <string name="detail_overrides_title">Detail by category</string>
+    <string name="detail_overrides_description">Override the default for individual categories. Summary keeps daily totals only; daily summaries never change.</string>
+    <string name="detail_choice_default">Default</string>
+    <string name="detail_choice_summary">Summary</string>
+    <string name="detail_choice_sessions">Sessions</string>
+    <string name="detail_choice_detailed">Detailed</string>
+    <string name="detail_group_sleep_hint">Sessions lists each sleep session with full date and time. Detailed adds sleep stages.</string>
+    <string name="detail_expansion_schema_hint">Detailed Activity, Nutrition, or Body adds each source record and switches analytical JSON, CSV, and Markdown exports to schema 7.</string>
 
     <!-- Sleep day attribution (issue #104) -->
     <string name="sleep_attribution_title">Sleep Day Attribution</string>

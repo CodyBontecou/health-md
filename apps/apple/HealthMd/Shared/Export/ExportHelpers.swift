@@ -32,7 +32,12 @@ extension ExportDataSnapshot {
     ) -> [String] {
         var lines: [String] = ["---"]
         appendFrontmatterField(key: "schema", value: HealthMdExportSchema.identifier, to: &lines)
-        appendFrontmatterField(key: "schema_version", value: "\(HealthMdExportSchema.version)", to: &lines)
+        if detailExpansion != nil {
+            appendFrontmatterField(key: "schema_version", value: "\(AppleDetailExpansionSchema.version)", to: &lines)
+            appendFrontmatterField(key: "schema_profile", value: AppleDetailExpansionSchema.profile, to: &lines)
+        } else {
+            appendFrontmatterField(key: "schema_version", value: "\(HealthMdExportSchema.version)", to: &lines)
+        }
         lines.append("time_context:")
         lines.append("  calendar_timezone: \(timeContext.calendarTimeZoneIdentifier)")
         lines.append("  timestamp_timezone: \(ExportTimeContext.timestampTimeZoneIdentifier)")

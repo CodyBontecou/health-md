@@ -272,11 +272,13 @@ class HealthConnectManager(
         dates: List<LocalDate>,
         includeGranularData: Boolean,
         zoneId: ZoneId = ZoneId.systemDefault(),
+        detail: ExportDetailSelection = ExportDetailSelection.uniform(includeGranularData),
     ) {
         val run = currentCoroutineContext()[InteractiveRouteConsent] ?: return
         try {
             val sortedDates = dates.distinct().sorted()
-            val chunkDays = if (includeGranularData) GRANULAR_READ_CHUNK_DAYS else RANGE_READ_CHUNK_DAYS
+            // Must mirror fetchHealthDataRange chunking so consent and capture windows agree.
+            val chunkDays = if (detail.any) GRANULAR_READ_CHUNK_DAYS else RANGE_READ_CHUNK_DAYS
             val boundedWindows = mutableListOf<MutableList<LocalDate>>()
             for (date in sortedDates) {
                 val current = boundedWindows.lastOrNull()
@@ -331,13 +333,17 @@ class HealthConnectManager(
         zoneId: ZoneId = ZoneId.systemDefault(),
         pinnedCalendarDays: Boolean = false,
         sleepDayAttribution: SleepDayAttribution = SleepDayAttribution.DEFAULT,
+        detail: ExportDetailSelection = ExportDetailSelection.uniform(includeGranularData),
     ): List<HealthData> {
         if (dates.isEmpty()) return emptyList()
 
         val requestedDates = dates.toSet()
         val dataByDate = dates.associateWith { HealthData(it) }.toMutableMap()
         val sortedDates = requestedDates.sorted()
-        val chunkDays = if (includeGranularData) GRANULAR_READ_CHUNK_DAYS else RANGE_READ_CHUNK_DAYS
+        // Per-group detail: a summarized group never pays for another group's sample reads.
+        val chunkDays = if (detail.any) GRANULAR_READ_CHUNK_DAYS else RANGE_READ_CHUNK_DAYS
+        // android-analytical-v7 interval arrays. Wake-date (android-sleep-v6) never captures them.
+        val expansion = detail.analyticalExpansion && sleepDayAttribution != SleepDayAttribution.MORNING_ENDS
 
         // Interactive compatibility exports complete their global consent-only pass before this
         // canonical capture. Newest-first traversal remains useful for direct range callers.
@@ -369,26 +375,29 @@ class HealthConnectManager(
             applyMobilityAggregates(dataByDate, chunkDates, localRange, selection)
 
             if (selection.sleep) {
-                applySleepRange(dataByDate, chunkDates, zoneId, includeGranularData, sleepDayAttribution = sleepDayAttribution)
+                applySleepRange(dataByDate, chunkDates, zoneId, detail.sleepStages, sleepDayAttribution = sleepDayAttribution)
             }
             if (selection.activity || selection.workouts || selection.heart || selection.mobility) {
-                applyExerciseRange(dataByDate, chunkDates, instantRange, selection, includeGranularData, zoneId, sleepDayAttribution)
+                applyExerciseRange(dataByDate, chunkDates, instantRange, selection, detail.workouts, zoneId, sleepDayAttribution)
             }
-            if (selection.activity && includeGranularData) {
+            if (selection.activity && detail.activity) {
                 applyStepSamplesRange(dataByDate, chunkDates, instantRange, zoneId)
                 applyActivityIntensityRange(dataByDate, chunkDates, instantRange, zoneId)
+                if (expansion) applyActivityExpansionSamplesRange(dataByDate, chunkDates, instantRange, zoneId)
             }
             if (selection.heart) {
-                applyHeartRangeReads(dataByDate, chunkDates, instantRange, includeGranularData, zoneId)
+                applyHeartRangeReads(dataByDate, chunkDates, instantRange, detail.heart, zoneId)
             }
             if (selection.vitals) {
-                applyVitalsRangeReads(dataByDate, chunkDates, instantRange, includeGranularData, zoneId)
+                applyVitalsRangeReads(dataByDate, chunkDates, instantRange, detail.vitals, zoneId)
             }
             if (selection.body) {
-                applyBodyRangeReads(dataByDate, chunkDates, instantRange, zoneId)
+                applyBodyRangeReads(dataByDate, chunkDates, instantRange, zoneId,
+                    includeRecordSamples = expansion && detail.body)
             }
-            if (selection.nutrition && includeGranularData) {
+            if (selection.nutrition && detail.nutrition) {
                 applyNutritionMealRange(dataByDate, chunkDates, instantRange, zoneId)
+                if (expansion) applyHydrationSamplesRange(dataByDate, chunkDates, instantRange, zoneId)
             }
             if (selection.reproductiveHealth) {
                 applyReproductiveRangeReads(dataByDate, chunkDates, instantRange, zoneId)
@@ -1127,6 +1136,97 @@ class HealthConnectManager(
         }
     }
 
+    /**
+     * android-analytical-v7 activity intervals. One sample per source record, owned by the local
+     * date of its start instant; values use the units of the daily aggregates (kcal, meters,
+     * floors). A missing read permission yields no entries rather than failing the export.
+     */
+    private suspend fun applyActivityExpansionSamplesRange(
+        dataByDate: MutableMap<LocalDate, HealthData>,
+        requestedDates: Set<LocalDate>,
+        timeRange: TimeRangeFilter,
+        zone: ZoneId,
+    ) {
+        val activeCalories = readRecordsOrEmpty(ActiveCaloriesBurnedRecord::class, timeRange)
+            .recordSamplesByDate("active_calories", zone) { SourceRecordValue(it.startTime, it.startZoneOffset, it.endTime, it.endZoneOffset, it.energy.inKilocalories) }
+        val totalCalories = readRecordsOrEmpty(TotalCaloriesBurnedRecord::class, timeRange)
+            .recordSamplesByDate("total_calories", zone) { SourceRecordValue(it.startTime, it.startZoneOffset, it.endTime, it.endZoneOffset, it.energy.inKilocalories) }
+        val distance = readRecordsOrEmpty(DistanceRecord::class, timeRange)
+            .recordSamplesByDate("distance", zone) { SourceRecordValue(it.startTime, it.startZoneOffset, it.endTime, it.endZoneOffset, it.distance.inMeters) }
+        val floors = readRecordsOrEmpty(FloorsClimbedRecord::class, timeRange)
+            .recordSamplesByDate("floors_climbed", zone) { SourceRecordValue(it.startTime, it.startZoneOffset, it.endTime, it.endZoneOffset, it.floors) }
+        val elevation = readRecordsOrEmpty(ElevationGainedRecord::class, timeRange)
+            .recordSamplesByDate("elevation_gained", zone) { SourceRecordValue(it.startTime, it.startZoneOffset, it.endTime, it.endZoneOffset, it.elevation.inMeters) }
+        val dates = activeCalories.keys + totalCalories.keys + distance.keys + floors.keys + elevation.keys
+        for (date in dates) {
+            if (date !in requestedDates) continue
+            dataByDate.update(date) { current ->
+                current.copy(activity = current.activity.copy(
+                    activeCaloriesSamples = activeCalories[date].orEmpty(),
+                    totalCaloriesSamples = totalCalories[date].orEmpty(),
+                    distanceSamples = distance[date].orEmpty(),
+                    floorsSamples = floors[date].orEmpty(),
+                    elevationSamples = elevation[date].orEmpty(),
+                ))
+            }
+        }
+    }
+
+    /** android-analytical-v7 hydration intervals in liters, one per HydrationRecord. */
+    private suspend fun applyHydrationSamplesRange(
+        dataByDate: MutableMap<LocalDate, HealthData>,
+        requestedDates: Set<LocalDate>,
+        timeRange: TimeRangeFilter,
+        zone: ZoneId,
+    ) {
+        val hydration = readRecordsOrEmpty(HydrationRecord::class, timeRange)
+            .recordSamplesByDate("hydration", zone) { SourceRecordValue(it.startTime, it.startZoneOffset, it.endTime, it.endZoneOffset, it.volume.inLiters) }
+        for ((date, samples) in hydration) {
+            if (date !in requestedDates) continue
+            dataByDate.update(date) { current ->
+                current.copy(nutrition = current.nutrition.copy(hydrationSamples = samples))
+            }
+        }
+    }
+
+    /** Source instants and value of one record; [end] is null for instantaneous records. */
+    private data class SourceRecordValue(
+        val start: Instant,
+        val startOffset: ZoneOffset?,
+        val end: Instant?,
+        val endOffset: ZoneOffset?,
+        val value: Double,
+    )
+
+    /**
+     * android-analytical-v7 projection: one sample per record, grouped by the local date of its
+     * start instant, with exact instants/offsets, identity, and metadata preserved.
+     */
+    private fun <T : androidx.health.connect.client.records.Record> List<T>.recordSamplesByDate(
+        kind: String,
+        zone: ZoneId,
+        project: (T) -> SourceRecordValue,
+    ): Map<LocalDate, List<TimestampedSample>> = map { record -> record to project(record) }
+        .groupBy { (_, source) -> source.start.atZone(zone).toLocalDate() }
+        .mapValues { (_, records) ->
+            records.map { (record, source) ->
+                val identityParts: Array<Any?> = if (source.end != null) {
+                    arrayOf(source.start, source.end, source.value)
+                } else {
+                    arrayOf(source.start, source.value)
+                }
+                TimestampedSample(
+                    time = LocalDateTime.ofInstant(source.start, zone),
+                    value = source.value,
+                    source = record.metadata.dataOrigin.packageName,
+                    metadata = record.metadata.toExportMetadata(),
+                    exactTime = source.start.toExactSourceTimestamp(source.startOffset),
+                    exactEndTime = source.end?.toExactSourceTimestamp(source.endOffset),
+                    identity = record.metadata.toExactSourceIdentity(kind, *identityParts),
+                )
+            }.sortedBy { it.time }
+        }
+
     private suspend fun applyActivityIntensityRange(
         dataByDate: MutableMap<LocalDate, HealthData>,
         requestedDates: Set<LocalDate>,
@@ -1520,12 +1620,12 @@ class HealthConnectManager(
         requestedDates: Set<LocalDate>,
         timeRange: TimeRangeFilter,
         zone: ZoneId,
+        includeRecordSamples: Boolean = false,
     ) {
-
-        val weightsByDate = readRecordsOrEmpty(WeightRecord::class, timeRange)
-            .groupBy { it.time.atZone(zone).toLocalDate() }
-        val heightsByDate = readRecordsOrEmpty(HeightRecord::class, timeRange)
-            .groupBy { it.time.atZone(zone).toLocalDate() }
+        val weightRecords = readRecordsOrEmpty(WeightRecord::class, timeRange)
+        val heightRecords = readRecordsOrEmpty(HeightRecord::class, timeRange)
+        val weightsByDate = weightRecords.groupBy { it.time.atZone(zone).toLocalDate() }
+        val heightsByDate = heightRecords.groupBy { it.time.atZone(zone).toLocalDate() }
         for (date in (weightsByDate.keys + heightsByDate.keys)) {
             if (date !in requestedDates) continue
             dataByDate.update(date) { current ->
@@ -1545,8 +1645,8 @@ class HealthConnectManager(
             }
         }
 
-        val bodyFatByDate = readRecordsOrEmpty(BodyFatRecord::class, timeRange)
-            .groupBy { it.time.atZone(zone).toLocalDate() }
+        val bodyFatRecords = readRecordsOrEmpty(BodyFatRecord::class, timeRange)
+        val bodyFatByDate = bodyFatRecords.groupBy { it.time.atZone(zone).toLocalDate() }
         for ((date, records) in bodyFatByDate) {
             if (date !in requestedDates) continue
             dataByDate.update(date) { current ->
@@ -1554,8 +1654,8 @@ class HealthConnectManager(
             }
         }
 
-        val leanMassByDate = readRecordsOrEmpty(LeanBodyMassRecord::class, timeRange)
-            .groupBy { it.time.atZone(zone).toLocalDate() }
+        val leanMassRecords = readRecordsOrEmpty(LeanBodyMassRecord::class, timeRange)
+        val leanMassByDate = leanMassRecords.groupBy { it.time.atZone(zone).toLocalDate() }
         for ((date, records) in leanMassByDate) {
             if (date !in requestedDates) continue
             dataByDate.update(date) { current ->
@@ -1563,8 +1663,8 @@ class HealthConnectManager(
             }
         }
 
-        val waterMassByDate = readRecordsOrEmpty(BodyWaterMassRecord::class, timeRange)
-            .groupBy { it.time.atZone(zone).toLocalDate() }
+        val waterMassRecords = readRecordsOrEmpty(BodyWaterMassRecord::class, timeRange)
+        val waterMassByDate = waterMassRecords.groupBy { it.time.atZone(zone).toLocalDate() }
         for ((date, records) in waterMassByDate) {
             if (date !in requestedDates) continue
             dataByDate.update(date) { current ->
@@ -1572,12 +1672,37 @@ class HealthConnectManager(
             }
         }
 
-        val boneMassByDate = readRecordsOrEmpty(BoneMassRecord::class, timeRange)
-            .groupBy { it.time.atZone(zone).toLocalDate() }
+        val boneMassRecords = readRecordsOrEmpty(BoneMassRecord::class, timeRange)
+        val boneMassByDate = boneMassRecords.groupBy { it.time.atZone(zone).toLocalDate() }
         for ((date, records) in boneMassByDate) {
             if (date !in requestedDates) continue
             dataByDate.update(date) { current ->
                 current.copy(body = current.body.copy(boneMass = records.maxByOrNull { it.time }?.mass?.inKilograms))
+            }
+        }
+
+        if (!includeRecordSamples) return
+        // android-analytical-v7: the same records, one entry each, in the summary units.
+        val weights = weightRecords.recordSamplesByDate("weight", zone) { SourceRecordValue(it.time, it.zoneOffset, null, null, it.weight.inKilograms) }
+        val heights = heightRecords.recordSamplesByDate("height", zone) { SourceRecordValue(it.time, it.zoneOffset, null, null, it.height.inMeters) }
+        val bodyFat = bodyFatRecords.recordSamplesByDate("body_fat", zone) {
+            SourceRecordValue(it.time, it.zoneOffset, null, null, CompatibilityHealthMapper.percentageFraction(it.percentage))
+        }
+        val leanMass = leanMassRecords.recordSamplesByDate("lean_body_mass", zone) { SourceRecordValue(it.time, it.zoneOffset, null, null, it.mass.inKilograms) }
+        val boneMass = boneMassRecords.recordSamplesByDate("bone_mass", zone) { SourceRecordValue(it.time, it.zoneOffset, null, null, it.mass.inKilograms) }
+        val waterMass = waterMassRecords.recordSamplesByDate("body_water_mass", zone) { SourceRecordValue(it.time, it.zoneOffset, null, null, it.mass.inKilograms) }
+        val dates = weights.keys + heights.keys + bodyFat.keys + leanMass.keys + boneMass.keys + waterMass.keys
+        for (date in dates) {
+            if (date !in requestedDates) continue
+            dataByDate.update(date) { current ->
+                current.copy(body = current.body.copy(
+                    weightSamples = weights[date].orEmpty(),
+                    heightSamples = heights[date].orEmpty(),
+                    bodyFatSamples = bodyFat[date].orEmpty(),
+                    leanBodyMassSamples = leanMass[date].orEmpty(),
+                    boneMassSamples = boneMass[date].orEmpty(),
+                    bodyWaterMassSamples = waterMass[date].orEmpty(),
+                ))
             }
         }
     }

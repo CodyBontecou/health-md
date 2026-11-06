@@ -78,7 +78,7 @@ class HostCoreDailyNoteTest {
                     providerIdsAttempted = listOf("synthetic-provider"), mergePolicyId = "synthetic-note-policy"))
                 else HealthData(date, activity = ActivityData(steps = 42))
             val repository = mockk<com.healthmd.domain.repository.HealthRepository>()
-            coEvery { repository.fetchHealthDataRange(any(), any(), any(), any(), any(), any()) } returns listOf(data)
+            coEvery { repository.fetchHealthDataRange(any(), any(), any(), any(), any(), any(), any()) } returns listOf(data)
             val base = repositorySettings(sections)
             val settings = base.copy(executionSleepCaptureContext = capture,
                 metricSelection = base.metricSelection.copy(enabledMetrics = base.metricSelection.enabledMetrics + "iodine"),

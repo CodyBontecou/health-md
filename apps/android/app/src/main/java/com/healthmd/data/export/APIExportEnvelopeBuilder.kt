@@ -53,6 +53,7 @@ class APIExportEnvelopeBuilder @Inject constructor(
                     data = record,
                     customization = frozenCustomization,
                     includeGranularData = settings.includeGranularData,
+                    detail = settings.exportDetailSelection(),
                 )
             ).jsonObject
             canonicalDailyRecord(
@@ -118,6 +119,7 @@ class APIExportEnvelopeBuilder @Inject constructor(
                 data = record,
                 customization = settings.formatCustomization.copy(includeAndroidNativeFields = true),
                 includeGranularData = settings.includeGranularData,
+                detail = settings.exportDetailSelection(),
                 captureContext = captureContext,
             )).jsonObject
         }

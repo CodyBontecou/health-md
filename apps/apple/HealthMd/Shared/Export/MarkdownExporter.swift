@@ -83,6 +83,40 @@ extension HealthData {
 
         markdown += whoopProviderMarkdown(snapshot: snapshot, headerPrefix: headerPrefix)
         markdown += losslessHealthRecordsMarkdown(snapshot: snapshot, headerPrefix: headerPrefix)
+        markdown += detailSamplesMarkdown(snapshot: snapshot, headerPrefix: headerPrefix)
+        return markdown
+    }
+
+    /// apple-v12 only: one collapsed table per category, one row per HealthKit source sample.
+    func detailSamplesMarkdown(snapshot: ExportDataSnapshot, headerPrefix: String) -> String {
+        guard let expansion = snapshot.detailExpansion else { return "" }
+        let groups = ExportDataSnapshot.DetailExpansion.orderedGroups.filter {
+            !expansion.samples(for: $0.group).isEmpty
+        }
+        guard !groups.isEmpty else { return "" }
+
+        var markdown = "\n\(headerPrefix) Detail Samples\n"
+        for entry in groups {
+            let samples = expansion.samples(for: entry.group)
+            markdown += "\n<details>\n<summary>\(entry.title) Detail Samples (\(samples.count) samples)</summary>\n\n"
+            markdown += "| Start | End | Metric | Value | Unit | Source |\n"
+            markdown += "|-------|-----|--------|-------|------|--------|\n"
+            for sample in samples {
+                let label = AppleDetailSampleCatalog.entry(forHealthKitType: sample.healthKitType)?.label
+                    ?? sample.metric
+                let value = sample.value.map { String(describing: $0) } ?? sample.categoryValue ?? ""
+                let cells = [
+                    snapshot.formatCalendarTime(sample.startDate),
+                    snapshot.formatCalendarTime(sample.endDate),
+                    label,
+                    value,
+                    sample.unit ?? "",
+                    sample.source ?? "",
+                ].map(markdownTableCell)
+                markdown += "| " + cells.joined(separator: " | ") + " |\n"
+            }
+            markdown += "\n</details>\n"
+        }
         return markdown
     }
 

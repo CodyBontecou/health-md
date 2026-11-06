@@ -543,6 +543,14 @@
     <string name="feedback_no_app_available">No hay ninguna aplicación disponible para abrir este enlace.</string>
     <string name="granular_data_title">Incluir series de tiempo detalladas</string>
     <string name="granular_data_description">Añade muestras con marca de tiempo, como la frecuencia cardíaca y las fases del sueño, a las exportaciones de compatibilidad. Para obtener una copia completa de la API, usa una instantánea bruta de la API.</string>
+    <string name="detail_overrides_title">Detalle por categoría</string>
+    <string name="detail_overrides_description">Anula el valor predeterminado para categorías concretas. Resumen conserva solo los totales diarios; los resúmenes diarios nunca cambian.</string>
+    <string name="detail_choice_default">Predeterminado</string>
+    <string name="detail_choice_summary">Resumen</string>
+    <string name="detail_choice_sessions">Sesiones</string>
+    <string name="detail_choice_detailed">Detallado</string>
+    <string name="detail_group_sleep_hint">Sesiones enumera cada sesión de sueño con fecha y hora completas. Detallado añade las fases del sueño.</string>
+    <string name="detail_expansion_schema_hint">Detallado en Actividad, Nutrición o Cuerpo añade cada registro de origen y cambia las exportaciones analíticas JSON, CSV y Markdown al esquema 7.</string>
     <string name="sleep_attribution_title">Atribución del día de sueño</string>
     <string name="sleep_attribution_night_begins">Comienza de noche</string>
     <string name="sleep_attribution_morning_ends">Termina de mañana</string>

@@ -23,12 +23,23 @@ nonisolated struct CategorySampleValue: Sendable {
     let startDate: Date
     let endDate: Date
     let metadata: [String: String]
+    let uuid: UUID?
+    let sourceBundleIdentifier: String?
 
-    init(value: Int, startDate: Date, endDate: Date, metadata: [String: String] = [:]) {
+    init(
+        value: Int,
+        startDate: Date,
+        endDate: Date,
+        metadata: [String: String] = [:],
+        uuid: UUID? = nil,
+        sourceBundleIdentifier: String? = nil
+    ) {
         self.value = value
         self.startDate = startDate
         self.endDate = endDate
         self.metadata = metadata
+        self.uuid = uuid
+        self.sourceBundleIdentifier = sourceBundleIdentifier
     }
 }
 
@@ -39,19 +50,22 @@ nonisolated struct QuantitySampleValue: Sendable {
     let startDate: Date
     let endDate: Date
     let metadata: [String: String]
+    let sourceBundleIdentifier: String?
 
     init(
         uuid: UUID? = nil,
         value: Double,
         startDate: Date,
         endDate: Date,
-        metadata: [String: String] = [:]
+        metadata: [String: String] = [:],
+        sourceBundleIdentifier: String? = nil
     ) {
         self.uuid = uuid
         self.value = value
         self.startDate = startDate
         self.endDate = endDate
         self.metadata = metadata
+        self.sourceBundleIdentifier = sourceBundleIdentifier
     }
 }
 

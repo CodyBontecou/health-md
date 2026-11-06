@@ -537,6 +537,9 @@ private fun ProfileDetailDialog(
                         "Detailed time-series",
                         if (snapshot.includeGranularData == true) "On" else "Off",
                     )
+                    if (snapshot.detailOverrideCount > 0) {
+                        FactRow("Detail overrides", "${snapshot.detailOverrideCount} categories")
+                    }
                     snapshot.filenameFormat?.let { FactRow("Filename format", it) }
                 } else {
                     FactRow("Settings", "Saved snapshot could not be decoded")

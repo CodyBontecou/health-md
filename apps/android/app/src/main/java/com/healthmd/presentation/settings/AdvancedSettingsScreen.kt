@@ -35,6 +35,7 @@ fun AdvancedSettingsScreen(
     onNavigateToDailyNoteInjection: () -> Unit,
     onNavigateToIndividualTracking: () -> Unit,
     onIncludeGranularDataChanged: (Boolean) -> Unit,
+    onDetailChoiceChanged: (ExportDetailGroup, ExportDetailChoice?) -> Unit,
     onSleepDayAttributionChanged: (SleepDayAttribution) -> Unit,
     onBack: () -> Unit,
 ) {
@@ -205,6 +206,8 @@ fun AdvancedSettingsScreen(
                 )
             }
         }
+
+        ExportDetailOverridesSection(settings = settings, onDetailChoiceChanged = onDetailChoiceChanged)
 
         Spacer(modifier = Modifier.height(Spacing.xl))
     }

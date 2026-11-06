@@ -12,6 +12,52 @@ nonisolated enum ExportCompatibilityDetail: String, Codable, CaseIterable, Senda
     var includesSelectedTimeSeries: Bool { self == .selectedTimeSeries }
 }
 
+/// Stable, platform-neutral detail groups shared with Android (`ExportDetailGroup` in
+/// ExportDetailPolicy.kt) and documented in docs/features/per-group-export-detail.md.
+/// Never rename a raw value.
+nonisolated enum ExportDetailGroup: String, Codable, CaseIterable, Sendable, Comparable {
+    case sleep
+    case activity
+    case heart
+    case vitals
+    case nutrition
+    case mobility
+    case reproductiveHealth = "reproductive_health"
+    case mindfulness
+    case workouts
+    case body
+
+    /// Groups whose compatibility detail Apple exports can select independently. Sleep, heart,
+    /// vitals and workouts select their apple-v8 detail arrays. Activity, nutrition, mobility,
+    /// reproductive health, mindfulness, body and the vitals temperature/spirometry types are
+    /// projected only by the apple-v12 successor (`AppleExportDetailPolicy.selectsAppleV12`).
+    static let appleSupported: [ExportDetailGroup] = allCases
+
+    /// Groups an apple-v8 peer already understands as override keys.
+    static let appleV8OverrideGroups: Set<ExportDetailGroup> = [.sleep, .heart, .vitals, .workouts]
+
+    /// Groups whose explicit `detailed` override selects the apple-v12 successor because their
+    /// `detailSamples` cannot be represented by apple-v8.
+    static let appleV12ExpansionGroups: Set<ExportDetailGroup> = [
+        .activity, .nutrition, .mobility, .reproductiveHealth, .mindfulness, .body, .vitals,
+    ]
+
+    /// Choices Apple can honor. HealthKit exposes sleep category intervals, not source sessions,
+    /// so Apple never offers `sessions`.
+    var appleSupportedChoices: [ExportDetailChoice] { [.summary, .detailed] }
+
+    static func < (lhs: Self, rhs: Self) -> Bool {
+        allCases.firstIndex(of: lhs)! < allCases.firstIndex(of: rhs)!
+    }
+}
+
+/// Per-group detail request. `sessions` is Android-only (Health Connect sleep sessions).
+nonisolated enum ExportDetailChoice: String, Codable, CaseIterable, Sendable {
+    case summary
+    case sessions
+    case detailed
+}
+
 /// Apple-only canonical source-record archive policy.
 nonisolated enum HealthKitSourceArchivePolicy: String, Codable, CaseIterable, Sendable {
     case none
@@ -25,10 +71,154 @@ nonisolated enum HealthKitSourceArchivePolicy: String, Codable, CaseIterable, Se
 /// The durable model deliberately supports archive-only output even though the
 /// primary UI presents Summary, Detailed Time-Series, and Lossless presets.
 nonisolated struct AppleExportDetailPolicy: Codable, Equatable, Sendable {
+    /// Default compatibility detail for every group without an explicit override.
     var compatibilityDetail: ExportCompatibilityDetail
     var healthKitSourceArchive: HealthKitSourceArchivePolicy
+    /// Explicit per-group compatibility detail. Empty reproduces the historical uniform policy
+    /// exactly. Only `ExportDetailGroup.appleSupported` groups with Apple choices are honored.
+    var compatibilityDetailOverrides: [ExportDetailGroup: ExportDetailChoice] = [:]
     /// Nil preserves the historical policy. These IDs request only native source detail.
     var nativeDetailMetricIDs: Set<String>? = nil
+
+    init(
+        compatibilityDetail: ExportCompatibilityDetail,
+        healthKitSourceArchive: HealthKitSourceArchivePolicy,
+        compatibilityDetailOverrides: [ExportDetailGroup: ExportDetailChoice] = [:],
+        nativeDetailMetricIDs: Set<String>? = nil
+    ) {
+        self.compatibilityDetail = compatibilityDetail
+        self.healthKitSourceArchive = healthKitSourceArchive
+        self.compatibilityDetailOverrides = Self.supportedOverrides(compatibilityDetailOverrides)
+        self.nativeDetailMetricIDs = nativeDetailMetricIDs
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case compatibilityDetail
+        case healthKitSourceArchive
+        case compatibilityDetailOverrides
+        case nativeDetailMetricIDs
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        compatibilityDetail = try container.decode(ExportCompatibilityDetail.self, forKey: .compatibilityDetail)
+        healthKitSourceArchive = try container.decode(HealthKitSourceArchivePolicy.self, forKey: .healthKitSourceArchive)
+        compatibilityDetailOverrides = try Self.decodeOverrides(
+            container.decodeIfPresent([String: String].self, forKey: .compatibilityDetailOverrides)
+        )
+        nativeDetailMetricIDs = try container.decodeIfPresent(Set<String>.self, forKey: .nativeDetailMetricIDs)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(compatibilityDetail, forKey: .compatibilityDetail)
+        try container.encode(healthKitSourceArchive, forKey: .healthKitSourceArchive)
+        if !compatibilityDetailOverrides.isEmpty {
+            try container.encode(overridesWireValue, forKey: .compatibilityDetailOverrides)
+        }
+        try container.encodeIfPresent(nativeDetailMetricIDs, forKey: .nativeDetailMetricIDs)
+    }
+
+    /// Wire form keyed by group raw value. Unknown or unsupported entries fail decoding so a
+    /// durable job never silently loses requested detail.
+    var overridesWireValue: [String: String] {
+        Dictionary(uniqueKeysWithValues: compatibilityDetailOverrides.map { ($0.key.rawValue, $0.value.rawValue) })
+    }
+
+    static func decodeOverrides(_ raw: [String: String]?) throws -> [ExportDetailGroup: ExportDetailChoice] {
+        guard let raw else { return [:] }
+        var result: [ExportDetailGroup: ExportDetailChoice] = [:]
+        for (key, value) in raw {
+            guard let group = ExportDetailGroup(rawValue: key),
+                  let choice = ExportDetailChoice(rawValue: value),
+                  ExportDetailGroup.appleSupported.contains(group),
+                  group.appleSupportedChoices.contains(choice) else {
+                throw DecodingError.dataCorrupted(.init(
+                    codingPath: [CodingKeys.compatibilityDetailOverrides],
+                    debugDescription: "Unsupported export detail override."
+                ))
+            }
+            result[group] = choice
+        }
+        return result
+    }
+
+    private static func supportedOverrides(
+        _ overrides: [ExportDetailGroup: ExportDetailChoice]
+    ) -> [ExportDetailGroup: ExportDetailChoice] {
+        overrides.filter { ExportDetailGroup.appleSupported.contains($0.key) && $0.key.appleSupportedChoices.contains($0.value) }
+    }
+
+    /// The uniform policy without per-group overrides; presets and legacy bridges use it.
+    var basePolicy: AppleExportDetailPolicy {
+        AppleExportDetailPolicy(
+            compatibilityDetail: compatibilityDetail,
+            healthKitSourceArchive: healthKitSourceArchive,
+            nativeDetailMetricIDs: nativeDetailMetricIDs
+        )
+    }
+
+    var hasDetailOverrides: Bool { !compatibilityDetailOverrides.isEmpty }
+
+    /// Applies a preset's default levels while keeping every explicit per-group choice.
+    func replacingBase(with preset: AppleExportDetailPolicy) -> AppleExportDetailPolicy {
+        AppleExportDetailPolicy(
+            compatibilityDetail: preset.compatibilityDetail,
+            healthKitSourceArchive: preset.healthKitSourceArchive,
+            compatibilityDetailOverrides: compatibilityDetailOverrides,
+            nativeDetailMetricIDs: nativeDetailMetricIDs
+        )
+    }
+
+    /// Sets one group's explicit choice; `nil` returns it to the default.
+    func settingCompatibilityDetail(_ choice: ExportDetailChoice?, for group: ExportDetailGroup) -> AppleExportDetailPolicy {
+        var overrides = compatibilityDetailOverrides
+        overrides[group] = choice
+        return AppleExportDetailPolicy(
+            compatibilityDetail: compatibilityDetail,
+            healthKitSourceArchive: healthKitSourceArchive,
+            compatibilityDetailOverrides: overrides,
+            nativeDetailMetricIDs: nativeDetailMetricIDs
+        )
+    }
+
+    /// Resolved compatibility detail for one group.
+    func includesSelectedTimeSeries(for group: ExportDetailGroup) -> Bool {
+        switch compatibilityDetailOverrides[group] {
+        case .detailed?, .sessions?: return true
+        case .summary?: return false
+        case nil: return compatibilityDetail.includesSelectedTimeSeries
+        }
+    }
+
+    /// True when an explicit `detailed` override on an expansion group selects the apple-v12
+    /// successor. Uniform presets (Detailed Time-Series, Lossless) never select it, so their
+    /// output stays apple-v8 byte-for-byte. Morning ends keeps apple-v11; see
+    /// `selectsAppleV12(sleepDayAttribution:)`.
+    var selectsAppleV12: Bool {
+        compatibilityDetailOverrides.contains { group, choice in
+            choice == .detailed && ExportDetailGroup.appleV12ExpansionGroups.contains(group)
+        }
+    }
+
+    /// apple-v12 is a Night begins successor. Under Morning ends the profile stays apple-v11 and
+    /// expansion detail is neither captured nor written.
+    func selectsAppleV12(sleepDayAttribution: SleepDayAttribution?) -> Bool {
+        selectsAppleV12 && sleepDayAttribution != .morningEnds
+    }
+
+    /// Whether `group` captures and writes apple-v12 `detailSamples`.
+    func includesDetailSamples(for group: ExportDetailGroup, sleepDayAttribution: SleepDayAttribution?) -> Bool {
+        ExportDetailGroup.appleV12ExpansionGroups.contains(group)
+            && selectsAppleV12(sleepDayAttribution: sleepDayAttribution)
+            && includesSelectedTimeSeries(for: group)
+    }
+
+    /// Overrides an apple-v8-only per-group peer cannot decode or render.
+    var requiresAppleV12PeerSupport: Bool {
+        selectsAppleV12
+            || compatibilityDetailOverrides.keys.contains { !ExportDetailGroup.appleV8OverrideGroups.contains($0) }
+    }
 
     static let summary = AppleExportDetailPolicy(
         compatibilityDetail: .summary,
@@ -47,8 +237,10 @@ nonisolated struct AppleExportDetailPolicy: Codable, Equatable, Sendable {
         healthKitSourceArchive: .canonicalV1
     )
 
+    /// True when any group emits compatibility time-series.
     var includesSelectedTimeSeries: Bool {
         compatibilityDetail.includesSelectedTimeSeries
+            || compatibilityDetailOverrides.values.contains { $0 != .summary }
     }
 
     var includesCanonicalArchive: Bool {
@@ -59,10 +251,13 @@ nonisolated struct AppleExportDetailPolicy: Codable, Equatable, Sendable {
         includesSelectedTimeSeries || includesCanonicalArchive
     }
 
-    /// The historical Boolean can represent only Summary and Lossless exactly.
+    /// The historical Boolean can represent only uniform Summary and Lossless exactly.
     var isLegacyRepresentable: Bool {
         self == .summary || self == .lossless
     }
+
+    /// Split detail states older peers may understand, provided they lack no override support.
+    var isSplitRepresentable: Bool { !hasDetailOverrides }
 
     /// Safe downgrade projection. Split states become Summary instead of
     /// unexpectedly enabling a very large archive or claiming dropped detail.
@@ -71,6 +266,14 @@ nonisolated struct AppleExportDetailPolicy: Codable, Equatable, Sendable {
     }
 
     var historyDetailLevelToken: String {
+        let base = basePolicy
+        if hasDetailOverrides {
+            return base.healthKitSourceArchive.includesCanonicalArchive ? "custom_with_archive" : "custom"
+        }
+        return base.uniformHistoryDetailLevelToken
+    }
+
+    private var uniformHistoryDetailLevelToken: String {
         if self == .detailedTimeSeries {
             return "detailed_time_series"
         } else if self == .archiveOnly {
@@ -126,7 +329,9 @@ nonisolated enum AppleExportDetailPreset: String, CaseIterable, Identifiable, Se
         }
     }
 
-    init(policy: AppleExportDetailPolicy) {
+    init(policy fullPolicy: AppleExportDetailPolicy) {
+        // Presets describe the default level; per-group overrides are edited separately.
+        let policy = fullPolicy.basePolicy
         if policy == .summary {
             self = .summary
         } else if policy == .detailedTimeSeries {
@@ -167,12 +372,16 @@ struct ExportSettingsSnapshot: Codable, Equatable {
     var dailyNoteInjection: DailyNoteInjectionSnapshot
     var compatibilityDetail: ExportCompatibilityDetail
     var healthKitSourceArchivePolicy: HealthKitSourceArchivePolicy
+    /// Per-group compatibility detail. Encoded only when non-empty so historical snapshot bytes
+    /// and fingerprints stay unchanged; peers that cannot honor it are rejected before transfer.
+    var compatibilityDetailOverrides: [ExportDetailGroup: ExportDetailChoice] = [:]
 
     var detailPolicy: AppleExportDetailPolicy {
         get {
             AppleExportDetailPolicy(
                 compatibilityDetail: compatibilityDetail,
                 healthKitSourceArchive: healthKitSourceArchivePolicy,
+                compatibilityDetailOverrides: compatibilityDetailOverrides,
                 nativeDetailMetricIDs: metricSelection.nativeDetailMetricIDs.isEmpty ? nil
                     : metricSelection.nativeDetailMetricIDs.intersection(metricSelection.enabledMetricIDs)
             )
@@ -180,6 +389,7 @@ struct ExportSettingsSnapshot: Codable, Equatable {
         set {
             compatibilityDetail = newValue.compatibilityDetail
             healthKitSourceArchivePolicy = newValue.healthKitSourceArchive
+            compatibilityDetailOverrides = newValue.compatibilityDetailOverrides
         }
     }
 
@@ -251,6 +461,7 @@ struct ExportSettingsSnapshot: Codable, Equatable {
         case dailyNoteInjection
         case compatibilityDetail
         case healthKitSourceArchivePolicy
+        case compatibilityDetailOverrides
         case includeGranularData
         case generateRangeSummary
         case generateWeeklyRollups
@@ -363,6 +574,9 @@ struct ExportSettingsSnapshot: Codable, Equatable {
             HealthKitSourceArchivePolicy.self,
             forKey: .healthKitSourceArchivePolicy
         ) ?? legacyPolicy.healthKitSourceArchive
+        compatibilityDetailOverrides = try AppleExportDetailPolicy.decodeOverrides(
+            container.decodeIfPresent([String: String].self, forKey: .compatibilityDetailOverrides)
+        )
         if let rangeSummary = try container.decodeIfPresent(Bool.self, forKey: .generateRangeSummary) {
             generateRangeSummary = rangeSummary
         } else {
@@ -431,6 +645,9 @@ struct ExportSettingsSnapshot: Codable, Equatable {
         try container.encode(dailyNoteInjection, forKey: .dailyNoteInjection)
         try container.encode(compatibilityDetail, forKey: .compatibilityDetail)
         try container.encode(healthKitSourceArchivePolicy, forKey: .healthKitSourceArchivePolicy)
+        if !compatibilityDetailOverrides.isEmpty {
+            try container.encode(detailPolicy.overridesWireValue, forKey: .compatibilityDetailOverrides)
+        }
         // Keep a safe bridge for old decoders. Connected peers reject split
         // policies before transfer, so this field is never used to approximate
         // a split state on an old Mac.
@@ -494,6 +711,7 @@ struct ExportSettingsSnapshot: Codable, Equatable {
             calendarTimeZoneIdentifier: calendarTimeZoneIdentifier
                 ?? settings.exportTimeZoneOverride?.identifier
         )
+        snapshot.compatibilityDetailOverrides = settings.detailPolicy.compatibilityDetailOverrides
         snapshot.sleepCaptureContext = settings.executionSleepCaptureContext
             ?? (settings.executionSleepCaptureContextIsFrozen ? nil : AppleSleepCaptureContext.pinned.wrappedValue)
         snapshot.externalProviderCaptureAuthority = settings.executionExternalProviderCaptureAuthority

@@ -2,6 +2,7 @@ package com.healthmd.domain.repository
 
 import com.healthmd.domain.model.AndroidCaptureContext
 import com.healthmd.domain.model.DataTypeSelection
+import com.healthmd.domain.model.ExportDetailSelection
 import com.healthmd.domain.model.HealthData
 import com.healthmd.domain.model.SleepDayAttributionOverride
 import java.time.LocalDate
@@ -28,6 +29,8 @@ interface HealthRepository {
         zoneId: ZoneId = ZoneId.systemDefault(),
         pinnedCalendarDays: Boolean = false,
         sleepDayAttributionOverride: SleepDayAttributionOverride = SleepDayAttributionOverride.StoredPreference,
+        /** Per-group capture detail. Defaults to the exact projection of [includeGranularData]. */
+        detail: ExportDetailSelection = ExportDetailSelection.uniform(includeGranularData),
     ): List<HealthData> = dates.map { date ->
         fetchHealthData(date).filtered(dataTypes)
     }
@@ -41,6 +44,7 @@ interface HealthRepository {
         dataTypes: DataTypeSelection = DataTypeSelection(),
         includeGranularData: Boolean = false,
         zoneId: ZoneId = ZoneId.systemDefault(),
+        detail: ExportDetailSelection = ExportDetailSelection.uniform(includeGranularData),
     ) = Unit
 
     suspend fun isAvailable(): Boolean
