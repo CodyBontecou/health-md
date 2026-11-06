@@ -34,8 +34,23 @@ final class AppleV12DetailExpansionTests: XCTestCase {
                        [.activity, .nutrition, .mobility, .reproductiveHealth, .mindfulness, .body, .vitals])
     }
 
-    func testSleepHeartAndWorkoutOverridesStayAppleV8() {
-        for group in [ExportDetailGroup.sleep, .heart, .workouts] {
+    func testDetailedSleepSelectsAppleV12WithoutDetailSamples() {
+        XCTAssertEqual(ExportDetailGroup.appleV12SelectingGroups,
+                       ExportDetailGroup.appleV12ExpansionGroups.union([.sleep]))
+        for base in [AppleExportDetailPolicy.summary, .detailedTimeSeries] {
+            let policy = base.settingCompatibilityDetail(.detailed, for: .sleep)
+            XCTAssertTrue(policy.selectsAppleV12)
+            XCTAssertTrue(policy.requiresAppleV12PeerSupport)
+            XCTAssertFalse(policy.includesDetailSamples(for: .sleep, sleepDayAttribution: nil), "sleep has no detailSamples")
+            XCTAssertFalse(policy.selectsAppleV12(sleepDayAttribution: .morningEnds))
+        }
+        XCTAssertFalse(
+            AppleExportDetailPolicy.detailedTimeSeries.settingCompatibilityDetail(.summary, for: .sleep).selectsAppleV12
+        )
+    }
+
+    func testHeartAndWorkoutOverridesStayAppleV8() {
+        for group in [ExportDetailGroup.heart, .workouts] {
             let policy = AppleExportDetailPolicy.detailedTimeSeries.settingCompatibilityDetail(.detailed, for: group)
             XCTAssertFalse(policy.selectsAppleV12, "\(group)")
             XCTAssertFalse(policy.requiresAppleV12PeerSupport)
@@ -90,6 +105,15 @@ final class AppleV12DetailExpansionTests: XCTestCase {
             for group in ExportDetailGroup.appleV12ExpansionGroups {
                 XCTAssertTrue(v8.detailSamples(for: group).isEmpty)
             }
+            XCTAssertFalse(v8.sleep.stages.contains(where: \.hasSourceAttribution), "apple-v8 stages carry no sources")
+        }
+
+        let sleepDetailed = AppleExportDetailPolicy.summary.settingCompatibilityDetail(.detailed, for: .sleep)
+        let v12Sleep = ConnectedExportDetailPolicy.sanitized(source, detailPolicy: sleepDetailed)
+        XCTAssertEqual(v12Sleep.compatibilityDetailProfile, .appleV12)
+        XCTAssertEqual(v12Sleep.sleep.stages.map(\.sourceName), ["Apple Watch", "Withings"])
+        for group in ExportDetailGroup.appleV12ExpansionGroups {
+            XCTAssertTrue(v12Sleep.detailSamples(for: group).isEmpty, "\(group) resolves Summary")
         }
     }
 
@@ -152,6 +176,33 @@ final class AppleV12DetailExpansionTests: XCTestCase {
             XCTAssertEqual(((json[key] as? [String: Any])?["detailSamples"] as? [Any])?.count, 1, key)
         }
         XCTAssertNil((json["heart"] as? [String: Any])?["detailSamples"])
+
+        let stages = try XCTUnwrap((json["sleep"] as? [String: Any])?["sleepStages"] as? [[String: Any]])
+        XCTAssertEqual(stages.map { $0["sourceName"] as? String }, ["Apple Watch", "Withings"])
+        XCTAssertEqual(stages[1]["source"] as? String, "com.withings.wiScaleNG")
+        XCTAssertEqual(stages[1]["sourceUUID"] as? String, "00000000-0000-0000-0000-0000000000B2")
+        XCTAssertEqual(stages[1]["stage"] as? String, "deep")
+    }
+
+    func testAppleV8SleepStagesNeverCarrySourceAttribution() throws {
+        let config = FormatCustomization()
+        // Even an unsanitized day that still holds captured sources renders apple-v8 stages
+        // without them when it is not marked apple-v12.
+        var unmarked = ExportFixtures.appleV12DetailDay
+        unmarked.compatibilityDetailProfile = nil
+        XCTAssertTrue(unmarked.sleep.stages.allSatisfy(\.hasSourceAttribution))
+        let json = try unmarked.toJSONThrowing(customization: config)
+        XCTAssertTrue(json.contains("sleepStages"))
+        for key in ["sourceName", "sourceUUID", "\"source\""] {
+            XCTAssertFalse(json.contains(key), key)
+        }
+        XCTAssertEqual(unmarked.toCSV(customization: config).components(separatedBy: "\n").first,
+                       "Date,Category,Metric,Value,Unit,Timestamp")
+
+        let encoded = String(decoding: try JSONEncoder().encode(ExportFixtures.appleV12DetailDay.withoutDetailExpansion()), as: UTF8.self)
+        XCTAssertFalse(encoded.contains("sourceName"))
+        let decoded = try JSONDecoder().decode(SleepStageSample.self, from: Data(#"{"stage":"rem","startDate":0,"endDate":60}"#.utf8))
+        XCTAssertFalse(decoded.hasSourceAttribution)
     }
 
     func testJSONCreatesTheCategoryObjectForSamplesWithoutASummary() throws {
@@ -175,23 +226,35 @@ final class AppleV12DetailExpansionTests: XCTestCase {
         XCTAssertFalse(lines.contains("\(date),Metadata,schema_version,8,,"))
 
         let detailRows = lines.filter { $0.contains("Detail Sample,") }
+        XCTAssertEqual(lines.first, "Date,Category,Metric,Value,Unit,Timestamp,Source")
         XCTAssertEqual(detailRows, [
-            "\(date),Activity,Steps Detail Sample,1200,count,2026-03-15T08:00:00.000000000Z",
-            "\(date),Activity,Stand Hour Detail Sample,stood,category,2026-03-15T09:00:00.000000000Z",
-            "\(date),Vitals,Body Temperature Detail Sample,36.6,degC,2026-03-15T07:00:00.000000000Z",
-            "\(date),Body,Weight Detail Sample,75,kg,2026-03-15T07:30:00.000000000Z",
-            "\(date),Nutrition,Water Detail Sample,0.5,L,2026-03-15T12:00:00.000000000Z",
-            "\(date),Mindfulness,Mindful Session Detail Sample,not_applicable,category,2026-03-15T06:00:00.000000000Z",
-            "\(date),Mobility,Walking Speed Detail Sample,1.4,m/s,2026-03-15T10:00:00.000000000Z",
-            "\(date),Reproductive Health,Menstrual Flow Detail Sample,medium,category,2026-03-15T00:00:00.000000000Z",
+            "\(date),Activity,Steps Detail Sample,1200,count,2026-03-15T08:00:00.000000000Z,com.apple.health",
+            "\(date),Activity,Stand Hour Detail Sample,stood,category,2026-03-15T09:00:00.000000000Z,com.apple.health",
+            "\(date),Vitals,Body Temperature Detail Sample,36.6,degC,2026-03-15T07:00:00.000000000Z,",
+            "\(date),Body,Weight Detail Sample,75,kg,2026-03-15T07:30:00.000000000Z,com.apple.health",
+            "\(date),Nutrition,Water Detail Sample,0.5,L,2026-03-15T12:00:00.000000000Z,com.apple.health",
+            "\(date),Mindfulness,Mindful Session Detail Sample,not_applicable,category,2026-03-15T06:00:00.000000000Z,com.apple.health",
+            "\(date),Mobility,Walking Speed Detail Sample,1.4,m/s,2026-03-15T10:00:00.000000000Z,com.apple.health",
+            "\(date),Reproductive Health,Menstrual Flow Detail Sample,medium,category,2026-03-15T00:00:00.000000000Z,com.apple.health",
         ])
-        // Apart from the identity rows, every apple-v8 row is unchanged and precedes the samples.
+        // Sleep stage rows gain the Source column, the source name when HealthKit reports one.
+        let stageRows = lines.filter { $0.contains(",Sleep,Sleep Stage,") }
+        XCTAssertEqual(stageRows.count, 2)
+        XCTAssertTrue(stageRows[0].hasSuffix(",Apple Watch"), stageRows[0])
+        XCTAssertTrue(stageRows[1].hasSuffix(",Withings"), stageRows[1])
+        // Apart from the identity rows, the Source header and the stage Source cells, every
+        // apple-v8 row is unchanged and precedes the samples.
         let v8Lines = day.withoutDetailExpansion().toCSV(customization: config).components(separatedBy: "\n")
         let firstDetail = try XCTUnwrap(lines.firstIndex { $0.contains("Detail Sample,") })
         var successorPrefix = Array(lines[..<firstDetail])
         successorPrefix.removeAll { $0 == "\(date),Metadata,schema_profile,apple-v12,," }
-        successorPrefix = successorPrefix.map {
-            $0 == "\(date),Metadata,schema_version,12,," ? "\(date),Metadata,schema_version,8,," : $0
+        successorPrefix = successorPrefix.map { line in
+            if line == "\(date),Metadata,schema_version,12,," { return "\(date),Metadata,schema_version,8,," }
+            if line == "Date,Category,Metric,Value,Unit,Timestamp,Source" { return "Date,Category,Metric,Value,Unit,Timestamp" }
+            for suffix in [",Apple Watch", ",Withings"] where line.contains(",Sleep,Sleep Stage,") && line.hasSuffix(suffix) {
+                return String(line.dropLast(suffix.count))
+            }
+            return line
         }
         XCTAssertEqual(successorPrefix, Array(v8Lines.dropLast()))
     }
@@ -208,6 +271,12 @@ final class AppleV12DetailExpansionTests: XCTestCase {
         XCTAssertTrue(markdown.contains("| Start | End | Metric | Value | Unit | Source |"))
         XCTAssertTrue(markdown.contains("| Steps | 1200.0 | count | com.apple.health |"))
         XCTAssertTrue(markdown.contains("| Stand Hour | stood |  | com.apple.health |"))
+        XCTAssertTrue(markdown.contains("| Time | Stage | Duration | Source |"))
+        let stageLines = markdown.components(separatedBy: "\n").filter { $0.hasPrefix("| ") && ($0.contains(" | core | ") || $0.contains(" | deep | ")) }
+        XCTAssertEqual(stageLines.count, 2, stageLines.joined(separator: "\n"))
+        XCTAssertTrue(stageLines[0].contains(" | core | ") && stageLines[0].hasSuffix(" | Apple Watch |"), stageLines[0])
+        XCTAssertTrue(stageLines[1].contains(" | deep | ") && stageLines[1].hasSuffix(" | Withings |"), stageLines[1])
+        XCTAssertFalse(day.withoutDetailExpansion().toMarkdown(customization: config).contains("| Time | Stage | Duration | Source |"))
 
         let bases = day.toObsidianBases(customization: config)
         XCTAssertTrue(bases.contains("\nschema_version: 12\n"))
@@ -327,6 +396,42 @@ final class AppleV12DetailExpansionTests: XCTestCase {
     }
 
     @MainActor
+    func testCaptureAttributesSleepStageSourcesOnlyForAppleV12() async throws {
+        let day = ExportFixtures.referenceDate
+        let watch = UUID(), mat = UUID()
+        // Overlapping stages from two sources inside the Night begins window of `day`.
+        let samples = [
+            CategorySampleValue(value: HKCategoryValueSleepAnalysis.asleepCore.rawValue,
+                                startDate: day.addingTimeInterval(22 * 3600), endDate: day.addingTimeInterval(23 * 3600),
+                                uuid: watch, sourceBundleIdentifier: "com.apple.health.watch", sourceName: "Apple Watch"),
+            CategorySampleValue(value: HKCategoryValueSleepAnalysis.asleepDeep.rawValue,
+                                startDate: day.addingTimeInterval(22.5 * 3600), endDate: day.addingTimeInterval(23.5 * 3600),
+                                uuid: mat, sourceBundleIdentifier: "com.withings.wiScaleNG", sourceName: "Withings"),
+        ]
+
+        let v12Store = FakeHealthStore()
+        v12Store.categorySampleResults[HKCategoryTypeIdentifier.sleepAnalysis.rawValue] = samples
+        let sleepDetailed = AppleExportDetailPolicy.summary.settingCompatibilityDetail(.detailed, for: .sleep)
+        let v12 = try await makeManager(store: v12Store).fetchHealthData(for: day, detailPolicy: sleepDetailed, timeZone: utc)
+        XCTAssertEqual(v12.compatibilityDetailProfile, .appleV12)
+        let stages = v12.sleep.stages.sorted { $0.startDate < $1.startDate }
+        XCTAssertEqual(stages.map(\.stage), ["core", "deep"])
+        XCTAssertEqual(stages.map(\.sourceUUID), [watch, mat])
+        XCTAssertEqual(stages.map(\.source), ["com.apple.health.watch", "com.withings.wiScaleNG"])
+        XCTAssertEqual(stages.map(\.sourceName), ["Apple Watch", "Withings"])
+        for group in ExportDetailGroup.appleV12ExpansionGroups {
+            XCTAssertTrue(v12.detailSamples(for: group).isEmpty, "\(group) resolves Summary")
+        }
+
+        let v8Store = FakeHealthStore()
+        v8Store.categorySampleResults[HKCategoryTypeIdentifier.sleepAnalysis.rawValue] = samples
+        let v8 = try await makeManager(store: v8Store).fetchHealthData(for: day, detailPolicy: .detailedTimeSeries, timeZone: utc)
+        XCTAssertNil(v8.compatibilityDetailProfile)
+        XCTAssertEqual(v8.sleep.stages.count, 2, "the uniform preset keeps apple-v8 stages")
+        XCTAssertFalse(v8.sleep.stages.contains(where: \.hasSourceAttribution))
+    }
+
+    @MainActor
     func testCaptureDetailFailureIsPartialAndCancellationPropagates() async throws {
         let store = FakeHealthStore()
         store.statisticsSums[HKQuantityTypeIdentifier.stepCount.rawValue] = 100
@@ -361,7 +466,10 @@ final class AppleV12DetailExpansionTests: XCTestCase {
         XCTAssertTrue(current.supportsRequestedMacExportFeatures(rollupSummariesEnabled: false, detailPolicy: activityDetailed))
         XCTAssertFalse(perGroupOnly.supportsRequestedMacExportFeatures(rollupSummariesEnabled: false, detailPolicy: activityDetailed))
         XCTAssertFalse(perGroupOnly.supportsRequestedMacExportFeatures(rollupSummariesEnabled: false, detailPolicy: bodySummary))
-        XCTAssertTrue(perGroupOnly.supportsRequestedMacExportFeatures(rollupSummariesEnabled: false, detailPolicy: sleepOnly))
+        XCTAssertFalse(perGroupOnly.supportsRequestedMacExportFeatures(rollupSummariesEnabled: false, detailPolicy: sleepOnly),
+                       "detailed sleep selects apple-v12 stage sources")
+        let heartOnly = AppleExportDetailPolicy.summary.settingCompatibilityDetail(.detailed, for: .heart)
+        XCTAssertTrue(perGroupOnly.supportsRequestedMacExportFeatures(rollupSummariesEnabled: false, detailPolicy: heartOnly))
     }
 
     func testStrictReceiversAcceptAppleV12AndStillRejectUnknownIdentities() throws {

@@ -75,12 +75,31 @@ nonisolated struct SleepStageSample: Codable, Sendable {
     let startDate: Date
     let endDate: Date
     let metadata: [String: String]
+    /// Source attribution, apple-v12 only. Capture fills these in memory; every non-v12 day
+    /// strips them (`withoutSourceAttribution()`) so apple-v8 payloads never gain the keys.
+    /// A clipped interval keeps the UUID of the HealthKit sample it was cut from.
+    let sourceUUID: UUID?
+    /// Source revision bundle identifier.
+    let source: String?
+    /// `HKSource.name`: the user-visible app or device name (for example "Withings").
+    let sourceName: String?
 
-    init(stage: String, startDate: Date, endDate: Date, metadata: [String: String] = [:]) {
+    init(
+        stage: String,
+        startDate: Date,
+        endDate: Date,
+        metadata: [String: String] = [:],
+        sourceUUID: UUID? = nil,
+        source: String? = nil,
+        sourceName: String? = nil
+    ) {
         self.stage = stage
         self.startDate = startDate
         self.endDate = endDate
         self.metadata = metadata
+        self.sourceUUID = sourceUUID
+        self.source = source
+        self.sourceName = sourceName
     }
 
     init(from decoder: Decoder) throws {
@@ -89,6 +108,17 @@ nonisolated struct SleepStageSample: Codable, Sendable {
         startDate = try container.decode(Date.self, forKey: .startDate)
         endDate = try container.decode(Date.self, forKey: .endDate)
         metadata = try container.decodeIfPresent([String: String].self, forKey: .metadata) ?? [:]
+        sourceUUID = try container.decodeIfPresent(UUID.self, forKey: .sourceUUID)
+        source = try container.decodeIfPresent(String.self, forKey: .source)
+        sourceName = try container.decodeIfPresent(String.self, forKey: .sourceName)
+    }
+
+    var hasSourceAttribution: Bool {
+        sourceUUID != nil || source != nil || sourceName != nil
+    }
+
+    func withoutSourceAttribution() -> SleepStageSample {
+        SleepStageSample(stage: stage, startDate: startDate, endDate: endDate, metadata: metadata)
     }
 }
 

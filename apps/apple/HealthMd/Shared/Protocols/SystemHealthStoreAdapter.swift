@@ -568,7 +568,8 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
                 endDate: $0.endDate,
                 metadata: Self.serializedMetadata($0.metadata),
                 uuid: $0.uuid,
-                sourceBundleIdentifier: $0.sourceRevision.source.bundleIdentifier
+                sourceBundleIdentifier: $0.sourceRevision.source.bundleIdentifier,
+                sourceName: $0.sourceRevision.source.name
             )
         }
     }
@@ -1819,7 +1820,8 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
                 startDate: $0.startDate,
                 endDate: $0.endDate,
                 metadata: Self.serializedMetadata($0.metadata),
-                sourceBundleIdentifier: $0.sourceRevision.source.bundleIdentifier
+                sourceBundleIdentifier: $0.sourceRevision.source.bundleIdentifier,
+                sourceName: $0.sourceRevision.source.name
             )
         }
     }

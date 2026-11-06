@@ -201,24 +201,55 @@ struct GlassMetricsScreen: View {
 
     @ViewBuilder private func categoryRow(_ category: HealthMetricCategory) -> some View {
         let isExpanded = expanded.contains(category)
-        Button {
-            toggleExpanded(category)
-        } label: {
-            GlassRow(title: category.displayName) {
-                Text(verbatim: countText(category))
-                    .font(.system(size: 15))
-                    .foregroundStyle(palette.muted)
-                Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(palette.muted)
-                    .accessibilityHidden(true)
+        HStack(spacing: 0) {
+            // Separate-permission categories keep their Apple selector flow; only
+            // standard categories get the bulk toggle.
+            if !category.requiresSeparateAuthorization {
+                categoryToggle(category)
+                    .padding(.leading, GlassMetrics.panelPadding - 10)
             }
+            Button {
+                toggleExpanded(category)
+            } label: {
+                GlassRow(title: category.displayName) {
+                    Text(verbatim: countText(category))
+                        .font(.system(size: 15))
+                        .foregroundStyle(palette.muted)
+                    Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(palette.muted)
+                        .accessibilityHidden(true)
+                }
+            }
+            .buttonStyle(.plain)
+            .accessibilityAddTraits(isExpanded ? .isSelected : [])
         }
-        .buttonStyle(.plain)
-        .accessibilityAddTraits(isExpanded ? .isSelected : [])
         if isExpanded {
             ForEach(metrics(in: category), id: \.id) { metricToggle($0) }
         }
+    }
+
+    /// Checkbox that turns every metric in a category on or off, separate from the
+    /// row's expand action so the two never share a hit target.
+    private func categoryToggle(_ category: HealthMetricCategory) -> some View {
+        let isFull = state.isCategoryFullyEnabled(category)
+        let isPartial = state.isCategoryPartiallyEnabled(category)
+        return Button {
+            state.toggleCategory(category)
+        } label: {
+            Image(systemName: isFull ? "checkmark.square.fill" : (isPartial ? "minus.square.fill" : "square"))
+                .font(.system(size: 20, weight: .semibold))
+                .foregroundStyle(isFull || isPartial ? palette.text : palette.muted)
+                .frame(minWidth: 44, minHeight: 44)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("glass.metrics.categoryToggle.\(category.rawValue)")
+        .accessibilityLabel("Toggle all \(category.displayName) metrics")
+        .accessibilityValue(isFull
+            ? String(localized: "All enabled")
+            : (isPartial ? String(localized: "Partially enabled") : String(localized: "All disabled")))
+        .accessibilityHint("Double tap to toggle all metrics in this category")
     }
 
     private func toggleExpanded(_ category: HealthMetricCategory) {

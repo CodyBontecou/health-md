@@ -560,6 +560,8 @@ extension HealthData {
                 sleepDict["inBedTimeFormatted"] = formatDuration(snapshot.sleep.inBedSeconds)
             }
             if !snapshot.sleep.stages.isEmpty {
+                // apple-v12 adds per-stage source attribution; apple-v8 stage objects are unchanged.
+                let attributesSources = snapshot.detailExpansion != nil
                 sleepDict["sleepStages"] = FoundationJSONLazyArray(snapshot.sleep.stages) { stage -> [String: Any] in
                     var dict: [String: Any] = [
                         "stage": stage.stage,
@@ -568,6 +570,11 @@ extension HealthData {
                         "durationSeconds": stage.endDate.timeIntervalSince(stage.startDate)
                     ]
                     attachMetadata(stage.metadata, to: &dict)
+                    if attributesSources {
+                        if let uuid = stage.sourceUUID { dict["sourceUUID"] = uuid.uuidString }
+                        if let source = stage.source { dict["source"] = source }
+                        if let sourceName = stage.sourceName { dict["sourceName"] = sourceName }
+                    }
                     return dict
                 }
             }
@@ -1350,6 +1357,7 @@ extension HealthData {
         if let categoryValue = sample.categoryValue { dict["categoryValue"] = categoryValue }
         if let uuid = sample.sourceUUID { dict["sourceUUID"] = uuid.uuidString }
         if let source = sample.source { dict["source"] = source }
+        if let sourceName = sample.sourceName { dict["sourceName"] = sourceName }
         return dict
     }
 }

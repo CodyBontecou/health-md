@@ -19,6 +19,8 @@ nonisolated struct DetailSample: Codable, Sendable, Equatable {
     let sourceUUID: UUID?
     /// Source revision bundle identifier, when HealthKit reports one.
     let source: String?
+    /// `HKSource.name`: the user-visible app or device name (for example "Withings").
+    let sourceName: String?
 
     init(
         metric: String,
@@ -29,7 +31,8 @@ nonisolated struct DetailSample: Codable, Sendable, Equatable {
         unit: String? = nil,
         categoryValue: String? = nil,
         sourceUUID: UUID? = nil,
-        source: String? = nil
+        source: String? = nil,
+        sourceName: String? = nil
     ) {
         self.metric = metric
         self.healthKitType = healthKitType
@@ -40,6 +43,7 @@ nonisolated struct DetailSample: Codable, Sendable, Equatable {
         self.categoryValue = categoryValue
         self.sourceUUID = sourceUUID
         self.source = source
+        self.sourceName = sourceName
     }
 
     /// Deterministic order across the per-type queries of one category.
@@ -284,6 +288,13 @@ nonisolated extension HealthData {
         for group in ExportDetailGroup.appleV12ExpansionGroups {
             copy.setDetailSamples([], for: group)
         }
+        copy.stripSleepStageSourceAttribution()
         return copy
+    }
+
+    /// Removes apple-v12 sleep-stage source attribution, keeping every stage interval.
+    mutating func stripSleepStageSourceAttribution() {
+        guard sleep.stages.contains(where: \.hasSourceAttribution) else { return }
+        sleep.stages = sleep.stages.map { $0.withoutSourceAttribution() }
     }
 }

@@ -68,7 +68,7 @@ extension ExportDetailGroup {
     /// Shown under the per-category pickers wherever they appear.
     static var appleV12Footnote: String {
         String(
-            localized: "Detailed Activity, Nutrition, Mobility, Reproductive Health, Mindfulness, Body, or Vitals adds individual samples and switches files to schema 12. Unavailable with Morning ends.",
+            localized: "Detailed Sleep adds the source app or device of each sleep stage. Detailed Activity, Nutrition, Mobility, Reproductive Health, Mindfulness, Body, or Vitals adds individual samples. Either switches files to schema 12. Unavailable with Morning ends.",
             comment: "Footnote under per-category export detail pickers"
         )
     }

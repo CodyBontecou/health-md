@@ -33,10 +33,10 @@ Some records have no place in the shipped grammars. An explicit **Detailed** ove
 
 | Platform | Selected by an explicit Detailed override for | Profile | Adds |
 |---|---|---|---|
-| Apple | activity, nutrition, mobility, reproductive_health, mindfulness, body, vitals | `apple-v12` (`schema_version: 12`, `schema_profile: apple-v12`) | `<category>.detailSamples` |
+| Apple | sleep, activity, nutrition, mobility, reproductive_health, mindfulness, body, vitals | `apple-v12` (`schema_version: 12`, `schema_profile: apple-v12`) | `<category>.detailSamples`; for sleep, per-stage `sourceUUID`/`source`/`sourceName` on `sleepStages` |
 | Android | activity, nutrition, body (analytical profile only) | `android-analytical-v7` (`schemaVersion: 7`, `schemaProfile: android-analytical-v7`) | per-record interval arrays |
 
-- The uniform default (Detailed Time-Series / Lossless on Apple, `includeGranularData` on Android) never selects a successor, so those exports keep apple-v8 / analytical v5 bytes exactly. Sleep, heart and workout overrides also keep the shipped profile.
+- The uniform default (Detailed Time-Series / Lossless on Apple, `includeGranularData` on Android) never selects a successor, so those exports keep apple-v8 / analytical v5 bytes exactly. Heart and workout overrides also keep the shipped profile. A Sleep override selects apple-v12 only to attribute each stage to its source; sleep has no `detailSamples`.
 - Frozen v4 never upgrades. Morning ends keeps apple-v11 / android-sleep-v6 and neither captures nor writes the successor arrays.
 - Daily notes, scoped direct notes, rollups, the Apple data dictionary, and Android Obsidian Bases keep the shipped identity because they carry no sample arrays. Apple Markdown and Bases frontmatter of a v12 day carry the v12 header.
 - Both successors are written only by the native writers. The Rust engine never renders detailed daily records (Apple refuses detail in the Rust planner; Android v7 resolves to the Kotlin writers and refuses Rust pins), so no shared-core registry, UniFFI, CLI, or direct-protocol profile changed.
@@ -45,7 +45,8 @@ Some records have no place in the shipped grammars. An explicit **Detailed** ove
   - *More:* overlapping sources (for example a phone and a watch) each keep their records, while the summary is deduplicated across sources.
   - *Less:* a record belongs only to the day it starts, while the summary counts the part of every record that overlaps the day. A long record that starts before local midnight, such as a provider's hourly or daily step block, appears in the previous day's array but still contributes to this day's total.
   - Use the summary value for totals. Use the entries for timing, source, and record identity; to reproduce a total, read the neighbouring days' entries and clip each interval to the day.
-- Connected Macs must advertise `supportsAppleV12DetailExpansion` before receiving a v12 job or an override outside sleep/heart/vitals/workouts.
+- Connected Macs must advertise `supportsAppleV12DetailExpansion` before receiving a v12 job (including a Detailed sleep override) or an override outside sleep/heart/vitals/workouts.
+- Once any override selects apple-v12, every expansion category that resolves to Detailed, including through the default level, writes `detailSamples`. A user who wants only attributed sleep stages should keep the default at Summary.
 
 ## Native capability inventory
 
@@ -85,11 +86,11 @@ HealthKit queries use `HKSampleQueryDescriptor` with no limit and `CancellationE
 
 | Category | HealthKit types | Summary | Records | Samples / intervals | Nested | Notes |
 |---|---|---|---|---|---|---|
-| sleep | `sleepAnalysis` category samples | union-based totals, stages, bedtime/wake | **Unavailable as sessions**: HealthKit has no session object | **Exported**: `sleepStages` (category intervals, window-clipped) | — | Choices are Summary and Detailed. Wake-date mode merges intervals for ownership internally; that derivation is not exported as source sessions. |
+| sleep | `sleepAnalysis` category samples | union-based totals, stages, bedtime/wake | **Unavailable as sessions**: HealthKit has no session object | **Exported**: `sleepStages` (category intervals, window-clipped); v12 adds `sourceUUID`, `source` (bundle identifier) and `sourceName` per stage | — | Choices are Summary and Detailed. Overlapping sources (for example a watch and a bed sensor) each keep their stages; totals stay deduplicated. A clipped stage keeps the UUID of the sample it was cut from. Wake-date mode merges intervals for ownership internally; that derivation is not exported as source sessions. |
 | heart | heart rate, HRV SDNN, resting, walking, recovery, AFib burden | stats / most recent | — | **Exported**: `heartRateSamples`, `hrvSamples` | — | |
 | vitals | respiratory rate, SpO₂, BP correlations, glucose, temperatures, spirometry | stats / most recent | — | **Exported**: SpO₂, glucose, respiratory, BP samples; v12 adds temperature and spirometry `detailSamples` | — | Inhaler usage and electrodermal activity remain source-only (canonical archive). |
 | workouts | `HKWorkout`, events, route, associated series | per-workout | always | **Exported**: laps, splits, route, `timeSeries` | — | Follows the `workouts` override (Summary or Detailed). Summary keeps per-workout totals and drops laps, splits, route and series. Capture always reads workout detail; the sanitizer removes it. |
-| activity, nutrition, mobility, mindfulness, reproductive, body | quantity/category samples | statistics | — | v12: **Exported** `detailSamples` (one entry per sample: `metric`, `healthKitType`, `timestamp`, `endDate`, `value`+`unit` or `categoryValue`, `sourceUUID`, `source`) | — | Units are the summary units; percentages are fractions 0–1 labelled `%`, as in the canonical archive. Mindful sessions are category intervals. |
+| activity, nutrition, mobility, mindfulness, reproductive, body | quantity/category samples | statistics | — | v12: **Exported** `detailSamples` (one entry per sample: `metric`, `healthKitType`, `timestamp`, `endDate`, `value`+`unit` or `categoryValue`, `sourceUUID`, `source`, `sourceName`) | — | Units are the summary units; percentages are fractions 0–1 labelled `%`, as in the canonical archive. Mindful sessions are category intervals. |
 | hearing, symptoms, medications, other | quantity/category samples | statistics | source-only (canonical archive) | source-only (canonical archive) | — | No compatibility projection. Lossless exposes the native records. |
 
 ## Capture
@@ -108,7 +109,7 @@ When a category's summary itself requires source records, those records are stil
 | Format | Behavior |
 |---|---|
 | JSON | Under the shipped profiles, emits a subset of the existing optional detail arrays, per category; frozen Android v4 / analytical v5 and Apple v8 grammars are unchanged. The successor arrays appear only in apple-v12 / android-analytical-v7 records. |
-| CSV | Emits a subset of the existing detail rows. Sleep sessions are not added as CSV rows: adding them would change the frozen row grammar and needs a reviewed profile. |
+| CSV | Emits a subset of the existing detail rows. Sleep sessions are not added as CSV rows: adding them would change the frozen row grammar and needs a reviewed profile. apple-v12 files add a seventh `Source` header column, filled on sleep-stage and `Detail Sample` rows with the source name (or bundle identifier); other rows leave it empty. |
 | Markdown | Existing sample tables follow their category. An explicit sleep override (Sessions or Detailed, Android) adds a session table with full local date, time, source offset, and an elapsed duration that is safe across DST. The previous global setting keeps byte-identical output. |
 | Obsidian Bases | Frontmatter only. Unchanged. |
 | API / gateway / direct-device generated files | Use the same resolved selection as file exports. |

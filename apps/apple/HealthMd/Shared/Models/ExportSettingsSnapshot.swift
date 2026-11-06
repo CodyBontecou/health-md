@@ -42,6 +42,11 @@ nonisolated enum ExportDetailGroup: String, Codable, CaseIterable, Sendable, Com
         .activity, .nutrition, .mobility, .reproductiveHealth, .mindfulness, .body, .vitals,
     ]
 
+    /// Groups whose explicit `detailed` override selects apple-v12. Sleep has no
+    /// `detailSamples`; under apple-v12 its `sleepStages` entries carry source attribution
+    /// (`sourceUUID`, `source`, `sourceName`) that apple-v8 cannot represent.
+    static let appleV12SelectingGroups: Set<ExportDetailGroup> = appleV12ExpansionGroups.union([.sleep])
+
     /// Choices Apple can honor. HealthKit exposes sleep category intervals, not source sessions,
     /// so Apple never offers `sessions`.
     var appleSupportedChoices: [ExportDetailChoice] { [.summary, .detailed] }
@@ -191,13 +196,13 @@ nonisolated struct AppleExportDetailPolicy: Codable, Equatable, Sendable {
         }
     }
 
-    /// True when an explicit `detailed` override on an expansion group selects the apple-v12
+    /// True when an explicit `detailed` override on an expansion group or sleep selects the apple-v12
     /// successor. Uniform presets (Detailed Time-Series, Lossless) never select it, so their
     /// output stays apple-v8 byte-for-byte. Morning ends keeps apple-v11; see
     /// `selectsAppleV12(sleepDayAttribution:)`.
     var selectsAppleV12: Bool {
         compatibilityDetailOverrides.contains { group, choice in
-            choice == .detailed && ExportDetailGroup.appleV12ExpansionGroups.contains(group)
+            choice == .detailed && ExportDetailGroup.appleV12SelectingGroups.contains(group)
         }
     }
 
@@ -326,6 +331,18 @@ nonisolated enum AppleExportDetailPreset: String, CaseIterable, Identifiable, Se
             String(localized: "Adds detailed time-series and the canonical HealthKit source archive with identities, provenance, metadata, and relationships. Files may be much larger.", comment: "Export data-detail preset description")
         case .archiveOnly:
             String(localized: "Adds the canonical HealthKit source archive without duplicate compatibility time-series projections.", comment: "Advanced export data-detail preset description")
+        }
+    }
+
+    /// Guidance shown under archive-bearing presets so users exporting long
+    /// ranges choose the lighter preset up front instead of meeting the
+    /// large-export memory warning at confirmation time.
+    var localizedLongRangeNote: String? {
+        switch self {
+        case .summary, .detailedTimeSeries:
+            nil
+        case .losslessHealthRecords, .archiveOnly:
+            String(localized: "Exporting months or years? Detailed Time-Series keeps timestamped samples without the source archive and is much faster and lighter for long ranges.", comment: "Data-detail note recommending Detailed Time-Series for long export ranges")
         }
     }
 

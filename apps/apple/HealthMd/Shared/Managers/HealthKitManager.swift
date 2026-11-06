@@ -1226,6 +1226,10 @@ final class HealthKitManager: ObservableObject {
         // apple-v12 successor: explicit per-category Detailed overrides only, Night begins only.
         // Each selected source sample is read after its summary; a failed type is a partial
         // failure that never removes the category summary.
+        if !detailPolicy.selectsAppleV12(sleepDayAttribution: attribution) {
+            // Stage source attribution is an apple-v12 field; apple-v8/v11 days never carry it.
+            healthData.stripSleepStageSourceAttribution()
+        }
         if detailPolicy.selectsAppleV12(sleepDayAttribution: attribution) {
             healthData.compatibilityDetailProfile = .appleV12
             for entry in ExportDataSnapshot.DetailExpansion.orderedGroups
@@ -2933,7 +2937,10 @@ final class HealthKitManager: ObservableObject {
                         stage: entry.stage,
                         startDate: interval.start,
                         endDate: interval.end,
-                        metadata: entry.sample.metadata
+                        metadata: entry.sample.metadata,
+                        sourceUUID: entry.sample.uuid,
+                        source: entry.sample.sourceBundleIdentifier,
+                        sourceName: entry.sample.sourceName
                     )
                 }
             }
@@ -3111,7 +3118,8 @@ final class HealthKitManager: ObservableObject {
                         value: value.value,
                         unit: unit,
                         sourceUUID: value.uuid,
-                        source: value.sourceBundleIdentifier
+                        source: value.sourceBundleIdentifier,
+                        sourceName: value.sourceName
                     ))
                 }
             case .category:
@@ -3133,7 +3141,8 @@ final class HealthKitManager: ObservableObject {
                             rawValue: value.value
                         ),
                         sourceUUID: value.uuid,
-                        source: value.sourceBundleIdentifier
+                        source: value.sourceBundleIdentifier,
+                        sourceName: value.sourceName
                     ))
                 }
             }

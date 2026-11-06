@@ -241,6 +241,12 @@ extension HealthData {
             csv += fields.map(csvSafe).joined(separator: ",") + "\n"
         }
 
+        /// apple-v12 only: the seventh `Source` column, the source name or else bundle identifier.
+        let attributesSources = snapshot.detailExpansion != nil
+        func sourceLabel(name: String?, bundleIdentifier: String?) -> String {
+            name ?? bundleIdentifier ?? ""
+        }
+
         func appendCanonicalJSONRow(
             category: String,
             metric: String,
@@ -254,7 +260,9 @@ extension HealthData {
         }
 
         var csv = try CSVStreamAccumulator(sink: sink)
-        csv += "Date,Category,Metric,Value,Unit,Timestamp\n"
+        csv += attributesSources
+            ? "Date,Category,Metric,Value,Unit,Timestamp,Source\n"
+            : "Date,Category,Metric,Value,Unit,Timestamp\n"
         csv += "\(snapshot.dateString),Metadata,schema,\(HealthMdExportSchema.identifier),,\n"
         if snapshot.detailExpansion != nil {
             csv += "\(snapshot.dateString),Metadata,schema_version,\(AppleDetailExpansionSchema.version),,\n"
@@ -320,7 +328,10 @@ extension HealthData {
                 let isoFormatter = ExportDateFormatting.utcISO8601Formatter()
                 for stage in snapshot.sleep.stages {
                     let duration = stage.endDate.timeIntervalSince(stage.startDate)
-                    csv += "\(snapshot.dateString),Sleep,Sleep Stage,\(stage.stage) (\(Int(duration))s),seconds,\(isoFormatter.string(from: stage.startDate))\n"
+                    let sourceField = attributesSources
+                        ? "," + csvSafe(sourceLabel(name: stage.sourceName, bundleIdentifier: stage.source))
+                        : ""
+                    csv += "\(snapshot.dateString),Sleep,Sleep Stage,\(stage.stage) (\(Int(duration))s),seconds,\(isoFormatter.string(from: stage.startDate))\(sourceField)\n"
                 }
             }
         }
@@ -961,14 +972,16 @@ extension HealthData {
                 for sample in expansion.samples(for: entry.group) {
                     let label = AppleDetailSampleCatalog.entry(forHealthKitType: sample.healthKitType)?.label
                         ?? sample.metric
-                    appendCSVRow(
-                        category: entry.title,
-                        metric: "\(label) Detail Sample",
-                        value: sample.value.map(csvNumber) ?? sample.categoryValue ?? "",
-                        unit: sample.unit ?? "category",
-                        timestamp: CanonicalRFC3339UTC.string(from: sample.startDate),
-                        to: &csv
-                    )
+                    let fields = [
+                        snapshot.dateString,
+                        entry.title,
+                        "\(label) Detail Sample",
+                        sample.value.map(csvNumber) ?? sample.categoryValue ?? "",
+                        sample.unit ?? "category",
+                        CanonicalRFC3339UTC.string(from: sample.startDate),
+                        sourceLabel(name: sample.sourceName, bundleIdentifier: sample.source),
+                    ]
+                    csv += fields.map(csvSafe).joined(separator: ",") + "\n"
                 }
             }
         }
