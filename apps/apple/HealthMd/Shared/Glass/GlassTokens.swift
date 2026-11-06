@@ -96,13 +96,13 @@ enum GlassMetrics {
     static let segmentedHeight: CGFloat = 32
     static let primaryButtonHeight: CGFloat = 52
     static let tabBarHeight: CGFloat = 62
-    static let chipHeight: CGFloat = 40
+    static let chipHeight: CGFloat = 34
     static let issueDotSize: CGFloat = 5
 }
 
 /// Type scale from `tokens.json`. Sizes scale with Dynamic Type.
 enum GlassTextStyle {
-    case largeTitle, screenTitle, navTitle, body, rowSubtitle, caption, heroNumber, sentence, monoBody
+    case largeTitle, screenTitle, navTitle, body, rowSubtitle, caption, chip, heroNumber, sentence, monoBody
 
     fileprivate var size: CGFloat {
         switch self {
@@ -112,6 +112,7 @@ enum GlassTextStyle {
         case .body: return 16
         case .rowSubtitle, .monoBody: return 12.5
         case .caption: return 13
+        case .chip: return 14
         case .heroNumber: return 56
         case .sentence: return 24
         }
@@ -120,7 +121,7 @@ enum GlassTextStyle {
     fileprivate var weight: Font.Weight {
         switch self {
         case .largeTitle, .screenTitle, .heroNumber: return .bold
-        case .navTitle, .caption: return .semibold
+        case .navTitle, .caption, .chip: return .semibold
         case .sentence: return .medium
         case .body, .rowSubtitle, .monoBody: return .regular
         }
@@ -143,6 +144,7 @@ enum GlassTextStyle {
         case .body: return .body
         case .rowSubtitle, .monoBody: return .footnote
         case .caption: return .caption
+        case .chip: return .subheadline
         }
     }
 

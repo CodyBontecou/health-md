@@ -126,9 +126,10 @@ struct GlassChip: View {
                 }
                 Text(title).lineLimit(1)
             }
-            .glassFont(.body)
+            // The boards' chips: 34pt tall, 14pt semibold.
+            .glassFont(.chip)
             .foregroundStyle(isSelected ? palette.accentInk : palette.text)
-            .padding(.horizontal, 16)
+            .padding(.horizontal, 14)
             .frame(minHeight: GlassMetrics.chipHeight)
             .background(Capsule().fill(isSelected ? palette.accent : palette.surface2))
             .overlay(Capsule().strokeBorder(palette.edge, lineWidth: 1))
