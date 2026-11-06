@@ -416,8 +416,7 @@ struct AutomationsScreen: View {
             )) {
                 Text(profile.name)
             }
-            .labelsHidden()
-            .toggleStyle(GlassToggleStyle())
+            .toggleStyle(GlassToggleStyle(labelsHidden: true))
             .fixedSize()
             .padding(.top, 10)
             .padding(.trailing, 20)

@@ -16,6 +16,10 @@ struct GlassPrimaryButtonStyle: ButtonStyle {
 }
 
 struct GlassToggleStyle: ToggleStyle {
+    /// Draws only the switch. A custom style cannot read `.labelsHidden()`, so a switch
+    /// whose label is shown beside it asks for this; the label still names it to VoiceOver.
+    var labelsHidden = false
+
     @Environment(\.glassPalette) private var palette
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -24,8 +28,10 @@ struct GlassToggleStyle: ToggleStyle {
             configuration.isOn.toggle()
         } label: {
             HStack {
-                configuration.label
-                Spacer(minLength: 8)
+                if !labelsHidden {
+                    configuration.label
+                    Spacer(minLength: 8)
+                }
                 ZStack(alignment: configuration.isOn ? .trailing : .leading) {
                     Capsule().fill(configuration.isOn ? palette.accent : palette.track)
                     Capsule()
