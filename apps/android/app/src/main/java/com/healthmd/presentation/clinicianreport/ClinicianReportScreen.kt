@@ -137,23 +137,34 @@ fun ClinicianReportScreen(
 
             SectionLabel(stringResource(R.string.clinician_report_period))
             GeistCard {
-                Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs), modifier = Modifier.fillMaxWidth()) {
-                    listOf(
-                        ReportDateRangePreset.DAYS_7 to stringResource(R.string.clinician_report_7_days),
-                        ReportDateRangePreset.DAYS_30 to stringResource(R.string.clinician_report_30_days),
-                        ReportDateRangePreset.DAYS_90 to stringResource(R.string.clinician_report_90_days),
-                        ReportDateRangePreset.CUSTOM to stringResource(R.string.clinician_report_custom),
-                    ).forEach { (preset, label) ->
-                        FilterChip(
+                // One value from four: the M3 segmented button (DESIGN.md Components).
+                val presets = listOf(
+                    ReportDateRangePreset.DAYS_7 to stringResource(R.string.clinician_report_7_days),
+                    ReportDateRangePreset.DAYS_30 to stringResource(R.string.clinician_report_30_days),
+                    ReportDateRangePreset.DAYS_90 to stringResource(R.string.clinician_report_90_days),
+                    ReportDateRangePreset.CUSTOM to stringResource(R.string.clinician_report_custom),
+                )
+                val geist = com.healthmd.presentation.theme.LocalGeistColors.current
+                SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+                    presets.forEachIndexed { index, (preset, label) ->
+                        SegmentedButton(
                             selected = state.selectedPreset == preset,
                             onClick = {
                                 attemptConfigurationChange { viewModel.selectPreset(preset) }
                             },
-                            label = { Text(label) },
+                            shape = SegmentedButtonDefaults.itemShape(index, presets.size),
                             enabled = configurationControlsEnabled,
-                            modifier = Modifier.weight(1f).testTag("clinician_report_preset_${preset.name.lowercase()}"),
-                            colors = FilterChipDefaults.filterChipColors(selectedContainerColor = AppColors.accentSubtle, selectedLabelColor = AppColors.accent),
-                        )
+                            icon = {},
+                            colors = SegmentedButtonDefaults.colors(
+                                activeContainerColor = geist.secondaryContainer,
+                                activeContentColor = geist.onSecondaryContainer,
+                                inactiveContentColor = geist.primary,
+                                activeBorderColor = geist.gray.c700,
+                                inactiveBorderColor = geist.gray.c700,
+                            ),
+                            modifier = Modifier.heightIn(min = com.healthmd.presentation.theme.GeistSizes.minimumTouchTarget)
+                                .testTag("clinician_report_preset_${preset.name.lowercase()}"),
+                        ) { Text(label, style = GeistType.button14) }
                     }
                 }
                 if (state.selectedPreset == ReportDateRangePreset.CUSTOM) {
@@ -196,11 +207,10 @@ fun ClinicianReportScreen(
                             color = if (configurationControlsEnabled) AppColors.textPrimary else AppColors.textMuted,
                             modifier = Modifier.weight(1f),
                         )
-                        Switch(
+                        com.healthmd.presentation.common.AppSwitch(
                             checked = metric in state.configuration.selectedMetrics,
                             onCheckedChange = null,
                             enabled = configurationControlsEnabled,
-                            colors = SwitchDefaults.colors(checkedTrackColor = AppColors.accent, checkedThumbColor = AppColors.onAccent),
                         )
                     }
                 }

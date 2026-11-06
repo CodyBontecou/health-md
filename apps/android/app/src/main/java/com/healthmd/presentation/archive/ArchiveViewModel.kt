@@ -52,6 +52,11 @@ data class ArchiveUiState(
     val month: ArchiveMonth,
     val selectedDay: List<ArchiveDayRow>,
     val canShowNextMonth: Boolean,
+    /**
+     * The name for the lane exported from the app's current settings: the active profile, whose
+     * settings those are. Null when no profile exists yet.
+     */
+    val currentSettingsName: String? = null,
 )
 
 /** The Archive coverage calendar, fed from Android export history. */
@@ -79,6 +84,7 @@ class ArchiveViewModel @Inject constructor(
         val profiles: List<ExportProfile>,
         val schedules: List<ScheduledProfileEntry>,
         val settings: ExportSettings?,
+        val activeProfileName: String? = null,
     )
 
     val uiState: StateFlow<ArchiveUiState> = combine(
@@ -86,9 +92,12 @@ class ArchiveViewModel @Inject constructor(
         selection,
         combine(
             exportProfileRepository.profiles,
+            exportProfileRepository.activeProfileId,
             scheduledProfileEntryStore.entries,
             settingsRepository.exportSettings,
-        ) { profiles, schedules, settings -> LaneSources(profiles, schedules, settings) },
+        ) { profiles, activeId, schedules, settings ->
+            LaneSources(profiles, schedules, settings, ExportProfileRules.active(profiles, activeId)?.name)
+        },
     ) { entries, current, sources -> buildState(entries, current, sources, isLoaded = true) }
         .stateIn(
             viewModelScope,
@@ -173,6 +182,7 @@ class ArchiveViewModel @Inject constructor(
             month = month,
             selectedDay = rows,
             canShowNextMonth = current.month.isBefore(YearMonth.from(day)),
+            currentSettingsName = sources.activeProfileName,
         )
     }
 

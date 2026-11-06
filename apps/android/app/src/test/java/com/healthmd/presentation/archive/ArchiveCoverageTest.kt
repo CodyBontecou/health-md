@@ -230,6 +230,27 @@ class ArchiveCoverageTest {
     }
 
     @Test
+    fun `a long backfill counts toward the streak only inside the Apple 120-day window`() {
+        // The audit case: an All Time export covered a year, then nothing ran on Nov 5.
+        val today = LocalDate.of(2026, 11, 6)
+        val entries = listOf(
+            entry(
+                start = LocalDate.of(2025, 11, 4),
+                end = LocalDate.of(2026, 11, 4),
+                success = 366,
+                total = 366,
+                profile = null,
+            ),
+        )
+        val november = ArchiveCoverage.month(entries, YearMonth.of(2026, 11), today, filter = null)
+        assertEquals(4, november.stats.archivedCount)
+        // Apple ArchiveModel reads the streak from the 120 days before today (Jul 9 – Nov 5);
+        // Nov 5 has nothing due, so Jul 9 – Nov 4 count.
+        assertEquals(119, november.stats.streak)
+        assertEquals(119, ArchiveCoverage.currentStreak(entries, today))
+    }
+
+    @Test
     fun `month aggregates profiles with issue dots and a filter shows one profile`() {
         val gap = LocalDate.of(2026, 10, 19)
         val entries = listOf(

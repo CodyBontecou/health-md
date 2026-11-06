@@ -17,6 +17,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -65,6 +66,10 @@ fun AutomationDetailPane(
     modifier: Modifier = Modifier,
     /** Opens the sentence composer for this automation. */
     onCompose: ((String) -> Unit)? = null,
+    /** Runs the automation now (makes it active and opens Export now on it). */
+    onRunNow: ((String) -> Unit)? = null,
+    /** Called once the automation is deleted, so a phone screen can close. */
+    onDeleted: (() -> Unit)? = null,
     profilesViewModel: ExportProfilesViewModel = hiltViewModel(),
     schedulesViewModel: ProfileSchedulesViewModel = hiltViewModel(),
 ) {
@@ -90,6 +95,9 @@ fun AutomationDetailPane(
         return
     }
     var editingSchedule by remember(profileId) { mutableStateOf(false) }
+    var confirmDelete by remember(profileId) { mutableStateOf(false) }
+    var confirmDiscard by remember(profileId) { mutableStateOf(false) }
+    val schedules by schedulesViewModel.uiState.collectAsStateWithLifecycle()
     val protection = LocalConfigurationProtection.current
     val guarded: (() -> Unit) -> Unit = { action -> if (protection.enabled) protection.onBlockedChange() else action() }
 
@@ -99,8 +107,38 @@ fun AutomationDetailPane(
         onEditSchedule = { guarded { editingSchedule = true } },
         onMakeActive = { guarded { profilesViewModel.activate(row.profile.id) } },
         onCompose = onCompose?.let { open -> { open(row.profile.id) } },
+        onRunNow = onRunNow?.let { run -> { run(row.profile.id) } },
+        onToggleSchedule = { enabled -> guarded { schedulesViewModel.setEnabled(row.profile.id, enabled) } },
+        onDelete = { guarded { confirmDelete = true } },
+        onDiscardRecovery = { guarded { confirmDiscard = true } },
+        discardEnabled = schedules.discardingRecoveryProfileId == null,
         modifier = modifier,
     )
+
+    // Dialogs are separate windows outside the protected region: re-check the lock on confirm.
+    if (confirmDelete) {
+        ProfileScheduleDeleteDialog(
+            profileName = row.profile.name,
+            onDismiss = { confirmDelete = false },
+            onDelete = {
+                confirmDelete = false
+                guarded {
+                    schedulesViewModel.deleteProfile(row.profile.id)
+                    onDeleted?.invoke()
+                }
+            },
+        )
+    }
+    if (confirmDiscard) {
+        ProfileScheduleDiscardRecoveryDialog(
+            profileName = row.profile.name,
+            onDismiss = { confirmDiscard = false },
+            onDiscard = {
+                confirmDiscard = false
+                guarded { schedulesViewModel.discardPendingRecovery(row.profile.id) }
+            },
+        )
+    }
 
     if (editingSchedule) {
         ProfileCadenceEditorDialog(
@@ -124,6 +162,11 @@ private fun AutomationDetailContent(
     onEditSchedule: () -> Unit,
     onMakeActive: () -> Unit,
     onCompose: (() -> Unit)?,
+    onRunNow: (() -> Unit)?,
+    onToggleSchedule: (Boolean) -> Unit,
+    onDelete: () -> Unit,
+    onDiscardRecovery: () -> Unit,
+    discardEnabled: Boolean,
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalGeistColors.current
@@ -151,7 +194,24 @@ private fun AutomationDetailContent(
             }
         }
         Text(automationSentence(profile, row.entry), style = GeistType.copy18, color = colors.primary)
+        // The automation's own on/off switch: one whole-row target, as on the Automations card.
+        ProfileScheduleToggle(
+            label = stringResource(R.string.enabled),
+            checked = row.entry?.isEnabled == true,
+            onCheckedChange = onToggleSchedule,
+            description = stringResource(R.string.a11y_profiles_schedule_named, profile.name),
+        )
         FlowRow(horizontalArrangement = Arrangement.spacedBy(GeistSpacing.space2), verticalArrangement = Arrangement.spacedBy(GeistSpacing.space2)) {
+            if (onRunNow != null) {
+                FilledTonalButton(
+                    onClick = onRunNow,
+                    shape = RoundedCornerShape(GeistRadii.full),
+                    colors = ButtonDefaults.filledTonalButtonColors(
+                        containerColor = colors.secondaryContainer,
+                        contentColor = colors.onSecondaryContainer,
+                    ),
+                ) { Text(stringResource(R.string.automations_run_now), style = GeistType.button14) }
+            }
             if (!row.isActive) {
                 Button(
                     onClick = onMakeActive,
@@ -169,6 +229,25 @@ private fun AutomationDetailContent(
             }
             OutlinedButton(onClick = onEditProfile, shape = RoundedCornerShape(GeistRadii.full)) {
                 Text(stringResource(R.string.automation_detail_edit_profile), style = GeistType.button14, color = colors.brandPrimary)
+            }
+            TextButton(
+                onClick = onDelete,
+                modifier = Modifier.heightIn(min = GeistSizes.minimumTouchTarget),
+            ) {
+                Text(stringResource(R.string.a11y_profiles_delete), style = GeistType.button14, color = colors.error)
+            }
+        }
+        if (row.entry?.pendingExports?.isNotEmpty() == true) {
+            TextButton(
+                onClick = onDiscardRecovery,
+                enabled = discardEnabled,
+                modifier = Modifier.heightIn(min = GeistSizes.minimumTouchTarget),
+            ) {
+                Text(
+                    stringResource(R.string.profile_schedule_discard_recovery),
+                    style = GeistType.button14,
+                    color = if (discardEnabled) colors.error else colors.disabled,
+                )
             }
         }
 

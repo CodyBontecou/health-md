@@ -5,13 +5,11 @@
     <string name="export_now_title">এখনই রপ্তানি করুন</string>
     <string name="archive_filter_all">সব</string>
     <string name="archive_filter_current_settings">বর্তমান সেটিংস</string>
-    <string name="archive_stat_archived">আর্কাইভ করা দিন</string>
     <string name="archive_previous_month">আগের মাস</string>
     <string name="archive_next_month">পরের মাস</string>
     <string name="archive_legend_complete">সম্পূর্ণ</string>
     <string name="archive_legend_partial">আংশিক</string>
     <string name="archive_legend_missing">অনুপস্থিত</string>
-    <string name="archive_legend_not_exported">রপ্তানি হয়নি</string>
     <string name="archive_legend_today">আজ</string>
     <string name="archive_day_on_track">%2$d-এর মধ্যে %1$d পরিকল্পনা অনুযায়ী</string>
     <string name="archive_day_status">%1$s, %2$s</string>
@@ -200,4 +198,52 @@
         <item quantity="one">%1$dটি ফাঁক</item>
         <item quantity="other">%1$dটি ফাঁক</item>
     </plurals>
+    <plurals name="archive_stat_archived_all">
+        <item quantity="one">সব অটোমেশন জুড়ে আর্কাইভ করা দিন</item>
+        <item quantity="other">সব অটোমেশন জুড়ে আর্কাইভ করা দিন</item>
+    </plurals>
+    <plurals name="archive_stat_archived_month">
+        <item quantity="one">%1$s-এ আর্কাইভ করা দিন</item>
+        <item quantity="other">%1$s-এ আর্কাইভ করা দিন</item>
+    </plurals>
+    <string name="automations_new">নতুন অটোমেশন</string>
+    <string name="automations_next">পরবর্তী · %1$s</string>
+    <string name="automations_paused">বিরতিতে</string>
+    <string name="automations_on_demand">প্রয়োজন অনুযায়ী</string>
+    <string name="automations_run_now">এখনই চালান</string>
+    <string name="automations_run_now_named">%1$s এখনই চালান</string>
+    <string name="automations_edit">সম্পাদনা</string>
+    <string name="automations_edit_named">%1$s সম্পাদনা</string>
+    <string name="automations_switch_named">%1$s অটোমেশন</string>
+    <string name="automations_schedule_settings_title">সময়সূচি সেটিংস</string>
+    <string name="automations_schedule_settings_subtitle">অ্যাপ-ব্যাপী সময়সূচি, নির্ধারিত রপ্তানির গন্তব্য, অনুমতি ও ইতিহাস</string>
+    <string name="date_option_last_7_days">7 দিন</string>
+    <string name="export_dates_heading">তারিখ</string>
+    <string name="date_from_label">থেকে</string>
+    <string name="date_to_label">পর্যন্ত</string>
+    <string name="export_will_write">লেখা হবে</string>
+    <string name="export_will_write_with_daily_notes">%1$s + দৈনিক নোট</string>
+    <plurals name="export_will_write_files">
+        <item quantity="one">প্রায় %1$dটি %2$s ফাইল</item>
+        <item quantity="other">প্রায় %1$dটি %2$s ফাইল</item>
+    </plurals>
+    <plurals name="export_cta_files">
+        <item quantity="one">%1$dটি ফাইল রপ্তানি করুন</item>
+        <item quantity="other">%1$dটি ফাইল রপ্তানি করুন</item>
+    </plurals>
+    <plurals name="export_cta_send_days">
+        <item quantity="one">%1$d দিন পাঠান</item>
+        <item quantity="other">%1$d দিন পাঠান</item>
+    </plurals>
+    <string name="settings_plan_free">ফ্রি প্ল্যান</string>
+    <string name="settings_plan_full_access">সম্পূর্ণ অ্যাক্সেস</string>
+    <string name="settings_plan_manage">%1$s · পুনরুদ্ধার বা পরিচালনা করুন</string>
+    <string name="settings_status_ready">প্রস্তুত</string>
+    <string name="settings_status_off">বন্ধ</string>
+    <string name="settings_status_allowed">অনুমোদিত</string>
+    <string name="settings_status_not_allowed">অনুমোদিত নয়</string>
+    <string name="settings_status_paired">পেয়ার করা</string>
+    <string name="settings_health_connect_subtitle">অনুমতি এবং ইতিহাস অ্যাক্সেস</string>
+    <string name="settings_default_metrics">ডিফল্ট মেট্রিক্স</string>
+    <string name="settings_connected_apps">সংযুক্ত অ্যাপ</string>
 </resources>

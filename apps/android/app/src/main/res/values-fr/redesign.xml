@@ -5,13 +5,11 @@
     <string name="export_now_title">Exporter maintenant</string>
     <string name="archive_filter_all">Tout</string>
     <string name="archive_filter_current_settings">Réglages actuels</string>
-    <string name="archive_stat_archived">Jours archivés</string>
     <string name="archive_previous_month">Mois précédent</string>
     <string name="archive_next_month">Mois suivant</string>
     <string name="archive_legend_complete">Complet</string>
     <string name="archive_legend_partial">Partiel</string>
     <string name="archive_legend_missing">Manquant</string>
-    <string name="archive_legend_not_exported">Non exporté</string>
     <string name="archive_legend_today">Aujourd’hui</string>
     <string name="archive_day_on_track">%1$d sur %2$d à jour</string>
     <string name="archive_day_status">%1$s, %2$s</string>
@@ -210,4 +208,55 @@
         <item quantity="many">%1$d manques</item>
         <item quantity="other">%1$d manques</item>
     </plurals>
+    <plurals name="archive_stat_archived_all">
+        <item quantity="one">jour archivé sur toutes les automatisations</item>
+        <item quantity="other">jours archivés sur toutes les automatisations</item>
+    </plurals>
+    <plurals name="archive_stat_archived_month">
+        <item quantity="one">jour archivé en %1$s</item>
+        <item quantity="other">jours archivés en %1$s</item>
+    </plurals>
+    <string name="automations_new">Nouvelle automatisation</string>
+    <string name="automations_next">Prochaine · %1$s</string>
+    <string name="automations_paused">En pause</string>
+    <string name="automations_on_demand">À la demande</string>
+    <string name="automations_run_now">Exécuter maintenant</string>
+    <string name="automations_run_now_named">Exécuter %1$s maintenant</string>
+    <string name="automations_edit">Modifier</string>
+    <string name="automations_edit_named">Modifier %1$s</string>
+    <string name="automations_switch_named">Automatisation %1$s</string>
+    <string name="automations_schedule_settings_title">Paramètres de planification</string>
+    <string name="automations_schedule_settings_subtitle">Planification globale de l\'app, destination des exports planifiés, autorisations et historique</string>
+    <string name="date_option_last_7_days">7 jours</string>
+    <string name="export_dates_heading">Dates</string>
+    <string name="date_from_label">Du</string>
+    <string name="date_to_label">Au</string>
+    <string name="export_will_write">Sera écrit</string>
+    <string name="export_will_write_with_daily_notes">%1$s + notes quotidiennes</string>
+    <plurals name="export_will_write_files">
+        <item quantity="one">Environ %1$d fichier %2$s</item>
+        <item quantity="many">Environ %1$d fichiers %2$s</item>
+        <item quantity="other">Environ %1$d fichiers %2$s</item>
+    </plurals>
+    <plurals name="export_cta_files">
+        <item quantity="one">Exporter %1$d fichier</item>
+        <item quantity="many">Exporter %1$d fichiers</item>
+        <item quantity="other">Exporter %1$d fichiers</item>
+    </plurals>
+    <plurals name="export_cta_send_days">
+        <item quantity="one">Envoyer %1$d jour</item>
+        <item quantity="many">Envoyer %1$d jours</item>
+        <item quantity="other">Envoyer %1$d jours</item>
+    </plurals>
+    <string name="settings_plan_free">Forfait gratuit</string>
+    <string name="settings_plan_full_access">Accès complet</string>
+    <string name="settings_plan_manage">%1$s · restaurer ou gérer</string>
+    <string name="settings_status_ready">Prêt</string>
+    <string name="settings_status_off">Désactivé</string>
+    <string name="settings_status_allowed">Autorisé</string>
+    <string name="settings_status_not_allowed">Non autorisé</string>
+    <string name="settings_status_paired">Associé</string>
+    <string name="settings_health_connect_subtitle">Autorisations et accès à l\'historique</string>
+    <string name="settings_default_metrics">Mesures par défaut</string>
+    <string name="settings_connected_apps">Apps connectées</string>
 </resources>

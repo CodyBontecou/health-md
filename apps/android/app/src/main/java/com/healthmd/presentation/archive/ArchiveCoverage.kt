@@ -97,6 +97,9 @@ data class ArchiveMonth(
 object ArchiveCoverage {
     const val MAXIMUM_ISSUE_DOTS = 3
 
+    /** How far back the current streak reads, matching the Apple Archive. */
+    const val STREAK_WINDOW_DAYS = 120L
+
     /** Profiles in the order they were most recently exported. */
     fun profiles(entries: List<ExportHistoryEntry>): List<ArchiveProfile> =
         entries.sortedByDescending { it.timestamp }
@@ -254,14 +257,17 @@ object ArchiveCoverage {
 
     /**
      * The current streak: back from yesterday across month boundaries to the first gap,
-     * skipping dates with nothing due, and never before the earliest export.
+     * skipping dates with nothing due, never before the earliest export, and only within
+     * the [STREAK_WINDOW_DAYS] before today (Apple `ArchiveModel.streakWindowDays`), so a
+     * long backfill cannot claim a year-long streak.
      */
     fun currentStreak(entries: List<ExportHistoryEntry>, today: LocalDate, filter: ArchiveProfile? = null): Int {
         val earliest = entries.minOfOrNull { it.dateRangeStart } ?: return 0
+        val windowStart = today.minusDays(STREAK_WINDOW_DAYS)
         val lanes = filter?.let(::listOf) ?: profiles(entries)
         var streak = 0
         var date = today.minusDays(1)
-        while (!date.isBefore(earliest)) {
+        while (!date.isBefore(earliest) && !date.isBefore(windowStart)) {
             val statuses = lanes.map { status(entries, it, date, today) }
             val status = if (filter != null) {
                 statuses.firstOrNull() ?: CoverageStatus.NOT_DUE

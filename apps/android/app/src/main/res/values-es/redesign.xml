@@ -5,13 +5,11 @@
     <string name="export_now_title">Exportar ahora</string>
     <string name="archive_filter_all">Todo</string>
     <string name="archive_filter_current_settings">Ajustes actuales</string>
-    <string name="archive_stat_archived">Días archivados</string>
     <string name="archive_previous_month">Mes anterior</string>
     <string name="archive_next_month">Mes siguiente</string>
     <string name="archive_legend_complete">Completo</string>
     <string name="archive_legend_partial">Parcial</string>
     <string name="archive_legend_missing">Falta</string>
-    <string name="archive_legend_not_exported">Sin exportar</string>
     <string name="archive_legend_today">Hoy</string>
     <string name="archive_day_on_track">%1$d de %2$d al día</string>
     <string name="archive_day_status">%1$s, %2$s</string>
@@ -210,4 +208,55 @@
         <item quantity="many">%1$d huecos</item>
         <item quantity="other">%1$d huecos</item>
     </plurals>
+    <plurals name="archive_stat_archived_all">
+        <item quantity="one">día archivado en todas las automatizaciones</item>
+        <item quantity="other">días archivados en todas las automatizaciones</item>
+    </plurals>
+    <plurals name="archive_stat_archived_month">
+        <item quantity="one">día archivado en %1$s</item>
+        <item quantity="other">días archivados en %1$s</item>
+    </plurals>
+    <string name="automations_new">Nueva automatización</string>
+    <string name="automations_next">Próxima · %1$s</string>
+    <string name="automations_paused">En pausa</string>
+    <string name="automations_on_demand">Bajo demanda</string>
+    <string name="automations_run_now">Ejecutar ahora</string>
+    <string name="automations_run_now_named">Ejecutar %1$s ahora</string>
+    <string name="automations_edit">Editar</string>
+    <string name="automations_edit_named">Editar %1$s</string>
+    <string name="automations_switch_named">Automatización %1$s</string>
+    <string name="automations_schedule_settings_title">Configuración de programación</string>
+    <string name="automations_schedule_settings_subtitle">Programación de toda la app, destino de la exportación programada, permisos e historial</string>
+    <string name="date_option_last_7_days">7 días</string>
+    <string name="export_dates_heading">Fechas</string>
+    <string name="date_from_label">Desde</string>
+    <string name="date_to_label">Hasta</string>
+    <string name="export_will_write">Se escribirá</string>
+    <string name="export_will_write_with_daily_notes">%1$s + notas diarias</string>
+    <plurals name="export_will_write_files">
+        <item quantity="one">Aprox. %1$d archivo %2$s</item>
+        <item quantity="many">Aprox. %1$d archivos %2$s</item>
+        <item quantity="other">Aprox. %1$d archivos %2$s</item>
+    </plurals>
+    <plurals name="export_cta_files">
+        <item quantity="one">Exportar %1$d archivo</item>
+        <item quantity="many">Exportar %1$d archivos</item>
+        <item quantity="other">Exportar %1$d archivos</item>
+    </plurals>
+    <plurals name="export_cta_send_days">
+        <item quantity="one">Enviar %1$d día</item>
+        <item quantity="many">Enviar %1$d días</item>
+        <item quantity="other">Enviar %1$d días</item>
+    </plurals>
+    <string name="settings_plan_free">Plan gratuito</string>
+    <string name="settings_plan_full_access">Acceso completo</string>
+    <string name="settings_plan_manage">%1$s · restaurar o gestionar</string>
+    <string name="settings_status_ready">Listo</string>
+    <string name="settings_status_off">Desactivado</string>
+    <string name="settings_status_allowed">Permitido</string>
+    <string name="settings_status_not_allowed">No permitido</string>
+    <string name="settings_status_paired">Emparejado</string>
+    <string name="settings_health_connect_subtitle">Permisos y acceso al historial</string>
+    <string name="settings_default_metrics">Métricas predeterminadas</string>
+    <string name="settings_connected_apps">Apps conectadas</string>
 </resources>

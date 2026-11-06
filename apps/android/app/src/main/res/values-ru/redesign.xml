@@ -5,13 +5,11 @@
     <string name="export_now_title">Экспортировать</string>
     <string name="archive_filter_all">Все</string>
     <string name="archive_filter_current_settings">Текущие настройки</string>
-    <string name="archive_stat_archived">Дней в архиве</string>
     <string name="archive_previous_month">Предыдущий месяц</string>
     <string name="archive_next_month">Следующий месяц</string>
     <string name="archive_legend_complete">Полностью</string>
     <string name="archive_legend_partial">Частично</string>
     <string name="archive_legend_missing">Пропущено</string>
-    <string name="archive_legend_not_exported">Не экспортировано</string>
     <string name="archive_legend_today">Сегодня</string>
     <string name="archive_day_on_track">По плану: %1$d из %2$d</string>
     <string name="archive_day_status">%1$s, %2$s</string>
@@ -220,4 +218,62 @@
         <item quantity="many">%1$d пропусков</item>
         <item quantity="other">%1$d пропуска</item>
     </plurals>
+    <plurals name="archive_stat_archived_all">
+        <item quantity="one">день в архиве по всем автоматизациям</item>
+        <item quantity="few">дня в архиве по всем автоматизациям</item>
+        <item quantity="many">дней в архиве по всем автоматизациям</item>
+        <item quantity="other">дня в архиве по всем автоматизациям</item>
+    </plurals>
+    <plurals name="archive_stat_archived_month">
+        <item quantity="one">день в архиве за %1$s</item>
+        <item quantity="few">дня в архиве за %1$s</item>
+        <item quantity="many">дней в архиве за %1$s</item>
+        <item quantity="other">дня в архиве за %1$s</item>
+    </plurals>
+    <string name="automations_new">Новая автоматизация</string>
+    <string name="automations_next">Далее · %1$s</string>
+    <string name="automations_paused">Приостановлено</string>
+    <string name="automations_on_demand">По запросу</string>
+    <string name="automations_run_now">Запустить сейчас</string>
+    <string name="automations_run_now_named">Запустить %1$s сейчас</string>
+    <string name="automations_edit">Изменить</string>
+    <string name="automations_edit_named">Изменить %1$s</string>
+    <string name="automations_switch_named">Автоматизация %1$s</string>
+    <string name="automations_schedule_settings_title">Параметры расписания</string>
+    <string name="automations_schedule_settings_subtitle">Общее расписание приложения, назначение запланированного экспорта, разрешения и история</string>
+    <string name="date_option_last_7_days">7 дней</string>
+    <string name="export_dates_heading">Даты</string>
+    <string name="date_from_label">С</string>
+    <string name="date_to_label">По</string>
+    <string name="export_will_write">Будет записано</string>
+    <string name="export_will_write_with_daily_notes">%1$s + ежедневные заметки</string>
+    <plurals name="export_will_write_files">
+        <item quantity="one">Примерно %1$d файл %2$s</item>
+        <item quantity="few">Примерно %1$d файла %2$s</item>
+        <item quantity="many">Примерно %1$d файлов %2$s</item>
+        <item quantity="other">Примерно %1$d файла %2$s</item>
+    </plurals>
+    <plurals name="export_cta_files">
+        <item quantity="one">Экспортировать %1$d файл</item>
+        <item quantity="few">Экспортировать %1$d файла</item>
+        <item quantity="many">Экспортировать %1$d файлов</item>
+        <item quantity="other">Экспортировать %1$d файла</item>
+    </plurals>
+    <plurals name="export_cta_send_days">
+        <item quantity="one">Отправить %1$d день</item>
+        <item quantity="few">Отправить %1$d дня</item>
+        <item quantity="many">Отправить %1$d дней</item>
+        <item quantity="other">Отправить %1$d дня</item>
+    </plurals>
+    <string name="settings_plan_free">Бесплатный план</string>
+    <string name="settings_plan_full_access">Полный доступ</string>
+    <string name="settings_plan_manage">%1$s · восстановить или управлять</string>
+    <string name="settings_status_ready">Готово</string>
+    <string name="settings_status_off">Выкл.</string>
+    <string name="settings_status_allowed">Разрешено</string>
+    <string name="settings_status_not_allowed">Не разрешено</string>
+    <string name="settings_status_paired">Сопряжено</string>
+    <string name="settings_health_connect_subtitle">Разрешения и доступ к истории</string>
+    <string name="settings_default_metrics">Показатели по умолчанию</string>
+    <string name="settings_connected_apps">Подключённые приложения</string>
 </resources>

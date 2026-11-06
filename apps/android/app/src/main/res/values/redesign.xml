@@ -5,13 +5,11 @@
     <string name="export_now_title">Export now</string>
     <string name="archive_filter_all">All</string>
     <string name="archive_filter_current_settings">Current settings</string>
-    <string name="archive_stat_archived">Days archived</string>
     <string name="archive_previous_month">Previous month</string>
     <string name="archive_next_month">Next month</string>
     <string name="archive_legend_complete">Complete</string>
     <string name="archive_legend_partial">Partial</string>
     <string name="archive_legend_missing">Missing</string>
-    <string name="archive_legend_not_exported">Not exported</string>
     <string name="archive_legend_today">Today</string>
     <string name="archive_day_on_track">%1$d of %2$d on track</string>
     <string name="archive_day_status">%1$s, %2$s</string>
@@ -200,4 +198,52 @@
         <item quantity="one">%1$d gap</item>
         <item quantity="other">%1$d gaps</item>
     </plurals>
+    <plurals name="archive_stat_archived_all">
+        <item quantity="one">day archived across automations</item>
+        <item quantity="other">days archived across automations</item>
+    </plurals>
+    <plurals name="archive_stat_archived_month">
+        <item quantity="one">day archived in %1$s</item>
+        <item quantity="other">days archived in %1$s</item>
+    </plurals>
+    <string name="automations_new">New automation</string>
+    <string name="automations_next">Next · %1$s</string>
+    <string name="automations_paused">Paused</string>
+    <string name="automations_on_demand">On demand</string>
+    <string name="automations_run_now">Run now</string>
+    <string name="automations_run_now_named">Run %1$s now</string>
+    <string name="automations_edit">Edit</string>
+    <string name="automations_edit_named">Edit %1$s</string>
+    <string name="automations_switch_named">%1$s automation</string>
+    <string name="automations_schedule_settings_title">Schedule settings</string>
+    <string name="automations_schedule_settings_subtitle">App-wide schedule, scheduled export target, permissions and history</string>
+    <string name="date_option_last_7_days">7 days</string>
+    <string name="export_dates_heading">Dates</string>
+    <string name="date_from_label">From</string>
+    <string name="date_to_label">To</string>
+    <string name="export_will_write">Will write</string>
+    <string name="export_will_write_with_daily_notes">%1$s + daily notes</string>
+    <plurals name="export_will_write_files">
+        <item quantity="one">About %1$d %2$s file</item>
+        <item quantity="other">About %1$d %2$s files</item>
+    </plurals>
+    <plurals name="export_cta_files">
+        <item quantity="one">Export %1$d file</item>
+        <item quantity="other">Export %1$d files</item>
+    </plurals>
+    <plurals name="export_cta_send_days">
+        <item quantity="one">Send %1$d day</item>
+        <item quantity="other">Send %1$d days</item>
+    </plurals>
+    <string name="settings_plan_free">Free plan</string>
+    <string name="settings_plan_full_access">Full access</string>
+    <string name="settings_plan_manage">%1$s · restore or manage</string>
+    <string name="settings_status_ready">Ready</string>
+    <string name="settings_status_off">Off</string>
+    <string name="settings_status_allowed">Allowed</string>
+    <string name="settings_status_not_allowed">Not allowed</string>
+    <string name="settings_status_paired">Paired</string>
+    <string name="settings_health_connect_subtitle">Permissions and history access</string>
+    <string name="settings_default_metrics">Default metrics</string>
+    <string name="settings_connected_apps">Connected apps</string>
 </resources>

@@ -52,6 +52,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import com.healthmd.BuildConfig
 import com.healthmd.R
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -386,6 +387,27 @@ fun ExportScreen(
             hasSelectedFormat &&
             !uiState.isExporting &&
             !uiState.isPreviewing
+    val previewClick: () -> Unit = {
+        when {
+            !uiState.hasPermissions -> launchHealthPermissionRequest(
+                healthDataPermissionsToRequest,
+                emptySet(),
+            )
+            uiState.historyPermissionNeeded && historyPermissionAvailable ->
+                launchHealthPermissionRequest(
+                    healthDataPermissionsToRequest,
+                    permissionPlan.historicalReadPermissions,
+                )
+            uiState.historyPermissionNeeded -> viewModel.reportHealthConnectActionError(
+                if (historyPermissionCheckFailed) {
+                    HealthConnectActionError.ACCESS_CHECK_FAILED
+                } else {
+                    HealthConnectActionError.HISTORY_UNAVAILABLE
+                }
+            )
+            else -> viewModel.buildPreview()
+        }
+    }
     var confirmLargeExport by rememberSaveable { mutableStateOf(false) }
     val requestedExportDays = remember(uiState.startDate, uiState.endDate) {
         java.time.temporal.ChronoUnit.DAYS.between(uiState.startDate, uiState.endDate).toInt() + 1
@@ -564,6 +586,8 @@ fun ExportScreen(
             }
         }
 
+        // The sheet names its destination in "Will write"; Health Connect problems show as cards.
+        if (!asSheet) {
         Spacer(modifier = Modifier.height(Spacing.sm))
 
         // Status badges
@@ -624,6 +648,7 @@ fun ExportScreen(
         }
 
         Spacer(modifier = Modifier.height(Spacing.sm))
+        }
 
         // Permissions card (only if needed)
         if (!uiState.healthConnectAvailable) {
@@ -748,6 +773,10 @@ fun ExportScreen(
                             val yesterday = LocalDate.now().minusDays(1)
                             viewModel.setDateRange(yesterday, yesterday)
                         }
+                        DateRangeOption.Last7Days -> {
+                            val yesterday = LocalDate.now().minusDays(1)
+                            viewModel.setDateRange(yesterday.minusDays(6), yesterday)
+                        }
                         DateRangeOption.AllTime -> viewModel.selectAllTime()
                         DateRangeOption.Custom -> viewModel.setDateRange(uiState.startDate, uiState.endDate)
                     }
@@ -766,6 +795,15 @@ fun ExportScreen(
                 }
             },
         )
+        }
+
+        if (asSheet) {
+            ExportWillWriteCard(
+                destination = willWriteDestination(uiState),
+                summary = willWriteSummary(uiState, requestedExportDays),
+                canPreview = canPreview,
+                onPreview = previewClick,
+            )
         }
 
         // The sheet leads with profile, dates and the action; where and how it writes sits
@@ -1136,8 +1174,8 @@ fun ExportScreen(
             }
         }
 
-        // Debug panel
-        GeistCard {
+        // Debug panel: diagnostics for development builds only.
+        if (BuildConfig.DEBUG) GeistCard {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -1240,42 +1278,47 @@ fun ExportScreen(
             Spacer(modifier = Modifier.height(Spacing.xl))
         }
 
-        FloatingExportActionBar(
+        val previewUnavailableReason = when {
+            uiState.settings.exportMode != ExportMode.RAW_SNAPSHOT -> null
+            !uiState.rawProviderSupported -> stringResource(R.string.raw_snapshot_provider_unsupported)
+            !uiState.rawSelectionReady -> stringResource(R.string.raw_snapshot_selection_required)
+            else -> null
+        }
+        if (asSheet) {
+            // The board's single 56dp call to action; Preview sits in the "Will write" card.
+            ExportNowCta(
+                label = when {
+                    hitExportLimit -> stringResource(R.string.unlock_button)
+                    uiState.selectedTarget != ExportTarget.DEVICE_FOLDER ->
+                        pluralStringResource(R.plurals.export_cta_send_days, requestedExportDays, requestedExportDays)
+                    else -> {
+                        val files = willWriteFileCount(uiState, requestedExportDays)
+                        pluralStringResource(R.plurals.export_cta_files, files, files)
+                    }
+                },
+                // Clinic-sponsored delivery has no free-export allowance to show.
+                isPurchased = uiState.isPurchased || uiState.clinicDestinationAuthorized,
+                freeExportsRemaining = uiState.freeExportsRemaining,
+                hasSelectedFormat = hasSelectedFormat,
+                notice = previewUnavailableReason,
+                enabled = canExportAction,
+                isExporting = uiState.isExporting,
+                onExport = exportButtonClick,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .onSizeChanged { floatingActionBarHeightPx = it.height },
+            )
+        } else FloatingExportActionBar(
             clinicDestinationAuthorized = uiState.clinicDestinationAuthorized,
             isPurchased = uiState.isPurchased,
             freeExportsRemaining = uiState.freeExportsRemaining,
             hasSelectedFormat = hasSelectedFormat,
             canPreview = canPreview,
-            previewUnavailableReason = when {
-                uiState.settings.exportMode != ExportMode.RAW_SNAPSHOT -> null
-                !uiState.rawProviderSupported -> stringResource(R.string.raw_snapshot_provider_unsupported)
-                !uiState.rawSelectionReady -> stringResource(R.string.raw_snapshot_selection_required)
-                else -> null
-            },
+            previewUnavailableReason = previewUnavailableReason,
             canExport = canExportAction,
             hitExportLimit = hitExportLimit,
             isExporting = uiState.isExporting,
-            onPreview = {
-                when {
-                    !uiState.hasPermissions -> launchHealthPermissionRequest(
-                        healthDataPermissionsToRequest,
-                        emptySet(),
-                    )
-                    uiState.historyPermissionNeeded && historyPermissionAvailable ->
-                        launchHealthPermissionRequest(
-                            healthDataPermissionsToRequest,
-                            permissionPlan.historicalReadPermissions,
-                        )
-                    uiState.historyPermissionNeeded -> viewModel.reportHealthConnectActionError(
-                        if (historyPermissionCheckFailed) {
-                            HealthConnectActionError.ACCESS_CHECK_FAILED
-                        } else {
-                            HealthConnectActionError.HISTORY_UNAVAILABLE
-                        }
-                    )
-                    else -> viewModel.buildPreview()
-                }
-            },
+            onPreview = previewClick,
             onExport = exportButtonClick,
             modifier = Modifier
                 .align(Alignment.BottomCenter)
@@ -1406,6 +1449,142 @@ fun ExportScreen(
             },
             dismissButton = { TextButton(onClick = { showEndDatePicker = false }) { Text(stringResource(R.string.action_cancel_selection)) } },
         ) { DatePicker(state = state) }
+    }
+}
+
+/** Files one export writes: one per day and format, or one per day for raw snapshots. */
+internal fun willWriteFileCount(state: ExportUiState, days: Int): Int =
+    if (state.settings.exportMode == ExportMode.RAW_SNAPSHOT) days else days * state.exportFormats.size.coerceAtLeast(1)
+
+/** The destination line: the folder path, `POST host/path`, or the gateway host. */
+@Composable
+private fun willWriteDestination(state: ExportUiState): String = when (state.selectedTarget) {
+    ExportTarget.DEVICE_FOLDER -> state.folderName?.let { "$it/" }
+        ?: stringResource(R.string.export_target_folder_unselected_subtitle)
+    ExportTarget.API_ENDPOINT -> com.healthmd.presentation.archive.ArchiveCoverage.endpointLine(state.settings.apiEndpointUrl)
+        ?: stringResource(R.string.export_target_api_json_unconfigured_subtitle)
+    ExportTarget.AGENT_DATA_GATEWAY -> state.destinationLabel?.takeIf { state.agentDataGatewayConfigured }
+        ?: stringResource(R.string.export_target_gateway_unconfigured_subtitle)
+}
+
+/** "About 7 Markdown files + daily notes": the plan from the selected days, formats and notes. */
+@Composable
+private fun willWriteSummary(state: ExportUiState, days: Int): String {
+    val formats = if (state.settings.exportMode == ExportMode.RAW_SNAPSHOT) {
+        stringResource(
+            if (state.settings.rawSnapshot.format == com.healthmd.rawexport.RawExportFormat.JSON) {
+                R.string.raw_snapshot_format_json
+            } else {
+                R.string.raw_snapshot_format_ndjson
+            },
+        )
+    } else {
+        state.exportFormats.sortedBy { it.ordinal }.map { it.localizedDisplayName() }.joinToString(" + ")
+    }
+    val files = willWriteFileCount(state, days)
+    val summary = pluralStringResource(R.plurals.export_will_write_files, files, files, formats)
+    val writesNotes = state.selectedTarget == ExportTarget.DEVICE_FOLDER &&
+        state.settings.exportMode != ExportMode.RAW_SNAPSHOT &&
+        state.settings.dailyNoteInjection.enabled
+    return if (writesNotes) stringResource(R.string.export_will_write_with_daily_notes, summary) else summary
+}
+
+/** The board's "Will write" card: where the export goes and what it writes, with Preview. */
+@Composable
+private fun ExportWillWriteCard(
+    destination: String,
+    summary: String,
+    canPreview: Boolean,
+    onPreview: () -> Unit,
+) {
+    val colors = com.healthmd.presentation.theme.LocalGeistColors.current
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(com.healthmd.presentation.theme.GeistRadii.listGroup))
+            .background(colors.gray.c300)
+            .padding(start = Spacing.lg - Spacing.xxs, end = Spacing.xs, top = Spacing.xs, bottom = Spacing.md),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                stringResource(R.string.export_will_write).uppercase(),
+                style = GeistType.label12,
+                fontWeight = FontWeight.SemiBold,
+                color = colors.secondary,
+                modifier = Modifier.weight(1f),
+            )
+            TextButton(onClick = onPreview, enabled = canPreview) {
+                Text(stringResource(R.string.export_preview_button), style = GeistType.button14)
+            }
+        }
+        Text(destination, style = GeistType.copy13Mono, color = colors.primary)
+        Spacer(Modifier.height(Spacing.xxs))
+        Text(summary, style = GeistType.copy14, color = colors.secondary)
+    }
+}
+
+/** One full-width 56dp primary action, with the free-export count and blocking notes above it. */
+@Composable
+private fun ExportNowCta(
+    label: String,
+    isPurchased: Boolean,
+    freeExportsRemaining: Int,
+    hasSelectedFormat: Boolean,
+    notice: String?,
+    enabled: Boolean,
+    isExporting: Boolean,
+    onExport: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val colors = com.healthmd.presentation.theme.LocalGeistColors.current
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .background(colors.background200)
+            .padding(horizontal = Spacing.lg - Spacing.xxs, vertical = Spacing.sm),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+    ) {
+        if (!hasSelectedFormat) {
+            Text(
+                stringResource(R.string.export_no_format_selected),
+                style = MaterialTheme.typography.bodySmall,
+                color = AppColors.error,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+        notice?.let {
+            Text(it, style = MaterialTheme.typography.bodySmall, color = AppColors.textSecondary,
+                textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
+        }
+        if (!isPurchased) {
+            Text(
+                pluralStringResource(R.plurals.free_exports_remaining, freeExportsRemaining, freeExportsRemaining),
+                style = MaterialTheme.typography.bodySmall,
+                color = AppColors.textSecondary,
+            )
+        }
+        Button(
+            onClick = onExport,
+            enabled = enabled && !isExporting,
+            shape = RoundedCornerShape(com.healthmd.presentation.theme.GeistRadii.full),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = colors.brandPrimary,
+                contentColor = colors.brandOnPrimary,
+            ),
+            modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp),
+        ) {
+            if (isExporting) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(20.dp),
+                    strokeWidth = 2.dp,
+                    color = colors.brandOnPrimary,
+                )
+            } else {
+                Text(label, style = GeistType.button16, textAlign = TextAlign.Center)
+            }
+        }
     }
 }
 

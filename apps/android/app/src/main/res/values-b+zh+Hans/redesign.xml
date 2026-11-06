@@ -5,13 +5,11 @@
     <string name="export_now_title">立即导出</string>
     <string name="archive_filter_all">全部</string>
     <string name="archive_filter_current_settings">当前设置</string>
-    <string name="archive_stat_archived">已归档天数</string>
     <string name="archive_previous_month">上个月</string>
     <string name="archive_next_month">下个月</string>
     <string name="archive_legend_complete">完整</string>
     <string name="archive_legend_partial">部分</string>
     <string name="archive_legend_missing">缺失</string>
-    <string name="archive_legend_not_exported">未导出</string>
     <string name="archive_legend_today">今天</string>
     <string name="archive_day_on_track">%1$d / %2$d 按计划完成</string>
     <string name="archive_day_status">%1$s，%2$s</string>
@@ -190,4 +188,47 @@
     <plurals name="archive_gap_count">
         <item quantity="other">%1$d 个缺口</item>
     </plurals>
+    <plurals name="archive_stat_archived_all">
+        <item quantity="other">天已在所有自动化中归档</item>
+    </plurals>
+    <plurals name="archive_stat_archived_month">
+        <item quantity="other">天已于%1$s归档</item>
+    </plurals>
+    <string name="automations_new">新建自动化</string>
+    <string name="automations_next">下次 · %1$s</string>
+    <string name="automations_paused">已暂停</string>
+    <string name="automations_on_demand">按需</string>
+    <string name="automations_run_now">立即运行</string>
+    <string name="automations_run_now_named">立即运行 %1$s</string>
+    <string name="automations_edit">编辑</string>
+    <string name="automations_edit_named">编辑 %1$s</string>
+    <string name="automations_switch_named">%1$s 自动化</string>
+    <string name="automations_schedule_settings_title">计划设置</string>
+    <string name="automations_schedule_settings_subtitle">应用级计划、计划导出目标位置、权限和历史记录</string>
+    <string name="date_option_last_7_days">7 天</string>
+    <string name="export_dates_heading">日期</string>
+    <string name="date_from_label">从</string>
+    <string name="date_to_label">至</string>
+    <string name="export_will_write">将写入</string>
+    <string name="export_will_write_with_daily_notes">%1$s + 每日笔记</string>
+    <plurals name="export_will_write_files">
+        <item quantity="other">约 %1$d 个 %2$s 文件</item>
+    </plurals>
+    <plurals name="export_cta_files">
+        <item quantity="other">导出 %1$d 个文件</item>
+    </plurals>
+    <plurals name="export_cta_send_days">
+        <item quantity="other">发送 %1$d 天</item>
+    </plurals>
+    <string name="settings_plan_free">免费版</string>
+    <string name="settings_plan_full_access">完整访问</string>
+    <string name="settings_plan_manage">%1$s · 恢复或管理</string>
+    <string name="settings_status_ready">就绪</string>
+    <string name="settings_status_off">关闭</string>
+    <string name="settings_status_allowed">已允许</string>
+    <string name="settings_status_not_allowed">未允许</string>
+    <string name="settings_status_paired">已配对</string>
+    <string name="settings_health_connect_subtitle">权限和历史数据访问</string>
+    <string name="settings_default_metrics">默认指标</string>
+    <string name="settings_connected_apps">已连接的应用</string>
 </resources>

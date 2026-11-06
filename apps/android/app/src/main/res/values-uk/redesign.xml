@@ -5,13 +5,11 @@
     <string name="export_now_title">Експортувати</string>
     <string name="archive_filter_all">Усі</string>
     <string name="archive_filter_current_settings">Поточні налаштування</string>
-    <string name="archive_stat_archived">Днів в архіві</string>
     <string name="archive_previous_month">Попередній місяць</string>
     <string name="archive_next_month">Наступний місяць</string>
     <string name="archive_legend_complete">Повністю</string>
     <string name="archive_legend_partial">Частково</string>
     <string name="archive_legend_missing">Пропущено</string>
-    <string name="archive_legend_not_exported">Не експортовано</string>
     <string name="archive_legend_today">Сьогодні</string>
     <string name="archive_day_on_track">За планом: %1$d з %2$d</string>
     <string name="archive_day_status">%1$s, %2$s</string>
@@ -220,4 +218,62 @@
         <item quantity="many">%1$d пропусків</item>
         <item quantity="other">%1$d пропуску</item>
     </plurals>
+    <plurals name="archive_stat_archived_all">
+        <item quantity="one">день в архіві в усіх автоматизаціях</item>
+        <item quantity="few">дні в архіві в усіх автоматизаціях</item>
+        <item quantity="many">днів в архіві в усіх автоматизаціях</item>
+        <item quantity="other">дня в архіві в усіх автоматизаціях</item>
+    </plurals>
+    <plurals name="archive_stat_archived_month">
+        <item quantity="one">день в архіві за %1$s</item>
+        <item quantity="few">дні в архіві за %1$s</item>
+        <item quantity="many">днів в архіві за %1$s</item>
+        <item quantity="other">дня в архіві за %1$s</item>
+    </plurals>
+    <string name="automations_new">Нова автоматизація</string>
+    <string name="automations_next">Далі · %1$s</string>
+    <string name="automations_paused">Призупинено</string>
+    <string name="automations_on_demand">На запит</string>
+    <string name="automations_run_now">Запустити зараз</string>
+    <string name="automations_run_now_named">Запустити %1$s зараз</string>
+    <string name="automations_edit">Змінити</string>
+    <string name="automations_edit_named">Змінити %1$s</string>
+    <string name="automations_switch_named">Автоматизація %1$s</string>
+    <string name="automations_schedule_settings_title">Параметри розкладу</string>
+    <string name="automations_schedule_settings_subtitle">Загальний розклад програми, призначення запланованого експорту, дозволи та історія</string>
+    <string name="date_option_last_7_days">7 днів</string>
+    <string name="export_dates_heading">Дати</string>
+    <string name="date_from_label">З</string>
+    <string name="date_to_label">По</string>
+    <string name="export_will_write">Буде записано</string>
+    <string name="export_will_write_with_daily_notes">%1$s + щоденні нотатки</string>
+    <plurals name="export_will_write_files">
+        <item quantity="one">Приблизно %1$d файл %2$s</item>
+        <item quantity="few">Приблизно %1$d файли %2$s</item>
+        <item quantity="many">Приблизно %1$d файлів %2$s</item>
+        <item quantity="other">Приблизно %1$d файлу %2$s</item>
+    </plurals>
+    <plurals name="export_cta_files">
+        <item quantity="one">Експортувати %1$d файл</item>
+        <item quantity="few">Експортувати %1$d файли</item>
+        <item quantity="many">Експортувати %1$d файлів</item>
+        <item quantity="other">Експортувати %1$d файлу</item>
+    </plurals>
+    <plurals name="export_cta_send_days">
+        <item quantity="one">Надіслати %1$d день</item>
+        <item quantity="few">Надіслати %1$d дні</item>
+        <item quantity="many">Надіслати %1$d днів</item>
+        <item quantity="other">Надіслати %1$d дня</item>
+    </plurals>
+    <string name="settings_plan_free">Безкоштовний план</string>
+    <string name="settings_plan_full_access">Повний доступ</string>
+    <string name="settings_plan_manage">%1$s · відновити або керувати</string>
+    <string name="settings_status_ready">Готово</string>
+    <string name="settings_status_off">Вимк.</string>
+    <string name="settings_status_allowed">Дозволено</string>
+    <string name="settings_status_not_allowed">Не дозволено</string>
+    <string name="settings_status_paired">Пару створено</string>
+    <string name="settings_health_connect_subtitle">Дозволи й доступ до історії</string>
+    <string name="settings_default_metrics">Типові показники</string>
+    <string name="settings_connected_apps">Підключені застосунки</string>
 </resources>

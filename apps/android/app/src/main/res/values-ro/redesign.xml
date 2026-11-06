@@ -5,13 +5,11 @@
     <string name="export_now_title">Exportați acum</string>
     <string name="archive_filter_all">Toate</string>
     <string name="archive_filter_current_settings">Setările curente</string>
-    <string name="archive_stat_archived">Zile arhivate</string>
     <string name="archive_previous_month">Luna anterioară</string>
     <string name="archive_next_month">Luna următoare</string>
     <string name="archive_legend_complete">Complet</string>
     <string name="archive_legend_partial">Parțial</string>
     <string name="archive_legend_missing">Lipsește</string>
-    <string name="archive_legend_not_exported">Neexportat</string>
     <string name="archive_legend_today">Astăzi</string>
     <string name="archive_day_on_track">%1$d din %2$d la zi</string>
     <string name="archive_day_status">%1$s, %2$s</string>
@@ -210,4 +208,57 @@
         <item quantity="few">%1$d goluri</item>
         <item quantity="other">%1$d de goluri</item>
     </plurals>
+    <plurals name="archive_stat_archived_all">
+        <item quantity="one">zi arhivată în toate automatizările</item>
+        <item quantity="few">zile arhivate în toate automatizările</item>
+        <item quantity="other">de zile arhivate în toate automatizările</item>
+    </plurals>
+    <plurals name="archive_stat_archived_month">
+        <item quantity="one">zi arhivată în %1$s</item>
+        <item quantity="few">zile arhivate în %1$s</item>
+        <item quantity="other">de zile arhivate în %1$s</item>
+    </plurals>
+    <string name="automations_new">Automatizare nouă</string>
+    <string name="automations_next">Următoarea · %1$s</string>
+    <string name="automations_paused">Întreruptă</string>
+    <string name="automations_on_demand">La cerere</string>
+    <string name="automations_run_now">Rulați acum</string>
+    <string name="automations_run_now_named">Rulați %1$s acum</string>
+    <string name="automations_edit">Editați</string>
+    <string name="automations_edit_named">Editați %1$s</string>
+    <string name="automations_switch_named">Automatizarea %1$s</string>
+    <string name="automations_schedule_settings_title">Setări program</string>
+    <string name="automations_schedule_settings_subtitle">Program la nivelul aplicației, destinația exportului programat, permisiuni și istoric</string>
+    <string name="date_option_last_7_days">7 zile</string>
+    <string name="export_dates_heading">Date</string>
+    <string name="date_from_label">De la</string>
+    <string name="date_to_label">Până la</string>
+    <string name="export_will_write">Se va scrie</string>
+    <string name="export_will_write_with_daily_notes">%1$s + note zilnice</string>
+    <plurals name="export_will_write_files">
+        <item quantity="one">Aprox. %1$d fișier %2$s</item>
+        <item quantity="few">Aprox. %1$d fișiere %2$s</item>
+        <item quantity="other">Aprox. %1$d de fișiere %2$s</item>
+    </plurals>
+    <plurals name="export_cta_files">
+        <item quantity="one">Exportați %1$d fișier</item>
+        <item quantity="few">Exportați %1$d fișiere</item>
+        <item quantity="other">Exportați %1$d de fișiere</item>
+    </plurals>
+    <plurals name="export_cta_send_days">
+        <item quantity="one">Trimiteți %1$d zi</item>
+        <item quantity="few">Trimiteți %1$d zile</item>
+        <item quantity="other">Trimiteți %1$d de zile</item>
+    </plurals>
+    <string name="settings_plan_free">Plan gratuit</string>
+    <string name="settings_plan_full_access">Acces complet</string>
+    <string name="settings_plan_manage">%1$s · restaurați sau gestionați</string>
+    <string name="settings_status_ready">Gata</string>
+    <string name="settings_status_off">Oprit</string>
+    <string name="settings_status_allowed">Permis</string>
+    <string name="settings_status_not_allowed">Nepermis</string>
+    <string name="settings_status_paired">Asociat</string>
+    <string name="settings_health_connect_subtitle">Permisiuni și acces la istoric</string>
+    <string name="settings_default_metrics">Valori implicite</string>
+    <string name="settings_connected_apps">Aplicații conectate</string>
 </resources>

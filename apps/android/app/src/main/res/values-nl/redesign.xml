@@ -5,13 +5,11 @@
     <string name="export_now_title">Nu exporteren</string>
     <string name="archive_filter_all">Alles</string>
     <string name="archive_filter_current_settings">Huidige instellingen</string>
-    <string name="archive_stat_archived">Gearchiveerde dagen</string>
     <string name="archive_previous_month">Vorige maand</string>
     <string name="archive_next_month">Volgende maand</string>
     <string name="archive_legend_complete">Volledig</string>
     <string name="archive_legend_partial">Gedeeltelijk</string>
     <string name="archive_legend_missing">Ontbreekt</string>
-    <string name="archive_legend_not_exported">Niet geëxporteerd</string>
     <string name="archive_legend_today">Vandaag</string>
     <string name="archive_day_on_track">%1$d van %2$d op schema</string>
     <string name="archive_day_status">%1$s, %2$s</string>
@@ -200,4 +198,52 @@
         <item quantity="one">%1$d gat</item>
         <item quantity="other">%1$d gaten</item>
     </plurals>
+    <plurals name="archive_stat_archived_all">
+        <item quantity="one">dag gearchiveerd over alle automatiseringen</item>
+        <item quantity="other">dagen gearchiveerd over alle automatiseringen</item>
+    </plurals>
+    <plurals name="archive_stat_archived_month">
+        <item quantity="one">dag gearchiveerd in %1$s</item>
+        <item quantity="other">dagen gearchiveerd in %1$s</item>
+    </plurals>
+    <string name="automations_new">Nieuwe automatisering</string>
+    <string name="automations_next">Volgende · %1$s</string>
+    <string name="automations_paused">Gepauzeerd</string>
+    <string name="automations_on_demand">Op verzoek</string>
+    <string name="automations_run_now">Nu uitvoeren</string>
+    <string name="automations_run_now_named">%1$s nu uitvoeren</string>
+    <string name="automations_edit">Bewerken</string>
+    <string name="automations_edit_named">%1$s bewerken</string>
+    <string name="automations_switch_named">Automatisering %1$s</string>
+    <string name="automations_schedule_settings_title">Planningsinstellingen</string>
+    <string name="automations_schedule_settings_subtitle">App-brede planning, bestemming voor geplande exports, machtigingen en geschiedenis</string>
+    <string name="date_option_last_7_days">7 dagen</string>
+    <string name="export_dates_heading">Datums</string>
+    <string name="date_from_label">Van</string>
+    <string name="date_to_label">Tot</string>
+    <string name="export_will_write">Wordt geschreven</string>
+    <string name="export_will_write_with_daily_notes">%1$s + dagnotities</string>
+    <plurals name="export_will_write_files">
+        <item quantity="one">Ongeveer %1$d %2$s-bestand</item>
+        <item quantity="other">Ongeveer %1$d %2$s-bestanden</item>
+    </plurals>
+    <plurals name="export_cta_files">
+        <item quantity="one">%1$d bestand exporteren</item>
+        <item quantity="other">%1$d bestanden exporteren</item>
+    </plurals>
+    <plurals name="export_cta_send_days">
+        <item quantity="one">%1$d dag verzenden</item>
+        <item quantity="other">%1$d dagen verzenden</item>
+    </plurals>
+    <string name="settings_plan_free">Gratis abonnement</string>
+    <string name="settings_plan_full_access">Volledige toegang</string>
+    <string name="settings_plan_manage">%1$s · herstellen of beheren</string>
+    <string name="settings_status_ready">Klaar</string>
+    <string name="settings_status_off">Uit</string>
+    <string name="settings_status_allowed">Toegestaan</string>
+    <string name="settings_status_not_allowed">Niet toegestaan</string>
+    <string name="settings_status_paired">Gekoppeld</string>
+    <string name="settings_health_connect_subtitle">Rechten en toegang tot geschiedenis</string>
+    <string name="settings_default_metrics">Standaardmetingen</string>
+    <string name="settings_connected_apps">Verbonden apps</string>
 </resources>

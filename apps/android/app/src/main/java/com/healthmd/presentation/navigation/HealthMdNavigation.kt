@@ -53,7 +53,8 @@ import com.healthmd.presentation.export.ExportScreen
 import com.healthmd.presentation.history.HistoryScreen
 import com.healthmd.presentation.archive.ArchiveScreen
 import com.healthmd.presentation.archive.DayPageScreen
-import com.healthmd.presentation.export.ExportProfilesEntryCard
+import com.healthmd.presentation.export.ExportProfilesViewModel
+import com.healthmd.presentation.schedule.AutomationsScreen
 import com.healthmd.presentation.schedule.AutomationDetailPane
 import com.healthmd.presentation.schedule.composer.AutomationComposerScreen
 import com.healthmd.presentation.common.GeistCard
@@ -62,6 +63,7 @@ import com.healthmd.presentation.common.ConfigurationProtectionToast
 import com.healthmd.presentation.common.ConfigurationProtectionUi
 import com.healthmd.presentation.common.LocalConfigurationProtection
 import com.healthmd.presentation.common.LocalFloatingActionClearance
+import com.healthmd.presentation.common.LocalUsesNavigationRail
 import com.healthmd.presentation.onboarding.OnboardingScreen
 import com.healthmd.presentation.paywall.PaywallScreen
 import com.healthmd.presentation.release.AndroidReleaseNotes
@@ -335,11 +337,14 @@ fun HealthMdNavigation(
         AppNavigationLayout(
             destinations = if (showMainNav) NavDestination.entries else emptyList(),
             currentRoute = currentRoute,
-            onExportNow = if (showMainNav && currentRoute != NavDestination.SETTINGS.route) {
+            onExportNow = if (showMainNav) {
                 { navController.navigate(SubRoutes.EXPORT_NOW) { launchSingleTop = true } }
             } else {
                 null
             },
+            // The rail keeps Export now on every destination; the phone's floating button
+            // leaves Settings, as on the board.
+            showFloatingExportNow = currentRoute != NavDestination.SETTINGS.route,
             onNavigate = { dest ->
                 navController.navigate(dest.route) {
                     popUpTo(navController.graph.findStartDestination().id) {
@@ -440,20 +445,23 @@ fun HealthMdNavigation(
             }
             composable(NavDestination.SCHEDULE.route) {
                 var selectedAutomation by rememberSaveable { mutableStateOf<String?>(null) }
+                val automationsProfiles: ExportProfilesViewModel = hiltViewModel()
                 BoxWithConstraints(Modifier.fillMaxSize()) {
                     // Same split point as the Archive, so an unfolded foldable in landscape
                     // (about 760 dp beside the rail) shows list and detail together.
-                    val twoPane = maxWidth >= GeistBreakpoints.medium.dp
+                    val twoPane = LocalUsesNavigationRail.current || maxWidth >= GeistBreakpoints.medium.dp
+                    val openPaywall = {
+                        if (settingsViewModel.distributionPolicy.purchasesAvailable) {
+                            navController.navigate(PaywallEntryPoint.SCHEDULE.route)
+                        }
+                    }
+                    val runNow: (String) -> Unit = { id ->
+                        runAutomationNow(id, automationsProfiles, protectionEnabled != false, settingsViewModel::showBlockedChangeToast) {
+                            navController.navigate(SubRoutes.EXPORT_NOW) { launchSingleTop = true }
+                        }
+                    }
                     val schedule: @Composable () -> Unit = {
-                        ScheduleScreen(
-                            onNavigateToPaywall = {
-                                if (settingsViewModel.distributionPolicy.purchasesAvailable) {
-                                    navController.navigate(PaywallEntryPoint.SCHEDULE.route)
-                                }
-                            },
-                            profilesEntry = {
-                                ExportProfilesEntryCard(onOpen = { navController.navigate(SubRoutes.EXPORT_PROFILES) })
-                            },
+                        AutomationsScreen(
                             onOpenAutomation = { id ->
                                 if (twoPane) {
                                     selectedAutomation = id
@@ -461,6 +469,15 @@ fun HealthMdNavigation(
                                     navController.navigate(SubRoutes.automationDetail(id)) { launchSingleTop = true }
                                 }
                             },
+                            onEditAutomation = { id ->
+                                navController.navigate(SubRoutes.automationCompose(id)) { launchSingleTop = true }
+                            },
+                            onRunNow = runNow,
+                            onOpenScheduleSettings = {
+                                navController.navigate(SubRoutes.SCHEDULE_SETTINGS) { launchSingleTop = true }
+                            },
+                            onNavigateToPaywall = openPaywall,
+                            selectedAutomationId = selectedAutomation.takeIf { twoPane },
                         )
                     }
                     if (twoPane) {
@@ -473,6 +490,8 @@ fun HealthMdNavigation(
                                         profileId = selectedAutomation,
                                         onEditProfile = { id -> navController.navigate(SubRoutes.exportProfile(id)) },
                                         onCompose = { id -> navController.navigate(SubRoutes.automationCompose(id)) { launchSingleTop = true } },
+                                        onRunNow = runNow,
+                                        onDeleted = { selectedAutomation = null },
                                     )
                                 }
                             }
@@ -495,7 +514,8 @@ fun HealthMdNavigation(
             composable(NavDestination.SETTINGS.route) {
                 var settingsDetail by rememberSaveable { mutableStateOf<String?>(null) }
                 BoxWithConstraints(Modifier.fillMaxSize()) {
-                    val twoPane = maxWidth >= GeistSizes.readableContentMaxWidth
+                    // Beside the rail (from `md`) the list and the open entry share the screen.
+                    val twoPane = LocalUsesNavigationRail.current
                     // On wide layouts sub-screens open beside Settings instead of over it.
                     val open: (String) -> Unit = { route ->
                         if (twoPane) settingsDetail = route else navController.navigate(route) { launchSingleTop = true }
@@ -529,11 +549,30 @@ fun HealthMdNavigation(
                                     restoreState = true
                                 }
                             },
+                            // Endpoint and gateway setup lives with the scheduled export target.
+                            onNavigateToScheduleSettings = {
+                                navController.navigate(SubRoutes.SCHEDULE_SETTINGS) { launchSingleTop = true }
+                            },
+                            onNavigateToMetrics = { navController.navigate(SubRoutes.METRIC_SELECTION) { launchSingleTop = true } },
+                            selectedEntry = if (!twoPane) {
+                                null
+                            } else {
+                                when (settingsDetail) {
+                                    SubRoutes.EXPORT_PROFILES -> SettingsEntry.EXPORT_PROFILES
+                                    SubRoutes.CLINIC_ACCESS -> SettingsEntry.CLINIC_ACCESS
+                                    SubRoutes.CLINICIAN_REPORT -> SettingsEntry.CLINICIAN_REPORT
+                                    SubRoutes.DIRECT_CLI -> SettingsEntry.DIRECT_CLI
+                                    SubRoutes.DIAGNOSTICS -> SettingsEntry.DIAGNOSTICS
+                                    else -> SettingsEntry.FOLDER
+                                }
+                            },
                         )
                     }
                     if (twoPane) {
+                        // The board's list column: 320dp on foldables and small tablets, 420dp wider.
+                        val listWidth = if (maxWidth >= SETTINGS_WIDE_LIST_MIN_WIDTH) 420.dp else 320.dp
                         Row(Modifier.fillMaxSize()) {
-                            Box(Modifier.weight(1f)) { list() }
+                            Box(Modifier.width(listWidth)) { list() }
                             Box(Modifier.weight(1f).padding(Spacing.md)) {
                                 GeistCard(padding = Spacing.xxs) {
                                     val close = { settingsDetail = null }
@@ -592,10 +631,34 @@ fun HealthMdNavigation(
                     onBack = { navController.popBackStack() },
                 ) {
                     ReadableWidth {
+                        val profiles: ExportProfilesViewModel = hiltViewModel()
                         AutomationDetailPane(
                             profileId = profileId,
                             onEditProfile = { id -> navController.navigate(SubRoutes.exportProfile(id)) },
                             onCompose = { id -> navController.navigate(SubRoutes.automationCompose(id)) { launchSingleTop = true } },
+                            onRunNow = { id ->
+                                runAutomationNow(id, profiles, protectionEnabled != false, settingsViewModel::showBlockedChangeToast) {
+                                    navController.navigate(SubRoutes.EXPORT_NOW) { launchSingleTop = true }
+                                }
+                            },
+                            onDeleted = { navController.popBackStack() },
+                            profilesViewModel = profiles,
+                        )
+                    }
+                }
+            }
+            composable(SubRoutes.SCHEDULE_SETTINGS) {
+                SubScreenFrame(
+                    title = stringResource(R.string.automations_schedule_settings_title),
+                    onBack = { navController.popBackStack() },
+                ) {
+                    ReadableWidth {
+                        ScheduleScreen(
+                            onNavigateToPaywall = {
+                                if (settingsViewModel.distributionPolicy.purchasesAvailable) {
+                                    navController.navigate(PaywallEntryPoint.SCHEDULE.route)
+                                }
+                            },
                         )
                     }
                 }
@@ -950,12 +1013,41 @@ private fun localizedRecoveryDate(date: LocalDate): String {
         .format(Date.from(instant))
 }
 
+/**
+ * Run now uses the existing manual path: the automation becomes the active profile and Export
+ * now opens on it, with its progress, result and limits. Switching profiles is a configuration
+ * change, so a locked configuration only runs the automation that is already active.
+ */
+private fun runAutomationNow(
+    profileId: String,
+    profiles: ExportProfilesViewModel,
+    configurationLocked: Boolean,
+    onBlocked: () -> Unit,
+    openExportNow: () -> Unit,
+) {
+    val active = profiles.uiState.value.rows.firstOrNull { it.profile.id == profileId }?.isActive == true
+    if (!active) {
+        if (configurationLocked) {
+            onBlocked()
+            return
+        }
+        profiles.activate(profileId)
+    }
+    openExportNow()
+}
+
 /** Export now routes shown as a sheet over the current screen. */
 private val EXPORT_SHEET_ROUTES = setOf(SubRoutes.EXPORT_NOW, SubRoutes.EXPORT_BACKFILL)
 
 /** Material 3 FAB container height and its margin above the bottom bar. */
 private val FLOATING_ACTION_MIN_HEIGHT = 56.dp
 private val FLOATING_ACTION_MARGIN = 16.dp
+
+/** Content width from which the Settings list column widens to 420dp. */
+private val SETTINGS_WIDE_LIST_MIN_WIDTH = 900.dp
+
+/** Window width below which the navigation rail takes the board's compact 80dp. */
+private val COMPACT_RAIL_BREAKPOINT = 1000.dp
 
 /** Reserve the measured navigation size, including wrapped labels, rather than a fixed inset. */
 @Composable
@@ -964,13 +1056,16 @@ internal fun AppNavigationLayout(
     currentRoute: String?,
     onNavigate: (NavDestination) -> Unit,
     onExportNow: (() -> Unit)? = null,
+    showFloatingExportNow: Boolean = true,
     content: @Composable (Modifier) -> Unit,
 ) {
     BoxWithConstraints(
         modifier = Modifier.fillMaxSize().safeDrawingPadding(),
     ) {
         val useNavigationRail = maxWidth >= GeistBreakpoints.medium.dp
-        val showsFloatingAction = onExportNow != null && !useNavigationRail
+        val showsFloatingAction = onExportNow != null && !useNavigationRail && showFloatingExportNow
+        // The board's compact rail (below 1000dp) is 80dp; wider windows use 96dp.
+        val railWidth = if (maxWidth < COMPACT_RAIL_BREAKPOINT) 80.dp else 96.dp
         val density = LocalDensity.current
         var floatingActionHeight by remember { mutableStateOf(FLOATING_ACTION_MIN_HEIGHT) }
         Row(modifier = Modifier.fillMaxSize()) {
@@ -980,6 +1075,7 @@ internal fun AppNavigationLayout(
                     currentRoute = currentRoute,
                     onNavigate = onNavigate,
                     onExportNow = onExportNow,
+                    width = railWidth,
                 )
             }
             Scaffold(
@@ -1014,7 +1110,10 @@ internal fun AppNavigationLayout(
                 } else {
                     0.dp
                 }
-                CompositionLocalProvider(LocalFloatingActionClearance provides clearance) {
+                CompositionLocalProvider(
+                    LocalFloatingActionClearance provides clearance,
+                    LocalUsesNavigationRail provides (destinations.isNotEmpty() && useNavigationRail),
+                ) {
                     content(Modifier.fillMaxSize().padding(padding).consumeWindowInsets(padding))
                 }
             }
@@ -1028,13 +1127,14 @@ private fun AdaptiveNavigationRail(
     currentRoute: String?,
     onNavigate: (NavDestination) -> Unit,
     onExportNow: (() -> Unit)?,
+    width: androidx.compose.ui.unit.Dp,
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalGeistColors.current
     NavigationRail(
         modifier = modifier
             .fillMaxHeight()
-            .width(96.dp)
+            .width(width)
             .verticalScroll(rememberScrollState()),
         containerColor = colors.background100,
         contentColor = colors.primary,

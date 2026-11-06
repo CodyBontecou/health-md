@@ -84,14 +84,15 @@ import java.text.ParsePosition
 import java.util.Date
 import java.util.Locale
 
+/**
+ * Schedule settings, opened from Automations: the app-wide schedule, the scheduled export
+ * target and its endpoints, the permissions schedules need, and schedule history. Automations
+ * themselves (profiles and their schedules) are on [AutomationsScreen].
+ */
 @Composable
 fun ScheduleScreen(
     viewModel: ScheduleViewModel = hiltViewModel(),
     onNavigateToPaywall: () -> Unit = {},
-    /** Entry to the saved export profiles, shown at the top of Automations. */
-    profilesEntry: (@Composable () -> Unit)? = null,
-    /** Opens an automation's detail hub (a pane on wide layouts, a screen on phones). */
-    onOpenAutomation: ((String) -> Unit)? = null,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val clinicAccess: com.healthmd.presentation.clinic.ClinicAccessViewModel = hiltViewModel()
@@ -100,7 +101,6 @@ fun ScheduleScreen(
     val managedClinicEndpoint = clinicStatus.endpoint.takeIf { clinicStatus.active && !independentAccess }
     val historyViewModel: HistoryViewModel = hiltViewModel()
     val historyUiState by historyViewModel.uiState.collectAsStateWithLifecycle()
-    val profileSchedulesViewModel: ProfileSchedulesViewModel = hiltViewModel()
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val protection = LocalConfigurationProtection.current
@@ -341,31 +341,10 @@ fun ScheduleScreen(
             .fillMaxSize()
             .imePadding()
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = Spacing.md, vertical = Spacing.lg),
+            .padding(horizontal = Spacing.md, vertical = Spacing.sm),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(Spacing.md),
     ) {
-        Spacer(modifier = Modifier.height(Spacing.md))
-
-        Text(
-            text = stringResource(R.string.nav_automations),
-            style = MaterialTheme.typography.headlineMedium,
-            color = AppColors.textPrimary,
-            modifier = Modifier.fillMaxWidth(),
-        )
-        Text(
-            text = stringResource(R.string.automations_subtitle),
-            style = MaterialTheme.typography.bodyMedium,
-            color = AppColors.textSecondary,
-            modifier = Modifier.fillMaxWidth(),
-        )
-
-        Spacer(modifier = Modifier.height(Spacing.sm))
-
-        profilesEntry?.invoke()
-
-        ProfileSchedulesSection(viewModel = profileSchedulesViewModel, onOpenDetails = onOpenAutomation)
-
         ScheduleSectionLabel(stringResource(R.string.automatic_export_title))
 
         ConfigurationProtectedRegion(modifier = Modifier.fillMaxWidth()) {
@@ -623,8 +602,7 @@ fun ScheduleScreen(
             )
         }
 
-        // Clears the floating Export now action on compact layouts.
-        Spacer(modifier = Modifier.height(Spacing.xl + Spacing.xxl))
+        Spacer(modifier = Modifier.height(Spacing.xl))
     }
 
     if (showAPISettings) {
@@ -702,8 +680,7 @@ private fun ScheduleToggleCard(
         modifier = Modifier
             .fillMaxWidth()
             .clip(shape)
-            .background(AppColors.bgPrimary)
-            .border(1.dp, AppColors.borderDefault, shape)
+            .background(AppColors.bgSecondary)
             .toggleable(
                 value = checked,
                 role = Role.Switch,
@@ -719,26 +696,8 @@ private fun ScheduleToggleCard(
             color = AppColors.textPrimary,
             modifier = Modifier.weight(1f),
         )
-        GeistSwitch(checked = checked)
+        com.healthmd.presentation.common.AppSwitch(checked = checked, onCheckedChange = null)
     }
-}
-
-@Composable
-private fun GeistSwitch(
-    checked: Boolean,
-) {
-    Switch(
-        checked = checked,
-        onCheckedChange = null,
-        colors = SwitchDefaults.colors(
-            checkedThumbColor = AppColors.onAccent,
-            checkedTrackColor = AppColors.accent,
-            checkedBorderColor = AppColors.accent,
-            uncheckedThumbColor = AppColors.textSecondary,
-            uncheckedTrackColor = AppColors.bgPrimary,
-            uncheckedBorderColor = AppColors.borderStrong,
-        ),
-    )
 }
 
 @Composable
@@ -755,8 +714,8 @@ private fun WarningCard(
         modifier = Modifier
             .fillMaxWidth()
             .clip(shape)
-            .background(AppColors.bgPrimary)
-            .border(1.dp, AppColors.warningBorder, shape)
+            // Tonal, borderless (DESIGN.md); the title's warning color and text carry the status.
+            .background(AppColors.bgSecondary)
             .padding(Spacing.md),
     ) {
         Text(

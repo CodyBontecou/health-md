@@ -25,6 +25,12 @@ val LocalHostNavigationBarInset = compositionLocalOf<Dp> { 0.dp }
  */
 val LocalFloatingActionClearance = compositionLocalOf<Dp> { 0.dp }
 
+/**
+ * True from the `md` breakpoint (601dp of window width), where a navigation rail replaces the
+ * bottom bar. List/detail screens read this rather than their own width, which the rail narrows.
+ */
+val LocalUsesNavigationRail = compositionLocalOf { false }
+
 /** Measures the activity's navigation bar once, outside any dialog, for the dialogs below it. */
 @Composable
 fun ProvideHostNavigationBarInset(content: @Composable () -> Unit) {

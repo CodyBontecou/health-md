@@ -5,13 +5,11 @@
     <string name="export_now_title">अभी निर्यात करें</string>
     <string name="archive_filter_all">सभी</string>
     <string name="archive_filter_current_settings">मौजूदा सेटिंग्स</string>
-    <string name="archive_stat_archived">संग्रहित दिन</string>
     <string name="archive_previous_month">पिछला महीना</string>
     <string name="archive_next_month">अगला महीना</string>
     <string name="archive_legend_complete">पूर्ण</string>
     <string name="archive_legend_partial">आंशिक</string>
     <string name="archive_legend_missing">छूटा हुआ</string>
-    <string name="archive_legend_not_exported">निर्यात नहीं हुआ</string>
     <string name="archive_legend_today">आज</string>
     <string name="archive_day_on_track">%2$d में से %1$d योजना के अनुसार</string>
     <string name="archive_day_status">%1$s, %2$s</string>
@@ -200,4 +198,52 @@
         <item quantity="one">%1$d अंतराल</item>
         <item quantity="other">%1$d अंतराल</item>
     </plurals>
+    <plurals name="archive_stat_archived_all">
+        <item quantity="one">सभी ऑटोमेशन में संग्रहित दिन</item>
+        <item quantity="other">सभी ऑटोमेशन में संग्रहित दिन</item>
+    </plurals>
+    <plurals name="archive_stat_archived_month">
+        <item quantity="one">%1$s में संग्रहित दिन</item>
+        <item quantity="other">%1$s में संग्रहित दिन</item>
+    </plurals>
+    <string name="automations_new">नया ऑटोमेशन</string>
+    <string name="automations_next">अगला · %1$s</string>
+    <string name="automations_paused">रोका गया</string>
+    <string name="automations_on_demand">मांग पर</string>
+    <string name="automations_run_now">अभी चलाएँ</string>
+    <string name="automations_run_now_named">%1$s अभी चलाएँ</string>
+    <string name="automations_edit">संपादित करें</string>
+    <string name="automations_edit_named">%1$s संपादित करें</string>
+    <string name="automations_switch_named">%1$s ऑटोमेशन</string>
+    <string name="automations_schedule_settings_title">शेड्यूल सेटिंग्स</string>
+    <string name="automations_schedule_settings_subtitle">ऐप-व्यापी शेड्यूल, शेड्यूल किए गए निर्यात का गंतव्य, अनुमतियाँ और इतिहास</string>
+    <string name="date_option_last_7_days">7 दिन</string>
+    <string name="export_dates_heading">तारीखें</string>
+    <string name="date_from_label">से</string>
+    <string name="date_to_label">तक</string>
+    <string name="export_will_write">लिखा जाएगा</string>
+    <string name="export_will_write_with_daily_notes">%1$s + डेली नोट्स</string>
+    <plurals name="export_will_write_files">
+        <item quantity="one">लगभग %1$d %2$s फ़ाइल</item>
+        <item quantity="other">लगभग %1$d %2$s फ़ाइलें</item>
+    </plurals>
+    <plurals name="export_cta_files">
+        <item quantity="one">%1$d फ़ाइल निर्यात करें</item>
+        <item quantity="other">%1$d फ़ाइलें निर्यात करें</item>
+    </plurals>
+    <plurals name="export_cta_send_days">
+        <item quantity="one">%1$d दिन भेजें</item>
+        <item quantity="other">%1$d दिन भेजें</item>
+    </plurals>
+    <string name="settings_plan_free">मुफ़्त प्लान</string>
+    <string name="settings_plan_full_access">पूरी पहुँच</string>
+    <string name="settings_plan_manage">%1$s · पुनर्स्थापित या प्रबंधित करें</string>
+    <string name="settings_status_ready">तैयार</string>
+    <string name="settings_status_off">बंद</string>
+    <string name="settings_status_allowed">अनुमति है</string>
+    <string name="settings_status_not_allowed">अनुमति नहीं</string>
+    <string name="settings_status_paired">पेयर किया गया</string>
+    <string name="settings_health_connect_subtitle">अनुमतियाँ और इतिहास पहुँच</string>
+    <string name="settings_default_metrics">डिफ़ॉल्ट मेट्रिक्स</string>
+    <string name="settings_connected_apps">कनेक्टेड ऐप्स</string>
 </resources>

@@ -159,7 +159,7 @@ internal fun ProfileScheduleToggle(
         ) {
             Text(label, style = MaterialTheme.typography.bodyMedium, color = AppColors.textPrimary,
                 modifier = if (stacked) Modifier.fillMaxWidth() else Modifier.weight(1f).align(Alignment.CenterVertically))
-            Switch(checked = checked, onCheckedChange = null)
+            com.healthmd.presentation.common.AppSwitch(checked = checked, onCheckedChange = null)
         }
     }
 }

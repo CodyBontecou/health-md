@@ -5,13 +5,11 @@
     <string name="export_now_title">今すぐエクスポート</string>
     <string name="archive_filter_all">すべて</string>
     <string name="archive_filter_current_settings">現在の設定</string>
-    <string name="archive_stat_archived">アーカイブ済みの日数</string>
     <string name="archive_previous_month">前の月</string>
     <string name="archive_next_month">次の月</string>
     <string name="archive_legend_complete">完了</string>
     <string name="archive_legend_partial">一部</string>
     <string name="archive_legend_missing">欠落</string>
-    <string name="archive_legend_not_exported">未エクスポート</string>
     <string name="archive_legend_today">今日</string>
     <string name="archive_day_on_track">%2$d 件中 %1$d 件が予定どおり</string>
     <string name="archive_day_status">%1$s、%2$s</string>
@@ -190,4 +188,47 @@
     <plurals name="archive_gap_count">
         <item quantity="other">欠落 %1$d件</item>
     </plurals>
+    <plurals name="archive_stat_archived_all">
+        <item quantity="other">日をすべてのオートメーションでアーカイブ済み</item>
+    </plurals>
+    <plurals name="archive_stat_archived_month">
+        <item quantity="other">日を%1$sにアーカイブ済み</item>
+    </plurals>
+    <string name="automations_new">新規オートメーション</string>
+    <string name="automations_next">次回 · %1$s</string>
+    <string name="automations_paused">一時停止中</string>
+    <string name="automations_on_demand">手動</string>
+    <string name="automations_run_now">今すぐ実行</string>
+    <string name="automations_run_now_named">%1$sを今すぐ実行</string>
+    <string name="automations_edit">編集</string>
+    <string name="automations_edit_named">%1$sを編集</string>
+    <string name="automations_switch_named">%1$s オートメーション</string>
+    <string name="automations_schedule_settings_title">スケジュール設定</string>
+    <string name="automations_schedule_settings_subtitle">アプリ全体のスケジュール、スケジュールエクスポートの保存先、権限、履歴</string>
+    <string name="date_option_last_7_days">7日間</string>
+    <string name="export_dates_heading">日付</string>
+    <string name="date_from_label">開始</string>
+    <string name="date_to_label">終了</string>
+    <string name="export_will_write">書き込み内容</string>
+    <string name="export_will_write_with_daily_notes">%1$s + デイリーノート</string>
+    <plurals name="export_will_write_files">
+        <item quantity="other">約%1$d件の%2$sファイル</item>
+    </plurals>
+    <plurals name="export_cta_files">
+        <item quantity="other">%1$d件のファイルをエクスポート</item>
+    </plurals>
+    <plurals name="export_cta_send_days">
+        <item quantity="other">%1$d日分を送信</item>
+    </plurals>
+    <string name="settings_plan_free">無料プラン</string>
+    <string name="settings_plan_full_access">フルアクセス</string>
+    <string name="settings_plan_manage">%1$s · 復元または管理</string>
+    <string name="settings_status_ready">準備完了</string>
+    <string name="settings_status_off">オフ</string>
+    <string name="settings_status_allowed">許可済み</string>
+    <string name="settings_status_not_allowed">未許可</string>
+    <string name="settings_status_paired">ペアリング済み</string>
+    <string name="settings_health_connect_subtitle">権限と履歴へのアクセス</string>
+    <string name="settings_default_metrics">デフォルトの指標</string>
+    <string name="settings_connected_apps">接続済みアプリ</string>
 </resources>
