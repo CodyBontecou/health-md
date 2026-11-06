@@ -498,7 +498,7 @@
       "platforms": {
         "apple": {
           "state": "planned",
-          "target": "Liquid Glass experience rollout: the Archive calendar built on apps/apple/HealthMd/Shared/Coverage lands with the Liquid Glass branch."
+          "target": "Liquid Glass branch (PR #293): the Archive calendar built on apps/apple/HealthMd/Shared/Coverage."
         },
         "android": {
           "state": "available"
