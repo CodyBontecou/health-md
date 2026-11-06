@@ -295,4 +295,15 @@
         <item quantity="many">إرسال %1$d يومًا</item>
         <item quantity="other">إرسال %1$d يوم</item>
     </plurals>
+    <string name="settings_plan_free">الخطة المجانية</string>
+    <string name="settings_plan_full_access">وصول كامل</string>
+    <string name="settings_plan_manage">%1$s · استعادة أو إدارة</string>
+    <string name="settings_status_ready">جاهز</string>
+    <string name="settings_status_off">متوقف</string>
+    <string name="settings_status_allowed">مسموح</string>
+    <string name="settings_status_not_allowed">غير مسموح</string>
+    <string name="settings_status_paired">مقترن</string>
+    <string name="settings_health_connect_subtitle">الأذونات والوصول إلى السجل</string>
+    <string name="settings_default_metrics">المقاييس الافتراضية</string>
+    <string name="settings_connected_apps">التطبيقات المتصلة</string>
 </resources>

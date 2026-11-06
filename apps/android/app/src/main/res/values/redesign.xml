@@ -235,4 +235,15 @@
         <item quantity="one">Send %1$d day</item>
         <item quantity="other">Send %1$d days</item>
     </plurals>
+    <string name="settings_plan_free">Free plan</string>
+    <string name="settings_plan_full_access">Full access</string>
+    <string name="settings_plan_manage">%1$s · restore or manage</string>
+    <string name="settings_status_ready">Ready</string>
+    <string name="settings_status_off">Off</string>
+    <string name="settings_status_allowed">Allowed</string>
+    <string name="settings_status_not_allowed">Not allowed</string>
+    <string name="settings_status_paired">Paired</string>
+    <string name="settings_health_connect_subtitle">Permissions and history access</string>
+    <string name="settings_default_metrics">Default metrics</string>
+    <string name="settings_connected_apps">Connected apps</string>
 </resources>

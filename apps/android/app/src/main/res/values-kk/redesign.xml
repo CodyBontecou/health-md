@@ -235,4 +235,15 @@
         <item quantity="one">%1$d күнді жіберу</item>
         <item quantity="other">%1$d күнді жіберу</item>
     </plurals>
+    <string name="settings_plan_free">Тегін жоспар</string>
+    <string name="settings_plan_full_access">Толық қолжетімділік</string>
+    <string name="settings_plan_manage">%1$s · қалпына келтіру не басқару</string>
+    <string name="settings_status_ready">Дайын</string>
+    <string name="settings_status_off">Өшірулі</string>
+    <string name="settings_status_allowed">Рұқсат етілген</string>
+    <string name="settings_status_not_allowed">Рұқсат жоқ</string>
+    <string name="settings_status_paired">Жұптастырылған</string>
+    <string name="settings_health_connect_subtitle">Рұқсаттар және тарихқа қолжетімділік</string>
+    <string name="settings_default_metrics">Әдепкі көрсеткіштер</string>
+    <string name="settings_connected_apps">Қосылған қолданбалар</string>
 </resources>

@@ -235,4 +235,15 @@
         <item quantity="one">%1$d ਦਿਨ ਭੇਜੋ</item>
         <item quantity="other">%1$d ਦਿਨ ਭੇਜੋ</item>
     </plurals>
+    <string name="settings_plan_free">ਮੁਫ਼ਤ ਪਲਾਨ</string>
+    <string name="settings_plan_full_access">ਪੂਰੀ ਪਹੁੰਚ</string>
+    <string name="settings_plan_manage">%1$s · ਬਹਾਲ ਜਾਂ ਪ੍ਰਬੰਧਿਤ ਕਰੋ</string>
+    <string name="settings_status_ready">ਤਿਆਰ</string>
+    <string name="settings_status_off">ਬੰਦ</string>
+    <string name="settings_status_allowed">ਮਨਜ਼ੂਰ</string>
+    <string name="settings_status_not_allowed">ਮਨਜ਼ੂਰ ਨਹੀਂ</string>
+    <string name="settings_status_paired">ਜੋੜਿਆ ਗਿਆ</string>
+    <string name="settings_health_connect_subtitle">ਇਜਾਜ਼ਤਾਂ ਅਤੇ ਇਤਿਹਾਸ ਪਹੁੰਚ</string>
+    <string name="settings_default_metrics">ਡਿਫਾਲਟ ਮੈਟ੍ਰਿਕਸ</string>
+    <string name="settings_connected_apps">ਜੁੜੀਆਂ ਐਪਾਂ</string>
 </resources>

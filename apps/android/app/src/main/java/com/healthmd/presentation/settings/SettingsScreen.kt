@@ -38,7 +38,18 @@ import com.healthmd.data.health.providers.HealthProviderState
 import com.healthmd.distribution.DistributionWearSettingsCard
 import com.healthmd.domain.distribution.DistributionChannel
 import com.healthmd.presentation.common.*
-import com.healthmd.presentation.export.ExportProfilesEntryCard
+import com.healthmd.data.health.HealthConnectIntentLauncher
+import com.healthmd.data.health.HealthConnectManager
+import com.healthmd.domain.model.HealthMetricCategory
+import com.healthmd.presentation.directcli.DirectCliViewModel
+import com.healthmd.presentation.export.ExportProfilesViewModel
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.material.icons.automirrored.outlined.HelpOutline
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import com.healthmd.presentation.theme.AppColors
 import com.healthmd.presentation.theme.Spacing
 import com.healthmd.widget.setup.WidgetSettingsCard
@@ -58,6 +69,11 @@ fun SettingsScreen(
     onNavigateToDiagnostics: () -> Unit = {},
     onNavigateToFolderDestination: () -> Unit = {},
     onNavigateToAutomations: () -> Unit = {},
+    /** API endpoint and Agent Data gateway setup: the scheduled target in Schedule settings. */
+    onNavigateToScheduleSettings: () -> Unit = onNavigateToAutomations,
+    onNavigateToMetrics: () -> Unit = {},
+    /** The entry open beside the list on wide layouts. */
+    selectedEntry: SettingsEntry? = null,
 ) {
     val isPurchased by viewModel.isPurchased.collectAsStateWithLifecycle()
     val distributionPolicy = viewModel.distributionPolicy
@@ -127,359 +143,367 @@ fun SettingsScreen(
         if (protectionSettingsRequestId != null) protectionRequester.bringIntoView()
     }
 
+    // Trailing status values come from data the app already holds; nothing is guessed.
+    val folderName = LocalAppFolderName.current
+    val exportSettings by viewModel.settings.collectAsStateWithLifecycle()
+    val directCli: DirectCliViewModel = hiltViewModel()
+    val directCliState by directCli.uiState.collectAsStateWithLifecycle()
+    val healthConnect = remember(context) { HealthConnectManager(context) }
+    var healthConnectAllowed by remember { mutableStateOf<Boolean?>(null) }
+    LifecycleResumeEffect(healthConnect) {
+        val check = coroutineScope.launch {
+            healthConnectAllowed = runCatching {
+                healthConnect.isAvailable() && healthConnect.hasAllPermissions()
+            }.getOrDefault(false)
+        }
+        onPauseOrDispose { check.cancel() }
+    }
+    val metricCount = HealthMetricCategory.entries.sumOf { exportSettings.metricSelection.enabledMetricCount(it) }
+    val ready = stringResource(R.string.settings_status_ready)
+    val off = stringResource(R.string.settings_status_off)
+
     Column(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = Spacing.md, vertical = Spacing.lg),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(Spacing.md),
+            .padding(horizontal = Spacing.md, vertical = Spacing.md),
     ) {
-        Spacer(modifier = Modifier.height(Spacing.sm))
+        Text(
+            text = stringResource(R.string.nav_settings),
+            style = MaterialTheme.typography.headlineMedium,
+            color = AppColors.textPrimary,
+            modifier = Modifier.padding(horizontal = Spacing.xxs, vertical = Spacing.xs).semantics { heading() },
+        )
 
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-        ) {
-            GeistIconCircle(size = 48.dp) {
-                Icon(
-                    Icons.Outlined.Settings,
-                    contentDescription = null,
-                    tint = AppColors.accent,
-                    modifier = Modifier.size(20.dp),
-                )
-            }
-            Column {
-                Text(
-                    text = stringResource(R.string.nav_settings),
-                    style = MaterialTheme.typography.headlineMedium,
-                    color = AppColors.textPrimary,
-                )
-                Text(
-                    text = stringResource(R.string.settings_subtitle),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = AppColors.textSecondary,
-                )
-            }
-        }
-
-        // Premium upgrade (show at top for free users)
-        if (!isPurchased && distributionPolicy.purchasesAvailable) {
-            SettingsNavigationCard(
-                title = stringResource(R.string.settings_upgrade_title),
-                subtitle = stringResource(R.string.settings_upgrade_subtitle),
-                icon = Icons.Outlined.WorkspacePremium,
-                onClick = onNavigateToPaywall,
-            )
-        }
+        // The plan: restore or manage it on the paywall; F-Droid includes full access.
+        val plan = stringResource(if (isPurchased) R.string.settings_plan_full_access else R.string.settings_plan_free)
+        SettingsPlanCard(
+            plan = if (distributionPolicy.purchasesAvailable) stringResource(R.string.settings_plan_manage, plan) else plan,
+            onClick = if (distributionPolicy.purchasesAvailable) onNavigateToPaywall else null,
+            modifier = Modifier.padding(top = Spacing.xs),
+        )
         if (BuildConfig.MYSELF_CLAIM_ENABLED && distributionPolicy.purchasesAvailable) {
-            SettingsNavigationCard(
+            SettingsGroup(
                 title = stringResource(R.string.myself_claim_entry),
-                subtitle = stringResource(R.string.myself_claim_entry_subtitle),
-                icon = Icons.Outlined.WorkspacePremium,
-                onClick = onNavigateToMyselfClaim,
-                modifier = Modifier.testTag("settings_myself_claim"),
+                rows = listOf { shape ->
+                    SettingsRow(
+                        shape = shape,
+                        title = stringResource(R.string.myself_claim_entry),
+                        subtitle = stringResource(R.string.myself_claim_entry_subtitle),
+                        icon = Icons.Outlined.WorkspacePremium,
+                        onClick = onNavigateToMyselfClaim,
+                        modifier = Modifier.testTag("settings_myself_claim"),
+                    )
+                },
             )
         }
 
-        // Grouped as on the cross-platform Settings screen: Destinations, Data, App.
-        SectionLabel(stringResource(R.string.settings_section_destinations), modifier = Modifier.fillMaxWidth())
-        SettingsNavigationCard(
-            title = stringResource(R.string.settings_destination_folder_title),
-            subtitle = stringResource(R.string.settings_destination_folder_subtitle),
-            icon = Icons.Outlined.Folder,
-            onClick = onNavigateToFolderDestination,
-        )
-        SettingsNavigationCard(
-            title = stringResource(R.string.direct_cli_title),
-            subtitle = stringResource(R.string.settings_direct_cli_subtitle),
-            icon = Icons.Outlined.Computer,
-            onClick = onNavigateToDirectCli,
-        )
-        SettingsNavigationCard(
-            title = stringResource(R.string.settings_destination_api_title),
-            subtitle = stringResource(R.string.settings_destination_api_subtitle),
-            icon = Icons.Outlined.Cloud,
-            onClick = onNavigateToAutomations,
+        // Grouped as on the cross-platform Settings board: Destinations, Data, App.
+        SettingsGroup(
+            title = stringResource(R.string.settings_section_destinations),
+            rows = listOf(
+                { shape ->
+                    SettingsRow(
+                        shape = shape,
+                        title = stringResource(R.string.settings_destination_folder_title),
+                        subtitle = folderName ?: stringResource(R.string.settings_destination_folder_subtitle),
+                        icon = Icons.Outlined.Folder,
+                        trailing = if (folderName != null) ready else null,
+                        trailingTone = SettingsTrailingTone.POSITIVE,
+                        onClick = onNavigateToFolderDestination,
+                        selected = selectedEntry == SettingsEntry.FOLDER,
+                    )
+                },
+                { shape ->
+                    SettingsRow(
+                        shape = shape,
+                        title = stringResource(R.string.direct_cli_title),
+                        subtitle = directCliState.pairedListenerName ?: stringResource(R.string.settings_direct_cli_subtitle),
+                        icon = Icons.Outlined.Terminal,
+                        trailing = if (directCliState.hasTrust) stringResource(R.string.settings_status_paired) else null,
+                        trailingTone = SettingsTrailingTone.POSITIVE,
+                        onClick = onNavigateToDirectCli,
+                        selected = selectedEntry == SettingsEntry.DIRECT_CLI,
+                    )
+                },
+                { shape ->
+                    val configured = exportSettings.apiEndpointUrl.isNotBlank()
+                    SettingsRow(
+                        shape = shape,
+                        title = stringResource(R.string.export_preview_api_destination),
+                        subtitle = stringResource(R.string.export_target_api_json_unconfigured_subtitle),
+                        icon = Icons.Outlined.Link,
+                        trailing = if (configured) ready else off,
+                        trailingTone = if (configured) SettingsTrailingTone.POSITIVE else SettingsTrailingTone.NEUTRAL,
+                        onClick = onNavigateToScheduleSettings,
+                    )
+                },
+                { shape ->
+                    val configured = exportSettings.agentDataGatewayUrl.isNotBlank()
+                    SettingsRow(
+                        shape = shape,
+                        title = stringResource(R.string.export_preview_gateway_destination),
+                        subtitle = stringResource(R.string.export_target_gateway_unconfigured_subtitle),
+                        icon = Icons.Outlined.Cloud,
+                        trailing = if (configured) ready else off,
+                        trailingTone = if (configured) SettingsTrailingTone.POSITIVE else SettingsTrailingTone.NEUTRAL,
+                        onClick = onNavigateToScheduleSettings,
+                    )
+                },
+            ),
         )
 
-        SectionLabel(stringResource(R.string.settings_section_data), modifier = Modifier.fillMaxWidth())
-        // Profiles & Reports: occasional-use export configuration surfaces that
-        // moved off the Export screen so daily export controls come first.
-        ExportProfilesEntryCard(onOpen = onNavigateToExportProfiles)
-        if (whoopProviders.isNotEmpty()) {
-            HealthProviderSupportSection(
-                providers = whoopProviders,
-                onOpenProvider = { providerDialog = it },
-            )
+        val dataRows = buildList<@Composable (androidx.compose.ui.graphics.Shape) -> Unit> {
+            add { shape ->
+                SettingsRow(
+                    shape = shape,
+                    title = stringResource(R.string.health_provider_label_health_connect),
+                    subtitle = stringResource(R.string.settings_health_connect_subtitle),
+                    icon = Icons.Outlined.FavoriteBorder,
+                    trailing = when (healthConnectAllowed) {
+                        true -> stringResource(R.string.settings_status_allowed)
+                        false -> stringResource(R.string.settings_status_not_allowed)
+                        null -> null
+                    },
+                    trailingTone = if (healthConnectAllowed == true) SettingsTrailingTone.POSITIVE else SettingsTrailingTone.NEUTRAL,
+                    onClick = { HealthConnectIntentLauncher(context).openSettings() },
+                    external = true,
+                )
+            }
+            add { shape ->
+                SettingsRow(
+                    shape = shape,
+                    title = stringResource(R.string.settings_default_metrics),
+                    icon = Icons.Outlined.Tune,
+                    trailing = metricCount.toString(),
+                    onClick = onNavigateToMetrics,
+                )
+            }
+            add { shape ->
+                ExportProfilesSettingsRow(
+                    shape = shape,
+                    onOpen = onNavigateToExportProfiles,
+                    selected = selectedEntry == SettingsEntry.EXPORT_PROFILES,
+                )
+            }
+            whoopProviders.forEach { provider ->
+                add { shape ->
+                    SettingsRow(
+                        shape = shape,
+                        title = stringResource(R.string.settings_connected_apps),
+                        subtitle = stringResource(provider.provider.definition.summaryRes),
+                        icon = Icons.Outlined.Apps,
+                        trailing = provider.provider.definition.displayName,
+                        trailingTone = if (provider.isConnected) SettingsTrailingTone.POSITIVE else SettingsTrailingTone.NEUTRAL,
+                        onClick = { providerDialog = provider },
+                    )
+                }
+            }
+            add { shape ->
+                SettingsRow(
+                    shape = shape,
+                    title = stringResource(R.string.clinician_report_title),
+                    subtitle = stringResource(R.string.clinician_report_entry_subtitle),
+                    icon = Icons.Outlined.Description,
+                    onClick = onNavigateToClinicianReport,
+                    modifier = Modifier.testTag("clinician_report_entry"),
+                    selected = selectedEntry == SettingsEntry.CLINICIAN_REPORT,
+                )
+            }
+            add { shape ->
+                SettingsRow(
+                    shape = shape,
+                    title = stringResource(R.string.shared_setup_title),
+                    subtitle = stringResource(R.string.shared_setup_settings_detail),
+                    icon = Icons.Outlined.Share,
+                    onClick = onNavigateToSharedSetup,
+                )
+            }
         }
-        SettingsNavigationCard(
-            title = stringResource(R.string.clinician_report_title),
-            subtitle = stringResource(R.string.clinician_report_entry_subtitle),
-            icon = Icons.Outlined.Description,
-            onClick = onNavigateToClinicianReport,
-            modifier = Modifier.testTag("clinician_report_entry"),
-        )
-        SettingsNavigationCard(
-            title = stringResource(R.string.shared_setup_title),
-            subtitle = stringResource(R.string.shared_setup_settings_detail),
-            icon = Icons.Outlined.Share,
-            onClick = onNavigateToSharedSetup,
-        )
+        SettingsGroup(title = stringResource(R.string.settings_section_data), rows = dataRows)
 
-        SectionLabel(stringResource(R.string.settings_section_app), modifier = Modifier.fillMaxWidth())
-        ConfigurationProtectionSettingsCard(
-            enabled = protectionEnabled,
-            onEnabledChange = viewModel::setPreventAccidentalChanges,
+        SettingsGroup(
+            title = stringResource(R.string.settings_section_app),
             modifier = Modifier
                 .bringIntoViewRequester(protectionRequester)
                 .testTag(ConfigurationProtectionTestTags.SECTION),
-        )
-        WidgetSettingsCard()
-        if (distributionPolicy.wearSyncAvailable) {
-            DistributionWearSettingsCard()
-        }
-        SettingsNavigationCard(
-            title = stringResource(R.string.diagnostics_title),
-            subtitle = stringResource(R.string.diagnostics_entry),
-            icon = Icons.Outlined.BugReport,
-            onClick = onNavigateToDiagnostics,
-            modifier = Modifier.testTag("diagnostics.entry"),
-        )
-
-        HealthDiagnosticsSection(
-            onShareDiagnostics = {
-                coroutineScope.launch {
-                    shareRedactedDiagnostics(
-                        context = context,
-                        reportText = viewModel.buildRedactedDiagnosticsShareText(),
+            rows = listOf(
+                { shape ->
+                    // One whole-row switch target, the explanation below it at full width.
+                    SettingsRow(
+                        shape = shape,
+                        title = stringResource(R.string.configuration_protection_toggle),
+                        icon = Icons.Outlined.Lock,
+                        onClick = null,
+                        modifier = Modifier
+                            .testTag(ConfigurationProtectionTestTags.TOGGLE)
+                            .toggleable(
+                                value = protectionEnabled == true,
+                                enabled = protectionEnabled != null,
+                                role = Role.Switch,
+                                onValueChange = viewModel::setPreventAccidentalChanges,
+                            ),
+                        trailingContent = {
+                            AppSwitch(checked = protectionEnabled == true, onCheckedChange = null, enabled = protectionEnabled != null)
+                        },
+                        below = {
+                            Text(
+                                stringResource(R.string.configuration_protection_description),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = AppColors.textSecondary,
+                                modifier = Modifier.fillMaxWidth().padding(top = Spacing.xxs, bottom = Spacing.xxs),
+                            )
+                        },
                     )
-                }
-            },
+                },
+                { shape ->
+                    SettingsRow(
+                        shape = shape,
+                        title = stringResource(R.string.diagnostics_title),
+                        subtitle = stringResource(R.string.diagnostics_entry),
+                        icon = Icons.AutoMirrored.Outlined.HelpOutline,
+                        onClick = onNavigateToDiagnostics,
+                        modifier = Modifier.testTag("diagnostics.entry"),
+                        selected = selectedEntry == SettingsEntry.DIAGNOSTICS,
+                    )
+                },
+                { shape ->
+                    SettingsRow(
+                        shape = shape,
+                        title = stringResource(R.string.health_diagnostics_share_title),
+                        subtitle = stringResource(R.string.health_diagnostics_description),
+                        icon = Icons.Outlined.BugReport,
+                        onClick = {
+                            coroutineScope.launch {
+                                shareRedactedDiagnostics(
+                                    context = context,
+                                    reportText = viewModel.buildRedactedDiagnosticsShareText(),
+                                )
+                            }
+                        },
+                        external = true,
+                    )
+                },
+            ),
         )
+        Spacer(Modifier.height(Spacing.sm))
+        Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+            WidgetSettingsCard()
+            if (distributionPolicy.wearSyncAvailable) {
+                DistributionWearSettingsCard()
+            }
+        }
 
-        GeistCard {
-            SectionLabel(stringResource(R.string.section_about))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-            ) {
-                Icon(
-                    Icons.Outlined.Info,
-                    contentDescription = null,
-                    tint = AppColors.accent,
-                    modifier = Modifier.size(24.dp),
-                )
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = stringResource(
+        SettingsGroup(
+            title = stringResource(R.string.section_about),
+            rows = listOf(
+                { shape ->
+                    SettingsRow(
+                        shape = shape,
+                        title = stringResource(
                             when (distributionPolicy.channel) {
                                 DistributionChannel.GOOGLE_PLAY -> R.string.distribution_channel_play
                                 DistributionChannel.FDROID -> R.string.distribution_channel_fdroid
                             },
                         ),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = AppColors.textPrimary,
-                        fontWeight = FontWeight.Medium,
+                        subtitle = stringResource(R.string.about_license_summary),
+                        icon = Icons.Outlined.Info,
+                        onClick = null,
                     )
-                    Text(
-                        text = stringResource(R.string.about_license_summary),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = AppColors.textMuted,
+                },
+                { shape ->
+                    SettingsRow(
+                        shape = shape,
+                        title = stringResource(R.string.about_source_code),
+                        icon = Icons.Outlined.Code,
+                        onClick = { openExternalUrl(context, SOURCE_CODE_URL) },
+                        external = true,
                     )
-                }
-            }
+                },
+                { shape ->
+                    SettingsRow(
+                        shape = shape,
+                        title = stringResource(R.string.about_license),
+                        icon = Icons.Outlined.Gavel,
+                        onClick = { openExternalUrl(context, LICENSE_URL) },
+                        external = true,
+                    )
+                },
+            ),
+        )
 
-            Spacer(modifier = Modifier.height(Spacing.xs))
-
-            SettingsNavigationCard(
-                title = stringResource(R.string.about_source_code),
-                icon = Icons.Outlined.Code,
-                onClick = { openExternalUrl(context, SOURCE_CODE_URL) },
-                external = true,
-            )
-
-            Spacer(modifier = Modifier.height(Spacing.xs))
-
-            SettingsNavigationCard(
-                title = stringResource(R.string.about_license),
-                icon = Icons.Outlined.Gavel,
-                onClick = { openExternalUrl(context, LICENSE_URL) },
-                external = true,
-            )
-        }
-
-        // Feedback
-        GeistCard {
-            SectionLabel(stringResource(R.string.section_feedback))
-
-            SettingsNavigationCard(
-                title = stringResource(R.string.feedback_send_title),
-                subtitle = stringResource(R.string.feedback_send_subtitle),
-                icon = Icons.Outlined.Email,
-                onClick = { FeedbackHelper.sendFeedbackEmail(context) },
-                external = true,
-            )
-
-            Spacer(modifier = Modifier.height(Spacing.xs))
-
-            SettingsNavigationCard(
-                title = stringResource(R.string.feedback_discord_title),
-                subtitle = stringResource(R.string.feedback_discord_subtitle),
-                icon = Icons.Outlined.Groups,
-                onClick = { FeedbackHelper.openDiscordCommunity(context) },
-                external = true,
-            )
-
-            Spacer(modifier = Modifier.height(Spacing.xs))
-
-            SettingsNavigationCard(
-                title = stringResource(R.string.feedback_github_title),
-                subtitle = stringResource(R.string.feedback_github_subtitle),
-                icon = Icons.Outlined.BugReport,
-                onClick = { FeedbackHelper.openGitHubIssue(context) },
-                external = true,
-            )
-        }
+        SettingsGroup(
+            title = stringResource(R.string.section_feedback),
+            rows = listOf(
+                { shape ->
+                    SettingsRow(
+                        shape = shape,
+                        title = stringResource(R.string.feedback_send_title),
+                        subtitle = stringResource(R.string.feedback_send_subtitle),
+                        icon = Icons.Outlined.Email,
+                        onClick = { FeedbackHelper.sendFeedbackEmail(context) },
+                        external = true,
+                    )
+                },
+                { shape ->
+                    SettingsRow(
+                        shape = shape,
+                        title = stringResource(R.string.feedback_discord_title),
+                        subtitle = stringResource(R.string.feedback_discord_subtitle),
+                        icon = Icons.Outlined.Groups,
+                        onClick = { FeedbackHelper.openDiscordCommunity(context) },
+                        external = true,
+                    )
+                },
+                { shape ->
+                    SettingsRow(
+                        shape = shape,
+                        title = stringResource(R.string.feedback_github_title),
+                        subtitle = stringResource(R.string.feedback_github_subtitle),
+                        icon = Icons.Outlined.BugReport,
+                        onClick = { FeedbackHelper.openGitHubIssue(context) },
+                        external = true,
+                    )
+                },
+            ),
+        )
 
         Spacer(modifier = Modifier.height(Spacing.xl))
     }
 }
 
+/** Which entry is open beside the list on wide layouts, highlighted as on the board. */
+enum class SettingsEntry { FOLDER, DIRECT_CLI, EXPORT_PROFILES, CLINICIAN_REPORT, DIAGNOSTICS }
+
+/** The saved export profiles as a Settings row: the active one, how many, how many scheduled. */
 @Composable
-private fun HealthProviderSupportSection(
-    providers: List<HealthProviderUiState>,
-    onOpenProvider: (HealthProviderUiState) -> Unit,
+private fun ExportProfilesSettingsRow(
+    shape: androidx.compose.ui.graphics.Shape,
+    onOpen: () -> Unit,
+    selected: Boolean,
+    profiles: ExportProfilesViewModel = hiltViewModel(),
 ) {
-    GeistCard {
-        SectionLabel(stringResource(R.string.section_health_sources))
-
-        Text(
-            text = stringResource(R.string.whoop_sources_description),
-            style = MaterialTheme.typography.bodySmall,
-            color = AppColors.textMuted,
-        )
-
-        Spacer(modifier = Modifier.height(Spacing.sm))
-
-        providers.forEachIndexed { index, provider ->
-            HealthProviderRow(providerState = provider, onClick = { onOpenProvider(provider) })
-            if (index != providers.lastIndex) {
-                Spacer(modifier = Modifier.height(Spacing.xs))
-                HorizontalDivider(color = AppColors.borderSubtle)
-                Spacer(modifier = Modifier.height(Spacing.xs))
-            }
-        }
-    }
-}
-
-@Composable
-private fun HealthDiagnosticsSection(
-    onShareDiagnostics: () -> Unit,
-) {
-    GeistCard {
-        SectionLabel(stringResource(R.string.section_health_diagnostics))
-
-        Text(
-            text = stringResource(R.string.health_diagnostics_description),
-            style = MaterialTheme.typography.bodySmall,
-            color = AppColors.textMuted,
-        )
-
-        Spacer(modifier = Modifier.height(Spacing.sm))
-
-        SettingsNavigationCard(
-            title = stringResource(R.string.health_diagnostics_share_title),
-            subtitle = stringResource(R.string.health_diagnostics_share_subtitle),
-            icon = Icons.Outlined.Share,
-            onClick = onShareDiagnostics,
-            external = true,
-        )
-    }
-}
-
-@Composable
-private fun HealthProviderRow(
-    providerState: HealthProviderUiState,
-    onClick: () -> Unit,
-) {
-    val provider = providerState.provider
-    val definition = provider.definition
-    GeistCardClickable(
-        onClick = onClick,
-        padding = Spacing.sm,
-    ) {
-        Icon(
-            imageVector = when (definition.id) {
-                HealthProviderId.HEALTH_CONNECT -> Icons.Outlined.Favorite
-                HealthProviderId.SAMSUNG_HEALTH,
-                HealthProviderId.HUAWEI_HEALTH -> Icons.Outlined.PhoneAndroid
-                else -> Icons.Outlined.Dataset
-            },
-            contentDescription = null,
-            tint = if (providerState.isSelected || providerState.isConnected || provider.isInstalled || definition.directExportStatus == HealthProviderDirectExportStatus.Available) {
-                AppColors.success
-            } else {
-                AppColors.accent
-            },
-            modifier = Modifier.size(24.dp),
-        )
-        Spacer(modifier = Modifier.width(Spacing.sm))
-        Column(modifier = Modifier.weight(1f)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = definition.displayName,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = AppColors.textPrimary,
-                    fontWeight = FontWeight.Medium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f),
-                )
-                Text(
-                    text = when {
-                        providerState.isSelected -> stringResource(R.string.health_provider_status_selected)
-                        providerState.isConnected -> stringResource(R.string.status_connected)
-                        providerState.isDirectConnectionConfigured -> stringResource(R.string.health_provider_status_ready_to_connect)
-                        provider.isInstalled -> stringResource(R.string.health_provider_status_installed)
-                        else -> stringResource(definition.directExportStatus.labelRes)
-                    },
-                    style = MaterialTheme.typography.labelSmall,
-                    color = if (providerState.isSelected || providerState.isConnected || provider.isInstalled) AppColors.success else AppColors.textMuted,
-                    maxLines = 1,
-                )
-            }
-            Text(
-                text = stringResource(definition.summaryRes),
-                style = MaterialTheme.typography.bodySmall,
-                color = AppColors.textMuted,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
+    val state by profiles.uiState.collectAsStateWithLifecycle()
+    SettingsRow(
+        shape = shape,
+        title = stringResource(R.string.automations_profiles_title),
+        subtitle = if (state.rows.isEmpty()) {
+            stringResource(R.string.automations_profiles_body)
+        } else {
+            val count = state.rows.size
+            val scheduled = state.rows.count { it.entry?.isEnabled == true }
+            stringResource(
+                R.string.automations_profiles_summary,
+                state.activeProfileName ?: "—",
+                pluralStringResource(R.plurals.automations_profiles_count, count, count),
+                pluralStringResource(R.plurals.automations_profiles_scheduled, scheduled, scheduled),
             )
-            Spacer(modifier = Modifier.height(Spacing.xxs))
-            Text(
-                text = stringResource(
-                    R.string.health_provider_integration_details,
-                    stringResource(definition.integrationKind.labelRes),
-                    stringResource(definition.setupDescriptionRes),
-                ),
-                style = MaterialTheme.typography.labelSmall,
-                color = AppColors.textSecondary,
-                maxLines = 3,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
-        Spacer(modifier = Modifier.width(Spacing.xs))
-        Icon(
-            Icons.Outlined.ArrowOutward,
-            contentDescription = stringResource(provider.actionLabelRes),
-            tint = AppColors.textMuted,
-            modifier = Modifier.size(16.dp),
-        )
-    }
+        },
+        icon = Icons.Outlined.Layers,
+        onClick = onOpen,
+        modifier = Modifier.testTag("export_profiles_entry"),
+        selected = selected,
+    )
 }
 
 private const val SOURCE_CODE_URL = "https://github.com/CodyBontecou/health-md"

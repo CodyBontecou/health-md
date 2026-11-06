@@ -265,4 +265,15 @@
         <item quantity="many">Надіслати %1$d днів</item>
         <item quantity="other">Надіслати %1$d дня</item>
     </plurals>
+    <string name="settings_plan_free">Безкоштовний план</string>
+    <string name="settings_plan_full_access">Повний доступ</string>
+    <string name="settings_plan_manage">%1$s · відновити або керувати</string>
+    <string name="settings_status_ready">Готово</string>
+    <string name="settings_status_off">Вимк.</string>
+    <string name="settings_status_allowed">Дозволено</string>
+    <string name="settings_status_not_allowed">Не дозволено</string>
+    <string name="settings_status_paired">Пару створено</string>
+    <string name="settings_health_connect_subtitle">Дозволи й доступ до історії</string>
+    <string name="settings_default_metrics">Типові показники</string>
+    <string name="settings_connected_apps">Підключені застосунки</string>
 </resources>

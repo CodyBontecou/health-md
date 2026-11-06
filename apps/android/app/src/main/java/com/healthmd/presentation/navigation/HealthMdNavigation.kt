@@ -522,6 +522,22 @@ fun HealthMdNavigation(
                                     restoreState = true
                                 }
                             },
+                            // Endpoint and gateway setup lives with the scheduled export target.
+                            onNavigateToScheduleSettings = {
+                                navController.navigate(SubRoutes.SCHEDULE_SETTINGS) { launchSingleTop = true }
+                            },
+                            onNavigateToMetrics = { navController.navigate(SubRoutes.METRIC_SELECTION) { launchSingleTop = true } },
+                            selectedEntry = if (!twoPane) {
+                                null
+                            } else {
+                                when (settingsDetail) {
+                                    SubRoutes.EXPORT_PROFILES -> SettingsEntry.EXPORT_PROFILES
+                                    SubRoutes.CLINICIAN_REPORT -> SettingsEntry.CLINICIAN_REPORT
+                                    SubRoutes.DIRECT_CLI -> SettingsEntry.DIRECT_CLI
+                                    SubRoutes.DIAGNOSTICS -> SettingsEntry.DIAGNOSTICS
+                                    else -> SettingsEntry.FOLDER
+                                }
+                            },
                         )
                     }
                     if (twoPane) {

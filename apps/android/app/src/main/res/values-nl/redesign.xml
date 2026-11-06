@@ -235,4 +235,15 @@
         <item quantity="one">%1$d dag verzenden</item>
         <item quantity="other">%1$d dagen verzenden</item>
     </plurals>
+    <string name="settings_plan_free">Gratis abonnement</string>
+    <string name="settings_plan_full_access">Volledige toegang</string>
+    <string name="settings_plan_manage">%1$s · herstellen of beheren</string>
+    <string name="settings_status_ready">Klaar</string>
+    <string name="settings_status_off">Uit</string>
+    <string name="settings_status_allowed">Toegestaan</string>
+    <string name="settings_status_not_allowed">Niet toegestaan</string>
+    <string name="settings_status_paired">Gekoppeld</string>
+    <string name="settings_health_connect_subtitle">Rechten en toegang tot geschiedenis</string>
+    <string name="settings_default_metrics">Standaardmetingen</string>
+    <string name="settings_connected_apps">Verbonden apps</string>
 </resources>

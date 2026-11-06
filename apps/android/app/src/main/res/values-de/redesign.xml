@@ -235,4 +235,15 @@
         <item quantity="one">%1$d Tag senden</item>
         <item quantity="other">%1$d Tage senden</item>
     </plurals>
+    <string name="settings_plan_free">Kostenloser Plan</string>
+    <string name="settings_plan_full_access">Vollzugriff</string>
+    <string name="settings_plan_manage">%1$s · wiederherstellen oder verwalten</string>
+    <string name="settings_status_ready">Bereit</string>
+    <string name="settings_status_off">Aus</string>
+    <string name="settings_status_allowed">Erlaubt</string>
+    <string name="settings_status_not_allowed">Nicht erlaubt</string>
+    <string name="settings_status_paired">Gekoppelt</string>
+    <string name="settings_health_connect_subtitle">Berechtigungen und Verlaufszugriff</string>
+    <string name="settings_default_metrics">Standard-Messwerte</string>
+    <string name="settings_connected_apps">Verbundene Apps</string>
 </resources>

@@ -248,4 +248,15 @@
         <item quantity="many">Enviar %1$d dias</item>
         <item quantity="other">Enviar %1$d dias</item>
     </plurals>
+    <string name="settings_plan_free">Plano gratuito</string>
+    <string name="settings_plan_full_access">Acesso completo</string>
+    <string name="settings_plan_manage">%1$s · restaurar ou gerenciar</string>
+    <string name="settings_status_ready">Pronto</string>
+    <string name="settings_status_off">Desativado</string>
+    <string name="settings_status_allowed">Permitido</string>
+    <string name="settings_status_not_allowed">Não permitido</string>
+    <string name="settings_status_paired">Pareado</string>
+    <string name="settings_health_connect_subtitle">Permissões e acesso ao histórico</string>
+    <string name="settings_default_metrics">Métricas padrão</string>
+    <string name="settings_connected_apps">Apps conectados</string>
 </resources>

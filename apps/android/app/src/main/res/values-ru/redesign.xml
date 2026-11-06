@@ -265,4 +265,15 @@
         <item quantity="many">Отправить %1$d дней</item>
         <item quantity="other">Отправить %1$d дня</item>
     </plurals>
+    <string name="settings_plan_free">Бесплатный план</string>
+    <string name="settings_plan_full_access">Полный доступ</string>
+    <string name="settings_plan_manage">%1$s · восстановить или управлять</string>
+    <string name="settings_status_ready">Готово</string>
+    <string name="settings_status_off">Выкл.</string>
+    <string name="settings_status_allowed">Разрешено</string>
+    <string name="settings_status_not_allowed">Не разрешено</string>
+    <string name="settings_status_paired">Сопряжено</string>
+    <string name="settings_health_connect_subtitle">Разрешения и доступ к истории</string>
+    <string name="settings_default_metrics">Показатели по умолчанию</string>
+    <string name="settings_connected_apps">Подключённые приложения</string>
 </resources>

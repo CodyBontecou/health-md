@@ -250,4 +250,15 @@
         <item quantity="few">Trimiteți %1$d zile</item>
         <item quantity="other">Trimiteți %1$d de zile</item>
     </plurals>
+    <string name="settings_plan_free">Plan gratuit</string>
+    <string name="settings_plan_full_access">Acces complet</string>
+    <string name="settings_plan_manage">%1$s · restaurați sau gestionați</string>
+    <string name="settings_status_ready">Gata</string>
+    <string name="settings_status_off">Oprit</string>
+    <string name="settings_status_allowed">Permis</string>
+    <string name="settings_status_not_allowed">Nepermis</string>
+    <string name="settings_status_paired">Asociat</string>
+    <string name="settings_health_connect_subtitle">Permisiuni și acces la istoric</string>
+    <string name="settings_default_metrics">Valori implicite</string>
+    <string name="settings_connected_apps">Aplicații conectate</string>
 </resources>

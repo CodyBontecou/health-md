@@ -220,4 +220,15 @@
     <plurals name="export_cta_send_days">
         <item quantity="other">%1$d日分を送信</item>
     </plurals>
+    <string name="settings_plan_free">無料プラン</string>
+    <string name="settings_plan_full_access">フルアクセス</string>
+    <string name="settings_plan_manage">%1$s · 復元または管理</string>
+    <string name="settings_status_ready">準備完了</string>
+    <string name="settings_status_off">オフ</string>
+    <string name="settings_status_allowed">許可済み</string>
+    <string name="settings_status_not_allowed">未許可</string>
+    <string name="settings_status_paired">ペアリング済み</string>
+    <string name="settings_health_connect_subtitle">権限と履歴へのアクセス</string>
+    <string name="settings_default_metrics">デフォルトの指標</string>
+    <string name="settings_connected_apps">接続済みアプリ</string>
 </resources>
