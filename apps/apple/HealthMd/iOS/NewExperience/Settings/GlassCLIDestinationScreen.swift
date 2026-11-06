@@ -196,11 +196,13 @@ struct GlassCLIDestinationScreen: View {
                 VStack(alignment: .leading, spacing: 12) {
                     if directCLITransport == DirectTransportKind.manualIP.rawValue {
                         TextField("Mac IP or Tailscale address", text: $directCLIHost)
+                            .accessibilityLabel(Text("Mac IP or Tailscale address"))
                             .textInputAutocapitalization(.never)
                             .autocorrectionDisabled()
                             .keyboardType(.URL)
                         TextField("Port", text: $directCLIPort)
                             .keyboardType(.numberPad)
+                            .accessibilityLabel(Text("Port"))
                     }
                     SecureField("20-digit pairing code", text: $pairingCode)
                         .keyboardType(.numberPad)
