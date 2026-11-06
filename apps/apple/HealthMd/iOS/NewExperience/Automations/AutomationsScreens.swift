@@ -876,10 +876,10 @@ struct ComposerFieldList: View {
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .accessibilityElement(children: .ignore)
+                // Label the Button itself: wrapping it in a separate accessibility
+                // element made VoiceOver announce each field twice.
                 .accessibilityLabel(field.localizedDisplayName)
                 .accessibilityValue(on ? String(localized: "On") : String(localized: "Off"))
-                .accessibilityAddTraits(.isButton)
             }
         }
         .padding(.horizontal, 18)

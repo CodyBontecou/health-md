@@ -59,6 +59,8 @@ struct ArchiveScreen: View {
     /// Archive B: the iPhone leads with a week strip and a readable day; Month shows
     /// the full calendar. The choice is remembered.
     @AppStorage("glass.archive.showsMonth") private var showsMonth = false
+    /// The scroll view's visible height, so the wide layouts can fill it.
+    @State private var viewportHeight: CGFloat = 0
     @State private var dayFile: ArchiveDayFile?
     @State private var dayFileKey: DayFileKey?
 
@@ -92,6 +94,7 @@ struct ArchiveScreen: View {
             .padding(.top, layout == .splitView ? 20 : 12)
             .padding(.bottom, layout.isWide ? 22 : GlassMetrics.scrollBottomInset)
         }
+        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { viewportHeight = $0 }
         .background(palette.bg.ignoresSafeArea())
         .accessibilityIdentifier("glass.archive")
     }
@@ -154,22 +157,29 @@ struct ArchiveScreen: View {
         }
     }
 
-    /// DuoInnerArchiveG and iPadArchiveG: the month beside its day.
+    /// DuoInnerArchiveG and iPadArchiveG: the month beside its day. Both panels reach the
+    /// bottom of the visible area, as on the boards, and grow past it (scrolling) when
+    /// the month needs more room.
     private var wideBody: some View {
-        VStack(alignment: .leading, spacing: layout == .pad ? 16 : 12) {
-            wideHeader
-            if layout == .wide { chips(compact: true) }
-            pausedNoteIfNeeded
-            HStack(alignment: .top, spacing: layout == .pad ? 16 : 14) {
-                calendarPanel
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                compactDayPanel(showsSummary: true, fillsHeight: true)
-                    .frame(width: layout == .pad ? 320 : 250)
-                    .frame(maxHeight: .infinity, alignment: .top)
+        FillVisibleHeightLayout(minHeight: max(0, viewportHeight - wideVerticalPadding)) {
+            VStack(alignment: .leading, spacing: layout == .pad ? 16 : 12) {
+                wideHeader
+                if layout == .wide { chips(compact: true) }
+                pausedNoteIfNeeded
+                HStack(alignment: .top, spacing: layout == .pad ? 16 : 14) {
+                    calendarPanel
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                    compactDayPanel(showsSummary: true, fillsHeight: true)
+                        .frame(width: layout == .pad ? 320 : 250)
+                        .frame(maxHeight: .infinity, alignment: .top)
+                }
+                .frame(maxHeight: .infinity, alignment: .top)
             }
-            .fixedSize(horizontal: false, vertical: true)
         }
     }
+
+    /// The wide layouts' top and bottom scroll padding (see `body`).
+    private var wideVerticalPadding: CGFloat { 12 + 22 }
 
     // MARK: - Header
 
@@ -1102,6 +1112,7 @@ struct ArchiveScreen: View {
     /// "Automations · Manage", or the selected automation's sentence with Edit.
     private var sentenceCard: some View {
         let paused = model.profiles.filter(\.isPaused).count
+        let running = model.profiles.filter(\.isScheduled).count
         let profile = filteredProfile
         return Button {
             if let profile { onEditAutomation(profile) } else { onManageAutomations() }
@@ -1119,8 +1130,10 @@ struct ArchiveScreen: View {
                 Group {
                     if let profile {
                         Text(verbatim: Self.sentenceText(profile))
+                    } else if running + paused == 0 {
+                        Text("Nothing runs on a schedule yet. Exports you run yourself still appear in the Archive.")
                     } else {
-                        Text("\(model.profiles.count - paused) running and \(paused) paused. “All” counts a day complete when every running automation that was due covered it.")
+                        Text("\(running) running and \(paused) paused. “All” counts a day complete when every running automation that was due covered it.")
                     }
                 }
                 .font(.system(size: 17))
@@ -1416,6 +1429,27 @@ struct AttentionScreen: View {
             .navigationBarTitleDisplayMode(.inline)
         }
         .presentationDragIndicator(.visible)
+    }
+}
+
+/// Lays out its single child at its natural height, or at `minHeight` when that is
+/// taller, proposing the final height so flexible children (`maxHeight: .infinity`)
+/// stretch to it. Inside a scroll view this fills the visible area without capping
+/// content that needs more room.
+struct FillVisibleHeightLayout: Layout {
+    var minHeight: CGFloat
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        guard let child = subviews.first else { return .zero }
+        let natural = child.sizeThatFits(ProposedViewSize(width: proposal.width, height: nil))
+        return CGSize(width: proposal.width ?? natural.width, height: max(natural.height, minHeight))
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        subviews.first?.place(
+            at: bounds.origin,
+            proposal: ProposedViewSize(width: bounds.width, height: bounds.height)
+        )
     }
 }
 #endif

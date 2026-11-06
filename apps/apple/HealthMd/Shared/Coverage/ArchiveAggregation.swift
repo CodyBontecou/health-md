@@ -47,11 +47,12 @@ enum ArchiveAggregation {
     // MARK: - "All"
 
     /// Over profiles due for the date: missing > partial > complete. Today is
-    /// `inProgress`, and a date nothing was due on is `notDue`.
+    /// `inProgress` while any profile is due, and a date nothing was due on is `notDue`
+    /// (today included, so an on-demand-only setup doesn't read as "updating").
     static func aggregate(_ days: [ProfileDay], isToday: Bool) -> CoverageStatus {
-        if isToday { return .inProgress }
         let due = days.map(\.status).filter(isDue)
         if due.isEmpty { return .notDue }
+        if isToday { return .inProgress }
         if due.contains(.missing) { return .missing }
         if due.contains(.partial) { return .partial }
         return .complete

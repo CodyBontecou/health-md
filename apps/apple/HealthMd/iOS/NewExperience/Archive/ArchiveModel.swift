@@ -18,6 +18,8 @@ struct ArchiveProfile: Identifiable, Equatable {
     var writesFilesOnDevice = false
 
     var isPaused: Bool { entry != nil && entry?.isEnabled == false }
+    /// Has an enabled schedule; on-demand automations (no entry) are neither running nor paused.
+    var isScheduled: Bool { entry?.isEnabled == true }
     var hasTodayRefresh: Bool { entry?.todayRefreshEnabled == true }
     var isWeekly: Bool { entry?.frequency == .weekly }
 }

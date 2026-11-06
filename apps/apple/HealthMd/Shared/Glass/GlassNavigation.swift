@@ -122,7 +122,9 @@ struct GlassSidebar<ID: Hashable, Section: View, Accessory: View>: View {
                         .frame(maxWidth: .infinity, minHeight: GlassMetrics.touchTarget, alignment: .leading)
                         .background(
                             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                .fill(isSelected ? palette.glassStrong : Color.clear)
+                                // `line` reads on the light glass sidebar too; `glassStrong`
+                                // is near-white there and the selection vanished.
+                                .fill(isSelected ? palette.line : Color.clear)
                         )
                         .contentShape(Rectangle())
                 }
@@ -176,7 +178,7 @@ struct GlassSidebarListRow: View {
             .frame(maxWidth: .infinity, minHeight: 36, alignment: .leading)
             .background(
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(isSelected ? palette.surface : Color.clear)
+                    .fill(isSelected ? palette.line : Color.clear)
             )
             .contentShape(Rectangle())
         }

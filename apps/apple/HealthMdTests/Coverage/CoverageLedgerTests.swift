@@ -290,6 +290,8 @@ final class CoverageLedgerTests: XCTestCase {
         XCTAssertEqual(ArchiveAggregation.aggregate(days(.complete, .paused, .notDue), isToday: false), .complete)
         XCTAssertEqual(ArchiveAggregation.aggregate(days(.paused, .notDue), isToday: false), .notDue)
         XCTAssertEqual(ArchiveAggregation.aggregate(days(.missing), isToday: true), .inProgress)
+        XCTAssertEqual(ArchiveAggregation.aggregate(days(.notDue), isToday: true), .notDue)
+        XCTAssertEqual(ArchiveAggregation.aggregate(days(.paused, .notDue), isToday: true), .notDue)
     }
 
     func testIssueDotsCapAtThree() {

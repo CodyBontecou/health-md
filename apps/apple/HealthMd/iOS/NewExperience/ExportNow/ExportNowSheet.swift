@@ -179,13 +179,18 @@ struct ExportNowSheet: View {
                     GlassChip(title: ExportDateRangePreset.allTime.title) { selectAllTime() }
                 }
             }
-            // The sleep day setting (FormatsG) decides which date holds last night.
+            // The sleep day setting (FormatsG) decides which date holds last night; the
+            // advice to pick that date only shows while the range leaves it out.
             Group {
-                switch healthKitManager.sleepDayAttribution {
-                case .nightBegins:
+                switch (healthKitManager.sleepDayAttribution, rangeIncludesLastNight) {
+                case (.nightBegins, false):
                     Text("\(rangeText) · sleep counts noon → noon. For last night, choose Yesterday.")
-                case .morningEnds:
+                case (.nightBegins, true):
+                    Text("\(rangeText) · sleep counts noon → noon, so last night is included.")
+                case (.morningEnds, false):
                     Text("\(rangeText) · sleep counts on the day you wake. For last night, choose Today.")
+                case (.morningEnds, true):
+                    Text("\(rangeText) · sleep counts on the day you wake, so last night is included.")
                 }
             }
                 .glassFont(.rowSubtitle)
@@ -241,6 +246,16 @@ struct ExportNowSheet: View {
 
     private func sectionTitle(_ title: String) -> some View {
         Text(title).glassFont(.caption).foregroundStyle(palette.muted)
+    }
+
+    /// Whether the selected dates hold last night's sleep: yesterday when sleep counts
+    /// noon → noon, today when it counts on the day you wake.
+    private var rangeIncludesLastNight: Bool {
+        let today = calendar.startOfDay(for: Date())
+        let night = healthKitManager.sleepDayAttribution == .nightBegins
+            ? calendar.date(byAdding: .day, value: -1, to: today) ?? today
+            : today
+        return calendar.startOfDay(for: startDate) <= night && night <= calendar.startOfDay(for: endDate)
     }
 
     private var rangeText: String {
