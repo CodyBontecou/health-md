@@ -124,13 +124,29 @@ fun HealthMdNavigation(
         accessOwner.lifecycle.addObserver(observer)
         onDispose { accessOwner.lifecycle.removeObserver(observer) }
     }
-    if (accessViewModel.purchasesAvailable && accessUnlocked == null) {
+
+    // Resolve the initial route once. A folder selected during onboarding is persisted to
+    // settings, but must not turn into a live signal that rebuilds the navigation graph.
+    var initialShouldSkipOnboarding by rememberSaveable { mutableStateOf<Boolean?>(null) }
+    LaunchedEffect(settingsRepository) {
+        if (initialShouldSkipOnboarding == null) {
+            initialShouldSkipOnboarding = settingsRepository.resolveOnboardingCompletion()
+        }
+    }
+    val hasCompletedOnboarding by settingsRepository.hasCompletedOnboarding.collectAsStateWithLifecycle(initialValue = null)
+
+    // Onboarding comes first and the paywall last: the root gate applies only once setup is
+    // complete, so a new user walks through onboarding before being asked to pay.
+    val onboardingDone = initialShouldSkipOnboarding == true || hasCompletedOnboarding == true
+    if (accessViewModel.purchasesAvailable && onboardingDone && accessUnlocked == null) {
         Box(Modifier.fillMaxSize().background(AppColors.bgPrimary), contentAlignment = Alignment.Center) {
             CircularProgressIndicator(color = AppColors.accent)
         }
         return
     }
-    if (accessViewModel.purchasesAvailable && accessUnlocked != true) {
+    if (accessViewModel.purchasesAvailable && onboardingDone && accessUnlocked != true) {
+        // The navigation graph is rebuilt after unlock; start it past the finished onboarding.
+        SideEffect { initialShouldSkipOnboarding = true }
         val offers by accessViewModel.offers.collectAsStateWithLifecycle()
         val purchasing by accessViewModel.isPurchasing.collectAsStateWithLifecycle()
         val restoring by accessViewModel.isRestoring.collectAsStateWithLifecycle()
@@ -174,17 +190,6 @@ fun HealthMdNavigation(
     val currentRoute = currentDestination?.route.let { route ->
         if (route in EXPORT_SHEET_ROUTES) navController.previousBackStackEntry?.destination?.route else route
     }
-
-    // Resolve the initial route once. A folder selected during onboarding is persisted to
-    // settings, but must not turn into a live signal that rebuilds the navigation graph.
-    var initialShouldSkipOnboarding by rememberSaveable { mutableStateOf<Boolean?>(null) }
-    LaunchedEffect(settingsRepository) {
-        if (initialShouldSkipOnboarding == null) {
-            initialShouldSkipOnboarding = settingsRepository.resolveOnboardingCompletion()
-        }
-    }
-
-    val hasCompletedOnboarding by settingsRepository.hasCompletedOnboarding.collectAsStateWithLifecycle(initialValue = null)
 
     // Adaptive navigation: bottom bar on compact screens, navigation rail on larger layouts.
     val showMainNav = currentRoute in NavDestination.entries.map { it.route }
