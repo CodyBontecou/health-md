@@ -132,8 +132,6 @@ final class ProductCapabilityManifestTests: XCTestCase {
 
     private static let appleCapabilities: Set<String> = [
         "purchase.family-sharing",
-        // Lands on Apple with the Liquid Glass Archive; Android is planned with Material 3.
-        "export.coverage-calendar",
         "support.native-review-introduction",
         "apple.lossless-healthkit-archive",
         "apple.medication-dose-events",
