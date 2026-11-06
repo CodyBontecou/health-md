@@ -2,6 +2,7 @@ package com.healthmd.presentation.schedule
 
 import android.text.format.DateFormat
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -241,7 +242,16 @@ private fun AutomationCard(
             .fillMaxWidth()
             .testTag(AutomationsTags.CARD)
             .clip(RoundedCornerShape(GeistRadii.large))
-            .background(if (selected) colors.secondaryContainer else colors.background200)
+            .background(colors.background200)
+            // The automation open beside the list: the brand focus outline, not a fill, so the
+            // tonal Run now keeps its contrast.
+            .then(
+                if (selected) {
+                    Modifier.border(2.dp, colors.brandPrimary, RoundedCornerShape(GeistRadii.large))
+                } else {
+                    Modifier
+                },
+            )
             .semantics { this.selected = selected }
             .padding(GeistSpacing.space4),
     ) {
