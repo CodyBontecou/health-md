@@ -265,4 +265,34 @@
     <string name="automations_switch_named">أتمتة %1$s</string>
     <string name="automations_schedule_settings_title">إعدادات الجدول</string>
     <string name="automations_schedule_settings_subtitle">الجدول على مستوى التطبيق، ووجهة التصدير المجدول، والأذونات والسجل</string>
+    <string name="date_option_last_7_days">7 أيام</string>
+    <string name="export_dates_heading">التواريخ</string>
+    <string name="date_from_label">من</string>
+    <string name="date_to_label">إلى</string>
+    <string name="export_will_write">سيُكتب</string>
+    <string name="export_will_write_with_daily_notes">%1$s + الملاحظات اليومية</string>
+    <plurals name="export_will_write_files">
+        <item quantity="zero">حوالي %1$d ملف %2$s</item>
+        <item quantity="one">حوالي ملف %2$s واحد (%1$d)</item>
+        <item quantity="two">حوالي ملفي %2$s (%1$d)</item>
+        <item quantity="few">حوالي %1$d ملفات %2$s</item>
+        <item quantity="many">حوالي %1$d ملفًا %2$s</item>
+        <item quantity="other">حوالي %1$d ملف %2$s</item>
+    </plurals>
+    <plurals name="export_cta_files">
+        <item quantity="zero">تصدير %1$d ملف</item>
+        <item quantity="one">تصدير ملف واحد (%1$d)</item>
+        <item quantity="two">تصدير ملفين (%1$d)</item>
+        <item quantity="few">تصدير %1$d ملفات</item>
+        <item quantity="many">تصدير %1$d ملفًا</item>
+        <item quantity="other">تصدير %1$d ملف</item>
+    </plurals>
+    <plurals name="export_cta_send_days">
+        <item quantity="zero">إرسال %1$d يوم</item>
+        <item quantity="one">إرسال يوم واحد (%1$d)</item>
+        <item quantity="two">إرسال يومين (%1$d)</item>
+        <item quantity="few">إرسال %1$d أيام</item>
+        <item quantity="many">إرسال %1$d يومًا</item>
+        <item quantity="other">إرسال %1$d يوم</item>
+    </plurals>
 </resources>

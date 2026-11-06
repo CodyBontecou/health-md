@@ -217,4 +217,22 @@
     <string name="automations_switch_named">Automatisering %1$s</string>
     <string name="automations_schedule_settings_title">Planningsinstellingen</string>
     <string name="automations_schedule_settings_subtitle">App-brede planning, bestemming voor geplande exports, machtigingen en geschiedenis</string>
+    <string name="date_option_last_7_days">7 dagen</string>
+    <string name="export_dates_heading">Datums</string>
+    <string name="date_from_label">Van</string>
+    <string name="date_to_label">Tot</string>
+    <string name="export_will_write">Wordt geschreven</string>
+    <string name="export_will_write_with_daily_notes">%1$s + dagnotities</string>
+    <plurals name="export_will_write_files">
+        <item quantity="one">Ongeveer %1$d %2$s-bestand</item>
+        <item quantity="other">Ongeveer %1$d %2$s-bestanden</item>
+    </plurals>
+    <plurals name="export_cta_files">
+        <item quantity="one">%1$d bestand exporteren</item>
+        <item quantity="other">%1$d bestanden exporteren</item>
+    </plurals>
+    <plurals name="export_cta_send_days">
+        <item quantity="one">%1$d dag verzenden</item>
+        <item quantity="other">%1$d dagen verzenden</item>
+    </plurals>
 </resources>

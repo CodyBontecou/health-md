@@ -227,4 +227,25 @@
     <string name="automations_switch_named">Automatisation %1$s</string>
     <string name="automations_schedule_settings_title">Paramètres de planification</string>
     <string name="automations_schedule_settings_subtitle">Planification globale de l\'app, destination des exports planifiés, autorisations et historique</string>
+    <string name="date_option_last_7_days">7 jours</string>
+    <string name="export_dates_heading">Dates</string>
+    <string name="date_from_label">Du</string>
+    <string name="date_to_label">Au</string>
+    <string name="export_will_write">Sera écrit</string>
+    <string name="export_will_write_with_daily_notes">%1$s + notes quotidiennes</string>
+    <plurals name="export_will_write_files">
+        <item quantity="one">Environ %1$d fichier %2$s</item>
+        <item quantity="many">Environ %1$d fichiers %2$s</item>
+        <item quantity="other">Environ %1$d fichiers %2$s</item>
+    </plurals>
+    <plurals name="export_cta_files">
+        <item quantity="one">Exporter %1$d fichier</item>
+        <item quantity="many">Exporter %1$d fichiers</item>
+        <item quantity="other">Exporter %1$d fichiers</item>
+    </plurals>
+    <plurals name="export_cta_send_days">
+        <item quantity="one">Envoyer %1$d jour</item>
+        <item quantity="many">Envoyer %1$d jours</item>
+        <item quantity="other">Envoyer %1$d jours</item>
+    </plurals>
 </resources>

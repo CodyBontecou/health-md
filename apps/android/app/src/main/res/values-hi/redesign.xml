@@ -217,4 +217,22 @@
     <string name="automations_switch_named">%1$s ऑटोमेशन</string>
     <string name="automations_schedule_settings_title">शेड्यूल सेटिंग्स</string>
     <string name="automations_schedule_settings_subtitle">ऐप-व्यापी शेड्यूल, शेड्यूल किए गए निर्यात का गंतव्य, अनुमतियाँ और इतिहास</string>
+    <string name="date_option_last_7_days">7 दिन</string>
+    <string name="export_dates_heading">तारीखें</string>
+    <string name="date_from_label">से</string>
+    <string name="date_to_label">तक</string>
+    <string name="export_will_write">लिखा जाएगा</string>
+    <string name="export_will_write_with_daily_notes">%1$s + डेली नोट्स</string>
+    <plurals name="export_will_write_files">
+        <item quantity="one">लगभग %1$d %2$s फ़ाइल</item>
+        <item quantity="other">लगभग %1$d %2$s फ़ाइलें</item>
+    </plurals>
+    <plurals name="export_cta_files">
+        <item quantity="one">%1$d फ़ाइल निर्यात करें</item>
+        <item quantity="other">%1$d फ़ाइलें निर्यात करें</item>
+    </plurals>
+    <plurals name="export_cta_send_days">
+        <item quantity="one">%1$d दिन भेजें</item>
+        <item quantity="other">%1$d दिन भेजें</item>
+    </plurals>
 </resources>

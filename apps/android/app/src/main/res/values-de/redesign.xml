@@ -217,4 +217,22 @@
     <string name="automations_switch_named">Automation %1$s</string>
     <string name="automations_schedule_settings_title">Zeitplaneinstellungen</string>
     <string name="automations_schedule_settings_subtitle">App-weiter Zeitplan, Ziel für geplante Exporte, Berechtigungen und Verlauf</string>
+    <string name="date_option_last_7_days">7 Tage</string>
+    <string name="export_dates_heading">Zeitraum</string>
+    <string name="date_from_label">Von</string>
+    <string name="date_to_label">Bis</string>
+    <string name="export_will_write">Wird geschrieben</string>
+    <string name="export_will_write_with_daily_notes">%1$s + Tagesnotizen</string>
+    <plurals name="export_will_write_files">
+        <item quantity="one">Etwa %1$d %2$s-Datei</item>
+        <item quantity="other">Etwa %1$d %2$s-Dateien</item>
+    </plurals>
+    <plurals name="export_cta_files">
+        <item quantity="one">%1$d Datei exportieren</item>
+        <item quantity="other">%1$d Dateien exportieren</item>
+    </plurals>
+    <plurals name="export_cta_send_days">
+        <item quantity="one">%1$d Tag senden</item>
+        <item quantity="other">%1$d Tage senden</item>
+    </plurals>
 </resources>

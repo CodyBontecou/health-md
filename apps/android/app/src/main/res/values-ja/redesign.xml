@@ -205,4 +205,19 @@
     <string name="automations_switch_named">%1$s オートメーション</string>
     <string name="automations_schedule_settings_title">スケジュール設定</string>
     <string name="automations_schedule_settings_subtitle">アプリ全体のスケジュール、スケジュールエクスポートの保存先、権限、履歴</string>
+    <string name="date_option_last_7_days">7日間</string>
+    <string name="export_dates_heading">日付</string>
+    <string name="date_from_label">開始</string>
+    <string name="date_to_label">終了</string>
+    <string name="export_will_write">書き込み内容</string>
+    <string name="export_will_write_with_daily_notes">%1$s + デイリーノート</string>
+    <plurals name="export_will_write_files">
+        <item quantity="other">約%1$d件の%2$sファイル</item>
+    </plurals>
+    <plurals name="export_cta_files">
+        <item quantity="other">%1$d件のファイルをエクスポート</item>
+    </plurals>
+    <plurals name="export_cta_send_days">
+        <item quantity="other">%1$d日分を送信</item>
+    </plurals>
 </resources>

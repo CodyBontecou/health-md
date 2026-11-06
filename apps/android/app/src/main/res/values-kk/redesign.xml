@@ -217,4 +217,22 @@
     <string name="automations_switch_named">%1$s автоматтандыруы</string>
     <string name="automations_schedule_settings_title">Кесте параметрлері</string>
     <string name="automations_schedule_settings_subtitle">Қолданба бойынша кесте, жоспарланған экспорт мақсаты, рұқсаттар және тарих</string>
+    <string name="date_option_last_7_days">7 күн</string>
+    <string name="export_dates_heading">Күндер</string>
+    <string name="date_from_label">Бастап</string>
+    <string name="date_to_label">Дейін</string>
+    <string name="export_will_write">Жазылады</string>
+    <string name="export_will_write_with_daily_notes">%1$s + күнделікті жазбалар</string>
+    <plurals name="export_will_write_files">
+        <item quantity="one">Шамамен %1$d %2$s файл</item>
+        <item quantity="other">Шамамен %1$d %2$s файл</item>
+    </plurals>
+    <plurals name="export_cta_files">
+        <item quantity="one">%1$d файлды экспорттау</item>
+        <item quantity="other">%1$d файлды экспорттау</item>
+    </plurals>
+    <plurals name="export_cta_send_days">
+        <item quantity="one">%1$d күнді жіберу</item>
+        <item quantity="other">%1$d күнді жіберу</item>
+    </plurals>
 </resources>

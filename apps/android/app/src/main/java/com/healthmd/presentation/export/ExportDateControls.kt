@@ -16,9 +16,17 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -30,6 +38,8 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.healthmd.R
@@ -39,7 +49,9 @@ import com.healthmd.presentation.common.SectionLabel
 import com.healthmd.presentation.theme.AppColors
 import com.healthmd.presentation.theme.GeistAdaptiveLayout
 import com.healthmd.presentation.theme.GeistSizes
+import com.healthmd.presentation.theme.GeistRadii
 import com.healthmd.presentation.theme.GeistType
+import com.healthmd.presentation.theme.LocalGeistColors
 import com.healthmd.presentation.theme.Radii
 import com.healthmd.presentation.theme.Spacing
 import java.time.LocalDate
@@ -49,6 +61,8 @@ import java.time.format.FormatStyle
 internal enum class DateRangeOption {
     Today,
     Yesterday,
+    /** The last seven complete days, ending yesterday. */
+    Last7Days,
     AllTime,
     Custom;
 
@@ -64,6 +78,7 @@ internal enum class DateRangeOption {
                 allTimeSelected -> AllTime
                 startDate == today && endDate == today -> Today
                 startDate == yesterday && endDate == yesterday -> Yesterday
+                startDate == yesterday.minusDays(6) && endDate == yesterday -> Last7Days
                 else -> Custom
             }
         }
@@ -78,7 +93,12 @@ internal object ExportDateControlTags {
     fun preset(option: DateRangeOption) = "export.dateRange.preset.${option.name}"
 }
 
-/** Stateless presentation: the screen retains date resolution, pickers, and protection guards. */
+/**
+ * The board's Dates control: one connected row of Today / Yesterday / 7 days / Custom. Custom
+ * opens outlined From and To fields and keeps All time (every day with history) one tap away.
+ * Stateless: the screen retains date resolution, pickers, and protection guards.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun DateRangeSelectionSection(
     selectedOption: DateRangeOption,
@@ -90,149 +110,171 @@ internal fun DateRangeSelectionSection(
     showSleepGuidance: Boolean = false,
     sleepDayAttribution: SleepDayAttribution = SleepDayAttribution.DEFAULT,
 ) {
-    val options = listOf(
+    val colors = LocalGeistColors.current
+    val segments = listOf(
         DateRangeOption.Today to stringResource(R.string.date_option_today),
         DateRangeOption.Yesterday to stringResource(R.string.date_option_yesterday),
-        DateRangeOption.AllTime to stringResource(R.string.date_option_all_time),
+        DateRangeOption.Last7Days to stringResource(R.string.date_option_last_7_days),
         DateRangeOption.Custom to stringResource(R.string.date_option_custom),
     )
+    // All time is a custom range that runs from the first day with history.
+    val shownOption = if (selectedOption == DateRangeOption.AllTime) DateRangeOption.Custom else selectedOption
     Column(modifier = Modifier.fillMaxWidth()) {
-        SectionLabel(stringResource(R.string.section_date_range))
-        GeistCard(padding = Spacing.md) {
-            BoxWithConstraints(Modifier.fillMaxWidth().testTag(ExportDateControlTags.PRESETS).selectableGroup()) {
-                val columns = if (GeistAdaptiveLayout.stackActions(maxWidth.value, LocalDensity.current.fontScale)) 1 else 2
-                Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-                    options.chunked(columns).forEach { row ->
-                        Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-                            row.forEach { (option, label) ->
-                                DateRangeOptionButton(
-                                    text = label,
-                                    selected = selectedOption == option,
-                                    onClick = { onOptionSelected(option) },
-                                    modifier = Modifier.weight(1f).testTag(ExportDateControlTags.preset(option)),
-                                )
-                            }
+        Text(
+            stringResource(R.string.export_dates_heading),
+            style = GeistType.heading14,
+            color = colors.brandPrimary,
+            modifier = Modifier.padding(bottom = Spacing.xs),
+        )
+        SingleChoiceSegmentedButtonRow(
+            Modifier.fillMaxWidth().testTag(ExportDateControlTags.PRESETS),
+        ) {
+            segments.forEachIndexed { index, (option, label) ->
+                SegmentedButton(
+                    selected = shownOption == option,
+                    onClick = { onOptionSelected(option) },
+                    shape = SegmentedButtonDefaults.itemShape(index, segments.size),
+                    icon = {},
+                    colors = SegmentedButtonDefaults.colors(
+                        activeContainerColor = colors.secondaryContainer,
+                        activeContentColor = colors.onSecondaryContainer,
+                        inactiveContentColor = colors.primary,
+                        activeBorderColor = colors.gray.c700,
+                        inactiveBorderColor = colors.gray.c700,
+                    ),
+                    modifier = Modifier.heightIn(min = GeistSizes.minimumTouchTarget).testTag(ExportDateControlTags.preset(option)),
+                ) {
+                    Text(label, style = GeistType.button14, textAlign = TextAlign.Center)
+                }
+            }
+        }
+
+        AnimatedVisibility(
+            visible = shownOption == DateRangeOption.Custom,
+            enter = fadeIn(animationSpec = tween(160)) + expandVertically(animationSpec = tween(180)),
+            exit = fadeOut(animationSpec = tween(120)) + shrinkVertically(animationSpec = tween(160)),
+        ) {
+            Column(Modifier.fillMaxWidth().padding(top = Spacing.md), verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                BoxWithConstraints(Modifier.fillMaxWidth()) {
+                    val stacked = GeistAdaptiveLayout.stackActions(maxWidth.value, LocalDensity.current.fontScale)
+                    val from: @Composable (Modifier) -> Unit = { modifier ->
+                        DateField(
+                            label = stringResource(R.string.date_from_label),
+                            date = startDate,
+                            onClick = onStartDateClick,
+                            modifier = modifier.testTag(ExportDateControlTags.START_DATE),
+                        )
+                    }
+                    val to: @Composable (Modifier) -> Unit = { modifier ->
+                        DateField(
+                            label = stringResource(R.string.date_to_label),
+                            date = endDate,
+                            onClick = onEndDateClick,
+                            modifier = modifier.testTag(ExportDateControlTags.END_DATE),
+                        )
+                    }
+                    if (stacked) {
+                        Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                            from(Modifier.fillMaxWidth())
+                            to(Modifier.fillMaxWidth())
+                        }
+                    } else {
+                        Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                            from(Modifier.weight(1f))
+                            to(Modifier.weight(1f))
                         }
                     }
                 }
-            }
-
-            if (showSleepGuidance) {
-                Text(
-                    text = stringResource(if (sleepDayAttribution == SleepDayAttribution.MORNING_ENDS)
-                        R.string.export_sleep_date_guidance_morning_ends else R.string.export_sleep_date_guidance),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = AppColors.textSecondary,
-                    modifier = Modifier.padding(top = Spacing.md).testTag(ExportDateControlTags.SLEEP_GUIDANCE),
+                val allTime = selectedOption == DateRangeOption.AllTime
+                FilterChip(
+                    selected = allTime,
+                    onClick = { onOptionSelected(if (allTime) DateRangeOption.Custom else DateRangeOption.AllTime) },
+                    label = { Text(stringResource(R.string.date_option_all_time), style = GeistType.button14) },
+                    leadingIcon = if (allTime) {
+                        { Icon(Icons.Filled.Check, contentDescription = null, modifier = Modifier.size(18.dp)) }
+                    } else {
+                        null
+                    },
+                    shape = RoundedCornerShape(GeistRadii.small),
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = colors.secondaryContainer,
+                        selectedLabelColor = colors.onSecondaryContainer,
+                        selectedLeadingIconColor = colors.onSecondaryContainer,
+                        labelColor = colors.secondary,
+                    ),
+                    modifier = Modifier.heightIn(min = GeistSizes.minimumTouchTarget).testTag(ExportDateControlTags.preset(DateRangeOption.AllTime)),
                 )
             }
-
-            AnimatedVisibility(
-                visible = selectedOption == DateRangeOption.Custom,
-                enter = fadeIn(animationSpec = tween(160)) + expandVertically(animationSpec = tween(180)),
-                exit = fadeOut(animationSpec = tween(120)) + shrinkVertically(animationSpec = tween(160)),
-            ) {
-                Column(modifier = Modifier.fillMaxWidth()) {
-                    Spacer(modifier = Modifier.height(Spacing.md))
-                    HorizontalDivider(color = AppColors.borderDefault)
-                    DateRangeDateRow(
-                        label = stringResource(R.string.date_start_label),
-                        date = startDate,
-                        onClick = onStartDateClick,
-                        modifier = Modifier.testTag(ExportDateControlTags.START_DATE),
-                    )
-                    HorizontalDivider(color = AppColors.borderDefault)
-                    DateRangeDateRow(
-                        label = stringResource(R.string.date_end_label),
-                        date = endDate,
-                        onClick = onEndDateClick,
-                        modifier = Modifier.testTag(ExportDateControlTags.END_DATE),
-                    )
-                }
-            }
         }
-    }
-}
 
-@Composable
-private fun DateRangeOptionButton(
-    text: String,
-    selected: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    // Segmented-button styling: secondary container with a check when selected, outlined otherwise.
-    val colors = com.healthmd.presentation.theme.LocalGeistColors.current
-    val shape = RoundedCornerShape(Radii.button)
-    Row(
-        modifier = modifier
-            .heightIn(min = GeistSizes.minimumTouchTarget)
-            .clip(shape)
-            .background(if (selected) colors.secondaryContainer else Color.Transparent)
-            .border(1.dp, if (selected) colors.secondaryContainer else colors.gray.c700, shape)
-            .selectable(selected = selected, role = Role.RadioButton, onClick = onClick)
-            .padding(horizontal = Spacing.sm, vertical = Spacing.xs),
-        horizontalArrangement = Arrangement.spacedBy(Spacing.xs, Alignment.CenterHorizontally),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        // Selection remains visible without taking any width away from the essential label.
-        if (selected) {
-            Icon(
-                imageVector = Icons.Filled.Check,
-                contentDescription = null,
-                tint = colors.onSecondaryContainer,
-                modifier = Modifier.size(18.dp),
+        // The chosen dates, then how sleep is counted, as one helper line under the control.
+        val range = if (startDate == endDate) {
+            formatMediumDate(startDate)
+        } else {
+            stringResource(R.string.history_date_range, formatMediumDate(startDate), formatMediumDate(endDate))
+        }
+        val guidance = if (showSleepGuidance) {
+            stringResource(
+                if (sleepDayAttribution == SleepDayAttribution.MORNING_ENDS) {
+                    R.string.export_sleep_date_guidance_morning_ends
+                } else {
+                    R.string.export_sleep_date_guidance
+                },
             )
+        } else {
+            null
         }
         Text(
-            text = text,
-            color = if (selected) colors.onSecondaryContainer else colors.primary,
-            style = com.healthmd.presentation.theme.GeistType.button14,
-            textAlign = TextAlign.Center,
+            text = listOfNotNull(range, guidance).joinToString(" · "),
+            style = GeistType.label12,
+            color = colors.secondary,
+            modifier = Modifier
+                .padding(start = Spacing.xxs, end = Spacing.xxs, top = Spacing.xs)
+                .then(if (guidance != null) Modifier.testTag(ExportDateControlTags.SLEEP_GUIDANCE) else Modifier),
         )
     }
 }
 
-/** One labeled date action; neither the label nor the formatted value competes for row width. */
+/** An outlined, read-only date field (`rounded.xs`, 56dp) that opens the date picker. */
 @Composable
-private fun DateRangeDateRow(
+private fun DateField(
     label: String,
     date: LocalDate,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Column(
-        modifier = modifier.fillMaxWidth()
-            .heightIn(min = GeistSizes.minimumTouchTarget)
-            .clip(RoundedCornerShape(Radii.card))
-            .clickable(role = Role.Button, onClick = onClick)
-            .padding(vertical = Spacing.md),
-        verticalArrangement = Arrangement.spacedBy(Spacing.xs),
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.titleLarge,
-            color = AppColors.textPrimary,
-            modifier = Modifier.fillMaxWidth(),
+    val colors = LocalGeistColors.current
+    val value = formatMediumDate(date)
+    Box(modifier) {
+        OutlinedTextField(
+            value = value,
+            onValueChange = {},
+            readOnly = true,
+            label = { Text(label) },
+            textStyle = GeistType.label16,
+            shape = RoundedCornerShape(GeistRadii.extraSmall),
+            colors = OutlinedTextFieldDefaults.colors(
+                unfocusedBorderColor = colors.gray.c700,
+                focusedBorderColor = colors.brandPrimary,
+                unfocusedLabelColor = colors.secondary,
+                unfocusedTextColor = colors.primary,
+                focusedTextColor = colors.primary,
+            ),
+            modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp),
         )
+        // The field never takes typing: the whole field is one button that opens the picker.
         Box(
-            modifier = Modifier.fillMaxWidth()
-                .clip(RoundedCornerShape(Radii.card))
-                .background(AppColors.bgSecondary)
-                .padding(horizontal = Spacing.md, vertical = Spacing.xs),
-        ) {
-            Text(
-                text = formatCompactDate(date),
-                style = GeistType.label20Mono,
-                color = AppColors.textPrimary,
-                modifier = Modifier.fillMaxWidth(),
-            )
-        }
+            Modifier
+                .matchParentSize()
+                .clip(RoundedCornerShape(GeistRadii.extraSmall))
+                .clickable(role = Role.Button, onClickLabel = label, onClick = onClick)
+                .semantics { contentDescription = "$label, $value" },
+        )
     }
 }
 
 @Composable
-private fun formatCompactDate(date: LocalDate): String = date.format(
-    DateTimeFormatter.ofLocalizedDate(FormatStyle.SHORT)
+private fun formatMediumDate(date: LocalDate): String = date.format(
+    DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)
         .withLocale(LocalConfiguration.current.locales[0]),
 )

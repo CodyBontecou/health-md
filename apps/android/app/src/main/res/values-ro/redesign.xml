@@ -229,4 +229,25 @@
     <string name="automations_switch_named">Automatizarea %1$s</string>
     <string name="automations_schedule_settings_title">Setări program</string>
     <string name="automations_schedule_settings_subtitle">Program la nivelul aplicației, destinația exportului programat, permisiuni și istoric</string>
+    <string name="date_option_last_7_days">7 zile</string>
+    <string name="export_dates_heading">Date</string>
+    <string name="date_from_label">De la</string>
+    <string name="date_to_label">Până la</string>
+    <string name="export_will_write">Se va scrie</string>
+    <string name="export_will_write_with_daily_notes">%1$s + note zilnice</string>
+    <plurals name="export_will_write_files">
+        <item quantity="one">Aprox. %1$d fișier %2$s</item>
+        <item quantity="few">Aprox. %1$d fișiere %2$s</item>
+        <item quantity="other">Aprox. %1$d de fișiere %2$s</item>
+    </plurals>
+    <plurals name="export_cta_files">
+        <item quantity="one">Exportați %1$d fișier</item>
+        <item quantity="few">Exportați %1$d fișiere</item>
+        <item quantity="other">Exportați %1$d de fișiere</item>
+    </plurals>
+    <plurals name="export_cta_send_days">
+        <item quantity="one">Trimiteți %1$d zi</item>
+        <item quantity="few">Trimiteți %1$d zile</item>
+        <item quantity="other">Trimiteți %1$d de zile</item>
+    </plurals>
 </resources>

@@ -205,4 +205,19 @@
     <string name="automations_switch_named">%1$s 自动化</string>
     <string name="automations_schedule_settings_title">计划设置</string>
     <string name="automations_schedule_settings_subtitle">应用级计划、计划导出目标位置、权限和历史记录</string>
+    <string name="date_option_last_7_days">7 天</string>
+    <string name="export_dates_heading">日期</string>
+    <string name="date_from_label">从</string>
+    <string name="date_to_label">至</string>
+    <string name="export_will_write">将写入</string>
+    <string name="export_will_write_with_daily_notes">%1$s + 每日笔记</string>
+    <plurals name="export_will_write_files">
+        <item quantity="other">约 %1$d 个 %2$s 文件</item>
+    </plurals>
+    <plurals name="export_cta_files">
+        <item quantity="other">导出 %1$d 个文件</item>
+    </plurals>
+    <plurals name="export_cta_send_days">
+        <item quantity="other">发送 %1$d 天</item>
+    </plurals>
 </resources>

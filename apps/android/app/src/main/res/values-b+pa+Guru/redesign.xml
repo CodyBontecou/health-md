@@ -217,4 +217,22 @@
     <string name="automations_switch_named">%1$s ਆਟੋਮੇਸ਼ਨ</string>
     <string name="automations_schedule_settings_title">ਸਮਾਂ-ਸੂਚੀ ਸੈਟਿੰਗਜ਼</string>
     <string name="automations_schedule_settings_subtitle">ਐਪ-ਵਿਆਪੀ ਸਮਾਂ-ਸੂਚੀ, ਸਮਾਂ-ਸੂਚੀਬੱਧ ਨਿਰਯਾਤ ਦੀ ਮੰਜ਼ਿਲ, ਇਜਾਜ਼ਤਾਂ ਅਤੇ ਇਤਿਹਾਸ</string>
+    <string name="date_option_last_7_days">7 ਦਿਨ</string>
+    <string name="export_dates_heading">ਤਾਰੀਖਾਂ</string>
+    <string name="date_from_label">ਤੋਂ</string>
+    <string name="date_to_label">ਤੱਕ</string>
+    <string name="export_will_write">ਲਿਖਿਆ ਜਾਵੇਗਾ</string>
+    <string name="export_will_write_with_daily_notes">%1$s + ਰੋਜ਼ਾਨਾ ਨੋਟ</string>
+    <plurals name="export_will_write_files">
+        <item quantity="one">ਲਗਭਗ %1$d %2$s ਫ਼ਾਈਲ</item>
+        <item quantity="other">ਲਗਭਗ %1$d %2$s ਫ਼ਾਈਲਾਂ</item>
+    </plurals>
+    <plurals name="export_cta_files">
+        <item quantity="one">%1$d ਫ਼ਾਈਲ ਨਿਰਯਾਤ ਕਰੋ</item>
+        <item quantity="other">%1$d ਫ਼ਾਈਲਾਂ ਨਿਰਯਾਤ ਕਰੋ</item>
+    </plurals>
+    <plurals name="export_cta_send_days">
+        <item quantity="one">%1$d ਦਿਨ ਭੇਜੋ</item>
+        <item quantity="other">%1$d ਦਿਨ ਭੇਜੋ</item>
+    </plurals>
 </resources>

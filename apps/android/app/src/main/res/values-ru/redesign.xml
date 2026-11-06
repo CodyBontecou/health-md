@@ -241,4 +241,28 @@
     <string name="automations_switch_named">Автоматизация %1$s</string>
     <string name="automations_schedule_settings_title">Параметры расписания</string>
     <string name="automations_schedule_settings_subtitle">Общее расписание приложения, назначение запланированного экспорта, разрешения и история</string>
+    <string name="date_option_last_7_days">7 дней</string>
+    <string name="export_dates_heading">Даты</string>
+    <string name="date_from_label">С</string>
+    <string name="date_to_label">По</string>
+    <string name="export_will_write">Будет записано</string>
+    <string name="export_will_write_with_daily_notes">%1$s + ежедневные заметки</string>
+    <plurals name="export_will_write_files">
+        <item quantity="one">Примерно %1$d файл %2$s</item>
+        <item quantity="few">Примерно %1$d файла %2$s</item>
+        <item quantity="many">Примерно %1$d файлов %2$s</item>
+        <item quantity="other">Примерно %1$d файла %2$s</item>
+    </plurals>
+    <plurals name="export_cta_files">
+        <item quantity="one">Экспортировать %1$d файл</item>
+        <item quantity="few">Экспортировать %1$d файла</item>
+        <item quantity="many">Экспортировать %1$d файлов</item>
+        <item quantity="other">Экспортировать %1$d файла</item>
+    </plurals>
+    <plurals name="export_cta_send_days">
+        <item quantity="one">Отправить %1$d день</item>
+        <item quantity="few">Отправить %1$d дня</item>
+        <item quantity="many">Отправить %1$d дней</item>
+        <item quantity="other">Отправить %1$d дня</item>
+    </plurals>
 </resources>
