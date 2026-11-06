@@ -405,7 +405,7 @@ struct GlassGatewayDestinationSheet: View {
         } status: {
             EmptyView()
         } footer: {
-            if PracticeFeaturePolicy.current.isEnabled {
+            if ClinicAccessFeature.isEnabled {
                 GlassClinicDestinationNotice(onOpenClinicAccess: onOpenClinicAccess)
             }
         }

@@ -117,6 +117,8 @@ struct AutomationSettingsRows: View {
     let profile: ExportProfile
     let entry: ScheduledExportEntry?
     var includesAllRows = true
+    /// Shows a Name row that renames the automation; nil hides it.
+    var onRename: (() -> Void)? = nil
     let onPage: (GlassProfilePageKind) -> Void
     let onSchedule: () -> Void
 
@@ -125,6 +127,10 @@ struct AutomationSettingsRows: View {
 
     var body: some View {
         GlassPanel {
+            if let onRename {
+                row(String(localized: "Name"), value: profile.name, action: onRename)
+                    .accessibilityIdentifier("glass.automation.name")
+            }
             row(String(localized: "Metrics"), value: "\(profile.settings.metricSelection.enabledMetricIDs.count)") {
                 onPage(.metrics)
             }
@@ -622,6 +628,10 @@ struct AutomationDetailScreen: View {
                     AutomationSettingsRows(
                         profile: profile,
                         entry: entry,
+                        onRename: {
+                            renameText = profile.name
+                            showRename = true
+                        },
                         onPage: { page = $0 },
                         onSchedule: { showSchedule = true }
                     )
@@ -709,21 +719,6 @@ struct AutomationDetailScreen: View {
         .background(palette.bg.ignoresSafeArea())
         .navigationTitle(profile.name)
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Menu {
-                    Button(String(localized: "Rename…", comment: "Action renaming this profile")) {
-                        configurationProtection.performConfigurationChange {
-                            renameText = profile.name
-                            showRename = true
-                        }
-                    }
-                } label: {
-                    Image(systemName: "ellipsis")
-                }
-                .accessibilityLabel(String(localized: "More"))
-            }
-        }
         .onAppear {
             contextBindingPeer = AppleContextPhoneClient.shared.boundPeer(profileID: profile.id)
         }
@@ -736,8 +731,8 @@ struct AutomationDetailScreen: View {
             }
             .glassTheme()
         }
-        .alert(String(localized: "Rename Profile", comment: "Alert title: rename export profile"), isPresented: $showRename) {
-            TextField(String(localized: "Profile name", comment: "Placeholder for export profile name"), text: $renameText)
+        .alert(String(localized: "Name"), isPresented: $showRename) {
+            TextField(String(localized: "Name"), text: $renameText)
             Button(String(localized: "Save", comment: "Confirm rename")) {
                 _ = coordinator.renameProfile(id: profile.id, to: renameText)
             }

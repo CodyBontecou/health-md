@@ -68,6 +68,8 @@ android {
 
         // Explicit opt-in; absent or malformed values keep claim entry points disabled.
         buildConfigField("boolean", "MYSELF_CLAIM_ENABLED", "false")
+        // Clinic access stays hidden until it launches; existing sponsorships keep working.
+        buildConfigField("boolean", "CLINIC_ACCESS_ENABLED", "false")
         // Trust is baked into the app build, never supplied by a clinic invitation.
         for (name in listOf("CLINIC_LICENSING_URL", "CLINIC_LICENSING_ISSUER", "CLINIC_LICENSING_KEY_ID", "CLINIC_LICENSING_PUBLIC_KEY_DER", "CLINIC_LICENSING_TRUSTED_KEYS_JSON")) {
             buildConfigField("String", name, configuredClinicValue(name).asBuildConfigString())

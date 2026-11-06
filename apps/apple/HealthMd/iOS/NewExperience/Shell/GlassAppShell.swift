@@ -271,7 +271,7 @@ struct GlassAppShell: View {
                 if request.target == .agentDataGateway {
                     GlassGatewayDestinationSheet(
                         settings: agentDataGatewaySettings,
-                        onOpenClinicAccess: PracticeFeaturePolicy.current.isEnabled ? { showGatewayClinicAccess = true } : nil
+                        onOpenClinicAccess: ClinicAccessFeature.isEnabled ? { showGatewayClinicAccess = true } : nil
                     )
                     .sheet(isPresented: $showGatewayClinicAccess) {
                         NavigationStack { GlassClinicAccessScreen(coordinator: profileCoordinator) }
