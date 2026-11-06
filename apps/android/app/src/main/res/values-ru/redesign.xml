@@ -5,13 +5,11 @@
     <string name="export_now_title">Экспортировать</string>
     <string name="archive_filter_all">Все</string>
     <string name="archive_filter_current_settings">Текущие настройки</string>
-    <string name="archive_stat_archived">Дней в архиве</string>
     <string name="archive_previous_month">Предыдущий месяц</string>
     <string name="archive_next_month">Следующий месяц</string>
     <string name="archive_legend_complete">Полностью</string>
     <string name="archive_legend_partial">Частично</string>
     <string name="archive_legend_missing">Пропущено</string>
-    <string name="archive_legend_not_exported">Не экспортировано</string>
     <string name="archive_legend_today">Сегодня</string>
     <string name="archive_day_on_track">По плану: %1$d из %2$d</string>
     <string name="archive_day_status">%1$s, %2$s</string>
@@ -219,5 +217,17 @@
         <item quantity="few">%1$d пропуска</item>
         <item quantity="many">%1$d пропусков</item>
         <item quantity="other">%1$d пропуска</item>
+    </plurals>
+    <plurals name="archive_stat_archived_all">
+        <item quantity="one">день в архиве по всем автоматизациям</item>
+        <item quantity="few">дня в архиве по всем автоматизациям</item>
+        <item quantity="many">дней в архиве по всем автоматизациям</item>
+        <item quantity="other">дня в архиве по всем автоматизациям</item>
+    </plurals>
+    <plurals name="archive_stat_archived_month">
+        <item quantity="one">день в архиве за %1$s</item>
+        <item quantity="few">дня в архиве за %1$s</item>
+        <item quantity="many">дней в архиве за %1$s</item>
+        <item quantity="other">дня в архиве за %1$s</item>
     </plurals>
 </resources>

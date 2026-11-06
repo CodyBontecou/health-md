@@ -5,13 +5,11 @@
     <string name="export_now_title">Exportar agora</string>
     <string name="archive_filter_all">Tudo</string>
     <string name="archive_filter_current_settings">Configurações atuais</string>
-    <string name="archive_stat_archived">Dias arquivados</string>
     <string name="archive_previous_month">Mês anterior</string>
     <string name="archive_next_month">Próximo mês</string>
     <string name="archive_legend_complete">Completo</string>
     <string name="archive_legend_partial">Parcial</string>
     <string name="archive_legend_missing">Faltando</string>
-    <string name="archive_legend_not_exported">Não exportado</string>
     <string name="archive_legend_today">Hoje</string>
     <string name="archive_day_on_track">%1$d de %2$d em dia</string>
     <string name="archive_day_status">%1$s, %2$s</string>
@@ -209,5 +207,13 @@
         <item quantity="one">%1$d lacuna</item>
         <item quantity="many">%1$d lacunas</item>
         <item quantity="other">%1$d lacunas</item>
+    </plurals>
+    <plurals name="archive_stat_archived_all">
+        <item quantity="one">dia arquivado em todas as automações</item>
+        <item quantity="other">dias arquivados em todas as automações</item>
+    </plurals>
+    <plurals name="archive_stat_archived_month">
+        <item quantity="one">dia arquivado em %1$s</item>
+        <item quantity="other">dias arquivados em %1$s</item>
     </plurals>
 </resources>

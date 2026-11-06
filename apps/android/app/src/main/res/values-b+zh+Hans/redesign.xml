@@ -5,13 +5,11 @@
     <string name="export_now_title">立即导出</string>
     <string name="archive_filter_all">全部</string>
     <string name="archive_filter_current_settings">当前设置</string>
-    <string name="archive_stat_archived">已归档天数</string>
     <string name="archive_previous_month">上个月</string>
     <string name="archive_next_month">下个月</string>
     <string name="archive_legend_complete">完整</string>
     <string name="archive_legend_partial">部分</string>
     <string name="archive_legend_missing">缺失</string>
-    <string name="archive_legend_not_exported">未导出</string>
     <string name="archive_legend_today">今天</string>
     <string name="archive_day_on_track">%1$d / %2$d 按计划完成</string>
     <string name="archive_day_status">%1$s，%2$s</string>
@@ -189,5 +187,11 @@
     </plurals>
     <plurals name="archive_gap_count">
         <item quantity="other">%1$d 个缺口</item>
+    </plurals>
+    <plurals name="archive_stat_archived_all">
+        <item quantity="other">天已在所有自动化中归档</item>
+    </plurals>
+    <plurals name="archive_stat_archived_month">
+        <item quantity="other">天已于%1$s归档</item>
     </plurals>
 </resources>

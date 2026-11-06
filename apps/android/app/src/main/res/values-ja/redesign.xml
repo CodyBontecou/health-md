@@ -5,13 +5,11 @@
     <string name="export_now_title">今すぐエクスポート</string>
     <string name="archive_filter_all">すべて</string>
     <string name="archive_filter_current_settings">現在の設定</string>
-    <string name="archive_stat_archived">アーカイブ済みの日数</string>
     <string name="archive_previous_month">前の月</string>
     <string name="archive_next_month">次の月</string>
     <string name="archive_legend_complete">完了</string>
     <string name="archive_legend_partial">一部</string>
     <string name="archive_legend_missing">欠落</string>
-    <string name="archive_legend_not_exported">未エクスポート</string>
     <string name="archive_legend_today">今日</string>
     <string name="archive_day_on_track">%2$d 件中 %1$d 件が予定どおり</string>
     <string name="archive_day_status">%1$s、%2$s</string>
@@ -189,5 +187,11 @@
     </plurals>
     <plurals name="archive_gap_count">
         <item quantity="other">欠落 %1$d件</item>
+    </plurals>
+    <plurals name="archive_stat_archived_all">
+        <item quantity="other">日をすべてのオートメーションでアーカイブ済み</item>
+    </plurals>
+    <plurals name="archive_stat_archived_month">
+        <item quantity="other">日を%1$sにアーカイブ済み</item>
     </plurals>
 </resources>

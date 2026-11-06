@@ -5,13 +5,11 @@
     <string name="export_now_title">Nu exporteren</string>
     <string name="archive_filter_all">Alles</string>
     <string name="archive_filter_current_settings">Huidige instellingen</string>
-    <string name="archive_stat_archived">Gearchiveerde dagen</string>
     <string name="archive_previous_month">Vorige maand</string>
     <string name="archive_next_month">Volgende maand</string>
     <string name="archive_legend_complete">Volledig</string>
     <string name="archive_legend_partial">Gedeeltelijk</string>
     <string name="archive_legend_missing">Ontbreekt</string>
-    <string name="archive_legend_not_exported">Niet geëxporteerd</string>
     <string name="archive_legend_today">Vandaag</string>
     <string name="archive_day_on_track">%1$d van %2$d op schema</string>
     <string name="archive_day_status">%1$s, %2$s</string>
@@ -199,5 +197,13 @@
     <plurals name="archive_gap_count">
         <item quantity="one">%1$d gat</item>
         <item quantity="other">%1$d gaten</item>
+    </plurals>
+    <plurals name="archive_stat_archived_all">
+        <item quantity="one">dag gearchiveerd over alle automatiseringen</item>
+        <item quantity="other">dagen gearchiveerd over alle automatiseringen</item>
+    </plurals>
+    <plurals name="archive_stat_archived_month">
+        <item quantity="one">dag gearchiveerd in %1$s</item>
+        <item quantity="other">dagen gearchiveerd in %1$s</item>
     </plurals>
 </resources>

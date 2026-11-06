@@ -5,13 +5,11 @@
     <string name="export_now_title">अभी निर्यात करें</string>
     <string name="archive_filter_all">सभी</string>
     <string name="archive_filter_current_settings">मौजूदा सेटिंग्स</string>
-    <string name="archive_stat_archived">संग्रहित दिन</string>
     <string name="archive_previous_month">पिछला महीना</string>
     <string name="archive_next_month">अगला महीना</string>
     <string name="archive_legend_complete">पूर्ण</string>
     <string name="archive_legend_partial">आंशिक</string>
     <string name="archive_legend_missing">छूटा हुआ</string>
-    <string name="archive_legend_not_exported">निर्यात नहीं हुआ</string>
     <string name="archive_legend_today">आज</string>
     <string name="archive_day_on_track">%2$d में से %1$d योजना के अनुसार</string>
     <string name="archive_day_status">%1$s, %2$s</string>
@@ -199,5 +197,13 @@
     <plurals name="archive_gap_count">
         <item quantity="one">%1$d अंतराल</item>
         <item quantity="other">%1$d अंतराल</item>
+    </plurals>
+    <plurals name="archive_stat_archived_all">
+        <item quantity="one">सभी ऑटोमेशन में संग्रहित दिन</item>
+        <item quantity="other">सभी ऑटोमेशन में संग्रहित दिन</item>
+    </plurals>
+    <plurals name="archive_stat_archived_month">
+        <item quantity="one">%1$s में संग्रहित दिन</item>
+        <item quantity="other">%1$s में संग्रहित दिन</item>
     </plurals>
 </resources>

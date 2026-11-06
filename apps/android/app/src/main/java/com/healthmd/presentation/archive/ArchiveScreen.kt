@@ -42,6 +42,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -131,6 +133,7 @@ fun ArchiveScreen(
             modifier = modifier,
         )
     }
+    CompositionLocalProvider(LocalCurrentSettingsName provides state.currentSettingsName) {
     BoxWithConstraints(Modifier.fillMaxSize()) {
         if (maxWidth >= TWO_PANE_MIN_WIDTH && !(state.isLoaded && !state.hasHistory)) {
             ArchiveLargeLayout(
@@ -155,7 +158,11 @@ fun ArchiveScreen(
             header = header,
         )
     }
+    }
 }
+
+/** The name the current-settings lane reads as: the active profile's. */
+private val LocalCurrentSettingsName = compositionLocalOf<String?> { null }
 
 /** The Archive title with the Health Connect status; there is no overflow menu to offer. */
 @Composable
@@ -237,7 +244,7 @@ private fun ArchiveLargeLayout(
             modifier = Modifier.width(sideWidth).fillMaxHeight().verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(GeistSpacing.space3),
         ) {
-            ArchiveStatsCard(stats = state.month.stats, onShowGap = viewModel::jumpToGap)
+            ArchiveStatsCard(state = state, onShowGap = viewModel::jumpToGap)
             ArchiveDayCard(state = state, onBackfill = onBackfill, onOpenDay = onOpenDay)
             GeistCardClickable(onClick = onOpenAutomations) {
                 Column(Modifier.weight(1f)) {
@@ -314,7 +321,7 @@ private fun ArchiveCompactLayout(
                 )
             }
             Column(verticalArrangement = Arrangement.spacedBy(GeistSpacing.space3)) {
-                ArchiveStatsCard(stats = state.month.stats, onShowGap = viewModel::jumpToGap)
+                ArchiveStatsCard(state = state, onShowGap = viewModel::jumpToGap)
                 ArchiveCalendarCard(
                     state = state,
                     onPrevious = viewModel::showPreviousMonth,
@@ -389,8 +396,20 @@ private fun ArchiveFilterChips(
 }
 
 @Composable
-private fun ArchiveStatsCard(stats: ArchiveStats, onShowGap: () -> Unit) {
+private fun ArchiveStatsCard(state: ArchiveUiState, onShowGap: () -> Unit) {
     val colors = LocalGeistColors.current
+    val stats = state.month.stats
+    val count = stats.archivedCount
+    // "All" counts across automations; one automation counts within the shown month.
+    val label = if (state.selection.filter == null) {
+        pluralStringResource(R.plurals.archive_stat_archived_all, count)
+    } else {
+        pluralStringResource(
+            R.plurals.archive_stat_archived_month,
+            count,
+            state.month.month.format(DateTimeFormatter.ofPattern("LLLL", currentLocale())),
+        )
+    }
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -404,10 +423,10 @@ private fun ArchiveStatsCard(stats: ArchiveStats, onShowGap: () -> Unit) {
                 color = colors.brandOnSubtle,
             )
             Text(
-                text = stringResource(R.string.archive_stat_archived),
+                text = label,
                 style = MaterialTheme.typography.bodyLarge,
                 color = colors.brandOnSubtle,
-                modifier = Modifier.padding(bottom = GeistSpacing.space2),
+                modifier = Modifier.weight(1f, fill = false).padding(bottom = GeistSpacing.space2),
             )
         }
         Row(
@@ -788,7 +807,7 @@ private fun ProfileDot(color: Color, filled: Boolean, size: Int = 8) {
 
 @Composable
 private fun profileLabel(profile: ArchiveProfile): String =
-    profile.name ?: stringResource(R.string.archive_filter_current_settings)
+    profile.name ?: LocalCurrentSettingsName.current ?: stringResource(R.string.archive_filter_current_settings)
 
 /** Automation identity colors, in profile order. Pairs with text labels everywhere. */
 private fun profileColor(colors: GeistColors, index: Int): Color = when (index % 4) {
@@ -802,7 +821,8 @@ private fun CoverageStatus.labelRes(): Int = when (this) {
     CoverageStatus.COMPLETE -> R.string.archive_legend_complete
     CoverageStatus.PARTIAL -> R.string.archive_legend_partial
     CoverageStatus.MISSING -> R.string.archive_legend_missing
-    CoverageStatus.NOT_DUE -> R.string.archive_legend_not_exported
+    // Nothing was due on the date (the shared coverage status), as the board's legend reads.
+    CoverageStatus.NOT_DUE -> R.string.archive_status_not_due
     CoverageStatus.IN_PROGRESS -> R.string.archive_legend_today
 }
 

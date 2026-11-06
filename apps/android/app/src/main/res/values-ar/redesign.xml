@@ -5,13 +5,11 @@
     <string name="export_now_title">التصدير الآن</string>
     <string name="archive_filter_all">الكل</string>
     <string name="archive_filter_current_settings">الإعدادات الحالية</string>
-    <string name="archive_stat_archived">الأيام المؤرشفة</string>
     <string name="archive_previous_month">الشهر السابق</string>
     <string name="archive_next_month">الشهر التالي</string>
     <string name="archive_legend_complete">مكتمل</string>
     <string name="archive_legend_partial">جزئي</string>
     <string name="archive_legend_missing">مفقود</string>
-    <string name="archive_legend_not_exported">لم يُصدَّر</string>
     <string name="archive_legend_today">اليوم</string>
     <string name="archive_day_on_track">%1$d من %2$d حسب الخطة</string>
     <string name="archive_day_status">%1$s، %2$s</string>
@@ -239,5 +237,21 @@
         <item quantity="few">%1$d فجوات</item>
         <item quantity="many">%1$d فجوة</item>
         <item quantity="other">%1$d فجوة</item>
+    </plurals>
+    <plurals name="archive_stat_archived_all">
+        <item quantity="zero">يوم مؤرشف عبر كل الأتمتة</item>
+        <item quantity="one">يوم مؤرشف عبر كل الأتمتة</item>
+        <item quantity="two">يومان مؤرشفان عبر كل الأتمتة</item>
+        <item quantity="few">أيام مؤرشفة عبر كل الأتمتة</item>
+        <item quantity="many">يومًا مؤرشفًا عبر كل الأتمتة</item>
+        <item quantity="other">يوم مؤرشف عبر كل الأتمتة</item>
+    </plurals>
+    <plurals name="archive_stat_archived_month">
+        <item quantity="zero">يوم مؤرشف في %1$s</item>
+        <item quantity="one">يوم مؤرشف في %1$s</item>
+        <item quantity="two">يومان مؤرشفان في %1$s</item>
+        <item quantity="few">أيام مؤرشفة في %1$s</item>
+        <item quantity="many">يومًا مؤرشفًا في %1$s</item>
+        <item quantity="other">يوم مؤرشف في %1$s</item>
     </plurals>
 </resources>

@@ -5,13 +5,11 @@
     <string name="export_now_title">Қазір экспорттау</string>
     <string name="archive_filter_all">Барлығы</string>
     <string name="archive_filter_current_settings">Ағымдағы параметрлер</string>
-    <string name="archive_stat_archived">Мұрағаттағы күндер</string>
     <string name="archive_previous_month">Алдыңғы ай</string>
     <string name="archive_next_month">Келесі ай</string>
     <string name="archive_legend_complete">Толық</string>
     <string name="archive_legend_partial">Ішінара</string>
     <string name="archive_legend_missing">Жоқ</string>
-    <string name="archive_legend_not_exported">Экспортталмаған</string>
     <string name="archive_legend_today">Бүгін</string>
     <string name="archive_day_on_track">Жоспар бойынша: %1$d / %2$d</string>
     <string name="archive_day_status">%1$s, %2$s</string>
@@ -199,5 +197,13 @@
     <plurals name="archive_gap_count">
         <item quantity="one">%1$d олқылық</item>
         <item quantity="other">%1$d олқылық</item>
+    </plurals>
+    <plurals name="archive_stat_archived_all">
+        <item quantity="one">барлық автоматтандыру бойынша мұрағаттағы күн</item>
+        <item quantity="other">барлық автоматтандыру бойынша мұрағаттағы күн</item>
+    </plurals>
+    <plurals name="archive_stat_archived_month">
+        <item quantity="one">%1$s айында мұрағаттағы күн</item>
+        <item quantity="other">%1$s айында мұрағаттағы күн</item>
     </plurals>
 </resources>

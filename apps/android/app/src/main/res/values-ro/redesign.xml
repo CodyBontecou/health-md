@@ -5,13 +5,11 @@
     <string name="export_now_title">Exportați acum</string>
     <string name="archive_filter_all">Toate</string>
     <string name="archive_filter_current_settings">Setările curente</string>
-    <string name="archive_stat_archived">Zile arhivate</string>
     <string name="archive_previous_month">Luna anterioară</string>
     <string name="archive_next_month">Luna următoare</string>
     <string name="archive_legend_complete">Complet</string>
     <string name="archive_legend_partial">Parțial</string>
     <string name="archive_legend_missing">Lipsește</string>
-    <string name="archive_legend_not_exported">Neexportat</string>
     <string name="archive_legend_today">Astăzi</string>
     <string name="archive_day_on_track">%1$d din %2$d la zi</string>
     <string name="archive_day_status">%1$s, %2$s</string>
@@ -209,5 +207,15 @@
         <item quantity="one">%1$d gol</item>
         <item quantity="few">%1$d goluri</item>
         <item quantity="other">%1$d de goluri</item>
+    </plurals>
+    <plurals name="archive_stat_archived_all">
+        <item quantity="one">zi arhivată în toate automatizările</item>
+        <item quantity="few">zile arhivate în toate automatizările</item>
+        <item quantity="other">de zile arhivate în toate automatizările</item>
+    </plurals>
+    <plurals name="archive_stat_archived_month">
+        <item quantity="one">zi arhivată în %1$s</item>
+        <item quantity="few">zile arhivate în %1$s</item>
+        <item quantity="other">de zile arhivate în %1$s</item>
     </plurals>
 </resources>

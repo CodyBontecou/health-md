@@ -5,13 +5,11 @@
     <string name="export_now_title">Exportar ahora</string>
     <string name="archive_filter_all">Todo</string>
     <string name="archive_filter_current_settings">Ajustes actuales</string>
-    <string name="archive_stat_archived">Días archivados</string>
     <string name="archive_previous_month">Mes anterior</string>
     <string name="archive_next_month">Mes siguiente</string>
     <string name="archive_legend_complete">Completo</string>
     <string name="archive_legend_partial">Parcial</string>
     <string name="archive_legend_missing">Falta</string>
-    <string name="archive_legend_not_exported">Sin exportar</string>
     <string name="archive_legend_today">Hoy</string>
     <string name="archive_day_on_track">%1$d de %2$d al día</string>
     <string name="archive_day_status">%1$s, %2$s</string>
@@ -209,5 +207,13 @@
         <item quantity="one">%1$d hueco</item>
         <item quantity="many">%1$d huecos</item>
         <item quantity="other">%1$d huecos</item>
+    </plurals>
+    <plurals name="archive_stat_archived_all">
+        <item quantity="one">día archivado en todas las automatizaciones</item>
+        <item quantity="other">días archivados en todas las automatizaciones</item>
+    </plurals>
+    <plurals name="archive_stat_archived_month">
+        <item quantity="one">día archivado en %1$s</item>
+        <item quantity="other">días archivados en %1$s</item>
     </plurals>
 </resources>
