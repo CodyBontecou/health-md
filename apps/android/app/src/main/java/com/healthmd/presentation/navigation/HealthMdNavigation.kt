@@ -119,7 +119,7 @@ fun HealthMdNavigation(
         val error by accessViewModel.purchaseError.collectAsStateWithLifecycle()
         val context = LocalContext.current
         Scaffold(containerColor = AppColors.bgPrimary, bottomBar = {
-            if (clinicStatus.configured) {
+            if (BuildConfig.CLINIC_ACCESS_ENABLED && clinicStatus.configured) {
                 TextButton(onClick = { showClinicEnrollment = true },
                     modifier = Modifier.fillMaxWidth().navigationBarsPadding()) {
                     Text("Have a clinic invitation?")
@@ -372,7 +372,7 @@ fun HealthMdNavigation(
                 SettingsScreen(
                     viewModel = settingsViewModel,
                     protectionSettingsRequestId = protectionSettingsRequestId,
-                    clinicAccessAvailable = clinicStatus.configured,
+                    clinicAccessAvailable = BuildConfig.CLINIC_ACCESS_ENABLED && clinicStatus.configured,
                     onNavigateToClinicAccess = { navController.navigate("clinic-access") },
                     onNavigateToPaywall = {
                         if (settingsViewModel.distributionPolicy.purchasesAvailable) {

@@ -26,8 +26,8 @@ struct SettingsScreen: View {
     @ObservedObject private var purchaseManager = PurchaseManager.shared
     @ObservedObject private var clinicSponsorship = ClinicSponsorshipManager.shared
 
-    /// Clinic access appears when this build has reviewed clinic licensing configuration.
-    private var showsClinicAccess: Bool { clinicSponsorship.status.configured }
+    /// Clinic access appears when the feature flag is on and this build has clinic licensing configuration.
+    private var showsClinicAccess: Bool { ClinicAccessFeature.isEnabled && clinicSponsorship.status.configured }
     @State private var path: [Route] = []
     @State private var showPaywall = false
     @AppStorage("syncEnabled") private var syncEnabled = false

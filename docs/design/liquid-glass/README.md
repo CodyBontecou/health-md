@@ -59,7 +59,7 @@ The shipping app follows every board except where the board would need data the 
 - **AttentionG:** names a denied metric only for Medications. HealthKit does not reveal other read denials.
 - **AutomationDetailG:** "Use in Shortcuts" names the app's real App Intent.
 - **ClinicianReportG:** no Heart rate variability row. The report's 11-metric set is a cross-platform contract (`apps/apple/docs/features/clinician-report-v1.md`).
-- **ClinicAccessG** and the paywall's "Clinic invitation?": built, local-only, and shown only when `PracticeFeaturePolicy` is enabled, which it is not in production.
+- **ClinicAccessG** and the paywall's "Clinic invitation?": built, and hidden behind the `ClinicAccessFeature` flag (`CLINIC_ACCESS_ENABLED`, Android `BuildConfig.CLINIC_ACCESS_ENABLED`), which is off in every build until launch.
 - **ReviewG:** shows a real published review without a storefront label.
 - **iPadArchiveG / DuoInnerArchiveG:** the header keeps previous/next month chevrons. They are the only month navigation on those layouts, and coverage history spans several months.
 - **iPhone Duo boards:** "unfolded" is detected as a regular-width phone window with a short side of at least 500 pt; the outer-screen hint appears only after that state has been seen.

@@ -117,7 +117,7 @@ struct PaywallView: View {
     private var purchaseStatus: AnyView {
         AnyView(VStack(alignment: .leading, spacing: 4) {
             glassError
-            if clinic.status.configured && !clinic.status.active {
+            if ClinicAccessFeature.isEnabled && clinic.status.configured && !clinic.status.active {
                 Button(String(localized: "Have a clinic invitation?")) { showClinicAccess = true }
                     .buttonStyle(.plain)
                     .glassFont(.caption)
