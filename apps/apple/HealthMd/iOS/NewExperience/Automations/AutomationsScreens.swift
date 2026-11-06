@@ -1103,15 +1103,11 @@ struct ComposerScreen: View {
                 )
             } label: { allSettingsLabel }
             .buttonStyle(.plain)
-            .accessibilityElement(children: .ignore)
-            .accessibilityLabel(String(localized: "All settings"))
-            .accessibilityAddTraits(.isButton)
+            .accessibilityIdentifier("glass.automation.allSettings")
         } else {
             Button { dismiss() } label: { allSettingsLabel }
                 .buttonStyle(.plain)
-                .accessibilityElement(children: .ignore)
-                .accessibilityLabel(String(localized: "All settings"))
-                .accessibilityAddTraits(.isButton)
+                .accessibilityIdentifier("glass.automation.allSettings")
         }
     }
 
@@ -1124,6 +1120,9 @@ struct ComposerScreen: View {
                 .foregroundStyle(palette.muted)
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
+                // The button reads as "All settings" once; the list of what it holds
+                // is a visual hint only.
+                .accessibilityHidden(true)
         }
         .padding(.horizontal, 18)
         .frame(minHeight: 52)
