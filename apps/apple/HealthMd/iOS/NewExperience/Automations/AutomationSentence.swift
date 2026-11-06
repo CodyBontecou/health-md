@@ -179,7 +179,10 @@ struct AutomationSentence: Equatable {
         calendar: Calendar = .current
     ) -> AutomationSentence {
         let sortedFormats = ExportProfileCardSummary.sortedFormats(settings.exportFormats)
-        let formats = sortedFormats.map(\.localizedDisplayName).joined(separator: " + ")
+        // "Markdown + Bases" (AutomationsGlass): Bases is the Obsidian product name, as in the
+        // Automations list; the other formats keep their localized names.
+        let formats = sortedFormats.map { $0 == .obsidianBases ? "Bases" : $0.localizedDisplayName }
+            .joined(separator: " + ")
         let metricCount = settings.metricSelection.enabledMetricIDs.count
         let metrics = String(localized: "\(metricCount) metrics")
         let noteEnabled = settings.dailyNoteInjection.enabled

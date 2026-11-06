@@ -119,8 +119,8 @@ final class AutomationSentenceTests: XCTestCase {
             settings(formats: [.markdown, .obsidianBases], metricCount: 142, note: true),
             entry: dailyEntry, destination: "Vault/Health", style: .composer
         )
-        let formats = ExportProfileCardSummary.sortedFormats([.markdown, .obsidianBases])
-            .map(\.localizedDisplayName).joined(separator: " + ")
+        // Bases keeps its short product name, as on AutomationsGlass.
+        let formats = ExportFormat.markdown.localizedDisplayName + " + Bases"
         XCTAssertEqual(
             result.plainText,
             "Every morning at 7:30, write yesterday’s 142 metrics to Vault/Health as \(formats), and update my daily note."
