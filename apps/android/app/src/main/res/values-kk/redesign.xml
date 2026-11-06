@@ -206,4 +206,15 @@
         <item quantity="one">%1$s айында мұрағаттағы күн</item>
         <item quantity="other">%1$s айында мұрағаттағы күн</item>
     </plurals>
+    <string name="automations_new">Жаңа автоматтандыру</string>
+    <string name="automations_next">Келесі · %1$s</string>
+    <string name="automations_paused">Кідіртілген</string>
+    <string name="automations_on_demand">Сұраныс бойынша</string>
+    <string name="automations_run_now">Қазір іске қосу</string>
+    <string name="automations_run_now_named">%1$s қазір іске қосу</string>
+    <string name="automations_edit">Өңдеу</string>
+    <string name="automations_edit_named">%1$s өңдеу</string>
+    <string name="automations_switch_named">%1$s автоматтандыруы</string>
+    <string name="automations_schedule_settings_title">Кесте параметрлері</string>
+    <string name="automations_schedule_settings_subtitle">Қолданба бойынша кесте, жоспарланған экспорт мақсаты, рұқсаттар және тарих</string>
 </resources>

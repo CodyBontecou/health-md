@@ -230,4 +230,15 @@
         <item quantity="many">дней в архиве за %1$s</item>
         <item quantity="other">дня в архиве за %1$s</item>
     </plurals>
+    <string name="automations_new">Новая автоматизация</string>
+    <string name="automations_next">Далее · %1$s</string>
+    <string name="automations_paused">Приостановлено</string>
+    <string name="automations_on_demand">По запросу</string>
+    <string name="automations_run_now">Запустить сейчас</string>
+    <string name="automations_run_now_named">Запустить %1$s сейчас</string>
+    <string name="automations_edit">Изменить</string>
+    <string name="automations_edit_named">Изменить %1$s</string>
+    <string name="automations_switch_named">Автоматизация %1$s</string>
+    <string name="automations_schedule_settings_title">Параметры расписания</string>
+    <string name="automations_schedule_settings_subtitle">Общее расписание приложения, назначение запланированного экспорта, разрешения и история</string>
 </resources>

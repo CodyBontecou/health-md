@@ -53,7 +53,8 @@ import com.healthmd.presentation.export.ExportScreen
 import com.healthmd.presentation.history.HistoryScreen
 import com.healthmd.presentation.archive.ArchiveScreen
 import com.healthmd.presentation.archive.DayPageScreen
-import com.healthmd.presentation.export.ExportProfilesEntryCard
+import com.healthmd.presentation.export.ExportProfilesViewModel
+import com.healthmd.presentation.schedule.AutomationsScreen
 import com.healthmd.presentation.schedule.AutomationDetailPane
 import com.healthmd.presentation.schedule.composer.AutomationComposerScreen
 import com.healthmd.presentation.common.GeistCard
@@ -423,20 +424,23 @@ fun HealthMdNavigation(
             }
             composable(NavDestination.SCHEDULE.route) {
                 var selectedAutomation by rememberSaveable { mutableStateOf<String?>(null) }
+                val automationsProfiles: ExportProfilesViewModel = hiltViewModel()
                 BoxWithConstraints(Modifier.fillMaxSize()) {
                     // Same split point as the Archive, so an unfolded foldable in landscape
                     // (about 760 dp beside the rail) shows list and detail together.
                     val twoPane = LocalUsesNavigationRail.current || maxWidth >= GeistBreakpoints.medium.dp
+                    val openPaywall = {
+                        if (settingsViewModel.distributionPolicy.purchasesAvailable) {
+                            navController.navigate(PaywallEntryPoint.SCHEDULE.route)
+                        }
+                    }
+                    val runNow: (String) -> Unit = { id ->
+                        runAutomationNow(id, automationsProfiles, protectionEnabled != false, settingsViewModel::showBlockedChangeToast) {
+                            navController.navigate(SubRoutes.EXPORT_NOW) { launchSingleTop = true }
+                        }
+                    }
                     val schedule: @Composable () -> Unit = {
-                        ScheduleScreen(
-                            onNavigateToPaywall = {
-                                if (settingsViewModel.distributionPolicy.purchasesAvailable) {
-                                    navController.navigate(PaywallEntryPoint.SCHEDULE.route)
-                                }
-                            },
-                            profilesEntry = {
-                                ExportProfilesEntryCard(onOpen = { navController.navigate(SubRoutes.EXPORT_PROFILES) })
-                            },
+                        AutomationsScreen(
                             onOpenAutomation = { id ->
                                 if (twoPane) {
                                     selectedAutomation = id
@@ -444,6 +448,15 @@ fun HealthMdNavigation(
                                     navController.navigate(SubRoutes.automationDetail(id)) { launchSingleTop = true }
                                 }
                             },
+                            onEditAutomation = { id ->
+                                navController.navigate(SubRoutes.automationCompose(id)) { launchSingleTop = true }
+                            },
+                            onRunNow = runNow,
+                            onOpenScheduleSettings = {
+                                navController.navigate(SubRoutes.SCHEDULE_SETTINGS) { launchSingleTop = true }
+                            },
+                            onNavigateToPaywall = openPaywall,
+                            selectedAutomationId = selectedAutomation.takeIf { twoPane },
                         )
                     }
                     if (twoPane) {
@@ -456,6 +469,8 @@ fun HealthMdNavigation(
                                         profileId = selectedAutomation,
                                         onEditProfile = { id -> navController.navigate(SubRoutes.exportProfile(id)) },
                                         onCompose = { id -> navController.navigate(SubRoutes.automationCompose(id)) { launchSingleTop = true } },
+                                        onRunNow = runNow,
+                                        onDeleted = { selectedAutomation = null },
                                     )
                                 }
                             }
@@ -565,10 +580,34 @@ fun HealthMdNavigation(
                     onBack = { navController.popBackStack() },
                 ) {
                     ReadableWidth {
+                        val profiles: ExportProfilesViewModel = hiltViewModel()
                         AutomationDetailPane(
                             profileId = profileId,
                             onEditProfile = { id -> navController.navigate(SubRoutes.exportProfile(id)) },
                             onCompose = { id -> navController.navigate(SubRoutes.automationCompose(id)) { launchSingleTop = true } },
+                            onRunNow = { id ->
+                                runAutomationNow(id, profiles, protectionEnabled != false, settingsViewModel::showBlockedChangeToast) {
+                                    navController.navigate(SubRoutes.EXPORT_NOW) { launchSingleTop = true }
+                                }
+                            },
+                            onDeleted = { navController.popBackStack() },
+                            profilesViewModel = profiles,
+                        )
+                    }
+                }
+            }
+            composable(SubRoutes.SCHEDULE_SETTINGS) {
+                SubScreenFrame(
+                    title = stringResource(R.string.automations_schedule_settings_title),
+                    onBack = { navController.popBackStack() },
+                ) {
+                    ReadableWidth {
+                        ScheduleScreen(
+                            onNavigateToPaywall = {
+                                if (settingsViewModel.distributionPolicy.purchasesAvailable) {
+                                    navController.navigate(PaywallEntryPoint.SCHEDULE.route)
+                                }
+                            },
                         )
                     }
                 }
@@ -916,6 +955,29 @@ private fun localizedRecoveryDate(date: LocalDate): String {
     val instant = date.atStartOfDay(ZoneId.systemDefault()).toInstant()
     return android.text.format.DateFormat.getMediumDateFormat(LocalContext.current)
         .format(Date.from(instant))
+}
+
+/**
+ * Run now uses the existing manual path: the automation becomes the active profile and Export
+ * now opens on it, with its progress, result and limits. Switching profiles is a configuration
+ * change, so a locked configuration only runs the automation that is already active.
+ */
+private fun runAutomationNow(
+    profileId: String,
+    profiles: ExportProfilesViewModel,
+    configurationLocked: Boolean,
+    onBlocked: () -> Unit,
+    openExportNow: () -> Unit,
+) {
+    val active = profiles.uiState.value.rows.firstOrNull { it.profile.id == profileId }?.isActive == true
+    if (!active) {
+        if (configurationLocked) {
+            onBlocked()
+            return
+        }
+        profiles.activate(profileId)
+    }
+    openExportNow()
 }
 
 /** Export now routes shown as a sheet over the current screen. */

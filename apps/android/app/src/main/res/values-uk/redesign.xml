@@ -230,4 +230,15 @@
         <item quantity="many">днів в архіві за %1$s</item>
         <item quantity="other">дня в архіві за %1$s</item>
     </plurals>
+    <string name="automations_new">Нова автоматизація</string>
+    <string name="automations_next">Далі · %1$s</string>
+    <string name="automations_paused">Призупинено</string>
+    <string name="automations_on_demand">На запит</string>
+    <string name="automations_run_now">Запустити зараз</string>
+    <string name="automations_run_now_named">Запустити %1$s зараз</string>
+    <string name="automations_edit">Змінити</string>
+    <string name="automations_edit_named">Змінити %1$s</string>
+    <string name="automations_switch_named">Автоматизація %1$s</string>
+    <string name="automations_schedule_settings_title">Параметри розкладу</string>
+    <string name="automations_schedule_settings_subtitle">Загальний розклад програми, призначення запланованого експорту, дозволи та історія</string>
 </resources>

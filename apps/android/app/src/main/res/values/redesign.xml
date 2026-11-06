@@ -206,4 +206,15 @@
         <item quantity="one">day archived in %1$s</item>
         <item quantity="other">days archived in %1$s</item>
     </plurals>
+    <string name="automations_new">New automation</string>
+    <string name="automations_next">Next · %1$s</string>
+    <string name="automations_paused">Paused</string>
+    <string name="automations_on_demand">On demand</string>
+    <string name="automations_run_now">Run now</string>
+    <string name="automations_run_now_named">Run %1$s now</string>
+    <string name="automations_edit">Edit</string>
+    <string name="automations_edit_named">Edit %1$s</string>
+    <string name="automations_switch_named">%1$s automation</string>
+    <string name="automations_schedule_settings_title">Schedule settings</string>
+    <string name="automations_schedule_settings_subtitle">App-wide schedule, scheduled export target, permissions and history</string>
 </resources>

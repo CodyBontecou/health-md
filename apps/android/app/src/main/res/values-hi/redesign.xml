@@ -206,4 +206,15 @@
         <item quantity="one">%1$s में संग्रहित दिन</item>
         <item quantity="other">%1$s में संग्रहित दिन</item>
     </plurals>
+    <string name="automations_new">नया ऑटोमेशन</string>
+    <string name="automations_next">अगला · %1$s</string>
+    <string name="automations_paused">रोका गया</string>
+    <string name="automations_on_demand">मांग पर</string>
+    <string name="automations_run_now">अभी चलाएँ</string>
+    <string name="automations_run_now_named">%1$s अभी चलाएँ</string>
+    <string name="automations_edit">संपादित करें</string>
+    <string name="automations_edit_named">%1$s संपादित करें</string>
+    <string name="automations_switch_named">%1$s ऑटोमेशन</string>
+    <string name="automations_schedule_settings_title">शेड्यूल सेटिंग्स</string>
+    <string name="automations_schedule_settings_subtitle">ऐप-व्यापी शेड्यूल, शेड्यूल किए गए निर्यात का गंतव्य, अनुमतियाँ और इतिहास</string>
 </resources>

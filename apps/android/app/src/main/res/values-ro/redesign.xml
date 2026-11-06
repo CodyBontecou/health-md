@@ -218,4 +218,15 @@
         <item quantity="few">zile arhivate în %1$s</item>
         <item quantity="other">de zile arhivate în %1$s</item>
     </plurals>
+    <string name="automations_new">Automatizare nouă</string>
+    <string name="automations_next">Următoarea · %1$s</string>
+    <string name="automations_paused">Întreruptă</string>
+    <string name="automations_on_demand">La cerere</string>
+    <string name="automations_run_now">Rulați acum</string>
+    <string name="automations_run_now_named">Rulați %1$s acum</string>
+    <string name="automations_edit">Editați</string>
+    <string name="automations_edit_named">Editați %1$s</string>
+    <string name="automations_switch_named">Automatizarea %1$s</string>
+    <string name="automations_schedule_settings_title">Setări program</string>
+    <string name="automations_schedule_settings_subtitle">Program la nivelul aplicației, destinația exportului programat, permisiuni și istoric</string>
 </resources>

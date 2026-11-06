@@ -206,4 +206,15 @@
         <item quantity="one">%1$s ਵਿੱਚ ਪੁਰਾਲੇਖ ਕੀਤਾ ਦਿਨ</item>
         <item quantity="other">%1$s ਵਿੱਚ ਪੁਰਾਲੇਖ ਕੀਤੇ ਦਿਨ</item>
     </plurals>
+    <string name="automations_new">ਨਵਾਂ ਆਟੋਮੇਸ਼ਨ</string>
+    <string name="automations_next">ਅਗਲਾ · %1$s</string>
+    <string name="automations_paused">ਰੋਕਿਆ ਗਿਆ</string>
+    <string name="automations_on_demand">ਮੰਗ ਤੇ</string>
+    <string name="automations_run_now">ਹੁਣੇ ਚਲਾਓ</string>
+    <string name="automations_run_now_named">%1$s ਹੁਣੇ ਚਲਾਓ</string>
+    <string name="automations_edit">ਸੋਧੋ</string>
+    <string name="automations_edit_named">%1$s ਸੋਧੋ</string>
+    <string name="automations_switch_named">%1$s ਆਟੋਮੇਸ਼ਨ</string>
+    <string name="automations_schedule_settings_title">ਸਮਾਂ-ਸੂਚੀ ਸੈਟਿੰਗਜ਼</string>
+    <string name="automations_schedule_settings_subtitle">ਐਪ-ਵਿਆਪੀ ਸਮਾਂ-ਸੂਚੀ, ਸਮਾਂ-ਸੂਚੀਬੱਧ ਨਿਰਯਾਤ ਦੀ ਮੰਜ਼ਿਲ, ਇਜਾਜ਼ਤਾਂ ਅਤੇ ਇਤਿਹਾਸ</string>
 </resources>

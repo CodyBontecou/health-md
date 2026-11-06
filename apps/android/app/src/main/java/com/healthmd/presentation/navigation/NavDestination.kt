@@ -60,6 +60,8 @@ object SubRoutes {
     const val AUTOMATION_COMPOSE = "automation/{profileId}/compose"
     fun automationCompose(profileId: String): String = "automation/$profileId/compose"
     const val DIAGNOSTICS = "diagnostics"
+    /** The app-wide schedule, scheduled target, permissions and history, from Automations. */
+    const val SCHEDULE_SETTINGS = "schedule_settings"
     const val FOLDER_DESTINATION = "folder_destination"
     const val MYSELF_CLAIM = "myself_claim"
     const val PAYWALL = "paywall"

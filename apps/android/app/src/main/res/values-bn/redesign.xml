@@ -206,4 +206,15 @@
         <item quantity="one">%1$s-এ আর্কাইভ করা দিন</item>
         <item quantity="other">%1$s-এ আর্কাইভ করা দিন</item>
     </plurals>
+    <string name="automations_new">নতুন অটোমেশন</string>
+    <string name="automations_next">পরবর্তী · %1$s</string>
+    <string name="automations_paused">বিরতিতে</string>
+    <string name="automations_on_demand">প্রয়োজন অনুযায়ী</string>
+    <string name="automations_run_now">এখনই চালান</string>
+    <string name="automations_run_now_named">%1$s এখনই চালান</string>
+    <string name="automations_edit">সম্পাদনা</string>
+    <string name="automations_edit_named">%1$s সম্পাদনা</string>
+    <string name="automations_switch_named">%1$s অটোমেশন</string>
+    <string name="automations_schedule_settings_title">সময়সূচি সেটিংস</string>
+    <string name="automations_schedule_settings_subtitle">অ্যাপ-ব্যাপী সময়সূচি, নির্ধারিত রপ্তানির গন্তব্য, অনুমতি ও ইতিহাস</string>
 </resources>

@@ -194,4 +194,15 @@
     <plurals name="archive_stat_archived_month">
         <item quantity="other">日を%1$sにアーカイブ済み</item>
     </plurals>
+    <string name="automations_new">新規オートメーション</string>
+    <string name="automations_next">次回 · %1$s</string>
+    <string name="automations_paused">一時停止中</string>
+    <string name="automations_on_demand">手動</string>
+    <string name="automations_run_now">今すぐ実行</string>
+    <string name="automations_run_now_named">%1$sを今すぐ実行</string>
+    <string name="automations_edit">編集</string>
+    <string name="automations_edit_named">%1$sを編集</string>
+    <string name="automations_switch_named">%1$s オートメーション</string>
+    <string name="automations_schedule_settings_title">スケジュール設定</string>
+    <string name="automations_schedule_settings_subtitle">アプリ全体のスケジュール、スケジュールエクスポートの保存先、権限、履歴</string>
 </resources>

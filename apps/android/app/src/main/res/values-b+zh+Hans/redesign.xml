@@ -194,4 +194,15 @@
     <plurals name="archive_stat_archived_month">
         <item quantity="other">天已于%1$s归档</item>
     </plurals>
+    <string name="automations_new">新建自动化</string>
+    <string name="automations_next">下次 · %1$s</string>
+    <string name="automations_paused">已暂停</string>
+    <string name="automations_on_demand">按需</string>
+    <string name="automations_run_now">立即运行</string>
+    <string name="automations_run_now_named">立即运行 %1$s</string>
+    <string name="automations_edit">编辑</string>
+    <string name="automations_edit_named">编辑 %1$s</string>
+    <string name="automations_switch_named">%1$s 自动化</string>
+    <string name="automations_schedule_settings_title">计划设置</string>
+    <string name="automations_schedule_settings_subtitle">应用级计划、计划导出目标位置、权限和历史记录</string>
 </resources>

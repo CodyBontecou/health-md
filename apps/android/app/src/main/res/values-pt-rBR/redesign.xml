@@ -216,4 +216,15 @@
         <item quantity="one">dia arquivado em %1$s</item>
         <item quantity="other">dias arquivados em %1$s</item>
     </plurals>
+    <string name="automations_new">Nova automação</string>
+    <string name="automations_next">Próxima · %1$s</string>
+    <string name="automations_paused">Pausada</string>
+    <string name="automations_on_demand">Sob demanda</string>
+    <string name="automations_run_now">Executar agora</string>
+    <string name="automations_run_now_named">Executar %1$s agora</string>
+    <string name="automations_edit">Editar</string>
+    <string name="automations_edit_named">Editar %1$s</string>
+    <string name="automations_switch_named">Automação %1$s</string>
+    <string name="automations_schedule_settings_title">Configurações de agendamento</string>
+    <string name="automations_schedule_settings_subtitle">Agendamento de todo o app, destino da exportação agendada, permissões e histórico</string>
 </resources>

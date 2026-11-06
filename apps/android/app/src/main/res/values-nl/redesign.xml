@@ -206,4 +206,15 @@
         <item quantity="one">dag gearchiveerd in %1$s</item>
         <item quantity="other">dagen gearchiveerd in %1$s</item>
     </plurals>
+    <string name="automations_new">Nieuwe automatisering</string>
+    <string name="automations_next">Volgende · %1$s</string>
+    <string name="automations_paused">Gepauzeerd</string>
+    <string name="automations_on_demand">Op verzoek</string>
+    <string name="automations_run_now">Nu uitvoeren</string>
+    <string name="automations_run_now_named">%1$s nu uitvoeren</string>
+    <string name="automations_edit">Bewerken</string>
+    <string name="automations_edit_named">%1$s bewerken</string>
+    <string name="automations_switch_named">Automatisering %1$s</string>
+    <string name="automations_schedule_settings_title">Planningsinstellingen</string>
+    <string name="automations_schedule_settings_subtitle">App-brede planning, bestemming voor geplande exports, machtigingen en geschiedenis</string>
 </resources>

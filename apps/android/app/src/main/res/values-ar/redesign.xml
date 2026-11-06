@@ -254,4 +254,15 @@
         <item quantity="many">يومًا مؤرشفًا في %1$s</item>
         <item quantity="other">يوم مؤرشف في %1$s</item>
     </plurals>
+    <string name="automations_new">أتمتة جديدة</string>
+    <string name="automations_next">التالي · %1$s</string>
+    <string name="automations_paused">متوقفة مؤقتًا</string>
+    <string name="automations_on_demand">عند الطلب</string>
+    <string name="automations_run_now">تشغيل الآن</string>
+    <string name="automations_run_now_named">تشغيل %1$s الآن</string>
+    <string name="automations_edit">تعديل</string>
+    <string name="automations_edit_named">تعديل %1$s</string>
+    <string name="automations_switch_named">أتمتة %1$s</string>
+    <string name="automations_schedule_settings_title">إعدادات الجدول</string>
+    <string name="automations_schedule_settings_subtitle">الجدول على مستوى التطبيق، ووجهة التصدير المجدول، والأذونات والسجل</string>
 </resources>
