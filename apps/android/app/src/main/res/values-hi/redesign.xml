@@ -6,9 +6,6 @@
     <string name="archive_filter_all">सभी</string>
     <string name="archive_filter_current_settings">मौजूदा सेटिंग्स</string>
     <string name="archive_stat_archived">संग्रहित दिन</string>
-    <string name="archive_stat_streak">मौजूदा सिलसिला</string>
-    <string name="archive_stat_gaps">अंतराल</string>
-    <string name="archive_show_gap">पहला अंतराल दिखाएँ</string>
     <string name="archive_previous_month">पिछला महीना</string>
     <string name="archive_next_month">अगला महीना</string>
     <string name="archive_legend_complete">पूर्ण</string>
@@ -17,7 +14,6 @@
     <string name="archive_legend_not_exported">निर्यात नहीं हुआ</string>
     <string name="archive_legend_today">आज</string>
     <string name="archive_day_on_track">%2$d में से %1$d योजना के अनुसार</string>
-    <string name="archive_day_nothing">इस तारीख के लिए कुछ निर्यात नहीं हुआ</string>
     <string name="archive_day_status">%1$s, %2$s</string>
     <string name="archive_row_last_export">अंतिम निर्यात %1$s</string>
     <string name="archive_action_backfill">पूरा करें</string>
@@ -185,5 +181,23 @@
     <plurals name="automations_profiles_scheduled">
         <item quantity="one">%1$d शेड्यूल</item>
         <item quantity="other">%1$d शेड्यूल</item>
+    </plurals>
+    <string name="archive_no_gaps">कोई अंतराल नहीं</string>
+    <string name="archive_status_updating">अपडेट हो रहा है</string>
+    <string name="archive_status_not_due">देय नहीं</string>
+    <string name="archive_action_open">खोलें</string>
+    <string name="archive_action_retry">फिर से कोशिश करें</string>
+    <string name="archive_action_refresh">रीफ़्रेश करें</string>
+    <string name="archive_health_connected">Health Connect: कनेक्ट है</string>
+    <string name="archive_health_not_connected">Health Connect: कनेक्ट नहीं है</string>
+    <string name="archive_day_nothing_due">कुछ भी देय नहीं</string>
+    <string name="archive_row_not_due">इस तारीख को देय नहीं।</string>
+    <plurals name="archive_streak_days">
+        <item quantity="one">%1$d दिन का सिलसिला</item>
+        <item quantity="other">%1$d दिनों का सिलसिला</item>
+    </plurals>
+    <plurals name="archive_gap_count">
+        <item quantity="one">%1$d अंतराल</item>
+        <item quantity="other">%1$d अंतराल</item>
     </plurals>
 </resources>

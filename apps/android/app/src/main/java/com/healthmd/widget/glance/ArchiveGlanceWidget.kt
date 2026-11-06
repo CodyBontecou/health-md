@@ -52,10 +52,13 @@ import com.healthmd.data.scheduler.ExportScheduler
 import com.healthmd.data.scheduler.ScheduledProfileEntry
 import com.healthmd.data.scheduler.ScheduledProfileEntryStore
 import com.healthmd.data.scheduler.ScheduledProfileOccurrenceMath
+import com.healthmd.data.settings.ExportProfileRepository
 import com.healthmd.domain.model.ExportHistoryEntry
 import com.healthmd.domain.repository.ExportHistoryRepository
+import com.healthmd.domain.repository.SettingsRepository
 import com.healthmd.presentation.MainActivity
 import com.healthmd.presentation.archive.ArchiveCoverage
+import com.healthmd.presentation.archive.ArchiveProfile
 import com.healthmd.presentation.archive.CoverageStatus
 import com.healthmd.presentation.navigation.SubRoutes
 import dagger.hilt.EntryPoint
@@ -108,10 +111,12 @@ data class ArchiveWidgetSummary(
             entries: List<ExportHistoryEntry>,
             today: LocalDate,
             nextRunAtMillis: Long? = null,
+            /** Lanes whose automation keeps today updating; others leave today not due. */
+            dueToday: Set<ArchiveProfile> = emptySet(),
         ): ArchiveWidgetSummary {
             val days = (LOOKBACK_DAYS - 1 downTo 0).map { back ->
                 val date = today.minusDays(back)
-                date to ArchiveCoverage.aggregateDay(entries, date, today)
+                date to ArchiveCoverage.aggregateDay(entries, date, today, dueToday)
             }
             val month = YearMonth.from(today)
             val monthStats = ArchiveCoverage.stats(
@@ -158,6 +163,8 @@ interface ArchiveWidgetEntryPoint {
     fun exportHistoryRepository(): ExportHistoryRepository
     fun exportScheduler(): ExportScheduler
     fun scheduledProfileEntryStore(): ScheduledProfileEntryStore
+    fun exportProfileRepository(): ExportProfileRepository
+    fun settingsRepository(): SettingsRepository
 }
 
 /** Shared loading for both Archive providers; the layout follows the placed size. */
@@ -180,7 +187,15 @@ abstract class BaseArchiveGlanceWidget : GlanceAppWidget() {
                 nowMillis = nowMillis,
             )
         }.getOrNull()
-        val summary = ArchiveWidgetSummary.from(entries, LocalDate.now(), nextRun)
+        val dueToday = runCatching {
+            ArchiveCoverage.dueToday(
+                lanes = ArchiveCoverage.profiles(entries),
+                profiles = entryPoint.exportProfileRepository().getProfiles(),
+                schedules = entryPoint.scheduledProfileEntryStore().getEntries(),
+                settings = entryPoint.settingsRepository().getExportSettings(),
+            )
+        }.getOrDefault(emptySet())
+        val summary = ArchiveWidgetSummary.from(entries, LocalDate.now(), nextRun, dueToday)
         val now = Instant.ofEpochMilli(nowMillis)
         val zoneId = ZoneId.systemDefault()
         provideContent { ArchiveWidgetContent(summary, LocalSize.current, now, zoneId) }

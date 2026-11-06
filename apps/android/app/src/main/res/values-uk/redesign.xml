@@ -6,9 +6,6 @@
     <string name="archive_filter_all">Усі</string>
     <string name="archive_filter_current_settings">Поточні налаштування</string>
     <string name="archive_stat_archived">Днів в архіві</string>
-    <string name="archive_stat_streak">Поточна серія</string>
-    <string name="archive_stat_gaps">Пропуски</string>
-    <string name="archive_show_gap">Показати перший пропуск</string>
     <string name="archive_previous_month">Попередній місяць</string>
     <string name="archive_next_month">Наступний місяць</string>
     <string name="archive_legend_complete">Повністю</string>
@@ -17,7 +14,6 @@
     <string name="archive_legend_not_exported">Не експортовано</string>
     <string name="archive_legend_today">Сьогодні</string>
     <string name="archive_day_on_track">За планом: %1$d з %2$d</string>
-    <string name="archive_day_nothing">За цю дату нічого не експортовано</string>
     <string name="archive_day_status">%1$s, %2$s</string>
     <string name="archive_row_last_export">Останній експорт: %1$s</string>
     <string name="archive_action_backfill">Надолужити</string>
@@ -201,5 +197,27 @@
         <item quantity="few">за розкладом: %1$d</item>
         <item quantity="many">за розкладом: %1$d</item>
         <item quantity="other">за розкладом: %1$d</item>
+    </plurals>
+    <string name="archive_no_gaps">Без пропусків</string>
+    <string name="archive_status_updating">Оновлюється</string>
+    <string name="archive_status_not_due">Не заплановано</string>
+    <string name="archive_action_open">Відкрити</string>
+    <string name="archive_action_retry">Повторити</string>
+    <string name="archive_action_refresh">Оновити</string>
+    <string name="archive_health_connected">Health Connect: підключено</string>
+    <string name="archive_health_not_connected">Health Connect: не підключено</string>
+    <string name="archive_day_nothing_due">Нічого не заплановано</string>
+    <string name="archive_row_not_due">На цю дату не заплановано.</string>
+    <plurals name="archive_streak_days">
+        <item quantity="one">Серія: %1$d день</item>
+        <item quantity="few">Серія: %1$d дні</item>
+        <item quantity="many">Серія: %1$d днів</item>
+        <item quantity="other">Серія: %1$d дня</item>
+    </plurals>
+    <plurals name="archive_gap_count">
+        <item quantity="one">%1$d пропуск</item>
+        <item quantity="few">%1$d пропуски</item>
+        <item quantity="many">%1$d пропусків</item>
+        <item quantity="other">%1$d пропуску</item>
     </plurals>
 </resources>

@@ -6,9 +6,6 @@
     <string name="archive_filter_all">الكل</string>
     <string name="archive_filter_current_settings">الإعدادات الحالية</string>
     <string name="archive_stat_archived">الأيام المؤرشفة</string>
-    <string name="archive_stat_streak">السلسلة الحالية</string>
-    <string name="archive_stat_gaps">الفجوات</string>
-    <string name="archive_show_gap">إظهار أول فجوة</string>
     <string name="archive_previous_month">الشهر السابق</string>
     <string name="archive_next_month">الشهر التالي</string>
     <string name="archive_legend_complete">مكتمل</string>
@@ -17,7 +14,6 @@
     <string name="archive_legend_not_exported">لم يُصدَّر</string>
     <string name="archive_legend_today">اليوم</string>
     <string name="archive_day_on_track">%1$d من %2$d حسب الخطة</string>
-    <string name="archive_day_nothing">لم يُصدَّر شيء لهذا التاريخ</string>
     <string name="archive_day_status">%1$s، %2$s</string>
     <string name="archive_row_last_export">آخر تصدير %1$s</string>
     <string name="archive_action_backfill">استكمال</string>
@@ -217,5 +213,31 @@
         <item quantity="few">%1$d مجدول</item>
         <item quantity="many">%1$d مجدول</item>
         <item quantity="other">%1$d مجدول</item>
+    </plurals>
+    <string name="archive_no_gaps">لا توجد فجوات</string>
+    <string name="archive_status_updating">جارٍ التحديث</string>
+    <string name="archive_status_not_due">غير مستحق</string>
+    <string name="archive_action_open">فتح</string>
+    <string name="archive_action_retry">إعادة المحاولة</string>
+    <string name="archive_action_refresh">تحديث</string>
+    <string name="archive_health_connected">Health Connect: متصل</string>
+    <string name="archive_health_not_connected">Health Connect: غير متصل</string>
+    <string name="archive_day_nothing_due">لا شيء مستحق</string>
+    <string name="archive_row_not_due">غير مستحق في هذا التاريخ.</string>
+    <plurals name="archive_streak_days">
+        <item quantity="zero">سلسلة %1$d يوم</item>
+        <item quantity="one">سلسلة يوم واحد (%1$d)</item>
+        <item quantity="two">سلسلة يومين (%1$d)</item>
+        <item quantity="few">سلسلة %1$d أيام</item>
+        <item quantity="many">سلسلة %1$d يومًا</item>
+        <item quantity="other">سلسلة %1$d يوم</item>
+    </plurals>
+    <plurals name="archive_gap_count">
+        <item quantity="zero">%1$d فجوة</item>
+        <item quantity="one">فجوة واحدة (%1$d)</item>
+        <item quantity="two">فجوتان (%1$d)</item>
+        <item quantity="few">%1$d فجوات</item>
+        <item quantity="many">%1$d فجوة</item>
+        <item quantity="other">%1$d فجوة</item>
     </plurals>
 </resources>

@@ -6,9 +6,6 @@
     <string name="archive_filter_all">全部</string>
     <string name="archive_filter_current_settings">当前设置</string>
     <string name="archive_stat_archived">已归档天数</string>
-    <string name="archive_stat_streak">当前连续天数</string>
-    <string name="archive_stat_gaps">缺口</string>
-    <string name="archive_show_gap">显示第一个缺口</string>
     <string name="archive_previous_month">上个月</string>
     <string name="archive_next_month">下个月</string>
     <string name="archive_legend_complete">完整</string>
@@ -17,7 +14,6 @@
     <string name="archive_legend_not_exported">未导出</string>
     <string name="archive_legend_today">今天</string>
     <string name="archive_day_on_track">%1$d / %2$d 按计划完成</string>
-    <string name="archive_day_nothing">此日期没有导出内容</string>
     <string name="archive_day_status">%1$s，%2$s</string>
     <string name="archive_row_last_export">上次导出：%1$s</string>
     <string name="archive_action_backfill">补导</string>
@@ -177,5 +173,21 @@
     </plurals>
     <plurals name="automations_profiles_scheduled">
         <item quantity="other">%1$d 个已排程</item>
+    </plurals>
+    <string name="archive_no_gaps">无缺口</string>
+    <string name="archive_status_updating">更新中</string>
+    <string name="archive_status_not_due">未到期</string>
+    <string name="archive_action_open">打开</string>
+    <string name="archive_action_retry">重试</string>
+    <string name="archive_action_refresh">刷新</string>
+    <string name="archive_health_connected">Health Connect：已连接</string>
+    <string name="archive_health_not_connected">Health Connect：未连接</string>
+    <string name="archive_day_nothing_due">无到期项</string>
+    <string name="archive_row_not_due">此日期未到期。</string>
+    <plurals name="archive_streak_days">
+        <item quantity="other">连续 %1$d 天</item>
+    </plurals>
+    <plurals name="archive_gap_count">
+        <item quantity="other">%1$d 个缺口</item>
     </plurals>
 </resources>

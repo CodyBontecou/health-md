@@ -6,9 +6,6 @@
     <string name="archive_filter_all">Alles</string>
     <string name="archive_filter_current_settings">Huidige instellingen</string>
     <string name="archive_stat_archived">Gearchiveerde dagen</string>
-    <string name="archive_stat_streak">Huidige reeks</string>
-    <string name="archive_stat_gaps">Hiaten</string>
-    <string name="archive_show_gap">Eerste hiaat tonen</string>
     <string name="archive_previous_month">Vorige maand</string>
     <string name="archive_next_month">Volgende maand</string>
     <string name="archive_legend_complete">Volledig</string>
@@ -17,7 +14,6 @@
     <string name="archive_legend_not_exported">Niet geëxporteerd</string>
     <string name="archive_legend_today">Vandaag</string>
     <string name="archive_day_on_track">%1$d van %2$d op schema</string>
-    <string name="archive_day_nothing">Niets geëxporteerd voor deze datum</string>
     <string name="archive_day_status">%1$s, %2$s</string>
     <string name="archive_row_last_export">Laatste export %1$s</string>
     <string name="archive_action_backfill">Aanvullen</string>
@@ -185,5 +181,23 @@
     <plurals name="automations_profiles_scheduled">
         <item quantity="one">%1$d gepland</item>
         <item quantity="other">%1$d gepland</item>
+    </plurals>
+    <string name="archive_no_gaps">Geen gaten</string>
+    <string name="archive_status_updating">Wordt bijgewerkt</string>
+    <string name="archive_status_not_due">Niet gepland</string>
+    <string name="archive_action_open">Openen</string>
+    <string name="archive_action_retry">Opnieuw</string>
+    <string name="archive_action_refresh">Vernieuwen</string>
+    <string name="archive_health_connected">Health Connect: verbonden</string>
+    <string name="archive_health_not_connected">Health Connect: niet verbonden</string>
+    <string name="archive_day_nothing_due">Niets gepland</string>
+    <string name="archive_row_not_due">Niet gepland op deze datum.</string>
+    <plurals name="archive_streak_days">
+        <item quantity="one">Reeks van %1$d dag</item>
+        <item quantity="other">Reeks van %1$d dagen</item>
+    </plurals>
+    <plurals name="archive_gap_count">
+        <item quantity="one">%1$d gat</item>
+        <item quantity="other">%1$d gaten</item>
     </plurals>
 </resources>

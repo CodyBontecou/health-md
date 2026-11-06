@@ -5,6 +5,7 @@ import com.healthmd.domain.model.ExportHistoryEntry
 import com.healthmd.domain.model.ExportSource
 import com.healthmd.domain.model.FailedDateDetail
 import com.healthmd.data.scheduler.ScheduledProfileEntry
+import com.healthmd.presentation.archive.ArchiveProfile
 import com.healthmd.presentation.archive.CoverageStatus
 import com.healthmd.widget.glance.ArchiveWidgetSummary
 import org.junit.Assert.assertEquals
@@ -32,7 +33,7 @@ class ArchiveWidgetSummaryTest {
                 failedDateDetails = listOf(FailedDateDetail(today.minusDays(6), ExportFailureReason.FILE_WRITE_ERROR)),
             ),
         )
-        val summary = ArchiveWidgetSummary.from(entries, today)
+        val summary = ArchiveWidgetSummary.from(entries, today, dueToday = setOf(ArchiveProfile(null)))
         assertTrue(summary.hasHistory)
         assertEquals(5, summary.streak)
         assertEquals(1, summary.gapCount)
@@ -69,7 +70,7 @@ class ArchiveWidgetSummaryTest {
             ),
         )
 
-        val summary = ArchiveWidgetSummary.from(entries, october31)
+        val summary = ArchiveWidgetSummary.from(entries, october31, dueToday = setOf(ArchiveProfile(null)))
 
         assertEquals(YearMonth.of(2026, 10), summary.month)
         // October 1–30 minus the two gaps; September days and today never count.

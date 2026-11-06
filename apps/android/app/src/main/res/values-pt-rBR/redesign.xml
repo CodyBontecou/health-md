@@ -6,9 +6,6 @@
     <string name="archive_filter_all">Tudo</string>
     <string name="archive_filter_current_settings">Configurações atuais</string>
     <string name="archive_stat_archived">Dias arquivados</string>
-    <string name="archive_stat_streak">Sequência atual</string>
-    <string name="archive_stat_gaps">Lacunas</string>
-    <string name="archive_show_gap">Mostrar a primeira lacuna</string>
     <string name="archive_previous_month">Mês anterior</string>
     <string name="archive_next_month">Próximo mês</string>
     <string name="archive_legend_complete">Completo</string>
@@ -17,7 +14,6 @@
     <string name="archive_legend_not_exported">Não exportado</string>
     <string name="archive_legend_today">Hoje</string>
     <string name="archive_day_on_track">%1$d de %2$d em dia</string>
-    <string name="archive_day_nothing">Nada foi exportado para esta data</string>
     <string name="archive_day_status">%1$s, %2$s</string>
     <string name="archive_row_last_export">Última exportação %1$s</string>
     <string name="archive_action_backfill">Recuperar</string>
@@ -193,5 +189,25 @@
         <item quantity="one">%1$d agendado</item>
         <item quantity="many">%1$d de agendados</item>
         <item quantity="other">%1$d agendados</item>
+    </plurals>
+    <string name="archive_no_gaps">Sem lacunas</string>
+    <string name="archive_status_updating">Atualizando</string>
+    <string name="archive_status_not_due">Não previsto</string>
+    <string name="archive_action_open">Abrir</string>
+    <string name="archive_action_retry">Tentar novamente</string>
+    <string name="archive_action_refresh">Atualizar</string>
+    <string name="archive_health_connected">Health Connect: conectado</string>
+    <string name="archive_health_not_connected">Health Connect: não conectado</string>
+    <string name="archive_day_nothing_due">Nada previsto</string>
+    <string name="archive_row_not_due">Não previsto nesta data.</string>
+    <plurals name="archive_streak_days">
+        <item quantity="one">Sequência de %1$d dia</item>
+        <item quantity="many">Sequência de %1$d dias</item>
+        <item quantity="other">Sequência de %1$d dias</item>
+    </plurals>
+    <plurals name="archive_gap_count">
+        <item quantity="one">%1$d lacuna</item>
+        <item quantity="many">%1$d lacunas</item>
+        <item quantity="other">%1$d lacunas</item>
     </plurals>
 </resources>

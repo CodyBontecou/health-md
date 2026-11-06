@@ -6,9 +6,6 @@
     <string name="archive_filter_all">ਸਾਰੇ</string>
     <string name="archive_filter_current_settings">ਮੌਜੂਦਾ ਸੈਟਿੰਗਾਂ</string>
     <string name="archive_stat_archived">ਪੁਰਾਲੇਖ ਕੀਤੇ ਦਿਨ</string>
-    <string name="archive_stat_streak">ਮੌਜੂਦਾ ਲੜੀ</string>
-    <string name="archive_stat_gaps">ਖਾਲੀ ਥਾਵਾਂ</string>
-    <string name="archive_show_gap">ਪਹਿਲੀ ਖਾਲੀ ਥਾਂ ਦਿਖਾਓ</string>
     <string name="archive_previous_month">ਪਿਛਲਾ ਮਹੀਨਾ</string>
     <string name="archive_next_month">ਅਗਲਾ ਮਹੀਨਾ</string>
     <string name="archive_legend_complete">ਪੂਰਾ</string>
@@ -17,7 +14,6 @@
     <string name="archive_legend_not_exported">ਨਿਰਯਾਤ ਨਹੀਂ ਹੋਇਆ</string>
     <string name="archive_legend_today">ਅੱਜ</string>
     <string name="archive_day_on_track">%2$d ਵਿੱਚੋਂ %1$d ਯੋਜਨਾ ਅਨੁਸਾਰ</string>
-    <string name="archive_day_nothing">ਇਸ ਤਾਰੀਖ ਲਈ ਕੁਝ ਵੀ ਨਿਰਯਾਤ ਨਹੀਂ ਹੋਇਆ</string>
     <string name="archive_day_status">%1$s, %2$s</string>
     <string name="archive_row_last_export">ਆਖਰੀ ਨਿਰਯਾਤ %1$s</string>
     <string name="archive_action_backfill">ਪੂਰਾ ਕਰੋ</string>
@@ -185,5 +181,23 @@
     <plurals name="automations_profiles_scheduled">
         <item quantity="one">%1$d ਨਿਯਤ</item>
         <item quantity="other">%1$d ਨਿਯਤ</item>
+    </plurals>
+    <string name="archive_no_gaps">ਕੋਈ ਖਾਲੀ ਥਾਂ ਨਹੀਂ</string>
+    <string name="archive_status_updating">ਅੱਪਡੇਟ ਹੋ ਰਿਹਾ ਹੈ</string>
+    <string name="archive_status_not_due">ਬਕਾਇਆ ਨਹੀਂ</string>
+    <string name="archive_action_open">ਖੋਲ੍ਹੋ</string>
+    <string name="archive_action_retry">ਮੁੜ ਕੋਸ਼ਿਸ਼ ਕਰੋ</string>
+    <string name="archive_action_refresh">ਤਾਜ਼ਾ ਕਰੋ</string>
+    <string name="archive_health_connected">Health Connect: ਕਨੈਕਟ ਹੈ</string>
+    <string name="archive_health_not_connected">Health Connect: ਕਨੈਕਟ ਨਹੀਂ ਹੈ</string>
+    <string name="archive_day_nothing_due">ਕੁਝ ਵੀ ਬਕਾਇਆ ਨਹੀਂ</string>
+    <string name="archive_row_not_due">ਇਸ ਤਾਰੀਖ ਨੂੰ ਬਕਾਇਆ ਨਹੀਂ।</string>
+    <plurals name="archive_streak_days">
+        <item quantity="one">%1$d ਦਿਨ ਦੀ ਲੜੀ</item>
+        <item quantity="other">%1$d ਦਿਨਾਂ ਦੀ ਲੜੀ</item>
+    </plurals>
+    <plurals name="archive_gap_count">
+        <item quantity="one">%1$d ਖਾਲੀ ਥਾਂ</item>
+        <item quantity="other">%1$d ਖਾਲੀ ਥਾਂਵਾਂ</item>
     </plurals>
 </resources>

@@ -6,9 +6,6 @@
     <string name="archive_filter_all">Alle</string>
     <string name="archive_filter_current_settings">Aktuelle Einstellungen</string>
     <string name="archive_stat_archived">Archivierte Tage</string>
-    <string name="archive_stat_streak">Aktuelle Serie</string>
-    <string name="archive_stat_gaps">Lücken</string>
-    <string name="archive_show_gap">Erste Lücke anzeigen</string>
     <string name="archive_previous_month">Vorheriger Monat</string>
     <string name="archive_next_month">Nächster Monat</string>
     <string name="archive_legend_complete">Vollständig</string>
@@ -17,7 +14,6 @@
     <string name="archive_legend_not_exported">Nicht exportiert</string>
     <string name="archive_legend_today">Heute</string>
     <string name="archive_day_on_track">%1$d von %2$d im Plan</string>
-    <string name="archive_day_nothing">Für dieses Datum wurde nichts exportiert</string>
     <string name="archive_day_status">%1$s, %2$s</string>
     <string name="archive_row_last_export">Letzter Export %1$s</string>
     <string name="archive_action_backfill">Nachholen</string>
@@ -185,5 +181,23 @@
     <plurals name="automations_profiles_scheduled">
         <item quantity="one">%1$d geplant</item>
         <item quantity="other">%1$d geplant</item>
+    </plurals>
+    <string name="archive_no_gaps">Keine Lücken</string>
+    <string name="archive_status_updating">Wird aktualisiert</string>
+    <string name="archive_status_not_due">Nicht fällig</string>
+    <string name="archive_action_open">Öffnen</string>
+    <string name="archive_action_retry">Erneut versuchen</string>
+    <string name="archive_action_refresh">Aktualisieren</string>
+    <string name="archive_health_connected">Health Connect: verbunden</string>
+    <string name="archive_health_not_connected">Health Connect: nicht verbunden</string>
+    <string name="archive_day_nothing_due">Nichts fällig</string>
+    <string name="archive_row_not_due">An diesem Datum nicht fällig.</string>
+    <plurals name="archive_streak_days">
+        <item quantity="one">%1$d Tag in Folge</item>
+        <item quantity="other">%1$d Tage in Folge</item>
+    </plurals>
+    <plurals name="archive_gap_count">
+        <item quantity="one">%1$d Lücke</item>
+        <item quantity="other">%1$d Lücken</item>
     </plurals>
 </resources>

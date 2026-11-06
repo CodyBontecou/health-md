@@ -20,6 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalContext
@@ -60,6 +61,7 @@ import com.healthmd.presentation.metrics.MetricSelectionScreen
 import com.healthmd.presentation.common.ConfigurationProtectionToast
 import com.healthmd.presentation.common.ConfigurationProtectionUi
 import com.healthmd.presentation.common.LocalConfigurationProtection
+import com.healthmd.presentation.common.LocalFloatingActionClearance
 import com.healthmd.presentation.onboarding.OnboardingScreen
 import com.healthmd.presentation.paywall.PaywallScreen
 import com.healthmd.presentation.release.AndroidReleaseNotes
@@ -76,6 +78,7 @@ import com.healthmd.presentation.theme.GeistBreakpoints
 import com.healthmd.presentation.theme.GeistAdaptiveLayout
 import com.healthmd.presentation.theme.GeistRadii
 import com.healthmd.presentation.theme.GeistSizes
+import com.healthmd.presentation.theme.GeistSpacing
 import com.healthmd.presentation.theme.GeistType
 import com.healthmd.presentation.theme.LocalGeistColors
 import com.healthmd.presentation.theme.Spacing
@@ -911,6 +914,10 @@ private fun localizedRecoveryDate(date: LocalDate): String {
 /** Export now routes shown as a sheet over the current screen. */
 private val EXPORT_SHEET_ROUTES = setOf(SubRoutes.EXPORT_NOW, SubRoutes.EXPORT_BACKFILL)
 
+/** Material 3 FAB container height and its margin above the bottom bar. */
+private val FLOATING_ACTION_MIN_HEIGHT = 56.dp
+private val FLOATING_ACTION_MARGIN = 16.dp
+
 /** Reserve the measured navigation size, including wrapped labels, rather than a fixed inset. */
 @Composable
 internal fun AppNavigationLayout(
@@ -924,6 +931,9 @@ internal fun AppNavigationLayout(
         modifier = Modifier.fillMaxSize().safeDrawingPadding(),
     ) {
         val useNavigationRail = maxWidth >= GeistBreakpoints.medium.dp
+        val showsFloatingAction = onExportNow != null && !useNavigationRail
+        val density = LocalDensity.current
+        var floatingActionHeight by remember { mutableStateOf(FLOATING_ACTION_MIN_HEIGHT) }
         Row(modifier = Modifier.fillMaxSize()) {
             if (destinations.isNotEmpty() && useNavigationRail) {
                 AdaptiveNavigationRail(
@@ -948,12 +958,26 @@ internal fun AppNavigationLayout(
                     }
                 },
                 floatingActionButton = {
-                    if (onExportNow != null && !useNavigationRail) {
-                        ExportNowButton(onClick = onExportNow, expanded = true)
+                    if (onExportNow != null && showsFloatingAction) {
+                        // Measured so large font scales still clear the button.
+                        Box(
+                            Modifier.onSizeChanged {
+                                floatingActionHeight = maxOf(with(density) { it.height.toDp() }, FLOATING_ACTION_MIN_HEIGHT)
+                            },
+                        ) {
+                            ExportNowButton(onClick = onExportNow, expanded = true)
+                        }
                     }
                 },
             ) { padding ->
-                content(Modifier.fillMaxSize().padding(padding).consumeWindowInsets(padding))
+                val clearance = if (showsFloatingAction) {
+                    floatingActionHeight + FLOATING_ACTION_MARGIN + GeistSpacing.space6
+                } else {
+                    0.dp
+                }
+                CompositionLocalProvider(LocalFloatingActionClearance provides clearance) {
+                    content(Modifier.fillMaxSize().padding(padding).consumeWindowInsets(padding))
+                }
             }
         }
     }

@@ -6,9 +6,6 @@
     <string name="archive_filter_all">Барлығы</string>
     <string name="archive_filter_current_settings">Ағымдағы параметрлер</string>
     <string name="archive_stat_archived">Мұрағаттағы күндер</string>
-    <string name="archive_stat_streak">Ағымдағы серия</string>
-    <string name="archive_stat_gaps">Олқылықтар</string>
-    <string name="archive_show_gap">Бірінші олқылықты көрсету</string>
     <string name="archive_previous_month">Алдыңғы ай</string>
     <string name="archive_next_month">Келесі ай</string>
     <string name="archive_legend_complete">Толық</string>
@@ -17,7 +14,6 @@
     <string name="archive_legend_not_exported">Экспортталмаған</string>
     <string name="archive_legend_today">Бүгін</string>
     <string name="archive_day_on_track">Жоспар бойынша: %1$d / %2$d</string>
-    <string name="archive_day_nothing">Бұл күнге ештеңе экспортталмады</string>
     <string name="archive_day_status">%1$s, %2$s</string>
     <string name="archive_row_last_export">Соңғы экспорт: %1$s</string>
     <string name="archive_action_backfill">Толықтыру</string>
@@ -185,5 +181,23 @@
     <plurals name="automations_profiles_scheduled">
         <item quantity="one">%1$d жоспарланған</item>
         <item quantity="other">%1$d жоспарланған</item>
+    </plurals>
+    <string name="archive_no_gaps">Олқылық жоқ</string>
+    <string name="archive_status_updating">Жаңартылуда</string>
+    <string name="archive_status_not_due">Мерзімі емес</string>
+    <string name="archive_action_open">Ашу</string>
+    <string name="archive_action_retry">Қайталау</string>
+    <string name="archive_action_refresh">Жаңарту</string>
+    <string name="archive_health_connected">Health Connect: қосылған</string>
+    <string name="archive_health_not_connected">Health Connect: қосылмаған</string>
+    <string name="archive_day_nothing_due">Мерзімі келгені жоқ</string>
+    <string name="archive_row_not_due">Бұл күні мерзімі емес.</string>
+    <plurals name="archive_streak_days">
+        <item quantity="one">%1$d күндік серия</item>
+        <item quantity="other">%1$d күндік серия</item>
+    </plurals>
+    <plurals name="archive_gap_count">
+        <item quantity="one">%1$d олқылық</item>
+        <item quantity="other">%1$d олқылық</item>
     </plurals>
 </resources>

@@ -6,9 +6,6 @@
     <string name="archive_filter_all">すべて</string>
     <string name="archive_filter_current_settings">現在の設定</string>
     <string name="archive_stat_archived">アーカイブ済みの日数</string>
-    <string name="archive_stat_streak">現在の連続日数</string>
-    <string name="archive_stat_gaps">欠落</string>
-    <string name="archive_show_gap">最初の欠落を表示</string>
     <string name="archive_previous_month">前の月</string>
     <string name="archive_next_month">次の月</string>
     <string name="archive_legend_complete">完了</string>
@@ -17,7 +14,6 @@
     <string name="archive_legend_not_exported">未エクスポート</string>
     <string name="archive_legend_today">今日</string>
     <string name="archive_day_on_track">%2$d 件中 %1$d 件が予定どおり</string>
-    <string name="archive_day_nothing">この日付にはエクスポートされたものがありません</string>
     <string name="archive_day_status">%1$s、%2$s</string>
     <string name="archive_row_last_export">前回のエクスポート：%1$s</string>
     <string name="archive_action_backfill">補完</string>
@@ -177,5 +173,21 @@
     </plurals>
     <plurals name="automations_profiles_scheduled">
         <item quantity="other">%1$d件をスケジュール済み</item>
+    </plurals>
+    <string name="archive_no_gaps">欠落なし</string>
+    <string name="archive_status_updating">更新中</string>
+    <string name="archive_status_not_due">対象外</string>
+    <string name="archive_action_open">開く</string>
+    <string name="archive_action_retry">再試行</string>
+    <string name="archive_action_refresh">更新</string>
+    <string name="archive_health_connected">Health Connect：接続済み</string>
+    <string name="archive_health_not_connected">Health Connect：未接続</string>
+    <string name="archive_day_nothing_due">対象なし</string>
+    <string name="archive_row_not_due">この日は対象外です。</string>
+    <plurals name="archive_streak_days">
+        <item quantity="other">%1$d日連続</item>
+    </plurals>
+    <plurals name="archive_gap_count">
+        <item quantity="other">欠落 %1$d件</item>
     </plurals>
 </resources>

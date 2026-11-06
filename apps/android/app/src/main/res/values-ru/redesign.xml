@@ -6,9 +6,6 @@
     <string name="archive_filter_all">Все</string>
     <string name="archive_filter_current_settings">Текущие настройки</string>
     <string name="archive_stat_archived">Дней в архиве</string>
-    <string name="archive_stat_streak">Текущая серия</string>
-    <string name="archive_stat_gaps">Пропуски</string>
-    <string name="archive_show_gap">Показать первый пропуск</string>
     <string name="archive_previous_month">Предыдущий месяц</string>
     <string name="archive_next_month">Следующий месяц</string>
     <string name="archive_legend_complete">Полностью</string>
@@ -17,7 +14,6 @@
     <string name="archive_legend_not_exported">Не экспортировано</string>
     <string name="archive_legend_today">Сегодня</string>
     <string name="archive_day_on_track">По плану: %1$d из %2$d</string>
-    <string name="archive_day_nothing">За эту дату ничего не экспортировано</string>
     <string name="archive_day_status">%1$s, %2$s</string>
     <string name="archive_row_last_export">Последний экспорт: %1$s</string>
     <string name="archive_action_backfill">Догнать</string>
@@ -201,5 +197,27 @@
         <item quantity="few">по расписанию: %1$d</item>
         <item quantity="many">по расписанию: %1$d</item>
         <item quantity="other">по расписанию: %1$d</item>
+    </plurals>
+    <string name="archive_no_gaps">Без пропусков</string>
+    <string name="archive_status_updating">Обновляется</string>
+    <string name="archive_status_not_due">Не запланировано</string>
+    <string name="archive_action_open">Открыть</string>
+    <string name="archive_action_retry">Повторить</string>
+    <string name="archive_action_refresh">Обновить</string>
+    <string name="archive_health_connected">Health Connect: подключено</string>
+    <string name="archive_health_not_connected">Health Connect: не подключено</string>
+    <string name="archive_day_nothing_due">Ничего не запланировано</string>
+    <string name="archive_row_not_due">На эту дату не запланировано.</string>
+    <plurals name="archive_streak_days">
+        <item quantity="one">Серия: %1$d день</item>
+        <item quantity="few">Серия: %1$d дня</item>
+        <item quantity="many">Серия: %1$d дней</item>
+        <item quantity="other">Серия: %1$d дня</item>
+    </plurals>
+    <plurals name="archive_gap_count">
+        <item quantity="one">%1$d пропуск</item>
+        <item quantity="few">%1$d пропуска</item>
+        <item quantity="many">%1$d пропусков</item>
+        <item quantity="other">%1$d пропуска</item>
     </plurals>
 </resources>

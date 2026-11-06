@@ -42,6 +42,8 @@ data class GeistColors(
     val coverageComplete: Color,
     val onCoverageComplete: Color,
     val coverageMissing: Color,
+    /** Archive "No gaps": success text on the `brandSubtle` stats card. */
+    val coverageNoGaps: Color,
     val gray: GeistColorScale,
     val grayAlpha: GeistColorScale,
     val blue: GeistColorScale,
@@ -78,6 +80,7 @@ internal val GeistLightColors = GeistColors(
     coverageComplete = Color(0xFFDCCFFA),
     onCoverageComplete = Color(0xFF2D1F4F),
     coverageMissing = Color(0xFFB93C0A),
+    coverageNoGaps = Color(0xFF15803D),
     gray = GeistColorScale(
         Color(0xFFF2ECF4), Color(0xFFECE6EE), Color(0xFFE6E0E9), Color(0xFFE0DAE2),
         Color(0xFFCAC4D0), Color(0xFFAEA9B4), Color(0xFF7A757F), Color(0xFF605D66),
@@ -140,6 +143,7 @@ internal val GeistDarkColors = GeistColors(
     coverageComplete = Color(0xFF3B3058),
     onCoverageComplete = Color(0xFFFFFFFF),
     coverageMissing = Color(0xFFFFA184),
+    coverageNoGaps = Color(0xFF8BF0B4),
     gray = GeistColorScale(
         Color(0xFF211F26), Color(0xFF2B2930), Color(0xFF36343B), Color(0xFF3B383E),
         Color(0xFF49454F), Color(0xFF625F68), Color(0xFF948F99), Color(0xFFAEA9B4),

@@ -19,6 +19,12 @@ import androidx.compose.ui.unit.dp
  */
 val LocalHostNavigationBarInset = compositionLocalOf<Dp> { 0.dp }
 
+/**
+ * Bottom space a scrolling screen leaves so its last row clears the floating Export now
+ * button: the button, its margin and a gap. Zero where no floating button is shown (rail).
+ */
+val LocalFloatingActionClearance = compositionLocalOf<Dp> { 0.dp }
+
 /** Measures the activity's navigation bar once, outside any dialog, for the dialogs below it. */
 @Composable
 fun ProvideHostNavigationBarInset(content: @Composable () -> Unit) {

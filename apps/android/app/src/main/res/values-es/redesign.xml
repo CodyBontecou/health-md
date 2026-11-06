@@ -6,9 +6,6 @@
     <string name="archive_filter_all">Todo</string>
     <string name="archive_filter_current_settings">Ajustes actuales</string>
     <string name="archive_stat_archived">Días archivados</string>
-    <string name="archive_stat_streak">Racha actual</string>
-    <string name="archive_stat_gaps">Huecos</string>
-    <string name="archive_show_gap">Mostrar el primer hueco</string>
     <string name="archive_previous_month">Mes anterior</string>
     <string name="archive_next_month">Mes siguiente</string>
     <string name="archive_legend_complete">Completo</string>
@@ -17,7 +14,6 @@
     <string name="archive_legend_not_exported">Sin exportar</string>
     <string name="archive_legend_today">Hoy</string>
     <string name="archive_day_on_track">%1$d de %2$d al día</string>
-    <string name="archive_day_nothing">No se exportó nada para esta fecha</string>
     <string name="archive_day_status">%1$s, %2$s</string>
     <string name="archive_row_last_export">Última exportación %1$s</string>
     <string name="archive_action_backfill">Recuperar</string>
@@ -193,5 +189,25 @@
         <item quantity="one">%1$d programado</item>
         <item quantity="many">%1$d de programados</item>
         <item quantity="other">%1$d programados</item>
+    </plurals>
+    <string name="archive_no_gaps">Sin huecos</string>
+    <string name="archive_status_updating">Actualizando</string>
+    <string name="archive_status_not_due">No toca</string>
+    <string name="archive_action_open">Abrir</string>
+    <string name="archive_action_retry">Reintentar</string>
+    <string name="archive_action_refresh">Actualizar</string>
+    <string name="archive_health_connected">Health Connect: conectado</string>
+    <string name="archive_health_not_connected">Health Connect: no conectado</string>
+    <string name="archive_day_nothing_due">Nada pendiente</string>
+    <string name="archive_row_not_due">No toca en esta fecha.</string>
+    <plurals name="archive_streak_days">
+        <item quantity="one">Racha de %1$d día</item>
+        <item quantity="many">Racha de %1$d días</item>
+        <item quantity="other">Racha de %1$d días</item>
+    </plurals>
+    <plurals name="archive_gap_count">
+        <item quantity="one">%1$d hueco</item>
+        <item quantity="many">%1$d huecos</item>
+        <item quantity="other">%1$d huecos</item>
     </plurals>
 </resources>

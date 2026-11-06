@@ -6,9 +6,6 @@
     <string name="archive_filter_all">Toate</string>
     <string name="archive_filter_current_settings">Setările curente</string>
     <string name="archive_stat_archived">Zile arhivate</string>
-    <string name="archive_stat_streak">Serie curentă</string>
-    <string name="archive_stat_gaps">Goluri</string>
-    <string name="archive_show_gap">Afișați primul gol</string>
     <string name="archive_previous_month">Luna anterioară</string>
     <string name="archive_next_month">Luna următoare</string>
     <string name="archive_legend_complete">Complet</string>
@@ -17,7 +14,6 @@
     <string name="archive_legend_not_exported">Neexportat</string>
     <string name="archive_legend_today">Astăzi</string>
     <string name="archive_day_on_track">%1$d din %2$d la zi</string>
-    <string name="archive_day_nothing">Nu s-a exportat nimic pentru această dată</string>
     <string name="archive_day_status">%1$s, %2$s</string>
     <string name="archive_row_last_export">Ultimul export %1$s</string>
     <string name="archive_action_backfill">Recuperați</string>
@@ -193,5 +189,25 @@
         <item quantity="one">%1$d programat</item>
         <item quantity="few">%1$d programate</item>
         <item quantity="other">%1$d programate</item>
+    </plurals>
+    <string name="archive_no_gaps">Fără goluri</string>
+    <string name="archive_status_updating">Se actualizează</string>
+    <string name="archive_status_not_due">Nu este programat</string>
+    <string name="archive_action_open">Deschideți</string>
+    <string name="archive_action_retry">Reîncercați</string>
+    <string name="archive_action_refresh">Reîmprospătați</string>
+    <string name="archive_health_connected">Health Connect: conectat</string>
+    <string name="archive_health_not_connected">Health Connect: neconectat</string>
+    <string name="archive_day_nothing_due">Nimic programat</string>
+    <string name="archive_row_not_due">Nu este programat la această dată.</string>
+    <plurals name="archive_streak_days">
+        <item quantity="one">Serie de %1$d zi</item>
+        <item quantity="few">Serie de %1$d zile</item>
+        <item quantity="other">Serie de %1$d de zile</item>
+    </plurals>
+    <plurals name="archive_gap_count">
+        <item quantity="one">%1$d gol</item>
+        <item quantity="few">%1$d goluri</item>
+        <item quantity="other">%1$d de goluri</item>
     </plurals>
 </resources>

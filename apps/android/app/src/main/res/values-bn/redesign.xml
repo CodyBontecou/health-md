@@ -6,9 +6,6 @@
     <string name="archive_filter_all">সব</string>
     <string name="archive_filter_current_settings">বর্তমান সেটিংস</string>
     <string name="archive_stat_archived">আর্কাইভ করা দিন</string>
-    <string name="archive_stat_streak">বর্তমান ধারা</string>
-    <string name="archive_stat_gaps">ফাঁক</string>
-    <string name="archive_show_gap">প্রথম ফাঁক দেখান</string>
     <string name="archive_previous_month">আগের মাস</string>
     <string name="archive_next_month">পরের মাস</string>
     <string name="archive_legend_complete">সম্পূর্ণ</string>
@@ -17,7 +14,6 @@
     <string name="archive_legend_not_exported">রপ্তানি হয়নি</string>
     <string name="archive_legend_today">আজ</string>
     <string name="archive_day_on_track">%2$d-এর মধ্যে %1$d পরিকল্পনা অনুযায়ী</string>
-    <string name="archive_day_nothing">এই তারিখের জন্য কিছু রপ্তানি হয়নি</string>
     <string name="archive_day_status">%1$s, %2$s</string>
     <string name="archive_row_last_export">শেষ রপ্তানি %1$s</string>
     <string name="archive_action_backfill">পূরণ করুন</string>
@@ -185,5 +181,23 @@
     <plurals name="automations_profiles_scheduled">
         <item quantity="one">%1$d নির্ধারিত</item>
         <item quantity="other">%1$d নির্ধারিত</item>
+    </plurals>
+    <string name="archive_no_gaps">কোনো ফাঁক নেই</string>
+    <string name="archive_status_updating">আপডেট হচ্ছে</string>
+    <string name="archive_status_not_due">বকেয়া নয়</string>
+    <string name="archive_action_open">খুলুন</string>
+    <string name="archive_action_retry">আবার চেষ্টা করুন</string>
+    <string name="archive_action_refresh">রিফ্রেশ করুন</string>
+    <string name="archive_health_connected">Health Connect: সংযুক্ত</string>
+    <string name="archive_health_not_connected">Health Connect: সংযুক্ত নয়</string>
+    <string name="archive_day_nothing_due">কিছুই বকেয়া নেই</string>
+    <string name="archive_row_not_due">এই তারিখে বকেয়া নয়।</string>
+    <plurals name="archive_streak_days">
+        <item quantity="one">%1$d দিনের ধারা</item>
+        <item quantity="other">%1$d দিনের ধারা</item>
+    </plurals>
+    <plurals name="archive_gap_count">
+        <item quantity="one">%1$dটি ফাঁক</item>
+        <item quantity="other">%1$dটি ফাঁক</item>
     </plurals>
 </resources>

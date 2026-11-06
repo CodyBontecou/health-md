@@ -6,9 +6,6 @@
     <string name="archive_filter_all">All</string>
     <string name="archive_filter_current_settings">Current settings</string>
     <string name="archive_stat_archived">Days archived</string>
-    <string name="archive_stat_streak">Current streak</string>
-    <string name="archive_stat_gaps">Gaps</string>
-    <string name="archive_show_gap">Show first gap</string>
     <string name="archive_previous_month">Previous month</string>
     <string name="archive_next_month">Next month</string>
     <string name="archive_legend_complete">Complete</string>
@@ -17,7 +14,6 @@
     <string name="archive_legend_not_exported">Not exported</string>
     <string name="archive_legend_today">Today</string>
     <string name="archive_day_on_track">%1$d of %2$d on track</string>
-    <string name="archive_day_nothing">Nothing exported for this date</string>
     <string name="archive_day_status">%1$s, %2$s</string>
     <string name="archive_row_last_export">Last export %1$s</string>
     <string name="archive_action_backfill">Backfill</string>
@@ -185,5 +181,23 @@
     <plurals name="automations_profiles_scheduled">
         <item quantity="one">%1$d scheduled</item>
         <item quantity="other">%1$d scheduled</item>
+    </plurals>
+    <string name="archive_no_gaps">No gaps</string>
+    <string name="archive_status_updating">Updating</string>
+    <string name="archive_status_not_due">Not due</string>
+    <string name="archive_action_open">Open</string>
+    <string name="archive_action_retry">Retry</string>
+    <string name="archive_action_refresh">Refresh</string>
+    <string name="archive_health_connected">Health Connect: connected</string>
+    <string name="archive_health_not_connected">Health Connect: not connected</string>
+    <string name="archive_day_nothing_due">Nothing due</string>
+    <string name="archive_row_not_due">Not due on this date.</string>
+    <plurals name="archive_streak_days">
+        <item quantity="one">%1$d-day streak</item>
+        <item quantity="other">%1$d-day streak</item>
+    </plurals>
+    <plurals name="archive_gap_count">
+        <item quantity="one">%1$d gap</item>
+        <item quantity="other">%1$d gaps</item>
     </plurals>
 </resources>

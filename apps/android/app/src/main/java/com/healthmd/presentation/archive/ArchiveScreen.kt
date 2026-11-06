@@ -27,9 +27,13 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.History
+import androidx.compose.material.icons.outlined.LocalFireDepartment
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
@@ -50,6 +54,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -57,12 +63,17 @@ import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.healthmd.R
+import com.healthmd.data.health.HealthConnectIntentLauncher
 import com.healthmd.presentation.common.GeistCard
 import com.healthmd.presentation.common.GeistCardClickable
+import com.healthmd.presentation.common.LocalConfigurationProtection
+import com.healthmd.presentation.common.LocalFloatingActionClearance
 import com.healthmd.presentation.common.PrimaryButton
 import com.healthmd.presentation.theme.GeistBreakpoints
 import com.healthmd.presentation.theme.GeistColors
@@ -99,6 +110,27 @@ fun ArchiveScreen(
     viewModel: ArchiveViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val healthConnectConnected by viewModel.healthConnectConnected.collectAsStateWithLifecycle()
+    // Permissions change in Health Connect itself, so re-read them whenever the Archive returns.
+    LifecycleResumeEffect(viewModel) {
+        viewModel.refreshHealthConnect()
+        onPauseOrDispose { }
+    }
+    val context = LocalContext.current
+    val protection = LocalConfigurationProtection.current
+    val header: @Composable (Modifier) -> Unit = { modifier ->
+        ArchiveHeader(
+            healthConnectConnected = healthConnectConnected,
+            onOpenHealthConnect = {
+                if (protection.enabled) {
+                    protection.onBlockedChange()
+                } else {
+                    HealthConnectIntentLauncher(context).openSettings()
+                }
+            },
+            modifier = modifier,
+        )
+    }
     BoxWithConstraints(Modifier.fillMaxSize()) {
         if (maxWidth >= TWO_PANE_MIN_WIDTH && !(state.isLoaded && !state.hasHistory)) {
             ArchiveLargeLayout(
@@ -109,6 +141,7 @@ fun ArchiveScreen(
                 onOpenDay = onOpenDay,
                 onOpenHistory = onOpenHistory,
                 onOpenAutomations = onOpenAutomations,
+                header = header,
             )
             return@BoxWithConstraints
         }
@@ -119,7 +152,37 @@ fun ArchiveScreen(
             onOpenHistory = onOpenHistory,
             onBackfill = onBackfill,
             onOpenDay = onOpenDay,
+            header = header,
         )
+    }
+}
+
+/** The Archive title with the Health Connect status; there is no overflow menu to offer. */
+@Composable
+private fun ArchiveHeader(
+    healthConnectConnected: Boolean?,
+    onOpenHealthConnect: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val colors = LocalGeistColors.current
+    Row(modifier = modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            text = stringResource(R.string.nav_archive),
+            style = MaterialTheme.typography.headlineMedium,
+            color = colors.primary,
+            modifier = Modifier.weight(1f).padding(horizontal = GeistSpacing.space1),
+        )
+        if (healthConnectConnected != null) {
+            IconButton(onClick = onOpenHealthConnect) {
+                Icon(
+                    imageVector = if (healthConnectConnected) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
+                    contentDescription = stringResource(
+                        if (healthConnectConnected) R.string.archive_health_connected else R.string.archive_health_not_connected,
+                    ),
+                    tint = if (healthConnectConnected) colors.brandPrimary else colors.secondary,
+                )
+            }
+        }
     }
 }
 
@@ -136,6 +199,7 @@ private fun ArchiveLargeLayout(
     onOpenDay: (LocalDate) -> Unit,
     onOpenHistory: () -> Unit,
     onOpenAutomations: () -> Unit,
+    header: @Composable (Modifier) -> Unit,
 ) {
     val colors = LocalGeistColors.current
     Row(
@@ -152,12 +216,7 @@ private fun ArchiveLargeLayout(
                 .padding(horizontal = GeistSpacing.space4, vertical = GeistSpacing.space4),
             verticalArrangement = Arrangement.spacedBy(GeistSpacing.space3),
         ) {
-            Text(
-                text = stringResource(R.string.nav_archive),
-                style = MaterialTheme.typography.headlineMedium,
-                color = colors.primary,
-                modifier = Modifier.padding(horizontal = GeistSpacing.space1),
-            )
+            header(Modifier)
             if (state.month.profiles.size > 1) {
                 ArchiveFilterChips(
                     profiles = state.month.profiles,
@@ -234,6 +293,7 @@ private fun ArchiveCompactLayout(
     onOpenHistory: () -> Unit,
     onBackfill: (LocalDate) -> Unit,
     onOpenDay: (LocalDate) -> Unit,
+    header: @Composable (Modifier) -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -242,12 +302,7 @@ private fun ArchiveCompactLayout(
             .padding(horizontal = GeistSpacing.space4, vertical = GeistSpacing.space4),
         verticalArrangement = Arrangement.spacedBy(GeistSpacing.space3),
     ) {
-        Text(
-            text = stringResource(R.string.nav_archive),
-            style = MaterialTheme.typography.headlineMedium,
-            color = LocalGeistColors.current.primary,
-            modifier = Modifier.padding(horizontal = GeistSpacing.space1, vertical = GeistSpacing.space2),
-        )
+        header(Modifier.padding(vertical = GeistSpacing.space1))
         if (state.isLoaded && !state.hasHistory) {
             ArchiveEmptyState(onExportNow = onExportNow)
         } else {
@@ -270,8 +325,10 @@ private fun ArchiveCompactLayout(
             }
         }
         ArchiveHistoryCard(onOpenHistory)
-        // Clears the floating Export now action on compact layouts.
-        Spacer(Modifier.height(GeistSpacing.space24))
+        // Clears the floating Export now action; zero beside a navigation rail. The column's
+        // own bottom padding and item spacing already sit above it.
+        val clearance = LocalFloatingActionClearance.current - GeistSpacing.space4 - GeistSpacing.space3
+        if (clearance > 0.dp) Spacer(Modifier.height(clearance))
     }
 }
 
@@ -331,7 +388,6 @@ private fun ArchiveFilterChips(
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun ArchiveStatsCard(stats: ArchiveStats, onShowGap: () -> Unit) {
     val colors = LocalGeistColors.current
@@ -354,34 +410,41 @@ private fun ArchiveStatsCard(stats: ArchiveStats, onShowGap: () -> Unit) {
                 modifier = Modifier.padding(bottom = GeistSpacing.space2),
             )
         }
-        FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(GeistSpacing.space4),
-            verticalArrangement = Arrangement.Center,
+        Row(
+            modifier = Modifier.fillMaxWidth().heightIn(min = GeistSizes.minimumTouchTarget),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            StatLabel(label = stringResource(R.string.archive_stat_streak), value = stats.streak, color = colors.brandOnSubtle)
-            StatLabel(
-                label = stringResource(R.string.archive_stat_gaps),
-                value = stats.gapCount,
-                color = if (stats.gapCount > 0) colors.coverageMissing else colors.brandOnSubtle,
+            Icon(
+                Icons.Outlined.LocalFireDepartment,
+                contentDescription = null,
+                tint = colors.brandOnSubtle,
+                modifier = Modifier.size(20.dp),
             )
-            if (stats.earliestGap != null) {
-                TextButton(onClick = onShowGap) {
-                    Text(stringResource(R.string.archive_show_gap), style = GeistType.button14, color = colors.brandOnSubtle)
-                }
+            Spacer(Modifier.width(GeistSpacing.space2))
+            Text(
+                text = pluralStringResource(R.plurals.archive_streak_days, stats.streak, stats.streak),
+                style = GeistType.label14,
+                fontWeight = FontWeight.Medium,
+                color = colors.brandOnSubtle,
+                modifier = Modifier.weight(1f),
+            )
+            // Selects the earliest gap of the shown month; with none there is nothing to show.
+            val gapColor = if (stats.gapCount > 0) colors.coverageMissing else colors.coverageNoGaps
+            TextButton(
+                onClick = onShowGap,
+                enabled = stats.earliestGap != null,
+                colors = ButtonDefaults.textButtonColors(contentColor = gapColor, disabledContentColor = gapColor),
+            ) {
+                Text(
+                    text = if (stats.gapCount > 0) {
+                        pluralStringResource(R.plurals.archive_gap_count, stats.gapCount, stats.gapCount)
+                    } else {
+                        stringResource(R.string.archive_no_gaps)
+                    },
+                    style = GeistType.button14,
+                )
             }
         }
-    }
-}
-
-@Composable
-private fun StatLabel(label: String, value: Int, color: Color) {
-    Row(
-        modifier = Modifier.heightIn(min = GeistSizes.minimumTouchTarget),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(GeistSpacing.space2),
-    ) {
-        Text(label, style = GeistType.label14, color = color)
-        Text(value.toString(), style = GeistType.heading16, color = color)
     }
 }
 
@@ -575,17 +638,18 @@ private fun ArchiveDayCard(
 ) {
     val colors = LocalGeistColors.current
     val rows = state.selectedDay
-    val (onTrack, due) = ArchiveCoverage.onTrack(rows)
+    val (onTrack, due) = ArchiveCoverage.onTrack(rows.map { it.day })
+    val date = state.selection.selectedDate
     GeistCard(padding = GeistSpacing.space4) {
         Text(
-            text = localizedDate(state.selection.selectedDate, DateFormat.FULL),
+            text = localizedDate(date, DateFormat.FULL),
             style = MaterialTheme.typography.titleMedium,
             color = colors.primary,
             modifier = Modifier.padding(horizontal = GeistSpacing.space1),
         )
         Text(
             text = if (due == 0) {
-                stringResource(R.string.archive_day_nothing)
+                stringResource(R.string.archive_day_nothing_due)
             } else {
                 stringResource(R.string.archive_day_on_track, onTrack, due)
             },
@@ -595,58 +659,96 @@ private fun ArchiveDayCard(
         )
         rows.forEach { row ->
             Spacer(Modifier.height(GeistSpacing.space3))
-            val openDayLabel = stringResource(R.string.day_page_open)
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = GeistSizes.minimumTouchTarget)
-                    .clip(RoundedCornerShape(GeistRadii.small))
-                    .clickable(
-                        enabled = row.status != CoverageStatus.NOT_DUE,
-                        role = Role.Button,
-                        onClickLabel = openDayLabel,
-                    ) { onOpenDay(state.selection.selectedDate) },
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(GeistSpacing.space3),
-            ) {
-                ProfileDot(
-                    color = profileColor(colors, state.month.profiles.indexOf(row.profile).coerceAtLeast(0)),
-                    filled = true,
-                    size = 12,
+            ArchiveDayRowItem(
+                row = row,
+                color = profileColor(colors, state.month.profiles.indexOf(row.day.profile).coerceAtLeast(0)),
+                onAction = { action ->
+                    when (action) {
+                        ArchiveDayAction.OPEN -> onOpenDay(date)
+                        // Export now preset to this date writes, re-writes or refreshes it.
+                        ArchiveDayAction.REEXPORT, ArchiveDayAction.RETRY,
+                        ArchiveDayAction.BACKFILL, ArchiveDayAction.REFRESH -> onBackfill(date)
+                    }
+                },
+            )
+        }
+    }
+}
+
+@Composable
+private fun ArchiveDayRowItem(row: ArchiveDayRow, color: Color, onAction: (ArchiveDayAction) -> Unit) {
+    val colors = LocalGeistColors.current
+    val day = row.day
+    Row(
+        modifier = Modifier.fillMaxWidth().heightIn(min = GeistSizes.minimumTouchTarget),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(GeistSpacing.space3),
+    ) {
+        Box(
+            modifier = Modifier.size(GeistSizes.control).background(colors.secondaryContainer, CircleShape),
+            contentAlignment = Alignment.Center,
+        ) {
+            ProfileDot(color = color, filled = true, size = 12)
+        }
+        Column(modifier = Modifier.weight(1f)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(GeistSpacing.space2)) {
+                Text(
+                    profileLabel(day.profile),
+                    style = GeistType.heading14,
+                    color = colors.primary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false),
                 )
-                Column(modifier = Modifier.weight(1f)) {
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(GeistSpacing.space2)) {
-                        Text(profileLabel(row.profile), style = GeistType.heading14, color = colors.primary)
-                        StatusBadge(row.status)
-                    }
-                    row.latestEntry?.let { entry ->
-                        Text(
-                            text = stringResource(R.string.archive_row_last_export, localizedDateTime(entry.timestamp)),
-                            style = GeistType.label13,
-                            color = colors.secondary,
-                        )
-                    }
-                }
-                if (row.status == CoverageStatus.MISSING || row.status == CoverageStatus.PARTIAL) {
-                    Button(
-                        onClick = { onBackfill(state.selection.selectedDate) },
-                        shape = CircleShape,
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = colors.brandPrimary,
-                            contentColor = colors.brandOnPrimary,
-                        ),
-                    ) {
-                        Text(
-                            stringResource(
-                                if (row.status == CoverageStatus.PARTIAL) R.string.archive_action_reexport else R.string.archive_action_backfill,
-                            ),
-                            style = GeistType.button14,
-                        )
-                    }
-                }
+                StatusBadge(day.status)
+            }
+            row.path?.let { path ->
+                Text(
+                    text = path,
+                    style = GeistType.label13Mono,
+                    color = colors.secondary,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            val note = when {
+                day.status == CoverageStatus.NOT_DUE -> stringResource(R.string.archive_row_not_due)
+                day.latestEntry != null -> stringResource(R.string.archive_row_last_export, localizedDateTime(day.latestEntry.timestamp))
+                else -> null
+            }
+            note?.let { Text(it, style = GeistType.label13, color = colors.secondary) }
+        }
+        row.action?.let { action ->
+            val label = stringResource(action.labelRes())
+            if (action.isProminent) {
+                Button(
+                    onClick = { onAction(action) },
+                    shape = CircleShape,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = colors.brandPrimary,
+                        contentColor = colors.brandOnPrimary,
+                    ),
+                ) { Text(label, style = GeistType.button14) }
+            } else {
+                FilledTonalButton(
+                    onClick = { onAction(action) },
+                    shape = CircleShape,
+                    colors = ButtonDefaults.filledTonalButtonColors(
+                        containerColor = colors.secondaryContainer,
+                        contentColor = colors.onSecondaryContainer,
+                    ),
+                ) { Text(label, style = GeistType.button14) }
             }
         }
     }
+}
+
+private fun ArchiveDayAction.labelRes(): Int = when (this) {
+    ArchiveDayAction.OPEN -> R.string.archive_action_open
+    ArchiveDayAction.REEXPORT -> R.string.archive_action_reexport
+    ArchiveDayAction.RETRY -> R.string.archive_action_retry
+    ArchiveDayAction.BACKFILL -> R.string.archive_action_backfill
+    ArchiveDayAction.REFRESH -> R.string.archive_action_refresh
 }
 
 @Composable
@@ -658,8 +760,13 @@ private fun StatusBadge(status: CoverageStatus) {
         CoverageStatus.PARTIAL, CoverageStatus.IN_PROGRESS -> colors.brandPrimary
         CoverageStatus.NOT_DUE -> colors.secondary
     }
+    val label = when (status) {
+        CoverageStatus.NOT_DUE -> R.string.archive_status_not_due
+        CoverageStatus.IN_PROGRESS -> R.string.archive_status_updating
+        else -> status.labelRes()
+    }
     Text(
-        text = stringResource(status.labelRes()),
+        text = stringResource(label),
         style = GeistType.label12,
         color = tint,
         modifier = Modifier

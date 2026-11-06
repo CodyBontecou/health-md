@@ -6,9 +6,6 @@
     <string name="archive_filter_all">Tout</string>
     <string name="archive_filter_current_settings">Réglages actuels</string>
     <string name="archive_stat_archived">Jours archivés</string>
-    <string name="archive_stat_streak">Série en cours</string>
-    <string name="archive_stat_gaps">Lacunes</string>
-    <string name="archive_show_gap">Afficher la première lacune</string>
     <string name="archive_previous_month">Mois précédent</string>
     <string name="archive_next_month">Mois suivant</string>
     <string name="archive_legend_complete">Complet</string>
@@ -17,7 +14,6 @@
     <string name="archive_legend_not_exported">Non exporté</string>
     <string name="archive_legend_today">Aujourd’hui</string>
     <string name="archive_day_on_track">%1$d sur %2$d à jour</string>
-    <string name="archive_day_nothing">Rien n’a été exporté pour cette date</string>
     <string name="archive_day_status">%1$s, %2$s</string>
     <string name="archive_row_last_export">Dernier export %1$s</string>
     <string name="archive_action_backfill">Rattraper</string>
@@ -193,5 +189,25 @@
         <item quantity="one">%1$d planifié</item>
         <item quantity="many">%1$d de planifiés</item>
         <item quantity="other">%1$d planifiés</item>
+    </plurals>
+    <string name="archive_no_gaps">Aucun manque</string>
+    <string name="archive_status_updating">Mise à jour</string>
+    <string name="archive_status_not_due">Non prévu</string>
+    <string name="archive_action_open">Ouvrir</string>
+    <string name="archive_action_retry">Réessayer</string>
+    <string name="archive_action_refresh">Actualiser</string>
+    <string name="archive_health_connected">Health Connect : connecté</string>
+    <string name="archive_health_not_connected">Health Connect : non connecté</string>
+    <string name="archive_day_nothing_due">Rien de prévu</string>
+    <string name="archive_row_not_due">Rien de prévu à cette date.</string>
+    <plurals name="archive_streak_days">
+        <item quantity="one">Série de %1$d jour</item>
+        <item quantity="many">Série de %1$d jours</item>
+        <item quantity="other">Série de %1$d jours</item>
+    </plurals>
+    <plurals name="archive_gap_count">
+        <item quantity="one">%1$d manque</item>
+        <item quantity="many">%1$d manques</item>
+        <item quantity="other">%1$d manques</item>
     </plurals>
 </resources>

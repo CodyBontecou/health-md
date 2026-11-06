@@ -33,6 +33,7 @@ colors:
   coverage-complete: "#dccffa"
   on-coverage-complete: "#2d1f4f"
   coverage-missing: "#b93c0a"
+  coverage-no-gaps: "#15803d"
   gray-alpha-100: "#0000000d"
   gray-alpha-200: "#00000015"
   gray-alpha-300: "#0000001a"
@@ -467,7 +468,7 @@ This is the Light theme. The Dark theme uses the same token names with different
 
 `background-100` is the page surface and `background-200` the card and list-group surface. The `gray-*` steps are tonal containers and text: `gray-100`–`gray-300` are container fills (navigation bar, chips, inputs), `gray-500` is the outline-variant used for dividers and chip borders, `gray-700` is the outline and the disabled-text token, `gray-900` is secondary text and `gray-1000` primary text. `gray-alpha-*` remain for translucent overlays and scrims. The `brand-*` tonal palette carries primary actions (`brand-primary` on `brand-on-primary`), primary containers such as the Export now button and hero cards (`brand-subtle` on `brand-on-subtle`), and selection. `secondary-container` fills selected chips, segmented buttons, navigation indicators and tonal buttons. Semantic accents keep their meaning: `green` success, `red` errors, `amber` warnings, plus `blue`, `teal`, `purple` and `pink` for automation identity and charts.
 
-Archive coverage uses dedicated day states: complete days fill with `coverage-complete` and `on-coverage-complete` text; partial days use `gray-300` with a 3px `brand-primary` bottom bar; missing days use a 1.5px dashed `coverage-missing` outline and number; today has a 2px `brand-primary` outline; dates with nothing due render at 38% opacity. Color never carries meaning alone: every day exposes its status in its accessibility label and the legend names each state.
+Archive coverage uses dedicated day states: complete days fill with `coverage-complete` and `on-coverage-complete` text; partial days use `gray-300` with a 3px `brand-primary` bottom bar; missing days use a 1.5px dashed `coverage-missing` outline and number; today has a 2px `brand-primary` outline; dates with nothing due render at 38% opacity. The stats card names its gap count in `coverage-missing`, or "No gaps" in `coverage-no-gaps`, on `brand-subtle`. Color never carries meaning alone: every day exposes its status in its accessibility label and the legend names each state.
 
 ## Typography
 
