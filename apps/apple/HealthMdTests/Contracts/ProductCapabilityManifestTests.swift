@@ -33,7 +33,6 @@ final class ProductCapabilityManifestTests: XCTestCase {
             [
                 "account.clinic-sync-requests",
                 "core.shared-rust-profile-engine",
-                "export.coverage-calendar",
                 "setup.share-portable-configuration",
             ]
         )
@@ -132,6 +131,8 @@ final class ProductCapabilityManifestTests: XCTestCase {
 
     private static let appleCapabilities: Set<String> = [
         "purchase.family-sharing",
+        // Lands on Apple with the Liquid Glass Archive; Android is planned with Material 3.
+        "export.coverage-calendar",
         "support.native-review-introduction",
         "apple.lossless-healthkit-archive",
         "apple.medication-dose-events",
@@ -161,7 +162,7 @@ final class ProductCapabilityManifestTests: XCTestCase {
         sharedCapabilities
             .union(appleCapabilities)
             .union(androidCapabilities)
-            .union(["source.private-platform-database", "apple.ads-purchase-attribution", "core.shared-rust-profile-engine", "export.coverage-calendar", "setup.share-portable-configuration", "account.clinic-sync-requests"])
+            .union(["source.private-platform-database", "apple.ads-purchase-attribution", "core.shared-rust-profile-engine", "setup.share-portable-configuration", "account.clinic-sync-requests"])
     }
 
     private enum ManifestError: Error {
