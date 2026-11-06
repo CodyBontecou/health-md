@@ -107,7 +107,8 @@ internal fun SettingsRow(
             .clip(shape)
             .background(container)
             .then(if (onClick != null) Modifier.clickable(role = Role.Button, onClick = onClick) else Modifier)
-            .semantics { this.selected = selected }
+            // Only the entry open beside the list reports selection; phones have none.
+            .then(if (selected) Modifier.semantics { this.selected = true } else Modifier)
             .heightIn(min = if (subtitle != null) 72.dp else 56.dp)
             .padding(start = GeistSpacing.space4, end = GeistSpacing.space6 - GeistSpacing.space1, top = GeistSpacing.space2, bottom = GeistSpacing.space2),
         verticalArrangement = Arrangement.Center,

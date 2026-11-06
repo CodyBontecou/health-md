@@ -252,7 +252,7 @@ private fun AutomationCard(
                     Modifier
                 },
             )
-            .semantics { this.selected = selected }
+            .then(if (selected) Modifier.semantics { this.selected = true } else Modifier)
             .padding(GeistSpacing.space4),
     ) {
         // A paused automation recedes, as on the board; its controls stay fully usable.
