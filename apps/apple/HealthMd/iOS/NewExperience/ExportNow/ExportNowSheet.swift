@@ -111,28 +111,57 @@ struct ExportNowSheet: View {
                 }
                 .padding(GlassMetrics.screenMargin)
             }
-            .safeAreaInset(edge: .bottom) {
+            // ExportNowG: a plain-text Cancel beside the centred title, and the CTA in a
+            // glass footer bar separated from the content.
+            .safeAreaInset(edge: .top, spacing: 0) { header }
+            .safeAreaInset(edge: .bottom, spacing: 0) {
                 Button(ctaTitle, action: exportTapped)
                     .buttonStyle(GlassPrimaryButtonStyle())
-                    .padding(.horizontal, GlassMetrics.screenMargin)
-                    .padding(.bottom, 8)
                     .accessibilityIdentifier("glass.exportNow.confirm")
+                    .padding(.horizontal, GlassMetrics.screenMargin)
+                    .padding(.top, 12)
+                    .padding(.bottom, 8)
+                    .frame(maxWidth: .infinity)
+                    .background {
+                        Color.clear.glassSurface(in: Rectangle())
+                            .overlay(alignment: .top) { Rectangle().fill(palette.edge).frame(height: 1) }
+                            .ignoresSafeArea(edges: .bottom)
+                    }
             }
             .background(palette.bg.ignoresSafeArea())
             .navigationTitle(String(localized: "Export now"))
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button(String(localized: "Cancel")) { dismiss() }
-                }
-            }
+            .toolbar(.hidden, for: .navigationBar)
             .navigationDestination(isPresented: $showPreview) {
                 // Export from the preview runs the same checks as this sheet's button.
                 preview(exportTapped)
             }
         }
         .glassSheet(palette: palette)
+        .presentationDragIndicator(.visible)
         .onAppear(perform: applyRequest)
+    }
+
+    private var header: some View {
+        ZStack {
+            Text("Export now")
+                .glassFont(.navTitle)
+                .foregroundStyle(palette.text)
+                .accessibilityAddTraits(.isHeader)
+            HStack {
+                Button(String(localized: "Cancel")) { dismiss() }
+                    .buttonStyle(.plain)
+                    .font(.system(size: 16))
+                    .foregroundStyle(palette.sec)
+                    .frame(minWidth: 70, minHeight: GlassMetrics.touchTarget, alignment: .leading)
+                    .contentShape(Rectangle())
+                Spacer()
+            }
+        }
+        .padding(.horizontal, GlassMetrics.screenMargin)
+        .padding(.top, 14)
+        .padding(.bottom, 4)
+        .frame(maxWidth: .infinity)
+        .background(palette.bg)
     }
 
     private var profileChips: some View {
