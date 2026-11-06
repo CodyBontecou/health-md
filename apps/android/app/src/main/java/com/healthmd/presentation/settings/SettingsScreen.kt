@@ -58,6 +58,8 @@ fun SettingsScreen(
     onNavigateToDiagnostics: () -> Unit = {},
     onNavigateToFolderDestination: () -> Unit = {},
     onNavigateToAutomations: () -> Unit = {},
+    clinicAccessAvailable: Boolean = false,
+    onNavigateToClinicAccess: () -> Unit = {},
 ) {
     val isPurchased by viewModel.isPurchased.collectAsStateWithLifecycle()
     val distributionPolicy = viewModel.distributionPolicy
@@ -213,6 +215,10 @@ fun SettingsScreen(
                 providers = whoopProviders,
                 onOpenProvider = { providerDialog = it },
             )
+        }
+        if (clinicAccessAvailable) {
+            SettingsNavigationCard(title = "Clinic access", subtitle = "Manage sponsorship and sharing",
+                icon = Icons.Outlined.Settings, onClick = onNavigateToClinicAccess)
         }
         SettingsNavigationCard(
             title = stringResource(R.string.clinician_report_title),

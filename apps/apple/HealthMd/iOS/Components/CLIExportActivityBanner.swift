@@ -71,6 +71,8 @@ final class CLIExportActivityTracker: ObservableObject {
     }
 
     @Published private(set) var snapshot: Snapshot?
+    /// The requested source-day range of the job that began last, for the Live Activity footer.
+    private(set) var activityDateRange: (jobID: UUID, range: ClosedRange<Date>)?
     private(set) var admissionID: UUID?
 
     private struct ConnectedActivityOwner {
@@ -92,10 +94,12 @@ final class CLIExportActivityTracker: ObservableObject {
         totalDays: Int = 0,
         targetLabel: String? = nil,
         message: String,
-        admissionID: UUID = UUID()
+        admissionID: UUID = UUID(),
+        dateRange: ClosedRange<Date>? = nil
     ) {
         dismissalTask?.cancel()
         self.admissionID = admissionID
+        activityDateRange = dateRange.map { (jobID, $0) }
         connectedActivityOwner = nil
         publish(Snapshot(
             jobID: jobID,

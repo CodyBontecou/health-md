@@ -1547,4 +1547,12 @@
         <item quantity="one">day in %1$s</item>
         <item quantity="other">days in %1$s</item>
     </plurals>
+    <string name="clinic_access_active_title">Your clinic access is active</string>
+    <string name="clinic_access_active_body">Your clinic sponsors delivery to its approved endpoint. You choose what to share. Other export destinations require your own Health.md access.</string>
+
+    <string name="clinic_sync_channel_name">Clinic sync requests</string>
+    <string name="clinic_sync_request_body">Your clinic is asking for your latest health data. Tap to send it.</string>
+    <string name="clinic_sync_result_sent">Your latest data was sent to your clinic.</string>
+    <string name="clinic_sync_result_failed">Could not send your data to your clinic. Open Health.md and try again.</string>
+    <string name="clinic_sync_result_profile_missing">Open Clinic access in Health.md and choose Use clinic destination first.</string>
 </resources>

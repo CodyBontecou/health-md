@@ -81,6 +81,7 @@ fun ExportProfileEditorDialog(
     overlapPreview: (target: ExportTarget, folderUri: String?, settings: ExportSettings) -> List<String>,
     onConfirm: (ExportProfileEditorDraft) -> Unit,
     onDismiss: () -> Unit,
+    managedClinicEndpoint: String? = null,
 ) {
     val context = LocalContext.current
     var draft by remember { mutableStateOf(initial) }
@@ -141,6 +142,12 @@ fun ExportProfileEditorDialog(
                 )
 
                 EditorSectionLabel("Destination")
+                if (managedClinicEndpoint != null) {
+                    FactRow("Target", draft.target.name)
+                    FactRow("Clinic destination", managedClinicEndpoint)
+                    Text("Your clinic manages this destination. Use Clinic access to select it or manage sharing. Other destinations require your own Health.md access.",
+                        style = MaterialTheme.typography.bodySmall, color = AppColors.textMuted)
+                } else {
                 Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
                     EditorChoiceButton(
                         text = "Device Folder",
@@ -217,6 +224,8 @@ fun ExportProfileEditorDialog(
                             )
                         }
                     }
+                }
+
                 }
 
                 EditorSectionLabel("Output")

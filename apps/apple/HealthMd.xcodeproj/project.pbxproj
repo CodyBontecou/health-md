@@ -34,6 +34,7 @@
 		9985A4A481A3E00BCD869EDC /* HealthWidgets.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5CDCF99E6E01498476F63ED /* HealthWidgets.swift */; };
 		A1C0A5E82F62100100A5E771 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A1C0A5E72F62100100A5E771 /* Assets.xcassets */; };
 		B0995875A54768B05B29752D /* WatchHealthSnapshotStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8EE59041238A4C32044037A6 /* WatchHealthSnapshotStore.swift */; };
+		A1C0A5EA2F62100100A5E773 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A1C0A5E92F62100100A5E772 /* Assets.xcassets */; };
 		B5B8607E3E14D811F78E519E /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B8B573DB34E1B6C531377506 /* Assets.xcassets */; };
 		B660CA37F4E61843D73D1979 /* WatchHealthSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0C92EF568620D0B32D839B /* WatchHealthSnapshot.swift */; };
 		C05B5A8670CDD9695D11E947 /* HealthMdWidgets.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = B13FE3C85778922B02345D54 /* HealthMdWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
@@ -142,6 +143,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		C11C00000000000000000001 /* NativeLicensing.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = NativeLicensing.xcconfig; path = ../licensing/deploy/NativeLicensing.xcconfig; sourceTree = SOURCE_ROOT; };
 		A90000000000000000000001 /* healthmd-mcp */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = "healthmd-mcp"; sourceTree = BUILT_PRODUCTS_DIR; };
 		A90000000000000000000002 /* main.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = "mcp-main.swift"; path = "Sources/healthmd-mcp/main.swift"; sourceTree = "<group>"; };
 		A90000000000000000000003 /* HealthMdMCPServer.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Sources/HealthMdMCPCore/HealthMdMCPServer.swift; sourceTree = "<group>"; };
@@ -172,6 +174,7 @@
 		B13FE3C85778922B02345D54 /* HealthMdWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; name = HealthMdWidgets.appex; path = HealthMdWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		C1A000032F71000100C1A003 /* CLIExportLiveActivityWidget.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CLIExportLiveActivityWidget.swift; sourceTree = "<group>"; };
 		C1A000042F71000100C1A004 /* CLIExportActivityAttributes.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = CLIExportActivityAttributes.swift; path = ../HealthMd/iOS/Components/CLIExportActivityAttributes.swift; sourceTree = "<group>"; };
+		A1C0A5E92F62100100A5E772 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		B8B573DB34E1B6C531377506 /* Assets.xcassets */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		BA117C7F83AE916A975F62C0 /* HealthMdWidgets.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = HealthMdWidgets.entitlements; sourceTree = "<group>"; };
 		E07707407965C680321DD221 /* HealthMdWatchWidgetBundle.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = HealthMdWatchWidgetBundle.swift; sourceTree = "<group>"; };
@@ -227,6 +230,7 @@
 				iOS/ClinicianReport/ClinicianReportShareSheet.swift,
 				iOS/ClinicianReport/ClinicianReportView.swift,
 				iOS/ClinicianReport/ClinicianReportViewModel.swift,
+				iOS/ClinicSyncDoorbellManager.swift,
 				iOS/ContentView.swift,
 				iOS/HealthMdApp.swift,
 				iOS/IPhoneExportRequestHandler.swift,
@@ -244,14 +248,6 @@
 				iOS/Views/OnboardingView.swift,
 				iOS/Views/PaywallView.swift,
 				iOS/Views/ScheduleSettingsView.swift,
-				iOS/Views/SyncSettingsView.swift,
-				iPad/iPadContentView.swift,
-				iPad/iPadExportView.swift,
-				iPad/iPadHistoryView.swift,
-				iPad/iPadScheduleView.swift,
-				iPad/iPadSettingsView.swift,
-				iPad/iPadSidebar.swift,
-				iPad/iPadSyncView.swift,
 				macOS/Info.plist,
 			);
 			target = 62CC00052F15D70300F9103F /* HealthMd-macOS */;
@@ -391,6 +387,7 @@
 				939A80158D7C75A1BF7A95DF /* WatchHealthWidgets.swift */,
 				41F75912A371DDB1294E02B9 /* Info.plist */,
 				7FD613D21A666369A7740546 /* HealthMdWatchWidgets.entitlements */,
+				A1C0A5E92F62100100A5E772 /* Assets.xcassets */,
 			);
 			name = HealthMdWatchWidgets;
 			path = HealthMdWatchWidgets;
@@ -446,6 +443,7 @@
 		624B99E62F15D70300F9103F = {
 			isa = PBXGroup;
 			children = (
+				C11C00000000000000000001 /* NativeLicensing.xcconfig */,
 				624B99F12F15D70300F9103F /* HealthMd */,
 				62A1B0032F50A00100000003 /* HealthMdTests */,
 				624B99F02F15D70300F9103F /* Products */,
@@ -789,6 +787,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A1C0A5EA2F62100100A5E773 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1317,6 +1316,7 @@
 		};
 		624B99F82F15D70500F9103F /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = C11C00000000000000000001 /* NativeLicensing.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
@@ -1383,6 +1383,7 @@
 		};
 		624B99F92F15D70500F9103F /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = C11C00000000000000000001 /* NativeLicensing.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
@@ -1665,6 +1666,7 @@
 		};
 		6C18C8B2947E48198BC2435C /* Debug-iOS */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = C11C00000000000000000001 /* NativeLicensing.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
@@ -1911,6 +1913,7 @@
 		};
 		9CEC71EEDC5D476DB4D246EF /* Release-iOS */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = C11C00000000000000000001 /* NativeLicensing.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;

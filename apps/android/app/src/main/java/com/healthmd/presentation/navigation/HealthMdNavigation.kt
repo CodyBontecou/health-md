@@ -103,11 +103,21 @@ fun HealthMdNavigation(
     // Root boundary, outside NavHost: Back/deep links cannot expose tracking
     // without a store entitlement. F-Droid keeps its included-access policy.
     val accessViewModel: PaywallViewModel = hiltViewModel()
+    val clinicAccessViewModel: com.healthmd.presentation.clinic.ClinicAccessViewModel = hiltViewModel()
+    val clinicStatus by clinicAccessViewModel.status.collectAsStateWithLifecycle()
+    var showClinicEnrollment by remember { mutableStateOf(false) }
+    if (showClinicEnrollment) {
+        com.healthmd.presentation.clinic.ClinicAccessScreen(
+            onDone = { showClinicEnrollment = false }, viewModel = clinicAccessViewModel)
+        return
+    }
+
     val accessUnlocked by accessViewModel.accessState.collectAsStateWithLifecycle()
+    val personalAccess by accessViewModel.isUnlocked.collectAsStateWithLifecycle()
     val accessOwner = LocalLifecycleOwner.current
     DisposableEffect(accessOwner, accessViewModel) {
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) accessViewModel.refreshAccess()
+            if (event == Lifecycle.Event.ON_RESUME) { accessViewModel.refreshAccess(); clinicAccessViewModel.refresh() }
         }
         accessOwner.lifecycle.addObserver(observer)
         onDispose { accessOwner.lifecycle.removeObserver(observer) }
@@ -124,6 +134,15 @@ fun HealthMdNavigation(
         val restoring by accessViewModel.isRestoring.collectAsStateWithLifecycle()
         val error by accessViewModel.purchaseError.collectAsStateWithLifecycle()
         val context = LocalContext.current
+        Scaffold(containerColor = AppColors.bgPrimary, bottomBar = {
+            if (clinicStatus.configured) {
+                TextButton(onClick = { showClinicEnrollment = true },
+                    modifier = Modifier.fillMaxWidth().navigationBarsPadding()) {
+                    Text("Have a clinic invitation?")
+                }
+            }
+        }) { padding ->
+            Box(Modifier.fillMaxSize().padding(padding)) {
         PaywallScreen(
             onPurchase = {},
             onPlanPurchase = { plan ->
@@ -139,6 +158,8 @@ fun HealthMdNavigation(
             purchaseError = error,
             onClearError = accessViewModel::clearError,
         )
+            }
+        }
         return
     }
 
@@ -467,6 +488,10 @@ fun HealthMdNavigation(
                     onBack = { navController.popBackStack() },
                 ) { HistoryScreen() }
             }
+            composable(SubRoutes.CLINIC_ACCESS) {
+                com.healthmd.presentation.clinic.ClinicAccessScreen(
+                    onDone = { navController.popBackStack() }, viewModel = clinicAccessViewModel)
+            }
             composable(NavDestination.SETTINGS.route) {
                 var settingsDetail by rememberSaveable { mutableStateOf<String?>(null) }
                 BoxWithConstraints(Modifier.fillMaxSize()) {
@@ -479,6 +504,8 @@ fun HealthMdNavigation(
                         SettingsScreen(
                             viewModel = settingsViewModel,
                             protectionSettingsRequestId = protectionSettingsRequestId,
+                            clinicAccessAvailable = clinicStatus.configured,
+                            onNavigateToClinicAccess = { open(SubRoutes.CLINIC_ACCESS) },
                             onNavigateToPaywall = {
                                 if (settingsViewModel.distributionPolicy.purchasesAvailable) {
                                     navController.navigate(PaywallEntryPoint.UPGRADE.route)
@@ -512,9 +539,16 @@ fun HealthMdNavigation(
                                     val close = { settingsDetail = null }
                                     when (settingsDetail) {
                                         SubRoutes.EXPORT_PROFILES -> ExportProfilesScreen(onBack = close)
-                                        SubRoutes.CLINICIAN_REPORT -> ClinicianReportScreen(onBack = close)
+                                        SubRoutes.CLINICIAN_REPORT -> if (personalAccess) {
+                                            ClinicianReportScreen(onBack = close)
+                                        } else {
+                                            Text("Your own Health.md access is required to save or share a report.",
+                                                modifier = Modifier.padding(com.healthmd.presentation.theme.Spacing.md))
+                                        }
                                         SubRoutes.DIRECT_CLI -> DirectCliScreen(onBack = close)
                                         SubRoutes.DIAGNOSTICS -> DiagnosticsScreen(onBack = close)
+                                        SubRoutes.CLINIC_ACCESS -> com.healthmd.presentation.clinic.ClinicAccessScreen(
+                                            onDone = close, viewModel = clinicAccessViewModel)
                                         else -> FolderDestinationScreen()
                                     }
                                 }
@@ -586,7 +620,12 @@ fun HealthMdNavigation(
                 )
             }
             composable(SubRoutes.CLINICIAN_REPORT) {
-                ClinicianReportScreen(onBack = { navController.popBackStack() })
+                if (personalAccess) {
+                    ClinicianReportScreen(onBack = { navController.popBackStack() })
+                } else {
+                    Text("Your own Health.md access is required to save or share a report.",
+                        modifier = Modifier.padding(com.healthmd.presentation.theme.Spacing.md))
+                }
             }
             composable(SubRoutes.ADVANCED_SETTINGS) {
                 AdvancedSettingsScreen(

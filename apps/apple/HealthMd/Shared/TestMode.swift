@@ -122,7 +122,12 @@ enum TestMode {
     }
 
     static var healthKitExportPreviewFormats: Set<ExportFormat> {
-        env("UITEST_HEALTHKIT_EXPORT_PREVIEW_FORMATS") == "all" ? Set(ExportFormat.allCases) : [.markdown]
+        switch env("UITEST_HEALTHKIT_EXPORT_PREVIEW_FORMATS") {
+        case "all": return Set(ExportFormat.allCases)
+        // App Store captures: the Daily automation of ComposeGlass writes Markdown + Bases.
+        case "markdown+bases": return [.markdown, .obsidianBases]
+        default: return [.markdown]
+        }
     }
 
     static var healthKitExportPreviewPartialCapture: Bool {

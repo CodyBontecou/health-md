@@ -9,7 +9,7 @@ Health.md writes the files to the folder that you select.
 
 <div class="availability available">
 <strong>Available now · Health.md for iPhone</strong>
-<p>The first export uses the free allowance. You can configure schedules and paid features later.</p>
+<p>Exports need an active trial, subscription, or Lifetime access. You can set up schedules and other automations later.</p>
 </div>
 
 ## Before you start
@@ -20,54 +20,51 @@ Before you start, make sure that you have:
 - Permission to read at least one Apple Health category
 - A writable Files folder in iCloud Drive, On My iPhone, or an Obsidian vault.
 
-Keep the default metrics and the Markdown format. Select **Yesterday** or a different one-day range.
+Keep the default metrics and the Markdown format. Select **Yesterday** for a one-day range.
 
 ## 1. Finish iPhone setup
 
-Health.md shows seven onboarding screens.
+Health.md shows five setup steps. None of them blocks progress: Apple Health access and the folder can be skipped and repaired later.
 
-On the first launch, tap **Start Setup**. Authorize the health categories that you want. Review the sample output. Select a folder in Files. Continue to **Ready**. At the unlock step, continue with the free allowance.
+On the first launch, tap **Connect Apple Health**. Authorize the health categories that you want. Review the sample output. Select a folder in Files. Continue to the last step.
 
-If setup is complete, open the **Export** tab. Make sure that Apple Health and the local folder are ready.
-
-If the folder is missing or unavailable, use the folder control to select it again.
+After setup, the app opens on **Archive**. If Apple Health or the folder needs attention, the **Needs attention** card at the top says what to fix.
 
 <div class="docs-screenshot-grid">
 <figure class="docs-screenshot">
   <a href="/docs/assets/docs/iphone-first-export/onboarding-start.webp" target="_blank" rel="noopener" aria-label="Open the onboarding screenshot at full size">
-    <img src="/docs/assets/docs/iphone-first-export/onboarding-start.webp" width="1206" height="2622" loading="lazy" alt="Health.md onboarding welcome screen at step 1 of 7 with the Start Setup button." />
+    <img src="/docs/assets/docs/iphone-first-export/onboarding-start.webp" width="1206" height="2622" loading="lazy" alt="Health.md setup screen at step 1 of 5 listing three steps, with the Connect Apple Health button." />
   </a>
-  <figcaption>Start Setup explains local files, schedules, and folders before it requests access.</figcaption>
+  <figcaption>Setup explains what Health.md reads and where files go before it requests access.</figcaption>
 </figure>
 <figure class="docs-screenshot">
-  <a href="/docs/assets/docs/iphone-first-export/export-setup-required.webp" target="_blank" rel="noopener" aria-label="Open the setup-required screenshot at full size">
-    <img src="/docs/assets/docs/iphone-first-export/export-setup-required.webp" width="1206" height="2622" loading="lazy" alt="Health.md Export tab with Health disconnected, Choose Folder available, Local iPhone Folder selected, and date-range buttons." />
+  <a href="/docs/assets/docs/iphone-first-export/export-now.webp" target="_blank" rel="noopener" aria-label="Open the Export now screenshot at full size">
+    <img src="/docs/assets/docs/iphone-first-export/export-now.webp" width="1206" height="2622" loading="lazy" alt="Health.md Export now sheet with Yesterday selected, a Range summary only switch, a Will write summary for one file and one day, and an Export yesterday button." />
   </a>
-  <figcaption>The badges show that Apple Health and folder setup are incomplete.</figcaption>
+  <figcaption>Export now shows what it will write before you start.</figcaption>
 </figure>
 </div>
 
 ## 2. Choose a small export
 
-On the **Export** tab:
+Tap the round **Export now** button next to the tab bar. Then:
 
-1. Select **Local iPhone Folder** as the target.
-2. Select **Yesterday** or a custom one-day range.
-3. Keep the default metric selection.
-4. Keep **Markdown** selected.
+1. Select **Yesterday**.
+2. Leave **Range summary only** off.
+3. Check that **Will write** names your folder and about one file for one day.
 
-Add CSV, JSON, or Obsidian Bases after this export succeeds. A short range makes permission, empty-data, and folder problems easier to find.
+The default automation keeps the default metric selection and **Markdown**. To change them, open **Automations**, choose the automation, then **Metrics** or **Formats**. Add CSV, JSON, or Obsidian Bases after this export succeeds. A short range makes permission, empty-data, and folder problems easier to find.
 
 <figure class="docs-screenshot docs-screenshot-single">
   <a href="/docs/assets/docs/iphone-first-export/metric-selection.webp" target="_blank" rel="noopener" aria-label="Open the metric-selection screenshot at full size">
-    <img src="/docs/assets/docs/iphone-first-export/metric-selection.webp" width="1206" height="2622" loading="lazy" alt="Current Health Metrics screen with an enabled metric count, standard metrics switch, search field, and expandable Sleep, Activity, and Heart categories." />
+    <img src="/docs/assets/docs/iphone-first-export/metric-selection.webp" width="1206" height="2622" loading="lazy" alt="Health.md Metrics page with the enabled metric count, Recommended, Select All and Deselect All buttons, a search field, and categories with enabled counts." />
   </a>
-  <figcaption>Metric totals depend on the app version and permissions. This example has two enabled metrics.</figcaption>
+  <figcaption>Metric totals depend on the app version and permissions.</figcaption>
 </figure>
 
 ## 3. Preview before writing
 
-Tap **Preview**. Preview needs Apple Health access. It does not need a writable folder.
+In **Export now**, tap **Preview**. Preview needs Apple Health access. It does not need a writable folder.
 
 Use Preview to identify an Apple Health permission problem before you test the folder.
 
@@ -78,27 +75,27 @@ Make sure that the preview shows:
 - Missing or unavailable values instead of false zero values
 - The selected format and filename structure.
 
-Return to the **Export** tab if you must change dates, metrics, or formats.
+Close the preview and change the automation's settings if you must change metrics or formats.
 
 <figure class="docs-screenshot docs-screenshot-single">
   <a href="/docs/assets/docs/iphone-first-export/export-preview.webp" target="_blank" rel="noopener" aria-label="Open the export-preview screenshot at full size">
-    <img src="/docs/assets/docs/iphone-first-export/export-preview.webp" width="1206" height="2622" loading="lazy" alt="Health.md Export Preview showing a one-day Markdown export estimate, roll-up periods, destination, and generated filename." />
+    <img src="/docs/assets/docs/iphone-first-export/export-preview.webp" width="1206" height="2622" loading="lazy" alt="Health.md Export Preview showing the sleep window, a one-day Markdown estimate, the roll-up period, the destination folder, and the generated filename." />
   </a>
-  <figcaption>This example uses sample health data. It shows that no vault is selected.</figcaption>
+  <figcaption>This example uses sample health data.</figcaption>
 </figure>
 
 ## 4. Export and verify
 
-Tap **Export Data**. If setup is incomplete, Health.md identifies the missing Apple Health or folder requirement.
+Tap **Export yesterday**. If setup is incomplete, Health.md identifies the missing Apple Health or folder requirement.
 
 After the export completes:
 
-1. Review the result for written, skipped, or failed files.
+1. Review the result for written, skipped, or failed files. The day appears on the **Archive** calendar.
 2. Open the Files app and the selected folder.
 3. Open one generated file. Make sure that its date, units, and frontmatter are correct.
 4. Keep the result details if you must investigate a problem.
 
-An idle export button does not show that an export succeeded.
+A covered day on the calendar is a summary; tap the day to see each automation's status for that date.
 
 <div class="callout">
 <strong>No data for the selected day?</strong>

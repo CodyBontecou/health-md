@@ -553,6 +553,7 @@ private fun MarkdownTemplateConfig.immutableDeepCopy(): MarkdownTemplateConfig =
 
 private fun MetricSelectionState.immutableDeepCopy(): MetricSelectionState = MetricSelectionState(
     enabledMetrics = enabledMetrics.immutableSortedBy { it },
+    nativeDetailMetricIds = nativeDetailMetricIds.immutableSortedBy { it },
 )
 
 private fun DailyNoteInjectionSettings.immutableDeepCopy(): DailyNoteInjectionSettings = copy(

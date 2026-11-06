@@ -1,41 +1,42 @@
 ---
 title: "Exporter"
-description: "Utilisez l'onglet Exporter pour vérifier HealthKit et les connexions au coffre-fort. Sélectionnez une destination et exportez une plage de dates."
+description: "Exportez vos données Apple Health maintenant ou selon une planification. Vérifiez que tout est prêt dans Archives, choisissez une plage dans Exporter maintenant et définissez la destination de chaque automatisation."
 ---
 
-<p> L'onglet Exporter est organisé en trois petites décisions : confirmer l'état de préparation, choisir une destination, puis choisir la plage de dates avant de prévisualiser ou d'exporter. </p>
+<p>Sur iPhone, Health.md compte trois onglets, <strong>Archives</strong>, <strong>Automatisations</strong> et <strong>Réglages</strong>, ainsi qu’un bouton rond <strong>Exporter maintenant</strong>. Sur iPad, les onglets passent dans une barre latérale.</p>
 
-## Lire les badges d'état
- <div class="options">
- <div class="option"> <strong> Badge Santé </strong> <p>Le vert indique l’état de configuration Connecté de l’app, sans confirmer l’accès en lecture à chaque catégorie. HealthKit ne révèle pas les autorisations de lecture refusées. Touchez l’indicateur pour demander l’accès. iOS peut afficher une boîte de dialogue pour les types nécessitant une décision ; si les choix sont déjà enregistrés, Health.md affiche le guide des autorisations. Vérifiez les catégories dans Apple Health. Un résultat vide peut indiquer un accès refusé ou l’absence de données correspondantes. <a href="/fr/docs/troubleshooting/">Résoudre les données manquantes</a>.</p> </div>
- <div class="option"> <strong> Badge du coffre-fort </strong> <p> Point vert = un dossier du coffre-fort est sélectionné. Appuyez pour choisir à nouveau ou modifier le coffre-fort. L'étiquette indique le nom du dossier. </p> </div>
- </div>
- <p> L'action <em> Export </em> reste désactivée jusqu'à ce que HealthKit , le format de sortie et la destination sélectionnée soient prêts. Cela évite le mode d’échec le plus courant : tenter d’exporter sans destination. </p>
+## Vérifier que tout est prêt dans Archives
+<p>Le calendrier d’<strong>Archives</strong> montre les dates de santé couvertes par chaque automatisation. Quand quelque chose bloque les exportations, la carte <strong>À vérifier</strong> en haut l’indique :</p>
+<div class="options">
+<div class="option"><strong>Apple Health</strong><p>Health.md affiche l’état de configuration de l’app, pas un accès en lecture confirmé à chaque catégorie. HealthKit ne révèle pas les autorisations de lecture refusées. Vérifiez les catégories dans Apple Health. Un résultat vide peut signifier un accès refusé ou l’absence de données. <a href="/fr/docs/troubleshooting/">Résoudre les données manquantes</a>.</p></div>
+<div class="option"><strong>Dossier</strong><p>Choisissez ou rechoisissez le dossier dans <strong>Réglages → Dossier</strong>. Si iOS perd l’accès après le déplacement d’un dossier, Health.md vous demande de le choisir à nouveau ; rien n’est supprimé.</p></div>
+</div>
 
-## Choisissez une cible d'exportation
- <p> La carte Export Target décide où les données vont : </p>
+## Choisir la destination d’une automatisation
+<p>Chaque automatisation a sa propre destination. Ouvrez <strong>Automatisations</strong>, choisissez l’automatisation, puis <strong>Sortie</strong> :</p>
 
 <div class="options">
- <div class="option"> <strong> Local iPhone Dossier </strong> <p> Écrit directement dans le dossier ou le coffre-fort Obsidian que vous avez choisi sur cet appareil. </p> </div>
- <div class="option"> <strong> Mac connecté </strong> <p> Envoie les données quotidiennes capturées et un instantané des paramètres exacts à l'application Mac à proximité. Le iPhone lit HealthKit . Le Mac restitue les formats sélectionnés et écrit les fichiers. </p> </div>
- <div class="option"> <strong> Point de terminaison API </strong> <p> POST une enveloppe JSON directement de iPhone vers un point de terminaison HTTP(S) configuré par l'utilisateur. <a href="/fr/docs/api-endpoint/"> Voir le point de terminaison de l'API </a> . </p> </div>
- </div>
+<div class="option"><strong>Dossier local</strong><p>Écrit directement dans le dossier ou le coffre Obsidian choisi sur cet appareil.</p></div>
+<div class="option"><strong>Mac connecté</strong><p>Envoie les données quotidiennes capturées et un instantané exact des réglages à l’app Mac à proximité. L’iPhone lit HealthKit ; le Mac génère les formats choisis et écrit les fichiers.</p></div>
+<div class="option"><strong>Point de terminaison de l’API</strong><p>Envoie par POST une enveloppe JSON directement depuis l’iPhone vers un point de terminaison HTTP(S) que vous configurez. <a href="/fr/docs/api-endpoint/">Voir Point de terminaison de l’API</a>.</p></div>
+<div class="option"><strong>Passerelle Agent Data</strong><p>Envoie chaque fichier exporté, sans modification, au point d’ingestion de votre passerelle.</p></div>
+</div>
 
-## Choisissez une plage de dates
- <p> Les préréglages de date couvrent les chemins courants : </p>
+## Choisir une plage dans Exporter maintenant
+<p>Touchez <strong>Exporter maintenant</strong>, choisissez l’automatisation si vous en avez plusieurs, puis une plage :</p>
 
 <div class="options">
- <div class="option"> <strong> Aujourd'hui </strong> <p> Exporte le jour en cours. Utile pour tester le formatage de la sortie. </p> </div>
- <div class="option"> <strong> Hier </strong> <p> Le choix d'exportation quotidien le plus sûr car la journée est terminée. </p> </div>
- <div class="option"> <strong> Tous les temps </strong> <p> Remplissez à partir des premières données HealthKit Health.md peut trouver. </p> </div>
- <div class="option"> <strong> Personnalisé </strong> <p> Choisissez les dates de début et de fin pour une plage spécifique. </p> </div>
- </div>
+<div class="option"><strong>Hier</strong><p>Le choix le plus sûr pour une exportation quotidienne, car la journée est terminée.</p></div>
+<div class="option"><strong>7 jours / 30 jours</strong><p>La dernière semaine ou le dernier mois, jusqu’à hier. À partir de 30 jours, Health.md demande une confirmation.</p></div>
+<div class="option"><strong>Personnalisé</strong><p>Choisissez les dates de début et de fin d’une plage précise.</p></div>
+</div>
+<p><strong>Sera écrit</strong> indique la destination et, approximativement, combien de fichiers et de jours couvre l’exportation. <strong>Résumé de la plage de dates uniquement</strong> écrit un seul fichier de synthèse au lieu de fichiers quotidiens. Aujourd’hui et Tout l’historique restent disponibles dans <strong>Automatisations → Tous les réglages d’exportation</strong>.</p>
 
 ## Aperçu ou exportation
- <div class="options">
- <div class="option"> <strong> Aperçu </strong> <p> Affiche les fichiers et le contenu qui seront générés avant que quoi que ce soit ne soit écrit. </p> </div>
- <div class="option"> <strong> Exporter </strong> <p> Exécute l'exportation, affiche la progression sur l'écran principal et enregistre le résultat dans l'historique. </p> </div>
- </div>
+<div class="options">
+<div class="option"><strong>Aperçu</strong><p>Montre les fichiers et contenus qui seront générés avant toute écriture.</p></div>
+<div class="option"><strong>Exporter</strong><p>Lance l’exportation, affiche la progression au-dessus de la barre d’onglets avec un bouton Annuler et enregistre le résultat dans l’historique et le calendrier d’Archives.</p></div>
+</div>
 
 ## Choisissez le niveau de détail des données
 
@@ -62,11 +63,7 @@ L'arrêt ou l'annulation met fin uniquement à la tentative en cours. Les fichie
 
 ## Profils et historique fiable
 
-Un profil enregistré gèle ses paramètres et sa destination pour l'exécution. Les lignes de l'historique planifié et d'automatisation prenant en compte le profil conservent le profil d'exécution, tandis que l'historique conserve une étiquette de confidentialité pour la destination réellement utilisée. Une ligne de l'onglet Exportation manuelle peut omettre le nom du profil. Les changements de nom et de destination ultérieurs ne réécrivent pas l’historique existant. Si le profil référencé est introuvable, l’opération échoue sans utiliser d’autres paramètres. Voir [Exporter les profils](/fr/docs/export-profiles/).
-
-## Barre d'onglets
-
-<p> Les quatre onglets en bas de l'écran, Exportation, Planification, Synchronisation, Paramètres, couvrent toute la surface de l'application. Tout le reste réside dans une ou deux couches au plus profond des paramètres. </p>
+Un profil enregistré fige ses réglages et sa destination pour l’exécution. Les lignes d’historique des exportations planifiées et des automatisations qui connaissent le profil conservent le profil utilisé, et l’historique garde une étiquette respectueuse de la vie privée pour la destination réellement employée. Une ligne d’exportation manuelle peut omettre le nom du profil. Les renommages et changements de destination ultérieurs ne réécrivent pas l’historique existant. Si un profil référencé est introuvable, l’opération échoue sans utiliser d’autres réglages. Voir [Profils d’exportation](/fr/docs/export-profiles/).
 
 <div class="callout">
  <strong> Comportement de déverrouillage. </strong>

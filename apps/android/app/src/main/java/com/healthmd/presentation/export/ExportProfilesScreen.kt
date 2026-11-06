@@ -108,6 +108,10 @@ fun ExportProfilesScreen(
     LaunchedEffect(initialDetailProfileId) {
         if (initialDetailProfileId != null) viewModel.openDetail(initialDetailProfileId)
     }
+    val clinicAccess: com.healthmd.presentation.clinic.ClinicAccessViewModel = hiltViewModel()
+    val clinicStatus by clinicAccess.status.collectAsStateWithLifecycle()
+    val independentAccess by clinicAccess.independentAccess.collectAsStateWithLifecycle()
+    val managedClinicEndpoint = clinicStatus.endpoint.takeIf { clinicStatus.active && !independentAccess }
     val protection = LocalConfigurationProtection.current
     val attemptProfileChange: (() -> Unit) -> Unit = { action ->
         if (protection.enabled) protection.onBlockedChange() else action()
@@ -191,6 +195,7 @@ fun ExportProfilesScreen(
     uiState.detailProfileId?.let { profileId ->
         val row = uiState.rows.firstOrNull { it.profile.id == profileId } ?: return
         ProfileDetailDialog(
+            clinicSponsoredOnly = managedClinicEndpoint != null,
             row = row,
             canDelete = uiState.rows.size > 1,
             onActivate = { attemptDetailProfileChange { viewModel.activate(row.profile.id) } },
@@ -270,6 +275,7 @@ fun ExportProfilesScreen(
 
     if (uiState.creatingProfile) {
         ExportProfileEditorDialog(
+            managedClinicEndpoint = managedClinicEndpoint,
             isCreation = true,
             initial = ExportProfilesViewModel.initialCreationDraft(
                 rows = uiState.rows,
@@ -301,6 +307,7 @@ fun ExportProfilesScreen(
     uiState.editingProfileId?.let { profileId ->
         val row = uiState.rows.firstOrNull { it.profile.id == profileId } ?: return
         ExportProfileEditorDialog(
+            managedClinicEndpoint = managedClinicEndpoint,
             isCreation = false,
             initial = ExportProfilesViewModel.initialEditDraft(
                 profile = row.profile,
@@ -440,6 +447,7 @@ private val ExportFormatLabels = mapOf(
 
 @Composable
 private fun ProfileDetailDialog(
+    clinicSponsoredOnly: Boolean,
     row: ExportProfileRow,
     canDelete: Boolean,
     onActivate: () -> Unit,
@@ -488,7 +496,7 @@ private fun ProfileDetailDialog(
                     )
                 }
                 FactRow("Destination", destinationLine(profile))
-                if (profile.target == ExportTarget.DEVICE_FOLDER) {
+                if (profile.target == ExportTarget.DEVICE_FOLDER && !clinicSponsoredOnly) {
                     TextButton(onClick = {
                         // Rebinding the folder mutates profile configuration;
                         // the launch itself is gated so a pick is never

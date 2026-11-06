@@ -109,6 +109,13 @@ struct ExportPreviewOperationConfiguration {
 // Side effects (individual entry tracking, daily-note injection) are rendered
 // as additional preview rows so users can inspect the actual generated content.
 
+enum ExportPreviewPresentation {
+    case classic, glass
+    /// ExportPreviewG pushed inside the Export now sheet: Back pops to Export now, and
+    /// Export hands over to the sheet, which closes itself before exporting.
+    case glassPushed
+}
+
 struct ExportPreviewView: View {
     let startDate: Date
     let endDate: Date
@@ -127,6 +134,8 @@ struct ExportPreviewView: View {
     let onExport: (() -> Void)?
     let onSizeEstimateUpdated: ((ExportPreviewSizeEstimate?) -> Void)?
     private let appleLooseDailyPlanner: any AppleLooseDailyExportPlanning
+    /// The glass shell restyles the preview; macOS and the classic Export tab keep the list.
+    let presentation: ExportPreviewPresentation
 
     init(
         startDate: Date,
@@ -145,8 +154,10 @@ struct ExportPreviewView: View {
         requestHealthAuthorization: (@MainActor () async throws -> HealthKitManager.AuthorizationRequestOutcome)? = nil,
         onExport: (() -> Void)? = nil,
         onSizeEstimateUpdated: ((ExportPreviewSizeEstimate?) -> Void)? = nil,
-        appleLooseDailyPlanner: (any AppleLooseDailyExportPlanning)? = nil
+        appleLooseDailyPlanner: (any AppleLooseDailyExportPlanning)? = nil,
+        presentation: ExportPreviewPresentation = .classic
     ) {
+        self.presentation = presentation
         self.startDate = startDate
         self.endDate = endDate
         _vaultManager = ObservedObject(wrappedValue: vaultManager)
@@ -179,6 +190,9 @@ struct ExportPreviewView: View {
     @State private var permissionGuidance: ExportPermissionGuidance?
     @State private var isStartingExport = false
     @State private var sleepWindowDescription = ""
+    /// The file shown by the glass preview's format switcher.
+    @State var glassSelectedFileID: String?
+    @Environment(\.glassPalette) var glassPalette
 
     /// Cap how many dates we render so opening preview never feels slow.
     /// We also cap how many dates we'll *fetch* — preview is for shape, not census.
@@ -190,6 +204,53 @@ struct ExportPreviewView: View {
     ]
 
     var body: some View {
+        Group {
+            #if os(iOS)
+            if presentation == .glass {
+                glassStack
+            } else if presentation == .glassPushed {
+                glassPage
+            } else {
+                classicStack
+            }
+            #else
+            classicStack
+            #endif
+        }
+        .task {
+            await buildPreviews()
+        }
+        .geistDialog(
+            isPresented: Binding(
+                get: { permissionGuidance != nil },
+                set: { if !$0 { permissionGuidance = nil } }
+            ),
+            title: Text("Health Permissions Needed"),
+            message: permissionGuidance.map { guidance in
+                #if os(iOS)
+                Text(guidance.iOSInstructions)
+                #else
+                Text(guidance.macInstructions)
+                #endif
+            },
+            actions: {
+                #if os(iOS)
+                [
+                    .action("Request Access") {
+                        requestAdditionalHealthAccess()
+                    },
+                    .action("Open Health App") {
+                        openHealthApp()
+                    }
+                ]
+                #else
+                [.action("Done", role: .secondary)]
+                #endif
+            }()
+        )
+    }
+
+    private var classicStack: some View {
         NavigationStack {
             Group {
                 if isLoading {
@@ -244,37 +305,6 @@ struct ExportPreviewView: View {
                 }
             }
         }
-        .task {
-            await buildPreviews()
-        }
-        .geistDialog(
-            isPresented: Binding(
-                get: { permissionGuidance != nil },
-                set: { if !$0 { permissionGuidance = nil } }
-            ),
-            title: Text("Health Permissions Needed"),
-            message: permissionGuidance.map { guidance in
-                #if os(iOS)
-                Text(guidance.iOSInstructions)
-                #else
-                Text(guidance.macInstructions)
-                #endif
-            },
-            actions: {
-                #if os(iOS)
-                [
-                    .action("Request Access") {
-                        requestAdditionalHealthAccess()
-                    },
-                    .action("Open Health App") {
-                        openHealthApp()
-                    }
-                ]
-                #else
-                [.action("Done", role: .secondary)]
-                #endif
-            }()
-        )
     }
 
     // MARK: - States
@@ -295,7 +325,8 @@ struct ExportPreviewView: View {
     private func startExport() {
         guard !isLoading, !isStartingExport, let onExport else { return }
         isStartingExport = true
-        dismiss()
+        // A pushed preview leaves closing to its sheet.
+        if presentation != .glassPushed { dismiss() }
         onExport()
     }
 
@@ -1635,3 +1666,303 @@ private extension ExportFormat {
         }
     }
 }
+
+#if os(iOS)
+// MARK: - Glass presentation (ExportPreviewG)
+
+extension ExportPreviewView {
+    /// The most recent day with daily files, or the roll-up section in summary-only mode.
+    private var glassDay: DatePreview? {
+        datePreviews.first { day in day.files.contains { $0.kind.isDailyAggregateFormat } }
+            ?? datePreviews.first { !$0.files.isEmpty }
+    }
+
+    private var glassFiles: [FilePreview] {
+        (glassDay?.files ?? []).filter { $0.kind != .individualEntry }
+    }
+
+    private var glassSelectedFile: FilePreview? {
+        glassFiles.first { $0.id == glassSelectedFileID } ?? glassFiles.first
+    }
+
+    var glassStack: some View {
+        NavigationStack { glassPage }
+            .tint(glassPalette.accent)
+            .glassSheet(palette: glassPalette)
+    }
+
+    /// The preview page itself, hosted by `glassStack` or pushed by its caller.
+    var glassPage: some View {
+        let palette = glassPalette
+        return ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                if isLoading {
+                    VStack(spacing: 12) {
+                        ProgressView().tint(palette.accent)
+                        Text("Building preview…").glassFont(.rowSubtitle).foregroundStyle(palette.muted)
+                    }
+                    .frame(maxWidth: .infinity, minHeight: 240)
+                } else {
+                    glassSummary
+                    glassNotes
+                    if glassFiles.isEmpty {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("No data to preview").glassFont(.navTitle).foregroundStyle(palette.text)
+                            Text("There is no health data for the selected dates, or no formats are selected.")
+                                .glassFont(.rowSubtitle)
+                                .foregroundStyle(palette.muted)
+                        }
+                        .padding(GlassMetrics.panelPadding)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .glassSurface()
+                    } else {
+                        if glassFiles.count > 1 { glassSwitcher }
+                        if let file = glassSelectedFile { glassFilePanel(file) }
+                    }
+                    glassFootnote
+                }
+            }
+            .padding(.horizontal, GlassMetrics.screenMargin)
+            .padding(.top, 4)
+            .padding(.bottom, 40)
+        }
+        .background(palette.bg.ignoresSafeArea())
+        .navigationTitle(String(localized: "Preview"))
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) {
+                Button(String(localized: "Back")) { dismiss() }
+                    .foregroundStyle(palette.sec)
+            }
+            if onExport != nil {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(action: startExport) {
+                        Text("Export")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(palette.accentInk)
+                            .padding(.horizontal, 16)
+                            .frame(height: 36)
+                            .background(Capsule().fill(palette.accent))
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(isLoading || isStartingExport)
+                    .opacity(isLoading || isStartingExport ? 0.4 : 1)
+                    .accessibilityIdentifier(AccessibilityID.ExportPreview.exportButton)
+                    .accessibilityLabel("Export Health Data")
+                    .accessibilityHint("Closes the preview and exports the selected health data")
+                }
+            }
+        }
+            .navigationBarBackButtonHidden(presentation == .glassPushed)
+            .tint(palette.accent)
+    }
+
+    // MARK: Summary
+
+    private var glassRangeText: String {
+        let calendar = Calendar.current
+        if calendar.isDate(startDate, inSameDayAs: endDate) {
+            return startDate.formatted(.dateTime.month(.abbreviated).day())
+        }
+        return (min(startDate, endDate)..<max(startDate, endDate)).formatted(.interval.month(.abbreviated).day())
+    }
+
+    private var glassPerDayFileCount: Int {
+        settings.dailyNotesOnlyModeEnabled || settings.summaryOnlyModeEnabled ? 0 : settings.exportFormats.count
+    }
+
+    private var glassSummary: some View {
+        let palette = glassPalette
+        let perDay = glassPerDayFileCount
+        let isPayload = targetType == .apiEndpoint || targetType == .agentDataGateway
+        let cells: [(String, String)] = [
+            (String(localized: "Range"), glassRangeText),
+            (String(localized: "Per day"), perDay == 1 ? String(localized: "1 file") : String(localized: "\(perDay) files")),
+            (isPayload ? String(localized: "Est. payload") : String(localized: "Est. size"),
+             estimatedExportSize.map { "~\($0.sizeLabel)" } ?? "—")
+        ]
+        return HStack(spacing: 0) {
+            ForEach(Array(cells.enumerated()), id: \.offset) { index, cell in
+                if index > 0 { Rectangle().fill(palette.line).frame(width: 1) }
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(cell.0).font(.system(size: 12)).foregroundStyle(palette.muted)
+                    Text(verbatim: cell.1)
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundStyle(palette.text)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 12)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .accessibilityElement(children: .combine)
+            }
+        }
+        .fixedSize(horizontal: false, vertical: true)
+        .glassSurface()
+    }
+
+    // MARK: Notes
+
+    @ViewBuilder private var glassNotes: some View {
+        if !bloodPressurePermissionFailures.isEmpty {
+            glassPermissionNote(
+                message: String(localized: "iOS didn’t allow Blood Pressure, so systolic and diastolic are skipped. Everything else exports."),
+                fix: { permissionGuidance = ExportPermissionGuidance(healthDataName: "Blood Pressure") }
+            )
+        }
+        if let guidance = ExportPermissionGuidance(failures: additionalPermissionFailures) {
+            glassPermissionNote(
+                message: String(localized: "Health.md has not requested \(guidance.healthDataName) on this device yet. Apple Health will not list new data types until Health.md requests them."),
+                fix: requestAdditionalHealthAccess
+            )
+            .accessibilityIdentifier(AccessibilityID.ExportPreview.permissionHelpButton)
+        }
+        ForEach(Array(degradingNonPermissionFailures.enumerated()), id: \.offset) { _, failure in
+            GlassBanner(title: failure.localizedSummary, systemImage: "exclamationmark.triangle", tone: .warning)
+        }
+        ForEach(Array(informationalFailures.enumerated()), id: \.offset) { _, failure in
+            GlassBanner(title: failure.localizedSummary, systemImage: "info.circle", tone: .info)
+        }
+    }
+
+    private func glassPermissionNote(message: String, fix: @escaping () -> Void) -> some View {
+        let palette = glassPalette
+        return HStack(alignment: .top, spacing: 12) {
+            Image(systemName: "exclamationmark.circle")
+                .foregroundStyle(palette.coral)
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 6) {
+                Text(String(localized: "Permission needs attention"))
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(palette.text)
+                Text(message)
+                    .font(.system(size: 14))
+                    .foregroundStyle(palette.sec)
+                    .fixedSize(horizontal: false, vertical: true)
+                Button(action: fix) {
+                    Text(String(localized: "Fix in Health"))
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(palette.text)
+                        .padding(.horizontal, 14)
+                        .frame(height: 32)
+                        .background(Capsule().fill(palette.surface2))
+                        .overlay(Capsule().strokeBorder(palette.edge, lineWidth: 1))
+                }
+                .buttonStyle(.plain)
+                .frame(minHeight: GlassMetrics.touchTarget)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
+        .glassSurface(cornerRadius: GlassMetrics.panelSmallRadius)
+        .overlay(
+            RoundedRectangle(cornerRadius: GlassMetrics.panelSmallRadius, style: .continuous)
+                .strokeBorder(palette.coral, lineWidth: 1)
+        )
+        .accessibilityElement(children: .contain)
+    }
+
+    // MARK: File
+
+    private func glassTitle(_ file: FilePreview) -> String {
+        if case .exportFormat(let format) = file.kind { return format.localizedDisplayName }
+        return file.kind.displayName
+    }
+
+    private var glassSwitcher: some View {
+        let palette = glassPalette
+        let files = glassFiles
+        let selectedID = glassSelectedFile?.id
+        return ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 2) {
+                ForEach(files) { file in
+                    let isSelected = file.id == selectedID
+                    Button { glassSelectedFileID = file.id } label: {
+                        Text(glassTitle(file))
+                            .font(.system(size: 13, weight: isSelected ? .bold : .medium))
+                            .foregroundStyle(palette.text)
+                            .lineLimit(1)
+                            .padding(.horizontal, 12)
+                            .frame(minWidth: files.count <= 3 ? 100 : nil, minHeight: 32)
+                            .background(Capsule().fill(isSelected ? palette.glassStrong : Color.clear))
+                            .contentShape(Capsule())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityAddTraits(isSelected ? .isSelected : [])
+                    .accessibilityIdentifier("exportPreview.fileRow.\(file.kind.accessibilityIdentifierSuffix)")
+                }
+            }
+            .padding(3)
+            .background(Capsule().fill(palette.surface))
+            .overlay(Capsule().strokeBorder(palette.line, lineWidth: 1))
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(String(localized: "Preview format"))
+    }
+
+    /// Long files show their head inline; the full preview opens on its own page.
+    private static let glassInlineLineLimit = 120
+
+    private func glassFilePanel(_ file: FilePreview) -> some View {
+        let palette = glassPalette
+        let content = file.preparedDisplayContent ?? ExportPreviewDisplayContent.make(from: file.content)
+        let lines = content.text.split(separator: "\n", omittingEmptySubsequences: false)
+        let isClipped = lines.count > Self.glassInlineLineLimit || content.isTruncated
+        let shown = lines.prefix(Self.glassInlineLineLimit).joined(separator: "\n")
+        let path = [file.folderPath, file.filename].filter { !$0.isEmpty }.joined(separator: "/")
+        return VStack(alignment: .leading, spacing: 6) {
+            Text(verbatim: "\(path) · \(file.sizeLabel)")
+                .foregroundStyle(palette.muted)
+                .lineLimit(2)
+                .truncationMode(.middle)
+            Text(verbatim: shown)
+                .foregroundStyle(palette.text)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .accessibilityIdentifier(AccessibilityID.ExportPreview.fileContent)
+            if isClipped {
+                NavigationLink {
+                    FileContentView(file: file)
+                } label: {
+                    Text(verbatim: String(localized: "Open full file") + " →")
+                        .glassFont(.caption)
+                        .foregroundStyle(palette.accent)
+                        .frame(minHeight: GlassMetrics.touchTarget)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .font(.system(size: 12.5, design: .monospaced))
+        .lineSpacing(4)
+        .padding(.horizontal, 16)
+        .padding(.top, 10)
+        .padding(.bottom, 14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .glassSurface()
+    }
+
+    @ViewBuilder private var glassFootnote: some View {
+        let palette = glassPalette
+        let showsSleepHint = !sleepWindowDescription.isEmpty
+            && settings.metricSelection.enabledMetricCount(for: .sleep) > 0
+        VStack(alignment: .leading, spacing: 6) {
+            if settings.summaryOnlyModeEnabled {
+                Text("Previewing \(localizedSourceDayCount(renderedDayPreviewCount)) with data. The full summary-only export will fetch the complete touched roll-up windows.")
+            } else {
+                Text(String(localized: "Showing every selected format for the most recent day. The full export includes each date."))
+            }
+            if showsSleepHint {
+                if capturedSleepAttribution == .morningEnds {
+                    Text(capturedSleepAttribution.localizedDescription)
+                } else {
+                    Text(String(localized: "If sleep is missing, try the previous date — morning sleep can land in that summary."))
+                }
+            }
+        }
+        .font(.system(size: 13))
+        .foregroundStyle(palette.muted)
+        .padding(.horizontal, 4)
+    }
+}
+#endif

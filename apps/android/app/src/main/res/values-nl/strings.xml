@@ -1459,6 +1459,9 @@
     <string name="export_sleep_date_guidance">Slaap loopt van twaalf uur ’s middags op elke gekozen datum tot twaalf uur ’s middags de volgende dag. Kies Gisteren voor de slaap van afgelopen nacht.</string>
     <string name="export_sleep_preview_window">Slaapvenster: %1$s om twaalf uur ’s middags tot %2$s om twaalf uur ’s middags (%3$s).</string>
     <string name="export_sleep_preview_guidance">Ontbreekt slaap? Probeer de vorige datum. Ochtendslaap kan in die samenvatting staan, ook als de ruwe records van vandaag zijn. Queryfouten worden apart vermeld; een leeg resultaat kan ook betekenen dat leestoegang ontbreekt.</string>
+    <string name="export_sleep_date_guidance_morning_ends">Volledige slaapsessies horen bij de datum waarop ze eindigen in de tijdzone van de export. Kies Vandaag voor de slaap van afgelopen nacht.</string>
+    <string name="export_sleep_preview_window_morning_ends">Einddatums van slaap: %1$s tot %2$s (%3$s).</string>
+    <string name="export_sleep_preview_guidance_morning_ends">Volledige slaapsessies horen bij hun einddatum in de tijdzone van deze export, zonder afkapping om 12:00. Queryfouten worden apart vermeld; een leeg resultaat kan ook betekenen dat leestoegang ontbreekt.</string>
     <string name="whoop_connection_description">Verbind WHOOP om herstel, belasting, slaap, trainingen en lichaamsmetingen te exporteren. Aanmelden gebeurt in je browser; Health.md bewaart tokens versleuteld op dit apparaat. Verbreken verwijdert de opgeslagen verbinding op dit apparaat.</string>
     <string name="whoop_connect">WHOOP verbinden</string>
     <string name="whoop_sources_description">Verbind WHOOP voor rechtstreekse providerexports of blijf Health Connect gebruiken voor lokale records.</string>
@@ -1470,6 +1473,8 @@
     <string name="paywall_access_subtitle">Kies een abonnement of levenslange toegang om je privégezondheidsarchief te beginnen. In aanmerking komende abonnementen bevatten een gratis proefperiode van 7 dagen.</string>
     <string name="paywall_access_active_title">Je toegang is actief</string>
     <string name="paywall_access_active_body">Ga verder met instellen om je gezondheidsgegevens te verbinden en te kiezen waar je je privéarchief bewaart.</string>
+    <string name="clinic_access_active_title">Je kliniektoegang is actief</string>
+    <string name="clinic_access_active_body">Je kliniek sponsort de levering aan haar goedgekeurde endpoint. Jij kiest wat je deelt. Voor andere exportbestemmingen heb je je eigen Health.md-toegang nodig.</string>
     <string name="paywall_plan_choices">Wekelijkse, jaarlijkse of levenslange toegang</string>
     <string name="paywall_weekly_price">%1$s / week</string>
     <string name="paywall_yearly_price">%1$s / jaar</string>
@@ -1493,4 +1498,10 @@
         <item quantity="one">dag in %1$s</item>
         <item quantity="other">dagen in %1$s</item>
     </plurals>
+
+    <string name="clinic_sync_channel_name">Synchronisatieverzoeken van de kliniek</string>
+    <string name="clinic_sync_request_body">Je kliniek vraagt om je nieuwste gezondheidsgegevens. Tik om ze te versturen.</string>
+    <string name="clinic_sync_result_sent">Je nieuwste gegevens zijn naar je kliniek verstuurd.</string>
+    <string name="clinic_sync_result_failed">Je gegevens konden niet naar je kliniek worden verstuurd. Open Health.md en probeer het opnieuw.</string>
+    <string name="clinic_sync_result_profile_missing">Open Klinische toegang in Health.md en kies eerst Klinische bestemming gebruiken.</string>
 </resources>

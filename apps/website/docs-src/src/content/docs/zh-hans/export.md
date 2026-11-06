@@ -1,41 +1,42 @@
 ---
 title: "出口"
-description: "使用“导出”选项卡检查HealthKit和保管库连接。选择目的地并导出日期范围。"
+description: "立即或按计划导出 Apple Health 数据。在归档中查看准备情况，在立即导出中选择范围，并为每个自动化设置目标位置。"
 ---
 
-<p>导出选项卡由三个小决定组成：确认准备情况、选择目的地、然后在预览或导出之前选择日期范围。 </p>
+<p>iPhone 上的 Health.md 有三个标签：<strong>归档</strong>、<strong>自动化</strong>和<strong>设置</strong>，另有一个圆形的<strong>立即导出</strong>按钮。在 iPad 上，这些标签会移到侧边栏。</p>
 
-## 读取状态徽章
- <div class="options">
- <div class="option"> <strong>健康徽章</strong> <p>绿色表示应用的“已连接”设置状态，并不代表每个类别的读取权限都已确认。HealthKit 不会向应用透露被拒绝的读取权限。轻点标记以请求访问。对于尚未作出选择的数据类型，iOS 可能显示权限对话框；如果选择已记录，Health.md 会显示权限说明。请在 Apple Health 中检查类别。结果为空可能表示访问被拒绝，也可能表示没有匹配的数据。<a href="/zh-hans/docs/troubleshooting/">排查缺失的数据</a>。</p> </div>
- <div class="option"> <strong>保管库徽章</strong> <p>绿点 = 已选择保管库文件夹。点击以重新选择或更改保管库。标签显示文件夹名称。 </p> </div>
- </div>
- <p>导出<em>操作保持禁用状态</em>直到HealthKit 、输出格式和所选目标准备就绪。这可以防止最常见的故障模式：尝试在没有目的地的情况下导出。 </p>
+## 在归档中查看准备情况
+<p><strong>归档</strong>日历显示每个自动化已覆盖的健康数据日期。如果有问题阻止导出，顶部的<strong>需要关注</strong>卡片会说明原因。</p>
+<div class="options">
+<div class="option"><strong>Apple Health</strong><p>Health.md 显示的是 App 的设置状态，并不代表已确认每个类别的读取权限。HealthKit 不会透露被拒绝的读取权限。请在 Apple Health 中检查类别。结果为空可能意味着访问被拒绝，或者没有数据。<a href="/zh-hans/docs/troubleshooting/">排查缺失数据</a>。</p></div>
+<div class="option"><strong>文件夹</strong><p>在<strong>设置 → 文件夹</strong>中选择或重新选择文件夹。如果移动文件夹后 iOS 失去了访问权限，Health.md 会请你重新选择。不会删除任何内容。</p></div>
+</div>
 
-## 选择导出目标
- <p>导出目标卡决定数据的去向： </p>
+## 为自动化选择导出目标位置
+<p>每个自动化都有自己的目标位置。打开<strong>自动化</strong>，选择一个自动化，然后打开<strong>输出</strong>。</p>
 
 <div class="options">
- <div class="option"> <strong>本地iPhone文件夹</strong> <p>直接写入您在此设备上选择的文件夹或Obsidian保管库。 </p> </div>
- <div class="option"> <strong>已连接的 Mac </strong> <p>将捕获的每日数据和准确的设置快照发送到附近的 Mac 应用程序。 iPhone读取HealthKit 。 Mac 渲染选定的格式并写入文件。 </p> </div>
- <div class="option"> <strong> API 端点</strong> <p>将 JSON 信封直接从iPhone发送到用户配置的 HTTP(S) 端点。 <a href="/zh-hans/docs/api-endpoint/">请参阅 API 端点</a> 。 </p> </div>
- </div>
+<div class="option"><strong>本地文件夹</strong><p>直接写入你在此设备上选择的文件夹或 Obsidian 仓库。</p></div>
+<div class="option"><strong>已连接的 Mac</strong><p>将获取的每日数据和设置的精确快照发送到附近的 Mac App。iPhone 读取 HealthKit；Mac 生成所选格式并写入文件。</p></div>
+<div class="option"><strong>API 端点</strong><p>从 iPhone 直接将 JSON 信封 POST 到你配置的 HTTP(S) 端点。<a href="/zh-hans/docs/api-endpoint/">查看 API 端点</a>。</p></div>
+<div class="option"><strong>Agent Data 网关</strong><p>将每个导出的文件原样上传到网关的接收端点。</p></div>
+</div>
 
-## 选择日期范围
- <p>日期预设涵盖常见路径： </p>
+## 在立即导出中选择范围
+<p>轻点<strong>立即导出</strong>；如果有多个自动化，请先选择一个，然后选择范围。</p>
 
 <div class="options">
- <div class="option"> <strong>今天</strong> <p>导出当天。对于测试输出格式很有用。 </p> </div>
- <div class="option"> <strong>昨天</strong> <p>最安全的每日导出选择，因为这一天已经结束。 </p> </div>
- <div class="option"> <strong>所有时间</strong> <p>从Health.md可以找到的最早HealthKit数据回填。 </p> </div>
- <div class="option"> <strong>自定义</strong> <p>选择特定范围的开始日期和结束日期。 </p> </div>
- </div>
+<div class="option"><strong>昨天</strong><p>这一天已经结束，因此最适合每日导出。</p></div>
+<div class="option"><strong>7 天 / 30 天</strong><p>截至昨天的最近一周或一个月。30 天及以上时会先请你确认。</p></div>
+<div class="option"><strong>自定义</strong><p>为特定范围选择开始日期和结束日期。</p></div>
+</div>
+<p><strong>将写入</strong>会显示目标位置，以及导出涵盖的大致文件数和天数。<strong>仅日期范围摘要</strong>只写入一个摘要文件，而不是每日文件。“今天”和“全部时间”仍可在<strong>自动化 → 所有导出设置</strong>中使用。</p>
 
 ## 预览或导出
- <div class="options">
- <div class="option"> <strong>预览</strong> <p>显示写入任何内容之前将生成的文件和内容。 </p> </div>
- <div class="option"> <strong>导出</strong> <p>运行导出，在主屏幕上显示进度，并将结果记录在历史记录中。 </p> </div>
- </div>
+<div class="options">
+<div class="option"><strong>预览</strong><p>在写入任何内容之前，显示将生成的文件及其内容。</p></div>
+<div class="option"><strong>导出</strong><p>运行导出，在标签栏上方显示进度和取消按钮，并将结果记录到历史和归档日历中。</p></div>
+</div>
 
 ## 选择数据详细级别
 
@@ -62,11 +63,7 @@ description: "使用“导出”选项卡检查HealthKit和保管库连接。选
 
 ## 简介和值得信赖的历史
 
-保存的配置文件会冻结其设置和运行目标。配置文件感知的计划和自动化历史记录行保留运行时配置文件，而历史记录则保留实际使用的目的地的隐私安全标签。手动导出选项卡行可能会省略配置文件名称。以后的重命名和目标更改不会重写现有历史记录。如果找不到所引用的配置文件，操作会失败，不会改用其他设置。请参阅[导出配置文件](/zh-hans/docs/export-profiles/)。
-
-## 标签栏
-
-<p>屏幕底部的四个选项卡（导出、计划、同步、设置）覆盖了整个应用程序表面区域。其他一切都位于“设置”深处的一两层。 </p>
+已保存的配置方案会在运行时固定设置和目标位置。支持配置方案的计划运行和自动化历史记录行会保留运行时的配置方案，历史记录还会保留实际使用的目标位置的隐私友好标签。手动导出行可能省略配置方案名称。之后重命名或更改目标位置不会改写已有历史。如果引用的配置方案不存在，操作会失败，而不会改用其他设置。请参阅[导出配置方案](/zh-hans/docs/export-profiles/)。
 
 <div class="callout">
  <strong>解锁行为。 </strong>

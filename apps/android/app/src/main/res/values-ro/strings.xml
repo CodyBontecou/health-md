@@ -1507,6 +1507,9 @@
     <string name="export_sleep_date_guidance">Somnul acoperă intervalul de la amiaza fiecărei date selectate până la amiaza zilei următoare. Pentru somnul de azi-noapte, alege Ieri.</string>
     <string name="export_sleep_preview_window">Interval de somn: %1$s la amiază până la %2$s la amiază (%3$s).</string>
     <string name="export_sleep_preview_guidance">Dacă somnul lipsește, încearcă data precedentă. Somnul de dimineață poate apărea în rezumatul acelei date, chiar dacă înregistrările brute sunt datate astăzi. Erorile de interogare sunt afișate separat; un rezultat gol poate însemna și că accesul la citire nu este disponibil.</string>
+    <string name="export_sleep_date_guidance_morning_ends">Sesiunile de somn complete aparțin datei la care se încheie în fusul orar al exportului. Pentru somnul de azi-noapte, alege Astăzi.</string>
+    <string name="export_sleep_preview_window_morning_ends">Datele de sfârșit ale somnului: %1$s – %2$s (%3$s).</string>
+    <string name="export_sleep_preview_guidance_morning_ends">Sesiunile de somn complete aparțin datei lor de sfârșit în fusul orar al acestui export, fără tăiere la prânz. Erorile de interogare sunt afișate separat; un rezultat gol poate însemna și că accesul la citire nu este disponibil.</string>
     <string name="whoop_connection_description">Conectează WHOOP pentru a exporta recuperarea, efortul, somnul, antrenamentele și măsurătorile corporale. Autentificarea folosește browserul; Health.md păstrează tokenurile criptate pe acest dispozitiv. Deconectarea elimină conexiunea salvată pe acest dispozitiv.</string>
     <string name="whoop_connect">Conectează WHOOP</string>
     <string name="whoop_sources_description">Conectează WHOOP pentru exporturi directe de la furnizor sau continuă să folosești Health Connect pentru înregistrările locale.</string>
@@ -1518,6 +1521,8 @@
     <string name="paywall_access_subtitle">Alege un abonament sau acces pe viață pentru a începe arhiva ta privată de sănătate. Abonamentele eligibile includ o perioadă de probă gratuită de 7 zile.</string>
     <string name="paywall_access_active_title">Accesul tău este activ</string>
     <string name="paywall_access_active_body">Continuă configurarea pentru a conecta datele de sănătate și a alege unde salvezi arhiva privată.</string>
+    <string name="clinic_access_active_title">Accesul prin clinică este activ</string>
+    <string name="clinic_access_active_body">Clinica ta sponsorizează livrarea către endpointul său aprobat. Tu alegi ce partajezi. Celelalte destinații de export necesită propriul tău acces Health.md.</string>
     <string name="paywall_plan_choices">Acces săptămânal, anual sau pe viață</string>
     <string name="paywall_weekly_price">%1$s / săptămână</string>
     <string name="paywall_yearly_price">%1$s / an</string>
@@ -1544,4 +1549,10 @@
         <item quantity="few">zile în %1$s</item>
         <item quantity="other">de zile în %1$s</item>
     </plurals>
+
+    <string name="clinic_sync_channel_name">Solicitări de sincronizare de la clinică</string>
+    <string name="clinic_sync_request_body">Clinica ta solicită cele mai recente date de sănătate. Atinge pentru a le trimite.</string>
+    <string name="clinic_sync_result_sent">Cele mai recente date au fost trimise clinicii tale.</string>
+    <string name="clinic_sync_result_failed">Datele nu au putut fi trimise clinicii. Deschide Health.md și încearcă din nou.</string>
+    <string name="clinic_sync_result_profile_missing">Deschide accesul clinicii în Health.md și alege mai întâi Folosește destinația clinicii.</string>
 </resources>

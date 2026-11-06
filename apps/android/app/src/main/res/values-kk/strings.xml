@@ -1400,6 +1400,9 @@
     <string name="export_sleep_date_guidance">Ұйқы таңдалған күннің түскі уақытынан келесі күннің түскі уақытына дейінгі аралықты қамтиды. Өткен түнгі ұйқы үшін «Кеше» параметрін таңдаңыз.</string>
     <string name="export_sleep_preview_window">Ұйқы аралығы: %1$s түскі уақытынан %2$s түскі уақытына дейін (%3$s).</string>
     <string name="export_sleep_preview_guidance">Ұйқы деректері болмаса, алдыңғы күнді таңдаңыз. Бастапқы жазбалар бүгінгі күнмен белгіленсе де, таңғы ұйқы сол күннің қорытындысында болуы мүмкін. Сұрау қателері бөлек көрсетіледі; бос нәтиже оқу рұқсатының қолжетімсіз екенін де білдіруі мүмкін.</string>
+    <string name="export_sleep_date_guidance_morning_ends">Толық ұйқы сеанстары экспорттың уақыт белдеуінде аяқталған күнге жатады. Өткен түнгі ұйқы үшін Бүгінді таңдаңыз.</string>
+    <string name="export_sleep_preview_window_morning_ends">Ұйқының аяқталу күндері: %1$s – %2$s (%3$s).</string>
+    <string name="export_sleep_preview_guidance_morning_ends">Толық ұйқы сеанстары осы экспорттың уақыт белдеуіндегі аяқталу күніне жатады, түсте кесілмейді. Сұрау қателері бөлек көрсетіледі; бос нәтиже оқу рұқсатының қолжетімсіз екенін де білдіруі мүмкін.</string>
     <string name="whoop_connection_description">Қалпына келу, жүктеме, ұйқы, жаттығулар мен дене өлшемдерін экспорттау үшін WHOOP қызметін қосыңыз. Кіру браузер арқылы орындалады; Health.md токендерді осы құрылғыда шифрлап сақтайды. Ажырату осы құрылғыда сақталған қосылымды жояды.</string>
     <string name="whoop_connect">WHOOP қызметін қосу</string>
     <string name="whoop_sources_description">Провайдерден тікелей экспорттау үшін WHOOP қызметін қосыңыз немесе жергілікті жазбалар үшін Health Connect қолдануды жалғастырыңыз.</string>
@@ -1411,6 +1414,8 @@
     <string name="paywall_access_subtitle">Жеке денсаулық мұрағатын бастау үшін жазылымды немесе өмір бойы қолжетімділікті таңдаңыз. Тиісті жазылымдарға 7 күндік тегін сынақ мерзімі кіреді.</string>
     <string name="paywall_access_active_title">Қолжетімділігіңіз белсенді</string>
     <string name="paywall_access_active_body">Денсаулық деректерін қосып, жеке мұрағатты сақтау орнын таңдау үшін баптауды жалғастырыңыз.</string>
+    <string name="clinic_access_active_title">Клиника арқылы қолжетімділігіңіз белсенді</string>
+    <string name="clinic_access_active_body">Клиникаңыз мақұлданған соңғы нүктесіне жеткізуге демеушілік етеді. Нені бөлісуді өзіңіз таңдайсыз. Басқа экспорт бағыттары үшін өз Health.md қолжетімділігіңіз қажет.</string>
     <string name="paywall_plan_choices">Апталық, жылдық немесе өмір бойы қолжетімділік</string>
     <string name="paywall_weekly_price">%1$s / апта</string>
     <string name="paywall_yearly_price">%1$s / жыл</string>
@@ -1434,4 +1439,10 @@
         <item quantity="one">күн, %1$s айында</item>
         <item quantity="other">күн, %1$s айында</item>
     </plurals>
+
+    <string name="clinic_sync_channel_name">Клиникадан синхрондау сұраулары</string>
+    <string name="clinic_sync_request_body">Клиникаңыз денсаулығыңыз туралы соңғы деректерді сұрап отыр. Жіберу үшін түртіңіз.</string>
+    <string name="clinic_sync_result_sent">Соңғы деректеріңіз клиникаға жіберілді.</string>
+    <string name="clinic_sync_result_failed">Деректерді клиникаға жіберу мүмкін болмады. Health.md қолданбасын ашып, қайталап көріңіз.</string>
+    <string name="clinic_sync_result_profile_missing">Health.md ішінде клиника қолжетімділігін ашып, алдымен «Клиника мекенжайын пайдалану» опциясын таңдаңыз.</string>
 </resources>

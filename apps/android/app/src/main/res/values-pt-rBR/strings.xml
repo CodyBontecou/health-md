@@ -1507,6 +1507,9 @@
     <string name="export_sleep_date_guidance">O sono abrange do meio-dia de cada data selecionada ao meio-dia seguinte. Para o sono da última noite, escolha Ontem.</string>
     <string name="export_sleep_preview_window">Janela de sono: de %1$s ao meio-dia a %2$s ao meio-dia (%3$s).</string>
     <string name="export_sleep_preview_guidance">Se o sono estiver ausente, tente a data anterior. O sono da manhã pode aparecer nesse resumo mesmo quando os registros brutos têm a data de hoje. Falhas de consulta são listadas separadamente; um resultado vazio também pode indicar que o acesso de leitura está indisponível.</string>
+    <string name="export_sleep_date_guidance_morning_ends">Sessões de sono completas pertencem à data em que terminam no fuso horário da exportação. Para o sono da noite passada, escolha Hoje.</string>
+    <string name="export_sleep_preview_window_morning_ends">Datas de término do sono: %1$s a %2$s (%3$s).</string>
+    <string name="export_sleep_preview_guidance_morning_ends">Sessões de sono completas pertencem à data de término no fuso horário desta exportação, sem corte ao meio-dia. Falhas de consulta são listadas separadamente; um resultado vazio também pode indicar que o acesso de leitura está indisponível.</string>
     <string name="whoop_connection_description">Conecte o WHOOP para exportar recuperação, esforço, sono, treinos e medidas corporais. O login usa seu navegador; o Health.md armazena os tokens criptografados neste dispositivo. Desconectar remove a conexão salva neste dispositivo.</string>
     <string name="whoop_connect">Conectar WHOOP</string>
     <string name="whoop_sources_description">Conecte o WHOOP para exportar diretamente do provedor ou continue usando o Health Connect para registros locais.</string>
@@ -1518,6 +1521,8 @@
     <string name="paywall_access_subtitle">Escolha uma assinatura ou acesso vitalício para começar seu arquivo de saúde privado. Assinaturas elegíveis incluem um teste gratuito de 7 dias.</string>
     <string name="paywall_access_active_title">Seu acesso está ativo</string>
     <string name="paywall_access_active_body">Continue a configuração para conectar seus dados de saúde e escolher onde salvar seu arquivo privado.</string>
+    <string name="clinic_access_active_title">Seu acesso pela clínica está ativo</string>
+    <string name="clinic_access_active_body">Sua clínica patrocina o envio para o endpoint aprovado dela. Você escolhe o que compartilhar. Outros destinos de exportação exigem seu próprio acesso ao Health.md.</string>
     <string name="paywall_plan_choices">Acesso semanal, anual ou vitalício</string>
     <string name="paywall_weekly_price">%1$s / semana</string>
     <string name="paywall_yearly_price">%1$s / ano</string>
@@ -1544,4 +1549,10 @@
         <item quantity="many">de dias em %1$s</item>
         <item quantity="other">dias em %1$s</item>
     </plurals>
+
+    <string name="clinic_sync_channel_name">Pedidos de sincronização da clínica</string>
+    <string name="clinic_sync_request_body">Sua clínica está pedindo seus dados de saúde mais recentes. Toque para enviá-los.</string>
+    <string name="clinic_sync_result_sent">Seus dados mais recentes foram enviados à sua clínica.</string>
+    <string name="clinic_sync_result_failed">Não foi possível enviar seus dados à clínica. Abra o Health.md e tente novamente.</string>
+    <string name="clinic_sync_result_profile_missing">Abra o acesso da clínica no Health.md e escolha Usar destino da clínica primeiro.</string>
 </resources>

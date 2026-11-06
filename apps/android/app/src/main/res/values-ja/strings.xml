@@ -1284,6 +1284,9 @@
     <string name="export_sleep_date_guidance">睡眠は選択した各日の正午から翌日の正午までを対象とします。昨夜の睡眠には「昨日」を選択してください。</string>
     <string name="export_sleep_preview_window">睡眠の時間枠：%1$sの正午から%2$sの正午まで（%3$s）。</string>
     <string name="export_sleep_preview_guidance">睡眠がない場合は前日を試してください。元の記録が今日の日付でも、朝の睡眠は前日の概要に含まれることがあります。クエリエラーは別途表示されます。結果が空の場合、読み取りアクセスが利用できない可能性もあります。</string>
+    <string name="export_sleep_date_guidance_morning_ends">睡眠セッション全体は、エクスポートのタイムゾーンで終了した日付に含まれます。昨夜の睡眠には「今日」を選択してください。</string>
+    <string name="export_sleep_preview_window_morning_ends">睡眠の終了日：%1$s〜%2$s（%3$s）。</string>
+    <string name="export_sleep_preview_guidance_morning_ends">睡眠セッション全体は、このエクスポートのタイムゾーンでの終了日に含まれ、正午で区切られません。クエリエラーは別途表示されます。結果が空の場合、読み取りアクセスが利用できない可能性もあります。</string>
     <string name="whoop_connection_description">WHOOPに接続して、回復、負荷、睡眠、ワークアウト、身体測定値をエクスポートできます。ログインにはブラウザを使用し、Health.mdはトークンをこのデバイスに暗号化して保存します。接続を解除すると、このデバイスに保存された接続が削除されます。</string>
     <string name="whoop_connect">WHOOPに接続</string>
     <string name="whoop_sources_description">WHOOPに接続してプロバイダーから直接エクスポートするか、ローカルの記録に引き続きHealth Connectを使用できます。</string>
@@ -1295,6 +1298,8 @@
     <string name="paywall_access_subtitle">サブスクリプションまたは永久アクセスを選んで、プライベートな健康アーカイブを始めましょう。対象のサブスクリプションには7日間の無料トライアルが含まれます。</string>
     <string name="paywall_access_active_title">アクセスは有効です</string>
     <string name="paywall_access_active_body">設定を続けて健康データを接続し、プライベートアーカイブの保存先を選択してください。</string>
+    <string name="clinic_access_active_title">クリニックのアクセスは有効です</string>
+    <string name="clinic_access_active_body">クリニックが承認済みエンドポイントへの配信をスポンサーしています。共有する内容はあなたが選びます。その他のエクスポート先には、ご自身の Health.md アクセスが必要です。</string>
     <string name="paywall_plan_choices">週額、年額、または永久アクセス</string>
     <string name="paywall_weekly_price">%1$s / 週</string>
     <string name="paywall_yearly_price">%1$s / 年</string>
@@ -1315,4 +1320,10 @@
     <plurals name="widget_archive_days_in_month">
         <item quantity="other">日（%1$s）</item>
     </plurals>
+
+    <string name="clinic_sync_channel_name">クリニックの同期リクエスト</string>
+    <string name="clinic_sync_request_body">クリニックが最新のヘルスケアデータを求めています。タップして送信します。</string>
+    <string name="clinic_sync_result_sent">最新のデータをクリニックに送信しました。</string>
+    <string name="clinic_sync_result_failed">データをクリニックに送信できませんでした。Health.mdを開いてもう一度お試しください。</string>
+    <string name="clinic_sync_result_profile_missing">Health.mdでクリニックアクセスを開き、先に「クリニックの送信先を使用」を選んでください。</string>
 </resources>

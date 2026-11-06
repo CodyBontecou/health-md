@@ -487,6 +487,14 @@ final class IPhoneDirectCLIService: ObservableObject {
             try? trustStore.saveState(trustState)
         }
         self.needsPairingCode = trustState.trustedMac == nil
+        #if DEBUG
+        // App Store screenshots: the fixture computer was paired by QR (display only).
+        if let fixture = AppStoreScreenshotFixtures.pairedCLI {
+            let methods = DirectCLIPairingMethodStore(defaults: defaults)
+            methods.noteAttempt(.qr, at: fixture.pairedAt)
+            methods.method(forPairingAt: fixture.pairedAt)
+        }
+        #endif
     }
 
     var isEnabled: Bool {
@@ -494,11 +502,25 @@ final class IPhoneDirectCLIService: ObservableObject {
     }
 
     var pairedCLIName: String? {
-        client.savedServer()?.displayName
+        #if DEBUG
+        if let fixture = AppStoreScreenshotFixtures.pairedCLI { return fixture.name }
+        #endif
+        return client.savedServer()?.displayName
     }
 
     var hasPairedCLI: Bool {
-        client.savedServer() != nil
+        #if DEBUG
+        if AppStoreScreenshotFixtures.pairedCLI != nil { return true }
+        #endif
+        return client.savedServer() != nil
+    }
+
+    /// When the saved pairing was made. The phone does not record later use.
+    var pairedCLIPairedAt: Date? {
+        #if DEBUG
+        if let fixture = AppStoreScreenshotFixtures.pairedCLI { return fixture.pairedAt }
+        #endif
+        return client.savedServer()?.pairedAt
     }
 
     var isPairingHandoffWaitingForActiveOperation: Bool {
@@ -820,6 +842,10 @@ final class IPhoneDirectCLIService: ObservableObject {
     }
 
     private func startReconnectLoopIfNeeded() {
+        #if DEBUG
+        // The screenshot pairing is display only; never connect for it.
+        if AppStoreScreenshotFixtures.pairedCLI != nil { return }
+        #endif
         guard isEnabled,
               appIsActive,
               reconnectTask == nil,

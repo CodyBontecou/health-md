@@ -32,8 +32,8 @@ nonisolated final class FeedbackReporterTests: XCTestCase {
         XCTAssertEqual(body, FeedbackHelper.issueBody, "Preserve the pre-filled template")
         let failure = try XCTUnwrap(reporter.failure)
         XCTAssertTrue(failure.message.contains("No issue was submitted"))
-        XCTAssertTrue(failure.reportText.contains(FeedbackHelper.issueBody))
-        XCTAssertTrue(failure.reportText.contains("To: cody@isolated.tech"))
+        XCTAssertTrue(failure.reportText.hasPrefix("Health.md "), "ReportFallbackG starts with the version line")
+        XCTAssertTrue(failure.reportText.contains(FeedbackFallbackCopy().stepsPrompt))
         XCTAssertTrue(failure.reportText.contains("https://github.com/CodyBontecou/health-md/issues/new"))
     }
 
@@ -50,7 +50,7 @@ nonisolated final class FeedbackReporterTests: XCTestCase {
         let failure = try XCTUnwrap(reporter.failure)
         XCTAssertTrue(failure.message.contains("could not open your email app"))
         XCTAssertTrue(failure.reportText.contains(FeedbackHelper.supportEmail))
-        XCTAssertTrue(failure.reportText.contains(FeedbackHelper.diagnosticsBlock))
+        XCTAssertTrue(failure.reportText.contains(FeedbackReporter.platformDescription))
         XCTAssertEqual(attempts, 1)
     }
 
@@ -61,6 +61,19 @@ nonisolated final class FeedbackReporterTests: XCTestCase {
         XCTAssertNil(reporter.failure)
         try XCTUnwrap(completion)(false)
         XCTAssertNotNil(reporter.failure)
+    }
+
+    @MainActor func testReportTemplateFollowsReportFallbackBoard() {
+        let copy = FeedbackFallbackCopy(bundle: .main, locale: Locale(identifier: "en"))
+        let template = FeedbackReporter.reportTemplate(appVersion: "4.2", platform: "iOS 26.1", strings: copy)
+        XCTAssertEqual(template.components(separatedBy: "\n"), [
+            "Health.md 4.2 · iOS 26.1",
+            copy.problemPrompt,
+            copy.expectedPrompt,
+            copy.stepsPrompt,
+            copy.privateDetailsReminder,
+        ])
+        XCTAssertFalse(template.contains("Device:"), "No device details beyond the OS version")
     }
 
     @MainActor func testSuccessfulHandoffsDoNotClaimSubmissionOrDelivery() {
@@ -96,6 +109,27 @@ nonisolated final class FeedbackReporterTests: XCTestCase {
         XCTAssertEqual(pasteboard, "Synthetic edited report")
         XCTAssertEqual(draft.copyConfirmation, String(localized: "Copied"))
         XCTAssertEqual(draft.copyAccessibilityLabel, String(localized: "Report copied"))
+    }
+
+    @MainActor func testDiagnosticsSummaryAttachesOnceAndDetachesExactly() {
+        let report = "Problem: synthetic"
+        let summary = "--- Diagnostics summary ---\nEvents: 0"
+        let attached = FeedbackDiagnosticsAttachment.attaching(summary, to: report)
+        XCTAssertEqual(attached, report + "\n\n" + summary)
+        XCTAssertEqual(FeedbackDiagnosticsAttachment.attaching(summary, to: attached), attached)
+        XCTAssertEqual(FeedbackDiagnosticsAttachment.detaching(summary, from: attached), report)
+        XCTAssertEqual(FeedbackDiagnosticsAttachment.detaching(summary, from: "edited"), "edited")
+    }
+
+    @MainActor func testFailureTitleFollowsTheFailedHandoff() throws {
+        let reporter = makeReporter { _, completion in completion(false) }
+        reporter.open(.email)
+        XCTAssertEqual(reporter.failure?.kind, .emailHandoff)
+        reporter.open(.github)
+        XCTAssertEqual(reporter.failure?.kind, .githubHandoff)
+        let copy = FeedbackFallbackCopy()
+        XCTAssertEqual(copy.title(for: .emailHandoff), String(localized: "Couldn’t open Mail"))
+        XCTAssertEqual(copy.title(for: .generic), copy.title)
     }
 
     @MainActor func testUnchangedEditorTextKeepsConfirmationButFailedCopyClearsIt() {
@@ -144,10 +178,10 @@ nonisolated final class FeedbackReporterTests: XCTestCase {
         let expected = [
             ("de", "Feedback konnte nicht gesendet werden",
              "Bearbeiten Sie den Bericht und kopieren Sie ihn, bevor Sie das Fenster schließen. Es wird nichts automatisch gesendet. Vermeiden Sie es, private Gesundheitsdaten einzufügen.",
-             "Feedback-Bericht", "Bericht kopieren", "Kopiert", "Bericht kopiert"),
+             "Berichtstext", "Bericht kopieren", "Kopiert", "Bericht kopiert"),
             ("ja", "フィードバックを送信できませんでした",
              "レポートを編集し、閉じる前にコピーしてください。自動的に送信されることはありません。個人の健康データを含めないでください。",
-             "フィードバックのレポート", "レポートをコピー", "コピーされました", "レポートをコピーしました")
+             "レポートのテキスト", "レポートをコピー", "コピーされました", "レポートをコピーしました")
         ]
         for (language, title, instructions, reportLabel, copyReport, copied, reportCopied) in expected {
             let copy = FeedbackFallbackCopy(bundle: try localizedResources(language), locale: Locale(identifier: language))
@@ -177,7 +211,7 @@ nonisolated final class FeedbackReporterTests: XCTestCase {
         let failure = try XCTUnwrap(reporter.failure)
         XCTAssertTrue(failure.message.contains("Mail could not queue your feedback"))
         XCTAssertTrue(failure.reportText.contains(FeedbackHelper.supportEmail))
-        XCTAssertTrue(failure.reportText.contains(FeedbackHelper.diagnosticsBlock))
+        XCTAssertTrue(failure.reportText.contains(FeedbackReporter.platformDescription))
         reporter.failure = nil
         reporter.mailSheetDismissed()
         XCTAssertNil(reporter.failure, "Consume pending completion exactly once")

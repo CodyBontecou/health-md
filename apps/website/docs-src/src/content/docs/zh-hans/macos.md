@@ -31,9 +31,9 @@ Apple Health 仍位于 iPhone 上。Mac 应用不会直接读取 HealthKit。
 
 1. 在 Mac 上安装并打开 Health.md。
 2. 在本地磁盘、iCloud Drive 或 Obsidian 知识库中选择目标文件夹。
-3. 在 iPhone 的“同步”标签页中启用 Mac 连接。
-4. 在 iPhone 上选择“已连接的 Mac”作为导出目标。
-5. 配置导出，然后轻点“导出”。
+3. 在 iPhone 上打开**设置 → Mac 目标位置**并启用它。
+4. 在 iPhone 上，将已连接的 Mac 选为自动化的目标位置（**自动化 → 自动化 → 输出**）。
+5. 轻点**立即导出**，或让自动化按计划运行。
 
 iPhone 会获取 HealthKit 数据和生效的设置快照。当前对等设备会传输有界且经过校验和验证的分区。Mac 使用生产环境导出器写入所请求的文件。
 

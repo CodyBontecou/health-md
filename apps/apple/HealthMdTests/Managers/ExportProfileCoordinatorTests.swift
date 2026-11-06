@@ -1070,4 +1070,22 @@ final class ExportProfileCoordinatorTests: XCTestCase {
             "a diverging draft template clears the overlap"
         )
     }
+
+    func testOverlapPreviewIgnoresTheProfileBeingEdited() throws {
+        let vaultManager = makeVaultManager()
+        let coordinator = makeCoordinator(vaultManager: vaultManager)
+        selectVaultFolder(in: vaultManager, path: "/Users/x/SharedVault")
+        coordinator.vaultFolderWasSelected()
+        let only = try XCTUnwrap(coordinator.profileStore.profiles.first)
+
+        XCTAssertTrue(
+            coordinator.overlapPreviewNames(
+                target: .localIPhoneFolder,
+                folderVaultID: nil,
+                settings: ExportSettingsSnapshot.from(coordinator.liveSettings),
+                editingProfileID: only.id
+            ).isEmpty,
+            "editing the only automation never overlaps with itself"
+        )
+    }
 }

@@ -893,7 +893,9 @@ class ExportHistoryManager: ObservableObject {
         partialFailures: [ExportPartialFailure] = [],
         appleExportEnginePin: AppleExportEnginePin? = nil,
         operationDetails: ExportHistoryOperationDetails? = nil,
-        profileName: String? = nil
+        profileName: String? = nil,
+        profileID: UUID? = nil,
+        completedDates: [Date]? = nil
     ) {
         let entry = ExportHistoryEntry(
             id: id,
@@ -915,7 +917,7 @@ class ExportHistoryManager: ObservableObject {
             operationDetails: operationDetails,
             profileName: profileName
         )
-        addEntry(entry)
+        addEntry(entry, profileID: profileID, completedDates: completedDates)
     }
 
     /// Records a failed export attempt
@@ -937,7 +939,9 @@ class ExportHistoryManager: ObservableObject {
         partialFailures: [ExportPartialFailure] = [],
         appleExportEnginePin: AppleExportEnginePin? = nil,
         operationDetails: ExportHistoryOperationDetails? = nil,
-        profileName: String? = nil
+        profileName: String? = nil,
+        profileID: UUID? = nil,
+        completedDates: [Date]? = nil
     ) {
         let entry = ExportHistoryEntry(
             id: id,
@@ -960,19 +964,25 @@ class ExportHistoryManager: ObservableObject {
             operationDetails: operationDetails,
             profileName: profileName
         )
-        addEntry(entry)
+        addEntry(entry, profileID: profileID, completedDates: completedDates)
     }
 
     /// Clears all history
     func clearHistory() {
         history = []
         saveHistory()
+        CoverageLedgerStore.shared.clear()
     }
 
     // MARK: - Private Methods
 
-    private func addEntry(_ entry: ExportHistoryEntry) {
+    private func addEntry(
+        _ entry: ExportHistoryEntry,
+        profileID: UUID?,
+        completedDates: [Date]?
+    ) {
         guard !history.contains(where: { $0.id == entry.id }) else { return }
+        let priorHistory = history
         history.insert(entry, at: 0)
 
         // Trim history to max entries
@@ -981,6 +991,12 @@ class ExportHistoryManager: ObservableObject {
         }
 
         saveHistory()
+        CoverageLedgerStore.shared.record(
+            entry: entry,
+            explicitProfileID: profileID,
+            completedDates: completedDates,
+            priorHistory: priorHistory
+        )
     }
 
     private func loadHistory() {

@@ -40,13 +40,16 @@ class ProductCapabilityManifestTest {
         assertEquals(appleCapabilities + setOf("source.private-platform-database", "apple.ads-purchase-attribution"), idsWithState(states, "unavailable"))
         assertEquals(
             setOf(
+                "account.clinic-sync-requests",
                 "core.shared-rust-profile-engine",
                 "automation.api-recovery-authority",
                 "automation.include-today",
+                "automation.run-overlap-policy",
                 "direct.cli_agent_push_wake",
                 "export.range-summary",
                 "setup.share-portable-configuration",
                 "support.local-reporting-fallback",
+                "support.native-review-introduction",
             ),
             idsWithState(states, "planned"),
         )
@@ -129,6 +132,7 @@ class ProductCapabilityManifestTest {
 
     private companion object {
         val sharedCapabilities = setOf(
+        "account.clinic-sponsored-access",
             "purchase.free-export-journey",
             "account.myself_lifetime_claim",
             "export.daily-files",
@@ -154,6 +158,7 @@ class ProductCapabilityManifestTest {
             "direct.full_public_authorized_corpus",
             "diagnostics.local_bundle",
             "settings.sleep-attribution",
+            "export.coverage-calendar",
         )
 
         val appleCapabilities = setOf(
@@ -174,16 +179,18 @@ class ProductCapabilityManifestTest {
             "android.nutrition-meals",
             "android.contextual-source-fields",
             "android.skin-temperature",
-            // Lands on Android first; Apple is planned with the Liquid Glass Archive.
-            "export.coverage-calendar",
         )
 
         val allCapabilities = sharedCapabilities + appleCapabilities + androidCapabilities + setOf(
+            "support.native-review-introduction",
+            "account.clinic-sync-requests",
             "source.private-platform-database",
             "apple.ads-purchase-attribution",
             "automation.api-recovery-authority",
             "automation.include-today",
+            "automation.run-overlap-policy",
             "direct.cli_agent_push_wake",
+            "export.coverage-calendar",
             "export.range-summary",
             "setup.share-portable-configuration",
             "account.myself_lifetime_claim",

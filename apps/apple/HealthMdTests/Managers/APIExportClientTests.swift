@@ -1,3 +1,4 @@
+import Network
 import XCTest
 @testable import HealthMd
 
@@ -273,6 +274,117 @@ final class APIExportClientTests: XCTestCase {
         })
     }
 
+    func testClinicUploadReauthorizesEveryRequestAndRejectsOtherDestinations() async throws {
+        ExternalIntegrationURLProtocolStub.reset()
+        defer { ExternalIntegrationURLProtocolStub.reset() }
+        let endpoint = URL(string: "https://intake.clinic.example/upload")!
+        var active = true
+        ExternalIntegrationURLProtocolStub.setHandler { request in
+            XCTAssertEqual(request.url, endpoint)
+            return (HTTPURLResponse(url: endpoint, statusCode: 202, httpVersion: nil, headerFields: nil)!,
+                    Data("private response".utf8))
+        }
+        let client = APIExportClient(session: .externalIntegrationTestSession(), authorizeAccess: { url in
+            active && url == endpoint ? .allowedClinicDestination : .blockedDestinationNotPermitted
+        })
+        func destination(_ url: URL) -> APIExportDestinationSnapshot {
+            APIExportDestinationSnapshot(endpointURL: url, authorizationHeaderValue: nil,
+                displayName: "Clinic", redactedEndpointDescription: url.absoluteString)
+        }
+        let result = try await client.upload(payload: Data("{}".utf8), destination: destination(endpoint))
+        XCTAssertNil(result.responseBodyPreview)
+        for url in [URL(string: "https://other.example/upload")!, endpoint] {
+            active = false
+            do {
+                _ = try await client.upload(payload: Data("{}".utf8), destination: destination(url))
+                XCTFail("Denied clinic destination must not upload")
+            } catch APIExportClientError.accessDenied { }
+        }
+    }
+
+    func testClinicDenialsPreventMemoryAndFileUploadsFromReachingTransport() async throws {
+        ExternalIntegrationURLProtocolStub.reset()
+        defer { ExternalIntegrationURLProtocolStub.reset() }
+        ExternalIntegrationURLProtocolStub.setHandler { _ in
+            XCTFail("A denied batch or retry reached the network")
+            throw URLError(.badServerResponse)
+        }
+        let endpoint = URL(string: "https://intake.clinic.example/upload")!
+        let destination = APIExportDestinationSnapshot(endpointURL: endpoint,
+            authorizationHeaderValue: "Bearer synthetic", displayName: "Clinic",
+            redactedEndpointDescription: endpoint.absoluteString)
+        let artifact = try ExportArtifactIO.renderTemporary(prefix: "clinic-denied", mediaType: "application/json") {
+            try $0.write(Data("{}".utf8))
+        }
+        defer { try? FileManager.default.removeItem(at: artifact.url) }
+        for denial in [ClinicExportDecision.blockedSharingNotAuthorized, .blockedAccessExpired, .blockedDestinationNotPermitted] {
+            let client = APIExportClient(session: .externalIntegrationTestSession(), authorizeAccess: { _ in denial })
+            do { _ = try await client.upload(payload: Data("{}".utf8), destination: destination); XCTFail("Expected denial") }
+            catch APIExportClientError.accessDenied { }
+            do { _ = try await client.upload(payloadArtifact: artifact, destination: destination); XCTFail("Expected denial") }
+            catch APIExportClientError.accessDenied { }
+        }
+    }
+
+    func testClinicRedirectsCannotReplayPayloadOrCredentialToAnotherDestination() async throws {
+        // Loopback HTTP isolates URLSession redirect behavior; HTTPS endpoint grammar is
+        // covered by the shared signed-grant fixtures, never relaxed in production.
+        let receiver = try ClinicRedirectReceiver()
+        try receiver.start()
+        defer { receiver.stop() }
+        let endpoint = receiver.url
+        let destination = APIExportDestinationSnapshot(endpointURL: endpoint,
+            authorizationHeaderValue: "Bearer unrelated-personal-token", displayName: "Synthetic clinic",
+            redactedEndpointDescription: endpoint.absoluteString)
+        let artifact = try ExportArtifactIO.renderTemporary(prefix: "clinic-redirect", mediaType: "application/json") {
+            try $0.write(Data("{}".utf8))
+        }
+        defer { try? FileManager.default.removeItem(at: artifact.url) }
+        for access in [ClinicExportDecision.allowedClinicDestination, .allowedPersonal] {
+            let client = APIExportClient(session: .shared, authorizeAccess: { _ in access },
+                clinicContext: { _ in (true, "Bearer synthetic-clinic-token") })
+            do { _ = try await client.upload(payload: Data("{}".utf8), destination: destination); XCTFail("Expected redirect rejection") }
+            catch APIExportClientError.serverRejected(let status, let body) { XCTAssertEqual(status, 307); XCTAssertNil(body) }
+            do { _ = try await client.upload(payloadArtifact: artifact, destination: destination); XCTFail("Expected redirect rejection") }
+            catch APIExportClientError.serverRejected(let status, let body) { XCTAssertEqual(status, 307); XCTAssertNil(body) }
+        }
+        XCTAssertEqual(receiver.requestCount, 4, "Redirects must not generate additional requests")
+    }
+
+    func testManagedClinicUploadKeepsCredentialsAndResponsesScopedAfterPersonalPurchase() async throws {
+        ExternalIntegrationURLProtocolStub.reset()
+        defer { ExternalIntegrationURLProtocolStub.reset() }
+        let endpoint = URL(string: "https://intake.clinic.example/upload")!
+        let destination = APIExportDestinationSnapshot(endpointURL: endpoint,
+            authorizationHeaderValue: "Bearer unrelated-personal-secret", displayName: "Clinic",
+            redactedEndpointDescription: endpoint.absoluteString)
+        let client = APIExportClient(session: .externalIntegrationTestSession(),
+            authorizeAccess: { _ in .allowedPersonal },
+            clinicContext: { _ in (true, "Bearer clinic-upload-secret") })
+        ExternalIntegrationURLProtocolStub.setHandler { request in
+            XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer clinic-upload-secret")
+            return (HTTPURLResponse(url: endpoint, statusCode: 202, httpVersion: nil, headerFields: nil)!,
+                    Data("private clinic response".utf8))
+        }
+        let result = try await client.upload(payload: Data("{}".utf8), destination: destination)
+        XCTAssertNil(result.responseBodyPreview)
+
+        let noClinicCredential = APIExportClient(session: .externalIntegrationTestSession(),
+            authorizeAccess: { _ in .allowedPersonal }, clinicContext: { _ in (true, nil) })
+        ExternalIntegrationURLProtocolStub.setHandler { request in
+            XCTAssertNil(request.value(forHTTPHeaderField: "Authorization"))
+            return (HTTPURLResponse(url: endpoint, statusCode: 400, httpVersion: nil, headerFields: nil)!,
+                    Data("private rejection details".utf8))
+        }
+        do {
+            _ = try await noClinicCredential.upload(payload: Data("{}".utf8), destination: destination)
+            XCTFail("Clinic rejection must fail")
+        } catch APIExportClientError.serverRejected(let status, let body) {
+            XCTAssertEqual(status, 400)
+            XCTAssertNil(body)
+        }
+    }
+
     func testPreparedPayloadUploadSendsExactMeasuredBytes() async throws {
         ExternalIntegrationURLProtocolStub.reset()
         defer { ExternalIntegrationURLProtocolStub.reset() }
@@ -294,7 +406,8 @@ final class APIExportClientTests: XCTestCase {
         }
 
         let result = try await APIExportClient(
-            session: .externalIntegrationTestSession()
+            session: .externalIntegrationTestSession(),
+            authorizeAccess: { _ in .allowedPersonal }
         ).upload(
             payload: expectedBody,
             destination: APIExportDestinationSnapshot(
@@ -331,7 +444,8 @@ final class APIExportClientTests: XCTestCase {
         }
 
         let result = try await APIExportClient(
-            session: .externalIntegrationTestSession()
+            session: .externalIntegrationTestSession(),
+            authorizeAccess: { _ in .allowedPersonal }
         ).upload(
             payloadArtifact: artifact,
             destination: APIExportDestinationSnapshot(
@@ -378,7 +492,8 @@ final class APIExportClientTests: XCTestCase {
         let context = ExportPerformanceRunContext(runID: runID, target: .apiEndpoint)
         _ = try await ExportPerformanceInstrumentation.withRunContext(context) {
             try await APIExportClient(
-                session: .externalIntegrationTestSession()
+                session: .externalIntegrationTestSession(),
+            authorizeAccess: { _ in .allowedPersonal }
             ).upload(
                 payload: Data("{}".utf8),
                 destination: APIExportDestinationSnapshot(
@@ -411,7 +526,7 @@ final class APIExportClientTests: XCTestCase {
             displayName: "api.example.com",
             redactedEndpointDescription: "https://api.example.com/healthmd"
         )
-        let client = APIExportClient(session: session)
+        let client = APIExportClient(session: session, authorizeAccess: { _ in .allowedPersonal })
         _ = try await client.upload(payload: Data("{}".utf8), destination: destination)
         let artifact = try ExportArtifactIO.renderTemporary(
             prefix: "api-authenticated-file-upload",
@@ -437,7 +552,7 @@ final class APIExportClientTests: XCTestCase {
             mediaType: "application/json"
         ) { try $0.write(Data("{}".utf8)) }
 
-        let response = try await APIExportClient(session: session).upload(
+        let response = try await APIExportClient(session: session, authorizeAccess: { _ in .allowedPersonal }).upload(
             payloadArtifact: artifact,
             destination: APIExportDestinationSnapshot(
                 endpointURL: endpoint,
@@ -469,7 +584,8 @@ final class APIExportClientTests: XCTestCase {
         do {
             _ = try await APIExportClient(
                 session: .externalIntegrationTestSession(),
-                maximumResponseBytes: 64
+                maximumResponseBytes: 64,
+                authorizeAccess: { _ in .allowedPersonal }
             ).upload(
                 payload: Data("{}".utf8),
                 destination: APIExportDestinationSnapshot(
@@ -512,7 +628,8 @@ final class APIExportClientTests: XCTestCase {
         do {
             _ = try await APIExportClient(
                 session: .externalIntegrationTestSession(),
-                maximumResponseBytes: 64
+                maximumResponseBytes: 64,
+                authorizeAccess: { _ in .allowedPersonal }
             ).upload(
                 payloadArtifact: artifact,
                 destination: APIExportDestinationSnapshot(
@@ -673,5 +790,58 @@ private final class AuthenticationChallengeSender: NSObject, URLAuthenticationCh
         )!
         protocolInstance.client?.urlProtocol(protocolInstance, didReceive: response, cacheStoragePolicy: .notAllowed)
         protocolInstance.client?.urlProtocolDidFinishLoading(protocolInstance)
+    }
+}
+
+/// Tiny real transport double. Any followed Location adds a request and returns 200,
+/// so both the response assertion and request count detect redirect forwarding.
+private final class ClinicRedirectReceiver: @unchecked Sendable {
+    private let listener: NWListener
+    private let queue = DispatchQueue(label: "clinic-redirect-test")
+    private let lock = NSLock()
+    private var count = 0
+    var requestCount: Int { lock.lock(); defer { lock.unlock() }; return count }
+    var url: URL { URL(string: "http://127.0.0.1:\(listener.port!.rawValue)/upload")! }
+    init() throws {
+        let parameters = NWParameters.tcp
+        parameters.requiredLocalEndpoint = .hostPort(host: "127.0.0.1", port: .any)
+        listener = try NWListener(using: parameters)
+    }
+    func start() throws {
+        let ready = DispatchSemaphore(value: 0)
+        listener.stateUpdateHandler = { state in
+            if case .ready = state { ready.signal() }
+            if case .failed = state { ready.signal() }
+        }
+        listener.newConnectionHandler = { [weak self] connection in
+            guard let self else { return }
+            connection.start(queue: self.queue)
+            self.receive(connection, data: Data())
+        }
+        listener.start(queue: queue)
+        guard ready.wait(timeout: .now() + 5) == .success, listener.state == .ready else {
+            throw URLError(.cannotConnectToHost)
+        }
+    }
+    func stop() { listener.cancel() }
+    private func receive(_ connection: NWConnection, data: Data) {
+        connection.receive(minimumIncompleteLength: 1, maximumLength: 65536) { [weak self] chunk, _, done, error in
+            guard let self else { connection.cancel(); return }
+            var accumulated = data
+            accumulated.append(chunk ?? Data())
+            guard let end = accumulated.range(of: Data("\r\n\r\n".utf8)) else {
+                if done || error != nil { connection.cancel() } else { self.receive(connection, data: accumulated) }
+                return
+            }
+            let headers = String(decoding: accumulated[..<end.lowerBound], as: UTF8.self)
+            let length = headers.components(separatedBy: "\r\n").first { $0.lowercased().hasPrefix("content-length:") }
+                .flatMap { Int($0.split(separator: ":", maxSplits: 1)[1].trimmingCharacters(in: .whitespaces)) } ?? 0
+            if accumulated.count - end.upperBound < length { self.receive(connection, data: accumulated); return }
+            self.lock.lock(); self.count += 1; self.lock.unlock()
+            let redirected = headers.hasPrefix("POST /elsewhere") || headers.hasPrefix("GET /elsewhere")
+            let response = redirected ? "HTTP/1.1 200 OK\r\nContent-Length: 0\r\nConnection: close\r\n\r\n" :
+                "HTTP/1.1 307 Temporary Redirect\r\nLocation: /elsewhere\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
+            connection.send(content: Data(response.utf8), completion: .contentProcessed { _ in connection.cancel() })
+        }
     }
 }

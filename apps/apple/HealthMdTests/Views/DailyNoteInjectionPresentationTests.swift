@@ -12,7 +12,7 @@ nonisolated final class DailyNoteInjectionPresentationTests: XCTestCase {
     func testCompiledPluralResourcesSelectZeroOneTwoAndSeveralForEveryLanguage() throws {
         let expected = [
             ("en", "1 metric", "2 metrics", "1 metric enabled", "2 metrics enabled"),
-            ("de", "1 Metrik", "2 Metriken", "1 Metrik aktiviert", "2 Metriken aktiviert"),
+            ("de", "1 Messwert", "2 Messwerte", "1 Metrik aktiviert", "2 Metriken aktiviert"),
             ("es", "1 métrica", "2 métricas", "1 métrica activada", "2 métricas activadas"),
             ("fr", "1 indicateur", "2 indicateurs", "1 mesure activée", "2 mesures activées"),
             ("it", "1 metrica", "2 metriche", "1 metrica attivata", "2 metriche attivate"),

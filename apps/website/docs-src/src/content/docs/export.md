@@ -1,40 +1,41 @@
 ---
 title: "Export"
-description: "Use the Export tab to check HealthKit and vault connections. Select a destination and export a date range."
+description: "Export Apple Health data now or on a schedule. Check readiness on the Archive, choose a date range in Export now, and set each automation's destination."
 ---
 
-<p>The Export tab is organized as three small decisions: confirm readiness, choose a destination, then pick the date range before previewing or exporting.</p>
+<p>On iPhone, Health.md has three tabs, <strong>Archive</strong>, <strong>Automations</strong>, and <strong>Settings</strong>, plus a round <strong>Export now</strong> button. On iPad the tabs move to a sidebar.</p>
 
-## Read the status badges
+## Check readiness on the Archive
+<p>The <strong>Archive</strong> calendar shows which health dates each automation has covered. When something blocks exports, a <strong>Needs attention</strong> card at the top names it:</p>
 <div class="options">
-<div class="option"><strong>Health badge</strong><p>Green shows the app's Connected setup state, not confirmed read access to every category. HealthKit does not reveal denied read permissions. Tap the badge to request access. iOS may show a sheet for types needing a decision; for choices already recorded, Health.md shows permission guidance. Review categories in Apple Health. Empty results can mean withheld access or no matching data. <a href="/docs/troubleshooting/">Troubleshoot missing data</a>.</p></div>
-<div class="option"><strong>Vault badge</strong><p>Green dot = a vault folder is selected. Tap to re-pick or change the vault. The label shows the folder name.</p></div>
+<div class="option"><strong>Apple Health</strong><p>Health.md shows the app's setup state, not confirmed read access to every category. HealthKit does not reveal denied read permissions. Review categories in Apple Health. Empty results can mean withheld access or no matching data. <a href="/docs/troubleshooting/">Troubleshoot missing data</a>.</p></div>
+<div class="option"><strong>Folder</strong><p>Choose or re-pick the folder in <strong>Settings → Folder</strong>. If iOS loses access after a folder moves, Health.md asks you to choose it again; nothing is deleted.</p></div>
 </div>
-<p>The <em>Export</em> action stays disabled until HealthKit, output format, and the selected destination are ready. This prevents the most common failure mode: trying to export with no destination.</p>
 
-## Choose an export target
-<p>The Export Target card decides where data goes:</p>
+## Choose where an automation exports
+<p>Each automation has its own destination. Open <strong>Automations</strong>, choose the automation, then <strong>Output</strong>:</p>
 
 <div class="options">
-<div class="option"><strong>Local iPhone Folder</strong><p>Writes directly into the folder or Obsidian vault you picked on this device.</p></div>
+<div class="option"><strong>Local Folder</strong><p>Writes directly into the folder or Obsidian vault you picked on this device.</p></div>
 <div class="option"><strong>Connected Mac</strong><p>Sends captured daily data and an exact settings snapshot to the nearby Mac app. The iPhone reads HealthKit. The Mac renders the selected formats and writes the files.</p></div>
 <div class="option"><strong>API Endpoint</strong><p>POSTs a JSON envelope directly from iPhone to a user-configured HTTP(S) endpoint. <a href="/docs/api-endpoint/">See API Endpoint</a>.</p></div>
+<div class="option"><strong>Agent Data gateway</strong><p>Uploads each exported file unchanged to your gateway's ingestion endpoint.</p></div>
 </div>
 
-## Pick a date range
-<p>Date presets cover the common paths:</p>
+## Pick a date range in Export now
+<p>Tap <strong>Export now</strong>, choose the automation if you have several, then a range:</p>
 
 <div class="options">
-<div class="option"><strong>Today</strong><p>Export the current day. Useful for testing output formatting.</p></div>
 <div class="option"><strong>Yesterday</strong><p>The safest daily-export choice because the day is complete.</p></div>
-<div class="option"><strong>All Time</strong><p>Backfill from the earliest HealthKit data Health.md can find.</p></div>
+<div class="option"><strong>7 days / 30 days</strong><p>The last week or month, ending yesterday. Ranges of 30 days or more ask you to confirm first.</p></div>
 <div class="option"><strong>Custom</strong><p>Pick start and end dates for a specific range.</p></div>
 </div>
+<p><strong>Will write</strong> shows the destination and roughly how many files and days the export covers. <strong>Range summary only</strong> writes one roll-up file instead of daily files. Today and All Time remain available in <strong>Automations → All export settings</strong>.</p>
 
 ## Preview or Export
 <div class="options">
 <div class="option"><strong>Preview</strong><p>Shows the files and contents that will be generated before anything is written.</p></div>
-<div class="option"><strong>Export</strong><p>Runs the export, shows progress on the main screen, and records the outcome in history.</p></div>
+<div class="option"><strong>Export</strong><p>Runs the export, shows progress above the tab bar with a Cancel button, and records the outcome in history and on the Archive calendar.</p></div>
 </div>
 
 ## Choose the Data Detail level
@@ -62,11 +63,7 @@ Stopping or cancelling ends only the current attempt. Files and dates already co
 
 ## Profiles and trustworthy history
 
-A saved profile freezes its settings and destination for the run. Profile-aware scheduled and automation history rows keep the run-time profile, while history retains a privacy-safe label for the destination actually used. A manual Export-tab row may omit the profile name. Later renames and destination changes do not rewrite existing history. If a referenced profile is missing, the operation fails without substituting other settings. See [Export profiles](/docs/export-profiles/).
-
-## Tab bar
-
-<p>The four tabs at the bottom of the screen, Export, Schedule, Sync, Settings, cover the entire app surface area. Everything else lives one or two layers deep inside Settings.</p>
+A saved profile freezes its settings and destination for the run. Profile-aware scheduled and automation history rows keep the run-time profile, while history retains a privacy-safe label for the destination actually used. A manual export row may omit the profile name. Later renames and destination changes do not rewrite existing history. If a referenced profile is missing, the operation fails without substituting other settings. See [Export profiles](/docs/export-profiles/).
 
 <div class="callout">
 <strong>Unlock behavior.</strong>

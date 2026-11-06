@@ -274,7 +274,7 @@ struct ProfileScheduleEditorSheet: View {
                     SchedulingChoicePicker(
                         title: "Frequency",
                         choices: ScheduleFrequency.allCases.map { SchedulingChoice(value: $0, title: $0.description, titleIsResolved: true) },
-                        selection: $draft.frequency
+                        selection: frequencyBinding
                     )
                     .accessibilityIdentifier("schedule.profile.editor.frequency")
 
@@ -299,6 +299,11 @@ struct ProfileScheduleEditorSheet: View {
                             },
                             selection: $draft.customUnit
                         )
+                        SchedulingLabeledControl(title: "Starting", value: Text(draft.customAnchorDate, style: .date)) {
+                            DatePicker("Starting", selection: customAnchorDateBinding, displayedComponents: .date)
+                                .accessibilityIdentifier("schedule.profile.editor.starting")
+                                .accessibilityHint("Sets the first day and repeating phase of the custom schedule")
+                        }
                     }
 
                     SchedulingLabeledControl(title: "Time", value: Text(timeBinding.wrappedValue, style: .time)) {
@@ -335,7 +340,7 @@ struct ProfileScheduleEditorSheet: View {
                 } header: {
                     Text("Scope")
                 } footer: {
-                    Text("Refresh windows are best effort; iOS may delay background runs. Each run exports the profile's metrics and formats to its own destination. A run consumes one of the 5 free export actions unless you have Full Access.")
+                    Text("Refresh windows are best effort; iOS may delay background runs. Each run exports the profile's metrics and formats to its own destination. Scheduled exports require an active trial or subscription, or Lifetime access.")
                 }
             }
             .navigationTitle(profile.name)
@@ -383,6 +388,26 @@ struct ProfileScheduleEditorSheet: View {
         )
         if entry.lookbackDays == currentDefault { return entry }
         return entry
+    }
+
+    /// Entering Custom starts its cadence today, matching the schedule settings editor.
+    private var frequencyBinding: Binding<ScheduleFrequency> {
+        Binding(
+            get: { draft.frequency },
+            set: { newValue in
+                if newValue == .custom, draft.frequency != .custom {
+                    draft.customAnchorDate = Calendar.current.startOfDay(for: Date())
+                }
+                draft.frequency = newValue
+            }
+        )
+    }
+
+    private var customAnchorDateBinding: Binding<Date> {
+        Binding(
+            get: { draft.customAnchorDate },
+            set: { draft.customAnchorDate = Calendar.current.startOfDay(for: $0) }
+        )
     }
 
     private var timeBinding: Binding<Date> {

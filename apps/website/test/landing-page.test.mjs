@@ -649,7 +649,7 @@ test("first iPhone export guide uses current, optimized simulator screenshots", 
   assert.match(iphoneExportGuide, /Preview before writing/);
   const screenshots = [
     "onboarding-start.webp",
-    "export-setup-required.webp",
+    "export-now.webp",
     "metric-selection.webp",
     "export-preview.webp",
   ];

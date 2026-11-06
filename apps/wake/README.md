@@ -29,7 +29,13 @@ Full contract: [`docs/architecture/rfc-0005-worker-spec.md`](../../docs/architec
 | `/health` | GET | Liveness: `{"ok":true,"service":"healthmd-wake"}` |
 | `/wake/register` | POST | Phone enrolls (or rotates) wake material; returns `{"wakeId":...}` |
 | `/wake/register` | DELETE | Unpair revoke; idempotent |
-| `/wake/request` | POST | CLI's HMAC-authenticated doorbell ring |
+| `/wake/request` | POST | HMAC-authenticated doorbell ring from the CLI or a delegated holder (clinic sync requests) |
+
+Registrations default to an APNs Direct CLI pairing. `platform: "fcm"` and
+`purpose: "delegated-sync"` register a clinic sync request doorbell; see the
+[2026-11-03 amendment](../../docs/architecture/rfc-0005-worker-spec.md#amendment-2026-11-03-delegated-sync-doorbells-and-the-fcm-transport).
+Apply `migrations/0002_delegated_sync_fcm.sql` before deploying, and set
+`FCM_SERVICE_ACCOUNT_JSON` with `wrangler secret put` to enable Android delivery.
 
 ### HMAC construction (2026-09-03 amendment)
 

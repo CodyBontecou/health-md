@@ -793,6 +793,27 @@ final class WHOOPProviderAPIClientTests: XCTestCase {
         XCTAssertTrue(record.payloads.allSatisfy { $0.statusCode == 429 })
     }
 
+    func testDeselectedResourcesAreNotRequested() async throws {
+        var paths: [String] = []
+        ExternalIntegrationURLProtocolStub.setHandler { request in
+            paths.append(request.url?.path ?? "")
+            return Self.response(request, status: 200, json: ["records": []])
+        }
+
+        let record = try await client.fetchDailyRecord(
+            provider: .whoop,
+            date: exportDate,
+            token: token(),
+            calendar: calendar,
+            now: exportDate,
+            whoopResources: [.recovery, .sleep]
+        )
+
+        XCTAssertEqual(record.payloads.map(\.name), ["recovery", "sleep"])
+        XCTAssertEqual(paths.count, 2, "Deselected collections and the body snapshot are never fetched")
+        XCTAssertFalse(paths.contains { $0.hasSuffix("/user/measurement/body") })
+    }
+
     private func token(scope: String = "offline read:cycles read:recovery read:sleep read:workout read:body_measurement") -> ExternalIntegrationToken {
         ExternalIntegrationToken(
             accessToken: "access-token",

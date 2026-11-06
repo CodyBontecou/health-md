@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Health.md glass — Archive</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+body{margin:0;color-scheme:dark}
+a{color:#CDB6FF;text-decoration:none}a:hover{color:#FFFFFF}
+button{font-family:inherit;cursor:pointer}
+@keyframes breathe{0%,100%{opacity:1}50%{opacity:.45}}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; position: relative; background: #0E0E11; font-family: -apple-system, 'SF Pro Text', 'SF Pro Display', Inter, system-ui, sans-serif; color: #FFFFFF; overflow: hidden; ">
+<div aria-hidden="true" style="position: absolute; inset: 0; overflow: hidden; z-index: 0"></div>
+<div style="position: relative; z-index: 1; height: 100%; display: flex; flex-direction: column">
+
+<div style="flex: 1; min-height: 0; overflow-y: auto; padding: 60px 16px 120px; display: flex; flex-direction: column; gap: 14px">
+  <div style="display: flex; align-items: center; justify-content: space-between; padding: 0 4px">
+    <h1 style="margin: 0; font-size: 34px; font-weight: 700; letter-spacing: -0.6px">Archive</h1>
+    <button type="button" aria-label="Health.md" style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; color: #FFFFFF; padding: 0; background: rgba(255,255,255,0.12); backdrop-filter: blur(26px) saturate(180%); -webkit-backdrop-filter: blur(26px) saturate(180%); border: 1px solid rgba(255,255,255,0.12); border-radius: 22px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.22), inset 0 -1px 0 rgba(255,255,255,0.06), 0 1px 2px rgba(0,0,0,0.3)"><img src="../assets/crystal-heart.png" alt="" style="width: 24px; height: 24px"></button>
+  </div>
+
+  <div role="tablist" aria-label="Profile" style="flex: none; display: flex; gap: 8px; overflow-x: auto; margin: 0 -16px; padding: 2px 16px 6px; scrollbar-width: none">
+    <sc-for list="{{ chips }}" as="p" hint-placeholder-count="5">
+      <button type="button" role="tab" aria-selected="{{ p.selected }}" onClick="{{ p.pick }}" style="{{ p.style }}">
+        <span style="{{ p.dot }}"></span>{{ p.label }}
+      </button>
+    </sc-for>
+  </div>
+
+  <div style="display: flex; align-items: center; gap: 16px; padding: 18px 20px; background: rgba(255,255,255,0.06); backdrop-filter: blur(26px) saturate(180%); -webkit-backdrop-filter: blur(26px) saturate(180%); border: 1px solid rgba(255,255,255,0.12); border-radius: 26px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.22), inset 0 -1px 0 rgba(255,255,255,0.06), 0 1px 2px rgba(0,0,0,0.3)">
+    <span style="font-size: 56px; font-weight: 700; letter-spacing: -2.5px; line-height: 0.9; font-variant-numeric: tabular-nums">{{ stats.count }}</span>
+    <div style="flex: 1; display: flex; flex-direction: column; gap: 4px">
+      <span style="font-size: 16px; font-weight: 600">{{ stats.label }}</span>
+      <div style="display: flex; gap: 12px; font-size: 13px; color: #B3ABC6">
+        <span>{{ stats.streakText }}</span>
+        <button type="button" onClick="{{ jumpGap }}" style="{{ stats.gapStyle }}">{{ stats.gapText }}</button>
+      </div>
+    </div>
+  </div>
+
+  <sc-if value="{{ pausedNote }}" hint-placeholder-val="{{ false }}">
+    <div style="display: flex; gap: 10px; align-items: flex-start; padding: 12px 16px; background: rgba(255,255,255,0.06); backdrop-filter: blur(26px) saturate(180%); -webkit-backdrop-filter: blur(26px) saturate(180%); border: 1px solid rgba(255,255,255,0.12); border-radius: 18px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.22), inset 0 -1px 0 rgba(255,255,255,0.06), 0 1px 2px rgba(0,0,0,0.3)">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#B3ABC6" stroke-width="2" stroke-linecap="round" aria-hidden="true" style="flex: none; margin-top: 1px"><circle cx="12" cy="12" r="9"/><path d="M10 9v6M14 9v6"/></svg>
+      <span style="flex: 1; font-size: 14px; line-height: 1.45; color: #DAD4E8">{{ pausedNote }}</span>
+      <button type="button" style="flex: none; height: 30px; padding: 0 12px; border-radius: 15px; border: 1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.18); color: #FFFFFF; font-size: 13px; font-weight: 600">Resume</button>
+    </div>
+  </sc-if>
+
+  <div style="display: flex; flex-direction: column; gap: 10px; padding: 16px 12px 12px; background: rgba(255,255,255,0.06); backdrop-filter: blur(26px) saturate(180%); -webkit-backdrop-filter: blur(26px) saturate(180%); border: 1px solid rgba(255,255,255,0.12); border-radius: 26px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.22), inset 0 -1px 0 rgba(255,255,255,0.06), 0 1px 2px rgba(0,0,0,0.3)">
+    <div style="display: flex; align-items: center; justify-content: space-between; padding: 0 6px">
+      <span style="font-size: 17px; font-weight: 700">October 2026</span>
+      <div style="display: flex; gap: 6px">
+        <button type="button" aria-label="Previous month" style="width: 32px; height: 32px; border-radius: 16px; border: none; background: rgba(255,255,255,0.18); color: #FFFFFF; display: flex; align-items: center; justify-content: center; padding: 0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg></button>
+        <button type="button" aria-label="Next month" style="width: 32px; height: 32px; border-radius: 16px; border: none; background: rgba(255,255,255,0.10); color: #B3ABC6; display: flex; align-items: center; justify-content: center; padding: 0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button>
+      </div>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 5px">
+      <sc-for list="{{ weekdays }}" as="w" hint-placeholder-count="7">
+        <span style="text-align: center; font-size: 11px; font-weight: 600; color: #B3ABC6">{{ w }}</span>
+      </sc-for>
+      <sc-for list="{{ cells }}" as="d" hint-placeholder-count="35">
+        <sc-if value="{{ d.blank }}" hint-placeholder-val="{{ false }}"><span></span></sc-if>
+        <sc-if value="{{ d.real }}" hint-placeholder-val="{{ true }}">
+          <button type="button" onClick="{{ d.pick }}" aria-label="{{ d.aria }}" aria-pressed="{{ d.pressed }}" style="{{ d.style }}">
+            <span style="line-height: 1">{{ d.n }}</span>
+            <sc-if value="{{ d.hasDots }}" hint-placeholder-val="{{ false }}">
+              <span aria-hidden="true" style="display: flex; gap: 2px; height: 5px">
+                <sc-for list="{{ d.dots }}" as="x" hint-placeholder-count="1"><span style="{{ x.style }}"></span></sc-for>
+              </span>
+            </sc-if>
+          </button>
+        </sc-if>
+      </sc-for>
+    </div>
+    <div style="display: flex; flex-wrap: wrap; gap: 6px 14px; padding: 4px 6px 0; font-size: 11px; font-weight: 500; color: #B3ABC6">
+      <span style="display: flex; align-items: center; gap: 5px"><span style="width: 10px; height: 10px; border-radius: 3px; background: #3B3058"></span>Complete</span>
+      <span style="display: flex; align-items: center; gap: 5px"><span style="width: 10px; height: 10px; border-radius: 3px; background: rgba(255,255,255,0.07); box-shadow: inset 0 -3px 0 #CDB6FF"></span>Partial</span>
+      <span style="display: flex; align-items: center; gap: 5px"><span style="width: 10px; height: 10px; border-radius: 3px; border: 1.5px dashed #FFA184; box-sizing: border-box"></span>Missing</span>
+      <span style="display: flex; align-items: center; gap: 5px"><span style="width: 10px; height: 10px; border-radius: 3px; border: 1px solid rgba(255,255,255,0.14); box-sizing: border-box; opacity: 0.6"></span>Not due</span>
+    </div>
+  </div>
+
+  <div style="display: flex; flex-direction: column; gap: 4px; padding: 16px 18px 8px; background: rgba(255,255,255,0.06); backdrop-filter: blur(26px) saturate(180%); -webkit-backdrop-filter: blur(26px) saturate(180%); border: 1px solid rgba(255,255,255,0.12); border-radius: 26px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.22), inset 0 -1px 0 rgba(255,255,255,0.06), 0 1px 2px rgba(0,0,0,0.3)">
+    <div style="display: flex; align-items: baseline; justify-content: space-between; padding-bottom: 6px">
+      <span style="font-size: 18px; font-weight: 700">{{ dayTitle }}</span>
+      <span style="font-size: 13px; font-weight: 600; color: #B3ABC6">{{ daySummary }}</span>
+    </div>
+    <sc-for list="{{ rows }}" as="r" hint-placeholder-count="3">
+      <div style="display: flex; flex-direction: column; gap: 6px; padding: 12px 0; border-top: 1px solid rgba(255,255,255,0.14)">
+        <div style="display: flex; align-items: center; gap: 10px">
+          <span style="{{ r.dot }}"></span>
+          <span style="flex: 1; font-size: 16px; font-weight: 600">{{ r.name }}</span>
+          <span style="{{ r.badgeStyle }}">{{ r.badge }}</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 10px; padding-left: 18px">
+          <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px">
+            <span style="font-family: 'SF Mono', 'JetBrains Mono', ui-monospace, monospace; font-size: 12px; color: #DAD4E8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{ r.path }}</span>
+            <span style="font-size: 13px; line-height: 1.4; color: #B3ABC6">{{ r.note }}</span>
+          </span>
+          <sc-if value="{{ r.hasAction }}" hint-placeholder-val="{{ true }}">
+            <button type="button" style="{{ r.actionStyle }}">{{ r.action }}</button>
+          </sc-if>
+        </div>
+      </div>
+    </sc-for>
+  </div>
+
+  <a href="{{ sentenceHref }}" style="display: flex; flex-direction: column; gap: 8px; padding: 18px 20px; color: #FFFFFF; background: rgba(255,255,255,0.06); backdrop-filter: blur(26px) saturate(180%); -webkit-backdrop-filter: blur(26px) saturate(180%); border: 1px solid rgba(255,255,255,0.12); border-radius: 26px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.22), inset 0 -1px 0 rgba(255,255,255,0.06), 0 1px 2px rgba(0,0,0,0.3)">
+    <div style="display: flex; justify-content: space-between"><span style="font-size: 13px; font-weight: 600; color: #B3ABC6">{{ sentenceLabel }}</span><span style="font-size: 13px; font-weight: 600; color: #CDB6FF">{{ sentenceCta }}</span></div>
+    <span style="font-size: 17px; line-height: 1.5; color: #DAD4E8">{{ sentence }}</span>
+  </a>
+</div>
+<div style="position: absolute; left: 16px; right: 16px; bottom: 26px; z-index: 5; display: flex; gap: 10px; align-items: center"><nav aria-label="Tabs" style="flex: 1; display: flex; gap: 2px; padding: 4px; background: rgba(255,255,255,0.06); backdrop-filter: blur(26px) saturate(180%); -webkit-backdrop-filter: blur(26px) saturate(180%); border: 1px solid rgba(255,255,255,0.12); border-radius: 31px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.22), inset 0 -1px 0 rgba(255,255,255,0.06), 0 1px 2px rgba(0,0,0,0.3)"><a href="ArchiveGlassDark.dc.html" aria-current="page" style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; height: 54px; border-radius: 27px; background: rgba(255,255,255,0.12); box-shadow: inset 0 1px 0 rgba(255,255,255,0.22); color: #CDB6FF; font-size: 10px; font-weight: 600"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="6" height="6" rx="3"/><rect x="14" y="4" width="6" height="6" rx="3"/><rect x="4" y="14" width="6" height="6" rx="3"/><rect x="14" y="14" width="6" height="6" rx="3"/></svg>Archive</a><a href="AutomationsGlass.dc.html" style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; height: 54px; border-radius: 27px;  color: #FFFFFF; font-size: 10px; font-weight: 600"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h10M4 12h6M4 17h10"/><circle cx="18" cy="12" r="2.5"/></svg>Automations</a><a href="SettingsGlass.dc.html" style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; height: 54px; border-radius: 27px;  color: #FFFFFF; font-size: 10px; font-weight: 600"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h16M4 16h16"/><circle cx="9" cy="8" r="2.2"/><circle cx="15" cy="16" r="2.2"/></svg>Settings</a></nav><a href="ExportNowG.dc.html" aria-label="Export now" style="flex: none; width: 62px; height: 62px; display: flex; align-items: center; justify-content: center; padding: 0; color: #1A0F33; background: #CDB6FF; border: 1px solid rgba(255,255,255,0.12); border-radius: 31px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.6), 0 4px 12px rgba(0,0,0,0.25)"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3M7 8l5-5 5 5M5 21h14"/></svg></a></div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"profile": {"editor": "enum", "options": ["all", "daily", "weekly", "feed", "mac"], "default": "mac"}, "$preview": {"width": 390, "height": 844}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); var pr = (props && props.profile) || 'mac';
+    this.state = { profile: pr, sel: { all: 19, daily: 19, weekly: 25, feed: 15, mac: 24 }[pr] || 19 }; }
+  renderVals() {
+    var C = {"fill": "#3B3058", "fillText": "#FFFFFF", "partial": "rgba(255,255,255,0.07)", "bg": "#0E0E11", "text": "#FFFFFF", "sec": "#DAD4E8", "muted": "#B3ABC6", "accent": "#CDB6FF", "accentInk": "#1A0F33", "track": "rgba(255,255,255,0.20)", "coral": "#FFA184", "ok": "#8BF0B4", "surface": "rgba(255,255,255,0.10)", "surface2": "rgba(255,255,255,0.18)", "line": "rgba(255,255,255,0.14)", "glass": "rgba(255,255,255,0.06)", "glassStrong": "rgba(255,255,255,0.12)", "edge": "rgba(255,255,255,0.12)", "hi": "rgba(255,255,255,0.22)", "shadow": "0 1px 2px rgba(0,0,0,0.3)", "tint": "rgba(205,182,255,0.30)", "p2": "#7DB4FF", "p3": "#5ED3B0", "p4": "#F2B266"}, self = this, s = this.state;
+    var P = [
+      { id: 'daily', name: 'Daily', dest: 'Vault/Health', ext: 'md', color: C.accent, kind: 'daily',
+        sentence: 'Every morning at 7:30, write yesterday’s 142 metrics to Vault/Health and update my daily note.' },
+      { id: 'weekly', name: 'Weekly CSV', dest: 'Files/Exports', ext: 'csv', color: C.p2, kind: 'weekly',
+        sentence: 'Every Sunday at 8:00, write the last 7 days as CSV to Files/Exports.' },
+      { id: 'feed', name: 'Agent feed', dest: 'api.example.com', ext: 'json', color: C.p3, kind: 'feed',
+        sentence: 'Every 2 hours, send today as JSON to api.example.com.' },
+      { id: 'mac', name: 'Mac archive', dest: '[Mac name]:~/Health', ext: 'md', color: C.p4, kind: 'paused', pausedFrom: 22,
+        sentence: 'Every night at 11:00, write today to Health.md for Mac. Paused since Oct 22.' }
+    ];
+    var feedRuns = { 7: 9, 15: 0, 19: 10, 23: 11, 31: 7 };
+    function status(p, d) {
+      if (p.kind === 'daily') {
+        if (d === 31) return { st: 'today', note: 'Refreshes every 2 h · last 2:00 PM' };
+        if (d === 19 || d === 20) return { st: 'missing', note: 'iOS didn’t give the 7:30 run time, and look-back hasn’t reached it.' };
+        if (d === 12 || d === 26) return { st: 'partial', note: 'Sleep had no samples yet when it ran.' };
+        return { st: 'full', note: '142 metrics · daily note updated' };
+      }
+      if (p.kind === 'weekly') {
+        var dow = new Date(2026, 9, d).getDay();
+        if (dow !== 0) return { st: 'none', note: 'Not due — covered by Sunday’s file.' };
+        return { st: 'full', note: 'Week of Oct ' + Math.max(1, d - 6) + ' – ' + d };
+      }
+      if (p.kind === 'feed') {
+        var total = d === 31 ? 8 : 12, ok = feedRuns[d] !== undefined ? feedRuns[d] : total;
+        var st = d === 31 ? 'today' : (ok === 0 ? 'missing' : (ok < total ? 'partial' : 'full'));
+        return { st: st, note: ok + ' of ' + total + ' refreshes sent' + (ok < total && d !== 31 ? ' · endpoint timed out' : ''), ok: ok, total: total };
+      }
+      if (p.kind === 'paused') {
+        if (d >= p.pausedFrom) return { st: 'paused', note: 'Paused — not counted as a gap.' };
+        return { st: 'full', note: 'Written at 11:02 PM' };
+      }
+    }
+    var active = P.filter(function (p) { return p.kind !== 'paused'; });
+    function agg(d) {
+      var sts = P.map(function (p) { return status(p, d).st; }).filter(function (x) { return x !== 'none' && x !== 'paused'; });
+      if (d === 31) return 'today';
+      if (!sts.length) return 'none';
+      if (sts.indexOf('missing') >= 0) return 'missing';
+      if (sts.indexOf('partial') >= 0) return 'partial';
+      return 'full';
+    }
+    var cur = s.profile === 'all' ? null : P.filter(function (p) { return p.id === s.profile; })[0];
+    function stOf(d) { return cur ? status(cur, d).st : agg(d); }
+
+    var chips = [{ id: 'all', label: 'All', color: C.text }].concat(P.map(function (p) {
+      return { id: p.id, label: p.name + (p.kind === 'paused' ? ' · paused' : ''), color: p.color };
+    })).map(function (ch) {
+      var on = ch.id === s.profile;
+      return {
+        label: ch.label, selected: on ? 'true' : 'false',
+        pick: function () { self.setState({ profile: ch.id }); },
+        dot: 'width: 8px; height: 8px; border-radius: 4px; background: ' + ch.color + (ch.id === 'all' ? '; display: none' : ''),
+        style: 'flex: none; display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 16px; border-radius: 20px; font-size: 15px; font-weight: 600; white-space: nowrap; border: 1px solid ' + C.edge + '; color: ' + (on ? C.accentInk : C.text) + '; background: ' + (on ? C.accent : C.surface2) + '; box-shadow: inset 0 1px 0 ' + C.hi + '; backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px)'
+      };
+    });
+
+    var cells = [];
+    for (var b = 0; b < 4; b++) cells.push({ blank: true, real: false });
+    for (var d = 1; d <= 31; d++) (function (d) {
+      var st = stOf(d), on = s.sel === d;
+      var bg = st === 'full' ? C.fill : (st === 'partial' ? C.partial : 'transparent');
+      var border = st === 'missing' ? '1.5px dashed ' + C.coral : (st === 'today' ? '2px solid ' + C.accent : '1px solid ' + C.line);
+      var sh = [];
+      if (st === 'full') sh.push('inset 0 1px 0 rgba(255,255,255,0.22)');
+      if (st === 'partial') sh.push('inset 0 -3px 0 ' + C.accent);
+      if (on) { sh.push('0 0 0 2px ' + C.bg); sh.push('0 0 0 4px ' + C.text); }
+      var col = st === 'missing' ? C.coral : (st === 'full' ? C.fillText : C.text);
+      var dim = (st === 'none' || st === 'paused') ? '; opacity: 0.4' : '';
+      var hatch = st === 'paused' ? '; background-image: repeating-linear-gradient(135deg, ' + C.line + ' 0 2px, transparent 2px 7px)' : '';
+      var issues = cur ? [] : P.filter(function (p) { var x = status(p, d).st; return x === 'missing' || x === 'partial'; });
+      var dots = issues.map(function (p) {
+        var miss = status(p, d).st === 'missing';
+        return { style: 'width: 5px; height: 5px; border-radius: 3px; box-sizing: border-box; ' + (miss ? 'border: 1.5px solid ' + p.color : 'background: ' + p.color) };
+      });
+      cells.push({
+        blank: false, real: true, n: d, pressed: on ? 'true' : 'false', hasDots: dots.length > 0, dots: dots,
+        aria: 'October ' + d + ', ' + (st === 'none' ? 'not due' : st) + (issues.length ? '; issues: ' + issues.map(function (p) { return p.name + ' ' + status(p, d).st; }).join(', ') : ''),
+        pick: function () { self.setState({ sel: d }); },
+        style: 'height: 42px; padding: 0; border-radius: 12px; box-sizing: border-box; display: flex; flex-direction: column; gap: 4px; align-items: center; justify-content: center; font-size: 14px; font-weight: ' + (on ? '700' : '600') + '; font-variant-numeric: tabular-nums; color: ' + col + '; background: ' + bg + '; border: ' + border + '; box-shadow: ' + (sh.length ? sh.join(', ') : 'none') + dim + hatch + (st === 'today' && !on ? '; animation: breathe 2.6s ease-in-out infinite' : '')
+      });
+    })(d);
+
+    // stats
+    var count = 0, gaps = 0, firstGap = null, streak = 0, streakOpen = true;
+    for (var k = 30; k >= 1; k--) {
+      var x = stOf(k);
+      if (x === 'full' || x === 'partial') { count++; if (streakOpen) streak++; }
+      if (x === 'missing') { gaps++; streakOpen = false; firstGap = firstGap === null || k < firstGap ? k : firstGap; }
+    }
+    var unit = cur && cur.kind === 'weekly' ? 'week' : 'day';
+    var label = cur && cur.kind === 'weekly' ? 'weeks archived in October' : (cur && cur.kind === 'feed' ? 'days fully or partly sent' : (cur && cur.kind === 'paused' ? 'days archived before pausing' : (cur ? 'days archived in October' : 'days archived across automations')));
+    var stats = {
+      count: count, label: label,
+      streakText: streak + '-' + unit + ' streak',
+      gapText: gaps ? gaps + (gaps === 1 ? ' gap' : ' gaps') : 'No gaps',
+      gapStyle: 'padding: 0; border: none; background: transparent; font-size: 13px; font-weight: 600; color: ' + (gaps ? C.coral : C.ok)
+    };
+
+    // day card rows
+    var shown = cur ? [cur] : P;
+    var rows = shown.map(function (p) {
+      var r = status(p, s.sel), st = r.st;
+      var map = {
+        full: ['Complete', C.ok, 'Open', false], partial: ['Partial', C.accent, p.kind === 'feed' ? 'Retry' : 'Re-export', true],
+        missing: ['Missing', C.coral, 'Backfill', true], today: ['Updating', C.accent, 'Refresh', false],
+        none: ['Not due', C.muted, '', false], paused: ['Paused', C.muted, '', false]
+      }[st];
+      var dd = s.sel < 10 ? '0' + s.sel : s.sel;
+      return {
+        name: p.name, note: r.note,
+        path: st === 'none' || st === 'paused' ? p.dest : (p.kind === 'feed' ? 'POST ' + p.dest + '/health' : p.dest + '/2026-10-' + dd + '.' + p.ext),
+        dot: 'flex: none; width: 8px; height: 8px; border-radius: 4px; background: ' + p.color,
+        badge: map[0], badgeStyle: 'font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 11px; background: ' + C.surface2 + '; color: ' + map[1],
+        hasAction: !!map[2], action: map[2],
+        actionStyle: 'flex: none; height: 34px; padding: 0 14px; border-radius: 17px; font-size: 14px; font-weight: 600; border: 1px solid ' + C.edge + '; box-shadow: inset 0 1px 0 ' + C.hi + '; ' + (map[3] ? 'background: ' + C.accent + '; color: ' + C.accentInk : 'background: ' + C.surface2 + '; color: ' + C.text)
+      };
+    });
+    var dueRows = shown.map(function (p) { return status(p, s.sel).st; }).filter(function (x) { return x !== 'none' && x !== 'paused'; });
+    var okRows = dueRows.filter(function (x) { return x === 'full' || x === 'today'; }).length;
+    var dayTitle = new Date(2026, 9, s.sel).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+
+    return {
+      isAll: !cur,
+      legendDots: P.filter(function (p) { return p.kind !== 'paused'; }).map(function (p) { return { name: p.name, style: 'width: 7px; height: 7px; border-radius: 4px; background: ' + p.color }; }),
+      chips: chips, cells: cells, weekdays: ['S', 'M', 'T', 'W', 'T', 'F', 'S'], stats: stats, rows: rows,
+      dayTitle: dayTitle,
+      daySummary: cur ? '' : (dueRows.length ? okRows + ' of ' + dueRows.length + ' on track' : 'Nothing due'),
+      jumpGap: function () { if (firstGap) self.setState({ sel: firstGap }); },
+      pausedNote: cur && cur.kind === 'paused' ? 'Mac archive is paused since Oct 22. Days while paused are not counted as gaps.' : '',
+      sentenceLabel: cur ? cur.name + ' automation' : 'Automations',
+      sentenceCta: cur ? 'Edit' : 'Manage',
+      sentence: cur ? cur.sentence : '3 running and 1 paused. “All” counts a day complete when every running automation that was due covered it.',
+      sentenceHref: cur ? 'ComposeGlass.dc.html' : 'AutomationsGlass.dc.html'
+    };
+  }
+}
+</script>
+</body>
+</html>

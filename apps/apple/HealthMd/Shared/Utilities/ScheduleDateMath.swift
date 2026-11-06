@@ -239,8 +239,10 @@ enum ScheduleDateMath {
         let fireDay = calendar.startOfDay(for: fireDate)
         let lookbackDays = ExportSchedule.clampedLookbackDays(schedule.lookbackDays)
 
+        // Include Today adds the fire day to the window. The start stays put, so the next
+        // run still re-exports this run's partial day once that day has ended.
         guard let startDate = calendar.date(byAdding: .day, value: -lookbackDays, to: fireDay),
-              let endDate = calendar.date(byAdding: .day, value: -1, to: fireDay)
+              let endDate = calendar.date(byAdding: .day, value: schedule.includeToday ? 0 : -1, to: fireDay)
         else {
             return []
         }

@@ -257,6 +257,16 @@ final class SharedSetupAppleProfileFieldCoverageTests: XCTestCase {
         ),
     ]
 
+    // Added after the v3 ledger froze. The shared setup format does not change.
+    private static let localSchedulePreferenceFields: [CoverageLedger.Field] = [
+        .init(
+            sourceType: "ScheduledExportEntry", field: "includeToday",
+            fieldKind: .stored, serializedKey: "includeToday",
+            disposition: .localOnly, contractPath: nil,
+            reason: "Include Today is a local schedule preference; shared setups do not carry it, so imports default to off."
+        ),
+    ]
+
     private func loadLedger() throws -> CoverageLedger {
         let historical = try JSONDecoder().decode(
             CoverageLedger.self,
@@ -266,7 +276,7 @@ final class SharedSetupAppleProfileFieldCoverageTests: XCTestCase {
             schema: historical.schema, schemaVersion: historical.schemaVersion,
             targetContract: historical.targetContract, fieldKinds: historical.fieldKinds,
             dispositions: historical.dispositions,
-            fields: historical.fields + Self.sleepCapturePersistenceFields
+            fields: historical.fields + Self.sleepCapturePersistenceFields + Self.localSchedulePreferenceFields
         )
     }
 

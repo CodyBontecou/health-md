@@ -123,6 +123,10 @@ fun ExportScreen(
     onSeeInArchive: (() -> Unit)? = null,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val clinicAccess: com.healthmd.presentation.clinic.ClinicAccessViewModel = hiltViewModel()
+    val clinicStatus by clinicAccess.status.collectAsStateWithLifecycle()
+    val independentAccess by clinicAccess.independentAccess.collectAsStateWithLifecycle()
+    val managedClinicEndpoint = clinicStatus.endpoint.takeIf { clinicStatus.active && !independentAccess }
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val protection = LocalConfigurationProtection.current
@@ -365,7 +369,7 @@ fun ExportScreen(
     }
 
     // Keep export readiness and quota routing identical in the main action bar and preview.
-    val hitExportLimit = !uiState.isPurchased && uiState.freeExportsRemaining <= 0
+    val hitExportLimit = !uiState.isPurchased && !uiState.clinicDestinationAuthorized && uiState.freeExportsRemaining <= 0
     val hasSelectedFormat = uiState.hasSelectedFormat
     val canUseExportControls = uiState.hasPermissions &&
             !uiState.historyPermissionNeeded &&
@@ -807,6 +811,7 @@ fun ExportScreen(
         }
         ConfigurationProtectedRegion(modifier = Modifier.fillMaxWidth()) {
         ExportTargetSelector(
+            managedClinicEndpoint = managedClinicEndpoint,
             selectedTarget = uiState.selectedTarget,
             folderSubtitle = uiState.folderName?.let {
                 stringResource(R.string.export_target_folder_selected_subtitle, it)
@@ -1236,6 +1241,7 @@ fun ExportScreen(
         }
 
         FloatingExportActionBar(
+            clinicDestinationAuthorized = uiState.clinicDestinationAuthorized,
             isPurchased = uiState.isPurchased,
             freeExportsRemaining = uiState.freeExportsRemaining,
             hasSelectedFormat = hasSelectedFormat,
@@ -1279,6 +1285,7 @@ fun ExportScreen(
 
     if (showAPISettings) {
         APIExportSettingsDialog(
+            managedClinicEndpoint = managedClinicEndpoint,
             initialEndpointUrl = uiState.settings.apiEndpointUrl,
             authorizationConfigured = uiState.apiAuthorizationConfigured,
             requestHeadersConfigured = uiState.apiRequestHeadersConfigured,
@@ -1415,6 +1422,7 @@ internal fun FloatingExportActionBar(
     onPreview: () -> Unit,
     onExport: () -> Unit,
     modifier: Modifier = Modifier,
+    clinicDestinationAuthorized: Boolean = false,
 ) {
     Surface(
         modifier = modifier
@@ -1451,7 +1459,7 @@ internal fun FloatingExportActionBar(
                 )
             }
 
-            if (!isPurchased) {
+            if (!isPurchased && !clinicDestinationAuthorized) {
                 Text(
                     text = pluralStringResource(
                         R.plurals.free_exports_remaining,

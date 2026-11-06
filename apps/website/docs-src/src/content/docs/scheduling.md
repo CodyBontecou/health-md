@@ -8,7 +8,7 @@ This page describes iPhone scheduling. Android has different background permissi
 ## Verify the first scheduled export
 
 1. Activate the intended profile. Check its metrics, formats, Data Detail, write behavior and destination. Run one completed day manually and inspect the saved file or endpoint result before enabling automation.
-2. Open Schedule, then Set Up Schedule or Manage Schedule. Enable the schedule, choose Daily, Weekly or Custom, set the time, and start with a one-day completed-day lookback. Allow notifications if you want local recovery reminders.
+2. On iPhone, open **Automations**, choose the automation, then tap **Schedule**; on Android, open Schedule, then Set Up Schedule or Manage Schedule. Enable the schedule, choose Daily, Weekly or Custom, set the time, and start with a one-day completed-day lookback. Allow notifications if you want local recovery reminders.
 3. Check whether scheduling is enabled, the next occurrence and the last result. After an attempt, inspect its history details and the actual destination; a next-run label or notification is not proof that data was written.
 4. Check the exported dates, units, coverage and missing data. A saved file does not by itself prove complete source capture.
 

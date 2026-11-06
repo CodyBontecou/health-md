@@ -1,41 +1,42 @@
 ---
 title: "Export"
-description: "Verwenden Sie die Registerkarte „Exportieren“, um HealthKit und Tresorverbindungen zu überprüfen. Wählen Sie ein Ziel aus und exportieren Sie einen Datumsbereich."
+description: "Apple-Health-Daten jetzt oder nach Zeitplan exportieren. Prüfen Sie die Bereitschaft im Archiv, wählen Sie in „Jetzt exportieren“ einen Zeitraum und legen Sie für jede Automation ein Ziel fest."
 ---
 
-<p> Die Registerkarte „Exportieren“ ist in drei kleine Entscheidungen unterteilt: Bestätigen Sie die Bereitschaft, wählen Sie ein Ziel und wählen Sie dann den Datumsbereich aus, bevor Sie eine Vorschau anzeigen oder exportieren. </p>
+<p>Auf dem iPhone hat Health.md drei Tabs, <strong>Archiv</strong>, <strong>Automationen</strong> und <strong>Einstellungen</strong>, sowie eine runde Taste <strong>Jetzt exportieren</strong>. Auf dem iPad stehen die Tabs in einer Seitenleiste.</p>
 
-## Lesen Sie die Status-Badges
- <div class="options">
- <div class="option"> <strong> Gesundheits-Badge </strong> <p>Grün zeigt den Einrichtungsstatus „Verbunden“, nicht den bestätigten Lesezugriff auf jede Kategorie. HealthKit legt verweigerte Leserechte nicht offen. Tippen Sie auf das Badge, um Zugriff anzufragen. Für noch nicht entschiedene Kategorien kann iOS einen Dialog anzeigen; bei bereits gespeicherten Entscheidungen zeigt Health.md die Berechtigungshilfe. Prüfen Sie die Kategorien in Apple Health. Ein leeres Ergebnis kann verweigerten Zugriff oder fehlende passende Daten bedeuten. <a href="/de/docs/troubleshooting/">Fehlende Daten prüfen</a>.</p> </div>
- <div class="option"> <strong> Tresor-Abzeichen </strong> <p> Grüner Punkt = ein Tresorordner ist ausgewählt. Tippen Sie, um den Tresor erneut auszuwählen oder zu ändern. Die Beschriftung zeigt den Ordnernamen. </p> </div>
- </div>
- <p> Die Aktion <em> Export </em> bleibt deaktiviert, bis HealthKit , das Ausgabeformat und das ausgewählte Ziel bereit sind. Dies verhindert den häufigsten Fehlermodus: den Versuch, ohne Ziel zu exportieren. </p>
+## Bereitschaft im Archiv prüfen
+<p>Der Kalender im <strong>Archiv</strong> zeigt, welche Gesundheitsdaten jede Automation abgedeckt hat. Wenn etwas Exporte blockiert, nennt die Karte <strong>Aufmerksamkeit nötig</strong> oben die Ursache:</p>
+<div class="options">
+<div class="option"><strong>Apple Health</strong><p>Health.md zeigt den Einrichtungsstatus der App, keinen bestätigten Lesezugriff auf jede Kategorie. HealthKit verrät keine verweigerten Leseberechtigungen. Prüfen Sie die Kategorien in Apple Health. Leere Ergebnisse können verweigerten Zugriff oder fehlende Daten bedeuten. <a href="/de/docs/troubleshooting/">Fehlende Daten beheben</a>.</p></div>
+<div class="option"><strong>Ordner</strong><p>Wählen Sie den Ordner in <strong>Einstellungen → Ordner</strong> oder wählen Sie ihn erneut. Verliert iOS nach dem Verschieben eines Ordners den Zugriff, bittet Health.md Sie, ihn erneut zu wählen; es wird nichts gelöscht.</p></div>
+</div>
 
-## Wählen Sie ein Exportziel
- <p> Die Exportzielkarte entscheidet, wohin die Daten gehen: </p>
+## Exportziel einer Automation wählen
+<p>Jede Automation hat ihr eigenes Ziel. Öffnen Sie <strong>Automationen</strong>, wählen Sie die Automation und dann <strong>Ausgabe</strong>:</p>
 
 <div class="options">
- <div class="option"> <strong> Lokaler iPhone Ordner </strong> <p> Schreibt direkt in den Ordner oder Obsidian Tresor, den Sie auf diesem Gerät ausgewählt haben. </p> </div>
- <div class="option"> <strong> Verbundener Mac </strong> <p> Sendet erfasste Tagesdaten und einen genauen Einstellungs-Snapshot an die nahegelegene Mac-App. Das iPhone liest die Daten aus HealthKit. Der Mac rendert die ausgewählten Formate und schreibt die Dateien. </p> </div>
- <div class="option"> <strong> API-Endpunkt </strong> <p> POSTET einen JSON-Umschlag direkt von iPhone an einen vom Benutzer konfigurierten HTTP(S)-Endpunkt. <a href="/de/docs/api-endpoint/"> Siehe API-Endpunkt </a> . </p> </div>
- </div>
+<div class="option"><strong>Lokaler Ordner</strong><p>Schreibt direkt in den Ordner oder Obsidian-Vault, den Sie auf diesem Gerät gewählt haben.</p></div>
+<div class="option"><strong>Verbundener Mac</strong><p>Sendet erfasste Tagesdaten und eine exakte Momentaufnahme der Einstellungen an die Mac-App in der Nähe. Das iPhone liest HealthKit; der Mac erzeugt die gewählten Formate und schreibt die Dateien.</p></div>
+<div class="option"><strong>API-Endpunkt</strong><p>Sendet einen JSON-Umschlag per POST direkt vom iPhone an einen von Ihnen konfigurierten HTTP(S)-Endpunkt. <a href="/de/docs/api-endpoint/">Siehe API-Endpunkt</a>.</p></div>
+<div class="option"><strong>Agent Data-Gateway</strong><p>Lädt jede exportierte Datei unverändert auf den Ingestion-Endpunkt Ihres Gateways hoch.</p></div>
+</div>
 
-## Wählen Sie einen Datumsbereich aus
- <p> Datumsvoreinstellungen decken die gängigen Pfade ab: </p>
+## Zeitraum in „Jetzt exportieren“ wählen
+<p>Tippen Sie auf <strong>Jetzt exportieren</strong>, wählen Sie bei mehreren Automationen die gewünschte und dann einen Zeitraum:</p>
 
 <div class="options">
- <div class="option"> <strong> Heute </strong> <p> Den aktuellen Tag exportieren. Nützlich zum Testen der Ausgabeformatierung. </p> </div>
- <div class="option"> <strong> Gestern </strong> <p> Die sicherste Wahl für den täglichen Export, da der Tag abgeschlossen ist. </p> </div>
- <div class="option"> <strong> Alle Zeiten </strong> <p> Backfill von den frühesten HealthKit Daten, Health.md finden kann. </p> </div>
- <div class="option"> <strong> Benutzerdefiniert </strong> <p> Wählen Sie Start- und Enddatum für einen bestimmten Bereich. </p> </div>
- </div>
+<div class="option"><strong>Gestern</strong><p>Die sicherste Wahl für tägliche Exporte, weil der Tag abgeschlossen ist.</p></div>
+<div class="option"><strong>7 Tage / 30 Tage</strong><p>Die letzte Woche oder der letzte Monat, jeweils bis gestern. Bei 30 oder mehr Tagen fragt Health.md vorher nach.</p></div>
+<div class="option"><strong>Benutzerdefiniert</strong><p>Start- und Enddatum für einen bestimmten Zeitraum wählen.</p></div>
+</div>
+<p><strong>Wird geschrieben</strong> zeigt das Ziel und ungefähr, wie viele Dateien und Tage der Export umfasst. <strong>Nur Bereichszusammenfassung</strong> schreibt eine einzige Zusammenfassungsdatei statt Tagesdateien. „Heute“ und „Gesamter Zeitraum“ bleiben unter <strong>Automationen → Alle Exporteinstellungen</strong> verfügbar.</p>
 
 ## Vorschau oder Export
- <div class="options">
- <div class="option"> <strong> Vorschau </strong> <p> Zeigt die Dateien und Inhalte an, die generiert werden, bevor etwas geschrieben wird. </p> </div>
- <div class="option"> <strong> Export </strong> <p> Führt den Export aus, zeigt den Fortschritt auf dem Hauptbildschirm an und zeichnet das Ergebnis im Verlauf auf. </p> </div>
- </div>
+<div class="options">
+<div class="option"><strong>Vorschau</strong><p>Zeigt die Dateien und Inhalte, die erzeugt werden, bevor etwas geschrieben wird.</p></div>
+<div class="option"><strong>Export</strong><p>Führt den Export aus, zeigt den Fortschritt über der Tab-Leiste mit einer Abbrechen-Taste und speichert das Ergebnis im Verlauf und im Kalender des Archivs.</p></div>
+</div>
 
 ## Wählen Sie die Datendetailebene
 
@@ -62,11 +63,7 @@ Durch Stoppen oder Abbrechen wird nur der aktuelle Versuch beendet. Bereits abge
 
 ## Profile und verlässlicher Exportverlauf
 
-Ein gespeichertes Profil friert seine Einstellungen und das Ziel für den Lauf ein. Profilbewusste geplante und Automatisierungsverlaufszeilen behalten das Laufzeitprofil bei, während der Verlauf eine datenschutzsichere Bezeichnung für das tatsächlich verwendete Ziel beibehält. In einer manuellen Export-Tab-Zeile kann der Profilname weggelassen werden. Spätere Umbenennungen und Zieländerungen schreiben den vorhandenen Verlauf nicht neu. Fehlende Profilreferenzen führen zu einem Fehler; Health.md verwendet dann keine Ersatzeinstellungen. Siehe [Profile exportieren](/de/docs/export-profiles/).
-
-## Tab-Leiste
-
-<p> Die vier Registerkarten am unteren Bildschirmrand, Export, Zeitplan, Synchronisierung, Einstellungen, decken die gesamte App-Oberfläche ab. Alles andere befindet sich ein oder zwei Ebenen tief in den Einstellungen. </p>
+Ein gespeichertes Profil friert seine Einstellungen und das Ziel für den Lauf ein. Profilbewusste geplante und Automationsverlaufszeilen behalten das Laufzeitprofil bei, während der Verlauf eine datenschutzsichere Bezeichnung für das tatsächlich verwendete Ziel beibehält. In einer Zeile eines manuellen Exports kann der Profilname fehlen. Spätere Umbenennungen und Zieländerungen schreiben den bestehenden Verlauf nicht um. Fehlt ein referenziertes Profil, schlägt der Vorgang fehl, ohne andere Einstellungen zu verwenden. Siehe [Exportprofile](/de/docs/export-profiles/).
 
 <div class="callout">
  <strong> Entsperrverhalten. </strong>

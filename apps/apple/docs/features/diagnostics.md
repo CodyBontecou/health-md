@@ -13,14 +13,15 @@ segments expire after 24 hours on the next app access. V1 never automatically
 captures health payloads, pairing codes, credential stores, or arbitrary error
 text.
 
-Choose the event time range/subsystem/operation UUID, inspect events, and add
+Choose the event time range (1 hour, 24 hours or 7 days on iPhone/iPad) and, under
+**Filters**, the subsystem/operation UUID, inspect events, and use **Add files** for
 any existing files you want, including health exports or screenshots. Attachment
 bytes are copied unchanged and are not scrubbed; source names are included
 (with disclosed truncation for unusually long names). No new health reads are
 performed. Attachments or free-form private context mark the bundle as possibly
 containing health data regardless of the private-context sharing switch.
 
-**Prepare Bundle** freezes the selected events and attachment copies. Open the
+**Review & prepare ZIP** (iPhone/iPad; **Prepare Bundle** on macOS) freezes the selected events and attachment copies. Open the
 manifest, README, event JSON/text and attachments to review them. Previews are
 limited to 128 KiB; inspect large/binary originals with a trusted local viewer.
 Changing selections invalidates the prepared artifact. A review acknowledgement

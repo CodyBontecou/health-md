@@ -1,0 +1,19 @@
+{
+  "name": "healthmd-licensing-ops",
+  "main": "src/worker.mjs",
+  "compatibility_date": "2026-11-01",
+  "workers_dev": true,
+  "compatibility_flags": ["nodejs_compat"],
+  "preview_urls": false,
+  "observability": {"enabled": false},
+  "triggers": {"crons": ["*/5 * * * *"]},
+  "r2_buckets": [{"binding": "BACKUPS", "bucket_name": "healthmd-licensing-backups"}],
+  "kv_namespaces": [{"binding": "STATE", "id": "da73530c6c25460e962b14044b23b7ff"}],
+  "send_email": [{"name": "EMAIL", "allowed_destination_addresses": ["bontecouc@gmail.com"], "allowed_sender_addresses": ["healthmd-alerts@isolated.tech"]}],
+  "vars": {
+    "MONITOR_ENABLED": "true",
+    "SERVICE_HEALTH_URL": "https://licensing.healthmd.app/ops/health",
+    "ALERT_FROM": "healthmd-alerts@isolated.tech",
+    "ALERT_TO": "bontecouc@gmail.com"
+  }
+}

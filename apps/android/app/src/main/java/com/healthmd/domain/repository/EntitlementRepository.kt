@@ -6,6 +6,14 @@ import kotlinx.coroutines.flow.StateFlow
 interface EntitlementRepository {
     val isUnlocked: StateFlow<Boolean>
 
+    /** App navigation can be sponsored without granting arbitrary export access. */
+    val canEnterApp: StateFlow<Boolean> get() = isUnlocked
+    val sponsoredEndpoint: StateFlow<String?> get() = NO_CLINIC_ENDPOINT
+    suspend fun clinicUploadAuthorization(endpoint: String): String? = null
+
+    /** Call with the frozen destination. Generic verifyAccess remains personal-only. */
+    suspend fun verifyExportAccess(target: com.healthmd.domain.model.ExportTarget, endpoint: String?): Boolean = verifyAccess()
+
     /** Only permanent access may be persisted as the legacy isPurchased flag. */
     val isPermanentlyUnlocked: StateFlow<Boolean> get() = isUnlocked
 
@@ -20,4 +28,8 @@ interface EntitlementRepository {
 
     /** Debug-only reset of channel entitlement state. */
     fun debugReset()
+
+    companion object {
+        private val NO_CLINIC_ENDPOINT = kotlinx.coroutines.flow.MutableStateFlow<String?>(null)
+    }
 }

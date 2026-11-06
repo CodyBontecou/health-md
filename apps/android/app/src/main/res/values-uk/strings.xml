@@ -1561,6 +1561,9 @@
     <string name="export_sleep_date_guidance">Сон охоплює період від полудня вибраної дати до полудня наступного дня. Для сну минулої ночі виберіть «Учора».</string>
     <string name="export_sleep_preview_window">Вікно сну: від полудня %1$s до полудня %2$s (%3$s).</string>
     <string name="export_sleep_preview_guidance">Якщо сон відсутній, спробуйте попередню дату. Ранковий сон може потрапити до її підсумку, навіть якщо вихідні записи датовані сьогодні. Помилки запитів наведено окремо; порожній результат також може означати недоступність читання.</string>
+    <string name="export_sleep_date_guidance_morning_ends">Сеанси сну цілком належать до дати їх завершення в часовому поясі експорту. Для сну минулої ночі виберіть «Сьогодні».</string>
+    <string name="export_sleep_preview_window_morning_ends">Дати завершення сну: з %1$s по %2$s (%3$s).</string>
+    <string name="export_sleep_preview_guidance_morning_ends">Сеанси сну цілком належать до дати завершення в часовому поясі цього експорту, без обрізання опівдні. Помилки запитів наведено окремо; порожній результат також може означати недоступність читання.</string>
     <string name="whoop_connection_description">Підключіть WHOOP для експорту відновлення, навантаження, сну, тренувань і вимірювань тіла. Вхід відбувається в браузері; Health.md зберігає токени зашифрованими на цьому пристрої. Відключення видаляє збережене підключення на цьому пристрої.</string>
     <string name="whoop_connect">Підключити WHOOP</string>
     <string name="whoop_sources_description">Підключіть WHOOP для прямого експорту від постачальника або продовжуйте використовувати Health Connect для локальних записів.</string>
@@ -1572,6 +1575,8 @@
     <string name="paywall_access_subtitle">Виберіть підписку або довічний доступ, щоб створити приватний архів здоров’я. Доступні для пробного періоду підписки включають 7 безкоштовних днів.</string>
     <string name="paywall_access_active_title">Ваш доступ активний</string>
     <string name="paywall_access_active_body">Продовжте налаштування, щоб підключити дані про здоров’я й вибрати місце для приватного архіву.</string>
+    <string name="clinic_access_active_title">Доступ через клініку активний</string>
+    <string name="clinic_access_active_body">Ваша клініка спонсорує доставку на свою схвалену кінцеву точку. Ви самі вибираєте, чим ділитися. Для інших місць експорту потрібен ваш власний доступ до Health.md.</string>
     <string name="paywall_plan_choices">Тижневий, річний або довічний доступ</string>
     <string name="paywall_weekly_price">%1$s / тиждень</string>
     <string name="paywall_yearly_price">%1$s / рік</string>
@@ -1601,4 +1606,10 @@
         <item quantity="many">днів за %1$s</item>
         <item quantity="other">дня за %1$s</item>
     </plurals>
+
+    <string name="clinic_sync_channel_name">Запити синхронізації від клініки</string>
+    <string name="clinic_sync_request_body">Ваша клініка запитує ваші останні дані про здоров’я. Торкніться, щоб надіслати їх.</string>
+    <string name="clinic_sync_result_sent">Ваші останні дані надіслано до клініки.</string>
+    <string name="clinic_sync_result_failed">Не вдалося надіслати дані до клініки. Відкрийте Health.md і спробуйте ще раз.</string>
+    <string name="clinic_sync_result_profile_missing">Відкрийте доступ клініки в Health.md і спочатку виберіть «Використовувати призначення клініки».</string>
 </resources>

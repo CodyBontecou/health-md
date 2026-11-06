@@ -39,6 +39,7 @@ object SubRoutes {
     const val ARCHIVE_DAY = "archive/day/{date}"
     fun archiveDay(date: LocalDate): String = "archive/day/$date"
     const val HISTORY = "history"
+    const val CLINIC_ACCESS = "clinic-access"
     const val ONBOARDING = "onboarding"
     const val METRIC_SELECTION = "metric_selection"
     const val FORMAT_CUSTOMIZATION = "format_customization"

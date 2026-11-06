@@ -7,6 +7,7 @@ import com.healthmd.BuildConfig
 import com.healthmd.domain.billing.BillingError
 import com.healthmd.domain.distribution.DistributionPolicy
 import com.healthmd.domain.repository.EntitlementRepository
+import com.healthmd.domain.repository.PurchaseOffer
 import com.healthmd.domain.repository.PurchaseRepository
 import com.healthmd.domain.repository.PurchasePlan
 import com.healthmd.domain.repository.SettingsRepository
@@ -44,7 +45,7 @@ class PaywallViewModel @Inject constructor(
     /** Resolve persisted lifetime access before presenting a root paywall. */
     val accessState: StateFlow<Boolean?> = combine(
         settingsRepository.isPurchased,
-        entitlementRepository.isUnlocked,
+        entitlementRepository.canEnterApp,
     ) { persisted, live -> distributionPolicy.fullAccessIncluded || persisted || live }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
@@ -62,7 +63,9 @@ class PaywallViewModel @Inject constructor(
         .map { it?.localizedPriceText }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
-    val offers = purchaseRepository.offers
+    val offers: StateFlow<List<PurchaseOffer>> =
+        if (StaticPurchasePreview.enabled) MutableStateFlow(StaticPurchasePreview.offers).asStateFlow()
+        else purchaseRepository.offers
 
     fun refreshAccess() {
         entitlementRepository.refresh()
