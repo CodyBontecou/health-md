@@ -70,7 +70,9 @@ struct GlassSegmentedControl<Value: Hashable>: View {
     @Environment(\.glassPalette) private var palette
 
     var body: some View {
-        HStack(spacing: 0) {
+        // ExportNowG, CLIDestG, DiagnosticsG: the selected segment is a raised neutral
+        // pill with bold text; the accent stays for chips and primary actions.
+        HStack(spacing: 2) {
             ForEach(Array(segments.enumerated()), id: \.element.id) { index, segment in
                 let isSelected = segment.value == selection
                 Button {
@@ -78,12 +80,23 @@ struct GlassSegmentedControl<Value: Hashable>: View {
                 } label: {
                     Text(segment.title)
                         .glassFont(.caption)
-                        .foregroundStyle(isSelected ? palette.accentInk : palette.text)
+                        .fontWeight(isSelected ? .bold : .medium)
+                        .foregroundStyle(palette.text)
                         .lineLimit(1)
                         .minimumScaleFactor(0.8)
-                        .padding(.horizontal, 10)
+                        .padding(.horizontal, 6)
                         .frame(maxWidth: .infinity, minHeight: GlassMetrics.segmentedHeight)
-                        .background(Capsule().fill(isSelected ? palette.accent : Color.clear))
+                        .background {
+                            if isSelected {
+                                Capsule()
+                                    .fill(palette.glassStrong)
+                                    .overlay(alignment: .top) {
+                                        Capsule().strokeBorder(palette.hi, lineWidth: 1)
+                                            .mask(LinearGradient(colors: [.black, .clear], startPoint: .top, endPoint: .center))
+                                    }
+                                    .shadow(color: .black.opacity(0.18), radius: 1.5, y: 1)
+                            }
+                        }
                         .contentShape(Capsule())
                 }
                 .buttonStyle(.plain)
@@ -91,6 +104,7 @@ struct GlassSegmentedControl<Value: Hashable>: View {
                 .accessibilityIdentifier(accessibilityIdentifierPrefix.map { "\($0).\(index)" } ?? "")
             }
         }
+        .padding(3)
         .background(Capsule().fill(palette.surface))
         .overlay(Capsule().strokeBorder(palette.line, lineWidth: 1))
     }
