@@ -1667,10 +1667,6 @@
     <string name="whoop_disconnect">قطع اتصال WHOOP</string>
     <string name="whoop_use_for_exports">استخدام WHOOP للتصدير</string>
     <string name="paywall_access_subtitle">اختر اشتراكًا أو وصولًا مدى الحياة لبدء أرشيفك الصحي الخاص. تتضمن الاشتراكات المؤهلة تجربة مجانية لمدة 7 أيام.</string>
-    <string name="paywall_access_active_title">وصولك نشط</string>
-    <string name="paywall_access_active_body">تابع الإعداد لربط بياناتك الصحية واختيار مكان حفظ أرشيفك الخاص.</string>
-    <string name="clinic_access_active_title">وصولك عبر العيادة نشط</string>
-    <string name="clinic_access_active_body">ترعى عيادتك التسليم إلى نقطة النهاية المعتمدة لديها. أنت من يختار ما تشاركه. تتطلب وجهات التصدير الأخرى وصولك الخاص إلى Health.md.</string>
     <string name="paywall_plan_choices">وصول أسبوعي أو سنوي أو مدى الحياة</string>
     <string name="paywall_weekly_price">%1$s / أسبوع</string>
     <string name="paywall_yearly_price">%1$s / سنة</string>

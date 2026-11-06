@@ -1522,10 +1522,6 @@
     <string name="whoop_disconnect">Déconnecter WHOOP</string>
     <string name="whoop_use_for_exports">Utiliser WHOOP pour les exports</string>
     <string name="paywall_access_subtitle">Choisissez un abonnement ou un accès à vie pour créer vos archives de santé privées. Les abonnements éligibles incluent un essai gratuit de 7 jours.</string>
-    <string name="paywall_access_active_title">Votre accès est actif</string>
-    <string name="paywall_access_active_body">Poursuivez la configuration pour connecter vos données de santé et choisir où enregistrer vos archives privées.</string>
-    <string name="clinic_access_active_title">Votre accès clinique est actif</string>
-    <string name="clinic_access_active_body">Votre clinique prend en charge l\'envoi vers son point de terminaison approuvé. Vous choisissez ce que vous partagez. Les autres destinations d\'export nécessitent votre propre accès Health.md.</string>
     <string name="paywall_plan_choices">Accès hebdomadaire, annuel ou à vie</string>
     <string name="paywall_weekly_price">%1$s / semaine</string>
     <string name="paywall_yearly_price">%1$s / an</string>

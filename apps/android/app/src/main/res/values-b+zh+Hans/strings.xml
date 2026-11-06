@@ -1297,10 +1297,6 @@
     <string name="whoop_disconnect">断开WHOOP连接</string>
     <string name="whoop_use_for_exports">使用WHOOP导出</string>
     <string name="paywall_access_subtitle">选择订阅或终身访问，开始建立您的私人健康档案。符合条件的订阅包含7天免费试用。</string>
-    <string name="paywall_access_active_title">您的访问权限已生效</string>
-    <string name="paywall_access_active_body">继续设置以连接健康数据，并选择私人档案的保存位置。</string>
-    <string name="clinic_access_active_title">您的诊所访问权限已生效</string>
-    <string name="clinic_access_active_body">您的诊所赞助向其已批准端点的传送。分享哪些内容由您决定。其他导出目标需要您自己的 Health.md 访问权限。</string>
     <string name="paywall_plan_choices">按周、按年或终身访问</string>
     <string name="paywall_weekly_price">%1$s / 周</string>
     <string name="paywall_yearly_price">%1$s / 年</string>

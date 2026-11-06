@@ -1576,10 +1576,6 @@
     <string name="whoop_disconnect">Відключити WHOOP</string>
     <string name="whoop_use_for_exports">Використовувати WHOOP для експорту</string>
     <string name="paywall_access_subtitle">Виберіть підписку або довічний доступ, щоб створити приватний архів здоров’я. Доступні для пробного періоду підписки включають 7 безкоштовних днів.</string>
-    <string name="paywall_access_active_title">Ваш доступ активний</string>
-    <string name="paywall_access_active_body">Продовжте налаштування, щоб підключити дані про здоров’я й вибрати місце для приватного архіву.</string>
-    <string name="clinic_access_active_title">Доступ через клініку активний</string>
-    <string name="clinic_access_active_body">Ваша клініка спонсорує доставку на свою схвалену кінцеву точку. Ви самі вибираєте, чим ділитися. Для інших місць експорту потрібен ваш власний доступ до Health.md.</string>
     <string name="paywall_plan_choices">Тижневий, річний або довічний доступ</string>
     <string name="paywall_weekly_price">%1$s / тиждень</string>
     <string name="paywall_yearly_price">%1$s / рік</string>

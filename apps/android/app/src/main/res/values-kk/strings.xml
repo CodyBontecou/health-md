@@ -1415,10 +1415,6 @@
     <string name="whoop_disconnect">WHOOP қызметін ажырату</string>
     <string name="whoop_use_for_exports">Экспорттау үшін WHOOP пайдалану</string>
     <string name="paywall_access_subtitle">Жеке денсаулық мұрағатын бастау үшін жазылымды немесе өмір бойы қолжетімділікті таңдаңыз. Тиісті жазылымдарға 7 күндік тегін сынақ мерзімі кіреді.</string>
-    <string name="paywall_access_active_title">Қолжетімділігіңіз белсенді</string>
-    <string name="paywall_access_active_body">Денсаулық деректерін қосып, жеке мұрағатты сақтау орнын таңдау үшін баптауды жалғастырыңыз.</string>
-    <string name="clinic_access_active_title">Клиника арқылы қолжетімділігіңіз белсенді</string>
-    <string name="clinic_access_active_body">Клиникаңыз мақұлданған соңғы нүктесіне жеткізуге демеушілік етеді. Нені бөлісуді өзіңіз таңдайсыз. Басқа экспорт бағыттары үшін өз Health.md қолжетімділігіңіз қажет.</string>
     <string name="paywall_plan_choices">Апталық, жылдық немесе өмір бойы қолжетімділік</string>
     <string name="paywall_weekly_price">%1$s / апта</string>
     <string name="paywall_yearly_price">%1$s / жыл</string>

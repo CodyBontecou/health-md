@@ -1474,10 +1474,6 @@
     <string name="whoop_disconnect">WHOOP-verbinding verbreken</string>
     <string name="whoop_use_for_exports">WHOOP gebruiken voor exports</string>
     <string name="paywall_access_subtitle">Kies een abonnement of levenslange toegang om je privégezondheidsarchief te beginnen. In aanmerking komende abonnementen bevatten een gratis proefperiode van 7 dagen.</string>
-    <string name="paywall_access_active_title">Je toegang is actief</string>
-    <string name="paywall_access_active_body">Ga verder met instellen om je gezondheidsgegevens te verbinden en te kiezen waar je je privéarchief bewaart.</string>
-    <string name="clinic_access_active_title">Je kliniektoegang is actief</string>
-    <string name="clinic_access_active_body">Je kliniek sponsort de levering aan haar goedgekeurde endpoint. Jij kiest wat je deelt. Voor andere exportbestemmingen heb je je eigen Health.md-toegang nodig.</string>
     <string name="paywall_plan_choices">Wekelijkse, jaarlijkse of levenslange toegang</string>
     <string name="paywall_weekly_price">%1$s / week</string>
     <string name="paywall_yearly_price">%1$s / jaar</string>

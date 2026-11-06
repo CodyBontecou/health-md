@@ -1448,10 +1448,6 @@
     <string name="whoop_disconnect">WHOOP সংযোগ বিচ্ছিন্ন করুন</string>
     <string name="whoop_use_for_exports">রপ্তানির জন্য WHOOP ব্যবহার করুন</string>
     <string name="paywall_access_subtitle">আপনার ব্যক্তিগত স্বাস্থ্য আর্কাইভ শুরু করতে সাবস্ক্রিপশন বা আজীবন অ্যাক্সেস বেছে নিন। যোগ্য সাবস্ক্রিপশনে 7 দিনের বিনামূল্যের ট্রায়াল রয়েছে।</string>
-    <string name="paywall_access_active_title">আপনার অ্যাক্সেস সক্রিয়</string>
-    <string name="paywall_access_active_body">স্বাস্থ্য তথ্য সংযুক্ত করতে এবং ব্যক্তিগত আর্কাইভ কোথায় সংরক্ষণ করবেন তা বেছে নিতে সেটআপ চালিয়ে যান।</string>
-    <string name="clinic_access_active_title">আপনার ক্লিনিক অ্যাক্সেস সক্রিয়</string>
-    <string name="clinic_access_active_body">আপনার ক্লিনিক তার অনুমোদিত এন্ডপয়েন্টে ডেলিভারি স্পনসর করে। কী শেয়ার করবেন তা আপনিই বেছে নেন। অন্যান্য এক্সপোর্ট গন্তব্যের জন্য আপনার নিজের Health.md অ্যাক্সেস প্রয়োজন।</string>
     <string name="paywall_plan_choices">সাপ্তাহিক, বার্ষিক বা আজীবন অ্যাক্সেস</string>
     <string name="paywall_weekly_price">%1$s / সপ্তাহ</string>
     <string name="paywall_yearly_price">%1$s / বছর</string>

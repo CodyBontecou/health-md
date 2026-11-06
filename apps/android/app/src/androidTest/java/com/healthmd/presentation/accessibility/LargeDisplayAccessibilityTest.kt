@@ -187,7 +187,6 @@ class LargeDisplayAccessibilityTest(private val display: AccessibilityDisplayCas
             OnboardingPage.WELCOME,
             OnboardingPage.HEALTH_ACCESS,
             OnboardingPage.FOLDER_SETUP,
-            OnboardingPage.PLAY_ACCESS,
             OnboardingPage.INCLUDED_ACCESS,
             OnboardingPage.READY,
         )
@@ -229,14 +228,6 @@ class LargeDisplayAccessibilityTest(private val display: AccessibilityDisplayCas
                                 folderName = "A long selected folder name for accessible exports"
                             },
                         )
-                        OnboardingPage.PLAY_ACCESS -> PaywallScreen(
-                            offers = trialOffers,
-                            onPlanPurchase = { actions += "purchase" },
-                            onPurchase = { actions += "purchase" },
-                            onRestore = { actions += "restore" },
-                            onDismiss = null,
-                            subtitle = text(R.string.schedule_unlock_required_body),
-                        )
                         OnboardingPage.INCLUDED_ACCESS -> IncludedAccessPage()
                         OnboardingPage.READY -> ReadyPage()
                     }
@@ -258,9 +249,6 @@ class LargeDisplayAccessibilityTest(private val display: AccessibilityDisplayCas
         tap(R.string.onboarding_storage_select_button)
         scrollAndTap(R.string.export_folder_change)
         tap(R.string.onboarding_continue)
-        tapPaywallAction(R.string.paywall_cta_trial)
-        tapPaywallAction(R.string.paywall_restore)
-        tap(R.string.onboarding_continue)
         // The included-access channel's final feature is also reachable at the largest scales.
         compose.onNodeWithText(text(R.string.fdroid_onboarding_no_play_services))
             .performScrollTo().assertFullyVisible()
@@ -268,7 +256,7 @@ class LargeDisplayAccessibilityTest(private val display: AccessibilityDisplayCas
         capture("ready-intro")
         tap(R.string.onboarding_ready_start_button)
 
-        assertEquals(listOf("shared", "health", "folder", "folder", "purchase", "restore", "complete"), actions)
+        assertEquals(listOf("shared", "health", "folder", "folder", "complete"), actions)
     }
 
     @Test
@@ -320,7 +308,7 @@ class LargeDisplayAccessibilityTest(private val display: AccessibilityDisplayCas
         compose.setContent {
             TestViewport {
                 val pages = listOf(OnboardingPage.WELCOME, OnboardingPage.HEALTH_ACCESS,
-                    OnboardingPage.FOLDER_SETUP, OnboardingPage.PLAY_ACCESS, OnboardingPage.READY)
+                    OnboardingPage.FOLDER_SETUP, OnboardingPage.READY)
                 val pager = rememberPagerState(initialPage = 1, pageCount = { pages.size })
                 var connected by remember { mutableStateOf(false) }
                 OnboardingLayout(

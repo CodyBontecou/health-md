@@ -1522,10 +1522,6 @@
     <string name="whoop_disconnect">Deconectează WHOOP</string>
     <string name="whoop_use_for_exports">Folosește WHOOP pentru exporturi</string>
     <string name="paywall_access_subtitle">Alege un abonament sau acces pe viață pentru a începe arhiva ta privată de sănătate. Abonamentele eligibile includ o perioadă de probă gratuită de 7 zile.</string>
-    <string name="paywall_access_active_title">Accesul tău este activ</string>
-    <string name="paywall_access_active_body">Continuă configurarea pentru a conecta datele de sănătate și a alege unde salvezi arhiva privată.</string>
-    <string name="clinic_access_active_title">Accesul prin clinică este activ</string>
-    <string name="clinic_access_active_body">Clinica ta sponsorizează livrarea către endpointul său aprobat. Tu alegi ce partajezi. Celelalte destinații de export necesită propriul tău acces Health.md.</string>
     <string name="paywall_plan_choices">Acces săptămânal, anual sau pe viață</string>
     <string name="paywall_weekly_price">%1$s / săptămână</string>
     <string name="paywall_yearly_price">%1$s / an</string>

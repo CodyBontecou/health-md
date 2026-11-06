@@ -610,8 +610,6 @@
     <string name="paywall_title">Unlock Health.md</string>
     <string name="paywall_subtitle">Choose a subscription or Lifetime access to begin your private health archive. Eligible subscriptions include a 7-day free trial.</string>
     <string name="paywall_access_subtitle">Choose a subscription or Lifetime access to begin your private health archive. Eligible subscriptions include a 7-day free trial.</string>
-    <string name="paywall_access_active_title">Your access is active</string>
-    <string name="paywall_access_active_body">Continue setup to connect your health data and choose where to save your private archive.</string>
     <string name="paywall_plan_choices">Weekly, yearly, or Lifetime access</string>
     <string name="paywall_weekly_price">%1$s / week</string>
     <string name="paywall_yearly_price">%1$s / year</string>
@@ -1550,8 +1548,6 @@
         <item quantity="one">day in %1$s</item>
         <item quantity="other">days in %1$s</item>
     </plurals>
-    <string name="clinic_access_active_title">Your clinic access is active</string>
-    <string name="clinic_access_active_body">Your clinic sponsors delivery to its approved endpoint. You choose what to share. Other export destinations require your own Health.md access.</string>
 
     <string name="clinic_sync_channel_name">Clinic sync requests</string>
     <string name="clinic_sync_request_body">Your clinic is asking for your latest health data. Tap to send it.</string>

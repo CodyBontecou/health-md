@@ -1522,10 +1522,6 @@
     <string name="whoop_disconnect">Desconectar WHOOP</string>
     <string name="whoop_use_for_exports">Usar WHOOP para exportações</string>
     <string name="paywall_access_subtitle">Escolha uma assinatura ou acesso vitalício para começar seu arquivo de saúde privado. Assinaturas elegíveis incluem um teste gratuito de 7 dias.</string>
-    <string name="paywall_access_active_title">Seu acesso está ativo</string>
-    <string name="paywall_access_active_body">Continue a configuração para conectar seus dados de saúde e escolher onde salvar seu arquivo privado.</string>
-    <string name="clinic_access_active_title">Seu acesso pela clínica está ativo</string>
-    <string name="clinic_access_active_body">Sua clínica patrocina o envio para o endpoint aprovado dela. Você escolhe o que compartilhar. Outros destinos de exportação exigem seu próprio acesso ao Health.md.</string>
     <string name="paywall_plan_choices">Acesso semanal, anual ou vitalício</string>
     <string name="paywall_weekly_price">%1$s / semana</string>
     <string name="paywall_yearly_price">%1$s / ano</string>

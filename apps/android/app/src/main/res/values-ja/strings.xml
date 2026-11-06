@@ -1299,10 +1299,6 @@
     <string name="whoop_disconnect">WHOOPの接続を解除</string>
     <string name="whoop_use_for_exports">エクスポートにWHOOPを使用</string>
     <string name="paywall_access_subtitle">サブスクリプションまたは永久アクセスを選んで、プライベートな健康アーカイブを始めましょう。対象のサブスクリプションには7日間の無料トライアルが含まれます。</string>
-    <string name="paywall_access_active_title">アクセスは有効です</string>
-    <string name="paywall_access_active_body">設定を続けて健康データを接続し、プライベートアーカイブの保存先を選択してください。</string>
-    <string name="clinic_access_active_title">クリニックのアクセスは有効です</string>
-    <string name="clinic_access_active_body">クリニックが承認済みエンドポイントへの配信をスポンサーしています。共有する内容はあなたが選びます。その他のエクスポート先には、ご自身の Health.md アクセスが必要です。</string>
     <string name="paywall_plan_choices">週額、年額、または永久アクセス</string>
     <string name="paywall_weekly_price">%1$s / 週</string>
     <string name="paywall_yearly_price">%1$s / 年</string>

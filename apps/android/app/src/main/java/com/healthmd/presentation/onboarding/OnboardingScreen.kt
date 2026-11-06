@@ -1,6 +1,5 @@
 package com.healthmd.presentation.onboarding
 
-import android.app.Activity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.pager.rememberPagerState
@@ -20,14 +19,11 @@ import com.healthmd.data.health.HealthConnectPermissionPolicy
 import com.healthmd.data.health.grantedAnyRequestedHealthPermission
 import com.healthmd.data.health.tryLaunchHealthConnectPermissions
 import com.healthmd.presentation.common.HealthConnectActionError
-import com.healthmd.presentation.paywall.PaywallScreen
-import com.healthmd.presentation.paywall.PaywallViewModel
 import kotlinx.coroutines.launch
 
 @Composable
 fun OnboardingScreen(
     viewModel: OnboardingViewModel = hiltViewModel(),
-    paywallViewModel: PaywallViewModel = hiltViewModel(),
     onComplete: () -> Unit,
     onUseSharedSetup: () -> Unit = {},
     initialPage: Int = 0,
@@ -38,22 +34,9 @@ fun OnboardingScreen(
     val distributionPolicy = viewModel.distributionPolicy
     val healthPageIndex = pages.indexOf(OnboardingPage.HEALTH_ACCESS)
     val folderPageIndex = pages.indexOf(OnboardingPage.FOLDER_SETUP)
-    val accessPageIndex = pages.indexOfFirst {
-        it == OnboardingPage.PLAY_ACCESS || it == OnboardingPage.INCLUDED_ACCESS
-    }
-    val readyPageIndex = pages.indexOf(OnboardingPage.READY)
-    val isUnlocked by paywallViewModel.isUnlocked.collectAsStateWithLifecycle()
-    val appAccess by paywallViewModel.accessState.collectAsStateWithLifecycle()
-    val clinicSponsored = appAccess == true && !isUnlocked
-    val isPurchasing by paywallViewModel.isPurchasing.collectAsStateWithLifecycle()
-    val isRestoring by paywallViewModel.isRestoring.collectAsStateWithLifecycle()
-    val purchaseError by paywallViewModel.purchaseError.collectAsStateWithLifecycle()
-    val priceText by paywallViewModel.priceText.collectAsStateWithLifecycle()
-    val debugUnlockOverride by paywallViewModel.debugUnlockOverride.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val coroutineScope = rememberCoroutineScope()
-    var advanceAfterUnlock by remember { mutableStateOf(false) }
     val selectedFolderFallback = stringResource(R.string.onboarding_storage_selected_folder_fallback)
     val folderDisplayName = uiState.folderUri?.let { uiState.folderName ?: selectedFolderFallback }
 
@@ -129,16 +112,7 @@ fun OnboardingScreen(
     LaunchedEffect(uiState.folderUri, pagerState.settledPage, allowAutomaticAdvance) {
         if (allowAutomaticAdvance && pagerState.settledPage == folderPageIndex && uiState.folderUri != null) {
             kotlinx.coroutines.delay(800)
-            pagerState.animateScrollToPage(accessPageIndex)
-        }
-    }
-
-    // Only advance for an unlock initiated from this page. Existing purchasers
-    // should still see the onboarding paywall instead of being immediately skipped.
-    LaunchedEffect(isUnlocked, advanceAfterUnlock, pagerState.settledPage) {
-        if (isUnlocked && advanceAfterUnlock && pagerState.settledPage == accessPageIndex) {
-            advanceAfterUnlock = false
-            pagerState.animateScrollToPage(readyPageIndex)
+            pagerState.animateScrollToPage(folderPageIndex + 1)
         }
     }
 
@@ -205,38 +179,6 @@ fun OnboardingScreen(
             OnboardingPage.FOLDER_SETUP -> StorageSetupPage(
                 folderName = folderDisplayName,
                 onSelectFolder = { folderPickerLauncher.launch(null) },
-            )
-            OnboardingPage.PLAY_ACCESS -> if (isUnlocked || clinicSponsored) {
-                ActiveAccessPage(clinicSponsored = clinicSponsored)
-            } else PaywallScreen(
-                onPurchase = {
-                    (context as? Activity)?.let { activity ->
-                        advanceAfterUnlock = !isUnlocked
-                        paywallViewModel.launchPurchaseFlow(activity)
-                    }
-                },
-                onRestore = {
-                    advanceAfterUnlock = !isUnlocked
-                    paywallViewModel.restorePurchases()
-                },
-                onDismiss = null,
-                isPurchasing = isPurchasing,
-                isRestoring = isRestoring,
-                priceText = priceText,
-                purchaseError = purchaseError,
-                onClearError = paywallViewModel::clearError,
-                subtitle = stringResource(R.string.schedule_unlock_required_body),
-                isDebugBuild = paywallViewModel.isDebugBuild,
-                debugUnlockOverride = debugUnlockOverride,
-                onDebugToggleUnlock = {
-                    advanceAfterUnlock = !isUnlocked
-                    paywallViewModel.debugToggleUnlock()
-                },
-                onDebugResetState = paywallViewModel::debugResetPurchaseState,
-                purchasesAvailable = paywallViewModel.purchasesAvailable,
-                fullAccessIncluded = distributionPolicy.fullAccessIncluded,
-                // Onboarding is already a pager; nested swipe areas would fight it.
-                carousel = false,
             )
             OnboardingPage.INCLUDED_ACCESS -> IncludedAccessPage()
             OnboardingPage.READY -> ReadyPage()
