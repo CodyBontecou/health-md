@@ -565,18 +565,17 @@
       "profiles": [],
       "platforms": {
         "apple": {
-          "state": "planned",
-          "target": "Liquid Glass experience rollout: enable the Archive calendar behind NEW_EXPERIENCE_ENABLED after coverage-map parity sign-off."
+          "state": "available"
         },
         "android": {
           "state": "planned",
-          "target": "Material 3 archive screen fed from Android export history, using the same per-date statuses and All aggregation rules."
+          "target": "Material 3 branch (PR #298): the Archive screen in presentation/archive, with the same per-date statuses and All aggregation rules."
         }
       },
       "evidence": [
         "apps/apple/HealthMd/Shared/Coverage/CoverageProjection.swift",
         "apps/apple/HealthMd/Shared/Coverage/ArchiveAggregation.swift",
-        "apps/android/app/src/main/java/com/healthmd/presentation/history/HistoryViewModel.kt"
+        "apps/apple/HealthMdTests/Coverage/CoverageLedgerTests.swift"
       ]
     },
     {
