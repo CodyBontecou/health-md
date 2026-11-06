@@ -9,9 +9,8 @@ struct APIProviderCaptureTests {
     // docs/testing/lifecycle-audit.md; these isolated fixtures have no live effects.
     private static var retained: [AnyObject] = []
 
-    @Test(arguments: ["unchanged", "replaced", "disconnected"])
+    @Test(.enabled("Requires Connected Apps test host") { await ConnectedAppsFeature.isEnabled }, arguments: ["unchanged", "replaced", "disconnected"])
     func acceptedConnectionAndSettingsRemainFixed(change: String) async throws {
-        try #require(ConnectedAppsFeature.isEnabled)
         let (settings, manager, store) = fixture()
         let provider = Provider()
         let accepted = provider.currentID
@@ -101,9 +100,8 @@ struct APIProviderCaptureTests {
     }
 
     #if os(iOS)
-    @Test(arguments: [false, true])
+    @Test(.enabled("Requires Connected Apps test host") { await ConnectedAppsFeature.isEnabled }, arguments: [false, true])
     func scheduledAPIAdmissionCapturesProvidersEvenWhenLocalSidecarsAreSuppressed(profile: Bool) async throws {
-        try #require(ConnectedAppsFeature.isEnabled)
         let (settings, _, _) = fixture()
         settings.generateRangeSummary = true
         settings.summaryOnlyExport = true

@@ -57,9 +57,8 @@ struct ConnectedFileSourceAuthorityTests {
         #expect(providers.successfulFetches == 0)
     }
 
-    @Test(arguments: ["unchanged", "replaced", "disconnected", "empty"])
+    @Test(.enabled("Requires Connected Apps test host") { await ConnectedAppsFeature.isEnabled }, arguments: ["unchanged", "replaced", "disconnected", "empty"])
     func freshAcceptanceFreezesSettingsClockAndProviderMembership(change: String) async throws {
-        try #require(ConnectedAppsFeature.isEnabled)
         let fixture = try fixture()
         defer { fixture.defaults.removePersistentDomain(forName: fixture.suite) }
         let providers = Provider()
@@ -105,9 +104,8 @@ struct ConnectedFileSourceAuthorityTests {
         #expect(providers.successfulFetches == (change == "empty" ? 0 : change == "unchanged" ? 2 : 1))
     }
 
-    @Test(arguments: ["selected", "empty", "unavailable", "missing"])
+    @Test(.enabled("Requires Connected Apps test host") { await ConnectedAppsFeature.isEnabled }, arguments: ["selected", "empty", "unavailable", "missing"])
     func diskRecoveryKeepsPrivateGrantAndUsesActualRecoveredProducer(mode: String) async throws {
-        try #require(ConnectedAppsFeature.isEnabled)
         let fixture = try fixture()
         defer { fixture.defaults.removePersistentDomain(forName: fixture.suite) }
         let providers = Provider()
@@ -185,9 +183,8 @@ struct ConnectedFileSourceAuthorityTests {
         #expect(replay.fetchExternalRecords == nil)
     }
 
-    @Test(arguments: [false, true], [ExportTargetSelection.connectedMac, .agentDataGateway])
+    @Test(.enabled("Requires Connected Apps test host") { await ConnectedAppsFeature.isEnabled }, arguments: [false, true], [ExportTargetSelection.connectedMac, .agentDataGateway])
     func scheduledFileOccurrencesAcceptSourceAndProfileBeforeCapture(profile: Bool, target: ExportTargetSelection) async throws {
-        try #require(ConnectedAppsFeature.isEnabled)
         let fixture = try fixture()
         defer { fixture.defaults.removePersistentDomain(forName: fixture.suite) }
         let providers = Provider()

@@ -546,9 +546,8 @@ struct GatewaySourceAuthorityTests {
     // in docs/testing/lifecycle-audit.md; these objects use only synthetic stores.
     private static var retained: [AnyObject] = []
 
-    @Test(arguments: ["unchanged", "replaced", "empty"])
+    @Test(.enabled("Requires Connected Apps test host") { await ConnectedAppsFeature.isEnabled }, arguments: ["unchanged", "replaced", "empty"])
     func productionGatewayKeepsAcceptedSourceAndSettings(change: String) async throws {
-        try #require(ConnectedAppsFeature.isEnabled)
         let suite = "GatewaySourceAuthority-\(UUID())"
         let defaults = try #require(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
