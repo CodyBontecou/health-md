@@ -10,6 +10,8 @@ struct GlassFolderDestinationScreen: View {
 
     @Environment(\.glassPalette) private var palette
     @EnvironmentObject private var configurationProtection: ConfigurationProtectionManager
+    @State private var editingSubfolder = false
+    @State private var subfolderDraft = ""
     @ObservedObject private var history = ExportHistoryManager.shared
     @AppStorage(NewAutomationDestinationPreference.key) private var newAutomationsUseDefaultFolder = false
 
@@ -73,18 +75,28 @@ struct GlassFolderDestinationScreen: View {
                     .accessibilityHint(String(localized: "Choose New Folder…"))
                     .accessibilityIdentifier("glass.folderDestination.chooseDefault")
 
-                    GlassRow(title: String(localized: "Subfolder")) {
-                        TextField(
-                            String(localized: "Subfolder"),
-                            text: configurationProtection.protecting($vaultManager.healthSubfolder)
-                        )
-                        .textFieldStyle(.plain)
-                        .glassFont(.body)
-                        .foregroundStyle(palette.muted)
-                        .multilineTextAlignment(.trailing)
-                        .autocorrectionDisabled()
-                        .textInputAutocapitalization(.never)
+                    // FolderDestG: the subfolder reads as a mono value with a chevron and
+                    // opens a small editor.
+                    Button {
+                        configurationProtection.performConfigurationChange {
+                            subfolderDraft = vaultManager.healthSubfolder
+                            editingSubfolder = true
+                        }
+                    } label: {
+                        GlassRow(title: String(localized: "Subfolder")) {
+                            HStack(spacing: 8) {
+                                Text(verbatim: vaultManager.healthSubfolder)
+                                    .font(.system(size: 13.5, design: .monospaced))
+                                    .foregroundStyle(palette.muted)
+                                    .lineLimit(1)
+                                    .truncationMode(.middle)
+                                chevron
+                            }
+                        }
                     }
+                    .buttonStyle(.plain)
+                    .accessibilityValue(Text(verbatim: vaultManager.healthSubfolder))
+                    .accessibilityIdentifier("glass.folderDestination.subfolder")
                     .overlay(alignment: .top) { divider }
 
                     GlassToggleRow(
@@ -132,6 +144,17 @@ struct GlassFolderDestinationScreen: View {
         .navigationTitle(isPad ? String(localized: "Vault on this iPad") : String(localized: "Vault on this iPhone"))
         .navigationBarTitleDisplayMode(.inline)
         .accessibilityIdentifier("glass.folderDestination")
+        .alert(String(localized: "Subfolder"), isPresented: $editingSubfolder) {
+            TextField(String(localized: "Subfolder"), text: $subfolderDraft)
+                .autocorrectionDisabled()
+                .textInputAutocapitalization(.never)
+            Button(String(localized: "Cancel"), role: .cancel) {}
+            Button(String(localized: "Save")) {
+                configurationProtection.performConfigurationChange {
+                    vaultManager.healthSubfolder = subfolderDraft
+                }
+            }
+        }
     }
 
     /// FolderDestG's warning banner, with its "Choose folder again" action inside.
