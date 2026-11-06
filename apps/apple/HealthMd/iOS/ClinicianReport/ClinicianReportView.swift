@@ -197,9 +197,18 @@ struct ClinicianReportView: View {
 
     private var periodSection: some View {
         VStack(alignment: .leading, spacing: 6) {
-            GlassSectionLabel(title: copy.string(.period))
-                .padding(.horizontal, 20)
-            periodPicker
+            // ClinicianReportG: "Period" and its segments share one glass panel.
+            GlassPanel {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(copy.string(.period))
+                        .glassFont(.body)
+                        .foregroundStyle(palette.text)
+                        .accessibilityHidden(true)
+                    periodPicker
+                }
+                .padding(.horizontal, GlassMetrics.panelPadding)
+                .padding(.vertical, 12)
+            }
 
             if viewModel.selectedPreset == .custom {
                 GlassPanel {
