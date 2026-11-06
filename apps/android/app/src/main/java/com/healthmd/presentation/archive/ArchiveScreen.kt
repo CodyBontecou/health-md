@@ -76,6 +76,7 @@ import com.healthmd.presentation.common.GeistCard
 import com.healthmd.presentation.common.GeistCardClickable
 import com.healthmd.presentation.common.LocalConfigurationProtection
 import com.healthmd.presentation.common.LocalFloatingActionClearance
+import com.healthmd.presentation.common.LocalUsesNavigationRail
 import com.healthmd.presentation.common.PrimaryButton
 import com.healthmd.presentation.theme.GeistBreakpoints
 import com.healthmd.presentation.theme.GeistColors
@@ -98,6 +99,9 @@ private val TWO_PANE_MIN_WIDTH = GeistBreakpoints.medium.dp
 
 /** Content width from which the side column takes its full 400dp (tablets, landscape). */
 private val LARGE_SIDE_BREAKPOINT = 920.dp
+
+/** Content width from which the side column takes the board's compact 300dp. */
+private val MEDIUM_SIDE_BREAKPOINT = 700.dp
 
 @Composable
 fun ArchiveScreen(
@@ -135,10 +139,18 @@ fun ArchiveScreen(
     }
     CompositionLocalProvider(LocalCurrentSettingsName provides state.currentSettingsName) {
     BoxWithConstraints(Modifier.fillMaxSize()) {
-        if (maxWidth >= TWO_PANE_MIN_WIDTH && !(state.isLoaded && !state.hasHistory)) {
+        // From `md` the rail narrows the content below 601dp on an unfolded foldable, so the
+        // window class (the rail) decides, as DESIGN.md does: the calendar sits beside the day.
+        val twoPane = LocalUsesNavigationRail.current || maxWidth >= TWO_PANE_MIN_WIDTH
+        if (twoPane && !(state.isLoaded && !state.hasHistory)) {
             ArchiveLargeLayout(
                 state = state,
-                sideWidth = if (maxWidth >= LARGE_SIDE_BREAKPOINT) 400.dp else 300.dp,
+                sideWidth = when {
+                    maxWidth >= LARGE_SIDE_BREAKPOINT -> 400.dp
+                    maxWidth >= MEDIUM_SIDE_BREAKPOINT -> 300.dp
+                    // A ~600dp unfolded inner display: keep the calendar readable beside the day.
+                    else -> 264.dp
+                },
                 viewModel = viewModel,
                 onBackfill = onBackfill,
                 onOpenDay = onOpenDay,

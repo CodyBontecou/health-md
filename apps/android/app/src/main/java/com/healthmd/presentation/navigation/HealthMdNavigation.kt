@@ -62,6 +62,7 @@ import com.healthmd.presentation.common.ConfigurationProtectionToast
 import com.healthmd.presentation.common.ConfigurationProtectionUi
 import com.healthmd.presentation.common.LocalConfigurationProtection
 import com.healthmd.presentation.common.LocalFloatingActionClearance
+import com.healthmd.presentation.common.LocalUsesNavigationRail
 import com.healthmd.presentation.onboarding.OnboardingScreen
 import com.healthmd.presentation.paywall.PaywallScreen
 import com.healthmd.presentation.release.AndroidReleaseNotes
@@ -314,11 +315,14 @@ fun HealthMdNavigation(
         AppNavigationLayout(
             destinations = if (showMainNav) NavDestination.entries else emptyList(),
             currentRoute = currentRoute,
-            onExportNow = if (showMainNav && currentRoute != NavDestination.SETTINGS.route) {
+            onExportNow = if (showMainNav) {
                 { navController.navigate(SubRoutes.EXPORT_NOW) { launchSingleTop = true } }
             } else {
                 null
             },
+            // The rail keeps Export now on every destination; the phone's floating button
+            // leaves Settings, as on the board.
+            showFloatingExportNow = currentRoute != NavDestination.SETTINGS.route,
             onNavigate = { dest ->
                 navController.navigate(dest.route) {
                     popUpTo(navController.graph.findStartDestination().id) {
@@ -422,7 +426,7 @@ fun HealthMdNavigation(
                 BoxWithConstraints(Modifier.fillMaxSize()) {
                     // Same split point as the Archive, so an unfolded foldable in landscape
                     // (about 760 dp beside the rail) shows list and detail together.
-                    val twoPane = maxWidth >= GeistBreakpoints.medium.dp
+                    val twoPane = LocalUsesNavigationRail.current || maxWidth >= GeistBreakpoints.medium.dp
                     val schedule: @Composable () -> Unit = {
                         ScheduleScreen(
                             onNavigateToPaywall = {
@@ -470,7 +474,8 @@ fun HealthMdNavigation(
             composable(NavDestination.SETTINGS.route) {
                 var settingsDetail by rememberSaveable { mutableStateOf<String?>(null) }
                 BoxWithConstraints(Modifier.fillMaxSize()) {
-                    val twoPane = maxWidth >= GeistSizes.readableContentMaxWidth
+                    // Beside the rail (from `md`) the list and the open entry share the screen.
+                    val twoPane = LocalUsesNavigationRail.current
                     // On wide layouts sub-screens open beside Settings instead of over it.
                     val open: (String) -> Unit = { route ->
                         if (twoPane) settingsDetail = route else navController.navigate(route) { launchSingleTop = true }
@@ -505,8 +510,10 @@ fun HealthMdNavigation(
                         )
                     }
                     if (twoPane) {
+                        // The board's list column: 320dp on foldables and small tablets, 420dp wider.
+                        val listWidth = if (maxWidth >= SETTINGS_WIDE_LIST_MIN_WIDTH) 420.dp else 320.dp
                         Row(Modifier.fillMaxSize()) {
-                            Box(Modifier.weight(1f)) { list() }
+                            Box(Modifier.width(listWidth)) { list() }
                             Box(Modifier.weight(1f).padding(Spacing.md)) {
                                 GeistCard(padding = Spacing.xxs) {
                                     val close = { settingsDetail = null }
@@ -918,6 +925,12 @@ private val EXPORT_SHEET_ROUTES = setOf(SubRoutes.EXPORT_NOW, SubRoutes.EXPORT_B
 private val FLOATING_ACTION_MIN_HEIGHT = 56.dp
 private val FLOATING_ACTION_MARGIN = 16.dp
 
+/** Content width from which the Settings list column widens to 420dp. */
+private val SETTINGS_WIDE_LIST_MIN_WIDTH = 900.dp
+
+/** Window width below which the navigation rail takes the board's compact 80dp. */
+private val COMPACT_RAIL_BREAKPOINT = 1000.dp
+
 /** Reserve the measured navigation size, including wrapped labels, rather than a fixed inset. */
 @Composable
 internal fun AppNavigationLayout(
@@ -925,13 +938,16 @@ internal fun AppNavigationLayout(
     currentRoute: String?,
     onNavigate: (NavDestination) -> Unit,
     onExportNow: (() -> Unit)? = null,
+    showFloatingExportNow: Boolean = true,
     content: @Composable (Modifier) -> Unit,
 ) {
     BoxWithConstraints(
         modifier = Modifier.fillMaxSize().safeDrawingPadding(),
     ) {
         val useNavigationRail = maxWidth >= GeistBreakpoints.medium.dp
-        val showsFloatingAction = onExportNow != null && !useNavigationRail
+        val showsFloatingAction = onExportNow != null && !useNavigationRail && showFloatingExportNow
+        // The board's compact rail (below 1000dp) is 80dp; wider windows use 96dp.
+        val railWidth = if (maxWidth < COMPACT_RAIL_BREAKPOINT) 80.dp else 96.dp
         val density = LocalDensity.current
         var floatingActionHeight by remember { mutableStateOf(FLOATING_ACTION_MIN_HEIGHT) }
         Row(modifier = Modifier.fillMaxSize()) {
@@ -941,6 +957,7 @@ internal fun AppNavigationLayout(
                     currentRoute = currentRoute,
                     onNavigate = onNavigate,
                     onExportNow = onExportNow,
+                    width = railWidth,
                 )
             }
             Scaffold(
@@ -975,7 +992,10 @@ internal fun AppNavigationLayout(
                 } else {
                     0.dp
                 }
-                CompositionLocalProvider(LocalFloatingActionClearance provides clearance) {
+                CompositionLocalProvider(
+                    LocalFloatingActionClearance provides clearance,
+                    LocalUsesNavigationRail provides (destinations.isNotEmpty() && useNavigationRail),
+                ) {
                     content(Modifier.fillMaxSize().padding(padding).consumeWindowInsets(padding))
                 }
             }
@@ -989,13 +1009,14 @@ private fun AdaptiveNavigationRail(
     currentRoute: String?,
     onNavigate: (NavDestination) -> Unit,
     onExportNow: (() -> Unit)?,
+    width: androidx.compose.ui.unit.Dp,
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalGeistColors.current
     NavigationRail(
         modifier = modifier
             .fillMaxHeight()
-            .width(96.dp)
+            .width(width)
             .verticalScroll(rememberScrollState()),
         containerColor = colors.background100,
         contentColor = colors.primary,
