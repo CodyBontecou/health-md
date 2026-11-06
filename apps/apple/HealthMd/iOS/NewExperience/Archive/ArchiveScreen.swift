@@ -167,7 +167,7 @@ struct ArchiveScreen: View {
                 if layout == .wide { chips(compact: true) }
                 pausedNoteIfNeeded
                 HStack(alignment: .top, spacing: layout == .pad ? 16 : 14) {
-                    calendarPanel
+                    calendarPanel(fillsHeight: true)
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                     compactDayPanel(showsSummary: true, fillsHeight: true)
                         .frame(width: layout == .pad ? 320 : 250)
@@ -452,7 +452,11 @@ struct ArchiveScreen: View {
 
     // MARK: - Calendar
 
-    private var calendarPanel: some View {
+    private var calendarPanel: some View { calendarPanel(fillsHeight: false) }
+
+    /// `fillsHeight`: the wide boards stretch the calendar's glass to the day panel's
+    /// height, with the month at the top.
+    private func calendarPanel(fillsHeight: Bool) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             if !layout.isWide {
                 HStack {
@@ -480,6 +484,7 @@ struct ArchiveScreen: View {
         .padding(.horizontal, layout == .splitView ? 10 : 12)
         .padding(.top, layout.isWide ? 12 : 16)
         .padding(.bottom, layout.isWide ? 12 : 14)
+        .frame(maxHeight: fillsHeight ? .infinity : nil, alignment: .top)
         .glassSurface()
     }
 
