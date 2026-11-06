@@ -430,9 +430,9 @@ private fun PlansSlide(
                             Text(
                                 stringResource(R.string.paywall_best_value),
                                 style = GeistType.button12,
-                                color = colors.brandOnSubtle,
+                                color = colors.onTertiaryContainer,
                                 modifier = Modifier
-                                    .background(colors.brandSubtle, RoundedCornerShape(GeistRadii.small))
+                                    .background(colors.tertiaryContainer, RoundedCornerShape(GeistRadii.small))
                                     .padding(horizontal = GeistSpacing.space2, vertical = 2.dp),
                             )
                         }
