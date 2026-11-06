@@ -118,8 +118,10 @@ private struct GlassPaneModifier: ViewModifier {
         let shape = RoundedRectangle(cornerRadius: GlassMetrics.paneRadius, style: .continuous)
         content
             .clipShape(shape)
-            .background(shape.fill(palette.glass))
-            .overlay(shape.strokeBorder(palette.edge, lineWidth: 1))
+            // Pane screens paint `bg` themselves, so the list pane does too: both columns
+            // read the same, separated by the panes' edges.
+            .background(shape.fill(palette.bg))
+            .overlay(shape.strokeBorder(palette.line, lineWidth: 1))
     }
 }
 
