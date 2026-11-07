@@ -125,10 +125,12 @@ struct ExportStatusBadge: View {
     }
 
     /// Seconds before the toast leaves on its own; nil keeps it until dismissed. A toast
-    /// that opens details when tapped stays, as its owner manages its expiry.
+    /// that opens details when tapped stays, as its owner manages its expiry. So does one
+    /// offering View/Browse actions: it is often read only after the export moment, and a
+    /// timed exit made a late tap on "View Exported File" land on empty space.
     private var resolvedAutoDismissDelay: TimeInterval? {
         // Give VoiceOver users and UI tests the time they need; they can still dismiss.
-        guard autoDismisses, onTap == nil, !voiceOverEnabled,
+        guard autoDismisses, onTap == nil, !hasExportActions, !voiceOverEnabled,
               !ProcessInfo.processInfo.arguments.contains("--uitesting") else { return nil }
         switch status {
         case .success: return 6
