@@ -84,6 +84,27 @@ object ComposerSentence {
         return result
     }
 
+    /**
+     * The read-only summary of cards (iOS `summaryTemplate`): text in `[brackets]` is left out,
+     * brackets and all, when a token inside it has no value; then it splits as [segments].
+     */
+    fun summarySegments(
+        template: String,
+        values: Map<ComposerToken, String>,
+        emphasis: Map<ComposerToken, String> = emptyMap(),
+    ): List<ComposerSegment> {
+        val resolved = OPTIONAL.replace(template) { match ->
+            val inner = match.groupValues[1]
+            val names = TOKEN.findAll(inner).map { it.groupValues[1] }.toList()
+            val complete = names.all { name -> ComposerToken.fromKey(name)?.let(values::containsKey) == true }
+            if (complete) inner else ""
+        }
+        return segments(resolved, values, emphasis)
+    }
+
+    private val OPTIONAL = Regex("\\[([^\\[\\]]*)]")
+    private val TOKEN = Regex("\\{([a-z]+)}")
+
     fun plainText(segments: List<ComposerSegment>): String = segments.joinToString("") {
         when (it) {
             is ComposerSegment.Text -> it.text

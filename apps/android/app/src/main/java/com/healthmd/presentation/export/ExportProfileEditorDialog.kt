@@ -120,6 +120,8 @@ fun ExportProfileEditorDialog(
     onConfirm: (ExportProfileEditorDraft) -> Unit,
     onDismiss: () -> Unit,
     managedClinicEndpoint: String? = null,
+    /** Replaces the default title, e.g. "New automation" when created from Automations. */
+    title: String? = null,
 ) {
     val context = LocalContext.current
     val colors = LocalGeistColors.current
@@ -155,7 +157,7 @@ fun ExportProfileEditorDialog(
     val overlappingNames = overlapPreview(draft.target, draft.folderUri, draft.settings)
 
     ProfileFullScreenDialog(
-        title = stringResource(if (isCreation) R.string.m3_profiles_editor_new_title else R.string.m3_profiles_editor_edit_title),
+        title = title ?: stringResource(if (isCreation) R.string.m3_profiles_editor_new_title else R.string.m3_profiles_editor_edit_title),
         onDismiss = onDismiss,
         actions = {
             AdaptiveActionPair(

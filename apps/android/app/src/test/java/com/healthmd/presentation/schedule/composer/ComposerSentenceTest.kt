@@ -35,6 +35,19 @@ class ComposerSentenceTest {
     }
 
     @Test
+    fun summaryLeavesOutOptionalPartsWhoseTokensHaveNoValue() {
+        val template = "{when}, write {range}[’s {metrics}][ as {formats}] to {where}[ and {note}]."
+        val sparse = values - ComposerToken.METRICS - ComposerToken.FORMATS - ComposerToken.NOTE
+        assertThat(ComposerSentence.plainText(ComposerSentence.summarySegments(template, sparse)))
+            .isEqualTo("Every morning at 7:30, write yesterday to Vault.")
+        assertThat(ComposerSentence.plainText(ComposerSentence.summarySegments(template, values)))
+            .isEqualTo("Every morning at 7:30, write yesterday’s 64 metrics as Markdown to Vault and update my daily note.")
+        val multi = "{when}, write[ {metrics} for] {range}[ as {formats}] to {where}[ and {note}]."
+        assertThat(ComposerSentence.plainText(ComposerSentence.summarySegments(multi, sparse + (ComposerToken.RANGE to "the last 7 days"))))
+            .isEqualTo("Every morning at 7:30, write the last 7 days to Vault.")
+    }
+
+    @Test
     fun emphasisMakesOnlyTheTimeTheChoice() {
         val segments = ComposerSentence.segments("{when}.", values, mapOf(ComposerToken.WHEN to "7:30"))
         assertThat(segments).containsExactly(

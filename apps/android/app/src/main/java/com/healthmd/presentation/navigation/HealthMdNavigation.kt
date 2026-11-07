@@ -62,6 +62,8 @@ import com.healthmd.presentation.archive.DayPageViewModel
 import com.healthmd.presentation.export.ExportProfilesViewModel
 import com.healthmd.presentation.schedule.AutomationsScreen
 import com.healthmd.presentation.schedule.AutomationDetailPane
+import com.healthmd.presentation.schedule.AutomationRoutes
+import com.healthmd.presentation.schedule.automationProfilePages
 import com.healthmd.presentation.schedule.composer.AutomationComposerScreen
 import com.healthmd.presentation.common.GeistCard
 import com.healthmd.presentation.metrics.MetricSelectionScreen
@@ -524,13 +526,6 @@ fun HealthMdNavigation(
                                     navController.navigate(SubRoutes.automationDetail(id)) { launchSingleTop = true }
                                 }
                             },
-                            onEditAutomation = { id ->
-                                navController.navigate(SubRoutes.automationCompose(id)) { launchSingleTop = true }
-                            },
-                            onRunNow = runNow,
-                            onOpenScheduleSettings = {
-                                navController.navigate(SubRoutes.SCHEDULE_SETTINGS) { launchSingleTop = true }
-                            },
                             onOpenHistory = {
                                 navController.navigate(SubRoutes.HISTORY) { launchSingleTop = true }
                             },
@@ -546,9 +541,10 @@ fun HealthMdNavigation(
                                 GeistCard(padding = Spacing.xxs) {
                                     AutomationDetailPane(
                                         profileId = selectedAutomation,
-                                        onEditProfile = { id -> navController.navigate(SubRoutes.exportProfile(id)) },
                                         onCompose = { id -> navController.navigate(SubRoutes.automationCompose(id)) { launchSingleTop = true } },
                                         onRunNow = runNow,
+                                        onOpenPage = { id, page -> navController.navigate(AutomationRoutes.page(id, page)) { launchSingleTop = true } },
+                                        onOpenSchedule = { id -> navController.navigate(AutomationRoutes.schedule(id)) { launchSingleTop = true } },
                                         onDeleted = { selectedAutomation = null },
                                     )
                                 }
@@ -684,27 +680,31 @@ fun HealthMdNavigation(
             }
             composable(SubRoutes.AUTOMATION_DETAIL) { entry ->
                 val profileId = entry.arguments?.getString("profileId")
-                SubScreenFrame(
-                    title = stringResource(R.string.nav_automations),
+                val profiles: ExportProfilesViewModel = hiltViewModel()
+                // Titled with the automation's name, as on iOS; its own frame carries Back.
+                AutomationDetailPane(
+                    profileId = profileId,
                     onBack = { navController.popBackStack() },
-                ) {
-                    ReadableWidth {
-                        val profiles: ExportProfilesViewModel = hiltViewModel()
-                        AutomationDetailPane(
-                            profileId = profileId,
-                            onEditProfile = { id -> navController.navigate(SubRoutes.exportProfile(id)) },
-                            onCompose = { id -> navController.navigate(SubRoutes.automationCompose(id)) { launchSingleTop = true } },
-                            onRunNow = { id ->
-                                runAutomationNow(id, profiles, protectionEnabled != false, settingsViewModel::showBlockedChangeToast) {
-                                    navController.navigate(SubRoutes.EXPORT_NOW) { launchSingleTop = true }
-                                }
-                            },
-                            onDeleted = { navController.popBackStack() },
-                            profilesViewModel = profiles,
-                        )
-                    }
-                }
+                    onCompose = { id -> navController.navigate(SubRoutes.automationCompose(id)) { launchSingleTop = true } },
+                    onRunNow = { id ->
+                        runAutomationNow(id, profiles, protectionEnabled != false, settingsViewModel::showBlockedChangeToast) {
+                            navController.navigate(SubRoutes.EXPORT_NOW) { launchSingleTop = true }
+                        }
+                    },
+                    onOpenPage = { id, page -> navController.navigate(AutomationRoutes.page(id, page)) { launchSingleTop = true } },
+                    onOpenSchedule = { id -> navController.navigate(AutomationRoutes.schedule(id)) { launchSingleTop = true } },
+                    onDeleted = { navController.popBackStack() },
+                    profilesViewModel = profiles,
+                )
             }
+            automationProfilePages(
+                navController = navController,
+                sleepDayAttribution = { sleepDayAttribution },
+                onSleepDayAttributionChanged = { mode ->
+                    settingsViewModel.performConfigurationChange { settingsViewModel.updateSleepDayAttribution(mode) }
+                },
+                showsScheduleAccessNote = settingsViewModel.distributionPolicy.purchasesAvailable,
+            )
             composable(SubRoutes.SCHEDULE_SETTINGS) {
                 SubScreenFrame(
                     title = stringResource(R.string.automations_schedule_settings_title),
@@ -724,7 +724,20 @@ fun HealthMdNavigation(
             composable(SubRoutes.AUTOMATION_COMPOSE) { entry ->
                 val profileId = entry.arguments?.getString("profileId")
                 if (profileId != null) {
-                    AutomationComposerScreen(profileId = profileId, onBack = { navController.popBackStack() })
+                    AutomationComposerScreen(
+                        profileId = profileId,
+                        onBack = { navController.popBackStack() },
+                        onOpenPage = { page -> navController.navigate(AutomationRoutes.page(profileId, page)) { launchSingleTop = true } },
+                        onOpenSchedule = { navController.navigate(AutomationRoutes.schedule(profileId)) { launchSingleTop = true } },
+                        // Opened from the detail, "All settings" returns to it; from the Archive it opens it.
+                        onAllSettings = {
+                            if (navController.previousBackStackEntry?.destination?.route == SubRoutes.AUTOMATION_DETAIL) {
+                                navController.popBackStack()
+                            } else {
+                                navController.navigate(SubRoutes.automationDetail(profileId)) { launchSingleTop = true }
+                            }
+                        },
+                    )
                 }
             }
             composable(SubRoutes.DIRECT_CLI) {

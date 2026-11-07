@@ -497,6 +497,50 @@ class ExportProfilesViewModelTest {
     }
 
     @Test
+    fun `save draft applies the change to the stored profile and saves it`() = runTest {
+        val harness = harness()
+        coEvery { harness.repository.profileById("p2") } answers { harness.profiles.value.first { it.id == "p2" } }
+        coEvery {
+            harness.repository.applyEditorUpdate(any(), any(), any(), any(), any(), any(), any())
+        } returns "Weekly"
+        val viewModel = harness.viewModel()
+        advanceUntilIdle()
+
+        viewModel.saveDraft("p2") { draft ->
+            draft.copy(settings = draft.settings.copy(filenameFormat = "{year}-{month}-{day}"))
+        }
+        advanceUntilIdle()
+
+        val jsonSlot = slot<String>()
+        coVerify(exactly = 1) {
+            harness.repository.applyEditorUpdate("p2", "Weekly", capture(jsonSlot), ExportTarget.DEVICE_FOLDER, any(), any(), any())
+        }
+        val decoded = AndroidExportSettingsSnapshotCodec.decodeOrNull(jsonSlot.captured)
+        assertThat(decoded).isNotNull()
+        val restored = decoded!!.restoreOnto(ExportSettings())
+        assertThat(restored.filenameFormat).isEqualTo("{year}-{month}-{day}")
+        // A non-active profile never touches live state.
+        coVerify(exactly = 0) { harness.profileCoordinator.activate(any()) }
+    }
+
+    @Test
+    fun `save draft skips unchanged drafts and unknown profiles`() = runTest {
+        val harness = harness()
+        coEvery { harness.repository.profileById("p1") } answers { harness.profiles.value.first { it.id == "p1" } }
+        coEvery { harness.repository.profileById("missing") } returns null
+        val viewModel = harness.viewModel()
+        advanceUntilIdle()
+
+        viewModel.saveDraft("p1") { it }
+        viewModel.saveDraft("missing") { it.copy(name = "Other") }
+        advanceUntilIdle()
+
+        coVerify(exactly = 0) {
+            harness.repository.applyEditorUpdate(any(), any(), any(), any(), any(), any(), any())
+        }
+    }
+
+    @Test
     fun `draft overlap preview names profiles writing the same files as the draft`() = runTest {
         val overlapping = ExportSettings()
         val harness = harness(
