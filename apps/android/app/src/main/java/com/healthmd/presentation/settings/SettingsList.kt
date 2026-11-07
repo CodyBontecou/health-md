@@ -80,6 +80,30 @@ internal fun groupRowShape(index: Int, count: Int): Shape {
 /** Trailing status tone: positive states read in the success color, others in secondary text. */
 internal enum class SettingsTrailingTone { NEUTRAL, POSITIVE }
 
+/** A destination's state, drawn as a capsule badge: ready, needs attention, or off. */
+internal enum class SettingsBadgeTone { OK, ATTENTION, OFF }
+
+internal data class SettingsBadge(val title: String, val tone: SettingsBadgeTone)
+
+/** The capsule status badge beside a destination row's chevron. */
+@Composable
+internal fun SettingsBadgePill(badge: SettingsBadge, modifier: Modifier = Modifier) {
+    val colors = LocalGeistColors.current
+    Text(
+        badge.title,
+        style = GeistType.label12,
+        color = when (badge.tone) {
+            SettingsBadgeTone.OK -> colors.success
+            SettingsBadgeTone.ATTENTION -> colors.error
+            SettingsBadgeTone.OFF -> colors.secondary
+        },
+        modifier = modifier
+            .clip(RoundedCornerShape(GeistRadii.full))
+            .background(colors.gray.c300)
+            .padding(horizontal = GeistSpacing.space2, vertical = 2.dp),
+    )
+}
+
 /**
  * One Settings row: a 40dp icon circle, title and optional subtitle, a trailing status value,
  * and a chevron (or an outward arrow for external links). The whole row is one action.
@@ -88,7 +112,7 @@ internal enum class SettingsTrailingTone { NEUTRAL, POSITIVE }
 internal fun SettingsRow(
     shape: Shape,
     title: String,
-    icon: ImageVector,
+    icon: ImageVector?,
     onClick: (() -> Unit)?,
     modifier: Modifier = Modifier,
     subtitle: String? = null,
@@ -98,6 +122,8 @@ internal fun SettingsRow(
     selected: Boolean = false,
     trailingContent: (@Composable () -> Unit)? = null,
     below: (@Composable ColumnScope.() -> Unit)? = null,
+    badge: SettingsBadge? = null,
+    enabled: Boolean = true,
 ) {
     val colors = LocalGeistColors.current
     val container = if (selected) colors.secondaryContainer else colors.background200
@@ -106,7 +132,7 @@ internal fun SettingsRow(
             .fillMaxWidth()
             .clip(shape)
             .background(container)
-            .then(if (onClick != null) Modifier.clickable(role = Role.Button, onClick = onClick) else Modifier)
+            .then(if (onClick != null) Modifier.clickable(enabled = enabled, role = Role.Button, onClick = onClick) else Modifier)
             // Only the entry open beside the list reports selection; phones have none.
             .then(if (selected) Modifier.semantics { this.selected = true } else Modifier)
             .heightIn(min = if (subtitle != null) 72.dp else 56.dp)
@@ -120,7 +146,7 @@ internal fun SettingsRow(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(GeistSpacing.space4),
             ) {
-                if (!reading) {
+                if (!reading && icon != null) {
                     Box(
                         Modifier
                             .size(GeistSizes.control)
@@ -136,11 +162,20 @@ internal fun SettingsRow(
                     }
                 }
                 Column(Modifier.weight(1f)) {
-                    Text(title, style = GeistType.label16, color = if (selected) colors.onSecondaryContainer else colors.primary)
+                    Text(
+                        title,
+                        style = GeistType.label16,
+                        color = when {
+                            !enabled -> colors.disabled
+                            selected -> colors.onSecondaryContainer
+                            else -> colors.primary
+                        },
+                    )
                     subtitle?.let {
                         Text(it, style = GeistType.copy14, color = if (selected) colors.onSecondaryContainer else colors.secondary)
                     }
                 }
+                badge?.let { SettingsBadgePill(it) }
                 trailing?.let {
                     Text(
                         it,
