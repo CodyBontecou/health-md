@@ -199,13 +199,20 @@ struct GlassAPIDestinationSheet: View {
 
     /// Same validation as `APIExportSettings.endpointURL`, applied to the draft.
     private var draftURL: URL? {
-        let trimmed = endpoint.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty,
-              let url = URL(string: trimmed),
-              let scheme = url.scheme?.lowercased(),
-              ["https", "http"].contains(scheme),
-              url.host?.isEmpty == false else { return nil }
-        return url
+        APIExportSettings.supportedEndpointURL(from: endpoint)
+    }
+
+    /// Why the draft can't be saved; an empty field is allowed (it clears the endpoint).
+    private var endpointProblemMessage: String? {
+        guard !endpoint.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return nil }
+        switch APIExportSettings.endpointProblem(for: endpoint) {
+        case nil:
+            return nil
+        case .invalid:
+            return String(localized: "Enter a valid HTTP or HTTPS URL")
+        case .cleartextToInternetHost:
+            return String(localized: "Use https:// — plain http:// only reaches local network addresses.")
+        }
     }
 
     private var hasChanges: Bool {
@@ -222,7 +229,7 @@ struct GlassAPIDestinationSheet: View {
             trustNote: String(localized: "Only send Apple Health data to endpoints you control or trust. Uploads use this profile’s metrics and data detail."),
             removeTitle: String(localized: "Remove endpoint"),
             canRemove: !settings.endpointURLString.isEmpty || !settings.bearerToken.isEmpty,
-            hasChanges: hasChanges,
+            hasChanges: hasChanges && endpointProblemMessage == nil,
             onSave: {
                 names.apiEndpointName = name
                 settings.endpointURLString = endpoint
@@ -243,7 +250,11 @@ struct GlassAPIDestinationSheet: View {
                     .glassFont(.body)
                     .accessibilityLabel(String(localized: "Endpoint name"))
             }
-            GlassDestinationFieldRow(label: String(localized: "Endpoint URL"), showsDivider: true) {
+            GlassDestinationFieldRow(
+                label: String(localized: "Endpoint URL"),
+                helper: endpointProblemMessage,
+                showsDivider: true
+            ) {
                 TextField("https://api.example.com/healthmd", text: $endpoint)
                     .glassFont(.monoBody)
                     .keyboardType(.URL)
@@ -289,7 +300,10 @@ struct GlassAPIDestinationSheet: View {
     }
 
     private var testSubtitle: String {
-        if draftURL == nil { return String(localized: "Enter a valid HTTP or HTTPS URL") }
+        // A typed URL's problem is already shown under the field; only prompt for an empty one.
+        if draftURL == nil, endpointProblemMessage == nil {
+            return String(localized: "Enter a valid HTTP or HTTPS URL")
+        }
         if case .failed(let message) = testState { return message }
         return String(localized: "Sends a HEAD request — no health data")
     }

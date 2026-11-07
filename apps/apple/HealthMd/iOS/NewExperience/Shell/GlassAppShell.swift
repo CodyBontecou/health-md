@@ -1050,7 +1050,7 @@ struct GlassAppShell: View {
         let model = archiveModel
         let stats = model.stats(month: model.now, filter: nil)
         let nextRun = archiveProfiles.compactMap(\.entry).filter(\.isEnabled).compactMap {
-            ScheduleDateMath.calculateNextRunDate(schedule: $0.dateMathProjection, now: model.now)
+            ScheduleDateMath.nextAnyRunDate(schedule: $0.dateMathProjection, now: model.now)
         }.min()
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: model.now)

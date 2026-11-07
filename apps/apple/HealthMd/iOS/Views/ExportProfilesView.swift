@@ -1741,8 +1741,12 @@ struct ExportProfileEndpointFormSheet: View {
         url.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
+    private var urlProblem: APIExportSettings.EndpointProblem? {
+        trimmedURL.isEmpty ? nil : APIExportSettings.endpointProblem(for: trimmedURL)
+    }
+
     private var canAdd: Bool {
-        !trimmedURL.isEmpty
+        !trimmedURL.isEmpty && urlProblem == nil
     }
 
     var body: some View {
@@ -1771,6 +1775,14 @@ struct ExportProfileEndpointFormSheet: View {
                     .accessibilityIdentifier("export.profiles.editor.endpointURL")
                     .autocorrectionDisabled()
                     .textInputAutocapitalization(.never)
+
+                    if let urlProblem {
+                        Text(urlProblem == .cleartextToInternetHost
+                             ? String(localized: "Use https:// — plain http:// only reaches local network addresses.")
+                             : String(localized: "Enter a valid HTTP or HTTPS URL"))
+                            .font(.footnote)
+                            .foregroundStyle(.red)
+                    }
 
                     SecureField(
                         String(localized: "Bearer token", comment: "Endpoint form token field label"),

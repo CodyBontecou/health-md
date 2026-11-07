@@ -865,6 +865,15 @@ final class PurchaseManager: ObservableObject {
 
     // MARK: - Restore
 
+    /// Whether a StoreKit error only reports that the person dismissed the
+    /// Apple Account prompt, which should leave the paywall silent.
+    nonisolated static func isUserCancellation(_ error: Error) -> Bool {
+        if case StoreKitError.userCancelled = error { return true }
+        if let skError = error as? SKError, skError.code == .paymentCancelled { return true }
+        let nsError = error as NSError
+        return nsError.domain == NSURLErrorDomain && nsError.code == NSURLErrorCancelled
+    }
+
     static var restoreNotFoundMessage: String {
         String(
             localized: "No purchase found for this Apple ID.\n\nFor Family Lifetime, make sure the purchaser has Apple Family Purchase Sharing turned on, this device is signed into a member of that Apple Family, and Health.md is not hidden from purchase history. Then reopen Health.md and tap Restore Purchase again.\n\nIf you bought Health.md before v1.7.0, your access is restored automatically — try force-quitting and reopening the app. If the issue persists, contact us at cody@isolated.tech and we'll sort it out.",
@@ -911,7 +920,10 @@ final class PurchaseManager: ObservableObject {
         }
 
         if let syncError {
-            purchaseError = syncError.localizedDescription
+            // Cancelling the Apple Account sign-in is the user's choice, not a failure.
+            if !Self.isUserCancellation(syncError) {
+                purchaseError = syncError.localizedDescription
+            }
             return
         }
 

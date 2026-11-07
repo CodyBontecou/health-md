@@ -1358,6 +1358,13 @@ struct ContentView: View {
         showError = true
     }
 
+    /// The toast text for an export that wrote nothing. A day without Health data
+    /// is not a failure — coverage records it as complete and the No Health Data
+    /// dialog already explains it — so no red "failed" toast competes with that dialog.
+    static func failureToastStatus(_ status: String, reason: ExportFailureReason) -> String? {
+        reason == .noHealthData ? nil : status
+    }
+
     private func presentExportFailure(
         _ reason: ExportFailureReason,
         detail: FailedDateDetail? = nil
@@ -1505,7 +1512,10 @@ struct ContentView: View {
                 exportStatusMessage = advancedSettings.dailyNotesOnlyModeEnabled
                     ? "No daily notes were updated"
                     : "Export failed: \(primaryReason.shortDescription)"
-                vaultManager.lastExportStatus = primaryReason.shortDescription
+                vaultManager.lastExportStatus = Self.failureToastStatus(
+                    primaryReason.shortDescription,
+                    reason: primaryReason
+                )
                 presentExportFailure(
                     primaryReason,
                     detail: result.failedDateDetails.first
@@ -1619,7 +1629,7 @@ struct ContentView: View {
             } else {
                 let primaryReason = result.primaryFailureReason ?? .unknown
                 exportStatusMessage = "API export failed: \(primaryReason.shortDescription)"
-                vaultManager.lastExportStatus = "API export failed"
+                vaultManager.lastExportStatus = Self.failureToastStatus("API export failed", reason: primaryReason)
                 presentExportFailure(
                     primaryReason,
                     detail: result.failedDateDetails.first
@@ -1728,7 +1738,10 @@ struct ContentView: View {
             } else {
                 let primaryReason = result.primaryFailureReason ?? .unknown
                 exportStatusMessage = "Agent Data gateway export failed: \(primaryReason.shortDescription)"
-                vaultManager.lastExportStatus = "Agent Data gateway export failed"
+                vaultManager.lastExportStatus = Self.failureToastStatus(
+                    "Agent Data gateway export failed",
+                    reason: primaryReason
+                )
                 presentExportFailure(
                     primaryReason,
                     detail: result.failedDateDetails.first
