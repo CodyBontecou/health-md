@@ -380,6 +380,8 @@ fun HealthMdNavigation(
                     onComplete = {
                         navController.navigate(NavDestination.ARCHIVE.route) {
                             popUpTo(SubRoutes.ONBOARDING) { inclusive = true }
+                            // Replayed from App & support, the Archive is already below.
+                            launchSingleTop = true
                         }
                     },
                     onUseSharedSetup = { navController.navigate(SubRoutes.SHARED_SETUP) },
@@ -574,6 +576,14 @@ fun HealthMdNavigation(
                     val open: (String) -> Unit = { route ->
                         if (twoPane) settingsDetail = route else navController.navigate(route) { launchSingleTop = true }
                     }
+                    val openSchedulePaywall = {
+                        if (settingsViewModel.distributionPolicy.purchasesAvailable) {
+                            navController.navigate(PaywallEntryPoint.SCHEDULE.route)
+                        }
+                    }
+                    val appSupport: @Composable () -> Unit = {
+                        SettingsAppSupport(navController, settingsViewModel, protectionSettingsRequestId)
+                    }
                     val list: @Composable () -> Unit = {
                         SettingsScreen(
                             viewModel = settingsViewModel,
@@ -585,38 +595,27 @@ fun HealthMdNavigation(
                                     navController.navigate(PaywallEntryPoint.UPGRADE.route)
                                 }
                             },
-                            onNavigateToMyselfClaim = {
-                                if (BuildConfig.MYSELF_CLAIM_ENABLED && settingsViewModel.distributionPolicy.purchasesAvailable) {
-                                    navController.navigate(SubRoutes.MYSELF_CLAIM) { launchSingleTop = true }
-                                }
-                            },
-                            onNavigateToExportProfiles = { open(SubRoutes.EXPORT_PROFILES) },
                             onNavigateToClinicianReport = { open(SubRoutes.CLINICIAN_REPORT) },
                             onNavigateToDirectCli = { open(SubRoutes.DIRECT_CLI) },
-                            onNavigateToSharedSetup = { navController.navigate(SubRoutes.SHARED_SETUP) },
-                            onNavigateToDiagnostics = { open(SubRoutes.DIAGNOSTICS) },
                             onNavigateToFolderDestination = { open(SubRoutes.FOLDER_DESTINATION) },
-                            onNavigateToAutomations = {
-                                navController.navigate(NavDestination.AUTOMATIONS.route) {
-                                    popUpTo(navController.graph.findStartDestination().id) { saveState = true }
-                                    launchSingleTop = true
-                                    restoreState = true
-                                }
-                            },
-                            // Endpoint and gateway setup lives with the scheduled export target.
-                            onNavigateToScheduleSettings = {
-                                navController.navigate(SubRoutes.SCHEDULE_SETTINGS) { launchSingleTop = true }
-                            },
+                            onNavigateToApiEndpoint = { open(SubRoutes.SETTINGS_API_ENDPOINT) },
+                            onNavigateToGateway = { open(SubRoutes.SETTINGS_GATEWAY) },
+                            onNavigateToConnectedApps = { open(SubRoutes.SETTINGS_CONNECTED_APPS) },
+                            onNavigateToAppSupport = { open(SubRoutes.SETTINGS_APP_SUPPORT) },
+                            onNavigateToScheduleSettings = { open(SubRoutes.SCHEDULE_SETTINGS) },
                             onNavigateToMetrics = { navController.navigate(SubRoutes.METRIC_SELECTION) { launchSingleTop = true } },
                             selectedEntry = if (!twoPane) {
                                 null
                             } else {
                                 when (settingsDetail) {
-                                    SubRoutes.EXPORT_PROFILES -> SettingsEntry.EXPORT_PROFILES
                                     SubRoutes.CLINIC_ACCESS -> SettingsEntry.CLINIC_ACCESS
                                     SubRoutes.CLINICIAN_REPORT -> SettingsEntry.CLINICIAN_REPORT
                                     SubRoutes.DIRECT_CLI -> SettingsEntry.DIRECT_CLI
-                                    SubRoutes.DIAGNOSTICS -> SettingsEntry.DIAGNOSTICS
+                                    SubRoutes.SETTINGS_API_ENDPOINT -> SettingsEntry.API
+                                    SubRoutes.SETTINGS_GATEWAY -> SettingsEntry.GATEWAY
+                                    SubRoutes.SETTINGS_CONNECTED_APPS -> SettingsEntry.CONNECTED_APPS
+                                    SubRoutes.SETTINGS_APP_SUPPORT -> SettingsEntry.APP_SUPPORT
+                                    SubRoutes.SCHEDULE_SETTINGS -> SettingsEntry.SCHEDULE
                                     else -> SettingsEntry.FOLDER
                                 }
                             },
@@ -631,7 +630,11 @@ fun HealthMdNavigation(
                                 GeistCard(padding = Spacing.xxs) {
                                     val close = { settingsDetail = null }
                                     when (settingsDetail) {
-                                        SubRoutes.EXPORT_PROFILES -> ExportProfilesScreen(onBack = close)
+                                        SubRoutes.SETTINGS_API_ENDPOINT -> ApiEndpointScreen(onBack = close)
+                                        SubRoutes.SETTINGS_GATEWAY -> GatewayDestinationScreen(onBack = close)
+                                        SubRoutes.SETTINGS_CONNECTED_APPS -> ConnectedAppsScreen(viewModel = settingsViewModel)
+                                        SubRoutes.SETTINGS_APP_SUPPORT -> appSupport()
+                                        SubRoutes.SCHEDULE_SETTINGS -> ScheduleScreen(onNavigateToPaywall = openSchedulePaywall)
                                         SubRoutes.CLINICIAN_REPORT -> if (personalAccess) {
                                             ClinicianReportScreen(onBack = close)
                                         } else {
@@ -639,7 +642,6 @@ fun HealthMdNavigation(
                                                 modifier = Modifier.padding(com.healthmd.presentation.theme.Spacing.md))
                                         }
                                         SubRoutes.DIRECT_CLI -> DirectCliScreen(onBack = close)
-                                        SubRoutes.DIAGNOSTICS -> DiagnosticsScreen(onBack = close)
                                         SubRoutes.CLINIC_ACCESS -> com.healthmd.presentation.clinic.ClinicAccessScreen(
                                             onDone = close, viewModel = clinicAccessViewModel)
                                         else -> FolderDestinationScreen()
@@ -654,9 +656,27 @@ fun HealthMdNavigation(
             }
             composable(SubRoutes.FOLDER_DESTINATION) {
                 SubScreenFrame(
-                    title = stringResource(R.string.settings_destination_folder_title),
+                    title = stringResource(R.string.settings_vault_title),
                     onBack = { navController.popBackStack() },
                 ) { ReadableWidth { FolderDestinationScreen() } }
+            }
+            composable(SubRoutes.SETTINGS_APP_SUPPORT) {
+                SubScreenFrame(
+                    title = stringResource(R.string.settings_app_support),
+                    onBack = { navController.popBackStack() },
+                ) { ReadableWidth { SettingsAppSupport(navController, settingsViewModel, protectionSettingsRequestId) } }
+            }
+            composable(SubRoutes.SETTINGS_API_ENDPOINT) {
+                ReadableWidth { ApiEndpointScreen(onBack = { navController.popBackStack() }) }
+            }
+            composable(SubRoutes.SETTINGS_GATEWAY) {
+                ReadableWidth { GatewayDestinationScreen(onBack = { navController.popBackStack() }) }
+            }
+            composable(SubRoutes.SETTINGS_CONNECTED_APPS) {
+                SubScreenFrame(
+                    title = stringResource(R.string.settings_connected_apps),
+                    onBack = { navController.popBackStack() },
+                ) { ReadableWidth { ConnectedAppsScreen(viewModel = settingsViewModel) } }
             }
 
             if (BuildConfig.MYSELF_CLAIM_ENABLED && settingsViewModel.distributionPolicy.purchasesAvailable) {
@@ -1400,4 +1420,30 @@ private fun ReadableWidth(content: @Composable () -> Unit) {
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
         Box(Modifier.widthIn(max = GeistSizes.readableContentMaxWidth).fillMaxSize()) { content() }
     }
+}
+
+/** App & support with its routes: setup sharing, diagnostics, the myself.md claim, onboarding. */
+@Composable
+private fun SettingsAppSupport(
+    navController: androidx.navigation.NavHostController,
+    settingsViewModel: SettingsViewModel,
+    protectionSettingsRequestId: Long?,
+) {
+    AppSupportScreen(
+        viewModel = settingsViewModel,
+        protectionSettingsRequestId = protectionSettingsRequestId,
+        onNavigateToSharedSetup = { navController.navigate(SubRoutes.SHARED_SETUP) { launchSingleTop = true } },
+        onNavigateToDiagnostics = { navController.navigate(SubRoutes.DIAGNOSTICS) { launchSingleTop = true } },
+        onNavigateToMyselfClaim = {
+            if (BuildConfig.MYSELF_CLAIM_ENABLED && settingsViewModel.distributionPolicy.purchasesAvailable) {
+                navController.navigate(SubRoutes.MYSELF_CLAIM) { launchSingleTop = true }
+            }
+        },
+        onReplayOnboarding = {
+            navController.navigate(SubRoutes.ONBOARDING) {
+                popUpTo(navController.graph.findStartDestination().id)
+                launchSingleTop = true
+            }
+        },
+    )
 }

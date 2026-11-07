@@ -75,6 +75,11 @@ object SubRoutes {
     const val FOLDER_DESTINATION = "folder_destination"
     const val MYSELF_CLAIM = "myself_claim"
     const val PAYWALL = "paywall"
+    /** Settings pages pushed from the Settings tab, as on iOS. */
+    const val SETTINGS_APP_SUPPORT = "settings/app_support"
+    const val SETTINGS_API_ENDPOINT = "settings/api_endpoint"
+    const val SETTINGS_GATEWAY = "settings/gateway"
+    const val SETTINGS_CONNECTED_APPS = "settings/connected_apps"
 }
 
 enum class PaywallEntryPoint(

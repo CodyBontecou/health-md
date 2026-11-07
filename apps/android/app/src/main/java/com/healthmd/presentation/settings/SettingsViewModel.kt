@@ -125,6 +125,14 @@ class SettingsViewModel @Inject constructor(
         dismissBlockedChangeToast()
     }
 
+    /**
+     * App & support has scrolled to the lock for [requestId]. Clearing it keeps Settings from
+     * reopening App & support each time it composes; a newer request is left in place.
+     */
+    fun consumeProtectionSettingsRequest(requestId: Long) {
+        _protectionSettingsRequestId.compareAndSet(requestId, null)
+    }
+
     /** Guards callbacks owned by this shared settings ViewModel. Feature screens also use the
      * shared UI overlay so their user-initiated mutations cannot reach their ViewModels. */
     fun performConfigurationChange(action: () -> Unit) {

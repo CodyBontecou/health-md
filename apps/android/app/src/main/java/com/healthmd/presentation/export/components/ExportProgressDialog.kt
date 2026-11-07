@@ -8,7 +8,13 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import com.healthmd.presentation.common.dialogNavigationBarsPadding
@@ -64,6 +70,8 @@ fun ExportProgressDialog(
     isDone: Boolean = false,
     onSeeInArchive: (() -> Unit)? = null,
     onClose: () -> Unit = {},
+    /** The done line, as on iOS: "Oct 24 – 30 · 14 files". */
+    doneSubtitle: String? = null,
 ) {
     val colors = LocalGeistColors.current
     val locale = LocalConfiguration.current.locales[0]
@@ -91,11 +99,21 @@ fun ExportProgressDialog(
         pluralStringResource(R.plurals.export_progress_days_count, total, current, total)
     }
     val fraction = if (isDone) 1f else if (total > 0) (current.toFloat() / total).coerceIn(0f, 1f) else null
-    val animatedFraction by animateFloatAsState(
+    val progressFraction by animateFloatAsState(
         targetValue = fraction ?: 0f,
         animationSpec = tween(GeistMotion.overlay),
         label = "momentProgress",
     )
+    // Replay refills the finished heart facet by facet, as on iOS.
+    var replays by remember { mutableIntStateOf(0) }
+    val replay = remember { Animatable(1f) }
+    LaunchedEffect(replays) {
+        if (replays > 0) {
+            replay.snapTo(0f)
+            replay.animateTo(1f, tween(durationMillis = REPLAY_MILLIS, easing = LinearEasing))
+        }
+    }
+    val animatedFraction = if (isDone && replays > 0) replay.value else progressFraction
 
     Dialog(
         onDismissRequest = { if (isDone) onClose() },
@@ -176,7 +194,11 @@ fun ExportProgressDialog(
                     )
                 }
                 Text(
-                    text = if (isDone) progressStateDescription else progressStateDescription + " " + stringResource(R.string.moment_keep_open),
+                    text = if (isDone) {
+                        doneSubtitle ?: progressStateDescription
+                    } else {
+                        progressStateDescription + " " + stringResource(R.string.moment_keep_open)
+                    },
                     style = MaterialTheme.typography.bodyMedium,
                     color = colors.secondary,
                 )
@@ -193,6 +215,15 @@ fun ExportProgressDialog(
                                 ),
                             ) { Text(stringResource(R.string.moment_see_in_archive), style = GeistType.button14) }
                         }
+                        FilledTonalButton(
+                            onClick = { replays++ },
+                            modifier = Modifier.heightIn(min = GeistSizes.controlLarge),
+                            shape = RoundedCornerShape(GeistRadii.full),
+                            colors = ButtonDefaults.filledTonalButtonColors(
+                                containerColor = colors.secondaryContainer,
+                                contentColor = colors.onSecondaryContainer,
+                            ),
+                        ) { Text(stringResource(R.string.moment_replay), style = GeistType.button14) }
                         FilledTonalButton(
                             onClick = onClose,
                             modifier = Modifier.then(if (onSeeInArchive == null) Modifier.weight(1f) else Modifier)
@@ -217,6 +248,9 @@ fun ExportProgressDialog(
         }
     }
 }
+
+/** iOS refills ten facets 380 ms apart. */
+private const val REPLAY_MILLIS = 3_800
 
 /** Facets of the crystal heart in the design's 160×150 box (origin 40,4), in fill order. */
 private val HEART_FACETS: List<List<Offset>> = listOf(

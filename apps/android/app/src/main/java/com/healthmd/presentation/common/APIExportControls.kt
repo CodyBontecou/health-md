@@ -569,7 +569,7 @@ private fun APISettingsSection(
 }
 
 @Composable
-private fun StoredSecretStatus(
+internal fun StoredSecretStatus(
     label: String,
     removeLabel: String,
     onRemove: () -> Unit,
@@ -610,7 +610,7 @@ private fun StoredSecretStatus(
 }
 
 @Composable
-private fun CustomHeadersDisclosure(
+internal fun CustomHeadersDisclosure(
     configured: Boolean,
     expanded: Boolean,
     onClick: () -> Unit,
@@ -669,7 +669,7 @@ private fun CustomHeadersDisclosure(
     }
 }
 
-private sealed interface APISettingsValidationError {
+internal sealed interface APISettingsValidationError {
     data object InvalidEndpoint : APISettingsValidationError
     data class InvalidAuthorization(
         val reason: APIExportAuthorizationValidationReason,
@@ -749,7 +749,7 @@ private fun APISettingsValidationError.apiExportLocalizedMessage(): String = whe
 }
 
 @Composable
-private fun APISettingsError(error: APISettingsValidationError) {
+internal fun APISettingsError(error: APISettingsValidationError) {
     EndpointSettingsErrorNote(message = error.apiExportLocalizedMessage())
 }
 
