@@ -658,10 +658,6 @@
     <string name="scheduled_recovery_result_complete">Recuperação das exportações agendadas concluída.</string>
     <string name="scheduled_recovery_result_blocked">A recuperação das exportações agendadas ainda não está pronta.</string>
     <string name="not_now">Agora não</string>
-    <string name="release_notes_title">Novidades no %s</string>
-    <string name="release_notes_settings_hint">Você pode ajustar os formatos de exportação, o Markdown personalizado e as métricas em Configurações.</string>
-    <string name="release_notes_open_settings">Abrir Configurações</string>
-    <string name="release_notes_got_it">Entendi</string>
     <string name="release_notes_highlight_feedback">As sessões de CLI direto reconectam automaticamente após quedas breves do desktop, então as exportações terminam de forma confiável.</string>
     <string name="release_notes_highlight_export_parity">Os comandos de janela de ativação do desktop esperam até 120 segundos você abrir o app e conectar, sem notificações push.</string>
     <string name="release_notes_highlight_templates">O pareamento manual com endereço, porta e código de 20 dígitos continua funcionando, inclusive com versões mais antigas da CLI.</string>

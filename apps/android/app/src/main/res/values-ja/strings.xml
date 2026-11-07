@@ -516,10 +516,6 @@
     <string name="scheduled_recovery_result_complete">スケジュールされたリカバリが完了しました。</string>
     <string name="scheduled_recovery_result_blocked">スケジュールされたリカバリはまだ準備ができていません。</string>
     <string name="not_now">後で</string>
-    <string name="release_notes_title">%s の新機能</string>
-    <string name="release_notes_settings_hint">[設定] からエクスポート形式、カスタム Markdown、およびメトリクスを調整できます。</string>
-    <string name="release_notes_open_settings">設定を開く</string>
-    <string name="release_notes_got_it">わかった</string>
     <string name="release_notes_highlight_feedback">Direct CLIセッションは、デスクトップとの接続が短時間切れた後に自動的に再接続され、エクスポートが確実に完了します。</string>
     <string name="release_notes_highlight_export_parity">デスクトップのウェイクウィンドウコマンドは、アプリを開いて接続するまで最大120秒待機します。プッシュ通知は使いません。</string>
     <string name="release_notes_highlight_templates">アドレス、ポート、20桁のコードによる手動ペアリングも、以前のCLIバージョンを含めて引き続き利用できます。</string>

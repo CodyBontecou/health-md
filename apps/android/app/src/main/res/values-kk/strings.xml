@@ -527,10 +527,6 @@
     <string name="scheduled_recovery_result_complete">Жоспарланған қалпына келтіру аяқталды.</string>
     <string name="scheduled_recovery_result_blocked">Жоспарланған қалпына келтіру әлі дайын емес.</string>
     <string name="not_now">Қазір емес</string>
-    <string name="release_notes_title">%s нұсқасындағы жаңалықтар</string>
-    <string name="release_notes_settings_hint">Экспорт пішімдерін, арнаулы Markdown үлгісін және көрсеткіштерді «Параметрлер» бөлімінде реттеуге болады.</string>
-    <string name="release_notes_open_settings">Параметрлерді ашу</string>
-    <string name="release_notes_got_it">Түсіндім</string>
     <string name="release_notes_highlight_feedback">Десктоптың қысқа үзілістерінен кейін Direct CLI сессиялары автоматты түрде қайта қосылады, сондықтан экспорттар сенімді аяқталады.</string>
     <string name="release_notes_highlight_export_parity">Десктоптың ояну терезесі командалары қосымшаны ашып, қосылуыңызды 120 секундқа дейін күтеді, push-хабарламаларсыз.</string>
     <string name="release_notes_highlight_templates">Мекенжай, порт және 20 таңбалы код арқылы қолмен жұптау әлі жұмыс істейді, ескі CLI нұсқаларымен де.</string>

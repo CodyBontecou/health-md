@@ -65,12 +65,9 @@
     <string name="archive_action_reexport">Exportar de novo</string>
     <string name="day_page_open">Abrir o arquivo do dia</string>
     <string name="day_page_share">Compartilhar arquivo</string>
-    <string name="day_page_note">Como o Health.md gravaria este dia agora, com os dados atuais do Health Connect. Nada é gravado.</string>
     <string name="day_page_empty">Nada seria gravado para esta data com as configurações atuais.</string>
     <string name="day_page_range_only">Snapshots brutos gravam um arquivo para todo o período, então não há arquivo por dia.</string>
     <string name="day_page_failed">Não foi possível ler este dia do Health Connect.</string>
-    <string name="day_page_retry">Tentar de novo</string>
-    <string name="day_page_truncated">O arquivo aparece encurtado aqui. Compartilhe para ver tudo.</string>
     <string name="notification_open_archive">Abrir arquivo</string>
     <string name="direct_cli_chip_connecting">CLI</string>
     <string name="direct_cli_chip_done">Pronto</string>
@@ -169,7 +166,6 @@
     <string name="widget_archive_preview_month_value">24</string>
     <string name="widget_archive_preview_month_detail">dias em outubro</string>
     <string name="widget_archive_preview_gaps">2 lacunas</string>
-    <string name="day_page_export_day">Exportar este dia</string>
     <string name="moment_see_in_archive">Ver no arquivo</string>
     <string name="export_now_more_options">Mais opções</string>
     <string name="automations_profiles_summary">Ativo: %1$s · %2$s · %3$s</string>
@@ -193,8 +189,6 @@
     <string name="archive_action_open">Abrir</string>
     <string name="archive_action_retry">Tentar novamente</string>
     <string name="archive_action_refresh">Atualizar</string>
-    <string name="archive_health_connected">Health Connect: conectado</string>
-    <string name="archive_health_not_connected">Health Connect: não conectado</string>
     <string name="archive_day_nothing_due">Nada previsto</string>
     <string name="archive_row_not_due">Não previsto nesta data.</string>
     <string name="automations_new">Nova automação</string>

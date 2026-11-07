@@ -647,10 +647,6 @@
     <string name="scheduled_recovery_result_complete">Wiederherstellung geplanter Exporte abgeschlossen.</string>
     <string name="scheduled_recovery_result_blocked">Die Wiederherstellung geplanter Exporte ist noch nicht möglich.</string>
     <string name="not_now">Jetzt nicht</string>
-    <string name="release_notes_title">Neu in %s</string>
-    <string name="release_notes_settings_hint">Sie können Exportformate, benutzerdefiniertes Markdown und Metriken in den Einstellungen anpassen.</string>
-    <string name="release_notes_open_settings">Einstellungen öffnen</string>
-    <string name="release_notes_got_it">Verstanden</string>
     <string name="release_notes_highlight_feedback">Direct-CLI-Sitzungen verbinden sich nach kurzen Verbindungsabbrüchen am Desktop automatisch neu, sodass Exporte zuverlässig abgeschlossen werden.</string>
     <string name="release_notes_highlight_export_parity">Wake-Window-Befehle des Desktops warten bis zu 120 Sekunden, bis Sie die App öffnen und sich verbinden — ganz ohne Push-Benachrichtigungen.</string>
     <string name="release_notes_highlight_templates">Manuelles Koppeln mit Computeradresse, Port und 20-stelligem Code funktioniert weiterhin, auch mit älteren CLI-Versionen.</string>

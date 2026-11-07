@@ -547,10 +547,6 @@
     <string name="scheduled_recovery_result_blocked">নির্ধারিত পুনরুদ্ধার এখনও প্রস্তুত নয়।</string>
     <string name="not_now">এখন না</string>
     <!-- Release notes -->
-    <string name="release_notes_title">%s এ নতুন কি আছে</string>
-    <string name="release_notes_settings_hint">সেটিংস থেকে রপ্তানি ফরম্যাট, কাস্টম Markdown ও মেট্রিক সামঞ্জস্য করতে পারবেন।</string>
-    <string name="release_notes_open_settings">সেটিংস খুলুন</string>
-    <string name="release_notes_got_it">বুঝেছি</string>
     <string name="release_notes_highlight_feedback">ডেস্কটপ সংযোগ সংক্ষিপ্তভাবে বিচ্ছিন্ন হলে Direct CLI সেশন স্বয়ংক্রিয়ভাবে পুনরায় সংযুক্ত হয়, তাই রপ্তানি নির্ভরযোগ্যভাবে সম্পন্ন হয়।</string>
     <string name="release_notes_highlight_export_parity">ডেস্কটপের ওয়েক উইন্ডো কমান্ড আপনার অ্যাপ খুলে সংযোগ করার জন্য ১২০ সেকেন্ড পর্যন্ত অপেক্ষা করে, কোনো পুশ নোটিফিকেশন ছাড়াই।</string>
     <string name="release_notes_highlight_templates">ঠিকানা, পোর্ট এবং ২০-সংখ্যার কোড দিয়ে ম্যানুয়াল জুড়ি এখনও কাজ করে, পুরোনো CLI সংস্করণেও।</string>

@@ -65,12 +65,9 @@
     <string name="archive_action_reexport">Қайта экспорттау</string>
     <string name="day_page_open">Күн файлын ашу</string>
     <string name="day_page_share">Файлмен бөлісу</string>
-    <string name="day_page_note">Health.md бұл күнді қазір ағымдағы Health Connect деректерінен осылай жазар еді. Ештеңе жазылмайды.</string>
     <string name="day_page_empty">Ағымдағы параметрлермен бұл күнге ештеңе жазылмайды.</string>
     <string name="day_page_range_only">Өңделмеген суреттер бүкіл кезеңге бір файл жазады, сондықтан жеке күн файлы жоқ.</string>
     <string name="day_page_failed">Бұл күнді Health Connect-тен оқу мүмкін болмады.</string>
-    <string name="day_page_retry">Қайталау</string>
-    <string name="day_page_truncated">Мұнда файл қысқартылған. Толық көру үшін бөлісіңіз.</string>
     <string name="notification_open_archive">Мұрағатты ашу</string>
     <string name="direct_cli_chip_connecting">CLI</string>
     <string name="direct_cli_chip_done">Дайын</string>
@@ -164,7 +161,6 @@
     <string name="widget_archive_preview_month_value">24</string>
     <string name="widget_archive_preview_month_detail">күн, қазан айында</string>
     <string name="widget_archive_preview_gaps">2 олқылық</string>
-    <string name="day_page_export_day">Осы күнді экспорттау</string>
     <string name="moment_see_in_archive">Мұрағаттан көру</string>
     <string name="export_now_more_options">Қосымша параметрлер</string>
     <string name="automations_profiles_summary">Белсенді: %1$s · %2$s · %3$s</string>
@@ -185,8 +181,6 @@
     <string name="archive_action_open">Ашу</string>
     <string name="archive_action_retry">Қайталау</string>
     <string name="archive_action_refresh">Жаңарту</string>
-    <string name="archive_health_connected">Health Connect: қосылған</string>
-    <string name="archive_health_not_connected">Health Connect: қосылмаған</string>
     <string name="archive_day_nothing_due">Мерзімі келгені жоқ</string>
     <string name="archive_row_not_due">Бұл күні мерзімі емес.</string>
     <string name="automations_new">Жаңа автоматтандыру</string>

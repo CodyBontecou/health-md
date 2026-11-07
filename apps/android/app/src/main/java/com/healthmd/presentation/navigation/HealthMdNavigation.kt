@@ -38,6 +38,8 @@ import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.dialog
+import androidx.navigation.NavType
+import androidx.navigation.navArgument
 import androidx.compose.ui.window.DialogProperties
 import com.healthmd.presentation.export.ExportNowSheet
 import com.healthmd.presentation.export.ExportProfileSelector
@@ -56,6 +58,7 @@ import com.healthmd.presentation.export.ExportScreen
 import com.healthmd.presentation.history.HistoryScreen
 import com.healthmd.presentation.archive.ArchiveScreen
 import com.healthmd.presentation.archive.DayPageScreen
+import com.healthmd.presentation.archive.DayPageViewModel
 import com.healthmd.presentation.export.ExportProfilesViewModel
 import com.healthmd.presentation.schedule.AutomationsScreen
 import com.healthmd.presentation.schedule.AutomationDetailPane
@@ -70,8 +73,8 @@ import com.healthmd.presentation.common.LocalUsesNavigationRail
 import com.healthmd.presentation.onboarding.OnboardingScreen
 import com.healthmd.presentation.paywall.PaywallScreen
 import com.healthmd.presentation.release.AndroidReleaseNotes
-import com.healthmd.presentation.release.ReleaseNotesDialog
 import com.healthmd.presentation.release.ReleaseNotesGate
+import com.healthmd.presentation.release.WhatsNewSheet
 import com.healthmd.presentation.schedule.ScheduleScreen
 import com.healthmd.presentation.schedule.ScheduledRecoveryUiState
 import com.healthmd.presentation.schedule.ScheduledRecoveryViewModel
@@ -386,8 +389,15 @@ fun HealthMdNavigation(
             composable(NavDestination.ARCHIVE.route) {
                 ArchiveScreen(
                     onExportNow = { navController.navigate(SubRoutes.EXPORT_NOW) { launchSingleTop = true } },
-                    onBackfill = { date -> navController.navigate(SubRoutes.exportBackfill(date)) },
-                    onOpenDay = { date -> navController.navigate(SubRoutes.archiveDay(date)) { launchSingleTop = true } },
+                    onBackfill = { date, profileId -> navController.navigate(SubRoutes.exportBackfill(date, profileId)) },
+                    onOpenDay = { date, lane ->
+                        navController.navigate(SubRoutes.archiveDay(date, lane?.let(DayPageViewModel::encodeLane))) {
+                            launchSingleTop = true
+                        }
+                    },
+                    onOpenAutomation = { id ->
+                        navController.navigate(SubRoutes.automationDetail(id)) { launchSingleTop = true }
+                    },
                     onOpenAutomations = {
                         navController.navigate(NavDestination.AUTOMATIONS.route) {
                             popUpTo(navController.graph.findStartDestination().id) { saveState = true }
@@ -403,18 +413,50 @@ fun HealthMdNavigation(
                     },
                 )
             }
-            composable(SubRoutes.ARCHIVE_DAY) {
+            composable(
+                SubRoutes.ARCHIVE_DAY,
+                arguments = listOf(
+                    navArgument(DayPageViewModel.LANE_ARGUMENT) {
+                        type = NavType.StringType
+                        nullable = true
+                        defaultValue = null
+                    },
+                ),
+            ) {
                 DayPageScreen(
                     onBack = { navController.popBackStack() },
-                    onReexport = { date -> navController.navigate(SubRoutes.exportBackfill(date)) },
+                    onFix = { date, profileId -> navController.navigate(SubRoutes.exportBackfill(date, profileId)) },
                 )
             }
             // Backfill shares Export now; its route carries the one date to preset.
             listOf(SubRoutes.EXPORT_NOW, SubRoutes.EXPORT_BACKFILL).forEach { route ->
                 dialog(
                     route = route,
+                    arguments = if (route == SubRoutes.EXPORT_BACKFILL) {
+                        listOf(
+                            navArgument("profileId") {
+                                type = NavType.StringType
+                                nullable = true
+                                defaultValue = null
+                            },
+                        )
+                    } else {
+                        emptyList()
+                    },
                     dialogProperties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
                 ) { entry ->
+                    // A fix from the Archive presets its automation: selecting it here is the
+                    // sheet's own Profile control (Make active), applied once per opening.
+                    val presetProfileId = entry.arguments?.getString("profileId")
+                    if (presetProfileId != null) {
+                        val profilesViewModel: ExportProfilesViewModel = hiltViewModel()
+                        val protection = LocalConfigurationProtection.current
+                        var presetApplied by rememberSaveable(presetProfileId) { mutableStateOf(false) }
+                        LaunchedEffect(presetProfileId) {
+                            if (!presetApplied && !protection.enabled) profilesViewModel.activate(presetProfileId)
+                            presetApplied = true
+                        }
+                    }
                     val closeSheet: () -> Unit = {
                         if (!navController.popBackStack()) {
                             navController.navigate(NavDestination.ARCHIVE.route) { launchSingleTop = true }
@@ -844,16 +886,7 @@ fun HealthMdNavigation(
         }
 
         if (shouldShowReleaseNotes && releaseNotes != null) {
-            ReleaseNotesDialog(
-                notes = releaseNotes,
-                onDismiss = markReleaseNotesSeen,
-                onOpenSettings = {
-                    markReleaseNotesSeen()
-                    navController.navigate(NavDestination.SETTINGS.route) {
-                        launchSingleTop = true
-                    }
-                },
-            )
+            WhatsNewSheet(notes = releaseNotes, onContinue = markReleaseNotesSeen)
         }
 
         ConfigurationProtectionToast(

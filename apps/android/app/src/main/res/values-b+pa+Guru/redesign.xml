@@ -65,12 +65,9 @@
     <string name="archive_action_reexport">ਮੁੜ ਐਕਸਪੋਰਟ ਕਰੋ</string>
     <string name="day_page_open">ਦਿਨ ਦੀ ਫ਼ਾਈਲ ਖੋਲ੍ਹੋ</string>
     <string name="day_page_share">ਫ਼ਾਈਲ ਸਾਂਝੀ ਕਰੋ</string>
-    <string name="day_page_note">ਮੌਜੂਦਾ Health Connect ਡਾਟਾ ਤੋਂ Health.md ਹੁਣ ਇਹ ਦਿਨ ਇਸ ਤਰ੍ਹਾਂ ਲਿਖੇਗਾ। ਕੁਝ ਵੀ ਲਿਖਿਆ ਨਹੀਂ ਜਾਂਦਾ।</string>
     <string name="day_page_empty">ਮੌਜੂਦਾ ਸੈਟਿੰਗਾਂ ਨਾਲ ਇਸ ਤਾਰੀਖ ਲਈ ਕੁਝ ਨਹੀਂ ਲਿਖਿਆ ਜਾਵੇਗਾ।</string>
     <string name="day_page_range_only">ਰਾਅ ਸਨੈਪਸ਼ਾਟ ਪੂਰੀ ਮਿਆਦ ਲਈ ਇੱਕ ਫ਼ਾਈਲ ਲਿਖਦੇ ਹਨ, ਇਸ ਲਈ ਵੱਖਰੀ ਦਿਨ ਦੀ ਫ਼ਾਈਲ ਨਹੀਂ ਹੈ।</string>
     <string name="day_page_failed">Health Connect ਤੋਂ ਇਹ ਦਿਨ ਪੜ੍ਹਿਆ ਨਹੀਂ ਜਾ ਸਕਿਆ।</string>
-    <string name="day_page_retry">ਮੁੜ ਕੋਸ਼ਿਸ਼ ਕਰੋ</string>
-    <string name="day_page_truncated">ਇੱਥੇ ਫ਼ਾਈਲ ਛੋਟੀ ਕੀਤੀ ਗਈ ਹੈ। ਪੂਰੀ ਦੇਖਣ ਲਈ ਸਾਂਝੀ ਕਰੋ।</string>
     <string name="notification_open_archive">ਆਰਕਾਈਵ ਖੋਲ੍ਹੋ</string>
     <string name="direct_cli_chip_connecting">CLI</string>
     <string name="direct_cli_chip_done">ਹੋ ਗਿਆ</string>
@@ -164,7 +161,6 @@
     <string name="widget_archive_preview_month_value">24</string>
     <string name="widget_archive_preview_month_detail">ਦਿਨ, ਅਕਤੂਬਰ ਵਿੱਚ</string>
     <string name="widget_archive_preview_gaps">2 ਖਾਲੀ ਥਾਵਾਂ</string>
-    <string name="day_page_export_day">ਇਹ ਦਿਨ ਐਕਸਪੋਰਟ ਕਰੋ</string>
     <string name="moment_see_in_archive">ਆਰਕਾਈਵ ਵਿੱਚ ਦੇਖੋ</string>
     <string name="export_now_more_options">ਹੋਰ ਵਿਕਲਪ</string>
     <string name="automations_profiles_summary">ਸਰਗਰਮ: %1$s · %2$s · %3$s</string>
@@ -185,8 +181,6 @@
     <string name="archive_action_open">ਖੋਲ੍ਹੋ</string>
     <string name="archive_action_retry">ਮੁੜ ਕੋਸ਼ਿਸ਼ ਕਰੋ</string>
     <string name="archive_action_refresh">ਤਾਜ਼ਾ ਕਰੋ</string>
-    <string name="archive_health_connected">Health Connect: ਕਨੈਕਟ ਹੈ</string>
-    <string name="archive_health_not_connected">Health Connect: ਕਨੈਕਟ ਨਹੀਂ ਹੈ</string>
     <string name="archive_day_nothing_due">ਕੁਝ ਵੀ ਬਕਾਇਆ ਨਹੀਂ</string>
     <string name="archive_row_not_due">ਇਸ ਤਾਰੀਖ ਨੂੰ ਬਕਾਇਆ ਨਹੀਂ।</string>
     <string name="automations_new">ਨਵਾਂ ਆਟੋਮੇਸ਼ਨ</string>

@@ -65,12 +65,9 @@
     <string name="archive_action_reexport">Opnieuw exporteren</string>
     <string name="day_page_open">Bestand van de dag openen</string>
     <string name="day_page_share">Bestand delen</string>
-    <string name="day_page_note">Zo zou Health.md deze dag nu schrijven, met de huidige Health Connect-gegevens. Er wordt niets geschreven.</string>
     <string name="day_page_empty">Met de huidige instellingen wordt voor deze datum niets geschreven.</string>
     <string name="day_page_range_only">Ruwe snapshots schrijven één bestand voor de hele periode, dus er is geen apart dagbestand.</string>
     <string name="day_page_failed">Deze dag kon niet uit Health Connect worden gelezen.</string>
-    <string name="day_page_retry">Opnieuw proberen</string>
-    <string name="day_page_truncated">Het bestand is hier ingekort. Deel het om alles te zien.</string>
     <string name="notification_open_archive">Archief openen</string>
     <string name="direct_cli_chip_connecting">CLI</string>
     <string name="direct_cli_chip_done">Klaar</string>
@@ -164,7 +161,6 @@
     <string name="widget_archive_preview_month_value">24</string>
     <string name="widget_archive_preview_month_detail">dagen in oktober</string>
     <string name="widget_archive_preview_gaps">2 hiaten</string>
-    <string name="day_page_export_day">Deze dag exporteren</string>
     <string name="moment_see_in_archive">Bekijken in archief</string>
     <string name="export_now_more_options">Meer opties</string>
     <string name="automations_profiles_summary">Actief: %1$s · %2$s · %3$s</string>
@@ -185,8 +181,6 @@
     <string name="archive_action_open">Openen</string>
     <string name="archive_action_retry">Opnieuw</string>
     <string name="archive_action_refresh">Vernieuwen</string>
-    <string name="archive_health_connected">Health Connect: verbonden</string>
-    <string name="archive_health_not_connected">Health Connect: niet verbonden</string>
     <string name="archive_day_nothing_due">Niets gepland</string>
     <string name="archive_row_not_due">Niet gepland op deze datum.</string>
     <string name="automations_new">Nieuwe automatisering</string>

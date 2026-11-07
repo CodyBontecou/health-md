@@ -547,10 +547,6 @@
     <string name="scheduled_recovery_result_blocked">निर्धारित पुनर्प्राप्ति अभी तैयार नहीं है।</string>
     <string name="not_now">अभी नहीं</string>
     <!-- Release notes -->
-    <string name="release_notes_title">%s में नया क्या है?</string>
-    <string name="release_notes_settings_hint">आप सेटिंग्स में निर्यात प्रारूप, कस्टम Markdown और मेट्रिक्स को समायोजित कर सकते हैं।</string>
-    <string name="release_notes_open_settings">सेटिंग्स खोलें</string>
-    <string name="release_notes_got_it">समझ गया</string>
     <string name="release_notes_highlight_feedback">डेस्कटॉप के छोटे कनेक्शन टूटने के बाद Direct CLI सेशन अपने आप फिर जुड़ जाते हैं, इसलिए निर्यात भरोसेमंद ढंग से पूरे होते हैं।</string>
     <string name="release_notes_highlight_export_parity">डेस्कटॉप की वेक विंडो कमांड आपके ऐप खोलकर कनेक्ट होने तक 120 सेकंड तक प्रतीक्षा करती हैं, बिना किसी पुश नोटिफिकेशन के।</string>
     <string name="release_notes_highlight_templates">पता, पोर्ट और 20-अंकों वाले कोड से मैनुअल पेयरिंग अब भी काम करती है, पुराने CLI वर्शन के साथ भी।</string>

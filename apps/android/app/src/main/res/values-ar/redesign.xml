@@ -65,12 +65,9 @@
     <string name="archive_action_reexport">إعادة التصدير</string>
     <string name="day_page_open">فتح ملف اليوم</string>
     <string name="day_page_share">مشاركة الملف</string>
-    <string name="day_page_note">هكذا سيكتب Health.md هذا اليوم الآن من بيانات Health Connect الحالية. لا يُكتب شيء.</string>
     <string name="day_page_empty">لن يُكتب شيء لهذا التاريخ بالإعدادات الحالية.</string>
     <string name="day_page_range_only">تكتب اللقطات الخام ملفًا واحدًا للفترة كلها، لذا لا يوجد ملف ليوم واحد.</string>
     <string name="day_page_failed">تعذّرت قراءة هذا اليوم من Health Connect.</string>
-    <string name="day_page_retry">إعادة المحاولة</string>
-    <string name="day_page_truncated">الملف مختصر هنا. شاركه لرؤيته كاملًا.</string>
     <string name="notification_open_archive">فتح الأرشيف</string>
     <string name="direct_cli_chip_connecting">CLI</string>
     <string name="direct_cli_chip_done">تم</string>
@@ -184,7 +181,6 @@
     <string name="widget_archive_preview_month_value">24</string>
     <string name="widget_archive_preview_month_detail">يومًا في أكتوبر</string>
     <string name="widget_archive_preview_gaps">فجوتان</string>
-    <string name="day_page_export_day">تصدير هذا اليوم</string>
     <string name="moment_see_in_archive">عرض في الأرشيف</string>
     <string name="export_now_more_options">خيارات إضافية</string>
     <string name="automations_profiles_summary">النشط: %1$s · %2$s · %3$s</string>
@@ -217,8 +213,6 @@
     <string name="archive_action_open">فتح</string>
     <string name="archive_action_retry">إعادة المحاولة</string>
     <string name="archive_action_refresh">تحديث</string>
-    <string name="archive_health_connected">Health Connect: متصل</string>
-    <string name="archive_health_not_connected">Health Connect: غير متصل</string>
     <string name="archive_day_nothing_due">لا شيء مستحق</string>
     <string name="archive_row_not_due">غير مستحق في هذا التاريخ.</string>
     <string name="automations_new">أتمتة جديدة</string>

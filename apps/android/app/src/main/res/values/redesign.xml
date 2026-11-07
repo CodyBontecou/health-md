@@ -65,12 +65,9 @@
     <string name="archive_action_reexport">Re-export</string>
     <string name="day_page_open">Open the day’s file</string>
     <string name="day_page_share">Share file</string>
-    <string name="day_page_note">Shown as Health.md would write this day now, from current Health Connect data. Nothing is written.</string>
     <string name="day_page_empty">Nothing would be written for this date with the current settings.</string>
     <string name="day_page_range_only">Raw snapshot exports write one file for the whole range, so there is no single day file to show.</string>
     <string name="day_page_failed">Couldn’t read this day from Health Connect.</string>
-    <string name="day_page_retry">Try again</string>
-    <string name="day_page_truncated">The file is shortened here. Share it to see everything.</string>
     <string name="notification_open_archive">Open archive</string>
     <string name="direct_cli_chip_connecting">CLI</string>
     <string name="direct_cli_chip_done">Done</string>
@@ -164,7 +161,6 @@
     <string name="widget_archive_preview_month_value">24</string>
     <string name="widget_archive_preview_month_detail">days in October</string>
     <string name="widget_archive_preview_gaps">2 gaps</string>
-    <string name="day_page_export_day">Export this day</string>
     <string name="moment_see_in_archive">See in archive</string>
     <string name="export_now_more_options">More options</string>
     <string name="automations_profiles_summary">Active: %1$s · %2$s · %3$s</string>
@@ -185,8 +181,6 @@
     <string name="archive_action_open">Open</string>
     <string name="archive_action_retry">Retry</string>
     <string name="archive_action_refresh">Refresh</string>
-    <string name="archive_health_connected">Health Connect: connected</string>
-    <string name="archive_health_not_connected">Health Connect: not connected</string>
     <string name="archive_day_nothing_due">Nothing due</string>
     <string name="archive_row_not_due">Not due on this date.</string>
     <string name="automations_new">New automation</string>
@@ -268,4 +262,52 @@
     <string name="archive_setup_choose_folder">Choose folder</string>
     <string name="archive_setup_done">Done</string>
     <string name="archive_setup_next">Next</string>
+    <!-- Archive step B: day files, Needs attention, day page and What's New (English only until the translation pass). -->
+    <string name="archive_read_whole_note">Read the whole note</string>
+    <plurals name="archive_attention_count">
+        <item quantity="one">%d item needs a look.</item>
+        <item quantity="other">%d items need a look.</item>
+    </plurals>
+    <string name="attention_title">Needs attention</string>
+    <string name="attention_empty_title">Nothing needs attention</string>
+    <string name="attention_empty_body">Health.md will list problems here, each with its fix.</string>
+    <string name="attention_health_title">Health Connect permission</string>
+    <string name="attention_health_body">Health.md can’t read your health data until you allow it.</string>
+    <string name="attention_folder_title">Folder unavailable</string>
+    <string name="attention_folder_body">The export folder moved or can’t be verified. Choose it again to resume exports.</string>
+    <string name="attention_folder_body_named">The %1$s folder moved or can’t be verified. Choose it again to resume exports.</string>
+    <string name="attention_folder_body_waiting">The export folder moved or can’t be verified. Choose it again to resume %1$s.</string>
+    <string name="attention_folder_body_named_waiting">The %1$s folder moved or can’t be verified. Choose it again to resume %2$s.</string>
+    <string name="attention_folder_action">Choose folder</string>
+    <string name="attention_endpoint_title">Endpoint failing</string>
+    <string name="attention_gateway_title">Agent Data gateway failing</string>
+    <string name="attention_host_api">API endpoint</string>
+    <string name="attention_host_gateway">Agent Data gateway</string>
+    <!-- %1$s host, %2$s HTTP status code, %3$s the spelled-out number of failures. -->
+    <plurals name="attention_endpoint_status">
+        <item quantity="one">%1$s returned %2$s.</item>
+        <item quantity="other">%1$s returned %2$s %3$s times.</item>
+    </plurals>
+    <!-- %1$s host, %2$s failure reason, %3$s the spelled-out number of failures. -->
+    <plurals name="attention_endpoint_failed">
+        <item quantity="one">%1$s: %2$s.</item>
+        <item quantity="other">%1$s failed %3$s times: %2$s.</item>
+    </plurals>
+    <string name="attention_retry_refresh">%1$s will retry at the next refresh.</string>
+    <string name="attention_retry_run">%1$s will retry at the next scheduled run.</string>
+    <string name="attention_endpoint_action">View endpoint</string>
+    <string name="day_page_reading">Reading the file…</string>
+    <string name="day_page_not_on_device">This automation writes somewhere this phone can’t read, so the file isn’t shown here.</string>
+    <string name="day_page_not_written_yet">Today’s file isn’t written yet.</string>
+    <string name="day_page_file_gone">The file for this date isn’t in the folder any more.</string>
+    <string name="day_page_no_own_file">This automation doesn’t write a file of its own for each date.</string>
+    <string name="day_page_no_file">No file was written for this date.</string>
+    <string name="day_page_nothing_due">Nothing was due on this date.</string>
+    <string name="day_page_long_file">Long file: the first lines are shown. Open it to read the rest.</string>
+    <string name="day_page_open_file">Open file</string>
+    <string name="day_page_automation">Automation</string>
+    <string name="day_page_no_viewer">No app on this phone can open this file.</string>
+    <string name="whats_new_title">What’s New</string>
+    <string name="whats_new_version">Health.md %1$s</string>
+    <string name="whats_new_continue">Continue</string>
 </resources>

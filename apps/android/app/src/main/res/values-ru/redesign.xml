@@ -65,12 +65,9 @@
     <string name="archive_action_reexport">Экспортировать снова</string>
     <string name="day_page_open">Открыть файл дня</string>
     <string name="day_page_share">Поделиться файлом</string>
-    <string name="day_page_note">Так Health.md записал бы этот день сейчас по текущим данным Health Connect. Ничего не записывается.</string>
     <string name="day_page_empty">С текущими настройками для этой даты ничего не будет записано.</string>
     <string name="day_page_range_only">Необработанные снимки записывают один файл на весь период, поэтому отдельного файла дня нет.</string>
     <string name="day_page_failed">Не удалось прочитать этот день из Health Connect.</string>
-    <string name="day_page_retry">Повторить</string>
-    <string name="day_page_truncated">Здесь файл сокращён. Поделитесь им, чтобы увидеть полностью.</string>
     <string name="notification_open_archive">Открыть архив</string>
     <string name="direct_cli_chip_connecting">CLI</string>
     <string name="direct_cli_chip_done">Готово</string>
@@ -174,7 +171,6 @@
     <string name="widget_archive_preview_month_value">24</string>
     <string name="widget_archive_preview_month_detail">дня за октябрь</string>
     <string name="widget_archive_preview_gaps">2 пропуска</string>
-    <string name="day_page_export_day">Экспортировать этот день</string>
     <string name="moment_see_in_archive">Открыть в архиве</string>
     <string name="export_now_more_options">Другие параметры</string>
     <string name="automations_profiles_summary">Активен: %1$s · %2$s · %3$s</string>
@@ -201,8 +197,6 @@
     <string name="archive_action_open">Открыть</string>
     <string name="archive_action_retry">Повторить</string>
     <string name="archive_action_refresh">Обновить</string>
-    <string name="archive_health_connected">Health Connect: подключено</string>
-    <string name="archive_health_not_connected">Health Connect: не подключено</string>
     <string name="archive_day_nothing_due">Ничего не запланировано</string>
     <string name="archive_row_not_due">На эту дату не запланировано.</string>
     <string name="automations_new">Новая автоматизация</string>

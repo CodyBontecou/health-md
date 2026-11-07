@@ -587,10 +587,6 @@
     <string name="not_now">Not now</string>
 
     <!-- Release notes -->
-    <string name="release_notes_title">What’s New in %s</string>
-    <string name="release_notes_settings_hint">You can tune export formats, custom Markdown, and metrics from Settings.</string>
-    <string name="release_notes_open_settings">Open Settings</string>
-    <string name="release_notes_got_it">Got it</string>
     <string name="release_notes_highlight_widgets">Scheduled Raw API Snapshot exports use your profile’s raw format for API endpoints and folders.</string>
     <string name="release_notes_highlight_feedback">Scheduled snapshots include your selected lookback and Today Refresh.</string>
     <string name="release_notes_highlight_export_parity">Clear a stuck scheduled backlog with Discard pending recovery in the profile schedule.</string>

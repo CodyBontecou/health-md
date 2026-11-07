@@ -65,12 +65,9 @@
     <string name="archive_action_reexport">重新导出</string>
     <string name="day_page_open">打开当天的文件</string>
     <string name="day_page_share">分享文件</string>
-    <string name="day_page_note">这是 Health.md 现在根据当前 Health Connect 数据写入这一天的内容。不会写入任何内容。</string>
     <string name="day_page_empty">按当前设置，这一天不会写入任何内容。</string>
     <string name="day_page_range_only">原始快照会为整个时间段写入一个文件，因此没有单独的日文件。</string>
     <string name="day_page_failed">无法从 Health Connect 读取这一天。</string>
-    <string name="day_page_retry">重试</string>
-    <string name="day_page_truncated">此处的文件已截短。分享即可查看全部内容。</string>
     <string name="notification_open_archive">打开归档</string>
     <string name="direct_cli_chip_connecting">CLI</string>
     <string name="direct_cli_chip_done">完成</string>
@@ -159,7 +156,6 @@
     <string name="widget_archive_preview_month_value">24</string>
     <string name="widget_archive_preview_month_detail">天（10月）</string>
     <string name="widget_archive_preview_gaps">2 处缺口</string>
-    <string name="day_page_export_day">导出这一天</string>
     <string name="moment_see_in_archive">在存档中查看</string>
     <string name="export_now_more_options">更多选项</string>
     <string name="automations_profiles_summary">当前：%1$s · %2$s · %3$s</string>
@@ -177,8 +173,6 @@
     <string name="archive_action_open">打开</string>
     <string name="archive_action_retry">重试</string>
     <string name="archive_action_refresh">刷新</string>
-    <string name="archive_health_connected">Health Connect：已连接</string>
-    <string name="archive_health_not_connected">Health Connect：未连接</string>
     <string name="archive_day_nothing_due">无到期项</string>
     <string name="archive_row_not_due">此日期未到期。</string>
     <string name="automations_new">新建自动化</string>

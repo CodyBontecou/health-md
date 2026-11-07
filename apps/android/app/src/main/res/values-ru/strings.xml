@@ -669,10 +669,6 @@
     <string name="scheduled_recovery_result_complete">Плановое восстановление завершено.</string>
     <string name="scheduled_recovery_result_blocked">Плановое восстановление еще не готово.</string>
     <string name="not_now">Не сейчас</string>
-    <string name="release_notes_title">Что нового в %s</string>
-    <string name="release_notes_settings_hint">Вы можете настроить форматы экспорта, специальные Markdown и метрики в настройках.</string>
-    <string name="release_notes_open_settings">Открыть настройки</string>
-    <string name="release_notes_got_it">понял</string>
     <string name="release_notes_highlight_feedback">Сессии Direct CLI автоматически переподключаются после кратких разрывов связи с компьютером, поэтому экспорты надёжно завершаются.</string>
     <string name="release_notes_highlight_export_parity">Команды окна пробуждения на компьютере ждут до 120 секунд, пока вы откроете приложение и подключитесь, — без push-уведомлений.</string>
     <string name="release_notes_highlight_templates">Ручное сопряжение по адресу, порту и 20-значному коду по-прежнему работает, в том числе со старыми версиями CLI.</string>

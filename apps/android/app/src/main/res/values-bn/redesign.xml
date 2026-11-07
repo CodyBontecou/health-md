@@ -65,12 +65,9 @@
     <string name="archive_action_reexport">আবার এক্সপোর্ট</string>
     <string name="day_page_open">দিনের ফাইল খুলুন</string>
     <string name="day_page_share">ফাইল শেয়ার করুন</string>
-    <string name="day_page_note">বর্তমান Health Connect ডেটা থেকে Health.md এখন দিনটি এভাবে লিখবে। কিছুই লেখা হয় না।</string>
     <string name="day_page_empty">বর্তমান সেটিংসে এই তারিখের জন্য কিছুই লেখা হবে না।</string>
     <string name="day_page_range_only">র স্ন্যাপশট পুরো সময়সীমার জন্য একটি ফাইল লেখে, তাই আলাদা দিনের ফাইল নেই।</string>
     <string name="day_page_failed">Health Connect থেকে এই দিনটি পড়া যায়নি।</string>
-    <string name="day_page_retry">আবার চেষ্টা করুন</string>
-    <string name="day_page_truncated">এখানে ফাইলটি সংক্ষিপ্ত। পুরোটা দেখতে শেয়ার করুন।</string>
     <string name="notification_open_archive">আর্কাইভ খুলুন</string>
     <string name="direct_cli_chip_connecting">CLI</string>
     <string name="direct_cli_chip_done">সম্পন্ন</string>
@@ -164,7 +161,6 @@
     <string name="widget_archive_preview_month_value">২৪</string>
     <string name="widget_archive_preview_month_detail">দিন, অক্টোবর মাসে</string>
     <string name="widget_archive_preview_gaps">২টি ফাঁক</string>
-    <string name="day_page_export_day">এই দিনটি এক্সপোর্ট করুন</string>
     <string name="moment_see_in_archive">আর্কাইভে দেখুন</string>
     <string name="export_now_more_options">আরও বিকল্প</string>
     <string name="automations_profiles_summary">সক্রিয়: %1$s · %2$s · %3$s</string>
@@ -185,8 +181,6 @@
     <string name="archive_action_open">খুলুন</string>
     <string name="archive_action_retry">আবার চেষ্টা করুন</string>
     <string name="archive_action_refresh">রিফ্রেশ করুন</string>
-    <string name="archive_health_connected">Health Connect: সংযুক্ত</string>
-    <string name="archive_health_not_connected">Health Connect: সংযুক্ত নয়</string>
     <string name="archive_day_nothing_due">কিছুই বকেয়া নেই</string>
     <string name="archive_row_not_due">এই তারিখে বকেয়া নয়।</string>
     <string name="automations_new">নতুন অটোমেশন</string>

@@ -669,10 +669,6 @@
     <string name="scheduled_recovery_result_complete">Заплановане відновлення завершено.</string>
     <string name="scheduled_recovery_result_blocked">Планове відновлення ще не готове.</string>
     <string name="not_now">Не зараз</string>
-    <string name="release_notes_title">Що нового в %s</string>
-    <string name="release_notes_settings_hint">Ви можете налаштувати формати експорту, власний Markdown і показники в налаштуваннях.</string>
-    <string name="release_notes_open_settings">Відкрийте налаштування</string>
-    <string name="release_notes_got_it">Зрозуміло</string>
     <string name="release_notes_highlight_feedback">Сесії Direct CLI автоматично перепід\'єднуються після коротких розривів зв\'язку з комп\'ютером, тому експорти надійно завершуються.</string>
     <string name="release_notes_highlight_export_parity">Команди вікна пробудження на комп\'ютері чекають до 120 секунд, поки ви відкриєте застосунок і під\'єднаєтесь, — без push-сповіщень.</string>
     <string name="release_notes_highlight_templates">Ручне з\'єднання за адресою, портом і 20-значним кодом досі працює, зокрема зі старішими версіями CLI.</string>

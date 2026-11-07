@@ -33,6 +33,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -269,12 +270,16 @@ private fun WeekTile(
 @Composable
 internal fun ArchiveReadableDayCard(
     state: ArchiveUiState,
-    onAction: (ArchiveDayAction) -> Unit,
-    onOpenDay: (LocalDate) -> Unit,
+    /** The lead lane's file as last read; shown only while its key matches the selection. */
+    leadFile: ArchiveLoadedFile?,
+    onAction: (ArchiveDayRow, ArchiveDayAction) -> Unit,
+    /** Opens the day page on one lane's tab. */
+    onOpenDay: (ArchiveProfile) -> Unit,
 ) {
     val colors = LocalGeistColors.current
     val date = state.selection.selectedDate
     val lead = state.leadRow
+    val file = leadFile?.takeIf { it.key == state.leadFileKey }?.file
     GeistCard(padding = GeistSpacing.space4) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
@@ -288,13 +293,13 @@ internal fun ArchiveReadableDayCard(
         }
         if (lead != null) {
             Spacer(Modifier.height(GeistSpacing.space3))
-            LeadDetail(lead, state, onAction, onOpenDay = { onOpenDay(date) })
+            LeadDetail(lead, state, file, onAction = { onAction(lead, it) }, onOpenDay = { onOpenDay(lead.day.profile) })
             val others = if (state.selection.filter == null) state.selectedDay.filter { it !== lead } else emptyList()
             if (others.isNotEmpty()) {
                 Spacer(Modifier.height(GeistSpacing.space2))
                 others.forEach { row ->
                     HorizontalDivider(color = colors.gray.c300)
-                    OtherAutomationRow(row, state, onClick = { onOpenDay(date) })
+                    OtherAutomationRow(row, state, onClick = { onOpenDay(row.day.profile) })
                 }
             }
         }
@@ -305,12 +310,13 @@ internal fun ArchiveReadableDayCard(
 private fun LeadDetail(
     lead: ArchiveDayRow,
     state: ArchiveUiState,
+    file: ArchiveDayFile?,
     onAction: (ArchiveDayAction) -> Unit,
     onOpenDay: () -> Unit,
 ) {
     val colors = LocalGeistColors.current
     val status = lead.day.status
-    val note = dayNote(lead, state)
+    val note = dayNote(lead, state.pausedLanes)
     if (status == CoverageStatus.MISSING) {
         Column(
             modifier = Modifier
@@ -350,29 +356,41 @@ private fun LeadDetail(
         )
         Spacer(Modifier.height(GeistSpacing.space2))
     }
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = GeistSpacing.space1),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(GeistSpacing.space3),
-    ) {
-        Text(note, style = MaterialTheme.typography.bodyMedium, color = colors.secondary, modifier = Modifier.weight(1f))
-        lead.action?.takeIf { it != ArchiveDayAction.OPEN }?.let { action ->
-            val label = stringResource(action.labelRes())
-            if (action.isProminent) {
-                Button(
-                    onClick = { onAction(action) },
-                    shape = CircleShape,
-                    colors = ButtonDefaults.buttonColors(containerColor = colors.brandPrimary, contentColor = colors.brandOnPrimary),
-                ) { Text(label, style = GeistType.button14) }
-            } else {
-                FilledTonalButton(
-                    onClick = { onAction(action) },
-                    shape = CircleShape,
-                    colors = ButtonDefaults.filledTonalButtonColors(
-                        containerColor = colors.secondaryContainer,
-                        contentColor = colors.onSecondaryContainer,
-                    ),
-                ) { Text(label, style = GeistType.button14) }
+    val locale = currentLocale()
+    val tiles = remember(file?.source, locale) { file?.let { ArchiveDayTiles.tiles(it.source, locale = locale) }.orEmpty() }
+    if (tiles.isNotEmpty()) {
+        tiles.chunked(2).forEachIndexed { index, pair ->
+            if (index > 0) Spacer(Modifier.height(GeistSpacing.space2))
+            Row(horizontalArrangement = Arrangement.spacedBy(GeistSpacing.space2)) {
+                pair.forEach { MetricTile(it, Modifier.weight(1f)) }
+                if (pair.size == 1) Spacer(Modifier.weight(1f))
+            }
+        }
+    } else {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = GeistSpacing.space1),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(GeistSpacing.space3),
+        ) {
+            Text(note, style = MaterialTheme.typography.bodyMedium, color = colors.secondary, modifier = Modifier.weight(1f))
+            lead.action?.takeIf { it != ArchiveDayAction.OPEN }?.let { action ->
+                val label = stringResource(action.labelRes())
+                if (action.isProminent) {
+                    Button(
+                        onClick = { onAction(action) },
+                        shape = CircleShape,
+                        colors = ButtonDefaults.buttonColors(containerColor = colors.brandPrimary, contentColor = colors.brandOnPrimary),
+                    ) { Text(label, style = GeistType.button14) }
+                } else {
+                    FilledTonalButton(
+                        onClick = { onAction(action) },
+                        shape = CircleShape,
+                        colors = ButtonDefaults.filledTonalButtonColors(
+                            containerColor = colors.secondaryContainer,
+                            contentColor = colors.onSecondaryContainer,
+                        ),
+                    ) { Text(label, style = GeistType.button14) }
+                }
             }
         }
     }
@@ -384,7 +402,11 @@ private fun LeadDetail(
             shape = CircleShape,
             modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
         ) {
-            Text(stringResource(R.string.archive_see_this_day), style = GeistType.button14, color = colors.primary)
+            Text(
+                stringResource(if (file != null) R.string.archive_read_whole_note else R.string.archive_see_this_day),
+                style = GeistType.button14,
+                color = colors.primary,
+            )
             Spacer(Modifier.width(GeistSpacing.space2))
             Icon(Icons.AutoMirrored.Outlined.KeyboardArrowRight, contentDescription = null, tint = colors.primary)
         }
@@ -415,7 +437,7 @@ private fun OtherAutomationRow(row: ArchiveDayRow, state: ArchiveUiState, onClic
         )
         Spacer(Modifier.weight(1f))
         Text(
-            text = dayNote(row, state),
+            text = dayNote(row, state.pausedLanes),
             style = GeistType.label13,
             color = if (row.day.status == CoverageStatus.MISSING) colors.coverageMissing else colors.secondary,
             textAlign = TextAlign.End,
@@ -424,12 +446,48 @@ private fun OtherAutomationRow(row: ArchiveDayRow, state: ArchiveUiState, onClic
     }
 }
 
+/** One headline value from the day's file (iOS `metricTile`). */
+@Composable
+private fun MetricTile(tile: ArchiveDayTile, modifier: Modifier = Modifier) {
+    val colors = LocalGeistColors.current
+    val label = tile.labelRes?.let { stringResource(it) } ?: tile.key
+    Column(
+        modifier = modifier
+            .background(colors.background100, RoundedCornerShape(GeistRadii.listGroup))
+            .border(1.dp, colors.gray.c300, RoundedCornerShape(GeistRadii.listGroup))
+            .padding(horizontal = GeistSpacing.space3, vertical = GeistSpacing.space3)
+            .semantics(mergeDescendants = true) { contentDescription = "$label, ${tile.value} ${tile.unit}".trim() },
+    ) {
+        Text(label, style = GeistType.label12, color = colors.secondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(GeistSpacing.space1)) {
+            Text(
+                tile.value,
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                color = colors.primary,
+                maxLines = 1,
+                modifier = Modifier.alignByBaseline(),
+            )
+            if (tile.unit.isNotEmpty()) {
+                Text(
+                    tile.unit,
+                    style = GeistType.label13,
+                    color = colors.secondary,
+                    maxLines = 1,
+                    modifier = Modifier.alignByBaseline(),
+                )
+            }
+        }
+        Text(tile.key, style = GeistType.label12Mono, color = colors.secondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    }
+}
+
 /** iOS `ArchiveCopy.note`, from what Android history records. */
 @Composable
-private fun dayNote(row: ArchiveDayRow, state: ArchiveUiState): String {
+internal fun dayNote(row: ArchiveDayRow, pausedLanes: Set<ArchiveProfile>): String {
     val day = row.day
     return when {
-        day.profile in state.pausedLanes && day.status == CoverageStatus.NOT_DUE ->
+        day.profile in pausedLanes && day.status == CoverageStatus.NOT_DUE ->
             stringResource(R.string.archive_note_paused)
         day.status == CoverageStatus.NOT_DUE -> stringResource(R.string.archive_row_not_due)
         day.status == CoverageStatus.IN_PROGRESS -> stringResource(R.string.archive_note_in_progress)

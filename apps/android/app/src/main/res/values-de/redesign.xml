@@ -65,12 +65,9 @@
     <string name="archive_action_reexport">Erneut exportieren</string>
     <string name="day_page_open">Datei des Tages öffnen</string>
     <string name="day_page_share">Datei teilen</string>
-    <string name="day_page_note">So würde Health.md diesen Tag jetzt aus den aktuellen Health Connect-Daten schreiben. Es wird nichts geschrieben.</string>
     <string name="day_page_empty">Mit den aktuellen Einstellungen würde für dieses Datum nichts geschrieben.</string>
     <string name="day_page_range_only">Rohdaten-Snapshots schreiben eine Datei für den gesamten Zeitraum, daher gibt es keine einzelne Tagesdatei.</string>
     <string name="day_page_failed">Dieser Tag konnte nicht aus Health Connect gelesen werden.</string>
-    <string name="day_page_retry">Erneut versuchen</string>
-    <string name="day_page_truncated">Die Datei ist hier gekürzt. Teile sie, um alles zu sehen.</string>
     <string name="notification_open_archive">Archiv öffnen</string>
     <string name="direct_cli_chip_connecting">CLI</string>
     <string name="direct_cli_chip_done">Fertig</string>
@@ -164,7 +161,6 @@
     <string name="widget_archive_preview_month_value">24</string>
     <string name="widget_archive_preview_month_detail">Tage im Oktober</string>
     <string name="widget_archive_preview_gaps">2 Lücken</string>
-    <string name="day_page_export_day">Diesen Tag exportieren</string>
     <string name="moment_see_in_archive">Im Archiv ansehen</string>
     <string name="export_now_more_options">Weitere Optionen</string>
     <string name="automations_profiles_summary">Aktiv: %1$s · %2$s · %3$s</string>
@@ -185,8 +181,6 @@
     <string name="archive_action_open">Öffnen</string>
     <string name="archive_action_retry">Erneut versuchen</string>
     <string name="archive_action_refresh">Aktualisieren</string>
-    <string name="archive_health_connected">Health Connect: verbunden</string>
-    <string name="archive_health_not_connected">Health Connect: nicht verbunden</string>
     <string name="archive_day_nothing_due">Nichts fällig</string>
     <string name="archive_row_not_due">An diesem Datum nicht fällig.</string>
     <string name="automations_new">Neue Automation</string>

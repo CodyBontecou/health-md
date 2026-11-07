@@ -691,10 +691,6 @@
     <string name="scheduled_recovery_result_complete">اكتملت استعادة عمليات التصدير المجدولة.</string>
     <string name="scheduled_recovery_result_blocked">استعادة عمليات التصدير المجدولة غير جاهزة بعد.</string>
     <string name="not_now">ليس الآن</string>
-    <string name="release_notes_title">ما الجديد في %s</string>
-    <string name="release_notes_settings_hint">يمكنك ضبط صيغ التصدير وقالب Markdown المخصص والمقاييس من الإعدادات.</string>
-    <string name="release_notes_open_settings">افتح الإعدادات</string>
-    <string name="release_notes_got_it">حسنًا</string>
     <string name="release_notes_highlight_feedback">تعيد جلسات Direct CLI الاتصال تلقائيًا بعد انقطاعات قصيرة لسطح المكتب، فتكتمل عمليات التصدير بموثوقية.</string>
     <string name="release_notes_highlight_export_parity">تنتظر أوامر نافذة الاستيقاظ من سطح المكتب حتى 120 ثانية لتفتح التطبيق وتتصل، دون أي إشعارات فورية.</string>
     <string name="release_notes_highlight_templates">لا يزال الربط اليدوي عبر العنوان والمنفذ والرمز المكوّن من 20 رقمًا يعمل، بما في ذلك مع إصدارات CLI الأقدم.</string>

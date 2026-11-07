@@ -647,10 +647,6 @@
     <string name="scheduled_recovery_result_complete">Herstel van geplande exports voltooid.</string>
     <string name="scheduled_recovery_result_blocked">Herstel van geplande exports is nog niet mogelijk.</string>
     <string name="not_now">Nu niet</string>
-    <string name="release_notes_title">Wat is er nieuw in %s</string>
-    <string name="release_notes_settings_hint">Je kunt exportindelingen, aangepaste Markdown en metingen aanpassen via Instellingen.</string>
-    <string name="release_notes_open_settings">Instellingen openen</string>
-    <string name="release_notes_got_it">Begrepen</string>
     <string name="release_notes_highlight_feedback">Direct CLI-sessies maken automatisch opnieuw verbinding na korte desktoponderbrekingen, zodat exports betrouwbaar voltooid worden.</string>
     <string name="release_notes_highlight_export_parity">Wake-window-opdrachten op de desktop wachten tot 120 seconden tot je de app opent en verbindt, zonder pushmeldingen.</string>
     <string name="release_notes_highlight_templates">Handmatig koppelen met adres, poort en 20-cijferige code werkt nog steeds, ook met oudere CLI-versies.</string>

@@ -10,22 +10,25 @@ import com.healthmd.data.scheduler.ScheduledProfileScheduler
 import com.healthmd.data.scheduler.ScheduledProfileEntry
 import com.healthmd.data.scheduler.ScheduledProfileEntryStore
 import com.healthmd.data.settings.ExportProfileRepository
-import com.healthmd.domain.exportengine.AndroidExportSettingsSnapshotCodec
 import com.healthmd.domain.model.ExportHistoryEntry
 import com.healthmd.domain.model.ExportProfile
 import com.healthmd.domain.model.ExportProfileRules
-import com.healthmd.domain.model.ExportSettings
-import com.healthmd.domain.model.ExportTarget
 import com.healthmd.domain.repository.ExportHistoryRepository
 import com.healthmd.domain.repository.SettingsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -49,6 +52,12 @@ data class ArchiveDayRow(
     /** The dated file, folder or endpoint line; null when it cannot be derived. */
     val path: String?,
     val action: ArchiveDayAction?,
+    /** The date's own file in a chosen folder, when the lane writes one. */
+    val file: ArchiveFileRef? = null,
+    /** The saved automation the lane maps to; fixes preset Export now to it. */
+    val automationId: String? = null,
+    /** False for endpoints and gateways: no file on this device to read. */
+    val writesFilesOnDevice: Boolean = false,
 )
 
 /** One tile of the week strip. Future dates are shown but cannot be selected. */
@@ -97,6 +106,10 @@ data class ArchiveUiState(
     /** The readable day's lead lane: the filter, else the first lane that is not paused. */
     val leadRow: ArchiveDayRow?
         get() = selectedDay.firstOrNull { it.day.profile !in pausedLanes } ?: selectedDay.firstOrNull()
+
+    /** What the readable day card reads: the lead lane's own file for the selected date. */
+    val leadFileKey: ArchiveDayFileKey?
+        get() = leadRow?.let { ArchiveLanes.fileKey(it, selection.selectedDate) }
 }
 
 /** The Archive coverage calendar, fed from Android export history. */
@@ -109,6 +122,7 @@ class ArchiveViewModel @Inject constructor(
     private val healthConnectManager: HealthConnectManager,
     private val exportScheduler: ExportScheduler,
     private val profileScheduler: ScheduledProfileScheduler,
+    private val dayFileReader: ArchiveDayFileReader,
     @ApplicationContext context: Context,
 ) : ViewModel() {
     private val preferences = context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
@@ -126,32 +140,28 @@ class ArchiveViewModel @Inject constructor(
     /** Whether Health Connect granted any read permission; null until checked. */
     val healthConnectConnected: StateFlow<Boolean?> = _healthConnectConnected.asStateFlow()
 
-    private data class LaneSources(
-        val profiles: List<ExportProfile>,
-        val schedules: List<ScheduledProfileEntry>,
-        val settings: ExportSettings?,
-        val activeProfileName: String? = null,
-        val hasFolder: Boolean = false,
-    )
+    private val sources = combine(
+        exportProfileRepository.profiles,
+        exportProfileRepository.activeProfileId,
+        scheduledProfileEntryStore.entries,
+        settingsRepository.exportSettings,
+        settingsRepository.exportFolderUri,
+    ) { profiles, activeId, schedules, settings, folder ->
+        ArchiveLaneSources(
+            profiles = profiles,
+            schedules = schedules,
+            settings = settings,
+            activeProfileName = ExportProfileRules.active(profiles, activeId)?.name,
+            appFolderUri = folder?.takeIf { it.isNotBlank() },
+        )
+    }
+
+    private val entries = exportHistoryRepository.getAllEntries()
 
     val uiState: StateFlow<ArchiveUiState> = combine(
-        exportHistoryRepository.getAllEntries(),
+        entries,
         combine(selection, showsMonth) { current, month -> current to month },
-        combine(
-            exportProfileRepository.profiles,
-            exportProfileRepository.activeProfileId,
-            scheduledProfileEntryStore.entries,
-            settingsRepository.exportSettings,
-            settingsRepository.exportFolderUri,
-        ) { profiles, activeId, schedules, settings, folder ->
-            LaneSources(
-                profiles,
-                schedules,
-                settings,
-                ExportProfileRules.active(profiles, activeId)?.name,
-                hasFolder = !folder.isNullOrBlank(),
-            )
-        },
+        sources,
     ) { entries, (current, month), sources -> buildState(entries, current, sources, isLoaded = true, showsMonth = month) }
         .stateIn(
             viewModelScope,
@@ -159,14 +169,51 @@ class ArchiveViewModel @Inject constructor(
             buildState(
                 emptyList(),
                 selection.value,
-                LaneSources(emptyList(), emptyList(), null),
+                ArchiveLaneSources(),
                 isLoaded = false,
                 showsMonth = showsMonth.value,
             ),
         )
 
+    /**
+     * The lead lane's written file for the selected date, read through SAF (iOS `loadLeadFile`).
+     * Compare its key with [ArchiveUiState.leadFileKey] so a stale read never shows.
+     */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val leadFile: StateFlow<ArchiveLoadedFile?> = uiState
+        .map { it.leadFileKey }
+        .distinctUntilChanged()
+        .mapLatest { key -> key?.let { ArchiveLoadedFile(it, dayFileReader.read(it.ref)) } }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    /** Re-checked on resume: a grant can be revoked while the app is away. */
+    private val environmentTick = MutableStateFlow(0)
+
+    /** Needs attention: the heart's count and the sheet's items. */
+    val attention: StateFlow<List<ArchiveAttentionItem>> = combine(
+        entries,
+        sources,
+        _healthConnectConnected,
+        environmentTick,
+    ) { entries, sources, connected, _ ->
+        val folder = sources.appFolderUri
+        ArchiveAttention.items(
+            ArchiveAttentionInputs(
+                entries = entries,
+                sources = sources,
+                healthConnected = connected,
+                appFolderAccessible = folder == null || dayFileReader.hasFolderAccess(folder),
+                appFolderName = sources.profiles.firstOrNull { it.folderUri == folder }?.folderDisplayName
+                    ?: folder?.let(dayFileReader::folderDisplayName),
+            ),
+        )
+    }
+        .flowOn(Dispatchers.IO)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
     /** Re-reads the Health Connect permission state, e.g. when the screen resumes. */
     fun refreshHealthConnect() {
+        environmentTick.update { it + 1 }
         viewModelScope.launch {
             _healthConnectConnected.value = try {
                 healthConnectManager.isAvailable() && healthConnectManager.hasAllPermissions()
@@ -231,7 +278,7 @@ class ArchiveViewModel @Inject constructor(
     private fun buildState(
         entries: List<ExportHistoryEntry>,
         current: ArchiveSelection,
-        sources: LaneSources,
+        sources: ArchiveLaneSources,
         isLoaded: Boolean,
         showsMonth: Boolean,
     ): ArchiveUiState {
@@ -239,28 +286,13 @@ class ArchiveViewModel @Inject constructor(
         val profiles = ArchiveCoverage.profiles(entries)
         // A filter for a profile that no longer appears in history falls back to "All".
         val filter = current.filter?.takeIf { it in profiles }
-        val laneInfo = profiles.associateWith { lane(it, sources) }
+        val laneInfo = profiles.associateWith { ArchiveLanes.lane(it, sources) }
         val dueToday = laneInfo.filterValues { it.isDueToday }.keys
         val month = ArchiveCoverage.month(entries, current.month, day, filter, dueToday)
         val lanes = filter?.let(::listOf) ?: profiles
-        val rows = ArchiveCoverage.profileDays(entries, lanes, current.selectedDate, day, dueToday).map { row ->
-            val info = laneInfo[row.profile] ?: ArchiveLane()
-            val path = ArchiveCoverage.pathLine(info.output, current.selectedDate, row.status)
-            // The day page renders a per-date file, so Open needs one in a device folder.
-            val canOpen = info.output is ArchiveOutput.DeviceFolder &&
-                ArchiveCoverage.relativeFilePath(info.output.settings, current.selectedDate) != null
-            ArchiveDayRow(
-                day = row,
-                path = path,
-                action = ArchiveCoverage.action(row.status, info.hasTodayRefresh, canOpen),
-            )
-        }
-        val automations = sources.profiles.map { profile ->
-            ArchiveAutomation(profile, sources.schedules.firstOrNull { it.profileId == profile.id })
-        }
-        // The current-settings lane reads as the active profile, so it maps to that automation.
-        fun automationFor(lane: ArchiveProfile): ArchiveAutomation? =
-            (lane.name ?: sources.activeProfileName)?.let { name -> automations.firstOrNull { it.profile.name == name } }
+        val automations = ArchiveLanes.automations(sources)
+        val rows = ArchiveLanes.dayRows(entries, lanes, current.selectedDate, day, sources, laneInfo, automations)
+        fun automationFor(lane: ArchiveProfile): ArchiveAutomation? = ArchiveLanes.automationFor(lane, automations, sources)
         val pausedLanes = profiles.filter { automationFor(it)?.isPaused == true }.toSet()
         val firstDay = WeekFields.of(Locale.getDefault()).firstDayOfWeek
         val weekStart = current.selectedDate.minusDays(((current.selectedDate.dayOfWeek.value - firstDay.value + 7) % 7).toLong())
@@ -298,7 +330,7 @@ class ArchiveViewModel @Inject constructor(
     private fun nextRun(
         filter: ArchiveProfile?,
         automations: List<ArchiveAutomation>,
-        sources: LaneSources,
+        sources: ArchiveLaneSources,
     ): ArchiveNextRun? {
         val now = clock.millis()
         val profileRuns = automations
@@ -321,42 +353,5 @@ class ArchiveViewModel @Inject constructor(
     private companion object {
         const val PREFERENCES = "archive_ui"
         const val KEY_SHOWS_MONTH = "shows_month"
-    }
-
-    /** Resolves a history lane to its profile, schedule and output; unknown parts stay null. */
-    private fun lane(profile: ArchiveProfile, sources: LaneSources): ArchiveLane {
-        val settings = sources.settings
-        val name = profile.name
-        if (name == null) {
-            return ArchiveLane(
-                isDueToday = settings?.let(ArchiveCoverage::isDueToday) == true,
-                output = settings?.let(::currentOutput),
-            )
-        }
-        val exportProfile = ExportProfileRules.byName(sources.profiles, name) ?: return ArchiveLane()
-        val schedule = sources.schedules.firstOrNull { it.profileId == exportProfile.id }
-        return ArchiveLane(
-            isDueToday = ArchiveCoverage.isDueToday(schedule),
-            hasTodayRefresh = schedule?.isEnabled == true && schedule.todayRefreshEnabled,
-            output = profileOutput(exportProfile, settings),
-        )
-    }
-
-    private fun currentOutput(settings: ExportSettings): ArchiveOutput? = when (settings.exportTarget) {
-        // The current folder's display name is not stored with settings; show the relative path.
-        ExportTarget.DEVICE_FOLDER -> ArchiveOutput.DeviceFolder(folderName = null, settings = settings)
-        ExportTarget.API_ENDPOINT -> ArchiveCoverage.endpointLine(settings.apiEndpointUrl)?.let(ArchiveOutput::Endpoint)
-        ExportTarget.AGENT_DATA_GATEWAY -> null
-    }
-
-    private fun profileOutput(profile: ExportProfile, current: ExportSettings?): ArchiveOutput? = when (profile.target) {
-        ExportTarget.DEVICE_FOLDER -> current?.let { base ->
-            val restored = runCatching {
-                AndroidExportSettingsSnapshotCodec.decodeOrNull(profile.settingsSnapshotJson)?.restoreOnto(base)
-            }.getOrNull()
-            restored?.let { ArchiveOutput.DeviceFolder(folderName = profile.folderDisplayName, settings = it) }
-        }
-        ExportTarget.API_ENDPOINT -> ArchiveCoverage.endpointLine(profile.apiEndpointUrl)?.let(ArchiveOutput::Endpoint)
-        ExportTarget.AGENT_DATA_GATEWAY -> null
     }
 }

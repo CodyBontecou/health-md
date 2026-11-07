@@ -1,5 +1,6 @@
 package com.healthmd.presentation.navigation
 
+import android.net.Uri
 import androidx.annotation.StringRes
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Autorenew
@@ -32,12 +33,20 @@ enum class NavDestination(
 object SubRoutes {
     /** The full export screen, opened from the global Export now action. */
     const val EXPORT_NOW = "export"
-    /** Export now preset to one date, opened by Backfill in the Archive. */
-    const val EXPORT_BACKFILL = "export/backfill/{date}"
-    fun exportBackfill(date: LocalDate): String = "export/backfill/$date"
-    /** The day page: the file Health.md writes for one Archive date. */
-    const val ARCHIVE_DAY = "archive/day/{date}"
-    fun archiveDay(date: LocalDate): String = "archive/day/$date"
+    /**
+     * Export now preset to one date, opened by Backfill and the Archive's fixes. A profile id
+     * presets the automation too (iOS `ExportNowRequest(profileID:)`).
+     */
+    const val EXPORT_BACKFILL = "export/backfill/{date}?profileId={profileId}"
+    fun exportBackfill(date: LocalDate, profileId: String? = null): String =
+        "export/backfill/$date" + profileId?.let { "?profileId=${Uri.encode(it)}" }.orEmpty()
+    /**
+     * The day page: the file one automation wrote for an Archive date. The lane (an encoded
+     * [com.healthmd.presentation.archive.ArchiveProfile]) opens that automation's tab.
+     */
+    const val ARCHIVE_DAY = "archive/day/{date}?lane={lane}"
+    fun archiveDay(date: LocalDate, lane: String? = null): String =
+        "archive/day/$date" + lane?.let { "?lane=${Uri.encode(it)}" }.orEmpty()
     const val HISTORY = "history"
     const val CLINIC_ACCESS = "clinic-access"
     const val ONBOARDING = "onboarding"

@@ -658,10 +658,6 @@
     <string name="scheduled_recovery_result_complete">Recuperarea exporturilor programate s-a încheiat.</string>
     <string name="scheduled_recovery_result_blocked">Recuperarea exporturilor programate nu este încă disponibilă.</string>
     <string name="not_now">Nu acum</string>
-    <string name="release_notes_title">Ce este nou în %s</string>
-    <string name="release_notes_settings_hint">Puteți ajusta formatele de export, formatul Markdown personalizat și metricile din Setări.</string>
-    <string name="release_notes_open_settings">Deschideți Setările</string>
-    <string name="release_notes_got_it">Am înțeles</string>
     <string name="release_notes_highlight_feedback">Sesiunile CLI direct se reconectează automat după deconectări scurte ale desktopului, astfel încât exporturile se finalizează fiabil.</string>
     <string name="release_notes_highlight_export_parity">Comenzile cu fereastră de activare de pe desktop așteaptă până la 120 de secunde să deschizi aplicația și să te conectezi, fără notificări push.</string>
     <string name="release_notes_highlight_templates">Asocierea manuală cu adresă, port și cod din 20 de cifre funcționează în continuare, inclusiv cu versiuni CLI mai vechi.</string>

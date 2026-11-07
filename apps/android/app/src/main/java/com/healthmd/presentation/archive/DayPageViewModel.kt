@@ -3,119 +3,164 @@ package com.healthmd.presentation.archive
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.healthmd.data.export.ExportOrchestrator
+import com.healthmd.data.scheduler.ScheduledProfileEntryStore
+import com.healthmd.data.settings.ExportProfileRepository
 import com.healthmd.domain.model.ExportHistoryEntry
-import com.healthmd.domain.model.ExportPreviewFile
+import com.healthmd.domain.model.ExportProfileRules
 import com.healthmd.domain.repository.ExportHistoryRepository
-import com.healthmd.domain.repository.ExportRepository
-import com.healthmd.domain.repository.HealthRepository
 import com.healthmd.domain.repository.SettingsRepository
-import com.healthmd.rawexport.ExportMode
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.time.LocalDate
 import javax.inject.Inject
-import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.mapLatest
+import kotlinx.coroutines.flow.stateIn
 
-/** What the day page can show for one date. */
-sealed interface DayPageContent {
-    data object Loading : DayPageContent
-    /** Raw snapshots are one range artifact, so no single day file exists. */
-    data object RangeArtifactOnly : DayPageContent
-    /** The current settings would write nothing for this date. */
-    data object Empty : DayPageContent
-    data object Failed : DayPageContent
-    data class Files(val files: List<ExportPreviewFile>) : DayPageContent
-}
+/** One automation tab of the day page. */
+data class DayPageLane(
+    val row: ArchiveDayRow,
+    /** Position among the Archive's lanes, for the identity colour. */
+    val colorIndex: Int,
+    val isPaused: Boolean,
+)
 
 data class DayPageUiState(
     val date: LocalDate,
-    val content: DayPageContent = DayPageContent.Loading,
-    val selectedIndex: Int = 0,
-    /**
-     * Whether an export wrote this date. Until one does, the page is only a preview, so it
-     * offers "Export this day" and no Share or Re-export.
-     */
-    val isWritten: Boolean = false,
+    val today: LocalDate = date,
+    val isLoaded: Boolean = false,
+    val lanes: List<DayPageLane> = emptyList(),
+    val selected: ArchiveProfile? = null,
+    val currentSettingsName: String? = null,
 ) {
-    val selectedFile: ExportPreviewFile?
-        get() = (content as? DayPageContent.Files)?.files?.getOrNull(selectedIndex)
+    val lane: DayPageLane?
+        get() = lanes.firstOrNull { it.row.day.profile == selected } ?: lanes.firstOrNull()
+
+    /** What to read for the selected tab; null when the date has no file of its own. */
+    val fileKey: ArchiveDayFileKey?
+        get() = lane?.let { ArchiveLanes.fileKey(it.row, date) }
+
+    /**
+     * The date's fix (Backfill, Retry, Refresh), or Re-export for a written day (iOS
+     * `secondaryAction`).
+     */
+    val secondaryAction: ArchiveDayAction?
+        get() {
+            val row = lane?.row ?: return null
+            row.action?.takeIf { it != ArchiveDayAction.OPEN }?.let { return it }
+            return when (row.day.status) {
+                CoverageStatus.COMPLETE, CoverageStatus.PARTIAL -> ArchiveDayAction.REEXPORT
+                else -> null
+            }
+        }
 }
 
 /**
- * The day page renders the file itself: the same dry run Export now previews, for one date,
- * with the current export settings. It writes nothing and records no history.
+ * The day page (iOS `ArchiveDayPage`): one tab per automation, its status for the date, and the
+ * file that automation wrote, read from the export folder. Nothing is rendered or written here.
  */
 @HiltViewModel
 class DayPageViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
-    private val healthRepository: HealthRepository,
-    private val exportRepository: ExportRepository,
-    private val settingsRepository: SettingsRepository,
-    private val exportHistoryRepository: ExportHistoryRepository,
+    exportHistoryRepository: ExportHistoryRepository,
+    exportProfileRepository: ExportProfileRepository,
+    scheduledProfileEntryStore: ScheduledProfileEntryStore,
+    settingsRepository: SettingsRepository,
+    private val dayFileReader: ArchiveDayFileReader,
 ) : ViewModel() {
     private val date: LocalDate = savedStateHandle.get<String>(DATE_ARGUMENT)
         ?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
         ?: LocalDate.now()
 
-    private val _uiState = MutableStateFlow(DayPageUiState(date = date))
-    val uiState: StateFlow<DayPageUiState> = _uiState.asStateFlow()
+    /** The tab chosen here, else the one the route asked for; null leads with the Archive's lead lane. */
+    private val selection = MutableStateFlow(decodeLane(savedStateHandle.get<String>(LANE_ARGUMENT)))
 
-    init {
-        load()
+    private val sources = combine(
+        exportProfileRepository.profiles,
+        exportProfileRepository.activeProfileId,
+        scheduledProfileEntryStore.entries,
+        settingsRepository.exportSettings,
+        settingsRepository.exportFolderUri,
+    ) { profiles, activeId, schedules, settings, folder ->
+        ArchiveLaneSources(
+            profiles = profiles,
+            schedules = schedules,
+            settings = settings,
+            activeProfileName = ExportProfileRules.active(profiles, activeId)?.name,
+            appFolderUri = folder?.takeIf { it.isNotBlank() },
+        )
     }
 
-    fun load() {
-        _uiState.update { it.copy(content = DayPageContent.Loading) }
-        viewModelScope.launch {
-            val content = try {
-                val settings = settingsRepository.getExportSettings()
-                if (settings.exportMode == ExportMode.RAW_SNAPSHOT) {
-                    DayPageContent.RangeArtifactOnly
-                } else {
-                    val preview = ExportOrchestrator(healthRepository, exportRepository)
-                        .previewDates(listOf(date), settings, maxPreviewDays = 1)
-                    dayPageContent(preview.days.firstOrNull { it.date == date }?.files.orEmpty(), preview.days.any { it.failureReason != null })
-                }
-            } catch (cancelled: CancellationException) {
-                throw cancelled
-            } catch (_: Exception) {
-                DayPageContent.Failed
-            }
-            val isWritten = runCatching {
-                isWritten(exportHistoryRepository.getAllEntries().first(), date)
-            }.getOrDefault(false)
-            _uiState.update { it.copy(content = content, selectedIndex = 0, isWritten = isWritten) }
-        }
-    }
+    val uiState: StateFlow<DayPageUiState> = combine(
+        exportHistoryRepository.getAllEntries(),
+        sources,
+        selection,
+    ) { entries, sources, selected -> state(entries, sources, selected, date, LocalDate.now()) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), DayPageUiState(date = date))
 
-    fun selectFile(index: Int) {
-        _uiState.update { it.copy(selectedIndex = index) }
+    /** The selected tab's written file; compare its key with [DayPageUiState.fileKey]. */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val file: StateFlow<ArchiveLoadedFile?> = uiState
+        .map { it.fileKey }
+        .distinctUntilChanged()
+        .mapLatest { key -> key?.let { ArchiveLoadedFile(it, dayFileReader.read(it.ref)) } }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    fun select(lane: ArchiveProfile) {
+        selection.value = lane
     }
 
     companion object {
         const val DATE_ARGUMENT = "date"
+        const val LANE_ARGUMENT = "lane"
 
-        /**
-         * Written when any profile's export completed the date, fully or partly. The day after
-         * stands in for "today" so today's own written file counts rather than "in progress".
-         */
-        internal fun isWritten(entries: List<ExportHistoryEntry>, date: LocalDate): Boolean =
-            ArchiveCoverage.profiles(entries).any { profile ->
-                ArchiveCoverage.status(entries, profile, date, today = date.plusDays(1)).let {
-                    it == CoverageStatus.COMPLETE || it == CoverageStatus.PARTIAL
-                }
+        private const val CURRENT_SETTINGS_LANE = "c"
+        private const val NAMED_LANE_PREFIX = "n:"
+
+        /** A lane as a route argument: the current-settings lane has no name of its own. */
+        fun encodeLane(lane: ArchiveProfile): String = lane.name?.let { NAMED_LANE_PREFIX + it } ?: CURRENT_SETTINGS_LANE
+
+        fun decodeLane(value: String?): ArchiveProfile? = when {
+            value == null -> null
+            value == CURRENT_SETTINGS_LANE -> ArchiveProfile(null)
+            value.startsWith(NAMED_LANE_PREFIX) -> ArchiveProfile(value.removePrefix(NAMED_LANE_PREFIX))
+            else -> null
+        }
+
+        internal fun state(
+            entries: List<ExportHistoryEntry>,
+            sources: ArchiveLaneSources,
+            selected: ArchiveProfile?,
+            date: LocalDate,
+            today: LocalDate,
+        ): DayPageUiState {
+            val lanes = ArchiveCoverage.profiles(entries)
+            val automations = ArchiveLanes.automations(sources)
+            val rows = ArchiveLanes.dayRows(entries, lanes, date, today, sources, automations = automations)
+            val pages = rows.mapIndexed { index, row ->
+                DayPageLane(
+                    row = row,
+                    colorIndex = index,
+                    isPaused = ArchiveLanes.automationFor(row.day.profile, automations, sources)?.isPaused == true,
+                )
             }
-
-        internal fun dayPageContent(files: List<ExportPreviewFile>, failed: Boolean): DayPageContent = when {
-            files.isNotEmpty() -> DayPageContent.Files(files)
-            failed -> DayPageContent.Failed
-            else -> DayPageContent.Empty
+            // iOS `leadProfile`: the asked-for lane, else the first running one, else the first.
+            val lead = selected?.takeIf { wanted -> pages.any { it.row.day.profile == wanted } }
+                ?: pages.firstOrNull { !it.isPaused }?.row?.day?.profile
+                ?: pages.firstOrNull()?.row?.day?.profile
+            return DayPageUiState(
+                date = date,
+                today = today,
+                isLoaded = true,
+                lanes = pages,
+                selected = lead,
+                currentSettingsName = sources.activeProfileName,
+            )
         }
     }
 }

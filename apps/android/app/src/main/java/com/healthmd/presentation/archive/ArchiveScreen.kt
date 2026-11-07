@@ -27,8 +27,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -43,6 +41,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -103,10 +104,12 @@ private val MEDIUM_SIDE_BREAKPOINT = 700.dp
 @Composable
 fun ArchiveScreen(
     onExportNow: () -> Unit,
-    /** Opens Export now preset to one missing date. */
-    onBackfill: (LocalDate) -> Unit,
-    /** Opens the day page: the file Health.md writes for one date. */
-    onOpenDay: (LocalDate) -> Unit = {},
+    /** Opens Export now preset to one date and, when known, the lane's automation id. */
+    onBackfill: (LocalDate, String?) -> Unit,
+    /** Opens the day page on one lane's tab; null leads with the Archive's lead lane. */
+    onOpenDay: (LocalDate, ArchiveProfile?) -> Unit = { _, _ -> },
+    /** Opens one automation's detail: an endpoint fix from Needs attention. */
+    onOpenAutomation: (String) -> Unit = {},
     /** Opens the Automations tab: the sentence card's Manage. */
     onOpenAutomations: () -> Unit = {},
     /** Opens one automation's sentence composer: the sentence card's Edit. */
@@ -117,6 +120,9 @@ fun ArchiveScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val healthConnectConnected by viewModel.healthConnectConnected.collectAsStateWithLifecycle()
+    val leadFile by viewModel.leadFile.collectAsStateWithLifecycle()
+    val attention by viewModel.attention.collectAsStateWithLifecycle()
+    var showAttention by rememberSaveable { mutableStateOf(false) }
     // Permissions change in Health Connect itself, so re-read them whenever the Archive returns.
     LifecycleResumeEffect(viewModel) {
         viewModel.refreshHealthConnect()
@@ -133,9 +139,22 @@ fun ArchiveScreen(
     }
     val header: @Composable (Modifier) -> Unit = { modifier ->
         ArchiveHeader(
-            healthConnectConnected = healthConnectConnected,
-            onOpenHealthConnect = openHealthConnect,
+            attentionCount = attention.size,
+            onShowAttention = { showAttention = true },
             modifier = modifier,
+        )
+    }
+    if (showAttention) {
+        ArchiveAttentionSheet(
+            items = attention,
+            onDismiss = { showAttention = false },
+            onFix = { item ->
+                when (item) {
+                    ArchiveAttentionItem.HealthPermission -> openHealthConnect()
+                    is ArchiveAttentionItem.FolderUnavailable -> onChooseFolder()
+                    is ArchiveAttentionItem.EndpointFailing -> item.profileId?.let(onOpenAutomation) ?: onOpenAutomations()
+                }
+            },
         )
     }
     CompositionLocalProvider(LocalCurrentSettingsName provides state.currentSettingsName) {
@@ -153,6 +172,7 @@ fun ArchiveScreen(
                     else -> 264.dp
                 },
                 viewModel = viewModel,
+                leadFile = leadFile,
                 onBackfill = onBackfill,
                 onOpenDay = onOpenDay,
                 onOpenAutomations = onOpenAutomations,
@@ -164,6 +184,7 @@ fun ArchiveScreen(
         ArchiveCompactLayout(
             state = state,
             viewModel = viewModel,
+            leadFile = leadFile,
             onExportNow = onExportNow,
             onBackfill = onBackfill,
             onOpenDay = onOpenDay,
@@ -181,11 +202,11 @@ fun ArchiveScreen(
 /** The name the current-settings lane reads as: the active profile's. */
 internal val LocalCurrentSettingsName = compositionLocalOf<String?> { null }
 
-/** The Archive title with the Health Connect status; there is no overflow menu to offer. */
+/** The Archive title with the Health.md heart, which opens Needs attention (iOS `titleRow`). */
 @Composable
 private fun ArchiveHeader(
-    healthConnectConnected: Boolean?,
-    onOpenHealthConnect: () -> Unit,
+    attentionCount: Int,
+    onShowAttention: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalGeistColors.current
@@ -196,17 +217,7 @@ private fun ArchiveHeader(
             color = colors.primary,
             modifier = Modifier.weight(1f).padding(horizontal = GeistSpacing.space1),
         )
-        if (healthConnectConnected != null) {
-            IconButton(onClick = onOpenHealthConnect) {
-                Icon(
-                    imageVector = if (healthConnectConnected) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
-                    contentDescription = stringResource(
-                        if (healthConnectConnected) R.string.archive_health_connected else R.string.archive_health_not_connected,
-                    ),
-                    tint = if (healthConnectConnected) colors.brandPrimary else colors.secondary,
-                )
-            }
-        }
+        ArchiveAttentionButton(count = attentionCount, onClick = onShowAttention)
     }
 }
 
@@ -219,8 +230,9 @@ private fun ArchiveLargeLayout(
     state: ArchiveUiState,
     sideWidth: androidx.compose.ui.unit.Dp,
     viewModel: ArchiveViewModel,
-    onBackfill: (LocalDate) -> Unit,
-    onOpenDay: (LocalDate) -> Unit,
+    leadFile: ArchiveLoadedFile?,
+    onBackfill: (LocalDate, String?) -> Unit,
+    onOpenDay: (LocalDate, ArchiveProfile?) -> Unit,
     onOpenAutomations: () -> Unit,
     onEditAutomation: (String) -> Unit,
     header: @Composable (Modifier) -> Unit,
@@ -278,9 +290,10 @@ private fun ArchiveLargeLayout(
 private fun ArchiveCompactLayout(
     state: ArchiveUiState,
     viewModel: ArchiveViewModel,
+    leadFile: ArchiveLoadedFile?,
     onExportNow: () -> Unit,
-    onBackfill: (LocalDate) -> Unit,
-    onOpenDay: (LocalDate) -> Unit,
+    onBackfill: (LocalDate, String?) -> Unit,
+    onOpenDay: (LocalDate, ArchiveProfile?) -> Unit,
     onOpenAutomations: () -> Unit,
     onEditAutomation: (String) -> Unit,
     onConnectHealth: () -> Unit,
@@ -341,13 +354,14 @@ private fun ArchiveCompactLayout(
                     onShowMonth = { viewModel.setShowsMonth(true) },
                     onSelect = viewModel::selectDate,
                 )
+                val date = state.selection.selectedDate
                 ArchiveReadableDayCard(
                     state = state,
-                    onAction = { action ->
-                        val date = state.selection.selectedDate
-                        if (action == ArchiveDayAction.OPEN) onOpenDay(date) else onBackfill(date)
+                    leadFile = leadFile,
+                    onAction = { row, action ->
+                        if (action == ArchiveDayAction.OPEN) onOpenDay(date, row.day.profile) else onBackfill(date, row.automationId)
                     },
-                    onOpenDay = onOpenDay,
+                    onOpenDay = { lane -> onOpenDay(date, lane) },
                 )
                 ArchiveSentenceCard(state, onManage = onOpenAutomations, onEdit = onEditAutomation)
             }
@@ -590,8 +604,8 @@ private fun LegendItem(status: CoverageStatus) {
 @Composable
 private fun ArchiveDayCard(
     state: ArchiveUiState,
-    onBackfill: (LocalDate) -> Unit,
-    onOpenDay: (LocalDate) -> Unit,
+    onBackfill: (LocalDate, String?) -> Unit,
+    onOpenDay: (LocalDate, ArchiveProfile?) -> Unit,
 ) {
     val colors = LocalGeistColors.current
     val rows = state.selectedDay
@@ -621,10 +635,10 @@ private fun ArchiveDayCard(
                 color = profileColor(colors, state.month.profiles.indexOf(row.day.profile).coerceAtLeast(0)),
                 onAction = { action ->
                     when (action) {
-                        ArchiveDayAction.OPEN -> onOpenDay(date)
-                        // Export now preset to this date writes, re-writes or refreshes it.
+                        ArchiveDayAction.OPEN -> onOpenDay(date, row.day.profile)
+                        // Export now preset to this date and automation writes, re-writes or refreshes it.
                         ArchiveDayAction.REEXPORT, ArchiveDayAction.RETRY,
-                        ArchiveDayAction.BACKFILL, ArchiveDayAction.REFRESH -> onBackfill(date)
+                        ArchiveDayAction.BACKFILL, ArchiveDayAction.REFRESH -> onBackfill(date, row.automationId)
                     }
                 },
             )

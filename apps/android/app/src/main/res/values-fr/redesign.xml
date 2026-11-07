@@ -65,12 +65,9 @@
     <string name="archive_action_reexport">Réexporter</string>
     <string name="day_page_open">Ouvrir le fichier du jour</string>
     <string name="day_page_share">Partager le fichier</string>
-    <string name="day_page_note">Tel que Health.md écrirait ce jour maintenant, à partir des données Health Connect actuelles. Rien n’est écrit.</string>
     <string name="day_page_empty">Rien ne serait écrit pour cette date avec les réglages actuels.</string>
     <string name="day_page_range_only">Les instantanés bruts écrivent un seul fichier pour toute la période : il n’y a pas de fichier par jour.</string>
     <string name="day_page_failed">Impossible de lire ce jour depuis Health Connect.</string>
-    <string name="day_page_retry">Réessayer</string>
-    <string name="day_page_truncated">Le fichier est raccourci ici. Partagez-le pour tout voir.</string>
     <string name="notification_open_archive">Ouvrir l’archive</string>
     <string name="direct_cli_chip_connecting">CLI</string>
     <string name="direct_cli_chip_done">Terminé</string>
@@ -169,7 +166,6 @@
     <string name="widget_archive_preview_month_value">24</string>
     <string name="widget_archive_preview_month_detail">jours en octobre</string>
     <string name="widget_archive_preview_gaps">2 lacunes</string>
-    <string name="day_page_export_day">Exporter ce jour</string>
     <string name="moment_see_in_archive">Voir dans l’archive</string>
     <string name="export_now_more_options">Plus d’options</string>
     <string name="automations_profiles_summary">Actif : %1$s · %2$s · %3$s</string>
@@ -193,8 +189,6 @@
     <string name="archive_action_open">Ouvrir</string>
     <string name="archive_action_retry">Réessayer</string>
     <string name="archive_action_refresh">Actualiser</string>
-    <string name="archive_health_connected">Health Connect : connecté</string>
-    <string name="archive_health_not_connected">Health Connect : non connecté</string>
     <string name="archive_day_nothing_due">Rien de prévu</string>
     <string name="archive_row_not_due">Rien de prévu à cette date.</string>
     <string name="automations_new">Nouvelle automatisation</string>

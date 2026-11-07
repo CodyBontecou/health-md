@@ -65,12 +65,9 @@
     <string name="archive_action_reexport">फिर से एक्सपोर्ट करें</string>
     <string name="day_page_open">दिन की फ़ाइल खोलें</string>
     <string name="day_page_share">फ़ाइल शेयर करें</string>
-    <string name="day_page_note">मौजूदा Health Connect डेटा से Health.md अभी यह दिन ऐसे लिखेगा। कुछ भी लिखा नहीं जाता।</string>
     <string name="day_page_empty">मौजूदा सेटिंग्स के साथ इस तारीख के लिए कुछ नहीं लिखा जाएगा।</string>
     <string name="day_page_range_only">रॉ स्नैपशॉट पूरी अवधि के लिए एक फ़ाइल लिखते हैं, इसलिए अलग दिन की फ़ाइल नहीं है।</string>
     <string name="day_page_failed">Health Connect से यह दिन पढ़ा नहीं जा सका।</string>
-    <string name="day_page_retry">फिर से कोशिश करें</string>
-    <string name="day_page_truncated">यहाँ फ़ाइल छोटी दिखाई गई है। पूरी देखने के लिए शेयर करें।</string>
     <string name="notification_open_archive">आर्काइव खोलें</string>
     <string name="direct_cli_chip_connecting">CLI</string>
     <string name="direct_cli_chip_done">हो गया</string>
@@ -164,7 +161,6 @@
     <string name="widget_archive_preview_month_value">24</string>
     <string name="widget_archive_preview_month_detail">दिन, अक्टूबर में</string>
     <string name="widget_archive_preview_gaps">2 अंतराल</string>
-    <string name="day_page_export_day">यह दिन निर्यात करें</string>
     <string name="moment_see_in_archive">संग्रह में देखें</string>
     <string name="export_now_more_options">और विकल्प</string>
     <string name="automations_profiles_summary">सक्रिय: %1$s · %2$s · %3$s</string>
@@ -185,8 +181,6 @@
     <string name="archive_action_open">खोलें</string>
     <string name="archive_action_retry">फिर से कोशिश करें</string>
     <string name="archive_action_refresh">रीफ़्रेश करें</string>
-    <string name="archive_health_connected">Health Connect: कनेक्ट है</string>
-    <string name="archive_health_not_connected">Health Connect: कनेक्ट नहीं है</string>
     <string name="archive_day_nothing_due">कुछ भी देय नहीं</string>
     <string name="archive_row_not_due">इस तारीख को देय नहीं।</string>
     <string name="automations_new">नया ऑटोमेशन</string>

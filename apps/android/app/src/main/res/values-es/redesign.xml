@@ -65,12 +65,9 @@
     <string name="archive_action_reexport">Volver a exportar</string>
     <string name="day_page_open">Abrir el archivo del día</string>
     <string name="day_page_share">Compartir archivo</string>
-    <string name="day_page_note">Así escribiría Health.md este día ahora, con los datos actuales de Health Connect. No se escribe nada.</string>
     <string name="day_page_empty">Con la configuración actual no se escribiría nada para esta fecha.</string>
     <string name="day_page_range_only">Las instantáneas sin procesar escriben un archivo para todo el intervalo, así que no hay un archivo por día.</string>
     <string name="day_page_failed">No se pudo leer este día de Health Connect.</string>
-    <string name="day_page_retry">Reintentar</string>
-    <string name="day_page_truncated">Aquí el archivo aparece recortado. Compártelo para verlo completo.</string>
     <string name="notification_open_archive">Abrir archivo</string>
     <string name="direct_cli_chip_connecting">CLI</string>
     <string name="direct_cli_chip_done">Listo</string>
@@ -169,7 +166,6 @@
     <string name="widget_archive_preview_month_value">24</string>
     <string name="widget_archive_preview_month_detail">días en octubre</string>
     <string name="widget_archive_preview_gaps">2 huecos</string>
-    <string name="day_page_export_day">Exportar este día</string>
     <string name="moment_see_in_archive">Ver en el archivo</string>
     <string name="export_now_more_options">Más opciones</string>
     <string name="automations_profiles_summary">Activo: %1$s · %2$s · %3$s</string>
@@ -193,8 +189,6 @@
     <string name="archive_action_open">Abrir</string>
     <string name="archive_action_retry">Reintentar</string>
     <string name="archive_action_refresh">Actualizar</string>
-    <string name="archive_health_connected">Health Connect: conectado</string>
-    <string name="archive_health_not_connected">Health Connect: no conectado</string>
     <string name="archive_day_nothing_due">Nada pendiente</string>
     <string name="archive_row_not_due">No toca en esta fecha.</string>
     <string name="automations_new">Nueva automatización</string>

@@ -65,12 +65,9 @@
     <string name="archive_action_reexport">Exportă din nou</string>
     <string name="day_page_open">Deschide fișierul zilei</string>
     <string name="day_page_share">Partajează fișierul</string>
-    <string name="day_page_note">Așa ar scrie Health.md această zi acum, din datele actuale Health Connect. Nu se scrie nimic.</string>
     <string name="day_page_empty">Cu setările actuale nu s-ar scrie nimic pentru această dată.</string>
     <string name="day_page_range_only">Instantaneele brute scriu un singur fișier pentru tot intervalul, deci nu există fișier pe zi.</string>
     <string name="day_page_failed">Ziua nu a putut fi citită din Health Connect.</string>
-    <string name="day_page_retry">Încearcă din nou</string>
-    <string name="day_page_truncated">Fișierul este scurtat aici. Partajează-l ca să vezi tot.</string>
     <string name="notification_open_archive">Deschide arhiva</string>
     <string name="direct_cli_chip_connecting">CLI</string>
     <string name="direct_cli_chip_done">Gata</string>
@@ -169,7 +166,6 @@
     <string name="widget_archive_preview_month_value">24</string>
     <string name="widget_archive_preview_month_detail">zile în octombrie</string>
     <string name="widget_archive_preview_gaps">2 goluri</string>
-    <string name="day_page_export_day">Exportă această zi</string>
     <string name="moment_see_in_archive">Vezi în arhivă</string>
     <string name="export_now_more_options">Mai multe opțiuni</string>
     <string name="automations_profiles_summary">Activ: %1$s · %2$s · %3$s</string>
@@ -193,8 +189,6 @@
     <string name="archive_action_open">Deschideți</string>
     <string name="archive_action_retry">Reîncercați</string>
     <string name="archive_action_refresh">Reîmprospătați</string>
-    <string name="archive_health_connected">Health Connect: conectat</string>
-    <string name="archive_health_not_connected">Health Connect: neconectat</string>
     <string name="archive_day_nothing_due">Nimic programat</string>
     <string name="archive_row_not_due">Nu este programat la această dată.</string>
     <string name="automations_new">Automatizare nouă</string>

@@ -47,7 +47,12 @@ enum class ArchiveDayAction(
 /** Where one automation lane writes a date, for the selected-day rows. */
 sealed interface ArchiveOutput {
     /** Dated files under a device folder, built from the lane's own output settings. */
-    data class DeviceFolder(val folderName: String?, val settings: ExportSettings) : ArchiveOutput
+    data class DeviceFolder(
+        val folderName: String?,
+        val settings: ExportSettings,
+        /** The SAF tree the lane writes into, when one is chosen. */
+        val folderUri: String? = null,
+    ) : ArchiveOutput
 
     /** An HTTP destination; [line] is already `POST host/path`. */
     data class Endpoint(val line: String) : ArchiveOutput

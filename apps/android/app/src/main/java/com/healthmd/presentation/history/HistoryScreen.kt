@@ -911,7 +911,7 @@ private fun localizedWarningSummary(entry: ExportHistoryEntry): String? = when {
 }
 
 @Composable
-private fun ExportFailureReason.localizedLabel(): String = stringResource(
+internal fun ExportFailureReason.localizedLabel(): String = stringResource(
     when (this) {
         ExportFailureReason.NO_FOLDER_SELECTED -> R.string.export_failure_no_folder_label
         ExportFailureReason.NO_HEALTH_DATA -> R.string.export_failure_no_data_label
