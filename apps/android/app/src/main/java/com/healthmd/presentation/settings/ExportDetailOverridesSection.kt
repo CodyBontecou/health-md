@@ -1,19 +1,15 @@
 package com.healthmd.presentation.settings
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.height
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import com.healthmd.R
 import com.healthmd.domain.model.CompatibilitySchemaProfile
 import com.healthmd.domain.model.DataTypeSelection
@@ -21,9 +17,9 @@ import com.healthmd.domain.model.ExportDetailSelection
 import com.healthmd.domain.model.ExportDetailChoice
 import com.healthmd.domain.model.ExportDetailGroup
 import com.healthmd.domain.model.ExportSettings
-import com.healthmd.presentation.common.GeistCard
-import com.healthmd.presentation.theme.AppColors
-import com.healthmd.presentation.theme.Spacing
+import com.healthmd.presentation.theme.GeistSpacing
+import com.healthmd.presentation.theme.GeistType
+import com.healthmd.presentation.theme.LocalGeistColors
 
 /** Groups shown for the categories the export actually includes. */
 internal fun ExportSettings.visibleDetailGroups(): List<ExportDetailGroup> {
@@ -45,10 +41,10 @@ private fun DataTypeSelection.includes(group: ExportDetailGroup): Boolean = when
 }
 
 /**
- * Per-category detail overrides. "Default" follows the global time-series switch; any other chip
- * stores an explicit override for that category only.
+ * Per-category detail overrides as a list group: one row per included category with a segmented
+ * choice. "Default" follows the global time-series switch; any other segment stores an explicit
+ * override for that category only.
  */
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ExportDetailOverridesSection(
     settings: ExportSettings,
@@ -56,58 +52,47 @@ fun ExportDetailOverridesSection(
 ) {
     val groups = settings.visibleDetailGroups()
     if (groups.isEmpty()) return
+    val colors = LocalGeistColors.current
     val overrides = settings.typedDetailOverrides()
-    GeistCard {
-        Text(
-            stringResource(R.string.detail_overrides_title),
-            style = MaterialTheme.typography.bodyLarge,
-            color = AppColors.textPrimary,
-            fontWeight = FontWeight.Medium,
-        )
+    val showSchemaHint = settings.formatCustomization.compatibilitySchemaProfile == CompatibilitySchemaProfile.ANDROID_ANALYTICAL_V5 &&
+        groups.any { it in ExportDetailSelection.ANALYTICAL_EXPANSION_GROUPS }
+    Column(Modifier.fillMaxWidth()) {
+        SettingsGroupHeading(stringResource(R.string.detail_overrides_title))
         Text(
             stringResource(R.string.detail_overrides_description),
-            style = MaterialTheme.typography.bodySmall,
-            color = AppColors.textMuted,
+            style = GeistType.copy14,
+            color = colors.secondary,
+            modifier = Modifier.padding(start = GeistSpacing.space4, end = GeistSpacing.space4, bottom = GeistSpacing.space3),
         )
-        for (group in groups) {
-            Spacer(modifier = Modifier.height(Spacing.sm))
-            Text(
-                stringResource(group.labelRes()),
-                style = MaterialTheme.typography.bodyMedium,
-                color = AppColors.textPrimary,
-            )
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-                val options = listOf<ExportDetailChoice?>(null) + group.supportedChoices
-                for (option in options) {
-                    FilterChip(
-                        selected = overrides[group] == option,
-                        onClick = { onDetailChoiceChanged(group, option) },
-                        label = { Text(stringResource(option.labelRes())) },
-                        modifier = Modifier.testTag("detail_${group.wireId}_${option?.wireId ?: "default"}"),
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = AppColors.accentSubtle,
-                            selectedLabelColor = AppColors.accent,
-                        ),
+        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            groups.forEachIndexed { index, group ->
+                SettingsFieldRow(shape = groupRowShape(index, groups.size)) {
+                    Text(stringResource(group.labelRes()), style = GeistType.label16, color = colors.primary)
+                    SettingsSegmentedChoice(
+                        options = listOf<ExportDetailChoice?>(null) + group.supportedChoices,
+                        selected = overrides[group],
+                        label = { option -> stringResource(option.labelRes()) },
+                        onSelect = { option -> onDetailChoiceChanged(group, option) },
+                        tag = { option -> "detail_${group.wireId}_${option?.wireId ?: "default"}" },
                     )
+                    if (group == ExportDetailGroup.SLEEP) {
+                        Text(
+                            stringResource(R.string.detail_group_sleep_hint),
+                            style = GeistType.copy14,
+                            color = colors.secondary,
+                        )
+                    }
                 }
             }
-            if (group == ExportDetailGroup.SLEEP) {
-                Text(
-                    stringResource(R.string.detail_group_sleep_hint),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = AppColors.textMuted,
-                )
-            }
         }
-        if (settings.formatCustomization.compatibilitySchemaProfile == CompatibilitySchemaProfile.ANDROID_ANALYTICAL_V5 &&
-            groups.any { it in ExportDetailSelection.ANALYTICAL_EXPANSION_GROUPS }
-        ) {
-            Spacer(modifier = Modifier.height(Spacing.sm))
+        if (showSchemaHint) {
             Text(
                 stringResource(R.string.detail_expansion_schema_hint),
-                style = MaterialTheme.typography.bodySmall,
-                color = AppColors.textMuted,
-                modifier = Modifier.testTag("detail_expansion_schema_hint"),
+                style = GeistType.copy14,
+                color = colors.secondary,
+                modifier = Modifier
+                    .padding(start = GeistSpacing.space4, end = GeistSpacing.space4, top = GeistSpacing.space3)
+                    .testTag("detail_expansion_schema_hint"),
             )
         }
     }

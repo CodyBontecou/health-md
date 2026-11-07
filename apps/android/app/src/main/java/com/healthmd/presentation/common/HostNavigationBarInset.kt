@@ -58,12 +58,22 @@ fun Modifier.dialogNavigationBarsPadding(): Modifier = composed {
  * fit the window between the system bars and below the camera cutout, so content laid out for the full height (a bottom
  * sheet's action) ran off the bottom of the screen. Clearing the fitting lets the window cover the
  * display and report the real navigation bar inset to `dialogNavigationBarsPadding`.
+ * [fullScreenPage] dialogs paint their own page surface, so system bar icons follow the theme.
  */
 @Composable
-fun EdgeToEdgeDialogWindow() {
-    val window = (LocalView.current.parent as? DialogWindowProvider)?.window ?: return
-    DisposableEffect(window) {
+fun EdgeToEdgeDialogWindow(fullScreenPage: Boolean = false) {
+    val view = LocalView.current
+    val window = (view.parent as? DialogWindowProvider)?.window ?: return
+    val isDark = com.healthmd.presentation.theme.LocalGeistColors.current.isDark
+    DisposableEffect(window, fullScreenPage, isDark) {
         WindowCompat.setDecorFitsSystemWindows(window, false)
+        if (fullScreenPage) {
+            // A page-like dialog covers the status bar with its own surface: match the icons to it.
+            WindowCompat.getInsetsController(window, view).apply {
+                isAppearanceLightStatusBars = !isDark
+                isAppearanceLightNavigationBars = !isDark
+            }
+        }
         window.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
         window.attributes = window.attributes.apply {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {

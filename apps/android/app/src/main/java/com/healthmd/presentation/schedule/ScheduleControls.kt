@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
@@ -21,6 +22,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.onSizeChanged
@@ -39,6 +41,7 @@ import androidx.compose.ui.unit.dp
 import com.healthmd.R
 import com.healthmd.domain.model.ScheduleCadenceUnit
 import com.healthmd.domain.model.ScheduleDateWindow
+import com.healthmd.presentation.settings.groupRowShape
 import com.healthmd.presentation.theme.*
 import java.text.DateFormatSymbols
 import java.text.NumberFormat
@@ -53,6 +56,20 @@ internal object ScheduleControlTags {
     const val LOOKBACK = "schedule.lookback"
 }
 
+
+/** The Material 3 `input` outline: 4 dp corners, gray-700 at rest, a 2 dp brand outline on focus. */
+internal val ScheduleFieldShape = RoundedCornerShape(GeistRadii.extraSmall)
+
+/** DESIGN.md `input` height. */
+internal val ScheduleFieldMinHeight = 56.dp
+
+internal fun Modifier.scheduleFieldOutline(colors: GeistColors, focused: Boolean = false): Modifier =
+    clip(ScheduleFieldShape).border(
+        width = if (focused) 2.dp else 1.dp,
+        color = if (focused) colors.brandPrimary else colors.gray.c700,
+        shape = ScheduleFieldShape,
+    )
+
 /** Stateless UI: callers retain scheduling, bounds, persistence, and protection policy. */
 @Composable
 internal fun ScheduleSettingsCard(
@@ -65,61 +82,77 @@ internal fun ScheduleSettingsCard(
     onDateWindowSelected: (ScheduleDateWindow) -> Unit,
     onLookbackDelta: (Int) -> Unit,
 ) {
-    val shape = RoundedCornerShape(Radii.card)
-    Column(
-        modifier = Modifier.fillMaxWidth().clip(shape)
-            .background(AppColors.bgPrimary).border(1.dp, AppColors.borderDefault, shape)
-            .padding(Spacing.md),
-    ) {
-        FrequencyRow(uiState.cadenceValue, uiState.cadenceUnit, onFrequencyValueChange, onFrequencyUnitSelected)
-        ScheduleDivider()
-        ControlLabel(stringResource(R.string.schedule_date_window))
-        ScheduleDropdown(
-            selected = uiState.dateWindow,
-            options = listOf(
-                ScheduleDateWindow.PAST_COMPLETE_DAYS to stringResource(R.string.schedule_date_window_past_complete_days),
-                ScheduleDateWindow.PAST_COMPLETE_DAYS_THROUGH_TODAY to stringResource(R.string.schedule_date_window_past_complete_days_through_today),
-                ScheduleDateWindow.TODAY to stringResource(R.string.schedule_date_window_today),
-            ),
-            description = stringResource(R.string.schedule_date_window),
-            onSelected = onDateWindowSelected,
-            tag = ScheduleControlTags.DATE_WINDOW,
-        )
-
-        if (uiState.cadenceUnit == ScheduleCadenceUnit.DAYS || uiState.cadenceUnit == ScheduleCadenceUnit.WEEKS) {
-            ScheduleDivider()
-            ControlLabel(stringResource(R.string.schedule_time))
-            TimeRow(uiState.hour, uiState.minute, onHourDelta, onMinuteDelta, onTogglePeriod)
+    // A list group of labelled rows (DESIGN.md `list-group`). The frequency and date rows keep
+    // fixed positions so an in-progress frequency edit survives the conditional rows below.
+    val showTime = uiState.cadenceUnit == ScheduleCadenceUnit.DAYS || uiState.cadenceUnit == ScheduleCadenceUnit.WEEKS
+    val showLookback = uiState.dateWindow != ScheduleDateWindow.TODAY
+    val count = 2 + (if (showTime) 1 else 0) + (if (showLookback) 1 else 0)
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        ScheduleGroupRow(groupRowShape(0, count)) {
+            FrequencyRow(uiState.cadenceValue, uiState.cadenceUnit, onFrequencyValueChange, onFrequencyUnitSelected)
         }
-
-        if (uiState.dateWindow != ScheduleDateWindow.TODAY) {
-            ScheduleDivider()
-            ControlLabel(stringResource(R.string.schedule_export_past_days))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                val value = formatInteger(uiState.lookbackDays, LocalConfiguration.current.locales[0])
-                Text(
-                    value, style = GeistType.label20Mono, color = AppColors.textPrimary,
-                    modifier = Modifier.weight(1f).testTag(ScheduleControlTags.LOOKBACK),
-                )
-                StepperActions(
-                    value = value,
-                    onDecrease = { onLookbackDelta(-1) }, onIncrease = { onLookbackDelta(1) },
-                    decreaseDescription = stringResource(R.string.schedule_decrease_lookback_days),
-                    increaseDescription = stringResource(R.string.schedule_increase_lookback_days),
-                )
+        ScheduleGroupRow(groupRowShape(1, count)) {
+            ControlLabel(stringResource(R.string.schedule_date_window))
+            ScheduleDropdown(
+                selected = uiState.dateWindow,
+                options = listOf(
+                    ScheduleDateWindow.PAST_COMPLETE_DAYS to stringResource(R.string.schedule_date_window_past_complete_days),
+                    ScheduleDateWindow.PAST_COMPLETE_DAYS_THROUGH_TODAY to stringResource(R.string.schedule_date_window_past_complete_days_through_today),
+                    ScheduleDateWindow.TODAY to stringResource(R.string.schedule_date_window_today),
+                ),
+                description = stringResource(R.string.schedule_date_window),
+                onSelected = onDateWindowSelected,
+                tag = ScheduleControlTags.DATE_WINDOW,
+            )
+        }
+        if (showTime) {
+            ScheduleGroupRow(groupRowShape(2, count)) {
+                ControlLabel(stringResource(R.string.schedule_time))
+                TimeRow(uiState.hour, uiState.minute, onHourDelta, onMinuteDelta, onTogglePeriod)
+            }
+        }
+        if (showLookback) {
+            ScheduleGroupRow(groupRowShape(count - 1, count)) {
+                ControlLabel(stringResource(R.string.schedule_export_past_days))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(GeistSpacing.space2),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    val value = formatInteger(uiState.lookbackDays, LocalConfiguration.current.locales[0])
+                    Text(
+                        value, style = GeistType.label20Mono, color = LocalGeistColors.current.primary,
+                        modifier = Modifier.weight(1f).testTag(ScheduleControlTags.LOOKBACK),
+                    )
+                    StepperActions(
+                        value = value,
+                        onDecrease = { onLookbackDelta(-1) }, onIncrease = { onLookbackDelta(1) },
+                        decreaseDescription = stringResource(R.string.schedule_decrease_lookback_days),
+                        increaseDescription = stringResource(R.string.schedule_increase_lookback_days),
+                    )
+                }
             }
         }
     }
 }
 
+/** One list-group row on `background-200`: the label above its control, 16 dp padding. */
+@Composable
+private fun ScheduleGroupRow(shape: Shape, content: @Composable ColumnScope.() -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(shape)
+            .background(LocalGeistColors.current.background200)
+            .padding(GeistSpacing.space4),
+        content = content,
+    )
+}
+
 @Composable
 private fun ControlLabel(text: String) {
-    Text(text, style = MaterialTheme.typography.titleLarge, color = AppColors.textPrimary)
-    Spacer(Modifier.height(Spacing.xs))
+    Text(text, style = GeistType.label16, color = LocalGeistColors.current.primary)
+    Spacer(Modifier.height(GeistSpacing.space2))
 }
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -135,8 +168,8 @@ private fun FrequencyRow(
         val stacked = GeistAdaptiveLayout.stackActions(maxWidth.value, LocalDensity.current.fontScale)
         // Keep the same composition when fields reflow so an in-progress edit retains focus.
         FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
-            verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+            horizontalArrangement = Arrangement.spacedBy(GeistSpacing.space2),
+            verticalArrangement = Arrangement.spacedBy(GeistSpacing.space2),
             maxItemsInEachRow = if (stacked) 1 else 2,
         ) {
             FrequencyValueField(value, unit, onValueChange, if (stacked) Modifier.fillMaxWidth() else Modifier)
@@ -156,10 +189,10 @@ private fun FrequencyRow(
         }
     }
     if (unit == ScheduleCadenceUnit.MINUTES) {
-        Spacer(Modifier.height(Spacing.xs))
+        Spacer(Modifier.height(GeistSpacing.space2))
         Text(
             stringResource(R.string.cadence_minutes_minimum),
-            style = MaterialTheme.typography.bodySmall, color = AppColors.textSecondary,
+            style = GeistType.copy13, color = LocalGeistColors.current.secondary,
         )
     }
 }
@@ -171,6 +204,7 @@ private fun FrequencyValueField(
     onValueChange: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val colors = LocalGeistColors.current
     val locale = LocalConfiguration.current.locales[0]
     var text by rememberSaveable(locale) { mutableStateOf(formatInteger(value, locale)) }
     var isFocused by remember { mutableStateOf(false) }
@@ -178,14 +212,14 @@ private fun FrequencyValueField(
     val focusManager = LocalFocusManager.current
     val keyboard = LocalSoftwareKeyboardController.current
     val description = stringResource(R.string.schedule_frequency)
-    val style = GeistType.label20Mono.copy(color = AppColors.textPrimary, textAlign = TextAlign.Center)
+    val style = GeistType.label20Mono.copy(color = colors.primary, textAlign = TextAlign.Center)
     val measurer = rememberTextMeasurer()
     val density = LocalDensity.current
     val digitWidth = remember(measurer, locale, style, density) {
         (0..9).maxOf { measurer.measure(formatInteger(it, locale).repeat(MAX_FREQUENCY_DIGITS), style).size.width }
     }
     val inputWidth = with(density) {
-        maxOf(digitWidth, measurer.measure(text, style).size.width).toDp() + Spacing.xs * 2
+        maxOf(digitWidth, measurer.measure(text, style).size.width).toDp() + GeistSpacing.space4 * 2
     }
 
     LaunchedEffect(value, unit, isFocused) {
@@ -198,7 +232,6 @@ private fun FrequencyValueField(
         onValueChange(committed)
     }
 
-    val shape = RoundedCornerShape(Radii.card)
     BasicTextField(
         value = text,
         onValueChange = { raw ->
@@ -210,17 +243,19 @@ private fun FrequencyValueField(
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
         keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus(); keyboard?.hide() }),
         textStyle = style,
-        cursorBrush = SolidColor(AppColors.accent),
+        cursorBrush = SolidColor(colors.brandPrimary),
         decorationBox = { innerField ->
             // Decoration belongs inside the field's focus/semantics target, not outside it.
-            Box(Modifier.padding(Spacing.xs), contentAlignment = Alignment.Center) { innerField() }
+            Box(
+                Modifier.padding(horizontal = GeistSpacing.space4, vertical = GeistSpacing.space3),
+                contentAlignment = Alignment.Center,
+            ) { innerField() }
         },
         modifier = modifier
             .testTag(ScheduleControlTags.FREQUENCY_VALUE)
             .semantics { contentDescription = description }
-            .width(inputWidth).heightIn(min = GeistSizes.minimumTouchTarget)
-            .clip(shape).background(AppColors.bgPrimary)
-            .border(1.dp, if (isFocused) AppColors.accent else AppColors.borderDefault, shape)
+            .width(inputWidth).heightIn(min = ScheduleFieldMinHeight)
+            .scheduleFieldOutline(colors, focused = isFocused)
             .onFocusChanged { state ->
                 val wasFocused = isFocused
                 isFocused = state.isFocused
@@ -229,6 +264,7 @@ private fun FrequencyValueField(
     )
 }
 
+/** An M3 exposed dropdown: an outlined `input` anchor whose full selected label wraps. */
 @Composable
 private fun <T> ScheduleDropdown(
     selected: T,
@@ -238,47 +274,49 @@ private fun <T> ScheduleDropdown(
     tag: String,
     modifier: Modifier = Modifier,
 ) {
+    val colors = LocalGeistColors.current
     var expanded by remember { mutableStateOf(false) }
     val focusManager = LocalFocusManager.current
     val keyboard = LocalSoftwareKeyboardController.current
-    val shape = RoundedCornerShape(Radii.card)
     val density = LocalDensity.current
     val direction = LocalLayoutDirection.current
     var anchorWidth by remember { mutableIntStateOf(0) }
     // A regular Box supports FlowRow's intrinsic sizing; BoxWithConstraints does not.
     Box(modifier) {
         Row(
-            modifier = Modifier.fillMaxWidth().testTag(tag).heightIn(min = GeistSizes.minimumTouchTarget)
+            modifier = Modifier.fillMaxWidth().testTag(tag).heightIn(min = ScheduleFieldMinHeight)
                 .onSizeChanged { anchorWidth = it.width }
-                .clip(shape).background(AppColors.bgPrimary).border(1.dp, AppColors.borderDefault, shape)
+                .scheduleFieldOutline(colors, focused = expanded)
                 .clickable(role = Role.Button) {
                     focusManager.clearFocus()
                     keyboard?.hide()
                     expanded = true
                 }
                 .semantics { contentDescription = description }
-                .padding(Spacing.xs),
+                .padding(start = GeistSpacing.space4, end = GeistSpacing.space3, top = GeistSpacing.space2, bottom = GeistSpacing.space2),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+            horizontalArrangement = Arrangement.spacedBy(GeistSpacing.space2),
         ) {
             Text(
                 options.firstOrNull { it.first == selected }?.second.orEmpty(),
-                style = MaterialTheme.typography.titleLarge, color = AppColors.accentHover,
+                style = GeistType.label16, color = colors.primary,
                 modifier = Modifier.weight(1f),
             )
             Icon(Icons.Filled.KeyboardArrowDown, contentDescription = null,
-                tint = AppColors.accentHover, modifier = Modifier.size(Spacing.lg))
+                tint = colors.secondary, modifier = Modifier.size(GeistSpacing.space6))
         }
         DropdownMenu(
             expanded, onDismissRequest = { expanded = false },
             modifier = Modifier.widthIn(max = with(density) { anchorWidth.toDp() }),
+            shape = RoundedCornerShape(GeistRadii.extraSmall),
+            containerColor = colors.gray.c200,
         ) {
             // A popup creates another Compose owner. Preserve the anchor's scale and
             // direction rather than reverting scoped accessibility layouts to its defaults.
             CompositionLocalProvider(LocalDensity provides density, LocalLayoutDirection provides direction) {
                 options.forEach { (value, label) ->
                     DropdownMenuItem(
-                        text = { Text(label) },
+                        text = { Text(label, style = GeistType.label16, color = colors.primary) },
                         onClick = { expanded = false; onSelected(value) },
                     )
                 }
@@ -296,6 +334,7 @@ internal fun TimeRow(
     onTogglePeriod: () -> Unit,
     use24HourTime: Boolean = DateFormat.is24HourFormat(LocalContext.current),
 ) {
+    val colors = LocalGeistColors.current
     val locale = LocalConfiguration.current.locales[0]
     val displayHour = localizedDisplayHour(hour, localizedHourCycle(locale, use24HourTime))
     val period = DateFormatSymbols.getInstance(locale).amPmStrings[if (hour < 12) 0 else 1]
@@ -318,24 +357,25 @@ internal fun TimeRow(
     }
     BoxWithConstraints(Modifier.fillMaxWidth()) {
         val separatePeriod = GeistAdaptiveLayout.stackDetailedControls(maxWidth.value, LocalDensity.current.fontScale) ||
-            maxWidth < GeistSizes.minimumTouchTarget * 6 + Spacing.xs * 6 + separatorWidth
-        val separateNumbers = maxWidth < GeistSizes.minimumTouchTarget * 4 + Spacing.xs * 4 + separatorWidth
+            maxWidth < GeistSizes.minimumTouchTarget * 6 + GeistSpacing.space2 * 6 + separatorWidth
+        val separateNumbers = maxWidth < GeistSizes.minimumTouchTarget * 4 + GeistSpacing.space2 * 4 + separatorWidth
         val periodAction: @Composable (Modifier) -> Unit = { modifier ->
             val description = stringResource(R.string.schedule_toggle_time_period)
-            val shape = RoundedCornerShape(Radii.card)
+            // One tonal AM/PM action (DESIGN.md): the period and its swap affordance.
             Box(
                 modifier = modifier.testTag(ScheduleControlTags.PERIOD)
-                    .heightIn(min = GeistSizes.minimumTouchTarget).clip(shape)
-                    .background(AppColors.bgPrimary).border(1.dp, AppColors.borderDefault, shape)
+                    .heightIn(min = GeistSizes.minimumTouchTarget)
+                    .clip(RoundedCornerShape(GeistRadii.full))
+                    .background(colors.secondaryContainer)
                     .clickable(role = Role.Button, onClick = onTogglePeriod)
                     .semantics { contentDescription = description; stateDescription = period }
-                    .padding(Spacing.xs),
+                    .padding(horizontal = GeistSpacing.space4, vertical = GeistSpacing.space2),
                 contentAlignment = Alignment.Center,
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-                    Text(period, style = GeistType.label20Mono, color = AppColors.textPrimary, modifier = Modifier.weight(1f, fill = false))
-                    Icon(Icons.Filled.SwapVert, contentDescription = null, tint = AppColors.textSecondary,
-                        modifier = Modifier.size(Spacing.lg))
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(GeistSpacing.space2)) {
+                    Text(period, style = GeistType.label20Mono, color = colors.onSecondaryContainer, modifier = Modifier.weight(1f, fill = false))
+                    Icon(Icons.Filled.SwapVert, contentDescription = null, tint = colors.onSecondaryContainer,
+                        modifier = Modifier.size(GeistSpacing.space6))
                 }
             }
         }
@@ -349,7 +389,7 @@ internal fun TimeRow(
                 stringResource(R.string.schedule_increase_minute), stringResource(R.string.schedule_decrease_minute),
                 modifier.testTag(ScheduleControlTags.MINUTE))
         }
-        Column(verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
+        Column(verticalArrangement = Arrangement.spacedBy(GeistSpacing.space4)) {
             if (periodFirst && separatePeriod) periodAction(Modifier.fillMaxWidth())
             if (separateNumbers) {
                 // Very narrow windows still keep both targets intact and identify each field.
@@ -363,13 +403,13 @@ internal fun TimeRow(
                 }
             } else {
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+                    horizontalArrangement = Arrangement.spacedBy(GeistSpacing.space2),
                     verticalAlignment = Alignment.Top,
                 ) {
                     if (periodFirst && !separatePeriod) periodAction(Modifier.weight(1f))
                     hourPicker(Modifier.weight(1f))
-                    Text(separator, style = GeistType.label20Mono, color = AppColors.textSecondary,
-                        modifier = Modifier.heightIn(min = GeistSizes.minimumTouchTarget).padding(vertical = Spacing.xs))
+                    Text(separator, style = GeistType.label20Mono, color = colors.secondary,
+                        modifier = Modifier.heightIn(min = GeistSizes.minimumTouchTarget).padding(vertical = GeistSpacing.space2))
                     minutePicker(Modifier.weight(1f))
                     if (!use24HourTime && !periodFirst && !separatePeriod) periodAction(Modifier.weight(1f))
                 }
@@ -391,10 +431,10 @@ private fun PickerPill(
     Column(
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+        verticalArrangement = Arrangement.spacedBy(GeistSpacing.space2),
     ) {
-        Text(label, style = GeistType.label20Mono, color = AppColors.textPrimary,
-            modifier = Modifier.heightIn(min = GeistSizes.minimumTouchTarget).padding(vertical = Spacing.xs))
+        Text(label, style = GeistType.label20Mono, color = LocalGeistColors.current.primary,
+            modifier = Modifier.heightIn(min = GeistSizes.minimumTouchTarget).padding(vertical = GeistSpacing.space2))
         StepperActions(label, onDecrement, onIncrement, decrementDescription, incrementDescription)
     }
 }
@@ -407,31 +447,26 @@ private fun StepperActions(
     decreaseDescription: String,
     increaseDescription: String,
 ) {
-    Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+    // Separated 48 dp minus/plus targets with an 8 dp gap (DESIGN.md time editors).
+    Row(horizontalArrangement = Arrangement.spacedBy(GeistSpacing.space2)) {
         StepperIcon(Icons.Filled.Remove, value, decreaseDescription, onDecrease)
         StepperIcon(Icons.Filled.Add, value, increaseDescription, onIncrease)
     }
 }
 
+/** A filled tonal icon button on `secondary-container`. */
 @Composable
 private fun StepperIcon(icon: ImageVector, value: String, description: String, onClick: () -> Unit) {
-    val shape = RoundedCornerShape(Radii.card)
+    val colors = LocalGeistColors.current
     Box(
-        modifier = Modifier.size(GeistSizes.minimumTouchTarget).clip(shape)
-            .background(AppColors.bgPrimary).border(1.dp, AppColors.borderDefault, shape)
+        modifier = Modifier.size(GeistSizes.minimumTouchTarget).clip(CircleShape)
+            .background(colors.secondaryContainer)
             .clickable(role = Role.Button, onClick = onClick)
             .semantics { contentDescription = description; stateDescription = value },
         contentAlignment = Alignment.Center,
     ) {
-        Icon(icon, contentDescription = null, tint = AppColors.textPrimary, modifier = Modifier.size(Spacing.lg))
+        Icon(icon, contentDescription = null, tint = colors.onSecondaryContainer, modifier = Modifier.size(GeistSpacing.space6))
     }
-}
-
-@Composable
-private fun ScheduleDivider() {
-    Spacer(Modifier.height(Spacing.md))
-    HorizontalDivider(color = AppColors.borderDefault)
-    Spacer(Modifier.height(Spacing.md))
 }
 
 private const val MAX_FREQUENCY_DIGITS = 5

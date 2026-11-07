@@ -3,26 +3,28 @@ package com.healthmd.presentation.settings
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.outlined.Dataset
-import androidx.compose.material3.*
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontWeight
 import com.healthmd.R
 import com.healthmd.domain.model.*
-import com.healthmd.presentation.common.*
+import com.healthmd.presentation.common.SecondaryButton
+import com.healthmd.presentation.common.SubScreenTopBar
 import com.healthmd.presentation.i18n.localizedDescription
 import com.healthmd.presentation.i18n.localizedDisplayName
 import com.healthmd.presentation.theme.*
@@ -34,171 +36,125 @@ fun FormatCustomizationScreen(
     onNavigateToFrontmatter: () -> Unit = {},
     onBack: () -> Unit,
 ) {
-    BoxWithConstraints(Modifier.fillMaxSize().background(AppColors.bgPrimary).imePadding()) {
+    BoxWithConstraints(Modifier.fillMaxSize().imePadding(), contentAlignment = Alignment.TopCenter) {
         // Allocate space, never change the font size/scale. The editor scrolls internally
         // after at most half the available height, including when the IME is showing.
-        val lineHeight = with(LocalDensity.current) { MaterialTheme.typography.bodySmall.lineHeight.toDp() }
-        val editorMaxLines = ((maxHeight / 2 - Spacing.md * 2) / lineHeight).toInt().coerceIn(1, 16)
+        val lineHeight = with(LocalDensity.current) { GeistType.copy13Mono.lineHeight.toDp() }
+        val editorMaxLines = ((maxHeight / 2 - GeistSpacing.space4 * 2) / lineHeight).toInt().coerceIn(1, 16)
         Column(
-            modifier = Modifier.fillMaxSize().testTag(FormatCustomizationTags.SCROLL)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = Spacing.md, vertical = Spacing.lg),
-            verticalArrangement = Arrangement.spacedBy(Spacing.md),
+            modifier = Modifier.widthIn(max = GeistSizes.readableContentMaxWidth).fillMaxSize()
+                .testTag(FormatCustomizationTags.SCROLL)
+                .verticalScroll(rememberScrollState()),
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+            // Back joins the editor's scroll surface rather than consuming scarce fixed height.
+            SubScreenTopBar(title = stringResource(R.string.format_customization_title), onBack = onBack, backButtonModifier = Modifier.testTag(FormatCustomizationTags.BACK))
+            Column(
+                Modifier.fillMaxWidth().padding(
+                    start = GeistSpacing.space4, end = GeistSpacing.space4, bottom = GeistSpacing.space8,
+                ),
             ) {
-                IconButton(
-                    onClick = onBack,
-                    modifier = Modifier.size(GeistSizes.minimumTouchTarget).testTag(FormatCustomizationTags.BACK),
-                ) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back), tint = AppColors.textPrimary)
-                }
-                Text(
-                    stringResource(R.string.format_customization_title),
-                    style = MaterialTheme.typography.titleLarge,
-                    color = AppColors.textPrimary,
-                    fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.weight(1f).semantics { heading() },
-                )
+                FormatCustomizationBody(customization, onCustomizationChanged, onNavigateToFrontmatter, editorMaxLines)
             }
+        }
+    }
+}
 
-            GeistCard(padding = Spacing.md) {
-                SectionLabel(stringResource(R.string.section_date_format))
-                Column(Modifier.selectableGroup().testTag(FormatCustomizationTags.DATE)) {
-                    DateFormatPreference.entries.forEach { format ->
-                        FormatCustomizationChoice(
-                            label = format.localizedDisplayName(), selected = customization.dateFormat == format,
-                            onClick = { onCustomizationChanged(customization.copy(dateFormat = format)) },
-                            tag = FormatCustomizationTags.choice(FormatCustomizationTags.DATE, format),
-                        )
-                    }
-                }
-            }
+@Composable
+private fun FormatCustomizationBody(
+    customization: FormatCustomization,
+    onCustomizationChanged: (FormatCustomization) -> Unit,
+    onNavigateToFrontmatter: () -> Unit,
+    editorMaxLines: Int,
+) {
+    val template = customization.markdownTemplate
+    fun updateTemplate(transform: (MarkdownTemplateConfig) -> MarkdownTemplateConfig) =
+        onCustomizationChanged(customization.copy(markdownTemplate = transform(customization.markdownTemplate)))
 
-            GeistCard(padding = Spacing.md) {
-                SectionLabel(stringResource(R.string.section_time_format))
-                Column(Modifier.selectableGroup().testTag(FormatCustomizationTags.TIME)) {
-                    TimeFormatPreference.entries.forEach { format ->
-                        FormatCustomizationChoice(
-                            label = format.localizedDisplayName(), selected = customization.timeFormat == format,
-                            onClick = { onCustomizationChanged(customization.copy(timeFormat = format)) },
-                            tag = FormatCustomizationTags.choice(FormatCustomizationTags.TIME, format),
-                        )
-                    }
-                }
-            }
+    FormatCustomizationChoiceGroup(
+        title = stringResource(R.string.section_date_format),
+        options = DateFormatPreference.entries, selected = customization.dateFormat,
+        onSelected = { onCustomizationChanged(customization.copy(dateFormat = it)) },
+        group = FormatCustomizationTags.DATE, label = { it.localizedDisplayName() },
+    )
+    FormatCustomizationChoiceGroup(
+        title = stringResource(R.string.section_time_format),
+        options = TimeFormatPreference.entries, selected = customization.timeFormat,
+        onSelected = { onCustomizationChanged(customization.copy(timeFormat = it)) },
+        group = FormatCustomizationTags.TIME, label = { it.localizedDisplayName() },
+    )
+    FormatCustomizationChoices(
+        title = stringResource(R.string.section_unit_system),
+        options = UnitPreference.entries, selected = customization.unitPreference,
+        onSelected = { pref -> onCustomizationChanged(customization.copy(unitPreference = pref)) },
+        group = FormatCustomizationTags.UNIT,
+        label = { it.localizedDisplayName() }, description = { it.localizedDescription() },
+    )
 
-            GeistCard(padding = Spacing.md) {
-                SectionLabel(stringResource(R.string.section_unit_system))
-                FormatCustomizationChoices(
-                    options = UnitPreference.entries, selected = customization.unitPreference,
-                    onSelected = { pref -> onCustomizationChanged(customization.copy(unitPreference = pref)) },
-                    group = FormatCustomizationTags.UNIT,
-                    label = { it.localizedDisplayName() }, description = { it.localizedDescription() },
-                )
-            }
+    Spacer(Modifier.height(GeistSpacing.space6))
+    SettingsNavigationCard(
+        title = stringResource(R.string.frontmatter_customization_title),
+        subtitle = stringResource(R.string.frontmatter_customization_subtitle),
+        icon = Icons.Outlined.Dataset,
+        onClick = onNavigateToFrontmatter,
+        modifier = Modifier.testTag(FormatCustomizationTags.FRONTMATTER),
+    )
 
-            SettingsNavigationCard(
-                title = stringResource(R.string.frontmatter_customization_title),
-                subtitle = stringResource(R.string.frontmatter_customization_subtitle),
-                icon = Icons.Outlined.Dataset,
-                onClick = onNavigateToFrontmatter,
-                modifier = Modifier.testTag(FormatCustomizationTags.FRONTMATTER),
+    val editor: List<@Composable (Shape) -> Unit> = if (template.style == MarkdownTemplateStyle.CUSTOM) {
+        listOf { shape ->
+            FormatCustomizationTemplateEditor(
+                template = template.customTemplate,
+                maxLines = editorMaxLines,
+                shape = shape,
+                onTemplateChanged = { text -> updateTemplate { it.copy(customTemplate = text) } },
+                onReset = { updateTemplate { it.copy(customTemplate = MarkdownTemplateConfig.DEFAULT_TEMPLATE) } },
             )
+        }
+    } else {
+        emptyList()
+    }
+    FormatCustomizationChoiceGroup(
+        title = stringResource(R.string.section_markdown_template),
+        options = MarkdownTemplateStyle.entries, selected = template.style,
+        onSelected = { style -> updateTemplate { it.copy(style = style) } },
+        group = FormatCustomizationTags.TEMPLATE, label = { it.localizedDisplayName() },
+        extra = editor,
+    )
 
-            GeistCard(padding = Spacing.md) {
-                SectionLabel(stringResource(R.string.section_markdown_template))
-                Column(Modifier.selectableGroup().testTag(FormatCustomizationTags.TEMPLATE)) {
-                    MarkdownTemplateStyle.entries.forEach { style ->
-                        FormatCustomizationChoice(
-                            label = style.localizedDisplayName(),
-                            selected = customization.markdownTemplate.style == style,
-                            onClick = {
-                                onCustomizationChanged(
-                                    customization.copy(markdownTemplate = customization.markdownTemplate.copy(style = style))
-                                )
-                            },
-                            tag = FormatCustomizationTags.choice(FormatCustomizationTags.TEMPLATE, style),
-                        )
-                    }
+    FormatCustomizationChoices(
+        title = stringResource(R.string.section_bullet_style),
+        options = BulletStyle.entries, selected = template.bulletStyle,
+        onSelected = { style -> updateTemplate { it.copy(bulletStyle = style) } },
+        group = FormatCustomizationTags.BULLET,
+        label = { "${it.symbol} ${it.localizedDisplayName()}" },
+    )
+    FormatCustomizationChoices(
+        title = stringResource(R.string.section_header_level),
+        options = (1..3).toList(), selected = template.sectionHeaderLevel,
+        onSelected = { level -> updateTemplate { it.copy(sectionHeaderLevel = level) } },
+        group = FormatCustomizationTags.HEADER,
+        label = { "${"#".repeat(it)} H$it" },
+    )
+
+    val emoji = stringResource(R.string.toggle_emoji_headers)
+    val summary = stringResource(R.string.toggle_include_summary)
+    val nativeFields = stringResource(R.string.toggle_android_native_fields)
+    val legacyAliases = stringResource(R.string.toggle_legacy_android_aliases)
+    SettingsGroup(
+        title = stringResource(R.string.section_options),
+        rows = listOf(
+            { shape ->
+                FormatCustomizationToggle(emoji, template.useEmoji, FormatCustomizationTags.EMOJI, shape) { value ->
+                    updateTemplate { it.copy(useEmoji = value) }
                 }
-
-                if (customization.markdownTemplate.style == MarkdownTemplateStyle.CUSTOM) {
-                    FormatCustomizationTemplateEditor(
-                        template = customization.markdownTemplate.customTemplate,
-                        maxLines = editorMaxLines,
-                        onTemplateChanged = { template ->
-                            onCustomizationChanged(
-                                customization.copy(
-                                    markdownTemplate = customization.markdownTemplate.copy(customTemplate = template),
-                                )
-                            )
-                        },
-                        onReset = {
-                            onCustomizationChanged(
-                                customization.copy(
-                                    markdownTemplate = customization.markdownTemplate.copy(
-                                        customTemplate = MarkdownTemplateConfig.DEFAULT_TEMPLATE,
-                                    ),
-                                )
-                            )
-                        },
-                    )
+            },
+            { shape ->
+                FormatCustomizationToggle(summary, template.includeSummary, FormatCustomizationTags.SUMMARY, shape) { value ->
+                    updateTemplate { it.copy(includeSummary = value) }
                 }
-            }
-
-            GeistCard(padding = Spacing.md) {
-                SectionLabel(stringResource(R.string.section_bullet_style))
-                FormatCustomizationChoices(
-                    options = BulletStyle.entries, selected = customization.markdownTemplate.bulletStyle,
-                    onSelected = { style ->
-                        onCustomizationChanged(
-                            customization.copy(markdownTemplate = customization.markdownTemplate.copy(bulletStyle = style))
-                        )
-                    },
-                    group = FormatCustomizationTags.BULLET,
-                    label = { "${it.symbol} ${it.localizedDisplayName()}" },
-                )
-            }
-
-            GeistCard(padding = Spacing.md) {
-                SectionLabel(stringResource(R.string.section_header_level))
-                FormatCustomizationChoices(
-                    options = (1..3).toList(), selected = customization.markdownTemplate.sectionHeaderLevel,
-                    onSelected = { level ->
-                        onCustomizationChanged(
-                            customization.copy(markdownTemplate = customization.markdownTemplate.copy(sectionHeaderLevel = level))
-                        )
-                    },
-                    group = FormatCustomizationTags.HEADER,
-                    label = { "${"#".repeat(it)} H$it" },
-                )
-            }
-
-            GeistCard(padding = Spacing.md) {
-                SectionLabel(stringResource(R.string.section_options))
+            },
+            { shape ->
                 FormatCustomizationToggle(
-                    stringResource(R.string.toggle_emoji_headers), customization.markdownTemplate.useEmoji,
-                    FormatCustomizationTags.EMOJI,
-                ) {
-                    onCustomizationChanged(
-                        customization.copy(markdownTemplate = customization.markdownTemplate.copy(useEmoji = it))
-                    )
-                }
-                FormatCustomizationToggle(
-                    stringResource(R.string.toggle_include_summary), customization.markdownTemplate.includeSummary,
-                    FormatCustomizationTags.SUMMARY,
-                ) {
-                    onCustomizationChanged(
-                        customization.copy(markdownTemplate = customization.markdownTemplate.copy(includeSummary = it))
-                    )
-                }
-                FormatCustomizationToggle(
-                    stringResource(R.string.toggle_android_native_fields), customization.includeAndroidNativeFields,
-                    FormatCustomizationTags.NATIVE_FIELDS,
+                    nativeFields, customization.includeAndroidNativeFields, FormatCustomizationTags.NATIVE_FIELDS, shape,
                 ) {
                     onCustomizationChanged(
                         customization.copy(
@@ -211,94 +167,106 @@ fun FormatCustomizationScreen(
                         )
                     )
                 }
+            },
+            { shape ->
                 FormatCustomizationToggle(
-                    stringResource(R.string.toggle_legacy_android_aliases), customization.includeLegacyAndroidAliases,
-                    FormatCustomizationTags.LEGACY_ALIASES,
+                    legacyAliases, customization.includeLegacyAndroidAliases, FormatCustomizationTags.LEGACY_ALIASES, shape,
                 ) {
                     onCustomizationChanged(customization.copy(includeLegacyAndroidAliases = it))
                 }
-            }
-
-            Spacer(modifier = Modifier.height(Spacing.xl))
-        }
-    }
+            },
+        ),
+    )
 }
 
+/** The custom template editor: one tonal list-group row that follows the template choices. */
 @Composable
 private fun FormatCustomizationTemplateEditor(
     template: String,
     maxLines: Int,
+    shape: Shape,
     onTemplateChanged: (String) -> Unit,
     onReset: () -> Unit,
 ) {
-    Spacer(modifier = Modifier.height(Spacing.sm))
-    Text(
-        text = stringResource(R.string.custom_markdown_template_help),
-        color = AppColors.textSecondary,
-        style = MaterialTheme.typography.bodySmall,
-        modifier = Modifier.fillMaxWidth(),
-    )
-    Spacer(modifier = Modifier.height(Spacing.sm))
-    val label = stringResource(R.string.custom_markdown_template_label)
-    // An external label can wrap without being shrunk into an outlined field's floating label.
-    Text(label, style = MaterialTheme.typography.bodyLarge, color = AppColors.textPrimary,
-        modifier = Modifier.fillMaxWidth().testTag(FormatCustomizationTags.label(FormatCustomizationTags.TEMPLATE_FIELD)))
-    Spacer(modifier = Modifier.height(Spacing.xs))
-    if (template.isEmpty()) {
-        // Keep the full multiline example outside the bounded editor too. A placeholder
-        // paragraph must not force an empty field to grow beyond the keyboard window.
+    val colors = LocalGeistColors.current
+    Column(
+        Modifier.fillMaxWidth().clip(shape).background(colors.background200).padding(GeistSpacing.space4),
+        verticalArrangement = Arrangement.spacedBy(GeistSpacing.space2),
+    ) {
         Text(
-            stringResource(R.string.custom_markdown_template_placeholder),
-            style = MaterialTheme.typography.bodyLarge.copy(fontFamily = GeistMono),
-            color = AppColors.textSecondary,
+            text = stringResource(R.string.custom_markdown_template_help),
+            color = colors.secondary,
+            style = GeistType.copy13,
             modifier = Modifier.fillMaxWidth(),
         )
-        Spacer(modifier = Modifier.height(Spacing.xs))
-    }
-    OutlinedTextField(
-        value = template,
-        onValueChange = onTemplateChanged,
-        modifier = Modifier.fillMaxWidth().heightIn(min = GeistSizes.minimumTouchTarget)
-            .testTag(FormatCustomizationTags.TEMPLATE_FIELD).semantics { contentDescription = label },
-        minLines = 1,
-        maxLines = maxLines,
-        textStyle = MaterialTheme.typography.bodySmall.copy(fontFamily = GeistMono),
-        colors = OutlinedTextFieldDefaults.colors(
-            focusedBorderColor = AppColors.accent,
-            unfocusedBorderColor = AppColors.borderDefault,
-            focusedTextColor = AppColors.textPrimary,
-            unfocusedTextColor = AppColors.textPrimary,
-            cursorColor = AppColors.accent,
-        ),
-        shape = RoundedCornerShape(Radii.textField),
-    )
-    Spacer(modifier = Modifier.height(Spacing.xs))
-    // Keep reset immediately after the editor, rather than beyond a long token reference.
-    SecondaryButton(
-        text = stringResource(R.string.custom_markdown_template_reset),
-        onClick = onReset,
-        modifier = Modifier.fillMaxWidth().testTag(FormatCustomizationTags.TEMPLATE_RESET),
-    )
-    Spacer(modifier = Modifier.height(Spacing.sm))
-    GeistCard(padding = Spacing.md) {
-        SectionLabel(stringResource(R.string.custom_markdown_template_preview))
+        val label = stringResource(R.string.custom_markdown_template_label)
+        // An external label can wrap without being shrunk into an outlined field's floating label.
         Text(
-            text = renderCustomTemplatePreview(
-                template = template,
-                emptyPreview = stringResource(R.string.custom_markdown_template_empty_preview),
+            label, style = GeistType.label16, color = colors.primary,
+            modifier = Modifier.fillMaxWidth().padding(top = GeistSpacing.space2)
+                .testTag(FormatCustomizationTags.label(FormatCustomizationTags.TEMPLATE_FIELD)),
+        )
+        if (template.isEmpty()) {
+            // Keep the full multiline example outside the bounded editor too. A placeholder
+            // paragraph must not force an empty field to grow beyond the keyboard window.
+            Text(
+                stringResource(R.string.custom_markdown_template_placeholder),
+                style = GeistType.copy14Mono,
+                color = colors.secondary,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+        OutlinedTextField(
+            value = template,
+            onValueChange = onTemplateChanged,
+            modifier = Modifier.fillMaxWidth().heightIn(min = GeistSizes.minimumTouchTarget)
+                .testTag(FormatCustomizationTags.TEMPLATE_FIELD).semantics { contentDescription = label },
+            minLines = 1,
+            maxLines = maxLines,
+            textStyle = GeistType.copy13Mono,
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = colors.brandPrimary,
+                unfocusedBorderColor = colors.gray.c700,
+                focusedTextColor = colors.primary,
+                unfocusedTextColor = colors.primary,
+                cursorColor = colors.brandPrimary,
             ),
-            color = AppColors.textSecondary,
-            style = MaterialTheme.typography.bodySmall.copy(fontFamily = GeistMono),
-            modifier = Modifier.fillMaxWidth().testTag(FormatCustomizationTags.TEMPLATE_PREVIEW),
+            shape = RoundedCornerShape(GeistRadii.extraSmall),
+        )
+        // Keep reset immediately after the editor, rather than beyond a long token reference.
+        SecondaryButton(
+            text = stringResource(R.string.custom_markdown_template_reset),
+            onClick = onReset,
+            modifier = Modifier.fillMaxWidth().testTag(FormatCustomizationTags.TEMPLATE_RESET),
+        )
+        Column(
+            Modifier.fillMaxWidth().padding(top = GeistSpacing.space2)
+                .clip(RoundedCornerShape(GeistRadii.medium)).background(colors.gray.c200)
+                .padding(GeistSpacing.space4),
+            verticalArrangement = Arrangement.spacedBy(GeistSpacing.space2),
+        ) {
+            Text(
+                stringResource(R.string.custom_markdown_template_preview),
+                style = GeistType.label14, color = colors.secondary,
+                modifier = Modifier.semantics { heading() },
+            )
+            Text(
+                text = renderCustomTemplatePreview(
+                    template = template,
+                    emptyPreview = stringResource(R.string.custom_markdown_template_empty_preview),
+                ),
+                color = colors.primary,
+                style = GeistType.copy13Mono,
+                modifier = Modifier.fillMaxWidth().testTag(FormatCustomizationTags.TEMPLATE_PREVIEW),
+            )
+        }
+        Text(
+            text = stringResource(R.string.custom_markdown_template_tokens),
+            color = colors.secondary,
+            style = GeistType.copy13,
+            modifier = Modifier.fillMaxWidth().padding(top = GeistSpacing.space2),
         )
     }
-    Spacer(modifier = Modifier.height(Spacing.sm))
-    Text(
-        text = stringResource(R.string.custom_markdown_template_tokens),
-        color = AppColors.textSecondary,
-        style = MaterialTheme.typography.bodySmall,
-        modifier = Modifier.fillMaxWidth(),
-    )
 }
 
 private fun renderCustomTemplatePreview(template: String, emptyPreview: String): String {

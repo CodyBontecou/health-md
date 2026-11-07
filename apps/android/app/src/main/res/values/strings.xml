@@ -1175,6 +1175,8 @@
     <string name="export_preview_api_preparation_failed">API export preparation failed.</string>
     <string name="export_preview_artifacts_per_range">Artifacts per range</string>
     <string name="export_preview_back_description">Back to export preview</string>
+    <string name="export_preview_wrap_lines">Wrap lines</string>
+    <string name="export_preview_format_text">Format text</string>
     <string name="export_preview_destination_label">Destination</string>
     <string name="export_preview_empty_file">(empty file)</string>
     <string name="export_preview_formats_per_day">Formats per day</string>

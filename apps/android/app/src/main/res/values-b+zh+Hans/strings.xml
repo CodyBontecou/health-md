@@ -961,6 +961,8 @@
     <string name="export_preview_api_preparation_failed">API 导出准备失败。</string>
     <string name="export_preview_artifacts_per_range">每个范围的导出文件数</string>
     <string name="export_preview_back_description">返回导出预览</string>
+    <string name="export_preview_wrap_lines">自动换行</string>
+    <string name="export_preview_format_text">格式化文本</string>
     <string name="export_preview_destination_label">目标位置</string>
     <string name="export_preview_empty_file">（空文件）</string>
     <string name="export_preview_formats_per_day">每天的格式数</string>

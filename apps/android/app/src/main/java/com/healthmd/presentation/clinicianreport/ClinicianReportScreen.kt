@@ -13,7 +13,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.Save
 import androidx.compose.material.icons.outlined.Share
@@ -42,6 +41,7 @@ import com.healthmd.presentation.common.LocalConfigurationProtection
 import com.healthmd.presentation.common.PrimaryButton
 import com.healthmd.presentation.common.SecondaryButton
 import com.healthmd.presentation.common.SectionLabel
+import com.healthmd.presentation.common.SubScreenTopBar
 import com.healthmd.presentation.theme.*
 import java.time.Instant
 import java.time.LocalDate
@@ -115,22 +115,10 @@ fun ClinicianReportScreen(
         ) { DatePicker(state = pickerState) }
     }
 
-    Scaffold(
-        containerColor = AppColors.bgPrimary,
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.clinician_report_title), style = GeistType.heading20) },
-                navigationIcon = {
-                    IconButton(onClick = cancelAndBack) {
-                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = stringResource(R.string.back))
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = AppColors.bgPrimary, titleContentColor = AppColors.textPrimary),
-            )
-        },
-    ) { padding ->
+    Column(Modifier.fillMaxSize()) {
+        SubScreenTopBar(title = stringResource(R.string.clinician_report_title), onBack = cancelAndBack)
         Column(
-            modifier = Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(Spacing.md),
+            modifier = Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(start = Spacing.md, end = Spacing.md, bottom = Spacing.md),
             verticalArrangement = Arrangement.spacedBy(Spacing.md),
         ) {
             Text(stringResource(R.string.clinician_report_intro), style = GeistType.copy14, color = AppColors.textSecondary)

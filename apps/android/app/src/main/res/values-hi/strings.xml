@@ -1058,6 +1058,8 @@
     <string name="export_preview_api_preparation_failed">API निर्यात की तैयारी विफल हुई।</string>
     <string name="export_preview_artifacts_per_range">प्रति रेंज आर्टिफ़ैक्ट</string>
     <string name="export_preview_back_description">निर्यात पूर्वावलोकन पर वापस जाएँ</string>
+    <string name="export_preview_wrap_lines">पंक्तियाँ लपेटें</string>
+    <string name="export_preview_format_text">टेक्स्ट फ़ॉर्मैट करें</string>
     <string name="export_preview_destination_label">गंतव्य</string>
     <string name="export_preview_empty_file">(खाली फ़ाइल)</string>
     <string name="export_preview_formats_per_day">प्रति दिन प्रारूप</string>

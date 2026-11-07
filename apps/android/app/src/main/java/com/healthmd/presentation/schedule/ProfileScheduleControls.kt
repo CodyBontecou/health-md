@@ -1,7 +1,5 @@
 package com.healthmd.presentation.schedule
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.selection.toggleable
@@ -16,7 +14,6 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.onSizeChanged
@@ -27,10 +24,10 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.unit.dp
 import com.healthmd.R
 import com.healthmd.data.scheduler.ScheduledProfileEntry
 import com.healthmd.presentation.common.AdaptiveActionPair
+import com.healthmd.presentation.common.SecondaryButton
 import com.healthmd.presentation.theme.*
 
 internal object ProfileScheduleTags {
@@ -75,14 +72,15 @@ internal fun ProfileScheduleRowContent(
     modifier: Modifier = Modifier,
     onOpenDetails: (() -> Unit)? = null,
 ) {
+    val colors = LocalGeistColors.current
     Column(modifier.fillMaxWidth().testTag(ProfileScheduleTags.ROW),
-        verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-        Text(row.profile.name, style = MaterialTheme.typography.titleMedium, color = AppColors.textPrimary,
+        verticalArrangement = Arrangement.spacedBy(GeistSpacing.space3)) {
+        Text(row.profile.name, style = GeistType.heading16, color = colors.primary,
             modifier = Modifier.fillMaxWidth().testTag(ProfileScheduleTags.NAME))
         // The automation as a sentence, as on the cross-platform Automations screen.
         Text(
             automationSentence(row.profile, row.entry),
-            style = GeistType.copy18, color = AppColors.textPrimary,
+            style = GeistType.copy18, color = colors.primary,
             modifier = Modifier.fillMaxWidth().testTag(ProfileScheduleTags.SENTENCE),
         )
         if (onOpenDetails != null) {
@@ -91,28 +89,29 @@ internal fun ProfileScheduleRowContent(
                 onClick = onOpenDetails,
                 modifier = Modifier.heightIn(min = GeistSizes.minimumTouchTarget)
                     .testTag(ProfileScheduleTags.DETAILS).semantics { contentDescription = detailsDescription },
-            ) { Text(stringResource(R.string.automation_detail_details)) }
+            ) { Text(stringResource(R.string.automation_detail_details), style = GeistType.button14, color = colors.brandPrimary) }
         }
         Text(
             cadenceSummary(row.entry, todayRefreshSummary(row.entry)),
-            style = MaterialTheme.typography.bodySmall, color = AppColors.textSecondary,
+            style = GeistType.copy13, color = colors.secondary,
             modifier = Modifier.fillMaxWidth().testTag(ProfileScheduleTags.SUMMARY),
         )
         AdaptiveActionPair(
             primaryAction = { actionModifier ->
                 val description = stringResource(R.string.a11y_profiles_edit_named, row.profile.name)
-                OutlinedButton(onClick = onOpenEditor,
+                SecondaryButton(
+                    text = stringResource(R.string.a11y_profiles_edit),
+                    onClick = onOpenEditor,
                     modifier = actionModifier.heightIn(min = GeistSizes.minimumTouchTarget)
-                        .testTag(ProfileScheduleTags.EDIT).semantics { contentDescription = description }) {
-                    Text(stringResource(R.string.a11y_profiles_edit))
-                }
+                        .testTag(ProfileScheduleTags.EDIT).semantics { contentDescription = description },
+                )
             },
             secondaryAction = { actionModifier ->
                 val description = stringResource(R.string.a11y_profiles_delete_named, row.profile.name)
                 TextButton(onClick = onDelete,
                     modifier = actionModifier.heightIn(min = GeistSizes.minimumTouchTarget)
                         .testTag(ProfileScheduleTags.DELETE).semantics { contentDescription = description }) {
-                    Text(stringResource(R.string.a11y_profiles_delete), color = AppColors.error)
+                    Text(stringResource(R.string.a11y_profiles_delete), style = GeistType.button14, color = colors.error)
                 }
             },
         )
@@ -124,8 +123,8 @@ internal fun ProfileScheduleRowContent(
                     .testTag(ProfileScheduleTags.DISCARD_RECOVERY)
                     .semantics { contentDescription = description },
             ) {
-                Text(stringResource(R.string.profile_schedule_discard_recovery),
-                    color = if (discardEnabled) AppColors.error else AppColors.textMuted)
+                Text(stringResource(R.string.profile_schedule_discard_recovery), style = GeistType.button14,
+                    color = if (discardEnabled) colors.error else colors.disabled)
             }
         }
         ProfileScheduleToggle(
@@ -157,7 +156,7 @@ internal fun ProfileScheduleToggle(
             verticalArrangement = Arrangement.spacedBy(Spacing.xxs),
             maxItemsInEachRow = if (stacked) 1 else 2,
         ) {
-            Text(label, style = MaterialTheme.typography.bodyMedium, color = AppColors.textPrimary,
+            Text(label, style = GeistType.label14, color = LocalGeistColors.current.primary,
                 modifier = if (stacked) Modifier.fillMaxWidth() else Modifier.weight(1f).align(Alignment.CenterVertically))
             com.healthmd.presentation.common.AppSwitch(checked = checked, onCheckedChange = null)
         }
@@ -178,37 +177,41 @@ internal fun <T> ProfileScheduleDropdown(
     val direction = LocalLayoutDirection.current
     val focusManager = LocalFocusManager.current
     val keyboard = LocalSoftwareKeyboardController.current
-    val shape = RoundedCornerShape(Radii.card)
-    Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-        Text(label, style = MaterialTheme.typography.bodyLarge, color = AppColors.textPrimary,
+    val colors = LocalGeistColors.current
+    // The label wraps outside the field (DESIGN.md); the anchor is an outlined M3 `input`.
+    Column(verticalArrangement = Arrangement.spacedBy(GeistSpacing.space2)) {
+        Text(label, style = GeistType.label16, color = colors.primary,
             modifier = Modifier.fillMaxWidth())
         Box {
             Row(
-                modifier = Modifier.fillMaxWidth().heightIn(min = GeistSizes.minimumTouchTarget)
+                modifier = Modifier.fillMaxWidth().heightIn(min = ScheduleFieldMinHeight)
                     .testTag(tag).onSizeChanged { anchorWidth = it.width }
-                    .clip(shape).background(AppColors.bgPrimary).border(1.dp, AppColors.borderDefault, shape)
+                    .scheduleFieldOutline(colors, focused = expanded)
                     .clickable(role = Role.Button) {
                         focusManager.clearFocus(); keyboard?.hide(); expanded = true
                     }
-                    .semantics { contentDescription = label }.padding(Spacing.xs),
+                    .semantics { contentDescription = label }
+                    .padding(start = GeistSpacing.space4, end = GeistSpacing.space3, top = GeistSpacing.space2, bottom = GeistSpacing.space2),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+                horizontalArrangement = Arrangement.spacedBy(GeistSpacing.space2),
             ) {
                 Text(options.firstOrNull { it.first == selected }?.second.orEmpty(),
-                    style = MaterialTheme.typography.bodyLarge, color = AppColors.textPrimary,
+                    style = GeistType.label16, color = colors.primary,
                     modifier = Modifier.weight(1f))
                 Icon(Icons.Filled.KeyboardArrowDown, contentDescription = null,
-                    tint = AppColors.textSecondary, modifier = Modifier.size(Spacing.lg))
+                    tint = colors.secondary, modifier = Modifier.size(GeistSpacing.space6))
             }
             DropdownMenu(
                 expanded = expanded, onDismissRequest = { expanded = false },
                 modifier = Modifier.widthIn(max = with(density) { anchorWidth.toDp() }).testTag(tag + ProfileScheduleTags.MENU),
+                shape = RoundedCornerShape(GeistRadii.extraSmall),
+                containerColor = colors.gray.c200,
             ) {
                 // Native popup owners must retain the anchor's exact user scale and direction.
                 CompositionLocalProvider(LocalDensity provides density, LocalLayoutDirection provides direction) {
                     options.forEach { (value, text) ->
                         DropdownMenuItem(
-                            text = { Text(text, style = MaterialTheme.typography.labelLarge) },
+                            text = { Text(text, style = GeistType.label16, color = colors.primary) },
                             onClick = { expanded = false; onSelected(value) },
                             modifier = Modifier.heightIn(min = GeistSizes.minimumTouchTarget),
                         )
@@ -238,9 +241,10 @@ internal fun ProfileScheduleNumberField(
     var focused by remember { mutableStateOf(false) }
     val focusManager = LocalFocusManager.current
     val keyboard = LocalSoftwareKeyboardController.current
-    val shape = RoundedCornerShape(Radii.card)
-    Column(modifier, verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-        Text(label, style = MaterialTheme.typography.bodyLarge, color = AppColors.textPrimary,
+    val colors = LocalGeistColors.current
+    // The label wraps outside the field (DESIGN.md); the field is an outlined M3 `input`.
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(GeistSpacing.space2)) {
+        Text(label, style = GeistType.label16, color = colors.primary,
             modifier = Modifier.fillMaxWidth())
         BasicTextField(
             value = text,
@@ -254,16 +258,20 @@ internal fun ProfileScheduleNumberField(
                     }
                 }
             },
-            textStyle = GeistType.label20Mono.copy(color = AppColors.textPrimary),
+            textStyle = GeistType.label20Mono.copy(color = colors.primary),
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
             keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus(); keyboard?.hide() }),
-            cursorBrush = SolidColor(AppColors.accent),
-            decorationBox = { inner -> Box(Modifier.padding(Spacing.xs)) { inner() } },
-            modifier = Modifier.fillMaxWidth().heightIn(min = GeistSizes.minimumTouchTarget)
+            cursorBrush = SolidColor(colors.brandPrimary),
+            decorationBox = { inner ->
+                Box(
+                    Modifier.padding(horizontal = GeistSpacing.space4, vertical = GeistSpacing.space3),
+                    contentAlignment = Alignment.CenterStart,
+                ) { inner() }
+            },
+            modifier = Modifier.fillMaxWidth().heightIn(min = ScheduleFieldMinHeight)
                 .testTag(tag).semantics { contentDescription = label }.onFocusChanged { focused = it.isFocused }
-                .clip(shape).background(AppColors.bgPrimary)
-                .border(1.dp, if (focused) AppColors.accent else AppColors.borderDefault, shape),
+                .scheduleFieldOutline(colors, focused = focused),
         )
     }
 }

@@ -1,5 +1,8 @@
 package com.healthmd.presentation.navigation
 
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Button
+import androidx.compose.material.icons.outlined.EventRepeat
 import com.healthmd.presentation.diagnostics.DiagnosticsScreen
 
 import androidx.compose.foundation.background
@@ -586,7 +589,7 @@ fun HealthMdNavigation(
                                         SubRoutes.CLINICIAN_REPORT -> if (personalAccess) {
                                             ClinicianReportScreen(onBack = close)
                                         } else {
-                                            Text("Your own Health.md access is required to save or share a report.",
+                                            Text(stringResource(R.string.m3_nav_report_requires_access),
                                                 modifier = Modifier.padding(com.healthmd.presentation.theme.Spacing.md))
                                         }
                                         SubRoutes.DIRECT_CLI -> DirectCliScreen(onBack = close)
@@ -691,7 +694,7 @@ fun HealthMdNavigation(
                 if (personalAccess) {
                     ClinicianReportScreen(onBack = { navController.popBackStack() })
                 } else {
-                    Text("Your own Health.md access is required to save or share a report.",
+                    Text(stringResource(R.string.m3_nav_report_requires_access),
                         modifier = Modifier.padding(com.healthmd.presentation.theme.Spacing.md))
                 }
             }
@@ -925,32 +928,47 @@ private fun ScheduledRecoveryDialog(
     onDismiss: () -> Unit,
     onRecover: () -> Unit,
 ) {
+    val colors = LocalGeistColors.current
     AlertDialog(
         onDismissRequest = { if (!state.isRunning) onDismiss() },
-        title = { Text(stringResource(R.string.scheduled_recovery_title)) },
+        containerColor = colors.gray.c200,
+        shape = RoundedCornerShape(GeistRadii.large),
+        icon = { Icon(Icons.Outlined.EventRepeat, contentDescription = null, tint = colors.brandPrimary) },
+        title = {
+            Text(stringResource(R.string.scheduled_recovery_title), style = GeistType.heading24, color = colors.primary)
+        },
         text = {
             Text(
                 text = scheduledRecoveryDialogText(state),
-                style = MaterialTheme.typography.bodyMedium,
-                color = AppColors.textSecondary,
+                style = GeistType.copy14,
+                color = colors.secondary,
             )
         },
         confirmButton = {
             if (state.canRecover) {
-                TextButton(onClick = onRecover, enabled = !state.isRunning) {
+                Button(
+                    onClick = onRecover,
+                    enabled = !state.isRunning,
+                    shape = RoundedCornerShape(GeistRadii.full),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = colors.brandPrimary,
+                        contentColor = colors.brandOnPrimary,
+                    ),
+                ) {
                     Text(
                         if (state.isRunning) {
                             stringResource(R.string.scheduled_recovery_running_button)
                         } else {
                             stringResource(R.string.scheduled_recovery_retry_button)
-                        }
+                        },
+                        style = GeistType.button14,
                     )
                 }
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss, enabled = !state.isRunning) {
-                Text(stringResource(R.string.not_now))
+                Text(stringResource(R.string.not_now), style = GeistType.button14)
             }
         },
     )
@@ -1317,19 +1335,7 @@ private fun SubScreenFrame(
     content: @Composable () -> Unit,
 ) {
     Column(Modifier.fillMaxSize()) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.xxs, vertical = Spacing.xs),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            IconButton(onClick = onBack) {
-                Icon(
-                    Icons.AutoMirrored.Outlined.ArrowBack,
-                    contentDescription = stringResource(R.string.back),
-                    tint = AppColors.textPrimary,
-                )
-            }
-            Text(title, style = MaterialTheme.typography.headlineSmall, color = AppColors.textPrimary)
-        }
+        com.healthmd.presentation.common.SubScreenTopBar(title = title, onBack = onBack)
         Box(Modifier.weight(1f)) { content() }
     }
 }

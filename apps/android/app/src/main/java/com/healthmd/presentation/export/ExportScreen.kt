@@ -1,5 +1,49 @@
 package com.healthmd.presentation.export
 
+import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.TextUnit
+import androidx.compose.ui.text.style.TextIndent
+import androidx.compose.ui.text.ParagraphStyle
+import androidx.compose.material.icons.outlined.DataObject
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.Dispatchers
+import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.runtime.produceState
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.displayCutout
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.union
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.outlined.WrapText
+import androidx.compose.material.icons.outlined.ErrorOutline
+import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.WarningAmber
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.IconToggleButton
+import androidx.compose.material3.Surface
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import com.healthmd.presentation.common.AdaptiveActionPair
+import com.healthmd.presentation.common.EdgeToEdgeDialogWindow
+import com.healthmd.presentation.common.PrimaryButton
+import com.healthmd.presentation.common.SecondaryButton
+import com.healthmd.presentation.common.dialogNavigationBarsPadding
+import com.healthmd.presentation.settings.groupRowShape
+import com.healthmd.presentation.theme.GeistRadii
+import com.healthmd.presentation.theme.GeistSizes
+import com.healthmd.presentation.theme.GeistSpacing
+import com.healthmd.presentation.theme.LocalGeistColors
 import android.app.Activity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -1369,17 +1413,30 @@ fun ExportScreen(
 
     // Open-with dialog (shown when Obsidian is installed)
     if (showOpenDialog) {
+        val openDialogColors = LocalGeistColors.current
         AlertDialog(
             onDismissRequest = { showOpenDialog = false },
+            containerColor = openDialogColors.gray.c200,
+            shape = RoundedCornerShape(GeistRadii.large),
+            icon = {
+                Box(
+                    Modifier
+                        .size(GeistSizes.controlLarge)
+                        .background(openDialogColors.brandSubtle, CircleShape),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(Icons.Outlined.FolderOpen, contentDescription = null, tint = openDialogColors.brandOnSubtle)
+                }
+            },
             title = {
                 Text(
                     stringResource(R.string.open_folder),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = AppColors.textPrimary,
+                    style = GeistType.heading20,
+                    color = openDialogColors.primary,
                 )
             },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                Column(verticalArrangement = Arrangement.spacedBy(GeistSpacing.space2)) {
                     SecondaryButton(
                         text = stringResource(R.string.open_with_files),
                         modifier = Modifier.fillMaxWidth(),
@@ -1403,7 +1460,11 @@ fun ExportScreen(
             confirmButton = {},
             dismissButton = {
                 TextButton(onClick = { showOpenDialog = false }) {
-                    Text(stringResource(R.string.action_close_options), color = AppColors.textMuted)
+                    Text(
+                        stringResource(R.string.action_close_options),
+                        style = GeistType.button14,
+                        color = openDialogColors.brandPrimary,
+                    )
                 }
             },
         )
@@ -1928,14 +1989,15 @@ private fun ExportFailureGroup(
     group: ExportFailureDiagnosticGroup,
     isRawSnapshot: Boolean,
 ) {
+    val colors = LocalGeistColors.current
+    // A tonal well inside the diagnostics card; hierarchy from fill, not a border.
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(Radii.card))
-            .background(AppColors.bgSecondary)
-            .border(1.dp, AppColors.borderDefault, RoundedCornerShape(Radii.card))
-            .padding(Spacing.sm),
-        verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+            .clip(RoundedCornerShape(GeistRadii.medium))
+            .background(colors.gray.c200)
+            .padding(GeistSpacing.space3),
+        verticalArrangement = Arrangement.spacedBy(GeistSpacing.space1),
     ) {
         Text(
             if (isRawSnapshot) {
@@ -1953,20 +2015,19 @@ private fun ExportFailureGroup(
                     group.count,
                 )
             },
-            style = MaterialTheme.typography.labelLarge,
-            color = AppColors.textPrimary,
-            fontWeight = FontWeight.SemiBold,
+            style = GeistType.heading14,
+            color = colors.primary,
         )
         Text(
             group.guidanceText(),
-            style = MaterialTheme.typography.bodySmall,
-            color = AppColors.textSecondary,
+            style = GeistType.copy14,
+            color = colors.secondary,
         )
         if (!isRawSnapshot && group.sampleDates.isNotEmpty()) {
             Text(
                 group.dateSampleText(),
-                style = MaterialTheme.typography.bodySmall,
-                color = AppColors.textMuted,
+                style = GeistType.copy13,
+                color = colors.secondary,
             )
         }
     }
@@ -2034,6 +2095,11 @@ fun ExportFailureDiagnosticGroup.dateSampleText(): String {
     }
 }
 
+/**
+ * Export preview as a full-screen Material 3 surface: a top app bar (Close on the file list,
+ * Back on a file), the list of files grouped by day as list-group rows, a full-height file
+ * reader, and a pinned action bar with Export as the one filled action.
+ */
 @Composable
 private fun ExportPreviewDialog(
     preview: ExportPreview?,
@@ -2047,107 +2113,215 @@ private fun ExportPreviewDialog(
     onCancel: () -> Unit,
 ) {
     var selectedFile by remember(preview) { mutableStateOf<PreviewFileDetails?>(null) }
+    var wrapLines by rememberSaveable { mutableStateOf(true) }
+    var formatted by rememberSaveable { mutableStateOf(true) }
     val closePreview = if (isLoading) onCancel else onDismiss
+    val colors = LocalGeistColors.current
 
-    AlertDialog(
-        onDismissRequest = closePreview,
-        title = {
-            selectedFile?.let { file ->
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(
-                        onClick = { selectedFile = null },
-                        modifier = Modifier
-                            .size(40.dp)
-                            .clip(CircleShape)
-                            .background(AppColors.bgTertiary),
+    Dialog(
+        onDismissRequest = { if (selectedFile != null) selectedFile = null else closePreview() },
+        properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
+    ) {
+        EdgeToEdgeDialogWindow(fullScreenPage = true)
+        Surface(modifier = Modifier.fillMaxSize(), color = colors.background100) {
+            Column(
+                Modifier
+                    .fillMaxSize()
+                    .windowInsetsPadding(WindowInsets.statusBars.union(WindowInsets.displayCutout))
+                    .dialogNavigationBarsPadding(),
+            ) {
+                val file = selectedFile
+                PreviewTopBar(
+                    title = file?.title ?: stringResource(R.string.export_preview_title),
+                    subtitle = file?.subtitle,
+                    isFile = file != null,
+                    onNavigate = { if (file != null) selectedFile = null else closePreview() },
+                    wrapLines = wrapLines,
+                    onWrapLinesChange = { wrapLines = it },
+                    canFormat = file != null && PreviewSyntax.forPath(file.relativePath) != PreviewSyntax.PLAIN,
+                    formatted = formatted,
+                    onFormattedChange = { formatted = it },
+                )
+                Box(
+                    Modifier
+                        .weight(1f)
+                        .fillMaxWidth(),
+                    contentAlignment = Alignment.TopCenter,
+                ) {
+                    Box(
+                        Modifier
+                            .widthIn(max = GeistSizes.readableContentMaxWidth)
+                            .fillMaxSize(),
                     ) {
-                        Icon(
-                            Icons.AutoMirrored.Outlined.ArrowBack,
-                            contentDescription = stringResource(R.string.export_preview_back_description),
-                            tint = AppColors.textPrimary,
-                        )
+                        when {
+                            isLoading -> ExportPreviewLoadingContent()
+                            file != null -> PreviewFileContent(file, destinationLabel, wrapLines, formatted)
+                            preview != null -> ExportPreviewFileList(
+                                preview = preview,
+                                destinationLabel = destinationLabel,
+                                formatsPerDay = formatsPerDay,
+                                onFileSelected = { selectedFile = it },
+                            )
+                        }
                     }
-                    Spacer(modifier = Modifier.width(Spacing.sm))
-                    Text(
-                        file.title,
-                        style = MaterialTheme.typography.titleLarge,
-                        color = AppColors.textPrimary,
-                        fontWeight = FontWeight.SemiBold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
                 }
-            } ?: Text(
-                stringResource(R.string.export_preview_title),
-                style = MaterialTheme.typography.titleLarge,
-                color = AppColors.textPrimary,
-                fontWeight = FontWeight.SemiBold,
-            )
-        },
-        text = {
-            when {
-                isLoading -> ExportPreviewLoadingContent()
-                selectedFile != null -> PreviewFileContent(selectedFile!!)
-                preview != null -> ExportPreviewFileList(
-                    preview = preview,
-                    destinationLabel = destinationLabel,
-                    formatsPerDay = formatsPerDay,
-                    onFileSelected = { selectedFile = it },
+                PreviewActionBar(
+                    showExport = !isLoading && preview != null,
+                    canExport = canExport,
+                    hitExportLimit = hitExportLimit,
+                    onExport = onExport,
+                    onDone = closePreview,
                 )
             }
-        },
-        confirmButton = {
-            if (!isLoading && preview != null) {
-                Button(
-                    onClick = onExport,
-                    enabled = canExport,
-                    shape = RoundedCornerShape(Radii.button),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = AppColors.textPrimary,
-                        contentColor = AppColors.bgPrimary,
-                        disabledContainerColor = AppColors.bgTertiary,
-                        disabledContentColor = AppColors.textMuted,
-                    ),
-                ) {
-                    Icon(Icons.Outlined.UploadFile, contentDescription = null)
-                    Spacer(modifier = Modifier.width(Spacing.xs))
-                    Text(
-                        stringResource(
-                            if (hitExportLimit) R.string.unlock_button else R.string.export_button
-                        )
-                    )
-                }
-            } else {
-                TextButton(onClick = closePreview) {
-                    Text(stringResource(R.string.export_preview_done), color = AppColors.accent)
-                }
-            }
-        },
-        dismissButton = {
-            if (!isLoading && preview != null) {
-                TextButton(onClick = closePreview) {
-                    Text(stringResource(R.string.export_preview_done), color = AppColors.textSecondary)
-                }
-            }
-        },
+        }
+    }
+}
+
+/** Sub-screen top app bar: navigation icon, a one-line `heading-20` title and optional subtitle. */
+@Composable
+private fun PreviewTopBar(
+    title: String,
+    subtitle: String?,
+    isFile: Boolean,
+    onNavigate: () -> Unit,
+    wrapLines: Boolean,
+    onWrapLinesChange: (Boolean) -> Unit,
+    canFormat: Boolean,
+    formatted: Boolean,
+    onFormattedChange: (Boolean) -> Unit,
+) {
+    val colors = LocalGeistColors.current
+    val toggleColors = IconButtonDefaults.iconToggleButtonColors(
+        contentColor = colors.secondary,
+        checkedContentColor = colors.onSecondaryContainer,
+        checkedContainerColor = colors.secondaryContainer,
     )
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 64.dp)
+            .padding(horizontal = GeistSpacing.space1),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        IconButton(onClick = onNavigate, modifier = Modifier.size(GeistSizes.minimumTouchTarget)) {
+            Icon(
+                if (isFile) Icons.AutoMirrored.Outlined.ArrowBack else Icons.Outlined.Close,
+                contentDescription = stringResource(
+                    if (isFile) R.string.export_preview_back_description else R.string.close
+                ),
+                tint = colors.primary,
+            )
+        }
+        Column(
+            Modifier
+                .weight(1f)
+                .padding(horizontal = GeistSpacing.space1, vertical = GeistSpacing.space2),
+        ) {
+            Text(
+                title,
+                style = GeistType.heading20,
+                color = colors.primary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.semantics { heading() },
+            )
+            subtitle?.let {
+                Text(it, style = GeistType.copy13, color = colors.secondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+        }
+        if (isFile && canFormat) {
+            val formatLabel = stringResource(R.string.export_preview_format_text)
+            IconToggleButton(
+                checked = formatted,
+                onCheckedChange = onFormattedChange,
+                modifier = Modifier
+                    .size(GeistSizes.minimumTouchTarget)
+                    .semantics { contentDescription = formatLabel },
+                colors = toggleColors,
+            ) {
+                Icon(Icons.Outlined.DataObject, contentDescription = null)
+            }
+        }
+        if (isFile) {
+            val wrapLabel = stringResource(R.string.export_preview_wrap_lines)
+            IconToggleButton(
+                checked = wrapLines,
+                onCheckedChange = onWrapLinesChange,
+                modifier = Modifier
+                    .size(GeistSizes.minimumTouchTarget)
+                    .semantics { contentDescription = wrapLabel },
+                colors = toggleColors,
+            ) {
+                Icon(Icons.AutoMirrored.Outlined.WrapText, contentDescription = null)
+            }
+        }
+    }
+}
+
+/** Pinned footer: Done beside the one filled Export action, stacking when labels would crowd. */
+@Composable
+private fun PreviewActionBar(
+    showExport: Boolean,
+    canExport: Boolean,
+    hitExportLimit: Boolean,
+    onExport: () -> Unit,
+    onDone: () -> Unit,
+) {
+    val colors = LocalGeistColors.current
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .background(colors.background200)
+            .padding(horizontal = GeistSpacing.space4, vertical = GeistSpacing.space3),
+        contentAlignment = Alignment.Center,
+    ) {
+        Box(Modifier.widthIn(max = GeistSizes.readableContentMaxWidth)) {
+            if (showExport) {
+                AdaptiveActionPair(
+                    primaryAction = { modifier ->
+                        PrimaryButton(
+                            text = stringResource(if (hitExportLimit) R.string.unlock_button else R.string.export_button),
+                            onClick = onExport,
+                            enabled = canExport,
+                            icon = Icons.Outlined.UploadFile,
+                            modifier = modifier,
+                        )
+                    },
+                    secondaryAction = { modifier ->
+                        SecondaryButton(
+                            text = stringResource(R.string.export_preview_done),
+                            onClick = onDone,
+                            modifier = modifier,
+                        )
+                    },
+                )
+            } else {
+                SecondaryButton(
+                    text = stringResource(R.string.export_preview_done),
+                    onClick = onDone,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+        }
+    }
 }
 
 @Composable
 private fun ExportPreviewLoadingContent() {
+    val colors = LocalGeistColors.current
     Column(
         modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(min = 260.dp),
+            .fillMaxSize()
+            .padding(GeistSpacing.space4),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        CircularProgressIndicator(color = AppColors.accent)
-        Spacer(modifier = Modifier.height(Spacing.md))
+        CircularProgressIndicator(color = colors.brandPrimary)
+        Spacer(modifier = Modifier.height(GeistSpacing.space4))
         Text(
             stringResource(R.string.export_preview_building),
-            style = MaterialTheme.typography.bodyMedium,
-            color = AppColors.textMuted,
+            style = GeistType.copy14,
+            color = colors.secondary,
         )
     }
 }
@@ -2159,44 +2333,21 @@ private fun ExportPreviewFileList(
     formatsPerDay: Int,
     onFileSelected: (PreviewFileDetails) -> Unit,
 ) {
+    val colors = LocalGeistColors.current
     Column(
         modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(max = 560.dp)
-            .verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = GeistSpacing.space4)
+            .padding(bottom = GeistSpacing.space6),
     ) {
-        preview.sleepWindow?.let { window ->
-            val morningEnds = window.captureContext.sleepDayAttribution == SleepDayAttribution.MORNING_ENDS
-            Text(
-                text = stringResource(
-                    if (morningEnds) R.string.export_sleep_preview_window_morning_ends
-                    else R.string.export_sleep_preview_window,
-                    formatPreviewDate(window.startDate),
-                    formatPreviewDate(if (morningEnds) window.endDate else window.endDate.plusDays(1)),
-                    window.captureContext.zoneId.id,
-                ),
-                style = MaterialTheme.typography.bodySmall,
-                color = AppColors.textSecondary,
-            )
-            Text(
-                text = stringResource(if (morningEnds) R.string.export_sleep_preview_guidance_morning_ends
-                    else R.string.export_sleep_preview_guidance),
-                style = MaterialTheme.typography.bodySmall,
-                color = AppColors.textSecondary,
-            )
-        }
-
         PreviewSummaryCard(
             requestedDayCount = preview.requestedDateCount,
             formatsPerDay = formatsPerDay,
             destinationLabel = destinationLabel,
             isRangeArtifact = preview.isRangeArtifact,
             artifactCount = preview.totalFileCount,
-        )
-
-        Text(
-            if (preview.isRangeArtifact) {
+            totals = if (preview.isRangeArtifact) {
                 stringResource(
                     R.string.export_preview_summary,
                     dayCountLabel(preview.requestedDateCount),
@@ -2211,57 +2362,75 @@ private fun ExportPreviewFileList(
                     formatBytes(preview.totalByteCount),
                 )
             },
-            style = MaterialTheme.typography.bodyMedium,
-            color = AppColors.textSecondary,
-        )
-        if (!preview.isRangeArtifact && preview.isTruncated && preview.previewedDateCount > 0) {
-            Text(
+            limitNote = if (!preview.isRangeArtifact && preview.isTruncated && preview.previewedDateCount > 0) {
                 pluralStringResource(
                     R.plurals.export_preview_limited_days,
                     preview.previewedDateCount,
                     preview.previewedDateCount,
+                )
+            } else null,
+        )
+
+        preview.sleepWindow?.let { window ->
+            val morningEnds = window.captureContext.sleepDayAttribution == SleepDayAttribution.MORNING_ENDS
+            PreviewNote(
+                tone = PreviewNoteTone.INFO,
+                title = null,
+                message = stringResource(
+                    if (morningEnds) R.string.export_sleep_preview_window_morning_ends
+                    else R.string.export_sleep_preview_window,
+                    formatPreviewDate(window.startDate),
+                    formatPreviewDate(if (morningEnds) window.endDate else window.endDate.plusDays(1)),
+                    window.captureContext.zoneId.id,
+                ) + "\n" + stringResource(
+                    if (morningEnds) R.string.export_sleep_preview_guidance_morning_ends
+                    else R.string.export_sleep_preview_guidance
                 ),
-                style = MaterialTheme.typography.bodySmall,
-                color = AppColors.textMuted,
+                modifier = Modifier.padding(top = GeistSpacing.space3),
             )
         }
+
         if (preview.days.isEmpty()) {
-            PreviewStatusCard(
+            PreviewNote(
+                tone = PreviewNoteTone.INFO,
                 title = stringResource(R.string.export_preview_no_data_title),
                 message = stringResource(R.string.export_preview_no_data_message),
-                color = AppColors.textMuted,
+                modifier = Modifier.padding(top = GeistSpacing.space3),
             )
         }
 
         preview.days.forEach { day ->
             Text(
                 if (preview.isRangeArtifact) formatPreviewDateRange(day.requestedDates) else formatPreviewDate(day.date),
-                style = MaterialTheme.typography.labelLarge,
-                color = AppColors.textMuted,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.padding(top = Spacing.xs),
+                style = GeistType.heading14,
+                color = colors.brandPrimary,
+                modifier = Modifier
+                    .padding(start = GeistSpacing.space4, top = GeistSpacing.space6, bottom = GeistSpacing.space2)
+                    .semantics { heading() },
             )
 
             day.failureReason?.let { reason ->
-                PreviewStatusCard(
+                PreviewNote(
+                    tone = PreviewNoteTone.ERROR,
                     title = reason.localizedFailureLabel(),
                     message = day.issues.takeIf { it.isNotEmpty() }
                         ?.map { it.localizedMessage() }
                         ?.joinToString("\n")
                         ?: stringResource(R.string.export_preview_no_exportable_file),
-                    color = AppColors.error,
+                    modifier = Modifier.padding(bottom = GeistSpacing.space2),
                 )
             }
             if (day.failureReason == null && day.issues.isNotEmpty()) {
-                PreviewStatusCard(
+                PreviewNote(
+                    tone = PreviewNoteTone.WARNING,
                     title = stringResource(R.string.export_preview_warning_title),
                     message = day.issues.map { it.localizedMessage() }.joinToString("\n"),
-                    color = AppColors.warning,
+                    modifier = Modifier.padding(bottom = GeistSpacing.space2),
                 )
             }
 
-            day.files.forEach { file ->
-                val details = PreviewFileDetails(
+            val rows = day.files.map { file ->
+                PreviewFileDetails(
                     title = file.relativePath.substringAfterLast('/'),
                     subtitle = "${file.formatLabel ?: file.format.localizedDisplayName()} · ${formatBytes(file.byteCount)}",
                     relativePath = file.relativePath,
@@ -2270,16 +2439,9 @@ private fun ExportPreviewFileList(
                     previewOmittedByteCount = file.previewOmittedByteCount,
                     previewTailContent = file.previewTailContent,
                     isWritable = true,
-                )
-                PreviewFileRow(
-                    file = details,
-                    destinationLabel = destinationLabel,
-                    onClick = { onFileSelected(details) },
-                )
-            }
-
-            day.sideEffects.forEach { effect ->
-                val details = PreviewFileDetails(
+                ) to true
+            } + day.sideEffects.map { effect ->
+                PreviewFileDetails(
                     title = effect.relativePath.substringAfterLast('/'),
                     subtitle = effect.action.localizedAction() + if (effect.wouldWrite) " · ${formatBytes(effect.byteCount)}" else "",
                     relativePath = effect.relativePath,
@@ -2288,18 +2450,24 @@ private fun ExportPreviewFileList(
                     previewOmittedByteCount = 0,
                     previewTailContent = "",
                     isWritable = effect.wouldWrite,
-                )
-                PreviewFileRow(
-                    file = details,
-                    destinationLabel = destinationLabel,
-                    onClick = { if (effect.content != null) onFileSelected(details) },
-                    enabled = effect.content != null,
-                )
+                ) to (effect.content != null)
+            }
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                rows.forEachIndexed { index, (details, openable) ->
+                    PreviewFileRow(
+                        file = details,
+                        destinationLabel = destinationLabel,
+                        shape = groupRowShape(index, rows.size),
+                        onClick = { onFileSelected(details) },
+                        enabled = openable,
+                    )
+                }
             }
         }
     }
 }
 
+/** What the export writes and where, as a tonal card with the totals beneath. */
 @Composable
 private fun PreviewSummaryCard(
     requestedDayCount: Int,
@@ -2307,155 +2475,165 @@ private fun PreviewSummaryCard(
     destinationLabel: String?,
     isRangeArtifact: Boolean,
     artifactCount: Int,
+    totals: String,
+    limitNote: String?,
 ) {
+    val colors = LocalGeistColors.current
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(Radii.card))
-            .background(AppColors.bgPrimary)
-            .border(1.dp, AppColors.borderDefault, RoundedCornerShape(Radii.card))
-            .padding(Spacing.md),
-        verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+            .clip(RoundedCornerShape(GeistRadii.large))
+            .background(colors.background200)
+            .padding(GeistSpacing.space4 + GeistSpacing.space1),
+        verticalArrangement = Arrangement.spacedBy(GeistSpacing.space2),
     ) {
         PreviewSummaryRow(stringResource(R.string.section_date_range), dayCountLabel(requestedDayCount))
         PreviewSummaryRow(
             stringResource(
-                if (isRangeArtifact) {
-                    R.string.export_preview_artifacts_per_range
-                } else {
-                    R.string.export_preview_formats_per_day
-                }
+                if (isRangeArtifact) R.string.export_preview_artifacts_per_range
+                else R.string.export_preview_formats_per_day
             ),
             localizedInteger(if (isRangeArtifact) artifactCount else formatsPerDay),
         )
         PreviewSummaryRow(
             stringResource(R.string.export_preview_destination_label),
             destinationLabel ?: stringResource(R.string.export_preview_selected_folder),
+            mono = true,
         )
+        Text(
+            totals,
+            style = GeistType.copy14,
+            color = colors.secondary,
+            modifier = Modifier.padding(top = GeistSpacing.space1),
+        )
+        limitNote?.let { Text(it, style = GeistType.copy13, color = colors.secondary) }
     }
 }
 
 @Composable
-private fun PreviewSummaryRow(label: String, value: String) {
+private fun PreviewSummaryRow(label: String, value: String, mono: Boolean = false) {
+    val colors = LocalGeistColors.current
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.Top,
     ) {
-        Text(
-            label,
-            style = MaterialTheme.typography.bodyMedium,
-            color = AppColors.textSecondary,
-        )
+        Text(label, style = GeistType.copy14, color = colors.secondary)
         Text(
             value,
-            modifier = Modifier.padding(start = Spacing.md),
-            style = MaterialTheme.typography.bodyMedium,
-            color = AppColors.textPrimary,
+            modifier = Modifier.padding(start = GeistSpacing.space4),
+            style = if (mono) GeistType.label13Mono else GeistType.label14,
+            color = colors.primary,
             textAlign = TextAlign.End,
         )
     }
 }
 
+private enum class PreviewNoteTone { INFO, WARNING, ERROR }
+
+/** A tonal note (no border) whose tone is carried by its icon and title as well as color. */
 @Composable
-private fun PreviewStatusCard(title: String, message: String, color: Color) {
-    Column(
-        modifier = Modifier
+private fun PreviewNote(
+    tone: PreviewNoteTone,
+    title: String?,
+    message: String,
+    modifier: Modifier = Modifier,
+) {
+    val colors = LocalGeistColors.current
+    val (container, accent, icon) = when (tone) {
+        PreviewNoteTone.INFO -> Triple(colors.gray.c200, colors.secondary, Icons.Outlined.Info)
+        PreviewNoteTone.WARNING -> Triple(colors.amber.c100, colors.warning, Icons.Outlined.WarningAmber)
+        PreviewNoteTone.ERROR -> Triple(colors.red.c100, colors.error, Icons.Outlined.ErrorOutline)
+    }
+    Row(
+        modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(Radii.card))
-            .background(AppColors.bgPrimary)
-            .border(1.dp, AppColors.borderDefault, RoundedCornerShape(Radii.card))
-            .padding(Spacing.sm),
-        verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+            .clip(RoundedCornerShape(GeistRadii.medium))
+            .background(container)
+            .padding(GeistSpacing.space4),
+        horizontalArrangement = Arrangement.spacedBy(GeistSpacing.space3),
     ) {
-        Text(
-            title,
-            style = MaterialTheme.typography.labelLarge,
-            color = color,
-            fontWeight = FontWeight.SemiBold,
-        )
-        Text(
-            message,
-            style = MaterialTheme.typography.bodySmall,
-            color = AppColors.textSecondary,
-        )
+        Icon(icon, contentDescription = null, tint = accent, modifier = Modifier.size(20.dp))
+        Column(verticalArrangement = Arrangement.spacedBy(GeistSpacing.space1)) {
+            title?.let { Text(it, style = GeistType.heading14, color = accent) }
+            Text(message, style = GeistType.copy14, color = colors.primary)
+        }
     }
 }
 
+/** One file as a list-group row: icon circle, name, format and size, and its folder in mono. */
 @Composable
 private fun PreviewFileRow(
     file: PreviewFileDetails,
     destinationLabel: String?,
+    shape: Shape,
     onClick: () -> Unit,
     enabled: Boolean = true,
 ) {
-    val rowColor = if (file.isWritable) AppColors.accent else AppColors.textMuted
-    Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-        Row(
+    val colors = LocalGeistColors.current
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(shape)
+            .background(colors.background200)
+            .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
+            .heightIn(min = 72.dp)
+            .padding(start = GeistSpacing.space4, end = GeistSpacing.space3, top = GeistSpacing.space3, bottom = GeistSpacing.space3),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(GeistSpacing.space4),
+    ) {
+        Box(
             modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(Radii.card))
-                .background(AppColors.bgPrimary)
-                .border(1.dp, AppColors.borderDefault, RoundedCornerShape(Radii.card))
-                .clickable(enabled = enabled, onClick = onClick)
-                .padding(Spacing.md),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                .size(GeistSizes.control)
+                .background(if (file.isWritable) colors.brandSubtle else colors.gray.c300, CircleShape),
+            contentAlignment = Alignment.Center,
         ) {
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(CircleShape)
-                    .background(if (file.isWritable) AppColors.accentSubtle else AppColors.bgSecondary),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    Icons.Outlined.Description,
-                    contentDescription = null,
-                    tint = rowColor,
-                    modifier = Modifier.size(22.dp),
-                )
-            }
-            Column(modifier = Modifier.weight(1f)) {
+            Icon(
+                Icons.Outlined.Description,
+                contentDescription = null,
+                tint = if (file.isWritable) colors.brandOnSubtle else colors.secondary,
+                modifier = Modifier.size(22.dp),
+            )
+        }
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                file.title,
+                style = GeistType.label16,
+                color = if (enabled) colors.primary else colors.secondary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(file.subtitle, style = GeistType.copy14, color = colors.secondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            parentPathLabel(file.relativePath, destinationLabel)?.let { path ->
                 Text(
-                    file.title,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = if (enabled) AppColors.textPrimary else AppColors.textMuted,
-                    fontWeight = FontWeight.SemiBold,
+                    path,
+                    style = GeistType.label12Mono,
+                    color = colors.secondary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                )
-                Text(
-                    file.subtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = AppColors.textSecondary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-            if (enabled) {
-                Icon(
-                    Icons.AutoMirrored.Outlined.ArrowForwardIos,
-                    contentDescription = null,
-                    tint = AppColors.textMuted,
+                    modifier = Modifier.padding(top = GeistSpacing.space1),
                 )
             }
         }
-        parentPathLabel(file.relativePath, destinationLabel)?.let { path ->
-            Text(
-                path,
-                style = MaterialTheme.typography.bodySmall,
-                color = AppColors.textMuted,
-                modifier = Modifier.padding(start = Spacing.md),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
+        if (enabled) {
+            Icon(
+                Icons.AutoMirrored.Outlined.KeyboardArrowRight,
+                contentDescription = null,
+                tint = colors.secondary,
             )
         }
     }
 }
 
+/** The file reader: where it is written, then the content on a full-height mono surface. */
 @Composable
-private fun PreviewFileContent(file: PreviewFileDetails) {
+private fun PreviewFileContent(
+    file: PreviewFileDetails,
+    destinationLabel: String?,
+    wrapLines: Boolean,
+    formatted: Boolean,
+) {
+    val colors = LocalGeistColors.current
     val displayContent = remember(
         file.content,
         file.previewTailContent,
@@ -2473,54 +2651,108 @@ private fun PreviewFileContent(file: PreviewFileDetails) {
             ExportPreviewDisplayContent.make(file.content)
         }
     }
-    val renderedContent = displayContent.render(
-        emptyFileLabel = stringResource(R.string.export_preview_empty_file),
-        truncationMarker = stringResource(
-            R.string.export_preview_truncation_marker,
-            formatBytes(displayContent.omittedByteCount),
-            formatBytes(displayContent.originalByteCount),
-        ),
+    val emptyFileLabel = stringResource(R.string.export_preview_empty_file)
+    val truncationMarker = stringResource(
+        R.string.export_preview_truncation_marker,
+        formatBytes(displayContent.omittedByteCount),
+        formatBytes(displayContent.originalByteCount),
     )
+    val syntax = remember(file.relativePath) { PreviewSyntax.forPath(file.relativePath) }
+    val palette = PreviewPalette(
+        key = colors.brandPrimary,
+        string = colors.teal.c900,
+        literal = colors.pink.c900,
+        punctuation = colors.secondary,
+        heading = colors.primary,
+    )
+    // One monospace column, for hanging indents that keep wrapped values under their indent.
+    val textMeasurer = rememberTextMeasurer()
+    val density = LocalDensity.current
+    val columnWidth = remember(textMeasurer, density) {
+        with(density) { (textMeasurer.measure("0000000000", GeistType.label12Mono).size.width / 10f).toSp() }
+    }
+    val hangIndents = formatted && wrapLines &&
+        (syntax == PreviewSyntax.JSON || syntax == PreviewSyntax.NDJSON || syntax == PreviewSyntax.YAML)
+    // Formatting runs off the main thread: a preview holds up to 64 KB of text.
+    val renderedContent by produceState<AnnotatedString?>(
+        initialValue = null,
+        displayContent, formatted, hangIndents, syntax, palette, emptyFileLabel, truncationMarker, columnWidth,
+    ) {
+        value = null
+        value = withContext(Dispatchers.Default) {
+            when {
+                displayContent.isEmpty -> AnnotatedString(emptyFileLabel)
+                !formatted || syntax == PreviewSyntax.PLAIN -> AnnotatedString(
+                    displayContent.render(emptyFileLabel = emptyFileLabel, truncationMarker = truncationMarker),
+                )
+                else -> buildAnnotatedString {
+                    val head = ExportPreviewFormatter.format(displayContent.text, syntax, palette)
+                    append(if (hangIndents) head.withHangingIndents(columnWidth) else head)
+                    if (displayContent.isTruncated) {
+                        withStyle(SpanStyle(color = palette.punctuation)) { append(truncationMarker) }
+                        val tail = ExportPreviewFormatter.format(displayContent.tailText, syntax, palette)
+                        append(if (hangIndents) tail.withHangingIndents(columnWidth) else tail)
+                    }
+                }
+            }
+        }
+    }
+    val fullPath = listOfNotNull(destinationLabel?.takeIf { it.isNotBlank() }, file.relativePath.trim('/'))
+        .joinToString("/")
 
     Column(
         modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(max = 560.dp),
-        verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+            .fillMaxSize()
+            .padding(start = GeistSpacing.space4, end = GeistSpacing.space4, bottom = GeistSpacing.space3),
+        verticalArrangement = Arrangement.spacedBy(GeistSpacing.space3),
     ) {
-        Text(
-            stringResource(
-                if (displayContent.isTruncated) {
-                    R.string.export_preview_truncated_file
-                } else {
-                    R.string.export_preview_complete_file
-                },
-                formatBytes(displayContent.originalByteCount),
-            ),
-            style = MaterialTheme.typography.bodySmall,
-            color = AppColors.textSecondary,
-        )
-        Text(
-            file.relativePath,
-            style = MaterialTheme.typography.bodySmall,
-            color = AppColors.textMuted,
-        )
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(GeistRadii.listGroup))
+                .background(colors.background200)
+                .padding(GeistSpacing.space4),
+            verticalArrangement = Arrangement.spacedBy(GeistSpacing.space1),
+        ) {
+            SelectionContainer {
+                Text(fullPath, style = GeistType.label12Mono, color = colors.primary)
+            }
+            Text(
+                stringResource(
+                    if (displayContent.isTruncated) R.string.export_preview_truncated_file
+                    else R.string.export_preview_complete_file,
+                    formatBytes(displayContent.originalByteCount),
+                ),
+                style = GeistType.copy13,
+                color = colors.secondary,
+            )
+        }
         Box(
             modifier = Modifier
+                .weight(1f)
                 .fillMaxWidth()
-                .heightIn(min = 260.dp, max = 460.dp)
-                .clip(RoundedCornerShape(Radii.card))
-                .background(AppColors.bgPrimary)
-                .border(1.dp, AppColors.borderDefault, RoundedCornerShape(Radii.card))
+                .clip(RoundedCornerShape(GeistRadii.medium))
+                .background(colors.gray.c100)
                 .verticalScroll(rememberScrollState())
-                .padding(Spacing.sm),
+                .then(if (wrapLines) Modifier else Modifier.horizontalScroll(rememberScrollState()))
+                .padding(GeistSpacing.space4),
         ) {
-            Text(
-                renderedContent,
-                style = MaterialTheme.typography.bodySmall,
-                color = AppColors.textPrimary,
-                fontFamily = GeistMono,
-            )
+            val content = renderedContent
+            if (content == null) {
+                CircularProgressIndicator(
+                    color = colors.brandPrimary,
+                    modifier = Modifier.size(GeistSpacing.space6),
+                )
+            } else {
+                SelectionContainer {
+                    Text(
+                        content,
+                        style = GeistType.label12Mono,
+                        color = colors.primary,
+                        softWrap = wrapLines,
+                    )
+                }
+            }
         }
     }
 }
@@ -2736,5 +2968,36 @@ private fun ExportMoreOptionsToggle(expanded: Boolean, summary: String, onToggle
             contentDescription = null,
             tint = AppColors.textSecondary,
         )
+    }
+}
+
+/**
+ * Turns each line's leading spaces into a paragraph indent whose wrapped lines hang one level
+ * deeper, so a long value wraps under its own indent instead of breaking after the spaces and
+ * restarting at the left edge. Display only: copied text loses its indentation.
+ */
+private fun AnnotatedString.withHangingIndents(column: TextUnit): AnnotatedString = buildAnnotatedString {
+    val source = this@withHangingIndents
+    var lineStart = 0
+    while (lineStart <= source.length) {
+        val lineEnd = source.text.indexOf('\n', lineStart).let { if (it < 0) source.length else it }
+        var contentStart = lineStart
+        while (contentStart < lineEnd && source.text[contentStart] == ' ') contentStart++
+        val indent = contentStart - lineStart
+        withStyle(
+            ParagraphStyle(
+                textIndent = TextIndent(
+                    firstLine = (column.value * indent).sp,
+                    restLine = (column.value * (indent + 2)).sp,
+                ),
+            ),
+        ) {
+            // An empty paragraph collapses; a single space keeps blank lines. Paragraph boundaries
+            // replace the newlines (a kept newline adds a blank line), so copy exact text from the
+            // raw view.
+            if (contentStart == lineEnd) append(' ') else append(source.subSequence(contentStart, lineEnd))
+        }
+        if (lineEnd == source.length) break
+        lineStart = lineEnd + 1
     }
 }

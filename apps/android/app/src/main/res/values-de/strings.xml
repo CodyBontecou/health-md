@@ -1084,6 +1084,8 @@
     <string name="export_preview_api_preparation_failed">Die Vorbereitung des API-Exports ist fehlgeschlagen.</string>
     <string name="export_preview_artifacts_per_range">Artefakte pro Bereich</string>
     <string name="export_preview_back_description">Zurück zur Exportvorschau</string>
+    <string name="export_preview_wrap_lines">Zeilen umbrechen</string>
+    <string name="export_preview_format_text">Text formatieren</string>
     <string name="export_preview_destination_label">Ziel</string>
     <string name="export_preview_empty_file">(leere Datei)</string>
     <string name="export_preview_formats_per_day">Formate pro Tag</string>

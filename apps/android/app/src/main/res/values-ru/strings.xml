@@ -1150,6 +1150,8 @@
     <string name="export_preview_api_preparation_failed">Не удалось подготовить экспорт API.</string>
     <string name="export_preview_artifacts_per_range">Артефактов на диапазон</string>
     <string name="export_preview_back_description">Назад к предпросмотру экспорта</string>
+    <string name="export_preview_wrap_lines">Переносить строки</string>
+    <string name="export_preview_format_text">Форматировать текст</string>
     <string name="export_preview_destination_label">Назначение</string>
     <string name="export_preview_empty_file">(пустой файл)</string>
     <string name="export_preview_formats_per_day">Форматов в день</string>

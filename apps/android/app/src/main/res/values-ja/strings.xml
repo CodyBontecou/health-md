@@ -963,6 +963,8 @@
     <string name="export_preview_api_preparation_failed">API エクスポートの準備に失敗しました。</string>
     <string name="export_preview_artifacts_per_range">範囲ごとの成果物</string>
     <string name="export_preview_back_description">エクスポートプレビューに戻る</string>
+    <string name="export_preview_wrap_lines">行を折り返す</string>
+    <string name="export_preview_format_text">テキストを整形</string>
     <string name="export_preview_destination_label">出力先</string>
     <string name="export_preview_empty_file">（空のファイル）</string>
     <string name="export_preview_formats_per_day">1日あたりの形式</string>

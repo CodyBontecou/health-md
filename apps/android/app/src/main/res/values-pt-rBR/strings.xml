@@ -1114,6 +1114,8 @@
     <string name="export_preview_api_preparation_failed">Falha na preparação da exportação da API.</string>
     <string name="export_preview_artifacts_per_range">Artefatos por intervalo</string>
     <string name="export_preview_back_description">Voltar para a prévia da exportação</string>
+    <string name="export_preview_wrap_lines">Quebrar linhas</string>
+    <string name="export_preview_format_text">Formatar texto</string>
     <string name="export_preview_destination_label">Destino</string>
     <string name="export_preview_empty_file">(arquivo vazio)</string>
     <string name="export_preview_formats_per_day">Formatos por dia</string>

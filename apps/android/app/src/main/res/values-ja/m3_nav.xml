@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="m3_nav_report_requires_access">レポートを保存または共有するには、ご自身の Health.md アクセスが必要です。</string>
+</resources>

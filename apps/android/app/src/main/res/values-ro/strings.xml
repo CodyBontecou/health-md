@@ -1114,6 +1114,8 @@
     <string name="export_preview_api_preparation_failed">Pregătirea exportului API nu a reușit.</string>
     <string name="export_preview_artifacts_per_range">Artefacte pe interval</string>
     <string name="export_preview_back_description">Înapoi la previzualizarea exportului</string>
+    <string name="export_preview_wrap_lines">Încadrează rândurile</string>
+    <string name="export_preview_format_text">Formatează textul</string>
     <string name="export_preview_destination_label">Destinație</string>
     <string name="export_preview_empty_file">(fișier gol)</string>
     <string name="export_preview_formats_per_day">Formate pe zi</string>

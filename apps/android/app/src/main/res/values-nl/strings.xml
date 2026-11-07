@@ -1084,6 +1084,8 @@
     <string name="export_preview_api_preparation_failed">Voorbereiding van API-export mislukt.</string>
     <string name="export_preview_artifacts_per_range">Artefacten per bereik</string>
     <string name="export_preview_back_description">Terug naar exportvoorbeeld</string>
+    <string name="export_preview_wrap_lines">Regels laten teruglopen</string>
+    <string name="export_preview_format_text">Tekst opmaken</string>
     <string name="export_preview_destination_label">Bestemming</string>
     <string name="export_preview_empty_file">(leeg bestand)</string>
     <string name="export_preview_formats_per_day">Formaten per dag</string>

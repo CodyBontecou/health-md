@@ -1058,6 +1058,8 @@
     <string name="export_preview_api_preparation_failed">API ਨਿਰਯਾਤ ਤਿਆਰੀ ਅਸਫਲ ਰਹੀ।</string>
     <string name="export_preview_artifacts_per_range">ਹਰ ਰੇਂਜ ਲਈ ਆਰਟੀਫੈਕਟ</string>
     <string name="export_preview_back_description">ਨਿਰਯਾਤ ਝਲਕ ਵੱਲ ਵਾਪਸ ਜਾਓ</string>
+    <string name="export_preview_wrap_lines">ਲਾਈਨਾਂ ਲਪੇਟੋ</string>
+    <string name="export_preview_format_text">ਟੈਕਸਟ ਫਾਰਮੈਟ ਕਰੋ</string>
     <string name="export_preview_destination_label">ਮੰਜ਼ਿਲ</string>
     <string name="export_preview_empty_file">(ਖਾਲੀ ਫ਼ਾਈਲ)</string>
     <string name="export_preview_formats_per_day">ਹਰ ਦਿਨ ਦੇ ਫਾਰਮੈਟ</string>

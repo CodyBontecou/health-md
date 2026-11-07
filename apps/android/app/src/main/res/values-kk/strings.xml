@@ -1025,6 +1025,8 @@
     <string name="export_preview_api_preparation_failed">API экспортын дайындау сәтсіз аяқталды.</string>
     <string name="export_preview_artifacts_per_range">Әр ауқымдағы артефакт саны</string>
     <string name="export_preview_back_description">Экспортты алдын ала қарауға оралу</string>
+    <string name="export_preview_wrap_lines">Жолдарды тасымалдау</string>
+    <string name="export_preview_format_text">Мәтінді пішімдеу</string>
     <string name="export_preview_destination_label">Экспорт орны</string>
     <string name="export_preview_empty_file">(бос файл)</string>
     <string name="export_preview_formats_per_day">Әр күндегі пішім саны</string>

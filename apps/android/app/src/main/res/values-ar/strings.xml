@@ -1205,6 +1205,8 @@
     <string name="export_preview_api_preparation_failed">فشل إعداد تصدير API.</string>
     <string name="export_preview_artifacts_per_range">الملفات الناتجة لكل نطاق</string>
     <string name="export_preview_back_description">العودة إلى معاينة التصدير</string>
+    <string name="export_preview_wrap_lines">التفاف الأسطر</string>
+    <string name="export_preview_format_text">تنسيق النص</string>
     <string name="export_preview_destination_label">الوجهة</string>
     <string name="export_preview_empty_file">(ملف فارغ)</string>
     <string name="export_preview_formats_per_day">الصيغ لكل يوم</string>
