@@ -247,6 +247,23 @@ struct AutomationSentence: Equatable {
         let listText: String
 
         static func make(_ entry: ScheduledExportEntry?, style: Style, locale: Locale, calendar: Calendar) -> When {
+            let when = scheduled(entry, style: style, locale: locale, calendar: calendar)
+            // A paused card keeps its cadence but must not read as if it still runs.
+            guard style == .summary, let entry, !entry.isEnabled else { return when }
+            let paused = String(localized: "Paused")
+            return When(
+                text: String(localized: "Paused · \(when.text)"),
+                emphasis: paused,
+                listText: String(localized: "Paused · \(when.listText)")
+            )
+        }
+
+        private static func scheduled(
+            _ entry: ScheduledExportEntry?,
+            style: Style,
+            locale: Locale,
+            calendar: Calendar
+        ) -> When {
             guard let entry else {
                 let text = String(localized: "On demand")
                 return When(text: text, emphasis: nil, listText: text)

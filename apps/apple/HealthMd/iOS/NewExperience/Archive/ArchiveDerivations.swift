@@ -96,14 +96,27 @@ enum ArchiveFileLocation: Equatable {
         defer { if didAccess { rootURL.stopAccessingSecurityScopedResource() } }
         let file = fileURL(relativePath: relativePath, rootURL: rootURL)
         let fileManager = FileManager.default
-        var isDirectory: ObjCBool = false
-        if fileManager.fileExists(atPath: file.path, isDirectory: &isDirectory), !isDirectory.boolValue {
-            return (.file(file), rootURL)
+        // History keeps no written paths, so the expected path follows today's settings.
+        // A file written before a subfolder was added sits nearer the root: try the path
+        // with its leading folders dropped, one at a time, down to the file name itself.
+        for candidateRelativePath in candidatePaths(for: relativePath) {
+            let candidate = fileURL(relativePath: candidateRelativePath, rootURL: rootURL)
+            var isDirectory: ObjCBool = false
+            if fileManager.fileExists(atPath: candidate.path, isDirectory: &isDirectory), !isDirectory.boolValue {
+                return (.file(candidate), rootURL)
+            }
         }
         let folder = file.deletingLastPathComponent()
         if fileManager.fileExists(atPath: folder.path) { return (.folder(folder), rootURL) }
         if fileManager.fileExists(atPath: rootURL.path) { return (.folder(rootURL), rootURL) }
         return (.unavailable, rootURL)
+    }
+
+    /// `Health/Daily/2026-10-19.md`, then `Daily/2026-10-19.md`, then `2026-10-19.md`.
+    nonisolated static func candidatePaths(for relativePath: String) -> [String] {
+        let segments = relativePath.split(separator: "/").map(String.init).filter { !$0.isEmpty }
+        guard !segments.isEmpty else { return [] }
+        return segments.indices.map { segments[$0...].joined(separator: "/") }
     }
 
     /// `root/Health/2026-10-19.md` from the planner's slash-separated relative path.

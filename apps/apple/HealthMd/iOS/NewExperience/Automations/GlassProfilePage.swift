@@ -182,21 +182,22 @@ private struct GlassAutosaveModifier<Value: Equatable>: ViewModifier {
                         }
                         .accessibilityLabel(String(localized: "Back"))
                         .accessibilityIdentifier("glass.page.back")
+                        // On the back button, so the confirmation points at what was tapped.
+                        .confirmationDialog(
+                            String(localized: "Discard this change?"),
+                            isPresented: $showDiscard,
+                            titleVisibility: .visible
+                        ) {
+                            Button(String(localized: "Discard Change"), role: .destructive) {
+                                if let saved { revert(saved) }
+                                dismiss()
+                            }
+                            Button(String(localized: "Keep Editing"), role: .cancel) {}
+                        } message: {
+                            Text(invalidReason)
+                        }
                     }
                 }
-            }
-            .confirmationDialog(
-                String(localized: "Discard this change?"),
-                isPresented: $showDiscard,
-                titleVisibility: .visible
-            ) {
-                Button(String(localized: "Discard Change"), role: .destructive) {
-                    if let saved { revert(saved) }
-                    dismiss()
-                }
-                Button(String(localized: "Keep Editing"), role: .cancel) {}
-            } message: {
-                Text(invalidReason)
             }
     }
 

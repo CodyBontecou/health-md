@@ -16,7 +16,7 @@ enum UITestLaunchHelper {
         line: UInt = #line
     ) {
         guard openTab("Settings", in: app, file: file, line: line) else { return }
-        // iPhone shows "Help & diagnostics", iPad "App & support"; both carry this identifier.
+        // iPhone and iPad both show "App & support" under this identifier.
         let row = app.buttons["glass.settings.appSupport"]
         guard row.waitForExistence(timeout: 10) else {
             XCTFail("App & support must be reachable from Settings", file: file, line: line)

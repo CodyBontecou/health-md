@@ -1363,7 +1363,9 @@ struct SharedSetupFlowView: View {
     private func reviewHeadline(_ preview: SharedSetupV2ImportPlan, changes: Int?) -> String {
         let name = preview.document.profiles.first { $0.bundleID == preview.activeBundleID }?.name
             ?? preview.activeBundleID
-        guard let changes else { return "“\(name)”" }
+        // Zero differences from the active setup is not "0 changes": in Add mode the
+        // setup still becomes a new profile, so name it alone.
+        guard let changes, changes > 0 else { return "“\(name)”" }
         return changes == 1
             ? String(localized: "“\(name)” · 1 change")
             : String(localized: "“\(name)” · \(changes) changes")

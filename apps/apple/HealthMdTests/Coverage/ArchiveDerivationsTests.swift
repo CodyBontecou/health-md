@@ -78,6 +78,22 @@ final class ArchiveDerivationsTests: XCTestCase {
         )
     }
 
+    func testFileLocationFindsAFileWrittenBeforeTheSubfolderWasAdded() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("ArchiveOpen-\(UUID())", isDirectory: true)
+        try FileManager.default.createDirectory(at: root.appendingPathComponent("Health"), withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let earlier = root.appendingPathComponent("2026-10-19.md")
+        try Data("x".utf8).write(to: earlier)
+
+        let found = ArchiveFileLocation.locate(relativePath: "Health/2026-10-19.md", bookmarkData: nil, fallbackRootURL: root)
+        guard case .file(let foundFile) = found.location else { return XCTFail("expected the earlier file") }
+        XCTAssertEqual(foundFile.standardizedFileURL.path, earlier.standardizedFileURL.path)
+        XCTAssertEqual(
+            ArchiveFileLocation.candidatePaths(for: "Health/Daily/2026-10-19.md"),
+            ["Health/Daily/2026-10-19.md", "Daily/2026-10-19.md", "2026-10-19.md"]
+        )
+    }
+
     func testEndpointLineShowsHostAndPathOnly() {
         XCTAssertEqual(
             ArchiveOutputPath.endpointLine(URL(string: "https://user:secret@api.example.com/health?token=1#x")),
