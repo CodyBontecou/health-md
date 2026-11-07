@@ -25,7 +25,11 @@ class ClinicAccessViewModel @Inject constructor(
     private val coordinator: ExportProfileCoordinator,
     private val snapshots: ScheduledProfileSnapshotFactory,
     entitlements: com.healthmd.domain.repository.EntitlementRepository,
+    private val syncRequests: com.healthmd.data.clinicsync.ClinicSyncDoorbellManager,
 ) : ViewModel() {
+    val syncRequestState = syncRequests.state
+    val syncRequestsAvailable: Boolean get() = syncRequests.pushAvailable
+
     val status = manager.status
     val independentAccess = entitlements.isUnlocked
     private val mutableBusy = MutableStateFlow(false)
@@ -38,6 +42,9 @@ class ClinicAccessViewModel @Inject constructor(
     fun resumeEnrollment() = run { manager.resumeEnrollment() }
     fun disconnect() = run { manager.disconnect() }
     fun setSharing(authorized: Boolean) = run { manager.setSharingAuthorized(authorized) }
+    fun setSyncRequests(enabled: Boolean) {
+        viewModelScope.launch { if (enabled) syncRequests.enable() else syncRequests.disable() }
+    }
 
     fun useDestination(uploadToken: String, onDone: () -> Unit) = run {
         val state = status.value

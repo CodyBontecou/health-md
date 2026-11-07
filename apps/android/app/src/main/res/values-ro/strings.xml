@@ -301,8 +301,6 @@
     <string name="export_progress_title">Se exportă datele de sănătate</string>
 
     <!-- Navigation labels -->
-    <string name="nav_export">Export</string>
-    <string name="nav_schedule">Programare</string>
     <string name="nav_history">Istoric</string>
     <string name="nav_settings">Setări</string>
 
@@ -542,6 +540,14 @@
     <string name="feedback_no_app_available">Nicio aplicație disponibilă pentru a deschide acest link</string>
     <string name="granular_data_title">Includeți serii temporale detaliate</string>
     <string name="granular_data_description">Adăugați în exporturile de compatibilitate mostre cu marcaj temporal, precum frecvența cardiacă și etapele somnului. Pentru o copie completă a datelor API, utilizați Raw API Snapshot.</string>
+    <string name="detail_overrides_title">Detaliu pe categorie</string>
+    <string name="detail_overrides_description">Suprascrie valoarea implicită pentru anumite categorii. Rezumat păstrează doar totalurile zilnice; rezumatele zilnice nu se schimbă niciodată.</string>
+    <string name="detail_choice_default">Implicit</string>
+    <string name="detail_choice_summary">Rezumat</string>
+    <string name="detail_choice_sessions">Sesiuni</string>
+    <string name="detail_choice_detailed">Detaliat</string>
+    <string name="detail_group_sleep_hint">Sesiuni listează fiecare sesiune de somn cu data și ora complete. Detaliat adaugă fazele somnului.</string>
+    <string name="detail_expansion_schema_hint">Detaliat pentru Activitate, Nutriție sau Corp adaugă fiecare înregistrare sursă și trece exporturile analitice JSON, CSV și Markdown la schema 7.</string>
     <string name="sleep_attribution_title">Atribuirea zilei de somn</string>
     <string name="sleep_attribution_night_begins">Începe noaptea</string>
     <string name="sleep_attribution_morning_ends">Se termină dimineața</string>
@@ -652,10 +658,6 @@
     <string name="scheduled_recovery_result_complete">Recuperarea exporturilor programate s-a încheiat.</string>
     <string name="scheduled_recovery_result_blocked">Recuperarea exporturilor programate nu este încă disponibilă.</string>
     <string name="not_now">Nu acum</string>
-    <string name="release_notes_title">Ce este nou în %s</string>
-    <string name="release_notes_settings_hint">Puteți ajusta formatele de export, formatul Markdown personalizat și metricile din Setări.</string>
-    <string name="release_notes_open_settings">Deschideți Setările</string>
-    <string name="release_notes_got_it">Am înțeles</string>
     <string name="release_notes_highlight_feedback">Sesiunile CLI direct se reconectează automat după deconectări scurte ale desktopului, astfel încât exporturile se finalizează fiabil.</string>
     <string name="release_notes_highlight_export_parity">Comenzile cu fereastră de activare de pe desktop așteaptă până la 120 de secunde să deschizi aplicația și să te conectezi, fără notificări push.</string>
     <string name="release_notes_highlight_templates">Asocierea manuală cu adresă, port și cod din 20 de cifre funcționează în continuare, inclusiv cu versiuni CLI mai vechi.</string>
@@ -1108,6 +1110,8 @@
     <string name="export_preview_api_preparation_failed">Pregătirea exportului API nu a reușit.</string>
     <string name="export_preview_artifacts_per_range">Artefacte pe interval</string>
     <string name="export_preview_back_description">Înapoi la previzualizarea exportului</string>
+    <string name="export_preview_wrap_lines">Încadrează rândurile</string>
+    <string name="export_preview_format_text">Formatează textul</string>
     <string name="export_preview_destination_label">Destinație</string>
     <string name="export_preview_empty_file">(fișier gol)</string>
     <string name="export_preview_formats_per_day">Formate pe zi</string>
@@ -1516,10 +1520,6 @@
     <string name="whoop_disconnect">Deconectează WHOOP</string>
     <string name="whoop_use_for_exports">Folosește WHOOP pentru exporturi</string>
     <string name="paywall_access_subtitle">Alege un abonament sau acces pe viață pentru a începe arhiva ta privată de sănătate. Abonamentele eligibile includ o perioadă de probă gratuită de 7 zile.</string>
-    <string name="paywall_access_active_title">Accesul tău este activ</string>
-    <string name="paywall_access_active_body">Continuă configurarea pentru a conecta datele de sănătate și a alege unde salvezi arhiva privată.</string>
-    <string name="clinic_access_active_title">Accesul prin clinică este activ</string>
-    <string name="clinic_access_active_body">Clinica ta sponsorizează livrarea către endpointul său aprobat. Tu alegi ce partajezi. Celelalte destinații de export necesită propriul tău acces Health.md.</string>
     <string name="paywall_plan_choices">Acces săptămânal, anual sau pe viață</string>
     <string name="paywall_weekly_price">%1$s / săptămână</string>
     <string name="paywall_yearly_price">%1$s / an</string>
@@ -1530,30 +1530,20 @@
     <string name="paywall_terms">Condiții</string>
     <string name="paywall_privacy">Confidențialitate</string>
     <string name="paywall_subscription_disclosure">Abonamentele eligibile includ o perioadă de probă gratuită de 7 zile, apoi se reînnoiesc automat la prețul afișat, dacă nu sunt anulate înainte de sfârșitul perioadei de probă sau al perioadei curente. Gestionează sau anulează în Google Play. Accesul pe viață se plătește imediat, o singură dată. Accesul plătit existent se păstrează. Viața nu are nicio încercare. Ștergerea aplicației sau cumpărarea Lifetime nu anulează un abonament existent.</string>
+    <plurals name="widget_archive_gaps">
+        <item quantity="one">%1$s gol</item>
+        <item quantity="few">%1$s goluri</item>
+        <item quantity="other">%1$s de goluri</item>
+    </plurals>
+    <plurals name="widget_archive_days_in_month">
+        <item quantity="one">zi în %1$s</item>
+        <item quantity="few">zile în %1$s</item>
+        <item quantity="other">de zile în %1$s</item>
+    </plurals>
 
-    <!-- Signal carousel paywall -->
-    <string name="paywall_signal_title">Fiecare bătaie a inimii, notată.</string>
-    <string name="paywall_signal_lede">Health.md transformă Health Connect într-o notă Markdown pentru fiecare zi, salvată în dosarul ales de tine.</string>
-    <string name="paywall_signal_example">Exemplu</string>
-    <string name="paywall_signal_trial_title">Șapte zile din partea noastră.</string>
-    <string name="paywall_signal_day_today">Azi</string>
-    <string name="paywall_signal_day_today_body">Exporturi, programări și automatizări nelimitate.</string>
-    <string name="paywall_signal_day_cancel">Anulezi oricând</string>
-    <string name="paywall_signal_day_cancel_body">Anulează din Google Play înainte de sfârșitul perioadei de probă.</string>
-    <string name="paywall_signal_day_end">Sfârșitul probei</string>
-    <string name="paywall_signal_day_end_body">Apoi %1$s.</string>
-    <string name="paywall_signal_plans_title">Alege-ți drumul.</string>
-    <string name="paywall_signal_best_value">Cea mai bună ofertă</string>
-    <string name="paywall_signal_free_week">7 zile gratuit</string>
-    <string name="paywall_signal_lifetime_detail">Plătești o singură dată, azi. Fără reînnoire.</string>
-    <string name="paywall_signal_subscription_detail">Se reînnoiește automat. Anulezi oricând din Google Play.</string>
-    <string name="paywall_signal_cta_trial">Începe proba gratuită de 7 zile</string>
-    <string name="paywall_signal_cta_subscribe">Abonează-te</string>
-    <string name="paywall_signal_cta_lifetime">Cumpără pe viață</string>
-    <string name="paywall_signal_step_archive">Arhivă</string>
-    <string name="paywall_signal_step_trial">Probă</string>
-    <string name="paywall_signal_step_plans">Planuri</string>
-    <string name="paywall_signal_plan_weekly">Săptămânal</string>
-    <string name="paywall_signal_plan_yearly">Anual</string>
-    <string name="paywall_signal_plan_lifetime">Pe viață</string>
+    <string name="clinic_sync_channel_name">Solicitări de sincronizare de la clinică</string>
+    <string name="clinic_sync_request_body">Clinica ta solicită cele mai recente date de sănătate. Atinge pentru a le trimite.</string>
+    <string name="clinic_sync_result_sent">Cele mai recente date au fost trimise clinicii tale.</string>
+    <string name="clinic_sync_result_failed">Datele nu au putut fi trimise clinicii. Deschide Health.md și încearcă din nou.</string>
+    <string name="clinic_sync_result_profile_missing">Deschide accesul clinicii în Health.md și alege mai întâi Folosește destinația clinicii.</string>
 </resources>

@@ -25,6 +25,10 @@ New installs default to Summary. During migration, the historical combined `incl
 
 > **Current App Store availability:** The Lossless Health Records export mode remains available for ordinary Apple Health samples. Clinical Health Records and Clinical Documents are temporarily excluded from current App Store builds, including authorization, metric selection, direct-query catalogs, and capture. Their schema representation remains reserved for compatibility and a future reviewed release.
 
+### Detail by category
+
+**Detail by Category** overrides the preset's compatibility detail for sleep, heart, vitals, or workouts individually (`compatibilityDetailOverrides`). For example, sleep stages can be exported while heart-rate and vitals samples stay summarized. Capture skips sample queries for summarized categories. A Summary workouts choice keeps per-workout totals and drops laps, splits, route, and workout time series; Detailed keeps them. Overrides never affect the canonical archive or daily summaries. HealthKit exposes sleep as category intervals with no source session object, so Apple offers Summary or Detailed sleep only. See [per-category export detail](../../../../docs/features/per-group-export-detail.md) for the cross-platform model and inventory.
+
 ## Who it is for
 
 - **Detailed Time-Series:** people building intraday charts or preserving selected timestamped readings without a full source archive.

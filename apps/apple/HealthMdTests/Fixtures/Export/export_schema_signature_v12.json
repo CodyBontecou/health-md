@@ -1,0 +1,1223 @@
+{
+  "fingerprint" : "5f83942495982dff26e275749981ea278bbde81f517a4a4d508768c818e29c14",
+  "payload" : {
+    "csvHeader" : [
+      "Date",
+      "Category",
+      "Metric",
+      "Value",
+      "Unit",
+      "Timestamp",
+      "Source"
+    ],
+    "csvRowContracts" : [
+      {
+        "category" : "Activity",
+        "hasTimestamp" : false,
+        "metric" : "Active Calories",
+        "unit" : "kcal"
+      },
+      {
+        "category" : "Activity",
+        "hasTimestamp" : false,
+        "metric" : "Basal Energy",
+        "unit" : "kcal"
+      },
+      {
+        "category" : "Activity",
+        "hasTimestamp" : false,
+        "metric" : "Cardio Fitness (VO2 Max)",
+        "unit" : "mL/kg/min"
+      },
+      {
+        "category" : "Activity",
+        "hasTimestamp" : false,
+        "metric" : "Cycling Distance",
+        "unit" : "meters"
+      },
+      {
+        "category" : "Activity",
+        "hasTimestamp" : false,
+        "metric" : "Exercise Minutes",
+        "unit" : "minutes"
+      },
+      {
+        "category" : "Activity",
+        "hasTimestamp" : false,
+        "metric" : "Flights Climbed",
+        "unit" : "count"
+      },
+      {
+        "category" : "Activity",
+        "hasTimestamp" : true,
+        "metric" : "Stand Hour Detail Sample",
+        "unit" : "category"
+      },
+      {
+        "category" : "Activity",
+        "hasTimestamp" : false,
+        "metric" : "Stand Hours",
+        "unit" : "hours"
+      },
+      {
+        "category" : "Activity",
+        "hasTimestamp" : false,
+        "metric" : "Stand Time",
+        "unit" : "minutes"
+      },
+      {
+        "category" : "Activity",
+        "hasTimestamp" : false,
+        "metric" : "Steps",
+        "unit" : "count"
+      },
+      {
+        "category" : "Activity",
+        "hasTimestamp" : true,
+        "metric" : "Steps Detail Sample",
+        "unit" : "count"
+      },
+      {
+        "category" : "Activity",
+        "hasTimestamp" : false,
+        "metric" : "Walking Running Distance",
+        "unit" : "meters"
+      },
+      {
+        "category" : "Body",
+        "hasTimestamp" : false,
+        "metric" : "BMI",
+        "unit" : ""
+      },
+      {
+        "category" : "Body",
+        "hasTimestamp" : false,
+        "metric" : "Body Fat Percentage",
+        "unit" : "percent"
+      },
+      {
+        "category" : "Body",
+        "hasTimestamp" : false,
+        "metric" : "Height",
+        "unit" : "m"
+      },
+      {
+        "category" : "Body",
+        "hasTimestamp" : false,
+        "metric" : "Weight",
+        "unit" : "kg"
+      },
+      {
+        "category" : "Body",
+        "hasTimestamp" : true,
+        "metric" : "Weight Detail Sample",
+        "unit" : "kg"
+      },
+      {
+        "category" : "Hearing",
+        "hasTimestamp" : false,
+        "metric" : "Environmental Sound Level",
+        "unit" : "dB"
+      },
+      {
+        "category" : "Hearing",
+        "hasTimestamp" : false,
+        "metric" : "Headphone Audio Level",
+        "unit" : "dB"
+      },
+      {
+        "category" : "Heart",
+        "hasTimestamp" : false,
+        "metric" : "Average Heart Rate",
+        "unit" : "bpm"
+      },
+      {
+        "category" : "Heart",
+        "hasTimestamp" : false,
+        "metric" : "HRV",
+        "unit" : "ms"
+      },
+      {
+        "category" : "Heart",
+        "hasTimestamp" : false,
+        "metric" : "Max Heart Rate",
+        "unit" : "bpm"
+      },
+      {
+        "category" : "Heart",
+        "hasTimestamp" : false,
+        "metric" : "Min Heart Rate",
+        "unit" : "bpm"
+      },
+      {
+        "category" : "Heart",
+        "hasTimestamp" : false,
+        "metric" : "Resting Heart Rate",
+        "unit" : "bpm"
+      },
+      {
+        "category" : "Heart",
+        "hasTimestamp" : false,
+        "metric" : "Walking Heart Rate Average",
+        "unit" : "bpm"
+      },
+      {
+        "category" : "Medications",
+        "hasTimestamp" : false,
+        "metric" : "Active Medications",
+        "unit" : "count"
+      },
+      {
+        "category" : "Medications",
+        "hasTimestamp" : false,
+        "metric" : "Archived Medications",
+        "unit" : "count"
+      },
+      {
+        "category" : "Medications",
+        "hasTimestamp" : false,
+        "metric" : "Authorized Medications",
+        "unit" : "count"
+      },
+      {
+        "category" : "Medications",
+        "hasTimestamp" : true,
+        "metric" : "Dose Event",
+        "unit" : "scheduled"
+      },
+      {
+        "category" : "Medications",
+        "hasTimestamp" : true,
+        "metric" : "Dose Event Dose Quantity",
+        "unit" : "tablet"
+      },
+      {
+        "category" : "Medications",
+        "hasTimestamp" : true,
+        "metric" : "Dose Event End",
+        "unit" : "datetime"
+      },
+      {
+        "category" : "Medications",
+        "hasTimestamp" : true,
+        "metric" : "Dose Event ID",
+        "unit" : "uuid"
+      },
+      {
+        "category" : "Medications",
+        "hasTimestamp" : true,
+        "metric" : "Dose Event Medication Concept Identifier",
+        "unit" : ""
+      },
+      {
+        "category" : "Medications",
+        "hasTimestamp" : true,
+        "metric" : "Dose Event Medication Name",
+        "unit" : ""
+      },
+      {
+        "category" : "Medications",
+        "hasTimestamp" : true,
+        "metric" : "Dose Event Schedule Type",
+        "unit" : ""
+      },
+      {
+        "category" : "Medications",
+        "hasTimestamp" : true,
+        "metric" : "Dose Event Scheduled Date",
+        "unit" : "datetime"
+      },
+      {
+        "category" : "Medications",
+        "hasTimestamp" : true,
+        "metric" : "Dose Event Scheduled Dose Quantity",
+        "unit" : "tablet"
+      },
+      {
+        "category" : "Medications",
+        "hasTimestamp" : true,
+        "metric" : "Dose Event Start",
+        "unit" : "datetime"
+      },
+      {
+        "category" : "Medications",
+        "hasTimestamp" : true,
+        "metric" : "Dose Event Status",
+        "unit" : ""
+      },
+      {
+        "category" : "Medications",
+        "hasTimestamp" : true,
+        "metric" : "Dose Event Status Display",
+        "unit" : ""
+      },
+      {
+        "category" : "Medications",
+        "hasTimestamp" : true,
+        "metric" : "Dose Event Unit",
+        "unit" : ""
+      },
+      {
+        "category" : "Medications",
+        "hasTimestamp" : false,
+        "metric" : "Dose Events",
+        "unit" : "count"
+      },
+      {
+        "category" : "Medications",
+        "hasTimestamp" : false,
+        "metric" : "Medication",
+        "unit" : "active;scheduled"
+      },
+      {
+        "category" : "Medications",
+        "hasTimestamp" : false,
+        "metric" : "Medication",
+        "unit" : "archived;as_needed"
+      },
+      {
+        "category" : "Medications",
+        "hasTimestamp" : false,
+        "metric" : "Medication Archived",
+        "unit" : "boolean"
+      },
+      {
+        "category" : "Medications",
+        "hasTimestamp" : false,
+        "metric" : "Medication Archived",
+        "unit" : "boolean"
+      },
+      {
+        "category" : "Medications",
+        "hasTimestamp" : false,
+        "metric" : "Medication Concept Identifier",
+        "unit" : ""
+      },
+      {
+        "category" : "Medications",
+        "hasTimestamp" : false,
+        "metric" : "Medication Concept Identifier",
+        "unit" : ""
+      },
+      {
+        "category" : "Medications",
+        "hasTimestamp" : false,
+        "metric" : "Medication Display Name",
+        "unit" : ""
+      },
+      {
+        "category" : "Medications",
+        "hasTimestamp" : false,
+        "metric" : "Medication Display Name",
+        "unit" : ""
+      },
+      {
+        "category" : "Medications",
+        "hasTimestamp" : false,
+        "metric" : "Medication Export Name",
+        "unit" : ""
+      },
+      {
+        "category" : "Medications",
+        "hasTimestamp" : false,
+        "metric" : "Medication Export Name",
+        "unit" : ""
+      },
+      {
+        "category" : "Medications",
+        "hasTimestamp" : false,
+        "metric" : "Medication General Form",
+        "unit" : ""
+      },
+      {
+        "category" : "Medications",
+        "hasTimestamp" : false,
+        "metric" : "Medication General Form",
+        "unit" : ""
+      },
+      {
+        "category" : "Medications",
+        "hasTimestamp" : false,
+        "metric" : "Medication Has Schedule",
+        "unit" : "boolean"
+      },
+      {
+        "category" : "Medications",
+        "hasTimestamp" : false,
+        "metric" : "Medication Has Schedule",
+        "unit" : "boolean"
+      },
+      {
+        "category" : "Medications",
+        "hasTimestamp" : false,
+        "metric" : "Medication Nickname",
+        "unit" : ""
+      },
+      {
+        "category" : "Medications",
+        "hasTimestamp" : false,
+        "metric" : "Medication Related Coding",
+        "unit" : "coding"
+      },
+      {
+        "category" : "Medications",
+        "hasTimestamp" : false,
+        "metric" : "Medication RxNorm Code",
+        "unit" : "rxnorm"
+      },
+      {
+        "category" : "Medications",
+        "hasTimestamp" : false,
+        "metric" : "Skipped Doses",
+        "unit" : "count"
+      },
+      {
+        "category" : "Medications",
+        "hasTimestamp" : false,
+        "metric" : "Taken Doses",
+        "unit" : "count"
+      },
+      {
+        "category" : "Metadata",
+        "hasTimestamp" : false,
+        "metadataValue" : "healthmd.health_data",
+        "metric" : "schema",
+        "unit" : ""
+      },
+      {
+        "category" : "Metadata",
+        "hasTimestamp" : false,
+        "metadataValue" : "apple-v12",
+        "metric" : "schema_profile",
+        "unit" : ""
+      },
+      {
+        "category" : "Metadata",
+        "hasTimestamp" : false,
+        "metric" : "schema_version",
+        "unit" : ""
+      },
+      {
+        "category" : "Metadata",
+        "hasTimestamp" : false,
+        "metadataValue" : "UTC",
+        "metric" : "time_context.calendar_timezone",
+        "unit" : ""
+      },
+      {
+        "category" : "Metadata",
+        "hasTimestamp" : false,
+        "metadataValue" : "UTC",
+        "metric" : "time_context.timestamp_timezone",
+        "unit" : ""
+      },
+      {
+        "category" : "Metadata",
+        "hasTimestamp" : false,
+        "metadataValue" : "metric",
+        "metric" : "unit_system",
+        "unit" : ""
+      },
+      {
+        "category" : "Mindfulness",
+        "hasTimestamp" : false,
+        "metric" : "Mindful Minutes",
+        "unit" : "minutes"
+      },
+      {
+        "category" : "Mindfulness",
+        "hasTimestamp" : true,
+        "metric" : "Mindful Session Detail Sample",
+        "unit" : "category"
+      },
+      {
+        "category" : "Mindfulness",
+        "hasTimestamp" : false,
+        "metric" : "Mindful Sessions",
+        "unit" : "count"
+      },
+      {
+        "category" : "Mobility",
+        "hasTimestamp" : false,
+        "metric" : "Double Support Percentage",
+        "unit" : "percent"
+      },
+      {
+        "category" : "Mobility",
+        "hasTimestamp" : false,
+        "metric" : "Walking Speed",
+        "unit" : "m/s"
+      },
+      {
+        "category" : "Mobility",
+        "hasTimestamp" : true,
+        "metric" : "Walking Speed Detail Sample",
+        "unit" : "m/s"
+      },
+      {
+        "category" : "Mobility",
+        "hasTimestamp" : false,
+        "metric" : "Walking Step Length",
+        "unit" : "meters"
+      },
+      {
+        "category" : "Nutrition",
+        "hasTimestamp" : false,
+        "metric" : "Caffeine",
+        "unit" : "mg"
+      },
+      {
+        "category" : "Nutrition",
+        "hasTimestamp" : false,
+        "metric" : "Carbohydrates",
+        "unit" : "g"
+      },
+      {
+        "category" : "Nutrition",
+        "hasTimestamp" : false,
+        "metric" : "Dietary Energy",
+        "unit" : "kcal"
+      },
+      {
+        "category" : "Nutrition",
+        "hasTimestamp" : false,
+        "metric" : "Fat",
+        "unit" : "g"
+      },
+      {
+        "category" : "Nutrition",
+        "hasTimestamp" : false,
+        "metric" : "Fiber",
+        "unit" : "g"
+      },
+      {
+        "category" : "Nutrition",
+        "hasTimestamp" : false,
+        "metric" : "Protein",
+        "unit" : "g"
+      },
+      {
+        "category" : "Nutrition",
+        "hasTimestamp" : false,
+        "metric" : "Sugar",
+        "unit" : "g"
+      },
+      {
+        "category" : "Nutrition",
+        "hasTimestamp" : false,
+        "metric" : "Water",
+        "unit" : "L"
+      },
+      {
+        "category" : "Nutrition",
+        "hasTimestamp" : true,
+        "metric" : "Water Detail Sample",
+        "unit" : "L"
+      },
+      {
+        "category" : "Raw HealthKit",
+        "hasTimestamp" : false,
+        "metric" : "Raw Capture Status",
+        "unit" : "status"
+      },
+      {
+        "category" : "Reproductive Health",
+        "hasTimestamp" : false,
+        "metric" : "Menstrual Flow",
+        "unit" : ""
+      },
+      {
+        "category" : "Reproductive Health",
+        "hasTimestamp" : true,
+        "metric" : "Menstrual Flow Detail Sample",
+        "unit" : "category"
+      },
+      {
+        "category" : "Sleep",
+        "hasTimestamp" : false,
+        "metric" : "Awake Time",
+        "unit" : "seconds"
+      },
+      {
+        "category" : "Sleep",
+        "hasTimestamp" : false,
+        "metric" : "Core Sleep",
+        "unit" : "seconds"
+      },
+      {
+        "category" : "Sleep",
+        "hasTimestamp" : false,
+        "metric" : "Deep Sleep",
+        "unit" : "seconds"
+      },
+      {
+        "category" : "Sleep",
+        "hasTimestamp" : false,
+        "metric" : "In Bed Time",
+        "unit" : "seconds"
+      },
+      {
+        "category" : "Sleep",
+        "hasTimestamp" : false,
+        "metric" : "REM Sleep",
+        "unit" : "seconds"
+      },
+      {
+        "category" : "Sleep",
+        "hasTimestamp" : true,
+        "metric" : "Sleep Stage",
+        "unit" : "seconds"
+      },
+      {
+        "category" : "Sleep",
+        "hasTimestamp" : true,
+        "metric" : "Sleep Stage",
+        "unit" : "seconds"
+      },
+      {
+        "category" : "Sleep",
+        "hasTimestamp" : false,
+        "metric" : "Total Duration",
+        "unit" : "seconds"
+      },
+      {
+        "category" : "Vitals",
+        "hasTimestamp" : false,
+        "metric" : "Blood Oxygen Avg",
+        "unit" : "percent"
+      },
+      {
+        "category" : "Vitals",
+        "hasTimestamp" : false,
+        "metric" : "Blood Oxygen Max",
+        "unit" : "percent"
+      },
+      {
+        "category" : "Vitals",
+        "hasTimestamp" : false,
+        "metric" : "Blood Oxygen Min",
+        "unit" : "percent"
+      },
+      {
+        "category" : "Vitals",
+        "hasTimestamp" : false,
+        "metric" : "Blood Pressure Diastolic Avg",
+        "unit" : "mmHg"
+      },
+      {
+        "category" : "Vitals",
+        "hasTimestamp" : false,
+        "metric" : "Blood Pressure Diastolic Max",
+        "unit" : "mmHg"
+      },
+      {
+        "category" : "Vitals",
+        "hasTimestamp" : false,
+        "metric" : "Blood Pressure Diastolic Min",
+        "unit" : "mmHg"
+      },
+      {
+        "category" : "Vitals",
+        "hasTimestamp" : false,
+        "metric" : "Blood Pressure Systolic Avg",
+        "unit" : "mmHg"
+      },
+      {
+        "category" : "Vitals",
+        "hasTimestamp" : false,
+        "metric" : "Blood Pressure Systolic Max",
+        "unit" : "mmHg"
+      },
+      {
+        "category" : "Vitals",
+        "hasTimestamp" : false,
+        "metric" : "Blood Pressure Systolic Min",
+        "unit" : "mmHg"
+      },
+      {
+        "category" : "Vitals",
+        "hasTimestamp" : true,
+        "metric" : "Body Temperature Detail Sample",
+        "unit" : "degC"
+      },
+      {
+        "category" : "Vitals",
+        "hasTimestamp" : false,
+        "metric" : "Respiratory Rate Avg",
+        "unit" : "breaths/min"
+      },
+      {
+        "category" : "Vitals",
+        "hasTimestamp" : false,
+        "metric" : "Respiratory Rate Max",
+        "unit" : "breaths/min"
+      },
+      {
+        "category" : "Vitals",
+        "hasTimestamp" : false,
+        "metric" : "Respiratory Rate Min",
+        "unit" : "breaths/min"
+      },
+      {
+        "category" : "Workouts",
+        "hasTimestamp" : true,
+        "metric" : "HealthKit Activity Type",
+        "unit" : ""
+      },
+      {
+        "category" : "Workouts",
+        "hasTimestamp" : true,
+        "metric" : "HealthKit Activity Type Raw Value",
+        "unit" : ""
+      },
+      {
+        "category" : "Workouts",
+        "hasTimestamp" : false,
+        "metric" : "Running Avg Pace",
+        "unit" : ""
+      },
+      {
+        "category" : "Workouts",
+        "hasTimestamp" : false,
+        "metric" : "Running Calories",
+        "unit" : "kcal"
+      },
+      {
+        "category" : "Workouts",
+        "hasTimestamp" : false,
+        "metric" : "Running Distance",
+        "unit" : "meters"
+      },
+      {
+        "category" : "Workouts",
+        "hasTimestamp" : false,
+        "metric" : "Running Duration",
+        "unit" : "seconds"
+      },
+      {
+        "category" : "Workouts",
+        "hasTimestamp" : false,
+        "metric" : "Running Start Time",
+        "unit" : "time"
+      },
+      {
+        "category" : "Workouts",
+        "hasTimestamp" : true,
+        "metric" : "Workout Activity Type",
+        "unit" : ""
+      },
+      {
+        "category" : "Workouts",
+        "hasTimestamp" : true,
+        "metric" : "Workout Sport",
+        "unit" : ""
+      }
+    ],
+    "jsonShapePaths" : [
+      "$.activity.activeCalories:number",
+      "$.activity.basalEnergyBurned:number",
+      "$.activity.cyclingDistance:number",
+      "$.activity.cyclingDistanceKm:number",
+      "$.activity.cyclingDistanceMi:number",
+      "$.activity.detailSamples:array",
+      "$.activity.detailSamples[].categoryValue:string",
+      "$.activity.detailSamples[].endDate:string",
+      "$.activity.detailSamples[].healthKitType:string",
+      "$.activity.detailSamples[].metric:string",
+      "$.activity.detailSamples[].source:string",
+      "$.activity.detailSamples[].sourceUUID:string",
+      "$.activity.detailSamples[].timestamp:string",
+      "$.activity.detailSamples[].unit:string",
+      "$.activity.detailSamples[].value:number",
+      "$.activity.detailSamples[]:object",
+      "$.activity.exerciseMinutes:number",
+      "$.activity.flightsClimbed:number",
+      "$.activity.standHours:number",
+      "$.activity.standTimeMinutes:number",
+      "$.activity.steps:number",
+      "$.activity.vo2Max:number",
+      "$.activity.walkingRunningDistance:number",
+      "$.activity.walkingRunningDistanceKm:number",
+      "$.activity.walkingRunningDistanceMi:number",
+      "$.activity:object",
+      "$.body.bmi:number",
+      "$.body.bodyFatPercent:number",
+      "$.body.bodyFatPercentage:number",
+      "$.body.detailSamples:array",
+      "$.body.detailSamples[].endDate:string",
+      "$.body.detailSamples[].healthKitType:string",
+      "$.body.detailSamples[].metric:string",
+      "$.body.detailSamples[].source:string",
+      "$.body.detailSamples[].sourceUUID:string",
+      "$.body.detailSamples[].timestamp:string",
+      "$.body.detailSamples[].unit:string",
+      "$.body.detailSamples[].value:number",
+      "$.body.detailSamples[]:object",
+      "$.body.height:number",
+      "$.body.weight:number",
+      "$.body:object",
+      "$.date:string",
+      "$.hearing.environmentalSoundLevel:number",
+      "$.hearing.headphoneAudioLevel:number",
+      "$.hearing:object",
+      "$.heart.averageHeartRate:number",
+      "$.heart.heartRateMax:number",
+      "$.heart.heartRateMin:number",
+      "$.heart.hrv:number",
+      "$.heart.restingHeartRate:number",
+      "$.heart.walkingHeartRateAverage:number",
+      "$.heart:object",
+      "$.medications.activeMedicationCount:number",
+      "$.medications.archivedMedicationCount:number",
+      "$.medications.doseEventCount:number",
+      "$.medications.doseEvents:array",
+      "$.medications.doseEvents[].doseQuantity:number",
+      "$.medications.doseEvents[].endDate:string",
+      "$.medications.doseEvents[].id:string",
+      "$.medications.doseEvents[].logStatus:string",
+      "$.medications.doseEvents[].logStatusDisplay:string",
+      "$.medications.doseEvents[].medicationConceptIdentifier:string",
+      "$.medications.doseEvents[].medicationName:string",
+      "$.medications.doseEvents[].scheduleType:string",
+      "$.medications.doseEvents[].scheduledDate:string",
+      "$.medications.doseEvents[].scheduledDoseQuantity:number",
+      "$.medications.doseEvents[].startDate:string",
+      "$.medications.doseEvents[].unit:string",
+      "$.medications.doseEvents[]:object",
+      "$.medications.medicationCount:number",
+      "$.medications.medications:array",
+      "$.medications.medications[].conceptIdentifier:string",
+      "$.medications.medications[].displayName:string",
+      "$.medications.medications[].generalForm:string",
+      "$.medications.medications[].hasSchedule:bool",
+      "$.medications.medications[].isArchived:bool",
+      "$.medications.medications[].name:string",
+      "$.medications.medications[].nickname:string",
+      "$.medications.medications[].relatedCodings:array",
+      "$.medications.medications[].relatedCodings[].code:string",
+      "$.medications.medications[].relatedCodings[].system:string",
+      "$.medications.medications[].relatedCodings[]:object",
+      "$.medications.medications[].rxNormCodes:array",
+      "$.medications.medications[].rxNormCodes[]:string",
+      "$.medications.medications[]:object",
+      "$.medications.skippedDoseCount:number",
+      "$.medications.takenDoseCount:number",
+      "$.medications:object",
+      "$.mindfulness.detailSamples:array",
+      "$.mindfulness.detailSamples[].categoryValue:string",
+      "$.mindfulness.detailSamples[].endDate:string",
+      "$.mindfulness.detailSamples[].healthKitType:string",
+      "$.mindfulness.detailSamples[].metric:string",
+      "$.mindfulness.detailSamples[].source:string",
+      "$.mindfulness.detailSamples[].sourceUUID:string",
+      "$.mindfulness.detailSamples[].timestamp:string",
+      "$.mindfulness.detailSamples[]:object",
+      "$.mindfulness.mindfulMinutes:number",
+      "$.mindfulness.mindfulSessions:number",
+      "$.mindfulness:object",
+      "$.mobility.detailSamples:array",
+      "$.mobility.detailSamples[].endDate:string",
+      "$.mobility.detailSamples[].healthKitType:string",
+      "$.mobility.detailSamples[].metric:string",
+      "$.mobility.detailSamples[].source:string",
+      "$.mobility.detailSamples[].sourceUUID:string",
+      "$.mobility.detailSamples[].timestamp:string",
+      "$.mobility.detailSamples[].unit:string",
+      "$.mobility.detailSamples[].value:number",
+      "$.mobility.detailSamples[]:object",
+      "$.mobility.walkingDoubleSupportPercentage:number",
+      "$.mobility.walkingSpeed:number",
+      "$.mobility.walkingStepLength:number",
+      "$.mobility:object",
+      "$.nutrition.caffeine:number",
+      "$.nutrition.carbohydrates:number",
+      "$.nutrition.detailSamples:array",
+      "$.nutrition.detailSamples[].endDate:string",
+      "$.nutrition.detailSamples[].healthKitType:string",
+      "$.nutrition.detailSamples[].metric:string",
+      "$.nutrition.detailSamples[].source:string",
+      "$.nutrition.detailSamples[].sourceUUID:string",
+      "$.nutrition.detailSamples[].timestamp:string",
+      "$.nutrition.detailSamples[].unit:string",
+      "$.nutrition.detailSamples[].value:number",
+      "$.nutrition.detailSamples[]:object",
+      "$.nutrition.dietaryEnergy:number",
+      "$.nutrition.fat:number",
+      "$.nutrition.fiber:number",
+      "$.nutrition.protein:number",
+      "$.nutrition.sugar:number",
+      "$.nutrition.water:number",
+      "$.nutrition:object",
+      "$.raw_capture_status:string",
+      "$.reproductiveHealth.detailSamples:array",
+      "$.reproductiveHealth.detailSamples[].categoryValue:string",
+      "$.reproductiveHealth.detailSamples[].endDate:string",
+      "$.reproductiveHealth.detailSamples[].healthKitType:string",
+      "$.reproductiveHealth.detailSamples[].metric:string",
+      "$.reproductiveHealth.detailSamples[].source:string",
+      "$.reproductiveHealth.detailSamples[].sourceUUID:string",
+      "$.reproductiveHealth.detailSamples[].timestamp:string",
+      "$.reproductiveHealth.detailSamples[]:object",
+      "$.reproductiveHealth.menstrual_flow:string",
+      "$.reproductiveHealth:object",
+      "$.schema:string",
+      "$.schema_profile:string",
+      "$.schema_version:number",
+      "$.sleep.awakeTime:number",
+      "$.sleep.awakeTimeFormatted:string",
+      "$.sleep.coreSleep:number",
+      "$.sleep.coreSleepFormatted:string",
+      "$.sleep.deepSleep:number",
+      "$.sleep.deepSleepFormatted:string",
+      "$.sleep.inBedTime:number",
+      "$.sleep.inBedTimeFormatted:string",
+      "$.sleep.remSleep:number",
+      "$.sleep.remSleepFormatted:string",
+      "$.sleep.sleepStages:array",
+      "$.sleep.sleepStages[].durationSeconds:number",
+      "$.sleep.sleepStages[].endDate:string",
+      "$.sleep.sleepStages[].source:string",
+      "$.sleep.sleepStages[].sourceName:string",
+      "$.sleep.sleepStages[].sourceUUID:string",
+      "$.sleep.sleepStages[].stage:string",
+      "$.sleep.sleepStages[].startDate:string",
+      "$.sleep.sleepStages[]:object",
+      "$.sleep.totalDuration:number",
+      "$.sleep.totalDurationFormatted:string",
+      "$.sleep:object",
+      "$.time_context.calendar_timezone:string",
+      "$.time_context.timestamp_timezone:string",
+      "$.time_context:object",
+      "$.type:string",
+      "$.unit_system:string",
+      "$.units.active_calories:string",
+      "$.units.active_medication_count:string",
+      "$.units.archived_medication_count:string",
+      "$.units.average_heart_rate:string",
+      "$.units.basal_calories:string",
+      "$.units.blood_oxygen:string",
+      "$.units.blood_oxygen_avg:string",
+      "$.units.blood_oxygen_max:string",
+      "$.units.blood_oxygen_min:string",
+      "$.units.blood_pressure_diastolic:string",
+      "$.units.blood_pressure_diastolic_avg:string",
+      "$.units.blood_pressure_diastolic_max:string",
+      "$.units.blood_pressure_diastolic_min:string",
+      "$.units.blood_pressure_systolic:string",
+      "$.units.blood_pressure_systolic_avg:string",
+      "$.units.blood_pressure_systolic_max:string",
+      "$.units.blood_pressure_systolic_min:string",
+      "$.units.bmi:string",
+      "$.units.body_fat_percent:string",
+      "$.units.caffeine_mg:string",
+      "$.units.carbohydrates_g:string",
+      "$.units.cycling_km:string",
+      "$.units.cycling_mi:string",
+      "$.units.dietary_calories:string",
+      "$.units.double_support_percent:string",
+      "$.units.environmental_sound_db:string",
+      "$.units.exercise_minutes:string",
+      "$.units.fat_g:string",
+      "$.units.fiber_g:string",
+      "$.units.flights_climbed:string",
+      "$.units.headphone_audio_db:string",
+      "$.units.heart_rate_max:string",
+      "$.units.heart_rate_min:string",
+      "$.units.height_m:string",
+      "$.units.hrv_ms:string",
+      "$.units.medication_count:string",
+      "$.units.medication_dose_count:string",
+      "$.units.medication_skipped_count:string",
+      "$.units.medication_taken_count:string",
+      "$.units.mindful_minutes:string",
+      "$.units.mindful_sessions:string",
+      "$.units.protein_g:string",
+      "$.units.respiratory_rate:string",
+      "$.units.respiratory_rate_avg:string",
+      "$.units.respiratory_rate_max:string",
+      "$.units.respiratory_rate_min:string",
+      "$.units.resting_heart_rate:string",
+      "$.units.sleep_awake_hours:string",
+      "$.units.sleep_core_hours:string",
+      "$.units.sleep_deep_hours:string",
+      "$.units.sleep_in_bed_hours:string",
+      "$.units.sleep_rem_hours:string",
+      "$.units.sleep_total_hours:string",
+      "$.units.stand_hours:string",
+      "$.units.stand_time_minutes:string",
+      "$.units.step_length_cm:string",
+      "$.units.steps:string",
+      "$.units.sugar_g:string",
+      "$.units.vo2_max:string",
+      "$.units.walking_heart_rate:string",
+      "$.units.walking_running_km:string",
+      "$.units.walking_running_mi:string",
+      "$.units.walking_speed:string",
+      "$.units.water_l:string",
+      "$.units.weight_kg:string",
+      "$.units.workout_calories:string",
+      "$.units.workout_count:string",
+      "$.units.workout_distance_km:string",
+      "$.units.workout_distance_mi:string",
+      "$.units.workout_minutes:string",
+      "$.units:object",
+      "$.vitals.bloodOxygen:number",
+      "$.vitals.bloodOxygenAvg:number",
+      "$.vitals.bloodOxygenMax:number",
+      "$.vitals.bloodOxygenMaxPercent:number",
+      "$.vitals.bloodOxygenMin:number",
+      "$.vitals.bloodOxygenMinPercent:number",
+      "$.vitals.bloodOxygenPercent:number",
+      "$.vitals.bloodPressureDiastolic:number",
+      "$.vitals.bloodPressureDiastolicAvg:number",
+      "$.vitals.bloodPressureDiastolicMax:number",
+      "$.vitals.bloodPressureDiastolicMin:number",
+      "$.vitals.bloodPressureSystolic:number",
+      "$.vitals.bloodPressureSystolicAvg:number",
+      "$.vitals.bloodPressureSystolicMax:number",
+      "$.vitals.bloodPressureSystolicMin:number",
+      "$.vitals.detailSamples:array",
+      "$.vitals.detailSamples[].endDate:string",
+      "$.vitals.detailSamples[].healthKitType:string",
+      "$.vitals.detailSamples[].metric:string",
+      "$.vitals.detailSamples[].timestamp:string",
+      "$.vitals.detailSamples[].unit:string",
+      "$.vitals.detailSamples[].value:number",
+      "$.vitals.detailSamples[]:object",
+      "$.vitals.respiratoryRate:number",
+      "$.vitals.respiratoryRateAvg:number",
+      "$.vitals.respiratoryRateMax:number",
+      "$.vitals.respiratoryRateMin:number",
+      "$.vitals:object",
+      "$.workouts:array",
+      "$.workouts[].avgPaceFormatted:string",
+      "$.workouts[].avgPacePerKmFormatted:string",
+      "$.workouts[].avgPacePerMiFormatted:string",
+      "$.workouts[].calories:number",
+      "$.workouts[].distance:number",
+      "$.workouts[].distanceFormatted:string",
+      "$.workouts[].distanceKm:number",
+      "$.workouts[].distanceMi:number",
+      "$.workouts[].duration:number",
+      "$.workouts[].durationFormatted:string",
+      "$.workouts[].elapsedDuration:number",
+      "$.workouts[].endTimeISO:string",
+      "$.workouts[].healthKitActivityType:string",
+      "$.workouts[].healthKitActivityTypeRawValue:number",
+      "$.workouts[].id:string",
+      "$.workouts[].speedKmh:number",
+      "$.workouts[].speedMph:number",
+      "$.workouts[].sport:string",
+      "$.workouts[].startTime:string",
+      "$.workouts[].startTimeISO:string",
+      "$.workouts[].type:string",
+      "$.workouts[]:object"
+    ],
+    "markdownDetailSampleStructure" : [
+      "## Detail Samples",
+      "<summary>Activity Detail Samples (2 samples)</summary>",
+      "| Start | End | Metric | Value | Unit | Source |",
+      "|-------|-----|--------|-------|------|--------|",
+      "<summary>Vitals Detail Samples (1 samples)</summary>",
+      "| Start | End | Metric | Value | Unit | Source |",
+      "|-------|-----|--------|-------|------|--------|",
+      "<summary>Body Detail Samples (1 samples)</summary>",
+      "| Start | End | Metric | Value | Unit | Source |",
+      "|-------|-----|--------|-------|------|--------|",
+      "<summary>Nutrition Detail Samples (1 samples)</summary>",
+      "| Start | End | Metric | Value | Unit | Source |",
+      "|-------|-----|--------|-------|------|--------|",
+      "<summary>Mindfulness Detail Samples (1 samples)</summary>",
+      "| Start | End | Metric | Value | Unit | Source |",
+      "|-------|-----|--------|-------|------|--------|",
+      "<summary>Mobility Detail Samples (1 samples)</summary>",
+      "| Start | End | Metric | Value | Unit | Source |",
+      "|-------|-----|--------|-------|------|--------|",
+      "<summary>Reproductive Health Detail Samples (1 samples)</summary>",
+      "| Start | End | Metric | Value | Unit | Source |",
+      "|-------|-----|--------|-------|------|--------|"
+    ],
+    "markdownFrontmatterTopLevelKeys" : [
+      "active_calories",
+      "active_medication_count",
+      "archived_medication_count",
+      "average_heart_rate",
+      "basal_calories",
+      "blood_oxygen",
+      "blood_oxygen_avg",
+      "blood_oxygen_max",
+      "blood_oxygen_min",
+      "blood_pressure_diastolic",
+      "blood_pressure_diastolic_avg",
+      "blood_pressure_diastolic_max",
+      "blood_pressure_diastolic_min",
+      "blood_pressure_systolic",
+      "blood_pressure_systolic_avg",
+      "blood_pressure_systolic_max",
+      "blood_pressure_systolic_min",
+      "bmi",
+      "body_fat_percent",
+      "caffeine_mg",
+      "carbohydrates_g",
+      "cycling_km",
+      "cycling_mi",
+      "date",
+      "dietary_calories",
+      "double_support_percent",
+      "environmental_sound_db",
+      "exercise_minutes",
+      "fat_g",
+      "fiber_g",
+      "flights_climbed",
+      "headphone_audio_db",
+      "heart_rate_max",
+      "heart_rate_min",
+      "height_m",
+      "hrv_ms",
+      "medication_count",
+      "medication_details",
+      "medication_dose_count",
+      "medication_dose_events",
+      "medication_skipped_count",
+      "medication_taken_count",
+      "medications",
+      "menstrual_flow",
+      "mindful_minutes",
+      "mindful_sessions",
+      "protein_g",
+      "raw_capture_status",
+      "raw_integrity_warning_count",
+      "raw_query_failure_count",
+      "raw_record_count",
+      "respiratory_rate",
+      "respiratory_rate_avg",
+      "respiratory_rate_max",
+      "respiratory_rate_min",
+      "resting_heart_rate",
+      "schema",
+      "schema_profile",
+      "schema_version",
+      "sleep_awake_hours",
+      "sleep_core_hours",
+      "sleep_deep_hours",
+      "sleep_in_bed_hours",
+      "sleep_rem_hours",
+      "sleep_total_hours",
+      "stand_hours",
+      "stand_time_minutes",
+      "step_length_cm",
+      "steps",
+      "sugar_g",
+      "time_context",
+      "type",
+      "units",
+      "vo2_max",
+      "walking_heart_rate",
+      "walking_running_km",
+      "walking_running_mi",
+      "walking_speed",
+      "water_l",
+      "weight_kg",
+      "workout_calories",
+      "workout_count",
+      "workout_distance_km",
+      "workout_distance_mi",
+      "workout_minutes",
+      "workouts"
+    ],
+    "obsidianBasesFrontmatterTopLevelKeys" : [
+      "active_calories",
+      "active_medication_count",
+      "archived_medication_count",
+      "average_heart_rate",
+      "basal_calories",
+      "blood_oxygen",
+      "blood_oxygen_avg",
+      "blood_oxygen_max",
+      "blood_oxygen_min",
+      "blood_pressure_diastolic",
+      "blood_pressure_diastolic_avg",
+      "blood_pressure_diastolic_max",
+      "blood_pressure_diastolic_min",
+      "blood_pressure_systolic",
+      "blood_pressure_systolic_avg",
+      "blood_pressure_systolic_max",
+      "blood_pressure_systolic_min",
+      "bmi",
+      "body_fat_percent",
+      "caffeine_mg",
+      "carbohydrates_g",
+      "cycling_km",
+      "cycling_mi",
+      "date",
+      "dietary_calories",
+      "double_support_percent",
+      "environmental_sound_db",
+      "exercise_minutes",
+      "fat_g",
+      "fiber_g",
+      "flights_climbed",
+      "headphone_audio_db",
+      "heart_rate_max",
+      "heart_rate_min",
+      "height_m",
+      "hrv_ms",
+      "medication_count",
+      "medication_details",
+      "medication_dose_count",
+      "medication_dose_events",
+      "medication_skipped_count",
+      "medication_taken_count",
+      "medications",
+      "menstrual_flow",
+      "mindful_minutes",
+      "mindful_sessions",
+      "protein_g",
+      "raw_capture_status",
+      "raw_integrity_warning_count",
+      "raw_query_failure_count",
+      "raw_record_count",
+      "respiratory_rate",
+      "respiratory_rate_avg",
+      "respiratory_rate_max",
+      "respiratory_rate_min",
+      "resting_heart_rate",
+      "schema",
+      "schema_profile",
+      "schema_version",
+      "sleep_awake_hours",
+      "sleep_core_hours",
+      "sleep_deep_hours",
+      "sleep_in_bed_hours",
+      "sleep_rem_hours",
+      "sleep_total_hours",
+      "stand_hours",
+      "stand_time_minutes",
+      "step_length_cm",
+      "steps",
+      "sugar_g",
+      "time_context",
+      "type",
+      "units",
+      "vo2_max",
+      "walking_heart_rate",
+      "walking_running_km",
+      "walking_running_mi",
+      "walking_speed",
+      "water_l",
+      "weight_kg",
+      "workout_calories",
+      "workout_count",
+      "workout_details",
+      "workout_distance_km",
+      "workout_distance_mi",
+      "workout_minutes",
+      "workouts"
+    ],
+    "schema" : "healthmd.health_data",
+    "schemaProfile" : "apple-v12"
+  },
+  "schema" : "healthmd.health_data",
+  "schemaProfile" : "apple-v12",
+  "schemaVersion" : 12
+}

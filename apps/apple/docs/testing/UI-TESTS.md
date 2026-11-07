@@ -12,6 +12,7 @@ UI tests use synthetic launch state, not simulator Health data or production pur
 | Paid-access onboarding, first preview, root gate, and shared setup | [`OnboardingJourneyUITests.swift`](../../HealthMdUITests/OnboardingJourneyUITests.swift) |
 | Mandatory root paywall, dismissal resistance, foregrounding, and paid access | [`PaywallJourneyUITests.swift`](../../HealthMdUITests/PaywallJourneyUITests.swift) |
 | Export preview, result, and cancellation | [`ExportJourneyUITests.swift`](../../HealthMdUITests/ExportJourneyUITests.swift) |
+| App Store board captures (iPhone, iPad) and slide composition | [`AppStoreScreenshotUITests.swift`](../../HealthMdUITests/AppStoreScreenshotUITests.swift), [screenshot runbook](../../screenshots/macos/README.md) |
 | Launch-state reset | `configureTestMode()` in [`HealthMdApp.swift`](../../HealthMd/iOS/HealthMdApp.swift) |
 | Broader test/coverage gates | [CI quality gates](CI-QUALITY-GATES.md) |
 

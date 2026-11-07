@@ -384,8 +384,6 @@
     <string name="export_progress_title">Exportando Dados de Saúde</string>
 
     <!-- Navigation labels -->
-    <string name="nav_export">Exportar</string>
-    <string name="nav_schedule">Agendamento</string>
     <string name="nav_history">Histórico</string>
     <string name="nav_settings">Configurações</string>
 
@@ -542,6 +540,14 @@
     <string name="feedback_no_app_available">Nenhum app disponível para abrir este link</string>
     <string name="granular_data_title">Incluir séries temporais detalhadas</string>
     <string name="granular_data_description">Adicione amostras com data e hora, como frequência cardíaca e estágios do sono, às exportações de compatibilidade. Para uma cópia completa da API, use Raw API Snapshot.</string>
+    <string name="detail_overrides_title">Detalhe por categoria</string>
+    <string name="detail_overrides_description">Substitua o padrão para categorias específicas. Resumo mantém apenas os totais diários; os resumos diários nunca mudam.</string>
+    <string name="detail_choice_default">Padrão</string>
+    <string name="detail_choice_summary">Resumo</string>
+    <string name="detail_choice_sessions">Sessões</string>
+    <string name="detail_choice_detailed">Detalhado</string>
+    <string name="detail_group_sleep_hint">Sessões lista cada sessão de sono com data e hora completas. Detalhado adiciona as fases do sono.</string>
+    <string name="detail_expansion_schema_hint">Detalhado em Atividade, Nutrição ou Corpo adiciona cada registro de origem e muda as exportações analíticas JSON, CSV e Markdown para o esquema 7.</string>
     <string name="sleep_attribution_title">Atribuição do dia de sono</string>
     <string name="sleep_attribution_night_begins">Começa à noite</string>
     <string name="sleep_attribution_morning_ends">Termina de manhã</string>
@@ -652,10 +658,6 @@
     <string name="scheduled_recovery_result_complete">Recuperação das exportações agendadas concluída.</string>
     <string name="scheduled_recovery_result_blocked">A recuperação das exportações agendadas ainda não está pronta.</string>
     <string name="not_now">Agora não</string>
-    <string name="release_notes_title">Novidades no %s</string>
-    <string name="release_notes_settings_hint">Você pode ajustar os formatos de exportação, o Markdown personalizado e as métricas em Configurações.</string>
-    <string name="release_notes_open_settings">Abrir Configurações</string>
-    <string name="release_notes_got_it">Entendi</string>
     <string name="release_notes_highlight_feedback">As sessões de CLI direto reconectam automaticamente após quedas breves do desktop, então as exportações terminam de forma confiável.</string>
     <string name="release_notes_highlight_export_parity">Os comandos de janela de ativação do desktop esperam até 120 segundos você abrir o app e conectar, sem notificações push.</string>
     <string name="release_notes_highlight_templates">O pareamento manual com endereço, porta e código de 20 dígitos continua funcionando, inclusive com versões mais antigas da CLI.</string>
@@ -1108,6 +1110,8 @@
     <string name="export_preview_api_preparation_failed">Falha na preparação da exportação da API.</string>
     <string name="export_preview_artifacts_per_range">Artefatos por intervalo</string>
     <string name="export_preview_back_description">Voltar para a prévia da exportação</string>
+    <string name="export_preview_wrap_lines">Quebrar linhas</string>
+    <string name="export_preview_format_text">Formatar texto</string>
     <string name="export_preview_destination_label">Destino</string>
     <string name="export_preview_empty_file">(arquivo vazio)</string>
     <string name="export_preview_formats_per_day">Formatos por dia</string>
@@ -1516,10 +1520,6 @@
     <string name="whoop_disconnect">Desconectar WHOOP</string>
     <string name="whoop_use_for_exports">Usar WHOOP para exportações</string>
     <string name="paywall_access_subtitle">Escolha uma assinatura ou acesso vitalício para começar seu arquivo de saúde privado. Assinaturas elegíveis incluem um teste gratuito de 7 dias.</string>
-    <string name="paywall_access_active_title">Seu acesso está ativo</string>
-    <string name="paywall_access_active_body">Continue a configuração para conectar seus dados de saúde e escolher onde salvar seu arquivo privado.</string>
-    <string name="clinic_access_active_title">Seu acesso pela clínica está ativo</string>
-    <string name="clinic_access_active_body">Sua clínica patrocina o envio para o endpoint aprovado dela. Você escolhe o que compartilhar. Outros destinos de exportação exigem seu próprio acesso ao Health.md.</string>
     <string name="paywall_plan_choices">Acesso semanal, anual ou vitalício</string>
     <string name="paywall_weekly_price">%1$s / semana</string>
     <string name="paywall_yearly_price">%1$s / ano</string>
@@ -1530,30 +1530,20 @@
     <string name="paywall_terms">Termos</string>
     <string name="paywall_privacy">Privacidade</string>
     <string name="paywall_subscription_disclosure">Assinaturas elegíveis incluem um teste gratuito de 7 dias e depois são renovadas automaticamente pelo preço exibido, a menos que sejam canceladas antes do fim do teste ou do período atual. Gerencie ou cancele no Google Play. O acesso vitalício é cobrado imediatamente como compra única. O acesso pago existente é mantido. Lifetime não tem julgamento. Excluir o aplicativo ou comprar o Lifetime não cancela uma assinatura existente.</string>
+    <plurals name="widget_archive_gaps">
+        <item quantity="one">%1$s lacuna</item>
+        <item quantity="many">%1$s de lacunas</item>
+        <item quantity="other">%1$s lacunas</item>
+    </plurals>
+    <plurals name="widget_archive_days_in_month">
+        <item quantity="one">dia em %1$s</item>
+        <item quantity="many">de dias em %1$s</item>
+        <item quantity="other">dias em %1$s</item>
+    </plurals>
 
-    <!-- Signal carousel paywall -->
-    <string name="paywall_signal_title">Cada batida do coração, registrada.</string>
-    <string name="paywall_signal_lede">O Health.md transforma o Health Connect em uma nota Markdown para cada dia, salva na pasta que você escolher.</string>
-    <string name="paywall_signal_example">Exemplo</string>
-    <string name="paywall_signal_trial_title">Sete dias por nossa conta.</string>
-    <string name="paywall_signal_day_today">Hoje</string>
-    <string name="paywall_signal_day_today_body">Exportações, agendamentos e automações ilimitados.</string>
-    <string name="paywall_signal_day_cancel">Cancele quando quiser</string>
-    <string name="paywall_signal_day_cancel_body">Cancele no Google Play antes do fim do teste.</string>
-    <string name="paywall_signal_day_end">Fim do teste</string>
-    <string name="paywall_signal_day_end_body">Depois, %1$s.</string>
-    <string name="paywall_signal_plans_title">Escolha seu caminho.</string>
-    <string name="paywall_signal_best_value">Melhor custo-benefício</string>
-    <string name="paywall_signal_free_week">7 dias grátis</string>
-    <string name="paywall_signal_lifetime_detail">Pagamento único hoje. Sem renovação.</string>
-    <string name="paywall_signal_subscription_detail">Renova automaticamente. Cancele quando quiser no Google Play.</string>
-    <string name="paywall_signal_cta_trial">Começar teste grátis de 7 dias</string>
-    <string name="paywall_signal_cta_subscribe">Assinar</string>
-    <string name="paywall_signal_cta_lifetime">Comprar vitalício</string>
-    <string name="paywall_signal_step_archive">Arquivo</string>
-    <string name="paywall_signal_step_trial">Teste</string>
-    <string name="paywall_signal_step_plans">Planos</string>
-    <string name="paywall_signal_plan_weekly">Semanal</string>
-    <string name="paywall_signal_plan_yearly">Anual</string>
-    <string name="paywall_signal_plan_lifetime">Vitalício</string>
+    <string name="clinic_sync_channel_name">Pedidos de sincronização da clínica</string>
+    <string name="clinic_sync_request_body">Sua clínica está pedindo seus dados de saúde mais recentes. Toque para enviá-los.</string>
+    <string name="clinic_sync_result_sent">Seus dados mais recentes foram enviados à sua clínica.</string>
+    <string name="clinic_sync_result_failed">Não foi possível enviar seus dados à clínica. Abra o Health.md e tente novamente.</string>
+    <string name="clinic_sync_result_profile_missing">Abra o acesso da clínica no Health.md e escolha Usar destino da clínica primeiro.</string>
 </resources>

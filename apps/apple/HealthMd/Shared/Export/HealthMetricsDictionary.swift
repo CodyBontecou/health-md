@@ -17,6 +17,22 @@ nonisolated enum HealthMdExportSchema {
     static let dataDictionaryFilename = "_healthmd_data_dictionary.json"
 }
 
+/// Apple-only Night begins successor of apple-v8 that adds per-category `detailSamples`.
+/// Selected only by an explicit per-category `detailed` override (see
+/// `AppleExportDetailPolicy.selectsAppleV12`). Native-writer-only: daily notes, scoped notes,
+/// rollups and the data dictionary keep `HealthMdExportSchema.version`.
+nonisolated enum AppleDetailExpansionSchema {
+    static let version = 12
+    static let profile = "apple-v12"
+
+    /// Strict daily-record identity check shared by connected/API/CLI receivers: apple-v8
+    /// (no profile) or apple-v12. Every other version, including apple-v11, is rejected here.
+    static func isAcceptedNightBeginsDailyIdentity(schemaVersion: Int?, schemaProfile: String?) -> Bool {
+        if schemaVersion == HealthMdExportSchema.version { return schemaProfile == nil }
+        return schemaVersion == Self.version && schemaProfile == Self.profile
+    }
+}
+
 // MARK: - Shared Metric Export Mapping
 
 /// Canonical mapping from HealthMetrics metric IDs to exported frontmatter keys.

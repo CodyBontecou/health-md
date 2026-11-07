@@ -168,6 +168,9 @@ class SchedulingManager: ObservableObject {
     /// folder-target runs must not overlap. Non-folder targets run
     /// concurrently (decision 6).
     private let profileFolderRunGate = AsyncSemaphore()
+    /// Orders occurrences of one profile by its "If runs overlap" choice.
+    @MainActor private let profileOverlapGate = ProfileRunOverlapGate()
+    private let profileOverlapPolicies = ProfileRunOverlapPolicyStore()
     /// Overridable destination adoption for tests; production adopts through
     /// persisted vault keys + APIExportSettings exactly like the UI
     /// coordinator.
@@ -347,15 +350,27 @@ class SchedulingManager: ObservableObject {
 
     @MainActor private func refreshPendingRecoveryProfiles() {
         guard let requests = try? pendingExportStore.loadAll() else { return }
-        pendingRecoveryProfileIDs = Set(requests.filter { request in
-            guard request.source == .scheduled else { return false }
-            if request.attemptedAt != nil { return true }
-            // Pre-marker retries are recoverable after their fallback window. A merely
-            // armed future occurrence is not an error/recovery action in the UI.
-            return request.scheduledFireDate.map {
-                $0.addingTimeInterval(exportNotificationScheduler.fallbackDelay) <= now()
-            } ?? false
-        }.compactMap(\.profileID))
+        pendingRecoveryProfileIDs = Set(requests.filter(isPendingRecovery).compactMap(\.profileID))
+    }
+
+    @MainActor private func isPendingRecovery(_ request: PendingExportRequest) -> Bool {
+        guard request.source == .scheduled else { return false }
+        if request.attemptedAt != nil { return true }
+        // Pre-marker retries are recoverable after their fallback window. A merely
+        // armed future occurrence is not an error/recovery action in the UI.
+        return request.scheduledFireDate.map {
+            $0.addingTimeInterval(exportNotificationScheduler.fallbackDelay) <= now()
+        } ?? false
+    }
+
+    /// Data days still unresolved by a profile's pending recovery, oldest first, for display.
+    /// Empty when nothing is pending or the journal cannot be read.
+    @MainActor func pendingRecoveryDates(profileID: UUID) -> [Date] {
+        guard let requests = try? pendingExportStore.loadAll() else { return [] }
+        return requests
+            .filter { $0.profileID == profileID && isPendingRecovery($0) }
+            .flatMap(\.dates)
+            .sorted()
     }
 
     /// No credentials, profiles, files, history or success markers are removed. Invalidate
@@ -1226,7 +1241,8 @@ class SchedulingManager: ObservableObject {
                 targetLabel: targetLabel,
                 exportTarget: target,
                 appleExportEnginePin: request.settingsSnapshot?.appleExportEnginePin,
-                profileName: request.profileName
+                profileName: request.profileName,
+                profileID: request.profileID
             )
         }
 
@@ -1301,6 +1317,14 @@ class SchedulingManager: ObservableObject {
     @MainActor
     private func scheduledTarget(for request: PendingExportRequest?) -> ExportTargetSelection {
         request?.exportTarget ?? schedule.target
+    }
+
+    /// The saved folder's display name for failure notifications; nil for other targets.
+    @MainActor
+    private func scheduledFolderName(for target: ExportTargetSelection) -> String? {
+        guard case .localIPhoneFolder = target else { return nil }
+        let vaultManager = VaultManager()
+        return vaultManager.hasSavedVaultFolder ? vaultManager.vaultName : nil
     }
 
     @MainActor
@@ -3200,6 +3224,17 @@ class SchedulingManager: ObservableObject {
             )
         }
 
+        let overlapPolicy = profileOverlapPolicies.policy(for: due.profileID)
+        guard await profileOverlapGate.admit(due.profileID, policy: overlapPolicy) == .run else {
+            logger.info("Profile occurrence skipped: an earlier run is still in progress")
+            return
+        }
+        defer {
+            let gate = profileOverlapGate
+            let profileID = due.profileID
+            Task { @MainActor in await gate.finish(profileID) }
+        }
+
         guard let entry = scheduledEntryStore.entry(id: due.entryID),
               entry.isEnabled,
               entry.recoveryGeneration == due.recoveryGeneration,
@@ -3306,7 +3341,8 @@ class SchedulingManager: ObservableObject {
                     targetLabel: scheduledTargetLabel(for: target, profile: profile),
                     exportTarget: target,
                     appleExportEnginePin: settings.appleExportEnginePin,
-                    profileName: pendingRequest.profileName ?? profile.name
+                    profileName: pendingRequest.profileName ?? profile.name,
+                    profileID: profile.id
                 )
             }
         } else if result.totalCount > 0, !isExportLimitResult(result) {
@@ -3318,7 +3354,8 @@ class SchedulingManager: ObservableObject {
                 targetLabel: scheduledTargetLabel(for: target, profile: profile),
                 exportTarget: target,
                 appleExportEnginePin: settings.appleExportEnginePin,
-                profileName: pendingRequest.profileName ?? profile.name
+                profileName: pendingRequest.profileName ?? profile.name,
+                profileID: profile.id
             )
         }
     }
@@ -3677,7 +3714,9 @@ class SchedulingManager: ObservableObject {
                         success: false,
                         daysExported: max(result.totalCount, fallbackDaysToExport),
                         failureReason: result.primaryFailureReason,
-                        errorDetails: result.failedDateDetails.first?.errorDetails
+                        errorDetails: result.failedDateDetails.first?.errorDetails,
+                        profileName: pendingRequest?.profileName,
+                        folderName: scheduledFolderName(for: target)
                     )
                 }
             }
@@ -3700,7 +3739,9 @@ class SchedulingManager: ObservableObject {
                     success: false,
                     daysExported: max(result.totalCount, fallbackDaysToExport),
                     failureReason: failureReason,
-                    errorDetails: result.failedDateDetails.first?.errorDetails
+                    errorDetails: result.failedDateDetails.first?.errorDetails,
+                    profileName: pendingRequest?.profileName,
+                    folderName: scheduledFolderName(for: target)
                 )
             }
 
@@ -3726,6 +3767,8 @@ class SchedulingManager: ObservableObject {
         daysExported: Int,
         failureReason: ExportFailureReason? = nil,
         errorDetails: String? = nil,
+        profileName: String? = nil,
+        folderName: String? = nil,
         dailyNoteUpdateCount: Int = 0,
         dailyNoteSkipCount: Int = 0
     ) async {
@@ -3756,15 +3799,14 @@ class SchedulingManager: ObservableObject {
                     localized: "The saved export folder changed. Open Health.md and re-select the intended folder before the next export.",
                     comment: "Scheduled export notification when the saved folder resolves elsewhere"
                 )
-            } else if let reason = failureReason {
-                body = reason.shortDescription
-                if let details = errorDetails, !details.isEmpty {
-                    body += ": \(details)"
-                }
-            } else if let details = errorDetails, !details.isEmpty {
-                body = details
             } else {
-                body = String(localized: "Failed to export health data. Please check your settings.", comment: "Generic export failure message")
+                // NotificationsG: profile and cause class only. System error text can
+                // carry paths or record dates, so it stays in history and Diagnostics.
+                body = ScheduledExportNotificationCopy.failureBody(
+                    profileName: profileName,
+                    folderName: folderName,
+                    reason: failureReason
+                )
             }
             content.body = body
             content.sound = .default

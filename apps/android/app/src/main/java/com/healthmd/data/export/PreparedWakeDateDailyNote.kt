@@ -91,6 +91,7 @@ class PreparedWakeDateDailyNote private constructor(
                 filenameFormat = "{date}", folderStructure = "", subfolder = "",
                 folderOrganization = FolderOrganization.FLAT, writeMode = WriteMode.OVERWRITE,
                 includeGranularData = settings.includeGranularData && injection.injectMarkdownSections,
+                detailOverrides = if (injection.injectMarkdownSections) settings.detailOverrides else emptyMap(),
                 individualTracking = settings.individualTracking.copy(globalEnabled = false),
                 dailyNoteInjection = injection.copy(enabled = false),
                 metricSelection = settings.metricSelection.copy(

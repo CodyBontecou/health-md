@@ -32,7 +32,7 @@ internal object AndroidWakeDateSourceProjection {
         val context = requireNotNull(request.captureContext)
         require(request.profile == AndroidExportProfile.android_sleep_v6 && context.sleepDayAttribution == SleepDayAttribution.MORNING_ENDS)
         val (root, details) = nativeParts(request.data, request.metricSelection, request.customization,
-            request.includeGranularData, context, semanticResult) ?: return plan
+            request.detail, context, semanticResult) ?: return plan
         val selected = request.data.filtered(request.metricSelection, context)
         val aliases = if (request.customization.includeLegacyAndroidAliases) {
             val canonicalKeys = HealthDataFields.extractForWakeDate(selected, request.customization.unitConverter,
@@ -123,12 +123,12 @@ internal object AndroidWakeDateSourceProjection {
         val (root, _) = nativeParts(data, settings.metricSelection, settings.formatCustomization.copy(
             unitPreference = UnitPreference.METRIC, includeLegacyAndroidAliases = false,
             includeAndroidNativeFields = true),
-            settings.includeGranularData, context, semanticResult) ?: return aggregate
+            settings.exportDetailSelection(), context, semanticResult) ?: return aggregate
         return composeJson(aggregate, root)
     }
 
     private fun nativeParts(data: HealthData, selection: MetricSelectionState, customization: FormatCustomization,
-        includeGranularData: Boolean, context: AndroidCaptureContext, semanticResult: ByteArray): Pair<JsonObject, JsonObject>? {
+        detail: ExportDetailSelection, context: AndroidCaptureContext, semanticResult: ByteArray): Pair<JsonObject, JsonObject>? {
         val selected = data.filtered(selection, context)
         val source = HealthData(date = selected.date, sleep = selected.sleep, workouts = selected.workouts,
             plannedWorkouts = selected.plannedWorkouts, medicalResources = selected.medicalResources,
@@ -149,7 +149,7 @@ internal object AndroidWakeDateSourceProjection {
             source.sleep.stages.isEmpty() && source.sleep.sessions.isEmpty() && source.workouts.isEmpty() &&
             source.plannedWorkouts.isEmpty() && !source.medicalResources.hasData &&
             source.compatibilityProvenance == null && !customization.includeLegacyAndroidAliases) return null
-        val root = Json.parseToJsonElement(JsonExporter().export(source, customization, includeGranularData, context)).jsonObject
+        val root = Json.parseToJsonElement(JsonExporter().export(source, customization, captureContext = context, detail = detail)).jsonObject
         val keys = Json.parseToJsonElement(semanticResult.decodeToString()).jsonObject.getValue("selected_output_keys").jsonArray
             .map { it.jsonPrimitive.content }
         require(keys.distinct().size == keys.size)

@@ -267,6 +267,14 @@
     </plurals>
     <string name="granular_data_title">Егжей-тегжейлі уақыт қатарларын қосу</string>
     <string name="granular_data_description">Үйлесімділік экспорттарына жүрек соғу жиілігі мен ұйқы кезеңдері сияқты уақыт белгісі бар үлгілерді қосады. API деректерінің толық көшірмесі үшін «Өңделмеген API снапшоты» пішімін пайдаланыңыз.</string>
+    <string name="detail_overrides_title">Санат бойынша егжей-тегжей</string>
+    <string name="detail_overrides_description">Жеке санаттар үшін әдепкі мәнді қайта анықтаңыз. «Қорытынды» тек күндік жиынтықтарды сақтайды; күндік қорытындылар өзгермейді.</string>
+    <string name="detail_choice_default">Әдепкі</string>
+    <string name="detail_choice_summary">Қорытынды</string>
+    <string name="detail_choice_sessions">Сеанстар</string>
+    <string name="detail_choice_detailed">Толық</string>
+    <string name="detail_group_sleep_hint">«Сеанстар» әр ұйқы сеансын толық күні мен уақытымен көрсетеді. «Толық» ұйқы кезеңдерін қосады.</string>
+    <string name="detail_expansion_schema_hint">Белсенділік, тамақтану немесе дене үшін «Толық» әр бастапқы жазбаны қосып, аналитикалық JSON, CSV және Markdown экспорттарын 7-схемаға ауыстырады.</string>
     <string name="sleep_attribution_title">Ұйықтау күнін белгілеу</string>
     <string name="sleep_attribution_night_begins">Түн басталады</string>
     <string name="sleep_attribution_morning_ends">Таң аяқталады</string>
@@ -519,10 +527,6 @@
     <string name="scheduled_recovery_result_complete">Жоспарланған қалпына келтіру аяқталды.</string>
     <string name="scheduled_recovery_result_blocked">Жоспарланған қалпына келтіру әлі дайын емес.</string>
     <string name="not_now">Қазір емес</string>
-    <string name="release_notes_title">%s нұсқасындағы жаңалықтар</string>
-    <string name="release_notes_settings_hint">Экспорт пішімдерін, арнаулы Markdown үлгісін және көрсеткіштерді «Параметрлер» бөлімінде реттеуге болады.</string>
-    <string name="release_notes_open_settings">Параметрлерді ашу</string>
-    <string name="release_notes_got_it">Түсіндім</string>
     <string name="release_notes_highlight_feedback">Десктоптың қысқа үзілістерінен кейін Direct CLI сессиялары автоматты түрде қайта қосылады, сондықтан экспорттар сенімді аяқталады.</string>
     <string name="release_notes_highlight_export_parity">Десктоптың ояну терезесі командалары қосымшаны ашып, қосылуыңызды 120 секундқа дейін күтеді, push-хабарламаларсыз.</string>
     <string name="release_notes_highlight_templates">Мекенжай, порт және 20 таңбалы код арқылы қолмен жұптау әлі жұмыс істейді, ескі CLI нұсқаларымен де.</string>
@@ -549,8 +553,6 @@
     <string name="debug_toggle_unlock">Құлып күйін ауыстыру</string>
     <string name="debug_reset_state">Күйді қалпына келтіру</string>
     <string name="export_progress_title">Денсаулық деректері экспортталуда</string>
-    <string name="nav_export">Экспорт</string>
-    <string name="nav_schedule">Кесте</string>
     <string name="nav_history">Тарих</string>
     <string name="nav_settings">Параметрлер</string>
     <string name="shortcut_export_short">Экспорттау</string>
@@ -1019,6 +1021,8 @@
     <string name="export_preview_api_preparation_failed">API экспортын дайындау сәтсіз аяқталды.</string>
     <string name="export_preview_artifacts_per_range">Әр ауқымдағы артефакт саны</string>
     <string name="export_preview_back_description">Экспортты алдын ала қарауға оралу</string>
+    <string name="export_preview_wrap_lines">Жолдарды тасымалдау</string>
+    <string name="export_preview_format_text">Мәтінді пішімдеу</string>
     <string name="export_preview_destination_label">Экспорт орны</string>
     <string name="export_preview_empty_file">(бос файл)</string>
     <string name="export_preview_formats_per_day">Әр күндегі пішім саны</string>
@@ -1409,10 +1413,6 @@
     <string name="whoop_disconnect">WHOOP қызметін ажырату</string>
     <string name="whoop_use_for_exports">Экспорттау үшін WHOOP пайдалану</string>
     <string name="paywall_access_subtitle">Жеке денсаулық мұрағатын бастау үшін жазылымды немесе өмір бойы қолжетімділікті таңдаңыз. Тиісті жазылымдарға 7 күндік тегін сынақ мерзімі кіреді.</string>
-    <string name="paywall_access_active_title">Қолжетімділігіңіз белсенді</string>
-    <string name="paywall_access_active_body">Денсаулық деректерін қосып, жеке мұрағатты сақтау орнын таңдау үшін баптауды жалғастырыңыз.</string>
-    <string name="clinic_access_active_title">Клиника арқылы қолжетімділігіңіз белсенді</string>
-    <string name="clinic_access_active_body">Клиникаңыз мақұлданған соңғы нүктесіне жеткізуге демеушілік етеді. Нені бөлісуді өзіңіз таңдайсыз. Басқа экспорт бағыттары үшін өз Health.md қолжетімділігіңіз қажет.</string>
     <string name="paywall_plan_choices">Апталық, жылдық немесе өмір бойы қолжетімділік</string>
     <string name="paywall_weekly_price">%1$s / апта</string>
     <string name="paywall_yearly_price">%1$s / жыл</string>
@@ -1423,30 +1423,18 @@
     <string name="paywall_terms">Шарттар</string>
     <string name="paywall_privacy">Құпиялық</string>
     <string name="paywall_subscription_disclosure">Тиісті жазылымдарға 7 күндік тегін сынақ мерзімі кіреді, одан кейін сынақ немесе ағымдағы кезең аяқталмай тұрып бас тартпасаңыз, көрсетілген бағамен автоматты түрде жаңартылады. Google Play арқылы басқарыңыз немесе бас тартыңыз. Өмір бойы қолжетімділік үшін төлем бірден бір рет алынады. Бұрынғы ақылы қолжетімділік сақталады. Өмір бойы сынақ болмайды. Қолданбаны жою немесе Lifetime сатып алу бұрыннан бар жазылымнан бас тартпайды.</string>
+    <plurals name="widget_archive_gaps">
+        <item quantity="one">%1$s олқылық</item>
+        <item quantity="other">%1$s олқылық</item>
+    </plurals>
+    <plurals name="widget_archive_days_in_month">
+        <item quantity="one">күн, %1$s айында</item>
+        <item quantity="other">күн, %1$s айында</item>
+    </plurals>
 
-    <!-- Signal carousel paywall -->
-    <string name="paywall_signal_title">Әр жүрек соғысы — жазулы.</string>
-    <string name="paywall_signal_lede">Health.md Health Connect деректерін күн сайынғы Markdown жазбасына айналдырып, өзіңіз таңдаған қалтаға сақтайды.</string>
-    <string name="paywall_signal_example">Мысал</string>
-    <string name="paywall_signal_trial_title">Жеті күн — біздің есебімізден.</string>
-    <string name="paywall_signal_day_today">Бүгін</string>
-    <string name="paywall_signal_day_today_body">Шексіз экспорт, кесте және автоматтандыру.</string>
-    <string name="paywall_signal_day_cancel">Кез келген уақытта бас тарту</string>
-    <string name="paywall_signal_day_cancel_body">Сынақ мерзімі аяқталмай тұрып, Google Play-де бас тартыңыз.</string>
-    <string name="paywall_signal_day_end">Сынақ мерзімінің соңы</string>
-    <string name="paywall_signal_day_end_body">Содан кейін %1$s.</string>
-    <string name="paywall_signal_plans_title">Өз жолыңызды таңдаңыз.</string>
-    <string name="paywall_signal_best_value">Ең тиімді</string>
-    <string name="paywall_signal_free_week">7 күн тегін</string>
-    <string name="paywall_signal_lifetime_detail">Бүгін бір рет төлейсіз. Жаңартылмайды.</string>
-    <string name="paywall_signal_subscription_detail">Автоматты түрде жаңартылады. Google Play-де кез келген уақытта бас тартуға болады.</string>
-    <string name="paywall_signal_cta_trial">7 күндік тегін сынақты бастау</string>
-    <string name="paywall_signal_cta_subscribe">Жазылу</string>
-    <string name="paywall_signal_cta_lifetime">Өмір бойына сатып алу</string>
-    <string name="paywall_signal_step_archive">Мұрағат</string>
-    <string name="paywall_signal_step_trial">Сынақ</string>
-    <string name="paywall_signal_step_plans">Жоспарлар</string>
-    <string name="paywall_signal_plan_weekly">Апта сайын</string>
-    <string name="paywall_signal_plan_yearly">Жыл сайын</string>
-    <string name="paywall_signal_plan_lifetime">Өмір бойы</string>
+    <string name="clinic_sync_channel_name">Клиникадан синхрондау сұраулары</string>
+    <string name="clinic_sync_request_body">Клиникаңыз денсаулығыңыз туралы соңғы деректерді сұрап отыр. Жіберу үшін түртіңіз.</string>
+    <string name="clinic_sync_result_sent">Соңғы деректеріңіз клиникаға жіберілді.</string>
+    <string name="clinic_sync_result_failed">Деректерді клиникаға жіберу мүмкін болмады. Health.md қолданбасын ашып, қайталап көріңіз.</string>
+    <string name="clinic_sync_result_profile_missing">Health.md ішінде клиника қолжетімділігін ашып, алдымен «Клиника мекенжайын пайдалану» опциясын таңдаңыз.</string>
 </resources>

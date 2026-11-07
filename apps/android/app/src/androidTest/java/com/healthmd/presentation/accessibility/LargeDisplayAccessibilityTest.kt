@@ -187,7 +187,6 @@ class LargeDisplayAccessibilityTest(private val display: AccessibilityDisplayCas
             OnboardingPage.WELCOME,
             OnboardingPage.HEALTH_ACCESS,
             OnboardingPage.FOLDER_SETUP,
-            OnboardingPage.PLAY_ACCESS,
             OnboardingPage.INCLUDED_ACCESS,
             OnboardingPage.READY,
         )
@@ -229,14 +228,6 @@ class LargeDisplayAccessibilityTest(private val display: AccessibilityDisplayCas
                                 folderName = "A long selected folder name for accessible exports"
                             },
                         )
-                        OnboardingPage.PLAY_ACCESS -> PaywallScreen(
-                            offers = trialOffers,
-                            onPlanPurchase = { actions += "purchase" },
-                            onPurchase = { actions += "purchase" },
-                            onRestore = { actions += "restore" },
-                            onDismiss = null,
-                            subtitle = text(R.string.schedule_unlock_required_body),
-                        )
                         OnboardingPage.INCLUDED_ACCESS -> IncludedAccessPage()
                         OnboardingPage.READY -> ReadyPage()
                     }
@@ -258,9 +249,6 @@ class LargeDisplayAccessibilityTest(private val display: AccessibilityDisplayCas
         tap(R.string.onboarding_storage_select_button)
         scrollAndTap(R.string.export_folder_change)
         tap(R.string.onboarding_continue)
-        tapPaywallAction(R.string.paywall_signal_cta_trial)
-        tapPaywallAction(R.string.paywall_restore)
-        tap(R.string.onboarding_continue)
         // The included-access channel's final feature is also reachable at the largest scales.
         compose.onNodeWithText(text(R.string.fdroid_onboarding_no_play_services))
             .performScrollTo().assertFullyVisible()
@@ -268,7 +256,7 @@ class LargeDisplayAccessibilityTest(private val display: AccessibilityDisplayCas
         capture("ready-intro")
         tap(R.string.onboarding_ready_start_button)
 
-        assertEquals(listOf("shared", "health", "folder", "folder", "purchase", "restore", "complete"), actions)
+        assertEquals(listOf("shared", "health", "folder", "folder", "complete"), actions)
     }
 
     @Test
@@ -278,7 +266,7 @@ class LargeDisplayAccessibilityTest(private val display: AccessibilityDisplayCas
             TestViewport {
                 AppNavigationLayout(
                     destinations = NavDestination.entries,
-                    currentRoute = NavDestination.EXPORT.route,
+                    currentRoute = NavDestination.ARCHIVE.route,
                     onNavigate = { actions += it.route },
                 ) { modifier ->
                     Column(modifier = modifier.verticalScroll(rememberScrollState())) {
@@ -305,12 +293,12 @@ class LargeDisplayAccessibilityTest(private val display: AccessibilityDisplayCas
             tab.performTouchInput { click() }
         }
         assertEquals(listOf(LAST_ACTION) + NavDestination.entries.map { it.route }, actions)
-        if (display.width < 601 && GeistAdaptiveLayout.wrapNavigation(display.width - 16f, display.fontScale, 4)) {
-            val export = node(R.string.nav_export).getUnclippedBoundsInRoot()
-            val schedule = node(R.string.nav_schedule).getUnclippedBoundsInRoot()
-            val history = node(R.string.nav_history).getUnclippedBoundsInRoot()
-            assertEquals("First row has two wide tabs", export.top, schedule.top)
-            assertTrue("Remaining tabs use a second row", history.top >= export.bottom)
+        if (display.width < 601 && GeistAdaptiveLayout.wrapNavigation(display.width - 16f, display.fontScale, NavDestination.entries.size)) {
+            val archive = node(R.string.nav_archive).getUnclippedBoundsInRoot()
+            val automations = node(R.string.nav_automations).getUnclippedBoundsInRoot()
+            val settings = node(R.string.nav_settings).getUnclippedBoundsInRoot()
+            assertEquals("First row has two wide tabs", archive.top, automations.top)
+            assertTrue("Remaining tabs use a second row", settings.top >= archive.bottom)
         }
     }
 
@@ -320,7 +308,7 @@ class LargeDisplayAccessibilityTest(private val display: AccessibilityDisplayCas
         compose.setContent {
             TestViewport {
                 val pages = listOf(OnboardingPage.WELCOME, OnboardingPage.HEALTH_ACCESS,
-                    OnboardingPage.FOLDER_SETUP, OnboardingPage.PLAY_ACCESS, OnboardingPage.READY)
+                    OnboardingPage.FOLDER_SETUP, OnboardingPage.READY)
                 val pager = rememberPagerState(initialPage = 1, pageCount = { pages.size })
                 var connected by remember { mutableStateOf(false) }
                 OnboardingLayout(
@@ -372,7 +360,7 @@ class LargeDisplayAccessibilityTest(private val display: AccessibilityDisplayCas
         val actions = mutableListOf<String>()
         compose.setContent {
             TestViewport {
-                AppNavigationLayout(NavDestination.entries, NavDestination.EXPORT.route, {}) { modifier ->
+                AppNavigationLayout(NavDestination.entries, NavDestination.ARCHIVE.route, {}) { modifier ->
                     Box(modifier) {
                         FloatingExportActionBar(
                             isPurchased = false,
@@ -425,7 +413,7 @@ class LargeDisplayAccessibilityTest(private val display: AccessibilityDisplayCas
                 }
             }
         }
-        tapPaywallAction(R.string.paywall_signal_cta_trial)
+        tapPaywallAction(R.string.paywall_cta_trial)
         tapPaywallAction(R.string.paywall_restore)
         revealPaywallAction(hasContentDescription(text(R.string.close)))
             .performTouchInput { click() }

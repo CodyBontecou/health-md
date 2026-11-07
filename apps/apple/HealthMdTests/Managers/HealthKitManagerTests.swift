@@ -1357,14 +1357,23 @@ final class HealthKitManagerAggregationTests: XCTestCase {
         let nightBegins = try await sut.fetchHealthData(for: HealthKitFixtures.referenceDate)
         XCTAssertNil(nightBegins.timeContext.sleepDayAttribution, "default captures keep legacy record bytes")
 
+        // Morning ends is approved under the explicit apple-v11 profile (2026-10-29), so a
+        // fresh capture carries that marker and records its attribution.
         sut.setSleepDayAttribution(.morningEnds)
-        do {
-            _ = try await sut.fetchHealthData(for: HealthKitFixtures.referenceDate)
-            XCTFail("No shipped v8 capture may publish unapproved ownership")
-        } catch {
-            XCTAssertEqual(error as? AppleSleepCaptureContext.AvailabilityError, .unapprovedAttribution)
-        }
+        let morningEnds = try await sut.fetchHealthData(for: HealthKitFixtures.referenceDate)
+        XCTAssertEqual(morningEnds.timeContext.sleepDayAttribution, .morningEnds)
         XCTAssertEqual(sut.sleepDayAttribution, .morningEnds, "Do not coerce a saved preference")
+
+        // A Morning ends context without the apple-v11 marker (a historical draft) still rejects.
+        let unversioned = try JSONDecoder().decode(AppleSleepCaptureContext.self, from: Data(
+            #"{"calendarTimeZoneIdentifier":"UTC","sleepDayAttribution":"morning_ends"}"#.utf8
+        ))
+        do {
+            _ = try await sut.fetchHealthData(for: HealthKitFixtures.referenceDate, captureContext: unversioned)
+            XCTFail("Unversioned Morning ends authority must not capture")
+        } catch {
+            XCTAssertEqual(error as? AppleSleepCaptureContext.AvailabilityError, .unversionedAttribution)
+        }
     }
 
     @MainActor

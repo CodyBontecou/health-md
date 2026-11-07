@@ -7,6 +7,7 @@ import com.healthmd.data.export.MarkdownExporter
 import com.healthmd.data.export.WakeDateJsonDocument
 import com.healthmd.core.HEALTHMD_SLEEP_REGISTRY_SHA256
 import com.healthmd.domain.exportengine.ExportEnginePin
+import com.healthmd.domain.model.ExportDetailSelection
 import com.healthmd.domain.model.AndroidCaptureContext
 import com.healthmd.domain.model.SleepDayAttribution
 import com.healthmd.domain.model.FormatCustomization
@@ -72,6 +73,8 @@ object HealthMdRenderInputAdapter {
         val groupByCategory: Boolean = true,
         val includePlatformExtensions: Boolean = false,
         val includeGranularData: Boolean = false,
+        /** Per-group detail; defaults to the exact projection of [includeGranularData]. */
+        val detail: ExportDetailSelection = ExportDetailSelection.uniform(includeGranularData),
         val composeSleepRecordsNatively: Boolean = false,
         val composeWorkoutRecordsNatively: Boolean = false,
         val rawCaptureStatus: String = "not_requested",
@@ -147,10 +150,10 @@ object HealthMdRenderInputAdapter {
                 captureContext.exportProfileID != "android-sleep-v6" || captureContext.zoneId.id != calendarTimeZone) {
                 throw AdapterException("wake-date native capture authority is incompatible")
             }
-            if (options.includeGranularData) {
+            if (options.detail.any) {
                 for (data in presentationByOwnerDate.values) {
                     val payload = json.parseToJsonElement(JsonExporter().export(data,
-                        presentationCustomization, true, captureContext = captureContext))
+                        presentationCustomization, captureContext = captureContext, detail = options.detail))
                     if (hasUnqualifiedDetailArrays(payload, emptyList())) {
                         throw AdapterException("wake-date non-sleep details are not qualified")
                     }
@@ -476,7 +479,9 @@ object HealthMdRenderInputAdapter {
                 val sleep = native["sleep"]?.jsonObject ?: buildJsonObject {}
                 val stages = sleep["sleepStages"]?.jsonArray ?: JsonArray(emptyList())
                 val sessions = sleep["sleepSessions"]?.jsonArray ?: JsonArray(emptyList())
-                if (options.includeGranularData && !options.composeSleepRecordsNatively && (stages.size != presentationData.sleep.stages.size || sessions.size != presentationData.sleep.sessions.size)) {
+                if (!options.composeSleepRecordsNatively &&
+                    ((options.detail.sleepStages && stages.size != presentationData.sleep.stages.size) ||
+                        (options.detail.sleepSessions && sessions.size != presentationData.sleep.sessions.size))) {
                     throw AdapterException("wake-date native sleep details are incompatible")
                 }
                 val selected = frozenSelectedOutputKeys ?: selectedOutputKeys
@@ -884,8 +889,8 @@ object HealthMdRenderInputAdapter {
     private fun nativePresentation(data: HealthData, customization: FormatCustomization,
         options: Options, context: AndroidCaptureContext?): String = if (options.composeSleepRecordsNatively || options.composeWorkoutRecordsNatively) {
         JsonExporter().exportForNativeComposition(data, customization, options.includeGranularData, requireNotNull(context),
-            options.composeSleepRecordsNatively, options.composeWorkoutRecordsNatively)
-    } else JsonExporter().export(data, customization, options.includeGranularData, captureContext = context)
+            options.composeSleepRecordsNatively, options.composeWorkoutRecordsNatively, options.detail)
+    } else JsonExporter().export(data, customization, captureContext = context, detail = options.detail)
 
     private fun profileDocuments(
         data: HealthData?,
@@ -912,7 +917,7 @@ object HealthMdRenderInputAdapter {
                 includeMetadata = options.includeMetadata,
                 groupByCategory = options.groupByCategory,
                 customization = customization,
-                includeGranularData = options.includeGranularData,
+                detail = options.detail,
             )
             val body = if (options.includeMetadata && rendered.startsWith("---\n")) {
                 val delimiter = rendered.indexOf("\n---\n\n", startIndex = 4)
@@ -926,7 +931,7 @@ object HealthMdRenderInputAdapter {
             JsonNull
         }
         val rows = if (nativeWakeDateContext == null && "csv" in options.formats) {
-            val parsed = parseCsv(CsvExporter().export(data, customization, options.includeGranularData))
+            val parsed = parseCsv(CsvExporter().export(data, customization, detail = options.detail))
             if (parsed.firstOrNull() != listOf("Date", "Category", "Metric", "Value", "Unit", "Timestamp")) {
                 throw AdapterException("CSV presentation is invalid")
             }

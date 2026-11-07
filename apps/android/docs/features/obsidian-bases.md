@@ -18,7 +18,7 @@ Writes frontmatter-only `.md` notes — a single YAML block listing every metric
 
 ## Where to find it
 
-1. Enable **Obsidian Bases** in **Export Format** on the Export tab.
+1. Enable **Obsidian Bases** in **Export Format** on the Export now screen.
 2. Export; one `-bases.md` file appears per day (when Markdown is also enabled; otherwise plain `.md`).
 
 ## Prerequisites

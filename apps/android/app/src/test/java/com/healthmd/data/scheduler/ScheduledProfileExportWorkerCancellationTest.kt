@@ -275,7 +275,7 @@ class ScheduledProfileExportWorkerCancellationTest {
             apiRunner.exportDates(
                 dates = any(),
                 settings = any(),
-                onProgress = null,
+                onProgress = any(),
                 expectedDestinationFingerprint = null,
                 durableOperationId = any(),
                 durableSettingsSnapshotJson = profile.settingsSnapshotJson,
@@ -630,7 +630,7 @@ class ScheduledProfileExportWorkerCancellationTest {
                     coVerify(exactly = 1) { settingsRepository.getSleepDayAttribution() }
                     coVerify(exactly = 1) { settingsRepository.getSelectedHealthProviderId() }
                 }
-                coVerify(exactly = 0) { sdk.fetchHealthDataRange(any(), any(), any(), any(), any(), any()) }
+                coVerify(exactly = 0) { sdk.fetchHealthDataRange(any(), any(), any(), any(), any(), any(), any()) }
             } finally { dataScope.coroutineContext[kotlinx.coroutines.Job]?.cancel(); root.deleteRecursively() }
         }
     }
@@ -776,7 +776,7 @@ class ScheduledProfileExportWorkerCancellationTest {
             apiRunner.exportDates(
                 dates = capture(exportedDates),
                 settings = any(),
-                onProgress = null,
+                onProgress = any(),
                 expectedDestinationFingerprint = null,
                 durableOperationId = any(),
                 durableSettingsSnapshotJson = profile.settingsSnapshotJson,

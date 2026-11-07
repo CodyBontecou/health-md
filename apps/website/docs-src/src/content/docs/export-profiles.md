@@ -7,9 +7,9 @@ Export profiles keep a repeatable export setup together. Manage them in Health.m
 
 ## Manage and edit profiles
 
-Open **Settings → Export Profiles**. The list marks the active profile and lets you create, rename, duplicate, delete, activate, or inspect profiles. Open a profile's detail view to copy its stable ID. The last remaining profile cannot be deleted.
+On iPhone, each profile is an automation: open **Automations** to see them, tap **+** to create one, and open an automation to run, duplicate, pause, or edit it page by page (metrics, formats, output, daily notes, entries, schedule). Its page also shows the stable Profile ID. **Settings → App & support → Export Profiles** keeps the full list for renaming, deleting, and activating. On Android, open **Settings → Export Profiles**. The last remaining profile cannot be deleted.
 
-The Export tab edits the active profile. Activate another profile before changing export settings if you do not want to update the current one.
+**Automations → All export settings** edits the active profile. Activate another profile before changing those settings if you do not want to update the current one.
 
 Each profile freezes the choices needed to reproduce a run:
 
@@ -29,7 +29,7 @@ A schedule is bound separately to the profile's stable identity. Switching the a
 
 ## Names, stable IDs, and automation
 
-A display name is for people and may change. A profile's stable ID is for rename-safe automation. Copy it from **Settings → Export Profiles → Profile ID**.
+A display name is for people and may change. A profile's stable ID is for rename-safe automation. Copy it from the automation's page in **Automations** on iPhone, or from **Settings → Export Profiles → Profile ID** on Android.
 
 - Apple Shortcuts select a profile by display name. An empty profile parameter uses the active profile.
 - Android Tasker and adb broadcasts can supply the `PROFILE` extra with a stable ID or name. Prefer the ID for workflows that must survive renames.

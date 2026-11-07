@@ -1,8 +1,11 @@
 #!/usr/bin/env bash
+# Captures the Mac app (unless MAC_SCREENSHOT_SKIP_CAPTURE=1), lays the captures into the
+# AS_Mac_* boards and validates the result. Never uploads.
 set -euo pipefail
 
 LOCALE="${1:-en-US}"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+COPY="$ROOT/screenshots/macos/copy.json"
 CAPTURES="$ROOT/screenshots/macos/captures/$LOCALE"
 OUTPUT="$ROOT/fastlane/screenshots-macos/$LOCALE"
 REVIEW="$ROOT/screenshots/macos/review/$LOCALE"
@@ -11,35 +14,26 @@ if [ "${MAC_SCREENSHOT_SKIP_CAPTURE:-0}" != "1" ]; then
   "$ROOT/scripts/capture-macos-app-store-screenshots.sh" "$LOCALE"
 fi
 
-swift "$ROOT/scripts/compose-macos-app-store-screenshots.swift" \
-  --copy "$ROOT/screenshots/macos/copy.json" \
+# The board set replaces whatever slides this locale had; compose into a fresh folder first so a
+# failed run leaves the committed slides untouched.
+STAGING="$(mktemp -d)"
+trap 'rm -rf "$STAGING"' EXIT
+
+swift "$ROOT/scripts/app-store-screenshots/compose.swift" \
+  --copy "$COPY" \
   --locale "$LOCALE" \
   --captures "$CAPTURES" \
-  --output "$OUTPUT" \
-  --review "$REVIEW"
+  --output "$STAGING"
 
-if [ "$LOCALE" = "en-US" ] && [ -f "$OUTPUT/04_track_every_export.png" ]; then
-  mv "$OUTPUT/04_track_every_export.png" "$REVIEW/previous_04_track_every_export.png"
-fi
-
-EXPECTED_FILES=(
-  01_sync_with_iphone.png
-  02_export_health_data.png
-  03_automate_every_export.png
-  04_preview_before_export.png
-  05_configure_your_app.png
+EXPECTED_FILES=()
+while IFS= read -r FILE; do EXPECTED_FILES+=("$FILE"); done < <(
+  python3 -c 'import json,sys; [print(s["output"]) for s in json.load(open(sys.argv[1]))["slides"]]' "$COPY"
 )
 
-PNG_COUNT="$(find "$OUTPUT" -maxdepth 1 -type f -name '*.png' | wc -l | tr -d ' ')"
-if [ "$PNG_COUNT" != "5" ]; then
-  echo "Expected exactly five final PNGs in $OUTPUT; found $PNG_COUNT" >&2
-  exit 1
-fi
-
 for FILE in "${EXPECTED_FILES[@]}"; do
-  PATH_TO_IMAGE="$OUTPUT/$FILE"
+  PATH_TO_IMAGE="$STAGING/$FILE"
   if [ ! -f "$PATH_TO_IMAGE" ]; then
-    echo "Missing ordered screenshot: $PATH_TO_IMAGE" >&2
+    echo "Missing ordered screenshot: $FILE" >&2
     exit 1
   fi
   WIDTH="$(sips -g pixelWidth "$PATH_TO_IMAGE" | awk '/pixelWidth/ { print $2 }')"
@@ -50,6 +44,10 @@ for FILE in "${EXPECTED_FILES[@]}"; do
     exit 1
   fi
 done
+
+mkdir -p "$OUTPUT" "$REVIEW"
+find "$OUTPUT" -maxdepth 1 -type f -name '*.png' -delete
+cp "$STAGING"/*.png "$OUTPUT/"
 
 VALIDATION_OUTPUT="$(asc screenshots validate \
   --path "$OUTPUT" \

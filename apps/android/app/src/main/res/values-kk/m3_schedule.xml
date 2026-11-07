@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="m3_schedule_clinic_destination_title">Клиника бағыты</string>
+    <string name="m3_schedule_clinic_destination_body">Бұл бағытты клиникаңыз басқарады. Оны таңдау немесе бөлісуді басқару үшін «Клиникаға қолжетімділік» бөлімін пайдаланыңыз. Басқа бағыттар үшін өзіңіздің Health.md қолжетімділігіңіз қажет.</string>
+</resources>

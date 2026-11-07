@@ -197,13 +197,13 @@ class RemoteProviderBindingTest {
         init {
             val manager = mockk<HealthConnectManager>()
             every { manager.isBeforeFirstUnlock() } returns false
-            coEvery { manager.fetchHealthDataRange(any(), any(), any(), any(), any(), any()) } answers {
+            coEvery { manager.fetchHealthDataRange(any(), any(), any(), any(), any(), any(), any()) } answers {
                 calls += "health_connect"
                 firstArg<List<LocalDate>>().map { HealthData(it, activity = ActivityData(steps = 10)) }
             }
             val alternate = mockk<HealthDataProvider>()
             every { alternate.providerId } returns "whoop"
-            coEvery { alternate.fetchHealthDataRange(any(), any(), any(), any(), any(), any()) } answers {
+            coEvery { alternate.fetchHealthDataRange(any(), any(), any(), any(), any(), any(), any()) } answers {
                 calls += "whoop"
                 firstArg<List<LocalDate>>().map { HealthData(it, activity = ActivityData(steps = 999)) }
             }

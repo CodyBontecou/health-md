@@ -14,6 +14,9 @@ import com.healthmd.domain.model.CompatibilityProvenance
 import com.healthmd.domain.model.CompatibilitySchemaProfile
 import com.healthmd.domain.model.ExactSourceIdentity
 import com.healthmd.domain.model.ExactSourceTimestamp
+import com.healthmd.domain.model.ExportDetailChoice
+import com.healthmd.domain.model.ExportDetailGroup
+import com.healthmd.domain.model.ExportDetailSelection
 import com.healthmd.domain.model.FormatCustomization
 import com.healthmd.domain.model.HealthData
 import com.healthmd.domain.model.HealthDataFields
@@ -141,7 +144,7 @@ class ExporterSchemaSignatureTest {
     }
 
     private fun snapshot(profile: Profile): JsonObject {
-        val payload = payload(profile.customization)
+        val payload = payload(profile.customization, profile.data, profile.summaryDetail, profile.granularDetail)
         val fingerprint = MessageDigest.getInstance("SHA-256")
             .digest(payload.toString().toByteArray(Charsets.UTF_8))
             .joinToString("") { "%02x".format(Locale.US, it.toInt() and 0xff) }
@@ -156,21 +159,26 @@ class ExporterSchemaSignatureTest {
         }
     }
 
-    private fun payload(metricCustomization: FormatCustomization): JsonObject {
+    private fun payload(
+        metricCustomization: FormatCustomization,
+        data: HealthData,
+        summaryDetail: ExportDetailSelection,
+        granularDetail: ExportDetailSelection,
+    ): JsonObject {
         val imperialCustomization = metricCustomization.copy(unitPreference = UnitPreference.IMPERIAL)
-        val data = ExportSignatureFixtures.syntheticDay
         val jsonExporter = JsonExporter()
         val csvExporter = CsvExporter()
         val markdownExporter = MarkdownExporter()
         val basesExporter = ObsidianBasesExporter()
+        fun detail(granular: Boolean) = if (granular) granularDetail else summaryDetail
 
         fun json(customization: FormatCustomization, granular: Boolean): JsonObject =
             Json.parseToJsonElement(
-                jsonExporter.export(data, customization, includeGranularData = granular),
+                jsonExporter.export(data, customization, includeGranularData = granular, detail = detail(granular)),
             ).jsonObject
 
         fun csv(customization: FormatCustomization, granular: Boolean): String =
-            csvExporter.export(data, customization, includeGranularData = granular)
+            csvExporter.export(data, customization, includeGranularData = granular, detail = detail(granular))
 
         fun markdown(customization: FormatCustomization, granular: Boolean): String =
             markdownExporter.export(
@@ -179,6 +187,7 @@ class ExporterSchemaSignatureTest {
                 groupByCategory = true,
                 customization = customization,
                 includeGranularData = granular,
+                detail = detail(granular),
             )
 
         val metricJson = json(metricCustomization, granular = false)
@@ -487,12 +496,22 @@ class ExporterSchemaSignatureTest {
         val version: Int,
         val profile: CompatibilitySchemaProfile,
         val customization: FormatCustomization,
+        val data: HealthData = ExportSignatureFixtures.syntheticDay,
+        /** Historical profiles use the exact projection of the global Boolean. */
+        val summaryDetail: ExportDetailSelection = ExportDetailSelection.uniform(false),
+        val granularDetail: ExportDetailSelection = ExportDetailSelection.uniform(true),
     ) {
         val fileName: String = "exporter_signature_${id.replace('-', '_')}.json"
         val resourcePath: String = "export-contract/signatures/$fileName"
     }
 
     private companion object {
+        val V7_OVERRIDES = mapOf(
+            ExportDetailGroup.ACTIVITY to ExportDetailChoice.DETAILED,
+            ExportDetailGroup.NUTRITION to ExportDetailChoice.DETAILED,
+            ExportDetailGroup.BODY to ExportDetailChoice.DETAILED,
+        )
+
         val updateRequested: Boolean =
             System.getenv("UPDATE_ANDROID_EXPORTER_SIGNATURES") == "1"
 
@@ -510,6 +529,17 @@ class ExporterSchemaSignatureTest {
                 version = 5,
                 profile = CompatibilitySchemaProfile.ANDROID_ANALYTICAL_V5,
                 customization = FormatCustomization.analyticalDefault(),
+            ),
+            // Selected by the analytical setting plus explicit `detailed` overrides for the
+            // expansion groups; the stored setting enum stays ANDROID_ANALYTICAL_V5.
+            Profile(
+                id = "android-analytical-v7",
+                version = 7,
+                profile = CompatibilitySchemaProfile.ANDROID_ANALYTICAL_V5,
+                customization = FormatCustomization.analyticalDefault(),
+                data = ExportSignatureFixtures.syntheticDayV7,
+                summaryDetail = ExportDetailSelection.resolve(false, V7_OVERRIDES),
+                granularDetail = ExportDetailSelection.resolve(true, V7_OVERRIDES),
             ),
         )
     }
@@ -966,5 +996,26 @@ internal object ExportSignatureFixtures {
         exactEndTime = exactEnd,
         identity = identity,
         correlatedSourceIds = mapOf("route" to listOf("health-connect:route")),
+    )
+    private fun instantSample(value: Double): TimestampedSample = sample(value = value).copy(exactEndTime = null)
+
+    /** [syntheticDay] plus every android-analytical-v7 record array (intervals and instants). */
+    val syntheticDayV7: HealthData = syntheticDay.copy(
+        activity = syntheticDay.activity.copy(
+            activeCaloriesSamples = listOf(sample(value = 45.5)),
+            totalCaloriesSamples = listOf(sample(value = 120.5)),
+            distanceSamples = listOf(sample(value = 850.5)),
+            floorsSamples = listOf(sample(value = 2.0)),
+            elevationSamples = listOf(sample(value = 6.5)),
+        ),
+        body = syntheticDay.body.copy(
+            weightSamples = listOf(instantSample(75.5)),
+            heightSamples = listOf(instantSample(1.78)),
+            bodyFatSamples = listOf(instantSample(0.185)),
+            leanBodyMassSamples = listOf(instantSample(60.5)),
+            boneMassSamples = listOf(instantSample(3.2)),
+            bodyWaterMassSamples = listOf(instantSample(45.5)),
+        ),
+        nutrition = syntheticDay.nutrition.copy(hydrationSamples = listOf(sample(value = 0.25))),
     )
 }

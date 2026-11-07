@@ -18,7 +18,7 @@ Writes spreadsheet-friendly CSV with one row per metric — and, when granular d
 
 ## Where to find it
 
-1. Enable **CSV** in **Export Format** on the Export tab.
+1. Enable **CSV** in **Export Format** on the Export now screen.
 2. Export; one `.csv` file appears per day at your destination.
 
 ## Prerequisites
@@ -30,7 +30,7 @@ Writes spreadsheet-friendly CSV with one row per metric — and, when granular d
 ## Setup
 
 1. Enable the CSV format card.
-2. (Optional) Enable granular data if you want timestamped sample rows, not just daily aggregates.
+2. (Optional) Enable granular data if you want timestamped sample rows, not just daily aggregates. **Detail by category** in Advanced Settings overrides this per category, for example sleep stage rows without heart-rate sample rows ([per-category export detail](../../../../docs/features/per-group-export-detail.md)).
 3. Export and open the file in your spreadsheet app.
 
 ## Example output

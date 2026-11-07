@@ -24,7 +24,10 @@ enum CanonicalDailyJSONStream {
             let metadata = try parser.parse()
             guard metadata.rootIsObject,
                   metadata.schema == HealthMdExportSchema.identifier,
-                  metadata.schemaVersion == HealthMdExportSchema.version else {
+                  AppleDetailExpansionSchema.isAcceptedNightBeginsDailyIdentity(
+                      schemaVersion: metadata.schemaVersion,
+                      schemaProfile: metadata.schemaProfile
+                  ) else {
                 throw StreamError.schemaMismatch
             }
             if expectsLosslessArchive {
@@ -63,6 +66,7 @@ enum CanonicalDailyJSONStream {
         var rootIsObject = false
         var schema: String?
         var schemaVersion: Int?
+        var schemaProfile: String?
         var sawArchive = false
         var archiveSchema: String?
         var archiveSchemaVersion: Int?
@@ -264,12 +268,14 @@ enum CanonicalDailyJSONStream {
         private func shouldCapture(_ path: [String]) -> Bool {
             path == ["schema"]
                 || path == ["schema_version"]
+                || path == ["schema_profile"]
                 || path == ["healthkit_record_archive", "schema"]
                 || path == ["healthkit_record_archive", "schema_version"]
         }
 
         private func applyCapturedString(_ value: String?, path: [String]) {
             if path == ["schema"] { metadata.schema = value }
+            if path == ["schema_profile"] { metadata.schemaProfile = value }
             if path == ["healthkit_record_archive", "schema"] {
                 metadata.archiveSchema = value
             }

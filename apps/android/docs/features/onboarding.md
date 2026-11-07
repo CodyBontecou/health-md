@@ -9,7 +9,7 @@
 
 ## What it does
 
-First-run setup walks through a welcome, Health Connect access, an export folder, distribution-specific access information, and a ready screen. Granting Health Connect permission or picking a folder auto-advances after a short pause, and the Health and Folder steps can be skipped—you can complete them later from the Export tab. The Play build offers the optional lifetime purchase; the F-Droid build explains that full access is included and has no purchase controls.
+First-run setup walks through a welcome, Health Connect access, an export folder, distribution-specific access information, and a ready screen. Granting Health Connect permission or picking a folder auto-advances after a short pause, and the Health and Folder steps can be skipped—you can complete them later from the Export now screen. The Play build offers the optional lifetime purchase; the F-Droid build explains that full access is included and has no purchase controls.
 
 ## Who it is for
 
@@ -21,7 +21,7 @@ First-run setup walks through a welcome, Health Connect access, an export folder
 
 1. Install Health.md from Google Play or F-Droid and open it for the first time.
 2. Swipe (or use Back/Continue) through the five pages: **Welcome → Health → Storage → Unlock → Ready** on Play, or **Welcome → Health → Storage → Included → Ready** on F-Droid.
-3. On the Ready page, tap to finish and land on the Export tab.
+3. On the Ready page, tap to finish and land on the Archive.
 
 ## Prerequisites
 
@@ -39,11 +39,11 @@ First-run setup walks through a welcome, Health Connect access, an export folder
 
 ## Example output
 
-Completed onboarding opens the Export tab. If you granted Health Connect access and selected a folder, those settings are retained; skipped steps must be completed before a folder export (see ./manual-export.md).
+Completed onboarding opens the Archive. If you granted Health Connect access and selected a folder, those settings are retained; skipped steps must be completed before a folder export (see ./manual-export.md).
 
 ## Tips
 
-- Skipped steps are not lost: re-grant permissions from the Export tab's permission notice, and pick a folder any time from **Export Folder → Select**.
+- Skipped steps are not lost: re-grant permissions from the Export now screen's permission notice, and pick a folder any time from **Export Folder → Select**.
 - Onboarding respects your system layout direction and swipes right-to-left in RTL locales.
 - The Play unlock page always shows, even for existing purchasers, so restore is reachable on a new device. F-Droid never shows purchase or restore controls.
 

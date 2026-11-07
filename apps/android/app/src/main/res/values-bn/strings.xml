@@ -279,6 +279,14 @@
     </plurals>
     <string name="granular_data_title">বিস্তারিত সময়-সিরিজ অন্তর্ভুক্ত করুন</string>
     <string name="granular_data_description">সামঞ্জস্য রপ্তানিতে হার্ট রেট এবং ঘুমের পর্যায়ের মতো টাইমস্ট্যাম্পযুক্ত নমুনাগুলি যোগ করুন। একটি API-সম্পূর্ণ অনুলিপির জন্য, Raw API Snapshot ব্যবহার করুন।</string>
+    <string name="detail_overrides_title">বিভাগ অনুযায়ী বিস্তারিত</string>
+    <string name="detail_overrides_description">নির্দিষ্ট বিভাগের জন্য ডিফল্ট পরিবর্তন করুন। সারাংশ শুধু দৈনিক মোট রাখে; দৈনিক সারাংশ কখনও বদলায় না।</string>
+    <string name="detail_choice_default">ডিফল্ট</string>
+    <string name="detail_choice_summary">সারাংশ</string>
+    <string name="detail_choice_sessions">সেশন</string>
+    <string name="detail_choice_detailed">বিস্তারিত</string>
+    <string name="detail_group_sleep_hint">সেশন প্রতিটি ঘুমের সেশন সম্পূর্ণ তারিখ ও সময়সহ দেখায়। বিস্তারিত ঘুমের ধাপও যোগ করে।</string>
+    <string name="detail_expansion_schema_hint">কার্যকলাপ, পুষ্টি বা শরীরের জন্য বিস্তারিত প্রতিটি উৎস রেকর্ড যোগ করে এবং বিশ্লেষণমূলক JSON, CSV ও Markdown এক্সপোর্টকে স্কিমা 7-এ বদলে দেয়।</string>
     <string name="sleep_attribution_title">ঘুমের দিন নির্ধারণ</string>
     <string name="sleep_attribution_night_begins">রাত শুরু</string>
     <string name="sleep_attribution_morning_ends">সকাল শেষ</string>
@@ -539,10 +547,6 @@
     <string name="scheduled_recovery_result_blocked">নির্ধারিত পুনরুদ্ধার এখনও প্রস্তুত নয়।</string>
     <string name="not_now">এখন না</string>
     <!-- Release notes -->
-    <string name="release_notes_title">%s এ নতুন কি আছে</string>
-    <string name="release_notes_settings_hint">সেটিংস থেকে রপ্তানি ফরম্যাট, কাস্টম Markdown ও মেট্রিক সামঞ্জস্য করতে পারবেন।</string>
-    <string name="release_notes_open_settings">সেটিংস খুলুন</string>
-    <string name="release_notes_got_it">বুঝেছি</string>
     <string name="release_notes_highlight_feedback">ডেস্কটপ সংযোগ সংক্ষিপ্তভাবে বিচ্ছিন্ন হলে Direct CLI সেশন স্বয়ংক্রিয়ভাবে পুনরায় সংযুক্ত হয়, তাই রপ্তানি নির্ভরযোগ্যভাবে সম্পন্ন হয়।</string>
     <string name="release_notes_highlight_export_parity">ডেস্কটপের ওয়েক উইন্ডো কমান্ড আপনার অ্যাপ খুলে সংযোগ করার জন্য ১২০ সেকেন্ড পর্যন্ত অপেক্ষা করে, কোনো পুশ নোটিফিকেশন ছাড়াই।</string>
     <string name="release_notes_highlight_templates">ঠিকানা, পোর্ট এবং ২০-সংখ্যার কোড দিয়ে ম্যানুয়াল জুড়ি এখনও কাজ করে, পুরোনো CLI সংস্করণেও।</string>
@@ -574,8 +578,6 @@
     <!-- Export progress dialog -->
     <string name="export_progress_title">স্বাস্থ্য ডেটা রপ্তানি করা হচ্ছে</string>
     <!-- Navigation labels -->
-    <string name="nav_export">রপ্তানি</string>
-    <string name="nav_schedule">সময়সূচী</string>
     <string name="nav_history">ইতিহাস</string>
     <string name="nav_settings">সেটিংস</string>
     <string name="shortcut_export_short">রপ্তানি</string>
@@ -1052,6 +1054,8 @@
     <string name="export_preview_api_preparation_failed">API রপ্তানির প্রস্তুতি ব্যর্থ হয়েছে।</string>
     <string name="export_preview_artifacts_per_range">প্রতি পরিসরে আর্টিফ্যাক্ট</string>
     <string name="export_preview_back_description">রপ্তানির পূর্বরূপে ফিরে যান</string>
+    <string name="export_preview_wrap_lines">লাইন মোড়ানো</string>
+    <string name="export_preview_format_text">টেক্সট ফরম্যাট করুন</string>
     <string name="export_preview_destination_label">গন্তব্য</string>
     <string name="export_preview_empty_file">(খালি ফাইল)</string>
     <string name="export_preview_formats_per_day">প্রতি দিনে ফরম্যাট</string>
@@ -1442,10 +1446,6 @@
     <string name="whoop_disconnect">WHOOP সংযোগ বিচ্ছিন্ন করুন</string>
     <string name="whoop_use_for_exports">রপ্তানির জন্য WHOOP ব্যবহার করুন</string>
     <string name="paywall_access_subtitle">আপনার ব্যক্তিগত স্বাস্থ্য আর্কাইভ শুরু করতে সাবস্ক্রিপশন বা আজীবন অ্যাক্সেস বেছে নিন। যোগ্য সাবস্ক্রিপশনে 7 দিনের বিনামূল্যের ট্রায়াল রয়েছে।</string>
-    <string name="paywall_access_active_title">আপনার অ্যাক্সেস সক্রিয়</string>
-    <string name="paywall_access_active_body">স্বাস্থ্য তথ্য সংযুক্ত করতে এবং ব্যক্তিগত আর্কাইভ কোথায় সংরক্ষণ করবেন তা বেছে নিতে সেটআপ চালিয়ে যান।</string>
-    <string name="clinic_access_active_title">আপনার ক্লিনিক অ্যাক্সেস সক্রিয়</string>
-    <string name="clinic_access_active_body">আপনার ক্লিনিক তার অনুমোদিত এন্ডপয়েন্টে ডেলিভারি স্পনসর করে। কী শেয়ার করবেন তা আপনিই বেছে নেন। অন্যান্য এক্সপোর্ট গন্তব্যের জন্য আপনার নিজের Health.md অ্যাক্সেস প্রয়োজন।</string>
     <string name="paywall_plan_choices">সাপ্তাহিক, বার্ষিক বা আজীবন অ্যাক্সেস</string>
     <string name="paywall_weekly_price">%1$s / সপ্তাহ</string>
     <string name="paywall_yearly_price">%1$s / বছর</string>
@@ -1456,30 +1456,18 @@
     <string name="paywall_terms">শর্তাবলি</string>
     <string name="paywall_privacy">গোপনীয়তা</string>
     <string name="paywall_subscription_disclosure">যোগ্য সাবস্ক্রিপশনে 7 দিনের বিনামূল্যের ট্রায়াল রয়েছে, তারপর ট্রায়াল বা বর্তমান মেয়াদ শেষ হওয়ার আগে বাতিল না করলে দেখানো মূল্যে স্বয়ংক্রিয়ভাবে নবায়ন হয়। Google Play-তে পরিচালনা বা বাতিল করুন। আজীবন অ্যাক্সেসের জন্য সঙ্গে সঙ্গে এককালীন মূল্য নেওয়া হয়। বিদ্যমান অর্থপ্রদত্ত অ্যাক্সেস বজায় থাকে। আজীবন কোন বিচার নেই। অ্যাপ মুছে ফেলা বা লাইফটাইম কেনা একটি বিদ্যমান সাবস্ক্রিপশন বাতিল করে না।</string>
+    <plurals name="widget_archive_gaps">
+        <item quantity="one">%1$sটি ফাঁক</item>
+        <item quantity="other">%1$sটি ফাঁক</item>
+    </plurals>
+    <plurals name="widget_archive_days_in_month">
+        <item quantity="one">দিন, %1$s মাসে</item>
+        <item quantity="other">দিন, %1$s মাসে</item>
+    </plurals>
 
-    <!-- Signal carousel paywall -->
-    <string name="paywall_signal_title">প্রতিটি হৃদস্পন্দন, লিখে রাখা।</string>
-    <string name="paywall_signal_lede">Health.md, Health Connect-এর ডেটাকে প্রতিদিনের একটি Markdown নোটে পরিণত করে আপনার বেছে নেওয়া ফোল্ডারে সংরক্ষণ করে।</string>
-    <string name="paywall_signal_example">উদাহরণ</string>
-    <string name="paywall_signal_trial_title">সাত দিন, আমাদের পক্ষ থেকে।</string>
-    <string name="paywall_signal_day_today">আজ</string>
-    <string name="paywall_signal_day_today_body">সীমাহীন রপ্তানি, সময়সূচি ও অটোমেশন।</string>
-    <string name="paywall_signal_day_cancel">যেকোনো সময় বাতিল করুন</string>
-    <string name="paywall_signal_day_cancel_body">ট্রায়াল শেষ হওয়ার আগে Google Play-এ বাতিল করুন।</string>
-    <string name="paywall_signal_day_end">ট্রায়াল শেষ</string>
-    <string name="paywall_signal_day_end_body">এরপর %1$s।</string>
-    <string name="paywall_signal_plans_title">আপনার পথ বেছে নিন।</string>
-    <string name="paywall_signal_best_value">সবচেয়ে সাশ্রয়ী</string>
-    <string name="paywall_signal_free_week">৭ দিন বিনামূল্যে</string>
-    <string name="paywall_signal_lifetime_detail">আজ একবার পরিশোধ করুন। কোনো নবায়ন নেই।</string>
-    <string name="paywall_signal_subscription_detail">স্বয়ংক্রিয়ভাবে নবায়ন হয়। Google Play-এ যেকোনো সময় বাতিল করুন।</string>
-    <string name="paywall_signal_cta_trial">৭ দিনের বিনামূল্যে ট্রায়াল শুরু করুন</string>
-    <string name="paywall_signal_cta_subscribe">সাবস্ক্রাইব করুন</string>
-    <string name="paywall_signal_cta_lifetime">আজীবনের জন্য কিনুন</string>
-    <string name="paywall_signal_step_archive">সংরক্ষণাগার</string>
-    <string name="paywall_signal_step_trial">ট্রায়াল</string>
-    <string name="paywall_signal_step_plans">প্ল্যান</string>
-    <string name="paywall_signal_plan_weekly">সাপ্তাহিক</string>
-    <string name="paywall_signal_plan_yearly">বার্ষিক</string>
-    <string name="paywall_signal_plan_lifetime">আজীবন</string>
+    <string name="clinic_sync_channel_name">ক্লিনিকের সিঙ্ক অনুরোধ</string>
+    <string name="clinic_sync_request_body">আপনার ক্লিনিক আপনার সর্বশেষ স্বাস্থ্য ডেটা চাইছে। পাঠাতে ট্যাপ করুন।</string>
+    <string name="clinic_sync_result_sent">আপনার সর্বশেষ ডেটা আপনার ক্লিনিকে পাঠানো হয়েছে।</string>
+    <string name="clinic_sync_result_failed">আপনার ডেটা ক্লিনিকে পাঠানো যায়নি। Health.md খুলে আবার চেষ্টা করুন।</string>
+    <string name="clinic_sync_result_profile_missing">Health.md-এ ক্লিনিক অ্যাক্সেস খুলুন এবং প্রথমে ক্লিনিকের গন্তব্য ব্যবহার করুন বেছে নিন।</string>
 </resources>

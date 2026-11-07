@@ -25,6 +25,8 @@ description: "为 Android 设置Health.md 。导出Health Connect数据，选择
 
 Android 版Health.md将Health Connect变成本地首屈一指的健康日志。选择您需要的指标并预览输出。然后将文件导出到本地文件夹、 Obsidian保管库、同步提供程序文件夹或可写 Android 文档提供程序。
 
+应用有三个标签页。**归档**是一个日历，显示你的导出已覆盖的健康数据日期，并可补导缺失的日期。**自动化**包含你的导出配置文件和计划。**设置**包含目标位置、数据和应用选项。除“设置”外，在任何标签页都可以用**立即导出**按钮开始一次性导出。
+
 <div class="options">
  <div class="option"> <strong> Health Connect源</strong> <p>通过 Android 设备上Health Connect API 读取活动、睡眠、心脏、生命体征、身体测量、营养、锻炼和其他类别。 </p> </div>
  <div class="option"> <strong> Obsidian -本机输出</strong> <p>编写每日笔记、YAML/frontmatter、 Obsidian基础友好笔记、个人条目和与Health.md Obsidian插件兼容的 JSON。 </p> </div>

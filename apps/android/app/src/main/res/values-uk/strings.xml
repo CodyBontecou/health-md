@@ -306,8 +306,6 @@
     <string name="export_progress_title">Експортування даних про здоров\'я</string>
 
     <!-- Navigation labels -->
-    <string name="nav_export">Експорт</string>
-    <string name="nav_schedule">Розклад</string>
     <string name="nav_history">Історія</string>
     <string name="nav_settings">Параметри</string>
 
@@ -552,6 +550,14 @@
     <string name="feedback_no_app_available">Немає доступної програми для відкриття цього посилання</string>
     <string name="granular_data_title">Додайте детальний часовий ряд</string>
     <string name="granular_data_description">Додайте зразки з часовими мітками, як-от частоту серцевих скорочень і стадії сну, до експорту сумісності. Для повної копії API використовуйте необроблений знімок API.</string>
+    <string name="detail_overrides_title">Деталізація за категоріями</string>
+    <string name="detail_overrides_description">Перевизначте типове значення для окремих категорій. «Підсумок» зберігає лише денні підсумки; денні зведення ніколи не змінюються.</string>
+    <string name="detail_choice_default">Типово</string>
+    <string name="detail_choice_summary">Підсумок</string>
+    <string name="detail_choice_sessions">Сеанси</string>
+    <string name="detail_choice_detailed">Детально</string>
+    <string name="detail_group_sleep_hint">«Сеанси» перелічує кожен сеанс сну з повною датою й часом. «Детально» додає фази сну.</string>
+    <string name="detail_expansion_schema_hint">«Детально» для активності, харчування або тіла додає кожен вихідний запис і переводить аналітичні експорти JSON, CSV і Markdown на схему 7.</string>
     <string name="sleep_attribution_title">Належність сну до дня</string>
     <string name="sleep_attribution_night_begins">Ніч початку</string>
     <string name="sleep_attribution_morning_ends">Ранок завершення</string>
@@ -663,10 +669,6 @@
     <string name="scheduled_recovery_result_complete">Заплановане відновлення завершено.</string>
     <string name="scheduled_recovery_result_blocked">Планове відновлення ще не готове.</string>
     <string name="not_now">Не зараз</string>
-    <string name="release_notes_title">Що нового в %s</string>
-    <string name="release_notes_settings_hint">Ви можете налаштувати формати експорту, власний Markdown і показники в налаштуваннях.</string>
-    <string name="release_notes_open_settings">Відкрийте налаштування</string>
-    <string name="release_notes_got_it">Зрозуміло</string>
     <string name="release_notes_highlight_feedback">Сесії Direct CLI автоматично перепід\'єднуються після коротких розривів зв\'язку з комп\'ютером, тому експорти надійно завершуються.</string>
     <string name="release_notes_highlight_export_parity">Команди вікна пробудження на комп\'ютері чекають до 120 секунд, поки ви відкриєте застосунок і під\'єднаєтесь, — без push-сповіщень.</string>
     <string name="release_notes_highlight_templates">Ручне з\'єднання за адресою, портом і 20-значним кодом досі працює, зокрема зі старішими версіями CLI.</string>
@@ -1144,6 +1146,8 @@
     <string name="export_preview_api_preparation_failed">Не вдалося підготувати експорт API.</string>
     <string name="export_preview_artifacts_per_range">Артефактів на діапазон</string>
     <string name="export_preview_back_description">Назад до попереднього перегляду експорту</string>
+    <string name="export_preview_wrap_lines">Переносити рядки</string>
+    <string name="export_preview_format_text">Форматувати текст</string>
     <string name="export_preview_destination_label">Призначення</string>
     <string name="export_preview_empty_file">(порожній файл)</string>
     <string name="export_preview_formats_per_day">Форматів на день</string>
@@ -1570,10 +1574,6 @@
     <string name="whoop_disconnect">Відключити WHOOP</string>
     <string name="whoop_use_for_exports">Використовувати WHOOP для експорту</string>
     <string name="paywall_access_subtitle">Виберіть підписку або довічний доступ, щоб створити приватний архів здоров’я. Доступні для пробного періоду підписки включають 7 безкоштовних днів.</string>
-    <string name="paywall_access_active_title">Ваш доступ активний</string>
-    <string name="paywall_access_active_body">Продовжте налаштування, щоб підключити дані про здоров’я й вибрати місце для приватного архіву.</string>
-    <string name="clinic_access_active_title">Доступ через клініку активний</string>
-    <string name="clinic_access_active_body">Ваша клініка спонсорує доставку на свою схвалену кінцеву точку. Ви самі вибираєте, чим ділитися. Для інших місць експорту потрібен ваш власний доступ до Health.md.</string>
     <string name="paywall_plan_choices">Тижневий, річний або довічний доступ</string>
     <string name="paywall_weekly_price">%1$s / тиждень</string>
     <string name="paywall_yearly_price">%1$s / рік</string>
@@ -1584,30 +1584,22 @@
     <string name="paywall_terms">Умови</string>
     <string name="paywall_privacy">Конфіденційність</string>
     <string name="paywall_subscription_disclosure">Відповідні підписки включають безкоштовний пробний період на 7 днів, а потім автоматично поновлюються за вказаною ціною, якщо їх не скасувати до завершення пробного або поточного періоду. Керуйте або скасуйте в Google Play. Довічний доступ оплачується відразу одним платежем. Наявний платний доступ зберігається. Довічне судження не має. Видалення програми або купівля Lifetime не скасовує існуючу підписку.</string>
+    <plurals name="widget_archive_gaps">
+        <item quantity="one">%1$s пропуск</item>
+        <item quantity="few">%1$s пропуски</item>
+        <item quantity="many">%1$s пропусків</item>
+        <item quantity="other">%1$s пропуску</item>
+    </plurals>
+    <plurals name="widget_archive_days_in_month">
+        <item quantity="one">день за %1$s</item>
+        <item quantity="few">дні за %1$s</item>
+        <item quantity="many">днів за %1$s</item>
+        <item quantity="other">дня за %1$s</item>
+    </plurals>
 
-    <!-- Signal carousel paywall -->
-    <string name="paywall_signal_title">Кожен удар серця — записано.</string>
-    <string name="paywall_signal_lede">Health.md перетворює дані Health Connect на щоденну нотатку Markdown і зберігає її у вибраній вами папці.</string>
-    <string name="paywall_signal_example">Приклад</string>
-    <string name="paywall_signal_trial_title">Сім днів — від нас.</string>
-    <string name="paywall_signal_day_today">Сьогодні</string>
-    <string name="paywall_signal_day_today_body">Необмежені експорти, розклади й автоматизації.</string>
-    <string name="paywall_signal_day_cancel">Скасування будь-коли</string>
-    <string name="paywall_signal_day_cancel_body">Скасуйте передплату в Google Play до завершення пробного періоду.</string>
-    <string name="paywall_signal_day_end">Кінець пробного періоду</string>
-    <string name="paywall_signal_day_end_body">Потім %1$s.</string>
-    <string name="paywall_signal_plans_title">Оберіть свій шлях.</string>
-    <string name="paywall_signal_best_value">Найвигідніше</string>
-    <string name="paywall_signal_free_week">7 днів безкоштовно</string>
-    <string name="paywall_signal_lifetime_detail">Один платіж сьогодні. Без поновлення.</string>
-    <string name="paywall_signal_subscription_detail">Поновлюється автоматично. Скасування будь-коли в Google Play.</string>
-    <string name="paywall_signal_cta_trial">Почати 7 днів безкоштовно</string>
-    <string name="paywall_signal_cta_subscribe">Передплатити</string>
-    <string name="paywall_signal_cta_lifetime">Купити назавжди</string>
-    <string name="paywall_signal_step_archive">Архів</string>
-    <string name="paywall_signal_step_trial">Пробний період</string>
-    <string name="paywall_signal_step_plans">Тарифи</string>
-    <string name="paywall_signal_plan_weekly">Щотижня</string>
-    <string name="paywall_signal_plan_yearly">Щороку</string>
-    <string name="paywall_signal_plan_lifetime">Назавжди</string>
+    <string name="clinic_sync_channel_name">Запити синхронізації від клініки</string>
+    <string name="clinic_sync_request_body">Ваша клініка запитує ваші останні дані про здоров’я. Торкніться, щоб надіслати їх.</string>
+    <string name="clinic_sync_result_sent">Ваші останні дані надіслано до клініки.</string>
+    <string name="clinic_sync_result_failed">Не вдалося надіслати дані до клініки. Відкрийте Health.md і спробуйте ще раз.</string>
+    <string name="clinic_sync_result_profile_missing">Відкрийте доступ клініки в Health.md і спочатку виберіть «Використовувати призначення клініки».</string>
 </resources>

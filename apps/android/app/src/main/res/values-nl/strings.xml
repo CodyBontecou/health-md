@@ -376,8 +376,6 @@
     <string name="export_progress_title">Gezondheidsgegevens worden geëxporteerd</string>
 
     <!-- Navigation labels -->
-    <string name="nav_export">Export</string>
-    <string name="nav_schedule">Planning</string>
     <string name="nav_history">Geschiedenis</string>
     <string name="nav_settings">Instellingen</string>
 
@@ -532,6 +530,14 @@
     <string name="feedback_no_app_available">Geen app beschikbaar om deze link te openen</string>
     <string name="granular_data_title">Gedetailleerde tijdreeksen opnemen</string>
     <string name="granular_data_description">Voeg meetwaarden met tijdstempel, zoals hartslag en slaapfasen, toe aan compatibiliteitsexports. Gebruik de ruwe API-snapshot voor een API-volledige kopie.</string>
+    <string name="detail_overrides_title">Detail per categorie</string>
+    <string name="detail_overrides_description">Overschrijf de standaard voor afzonderlijke categorieën. Samenvatting bewaart alleen dagtotalen; dagelijkse samenvattingen veranderen nooit.</string>
+    <string name="detail_choice_default">Standaard</string>
+    <string name="detail_choice_summary">Samenvatting</string>
+    <string name="detail_choice_sessions">Sessies</string>
+    <string name="detail_choice_detailed">Gedetailleerd</string>
+    <string name="detail_group_sleep_hint">Sessies toont elke slaapsessie met volledige datum en tijd. Gedetailleerd voegt slaapfasen toe.</string>
+    <string name="detail_expansion_schema_hint">Gedetailleerd voor Activiteit, Voeding of Lichaam voegt elk bronrecord toe en zet analytische JSON-, CSV- en Markdown-exports om naar schema 7.</string>
     <string name="sleep_attribution_title">Toewijzing slaapdag</string>
     <string name="sleep_attribution_night_begins">Nacht begint</string>
     <string name="sleep_attribution_morning_ends">Ochtend eindigt</string>
@@ -641,10 +647,6 @@
     <string name="scheduled_recovery_result_complete">Herstel van geplande exports voltooid.</string>
     <string name="scheduled_recovery_result_blocked">Herstel van geplande exports is nog niet mogelijk.</string>
     <string name="not_now">Nu niet</string>
-    <string name="release_notes_title">Wat is er nieuw in %s</string>
-    <string name="release_notes_settings_hint">Je kunt exportindelingen, aangepaste Markdown en metingen aanpassen via Instellingen.</string>
-    <string name="release_notes_open_settings">Instellingen openen</string>
-    <string name="release_notes_got_it">Begrepen</string>
     <string name="release_notes_highlight_feedback">Direct CLI-sessies maken automatisch opnieuw verbinding na korte desktoponderbrekingen, zodat exports betrouwbaar voltooid worden.</string>
     <string name="release_notes_highlight_export_parity">Wake-window-opdrachten op de desktop wachten tot 120 seconden tot je de app opent en verbindt, zonder pushmeldingen.</string>
     <string name="release_notes_highlight_templates">Handmatig koppelen met adres, poort en 20-cijferige code werkt nog steeds, ook met oudere CLI-versies.</string>
@@ -1078,6 +1080,8 @@
     <string name="export_preview_api_preparation_failed">Voorbereiding van API-export mislukt.</string>
     <string name="export_preview_artifacts_per_range">Artefacten per bereik</string>
     <string name="export_preview_back_description">Terug naar exportvoorbeeld</string>
+    <string name="export_preview_wrap_lines">Regels laten teruglopen</string>
+    <string name="export_preview_format_text">Tekst opmaken</string>
     <string name="export_preview_destination_label">Bestemming</string>
     <string name="export_preview_empty_file">(leeg bestand)</string>
     <string name="export_preview_formats_per_day">Formaten per dag</string>
@@ -1468,10 +1472,6 @@
     <string name="whoop_disconnect">WHOOP-verbinding verbreken</string>
     <string name="whoop_use_for_exports">WHOOP gebruiken voor exports</string>
     <string name="paywall_access_subtitle">Kies een abonnement of levenslange toegang om je privégezondheidsarchief te beginnen. In aanmerking komende abonnementen bevatten een gratis proefperiode van 7 dagen.</string>
-    <string name="paywall_access_active_title">Je toegang is actief</string>
-    <string name="paywall_access_active_body">Ga verder met instellen om je gezondheidsgegevens te verbinden en te kiezen waar je je privéarchief bewaart.</string>
-    <string name="clinic_access_active_title">Je kliniektoegang is actief</string>
-    <string name="clinic_access_active_body">Je kliniek sponsort de levering aan haar goedgekeurde endpoint. Jij kiest wat je deelt. Voor andere exportbestemmingen heb je je eigen Health.md-toegang nodig.</string>
     <string name="paywall_plan_choices">Wekelijkse, jaarlijkse of levenslange toegang</string>
     <string name="paywall_weekly_price">%1$s / week</string>
     <string name="paywall_yearly_price">%1$s / jaar</string>
@@ -1482,30 +1482,18 @@
     <string name="paywall_terms">Voorwaarden</string>
     <string name="paywall_privacy">Privacy</string>
     <string name="paywall_subscription_disclosure">In aanmerking komende abonnementen bevatten een gratis proefperiode van 7 dagen en worden daarna automatisch verlengd tegen de getoonde prijs, tenzij je opzegt voordat de proefperiode of huidige periode eindigt. Beheer of annuleer in Google Play. Levenslange toegang wordt direct als eenmalige aankoop in rekening gebracht. Bestaande betaalde toegang blijft behouden. Levenslang kent geen proces. Het verwijderen van de app of het kopen van Lifetime annuleert een bestaand abonnement niet.</string>
+    <plurals name="widget_archive_gaps">
+        <item quantity="one">%1$s hiaat</item>
+        <item quantity="other">%1$s hiaten</item>
+    </plurals>
+    <plurals name="widget_archive_days_in_month">
+        <item quantity="one">dag in %1$s</item>
+        <item quantity="other">dagen in %1$s</item>
+    </plurals>
 
-    <!-- Signal carousel paywall -->
-    <string name="paywall_signal_title">Elke hartslag, op papier.</string>
-    <string name="paywall_signal_lede">Health.md maakt van Health Connect elke dag een Markdown-notitie, opgeslagen in de map die je kiest.</string>
-    <string name="paywall_signal_example">Voorbeeld</string>
-    <string name="paywall_signal_trial_title">Zeven dagen van ons.</string>
-    <string name="paywall_signal_day_today">Vandaag</string>
-    <string name="paywall_signal_day_today_body">Onbeperkt exporteren, plannen en automatiseren.</string>
-    <string name="paywall_signal_day_cancel">Altijd opzegbaar</string>
-    <string name="paywall_signal_day_cancel_body">Zeg op in Google Play voordat de proefperiode eindigt.</string>
-    <string name="paywall_signal_day_end">Proefperiode eindigt</string>
-    <string name="paywall_signal_day_end_body">Daarna %1$s.</string>
-    <string name="paywall_signal_plans_title">Kies je route.</string>
-    <string name="paywall_signal_best_value">Beste deal</string>
-    <string name="paywall_signal_free_week">7 dagen gratis</string>
-    <string name="paywall_signal_lifetime_detail">Eén keer betalen, vandaag. Geen verlenging.</string>
-    <string name="paywall_signal_subscription_detail">Wordt automatisch verlengd. Altijd opzegbaar in Google Play.</string>
-    <string name="paywall_signal_cta_trial">Start 7 dagen gratis</string>
-    <string name="paywall_signal_cta_subscribe">Abonneren</string>
-    <string name="paywall_signal_cta_lifetime">Levenslang kopen</string>
-    <string name="paywall_signal_step_archive">Archief</string>
-    <string name="paywall_signal_step_trial">Proef</string>
-    <string name="paywall_signal_step_plans">Abonnementen</string>
-    <string name="paywall_signal_plan_weekly">Wekelijks</string>
-    <string name="paywall_signal_plan_yearly">Jaarlijks</string>
-    <string name="paywall_signal_plan_lifetime">Levenslang</string>
+    <string name="clinic_sync_channel_name">Synchronisatieverzoeken van de kliniek</string>
+    <string name="clinic_sync_request_body">Je kliniek vraagt om je nieuwste gezondheidsgegevens. Tik om ze te versturen.</string>
+    <string name="clinic_sync_result_sent">Je nieuwste gegevens zijn naar je kliniek verstuurd.</string>
+    <string name="clinic_sync_result_failed">Je gegevens konden niet naar je kliniek worden verstuurd. Open Health.md en probeer het opnieuw.</string>
+    <string name="clinic_sync_result_profile_missing">Open Klinische toegang in Health.md en kies eerst Klinische bestemming gebruiken.</string>
 </resources>

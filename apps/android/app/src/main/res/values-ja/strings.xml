@@ -259,6 +259,14 @@
     </plurals>
     <string name="granular_data_title">詳細な時系列を含める</string>
     <string name="granular_data_description">心拍数や睡眠段階などのタイムスタンプ付きサンプルを互換性エクスポートに追加します。 API の完全なコピーの場合は、Raw API Snapshot を使用します。</string>
+    <string name="detail_overrides_title">カテゴリ別の詳細</string>
+    <string name="detail_overrides_description">カテゴリごとに既定値を上書きします。「概要」は日ごとの合計のみを保持し、日次サマリーは変わりません。</string>
+    <string name="detail_choice_default">既定</string>
+    <string name="detail_choice_summary">概要</string>
+    <string name="detail_choice_sessions">セッション</string>
+    <string name="detail_choice_detailed">詳細</string>
+    <string name="detail_group_sleep_hint">「セッション」は各睡眠セッションを完全な日付と時刻で一覧表示します。「詳細」は睡眠ステージを追加します。</string>
+    <string name="detail_expansion_schema_hint">アクティビティ、栄養、身体で「詳細」を選ぶと各ソース記録が追加され、分析用の JSON・CSV・Markdown エクスポートがスキーマ 7 に切り替わります。</string>
     <string name="sleep_attribution_title">睡眠日の帰属</string>
     <string name="sleep_attribution_night_begins">就寝時刻で</string>
     <string name="sleep_attribution_morning_ends">起床時刻で</string>
@@ -508,10 +516,6 @@
     <string name="scheduled_recovery_result_complete">スケジュールされたリカバリが完了しました。</string>
     <string name="scheduled_recovery_result_blocked">スケジュールされたリカバリはまだ準備ができていません。</string>
     <string name="not_now">後で</string>
-    <string name="release_notes_title">%s の新機能</string>
-    <string name="release_notes_settings_hint">[設定] からエクスポート形式、カスタム Markdown、およびメトリクスを調整できます。</string>
-    <string name="release_notes_open_settings">設定を開く</string>
-    <string name="release_notes_got_it">わかった</string>
     <string name="release_notes_highlight_feedback">Direct CLIセッションは、デスクトップとの接続が短時間切れた後に自動的に再接続され、エクスポートが確実に完了します。</string>
     <string name="release_notes_highlight_export_parity">デスクトップのウェイクウィンドウコマンドは、アプリを開いて接続するまで最大120秒待機します。プッシュ通知は使いません。</string>
     <string name="release_notes_highlight_templates">アドレス、ポート、20桁のコードによる手動ペアリングも、以前のCLIバージョンを含めて引き続き利用できます。</string>
@@ -538,8 +542,6 @@
     <string name="debug_toggle_unlock">ロック解除の切り替え</string>
     <string name="debug_reset_state">状態をリセット</string>
     <string name="export_progress_title">健康データをエクスポート中</string>
-    <string name="nav_export">エクスポート</string>
-    <string name="nav_schedule">スケジュール</string>
     <string name="nav_history">履歴</string>
     <string name="nav_settings">設定</string>
     <string name="shortcut_export_short">エクスポート</string>
@@ -957,6 +959,8 @@
     <string name="export_preview_api_preparation_failed">API エクスポートの準備に失敗しました。</string>
     <string name="export_preview_artifacts_per_range">範囲ごとの成果物</string>
     <string name="export_preview_back_description">エクスポートプレビューに戻る</string>
+    <string name="export_preview_wrap_lines">行を折り返す</string>
+    <string name="export_preview_format_text">テキストを整形</string>
     <string name="export_preview_destination_label">出力先</string>
     <string name="export_preview_empty_file">（空のファイル）</string>
     <string name="export_preview_formats_per_day">1日あたりの形式</string>
@@ -1293,10 +1297,6 @@
     <string name="whoop_disconnect">WHOOPの接続を解除</string>
     <string name="whoop_use_for_exports">エクスポートにWHOOPを使用</string>
     <string name="paywall_access_subtitle">サブスクリプションまたは永久アクセスを選んで、プライベートな健康アーカイブを始めましょう。対象のサブスクリプションには7日間の無料トライアルが含まれます。</string>
-    <string name="paywall_access_active_title">アクセスは有効です</string>
-    <string name="paywall_access_active_body">設定を続けて健康データを接続し、プライベートアーカイブの保存先を選択してください。</string>
-    <string name="clinic_access_active_title">クリニックのアクセスは有効です</string>
-    <string name="clinic_access_active_body">クリニックが承認済みエンドポイントへの配信をスポンサーしています。共有する内容はあなたが選びます。その他のエクスポート先には、ご自身の Health.md アクセスが必要です。</string>
     <string name="paywall_plan_choices">週額、年額、または永久アクセス</string>
     <string name="paywall_weekly_price">%1$s / 週</string>
     <string name="paywall_yearly_price">%1$s / 年</string>
@@ -1307,30 +1307,16 @@
     <string name="paywall_terms">利用規約</string>
     <string name="paywall_privacy">プライバシー</string>
     <string name="paywall_subscription_disclosure">対象のサブスクリプションには7日間の無料トライアルが含まれ、トライアルまたは現在の期間が終了する前に解約しない限り、表示価格で自動更新されます。管理や解約はGoogle Playで行えます。永久アクセスは一回払いで直ちに請求されます。既存の有料アクセスは維持されます。 生涯に試練はない。アプリを削除したり、ライフタイムを購入したりしても、既存のサブスクリプションはキャンセルされません。</string>
+    <plurals name="widget_archive_gaps">
+        <item quantity="other">欠落 %1$s 件</item>
+    </plurals>
+    <plurals name="widget_archive_days_in_month">
+        <item quantity="other">日（%1$s）</item>
+    </plurals>
 
-    <!-- Signal carousel paywall -->
-    <string name="paywall_signal_title">鼓動のひとつひとつを、記録に。</string>
-    <string name="paywall_signal_lede">Health.mdは、ヘルスコネクトのデータを毎日のMarkdownノートにして、選んだフォルダに保存します。</string>
-    <string name="paywall_signal_example">例</string>
-    <string name="paywall_signal_trial_title">7日間、無料でどうぞ。</string>
-    <string name="paywall_signal_day_today">今日</string>
-    <string name="paywall_signal_day_today_body">エクスポート、スケジュール、オートメーションが無制限。</string>
-    <string name="paywall_signal_day_cancel">いつでも解約可能</string>
-    <string name="paywall_signal_day_cancel_body">トライアル終了前にGoogle Playで解約してください。</string>
-    <string name="paywall_signal_day_end">トライアル終了</string>
-    <string name="paywall_signal_day_end_body">その後は%1$s。</string>
-    <string name="paywall_signal_plans_title">プランを選ぶ。</string>
-    <string name="paywall_signal_best_value">いちばんお得</string>
-    <string name="paywall_signal_free_week">7日間無料</string>
-    <string name="paywall_signal_lifetime_detail">今日1回だけのお支払い。更新なし。</string>
-    <string name="paywall_signal_subscription_detail">自動更新。Google Playでいつでも解約できます。</string>
-    <string name="paywall_signal_cta_trial">7日間の無料トライアルを開始</string>
-    <string name="paywall_signal_cta_subscribe">登録する</string>
-    <string name="paywall_signal_cta_lifetime">買い切りで購入</string>
-    <string name="paywall_signal_step_archive">アーカイブ</string>
-    <string name="paywall_signal_step_trial">トライアル</string>
-    <string name="paywall_signal_step_plans">プラン</string>
-    <string name="paywall_signal_plan_weekly">週額</string>
-    <string name="paywall_signal_plan_yearly">年額</string>
-    <string name="paywall_signal_plan_lifetime">買い切り</string>
+    <string name="clinic_sync_channel_name">クリニックの同期リクエスト</string>
+    <string name="clinic_sync_request_body">クリニックが最新のヘルスケアデータを求めています。タップして送信します。</string>
+    <string name="clinic_sync_result_sent">最新のデータをクリニックに送信しました。</string>
+    <string name="clinic_sync_result_failed">データをクリニックに送信できませんでした。Health.mdを開いてもう一度お試しください。</string>
+    <string name="clinic_sync_result_profile_missing">Health.mdでクリニックアクセスを開き、先に「クリニックの送信先を使用」を選んでください。</string>
 </resources>

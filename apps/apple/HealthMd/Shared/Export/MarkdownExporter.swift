@@ -83,6 +83,40 @@ extension HealthData {
 
         markdown += whoopProviderMarkdown(snapshot: snapshot, headerPrefix: headerPrefix)
         markdown += losslessHealthRecordsMarkdown(snapshot: snapshot, headerPrefix: headerPrefix)
+        markdown += detailSamplesMarkdown(snapshot: snapshot, headerPrefix: headerPrefix)
+        return markdown
+    }
+
+    /// apple-v12 only: one collapsed table per category, one row per HealthKit source sample.
+    func detailSamplesMarkdown(snapshot: ExportDataSnapshot, headerPrefix: String) -> String {
+        guard let expansion = snapshot.detailExpansion else { return "" }
+        let groups = ExportDataSnapshot.DetailExpansion.orderedGroups.filter {
+            !expansion.samples(for: $0.group).isEmpty
+        }
+        guard !groups.isEmpty else { return "" }
+
+        var markdown = "\n\(headerPrefix) Detail Samples\n"
+        for entry in groups {
+            let samples = expansion.samples(for: entry.group)
+            markdown += "\n<details>\n<summary>\(entry.title) Detail Samples (\(samples.count) samples)</summary>\n\n"
+            markdown += "| Start | End | Metric | Value | Unit | Source |\n"
+            markdown += "|-------|-----|--------|-------|------|--------|\n"
+            for sample in samples {
+                let label = AppleDetailSampleCatalog.entry(forHealthKitType: sample.healthKitType)?.label
+                    ?? sample.metric
+                let value = sample.value.map { String(describing: $0) } ?? sample.categoryValue ?? ""
+                let cells = [
+                    snapshot.formatCalendarTime(sample.startDate),
+                    snapshot.formatCalendarTime(sample.endDate),
+                    label,
+                    value,
+                    sample.unit ?? "",
+                    sample.sourceName ?? sample.source ?? "",
+                ].map(markdownTableCell)
+                markdown += "| " + cells.joined(separator: " | ") + " |\n"
+            }
+            markdown += "\n</details>\n"
+        }
         return markdown
     }
 
@@ -711,11 +745,20 @@ extension HealthData {
         }
         if !snapshot.sleep.stages.isEmpty {
             markdown += "\n<details>\n<summary>Sleep Stages Timeline (\(snapshot.sleep.stages.count) intervals)</summary>\n\n"
-            markdown += "| Time | Stage | Duration |\n|------|-------|----------|\n"
+            // apple-v12 adds a Source column; the apple-v8 table is unchanged.
+            let attributesSources = snapshot.detailExpansion != nil
+            markdown += attributesSources
+                ? "| Time | Stage | Duration | Source |\n|------|-------|----------|--------|\n"
+                : "| Time | Stage | Duration |\n|------|-------|----------|\n"
             for stage in snapshot.sleep.stages {
                 let time = snapshot.formatCalendarTime(stage.startDate)
                 let duration = stage.endDate.timeIntervalSince(stage.startDate)
-                markdown += "| \(time) | \(stage.stage) | \(formatDuration(duration)) |\n"
+                if attributesSources {
+                    let source = markdownTableCell(stage.sourceName ?? stage.source ?? "")
+                    markdown += "| \(time) | \(stage.stage) | \(formatDuration(duration)) | \(source) |\n"
+                } else {
+                    markdown += "| \(time) | \(stage.stage) | \(formatDuration(duration)) |\n"
+                }
             }
             markdown += "\n</details>\n"
         }

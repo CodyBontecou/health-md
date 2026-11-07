@@ -207,7 +207,7 @@ class ExportWorkerGenerationTest {
             apiRunner.exportDates(
                 dates = any(),
                 settings = capture(exportedSettings),
-                onProgress = null,
+                onProgress = any(),
                 expectedDestinationFingerprint = API_FINGERPRINT,
                 durableOperationId = capture(exportedOperationId),
                 durableSettingsSnapshotJson = any(),
@@ -268,7 +268,7 @@ class ExportWorkerGenerationTest {
             apiRunner.exportDates(
                 dates = any(),
                 settings = any(),
-                onProgress = null,
+                onProgress = any(),
                 expectedDestinationFingerprint = API_FINGERPRINT,
                 durableOperationId = any(),
                 durableSettingsSnapshotJson = any(),
@@ -306,7 +306,7 @@ class ExportWorkerGenerationTest {
             apiRunner.exportDates(
                 dates = any(),
                 settings = any(),
-                onProgress = null,
+                onProgress = any(),
                 expectedDestinationFingerprint = API_FINGERPRINT,
                 durableOperationId = any(),
                 durableSettingsSnapshotJson = any(),
@@ -342,7 +342,7 @@ class ExportWorkerGenerationTest {
             apiRunner.exportDates(
                 dates = any(),
                 settings = any(),
-                onProgress = null,
+                onProgress = any(),
                 expectedDestinationFingerprint = API_FINGERPRINT,
                 durableOperationId = any(),
                 durableSettingsSnapshotJson = any(),
@@ -443,7 +443,7 @@ class ExportWorkerGenerationTest {
             apiRunner.exportDates(
                 dates = capture(exportedDates),
                 settings = any(),
-                onProgress = null,
+                onProgress = any(),
                 expectedDestinationFingerprint = API_FINGERPRINT,
                 durableOperationId = any(),
                 durableSettingsSnapshotJson = any(),
@@ -522,7 +522,7 @@ class ExportWorkerGenerationTest {
             apiRunner.exportDates(
                 dates = capture(exportedDates),
                 settings = any(),
-                onProgress = null,
+                onProgress = any(),
                 expectedDestinationFingerprint = API_FINGERPRINT,
                 durableOperationId = any(),
                 durableSettingsSnapshotJson = any(),

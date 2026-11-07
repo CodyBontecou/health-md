@@ -309,6 +309,14 @@
     </plurals>
     <string name="granular_data_title">Include Detailed Time-Series</string>
     <string name="granular_data_description">Add timestamped samples such as heart rate and sleep stages to compatibility exports. For an API-complete copy, use Raw API Snapshot.</string>
+    <string name="detail_overrides_title">Detail by category</string>
+    <string name="detail_overrides_description">Override the default for individual categories. Summary keeps daily totals only; daily summaries never change.</string>
+    <string name="detail_choice_default">Default</string>
+    <string name="detail_choice_summary">Summary</string>
+    <string name="detail_choice_sessions">Sessions</string>
+    <string name="detail_choice_detailed">Detailed</string>
+    <string name="detail_group_sleep_hint">Sessions lists each sleep session with full date and time. Detailed adds sleep stages.</string>
+    <string name="detail_expansion_schema_hint">Detailed Activity, Nutrition, or Body adds each source record and switches analytical JSON, CSV, and Markdown exports to schema 7.</string>
 
     <!-- Sleep day attribution (issue #104) -->
     <string name="sleep_attribution_title">Sleep Day Attribution</string>
@@ -579,10 +587,6 @@
     <string name="not_now">Not now</string>
 
     <!-- Release notes -->
-    <string name="release_notes_title">What’s New in %s</string>
-    <string name="release_notes_settings_hint">You can tune export formats, custom Markdown, and metrics from Settings.</string>
-    <string name="release_notes_open_settings">Open Settings</string>
-    <string name="release_notes_got_it">Got it</string>
     <string name="release_notes_highlight_widgets">Scheduled Raw API Snapshot exports use your profile’s raw format for API endpoints and folders.</string>
     <string name="release_notes_highlight_feedback">Scheduled snapshots include your selected lookback and Today Refresh.</string>
     <string name="release_notes_highlight_export_parity">Clear a stuck scheduled backlog with Discard pending recovery in the profile schedule.</string>
@@ -602,8 +606,6 @@
     <string name="paywall_title">Unlock Health.md</string>
     <string name="paywall_subtitle">Choose a subscription or Lifetime access to begin your private health archive. Eligible subscriptions include a 7-day free trial.</string>
     <string name="paywall_access_subtitle">Choose a subscription or Lifetime access to begin your private health archive. Eligible subscriptions include a 7-day free trial.</string>
-    <string name="paywall_access_active_title">Your access is active</string>
-    <string name="paywall_access_active_body">Continue setup to connect your health data and choose where to save your private archive.</string>
     <string name="paywall_plan_choices">Weekly, yearly, or Lifetime access</string>
     <string name="paywall_weekly_price">%1$s / week</string>
     <string name="paywall_yearly_price">%1$s / year</string>
@@ -633,8 +635,6 @@
     <string name="export_progress_title">Exporting Health Data</string>
 
     <!-- Navigation labels -->
-    <string name="nav_export">Export</string>
-    <string name="nav_schedule">Schedule</string>
     <string name="nav_history">History</string>
     <string name="nav_settings">Settings</string>
     <string name="shortcut_export_short">Export</string>
@@ -1171,6 +1171,8 @@
     <string name="export_preview_api_preparation_failed">API export preparation failed.</string>
     <string name="export_preview_artifacts_per_range">Artifacts per range</string>
     <string name="export_preview_back_description">Back to export preview</string>
+    <string name="export_preview_wrap_lines">Wrap lines</string>
+    <string name="export_preview_format_text">Format text</string>
     <string name="export_preview_destination_label">Destination</string>
     <string name="export_preview_empty_file">(empty file)</string>
     <string name="export_preview_formats_per_day">Formats per day</string>
@@ -1531,32 +1533,18 @@
     <string name="post_export_upgrade_action">See lifetime access</string>
     <string name="post_export_manual_action">Keep exporting manually</string>
     <string name="post_export_continue_free">Continue free</string>
-    <string name="clinic_access_active_title">Your clinic access is active</string>
-    <string name="clinic_access_active_body">Your clinic sponsors delivery to its approved endpoint. You choose what to share. Other export destinations require your own Health.md access.</string>
+    <plurals name="widget_archive_gaps">
+        <item quantity="one">%1$s gap</item>
+        <item quantity="other">%1$s gaps</item>
+    </plurals>
+    <plurals name="widget_archive_days_in_month">
+        <item quantity="one">day in %1$s</item>
+        <item quantity="other">days in %1$s</item>
+    </plurals>
 
-    <!-- Signal carousel paywall -->
-    <string name="paywall_signal_title">Every heartbeat, written down.</string>
-    <string name="paywall_signal_lede">Health.md turns Health Connect into a Markdown note for every day, saved to the folder you choose.</string>
-    <string name="paywall_signal_example">Example</string>
-    <string name="paywall_signal_trial_title">Seven days, on us.</string>
-    <string name="paywall_signal_day_today">Today</string>
-    <string name="paywall_signal_day_today_body">Unlimited exports, schedules, and automations.</string>
-    <string name="paywall_signal_day_cancel">Cancel anytime</string>
-    <string name="paywall_signal_day_cancel_body">Cancel in Google Play before the trial ends.</string>
-    <string name="paywall_signal_day_end">Trial ends</string>
-    <string name="paywall_signal_day_end_body">Then %1$s.</string>
-    <string name="paywall_signal_plans_title">Pick a path.</string>
-    <string name="paywall_signal_best_value">Best value</string>
-    <string name="paywall_signal_free_week">7 days free</string>
-    <string name="paywall_signal_lifetime_detail">Pay once today. Never renews.</string>
-    <string name="paywall_signal_subscription_detail">Renews automatically. Cancel anytime in Google Play.</string>
-    <string name="paywall_signal_cta_trial">Start 7-day free trial</string>
-    <string name="paywall_signal_cta_subscribe">Subscribe</string>
-    <string name="paywall_signal_cta_lifetime">Buy Lifetime</string>
-    <string name="paywall_signal_step_archive">Archive</string>
-    <string name="paywall_signal_step_trial">Trial</string>
-    <string name="paywall_signal_step_plans">Plans</string>
-    <string name="paywall_signal_plan_weekly">Weekly</string>
-    <string name="paywall_signal_plan_yearly">Yearly</string>
-    <string name="paywall_signal_plan_lifetime">Lifetime</string>
+    <string name="clinic_sync_channel_name">Clinic sync requests</string>
+    <string name="clinic_sync_request_body">Your clinic is asking for your latest health data. Tap to send it.</string>
+    <string name="clinic_sync_result_sent">Your latest data was sent to your clinic.</string>
+    <string name="clinic_sync_result_failed">Could not send your data to your clinic. Open Health.md and try again.</string>
+    <string name="clinic_sync_result_profile_missing">Open Clinic access in Health.md and choose Use clinic destination first.</string>
 </resources>

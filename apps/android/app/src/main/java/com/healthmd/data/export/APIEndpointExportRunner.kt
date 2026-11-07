@@ -111,6 +111,7 @@ private class HealthRepositoryAPIExportCaptureSource(
                 dates = dates,
                 dataTypes = effectiveSelection,
                 includeGranularData = settings.shouldFetchGranularData(),
+                detail = settings.captureDetailSelection(),
                 zoneId = context.zoneId,
             )
         }
@@ -132,6 +133,7 @@ private class HealthRepositoryAPIExportCaptureSource(
             dates = listOf(date),
             dataTypes = effectiveSelection,
             includeGranularData = settings.shouldFetchGranularData(),
+            detail = settings.captureDetailSelection(),
             zoneId = context.zoneId,
             sleepDayAttributionOverride = context.explicitSleepDayAttributionOverride,
         ).firstOrNull() ?: HealthData(date))

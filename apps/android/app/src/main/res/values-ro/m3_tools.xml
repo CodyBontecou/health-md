@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="m3_tools_diagnostics_verbosity">Nivel de detaliu</string>
+    <string name="m3_tools_diagnostics_subsystem">Subsistem</string>
+    <string name="m3_tools_diagnostics_time_range">Interval de timp</string>
+    <string name="m3_tools_diagnostics_events">Evenimente recente</string>
+    <string name="m3_tools_diagnostics_files">Fișierele pachetului</string>
+    <string name="m3_tools_direct_cli_pairing">Asociază cu computerul</string>
+    <string name="m3_tools_direct_cli_manual">Introdu manual</string>
+    <string name="m3_tools_direct_cli_computer">Computer asociat</string>
+    <string name="m3_tools_direct_cli_export">Export</string>
+    <string name="m3_tools_clinic_title">Accesul clinicii</string>
+    <string name="m3_tools_clinic_intro">Clinica ta poate sponsoriza livrarea către endpointul său aprobat. Tu alegi ce partajezi. Alte destinații de export necesită propriul tău acces Health.md.</string>
+    <string name="m3_tools_clinic_storage_unavailable">Deblochează telefonul și încearcă din nou. Accesul clinicii nu a putut fi citit în siguranță.</string>
+    <string name="m3_tools_clinic_fallback_name">Clinică</string>
+    <string name="m3_tools_clinic_sharing">Partajare</string>
+    <string name="m3_tools_clinic_allow_sharing">Permite partajarea cu această clinică</string>
+    <string name="m3_tools_clinic_sharing_description">Vor fi trimise doar valorile și datele pe care le selectezi în Health.md. Programarea folosește selecția salvată. Dezactivarea partajării oprește încărcările viitoare către clinică; nu șterge copiile pe care clinica le-a primit deja.</string>
+    <string name="m3_tools_clinic_upload_token">Token de încărcare al clinicii (opțional)</string>
+    <string name="m3_tools_clinic_upload_token_description">Dacă clinica îți oferă un token personal de încărcare, introdu-l aici. Este stocat în siguranță și folosit doar pentru endpointul aprobat al acestei clinici.</string>
+    <string name="m3_tools_clinic_use_destination">Folosește destinația clinicii</string>
+    <string name="m3_tools_clinic_sync_requests">Solicitări de sincronizare</string>
+    <string name="m3_tools_clinic_allow_sync">Permite solicitări de sincronizare de la această clinică</string>
+    <string name="m3_tools_clinic_sync_description">Clinica ta poate trimite o notificare prin care cere cele mai recente date. Nu se trimite nimic până nu o atingi; apoi ziua de ieri și cea de azi sunt partajate cu această clinică. Dezactivarea opțiunii oprește solicitările noi.</string>
+    <string name="m3_tools_clinic_invitation">Invitație</string>
+    <string name="m3_tools_clinic_invitation_code">Cod de invitație</string>
+    <string name="m3_tools_clinic_accept_invitation">Acceptă invitația</string>
+    <string name="m3_tools_clinic_not_configured">Accesul clinicii nu este configurat în această versiune Health.md.</string>
+    <string name="m3_tools_clinic_enrollment_pending">Invitația ta este salvată în siguranță. Încearcă din nou pentru a finaliza înscrierea; nu ai nevoie de un cod nou.</string>
+    <string name="m3_tools_clinic_retry_enrollment">Reîncearcă înscrierea</string>
+    <string name="m3_tools_clinic_refresh">Reîmprospătează accesul clinicii</string>
+    <string name="m3_tools_clinic_disconnect_clinic">Deconectează clinica</string>
+    <string name="m3_tools_clinic_error">Accesul clinicii nu a putut fi actualizat. Verifică conexiunea sau reîncearcă înscrierea salvată.</string>
+    <string name="m3_tools_clinic_disconnect_question">Deconectezi această clinică?</string>
+    <string name="m3_tools_clinic_disconnect_body">Partajarea sponsorizată de clinică se va opri. Accesul cumpărat de tine și datele de sănătate locale rămân disponibile.</string>
+    <string name="m3_tools_clinic_disconnect">Deconectează</string>
+    <string name="m3_tools_clinic_sync_sharing_required">Permite mai întâi partajarea cu această clinică.</string>
+    <string name="m3_tools_clinic_sync_push_unavailable">Solicitările de sincronizare nu sunt disponibile în această versiune Health.md.</string>
+    <string name="m3_tools_clinic_sync_notifications_denied">Permisiunea pentru notificări nu a fost acordată. Permite notificările pentru Health.md în Setări.</string>
+    <string name="m3_tools_clinic_sync_wake_service">Serviciul de notificări nu este disponibil. Încearcă mai târziu.</string>
+    <string name="m3_tools_clinic_sync_clinic_unreachable">Clinica ta nu a putut fi contactată. Încearcă mai târziu.</string>
+    <string name="m3_tools_clinic_sync_storage">Deblochează telefonul și încearcă din nou. Cheia solicitării nu a putut fi stocată în siguranță.</string>
+</resources>

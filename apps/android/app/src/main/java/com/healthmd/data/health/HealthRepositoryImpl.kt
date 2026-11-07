@@ -4,6 +4,7 @@ import com.healthmd.domain.model.AndroidCaptureContext
 import com.healthmd.domain.model.HealthProviderCaptureAuthority
 import com.healthmd.domain.repository.RestorableHealthRepository
 import com.healthmd.domain.model.DataTypeSelection
+import com.healthmd.domain.model.ExportDetailSelection
 import com.healthmd.domain.model.HealthData
 import com.healthmd.domain.model.ProviderFailureProvenance
 import com.healthmd.domain.model.SleepDayAttributionOverride
@@ -150,6 +151,7 @@ class HealthRepositoryImpl private constructor(
         zoneId: ZoneId,
         pinnedCalendarDays: Boolean,
         sleepDayAttributionOverride: SleepDayAttributionOverride,
+        detail: ExportDetailSelection,
     ): List<HealthData> {
         if (dates.isEmpty()) return emptyList()
         val context = resolveCaptureContext(zoneId, sleepDayAttributionOverride)
@@ -164,6 +166,7 @@ class HealthRepositoryImpl private constructor(
                 captureZoneId,
                 pinnedCalendarDays,
                 attribution,
+                detail,
             )
         }
         val attemptedIds = configuredProviderIds()
@@ -180,6 +183,7 @@ class HealthRepositoryImpl private constructor(
                     captureZoneId,
                     pinnedCalendarDays,
                     attribution,
+                    detail,
                 )
             }
                 .onSuccess { records ->
@@ -213,17 +217,18 @@ class HealthRepositoryImpl private constructor(
         dataTypes: DataTypeSelection,
         includeGranularData: Boolean,
         zoneId: ZoneId,
+        detail: ExportDetailSelection,
     ) {
         if (!dataTypes.workouts) return
         if (!shouldUseAllConnected()) {
-            activeProvider().authorizeExerciseRouteConsent(dates, dataTypes, includeGranularData, zoneId)
+            activeProvider().authorizeExerciseRouteConsent(dates, dataTypes, includeGranularData, zoneId, detail)
             return
         }
         val attemptedIds = configuredProviderIds()
         val (providers, _) = providerReadiness(attemptedIds, configuredProviders(attemptedIds))
         providers.forEach { provider ->
             runCatchingCancellable {
-                provider.authorizeExerciseRouteConsent(dates, dataTypes, includeGranularData, zoneId)
+                provider.authorizeExerciseRouteConsent(dates, dataTypes, includeGranularData, zoneId, detail)
             }
         }
     }

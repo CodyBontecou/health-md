@@ -11,8 +11,11 @@ import android.text.format.DateFormat
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -25,10 +28,13 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.WarningAmber
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -47,7 +53,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
@@ -66,6 +74,7 @@ import com.healthmd.domain.model.AgentDataGatewayEndpoint
 import com.healthmd.domain.model.ExportTarget
 import com.healthmd.domain.model.ScheduleDateWindow
 import com.healthmd.presentation.common.APIExportSettingsDialog
+import com.healthmd.presentation.common.AppSwitch
 import com.healthmd.presentation.common.AgentDataGatewaySettingsDialog
 import com.healthmd.presentation.common.ConfigurationProtectedRegion
 import com.healthmd.presentation.common.ExportTargetSelector
@@ -73,9 +82,12 @@ import com.healthmd.presentation.common.HealthConnectActionError
 import com.healthmd.presentation.common.HealthConnectErrorNotice
 import com.healthmd.presentation.common.LocalConfigurationProtection
 import com.healthmd.presentation.history.HistoryViewModel
-import com.healthmd.presentation.theme.AppColors
-import com.healthmd.presentation.theme.Radii
-import com.healthmd.presentation.theme.Spacing
+import com.healthmd.presentation.settings.groupRowShape
+import com.healthmd.presentation.theme.GeistRadii
+import com.healthmd.presentation.theme.GeistSizes
+import com.healthmd.presentation.theme.GeistSpacing
+import com.healthmd.presentation.theme.GeistType
+import com.healthmd.presentation.theme.LocalGeistColors
 import com.healthmd.util.runCatchingCancellable
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -84,6 +96,11 @@ import java.text.ParsePosition
 import java.util.Date
 import java.util.Locale
 
+/**
+ * Schedule settings, opened from Automations: the app-wide schedule, the scheduled export
+ * target and its endpoints, the permissions schedules need, and schedule history. Automations
+ * themselves (profiles and their schedules) are on [AutomationsScreen].
+ */
 @Composable
 fun ScheduleScreen(
     viewModel: ScheduleViewModel = hiltViewModel(),
@@ -96,7 +113,6 @@ fun ScheduleScreen(
     val managedClinicEndpoint = clinicStatus.endpoint.takeIf { clinicStatus.active && !independentAccess }
     val historyViewModel: HistoryViewModel = hiltViewModel()
     val historyUiState by historyViewModel.uiState.collectAsStateWithLifecycle()
-    val profileSchedulesViewModel: ProfileSchedulesViewModel = hiltViewModel()
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val protection = LocalConfigurationProtection.current
@@ -308,25 +324,51 @@ fun ScheduleScreen(
     }
 
     if (historyUiState.showClearConfirmation) {
+        val colors = LocalGeistColors.current
         AlertDialog(
             onDismissRequest = { historyViewModel.dismissClearHistory() },
-            title = { Text(stringResource(R.string.history_clear_title)) },
-            text = { Text(stringResource(R.string.history_clear_body)) },
+            containerColor = colors.gray.c200,
+            shape = RoundedCornerShape(GeistRadii.large),
+            tonalElevation = 0.dp,
+            icon = { Icon(Icons.Outlined.Delete, contentDescription = null, tint = colors.secondary) },
+            title = {
+                Text(
+                    stringResource(R.string.history_clear_title),
+                    style = GeistType.heading20,
+                    color = colors.primary,
+                    textAlign = TextAlign.Center,
+                )
+            },
+            text = {
+                Text(stringResource(R.string.history_clear_body), style = GeistType.copy14, color = colors.secondary)
+            },
             confirmButton = {
-                TextButton(onClick = {
-                    if (protection.enabled) {
-                        historyViewModel.dismissClearHistory()
-                        protection.onBlockedChange()
-                    } else {
-                        historyViewModel.clearHistory()
-                    }
-                }) {
-                    Text(stringResource(R.string.action_clear_history))
+                Button(
+                    onClick = {
+                        if (protection.enabled) {
+                            historyViewModel.dismissClearHistory()
+                            protection.onBlockedChange()
+                        } else {
+                            historyViewModel.clearHistory()
+                        }
+                    },
+                    shape = RoundedCornerShape(GeistRadii.full),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = colors.brandPrimary,
+                        contentColor = colors.brandOnPrimary,
+                    ),
+                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp),
+                    modifier = Modifier.heightIn(min = GeistSizes.minimumTouchTarget),
+                ) {
+                    Text(stringResource(R.string.action_clear_history), style = GeistType.button14)
                 }
             },
             dismissButton = {
-                TextButton(onClick = { historyViewModel.dismissClearHistory() }) {
-                    Text(stringResource(R.string.action_keep_history))
+                TextButton(
+                    onClick = { historyViewModel.dismissClearHistory() },
+                    modifier = Modifier.heightIn(min = GeistSizes.minimumTouchTarget),
+                ) {
+                    Text(stringResource(R.string.action_keep_history), style = GeistType.button14, color = LocalGeistColors.current.brandPrimary)
                 }
             },
         )
@@ -337,23 +379,10 @@ fun ScheduleScreen(
             .fillMaxSize()
             .imePadding()
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = Spacing.md, vertical = Spacing.lg),
+            .padding(horizontal = GeistSpacing.space4, vertical = GeistSpacing.space2),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(Spacing.md),
+        verticalArrangement = Arrangement.spacedBy(GeistSpacing.space4),
     ) {
-        Spacer(modifier = Modifier.height(Spacing.md))
-
-        Text(
-            text = stringResource(R.string.section_schedule),
-            style = MaterialTheme.typography.headlineMedium,
-            color = AppColors.textPrimary,
-            modifier = Modifier.fillMaxWidth(),
-        )
-
-        Spacer(modifier = Modifier.height(Spacing.sm))
-
-        ProfileSchedulesSection(viewModel = profileSchedulesViewModel)
-
         ScheduleSectionLabel(stringResource(R.string.automatic_export_title))
 
         ConfigurationProtectedRegion(modifier = Modifier.fillMaxWidth()) {
@@ -452,35 +481,17 @@ fun ScheduleScreen(
         )
 
         if (uiState.selectedTarget == ExportTarget.API_ENDPOINT) {
-            TextButton(onClick = {
-                attemptConfigurationChange { showAPISettings = true }
-            }) {
-                Text(
-                    stringResource(
-                        if (uiState.apiEndpointConfigured) {
-                            R.string.action_edit_endpoint
-                        } else {
-                            R.string.action_configure_endpoint
-                        },
-                    ),
-                )
-            }
+            EndpointSettingsButton(
+                configured = uiState.apiEndpointConfigured,
+                onClick = { attemptConfigurationChange { showAPISettings = true } },
+            )
         }
 
         if (uiState.selectedTarget == ExportTarget.AGENT_DATA_GATEWAY) {
-            TextButton(onClick = {
-                attemptConfigurationChange { showGatewaySettings = true }
-            }) {
-                Text(
-                    stringResource(
-                        if (uiState.agentDataGatewayConfigured) {
-                            R.string.action_edit_endpoint
-                        } else {
-                            R.string.action_configure_endpoint
-                        },
-                    ),
-                )
-            }
+            EndpointSettingsButton(
+                configured = uiState.agentDataGatewayConfigured,
+                onClick = { attemptConfigurationChange { showGatewaySettings = true } },
+            )
         }
         }
 
@@ -513,8 +524,6 @@ fun ScheduleScreen(
         }
 
         if (uiState.isEnabled) {
-            Spacer(modifier = Modifier.height(Spacing.xs))
-
             ScheduleSectionLabel(stringResource(R.string.section_schedule))
 
             ConfigurationProtectedRegion(modifier = Modifier.fillMaxWidth()) {
@@ -602,8 +611,6 @@ fun ScheduleScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(Spacing.sm))
-
             ScheduleHistoryHeading(
                 onRequestClearHistory = {
                     attemptConfigurationChange { historyViewModel.requestClearHistory() }
@@ -611,7 +618,7 @@ fun ScheduleScreen(
             )
         }
 
-        Spacer(modifier = Modifier.height(Spacing.xl))
+        Spacer(modifier = Modifier.height(GeistSpacing.space8))
     }
 
     if (showAPISettings) {
@@ -655,14 +662,17 @@ fun ScheduleScreen(
     }
 }
 
+/** A list-group heading (DESIGN.md `list-group`): `heading-14` in the brand color. */
 @Composable
 private fun ScheduleSectionLabel(text: String) {
     Text(
         text = text,
-        style = MaterialTheme.typography.titleMedium,
-        color = AppColors.textSecondary,
-        fontWeight = FontWeight.Normal,
-        modifier = Modifier.fillMaxWidth(),
+        style = GeistType.heading14,
+        color = LocalGeistColors.current.brandPrimary,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = GeistSpacing.space4, top = GeistSpacing.space2)
+            .semantics { heading() },
     )
 }
 
@@ -673,61 +683,61 @@ private fun BodyText(
 ) {
     Text(
         text = text,
-        style = MaterialTheme.typography.bodyLarge,
-        color = AppColors.textSecondary,
-        modifier = modifier,
+        style = GeistType.copy14,
+        color = LocalGeistColors.current.secondary,
+        modifier = modifier.padding(horizontal = GeistSpacing.space4),
     )
 }
 
+/** Opens the selected endpoint's settings: a text action, not a second filled button. */
+@Composable
+private fun EndpointSettingsButton(configured: Boolean, onClick: () -> Unit) {
+    TextButton(
+        onClick = onClick,
+        modifier = Modifier.heightIn(min = GeistSizes.minimumTouchTarget),
+    ) {
+        Text(
+            stringResource(if (configured) R.string.action_edit_endpoint else R.string.action_configure_endpoint),
+            style = GeistType.button14,
+            color = LocalGeistColors.current.brandPrimary,
+        )
+    }
+}
+
+/** The schedule's on/off switch as a one-row list group; the whole row is the target. */
 @Composable
 private fun ScheduleToggleCard(
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
 ) {
-    val shape = RoundedCornerShape(Radii.card)
+    val colors = LocalGeistColors.current
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(shape)
-            .background(AppColors.bgPrimary)
-            .border(1.dp, AppColors.borderDefault, shape)
+            .clip(groupRowShape(0, 1))
+            .background(colors.background200)
             .toggleable(
                 value = checked,
                 role = Role.Switch,
                 onValueChange = onCheckedChange,
             )
-            .padding(Spacing.md),
-        horizontalArrangement = Arrangement.SpaceBetween,
+            .heightIn(min = 56.dp)
+            .padding(horizontal = GeistSpacing.space4, vertical = GeistSpacing.space2),
+        horizontalArrangement = Arrangement.spacedBy(GeistSpacing.space4),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
             text = stringResource(R.string.schedule_enable_scheduled_exports),
-            style = MaterialTheme.typography.titleMedium,
-            color = AppColors.textPrimary,
+            style = GeistType.label16,
+            color = colors.primary,
             modifier = Modifier.weight(1f),
         )
-        GeistSwitch(checked = checked)
+        AppSwitch(checked = checked, onCheckedChange = null)
     }
 }
 
-@Composable
-private fun GeistSwitch(
-    checked: Boolean,
-) {
-    Switch(
-        checked = checked,
-        onCheckedChange = null,
-        colors = SwitchDefaults.colors(
-            checkedThumbColor = AppColors.onAccent,
-            checkedTrackColor = AppColors.accent,
-            checkedBorderColor = AppColors.accent,
-            uncheckedThumbColor = AppColors.textSecondary,
-            uncheckedTrackColor = AppColors.bgPrimary,
-            uncheckedBorderColor = AppColors.borderStrong,
-        ),
-    )
-}
-
+/** A tonal warning note (no border): icon, title and color carry the status; text actions. */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun WarningCard(
     title: String,
@@ -737,38 +747,38 @@ private fun WarningCard(
     secondaryAction: String? = null,
     onSecondaryAction: (() -> Unit)? = null,
 ) {
-    val shape = RoundedCornerShape(Radii.card)
+    val colors = LocalGeistColors.current
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(shape)
-            .background(AppColors.bgPrimary)
-            .border(1.dp, AppColors.warningBorder, shape)
-            .padding(Spacing.md),
+            .clip(RoundedCornerShape(GeistRadii.medium))
+            .background(colors.amber.c100)
+            .padding(start = GeistSpacing.space4, end = GeistSpacing.space2, top = GeistSpacing.space4, bottom = GeistSpacing.space1),
     ) {
-        Text(
-            title,
-            style = MaterialTheme.typography.titleSmall,
-            color = AppColors.warning,
-            fontWeight = FontWeight.SemiBold,
-        )
-        Spacer(modifier = Modifier.height(Spacing.xs))
-        Text(
-            body,
-            style = MaterialTheme.typography.bodySmall,
-            color = AppColors.textMuted,
-        )
         Row(
+            modifier = Modifier.padding(end = GeistSpacing.space2),
+            horizontalArrangement = Arrangement.spacedBy(GeistSpacing.space3),
+        ) {
+            Icon(Icons.Outlined.WarningAmber, contentDescription = null, tint = colors.warning, modifier = Modifier.size(20.dp))
+            Column(verticalArrangement = Arrangement.spacedBy(GeistSpacing.space1)) {
+                Text(title, style = GeistType.heading14, color = colors.warning)
+                Text(body, style = GeistType.copy14, color = colors.primary)
+            }
+        }
+        FlowRow(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.End,
         ) {
             secondaryAction?.let { label ->
-                TextButton(onClick = { onSecondaryAction?.invoke() }) {
-                    Text(label)
+                TextButton(
+                    onClick = { onSecondaryAction?.invoke() },
+                    modifier = Modifier.heightIn(min = GeistSizes.minimumTouchTarget),
+                ) {
+                    Text(label, style = GeistType.button14, color = colors.brandPrimary)
                 }
             }
-            TextButton(onClick = onAction) {
-                Text(action)
+            TextButton(onClick = onAction, modifier = Modifier.heightIn(min = GeistSizes.minimumTouchTarget)) {
+                Text(action, style = GeistType.button14, color = colors.brandPrimary)
             }
         }
     }

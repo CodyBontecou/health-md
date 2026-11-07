@@ -51,4 +51,14 @@
     <string name="wear_preview_placeholder">Предпросмотр; без показателя здоровья</string>
     <string name="wear_complication_description">%1$s, %2$s, %3$s</string>
     <string name="wear_complication_long">%1$s %2$s · %3$s</string>
+    <string name="wear_short_activity">Активность</string>
+    <string name="wear_short_recovery">Восстановление</string>
+    <string name="wear_short_steps">Шаги</string>
+    <string name="wear_short_move">Движение</string>
+    <string name="wear_short_exercise">Упражнения</string>
+    <string name="wear_short_sleep">Сон</string>
+    <string name="wear_short_resting_hr">Покой</string>
+    <string name="wear_short_average_hr">Ср. пульс</string>
+    <string name="wear_short_hrv">HRV</string>
+    <string name="wear_short_blood_oxygen">SpO₂</string>
 </resources>

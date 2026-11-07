@@ -259,6 +259,14 @@
     </plurals>
     <string name="granular_data_title">包括详细的时间序列</string>
     <string name="granular_data_description">将带有时间戳的样本（例如心率和睡眠阶段）添加到兼容性导出中。对于 API 完整副本，请使用 Raw API Snapshot。</string>
+    <string name="detail_overrides_title">按类别设置详细程度</string>
+    <string name="detail_overrides_description">为单个类别覆盖默认设置。“摘要”仅保留每日总计；每日摘要不会改变。</string>
+    <string name="detail_choice_default">默认</string>
+    <string name="detail_choice_summary">摘要</string>
+    <string name="detail_choice_sessions">会话</string>
+    <string name="detail_choice_detailed">详细</string>
+    <string name="detail_group_sleep_hint">“会话”会以完整日期和时间列出每个睡眠会话。“详细”还会添加睡眠阶段。</string>
+    <string name="detail_expansion_schema_hint">为“活动”“营养”或“身体”选择“详细”会添加每条来源记录，并将分析型 JSON、CSV 和 Markdown 导出切换到架构 7。</string>
     <string name="sleep_attribution_title">睡眠归属日</string>
     <string name="sleep_attribution_night_begins">以入睡当晚为准</string>
     <string name="sleep_attribution_morning_ends">以醒来早晨为准</string>
@@ -508,10 +516,6 @@
     <string name="scheduled_recovery_result_complete">计划恢复已完成。</string>
     <string name="scheduled_recovery_result_blocked">计划的恢复尚未准备好。</string>
     <string name="not_now">暂不</string>
-    <string name="release_notes_title">%s 的新功能</string>
-    <string name="release_notes_settings_hint">您可以从“设置”中调整导出格式、自定义 Markdown 和指标。</string>
-    <string name="release_notes_open_settings">打开设置</string>
-    <string name="release_notes_got_it">知道了</string>
     <string name="release_notes_highlight_feedback">Direct CLI 会话在桌面短暂断开后会自动重新连接，因此导出能够可靠完成。</string>
     <string name="release_notes_highlight_export_parity">桌面唤醒窗口命令最多等待 120 秒，供您打开应用并连接，不使用任何推送通知。</string>
     <string name="release_notes_highlight_templates">通过地址、端口和 20 位配对码手动配对仍然可用，旧版 CLI 同样支持。</string>
@@ -538,8 +542,6 @@
     <string name="debug_toggle_unlock">切换解锁</string>
     <string name="debug_reset_state">复位状态</string>
     <string name="export_progress_title">正在导出健康数据</string>
-    <string name="nav_export">导出</string>
-    <string name="nav_schedule">计划</string>
     <string name="nav_history">历史</string>
     <string name="nav_settings">设置</string>
     <string name="shortcut_export_short">导出</string>
@@ -955,6 +957,8 @@
     <string name="export_preview_api_preparation_failed">API 导出准备失败。</string>
     <string name="export_preview_artifacts_per_range">每个范围的导出文件数</string>
     <string name="export_preview_back_description">返回导出预览</string>
+    <string name="export_preview_wrap_lines">自动换行</string>
+    <string name="export_preview_format_text">格式化文本</string>
     <string name="export_preview_destination_label">目标位置</string>
     <string name="export_preview_empty_file">（空文件）</string>
     <string name="export_preview_formats_per_day">每天的格式数</string>
@@ -1291,10 +1295,6 @@
     <string name="whoop_disconnect">断开WHOOP连接</string>
     <string name="whoop_use_for_exports">使用WHOOP导出</string>
     <string name="paywall_access_subtitle">选择订阅或终身访问，开始建立您的私人健康档案。符合条件的订阅包含7天免费试用。</string>
-    <string name="paywall_access_active_title">您的访问权限已生效</string>
-    <string name="paywall_access_active_body">继续设置以连接健康数据，并选择私人档案的保存位置。</string>
-    <string name="clinic_access_active_title">您的诊所访问权限已生效</string>
-    <string name="clinic_access_active_body">您的诊所赞助向其已批准端点的传送。分享哪些内容由您决定。其他导出目标需要您自己的 Health.md 访问权限。</string>
     <string name="paywall_plan_choices">按周、按年或终身访问</string>
     <string name="paywall_weekly_price">%1$s / 周</string>
     <string name="paywall_yearly_price">%1$s / 年</string>
@@ -1305,30 +1305,16 @@
     <string name="paywall_terms">条款</string>
     <string name="paywall_privacy">隐私</string>
     <string name="paywall_subscription_disclosure">符合条件的订阅包含7天免费试用，之后按显示的价格自动续订，除非在试用期或当前计费周期结束前取消。请在Google Play中管理或取消。终身访问将在购买时立即一次性收费。现有付费访问权限将予以保留。 一生没有考验。删除应用程序或购买终身不会取消现有订阅。</string>
+    <plurals name="widget_archive_gaps">
+        <item quantity="other">%1$s 处缺口</item>
+    </plurals>
+    <plurals name="widget_archive_days_in_month">
+        <item quantity="other">天（%1$s）</item>
+    </plurals>
 
-    <!-- Signal carousel paywall -->
-    <string name="paywall_signal_title">每一次心跳，都有记录。</string>
-    <string name="paywall_signal_lede">Health.md 将 Health Connect 数据变成每天一篇 Markdown 笔记，保存到你选择的文件夹。</string>
-    <string name="paywall_signal_example">示例</string>
-    <string name="paywall_signal_trial_title">七天，我们请客。</string>
-    <string name="paywall_signal_day_today">今天</string>
-    <string name="paywall_signal_day_today_body">无限次导出、计划和自动化。</string>
-    <string name="paywall_signal_day_cancel">随时取消</string>
-    <string name="paywall_signal_day_cancel_body">请在试用结束前在 Google Play 中取消。</string>
-    <string name="paywall_signal_day_end">试用结束</string>
-    <string name="paywall_signal_day_end_body">之后 %1$s。</string>
-    <string name="paywall_signal_plans_title">选一条路。</string>
-    <string name="paywall_signal_best_value">最超值</string>
-    <string name="paywall_signal_free_week">7 天免费</string>
-    <string name="paywall_signal_lifetime_detail">今天一次付清，永不续订。</string>
-    <string name="paywall_signal_subscription_detail">自动续订。可随时在 Google Play 中取消。</string>
-    <string name="paywall_signal_cta_trial">开始 7 天免费试用</string>
-    <string name="paywall_signal_cta_subscribe">订阅</string>
-    <string name="paywall_signal_cta_lifetime">购买终身版</string>
-    <string name="paywall_signal_step_archive">归档</string>
-    <string name="paywall_signal_step_trial">试用</string>
-    <string name="paywall_signal_step_plans">方案</string>
-    <string name="paywall_signal_plan_weekly">按周</string>
-    <string name="paywall_signal_plan_yearly">按年</string>
-    <string name="paywall_signal_plan_lifetime">终身</string>
+    <string name="clinic_sync_channel_name">诊所同步请求</string>
+    <string name="clinic_sync_request_body">你的诊所正在请求你最新的健康数据。轻点即可发送。</string>
+    <string name="clinic_sync_result_sent">你的最新数据已发送给诊所。</string>
+    <string name="clinic_sync_result_failed">无法将你的数据发送给诊所。请打开 Health.md 后重试。</string>
+    <string name="clinic_sync_result_profile_missing">请先在 Health.md 中打开诊所访问，并选择使用诊所目标。</string>
 </resources>

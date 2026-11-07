@@ -13,7 +13,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.Save
 import androidx.compose.material.icons.outlined.Share
@@ -42,6 +41,7 @@ import com.healthmd.presentation.common.LocalConfigurationProtection
 import com.healthmd.presentation.common.PrimaryButton
 import com.healthmd.presentation.common.SecondaryButton
 import com.healthmd.presentation.common.SectionLabel
+import com.healthmd.presentation.common.SubScreenTopBar
 import com.healthmd.presentation.theme.*
 import java.time.Instant
 import java.time.LocalDate
@@ -115,45 +115,44 @@ fun ClinicianReportScreen(
         ) { DatePicker(state = pickerState) }
     }
 
-    Scaffold(
-        containerColor = AppColors.bgPrimary,
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.clinician_report_title), style = GeistType.heading20) },
-                navigationIcon = {
-                    IconButton(onClick = cancelAndBack) {
-                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = stringResource(R.string.back))
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = AppColors.bgPrimary, titleContentColor = AppColors.textPrimary),
-            )
-        },
-    ) { padding ->
+    Column(Modifier.fillMaxSize()) {
+        SubScreenTopBar(title = stringResource(R.string.clinician_report_title), onBack = cancelAndBack)
         Column(
-            modifier = Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(Spacing.md),
+            modifier = Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(start = Spacing.md, end = Spacing.md, bottom = Spacing.md),
             verticalArrangement = Arrangement.spacedBy(Spacing.md),
         ) {
             Text(stringResource(R.string.clinician_report_intro), style = GeistType.copy14, color = AppColors.textSecondary)
 
             SectionLabel(stringResource(R.string.clinician_report_period))
             GeistCard {
-                Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs), modifier = Modifier.fillMaxWidth()) {
-                    listOf(
-                        ReportDateRangePreset.DAYS_7 to stringResource(R.string.clinician_report_7_days),
-                        ReportDateRangePreset.DAYS_30 to stringResource(R.string.clinician_report_30_days),
-                        ReportDateRangePreset.DAYS_90 to stringResource(R.string.clinician_report_90_days),
-                        ReportDateRangePreset.CUSTOM to stringResource(R.string.clinician_report_custom),
-                    ).forEach { (preset, label) ->
-                        FilterChip(
+                // One value from four: the M3 segmented button (DESIGN.md Components).
+                val presets = listOf(
+                    ReportDateRangePreset.DAYS_7 to stringResource(R.string.clinician_report_7_days),
+                    ReportDateRangePreset.DAYS_30 to stringResource(R.string.clinician_report_30_days),
+                    ReportDateRangePreset.DAYS_90 to stringResource(R.string.clinician_report_90_days),
+                    ReportDateRangePreset.CUSTOM to stringResource(R.string.clinician_report_custom),
+                )
+                val geist = com.healthmd.presentation.theme.LocalGeistColors.current
+                SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+                    presets.forEachIndexed { index, (preset, label) ->
+                        SegmentedButton(
                             selected = state.selectedPreset == preset,
                             onClick = {
                                 attemptConfigurationChange { viewModel.selectPreset(preset) }
                             },
-                            label = { Text(label) },
+                            shape = SegmentedButtonDefaults.itemShape(index, presets.size),
                             enabled = configurationControlsEnabled,
-                            modifier = Modifier.weight(1f).testTag("clinician_report_preset_${preset.name.lowercase()}"),
-                            colors = FilterChipDefaults.filterChipColors(selectedContainerColor = AppColors.accentSubtle, selectedLabelColor = AppColors.accent),
-                        )
+                            icon = {},
+                            colors = SegmentedButtonDefaults.colors(
+                                activeContainerColor = geist.secondaryContainer,
+                                activeContentColor = geist.onSecondaryContainer,
+                                inactiveContentColor = geist.primary,
+                                activeBorderColor = geist.gray.c700,
+                                inactiveBorderColor = geist.gray.c700,
+                            ),
+                            modifier = Modifier.heightIn(min = com.healthmd.presentation.theme.GeistSizes.minimumTouchTarget)
+                                .testTag("clinician_report_preset_${preset.name.lowercase()}"),
+                        ) { Text(label, style = GeistType.button14) }
                     }
                 }
                 if (state.selectedPreset == ReportDateRangePreset.CUSTOM) {
@@ -196,11 +195,10 @@ fun ClinicianReportScreen(
                             color = if (configurationControlsEnabled) AppColors.textPrimary else AppColors.textMuted,
                             modifier = Modifier.weight(1f),
                         )
-                        Switch(
+                        com.healthmd.presentation.common.AppSwitch(
                             checked = metric in state.configuration.selectedMetrics,
                             onCheckedChange = null,
                             enabled = configurationControlsEnabled,
-                            colors = SwitchDefaults.colors(checkedTrackColor = AppColors.accent, checkedThumbColor = AppColors.onAccent),
                         )
                     }
                 }
@@ -239,7 +237,7 @@ fun ClinicianReportScreen(
                 supportingText = { Text(stringResource(R.string.clinician_report_display_name_hint)) },
                 singleLine = true,
                 colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = AppColors.accent, unfocusedBorderColor = AppColors.borderDefault),
-                shape = RoundedCornerShape(Radii.card),
+                shape = RoundedCornerShape(Radii.textField),
             )
 
             state.errorMessage?.let { StatusCard(it, AppColors.errorSubtle, AppColors.error) }

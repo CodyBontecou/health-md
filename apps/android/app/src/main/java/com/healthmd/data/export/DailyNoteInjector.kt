@@ -1,6 +1,7 @@
 package com.healthmd.data.export
 
 import com.healthmd.domain.model.DailyNoteInjectionSettings
+import com.healthmd.domain.model.ExportDetailSelection
 import com.healthmd.domain.model.FormatCustomization
 import com.healthmd.domain.model.HealthData
 import com.healthmd.domain.model.HealthDataFields
@@ -36,11 +37,12 @@ class DailyNoteInjector {
         metricSelection: MetricSelectionState? = null,
         captureContext: AndroidCaptureContext? = null,
         includeGranularData: Boolean = false,
+        detail: ExportDetailSelection = ExportDetailSelection.uniform(includeGranularData),
     ): Pair<InjectionResult, String?> {
         if (!settings.enabled) return Pair(InjectionResult.SKIPPED, null)
         if (existingContent != null && hasScopedCapture(existingContent)) {
             return injectScopedNight(existingContent, data, settings, customization, metricSelection,
-                captureContext, includeGranularData)
+                captureContext, detail)
         }
 
         val dateString = customization.dateFormat.format(data.date)
@@ -79,7 +81,7 @@ class DailyNoteInjector {
     private fun injectScopedNight(
         existing: String, data: HealthData, settings: DailyNoteInjectionSettings,
         customization: FormatCustomization, selection: MetricSelectionState?,
-        context: AndroidCaptureContext?, includeGranularData: Boolean,
+        context: AndroidCaptureContext?, detail: ExportDetailSelection,
     ): Pair<InjectionResult,String?> = try {
         require(context?.sleepDayAttribution == SleepDayAttribution.NIGHT_BEGINS)
         val kinds = scopedHeader(existing).filter { captureKey(it) == "healthmd_injection_kind" }
@@ -88,7 +90,7 @@ class DailyNoteInjector {
         val profile = if (customization.compatibilitySchemaProfile == CompatibilitySchemaProfile.ANDROID_ANALYTICAL_V5)
             CoreMetricRegistryProfile.ANDROID_ANALYTICAL_V5 else CoreMetricRegistryProfile.ANDROID_FROZEN_V4
         val core = HealthMdCoreService()
-        val patch = prepareScopedNightPatch(data, settings, customization, selection, requireNotNull(context), includeGranularData)
+        val patch = prepareScopedNightPatch(data, settings, customization, selection, requireNotNull(context), detail = detail)
         InjectionResult.UPDATED to core.mergeScopedNote(profile,existing,patch,settings.injectMarkdownSections)
     } catch (error: CancellationException) { throw error }
     catch (_: HealthMdRenderServiceException) { InjectionResult.FAILED to null }
@@ -98,7 +100,8 @@ class DailyNoteInjector {
 
     internal fun prepareScopedNightPatch(
         data: HealthData, settings: DailyNoteInjectionSettings, customization: FormatCustomization,
-        selection: MetricSelectionState?, context: AndroidCaptureContext, includeGranularData: Boolean,
+        selection: MetricSelectionState?, context: AndroidCaptureContext, includeGranularData: Boolean = false,
+        detail: ExportDetailSelection = ExportDetailSelection.uniform(includeGranularData),
     ): String {
         require(context.sleepDayAttribution == SleepDayAttribution.NIGHT_BEGINS)
         val profile = if (customization.compatibilitySchemaProfile == CompatibilitySchemaProfile.ANDROID_ANALYTICAL_V5)
@@ -114,9 +117,10 @@ class DailyNoteInjector {
         val names = HealthDataFields.extract(selected, rendering.unitConverter, rendering.timeFormat,
             rendering.includeLegacyAndroidAliases, rendering.includeAndroidNativeFields)
             .filter { it.value != null }.mapNotNull { rendering.frontmatterConfig.outputKey(it.key) }
-        val record = JsonExporter().export(selected,rendering,includeGranularData && settings.injectMarkdownSections)
+        val recordDetail = if (settings.injectMarkdownSections) detail else ExportDetailSelection.SUMMARY
+        val record = JsonExporter().export(selected, rendering, detail = recordDetail)
         val markdown = if(settings.injectMarkdownSections) markdownExporter.export(selected,false,true,rendering,
-            includeGranularData) else ""
+            detail = detail) else ""
         val core = HealthMdCoreService()
         return core.prepareScopedAndroidNightNote(profile,record,context.zoneId.id,
             ObsidianBasesExporter().export(selected,rendering),markdown,names,settings.injectMarkdownSections)

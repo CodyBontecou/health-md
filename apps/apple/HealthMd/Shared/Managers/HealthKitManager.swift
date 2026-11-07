@@ -1053,7 +1053,7 @@ final class HealthKitManager: ObservableObject {
                 for: date,
                 attribution: Self.effectiveSleepDayAttribution,
                 timeZone: Self.effectiveFetchTimeZone,
-                includeDetailedTimeSeries: detailPolicy.includesSelectedTimeSeries
+                includeDetailedTimeSeries: detailPolicy.includesSelectedTimeSeries(for: .sleep)
             )
         }
         async let activityTask = fetchIfEnabled(fetchScope.activity, fallback: ActivityData()) {
@@ -1062,7 +1062,7 @@ final class HealthKitManager: ObservableObject {
         async let heartTask = fetchIfEnabled(fetchScope.heart, fallback: HeartData()) {
             try await fetchHeartData(
                 for: date,
-                includeDetailedTimeSeries: detailPolicy.includesSelectedTimeSeries,
+                includeDetailedTimeSeries: detailPolicy.includesSelectedTimeSeries(for: .heart),
                 fetchScope: fetchScope
             )
         }
@@ -1070,7 +1070,7 @@ final class HealthKitManager: ObservableObject {
         async let vitalsTask = fetchIfEnabled(shouldFetchVitals, fallback: VitalsFetchResult()) {
             try await fetchVitalsData(
                 for: date,
-                includeDetailedTimeSeries: detailPolicy.includesSelectedTimeSeries,
+                includeDetailedTimeSeries: detailPolicy.includesSelectedTimeSeries(for: .vitals),
                 fetchScope: fetchScope
             )
         }
@@ -1221,6 +1221,28 @@ final class HealthKitManager: ObservableObject {
         }
         do { healthData.workouts    = try await workoutsTask  } catch {
             try handleFetchFailure("workouts", error: error)
+        }
+
+        // apple-v12 successor: explicit per-category Detailed overrides only, Night begins only.
+        // Each selected source sample is read after its summary; a failed type is a partial
+        // failure that never removes the category summary.
+        if !detailPolicy.selectsAppleV12(sleepDayAttribution: attribution) {
+            // Stage source attribution is an apple-v12 field; apple-v8/v11 days never carry it.
+            healthData.stripSleepStageSourceAttribution()
+        }
+        if detailPolicy.selectsAppleV12(sleepDayAttribution: attribution) {
+            healthData.compatibilityDetailProfile = .appleV12
+            for entry in ExportDataSnapshot.DetailExpansion.orderedGroups
+            where detailPolicy.includesDetailSamples(for: entry.group, sleepDayAttribution: attribution) {
+                do {
+                    healthData.setDetailSamples(
+                        try await fetchDetailSamples(for: entry.group, date: date, fetchScope: fetchScope),
+                        for: entry.group
+                    )
+                } catch {
+                    try handleFetchFailure("\(entry.group.rawValue) detail samples", error: error)
+                }
+            }
         }
 
         if detailPolicy.includesCanonicalArchive {
@@ -2915,7 +2937,10 @@ final class HealthKitManager: ObservableObject {
                         stage: entry.stage,
                         startDate: interval.start,
                         endDate: interval.end,
-                        metadata: entry.sample.metadata
+                        metadata: entry.sample.metadata,
+                        sourceUUID: entry.sample.uuid,
+                        source: entry.sample.sourceBundleIdentifier,
+                        sourceName: entry.sample.sourceName
                     )
                 }
             }
@@ -3055,6 +3080,74 @@ final class HealthKitManager: ObservableObject {
     /// workout queries use strict source-start ownership.
     private static func compatibilityStatisticsPredicate(dayStart: Date, dayEnd: Date) -> NSPredicate {
         HKQuery.predicateForSamples(withStart: dayStart, end: dayEnd)
+    }
+
+    // MARK: - apple-v12 Detail Samples
+
+    /// One `DetailSample` per HealthKit source sample of the types this category already
+    /// summarizes, in the summary's unit. Start-owned in the effective fetch calendar.
+    private func fetchDetailSamples(
+        for group: ExportDetailGroup,
+        date: Date,
+        fetchScope: HealthDataFetchScope
+    ) async throws -> [DetailSample] {
+        let calendar = Self.effectiveFetchCalendar
+        let startOfDay = calendar.startOfDay(for: date)
+        let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
+        let predicate = Self.compatibilitySamplePredicate(dayStart: startOfDay, dayEnd: endOfDay)
+
+        var samples: [DetailSample] = []
+        for entry in AppleDetailSampleCatalog.entries(for: group)
+        where entry.selectionMetricIDs.contains(where: { fetchScope.includesMetric($0) }) {
+            try Task.checkCancellation()
+            switch entry.kind {
+            case .quantity(let unit):
+                let values = try await store.queryQuantitySamples(
+                    identifier: HKQuantityTypeIdentifier(rawValue: entry.healthKitType),
+                    predicate: predicate,
+                    ascending: true,
+                    limit: nil
+                )
+                for value in values
+                where Self.ownsCompatibilitySample(startingAt: value.startDate, dayStart: startOfDay, dayEnd: endOfDay) {
+                    samples.append(DetailSample(
+                        metric: entry.metricID,
+                        healthKitType: entry.healthKitType,
+                        startDate: value.startDate,
+                        endDate: value.endDate,
+                        value: value.value,
+                        unit: unit,
+                        sourceUUID: value.uuid,
+                        source: value.sourceBundleIdentifier,
+                        sourceName: value.sourceName
+                    ))
+                }
+            case .category:
+                let values = try await store.queryCategorySamples(
+                    identifier: HKCategoryTypeIdentifier(rawValue: entry.healthKitType),
+                    predicate: predicate,
+                    ascending: true,
+                    limit: nil
+                )
+                for value in values
+                where Self.ownsCompatibilitySample(startingAt: value.startDate, dayStart: startOfDay, dayEnd: endOfDay) {
+                    samples.append(DetailSample(
+                        metric: entry.metricID,
+                        healthKitType: entry.healthKitType,
+                        startDate: value.startDate,
+                        endDate: value.endDate,
+                        categoryValue: AppleDetailSampleCatalog.categoryValueString(
+                            healthKitType: entry.healthKitType,
+                            rawValue: value.value
+                        ),
+                        sourceUUID: value.uuid,
+                        source: value.sourceBundleIdentifier,
+                        sourceName: value.sourceName
+                    ))
+                }
+            }
+        }
+        return DetailSample.sortedForExport(samples)
     }
 
     // MARK: - Activity Data

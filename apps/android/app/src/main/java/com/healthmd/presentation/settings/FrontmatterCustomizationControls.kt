@@ -10,13 +10,16 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.*
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.RadioButtonDefaults
+import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
@@ -37,6 +40,7 @@ import androidx.compose.ui.unit.dp
 import com.healthmd.R
 import com.healthmd.domain.model.CustomFrontmatterField
 import com.healthmd.domain.model.FrontmatterKeyStyle
+import com.healthmd.presentation.common.AppSwitch
 import com.healthmd.presentation.common.SecondaryButton
 import com.healthmd.presentation.theme.*
 
@@ -71,27 +75,33 @@ internal fun FrontmatterCustomizationKeyStyles(
     selected: FrontmatterKeyStyle,
     onSelected: (FrontmatterKeyStyle) -> Unit,
 ) {
+    val colors = LocalGeistColors.current
+    val styles = FrontmatterKeyStyle.entries
     BoxWithConstraints(Modifier.fillMaxWidth()) {
         val stacked = GeistAdaptiveLayout.stackActions(maxWidth.value, LocalDensity.current.fontScale)
         FlowRow(
             modifier = Modifier.fillMaxWidth().selectableGroup(),
-            horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
-            verticalArrangement = Arrangement.spacedBy(Spacing.xs),
-            maxItemsInEachRow = if (stacked) 1 else 2,
+            horizontalArrangement = Arrangement.spacedBy(2.dp),
+            verticalArrangement = Arrangement.spacedBy(2.dp),
+            maxItemsInEachRow = if (stacked) 1 else styles.size,
         ) {
-            FrontmatterKeyStyle.entries.forEach { style ->
+            styles.forEachIndexed { index, style ->
                 val isSelected = selected == style
-                val shape = RoundedCornerShape(Radii.card)
+                val shape = if (stacked) groupRowShape(index, styles.size) else groupCellShape(index, styles.size)
                 Row(
-                    modifier = Modifier.weight(1f).heightIn(min = GeistSizes.minimumTouchTarget)
+                    modifier = Modifier.weight(1f).heightIn(min = GroupRowMinHeight)
                         .testTag(FrontmatterCustomizationTags.style(style)).clip(shape)
-                        .background(if (isSelected) AppColors.accentSubtle else AppColors.bgSecondary)
-                        .border(1.dp, if (isSelected) AppColors.accentBorder else AppColors.borderDefault, shape)
+                        .background(if (isSelected) colors.secondaryContainer else colors.background200)
                         .selectable(selected = isSelected, role = Role.RadioButton, onClick = { onSelected(style) })
-                        .padding(Spacing.xs),
+                        .padding(horizontal = GeistSpacing.space4, vertical = GeistSpacing.space2),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+                    horizontalArrangement = Arrangement.spacedBy(GeistSpacing.space2),
                 ) {
+                    RadioButton(
+                        selected = isSelected, onClick = null,
+                        colors = RadioButtonDefaults.colors(selectedColor = colors.brandPrimary, unselectedColor = colors.secondary),
+                        modifier = Modifier.clearAndSetSemantics {},
+                    )
                     // These are the existing machine-readable style examples, not translated prose.
                     Text(
                         when (style) {
@@ -99,13 +109,8 @@ internal fun FrontmatterCustomizationKeyStyles(
                             FrontmatterKeyStyle.CAMEL_CASE -> "camelCase"
                         },
                         style = GeistType.copy16.copy(fontFamily = GeistMono),
-                        color = if (isSelected) AppColors.accent else AppColors.textSecondary,
+                        color = if (isSelected) colors.onSecondaryContainer else colors.primary,
                         modifier = Modifier.weight(1f),
-                    )
-                    RadioButton(
-                        selected = isSelected, onClick = null,
-                        colors = RadioButtonDefaults.colors(selectedColor = AppColors.accent, unselectedColor = AppColors.textSecondary),
-                        modifier = Modifier.clearAndSetSemantics {},
                     )
                 }
             }
@@ -113,7 +118,10 @@ internal fun FrontmatterCustomizationKeyStyles(
     }
 }
 
-/** Labels use the full width in reading layouts; there is only one labeled switch target. */
+/**
+ * One whole-row labeled switch target (the switch is indicator artwork). Labels use the full
+ * width in reading layouts; insets sit inside the label node so it reports that width.
+ */
 @Composable
 internal fun FrontmatterCustomizationToggle(
     label: String,
@@ -123,48 +131,42 @@ internal fun FrontmatterCustomizationToggle(
     textStyle: TextStyle = GeistType.copy16,
     fullWidthLabel: Boolean = false,
 ) {
+    val colors = LocalGeistColors.current
     val state = stringResource(if (checked) R.string.enabled else R.string.disabled)
     BoxWithConstraints(Modifier.fillMaxWidth()) {
         val stacked = fullWidthLabel ||
             GeistAdaptiveLayout.stackDetailedControls(maxWidth.value, LocalDensity.current.fontScale)
         val control: @Composable () -> Unit = {
-            Switch(
-                checked = checked, onCheckedChange = null,
-                modifier = Modifier.clearAndSetSemantics {},
-                colors = SwitchDefaults.colors(
-                    checkedThumbColor = AppColors.onAccent,
-                    checkedTrackColor = AppColors.accent,
-                    uncheckedThumbColor = AppColors.textMuted,
-                    uncheckedTrackColor = AppColors.bgSecondary,
-                    uncheckedBorderColor = AppColors.borderDefault,
-                ),
-            )
+            AppSwitch(checked = checked, onCheckedChange = null, modifier = Modifier.clearAndSetSemantics {})
         }
         Column(
-            Modifier.fillMaxWidth().heightIn(min = GeistSizes.minimumTouchTarget).testTag(tag)
+            Modifier.fillMaxWidth().heightIn(min = GroupRowMinHeight).testTag(tag)
                 .toggleable(value = checked, role = Role.Switch, onValueChange = onCheckedChange)
                 .semantics { stateDescription = state }
-                .padding(vertical = Spacing.xs),
+                .padding(vertical = GeistSpacing.space2),
+            verticalArrangement = Arrangement.Center,
         ) {
             if (stacked) {
-                Text(label, style = textStyle, color = AppColors.textPrimary,
-                    modifier = Modifier.fillMaxWidth().testTag(FrontmatterCustomizationTags.label(tag)))
+                Text(label, style = textStyle, color = colors.primary,
+                    modifier = Modifier.fillMaxWidth().testTag(FrontmatterCustomizationTags.label(tag))
+                        .padding(horizontal = GeistSpacing.space4))
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = GeistSpacing.space4),
+                    horizontalArrangement = Arrangement.spacedBy(GeistSpacing.space2),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text(state, style = GeistType.copy13, color = AppColors.textSecondary,
+                    Text(state, style = GeistType.copy13, color = colors.secondary,
                         modifier = Modifier.weight(1f).clearAndSetSemantics {})
                     control()
                 }
             } else {
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                    modifier = Modifier.fillMaxWidth().padding(end = GeistSpacing.space4),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text(label, style = textStyle, color = AppColors.textPrimary,
-                        modifier = Modifier.weight(1f).testTag(FrontmatterCustomizationTags.label(tag)))
+                    Text(label, style = textStyle, color = colors.primary,
+                        modifier = Modifier.weight(1f).testTag(FrontmatterCustomizationTags.label(tag))
+                            .padding(start = GeistSpacing.space4, end = GeistSpacing.space3))
                     control()
                 }
             }
@@ -182,8 +184,8 @@ internal fun FrontmatterCustomizationInputPair(
     BoxWithConstraints(Modifier.fillMaxWidth()) {
         val stacked = GeistAdaptiveLayout.stackActions(maxWidth.value, LocalDensity.current.fontScale)
         FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-            verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+            horizontalArrangement = Arrangement.spacedBy(GeistSpacing.space3),
+            verticalArrangement = Arrangement.spacedBy(GeistSpacing.space2),
             maxItemsInEachRow = if (stacked) 1 else 2,
         ) {
             keyField(Modifier.weight(1f))
@@ -192,7 +194,11 @@ internal fun FrontmatterCustomizationInputPair(
     }
 }
 
-/** No floating label or font reduction. Identifiers scroll during editing without rewriting them. */
+/**
+ * An outlined input with its label outside the field: no floating label or font reduction.
+ * Identifiers scroll during editing without rewriting them; long values get a wrapping reading
+ * surface below.
+ */
 @Composable
 internal fun FrontmatterCustomizationTextField(
     label: String,
@@ -205,6 +211,7 @@ internal fun FrontmatterCustomizationTextField(
     identifier: Boolean = true,
     imeAction: ImeAction = ImeAction.Done,
 ) {
+    val colors = LocalGeistColors.current
     val description = listOfNotNull(context, label).joinToString(", ")
     val focusManager = LocalFocusManager.current
     val keyboard = LocalSoftwareKeyboardController.current
@@ -213,7 +220,7 @@ internal fun FrontmatterCustomizationTextField(
     val style = if (identifier) GeistType.copy16.copy(fontFamily = GeistMono) else GeistType.copy16
     val measurer = rememberTextMeasurer()
     val density = LocalDensity.current
-    val horizontalPadding = with(density) { Spacing.sm.roundToPx() * 2 }
+    val horizontalPadding = with(density) { GeistSpacing.space4.roundToPx() * 2 }
     val valueOverflows = remember(value, style, measurer, density, fieldWidth, horizontalPadding) {
         // Only determine whether a second reading surface is needed. Keep measurement
         // bounded instead of creating an arbitrarily wide paragraph for a saved value.
@@ -224,48 +231,58 @@ internal fun FrontmatterCustomizationTextField(
             constraints = Constraints(maxWidth = (fieldWidth - horizontalPadding).coerceAtLeast(1)),
         ).hasVisualOverflow
     }
-    val shape = RoundedCornerShape(Radii.card)
-    Column(modifier.padding(vertical = Spacing.xxs), verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-        Text(label, style = GeistType.copy16, color = AppColors.textPrimary,
+    val shape = RoundedCornerShape(GeistRadii.extraSmall)
+    val outline = when {
+        focused -> colors.brandPrimary
+        enabled -> colors.gray.c700
+        else -> colors.gray.c500
+    }
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(GeistSpacing.space1)) {
+        Text(label, style = GeistType.copy16, color = if (enabled) colors.primary else colors.secondary,
             modifier = Modifier.fillMaxWidth().testTag(FrontmatterCustomizationTags.label(tag)))
         BasicTextField(
             value = value,
             onValueChange = onValueChange,
             enabled = enabled,
             singleLine = true,
-            textStyle = style.copy(color = if (enabled) AppColors.textPrimary else AppColors.textMuted),
-            cursorBrush = SolidColor(AppColors.accent),
+            textStyle = style.copy(color = if (enabled) colors.primary else colors.disabled),
+            cursorBrush = SolidColor(colors.brandPrimary),
             keyboardOptions = KeyboardOptions(imeAction = imeAction),
             keyboardActions = KeyboardActions(
                 onNext = { focusManager.moveFocus(FocusDirection.Next) },
                 onDone = { focusManager.clearFocus(); keyboard?.hide() },
             ),
             decorationBox = { innerField ->
-                Box(Modifier.padding(Spacing.sm), contentAlignment = Alignment.CenterStart) { innerField() }
+                Box(
+                    Modifier.padding(horizontal = GeistSpacing.space4, vertical = GeistSpacing.space3),
+                    contentAlignment = Alignment.CenterStart,
+                ) { innerField() }
             },
             modifier = Modifier.fillMaxWidth().heightIn(min = GeistSizes.minimumTouchTarget)
                 .testTag(tag).semantics { contentDescription = description }
                 .onSizeChanged { fieldWidth = it.width }
                 .onFocusChanged { focused = it.isFocused }
-                .clip(shape).background(AppColors.bgPrimary)
-                .border(1.dp, if (focused) AppColors.accent else AppColors.borderDefault, shape),
+                .clip(shape)
+                .border(if (focused) 2.dp else 1.dp, outline, shape),
         )
         if (fieldWidth > 0 && (valueOverflows || value.contains('\n'))) {
             // A separate wrapping reading surface also exposes long disabled values. It does
             // not make the single-line editing/touch target taller than a short viewport.
-            Text(value, style = style, color = AppColors.textSecondary,
+            Text(value, style = style, color = colors.secondary,
                 modifier = Modifier.fillMaxWidth().testTag(FrontmatterCustomizationTags.currentValue(tag)))
         }
     }
 }
 
+/** A metric's tonal list-group row: its whole-row switch, then its output-key input. */
 @Composable
 internal fun FrontmatterCustomizationMetric(
     field: CustomFrontmatterField,
+    shape: Shape,
     onEnabledChanged: (Boolean) -> Unit,
     onCustomKeyChanged: (String) -> Unit,
 ) {
-    Column(Modifier.fillMaxWidth().padding(vertical = Spacing.xs)) {
+    FrontmatterCustomizationGroupRow(shape, contentPadding = false) {
         FrontmatterCustomizationToggle(
             label = field.originalKey, checked = field.isEnabled, onCheckedChange = onEnabledChanged,
             tag = FrontmatterCustomizationTags.metric(field.originalKey),
@@ -275,29 +292,54 @@ internal fun FrontmatterCustomizationMetric(
             label = stringResource(R.string.frontmatter_output_key), value = field.customKey,
             onValueChange = onCustomKeyChanged, enabled = field.isEnabled,
             context = field.originalKey, tag = FrontmatterCustomizationTags.outputKey(field.originalKey),
+            modifier = Modifier.padding(start = GeistSpacing.space4, end = GeistSpacing.space4, bottom = GeistSpacing.space4),
         )
     }
 }
 
+/**
+ * A tonal list-group row container. With [contentPadding] its content sits inside the 16dp row
+ * inset; without it, whole-row targets (switch rows) span the row and inset their own content.
+ */
+@Composable
+internal fun FrontmatterCustomizationGroupRow(
+    shape: Shape,
+    modifier: Modifier = Modifier,
+    contentPadding: Boolean = true,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    val colors = LocalGeistColors.current
+    Column(
+        modifier.fillMaxWidth().clip(shape).background(colors.background200)
+            .then(if (contentPadding) Modifier.padding(GeistSpacing.space4) else Modifier),
+        verticalArrangement = Arrangement.spacedBy(if (contentPadding) GeistSpacing.space3 else GeistSpacing.space1),
+        content = content,
+    )
+}
+
+/** A saved key as its own tonal row: the key, its value, and a separate contextual Delete. */
 @Composable
 internal fun FrontmatterCustomizationEntry(
     title: String,
     subtitle: String,
     deleteDescription: String,
     tag: String,
+    shape: Shape,
     onDelete: () -> Unit,
 ) {
-    Column(Modifier.fillMaxWidth().testTag(tag).padding(vertical = Spacing.xs),
-        verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-        Text(title, style = GeistType.copy14Mono, color = AppColors.textPrimary,
-            modifier = Modifier.fillMaxWidth().testTag(FrontmatterCustomizationTags.label(tag)))
-        Text(subtitle, style = GeistType.copy13, color = AppColors.textSecondary,
-            modifier = Modifier.fillMaxWidth().testTag(FrontmatterCustomizationTags.currentValue(tag)))
+    val colors = LocalGeistColors.current
+    FrontmatterCustomizationGroupRow(shape, modifier = Modifier.testTag(tag)) {
+        Column(verticalArrangement = Arrangement.spacedBy(GeistSpacing.space1)) {
+            Text(title, style = GeistType.copy14Mono, color = colors.primary,
+                modifier = Modifier.fillMaxWidth().testTag(FrontmatterCustomizationTags.label(tag)))
+            Text(subtitle, style = GeistType.copy13, color = colors.secondary,
+                modifier = Modifier.fillMaxWidth().testTag(FrontmatterCustomizationTags.currentValue(tag)))
+        }
         // Keep the action compact even for arbitrarily long saved keys/values. Its spoken
         // label includes the visible key and group; its current value remains available too.
         SecondaryButton(
             text = stringResource(R.string.action_delete_field), onClick = onDelete,
-            modifier = Modifier.fillMaxWidth().testTag(FrontmatterCustomizationTags.delete(tag))
+            modifier = Modifier.align(Alignment.End).testTag(FrontmatterCustomizationTags.delete(tag))
                 .semantics { contentDescription = deleteDescription; stateDescription = subtitle },
         )
     }

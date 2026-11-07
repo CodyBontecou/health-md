@@ -6,7 +6,6 @@
       "id": "healthmd.product_capabilities",
       "version": 1,
       "path": "packages/contracts/product-capabilities.json",
-      "sha256": "1c641264d087569a4baee4fd41ff936d0df795bdb7523e2b5f905de829ae1826",
       "implementations": [
         "packages/contracts/validate.py",
         "apps/apple/HealthMdTests/Contracts/ProductCapabilityManifestTests.swift",
@@ -505,6 +504,29 @@
       ]
     },
     {
+      "id": "healthmd.health_data.apple_detail",
+      "version": 12,
+      "status": "inventory_only",
+      "summary": "Apple apple-v12 compatibility detail successor: the Night begins apple-v8 grammar plus start-owned per-category detailSamples and per-stage sleep source attribution, selected only by an explicit detailed override for an expansion category or sleep. apple-v8 bytes are unchanged.",
+      "authorities": [
+        "apps/apple/HealthMd/Shared/Models/DetailSample.swift",
+        "apps/apple/HealthMd/Shared/Models/ExportSettingsSnapshot.swift",
+        "docs/features/per-group-export-detail.md"
+      ],
+      "consumers": [
+        "apps/apple/HealthMdTests/Export/ExportSchemaSignatureTests.swift",
+        "apps/apple/HealthMdTests/Export/AppleV12DetailExpansionTests.swift"
+      ],
+      "fixtures": [
+        {
+          "path": "apps/apple/HealthMdTests/Fixtures/Export/export_schema_signature_v12.json",
+          "sha256": "a56f4e7aabd2d074e32bf8201ca8e7191ef573cf4b35343374cf1a83274f3efa",
+          "provenance": "Reviewed apple-v12 signature generated from the synthetic detail-expansion fixture day by the Apple export schema signature tests.",
+          "mirrors": []
+        }
+      ]
+    },
+    {
       "id": "healthmd.provider_sections",
       "version": 1,
       "status": "canonical",
@@ -638,6 +660,29 @@
           "path": "apps/android/app/src/test/resources/export-contract/signatures/exporter_signature_android_analytical_v5.json",
           "sha256": "f92aaef42e1198bcd1b7591aa5248fc759270f2900ec108042d0375ed418152c",
           "provenance": "Generated from the reviewed synthetic Android exporter fixture and guarded as the shipped analytical v5 profile.",
+          "mirrors": []
+        }
+      ]
+    },
+    {
+      "id": "healthmd.health_data.android_analytical_detail",
+      "version": 7,
+      "status": "inventory_only",
+      "summary": "Android android-analytical-v7 compatibility detail successor: the analytical v5 grammar plus per-record interval arrays for calories, distance, floors, elevation, hydration and body records, selected only by an explicit detailed activity, nutrition or body override. Frozen v4 and analytical v5 bytes are unchanged.",
+      "authorities": [
+        "apps/android/app/src/main/java/com/healthmd/domain/model/DailyRecordSchemaProfile.kt",
+        "apps/android/app/src/main/java/com/healthmd/data/export/JsonExporter.kt",
+        "docs/features/per-group-export-detail.md"
+      ],
+      "consumers": [
+        "apps/android/app/src/test/java/com/healthmd/export/ExporterSchemaSignatureTest.kt",
+        "apps/android/app/src/test/java/com/healthmd/export/AnalyticalV7ExportTest.kt"
+      ],
+      "fixtures": [
+        {
+          "path": "apps/android/app/src/test/resources/export-contract/signatures/exporter_signature_android_analytical_v7.json",
+          "sha256": "23dfa58936442fe8c1793f5967ea7cc9d1212eb9d9fd3a2c0025402089811a97",
+          "provenance": "Reviewed android-analytical-v7 signature generated from the synthetic v7 exporter fixture day; v4 and v5 signatures are unchanged.",
           "mirrors": []
         }
       ]
@@ -793,14 +838,20 @@
         "apps/apple/HealthMd/Shared/Models/ClinicExportAuthorization.swift",
         "apps/apple/HealthMd/Shared/Models/ClinicGrantVerifier.swift",
         "apps/android/app/src/main/java/com/healthmd/domain/billing/ClinicExportAuthorization.kt",
-        "apps/android/app/src/main/java/com/healthmd/domain/billing/ClinicGrantVerifier.kt"
+        "apps/android/app/src/main/java/com/healthmd/domain/billing/ClinicGrantVerifier.kt",
+        "apps/wake/src/state.ts",
+        "apps/apple/HealthMd/iOS/ClinicSyncDoorbellManager.swift",
+        "apps/android/app/src/main/java/com/healthmd/data/clinicsync/ClinicSyncDoorbell.kt"
       ],
       "consumers": [
         "scripts/tests/test_clinic_export_authorization.py",
         "apps/android/app/src/test/java/com/healthmd/domain/billing/ClinicExportAuthorizationTest.kt",
         "apps/licensing/test/service.test.mjs",
         "apps/licensing/test/production.test.mjs",
-        "apps/android/app/src/test/java/com/healthmd/domain/billing/ClinicSponsorshipRecoveryTest.kt"
+        "apps/android/app/src/test/java/com/healthmd/domain/billing/ClinicSponsorshipRecoveryTest.kt",
+        "apps/android/app/src/test/java/com/healthmd/data/clinicsync/ClinicSyncDoorbellManagerTest.kt",
+        "apps/apple/HealthMdTests/Wake/ClinicSyncDoorbellManagerTests.swift",
+        "apps/wake/src/delegated-sync.test.ts"
       ],
       "documentation": [
         "apps/licensing/README.md"
@@ -816,6 +867,12 @@
           "path": "packages/contracts/clinic-sponsorship/v1/verification-fixtures.json",
           "sha256": "310ae896331c3f1c0e15088bae9756bb7d1cd89005c4b75454219f1ed766b9e5",
           "provenance": "Synthetic authorization and ephemeral P-256 verification vectors; no private signing key or live patient data.",
+          "mirrors": []
+        },
+        {
+          "path": "packages/contracts/clinic-sponsorship/v1/sync-doorbell-fixtures.json",
+          "sha256": "f7dc46a6a05839ca5d0407701a0d557d30fabd28b9f38b553b676ec0c8b30684",
+          "provenance": "Synthetic clinic sync doorbell messages, RFC-0005 wake request HMAC vector and push payloads; fictional key and identifiers, no patient data.",
           "mirrors": []
         }
       ]

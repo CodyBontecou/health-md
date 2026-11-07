@@ -354,6 +354,11 @@ extension HealthData {
             )
         ]
 
+        if wakeDateContext == nil, snapshot.detailExpansion != nil {
+            json["schema_version"] = AppleDetailExpansionSchema.version
+            json["schema_profile"] = AppleDetailExpansionSchema.profile
+        }
+
         if let context = wakeDateContext {
             json["schema_version"] = 11
             json["schema_profile"] = "apple-v11"
@@ -555,6 +560,8 @@ extension HealthData {
                 sleepDict["inBedTimeFormatted"] = formatDuration(snapshot.sleep.inBedSeconds)
             }
             if !snapshot.sleep.stages.isEmpty {
+                // apple-v12 adds per-stage source attribution; apple-v8 stage objects are unchanged.
+                let attributesSources = snapshot.detailExpansion != nil
                 sleepDict["sleepStages"] = FoundationJSONLazyArray(snapshot.sleep.stages) { stage -> [String: Any] in
                     var dict: [String: Any] = [
                         "stage": stage.stage,
@@ -563,6 +570,11 @@ extension HealthData {
                         "durationSeconds": stage.endDate.timeIntervalSince(stage.startDate)
                     ]
                     attachMetadata(stage.metadata, to: &dict)
+                    if attributesSources {
+                        if let uuid = stage.sourceUUID { dict["sourceUUID"] = uuid.uuidString }
+                        if let source = stage.source { dict["source"] = source }
+                        if let sourceName = stage.sourceName { dict["sourceName"] = sourceName }
+                    }
                     return dict
                 }
             }
@@ -1297,6 +1309,20 @@ extension HealthData {
             json["other"] = dict
         }
 
+        // apple-v12: one `detailSamples` entry per HealthKit source sample. A category object is
+        // created when samples exist without a daily summary so no sample is ever dropped.
+        if let expansion = snapshot.detailExpansion {
+            for entry in ExportDataSnapshot.DetailExpansion.orderedGroups {
+                let samples = expansion.samples(for: entry.group)
+                guard !samples.isEmpty else { continue }
+                var dict = json[entry.jsonKey] as? [String: Any] ?? [:]
+                dict["detailSamples"] = FoundationJSONLazyArray(samples) { sample -> [String: Any] in
+                    Self.appleV12DetailSampleJSON(sample)
+                }
+                json[entry.jsonKey] = dict
+            }
+        }
+
         if let providers = snapshot.providers, !providers.isEmpty {
             json["providers"] = try providers.foundationJSONObject()
         }
@@ -1314,5 +1340,24 @@ extension HealthData {
         }
 
         return json
+    }
+
+    /// apple-v12 `detailSamples` element. Exact UTC instants (nanosecond grammar shared with
+    /// `bloodPressureSamples`); quantity samples carry `value`/`unit`, category samples
+    /// `categoryValue`.
+    nonisolated static func appleV12DetailSampleJSON(_ sample: DetailSample) -> [String: Any] {
+        var dict: [String: Any] = [
+            "metric": sample.metric,
+            "healthKitType": sample.healthKitType,
+            "timestamp": CanonicalRFC3339UTC.string(from: sample.startDate),
+            "endDate": CanonicalRFC3339UTC.string(from: sample.endDate),
+        ]
+        if let value = sample.value { dict["value"] = value }
+        if let unit = sample.unit { dict["unit"] = unit }
+        if let categoryValue = sample.categoryValue { dict["categoryValue"] = categoryValue }
+        if let uuid = sample.sourceUUID { dict["sourceUUID"] = uuid.uuidString }
+        if let source = sample.source { dict["source"] = source }
+        if let sourceName = sample.sourceName { dict["sourceName"] = sourceName }
+        return dict
     }
 }

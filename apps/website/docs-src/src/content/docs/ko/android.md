@@ -26,6 +26,8 @@ description: "Android용 Health.md 설정하세요. Health Connect 데이터를 
 
 Android용 Health.md Health Connect 로컬 우선 건강 저널로 바꿔줍니다. 필요한 지표를 선택하고 출력을 미리 봅니다. 그런 다음 파일을 로컬 폴더, Obsidian 볼트, 동기화된 공급자 폴더 또는 쓰기 가능한 Android 문서 공급자로 내보냅니다.
 
+앱에는 탭이 세 개 있습니다. **보관함**은 내보내기로 기록된 건강 데이터 날짜를 보여 주는 달력이며, 빠진 날짜를 채울 수 있습니다. **자동화**에는 내보내기 프로필과 일정이 있습니다. **설정**에는 저장 위치, 데이터, 앱 옵션이 있습니다. **지금 내보내기** 버튼으로 설정을 제외한 모든 탭에서 일회성 내보내기를 시작할 수 있습니다.
+
 <div class="options">
  <div class="option"> <strong> Health Connect 소스 </strong> <p> Android의 기기 내 Health Connect API를 통해 활동, 수면, 심장, 활력, 신체 측정, 영양, 운동 및 기타 카테고리를 읽습니다. </p> </div>
  <div class="option"> <strong> Obsidian -네이티브 출력 </strong> <p> 일일 메모, YAML/머리말, Obsidian 기본 친화적 메모, 개별 항목 및 Health.md Obsidian 플러그인과 호환되는 JSON을 작성합니다. </p> </div>

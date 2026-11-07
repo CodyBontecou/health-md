@@ -68,6 +68,8 @@ android {
 
         // Explicit opt-in; absent or malformed values keep claim entry points disabled.
         buildConfigField("boolean", "MYSELF_CLAIM_ENABLED", "false")
+        // Clinic access stays hidden until it launches; existing sponsorships keep working.
+        buildConfigField("boolean", "CLINIC_ACCESS_ENABLED", "false")
         // Trust is baked into the app build, never supplied by a clinic invitation.
         for (name in listOf("CLINIC_LICENSING_URL", "CLINIC_LICENSING_ISSUER", "CLINIC_LICENSING_KEY_ID", "CLINIC_LICENSING_PUBLIC_KEY_DER", "CLINIC_LICENSING_TRUSTED_KEYS_JSON")) {
             buildConfigField("String", name, configuredClinicValue(name).asBuildConfigString())
@@ -132,6 +134,10 @@ android {
             buildConfigField("String", "WHOOP_TOKEN_BROKER_URL", configuredValue("WHOOP_TOKEN_BROKER_URL").asBuildConfigString())
             buildConfigField("String", "WHOOP_HEALTHMD_BROKER_URL", configuredValue("WHOOP_HEALTHMD_BROKER_URL").asBuildConfigString())
             buildConfigField("String", "WHOOP_HEALTHMD_BROKER_CLIENT_TOKEN", configuredValue("WHOOP_HEALTHMD_BROKER_CLIENT_TOKEN").asBuildConfigString())
+            // Clinic sync requests over FCM. Empty values keep the transport unavailable.
+            for (name in listOf("FIREBASE_PROJECT_ID", "FIREBASE_APPLICATION_ID", "FIREBASE_API_KEY", "FIREBASE_SENDER_ID")) {
+                buildConfigField("String", name, configuredValue(name).asBuildConfigString())
+            }
             signingConfig = signingConfigs.getByName("release")
         }
         create("fdroid") {
@@ -270,6 +276,7 @@ dependencies {
     add("playImplementation", libs.billing.ktx)
     add("playImplementation", libs.play.review)
     add("playImplementation", libs.play.review.ktx)
+    add("playImplementation", libs.firebase.messaging)
 
     // Tagged, on-device PDF authoring. The port is Apache-2.0. Its obsolete
     // Bouncy Castle transitives are excluded because direct-protocol already supplies bcprov-jdk18on.

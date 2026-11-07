@@ -376,8 +376,6 @@
     <string name="export_progress_title">Gesundheitsdaten werden exportiert</string>
 
     <!-- Navigation labels -->
-    <string name="nav_export">Export</string>
-    <string name="nav_schedule">Zeitplan</string>
     <string name="nav_history">Verlauf</string>
     <string name="nav_settings">Einstellungen</string>
 
@@ -532,6 +530,14 @@
     <string name="feedback_no_app_available">Keine App zum Öffnen dieses Links verfügbar</string>
     <string name="granular_data_title">Detaillierte Zeitreihen einbeziehen</string>
     <string name="granular_data_description">Fügen Sie zeitgestempelte Messwerte wie Herzfrequenz und Schlafphasen zu Kompatibilitätsexporten hinzu. Für eine API-vollständige Kopie verwenden Sie den API-Rohdaten-Snapshot.</string>
+    <string name="detail_overrides_title">Detailgrad nach Kategorie</string>
+    <string name="detail_overrides_description">Überschreibe die Standardeinstellung für einzelne Kategorien. Zusammenfassung behält nur Tageswerte; Tageszusammenfassungen ändern sich nie.</string>
+    <string name="detail_choice_default">Standard</string>
+    <string name="detail_choice_summary">Zusammenfassung</string>
+    <string name="detail_choice_sessions">Sitzungen</string>
+    <string name="detail_choice_detailed">Detailliert</string>
+    <string name="detail_group_sleep_hint">Sitzungen listet jede Schlafsitzung mit vollständigem Datum und Uhrzeit. Detailliert fügt Schlafphasen hinzu.</string>
+    <string name="detail_expansion_schema_hint">Detailliert bei Aktivität, Ernährung oder Körper fügt jeden Quelldatensatz hinzu und stellt analytische JSON-, CSV- und Markdown-Exporte auf Schema 7 um.</string>
     <string name="sleep_attribution_title">Zuordnung des Schlaftags</string>
     <string name="sleep_attribution_night_begins">Nachtbeginn</string>
     <string name="sleep_attribution_morning_ends">Morgenende</string>
@@ -641,10 +647,6 @@
     <string name="scheduled_recovery_result_complete">Wiederherstellung geplanter Exporte abgeschlossen.</string>
     <string name="scheduled_recovery_result_blocked">Die Wiederherstellung geplanter Exporte ist noch nicht möglich.</string>
     <string name="not_now">Jetzt nicht</string>
-    <string name="release_notes_title">Neu in %s</string>
-    <string name="release_notes_settings_hint">Sie können Exportformate, benutzerdefiniertes Markdown und Metriken in den Einstellungen anpassen.</string>
-    <string name="release_notes_open_settings">Einstellungen öffnen</string>
-    <string name="release_notes_got_it">Verstanden</string>
     <string name="release_notes_highlight_feedback">Direct-CLI-Sitzungen verbinden sich nach kurzen Verbindungsabbrüchen am Desktop automatisch neu, sodass Exporte zuverlässig abgeschlossen werden.</string>
     <string name="release_notes_highlight_export_parity">Wake-Window-Befehle des Desktops warten bis zu 120 Sekunden, bis Sie die App öffnen und sich verbinden — ganz ohne Push-Benachrichtigungen.</string>
     <string name="release_notes_highlight_templates">Manuelles Koppeln mit Computeradresse, Port und 20-stelligem Code funktioniert weiterhin, auch mit älteren CLI-Versionen.</string>
@@ -1078,6 +1080,8 @@
     <string name="export_preview_api_preparation_failed">Die Vorbereitung des API-Exports ist fehlgeschlagen.</string>
     <string name="export_preview_artifacts_per_range">Artefakte pro Bereich</string>
     <string name="export_preview_back_description">Zurück zur Exportvorschau</string>
+    <string name="export_preview_wrap_lines">Zeilen umbrechen</string>
+    <string name="export_preview_format_text">Text formatieren</string>
     <string name="export_preview_destination_label">Ziel</string>
     <string name="export_preview_empty_file">(leere Datei)</string>
     <string name="export_preview_formats_per_day">Formate pro Tag</string>
@@ -1468,10 +1472,6 @@
     <string name="whoop_disconnect">WHOOP trennen</string>
     <string name="whoop_use_for_exports">WHOOP für Exporte verwenden</string>
     <string name="paywall_access_subtitle">Wähle ein Abo oder lebenslangen Zugriff für dein privates Gesundheitsarchiv. Berechtigte Abos bieten eine kostenlose 7-tägige Testphase.</string>
-    <string name="paywall_access_active_title">Dein Zugriff ist aktiv</string>
-    <string name="paywall_access_active_body">Fahre mit der Einrichtung fort, um deine Gesundheitsdaten zu verbinden und den Speicherort deines privaten Archivs auszuwählen.</string>
-    <string name="clinic_access_active_title">Dein Klinikzugang ist aktiv</string>
-    <string name="clinic_access_active_body">Deine Klinik übernimmt die Übermittlung an ihren freigegebenen Endpunkt. Du entscheidest, was du teilst. Andere Exportziele erfordern deinen eigenen Health.md-Zugriff.</string>
     <string name="paywall_plan_choices">Wöchentlicher, jährlicher oder lebenslanger Zugriff</string>
     <string name="paywall_weekly_price">%1$s / Woche</string>
     <string name="paywall_yearly_price">%1$s / Jahr</string>
@@ -1482,30 +1482,18 @@
     <string name="paywall_terms">Nutzungsbedingungen</string>
     <string name="paywall_privacy">Datenschutz</string>
     <string name="paywall_subscription_disclosure">Berechtigte Abos bieten eine kostenlose 7-tägige Testphase und verlängern sich danach automatisch zum angezeigten Preis, sofern sie nicht vor Ende der Testphase oder des aktuellen Zeitraums gekündigt werden. Verwaltung und Kündigung erfolgen in Google Play. Lebenslanger Zugriff wird sofort einmalig berechnet. Bestehender bezahlter Zugriff bleibt erhalten. Lifetime hat keine Testversion. Durch das Löschen der App oder den Kauf von Lifetime wird ein bestehendes Abonnement nicht gekündigt.</string>
+    <plurals name="widget_archive_gaps">
+        <item quantity="one">%1$s Lücke</item>
+        <item quantity="other">%1$s Lücken</item>
+    </plurals>
+    <plurals name="widget_archive_days_in_month">
+        <item quantity="one">Tag im %1$s</item>
+        <item quantity="other">Tage im %1$s</item>
+    </plurals>
 
-    <!-- Signal carousel paywall -->
-    <string name="paywall_signal_title">Jeder Herzschlag, festgehalten.</string>
-    <string name="paywall_signal_lede">Health.md macht aus Health Connect jeden Tag eine Markdown-Notiz – gespeichert im Ordner deiner Wahl.</string>
-    <string name="paywall_signal_example">Beispiel</string>
-    <string name="paywall_signal_trial_title">Sieben Tage geschenkt.</string>
-    <string name="paywall_signal_day_today">Heute</string>
-    <string name="paywall_signal_day_today_body">Unbegrenzte Exporte, Zeitpläne und Automationen.</string>
-    <string name="paywall_signal_day_cancel">Jederzeit kündbar</string>
-    <string name="paywall_signal_day_cancel_body">Kündige vor Ende der Testphase in Google Play.</string>
-    <string name="paywall_signal_day_end">Testphase endet</string>
-    <string name="paywall_signal_day_end_body">Danach %1$s.</string>
-    <string name="paywall_signal_plans_title">Wähle deinen Weg.</string>
-    <string name="paywall_signal_best_value">Bestes Angebot</string>
-    <string name="paywall_signal_free_week">7 Tage gratis</string>
-    <string name="paywall_signal_lifetime_detail">Heute einmal zahlen. Keine Verlängerung.</string>
-    <string name="paywall_signal_subscription_detail">Verlängert sich automatisch. Jederzeit in Google Play kündbar.</string>
-    <string name="paywall_signal_cta_trial">7 Tage gratis testen</string>
-    <string name="paywall_signal_cta_subscribe">Abonnieren</string>
-    <string name="paywall_signal_cta_lifetime">Dauerzugriff kaufen</string>
-    <string name="paywall_signal_step_archive">Archiv</string>
-    <string name="paywall_signal_step_trial">Testphase</string>
-    <string name="paywall_signal_step_plans">Tarife</string>
-    <string name="paywall_signal_plan_weekly">Wöchentlich</string>
-    <string name="paywall_signal_plan_yearly">Jährlich</string>
-    <string name="paywall_signal_plan_lifetime">Dauerzugriff</string>
+    <string name="clinic_sync_channel_name">Synchronisierungsanfragen der Klinik</string>
+    <string name="clinic_sync_request_body">Deine Klinik bittet um deine neuesten Gesundheitsdaten. Tippe, um sie zu senden.</string>
+    <string name="clinic_sync_result_sent">Deine neuesten Daten wurden an deine Klinik gesendet.</string>
+    <string name="clinic_sync_result_failed">Deine Daten konnten nicht an die Klinik gesendet werden. Öffne Health.md und versuche es erneut.</string>
+    <string name="clinic_sync_result_profile_missing">Öffne den Klinikzugang in Health.md und wähle zuerst Klinikziel verwenden.</string>
 </resources>

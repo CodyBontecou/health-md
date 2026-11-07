@@ -7,92 +7,97 @@ Mit dieser Anleitung erstellen Sie einen kleinen, überprüfbaren Export, bevor 
 
 <div class="availability available">
 <strong>Jetzt verfügbar · Health.md für iPhone</strong>
-<p>Der erste Export ist im kostenlosen Kontingent enthalten. Zeitplanung und weitere kostenpflichtige Funktionen können Sie später konfigurieren.</p>
+<p>Für Exporte benötigen Sie eine aktive Testphase, ein Abo oder Lifetime-Zugang. Zeitpläne und andere Automationen können Sie später einrichten.</p>
 </div>
 
 ## Bevor Sie beginnen
 
-Sie benötigen:
+Stellen Sie vorab sicher, dass Folgendes vorhanden ist:
 
-- [Health.md im App Store](https://apps.apple.com/app/health-md/id6757763969) auf einem iPhone mit Apple Health-Daten;
-- die Berechtigung, mindestens eine Apple Health-Kategorie zu lesen;
-- ein beschreibbares Ziel in Dateien, etwa iCloud Drive, „Auf meinem iPhone“ oder einen Obsidian-Vault.
+- [Health.md aus dem App Store](https://apps.apple.com/app/health-md/id6757763969), installiert auf einem iPhone mit Apple-Health-Daten
+- die Berechtigung, mindestens eine Apple-Health-Kategorie zu lesen
+- ein beschreibbarer Ordner in Dateien, in iCloud Drive, auf „Auf meinem iPhone“ oder in einem Obsidian-Vault.
 
-Behalten Sie für den kürzesten ersten Durchlauf die Standardmetriken und die Markdown-Ausgabe bei. Beginnen Sie mit **Gestern** oder einem anderen Zeitraum von einem Tag statt mit dem gesamten verfügbaren Verlauf.
+Behalten Sie die Standardmetriken und das Markdown-Format bei. Wählen Sie **Gestern** für einen Zeitraum von einem Tag.
 
 ## 1. iPhone-Einrichtung abschließen
 
-Tippen Sie beim ersten Start auf **Start Setup** („Einrichtung starten“) und führen Sie die sieben Onboarding-Schritte aus. Autorisieren Sie die gewünschten Gesundheitskategorien, prüfen Sie die Beispielausgabe, wählen Sie einen Ordner in Dateien und fahren Sie bis **Ready** („Bereit“) fort. Wenn der Schritt zum Freischalten erscheint, können Sie mit dem kostenlosen Kontingent fortfahren.
+Health.md zeigt fünf Einrichtungsschritte. Keiner davon blockiert: Apple-Health-Zugriff und Ordner können Sie überspringen und später nachholen.
 
-Wenn Sie das Onboarding bereits abgeschlossen haben, öffnen Sie den Tab **Export** und vergewissern Sie sich, dass Apple Health und der lokale Ordner bereit sind. Ersetzen Sie ein fehlendes oder nicht erreichbares Ziel über die Ordnerauswahl.
+Tippen Sie beim ersten Start auf **Apple Health verbinden**. Autorisieren Sie die gewünschten Gesundheitskategorien, prüfen Sie die Beispielausgabe, wählen Sie einen Ordner in Dateien und fahren Sie bis zum letzten Schritt fort.
+
+Nach der Einrichtung öffnet die App das **Archiv**. Wenn Apple Health oder der Ordner Aufmerksamkeit brauchen, nennt die Karte **Aufmerksamkeit nötig** oben, was zu beheben ist.
 
 <div class="docs-screenshot-grid">
 <figure class="docs-screenshot">
-  <a href="/docs/assets/docs/iphone-first-export/onboarding-start.webp" target="_blank" rel="noopener" aria-label="Onboarding-Screenshot in voller Größe öffnen">
-    <img src="/docs/assets/docs/iphone-first-export/onboarding-start.webp" width="1206" height="2622" loading="lazy" alt="Willkommensbildschirm des Health.md-Onboardings bei Schritt 1 von 7 mit der Schaltfläche „Start Setup“." />
+  <a href="/docs/assets/docs/iphone-first-export/onboarding-start.webp" target="_blank" rel="noopener" aria-label="Einrichtungs-Screenshot in voller Größe öffnen">
+    <img src="/docs/assets/docs/iphone-first-export/onboarding-start.webp" width="1206" height="2622" loading="lazy" alt="Health.md-Einrichtung bei Schritt 1 von 5 mit drei aufgelisteten Schritten und der Taste zum Verbinden mit Apple Health." />
   </a>
-  <figcaption>„Start Setup“ stellt das lokale Archiv, geplante Notizen und das Ordnermodell vor, bevor die App Zugriff anfordert. Die Benutzeroberfläche dieser authentischen Aufnahme bleibt auf Englisch.</figcaption>
+  <figcaption>Die Einrichtung erklärt, was Health.md liest und wohin Dateien gehen, bevor sie Zugriff anfordert. Die Oberfläche dieser Aufnahme bleibt auf Englisch.</figcaption>
 </figure>
 <figure class="docs-screenshot">
-  <a href="/docs/assets/docs/iphone-first-export/export-setup-required.webp" target="_blank" rel="noopener" aria-label="Screenshot der erforderlichen Einrichtung in voller Größe öffnen">
-    <img src="/docs/assets/docs/iphone-first-export/export-setup-required.webp" width="1206" height="2622" loading="lazy" alt="Health.md-Tab „Export“ mit nicht verbundenem Health-Zugriff, verfügbarer Ordnerauswahl, ausgewähltem lokalen iPhone-Ordner und Schaltflächen für den Datumsbereich." />
+  <a href="/docs/assets/docs/iphone-first-export/export-now.webp" target="_blank" rel="noopener" aria-label="Screenshot von „Jetzt exportieren“ in voller Größe öffnen">
+    <img src="/docs/assets/docs/iphone-first-export/export-now.webp" width="1206" height="2622" loading="lazy" alt="Health.md-Blatt „Jetzt exportieren“ mit ausgewähltem Zeitraum Gestern, einem Schalter für nur die Bereichszusammenfassung, einer Übersicht für eine Datei und einen Tag und einer Exporttaste." />
   </a>
-  <figcaption>Die Bereitschaftskennzeichnungen weisen eindeutig auf fehlende Health- und Ordnereinrichtung hin. Auch diese Referenzaufnahme bleibt auf Englisch und zeigt bewusst beide Anforderungen als unvollständig.</figcaption>
+  <figcaption>„Jetzt exportieren“ zeigt vor dem Start, was geschrieben wird. Auch diese Referenzaufnahme zeigt die Oberfläche auf Englisch.</figcaption>
 </figure>
 </div>
 
 ## 2. Kleinen Export auswählen
 
-Im Tab „Export“:
+Tippen Sie auf die runde Taste **Jetzt exportieren** neben der Tab-Leiste. Dann:
 
-1. Wählen Sie **Lokaler iPhone-Ordner** als Ziel.
-2. Wählen Sie **Gestern** oder einen benutzerdefinierten Zeitraum von einem Tag.
-3. Behalten Sie für den ersten Durchlauf die Standardauswahl der Metriken bei.
-4. Lassen Sie **Markdown** ausgewählt. Sie können CSV, JSON oder Obsidian Bases hinzufügen, nachdem der grundlegende Ablauf funktioniert.
+1. Wählen Sie **Gestern**.
+2. Lassen Sie **Nur Bereichszusammenfassung** ausgeschaltet.
+3. Prüfen Sie, dass **Wird geschrieben** Ihren Ordner und etwa eine Datei für einen Tag nennt.
 
-Ein kurzer Zeitraum erleichtert es, Berechtigungen, leere Kategorien und Zielprobleme nachzuvollziehen. Außerdem vermeiden Sie so, eine lange laufende erste Anfrage fälschlich für einen fehlgeschlagenen Export zu halten.
+Die Standard-Automation verwendet die Standardauswahl an Metriken und **Markdown**. Zum Ändern öffnen Sie **Automationen**, wählen die Automation und dann **Metriken** oder **Formate**. Fügen Sie CSV, JSON oder Obsidian Bases erst hinzu, wenn dieser Export funktioniert. Ein kurzer Zeitraum macht Berechtigungs-, Leerdaten- und Ordnerprobleme leichter auffindbar.
 
 <figure class="docs-screenshot docs-screenshot-single">
   <a href="/docs/assets/docs/de/iphone-first-export/metric-selection.webp" target="_blank" rel="noopener" aria-label="Screenshot der Metrikauswahl in voller Größe öffnen">
-    <img src="/docs/assets/docs/de/iphone-first-export/metric-selection.webp" width="1206" height="2622" loading="lazy" alt="Aktueller Bildschirm „Gesundheitsmetriken“ mit 217 von 219 aktivierten Metriken, eingeschalteten Standardmetriken, einem Suchfeld und den aufklappbaren Kategorien Schlaf, Aktivität und Herz." />
+    <img src="/docs/assets/docs/de/iphone-first-export/metric-selection.webp" width="1206" height="2622" loading="lazy" alt="Health.md-Seite „Metriken“ mit der Anzahl aktiver Metriken, den Tasten Empfohlen, Alle auswählen und Alle abwählen, einem Suchfeld und Kategorien mit Anzahlen." />
   </a>
-  <figcaption>Die Gesamtzahl der Metriken hängt von der installierten App-Version und den Berechtigungen ab. Diese lokalisierte Aufnahme zeigt 217 von 219 aktivierten Metriken und eingeschaltete Standardmetriken; für den ersten Export ist dieser Umfang nicht erforderlich.</figcaption>
+  <figcaption>Die Anzahl der Metriken hängt von App-Version und Berechtigungen ab. Diese lokalisierte Aufnahme zeigt 217 von 219 aktivierten Metriken.</figcaption>
 </figure>
 
 ## 3. Vor dem Schreiben Vorschau prüfen
 
-Tippen Sie auf **Vorschau**. Die Vorschau benötigt Zugriff auf Apple Health, aber keinen beschreibbaren lokalen Ordner. Dadurch lässt sich ein Problem mit Leseberechtigungen von einem Problem mit Dateien unterscheiden.
+Tippen Sie in **Jetzt exportieren** auf **Vorschau**. Die Vorschau braucht Apple-Health-Zugriff, aber keinen beschreibbaren Ordner.
+
+Nutzen Sie die Vorschau, um ein Berechtigungsproblem bei Apple Health zu erkennen, bevor Sie den Ordner testen.
 
 Prüfen Sie, ob die Vorschau Folgendes zeigt:
 
-- das angeforderte Datum;
-- die erwarteten Metriknamen und Einheiten;
-- ausdrücklich fehlende oder nicht verfügbare Werte statt erfundener Nullen;
-- das ausgewählte Format und die Dateinamenstruktur.
+- das angeforderte Datum
+- die erwarteten Metriknamen und Einheiten
+- fehlende oder nicht verfügbare Werte statt falscher Nullwerte
+- das gewählte Format und die Dateinamenstruktur.
 
-Kehren Sie zum Tab „Export“ zurück, wenn Sie Datumsangaben, Metriken oder Formatierung anpassen müssen.
+Schließen Sie die Vorschau und ändern Sie die Einstellungen der Automation, wenn Sie Metriken oder Formate ändern müssen.
 
 <figure class="docs-screenshot docs-screenshot-single">
   <a href="/docs/assets/docs/de/iphone-first-export/export-preview.webp" target="_blank" rel="noopener" aria-label="Screenshot der Exportvorschau in voller Größe öffnen">
-    <img src="/docs/assets/docs/de/iphone-first-export/export-preview.webp" width="1206" height="2622" loading="lazy" alt="Health.md-Exportvorschau mit Schätzung für einen eintägigen Markdown-Export, Roll-up-Zeiträumen, Ziel und generiertem Dateinamen." />
+    <img src="/docs/assets/docs/de/iphone-first-export/export-preview.webp" width="1206" height="2622" loading="lazy" alt="Health.md-Exportvorschau mit Schlaffenster, Schätzung für einen Markdown-Tag, Zusammenfassungszeitraum, Zielordner und erzeugtem Dateinamen." />
   </a>
-  <figcaption>Die Vorschau trennt die Prüfung der Ausgabe vom Schreiben. Diese reproduzierbare Dokumentationsaufnahme verwendet Beispieldaten und zeigt ausdrücklich, dass kein Vault ausgewählt ist.</figcaption>
+  <figcaption>Dieses Beispiel verwendet Beispiel-Gesundheitsdaten.</figcaption>
 </figure>
 
 ## 4. Exportieren und verifizieren
 
-Tippen Sie auf **Daten exportieren**. Wenn die Einrichtung unvollständig ist, nennt Health.md die fehlende Health- oder Ordneranforderung, statt unbemerkt einen teilweisen Schreibvorgang zu starten.
+Tippen Sie auf **Gestern exportieren**. Ist die Einrichtung unvollständig, nennt Health.md die fehlende Apple-Health- oder Ordner-Voraussetzung.
 
-Nach Abschluss:
+Nach Abschluss des Exports:
 
-1. Prüfen Sie im Ergebnis der App, welche Dateien geschrieben, übersprungen oder nicht geschrieben wurden.
-2. Öffnen Sie die App „Dateien“ und navigieren Sie zum ausgewählten Ordner.
-3. Öffnen Sie eine generierte Datei und prüfen Sie Datum, Einheiten und frontmatter.
-4. Bewahren Sie die Ergebnisdetails für die Fehlerbehebung auf; schließen Sie nicht allein daraus auf Erfolg, dass die Schaltfläche wieder in den Ruhezustand wechselt.
+1. Prüfen Sie im Ergebnis geschriebene, übersprungene oder fehlgeschlagene Dateien. Der Tag erscheint im Kalender im **Archiv**.
+2. Öffnen Sie die App Dateien und den gewählten Ordner.
+3. Öffnen Sie eine erzeugte Datei und prüfen Sie Datum, Einheiten und Frontmatter.
+4. Bewahren Sie die Ergebnisdetails auf, falls Sie ein Problem untersuchen müssen.
+
+Ein abgedeckter Tag im Kalender ist eine Zusammenfassung; tippen Sie auf den Tag, um den Status jeder Automation für dieses Datum zu sehen.
 
 <div class="callout">
-<strong>Keine Daten für den ausgewählten Tag?</strong>
-<p style="margin-top:6px;">Probieren Sie einen Tag aus, von dem Sie wissen, dass er Aktivitäts- oder Schlafdaten enthält. Prüfen Sie anschließend die Health-Autorisierung und die Metrikauswahl. Ein autorisierter, aber leerer Zeitraum ist etwas anderes als ein Übertragungs- oder Schreibfehler.</p>
+<strong>Keine Daten für den gewählten Tag?</strong>
+<p style="margin-top:6px;">Wählen Sie einen Tag mit Aktivitäts- oder Schlafdaten. Prüfen Sie dann die Apple-Health-Autorisierung und die Metrikauswahl. Ein leerer Zeitraum ist kein Schreibfehler.</p>
 </div>
 
 ## Nächste Schritte

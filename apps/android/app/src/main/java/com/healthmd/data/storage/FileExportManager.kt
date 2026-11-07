@@ -139,6 +139,20 @@ class FileExportManager(private val context: Context) {
         }
     }
 
+    /** The document URI of an existing file under the tree, or null when it or a folder is missing. */
+    fun findDocumentAtRelativePath(folderUriString: String, relativePath: String): Uri? {
+        return try {
+            val treeUri = Uri.parse(folderUriString)
+            val normalized = normalizePath(relativePath)
+            val parent = normalized.substringBeforeLast('/', missingDelimiterValue = "")
+            val fileName = normalized.substringAfterLast('/')
+            val folderUri = findFolder(treeUri, parent) ?: return null
+            findExistingFile(treeUri, folderUri, fileName)
+        } catch (_: Exception) {
+            null
+        }
+    }
+
     fun fileExistsAtRelativePath(folderUriString: String, relativePath: String): Boolean {
         return try {
             val treeUri = Uri.parse(folderUriString)

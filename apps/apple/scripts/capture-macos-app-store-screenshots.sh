@@ -2,7 +2,11 @@
 set -euo pipefail
 
 SUPPORTED_LOCALES=(en-US de-DE es-ES fr-FR it ja ko nl-NL pt-BR zh-Hans)
-SCREENS=(sync destination readiness activity settings)
+# Screens behind the AS_Mac_* boards (sync = MacHomeG, cli = MacCLIG). Override with
+# MAC_SCREENSHOT_SCREENS="sync destination readiness activity settings cli".
+read -r -a SCREENS <<< "${MAC_SCREENSHOT_SCREENS:-sync cli}"
+# The boards show the dark glass UI. MAC_SCREENSHOT_APPEARANCE=light reproduces the earlier light set.
+APPEARANCE="${MAC_SCREENSHOT_APPEARANCE:-dark}"
 LOCALE="${1:-en-US}"
 SCREENSHOT_BUNDLE_ID="com.codybontecou.obsidianhealth.screenshot"
 DERIVED_DATA="build/macos-screenshots-dd"
@@ -13,6 +17,12 @@ SKIP_BUILD="${MAC_SCREENSHOT_SKIP_BUILD:-0}"
 
 cd "$(dirname "$0")/.."
 APP_PATH="$(pwd)/$DERIVED_DATA/Build/Products/Debug/Health.md.app"
+
+case "$APPEARANCE" in
+  dark) INTERFACE_STYLE="Dark" ;;
+  light) INTERFACE_STYLE="Light" ;;
+  *) echo "Unsupported appearance: $APPEARANCE (use dark or light)" >&2; exit 1 ;;
+esac
 
 if [[ ! " ${SUPPORTED_LOCALES[*]} " =~ " $LOCALE " ]]; then
   echo "Unsupported Mac screenshot locale: $LOCALE" >&2
@@ -62,7 +72,8 @@ for SCREEN in "${SCREENS[@]}"; do
     -MacMarketingLocale "$LOCALE" \
     -AppleLanguages "($APPLE_LANGUAGE)" \
     -AppleLocale "$LOCALE" \
-    -AppleInterfaceStyle Light
+    -MacMarketingAppearance "$APPEARANCE" \
+    -AppleInterfaceStyle "$INTERFACE_STYLE"
 
   WAITED=0
   while true; do
@@ -82,11 +93,12 @@ for SCREEN in "${SCREENS[@]}"; do
 
   WIDTH="$(sips -g pixelWidth "$SOURCE" | awk '/pixelWidth/ { print $2 }')"
   HEIGHT="$(sips -g pixelHeight "$SOURCE" | awk '/pixelHeight/ { print $2 }')"
-  if [ "$WIDTH" != "2200" ] || [ "$HEIGHT" != "1464" ]; then
+  # 1100 x 720 pt window (title bar included) at 2x, the window the boards frame.
+  if [ "$WIDTH" != "2200" ] || [ "$HEIGHT" != "1440" ]; then
     echo "Unexpected capture size for $SCREEN: ${WIDTH}x${HEIGHT}" >&2
     exit 1
   fi
   cp "$SOURCE" "$CAPTURE_DESTINATION/$SCREEN.png"
 done
 
-echo "Captured five native 2200x1464 app windows in $CAPTURE_DESTINATION"
+echo "Captured ${#SCREENS[@]} native 2200x1440 $APPEARANCE app windows in $CAPTURE_DESTINATION"

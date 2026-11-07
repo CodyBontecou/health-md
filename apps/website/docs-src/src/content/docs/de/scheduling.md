@@ -8,7 +8,7 @@ Auf dieser Seite wird iPhone Planung beschrieben. Für Android gelten unterschie
 ## Überprüfen Sie den ersten geplanten Export
 
 1. Aktivieren Sie das vorgesehene Profil. Überprüfen Sie die Metriken, Formate, Datendetails, das Schreibverhalten und das Ziel. Führen Sie einen abgeschlossenen Tag manuell aus und überprüfen Sie die gespeicherte Datei oder das Endpunktergebnis, bevor Sie die Automatisierung aktivieren.
-2. Öffnen Sie „Zeitplan“, dann „Zeitplan einrichten“ oder „Zeitplan verwalten“. Aktivieren Sie den Zeitplan, wählen Sie „Täglich“, „Wöchentlich“ oder „Benutzerdefiniert“, legen Sie die Uhrzeit fest und beginnen Sie mit einem eintägigen Rückblick auf den abgeschlossenen Tag. Erlauben Sie Benachrichtigungen, wenn Sie lokale Wiederherstellungserinnerungen wünschen.
+2. Öffnen Sie auf dem iPhone **Automationen**, wählen Sie die Automation und tippen Sie auf **Zeitplan**; auf Android öffnen Sie „Zeitplan“ und dann „Zeitplan einrichten“ oder „Zeitplan verwalten“. Aktivieren Sie den Zeitplan, wählen Sie „Täglich“, „Wöchentlich“ oder „Benutzerdefiniert“, legen Sie die Uhrzeit fest und beginnen Sie mit einem Rückblick von einem abgeschlossenen Tag. Erlauben Sie Mitteilungen, wenn Sie lokale Wiederherstellungserinnerungen möchten.
 3. Überprüfen Sie, ob die Planung aktiviert ist, das nächste Vorkommen und das letzte Ergebnis. Überprüfen Sie nach einem Versuch die Verlaufsdetails und das tatsächliche Ziel. Ein Etikett oder eine Benachrichtigung für die nächste Ausführung ist kein Beweis dafür, dass Daten geschrieben wurden.
 4. Überprüfen Sie die exportierten Daten, Einheiten, Abdeckung und fehlenden Daten. Eine gespeicherte Datei allein beweist nicht, dass die Quelle vollständig erfasst ist.
 

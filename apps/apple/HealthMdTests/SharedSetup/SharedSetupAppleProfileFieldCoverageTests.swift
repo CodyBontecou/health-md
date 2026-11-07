@@ -32,7 +32,8 @@ final class SharedSetupAppleProfileFieldCoverageTests: XCTestCase {
         let historicalIdentities = Set((v1Rows + v2Rows).map {
             "\($0["source_type"] ?? "").\($0["field"] ?? "")"
         })
-        XCTAssertEqual(currentRows.count, historicalIdentities.count + 1)
+        // Two rows postdate v1/v2: the recovery calendar authority and per-metric native detail.
+        XCTAssertEqual(currentRows.count, historicalIdentities.count + 2)
         let recovery = try XCTUnwrap(try loadLedger().fields.first {
             $0.sourceType == "ExportSettingsSnapshot" && $0.field == "historicalCalendarRollupPeriods"
         })
@@ -40,6 +41,13 @@ final class SharedSetupAppleProfileFieldCoverageTests: XCTestCase {
         XCTAssertEqual(recovery.disposition, .prohibited)
         XCTAssertNil(recovery.serializedKey)
         XCTAssertNil(recovery.contractPath)
+
+        let nativeDetail = try XCTUnwrap(try loadLedger().fields.first {
+            $0.sourceType == "MetricSelectionSnapshot" && $0.field == "nativeDetailMetricIDs"
+        })
+        XCTAssertEqual(nativeDetail.fieldKind, .stored)
+        XCTAssertEqual(nativeDetail.disposition, .localOnly)
+        XCTAssertNil(nativeDetail.contractPath)
     }
 
     func testLedgerExactlyCoversCurrentStoredAndEncodedFields() throws {
@@ -257,6 +265,27 @@ final class SharedSetupAppleProfileFieldCoverageTests: XCTestCase {
         ),
     ]
 
+    // Added after the v3 ledger froze. The shared setup format does not change.
+    private static let localSchedulePreferenceFields: [CoverageLedger.Field] = [
+        .init(
+            sourceType: "ScheduledExportEntry", field: "includeToday",
+            fieldKind: .stored, serializedKey: "includeToday",
+            disposition: .localOnly, contractPath: nil,
+            reason: "Include Today is a local schedule preference; shared setups do not carry it, so imports default to off."
+        ),
+    ]
+
+    // Per-group compatibility detail was added after the v3 ledger froze. Frozen
+    // Shared Setup v2 cannot represent it, so setup files carry only the default level.
+    private static let perGroupDetailFields: [CoverageLedger.Field] = [
+        .init(
+            sourceType: "ExportSettingsSnapshot", field: "compatibilityDetailOverrides",
+            fieldKind: .stored, serializedKey: "compatibilityDetailOverrides",
+            disposition: .prohibited, contractPath: nil,
+            reason: "Per-group detail overrides cannot be represented by frozen Shared Setup v2 compatibility_detail; portable adoption requires a reviewed successor."
+        ),
+    ]
+
     private func loadLedger() throws -> CoverageLedger {
         let historical = try JSONDecoder().decode(
             CoverageLedger.self,
@@ -266,7 +295,8 @@ final class SharedSetupAppleProfileFieldCoverageTests: XCTestCase {
             schema: historical.schema, schemaVersion: historical.schemaVersion,
             targetContract: historical.targetContract, fieldKinds: historical.fieldKinds,
             dispositions: historical.dispositions,
-            fields: historical.fields + Self.sleepCapturePersistenceFields
+            fields: historical.fields + Self.sleepCapturePersistenceFields + Self.localSchedulePreferenceFields
+                + Self.perGroupDetailFields
         )
     }
 
@@ -365,7 +395,9 @@ final class SharedSetupAppleProfileFieldCoverageTests: XCTestCase {
         )
         let metricSelection = MetricSelectionSnapshot(
             enabledMetricIDs: ["steps"],
-            enabledCategoryIDs: ["activity"]
+            enabledCategoryIDs: ["activity"],
+            // Non-empty so the conditionally encoded key appears in the inventory.
+            nativeDetailMetricIDs: ["steps"]
         )
         let enginePin = try makeSyntheticAppleExportEnginePin(
             calendarTimeZoneIdentifier: "America/Los_Angeles"
@@ -394,6 +426,7 @@ final class SharedSetupAppleProfileFieldCoverageTests: XCTestCase {
             appleExportEngineAuthorityIsFrozen: true,
             calendarTimeZoneIdentifier: "America/Los_Angeles"
         )
+        snapshot.compatibilityDetailOverrides = [.sleep: .detailed]
         snapshot.externalProviderCaptureAuthority = ExternalProviderCaptureAuthority(connections: ["whoop": UUID()])
         snapshot.sleepCaptureContext = AppleSleepCaptureContext(
             timeZone: TimeZone(identifier: "America/Los_Angeles")!, sleepDayAttribution: .nightBegins

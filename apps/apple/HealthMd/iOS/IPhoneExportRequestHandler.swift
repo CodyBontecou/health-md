@@ -394,7 +394,9 @@ final class IPhoneExportRequestHandler: ObservableObject {
                 jobID: request.jobID,
                 source: .macApp,
                 totalDays: dates.count,
-                message: cliActivityStartMessage(for: request)
+                targetLabel: syncService.connectedPeerName,
+                message: cliActivityStartMessage(for: request),
+                dateRange: dates.min().flatMap { first in dates.max().map { first...$0 } }
             )
         }
         syncService.send(.iphoneExportAccepted(IPhoneExportAcknowledgement(

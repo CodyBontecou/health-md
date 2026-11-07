@@ -62,6 +62,8 @@ fun PaywallScreen(
     onClearError: () -> Unit = {},
     purchasesAvailable: Boolean = true,
     fullAccessIncluded: Boolean = false,
+    /** The three-slide carousel; false inside a host pager such as onboarding. */
+    carousel: Boolean = true,
     // Debug props
     isDebugBuild: Boolean = false,
     debugUnlockOverride: Boolean? = null,
@@ -87,9 +89,9 @@ fun PaywallScreen(
         }
     }
 
-    // Store-backed purchase flow tells its story as a carousel; included access keeps the summary below.
-    if (purchasesAvailable && !fullAccessIncluded) {
-        SignalPaywallCarousel(
+    // Store channels use the carousel; included-access channels keep the single-page summary.
+    if (carousel && purchasesAvailable && !fullAccessIncluded) {
+        PaywallCarousel(
             offers = offers,
             onPlanPurchase = onPlanPurchase,
             onRestore = onRestore,
@@ -98,6 +100,17 @@ fun PaywallScreen(
             isPurchasing = isPurchasing,
             isRestoring = isRestoring,
             errorMessage = errorMessage,
+            debugControls = if (isDebugBuild) {
+                {
+                    DebugPurchaseControls(
+                        debugUnlockOverride = debugUnlockOverride,
+                        onToggleUnlock = onDebugToggleUnlock,
+                        onResetState = onDebugResetState,
+                    )
+                }
+            } else {
+                null
+            },
         )
         return
     }

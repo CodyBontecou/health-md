@@ -764,6 +764,11 @@ struct ExportTabView: View {
 
                 rowDivider()
 
+                ExportDetailOverridesSection(policy: $advancedSettings.detailPolicy)
+                    .configurationChangesProtected()
+
+                rowDivider()
+
                 sleepDayAttributionInlineRow
                     .configurationChangesProtected()
             }
@@ -836,6 +841,14 @@ struct ExportTabView: View {
                     .font(.footnote)
                     .foregroundStyle(Color.textSecondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
+
+                if let longRangeNote = selectedPreset.localizedLongRangeNote {
+                    Label(longRangeNote, systemImage: "lightbulb")
+                        .font(.footnote)
+                        .foregroundStyle(Color.textSecondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
         }
         .padding(.vertical, Spacing.s3)
@@ -850,7 +863,7 @@ struct ExportTabView: View {
             "Data Detail",
             selection: Binding(
                 get: { AppleExportDetailPreset(policy: advancedSettings.detailPolicy) },
-                set: { advancedSettings.detailPolicy = $0.policy }
+                set: { advancedSettings.detailPolicy = advancedSettings.detailPolicy.replacingBase(with: $0.policy) }
             )
         ) {
             ForEach(presets) { preset in

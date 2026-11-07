@@ -16,6 +16,7 @@ struct MacSyncView: View {
     @EnvironmentObject var healthDataStore: HealthDataStore
 
     @ObservedObject private var historyManager = SyncEventHistoryManager.shared
+    @ObservedObject private var exportHistoryManager = ExportHistoryManager.shared
 
     @StateObject private var feedbackReporter = FeedbackReporter()
     @State private var receivingPaused = false
@@ -26,8 +27,8 @@ struct MacSyncView: View {
         GeometryReader { proxy in
             ScrollViewReader { scrollProxy in
                 ScrollView {
-                    VStack(alignment: .leading, spacing: Spacing.s8) {
-                        heroSection
+                    VStack(alignment: .leading, spacing: 18) {
+                        header
                             .id("marketing-sync")
 
                         if let progress = activeExportProgress {
@@ -43,18 +44,24 @@ struct MacSyncView: View {
                             nearbyDevicesCard
                         }
 
-                        dashboardGrid(width: proxy.size.width)
-
                         if let error = displayLastError {
                             errorBanner(error)
                         }
+
+                        readinessSection
+                        manualIPSection
+                        activitySection
+
+                        if displayConnectionState != .connected && historyManager.history.isEmpty {
+                            setupStepsCard
+                        }
                     }
                     .padding(.horizontal, horizontalPadding(for: proxy.size.width))
-                    .padding(.vertical, Spacing.s8)
-                    .frame(maxWidth: 1_200, alignment: .topLeading)
-                    .frame(maxWidth: .infinity, alignment: .top)
+                    .padding(.vertical, 24)
+                    .frame(maxWidth: 900, alignment: .topLeading)
+                    .frame(maxWidth: .infinity, alignment: .topLeading)
                 }
-                .background(GeistMacBackdrop())
+                .background(Color.glassAdaptive(\.bg).ignoresSafeArea())
                 #if DEBUG
                 .task {
                     guard MacMarketingCapture.isActive,
@@ -65,8 +72,9 @@ struct MacSyncView: View {
                 #endif
             }
         }
-        .foregroundStyle(Color.textPrimary)
-        .tint(Color.accent)
+        .foregroundStyle(Color.glassAdaptive(\.text))
+        .tint(Color.glassAdaptive(\.accent))
+        .toolbar { destinationToolbar }
         .feedbackFailureSheet($feedbackReporter.failure)
         .animation(
             reduceMotion ? nil : AnimationTimings.standard,
@@ -78,6 +86,8 @@ struct MacSyncView: View {
             if MacMarketingCapture.isActive { return }
             #endif
             syncService.startBrowsing()
+            // The Addresses row has no Refresh button on the board; re-read them on every visit.
+            if syncService.manualIPServerEnabled { syncService.refreshManualIPAddresses() }
         }
         .geistDialog(
             isPresented: $showClearConfirmation,
@@ -110,139 +120,39 @@ struct MacSyncView: View {
         return Spacing.s8
     }
 
-    @ViewBuilder
-    private func dashboardGrid(width: CGFloat) -> some View {
-        if width >= 1_040 {
-            HStack(alignment: .top, spacing: Spacing.s6) {
-                VStack(alignment: .leading, spacing: Spacing.s6) {
-                    destinationCard
-                    systemStatusCard
-                    manualIPConnectionCard
-                }
-                .frame(maxWidth: .infinity, alignment: .topLeading)
+    // MARK: - Header
 
-                VStack(alignment: .leading, spacing: Spacing.s6) {
-                    setupStepsCard
-                    activityCard
-                    if healthDataStore.recordCount > 0 {
-                        legacyCacheCard
-                    }
+    /// MacHomeG: title, paragraph and the readiness pill. Pausing and clearing activity live in
+    /// the window toolbar, outside the board's page.
+    private var header: some View {
+        MacGlassPageHeader(
+            title: String(localized: "Mac destination"),
+            subtitle: String(localized: "Receive exports from your iPhone and write them straight into a folder. Configure everything on iPhone.")
+        ) {
+            MacGlassStatusPill(title: readinessText, color: readinessPillColor)
+                .accessibilityLabel(String(localized: "Mac export readiness"))
+                .accessibilityValue(readinessText)
+        }
+    }
+
+    @ToolbarContentBuilder
+    private var destinationToolbar: some ToolbarContent {
+        ToolbarItemGroup(placement: .primaryAction) {
+            pauseReceivingButton
+            if !historyManager.history.isEmpty {
+                Button(String(localized: "Clear Activity")) {
+                    showActivityClearConfirmation = true
                 }
-                .frame(width: 360, alignment: .topLeading)
-            }
-        } else {
-            VStack(alignment: .leading, spacing: Spacing.s6) {
-                destinationCard
-                systemStatusCard
-                manualIPConnectionCard
-                setupStepsCard
-                activityCard
-                if healthDataStore.recordCount > 0 {
-                    legacyCacheCard
-                }
+                .accessibilityLabel("Clear activity feed")
             }
         }
     }
 
-    // MARK: - Hero
-
-    private var heroSection: some View {
-        GeistMacCard(padding: Spacing.s8) {
-            VStack(alignment: .leading, spacing: Spacing.s6) {
-                HStack(alignment: .top, spacing: Spacing.s6) {
-                    VStack(alignment: .leading, spacing: Spacing.s4) {
-                        HStack(spacing: Spacing.s3) {
-                            Image("AppIconImage")
-                                .resizable()
-                                .aspectRatio(contentMode: .fit)
-                                .frame(width: 32, height: 32)
-                                .clipShape(RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous))
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
-                                        .strokeBorder(Color.borderSubtle, lineWidth: 1)
-                                )
-                                .accessibilityHidden(true)
-
-                            VStack(alignment: .leading, spacing: 0) {
-                                Text("health.md")
-                                    .font(Typography.headline())
-                                    .foregroundStyle(Color.textPrimary)
-                                    .tracking(-0.2)
-                                Text("Mac Destination")
-                                    .font(Typography.caption())
-                                    .foregroundStyle(Color.textMuted)
-                            }
-                        }
-
-                        VStack(alignment: .leading, spacing: Spacing.s2) {
-                            Text(readinessHeroTitle)
-                                .font(Typography.displayLarge())
-                                .foregroundStyle(Color.textPrimary)
-                                .tracking(-0.9)
-                                .accessibilityAddTraits(.isHeader)
-
-                            Text("Receive Health.md exports from your iPhone and save Markdown, JSON, or CSV files directly into your destination folder.")
-                                .font(Typography.body())
-                                .foregroundStyle(Color.textSecondary)
-                                .fixedSize(horizontal: false, vertical: true)
-                                .frame(maxWidth: 640, alignment: .leading)
-                        }
-                    }
-
-                    Spacer(minLength: Spacing.s4)
-
-                    VStack(alignment: .trailing, spacing: Spacing.s3) {
-                        GeistStatusPill(
-                            title: statusPrimaryLine,
-                            subtitle: statusSecondaryLine,
-                            systemImage: connectionStatusIcon,
-                            color: connectionDotColor
-                        )
-
-                        pauseReceivingButton
-                    }
-                }
-
-                LazyVGrid(
-                    columns: [GridItem(.adaptive(minimum: 180), spacing: Spacing.s3)],
-                    alignment: .leading,
-                    spacing: Spacing.s3
-                ) {
-                    GeistMetricTile(
-                        icon: "iphone",
-                        title: String(localized: "iPhone"),
-                        value: displayConnectionState == .connected
-                            ? (displayConnectedPeerName ?? String(localized: "Connected"))
-                            : String(localized: "Listening"),
-                        detail: displayConnectionState == .connected
-                            ? String(localized: "Local network")
-                            : String(localized: "Open Health.md on iPhone"),
-                        color: displayConnectionState == .connected ? Color.success : Color.textMuted
-                    )
-
-                    GeistMetricTile(
-                        icon: "folder",
-                        title: String(localized: "Destination"),
-                        value: vaultManager.hasVaultSelection
-                            ? vaultManager.vaultName
-                            : String(localized: "Choose Folder"),
-                        detail: folderAccessHealthy
-                            ? String(localized: "Ready to write")
-                            : (vaultManager.hasVaultSelection
-                                ? vaultManager.vaultAvailabilityText
-                                : String(localized: "Required before exports")),
-                        color: folderAccessHealthy ? Color.success : Color.warning
-                    )
-
-                    GeistMetricTile(
-                        icon: "internaldrive",
-                        title: String(localized: "Storage"),
-                        value: storageSummary.shortFree,
-                        detail: String(localized: "\(storageSummary.usedPercentText) used"),
-                        color: Color.textSecondary
-                    )
-                }
-            }
+    private var readinessPillColor: Color {
+        switch readinessState {
+        case .ready: return Color.glassAdaptive(\.ok)
+        case .active: return Color.glassAdaptive(\.accent)
+        case .paused, .attention: return Color.glassAdaptive(\.coral)
         }
     }
 
@@ -257,7 +167,6 @@ struct MacSyncView: View {
                 systemImage: receivingPaused ? "play.fill" : "pause.fill"
             )
         }
-        .buttonStyle(GeistMacButtonStyle(kind: .primary))
         .disabled(displayConnectionState == .connecting)
     }
 
@@ -280,7 +189,7 @@ struct MacSyncView: View {
                 HStack(alignment: .center, spacing: Spacing.s4) {
                     Image(systemName: exportPhaseIcon(progress.phase))
                         .font(.title3.weight(.semibold))
-                        .foregroundStyle(Color.accent)
+                        .foregroundStyle(Color.glassAdaptive(\.accent))
                         .frame(width: 48, height: 48)
                         .background(
                             Color.accentSubtle,
@@ -288,7 +197,7 @@ struct MacSyncView: View {
                         )
                         .overlay(
                             RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous)
-                                .strokeBorder(Color.accent.opacity(0.25), lineWidth: 1)
+                                .strokeBorder(Color.glassAdaptive(\.accent).opacity(0.25), lineWidth: 1)
                         )
                         .accessibilityHidden(true)
 
@@ -296,21 +205,21 @@ struct MacSyncView: View {
                         HStack(spacing: Spacing.s2) {
                             Text(exportPhaseTitle(progress.phase))
                                 .font(Typography.heading20())
-                                .foregroundStyle(Color.textPrimary)
+                                .foregroundStyle(Color.glassAdaptive(\.text))
                                 .accessibilityAddTraits(.isHeader)
 
                             Text(String(localized: "In Progress"))
                                 .font(Typography.label())
-                                .foregroundStyle(Color.accent)
+                                .foregroundStyle(Color.glassAdaptive(\.accent))
                                 .padding(.horizontal, Spacing.s2)
                                 .padding(.vertical, 3)
                                 .background(Color.accentSubtle, in: Capsule())
-                                .overlay(Capsule().strokeBorder(Color.accent.opacity(0.25), lineWidth: 1))
+                                .overlay(Capsule().strokeBorder(Color.glassAdaptive(\.accent).opacity(0.25), lineWidth: 1))
                         }
 
                         Text(localizedProgressMessage(progress))
                             .font(Typography.body())
-                            .foregroundStyle(Color.textSecondary)
+                            .foregroundStyle(Color.glassAdaptive(\.sec))
                             .lineLimit(2)
                             .fixedSize(horizontal: false, vertical: true)
                     }
@@ -320,7 +229,7 @@ struct MacSyncView: View {
                     if progress.totalDays > 0 {
                         Text(String(localized: "\(percentage) percent complete"))
                             .font(.system(size: 30, weight: .semibold, design: .rounded))
-                            .foregroundStyle(Color.textPrimary)
+                            .foregroundStyle(Color.glassAdaptive(\.text))
                             .monospacedDigit()
                     } else {
                         VStack(alignment: .trailing, spacing: Spacing.s1) {
@@ -328,7 +237,7 @@ struct MacSyncView: View {
                                 .controlSize(.small)
                             Text(String(localized: "In Progress"))
                                 .font(Typography.caption())
-                                .foregroundStyle(Color.textMuted)
+                                .foregroundStyle(Color.glassAdaptive(\.muted))
                         }
                         .accessibilityElement(children: .combine)
                         .accessibilityLabel(String(localized: "Export in Progress"))
@@ -340,13 +249,13 @@ struct MacSyncView: View {
                 if progress.totalDays > 0 {
                     ProgressView(value: clampedProgress)
                         .progressViewStyle(.linear)
-                        .tint(Color.accent)
+                        .tint(Color.glassAdaptive(\.accent))
                         .accessibilityLabel(String(localized: "Export progress"))
                         .accessibilityValue(String(localized: "\(percentage) percent complete"))
                 } else {
                     ProgressView()
                         .progressViewStyle(.linear)
-                        .tint(Color.accent)
+                        .tint(Color.glassAdaptive(\.accent))
                         .accessibilityLabel(String(localized: "Export in Progress"))
                 }
 
@@ -360,7 +269,7 @@ struct MacSyncView: View {
                             icon: "calendar",
                             title: String(localized: "Source days processed"),
                             value: "\(min(max(progress.processedDays, 0), progress.totalDays)) / \(progress.totalDays)",
-                            color: Color.textSecondary
+                            color: Color.glassAdaptive(\.sec)
                         )
                     }
 
@@ -368,7 +277,7 @@ struct MacSyncView: View {
                         icon: "doc.on.doc",
                         title: String(localized: "Files Exported"),
                         value: "\(max(progress.filesWritten, 0))",
-                        color: progress.filesWritten > 0 ? Color.success : Color.textSecondary
+                        color: progress.filesWritten > 0 ? Color.success : Color.glassAdaptive(\.sec)
                     )
 
                     GeistInfoChip(
@@ -377,14 +286,14 @@ struct MacSyncView: View {
                         value: vaultManager.hasVaultSelection
                             ? vaultManager.vaultName
                             : String(localized: "Mac folder"),
-                        color: Color.textSecondary
+                        color: Color.glassAdaptive(\.sec)
                     )
                 }
             }
         }
         .overlay(
             RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous)
-                .strokeBorder(Color.accent.opacity(0.28), lineWidth: 1)
+                .strokeBorder(Color.glassAdaptive(\.accent).opacity(0.28), lineWidth: 1)
         )
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier(AccessibilityID.Mac.exportActivity)
@@ -403,19 +312,19 @@ struct MacSyncView: View {
             ForEach(Array(steps.enumerated()), id: \.offset) { index, step in
                 let isComplete = index < currentIndex
                 let isCurrent = index == currentIndex
-                let stepColor = isComplete ? Color.success : (isCurrent ? Color.accent : Color.textMuted)
+                let stepColor = isComplete ? Color.success : (isCurrent ? Color.glassAdaptive(\.accent) : Color.glassAdaptive(\.muted))
 
                 VStack(spacing: Spacing.s2) {
                     HStack(spacing: 0) {
                         Rectangle()
                             .fill(index == 0
                                   ? Color.clear
-                                  : (index <= currentIndex ? Color.success.opacity(0.65) : Color.borderDefault))
+                                  : (index <= currentIndex ? Color.success.opacity(0.65) : Color.glassAdaptive(\.edge)))
                             .frame(height: 2)
 
                         ZStack {
                             Circle()
-                                .fill(isComplete || isCurrent ? stepColor.opacity(0.14) : Color.bgSecondary)
+                                .fill(isComplete || isCurrent ? stepColor.opacity(0.14) : Color.glassAdaptive(\.surface2))
                             Circle()
                                 .strokeBorder(stepColor.opacity(isComplete || isCurrent ? 0.75 : 0.35), lineWidth: 1)
                             Image(systemName: isComplete ? "checkmark" : step.icon)
@@ -427,7 +336,7 @@ struct MacSyncView: View {
                         Rectangle()
                             .fill(index == steps.count - 1
                                   ? Color.clear
-                                  : (index < currentIndex ? Color.success.opacity(0.65) : Color.borderDefault))
+                                  : (index < currentIndex ? Color.success.opacity(0.65) : Color.glassAdaptive(\.edge)))
                             .frame(height: 2)
                     }
 
@@ -509,274 +418,203 @@ struct MacSyncView: View {
         }
     }
 
-    private var destinationCard: some View {
-        GeistMacCard {
-            VStack(alignment: .leading, spacing: Spacing.s4) {
-                GeistSectionHeader(
-                    title: String(localized: "Destination Folder"),
-                    subtitle: String(localized: "Where this Mac writes files received from iPhone.")
-                ) {
-                    Button(
-                        vaultManager.hasVaultSelection
-                            ? String(localized: "Change Folder")
-                            : String(localized: "Choose Folder")
-                    ) {
+    // MARK: - MacHomeG sections
+
+    private var readinessSection: some View {
+        MacGlassSection(title: String(localized: "Readiness")) {
+            MacGlassRow(title: String(localized: "Destination folder")) {
+                if folderAccessHealthy {
+                    // MacHomeG shows only the path; clicking it (or the context menu) changes it.
+                    Button {
+                        chooseDestinationFolder()
+                    } label: {
+                        MacGlassValue(destinationFolderText, monospaced: true)
+                    }
+                    .buttonStyle(.plain)
+                    .help(String(localized: "Change destination folder"))
+                    .accessibilityLabel(String(localized: "Change destination folder"))
+                } else {
+                    MacGlassValue(destinationFolderText, tone: .warning)
+                    Button(String(localized: "Choose Folder")) {
                         chooseDestinationFolder()
                     }
-                    .buttonStyle(GeistMacButtonStyle(kind: .secondary, size: .small))
-                    .accessibilityLabel(
-                        vaultManager.hasVaultSelection
-                            ? String(localized: "Change destination folder")
-                            : String(localized: "Choose destination folder")
-                    )
+                    .buttonStyle(MacGlassRowButtonStyle())
+                    .accessibilityLabel(String(localized: "Choose destination folder"))
                 }
-
-                HStack(alignment: .center, spacing: Spacing.s4) {
-                    Image(systemName: vaultManager.hasVaultSelection ? "folder.fill" : "folder")
-                        .font(.title3.weight(.medium))
-                        .foregroundStyle(Color.primary)
-                        .frame(width: 56, height: 56)
-                        .accessibilityHidden(true)
-
-                    VStack(alignment: .leading, spacing: Spacing.s1) {
-                        Text(folderTitle)
-                            .font(Typography.headline())
-                            .foregroundStyle(Color.textPrimary)
-                            .lineLimit(1)
-
-                        Text(folderSubtitle)
-                            .font(Typography.caption())
-                            .foregroundStyle(Color.textSecondary)
-                            .lineLimit(2)
-                            .truncationMode(.middle)
-                    }
-
-                    Spacer(minLength: 0)
+            }
+            .contextMenu {
+                Button(String(localized: "Change destination folder")) {
+                    chooseDestinationFolder()
                 }
-
-                GeistDivider()
-
-                LazyVGrid(
-                    columns: [GridItem(.adaptive(minimum: 142), spacing: Spacing.s3)],
-                    alignment: .leading,
-                    spacing: Spacing.s3
-                ) {
-                    GeistInfoChip(
-                        icon: "folder",
-                        title: vaultManager.hasVaultSelection
-                            ? String(localized: "Folder Exists")
-                            : String(localized: "No Folder"),
-                        value: vaultManager.hasVaultSelection
-                            ? (vaultManager.vaultURL == nil ? vaultManager.vaultAvailabilityText : (folderExists ? String(localized: "Ready") : String(localized: "Missing")))
-                            : String(localized: "Required"),
-                        color: folderExists ? Color.textSecondary : Color.warning
-                    )
-
-                    GeistInfoChip(
-                        icon: "checkmark.square",
-                        title: String(localized: "Writable"),
-                        value: folderAccessHealthy
-                            ? String(localized: "Verified")
-                            : String(localized: "Needs Access"),
-                        color: folderAccessHealthy ? Color.success : Color.warning
-                    )
-
-                    GeistInfoChip(
-                        icon: "internaldrive",
-                        title: storageSummary.shortFree,
-                        value: String(localized: "\(storageSummary.usedPercentText) used"),
-                        color: Color.textSecondary
-                    )
-
-                    GeistInfoChip(
-                        icon: "checkmark.seal",
-                        title: volumeKind,
-                        value: storageSummary.volumeLabel,
-                        color: Color.textSecondary
-                    )
-                }
-
-                StorageUsageBar(summary: storageSummary)
+            }
+            .accessibilityLabel("Destination folder")
+            .accessibilityValue(folderAccessibilityValue)
+            MacGlassDivider()
+            MacGlassRow(
+                String(localized: "Storage"),
+                value: String(localized: "\(storageSummary.free) free of \(storageSummary.total)")
+            )
+            MacGlassDivider()
+            MacGlassRow(String(localized: "Last export"), value: lastExportText)
+            if displayConnectionState != .connected {
+                MacGlassDivider()
+                MacGlassRow(String(localized: "iPhone"), value: statusPrimaryLine, tone: .warning)
             }
         }
         .id("marketing-destination")
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("Destination folder")
-        .accessibilityValue(folderAccessibilityValue)
     }
 
-    private var systemStatusCard: some View {
-        GeistMacCard {
-            VStack(alignment: .leading, spacing: Spacing.s4) {
-                GeistSectionHeader(
-                    title: String(localized: "System Status"),
-                    subtitle: String(localized: "Connection, permissions, and receiver version.")
-                ) {
-                    Button {
-                        syncService.stopBrowsing()
-                        syncService.startBrowsing()
-                    } label: {
-                        Label("Check Again", systemImage: "arrow.clockwise")
+    private var destinationFolderText: String {
+        guard vaultManager.hasVaultSelection else { return String(localized: "No folder selected") }
+        guard folderAccessHealthy else { return vaultManager.vaultAvailabilityText }
+        guard let path = vaultManager.pathForDisplay else { return vaultManager.vaultName }
+        return MacDisplayPath.abbreviatingHome(path)
+    }
+
+    private var lastExportText: String {
+        #if DEBUG
+        if MacMarketingCapture.isActive { return MacMarketingCapture.lastExport.lastExportHomeLine }
+        #endif
+        return exportHistoryManager.history.first?.lastExportHomeLine ?? String(localized: "None yet")
+    }
+
+    // MARK: Manual IP display state (the capture fixture replaces the live server's values)
+
+    private var displayManualIPEnabled: Bool {
+        #if DEBUG
+        if MacMarketingCapture.isActive { return true }
+        #endif
+        return syncService.manualIPServerEnabled
+    }
+
+    private var displayManualIPAddresses: [String] {
+        #if DEBUG
+        // Never the capturing Mac's real LAN or Tailscale addresses.
+        if MacMarketingCapture.isActive { return MacMarketingCapture.manualIPAddresses }
+        #endif
+        return syncService.manualIPAddresses.map(\.address)
+    }
+
+    private var displayManualIPPairingCode: String? {
+        #if DEBUG
+        if MacMarketingCapture.isActive { return MacMarketingCapture.manualIPPairingCode }
+        #endif
+        return syncService.manualIPPairingCode
+    }
+
+    private func isPairingCodeExpired(now: Date) -> Bool {
+        #if DEBUG
+        // The fixture code stays live whatever time the capture runs.
+        if MacMarketingCapture.isActive { return false }
+        #endif
+        return syncService.manualIPPairingCodeExpiresAt.map { $0 <= now } ?? false
+    }
+
+    private var displayManualIPPairingCodeExpiresAt: Date? {
+        #if DEBUG
+        if MacMarketingCapture.isActive { return MacMarketingCapture.manualIPPairingCodeExpiresAt }
+        #endif
+        return syncService.manualIPPairingCodeExpiresAt
+    }
+
+    /// MacHomeG: an accent On/Off value, then addresses, port and pairing code. Refreshing the
+    /// addresses and replacing a live code are in each row's context menu; an empty or expired
+    /// value shows its action inline.
+    private var manualIPSection: some View {
+        MacGlassSection(title: String(localized: "Manual IP & Tailscale")) {
+            MacGlassRow(title: String(localized: "Allow manual IP connections")) {
+                MacGlassOnOffButton(
+                    title: String(localized: "Allow manual IP connections"),
+                    isOn: Binding(
+                        get: { displayManualIPEnabled },
+                        set: { syncService.setManualIPServerEnabled($0) }
+                    )
+                )
+            }
+
+            if displayManualIPEnabled {
+                MacGlassDivider()
+                MacGlassRow(title: String(localized: "Addresses")) {
+                    if displayManualIPAddresses.isEmpty {
+                        MacGlassValue(String(localized: "None found"), tone: .warning)
+                        Button(String(localized: "Refresh")) {
+                            syncService.refreshManualIPAddresses()
+                        }
+                        .buttonStyle(MacGlassRowButtonStyle())
+                    } else {
+                        MacGlassValue(
+                            displayManualIPAddresses.joined(separator: " · "),
+                            monospaced: true
+                        )
                     }
-                    .buttonStyle(GeistMacButtonStyle(kind: .secondary, size: .small))
                 }
-
-                LazyVGrid(
-                    columns: [GridItem(.adaptive(minimum: 220), spacing: Spacing.s3)],
-                    alignment: .leading,
-                    spacing: Spacing.s3
-                ) {
-                    SystemStatusBlock(
-                        icon: "antenna.radiowaves.left.and.right",
-                        title: String(localized: "Receiver"),
-                        value: String(localized: "Version \(appVersion)"),
-                        badge: receivingPaused
-                            ? String(localized: "Paused")
-                            : String(localized: "Listening"),
-                        color: receivingPaused ? Color.warning : Color.success
-                    )
-
-                    SystemStatusBlock(
-                        icon: "lock.shield",
-                        title: String(localized: "Permissions"),
-                        value: permissionValue,
-                        badge: folderAccessHealthy
-                            ? String(localized: "Granted")
-                            : String(localized: "Needs Access"),
-                        color: folderAccessHealthy ? Color.success : Color.warning
-                    )
-                }
-
-                GeistDivider()
-
-                HStack(alignment: .firstTextBaseline) {
-                    VStack(alignment: .leading, spacing: Spacing.s1) {
-                        Text("Last Check")
-                            .font(Typography.caption())
-                            .foregroundStyle(Color.textMuted)
-                        Text(lastCheckText)
-                            .font(Typography.bodyEmphasis())
-                            .foregroundStyle(Color.textPrimary)
+                .contextMenu {
+                    Button(String(localized: "Refresh")) {
+                        syncService.refreshManualIPAddresses()
                     }
-
-                    Spacer()
-
-                    GeistStatusPill(
-                        title: readinessText,
-                        subtitle: nil,
-                        systemImage: readinessIcon,
-                        color: readinessColor,
-                        compact: true
-                    )
+                }
+                MacGlassDivider()
+                MacGlassRow(String(localized: "Port"), value: "\(SyncService.manualIPPort)", monospaced: true)
+                MacGlassDivider()
+                TimelineView(.periodic(from: .now, by: 30)) { context in
+                    pairingCodeRow(now: context.date)
                 }
             }
         }
         .id("marketing-system-status")
     }
 
-    private var manualIPConnectionCard: some View {
-        GeistMacCard {
-            VStack(alignment: .leading, spacing: Spacing.s4) {
-                GeistSectionHeader(
-                    title: String(localized: "Manual IP / Tailscale"),
-                    subtitle: String(localized: "Use this when your iPhone cannot discover the Mac automatically.")
+    @ViewBuilder
+    private func pairingCodeRow(now: Date) -> some View {
+        let isExpired = isPairingCodeExpired(now: now)
+        MacGlassRow(title: String(localized: "Pairing code")) {
+            if let code = displayManualIPPairingCode, !isExpired {
+                MacGlassValue(pairingCodeText(code), tone: .text, monospaced: true)
+            } else {
+                Button(
+                    syncService.manualIPPairingCode == nil
+                        ? String(localized: "Generate Code")
+                        : String(localized: "New Code")
                 ) {
-                    Button {
-                        syncService.refreshManualIPAddresses()
-                    } label: {
-                        Label("Refresh", systemImage: "arrow.clockwise")
-                    }
-                    .buttonStyle(GeistMacButtonStyle(kind: .secondary, size: .small))
+                    syncService.generateManualIPPairingCode()
                 }
-
-                Toggle(isOn: Binding(
-                    get: { syncService.manualIPServerEnabled },
-                    set: { syncService.setManualIPServerEnabled($0) }
-                )) {
-                    VStack(alignment: .leading, spacing: Spacing.s1) {
-                        Text("Allow Manual IP Connections")
-                            .font(Typography.bodyEmphasis())
-                            .foregroundStyle(Color.textPrimary)
-                        Text(manualIPServerStatusText)
-                            .font(Typography.caption())
-                            .foregroundStyle(Color.textMuted)
-                    }
-                }
-                .toggleStyle(.switch)
-
-                if syncService.manualIPServerEnabled {
-                    GeistDivider()
-
-                    VStack(alignment: .leading, spacing: Spacing.s3) {
-                        HStack(alignment: .firstTextBaseline) {
-                            VStack(alignment: .leading, spacing: Spacing.s1) {
-                                Text("Pairing Code")
-                                    .font(Typography.label())
-                                    .foregroundStyle(Color.textMuted)
-                                Text(syncService.manualIPPairingCode ?? String(localized: "Generate a code"))
-                                    .font(.system(size: 28, weight: .bold, design: .monospaced))
-                                    .foregroundStyle(Color.textPrimary)
-                                    .textSelection(.enabled)
-                            }
-
-                            Spacer()
-
-                            Button(
-                                syncService.manualIPPairingCode == nil
-                                    ? String(localized: "Generate Code")
-                                    : String(localized: "New Code")
-                            ) {
-                                syncService.generateManualIPPairingCode()
-                            }
-                            .buttonStyle(GeistMacButtonStyle(kind: .primary, size: .small))
-                        }
-
-                        if let expiry = syncService.manualIPPairingCodeExpiresAt {
-                            Text("Expires at \(expiry.formatted(date: .omitted, time: .shortened)).")
-                                .font(Typography.caption())
-                                .foregroundStyle(Color.textMuted)
-                        }
-                    }
-
-                    GeistDivider()
-
-                    VStack(alignment: .leading, spacing: Spacing.s2) {
-                        Text("Enter one of these addresses on iPhone. Port: \(SyncService.manualIPPort)")
-                            .font(Typography.caption())
-                            .foregroundStyle(Color.textMuted)
-
-                        if syncService.manualIPAddresses.isEmpty {
-                            Text("No non-loopback IPv4 addresses found. Check Tailscale or Wi‑Fi and refresh.")
-                                .font(Typography.caption())
-                                .foregroundStyle(Color.warning)
-                        } else {
-                            ForEach(syncService.manualIPAddresses) { address in
-                                HStack(spacing: Spacing.s2) {
-                                    Image(systemName: address.isLikelyTailscale ? "lock.icloud" : "network")
-                                        .foregroundStyle(address.isLikelyTailscale ? Color.success : Color.textMuted)
-                                        .frame(width: 18)
-                                        .accessibilityHidden(true)
-
-                                    Text(address.displayName)
-                                        .font(.system(.body, design: .monospaced))
-                                        .foregroundStyle(Color.textPrimary)
-                                        .lineLimit(1)
-                                        .textSelection(.enabled)
-
-                                    Spacer(minLength: Spacing.s2)
-
-                                    Button("Copy") {
-                                        NSPasteboard.general.clearContents()
-                                        NSPasteboard.general.setString(address.address, forType: .string)
-                                    }
-                                    .buttonStyle(GeistMacButtonStyle(kind: .tertiary, size: .small))
-                                }
-                            }
-                        }
-                    }
-                }
+                .buttonStyle(MacGlassRowButtonStyle())
             }
         }
+        .contextMenu {
+            Button(String(localized: "New Code")) {
+                syncService.generateManualIPPairingCode()
+            }
+        }
+    }
+
+    /// "4821 · expires 11:40 PM".
+    private func pairingCodeText(_ code: String) -> String {
+        guard let expiry = displayManualIPPairingCodeExpiresAt else { return code }
+        let time = expiry.formatted(date: .omitted, time: .shortened)
+        return String(localized: "\(code) · expires \(time)", comment: "Mac pairing code with its expiry time, e.g. 4821 · expires 11:40 PM")
+    }
+
+    private var activitySection: some View {
+        MacGlassSection(title: String(localized: "Activity")) {
+            if let progress = activeExportProgress {
+                MacGlassRow(String(localized: "Now"), value: localizedProgressMessage(progress), tone: .accent)
+                if !historyManager.history.isEmpty { MacGlassDivider() }
+            }
+            if historyManager.history.isEmpty && activeExportProgress == nil {
+                MacGlassRow(String(localized: "No activity yet"), value: String(localized: "Exports received from iPhone appear here."))
+            }
+            // MacHomeG lists the three most recent events; History holds the full record.
+            ForEach(Array(historyManager.history.prefix(3).enumerated()), id: \.element.id) { index, event in
+                if index > 0 { MacGlassDivider() }
+                MacGlassRow(
+                    ExportHistorySummaryFormat.shortWhen(event.timestamp),
+                    value: event.activityLine,
+                    tone: event.isSuccess ? .muted : .coral
+                )
+            }
+        }
+        .id("marketing-activity")
     }
 
     private var setupStepsCard: some View {
@@ -813,57 +651,14 @@ struct MacSyncView: View {
         HStack(spacing: Spacing.s3) {
             Text(String(number))
                 .font(Typography.label())
-                .foregroundStyle(Color.bgPrimary)
+                .foregroundStyle(Color.glassAdaptive(\.bg))
                 .frame(width: 24, height: 24)
-                .background(Color.accent, in: Circle())
+                .background(Color.glassAdaptive(\.accent), in: Circle())
 
             Text(text)
                 .font(Typography.body())
-                .foregroundStyle(Color.textSecondary)
+                .foregroundStyle(Color.glassAdaptive(\.sec))
                 .lineLimit(2)
-        }
-    }
-
-    private var activityCard: some View {
-        GeistMacCard {
-            VStack(alignment: .leading, spacing: Spacing.s4) {
-                GeistSectionHeader(
-                    title: String(localized: "Activity Feed"),
-                    subtitle: String(localized: "Recent sync and export events on this Mac.")
-                ) {
-                    Button("Clear Activity") {
-                        showActivityClearConfirmation = true
-                    }
-                    .buttonStyle(GeistMacButtonStyle(kind: .secondary, size: .small))
-                    .disabled(historyManager.history.isEmpty)
-                    .accessibilityLabel("Clear activity feed")
-                }
-
-                ActivityTimelineView(
-                    items: activityItems,
-                    byteFormatter: byteString,
-                    dateFormatter: Self.sidebarDateFormatter,
-                    visibleItemLimit: 5
-                )
-            }
-        }
-        .id("marketing-activity")
-    }
-
-    private var legacyCacheCard: some View {
-        GeistMacCard {
-            VStack(alignment: .leading, spacing: Spacing.s4) {
-                GeistSectionHeader(
-                    title: String(localized: "Legacy Cache"),
-                    subtitle: legacyCacheText
-                )
-
-                Button("Delete Legacy Cache", role: .destructive) {
-                    showClearConfirmation = true
-                }
-                .buttonStyle(GeistMacButtonStyle(kind: .danger, size: .small))
-                .disabled(healthDataStore.recordCount == 0)
-            }
         }
     }
 
@@ -878,10 +673,10 @@ struct MacSyncView: View {
                 VStack(alignment: .leading, spacing: Spacing.s1) {
                     Text("Receiver Error")
                         .font(Typography.bodyEmphasis())
-                        .foregroundStyle(Color.textPrimary)
+                        .foregroundStyle(Color.glassAdaptive(\.text))
                     Text(error)
                         .font(Typography.body())
-                        .foregroundStyle(Color.textSecondary)
+                        .foregroundStyle(Color.glassAdaptive(\.sec))
                         .fixedSize(horizontal: false, vertical: true)
                 }
 
@@ -922,26 +717,12 @@ struct MacSyncView: View {
         return syncService.lastError
     }
 
-    private var manualIPServerStatusText: String {
-        if !syncService.manualIPServerEnabled {
-            return String(localized: "Disabled. Nearby discovery still works over local Wi‑Fi/Bluetooth.")
-        }
-        if syncService.activeTransport == .manualIP && displayConnectionState == .connected {
-            let peerName = displayConnectedPeerName ?? String(localized: "iPhone")
-            return String(localized: "Connected to \(peerName) by manual IP / Tailscale.")
-        }
-        if syncService.manualIPServerListening {
-            return String(localized: "Listening on port \(SyncService.manualIPPort). Generate a pairing code before connecting from iPhone.")
-        }
-        return String(localized: "Starting listener…")
-    }
-
     private var connectionDotColor: Color {
         if receivingPaused { return Color.warning }
         switch displayConnectionState {
         case .connected: return Color.success
         case .connecting: return Color.warning
-        case .disconnected: return Color.textMuted
+        case .disconnected: return Color.glassAdaptive(\.muted)
         }
     }
 
@@ -995,7 +776,7 @@ struct MacSyncView: View {
     private var readinessColor: Color {
         switch readinessState {
         case .ready: return Color.success
-        case .active: return Color.accent
+        case .active: return Color.glassAdaptive(\.accent)
         case .paused, .attention: return Color.warning
         }
     }
@@ -1163,79 +944,6 @@ struct MacSyncView: View {
         return StorageSummary(freeBytes: free.int64Value, totalBytes: total.int64Value)
     }
 
-    private var activityItems: [ActivityFeedItem] {
-        var items: [ActivityFeedItem] = []
-
-        if let progress = syncService.activeMacExportProgress,
-           ![MacExportPhase.completed, .failed, .cancelled].contains(progress.phase) {
-            items.append(ActivityFeedItem(
-                timestamp: Date(),
-                icon: "arrow.down.doc.fill",
-                title: String(localized: "Export in Progress"),
-                headline: localizedProgressMessage(progress),
-                detail: progress.totalDays > 0
-                    ? String(localized: "\(progress.processedDays)/\(progress.totalDays) records")
-                    : String(localized: "Receiving from iPhone"),
-                trailing: progress.filesWritten > 0
-                    ? String(localized: "\(progress.filesWritten) files")
-                    : nil,
-                color: Color.accent
-            ))
-        }
-
-        items.append(contentsOf: historyManager.history.prefix(6).map(activityItem(for:)))
-
-        if items.isEmpty {
-            if displayConnectionState == .connected {
-                items.append(ActivityFeedItem(
-                    timestamp: Date().addingTimeInterval(-60),
-                    icon: "link",
-                    title: String(localized: "Connection Established"),
-                    headline: displayConnectedPeerName ?? String(localized: "iPhone"),
-                    detail: String(localized: "Wi‑Fi / local network"),
-                    trailing: nil,
-                    color: Color.success
-                ))
-            }
-
-            items.append(ActivityFeedItem(
-                timestamp: Date().addingTimeInterval(-180),
-                icon: folderAccessHealthy ? "checkmark" : "folder.badge.questionmark",
-                title: folderAccessHealthy
-                    ? String(localized: "Destination Validated")
-                    : (vaultManager.hasVaultSelection
-                        ? String(localized: "Folder access needs attention")
-                        : String(localized: "Destination Needed")),
-                headline: folderAccessHealthy
-                    ? String(localized: "\(storageSummary.shortFree) available")
-                    : (vaultManager.hasVaultSelection
-                        ? vaultManager.vaultName
-                        : String(localized: "Choose a folder")),
-                detail: folderAccessHealthy
-                    ? String(localized: "Good to go")
-                    : (vaultManager.hasVaultSelection
-                        ? vaultManager.vaultAvailabilityText
-                        : String(localized: "Required before exports")),
-                trailing: nil,
-                color: folderAccessHealthy ? Color.success : Color.warning
-            ))
-
-            items.append(ActivityFeedItem(
-                timestamp: Date().addingTimeInterval(-420),
-                icon: "paperplane.fill",
-                title: String(localized: "App Launched"),
-                headline: String(localized: "Mac Destination ready"),
-                detail: receivingPaused
-                    ? String(localized: "Discovery paused")
-                    : String(localized: "Listening for Health.md"),
-                trailing: nil,
-                color: Color.accent
-            ))
-        }
-
-        return items
-    }
-
     private func activityItem(for event: SyncEvent) -> ActivityFeedItem {
         let title: String
         let icon: String
@@ -1245,7 +953,7 @@ struct MacSyncView: View {
         case .dataReceived:
             title = String(localized: "Export Received")
             icon = "tray.and.arrow.down.fill"
-            color = Color.accent
+            color = Color.glassAdaptive(\.accent)
         case .progressComplete:
             title = String(localized: "Sync Complete")
             icon = "checkmark.seal.fill"
@@ -1365,7 +1073,7 @@ struct MacSyncView: View {
 
 private struct GeistMacBackdrop: View {
     var body: some View {
-        Color.bgSecondary
+        Color.glassAdaptive(\.surface2)
             .ignoresSafeArea()
     }
 }
@@ -1389,10 +1097,10 @@ private struct GeistMacCard<Content: View>: View {
         content
             .padding(padding)
             .frame(maxWidth: .infinity, alignment: .topLeading)
-            .background(Color.bgPrimary, in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+            .background(Color.glassAdaptive(\.glassStrong), in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                    .strokeBorder(Color.borderSubtle, lineWidth: 1)
+                    .strokeBorder(Color.glassAdaptive(\.line), lineWidth: 1)
             )
             .shadow(color: Color.black.opacity(0.04), radius: 2, x: 0, y: 2)
     }
@@ -1418,12 +1126,12 @@ private struct GeistSectionHeader<Accessory: View>: View {
             VStack(alignment: .leading, spacing: Spacing.s1) {
                 Text(title)
                     .font(Typography.headline())
-                    .foregroundStyle(Color.textPrimary)
+                    .foregroundStyle(Color.glassAdaptive(\.text))
                     .tracking(-0.2)
                 if let subtitle {
                     Text(subtitle)
                         .font(Typography.caption())
-                        .foregroundStyle(Color.textMuted)
+                        .foregroundStyle(Color.glassAdaptive(\.muted))
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
@@ -1446,7 +1154,7 @@ private extension GeistSectionHeader where Accessory == EmptyView {
 private struct GeistDivider: View {
     var body: some View {
         Rectangle()
-            .fill(Color.borderSubtle)
+            .fill(Color.glassAdaptive(\.line))
             .frame(height: 1)
     }
 }
@@ -1486,16 +1194,16 @@ private struct GeistMacButtonStyle: ButtonStyle {
 
     private var foregroundColor: Color {
         switch kind {
-        case .primary: return Color.bgPrimary
-        case .secondary, .tertiary: return Color.textPrimary
-        case .danger: return Color.bgPrimary
+        case .primary: return Color.glassAdaptive(\.bg)
+        case .secondary, .tertiary: return Color.glassAdaptive(\.text)
+        case .danger: return Color.glassAdaptive(\.bg)
         }
     }
 
     private var borderColor: Color {
         switch kind {
-        case .primary: return Color.accent
-        case .secondary: return Color.borderSubtle
+        case .primary: return Color.glassAdaptive(\.accent)
+        case .secondary: return Color.glassAdaptive(\.line)
         case .tertiary: return Color.clear
         case .danger: return Color.error
         }
@@ -1508,7 +1216,7 @@ private struct GeistMacButtonStyle: ButtonStyle {
     private func backgroundColor(configuration: Configuration) -> Color {
         switch kind {
         case .primary:
-            return Color.accent.opacity(configuration.isPressed ? 0.84 : 1)
+            return Color.glassAdaptive(\.accent).opacity(configuration.isPressed ? 0.84 : 1)
         case .secondary:
             return configuration.isPressed ? Color.controlPressed : Color.controlBackground
         case .tertiary:
@@ -1536,12 +1244,12 @@ private struct GeistStatusPill: View {
             VStack(alignment: .leading, spacing: 0) {
                 Text(title)
                     .font(compact ? Typography.caption() : Typography.bodyEmphasis())
-                    .foregroundStyle(Color.textPrimary)
+                    .foregroundStyle(Color.glassAdaptive(\.text))
                     .lineLimit(1)
                 if let subtitle, !compact {
                     Text(subtitle)
                         .font(Typography.caption())
-                        .foregroundStyle(Color.textMuted)
+                        .foregroundStyle(Color.glassAdaptive(\.muted))
                         .lineLimit(1)
                 }
             }
@@ -1572,25 +1280,25 @@ private struct GeistMetricTile: View {
             VStack(alignment: .leading, spacing: Spacing.s1) {
                 Text(title)
                     .font(Typography.caption())
-                    .foregroundStyle(Color.textMuted)
+                    .foregroundStyle(Color.glassAdaptive(\.muted))
                 Text(value)
                     .font(Typography.bodyEmphasis())
-                    .foregroundStyle(Color.textPrimary)
+                    .foregroundStyle(Color.glassAdaptive(\.text))
                     .lineLimit(2)
                     .fixedSize(horizontal: false, vertical: true)
                 Text(detail)
                     .font(Typography.caption())
-                    .foregroundStyle(Color.textSecondary)
+                    .foregroundStyle(Color.glassAdaptive(\.sec))
                     .lineLimit(2)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
         .padding(Spacing.s4)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.bgSecondary, in: RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous))
+        .background(Color.glassAdaptive(\.surface2), in: RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
-                .strokeBorder(Color.borderSubtle, lineWidth: 1)
+                .strokeBorder(Color.glassAdaptive(\.line), lineWidth: 1)
         )
         .accessibilityElement(children: .combine)
     }
@@ -1613,7 +1321,7 @@ private struct GeistInfoChip: View {
             VStack(alignment: .leading, spacing: 1) {
                 Text(title)
                     .font(Typography.caption())
-                    .foregroundStyle(Color.textSecondary)
+                    .foregroundStyle(Color.glassAdaptive(\.sec))
                     .lineLimit(2)
                     .fixedSize(horizontal: false, vertical: true)
                 Text(value)
@@ -1625,10 +1333,10 @@ private struct GeistInfoChip: View {
         }
         .padding(Spacing.s3)
         .frame(maxWidth: .infinity, alignment: .topLeading)
-        .background(Color.bgSecondary, in: RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous))
+        .background(Color.glassAdaptive(\.surface2), in: RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
-                .strokeBorder(Color.borderSubtle, lineWidth: 1)
+                .strokeBorder(Color.glassAdaptive(\.line), lineWidth: 1)
         )
         .accessibilityElement(children: .combine)
     }
@@ -1645,21 +1353,21 @@ private struct SystemStatusBlock: View {
         HStack(alignment: .top, spacing: Spacing.s3) {
             ZStack {
                 RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
-                    .fill(Color.bgSecondary)
+                    .fill(Color.glassAdaptive(\.surface2))
                     .frame(width: 36, height: 36)
                 Image(systemName: icon)
                     .font(.body.weight(.medium))
-                    .foregroundStyle(Color.textSecondary)
+                    .foregroundStyle(Color.glassAdaptive(\.sec))
                     .accessibilityHidden(true)
             }
 
             VStack(alignment: .leading, spacing: Spacing.s1) {
                 Text(title)
                     .font(Typography.caption())
-                    .foregroundStyle(Color.textMuted)
+                    .foregroundStyle(Color.glassAdaptive(\.muted))
                 Text(value)
                     .font(Typography.bodyEmphasis())
-                    .foregroundStyle(Color.textPrimary)
+                    .foregroundStyle(Color.glassAdaptive(\.text))
                 Text(badge)
                     .font(Typography.caption())
                     .foregroundStyle(color)
@@ -1671,10 +1379,10 @@ private struct SystemStatusBlock: View {
         }
         .padding(Spacing.s4)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.bgSecondary, in: RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous))
+        .background(Color.glassAdaptive(\.surface2), in: RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
-                .strokeBorder(Color.borderSubtle, lineWidth: 1)
+                .strokeBorder(Color.glassAdaptive(\.line), lineWidth: 1)
         )
         .accessibilityElement(children: .combine)
     }
@@ -1690,7 +1398,7 @@ private struct StorageUsageBar: View {
                     Capsule()
                         .fill(Color.geistGray200)
                     Capsule()
-                        .fill(Color.accent)
+                        .fill(Color.glassAdaptive(\.accent))
                         .frame(width: max(8, proxy.size.width * summary.usedFraction))
                 }
             }
@@ -1704,7 +1412,7 @@ private struct StorageUsageBar: View {
                 Text(summary.usedPercentText)
             }
             .font(Typography.caption())
-            .foregroundStyle(Color.textMuted)
+            .foregroundStyle(Color.glassAdaptive(\.muted))
         }
     }
 }
@@ -1750,7 +1458,7 @@ private struct ActivityTimelineRow: View {
 
                 if !isLast {
                     Rectangle()
-                        .fill(Color.borderSubtle)
+                        .fill(Color.glassAdaptive(\.line))
                         .frame(width: 1, height: 52)
                 }
             }
@@ -1759,32 +1467,32 @@ private struct ActivityTimelineRow: View {
                 HStack(alignment: .firstTextBaseline, spacing: Spacing.s2) {
                     Text(item.title)
                         .font(Typography.bodyEmphasis())
-                        .foregroundStyle(Color.textPrimary)
+                        .foregroundStyle(Color.glassAdaptive(\.text))
                         .lineLimit(1)
 
                     Spacer(minLength: Spacing.s2)
 
                     Text(item.timestamp, style: .time)
                         .font(Typography.caption())
-                        .foregroundStyle(Color.textMuted)
+                        .foregroundStyle(Color.glassAdaptive(\.muted))
                         .accessibilityLabel(dateFormatter.string(from: item.timestamp))
                 }
 
                 Text(item.headline)
                     .font(Typography.caption())
-                    .foregroundStyle(Color.textSecondary)
+                    .foregroundStyle(Color.glassAdaptive(\.sec))
                     .lineLimit(2)
 
                 HStack(alignment: .firstTextBaseline, spacing: Spacing.s2) {
                     Text(item.detail)
                         .font(Typography.caption())
-                        .foregroundStyle(Color.textMuted)
+                        .foregroundStyle(Color.glassAdaptive(\.muted))
                         .lineLimit(2)
                     Spacer(minLength: 0)
                     if let trailing = item.trailing {
                         Text(trailing)
                             .font(Typography.monoCaption())
-                            .foregroundStyle(Color.textMuted)
+                            .foregroundStyle(Color.glassAdaptive(\.muted))
                             .lineLimit(1)
                     }
                 }
