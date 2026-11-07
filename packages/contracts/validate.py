@@ -4042,9 +4042,14 @@ def validate_manifest(root: Path) -> tuple[int, int, int, int, int, int]:
     found_metric_inventory = False
     for index, inventory in enumerate(inventories):
         inventory_context = f"inventories[{index}]"
+        inventory_fields = {"id", "version", "path", "implementations"}
+        # Product capabilities are editable governance metadata, not frozen bytes.
+        # Registry identities and immutable contract fixtures remain hash-pinned.
+        if isinstance(inventory, dict) and inventory.get("id") != PRODUCT_CAPABILITIES_SCHEMA:
+            inventory_fields.add("sha256")
         inventory = require_exact_keys(
             inventory,
-            {"id", "version", "path", "sha256", "implementations"},
+            inventory_fields,
             inventory_context,
         )
         identifier = inventory.get("id")
@@ -4074,15 +4079,16 @@ def validate_manifest(root: Path) -> tuple[int, int, int, int, int, int]:
                 implementation,
                 f"{inventory_context}.implementations[{implementation_index}]",
             )
-        declared_hash = inventory.get("sha256")
-        if not isinstance(declared_hash, str) or not SHA256_RE.fullmatch(declared_hash):
-            fail(f"{inventory_context}: sha256 must be lowercase SHA-256 hex")
-        actual_hash = hashlib.sha256(inventory_path.read_bytes()).hexdigest()
-        if actual_hash != declared_hash:
-            fail(
-                f"{inventory_context}: SHA-256 mismatch for {raw_path}; "
-                f"declared {declared_hash}, actual {actual_hash}"
-            )
+        if identifier != PRODUCT_CAPABILITIES_SCHEMA:
+            declared_hash = inventory.get("sha256")
+            if not isinstance(declared_hash, str) or not SHA256_RE.fullmatch(declared_hash):
+                fail(f"{inventory_context}: sha256 must be lowercase SHA-256 hex")
+            actual_hash = hashlib.sha256(inventory_path.read_bytes()).hexdigest()
+            if actual_hash != declared_hash:
+                fail(
+                    f"{inventory_context}: SHA-256 mismatch for {raw_path}; "
+                    f"declared {declared_hash}, actual {actual_hash}"
+                )
         inventory_payload = load_json(inventory_path, inventory_context)
         if not isinstance(inventory_payload, dict):
             fail(f"{inventory_context}: inventory must be a JSON object")

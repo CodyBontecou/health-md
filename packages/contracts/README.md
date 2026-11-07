@@ -106,7 +106,7 @@ A unified cross-platform successor is now specified as a **deferred `healthmd.he
 
 `product-capabilities.json` records output profiles and product-level capabilities. Each capability is classified as `shared`, `apple_only`, `android_only`, `unavailable`, or `planned`. Platform entries use `available`, `unavailable`, or `planned`; every unavailable entry must carry a non-empty reason, and every planned entry must name its target. Platform-only data remains a supported product capability rather than a parity defect.
 
-The contract manifest pins both inventories by SHA-256. Update a hash only after reviewing its semantic diff and evidence. `make test-product-parity` checks capability classifications, profile/contract references, registry identity/order/availability/output invariants, evidence paths, canonical bytes, and pinned hashes.
+The product capability inventory is editable governance metadata and has no manifest SHA-256 pin. Its classifications, profile/contract references, and evidence paths are still validated. The metric registry and immutable contract fixtures remain SHA-256-pinned; update their hashes only after reviewing the semantic diff and evidence. `make test-product-parity` checks these rules along with registry identity/order/availability/output invariants and canonical bytes.
 
 ## Fixture policy
 
