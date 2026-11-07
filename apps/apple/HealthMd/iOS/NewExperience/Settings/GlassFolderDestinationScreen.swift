@@ -152,6 +152,9 @@ struct GlassFolderDestinationScreen: View {
             Button(String(localized: "Save")) {
                 configurationProtection.performConfigurationChange {
                     vaultManager.healthSubfolder = subfolderDraft
+                    // Persist it, as the classic Export tab does; otherwise the next vault
+                    // refresh reloads the old value and background exports never see it.
+                    vaultManager.saveSubfolderSetting()
                 }
             }
         }

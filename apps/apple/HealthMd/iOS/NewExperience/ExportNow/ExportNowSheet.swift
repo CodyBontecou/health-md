@@ -233,6 +233,10 @@ struct ExportNowSheet: View {
             set: { value in
                 configurationProtection.performConfigurationChange {
                     advancedSettings.summaryOnlyExport = value
+                    // "Range summary only" sits under "Range summaries" everywhere else.
+                    // On its own it falls back to daily files, contradicting "1 range
+                    // summary", so turning it on here turns on the summary it promises.
+                    if value { advancedSettings.generateRangeSummary = true }
                 }
             }
         )) {
