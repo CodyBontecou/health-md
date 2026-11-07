@@ -21,7 +21,7 @@ A separate app-level read-only service account may be stored outside the reposit
 
 ## Authored Play metadata
 
-Canonical metadata lives under `play-console/`. `play-console/locales.json` determines which locales are reviewed and publishable. For the current release, `en-US` is the reviewed listing and release-note locale.
+Canonical metadata lives under `play-console/`. `play-console/locales.json` determines which locales are reviewed and publishable. All 16 configured locales are reviewed listing locales; `en-US` remains the default and release-note locale.
 
 ### In-app product pricing (manual, Play Console)
 
