@@ -110,7 +110,14 @@ struct GlassCLIDestinationScreen: View {
             if connected { pairingCode = "" }
         }
         .fullScreenCover(isPresented: $showScanner, onDismiss: {
-            if enterCodeAfterScanner { enterCodeAfterScanner = false; showsCodeEntry = true; pairingCodeFocused = true }
+            if enterCodeAfterScanner {
+                enterCodeAfterScanner = false
+                // The code form only exists while Direct CLI access is on; the scanner is
+                // reachable with it off, so choosing to enter a code turns access on.
+                if !directCLIEnabled { enabled.wrappedValue = true }
+                showsCodeEntry = true
+                pairingCodeFocused = true
+            }
         }) {
             DirectCLIPairingScannerView(onPairingLink: { link in
                 configurationProtection.performConfigurationChange {

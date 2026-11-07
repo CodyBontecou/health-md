@@ -66,11 +66,18 @@ struct GlassMetricsScreen: View {
                         ForEach(searchResults, id: \.id) { metricToggle($0) }
                     }
                 }
-                GlassSectionLabel(title: String(localized: "Extra permissions"))
-                GlassPanel {
-                    permissionRow(.medications)
-                    permissionRow(.vision)
-                    ForEach(otherSeparateCategories, id: \.self) { categoryRow($0) }
+                // A search shows only the extra permissions it names, so "steps" doesn't
+                // list Medications and Vision under the result.
+                let showsMedications = matchesQuery(HealthMetricCategory.medications.displayName)
+                let showsVision = matchesQuery(String(localized: "Vision prescriptions"))
+                let others = otherSeparateCategories.filter { matchesQuery($0.displayName) }
+                if showsMedications || showsVision || !others.isEmpty {
+                    GlassSectionLabel(title: String(localized: "Extra permissions"))
+                    GlassPanel {
+                        if showsMedications { permissionRow(.medications) }
+                        if showsVision { permissionRow(.vision) }
+                        ForEach(others, id: \.self) { categoryRow($0) }
+                    }
                 }
             }
             .padding(GlassMetrics.screenMargin)
@@ -185,6 +192,10 @@ struct GlassMetricsScreen: View {
 
     /// Separate-permission categories without their own Apple selector row (clinical
     /// documents, when this build includes them) keep a plain category row.
+    private func matchesQuery(_ title: String) -> Bool {
+        query.isEmpty || title.localizedCaseInsensitiveContains(query)
+    }
+
     private var otherSeparateCategories: [HealthMetricCategory] {
         HealthMetricCategory.availableCases.filter {
             $0.requiresSeparateAuthorization && $0 != .medications && $0 != .vision

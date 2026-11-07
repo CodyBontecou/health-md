@@ -1312,10 +1312,8 @@ struct ExportProfileEditorSheet: View {
                         options: [nil] + destinationStore.vaults.map { Optional($0.id) },
                         label: { id in
                             destinationStore.vaults.first { $0.id == id }?.name
-                                ?? String(
-                                    localized: "Current folder (from Export tab)",
-                                    comment: "Editor option using the live shared vault"
-                                )
+                                // The Export tab is gone; match the Output screen's name for it.
+                                ?? String(localized: "Folder from Settings")
                         },
                         palette: palette
                     )

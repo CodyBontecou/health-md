@@ -522,6 +522,61 @@ final class ExportProfileCoordinatorTests: XCTestCase {
         XCTAssertEqual(coordinator.profileStore.profiles.count, 1)
     }
 
+    func testDeletingActiveProfileDoesNotWriteItsLiveSettingsIntoTheNextProfile() throws {
+        let settings = makeSettings()
+        settings.filenameFormat = "first-{date}"
+        let coordinator = makeCoordinator(settings: settings)
+        let firstID = try XCTUnwrap(coordinator.profileStore.activeProfileID)
+        coordinator.flushEdits()
+
+        // The copy becomes active; edit it live, then delete it.
+        let second = try XCTUnwrap(coordinator.addProfileDuplicatingActive())
+        settings.filenameFormat = "second-{date}"
+        XCTAssertTrue(coordinator.deleteProfile(id: second.id))
+
+        XCTAssertEqual(coordinator.profileStore.activeProfileID, firstID)
+        let first = try XCTUnwrap(coordinator.profileStore.profile(id: firstID))
+        XCTAssertEqual(first.settings.filenameFormat, "first-{date}",
+                       "the deleted profile's live edit must not land in the next profile")
+        XCTAssertEqual(settings.filenameFormat, "first-{date}",
+                       "live settings follow the newly active profile")
+    }
+
+    func testActiveProfileSubfolderSurvivesLiveSettingsFlush() throws {
+        let coordinator = makeCoordinator()
+        let activeID = try XCTUnwrap(coordinator.profileStore.activeProfileID)
+        let profile = try XCTUnwrap(coordinator.profileStore.profile(id: activeID))
+        var edited = profile.settings
+        edited.healthSubfolder = "QA"
+
+        _ = coordinator.updateProfile(
+            id: activeID,
+            name: profile.name,
+            target: profile.target,
+            folderVaultID: profile.folderVaultID,
+            apiEndpointID: profile.apiEndpointID,
+            settings: edited
+        )
+        // The debounced observer runs this after the editor's save applies live settings.
+        coordinator.flushEdits()
+
+        XCTAssertEqual(coordinator.profileStore.profile(id: activeID)?.settings.healthSubfolder, "QA",
+                       "a flush of the live settings must keep the profile's own subfolder")
+        let copy = try XCTUnwrap(coordinator.addProfileDuplicatingActive())
+        XCTAssertEqual(copy.settings.healthSubfolder, "QA", "a duplicate keeps the subfolder too")
+    }
+
+    func testDeletingInactiveProfileKeepsTheActiveProfile() throws {
+        let coordinator = makeCoordinator()
+        let firstID = try XCTUnwrap(coordinator.profileStore.activeProfileID)
+        let other = try XCTUnwrap(coordinator.duplicateProfile(id: firstID))
+        let third = try XCTUnwrap(coordinator.addProfileDuplicatingActive())
+
+        XCTAssertTrue(coordinator.deleteProfile(id: other.id))
+        XCTAssertEqual(coordinator.profileStore.activeProfileID, third.id,
+                       "deleting another profile must not switch the active one")
+    }
+
     func testDeleteProfileCompactsSharedSetupV2SidecarEndToEnd() throws {
         // Seed the native stores exactly as a v2 import leaves them: two
         // profiles, both carrying retained-intent sidecar rows and blocked

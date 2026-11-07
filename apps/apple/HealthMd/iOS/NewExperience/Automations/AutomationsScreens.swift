@@ -19,7 +19,8 @@ struct AutomationFacts {
             gateway: store.agentDataGateway(id: store.agentDataGatewayBinding(profileID: profile.id))
         )
         switch summary {
-        case .localFolder(let name): return name ?? String(localized: "iPhone folder")
+        // A profile without its own folder writes to the Settings folder, so name that one.
+        case .localFolder(let name): return name ?? coordinator.sharedFolderName ?? String(localized: "iPhone folder")
         case .connectedMac: return String(localized: "Connected Mac")
         case .apiEndpoint(let url), .agentDataGateway(let url):
             return url ?? String(localized: "not configured")
@@ -739,7 +740,7 @@ struct AutomationDetailScreen: View {
             Button(String(localized: "Cancel", comment: "Dismiss rename"), role: .cancel) {}
         }
         .confirmationDialog(
-            String(localized: "Delete this profile?", comment: "Confirm deleting an export profile"),
+            String(localized: "Delete this automation?", comment: "Confirm deleting an automation"),
             isPresented: $showDeleteConfirmation,
             titleVisibility: .visible
         ) {
