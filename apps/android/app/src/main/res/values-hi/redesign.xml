@@ -16,10 +16,8 @@
     <string name="archive_row_last_export">अंतिम निर्यात %1$s</string>
     <string name="archive_action_backfill">पूरा करें</string>
     <string name="archive_empty_title">आपका संग्रह यहाँ से शुरू होता है</string>
-    <string name="archive_empty_body">आपके द्वारा निर्यात किया गया हर दिन कैलेंडर का एक खाना भरता है। शुरू करने के लिए एक बार निर्यात करें।</string>
     <string name="automations_subtitle">सहेजे गए निर्यात जिन्हें आप शेड्यूल कर सकते हैं, ऑटोमेशन ऐप्स से शुरू कर सकते हैं, या healthmd CLI से चला सकते हैं।</string>
     <string name="automations_profiles_title">निर्यात प्रोफ़ाइल</string>
-    <string name="automations_profiles_body">सहेजे गए निर्यात कॉन्फ़िगरेशन बनाएँ, संपादित करें और उनके बीच बदलें।</string>
     <string name="automation_sentence_daily">हर दिन %1$s बजे %2$s में निर्यात करें।</string>
     <string name="automation_sentence_weekly">हर हफ़्ते %1$s को %2$s बजे %3$s में निर्यात करें।</string>
     <string name="automation_sentence_monthly">हर महीने %1$s बजे %2$s में निर्यात करें।</string>
@@ -29,10 +27,6 @@
     <string name="settings_section_destinations">गंतव्य</string>
     <string name="settings_section_data">डेटा</string>
     <string name="settings_section_app">ऐप</string>
-    <string name="settings_destination_folder_title">निर्यात फ़ोल्डर</string>
-    <string name="settings_destination_folder_subtitle">अभी निर्यात करें में वह फ़ोल्डर चुनें जिसमें Health.md लिखता है।</string>
-    <string name="settings_destination_api_title">API एंडपॉइंट और Agent Data गेटवे</string>
-    <string name="settings_destination_api_subtitle">ऑटोमेशन में अपने सर्वर या इनजेशन गेटवे पर अपलोड सेट करें।</string>
     <string name="automation_detail_destination">गंतव्य</string>
     <string name="automation_detail_formats">फ़ॉर्मैट</string>
     <string name="automation_detail_metrics">मेट्रिक्स</string>
@@ -41,16 +35,11 @@
     <string name="automation_detail_profile_id">प्रोफ़ाइल ID</string>
     <string name="automation_detail_copy">कॉपी करें</string>
     <string name="automation_detail_copied">कॉपी हो गया</string>
-    <string name="automation_detail_edit_profile">प्रोफ़ाइल संपादित करें</string>
     <string name="automation_detail_edit_schedule">शेड्यूल संपादित करें</string>
-    <string name="automation_detail_make_active">सक्रिय करें</string>
-    <string name="automation_detail_active">सक्रिय प्रोफ़ाइल</string>
     <string name="automation_detail_select">विवरण देखने के लिए कोई ऑटोमेशन चुनें।</string>
     <string name="automation_detail_details">विवरण</string>
     <string name="automation_detail_details_named">%1$s का विवरण</string>
     <string name="automation_detail_not_found">यह ऑटोमेशन अब मौजूद नहीं है।</string>
-    <string name="folder_destination_current">मौजूदा फ़ोल्डर</string>
-    <string name="folder_destination_none">कोई फ़ोल्डर नहीं चुना गया</string>
     <string name="folder_destination_choose">फ़ोल्डर चुनें</string>
     <string name="folder_destination_change">फ़ोल्डर बदलें</string>
     <string name="folder_destination_body">Health.md सीधे उस फ़ोल्डर में लिखता है जिसे आप Android फ़ोल्डर पिकर से चुनते हैं, जिसमें सिंक होने वाले ऐप फ़ोल्डर भी शामिल हैं। किसी खाते की ज़रूरत नहीं।</string>
@@ -61,9 +50,7 @@
     <string name="moment_keep_open">पूरा होने तक Health.md खुला रखें।</string>
     <string name="moment_heart_description">दिन लिखे जाने के साथ भरता क्रिस्टल दिल</string>
     <string name="archive_automations_manage">प्रबंधित करें</string>
-    <string name="archive_automations_card_body">“सभी” किसी दिन को तब पूरा मानता है जब हर नियत ऑटोमेशन ने उसे कवर किया हो।</string>
     <string name="archive_action_reexport">फिर से एक्सपोर्ट करें</string>
-    <string name="day_page_open">दिन की फ़ाइल खोलें</string>
     <string name="day_page_share">फ़ाइल शेयर करें</string>
     <string name="day_page_empty">मौजूदा सेटिंग्स के साथ इस तारीख के लिए कुछ नहीं लिखा जाएगा।</string>
     <string name="day_page_range_only">रॉ स्नैपशॉट पूरी अवधि के लिए एक फ़ाइल लिखते हैं, इसलिए अलग दिन की फ़ाइल नहीं है।</string>
@@ -122,7 +109,6 @@
     <string name="composer_when_night">हर रात %1$s बजे</string>
     <string name="composer_when_weekly">हर %1$s %2$s बजे</string>
     <string name="composer_when_monthly">हर महीने %1$s बजे</string>
-    <string name="composer_when_custom">कस्टम शेड्यूल पर %1$s बजे</string>
     <string name="composer_range_yesterday">कल</string>
     <string name="composer_note_update">मेरा डेली नोट अपडेट करें</string>
     <string name="composer_note_leave">डेली नोट्स न बदलें</string>
@@ -134,9 +120,7 @@
     <string name="composer_preview_title">पिछले दिन की फ़ाइल</string>
     <string name="composer_preview_note">Health Connect के सबसे हाल के पूरे दिन से बनी। कुछ भी लिखा नहीं जाता।</string>
     <string name="composer_fields">इस नोट के फ़ील्ड</string>
-    <string name="composer_all_metrics">सभी मेट्रिक्स</string>
     <string name="composer_all_settings">सभी सेटिंग्स</string>
-    <string name="composer_all_settings_sub">आउटपुट · फ़ॉर्मैट · एंट्री · गंतव्य</string>
     <string name="composer_label_when">कब</string>
     <string name="composer_label_range">दिन</string>
     <string name="composer_label_note">डेली नोट</string>
@@ -162,19 +146,9 @@
     <string name="widget_archive_preview_month_detail">दिन, अक्टूबर में</string>
     <string name="widget_archive_preview_gaps">2 अंतराल</string>
     <string name="moment_see_in_archive">संग्रह में देखें</string>
-    <string name="export_now_more_options">और विकल्प</string>
-    <string name="automations_profiles_summary">सक्रिय: %1$s · %2$s · %3$s</string>
     <plurals name="moment_done_days">
         <item quantity="one">%1$d दिन लिखा गया</item>
         <item quantity="other">%1$d दिन लिखे गए</item>
-    </plurals>
-    <plurals name="automations_profiles_count">
-        <item quantity="one">%1$d प्रोफ़ाइल</item>
-        <item quantity="other">%1$d प्रोफ़ाइल</item>
-    </plurals>
-    <plurals name="automations_profiles_scheduled">
-        <item quantity="one">%1$d शेड्यूल</item>
-        <item quantity="other">%1$d शेड्यूल</item>
     </plurals>
     <string name="archive_status_updating">अपडेट हो रहा है</string>
     <string name="archive_status_not_due">देय नहीं</string>
@@ -186,32 +160,15 @@
     <string name="automations_new">नया ऑटोमेशन</string>
     <string name="automations_next">अगला · %1$s</string>
     <string name="automations_paused">रोका गया</string>
-    <string name="automations_on_demand">मांग पर</string>
     <string name="automations_run_now">अभी चलाएँ</string>
-    <string name="automations_run_now_named">%1$s अभी चलाएँ</string>
     <string name="automations_edit">संपादित करें</string>
-    <string name="automations_edit_named">%1$s संपादित करें</string>
     <string name="automations_switch_named">%1$s ऑटोमेशन</string>
     <string name="automations_schedule_settings_title">शेड्यूल सेटिंग्स</string>
-    <string name="automations_schedule_settings_subtitle">ऐप-व्यापी शेड्यूल, शेड्यूल किए गए निर्यात का गंतव्य, अनुमतियाँ और इतिहास</string>
     <string name="date_option_last_7_days">7 दिन</string>
     <string name="export_dates_heading">तारीखें</string>
     <string name="date_from_label">से</string>
     <string name="date_to_label">तक</string>
     <string name="export_will_write">लिखा जाएगा</string>
-    <string name="export_will_write_with_daily_notes">%1$s + डेली नोट्स</string>
-    <plurals name="export_will_write_files">
-        <item quantity="one">लगभग %1$d %2$s फ़ाइल</item>
-        <item quantity="other">लगभग %1$d %2$s फ़ाइलें</item>
-    </plurals>
-    <plurals name="export_cta_files">
-        <item quantity="one">%1$d फ़ाइल निर्यात करें</item>
-        <item quantity="other">%1$d फ़ाइलें निर्यात करें</item>
-    </plurals>
-    <plurals name="export_cta_send_days">
-        <item quantity="one">%1$d दिन भेजें</item>
-        <item quantity="other">%1$d दिन भेजें</item>
-    </plurals>
     <string name="settings_plan_free">मुफ़्त प्लान</string>
     <string name="settings_plan_full_access">पूरी पहुँच</string>
     <string name="settings_plan_manage">%1$s · पुनर्स्थापित या प्रबंधित करें</string>
@@ -355,7 +312,6 @@
     <string name="schedule_custom">कस्टम</string>
     <string name="schedule_day">दिन</string>
     <string name="schedule_every">हर</string>
-    <string name="schedule_unit">इकाई</string>
     <string name="schedule_starting">शुरुआत</string>
     <string name="schedule_preferred_time">पसंदीदा समय</string>
     <string name="schedule_look_back">पिछली अवधि</string>

@@ -16,10 +16,8 @@
     <string name="archive_row_last_export">Última exportación %1$s</string>
     <string name="archive_action_backfill">Recuperar</string>
     <string name="archive_empty_title">Tu archivo empieza aquí</string>
-    <string name="archive_empty_body">Cada día que exportas llena una casilla del calendario. Exporta una vez para empezar.</string>
     <string name="automations_subtitle">Exportaciones guardadas que puedes programar, iniciar desde apps de automatización o ejecutar con la CLI healthmd.</string>
     <string name="automations_profiles_title">Perfiles de exportación</string>
-    <string name="automations_profiles_body">Crea, edita y cambia entre configuraciones de exportación guardadas.</string>
     <string name="automation_sentence_daily">Todos los días a las %1$s, exportar a %2$s.</string>
     <string name="automation_sentence_weekly">Cada semana, el %1$s a las %2$s, exportar a %3$s.</string>
     <string name="automation_sentence_monthly">Cada mes a las %1$s, exportar a %2$s.</string>
@@ -29,10 +27,6 @@
     <string name="settings_section_destinations">Destinos</string>
     <string name="settings_section_data">Datos</string>
     <string name="settings_section_app">App</string>
-    <string name="settings_destination_folder_title">Carpeta de exportación</string>
-    <string name="settings_destination_folder_subtitle">Elige en Exportar ahora la carpeta donde escribe Health.md.</string>
-    <string name="settings_destination_api_title">Endpoint de API y pasarela Agent Data</string>
-    <string name="settings_destination_api_subtitle">Configura en Automatizaciones las subidas a tu servidor o a una pasarela de ingesta.</string>
     <string name="automation_detail_destination">Destino</string>
     <string name="automation_detail_formats">Formatos</string>
     <string name="automation_detail_metrics">Métricas</string>
@@ -41,16 +35,11 @@
     <string name="automation_detail_profile_id">ID del perfil</string>
     <string name="automation_detail_copy">Copiar</string>
     <string name="automation_detail_copied">Copiado</string>
-    <string name="automation_detail_edit_profile">Editar perfil</string>
     <string name="automation_detail_edit_schedule">Editar programación</string>
-    <string name="automation_detail_make_active">Activar</string>
-    <string name="automation_detail_active">Perfil activo</string>
     <string name="automation_detail_select">Selecciona una automatización para ver sus detalles.</string>
     <string name="automation_detail_details">Detalles</string>
     <string name="automation_detail_details_named">Detalles de %1$s</string>
     <string name="automation_detail_not_found">Esta automatización ya no existe.</string>
-    <string name="folder_destination_current">Carpeta actual</string>
-    <string name="folder_destination_none">No hay ninguna carpeta seleccionada</string>
     <string name="folder_destination_choose">Elegir carpeta</string>
     <string name="folder_destination_change">Cambiar carpeta</string>
     <string name="folder_destination_body">Health.md escribe directamente en la carpeta que eliges con el selector de carpetas de Android, incluidas las carpetas sincronizadas de apps. No necesitas una cuenta.</string>
@@ -61,9 +50,7 @@
     <string name="moment_keep_open">Mantén Health.md abierto hasta que termine.</string>
     <string name="moment_heart_description">Un corazón de cristal que se llena a medida que se escriben los días</string>
     <string name="archive_automations_manage">Gestionar</string>
-    <string name="archive_automations_card_body">«Todas» cuenta un día como completo cuando todas las automatizaciones previstas lo cubrieron.</string>
     <string name="archive_action_reexport">Volver a exportar</string>
-    <string name="day_page_open">Abrir el archivo del día</string>
     <string name="day_page_share">Compartir archivo</string>
     <string name="day_page_empty">Con la configuración actual no se escribiría nada para esta fecha.</string>
     <string name="day_page_range_only">Las instantáneas sin procesar escriben un archivo para todo el intervalo, así que no hay un archivo por día.</string>
@@ -125,7 +112,6 @@
     <string name="composer_when_night">Cada madrugada a las %1$s</string>
     <string name="composer_when_weekly">Cada %1$s a las %2$s</string>
     <string name="composer_when_monthly">Cada mes a las %1$s</string>
-    <string name="composer_when_custom">Con un horario personalizado a las %1$s</string>
     <string name="composer_range_yesterday">ayer</string>
     <string name="composer_note_update">actualizar mi nota diaria</string>
     <string name="composer_note_leave">no tocar las notas diarias</string>
@@ -137,9 +123,7 @@
     <string name="composer_preview_title">Archivo del último día</string>
     <string name="composer_preview_note">Generado con el último día completo de Health Connect. No se escribe nada.</string>
     <string name="composer_fields">Campos de esta nota</string>
-    <string name="composer_all_metrics">Todas las métricas</string>
     <string name="composer_all_settings">Todos los ajustes</string>
-    <string name="composer_all_settings_sub">Salida · formato · entradas · destino</string>
     <string name="composer_label_when">Cuándo</string>
     <string name="composer_label_range">Días</string>
     <string name="composer_label_note">Nota diaria</string>
@@ -167,22 +151,10 @@
     <string name="widget_archive_preview_month_detail">días en octubre</string>
     <string name="widget_archive_preview_gaps">2 huecos</string>
     <string name="moment_see_in_archive">Ver en el archivo</string>
-    <string name="export_now_more_options">Más opciones</string>
-    <string name="automations_profiles_summary">Activo: %1$s · %2$s · %3$s</string>
     <plurals name="moment_done_days">
         <item quantity="one">%1$d día escrito</item>
         <item quantity="many">%1$d de días escritos</item>
         <item quantity="other">%1$d días escritos</item>
-    </plurals>
-    <plurals name="automations_profiles_count">
-        <item quantity="one">%1$d perfil</item>
-        <item quantity="many">%1$d de perfiles</item>
-        <item quantity="other">%1$d perfiles</item>
-    </plurals>
-    <plurals name="automations_profiles_scheduled">
-        <item quantity="one">%1$d programado</item>
-        <item quantity="many">%1$d de programados</item>
-        <item quantity="other">%1$d programados</item>
     </plurals>
     <string name="archive_status_updating">Actualizando</string>
     <string name="archive_status_not_due">No toca</string>
@@ -194,35 +166,15 @@
     <string name="automations_new">Nueva automatización</string>
     <string name="automations_next">Próxima · %1$s</string>
     <string name="automations_paused">En pausa</string>
-    <string name="automations_on_demand">Bajo demanda</string>
     <string name="automations_run_now">Ejecutar ahora</string>
-    <string name="automations_run_now_named">Ejecutar %1$s ahora</string>
     <string name="automations_edit">Editar</string>
-    <string name="automations_edit_named">Editar %1$s</string>
     <string name="automations_switch_named">Automatización %1$s</string>
     <string name="automations_schedule_settings_title">Configuración de programación</string>
-    <string name="automations_schedule_settings_subtitle">Programación de toda la app, destino de la exportación programada, permisos e historial</string>
     <string name="date_option_last_7_days">7 días</string>
     <string name="export_dates_heading">Fechas</string>
     <string name="date_from_label">Desde</string>
     <string name="date_to_label">Hasta</string>
     <string name="export_will_write">Se escribirá</string>
-    <string name="export_will_write_with_daily_notes">%1$s + notas diarias</string>
-    <plurals name="export_will_write_files">
-        <item quantity="one">Aprox. %1$d archivo %2$s</item>
-        <item quantity="many">Aprox. %1$d archivos %2$s</item>
-        <item quantity="other">Aprox. %1$d archivos %2$s</item>
-    </plurals>
-    <plurals name="export_cta_files">
-        <item quantity="one">Exportar %1$d archivo</item>
-        <item quantity="many">Exportar %1$d archivos</item>
-        <item quantity="other">Exportar %1$d archivos</item>
-    </plurals>
-    <plurals name="export_cta_send_days">
-        <item quantity="one">Enviar %1$d día</item>
-        <item quantity="many">Enviar %1$d días</item>
-        <item quantity="other">Enviar %1$d días</item>
-    </plurals>
     <string name="settings_plan_free">Plan gratuito</string>
     <string name="settings_plan_full_access">Acceso completo</string>
     <string name="settings_plan_manage">%1$s · restaurar o gestionar</string>
@@ -373,7 +325,6 @@
     <string name="schedule_custom">Personalizado</string>
     <string name="schedule_day">Día</string>
     <string name="schedule_every">Cada</string>
-    <string name="schedule_unit">Unidad</string>
     <string name="schedule_starting">A partir de</string>
     <string name="schedule_preferred_time">Hora preferida</string>
     <string name="schedule_look_back">Días anteriores</string>
