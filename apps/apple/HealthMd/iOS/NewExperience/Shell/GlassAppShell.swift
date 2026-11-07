@@ -37,6 +37,9 @@ struct GlassAppShell: View {
     let historyCheckAwaitsDecision: Bool
     let onContinueWithoutHistoryVerification: () -> Void
     let onCancelHistoryVerification: () -> Void
+    /// True while MomentGlass shows a finished export, so ContentView holds back its
+    /// completion toast instead of drawing it over the moment's summary.
+    @Binding var isShowingExportMoment: Bool
 
     @EnvironmentObject private var healthKitManager: HealthKitManager
     @EnvironmentObject private var syncService: SyncService
@@ -355,6 +358,7 @@ struct GlassAppShell: View {
             case .failed: break
             }
         }
+        .onChange(of: momentDone == nil, initial: true) { _, isHidden in isShowingExportMoment = !isHidden }
         .onChange(of: presentFirstExportPreview) { _, requested in consumeFirstPreview(requested) }
         .onChange(of: classicExportRequest) { _, _ in onExport() }
         .onChange(of: gapBackfillRouter.pendingRequest, initial: true) { _, _ in consumeGapBackfillRequest() }
@@ -685,8 +689,11 @@ struct GlassAppShell: View {
             .padding(.horizontal, GlassMetrics.screenMargin)
         } else if let assessment = executionHistoryAssessment,
                   assessment.needsWarning,
-                  dismissedHistoryNotice != assessment {
+                  dismissedHistoryNotice != assessment,
+                  !visibleTabRoots.isEmpty {
             // After an export runs, say how far its history was checked, as the Export tab did.
+            // Only over tab roots: on a pushed page (DayPage, details) the notice would cover
+            // that page's own bottom actions such as Open file; it returns on the way back.
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
                     Text(assessment.warningTitle)

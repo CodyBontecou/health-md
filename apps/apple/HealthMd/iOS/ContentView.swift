@@ -36,6 +36,7 @@ struct ContentView: View {
     @State private var showPostOnboardingPaywall = false
     @AppStorage("pricing.paywall.postOnboarding.shown.v1") private var hasSeenPostOnboardingPaywall = false
     @State private var isExporting = false
+    @State private var isShowingExportMoment = false
     @State private var isTestExportWaitingForCompletion = false
     @State private var isRequestingHealthAuthorization = false
     @State private var isAssessingHistory = false
@@ -170,7 +171,8 @@ struct ContentView: View {
                     isAssessingHistory: isAssessingHistory,
                     historyCheckAwaitsDecision: historyCheckAwaitsDecision,
                     onContinueWithoutHistoryVerification: continueWithoutHistoryVerification,
-                    onCancelHistoryVerification: invalidateExecutionHistory
+                    onCancelHistoryVerification: invalidateExecutionHistory,
+                    isShowingExportMoment: $isShowingExportMoment
                 )
                 .tint(Color.accent)
                 .task { ensureProfileCoordinator() }
@@ -196,7 +198,9 @@ struct ContentView: View {
 
             // Toast notifications
             VStack {
-                Spacer()
+                // MomentGlass fills the bottom with its own summary card, so while it shows,
+                // the completion toast sits at the top instead of covering that card.
+                if !isShowingExportMoment { Spacer() }
 
                 PartialExportNoticeToast(
                     notice: $partialExportNotice,
@@ -235,8 +239,11 @@ struct ContentView: View {
                         }
                     )
                     .padding(.horizontal, Spacing.lg)
-                    .padding(.bottom, 120)
+                    .padding(.top, isShowingExportMoment ? Spacing.s2 : 0)
+                    .padding(.bottom, isShowingExportMoment ? 0 : 120)
                 }
+
+                if isShowingExportMoment { Spacer() }
             }
         }
         .safeAreaInset(edge: .top, spacing: 0) {

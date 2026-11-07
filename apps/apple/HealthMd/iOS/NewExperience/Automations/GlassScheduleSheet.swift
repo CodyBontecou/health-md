@@ -37,9 +37,12 @@ struct GlassScheduleSheet: View {
         self.profile = profile
         self.entryStore = entryStore
         self.onSave = onSave
+        // No entry means no schedule: start the draft off so the toggle tells the truth.
+        // Autosave takes the first value as its baseline, so an "on" draft here was
+        // shown as scheduled yet never saved; turning it on is now a real change.
         _draft = State(initialValue: entry ?? ScheduledExportEntry(
             profileID: profile.id,
-            isEnabled: true,
+            isEnabled: false,
             frequency: .daily
         ))
     }

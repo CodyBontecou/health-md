@@ -528,6 +528,10 @@ struct ArchiveScreen: View {
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundStyle(palette.text)
                     .frame(maxWidth: .infinity, alignment: .leading)
+                    // VoiceOver reaches the day page from the name, as sighted users do from the row.
+                    .accessibilityAddTraits(.isButton)
+                    .accessibilityHint(Text("See this day"))
+                    .accessibilityAction { onOpenDay(selectedDate, profile.id) }
                 StatusBadge(title: ArchiveCopy.title(for: day.status), status: day.status)
             }
             HStack(spacing: 10) {
@@ -560,6 +564,10 @@ struct ArchiveScreen: View {
             .padding(.leading, 18)
         }
         .padding(.vertical, 12)
+        // Like the week view's rows, the row opens the day page on this automation;
+        // the fix button above keeps its own tap.
+        .contentShape(Rectangle())
+        .onTapGesture { onOpenDay(selectedDate, profile.id) }
     }
 
     /// The day as the Duo and iPad boards show it: name, badge and note, with one fix below.
@@ -597,7 +605,15 @@ struct ArchiveScreen: View {
 
     private func compactDayRow(_ profile: ArchiveProfile) -> some View {
         let day = model.day(profile, on: selectedDate)
-        return VStack(alignment: .leading, spacing: 4) {
+        // Opens the day page on this automation, as the week view's rows do.
+        return Button { onOpenDay(selectedDate, profile.id) } label: {
+            compactDayRowLabel(profile, day: day)
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func compactDayRowLabel(_ profile: ArchiveProfile, day: CoverageDay) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 8) {
                 Circle()
                     .fill(palette.profileColor(at: profile.colorIndex))
@@ -616,6 +632,8 @@ struct ArchiveScreen: View {
                 .padding(.leading, 16)
         }
         .padding(.vertical, 11)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
     }
 

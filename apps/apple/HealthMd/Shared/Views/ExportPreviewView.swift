@@ -1911,7 +1911,9 @@ extension ExportPreviewView {
         let lines = content.text.split(separator: "\n", omittingEmptySubsequences: false)
         let isClipped = lines.count > Self.glassInlineLineLimit || content.isTruncated
         let shown = lines.prefix(Self.glassInlineLineLimit).joined(separator: "\n")
-        let path = [file.folderPath, file.filename].filter { !$0.isEmpty }.joined(separator: "/")
+        // folderPath is a display folder that already ends in "/", so trim it before joining.
+        let folder = file.folderPath.hasSuffix("/") ? String(file.folderPath.dropLast()) : file.folderPath
+        let path = [folder, file.filename].filter { !$0.isEmpty }.joined(separator: "/")
         return VStack(alignment: .leading, spacing: 6) {
             Text(verbatim: "\(path) · \(file.sizeLabel)")
                 .foregroundStyle(palette.muted)
