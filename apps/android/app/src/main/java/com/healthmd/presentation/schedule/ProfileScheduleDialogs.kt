@@ -189,6 +189,7 @@ private fun ProfileScheduleDialog(onDismiss: () -> Unit, content: @Composable ()
     val context = LocalContext.current
     Dialog(onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
+        com.healthmd.presentation.common.EdgeToEdgeDialogWindow()
         CompositionLocalProvider(
             LocalDensity provides density, LocalLayoutDirection provides direction,
             LocalConfiguration provides configuration, LocalContext provides context,

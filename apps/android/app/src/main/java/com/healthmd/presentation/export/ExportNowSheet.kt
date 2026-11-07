@@ -51,6 +51,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.healthmd.R
+import com.healthmd.presentation.common.EdgeToEdgeDialogWindow
 import com.healthmd.presentation.common.dialogNavigationBarsPadding
 import com.healthmd.presentation.common.LocalConfigurationProtection
 import com.healthmd.presentation.theme.GeistRadii
@@ -77,6 +78,7 @@ fun ExportNowSheet(onDismiss: () -> Unit, content: @Composable () -> Unit) {
     var dragY by remember { mutableFloatStateOf(0f) }
     val shownY by animateFloatAsState(dragY, label = "sheetDrag")
     val dismissPx = with(density) { DISMISS_DRAG.toPx() }
+    EdgeToEdgeDialogWindow()
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val maxSheetHeight = maxHeight * 0.92f
         Box(
