@@ -112,7 +112,51 @@ final class APIExportSettings: ObservableObject {
     }
 
     var endpointURL: URL? {
-        let trimmed = endpointURLString.trimmingCharacters(in: .whitespacesAndNewlines)
+        Self.supportedEndpointURL(from: endpointURLString)
+    }
+
+    /// Why an endpoint string can't be used, or `nil` when it can (or is empty).
+    enum EndpointProblem: Equatable {
+        case invalid
+        /// Plain `http` to an internet host, which App Transport Security blocks.
+        case cleartextToInternetHost
+    }
+
+    /// The endpoint URL an export may actually reach: `https` to any host, or plain
+    /// `http` only where App Transport Security allows cleartext for this app
+    /// (`NSAllowsLocalNetworking`). Anything else would save and then fail every run.
+    nonisolated static func supportedEndpointURL(from rawValue: String) -> URL? {
+        endpointProblem(for: rawValue) == nil ? parsedEndpointURL(from: rawValue) : nil
+    }
+
+    nonisolated static func endpointProblem(for rawValue: String) -> EndpointProblem? {
+        guard let url = parsedEndpointURL(from: rawValue),
+              let scheme = url.scheme?.lowercased(),
+              let host = url.host else {
+            return .invalid
+        }
+        if scheme == "http", !allowsCleartext(toHost: host) {
+            return .cleartextToInternetHost
+        }
+        return nil
+    }
+
+    /// Hosts the local-networking ATS exception covers: loopback, IP literals,
+    /// unqualified names and the `.local` (Bonjour) domain.
+    nonisolated static func allowsCleartext(toHost rawHost: String) -> Bool {
+        let host = rawHost.lowercased()
+            .trimmingCharacters(in: CharacterSet(charactersIn: "[]"))
+            .trimmingCharacters(in: CharacterSet(charactersIn: "."))
+        guard !host.isEmpty else { return false }
+        if host == "localhost" || host.hasSuffix(".local") || !host.contains(".") { return true }
+        // IPv6 literals contain ':'; IPv4 literals are four dot-separated octets.
+        if host.contains(":") { return true }
+        let octets = host.split(separator: ".", omittingEmptySubsequences: false)
+        return octets.count == 4 && octets.allSatisfy { UInt8($0) != nil }
+    }
+
+    private nonisolated static func parsedEndpointURL(from rawValue: String) -> URL? {
+        let trimmed = rawValue.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty,
               let url = URL(string: trimmed),
               let scheme = url.scheme?.lowercased(),

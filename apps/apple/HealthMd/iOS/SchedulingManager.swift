@@ -316,10 +316,9 @@ class SchedulingManager: ObservableObject {
             // A missing bound endpoint is not an invitation to use the active profile's URL.
             guard let endpoint = scheduledDestinationStore.apiEndpoint(id: bindingID) else { return nil }
             // Resolve without persisting a URL or copying credentials into global settings.
-            let trimmedURL = endpoint.endpointURLString.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard let url = URL(string: trimmedURL),
-                  let scheme = url.scheme?.lowercased(), ["https", "http"].contains(scheme),
-                  url.host?.isEmpty == false else { return nil }
+            guard let url = APIExportSettings.supportedEndpointURL(from: endpoint.endpointURLString) else {
+                return nil
+            }
             let token = (scheduledDestinationStore.token(for: bindingID) ?? "")
                 .trimmingCharacters(in: .whitespacesAndNewlines)
             let header = token.isEmpty ? nil

@@ -45,7 +45,7 @@ struct AutomationFacts {
 
     func nextRun(_ profile: ExportProfile, now: Date = Date()) -> Date? {
         guard let entry = entry(profile), entry.isEnabled else { return nil }
-        return ScheduleDateMath.calculateNextRunDate(schedule: entry.dateMathProjection, now: now)
+        return ScheduleDateMath.nextAnyRunDate(schedule: entry.dateMathProjection, now: now)
     }
 
     func statusLine(_ profile: ExportProfile, now: Date = Date()) -> String {
@@ -82,6 +82,15 @@ struct AutomationFacts {
     static func scheduleShortLabel(_ entry: ScheduledExportEntry?) -> String {
         guard let entry else { return String(localized: "Off") }
         guard entry.isEnabled else { return String(localized: "Paused") }
+        let base = cadenceShortLabel(entry)
+        // The sentence leads with the refresh cadence ("Every 3 hours"), so the row
+        // names it too instead of contradicting it with only the daily run.
+        guard entry.todayRefreshEnabled else { return base }
+        let refresh = ScheduleSheetCopy.refreshChipTitle(minutes: entry.todayRefreshMinutes)
+        return String(localized: "\(base) · every \(refresh)", comment: "Schedule row: completed-day cadence, then the Refresh today interval")
+    }
+
+    private static func cadenceShortLabel(_ entry: ScheduledExportEntry) -> String {
         let cadence = ExportProfileCadenceSummary.from(entry)
         if let interval = cadence.customInterval, let unit = cadence.customUnit {
             return ScheduleDisplayCopy.cadence(count: interval, unit: unit, at: cadence.timeLabel)

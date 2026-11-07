@@ -198,9 +198,9 @@ enum ExportIntentRunner {
         guard let bindingID = profile.apiEndpointID else { return legacyDestination }
         destinationStore.reloadPersistedDestinations()
         guard let endpoint = destinationStore.apiEndpoint(id: bindingID),
-              let url = URL(string: endpoint.endpointURLString.trimmingCharacters(in: .whitespacesAndNewlines)),
-              let scheme = url.scheme?.lowercased(), ["https", "http"].contains(scheme),
-              url.host?.isEmpty == false else { return nil }
+              let url = APIExportSettings.supportedEndpointURL(from: endpoint.endpointURLString) else {
+            return nil
+        }
         let token = (destinationStore.token(for: bindingID) ?? "")
             .trimmingCharacters(in: .whitespacesAndNewlines)
         let header = token.isEmpty ? nil

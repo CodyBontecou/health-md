@@ -179,7 +179,7 @@ extension ArchiveModel {
     func nextRun(filter: UUID? = nil) -> (profile: ArchiveProfile, date: Date)? {
         profiles.filter { filter == nil || $0.id == filter }.compactMap { profile -> (ArchiveProfile, Date)? in
             guard let entry = profile.entry, entry.isEnabled,
-                  let date = ScheduleDateMath.calculateNextRunDate(
+                  let date = ScheduleDateMath.nextAnyRunDate(
                     schedule: entry.dateMathProjection, now: now, calendar: calendar
                   ) else { return nil }
             return (profile, date)
