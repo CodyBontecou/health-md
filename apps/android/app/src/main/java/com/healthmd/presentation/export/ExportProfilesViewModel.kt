@@ -22,12 +22,14 @@ import com.healthmd.domain.model.ExportTarget
 import com.healthmd.domain.repository.SettingsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import timber.log.Timber
 
 /** One row in the export profiles management screen. */
@@ -220,26 +222,49 @@ class ExportProfilesViewModel @Inject constructor(
      */
     fun updateProfile(profileId: String, draft: ExportProfileEditorDraft) {
         viewModelScope.launch {
-            runCatching {
-                val snapshotJson = encodeDraftSnapshot(draft)
-                val storedName = profileRepository.applyEditorUpdate(
-                    id = profileId,
-                    rawName = draft.name.trim(),
-                    settingsSnapshotJson = snapshotJson,
-                    target = draft.target,
-                    apiEndpointUrl = endpointBinding(draft),
-                    agentDataGatewayUrl = gatewayBinding(draft),
-                    folderUri = folderBinding(draft)?.first,
-                    folderDisplayName = folderBinding(draft)?.second,
-                )
-                require(storedName != null) { "Profile $profileId could not be updated." }
-                if (uiState.value.rows.firstOrNull { it.isActive }?.profile?.id == profileId) {
-                    // Re-activation applies the new snapshot onto live settings and
-                    // adopts the new folder binding (same-profile activate path).
-                    profileCoordinator.activate(profileId)
-                }
-            }.onFailure { Timber.e(it, "Could not update profile") }
+            runCatching { applyEditorUpdate(profileId, draft) }
+                .onFailure { Timber.e(it, "Could not update profile") }
             _uiState.update { it.copy(editingProfileId = null) }
+        }
+    }
+
+    /**
+     * Saves one part of a profile, as the automation pages do as they change (iOS
+     * `saveSettings(for:_:)`): [change] is applied to a draft freshly restored from the STORED
+     * profile, so a page never undoes another page's save with a stale copy. The write is not
+     * cancelled when the page that asked for it leaves, so a final change on Back still lands.
+     */
+    fun saveDraft(profileId: String, change: (ExportProfileEditorDraft) -> ExportProfileEditorDraft) {
+        viewModelScope.launch {
+            withContext(NonCancellable) {
+                runCatching {
+                    val profile = profileRepository.profileById(profileId) ?: return@runCatching
+                    val stored = initialEditDraft(profile, settingsRepository.getExportSettings())
+                    val updated = change(stored)
+                    if (updated != stored) applyEditorUpdate(profileId, updated)
+                }.onFailure { Timber.e(it, "Could not save profile") }
+            }
+        }
+    }
+
+    /** Name, target, destination bindings and a new frozen snapshot in one repository update. */
+    private suspend fun applyEditorUpdate(profileId: String, draft: ExportProfileEditorDraft) {
+        val snapshotJson = encodeDraftSnapshot(draft)
+        val storedName = profileRepository.applyEditorUpdate(
+            id = profileId,
+            rawName = draft.name.trim(),
+            settingsSnapshotJson = snapshotJson,
+            target = draft.target,
+            apiEndpointUrl = endpointBinding(draft),
+            agentDataGatewayUrl = gatewayBinding(draft),
+            folderUri = folderBinding(draft)?.first,
+            folderDisplayName = folderBinding(draft)?.second,
+        )
+        require(storedName != null) { "Profile $profileId could not be updated." }
+        if (uiState.value.rows.firstOrNull { it.isActive }?.profile?.id == profileId) {
+            // Re-activation applies the new snapshot onto live settings and
+            // adopts the new folder binding (same-profile activate path).
+            profileCoordinator.activate(profileId)
         }
     }
 
@@ -362,12 +387,15 @@ class ExportProfilesViewModel @Inject constructor(
         }
     }
 
+    /** Saves a schedule; not cancelled when the autosaving Schedule page that asked for it leaves. */
     fun saveEntry(entry: ScheduledProfileEntry) {
         viewModelScope.launch {
-            runCatching {
-                entryStore.upsert(entry)
-                profileScheduler.reconcile()
-            }.onFailure { Timber.e(it, "Could not save schedule entry") }
+            withContext(NonCancellable) {
+                runCatching {
+                    entryStore.upsert(entry)
+                    profileScheduler.reconcile()
+                }.onFailure { Timber.e(it, "Could not save schedule entry") }
+            }
             _uiState.update { it.copy(editingScheduleProfileId = null) }
         }
     }
