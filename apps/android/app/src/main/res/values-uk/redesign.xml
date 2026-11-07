@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="nav_archive">Архів</string>
     <string name="nav_automations">Автоматизації</string>
     <string name="export_now_title">Експортувати</string>
@@ -309,13 +309,13 @@
     <string name="attention_host_api">Кінцева точка API</string>
     <string name="attention_host_gateway">Шлюз Agent Data</string>
     <plurals name="attention_endpoint_status">
-        <item quantity="one">%1$s повернув %2$s.</item>
+        <item quantity="one">%1$s повернув %2$s %3$s раз.</item>
         <item quantity="few">%1$s повернув %2$s %3$s рази.</item>
         <item quantity="many">%1$s повернув %2$s %3$s разів.</item>
         <item quantity="other">%1$s повернув %2$s %3$s раза.</item>
     </plurals>
     <plurals name="attention_endpoint_failed">
-        <item quantity="one">%1$s: %2$s.</item>
+        <item quantity="one">%1$s: збій %3$s раз — %2$s.</item>
         <item quantity="few">%1$s: збій %3$s рази — %2$s.</item>
         <item quantity="many">%1$s: збій %3$s разів — %2$s.</item>
         <item quantity="other">%1$s: збій %3$s раза — %2$s.</item>
@@ -467,7 +467,7 @@
         <item quantity="many">Кожні %1$d хвилин</item>
         <item quantity="other">Кожні %1$d хвилини</item>
     </plurals>
-    <plurals name="automation_refresh_every_hours">
+    <plurals name="automation_refresh_every_hours" tools:ignore="ImpliedQuantity">
         <item quantity="one">Щогодини</item>
         <item quantity="few">Кожні %1$d години</item>
         <item quantity="many">Кожні %1$d годин</item>

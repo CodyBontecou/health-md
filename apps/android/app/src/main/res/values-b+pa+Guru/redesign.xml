@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="nav_archive">ਪੁਰਾਲੇਖ</string>
     <string name="nav_automations">ਆਟੋਮੇਸ਼ਨ</string>
     <string name="export_now_title">ਹੁਣੇ ਨਿਰਯਾਤ ਕਰੋ</string>
@@ -393,7 +393,7 @@
 <string name="automation_summary_send_multi">{when}, {range}[ ਦੇ {metrics}][ ਨੂੰ {formats} ਵਜੋਂ] {where} ਨੂੰ ਭੇਜੋ[ ਅਤੇ {note}]।</string>
 <string name="automation_range_today">ਅੱਜ</string>
 <plurals name="automation_refresh_every_minutes"><item quantity="one">ਹਰ %1$d ਮਿੰਟ ਬਾਅਦ</item><item quantity="other">ਹਰ %1$d ਮਿੰਟ ਬਾਅਦ</item></plurals>
-<plurals name="automation_refresh_every_hours"><item quantity="one">ਹਰ ਘੰਟੇ</item><item quantity="other">ਹਰ %1$d ਘੰਟਿਆਂ ਬਾਅਦ</item></plurals>
+<plurals name="automation_refresh_every_hours" tools:ignore="ImpliedQuantity"><item quantity="one">ਹਰ ਘੰਟੇ</item><item quantity="other">ਹਰ %1$d ਘੰਟਿਆਂ ਬਾਅਦ</item></plurals>
 <string name="settings_vault_title">ਇਸ ਡਿਵਾਈਸ ਉੱਤੇ ਵੌਲਟ</string>
 <string name="settings_vault_default">%1$s · ਡਿਫ਼ੌਲਟ</string>
 <plurals name="settings_vault_folders"><item quantity="one">%1$d ਫੋਲਡਰ</item><item quantity="other">%1$d ਫੋਲਡਰ</item></plurals>

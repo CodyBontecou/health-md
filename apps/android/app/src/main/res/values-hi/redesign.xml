@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="nav_archive">संग्रह</string>
     <string name="nav_automations">ऑटोमेशन</string>
     <string name="export_now_title">अभी निर्यात करें</string>
@@ -423,7 +423,7 @@
         <item quantity="one">हर %1$d मिनट में</item>
         <item quantity="other">हर %1$d मिनट में</item>
     </plurals>
-    <plurals name="automation_refresh_every_hours">
+    <plurals name="automation_refresh_every_hours" tools:ignore="ImpliedQuantity">
         <item quantity="one">हर घंटे</item>
         <item quantity="other">हर %1$d घंटे में</item>
     </plurals>

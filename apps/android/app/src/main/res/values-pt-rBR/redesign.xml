@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="nav_archive">Arquivo</string>
     <string name="nav_automations">Automações</string>
     <string name="export_now_title">Exportar agora</string>
@@ -277,6 +277,7 @@
     <string name="archive_read_whole_note">Ler a nota inteira</string>
     <plurals name="archive_attention_count">
         <item quantity="one">%d item precisa de revisão.</item>
+        <item quantity="many">%d itens precisam de revisão.</item>
         <item quantity="other">%d itens precisam de revisão.</item>
     </plurals>
     <string name="attention_title">Precisa de atenção</string>
@@ -296,10 +297,12 @@
     <string name="attention_host_gateway">Gateway Agent Data</string>
     <plurals name="attention_endpoint_status">
         <item quantity="one">%1$s retornou %2$s.</item>
+        <item quantity="many">%1$s retornou %2$s %3$s vezes.</item>
         <item quantity="other">%1$s retornou %2$s %3$s vezes.</item>
     </plurals>
     <plurals name="attention_endpoint_failed">
         <item quantity="one">%1$s: %2$s.</item>
+        <item quantity="many">%1$s falhou %3$s vezes: %2$s.</item>
         <item quantity="other">%1$s falhou %3$s vezes: %2$s.</item>
     </plurals>
     <string name="attention_retry_refresh">%1$s tentará novamente na próxima atualização.</string>
@@ -338,14 +341,17 @@
     <string name="automation_schedule_weekly">%1$s %2$s</string>
     <plurals name="automation_schedule_every_days">
         <item quantity="one">A cada %1$d dia às %2$s</item>
+        <item quantity="many">A cada %1$d dias às %2$s</item>
         <item quantity="other">A cada %1$d dias às %2$s</item>
     </plurals>
     <plurals name="automation_schedule_every_weeks">
         <item quantity="one">A cada %1$d semana às %2$s</item>
+        <item quantity="many">A cada %1$d semanas às %2$s</item>
         <item quantity="other">A cada %1$d semanas às %2$s</item>
     </plurals>
     <plurals name="automation_schedule_every_months">
         <item quantity="one">A cada %1$d mês às %2$s</item>
+        <item quantity="many">A cada %1$d meses às %2$s</item>
         <item quantity="other">A cada %1$d meses às %2$s</item>
     </plurals>
     <string name="automation_overlap_title">Exportações sobrepostas</string>
@@ -382,14 +388,17 @@
     <string name="schedule_api_refresh_note">Perfis de API reenviam um snapshot JSON completo a cada atualização — seu endpoint deve substituir os dados ou aplicar upsert.</string>
     <plurals name="schedule_count_days">
         <item quantity="one">%1$d dia</item>
+        <item quantity="many">%1$d dias</item>
         <item quantity="other">%1$d dias</item>
     </plurals>
     <plurals name="schedule_count_weeks">
         <item quantity="one">%1$d semana</item>
+        <item quantity="many">%1$d semanas</item>
         <item quantity="other">%1$d semanas</item>
     </plurals>
     <plurals name="schedule_count_months">
         <item quantity="one">%1$d mês</item>
+        <item quantity="many">%1$d meses</item>
         <item quantity="other">%1$d meses</item>
     </plurals>
     <string name="schedule_pending_recovery">Recuperação pendente</string>
@@ -433,16 +442,19 @@
     <string name="automation_range_today">hoje</string>
     <plurals name="automation_refresh_every_minutes">
         <item quantity="one">A cada %1$d minuto</item>
+        <item quantity="many">A cada %1$d minutos</item>
         <item quantity="other">A cada %1$d minutos</item>
     </plurals>
-    <plurals name="automation_refresh_every_hours">
+    <plurals name="automation_refresh_every_hours" tools:ignore="ImpliedQuantity">
         <item quantity="one">A cada hora</item>
+        <item quantity="many">A cada %1$d horas</item>
         <item quantity="other">A cada %1$d horas</item>
     </plurals>
     <string name="settings_vault_title">Cofre neste dispositivo</string>
     <string name="settings_vault_default">%1$s · padrão</string>
     <plurals name="settings_vault_folders">
         <item quantity="one">%1$d pasta</item>
+        <item quantity="many">%1$d pastas</item>
         <item quantity="other">%1$d pastas</item>
     </plurals>
     <string name="settings_cli_title">healthmd CLI</string>
@@ -502,14 +514,17 @@
     <string name="date_option_last_30_days">30 dias</string>
     <plurals name="export_now_about_files">
         <item quantity="one">Cerca de %1$d arquivo</item>
+        <item quantity="many">Cerca de %1$d arquivos</item>
         <item quantity="other">Cerca de %1$d arquivos</item>
     </plurals>
     <plurals name="export_now_days">
         <item quantity="one">%1$d dia</item>
+        <item quantity="many">%1$d dias</item>
         <item quantity="other">%1$d dias</item>
     </plurals>
     <plurals name="export_now_files">
         <item quantity="one">%1$d arquivo</item>
+        <item quantity="many">%1$d arquivos</item>
         <item quantity="other">%1$d arquivos</item>
     </plurals>
     <string name="export_now_daily_notes_updated">notas diárias atualizadas</string>
@@ -518,6 +533,7 @@
     <string name="export_now_cta_yesterday">Exportar ontem</string>
     <plurals name="export_now_cta_days">
         <item quantity="one">Exportar %1$d dia</item>
+        <item quantity="many">Exportar %1$d dias</item>
         <item quantity="other">Exportar %1$d dias</item>
     </plurals>
     <string name="export_now_destination">Destino</string>
