@@ -5,44 +5,44 @@
   "direction": "ltr",
   "slides": [
     {
-      "id": "core-export",
-      "headline": "আপনার স্বাস্থ্য ডেটা। আপনার ফাইল।",
-      "supportingLine": "অনুমোদিত Health Connect রেকর্ড আপনার নিয়ন্ত্রণে থাকা ফাইলে রপ্তানি করুন।"
+      "id": "text-file",
+      "headline": "আপনি, একটি টেক্সট ফাইল।",
+      "supportingLine": "Health.md, Health Connect পড়ে আপনার দিনগুলো Markdown, CSV ও JSON ফাইলে লেখে — ফাইলগুলো আপনারই।"
     },
     {
-      "id": "export-formats",
-      "headline": "নিজের মতো করে রপ্তানি করুন",
-      "supportingLine": "Markdown, Obsidian Bases, JSON ও CSV।"
+      "id": "interrogate",
+      "headline": "নিজের শরীরকেই জেরা করুন।",
+      "supportingLine": "আপনার স্বাস্থ্য ফাইল তুলে দিন চেনা AI ও টুলের হাতে — ফোল্ডার, CLI বা API দিয়ে।"
     },
     {
-      "id": "health-metrics",
-      "headline": "১০০টির বেশি স্বাস্থ্য মেট্রিক বেছে নিন",
-      "supportingLine": "ঘুম, কার্যকলাপ, হৃদ্‌যন্ত্র, ভাইটাল, পুষ্টি এবং আরও অনেক কিছু।"
+      "id": "periodic-table",
+      "headline": "আপনার নিজের পর্যায় সারণি।",
+      "supportingLine": "ঠিক কোন মেট্রিক লেখা হবে বেছে নিন: ঘুম, হৃদয়, কার্যকলাপ, গুরুত্বপূর্ণ লক্ষণ, পুষ্টি ও আরও।"
     },
     {
-      "id": "private-by-design",
-      "headline": "শুধু পড়া। নকশাতেই গোপনীয়তা।",
-      "supportingLine": "কোনো অ্যাকাউন্ট নেই। Health.md স্বাস্থ্য-ডেটা ক্লাউড নেই।"
+      "id": "day-itemized",
+      "headline": "আপনার দিন, পুরো হিসাব।",
+      "supportingLine": "আপনার ঠিক করা সময়ে দৈনিক নোট পৌঁছে যায় আপনার ভল্টে। আপনি শুধু পড়ুন।"
     },
     {
-      "id": "scheduled-exports",
-      "headline": "আপনার আর্কাইভ হালনাগাদ রাখুন",
-      "supportingLine": "আপনার নির্বাচিত গন্তব্যে রপ্তানির সময়সূচি দিন।"
+      "id": "pin-your-sleep",
+      "headline": "ঘুমকে পিন করুন খুঁটিয়ে দেখতে।",
+      "supportingLine": "Health Connect-এ রেকর্ড হওয়া ঘুমের প্রতিটি পর্যায়, এক ফাইলে — আগের একশো রাতের সঙ্গে মিলিয়ে দেখুন।"
     },
     {
-      "id": "file-preview",
-      "headline": "রপ্তানির আগে প্রিভিউ করুন",
-      "supportingLine": "কিছু লেখার আগে ফাইলের নাম, পাথ ও কনটেন্ট দেখুন।"
+      "id": "quilt",
+      "headline": "আপনার মাস, যেন নকশিকাঁথা।",
+      "supportingLine": "আর্কাইভে রপ্তানি করা প্রতিটি দিন দেখা যায়, আর পূরণ করার মতো ফাঁকগুলো চিহ্নিত থাকে।"
     },
     {
-      "id": "home-screen-widgets",
-      "headline": "এক নজরে স্বাস্থ্য",
-      "supportingLine": "কার্যকলাপ, ঘুম, হৃদ্‌যন্ত্র ও সারাংশের উইজেট।"
+      "id": "preserved",
+      "headline": "সংরক্ষিত, আপনার নিজের ডিভাইসে।",
+      "supportingLine": "Health Connect ডেটা আপনার ফোন থেকে সোজা আপনার ফাইলে যায়। Health.md ক্লাউড দিয়ে কিছুই যায় না।"
     },
     {
-      "id": "direct-cli",
-      "headline": "সরাসরি আপনার কম্পিউটারে",
-      "supportingLine": "ক্লাউড রিলে ছাড়াই প্রমাণীকৃত, এনক্রিপ্ট করা রপ্তানির জন্য Health.md CLI-র সঙ্গে পেয়ার করুন।"
+      "id": "at-a-glance",
+      "headline": "আপনার সংখ্যা, এক নজরে।",
+      "supportingLine": "আপনার আর্কাইভ, কার্যকলাপ, হৃদয় ও ঘুমের জন্য হোম স্ক্রিন উইজেট।"
     }
   ]
 }

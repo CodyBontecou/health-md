@@ -5,44 +5,44 @@
   "direction": "ltr",
   "slides": [
     {
-      "id": "core-export",
-      "headline": "ਤੁਹਾਡਾ ਸਿਹਤ ਡਾਟਾ। ਤੁਹਾਡੀਆਂ ਫ਼ਾਈਲਾਂ।",
-      "supportingLine": "ਅਧਿਕਾਰਤ Health Connect ਰਿਕਾਰਡ ਆਪਣੇ ਕੰਟਰੋਲ ਵਾਲੀਆਂ ਫ਼ਾਈਲਾਂ ਵਿੱਚ ਨਿਰਯਾਤ ਕਰੋ।"
+      "id": "text-file",
+      "headline": "ਤੁਸੀਂ, ਇੱਕ ਟੈਕਸਟ ਫ਼ਾਈਲ।",
+      "supportingLine": "Health.md, Health Connect ਪੜ੍ਹ ਕੇ ਤੁਹਾਡੇ ਦਿਨ Markdown, CSV ਤੇ JSON ਫ਼ਾਈਲਾਂ ਵਿੱਚ ਲਿਖਦਾ ਹੈ — ਫ਼ਾਈਲਾਂ ਤੁਹਾਡੀਆਂ।"
     },
     {
-      "id": "export-formats",
-      "headline": "ਆਪਣੇ ਤਰੀਕੇ ਨਾਲ ਨਿਰਯਾਤ ਕਰੋ",
-      "supportingLine": "Markdown, Obsidian Bases, JSON ਅਤੇ CSV।"
+      "id": "interrogate",
+      "headline": "ਆਪਣੇ ਸਰੀਰ ਤੋਂ ਪੁੱਛਗਿੱਛ ਕਰੋ।",
+      "supportingLine": "ਆਪਣੀਆਂ ਸਿਹਤ ਫ਼ਾਈਲਾਂ ਆਪਣੇ ਮੌਜੂਦਾ AI ਅਤੇ ਟੂਲਾਂ ਨੂੰ ਦਿਓ — ਫੋਲਡਰ, CLI ਜਾਂ API ਰਾਹੀਂ।"
     },
     {
-      "id": "health-metrics",
-      "headline": "100+ ਸਿਹਤ ਮੈਟ੍ਰਿਕਾਂ ਵਿੱਚੋਂ ਚੁਣੋ",
-      "supportingLine": "ਨੀਂਦ, ਸਰਗਰਮੀ, ਦਿਲ, ਜੀਵਨ-ਸੰਕੇਤ, ਪੋਸ਼ਣ ਅਤੇ ਹੋਰ ਬਹੁਤ ਕੁਝ।"
+      "id": "periodic-table",
+      "headline": "ਤੁਹਾਡੀ ਆਪਣੀ ਆਵਰਤੀ ਸਾਰਣੀ।",
+      "supportingLine": "ਚੁਣੋ ਕਿ ਕਿਹੜੇ ਮੈਟ੍ਰਿਕਸ ਲਿਖੇ ਜਾਣ: ਨੀਂਦ, ਦਿਲ, ਗਤੀਵਿਧੀ, ਜ਼ਰੂਰੀ ਸੰਕੇਤ, ਪੋਸ਼ਣ ਅਤੇ ਹੋਰ ਬਹੁਤ ਕੁਝ।"
     },
     {
-      "id": "private-by-design",
-      "headline": "ਸਿਰਫ਼ ਪੜ੍ਹਨ ਲਈ। ਡਿਜ਼ਾਈਨ ਤੋਂ ਹੀ ਨਿੱਜੀ।",
-      "supportingLine": "ਕੋਈ ਖਾਤਾ ਨਹੀਂ। ਕੋਈ Health.md ਸਿਹਤ-ਡਾਟਾ ਕਲਾਉਡ ਨਹੀਂ।"
+      "id": "day-itemized",
+      "headline": "ਤੁਹਾਡਾ ਦਿਨ, ਪੂਰਾ ਹਿਸਾਬ।",
+      "supportingLine": "ਤੁਹਾਡੇ ਤੈਅ ਸਮੇਂ 'ਤੇ ਰੋਜ਼ਾਨਾ ਨੋਟ ਤੁਹਾਡੇ ਵਾਲਟ ਵਿੱਚ ਪਹੁੰਚ ਜਾਂਦਾ ਹੈ। ਤੁਸੀਂ ਬੱਸ ਪੜ੍ਹੋ।"
     },
     {
-      "id": "scheduled-exports",
-      "headline": "ਆਪਣਾ ਆਰਕਾਈਵ ਅੱਪ ਟੂ ਡੇਟ ਰੱਖੋ",
-      "supportingLine": "ਆਪਣੇ ਚੁਣੇ ਟਿਕਾਣੇ ਲਈ ਨਿਰਯਾਤ ਦਾ ਸਮਾਂ ਤੈਅ ਕਰੋ।"
+      "id": "pin-your-sleep",
+      "headline": "ਨੀਂਦ ਨੂੰ ਪਿੰਨ ਕਰੋ ਗਹੁ ਨਾਲ ਵੇਖਣ ਲਈ।",
+      "supportingLine": "Health Connect ਵਿੱਚ ਦਰਜ ਨੀਂਦ ਦਾ ਹਰ ਪੜਾਅ, ਇੱਕ ਫ਼ਾਈਲ ਵਿੱਚ — ਪਿਛਲੀਆਂ ਸੌ ਰਾਤਾਂ ਨਾਲ ਮਿਲਾਓ।"
     },
     {
-      "id": "file-preview",
-      "headline": "ਨਿਰਯਾਤ ਤੋਂ ਪਹਿਲਾਂ ਝਲਕ ਵੇਖੋ",
-      "supportingLine": "ਕੁਝ ਵੀ ਲਿਖੇ ਜਾਣ ਤੋਂ ਪਹਿਲਾਂ ਫ਼ਾਈਲ ਨਾਮ, ਪਾਥ ਅਤੇ ਸਮੱਗਰੀ ਵੇਖੋ।"
+      "id": "quilt",
+      "headline": "ਤੁਹਾਡਾ ਮਹੀਨਾ, ਫੁਲਕਾਰੀ ਵਾਂਗ।",
+      "supportingLine": "ਆਰਕਾਈਵ ਵਿੱਚ ਨਿਰਯਾਤ ਕੀਤਾ ਹਰ ਦਿਨ ਦਿਸਦਾ ਹੈ, ਅਤੇ ਭਰਨ ਯੋਗ ਖਾਲੀ ਦਿਨ ਨਿਸ਼ਾਨਬੱਧ ਹੁੰਦੇ ਹਨ।"
     },
     {
-      "id": "home-screen-widgets",
-      "headline": "ਇੱਕ ਨਜ਼ਰ ਵਿੱਚ ਸਿਹਤ",
-      "supportingLine": "ਸਰਗਰਮੀ, ਨੀਂਦ, ਦਿਲ ਅਤੇ ਸਾਰ ਦੇ ਵਿਜੇਟ।"
+      "id": "preserved",
+      "headline": "ਸੰਭਾਲਿਆ, ਤੁਹਾਡੇ ਆਪਣੇ ਡਿਵਾਈਸਾਂ 'ਤੇ।",
+      "supportingLine": "Health Connect ਡੇਟਾ ਤੁਹਾਡੇ ਫ਼ੋਨ ਤੋਂ ਸਿੱਧਾ ਤੁਹਾਡੀਆਂ ਫ਼ਾਈਲਾਂ ਵਿੱਚ ਜਾਂਦਾ ਹੈ। Health.md ਕਲਾਊਡ ਵਿੱਚੋਂ ਕੁਝ ਨਹੀਂ ਲੰਘਦਾ।"
     },
     {
-      "id": "direct-cli",
-      "headline": "ਸਿੱਧਾ ਆਪਣੇ ਕੰਪਿਊਟਰ 'ਤੇ",
-      "supportingLine": "ਬਿਨਾਂ ਕਲਾਉਡ ਰਿਲੇ ਦੇ ਪ੍ਰਮਾਣਿਤ, ਇਨਕ੍ਰਿਪਟ ਕੀਤੇ ਨਿਰਯਾਤਾਂ ਲਈ Health.md CLI ਨਾਲ ਪੇਅਰ ਕਰੋ।"
+      "id": "at-a-glance",
+      "headline": "ਤੁਹਾਡੇ ਅੰਕੜੇ, ਇੱਕ ਨਜ਼ਰ ਵਿੱਚ।",
+      "supportingLine": "ਤੁਹਾਡੇ ਆਰਕਾਈਵ, ਗਤੀਵਿਧੀ, ਦਿਲ ਅਤੇ ਨੀਂਦ ਲਈ ਹੋਮ ਸਕ੍ਰੀਨ ਵਿਜੇਟ।"
     }
   ]
 }

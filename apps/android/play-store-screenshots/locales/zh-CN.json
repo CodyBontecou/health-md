@@ -5,44 +5,44 @@
   "direction": "ltr",
   "slides": [
     {
-      "id": "core-export",
-      "headline": "你的健康数据，你的文件",
-      "supportingLine": "将已授权的 Health Connect 记录导出为由你掌控的文件。"
+      "id": "text-file",
+      "headline": "把你，写成文本文件。",
+      "supportingLine": "Health.md 读取 Health Connect，把你的每一天写成归你所有的 Markdown、CSV 和 JSON 文件。"
     },
     {
-      "id": "export-formats",
-      "headline": "按你的方式导出",
-      "supportingLine": "支持 Markdown、Obsidian Bases、JSON 和 CSV。"
+      "id": "interrogate",
+      "headline": "追问你自己的身体。",
+      "supportingLine": "通过文件夹、CLI 或 API，把健康文件交给你已在用的 AI 和工具。"
     },
     {
-      "id": "health-metrics",
-      "headline": "100 多项健康指标任你选择",
-      "supportingLine": "涵盖睡眠、活动、心脏、生命体征、营养等。"
+      "id": "periodic-table",
+      "headline": "你的元素周期表。",
+      "supportingLine": "精确挑选要写入的指标：睡眠、心脏、活动、生命体征、营养等等。"
     },
     {
-      "id": "private-by-design",
-      "headline": "只读，隐私优先",
-      "supportingLine": "无需帐户，也没有 Health.md 健康数据云服务。"
+      "id": "day-itemized",
+      "headline": "你的一天，逐项列清。",
+      "supportingLine": "每日笔记按你设定的时间送进文件库，你只管读。"
     },
     {
-      "id": "scheduled-exports",
-      "headline": "让归档始终保持最新",
-      "supportingLine": "安排导出到你选择的目标位置。"
+      "id": "pin-your-sleep",
+      "headline": "把睡眠钉成标本，细细研究。",
+      "supportingLine": "Health Connect 记录的每个睡眠阶段都存成文件，可与之前一百晚逐一对比。"
     },
     {
-      "id": "file-preview",
-      "headline": "导出前先预览",
-      "supportingLine": "写入前查看文件名、路径和内容。"
+      "id": "quilt",
+      "headline": "你的一个月，拼成百衲被。",
+      "supportingLine": "归档列出你导出过的每一天，并标出值得补齐的空缺。"
     },
     {
-      "id": "home-screen-widgets",
-      "headline": "健康信息一目了然",
-      "supportingLine": "活动、睡眠、心脏和摘要小组件。"
+      "id": "preserved",
+      "headline": "珍藏在你自己的设备上。",
+      "supportingLine": "Health Connect 数据从手机直接写入你的文件，不经过任何 Health.md 云端。"
     },
     {
-      "id": "direct-cli",
-      "headline": "直接导出到电脑",
-      "supportingLine": "与 Health.md CLI 配对，无需云端中转即可进行经过身份验证的加密导出。"
+      "id": "at-a-glance",
+      "headline": "你的数据，一目了然。",
+      "supportingLine": "主屏幕小组件，展示归档、活动、心脏和睡眠。"
     }
   ]
 }

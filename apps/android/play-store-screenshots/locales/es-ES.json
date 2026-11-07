@@ -5,44 +5,44 @@
   "direction": "ltr",
   "slides": [
     {
-      "id": "core-export",
-      "headline": "Tus datos de salud. Tus archivos.",
-      "supportingLine": "Exporta registros autorizados de Health Connect a archivos bajo tu control."
+      "id": "text-file",
+      "headline": "Tú, hecho texto plano.",
+      "supportingLine": "Health.md lee Health Connect y guarda tus días en archivos Markdown, CSV y JSON que son tuyos."
     },
     {
-      "id": "export-formats",
-      "headline": "Exporta a tu manera",
-      "supportingLine": "Markdown, Obsidian Bases, JSON y CSV."
+      "id": "interrogate",
+      "headline": "Interroga a tu cuerpo.",
+      "supportingLine": "Entrega tus archivos de salud a la IA y las herramientas que ya usas: por carpeta, CLI o API."
     },
     {
-      "id": "health-metrics",
-      "headline": "Elige entre más de 100 métricas de salud",
-      "supportingLine": "Sueño, actividad, corazón, constantes vitales, nutrición y más."
+      "id": "periodic-table",
+      "headline": "Tu tabla periódica.",
+      "supportingLine": "Elige exactamente qué métricas se escriben: sueño, corazón, actividad, signos vitales, nutrición y más."
     },
     {
-      "id": "private-by-design",
-      "headline": "Solo lectura. Privacidad desde el diseño.",
-      "supportingLine": "Sin cuenta. Sin nube de datos de salud de Health.md."
+      "id": "day-itemized",
+      "headline": "Tu día, desglosado.",
+      "supportingLine": "Una nota diaria llega a tu bóveda según la programación que elijas. Tú solo la lees."
     },
     {
-      "id": "scheduled-exports",
-      "headline": "Mantén tu archivo al día",
-      "supportingLine": "Programa exportaciones al destino que elijas."
+      "id": "pin-your-sleep",
+      "headline": "Fija tu sueño para estudiarlo.",
+      "supportingLine": "Cada fase del sueño que registra Health Connect, en un archivo que puedes comparar con los cien anteriores."
     },
     {
-      "id": "file-preview",
-      "headline": "Previsualiza antes de exportar",
-      "supportingLine": "Consulta nombres, rutas y contenido antes de escribir nada."
+      "id": "quilt",
+      "headline": "Tu mes, en patchwork.",
+      "supportingLine": "El Archivo muestra cada día que has exportado y señala los huecos que merece la pena llenar."
     },
     {
-      "id": "home-screen-widgets",
-      "headline": "Tu salud de un vistazo",
-      "supportingLine": "Widgets de actividad, sueño, corazón y resumen."
+      "id": "preserved",
+      "headline": "Conservado en tus dispositivos.",
+      "supportingLine": "Los datos de Health Connect van de tu teléfono directamente a tus archivos. Nada pasa por una nube de Health.md."
     },
     {
-      "id": "direct-cli",
-      "headline": "Directo a tu ordenador",
-      "supportingLine": "Empareja la Health.md CLI para exportaciones autenticadas y cifradas sin intermediarios en la nube."
+      "id": "at-a-glance",
+      "headline": "Tus números, de un vistazo.",
+      "supportingLine": "Widgets de pantalla de inicio para tu archivo, actividad, corazón y sueño."
     }
   ]
 }
