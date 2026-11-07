@@ -47,14 +47,14 @@ class ArchiveWidgetGlanceTest {
     )
 
     @Test
-    fun `small archive renders streak gaps and next run and opens the app`() =
+    fun `small archive renders the month count gaps and next run and opens the app`() =
         runGlanceAppWidgetUnitTest(timeout = 10.seconds) {
             setContext(ApplicationProvider.getApplicationContext())
             setAppWidgetSize(ArchiveWidgetSizes.Small)
             provideComposable { ArchiveWidgetContent(summary, ArchiveWidgetSizes.Small, now, zoneId) }
 
-            onNode(hasTextEqualTo("10")).assertExists()
-            onNode(hasTextEqualTo("day streak")).assertExists()
+            onNode(hasTextEqualTo("28")).assertExists()
+            onNode(hasTextEqualTo("days in October")).assertExists()
             onNode(hasTextEqualTo("2 gaps")).assertExists()
             onNode(hasText("7:30")).assertExists()
             onNode(hasText("Next")).assertDoesNotExist()

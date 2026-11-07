@@ -84,7 +84,6 @@ data class ArchiveStats(
     val archivedCount: Int,
     val gapCount: Int,
     val earliestGap: LocalDate?,
-    val streak: Int,
 )
 
 data class ArchiveMonth(
@@ -96,9 +95,6 @@ data class ArchiveMonth(
 
 object ArchiveCoverage {
     const val MAXIMUM_ISSUE_DOTS = 3
-
-    /** How far back the current streak reads, matching the Apple Archive. */
-    const val STREAK_WINDOW_DAYS = 120L
 
     /** Profiles in the order they were most recently exported. */
     fun profiles(entries: List<ExportHistoryEntry>): List<ArchiveProfile> =
@@ -162,32 +158,25 @@ object ArchiveCoverage {
     }
 
     /**
-     * Days archived = complete + partial. The streak runs back from the latest past date,
-     * skips dates with nothing due, and stops at the first gap. Today is excluded.
+     * Days archived = complete + partial; gaps = missing. Today is excluded.
      */
     fun stats(days: List<Pair<LocalDate, CoverageStatus>>, today: LocalDate): ArchiveStats {
         var archived = 0
         var gaps = 0
         var earliestGap: LocalDate? = null
-        var streak = 0
-        var streakIsOpen = true
         days.filter { it.first.isBefore(today) }
             .sortedByDescending { it.first }
             .forEach { (date, status) ->
                 when (status) {
-                    CoverageStatus.COMPLETE, CoverageStatus.PARTIAL -> {
-                        archived += 1
-                        if (streakIsOpen) streak += 1
-                    }
+                    CoverageStatus.COMPLETE, CoverageStatus.PARTIAL -> archived += 1
                     CoverageStatus.MISSING -> {
                         gaps += 1
-                        streakIsOpen = false
                         earliestGap = date
                     }
                     CoverageStatus.NOT_DUE, CoverageStatus.IN_PROGRESS -> Unit
                 }
             }
-        return ArchiveStats(archived, gaps, earliestGap, streak)
+        return ArchiveStats(archived, gaps, earliestGap)
     }
 
     /** Per-profile rows for the selected day, in profile order. */
@@ -248,40 +237,8 @@ object ArchiveCoverage {
             month = month,
             profiles = profiles,
             days = days,
-            // Archived days and gaps belong to the shown month; the streak is the current one,
-            // the same number the Archive widget shows, so it does not reset on the 1st.
-            stats = stats(days.map { it.date to it.status }, today)
-                .copy(streak = currentStreak(entries, today, filter)),
+            stats = stats(days.map { it.date to it.status }, today),
         )
-    }
-
-    /**
-     * The current streak: back from yesterday across month boundaries to the first gap,
-     * skipping dates with nothing due, never before the earliest export, and only within
-     * the [STREAK_WINDOW_DAYS] before today (Apple `ArchiveModel.streakWindowDays`), so a
-     * long backfill cannot claim a year-long streak.
-     */
-    fun currentStreak(entries: List<ExportHistoryEntry>, today: LocalDate, filter: ArchiveProfile? = null): Int {
-        val earliest = entries.minOfOrNull { it.dateRangeStart } ?: return 0
-        val windowStart = today.minusDays(STREAK_WINDOW_DAYS)
-        val lanes = filter?.let(::listOf) ?: profiles(entries)
-        var streak = 0
-        var date = today.minusDays(1)
-        while (!date.isBefore(earliest) && !date.isBefore(windowStart)) {
-            val statuses = lanes.map { status(entries, it, date, today) }
-            val status = if (filter != null) {
-                statuses.firstOrNull() ?: CoverageStatus.NOT_DUE
-            } else {
-                aggregate(statuses, isToday = false)
-            }
-            when (status) {
-                CoverageStatus.COMPLETE, CoverageStatus.PARTIAL -> streak += 1
-                CoverageStatus.MISSING -> return streak
-                CoverageStatus.NOT_DUE, CoverageStatus.IN_PROGRESS -> Unit
-            }
-            date = date.minusDays(1)
-        }
-        return streak
     }
 
     /** The row action for a status (Apple `ArchiveAggregation.action`); Open needs the date's file. */

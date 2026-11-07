@@ -56,7 +56,7 @@
     <string name="folder_destination_body">Health.md Android қалта таңдағышымен таңдалған қалтаға, соның ішінде синхрондалатын қолданба қалталарына тікелей жазады. Есептік жазба қажет емес.</string>
     <string name="folder_destination_profiles">Өз қалтасы бар автоматтандырулар</string>
     <string name="widget_archive_name">Мұрағат</string>
-    <string name="widget_archive_description">Экспорт қамтуы: ағымдағы серия, олқылықтар және соңғы екі апта.</string>
+    <string name="widget_archive_description">Экспорт қамтуы: осы айда мұрағатталған күндер, олқылықтар және соңғы екі апта.</string>
     <string name="moment_writing">%1$s жазылуда…</string>
     <string name="moment_keep_open">Аяқталғанша Health.md қолданбасын ашық ұстаңыз.</string>
     <string name="moment_heart_description">Күндер жазылған сайын толатын кристалл жүрек</string>
@@ -156,11 +156,11 @@
     <string name="widget_archive_wide_name">Мұрағатқа шолу</string>
     <string name="widget_archive_wide_description">Осы айда мұрағатталған күндер, келесі жоспарланған іске қосу, Қазір экспорттау және соңғы екі апта.</string>
     <string name="widget_archive_next_run">Келесі %1$s</string>
-    <string name="widget_archive_empty_body">Серияны бастау үшін бір рет экспорттаңыз.</string>
+    <string name="widget_archive_empty_body">Мұрағатты бастау үшін бір рет экспорттаңыз.</string>
     <string name="widget_archive_preview_next_time">07:30</string>
     <string name="widget_archive_preview_next">Келесі 07:30</string>
-    <string name="widget_archive_preview_streak_value">11</string>
-    <string name="widget_archive_preview_streak_detail">күн қатарынан · 2 олқылық</string>
+    <string name="widget_archive_preview_archived_value">11</string>
+    <string name="widget_archive_preview_archived_detail">күн мұрағатталды · 2 олқылық</string>
     <string name="widget_archive_preview_month_value">24</string>
     <string name="widget_archive_preview_month_detail">күн, қазан айында</string>
     <string name="widget_archive_preview_gaps">2 олқылық</string>
@@ -180,7 +180,6 @@
         <item quantity="one">%1$d жоспарланған</item>
         <item quantity="other">%1$d жоспарланған</item>
     </plurals>
-    <string name="archive_no_gaps">Олқылық жоқ</string>
     <string name="archive_status_updating">Жаңартылуда</string>
     <string name="archive_status_not_due">Мерзімі емес</string>
     <string name="archive_action_open">Ашу</string>
@@ -190,22 +189,6 @@
     <string name="archive_health_not_connected">Health Connect: қосылмаған</string>
     <string name="archive_day_nothing_due">Мерзімі келгені жоқ</string>
     <string name="archive_row_not_due">Бұл күні мерзімі емес.</string>
-    <plurals name="archive_streak_days">
-        <item quantity="one">%1$d күндік серия</item>
-        <item quantity="other">%1$d күндік серия</item>
-    </plurals>
-    <plurals name="archive_gap_count">
-        <item quantity="one">%1$d олқылық</item>
-        <item quantity="other">%1$d олқылық</item>
-    </plurals>
-    <plurals name="archive_stat_archived_all">
-        <item quantity="one">барлық автоматтандыру бойынша мұрағаттағы күн</item>
-        <item quantity="other">барлық автоматтандыру бойынша мұрағаттағы күн</item>
-    </plurals>
-    <plurals name="archive_stat_archived_month">
-        <item quantity="one">%1$s айында мұрағаттағы күн</item>
-        <item quantity="other">%1$s айында мұрағаттағы күн</item>
-    </plurals>
     <string name="automations_new">Жаңа автоматтандыру</string>
     <string name="automations_next">Келесі · %1$s</string>
     <string name="automations_paused">Кідіртілген</string>

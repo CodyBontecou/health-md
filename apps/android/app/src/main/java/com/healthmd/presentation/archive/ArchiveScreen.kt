@@ -30,7 +30,6 @@ import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.History
-import androidx.compose.material.icons.outlined.LocalFireDepartment
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilledTonalButton
@@ -40,7 +39,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.compositionLocalOf
@@ -57,7 +55,6 @@ import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -256,7 +253,6 @@ private fun ArchiveLargeLayout(
             modifier = Modifier.width(sideWidth).fillMaxHeight().verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(GeistSpacing.space3),
         ) {
-            ArchiveStatsCard(state = state, onShowGap = viewModel::jumpToGap)
             ArchiveDayCard(state = state, onBackfill = onBackfill, onOpenDay = onOpenDay)
             GeistCardClickable(onClick = onOpenAutomations) {
                 Column(Modifier.weight(1f)) {
@@ -333,7 +329,6 @@ private fun ArchiveCompactLayout(
                 )
             }
             Column(verticalArrangement = Arrangement.spacedBy(GeistSpacing.space3)) {
-                ArchiveStatsCard(state = state, onShowGap = viewModel::jumpToGap)
                 ArchiveCalendarCard(
                     state = state,
                     onPrevious = viewModel::showPreviousMonth,
@@ -403,78 +398,6 @@ private fun ArchiveFilterChips(
                 colors = chipColors,
                 shape = RoundedCornerShape(GeistRadii.small),
             )
-        }
-    }
-}
-
-@Composable
-private fun ArchiveStatsCard(state: ArchiveUiState, onShowGap: () -> Unit) {
-    val colors = LocalGeistColors.current
-    val stats = state.month.stats
-    val count = stats.archivedCount
-    // "All" counts across automations; one automation counts within the shown month.
-    val label = if (state.selection.filter == null) {
-        pluralStringResource(R.plurals.archive_stat_archived_all, count)
-    } else {
-        pluralStringResource(
-            R.plurals.archive_stat_archived_month,
-            count,
-            state.month.month.format(DateTimeFormatter.ofPattern("LLLL", currentLocale())),
-        )
-    }
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(colors.brandSubtle, RoundedCornerShape(GeistRadii.large))
-            .padding(GeistSpacing.space6),
-    ) {
-        Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(GeistSpacing.space3)) {
-            Text(
-                text = stats.archivedCount.toString(),
-                style = GeistType.heading56,
-                color = colors.brandOnSubtle,
-            )
-            Text(
-                text = label,
-                style = MaterialTheme.typography.bodyLarge,
-                color = colors.brandOnSubtle,
-                modifier = Modifier.weight(1f, fill = false).padding(bottom = GeistSpacing.space2),
-            )
-        }
-        Row(
-            modifier = Modifier.fillMaxWidth().heightIn(min = GeistSizes.minimumTouchTarget),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Icon(
-                Icons.Outlined.LocalFireDepartment,
-                contentDescription = null,
-                tint = colors.brandOnSubtle,
-                modifier = Modifier.size(20.dp),
-            )
-            Spacer(Modifier.width(GeistSpacing.space2))
-            Text(
-                text = pluralStringResource(R.plurals.archive_streak_days, stats.streak, stats.streak),
-                style = GeistType.label14,
-                fontWeight = FontWeight.Medium,
-                color = colors.brandOnSubtle,
-                modifier = Modifier.weight(1f),
-            )
-            // Selects the earliest gap of the shown month; with none there is nothing to show.
-            val gapColor = if (stats.gapCount > 0) colors.coverageMissing else colors.coverageNoGaps
-            TextButton(
-                onClick = onShowGap,
-                enabled = stats.earliestGap != null,
-                colors = ButtonDefaults.textButtonColors(contentColor = gapColor, disabledContentColor = gapColor),
-            ) {
-                Text(
-                    text = if (stats.gapCount > 0) {
-                        pluralStringResource(R.plurals.archive_gap_count, stats.gapCount, stats.gapCount)
-                    } else {
-                        stringResource(R.string.archive_no_gaps)
-                    },
-                    style = GeistType.button14,
-                )
-            }
         }
     }
 }

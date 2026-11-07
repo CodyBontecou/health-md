@@ -1588,13 +1588,6 @@
     <string name="paywall_terms">Условия</string>
     <string name="paywall_privacy">Конфиденциальность</string>
     <string name="paywall_subscription_disclosure">Подходящие подписки включают бесплатный пробный период на 7 дней, затем автоматически продлеваются по указанной цене, если не отменены до окончания пробного или текущего периода. Управляйте подпиской или отмените её в Google Play. Пожизненный доступ оплачивается сразу одним платежом. Существующий платный доступ сохраняется. Жизнь не имеет суда. Удаление приложения или покупка Lifetime не отменяет существующую подписку.</string>
-    <!-- The streak number is drawn separately above this label, so the label takes no argument. -->
-    <plurals name="widget_archive_streak_label" tools:ignore="ImpliedQuantity">
-        <item quantity="one">день подряд</item>
-        <item quantity="few">дня подряд</item>
-        <item quantity="many">дней подряд</item>
-        <item quantity="other">дня подряд</item>
-    </plurals>
     <plurals name="widget_archive_gaps">
         <item quantity="one">%1$s пропуск</item>
         <item quantity="few">%1$s пропуска</item>

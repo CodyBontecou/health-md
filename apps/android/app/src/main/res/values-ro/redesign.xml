@@ -56,7 +56,7 @@
     <string name="folder_destination_body">Health.md scrie direct în dosarul ales cu selectorul de dosare Android, inclusiv în dosarele sincronizate ale aplicațiilor. Nu este nevoie de cont.</string>
     <string name="folder_destination_profiles">Automatizări cu dosar propriu</string>
     <string name="widget_archive_name">Arhivă</string>
-    <string name="widget_archive_description">Acoperirea exporturilor: seria curentă, golurile și ultimele două săptămâni.</string>
+    <string name="widget_archive_description">Acoperirea exporturilor: zilele arhivate luna aceasta, golurile și ultimele două săptămâni.</string>
     <string name="moment_writing">Se scrie %1$s…</string>
     <string name="moment_keep_open">Ține Health.md deschis până se termină.</string>
     <string name="moment_heart_description">O inimă de cristal care se umple pe măsură ce zilele sunt scrise</string>
@@ -161,11 +161,11 @@
     <string name="widget_archive_wide_name">Prezentare arhivă</string>
     <string name="widget_archive_wide_description">Zilele arhivate luna aceasta, următoarea rulare programată, Exportați acum și ultimele două săptămâni.</string>
     <string name="widget_archive_next_run">Următoarea %1$s</string>
-    <string name="widget_archive_empty_body">Exportați o dată pentru a începe seria.</string>
+    <string name="widget_archive_empty_body">Exportați o dată pentru a începe arhiva.</string>
     <string name="widget_archive_preview_next_time">07:30</string>
     <string name="widget_archive_preview_next">Următoarea 07:30</string>
-    <string name="widget_archive_preview_streak_value">11</string>
-    <string name="widget_archive_preview_streak_detail">zile la rând · 2 goluri</string>
+    <string name="widget_archive_preview_archived_value">11</string>
+    <string name="widget_archive_preview_archived_detail">zile arhivate · 2 goluri</string>
     <string name="widget_archive_preview_month_value">24</string>
     <string name="widget_archive_preview_month_detail">zile în octombrie</string>
     <string name="widget_archive_preview_gaps">2 goluri</string>
@@ -188,7 +188,6 @@
         <item quantity="few">%1$d programate</item>
         <item quantity="other">%1$d programate</item>
     </plurals>
-    <string name="archive_no_gaps">Fără goluri</string>
     <string name="archive_status_updating">Se actualizează</string>
     <string name="archive_status_not_due">Nu este programat</string>
     <string name="archive_action_open">Deschideți</string>
@@ -198,26 +197,6 @@
     <string name="archive_health_not_connected">Health Connect: neconectat</string>
     <string name="archive_day_nothing_due">Nimic programat</string>
     <string name="archive_row_not_due">Nu este programat la această dată.</string>
-    <plurals name="archive_streak_days">
-        <item quantity="one">Serie de %1$d zi</item>
-        <item quantity="few">Serie de %1$d zile</item>
-        <item quantity="other">Serie de %1$d de zile</item>
-    </plurals>
-    <plurals name="archive_gap_count">
-        <item quantity="one">%1$d gol</item>
-        <item quantity="few">%1$d goluri</item>
-        <item quantity="other">%1$d de goluri</item>
-    </plurals>
-    <plurals name="archive_stat_archived_all">
-        <item quantity="one">zi arhivată în toate automatizările</item>
-        <item quantity="few">zile arhivate în toate automatizările</item>
-        <item quantity="other">de zile arhivate în toate automatizările</item>
-    </plurals>
-    <plurals name="archive_stat_archived_month">
-        <item quantity="one">zi arhivată în %1$s</item>
-        <item quantity="few">zile arhivate în %1$s</item>
-        <item quantity="other">de zile arhivate în %1$s</item>
-    </plurals>
     <string name="automations_new">Automatizare nouă</string>
     <string name="automations_next">Următoarea · %1$s</string>
     <string name="automations_paused">Întreruptă</string>

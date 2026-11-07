@@ -56,7 +56,7 @@
     <string name="folder_destination_body">Health.md は、Android のフォルダ選択で選んだフォルダ（同期されるアプリのフォルダを含む）に直接書き込みます。アカウントは不要です。</string>
     <string name="folder_destination_profiles">独自のフォルダを使うオートメーション</string>
     <string name="widget_archive_name">アーカイブ</string>
-    <string name="widget_archive_description">エクスポートの記録状況：現在の連続日数、欠落、直近 2 週間。</string>
+    <string name="widget_archive_description">エクスポートの記録状況：今月のアーカイブ済み日数、欠落、直近 2 週間。</string>
     <string name="moment_writing">%1$s を書き込み中…</string>
     <string name="moment_keep_open">完了するまで Health.md を開いたままにしてください。</string>
     <string name="moment_heart_description">日付が書き込まれるにつれて満ちていくクリスタルのハート</string>
@@ -151,11 +151,11 @@
     <string name="widget_archive_wide_name">アーカイブ概要</string>
     <string name="widget_archive_wide_description">今月アーカイブした日数、次回の予定実行、今すぐエクスポート、直近2週間。</string>
     <string name="widget_archive_next_run">次回 %1$s</string>
-    <string name="widget_archive_empty_body">一度エクスポートすると連続記録が始まります。</string>
+    <string name="widget_archive_empty_body">一度エクスポートするとアーカイブが始まります。</string>
     <string name="widget_archive_preview_next_time">7:30</string>
     <string name="widget_archive_preview_next">次回 7:30</string>
-    <string name="widget_archive_preview_streak_value">11</string>
-    <string name="widget_archive_preview_streak_detail">日連続 · 欠落 2 件</string>
+    <string name="widget_archive_preview_archived_value">11</string>
+    <string name="widget_archive_preview_archived_detail">日アーカイブ済み · 欠落 2 件</string>
     <string name="widget_archive_preview_month_value">24</string>
     <string name="widget_archive_preview_month_detail">日（10月）</string>
     <string name="widget_archive_preview_gaps">欠落 2 件</string>
@@ -172,7 +172,6 @@
     <plurals name="automations_profiles_scheduled">
         <item quantity="other">%1$d件をスケジュール済み</item>
     </plurals>
-    <string name="archive_no_gaps">欠落なし</string>
     <string name="archive_status_updating">更新中</string>
     <string name="archive_status_not_due">対象外</string>
     <string name="archive_action_open">開く</string>
@@ -182,18 +181,6 @@
     <string name="archive_health_not_connected">Health Connect：未接続</string>
     <string name="archive_day_nothing_due">対象なし</string>
     <string name="archive_row_not_due">この日は対象外です。</string>
-    <plurals name="archive_streak_days">
-        <item quantity="other">%1$d日連続</item>
-    </plurals>
-    <plurals name="archive_gap_count">
-        <item quantity="other">欠落 %1$d件</item>
-    </plurals>
-    <plurals name="archive_stat_archived_all">
-        <item quantity="other">日をすべてのオートメーションでアーカイブ済み</item>
-    </plurals>
-    <plurals name="archive_stat_archived_month">
-        <item quantity="other">日を%1$sにアーカイブ済み</item>
-    </plurals>
     <string name="automations_new">新規オートメーション</string>
     <string name="automations_next">次回 · %1$s</string>
     <string name="automations_paused">一時停止中</string>

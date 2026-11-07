@@ -143,11 +143,6 @@ class ArchiveViewModel @Inject constructor(
     }
 
     /** Selects the earliest gap of the visible month, if any. */
-    fun jumpToGap() {
-        val gap = uiState.value.month.stats.earliestGap ?: return
-        selectDate(gap)
-    }
-
     private fun buildState(
         entries: List<ExportHistoryEntry>,
         current: ArchiveSelection,

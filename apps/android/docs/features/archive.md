@@ -18,7 +18,7 @@ The Archive is the first tab. It shows one month as a calendar of health dates â
 | Not exported | Nothing in history covered the date, or it is in the future. |
 | Today | An export may still update today. |
 
-Each export profile is its own lane; runs without a profile form the **Current settings** lane. **All** combines the lanes with the same rule as the Apple Archive: among lanes that covered a date, missing beats partial beats complete. In **All**, days with trouble show one dot per affected lane (filled for partial, hollow for missing). The stats card counts days archived (complete + partial) and gaps, and the streak runs back from yesterday, skipping dates with nothing exported, until the first gap.
+Each export profile is its own lane; runs without a profile form the **Current settings** lane. **All** combines the lanes with the same rule as the Apple Archive: among lanes that covered a date, missing beats partial beats complete. In **All**, days with trouble show one dot per affected lane (filled for partial, hollow for missing). The stats card counts days archived (complete + partial) and gaps in the shown month.
 
 ## Setup and use
 

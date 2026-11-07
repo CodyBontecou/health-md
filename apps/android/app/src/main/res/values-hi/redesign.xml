@@ -56,7 +56,7 @@
     <string name="folder_destination_body">Health.md सीधे उस फ़ोल्डर में लिखता है जिसे आप Android फ़ोल्डर पिकर से चुनते हैं, जिसमें सिंक होने वाले ऐप फ़ोल्डर भी शामिल हैं। किसी खाते की ज़रूरत नहीं।</string>
     <string name="folder_destination_profiles">अपने फ़ोल्डर वाले ऑटोमेशन</string>
     <string name="widget_archive_name">संग्रह</string>
-    <string name="widget_archive_description">आपका निर्यात कवरेज: मौजूदा सिलसिला, अंतराल और पिछले दो हफ़्ते।</string>
+    <string name="widget_archive_description">आपका निर्यात कवरेज: इस महीने संग्रहीत दिन, अंतराल और पिछले दो हफ़्ते।</string>
     <string name="moment_writing">%1$s लिखा जा रहा है…</string>
     <string name="moment_keep_open">पूरा होने तक Health.md खुला रखें।</string>
     <string name="moment_heart_description">दिन लिखे जाने के साथ भरता क्रिस्टल दिल</string>
@@ -156,11 +156,11 @@
     <string name="widget_archive_wide_name">संग्रह अवलोकन</string>
     <string name="widget_archive_wide_description">इस महीने संग्रहीत दिन, अगला निर्धारित रन, अभी निर्यात करें और पिछले दो सप्ताह।</string>
     <string name="widget_archive_next_run">अगला %1$s</string>
-    <string name="widget_archive_empty_body">अपना सिलसिला शुरू करने के लिए एक बार निर्यात करें।</string>
+    <string name="widget_archive_empty_body">अपना संग्रह शुरू करने के लिए एक बार निर्यात करें।</string>
     <string name="widget_archive_preview_next_time">सुबह 7:30</string>
     <string name="widget_archive_preview_next">अगला सुबह 7:30</string>
-    <string name="widget_archive_preview_streak_value">11</string>
-    <string name="widget_archive_preview_streak_detail">दिन लगातार · 2 अंतराल</string>
+    <string name="widget_archive_preview_archived_value">11</string>
+    <string name="widget_archive_preview_archived_detail">दिन संग्रहीत · 2 अंतराल</string>
     <string name="widget_archive_preview_month_value">24</string>
     <string name="widget_archive_preview_month_detail">दिन, अक्टूबर में</string>
     <string name="widget_archive_preview_gaps">2 अंतराल</string>
@@ -180,7 +180,6 @@
         <item quantity="one">%1$d शेड्यूल</item>
         <item quantity="other">%1$d शेड्यूल</item>
     </plurals>
-    <string name="archive_no_gaps">कोई अंतराल नहीं</string>
     <string name="archive_status_updating">अपडेट हो रहा है</string>
     <string name="archive_status_not_due">देय नहीं</string>
     <string name="archive_action_open">खोलें</string>
@@ -190,22 +189,6 @@
     <string name="archive_health_not_connected">Health Connect: कनेक्ट नहीं है</string>
     <string name="archive_day_nothing_due">कुछ भी देय नहीं</string>
     <string name="archive_row_not_due">इस तारीख को देय नहीं।</string>
-    <plurals name="archive_streak_days">
-        <item quantity="one">%1$d दिन का सिलसिला</item>
-        <item quantity="other">%1$d दिनों का सिलसिला</item>
-    </plurals>
-    <plurals name="archive_gap_count">
-        <item quantity="one">%1$d अंतराल</item>
-        <item quantity="other">%1$d अंतराल</item>
-    </plurals>
-    <plurals name="archive_stat_archived_all">
-        <item quantity="one">सभी ऑटोमेशन में संग्रहित दिन</item>
-        <item quantity="other">सभी ऑटोमेशन में संग्रहित दिन</item>
-    </plurals>
-    <plurals name="archive_stat_archived_month">
-        <item quantity="one">%1$s में संग्रहित दिन</item>
-        <item quantity="other">%1$s में संग्रहित दिन</item>
-    </plurals>
     <string name="automations_new">नया ऑटोमेशन</string>
     <string name="automations_next">अगला · %1$s</string>
     <string name="automations_paused">रोका गया</string>

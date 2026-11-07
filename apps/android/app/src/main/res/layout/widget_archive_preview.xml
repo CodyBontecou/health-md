@@ -45,7 +45,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="6dp"
-        android:text="@string/widget_archive_preview_streak_value"
+        android:text="@string/widget_archive_preview_archived_value"
         android:textColor="@color/widget_preview_primary"
         android:textSize="44sp" />
 
@@ -53,7 +53,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:maxLines="1"
-        android:text="@string/widget_archive_preview_streak_detail"
+        android:text="@string/widget_archive_preview_archived_detail"
         android:textColor="@color/widget_preview_secondary"
         android:textSize="13sp" />
 

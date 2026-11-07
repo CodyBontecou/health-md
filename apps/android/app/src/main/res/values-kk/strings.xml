@@ -1427,11 +1427,6 @@
     <string name="paywall_terms">Шарттар</string>
     <string name="paywall_privacy">Құпиялық</string>
     <string name="paywall_subscription_disclosure">Тиісті жазылымдарға 7 күндік тегін сынақ мерзімі кіреді, одан кейін сынақ немесе ағымдағы кезең аяқталмай тұрып бас тартпасаңыз, көрсетілген бағамен автоматты түрде жаңартылады. Google Play арқылы басқарыңыз немесе бас тартыңыз. Өмір бойы қолжетімділік үшін төлем бірден бір рет алынады. Бұрынғы ақылы қолжетімділік сақталады. Өмір бойы сынақ болмайды. Қолданбаны жою немесе Lifetime сатып алу бұрыннан бар жазылымнан бас тартпайды.</string>
-    <!-- The streak number is drawn separately above this label, so the label takes no argument. -->
-    <plurals name="widget_archive_streak_label" tools:ignore="ImpliedQuantity">
-        <item quantity="one">күн қатарынан</item>
-        <item quantity="other">күн қатарынан</item>
-    </plurals>
     <plurals name="widget_archive_gaps">
         <item quantity="one">%1$s олқылық</item>
         <item quantity="other">%1$s олқылық</item>

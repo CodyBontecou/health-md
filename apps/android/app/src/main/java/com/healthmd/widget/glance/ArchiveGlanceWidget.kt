@@ -85,7 +85,6 @@ data class ArchiveWidgetDay(val date: LocalDate, val status: CoverageStatus)
  * sensitive, and no Health Connect access or setup is needed.
  */
 data class ArchiveWidgetSummary(
-    val streak: Int,
     val gapCount: Int,
     /** The last [RECENT_DAYS] dates, oldest first, ending today. */
     val recentDays: List<ArchiveWidgetDay>,
@@ -104,7 +103,7 @@ data class ArchiveWidgetSummary(
         /** Gaps count over the last [GAP_WINDOW_DAYS] days, matching the widget description. */
         const val GAP_WINDOW_DAYS = 30
 
-        /** Stats look back [LOOKBACK_DAYS] so a streak does not reset at a month boundary. */
+        /** Days read back from today: enough for the gap window and the strip. */
         private const val LOOKBACK_DAYS = 60L
 
         fun from(
@@ -124,7 +123,6 @@ data class ArchiveWidgetSummary(
                 today,
             )
             return ArchiveWidgetSummary(
-                streak = ArchiveCoverage.currentStreak(entries, today),
                 gapCount = days.takeLast(GAP_WINDOW_DAYS).count { it.second == CoverageStatus.MISSING },
                 recentDays = days.takeLast(RECENT_DAYS).map { (date, status) -> ArchiveWidgetDay(date, status) },
                 hasHistory = entries.isNotEmpty(),
@@ -202,7 +200,7 @@ abstract class BaseArchiveGlanceWidget : GlanceAppWidget() {
     }
 }
 
-/** Archive · small (2×2): streak, gaps, next run and two weeks of coverage. */
+/** Archive · small (2×2): this month's archived days, gaps, next run and two weeks of coverage. */
 class ArchiveGlanceWidget : BaseArchiveGlanceWidget() {
     companion object {
         /** Re-renders every placed Archive widget; a no-op when none are placed. */
@@ -343,13 +341,13 @@ private fun ColumnScope.ArchiveSmallBody(context: Context, summary: ArchiveWidge
     val locale = context.locale()
     Spacer(GlanceModifier.height(6.dp))
     Text(
-        text = formatCount(summary.streak, locale),
+        text = formatCount(summary.monthArchivedCount, locale),
         style = ArchiveTextStyles.hero,
         maxLines = 1,
     )
     Row(verticalAlignment = Alignment.CenterVertically) {
         Text(
-            text = context.resources.getQuantityString(R.plurals.widget_archive_streak_label, summary.streak),
+            text = daysInMonthText(context, summary, locale),
             style = ArchiveTextStyles.secondary,
             maxLines = 1,
         )
@@ -388,11 +386,7 @@ private fun ColumnScope.ArchiveWideBody(context: Context, summary: ArchiveWidget
         Spacer(GlanceModifier.width(8.dp))
         Column {
             Text(
-                text = context.resources.getQuantityString(
-                    R.plurals.widget_archive_days_in_month,
-                    summary.monthArchivedCount,
-                    summary.month.month.getDisplayName(JavaTextStyle.FULL_STANDALONE, locale),
-                ),
+                text = daysInMonthText(context, summary, locale),
                 style = ArchiveTextStyles.secondary,
                 maxLines = 1,
             )
@@ -473,10 +467,16 @@ private fun archiveContentDescription(context: Context, summary: ArchiveWidgetSu
     val name = context.getString(R.string.widget_archive_name)
     if (!summary.hasHistory) return "$name: ${context.getString(R.string.archive_empty_title)}"
     val locale = context.locale()
-    val streak = "${formatCount(summary.streak, locale)} " +
-        context.resources.getQuantityString(R.plurals.widget_archive_streak_label, summary.streak)
-    return "$name: $streak, ${gapsText(context, summary.gapCount, locale)}"
+    val archived = "${formatCount(summary.monthArchivedCount, locale)} " + daysInMonthText(context, summary, locale)
+    return "$name: $archived, ${gapsText(context, summary.gapCount, locale)}"
 }
+
+private fun daysInMonthText(context: Context, summary: ArchiveWidgetSummary, locale: Locale): String =
+    context.resources.getQuantityString(
+        R.plurals.widget_archive_days_in_month,
+        summary.monthArchivedCount,
+        summary.month.month.getDisplayName(JavaTextStyle.FULL_STANDALONE, locale),
+    )
 
 private fun gapsText(context: Context, count: Int, locale: Locale): String =
     context.resources.getQuantityString(R.plurals.widget_archive_gaps, count, formatCount(count, locale))

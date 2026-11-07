@@ -56,7 +56,7 @@
     <string name="folder_destination_body">Health.md writes directly to the folder you pick with the Android folder picker, including synced app folders. No account is needed.</string>
     <string name="folder_destination_profiles">Automations with their own folder</string>
     <string name="widget_archive_name">Archive</string>
-    <string name="widget_archive_description">Your export coverage: current streak, gaps and the last two weeks.</string>
+    <string name="widget_archive_description">Your export coverage: days archived this month, gaps and the last two weeks.</string>
     <string name="moment_writing">Writing %1$s…</string>
     <string name="moment_keep_open">Keep Health.md open until it finishes.</string>
     <string name="moment_heart_description">A crystal heart that fills as days are written</string>
@@ -156,11 +156,11 @@
     <string name="widget_archive_wide_name">Archive overview</string>
     <string name="widget_archive_wide_description">This month\'s archived days, the next scheduled run, Export now and the last two weeks.</string>
     <string name="widget_archive_next_run">Next %1$s</string>
-    <string name="widget_archive_empty_body">Export once to start your streak.</string>
+    <string name="widget_archive_empty_body">Export once to start your archive.</string>
     <string name="widget_archive_preview_next_time">7:30 AM</string>
     <string name="widget_archive_preview_next">Next 7:30 AM</string>
-    <string name="widget_archive_preview_streak_value">11</string>
-    <string name="widget_archive_preview_streak_detail">day streak · 2 gaps</string>
+    <string name="widget_archive_preview_archived_value">11</string>
+    <string name="widget_archive_preview_archived_detail">days archived · 2 gaps</string>
     <string name="widget_archive_preview_month_value">24</string>
     <string name="widget_archive_preview_month_detail">days in October</string>
     <string name="widget_archive_preview_gaps">2 gaps</string>
@@ -180,7 +180,6 @@
         <item quantity="one">%1$d scheduled</item>
         <item quantity="other">%1$d scheduled</item>
     </plurals>
-    <string name="archive_no_gaps">No gaps</string>
     <string name="archive_status_updating">Updating</string>
     <string name="archive_status_not_due">Not due</string>
     <string name="archive_action_open">Open</string>
@@ -190,22 +189,6 @@
     <string name="archive_health_not_connected">Health Connect: not connected</string>
     <string name="archive_day_nothing_due">Nothing due</string>
     <string name="archive_row_not_due">Not due on this date.</string>
-    <plurals name="archive_streak_days">
-        <item quantity="one">%1$d-day streak</item>
-        <item quantity="other">%1$d-day streak</item>
-    </plurals>
-    <plurals name="archive_gap_count">
-        <item quantity="one">%1$d gap</item>
-        <item quantity="other">%1$d gaps</item>
-    </plurals>
-    <plurals name="archive_stat_archived_all">
-        <item quantity="one">day archived across automations</item>
-        <item quantity="other">days archived across automations</item>
-    </plurals>
-    <plurals name="archive_stat_archived_month">
-        <item quantity="one">day archived in %1$s</item>
-        <item quantity="other">days archived in %1$s</item>
-    </plurals>
     <string name="automations_new">New automation</string>
     <string name="automations_next">Next · %1$s</string>
     <string name="automations_paused">Paused</string>

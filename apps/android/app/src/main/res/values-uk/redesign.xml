@@ -56,7 +56,7 @@
     <string name="folder_destination_body">Health.md записує дані безпосередньо в папку, вибрану в системному засобі вибору папок Android, зокрема в синхронізовані папки застосунків. Обліковий запис не потрібен.</string>
     <string name="folder_destination_profiles">Автоматизації з власною папкою</string>
     <string name="widget_archive_name">Архів</string>
-    <string name="widget_archive_description">Охоплення експорту: поточна серія, пропуски й останні два тижні.</string>
+    <string name="widget_archive_description">Охоплення експорту: архівовані дні цього місяця, пропуски й останні два тижні.</string>
     <string name="moment_writing">Записується %1$s…</string>
     <string name="moment_keep_open">Не закривайте Health.md до завершення.</string>
     <string name="moment_heart_description">Кришталеве серце, що наповнюється, коли записуються дні</string>
@@ -166,11 +166,11 @@
     <string name="widget_archive_wide_name">Огляд архіву</string>
     <string name="widget_archive_wide_description">Дні в архіві за цей місяць, наступний запуск за розкладом, «Експортувати» та останні два тижні.</string>
     <string name="widget_archive_next_run">Далі %1$s</string>
-    <string name="widget_archive_empty_body">Виконайте експорт, щоб почати серію.</string>
+    <string name="widget_archive_empty_body">Виконайте експорт, щоб почати архів.</string>
     <string name="widget_archive_preview_next_time">7:30</string>
     <string name="widget_archive_preview_next">Далі 7:30</string>
-    <string name="widget_archive_preview_streak_value">11</string>
-    <string name="widget_archive_preview_streak_detail">днів поспіль · 2 пропуски</string>
+    <string name="widget_archive_preview_archived_value">11</string>
+    <string name="widget_archive_preview_archived_detail">днів в архіві · 2 пропуски</string>
     <string name="widget_archive_preview_month_value">24</string>
     <string name="widget_archive_preview_month_detail">дні за жовтень</string>
     <string name="widget_archive_preview_gaps">2 пропуски</string>
@@ -196,7 +196,6 @@
         <item quantity="many">за розкладом: %1$d</item>
         <item quantity="other">за розкладом: %1$d</item>
     </plurals>
-    <string name="archive_no_gaps">Без пропусків</string>
     <string name="archive_status_updating">Оновлюється</string>
     <string name="archive_status_not_due">Не заплановано</string>
     <string name="archive_action_open">Відкрити</string>
@@ -206,30 +205,6 @@
     <string name="archive_health_not_connected">Health Connect: не підключено</string>
     <string name="archive_day_nothing_due">Нічого не заплановано</string>
     <string name="archive_row_not_due">На цю дату не заплановано.</string>
-    <plurals name="archive_streak_days">
-        <item quantity="one">Серія: %1$d день</item>
-        <item quantity="few">Серія: %1$d дні</item>
-        <item quantity="many">Серія: %1$d днів</item>
-        <item quantity="other">Серія: %1$d дня</item>
-    </plurals>
-    <plurals name="archive_gap_count">
-        <item quantity="one">%1$d пропуск</item>
-        <item quantity="few">%1$d пропуски</item>
-        <item quantity="many">%1$d пропусків</item>
-        <item quantity="other">%1$d пропуску</item>
-    </plurals>
-    <plurals name="archive_stat_archived_all">
-        <item quantity="one">день в архіві в усіх автоматизаціях</item>
-        <item quantity="few">дні в архіві в усіх автоматизаціях</item>
-        <item quantity="many">днів в архіві в усіх автоматизаціях</item>
-        <item quantity="other">дня в архіві в усіх автоматизаціях</item>
-    </plurals>
-    <plurals name="archive_stat_archived_month">
-        <item quantity="one">день в архіві за %1$s</item>
-        <item quantity="few">дні в архіві за %1$s</item>
-        <item quantity="many">днів в архіві за %1$s</item>
-        <item quantity="other">дня в архіві за %1$s</item>
-    </plurals>
     <string name="automations_new">Нова автоматизація</string>
     <string name="automations_next">Далі · %1$s</string>
     <string name="automations_paused">Призупинено</string>

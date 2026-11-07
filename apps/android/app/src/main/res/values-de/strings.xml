@@ -1486,11 +1486,6 @@
     <string name="paywall_terms">Nutzungsbedingungen</string>
     <string name="paywall_privacy">Datenschutz</string>
     <string name="paywall_subscription_disclosure">Berechtigte Abos bieten eine kostenlose 7-tägige Testphase und verlängern sich danach automatisch zum angezeigten Preis, sofern sie nicht vor Ende der Testphase oder des aktuellen Zeitraums gekündigt werden. Verwaltung und Kündigung erfolgen in Google Play. Lebenslanger Zugriff wird sofort einmalig berechnet. Bestehender bezahlter Zugriff bleibt erhalten. Lifetime hat keine Testversion. Durch das Löschen der App oder den Kauf von Lifetime wird ein bestehendes Abonnement nicht gekündigt.</string>
-    <!-- The streak number is drawn separately above this label, so the label takes no argument. -->
-    <plurals name="widget_archive_streak_label" tools:ignore="ImpliedQuantity">
-        <item quantity="one">Tag in Folge</item>
-        <item quantity="other">Tage in Folge</item>
-    </plurals>
     <plurals name="widget_archive_gaps">
         <item quantity="one">%1$s Lücke</item>
         <item quantity="other">%1$s Lücken</item>

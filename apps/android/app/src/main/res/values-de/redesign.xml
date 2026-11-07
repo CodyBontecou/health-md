@@ -56,7 +56,7 @@
     <string name="folder_destination_body">Health.md schreibt direkt in den Ordner, den Sie mit der Android-Ordnerauswahl wählen, auch in synchronisierte App-Ordner. Kein Konto erforderlich.</string>
     <string name="folder_destination_profiles">Automationen mit eigenem Ordner</string>
     <string name="widget_archive_name">Archiv</string>
-    <string name="widget_archive_description">Ihre Exportabdeckung: aktuelle Serie, Lücken und die letzten zwei Wochen.</string>
+    <string name="widget_archive_description">Ihre Exportabdeckung: archivierte Tage in diesem Monat, Lücken und die letzten zwei Wochen.</string>
     <string name="moment_writing">Schreibe %1$s…</string>
     <string name="moment_keep_open">Lass Health.md geöffnet, bis der Export fertig ist.</string>
     <string name="moment_heart_description">Ein Kristallherz, das sich füllt, während Tage geschrieben werden</string>
@@ -156,11 +156,11 @@
     <string name="widget_archive_wide_name">Archivübersicht</string>
     <string name="widget_archive_wide_description">Archivierte Tage dieses Monats, nächste geplante Ausführung, Jetzt exportieren und die letzten zwei Wochen.</string>
     <string name="widget_archive_next_run">Nächste %1$s</string>
-    <string name="widget_archive_empty_body">Exportieren Sie einmal, um Ihre Serie zu starten.</string>
+    <string name="widget_archive_empty_body">Exportieren Sie einmal, um Ihr Archiv zu starten.</string>
     <string name="widget_archive_preview_next_time">07:30</string>
     <string name="widget_archive_preview_next">Nächste 07:30</string>
-    <string name="widget_archive_preview_streak_value">11</string>
-    <string name="widget_archive_preview_streak_detail">Tage in Folge · 2 Lücken</string>
+    <string name="widget_archive_preview_archived_value">11</string>
+    <string name="widget_archive_preview_archived_detail">Tage archiviert · 2 Lücken</string>
     <string name="widget_archive_preview_month_value">24</string>
     <string name="widget_archive_preview_month_detail">Tage im Oktober</string>
     <string name="widget_archive_preview_gaps">2 Lücken</string>
@@ -180,7 +180,6 @@
         <item quantity="one">%1$d geplant</item>
         <item quantity="other">%1$d geplant</item>
     </plurals>
-    <string name="archive_no_gaps">Keine Lücken</string>
     <string name="archive_status_updating">Wird aktualisiert</string>
     <string name="archive_status_not_due">Nicht fällig</string>
     <string name="archive_action_open">Öffnen</string>
@@ -190,22 +189,6 @@
     <string name="archive_health_not_connected">Health Connect: nicht verbunden</string>
     <string name="archive_day_nothing_due">Nichts fällig</string>
     <string name="archive_row_not_due">An diesem Datum nicht fällig.</string>
-    <plurals name="archive_streak_days">
-        <item quantity="one">%1$d Tag in Folge</item>
-        <item quantity="other">%1$d Tage in Folge</item>
-    </plurals>
-    <plurals name="archive_gap_count">
-        <item quantity="one">%1$d Lücke</item>
-        <item quantity="other">%1$d Lücken</item>
-    </plurals>
-    <plurals name="archive_stat_archived_all">
-        <item quantity="one">Tag archiviert über alle Automationen</item>
-        <item quantity="other">Tage archiviert über alle Automationen</item>
-    </plurals>
-    <plurals name="archive_stat_archived_month">
-        <item quantity="one">Tag archiviert im %1$s</item>
-        <item quantity="other">Tage archiviert im %1$s</item>
-    </plurals>
     <string name="automations_new">Neue Automation</string>
     <string name="automations_next">Nächste · %1$s</string>
     <string name="automations_paused">Pausiert</string>

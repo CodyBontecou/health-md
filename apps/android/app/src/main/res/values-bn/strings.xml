@@ -1460,11 +1460,6 @@
     <string name="paywall_terms">শর্তাবলি</string>
     <string name="paywall_privacy">গোপনীয়তা</string>
     <string name="paywall_subscription_disclosure">যোগ্য সাবস্ক্রিপশনে 7 দিনের বিনামূল্যের ট্রায়াল রয়েছে, তারপর ট্রায়াল বা বর্তমান মেয়াদ শেষ হওয়ার আগে বাতিল না করলে দেখানো মূল্যে স্বয়ংক্রিয়ভাবে নবায়ন হয়। Google Play-তে পরিচালনা বা বাতিল করুন। আজীবন অ্যাক্সেসের জন্য সঙ্গে সঙ্গে এককালীন মূল্য নেওয়া হয়। বিদ্যমান অর্থপ্রদত্ত অ্যাক্সেস বজায় থাকে। আজীবন কোন বিচার নেই। অ্যাপ মুছে ফেলা বা লাইফটাইম কেনা একটি বিদ্যমান সাবস্ক্রিপশন বাতিল করে না।</string>
-    <!-- The streak number is drawn separately above this label, so the label takes no argument. -->
-    <plurals name="widget_archive_streak_label" tools:ignore="ImpliedQuantity">
-        <item quantity="one">দিন টানা</item>
-        <item quantity="other">দিন টানা</item>
-    </plurals>
     <plurals name="widget_archive_gaps">
         <item quantity="one">%1$sটি ফাঁক</item>
         <item quantity="other">%1$sটি ফাঁক</item>

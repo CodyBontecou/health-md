@@ -56,7 +56,7 @@
     <string name="folder_destination_body">Health.md ਸਿੱਧਾ ਉਸ ਫੋਲਡਰ ਵਿੱਚ ਲਿਖਦਾ ਹੈ ਜੋ ਤੁਸੀਂ Android ਫੋਲਡਰ ਪਿਕਰ ਨਾਲ ਚੁਣਦੇ ਹੋ, ਸਿੰਕ ਹੋਣ ਵਾਲੇ ਐਪ ਫੋਲਡਰਾਂ ਸਮੇਤ। ਕਿਸੇ ਖਾਤੇ ਦੀ ਲੋੜ ਨਹੀਂ।</string>
     <string name="folder_destination_profiles">ਆਪਣੇ ਫੋਲਡਰ ਵਾਲੇ ਆਟੋਮੇਸ਼ਨ</string>
     <string name="widget_archive_name">ਪੁਰਾਲੇਖ</string>
-    <string name="widget_archive_description">ਤੁਹਾਡੀ ਨਿਰਯਾਤ ਕਵਰੇਜ: ਮੌਜੂਦਾ ਲੜੀ, ਖਾਲੀ ਥਾਵਾਂ ਅਤੇ ਪਿਛਲੇ ਦੋ ਹਫ਼ਤੇ।</string>
+    <string name="widget_archive_description">ਤੁਹਾਡੀ ਨਿਰਯਾਤ ਕਵਰੇਜ: ਇਸ ਮਹੀਨੇ ਪੁਰਾਲੇਖ ਕੀਤੇ ਦਿਨ, ਖਾਲੀ ਥਾਵਾਂ ਅਤੇ ਪਿਛਲੇ ਦੋ ਹਫ਼ਤੇ।</string>
     <string name="moment_writing">%1$s ਲਿਖਿਆ ਜਾ ਰਿਹਾ ਹੈ…</string>
     <string name="moment_keep_open">ਪੂਰਾ ਹੋਣ ਤੱਕ Health.md ਖੁੱਲ੍ਹਾ ਰੱਖੋ।</string>
     <string name="moment_heart_description">ਦਿਨ ਲਿਖੇ ਜਾਣ ਨਾਲ ਭਰਦਾ ਕ੍ਰਿਸਟਲ ਦਿਲ</string>
@@ -156,11 +156,11 @@
     <string name="widget_archive_wide_name">ਪੁਰਾਲੇਖ ਝਾਤ</string>
     <string name="widget_archive_wide_description">ਇਸ ਮਹੀਨੇ ਪੁਰਾਲੇਖ ਕੀਤੇ ਦਿਨ, ਅਗਲੀ ਨਿਰਧਾਰਤ ਚਲਾਈ, ਹੁਣੇ ਨਿਰਯਾਤ ਕਰੋ ਅਤੇ ਪਿਛਲੇ ਦੋ ਹਫ਼ਤੇ।</string>
     <string name="widget_archive_next_run">ਅਗਲਾ %1$s</string>
-    <string name="widget_archive_empty_body">ਆਪਣੀ ਲੜੀ ਸ਼ੁਰੂ ਕਰਨ ਲਈ ਇੱਕ ਵਾਰ ਨਿਰਯਾਤ ਕਰੋ।</string>
+    <string name="widget_archive_empty_body">ਆਪਣਾ ਪੁਰਾਲੇਖ ਸ਼ੁਰੂ ਕਰਨ ਲਈ ਇੱਕ ਵਾਰ ਨਿਰਯਾਤ ਕਰੋ।</string>
     <string name="widget_archive_preview_next_time">ਸਵੇਰੇ 7:30</string>
     <string name="widget_archive_preview_next">ਅਗਲਾ ਸਵੇਰੇ 7:30</string>
-    <string name="widget_archive_preview_streak_value">11</string>
-    <string name="widget_archive_preview_streak_detail">ਦਿਨ ਲਗਾਤਾਰ · 2 ਖਾਲੀ ਥਾਵਾਂ</string>
+    <string name="widget_archive_preview_archived_value">11</string>
+    <string name="widget_archive_preview_archived_detail">ਦਿਨ ਪੁਰਾਲੇਖ ਕੀਤੇ · 2 ਖਾਲੀ ਥਾਵਾਂ</string>
     <string name="widget_archive_preview_month_value">24</string>
     <string name="widget_archive_preview_month_detail">ਦਿਨ, ਅਕਤੂਬਰ ਵਿੱਚ</string>
     <string name="widget_archive_preview_gaps">2 ਖਾਲੀ ਥਾਵਾਂ</string>
@@ -180,7 +180,6 @@
         <item quantity="one">%1$d ਨਿਯਤ</item>
         <item quantity="other">%1$d ਨਿਯਤ</item>
     </plurals>
-    <string name="archive_no_gaps">ਕੋਈ ਖਾਲੀ ਥਾਂ ਨਹੀਂ</string>
     <string name="archive_status_updating">ਅੱਪਡੇਟ ਹੋ ਰਿਹਾ ਹੈ</string>
     <string name="archive_status_not_due">ਬਕਾਇਆ ਨਹੀਂ</string>
     <string name="archive_action_open">ਖੋਲ੍ਹੋ</string>
@@ -190,22 +189,6 @@
     <string name="archive_health_not_connected">Health Connect: ਕਨੈਕਟ ਨਹੀਂ ਹੈ</string>
     <string name="archive_day_nothing_due">ਕੁਝ ਵੀ ਬਕਾਇਆ ਨਹੀਂ</string>
     <string name="archive_row_not_due">ਇਸ ਤਾਰੀਖ ਨੂੰ ਬਕਾਇਆ ਨਹੀਂ।</string>
-    <plurals name="archive_streak_days">
-        <item quantity="one">%1$d ਦਿਨ ਦੀ ਲੜੀ</item>
-        <item quantity="other">%1$d ਦਿਨਾਂ ਦੀ ਲੜੀ</item>
-    </plurals>
-    <plurals name="archive_gap_count">
-        <item quantity="one">%1$d ਖਾਲੀ ਥਾਂ</item>
-        <item quantity="other">%1$d ਖਾਲੀ ਥਾਂਵਾਂ</item>
-    </plurals>
-    <plurals name="archive_stat_archived_all">
-        <item quantity="one">ਸਾਰੀਆਂ ਆਟੋਮੇਸ਼ਨਾਂ ਵਿੱਚ ਪੁਰਾਲੇਖ ਕੀਤਾ ਦਿਨ</item>
-        <item quantity="other">ਸਾਰੀਆਂ ਆਟੋਮੇਸ਼ਨਾਂ ਵਿੱਚ ਪੁਰਾਲੇਖ ਕੀਤੇ ਦਿਨ</item>
-    </plurals>
-    <plurals name="archive_stat_archived_month">
-        <item quantity="one">%1$s ਵਿੱਚ ਪੁਰਾਲੇਖ ਕੀਤਾ ਦਿਨ</item>
-        <item quantity="other">%1$s ਵਿੱਚ ਪੁਰਾਲੇਖ ਕੀਤੇ ਦਿਨ</item>
-    </plurals>
     <string name="automations_new">ਨਵਾਂ ਆਟੋਮੇਸ਼ਨ</string>
     <string name="automations_next">ਅਗਲਾ · %1$s</string>
     <string name="automations_paused">ਰੋਕਿਆ ਗਿਆ</string>

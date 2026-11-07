@@ -56,7 +56,7 @@
     <string name="folder_destination_body">يكتب Health.md مباشرة في المجلد الذي تختاره بأداة اختيار المجلدات في Android، بما في ذلك مجلدات التطبيقات المتزامنة. لا حاجة إلى حساب.</string>
     <string name="folder_destination_profiles">عمليات أتمتة بمجلد خاص بها</string>
     <string name="widget_archive_name">الأرشيف</string>
-    <string name="widget_archive_description">تغطية التصدير: السلسلة الحالية والفجوات وآخر أسبوعين.</string>
+    <string name="widget_archive_description">تغطية التصدير: الأيام المؤرشفة هذا الشهر والفجوات وآخر أسبوعين.</string>
     <string name="moment_writing">جارٍ كتابة %1$s…</string>
     <string name="moment_keep_open">أبقِ Health.md مفتوحًا حتى ينتهي.</string>
     <string name="moment_heart_description">قلب كريستالي يمتلئ كلما كُتبت الأيام</string>
@@ -176,11 +176,11 @@
     <string name="widget_archive_wide_name">نظرة عامة على الأرشيف</string>
     <string name="widget_archive_wide_description">الأيام المؤرشفة هذا الشهر، والتشغيل المجدول التالي، والتصدير الآن، وآخر أسبوعين.</string>
     <string name="widget_archive_next_run">التالي %1$s</string>
-    <string name="widget_archive_empty_body">صدِّر مرة واحدة لتبدأ سلسلتك.</string>
+    <string name="widget_archive_empty_body">صدِّر مرة واحدة لتبدأ أرشيفك.</string>
     <string name="widget_archive_preview_next_time">7:30 ص</string>
     <string name="widget_archive_preview_next">التالي 7:30 ص</string>
-    <string name="widget_archive_preview_streak_value">11</string>
-    <string name="widget_archive_preview_streak_detail">يومًا متتاليًا · فجوتان</string>
+    <string name="widget_archive_preview_archived_value">11</string>
+    <string name="widget_archive_preview_archived_detail">يومًا مؤرشفًا · فجوتان</string>
     <string name="widget_archive_preview_month_value">24</string>
     <string name="widget_archive_preview_month_detail">يومًا في أكتوبر</string>
     <string name="widget_archive_preview_gaps">فجوتان</string>
@@ -212,7 +212,6 @@
         <item quantity="many">%1$d مجدول</item>
         <item quantity="other">%1$d مجدول</item>
     </plurals>
-    <string name="archive_no_gaps">لا توجد فجوات</string>
     <string name="archive_status_updating">جارٍ التحديث</string>
     <string name="archive_status_not_due">غير مستحق</string>
     <string name="archive_action_open">فتح</string>
@@ -222,38 +221,6 @@
     <string name="archive_health_not_connected">Health Connect: غير متصل</string>
     <string name="archive_day_nothing_due">لا شيء مستحق</string>
     <string name="archive_row_not_due">غير مستحق في هذا التاريخ.</string>
-    <plurals name="archive_streak_days">
-        <item quantity="zero">سلسلة %1$d يوم</item>
-        <item quantity="one">سلسلة يوم واحد (%1$d)</item>
-        <item quantity="two">سلسلة يومين (%1$d)</item>
-        <item quantity="few">سلسلة %1$d أيام</item>
-        <item quantity="many">سلسلة %1$d يومًا</item>
-        <item quantity="other">سلسلة %1$d يوم</item>
-    </plurals>
-    <plurals name="archive_gap_count">
-        <item quantity="zero">%1$d فجوة</item>
-        <item quantity="one">فجوة واحدة (%1$d)</item>
-        <item quantity="two">فجوتان (%1$d)</item>
-        <item quantity="few">%1$d فجوات</item>
-        <item quantity="many">%1$d فجوة</item>
-        <item quantity="other">%1$d فجوة</item>
-    </plurals>
-    <plurals name="archive_stat_archived_all">
-        <item quantity="zero">يوم مؤرشف عبر كل الأتمتة</item>
-        <item quantity="one">يوم مؤرشف عبر كل الأتمتة</item>
-        <item quantity="two">يومان مؤرشفان عبر كل الأتمتة</item>
-        <item quantity="few">أيام مؤرشفة عبر كل الأتمتة</item>
-        <item quantity="many">يومًا مؤرشفًا عبر كل الأتمتة</item>
-        <item quantity="other">يوم مؤرشف عبر كل الأتمتة</item>
-    </plurals>
-    <plurals name="archive_stat_archived_month">
-        <item quantity="zero">يوم مؤرشف في %1$s</item>
-        <item quantity="one">يوم مؤرشف في %1$s</item>
-        <item quantity="two">يومان مؤرشفان في %1$s</item>
-        <item quantity="few">أيام مؤرشفة في %1$s</item>
-        <item quantity="many">يومًا مؤرشفًا في %1$s</item>
-        <item quantity="other">يوم مؤرشف في %1$s</item>
-    </plurals>
     <string name="automations_new">أتمتة جديدة</string>
     <string name="automations_next">التالي · %1$s</string>
     <string name="automations_paused">متوقفة مؤقتًا</string>

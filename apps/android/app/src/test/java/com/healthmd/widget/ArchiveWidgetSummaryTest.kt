@@ -21,7 +21,7 @@ class ArchiveWidgetSummaryTest {
     private val today = LocalDate.of(2026, 11, 2)
 
     @Test
-    fun `streak crosses the month boundary and recent ends with today`() {
+    fun `gaps and recent days end with today`() {
         val entries = listOf(
             ExportHistoryEntry(
                 timestamp = 1,
@@ -35,7 +35,6 @@ class ArchiveWidgetSummaryTest {
         )
         val summary = ArchiveWidgetSummary.from(entries, today, dueToday = setOf(ArchiveProfile(null)))
         assertTrue(summary.hasHistory)
-        assertEquals(5, summary.streak)
         assertEquals(1, summary.gapCount)
         assertEquals(ArchiveWidgetSummary.RECENT_DAYS, summary.recent.size)
         assertEquals(CoverageStatus.IN_PROGRESS, summary.recent.last())
@@ -46,7 +45,7 @@ class ArchiveWidgetSummaryTest {
     fun `no history renders the empty state`() {
         val summary = ArchiveWidgetSummary.from(emptyList(), today)
         assertFalse(summary.hasHistory)
-        assertEquals(0, summary.streak)
+        assertEquals(0, summary.monthArchivedCount)
         assertTrue(summary.recent.dropLast(1).all { it == CoverageStatus.NOT_DUE })
     }
 
@@ -75,7 +74,6 @@ class ArchiveWidgetSummaryTest {
         assertEquals(YearMonth.of(2026, 10), summary.month)
         // October 1–30 minus the two gaps; September days and today never count.
         assertEquals(28, summary.monthArchivedCount)
-        assertEquals(10, summary.streak)
         assertEquals(2, summary.gapCount)
         assertEquals(LocalDate.of(2026, 10, 18), summary.recentDays.first().date)
         assertEquals(october31, summary.recentDays.last().date)

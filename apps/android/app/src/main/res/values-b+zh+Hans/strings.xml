@@ -1309,10 +1309,6 @@
     <string name="paywall_terms">条款</string>
     <string name="paywall_privacy">隐私</string>
     <string name="paywall_subscription_disclosure">符合条件的订阅包含7天免费试用，之后按显示的价格自动续订，除非在试用期或当前计费周期结束前取消。请在Google Play中管理或取消。终身访问将在购买时立即一次性收费。现有付费访问权限将予以保留。 一生没有考验。删除应用程序或购买终身不会取消现有订阅。</string>
-    <!-- The streak number is drawn separately above this label, so the label takes no argument. -->
-    <plurals name="widget_archive_streak_label" tools:ignore="ImpliedQuantity">
-        <item quantity="other">连续天数</item>
-    </plurals>
     <plurals name="widget_archive_gaps">
         <item quantity="other">%1$s 处缺口</item>
     </plurals>

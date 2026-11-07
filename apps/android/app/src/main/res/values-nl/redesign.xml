@@ -56,7 +56,7 @@
     <string name="folder_destination_body">Health.md schrijft rechtstreeks naar de map die je met de Android-mapkiezer kiest, ook gesynchroniseerde app-mappen. Er is geen account nodig.</string>
     <string name="folder_destination_profiles">Automatiseringen met een eigen map</string>
     <string name="widget_archive_name">Archief</string>
-    <string name="widget_archive_description">Je exportdekking: huidige reeks, hiaten en de afgelopen twee weken.</string>
+    <string name="widget_archive_description">Je exportdekking: gearchiveerde dagen deze maand, hiaten en de afgelopen twee weken.</string>
     <string name="moment_writing">%1$s schrijven…</string>
     <string name="moment_keep_open">Houd Health.md open tot het klaar is.</string>
     <string name="moment_heart_description">Een kristallen hart dat zich vult terwijl dagen worden geschreven</string>
@@ -156,11 +156,11 @@
     <string name="widget_archive_wide_name">Archiefoverzicht</string>
     <string name="widget_archive_wide_description">Gearchiveerde dagen deze maand, de volgende geplande run, Nu exporteren en de afgelopen twee weken.</string>
     <string name="widget_archive_next_run">Volgende %1$s</string>
-    <string name="widget_archive_empty_body">Exporteer één keer om je reeks te starten.</string>
+    <string name="widget_archive_empty_body">Exporteer één keer om je archief te starten.</string>
     <string name="widget_archive_preview_next_time">7:30</string>
     <string name="widget_archive_preview_next">Volgende 7:30</string>
-    <string name="widget_archive_preview_streak_value">11</string>
-    <string name="widget_archive_preview_streak_detail">dagen op rij · 2 hiaten</string>
+    <string name="widget_archive_preview_archived_value">11</string>
+    <string name="widget_archive_preview_archived_detail">dagen gearchiveerd · 2 hiaten</string>
     <string name="widget_archive_preview_month_value">24</string>
     <string name="widget_archive_preview_month_detail">dagen in oktober</string>
     <string name="widget_archive_preview_gaps">2 hiaten</string>
@@ -180,7 +180,6 @@
         <item quantity="one">%1$d gepland</item>
         <item quantity="other">%1$d gepland</item>
     </plurals>
-    <string name="archive_no_gaps">Geen gaten</string>
     <string name="archive_status_updating">Wordt bijgewerkt</string>
     <string name="archive_status_not_due">Niet gepland</string>
     <string name="archive_action_open">Openen</string>
@@ -190,22 +189,6 @@
     <string name="archive_health_not_connected">Health Connect: niet verbonden</string>
     <string name="archive_day_nothing_due">Niets gepland</string>
     <string name="archive_row_not_due">Niet gepland op deze datum.</string>
-    <plurals name="archive_streak_days">
-        <item quantity="one">Reeks van %1$d dag</item>
-        <item quantity="other">Reeks van %1$d dagen</item>
-    </plurals>
-    <plurals name="archive_gap_count">
-        <item quantity="one">%1$d gat</item>
-        <item quantity="other">%1$d gaten</item>
-    </plurals>
-    <plurals name="archive_stat_archived_all">
-        <item quantity="one">dag gearchiveerd over alle automatiseringen</item>
-        <item quantity="other">dagen gearchiveerd over alle automatiseringen</item>
-    </plurals>
-    <plurals name="archive_stat_archived_month">
-        <item quantity="one">dag gearchiveerd in %1$s</item>
-        <item quantity="other">dagen gearchiveerd in %1$s</item>
-    </plurals>
     <string name="automations_new">Nieuwe automatisering</string>
     <string name="automations_next">Volgende · %1$s</string>
     <string name="automations_paused">Gepauzeerd</string>

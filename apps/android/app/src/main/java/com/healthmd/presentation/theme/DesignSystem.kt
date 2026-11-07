@@ -45,7 +45,7 @@ data class GeistColors(
     val coverageComplete: Color,
     val onCoverageComplete: Color,
     val coverageMissing: Color,
-    /** Archive "No gaps": success text on the `brandSubtle` stats card. */
+    /** Success green for coverage with no gaps. */
     val coverageNoGaps: Color,
     val gray: GeistColorScale,
     val grayAlpha: GeistColorScale,

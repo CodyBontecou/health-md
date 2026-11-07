@@ -1460,11 +1460,6 @@
     <string name="paywall_terms">शर्तें</string>
     <string name="paywall_privacy">गोपनीयता</string>
     <string name="paywall_subscription_disclosure">योग्य सदस्यताओं में 7 दिन का मुफ़्त ट्रायल शामिल है, जिसके बाद दिखाए गए मूल्य पर अपने आप नवीनीकरण होता है, जब तक ट्रायल या मौजूदा अवधि समाप्त होने से पहले रद्द न किया जाए। Google Play में प्रबंधित करें या रद्द करें। आजीवन एक्सेस का एकमुश्त भुगतान तुरंत लिया जाता है। मौजूदा सशुल्क एक्सेस बरकरार रहता है। जीवन भर का कोई परीक्षण नहीं है. ऐप को हटाने या लाइफटाइम खरीदने से मौजूदा सदस्यता रद्द नहीं होती है।</string>
-    <!-- The streak number is drawn separately above this label, so the label takes no argument. -->
-    <plurals name="widget_archive_streak_label" tools:ignore="ImpliedQuantity">
-        <item quantity="one">दिन लगातार</item>
-        <item quantity="other">दिन लगातार</item>
-    </plurals>
     <plurals name="widget_archive_gaps">
         <item quantity="one">%1$s अंतराल</item>
         <item quantity="other">%1$s अंतराल</item>

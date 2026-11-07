@@ -192,7 +192,7 @@ class ArchiveCoverageTest {
     }
 
     @Test
-    fun `streak runs back from yesterday, skips not due dates and stops at the first gap`() {
+    fun `stats count archived days and gaps before today`() {
         val days = listOf(
             LocalDate.of(2026, 10, 25) to CoverageStatus.COMPLETE,
             LocalDate.of(2026, 10, 26) to CoverageStatus.MISSING,
@@ -205,49 +205,7 @@ class ArchiveCoverageTest {
         val stats = ArchiveCoverage.stats(days, today)
         assertEquals(4, stats.archivedCount)
         assertEquals(1, stats.gapCount)
-        assertEquals(3, stats.streak)
         assertEquals(LocalDate.of(2026, 10, 26), stats.earliestGap)
-    }
-
-    @Test
-    fun `the month card carries the current streak across the month boundary`() {
-        val today = LocalDate.of(2026, 11, 3)
-        val gap = LocalDate.of(2026, 10, 5)
-        val entries = listOf(
-            entry(
-                start = LocalDate.of(2026, 10, 1),
-                end = LocalDate.of(2026, 11, 2),
-                success = 32,
-                total = 33,
-                failed = listOf(FailedDateDetail(gap, ExportFailureReason.UNKNOWN)),
-            ),
-        )
-        val november = ArchiveCoverage.month(entries, YearMonth.of(2026, 11), today, filter = null)
-        assertEquals(2, november.stats.archivedCount)
-        // Oct 6 through Nov 2, not just Nov 1 and 2; the widget reads the same number.
-        assertEquals(28, november.stats.streak)
-        assertEquals(28, ArchiveCoverage.currentStreak(entries, today))
-    }
-
-    @Test
-    fun `a long backfill counts toward the streak only inside the Apple 120-day window`() {
-        // The audit case: an All Time export covered a year, then nothing ran on Nov 5.
-        val today = LocalDate.of(2026, 11, 6)
-        val entries = listOf(
-            entry(
-                start = LocalDate.of(2025, 11, 4),
-                end = LocalDate.of(2026, 11, 4),
-                success = 366,
-                total = 366,
-                profile = null,
-            ),
-        )
-        val november = ArchiveCoverage.month(entries, YearMonth.of(2026, 11), today, filter = null)
-        assertEquals(4, november.stats.archivedCount)
-        // Apple ArchiveModel reads the streak from the 120 days before today (Jul 9 – Nov 5);
-        // Nov 5 has nothing due, so Jul 9 – Nov 4 count.
-        assertEquals(119, november.stats.streak)
-        assertEquals(119, ArchiveCoverage.currentStreak(entries, today))
     }
 
     @Test

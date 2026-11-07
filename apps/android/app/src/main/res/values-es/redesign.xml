@@ -56,7 +56,7 @@
     <string name="folder_destination_body">Health.md escribe directamente en la carpeta que eliges con el selector de carpetas de Android, incluidas las carpetas sincronizadas de apps. No necesitas una cuenta.</string>
     <string name="folder_destination_profiles">Automatizaciones con su propia carpeta</string>
     <string name="widget_archive_name">Archivo</string>
-    <string name="widget_archive_description">Tu cobertura de exportación: racha actual, huecos y las dos últimas semanas.</string>
+    <string name="widget_archive_description">Tu cobertura de exportación: días archivados este mes, huecos y las dos últimas semanas.</string>
     <string name="moment_writing">Escribiendo %1$s…</string>
     <string name="moment_keep_open">Mantén Health.md abierto hasta que termine.</string>
     <string name="moment_heart_description">Un corazón de cristal que se llena a medida que se escriben los días</string>
@@ -161,11 +161,11 @@
     <string name="widget_archive_wide_name">Resumen del archivo</string>
     <string name="widget_archive_wide_description">Días archivados este mes, la próxima ejecución programada, Exportar ahora y las últimas dos semanas.</string>
     <string name="widget_archive_next_run">Próxima %1$s</string>
-    <string name="widget_archive_empty_body">Exporta una vez para empezar tu racha.</string>
+    <string name="widget_archive_empty_body">Exporta una vez para empezar tu archivo.</string>
     <string name="widget_archive_preview_next_time">7:30</string>
     <string name="widget_archive_preview_next">Próxima 7:30</string>
-    <string name="widget_archive_preview_streak_value">11</string>
-    <string name="widget_archive_preview_streak_detail">días seguidos · 2 huecos</string>
+    <string name="widget_archive_preview_archived_value">11</string>
+    <string name="widget_archive_preview_archived_detail">días archivados · 2 huecos</string>
     <string name="widget_archive_preview_month_value">24</string>
     <string name="widget_archive_preview_month_detail">días en octubre</string>
     <string name="widget_archive_preview_gaps">2 huecos</string>
@@ -188,7 +188,6 @@
         <item quantity="many">%1$d de programados</item>
         <item quantity="other">%1$d programados</item>
     </plurals>
-    <string name="archive_no_gaps">Sin huecos</string>
     <string name="archive_status_updating">Actualizando</string>
     <string name="archive_status_not_due">No toca</string>
     <string name="archive_action_open">Abrir</string>
@@ -198,24 +197,6 @@
     <string name="archive_health_not_connected">Health Connect: no conectado</string>
     <string name="archive_day_nothing_due">Nada pendiente</string>
     <string name="archive_row_not_due">No toca en esta fecha.</string>
-    <plurals name="archive_streak_days">
-        <item quantity="one">Racha de %1$d día</item>
-        <item quantity="many">Racha de %1$d días</item>
-        <item quantity="other">Racha de %1$d días</item>
-    </plurals>
-    <plurals name="archive_gap_count">
-        <item quantity="one">%1$d hueco</item>
-        <item quantity="many">%1$d huecos</item>
-        <item quantity="other">%1$d huecos</item>
-    </plurals>
-    <plurals name="archive_stat_archived_all">
-        <item quantity="one">día archivado en todas las automatizaciones</item>
-        <item quantity="other">días archivados en todas las automatizaciones</item>
-    </plurals>
-    <plurals name="archive_stat_archived_month">
-        <item quantity="one">día archivado en %1$s</item>
-        <item quantity="other">días archivados en %1$s</item>
-    </plurals>
     <string name="automations_new">Nueva automatización</string>
     <string name="automations_next">Próxima · %1$s</string>
     <string name="automations_paused">En pausa</string>

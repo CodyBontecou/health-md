@@ -1534,12 +1534,6 @@
     <string name="paywall_terms">Condiciones</string>
     <string name="paywall_privacy">Privacidad</string>
     <string name="paywall_subscription_disclosure">Las suscripciones elegibles incluyen una prueba gratuita de 7 días y después se renuevan automáticamente al precio mostrado, salvo que se cancelen antes de terminar la prueba o el período actual. Gestiona o cancela en Google Play. El acceso de por vida se cobra inmediatamente como pago único. Se conserva el acceso de pago existente. La vida no tiene juicio. Eliminar la aplicación o comprar Lifetime no cancela una suscripción existente.</string>
-    <!-- The streak number is drawn separately above this label, so the label takes no argument. -->
-    <plurals name="widget_archive_streak_label" tools:ignore="ImpliedQuantity">
-        <item quantity="one">día seguido</item>
-        <item quantity="many">de días seguidos</item>
-        <item quantity="other">días seguidos</item>
-    </plurals>
     <plurals name="widget_archive_gaps">
         <item quantity="one">%1$s hueco</item>
         <item quantity="many">%1$s de huecos</item>

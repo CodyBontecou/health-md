@@ -56,7 +56,7 @@
     <string name="folder_destination_body">O Health.md grava diretamente na pasta que você escolhe no seletor de pastas do Android, incluindo pastas sincronizadas de apps. Não é preciso ter conta.</string>
     <string name="folder_destination_profiles">Automações com pasta própria</string>
     <string name="widget_archive_name">Arquivo</string>
-    <string name="widget_archive_description">Sua cobertura de exportação: sequência atual, lacunas e as duas últimas semanas.</string>
+    <string name="widget_archive_description">Sua cobertura de exportação: dias arquivados neste mês, lacunas e as duas últimas semanas.</string>
     <string name="moment_writing">Gravando %1$s…</string>
     <string name="moment_keep_open">Mantenha o Health.md aberto até terminar.</string>
     <string name="moment_heart_description">Um coração de cristal que se enche conforme os dias são gravados</string>
@@ -161,11 +161,11 @@
     <string name="widget_archive_wide_name">Visão geral do arquivo</string>
     <string name="widget_archive_wide_description">Dias arquivados neste mês, a próxima execução agendada, Exportar agora e as últimas duas semanas.</string>
     <string name="widget_archive_next_run">Próxima %1$s</string>
-    <string name="widget_archive_empty_body">Exporte uma vez para começar sua sequência.</string>
+    <string name="widget_archive_empty_body">Exporte uma vez para começar seu arquivo.</string>
     <string name="widget_archive_preview_next_time">7:30</string>
     <string name="widget_archive_preview_next">Próxima 7:30</string>
-    <string name="widget_archive_preview_streak_value">11</string>
-    <string name="widget_archive_preview_streak_detail">dias seguidos · 2 lacunas</string>
+    <string name="widget_archive_preview_archived_value">11</string>
+    <string name="widget_archive_preview_archived_detail">dias arquivados · 2 lacunas</string>
     <string name="widget_archive_preview_month_value">24</string>
     <string name="widget_archive_preview_month_detail">dias em outubro</string>
     <string name="widget_archive_preview_gaps">2 lacunas</string>
@@ -188,7 +188,6 @@
         <item quantity="many">%1$d de agendados</item>
         <item quantity="other">%1$d agendados</item>
     </plurals>
-    <string name="archive_no_gaps">Sem lacunas</string>
     <string name="archive_status_updating">Atualizando</string>
     <string name="archive_status_not_due">Não previsto</string>
     <string name="archive_action_open">Abrir</string>
@@ -198,24 +197,6 @@
     <string name="archive_health_not_connected">Health Connect: não conectado</string>
     <string name="archive_day_nothing_due">Nada previsto</string>
     <string name="archive_row_not_due">Não previsto nesta data.</string>
-    <plurals name="archive_streak_days">
-        <item quantity="one">Sequência de %1$d dia</item>
-        <item quantity="many">Sequência de %1$d dias</item>
-        <item quantity="other">Sequência de %1$d dias</item>
-    </plurals>
-    <plurals name="archive_gap_count">
-        <item quantity="one">%1$d lacuna</item>
-        <item quantity="many">%1$d lacunas</item>
-        <item quantity="other">%1$d lacunas</item>
-    </plurals>
-    <plurals name="archive_stat_archived_all">
-        <item quantity="one">dia arquivado em todas as automações</item>
-        <item quantity="other">dias arquivados em todas as automações</item>
-    </plurals>
-    <plurals name="archive_stat_archived_month">
-        <item quantity="one">dia arquivado em %1$s</item>
-        <item quantity="other">dias arquivados em %1$s</item>
-    </plurals>
     <string name="automations_new">Nova automação</string>
     <string name="automations_next">Próxima · %1$s</string>
     <string name="automations_paused">Pausada</string>

@@ -56,7 +56,7 @@
     <string name="folder_destination_body">Health.md записывает данные прямо в папку, выбранную в системном средстве выбора папок Android, в том числе в синхронизируемые папки приложений. Аккаунт не нужен.</string>
     <string name="folder_destination_profiles">Автоматизации со своей папкой</string>
     <string name="widget_archive_name">Архив</string>
-    <string name="widget_archive_description">Охват экспорта: текущая серия, пропуски и последние две недели.</string>
+    <string name="widget_archive_description">Охват экспорта: дни в архиве за этот месяц, пропуски и последние две недели.</string>
     <string name="moment_writing">Записывается %1$s…</string>
     <string name="moment_keep_open">Не закрывайте Health.md до завершения.</string>
     <string name="moment_heart_description">Хрустальное сердце, которое наполняется по мере записи дней</string>
@@ -166,11 +166,11 @@
     <string name="widget_archive_wide_name">Обзор архива</string>
     <string name="widget_archive_wide_description">Дни в архиве за этот месяц, следующий запуск по расписанию, «Экспортировать» и последние две недели.</string>
     <string name="widget_archive_next_run">Далее %1$s</string>
-    <string name="widget_archive_empty_body">Выполните экспорт, чтобы начать серию.</string>
+    <string name="widget_archive_empty_body">Выполните экспорт, чтобы начать архив.</string>
     <string name="widget_archive_preview_next_time">7:30</string>
     <string name="widget_archive_preview_next">Далее 7:30</string>
-    <string name="widget_archive_preview_streak_value">11</string>
-    <string name="widget_archive_preview_streak_detail">дней подряд · 2 пропуска</string>
+    <string name="widget_archive_preview_archived_value">11</string>
+    <string name="widget_archive_preview_archived_detail">дней в архиве · 2 пропуска</string>
     <string name="widget_archive_preview_month_value">24</string>
     <string name="widget_archive_preview_month_detail">дня за октябрь</string>
     <string name="widget_archive_preview_gaps">2 пропуска</string>
@@ -196,7 +196,6 @@
         <item quantity="many">по расписанию: %1$d</item>
         <item quantity="other">по расписанию: %1$d</item>
     </plurals>
-    <string name="archive_no_gaps">Без пропусков</string>
     <string name="archive_status_updating">Обновляется</string>
     <string name="archive_status_not_due">Не запланировано</string>
     <string name="archive_action_open">Открыть</string>
@@ -206,30 +205,6 @@
     <string name="archive_health_not_connected">Health Connect: не подключено</string>
     <string name="archive_day_nothing_due">Ничего не запланировано</string>
     <string name="archive_row_not_due">На эту дату не запланировано.</string>
-    <plurals name="archive_streak_days">
-        <item quantity="one">Серия: %1$d день</item>
-        <item quantity="few">Серия: %1$d дня</item>
-        <item quantity="many">Серия: %1$d дней</item>
-        <item quantity="other">Серия: %1$d дня</item>
-    </plurals>
-    <plurals name="archive_gap_count">
-        <item quantity="one">%1$d пропуск</item>
-        <item quantity="few">%1$d пропуска</item>
-        <item quantity="many">%1$d пропусков</item>
-        <item quantity="other">%1$d пропуска</item>
-    </plurals>
-    <plurals name="archive_stat_archived_all">
-        <item quantity="one">день в архиве по всем автоматизациям</item>
-        <item quantity="few">дня в архиве по всем автоматизациям</item>
-        <item quantity="many">дней в архиве по всем автоматизациям</item>
-        <item quantity="other">дня в архиве по всем автоматизациям</item>
-    </plurals>
-    <plurals name="archive_stat_archived_month">
-        <item quantity="one">день в архиве за %1$s</item>
-        <item quantity="few">дня в архиве за %1$s</item>
-        <item quantity="many">дней в архиве за %1$s</item>
-        <item quantity="other">дня в архиве за %1$s</item>
-    </plurals>
     <string name="automations_new">Новая автоматизация</string>
     <string name="automations_next">Далее · %1$s</string>
     <string name="automations_paused">Приостановлено</string>

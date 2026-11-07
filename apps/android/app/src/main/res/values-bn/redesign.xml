@@ -56,7 +56,7 @@
     <string name="folder_destination_body">Health.md সরাসরি সেই ফোল্ডারে লেখে যা আপনি Android ফোল্ডার পিকার দিয়ে বেছে নেন, সিঙ্ক হওয়া অ্যাপ ফোল্ডারসহ। কোনো অ্যাকাউন্ট লাগে না।</string>
     <string name="folder_destination_profiles">নিজস্ব ফোল্ডারসহ অটোমেশন</string>
     <string name="widget_archive_name">আর্কাইভ</string>
-    <string name="widget_archive_description">আপনার রপ্তানি কভারেজ: বর্তমান ধারা, ফাঁক এবং গত দুই সপ্তাহ।</string>
+    <string name="widget_archive_description">আপনার রপ্তানি কভারেজ: এই মাসে আর্কাইভ করা দিন, ফাঁক এবং গত দুই সপ্তাহ।</string>
     <string name="moment_writing">%1$s লেখা হচ্ছে…</string>
     <string name="moment_keep_open">শেষ না হওয়া পর্যন্ত Health.md খোলা রাখুন।</string>
     <string name="moment_heart_description">দিন লেখার সঙ্গে সঙ্গে ভরে ওঠা একটি স্ফটিক হৃদয়</string>
@@ -156,11 +156,11 @@
     <string name="widget_archive_wide_name">আর্কাইভ সংক্ষিপ্ত বিবরণ</string>
     <string name="widget_archive_wide_description">এই মাসে আর্কাইভ করা দিন, পরবর্তী নির্ধারিত রান, এখনই রপ্তানি করুন এবং গত দুই সপ্তাহ।</string>
     <string name="widget_archive_next_run">পরবর্তী %1$s</string>
-    <string name="widget_archive_empty_body">আপনার ধারা শুরু করতে একবার রপ্তানি করুন।</string>
+    <string name="widget_archive_empty_body">আপনার আর্কাইভ শুরু করতে একবার রপ্তানি করুন।</string>
     <string name="widget_archive_preview_next_time">সকাল ৭:৩০</string>
     <string name="widget_archive_preview_next">পরবর্তী সকাল ৭:৩০</string>
-    <string name="widget_archive_preview_streak_value">১১</string>
-    <string name="widget_archive_preview_streak_detail">দিন টানা · ২টি ফাঁক</string>
+    <string name="widget_archive_preview_archived_value">১১</string>
+    <string name="widget_archive_preview_archived_detail">দিন আর্কাইভ করা · ২টি ফাঁক</string>
     <string name="widget_archive_preview_month_value">২৪</string>
     <string name="widget_archive_preview_month_detail">দিন, অক্টোবর মাসে</string>
     <string name="widget_archive_preview_gaps">২টি ফাঁক</string>
@@ -180,7 +180,6 @@
         <item quantity="one">%1$d নির্ধারিত</item>
         <item quantity="other">%1$d নির্ধারিত</item>
     </plurals>
-    <string name="archive_no_gaps">কোনো ফাঁক নেই</string>
     <string name="archive_status_updating">আপডেট হচ্ছে</string>
     <string name="archive_status_not_due">বকেয়া নয়</string>
     <string name="archive_action_open">খুলুন</string>
@@ -190,22 +189,6 @@
     <string name="archive_health_not_connected">Health Connect: সংযুক্ত নয়</string>
     <string name="archive_day_nothing_due">কিছুই বকেয়া নেই</string>
     <string name="archive_row_not_due">এই তারিখে বকেয়া নয়।</string>
-    <plurals name="archive_streak_days">
-        <item quantity="one">%1$d দিনের ধারা</item>
-        <item quantity="other">%1$d দিনের ধারা</item>
-    </plurals>
-    <plurals name="archive_gap_count">
-        <item quantity="one">%1$dটি ফাঁক</item>
-        <item quantity="other">%1$dটি ফাঁক</item>
-    </plurals>
-    <plurals name="archive_stat_archived_all">
-        <item quantity="one">সব অটোমেশন জুড়ে আর্কাইভ করা দিন</item>
-        <item quantity="other">সব অটোমেশন জুড়ে আর্কাইভ করা দিন</item>
-    </plurals>
-    <plurals name="archive_stat_archived_month">
-        <item quantity="one">%1$s-এ আর্কাইভ করা দিন</item>
-        <item quantity="other">%1$s-এ আর্কাইভ করা দিন</item>
-    </plurals>
     <string name="automations_new">নতুন অটোমেশন</string>
     <string name="automations_next">পরবর্তী · %1$s</string>
     <string name="automations_paused">বিরতিতে</string>
