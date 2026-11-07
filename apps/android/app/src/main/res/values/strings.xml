@@ -12,7 +12,6 @@
     <string name="cancel">Cancel</string>
     <string name="whoop_connection_description">Connect WHOOP to export recovery, strain, sleep, workouts, and body measurements. Sign-in uses your browser; Health.md stores tokens encrypted on this device. Disconnect removes this device’s saved connection.</string>
     <string name="whoop_connect">Connect WHOOP</string>
-    <string name="whoop_sources_description">Connect WHOOP for direct provider exports, or continue using Health Connect for local records.</string>
     <string name="whoop_sign_in_failed">WHOOP sign-in could not be started. Check your connection and try again.</string>
     <string name="whoop_use_health_connect">Use Health Connect for exports</string>
     <string name="whoop_reconnect">Reconnect WHOOP</string>
@@ -245,7 +244,6 @@
     <string name="debug_sdk_status_unknown">UNKNOWN (%1$d)</string>
 
     <!-- Settings screen -->
-    <string name="settings_subtitle">Manage exports, connections, and support</string>
     <string name="configuration_protection_title">Prevent Accidental Changes</string>
     <string name="configuration_protection_toggle">Lock configuration changes</string>
     <string name="configuration_protection_description">Keeps export, sync, schedule, folder, connection, and other settings from being changed by mistake. Manual exports remain available.</string>
@@ -253,15 +251,8 @@
     <string name="configuration_protection_blocked_body">Turn off Prevent Accidental Changes in Settings to edit your configuration.</string>
     <string name="configuration_protection_blocked_action">Show why configuration changes are blocked</string>
     <string name="configuration_protection_open_setting">Open setting</string>
-    <string name="section_health_sources">Health sources</string>
-    <string name="health_provider_status_installed">Installed</string>
-    <string name="health_provider_status_selected">Selected</string>
-    <string name="health_provider_status_ready_to_connect">Ready to connect</string>
-    <string name="health_provider_integration_details">%1$s \u2022 %2$s</string>
-    <string name="section_health_diagnostics">Health source diagnostics</string>
     <string name="health_diagnostics_description">Share a provider report with beta testers or support. It includes selected providers, export date ranges, permission states, and error categories. It excludes health measurements, credentials, and raw paths, but is not operational-only or anonymous.</string>
     <string name="health_diagnostics_share_title">Share provider report (includes settings)</string>
-    <string name="health_diagnostics_share_subtitle">No credentials, provider secrets, raw file paths, or health measurements</string>
     <string name="health_diagnostics_share_subject">Health.md redacted technical report</string>
     <string name="health_diagnostics_share_chooser">Share technical report</string>
     <string name="section_write_mode">Write Mode</string>
@@ -276,16 +267,10 @@
     <string name="advanced_settings_nav_title">Advanced Export Settings</string>
     <string name="advanced_settings_nav_subtitle">Metrics, daily notes, individual tracking, format customization</string>
     <!-- Settings upgrade -->
-    <string name="settings_upgrade_title">Upgrade to Premium</string>
     <string name="settings_upgrade_subtitle">Unlimited exports, scheduled exports &amp; more</string>
 
-    <string name="section_feedback">Feedback</string>
     <string name="feedback_send_title">Send Feedback</string>
-    <string name="feedback_send_subtitle">Opens your email client</string>
-    <string name="feedback_github_title">Report a Bug on GitHub</string>
-    <string name="feedback_github_subtitle">Opens a pre-filled issue template</string>
     <string name="feedback_discord_title">Join our Discord</string>
-    <string name="feedback_discord_subtitle">Chat with the Health.md community</string>
     <string name="feedback_no_app_available">No app available to open this link</string>
     <string name="reset_to_defaults">Reset to Defaults</string>
 
@@ -501,7 +486,6 @@
         <item quantity="one">%1$d metric selected</item>
         <item quantity="other">%1$d metrics selected</item>
     </plurals>
-    <string name="section_quick_actions">Quick Actions</string>
     <string name="action_suggested">Suggested</string>
     <string name="action_all">All</string>
     <string name="action_none">None</string>
@@ -517,13 +501,6 @@
     <string name="no_history_title">No Export\nHistory</string>
     <string name="no_history_subtitle">Your exports will appear here</string>
     <string name="section_export_history">Export History</string>
-    <string name="history_status_success">\u2713 Success</string>
-    <string name="history_status_partial">! Partial</string>
-    <string name="history_status_failed">\u2717 Failed</string>
-    <plurals name="history_entry_days">
-        <item quantity="one">%1$d/%2$d day • %3$s to %4$s</item>
-        <item quantity="other">%1$d/%2$d days • %3$s to %4$s</item>
-    </plurals>
     <string name="history_timestamp_format">%1$s at %2$s</string>
     <string name="export_source_manual">Manual</string>
     <string name="export_source_scheduled">Scheduled</string>
@@ -846,12 +823,6 @@
 
     <string name="history_clear_title">Clear export history?</string>
     <string name="history_clear_body">This removes all local export history entries. Exported files are not deleted.</string>
-    <string name="history_target_label">Target: %1$s</string>
-    <string name="history_profile_label">Profile: %1$s</string>
-    <plurals name="history_file_count">
-        <item quantity="one">File: %1$d</item>
-        <item quantity="other">Files: %1$d</item>
-    </plurals>
     <string name="history_detail_title">Export details</string>
     <string name="history_detail_source">Source</string>
     <string name="history_detail_profile">Profile</string>
@@ -1117,10 +1088,6 @@
     <plurals name="raw_snapshot_diagnostics_incomplete_count">
         <item quantity="one">%1$d incomplete snapshot action</item>
         <item quantity="other">%1$d incomplete snapshot actions</item>
-    </plurals>
-    <plurals name="raw_snapshot_history_entry_actions">
-        <item quantity="one">Snapshot actions: %1$d/%2$d action • %3$s to %4$s</item>
-        <item quantity="other">Snapshot actions: %1$d/%2$d actions • %3$s to %4$s</item>
     </plurals>
     <plurals name="schedule_cadence_unit_days">
         <item quantity="one">day</item>
@@ -1437,7 +1404,6 @@
 
     <!-- Share My Setup -->
     <string name="shared_setup_title">Share My Setup</string>
-    <string name="shared_setup_back">Back</string>
     <string name="shared_setup_intro">Copy export preferences between Health.md devices without sharing health data, credentials, permissions, purchases, or folder access.</string>
     <string name="shared_setup_sender_disclosure">Custom Markdown, frontmatter values, and endpoint host/path are copied verbatim. Review them for personal, tenant, routing, or secret text before sending.</string>
     <string name="shared_setup_use">Use a Shared Setup</string>

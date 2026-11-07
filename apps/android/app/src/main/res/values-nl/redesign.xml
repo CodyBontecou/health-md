@@ -16,10 +16,8 @@
     <string name="archive_row_last_export">Laatste export %1$s</string>
     <string name="archive_action_backfill">Aanvullen</string>
     <string name="archive_empty_title">Je archief begint hier</string>
-    <string name="archive_empty_body">Elke dag die je exporteert vult een vakje in de kalender. Exporteer één keer om te beginnen.</string>
     <string name="automations_subtitle">Opgeslagen exports die je kunt plannen, vanuit automatiseringsapps kunt starten of met de healthmd-CLI kunt uitvoeren.</string>
     <string name="automations_profiles_title">Exportprofielen</string>
-    <string name="automations_profiles_body">Maak, bewerk en wissel tussen opgeslagen exportconfiguraties.</string>
     <string name="automation_sentence_daily">Elke dag om %1$s exporteren naar %2$s.</string>
     <string name="automation_sentence_weekly">Elke week op %1$s om %2$s exporteren naar %3$s.</string>
     <string name="automation_sentence_monthly">Elke maand om %1$s exporteren naar %2$s.</string>
@@ -29,10 +27,6 @@
     <string name="settings_section_destinations">Bestemmingen</string>
     <string name="settings_section_data">Gegevens</string>
     <string name="settings_section_app">App</string>
-    <string name="settings_destination_folder_title">Exportmap</string>
-    <string name="settings_destination_folder_subtitle">Kies in Nu exporteren de map waarin Health.md schrijft.</string>
-    <string name="settings_destination_api_title">API-endpoint en Agent Data-gateway</string>
-    <string name="settings_destination_api_subtitle">Stel in Automatiseringen uploads naar je server of een ingestiegateway in.</string>
     <string name="automation_detail_destination">Bestemming</string>
     <string name="automation_detail_formats">Formaten</string>
     <string name="automation_detail_metrics">Metingen</string>
@@ -41,16 +35,11 @@
     <string name="automation_detail_profile_id">Profiel-ID</string>
     <string name="automation_detail_copy">Kopiëren</string>
     <string name="automation_detail_copied">Gekopieerd</string>
-    <string name="automation_detail_edit_profile">Profiel bewerken</string>
     <string name="automation_detail_edit_schedule">Planning bewerken</string>
-    <string name="automation_detail_make_active">Activeren</string>
-    <string name="automation_detail_active">Actief profiel</string>
     <string name="automation_detail_select">Selecteer een automatisering om de details te zien.</string>
     <string name="automation_detail_details">Details</string>
     <string name="automation_detail_details_named">Details van %1$s</string>
     <string name="automation_detail_not_found">Deze automatisering bestaat niet meer.</string>
-    <string name="folder_destination_current">Huidige map</string>
-    <string name="folder_destination_none">Geen map geselecteerd</string>
     <string name="folder_destination_choose">Map kiezen</string>
     <string name="folder_destination_change">Map wijzigen</string>
     <string name="folder_destination_body">Health.md schrijft rechtstreeks naar de map die je met de Android-mapkiezer kiest, ook gesynchroniseerde app-mappen. Er is geen account nodig.</string>
@@ -61,9 +50,7 @@
     <string name="moment_keep_open">Houd Health.md open tot het klaar is.</string>
     <string name="moment_heart_description">Een kristallen hart dat zich vult terwijl dagen worden geschreven</string>
     <string name="archive_automations_manage">Beheren</string>
-    <string name="archive_automations_card_body">‘Alle’ telt een dag als compleet wanneer elke geplande automatisering hem dekte.</string>
     <string name="archive_action_reexport">Opnieuw exporteren</string>
-    <string name="day_page_open">Bestand van de dag openen</string>
     <string name="day_page_share">Bestand delen</string>
     <string name="day_page_empty">Met de huidige instellingen wordt voor deze datum niets geschreven.</string>
     <string name="day_page_range_only">Ruwe snapshots schrijven één bestand voor de hele periode, dus er is geen apart dagbestand.</string>
@@ -122,7 +109,6 @@
     <string name="composer_when_night">Elke nacht om %1$s</string>
     <string name="composer_when_weekly">Elke %1$s om %2$s</string>
     <string name="composer_when_monthly">Elke maand om %1$s</string>
-    <string name="composer_when_custom">Volgens een eigen schema om %1$s</string>
     <string name="composer_range_yesterday">gisteren</string>
     <string name="composer_note_update">mijn dagnotitie bijwerken</string>
     <string name="composer_note_leave">dagnotities niet aanraken</string>
@@ -134,9 +120,7 @@
     <string name="composer_preview_title">Bestand van de laatste dag</string>
     <string name="composer_preview_note">Gemaakt van de meest recente volledige dag in Health Connect. Er wordt niets geschreven.</string>
     <string name="composer_fields">Velden in deze notitie</string>
-    <string name="composer_all_metrics">Alle meetwaarden</string>
     <string name="composer_all_settings">Alle instellingen</string>
-    <string name="composer_all_settings_sub">Uitvoer · opmaak · items · bestemming</string>
     <string name="composer_label_when">Wanneer</string>
     <string name="composer_label_range">Dagen</string>
     <string name="composer_label_note">Dagnotitie</string>
@@ -162,19 +146,9 @@
     <string name="widget_archive_preview_month_detail">dagen in oktober</string>
     <string name="widget_archive_preview_gaps">2 hiaten</string>
     <string name="moment_see_in_archive">Bekijken in archief</string>
-    <string name="export_now_more_options">Meer opties</string>
-    <string name="automations_profiles_summary">Actief: %1$s · %2$s · %3$s</string>
     <plurals name="moment_done_days">
         <item quantity="one">%1$d dag geschreven</item>
         <item quantity="other">%1$d dagen geschreven</item>
-    </plurals>
-    <plurals name="automations_profiles_count">
-        <item quantity="one">%1$d profiel</item>
-        <item quantity="other">%1$d profielen</item>
-    </plurals>
-    <plurals name="automations_profiles_scheduled">
-        <item quantity="one">%1$d gepland</item>
-        <item quantity="other">%1$d gepland</item>
     </plurals>
     <string name="archive_status_updating">Wordt bijgewerkt</string>
     <string name="archive_status_not_due">Niet gepland</string>
@@ -186,32 +160,15 @@
     <string name="automations_new">Nieuwe automatisering</string>
     <string name="automations_next">Volgende · %1$s</string>
     <string name="automations_paused">Gepauzeerd</string>
-    <string name="automations_on_demand">Op verzoek</string>
     <string name="automations_run_now">Nu uitvoeren</string>
-    <string name="automations_run_now_named">%1$s nu uitvoeren</string>
     <string name="automations_edit">Bewerken</string>
-    <string name="automations_edit_named">%1$s bewerken</string>
     <string name="automations_switch_named">Automatisering %1$s</string>
     <string name="automations_schedule_settings_title">Planningsinstellingen</string>
-    <string name="automations_schedule_settings_subtitle">App-brede planning, bestemming voor geplande exports, machtigingen en geschiedenis</string>
     <string name="date_option_last_7_days">7 dagen</string>
     <string name="export_dates_heading">Datums</string>
     <string name="date_from_label">Van</string>
     <string name="date_to_label">Tot</string>
     <string name="export_will_write">Wordt geschreven</string>
-    <string name="export_will_write_with_daily_notes">%1$s + dagnotities</string>
-    <plurals name="export_will_write_files">
-        <item quantity="one">Ongeveer %1$d %2$s-bestand</item>
-        <item quantity="other">Ongeveer %1$d %2$s-bestanden</item>
-    </plurals>
-    <plurals name="export_cta_files">
-        <item quantity="one">%1$d bestand exporteren</item>
-        <item quantity="other">%1$d bestanden exporteren</item>
-    </plurals>
-    <plurals name="export_cta_send_days">
-        <item quantity="one">%1$d dag verzenden</item>
-        <item quantity="other">%1$d dagen verzenden</item>
-    </plurals>
     <string name="settings_plan_free">Gratis abonnement</string>
     <string name="settings_plan_full_access">Volledige toegang</string>
     <string name="settings_plan_manage">%1$s · herstellen of beheren</string>
@@ -355,7 +312,6 @@
     <string name="schedule_custom">Aangepast</string>
     <string name="schedule_day">Dag</string>
     <string name="schedule_every">Elke</string>
-    <string name="schedule_unit">Eenheid</string>
     <string name="schedule_starting">Vanaf</string>
     <string name="schedule_preferred_time">Voorkeurstijd</string>
     <string name="schedule_look_back">Terugkijken</string>

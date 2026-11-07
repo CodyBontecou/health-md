@@ -217,7 +217,6 @@
     <string name="debug_sdk_status_update_required">PROVIDER_UPDATE_REQUIRED (%1$d)</string>
     <string name="debug_sdk_status_unknown">UNKNOWN (%1$d)</string>
     <!-- Settings screen -->
-    <string name="settings_subtitle">निर्यात, कनेक्शन और सहायता प्रबंधित करें</string>
     <string name="configuration_protection_title">अनजाने बदलाव रोकें</string>
     <string name="configuration_protection_toggle">कॉन्फ़िगरेशन बदलाव लॉक करें</string>
     <string name="configuration_protection_description">एक्सपोर्ट, सिंक, शेड्यूल, फ़ोल्डर, कनेक्शन और अन्य सेटिंग्स को गलती से बदलने से रोकता है। मैन्युअल एक्सपोर्ट उपलब्ध रहते हैं।</string>
@@ -225,15 +224,8 @@
     <string name="configuration_protection_blocked_body">अपना कॉन्फ़िगरेशन संपादित करने के लिए सेटिंग्स में अनजाने बदलाव रोकें को बंद करें।</string>
     <string name="configuration_protection_blocked_action">देखें कि कॉन्फ़िगरेशन बदलाव क्यों ब्लॉक हैं</string>
     <string name="configuration_protection_open_setting">सेटिंग खोलें</string>
-    <string name="section_health_sources">स्वास्थ्य सूत्र</string>
-    <string name="health_provider_status_installed">स्थापित</string>
-    <string name="health_provider_status_selected">चयनित</string>
-    <string name="health_provider_status_ready_to_connect">कनेक्ट करने के लिए तैयार</string>
-    <string name="health_provider_integration_details">%1$s \u2022 %2$s</string>
-    <string name="section_health_diagnostics">स्वास्थ्य डेटा स्रोत की डायग्नोस्टिक जानकारी</string>
     <string name="health_diagnostics_description">ऐसी प्रदाता रिपोर्ट बीटा परीक्षकों या सहायता टीम के साथ साझा करें जिससे संवेदनशील जानकारी हटा दी गई है। इसमें प्रदाता सेटअप, अनुमति की स्थितियाँ और अंतिम निर्यात त्रुटि श्रेणियाँ शामिल हैं; स्वास्थ्य माप, क्रेडेंशियल या रॉ फ़ाइल पाथ शामिल नहीं होते।</string>
     <string name="health_diagnostics_share_title">संवेदनशील जानकारी रहित तकनीकी रिपोर्ट साझा करें</string>
-    <string name="health_diagnostics_share_subtitle">कोई क्रेडेंशियल, प्रदाता का गोपनीय डेटा, रॉ फ़ाइल पाथ या स्वास्थ्य माप नहीं</string>
     <string name="health_diagnostics_share_subject">Health.md की संवेदनशील जानकारी रहित तकनीकी रिपोर्ट</string>
     <string name="health_diagnostics_share_chooser">तकनीकी रिपोर्ट साझा करें</string>
     <string name="section_write_mode">लिखने की विधि</string>
@@ -248,15 +240,9 @@
     <string name="advanced_settings_nav_title">उन्नत निर्यात सेटिंग्स</string>
     <string name="advanced_settings_nav_subtitle">मेट्रिक्स, दैनिक नोट्स, व्यक्तिगत ट्रैकिंग, प्रारूप कस्टमाइज़ेशन</string>
     <!-- Settings upgrade -->
-    <string name="settings_upgrade_title">प्रीमियम में अपग्रेड करें</string>
     <string name="settings_upgrade_subtitle">असीमित निर्यात, अनुसूचित निर्यात और बहुत कुछ</string>
-    <string name="section_feedback">प्रतिक्रिया</string>
     <string name="feedback_send_title">प्रतिक्रिया भेजें</string>
-    <string name="feedback_send_subtitle">आपके ईमेल क्लाइंट को खोलता है</string>
-    <string name="feedback_github_title">GitHub पर बग रिपोर्ट करें</string>
-    <string name="feedback_github_subtitle">एक पूर्व-भरे गए समस्या टेम्पलेट को खोलता है</string>
     <string name="feedback_discord_title">हमारे Discord से जुड़ें</string>
-    <string name="feedback_discord_subtitle">Health.md समुदाय के साथ चैट करें</string>
     <string name="feedback_no_app_available">इस लिंक को खोलने के लिए कोई ऐप उपलब्ध नहीं है</string>
     <string name="reset_to_defaults">डिफ़ॉल्ट पर रीसेट करें</string>
     <!-- Advanced settings screen -->
@@ -464,7 +450,6 @@
         <item quantity="one">%1$d मेट्रिक चुना गया</item>
         <item quantity="other">%1$d मेट्रिक्स चुने गए</item>
     </plurals>
-    <string name="section_quick_actions">त्वरित कार्य</string>
     <string name="action_suggested">सुझाया गया</string>
     <string name="action_all">सभी</string>
     <string name="action_none">कोई नहीं</string>
@@ -479,13 +464,6 @@
     <string name="no_history_title">कोई निर्यात\nइतिहास नहीं</string>
     <string name="no_history_subtitle">आपके निर्यात यहां दिखाई देंगे</string>
     <string name="section_export_history">निर्यात इतिहास</string>
-    <string name="history_status_success">\u2713 सफल</string>
-    <string name="history_status_partial">! आंशिक</string>
-    <string name="history_status_failed">\u2717 विफल</string>
-    <plurals name="history_entry_days">
-        <item quantity="one">%1$d/%2$d दिन • %3$s से %4$s तक</item>
-        <item quantity="other">%1$d/%2$d दिन • %3$s से %4$s तक</item>
-    </plurals>
     <string name="history_timestamp_format">%1$s को %2$s</string>
     <string name="export_source_manual">मैनुअल</string>
     <string name="export_source_scheduled">निर्धारित</string>
@@ -757,12 +735,6 @@
     <string name="export_folder_root_label">निर्यात फ़ोल्डर</string>
     <string name="history_clear_title">निर्यात इतिहास साफ़ करें?</string>
     <string name="history_clear_body">यह सभी स्थानीय निर्यात इतिहास प्रविष्टियाँ हटा देता है। निर्यात की गई फ़ाइलें हटाई नहीं जातीं.</string>
-    <string name="history_target_label">लक्ष्यः %1$s</string>
-    <string name="history_profile_label">प्रोफ़ाइल: %1$s</string>
-    <plurals name="history_file_count">
-        <item quantity="one">फ़ाइल: %1$d</item>
-        <item quantity="other">फ़ाइलें: %1$d</item>
-    </plurals>
     <string name="history_detail_title">निर्यात विवरण</string>
     <string name="history_detail_source">स्रोत</string>
     <string name="history_detail_profile">प्रोफ़ाइल</string>
@@ -1002,10 +974,6 @@
     <plurals name="raw_snapshot_diagnostics_incomplete_count">
         <item quantity="one">%1$d अधूरी स्नैपशॉट कार्रवाई</item>
         <item quantity="other">%1$d अधूरी स्नैपशॉट कार्रवाइयाँ</item>
-    </plurals>
-    <plurals name="raw_snapshot_history_entry_actions">
-        <item quantity="one">स्नैपशॉट कार्रवाइयाँ: %1$d/%2$d कार्रवाई • %3$s से %4$s तक</item>
-        <item quantity="other">स्नैपशॉट कार्रवाइयाँ: %1$d/%2$d कार्रवाइयाँ • %3$s से %4$s तक</item>
     </plurals>
     <plurals name="schedule_cadence_unit_days" tools:ignore="ImpliedQuantity">
         <item quantity="one">दिन</item>
@@ -1316,7 +1284,6 @@
     <string name="clinician_report_workout_type_other">अन्य</string>
     <string name="clinician_report_unit_respiratory_rate">श्वास/मिनट</string>
     <string name="shared_setup_title">अपना सेटअप साझा करें</string>
-    <string name="shared_setup_back">वापस</string>
     <string name="shared_setup_intro">स्वास्थ्य डेटा, क्रेडेंशियल, अनुमतियाँ, खरीदारी या फ़ोल्डर एक्सेस साझा किए बिना Health.md डिवाइसों के बीच एक्सपोर्ट प्राथमिकताएँ कॉपी करें।</string>
     <string name="shared_setup_sender_disclosure">कस्टम Markdown, फ़्रंटमैटर वैल्यू और एंडपॉइंट होस्ट/पाथ जस के तस कॉपी होते हैं। भेजने से पहले इनमें कोई व्यक्तिगत, टेनेंट, रूटिंग या गुप्त टेक्स्ट है या नहीं, इसकी समीक्षा करें।</string>
     <string name="shared_setup_use">साझा सेटअप का उपयोग करें</string>
@@ -1439,7 +1406,6 @@
     <string name="export_sleep_preview_guidance_morning_ends">पूरे नींद सत्र इस एक्सपोर्ट के टाइम ज़ोन में अपनी समाप्ति तारीख के होते हैं, दोपहर पर काटे बिना। क्वेरी की विफलताएँ अलग से दिखाई जाती हैं; खाली परिणाम का मतलब पढ़ने की अनुमति उपलब्ध न होना भी हो सकता है।</string>
     <string name="whoop_connection_description">रिकवरी, तनाव, नींद, वर्कआउट और शारीरिक माप निर्यात करने के लिए WHOOP कनेक्ट करें। साइन-इन आपके ब्राउज़र में होता है; Health.md टोकन को इस डिवाइस पर एन्क्रिप्ट करके रखता है। डिस्कनेक्ट करने से इस डिवाइस का सहेजा गया कनेक्शन हट जाता है।</string>
     <string name="whoop_connect">WHOOP कनेक्ट करें</string>
-    <string name="whoop_sources_description">सीधे प्रदाता से निर्यात करने के लिए WHOOP कनेक्ट करें या स्थानीय रिकॉर्ड के लिए Health Connect का उपयोग जारी रखें।</string>
     <string name="whoop_sign_in_failed">WHOOP साइन-इन शुरू नहीं हो सका। अपना कनेक्शन जाँचें और फिर कोशिश करें।</string>
     <string name="whoop_use_health_connect">निर्यात के लिए Health Connect उपयोग करें</string>
     <string name="whoop_reconnect">WHOOP फिर से कनेक्ट करें</string>

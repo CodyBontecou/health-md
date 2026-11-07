@@ -16,10 +16,8 @@
     <string name="archive_row_last_export">Letzter Export %1$s</string>
     <string name="archive_action_backfill">Nachholen</string>
     <string name="archive_empty_title">Ihr Archiv beginnt hier</string>
-    <string name="archive_empty_body">Jeder exportierte Tag füllt ein Feld im Kalender. Exportieren Sie einmal, um zu beginnen.</string>
     <string name="automations_subtitle">Gespeicherte Exporte, die Sie planen, aus Automatisierungs-Apps starten oder mit der healthmd-CLI ausführen können.</string>
     <string name="automations_profiles_title">Exportprofile</string>
-    <string name="automations_profiles_body">Gespeicherte Exportkonfigurationen erstellen, bearbeiten und wechseln.</string>
     <string name="automation_sentence_daily">Täglich um %1$s nach %2$s exportieren.</string>
     <string name="automation_sentence_weekly">Wöchentlich am %1$s um %2$s nach %3$s exportieren.</string>
     <string name="automation_sentence_monthly">Monatlich um %1$s nach %2$s exportieren.</string>
@@ -29,10 +27,6 @@
     <string name="settings_section_destinations">Ziele</string>
     <string name="settings_section_data">Daten</string>
     <string name="settings_section_app">App</string>
-    <string name="settings_destination_folder_title">Exportordner</string>
-    <string name="settings_destination_folder_subtitle">Wählen Sie unter „Jetzt exportieren“ den Ordner, in den Health.md schreibt.</string>
-    <string name="settings_destination_api_title">API-Endpunkt und Agent Data Gateway</string>
-    <string name="settings_destination_api_subtitle">Richten Sie unter „Automationen“ Uploads an Ihren Server oder ein Ingestion-Gateway ein.</string>
     <string name="automation_detail_destination">Ziel</string>
     <string name="automation_detail_formats">Formate</string>
     <string name="automation_detail_metrics">Messwerte</string>
@@ -41,16 +35,11 @@
     <string name="automation_detail_profile_id">Profil-ID</string>
     <string name="automation_detail_copy">Kopieren</string>
     <string name="automation_detail_copied">Kopiert</string>
-    <string name="automation_detail_edit_profile">Profil bearbeiten</string>
     <string name="automation_detail_edit_schedule">Zeitplan bearbeiten</string>
-    <string name="automation_detail_make_active">Aktivieren</string>
-    <string name="automation_detail_active">Aktives Profil</string>
     <string name="automation_detail_select">Wählen Sie eine Automation aus, um Details zu sehen.</string>
     <string name="automation_detail_details">Details</string>
     <string name="automation_detail_details_named">Details zu %1$s</string>
     <string name="automation_detail_not_found">Diese Automation gibt es nicht mehr.</string>
-    <string name="folder_destination_current">Aktueller Ordner</string>
-    <string name="folder_destination_none">Kein Ordner ausgewählt</string>
     <string name="folder_destination_choose">Ordner auswählen</string>
     <string name="folder_destination_change">Ordner ändern</string>
     <string name="folder_destination_body">Health.md schreibt direkt in den Ordner, den Sie mit der Android-Ordnerauswahl wählen, auch in synchronisierte App-Ordner. Kein Konto erforderlich.</string>
@@ -61,9 +50,7 @@
     <string name="moment_keep_open">Lass Health.md geöffnet, bis der Export fertig ist.</string>
     <string name="moment_heart_description">Ein Kristallherz, das sich füllt, während Tage geschrieben werden</string>
     <string name="archive_automations_manage">Verwalten</string>
-    <string name="archive_automations_card_body">„Alle“ zählt einen Tag als vollständig, wenn jede fällige Automatisierung ihn abgedeckt hat.</string>
     <string name="archive_action_reexport">Erneut exportieren</string>
-    <string name="day_page_open">Datei des Tages öffnen</string>
     <string name="day_page_share">Datei teilen</string>
     <string name="day_page_empty">Mit den aktuellen Einstellungen würde für dieses Datum nichts geschrieben.</string>
     <string name="day_page_range_only">Rohdaten-Snapshots schreiben eine Datei für den gesamten Zeitraum, daher gibt es keine einzelne Tagesdatei.</string>
@@ -122,7 +109,6 @@
     <string name="composer_when_night">Jede Nacht um %1$s</string>
     <string name="composer_when_weekly">Jeden %1$s um %2$s</string>
     <string name="composer_when_monthly">Jeden Monat um %1$s</string>
-    <string name="composer_when_custom">Nach eigenem Zeitplan um %1$s</string>
     <string name="composer_range_yesterday">gestern</string>
     <string name="composer_note_update">meine Tagesnotiz aktualisieren</string>
     <string name="composer_note_leave">Tagesnotizen nicht ändern</string>
@@ -134,9 +120,7 @@
     <string name="composer_preview_title">Datei des letzten Tages</string>
     <string name="composer_preview_note">Aus dem letzten vollständigen Tag in Health Connect erzeugt. Es wird nichts geschrieben.</string>
     <string name="composer_fields">Felder in dieser Notiz</string>
-    <string name="composer_all_metrics">Alle Messwerte</string>
     <string name="composer_all_settings">Alle Einstellungen</string>
-    <string name="composer_all_settings_sub">Ausgabe · Format · Einträge · Ziel</string>
     <string name="composer_label_when">Wann</string>
     <string name="composer_label_range">Tage</string>
     <string name="composer_label_note">Tagesnotiz</string>
@@ -162,19 +146,9 @@
     <string name="widget_archive_preview_month_detail">Tage im Oktober</string>
     <string name="widget_archive_preview_gaps">2 Lücken</string>
     <string name="moment_see_in_archive">Im Archiv ansehen</string>
-    <string name="export_now_more_options">Weitere Optionen</string>
-    <string name="automations_profiles_summary">Aktiv: %1$s · %2$s · %3$s</string>
     <plurals name="moment_done_days">
         <item quantity="one">%1$d Tag geschrieben</item>
         <item quantity="other">%1$d Tage geschrieben</item>
-    </plurals>
-    <plurals name="automations_profiles_count">
-        <item quantity="one">%1$d Profil</item>
-        <item quantity="other">%1$d Profile</item>
-    </plurals>
-    <plurals name="automations_profiles_scheduled">
-        <item quantity="one">%1$d geplant</item>
-        <item quantity="other">%1$d geplant</item>
     </plurals>
     <string name="archive_status_updating">Wird aktualisiert</string>
     <string name="archive_status_not_due">Nicht fällig</string>
@@ -186,32 +160,15 @@
     <string name="automations_new">Neue Automation</string>
     <string name="automations_next">Nächste · %1$s</string>
     <string name="automations_paused">Pausiert</string>
-    <string name="automations_on_demand">Bei Bedarf</string>
     <string name="automations_run_now">Jetzt ausführen</string>
-    <string name="automations_run_now_named">%1$s jetzt ausführen</string>
     <string name="automations_edit">Bearbeiten</string>
-    <string name="automations_edit_named">%1$s bearbeiten</string>
     <string name="automations_switch_named">Automation %1$s</string>
     <string name="automations_schedule_settings_title">Zeitplaneinstellungen</string>
-    <string name="automations_schedule_settings_subtitle">App-weiter Zeitplan, Ziel für geplante Exporte, Berechtigungen und Verlauf</string>
     <string name="date_option_last_7_days">7 Tage</string>
     <string name="export_dates_heading">Zeitraum</string>
     <string name="date_from_label">Von</string>
     <string name="date_to_label">Bis</string>
     <string name="export_will_write">Wird geschrieben</string>
-    <string name="export_will_write_with_daily_notes">%1$s + Tagesnotizen</string>
-    <plurals name="export_will_write_files">
-        <item quantity="one">Etwa %1$d %2$s-Datei</item>
-        <item quantity="other">Etwa %1$d %2$s-Dateien</item>
-    </plurals>
-    <plurals name="export_cta_files">
-        <item quantity="one">%1$d Datei exportieren</item>
-        <item quantity="other">%1$d Dateien exportieren</item>
-    </plurals>
-    <plurals name="export_cta_send_days">
-        <item quantity="one">%1$d Tag senden</item>
-        <item quantity="other">%1$d Tage senden</item>
-    </plurals>
     <string name="settings_plan_free">Kostenloser Plan</string>
     <string name="settings_plan_full_access">Vollzugriff</string>
     <string name="settings_plan_manage">%1$s · wiederherstellen oder verwalten</string>
@@ -355,7 +312,6 @@
     <string name="schedule_custom">Benutzerdefiniert</string>
     <string name="schedule_day">Tag</string>
     <string name="schedule_every">Alle</string>
-    <string name="schedule_unit">Einheit</string>
     <string name="schedule_starting">Beginn</string>
     <string name="schedule_preferred_time">Bevorzugte Uhrzeit</string>
     <string name="schedule_look_back">Rückblick</string>

@@ -153,7 +153,6 @@
     <string name="debug_sdk_status_unknown">UNKNOWN (%1$d)</string>
 
     <!-- Settings screen -->
-    <string name="settings_subtitle">Exporte, Verbindungen und Support verwalten</string>
     <string name="configuration_protection_title">Versehentliche Änderungen verhindern</string>
     <string name="configuration_protection_toggle">Konfigurationsänderungen sperren</string>
     <string name="configuration_protection_description">Verhindert versehentliche Änderungen an Export-, Synchronisierungs-, Zeitplan-, Ordner-, Verbindungs- und anderen Einstellungen. Manuelle Exporte bleiben verfügbar.</string>
@@ -172,11 +171,7 @@
     <string name="label_units">Einheiten</string>
     <string name="advanced_settings_nav_title">Erweiterte Exporteinstellungen</string>
     <string name="advanced_settings_nav_subtitle">Metriken, Tagesnotizen, Einzeleinträge, Formatanpassung</string>
-    <string name="section_feedback">Feedback</string>
     <string name="feedback_send_title">Feedback senden</string>
-    <string name="feedback_send_subtitle">Öffnet Ihren E-Mail-Client</string>
-    <string name="feedback_github_title">Fehler auf GitHub melden</string>
-    <string name="feedback_github_subtitle">Öffnet eine vorausgefüllte Issue-Vorlage</string>
     <string name="reset_to_defaults">Auf Standardwerte zurücksetzen</string>
 
     <!-- Advanced settings screen -->
@@ -315,7 +310,6 @@
         <item quantity="one">%1$d Metrik ausgewählt</item>
         <item quantity="other">%1$d Metriken ausgewählt</item>
     </plurals>
-    <string name="section_quick_actions">Schnellaktionen</string>
     <string name="action_suggested">Empfohlen</string>
     <string name="action_all">Alle</string>
     <string name="action_none">Keine</string>
@@ -331,13 +325,6 @@
     <string name="no_history_title">Kein\nExportverlauf</string>
     <string name="no_history_subtitle">Ihre Exporte werden hier angezeigt</string>
     <string name="section_export_history">Exportverlauf</string>
-    <string name="history_status_success">✓ Erfolg</string>
-    <string name="history_status_partial">! Teilweise</string>
-    <string name="history_status_failed">✗ Fehlgeschlagen</string>
-    <plurals name="history_entry_days">
-        <item quantity="one">%1$d/%2$d Tag • %3$s bis %4$s</item>
-        <item quantity="other">%1$d/%2$d Tage • %3$s bis %4$s</item>
-    </plurals>
     <string name="history_timestamp_format">%1$s um %2$s</string>
     <string name="export_source_manual">Manuell</string>
     <string name="export_source_scheduled">Geplant</string>
@@ -512,21 +499,12 @@
     <string name="debug_has_history_permission">Hat Verlaufberechtigung</string>
     <string name="debug_requires_history_permission">Bereich benötigt Verlaufzugriff</string>
     <string name="debug_first_permission_grant">Erste Berechtigungserteilung</string>
-    <string name="section_health_sources">Gesundheitsquellen</string>
-    <string name="health_provider_status_installed">Installiert</string>
-    <string name="health_provider_status_selected">Ausgewählt</string>
-    <string name="health_provider_status_ready_to_connect">Bereit zum Verbinden</string>
-    <string name="health_provider_integration_details">%1$s \u2022 %2$s</string>
-    <string name="section_health_diagnostics">Diagnosedaten zur Gesundheitsdatenquelle</string>
     <string name="health_diagnostics_description">Teilen Sie einen bereinigten Anbieterbericht mit Beta-Testern oder dem Support. Er enthält die Anbietereinrichtung, Berechtigungsstatus und Kategorien der letzten Exportfehler – ohne Gesundheitsmesswerte, Anmeldedaten oder Rohdateipfade.</string>
     <string name="health_diagnostics_share_title">Geschwärzten technischen Bericht teilen</string>
-    <string name="health_diagnostics_share_subtitle">Keine Anmeldedaten, Anbieter-Geheimnisse, Rohdateipfade oder Gesundheitsmesswerte</string>
     <string name="health_diagnostics_share_subject">Geschwärzter technischer Bericht von Health.md</string>
     <string name="health_diagnostics_share_chooser">Technischen Bericht teilen</string>
-    <string name="settings_upgrade_title">Auf Premium upgraden</string>
     <string name="settings_upgrade_subtitle">Unbegrenzte Exporte, geplante Exporte und mehr</string>
     <string name="feedback_discord_title">Unserem Discord beitreten</string>
-    <string name="feedback_discord_subtitle">Chatten Sie mit der Health.md-Community</string>
     <string name="feedback_no_app_available">Keine App zum Öffnen dieses Links verfügbar</string>
     <string name="granular_data_title">Detaillierte Zeitreihen einbeziehen</string>
     <string name="granular_data_description">Fügen Sie zeitgestempelte Messwerte wie Herzfrequenz und Schlafphasen zu Kompatibilitätsexporten hinzu. Für eine API-vollständige Kopie verwenden Sie den API-Rohdaten-Snapshot.</string>
@@ -784,12 +762,6 @@
     <string name="export_folder_root_label">Exportordner</string>
     <string name="history_clear_title">Exportverlauf löschen?</string>
     <string name="history_clear_body">Dadurch werden alle lokalen Einträge im Exportverlauf entfernt. Exportierte Dateien werden nicht gelöscht.</string>
-    <string name="history_target_label">Ziel: %1$s</string>
-    <string name="history_profile_label">Profil: %1$s</string>
-    <plurals name="history_file_count">
-        <item quantity="one">Datei: %1$d</item>
-        <item quantity="other">Dateien: %1$d</item>
-    </plurals>
     <string name="history_detail_title">Exportdetails</string>
     <string name="history_detail_source">Quelle</string>
     <string name="history_detail_profile">Profil</string>
@@ -1028,10 +1000,6 @@
     <plurals name="raw_snapshot_diagnostics_incomplete_count">
         <item quantity="one">%1$d unvollständige Snapshot-Aktion</item>
         <item quantity="other">%1$d unvollständige Snapshot-Aktionen</item>
-    </plurals>
-    <plurals name="raw_snapshot_history_entry_actions">
-        <item quantity="one">Snapshot-Aktionen: %1$d/%2$d Aktion • %3$s bis %4$s</item>
-        <item quantity="other">Snapshot-Aktionen: %1$d/%2$d Aktionen • %3$s bis %4$s</item>
     </plurals>
     <plurals name="schedule_cadence_unit_days">
         <item quantity="one">Tag</item>
@@ -1342,7 +1310,6 @@
     <string name="clinician_report_workout_type_other">Sonstiges</string>
     <string name="clinician_report_unit_respiratory_rate">Atemzüge/min</string>
     <string name="shared_setup_title">Mein Setup teilen</string>
-    <string name="shared_setup_back">Zurück</string>
     <string name="shared_setup_intro">Exporteinstellungen zwischen Health.md-Geräten kopieren, ohne Gesundheitsdaten, Anmeldeinformationen, Berechtigungen, Käufe oder Ordnerzugriff zu teilen.</string>
     <string name="shared_setup_sender_disclosure">Benutzerdefiniertes Markdown, Frontmatter-Werte sowie Endpunkt-Host und -Pfad werden unverändert kopiert. Prüfen Sie alles vor dem Senden auf persönliche, mandantenbezogene, Routing- oder geheime Texte.</string>
     <string name="shared_setup_use">Geteiltes Setup verwenden</string>
@@ -1465,7 +1432,6 @@
     <string name="export_sleep_preview_guidance_morning_ends">Ganze Schlafphasen gehören zu ihrem Enddatum in der Zeitzone dieses Exports, ohne Kappung zur Mittagszeit. Abfragefehler werden separat aufgeführt; ein leeres Ergebnis kann auch auf fehlenden Lesezugriff hinweisen.</string>
     <string name="whoop_connection_description">Verbinde WHOOP, um Erholung, Belastung, Schlaf, Trainings und Körpermessungen zu exportieren. Die Anmeldung erfolgt im Browser; Health.md speichert Tokens verschlüsselt auf diesem Gerät. Beim Trennen wird die gespeicherte Verbindung auf diesem Gerät entfernt.</string>
     <string name="whoop_connect">WHOOP verbinden</string>
-    <string name="whoop_sources_description">Verbinde WHOOP für direkte Anbieterexporte oder nutze Health Connect weiterhin für lokale Datensätze.</string>
     <string name="whoop_sign_in_failed">Die WHOOP-Anmeldung konnte nicht gestartet werden. Prüfe deine Verbindung und versuche es erneut.</string>
     <string name="whoop_use_health_connect">Health Connect für Exporte verwenden</string>
     <string name="whoop_reconnect">WHOOP erneut verbinden</string>

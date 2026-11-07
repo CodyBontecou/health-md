@@ -207,7 +207,6 @@
     <string name="debug_sdk_status_unavailable">SDK_UNAVAILABLE (%1$d)</string>
     <string name="debug_sdk_status_update_required">PROVIDER_UPDATE_REQUIRED (%1$d)</string>
     <string name="debug_sdk_status_unknown">UNKNOWN (%1$d)</string>
-    <string name="settings_subtitle">Экспорттарды, қосылымдарды және қолдауды басқару</string>
     <string name="configuration_protection_title">Кездейсоқ өзгерістерге жол бермеу</string>
     <string name="configuration_protection_toggle">Конфигурация өзгерістерін құлыптау</string>
     <string name="configuration_protection_description">Экспорт, синхрондау, кесте, қалта, байланыс және басқа параметрлердің кездейсоқ өзгертілуіне жол бермейді. Қолмен экспорттау қолжетімді болып қалады.</string>
@@ -215,15 +214,8 @@
     <string name="configuration_protection_blocked_body">Конфигурацияны өңдеу үшін Параметрлерде «Кездейсоқ өзгерістерге жол бермеу» опциясын өшіріңіз.</string>
     <string name="configuration_protection_blocked_action">Конфигурация өзгерістерінің неге бұғатталғанын көрсету</string>
     <string name="configuration_protection_open_setting">Параметрді ашу</string>
-    <string name="section_health_sources">Денсаулық деректерінің көздері</string>
-    <string name="health_provider_status_installed">Орнатылған</string>
-    <string name="health_provider_status_selected">Таңдалған</string>
-    <string name="health_provider_status_ready_to_connect">Қосылуға дайын</string>
-    <string name="health_provider_integration_details">%1$s \u2022 %2$s</string>
-    <string name="section_health_diagnostics">Денсаулық деректері көзі туралы диагностикалық ақпарат</string>
     <string name="health_diagnostics_description">Бета-тестерлерге немесе қолдау қызметіне құпия деректері жасырылған провайдер есебін жіберіңіз. Есепте провайдер параметрлері, рұқсат күйлері және соңғы экспорт қатесінің санаттары көрсетіледі; денсаулық өлшемдері, тіркелгі деректері және өңделмеген файл жолдары берілмейді.</string>
     <string name="health_diagnostics_share_title">Құпия деректері жасырылған техникалық есепті бөлісу</string>
-    <string name="health_diagnostics_share_subtitle">Тіркелгі деректері, провайдер құпиялары, өңделмеген файл жолдары немесе денсаулық өлшемдері жоқ</string>
     <string name="health_diagnostics_share_subject">Health.md-тің құпия деректері жасырылған техникалық есебі</string>
     <string name="health_diagnostics_share_chooser">Техникалық есепті бөлісу</string>
     <string name="section_write_mode">Жазу режимі</string>
@@ -237,15 +229,9 @@
     <string name="label_units">Өлшем бірліктері</string>
     <string name="advanced_settings_nav_title">Қосымша экспорт параметрлері</string>
     <string name="advanced_settings_nav_subtitle">Көрсеткіштер, күнделікті жазбалар, жеке жазбаларды бақылау, пішімді баптау</string>
-    <string name="settings_upgrade_title">Premium нұсқасына өту</string>
     <string name="settings_upgrade_subtitle">Шексіз экспорттар, жоспарланған экспорттар және т.б.</string>
-    <string name="section_feedback">Кері байланыс</string>
     <string name="feedback_send_title">Пікір жіберу</string>
-    <string name="feedback_send_subtitle">Электрондық пошта клиентін ашады</string>
-    <string name="feedback_github_title">GitHub-та ақау туралы хабарлау</string>
-    <string name="feedback_github_subtitle">Алдын ала толтырылған мәселе үлгісін ашады</string>
     <string name="feedback_discord_title">Discord қауымдастығымызға қосылу</string>
-    <string name="feedback_discord_subtitle">Health.md қауымдастығымен сөйлесіңіз</string>
     <string name="feedback_no_app_available">Бұл сілтемені ашатын қолданба жоқ</string>
     <string name="reset_to_defaults">Әдепкі мәндерді қалпына келтіру</string>
     <string name="advanced_settings_title">Экспорт параметрлері</string>
@@ -447,7 +433,6 @@
         <item quantity="one">%1$d көрсеткіш таңдалды</item>
         <item quantity="other">%1$d көрсеткіш таңдалды</item>
     </plurals>
-    <string name="section_quick_actions">Жылдам әрекеттер</string>
     <string name="action_suggested">Ұсынылған</string>
     <string name="action_all">Барлығы</string>
     <string name="action_none">Ешқайсысы</string>
@@ -461,13 +446,6 @@
     <string name="no_history_title">Экспорт тарихы\nжоқ</string>
     <string name="no_history_subtitle">Экспорттарыңыз осында көрсетіледі</string>
     <string name="section_export_history">Экспорт тарихы</string>
-    <string name="history_status_success">✓ Сәтті</string>
-    <string name="history_status_partial">! Ішінара</string>
-    <string name="history_status_failed">✗ Сәтсіз</string>
-    <plurals name="history_entry_days">
-        <item quantity="one">%1$d/%2$d күн • %3$s – %4$s</item>
-        <item quantity="other">%1$d/%2$d күн • %3$s – %4$s</item>
-    </plurals>
     <string name="history_timestamp_format">%1$s, %2$s</string>
     <string name="export_source_manual">Қолмен</string>
     <string name="export_source_scheduled">Жоспарланған</string>
@@ -719,12 +697,6 @@
     <string name="export_folder_root_label">Экспорт қалтасы</string>
     <string name="history_clear_title">Экспорт тарихын тазалау керек пе?</string>
     <string name="history_clear_body">Бұл барлық жергілікті экспорттық тарих жазбаларын жояды. Экспортталған файлдар жойылмайды.</string>
-    <string name="history_target_label">Мақсат: %1$s</string>
-    <string name="history_profile_label">Профиль: %1$s</string>
-    <plurals name="history_file_count">
-        <item quantity="one">Файл: %1$d</item>
-        <item quantity="other">Файлдар: %1$d</item>
-    </plurals>
     <string name="history_detail_title">Экспорт мәліметтері</string>
     <string name="history_detail_source">Дереккөз</string>
     <string name="history_detail_profile">Профиль</string>
@@ -968,10 +940,6 @@
     <plurals name="raw_snapshot_diagnostics_incomplete_count">
         <item quantity="one">%1$d аяқталмаған снапшот әрекеті</item>
         <item quantity="other">%1$d аяқталмаған снапшот әрекеті</item>
-    </plurals>
-    <plurals name="raw_snapshot_history_entry_actions">
-        <item quantity="one">Снапшот әрекеттері: %1$d/%2$d әрекет • %3$s – %4$s</item>
-        <item quantity="other">Снапшот әрекеттері: %1$d/%2$d әрекет • %3$s – %4$s</item>
     </plurals>
     <plurals name="schedule_cadence_unit_days">
         <item quantity="one">күн</item>
@@ -1283,7 +1251,6 @@
     <string name="clinician_report_workout_type_other">Басқа</string>
     <string name="clinician_report_unit_respiratory_rate">тыныс/мин</string>
     <string name="shared_setup_title">Реттеуімді бөлісу</string>
-    <string name="shared_setup_back">Артқа</string>
     <string name="shared_setup_intro">Денсаулық деректерін, тіркелгі деректерін, рұқсаттарды, сатып алуларды немесе қалтаға қол жеткізуді бөліспей-ақ Health.md құрылғылары арасында экспорт теңшелімдерін көшіріңіз.</string>
     <string name="shared_setup_sender_disclosure">Арнаулы Markdown, frontmatter мәндері және соңғы нүктенің хост/жолы сол күйінде көшіріледі. Жібермес бұрын оларды жеке, жалға алушы, бағдарлау немесе құпия мәтіндерге қарап тексеріңіз.</string>
     <string name="shared_setup_use">Бөліскен реттеуді пайдалану</string>
@@ -1406,7 +1373,6 @@
     <string name="export_sleep_preview_guidance_morning_ends">Толық ұйқы сеанстары осы экспорттың уақыт белдеуіндегі аяқталу күніне жатады, түсте кесілмейді. Сұрау қателері бөлек көрсетіледі; бос нәтиже оқу рұқсатының қолжетімсіз екенін де білдіруі мүмкін.</string>
     <string name="whoop_connection_description">Қалпына келу, жүктеме, ұйқы, жаттығулар мен дене өлшемдерін экспорттау үшін WHOOP қызметін қосыңыз. Кіру браузер арқылы орындалады; Health.md токендерді осы құрылғыда шифрлап сақтайды. Ажырату осы құрылғыда сақталған қосылымды жояды.</string>
     <string name="whoop_connect">WHOOP қызметін қосу</string>
-    <string name="whoop_sources_description">Провайдерден тікелей экспорттау үшін WHOOP қызметін қосыңыз немесе жергілікті жазбалар үшін Health Connect қолдануды жалғастырыңыз.</string>
     <string name="whoop_sign_in_failed">WHOOP жүйесіне кіруді бастау мүмкін болмады. Байланысты тексеріп, әрекетті қайталаңыз.</string>
     <string name="whoop_use_health_connect">Экспорттау үшін Health Connect пайдалану</string>
     <string name="whoop_reconnect">WHOOP қызметіне қайта қосылу</string>

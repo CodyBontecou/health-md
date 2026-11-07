@@ -16,10 +16,8 @@
     <string name="archive_row_last_export">Last export %1$s</string>
     <string name="archive_action_backfill">Backfill</string>
     <string name="archive_empty_title">Your archive starts here</string>
-    <string name="archive_empty_body">Each day you export fills a square on the calendar. Export once to begin.</string>
     <string name="automations_subtitle">Saved exports you can schedule, start from automation apps, or run with the healthmd CLI.</string>
     <string name="automations_profiles_title">Export profiles</string>
-    <string name="automations_profiles_body">Create, edit, and switch between saved export configurations.</string>
     <string name="automation_sentence_daily">Every day at %1$s, export to %2$s.</string>
     <string name="automation_sentence_weekly">Every week on %1$s at %2$s, export to %3$s.</string>
     <string name="automation_sentence_monthly">Every month at %1$s, export to %2$s.</string>
@@ -29,10 +27,6 @@
     <string name="settings_section_destinations">Destinations</string>
     <string name="settings_section_data">Data</string>
     <string name="settings_section_app">App</string>
-    <string name="settings_destination_folder_title">Export folder</string>
-    <string name="settings_destination_folder_subtitle">Choose the folder Health.md writes to in Export now.</string>
-    <string name="settings_destination_api_title">API endpoint and Agent Data gateway</string>
-    <string name="settings_destination_api_subtitle">Set up uploads to your server or an ingestion gateway in Automations.</string>
     <string name="automation_detail_destination">Destination</string>
     <string name="automation_detail_formats">Formats</string>
     <string name="automation_detail_metrics">Metrics</string>
@@ -41,16 +35,11 @@
     <string name="automation_detail_profile_id">Profile ID</string>
     <string name="automation_detail_copy">Copy</string>
     <string name="automation_detail_copied">Copied</string>
-    <string name="automation_detail_edit_profile">Edit profile</string>
     <string name="automation_detail_edit_schedule">Edit schedule</string>
-    <string name="automation_detail_make_active">Make active</string>
-    <string name="automation_detail_active">Active profile</string>
     <string name="automation_detail_select">Select an automation to see its details.</string>
     <string name="automation_detail_details">Details</string>
     <string name="automation_detail_details_named">Details for %1$s</string>
     <string name="automation_detail_not_found">This automation no longer exists.</string>
-    <string name="folder_destination_current">Current folder</string>
-    <string name="folder_destination_none">No folder selected</string>
     <string name="folder_destination_choose">Choose folder</string>
     <string name="folder_destination_change">Change folder</string>
     <string name="folder_destination_body">Health.md writes directly to the folder you pick with the Android folder picker, including synced app folders. No account is needed.</string>
@@ -61,9 +50,7 @@
     <string name="moment_keep_open">Keep Health.md open until it finishes.</string>
     <string name="moment_heart_description">A crystal heart that fills as days are written</string>
     <string name="archive_automations_manage">Manage</string>
-    <string name="archive_automations_card_body">“All” counts a day complete when every automation that was due covered it.</string>
     <string name="archive_action_reexport">Re-export</string>
-    <string name="day_page_open">Open the day’s file</string>
     <string name="day_page_share">Share file</string>
     <string name="day_page_empty">Nothing would be written for this date with the current settings.</string>
     <string name="day_page_range_only">Raw snapshot exports write one file for the whole range, so there is no single day file to show.</string>
@@ -122,7 +109,6 @@
     <string name="composer_when_night">Every night at %1$s</string>
     <string name="composer_when_weekly">Every %1$s at %2$s</string>
     <string name="composer_when_monthly">Every month at %1$s</string>
-    <string name="composer_when_custom">On a custom schedule at %1$s</string>
     <string name="composer_range_yesterday">yesterday</string>
     <string name="composer_note_update">update my daily note</string>
     <string name="composer_note_leave">leave daily notes alone</string>
@@ -134,9 +120,7 @@
     <string name="composer_preview_title">Latest day’s file</string>
     <string name="composer_preview_note">Rendered from the most recent complete day in Health Connect. Nothing is written.</string>
     <string name="composer_fields">Fields in this note</string>
-    <string name="composer_all_metrics">All metrics</string>
     <string name="composer_all_settings">All settings</string>
-    <string name="composer_all_settings_sub">Output · format · entries · destination</string>
     <string name="composer_label_when">When</string>
     <string name="composer_label_range">Days</string>
     <string name="composer_label_note">Daily note</string>
@@ -162,19 +146,9 @@
     <string name="widget_archive_preview_month_detail">days in October</string>
     <string name="widget_archive_preview_gaps">2 gaps</string>
     <string name="moment_see_in_archive">See in archive</string>
-    <string name="export_now_more_options">More options</string>
-    <string name="automations_profiles_summary">Active: %1$s · %2$s · %3$s</string>
     <plurals name="moment_done_days">
         <item quantity="one">%1$d day written</item>
         <item quantity="other">%1$d days written</item>
-    </plurals>
-    <plurals name="automations_profiles_count">
-        <item quantity="one">%1$d profile</item>
-        <item quantity="other">%1$d profiles</item>
-    </plurals>
-    <plurals name="automations_profiles_scheduled">
-        <item quantity="one">%1$d scheduled</item>
-        <item quantity="other">%1$d scheduled</item>
     </plurals>
     <string name="archive_status_updating">Updating</string>
     <string name="archive_status_not_due">Not due</string>
@@ -186,32 +160,15 @@
     <string name="automations_new">New automation</string>
     <string name="automations_next">Next · %1$s</string>
     <string name="automations_paused">Paused</string>
-    <string name="automations_on_demand">On demand</string>
     <string name="automations_run_now">Run now</string>
-    <string name="automations_run_now_named">Run %1$s now</string>
     <string name="automations_edit">Edit</string>
-    <string name="automations_edit_named">Edit %1$s</string>
     <string name="automations_switch_named">%1$s automation</string>
     <string name="automations_schedule_settings_title">Schedule settings</string>
-    <string name="automations_schedule_settings_subtitle">App-wide schedule, scheduled export target, permissions and history</string>
     <string name="date_option_last_7_days">7 days</string>
     <string name="export_dates_heading">Dates</string>
     <string name="date_from_label">From</string>
     <string name="date_to_label">To</string>
     <string name="export_will_write">Will write</string>
-    <string name="export_will_write_with_daily_notes">%1$s + daily notes</string>
-    <plurals name="export_will_write_files">
-        <item quantity="one">About %1$d %2$s file</item>
-        <item quantity="other">About %1$d %2$s files</item>
-    </plurals>
-    <plurals name="export_cta_files">
-        <item quantity="one">Export %1$d file</item>
-        <item quantity="other">Export %1$d files</item>
-    </plurals>
-    <plurals name="export_cta_send_days">
-        <item quantity="one">Send %1$d day</item>
-        <item quantity="other">Send %1$d days</item>
-    </plurals>
     <string name="settings_plan_free">Free plan</string>
     <string name="settings_plan_full_access">Full access</string>
     <string name="settings_plan_manage">%1$s · restore or manage</string>
@@ -360,7 +317,6 @@
     <string name="schedule_custom">Custom</string>
     <string name="schedule_day">Day</string>
     <string name="schedule_every">Every</string>
-    <string name="schedule_unit">Unit</string>
     <string name="schedule_starting">Starting</string>
     <string name="schedule_preferred_time">Preferred time</string>
     <string name="schedule_look_back">Look back</string>

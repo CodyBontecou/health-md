@@ -77,7 +77,6 @@
     <string name="debug_sdk_status_unknown">UNKNOWN (%1$d)</string>
 
     <!-- Settings screen -->
-    <string name="settings_subtitle">إدارة عمليات التصدير والاتصالات والدعم</string>
     <string name="configuration_protection_title">منع التغييرات غير المقصودة</string>
     <string name="configuration_protection_toggle">قفل تغييرات الإعدادات</string>
     <string name="configuration_protection_description">يمنع تغيير إعدادات التصدير والمزامنة والجدولة والمجلد والاتصال وغيرها عن طريق الخطأ. تظل عمليات التصدير اليدوية متاحة.</string>
@@ -96,11 +95,7 @@
     <string name="label_units">الوحدات</string>
     <string name="advanced_settings_nav_title">إعدادات التصدير المتقدمة</string>
     <string name="advanced_settings_nav_subtitle">المقاييس والملاحظات اليومية والتتبع الفردي وتخصيص الصيغة</string>
-    <string name="section_feedback">الملاحظات</string>
     <string name="feedback_send_title">إرسال ملاحظات</string>
-    <string name="feedback_send_subtitle">يفتح تطبيق البريد الإلكتروني</string>
-    <string name="feedback_github_title">الإبلاغ عن خطأ على GitHub</string>
-    <string name="feedback_github_subtitle">يفتح نموذج بلاغ معبّأ مسبقًا</string>
     <string name="reset_to_defaults">إعادة الضبط على الإعدادات الافتراضية</string>
 
     <!-- Advanced settings screen -->
@@ -251,7 +246,6 @@
         <item quantity="many">تم تحديد %1$d مقياسًا</item>
         <item quantity="other">تم تحديد %1$d مقياس</item>
     </plurals>
-    <string name="section_quick_actions">الإجراءات السريعة</string>
     <string name="action_suggested">مقترح</string>
     <string name="action_all">الكل</string>
     <string name="action_none">لا شيء</string>
@@ -267,17 +261,6 @@
     <string name="no_history_title">لا يوجد سجل\nللتصدير</string>
     <string name="no_history_subtitle">ستظهر التصديرات هنا</string>
     <string name="section_export_history">سجل التصديرات</string>
-    <string name="history_status_success">\u2713 ناجح</string>
-    <string name="history_status_partial">! جزئي</string>
-    <string name="history_status_failed">\u2717 فاشل</string>
-    <plurals name="history_entry_days">
-        <item quantity="zero">لا أيام (%1$d/%2$d) • من %3$s إلى %4$s</item>
-        <item quantity="one">يوم واحد (%1$d/%2$d) • من %3$s إلى %4$s</item>
-        <item quantity="two">يومان (%1$d/%2$d) • من %3$s إلى %4$s</item>
-        <item quantity="few">%1$d/%2$d أيام • من %3$s إلى %4$s</item>
-        <item quantity="many">%1$d/%2$d يومًا • من %3$s إلى %4$s</item>
-        <item quantity="other">%1$d/%2$d يوم • من %3$s إلى %4$s</item>
-    </plurals>
     <string name="history_timestamp_format">%1$s في %2$s</string>
     <string name="export_source_manual">يدوي</string>
     <string name="export_source_scheduled">مجدول</string>
@@ -552,21 +535,12 @@
     <string name="debug_has_history_permission">إذن السجل ممنوح</string>
     <string name="debug_requires_history_permission">النطاق يحتاج إلى إذن السجل</string>
     <string name="debug_first_permission_grant">أول منح للإذن</string>
-    <string name="section_health_sources">مصادر البيانات الصحية</string>
-    <string name="health_provider_status_installed">تم التثبيت</string>
-    <string name="health_provider_status_selected">محدّد</string>
-    <string name="health_provider_status_ready_to_connect">جاهز للاتصال</string>
-    <string name="health_provider_integration_details">%1$s \u2022 %2$s</string>
-    <string name="section_health_diagnostics">تشخيص مصدر البيانات الصحية</string>
     <string name="health_diagnostics_description">شارك مع مختبري الإصدار التجريبي أو فريق الدعم تقريرًا عن الموفّر بعد حجب البيانات الحساسة منه. يتضمن التقرير إعداد الموفّر وحالات الأذونات وفئات أحدث أخطاء التصدير، من دون قياسات صحية أو بيانات اعتماد أو مسارات ملفات خام.</string>
     <string name="health_diagnostics_share_title">مشاركة تقرير تقني بعد حجب البيانات الحساسة</string>
-    <string name="health_diagnostics_share_subtitle">بلا بيانات اعتماد أو أسرار للموفّر أو مسارات ملفات خام أو قياسات صحية</string>
     <string name="health_diagnostics_share_subject">تقرير تقني من Health.md بعد حجب البيانات الحساسة</string>
     <string name="health_diagnostics_share_chooser">مشاركة التقرير التقني</string>
-    <string name="settings_upgrade_title">الترقية إلى Premium</string>
     <string name="settings_upgrade_subtitle">عمليات تصدير غير محدودة، وتصدير مجدول، والمزيد</string>
     <string name="feedback_discord_title">انضم إلى Discord</string>
-    <string name="feedback_discord_subtitle">دردش مع مجتمع Health.md</string>
     <string name="feedback_no_app_available">لا يوجد تطبيق متاح لفتح هذا الرابط</string>
     <string name="granular_data_title">تضمين سلاسل زمنية مفصّلة</string>
     <string name="granular_data_description">أضف عينات مؤرخة زمنيًا، مثل معدل ضربات القلب ومراحل النوم، إلى عمليات تصدير التوافق. وللحصول على نسخة مكتملة عبر API، استخدم لقطة API خام.</string>
@@ -832,16 +806,6 @@
     <string name="export_folder_root_label">مجلد التصدير</string>
     <string name="history_clear_title">هل تريد محو سجل التصدير؟</string>
     <string name="history_clear_body">يؤدي هذا إلى إزالة كافة إدخالات سجل التصدير المحلي. لا يتم حذف الملفات المصدرة.</string>
-    <string name="history_target_label">الوجهة: %1$s</string>
-    <string name="history_profile_label">ملف التصدير: %1$s</string>
-    <plurals name="history_file_count">
-        <item quantity="zero">لا ملفات (%1$d)</item>
-        <item quantity="one">ملف واحد (%1$d)</item>
-        <item quantity="two">ملفان (%1$d)</item>
-        <item quantity="few">%1$d ملفات</item>
-        <item quantity="many">%1$d ملفًا</item>
-        <item quantity="other">%1$d ملف</item>
-    </plurals>
     <string name="history_detail_title">تفاصيل التصدير</string>
     <string name="history_detail_source">المصدر</string>
     <string name="history_detail_profile">ملف التصدير</string>
@@ -1117,14 +1081,6 @@
         <item quantity="few">%1$d إجراءات غير مكتملة للقطة</item>
         <item quantity="many">%1$d إجراء غير مكتمل للقطة</item>
         <item quantity="other">%1$d إجراء غير مكتمل للقطة</item>
-    </plurals>
-    <plurals name="raw_snapshot_history_entry_actions">
-        <item quantity="zero">لا إجراءات للقطة (%1$d/%2$d) • من %3$s إلى %4$s</item>
-        <item quantity="one">إجراء واحد للقطة (%1$d/%2$d) • من %3$s إلى %4$s</item>
-        <item quantity="two">إجراءان للقطة (%1$d/%2$d) • من %3$s إلى %4$s</item>
-        <item quantity="few">%1$d/%2$d إجراءات للقطة • من %3$s إلى %4$s</item>
-        <item quantity="many">%1$d/%2$d إجراء للقطة • من %3$s إلى %4$s</item>
-        <item quantity="other">%1$d/%2$d إجراء للقطة • من %3$s إلى %4$s</item>
     </plurals>
     <plurals name="schedule_cadence_unit_days">
         <item quantity="zero">يوم</item>
@@ -1535,7 +1491,6 @@
     <string name="clinician_report_workout_type_other">أخرى</string>
     <string name="clinician_report_unit_respiratory_rate">نَفَس/دقيقة</string>
     <string name="shared_setup_title">مشاركة إعدادي</string>
-    <string name="shared_setup_back">رجوع</string>
     <string name="shared_setup_intro">انسخ تفضيلات التصدير بين أجهزة Health.md دون مشاركة البيانات الصحية أو بيانات الاعتماد أو الأذونات أو المشتريات أو الوصول إلى المجلدات.</string>
     <string name="shared_setup_sender_disclosure">يُنسخ محتوى Markdown المخصص وقيم frontmatter ومستضيف نقطة النهاية ومسارها كما هي حرفيًا. راجعها قبل الإرسال بحثًا عن نصوص شخصية أو خاصة بالمستأجر أو متعلقة بالتوجيه أو سرية.</string>
     <string name="shared_setup_use">استخدام إعداد مشترك</string>
@@ -1658,7 +1613,6 @@
     <string name="export_sleep_preview_guidance_morning_ends">تُنسب جلسات النوم كاملةً إلى تاريخ انتهائها حسب المنطقة الزمنية لهذا التصدير، دون اقتطاع عند الظهر. تُعرض أخطاء الاستعلام بشكل منفصل؛ وقد تعني النتيجة الفارغة أيضًا عدم توفر إذن القراءة.</string>
     <string name="whoop_connection_description">اربط WHOOP لتصدير التعافي والإجهاد والنوم والتمارين وقياسات الجسم. يتم تسجيل الدخول عبر متصفحك؛ ويخزن Health.md الرموز مشفرة على هذا الجهاز. يؤدي قطع الاتصال إلى إزالة الاتصال المحفوظ على هذا الجهاز.</string>
     <string name="whoop_connect">ربط WHOOP</string>
-    <string name="whoop_sources_description">اربط WHOOP للتصدير مباشرة من مزود البيانات، أو واصل استخدام Health Connect للسجلات المحلية.</string>
     <string name="whoop_sign_in_failed">تعذر بدء تسجيل الدخول إلى WHOOP. تحقق من اتصالك وحاول مجددًا.</string>
     <string name="whoop_use_health_connect">استخدام Health Connect للتصدير</string>
     <string name="whoop_reconnect">إعادة ربط WHOOP</string>

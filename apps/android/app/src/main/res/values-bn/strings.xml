@@ -217,7 +217,6 @@
     <string name="debug_sdk_status_update_required">PROVIDER_UPDATE_REQUIRED (%1$d)</string>
     <string name="debug_sdk_status_unknown">UNKNOWN (%1$d)</string>
     <!-- Settings screen -->
-    <string name="settings_subtitle">রপ্তানি, সংযোগ ও সহায়তা পরিচালনা করুন</string>
     <string name="configuration_protection_title">অনিচ্ছাকৃত পরিবর্তন রোধ করুন</string>
     <string name="configuration_protection_toggle">কনফিগারেশন পরিবর্তন লক করুন</string>
     <string name="configuration_protection_description">রপ্তানি, সিঙ্ক, সময়সূচি, ফোল্ডার, সংযোগ ও অন্যান্য সেটিংস ভুল করে পরিবর্তন হওয়া রোধ করে। ম্যানুয়াল রপ্তানি চালু থাকে।</string>
@@ -225,15 +224,8 @@
     <string name="configuration_protection_blocked_body">কনফিগারেশন সম্পাদনা করতে সেটিংসে অনিচ্ছাকৃত পরিবর্তন রোধ করুন বন্ধ করুন।</string>
     <string name="configuration_protection_blocked_action">কেন কনফিগারেশন পরিবর্তন ব্লক করা হয়েছে তা দেখুন</string>
     <string name="configuration_protection_open_setting">সেটিং খুলুন</string>
-    <string name="section_health_sources">স্বাস্থ্য সূত্র</string>
-    <string name="health_provider_status_installed">ইনস্টল করা হয়েছে</string>
-    <string name="health_provider_status_selected">নির্বাচিত</string>
-    <string name="health_provider_status_ready_to_connect">সংযোগ করতে প্রস্তুত</string>
-    <string name="health_provider_integration_details">%1$s \u2022 %2$s</string>
-    <string name="section_health_diagnostics">স্বাস্থ্য তথ্য উৎসের ডায়াগনস্টিক তথ্য</string>
     <string name="health_diagnostics_description">সংবেদনশীল তথ্য অপসারণ করা একটি প্রদানকারী প্রতিবেদন বিটা পরীক্ষক বা সহায়তা দলের সঙ্গে শেয়ার করুন। এতে প্রদানকারী সেটআপ, অনুমতির অবস্থা এবং সর্বশেষ রপ্তানি ত্রুটির বিভাগ থাকে; স্বাস্থ্য পরিমাপ, শংসাপত্র বা কাঁচা ফাইলের পাথ থাকে না।</string>
     <string name="health_diagnostics_share_title">সংবেদনশীল তথ্যহীন প্রযুক্তিগত প্রতিবেদন শেয়ার করুন</string>
-    <string name="health_diagnostics_share_subtitle">কোনো শংসাপত্র, প্রদানকারীর গোপন তথ্য, কাঁচা ফাইলের পাথ বা স্বাস্থ্য পরিমাপ নেই</string>
     <string name="health_diagnostics_share_subject">Health.md-এর সংবেদনশীল তথ্যহীন প্রযুক্তিগত প্রতিবেদন</string>
     <string name="health_diagnostics_share_chooser">প্রযুক্তিগত প্রতিবেদন শেয়ার করুন</string>
     <string name="section_write_mode">লেখার মোড</string>
@@ -248,15 +240,9 @@
     <string name="advanced_settings_nav_title">উন্নত রপ্তানি সেটিংস</string>
     <string name="advanced_settings_nav_subtitle">মেট্রিক্স, দৈনিক নোট, স্বতন্ত্র ট্র্যাকিং, ফরম্যাট কাস্টমাইজেশন</string>
     <!-- Settings upgrade -->
-    <string name="settings_upgrade_title">প্রিমিয়ামে আপগ্রেড করুন</string>
     <string name="settings_upgrade_subtitle">সীমাহীন রপ্তানি, নির্ধারিত রপ্তানি এবং আরও অনেক কিছু</string>
-    <string name="section_feedback">প্রতিক্রিয়া</string>
     <string name="feedback_send_title">প্রতিক্রিয়া পাঠান</string>
-    <string name="feedback_send_subtitle">আপনার ইমেল ক্লায়েন্ট খুলে</string>
-    <string name="feedback_github_title">GitHub এ বাগ রিপোর্ট করুন</string>
-    <string name="feedback_github_subtitle">প্রি-ফিলড ইস্যু টেমপ্লেট খুলে</string>
     <string name="feedback_discord_title">আমাদের Discord-এ যোগ দিন</string>
-    <string name="feedback_discord_subtitle">Health.md সম্প্রদায়ের সাথে চ্যাট করুন</string>
     <string name="feedback_no_app_available">এই লিঙ্কটি খোলার জন্য কোনো অ্যাপ উপলভ্য নেই</string>
     <string name="reset_to_defaults">ডিফল্টে রিসেট করুন</string>
     <!-- Advanced settings screen -->
@@ -464,7 +450,6 @@
         <item quantity="one">%1$dটি মেট্রিক নির্বাচিত</item>
         <item quantity="other">%1$dটি মেট্রিক নির্বাচিত</item>
     </plurals>
-    <string name="section_quick_actions">দ্রুত পদক্ষেপ</string>
     <string name="action_suggested">প্রস্তাবিত</string>
     <string name="action_all">সব</string>
     <string name="action_none">কোনো নয়</string>
@@ -479,13 +464,6 @@
     <string name="no_history_title">কোনো রপ্তানি\nইতিহাস নেই</string>
     <string name="no_history_subtitle">আপনার রপ্তানি এখানে প্রদর্শিত হবে</string>
     <string name="section_export_history">রপ্তানি ইতিহাস</string>
-    <string name="history_status_success">\u2713 সফল</string>
-    <string name="history_status_partial">! আংশিক</string>
-    <string name="history_status_failed">\u2717 ব্যর্থ</string>
-    <plurals name="history_entry_days">
-        <item quantity="one">%1$d/%2$d দিন • %3$s থেকে %4$s</item>
-        <item quantity="other">%1$d/%2$d দিন • %3$s থেকে %4$s</item>
-    </plurals>
     <string name="history_timestamp_format">%1$s এ %2$s</string>
     <string name="export_source_manual">ম্যানুয়াল</string>
     <string name="export_source_scheduled">নির্ধারিত</string>
@@ -757,12 +735,6 @@
     <string name="export_folder_root_label">রপ্তানি ফোল্ডার</string>
     <string name="history_clear_title">রপ্তানির ইতিহাস সাফ করবেন?</string>
     <string name="history_clear_body">এটি সমস্ত স্থানীয় রপ্তানি ইতিহাস এন্ট্রি মুছে দেয়। রপ্তানি করা ফাইল মুছে ফেলা হয় না.</string>
-    <string name="history_target_label">লক্ষ্য: %1$s</string>
-    <string name="history_profile_label">প্রোফাইল: %1$s</string>
-    <plurals name="history_file_count">
-        <item quantity="one">ফাইল: %1$d</item>
-        <item quantity="other">ফাইল: %1$d</item>
-    </plurals>
     <string name="history_detail_title">রপ্তানি বিবরণ</string>
     <string name="history_detail_source">উৎস</string>
     <string name="history_detail_profile">প্রোফাইল</string>
@@ -1002,10 +974,6 @@
     <plurals name="raw_snapshot_diagnostics_incomplete_count">
         <item quantity="one">%1$dটি অসম্পূর্ণ স্ন্যাপশট ক্রিয়া</item>
         <item quantity="other">%1$dটি অসম্পূর্ণ স্ন্যাপশট ক্রিয়া</item>
-    </plurals>
-    <plurals name="raw_snapshot_history_entry_actions">
-        <item quantity="one">স্ন্যাপশট ক্রিয়া: %1$d/%2$dটি ক্রিয়া • %3$s থেকে %4$s</item>
-        <item quantity="other">স্ন্যাপশট ক্রিয়া: %1$d/%2$dটি ক্রিয়া • %3$s থেকে %4$s</item>
     </plurals>
     <plurals name="schedule_cadence_unit_days" tools:ignore="ImpliedQuantity">
         <item quantity="one">দিন</item>
@@ -1316,7 +1284,6 @@
     <string name="clinician_report_workout_type_other">অন্যান্য</string>
     <string name="clinician_report_unit_respiratory_rate">শ্বাস/মিনিট</string>
     <string name="shared_setup_title">আমার সেটআপ শেয়ার করুন</string>
-    <string name="shared_setup_back">ফিরে যান</string>
     <string name="shared_setup_intro">স্বাস্থ্য ডেটা, ক্রেডেনশিয়াল, অনুমতি, কেনাকাটা বা ফোল্ডার অ্যাক্সেস শেয়ার না করে Health.md ডিভাইসের মধ্যে রপ্তানি পছন্দগুলো কপি করুন।</string>
     <string name="shared_setup_sender_disclosure">কাস্টম Markdown, frontmatter মান এবং এন্ডপয়েন্ট হোস্ট/পাথ হুবহু কপি হয়। পাঠানোর আগে এগুলোতে ব্যক্তিগত, ভাড়াটে, রাউটিং বা গোপন টেক্সট আছে কি না পর্যালোচনা করুন।</string>
     <string name="shared_setup_use">শেয়ার করা সেটআপ ব্যবহার করুন</string>
@@ -1439,7 +1406,6 @@
     <string name="export_sleep_preview_guidance_morning_ends">এই এক্সপোর্টের টাইম জোনে পুরো ঘুমের সেশন তার শেষের তারিখের অংশ হয়, দুপুরে কাটা ছাড়াই। কোয়েরির ব্যর্থতা আলাদা দেখানো হয়; খালি ফলাফলের অর্থ পড়ার অনুমতি না থাকাও হতে পারে।</string>
     <string name="whoop_connection_description">রিকভারি, পরিশ্রম, ঘুম, ব্যায়াম ও শরীরের পরিমাপ রপ্তানি করতে WHOOP সংযুক্ত করুন। সাইন-ইন ব্রাউজারে হয়; Health.md এই ডিভাইসে টোকেন এনক্রিপ্ট করে রাখে। সংযোগ বিচ্ছিন্ন করলে এই ডিভাইসের সংরক্ষিত সংযোগ মুছে যায়।</string>
     <string name="whoop_connect">WHOOP সংযুক্ত করুন</string>
-    <string name="whoop_sources_description">সরাসরি প্রদানকারীর কাছ থেকে রপ্তানি করতে WHOOP সংযুক্ত করুন অথবা স্থানীয় রেকর্ডের জন্য Health Connect ব্যবহার চালিয়ে যান।</string>
     <string name="whoop_sign_in_failed">WHOOP সাইন-ইন শুরু করা যায়নি। সংযোগ পরীক্ষা করে আবার চেষ্টা করুন।</string>
     <string name="whoop_use_health_connect">রপ্তানির জন্য Health Connect ব্যবহার করুন</string>
     <string name="whoop_reconnect">WHOOP আবার সংযুক্ত করুন</string>

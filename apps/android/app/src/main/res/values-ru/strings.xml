@@ -75,7 +75,6 @@
     <string name="debug_sdk_status_unknown">UNKNOWN (%1$d)</string>
 
     <!-- Settings screen -->
-    <string name="settings_subtitle">Управляйте экспортом, подключениями и поддержкой</string>
     <string name="configuration_protection_title">Защита от случайных изменений</string>
     <string name="configuration_protection_toggle">Заблокировать изменения конфигурации</string>
     <string name="configuration_protection_description">Предотвращает случайное изменение настроек экспорта, синхронизации, расписания, папок, подключений и других параметров. Ручной экспорт остаётся доступен.</string>
@@ -94,11 +93,7 @@
     <string name="label_units">Единицы измерения</string>
     <string name="advanced_settings_nav_title">Расширенные параметры экспорта</string>
     <string name="advanced_settings_nav_subtitle">Метрики, ежедневные заметки, отдельное отслеживание, настройка формата</string>
-    <string name="section_feedback">Обратная связь</string>
     <string name="feedback_send_title">Отправить отзыв</string>
-    <string name="feedback_send_subtitle">Открывает ваш почтовый клиент</string>
-    <string name="feedback_github_title">Сообщить об ошибке на GitHub</string>
-    <string name="feedback_github_subtitle">Открывает предзаполненный шаблон проблемы</string>
     <string name="reset_to_defaults">Восстановить значения по умолчанию</string>
 
     <!-- Advanced settings screen -->
@@ -243,7 +238,6 @@
         <item quantity="many">Выбрано %1$d метрик</item>
         <item quantity="other">Выбрано %1$d метрики</item>
     </plurals>
-    <string name="section_quick_actions">Быстрые действия</string>
     <string name="action_suggested">Рекомендуемое</string>
     <string name="action_all">Все</string>
     <string name="action_none">Ничего</string>
@@ -259,15 +253,6 @@
     <string name="no_history_title">Нет Истории\nЭкспорта</string>
     <string name="no_history_subtitle">Ваши экспорты будут отображаться здесь</string>
     <string name="section_export_history">История экспорта</string>
-    <string name="history_status_success">✓ Успешно</string>
-    <string name="history_status_partial">! Частично</string>
-    <string name="history_status_failed">✗ Ошибка</string>
-    <plurals name="history_entry_days">
-        <item quantity="one">%1$d/%2$d день • с %3$s по %4$s</item>
-        <item quantity="few">%1$d/%2$d дня • с %3$s по %4$s</item>
-        <item quantity="many">%1$d/%2$d дней • с %3$s по %4$s</item>
-        <item quantity="other">%1$d/%2$d дня • с %3$s по %4$s</item>
-    </plurals>
     <string name="history_timestamp_format">%1$s в %2$s</string>
     <string name="export_source_manual">Вручную</string>
     <string name="export_source_scheduled">По расписанию</string>
@@ -532,21 +517,12 @@
     <string name="debug_has_history_permission">Имеет разрешение на историю</string>
     <string name="debug_requires_history_permission">Для диапазона нужен доступ к истории</string>
     <string name="debug_first_permission_grant">Первое разрешение</string>
-    <string name="section_health_sources">Источники здоровья</string>
-    <string name="health_provider_status_installed">Установлено</string>
-    <string name="health_provider_status_selected">Выбрано</string>
-    <string name="health_provider_status_ready_to_connect">Готов к подключению</string>
-    <string name="health_provider_integration_details">%1$s \u2022 %2$s</string>
-    <string name="section_health_diagnostics">Диагностика источника данных о здоровье</string>
     <string name="health_diagnostics_description">Поделитесь с бета-тестерами или службой поддержки отчётом поставщика, из которого удалены конфиденциальные данные. Он содержит сведения о настройке поставщика, состоянии разрешений и категориях последней ошибки экспорта, но не содержит показателей здоровья, учётных данных и путей к необработанным файлам.</string>
     <string name="health_diagnostics_share_title">Поделиться техническим отчётом со скрытыми данными</string>
-    <string name="health_diagnostics_share_subtitle">Без учётных данных, секретов поставщика, путей к необработанным файлам и показателей здоровья</string>
     <string name="health_diagnostics_share_subject">Технический отчёт Health.md со скрытыми данными</string>
     <string name="health_diagnostics_share_chooser">Поделиться техническим отчётом</string>
-    <string name="settings_upgrade_title">Обновите до Premium</string>
     <string name="settings_upgrade_subtitle">Неограниченный экспорт, запланированный экспорт и многое другое</string>
     <string name="feedback_discord_title">Присоединяйтесь к нашему Discord</string>
-    <string name="feedback_discord_subtitle">Общайтесь с сообществом Health.md</string>
     <string name="feedback_no_app_available">Нет приложения, позволяющего открыть эту ссылку.</string>
     <string name="granular_data_title">Включить подробные временные ряды</string>
     <string name="granular_data_description">Добавляйте в экспорт совместимости образцы с отметками времени, например частоту сердечных сокращений и стадии сна. Для полной копии API используйте необработанный снимок API.</string>
@@ -808,14 +784,6 @@
     <string name="export_folder_root_label">Папка экспорта</string>
     <string name="history_clear_title">Очистить историю экспорта?</string>
     <string name="history_clear_body">При этом будут удалены все записи локальной истории экспорта. Экспортированные файлы не удаляются.</string>
-    <string name="history_target_label">Цель: %1$s</string>
-    <string name="history_profile_label">Профиль: %1$s</string>
-    <plurals name="history_file_count">
-        <item quantity="one">Файл: %1$d</item>
-        <item quantity="few">Файлы: %1$d</item>
-        <item quantity="many">Файлов: %1$d</item>
-        <item quantity="other">Файла: %1$d</item>
-    </plurals>
     <string name="history_detail_title">Детали экспорта</string>
     <string name="history_detail_source">Источник</string>
     <string name="history_detail_profile">Профиль</string>
@@ -1077,12 +1045,6 @@
         <item quantity="few">%1$d незавершённых действия со снимком</item>
         <item quantity="many">%1$d незавершённых действий со снимком</item>
         <item quantity="other">%1$d незавершённого действия со снимком</item>
-    </plurals>
-    <plurals name="raw_snapshot_history_entry_actions">
-        <item quantity="one">Действия со снимком: %1$d/%2$d действие • с %3$s по %4$s</item>
-        <item quantity="few">Действия со снимком: %1$d/%2$d действия • с %3$s по %4$s</item>
-        <item quantity="many">Действия со снимком: %1$d/%2$d действий • с %3$s по %4$s</item>
-        <item quantity="other">Действия со снимком: %1$d/%2$d действия • с %3$s по %4$s</item>
     </plurals>
     <plurals name="schedule_cadence_unit_days" tools:ignore="ImpliedQuantity">
         <item quantity="one">день</item>
@@ -1444,7 +1406,6 @@
     <string name="clinician_report_workout_type_other">Другое</string>
     <string name="clinician_report_unit_respiratory_rate">дыханий/мин</string>
     <string name="shared_setup_title">Поделиться моей настройкой</string>
-    <string name="shared_setup_back">Назад</string>
     <string name="shared_setup_intro">Копируйте настройки экспорта между устройствами Health.md, не передавая данные о здоровье, учётные данные, разрешения, покупки или доступ к папкам.</string>
     <string name="shared_setup_sender_disclosure">Пользовательский Markdown, значения фронтматтера, а также узел и путь конечной точки копируются дословно. Перед отправкой проверьте их на наличие личных, клиентских, маршрутных или секретных данных.</string>
     <string name="shared_setup_use">Использовать общую настройку</string>
@@ -1567,7 +1528,6 @@
     <string name="export_sleep_preview_guidance_morning_ends">Сеансы сна целиком относятся к дате окончания в часовом поясе этого экспорта, без обрезки в полдень. Ошибки запросов указаны отдельно; пустой результат также может означать отсутствие доступа на чтение.</string>
     <string name="whoop_connection_description">Подключите WHOOP для экспорта восстановления, нагрузки, сна, тренировок и измерений тела. Вход выполняется в браузере; Health.md хранит токены на этом устройстве в зашифрованном виде. Отключение удаляет сохранённое подключение на этом устройстве.</string>
     <string name="whoop_connect">Подключить WHOOP</string>
-    <string name="whoop_sources_description">Подключите WHOOP для прямого экспорта от поставщика или продолжайте использовать Health Connect для локальных записей.</string>
     <string name="whoop_sign_in_failed">Не удалось начать вход в WHOOP. Проверьте подключение и повторите попытку.</string>
     <string name="whoop_use_health_connect">Использовать Health Connect для экспорта</string>
     <string name="whoop_reconnect">Повторно подключить WHOOP</string>

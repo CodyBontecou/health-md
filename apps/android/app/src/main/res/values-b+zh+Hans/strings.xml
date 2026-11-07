@@ -201,7 +201,6 @@
     <string name="debug_sdk_status_unavailable">SDK_UNAVAILABLE (%1$d)</string>
     <string name="debug_sdk_status_update_required">PROVIDER_UPDATE_REQUIRED (%1$d)</string>
     <string name="debug_sdk_status_unknown">UNKNOWN (%1$d)</string>
-    <string name="settings_subtitle">管理导出、连接和支持</string>
     <string name="configuration_protection_title">防止意外更改</string>
     <string name="configuration_protection_toggle">锁定配置更改</string>
     <string name="configuration_protection_description">防止意外更改导出、同步、计划、文件夹、连接及其他设置。手动导出仍可使用。</string>
@@ -209,15 +208,8 @@
     <string name="configuration_protection_blocked_body">若要编辑配置，请在“设置”中关闭“防止意外更改”。</string>
     <string name="configuration_protection_blocked_action">查看配置更改被阻止的原因</string>
     <string name="configuration_protection_open_setting">打开设置</string>
-    <string name="section_health_sources">健康来源</string>
-    <string name="health_provider_status_installed">已安装</string>
-    <string name="health_provider_status_selected">已选择</string>
-    <string name="health_provider_status_ready_to_connect">准备连接</string>
-    <string name="health_provider_integration_details">%1$s \u2022 %2$s</string>
-    <string name="section_health_diagnostics">健康数据源诊断信息</string>
     <string name="health_diagnostics_description">与 Beta 测试人员或支持人员共享已移除敏感信息的提供商报告。报告包含提供商设置、权限状态和最近一次导出错误类别，但不包含健康测量数据、凭据或原始文件路径。</string>
     <string name="health_diagnostics_share_title">分享已脱敏的技术报告</string>
-    <string name="health_diagnostics_share_subtitle">不包含凭据、提供商机密、原始文件路径或健康测量数据</string>
     <string name="health_diagnostics_share_subject">Health.md 已脱敏技术报告</string>
     <string name="health_diagnostics_share_chooser">分享技术报告</string>
     <string name="section_write_mode">写入模式</string>
@@ -231,15 +223,9 @@
     <string name="label_units">单位</string>
     <string name="advanced_settings_nav_title">高级导出设置</string>
     <string name="advanced_settings_nav_subtitle">指标、每日笔记、个别追踪、格式自定义</string>
-    <string name="settings_upgrade_title">升级至高级版</string>
     <string name="settings_upgrade_subtitle">无限导出、计划导出及更多功能</string>
-    <string name="section_feedback">反馈</string>
     <string name="feedback_send_title">发送反馈</string>
-    <string name="feedback_send_subtitle">打开您的电子邮件客户端</string>
-    <string name="feedback_github_title">在 GitHub 上报告问题</string>
-    <string name="feedback_github_subtitle">打开预填充的问题模板</string>
     <string name="feedback_discord_title">加入我们的Discord</string>
-    <string name="feedback_discord_subtitle">与 Health.md 社区聊天</string>
     <string name="feedback_no_app_available">没有可用的应用程序可以打开此链接</string>
     <string name="reset_to_defaults">重置为默认值</string>
     <string name="advanced_settings_title">导出设置</string>
@@ -438,7 +424,6 @@
     <plurals name="individual_tracking_metrics_count">
         <item quantity="other">已选择 %1$d 个指标</item>
     </plurals>
-    <string name="section_quick_actions">快速操作</string>
     <string name="action_suggested">建议</string>
     <string name="action_all">全部</string>
     <string name="action_none">无</string>
@@ -452,12 +437,6 @@
     <string name="no_history_title">无导出\n历史记录</string>
     <string name="no_history_subtitle">您的导出将显示在此处</string>
     <string name="section_export_history">导出历史</string>
-    <string name="history_status_success">✓ 成功</string>
-    <string name="history_status_partial">! 部分</string>
-    <string name="history_status_failed">✗ 失败</string>
-    <plurals name="history_entry_days">
-        <item quantity="other">%1$d/%2$d 天 • %3$s 至 %4$s</item>
-    </plurals>
     <string name="history_timestamp_format">%1$s 在 %2$s</string>
     <string name="export_source_manual">手动</string>
     <string name="export_source_scheduled">计划</string>
@@ -707,11 +686,6 @@
     <string name="export_folder_root_label">导出文件夹</string>
     <string name="history_clear_title">清除导出历史记录？</string>
     <string name="history_clear_body">这将删除所有本地导出历史记录条目。导出的文件不会被删除。</string>
-    <string name="history_target_label">导出目标：%1$s</string>
-    <string name="history_profile_label">导出配置：%1$s</string>
-    <plurals name="history_file_count">
-        <item quantity="other">文件：%1$d 个</item>
-    </plurals>
     <string name="history_detail_title">导出详情</string>
     <string name="history_detail_source">来源</string>
     <string name="history_detail_profile">导出配置</string>
@@ -929,7 +903,6 @@
     <plurals name="history_retry_failed_dates"><item quantity="other">重试已结束，仍有 %1$d 个日期失败。</item></plurals>
     <plurals name="history_warning_failed_dates"><item quantity="other">%1$d 个失败日期</item></plurals>
     <plurals name="raw_snapshot_diagnostics_incomplete_count"><item quantity="other">%1$d 个未完成的快照操作</item></plurals>
-    <plurals name="raw_snapshot_history_entry_actions"><item quantity="other">快照操作：%1$d/%2$d 个 • %3$s 至 %4$s</item></plurals>
     <plurals name="schedule_cadence_unit_days"><item quantity="other">天</item></plurals>
     <plurals name="schedule_cadence_unit_hours"><item quantity="other">小时</item></plurals>
     <plurals name="schedule_cadence_unit_minutes"><item quantity="other">分钟</item></plurals>
@@ -1165,7 +1138,6 @@
     <string name="clinician_report_workout_type_other">其他</string>
     <string name="clinician_report_unit_respiratory_rate">次/分钟</string>
     <string name="shared_setup_title">分享我的配置</string>
-    <string name="shared_setup_back">返回</string>
     <string name="shared_setup_intro">在 Health.md 设备之间复制导出偏好设置，而不共享健康数据、凭据、权限、购买记录或文件夹访问权限。</string>
     <string name="shared_setup_sender_disclosure">自定义 Markdown、frontmatter 值以及端点主机/路径会原样复制。发送前请检查其中是否包含个人、租户、路由或机密文本。</string>
     <string name="shared_setup_use">使用共享配置</string>
@@ -1288,7 +1260,6 @@
     <string name="export_sleep_preview_guidance_morning_ends">完整的睡眠时段按此导出的时区归入其结束日期，不在中午截断。查询失败会单独列出；结果为空也可能表示无法读取数据。</string>
     <string name="whoop_connection_description">连接WHOOP以导出恢复、负荷、睡眠、锻炼和身体测量数据。登录通过浏览器进行；Health.md将令牌加密保存在此设备上。断开连接会删除此设备上保存的连接。</string>
     <string name="whoop_connect">连接WHOOP</string>
-    <string name="whoop_sources_description">连接WHOOP以直接从提供商导出，或继续使用Health Connect获取本地记录。</string>
     <string name="whoop_sign_in_failed">无法开始WHOOP登录。请检查连接并重试。</string>
     <string name="whoop_use_health_connect">使用Health Connect导出</string>
     <string name="whoop_reconnect">重新连接WHOOP</string>

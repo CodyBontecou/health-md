@@ -16,10 +16,8 @@
     <string name="archive_row_last_export">ਆਖਰੀ ਨਿਰਯਾਤ %1$s</string>
     <string name="archive_action_backfill">ਪੂਰਾ ਕਰੋ</string>
     <string name="archive_empty_title">ਤੁਹਾਡਾ ਪੁਰਾਲੇਖ ਇੱਥੋਂ ਸ਼ੁਰੂ ਹੁੰਦਾ ਹੈ</string>
-    <string name="archive_empty_body">ਤੁਹਾਡੇ ਵੱਲੋਂ ਨਿਰਯਾਤ ਕੀਤਾ ਹਰ ਦਿਨ ਕੈਲੰਡਰ ਦਾ ਇੱਕ ਖਾਨਾ ਭਰਦਾ ਹੈ। ਸ਼ੁਰੂ ਕਰਨ ਲਈ ਇੱਕ ਵਾਰ ਨਿਰਯਾਤ ਕਰੋ।</string>
     <string name="automations_subtitle">ਸੰਭਾਲੇ ਨਿਰਯਾਤ ਜਿਨ੍ਹਾਂ ਨੂੰ ਤੁਸੀਂ ਸਮਾਂ-ਸੂਚੀਬੱਧ ਕਰ ਸਕਦੇ ਹੋ, ਆਟੋਮੇਸ਼ਨ ਐਪਾਂ ਤੋਂ ਸ਼ੁਰੂ ਕਰ ਸਕਦੇ ਹੋ, ਜਾਂ healthmd CLI ਨਾਲ ਚਲਾ ਸਕਦੇ ਹੋ।</string>
     <string name="automations_profiles_title">ਨਿਰਯਾਤ ਪ੍ਰੋਫਾਈਲ</string>
-    <string name="automations_profiles_body">ਸੰਭਾਲੀਆਂ ਨਿਰਯਾਤ ਸੰਰਚਨਾਵਾਂ ਬਣਾਓ, ਸੋਧੋ ਅਤੇ ਬਦਲੋ।</string>
     <string name="automation_sentence_daily">ਹਰ ਰੋਜ਼ %1$s ਵਜੇ %2$s ਵਿੱਚ ਨਿਰਯਾਤ ਕਰੋ।</string>
     <string name="automation_sentence_weekly">ਹਰ ਹਫ਼ਤੇ %1$s ਨੂੰ %2$s ਵਜੇ %3$s ਵਿੱਚ ਨਿਰਯਾਤ ਕਰੋ।</string>
     <string name="automation_sentence_monthly">ਹਰ ਮਹੀਨੇ %1$s ਵਜੇ %2$s ਵਿੱਚ ਨਿਰਯਾਤ ਕਰੋ।</string>
@@ -29,10 +27,6 @@
     <string name="settings_section_destinations">ਮੰਜ਼ਿਲਾਂ</string>
     <string name="settings_section_data">ਡਾਟਾ</string>
     <string name="settings_section_app">ਐਪ</string>
-    <string name="settings_destination_folder_title">ਨਿਰਯਾਤ ਫੋਲਡਰ</string>
-    <string name="settings_destination_folder_subtitle">ਹੁਣੇ ਨਿਰਯਾਤ ਕਰੋ ਵਿੱਚ ਉਹ ਫੋਲਡਰ ਚੁਣੋ ਜਿਸ ਵਿੱਚ Health.md ਲਿਖਦਾ ਹੈ।</string>
-    <string name="settings_destination_api_title">API ਐਂਡਪੁਆਇੰਟ ਅਤੇ Agent Data ਗੇਟਵੇ</string>
-    <string name="settings_destination_api_subtitle">ਆਟੋਮੇਸ਼ਨ ਵਿੱਚ ਆਪਣੇ ਸਰਵਰ ਜਾਂ ਇਨਜੈਸ਼ਨ ਗੇਟਵੇ ਤੇ ਅਪਲੋਡ ਸੈੱਟ ਕਰੋ।</string>
     <string name="automation_detail_destination">ਮੰਜ਼ਿਲ</string>
     <string name="automation_detail_formats">ਫਾਰਮੈਟ</string>
     <string name="automation_detail_metrics">ਮੈਟ੍ਰਿਕਸ</string>
@@ -41,16 +35,11 @@
     <string name="automation_detail_profile_id">ਪ੍ਰੋਫਾਈਲ ID</string>
     <string name="automation_detail_copy">ਕਾਪੀ ਕਰੋ</string>
     <string name="automation_detail_copied">ਕਾਪੀ ਹੋ ਗਿਆ</string>
-    <string name="automation_detail_edit_profile">ਪ੍ਰੋਫਾਈਲ ਸੋਧੋ</string>
     <string name="automation_detail_edit_schedule">ਸਮਾਂ-ਸੂਚੀ ਸੋਧੋ</string>
-    <string name="automation_detail_make_active">ਸਰਗਰਮ ਕਰੋ</string>
-    <string name="automation_detail_active">ਸਰਗਰਮ ਪ੍ਰੋਫਾਈਲ</string>
     <string name="automation_detail_select">ਵੇਰਵੇ ਦੇਖਣ ਲਈ ਕੋਈ ਆਟੋਮੇਸ਼ਨ ਚੁਣੋ।</string>
     <string name="automation_detail_details">ਵੇਰਵੇ</string>
     <string name="automation_detail_details_named">%1$s ਦੇ ਵੇਰਵੇ</string>
     <string name="automation_detail_not_found">ਇਹ ਆਟੋਮੇਸ਼ਨ ਹੁਣ ਮੌਜੂਦ ਨਹੀਂ ਹੈ।</string>
-    <string name="folder_destination_current">ਮੌਜੂਦਾ ਫੋਲਡਰ</string>
-    <string name="folder_destination_none">ਕੋਈ ਫੋਲਡਰ ਨਹੀਂ ਚੁਣਿਆ</string>
     <string name="folder_destination_choose">ਫੋਲਡਰ ਚੁਣੋ</string>
     <string name="folder_destination_change">ਫੋਲਡਰ ਬਦਲੋ</string>
     <string name="folder_destination_body">Health.md ਸਿੱਧਾ ਉਸ ਫੋਲਡਰ ਵਿੱਚ ਲਿਖਦਾ ਹੈ ਜੋ ਤੁਸੀਂ Android ਫੋਲਡਰ ਪਿਕਰ ਨਾਲ ਚੁਣਦੇ ਹੋ, ਸਿੰਕ ਹੋਣ ਵਾਲੇ ਐਪ ਫੋਲਡਰਾਂ ਸਮੇਤ। ਕਿਸੇ ਖਾਤੇ ਦੀ ਲੋੜ ਨਹੀਂ।</string>
@@ -61,9 +50,7 @@
     <string name="moment_keep_open">ਪੂਰਾ ਹੋਣ ਤੱਕ Health.md ਖੁੱਲ੍ਹਾ ਰੱਖੋ।</string>
     <string name="moment_heart_description">ਦਿਨ ਲਿਖੇ ਜਾਣ ਨਾਲ ਭਰਦਾ ਕ੍ਰਿਸਟਲ ਦਿਲ</string>
     <string name="archive_automations_manage">ਪ੍ਰਬੰਧ ਕਰੋ</string>
-    <string name="archive_automations_card_body">“ਸਾਰੇ” ਕਿਸੇ ਦਿਨ ਨੂੰ ਉਦੋਂ ਪੂਰਾ ਮੰਨਦਾ ਹੈ ਜਦੋਂ ਹਰ ਨਿਯਤ ਆਟੋਮੇਸ਼ਨ ਨੇ ਉਸਨੂੰ ਕਵਰ ਕੀਤਾ ਹੋਵੇ।</string>
     <string name="archive_action_reexport">ਮੁੜ ਐਕਸਪੋਰਟ ਕਰੋ</string>
-    <string name="day_page_open">ਦਿਨ ਦੀ ਫ਼ਾਈਲ ਖੋਲ੍ਹੋ</string>
     <string name="day_page_share">ਫ਼ਾਈਲ ਸਾਂਝੀ ਕਰੋ</string>
     <string name="day_page_empty">ਮੌਜੂਦਾ ਸੈਟਿੰਗਾਂ ਨਾਲ ਇਸ ਤਾਰੀਖ ਲਈ ਕੁਝ ਨਹੀਂ ਲਿਖਿਆ ਜਾਵੇਗਾ।</string>
     <string name="day_page_range_only">ਰਾਅ ਸਨੈਪਸ਼ਾਟ ਪੂਰੀ ਮਿਆਦ ਲਈ ਇੱਕ ਫ਼ਾਈਲ ਲਿਖਦੇ ਹਨ, ਇਸ ਲਈ ਵੱਖਰੀ ਦਿਨ ਦੀ ਫ਼ਾਈਲ ਨਹੀਂ ਹੈ।</string>
@@ -122,7 +109,6 @@
     <string name="composer_when_night">ਹਰ ਰਾਤ %1$s ਵਜੇ</string>
     <string name="composer_when_weekly">ਹਰ %1$s %2$s ਵਜੇ</string>
     <string name="composer_when_monthly">ਹਰ ਮਹੀਨੇ %1$s ਵਜੇ</string>
-    <string name="composer_when_custom">ਕਸਟਮ ਸ਼ਡਿਊਲ ਤੇ %1$s ਵਜੇ</string>
     <string name="composer_range_yesterday">ਕੱਲ੍ਹ</string>
     <string name="composer_note_update">ਮੇਰਾ ਰੋਜ਼ਾਨਾ ਨੋਟ ਅੱਪਡੇਟ ਕਰੋ</string>
     <string name="composer_note_leave">ਰੋਜ਼ਾਨਾ ਨੋਟ ਨਾ ਬਦਲੋ</string>
@@ -134,9 +120,7 @@
     <string name="composer_preview_title">ਆਖਰੀ ਦਿਨ ਦੀ ਫ਼ਾਈਲ</string>
     <string name="composer_preview_note">Health Connect ਦੇ ਸਭ ਤੋਂ ਤਾਜ਼ਾ ਪੂਰੇ ਦਿਨ ਤੋਂ ਬਣੀ। ਕੁਝ ਵੀ ਲਿਖਿਆ ਨਹੀਂ ਜਾਂਦਾ।</string>
     <string name="composer_fields">ਇਸ ਨੋਟ ਦੇ ਖੇਤਰ</string>
-    <string name="composer_all_metrics">ਸਾਰੇ ਮੈਟ੍ਰਿਕਸ</string>
     <string name="composer_all_settings">ਸਾਰੀਆਂ ਸੈਟਿੰਗਾਂ</string>
-    <string name="composer_all_settings_sub">ਆਉਟਪੁੱਟ · ਫਾਰਮੈਟ · ਐਂਟਰੀਆਂ · ਟਿਕਾਣਾ</string>
     <string name="composer_label_when">ਕਦੋਂ</string>
     <string name="composer_label_range">ਦਿਨ</string>
     <string name="composer_label_note">ਰੋਜ਼ਾਨਾ ਨੋਟ</string>
@@ -162,19 +146,9 @@
     <string name="widget_archive_preview_month_detail">ਦਿਨ, ਅਕਤੂਬਰ ਵਿੱਚ</string>
     <string name="widget_archive_preview_gaps">2 ਖਾਲੀ ਥਾਵਾਂ</string>
     <string name="moment_see_in_archive">ਆਰਕਾਈਵ ਵਿੱਚ ਦੇਖੋ</string>
-    <string name="export_now_more_options">ਹੋਰ ਵਿਕਲਪ</string>
-    <string name="automations_profiles_summary">ਸਰਗਰਮ: %1$s · %2$s · %3$s</string>
     <plurals name="moment_done_days">
         <item quantity="one">%1$d ਦਿਨ ਲਿਖਿਆ ਗਿਆ</item>
         <item quantity="other">%1$d ਦਿਨ ਲਿਖੇ ਗਏ</item>
-    </plurals>
-    <plurals name="automations_profiles_count">
-        <item quantity="one">%1$d ਪ੍ਰੋਫਾਈਲ</item>
-        <item quantity="other">%1$d ਪ੍ਰੋਫਾਈਲ</item>
-    </plurals>
-    <plurals name="automations_profiles_scheduled">
-        <item quantity="one">%1$d ਨਿਯਤ</item>
-        <item quantity="other">%1$d ਨਿਯਤ</item>
     </plurals>
     <string name="archive_status_updating">ਅੱਪਡੇਟ ਹੋ ਰਿਹਾ ਹੈ</string>
     <string name="archive_status_not_due">ਬਕਾਇਆ ਨਹੀਂ</string>
@@ -186,32 +160,15 @@
     <string name="automations_new">ਨਵਾਂ ਆਟੋਮੇਸ਼ਨ</string>
     <string name="automations_next">ਅਗਲਾ · %1$s</string>
     <string name="automations_paused">ਰੋਕਿਆ ਗਿਆ</string>
-    <string name="automations_on_demand">ਮੰਗ ਤੇ</string>
     <string name="automations_run_now">ਹੁਣੇ ਚਲਾਓ</string>
-    <string name="automations_run_now_named">%1$s ਹੁਣੇ ਚਲਾਓ</string>
     <string name="automations_edit">ਸੋਧੋ</string>
-    <string name="automations_edit_named">%1$s ਸੋਧੋ</string>
     <string name="automations_switch_named">%1$s ਆਟੋਮੇਸ਼ਨ</string>
     <string name="automations_schedule_settings_title">ਸਮਾਂ-ਸੂਚੀ ਸੈਟਿੰਗਜ਼</string>
-    <string name="automations_schedule_settings_subtitle">ਐਪ-ਵਿਆਪੀ ਸਮਾਂ-ਸੂਚੀ, ਸਮਾਂ-ਸੂਚੀਬੱਧ ਨਿਰਯਾਤ ਦੀ ਮੰਜ਼ਿਲ, ਇਜਾਜ਼ਤਾਂ ਅਤੇ ਇਤਿਹਾਸ</string>
     <string name="date_option_last_7_days">7 ਦਿਨ</string>
     <string name="export_dates_heading">ਤਾਰੀਖਾਂ</string>
     <string name="date_from_label">ਤੋਂ</string>
     <string name="date_to_label">ਤੱਕ</string>
     <string name="export_will_write">ਲਿਖਿਆ ਜਾਵੇਗਾ</string>
-    <string name="export_will_write_with_daily_notes">%1$s + ਰੋਜ਼ਾਨਾ ਨੋਟ</string>
-    <plurals name="export_will_write_files">
-        <item quantity="one">ਲਗਭਗ %1$d %2$s ਫ਼ਾਈਲ</item>
-        <item quantity="other">ਲਗਭਗ %1$d %2$s ਫ਼ਾਈਲਾਂ</item>
-    </plurals>
-    <plurals name="export_cta_files">
-        <item quantity="one">%1$d ਫ਼ਾਈਲ ਨਿਰਯਾਤ ਕਰੋ</item>
-        <item quantity="other">%1$d ਫ਼ਾਈਲਾਂ ਨਿਰਯਾਤ ਕਰੋ</item>
-    </plurals>
-    <plurals name="export_cta_send_days">
-        <item quantity="one">%1$d ਦਿਨ ਭੇਜੋ</item>
-        <item quantity="other">%1$d ਦਿਨ ਭੇਜੋ</item>
-    </plurals>
     <string name="settings_plan_free">ਮੁਫ਼ਤ ਪਲਾਨ</string>
     <string name="settings_plan_full_access">ਪੂਰੀ ਪਹੁੰਚ</string>
     <string name="settings_plan_manage">%1$s · ਬਹਾਲ ਜਾਂ ਪ੍ਰਬੰਧਿਤ ਕਰੋ</string>
@@ -337,7 +294,6 @@
 <string name="schedule_custom">ਕਸਟਮ</string>
 <string name="schedule_day">ਦਿਨ</string>
 <string name="schedule_every">ਹਰ</string>
-<string name="schedule_unit">ਇਕਾਈ</string>
 <string name="schedule_starting">ਸ਼ੁਰੂ</string>
 <string name="schedule_preferred_time">ਪਸੰਦੀਦਾ ਸਮਾਂ</string>
 <string name="schedule_look_back">ਪਿਛਲੇ ਦਿਨ</string>

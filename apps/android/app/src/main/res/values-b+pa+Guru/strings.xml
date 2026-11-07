@@ -217,7 +217,6 @@
     <string name="debug_sdk_status_update_required">PROVIDER_UPDATE_REQUIRED (%1$d)</string>
     <string name="debug_sdk_status_unknown">UNKNOWN (%1$d)</string>
     <!-- Settings screen -->
-    <string name="settings_subtitle">ਨਿਰਯਾਤਾਂ, ਕਨੈਕਸ਼ਨਾਂ ਅਤੇ ਸਹਾਇਤਾ ਦਾ ਪ੍ਰਬੰਧ ਕਰੋ</string>
     <string name="configuration_protection_title">ਅਣਚਾਹੀਆਂ ਤਬਦੀਲੀਆਂ ਰੋਕੋ</string>
     <string name="configuration_protection_toggle">ਕੌਂਫਿਗਰੇਸ਼ਨ ਤਬਦੀਲੀਆਂ ਲੌਕ ਕਰੋ</string>
     <string name="configuration_protection_description">ਐਕਸਪੋਰਟ, ਸਿੰਕ, ਸਮਾਂ-ਸਾਰਣੀ, ਫੋਲਡਰ, ਕਨੈਕਸ਼ਨ ਅਤੇ ਹੋਰ ਸੈਟਿੰਗਾਂ ਨੂੰ ਗਲਤੀ ਨਾਲ ਬਦਲਣ ਤੋਂ ਰੋਕਦਾ ਹੈ। ਮੈਨੁਅਲ ਐਕਸਪੋਰਟ ਉਪਲਬਧ ਰਹਿੰਦੇ ਹਨ।</string>
@@ -225,15 +224,8 @@
     <string name="configuration_protection_blocked_body">ਆਪਣੀ ਕੌਂਫਿਗਰੇਸ਼ਨ ਨੂੰ ਸੋਧਣ ਲਈ ਸੈਟਿੰਗਾਂ ਵਿੱਚ ਅਣਚਾਹੀਆਂ ਤਬਦੀਲੀਆਂ ਰੋਕੋ ਨੂੰ ਬੰਦ ਕਰੋ।</string>
     <string name="configuration_protection_blocked_action">ਵੇਖੋ ਕਿ ਕੌਂਫਿਗਰੇਸ਼ਨ ਤਬਦੀਲੀਆਂ ਕਿਉਂ ਬਲੌਕ ਹਨ</string>
     <string name="configuration_protection_open_setting">ਸੈਟਿੰਗ ਖੋਲ੍ਹੋ</string>
-    <string name="section_health_sources">ਸਿਹਤ ਸਰੋਤ</string>
-    <string name="health_provider_status_installed">ਇੰਸਟਾਲ ਹੈ</string>
-    <string name="health_provider_status_selected">ਚੁਣਿਆ ਗਿਆ</string>
-    <string name="health_provider_status_ready_to_connect">ਜੁੜਨ ਲਈ ਤਿਆਰ ਹੈ</string>
-    <string name="health_provider_integration_details">%1$s \u2022 %2$s</string>
-    <string name="section_health_diagnostics">ਸਿਹਤ ਡਾਟਾ ਸਰੋਤ ਦੀ ਡਾਇਗਨੌਸਟਿਕ ਜਾਣਕਾਰੀ</string>
     <string name="health_diagnostics_description">ਬੀਟਾ ਟੈਸਟਰਾਂ ਜਾਂ ਸਹਾਇਤਾ ਨਾਲ ਸੰਵੇਦਨਸ਼ੀਲ ਜਾਣਕਾਰੀ-ਰਹਿਤ ਪ੍ਰਦਾਤਾ ਰਿਪੋਰਟ ਸਾਂਝੀ ਕਰੋ। ਇਸ ਵਿੱਚ ਪ੍ਰਦਾਤਾ ਸੈੱਟਅੱਪ, ਅਨੁਮਤੀ ਸਥਿਤੀਆਂ ਅਤੇ ਆਖਰੀ ਨਿਰਯਾਤ ਗਲਤੀ ਸ਼੍ਰੇਣੀਆਂ ਸ਼ਾਮਲ ਹਨ, ਪਰ ਸਿਹਤ ਮਾਪ, ਪ੍ਰਮਾਣ-ਪੱਤਰ ਜਾਂ ਰਾਅ ਫਾਈਲ ਪਾਥ ਨਹੀਂ।</string>
     <string name="health_diagnostics_share_title">ਸੰਵੇਦਨਸ਼ੀਲ ਜਾਣਕਾਰੀ-ਰਹਿਤ ਤਕਨੀਕੀ ਰਿਪੋਰਟ ਸਾਂਝੀ ਕਰੋ</string>
-    <string name="health_diagnostics_share_subtitle">ਕੋਈ ਪ੍ਰਮਾਣ-ਪੱਤਰ, ਪ੍ਰਦਾਤਾ ਦੀ ਗੁਪਤ ਜਾਣਕਾਰੀ, ਰਾਅ ਫਾਈਲ ਪਾਥ ਜਾਂ ਸਿਹਤ ਮਾਪ ਨਹੀਂ</string>
     <string name="health_diagnostics_share_subject">Health.md ਦੀ ਸੰਵੇਦਨਸ਼ੀਲ ਜਾਣਕਾਰੀ-ਰਹਿਤ ਤਕਨੀਕੀ ਰਿਪੋਰਟ</string>
     <string name="health_diagnostics_share_chooser">ਤਕਨੀਕੀ ਰਿਪੋਰਟ ਸਾਂਝੀ ਕਰੋ</string>
     <string name="section_write_mode">ਲਿਖਤ ਢੰਗ</string>
@@ -248,15 +240,9 @@
     <string name="advanced_settings_nav_title">ਉੱਨਤ ਨਿਰਯਾਤ ਸੈਟਿੰਗਜ਼</string>
     <string name="advanced_settings_nav_subtitle">ਮੈਟ੍ਰਿਕਸ, ਰੋਜ਼ਾਨਾ ਨੋਟਸ, ਵਿਅਕਤੀਗਤ ਟ੍ਰੈਕਿੰਗ, ਫਾਰਮੇਟ ਕਸਟਮਾਈਜੇਸ਼ਨ</string>
     <!-- Settings upgrade -->
-    <string name="settings_upgrade_title">ਪ੍ਰੀਮੀਅਮ \'ਤੇ ਅੱਪਗ੍ਰੇਡ ਕਰੋ</string>
     <string name="settings_upgrade_subtitle">ਅਸੀਮਤ ਨਿਰਯਾਤ, ਅਨੁਸੂਚਿਤ ਨਿਰਯਾਤ ਅਤੇ ਹੋਰ ਬਹੁਤ ਕੁਝ</string>
-    <string name="section_feedback">ਰਾਏ</string>
     <string name="feedback_send_title">ਪ੍ਰਤੀਕ੍ਰਿਆ ਭੇਜੋ</string>
-    <string name="feedback_send_subtitle">ਆਪਣਾ ਈਮੇਲ ਕਲਾਈਂਟ ਖੋਲਦਾ ਹੈ</string>
-    <string name="feedback_github_title">GitHub ਉੱਤੇ ਬਗ ਦੀ ਰਿਪੋਰਟ ਕਰੋ</string>
-    <string name="feedback_github_subtitle">ਪੂਰਵ-ਭਰੀ ਸਮੱਸਿਆ ਟੈਮਪਲੇਟ ਖੋਲਦਾ ਹੈ</string>
     <string name="feedback_discord_title">ਸਾਡੇ Discord ਵਿੱਚ ਸ਼ਾਮਲ ਹੋਵੋ</string>
-    <string name="feedback_discord_subtitle">Health.md ਭਾਈਚਾਰੇ ਨਾਲ ਗੱਲਬਾਤ ਕਰੋ</string>
     <string name="feedback_no_app_available">ਇਸ ਲਿੰਕ ਨੂੰ ਖੋਲ੍ਹਣ ਲਈ ਕੋਈ ਐਪ ਉਪਲਬਧ ਨਹੀਂ ਹੈ</string>
     <string name="reset_to_defaults">ਮੂਲ ਸੈਟਿੰਗਜ਼ \'ਤੇ ਮੁੜਸੈਟ ਕਰੋ</string>
     <!-- Advanced settings screen -->
@@ -464,7 +450,6 @@
         <item quantity="one">%1$d ਮੈਟ੍ਰਿਕ ਚੁਣਿਆ ਗਿਆ</item>
         <item quantity="other">%1$d ਮੈਟ੍ਰਿਕਸ ਚੁਣੇ ਗਏ</item>
     </plurals>
-    <string name="section_quick_actions">ਤੁਰੰਤ ਕਾਰਵਾਈਆਂ</string>
     <string name="action_suggested">ਸੁਝਾਇਆ</string>
     <string name="action_all">ਸਭ</string>
     <string name="action_none">ਕੋਈ ਨਹੀਂ</string>
@@ -479,13 +464,6 @@
     <string name="no_history_title">ਕੋਈ ਨਿਰਯਾਤ\nਇਤਿਹਾਸ ਨਹੀਂ</string>
     <string name="no_history_subtitle">ਆਪਣੇ ਨਿਰਯਾਤ ਇੱਥੇ ਦਿਖਾਈ ਦੇਣਗੇ</string>
     <string name="section_export_history">ਨਿਰਯਾਤ ਇਤਿਹਾਸ</string>
-    <string name="history_status_success">\u2713 ਸਫਲ</string>
-    <string name="history_status_partial">! ਅੰਸ਼ਕ</string>
-    <string name="history_status_failed">\u2717 ਫੇਲ</string>
-    <plurals name="history_entry_days">
-        <item quantity="one">%1$d/%2$d ਦਿਨ • %3$s ਤੋਂ %4$s</item>
-        <item quantity="other">%1$d/%2$d ਦਿਨ • %3$s ਤੋਂ %4$s</item>
-    </plurals>
     <string name="history_timestamp_format">%1$s ਨੂੰ %2$s ਵਜੇ</string>
     <string name="export_source_manual">ਮੈਨੂਅਲ</string>
     <string name="export_source_scheduled">ਅਨੁਸੂਚਿਤ</string>
@@ -757,12 +735,6 @@
     <string name="export_folder_root_label">ਨਿਰਯਾਤ ਫੋਲਡਰ</string>
     <string name="history_clear_title">ਕੀ ਨਿਰਯਾਤ ਇਤਿਹਾਸ ਸਾਫ਼ ਕਰਨਾ ਹੈ?</string>
     <string name="history_clear_body">ਇਸ ਨਾਲ ਸਾਰੀਆਂ ਸਥਾਨਕ ਨਿਰਯਾਤ ਇਤਿਹਾਸ ਐਂਟਰੀਆਂ ਹਟ ਜਾਂਦੀਆਂ ਹਨ। ਨਿਰਯਾਤ ਕੀਤੀਆਂ ਫਾਈਲਾਂ ਨਹੀਂ ਮਿਟਾਈਆਂ ਜਾਂਦੀਆਂ।</string>
-    <string name="history_target_label">ਟੀਚਾ: %1$s</string>
-    <string name="history_profile_label">ਪ੍ਰੋਫਾਈਲ: %1$s</string>
-    <plurals name="history_file_count">
-        <item quantity="one">ਫ਼ਾਈਲ: %1$d</item>
-        <item quantity="other">ਫ਼ਾਈਲਾਂ: %1$d</item>
-    </plurals>
     <string name="history_detail_title">ਨਿਰਯਾਤ ਦੇ ਵੇਰਵੇ</string>
     <string name="history_detail_source">ਸਰੋਤ</string>
     <string name="history_detail_profile">ਪ੍ਰੋਫਾਈਲ</string>
@@ -1002,10 +974,6 @@
     <plurals name="raw_snapshot_diagnostics_incomplete_count">
         <item quantity="one">%1$d ਅਧੂਰੀ ਸਨੈਪਸ਼ਾਟ ਕਾਰਵਾਈ</item>
         <item quantity="other">%1$d ਅਧੂਰੀਆਂ ਸਨੈਪਸ਼ਾਟ ਕਾਰਵਾਈਆਂ</item>
-    </plurals>
-    <plurals name="raw_snapshot_history_entry_actions">
-        <item quantity="one">ਸਨੈਪਸ਼ਾਟ ਕਾਰਵਾਈਆਂ: %1$d/%2$d ਕਾਰਵਾਈ • %3$s ਤੋਂ %4$s</item>
-        <item quantity="other">ਸਨੈਪਸ਼ਾਟ ਕਾਰਵਾਈਆਂ: %1$d/%2$d ਕਾਰਵਾਈਆਂ • %3$s ਤੋਂ %4$s</item>
     </plurals>
     <plurals name="schedule_cadence_unit_days" tools:ignore="ImpliedQuantity">
         <item quantity="one">ਦਿਨ</item>
@@ -1316,7 +1284,6 @@
     <string name="clinician_report_workout_type_other">ਹੋਰ</string>
     <string name="clinician_report_unit_respiratory_rate">ਸਾਹ/ਮਿੰਟ</string>
     <string name="shared_setup_title">ਮੇਰਾ ਸੈੱਟਅੱਪ ਸਾਂਝਾ ਕਰੋ</string>
-    <string name="shared_setup_back">ਪਿੱਛੇ</string>
     <string name="shared_setup_intro">ਸਿਹਤ ਡਾਟਾ, ਕ੍ਰੈਡੈਂਸ਼ੀਅਲ, ਅਨੁਮਤੀਆਂ, ਖਰੀਦਾਂ ਜਾਂ ਫੋਲਡਰ ਦੀ ਪਹੁੰਚ ਸਾਂਝੀ ਕੀਤੇ ਬਿਨਾਂ Health.md ਡਿਵਾਈਸਾਂ ਵਿਚਕਾਰ ਨਿਰਯਾਤ ਤਰਜੀਹਾਂ ਕਾਪੀ ਕਰੋ।</string>
     <string name="shared_setup_sender_disclosure">ਕਸਟਮ Markdown, frontmatter ਮੁੱਲ ਅਤੇ ਐਂਡਪੌਇੰਟ ਹੋਸਟ/ਮਾਰਗ ਜਿਵੇਂ ਦੇ ਹਨ ਉਵੇਂ ਹੀ ਕਾਪੀ ਹੁੰਦੇ ਹਨ। ਭੇਜਣ ਤੋਂ ਪਹਿਲਾਂ ਇਹਨਾਂ ਨੂੰ ਨਿੱਜੀ, ਕਿਰਾਏਦਾਰ, ਰੂਟਿੰਗ ਜਾਂ ਗੁਪਤ ਟੈਕਸਟ ਲਈ ਸਮੀਖਿਆ ਕਰੋ।</string>
     <string name="shared_setup_use">ਸਾਂਝਾ ਸੈੱਟਅੱਪ ਵਰਤੋ</string>
@@ -1439,7 +1406,6 @@
     <string name="export_sleep_preview_guidance_morning_ends">ਪੂਰੇ ਨੀਂਦ ਸੈਸ਼ਨ ਇਸ ਐਕਸਪੋਰਟ ਦੇ ਸਮਾਂ ਖੇਤਰ ਵਿੱਚ ਆਪਣੀ ਖਤਮ ਹੋਣ ਦੀ ਤਾਰੀਖ ਦੇ ਹੁੰਦੇ ਹਨ, ਦੁਪਹਿਰ ਵੇਲੇ ਕੱਟੇ ਬਿਨਾਂ। ਕਿਊਰੀ ਦੀਆਂ ਅਸਫਲਤਾਵਾਂ ਵੱਖਰੀਆਂ ਦਿਖਾਈਆਂ ਜਾਂਦੀਆਂ ਹਨ; ਖਾਲੀ ਨਤੀਜੇ ਦਾ ਮਤਲਬ ਪੜ੍ਹਨ ਦੀ ਪਹੁੰਚ ਉਪਲਬਧ ਨਾ ਹੋਣਾ ਵੀ ਹੋ ਸਕਦਾ ਹੈ।</string>
     <string name="whoop_connection_description">ਰਿਕਵਰੀ, ਮਿਹਨਤ, ਨੀਂਦ, ਕਸਰਤਾਂ ਅਤੇ ਸਰੀਰਕ ਮਾਪ ਨਿਰਯਾਤ ਕਰਨ ਲਈ WHOOP ਕਨੈਕਟ ਕਰੋ। ਸਾਈਨ-ਇਨ ਤੁਹਾਡੇ ਬ੍ਰਾਊਜ਼ਰ ਰਾਹੀਂ ਹੁੰਦਾ ਹੈ; Health.md ਟੋਕਨਾਂ ਨੂੰ ਇਸ ਡਿਵਾਈਸ ਉੱਤੇ ਇਨਕ੍ਰਿਪਟ ਕਰਕੇ ਰੱਖਦਾ ਹੈ। ਡਿਸਕਨੈਕਟ ਕਰਨ ਨਾਲ ਇਸ ਡਿਵਾਈਸ ਦਾ ਸੰਭਾਲਿਆ ਕਨੈਕਸ਼ਨ ਹਟ ਜਾਂਦਾ ਹੈ।</string>
     <string name="whoop_connect">WHOOP ਕਨੈਕਟ ਕਰੋ</string>
-    <string name="whoop_sources_description">ਪ੍ਰਦਾਤਾ ਤੋਂ ਸਿੱਧੇ ਨਿਰਯਾਤ ਲਈ WHOOP ਕਨੈਕਟ ਕਰੋ ਜਾਂ ਸਥਾਨਕ ਰਿਕਾਰਡਾਂ ਲਈ Health Connect ਵਰਤਣਾ ਜਾਰੀ ਰੱਖੋ।</string>
     <string name="whoop_sign_in_failed">WHOOP ਸਾਈਨ-ਇਨ ਸ਼ੁਰੂ ਨਹੀਂ ਹੋ ਸਕਿਆ। ਆਪਣਾ ਕਨੈਕਸ਼ਨ ਜਾਂਚੋ ਅਤੇ ਮੁੜ ਕੋਸ਼ਿਸ਼ ਕਰੋ।</string>
     <string name="whoop_use_health_connect">ਨਿਰਯਾਤ ਲਈ Health Connect ਵਰਤੋ</string>
     <string name="whoop_reconnect">WHOOP ਮੁੜ ਕਨੈਕਟ ਕਰੋ</string>

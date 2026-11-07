@@ -16,10 +16,8 @@
     <string name="archive_row_last_export">Останній експорт: %1$s</string>
     <string name="archive_action_backfill">Надолужити</string>
     <string name="archive_empty_title">Тут починається ваш архів</string>
-    <string name="archive_empty_body">Кожен експортований день заповнює клітинку календаря. Виконайте експорт один раз, щоб почати.</string>
     <string name="automations_subtitle">Збережені експорти, які можна запланувати, запустити з програм автоматизації або виконати через healthmd CLI.</string>
     <string name="automations_profiles_title">Профілі експорту</string>
-    <string name="automations_profiles_body">Створюйте, змінюйте й перемикайте збережені конфігурації експорту.</string>
     <string name="automation_sentence_daily">Щодня о %1$s — експорт до %2$s.</string>
     <string name="automation_sentence_weekly">Щотижня (%1$s) о %2$s — експорт до %3$s.</string>
     <string name="automation_sentence_monthly">Щомісяця о %1$s — експорт до %2$s.</string>
@@ -29,10 +27,6 @@
     <string name="settings_section_destinations">Призначення</string>
     <string name="settings_section_data">Дані</string>
     <string name="settings_section_app">Застосунок</string>
-    <string name="settings_destination_folder_title">Папка експорту</string>
-    <string name="settings_destination_folder_subtitle">Виберіть у розділі «Експортувати» папку, до якої записує Health.md.</string>
-    <string name="settings_destination_api_title">API-ендпоінт і шлюз Agent Data</string>
-    <string name="settings_destination_api_subtitle">Налаштуйте в розділі «Автоматизації» надсилання на ваш сервер або до шлюзу приймання даних.</string>
     <string name="automation_detail_destination">Призначення</string>
     <string name="automation_detail_formats">Формати</string>
     <string name="automation_detail_metrics">Показники</string>
@@ -41,16 +35,11 @@
     <string name="automation_detail_profile_id">ID профілю</string>
     <string name="automation_detail_copy">Копіювати</string>
     <string name="automation_detail_copied">Скопійовано</string>
-    <string name="automation_detail_edit_profile">Змінити профіль</string>
     <string name="automation_detail_edit_schedule">Змінити розклад</string>
-    <string name="automation_detail_make_active">Зробити активним</string>
-    <string name="automation_detail_active">Активний профіль</string>
     <string name="automation_detail_select">Виберіть автоматизацію, щоб побачити подробиці.</string>
     <string name="automation_detail_details">Докладно</string>
     <string name="automation_detail_details_named">Подробиці: %1$s</string>
     <string name="automation_detail_not_found">Цієї автоматизації більше немає.</string>
-    <string name="folder_destination_current">Поточна папка</string>
-    <string name="folder_destination_none">Папку не вибрано</string>
     <string name="folder_destination_choose">Вибрати папку</string>
     <string name="folder_destination_change">Змінити папку</string>
     <string name="folder_destination_body">Health.md записує дані безпосередньо в папку, вибрану в системному засобі вибору папок Android, зокрема в синхронізовані папки застосунків. Обліковий запис не потрібен.</string>
@@ -61,9 +50,7 @@
     <string name="moment_keep_open">Не закривайте Health.md до завершення.</string>
     <string name="moment_heart_description">Кришталеве серце, що наповнюється, коли записуються дні</string>
     <string name="archive_automations_manage">Керувати</string>
-    <string name="archive_automations_card_body">«Усі» вважає день повним, коли його покрила кожна запланована автоматизація.</string>
     <string name="archive_action_reexport">Експортувати знову</string>
-    <string name="day_page_open">Відкрити файл дня</string>
     <string name="day_page_share">Поділитися файлом</string>
     <string name="day_page_empty">З поточними налаштуваннями для цієї дати нічого не буде записано.</string>
     <string name="day_page_range_only">Необроблені знімки записують один файл на весь період, тому окремого файлу дня немає.</string>
@@ -128,7 +115,6 @@
     <string name="composer_when_night">Щоночі о %1$s</string>
     <string name="composer_when_weekly">Щотижня, %1$s о %2$s</string>
     <string name="composer_when_monthly">Щомісяця о %1$s</string>
-    <string name="composer_when_custom">За власним розкладом о %1$s</string>
     <string name="composer_range_yesterday">вчора</string>
     <string name="composer_note_update">оновлювати мою щоденну нотатку</string>
     <string name="composer_note_leave">не змінювати щоденні нотатки</string>
@@ -140,9 +126,7 @@
     <string name="composer_preview_title">Файл останнього дня</string>
     <string name="composer_preview_note">Створено з останнього повного дня в Health Connect. Нічого не записується.</string>
     <string name="composer_fields">Поля в цій нотатці</string>
-    <string name="composer_all_metrics">Усі показники</string>
     <string name="composer_all_settings">Усі налаштування</string>
-    <string name="composer_all_settings_sub">Вивід · формат · записи · місце</string>
     <string name="composer_label_when">Коли</string>
     <string name="composer_label_range">Дні</string>
     <string name="composer_label_note">Щоденна нотатка</string>
@@ -172,25 +156,11 @@
     <string name="widget_archive_preview_month_detail">дні за жовтень</string>
     <string name="widget_archive_preview_gaps">2 пропуски</string>
     <string name="moment_see_in_archive">Переглянути в архіві</string>
-    <string name="export_now_more_options">Інші параметри</string>
-    <string name="automations_profiles_summary">Активний: %1$s · %2$s · %3$s</string>
     <plurals name="moment_done_days">
         <item quantity="one">Записано %1$d день</item>
         <item quantity="few">Записано %1$d дні</item>
         <item quantity="many">Записано %1$d днів</item>
         <item quantity="other">Записано %1$d дня</item>
-    </plurals>
-    <plurals name="automations_profiles_count">
-        <item quantity="one">%1$d профіль</item>
-        <item quantity="few">%1$d профілі</item>
-        <item quantity="many">%1$d профілів</item>
-        <item quantity="other">%1$d профілю</item>
-    </plurals>
-    <plurals name="automations_profiles_scheduled">
-        <item quantity="one">за розкладом: %1$d</item>
-        <item quantity="few">за розкладом: %1$d</item>
-        <item quantity="many">за розкладом: %1$d</item>
-        <item quantity="other">за розкладом: %1$d</item>
     </plurals>
     <string name="archive_status_updating">Оновлюється</string>
     <string name="archive_status_not_due">Не заплановано</string>
@@ -202,38 +172,15 @@
     <string name="automations_new">Нова автоматизація</string>
     <string name="automations_next">Далі · %1$s</string>
     <string name="automations_paused">Призупинено</string>
-    <string name="automations_on_demand">На запит</string>
     <string name="automations_run_now">Запустити зараз</string>
-    <string name="automations_run_now_named">Запустити %1$s зараз</string>
     <string name="automations_edit">Змінити</string>
-    <string name="automations_edit_named">Змінити %1$s</string>
     <string name="automations_switch_named">Автоматизація %1$s</string>
     <string name="automations_schedule_settings_title">Параметри розкладу</string>
-    <string name="automations_schedule_settings_subtitle">Загальний розклад програми, призначення запланованого експорту, дозволи та історія</string>
     <string name="date_option_last_7_days">7 днів</string>
     <string name="export_dates_heading">Дати</string>
     <string name="date_from_label">З</string>
     <string name="date_to_label">По</string>
     <string name="export_will_write">Буде записано</string>
-    <string name="export_will_write_with_daily_notes">%1$s + щоденні нотатки</string>
-    <plurals name="export_will_write_files">
-        <item quantity="one">Приблизно %1$d файл %2$s</item>
-        <item quantity="few">Приблизно %1$d файли %2$s</item>
-        <item quantity="many">Приблизно %1$d файлів %2$s</item>
-        <item quantity="other">Приблизно %1$d файлу %2$s</item>
-    </plurals>
-    <plurals name="export_cta_files">
-        <item quantity="one">Експортувати %1$d файл</item>
-        <item quantity="few">Експортувати %1$d файли</item>
-        <item quantity="many">Експортувати %1$d файлів</item>
-        <item quantity="other">Експортувати %1$d файлу</item>
-    </plurals>
-    <plurals name="export_cta_send_days">
-        <item quantity="one">Надіслати %1$d день</item>
-        <item quantity="few">Надіслати %1$d дні</item>
-        <item quantity="many">Надіслати %1$d днів</item>
-        <item quantity="other">Надіслати %1$d дня</item>
-    </plurals>
     <string name="settings_plan_free">Безкоштовний план</string>
     <string name="settings_plan_full_access">Повний доступ</string>
     <string name="settings_plan_manage">%1$s · відновити або керувати</string>
@@ -391,7 +338,6 @@
     <string name="schedule_custom">Власний</string>
     <string name="schedule_day">День</string>
     <string name="schedule_every">Кожні</string>
-    <string name="schedule_unit">Одиниця</string>
     <string name="schedule_starting">Починаючи з</string>
     <string name="schedule_preferred_time">Бажаний час</string>
     <string name="schedule_look_back">Минулі дні</string>

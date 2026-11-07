@@ -153,7 +153,6 @@
     <string name="debug_sdk_status_unknown">UNKNOWN (%1$d)</string>
 
     <!-- Settings screen -->
-    <string name="settings_subtitle">Beheer exports, verbindingen en ondersteuning</string>
     <string name="configuration_protection_title">Onbedoelde wijzigingen voorkomen</string>
     <string name="configuration_protection_toggle">Configuratiewijzigingen vergrendelen</string>
     <string name="configuration_protection_description">Voorkomt onbedoelde wijzigingen aan instellingen voor export, synchronisatie, planning, mappen, verbindingen en meer. Handmatige exports blijven beschikbaar.</string>
@@ -172,11 +171,7 @@
     <string name="label_units">Eenheden</string>
     <string name="advanced_settings_nav_title">Geavanceerde export-instellingen</string>
     <string name="advanced_settings_nav_subtitle">Metingen, dagelijkse notities, afzonderlijke registraties, opmaak aanpassen</string>
-    <string name="section_feedback">Feedback</string>
     <string name="feedback_send_title">Feedback verzenden</string>
-    <string name="feedback_send_subtitle">Opent je e-mailclient</string>
-    <string name="feedback_github_title">Een bug rapporteren op GitHub</string>
-    <string name="feedback_github_subtitle">Opent een vooraf ingevuld issue-sjabloon</string>
     <string name="reset_to_defaults">Standaardinstellingen herstellen</string>
 
     <!-- Advanced settings screen -->
@@ -315,7 +310,6 @@
         <item quantity="one">%1$d metriek geselecteerd</item>
         <item quantity="other">%1$d metrieken geselecteerd</item>
     </plurals>
-    <string name="section_quick_actions">Snelle acties</string>
     <string name="action_suggested">Aanbevolen</string>
     <string name="action_all">Alles</string>
     <string name="action_none">Geen</string>
@@ -331,13 +325,6 @@
     <string name="no_history_title">Geen\nexportgeschiedenis</string>
     <string name="no_history_subtitle">Je exports verschijnen hier</string>
     <string name="section_export_history">Exportgeschiedenis</string>
-    <string name="history_status_success">✓ Geslaagd</string>
-    <string name="history_status_partial">! Gedeeltelijk</string>
-    <string name="history_status_failed">✗ Mislukt</string>
-    <plurals name="history_entry_days">
-        <item quantity="one">%1$d/%2$d dag • %3$s tot %4$s</item>
-        <item quantity="other">%1$d/%2$d dagen • %3$s tot %4$s</item>
-    </plurals>
     <string name="history_timestamp_format">%1$s om %2$s</string>
     <string name="export_source_manual">Handmatig</string>
     <string name="export_source_scheduled">Gepland</string>
@@ -512,21 +499,12 @@
     <string name="debug_has_history_permission">Heeft toegang tot geschiedenis</string>
     <string name="debug_requires_history_permission">Bereik heeft geschiedenis nodig</string>
     <string name="debug_first_permission_grant">Eerste toestemming verleend</string>
-    <string name="section_health_sources">Gezondheidsbronnen</string>
-    <string name="health_provider_status_installed">Geïnstalleerd</string>
-    <string name="health_provider_status_selected">Geselecteerd</string>
-    <string name="health_provider_status_ready_to_connect">Klaar om te verbinden</string>
-    <string name="health_provider_integration_details">%1$s \u2022 %2$s</string>
-    <string name="section_health_diagnostics">Diagnostische gegevens van de gezondheidsbron</string>
     <string name="health_diagnostics_description">Deel een providerrapport waaruit gevoelige gegevens zijn verwijderd met bètatesters of support. Het bevat providerinstellingen, machtigingsstatussen en categorieën van de laatste exportfouten, zonder gezondheidsmetingen, inloggegevens of paden naar ruwe bestanden.</string>
     <string name="health_diagnostics_share_title">Technisch rapport zonder gevoelige gegevens delen</string>
-    <string name="health_diagnostics_share_subtitle">Geen inloggegevens, providergeheimen, paden naar ruwe bestanden of gezondheidsmetingen</string>
     <string name="health_diagnostics_share_subject">Technisch rapport van Health.md zonder gevoelige gegevens</string>
     <string name="health_diagnostics_share_chooser">Technisch rapport delen</string>
-    <string name="settings_upgrade_title">Upgrade naar Premium</string>
     <string name="settings_upgrade_subtitle">Onbeperkte exports, geplande exports en meer</string>
     <string name="feedback_discord_title">Word lid van onze Discord</string>
-    <string name="feedback_discord_subtitle">Praat met de Health.md-community</string>
     <string name="feedback_no_app_available">Geen app beschikbaar om deze link te openen</string>
     <string name="granular_data_title">Gedetailleerde tijdreeksen opnemen</string>
     <string name="granular_data_description">Voeg meetwaarden met tijdstempel, zoals hartslag en slaapfasen, toe aan compatibiliteitsexports. Gebruik de ruwe API-snapshot voor een API-volledige kopie.</string>
@@ -784,12 +762,6 @@
     <string name="export_folder_root_label">Exportmap</string>
     <string name="history_clear_title">Exportgeschiedenis wissen?</string>
     <string name="history_clear_body">Hiermee verwijder je alle lokale vermeldingen uit de exportgeschiedenis. Geëxporteerde bestanden worden niet verwijderd.</string>
-    <string name="history_target_label">Doel: %1$s</string>
-    <string name="history_profile_label">Profiel: %1$s</string>
-    <plurals name="history_file_count">
-        <item quantity="one">Bestand: %1$d</item>
-        <item quantity="other">Bestanden: %1$d</item>
-    </plurals>
     <string name="history_detail_title">Exportdetails</string>
     <string name="history_detail_source">Bron</string>
     <string name="history_detail_profile">Profiel</string>
@@ -1028,10 +1000,6 @@
     <plurals name="raw_snapshot_diagnostics_incomplete_count">
         <item quantity="one">%1$d onvolledige snapshotactie</item>
         <item quantity="other">%1$d onvolledige snapshotacties</item>
-    </plurals>
-    <plurals name="raw_snapshot_history_entry_actions">
-        <item quantity="one">Snapshotacties: %1$d/%2$d actie • %3$s tot %4$s</item>
-        <item quantity="other">Snapshotacties: %1$d/%2$d acties • %3$s tot %4$s</item>
     </plurals>
     <plurals name="schedule_cadence_unit_days">
         <item quantity="one">dag</item>
@@ -1342,7 +1310,6 @@
     <string name="clinician_report_workout_type_other">Overig</string>
     <string name="clinician_report_unit_respiratory_rate">ademhalingen/min</string>
     <string name="shared_setup_title">Mijn setup delen</string>
-    <string name="shared_setup_back">Terug</string>
     <string name="shared_setup_intro">Kopieer exportvoorkeuren tussen Health.md-apparaten zonder gezondheidsgegevens, inloggegevens, machtigingen, aankopen of maptoegang te delen.</string>
     <string name="shared_setup_sender_disclosure">Aangepaste Markdown, frontmatterwaarden en de host/het pad van het endpoint worden letterlijk gekopieerd. Controleer ze vóór verzending op persoonlijke, tenant-, routerings- of geheime tekst.</string>
     <string name="shared_setup_use">Gedeelde setup gebruiken</string>
@@ -1465,7 +1432,6 @@
     <string name="export_sleep_preview_guidance_morning_ends">Volledige slaapsessies horen bij hun einddatum in de tijdzone van deze export, zonder afkapping om 12:00. Queryfouten worden apart vermeld; een leeg resultaat kan ook betekenen dat leestoegang ontbreekt.</string>
     <string name="whoop_connection_description">Verbind WHOOP om herstel, belasting, slaap, trainingen en lichaamsmetingen te exporteren. Aanmelden gebeurt in je browser; Health.md bewaart tokens versleuteld op dit apparaat. Verbreken verwijdert de opgeslagen verbinding op dit apparaat.</string>
     <string name="whoop_connect">WHOOP verbinden</string>
-    <string name="whoop_sources_description">Verbind WHOOP voor rechtstreekse providerexports of blijf Health Connect gebruiken voor lokale records.</string>
     <string name="whoop_sign_in_failed">Aanmelden bij WHOOP kon niet worden gestart. Controleer je verbinding en probeer het opnieuw.</string>
     <string name="whoop_use_health_connect">Health Connect gebruiken voor exports</string>
     <string name="whoop_reconnect">WHOOP opnieuw verbinden</string>

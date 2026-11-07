@@ -201,7 +201,6 @@
     <string name="debug_sdk_status_unavailable">SDK_UNAVAILABLE（%1$d）</string>
     <string name="debug_sdk_status_update_required">PROVIDER_UPDATE_REQUIRED（%1$d）</string>
     <string name="debug_sdk_status_unknown">UNKNOWN（%1$d）</string>
-    <string name="settings_subtitle">エクスポート、接続、サポートを管理</string>
     <string name="configuration_protection_title">誤操作による変更を防ぐ</string>
     <string name="configuration_protection_toggle">設定の変更をロック</string>
     <string name="configuration_protection_description">書き出し、同期、スケジュール、フォルダ、接続などの設定が誤って変更されるのを防ぎます。手動書き出しは引き続き利用できます。</string>
@@ -209,15 +208,8 @@
     <string name="configuration_protection_blocked_body">設定を編集するには、設定画面で「誤操作による変更を防ぐ」をオフにしてください。</string>
     <string name="configuration_protection_blocked_action">設定の変更がブロックされている理由を表示</string>
     <string name="configuration_protection_open_setting">設定を開く</string>
-    <string name="section_health_sources">健康データソース</string>
-    <string name="health_provider_status_installed">インストール済み</string>
-    <string name="health_provider_status_selected">選択済み</string>
-    <string name="health_provider_status_ready_to_connect">接続の準備ができました</string>
-    <string name="health_provider_integration_details">%1$s \u2022 %2$s</string>
-    <string name="section_health_diagnostics">健康データソースの診断情報</string>
     <string name="health_diagnostics_description">機密情報を除去したプロバイダーレポートをベータテスターまたはサポートと共有します。レポートには、プロバイダーの設定、権限の状態、直近のエクスポートエラーのカテゴリが含まれますが、健康測定値、認証情報、Raw ファイルのパスは含まれません。</string>
     <string name="health_diagnostics_share_title">機密情報を伏せた技術レポートを共有</string>
-    <string name="health_diagnostics_share_subtitle">認証情報、プロバイダーのシークレット、Raw ファイルのパス、健康データの測定値は含まれません</string>
     <string name="health_diagnostics_share_subject">Health.md の機密情報を伏せた技術レポート</string>
     <string name="health_diagnostics_share_chooser">技術レポートを共有</string>
     <string name="section_write_mode">書き込みモード</string>
@@ -231,15 +223,9 @@
     <string name="label_units">単位</string>
     <string name="advanced_settings_nav_title">高度なエクスポート設定</string>
     <string name="advanced_settings_nav_subtitle">メトリクス、日記、個別追跡、形式のカスタマイズ</string>
-    <string name="settings_upgrade_title">プレミアムにアップグレード</string>
     <string name="settings_upgrade_subtitle">無制限のエクスポート、スケジュールされたエクスポートなど</string>
-    <string name="section_feedback">フィードバック</string>
     <string name="feedback_send_title">フィードバックを送信</string>
-    <string name="feedback_send_subtitle">メールクライアントを開きます</string>
-    <string name="feedback_github_title">GitHubでバグを報告</string>
-    <string name="feedback_github_subtitle">プリフィルされたイシューテンプレートを開きます</string>
     <string name="feedback_discord_title">Discord に参加しましょう</string>
-    <string name="feedback_discord_subtitle">Health.md コミュニティとチャットする</string>
     <string name="feedback_no_app_available">このリンクを開くために使用できるアプリはありません</string>
     <string name="reset_to_defaults">デフォルトにリセット</string>
     <string name="advanced_settings_title">エクスポート設定</string>
@@ -438,7 +424,6 @@
     <plurals name="individual_tracking_metrics_count">
         <item quantity="other">%1$d件のメトリックを選択済み</item>
     </plurals>
-    <string name="section_quick_actions">クイックアクション</string>
     <string name="action_suggested">推奨</string>
     <string name="action_all">すべて</string>
     <string name="action_none">なし</string>
@@ -452,12 +437,6 @@
     <string name="no_history_title">エクスポート\n履歴なし</string>
     <string name="no_history_subtitle">エクスポートがここに表示されます</string>
     <string name="section_export_history">エクスポート履歴</string>
-    <string name="history_status_success">✓ 成功</string>
-    <string name="history_status_partial">! 一部完了</string>
-    <string name="history_status_failed">✗ 失敗</string>
-    <plurals name="history_entry_days">
-        <item quantity="other">%1$d/%2$d日 • %3$s～%4$s</item>
-    </plurals>
     <string name="history_timestamp_format">%1$s（%2$s）</string>
     <string name="export_source_manual">手動</string>
     <string name="export_source_scheduled">スケジュール済み</string>
@@ -707,11 +686,6 @@
     <string name="export_folder_root_label">エクスポートフォルダー</string>
     <string name="history_clear_title">エクスポート履歴をクリアしますか?</string>
     <string name="history_clear_body">これにより、ローカルのエクスポート履歴エントリがすべて削除されます。エクスポートされたファイルは削除されません。</string>
-    <string name="history_target_label">出力先：%1$s</string>
-    <string name="history_profile_label">プロファイル：%1$s</string>
-    <plurals name="history_file_count">
-        <item quantity="other">ファイル：%1$d件</item>
-    </plurals>
     <string name="history_detail_title">エクスポートの詳細</string>
     <string name="history_detail_source">ソース</string>
     <string name="history_detail_profile">プロファイル</string>
@@ -931,7 +905,6 @@
     <plurals name="history_retry_failed_dates"><item quantity="other">再試行が完了しましたが、%1$d件の日付で失敗しました。</item></plurals>
     <plurals name="history_warning_failed_dates"><item quantity="other">失敗した日付：%1$d件</item></plurals>
     <plurals name="raw_snapshot_diagnostics_incomplete_count"><item quantity="other">未完了のスナップショットアクション：%1$d件</item></plurals>
-    <plurals name="raw_snapshot_history_entry_actions"><item quantity="other">スナップショットアクション：%1$d/%2$d件 • %3$s～%4$s</item></plurals>
     <plurals name="schedule_cadence_unit_days"><item quantity="other">日</item></plurals>
     <plurals name="schedule_cadence_unit_hours"><item quantity="other">時間</item></plurals>
     <plurals name="schedule_cadence_unit_minutes"><item quantity="other">分</item></plurals>
@@ -1167,7 +1140,6 @@
     <string name="clinician_report_workout_type_other">その他</string>
     <string name="clinician_report_unit_respiratory_rate">回/分</string>
     <string name="shared_setup_title">セットアップを共有</string>
-    <string name="shared_setup_back">戻る</string>
     <string name="shared_setup_intro">健康データ、認証情報、権限、購入履歴、フォルダへのアクセスを共有せずに、Health.md デバイス間でエクスポート設定をコピーします。</string>
     <string name="shared_setup_sender_disclosure">カスタム Markdown、フロントマターの値、エンドポイントのホスト/パスはそのままコピーされます。送信前に、個人的な情報、テナント関連、ルーティング関連、機密のテキストが含まれていないか確認してください。</string>
     <string name="shared_setup_use">共有セットアップを使用</string>
@@ -1290,7 +1262,6 @@
     <string name="export_sleep_preview_guidance_morning_ends">睡眠セッション全体は、このエクスポートのタイムゾーンでの終了日に含まれ、正午で区切られません。クエリエラーは別途表示されます。結果が空の場合、読み取りアクセスが利用できない可能性もあります。</string>
     <string name="whoop_connection_description">WHOOPに接続して、回復、負荷、睡眠、ワークアウト、身体測定値をエクスポートできます。ログインにはブラウザを使用し、Health.mdはトークンをこのデバイスに暗号化して保存します。接続を解除すると、このデバイスに保存された接続が削除されます。</string>
     <string name="whoop_connect">WHOOPに接続</string>
-    <string name="whoop_sources_description">WHOOPに接続してプロバイダーから直接エクスポートするか、ローカルの記録に引き続きHealth Connectを使用できます。</string>
     <string name="whoop_sign_in_failed">WHOOPへのログインを開始できませんでした。接続を確認して、もう一度お試しください。</string>
     <string name="whoop_use_health_connect">エクスポートにHealth Connectを使用</string>
     <string name="whoop_reconnect">WHOOPに再接続</string>

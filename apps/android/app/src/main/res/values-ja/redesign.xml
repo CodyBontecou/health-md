@@ -16,10 +16,8 @@
     <string name="archive_row_last_export">前回のエクスポート：%1$s</string>
     <string name="archive_action_backfill">補完</string>
     <string name="archive_empty_title">アーカイブはここから始まります</string>
-    <string name="archive_empty_body">エクスポートした日ごとにカレンダーのマスが埋まります。まず一度エクスポートしてください。</string>
     <string name="automations_subtitle">スケジュール実行、オートメーションアプリからの起動、healthmd CLI での実行ができる保存済みエクスポートです。</string>
     <string name="automations_profiles_title">エクスポートプロファイル</string>
-    <string name="automations_profiles_body">保存済みのエクスポート設定を作成、編集、切り替えます。</string>
     <string name="automation_sentence_daily">毎日 %1$s に %2$s へエクスポートします。</string>
     <string name="automation_sentence_weekly">毎週%1$sの %2$s に %3$s へエクスポートします。</string>
     <string name="automation_sentence_monthly">毎月 %1$s に %2$s へエクスポートします。</string>
@@ -29,10 +27,6 @@
     <string name="settings_section_destinations">保存先</string>
     <string name="settings_section_data">データ</string>
     <string name="settings_section_app">アプリ</string>
-    <string name="settings_destination_folder_title">エクスポートフォルダ</string>
-    <string name="settings_destination_folder_subtitle">「今すぐエクスポート」で Health.md が書き込むフォルダを選びます。</string>
-    <string name="settings_destination_api_title">API エンドポイントと Agent Data ゲートウェイ</string>
-    <string name="settings_destination_api_subtitle">「オートメーション」で、サーバーまたは取り込みゲートウェイへのアップロードを設定します。</string>
     <string name="automation_detail_destination">保存先</string>
     <string name="automation_detail_formats">フォーマット</string>
     <string name="automation_detail_metrics">指標</string>
@@ -41,16 +35,11 @@
     <string name="automation_detail_profile_id">プロファイル ID</string>
     <string name="automation_detail_copy">コピー</string>
     <string name="automation_detail_copied">コピーしました</string>
-    <string name="automation_detail_edit_profile">プロファイルを編集</string>
     <string name="automation_detail_edit_schedule">スケジュールを編集</string>
-    <string name="automation_detail_make_active">有効にする</string>
-    <string name="automation_detail_active">有効なプロファイル</string>
     <string name="automation_detail_select">詳細を表示するオートメーションを選択してください。</string>
     <string name="automation_detail_details">詳細</string>
     <string name="automation_detail_details_named">%1$s の詳細</string>
     <string name="automation_detail_not_found">このオートメーションはもう存在しません。</string>
-    <string name="folder_destination_current">現在のフォルダ</string>
-    <string name="folder_destination_none">フォルダが選択されていません</string>
     <string name="folder_destination_choose">フォルダを選択</string>
     <string name="folder_destination_change">フォルダを変更</string>
     <string name="folder_destination_body">Health.md は、Android のフォルダ選択で選んだフォルダ（同期されるアプリのフォルダを含む）に直接書き込みます。アカウントは不要です。</string>
@@ -61,9 +50,7 @@
     <string name="moment_keep_open">完了するまで Health.md を開いたままにしてください。</string>
     <string name="moment_heart_description">日付が書き込まれるにつれて満ちていくクリスタルのハート</string>
     <string name="archive_automations_manage">管理</string>
-    <string name="archive_automations_card_body">「すべて」では、予定されていたすべての自動化がその日をカバーしたときに完了と数えます。</string>
     <string name="archive_action_reexport">再エクスポート</string>
-    <string name="day_page_open">その日のファイルを開く</string>
     <string name="day_page_share">ファイルを共有</string>
     <string name="day_page_empty">現在の設定では、この日付には何も書き込まれません。</string>
     <string name="day_page_range_only">Raw スナップショットは期間全体で 1 つのファイルを書き込むため、日ごとのファイルはありません。</string>
@@ -119,7 +106,6 @@
     <string name="composer_when_night">毎夜 %1$s</string>
     <string name="composer_when_weekly">毎週%1$s %2$s</string>
     <string name="composer_when_monthly">毎月 %1$s</string>
-    <string name="composer_when_custom">カスタム スケジュール %1$s</string>
     <string name="composer_range_yesterday">昨日</string>
     <string name="composer_note_update">デイリーノートを更新</string>
     <string name="composer_note_leave">デイリーノートは変更しない</string>
@@ -131,9 +117,7 @@
     <string name="composer_preview_title">直近の日のファイル</string>
     <string name="composer_preview_note">Health Connect の直近の完了日から作成しています。何も書き込まれません。</string>
     <string name="composer_fields">このノートの項目</string>
-    <string name="composer_all_metrics">すべての指標</string>
     <string name="composer_all_settings">すべての設定</string>
-    <string name="composer_all_settings_sub">出力・形式・エントリ・保存先</string>
     <string name="composer_label_when">タイミング</string>
     <string name="composer_label_range">日数</string>
     <string name="composer_label_note">デイリーノート</string>
@@ -157,16 +141,8 @@
     <string name="widget_archive_preview_month_detail">日（10月）</string>
     <string name="widget_archive_preview_gaps">欠落 2 件</string>
     <string name="moment_see_in_archive">アーカイブで見る</string>
-    <string name="export_now_more_options">その他のオプション</string>
-    <string name="automations_profiles_summary">アクティブ: %1$s · %2$s · %3$s</string>
     <plurals name="moment_done_days">
         <item quantity="other">%1$d日分を書き込みました</item>
-    </plurals>
-    <plurals name="automations_profiles_count">
-        <item quantity="other">%1$d件のプロファイル</item>
-    </plurals>
-    <plurals name="automations_profiles_scheduled">
-        <item quantity="other">%1$d件をスケジュール済み</item>
     </plurals>
     <string name="archive_status_updating">更新中</string>
     <string name="archive_status_not_due">対象外</string>
@@ -178,29 +154,15 @@
     <string name="automations_new">新規オートメーション</string>
     <string name="automations_next">次回 · %1$s</string>
     <string name="automations_paused">一時停止中</string>
-    <string name="automations_on_demand">手動</string>
     <string name="automations_run_now">今すぐ実行</string>
-    <string name="automations_run_now_named">%1$sを今すぐ実行</string>
     <string name="automations_edit">編集</string>
-    <string name="automations_edit_named">%1$sを編集</string>
     <string name="automations_switch_named">%1$s オートメーション</string>
     <string name="automations_schedule_settings_title">スケジュール設定</string>
-    <string name="automations_schedule_settings_subtitle">アプリ全体のスケジュール、スケジュールエクスポートの保存先、権限、履歴</string>
     <string name="date_option_last_7_days">7日間</string>
     <string name="export_dates_heading">日付</string>
     <string name="date_from_label">開始</string>
     <string name="date_to_label">終了</string>
     <string name="export_will_write">書き込み内容</string>
-    <string name="export_will_write_with_daily_notes">%1$s + デイリーノート</string>
-    <plurals name="export_will_write_files">
-        <item quantity="other">約%1$d件の%2$sファイル</item>
-    </plurals>
-    <plurals name="export_cta_files">
-        <item quantity="other">%1$d件のファイルをエクスポート</item>
-    </plurals>
-    <plurals name="export_cta_send_days">
-        <item quantity="other">%1$d日分を送信</item>
-    </plurals>
     <string name="settings_plan_free">無料プラン</string>
     <string name="settings_plan_full_access">フルアクセス</string>
     <string name="settings_plan_manage">%1$s · 復元または管理</string>
@@ -325,7 +287,6 @@
     <string name="schedule_custom">カスタム</string>
     <string name="schedule_day">日</string>
     <string name="schedule_every">間隔</string>
-    <string name="schedule_unit">単位</string>
     <string name="schedule_starting">開始日</string>
     <string name="schedule_preferred_time">希望時刻</string>
     <string name="schedule_look_back">振り返り</string>

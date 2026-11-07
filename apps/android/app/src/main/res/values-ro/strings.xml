@@ -74,7 +74,6 @@
     <string name="debug_sdk_status_unknown">UNKNOWN (%1$d)</string>
 
     <!-- Settings screen -->
-    <string name="settings_subtitle">Gestionați exporturile, conexiunile și asistența</string>
     <string name="configuration_protection_title">Preveniți modificările accidentale</string>
     <string name="configuration_protection_toggle">Blocați modificările configurației</string>
     <string name="configuration_protection_description">Previne modificarea accidentală a setărilor de export, sincronizare, programare, dosar, conexiune și altele. Exporturile manuale rămân disponibile.</string>
@@ -93,11 +92,7 @@
     <string name="label_units">Unități</string>
     <string name="advanced_settings_nav_title">Setări avansate de export</string>
     <string name="advanced_settings_nav_subtitle">Metrici, note zilnice, urmărire individuală, personalizarea formatului</string>
-    <string name="section_feedback">Feedback</string>
     <string name="feedback_send_title">Trimiteți Feedback</string>
-    <string name="feedback_send_subtitle">Deschide clientul de e-mail</string>
-    <string name="feedback_github_title">Raportați o Eroare pe GitHub</string>
-    <string name="feedback_github_subtitle">Deschide un șablon de problemă pre-completat</string>
     <string name="reset_to_defaults">Restabiliți valorile implicite</string>
 
     <!-- Advanced settings screen -->
@@ -239,7 +234,6 @@
         <item quantity="few">%1$d metrici selectate</item>
         <item quantity="other">%1$d de metrici selectate</item>
     </plurals>
-    <string name="section_quick_actions">Acțiuni Rapide</string>
     <string name="action_suggested">Sugerat</string>
     <string name="action_all">Toate</string>
     <string name="action_none">Niciuna</string>
@@ -255,14 +249,6 @@
     <string name="no_history_title">Nu există istoric\nal exporturilor</string>
     <string name="no_history_subtitle">Exporturile dvs. vor apărea aici</string>
     <string name="section_export_history">Istoricul exporturilor</string>
-    <string name="history_status_success">✓ Succes</string>
-    <string name="history_status_partial">! Parțial</string>
-    <string name="history_status_failed">✗ Eșuat</string>
-    <plurals name="history_entry_days">
-        <item quantity="one">%1$d/%2$d zi • %3$s până la %4$s</item>
-        <item quantity="few">%1$d/%2$d zile • %3$s până la %4$s</item>
-        <item quantity="other">%1$d/%2$d de zile • %3$s până la %4$s</item>
-    </plurals>
     <string name="history_timestamp_format">%1$s la %2$s</string>
     <string name="export_source_manual">Manual</string>
     <string name="export_source_scheduled">Programat</string>
@@ -522,21 +508,12 @@
     <string name="debug_has_history_permission">Are permisiune pentru istoric</string>
     <string name="debug_requires_history_permission">Intervalul necesită acces la istoric</string>
     <string name="debug_first_permission_grant">Prima acordare a permisiunii</string>
-    <string name="section_health_sources">Surse de sănătate</string>
-    <string name="health_provider_status_installed">Instalat</string>
-    <string name="health_provider_status_selected">Selectat</string>
-    <string name="health_provider_status_ready_to_connect">Gata de conectare</string>
-    <string name="health_provider_integration_details">%1$s \u2022 %2$s</string>
-    <string name="section_health_diagnostics">Diagnosticarea sursei de date de sănătate</string>
     <string name="health_diagnostics_description">Partajați cu testerii beta sau cu echipa de asistență un raport al furnizorului din care au fost eliminate datele sensibile. Acesta include configurarea furnizorului, starea permisiunilor și categoriile ultimei erori de export, fără măsurători de sănătate, credențiale sau căi ale fișierelor brute.</string>
     <string name="health_diagnostics_share_title">Partajați raportul tehnic cu date mascate</string>
-    <string name="health_diagnostics_share_subtitle">Fără credențiale, secrete ale furnizorului, căi ale fișierelor brute sau măsurători de sănătate</string>
     <string name="health_diagnostics_share_subject">Raport tehnic Health.md cu date mascate</string>
     <string name="health_diagnostics_share_chooser">Partajați raportul tehnic</string>
-    <string name="settings_upgrade_title">Treceți la Premium</string>
     <string name="settings_upgrade_subtitle">Exporturi nelimitate, exporturi programate și multe altele</string>
     <string name="feedback_discord_title">Alăturați-vă comunității noastre pe Discord</string>
-    <string name="feedback_discord_subtitle">Discutați cu comunitatea Health.md</string>
     <string name="feedback_no_app_available">Nicio aplicație disponibilă pentru a deschide acest link</string>
     <string name="granular_data_title">Includeți serii temporale detaliate</string>
     <string name="granular_data_description">Adăugați în exporturile de compatibilitate mostre cu marcaj temporal, precum frecvența cardiacă și etapele somnului. Pentru o copie completă a datelor API, utilizați Raw API Snapshot.</string>
@@ -796,13 +773,6 @@
     <string name="export_folder_root_label">Dosar de export</string>
     <string name="history_clear_title">Ștergeți istoricul exporturilor?</string>
     <string name="history_clear_body">Aceasta elimină toate intrările locale din istoricul exporturilor. Fișierele exportate nu sunt șterse.</string>
-    <string name="history_target_label">Destinație: %1$s</string>
-    <string name="history_profile_label">Profil: %1$s</string>
-    <plurals name="history_file_count">
-        <item quantity="one">Fișier: %1$d</item>
-        <item quantity="few">Fișiere: %1$d</item>
-        <item quantity="other">Fișiere: %1$d</item>
-    </plurals>
     <string name="history_detail_title">Detalii despre export</string>
     <string name="history_detail_source">Sursa</string>
     <string name="history_detail_profile">Profil</string>
@@ -1050,11 +1020,6 @@
         <item quantity="one">%1$d acțiune Raw Snapshot incompletă</item>
         <item quantity="few">%1$d acțiuni Raw Snapshot incomplete</item>
         <item quantity="other">%1$d de acțiuni Raw Snapshot incomplete</item>
-    </plurals>
-    <plurals name="raw_snapshot_history_entry_actions">
-        <item quantity="one">Acțiune Raw Snapshot: %1$d/%2$d • %3$s–%4$s</item>
-        <item quantity="few">Acțiuni Raw Snapshot: %1$d/%2$d • %3$s–%4$s</item>
-        <item quantity="other">Acțiuni Raw Snapshot: %1$d/%2$d • %3$s–%4$s</item>
     </plurals>
     <plurals name="schedule_cadence_unit_days">
         <item quantity="one">zi</item>
@@ -1390,7 +1355,6 @@
     <string name="clinician_report_workout_type_other">Altele</string>
     <string name="clinician_report_unit_respiratory_rate">respirații/min</string>
     <string name="shared_setup_title">Partajați configurația mea</string>
-    <string name="shared_setup_back">Înapoi</string>
     <string name="shared_setup_intro">Copiați preferințele de export între dispozitivele Health.md fără a partaja date de sănătate, date de autentificare, permisiuni, achiziții sau acces la dosare.</string>
     <string name="shared_setup_sender_disclosure">Markdown-ul personalizat, valorile frontmatter și gazda/calea punctului final sunt copiate literal. Examinați-le pentru texte personale, de chiriaș, de rutare sau secrete înainte de trimitere.</string>
     <string name="shared_setup_use">Utilizați o configurație partajată</string>
@@ -1513,7 +1477,6 @@
     <string name="export_sleep_preview_guidance_morning_ends">Sesiunile de somn complete aparțin datei lor de sfârșit în fusul orar al acestui export, fără tăiere la prânz. Erorile de interogare sunt afișate separat; un rezultat gol poate însemna și că accesul la citire nu este disponibil.</string>
     <string name="whoop_connection_description">Conectează WHOOP pentru a exporta recuperarea, efortul, somnul, antrenamentele și măsurătorile corporale. Autentificarea folosește browserul; Health.md păstrează tokenurile criptate pe acest dispozitiv. Deconectarea elimină conexiunea salvată pe acest dispozitiv.</string>
     <string name="whoop_connect">Conectează WHOOP</string>
-    <string name="whoop_sources_description">Conectează WHOOP pentru exporturi directe de la furnizor sau continuă să folosești Health Connect pentru înregistrările locale.</string>
     <string name="whoop_sign_in_failed">Autentificarea WHOOP nu a putut fi pornită. Verifică conexiunea și încearcă din nou.</string>
     <string name="whoop_use_health_connect">Folosește Health Connect pentru exporturi</string>
     <string name="whoop_reconnect">Reconectează WHOOP</string>

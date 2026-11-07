@@ -157,7 +157,6 @@
     <string name="debug_sdk_status_unknown">UNKNOWN (%1$d)</string>
 
     <!-- Settings screen -->
-    <string name="settings_subtitle">Gérez les exportations, les connexions et l’assistance</string>
     <string name="configuration_protection_title">Empêcher les modifications accidentelles</string>
     <string name="configuration_protection_toggle">Verrouiller les modifications de configuration</string>
     <string name="configuration_protection_description">Empêche toute modification accidentelle des réglages d’exportation, de synchronisation, de planification, de dossier, de connexion et autres. Les exportations manuelles restent disponibles.</string>
@@ -176,11 +175,7 @@
     <string name="label_units">Unités</string>
     <string name="advanced_settings_nav_title">Paramètres d\'export avancés</string>
     <string name="advanced_settings_nav_subtitle">Métriques, notes quotidiennes, suivi individuel, personnalisation du format</string>
-    <string name="section_feedback">Commentaires</string>
     <string name="feedback_send_title">Envoyer des commentaires</string>
-    <string name="feedback_send_subtitle">Ouvre votre client e-mail</string>
-    <string name="feedback_github_title">Signaler un bogue sur GitHub</string>
-    <string name="feedback_github_subtitle">Ouvre un modèle de problème pré-rempli</string>
     <string name="reset_to_defaults">Réinitialiser aux valeurs par défaut</string>
 
     <!-- Advanced settings screen -->
@@ -322,7 +317,6 @@
         <item quantity="many">%1$d métriques sélectionnées</item>
         <item quantity="other">%1$d métriques sélectionnées</item>
     </plurals>
-    <string name="section_quick_actions">Actions rapides</string>
     <string name="action_suggested">Suggérées</string>
     <string name="action_all">Toutes</string>
     <string name="action_none">Aucune</string>
@@ -338,14 +332,6 @@
     <string name="no_history_title">Aucun Historique\nD\'Export</string>
     <string name="no_history_subtitle">Vos exports apparaîtront ici</string>
     <string name="section_export_history">Historique d\'export</string>
-    <string name="history_status_success">✓ Réussie</string>
-    <string name="history_status_partial">! Partielle</string>
-    <string name="history_status_failed">✗ Échouée</string>
-    <plurals name="history_entry_days">
-        <item quantity="one">%1$d/%2$d jour • %3$s à %4$s</item>
-        <item quantity="many">%1$d/%2$d jours • %3$s à %4$s</item>
-        <item quantity="other">%1$d/%2$d jours • %3$s à %4$s</item>
-    </plurals>
     <string name="history_timestamp_format">%1$s à %2$s</string>
     <string name="export_source_manual">Manuel</string>
     <string name="export_source_scheduled">Planifié</string>
@@ -522,21 +508,12 @@
     <string name="debug_has_history_permission">Autorisation d’accès à l’historique accordée</string>
     <string name="debug_requires_history_permission">La plage nécessite l’historique</string>
     <string name="debug_first_permission_grant">Octroi de la première autorisation</string>
-    <string name="section_health_sources">Sources de santé</string>
-    <string name="health_provider_status_installed">Installé</string>
-    <string name="health_provider_status_selected">Choisi</string>
-    <string name="health_provider_status_ready_to_connect">Prêt à se connecter</string>
-    <string name="health_provider_integration_details">%1$s \u2022 %2$s</string>
-    <string name="section_health_diagnostics">Diagnostic de la source de données de santé</string>
     <string name="health_diagnostics_description">Partagez un rapport expurgé du fournisseur avec les bêta-testeurs ou l’assistance. Il comprend la configuration du fournisseur, l’état des autorisations et les catégories de la dernière erreur d’exportation, sans mesures de santé, identifiants de connexion ni chemins de fichiers bruts.</string>
     <string name="health_diagnostics_share_title">Partager un rapport technique expurgé</string>
-    <string name="health_diagnostics_share_subtitle">Aucun identifiant de connexion, secret de fournisseur, chemin de fichier brut ni mesure de santé</string>
     <string name="health_diagnostics_share_subject">Rapport technique expurgé de Health.md</string>
     <string name="health_diagnostics_share_chooser">Partager le rapport technique</string>
-    <string name="settings_upgrade_title">Passer à Premium</string>
     <string name="settings_upgrade_subtitle">Exportations illimitées, exportations planifiées et plus encore</string>
     <string name="feedback_discord_title">Rejoignez notre Discord</string>
-    <string name="feedback_discord_subtitle">Discutez avec la communauté Health.md</string>
     <string name="feedback_no_app_available">Aucune application disponible pour ouvrir ce lien</string>
     <string name="granular_data_title">Inclure des séries chronologiques détaillées</string>
     <string name="granular_data_description">Ajoutez aux exportations de compatibilité des échantillons horodatés, comme la fréquence cardiaque et les phases de sommeil. Pour obtenir une copie complète de l’API, utilisez un instantané brut de l’API.</string>
@@ -796,13 +773,6 @@
     <string name="export_folder_root_label">Dossier d\'exportation</string>
     <string name="history_clear_title">Effacer l\'historique des exportations ?</string>
     <string name="history_clear_body">Cela supprime toutes les entrées locales de l’historique des exportations. Les fichiers exportés ne sont pas supprimés.</string>
-    <string name="history_target_label">Cible : %1$s</string>
-    <string name="history_profile_label">Profil : %1$s</string>
-    <plurals name="history_file_count">
-        <item quantity="one">Fichier : %1$d</item>
-        <item quantity="many">Fichiers : %1$d</item>
-        <item quantity="other">Fichiers : %1$d</item>
-    </plurals>
     <string name="history_detail_title">Détails de l\'exportation</string>
     <string name="history_detail_source">Source</string>
     <string name="history_detail_profile">Profil</string>
@@ -1050,11 +1020,6 @@
         <item quantity="one">%1$d action d\'instantané incomplète</item>
         <item quantity="many">%1$d actions d\'instantané incomplètes</item>
         <item quantity="other">%1$d actions d\'instantané incomplètes</item>
-    </plurals>
-    <plurals name="raw_snapshot_history_entry_actions">
-        <item quantity="one">Actions d\'instantané : %1$d/%2$d action • %3$s à %4$s</item>
-        <item quantity="many">Actions d\'instantané : %1$d/%2$d actions • %3$s à %4$s</item>
-        <item quantity="other">Actions d\'instantané : %1$d/%2$d actions • %3$s à %4$s</item>
     </plurals>
     <plurals name="schedule_cadence_unit_days" tools:ignore="ImpliedQuantity">
         <item quantity="one">jour</item>
@@ -1393,7 +1358,6 @@
     <string name="shared_setup_use">Utiliser une configuration partagée</string>
     <string name="shared_setup_apply">Appliquer la configuration partagée</string>
     <string name="shared_setup_finish">Terminer la configuration</string>
-    <string name="shared_setup_back">Retour</string>
     <string name="shared_setup_intro">Copiez les préférences d\'export entre les appareils Health.md sans partager de données de santé, d\'informations d\'identification, d\'autorisations, d\'achats ni d\'accès aux dossiers.</string>
     <string name="shared_setup_sender_disclosure">Le Markdown personnalisé, les valeurs de frontmatter ainsi que l\'hôte et le chemin du point de terminaison sont copiés tels quels. Vérifiez-les avant l\'envoi pour repérer tout texte personnel, lié au locataire, au routage ou secret.</string>
     <string name="shared_setup_use_detail">Choisissez un fichier .healthmdconfig à vérifier</string>
@@ -1513,7 +1477,6 @@
     <string name="export_sleep_preview_guidance_morning_ends">Les sessions de sommeil complètes appartiennent à leur date de fin dans le fuseau horaire de cet export, sans découpage à midi. Les erreurs de requête sont indiquées séparément ; un résultat vide peut aussi signaler un accès en lecture indisponible.</string>
     <string name="whoop_connection_description">Connectez WHOOP pour exporter la récupération, l’effort, le sommeil, les entraînements et les mesures corporelles. La connexion utilise votre navigateur ; Health.md conserve les jetons chiffrés sur cet appareil. La déconnexion supprime la connexion enregistrée sur cet appareil.</string>
     <string name="whoop_connect">Connecter WHOOP</string>
-    <string name="whoop_sources_description">Connectez WHOOP pour exporter directement depuis le fournisseur, ou continuez à utiliser Health Connect pour les données locales.</string>
     <string name="whoop_sign_in_failed">La connexion à WHOOP n’a pas pu démarrer. Vérifiez votre connexion et réessayez.</string>
     <string name="whoop_use_health_connect">Utiliser Health Connect pour les exports</string>
     <string name="whoop_reconnect">Reconnecter WHOOP</string>
