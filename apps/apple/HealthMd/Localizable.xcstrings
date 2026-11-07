@@ -1589,28 +1589,6 @@
       "pt-BR":{"stringUnit":{"state":"translated","value":"%lld ativas e %lld em pausa. “Todas” conta um dia como completo quando cada automação ativa prevista o cobriu."}},
       "zh-Hans":{"stringUnit":{"state":"translated","value":"%lld 个运行中，%lld 个已暂停。“全部”在所有到期的运行中自动化都覆盖某天时，才将其计为完成。"}}
     }},
-    "%lld-day streak" : {"localizations":{
-      "de":{"stringUnit":{"state":"translated","value":"%lld-Tage-Serie"}},
-      "es":{"stringUnit":{"state":"translated","value":"Racha de %lld días"}},
-      "fr":{"stringUnit":{"state":"translated","value":"Série de %lld jours"}},
-      "it":{"stringUnit":{"state":"translated","value":"Serie di %lld giorni"}},
-      "ja":{"stringUnit":{"state":"translated","value":"%lld日連続"}},
-      "ko":{"stringUnit":{"state":"translated","value":"%lld일 연속"}},
-      "nl":{"stringUnit":{"state":"translated","value":"Reeks van %lld dagen"}},
-      "pt-BR":{"stringUnit":{"state":"translated","value":"Sequência de %lld dias"}},
-      "zh-Hans":{"stringUnit":{"state":"translated","value":"连续 %lld 天"}}
-    }},
-    "%lld-week streak" : {"localizations":{
-      "de":{"stringUnit":{"state":"translated","value":"%lld-Wochen-Serie"}},
-      "es":{"stringUnit":{"state":"translated","value":"Racha de %lld semanas"}},
-      "fr":{"stringUnit":{"state":"translated","value":"Série de %lld semaines"}},
-      "it":{"stringUnit":{"state":"translated","value":"Serie di %lld settimane"}},
-      "ja":{"stringUnit":{"state":"translated","value":"%lld週連続"}},
-      "ko":{"stringUnit":{"state":"translated","value":"%lld주 연속"}},
-      "nl":{"stringUnit":{"state":"translated","value":"Reeks van %lld weken"}},
-      "pt-BR":{"stringUnit":{"state":"translated","value":"Sequência de %lld semanas"}},
-      "zh-Hans":{"stringUnit":{"state":"translated","value":"连续 %lld 周"}}
-    }},
     "1 range summary for %@" : {"localizations":{
       "de":{"stringUnit":{"state":"translated","value":"1 Zeitraumzusammenfassung für %@"}},
       "es":{"stringUnit":{"state":"translated","value":"1 resumen del período para %@"}},
@@ -2117,50 +2095,6 @@
       "pt-BR":{"stringUnit":{"state":"translated","value":"Seu arquivo começa aqui"}},
       "zh-Hans":{"stringUnit":{"state":"translated","value":"你的归档从这里开始"}}
     }},
-    "days archived across automations" : {"localizations":{
-      "de":{"stringUnit":{"state":"translated","value":"archivierte Tage über alle Automationen"}},
-      "es":{"stringUnit":{"state":"translated","value":"días archivados en las automatizaciones"}},
-      "fr":{"stringUnit":{"state":"translated","value":"jours archivés sur les automatisations"}},
-      "it":{"stringUnit":{"state":"translated","value":"giorni archiviati tra le automazioni"}},
-      "ja":{"stringUnit":{"state":"translated","value":"全オートメーションのアーカイブ日数"}},
-      "ko":{"stringUnit":{"state":"translated","value":"자동화 전체 아카이브 일수"}},
-      "nl":{"stringUnit":{"state":"translated","value":"gearchiveerde dagen over automatiseringen"}},
-      "pt-BR":{"stringUnit":{"state":"translated","value":"dias arquivados nas automações"}},
-      "zh-Hans":{"stringUnit":{"state":"translated","value":"各自动化已归档天数"}}
-    }},
-    "days archived before pausing" : {"localizations":{
-      "de":{"stringUnit":{"state":"translated","value":"archivierte Tage vor der Pause"}},
-      "es":{"stringUnit":{"state":"translated","value":"días archivados antes de pausar"}},
-      "fr":{"stringUnit":{"state":"translated","value":"jours archivés avant la pause"}},
-      "it":{"stringUnit":{"state":"translated","value":"giorni archiviati prima della pausa"}},
-      "ja":{"stringUnit":{"state":"translated","value":"一時停止前のアーカイブ日数"}},
-      "ko":{"stringUnit":{"state":"translated","value":"일시 중지 전 아카이브 일수"}},
-      "nl":{"stringUnit":{"state":"translated","value":"gearchiveerde dagen vóór de pauze"}},
-      "pt-BR":{"stringUnit":{"state":"translated","value":"dias arquivados antes da pausa"}},
-      "zh-Hans":{"stringUnit":{"state":"translated","value":"暂停前已归档天数"}}
-    }},
-    "days archived in %@" : {"localizations":{
-      "de":{"stringUnit":{"state":"translated","value":"archivierte Tage im %@"}},
-      "es":{"stringUnit":{"state":"translated","value":"días archivados en %@"}},
-      "fr":{"stringUnit":{"state":"translated","value":"jours archivés en %@"}},
-      "it":{"stringUnit":{"state":"translated","value":"giorni archiviati in %@"}},
-      "ja":{"stringUnit":{"state":"translated","value":"%@のアーカイブ日数"}},
-      "ko":{"stringUnit":{"state":"translated","value":"%@ 아카이브 일수"}},
-      "nl":{"stringUnit":{"state":"translated","value":"gearchiveerde dagen in %@"}},
-      "pt-BR":{"stringUnit":{"state":"translated","value":"dias arquivados em %@"}},
-      "zh-Hans":{"stringUnit":{"state":"translated","value":"%@已归档天数"}}
-    }},
-    "days fully or partly sent" : {"localizations":{
-      "de":{"stringUnit":{"state":"translated","value":"ganz oder teilweise gesendete Tage"}},
-      "es":{"stringUnit":{"state":"translated","value":"días enviados total o parcialmente"}},
-      "fr":{"stringUnit":{"state":"translated","value":"jours envoyés totalement ou en partie"}},
-      "it":{"stringUnit":{"state":"translated","value":"giorni inviati del tutto o in parte"}},
-      "ja":{"stringUnit":{"state":"translated","value":"全部または一部を送信した日数"}},
-      "ko":{"stringUnit":{"state":"translated","value":"전체 또는 일부 전송된 일수"}},
-      "nl":{"stringUnit":{"state":"translated","value":"geheel of deels verzonden dagen"}},
-      "pt-BR":{"stringUnit":{"state":"translated","value":"dias enviados total ou parcialmente"}},
-      "zh-Hans":{"stringUnit":{"state":"translated","value":"全部或部分发送的天数"}}
-    }},
     "iPhone folder" : {"localizations":{
       "de":{"stringUnit":{"state":"translated","value":"iPhone-Ordner"}},
       "es":{"stringUnit":{"state":"translated","value":"Carpeta del iPhone"}},
@@ -2171,17 +2105,6 @@
       "nl":{"stringUnit":{"state":"translated","value":"iPhone-map"}},
       "pt-BR":{"stringUnit":{"state":"translated","value":"Pasta do iPhone"}},
       "zh-Hans":{"stringUnit":{"state":"translated","value":"iPhone 文件夹"}}
-    }},
-    "weeks archived in %@" : {"localizations":{
-      "de":{"stringUnit":{"state":"translated","value":"archivierte Wochen im %@"}},
-      "es":{"stringUnit":{"state":"translated","value":"semanas archivadas en %@"}},
-      "fr":{"stringUnit":{"state":"translated","value":"semaines archivées en %@"}},
-      "it":{"stringUnit":{"state":"translated","value":"settimane archiviate in %@"}},
-      "ja":{"stringUnit":{"state":"translated","value":"%@のアーカイブ週数"}},
-      "ko":{"stringUnit":{"state":"translated","value":"%@ 아카이브 주 수"}},
-      "nl":{"stringUnit":{"state":"translated","value":"gearchiveerde weken in %@"}},
-      "pt-BR":{"stringUnit":{"state":"translated","value":"semanas arquivadas em %@"}},
-      "zh-Hans":{"stringUnit":{"state":"translated","value":"%@已归档周数"}}
     }},
     "Assigns the whole sleep session to the date you wake up, using the export’s time zone." : {
       "comment" : "Sleep attribution description for the explicit wake-date export profile.",
@@ -148408,19 +148331,6 @@
         "zh-Hans": {"stringUnit":{"state":"translated","value":"已写入 %lld/%lld 天"}}
       }
     },
-    "%lld weeks" : {
-      "localizations" : {
-        "de": {"stringUnit":{"state":"translated","value":"%lld Wochen"}},
-        "es": {"stringUnit":{"state":"translated","value":"%lld semanas"}},
-        "fr": {"stringUnit":{"state":"translated","value":"%lld semaines"}},
-        "it": {"stringUnit":{"state":"translated","value":"%lld settimane"}},
-        "ja": {"stringUnit":{"state":"translated","value":"%lld週"}},
-        "ko": {"stringUnit":{"state":"translated","value":"%lld주"}},
-        "nl": {"stringUnit":{"state":"translated","value":"%lld weken"}},
-        "pt-BR": {"stringUnit":{"state":"translated","value":"%lld semanas"}},
-        "zh-Hans": {"stringUnit":{"state":"translated","value":"%lld 周"}}
-      }
-    },
     "%lld · old manual sync only" : {
       "localizations" : {
         "de": {"stringUnit":{"state":"translated","value":"%lld · nur alte manuelle Synchronisierung"}},
@@ -153348,19 +153258,6 @@
         "zh-Hans": {"stringUnit":{"state":"translated","value":"最适合使用 iCloud 云盘、“我的 iPad”或已同步的应用文件夹。Health.md 直接写入，无需账户。"}}
       }
     },
-    "days archived" : {
-      "localizations" : {
-        "de": {"stringUnit":{"state":"translated","value":"archivierte Tage"}},
-        "es": {"stringUnit":{"state":"translated","value":"días archivados"}},
-        "fr": {"stringUnit":{"state":"translated","value":"jours archivés"}},
-        "it": {"stringUnit":{"state":"translated","value":"giorni archiviati"}},
-        "ja": {"stringUnit":{"state":"translated","value":"アーカイブ済みの日数"}},
-        "ko": {"stringUnit":{"state":"translated","value":"보관된 일수"}},
-        "nl": {"stringUnit":{"state":"translated","value":"gearchiveerde dagen"}},
-        "pt-BR": {"stringUnit":{"state":"translated","value":"dias arquivados"}},
-        "zh-Hans": {"stringUnit":{"state":"translated","value":"已归档天数"}}
-      }
-    },
     "iCloud Drive" : {
       "localizations" : {
         "de": {"stringUnit":{"state":"translated","value":"iCloud Drive"}},
@@ -153398,19 +153295,6 @@
         "nl": {"stringUnit":{"state":"translated","value":"vandaag"}},
         "pt-BR": {"stringUnit":{"state":"translated","value":"hoje"}},
         "zh-Hans": {"stringUnit":{"state":"translated","value":"今天"}}
-      }
-    },
-    "weeks archived" : {
-      "localizations" : {
-        "de": {"stringUnit":{"state":"translated","value":"archivierte Wochen"}},
-        "es": {"stringUnit":{"state":"translated","value":"semanas archivadas"}},
-        "fr": {"stringUnit":{"state":"translated","value":"semaines archivées"}},
-        "it": {"stringUnit":{"state":"translated","value":"settimane archiviate"}},
-        "ja": {"stringUnit":{"state":"translated","value":"アーカイブ済みの週"}},
-        "ko": {"stringUnit":{"state":"translated","value":"보관된 주"}},
-        "nl": {"stringUnit":{"state":"translated","value":"gearchiveerde weken"}},
-        "pt-BR": {"stringUnit":{"state":"translated","value":"semanas arquivadas"}},
-        "zh-Hans": {"stringUnit":{"state":"translated","value":"已归档周数"}}
       }
     },
     "{when}, send {range}[’s {metrics}][ as {formats}] to {where}[ and {note}]." : {

@@ -107,7 +107,6 @@ struct ArchiveScreen: View {
             VStack(alignment: .leading, spacing: 14) {
                 titleRow(String(localized: "Archive"), size: 34, showsHeart: true)
                 chips(compact: false)
-                statsPanel
                 pausedNoteIfNeeded
                 calendarPanel
                 dayCard
@@ -135,7 +134,6 @@ struct ArchiveScreen: View {
         VStack(alignment: .leading, spacing: 12) {
             titleRow(String(localized: "Archive"), size: 30, showsHeart: true)
             chips(compact: true)
-            compactStatsPanel
             pausedNoteIfNeeded
             calendarPanel
                 .environment(\.calendarDensityOverride, .folded)
@@ -228,19 +226,8 @@ struct ArchiveScreen: View {
     }
 
     private var wideHeader: some View {
-        let stats = model.stats(month: month, filter: filter)
-        let isWeekly = model.isWeeklyFilter(filter)
-        return HStack(alignment: .center, spacing: 12) {
-            ViewThatFits(in: .horizontal) {
-                HStack(alignment: .firstTextBaseline, spacing: 14) {
-                    monthTitle
-                    inlineStats(stats, isWeekly: isWeekly)
-                }
-                VStack(alignment: .leading, spacing: 4) {
-                    monthTitle
-                    inlineStats(stats, isWeekly: isWeekly)
-                }
-            }
+        HStack(alignment: .center, spacing: 12) {
+            monthTitle
             Spacer(minLength: 8)
             monthButton(String(localized: "Previous month"), image: "chevron.left", offset: -1)
             monthButton(String(localized: "Next month"), image: "chevron.right", offset: 1)
@@ -267,28 +254,6 @@ struct ArchiveScreen: View {
             .foregroundStyle(palette.text)
             .lineLimit(1)
             .accessibilityAddTraits(.isHeader)
-    }
-
-    /// "27 days · 10-day streak · 3 gaps"; the gap count jumps to the first gap.
-    private func inlineStats(_ stats: ArchiveAggregation.Stats, isWeekly: Bool) -> some View {
-        HStack(spacing: 0) {
-            Text(isWeekly
-                ? String(localized: "\(stats.archivedCount) weeks")
-                : String(localized: "\(stats.archivedCount) days"))
-            Text(verbatim: " · ")
-            Text(streakText(stats, isWeekly: isWeekly))
-            Text(verbatim: " · ")
-            gapButton(stats, weight: .semibold)
-        }
-        .font(.system(size: layout == .pad ? 15 : 13))
-        .foregroundStyle(palette.muted)
-        .lineLimit(1)
-    }
-
-    private func streakText(_ stats: ArchiveAggregation.Stats, isWeekly: Bool) -> String {
-        isWeekly
-            ? String(localized: "\(stats.streak)-week streak")
-            : String(localized: "\(stats.streak)-day streak")
     }
 
     private func gapButton(_ stats: ArchiveAggregation.Stats, weight: Font.Weight) -> some View {
@@ -340,83 +305,6 @@ struct ArchiveScreen: View {
         } else {
             GlassChip(title: title, dotColor: color, isSelected: filter == id) { filter = id }
         }
-    }
-
-    // MARK: - Stats
-
-    private var statsPanel: some View {
-        let stats = model.stats(month: month, filter: filter)
-        let isWeekly = model.isWeeklyFilter(filter)
-        return HStack(spacing: 16) {
-            Text(verbatim: "\(stats.archivedCount)")
-                .glassFont(.heroNumber)
-                .foregroundStyle(palette.text)
-            VStack(alignment: .leading, spacing: 4) {
-                Text(statsLabel(isWeekly: isWeekly))
-                    .glassFont(.body)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(palette.text)
-                HStack(spacing: 12) {
-                    Text(streakText(stats, isWeekly: isWeekly)).foregroundStyle(palette.muted)
-                    gapButton(stats, weight: .semibold)
-                }
-                .font(.system(size: 13))
-            }
-            Spacer(minLength: 0)
-        }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 18)
-        .glassSurface()
-    }
-
-    /// DuoOuterG's smaller stats row.
-    private var compactStatsPanel: some View {
-        let stats = model.stats(month: month, filter: filter)
-        let isWeekly = model.isWeeklyFilter(filter)
-        return HStack(spacing: 12) {
-            Text(verbatim: "\(stats.archivedCount)")
-                .font(.system(size: 44, weight: .bold))
-                .tracking(-2)
-                .monospacedDigit()
-                .foregroundStyle(palette.text)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(compactStatsLabel(isWeekly: isWeekly))
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(palette.text)
-                HStack(spacing: 0) {
-                    Text(streakText(stats, isWeekly: isWeekly))
-                    Text(verbatim: " · ")
-                    gapButton(stats, weight: .semibold)
-                }
-                .font(.system(size: 12))
-                .foregroundStyle(palette.muted)
-            }
-            Spacer(minLength: 0)
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 14)
-        .glassSurface()
-    }
-
-    /// DuoOuterG's shorter label: "days archived".
-    private func compactStatsLabel(isWeekly: Bool) -> String {
-        if isWeekly { return String(localized: "weeks archived") }
-        if let profile = filteredProfile {
-            if profile.hasTodayRefresh { return String(localized: "days fully or partly sent") }
-            if profile.isPaused { return String(localized: "days archived before pausing") }
-        }
-        return String(localized: "days archived")
-    }
-
-    private func statsLabel(isWeekly: Bool) -> String {
-        let monthName = month.formatted(.dateTime.month(.wide))
-        guard let profile = filteredProfile else {
-            return String(localized: "days archived across automations")
-        }
-        if isWeekly { return String(localized: "weeks archived in \(monthName)") }
-        if profile.hasTodayRefresh { return String(localized: "days fully or partly sent") }
-        if profile.isPaused { return String(localized: "days archived before pausing") }
-        return String(localized: "days archived in \(monthName)")
     }
 
     @ViewBuilder private var pausedNoteIfNeeded: some View {
@@ -777,10 +665,9 @@ struct ArchiveScreen: View {
         dayFileKey = request
     }
 
-    /// "Next run · Daily · tomorrow at 7:30", with the streak and the gap count.
+    /// "Next run · Daily · tomorrow at 7:30", with the gap count.
     private var nextRunCard: some View {
         let stats = model.stats(month: month, filter: filter)
-        let isWeekly = model.isWeeklyFilter(filter)
         let next = model.nextRun(filter: filter)
         return HStack(spacing: 14) {
             Image(systemName: "clock")
@@ -807,13 +694,9 @@ struct ArchiveScreen: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .accessibilityElement(children: .combine)
-            VStack(alignment: .trailing, spacing: 3) {
-                Text(streakText(stats, isWeekly: isWeekly))
-                    .foregroundStyle(palette.sec)
-                gapButton(stats, weight: .semibold)
-            }
-            .font(.system(size: 13, weight: .semibold))
-            .lineLimit(1)
+            gapButton(stats, weight: .semibold)
+                .font(.system(size: 13, weight: .semibold))
+                .lineLimit(1)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 14)

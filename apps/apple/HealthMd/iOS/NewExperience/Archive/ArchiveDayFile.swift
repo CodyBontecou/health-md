@@ -175,7 +175,7 @@ enum ArchiveNextRun {
 
 extension ArchiveModel {
     /// The earliest scheduled run among running automations, or the filtered automation's
-    /// own next run, so the card agrees with the streak and gaps beside it.
+    /// own next run, so the card agrees with the gaps beside it.
     func nextRun(filter: UUID? = nil) -> (profile: ArchiveProfile, date: Date)? {
         profiles.filter { filter == nil || $0.id == filter }.compactMap { profile -> (ArchiveProfile, Date)? in
             guard let entry = profile.entry, entry.isEnabled,

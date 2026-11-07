@@ -315,7 +315,7 @@ final class CoverageLedgerTests: XCTestCase {
         XCTAssertNil(ArchiveAggregation.action(for: .paused, hasTodayRefresh: false))
     }
 
-    func testStatsStreakSkipsNotDueAndStopsAtGap() {
+    func testStatsCountArchivedAndGapsExcludingToday() {
         let input: [(date: Date, status: CoverageStatus)] = [
             (date(25), .complete), (date(26), .missing), (date(27), .complete), (date(28), .notDue),
             (date(29), .paused), (date(30), .partial), (date(31), .inProgress)
@@ -323,7 +323,6 @@ final class CoverageLedgerTests: XCTestCase {
         let stats = ArchiveAggregation.stats(days: input, today: date(31), calendar: calendar)
         XCTAssertEqual(stats.archivedCount, 3)
         XCTAssertEqual(stats.gapCount, 1)
-        XCTAssertEqual(stats.streak, 2)
         XCTAssertEqual(stats.earliestGap, date(26))
     }
 
@@ -338,7 +337,6 @@ final class CoverageLedgerTests: XCTestCase {
         )
         XCTAssertEqual(stats.archivedCount, 1)
         XCTAssertEqual(stats.gapCount, 1)
-        XCTAssertEqual(stats.streak, 1)
         XCTAssertEqual(stats.earliestGap, date(12))
     }
 

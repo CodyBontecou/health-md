@@ -35,7 +35,6 @@ enum ArchiveAggregation {
         let archivedCount: Int
         let gapCount: Int
         let earliestGap: Date?
-        let streak: Int
     }
 
     enum StatsUnit {
@@ -91,8 +90,7 @@ enum ArchiveAggregation {
 
     // MARK: - Stats
 
-    /// Days archived = complete + partial. The streak runs back from the latest past
-    /// date, skips not-due and paused dates, and stops at the first gap. Today is excluded.
+    /// Days archived = complete + partial; gaps = missing. Today is excluded.
     static func stats(
         days: [(date: Date, status: CoverageStatus)],
         unit: StatsUnit = .days,
@@ -112,23 +110,19 @@ enum ArchiveAggregation {
         var archived = 0
         var gaps = 0
         var earliestGap: Date?
-        var streak = 0
-        var streakIsOpen = true
 
         for period in periods.sorted(by: { $0.date > $1.date }) {
             switch period.status {
             case .complete, .partial:
                 archived += 1
-                if streakIsOpen { streak += 1 }
             case .missing:
                 gaps += 1
-                streakIsOpen = false
                 earliestGap = period.date
             case .notDue, .paused, .inProgress:
                 break
             }
         }
-        return Stats(archivedCount: archived, gapCount: gaps, earliestGap: earliestGap, streak: streak)
+        return Stats(archivedCount: archived, gapCount: gaps, earliestGap: earliestGap)
     }
 
     private static func isDue(_ status: CoverageStatus) -> Bool {

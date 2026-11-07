@@ -657,7 +657,7 @@
       "id": "export.coverage-calendar",
       "name": "Archive coverage calendar",
       "classification": "shared",
-      "summary": "Show which health dates each export profile covered, with per-date status, gaps and streaks, rather than when exports ran.",
+      "summary": "Show which health dates each export profile covered, with per-date status and gaps, rather than when exports ran.",
       "profiles": [],
       "platforms": {
         "apple": {

@@ -1027,7 +1027,6 @@ struct GlassAppShell: View {
             calendar.date(byAdding: .day, value: -offset, to: today)
         }.map { model.status(on: $0, filter: nil).rawValue }
         ArchiveWidgetPublisher.publish(
-            streak: stats.streak,
             archivedCount: stats.archivedCount,
             gapCount: stats.gapCount,
             nextRun: nextRun,
@@ -1070,7 +1069,6 @@ struct EndpointSheetRequest: Identifiable, Equatable {
 /// Writes the facts the Archive widget reads from the app group. Health-free.
 enum ArchiveWidgetPublisher {
     private struct Snapshot: Codable {
-        let streak: Int
         let archivedCount: Int
         let gapCount: Int
         let nextRun: Date?
@@ -1078,9 +1076,8 @@ enum ArchiveWidgetPublisher {
         let recentDays: [String]
     }
 
-    static func publish(streak: Int, archivedCount: Int, gapCount: Int, nextRun: Date?, recentDays: [String]) {
+    static func publish(archivedCount: Int, gapCount: Int, nextRun: Date?, recentDays: [String]) {
         guard let data = try? JSONEncoder().encode(Snapshot(
-            streak: streak,
             archivedCount: archivedCount,
             gapCount: gapCount,
             nextRun: nextRun,

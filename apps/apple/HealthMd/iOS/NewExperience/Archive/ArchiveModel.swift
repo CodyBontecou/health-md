@@ -95,36 +95,13 @@ struct ArchiveModel {
     }
 
     func stats(month: Date, filter: UUID?) -> ArchiveAggregation.Stats {
-        let unit = statsUnit(filter: filter)
-        let monthStats = ArchiveAggregation.stats(
+        ArchiveAggregation.stats(
             days: daysOfMonth(containing: month).map { ($0, status(on: $0, filter: filter)) },
-            unit: unit,
+            unit: statsUnit(filter: filter),
             today: now,
             calendar: calendar
         )
-        // The streak may cross into earlier months, so it reads its own window.
-        let window = (1...Self.streakWindowDays).compactMap {
-            calendar.date(byAdding: .day, value: -$0, to: now)
-        }
-        let streak = ArchiveAggregation.stats(
-            days: window.map { ($0, status(on: $0, filter: filter)) },
-            unit: unit,
-            today: now,
-            calendar: calendar
-        ).streak
-        return .init(
-            archivedCount: monthStats.archivedCount,
-            gapCount: monthStats.gapCount,
-            earliestGap: monthStats.earliestGap,
-            streak: streak
-        )
     }
-
-    func isWeeklyFilter(_ filter: UUID?) -> Bool {
-        profiles.first { $0.id == filter }?.isWeekly == true
-    }
-
-    private static let streakWindowDays = 120
 
     private func statsUnit(filter: UUID?) -> ArchiveAggregation.StatsUnit {
         guard let entry = profiles.first(where: { $0.id == filter })?.entry,

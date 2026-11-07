@@ -1025,7 +1025,6 @@ private extension DateFormatter {
 
 /// Written by the app from the coverage ledger.
 struct ArchiveWidgetSnapshot: Codable {
-    let streak: Int
     let archivedCount: Int
     let gapCount: Int
     let nextRun: Date?
@@ -1069,7 +1068,7 @@ struct ArchiveWidget: Widget {
             ArchiveWidgetView(entry: entry)
         }
         .configurationDisplayName("Archive")
-        .description("Your export streak and gaps.")
+        .description("Your archived days and gaps.")
         .supportedFamilies([.systemSmall, .systemMedium])
     }
 }
@@ -1105,12 +1104,12 @@ private struct ArchiveWidgetView: View {
                 }
             }
             Spacer(minLength: 0)
-            Text(verbatim: "\(entry.snapshot?.streak ?? 0)")
+            Text(verbatim: "\(entry.snapshot?.archivedCount ?? 0)")
                 .font(.system(size: 50, weight: .bold))
                 .kerning(-2)
                 .minimumScaleFactor(0.6)
                 .monospacedDigit()
-            Text("day streak")
+            Text("days in \(entry.date.formatted(.dateTime.month(.wide)))")
                 .font(.footnote.weight(.semibold))
                 .foregroundStyle(WidgetGlass.secondaryText)
         }

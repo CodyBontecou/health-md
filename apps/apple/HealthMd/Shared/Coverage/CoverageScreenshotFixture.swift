@@ -7,7 +7,7 @@ import Foundation
 /// show one finished month with gaps, partial days and a pause. Captures open the month
 /// before the current one, so the pattern is keyed to that month's day numbers and never
 /// depends on today's date. Days of the current month up to yesterday are written in full,
-/// which keeps the streak meaningful. Every day number used is at most 28, so the pattern
+/// which keeps recent coverage and the widget populated. Every day number used is at most 28, so the pattern
 /// fits every month.
 enum CoverageScreenshotFixture {
     /// How one automation behaves on the boards, read from its schedule entry.
