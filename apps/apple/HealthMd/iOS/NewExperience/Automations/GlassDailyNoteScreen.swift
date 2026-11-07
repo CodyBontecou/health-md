@@ -87,7 +87,7 @@ struct GlassDailyNoteScreen: View {
         guard draft.dailyNoteInjection.enabled else { return nil }
         let note = draft.dailyNoteInjection
         if (try? SharedSetupValidation.validateFilename(note.filenamePattern.trimmingCharacters(in: .whitespaces))) == nil {
-            return String(localized: "Enter a filename such as {date}. It can’t contain /, \\ or %.")
+            return String(localized: "Enter a filename such as {date}, without slashes or percent signs.")
         }
         if (try? SharedSetupValidation.validateRelativePath(note.folderPath)) == nil {
             return String(localized: "Enter a folder inside your vault, such as Daily.")
