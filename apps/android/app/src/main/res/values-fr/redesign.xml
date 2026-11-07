@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="nav_archive">Archive</string>
     <string name="nav_automations">Automatisations</string>
     <string name="export_now_title">Exporter maintenant</string>
@@ -277,6 +277,7 @@
     <string name="archive_read_whole_note">Lire toute la note</string>
     <plurals name="archive_attention_count">
         <item quantity="one">%d élément nécessite votre attention.</item>
+        <item quantity="many">%d éléments nécessitent votre attention.</item>
         <item quantity="other">%d éléments nécessitent votre attention.</item>
     </plurals>
     <string name="attention_title">Nécessite votre attention</string>
@@ -296,10 +297,12 @@
     <string name="attention_host_gateway">Passerelle Agent Data</string>
     <plurals name="attention_endpoint_status">
         <item quantity="one">%1$s a renvoyé %2$s.</item>
+        <item quantity="many">%1$s a renvoyé %2$s %3$s fois.</item>
         <item quantity="other">%1$s a renvoyé %2$s %3$s fois.</item>
     </plurals>
     <plurals name="attention_endpoint_failed">
         <item quantity="one">%1$s : %2$s.</item>
+        <item quantity="many">%1$s a échoué %3$s fois : %2$s.</item>
         <item quantity="other">%1$s a échoué %3$s fois : %2$s.</item>
     </plurals>
     <string name="attention_retry_refresh">%1$s réessaiera à la prochaine actualisation.</string>
@@ -338,14 +341,17 @@
     <string name="automation_schedule_weekly">%1$s %2$s</string>
     <plurals name="automation_schedule_every_days">
         <item quantity="one">À intervalle de %1$d jour, à %2$s</item>
+        <item quantity="many">Tous les %1$d jours à %2$s</item>
         <item quantity="other">Tous les %1$d jours à %2$s</item>
     </plurals>
     <plurals name="automation_schedule_every_weeks">
         <item quantity="one">À intervalle de %1$d semaine, à %2$s</item>
+        <item quantity="many">Toutes les %1$d semaines à %2$s</item>
         <item quantity="other">Toutes les %1$d semaines à %2$s</item>
     </plurals>
     <plurals name="automation_schedule_every_months">
         <item quantity="one">Tous les %1$d mois à %2$s</item>
+        <item quantity="many">Tous les %1$d mois à %2$s</item>
         <item quantity="other">Tous les %1$d mois à %2$s</item>
     </plurals>
     <string name="automation_overlap_title">Exports qui se chevauchent</string>
@@ -382,14 +388,17 @@
     <string name="schedule_api_refresh_note">Les profils API renvoient un instantané JSON complet à chaque actualisation — votre point de terminaison doit remplacer les données ou effectuer un upsert.</string>
     <plurals name="schedule_count_days">
         <item quantity="one">%1$d jour</item>
+        <item quantity="many">%1$d jours</item>
         <item quantity="other">%1$d jours</item>
     </plurals>
     <plurals name="schedule_count_weeks">
         <item quantity="one">%1$d semaine</item>
+        <item quantity="many">%1$d semaines</item>
         <item quantity="other">%1$d semaines</item>
     </plurals>
     <plurals name="schedule_count_months">
         <item quantity="one">%1$d mois</item>
+        <item quantity="many">%1$d mois</item>
         <item quantity="other">%1$d mois</item>
     </plurals>
     <string name="schedule_pending_recovery">Récupération en attente</string>
@@ -433,16 +442,19 @@
     <string name="automation_range_today">aujourd’hui</string>
     <plurals name="automation_refresh_every_minutes">
         <item quantity="one">À intervalle de %1$d minute</item>
+        <item quantity="many">Toutes les %1$d minutes</item>
         <item quantity="other">Toutes les %1$d minutes</item>
     </plurals>
-    <plurals name="automation_refresh_every_hours">
+    <plurals name="automation_refresh_every_hours" tools:ignore="ImpliedQuantity">
         <item quantity="one">Toutes les heures</item>
+        <item quantity="many">Toutes les %1$d heures</item>
         <item quantity="other">Toutes les %1$d heures</item>
     </plurals>
     <string name="settings_vault_title">Coffre sur cet appareil</string>
     <string name="settings_vault_default">%1$s · par défaut</string>
     <plurals name="settings_vault_folders">
         <item quantity="one">%1$d dossier</item>
+        <item quantity="many">%1$d dossiers</item>
         <item quantity="other">%1$d dossiers</item>
     </plurals>
     <string name="settings_cli_title">healthmd CLI</string>
@@ -502,14 +514,17 @@
     <string name="date_option_last_30_days">30 jours</string>
     <plurals name="export_now_about_files">
         <item quantity="one">Environ %1$d fichier</item>
+        <item quantity="many">Environ %1$d fichiers</item>
         <item quantity="other">Environ %1$d fichiers</item>
     </plurals>
     <plurals name="export_now_days">
         <item quantity="one">%1$d jour</item>
+        <item quantity="many">%1$d jours</item>
         <item quantity="other">%1$d jours</item>
     </plurals>
     <plurals name="export_now_files">
         <item quantity="one">%1$d fichier</item>
+        <item quantity="many">%1$d fichiers</item>
         <item quantity="other">%1$d fichiers</item>
     </plurals>
     <string name="export_now_daily_notes_updated">notes quotidiennes mises à jour</string>
@@ -518,6 +533,7 @@
     <string name="export_now_cta_yesterday">Exporter hier</string>
     <plurals name="export_now_cta_days">
         <item quantity="one">Exporter %1$d jour</item>
+        <item quantity="many">Exporter %1$d jours</item>
         <item quantity="other">Exporter %1$d jours</item>
     </plurals>
     <string name="export_now_destination">Destination</string>
