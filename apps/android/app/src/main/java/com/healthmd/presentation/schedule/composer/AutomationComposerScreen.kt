@@ -1,6 +1,6 @@
 package com.healthmd.presentation.schedule.composer
 
-import android.text.format.DateFormat
+import androidx.compose.runtime.setValue
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -22,6 +21,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -33,12 +33,11 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
-import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -47,14 +46,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
@@ -64,36 +59,23 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.healthmd.R
 import com.healthmd.presentation.common.LocalAppFolderName
-import com.healthmd.data.scheduler.ScheduledProfileEntry
-import com.healthmd.domain.model.ExportFormat
-import com.healthmd.domain.model.ExportTarget
+import com.healthmd.domain.model.ExportSettings
 import com.healthmd.domain.model.HealthMetrics
 import com.healthmd.presentation.common.LocalConfigurationProtection
-import com.healthmd.presentation.export.ExportProfileEditorDialog
-import com.healthmd.presentation.export.ExportProfileEditorDraft
 import com.healthmd.presentation.export.ExportProfilesViewModel
 import com.healthmd.presentation.i18n.localizedDisplayName
-import com.healthmd.presentation.metrics.MetricSelectionScreen
-import com.healthmd.presentation.schedule.ProfileCadenceEditorDialog
-import com.healthmd.presentation.schedule.ProfileSchedulesViewModel
+import com.healthmd.presentation.schedule.AutomationPage
+import com.healthmd.presentation.schedule.AutomationSentence
+import com.healthmd.presentation.schedule.ComposerDraft
 import com.healthmd.presentation.theme.GeistRadii
 import com.healthmd.presentation.theme.GeistSizes
 import com.healthmd.presentation.theme.GeistSpacing
 import com.healthmd.presentation.theme.GeistType
 import com.healthmd.presentation.theme.LocalGeistColors
-import java.time.DayOfWeek
-import java.time.LocalTime
-import java.time.format.DateTimeFormatter
-import java.time.format.TextStyle
-
-/** Metrics offered as one-tap fields, as on the board; everything else is under All metrics. */
-private val QUICK_FIELDS = listOf("sleep_total", "steps", "resting_hr", "hrv", "weight", "blood_oxygen")
 
 /** Content width from which the preview sits beside the sentence (unfolded foldables, tablets). */
 private val TWO_PANE_MIN_WIDTH = 600.dp
@@ -101,18 +83,25 @@ private val TWO_PANE_MIN_WIDTH = 600.dp
 /** Font scale from which tokens read as a list of labeled choices instead of inline pills. */
 private const val LIST_LAYOUT_FONT_SCALE = 1.5f
 
+/** Fields the composer lists before "All", as on iOS. */
+private const val VISIBLE_FIELD_COUNT = 6
+
 /**
- * The automation composer: the profile as one editable sentence, each choice a token that opens
- * the editor for that field, with the file it writes rendered live underneath. The daily-note
- * and field choices change in place; everything is staged in the same draft the profile editor
- * uses and is committed with Save. The schedule saves from its own dialog, as elsewhere.
+ * The automation composer (iOS `ComposerScreen`): the profile as one editable sentence whose
+ * tokens push the page for that choice, with the file it writes rendered live underneath.
+ * Field checks and the daily-note switch are staged on top of the saved profile and committed
+ * with Save; choices made on their own pages save there, so they are never undone here.
  */
 @Composable
 fun AutomationComposerScreen(
     profileId: String,
     onBack: () -> Unit,
+    /** Pushes one of the automation's settings pages. */
+    onOpenPage: (AutomationPage) -> Unit,
+    onOpenSchedule: () -> Unit,
+    /** "All settings": returns to the automation's detail, or opens it. */
+    onAllSettings: () -> Unit,
     profilesViewModel: ExportProfilesViewModel = hiltViewModel(),
-    schedulesViewModel: ProfileSchedulesViewModel = hiltViewModel(),
     previewViewModel: ComposerPreviewViewModel = hiltViewModel(),
 ) {
     val uiState by profilesViewModel.uiState.collectAsStateWithLifecycle()
@@ -127,48 +116,44 @@ fun AutomationComposerScreen(
     val protection = LocalConfigurationProtection.current
     val guarded: (() -> Unit) -> Unit = { action -> if (protection.enabled) protection.onBlockedChange() else action() }
 
-    // The saved state the draft compares against; refreshed whenever the stored profile changes.
-    val baseline = remember(row.profile.updatedAtEpochMillis, uiState.currentSettings) {
+    // The saved profile the staged choices apply to; refreshed whenever a page saves.
+    val saved = remember(row.profile.updatedAtEpochMillis, uiState.currentSettings) {
         ExportProfilesViewModel.initialEditDraft(row.profile, uiState.currentSettings)
     }
-    var draft by remember(baseline) { mutableStateOf(baseline) }
-    val dirty = draft != baseline
-    val canSave = dirty && draft.settings.exportFormats.isNotEmpty()
-
-    var editingSchedule by rememberSaveable { mutableStateOf(false) }
-    var editingMetrics by rememberSaveable { mutableStateOf(false) }
-    var editingFormats by rememberSaveable { mutableStateOf(false) }
-    var editingAll by rememberSaveable { mutableStateOf(false) }
+    var draft by rememberSaveable(profileId, stateSaver = ComposerDraftSaver) { mutableStateOf(ComposerDraft()) }
+    val settings = draft.applyTo(saved.settings)
     var confirmLeave by rememberSaveable { mutableStateOf(false) }
 
-    LaunchedEffect(draft.settings) { previewViewModel.preview(draft.settings) }
+    LaunchedEffect(settings) { previewViewModel.preview(settings) }
     val preview by previewViewModel.state.collectAsStateWithLifecycle()
 
     val save = {
-        guarded { profilesViewModel.updateProfile(row.profile.id, draft) }
+        guarded {
+            if (!draft.isEmpty) {
+                val staged = draft
+                profilesViewModel.saveDraft(profileId) { it.copy(settings = staged.applyTo(it.settings)) }
+                draft = ComposerDraft()
+            }
+            onBack()
+        }
     }
-    val leave = { if (dirty) confirmLeave = true else onBack() }
-    BackHandler(enabled = dirty) { confirmLeave = true }
+    val leave = { if (draft.isEmpty) onBack() else confirmLeave = true }
+    BackHandler(enabled = !draft.isEmpty) { confirmLeave = true }
 
     val onToken: (ComposerToken) -> Unit = { token ->
         guarded {
             when (token) {
-                ComposerToken.WHEN, ComposerToken.RANGE -> editingSchedule = true
-                ComposerToken.METRICS -> editingMetrics = true
-                ComposerToken.WHERE -> editingAll = true
-                ComposerToken.FORMATS -> editingFormats = true
+                ComposerToken.WHEN, ComposerToken.RANGE -> onOpenSchedule()
+                ComposerToken.METRICS -> onOpenPage(AutomationPage.METRICS)
+                ComposerToken.WHERE -> onOpenPage(AutomationPage.OUTPUT)
+                ComposerToken.FORMATS -> onOpenPage(AutomationPage.FORMATS)
                 // As on iOS, the note switches in place and Save commits it.
-                ComposerToken.NOTE -> draft = draft.copy(
-                    settings = draft.settings.copy(
-                        dailyNoteInjection = draft.settings.dailyNoteInjection.copy(
-                            enabled = !draft.settings.dailyNoteInjection.enabled,
-                        ),
-                    ),
-                )
+                ComposerToken.NOTE -> draft = draft.toggleNote(saved.settings)
             }
         }
     }
 
+    val listLayout = LocalDensity.current.fontScale >= LIST_LAYOUT_FONT_SCALE
     Column(Modifier.fillMaxSize().background(colors.background100)) {
         Row(
             modifier = Modifier
@@ -182,7 +167,8 @@ fun AutomationComposerScreen(
                 Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = stringResource(R.string.back), tint = colors.primary)
             }
             Text(
-                text = row.profile.name,
+                // The largest text sizes keep the bare name so the title fits.
+                text = if (listLayout) row.profile.name else stringResource(R.string.automation_composer_title, row.profile.name),
                 style = MaterialTheme.typography.titleLarge,
                 color = colors.primary,
                 maxLines = 1,
@@ -191,16 +177,16 @@ fun AutomationComposerScreen(
             )
             Button(
                 onClick = save,
-                enabled = canSave,
                 shape = RoundedCornerShape(GeistRadii.full),
                 colors = ButtonDefaults.buttonColors(containerColor = colors.brandPrimary, contentColor = colors.brandOnPrimary),
             ) { Text(stringResource(R.string.composer_save), style = GeistType.button14) }
         }
 
         BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
-            val listLayout = LocalDensity.current.fontScale >= LIST_LAYOUT_FONT_SCALE
             val twoPane = maxWidth >= TWO_PANE_MIN_WIDTH && !listLayout
-            val values = composerValues(draft, row.entry)
+            val destination = AutomationSentence.destination(row.profile, LocalAppFolderName.current)
+                ?: stringResource(R.string.automation_destination_selected_folder)
+            val values = automationSentenceValues(settings, row.entry, destination, summary = false)
             val sentence: @Composable () -> Unit = {
                 if (listLayout) {
                     ComposerTokenList(values = values, onToken = onToken)
@@ -216,15 +202,12 @@ fun AutomationComposerScreen(
             }
             val fields: @Composable () -> Unit = {
                 ComposerFields(
-                    draft = draft,
-                    onToggle = { id ->
-                        guarded {
-                            draft = draft.copy(settings = draft.settings.copy(metricSelection = draft.settings.metricSelection.toggle(id)))
-                        }
-                    },
-                    onAllMetrics = { guarded { editingMetrics = true } },
+                    saved = saved.settings,
+                    pending = draft.fields,
+                    onToggle = { id -> guarded { draft = draft.toggleField(id, saved.settings) } },
+                    onAllMetrics = { guarded { onOpenPage(AutomationPage.METRICS) } },
                 )
-                AllSettingsRow(onClick = { guarded { editingAll = true } })
+                AllSettingsRow(onClick = onAllSettings)
             }
             val previewCard: @Composable () -> Unit = { ComposerPreviewCard(preview) }
             if (twoPane) {
@@ -262,72 +245,21 @@ fun AutomationComposerScreen(
         }
     }
 
-    if (editingSchedule) {
-        ProfileCadenceEditorDialog(
-            profileId = row.profile.id,
-            profileName = row.profile.name,
-            entry = row.entry,
-            onSave = { entry ->
-                editingSchedule = false
-                guarded { schedulesViewModel.saveEntry(entry) }
-            },
-            onDismiss = { editingSchedule = false },
-        )
-    }
-    if (editingMetrics) {
-        Dialog(onDismissRequest = { editingMetrics = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-            Surface(Modifier.fillMaxSize(), color = colors.background100) {
-                MetricSelectionScreen(
-                    metricSelection = draft.settings.metricSelection,
-                    onSelectionChanged = { selection -> draft = draft.copy(settings = draft.settings.copy(metricSelection = selection)) },
-                    onBack = { editingMetrics = false },
-                )
-            }
-        }
-    }
-    if (editingFormats) {
-        ComposerFormatsDialog(
-            selected = draft.settings.exportFormats,
-            onConfirm = { formats ->
-                editingFormats = false
-                draft = draft.copy(settings = draft.settings.copy(exportFormats = formats))
-            },
-            onDismiss = { editingFormats = false },
-        )
-    }
-    if (editingAll) {
-        // The same full-field editor as Export profiles, seeded with the staged draft.
-        ExportProfileEditorDialog(
-            isCreation = false,
-            initial = draft,
-            overlapPreview = { target, folderUri, settings ->
-                profilesViewModel.draftOverlapPreview(row.profile.id, target, folderUri, settings)
-            },
-            onConfirm = { updated ->
-                editingAll = false
-                draft = updated
-            },
-            onDismiss = { editingAll = false },
-        )
-    }
     if (confirmLeave) {
         AlertDialog(
             onDismissRequest = { confirmLeave = false },
             title = { Text(stringResource(R.string.composer_unsaved_title)) },
             text = { Text(stringResource(R.string.composer_unsaved_body)) },
             confirmButton = {
-                TextButton(
-                    onClick = {
-                        confirmLeave = false
-                        if (canSave) save()
-                        onBack()
-                    },
-                    enabled = canSave,
-                ) { Text(stringResource(R.string.composer_save)) }
+                TextButton(onClick = {
+                    confirmLeave = false
+                    save()
+                }) { Text(stringResource(R.string.composer_save)) }
             },
             dismissButton = {
                 TextButton(onClick = {
                     confirmLeave = false
+                    draft = ComposerDraft()
                     onBack()
                 }) { Text(stringResource(R.string.composer_discard), color = colors.error) }
             },
@@ -335,64 +267,21 @@ fun AutomationComposerScreen(
     }
 }
 
-/** Token values for the draft in the user's language, time format and calendar. */
-@Composable
-private fun composerValues(draft: ExportProfileEditorDraft, entry: ScheduledProfileEntry?): ComposerValues {
-    val context = LocalContext.current
-    val locale = LocalConfiguration.current.locales[0]
-    val clock = entry?.let {
-        val pattern = DateFormat.getBestDateTimePattern(locale, if (DateFormat.is24HourFormat(context)) "Hm" else "hm")
-        LocalTime.of(it.hour, it.minute).format(DateTimeFormatter.ofPattern(pattern, locale))
-    }.orEmpty()
-    val whenText = when (ComposerSentence.whenKind(entry)) {
-        ComposerWhenKind.MANUAL -> stringResource(R.string.composer_when_manual)
-        ComposerWhenKind.DAILY -> stringResource(
-            when (ComposerDayPeriod.of(requireNotNull(entry).hour)) {
-                ComposerDayPeriod.MORNING -> R.string.composer_when_morning
-                ComposerDayPeriod.AFTERNOON -> R.string.composer_when_afternoon
-                ComposerDayPeriod.EVENING -> R.string.composer_when_evening
-                ComposerDayPeriod.NIGHT -> R.string.composer_when_night
-            },
-            clock,
+/** Keeps staged choices across configuration changes and process death. */
+private val ComposerDraftSaver = androidx.compose.runtime.saveable.Saver<ComposerDraft, ArrayList<String>>(
+    save = { draft ->
+        ArrayList(
+            listOf(draft.note?.toString().orEmpty()) +
+                draft.fields.map { (id, on) -> "${if (on) '1' else '0'}$id" },
         )
-        ComposerWhenKind.WEEKLY -> stringResource(
-            R.string.composer_when_weekly,
-            DayOfWeek.of(requireNotNull(entry).weekdayIso).getDisplayName(TextStyle.FULL, locale),
-            clock,
+    },
+    restore = { saved ->
+        ComposerDraft(
+            fields = saved.drop(1).associate { it.drop(1) to (it.first() == '1') },
+            note = saved.firstOrNull()?.takeIf { it.isNotEmpty() }?.toBooleanStrict(),
         )
-        ComposerWhenKind.MONTHLY -> stringResource(R.string.composer_when_monthly, clock)
-        ComposerWhenKind.CUSTOM -> stringResource(R.string.composer_when_custom, clock)
-    }
-    val days = ComposerSentence.rangeDays(entry)
-    val range = if (days > 1) pluralStringResource(R.plurals.composer_range_last_days, days, days) else stringResource(R.string.composer_range_yesterday)
-    val metricCount = draft.settings.metricSelection.enabledCount
-    val formats = ExportFormat.entries.filter { it in draft.settings.exportFormats }
-        .map { it.localizedDisplayName() }.joinToString(" + ")
-    val where = destinationLabel(draft)
-        ?: LocalAppFolderName.current?.takeIf { draft.target == ExportTarget.DEVICE_FOLDER && draft.folderUri == null }
-        ?: stringResource(R.string.automation_destination_selected_folder)
-    val values = mapOf(
-        ComposerToken.WHEN to whenText,
-        ComposerToken.RANGE to range,
-        ComposerToken.METRICS to pluralStringResource(R.plurals.composer_metrics, metricCount, metricCount),
-        ComposerToken.WHERE to where,
-        ComposerToken.FORMATS to formats.ifEmpty { "—" },
-        ComposerToken.NOTE to stringResource(
-            if (draft.settings.dailyNoteInjection.enabled) R.string.composer_note_update else R.string.composer_note_leave,
-        ),
-    )
-    return ComposerValues(values, emphasis = if (clock.isNotEmpty()) mapOf(ComposerToken.WHEN to clock) else emptyMap())
-}
-
-private data class ComposerValues(val values: Map<ComposerToken, String>, val emphasis: Map<ComposerToken, String>)
-
-/** A privacy-safe destination for the draft: the folder name, or only an endpoint's host. */
-private fun destinationLabel(draft: ExportProfileEditorDraft): String? = when (draft.target) {
-    ExportTarget.DEVICE_FOLDER -> draft.folderDisplayName?.trim()?.takeIf { it.isNotEmpty() }
-    ExportTarget.API_ENDPOINT -> runCatching { java.net.URI(draft.apiEndpointUrl.trim()).host }.getOrNull()?.takeIf { it.isNotBlank() }
-    ExportTarget.AGENT_DATA_GATEWAY -> runCatching { java.net.URI(draft.agentDataGatewayUrl.trim()).host }.getOrNull()?.takeIf { it.isNotBlank() }
-}
-
+    },
+)
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun ComposerSentenceView(template: String, values: ComposerValues, onToken: (ComposerToken) -> Unit) {
@@ -565,40 +454,68 @@ private fun PreviewMessage(text: String) {
     Text(text, style = MaterialTheme.typography.bodyMedium, color = LocalGeistColors.current.secondary)
 }
 
-@OptIn(ExperimentalLayoutApi::class)
+
 @Composable
-private fun ComposerFields(draft: ExportProfileEditorDraft, onToggle: (String) -> Unit, onAllMetrics: () -> Unit) {
+private fun ComposerFields(
+    saved: ExportSettings,
+    pending: Map<String, Boolean>,
+    onToggle: (String) -> Unit,
+    onAllMetrics: () -> Unit,
+) {
     val colors = LocalGeistColors.current
-    Column {
-        Row(Modifier.fillMaxWidth().padding(start = GeistSpacing.space1), verticalAlignment = Alignment.CenterVertically) {
+    val fields = HealthMetrics.allMetrics
+        .filter { saved.metricSelection.isEnabled(it.id) || pending.containsKey(it.id) }
+        .take(VISIBLE_FIELD_COUNT)
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(GeistRadii.large))
+            .background(colors.gray.c100)
+            .padding(horizontal = GeistSpacing.space4, vertical = GeistSpacing.space1),
+    ) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Text(
                 stringResource(R.string.composer_fields),
-                style = GeistType.heading14,
-                color = colors.brandPrimary,
+                style = GeistType.label14,
+                color = colors.secondary,
                 modifier = Modifier.weight(1f).semantics { heading() },
             )
             TextButton(onClick = onAllMetrics) {
-                Text(stringResource(R.string.composer_all_metrics), style = GeistType.button14, color = colors.brandPrimary)
+                Text(
+                    stringResource(R.string.composer_all_count, HealthMetrics.totalCount),
+                    style = GeistType.button14,
+                    color = colors.brandPrimary,
+                )
             }
         }
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(GeistSpacing.space2), verticalArrangement = Arrangement.spacedBy(GeistSpacing.space2)) {
-            QUICK_FIELDS.mapNotNull { id -> HealthMetrics.allMetrics.firstOrNull { it.id == id } }.forEach { metric ->
-                val on = draft.settings.metricSelection.isEnabled(metric.id)
-                val label = metric.localizedDisplayName()
-                val shape = RoundedCornerShape(GeistRadii.small + GeistSpacing.space1)
-                Row(
+        fields.forEach { metric ->
+            val on = pending[metric.id] ?: saved.metricSelection.isEnabled(metric.id)
+            HorizontalDivider(color = colors.gray.c400)
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = GeistSizes.minimumTouchTarget)
+                    .toggleable(value = on, role = Role.Checkbox) { onToggle(metric.id) },
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(GeistSpacing.space3),
+            ) {
+                Text(
+                    metric.localizedDisplayName(),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = colors.primary,
+                    modifier = Modifier.weight(1f),
+                )
+                Box(
                     Modifier
-                        .heightIn(min = GeistSizes.minimumTouchTarget)
-                        .clip(shape)
-                        .background(if (on) colors.secondaryContainer else androidx.compose.ui.graphics.Color.Transparent)
-                        .border(1.dp, if (on) colors.secondaryContainer else colors.gray.c500, shape)
-                        .toggleable(value = on, role = Role.Checkbox) { onToggle(metric.id) }
-                        .padding(start = if (on) GeistSpacing.space3 - 2.dp else GeistSpacing.space4, end = GeistSpacing.space4),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(GeistSpacing.space2),
+                        .size(24.dp)
+                        .clip(CircleShape)
+                        .then(
+                            if (on) Modifier.background(colors.brandPrimary)
+                            else Modifier.border(1.5.dp, colors.gray.c600, CircleShape),
+                        ),
+                    contentAlignment = Alignment.Center,
                 ) {
-                    if (on) Icon(Icons.Filled.Check, contentDescription = null, tint = colors.onSecondaryContainer, modifier = Modifier.size(18.dp))
-                    Text(label, style = GeistType.button14, color = if (on) colors.onSecondaryContainer else colors.secondary)
+                    if (on) Icon(Icons.Filled.Check, contentDescription = null, tint = colors.brandOnPrimary, modifier = Modifier.size(14.dp))
                 }
             }
         }
@@ -622,48 +539,8 @@ private fun AllSettingsRow(onClick: () -> Unit) {
         Icon(Icons.Outlined.Settings, contentDescription = null, tint = colors.secondary)
         Column(Modifier.weight(1f)) {
             Text(stringResource(R.string.composer_all_settings), style = MaterialTheme.typography.bodyLarge, color = colors.primary)
-            Text(stringResource(R.string.composer_all_settings_sub), style = MaterialTheme.typography.bodyMedium, color = colors.secondary)
+            Text(stringResource(R.string.composer_all_settings_hint), style = MaterialTheme.typography.bodyMedium, color = colors.secondary)
         }
         Icon(Icons.AutoMirrored.Outlined.KeyboardArrowRight, contentDescription = null, tint = colors.secondary)
     }
-}
-
-@Composable
-private fun ComposerFormatsDialog(
-    selected: Set<ExportFormat>,
-    onConfirm: (Set<ExportFormat>) -> Unit,
-    onDismiss: () -> Unit,
-) {
-    val colors = LocalGeistColors.current
-    var choice by remember(selected) { mutableStateOf(selected) }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.automation_detail_formats)) },
-        text = {
-            Column {
-                ExportFormat.entries.forEach { format ->
-                    val on = format in choice
-                    Row(
-                        Modifier
-                            .fillMaxWidth()
-                            .heightIn(min = GeistSizes.minimumTouchTarget)
-                            .clickable(role = Role.Checkbox) { choice = if (on) choice - format else choice + format },
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Checkbox(
-                            checked = on,
-                            onCheckedChange = null,
-                            colors = CheckboxDefaults.colors(checkedColor = colors.brandPrimary, checkmarkColor = colors.brandOnPrimary),
-                        )
-                        Spacer(Modifier.width(GeistSpacing.space3))
-                        Text(format.localizedDisplayName(), style = MaterialTheme.typography.bodyLarge, color = colors.primary)
-                    }
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = { onConfirm(choice) }, enabled = choice.isNotEmpty()) { Text(stringResource(R.string.composer_done)) }
-        },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
-    )
 }

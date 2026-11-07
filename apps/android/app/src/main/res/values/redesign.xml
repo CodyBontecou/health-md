@@ -268,4 +268,126 @@
     <string name="archive_setup_choose_folder">Choose folder</string>
     <string name="archive_setup_done">Done</string>
     <string name="archive_setup_next">Next</string>
+
+    <!-- Automations parity -->
+    <string name="automations_no_schedule">No schedule</string>
+    <string name="automation_section_automation">Automation</string>
+    <string name="automation_duplicate">Duplicate</string>
+    <string name="automation_pause">Pause</string>
+    <string name="automation_resume">Resume</string>
+    <string name="automation_row_name">Name</string>
+    <string name="automation_row_formats">Formats &amp; detail</string>
+    <string name="automation_row_output">Output</string>
+    <string name="automation_row_format">Format</string>
+    <string name="automation_row_daily_notes">Daily notes</string>
+    <string name="automation_row_entries">Individual entries</string>
+    <string name="automation_value_on">On</string>
+    <string name="automation_value_off">Off</string>
+    <string name="automation_format_standard">Standard</string>
+    <string name="automation_format_custom">Custom</string>
+    <string name="automation_schedule_daily">Daily %1$s</string>
+    <string name="automation_schedule_weekly">%1$s %2$s</string>
+    <plurals name="automation_schedule_every_days">
+        <item quantity="one">Every %1$d day at %2$s</item>
+        <item quantity="other">Every %1$d days at %2$s</item>
+    </plurals>
+    <plurals name="automation_schedule_every_weeks">
+        <item quantity="one">Every %1$d week at %2$s</item>
+        <item quantity="other">Every %1$d weeks at %2$s</item>
+    </plurals>
+    <plurals name="automation_schedule_every_months">
+        <item quantity="one">Every %1$d month at %2$s</item>
+        <item quantity="other">Every %1$d months at %2$s</item>
+    </plurals>
+    <string name="automation_overlap_title">Overlapping exports</string>
+    <string name="automation_overlap_body">This profile writes the same files as %1$s. The later run overwrites the earlier one. Give each profile its own folder or filename template to keep them separate.</string>
+    <string name="automation_use_in_automation_apps">Use in automation apps</string>
+    <string name="automation_use_in_automation_apps_sub">Tasker or adb: pass this profile ID as the PROFILE extra</string>
+    <string name="automation_delete">Delete automation</string>
+    <string name="automation_delete_keep_one">Keep at least one automation.</string>
+    <string name="automation_delete_keeps_files">Deleting keeps files already written.</string>
+    <string name="automation_composer_title">%1$s automation</string>
+    <string name="composer_all_settings_hint">Output · format · entries · schedule</string>
+    <string name="composer_all_count">All %1$d</string>
+    <string name="schedule_run_on_schedule">Run on a schedule</string>
+    <string name="schedule_run_on_schedule_sub">Runs even when this screen is closed</string>
+    <string name="schedule_when">When</string>
+    <string name="schedule_repeat">Repeat</string>
+    <string name="schedule_daily">Daily</string>
+    <string name="schedule_weekly">Weekly</string>
+    <string name="schedule_custom">Custom</string>
+    <string name="schedule_day">Day</string>
+    <string name="schedule_every">Every</string>
+    <string name="schedule_unit">Unit</string>
+    <string name="schedule_starting">Starting</string>
+    <string name="schedule_preferred_time">Preferred time</string>
+    <string name="schedule_look_back">Look back</string>
+    <string name="schedule_look_back_sub">Re-exports recent days to catch late data</string>
+    <string name="schedule_decrease">Decrease %1$s</string>
+    <string name="schedule_increase">Increase %1$s</string>
+    <string name="schedule_today">Today</string>
+    <string name="schedule_refresh_today">Refresh today</string>
+    <string name="schedule_refresh_today_sub">Keeps today’s partial file fresh</string>
+    <string name="schedule_refresh_every_minutes">%1$d min</string>
+    <string name="schedule_refresh_every_hours">%1$d hr</string>
+    <string name="schedule_api_refresh_note">API profiles resend a full JSON snapshot each refresh — your endpoint should replace or upsert.</string>
+    <plurals name="schedule_count_days">
+        <item quantity="one">%1$d day</item>
+        <item quantity="other">%1$d days</item>
+    </plurals>
+    <plurals name="schedule_count_weeks">
+        <item quantity="one">%1$d week</item>
+        <item quantity="other">%1$d weeks</item>
+    </plurals>
+    <plurals name="schedule_count_months">
+        <item quantity="one">%1$d month</item>
+        <item quantity="other">%1$d months</item>
+    </plurals>
+    <string name="schedule_pending_recovery">Pending recovery</string>
+    <string name="schedule_pending_recovery_range">A recovery for %1$s is waiting. Discarding keeps your profile, credentials, history and completed files; the schedule resumes at its next run.</string>
+    <string name="schedule_pending_recovery_body">A scheduled recovery is waiting. Discarding keeps your profile, credentials, history and completed files; the schedule resumes at its next run.</string>
+    <string name="schedule_background_timing">Background timing</string>
+    <string name="schedule_background_timing_sub">Without Alarms &amp; reminders access, Android treats the time as a target</string>
+    <string name="schedule_access_note">Scheduled exports need an active trial, subscription or Lifetime access.</string>
+    <string name="profile_page_discard_title">Discard this change?</string>
+    <string name="profile_page_discard">Discard change</string>
+    <string name="profile_page_keep_editing">Keep editing</string>
+    <string name="formats_page_title">Formats</string>
+    <string name="formats_markdown_description">Readable notes with flat properties</string>
+    <string name="formats_bases_description">Database views in Obsidian</string>
+    <string name="formats_json_description">Complete structured data</string>
+    <string name="formats_csv_description">Spreadsheet-friendly rows</string>
+    <string name="formats_include_metadata">Include frontmatter metadata</string>
+    <string name="formats_include_metadata_sub">Adds YAML metadata at the top of markdown files</string>
+    <string name="formats_group_by_category">Group by category</string>
+    <string name="formats_group_by_category_sub">Organizes health data under category headings</string>
+    <string name="formats_need_one">Select at least one export format.</string>
+    <string name="formats_data_detail">Data detail</string>
+    <string name="formats_sleep_day">Sleep day</string>
+    <string name="formats_sleep_day_note">Applies to every automation on this device.</string>
+    <string name="formats_uploads_note">API and gateway uploads use this setting too.</string>
+    <string name="output_page_title">Output</string>
+    <string name="output_where">Where</string>
+    <string name="output_destination">Destination</string>
+    <string name="output_folder">Folder</string>
+    <string name="output_folder_app">The app’s export folder</string>
+    <string name="output_use_app_folder">Use the app’s folder</string>
+    <string name="output_files">Files</string>
+    <string name="output_when_file_exists">When a file exists</string>
+    <string name="output_write_mode_note">Overwrite replaces the file. Append adds to the end. Update merges new values and keeps your edits.</string>
+    <string name="output_writes_to">Writes to</string>
+    <string name="output_endpoint_invalid">Enter a valid http(s) URL. Changes are saved once it is valid.</string>
+    <string name="automation_summary_single">{when}, write {range}[’s {metrics}][ as {formats}] to {where}[ and {note}].</string>
+    <string name="automation_summary_multi">{when}, write[ {metrics} for] {range}[ as {formats}] to {where}[ and {note}].</string>
+    <string name="automation_summary_send_single">{when}, send {range}[’s {metrics}][ as {formats}] to {where}[ and {note}].</string>
+    <string name="automation_summary_send_multi">{when}, send[ {metrics} for] {range}[ as {formats}] to {where}[ and {note}].</string>
+    <string name="automation_range_today">today</string>
+    <plurals name="automation_refresh_every_minutes">
+        <item quantity="one">Every %1$d minute</item>
+        <item quantity="other">Every %1$d minutes</item>
+    </plurals>
+    <plurals name="automation_refresh_every_hours">
+        <item quantity="one">Every hour</item>
+        <item quantity="other">Every %1$d hours</item>
+    </plurals>
 </resources>
