@@ -12,6 +12,8 @@ struct GlassSharedSetupRows: View {
     @State private var exportDocument: SharedSetupDocument?
     @State private var isExporterPresented = false
     @State private var shareURL: URL?
+    /// The file just saved through Save to Files; the picker closes without saying so.
+    @State private var savedFileName: String?
 
     private var appVersion: String {
         Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "unknown"
@@ -59,6 +61,14 @@ struct GlassSharedSetupRows: View {
             .accessibilityElement(children: .contain)
             .accessibilityIdentifier(AccessibilityID.SharedSetup.configurationCard)
 
+            if let savedFileName {
+                Label(String(localized: "Saved “\(savedFileName)”"), systemImage: "checkmark.circle.fill")
+                    .glassFont(.rowSubtitle)
+                    .foregroundStyle(palette.text)
+                    .padding(.horizontal, 4)
+                    .accessibilityIdentifier("sharedSetup.saved")
+            }
+
             // Kept verbatim from the classic card: the user must know what a setup file copies.
             Text("Share export preferences—not health data, permissions, credentials, purchases, or device access. Custom Markdown, frontmatter values, and endpoint host/path are copied verbatim, so review them for personal, tenant, routing, or secret text before sending.")
                 .glassFont(.rowSubtitle)
@@ -72,7 +82,10 @@ struct GlassSharedSetupRows: View {
             contentType: .healthMdConfiguration,
             defaultFilename: "Health-md-Setup.healthmdconfig"
         ) { result in
-            if case .failure(let error) = result { coordinator.errorMessage = error.localizedDescription }
+            switch result {
+            case .success(let url): savedFileName = url.lastPathComponent
+            case .failure(let error): coordinator.errorMessage = error.localizedDescription
+            }
         }
         .sheet(item: Binding(
             get: { shareURL.map(ShareItem.init) },
@@ -95,6 +108,7 @@ struct GlassSharedSetupRows: View {
     }
 
     private func prepareExport() {
+        savedFileName = nil
         do {
             exportDocument = try SharedSetupDocument(data: coordinator.exportData(appVersion: appVersion))
             isExporterPresented = true

@@ -65,21 +65,34 @@ struct GlassDailyNoteScreen: View {
                     )
                 }
             }
-            if !draft.hasFileDestinationOutput {
-                GlassBanner(
-                    title: String(localized: "Select at least one export format, or enable Daily Notes Only."),
-                    systemImage: "exclamationmark.triangle",
-                    tone: .warning
-                )
+            if let invalidReason {
+                GlassBanner(title: invalidReason, systemImage: "exclamationmark.triangle", tone: .warning)
             }
         }
         .glassAutosave(
             draft,
-            isValid: draft.hasFileDestinationOutput,
-            invalidReason: String(localized: "Select at least one export format, or enable Daily Notes Only."),
+            isValid: invalidReason == nil,
+            invalidReason: invalidReason ?? "",
             revert: { draft = $0 },
             save: { coordinator.saveSettings($0, for: profile) }
         )
+    }
+
+    /// Why the draft can't be saved. The location uses the same rules as a shared setup,
+    /// so an empty or path-like filename never reaches the exporter.
+    private var invalidReason: String? {
+        if !draft.hasFileDestinationOutput {
+            return String(localized: "Select at least one export format, or enable Daily Notes Only.")
+        }
+        guard draft.dailyNoteInjection.enabled else { return nil }
+        let note = draft.dailyNoteInjection
+        if (try? SharedSetupValidation.validateFilename(note.filenamePattern.trimmingCharacters(in: .whitespaces))) == nil {
+            return String(localized: "Enter a filename such as {date}, without slashes or percent signs.")
+        }
+        if (try? SharedSetupValidation.validateRelativePath(note.folderPath)) == nil {
+            return String(localized: "Enter a folder inside your vault, such as Daily.")
+        }
+        return nil
     }
 
     /// Daily notes only now lives on the Formats page; turning merging off here also

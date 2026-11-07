@@ -211,7 +211,8 @@ struct SettingsScreen: View {
                             ) { open(.appSupport) }
                             .accessibilityIdentifier("glass.settings.privacy")
                             GlassSettingsRow(
-                                title: String(localized: "Help & diagnostics"),
+                                // Named like the page it opens.
+                                title: String(localized: "App & support"),
                                 systemImage: "questionmark.circle.fill", tile: .settingsTileViolet,
                                 showsDivider: true
                             ) { open(.appSupport) }

@@ -114,6 +114,17 @@ final class AutomationSentenceTests: XCTestCase {
         XCTAssertTrue(result.segments.contains(.token(.when, "7:30")))
     }
 
+    func testPausedSummaryKeepsItsCadenceButSaysItIsPaused() {
+        var entry = dailyEntry
+        entry.isEnabled = false
+        let summary = sentence(settings(formats: [.markdown], metricCount: 142, note: false),
+                               entry: entry, destination: "Vault", style: .summary)
+        XCTAssertEqual(summary.plainText, "Paused · Every morning at 7:30, write yesterday’s 142 metrics to Vault.")
+        let composer = sentence(settings(formats: [.markdown], metricCount: 142, note: false),
+                                entry: entry, destination: "Vault", style: .composer)
+        XCTAssertFalse(composer.plainText.hasPrefix("Paused"))
+    }
+
     func testComposerNamesEveryChoice() {
         let result = sentence(
             settings(formats: [.markdown, .obsidianBases], metricCount: 142, note: true),

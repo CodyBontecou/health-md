@@ -66,6 +66,7 @@ struct GlassAppShell: View {
     @State private var showClassicFolderPicker = false
     @State private var showPreviewRequirements = false
     @State private var dismissedHistoryNotice: HealthHistoryAssessment?
+    @State private var historyDetailsExpanded = false
     @State private var resultEntry: ExportHistoryEntry?
     /// The finished run the moment shows until the user leaves it.
     @State private var momentDone: ExportHistoryEntry?
@@ -690,10 +691,14 @@ struct GlassAppShell: View {
         } else if let assessment = executionHistoryAssessment,
                   assessment.needsWarning,
                   dismissedHistoryNotice != assessment,
-                  !visibleTabRoots.isEmpty {
+                  !visibleTabRoots.isEmpty,
+                  momentDone == nil,
+                  vaultManager.lastExportStatus == nil {
             // After an export runs, say how far its history was checked, as the Export tab did.
             // Only over tab roots: on a pushed page (DayPage, details) the notice would cover
             // that page's own bottom actions such as Open file; it returns on the way back.
+            // Held back while MomentGlass covers the screen, where it would sit hidden but
+            // still reachable by VoiceOver, and while the export toast shows in the same spot.
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
                     Text(assessment.warningTitle)
@@ -701,18 +706,37 @@ struct GlassAppShell: View {
                     Spacer()
                     Button {
                         dismissedHistoryNotice = assessment
+                        historyDetailsExpanded = false
                     } label: {
                         Image(systemName: "xmark")
                     }
                     .accessibilityLabel(String(localized: "Dismiss"))
                 }
-                HealthHistoryDisclosureContent(assessment: assessment, isExecution: true) {
-                    if let url = URL(string: "x-apple-health://") { UIApplication.shared.open(url) }
+                // The open details list every affected type and can be far taller than the
+                // screen. Scroll them inside a bounded card so the title and dismiss button
+                // stay on screen.
+                if historyDetailsExpanded {
+                    ScrollView {
+                        historyDisclosure(assessment)
+                    }
+                    .frame(maxHeight: 340)
+                } else {
+                    historyDisclosure(assessment)
                 }
             }
             .padding(GlassMetrics.panelPadding)
             .glassSurface(cornerRadius: GlassMetrics.panelSmallRadius, style: .strong)
             .padding(.horizontal, GlassMetrics.screenMargin)
+        }
+    }
+
+    private func historyDisclosure(_ assessment: HealthHistoryAssessment) -> some View {
+        HealthHistoryDisclosureContent(
+            assessment: assessment,
+            isExecution: true,
+            detailsExpanded: $historyDetailsExpanded
+        ) {
+            if let url = URL(string: "x-apple-health://") { UIApplication.shared.open(url) }
         }
     }
 

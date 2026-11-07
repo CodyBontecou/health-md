@@ -159,13 +159,20 @@ struct AutomationSettingsRows: View {
             if includesAllRows {
                 row(
                     String(localized: "Individual entries"),
-                    value: onOff(profile.settings.individualTracking.globalEnabled)
+                    value: entriesSummary(profile.settings.individualTracking)
                 ) { onPage(.entries) }
                 .accessibilityIdentifier("glass.automation.entries")
             }
             row(String(localized: "Schedule"), value: AutomationFacts.scheduleShortLabel(entry), action: onSchedule)
                 .accessibilityIdentifier("glass.automation.schedule")
         }
+    }
+
+    /// "On" alone would claim entries are written while no metric is tracked.
+    private func entriesSummary(_ tracking: IndividualTrackingSnapshot) -> String {
+        guard tracking.globalEnabled else { return String(localized: "Off") }
+        let tracked = tracking.metricConfigs.values.filter(\.trackIndividually).count
+        return tracked == 0 ? String(localized: "None") : String(localized: "\(tracked) metrics")
     }
 
     private func onOff(_ isOn: Bool) -> String {
@@ -702,6 +709,25 @@ struct AutomationDetailScreen: View {
                                 .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
+                        // On the button, so the confirmation points at what was tapped.
+                        .confirmationDialog(
+                            String(localized: "Delete this automation?", comment: "Confirm deleting an automation"),
+                            isPresented: $showDeleteConfirmation,
+                            titleVisibility: .visible
+                        ) {
+                            Button(
+                                String(localized: "Delete “\(profile.name)”", comment: "Destructive action deleting the named export profile"),
+                                role: .destructive
+                            ) {
+                                if coordinator.deleteProfile(id: profile.id) {
+                                    onSchedulesChanged()
+                                    dismiss()
+                                }
+                            }
+                            Button(String(localized: "Cancel", comment: "Dismiss delete"), role: .cancel) {}
+                        } message: {
+                            Text(String(localized: "Deleting keeps files already written."))
+                        }
                         .disabled(profileStore.profiles.count <= 1)
                         .opacity(profileStore.profiles.count <= 1 ? 0.4 : 1)
                     }
@@ -738,24 +764,6 @@ struct AutomationDetailScreen: View {
                 _ = coordinator.renameProfile(id: profile.id, to: renameText)
             }
             Button(String(localized: "Cancel", comment: "Dismiss rename"), role: .cancel) {}
-        }
-        .confirmationDialog(
-            String(localized: "Delete this automation?", comment: "Confirm deleting an automation"),
-            isPresented: $showDeleteConfirmation,
-            titleVisibility: .visible
-        ) {
-            Button(
-                String(localized: "Delete “\(profile.name)”", comment: "Destructive action deleting the named export profile"),
-                role: .destructive
-            ) {
-                if coordinator.deleteProfile(id: profile.id) {
-                    onSchedulesChanged()
-                    dismiss()
-                }
-            }
-            Button(String(localized: "Cancel", comment: "Dismiss delete"), role: .cancel) {}
-        } message: {
-            Text(String(localized: "Deleting keeps files already written."))
         }
         .alert("Bind context automation?", isPresented: $showContextBindingConfirmation) {
             Button("Bind to this Mac") { bindContextAutomation() }
