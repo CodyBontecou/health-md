@@ -229,4 +229,9 @@
     <string name="settings_health_connect_subtitle">Рұқсаттар және тарихқа қолжетімділік</string>
     <string name="settings_default_metrics">Әдепкі көрсеткіштер</string>
     <string name="settings_connected_apps">Қосылған қолданбалар</string>
+    <string name="archive_no_gaps">Олқылық жоқ</string>
+    <plurals name="archive_gap_count">
+        <item quantity="one">%1$d олқылық</item>
+        <item quantity="other">%1$d олқылық</item>
+    </plurals>
 </resources>

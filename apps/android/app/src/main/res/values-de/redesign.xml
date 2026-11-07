@@ -229,4 +229,9 @@
     <string name="settings_health_connect_subtitle">Berechtigungen und Verlaufszugriff</string>
     <string name="settings_default_metrics">Standard-Messwerte</string>
     <string name="settings_connected_apps">Verbundene Apps</string>
+    <string name="archive_no_gaps">Keine Lücken</string>
+    <plurals name="archive_gap_count">
+        <item quantity="one">%1$d Lücke</item>
+        <item quantity="other">%1$d Lücken</item>
+    </plurals>
 </resources>

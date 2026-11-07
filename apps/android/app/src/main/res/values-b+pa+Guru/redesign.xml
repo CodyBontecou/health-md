@@ -229,4 +229,9 @@
     <string name="settings_health_connect_subtitle">ਇਜਾਜ਼ਤਾਂ ਅਤੇ ਇਤਿਹਾਸ ਪਹੁੰਚ</string>
     <string name="settings_default_metrics">ਡਿਫਾਲਟ ਮੈਟ੍ਰਿਕਸ</string>
     <string name="settings_connected_apps">ਜੁੜੀਆਂ ਐਪਾਂ</string>
+    <string name="archive_no_gaps">ਕੋਈ ਖਾਲੀ ਥਾਂ ਨਹੀਂ</string>
+    <plurals name="archive_gap_count">
+        <item quantity="one">%1$d ਖਾਲੀ ਥਾਂ</item>
+        <item quantity="other">%1$d ਖਾਲੀ ਥਾਂਵਾਂ</item>
+    </plurals>
 </resources>

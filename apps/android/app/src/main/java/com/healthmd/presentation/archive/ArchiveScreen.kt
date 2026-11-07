@@ -103,13 +103,16 @@ private val MEDIUM_SIDE_BREAKPOINT = 700.dp
 @Composable
 fun ArchiveScreen(
     onExportNow: () -> Unit,
-    onOpenHistory: () -> Unit,
     /** Opens Export now preset to one missing date. */
     onBackfill: (LocalDate) -> Unit,
     /** Opens the day page: the file Health.md writes for one date. */
     onOpenDay: (LocalDate) -> Unit = {},
-    /** Opens Automations from the large-screen summary card. */
+    /** Opens the Automations tab: the sentence card's Manage. */
     onOpenAutomations: () -> Unit = {},
+    /** Opens one automation's sentence composer: the sentence card's Edit. */
+    onEditAutomation: (String) -> Unit = {},
+    /** Opens the export folder destination: setup step two. */
+    onChooseFolder: () -> Unit = {},
     viewModel: ArchiveViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -121,16 +124,17 @@ fun ArchiveScreen(
     }
     val context = LocalContext.current
     val protection = LocalConfigurationProtection.current
+    val openHealthConnect: () -> Unit = {
+        if (protection.enabled) {
+            protection.onBlockedChange()
+        } else {
+            HealthConnectIntentLauncher(context).openSettings()
+        }
+    }
     val header: @Composable (Modifier) -> Unit = { modifier ->
         ArchiveHeader(
             healthConnectConnected = healthConnectConnected,
-            onOpenHealthConnect = {
-                if (protection.enabled) {
-                    protection.onBlockedChange()
-                } else {
-                    HealthConnectIntentLauncher(context).openSettings()
-                }
-            },
+            onOpenHealthConnect = openHealthConnect,
             modifier = modifier,
         )
     }
@@ -139,7 +143,7 @@ fun ArchiveScreen(
         // From `md` the rail narrows the content below 601dp on an unfolded foldable, so the
         // window class (the rail) decides, as DESIGN.md does: the calendar sits beside the day.
         val twoPane = LocalUsesNavigationRail.current || maxWidth >= TWO_PANE_MIN_WIDTH
-        if (twoPane && !(state.isLoaded && !state.hasHistory)) {
+        if (twoPane && !state.needsSetup) {
             ArchiveLargeLayout(
                 state = state,
                 sideWidth = when {
@@ -151,8 +155,8 @@ fun ArchiveScreen(
                 viewModel = viewModel,
                 onBackfill = onBackfill,
                 onOpenDay = onOpenDay,
-                onOpenHistory = onOpenHistory,
                 onOpenAutomations = onOpenAutomations,
+                onEditAutomation = onEditAutomation,
                 header = header,
             )
             return@BoxWithConstraints
@@ -161,9 +165,13 @@ fun ArchiveScreen(
             state = state,
             viewModel = viewModel,
             onExportNow = onExportNow,
-            onOpenHistory = onOpenHistory,
             onBackfill = onBackfill,
             onOpenDay = onOpenDay,
+            onOpenAutomations = onOpenAutomations,
+            onEditAutomation = onEditAutomation,
+            onConnectHealth = openHealthConnect,
+            onChooseFolder = onChooseFolder,
+            healthConnected = healthConnectConnected == true,
             header = header,
         )
     }
@@ -171,7 +179,7 @@ fun ArchiveScreen(
 }
 
 /** The name the current-settings lane reads as: the active profile's. */
-private val LocalCurrentSettingsName = compositionLocalOf<String?> { null }
+internal val LocalCurrentSettingsName = compositionLocalOf<String?> { null }
 
 /** The Archive title with the Health Connect status; there is no overflow menu to offer. */
 @Composable
@@ -213,8 +221,8 @@ private fun ArchiveLargeLayout(
     viewModel: ArchiveViewModel,
     onBackfill: (LocalDate) -> Unit,
     onOpenDay: (LocalDate) -> Unit,
-    onOpenHistory: () -> Unit,
     onOpenAutomations: () -> Unit,
+    onEditAutomation: (String) -> Unit,
     header: @Composable (Modifier) -> Unit,
 ) {
     val colors = LocalGeistColors.current
@@ -233,13 +241,12 @@ private fun ArchiveLargeLayout(
             verticalArrangement = Arrangement.spacedBy(GeistSpacing.space3),
         ) {
             header(Modifier)
-            if (state.month.profiles.size > 1) {
-                ArchiveFilterChips(
-                    profiles = state.month.profiles,
-                    selected = state.selection.filter,
-                    onSelect = viewModel::selectFilter,
-                )
-            }
+            ArchiveFilterChips(
+                profiles = state.month.profiles,
+                selected = state.selection.filter,
+                pausedLanes = state.pausedLanes,
+                onSelect = viewModel::selectFilter,
+            )
             ArchiveCalendarCard(
                 state = state,
                 onPrevious = viewModel::showPreviousMonth,
@@ -253,61 +260,32 @@ private fun ArchiveLargeLayout(
             modifier = Modifier.width(sideWidth).fillMaxHeight().verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(GeistSpacing.space3),
         ) {
-            ArchiveDayCard(state = state, onBackfill = onBackfill, onOpenDay = onOpenDay)
-            GeistCardClickable(onClick = onOpenAutomations) {
-                Column(Modifier.weight(1f)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = stringResource(R.string.nav_automations),
-                            style = GeistType.heading14,
-                            color = colors.primary,
-                            modifier = Modifier.weight(1f),
-                        )
-                        Text(
-                            text = stringResource(R.string.archive_automations_manage),
-                            style = GeistType.button14,
-                            color = colors.brandPrimary,
-                        )
-                    }
-                    Text(
-                        text = stringResource(R.string.archive_automations_card_body),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = colors.secondary,
-                    )
-                }
+            state.filteredAutomation?.takeIf { it.isPaused }?.let { automation ->
+                ArchivePausedNote(automation, onResume = { viewModel.resume(automation.profile.id) })
             }
-            ArchiveHistoryCard(onOpenHistory)
+            ArchiveNextRunCard(state, onShowGap = viewModel::jumpToGap)
+            ArchiveDayCard(state = state, onBackfill = onBackfill, onOpenDay = onOpenDay)
+            ArchiveSentenceCard(state, onManage = onOpenAutomations, onEdit = onEditAutomation)
         }
     }
 }
 
-@Composable
-private fun ArchiveHistoryCard(onOpenHistory: () -> Unit) {
-    GeistCardClickable(onClick = onOpenHistory) {
-        Icon(Icons.Outlined.History, contentDescription = null, tint = LocalGeistColors.current.secondary)
-        Spacer(Modifier.width(GeistSpacing.space4))
-        Text(
-            text = stringResource(R.string.nav_history),
-            style = MaterialTheme.typography.bodyLarge,
-            color = LocalGeistColors.current.primary,
-            modifier = Modifier.weight(1f),
-        )
-        Icon(
-            Icons.AutoMirrored.Outlined.KeyboardArrowRight,
-            contentDescription = null,
-            tint = LocalGeistColors.current.secondary,
-        )
-    }
-}
-
+/**
+ * Phones (iOS `phoneBody`): the week strip and readable day by default, or the month with
+ * the day's rows; the sentence card closes both.
+ */
 @Composable
 private fun ArchiveCompactLayout(
     state: ArchiveUiState,
     viewModel: ArchiveViewModel,
     onExportNow: () -> Unit,
-    onOpenHistory: () -> Unit,
     onBackfill: (LocalDate) -> Unit,
     onOpenDay: (LocalDate) -> Unit,
+    onOpenAutomations: () -> Unit,
+    onEditAutomation: (String) -> Unit,
+    onConnectHealth: () -> Unit,
+    onChooseFolder: () -> Unit,
+    healthConnected: Boolean,
     header: @Composable (Modifier) -> Unit,
 ) {
     Column(
@@ -318,27 +296,62 @@ private fun ArchiveCompactLayout(
         verticalArrangement = Arrangement.spacedBy(GeistSpacing.space3),
     ) {
         header(Modifier.padding(vertical = GeistSpacing.space1))
-        if (state.isLoaded && !state.hasHistory) {
-            ArchiveEmptyState(onExportNow = onExportNow)
-        } else {
-            if (state.month.profiles.size > 1) {
-                ArchiveFilterChips(
-                    profiles = state.month.profiles,
-                    selected = state.selection.filter,
-                    onSelect = viewModel::selectFilter,
-                )
+        val pausedNote: @Composable () -> Unit = {
+            state.filteredAutomation?.takeIf { it.isPaused }?.let { automation ->
+                ArchivePausedNote(automation, onResume = { viewModel.resume(automation.profile.id) })
             }
-            Column(verticalArrangement = Arrangement.spacedBy(GeistSpacing.space3)) {
+        }
+        val chips: @Composable () -> Unit = {
+            ArchiveFilterChips(
+                profiles = state.month.profiles,
+                selected = state.selection.filter,
+                pausedLanes = state.pausedLanes,
+                onSelect = viewModel::selectFilter,
+            )
+        }
+        when {
+            state.needsSetup -> ArchiveSetupChecklist(
+                healthConnected = healthConnected,
+                hasFolder = state.hasFolder,
+                onConnectHealth = onConnectHealth,
+                onChooseFolder = onChooseFolder,
+                onBackfill = onExportNow,
+            )
+            state.showsMonth -> {
+                chips()
+                pausedNote()
                 ArchiveCalendarCard(
                     state = state,
                     onPrevious = viewModel::showPreviousMonth,
                     onNext = viewModel::showNextMonth,
                     onSelect = viewModel::selectDate,
+                    onShowWeek = { viewModel.setShowsMonth(false) },
                 )
                 ArchiveDayCard(state = state, onBackfill = onBackfill, onOpenDay = onOpenDay)
+                ArchiveSentenceCard(state, onManage = onOpenAutomations, onEdit = onEditAutomation)
+            }
+            else -> {
+                if (state.month.profiles.size > 1) chips()
+                ArchiveNextRunCard(state, onShowGap = viewModel::jumpToGap)
+                pausedNote()
+                ArchiveWeekPanel(
+                    state = state,
+                    onPrevious = { viewModel.moveWeek(-1) },
+                    onNext = { viewModel.moveWeek(1) },
+                    onShowMonth = { viewModel.setShowsMonth(true) },
+                    onSelect = viewModel::selectDate,
+                )
+                ArchiveReadableDayCard(
+                    state = state,
+                    onAction = { action ->
+                        val date = state.selection.selectedDate
+                        if (action == ArchiveDayAction.OPEN) onOpenDay(date) else onBackfill(date)
+                    },
+                    onOpenDay = onOpenDay,
+                )
+                ArchiveSentenceCard(state, onManage = onOpenAutomations, onEdit = onEditAutomation)
             }
         }
-        ArchiveHistoryCard(onOpenHistory)
         // Clears the floating Export now action; zero beside a navigation rail. The column's
         // own bottom padding and item spacing already sit above it.
         val clearance = LocalFloatingActionClearance.current - GeistSpacing.space4 - GeistSpacing.space3
@@ -347,29 +360,10 @@ private fun ArchiveCompactLayout(
 }
 
 @Composable
-private fun ArchiveEmptyState(onExportNow: () -> Unit) {
-    val colors = LocalGeistColors.current
-    GeistCard {
-        Text(
-            text = stringResource(R.string.archive_empty_title),
-            style = MaterialTheme.typography.headlineSmall,
-            color = colors.primary,
-        )
-        Spacer(Modifier.height(GeistSpacing.space2))
-        Text(
-            text = stringResource(R.string.archive_empty_body),
-            style = MaterialTheme.typography.bodyMedium,
-            color = colors.secondary,
-        )
-        Spacer(Modifier.height(GeistSpacing.space4))
-        PrimaryButton(text = stringResource(R.string.export_now_title), onClick = onExportNow)
-    }
-}
-
-@Composable
 private fun ArchiveFilterChips(
     profiles: List<ArchiveProfile>,
     selected: ArchiveProfile?,
+    pausedLanes: Set<ArchiveProfile>,
     onSelect: (ArchiveProfile?) -> Unit,
 ) {
     val colors = LocalGeistColors.current
@@ -393,7 +387,13 @@ private fun ArchiveFilterChips(
             FilterChip(
                 selected = selected == profile,
                 onClick = { onSelect(profile) },
-                label = { Text(profileLabel(profile), style = GeistType.button14) },
+                label = {
+                    val name = profileLabel(profile)
+                    Text(
+                        if (profile in pausedLanes) stringResource(R.string.archive_chip_paused, name) else name,
+                        style = GeistType.button14,
+                    )
+                },
                 leadingIcon = { ProfileDot(color = profileColor(colors, index), filled = true) },
                 colors = chipColors,
                 shape = RoundedCornerShape(GeistRadii.small),
@@ -412,6 +412,8 @@ private fun ArchiveCalendarCard(
     cellMinHeight: androidx.compose.ui.unit.Dp = GeistSizes.minimumTouchTarget,
     /** False when the calendar already sits inside a tonal pane on large screens. */
     framed: Boolean = true,
+    /** The Week switch; null where only the month shows (large screens). */
+    onShowWeek: (() -> Unit)? = null,
 ) {
     val colors = LocalGeistColors.current
     val locale = currentLocale()
@@ -442,6 +444,7 @@ private fun ArchiveCalendarCard(
                     tint = if (state.canShowNextMonth) colors.secondary else colors.gray.c500,
                 )
             }
+            onShowWeek?.let { ArchiveViewModeButton(stringResource(R.string.archive_view_week), it) }
         }
         val weekdays = (0 until 7).map { firstDayOfWeek.plus(it.toLong()) }
         Row(modifier = Modifier.fillMaxWidth().padding(vertical = GeistSpacing.space2)) {
@@ -549,7 +552,7 @@ private fun DayCell(
     }
 }
 
-private fun Modifier.dayBackground(status: CoverageStatus, colors: GeistColors): Modifier = when (status) {
+internal fun Modifier.dayBackground(status: CoverageStatus, colors: GeistColors): Modifier = when (status) {
     CoverageStatus.COMPLETE -> background(colors.coverageComplete)
     CoverageStatus.PARTIAL -> background(colors.gray.c300).drawBehind {
         val bar = 3.dp.toPx()
@@ -697,7 +700,7 @@ private fun ArchiveDayRowItem(row: ArchiveDayRow, color: Color, onAction: (Archi
     }
 }
 
-private fun ArchiveDayAction.labelRes(): Int = when (this) {
+internal fun ArchiveDayAction.labelRes(): Int = when (this) {
     ArchiveDayAction.OPEN -> R.string.archive_action_open
     ArchiveDayAction.REEXPORT -> R.string.archive_action_reexport
     ArchiveDayAction.RETRY -> R.string.archive_action_retry
@@ -706,7 +709,7 @@ private fun ArchiveDayAction.labelRes(): Int = when (this) {
 }
 
 @Composable
-private fun StatusBadge(status: CoverageStatus) {
+internal fun StatusBadge(status: CoverageStatus) {
     val colors = LocalGeistColors.current
     val tint = when (status) {
         CoverageStatus.COMPLETE -> colors.success
@@ -730,7 +733,7 @@ private fun StatusBadge(status: CoverageStatus) {
 }
 
 @Composable
-private fun ProfileDot(color: Color, filled: Boolean, size: Int = 8) {
+internal fun ProfileDot(color: Color, filled: Boolean, size: Int = 8) {
     Box(
         modifier = Modifier
             .size(size.dp)
@@ -741,18 +744,18 @@ private fun ProfileDot(color: Color, filled: Boolean, size: Int = 8) {
 }
 
 @Composable
-private fun profileLabel(profile: ArchiveProfile): String =
+internal fun profileLabel(profile: ArchiveProfile): String =
     profile.name ?: LocalCurrentSettingsName.current ?: stringResource(R.string.archive_filter_current_settings)
 
 /** Automation identity colors, in profile order. Pairs with text labels everywhere. */
-private fun profileColor(colors: GeistColors, index: Int): Color = when (index % 4) {
+internal fun profileColor(colors: GeistColors, index: Int): Color = when (index % 4) {
     0 -> colors.brandPrimary
     1 -> colors.blue.c900
     2 -> colors.teal.c900
     else -> colors.amber.c900
 }
 
-private fun CoverageStatus.labelRes(): Int = when (this) {
+internal fun CoverageStatus.labelRes(): Int = when (this) {
     CoverageStatus.COMPLETE -> R.string.archive_legend_complete
     CoverageStatus.PARTIAL -> R.string.archive_legend_partial
     CoverageStatus.MISSING -> R.string.archive_legend_missing
@@ -762,14 +765,14 @@ private fun CoverageStatus.labelRes(): Int = when (this) {
 }
 
 @Composable
-private fun currentLocale(): Locale = LocalConfiguration.current.locales[0] ?: Locale.getDefault()
+internal fun currentLocale(): Locale = LocalConfiguration.current.locales[0] ?: Locale.getDefault()
 
 @Composable
-private fun localizedDate(date: LocalDate, style: Int): String {
+internal fun localizedDate(date: LocalDate, style: Int): String {
     val instant = date.atStartOfDay(ZoneId.systemDefault()).toInstant()
     return DateFormat.getDateInstance(style, currentLocale()).format(Date.from(instant))
 }
 
 @Composable
-private fun localizedDateTime(epochMillis: Long): String =
+internal fun localizedDateTime(epochMillis: Long): String =
     DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT, currentLocale()).format(Date(epochMillis))

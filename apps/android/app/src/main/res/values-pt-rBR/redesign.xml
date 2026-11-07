@@ -240,4 +240,10 @@
     <string name="settings_health_connect_subtitle">Permissões e acesso ao histórico</string>
     <string name="settings_default_metrics">Métricas padrão</string>
     <string name="settings_connected_apps">Apps conectados</string>
+    <string name="archive_no_gaps">Sem lacunas</string>
+    <plurals name="archive_gap_count">
+        <item quantity="one">%1$d lacuna</item>
+        <item quantity="many">%1$d lacunas</item>
+        <item quantity="other">%1$d lacunas</item>
+    </plurals>
 </resources>

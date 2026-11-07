@@ -1,8 +1,12 @@
 package com.healthmd.presentation.archive
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.healthmd.data.health.HealthConnectManager
+import com.healthmd.data.scheduler.ExportScheduler
+import com.healthmd.data.scheduler.ScheduledProfileOccurrenceMath
+import com.healthmd.data.scheduler.ScheduledProfileScheduler
 import com.healthmd.data.scheduler.ScheduledProfileEntry
 import com.healthmd.data.scheduler.ScheduledProfileEntryStore
 import com.healthmd.data.settings.ExportProfileRepository
@@ -15,6 +19,7 @@ import com.healthmd.domain.model.ExportTarget
 import com.healthmd.domain.repository.ExportHistoryRepository
 import com.healthmd.domain.repository.SettingsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -27,6 +32,8 @@ import kotlinx.coroutines.launch
 import java.time.Clock
 import java.time.LocalDate
 import java.time.YearMonth
+import java.time.temporal.WeekFields
+import java.util.Locale
 import javax.inject.Inject
 
 data class ArchiveSelection(
@@ -44,6 +51,18 @@ data class ArchiveDayRow(
     val action: ArchiveDayAction?,
 )
 
+/** One tile of the week strip. Future dates are shown but cannot be selected. */
+data class ArchiveWeekDay(val date: LocalDate, val status: CoverageStatus, val isFuture: Boolean)
+
+/** The earliest upcoming run: the automation's name, or null for the app-wide schedule. */
+data class ArchiveNextRun(val profileName: String?, val atMillis: Long)
+
+/** A saved automation as the Archive's sentence card and paused note read it. */
+data class ArchiveAutomation(val profile: ExportProfile, val entry: ScheduledProfileEntry?) {
+    val isRunning: Boolean get() = entry?.isEnabled == true
+    val isPaused: Boolean get() = entry != null && !entry.isEnabled
+}
+
 data class ArchiveUiState(
     val isLoaded: Boolean = false,
     val hasHistory: Boolean = false,
@@ -57,17 +76,44 @@ data class ArchiveUiState(
      * settings those are. Null when no profile exists yet.
      */
     val currentSettingsName: String? = null,
-)
+    /** False leads with the week strip and readable day (the iOS default); true shows the month. */
+    val showsMonth: Boolean = false,
+    val week: List<ArchiveWeekDay> = emptyList(),
+    val canShowPreviousWeek: Boolean = true,
+    val canShowNextWeek: Boolean = false,
+    val nextRun: ArchiveNextRun? = null,
+    val automations: List<ArchiveAutomation> = emptyList(),
+    /** The selected lane's automation, when the lane is a saved profile. */
+    val filteredAutomation: ArchiveAutomation? = null,
+    /** Lanes whose automation is paused. */
+    val pausedLanes: Set<ArchiveProfile> = emptySet(),
+    /** The app's export folder is chosen (setup step two). */
+    val hasFolder: Boolean = false,
+) {
+    /** iOS `needsSetup`: nothing exported, scheduled or pointed at a folder yet. */
+    val needsSetup: Boolean
+        get() = isLoaded && !hasHistory && automations.none { it.isRunning } && !hasFolder
+
+    /** The readable day's lead lane: the filter, else the first lane that is not paused. */
+    val leadRow: ArchiveDayRow?
+        get() = selectedDay.firstOrNull { it.day.profile !in pausedLanes } ?: selectedDay.firstOrNull()
+}
 
 /** The Archive coverage calendar, fed from Android export history. */
 @HiltViewModel
 class ArchiveViewModel @Inject constructor(
     exportHistoryRepository: ExportHistoryRepository,
     exportProfileRepository: ExportProfileRepository,
-    scheduledProfileEntryStore: ScheduledProfileEntryStore,
+    private val scheduledProfileEntryStore: ScheduledProfileEntryStore,
     settingsRepository: SettingsRepository,
     private val healthConnectManager: HealthConnectManager,
+    private val exportScheduler: ExportScheduler,
+    private val profileScheduler: ScheduledProfileScheduler,
+    @ApplicationContext context: Context,
 ) : ViewModel() {
+    private val preferences = context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
+    private val showsMonth = MutableStateFlow(preferences.getBoolean(KEY_SHOWS_MONTH, false))
+
     private val clock: Clock = Clock.systemDefaultZone()
     private val today: LocalDate get() = LocalDate.now(clock)
 
@@ -85,24 +131,38 @@ class ArchiveViewModel @Inject constructor(
         val schedules: List<ScheduledProfileEntry>,
         val settings: ExportSettings?,
         val activeProfileName: String? = null,
+        val hasFolder: Boolean = false,
     )
 
     val uiState: StateFlow<ArchiveUiState> = combine(
         exportHistoryRepository.getAllEntries(),
-        selection,
+        combine(selection, showsMonth) { current, month -> current to month },
         combine(
             exportProfileRepository.profiles,
             exportProfileRepository.activeProfileId,
             scheduledProfileEntryStore.entries,
             settingsRepository.exportSettings,
-        ) { profiles, activeId, schedules, settings ->
-            LaneSources(profiles, schedules, settings, ExportProfileRules.active(profiles, activeId)?.name)
+            settingsRepository.exportFolderUri,
+        ) { profiles, activeId, schedules, settings, folder ->
+            LaneSources(
+                profiles,
+                schedules,
+                settings,
+                ExportProfileRules.active(profiles, activeId)?.name,
+                hasFolder = !folder.isNullOrBlank(),
+            )
         },
-    ) { entries, current, sources -> buildState(entries, current, sources, isLoaded = true) }
+    ) { entries, (current, month), sources -> buildState(entries, current, sources, isLoaded = true, showsMonth = month) }
         .stateIn(
             viewModelScope,
             SharingStarted.WhileSubscribed(5_000),
-            buildState(emptyList(), selection.value, LaneSources(emptyList(), emptyList(), null), isLoaded = false),
+            buildState(
+                emptyList(),
+                selection.value,
+                LaneSources(emptyList(), emptyList(), null),
+                isLoaded = false,
+                showsMonth = showsMonth.value,
+            ),
         )
 
     /** Re-reads the Health Connect permission state, e.g. when the screen resumes. */
@@ -142,12 +202,38 @@ class ArchiveViewModel @Inject constructor(
         }
     }
 
+    /** Switches between the week strip and the month calendar; the choice is remembered. */
+    fun setShowsMonth(value: Boolean) {
+        preferences.edit().putBoolean(KEY_SHOWS_MONTH, value).apply()
+        showsMonth.value = value
+    }
+
+    /** Moves a week, keeping the weekday, never past today. */
+    fun moveWeek(offset: Long) {
+        val target = selection.value.selectedDate.plusWeeks(offset)
+        selectDate(if (target.isAfter(today)) today else target)
+    }
+
     /** Selects the earliest gap of the visible month, if any. */
+    fun jumpToGap() {
+        val gap = uiState.value.month.stats.earliestGap ?: return
+        selectDate(gap)
+    }
+
+    /** Turns a paused automation's schedule back on and re-arms it. */
+    fun resume(profileId: String) {
+        viewModelScope.launch {
+            scheduledProfileEntryStore.update(profileId) { it.copy(isEnabled = true) }
+            profileScheduler.reconcile()
+        }
+    }
+
     private fun buildState(
         entries: List<ExportHistoryEntry>,
         current: ArchiveSelection,
         sources: LaneSources,
         isLoaded: Boolean,
+        showsMonth: Boolean,
     ): ArchiveUiState {
         val day = today
         val profiles = ArchiveCoverage.profiles(entries)
@@ -169,6 +255,24 @@ class ArchiveViewModel @Inject constructor(
                 action = ArchiveCoverage.action(row.status, info.hasTodayRefresh, canOpen),
             )
         }
+        val automations = sources.profiles.map { profile ->
+            ArchiveAutomation(profile, sources.schedules.firstOrNull { it.profileId == profile.id })
+        }
+        // The current-settings lane reads as the active profile, so it maps to that automation.
+        fun automationFor(lane: ArchiveProfile): ArchiveAutomation? =
+            (lane.name ?: sources.activeProfileName)?.let { name -> automations.firstOrNull { it.profile.name == name } }
+        val pausedLanes = profiles.filter { automationFor(it)?.isPaused == true }.toSet()
+        val firstDay = WeekFields.of(Locale.getDefault()).firstDayOfWeek
+        val weekStart = current.selectedDate.minusDays(((current.selectedDate.dayOfWeek.value - firstDay.value + 7) % 7).toLong())
+        val week = (0L until 7L).map { offset ->
+            val date = weekStart.plusDays(offset)
+            val status = when {
+                date.isAfter(day) -> CoverageStatus.NOT_DUE
+                filter != null -> ArchiveCoverage.status(entries, filter, date, day, filter in dueToday)
+                else -> ArchiveCoverage.aggregateDay(entries, date, day, dueToday)
+            }
+            ArchiveWeekDay(date, status, isFuture = date.isAfter(day))
+        }
         return ArchiveUiState(
             isLoaded = isLoaded,
             hasHistory = entries.isNotEmpty(),
@@ -178,7 +282,45 @@ class ArchiveViewModel @Inject constructor(
             selectedDay = rows,
             canShowNextMonth = current.month.isBefore(YearMonth.from(day)),
             currentSettingsName = sources.activeProfileName,
+            showsMonth = showsMonth,
+            week = week,
+            canShowPreviousWeek = entries.isNotEmpty(),
+            canShowNextWeek = weekStart.plusDays(7).let { !it.isAfter(day) },
+            nextRun = nextRun(filter, automations, sources),
+            automations = automations,
+            filteredAutomation = filter?.let(::automationFor),
+            pausedLanes = pausedLanes,
+            hasFolder = sources.hasFolder,
         )
+    }
+
+    /** The earliest upcoming run, for the selected lane or across every schedule. */
+    private fun nextRun(
+        filter: ArchiveProfile?,
+        automations: List<ArchiveAutomation>,
+        sources: LaneSources,
+    ): ArchiveNextRun? {
+        val now = clock.millis()
+        val profileRuns = automations
+            .filter { it.isRunning && (filter == null || it.profile.name == (filter.name ?: sources.activeProfileName)) }
+            .mapNotNull { automation ->
+                runCatching { ScheduledProfileOccurrenceMath.nextOccurrence(automation.entry!!, now) }
+                    .getOrNull()
+                    ?.let { ArchiveNextRun(automation.profile.name, it.toEpochMilli()) }
+            }
+        val appRun = if (filter == null || filter.name == null) {
+            exportScheduler.nextScheduledAtMillis()
+                ?.takeIf { sources.settings?.scheduleEnabled == true }
+                ?.let { ArchiveNextRun(null, it) }
+        } else {
+            null
+        }
+        return (profileRuns + listOfNotNull(appRun)).filter { it.atMillis > now }.minByOrNull { it.atMillis }
+    }
+
+    private companion object {
+        const val PREFERENCES = "archive_ui"
+        const val KEY_SHOWS_MONTH = "shows_month"
     }
 
     /** Resolves a history lane to its profile, schedule and output; unknown parts stay null. */

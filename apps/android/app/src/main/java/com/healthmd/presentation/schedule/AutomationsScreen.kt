@@ -104,6 +104,8 @@ fun AutomationsScreen(
     onRunNow: (String) -> Unit,
     onOpenScheduleSettings: () -> Unit,
     onNavigateToPaywall: () -> Unit,
+    /** Opens export history; on iOS it lives under Automations, not the Archive. */
+    onOpenHistory: () -> Unit = {},
     modifier: Modifier = Modifier,
     selectedAutomationId: String? = null,
     schedulesViewModel: ProfileSchedulesViewModel = hiltViewModel(),
@@ -212,6 +214,15 @@ fun AutomationsScreen(
                     color = colors.secondary,
                 )
             }
+            Icon(Icons.AutoMirrored.Outlined.KeyboardArrowRight, contentDescription = null, tint = colors.secondary)
+        }
+        GeistCardClickable(onClick = onOpenHistory) {
+            Text(
+                stringResource(R.string.nav_history),
+                style = GeistType.label16,
+                color = colors.primary,
+                modifier = Modifier.weight(1f),
+            )
             Icon(Icons.AutoMirrored.Outlined.KeyboardArrowRight, contentDescription = null, tint = colors.secondary)
         }
 

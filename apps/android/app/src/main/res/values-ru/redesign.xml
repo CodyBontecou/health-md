@@ -251,4 +251,11 @@
     <string name="settings_health_connect_subtitle">Разрешения и доступ к истории</string>
     <string name="settings_default_metrics">Показатели по умолчанию</string>
     <string name="settings_connected_apps">Подключённые приложения</string>
+    <string name="archive_no_gaps">Без пропусков</string>
+    <plurals name="archive_gap_count">
+        <item quantity="one">%1$d пропуск</item>
+        <item quantity="few">%1$d пропуска</item>
+        <item quantity="many">%1$d пропусков</item>
+        <item quantity="other">%1$d пропуска</item>
+    </plurals>
 </resources>

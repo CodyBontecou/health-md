@@ -229,4 +229,43 @@
     <string name="settings_health_connect_subtitle">Permissions and history access</string>
     <string name="settings_default_metrics">Default metrics</string>
     <string name="settings_connected_apps">Connected apps</string>
+    <string name="archive_no_gaps">No gaps</string>
+    <plurals name="archive_gap_count">
+        <item quantity="one">%1$d gap</item>
+        <item quantity="other">%1$d gaps</item>
+    </plurals>
+    <!-- Archive, iOS structure: week strip, readable day, next run and sentence cards. -->
+    <string name="archive_view_month">Month</string>
+    <string name="archive_view_week">Week</string>
+    <string name="archive_previous_week">Previous week</string>
+    <string name="archive_next_week">Next week</string>
+    <string name="archive_next_run">Next run</string>
+    <string name="archive_next_run_value">%1$s · %2$s</string>
+    <string name="archive_when_today">today at %1$s</string>
+    <string name="archive_when_tomorrow">tomorrow at %1$s</string>
+    <string name="archive_nothing_scheduled">Nothing scheduled</string>
+    <string name="archive_day_fix">%1$s this day</string>
+    <string name="archive_see_this_day">See this day</string>
+    <string name="archive_note_missing">No export covered this date.</string>
+    <string name="archive_note_partial">Some data was skipped.</string>
+    <string name="archive_note_in_progress">Still updating today.</string>
+    <string name="archive_note_paused">Paused — not counted as a gap.</string>
+    <string name="archive_profile_automation">%1$s automation</string>
+    <string name="archive_edit">Edit</string>
+    <string name="archive_sentence_none">Nothing runs on a schedule yet. Exports you run yourself still appear in the Archive.</string>
+    <string name="archive_sentence_counts">%1$d running and %2$d paused. “All” counts a day complete when every running automation that was due covered it.</string>
+    <string name="archive_sentence_paused_suffix">%1$s Paused.</string>
+    <string name="archive_paused_note">%1$s is paused. Days while paused are not counted as gaps.</string>
+    <string name="archive_resume">Resume</string>
+    <string name="archive_chip_paused">%1$s · paused</string>
+    <string name="archive_setup_connect">Connect Health Connect</string>
+    <string name="archive_setup_connect_subtitle">Choose what Health.md may read</string>
+    <string name="archive_setup_folder">Choose a folder</string>
+    <string name="archive_setup_folder_subtitle">Your Obsidian vault or any folder on this device</string>
+    <string name="archive_setup_backfill">Backfill history</string>
+    <string name="archive_setup_backfill_subtitle">Optional — export past months in one go</string>
+    <string name="archive_setup_body">Each day you export fills a square on the calendar. Two steps first:</string>
+    <string name="archive_setup_choose_folder">Choose folder</string>
+    <string name="archive_setup_done">Done</string>
+    <string name="archive_setup_next">Next</string>
 </resources>

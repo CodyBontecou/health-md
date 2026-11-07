@@ -218,4 +218,8 @@
     <string name="settings_health_connect_subtitle">权限和历史数据访问</string>
     <string name="settings_default_metrics">默认指标</string>
     <string name="settings_connected_apps">已连接的应用</string>
+    <string name="archive_no_gaps">无缺口</string>
+    <plurals name="archive_gap_count">
+        <item quantity="other">%1$d 个缺口</item>
+    </plurals>
 </resources>

@@ -229,4 +229,9 @@
     <string name="settings_health_connect_subtitle">Rechten en toegang tot geschiedenis</string>
     <string name="settings_default_metrics">Standaardmetingen</string>
     <string name="settings_connected_apps">Verbonden apps</string>
+    <string name="archive_no_gaps">Geen gaten</string>
+    <plurals name="archive_gap_count">
+        <item quantity="one">%1$d gat</item>
+        <item quantity="other">%1$d gaten</item>
+    </plurals>
 </resources>

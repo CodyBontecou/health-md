@@ -386,7 +386,6 @@ fun HealthMdNavigation(
             composable(NavDestination.ARCHIVE.route) {
                 ArchiveScreen(
                     onExportNow = { navController.navigate(SubRoutes.EXPORT_NOW) { launchSingleTop = true } },
-                    onOpenHistory = { navController.navigate(SubRoutes.HISTORY) { launchSingleTop = true } },
                     onBackfill = { date -> navController.navigate(SubRoutes.exportBackfill(date)) },
                     onOpenDay = { date -> navController.navigate(SubRoutes.archiveDay(date)) { launchSingleTop = true } },
                     onOpenAutomations = {
@@ -395,6 +394,12 @@ fun HealthMdNavigation(
                             launchSingleTop = true
                             restoreState = true
                         }
+                    },
+                    onEditAutomation = { id ->
+                        navController.navigate(SubRoutes.automationCompose(id)) { launchSingleTop = true }
+                    },
+                    onChooseFolder = {
+                        navController.navigate(SubRoutes.FOLDER_DESTINATION) { launchSingleTop = true }
                     },
                 )
             }
@@ -483,6 +488,9 @@ fun HealthMdNavigation(
                             onRunNow = runNow,
                             onOpenScheduleSettings = {
                                 navController.navigate(SubRoutes.SCHEDULE_SETTINGS) { launchSingleTop = true }
+                            },
+                            onOpenHistory = {
+                                navController.navigate(SubRoutes.HISTORY) { launchSingleTop = true }
                             },
                             onNavigateToPaywall = openPaywall,
                             selectedAutomationId = selectedAutomation.takeIf { twoPane },

@@ -229,4 +229,9 @@
     <string name="settings_health_connect_subtitle">অনুমতি এবং ইতিহাস অ্যাক্সেস</string>
     <string name="settings_default_metrics">ডিফল্ট মেট্রিক্স</string>
     <string name="settings_connected_apps">সংযুক্ত অ্যাপ</string>
+    <string name="archive_no_gaps">কোনো ফাঁক নেই</string>
+    <plurals name="archive_gap_count">
+        <item quantity="one">%1$dটি ফাঁক</item>
+        <item quantity="other">%1$dটি ফাঁক</item>
+    </plurals>
 </resources>

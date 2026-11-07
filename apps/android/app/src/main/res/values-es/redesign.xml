@@ -240,4 +240,10 @@
     <string name="settings_health_connect_subtitle">Permisos y acceso al historial</string>
     <string name="settings_default_metrics">Métricas predeterminadas</string>
     <string name="settings_connected_apps">Apps conectadas</string>
+    <string name="archive_no_gaps">Sin huecos</string>
+    <plurals name="archive_gap_count">
+        <item quantity="one">%1$d hueco</item>
+        <item quantity="many">%1$d huecos</item>
+        <item quantity="other">%1$d huecos</item>
+    </plurals>
 </resources>

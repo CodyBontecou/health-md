@@ -229,4 +229,9 @@
     <string name="settings_health_connect_subtitle">अनुमतियाँ और इतिहास पहुँच</string>
     <string name="settings_default_metrics">डिफ़ॉल्ट मेट्रिक्स</string>
     <string name="settings_connected_apps">कनेक्टेड ऐप्स</string>
+    <string name="archive_no_gaps">कोई अंतराल नहीं</string>
+    <plurals name="archive_gap_count">
+        <item quantity="one">%1$d अंतराल</item>
+        <item quantity="other">%1$d अंतराल</item>
+    </plurals>
 </resources>

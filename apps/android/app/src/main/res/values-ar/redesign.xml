@@ -273,4 +273,13 @@
     <string name="settings_health_connect_subtitle">الأذونات والوصول إلى السجل</string>
     <string name="settings_default_metrics">المقاييس الافتراضية</string>
     <string name="settings_connected_apps">التطبيقات المتصلة</string>
+    <string name="archive_no_gaps">لا توجد فجوات</string>
+    <plurals name="archive_gap_count">
+        <item quantity="zero">%1$d فجوة</item>
+        <item quantity="one">فجوة واحدة (%1$d)</item>
+        <item quantity="two">فجوتان (%1$d)</item>
+        <item quantity="few">%1$d فجوات</item>
+        <item quantity="many">%1$d فجوة</item>
+        <item quantity="other">%1$d فجوة</item>
+    </plurals>
 </resources>

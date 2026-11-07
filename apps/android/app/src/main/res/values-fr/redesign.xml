@@ -240,4 +240,10 @@
     <string name="settings_health_connect_subtitle">Autorisations et accès à l\'historique</string>
     <string name="settings_default_metrics">Mesures par défaut</string>
     <string name="settings_connected_apps">Apps connectées</string>
+    <string name="archive_no_gaps">Aucun manque</string>
+    <plurals name="archive_gap_count">
+        <item quantity="one">%1$d manque</item>
+        <item quantity="many">%1$d manques</item>
+        <item quantity="other">%1$d manques</item>
+    </plurals>
 </resources>

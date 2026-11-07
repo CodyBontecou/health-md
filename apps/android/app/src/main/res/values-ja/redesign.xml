@@ -218,4 +218,8 @@
     <string name="settings_health_connect_subtitle">権限と履歴へのアクセス</string>
     <string name="settings_default_metrics">デフォルトの指標</string>
     <string name="settings_connected_apps">接続済みアプリ</string>
+    <string name="archive_no_gaps">欠落なし</string>
+    <plurals name="archive_gap_count">
+        <item quantity="other">欠落 %1$d件</item>
+    </plurals>
 </resources>

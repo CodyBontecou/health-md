@@ -251,4 +251,11 @@
     <string name="settings_health_connect_subtitle">Дозволи й доступ до історії</string>
     <string name="settings_default_metrics">Типові показники</string>
     <string name="settings_connected_apps">Підключені застосунки</string>
+    <string name="archive_no_gaps">Без пропусків</string>
+    <plurals name="archive_gap_count">
+        <item quantity="one">%1$d пропуск</item>
+        <item quantity="few">%1$d пропуски</item>
+        <item quantity="many">%1$d пропусків</item>
+        <item quantity="other">%1$d пропуску</item>
+    </plurals>
 </resources>

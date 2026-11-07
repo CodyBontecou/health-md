@@ -240,4 +240,10 @@
     <string name="settings_health_connect_subtitle">Permisiuni și acces la istoric</string>
     <string name="settings_default_metrics">Valori implicite</string>
     <string name="settings_connected_apps">Aplicații conectate</string>
+    <string name="archive_no_gaps">Fără goluri</string>
+    <plurals name="archive_gap_count">
+        <item quantity="one">%1$d gol</item>
+        <item quantity="few">%1$d goluri</item>
+        <item quantity="other">%1$d de goluri</item>
+    </plurals>
 </resources>
