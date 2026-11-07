@@ -248,7 +248,7 @@ final class ConfigurationProtectionJourneyUITests: XCTestCase {
         XCTAssertTrue(scrollUntilVisible(delete, in: app), "The disabled Delete action should be visible")
         XCTAssertFalse(delete.isEnabled, "The last remaining profile must not be deletable")
         delete.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
-        XCTAssertFalse(app.staticTexts["Delete this profile?"].waitForExistence(timeout: 1))
+        XCTAssertFalse(app.staticTexts["Delete this automation?"].waitForExistence(timeout: 1))
     }
 
     func testProtectedProfileSchedulesCardIsLockedOnScheduleTab() {
