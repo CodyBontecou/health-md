@@ -1,48 +1,48 @@
 {
   "schemaVersion": 1,
   "locale": "hi-IN",
-  "status": "draft",
+  "status": "reviewed",
   "direction": "ltr",
   "slides": [
     {
-      "id": "core-export",
-      "headline": "आपका स्वास्थ्य डेटा। आपकी फ़ाइलें।",
-      "supportingLine": "अधिकृत Health Connect रिकॉर्ड को अपने नियंत्रण वाली फ़ाइलों में निर्यात करें।"
+      "id": "text-file",
+      "headline": "आप, एक टेक्स्ट फ़ाइल।",
+      "supportingLine": "Health.md, Health Connect पढ़कर आपके दिनों को Markdown, CSV और JSON फ़ाइलों में लिखता है — फ़ाइलें आपकी अपनी।"
     },
     {
-      "id": "export-formats",
-      "headline": "अपने तरीके से निर्यात करें",
-      "supportingLine": "Markdown, Obsidian Bases, JSON और CSV।"
+      "id": "interrogate",
+      "headline": "अपने शरीर से पूछताछ करें।",
+      "supportingLine": "अपनी हेल्थ फ़ाइलें अपने मौजूदा AI और टूल्स को सौंपें — फ़ोल्डर, CLI या API से।"
     },
     {
-      "id": "health-metrics",
-      "headline": "100+ स्वास्थ्य मेट्रिक में से चुनें",
-      "supportingLine": "नींद, गतिविधि, हृदय, जीवन-संकेत, पोषण और बहुत कुछ।"
+      "id": "periodic-table",
+      "headline": "आपकी अपनी आवर्त सारणी।",
+      "supportingLine": "चुनें कि कौन-से मेट्रिक्स लिखे जाएँ: नींद, हृदय, गतिविधि, महत्वपूर्ण संकेत, पोषण और भी बहुत कुछ।"
     },
     {
-      "id": "private-by-design",
-      "headline": "केवल पढ़ने योग्य। गोपनीयता के लिए बनाया गया।",
-      "supportingLine": "कोई खाता नहीं। कोई Health.md स्वास्थ्य-डेटा क्लाउड नहीं।"
+      "id": "day-itemized",
+      "headline": "आपका दिन, पूरा हिसाब।",
+      "supportingLine": "आपके तय शेड्यूल पर एक दैनिक नोट आपके वॉल्ट में पहुँचता है। आपको बस पढ़ना है।"
     },
     {
-      "id": "scheduled-exports",
-      "headline": "अपने संग्रह को नया बनाए रखें",
-      "supportingLine": "अपने चुने हुए गंतव्य के लिए निर्यात शेड्यूल करें।"
+      "id": "pin-your-sleep",
+      "headline": "नींद को पिन करें गौर से देखने को।",
+      "supportingLine": "Health Connect में दर्ज नींद का हर चरण, एक फ़ाइल में — पिछली सौ रातों से तुलना कीजिए।"
     },
     {
-      "id": "file-preview",
-      "headline": "निर्यात से पहले पूर्वावलोकन करें",
-      "supportingLine": "कुछ भी लिखे जाने से पहले फ़ाइल नाम, पथ और सामग्री देखें।"
+      "id": "quilt",
+      "headline": "आपका महीना, गुदड़ी की तरह।",
+      "supportingLine": "संग्रह में निर्यात किया हर दिन दिखता है, और भरने लायक अंतराल चिह्नित होते हैं।"
     },
     {
-      "id": "home-screen-widgets",
-      "headline": "एक नज़र में स्वास्थ्य",
-      "supportingLine": "गतिविधि, नींद, हृदय और सारांश विजेट।"
+      "id": "preserved",
+      "headline": "सहेजा गया, आपके अपने डिवाइस पर।",
+      "supportingLine": "Health Connect डेटा आपके फ़ोन से सीधे आपकी फ़ाइलों में जाता है। Health.md क्लाउड से कुछ नहीं गुज़रता।"
     },
     {
-      "id": "direct-cli",
-      "headline": "सीधे अपने कंप्यूटर पर",
-      "supportingLine": "बिना क्लाउड रिले के प्रमाणित, एन्क्रिप्टेड निर्यात के लिए Health.md CLI से युग्मित करें।"
+      "id": "at-a-glance",
+      "headline": "आपके आँकड़े, एक नज़र में।",
+      "supportingLine": "आपके संग्रह, गतिविधि, हृदय और नींद के लिए होम स्क्रीन विजेट।"
     }
   ]
 }

@@ -1,48 +1,48 @@
 {
   "schemaVersion": 1,
   "locale": "ro",
-  "status": "draft",
+  "status": "reviewed",
   "direction": "ltr",
   "slides": [
     {
-      "id": "core-export",
-      "headline": "Datele tale de sănătate. Fișierele tale.",
-      "supportingLine": "Exportă înregistrările Health Connect autorizate în fișiere controlate de tine."
+      "id": "text-file",
+      "headline": "Tu, ca fișier text.",
+      "supportingLine": "Health.md citește Health Connect și îți scrie zilele în fișiere Markdown, CSV și JSON care îți aparțin."
     },
     {
-      "id": "export-formats",
-      "headline": "Exportă cum vrei",
-      "supportingLine": "Markdown, Obsidian Bases, JSON și CSV."
+      "id": "interrogate",
+      "headline": "Interoghează propriul corp.",
+      "supportingLine": "Dă-ți fișierele de sănătate AI-ului și uneltelor pe care le folosești deja: prin dosar, CLI sau API."
     },
     {
-      "id": "health-metrics",
-      "headline": "Alege din peste 100 de indicatori de sănătate",
-      "supportingLine": "Somn, activitate, inimă, semne vitale, nutriție și altele."
+      "id": "periodic-table",
+      "headline": "Tabelul tău periodic.",
+      "supportingLine": "Alege exact ce valori se scriu: somn, inimă, activitate, semne vitale, nutriție și multe altele."
     },
     {
-      "id": "private-by-design",
-      "headline": "Doar citire. Confidențial din proiectare.",
-      "supportingLine": "Fără cont. Fără cloud Health.md pentru date medicale."
+      "id": "day-itemized",
+      "headline": "Ziua ta, pe bon.",
+      "supportingLine": "O notă zilnică ajunge în seif după programul tău. Tu doar o citești."
     },
     {
-      "id": "scheduled-exports",
-      "headline": "Păstrează arhiva la zi",
-      "supportingLine": "Programează exporturi către destinația aleasă."
+      "id": "pin-your-sleep",
+      "headline": "Somnul tău, la microscop.",
+      "supportingLine": "Fiecare fază de somn din Health Connect, salvată ca fișier comparabil cu ultimele o sută de nopți."
     },
     {
-      "id": "file-preview",
-      "headline": "Previzualizează înainte de export",
-      "supportingLine": "Vezi numele, căile și conținutul fișierelor înainte de a scrie ceva."
+      "id": "quilt",
+      "headline": "Luna ta, ca un mozaic.",
+      "supportingLine": "Arhiva arată fiecare zi exportată și semnalează golurile care merită completate."
     },
     {
-      "id": "home-screen-widgets",
-      "headline": "Sănătatea dintr-o privire",
-      "supportingLine": "Widgeturi pentru activitate, somn, inimă și rezumat."
+      "id": "preserved",
+      "headline": "Conservat pe dispozitivele tale.",
+      "supportingLine": "Datele Health Connect ajung direct de pe telefon în fișierele tale. Nimic nu trece printr-un cloud Health.md."
     },
     {
-      "id": "direct-cli",
-      "headline": "Direct pe computerul tău",
-      "supportingLine": "Asociază Health.md CLI pentru exporturi autentificate și criptate, fără releu cloud."
+      "id": "at-a-glance",
+      "headline": "Cifrele tale, dintr-o privire.",
+      "supportingLine": "Widgeturi pe ecranul principal pentru arhivă, activitate, inimă și somn."
     }
   ]
 }

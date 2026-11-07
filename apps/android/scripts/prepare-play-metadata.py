@@ -21,14 +21,14 @@ MAX_SCREENSHOTS_PER_TYPE = 8
 MAX_SCREENSHOT_BYTES = 8 * 1024 * 1024
 EXPECTED_DEFAULT_TITLE = "Health.md – Health Data Export"
 EXPECTED_SLIDE_IDS = (
-    "core-export",
-    "export-formats",
-    "health-metrics",
-    "private-by-design",
-    "scheduled-exports",
-    "file-preview",
-    "home-screen-widgets",
-    "direct-cli",
+    "text-file",
+    "interrogate",
+    "periodic-table",
+    "day-itemized",
+    "pin-your-sleep",
+    "quilt",
+    "preserved",
+    "at-a-glance",
 )
 SCREENSHOT_TYPES = {
     "phone": "phoneScreenshots",

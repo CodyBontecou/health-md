@@ -11,91 +11,91 @@
     {
       "resourceQualifier": "values-ar",
       "playLocale": "ar",
-      "status": "draft",
+      "status": "reviewed",
       "direction": "rtl"
     },
     {
       "resourceQualifier": "values-b+zh+Hans",
       "playLocale": "zh-CN",
-      "status": "draft",
+      "status": "reviewed",
       "direction": "ltr"
     },
     {
       "resourceQualifier": "values-bn",
       "playLocale": "bn-BD",
-      "status": "draft",
+      "status": "reviewed",
       "direction": "ltr"
     },
     {
       "resourceQualifier": "values-de",
       "playLocale": "de-DE",
-      "status": "draft",
+      "status": "reviewed",
       "direction": "ltr"
     },
     {
       "resourceQualifier": "values-es",
       "playLocale": "es-ES",
-      "status": "draft",
+      "status": "reviewed",
       "direction": "ltr"
     },
     {
       "resourceQualifier": "values-fr",
       "playLocale": "fr-FR",
-      "status": "draft",
+      "status": "reviewed",
       "direction": "ltr"
     },
     {
       "resourceQualifier": "values-hi",
       "playLocale": "hi-IN",
-      "status": "draft",
+      "status": "reviewed",
       "direction": "ltr"
     },
     {
       "resourceQualifier": "values-ja",
       "playLocale": "ja-JP",
-      "status": "draft",
+      "status": "reviewed",
       "direction": "ltr"
     },
     {
       "resourceQualifier": "values-kk",
       "playLocale": "kk",
-      "status": "draft",
+      "status": "reviewed",
       "direction": "ltr"
     },
     {
       "resourceQualifier": "values-nl",
       "playLocale": "nl-NL",
-      "status": "draft",
+      "status": "reviewed",
       "direction": "ltr"
     },
     {
       "resourceQualifier": "values-b+pa+Guru",
       "playLocale": "pa",
-      "status": "draft",
+      "status": "reviewed",
       "direction": "ltr"
     },
     {
       "resourceQualifier": "values-pt-rBR",
       "playLocale": "pt-BR",
-      "status": "draft",
+      "status": "reviewed",
       "direction": "ltr"
     },
     {
       "resourceQualifier": "values-ro",
       "playLocale": "ro",
-      "status": "draft",
+      "status": "reviewed",
       "direction": "ltr"
     },
     {
       "resourceQualifier": "values-ru",
       "playLocale": "ru-RU",
-      "status": "draft",
+      "status": "reviewed",
       "direction": "ltr"
     },
     {
       "resourceQualifier": "values-uk",
       "playLocale": "uk",
-      "status": "draft",
+      "status": "reviewed",
       "direction": "ltr"
     }
   ]
