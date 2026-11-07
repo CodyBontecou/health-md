@@ -63,6 +63,8 @@ internal enum class DateRangeOption {
     Yesterday,
     /** The last seven complete days, ending yesterday. */
     Last7Days,
+    /** The last thirty complete days, ending yesterday. */
+    Last30Days,
     AllTime,
     Custom;
 
@@ -79,6 +81,7 @@ internal enum class DateRangeOption {
                 startDate == today && endDate == today -> Today
                 startDate == yesterday && endDate == yesterday -> Yesterday
                 startDate == yesterday.minusDays(6) && endDate == yesterday -> Last7Days
+                startDate == yesterday.minusDays(29) && endDate == yesterday -> Last30Days
                 else -> Custom
             }
         }
@@ -94,8 +97,9 @@ internal object ExportDateControlTags {
 }
 
 /**
- * The board's Dates control: one connected row of Today / Yesterday / 7 days / Custom. Custom
- * opens outlined From and To fields and keeps All time (every day with history) one tap away.
+ * The Dates control, as on iOS: one connected row of Yesterday / 7 days / 30 days / Custom. Custom
+ * opens outlined From and To fields and keeps Today and All time (every day with history) one
+ * tap away.
  * Stateless: the screen retains date resolution, pickers, and protection guards.
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -112,13 +116,16 @@ internal fun DateRangeSelectionSection(
 ) {
     val colors = LocalGeistColors.current
     val segments = listOf(
-        DateRangeOption.Today to stringResource(R.string.date_option_today),
         DateRangeOption.Yesterday to stringResource(R.string.date_option_yesterday),
         DateRangeOption.Last7Days to stringResource(R.string.date_option_last_7_days),
+        DateRangeOption.Last30Days to stringResource(R.string.date_option_last_30_days),
         DateRangeOption.Custom to stringResource(R.string.date_option_custom),
     )
-    // All time is a custom range that runs from the first day with history.
-    val shownOption = if (selectedOption == DateRangeOption.AllTime) DateRangeOption.Custom else selectedOption
+    // Today and All time are custom ranges: one day, or from the first day with history.
+    val shownOption = when (selectedOption) {
+        DateRangeOption.AllTime, DateRangeOption.Today -> DateRangeOption.Custom
+        else -> selectedOption
+    }
     Column(modifier = Modifier.fillMaxWidth()) {
         Text(
             stringResource(R.string.export_dates_heading),
@@ -185,25 +192,32 @@ internal fun DateRangeSelectionSection(
                         }
                     }
                 }
-                val allTime = selectedOption == DateRangeOption.AllTime
-                FilterChip(
-                    selected = allTime,
-                    onClick = { onOptionSelected(if (allTime) DateRangeOption.Custom else DateRangeOption.AllTime) },
-                    label = { Text(stringResource(R.string.date_option_all_time), style = GeistType.button14) },
-                    leadingIcon = if (allTime) {
-                        { Icon(Icons.Filled.Check, contentDescription = null, modifier = Modifier.size(18.dp)) }
-                    } else {
-                        null
-                    },
-                    shape = RoundedCornerShape(GeistRadii.small),
-                    colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = colors.secondaryContainer,
-                        selectedLabelColor = colors.onSecondaryContainer,
-                        selectedLeadingIconColor = colors.onSecondaryContainer,
-                        labelColor = colors.secondary,
-                    ),
-                    modifier = Modifier.heightIn(min = GeistSizes.minimumTouchTarget).testTag(ExportDateControlTags.preset(DateRangeOption.AllTime)),
-                )
+                Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                    listOf(
+                        DateRangeOption.Today to R.string.date_option_today,
+                        DateRangeOption.AllTime to R.string.date_option_all_time,
+                    ).forEach { (option, label) ->
+                        val chosen = selectedOption == option
+                        FilterChip(
+                            selected = chosen,
+                            onClick = { onOptionSelected(if (chosen) DateRangeOption.Custom else option) },
+                            label = { Text(stringResource(label), style = GeistType.button14) },
+                            leadingIcon = if (chosen) {
+                                { Icon(Icons.Filled.Check, contentDescription = null, modifier = Modifier.size(18.dp)) }
+                            } else {
+                                null
+                            },
+                            shape = RoundedCornerShape(GeistRadii.small),
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = colors.secondaryContainer,
+                                selectedLabelColor = colors.onSecondaryContainer,
+                                selectedLeadingIconColor = colors.onSecondaryContainer,
+                                labelColor = colors.secondary,
+                            ),
+                            modifier = Modifier.heightIn(min = GeistSizes.minimumTouchTarget).testTag(ExportDateControlTags.preset(option)),
+                        )
+                    }
+                }
             }
         }
 

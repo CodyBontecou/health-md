@@ -329,4 +329,40 @@
     <string name="gateway_page_remove_title">Remove gateway?</string>
     <string name="gateway_page_remove_body">Clears the gateway URL saved on this device. Files already uploaded stay where they are.</string>
     <string name="connected_apps_connected">Connected</string>
+    <string name="date_option_last_30_days">30 days</string>
+    <plurals name="export_now_about_files">
+        <item quantity="one">About %1$d file</item>
+        <item quantity="other">About %1$d files</item>
+    </plurals>
+    <plurals name="export_now_days">
+        <item quantity="one">%1$d day</item>
+        <item quantity="other">%1$d days</item>
+    </plurals>
+    <plurals name="export_now_files">
+        <item quantity="one">%1$d file</item>
+        <item quantity="other">%1$d files</item>
+    </plurals>
+    <string name="export_now_daily_notes_updated">daily notes updated</string>
+    <string name="export_now_large_title">Large export.</string>
+    <string name="export_now_large_body">This can take several minutes; keep Health.md open until it finishes.</string>
+    <string name="export_now_cta_yesterday">Export yesterday</string>
+    <plurals name="export_now_cta_days">
+        <item quantity="one">Export %1$d day</item>
+        <item quantity="other">Export %1$d days</item>
+    </plurals>
+    <string name="export_now_destination">Destination</string>
+    <string name="export_now_destination_gateway">Gateway</string>
+    <string name="export_now_setup_folder">Choose the folder this export writes to.</string>
+    <string name="export_now_setup_api">Set up the API endpoint this export sends to.</string>
+    <string name="export_now_setup_gateway">Set up the Agent Data gateway this export uploads to.</string>
+    <string name="moment_replay">Replay</string>
+    <string name="export_result_title">%1$d of %2$d days written</string>
+    <string name="export_result_days">Days</string>
+    <string name="export_result_complete">Complete</string>
+    <string name="export_result_not_written">Not written</string>
+    <string name="export_result_cancelled">Stopped</string>
+    <string name="export_result_retry">Retry %1$s</string>
+    <string name="export_result_retry_note_one">Completed dates stay completed. Retry writes only %1$s.</string>
+    <string name="export_result_retry_note">Completed dates stay completed. Retry writes %1$s.</string>
+    <string name="export_result_show_in_files">Show in Files</string>
 </resources>

@@ -55,15 +55,15 @@ class SecondaryControlsAccessibilityTest(display: AccessibilityDisplayCase) : Ac
     }
 
     private val presets = listOf(
-        DateRangeOption.Today to R.string.date_option_today,
         DateRangeOption.Yesterday to R.string.date_option_yesterday,
-        DateRangeOption.AllTime to R.string.date_option_all_time,
+        DateRangeOption.Last7Days to R.string.date_option_last_7_days,
+        DateRangeOption.Last30Days to R.string.date_option_last_30_days,
         DateRangeOption.Custom to R.string.date_option_custom,
     )
 
     @Test
     fun datePresetsKeepFullLabelsExclusiveSelectionAndCallbackIdentity() {
-        val selected = mutableStateOf(DateRangeOption.Today)
+        val selected = mutableStateOf(DateRangeOption.Yesterday)
         val calls = mutableListOf<DateRangeOption>()
         setContent {
             ScrollFixture {
@@ -78,9 +78,9 @@ class SecondaryControlsAccessibilityTest(display: AccessibilityDisplayCase) : Ac
             }
         }
 
-        assertPresetStates(DateRangeOption.Today)
+        assertPresetStates(DateRangeOption.Yesterday)
         presets.forEachIndexed { index, (option, _) ->
-            // Includes tapping the already-selected Today preset; every tap still calls once.
+            // Includes tapping the already-selected Yesterday preset; every tap still calls once.
             compose.onNodeWithTag(ExportDateControlTags.preset(option)).performScrollTo()
                 .assertFullyVisible().assertMinimumTouchTarget().performTouchInput {
                     click(Offset(width * 0.1f, height * 0.5f))
