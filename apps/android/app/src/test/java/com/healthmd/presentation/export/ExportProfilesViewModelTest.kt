@@ -14,6 +14,10 @@ import com.healthmd.domain.exportengine.ExportEnginePinPlanner
 import com.healthmd.domain.model.CompatibilitySchemaProfile
 import com.healthmd.domain.model.ExportProfile
 import com.healthmd.domain.model.ExportSettings
+import com.healthmd.domain.model.ExportFormat
+import com.healthmd.domain.model.RawSnapshotSettings
+import com.healthmd.rawexport.ExportMode
+import com.healthmd.rawexport.RawExportFormat
 import com.healthmd.domain.model.ExportSettingsSnapshotView
 import com.healthmd.domain.model.ExportTarget
 import com.healthmd.domain.repository.SettingsRepository
@@ -38,6 +42,33 @@ import java.time.ZoneId
 class ExportProfilesViewModelTest {
     @get:Rule
     val mainDispatcherRule = MainDispatcherRule()
+
+    @Test
+    fun `raw editor output is valid without inactive compatibility formats`() {
+        RawExportFormat.entries.forEach { format ->
+            val draft = ExportProfileEditorDraft(
+                name = "Raw",
+                target = ExportTarget.DEVICE_FOLDER,
+                settings = ExportSettings(
+                    exportMode = ExportMode.RAW_SNAPSHOT,
+                    exportFormats = emptySet(),
+                    rawSnapshot = RawSnapshotSettings(format = format),
+                ),
+            )
+            assertThat(draft.hasOutputFormat).isTrue()
+        }
+    }
+
+    @Test
+    fun `compatibility editor still requires at least one daily format`() {
+        val draft = ExportProfileEditorDraft(
+            name = "Daily",
+            target = ExportTarget.DEVICE_FOLDER,
+            settings = ExportSettings(exportFormats = emptySet()),
+        )
+        assertThat(draft.hasOutputFormat).isFalse()
+        assertThat(draft.copy(settings = draft.settings.copy(exportFormats = setOf(ExportFormat.JSON))).hasOutputFormat).isTrue()
+    }
 
     private val snapshotJson = kotlinx.serialization.json.Json.encodeToString(
         ExportSettingsSnapshotView.serializer(),

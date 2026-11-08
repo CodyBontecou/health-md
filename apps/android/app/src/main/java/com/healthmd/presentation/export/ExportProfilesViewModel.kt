@@ -20,6 +20,7 @@ import com.healthmd.domain.model.ExportSettings
 import com.healthmd.domain.model.ExportSettingsSnapshotView
 import com.healthmd.domain.model.ExportTarget
 import com.healthmd.domain.repository.SettingsRepository
+import com.healthmd.rawexport.ExportMode
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.NonCancellable
@@ -30,6 +31,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.Serializable
 import timber.log.Timber
 
 /** One row in the export profiles management screen. */
@@ -48,6 +50,7 @@ data class ExportProfileRow(
  * iOS `ExportProfileEditorSheet`): identity, destination binding, and the editable settings
  * projection all live here until Create/Save persists them.
  */
+@Serializable
 data class ExportProfileEditorDraft(
     val name: String,
     val target: ExportTarget,
@@ -59,7 +62,11 @@ data class ExportProfileEditorDraft(
     /** Raw gateway base URL for AGENT_DATA_GATEWAY targets (validated on save). */
     val agentDataGatewayUrl: String = "",
     val settings: ExportSettings = ExportSettings(),
-)
+) {
+    /** Raw snapshots have their own required JSON/NDJSON format, independent of daily formats. */
+    val hasOutputFormat: Boolean
+        get() = settings.exportMode == ExportMode.RAW_SNAPSHOT || settings.exportFormats.isNotEmpty()
+}
 
 data class ExportProfilesUiState(
     val rows: List<ExportProfileRow> = emptyList(),

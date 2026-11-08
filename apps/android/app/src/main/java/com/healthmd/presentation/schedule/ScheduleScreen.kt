@@ -443,56 +443,58 @@ fun ScheduleScreen(
         }
 
         ConfigurationProtectedRegion(modifier = Modifier.fillMaxWidth()) {
-        ExportTargetSelector(
-            managedClinicEndpoint = managedClinicEndpoint,
-            selectedTarget = uiState.selectedTarget,
-            folderSubtitle = if (uiState.hasExportFolder) {
-                stringResource(R.string.schedule_target_folder_ready)
-            } else {
-                stringResource(R.string.schedule_target_folder_choose)
-            },
-            apiSubtitle = if (uiState.apiEndpointConfigured) {
-                stringResource(
-                    R.string.schedule_target_api_configured,
-                    APIExportEndpoint.displayName(uiState.apiEndpointUrl),
+            Column(verticalArrangement = Arrangement.spacedBy(GeistSpacing.space2)) {
+                ExportTargetSelector(
+                    managedClinicEndpoint = managedClinicEndpoint,
+                    selectedTarget = uiState.selectedTarget,
+                    folderSubtitle = if (uiState.hasExportFolder) {
+                        stringResource(R.string.schedule_target_folder_ready)
+                    } else {
+                        stringResource(R.string.schedule_target_folder_choose)
+                    },
+                    apiSubtitle = if (uiState.apiEndpointConfigured) {
+                        stringResource(
+                            R.string.schedule_target_api_configured,
+                            APIExportEndpoint.displayName(uiState.apiEndpointUrl),
+                        )
+                    } else {
+                        stringResource(R.string.schedule_target_api_unconfigured)
+                    },
+                    gatewaySubtitle = if (uiState.agentDataGatewayConfigured) {
+                        stringResource(
+                            R.string.export_target_gateway_configured_subtitle,
+                            AgentDataGatewayEndpoint.displayName(uiState.agentDataGatewayUrl),
+                        )
+                    } else {
+                        stringResource(R.string.export_target_gateway_unconfigured_subtitle)
+                    },
+                    onTargetSelected = { target ->
+                        attemptConfigurationChange {
+                            viewModel.setScheduledExportTarget(target)
+                            if (target == ExportTarget.API_ENDPOINT && !uiState.apiEndpointConfigured) {
+                                showAPISettings = true
+                            }
+                            if (target == ExportTarget.AGENT_DATA_GATEWAY && !uiState.agentDataGatewayConfigured) {
+                                showGatewaySettings = true
+                            }
+                        }
+                    },
                 )
-            } else {
-                stringResource(R.string.schedule_target_api_unconfigured)
-            },
-            gatewaySubtitle = if (uiState.agentDataGatewayConfigured) {
-                stringResource(
-                    R.string.export_target_gateway_configured_subtitle,
-                    AgentDataGatewayEndpoint.displayName(uiState.agentDataGatewayUrl),
-                )
-            } else {
-                stringResource(R.string.export_target_gateway_unconfigured_subtitle)
-            },
-            onTargetSelected = { target ->
-                attemptConfigurationChange {
-                    viewModel.setScheduledExportTarget(target)
-                    if (target == ExportTarget.API_ENDPOINT && !uiState.apiEndpointConfigured) {
-                        showAPISettings = true
-                    }
-                    if (target == ExportTarget.AGENT_DATA_GATEWAY && !uiState.agentDataGatewayConfigured) {
-                        showGatewaySettings = true
-                    }
+
+                if (uiState.selectedTarget == ExportTarget.API_ENDPOINT) {
+                    EndpointSettingsButton(
+                        configured = uiState.apiEndpointConfigured,
+                        onClick = { attemptConfigurationChange { showAPISettings = true } },
+                    )
                 }
-            },
-        )
 
-        if (uiState.selectedTarget == ExportTarget.API_ENDPOINT) {
-            EndpointSettingsButton(
-                configured = uiState.apiEndpointConfigured,
-                onClick = { attemptConfigurationChange { showAPISettings = true } },
-            )
-        }
-
-        if (uiState.selectedTarget == ExportTarget.AGENT_DATA_GATEWAY) {
-            EndpointSettingsButton(
-                configured = uiState.agentDataGatewayConfigured,
-                onClick = { attemptConfigurationChange { showGatewaySettings = true } },
-            )
-        }
+                if (uiState.selectedTarget == ExportTarget.AGENT_DATA_GATEWAY) {
+                    EndpointSettingsButton(
+                        configured = uiState.agentDataGatewayConfigured,
+                        onClick = { attemptConfigurationChange { showGatewaySettings = true } },
+                    )
+                }
+            }
         }
 
         configurationErrorText?.let { message ->

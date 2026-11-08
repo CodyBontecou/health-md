@@ -16,6 +16,7 @@ import com.healthmd.data.scheduler.ScheduledProfileEntry
 import com.healthmd.domain.model.ExportFormat
 import com.healthmd.domain.model.ExportSettings
 import com.healthmd.domain.model.HealthMetrics
+import com.healthmd.rawexport.ExportMode
 import com.healthmd.presentation.i18n.localizedDisplayName
 import java.time.DayOfWeek
 import java.time.LocalTime
@@ -97,7 +98,9 @@ internal fun automationSentenceValues(
     val metricCount = settings.metricSelection.enabledCount
     val metrics = pluralStringResource(R.plurals.composer_metrics, metricCount, metricCount)
     val sorted = ExportFormat.entries.filter { it in settings.exportFormats }
-    val noteOn = settings.dailyNoteInjection.enabled
+    val rawSnapshot = settings.exportMode == ExportMode.RAW_SNAPSHOT
+    val rawSnapshotName = stringResource(R.string.export_type_raw_snapshot)
+    val noteOn = !rawSnapshot && settings.dailyNoteInjection.enabled
     val noteUpdate = stringResource(R.string.composer_note_update)
     val noteLeave = stringResource(R.string.composer_note_leave)
     val localizedFormats = sorted.associateWith { it.localizedDisplayName() }
@@ -107,18 +110,18 @@ internal fun automationSentenceValues(
         put(ComposerToken.WHERE, destination)
         if (summary) {
             // "write the last 7 days" already means every metric.
-            if (metricCount < HealthMetrics.totalCount) put(ComposerToken.METRICS, metrics)
+            if (!rawSnapshot && metricCount < HealthMetrics.totalCount) put(ComposerToken.METRICS, metrics)
             // Notes are the default; other formats are named. Bases is the Obsidian product name.
-            val notesOnly = ExportFormat.MARKDOWN in sorted &&
+            val notesOnly = !rawSnapshot && ExportFormat.MARKDOWN in sorted &&
                 sorted.all { it == ExportFormat.MARKDOWN || it == ExportFormat.OBSIDIAN_BASES }
-            val formats = sorted.map { if (it == ExportFormat.OBSIDIAN_BASES) "Bases" else localizedFormats.getValue(it) }
+            val formats = ComposerSentence.outputFormatNames(settings, rawSnapshotName) { if (it == ExportFormat.OBSIDIAN_BASES) "Bases" else localizedFormats.getValue(it) }
                 .joinToString(" + ")
             if (!notesOnly && formats.isNotEmpty()) put(ComposerToken.FORMATS, formats)
             if (noteOn) put(ComposerToken.NOTE, noteUpdate)
         } else {
-            put(ComposerToken.METRICS, metrics)
-            put(ComposerToken.FORMATS, sorted.joinToString(" + ") { localizedFormats.getValue(it) }.ifEmpty { "—" })
-            put(ComposerToken.NOTE, if (noteOn) noteUpdate else noteLeave)
+            if (!rawSnapshot) put(ComposerToken.METRICS, metrics)
+            put(ComposerToken.FORMATS, ComposerSentence.outputFormatNames(settings, rawSnapshotName) { localizedFormats.getValue(it) }.joinToString(" + ").ifEmpty { "—" })
+            if (!rawSnapshot) put(ComposerToken.NOTE, if (noteOn) noteUpdate else noteLeave)
         }
     }
     return ComposerValues(values, emphasis = emphasis?.let { mapOf(ComposerToken.WHEN to it) } ?: emptyMap())

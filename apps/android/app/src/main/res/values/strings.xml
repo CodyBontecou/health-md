@@ -330,6 +330,7 @@
     <string name="metric_selection_title">Health Metrics</string>
     <string name="search_metrics_hint">Search metrics…</string>
     <string name="select_all">Select All</string>
+    <string name="metric_search_no_results">No matching metrics. Try another search.</string>
     <string name="deselect_all">Deselect All</string>
     <string name="metrics_enabled_category" tools:ignore="PluralsCandidate">%1$d/%2$d enabled</string>
 
@@ -1547,4 +1548,8 @@
     <string name="clinic_sync_result_sent">Your latest data was sent to your clinic.</string>
     <string name="clinic_sync_result_failed">Could not send your data to your clinic. Open Health.md and try again.</string>
     <string name="clinic_sync_result_profile_missing">Open Clinic access in Health.md and choose Use clinic destination first.</string>
+    <string name="date_picker_enter_date">Enter date</string>
+    <string name="date_picker_show_calendar">Show calendar</string>
+    <string name="date_picker_input_label">Date (YYYY-MM-DD)</string>
+    <string name="date_picker_invalid_date">Enter a valid, available date in YYYY-MM-DD format.</string>
 </resources>

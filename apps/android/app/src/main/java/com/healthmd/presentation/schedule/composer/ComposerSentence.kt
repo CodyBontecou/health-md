@@ -2,6 +2,9 @@ package com.healthmd.presentation.schedule.composer
 
 import com.healthmd.data.scheduler.ScheduledProfileCadenceUnit
 import com.healthmd.data.scheduler.ScheduledProfileEntry
+import com.healthmd.domain.model.ExportFormat
+import com.healthmd.domain.model.ExportSettings
+import com.healthmd.rawexport.ExportMode
 import java.time.LocalDate
 
 /**
@@ -102,8 +105,20 @@ object ComposerSentence {
         return segments(resolved, values, emphasis)
     }
 
-    private val OPTIONAL = Regex("\\[([^\\[\\]]*)]")
-    private val TOKEN = Regex("\\{([a-z]+)}")
+    // Android's ICU regex engine requires literal closing delimiters to be escaped too.
+    private val OPTIONAL = Regex("\\[([^\\[\\]]*)\\]")
+    private val TOKEN = Regex("\\{([a-z]+)\\}")
+
+    /** Raw snapshots use their own format; compatibility flags are retained but inactive. */
+    fun outputFormatNames(
+        settings: ExportSettings,
+        rawSnapshotName: String,
+        name: (ExportFormat) -> String,
+    ): List<String> = if (settings.exportMode == ExportMode.RAW_SNAPSHOT) {
+        listOf("$rawSnapshotName (${settings.rawSnapshot.format.name})")
+    } else {
+        ExportFormat.entries.filter { it in settings.exportFormats }.map(name)
+    }
 
     fun plainText(segments: List<ComposerSegment>): String = segments.joinToString("") {
         when (it) {

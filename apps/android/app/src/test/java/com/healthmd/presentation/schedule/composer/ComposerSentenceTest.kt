@@ -4,6 +4,11 @@ import com.google.common.truth.Truth.assertThat
 import com.google.common.truth.Truth.assertWithMessage
 import com.healthmd.data.scheduler.ScheduledProfileCadenceUnit
 import com.healthmd.data.scheduler.ScheduledProfileEntry
+import com.healthmd.domain.model.ExportSettings
+import com.healthmd.domain.model.ExportFormat
+import com.healthmd.domain.model.RawSnapshotSettings
+import com.healthmd.rawexport.ExportMode
+import com.healthmd.rawexport.RawExportFormat
 import java.io.File
 import java.time.LocalDate
 import javax.xml.parsers.DocumentBuilderFactory
@@ -76,6 +81,22 @@ class ComposerSentenceTest {
         assertThat(ComposerDayPeriod.of(7)).isEqualTo(ComposerDayPeriod.MORNING)
         assertThat(ComposerDayPeriod.of(21)).isEqualTo(ComposerDayPeriod.NIGHT)
         assertThat(ComposerSentence.previewDate(LocalDate.of(2026, 10, 31))).isEqualTo(LocalDate.of(2026, 10, 30))
+    }
+
+    @Test
+    fun rawSnapshotFormatIgnoresRetainedCompatibilityFlags() {
+        RawExportFormat.entries.forEach { format ->
+            val settings = ExportSettings(
+                exportMode = ExportMode.RAW_SNAPSHOT,
+                exportFormats = setOf(ExportFormat.MARKDOWN, ExportFormat.CSV),
+                rawSnapshot = RawSnapshotSettings(format = format),
+            )
+            assertThat(ComposerSentence.outputFormatNames(settings, "Raw API Snapshot") { error("Inactive format") })
+                .containsExactly("Raw API Snapshot (${format.name})")
+        }
+        val compatibility = ExportSettings(exportFormats = setOf(ExportFormat.CSV, ExportFormat.MARKDOWN))
+        assertThat(ComposerSentence.outputFormatNames(compatibility, "Raw API Snapshot") { it.name })
+            .containsExactly("MARKDOWN", "CSV").inOrder()
     }
 
     @Test

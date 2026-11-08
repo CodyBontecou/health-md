@@ -102,6 +102,7 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import com.healthmd.BuildConfig
 import com.healthmd.R
+import com.healthmd.presentation.common.HealthDatePicker
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -315,11 +316,11 @@ fun ExportScreen(
         }
     }
 
-    var showStartDatePicker by remember { mutableStateOf(false) }
-    var showEndDatePicker by remember { mutableStateOf(false) }
+    var showStartDatePicker by rememberSaveable { mutableStateOf(false) }
+    var showEndDatePicker by rememberSaveable { mutableStateOf(false) }
     var showAPISettings by remember { mutableStateOf(false) }
     var showGatewaySettings by remember { mutableStateOf(false) }
-    var selectedDateRangeOption by remember {
+    var selectedDateRangeOption by rememberSaveable {
         mutableStateOf(
             DateRangeOption.fromDates(
                 startDate = uiState.startDate,
@@ -1536,7 +1537,7 @@ fun ExportScreen(
         DatePickerDialog(
             onDismissRequest = { showStartDatePicker = false },
             confirmButton = {
-                TextButton(onClick = {
+                TextButton(enabled = state.selectedDateMillis != null, onClick = {
                     attemptConfigurationChange {
                         state.selectedDateMillis?.let { millis ->
                             selectedDateRangeOption = DateRangeOption.Custom
@@ -1549,14 +1550,14 @@ fun ExportScreen(
                 }) { Text(stringResource(R.string.action_set_start_date)) }
             },
             dismissButton = { TextButton(onClick = { showStartDatePicker = false }) { Text(stringResource(R.string.action_cancel_selection)) } },
-        ) { DatePicker(state = state) }
+        ) { HealthDatePicker(state = state) }
     }
     if (showEndDatePicker) {
         val state = rememberDatePickerState(initialSelectedDateMillis = uiState.endDate.toDatePickerMillis())
         DatePickerDialog(
             onDismissRequest = { showEndDatePicker = false },
             confirmButton = {
-                TextButton(onClick = {
+                TextButton(enabled = state.selectedDateMillis != null, onClick = {
                     attemptConfigurationChange {
                         state.selectedDateMillis?.let { millis ->
                             selectedDateRangeOption = DateRangeOption.Custom
@@ -1569,7 +1570,7 @@ fun ExportScreen(
                 }) { Text(stringResource(R.string.action_set_end_date)) }
             },
             dismissButton = { TextButton(onClick = { showEndDatePicker = false }) { Text(stringResource(R.string.action_cancel_selection)) } },
-        ) { DatePicker(state = state) }
+        ) { HealthDatePicker(state = state) }
     }
 }
 

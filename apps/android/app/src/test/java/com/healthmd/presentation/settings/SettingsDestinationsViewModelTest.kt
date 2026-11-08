@@ -94,6 +94,51 @@ class SettingsDestinationsViewModelTest {
     }
 
     @Test
+    fun invalidReplacementTokenDoesNotSendSavedCredentials() = runTest(mainDispatcherRule.testDispatcher) {
+        coEvery { credentials.authorizationHeader() } returns "Bearer saved"
+        coEvery { tester.statusCode(any(), any(), any()) } returns 200
+        val model = viewModel()
+
+        model.testConnection("https://example.com/ingest", "bad\ntoken")
+        advanceUntilIdle()
+
+        assertThat(model.connectionTest.value).isEqualTo(ConnectionTestState.Failed)
+        coVerify(exactly = 0) { credentials.authorizationHeader() }
+        coVerify(exactly = 0) { tester.statusCode(any(), any(), any()) }
+    }
+
+    @Test
+    fun connectionTestUsesDraftHeadersWithoutReplacingStoredHeaders() = runTest(mainDispatcherRule.testDispatcher) {
+        val savedHeaders = listOf(APIExportRequestHeader("X-Tenant", "saved"))
+        val draftHeaders = listOf(APIExportRequestHeader("X-Tenant", "draft"), APIExportRequestHeader("X-Environment", "qa"))
+        coEvery { credentials.authorizationHeader() } returns null
+        coEvery { credentials.requestHeaders() } returns savedHeaders
+        coEvery { tester.statusCode(any(), any(), draftHeaders) } returns 204
+        val model = viewModel()
+
+        model.testConnection("https://example.com/ingest", "", "X-Tenant: draft\nX-Environment: qa")
+        advanceUntilIdle()
+
+        assertThat(model.connectionTest.value).isEqualTo(ConnectionTestState.Finished(204))
+        coVerify(exactly = 1) { tester.statusCode("https://example.com/ingest", null, draftHeaders) }
+        coVerify(exactly = 0) { credentials.requestHeaders() }
+    }
+
+    @Test
+    fun malformedDraftHeadersDoNotSendARequestOrReadSavedCredentials() = runTest(mainDispatcherRule.testDispatcher) {
+        val model = viewModel()
+
+        for (headers in listOf("missing separator", "X-Tenant: a\nx-tenant: b", "Host: other.example", "X-Test: a\rb")) {
+            model.testConnection("https://example.com/ingest", "", headers)
+            advanceUntilIdle()
+            assertThat(model.connectionTest.value).isEqualTo(ConnectionTestState.Failed)
+        }
+        coVerify(exactly = 0) { tester.statusCode(any(), any(), any()) }
+        coVerify(exactly = 0) { credentials.authorizationHeader() }
+        coVerify(exactly = 0) { credentials.requestHeaders() }
+    }
+
+    @Test
     fun connectionTestIgnoresInvalidUrlsAndReportsNetworkFailure() = runTest(mainDispatcherRule.testDispatcher) {
         coEvery { tester.statusCode(any(), any(), any()) } throws java.io.IOException("offline")
         val model = viewModel()

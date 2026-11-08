@@ -42,6 +42,8 @@ import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import com.healthmd.R
+import com.healthmd.rawexport.ExportMode
+import com.healthmd.presentation.export.RawSnapshotConfiguration
 import com.healthmd.data.storage.FileExportManager
 import com.healthmd.domain.model.APIExportEndpoint
 import com.healthmd.domain.model.AgentDataGatewayEndpoint
@@ -63,6 +65,7 @@ import com.healthmd.presentation.settings.ExportDetailOverridesSection
 import com.healthmd.presentation.settings.FormatCustomizationScreen
 import com.healthmd.presentation.settings.FrontmatterCustomizationScreen
 import com.healthmd.presentation.settings.IndividualTrackingScreen
+import com.healthmd.presentation.settings.AutomationOutputPathValidation
 import com.healthmd.presentation.settings.SettingsFieldRow
 import com.healthmd.presentation.settings.SettingsGroupHeading
 import com.healthmd.presentation.settings.SettingsSegmentedChoice
@@ -119,7 +122,14 @@ fun NavGraphBuilder.automationProfilePages(
             profileId = profileId,
             page = page,
             onBack = { navController.popBackStack() },
-            onOpenPage = { next -> navController.navigate(AutomationRoutes.page(profileId, next)) { launchSingleTop = true } },
+            onOpenPage = { next ->
+                // These pages share a destination ID. Single-top would replace the parent
+                // when opening Frontmatter, so compare arguments before pushing a child.
+                val current = navController.currentBackStackEntry?.arguments
+                if (current?.getString("profileId") != profileId || current.getString("page") != next.key) {
+                    navController.navigate(AutomationRoutes.page(profileId, next))
+                }
+            },
             sleepDayAttribution = sleepDayAttribution(),
             onSleepDayAttributionChanged = onSleepDayAttributionChanged,
         )
@@ -280,16 +290,33 @@ fun AutomationProfilePage(
             FrontmatterCustomizationScreen(configuration = state.value, onConfigurationChanged = { state.value = it }, onBack = onBack)
         }
         AutomationPage.DAILY_NOTES -> {
-            val state = rememberProfileAutosave(key, stored.settings.dailyNoteInjection) { value ->
+            val state = rememberProfileAutosave(
+                key, stored.settings.dailyNoteInjection, isValid = AutomationOutputPathValidation::isValidDailyNotes,
+            ) { value ->
                 saveDraft { it.copy(settings = it.settings.copy(dailyNoteInjection = value)) }
             }
-            DailyNoteInjectionScreen(settings = state.value, onSettingsChanged = { state.value = it }, onBack = onBack)
+            val back = guardedBack(
+                holdsInvalidChange = state.isDirty && !AutomationOutputPathValidation.isValidDailyNotes(state.value),
+                reason = stringResource(R.string.automation_output_path_invalid),
+                onDiscard = state::discard,
+                onBack = onBack,
+            )
+            DailyNoteInjectionScreen(settings = state.value, onSettingsChanged = { state.value = it }, onBack = back)
         }
         AutomationPage.ENTRIES -> {
-            val state = rememberProfileAutosave(key, stored.settings.individualTracking) { value ->
+            val state = rememberProfileAutosave(key, stored.settings.individualTracking, isValid = {
+                AutomationOutputPathValidation.isValid(listOf(it.entriesFolder), it.filenameTemplate)
+            }) { value ->
                 saveDraft { it.copy(settings = it.settings.copy(individualTracking = value)) }
             }
-            IndividualTrackingScreen(settings = state.value, onSettingsChanged = { state.value = it }, onBack = onBack)
+            val valid = AutomationOutputPathValidation.isValid(listOf(state.value.entriesFolder), state.value.filenameTemplate)
+            val back = guardedBack(
+                holdsInvalidChange = state.isDirty && !valid,
+                reason = stringResource(R.string.automation_output_path_invalid),
+                onDiscard = state::discard,
+                onBack = onBack,
+            )
+            IndividualTrackingScreen(settings = state.value, onSettingsChanged = { state.value = it }, onBack = back)
         }
         AutomationPage.FORMATS -> ProfileFormatsPage(
             key = key,
@@ -348,6 +375,22 @@ private fun ProfileFormatsPage(
     sleepDayAttribution: SleepDayAttribution,
     onSleepDayAttributionChanged: (SleepDayAttribution) -> Unit,
 ) {
+    if (stored.exportMode == ExportMode.RAW_SNAPSHOT) {
+        val raw = rememberProfileAutosave("$key/raw", stored.rawSnapshot) { value ->
+            onSave { it.copy(settings = it.settings.copy(rawSnapshot = value)) }
+        }
+        SubScreen(title = stringResource(R.string.formats_page_title), onBack = onBack) {
+            PageColumn {
+                RawSnapshotConfiguration(
+                    settings = stored.copy(rawSnapshot = raw.value),
+                    onFormatChanged = { raw.value = raw.value.copy(format = it) },
+                    onScopeChanged = { raw.value = raw.value.copy(scope = it) },
+                    onIncludeExerciseRoutesChanged = { raw.value = raw.value.copy(includeExerciseRoutes = it) },
+                )
+            }
+        }
+        return
+    }
     val colors = LocalGeistColors.current
     val protection = LocalConfigurationProtection.current
     val state = rememberProfileAutosave(
@@ -488,8 +531,11 @@ private data class OutputDraft(
     val filenameFormat: String,
     val writeMode: WriteMode,
 ) {
+    val hasValidPaths: Boolean
+        get() = AutomationOutputPathValidation.isValid(listOf(subfolder, folderStructure), filenameFormat)
+
     val isValid: Boolean
-        get() = when (target) {
+        get() = hasValidPaths && when (target) {
             ExportTarget.DEVICE_FOLDER -> true
             ExportTarget.API_ENDPOINT -> APIExportEndpoint.isConfigured(apiEndpointUrl)
             ExportTarget.AGENT_DATA_GATEWAY -> AgentDataGatewayEndpoint.isConfigured(agentDataGatewayUrl)
@@ -548,7 +594,9 @@ private fun ProfileOutputPage(
         files.takePersistablePermission(uri)
         state.value = state.value.copy(folderUri = uri.toString(), folderDisplayName = files.getFolderDisplayName(uri.toString()))
     }
-    val invalidReason = stringResource(R.string.output_endpoint_invalid)
+    val invalidReason = stringResource(
+        if (draft.hasValidPaths) R.string.output_endpoint_invalid else R.string.automation_output_path_invalid,
+    )
     val back = guardedBack(
         holdsInvalidChange = state.isDirty && !draft.isValid,
         reason = invalidReason,
@@ -606,13 +654,13 @@ private fun ProfileOutputPage(
                         ExportTarget.API_ENDPOINT -> UrlField(
                             value = draft.apiEndpointUrl,
                             label = stringResource(R.string.api_export_endpoint_url_label),
-                            error = invalidReason.takeIf { !draft.isValid },
+                            error = stringResource(R.string.output_endpoint_invalid).takeIf { !APIExportEndpoint.isConfigured(draft.apiEndpointUrl) },
                             onValueChange = { state.value = draft.copy(apiEndpointUrl = it) },
                         )
                         ExportTarget.AGENT_DATA_GATEWAY -> UrlField(
                             value = draft.agentDataGatewayUrl,
                             label = stringResource(R.string.agent_data_gateway_url_label),
-                            error = invalidReason.takeIf { !draft.isValid },
+                            error = stringResource(R.string.output_endpoint_invalid).takeIf { !AgentDataGatewayEndpoint.isConfigured(draft.agentDataGatewayUrl) },
                             onValueChange = { state.value = draft.copy(agentDataGatewayUrl = it) },
                         )
                     }
@@ -659,6 +707,10 @@ private fun ProfileOutputPage(
                         onValueChange = { state.value = draft.copy(filenameFormat = it) },
                     )
                 }
+            }
+
+            if (!draft.hasValidPaths) {
+                Text(invalidReason, style = GeistType.copy14, color = colors.warning)
             }
 
             SettingsGroupHeading(stringResource(R.string.output_when_file_exists))

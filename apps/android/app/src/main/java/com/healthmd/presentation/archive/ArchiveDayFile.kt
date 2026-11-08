@@ -7,6 +7,8 @@ import com.healthmd.domain.model.HealthDataFields
 import com.healthmd.domain.model.UnitConverter
 import com.healthmd.domain.model.UnitPreference
 import java.text.NumberFormat
+import java.nio.ByteBuffer
+import java.nio.charset.CharacterCodingException
 import java.time.LocalDate
 import java.util.Locale
 import kotlin.math.abs
@@ -36,12 +38,30 @@ data class ArchiveDayFile(
         }
 
     val isTruncated: Boolean
-        get() = byteCount > MAXIMUM_BYTES || source.split('\n').size > MAXIMUM_LINES + 1
+        get() {
+            val all = source.split('\n')
+            val count = all.size - if (all.lastOrNull() == "") 1 else 0
+            return byteCount > MAXIMUM_BYTES || count > MAXIMUM_LINES
+        }
 
     companion object {
         /** Above this the day page shows the first lines only; Open file shows the rest. */
         const val MAXIMUM_BYTES = 512 * 1024
         const val MAXIMUM_LINES = 400
+
+        /** Decode faithfully, trimming only a scalar cut by the preview byte limit. */
+        internal fun decodePreview(bytes: ByteArray, truncated: Boolean): String? {
+            val maximumTrim = if (truncated) minOf(3, bytes.size) else 0
+            for (trim in 0..maximumTrim) {
+                try {
+                    return Charsets.UTF_8.newDecoder()
+                        .decode(ByteBuffer.wrap(bytes, 0, bytes.size - trim)).toString()
+                } catch (_: CharacterCodingException) {
+                    // Try the next possible incomplete suffix, never replacement characters.
+                }
+            }
+            return null
+        }
     }
 }
 

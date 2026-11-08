@@ -63,6 +63,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.healthmd.R
 import com.healthmd.presentation.common.LocalAppFolderName
+import com.healthmd.rawexport.ExportMode
 import com.healthmd.domain.model.ExportSettings
 import com.healthmd.domain.model.HealthMetrics
 import com.healthmd.presentation.common.LocalConfigurationProtection
@@ -122,6 +123,7 @@ fun AutomationComposerScreen(
     }
     var draft by rememberSaveable(profileId, stateSaver = ComposerDraftSaver) { mutableStateOf(ComposerDraft()) }
     val settings = draft.applyTo(saved.settings)
+    val rawSnapshot = settings.exportMode == ExportMode.RAW_SNAPSHOT
     var confirmLeave by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(settings) { previewViewModel.preview(settings) }
@@ -193,7 +195,12 @@ fun AutomationComposerScreen(
                 } else {
                     ComposerSentenceView(
                         template = stringResource(
-                            if (ComposerSentence.isMultiDay(row.entry)) R.string.composer_template_multi else R.string.composer_template_single,
+                            when {
+                                rawSnapshot && ComposerSentence.isMultiDay(row.entry) -> R.string.automation_summary_multi
+                                rawSnapshot -> R.string.automation_summary_single
+                                ComposerSentence.isMultiDay(row.entry) -> R.string.composer_template_multi
+                                else -> R.string.composer_template_single
+                            },
                         ),
                         values = values,
                         onToken = onToken,
@@ -201,7 +208,7 @@ fun AutomationComposerScreen(
                 }
             }
             val fields: @Composable () -> Unit = {
-                ComposerFields(
+                if (!rawSnapshot) ComposerFields(
                     saved = saved.settings,
                     pending = draft.fields,
                     onToggle = { id -> guarded { draft = draft.toggleField(id, saved.settings) } },
@@ -286,7 +293,7 @@ private val ComposerDraftSaver = androidx.compose.runtime.saveable.Saver<Compose
 @Composable
 private fun ComposerSentenceView(template: String, values: ComposerValues, onToken: (ComposerToken) -> Unit) {
     val colors = LocalGeistColors.current
-    val segments = ComposerSentence.segments(template, values.values, values.emphasis)
+    val segments = ComposerSentence.summarySegments(template, values.values, values.emphasis)
     val sentenceStyle = MaterialTheme.typography.headlineSmall.copy(fontSize = 24.sp, lineHeight = 40.sp)
     FlowRow(
         modifier = Modifier.fillMaxWidth().padding(top = GeistSpacing.space3, start = GeistSpacing.space1, end = GeistSpacing.space1),
@@ -347,9 +354,10 @@ private fun ComposerTokenList(values: ComposerValues, onToken: (ComposerToken) -
         ComposerToken.NOTE to stringResource(R.string.composer_label_note),
     )
     Column(Modifier.fillMaxWidth().padding(top = GeistSpacing.space3), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-        ComposerToken.entries.forEachIndexed { index, token ->
+        val tokens = ComposerToken.entries.filter { it in values.values }
+        tokens.forEachIndexed { index, token ->
             val top = if (index == 0) GeistRadii.listGroup else GeistSpacing.space1
-            val bottom = if (index == ComposerToken.entries.lastIndex) GeistRadii.listGroup else GeistSpacing.space1
+            val bottom = if (index == tokens.lastIndex) GeistRadii.listGroup else GeistSpacing.space1
             Column(
                 Modifier
                     .fillMaxWidth()
@@ -439,7 +447,7 @@ private fun ComposerPreviewCard(state: ComposerPreviewState) {
             }
         }
         Text(
-            stringResource(R.string.composer_preview_note),
+            stringResource(if (state == ComposerPreviewState.RangeArtifactOnly) R.string.raw_snapshot_one_artifact_note else R.string.composer_preview_note),
             style = MaterialTheme.typography.bodySmall,
             color = colors.secondary,
             modifier = Modifier.padding(start = GeistSpacing.space1, top = GeistSpacing.space3),

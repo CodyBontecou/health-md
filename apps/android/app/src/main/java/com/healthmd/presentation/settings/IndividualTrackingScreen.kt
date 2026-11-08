@@ -116,6 +116,10 @@ fun IndividualTrackingScreen(
                             colors = settingsTextFieldColors(),
                             shape = settingsTextFieldShape,
                             singleLine = true,
+                            isError = !AutomationOutputPathValidation.isSafeFolder(settings.entriesFolder),
+                            supportingText = if (!AutomationOutputPathValidation.isSafeFolder(settings.entriesFolder)) {
+                                { Text(stringResource(R.string.automation_output_path_invalid)) }
+                            } else null,
                         )
                     }
                 }
@@ -131,6 +135,10 @@ fun IndividualTrackingScreen(
                             colors = settingsTextFieldColors(),
                             shape = settingsTextFieldShape,
                             singleLine = true,
+                            isError = !AutomationOutputPathValidation.isSafeFilename(settings.filenameTemplate),
+                            supportingText = if (!AutomationOutputPathValidation.isSafeFilename(settings.filenameTemplate)) {
+                                { Text(stringResource(R.string.automation_output_path_invalid)) }
+                            } else null,
                         )
                         Text(stringResource(R.string.individual_tracking_filename_tokens), style = GeistType.copy14, color = colors.secondary)
                     }

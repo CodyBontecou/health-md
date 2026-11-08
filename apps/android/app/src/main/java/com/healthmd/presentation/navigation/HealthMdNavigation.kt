@@ -60,6 +60,8 @@ import com.healthmd.presentation.archive.ArchiveScreen
 import com.healthmd.presentation.archive.DayPageScreen
 import com.healthmd.presentation.archive.DayPageViewModel
 import com.healthmd.presentation.export.ExportProfilesViewModel
+import com.healthmd.presentation.schedule.rememberProfileAutosave
+import com.healthmd.presentation.schedule.guardedBack
 import com.healthmd.presentation.schedule.AutomationsScreen
 import com.healthmd.presentation.schedule.AutomationDetailPane
 import com.healthmd.presentation.schedule.AutomationRoutes
@@ -844,14 +846,24 @@ fun HealthMdNavigation(
                 )
             }
             composable(SubRoutes.DAILY_NOTE_INJECTION) {
-                DailyNoteInjectionScreen(
-                    settings = settings.dailyNoteInjection,
-                    onSettingsChanged = {
-                        settingsViewModel.performConfigurationChange {
-                            settingsViewModel.updateDailyNoteInjection(it)
-                        }
-                    },
+                val draft = rememberProfileAutosave(
+                    SubRoutes.DAILY_NOTE_INJECTION, settings.dailyNoteInjection,
+                    isValid = AutomationOutputPathValidation::isValidDailyNotes,
+                ) { value ->
+                    settingsViewModel.performConfigurationChange {
+                        settingsViewModel.updateDailyNoteInjection(value)
+                    }
+                }
+                val back = guardedBack(
+                    holdsInvalidChange = draft.isDirty && !AutomationOutputPathValidation.isValidDailyNotes(draft.value),
+                    reason = stringResource(R.string.automation_output_path_invalid),
+                    onDiscard = draft::discard,
                     onBack = { navController.popBackStack() },
+                )
+                DailyNoteInjectionScreen(
+                    settings = draft.value,
+                    onSettingsChanged = { draft.value = it },
+                    onBack = back,
                 )
             }
             composable(SubRoutes.INDIVIDUAL_TRACKING) {

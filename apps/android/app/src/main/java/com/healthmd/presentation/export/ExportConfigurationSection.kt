@@ -278,7 +278,7 @@ fun ExportConfigurationSection(
 }
 
 @Composable
-private fun RawSnapshotConfiguration(
+internal fun RawSnapshotConfiguration(
     settings: ExportSettings,
     onFormatChanged: (RawExportFormat) -> Unit,
     onScopeChanged: (RawSnapshotScope) -> Unit,

@@ -57,6 +57,10 @@ fun DailyNoteInjectionScreen(
                         Text(stringResource(R.string.section_daily_notes_folder), style = GeistType.label16, color = colors.primary)
                         OutlinedTextField(
                             value = settings.folderPath,
+                            isError = !AutomationOutputPathValidation.isSafeDailyNoteFolder(settings.folderPath),
+                            supportingText = if (!AutomationOutputPathValidation.isSafeDailyNoteFolder(settings.folderPath)) {
+                                { Text(stringResource(R.string.automation_output_path_invalid)) }
+                            } else null,
                             onValueChange = { onSettingsChanged(settings.copy(folderPath = it)) },
                             modifier = Modifier.fillMaxWidth(),
                             textStyle = GeistType.copy14Mono,
@@ -71,6 +75,10 @@ fun DailyNoteInjectionScreen(
                         Text(stringResource(R.string.section_filename_pattern), style = GeistType.label16, color = colors.primary)
                         OutlinedTextField(
                             value = settings.filenamePattern,
+                            isError = !AutomationOutputPathValidation.isSafeDailyNoteFilename(settings.filenamePattern),
+                            supportingText = if (!AutomationOutputPathValidation.isSafeDailyNoteFilename(settings.filenamePattern)) {
+                                { Text(stringResource(R.string.automation_output_path_invalid)) }
+                            } else null,
                             onValueChange = { onSettingsChanged(settings.copy(filenamePattern = it)) },
                             modifier = Modifier.fillMaxWidth(),
                             textStyle = GeistType.copy14Mono,
@@ -84,7 +92,12 @@ fun DailyNoteInjectionScreen(
                     SettingsFieldRow(shape = groupRowShape(2, 3)) {
                         Text(stringResource(R.string.section_preview_path), style = GeistType.label16, color = colors.primary)
                         // The full path wraps so long folders stay readable.
-                        Text(settings.previewPath(), style = GeistType.copy14Mono, color = colors.brandPrimary)
+                        val valid = AutomationOutputPathValidation.isValidDailyNotes(settings)
+                        Text(
+                            if (valid) settings.previewPath() else stringResource(R.string.automation_output_path_invalid),
+                            style = GeistType.copy14Mono,
+                            color = if (valid) colors.brandPrimary else colors.error,
+                        )
                     }
                 }
 

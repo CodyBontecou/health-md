@@ -95,7 +95,7 @@ fun ApiEndpointScreen(
     val hasChanges = endpoint != saved || authorization.isNotBlank() || headers.isNotBlank()
     val draftValid = APIExportEndpoint.isConfigured(endpoint)
 
-    LaunchedEffect(endpoint, authorization) { destinations.resetConnectionTest() }
+    LaunchedEffect(endpoint, authorization, headers) { destinations.resetConnectionTest() }
     LaunchedEffect(state.apiConfigurationError) {
         if (state.apiConfigurationError != null) error = APISettingsValidationError.ConfigurationSaveFailed
     }
@@ -219,7 +219,15 @@ fun ApiEndpointScreen(
                             else -> stringResource(R.string.api_page_test_subtitle)
                         },
                         icon = null,
-                        onClick = { destinations.testConnection(endpoint, authorization) },
+                        onClick = {
+                            val validation = validateApiDraft(endpoint, authorization, headers)
+                            if (validation != null) {
+                                error = validation
+                                if (validation is APISettingsValidationError.InvalidHeaders) headersExpanded = true
+                            } else {
+                                destinations.testConnection(endpoint, authorization, headers)
+                            }
+                        },
                         enabled = draftValid && testState != ConnectionTestState.Running,
                         badge = when (val test = testState) {
                             is ConnectionTestState.Finished -> SettingsBadge(

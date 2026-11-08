@@ -54,7 +54,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -74,6 +74,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.healthmd.R
+import com.healthmd.presentation.settings.AutomationOutputPathValidation
+import com.healthmd.rawexport.ExportMode
+import com.healthmd.rawexport.RawSnapshotScope
 import com.healthmd.data.storage.FileExportManager
 import com.healthmd.domain.model.APIExportEndpoint
 import com.healthmd.domain.model.AgentDataGatewayEndpoint
@@ -125,8 +128,8 @@ fun ExportProfileEditorDialog(
 ) {
     val context = LocalContext.current
     val colors = LocalGeistColors.current
-    var draft by remember { mutableStateOf(initial) }
-    var showMetricSelection by remember { mutableStateOf(false) }
+    var draft by rememberSaveable(stateSaver = ExportProfileEditorDraftSaver) { mutableStateOf(initial) }
+    var showMetricSelection by rememberSaveable { mutableStateOf(false) }
 
     fun updateSettings(transform: (ExportSettings) -> ExportSettings) {
         draft = draft.copy(settings = transform(draft.settings))
@@ -144,15 +147,17 @@ fun ExportProfileEditorDialog(
         }
     }
 
+    val rawSnapshot = draft.settings.exportMode == ExportMode.RAW_SNAPSHOT
     val trimmedName = draft.name.trim()
     val endpointValid = draft.target != ExportTarget.API_ENDPOINT ||
         APIExportEndpoint.isConfigured(draft.apiEndpointUrl)
     val gatewayValid = draft.target != ExportTarget.AGENT_DATA_GATEWAY ||
         AgentDataGatewayEndpoint.isConfigured(draft.agentDataGatewayUrl)
     val canSave = trimmedName.isNotEmpty() &&
-        draft.settings.exportFormats.isNotEmpty() &&
+        draft.hasOutputFormat &&
         endpointValid &&
-        gatewayValid
+        gatewayValid &&
+        (rawSnapshot || AutomationOutputPathValidation.isValidDailyNotes(draft.settings.dailyNoteInjection))
 
     val overlappingNames = overlapPreview(draft.target, draft.folderUri, draft.settings)
 
@@ -260,181 +265,203 @@ fun ExportProfileEditorDialog(
             }
         }
 
-        ProfileSection(stringResource(R.string.m3_profiles_editor_output)) {
-            Text(stringResource(R.string.automation_detail_formats), style = GeistType.label14, color = colors.secondary)
-            FormatChoice(
-                selected = draft.settings.exportFormats,
-                onToggle = { format ->
-                    updateSettings {
-                        it.copy(
-                            exportFormats = if (format in it.exportFormats) {
-                                it.exportFormats - format
-                            } else {
-                                it.exportFormats + format
-                            },
-                        )
-                    }
-                },
-            )
-            Text(stringResource(R.string.section_write_mode), style = GeistType.label14, color = colors.secondary)
-            val modes = WriteMode.entries
-            ChoiceRows {
-                modes.forEachIndexed { index, mode ->
-                    EditorRadioRow(
-                        shape = groupRowShape(index, modes.size),
-                        title = mode.localizedDisplayName(),
-                        description = mode.localizedDescription(),
-                        selected = draft.settings.writeMode == mode,
-                        onClick = { updateSettings { it.copy(writeMode = mode) } },
-                    )
-                }
-            }
-            EditorTextField(
-                value = draft.settings.filenameFormat,
-                onValueChange = { value -> updateSettings { it.copy(filenameFormat = value) } },
-                label = stringResource(R.string.m3_profiles_editor_filename_template),
-                supporting = stringResource(R.string.filename_template_tokens),
-            )
-            EditorTextField(
-                value = draft.settings.folderStructure,
-                onValueChange = { value -> updateSettings { it.copy(folderStructure = value) } },
-                label = stringResource(R.string.folder_structure_template_label),
-            )
-            Text(stringResource(R.string.folder_organization_label), style = GeistType.label14, color = colors.secondary)
-            val organizations = FolderOrganization.entries
-            ChoiceRows {
-                organizations.forEachIndexed { index, org ->
-                    EditorRadioRow(
-                        shape = groupRowShape(index, organizations.size),
-                        title = folderOrganizationLabel(org),
-                        description = folderOrganizationPreview(org),
-                        selected = draft.settings.folderOrganization == org,
-                        onClick = { updateSettings { it.copy(folderOrganization = org) } },
-                    )
-                }
-            }
-            EditorTextField(
-                value = draft.settings.subfolder,
-                onValueChange = { value -> updateSettings { it.copy(subfolder = value) } },
-                label = stringResource(R.string.health_subfolder_label),
-            )
-            ToggleRows(
-                listOf(
-                    ToggleItem(stringResource(R.string.m3_profiles_editor_include_metadata), draft.settings.includeMetadata) { value ->
-                        updateSettings { it.copy(includeMetadata = value) }
-                    },
-                    ToggleItem(stringResource(R.string.toggle_group_by_category), draft.settings.groupByCategory) { value ->
-                        updateSettings { it.copy(groupByCategory = value) }
-                    },
-                    ToggleItem(stringResource(R.string.m3_profiles_detailed), draft.settings.includeGranularData) { value ->
-                        updateSettings { it.copy(includeGranularData = value) }
-                    },
-                ),
-            )
-            ExportDetailOverridesSection(
-                settings = draft.settings,
-                onDetailChoiceChanged = { group, choice -> updateSettings { it.withDetailChoice(group, choice) } },
-            )
-        }
-
-        ProfileSection(stringResource(R.string.automation_detail_metrics)) {
-            SettingsRow(
-                shape = RoundedCornerShape(GeistRadii.listGroup),
-                title = stringResource(R.string.metric_selection_title),
-                icon = Icons.Outlined.Checklist,
-                subtitle = stringResource(R.string.m3_profiles_editor_metrics_body),
-                trailing = stringResource(
-                    R.string.m3_profiles_editor_metrics_count,
-                    draft.settings.metricSelection.enabledCount,
-                    HealthMetrics.totalCount,
-                ),
-                onClick = { showMetricSelection = true },
-            )
-        }
-
-        ProfileSection(stringResource(R.string.m3_profiles_editor_daily_notes)) {
-            val daily = draft.settings.dailyNoteInjection
-            ToggleRows(
-                listOf(
-                    ToggleItem(stringResource(R.string.m3_profiles_editor_daily_inject), daily.enabled) { value ->
-                        updateSettings { it.copy(dailyNoteInjection = it.dailyNoteInjection.copy(enabled = value)) }
-                    },
-                ),
-            )
-            if (daily.enabled) {
-                EditorTextField(
-                    value = daily.folderPath,
-                    onValueChange = { value ->
-                        updateSettings { it.copy(dailyNoteInjection = it.dailyNoteInjection.copy(folderPath = value)) }
-                    },
-                    label = stringResource(R.string.m3_profiles_editor_notes_folder),
+        if (rawSnapshot) {
+            ProfileSection(stringResource(R.string.m3_profiles_editor_output)) {
+                RawSnapshotConfiguration(
+                    settings = draft.settings,
+                    onFormatChanged = { value -> updateSettings { it.copy(rawSnapshot = it.rawSnapshot.copy(format = value)) } },
+                    onScopeChanged = { value -> updateSettings { it.copy(rawSnapshot = it.rawSnapshot.copy(scope = value)) } },
+                    onIncludeExerciseRoutesChanged = { value -> updateSettings { it.copy(rawSnapshot = it.rawSnapshot.copy(includeExerciseRoutes = value)) } },
                 )
                 EditorTextField(
-                    value = daily.filenamePattern,
-                    onValueChange = { value ->
-                        updateSettings { it.copy(dailyNoteInjection = it.dailyNoteInjection.copy(filenamePattern = value)) }
-                    },
-                    label = stringResource(R.string.m3_profiles_editor_notes_filename),
-                )
-                ToggleRows(
-                    listOf(
-                        ToggleItem(stringResource(R.string.m3_profiles_editor_create_missing), daily.createIfMissing) { value ->
-                            updateSettings {
-                                it.copy(dailyNoteInjection = it.dailyNoteInjection.copy(createIfMissing = value))
-                            }
-                        },
-                        ToggleItem(stringResource(R.string.m3_profiles_editor_markdown_sections), daily.injectMarkdownSections) { value ->
-                            updateSettings {
-                                it.copy(dailyNoteInjection = it.dailyNoteInjection.copy(injectMarkdownSections = value))
-                            }
-                        },
-                    ),
+                    value = draft.settings.subfolder,
+                    onValueChange = { value -> updateSettings { it.copy(subfolder = value) } },
+                    label = stringResource(R.string.health_subfolder_label),
                 )
             }
-        }
-
-        ProfileSection(stringResource(R.string.m3_profiles_editor_individual)) {
-            val tracking = draft.settings.individualTracking
-            ToggleRows(
-                listOf(
-                    ToggleItem(stringResource(R.string.m3_profiles_editor_individual_toggle), tracking.globalEnabled) { value ->
-                        updateSettings { it.copy(individualTracking = it.individualTracking.copy(globalEnabled = value)) }
-                    },
-                ),
-            )
-            if (tracking.globalEnabled) {
-                EditorTextField(
-                    value = tracking.entriesFolder,
-                    onValueChange = { value ->
-                        updateSettings { it.copy(individualTracking = it.individualTracking.copy(entriesFolder = value)) }
-                    },
-                    label = stringResource(R.string.m3_profiles_editor_entries_folder),
-                )
-                ToggleRows(
-                    listOf(
-                        ToggleItem(stringResource(R.string.m3_profiles_editor_category_folders), tracking.organizeByCategory) { value ->
-                            updateSettings {
-                                it.copy(individualTracking = it.individualTracking.copy(organizeByCategory = value))
-                            }
-                        },
-                    ),
-                )
-                EditorTextField(
-                    value = tracking.filenameTemplate,
-                    onValueChange = { value ->
+        } else {
+            ProfileSection(stringResource(R.string.m3_profiles_editor_output)) {
+                Text(stringResource(R.string.automation_detail_formats), style = GeistType.label14, color = colors.secondary)
+                FormatChoice(
+                    selected = draft.settings.exportFormats,
+                    onToggle = { format ->
                         updateSettings {
-                            it.copy(individualTracking = it.individualTracking.copy(filenameTemplate = value))
+                            it.copy(
+                                exportFormats = if (format in it.exportFormats) {
+                                    it.exportFormats - format
+                                } else {
+                                    it.exportFormats + format
+                                },
+                            )
                         }
                     },
-                    label = stringResource(R.string.m3_profiles_editor_entry_filename),
-                    supporting = stringResource(R.string.individual_tracking_filename_tokens),
+                )
+                Text(stringResource(R.string.section_write_mode), style = GeistType.label14, color = colors.secondary)
+                val modes = WriteMode.entries
+                ChoiceRows {
+                    modes.forEachIndexed { index, mode ->
+                        EditorRadioRow(
+                            shape = groupRowShape(index, modes.size),
+                            title = mode.localizedDisplayName(),
+                            description = mode.localizedDescription(),
+                            selected = draft.settings.writeMode == mode,
+                            onClick = { updateSettings { it.copy(writeMode = mode) } },
+                        )
+                    }
+                }
+                EditorTextField(
+                    value = draft.settings.filenameFormat,
+                    onValueChange = { value -> updateSettings { it.copy(filenameFormat = value) } },
+                    label = stringResource(R.string.m3_profiles_editor_filename_template),
+                    supporting = stringResource(R.string.filename_template_tokens),
+                )
+                EditorTextField(
+                    value = draft.settings.folderStructure,
+                    onValueChange = { value -> updateSettings { it.copy(folderStructure = value) } },
+                    label = stringResource(R.string.folder_structure_template_label),
+                )
+                Text(stringResource(R.string.folder_organization_label), style = GeistType.label14, color = colors.secondary)
+                val organizations = FolderOrganization.entries
+                ChoiceRows {
+                    organizations.forEachIndexed { index, org ->
+                        EditorRadioRow(
+                            shape = groupRowShape(index, organizations.size),
+                            title = folderOrganizationLabel(org),
+                            description = folderOrganizationPreview(org),
+                            selected = draft.settings.folderOrganization == org,
+                            onClick = { updateSettings { it.copy(folderOrganization = org) } },
+                        )
+                    }
+                }
+                EditorTextField(
+                    value = draft.settings.subfolder,
+                    onValueChange = { value -> updateSettings { it.copy(subfolder = value) } },
+                    label = stringResource(R.string.health_subfolder_label),
+                )
+                ToggleRows(
+                    listOf(
+                        ToggleItem(stringResource(R.string.m3_profiles_editor_include_metadata), draft.settings.includeMetadata) { value ->
+                            updateSettings { it.copy(includeMetadata = value) }
+                        },
+                        ToggleItem(stringResource(R.string.toggle_group_by_category), draft.settings.groupByCategory) { value ->
+                            updateSettings { it.copy(groupByCategory = value) }
+                        },
+                        ToggleItem(stringResource(R.string.m3_profiles_detailed), draft.settings.includeGranularData) { value ->
+                            updateSettings { it.copy(includeGranularData = value) }
+                        },
+                    ),
+                )
+                ExportDetailOverridesSection(
+                    settings = draft.settings,
+                    onDetailChoiceChanged = { group, choice -> updateSettings { it.withDetailChoice(group, choice) } },
                 )
             }
-            Text(
-                text = stringResource(R.string.m3_profiles_editor_entry_rules_note),
-                style = GeistType.copy13,
-                color = colors.secondary,
-            )
+        }
+
+        if (!rawSnapshot || draft.settings.rawSnapshot.scope == RawSnapshotScope.SELECTED_RECORD_TYPES) {
+            ProfileSection(stringResource(R.string.automation_detail_metrics)) {
+                SettingsRow(
+                    shape = RoundedCornerShape(GeistRadii.listGroup),
+                    title = stringResource(R.string.metric_selection_title),
+                    icon = Icons.Outlined.Checklist,
+                    subtitle = stringResource(R.string.m3_profiles_editor_metrics_body),
+                    trailing = stringResource(
+                        R.string.m3_profiles_editor_metrics_count,
+                        draft.settings.metricSelection.enabledCount,
+                        HealthMetrics.totalCount,
+                    ),
+                    onClick = { showMetricSelection = true },
+                )
+            }
+        }
+
+        if (!rawSnapshot) {
+            ProfileSection(stringResource(R.string.m3_profiles_editor_daily_notes)) {
+                val daily = draft.settings.dailyNoteInjection
+                ToggleRows(
+                    listOf(
+                        ToggleItem(stringResource(R.string.m3_profiles_editor_daily_inject), daily.enabled) { value ->
+                            updateSettings { it.copy(dailyNoteInjection = it.dailyNoteInjection.copy(enabled = value)) }
+                        },
+                    ),
+                )
+                if (daily.enabled) {
+                    EditorTextField(
+                        value = daily.folderPath,
+                        error = if (!AutomationOutputPathValidation.isSafeDailyNoteFolder(daily.folderPath)) stringResource(R.string.automation_output_path_invalid) else null,
+                        onValueChange = { value ->
+                            updateSettings { it.copy(dailyNoteInjection = it.dailyNoteInjection.copy(folderPath = value)) }
+                        },
+                        label = stringResource(R.string.m3_profiles_editor_notes_folder),
+                    )
+                    EditorTextField(
+                        value = daily.filenamePattern,
+                        error = if (!AutomationOutputPathValidation.isSafeDailyNoteFilename(daily.filenamePattern)) stringResource(R.string.automation_output_path_invalid) else null,
+                        onValueChange = { value ->
+                            updateSettings { it.copy(dailyNoteInjection = it.dailyNoteInjection.copy(filenamePattern = value)) }
+                        },
+                        label = stringResource(R.string.m3_profiles_editor_notes_filename),
+                    )
+                    ToggleRows(
+                        listOf(
+                            ToggleItem(stringResource(R.string.m3_profiles_editor_create_missing), daily.createIfMissing) { value ->
+                                updateSettings {
+                                    it.copy(dailyNoteInjection = it.dailyNoteInjection.copy(createIfMissing = value))
+                                }
+                            },
+                            ToggleItem(stringResource(R.string.m3_profiles_editor_markdown_sections), daily.injectMarkdownSections) { value ->
+                                updateSettings {
+                                    it.copy(dailyNoteInjection = it.dailyNoteInjection.copy(injectMarkdownSections = value))
+                                }
+                            },
+                        ),
+                    )
+                }
+            }
+
+            ProfileSection(stringResource(R.string.m3_profiles_editor_individual)) {
+                val tracking = draft.settings.individualTracking
+                ToggleRows(
+                    listOf(
+                        ToggleItem(stringResource(R.string.m3_profiles_editor_individual_toggle), tracking.globalEnabled) { value ->
+                            updateSettings { it.copy(individualTracking = it.individualTracking.copy(globalEnabled = value)) }
+                        },
+                    ),
+                )
+                if (tracking.globalEnabled) {
+                    EditorTextField(
+                        value = tracking.entriesFolder,
+                        onValueChange = { value ->
+                            updateSettings { it.copy(individualTracking = it.individualTracking.copy(entriesFolder = value)) }
+                        },
+                        label = stringResource(R.string.m3_profiles_editor_entries_folder),
+                    )
+                    ToggleRows(
+                        listOf(
+                            ToggleItem(stringResource(R.string.m3_profiles_editor_category_folders), tracking.organizeByCategory) { value ->
+                                updateSettings {
+                                    it.copy(individualTracking = it.individualTracking.copy(organizeByCategory = value))
+                                }
+                            },
+                        ),
+                    )
+                    EditorTextField(
+                        value = tracking.filenameTemplate,
+                        onValueChange = { value ->
+                            updateSettings {
+                                it.copy(individualTracking = it.individualTracking.copy(filenameTemplate = value))
+                            }
+                        },
+                        label = stringResource(R.string.m3_profiles_editor_entry_filename),
+                        supporting = stringResource(R.string.individual_tracking_filename_tokens),
+                    )
+                }
+                Text(
+                    text = stringResource(R.string.m3_profiles_editor_entry_rules_note),
+                    style = GeistType.copy13,
+                    color = colors.secondary,
+                )
+            }
         }
 
         if (overlappingNames.isNotEmpty()) {

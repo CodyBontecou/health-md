@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -29,11 +30,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.healthmd.R
+import com.healthmd.presentation.theme.GeistAdaptiveLayout
 import com.healthmd.presentation.theme.GeistRadii
 import com.healthmd.presentation.theme.GeistSpacing
 import com.healthmd.presentation.theme.GeistType
@@ -43,23 +47,35 @@ import com.healthmd.presentation.theme.LocalGeistColors
 @Composable
 internal fun SettingsValueRow(shape: Shape, title: String, value: String, mono: Boolean = false) {
     val colors = LocalGeistColors.current
-    Row(
+    BoxWithConstraints(
         Modifier
             .fillMaxWidth()
             .clip(shape)
             .background(colors.background200)
             .semantics(mergeDescendants = true) {}
             .padding(horizontal = GeistSpacing.space4, vertical = GeistSpacing.space4),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(GeistSpacing.space4),
     ) {
-        Text(title, style = GeistType.label16, color = colors.primary, modifier = Modifier.weight(1f))
-        Text(
-            value,
-            style = if (mono) GeistType.label14Mono else GeistType.label14,
-            color = colors.secondary,
-            maxLines = 2,
-        )
+        val stacked = GeistAdaptiveLayout.stackDetailedControls(maxWidth.value, LocalDensity.current.fontScale)
+        if (stacked) {
+            Column(verticalArrangement = Arrangement.spacedBy(GeistSpacing.space1)) {
+                Text(title, style = GeistType.label16, color = colors.primary)
+                Text(value, style = if (mono) GeistType.label14Mono else GeistType.label14, color = colors.secondary)
+            }
+        } else {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(GeistSpacing.space4),
+            ) {
+                Text(title, style = GeistType.label16, color = colors.primary, modifier = Modifier.weight(1f))
+                Text(
+                    value,
+                    style = if (mono) GeistType.label14Mono else GeistType.label14,
+                    color = colors.secondary,
+                    textAlign = TextAlign.End,
+                    modifier = Modifier.weight(1f),
+                )
+            }
+        }
     }
 }
 

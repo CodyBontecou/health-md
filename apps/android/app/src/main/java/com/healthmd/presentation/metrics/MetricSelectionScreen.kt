@@ -10,6 +10,7 @@ import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -42,12 +43,16 @@ fun MetricSelectionScreen(
     onBack: () -> Unit,
 ) {
     val colors = LocalGeistColors.current
-    var searchQuery by remember { mutableStateOf("") }
+    var searchQuery by rememberSaveable { mutableStateOf("") }
     var expandedCategories by remember { mutableStateOf(HealthMetrics.categories.toSet()) }
     var focusSearch by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+    val normalizedQuery = searchQuery.trim()
+    val hasMatches = HealthMetrics.allMetrics.any {
+        context.getString(it.displayNameRes()).contains(normalizedQuery, ignoreCase = true)
+    }
     val locale = context.resources.configuration.locales[0]
     val integerFormat = remember(locale) {
         NumberFormat.getIntegerInstance(locale).apply { isGroupingUsed = false }
@@ -153,14 +158,25 @@ fun MetricSelectionScreen(
                     )
                 }
 
+                if (!hasMatches) {
+                    item(key = "no_matching_metrics") {
+                        Text(
+                            stringResource(R.string.metric_search_no_results),
+                            style = GeistType.copy16,
+                            color = colors.secondary,
+                            modifier = Modifier.fillMaxWidth().padding(vertical = GeistSpacing.space4),
+                        )
+                    }
+                }
+
                 HealthMetrics.categories.forEach { category ->
                     val metrics = HealthMetrics.metricsForCategory(category)
                     // Preserve the shipped localized-name, case-insensitive matching (not IDs,
-                    // units or category names), including the original blank-query behavior.
-                    val filteredMetrics = if (searchQuery.isBlank()) metrics else metrics.filter {
-                        context.getString(it.displayNameRes()).contains(searchQuery, ignoreCase = true)
+                    // units or category names), trimming accidental surrounding whitespace.
+                    val filteredMetrics = if (normalizedQuery.isBlank()) metrics else metrics.filter {
+                        context.getString(it.displayNameRes()).contains(normalizedQuery, ignoreCase = true)
                     }
-                    if (filteredMetrics.isEmpty() && searchQuery.isNotBlank()) return@forEach
+                    if (filteredMetrics.isEmpty() && normalizedQuery.isNotBlank()) return@forEach
                     val isExpanded = category in expandedCategories
                     // One list group per category: the tonal header, its tri-state row, then metrics.
                     val groupSize = 2 + if (isExpanded) filteredMetrics.size else 0

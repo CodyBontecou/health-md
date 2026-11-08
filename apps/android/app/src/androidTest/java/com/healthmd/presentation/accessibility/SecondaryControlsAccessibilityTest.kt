@@ -27,6 +27,9 @@ import com.healthmd.presentation.export.DateRangeSelectionSection
 import com.healthmd.presentation.export.ExportDateControlTags
 import com.healthmd.presentation.schedule.ScheduleHistoryHeading
 import com.healthmd.presentation.schedule.ScheduleHistoryTags
+import com.healthmd.presentation.settings.SettingsRow
+import com.healthmd.presentation.settings.SettingsValueRow
+import com.healthmd.presentation.settings.groupRowShape
 import com.healthmd.presentation.theme.AppColors
 import com.healthmd.presentation.theme.GeistAdaptiveLayout
 import com.healthmd.presentation.theme.GeistDarkColors
@@ -60,6 +63,45 @@ class SecondaryControlsAccessibilityTest(display: AccessibilityDisplayCase) : Ac
         DateRangeOption.Last30Days to R.string.date_option_last_30_days,
         DateRangeOption.Custom to R.string.date_option_custom,
     )
+
+    @Test
+    fun destinationDetailsStackValuesWithoutCrushingLabelsInAnExpandedDetailPane() {
+        val timestamp = "3 days ago, 10:31 AM"
+        val folder = "Documents/Health/Exports"
+        var opens = 0
+        setContent {
+            ScrollFixture {
+                Column(Modifier.width(228.dp)) {
+                    SettingsValueRow(groupRowShape(0, 1), "Last write", timestamp)
+                    SettingsRow(
+                        shape = groupRowShape(0, 1),
+                        title = "Subfolder",
+                        trailing = folder,
+                        icon = null,
+                        onClick = { opens++ },
+                    )
+                }
+            }
+        }
+
+        listOf("Last write" to timestamp, "Subfolder" to folder).forEach { (label, value) ->
+            val title = compose.onNodeWithText(label, useUnmergedTree = true).performScrollTo()
+            val detail = compose.onNodeWithText(value, useUnmergedTree = true).performScrollTo()
+            assertTextFits(title, GeistType.label16.fontSize)
+            assertTextFits(detail, GeistType.label14.fontSize)
+            val titleBounds = title.getUnclippedBoundsInRoot()
+            val detailBounds = detail.getUnclippedBoundsInRoot()
+            assertTrue("The value must sit below the readable label in a narrow pane",
+                detailBounds.top >= titleBounds.bottom)
+            if (display.language == "ar") {
+                assertEquals(titleBounds.right, detailBounds.right)
+            } else {
+                assertEquals(titleBounds.left, detailBounds.left)
+            }
+        }
+        compose.onNodeWithText(folder).performClick()
+        compose.runOnIdle { assertEquals(1, opens) }
+    }
 
     @Test
     fun datePresetsKeepFullLabelsExclusiveSelectionAndCallbackIdentity() {

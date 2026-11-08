@@ -18,9 +18,11 @@ import androidx.compose.material.icons.outlined.Save
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.annotation.StringRes
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -35,6 +37,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.healthmd.R
+import com.healthmd.presentation.common.HealthDatePicker
 import com.healthmd.domain.clinicianreport.*
 import com.healthmd.presentation.common.GeistCard
 import com.healthmd.presentation.common.LocalConfigurationProtection
@@ -83,8 +86,8 @@ fun ClinicianReportScreen(
         else if (protection.enabled) protection.onBlockedChange()
         else action()
     }
-    var pickingStart by remember { mutableStateOf(false) }
-    var pickingEnd by remember { mutableStateOf(false) }
+    var pickingStart by rememberSaveable { mutableStateOf(false) }
+    var pickingEnd by rememberSaveable { mutableStateOf(false) }
     val saveLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/pdf")) { uri ->
         uri?.let(viewModel::savePdf)
     }
@@ -96,7 +99,7 @@ fun ClinicianReportScreen(
             onDismissRequest = { pickingStart = false; pickingEnd = false },
             confirmButton = {
                 TextButton(
-                    enabled = configurationControlsEnabled,
+                    enabled = configurationControlsEnabled && pickerState.selectedDateMillis != null,
                     onClick = {
                         pickerState.selectedDateMillis?.let { millis ->
                             val selected = Instant.ofEpochMilli(millis).atZone(ZoneOffset.UTC).toLocalDate()
@@ -112,7 +115,7 @@ fun ClinicianReportScreen(
                 ) { Text(stringResource(R.string.clinician_report_select_date)) }
             },
             dismissButton = { TextButton(onClick = { pickingStart = false; pickingEnd = false }) { Text(stringResource(R.string.cancel)) } },
-        ) { DatePicker(state = pickerState) }
+        ) { HealthDatePicker(state = pickerState) }
     }
 
     Column(Modifier.fillMaxSize()) {
@@ -133,26 +136,39 @@ fun ClinicianReportScreen(
                     ReportDateRangePreset.CUSTOM to stringResource(R.string.clinician_report_custom),
                 )
                 val geist = com.healthmd.presentation.theme.LocalGeistColors.current
-                SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
-                    presets.forEachIndexed { index, (preset, label) ->
-                        SegmentedButton(
-                            selected = state.selectedPreset == preset,
-                            onClick = {
-                                attemptConfigurationChange { viewModel.selectPreset(preset) }
-                            },
-                            shape = SegmentedButtonDefaults.itemShape(index, presets.size),
-                            enabled = configurationControlsEnabled,
-                            icon = {},
-                            colors = SegmentedButtonDefaults.colors(
-                                activeContainerColor = geist.secondaryContainer,
-                                activeContentColor = geist.onSecondaryContainer,
-                                inactiveContentColor = geist.primary,
-                                activeBorderColor = geist.gray.c700,
-                                inactiveBorderColor = geist.gray.c700,
-                            ),
-                            modifier = Modifier.heightIn(min = com.healthmd.presentation.theme.GeistSizes.minimumTouchTarget)
-                                .testTag("clinician_report_preset_${preset.name.lowercase()}"),
-                        ) { Text(label, style = GeistType.button14) }
+                BoxWithConstraints(Modifier.fillMaxWidth()) {
+                    if (GeistAdaptiveLayout.stackDetailedControls(maxWidth.value, LocalDensity.current.fontScale)) {
+                        Column {
+                            presets.forEach { (preset, label) ->
+                                DetailRow(
+                                    label, state.selectedPreset == preset, configurationControlsEnabled,
+                                    modifier = Modifier.testTag("clinician_report_preset_${preset.name.lowercase()}"),
+                                ) { attemptConfigurationChange { viewModel.selectPreset(preset) } }
+                            }
+                        }
+                    } else {
+                        SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+                            presets.forEachIndexed { index, (preset, label) ->
+                                SegmentedButton(
+                                    selected = state.selectedPreset == preset,
+                                    onClick = {
+                                        attemptConfigurationChange { viewModel.selectPreset(preset) }
+                                    },
+                                    shape = SegmentedButtonDefaults.itemShape(index, presets.size),
+                                    enabled = configurationControlsEnabled,
+                                    icon = {},
+                                    colors = SegmentedButtonDefaults.colors(
+                                        activeContainerColor = geist.secondaryContainer,
+                                        activeContentColor = geist.onSecondaryContainer,
+                                        inactiveContentColor = geist.primary,
+                                        activeBorderColor = geist.gray.c700,
+                                        inactiveBorderColor = geist.gray.c700,
+                                    ),
+                                    modifier = Modifier.heightIn(min = com.healthmd.presentation.theme.GeistSizes.minimumTouchTarget)
+                                        .testTag("clinician_report_preset_${preset.name.lowercase()}"),
+                                ) { Text(label, style = GeistType.button14) }
+                            }
+                        }
                     }
                 }
                 if (state.selectedPreset == ReportDateRangePreset.CUSTOM) {
@@ -310,20 +326,32 @@ private fun busyStateSemantics(description: String): Modifier = Modifier.semanti
 
 @Composable
 private fun DateRangeButton(label: String, date: LocalDate, enabled: Boolean, onClick: () -> Unit) {
-    Row(
-        modifier = Modifier.fillMaxWidth().clickable(enabled = enabled, onClick = onClick).padding(vertical = Spacing.sm),
-        horizontalArrangement = Arrangement.SpaceBetween,
+    val textColor = if (enabled) AppColors.textSecondary else AppColors.textMuted
+    BoxWithConstraints(
+        Modifier.fillMaxWidth().heightIn(min = GeistSizes.minimumTouchTarget)
+            .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
+            .semantics(mergeDescendants = true) {}
+            .padding(vertical = Spacing.sm),
     ) {
-        val textColor = if (enabled) AppColors.textSecondary else AppColors.textMuted
-        Text(label, style = GeistType.copy14, color = textColor)
-        Text(date.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)), style = GeistType.copy14Mono, color = textColor)
+        val value = date.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM))
+        if (GeistAdaptiveLayout.stackDetailedControls(maxWidth.value, LocalDensity.current.fontScale)) {
+            Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                Text(label, style = GeistType.copy14, color = textColor)
+                Text(value, style = GeistType.copy14Mono, color = textColor)
+            }
+        } else {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Spacing.md)) {
+                Text(label, style = GeistType.copy14, color = textColor, modifier = Modifier.weight(1f))
+                Text(value, style = GeistType.copy14Mono, color = textColor, modifier = Modifier.weight(1f))
+            }
+        }
     }
 }
 
 @Composable
-private fun DetailRow(label: String, selected: Boolean, enabled: Boolean, onClick: () -> Unit) {
+private fun DetailRow(label: String, selected: Boolean, enabled: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit) {
     Row(
-        modifier = Modifier.fillMaxWidth().selectable(
+        modifier = modifier.fillMaxWidth().heightIn(min = GeistSizes.minimumTouchTarget).selectable(
             selected = selected,
             enabled = enabled,
             role = Role.RadioButton,

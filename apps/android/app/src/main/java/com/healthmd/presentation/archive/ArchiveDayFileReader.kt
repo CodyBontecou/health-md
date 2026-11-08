@@ -41,18 +41,23 @@ class ArchiveDayFileReader @Inject constructor(
             val bytes = resolver.openInputStream(uri)?.use { stream ->
                 val output = ByteArrayOutputStream()
                 val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
-                while (output.size() < ArchiveDayFile.MAXIMUM_BYTES) {
-                    val count = stream.read(buffer, 0, minOf(buffer.size, ArchiveDayFile.MAXIMUM_BYTES - output.size()))
+                val readLimit = ArchiveDayFile.MAXIMUM_BYTES + 1
+                while (output.size() < readLimit) {
+                    val count = stream.read(buffer, 0, minOf(buffer.size, readLimit - output.size()))
                     if (count < 0) break
                     output.write(buffer, 0, count)
                 }
                 output.toByteArray()
             } ?: return@withContext null
+            val previewBytes = bytes.copyOf(minOf(bytes.size, ArchiveDayFile.MAXIMUM_BYTES))
+            val source = ArchiveDayFile.decodePreview(
+                previewBytes, truncated = size > previewBytes.size || bytes.size > previewBytes.size,
+            ) ?: return@withContext null
             ArchiveDayFile(
                 documentUri = uri.toString(),
                 name = ref.relativePath.substringAfterLast('/'),
                 mimeType = mimeType,
-                source = String(bytes, Charsets.UTF_8),
+                source = source,
                 byteCount = maxOf(size, bytes.size.toLong()),
             )
         } catch (cancelled: CancellationException) {

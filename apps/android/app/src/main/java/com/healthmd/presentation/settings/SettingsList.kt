@@ -34,6 +34,7 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.style.TextAlign
 import com.healthmd.R
 import com.healthmd.presentation.theme.GeistAdaptiveLayout
 import com.healthmd.presentation.theme.GeistRadii
@@ -140,7 +141,7 @@ internal fun SettingsRow(
         verticalArrangement = Arrangement.Center,
     ) {
         androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxWidth()) {
-            // Reading-first below 336dp per font scale: the icon gives its width to the text.
+            // Constrained panes give labels and values separate lines at the user’s text scale.
             val reading = GeistAdaptiveLayout.stackDetailedControls(maxWidth.value, LocalDensity.current.fontScale)
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -174,13 +175,23 @@ internal fun SettingsRow(
                     subtitle?.let {
                         Text(it, style = GeistType.copy14, color = if (selected) colors.onSecondaryContainer else colors.secondary)
                     }
+                    if (reading && trailing != null) {
+                        Text(
+                            trailing,
+                            style = GeistType.label14,
+                            color = if (trailingTone == SettingsTrailingTone.POSITIVE) colors.success else colors.secondary,
+                            modifier = Modifier.padding(top = GeistSpacing.space1),
+                        )
+                    }
                 }
                 badge?.let { SettingsBadgePill(it) }
-                trailing?.let {
+                trailing?.takeUnless { reading }?.let {
                     Text(
                         it,
                         style = GeistType.label14,
                         color = if (trailingTone == SettingsTrailingTone.POSITIVE) colors.success else colors.secondary,
+                        textAlign = TextAlign.End,
+                        modifier = Modifier.weight(1f, fill = false),
                     )
                 }
                 if (trailingContent != null) {

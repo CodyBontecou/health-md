@@ -54,6 +54,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.healthmd.R
+import com.healthmd.rawexport.ExportMode
 import com.healthmd.data.scheduler.ScheduledProfileCadenceUnit
 import com.healthmd.data.scheduler.ScheduledProfileEntry
 import com.healthmd.domain.model.ExportSettings
@@ -275,7 +276,7 @@ private fun AutomationDetailContent(
             Triple(stringResource(R.string.automation_detail_metrics), settings.metricSelection.enabledCount.toString()) {
                 onOpenPage(AutomationPage.METRICS)
             },
-            Triple(stringResource(R.string.automation_row_formats), AutomationFacts.formatsShortLabel(settings.exportFormats).ifEmpty { "—" }) {
+            Triple(stringResource(R.string.automation_row_formats), if (settings.exportMode == ExportMode.RAW_SNAPSHOT) settings.rawSnapshot.format.name else AutomationFacts.formatsShortLabel(settings.exportFormats).ifEmpty { "—" }) {
                 onOpenPage(AutomationPage.FORMATS)
             },
             Triple(stringResource(R.string.automation_row_output), settings.writeMode.localizedDisplayName()) {

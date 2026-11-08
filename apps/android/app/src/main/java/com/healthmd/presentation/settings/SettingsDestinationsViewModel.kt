@@ -3,6 +3,7 @@ package com.healthmd.presentation.settings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.healthmd.data.export.APIExportAuthorization
+import com.healthmd.data.export.APIExportHeaders
 import com.healthmd.data.export.APIExportCredentialStore
 import com.healthmd.data.export.APIExportRequestHeader
 import com.healthmd.data.scheduler.ExportScheduler
@@ -123,18 +124,22 @@ class SettingsDestinationsViewModel @Inject constructor(
 
     /**
      * Tests the draft URL. A typed token is used as entered; otherwise the saved Authorization
-     * and custom headers go with the request, as they would with a real upload.
+     * and custom headers go with the request. Nonblank drafts replace the stored values;
+     * invalid drafts fail without falling back to saved credentials or making a request.
      */
-    fun testConnection(draftUrl: String, draftAuthorization: String) {
+    fun testConnection(draftUrl: String, draftAuthorization: String, draftHeaders: String = "") {
         val url = APIExportEndpoint.normalizedOrNull(draftUrl) ?: return
         testJob?.cancel()
         _connectionTest.value = ConnectionTestState.Running
         testJob = viewModelScope.launch {
             _connectionTest.value = try {
-                val authorization = draftAuthorization.takeIf { it.isNotBlank() }
-                    ?.let(APIExportAuthorization::normalizeOrNull)
-                    ?: credentialStore.authorizationHeader()
-                ConnectionTestState.Finished(tester.statusCode(url, authorization, credentialStore.requestHeaders()))
+                val typedAuthorization = draftAuthorization.takeIf { it.isNotBlank() }?.let {
+                    requireNotNull(APIExportAuthorization.normalizeOrNull(it))
+                }
+                val typedHeaders = draftHeaders.takeIf { it.isNotBlank() }?.let(APIExportHeaders::parse)
+                val authorization = typedAuthorization ?: credentialStore.authorizationHeader()
+                val headers = typedHeaders ?: credentialStore.requestHeaders()
+                ConnectionTestState.Finished(tester.statusCode(url, authorization, headers))
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (_: Exception) {
