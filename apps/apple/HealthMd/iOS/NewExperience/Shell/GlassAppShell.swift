@@ -37,8 +37,8 @@ struct GlassAppShell: View {
     let historyCheckAwaitsDecision: Bool
     let onContinueWithoutHistoryVerification: () -> Void
     let onCancelHistoryVerification: () -> Void
-    /// True while MomentGlass shows a finished export, so ContentView holds back its
-    /// completion toast instead of drawing it over the moment's summary.
+    /// True while MomentGlass owns running progress or a finished export, so the
+    /// parent does not draw another activity panel over it.
     @Binding var isShowingExportMoment: Bool
 
     @EnvironmentObject private var healthKitManager: HealthKitManager
@@ -359,7 +359,9 @@ struct GlassAppShell: View {
             case .failed: break
             }
         }
-        .onChange(of: momentDone == nil, initial: true) { _, isHidden in isShowingExportMoment = !isHidden }
+        .onChange(of: isExporting || momentDone != nil, initial: true) { _, isVisible in
+            isShowingExportMoment = isVisible
+        }
         .onChange(of: presentFirstExportPreview) { _, requested in consumeFirstPreview(requested) }
         .onChange(of: classicExportRequest) { _, _ in onExport() }
         .onChange(of: gapBackfillRouter.pendingRequest, initial: true) { _, _ in consumeGapBackfillRequest() }

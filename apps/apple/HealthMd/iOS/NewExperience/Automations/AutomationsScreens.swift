@@ -772,6 +772,7 @@ struct AutomationDetailScreen: View {
             Button(String(localized: "Save", comment: "Confirm rename")) {
                 _ = coordinator.renameProfile(id: profile.id, to: renameText)
             }
+            .disabled(renameText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             Button(String(localized: "Cancel", comment: "Dismiss rename"), role: .cancel) {}
         }
         .alert("Bind context automation?", isPresented: $showContextBindingConfirmation) {

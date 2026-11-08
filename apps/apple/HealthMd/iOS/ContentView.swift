@@ -254,7 +254,7 @@ struct ContentView: View {
                     }
                     .accessibilityIdentifier("uitest.export.finishBatch")
                 }
-                if isExporting {
+                if isExporting && !isShowingExportMoment {
                     ManualExportActivityBanner(
                         target: exportTargetSelection,
                         progress: exportProgress,
@@ -2679,6 +2679,10 @@ struct ContentView: View {
 
         exportTask = Task {
             defer {
+                if Task.isCancelled {
+                    exportStatusMessage = String(localized: "Export cancelled", comment: "Export was cancelled")
+                    vaultManager.lastExportStatus = exportStatusMessage
+                }
                 isExporting = false
                 isTestExportWaitingForCompletion = false
                 exportProgress = 0.0
@@ -2688,7 +2692,11 @@ struct ContentView: View {
             // Brief delay to simulate progress
             exportStatusMessage = "Exporting 2026-03-28... (1/1)"
             exportProgress = 0.5
-            try? await Task.sleep(for: .milliseconds(300))
+            do {
+                try await Task.sleep(for: .milliseconds(300))
+            } catch {
+                return
+            }
 
             let result = TestMode.exportResult ?? "success"
             if result == "intermediate-success" {

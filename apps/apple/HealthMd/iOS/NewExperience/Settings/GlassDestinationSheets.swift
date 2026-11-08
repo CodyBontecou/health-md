@@ -373,6 +373,11 @@ struct GlassGatewayDestinationSheet: View {
         AgentDataGatewayDestinationSnapshot(endpointURLString: endpoint)
     }
 
+    // Like the API editor, allow clearing the endpoint but reject an invalid nonempty draft.
+    private var isEndpointValid: Bool {
+        endpoint.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || draftSnapshot != nil
+    }
+
     private var hasChanges: Bool {
         name.trimmingCharacters(in: .whitespacesAndNewlines) != names.agentDataGatewayName
             || endpoint != settings.endpointURLString
@@ -387,7 +392,7 @@ struct GlassGatewayDestinationSheet: View {
             showsStatus: false,
             removeTitle: String(localized: "Remove gateway"),
             canRemove: !settings.endpointURLString.isEmpty,
-            hasChanges: hasChanges,
+            hasChanges: hasChanges && isEndpointValid,
             onSave: {
                 names.agentDataGatewayName = name
                 settings.endpointURLString = endpoint
@@ -406,7 +411,7 @@ struct GlassGatewayDestinationSheet: View {
             }
             GlassDestinationFieldRow(
                 label: String(localized: "Gateway URL"),
-                helper: endpoint.isEmpty || draftSnapshot != nil ? nil : String(localized: "Enter a valid HTTP or HTTPS URL"),
+                helper: isEndpointValid ? nil : String(localized: "Enter a valid HTTP or HTTPS URL"),
                 showsDivider: true
             ) {
                 TextField("https://gateway.example.com", text: $endpoint)

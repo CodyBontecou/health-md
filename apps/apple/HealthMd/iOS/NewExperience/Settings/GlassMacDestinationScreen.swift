@@ -9,7 +9,8 @@ struct GlassMacDestinationScreen: View {
     @Environment(\.glassPalette) private var palette
     @AppStorage("syncEnabled") private var syncEnabled = false
     @AppStorage("manualIPLastHost") private var manualMacHost = ""
-    @AppStorage("manualIPLastPort") private var manualMacPort = String(SyncService.manualIPPort)
+    @AppStorage("manualIPLastPort") private var savedManualMacPort = String(SyncService.manualIPPort)
+    @State private var manualMacPort = String(SyncService.manualIPPort)
     @State private var manualPairingCode = ""
     @ObservedObject private var requestRange = MacExportRequestRange.shared
 
@@ -82,6 +83,7 @@ struct GlassMacDestinationScreen: View {
         .navigationBarTitleDisplayMode(.inline)
         .accessibilityIdentifier("glass.macDestination")
         .onAppear {
+            manualMacPort = savedManualMacPort
             if syncEnabled && shouldStartRuntimeServices { syncService.startAdvertising() }
         }
         .onChange(of: syncEnabled) { _, isOn in
@@ -195,6 +197,11 @@ struct GlassMacDestinationScreen: View {
                         TextField(String(SyncService.manualIPPort), text: $manualMacPort)
                             .keyboardType(.numberPad)
                             .accessibilityLabel(String(localized: "Port"))
+                        if ManualConnectionPort.parse(manualMacPort) == nil {
+                            Text("Enter a port from 1 to 65535.")
+                                .glassFont(.rowSubtitle)
+                                .foregroundStyle(palette.coral)
+                        }
                     }
                     labelledField(String(localized: "Pairing code"), showsDivider: true) {
                         SecureField(
@@ -287,6 +294,7 @@ struct GlassMacDestinationScreen: View {
 
     private var canAttemptManualIPConnection: Bool {
         !manualMacHost.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && ManualConnectionPort.parse(manualMacPort) != nil
             && (syncService.hasSavedManualIPConnection
                 || !ManualIPSyncSecurity.normalizedPairingCode(manualPairingCode).isEmpty)
             && syncService.connectionState != .connecting
@@ -299,9 +307,10 @@ struct GlassMacDestinationScreen: View {
     }
 
     private func connectByManualIP() {
-        let port = UInt16(manualMacPort.trimmingCharacters(in: .whitespacesAndNewlines)) ?? SyncService.manualIPPort
+        guard let port = ManualConnectionPort.parse(manualMacPort) else { return }
         let pairingCode = ManualIPSyncSecurity.normalizedPairingCode(manualPairingCode)
         manualMacPort = String(port)
+        savedManualMacPort = String(port)
         if pairingCode.isEmpty && syncService.hasSavedManualIPConnection {
             syncService.connectToSavedManualMac(host: manualMacHost, port: port)
         } else {

@@ -37,9 +37,11 @@ struct GlassFrontmatterGroupScreen: View {
     }
 
     private var visibleFields: [CustomFrontmatterField] {
-        guard !query.isEmpty else { return fields }
+        let normalizedQuery = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !normalizedQuery.isEmpty else { return fields }
         return fields.filter {
-            $0.originalKey.localizedCaseInsensitiveContains(query) || $0.customKey.localizedCaseInsensitiveContains(query)
+            $0.originalKey.localizedCaseInsensitiveContains(normalizedQuery)
+                || $0.customKey.localizedCaseInsensitiveContains(normalizedQuery)
         }
     }
 
@@ -265,6 +267,7 @@ private struct GlassAddFieldAlerts: ViewModifier {
                     if !name.isEmpty { config.customFields[name] = value }
                     clear()
                 }
+                .disabled(trimmedKey.isEmpty)
             } message: {
                 Text("Add a custom field that will be included in every export.")
             }
@@ -280,6 +283,7 @@ private struct GlassAddFieldAlerts: ViewModifier {
                     }
                     clear()
                 }
+                .disabled(trimmedKey.isEmpty)
             } message: {
                 Text("Add a field that will export with an empty value for manual entry.")
             }

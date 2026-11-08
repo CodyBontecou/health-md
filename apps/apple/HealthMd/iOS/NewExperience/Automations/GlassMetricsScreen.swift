@@ -20,6 +20,10 @@ struct GlassMetricsScreen: View {
     @State private var permissionError: (title: String, message: String)?
     @State private var requestingPermission: PermissionKind?
 
+    private var normalizedQuery: String {
+        query.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
     init(coordinator: ExportProfileCoordinator, profile: ExportProfile) {
         self.coordinator = coordinator
         self.profile = profile
@@ -58,7 +62,7 @@ struct GlassMetricsScreen: View {
                     }
                 }
                 GlassPanel {
-                    if query.isEmpty {
+                    if normalizedQuery.isEmpty {
                         ForEach(standardCategories, id: \.self) { category in
                             categoryRow(category)
                         }
@@ -193,7 +197,7 @@ struct GlassMetricsScreen: View {
     /// Separate-permission categories without their own Apple selector row (clinical
     /// documents, when this build includes them) keep a plain category row.
     private func matchesQuery(_ title: String) -> Bool {
-        query.isEmpty || title.localizedCaseInsensitiveContains(query)
+        normalizedQuery.isEmpty || title.localizedCaseInsensitiveContains(normalizedQuery)
     }
 
     private var otherSeparateCategories: [HealthMetricCategory] {
@@ -268,7 +272,7 @@ struct GlassMetricsScreen: View {
     }
 
     private var searchResults: [HealthMetricDefinition] {
-        standardMetrics.filter { $0.localizedDisplayName.localizedCaseInsensitiveContains(query) }
+        standardMetrics.filter { $0.localizedDisplayName.localizedCaseInsensitiveContains(normalizedQuery) }
     }
 
     private func metricToggle(_ metric: HealthMetricDefinition) -> some View {

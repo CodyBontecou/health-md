@@ -196,16 +196,16 @@ struct ExportNowSheet: View {
             )
             if range == .custom {
                 VStack(spacing: 0) {
-                    DatePicker(String(localized: "From"), selection: $startDate, in: ...endDate, displayedComponents: .date)
-                    DatePicker(String(localized: "To"), selection: $endDate, in: startDate...Date(), displayedComponents: .date)
+                    DatePicker(String(localized: "From"), selection: customDate($startDate), in: ...endDate, displayedComponents: .date)
+                    DatePicker(String(localized: "To"), selection: customDate($endDate), in: startDate...Date(), displayedComponents: .date)
                 }
                 .padding(.horizontal, GlassMetrics.panelPadding)
                 .padding(.vertical, 6)
                 .foregroundStyle(palette.text)
                 .glassSurface(cornerRadius: GlassMetrics.panelSmallRadius)
                 HStack(spacing: 8) {
-                    GlassChip(title: ExportDateRangePreset.today.title) { selectPreset(.today) }
-                    GlassChip(title: ExportDateRangePreset.allTime.title) { selectAllTime() }
+                    GlassChip(title: ExportDateRangePreset.today.title, isSelected: dateRangePreset == .today) { selectPreset(.today) }
+                    GlassChip(title: ExportDateRangePreset.allTime.title, isSelected: dateRangePreset == .allTime) { selectAllTime() }
                 }
             }
             // The sleep day setting (FormatsG) decides which date holds last night; the
@@ -359,6 +359,15 @@ struct ExportNowSheet: View {
         guard let resolved = preset.resolvedRange(currentStartDate: startDate, currentEndDate: endDate) else { return }
         startDate = resolved.startDate
         endDate = resolved.endDate
+    }
+
+    /// Manual edits end preset semantics, including any pending All Time lookup.
+    /// Otherwise foreground restoration can replace the dates the user just chose.
+    private func customDate(_ date: Binding<Date>) -> Binding<Date> {
+        Binding(get: { date.wrappedValue }, set: { value in
+            dateRangePreset = .custom
+            date.wrappedValue = value
+        })
     }
 
     private func selectAllTime() {

@@ -3,6 +3,158 @@ import XCTest
 /// Flag-on reach test for the automation sub-pages. Each one is pushed from the hub and
 /// goes back without changing anything (the pages save as they change).
 final class GlassAutomationPagesUITests: XCTestCase {
+    func testAutomationRenameRequiresNonblankName() {
+        continueAfterFailure = false
+        let app = UITestLaunchHelper.configuredApp(
+            healthAuthorized: true, vaultSelected: true, purchaseUnlocked: true
+        )
+        app.launch()
+        XCTAssertTrue(UITestLaunchHelper.openAutomation(in: app))
+        app.buttons["glass.automation.name"].tap()
+        let alert = app.alerts.firstMatch
+        XCTAssertTrue(alert.waitForExistence(timeout: 5))
+        let name = alert.textFields.firstMatch
+        let original = name.value as? String ?? ""
+        name.tap()
+        name.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: original.count))
+        XCTAssertFalse(alert.buttons["Save"].isEnabled)
+        name.typeText("   ")
+        XCTAssertFalse(alert.buttons["Save"].isEnabled)
+        name.typeText("qa_name")
+        XCTAssertTrue(alert.buttons["Save"].isEnabled)
+        alert.buttons["Cancel"].tap()
+    }
+
+    func testUnsafeOutputDraftCanBeDiscardedWithoutReplacingSavedPath() {
+        continueAfterFailure = false
+        let app = UITestLaunchHelper.configuredApp(
+            healthAuthorized: true, vaultSelected: true, purchaseUnlocked: true
+        )
+        app.launch()
+        XCTAssertTrue(UITestLaunchHelper.openAutomation(in: app))
+        app.buttons["glass.automation.output"].tap()
+        let folder = app.textFields.firstMatch
+        XCTAssertTrue(folder.waitForExistence(timeout: 5))
+        let saved = folder.value as? String
+        folder.tap()
+        folder.typeText("../escape" + XCUIKeyboardKey.return.rawValue)
+        app.buttons["glass.page.back"].tap()
+        XCTAssertTrue(app.buttons["Discard Change"].waitForExistence(timeout: 5))
+        app.buttons["Discard Change"].tap()
+        app.buttons["glass.automation.output"].tap()
+        XCTAssertTrue(folder.waitForExistence(timeout: 5))
+        XCTAssertEqual(folder.value as? String, saved)
+    }
+
+    func testFrontmatterSearchIgnoresSurroundingWhitespace() {
+        continueAfterFailure = false
+        let app = UITestLaunchHelper.configuredApp(
+            healthAuthorized: true, vaultSelected: true, purchaseUnlocked: true
+        )
+        app.launch()
+        XCTAssertTrue(UITestLaunchHelper.openAutomation(in: app))
+        app.buttons["glass.automation.formatCustom"].tap()
+        let sleep = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Sleep,")).firstMatch
+        XCTAssertTrue(sleep.waitForExistence(timeout: 5))
+        sleep.tap()
+        let search = app.textFields["Search Fields"]
+        XCTAssertTrue(search.waitForExistence(timeout: 5))
+        search.tap()
+        search.typeText(" sleep ")
+        XCTAssertTrue(app.buttons["sleep_total_hours"].firstMatch.waitForExistence(timeout: 5))
+        search.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: 7) + "   ")
+        XCTAssertTrue(app.buttons["sleep_total_hours"].firstMatch.exists,
+                      "Whitespace-only queries must show the category's fields")
+    }
+
+    func testFrontmatterAddRequiresNonblankNames() {
+        continueAfterFailure = false
+        let app = UITestLaunchHelper.configuredApp(
+            healthAuthorized: true, vaultSelected: true, purchaseUnlocked: true
+        )
+        app.launch()
+        XCTAssertTrue(UITestLaunchHelper.openAutomation(in: app))
+        app.buttons["glass.automation.formatCustom"].tap()
+        for (page, action) in [("Custom fields", "Add Field"), ("Placeholder fields", "Add Placeholder")] {
+            let row = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", page + ",")).firstMatch
+            var swipes = 0
+            while !row.isHittable && swipes < 5 {
+                app.swipeUp()
+                swipes += 1
+            }
+            XCTAssertTrue(row.isHittable)
+            row.tap()
+            app.buttons["Add field"].tap()
+            let alert = app.alerts.firstMatch
+            XCTAssertTrue(alert.waitForExistence(timeout: 5))
+            let add = alert.buttons[action]
+            XCTAssertFalse(add.isEnabled)
+            let name = alert.textFields.firstMatch
+            name.tap()
+            name.typeText("   ")
+            XCTAssertFalse(add.isEnabled, "Whitespace must not dismiss the dialog without adding a field")
+            name.typeText("qa_field")
+            XCTAssertTrue(add.isEnabled, "A usable name enables Add")
+            alert.buttons["Cancel"].tap()
+            app.navigationBars[page].buttons.firstMatch.tap()
+        }
+    }
+
+    func testInvalidGatewayDraftCannotReplaceSavedEndpoint() {
+        continueAfterFailure = false
+        let app = UITestLaunchHelper.configuredApp(
+            healthAuthorized: true, vaultSelected: true, purchaseUnlocked: true
+        )
+        let savedEndpoint = "https://gateway.example.com"
+        app.launchArguments += ["-agentDataGateway.endpointURL", savedEndpoint]
+        app.launch()
+        app.buttons["Settings"].tap()
+
+        let gateway = app.buttons["glass.settings.gateway"]
+        XCTAssertTrue(gateway.waitForExistence(timeout: 5))
+        gateway.tap()
+        let endpoint = app.textFields["Agent Data gateway endpoint URL"]
+        XCTAssertTrue(endpoint.waitForExistence(timeout: 5))
+        XCTAssertEqual(endpoint.value as? String, savedEndpoint)
+        endpoint.tap()
+        endpoint.typeText("#fragment")
+
+        XCTAssertTrue(app.staticTexts["Enter a valid HTTP or HTTPS URL"].waitForExistence(timeout: 5))
+        let bar = app.navigationBars["Agent Data gateway"]
+        XCTAssertFalse(bar.buttons["Save"].isEnabled, "An invalid draft must not replace a working gateway")
+        bar.buttons.firstMatch.tap()
+        XCTAssertTrue(gateway.waitForExistence(timeout: 5))
+        gateway.tap()
+        XCTAssertTrue(endpoint.waitForExistence(timeout: 5))
+        XCTAssertEqual(endpoint.value as? String, savedEndpoint, "Discarding the invalid draft preserves the endpoint")
+    }
+
+    func testMetricSearchIgnoresSurroundingWhitespace() {
+        continueAfterFailure = false
+        let app = UITestLaunchHelper.configuredApp(
+            healthAuthorized: true, vaultSelected: true, purchaseUnlocked: true
+        )
+        app.launch()
+        app.buttons["Settings"].tap()
+        let metrics = app.buttons["glass.settings.metrics"]
+        XCTAssertTrue(metrics.waitForExistence(timeout: 5))
+        metrics.tap()
+        let search = app.textFields["Search metrics"]
+        XCTAssertTrue(search.waitForExistence(timeout: 5))
+        search.tap()
+        search.typeText("Sleep")
+        let totalSleep = app.descendants(matching: .any).matching(identifier: "Total Sleep").firstMatch
+        XCTAssertTrue(totalSleep.waitForExistence(timeout: 5))
+        search.typeText(" ")
+        XCTAssertTrue(totalSleep.exists, "A trailing space must not hide metrics ending in Sleep")
+
+        search.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: 6) + "  Sleep  ")
+        XCTAssertTrue(totalSleep.exists, "Leading and trailing whitespace must produce the same results")
+        search.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: 9) + "   ")
+        XCTAssertTrue(app.buttons["glass.metrics.categoryToggle.Sleep"].waitForExistence(timeout: 5),
+                      "Whitespace-only search returns to category browsing")
+    }
+
     func testEveryAutomationPageOpensFromTheHub() {
         continueAfterFailure = false
         let app = UITestLaunchHelper.configuredApp(

@@ -10,6 +10,25 @@ final class ExportJourneyUITests: XCTestCase {
 
     // MARK: - First-Run Export Journey
 
+    func testGlassBatchCancellationDoesNotPublishTheIntermediateSuccess() {
+        let app = UITestLaunchHelper.configuredApp(
+            healthAuthorized: true, vaultSelected: true, purchaseUnlocked: true,
+            exportResult: "intermediate-success"
+        )
+        app.launch()
+        app.buttons["glass.exportNow"].tap()
+        let confirm = app.buttons["glass.exportNow.confirm"]
+        XCTAssertTrue(confirm.waitForExistence(timeout: 5))
+        confirm.tap()
+        XCTAssertTrue(app.buttons[UITestLaunchHelper.Export.finishSimulatedBatch].waitForExistence(timeout: 5))
+        let cancel = app.buttons["glass.exportMoment.cancel"]
+        XCTAssertTrue(cancel.waitForExistence(timeout: 5))
+        cancel.tap()
+        XCTAssertTrue(app.staticTexts["Export cancelled"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["View Exported File"].exists)
+        XCTAssertFalse(cancel.exists)
+    }
+
     func testFirstRunExportJourney_showsExportButton_andCompletesExport() throws {
         let app = UITestLaunchHelper.firstRunExportApp()
         app.launchArguments += ["-UITestOpenClassicExport", "YES"]
@@ -92,19 +111,21 @@ final class ExportJourneyUITests: XCTestCase {
         )
 
         XCTAssertTrue(
-            app.buttons[UITestLaunchHelper.Export.cancelExportButton].waitForExistence(timeout: 1),
+            app.buttons["glass.exportMoment.cancel"].waitForExistence(timeout: 1),
             "The simulated multi-file export should still be running"
         )
         XCTAssertFalse(
             exportButton.exists,
-            "The bottom export bar should hide while the top activity banner owns progress and cancellation"
+            "The bottom export bar should hide while the moment owns progress and cancellation"
         )
 
         let activityBanner = app.descendants(matching: .any)[UITestLaunchHelper.Export.activityBanner]
-        XCTAssertTrue(
+        XCTAssertFalse(
             activityBanner.exists,
-            "The top export activity banner should remain visible while the export is running"
+            "The full-screen moment must be the only running progress panel"
         )
+        XCTAssertFalse(app.buttons[UITestLaunchHelper.Export.cancelExportButton].exists)
+        XCTAssertTrue(app.staticTexts["1 of 2 days"].exists)
 
         let statusBadge = app.descendants(matching: .any)[UITestLaunchHelper.Status.exportStatusBadge]
         XCTAssertFalse(

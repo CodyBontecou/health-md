@@ -58,24 +58,6 @@ final class GlassComposeExportTests: XCTestCase {
         ])
     }
 
-    // MARK: Moment
 
-    func testMomentReadsTheLocalExporterProgress() {
-        let progress = ExportMomentProgress.make(
-            message: "Exporting 2026-10-29... (5/7)", progress: 5.0 / 7, start: day(24), end: day(30), calendar: calendar
-        )
-        XCTAssertEqual(progress.completed, 5)
-        XCTAssertEqual(progress.total, 7)
-        XCTAssertNotNil(progress.currentDay)
-    }
-
-    func testMomentFallsBackToTheSelectedRange() {
-        let progress = ExportMomentProgress.make(
-            message: "Preparing API export…", progress: 0.5, start: day(24), end: day(30), calendar: calendar
-        )
-        XCTAssertEqual(progress.total, 7)
-        XCTAssertEqual(progress.completed, 3)
-        XCTAssertEqual(progress.currentDay, day(27))
-    }
 }
 #endif

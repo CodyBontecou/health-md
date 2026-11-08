@@ -5,6 +5,21 @@ import XCTest
 /// the individual entry example.
 @MainActor
 final class GlassAutomationSettingsDerivationTests: XCTestCase {
+    func testOutputEditorsRejectUnsafePathsBeforeTheyCanBreakSetupSharing() {
+        for path in ["../escape", "entries/../escape", "/absolute", "C:\\vault", "a//b", "a%2fb", "a\nb"] {
+            XCTAssertNotNil(AutomationOutputPathValidation.invalidReason(folders: [path], filename: "{date}"), path)
+        }
+        for name in ["", "   ", ".", "..", "../escape", "a/b", "a\\b", "a%2fb", "a\nb"] {
+            XCTAssertNotNil(AutomationOutputPathValidation.invalidReason(folders: ["entries"], filename: name), name)
+        }
+    }
+
+    func testOutputEditorsAllowVaultRootNestedFoldersAndExistingTokens() {
+        XCTAssertNil(AutomationOutputPathValidation.invalidReason(folders: ["", "Health/{year}/{month}"], filename: "{date}"))
+        XCTAssertNil(AutomationOutputPathValidation.invalidReason(folders: ["entries/健康"], filename: "{date}_{time}_{metric}"))
+        XCTAssertNotNil(AutomationOutputPathValidation.invalidReason(folders: ["Health", "../escape"], filename: "{date}"))
+    }
+
     // MARK: - Frontmatter field groups
 
     func testEveryDefaultFieldLandsInANamedGroup() {

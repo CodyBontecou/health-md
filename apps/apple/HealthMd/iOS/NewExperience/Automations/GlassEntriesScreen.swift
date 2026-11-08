@@ -77,11 +77,23 @@ struct GlassEntriesScreen: View {
                     .accessibilityElement(children: .combine)
                 }
             }
+            if let invalidReason {
+                GlassBanner(title: invalidReason, systemImage: "exclamationmark.triangle", tone: .warning)
+            }
         }
         .glassAutosave(
             draft,
+            isValid: invalidReason == nil,
+            invalidReason: invalidReason ?? "",
             revert: { draft = $0 },
             save: { coordinator.saveSettings($0, for: profile) }
+        )
+    }
+
+    private var invalidReason: String? {
+        AutomationOutputPathValidation.invalidReason(
+            folders: [draft.individualTracking.entriesFolder],
+            filename: draft.individualTracking.filenameTemplate
         )
     }
 

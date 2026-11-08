@@ -11,7 +11,8 @@ struct GlassCLIDestinationScreen: View {
     @Environment(\.glassPalette) private var palette
     @AppStorage(IPhoneDirectCLIService.enabledKey) private var directCLIEnabled = false
     @AppStorage(IPhoneDirectCLIService.hostKey) private var directCLIHost = ""
-    @AppStorage(IPhoneDirectCLIService.portKey) private var directCLIPort = String(HealthMdDirectProtocol.defaultManualIPPort)
+    @AppStorage(IPhoneDirectCLIService.portKey) private var savedDirectCLIPort = String(HealthMdDirectProtocol.defaultManualIPPort)
+    @State private var directCLIPort = String(HealthMdDirectProtocol.defaultManualIPPort)
     @AppStorage(IPhoneDirectCLIService.transportKey) private var directCLITransport = DirectTransportKind.manualIP.rawValue
     @State private var pairingCode = ""
     @State private var showScanner = false
@@ -99,6 +100,7 @@ struct GlassCLIDestinationScreen: View {
         .navigationBarTitleDisplayMode(.inline)
         .accessibilityIdentifier("glass.cliDestination")
         .onAppear {
+            directCLIPort = savedDirectCLIPort
             if directCLIEnabled && shouldStartRuntimeServices { directCLIService.setEnabled(true) }
             if directCLIService.pendingPairingLink != nil { pairingMethods.noteAttempt(.qr) }
         }
@@ -210,6 +212,11 @@ struct GlassCLIDestinationScreen: View {
                         TextField("Port", text: $directCLIPort)
                             .keyboardType(.numberPad)
                             .accessibilityLabel(Text("Port"))
+                        if ManualConnectionPort.parse(directCLIPort) == nil {
+                            Text("Enter a port from 1 to 65535.")
+                                .glassFont(.rowSubtitle)
+                                .foregroundStyle(palette.coral)
+                        }
                     }
                     SecureField("20-digit pairing code", text: $pairingCode)
                         .keyboardType(.numberPad)
@@ -351,15 +358,24 @@ struct GlassCLIDestinationScreen: View {
         let digits = ManualIPSyncSecurity.normalizedPairingCode(pairingCode).utf8.count
         let hasCode = digits == DirectPairingSecurity.sharedPairingCodeDigits
             || digits == DirectPairingSecurity.legacyPairingCodeDigits
-        let transportReady = directCLITransport == DirectTransportKind.nearby.rawValue || hasHost
+        let transportReady = directCLITransport == DirectTransportKind.nearby.rawValue
+            || (hasHost && ManualConnectionPort.parse(directCLIPort) != nil)
         return transportReady && !directCLIService.isConnecting && (!directCLIService.needsPairingCode || hasCode)
     }
 
     private func connect() {
         if directCLIService.needsPairingCode { pairingMethods.noteAttempt(.code) }
-        let port = UInt16(directCLIPort.trimmingCharacters(in: .whitespacesAndNewlines))
-            ?? HealthMdDirectProtocol.defaultManualIPPort
-        directCLIPort = String(port)
+        // Nearby ignores the manual endpoint; an invalid manual draft must not
+        // overwrite its saved port when pairing through Nearby.
+        let port: UInt16
+        if directCLITransport == DirectTransportKind.nearby.rawValue {
+            port = ManualConnectionPort.parse(savedDirectCLIPort) ?? HealthMdDirectProtocol.defaultManualIPPort
+        } else {
+            guard let manualPort = ManualConnectionPort.parse(directCLIPort) else { return }
+            port = manualPort
+            directCLIPort = String(port)
+            savedDirectCLIPort = String(port)
+        }
         directCLIService.connect(
             host: directCLIHost,
             port: port,

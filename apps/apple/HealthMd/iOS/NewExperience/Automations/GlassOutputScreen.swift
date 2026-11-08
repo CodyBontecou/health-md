@@ -101,8 +101,17 @@ struct GlassOutputScreen: View {
                     tone: .warning
                 )
             }
+            if let invalidReason {
+                GlassBanner(title: invalidReason, systemImage: "exclamationmark.triangle", tone: .warning)
+            }
         }
-        .glassAutosave(currentDraft, revert: restore, save: save)
+        .glassAutosave(
+            currentDraft,
+            isValid: invalidReason == nil,
+            invalidReason: invalidReason ?? "",
+            revert: restore,
+            save: save
+        )
         .sheet(isPresented: $showFolderImporter) {
             FolderPicker { url in
                 configurationProtection.performConfigurationChange {
@@ -194,6 +203,13 @@ struct GlassOutputScreen: View {
         Binding(
             get: { draft.healthSubfolder ?? "" },
             set: { draft.healthSubfolder = $0.isEmpty ? nil : $0 }
+        )
+    }
+
+    private var invalidReason: String? {
+        AutomationOutputPathValidation.invalidReason(
+            folders: [draft.healthSubfolder ?? "", draft.folderStructure],
+            filename: draft.filenameFormat
         )
     }
 

@@ -469,6 +469,9 @@ struct DiagnosticsView: View {
 
     private func configure() {
         DiagnosticRecorder.shared.configure(enabled: settings.enabled, verbosity: settings.verbosity)
+        // Disabling operational recording also revokes private recording consent.
+        // Reflect that canonical state rather than retaining the editor's old deadline.
+        settings = DiagnosticRecorder.shared.settings
         invalidate(); reload()
     }
     private func invalidate() { prepared?.delete(); prepared = nil; reviewed = false; error = nil }

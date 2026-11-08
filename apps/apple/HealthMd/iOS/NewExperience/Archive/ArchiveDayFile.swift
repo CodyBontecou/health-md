@@ -1,47 +1,6 @@
 #if os(iOS)
 import Foundation
 
-/// A day's written file, read for the Archive day card and the day page.
-nonisolated struct ArchiveDayFile: Equatable, Sendable {
-    let fileURL: URL
-    let rootURL: URL?
-    let source: String
-    let byteCount: Int
-
-    /// Above this the day page shows the first lines only; the full viewer reads the rest.
-    static let maximumBytes = 512 * 1024
-    static let maximumLines = 400
-
-    var lines: [String] {
-        let all = source.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
-        // A trailing newline is not a line of its own.
-        let trimmed = all.last == "" ? Array(all.dropLast()) : all
-        return Array(trimmed.prefix(Self.maximumLines))
-    }
-
-    var isTruncated: Bool {
-        byteCount > Self.maximumBytes || source.split(separator: "\n", omittingEmptySubsequences: false).count > Self.maximumLines + 1
-    }
-
-    var sizeText: String {
-        ByteCountFormatter.string(fromByteCount: Int64(byteCount), countStyle: .file)
-    }
-
-    /// Reads the located file as UTF-8 text. Touches the disk, so call it off the main actor.
-    nonisolated static func read(fileURL: URL, rootURL: URL?) -> ArchiveDayFile? {
-        let didAccess = rootURL?.startAccessingSecurityScopedResource() ?? false
-        defer { if didAccess { rootURL?.stopAccessingSecurityScopedResource() } }
-        guard let handle = try? FileHandle(forReadingFrom: fileURL) else { return nil }
-        defer { try? handle.close() }
-        let size = (try? fileURL.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0
-        guard let data = try? handle.read(upToCount: maximumBytes),
-              let source = String(data: data, encoding: .utf8) ?? String(data: data.dropLast(4), encoding: .utf8) else {
-            return nil
-        }
-        return ArchiveDayFile(fileURL: fileURL, rootURL: rootURL, source: source, byteCount: max(size, data.count))
-    }
-}
-
 /// One headline value from a day file's frontmatter, as the Archive day card shows it.
 struct ArchiveDayTile: Identifiable, Equatable {
     let key: String
