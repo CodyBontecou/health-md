@@ -152,6 +152,7 @@ internal fun PaywallCarousel(
             }
             HorizontalPager(
                 state = pager,
+                key = { slides[it] },
                 modifier = Modifier.fillMaxWidth().then(if (readingLayout) Modifier else Modifier.weight(1f)),
             ) { page ->
                 Box(
@@ -231,9 +232,10 @@ internal fun PaywallCarousel(
                 ) {
                     if (isPurchasing) {
                         CircularProgressIndicator(Modifier.size(20.dp), color = colors.brandOnPrimary, strokeWidth = 2.dp)
-                    } else {
-                        Text(selected?.let { ctaLabel(it) } ?: stringResource(R.string.paywall_cta_subscribe), style = GeistType.button16)
+                        Spacer(Modifier.width(GeistSpacing.space2))
                     }
+                    // Keep the action named while busy for accessibility and state continuity.
+                    Text(selected?.let { ctaLabel(it) } ?: stringResource(R.string.paywall_cta_subscribe), style = GeistType.button16)
                 }
                 FlowRow(horizontalArrangement = Arrangement.Center) {
                     if (pager.currentPage != plansPage) {
