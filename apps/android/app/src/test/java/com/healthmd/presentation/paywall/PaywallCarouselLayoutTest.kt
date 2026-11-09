@@ -211,4 +211,16 @@ class PaywallCarouselLayoutTest {
         assertEquals(listOf(PurchasePlan.LIFETIME), purchases)
     }
 
+
+    @Test fun removingTheVisibleTrialSlideRevealsItsReplacementFromTheTop() {
+        show(320, 640, 1f)
+        compose.onNodeWithContentDescription(context.getString(R.string.paywall_slide, 2, 3))
+            .performScrollTo().performClick()
+        compose.waitForIdle()
+        action(R.string.paywall_privacy).performScrollTo().assertIsDisplayed()
+        compose.runOnIdle { catalog = offers.map { it.copy(hasSevenDayTrial = false) } }
+        compose.onNodeWithText(text(R.string.paywall_plans_title)).assertIsDisplayed()
+        action(R.string.paywall_cta_subscribe).performScrollTo().assertIsEnabled()
+    }
+
 }

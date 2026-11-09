@@ -134,7 +134,7 @@ internal fun PaywallCarousel(
             maxWidth.value, maxHeight.value, LocalDensity.current.fontScale,
         )
         val pageScroll = rememberScrollState()
-        LaunchedEffect(pager.settledPage, readingLayout) {
+        LaunchedEffect(pager.settledPage, slides.getOrNull(pager.settledPage), readingLayout) {
             // Footer navigation should reveal the new slide rather than leave it above the viewport.
             if (readingLayout) pageScroll.scrollTo(0)
         }
