@@ -6,6 +6,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -47,6 +48,7 @@ import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberCoroutineScope
@@ -57,6 +59,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -69,6 +72,7 @@ import androidx.compose.ui.unit.dp
 import com.healthmd.R
 import com.healthmd.domain.repository.PurchaseOffer
 import com.healthmd.domain.repository.PurchasePlan
+import com.healthmd.presentation.theme.GeistAdaptiveLayout
 import com.healthmd.presentation.theme.GeistRadii
 import com.healthmd.presentation.theme.GeistSizes
 import com.healthmd.presentation.theme.GeistSpacing
@@ -95,6 +99,7 @@ private enum class PaywallSlide { BENEFIT, TRIAL, PLANS }
  * The Material 3 carousel paywall: what Health.md writes, how the trial works, then the plans.
  * Only offers and trial eligibility supplied by Google Play are shown; the bottom bar keeps the
  * selected plan's terms, the purchase action, Restore, Terms and Privacy on every slide.
+ * Reading layouts scroll the complete page so an expanded footer cannot crowd out the slides.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -124,109 +129,136 @@ internal fun PaywallCarousel(
     val pager = rememberPagerState(pageCount = { slides.size })
     val plansPage = slides.indexOf(PaywallSlide.PLANS)
 
-    Column(Modifier.fillMaxSize().background(colors.background100)) {
-        Row(Modifier.fillMaxWidth().statusBarsPadding().heightIn(min = GeistSpacing.space16).padding(horizontal = GeistSpacing.space1)) {
-            if (onDismiss != null) {
-                IconButton(onClick = onDismiss, enabled = !isLoading, modifier = Modifier.align(Alignment.CenterVertically)) {
-                    Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.close), tint = colors.primary)
-                }
-            }
-        }
-        HorizontalPager(state = pager, modifier = Modifier.weight(1f).fillMaxWidth()) { page ->
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
-                Column(
-                    modifier = Modifier
-                        .widthIn(max = GeistSizes.readableContentMaxWidth)
-                        .fillMaxSize()
-                        .verticalScroll(rememberScrollState())
-                        .padding(horizontal = GeistSpacing.space6 - GeistSpacing.space1, vertical = GeistSpacing.space2),
-                    verticalArrangement = Arrangement.spacedBy(GeistSpacing.space4),
-                ) {
-                    when (slides[page]) {
-                        PaywallSlide.BENEFIT -> BenefitSlide()
-                        PaywallSlide.TRIAL -> TrialSlide(selected)
-                        PaywallSlide.PLANS -> PlansSlide(
-                            plans = plans,
-                            selected = selected,
-                            enabled = !isLoading,
-                            onSelect = { selectedPlan = it },
-                            onRetry = onRetry,
-                            onManageSubscriptions = { uriHandler.openUri("https://play.google.com/store/account/subscriptions") },
-                            debugControls = debugControls,
-                        )
-                    }
-                }
-            }
+    BoxWithConstraints(Modifier.fillMaxSize().background(colors.background100)) {
+        val readingLayout = GeistAdaptiveLayout.readingFirst(
+            maxWidth.value, maxHeight.value, LocalDensity.current.fontScale,
+        )
+        val pageScroll = rememberScrollState()
+        LaunchedEffect(pager.settledPage, slides.getOrNull(pager.settledPage), readingLayout) {
+            // Footer navigation should reveal the new slide rather than leave it above the viewport.
+            if (readingLayout) pageScroll.scrollTo(0)
         }
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(colors.gray.c100)
-                .navigationBarsPadding()
-                .padding(start = GeistSpacing.space6 - GeistSpacing.space1, end = GeistSpacing.space6 - GeistSpacing.space1, top = GeistSpacing.space2, bottom = GeistSpacing.space4),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(GeistSpacing.space2),
+            Modifier.fillMaxSize().then(
+                if (readingLayout) Modifier.verticalScroll(pageScroll) else Modifier,
+            ),
         ) {
-            Row(Modifier.selectableGroup(), verticalAlignment = Alignment.CenterVertically) {
-                slides.indices.forEach { index ->
-                    val current = pager.currentPage == index
-                    val label = stringResource(R.string.paywall_slide, index + 1, slides.size)
-                    Box(
-                        modifier = Modifier
-                            .size(GeistSizes.minimumTouchTarget)
-                            .selectable(selected = current, role = Role.Tab) { scope.launch { pager.animateScrollToPage(index) } }
-                            .semantics { contentDescription = label },
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Box(
-                            Modifier
-                                .height(GeistSpacing.space2)
-                                .width(if (current) GeistSpacing.space6 else GeistSpacing.space2)
-                                .background(if (current) colors.brandPrimary else colors.gray.c500, CircleShape),
-                        )
+            Row(Modifier.fillMaxWidth().statusBarsPadding().heightIn(min = GeistSpacing.space16).padding(horizontal = GeistSpacing.space1)) {
+                if (onDismiss != null) {
+                    IconButton(onClick = onDismiss, enabled = !isLoading, modifier = Modifier.align(Alignment.CenterVertically)) {
+                        Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.close), tint = colors.primary)
                     }
                 }
             }
-            if (errorMessage != null) {
-                Row(horizontalArrangement = Arrangement.spacedBy(GeistSpacing.space2), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Outlined.Warning, contentDescription = null, tint = colors.error, modifier = Modifier.size(20.dp))
-                    Text(errorMessage, style = MaterialTheme.typography.bodySmall, color = colors.error)
+            HorizontalPager(
+                state = pager,
+                // During a catalog refresh the pager can query an obsolete item provider
+                // with the new count. Retain real slide identities without indexing past it.
+                key = { index -> slides.getOrNull(index) ?: "paywall-pending-$index" },
+                modifier = Modifier.fillMaxWidth().then(if (readingLayout) Modifier else Modifier.weight(1f)),
+            ) { page ->
+                Box(
+                    if (readingLayout) Modifier.fillMaxWidth() else Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.TopCenter,
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .widthIn(max = GeistSizes.readableContentMaxWidth)
+                            .then(
+                                if (readingLayout) Modifier.fillMaxWidth()
+                                else Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
+                            )
+                            .padding(horizontal = GeistSpacing.space6 - GeistSpacing.space1, vertical = GeistSpacing.space2),
+                        verticalArrangement = Arrangement.spacedBy(GeistSpacing.space4),
+                    ) {
+                        when (slides.getOrNull(page)) {
+                            null -> Unit // A retired page can remain in a pending layout pass.
+                            PaywallSlide.BENEFIT -> BenefitSlide()
+                            PaywallSlide.TRIAL -> TrialSlide(selected)
+                            PaywallSlide.PLANS -> PlansSlide(
+                                plans = plans,
+                                selected = selected,
+                                enabled = !isLoading,
+                                onSelect = { selectedPlan = it },
+                                onRetry = onRetry,
+                                onManageSubscriptions = { uriHandler.openUri("https://play.google.com/store/account/subscriptions") },
+                                debugControls = debugControls,
+                            )
+                        }
+                    }
                 }
             }
-            if (selected != null) {
-                Text(planTerms(selected), style = GeistType.label14, color = colors.secondary, textAlign = TextAlign.Center)
-            }
-            Button(
-                onClick = { selected?.let { onPlanPurchase(it.plan) } },
-                enabled = selected != null && !isLoading,
-                modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp),
-                shape = RoundedCornerShape(GeistRadii.full),
-                colors = ButtonDefaults.buttonColors(containerColor = colors.brandPrimary, contentColor = colors.brandOnPrimary),
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(colors.gray.c100)
+                    .navigationBarsPadding()
+                    .padding(start = GeistSpacing.space6 - GeistSpacing.space1, end = GeistSpacing.space6 - GeistSpacing.space1, top = GeistSpacing.space2, bottom = GeistSpacing.space4),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(GeistSpacing.space2),
             ) {
-                if (isPurchasing) {
-                    CircularProgressIndicator(Modifier.size(20.dp), color = colors.brandOnPrimary, strokeWidth = 2.dp)
-                } else {
+                Row(Modifier.selectableGroup(), verticalAlignment = Alignment.CenterVertically) {
+                    slides.indices.forEach { index ->
+                        val current = pager.currentPage == index
+                        val label = stringResource(R.string.paywall_slide, index + 1, slides.size)
+                        Box(
+                            modifier = Modifier
+                                .size(GeistSizes.minimumTouchTarget)
+                                .selectable(selected = current, role = Role.Tab) { scope.launch { pager.animateScrollToPage(index) } }
+                                .semantics { contentDescription = label },
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Box(
+                                Modifier
+                                    .height(GeistSpacing.space2)
+                                    .width(if (current) GeistSpacing.space6 else GeistSpacing.space2)
+                                    .background(if (current) colors.brandPrimary else colors.gray.c500, CircleShape),
+                            )
+                        }
+                    }
+                }
+                if (errorMessage != null) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(GeistSpacing.space2), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Outlined.Warning, contentDescription = null, tint = colors.error, modifier = Modifier.size(20.dp))
+                        Text(errorMessage, style = MaterialTheme.typography.bodySmall, color = colors.error)
+                    }
+                }
+                if (selected != null) {
+                    Text(planTerms(selected), style = GeistType.label14, color = colors.secondary, textAlign = TextAlign.Center)
+                }
+                Button(
+                    onClick = { selected?.let { onPlanPurchase(it.plan) } },
+                    enabled = selected != null && !isLoading,
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp),
+                    shape = RoundedCornerShape(GeistRadii.full),
+                    colors = ButtonDefaults.buttonColors(containerColor = colors.brandPrimary, contentColor = colors.brandOnPrimary),
+                ) {
+                    if (isPurchasing) {
+                        CircularProgressIndicator(Modifier.size(20.dp), color = colors.brandOnPrimary, strokeWidth = 2.dp)
+                        Spacer(Modifier.width(GeistSpacing.space2))
+                    }
+                    // Keep the action named while busy for accessibility and state continuity.
                     Text(selected?.let { ctaLabel(it) } ?: stringResource(R.string.paywall_cta_subscribe), style = GeistType.button16)
                 }
-            }
-            FlowRow(horizontalArrangement = Arrangement.Center) {
-                if (pager.currentPage != plansPage) {
-                    TextButton(onClick = { scope.launch { pager.animateScrollToPage(plansPage) } }) {
-                        Text(stringResource(R.string.paywall_see_all_plans), style = GeistType.button14, color = colors.brandPrimary)
+                FlowRow(horizontalArrangement = Arrangement.Center) {
+                    if (pager.currentPage != plansPage) {
+                        TextButton(onClick = { scope.launch { pager.animateScrollToPage(plansPage) } }) {
+                            Text(stringResource(R.string.paywall_see_all_plans), style = GeistType.button14, color = colors.brandPrimary)
+                        }
                     }
-                }
-                TextButton(onClick = onRestore, enabled = !isLoading) {
-                    Text(
-                        stringResource(if (isRestoring) R.string.paywall_restoring else R.string.paywall_restore),
-                        style = GeistType.button14,
-                        color = colors.brandPrimary,
-                    )
-                }
-                TextButton(onClick = { uriHandler.openUri("https://healthmd.app/terms-of-service.html") }) {
-                    Text(stringResource(R.string.paywall_terms), style = GeistType.button14, color = colors.brandPrimary)
-                }
-                TextButton(onClick = { uriHandler.openUri("https://healthmd.app/privacy-policy.html") }) {
-                    Text(stringResource(R.string.paywall_privacy), style = GeistType.button14, color = colors.brandPrimary)
+                    TextButton(onClick = onRestore, enabled = !isLoading) {
+                        Text(
+                            stringResource(if (isRestoring) R.string.paywall_restoring else R.string.paywall_restore),
+                            style = GeistType.button14,
+                            color = colors.brandPrimary,
+                        )
+                    }
+                    TextButton(onClick = { uriHandler.openUri("https://healthmd.app/terms-of-service.html") }) {
+                        Text(stringResource(R.string.paywall_terms), style = GeistType.button14, color = colors.brandPrimary)
+                    }
+                    TextButton(onClick = { uriHandler.openUri("https://healthmd.app/privacy-policy.html") }) {
+                        Text(stringResource(R.string.paywall_privacy), style = GeistType.button14, color = colors.brandPrimary)
+                    }
                 }
             }
         }
