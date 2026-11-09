@@ -66,8 +66,10 @@ enum ArchiveDayTiles {
         let label = metric?.localizedDisplayName ?? key
         let rawUnit = HealthMetricDataDictionary.unit(for: canonical, converter: UnitConverter(preference: .metric)) ?? ""
         let number = Double(value)
-        if canonical.hasSuffix("_hours"), canonical != "stand_hours", let hours = number {
-            let minutes = Int((hours * 60).rounded())
+        // Written files can be edited outside Health.md. Keep oversized finite
+        // values readable rather than trapping while converting their duration.
+        if canonical.hasSuffix("_hours"), canonical != "stand_hours", let hours = number,
+           let minutes = Int(exactly: (hours * 60).rounded()) {
             return ArchiveDayTile(key: key, label: label, value: "\(minutes / 60)h \(minutes % 60)m", unit: "")
         }
         let formatted: String
@@ -101,7 +103,7 @@ enum ArchiveDayTiles {
     }
 
     private static func isNumeric(_ value: String) -> Bool {
-        Double(value) != nil
+        Double(value)?.isFinite == true
     }
 
     private static func metric(for canonicalKey: String) -> HealthMetricDefinition? {

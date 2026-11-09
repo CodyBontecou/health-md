@@ -64,6 +64,22 @@ final class ArchiveDayFileTests: XCTestCase {
         XCTAssertEqual(tiles.first?.value, "58")
     }
 
+    func testNonfiniteFileValuesAreNotMetricTiles() {
+        for value in ["nan", "NaN", "inf", "-inf", "1e309"] {
+            let source = "---\nsleep_total_hours: \(value)\nsteps: \(value)\n---\n"
+            XCTAssertTrue(ArchiveDayTiles.tiles(fromMarkdown: source).isEmpty, value)
+        }
+    }
+
+    func testOversizedHourValuesStayReadableWithoutIntegerConversion() {
+        for value in ["1e308", "-1e308", "1e18", "-1e18"] {
+            let tiles = ArchiveDayTiles.tiles(fromMarkdown: "---\nsleep_total_hours: \(value)\n---\n")
+            XCTAssertEqual(tiles.count, 1)
+            XCTAssertEqual(tiles.first?.value, value)
+            XCTAssertEqual(tiles.first?.unit, "hours")
+        }
+    }
+
     func testFileLinesDropTheTrailingNewline() {
         let file = ArchiveDayFile(fileURL: URL(fileURLWithPath: "/tmp/a.md"), rootURL: nil, source: "a\nb\n", byteCount: 4)
         XCTAssertEqual(file.lines, ["a", "b"])
