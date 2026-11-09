@@ -152,7 +152,9 @@ internal fun PaywallCarousel(
             }
             HorizontalPager(
                 state = pager,
-                key = { slides[it] },
+                // During a catalog refresh the pager can query an obsolete item provider
+                // with the new count. Retain real slide identities without indexing past it.
+                key = { index -> slides.getOrNull(index) ?: "paywall-pending-$index" },
                 modifier = Modifier.fillMaxWidth().then(if (readingLayout) Modifier else Modifier.weight(1f)),
             ) { page ->
                 Box(
@@ -169,7 +171,8 @@ internal fun PaywallCarousel(
                             .padding(horizontal = GeistSpacing.space6 - GeistSpacing.space1, vertical = GeistSpacing.space2),
                         verticalArrangement = Arrangement.spacedBy(GeistSpacing.space4),
                     ) {
-                        when (slides[page]) {
+                        when (slides.getOrNull(page)) {
+                            null -> Unit // A retired page can remain in a pending layout pass.
                             PaywallSlide.BENEFIT -> BenefitSlide()
                             PaywallSlide.TRIAL -> TrialSlide(selected)
                             PaywallSlide.PLANS -> PlansSlide(

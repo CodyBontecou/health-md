@@ -211,6 +211,23 @@ class PaywallCarouselLayoutTest {
     }
 
 
+    @Test fun repeatedCatalogGrowthAndShrinkKeepPlansAndTheSelectedOffer() {
+        val purchases = mutableListOf<PurchasePlan>()
+        show(320, 640, 1f, onPurchase = { purchases += it })
+        action(R.string.paywall_see_all_plans).performScrollTo().performClick()
+        compose.waitForIdle()
+        readingPlan(R.string.paywall_plan_lifetime).performClick()
+        repeat(3) {
+            for (trial in listOf(false, true)) {
+                compose.runOnIdle { catalog = offers.map { it.copy(hasSevenDayTrial = trial) } }
+                compose.onNodeWithText(text(R.string.paywall_plans_title)).assertIsDisplayed()
+                action(R.string.paywall_plan_lifetime).assertIsSelected()
+            }
+        }
+        action(R.string.paywall_cta_lifetime).performScrollTo().performClick()
+        assertEquals(listOf(PurchasePlan.LIFETIME), purchases)
+    }
+
     @Test fun removingTheVisibleTrialSlideRevealsItsReplacementFromTheTop() {
         show(320, 640, 1f)
         compose.onNodeWithContentDescription(context.getString(R.string.paywall_slide, 2, 3))
