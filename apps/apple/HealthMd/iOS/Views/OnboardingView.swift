@@ -16,6 +16,7 @@ struct OnboardingView: View {
     @State private var currentStep = 0
     @State private var direction: TransitionDirection = .forward
     @State private var isRequestingHealthAuthorization = false
+    @State private var healthAuthorizationError: String?
 
     private let totalSteps = OnboardingStep.allCases.count
     private let sampleExportStepIndex = OnboardingStep.sampleExport.rawValue
@@ -51,9 +52,16 @@ struct OnboardingView: View {
                     .transition(.opacity)
             }
         }
-        .onChange(of: vaultManager.vaultURL) { _, folderURL in
-            if folderURL != nil {
-            }
+        .alert(
+            String(localized: "Unable to Connect Apple Health"),
+            isPresented: Binding(
+                get: { healthAuthorizationError != nil },
+                set: { if !$0 { healthAuthorizationError = nil } }
+            )
+        ) {
+            Button(String(localized: "OK"), role: .cancel) { healthAuthorizationError = nil }
+        } message: {
+            Text(healthAuthorizationError ?? "")
         }
     }
 
@@ -144,9 +152,9 @@ struct OnboardingView: View {
                 }
             case .ready:
                 OnboardingPrimaryButton(
-                    title: String(localized: "Create My First Export"),
+                    title: String(localized: "Create My First Automation"),
                     icon: "doc.text.magnifyingglass",
-                    accessibilityHint: String(localized: "Completes setup and opens a preview of your first export"),
+                    accessibilityHint: String(localized: "Completes setup and opens the automation creator. Your first export is free."),
                     action: advance
                 )
             }
@@ -198,11 +206,16 @@ struct OnboardingView: View {
         Task {
             defer { isRequestingHealthAuthorization = false }
             do {
-                _ = try await healthKitManager.requestAuthorization()
+                let outcome = try await healthKitManager.requestAuthorization()
+                if outcome == .unavailable {
+                    healthAuthorizationError = String(localized: "Apple Health is not available on this device. You can skip this step and connect on a supported device later.")
+                    return
+                }
                 if advanceWhenConnected && healthKitManager.isAuthorized {
                     advance()
                 }
             } catch {
+                healthAuthorizationError = error.localizedDescription
             }
         }
     }
@@ -217,12 +230,8 @@ struct OnboardingView: View {
 
 }
 
-/// The onboarding flow is intentionally short: welcome → health access → folder →
-/// sample export (with the Obsidian-plugin promo folded in) → ready, matching
-/// OnboardingG's phase order (read → archive location → preview).
-/// The unlock paywall no longer blocks onboarding; it surfaces once, after the
-/// first real export preview closes (see the post-onboarding paywall in
-/// ContentView), alongside the 3rd/7th-export soft prompts.
+/// Setup leads into the automation creator. A preview never consumes the free
+/// export; paid access is requested when the user runs another export.
 private enum OnboardingStep: Int, CaseIterable {
     case welcome
     case healthAccess
@@ -299,7 +308,7 @@ private struct GlassWelcomeStep: View {
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 24)
                 .accessibilityHidden(true)
-            Text("Make your body part of Obsidian")
+            Text("Export your health data.")
                 .glassFont(.largeTitle)
                 .foregroundStyle(palette.text)
             Text("Create a durable copy of sleep, HRV, workouts, vitals, medications and more — as files you own.")
@@ -308,7 +317,7 @@ private struct GlassWelcomeStep: View {
             GlassPanel {
                 step(1, "Choose what Health.md can read")
                 step(2, "Pick where your archive lives")
-                step(3, "Preview your first export")
+                step(3, "Create an automation and export free")
             }
             Text("No account or health-data cloud. Files go to folders you choose.")
                 .glassFont(.rowSubtitle)
@@ -471,7 +480,7 @@ private struct ReadyStep: View {
             OnboardingHeader(
                 eyebrow: String(localized: "Ready"),
                 title: String(localized: "Your Health Archive Is Ready"),
-                description: String(localized: "Review your setup, then preview your first private export with the defaults already configured."),
+                description: String(localized: "Create an automation with your chosen metrics and folder, then use Run now to generate your first export for free. Paid access is needed for further exports."),
                 icon: "checkmark.seal.fill",
                 showsIcon: false
             )
@@ -486,7 +495,7 @@ private struct ReadyStep: View {
                 )
                 OnboardingChecklistRow(
                     title: String(localized: "Export Folder"),
-                    detail: folderSelected ? folderName : String(localized: "Choose now or after previewing"),
+                    detail: folderSelected ? folderName : String(localized: "Choose now or before exporting"),
                     isComplete: folderSelected,
                     actionTitle: folderSelected ? nil : String(localized: "Choose Folder"),
                     action: folderSelected ? nil : onSelectFolder

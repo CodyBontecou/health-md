@@ -193,12 +193,8 @@ class SettingsRepositoryImpl(
 
     override suspend fun setPurchased(purchased: Boolean) {
         dataStore.edit { prefs ->
-            val wasPurchased = prefs[Keys.IS_PURCHASED] ?: false
+            // Purchase/restore must not replenish the first-export allowance.
             prefs[Keys.IS_PURCHASED] = purchased
-            if (purchased && !wasPurchased) {
-                prefs[Keys.FREE_EXPORTS_USED] = 0
-                prefs.remove(Keys.LEGACY_FREE_EXPORTS_REMAINING)
-            }
         }
     }
 

@@ -181,7 +181,7 @@ fun OnboardingScreen(
                 onSelectFolder = { folderPickerLauncher.launch(null) },
             )
             OnboardingPage.INCLUDED_ACCESS -> IncludedAccessPage()
-            OnboardingPage.READY -> ReadyPage()
+            OnboardingPage.READY -> ReadyPage(fullAccessIncluded = distributionPolicy.fullAccessIncluded)
         }
     }
 }

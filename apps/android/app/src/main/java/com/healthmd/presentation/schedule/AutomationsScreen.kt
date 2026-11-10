@@ -109,17 +109,31 @@ fun AutomationsScreen(
     onOpenHistory: () -> Unit = {},
     modifier: Modifier = Modifier,
     selectedAutomationId: String? = null,
+    createOnArrival: Boolean = false,
+    onCreationRequestConsumed: () -> Unit = {},
     profilesViewModel: ExportProfilesViewModel = hiltViewModel(),
     schedulesViewModel: ProfileSchedulesViewModel = hiltViewModel(),
     scheduleViewModel: ScheduleViewModel = hiltViewModel(),
     recentViewModel: AutomationRecentViewModel = hiltViewModel(),
 ) {
+    val protection = LocalConfigurationProtection.current
+    LaunchedEffect(createOnArrival) {
+        if (createOnArrival) {
+            onCreationRequestConsumed()
+            if (protection.enabled) protection.onBlockedChange() else profilesViewModel.startCreation()
+        }
+    }
     val state by profilesViewModel.uiState.collectAsStateWithLifecycle()
+    LaunchedEffect(state.detailProfileId) {
+        state.detailProfileId?.let { id ->
+            profilesViewModel.openDetail(null)
+            onOpenAutomation(id)
+        }
+    }
     val schedules by schedulesViewModel.uiState.collectAsStateWithLifecycle()
     val schedule by scheduleViewModel.uiState.collectAsStateWithLifecycle()
     val recent by recentViewModel.recentDays.collectAsStateWithLifecycle()
     val colors = LocalGeistColors.current
-    val protection = LocalConfigurationProtection.current
     val guarded: (() -> Unit) -> Unit = { action ->
         if (protection.enabled) protection.onBlockedChange() else action()
     }
@@ -161,15 +175,6 @@ fun AutomationsScreen(
             color = colors.secondary,
             modifier = Modifier.padding(start = GeistSpacing.space1, end = GeistSpacing.space1, bottom = GeistSpacing.space1),
         )
-
-        if (!schedule.isPurchased) {
-            AutomationsNotice(
-                title = stringResource(R.string.schedule_unlock_required_title),
-                body = stringResource(R.string.schedule_unlock_required_body),
-                action = stringResource(R.string.unlock_button),
-                onAction = onNavigateToPaywall,
-            )
-        }
 
         if (state.rows.isEmpty()) {
             Text(

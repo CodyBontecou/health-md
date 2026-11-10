@@ -119,6 +119,14 @@ class BillingRevocationTest {
         assertThat(fixture.purchased.value).isFalse()
     }
 
+    @Test fun freshInstallCanExportOfflineWithoutClaimingPaidAccess() = runTest {
+        val fixture = fixture(backgroundScope, cached = false, freeExportsUsed = 0,
+            setupCode = BillingClient.BillingResponseCode.FEATURE_NOT_SUPPORTED)
+        assertThat(fixture.repository.verifyAccess()).isTrue()
+        assertThat(fixture.repository.isUnlocked.value).isFalse()
+        assertThat(fixture.purchased.value).isFalse()
+    }
+
     private data class Fixture(
         val repository: BillingRepositoryImpl,
         val prefs: SharedPreferences,
@@ -142,6 +150,7 @@ class BillingRevocationTest {
         purchases: List<Purchase> = emptyList(),
         cached: Boolean = true,
         settingsPurchased: Boolean = cached,
+        freeExportsUsed: Int = 1,
     ): Fixture {
         val app = ApplicationProvider.getApplicationContext<Context>()
         val prefs = app.getSharedPreferences("healthmd_purchase_prefs", Context.MODE_PRIVATE)
@@ -158,6 +167,7 @@ class BillingRevocationTest {
         val purchased = MutableStateFlow(settingsPurchased)
         val settings = mockk<SettingsRepository>()
         every { settings.isPurchased } returns purchased
+        coEvery { settings.getFreeExportsUsed() } returns freeExportsUsed
         coEvery { settings.setPurchased(any()) } coAnswers { purchased.value = firstArg() }
         val client = mockk<BillingClient>(relaxed = true)
         every { client.startConnection(any()) } answers {

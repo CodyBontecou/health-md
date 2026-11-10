@@ -690,21 +690,23 @@ class ExportViewModelTest {
     }
 
     @Test
-    fun unpaidUserCannotStartEvenAFirstExport() = runTest {
+    fun unpaidUserCanCompleteFirstExportButCannotStartAnother() = runTest {
         val health = FakeHealthRepository(hasPermissions = true)
         val exports = FakeExportRepository()
         val viewModel = createViewModel(
             healthRepository = health,
             exportRepository = exports,
-            entitlementRepository = FakeBillingRepository(initialUnlocked = false),
+            entitlementRepository = FakeBillingRepository(initialUnlocked = false, verifiedAccess = true),
         )
         advanceUntilIdle()
         viewModel.startExport()
         advanceUntilIdle()
-        assertThat(health.fetchCalls).isEqualTo(0)
-        assertThat(exports.exportCalls).isEqualTo(0)
+        assertThat(exports.exportCalls).isEqualTo(1)
         assertThat(viewModel.uiState.value.freeExportsRemaining).isEqualTo(0)
-        assertThat(viewModel.uiState.value.postExportMilestone).isNull()
+        viewModel.startExport()
+        advanceUntilIdle()
+        assertThat(exports.exportCalls).isEqualTo(1)
+        assertThat(viewModel.uiState.value.isPurchased).isFalse()
     }
 
     @Test
@@ -932,9 +934,7 @@ private class FakeSettingsRepository(
     override suspend fun getFreeExportsRemaining(): Int = FreemiumPolicy.remainingExports(freeExportsUsedState.value)
 
     override suspend fun setPurchased(purchased: Boolean) {
-        val wasPurchased = isPurchasedState.value
         isPurchasedState.value = purchased
-        if (purchased && !wasPurchased) resetFreeExports()
     }
 
     override suspend fun resolveOnboardingCompletion(): Boolean =

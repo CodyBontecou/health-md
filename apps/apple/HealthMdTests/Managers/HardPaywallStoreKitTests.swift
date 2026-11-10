@@ -21,7 +21,9 @@ final class HardPaywallStoreKitTests: XCTestCase {
     }
 
     private func manager() -> PurchaseManager {
-        PurchaseManager(keychain: FakeKeychainStore(), defaults: FakeUserDefaults(),
+        let keychain = FakeKeychainStore()
+        keychain.writeInt(key: "freeExportsUsed", value: PurchaseManager.freeExportLimit)
+        return PurchaseManager(keychain: keychain, defaults: FakeUserDefaults(),
                         productLoader: {
                             let products = try await Product.products(for: $0)
                             // Packaged runners can omit the scheme's catalog. Fail
@@ -244,6 +246,7 @@ final class HardPaywallStoreKitTests: XCTestCase {
         let session = try await subscriptionSession()
         let keychain = FakeKeychainStore()
         keychain.writeInt(key: "serverVerifiedLegacy", value: 1)
+        keychain.writeInt(key: "freeExportsUsed", value: PurchaseManager.freeExportLimit)
         let manager = PurchaseManager(keychain: keychain, defaults: FakeUserDefaults(),
                                       productLoader: { try await Product.products(for: $0) })
         await manager.refreshStatus()

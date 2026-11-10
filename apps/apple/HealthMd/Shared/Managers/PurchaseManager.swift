@@ -153,9 +153,9 @@ final class PurchaseManager: ObservableObject {
     static let familyUpgradeProductID = HealthMdPurchaseOption.familyUpgrade.productID
     static let productIDs = HealthMdPurchaseOption.allCases.map(\.productID)
 
-    /// Access now requires a store-backed trial, subscription, or permanent unlock.
-    /// Retain the historical usage ledger, but grant no new free export actions.
-    static let freeExportLimit = 0
+    /// Let users generate their first export before choosing paid access.
+    /// Historical usage remains in the same durable ledger.
+    static let freeExportLimit = 1
 
     /// Free-export counts after which a soft, non-blocking upgrade prompt is
     /// surfaced ("value moments"). Distinct from the hard quota block.
@@ -188,14 +188,8 @@ final class PurchaseManager: ObservableObject {
 
     @Published private(set) var isUnlocked: Bool = false {
         didSet {
-            // When status resolves to unlocked (purchase, grandfather, or
-            // restore), clear any free-export count that accumulated during
-            // the async refreshStatus() race on launch. Without this, a user
-            // who exported before refreshStatus() settled could permanently
-            // burn quota they were never supposed to spend.
+            // Preserve the first-export ledger through purchase, restore, and expiry.
             if isUnlocked && !oldValue {
-                keychain.writeInt(key: freeExportsUsedKey, value: 0)
-                keychain.writeString(key: durableExportUseIDsKey, value: "")
                 pendingUpgradePrompt = nil
             }
         }
@@ -272,11 +266,11 @@ final class PurchaseManager: ObservableObject {
         if TestMode.isUITesting {
             return TestMode.purchaseUnlocked || freeExportsUsed < Self.freeExportLimit
         }
-        return isUnlocked && (activeEntitlementExpiration.map { $0 > Date() } ?? true)
+        return canExportFree || (isUnlocked && (activeEntitlementExpiration.map { $0 > Date() } ?? true))
     }
 
-    /// Durable jobs require active access at admission, including resume.
-    /// Historical quota receipts are not a substitute for an entitlement.
+    /// Durable jobs use the same allowance at admission, including resume.
+    /// A receipt does not grant another free action after the allowance is used.
     func canExport(jobID: UUID) -> Bool {
         if TestMode.isUITesting {
             return canExport

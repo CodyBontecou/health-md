@@ -23,7 +23,7 @@ struct GlassAppShell: View {
     @Binding var showFolderPicker: Bool
     @Binding var showExportProfiles: Bool
     @Binding var showClinicianReport: Bool
-    @Binding var presentFirstExportPreview: Bool
+    @Binding var presentFirstAutomationCreator: Bool
     let onFirstExportPreviewDismissed: () -> Void
     let canExport: Bool
     let onExport: () -> Void
@@ -75,6 +75,7 @@ struct GlassAppShell: View {
     @State private var archiveFilter: UUID?
     @State private var windowSize: CGSize = .zero
     @State private var editingAutomation: AutomationEditRequest?
+    @State private var createFirstAutomation = false
     /// Tab root pages on screen. The floating tab bar shows only over a root page, as
     /// on the boards: pushed pages keep their bottom actions uncovered.
     @State private var visibleTabRoots: Set<UUID> = []
@@ -362,7 +363,7 @@ struct GlassAppShell: View {
         .onChange(of: isExporting || momentDone != nil, initial: true) { _, isVisible in
             isShowingExportMoment = isVisible
         }
-        .onChange(of: presentFirstExportPreview) { _, requested in consumeFirstPreview(requested) }
+        .onChange(of: presentFirstAutomationCreator) { _, requested in consumeFirstAutomationRequest(requested) }
         .onChange(of: classicExportRequest) { _, _ in onExport() }
         .onChange(of: gapBackfillRouter.pendingRequest, initial: true) { _, _ in consumeGapBackfillRequest() }
         #if DEBUG
@@ -378,7 +379,7 @@ struct GlassAppShell: View {
             // Lets the classic export journeys reach the still-shipping Export settings directly.
             if UserDefaults.standard.bool(forKey: "UITestOpenClassicExport") { showClassicExport = true }
             #endif
-            consumeFirstPreview(presentFirstExportPreview)
+            consumeFirstAutomationRequest(presentFirstAutomationCreator)
         }
     }
 
@@ -435,17 +436,11 @@ struct GlassAppShell: View {
         Binding(get: { resultEntry }, set: { resultEntry = $0 })
     }
 
-    private func consumeFirstPreview(_ requested: Bool) {
+    private func consumeFirstAutomationRequest(_ requested: Bool) {
         guard requested else { return }
-        presentFirstExportPreview = false
-        // As on the Export tab: without Health access the preview has nothing to show.
-        if healthKitManager.isAuthorized {
-            showPreview = true
-        } else if configurationProtection.isEnabled {
-            configurationProtection.presentBlockedChangeToast()
-        } else {
-            showPreviewRequirements = true
-        }
+        presentFirstAutomationCreator = false
+        selectedTab = .schedule
+        createFirstAutomation = true
     }
 
     private static let navigationItems: [GlassNavigationItem<GlassTab>] = [
@@ -506,6 +501,7 @@ struct GlassAppShell: View {
             if let profileCoordinator {
                 AutomationsScreen(
                     coordinator: profileCoordinator,
+                    createOnArrival: $createFirstAutomation,
                     historyContent: AnyView(scheduleDetails),
                     onRun: { exportRequest = ExportNowRequest(profileID: $0) },
                     onPreview: { profileID in

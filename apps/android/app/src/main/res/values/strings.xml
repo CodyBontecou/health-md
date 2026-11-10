@@ -824,11 +824,12 @@
     <string name="onboarding_storage_selected">Saving to: %s</string>
 
     <string name="onboarding_ready_title">You\'re All Set!</string>
-    <string name="onboarding_ready_subtitle">Health.md is ready to export your wellness data.</string>
-    <string name="onboarding_ready_tip_1">Tap Export to create your first health notes</string>
-    <string name="onboarding_ready_tip_2">Set up automatic exports in the Schedule tab</string>
+    <string name="onboarding_ready_included_subtitle">Create an automation, then use Run now to generate your first export. Full Access is included.</string>
+    <string name="onboarding_ready_subtitle">Create an automation, then generate your first export for free. Paid access is needed for further exports.</string>
+    <string name="onboarding_ready_tip_1">Choose the metrics and folder for your automation</string>
+    <string name="onboarding_ready_tip_2">Use Run now to save your first health notes for free</string>
     <string name="onboarding_ready_tip_3">Customize your export format in Settings</string>
-    <string name="onboarding_ready_start_button">Start Exporting</string>
+    <string name="onboarding_ready_start_button">Create My First Automation</string>
 
     <string name="onboarding_continue">Continue</string>
     <string name="onboarding_skip">Skip</string>

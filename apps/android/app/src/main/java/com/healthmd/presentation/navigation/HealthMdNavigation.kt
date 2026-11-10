@@ -112,19 +112,9 @@ fun HealthMdNavigation(
     myselfClaimRequestId: Long = 0L,
     scheduledRecoveryPromptRequestId: Long = 0L,
 ) {
-    // Root boundary, outside NavHost: Back/deep links cannot expose tracking
-    // without a store entitlement. F-Droid keeps its included-access policy.
     val accessViewModel: PaywallViewModel = hiltViewModel()
     val clinicAccessViewModel: com.healthmd.presentation.clinic.ClinicAccessViewModel = hiltViewModel()
     val clinicStatus by clinicAccessViewModel.status.collectAsStateWithLifecycle()
-    var showClinicEnrollment by remember { mutableStateOf(false) }
-    if (showClinicEnrollment) {
-        com.healthmd.presentation.clinic.ClinicAccessScreen(
-            onDone = { showClinicEnrollment = false }, viewModel = clinicAccessViewModel)
-        return
-    }
-
-    val accessUnlocked by accessViewModel.accessState.collectAsStateWithLifecycle()
     val personalAccess by accessViewModel.isUnlocked.collectAsStateWithLifecycle()
     val accessOwner = LocalLifecycleOwner.current
     DisposableEffect(accessOwner, accessViewModel) {
@@ -145,52 +135,10 @@ fun HealthMdNavigation(
     }
     val hasCompletedOnboarding by settingsRepository.hasCompletedOnboarding.collectAsStateWithLifecycle(initialValue = null)
 
-    // Onboarding comes first and the paywall last: the root gate applies only once setup is
-    // complete, so a new user walks through onboarding before being asked to pay.
-    val onboardingDone = initialShouldSkipOnboarding == true || hasCompletedOnboarding == true
-    if (accessViewModel.purchasesAvailable && onboardingDone && accessUnlocked == null) {
-        Box(Modifier.fillMaxSize().background(AppColors.bgPrimary), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator(color = AppColors.accent)
-        }
-        return
-    }
-    if (accessViewModel.purchasesAvailable && onboardingDone && accessUnlocked != true) {
-        // The navigation graph is rebuilt after unlock; start it past the finished onboarding.
-        SideEffect { initialShouldSkipOnboarding = true }
-        val offers by accessViewModel.offers.collectAsStateWithLifecycle()
-        val purchasing by accessViewModel.isPurchasing.collectAsStateWithLifecycle()
-        val restoring by accessViewModel.isRestoring.collectAsStateWithLifecycle()
-        val error by accessViewModel.purchaseError.collectAsStateWithLifecycle()
-        val context = LocalContext.current
-        Scaffold(containerColor = AppColors.bgPrimary, bottomBar = {
-            if (BuildConfig.CLINIC_ACCESS_ENABLED && clinicStatus.configured) {
-                TextButton(onClick = { showClinicEnrollment = true },
-                    modifier = Modifier.fillMaxWidth().navigationBarsPadding()) {
-                    Text("Have a clinic invitation?")
-                }
-            }
-        }) { padding ->
-            Box(Modifier.fillMaxSize().padding(padding)) {
-        PaywallScreen(
-            onPurchase = {},
-            onPlanPurchase = { plan ->
-                (context as? android.app.Activity)?.let { accessViewModel.launchPurchaseFlow(it, plan) }
-            },
-            offers = offers,
-            onRetry = accessViewModel::refreshAccess,
-            onRestore = accessViewModel::restorePurchases,
-            onDismiss = null,
-            subtitle = stringResource(R.string.paywall_access_subtitle),
-            isPurchasing = purchasing,
-            isRestoring = restoring,
-            purchaseError = error,
-            onClearError = accessViewModel::clearError,
-        )
-            }
-        }
-        return
-    }
+    // Keep setup, automation editing, and completed exports reachable. Export
+    // entry points enforce paid access once the first free action is consumed.
 
+    var createFirstAutomation by rememberSaveable { mutableStateOf(false) }
     val navController = rememberNavController()
     val coroutineScope = rememberCoroutineScope()
     val appContext = LocalContext.current
@@ -380,7 +328,8 @@ fun HealthMdNavigation(
                 val isDebugMarketingCapture = BuildConfig.DEBUG && initialRoute == SubRoutes.ONBOARDING
                 OnboardingScreen(
                     onComplete = {
-                        navController.navigate(NavDestination.ARCHIVE.route) {
+                        createFirstAutomation = true
+                        navController.navigate(NavDestination.SCHEDULE.route) {
                             popUpTo(SubRoutes.ONBOARDING) { inclusive = true }
                             // Replayed from App & support, the Archive is already below.
                             launchSingleTop = true
@@ -523,6 +472,8 @@ fun HealthMdNavigation(
                     }
                     val schedule: @Composable () -> Unit = {
                         AutomationsScreen(
+                            createOnArrival = createFirstAutomation,
+                            onCreationRequestConsumed = { createFirstAutomation = false },
                             onOpenAutomation = { id ->
                                 if (twoPane) {
                                     selectedAutomation = id

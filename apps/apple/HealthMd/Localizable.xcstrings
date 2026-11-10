@@ -266,16 +266,16 @@
       "pt-BR":{"stringUnit":{"state":"translated","value":"Alterações"}},
       "zh-Hans":{"stringUnit":{"state":"translated","value":"更改"}}
     }},
-    "Make your body part of Obsidian" : {"localizations":{
-      "de":{"stringUnit":{"state":"translated","value":"Mach deinen Körper zum Teil von Obsidian"}},
-      "es":{"stringUnit":{"state":"translated","value":"Haz que tu cuerpo forme parte de Obsidian"}},
-      "fr":{"stringUnit":{"state":"translated","value":"Intégrez votre corps à Obsidian"}},
-      "it":{"stringUnit":{"state":"translated","value":"Porta il tuo corpo in Obsidian"}},
-      "ja":{"stringUnit":{"state":"translated","value":"あなたの身体をObsidianの一部に"}},
-      "ko":{"stringUnit":{"state":"translated","value":"내 몸을 Obsidian의 일부로"}},
-      "nl":{"stringUnit":{"state":"translated","value":"Maak je lichaam onderdeel van Obsidian"}},
-      "pt-BR":{"stringUnit":{"state":"translated","value":"Faça do seu corpo parte do Obsidian"}},
-      "zh-Hans":{"stringUnit":{"state":"translated","value":"让身体数据融入 Obsidian"}}
+    "Export your health data." : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Exportieren Sie Ihre Gesundheitsdaten."}},
+      "es":{"stringUnit":{"state":"translated","value":"Exporta tus datos de salud."}},
+      "fr":{"stringUnit":{"state":"translated","value":"Exportez vos données de santé."}},
+      "it":{"stringUnit":{"state":"translated","value":"Esporta i tuoi dati sulla salute."}},
+      "ja":{"stringUnit":{"state":"translated","value":"健康データをエクスポート。"}},
+      "ko":{"stringUnit":{"state":"translated","value":"건강 데이터를 내보내세요."}},
+      "nl":{"stringUnit":{"state":"translated","value":"Exporteer je gezondheidsgegevens."}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Exporte seus dados de saúde."}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"导出您的健康数据。"}}
     }},
     "Create a durable copy of sleep, HRV, workouts, vitals, medications and more — as files you own." : {"localizations":{
       "de":{"stringUnit":{"state":"translated","value":"Erstelle eine dauerhafte Kopie von Schlaf, HRV, Workouts, Vitalwerten, Medikamenten und mehr – als Dateien, die dir gehören."}},

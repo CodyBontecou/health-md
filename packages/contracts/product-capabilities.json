@@ -1249,9 +1249,9 @@
     },
     {
       "id": "purchase.free-export-journey",
-      "name": "Paid access and store-backed trials",
+      "name": "First free export and paid access",
       "classification": "shared",
-      "summary": "Hard paywall before tracking/setup on iOS/iPadOS and Google Play Android. Individual weekly/yearly subscriptions offer eligible users a seven-day store-backed trial; Lifetime is charged immediately. Existing paid and previously grandfathered permanent access is preserved. Historical capability ID and usage ledgers are retained; no new free export allowance or soft quota prompts. Free macOS companion and F-Droid Full Access are unchanged.",
+      "summary": "On iOS/iPadOS and Google Play Android, onboarding guides users into creating an automation and running their first export for free. Further exports require active paid access. Setup, automation editing, previews, and existing files remain reachable. Historical usage is preserved through purchase, restore, and expiry. Eligible subscriptions retain store-backed trials. Free macOS companion and F-Droid Full Access are unchanged.",
       "platforms": {
         "apple": {
           "state": "available"

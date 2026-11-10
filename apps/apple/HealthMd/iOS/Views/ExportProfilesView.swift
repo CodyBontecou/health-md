@@ -987,6 +987,7 @@ struct ExportProfileEditorSheet: View {
     private let editingProfileID: UUID?
     /// The Liquid Glass shell calls profiles "automations"; the legacy list keeps "profile".
     private let usesAutomationWording: Bool
+    private let onCreated: ((ExportProfile) -> Void)?
 
     @State private var name: String
     @State private var target: ExportTargetSelection
@@ -1005,10 +1006,12 @@ struct ExportProfileEditorSheet: View {
     init(
         coordinator: ExportProfileCoordinator,
         editing profile: ExportProfile? = nil,
-        usesAutomationWording: Bool = false
+        usesAutomationWording: Bool = false,
+        onCreated: ((ExportProfile) -> Void)? = nil
     ) {
         self.coordinator = coordinator
         self.usesAutomationWording = usesAutomationWording
+        self.onCreated = onCreated
         _profileStore = ObservedObject(wrappedValue: coordinator.profileStore)
         _destinationStore = ObservedObject(wrappedValue: coordinator.destinationStore)
         editingProfileID = profile?.id
@@ -1251,7 +1254,7 @@ struct ExportProfileEditorSheet: View {
                 settings: snapshot
             )
         } else {
-            coordinator.createProfile(
+            let created = coordinator.createProfile(
                 name: trimmedName,
                 target: target,
                 folderVaultID: target == .localIPhoneFolder ? folderVaultID : nil,
@@ -1259,6 +1262,7 @@ struct ExportProfileEditorSheet: View {
                 agentDataGatewayID: target == .agentDataGateway ? agentDataGatewayID : nil,
                 settings: snapshot
             )
+            if let created { onCreated?(created) }
         }
     }
 

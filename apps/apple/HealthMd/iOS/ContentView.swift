@@ -29,12 +29,7 @@ struct ContentView: View {
     @State private var hasResolvedAllTimeRangeThisLaunch = false
     @State private var showFolderPicker = false
     @State private var showDestinationChangedAlert = false
-    @State private var presentFirstExportPreview = false
-    /// One-time post-onboarding paywall: armed when onboarding completes
-    /// (unlocked users skip it), fired when the first export preview closes.
-    @State private var awaitingFirstPreviewCloseAfterOnboarding = false
-    @State private var showPostOnboardingPaywall = false
-    @AppStorage("pricing.paywall.postOnboarding.shown.v1") private var hasSeenPostOnboardingPaywall = false
+    @State private var presentFirstAutomationCreator = false
     @State private var isExporting = false
     @State private var isShowingExportMoment = false
     @State private var isTestExportWaitingForCompletion = false
@@ -123,10 +118,9 @@ struct ContentView: View {
                 onComplete: {
                     HealthMdReleaseNotes.markCurrentVersionAsSeenAfterOnboarding()
                     withOptionalMotionAnimation(AnimationTimings.smooth) {
-                        selectedTab = .export
-                        presentFirstExportPreview = true
+                        selectedTab = .schedule
+                        presentFirstAutomationCreator = true
                         hasCompletedOnboarding = true
-                        awaitingFirstPreviewCloseAfterOnboarding = shouldOfferPostOnboardingUnlock
                     }
                 }
             )
@@ -159,8 +153,8 @@ struct ContentView: View {
                     showFolderPicker: $showFolderPicker,
                     showExportProfiles: $showExportProfiles,
                     showClinicianReport: $showClinicianReport,
-                    presentFirstExportPreview: $presentFirstExportPreview,
-                    onFirstExportPreviewDismissed: { handleFirstExportPreviewClosed() },
+                    presentFirstAutomationCreator: $presentFirstAutomationCreator,
+                    onFirstExportPreviewDismissed: {},
                     canExport: canExport,
                     onExport: exportData,
                     onCancelExport: cancelExport,
@@ -306,15 +300,6 @@ struct ContentView: View {
         }
         .sheet(isPresented: $showPaywall) {
             PaywallView(context: currentPaywallContext, profileCoordinator: profileCoordinator)
-                .presentationDetents([.large])
-                .presentationDragIndicator(.visible)
-        }
-        .sheet(isPresented: $showPostOnboardingPaywall, onDismiss: {
-            if !TestMode.isUITesting {
-                hasSeenPostOnboardingPaywall = true
-            }
-        }) {
-            PaywallView(context: .onboarding, profileCoordinator: profileCoordinator)
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
         }
@@ -588,9 +573,9 @@ struct ContentView: View {
     private var canPresentReviewIntroduction: Bool {
         hasCompletedOnboarding && selectedTab == .export && !isExporting
             && !isAssessingHistory && !showFolderPicker && !showError
-            && !showDestinationChangedAlert && !showPaywall && !showPostOnboardingPaywall
+            && !showDestinationChangedAlert && !showPaywall
             && !showUpgradePromptPaywall && purchaseManager.pendingUpgradePrompt == nil
-            && !presentFirstExportPreview && markdownPreview == nil && quickLookURL == nil
+            && !presentFirstAutomationCreator && markdownPreview == nil && quickLookURL == nil
             && exportFolderBrowserPresentation == nil && !showExportProfiles && !showClinicianReport
             && partialExportNotice == nil && schedulingManager.notificationExportResult == nil
     }
@@ -936,31 +921,6 @@ struct ContentView: View {
 
     private func presentExportPaywall() {
         showPaywall = true
-    }
-
-    /// Post-onboarding unlock offer. Onboarding no longer gates on a paywall
-    /// step; instead, after the user sees their first real export preview, a
-    /// single non-blocking paywall is offered once per install.
-    private var shouldOfferPostOnboardingUnlock: Bool {
-        // UI tests control the offer through the launch environment and need
-        // launch-to-launch determinism, so persisted state is ignored there.
-        if TestMode.isUITesting {
-            return TestMode.showsPostOnboardingPaywall
-        }
-        guard !purchaseManager.isUnlocked,
-              !hasSeenPostOnboardingPaywall else { return false }
-        return true
-    }
-
-    private func handleFirstExportPreviewClosed() {
-        guard awaitingFirstPreviewCloseAfterOnboarding else { return }
-        awaitingFirstPreviewCloseAfterOnboarding = false
-        guard shouldOfferPostOnboardingUnlock else { return }
-        // Presenting a sheet directly inside another sheet's onDismiss can be
-        // dropped by SwiftUI; hop out of the dismissal transaction first.
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
-            showPostOnboardingPaywall = true
-        }
     }
 
     /// Swipe-to-dismiss on the value-moment prompt bypasses the button

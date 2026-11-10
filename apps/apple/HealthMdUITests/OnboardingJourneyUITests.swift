@@ -6,12 +6,12 @@ final class OnboardingJourneyUITests: XCTestCase {
         continueAfterFailure = false
     }
 
-    func testReadyCTACompletesOnboardingAndOpensFirstExportPreview() throws {
+    func testReadyCTACompletesOnboardingAndOpensAutomationCreator() throws {
         let app = UITestLaunchHelper.configuredApp(
             healthAuthorized: true,
             showOnboarding: true,
             showReleaseNotes: true,
-            purchaseUnlocked: true,
+            purchaseUnlocked: false,
             useHealthKitExportPreviewFixtures: true,
             analyticsTransport: "offline"
         )
@@ -27,31 +27,21 @@ final class OnboardingJourneyUITests: XCTestCase {
 
         // Sample export preview (phase 3, with the folded-in plugin promo), then ready.
         tapButton("Continue Setup", in: app)
-        tapButton("Create My First Export", in: app)
+        tapButton("Create My First Automation", in: app)
 
-        // ExportPreviewG renders the only selected format inline; the format
-        // switcher (and its per-file identifiers) appears only for several files.
-        let renderedFile = app.descendants(matching: .any)[
-            UITestLaunchHelper.ExportPreview.fileContent
-        ]
-        XCTAssertTrue(
-            renderedFile.waitForExistence(timeout: 15),
-            "Completing onboarding should open the preconfigured first-export preview instead of unseen release notes."
-        )
-        XCTAssertFalse(
-            app.staticTexts["whatsNew.title"].exists,
-            "Release notes should not replace the first-export preview after initial onboarding."
-        )
+        let create = app.buttons["export.profiles.editor.confirm"]
+        XCTAssertTrue(create.waitForExistence(timeout: 10))
+        XCTAssertFalse(app.staticTexts[UITestLaunchHelper.Paywall.title].exists)
+        create.tap()
+        XCTAssertTrue(app.buttons["glass.composer.runNow"].waitForExistence(timeout: 10))
+        XCTAssertFalse(app.staticTexts["whatsNew.title"].exists)
     }
 
-    // Historical selector retained for existing test consumers. The access wall
-    // now precedes onboarding; an unpaid install cannot reach the first preview.
-    func testPostOnboardingPaywallAppearsAfterFirstPreviewCloses() throws {
+    func testUnpaidUserReachesSetupWithoutAPaywall() throws {
         let app = UITestLaunchHelper.configuredApp(showOnboarding: true)
         app.launch()
-        XCTAssertTrue(app.staticTexts[UITestLaunchHelper.Paywall.title].waitForExistence(timeout: 10))
-        XCTAssertFalse(app.buttons["Start Setup"].exists)
-        XCTAssertFalse(app.buttons[UITestLaunchHelper.Paywall.dismissButton].exists)
+        XCTAssertTrue(app.buttons["Connect Apple Health"].waitForExistence(timeout: 10))
+        XCTAssertFalse(app.staticTexts[UITestLaunchHelper.Paywall.title].exists)
     }
 
     func testWelcomeLeavesSharedSetupImportToSettings() throws {
@@ -156,7 +146,7 @@ final class OnboardingJourneyUITests: XCTestCase {
         XCTAssertTrue(app.buttons["Choose Folder"].exists)
         XCTAssertTrue(app.buttons["Create My First Export"].exists)
 
-        tapButton("Create My First Export", in: app)
+        tapButton("Create My First Automation", in: app)
         // Geist dialogs are in-tree SwiftUI overlays rather than native UIAlert instances.
         let setupPromptTitle = app.staticTexts["Finish Preview Setup"]
         XCTAssertTrue(setupPromptTitle.waitForExistence(timeout: 8))

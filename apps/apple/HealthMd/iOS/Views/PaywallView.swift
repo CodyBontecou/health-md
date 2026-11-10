@@ -441,33 +441,22 @@ private struct PaywallPlanCard: View {
 /// Root access boundary: unpaid users cannot reach tracking/setup through a
 /// dismiss gesture or a deep link. Restore, store errors and clinic enrollment remain available.
 struct PurchaseAccessGate<Content: View>: View {
-    @ObservedObject private var purchases = PurchaseManager.shared
-    @ObservedObject private var clinic = ClinicSponsorshipManager.shared
     @Environment(\.scenePhase) private var scenePhase
-    @Environment(\.colorScheme) private var colorScheme
-    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @ViewBuilder let content: () -> Content
 
+    // Setup, automation editing, and completed files stay reachable. Each export
+    // entry point enforces paid access after the first free export is consumed.
     var body: some View {
-        Group {
-            if purchases.isUnlocked || clinic.status.active || (TestMode.isUITesting && TestMode.purchaseUnlocked) {
-                content()
-            } else if purchases.isCheckingAccess && !TestMode.isUITesting {
-                ProgressView("Checking purchases…")
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .background(
-                        GlassPalette.resolved(colorScheme: colorScheme, reduceTransparency: reduceTransparency)
-                            .bg.ignoresSafeArea()
-                    )
-            } else {
-                PaywallView(context: .onboarding, allowsDismissal: false)
+        content()
+            .onChange(of: scenePhase) { _, phase in
+                guard phase == .active, !TestMode.suppressesRuntimeServices else { return }
+                Task {
+                    await PurchaseManager.shared.refreshStatus()
+                    await ClinicSponsorshipManager.shared.refresh()
+                }
             }
-        }
-        .onChange(of: scenePhase) { _, phase in
-            guard phase == .active, !TestMode.suppressesRuntimeServices else { return }
-            Task { await purchases.refreshStatus(); await clinic.refresh() }
-        }
     }
+
 }
 
 #Preview {

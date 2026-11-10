@@ -11,18 +11,18 @@
 
 Health.md has one channel-neutral entitlement outcome: access to unlimited manual exports, scheduled exports, automation, recovery, and Direct CLI export.
 
-- **Google Play:** a hard paywall before tracking/setup. Choose Individual weekly ($0.99 US), yearly ($29.99 US), or Lifetime ($19.99 US live; $49.99 US launch target, matching Apple, pending the Play cutover). Eligible subscriptions include a seven-day store-backed free trial; Lifetime is charged immediately. Existing paid and grandfathered permanent access is retained. Android has no Family plans.
+- **Google Play:** setup and one free export before paid access is required. Choose Individual weekly ($0.99 US), yearly ($29.99 US), or Lifetime ($19.99 US live; $49.99 US launch target, matching Apple, pending the Play cutover). Eligible subscriptions include a seven-day store-backed free trial; Lifetime is charged immediately. Existing paid and grandfathered permanent access is retained. Android has no Family plans.
 - **F-Droid:** full access is included. There is no free counter, paywall, product lookup, purchase, or restore action.
 
 The distribution difference does not change export formats, bytes, schemas, or direct-device protocol behavior.
 
 ## Google Play flow
 
-1. Choose a plan using the localized Play price, or **Restore Purchase** for existing paid access.
-2. Complete setup to connect permissions and choose a destination.
+1. Complete setup, create an automation, and generate the first export for free.
+2. For further exports, choose a plan using the localized Play price, or **Restore Purchase** for existing paid access.
 3. Manage or cancel a subscription through Google Play. Canceling renewal preserves access until the paid-through/trial end; expired subscriptions do not become Lifetime access.
 
-Historical export counters are retained for migration but grant no new free actions. Missing products and failed verification do not bypass the gate. Subscription-only users need Play connectivity after a process restart. See the [billing guide](../../GOOGLE_PLAY_BILLING_SETUP.md) for lifecycle and qualification boundaries.
+Historical export counters are retained; users who have already consumed the first action do not receive a fresh allowance. Purchase, restore, and expiry preserve usage. After the allowance is consumed, missing products and failed verification do not grant paid access. Subscription-only users need Play connectivity after a process restart. See the [billing guide](../../GOOGLE_PLAY_BILLING_SETUP.md) for lifecycle and qualification boundaries.
 
 ## F-Droid flow
 

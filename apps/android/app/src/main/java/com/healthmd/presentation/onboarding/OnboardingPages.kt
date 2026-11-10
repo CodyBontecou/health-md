@@ -172,11 +172,11 @@ internal fun IncludedAccessPage() {
 }
 
 @Composable
-internal fun ReadyPage() {
+internal fun ReadyPage(fullAccessIncluded: Boolean = false) {
     OnboardingPageColumn {
         OnboardingPageHeader(
             title = stringResource(R.string.onboarding_ready_title),
-            subtitle = stringResource(R.string.onboarding_ready_subtitle),
+            subtitle = stringResource(if (fullAccessIncluded) R.string.onboarding_ready_included_subtitle else R.string.onboarding_ready_subtitle),
         ) { HeroIcon(Icons.Rounded.Check, success = true) }
         FeatureList(
             Icons.Outlined.FileUpload to stringResource(R.string.onboarding_ready_tip_1),

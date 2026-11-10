@@ -7,7 +7,7 @@ import org.junit.Test
 class SettingsRepositoryFreeExportTest {
 
     @Test
-    fun freshInstallPreservesZeroUsageWithoutGrantingAccess() {
+    fun freshInstallGrantsTheFirstExport() {
         val used = resolveFreeExportsUsed(currentUsed = null, legacyRemaining = null)
 
         assertThat(used).isEqualTo(0)
@@ -19,7 +19,7 @@ class SettingsRepositoryFreeExportTest {
     fun currentUsedCounterTakesPrecedenceAndIsSanitized() {
         assertThat(resolveFreeExportsUsed(currentUsed = 4, legacyRemaining = 0)).isEqualTo(4)
         assertThat(resolveFreeExportsUsed(currentUsed = -1, legacyRemaining = 0)).isEqualTo(0)
-        // The historical ledger still clamps at five; the new allowance is zero.
+        // The historical ledger still clamps at five; the new allowance is one.
         assertThat(resolveFreeExportsUsed(currentUsed = 99, legacyRemaining = 3)).isEqualTo(5)
     }
 

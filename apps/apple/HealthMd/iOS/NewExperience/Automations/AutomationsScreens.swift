@@ -234,6 +234,7 @@ struct AutomationRecentStrip: View {
 
 /// AutomationsGlass. An automation is an export profile with an optional schedule.
 struct AutomationsScreen: View {
+    @Binding var createOnArrival: Bool
     @ObservedObject var coordinator: ExportProfileCoordinator
     @ObservedObject private var profileStore: ExportProfileStore
     @ObservedObject private var entryStore: ScheduledExportEntryStore
@@ -247,6 +248,10 @@ struct AutomationsScreen: View {
     @EnvironmentObject private var configurationProtection: ConfigurationProtectionManager
     @EnvironmentObject private var schedulingManager: SchedulingManager
     @State private var showCreation = false
+    @State private var createdAutomation: AutomationEditRequest?
+    @State private var composingAutomation: AutomationEditRequest?
+    @State private var runAfterComposer: UUID?
+    @State private var previewAfterComposer: UUID?
     @State private var selectedProfileID: UUID?
     /// The composer pane's unsaved choices; kept here so a switch can ask first.
     @State private var paneDraft = ComposerDraft()
@@ -259,6 +264,7 @@ struct AutomationsScreen: View {
     /// old Export tab's settings on the automation pages (FormatsG holds sleep attribution).
     init(
         coordinator: ExportProfileCoordinator,
+        createOnArrival: Binding<Bool> = .constant(false),
         historyContent: AnyView = AnyView(EmptyView()),
         onRun: @escaping (UUID) -> Void,
         onPreview: @escaping (UUID) -> Void,
@@ -271,9 +277,16 @@ struct AutomationsScreen: View {
         self.onRun = onRun
         self.onPreview = onPreview
         self.onSchedulesChanged = onSchedulesChanged
+        _createOnArrival = createOnArrival
     }
 
     private var facts: AutomationFacts { AutomationFacts(coordinator: coordinator) }
+
+    private func consumeCreationRequest() {
+        guard createOnArrival else { return }
+        createOnArrival = false
+        configurationProtection.performConfigurationChange { showCreation = true }
+    }
 
     /// iPadAutomationsG: regular width on iPad shows the list beside the selected
     /// automation. An unfolded phone keeps the column; its composer is DuoInnerComposeG.
@@ -326,10 +339,37 @@ struct AutomationsScreen: View {
                 NavigationStack { list.glassTabRoot() }
             }
         }
-        .sheet(isPresented: $showCreation) {
-            ExportProfileEditorSheet(coordinator: coordinator, usesAutomationWording: true)
+        .onAppear { consumeCreationRequest() }
+        .onChange(of: createOnArrival) { _, _ in consumeCreationRequest() }
+        .sheet(isPresented: $showCreation, onDismiss: {
+            composingAutomation = createdAutomation
+            createdAutomation = nil
+        }) {
+            ExportProfileEditorSheet(coordinator: coordinator, usesAutomationWording: true) { profile in
+                createdAutomation = AutomationEditRequest(id: profile.id)
+            }
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
+        }
+        .sheet(item: $composingAutomation, onDismiss: {
+            if let id = runAfterComposer {
+                runAfterComposer = nil
+                onRun(id)
+            } else if let id = previewAfterComposer {
+                previewAfterComposer = nil
+                onPreview(id)
+            }
+        }) { request in
+            NavigationStack {
+                ComposerScreen(
+                    coordinator: coordinator,
+                    profileID: request.id,
+                    onPreview: { id in previewAfterComposer = id; composingAutomation = nil },
+                    onSchedulesChanged: onSchedulesChanged,
+                    onRun: { id in runAfterComposer = id; composingAutomation = nil }
+                )
+            }
+            .glassTheme()
         }
         .confirmationDialog(
             String(localized: "Save changes to this automation?"),
@@ -1121,6 +1161,18 @@ struct ComposerScreen: View {
                         }
                     )
                     allSettingsRow(profile)
+                }
+                if let onRun {
+                    Button(String(localized: "Run now")) {
+                        configurationProtection.performConfigurationChange {
+                            guard let current = profileStore.profile(id: profile.id) else { return }
+                            coordinator.saveSettings(draft.settings(from: current.settings), for: current)
+                            draft = ComposerDraft()
+                            onRun(profile.id)
+                        }
+                    }
+                    .buttonStyle(GlassPrimaryButtonStyle())
+                    .accessibilityIdentifier("glass.composer.runNow")
                 }
             }
             .padding(GlassMetrics.screenMargin)
