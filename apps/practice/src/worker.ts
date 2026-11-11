@@ -46,6 +46,10 @@ async function handleRequest(request: Request, env: PracticeWorkerEnv): Promise<
     return errorResponse("not_found", "The requested resource is unavailable", 404);
   }
 
+  if (url.pathname === "/favicon.ico") {
+    return withSecurityHeaders(new Response(null, { status: 204 }));
+  }
+
   if (assetPaths.has(url.pathname)) {
     return withSecurityHeaders(await env.ASSETS.fetch(request));
   }

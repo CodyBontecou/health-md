@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="m3_tools_diagnostics_verbosity">Verbosity</string>
+    <string name="m3_tools_diagnostics_subsystem">Subsystem</string>
+    <string name="m3_tools_diagnostics_time_range">Time range</string>
+    <string name="m3_tools_diagnostics_events">Recent events</string>
+    <string name="m3_tools_diagnostics_files">Bundle files</string>
+    <string name="m3_tools_direct_cli_pairing">Pair with your computer</string>
+    <string name="m3_tools_direct_cli_manual">Enter manually</string>
+    <string name="m3_tools_direct_cli_computer">Paired computer</string>
+    <string name="m3_tools_direct_cli_export">Export</string>
+    <string name="m3_tools_clinic_title">Clinic access</string>
+    <string name="m3_tools_clinic_intro">Your clinic can sponsor delivery to its approved endpoint. You choose what to share. Other export destinations require your own Health.md access.</string>
+    <string name="m3_tools_clinic_storage_unavailable">Unlock your phone and try again. Clinic access could not be read securely.</string>
+    <string name="m3_tools_clinic_fallback_name">Clinic</string>
+    <string name="m3_tools_clinic_sharing">Sharing</string>
+    <string name="m3_tools_clinic_allow_sharing">Allow sharing with this clinic</string>
+    <string name="m3_tools_clinic_sharing_description">Only the metrics and dates you select in Health.md will be sent. Scheduling uses your saved selection. Turning sharing off stops future clinic uploads; it does not delete copies the clinic already received.</string>
+    <string name="m3_tools_clinic_upload_token">Clinic upload token (optional)</string>
+    <string name="m3_tools_clinic_upload_token_description">If your clinic supplies a personal upload token, enter it here. It is stored securely and used only for this clinic\'s approved endpoint.</string>
+    <string name="m3_tools_clinic_use_destination">Use clinic destination</string>
+    <string name="m3_tools_clinic_sync_requests">Sync requests</string>
+    <string name="m3_tools_clinic_allow_sync">Allow sync requests from this clinic</string>
+    <string name="m3_tools_clinic_sync_description">Your clinic can send a notification asking for your latest data. Nothing is sent until you tap it; then yesterday and today are shared with this clinic. Turning this off stops new requests.</string>
+    <string name="m3_tools_clinic_invitation">Invitation</string>
+    <string name="m3_tools_clinic_invitation_code">Invitation code</string>
+    <string name="m3_tools_clinic_accept_invitation">Accept invitation</string>
+    <string name="m3_tools_clinic_not_configured">Clinic access is not configured in this version of Health.md.</string>
+    <string name="m3_tools_clinic_enrollment_pending">Your invitation is saved securely. Retry to finish enrollment; you do not need a new code.</string>
+    <string name="m3_tools_clinic_retry_enrollment">Retry enrollment</string>
+    <string name="m3_tools_clinic_refresh">Refresh clinic access</string>
+    <string name="m3_tools_clinic_disconnect_clinic">Disconnect clinic</string>
+    <string name="m3_tools_clinic_error">Could not update clinic access. Check your connection, or retry your saved enrollment.</string>
+    <string name="m3_tools_clinic_disconnect_question">Disconnect this clinic?</string>
+    <string name="m3_tools_clinic_disconnect_body">Clinic-sponsored sharing will stop. Your own purchased access and local health data remain available.</string>
+    <string name="m3_tools_clinic_disconnect">Disconnect</string>
+    <string name="m3_tools_clinic_sync_sharing_required">Allow sharing with this clinic first.</string>
+    <string name="m3_tools_clinic_sync_push_unavailable">Sync requests are not available in this version of Health.md.</string>
+    <string name="m3_tools_clinic_sync_notifications_denied">Notification permission was not granted. Allow notifications for Health.md in Settings.</string>
+    <string name="m3_tools_clinic_sync_wake_service">The notification service is not available. Try again later.</string>
+    <string name="m3_tools_clinic_sync_clinic_unreachable">Your clinic could not be reached. Try again later.</string>
+    <string name="m3_tools_clinic_sync_storage">Unlock your phone and try again. The request key could not be stored securely.</string>
+</resources>

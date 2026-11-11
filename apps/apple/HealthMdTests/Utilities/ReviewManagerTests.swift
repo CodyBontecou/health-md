@@ -54,13 +54,13 @@ final class ReviewManagerTests: XCTestCase {
     // MARK: - Repeat Milestones (every 30 after first)
 
     func testRepeatMilestone_triggersAt33() {
-        // Use advancing time: start at fixedNow, advance 15 days after first milestone
+        // Use advancing time: start at fixedNow, advance 121 days after first milestone
         let manager = makeManager()
         for _ in 1...3 { _ = manager.recordSuccessfulExport() }
         manager.didRequestReview()
 
-        // Create a new manager with time advanced past 14-day cooldown
-        let laterDate = Calendar.current.date(byAdding: .day, value: 15, to: Self.fixedNow)!
+        // Create a new manager with time advanced past 120-day cooldown
+        let laterDate = Calendar.current.date(byAdding: .day, value: 121, to: Self.fixedNow)!
         let laterManager = makeManager(now: { laterDate })
 
         for i in 4...33 {
@@ -79,14 +79,14 @@ final class ReviewManagerTests: XCTestCase {
         manager.didRequestReview()
 
         // Advance past cooldown for milestone 33
-        let day15 = Calendar.current.date(byAdding: .day, value: 15, to: Self.fixedNow)!
-        let mgr33 = makeManager(now: { day15 })
+        let day121 = Calendar.current.date(byAdding: .day, value: 121, to: Self.fixedNow)!
+        let mgr33 = makeManager(now: { day121 })
         for _ in 4...33 { _ = mgr33.recordSuccessfulExport() }
         mgr33.didRequestReview()
 
         // Advance past cooldown for milestone 63
-        let day30 = Calendar.current.date(byAdding: .day, value: 30, to: Self.fixedNow)!
-        let mgr63 = makeManager(now: { day30 })
+        let day242 = Calendar.current.date(byAdding: .day, value: 242, to: Self.fixedNow)!
+        let mgr63 = makeManager(now: { day242 })
         for i in 34...63 {
             let result = mgr63.recordSuccessfulExport()
             if i == 63 {
@@ -104,7 +104,7 @@ final class ReviewManagerTests: XCTestCase {
         XCTAssertTrue(manager.recordSuccessfulExport()) // 3 = triggers
         manager.didRequestReview()
 
-        // Only 5 days later (within 14-day cooldown)
+        // Only 5 days later (within 120-day cooldown)
         let fiveDaysLater = Calendar.current.date(byAdding: .day, value: 5, to: Self.fixedNow)!
         let cooldownManager = makeManager(now: { fiveDaysLater })
 
@@ -124,8 +124,8 @@ final class ReviewManagerTests: XCTestCase {
         XCTAssertTrue(manager.recordSuccessfulExport()) // 3 = triggers
         manager.didRequestReview()
 
-        // 15 days later (past 14-day cooldown)
-        let fifteenDaysLater = Calendar.current.date(byAdding: .day, value: 15, to: Self.fixedNow)!
+        // 121 days later (past 120-day cooldown)
+        let fifteenDaysLater = Calendar.current.date(byAdding: .day, value: 121, to: Self.fixedNow)!
         let laterManager = makeManager(now: { fifteenDaysLater })
 
         for i in 4...33 {
@@ -143,7 +143,7 @@ final class ReviewManagerTests: XCTestCase {
         for _ in 1...3 { _ = manager.recordSuccessfulExport() }
         manager.didRequestReview()
 
-        let laterDate = Calendar.current.date(byAdding: .day, value: 15, to: Self.fixedNow)!
+        let laterDate = Calendar.current.date(byAdding: .day, value: 121, to: Self.fixedNow)!
         let laterManager = makeManager(now: { laterDate })
 
         for i in 4...32 {

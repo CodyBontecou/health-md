@@ -13,15 +13,13 @@ case "$MODE" in
     ;;
 esac
 
-DERIVED_DATA_PATH="${DERIVED_DATA_PATH:-$ROOT_DIR/build/DerivedData/macOS}"
-MACOS_DEST="${MACOS_DEST:-platform=macOS,arch=$(uname -m)}"
+DERIVED_DATA_PATH="${DERIVED_DATA_PATH:-/tmp/healthmd-generated-individual-entry-docs-derived}"
 UPDATE_MARKER="HealthMdTests/Documentation/.update-generated-individual-entry-docs"
 TEST_IDENTIFIER="HealthMdTests/IndividualEntryDocumentationTests/testGeneratedIndividualEntryDocumentationHasNoDrift"
 XCODE_FLAGS=(
   -project HealthMd.xcodeproj
   -scheme HealthMd-Tests-macOS
-  -destination "$MACOS_DEST"
-  -enableCodeCoverage "${MACOS_CODE_COVERAGE:-NO}"
+  -destination 'platform=macOS'
   -only-testing:"$TEST_IDENTIFIER"
   -derivedDataPath "$DERIVED_DATA_PATH"
   CODE_SIGNING_ALLOWED=NO

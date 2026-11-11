@@ -8,10 +8,15 @@ import com.healthmd.data.clinicianreport.DefaultClinicianReportDataSource
 import com.healthmd.data.clinicianreport.SystemClinicianReportDateProvider
 import com.healthmd.data.health.HealthConnectDataProvider
 import com.healthmd.data.health.HealthConnectManager
+import com.healthmd.data.health.HealthProviderRegistry
+import com.healthmd.data.health.HealthRepositoryImpl
 import com.healthmd.domain.clinicianreport.*
 import com.healthmd.domain.model.*
+import com.healthmd.domain.repository.HealthRepository
+import com.healthmd.domain.repository.SettingsRepository
 import io.mockk.coEvery
 import io.mockk.coVerify
+import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.test.runTest
@@ -29,7 +34,7 @@ class ClinicianReportDataSourceTest {
     private val day = LocalDate.of(2026, 5, 1)
 
     @Test fun requestsOnlyRelevantDomainsWithGranularDataAndPreservesBloodPressurePair() = runTest {
-        val repository = RecordingHealthConnect(listOf(HealthData(
+        val repository = FakeHealthRepository(listOf(HealthData(
             date = day,
             vitals = VitalsData(bloodPressureSamples = listOf(BloodPressureSample(
                 time = LocalDateTime.of(2026, 5, 1, 8, 30), systolic = 123.0, diastolic = 77.0,
@@ -57,19 +62,87 @@ class ClinicianReportDataSourceTest {
         val pinnedZone = ZoneId.of("Pacific/Chatham")
         val manager = mockk<HealthConnectManager>()
         val provider = HealthConnectDataProvider(manager)
+        val registry = mockk<HealthProviderRegistry>()
+        val settings = mockk<SettingsRepository>()
+        coEvery { settings.getSelectedHealthProviderId() } returns "health_connect"
+        coEvery { settings.getSleepDayAttribution() } returns SleepDayAttribution.DEFAULT
+        every { registry.providerFor("health_connect") } returns provider
         coEvery {
-            manager.fetchHealthDataRange(any(), any(), true, pinnedZone, true)
+            manager.fetchHealthDataRange(any(), any(), true, pinnedZone, true, any(), any())
         } answers {
             firstArg<List<LocalDate>>().map { date -> HealthData(date) }
         }
 
-        source(provider).load(
+        val repository = HealthRepositoryImpl(registry, settings)
+        source(repository, provider).load(
             ReportConfiguration(ReportDateRange(day, day), setOf(ReportMetric.HEART_RATE)),
             pinnedZone,
         )
 
         coVerify(exactly = 1) {
-            manager.fetchHealthDataRange(listOf(day), any(), true, pinnedZone, true)
+            manager.fetchHealthDataRange(listOf(day), any(), true, pinnedZone, true, SleepDayAttribution.DEFAULT, any())
+        }
+    }
+
+    @Test fun explicitNightBeginsOverrideIsNotRepopulatedFromStoredMorningEnds() = runTest {
+        val manager = mockk<HealthConnectManager>()
+        val provider = HealthConnectDataProvider(manager)
+        val registry = mockk<HealthProviderRegistry>()
+        val settings = mockk<SettingsRepository>()
+        coEvery { settings.getSelectedHealthProviderId() } returns "health_connect"
+        coEvery { settings.getSleepDayAttribution() } returns SleepDayAttribution.MORNING_ENDS
+        every { registry.providerFor("health_connect") } returns provider
+        coEvery { manager.fetchHealthDataRange(any(), any(), any(), any(), any(), any(), any()) } answers {
+            firstArg<List<LocalDate>>().map(::HealthData)
+        }
+        val repository = HealthRepositoryImpl(registry, settings)
+
+        repository.fetchHealthDataRange(
+            dates = listOf(day),
+            sleepDayAttributionOverride = SleepDayAttributionOverride.Value(SleepDayAttribution.NIGHT_BEGINS),
+        )
+
+        coVerify(exactly = 0) { settings.getSleepDayAttribution() }
+        coVerify(exactly = 1) {
+            manager.fetchHealthDataRange(
+                listOf(day),
+                any(),
+                false,
+                any(),
+                false,
+                SleepDayAttribution.NIGHT_BEGINS,
+            )
+        }
+    }
+
+    @Test fun singleDateCapturePinsZoneBeforeStoredAttributionRead() = runTest {
+        val previous = TimeZone.getDefault()
+        val capturedZone = ZoneId.of("America/Los_Angeles")
+        try {
+            TimeZone.setDefault(TimeZone.getTimeZone(capturedZone))
+            val manager = mockk<HealthConnectManager>()
+            val provider = HealthConnectDataProvider(manager)
+            val registry = mockk<HealthProviderRegistry>()
+            val settings = mockk<SettingsRepository>()
+            coEvery { settings.getSelectedHealthProviderId() } returns "health_connect"
+            coEvery { settings.getSleepDayAttribution() } answers {
+                TimeZone.setDefault(TimeZone.getTimeZone("Europe/Berlin"))
+                SleepDayAttribution.NIGHT_BEGINS
+            }
+            every { registry.providerFor("health_connect") } returns provider
+            coEvery {
+                manager.fetchHealthDataRange(any(), any(), false, capturedZone, false, SleepDayAttribution.NIGHT_BEGINS, any())
+            } returns listOf(HealthData(day, sleep = SleepData(totalDuration = 1.minutes)))
+            val repository = HealthRepositoryImpl(registry, settings)
+
+            val captured = repository.fetchHealthData(day)
+
+            assertThat(captured.sleep.totalDuration).isEqualTo(1.minutes)
+            coVerify(exactly = 1) {
+                manager.fetchHealthDataRange(any(), any(), false, capturedZone, false, SleepDayAttribution.NIGHT_BEGINS, any())
+            }
+        } finally {
+            TimeZone.setDefault(previous)
         }
     }
 
@@ -90,7 +163,7 @@ class ClinicianReportDataSourceTest {
         val pinnedToday = LocalDate.of(2026, 1, 2)
         val ambientToday = LocalDate.of(2026, 1, 1)
         assertThat(ambientToday).isNotEqualTo(pinnedToday)
-        val repository = RecordingHealthConnect()
+        val repository = FakeHealthRepository()
         val pinnedDateProvider = ClinicianReportDateProvider { zoneId ->
             assertThat(zoneId).isEqualTo(pinnedZone)
             pinnedToday
@@ -110,7 +183,7 @@ class ClinicianReportDataSourceTest {
     }
 
     @Test fun usesDailyFallbackWithoutInventingSourceAndPrefersGranularScalar() = runTest {
-        val repository = RecordingHealthConnect(listOf(HealthData(
+        val repository = FakeHealthRepository(listOf(HealthData(
             date = day,
             heart = HeartData(restingHeartRate = 61.0, averageHeartRate = 70.0, samples = listOf(
                 TimestampedSample(LocalDateTime.of(2026, 5, 1, 10, 0), 72.0, source = "sensor.app"),
@@ -126,7 +199,7 @@ class ClinicianReportDataSourceTest {
     }
 
     @Test fun aggregateScalarFallbackRemainsDateOnlyAndManualEntryNeedsNoOrigin() = runTest {
-        val repository = RecordingHealthConnect(listOf(HealthData(
+        val repository = FakeHealthRepository(listOf(HealthData(
             date = day,
             vitals = VitalsData(
                 bloodGlucoseAvg = 104.0,
@@ -151,7 +224,7 @@ class ClinicianReportDataSourceTest {
             duration = 30.minutes,
             id = "synthetic-model-id",
         )
-        val input = source(RecordingHealthConnect(listOf(HealthData(day, workouts = listOf(workout, workout))))).load(
+        val input = source(FakeHealthRepository(listOf(HealthData(day, workouts = listOf(workout, workout))))).load(
             ReportConfiguration(ReportDateRange(day, day), setOf(ReportMetric.WORKOUTS)),
             ZoneId.of("UTC"),
         )
@@ -160,7 +233,7 @@ class ClinicianReportDataSourceTest {
     }
 
     @Test fun localReadFailureBecomesPartialWarningInsteadOfThrowing() = runTest {
-        val source = source(RecordingHealthConnect(error = IllegalStateException("private value must not leak")))
+        val source = source(FakeHealthRepository(error = IllegalStateException("private value must not leak")))
         val input = source.load(ReportConfiguration(ReportDateRange(day, day), setOf(ReportMetric.BLOOD_GLUCOSE)), ZoneId.of("UTC"))
         assertThat(input.warnings).isNotEmpty()
         assertThat(input.warnings.joinToString()).doesNotContain("private value")
@@ -168,7 +241,7 @@ class ClinicianReportDataSourceTest {
     }
 
     @Test fun emptyLocalCaptureDoesNotInventZeroReadings() = runTest {
-        val input = source(RecordingHealthConnect()).load(
+        val input = source(FakeHealthRepository()).load(
             ReportConfiguration(ReportDateRange(day, day), setOf(ReportMetric.STEPS, ReportMetric.HEART_RATE)),
             ZoneId.of("UTC"),
         )
@@ -180,7 +253,7 @@ class ClinicianReportDataSourceTest {
     @Test fun localCancellationPropagatesInsteadOfBecomingMissingData() = runTest {
         val cancellation = CancellationException("synthetic cancellation")
         val cancelled = try {
-            source(RecordingHealthConnect(error = cancellation)).load(
+            source(FakeHealthRepository(error = cancellation)).load(
                 ReportConfiguration(ReportDateRange(day, day), setOf(ReportMetric.STEPS)),
                 ZoneId.of("UTC"),
             )
@@ -191,41 +264,82 @@ class ClinicianReportDataSourceTest {
         assertThat(cancelled).isSameInstanceAs(cancellation)
     }
 
-    private fun source(
-        capture: RecordingHealthConnect,
-        dateProvider: ClinicianReportDateProvider = SystemClinicianReportDateProvider(),
-    ) = source(HealthConnectDataProvider(capture.manager), dateProvider)
+    @Test fun localReportUsesStoredMorningEndsWithPinnedZone() = runTest {
+        val capture = FakeHealthRepository(attribution = SleepDayAttribution.MORNING_ENDS)
+        val zone = ZoneId.of("Pacific/Chatham")
+        source(capture).load(
+            ReportConfiguration(ReportDateRange(day, day), setOf(ReportMetric.SLEEP_DURATION)),
+            zone,
+        )
+        assertThat(capture.requestedAttribution).isEqualTo(SleepDayAttribution.MORNING_ENDS)
+        assertThat(capture.requestedZoneId).isEqualTo(zone)
+    }
 
     private fun source(
+        repository: FakeHealthRepository,
+        dateProvider: ClinicianReportDateProvider = SystemClinicianReportDateProvider(),
+    ) = source(repository, repository.localProvider, dateProvider)
+
+    private fun source(
+        repository: HealthRepository,
         healthConnect: HealthConnectDataProvider,
         dateProvider: ClinicianReportDateProvider = SystemClinicianReportDateProvider(),
     ) = DefaultClinicianReportDataSource(
+        repository,
         healthConnect,
         ClinicianReportSourceLabelResolver(ApplicationProvider.getApplicationContext()),
         dateProvider,
     )
 
-    private class RecordingHealthConnect(
-        data: List<HealthData> = emptyList(),
-        error: Exception? = null,
-    ) {
-        val manager = mockk<HealthConnectManager>()
+    private class FakeHealthRepository(
+        private val data: List<HealthData> = emptyList(),
+        private val error: Exception? = null,
+        private val attribution: SleepDayAttribution = SleepDayAttribution.DEFAULT,
+    ) : HealthRepository {
+        val localProvider = mockk<HealthConnectDataProvider>()
         var requestedTypes: DataTypeSelection? = null
         var requestedDates: List<LocalDate>? = null
         var requestedZoneId: ZoneId? = null
+        var requestedAttribution: SleepDayAttribution? = null
         var includeGranular = false
         var pinnedCalendarDays = false
 
         init {
-            coEvery { manager.fetchHealthDataRange(any(), any(), any(), any(), any()) } answers {
+            coEvery { localProvider.fetchHealthDataRange(any(), any(), any(), any(), any(), any(), any()) } answers {
                 requestedDates = firstArg()
                 requestedTypes = secondArg()
                 includeGranular = thirdArg()
                 requestedZoneId = arg(3)
                 pinnedCalendarDays = arg(4)
+                requestedAttribution = arg(5)
                 error?.let { throw it }
                 data
             }
         }
+
+        override suspend fun resolveCaptureContext(
+            zoneId: ZoneId,
+            sleepDayAttributionOverride: SleepDayAttributionOverride,
+        ) = AndroidCaptureContext(
+            zoneId,
+            (sleepDayAttributionOverride as? SleepDayAttributionOverride.Value)?.attribution ?: attribution,
+        )
+        override suspend fun fetchHealthData(date: LocalDate): HealthData =
+            kotlin.error("Report must not read selected providers")
+        override suspend fun fetchHealthDataRange(
+            dates: List<LocalDate>,
+            dataTypes: DataTypeSelection,
+            includeGranularData: Boolean,
+            zoneId: ZoneId,
+            pinnedCalendarDays: Boolean,
+            sleepDayAttributionOverride: SleepDayAttributionOverride,
+            detail: ExportDetailSelection,
+        ): List<HealthData> = kotlin.error("Report must not read selected providers")
+        override suspend fun isAvailable() = true
+        override suspend fun hasPermissions() = true
+        override suspend fun hasHistoricalReadPermission() = true
+        override suspend fun hasBackgroundReadPermission() = true
+        override suspend fun getEarliestDataDate(): LocalDate? = data.minOfOrNull { it.date }
+        override fun isBeforeFirstUnlock() = false
     }
 }

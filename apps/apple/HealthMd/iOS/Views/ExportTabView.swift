@@ -38,7 +38,7 @@ struct ExportTabView: View {
     @Binding var startDate: Date
     @Binding var endDate: Date
     @Binding var dateRangePreset: ExportDateRangePreset
-    let showsBottomStatus: Bool
+    @Binding var isExporting: Bool
     @Binding var exportStatusMessage: String
     @Binding var showFolderPicker: Bool
     @Binding var presentFirstExportPreview: Bool
@@ -50,10 +50,7 @@ struct ExportTabView: View {
     let onExportTapped: () -> Void
     let historyProfileStore: ExportProfileStore?
     let executionHistoryAssessment: HealthHistoryAssessment?
-    let executionHistoryScope: HealthHistoryScope?
     let isAssessingHistory: Bool
-    let isDiscoveringExportRange: Bool
-    @Binding var isPreparingExport: Bool
     let onContinueWithoutHistoryVerification: () -> Void
     let onCancelHistoryVerification: () -> Void
 
@@ -65,6 +62,7 @@ struct ExportTabView: View {
     @Environment(\.scenePhase) private var scenePhase
 
     @ObservedObject private var purchaseManager = PurchaseManager.shared
+    @ObservedObject private var clinicSponsorship = ClinicSponsorshipManager.shared
     @State private var showHealthPermissionsGuide = false
     @State private var showPreviewRequirementsPrompt = false
     @State private var showFilenameEditor = false
@@ -77,8 +75,6 @@ struct ExportTabView: View {
     @State private var showAgentDataGatewaySettings = false
     @State private var previewSizeEstimate: ExportPreviewSizeEstimate?
     @State private var previewSizeEstimateConfiguration: ExportSizeEstimateConfiguration?
-    @State private var isResolvingAllTimeRange = false
-    @State private var allTimeResolutionError: String?
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -92,17 +88,20 @@ struct ExportTabView: View {
               externalIntegrations.connectedProviderCount > 0 else {
             return nil
         }
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = advancedSettings.exportTimeZoneOverride ?? .current
         return { date in
-            await externalIntegrations.fetchDailyRecords(for: date)
+            await externalIntegrations.fetchDailyRecords(for: date, calendar: calendar)
         }
     }
 
     var body: some View {
         NavigationStack {
             ScrollViewReader { proxy in
-            SchedulingExportScroll(showsFooter: !showsBottomStatus) {
+            GeometryReader { viewport in
+            SchedulingExportScroll(showsFooter: !isExporting) {
                 VStack(spacing: Spacing.md) {
-                    heroHeader
+                    heroHeader(availableWidth: viewport.size.width)
                     #if DEBUG
                     if TestMode.isUITesting {
                         // Synthetic journey diagnostics only, not a production
@@ -112,19 +111,7 @@ struct ExportTabView: View {
                             .accessibilityIdentifier("export.synthetic.statusMessage")
                     }
                     #endif
-                    statusBadges
-                        .configurationChangesProtected()
-                    exportTargetSection
-                        .configurationChangesProtected()
-                    dateRangeSection
-                    historyWarningSection
-                    healthDataSection
-                        .id("marketing-export-health-data")
-                    formatsSection
-                    automationSection
-                    formatOptionsSection
-                    outputSection
-                    pathPreviewSection
+                    exportSections(availableWidth: viewport.size.width)
                     resetButton
                         .configurationChangesProtected()
                 }
@@ -137,6 +124,11 @@ struct ExportTabView: View {
                     .transition(reduceMotion ? .opacity : .move(edge: .bottom).combined(with: .opacity))
             }
             .toolbar(.hidden, for: .navigationBar)
+            .onChange(of: exportStatusMessage) { oldValue, newValue in
+                if !newValue.isEmpty && newValue != oldValue {
+                    UIAccessibility.post(notification: .announcement, argument: newValue)
+                }
+            }
             #if DEBUG
             .onAppear {
                 guard MarketingCapture.pendingAdvancedSubscreen == .exportPreview else { return }
@@ -152,11 +144,20 @@ struct ExportTabView: View {
             }
             #endif
             }
+            }
         }
         // SwiftUI owns the logical waiter; the parent-owned worker retains the
         // physical provider slot through cancellation until the provider returns.
+        .alert("Preview range unavailable", isPresented: Binding(
+            get: { previewRangeError != nil }, set: { if !$0 { previewRangeError = nil } }
+        )) { Button("OK", role: .cancel) { previewRangeError = nil } } message: {
+            Text(previewRangeError ?? "")
+        }
+        .onDisappear { previewActionRevision = UUID() }
         .task(id: historyPreviewRequest) { await refreshHistoryAssessment() }
         .onChange(of: dateRangePreset) { _, _ in invalidateHistoryPreview() }
+        .onChange(of: startDate) { _, _ in invalidateHistoryPreview() }
+        .onChange(of: endDate) { _, _ in invalidateHistoryPreview() }
         .onReceive(advancedSettings.objectWillChange) { _ in invalidateHistoryPreview() }
         .onReceive(healthKitManager.objectWillChange) { _ in invalidateHistoryPreview() }
         .onReceive(historyProfileStore?.$activeProfileID.eraseToAnyPublisher() ?? Just<UUID?>(nil).eraseToAnyPublisher()) { id in
@@ -194,18 +195,12 @@ struct ExportTabView: View {
                             _ = try? await healthKitManager.requestAuthorization()
                             if healthKitManager.isAuthorized {
                                 await Task.yield()
-                                showPreview = true
+                                handlePreviewTapped()
                             }
                         }
                     }
                 ]
                 : [.cancel()]
-        )
-        .geistDialog(
-            isPresented: isPresentingAllTimeResolutionError,
-            title: Text("All Time Unavailable"),
-            message: Text(allTimeResolutionError ?? ""),
-            actions: [.action("Done", role: .secondary)]
         )
         .geistDialog(
             isPresented: $showRollupHelp,
@@ -257,13 +252,18 @@ struct ExportTabView: View {
                     ? apiExportSettings.destinationSnapshot
                     : nil,
                 connectedAppsEnabled: ConnectedAppsFeature.isEnabled,
-                fetchHealthData: { date in
+                externalIntegrations: externalIntegrations,
+                fetchHealthData: { date, snapshot in
+                    let capturedSettings = snapshot.makeAdvancedExportSettings()
                     #if DEBUG
                     if TestMode.useHealthKitExportPreviewFixtures || MarketingCapture.isActive {
                         return UITestHealthKitFixtures.exportPreviewHealthData(
                             for: date,
-                            includeGranularData: advancedSettings.effectiveDetailPolicy
-                                .includesSelectedTimeSeries
+                            includeGranularData: capturedSettings.effectiveDetailPolicy
+                                .includesSelectedTimeSeries,
+                            includeLargeSourceArchive: TestMode.healthKitExportPreviewLargeArchive
+                                && capturedSettings.effectiveDetailPolicy.includesCanonicalArchive,
+                            includePartialFailures: TestMode.healthKitExportPreviewPartialCapture
                         )
                     }
                     #endif
@@ -271,9 +271,9 @@ struct ExportTabView: View {
                     do {
                         return try await healthKitManager.fetchHealthData(
                             for: date,
-                            detailPolicy: advancedSettings.effectiveDetailPolicy,
-                            metricSelection: advancedSettings.metricSelection,
-                            timeZone: advancedSettings.exportTimeZoneOverride ?? .current
+                            detailPolicy: capturedSettings.effectiveDetailPolicy,
+                            metricSelection: capturedSettings.metricSelection,
+                            timeZone: capturedSettings.exportTimeZoneOverride ?? .current
                         )
                     } catch {
                         let descriptor = HealthKitSafeLogging.failureDescriptor(
@@ -305,13 +305,40 @@ struct ExportTabView: View {
         }
     }
 
+    // MARK: - Adaptive Sections
+
+    private func exportSections(availableWidth: CGFloat) -> some View {
+        AdaptivePageColumns(availableWidth: availableWidth) {
+            VStack(spacing: Spacing.md) {
+                exportTargetSection
+                    .configurationChangesProtected()
+                dateRangeSection
+                historyWarningSection
+                healthDataSection
+                    .id("marketing-export-health-data")
+                formatsSection
+            }
+        } secondary: {
+            VStack(spacing: Spacing.md) {
+                automationSection
+                formatOptionsSection
+                outputSection
+                pathPreviewSection
+            }
+        }
+    }
+
     // MARK: - Header
 
-    private var heroHeader: some View {
-        HealthMdPageHeader(
+    private func heroHeader(availableWidth: CGFloat) -> some View {
+        AdaptivePageHeader(
+            availableWidth: availableWidth,
             title: "Export",
             subtitle: "Choose what Health.md writes from Apple Health"
-        )
+        ) {
+            statusBadges
+                .configurationChangesProtected()
+        }
     }
 
     // MARK: - Status Badges
@@ -349,12 +376,19 @@ struct ExportTabView: View {
 
         return Group {
             if usesAccessibilityLayout {
-                VStack(spacing: Spacing.md) {
+                VStack(alignment: .leading, spacing: Spacing.md) {
                     badges
                 }
             } else {
-                HStack(spacing: Spacing.md) {
-                    badges
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: Spacing.md) {
+                        badges
+                    }
+                    .fixedSize(horizontal: true, vertical: false)
+
+                    VStack(alignment: .leading, spacing: Spacing.md) {
+                        badges
+                    }
                 }
             }
         }
@@ -389,42 +423,42 @@ struct ExportTabView: View {
 
     private var localTargetSubtitle: String {
         if vaultManager.requiresVaultReselection {
-            return "Saved folder changed. Review it in Files, then re-select the intended folder."
+            return String(localized: "Saved folder changed. Review it in Files, then re-select the intended folder.")
         }
         if vaultManager.vaultURL != nil {
             return String(localized: "Exports to \(vaultManager.vaultName) on this iPhone.")
         }
         if vaultManager.hasSavedVaultFolder {
-            return "Saved folder unavailable. Reconnect it in Files or tap to re-select."
+            return String(localized: "Saved folder unavailable. Reconnect it in Files or tap to re-select.")
         }
-        return "Local iPhone folder. Tap to choose a folder."
+        return String(localized: "Local iPhone folder. Tap to choose a folder.")
     }
 
     private var macTargetSubtitle: String {
         if canExportToConnectedMacWithCurrentSettings {
             if let path = syncService.macDestinationStatus?.destinationPathForDisplay {
-                return "Ready on Mac: \(path)"
+                return String(localized: "Ready on Mac: \(path)")
             }
             if let name = syncService.macDestinationStatus?.destinationDisplayName {
-                return "Ready on Mac: \(name)"
+                return String(localized: "Ready on Mac: \(name)")
             }
-            return syncService.macExportReadinessMessage(requiring: advancedSettings)
+            return macReadinessDisplayText
         }
         return macTargetUnavailableMessage
     }
 
     private var apiTargetSubtitle: String {
         if apiExportSettings.isConfigured {
-            return "POSTs JSON exports to \(apiExportSettings.displayName). Tap to edit."
+            return String(localized: "POSTs JSON exports to \(apiExportSettings.displayName). Tap to edit.")
         }
-        return "Send JSON directly to your HTTP(S) endpoint. Tap to configure."
+        return String(localized: "Send JSON directly to your HTTP(S) endpoint. Tap to configure.")
     }
 
     private var agentDataGatewayTargetSubtitle: String {
         if agentDataGatewaySettings.isConfigured {
-            return "Uploads export artifacts to \(agentDataGatewaySettings.displayName). Tap to edit."
+            return String(localized: "Uploads export artifacts to \(agentDataGatewaySettings.displayName). Tap to edit.")
         }
-        return "Upload exact export artifacts to your Agent Data gateway. Tap to configure."
+        return String(localized: "Upload exact export artifacts to your Agent Data gateway. Tap to configure.")
     }
 
     private var canExportToConnectedMacWithCurrentSettings: Bool {
@@ -433,35 +467,62 @@ struct ExportTabView: View {
 
     private var macTargetUnavailableMessage: String {
         guard syncService.connectionState == .connected else {
-            return "No Mac connected. Open Health.md on your Mac to connect."
+            return String(localized: "No Mac connected. Open Health.md on your Mac to connect.")
         }
         guard let capabilities = syncService.remoteCapabilities else {
-            return syncService.macExportReadinessMessage
+            return String(localized: "Waiting for Mac destination status")
         }
         guard capabilities.platform == .macOS,
               capabilities.isCompatibleWithMacExportJobs else {
-            return "Incompatible Mac. Update Health.md on Mac."
+            return String(localized: "Incompatible Mac. Update Health.md on Mac.")
         }
         if syncService.canExportToConnectedMac,
            !syncService.canExportToConnectedMac(requiring: advancedSettings) {
-            return syncService.macExportReadinessMessage(requiring: advancedSettings)
+            return macReadinessDisplayText
         }
         guard let status = syncService.macDestinationStatus else {
-            return syncService.macExportReadinessMessage(requiring: advancedSettings)
+            return String(localized: "Waiting for Mac destination status")
         }
         if status.activeJobID != nil {
-            return "Mac busy. Wait for the current export to finish."
+            return String(localized: "Mac busy. Wait for the current export to finish.")
         }
         if !status.destinationFolderSelected {
-            return "No folder selected. Choose a folder on Mac."
+            return String(localized: "No folder selected. Choose a folder on Mac.")
         }
         if !status.folderAccessHealthy {
             let destination = status.destinationPathForDisplay
                 ?? status.destinationDisplayName
-                ?? "the saved Mac folder"
-            return "Saved Mac destination \(destination) needs access. Re-select it on Mac."
+                ?? String(localized: "the saved Mac folder")
+            return String(localized: "Saved Mac destination \(destination) needs access. Re-select it on Mac.")
         }
-        return syncService.macExportReadinessMessage(requiring: advancedSettings)
+        return macReadinessDisplayText
+    }
+
+    private var macReadinessDisplayText: String {
+        let message = syncService.macExportReadinessMessage(requiring: advancedSettings)
+        // Only the locally generated ready/feature-compatibility copy is known
+        // here. Unavailable destination reasons may contain remote error prose.
+        guard syncService.canExportToConnectedMac else { return message }
+        switch message {
+        case "Ready to export to Mac":
+            return String(localized: "Ready to export to Mac")
+        case "Update Health.md on Mac to omit the data dictionary":
+            return String(localized: "Update Health.md on Mac to omit the data dictionary")
+        case "Update Health.md on Mac to use Daily Notes Only":
+            return String(localized: "Update Health.md on Mac to use Daily Notes Only")
+        case "Update Health.md on Mac to export summary-only roll-ups":
+            return String(localized: "Update Health.md on Mac to export summary-only roll-ups")
+        case "Update Health.md on Mac to export range summaries":
+            return String(localized: "Update Health.md on Mac to export range summaries")
+        case "Update Health.md on Mac to use this data detail setting":
+            return String(localized: "Update Health.md on Mac to use this data detail setting")
+        case "Update Health.md on Mac to export Lossless Health Records":
+            return String(localized: "Update Health.md on Mac to export Lossless Health Records")
+        case "Update Health.md on Mac":
+            return String(localized: "Update Health.md on Mac")
+        default:
+            return message
+        }
     }
 
     // MARK: - History evidence (outside exported records)
@@ -480,6 +541,8 @@ struct ExportTabView: View {
     }
 
     private func invalidateHistoryPreview() {
+        previewActionRevision = UUID()
+
         historyCoordinator.invalidate()
         historyPreviewWorker.cancelLogicalWaiter()
         historyRefreshID = UUID()
@@ -502,11 +565,6 @@ struct ExportTabView: View {
     }
 
     @ViewBuilder private var historyWarningSection: some View {
-        if isDiscoveringExportRange {
-            sectionCard(title: "Checking readable date range") {
-                HealthHistoryRangeDiscoveryContent(cancel: onCancelHistoryVerification)
-            }
-        }
         if isAssessingHistory {
             sectionCard(title: "Checking history access") {
                 HealthHistoryPendingContent(continueUnverified: onContinueWithoutHistoryVerification,
@@ -514,7 +572,7 @@ struct ExportTabView: View {
             }
         }
         if let assessment = HealthHistoryAssessment.displayed(preview: historyAssessment,
-            execution: executionHistoryAssessment, scope: historyScope, executionScope: executionHistoryScope), assessment.needsWarning {
+            execution: executionHistoryAssessment, scope: historyScope), assessment.needsWarning {
             sectionCard(title: assessment.warningTitle) {
                 HealthHistoryDisclosureContent(assessment: assessment,
                     isExecution: assessment.id == executionHistoryAssessment?.id,
@@ -525,6 +583,15 @@ struct ExportTabView: View {
     }
 
     // MARK: - Date Range
+
+    private var sleepDateGuidance: LocalizedStringKey {
+        switch healthKitManager.sleepDayAttribution {
+        case .nightBegins:
+            "Sleep covers noon on each selected date through noon the next day. For last night's sleep, choose Yesterday."
+        case .morningEnds:
+            "Whole sleep sessions belong to the date they end in the export's time zone. For last night's sleep, choose Today."
+        }
+    }
 
     private var dateRangeSection: some View {
         sectionCard(title: "Date Range") {
@@ -539,6 +606,14 @@ struct ExportTabView: View {
                     configurationProtection.performConfigurationChange {
                         selectDateRangePreset(preset)
                     }
+                }
+
+                if advancedSettings.metricSelection.enabledMetricCount(for: .sleep) > 0 {
+                    Text(sleepDateGuidance)
+                        .font(.footnote)
+                        .foregroundStyle(Color.textSecondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .accessibilityIdentifier(AccessibilityID.Export.sleepDateGuidance)
                 }
 
                 if dateRangePreset == .custom {
@@ -576,73 +651,44 @@ struct ExportTabView: View {
         }
     }
 
+    @State private var previewActionRevision = UUID()
+    @State private var previewRangeError: String?
+    @State private var admittedPreviewRange: ExportDateRange?
+
     private var previewDateRange: (startDate: Date, endDate: Date) {
-        (startDate, endDate)
+        (admittedPreviewRange?.startDate ?? startDate, admittedPreviewRange?.endDate ?? endDate)
+    }
+
+    private var previewRangeRequest: NativeExportDateRangeResolver.Request {
+        .init(selection: .init(preset: dateRangePreset, startDate: startDate, endDate: endDate),
+              enabledMetricIDs: advancedSettings.metricSelection.enabledMetrics,
+              timeZone: advancedSettings.exportTimeZoneOverride ?? .current)
     }
 
     private func selectDateRangePreset(_ preset: ExportDateRangePreset) {
         dateRangePreset = preset
-        allTimeResolutionError = nil
 
         switch preset {
         case .custom:
             return
         case .allTime:
-            resolveAllTimeRange()
+            return // The action owner resolves fresh selected-metric coverage.
         case .today, .yesterday:
             applyResolvedDateRange(for: preset)
         }
     }
 
-    private var nativeExportDateRangeRequest: NativeExportDateRangeResolver.Request {
-        NativeExportDateRangeResolver.Request(
-            selection: ExportDateRangeSelection(
-                preset: dateRangePreset,
-                startDate: startDate,
-                endDate: endDate
-            ),
-            enabledMetricIDs: advancedSettings.metricSelection.enabledMetrics,
-            timeZone: advancedSettings.exportTimeZoneOverride ?? .current
-        )
-    }
-
-    private func resolveAllTimeRange() {
-        guard !isResolvingAllTimeRange else { return }
-        isResolvingAllTimeRange = true
-        let request = nativeExportDateRangeRequest
-        Task { @MainActor in
-            defer { isResolvingAllTimeRange = false }
-            do {
-                let range = try await NativeExportDateRangeResolver.resolve(
-                    request,
-                    using: healthKitManager,
-                    currentRequest: { nativeExportDateRangeRequest }
-                )
-                // A preview finishing late must not rewrite the originating
-                // selection of an interactive export already being prepared.
-                guard !isPreparingExport else { return }
-                _ = configurationProtection.performConfigurationChange {
-                    startDate = range.startDate
-                    endDate = range.endDate
-                }
-            } catch is CancellationError {
-                return
-            } catch {
-                guard dateRangePreset == .allTime, !isPreparingExport else { return }
-                allTimeResolutionError = error.localizedDescription
-            }
-        }
-    }
-
-    private var isPresentingAllTimeResolutionError: Binding<Bool> {
-        Binding(
-            get: { allTimeResolutionError != nil },
-            set: { if !$0 { allTimeResolutionError = nil } }
-        )
-    }
-
-    private func applyResolvedDateRange(for preset: ExportDateRangePreset) {
+    private func applyResolvedDateRange(
+        for preset: ExportDateRangePreset,
+        allTimeStartDate: Date? = nil,
+        allTimeEndDate: Date? = nil
+    ) {
         let range = preset.resolvedRange(
+            currentStartDate: startDate,
+            currentEndDate: endDate,
+            allTimeStartDate: allTimeStartDate,
+            allTimeEndDate: allTimeEndDate
+        ) ?? ExportDateRangePreset.today.resolvedRange(
             currentStartDate: startDate,
             currentEndDate: endDate
         )
@@ -686,8 +732,51 @@ struct ExportTabView: View {
 
                 dataDetailInlineRow
                     .configurationChangesProtected()
+
+                rowDivider()
+
+                ExportDetailOverridesSection(policy: $advancedSettings.detailPolicy)
+                    .configurationChangesProtected()
+
+                rowDivider()
+
+                sleepDayAttributionInlineRow
+                    .configurationChangesProtected()
             }
         }
+    }
+
+    /// Issue #104: chooses which daily note owns a midnight-spanning sleep
+    /// session. Stored on the capturing device and applied to every capture
+    /// path (manual, scheduled, connected, direct, and App Intents).
+    private var sleepDayAttributionInlineRow: some View {
+        HStack(alignment: .top, spacing: Spacing.s3) {
+            inlineIcon("moon.zzz", isActive: healthKitManager.sleepDayAttribution == .morningEnds)
+
+            VStack(alignment: .leading, spacing: Spacing.s2) {
+                Picker("Sleep Day Attribution", selection: Binding(
+                    get: { healthKitManager.sleepDayAttribution },
+                    set: { mode in
+                        if mode.isAvailableForShippedProfiles { healthKitManager.setSleepDayAttribution(mode) }
+                    }
+                )) {
+                    ForEach(SleepDayAttribution.allCases, id: \.rawValue) { mode in
+                        Text(mode.localizedDisplayName).tag(mode)
+                            .disabled(!mode.isAvailableForShippedProfiles)
+                    }
+                }
+                .pickerStyle(.menu)
+                .font(.body.weight(.semibold))
+                .accessibilityIdentifier(AccessibilityID.Export.sleepDayAttributionPicker)
+                .accessibilityHint(healthKitManager.sleepDayAttribution.localizedDescription)
+
+                Text(healthKitManager.sleepDayAttribution.localizedDescription)
+                    .font(.footnote)
+                    .foregroundStyle(Color.textSecondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+        .padding(.vertical, Spacing.s3)
     }
 
     private var dataDetailInlineRow: some View {
@@ -723,6 +812,14 @@ struct ExportTabView: View {
                     .font(.footnote)
                     .foregroundStyle(Color.textSecondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
+
+                if let longRangeNote = selectedPreset.localizedLongRangeNote {
+                    Label(longRangeNote, systemImage: "lightbulb")
+                        .font(.footnote)
+                        .foregroundStyle(Color.textSecondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
         }
         .padding(.vertical, Spacing.s3)
@@ -733,19 +830,20 @@ struct ExportTabView: View {
     private func dataDetailPicker(
         presets: [AppleExportDetailPreset]
     ) -> some View {
-        SecondaryPicker(
+        Picker(
             "Data Detail",
-            selectedTitle: AppleExportDetailPreset(policy: advancedSettings.detailPolicy).localizedTitle,
             selection: Binding(
                 get: { AppleExportDetailPreset(policy: advancedSettings.detailPolicy) },
-                set: { advancedSettings.detailPolicy = $0.policy }
-            ),
-            showsTitle: false
+                set: { advancedSettings.detailPolicy = advancedSettings.detailPolicy.replacingBase(with: $0.policy) }
+            )
         ) {
             ForEach(presets) { preset in
                 Text(preset.localizedTitle).tag(preset)
             }
         }
+        .labelsHidden()
+        .pickerStyle(.menu)
+        .tint(Color.accent)
     }
 
     // MARK: - Export Formats
@@ -771,7 +869,7 @@ struct ExportTabView: View {
 
                 VStack(spacing: 0) {
                 ForEach(ExportFormat.allCases, id: \.self) { format in
-                    Toggle(format.rawValue, isOn: Binding(
+                    Toggle(format.localizedDisplayName, isOn: Binding(
                         get: { advancedSettings.exportFormats.contains(format) },
                         set: { isOn in
                             if isOn { advancedSettings.exportFormats.insert(format) }
@@ -781,7 +879,7 @@ struct ExportTabView: View {
                     .tint(Color.accent)
                     .font(.body.weight(.semibold))
                     .padding(.vertical, Spacing.s2)
-                    .accessibilityLabel(format.rawValue)
+                    .accessibilityLabel(format.localizedDisplayName)
                     .accessibilityValue(advancedSettings.exportFormats.contains(format) ? "Enabled" : "Disabled")
 
                     if format != ExportFormat.allCases.last {
@@ -1021,11 +1119,11 @@ struct ExportTabView: View {
                     inlineEditorRowLabel(
                         icon: "folder",
                         title: "Subfolder",
-                        value: vaultManager.healthSubfolder.isEmpty ? "Selected folder" : vaultManager.healthSubfolder
+                        value: vaultManager.healthSubfolder.isEmpty ? String(localized: "Selected folder") : vaultManager.healthSubfolder
                     )
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel("Subfolder: \(vaultManager.healthSubfolder.isEmpty ? "Selected folder" : vaultManager.healthSubfolder)")
+                .accessibilityLabel("Subfolder: \(vaultManager.healthSubfolder.isEmpty ? String(localized: "Selected folder") : vaultManager.healthSubfolder)")
                 .accessibilityHint("Double tap to change subfolder name")
 
                 rowDivider()
@@ -1092,8 +1190,12 @@ struct ExportTabView: View {
     // MARK: - Floating Export Bar
 
     private var floatingExportBar: some View {
-        SchedulingExportFooter(
-            freeExportsRemaining: !purchaseManager.isUnlocked && canExport ? purchaseManager.freeExportsRemaining : nil,
+        let clinicCovered = exportTargetSelection == .apiEndpoint && clinicSponsorship.status.active &&
+            clinicSponsorship.status.sharingAuthorized &&
+            ClinicExportAuthorization.canonicalClinicEndpoint(apiExportSettings.endpointURLString) ==
+            clinicSponsorship.status.endpoint.flatMap(ClinicExportAuthorization.canonicalClinicEndpoint)
+        return SchedulingExportFooter(
+            freeExportsRemaining: !purchaseManager.isUnlocked && !clinicCovered && canExport ? purchaseManager.freeExportsRemaining : nil,
             freeExportsIdentifier: AccessibilityID.Export.freeExportsLabel
         ) {
             SchedulingExportActions(
@@ -1109,7 +1211,7 @@ struct ExportTabView: View {
                 onExport: handleExportButtonTapped
             )
         }
-        .animation(reduceMotion ? nil : AnimationTimings.standard, value: showsBottomStatus)
+        .animation(reduceMotion ? nil : AnimationTimings.standard, value: isExporting)
     }
 
     private var exportDateCount: Int {
@@ -1203,14 +1305,12 @@ struct ExportTabView: View {
 
     // MARK: - Large Export Confirmation
 
-    // Every interactive entry, including Preview, uses the parent's single
-    // frozen request through discovery, scale confirmation and capture.
     private func handleExportButtonTapped() {
         onExportTapped()
     }
 
     private var previewRequirementsMessage: String {
-        "To preview your export, connect Apple Health so Health.md can read your data."
+        String(localized: "To preview your export, connect Apple Health so Health.md can read your data.")
     }
 
     private func handlePreviewTapped() {
@@ -1221,7 +1321,24 @@ struct ExportTabView: View {
             }
             showPreviewRequirementsPrompt = true
         } else {
-            showPreview = true
+            let revision = UUID()
+            previewActionRevision = revision
+            previewRangeError = nil
+            let request = previewRangeRequest
+            Task { @MainActor in
+                do {
+                    let range = try await NativeExportDateRangeResolver.resolve(request,
+                        using: healthKitManager, currentRequest: { previewRangeRequest })
+                    guard previewActionRevision == revision, request == previewRangeRequest else { return }
+                    admittedPreviewRange = range
+                    showPreview = true
+                } catch is CancellationError {
+                    return
+                } catch {
+                    guard previewActionRevision == revision, request == previewRangeRequest else { return }
+                    previewRangeError = error.localizedDescription
+                }
+            }
         }
     }
 
@@ -1262,7 +1379,7 @@ struct ExportTabView: View {
         }
     }
 
-    private var previewExportTargetType: PricingAnalyticsExportTargetType {
+    private var previewExportTargetType: ExportPreviewTargetType {
         switch exportTargetSelection {
         case .localIPhoneFolder:
             return .localFile
@@ -1499,11 +1616,11 @@ struct ExportTabView: View {
     }
 
     private var folderStructureDisplayText: String {
-        let dateFolders = advancedSettings.folderStructure.isEmpty ? "Flat (no date subfolders)" : advancedSettings.folderStructure
+        let dateFolders = advancedSettings.folderStructure.isEmpty ? String(localized: "Flat (no date subfolders)") : advancedSettings.folderStructure
         if advancedSettings.organizeFormatsIntoFolders {
-            return "File type folders / \(dateFolders)"
+            return String(localized: "File type folders / \(dateFolders)")
         }
-        return advancedSettings.folderStructure.isEmpty ? "Flat (no subfolders)" : advancedSettings.folderStructure
+        return advancedSettings.folderStructure.isEmpty ? String(localized: "Flat (no subfolders)") : advancedSettings.folderStructure
     }
 
     private var formatExtensionsList: String {
@@ -1586,10 +1703,13 @@ struct ExportTabView: View {
 }
 
 struct ExportTargetSectionView: View {
+    @ObservedObject private var clinic = ClinicSponsorshipManager.shared
+    @ObservedObject private var purchases = PurchaseManager.shared
     @Binding var selection: ExportTargetSelection
     let title: String
     let localTitle: String
     let localIcon: String
+    // Callers resolve controlled prose; paths and already-localized copy stay verbatim.
     let localSubtitle: String
     let macSubtitle: String
     let apiSubtitle: String
@@ -1647,6 +1767,12 @@ struct ExportTargetSectionView: View {
             sectionLabel(title)
             VStack(spacing: 0) {
                 VStack(spacing: Spacing.sm) {
+                    if clinic.status.active && !purchases.canExport {
+                        Text("Clinic destination").font(Typography.body())
+                        Text(clinic.status.endpoint ?? "").font(.footnote.monospaced())
+                        Text("Your clinic manages this destination. Use Clinic access to select it or manage sharing. Other destinations require your own Health.md access.")
+                            .font(.footnote).foregroundStyle(Color.textMuted)
+                    } else {
                     ExportTargetOptionRow(
                         title: localTitle,
                         icon: localIcon,
@@ -1701,6 +1827,7 @@ struct ExportTargetSectionView: View {
                         selection = .agentDataGateway
                         onOpenGatewaySettings?()
                     }
+                    }
                 }
             }
             .padding(Spacing.s4)
@@ -1746,7 +1873,7 @@ private struct ExportTargetOptionRow: View {
                         .font(.body.weight(.semibold))
                         .foregroundStyle(Color.textPrimary)
 
-                    Text(LocalizedStringKey(subtitle))
+                    Text(verbatim: subtitle)
                         .font(.footnote)
                         .foregroundStyle(isEnabled ? Color.textSecondary : Color.textMuted)
                         .lineLimit(3)
@@ -1774,9 +1901,9 @@ private struct ExportTargetOptionRow: View {
         .disabled(!isEnabled)
         .accessibilityIdentifier(accessibilityIdentifier)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(title): \(subtitle)")
-        .accessibilityValue(isSelected ? "Selected" : (isEnabled ? "Available" : "Unavailable"))
-        .accessibilityHint(isEnabled ? "Double tap to select this export target" : subtitle)
+        .accessibilityLabel(Text("\(Text(LocalizedStringKey(title))): \(Text(verbatim: subtitle))"))
+        .accessibilityValue(isSelected ? String(localized: "Selected") : (isEnabled ? String(localized: "Available") : String(localized: "Unavailable")))
+        .accessibilityHint(Text(verbatim: isEnabled ? String(localized: "Double tap to select this export target") : subtitle))
         .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 
@@ -1816,12 +1943,20 @@ private struct ExportTargetOptionRow: View {
 }
 
 struct APIExportSettingsSheet: View {
+    @ObservedObject private var clinic = ClinicSponsorshipManager.shared
+    @ObservedObject private var purchases = PurchaseManager.shared
     @ObservedObject var settings: APIExportSettings
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var configurationProtection: ConfigurationProtectionManager
     var body: some View {
         NavigationStack {
             Form {
+                if clinic.status.active && !purchases.canExport {
+                    Section("Clinic destination") {
+                        Text(clinic.status.endpoint ?? "").font(.footnote.monospaced())
+                        Text("Your clinic manages this destination. Use Clinic access to select it or manage sharing. Other destinations require your own Health.md access.")
+                    }
+                } else {
                 Section {
                     TextField(
                         "https://api.example.com/healthmd",
@@ -1849,10 +1984,11 @@ struct APIExportSettingsSheet: View {
                     HStack {
                         Image(systemName: settings.isConfigured ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
                             .foregroundStyle(settings.isConfigured ? Color.success : Color.warning)
-                        Text(settings.isConfigured ? "Ready to export to API" : "Enter a valid HTTP or HTTPS URL")
+                        Text(LocalizedStringKey(settings.isConfigured ? "Ready to export to API" : "Enter a valid HTTP or HTTPS URL"))
                     }
                 } footer: {
                     Text("Only send Apple Health data to endpoints you control or trust. API exports use your selected metrics and Data Detail setting.")
+                }
                 }
             }
             .navigationTitle("API Export")
@@ -1863,10 +1999,10 @@ struct APIExportSettingsSheet: View {
                 }
             }
         }
-        .safeAreaInset(edge: .bottom, spacing: 0) {
+        .overlay(alignment: .top) {
             ConfigurationProtectionToast(configurationProtection: configurationProtection)
                 .padding(.horizontal, Spacing.s4)
-                .padding(.bottom, Spacing.s2)
+                .padding(.top, Spacing.s2)
         }
         .onChange(of: configurationProtection.settingsNavigationRequestID) { _, requestID in
             if requestID != nil {
@@ -1906,7 +2042,7 @@ struct AgentDataGatewaySettingsSheet: View {
                     HStack {
                         Image(systemName: settings.isConfigured ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
                             .foregroundStyle(settings.isConfigured ? Color.success : Color.warning)
-                        Text(settings.isConfigured ? "Ready to export to the gateway" : "Enter a valid HTTP or HTTPS URL")
+                        Text(LocalizedStringKey(settings.isConfigured ? "Ready to export to the gateway" : "Enter a valid HTTP or HTTPS URL"))
                     }
                 } footer: {
                     Text("Only send Apple Health data to gateways you control or trust. Gateway uploads use your selected metrics and Data Detail setting, and always include the JSON daily export.")

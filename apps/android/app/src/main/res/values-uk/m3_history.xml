@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- History status labels shown beside a status icon (no glyph prefix). -->
+    <string name="m3_history_status_success">Успіх</string>
+    <string name="m3_history_status_partial">Частковий</string>
+    <string name="m3_history_status_failed">Помилка</string>
+    <plurals name="m3_history_snapshot_actions">
+        <item quantity="one">%1$d/%2$d дія зі знімком</item>
+        <item quantity="few">%1$d/%2$d дії зі знімком</item>
+        <item quantity="many">%1$d/%2$d дій зі знімком</item>
+        <item quantity="other">%1$d/%2$d дії зі знімком</item>
+    </plurals>
+</resources>

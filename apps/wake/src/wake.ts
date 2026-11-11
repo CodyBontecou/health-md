@@ -7,21 +7,26 @@
  */
 
 import { sendVisiblePush } from "./apns";
+import { sendFcmData, type FcmServiceAccount } from "./fcm";
 import {
-  APNS_TOKEN_RE,
   decideDelivery,
   generateWakeId,
   notificationPayload,
   NONCE_RETENTION_SEC,
   nonceRetentionCutoff,
+  parseRegistrationTarget,
   parseTimestampSeconds,
   sanitizePeerLabel,
+  syncRequestApnsPayload,
+  syncRequestFcmData,
   timestampWithinWindow,
   USER_ID_RE,
   VERIFICATION_HASH_RE,
   verifyWakeHmac,
   WAKE_ID_RE,
   type CounterRow,
+  type WakePlatform,
+  type WakePurpose,
 } from "./state";
 
 export interface WakeEnv {
@@ -61,6 +66,8 @@ interface RegistrationRow {
   peer_label: string | null;
   created_at: number;
   rotated_at: number;
+  platform: WakePlatform;
+  purpose: WakePurpose;
 }
 
 function rowToCounter(row: unknown): CounterRow | null {
@@ -89,20 +96,23 @@ export async function handleWakeRegister(request: Request, env: WakeEnv): Promis
   const body = await readJsonBody(request);
   if (!body) return jsonResponse({ error: "Invalid JSON body" }, 400);
 
-  const { userId, deviceToken, wakeKeyVerificationHash, peerLabel } = body as {
+  const { userId, deviceToken, wakeKeyVerificationHash, peerLabel, platform, purpose } = body as {
     userId?: unknown;
     deviceToken?: unknown;
     wakeKeyVerificationHash?: unknown;
     peerLabel?: unknown;
     wakeId?: unknown;
+    platform?: unknown;
+    purpose?: unknown;
   };
   const existingWakeId = (body as { wakeId?: unknown }).wakeId;
 
   if (typeof userId !== "string" || !USER_ID_RE.test(userId)) {
     return jsonResponse({ error: "Invalid userId" }, 400);
   }
-  if (typeof deviceToken !== "string" || !APNS_TOKEN_RE.test(deviceToken)) {
-    return jsonResponse({ error: "Invalid deviceToken" }, 400);
+  const target = parseRegistrationTarget(platform, purpose, deviceToken);
+  if (!target.ok) {
+    return jsonResponse({ error: target.error }, 400);
   }
   if (
     typeof wakeKeyVerificationHash !== "string"
@@ -112,6 +122,10 @@ export async function handleWakeRegister(request: Request, env: WakeEnv): Promis
   }
   const label = sanitizePeerLabel(peerLabel);
   if (peerLabel !== undefined && peerLabel !== null && label === null) {
+    return jsonResponse({ error: "Invalid peerLabel" }, 400);
+  }
+  // A delegated doorbell carries no display label: its holder is unknown here.
+  if (target.purpose === "delegated-sync" && label !== null) {
     return jsonResponse({ error: "Invalid peerLabel" }, 400);
   }
 
@@ -124,10 +138,14 @@ export async function handleWakeRegister(request: Request, env: WakeEnv): Promis
       return jsonResponse({ error: "Invalid wakeId" }, 400);
     }
     const existing = await env.DB.prepare(
-      "SELECT user_id FROM wake_registrations WHERE wake_id = ?",
-    ).bind(existingWakeId).first<{ user_id: string }>();
+      "SELECT user_id, platform, purpose FROM wake_registrations WHERE wake_id = ?",
+    ).bind(existingWakeId).first<{ user_id: string; platform: string; purpose: string }>();
     if (!existing || existing.user_id !== userId) {
       return jsonResponse({ error: "wake_unknown" }, 404);
+    }
+    // Rotation never repurposes a doorbell or moves it across transports.
+    if (existing.platform !== target.platform || existing.purpose !== target.purpose) {
+      return jsonResponse({ error: "wake_target_mismatch" }, 409);
     }
     await env.DB.prepare(
       `UPDATE wake_registrations
@@ -140,9 +158,13 @@ export async function handleWakeRegister(request: Request, env: WakeEnv): Promis
   const wakeId = generateWakeId();
   await env.DB.prepare(
     `INSERT INTO wake_registrations
-       (wake_id, user_id, verification_hash, device_token, peer_label, created_at, rotated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`,
-  ).bind(wakeId, userId, wakeKeyVerificationHash, deviceToken, label, nowSec, nowSec).run();
+       (wake_id, user_id, verification_hash, device_token, peer_label, created_at, rotated_at,
+        platform, purpose)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+  ).bind(
+    wakeId, userId, wakeKeyVerificationHash, deviceToken, label, nowSec, nowSec,
+    target.platform, target.purpose,
+  ).run();
   return jsonResponse({ wakeId });
 }
 
@@ -166,11 +188,44 @@ export async function handleWakeUnregister(request: Request, env: WakeEnv): Prom
   return jsonResponse({ ok: true });
 }
 
-/** POST /wake/request — the CLI's authenticated doorbell ring. */
+export interface PushConfig {
+  apns: ApnsConfig | null;
+  fcm: FcmServiceAccount | null;
+}
+
+/** Deliver one visible push for a registration; `null` when its transport is unconfigured. */
+async function deliverPush(
+  registration: RegistrationRow,
+  label: string | null,
+  push: PushConfig,
+  nowSec: number,
+): Promise<{ status: number; reason?: string } | null> {
+  if (registration.platform === "fcm") {
+    if (!push.fcm) return null;
+    return sendFcmData(push.fcm, registration.device_token,
+      syncRequestFcmData(registration.wake_id), 300, nowSec);
+  }
+  if (!push.apns) return null;
+  const payload = registration.purpose === "delegated-sync"
+    ? syncRequestApnsPayload(registration.wake_id)
+    : notificationPayload(label);
+  return sendVisiblePush(
+    { authKey: push.apns.authKey, keyId: push.apns.keyId, teamId: push.apns.teamId },
+    {
+      apnsToken: registration.device_token,
+      bundleId: push.apns.bundleId,
+      payload,
+      expirationSec: nowSec + 300,
+      host: push.apns.host as "api.push.apple.com" | "api.sandbox.push.apple.com",
+    },
+  );
+}
+
+/** POST /wake/request — an authenticated doorbell ring from the CLI or a delegated holder. */
 export async function handleWakeRequest(
   request: Request,
   env: WakeEnv,
-  apns: ApnsConfig | null,
+  push: PushConfig,
 ): Promise<Response> {
   const body = await readJsonBody(request);
   if (!body) return jsonResponse({ error: "Invalid JSON body" }, 400);
@@ -252,23 +307,21 @@ export async function handleWakeRequest(
     );
   }
 
-  // 7. One visible push. Only a delivered wake consumes budget.
-  if (!apns) {
-    return jsonResponse({ error: "apns_not_configured" }, 503);
-  }
-  const result = await sendVisiblePush(
-    { authKey: apns.authKey, keyId: apns.keyId, teamId: apns.teamId },
-    {
-      apnsToken: registration.device_token,
-      bundleId: apns.bundleId,
-      payload: notificationPayload(label),
-      expirationSec: nowSec + 300,
-      host: apns.host as "api.push.apple.com" | "api.sandbox.push.apple.com",
-    },
+  // 7. One visible push. Only a delivered wake consumes budget. Delegated
+  // holders never supply notification text.
+  const result = await deliverPush(
+    registration,
+    registration.purpose === "delegated-sync" ? null : label,
+    push,
+    nowSec,
   );
+  if (!result) {
+    const error = registration.platform === "fcm" ? "fcm_not_configured" : "apns_not_configured";
+    return jsonResponse({ error }, 503);
+  }
   if (result.status !== 200) {
-    // Honest degradation: the CLI treats any non-delivery as P1-only behavior.
-    // Log only the APNs reason — no identity beyond the opaque wakeId.
+    // Honest degradation: callers treat any non-delivery as "no wake this time".
+    // Log only the transport reason — no identity beyond the opaque wakeId.
     console.log(`wake ${wakeId} push failed: ${result.status} ${result.reason ?? "unknown"}`);
     return jsonResponse({ status: "undeliverable" });
   }

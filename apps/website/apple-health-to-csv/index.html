@@ -253,6 +253,14 @@
           <p>The sample pack is a separate fictional dataset from the app captures above. Health.md exports CSV files, not an Excel workbook; the workbook is an example of what you can build from them.</p>
         </section>
 
+        <section class="about-section" id="weekly-review-example">
+          <p class="section-kicker">After the export</p>
+          <h2>Turn daily CSVs into a weekly review</h2>
+          <p>Prefer a local script to a spreadsheet? Try the <a href="/assets/downloads/healthmd-weekly-review-example.zip" download>weekly CSV review example</a>. It includes a Python script, the same 28 fictional daily inputs, and an expected Markdown report. Python 3.9 or later must already be installed; no extra packages or uploads are needed.</p>
+          <p>Run <code>python3 weekly_review.py</code> from the unzipped example. The sample produces 249,630 total steps over 28 recorded days and 7.49 hours average sleep over 27 recorded days. Missing sleep stays missing, and recorded zero values stay included.</p>
+          <p><a href="/assets/downloads/weekly-review/expected-weekly-review.md">Inspect the expected report</a>, <a href="/assets/downloads/weekly-review/weekly_review.py">read the script</a>, or follow the <a href="/blog/health-md-for-macos/#section-turn-daily-csvs-into-a-weekly-review">step-by-step local review instructions</a>. The script uses daily summary files, not the combiner's <code>combined.csv</code>. It processes files already on disk and does not pair devices or schedule exports.</p>
+        </section>
+
         <section class="about-section" id="open-in-spreadsheet">
           <p class="section-kicker">From file to spreadsheet</p>
           <h2>Open your Apple Health CSV in Excel, Sheets, or Numbers</h2>

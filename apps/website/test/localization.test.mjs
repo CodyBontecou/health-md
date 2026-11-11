@@ -120,7 +120,7 @@ test('unpublished Spanish legal drafts preserve review and licensing notices wit
   assert.match(terms, /Aviso sobre la traducción/);
   assert.match(terms, /AGPL-3\.0-only/);
   assert.match(terms, /código fuente del sitio web se distribuye bajo la Licencia MIT/);
-  assert.match(terms, /5 exportaciones gratuitas/);
+  assert.match(terms, /href="\.\.\/terms-of-service\.html" hreflang="en"/);
   assert.match(terms, /No es una suscripción y no se renueva/);
 });
 

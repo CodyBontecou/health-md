@@ -19,8 +19,8 @@ description: "macOS 컴패니언 앱을 로컬 대상으로 사용하세요. iPh
 <ol>
 <li>macOS 앱을 설치하고 엽니다.</li>
 <li>Mac에서 Health.md가 쓰기 권한을 갖도록 대상 폴더를 선택합니다.</li>
-<li>iPhone에서 동기화 탭을 열고 Mac 연결을 활성화합니다.</li>
-<li>iPhone의 내보내기 탭으로 돌아가 <em>연결된 Mac</em>을 선택하고 내보내기를 구성한 다음 내보내기를 탭합니다.</li>
+<li>iPhone에서 <strong>설정 → Mac 내보내기 대상</strong>을 열고 활성화하세요.</li>
+<li>자동화의 대상으로 <em>연결된 Mac</em>을 선택한 뒤(<strong>자동화 → 자동화 → 출력</strong>), <strong>지금 내보내기</strong>를 사용하거나 자동화 예약이 실행되게 하세요.</li>
 </ol>
 
 ## 전송되는 항목

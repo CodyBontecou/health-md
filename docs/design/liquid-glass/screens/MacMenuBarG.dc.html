@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Health.md glass — Mac menu bar</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+body{margin:0;color-scheme:dark}
+a{color:#CDB6FF;text-decoration:none}a:hover{color:#FFFFFF}
+button{font-family:inherit;cursor:pointer}
+@keyframes breathe{0%,100%{opacity:1}50%{opacity:.45}}
+</style>
+</helmet>
+<div style="width: 300px; height: 280px; box-sizing: border-box; position: relative; background: #0E0E11; font-family: -apple-system, 'SF Pro Text', 'SF Pro Display', Inter, system-ui, sans-serif; color: #FFFFFF; overflow: hidden; border-radius: 16px">
+<div aria-hidden="true" style="position: absolute; inset: 0; overflow: hidden; z-index: 0"></div>
+<div style="position: relative; z-index: 1; height: 100%; display: flex; flex-direction: column">
+<div style="flex: 1; display: flex; flex-direction: column; gap: 10px; padding: 14px; background: rgba(255,255,255,0.12); backdrop-filter: blur(26px) saturate(180%); -webkit-backdrop-filter: blur(26px) saturate(180%); border: 1px solid rgba(255,255,255,0.12); border-radius: 16px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.22), inset 0 -1px 0 rgba(255,255,255,0.06), 0 1px 2px rgba(0,0,0,0.3)"><div style="display: flex; align-items: center; gap: 8px"><img src="../assets/crystal-heart.png" alt="" style="width: 18px; height: 18px"><span style="flex: 1; font-size: 14px; font-weight: 700">Mac destination</span><span style="font-size: 11px; font-weight: 600; color: #8BF0B4">Ready</span></div><div style="display: flex; flex-direction: column; gap: 2px; font-size: 12px"><span style="color: #B3ABC6">Last export</span><span>Today 11:02 PM · Oct 30 · 1 file</span></div><div style="display: flex; flex-direction: column; gap: 2px; font-size: 12px"><span style="color: #B3ABC6">Folder</span><span style="font-family: 'SF Mono', 'JetBrains Mono', ui-monospace, monospace">~/Obsidian/Vault/Health</span></div><div style="height: 1px; background: rgba(255,255,255,0.14)"></div><a href="#" style="display: flex; justify-content: space-between; font-size: 13px; color: #FFFFFF; padding: 4px 0"><span>Open Health.md</span><span style="color: #B3ABC6">⌘O</span></a><a href="#" style="display: flex; justify-content: space-between; font-size: 13px; color: #FFFFFF; padding: 4px 0"><span>History</span><span style="color: #B3ABC6"></span></a><a href="#" style="display: flex; justify-content: space-between; font-size: 13px; color: #FFFFFF; padding: 4px 0"><span>Quit Health.md</span><span style="color: #B3ABC6">⌘Q</span></a></div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":300,"height":280}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

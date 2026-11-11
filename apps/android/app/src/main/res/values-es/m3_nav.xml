@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="m3_nav_report_requires_access">Necesitas tu propio acceso a Health.md para guardar o compartir un informe.</string>
+</resources>

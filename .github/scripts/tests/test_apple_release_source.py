@@ -282,6 +282,31 @@ CURRENT_PROJECT_VERSION = 202610040000;
             with self.subTest(workflow=name):
                 self.assert_rejected(name)
 
+    def test_macos_asset_only_recovery_uses_original_source_after_main_product_changes(self):
+        self.write("apps/apple/HealthMd/App.swift", "// newer app must not enter the release asset\n")
+        self.commit("newer product on main")
+        self.publish_fixture()
+        name = "release-macos.yml"
+        event = self.event(name)
+        event["inputs"].update(skip_asc_upload=True, skip_asc_submit=True)
+        output = self.assert_resolves(name, event)
+        archive, env = self.archive_fixture(name, event, output)
+        self.assertEqual((archive / "apps/apple/HealthMd/App.swift").read_text(),
+                         "// immutable app source\n")
+        self.assertEqual(self.guard(name, "Verify qualified source before archive", event, archive, env).returncode, 0)
+
+    def test_asset_recovery_requires_both_store_operations_disabled_and_macos(self):
+        self.write("apps/apple/HealthMd/App.swift", "// newer product\n")
+        self.commit("newer product on main")
+        self.publish_fixture()
+        for name, upload, submit in (("release-macos.yml", True, False),
+                                     ("release-macos.yml", False, True),
+                                     ("release-ios.yml", True, True)):
+            with self.subTest(workflow=name, skip_upload=upload, skip_submit=submit):
+                event = self.event(name)
+                event["inputs"].update(skip_asc_upload=upload, skip_asc_submit=submit)
+                self.assert_rejected(name, event)
+
     def test_recovery_requires_a_main_workflow_dispatch(self):
         self.workflow_fix()
         self.publish_fixture()

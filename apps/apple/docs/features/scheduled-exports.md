@@ -11,7 +11,7 @@
 
 Scheduled Exports run recent Apple Health exports daily, weekly, or on a custom calendar cadence using the same iPhone settings as Manual Export, including formats, metrics, paths, write mode, and **Data Detail**. Custom schedules can repeat every N days, weeks, or months, covering patterns such as every other day or monthly. Targets are iPhone Folder, API Endpoint, or an already-open/connected Mac.
 
-Scheduling is available on the free plan. A scheduled request that exports at least one date consumes one of the same 5 free export actions used by manual, Shortcut, and direct exports, regardless of how many dates or files the request contains. Retries of that same durable request do not consume another use. Full Access removes the shared limit.
+In the subscription-enabled phone release, scheduling and export require an active store-backed trial, subscription, Lifetime purchase, or preserved permanent access. No local free-export allowance remains. The Mac companion and F-Droid included-access channel retain their documented exceptions. See [paid access](full-access-unlock.md).
 
 Data Detail defaults to Summary for new installs. Detailed Time-Series adds selected samples without the canonical archive; Lossless Health Records adds both and can be large, so enable it intentionally and start with a short lookback.
 
@@ -22,8 +22,6 @@ Data Detail defaults to Summary for new installs. Detailed Time-Series adds sele
 3. Choose Daily, Weekly, or Custom; then set the time, lookback, and destination. Custom schedules also have an interval unit and start date that establishes the repeating phase.
 4. Configure metrics, formats, and Data Detail on Export.
 5. Optional: enable Today Refresh every 30/60 minutes or 3/6/12 hours.
-
-On launch, Health.md restores local fallback notifications, HealthKit background delivery, and APNs registration for both legacy and profile schedules. Opening the app also re-arms the next profile occurrence even when nothing is due yet; it does not start a future export. App-open catch-up evaluates due profile schedules when the legacy schedule is disabled, while already-queued recovery remains owned by the pending drain rather than being immediately attempted twice.
 
 On launch, Health.md restores local fallback notifications, HealthKit background delivery, and APNs registration for both legacy and profile schedules. Opening the app also re-arms the next profile occurrence even when nothing is due yet; it does not start a future export. App-open catch-up evaluates due profile schedules when the legacy schedule is disabled, while already-queued recovery remains owned by the pending drain rather than being immediately attempted twice.
 
@@ -38,7 +36,7 @@ Each new completed-day profile occurrence re-exports the **entire configured loo
 - daily-note injection and individual entries for file targets, if enabled;
 - roll-ups, if explicitly enabled.
 
-Canonical records use strict source-start day ownership. Sleep summary keeps its established noon-to-noon night attribution, so the next completed-day pass remains the final compatibility summary for yesterday.
+Canonical records use strict source-start day ownership. Sleep summary keeps its established noon-to-noon night attribution, so the next completed-day pass remains the final compatibility summary for yesterday. Users who select the **Morning ends** sleep-attribution mode (issue #104) instead capture yesterday's night session in this morning's note; the device-local setting is read at each capture, so already-captured records never move retroactively.
 
 ## Completeness
 
@@ -56,26 +54,6 @@ A downstream automation should not equate a written file with a complete canonic
 Before a scheduled occurrence, Health.md persists exact requested dates, source, schedule kind, destination snapshot, fire date, and notification routing metadata. It does not store HealthKit samples in the worker.
 
 If HealthKit is protected while locked, the unresolved dates remain pending. Partial runs remove exact terminal dates (successfully written/uploaded days and iPhone HealthKit no-data outcomes) and keep only retryable dates, preventing append-mode duplicates. Missing Mac cache data remains retryable because a later iPhone sync may populate it. The immediate “Health Export Needs Attention” notification carries the stable pending request ID; Health.md does not announce an incomplete run as completed. Open Health.md and tap to retry. Duplicate triggers reuse pending identity and in-flight IDs prevent concurrent duplicate runs or re-expansion of completed dates. Whichever trigger actually runs the request — notification tap, app-open catch-up, or Connected Mac handshake resume — the run is presented through the scheduled-export activity banner with live progress; on a cold-launch notification tap the app-open drain may win the race and own the banner, and a result is never surfaced as a standalone alert. **Cancel Export** stops only the current attempt: it does not disable the schedule, completed dates stay completed, and unresolved dates remain queued for a later retry. For durable Connected Mac exports, cancellation reaches the active sender and retains a paused journal for recovery; independent interactive and Mac/CLI jobs do not inherit a caller's cancellation. The +60s fallback notification armed for a profile occurrence carries that profile's identity (exact dates, destination, frozen settings), so a tap runs the profile's own export while profile scheduling owns the wake-up; legacy-shaped requests are never armed while only profile entries are enabled. A preserved retry and its recovery notification survive wake-up re-arms and profile edits — only not-yet-fired fallback notifications are canceled when automation is re-armed or disabled — and the armed fallback is defused the moment its retry starts running, so it never surfaces mid-run.
-
-### Discard Pending Recovery (per profile)
-
-The shared Apple/Android outcome is to abandon one profile's unresolved scheduled work without recreating the profile, re-entering credentials, deleting completed exports or history, or rewinding completed-day/refresh progress.
-
-On iPhone, **Schedule → Profile Schedules → Discard Pending Recovery** appears for attempted recovery (including older pre-marker retries), not for a merely armed future fallback. Confirmation names the profile and is covered by Prevent Accidental Changes, including a lock enabled while confirmation is open. The action cancels that profile's pending recovery notifications and attempts, durably fences late callbacks, and re-arms the next ordinary occurrence without starting an export now. Disabled schedules stay disabled; other profiles and Shortcut recovery are untouched. Completed uploads and Mac files cannot be undone by discarding recovery. Scheduled Connected Mac journals stop automatic resume; independent manual and CLI jobs remain unaffected.
-
-Schedule-editor saves preserve the latest completed-day/refresh markers and recovery fence, including progress recorded by a different store instance while the sheet was open. A new enabled period also invalidates previously evaluated profile work. Execution rechecks authority after notification preparation and after waiting for another profile's folder export.
-
-**Today Refresh is same-day work:** retained refresh requests expire after their frozen owner-calendar day or when Today Refresh is switched off. They do not become historical backfills. Completed-day recovery still keeps its exact residual dates after lookback edits. Android Raw API Snapshot refresh failures wait for the next slot; Android compatibility journals continue their already-prepared batch recovery rather than being rewritten by this iOS change.
-
-**API recovery is destination-bound:** new pending requests retain local, nonce-scoped identity evidence for the exact endpoint, credential and profile binding, never the credential itself. Changed/deleted destinations, token rotation, retargeted profiles, and older API retries without identity evidence fail closed rather than adopting the current endpoint. Discard the old profile recovery to use the current configuration at the next ordinary occurrence. For pre-profile legacy recovery, disable/re-enable the legacy schedule and allow the next pending drain to discard the previous enabled period. Manual exports continue to use the current, explicitly configured destination.
-
-Android already freezes the pending endpoint URL and checks destination/credential/header fingerprints for prepared compatibility journals. Per-pending-request credential evidence before journal preparation, including Raw API Snapshot retries, is **planned** for the next Android scheduler-hardening change (`automation.api-recovery-authority`); this iPhone patch does not claim that additional parity.
-
-These are runtime/UI changes only: Apple v8, Android v4/v5, raw-snapshot v1 and API-envelope contracts are unchanged.
-
-### Regression verification
-
-On an SDK-equipped Mac, run `make -C apps/apple test-ios`, including `SchedulingManagerProfileSchedulingTests`, `ScheduledExportEntryStoreTests`, `ScheduledExportCoordinatorTests`, `ScheduledAPIEndpointIdentityTests`, `ConnectedCorpusDurableSenderTests` and `SchedulingA11yTests`. On-device QA must cover API/folder/Connected Mac recovery, lossless versus summary settings, expiry across the owner timezone's midnight, disable/re-enable and discard while a run or folder waiter is suspended, token/destination changes, preservation of other profiles/history/credentials, and confirmation/Cancel/protection with VoiceOver and accessibility text sizes. Source implementation is not a release or a substitute for those native checks.
 
 ### Discard Pending Recovery (per profile)
 
@@ -127,7 +105,7 @@ Connected Mac schedules require an open, compatible, ready Mac to begin; they do
 
 | Problem | Likely cause | Fix |
 |---|---|---|
-| Schedule did not complete | iOS delay, lock protection, target unavailable, or free quota exhausted | Unlock/tap the recovery notification or open the app to drain pending work. If all 5 free exports are used, unlock Full Access to resume. |
+| Schedule did not complete | iOS delay, lock protection, target unavailable, or paid access expired | Unlock/tap the recovery notification or open the app to drain pending work. If access has expired, restore or obtain access before resuming. |
 | File exists but archive is partial | One source branch failed/cancelled/skipped/unsupported | Inspect manifest/diagnostics; retry if recoverable. |
 | No archive | Lossless off or legacy peer | Review Export setting and update peers. |
 | Mac schedule fails | Mac closed/not ready/incompatible | Open/update Mac, select folder, retry pending/history. |
@@ -156,4 +134,4 @@ Local persistence v2 retains the shipped integer-hour field. For minute choices,
 
 Shared Setup v2 cannot represent minute refresh. Sharing a 30/60-minute profile choice fails with an explanation; choose a 3/6/12-hour interval before sharing. Existing public v2 schema/fixture bytes and daily health export schemas are unchanged. New windows refresh the same owner-day output, not a new export format.
 
-Each new durable export request with dates counts toward the existing free-export quota; retries of that request retain their identity. Faster windows can exhaust the quota sooner. The deployed push metadata remains hour-only: minute refresh does not advertise a rounded three-hour interval. Completed-day push nudges remain; minute windows use existing native background/app-open recovery paths and remain subject to iOS data-lock and background-delivery constraints.
+Each new durable export request checks paid access; retries retain their durable request identity. There is no new free-export quota. The deployed push metadata remains hour-only: minute refresh does not advertise a rounded three-hour interval. Completed-day push nudges remain; minute windows use existing native background/app-open recovery paths and remain subject to iOS data-lock and background-delivery constraints.

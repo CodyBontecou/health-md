@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="m3_tools_diagnostics_verbosity">详细程度</string>
+    <string name="m3_tools_diagnostics_subsystem">子系统</string>
+    <string name="m3_tools_diagnostics_time_range">时间范围</string>
+    <string name="m3_tools_diagnostics_events">最近事件</string>
+    <string name="m3_tools_diagnostics_files">包内文件</string>
+    <string name="m3_tools_direct_cli_pairing">与你的电脑配对</string>
+    <string name="m3_tools_direct_cli_manual">手动输入</string>
+    <string name="m3_tools_direct_cli_computer">已配对的电脑</string>
+    <string name="m3_tools_direct_cli_export">导出</string>
+    <string name="m3_tools_clinic_title">诊所访问</string>
+    <string name="m3_tools_clinic_intro">你的诊所可以资助向其批准端点的传送。由你选择共享哪些内容。其他导出目标需要你自己的 Health.md 访问权限。</string>
+    <string name="m3_tools_clinic_storage_unavailable">请解锁手机后重试。无法安全读取诊所访问信息。</string>
+    <string name="m3_tools_clinic_fallback_name">诊所</string>
+    <string name="m3_tools_clinic_sharing">共享</string>
+    <string name="m3_tools_clinic_allow_sharing">允许与此诊所共享</string>
+    <string name="m3_tools_clinic_sharing_description">只会发送你在 Health.md 中选择的指标和日期。计划任务使用你保存的选择。关闭共享会停止今后向诊所上传；不会删除诊所已收到的副本。</string>
+    <string name="m3_tools_clinic_upload_token">诊所上传令牌（可选）</string>
+    <string name="m3_tools_clinic_upload_token_description">如果你的诊所提供了个人上传令牌，请在此输入。它会被安全存储，且仅用于此诊所批准的端点。</string>
+    <string name="m3_tools_clinic_use_destination">使用诊所目标</string>
+    <string name="m3_tools_clinic_sync_requests">同步请求</string>
+    <string name="m3_tools_clinic_allow_sync">允许此诊所发送同步请求</string>
+    <string name="m3_tools_clinic_sync_description">你的诊所可以发送通知，请求你的最新数据。在你点按之前不会发送任何内容；点按后会与此诊所共享昨天和今天的数据。关闭此选项会停止新的请求。</string>
+    <string name="m3_tools_clinic_invitation">邀请</string>
+    <string name="m3_tools_clinic_invitation_code">邀请码</string>
+    <string name="m3_tools_clinic_accept_invitation">接受邀请</string>
+    <string name="m3_tools_clinic_not_configured">此版本的 Health.md 未配置诊所访问。</string>
+    <string name="m3_tools_clinic_enrollment_pending">你的邀请已安全保存。请重试以完成注册；无需新的邀请码。</string>
+    <string name="m3_tools_clinic_retry_enrollment">重试注册</string>
+    <string name="m3_tools_clinic_refresh">刷新诊所访问</string>
+    <string name="m3_tools_clinic_disconnect_clinic">断开诊所</string>
+    <string name="m3_tools_clinic_error">无法更新诊所访问。请检查网络连接，或重试已保存的注册。</string>
+    <string name="m3_tools_clinic_disconnect_question">要断开此诊所吗？</string>
+    <string name="m3_tools_clinic_disconnect_body">由诊所资助的共享将停止。你自己购买的访问权限和本地健康数据仍可使用。</string>
+    <string name="m3_tools_clinic_disconnect">断开</string>
+    <string name="m3_tools_clinic_sync_sharing_required">请先允许与此诊所共享。</string>
+    <string name="m3_tools_clinic_sync_push_unavailable">此版本的 Health.md 不支持同步请求。</string>
+    <string name="m3_tools_clinic_sync_notifications_denied">未授予通知权限。请在“设置”中允许 Health.md 发送通知。</string>
+    <string name="m3_tools_clinic_sync_wake_service">通知服务不可用。请稍后重试。</string>
+    <string name="m3_tools_clinic_sync_clinic_unreachable">无法联系你的诊所。请稍后重试。</string>
+    <string name="m3_tools_clinic_sync_storage">请解锁手机后重试。无法安全存储请求密钥。</string>
+</resources>

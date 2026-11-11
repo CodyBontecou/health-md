@@ -87,19 +87,22 @@ struct OnboardingPaywallLayout<Content: View>: View {
     @Environment(\.dynamicTypeSize) private var textSize
     let onDismiss: () -> Void
     let dismissIdentifier: String
+    var allowsDismissal: Bool = true
     @ViewBuilder let content: () -> Content
 
     var body: some View {
         GeometryReader { geometry in
             let reading = OnboardingReadingLayout.isNeeded(size: geometry.size, textSize: textSize)
             VStack(spacing: 0) {
-                HStack {
-                    Spacer(minLength: 0)
-                    OnboardingDismissButton(action: onDismiss)
-                        .accessibilityIdentifier(dismissIdentifier)
+                if allowsDismissal {
+                    HStack {
+                        Spacer(minLength: 0)
+                        OnboardingDismissButton(action: onDismiss)
+                            .accessibilityIdentifier(dismissIdentifier)
+                    }
+                    .padding(.horizontal, Spacing.s4)
+                    .padding(.top, Spacing.s2)
                 }
-                .padding(.horizontal, Spacing.s4)
-                .padding(.top, Spacing.s2)
 
                 ScrollView {
                     content()
@@ -211,7 +214,7 @@ struct OnboardingPaywallHeader: View {
                 AppIconMark(icon: "heart.text.square.fill", size: 72, usesAppIcon: true)
             }
             VStack(alignment: reading ? .leading : .center, spacing: Spacing.s2) {
-                Text(title)
+                Text(LocalizedStringKey(title))
                     .font(Typography.displayLarge())
                     .foregroundStyle(Color.textPrimary)
                     .tracking(-1)
@@ -245,19 +248,19 @@ struct OnboardingHeader: View {
                 AppIconMark(icon: icon, size: 64, symbolSize: 24, usesAppIcon: usesAppIcon)
             }
             VStack(alignment: reading ? .leading : .center, spacing: Spacing.s2) {
-                Text(eyebrow)
+                Text(verbatim: eyebrow)
                     .font(Typography.labelUppercase())
                     .foregroundStyle(Color.textSecondary)
                     .tracking(1.4)
                     .fixedSize(horizontal: false, vertical: true)
-                Text(title)
+                Text(verbatim: title)
                     .font(Typography.displayMedium())
                     .foregroundStyle(Color.textPrimary)
                     .lineSpacing(1)
                     .tracking(-0.6)
                     .fixedSize(horizontal: false, vertical: true)
                     .accessibilityAddTraits(.isHeader)
-                Text(description)
+                Text(verbatim: description)
                     .font(Typography.body())
                     .foregroundStyle(Color.textSecondary)
                     .lineSpacing(3)
@@ -325,7 +328,7 @@ struct OnboardingChecklistRow: View {
                         .accessibilityHidden(true)
                 }
                 VStack(alignment: .leading, spacing: Spacing.s1) {
-                    Text(title)
+                    Text(verbatim: title)
                         .font(Typography.headline())
                         .foregroundStyle(Color.textPrimary)
                     Text(detail)
@@ -340,7 +343,7 @@ struct OnboardingChecklistRow: View {
             }
             if let actionTitle, let action {
                 Button(action: action) {
-                    Text(actionTitle)
+                    Text(verbatim: actionTitle)
                         .font(Typography.bodyEmphasis())
                         .foregroundStyle(Color.textPrimary)
                         .multilineTextAlignment(.leading)
@@ -356,7 +359,7 @@ struct OnboardingChecklistRow: View {
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel(actionTitle)
+                .accessibilityLabel(Text(verbatim: actionTitle))
             }
         }
         .geistCard(cornerRadius: GeistRadius.md, padding: Spacing.s3)
@@ -367,7 +370,7 @@ struct OnboardingPrimaryButton: View {
     let title: String
     var icon: String? = nil
     var imageAsset: String? = nil
-    var accessibilityHint: String = "Double tap to continue"
+    var accessibilityHint: String = String(localized: "Double tap to continue")
     var isDisabled: Bool = false
     let action: () -> Void
 
@@ -383,8 +386,8 @@ struct OnboardingPrimaryButton: View {
         .buttonStyle(.plain)
         .disabled(isDisabled)
         .opacity(isDisabled ? 0.65 : 1)
-        .accessibilityLabel(title)
-        .accessibilityHint(accessibilityHint)
+        .accessibilityLabel(Text(verbatim: title))
+        .accessibilityHint(Text(verbatim: accessibilityHint))
     }
 }
 
@@ -407,7 +410,7 @@ struct OnboardingSecondaryButton: View {
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(title)
+        .accessibilityLabel(Text(verbatim: title))
     }
 }
 
@@ -422,7 +425,7 @@ private struct OnboardingActionLabel: View {
     var body: some View {
         HStack(spacing: Spacing.s2) {
             if !isPrimary { decoration }
-            Text(title)
+            Text(verbatim: title)
                 .font(isPrimary ? Typography.scaled(size: 16, weight: .medium) : Typography.bodyEmphasis())
                 .fixedSize(horizontal: false, vertical: true)
             if isPrimary { decoration }
@@ -523,7 +526,7 @@ struct OnboardingAudienceChoices<Choice: Hashable & Identifiable>: View {
 
     private func choiceButton(_ choice: Choice) -> some View {
         Button { onSelect(choice) } label: {
-            Text(title(choice))
+            Text(LocalizedStringKey(title(choice)))
                 .font(Typography.bodyEmphasis())
                 .foregroundStyle(selection == choice ? Color.bgPrimary : Color.textSecondary)
                 .multilineTextAlignment(.leading)
@@ -535,7 +538,7 @@ struct OnboardingAudienceChoices<Choice: Hashable & Identifiable>: View {
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(title(choice))
+        .accessibilityLabel(LocalizedStringKey(title(choice)))
         .accessibilityAddTraits(selection == choice ? .isSelected : [])
     }
 }
@@ -563,16 +566,16 @@ struct OnboardingPurchaseOptionLabel: View {
                     .foregroundStyle(isPrimary ? Color.bgPrimary : Color.accent)
                     .accessibilityHidden(true)
             }
-            Text(title)
+            Text(LocalizedStringKey(title))
                 .font(Typography.headline())
             if let badge {
-                Text(badge)
+                Text(LocalizedStringKey(badge))
                     .font(Typography.monoCaptionEmphasis())
                     .padding(.horizontal, Spacing.s2)
                     .padding(.vertical, 2)
                     .background((isPrimary ? Color.bgPrimary : Color.accent).opacity(0.12), in: Capsule())
             }
-            Text(subtitle)
+            Text(LocalizedStringKey(subtitle))
                 .font(subtitleFont)
                 .foregroundStyle(isPrimary ? Color.bgPrimary : Color.textSecondary)
             if isLoading {
@@ -580,7 +583,7 @@ struct OnboardingPurchaseOptionLabel: View {
                     .progressViewStyle(CircularProgressViewStyle(tint: isPrimary ? Color.bgPrimary : Color.accent))
                     .accessibilityHidden(true)
             }
-            Text(priceLabel ?? (isLoading ? "Loading…" : "—"))
+            Text(priceLabel ?? (isLoading ? String(localized: "Loading…") : "—"))
                 .font(Typography.bodyEmphasis())
         }
         .foregroundStyle(isPrimary ? Color.bgPrimary : Color.textPrimary)
@@ -651,7 +654,7 @@ struct PaywallPurchaseOptionButton: View {
 struct OnboardingPurchaseDisclosure: View {
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.s2) {
-            Text("Lifetime plans are one-time purchases charged to your Apple ID.")
+            Text("Eligible subscriptions include a 7-day free trial, then renew automatically at the displayed price unless canceled at least 24 hours before the trial or current period ends. Payment is charged to your Apple ID. Manage or cancel in App Store subscriptions. Lifetime plans are charged immediately as one-time purchases with no trial. Deleting the app or buying Lifetime does not cancel an existing subscription.")
                 .font(Typography.caption())
                 .foregroundStyle(Color.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)

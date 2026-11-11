@@ -42,6 +42,7 @@ class APIExportClientException(
 
 class APIExportClient @Inject constructor(
     private val client: OkHttpClient,
+    private val entitlements: com.healthmd.domain.repository.EntitlementRepository,
 ) : APIExportUploader {
     override suspend fun upload(
         endpointUrl: String,
@@ -56,6 +57,15 @@ class APIExportClient @Inject constructor(
                 message = "Configure a valid HTTP or HTTPS API endpoint before exporting.",
             )
 
+        // Reauthorize the actual network destination for every batch/retry. A navigation or
+        // scheduling check is not authority to transmit to an edited or substituted endpoint.
+        val personalAccess = entitlements.verifyAccess()
+        if (!personalAccess && !entitlements.verifyExportAccess(
+                com.healthmd.domain.model.ExportTarget.API_ENDPOINT, normalized)) {
+            throw APIExportClientException(ExportFailureReason.PAYWALL_REQUIRED, false,
+                message = "This destination is not covered by your access.")
+        }
+
         val validatedRequestHeaders = try {
             APIExportHeaders.validate(requestHeaders)
         } catch (error: IllegalArgumentException) {
@@ -67,24 +77,34 @@ class APIExportClient @Inject constructor(
             )
         }
 
+        val clinicAuthorization = entitlements.clinicUploadAuthorization(normalized)
+        val managedClinicEndpoint = clinicAuthorization != null || entitlements.sponsoredEndpoint.value?.let {
+            val approved = com.healthmd.domain.billing.ClinicExportAuthorization.canonicalClinicEndpoint(it)
+            approved != null && approved ==
+                com.healthmd.domain.billing.ClinicExportAuthorization.canonicalClinicEndpoint(normalized)
+        } == true
+
         val request = Request.Builder()
             .url(normalized)
             .post(payload.toRequestBody(JSON_MEDIA_TYPE))
             .header("Accept", "application/json")
             .header("User-Agent", "Health.md Android API Export")
             .apply {
-                authorizationHeader?.takeIf { it.isNotBlank() }?.let {
+                authorizationHeader?.takeIf { personalAccess && !managedClinicEndpoint && it.isNotBlank() }?.let {
                     header("Authorization", it)
                 }
                 // Custom headers are applied last intentionally. This lets advanced users use an
                 // arbitrary Authorization scheme or override defaults such as Accept/User-Agent.
-                validatedRequestHeaders.forEach { configuredHeader ->
+                validatedRequestHeaders.filter { personalAccess && !managedClinicEndpoint }.forEach { configuredHeader ->
                     header(configuredHeader.name, configuredHeader.value)
                 }
+                clinicAuthorization?.let { header("Authorization", it) }
             }
             .build()
 
-        val call = client.newCall(request)
+        val deliveryClient = if (personalAccess && !managedClinicEndpoint) client else client.newBuilder()
+            .followRedirects(false).followSslRedirects(false).build()
+        val call = deliveryClient.newCall(request)
         val response = try {
             // Wire cooperative cancellation to the exact OkHttp call so a user cancellation
             // aborts the in-flight upload immediately instead of waiting for the read timeout.
@@ -111,7 +131,7 @@ class APIExportClient @Inject constructor(
         }
 
         response.use {
-            val preview = responsePreview(it)
+            val preview = if (personalAccess && !managedClinicEndpoint) responsePreview(it) else null
             if (!it.isSuccessful) {
                 val message = buildString {
                     append("API endpoint returned HTTP ").append(it.code).append('.')
@@ -125,6 +145,56 @@ class APIExportClient @Inject constructor(
                 )
             }
             APIExportUploadResult(it.code, preview)
+        }
+    }
+
+    /**
+     * Sends a clinic control message (never health data) to the approved clinic endpoint with
+     * the same binding, credential and redirect rejection as clinic uploads. Personal
+     * destinations never receive control messages.
+     */
+    suspend fun sendClinicControlMessage(
+        endpointUrl: String,
+        messageType: String,
+        body: String,
+    ) = withContext(Dispatchers.IO) {
+        val canonical = com.healthmd.domain.billing.ClinicExportAuthorization.canonicalClinicEndpoint(endpointUrl)
+        val sponsored = entitlements.sponsoredEndpoint.value?.let {
+            com.healthmd.domain.billing.ClinicExportAuthorization.canonicalClinicEndpoint(it)
+        }
+        if (canonical == null || canonical != sponsored ||
+            !entitlements.verifyExportAccess(com.healthmd.domain.model.ExportTarget.API_ENDPOINT, canonical)) {
+            throw APIExportClientException(ExportFailureReason.PAYWALL_REQUIRED, false,
+                message = "This destination is not an approved clinic endpoint.")
+        }
+        val request = Request.Builder()
+            .url(canonical)
+            .post(body.toRequestBody(JSON_MEDIA_TYPE))
+            .header("Accept", "application/json")
+            .header("User-Agent", "Health.md Android API Export")
+            .header("X-HealthMd-Message", messageType)
+            .apply { entitlements.clinicUploadAuthorization(canonical)?.let { header("Authorization", it) } }
+            .build()
+        val call = client.newBuilder().followRedirects(false).followSslRedirects(false).build().newCall(request)
+        val response = try {
+            suspendCancellableCoroutine<Response> { continuation ->
+                continuation.invokeOnCancellation { call.cancel() }
+                call.enqueue(object : Callback {
+                    override fun onResponse(call: Call, response: Response) = continuation.resume(response)
+                    override fun onFailure(call: Call, error: IOException) = continuation.resumeWithException(error)
+                })
+            }
+        } catch (error: IOException) {
+            kotlin.coroutines.coroutineContext.ensureActive()
+            throw APIExportClientException(ExportFailureReason.NETWORK_ERROR, true,
+                message = "Could not reach the clinic endpoint.", cause = error)
+        }
+        response.use {
+            if (!it.isSuccessful) {
+                throw APIExportClientException(ExportFailureReason.API_REJECTED,
+                    it.code == 408 || it.code == 429 || it.code >= 500, it.code,
+                    message = "Clinic endpoint returned HTTP ${it.code}.")
+            }
         }
     }
 

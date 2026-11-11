@@ -199,8 +199,7 @@ struct ProfileScheduleSection: View {
             let weekday = weekdayName(entry.weekday)
             return String(localized: "Weekly on \(weekday) at \(time)", comment: "Profile schedule cadence summary")
         case .custom:
-            let unit = entry.customUnit.label(for: entry.customInterval)
-            return String(localized: "Every \(entry.customInterval) \(unit) at \(time)", comment: "Profile schedule cadence summary")
+            return ScheduleDisplayCopy.cadence(count: entry.customInterval, unit: entry.customUnit, at: time)
         }
     }
 
@@ -274,8 +273,8 @@ struct ProfileScheduleEditorSheet: View {
                 Section {
                     SchedulingChoicePicker(
                         title: "Frequency",
-                        choices: ScheduleFrequency.allCases.map { SchedulingChoice(value: $0, title: $0.description) },
-                        selection: $draft.frequency
+                        choices: ScheduleFrequency.allCases.map { SchedulingChoice(value: $0, title: $0.description, titleIsResolved: true) },
+                        selection: frequencyBinding
                     )
                     .accessibilityIdentifier("schedule.profile.editor.frequency")
 
@@ -291,17 +290,20 @@ struct ProfileScheduleEditorSheet: View {
                         SchedulingNumberControl(
                             title: "Custom frequency interval", value: $draft.customInterval,
                             bounds: 1...365, identifier: "schedule.profile.editor.interval",
-                            valueDescription: "Every \(draft.customInterval) \(draft.customUnit.label(for: draft.customInterval))"
+                            valueDescription: ScheduleDisplayCopy.cadence(count: draft.customInterval, unit: draft.customUnit)
                         )
                         SchedulingValueMenu(
                             title: "Unit",
-                            choices: [
-                                SchedulingChoice(value: ScheduleIntervalUnit.day, title: "Days"),
-                                SchedulingChoice(value: ScheduleIntervalUnit.week, title: "Weeks"),
-                                SchedulingChoice(value: ScheduleIntervalUnit.month, title: "Months")
-                            ],
+                            choices: ScheduleIntervalUnit.allCases.map {
+                                SchedulingChoice(value: $0, title: ScheduleDisplayCopy.unitChoiceLabel($0), titleIsResolved: true)
+                            },
                             selection: $draft.customUnit
                         )
+                        SchedulingLabeledControl(title: "Starting", value: Text(draft.customAnchorDate, style: .date)) {
+                            DatePicker("Starting", selection: customAnchorDateBinding, displayedComponents: .date)
+                                .accessibilityIdentifier("schedule.profile.editor.starting")
+                                .accessibilityHint("Sets the first day and repeating phase of the custom schedule")
+                        }
                     }
 
                     SchedulingLabeledControl(title: "Time", value: Text(timeBinding.wrappedValue, style: .time)) {
@@ -320,7 +322,9 @@ struct ProfileScheduleEditorSheet: View {
                         title: "Lookback window", value: $draft.lookbackDays,
                         bounds: ExportSchedule.minimumLookbackDays...ExportSchedule.maximumLookbackDays,
                         identifier: "schedule.profile.editor.lookback",
-                        valueDescription: "Lookback: \(draft.lookbackDays) day\(draft.lookbackDays == 1 ? "" : "s")"
+                        valueDescription: draft.lookbackDays == 1
+                            ? String(localized: "Lookback: 1 day")
+                            : String(localized: "Lookback: \(draft.lookbackDays) days")
                     )
 
                     Toggle("Today Refresh", isOn: $draft.todayRefreshEnabled)
@@ -328,7 +332,7 @@ struct ProfileScheduleEditorSheet: View {
                         SchedulingValueMenu(
                             title: "Refresh Interval",
                             choices: ExportSchedule.todayRefreshMinuteOptions.map {
-                                SchedulingChoice(value: $0, title: ExportSchedule.todayRefreshLabel($0))
+                                SchedulingChoice(value: $0, title: ExportSchedule.todayRefreshLabel($0), titleIsResolved: true)
                             },
                             selection: $draft.todayRefreshMinutes
                         )
@@ -336,7 +340,7 @@ struct ProfileScheduleEditorSheet: View {
                 } header: {
                     Text("Scope")
                 } footer: {
-                    Text("Refresh windows are best effort; iOS may delay background runs. Each run exports the profile's metrics and formats to its own destination. A run consumes one of the 5 free export actions unless you have Full Access.")
+                    Text("Refresh windows are best effort; iOS may delay background runs. Each run exports the profile's metrics and formats to its own destination. Scheduled exports require an active trial or subscription, or Lifetime access.")
                 }
             }
             .navigationTitle(profile.name)
@@ -361,10 +365,10 @@ struct ProfileScheduleEditorSheet: View {
         }
         // The sheet covers the app-level toast, so blocked saves surface a
         // sheet-local one; its settings shortcut dismisses the editor.
-        .safeAreaInset(edge: .bottom, spacing: 0) {
+        .overlay(alignment: .top) {
             ConfigurationProtectionToast(configurationProtection: configurationProtection)
                 .padding(.horizontal, Spacing.s4)
-                .padding(.bottom, Spacing.s2)
+                .padding(.top, Spacing.s2)
         }
         .onChange(of: configurationProtection.settingsNavigationRequestID) { _, requestID in
             if requestID != nil {
@@ -384,6 +388,26 @@ struct ProfileScheduleEditorSheet: View {
         )
         if entry.lookbackDays == currentDefault { return entry }
         return entry
+    }
+
+    /// Entering Custom starts its cadence today, matching the schedule settings editor.
+    private var frequencyBinding: Binding<ScheduleFrequency> {
+        Binding(
+            get: { draft.frequency },
+            set: { newValue in
+                if newValue == .custom, draft.frequency != .custom {
+                    draft.customAnchorDate = Calendar.current.startOfDay(for: Date())
+                }
+                draft.frequency = newValue
+            }
+        )
+    }
+
+    private var customAnchorDateBinding: Binding<Date> {
+        Binding(
+            get: { draft.customAnchorDate },
+            set: { draft.customAnchorDate = Calendar.current.startOfDay(for: $0) }
+        )
     }
 
     private var timeBinding: Binding<Date> {

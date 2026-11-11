@@ -25,21 +25,11 @@ final class HistoryAuthorizationJourneyUITests: XCTestCase {
     func testAllTimeLimitedHistoryShowsBoundaryAndPermissionGuide() throws {
         let app = UITestLaunchHelper.firstRunExportApp()
         app.launchEnvironment["UITEST_HISTORY_ASSESSMENT"] = "limited"
+        app.launchArguments += ["-UITestOpenClassicExport", "YES"]
         app.launch()
         let allTime = app.buttons[UITestLaunchHelper.Export.datePresetAllTimeButton]
         reveal(allTime, in: app)
         allTime.tap()
-        // The default metric set includes unresolved readable-range types. The
-        // real All Time resolver correctly rejects that range independently of
-        // the advisory limited-history warning. Finish its dialog before tapping
-        // controls behind it; XCTest otherwise consumes Details to dismiss it.
-        let unavailable = app.staticTexts["All Time Unavailable"]
-        XCTAssertTrue(unavailable.waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts.matching(NSPredicate(
-            format: "label CONTAINS %@", "The earliest date could not be determined for every selected metric."
-        )).firstMatch.exists)
-        app.buttons["Done"].tap()
-        XCTAssertTrue(unavailable.waitForNonExistence(timeout: 5))
         let message = app.staticTexts["export.historyWarning.message"]
         reveal(message, in: app)
         // Selecting a range invalidates the old preview before the asynchronous
@@ -70,6 +60,7 @@ final class HistoryAuthorizationJourneyUITests: XCTestCase {
     func testBoundedUnknownHistoryRechecksExecutionWithoutClaimingFullAccess() throws {
         let app = UITestLaunchHelper.firstRunExportApp()
         app.launchEnvironment["UITEST_HISTORY_ASSESSMENT"] = "unknown"
+        app.launchArguments += ["-UITestOpenClassicExport", "YES"]
         app.launch()
         let custom = app.buttons[UITestLaunchHelper.Export.datePresetCustomButton]
         reveal(custom, in: app)
@@ -82,8 +73,9 @@ final class HistoryAuthorizationJourneyUITests: XCTestCase {
         reveal(exportButton, in: app)
         exportButton.tap()
         XCTAssertTrue(app.descendants(matching: .any)[UITestLaunchHelper.Status.exportStatusBadge].waitForExistence(timeout: 10))
+        // Exporting closes the settings sheet, so the result is in the glass shell, not the export scroll.
         let execution = app.staticTexts["export.historyWarning.execution"]
-        reveal(execution, in: app)
+        XCTAssertTrue(execution.waitForExistence(timeout: 10))
         XCTAssertTrue(execution.label.contains("Rechecked for this export"))
         XCTAssertTrue(app.buttons["View Exported File"].exists)
     }
@@ -91,6 +83,7 @@ final class HistoryAuthorizationJourneyUITests: XCTestCase {
     func testUnknownHistoryPreviewHasAccessibleActionOnNativeRoot() throws {
         let app = UITestLaunchHelper.firstRunExportApp()
         app.launchEnvironment["UITEST_HISTORY_ASSESSMENT"] = "unknown"
+        app.launchArguments += ["-UITestOpenClassicExport", "YES"]
         app.launch()
         let message = app.staticTexts["export.historyWarning.message"]
         reveal(message, in: app)
@@ -107,6 +100,7 @@ final class HistoryAuthorizationJourneyUITests: XCTestCase {
         let app = UITestLaunchHelper.firstRunExportApp()
         app.launchEnvironment["UITEST_HISTORY_ASSESSMENT"] = "unavailable"
         app.launchArguments += ["-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL"]
+        app.launchArguments += ["-UITestOpenClassicExport", "YES"]
         app.launch()
         let message = app.staticTexts["export.historyWarning.message"]
         reveal(message, in: app)
@@ -122,18 +116,20 @@ final class HistoryAuthorizationJourneyUITests: XCTestCase {
     func testDelayedAssessmentCanContinueUnverifiedWithoutBlockingReadableExport() throws {
         let app = UITestLaunchHelper.firstRunExportApp()
         app.launchEnvironment["UITEST_HISTORY_ASSESSMENT"] = "pending"
+        app.launchArguments += ["-UITestOpenClassicExport", "YES"]
         app.launch()
         defer { app.terminate() }
         let exportButton = app.buttons[UITestLaunchHelper.Export.exportButton]
         XCTAssertTrue(exportButton.waitForExistence(timeout: 5))
         exportButton.tap()
+        // Exporting closes the settings sheet; the glass shell hosts the history check.
         let continueButton = app.buttons["export.historyWarning.continueUnverified"]
-        reveal(continueButton, in: app)
+        XCTAssertTrue(continueButton.waitForExistence(timeout: 10))
         continueButton.tap()
         let status = app.descendants(matching: .any)[UITestLaunchHelper.Status.exportStatusBadge]
         XCTAssertTrue(status.waitForExistence(timeout: 10))
         let execution = app.staticTexts["export.historyWarning.execution"]
-        reveal(execution, in: app)
+        XCTAssertTrue(execution.waitForExistence(timeout: 10))
         XCTAssertTrue(execution.label.contains("without a completed history assessment"))
         XCTAssertFalse(execution.label.contains("Rechecked"))
         XCTAssertFalse(app.buttons["export.historyWarning.cancelCheck"].exists)

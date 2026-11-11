@@ -14,6 +14,10 @@ import com.healthmd.domain.exportengine.ExportEnginePinPlanner
 import com.healthmd.domain.model.CompatibilitySchemaProfile
 import com.healthmd.domain.model.ExportProfile
 import com.healthmd.domain.model.ExportSettings
+import com.healthmd.domain.model.ExportFormat
+import com.healthmd.domain.model.RawSnapshotSettings
+import com.healthmd.rawexport.ExportMode
+import com.healthmd.rawexport.RawExportFormat
 import com.healthmd.domain.model.ExportSettingsSnapshotView
 import com.healthmd.domain.model.ExportTarget
 import com.healthmd.domain.repository.SettingsRepository
@@ -38,6 +42,33 @@ import java.time.ZoneId
 class ExportProfilesViewModelTest {
     @get:Rule
     val mainDispatcherRule = MainDispatcherRule()
+
+    @Test
+    fun `raw editor output is valid without inactive compatibility formats`() {
+        RawExportFormat.entries.forEach { format ->
+            val draft = ExportProfileEditorDraft(
+                name = "Raw",
+                target = ExportTarget.DEVICE_FOLDER,
+                settings = ExportSettings(
+                    exportMode = ExportMode.RAW_SNAPSHOT,
+                    exportFormats = emptySet(),
+                    rawSnapshot = RawSnapshotSettings(format = format),
+                ),
+            )
+            assertThat(draft.hasOutputFormat).isTrue()
+        }
+    }
+
+    @Test
+    fun `compatibility editor still requires at least one daily format`() {
+        val draft = ExportProfileEditorDraft(
+            name = "Daily",
+            target = ExportTarget.DEVICE_FOLDER,
+            settings = ExportSettings(exportFormats = emptySet()),
+        )
+        assertThat(draft.hasOutputFormat).isFalse()
+        assertThat(draft.copy(settings = draft.settings.copy(exportFormats = setOf(ExportFormat.JSON))).hasOutputFormat).isTrue()
+    }
 
     private val snapshotJson = kotlinx.serialization.json.Json.encodeToString(
         ExportSettingsSnapshotView.serializer(),
@@ -146,7 +177,10 @@ class ExportProfilesViewModelTest {
             coEvery { removeEntry(any()) } just Runs
         }
         val snapshotFactory = ScheduledProfileSnapshotFactory(
-            mockk<ExportEnginePinPlanner> {
+            settingsRepository = mockk<SettingsRepository> {
+                coEvery { getSleepDayAttribution() } returns com.healthmd.domain.model.SleepDayAttribution.NIGHT_BEGINS
+            },
+            enginePinPlanner = mockk<ExportEnginePinPlanner> {
                 every { forScheduledExport(any(), any(), any()) } answers {
                     val settings = firstArg<ExportSettings>()
                     val target = secondArg<ExportTarget>()
@@ -491,6 +525,50 @@ class ExportProfilesViewModelTest {
         }
         coVerify(exactly = 0) { harness.profileCoordinator.activate(any()) }
         assertThat(viewModel.uiState.value.editingProfileId).isNull()
+    }
+
+    @Test
+    fun `save draft applies the change to the stored profile and saves it`() = runTest {
+        val harness = harness()
+        coEvery { harness.repository.profileById("p2") } answers { harness.profiles.value.first { it.id == "p2" } }
+        coEvery {
+            harness.repository.applyEditorUpdate(any(), any(), any(), any(), any(), any(), any())
+        } returns "Weekly"
+        val viewModel = harness.viewModel()
+        advanceUntilIdle()
+
+        viewModel.saveDraft("p2") { draft ->
+            draft.copy(settings = draft.settings.copy(filenameFormat = "{year}-{month}-{day}"))
+        }
+        advanceUntilIdle()
+
+        val jsonSlot = slot<String>()
+        coVerify(exactly = 1) {
+            harness.repository.applyEditorUpdate("p2", "Weekly", capture(jsonSlot), ExportTarget.DEVICE_FOLDER, any(), any(), any())
+        }
+        val decoded = AndroidExportSettingsSnapshotCodec.decodeOrNull(jsonSlot.captured)
+        assertThat(decoded).isNotNull()
+        val restored = decoded!!.restoreOnto(ExportSettings())
+        assertThat(restored.filenameFormat).isEqualTo("{year}-{month}-{day}")
+        // A non-active profile never touches live state.
+        coVerify(exactly = 0) { harness.profileCoordinator.activate(any()) }
+    }
+
+    @Test
+    fun `save draft skips unchanged drafts and unknown profiles`() = runTest {
+        val harness = harness()
+        coEvery { harness.repository.profileById("p1") } answers { harness.profiles.value.first { it.id == "p1" } }
+        coEvery { harness.repository.profileById("missing") } returns null
+        val viewModel = harness.viewModel()
+        advanceUntilIdle()
+
+        viewModel.saveDraft("p1") { it }
+        viewModel.saveDraft("missing") { it.copy(name = "Other") }
+        advanceUntilIdle()
+
+        coVerify(exactly = 0) {
+            harness.repository.applyEditorUpdate(any(), any(), any(), any(), any(), any(), any())
+        }
     }
 
     @Test

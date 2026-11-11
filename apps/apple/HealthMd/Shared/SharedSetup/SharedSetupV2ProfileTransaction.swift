@@ -401,6 +401,7 @@ enum SharedSetupV2AppleProfileMaterializer {
         case .iso8601: .iso8601
         case .usShort: .usShort
         case .usLong: .usLong
+        case .euDot: .euDot
         case .euShort: .euShort
         case .euLong: .euLong
         case .compact: .compact

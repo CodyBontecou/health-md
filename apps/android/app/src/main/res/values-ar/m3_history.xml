@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- History status labels shown beside a status icon (no glyph prefix). -->
+    <string name="m3_history_status_success">ناجح</string>
+    <string name="m3_history_status_partial">جزئي</string>
+    <string name="m3_history_status_failed">فاشل</string>
+    <plurals name="m3_history_snapshot_actions">
+        <item quantity="zero">لا إجراءات للقطة (%1$d/%2$d)</item>
+        <item quantity="one">إجراء واحد للقطة (%1$d/%2$d)</item>
+        <item quantity="two">إجراءان للقطة (%1$d/%2$d)</item>
+        <item quantity="few">%1$d/%2$d إجراءات للقطة</item>
+        <item quantity="many">%1$d/%2$d إجراء للقطة</item>
+        <item quantity="other">%1$d/%2$d إجراء للقطة</item>
+    </plurals>
+</resources>

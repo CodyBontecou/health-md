@@ -8,8 +8,6 @@ import UIKit
 private enum IPhoneDirectQueryError: Error {
     case invalidRequest
     case queryUnavailable
-    case limitedHistoryAuthorization
-    case historyAuthorizationUnverified
     case requestInProgress
     case protectedDataUnavailable
     case healthKitNotAuthorized
@@ -22,8 +20,6 @@ private enum IPhoneDirectQueryError: Error {
         switch self {
         case .invalidRequest: "invalid_query_request"
         case .queryUnavailable: "query_unavailable"
-        case .limitedHistoryAuthorization: "limited_history_authorization"
-        case .historyAuthorizationUnverified: "history_authorization_unverified"
         case .requestInProgress: "request_in_progress"
         case .protectedDataUnavailable: "protected_data_unavailable"
         case .healthKitNotAuthorized: "healthkit_authorization_required"
@@ -38,8 +34,6 @@ private enum IPhoneDirectQueryError: Error {
         switch self {
         case .invalidRequest: "The direct query request is invalid or unsupported."
         case .queryUnavailable: "The iPhone could not complete the direct query."
-        case .limitedHistoryAuthorization: "Apple Health access is limited by date. Choose an explicit authorized range or grant full history access before requesting all available history."
-        case .historyAuthorizationUnverified: "Apple Health full-history access could not be verified for this scope. Choose an explicit date range, or use OS 27 or later and complete a full-history authorization assessment before requesting all available history."
         case .requestInProgress: "Another direct iPhone operation is already active."
         case .protectedDataUnavailable: "Unlock iPhone before starting a direct query."
         case .healthKitNotAuthorized: "Authorize the selected Health access before starting a direct query."
@@ -266,11 +260,14 @@ final class IPhoneDirectQueryCoordinator {
     func handle(
         _ request: DirectQueryRequest,
         channel: DirectSecureChannel,
+        protocolAuthority: AppleDirectProtocolAuthority,
         sourceInstallationID: UUID,
         healthKitManager: HealthKitManager
     ) async {
+        let selectedProtocol = protocolAuthority.frozenForCurrentOperation()
         guard activeRequestID == nil else {
-            try? await reject(request, error: .requestInProgress, channel: channel)
+            try? await reject(request, error: .requestInProgress, channel: channel,
+                              protocolAuthority: selectedProtocol)
             return
         }
         activeRequestID = request.requestID
@@ -290,7 +287,8 @@ final class IPhoneDirectQueryCoordinator {
                 )
             }
             try validateRequestLease(lease) // Immediately before send, not just capture.
-            try await channel.send(.queryResponse(response))
+            try await channel.send(.queryResponse(response), authorization: nil,
+                                   messageCanonicalizer: selectedProtocol)
         } catch {
             let safeError: IPhoneDirectQueryError
             if Task.isCancelled || error is CancellationError {
@@ -302,7 +300,8 @@ final class IPhoneDirectQueryCoordinator {
             } else {
                 safeError = error as? IPhoneDirectQueryError ?? .queryUnavailable
             }
-            try? await reject(request, error: safeError, channel: channel)
+            try? await reject(request, error: safeError, channel: channel,
+                              protocolAuthority: selectedProtocol)
         }
     }
 
@@ -353,9 +352,11 @@ final class IPhoneDirectQueryCoordinator {
         )
         guard authorized else { throw IPhoneDirectQueryError.healthKitNotAuthorized }
 
+        // Revalidate every request, including pages served from a cached snapshot.
+        // A trial/subscription expiring must not leave cached health queries open.
+        await PurchaseManager.shared.refreshStatus()
+        guard PurchaseManager.shared.canExport else { throw IPhoneDirectQueryError.accessUnavailable }
         let snapshot = try await snapshotForQuery(query, key: captureKey, lease: lease) {
-            await PurchaseManager.shared.refreshStatus()
-            guard PurchaseManager.shared.canExport else { throw IPhoneDirectQueryError.accessUnavailable }
             let timeZone = TimeZone.current
             let settings = AdvancedExportSettings()
             settings.exportTimeZoneOverride = timeZone
@@ -370,6 +371,7 @@ final class IPhoneDirectQueryCoordinator {
             var captureCalendar = Calendar(identifier: .gregorian)
             captureCalendar.timeZone = timeZone
             let frozenCaptureCalendar = captureCalendar
+            let captureContext = try healthKitManager.resolveSleepCaptureContext(settings: settings)
             let dates = try await resolveDates(
                 query.dates,
                 metricIDs: metricIDs,
@@ -397,6 +399,7 @@ final class IPhoneDirectQueryCoordinator {
                             detailPolicy: detailPolicy,
                             metricSelection: metricSelection,
                             timeZone: timeZone,
+                            captureContext: captureContext,
                             captureCalendar: frozenCaptureCalendar
                         )
                     },
@@ -473,14 +476,15 @@ final class IPhoneDirectQueryCoordinator {
     private func reject(
         _ request: DirectQueryRequest,
         error: IPhoneDirectQueryError,
-        channel: DirectSecureChannel
+        channel: DirectSecureChannel,
+        protocolAuthority: AppleDirectProtocolAuthority
     ) async throws {
         try await channel.send(.queryRejected(DirectQueryFailure(
             requestID: request.requestID,
             code: error.code,
             message: error.publicMessage,
             retryable: error.retryable
-        )))
+        )), authorization: nil, messageCanonicalizer: protocolAuthority)
     }
 
     private func resolveMetricIDs(_ selection: HealthMdMetricSelection) throws -> Set<String> {

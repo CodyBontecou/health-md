@@ -1,0 +1,25 @@
+THE SWEET SETUP — HUMAN REVIEW REQUIRED; NOT SENT
+Recipient route: desk@blancmedia.org
+Official contact: https://thesweetsetup.com/contact/
+Suggested subject: A fictional health vault for an Obsidian weekly review
+
+Hello,
+
+I’d like to offer a practical Obsidian workflow for editorial consideration: selected sleep and activity metrics beside daily journal notes, with a finished weekly review readers can inspect first.
+
+The Health.md guide includes a free starter vault with 28 fictional daily notes, a Bases log, fixed chart snapshots, and a completed weekly review:
+https://healthmd.app/blog/export-apple-health-data-to-obsidian/#starter-vault
+
+The sample needs no health permissions or account. The guide then explains how to export a reader’s own selected Apple Health data into a folder. The supplied review prose and chart snapshots are examples, not automatically updating analysis; interactive visualizations use a separate optional plugin.
+
+Would this be useful for an independent workflow test?
+
+[Add your own name and a short personal explanation before sending.]
+
+EDITORIAL CONTEXT — not part of the message
+The publisher has covered journaling with daily questions and companion automation for Obsidian:
+https://thesweetsetup.com/journaling-using-daily-questions-in-obsidian/
+https://thesweetsetup.com/actions-for-obsidian-adds-additional-shortcuts-support/
+These older articles show topic fit, not proof of current interest or a current author's role. Use the official desk rather than guessing an author's email.
+
+First contact should link the existing guide. The starter ZIP and preview are included locally for review; do not assume attachments or paid placement are wanted.

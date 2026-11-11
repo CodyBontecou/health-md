@@ -26,45 +26,17 @@ final class FormatA11yTests: XCTestCase {
         measure(Text(text).font(font).fixedSize(horizontal: false, vertical: true), width: width, size: size).height
     }
 
-    private func closedMenu(_ value: String) -> some View {
-        A11ySelectionMenu(selection: value, options: [value], optionLabel: { Text($0) }, onSelect: { _ in }) {
-            FormatSelectionValueLabel(value: value)
-        }
-    }
-
-    func testClosedMenuTriggerAllocatesFullValueHeightAtEveryTextSizeAndWidth() {
+    func testClosedMenuLabelAllocatesFullValueHeightAtEveryTextSizeAndWidth() {
         for size in sizes {
             for width in widths {
                 for value in ["ISO 8601 (2026-01-13)", "Friendly (Mon, Jan 13, 2026)", "12-hour with seconds (2:30:45 PM)"] {
-                    // Measure the real trigger: its ButtonStyle now owns padding,
-                    // minimum bounds, typography and the border, not the value label.
-                    let actual = measure(closedMenu(value), width: width, size: size)
-                    // A conservative lower bound: the chevron uses additional width.
-                    let fullText = textHeight(value, font: Typography.bodyEmphasis(),
-                                              width: width - 2 * Spacing.s3, size: size)
+                    let actual = measure(FormatSelectionValueLabel(value: value), width: width, size: size)
+                    // A conservative lower bound: even text with the entire padded width
+                    // must fit vertically. The real chevron consumes additional width.
+                    let fullText = textHeight(value, font: .footnote.weight(.medium), width: width - 16, size: size)
                     XCTAssertLessThanOrEqual(actual.width, width + 0.5)
                     XCTAssertGreaterThanOrEqual(actual.width, 44)
-                    XCTAssertGreaterThanOrEqual(actual.height, max(44, fullText + 2 * Spacing.s2) - 0.5)
-                }
-            }
-        }
-    }
-
-    func testSecondaryPickersKeepCompleteValuesAndMinimumBoundsWithAndWithoutTitles() {
-        let value = "Lossless Health Records with a complete synthetic destination name"
-        for size in sizes {
-            for width in widths {
-                for showsTitle in [false, true] {
-                    let picker = SecondaryPicker("Data Detail", selectedTitle: value,
-                                                 selection: .constant(1), showsTitle: showsTitle) {
-                        Text(value).tag(1)
-                    }
-                    let actual = measure(picker, width: width, size: size)
-                    let fullText = textHeight(value, font: Typography.bodyEmphasis(),
-                                              width: width - 2 * Spacing.s3, size: size)
-                    XCTAssertLessThanOrEqual(actual.width, width + 0.5)
-                    XCTAssertGreaterThanOrEqual(actual.width, 44)
-                    XCTAssertGreaterThanOrEqual(actual.height, max(44, fullText + 2 * Spacing.s2) - 0.5)
+                    XCTAssertGreaterThanOrEqual(actual.height, max(44, fullText + 16) - 0.5)
                 }
             }
         }
@@ -79,11 +51,11 @@ final class FormatA11yTests: XCTestCase {
                 let row = FormatSelectionControl(title: title, subtitle: subtitle, selection: value,
                                                  options: [value], optionTitle: { $0 }, onSelect: { _ in })
                 let actual = measure(row, width: width, size: size)
-                let trigger = measure(closedMenu(value), width: width, size: size)
+                let label = measure(FormatSelectionValueLabel(value: value), width: width, size: size)
                 let titleHeight = textHeight(title, font: .body.weight(.semibold), width: width, size: size)
                 let helperHeight = textHeight(subtitle, font: .footnote, width: width, size: size)
                 XCTAssertLessThanOrEqual(actual.width, width + 0.5)
-                XCTAssertGreaterThanOrEqual(actual.height, titleHeight + helperHeight + trigger.height + 31)
+                XCTAssertGreaterThanOrEqual(actual.height, titleHeight + helperHeight + label.height + 31)
             }
         }
     }
@@ -197,12 +169,12 @@ final class FormatA11yTests: XCTestCase {
         }
     }
 
-    func testLiveTextSizeChangeReflowsRealMenuTriggerAndCodeWithoutChangingValues() {
+    func testLiveTextSizeChangeReflowsRealMenuLabelAndCodeWithoutChangingValues() {
         let value = "Friendly (Mon, Jan 13, 2026)"
         let code = "# Synthetic {{date}}\n" + longValue
         func content(_ size: DynamicTypeSize) -> some View {
             VStack {
-                closedMenu(value)
+                FormatSelectionValueLabel(value: value)
                 FormatCodeBlock(text: code)
             }
             .environment(\.dynamicTypeSize, size)
@@ -256,9 +228,8 @@ final class FormatA11yTests: XCTestCase {
                 let a = luminance(foreground), b = luminance(background)
                 return (max(a, b) + 0.05) / (min(a, b) + 0.05)
             }
-            for surface in [Color.bgPrimary, .bgSecondary, .bgTertiary, .controlBackground] {
+            for surface in [Color.bgPrimary, .bgSecondary, .bgTertiary] {
                 XCTAssertGreaterThanOrEqual(contrast(rgb(.textSecondary), rgb(surface)), 4.5)
-                XCTAssertGreaterThanOrEqual(contrast(rgb(.textPrimary), rgb(surface)), 4.5)
             }
             // Actual callers: Reset on the page, Delete inside a section card.
             // Their existing 8% error fills do not composite over bgSecondary.

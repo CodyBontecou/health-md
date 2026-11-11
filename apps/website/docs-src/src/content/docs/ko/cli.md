@@ -92,7 +92,7 @@ healthmd export --last 7 \
   --destination "$HOME/Documents/HealthVault"
 ```
 
-`--profile PROFILE_ID`은 `--use-device-settings`나 측정 항목/카테고리 선택기와 결합할 수 없으며, 알 수 없는 ID는 라이브 설정을 사용하지 않고 안전하게 실패합니다. ID는 iPhone 또는 Android의 **설정 → 내보내기 프로필 → 프로필 ID**에서 복사하세요. 자동화와 대상 동작은 [내보내기 프로필](/ko/docs/export-profiles/)을 참고하세요.
+`--profile PROFILE_ID`는 `--use-device-settings`나 항목·카테고리 선택자와 함께 사용할 수 없으며, 알 수 없는 ID는 현재 설정을 쓰지 않고 안전하게 실패합니다. ID는 iPhone에서는 **자동화**의 해당 자동화 페이지(**프로필 ID**)에서, Android에서는 **설정 → 내보내기 프로필 → 프로필 ID**에서 복사하세요. 자동화와 대상 동작은 [내보내기 프로필](/ko/docs/export-profiles/)을 참고하세요.
 
 이식 가능한 직접 클라이언트는 MCP 래퍼 없이 지원되는 모든 iPhone 타입 지정 작업을 호출할 수 있습니다.
 

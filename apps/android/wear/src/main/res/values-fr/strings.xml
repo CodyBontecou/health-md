@@ -47,4 +47,14 @@
     <string name="wear_preview_placeholder">Aperçu ; aucune valeur de santé</string>
     <string name="wear_complication_description">%1$s, %2$s, %3$s</string>
     <string name="wear_complication_long">%1$s %2$s · %3$s</string>
+    <string name="wear_short_activity">Activité</string>
+    <string name="wear_short_recovery">Récup.</string>
+    <string name="wear_short_steps">Pas</string>
+    <string name="wear_short_move">Énergie</string>
+    <string name="wear_short_exercise">Exercice</string>
+    <string name="wear_short_sleep">Sommeil</string>
+    <string name="wear_short_resting_hr">Repos</string>
+    <string name="wear_short_average_hr">FC moy.</string>
+    <string name="wear_short_hrv">VFC</string>
+    <string name="wear_short_blood_oxygen">SpO₂</string>
 </resources>

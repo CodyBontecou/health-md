@@ -41,6 +41,7 @@ class ExportScheduler @Inject constructor(
     private val generationFactory: ScheduledExportGeneration,
     private val runCoordinator: ScheduledExportRunCoordinator,
     private val transitionObserver: ScheduledExportTransitionObserver,
+    private val healthRepository: com.healthmd.domain.repository.HealthRepository,
 ) {
     private val alarmManager = context.getSystemService(AlarmManager::class.java)
     private val mutex = Mutex()
@@ -422,15 +423,28 @@ class ExportScheduler @Inject constructor(
         }
     }
 
-    private fun nextOccurrence(
+    private suspend fun nextOccurrence(
         occurrence: ScheduledExportOccurrence,
         configuration: ScheduledExportConfiguration,
         catchUpThroughMillis: Long,
-    ): ScheduledExportOccurrence = if (configuration.zoneId == occurrence.configuration.zoneId) {
-        timeCalculator.nextFutureOccurrence(occurrence, catchUpThroughMillis)
-            .copy(configuration = configuration)
-    } else {
-        timeCalculator.rebaseOccurrence(occurrence, configuration, catchUpThroughMillis)
+    ): ScheduledExportOccurrence {
+        // Advancing accepts a new occurrence. Retain output/calendar/renderer choices,
+        // but never bind every future occurrence to the first occurrence's account.
+        val snapshot = configuration.settingsSnapshot
+        val nextConfiguration = if (snapshot?.sleepCaptureContext?.sleepDayAttribution ==
+            com.healthmd.domain.model.SleepDayAttribution.MORNING_ENDS) {
+            val authority = (healthRepository as? com.healthmd.domain.repository.RestorableHealthRepository
+                ?: error("Provider capture authority is unavailable")).captureProviderAuthority()
+            configuration.copy(settingsSnapshot = snapshot.copy(
+                version = AndroidExportSettingsSnapshot.PROVIDER_AUTHORITY_VERSION,
+                providerCaptureAuthority = authority.validatedCopy()))
+        } else configuration
+        return if (configuration.zoneId == occurrence.configuration.zoneId) {
+            timeCalculator.nextFutureOccurrence(occurrence, catchUpThroughMillis)
+                .copy(configuration = nextConfiguration)
+        } else {
+            timeCalculator.rebaseOccurrence(occurrence, nextConfiguration, catchUpThroughMillis)
+        }
     }
 
     /**
@@ -580,8 +594,16 @@ class ExportScheduler @Inject constructor(
     ): ScheduledExportConfiguration {
         val target = settings.scheduledExportTarget
         val fingerprint = destinationFingerprint(settings, target)
-        val enginePin = enginePinPlanner.forScheduledExport(settings, target, zoneId)
-        val settingsSnapshot = AndroidExportSettingsSnapshot.capture(settings, enginePin, zoneId)
+        val context = com.healthmd.domain.model.AndroidCaptureContext(zoneId, settingsRepository.getSleepDayAttribution())
+            .also { it.requireShippedProfile() }
+        val authority = if (context.sleepDayAttribution == com.healthmd.domain.model.SleepDayAttribution.MORNING_ENDS)
+            (healthRepository as? com.healthmd.domain.repository.RestorableHealthRepository
+                ?: error("Provider capture authority is unavailable")).captureProviderAuthority() else null
+        val captureSettings = settings.copy(executionSleepCaptureContext = context,
+            executionSleepCaptureAuthorityIsFrozen = true, executionProviderCaptureAuthority = authority,
+            executionProviderCaptureAuthorityIsFrozen = authority != null)
+        val enginePin = enginePinPlanner.forScheduledExport(captureSettings, target, zoneId)
+        val settingsSnapshot = AndroidExportSettingsSnapshot.capture(captureSettings, enginePin, zoneId, context)
         return ScheduledExportConfiguration.from(
             settings = settings,
             destinationFingerprint = fingerprint,
@@ -600,7 +622,8 @@ class ExportScheduler @Inject constructor(
         persisted: ScheduledExportConfiguration,
     ): ScheduledExportConfiguration? {
         val target = settings.scheduledExportTarget
-        if (!enginePinPlanner.persistedPinAppliesToScheduledExport(settings, target, persisted.enginePin)) {
+        val pinnedSettings = settings.copy(executionSleepCaptureContext = persisted.settingsSnapshot?.sleepCaptureContext)
+        if (!enginePinPlanner.persistedPinAppliesToScheduledExport(pinnedSettings, target, persisted.enginePin)) {
             return null
         }
         val persistedSnapshot = persisted.settingsSnapshot
@@ -611,7 +634,12 @@ class ExportScheduler @Inject constructor(
             if (persistedSnapshot.scheduledExportTarget != target) return null
             // Validate destination plumbing before comparing only non-secret frozen output choices.
             if (runCatching { persistedSnapshot.restoreOnto(settings) }.isFailure) return null
-            AndroidExportSettingsSnapshot.capture(settings, persisted.enginePin, zone)
+            // Retain the v1 identity during recovery. Only an already-v2 acceptance compares
+            // its frozen context against today's setting to detect an explicit configuration edit.
+            val context = if (persistedSnapshot.sleepCaptureContext == null) null else
+                com.healthmd.domain.model.AndroidCaptureContext(zone, settingsRepository.getSleepDayAttribution())
+            AndroidExportSettingsSnapshot.capture(settings.copy(
+                executionProviderCaptureAuthority = persistedSnapshot.providerCaptureAuthority), persisted.enginePin, zone, context)
                 .takeIf { it == persistedSnapshot }
                 ?: return null
         }

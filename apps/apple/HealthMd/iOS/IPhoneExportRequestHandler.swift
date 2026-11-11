@@ -58,8 +58,7 @@ final class IPhoneExportRequestHandler: ObservableObject {
             !isAutomation || (automationClient.allowsAcquisition(request, sync: syncService)
                 && syncService.remoteCapabilities == automationPeerCapabilities)
         }
-        externalIntegrations?.beginExportAction()
-        defer { externalIntegrations?.endExportAction() }
+        let suppliedIntegrations = externalIntegrations
         defer {
             if cancelledRequestIDs.remove(request.jobID) != nil {
                 pendingRequests.removeValue(forKey: request.jobID)
@@ -173,6 +172,47 @@ final class IPhoneExportRequestHandler: ObservableObject {
                 savedSettings: AdvancedExportSettings()
             )
         if let automationTimeZone { settings.exportTimeZoneOverride = automationTimeZone }
+        do {
+            settings.executionSleepCaptureContext = try healthKitManager.resolveSleepCaptureContext(settings: settings)
+        } catch {
+            syncService.send(.iphoneExportRejected(IPhoneExportFailure(jobID: request.jobID,
+                reason: .healthKitFetchFailed, message: error.localizedDescription)))
+            return
+        }
+        let externalIntegrations: (any ExternalIntegrationDailyRecordProviding)?
+        do {
+            if request.responseMode == .writeFiles {
+                if request.canonicalSelection != nil || !settings.writesExternalProviderSidecars
+                    || (persistedJournal?.macRequest == request && persistedJournal!.nextItemIndex >= persistedJournal!.totalItemCount) {
+                    externalIntegrations = nil
+                } else if let authority = settings.executionExternalProviderCaptureAuthority {
+                    externalIntegrations = try IPhoneConnectedCorpusProducer.restoreProviders(authority: authority, providers: suppliedIntegrations)
+                } else if persistedJournal?.macRequest == request,
+                          settings.executionSleepCaptureContext?.sleepDayAttribution == .morningEnds {
+                    throw ExternalProviderCaptureAuthority.RecoveryError.unavailable
+                } else {
+                    externalIntegrations = ConnectedAppsFeature.isEnabled ? suppliedIntegrations?.forCaptureOperation() : nil
+                }
+                if persistedJournal?.macRequest != request {
+                    let count = externalIntegrations?.connectedProviderCount ?? 0
+                    settings.executionExternalProviderCaptureAuthority = externalIntegrations?.captureAuthority
+                        ?? (count == 0 ? ExternalProviderCaptureAuthority(connections: [:]) : nil)
+                    settings.executionExternalProviderCaptureAuthorityIsFrozen = true
+                    if settings.executionSleepCaptureContext?.sleepDayAttribution == .morningEnds,
+                       settings.executionExternalProviderCaptureAuthority == nil {
+                        throw ExternalProviderCaptureAuthority.RecoveryError.unavailable
+                    }
+                }
+            } else {
+                externalIntegrations = ConnectedAppsFeature.isEnabled ? suppliedIntegrations?.forCaptureOperation() : nil
+            }
+        } catch {
+            syncService.send(.iphoneExportRejected(IPhoneExportFailure(jobID: request.jobID,
+                reason: .healthKitFetchFailed, message: error.localizedDescription)))
+            return
+        }
+        externalIntegrations?.beginExportAction()
+        defer { externalIntegrations?.endExportAction() }
         let healthSubfolder = VaultManager.savedHealthSubfolder()
         let sourceTimeZone = settings.exportTimeZoneOverride ?? .current
         var sourceCalendar = Calendar(identifier: .gregorian)
@@ -277,8 +317,6 @@ final class IPhoneExportRequestHandler: ObservableObject {
                         )))
                         return
                     }
-                    // Preserve main's readable-range resolution. The durable capture
-                    // observation below carries history uncertainty for the exact job.
                     if let earliestDate = discovery.earliestDate {
                         earliestCandidates.append(earliestDate)
                     }
@@ -324,15 +362,10 @@ final class IPhoneExportRequestHandler: ObservableObject {
             return
         }
 
-        if request.responseMode != .contextStore {
-            await PurchaseManager.shared.refreshStatus()
-        }
-        guard request.responseMode == .contextStore || PurchaseManager.shared.canExport else {
-            PricingAnalyticsClient.shared.trackExportBlockedByQuota(
-                context: .macTarget,
-                targetType: .connectedMac,
-                quotaState: PurchaseManager.shared.analyticsQuotaState
-            )
+        // A context-store response also releases health data to another device.
+        // Clinic navigation access never authorizes this personal-only destination.
+        await PurchaseManager.shared.refreshStatus()
+        guard PurchaseManager.shared.canExport else {
             syncService.send(.iphoneExportRejected(IPhoneExportFailure(
                 jobID: request.jobID,
                 reason: .exportLimitReached,
@@ -361,7 +394,9 @@ final class IPhoneExportRequestHandler: ObservableObject {
                 jobID: request.jobID,
                 source: .macApp,
                 totalDays: dates.count,
-                message: cliActivityStartMessage(for: request)
+                targetLabel: syncService.connectedPeerName,
+                message: cliActivityStartMessage(for: request),
+                dateRange: dates.min().flatMap { first in dates.max().map { first...$0 } }
             )
         }
         syncService.send(.iphoneExportAccepted(IPhoneExportAcknowledgement(
@@ -377,7 +412,7 @@ final class IPhoneExportRequestHandler: ObservableObject {
         )))
 
         let dateFormatter = sourceDateFormatter
-        let enabledExternalIntegrations: ExternalIntegrationDailyRecordProviding? = ConnectedAppsFeature.isEnabled ? externalIntegrations : nil
+        let enabledExternalIntegrations = externalIntegrations
         let selectedContextProviderIDs = request.canonicalSelection.map {
             Set($0.sourceIDs).subtracting(["apple_health"])
         }
@@ -496,7 +531,8 @@ final class IPhoneExportRequestHandler: ObservableObject {
                             for: date,
                             detailPolicy: detailPolicy,
                             metricSelection: settings.metricSelection,
-                            timeZone: sourceTimeZone
+                            timeZone: sourceTimeZone,
+                            captureContext: settings.executionSleepCaptureContext
                         )
                         guard !self.cancelledRequestIDs.contains(request.jobID),
                               self.activeRequestID == request.jobID else {
@@ -676,17 +712,6 @@ final class IPhoneExportRequestHandler: ObservableObject {
 
         if payload.successCount > 0 {
             PurchaseManager.shared.recordExportUse()
-            PricingAnalyticsClient.shared.trackExportSucceeded(
-                metadata: PricingAnalyticsExportMetadata(
-                    targetType: .connectedMac,
-                    formatCount: pending.settings.exportFormats.count,
-                    metricCount: pending.settings.metricSelection.totalEnabledCount,
-                    dateRangePreset: PricingAnalyticsDateRangePreset.custom,
-                    startDate: pending.request.dateRangeStart,
-                    endDate: pending.request.dateRangeEnd
-                ),
-                quotaState: PurchaseManager.shared.analyticsQuotaState
-            )
         }
         IPhoneCorpusExportRecoveryManager.shared.markCompletionRecorded(jobID: payload.jobID)
         finishCLIActivity(for: pending.request, status: payload.status)
@@ -1046,7 +1071,8 @@ final class IPhoneExportRequestHandler: ObservableObject {
                             for: date,
                             detailPolicy: detailPolicy,
                             metricSelection: metricSelection,
-                            timeZone: sourceTimeZone
+                            timeZone: sourceTimeZone,
+                            captureContext: settings.executionSleepCaptureContext
                         )
                     },
                     fetchExternalDailyRecords: request.canonicalSelection == nil
@@ -1094,7 +1120,8 @@ final class IPhoneExportRequestHandler: ObservableObject {
                                 for: date,
                                 detailPolicy: detailPolicy,
                                 metricSelection: metricSelection,
-                                timeZone: sourceTimeZone
+                                timeZone: sourceTimeZone,
+                                captureContext: settings.executionSleepCaptureContext
                             )
                         }
                         return HealthData(
@@ -1138,7 +1165,8 @@ final class IPhoneExportRequestHandler: ObservableObject {
                             for: date,
                             detailPolicy: detailPolicy,
                             metricSelection: metricSelection,
-                            timeZone: sourceTimeZone
+                            timeZone: sourceTimeZone,
+                            captureContext: settings.executionSleepCaptureContext
                         )
                     },
                     fetchExternalDailyRecords: nil
@@ -1317,17 +1345,6 @@ final class IPhoneExportRequestHandler: ObservableObject {
         )
         guard successCount > 0 else { return }
         PurchaseManager.shared.recordExportUse()
-        PricingAnalyticsClient.shared.trackExportSucceeded(
-            metadata: PricingAnalyticsExportMetadata(
-                targetType: .connectedMac,
-                formatCount: 0,
-                metricCount: settings.metricSelection.totalEnabledCount,
-                dateRangePreset: PricingAnalyticsDateRangePreset.custom,
-                startDate: resolvedDates.first ?? request.dateRangeStart,
-                endDate: resolvedDates.last ?? request.dateRangeEnd
-            ),
-            quotaState: PurchaseManager.shared.analyticsQuotaState
-        )
     }
 
     private func sendSizeBoundedMacExportJob(
@@ -1355,7 +1372,8 @@ final class IPhoneExportRequestHandler: ObservableObject {
                     for: date,
                     detailPolicy: detailPolicy,
                     metricSelection: settings.metricSelection,
-                    timeZone: sourceTimeZone
+                    timeZone: sourceTimeZone,
+                    captureContext: settings.executionSleepCaptureContext
                 )
             },
             fetchExternalDailyRecords: externalRecordFetcher,
@@ -1510,7 +1528,8 @@ final class IPhoneExportRequestHandler: ObservableObject {
                             for: date,
                             detailPolicy: detailPolicy,
                             metricSelection: metricSelection,
-                            timeZone: sourceTimeZone
+                            timeZone: sourceTimeZone,
+                            captureContext: settings.executionSleepCaptureContext
                         )
                     },
                     fetchExternalDailyRecords: externalRecordFetcher
@@ -1657,7 +1676,8 @@ final class IPhoneExportRequestHandler: ObservableObject {
                         for: date,
                         detailPolicy: detailPolicy,
                         metricSelection: metricSelection,
-                        timeZone: sourceTimeZone
+                        timeZone: sourceTimeZone,
+                        captureContext: settings.executionSleepCaptureContext
                     )
                 },
                 fetchExternalDailyRecords: { date in
@@ -1863,17 +1883,6 @@ final class IPhoneExportRequestHandler: ObservableObject {
 
         guard retainedDayCount > 0 else { return }
         PurchaseManager.shared.recordExportUse()
-        PricingAnalyticsClient.shared.trackExportSucceeded(
-            metadata: PricingAnalyticsExportMetadata(
-                targetType: .connectedMac,
-                formatCount: 0,
-                metricCount: settings.metricSelection.totalEnabledCount,
-                dateRangePreset: PricingAnalyticsDateRangePreset.custom,
-                startDate: pending.request.dateRangeStart,
-                endDate: pending.request.dateRangeEnd
-            ),
-            quotaState: PurchaseManager.shared.analyticsQuotaState
-        )
     }
 
     private func failPreparation(

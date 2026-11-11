@@ -116,7 +116,7 @@ These normally require a new negotiated version rather than an additive v1 edit:
 6. Keep `healthmd-cli` to arguments, JSON, progress, artifacts, and exit status.
 7. Implement matching Swift and persist immutable scope before capture/transfer.
 8. Update conformance fixtures/tests; fixture changes require evidence Swift generated them.
-9. Run affected automated regressions. Physical iPhone QA requires explicit authorization for the current task; otherwise report that qualification gap.
+9. Run both automated gates and physical iPhone QA.
 10. Update docs, changelogs, compatibility version, and release notes in both repos.
 
 Never update one side of a wire change and call it complete.
@@ -133,7 +133,7 @@ Never update one side of a wire change and call it complete.
    `healthmd.cli_guidance/1` with `request_sent: false`, requirements, examples, and next actions.
    Keep malformed/contradictory input and runtime failures nonzero, deterministic,
    privacy-safe `healthmd.cli_error/1`; never embed rejected values or escaped Clap output.
-6. Update parser/client/protocol/iPhone tests, help, README, operator guidance, and QA.
+6. Use the [QA consumer checklist](../../../apps/cli/docs/qa.md#cli-change-consumers) to cover workflow smoke, release/signing probes, structured guidance, skills, and public docs as well as parser/client/protocol/iPhone tests.
 
 Do not add `--iphone`; standalone already means direct iPhone.
 
@@ -188,14 +188,6 @@ The Rust MCP server exposes only fixed operations. It must retain strict stdio b
 
 ## Tests
 
-### Development feedback
-
-Follow the root verification policy and [test selection guide](../../../docs/testing-strategy.md). During iteration run `cargo test -p <owning-crate> <test-filter> --locked` in its owning workspace with the relevant features; use `swift test --package-path Packages/HealthMdConnectivity --filter <Test>` for standalone Swift behavior. Run affected crate/module regressions and Clippy once at completion, repeating only after relevant inputs change. Public-contract, authority/crypto, persistence/recovery, FFI, or uncertain-impact changes escalate to every affected producer/consumer gate.
-
-### CI / extended qualification
-
-The following is a cross-component qualification checklist, not a per-edit command sequence. Run bindings, MSRV, packaging, and platform builds locally when that surface changes or qualification is requested. Simulator/device/physical QA remains explicitly opt-in; record unrun surfaces rather than substituting a different platform's pass.
-
 Rust shared core and protocol:
 
 ```bash
@@ -216,6 +208,7 @@ cargo test --workspace --all-features --locked
 cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
 rustup run 1.85.0 cargo check --workspace --all-features --locked
 python3 scripts/update-mcp-shared-assets.py --check
+python3 scripts/smoke-cli.py   # Python 3.11+; hermetic discovery, no native credentials
 dist plan --allow-dirty
 cargo run --bin healthmd -- --help
 cargo run --bin healthmd -- export
@@ -230,6 +223,9 @@ cargo run --bin healthmd -- mcp schema healthmd_sleep_sessions
 cargo run --bin healthmd-mcp -- --help
 ```
 
+Local smoke needs no native credential setup or disposable OS account. The automated signed-release
+credential upgrade probes remain separate; see [release QA](../../../apps/cli/docs/qa.md#automated-gate).
+
 App/iPhone:
 
 ```bash
@@ -240,14 +236,14 @@ xcodebuild -project HealthMd.xcodeproj -scheme HealthMd \
   build CODE_SIGNING_ALLOWED=NO
 ```
 
-Run focused reconnect/background, protected spool, direct query, export coordination, transfer, and exporter tests. CI must cover macOS, Ubuntu, and Windows. When explicitly authorized, physical QA must cover LAN pairing/reconnect, Tailscale, status, raw, extract, interruption/resume, cancellation, background expiry, protected-data denial, file commits on all desktop OSes, and the complete direct MCP tool/UI/PNG path without Health.md for Mac.
+Run focused reconnect/background, protected spool, direct query, export coordination, transfer, and exporter tests. CI must cover macOS, Ubuntu, and Windows. Physical QA must cover LAN pairing/reconnect, Tailscale, status, raw, extract, interruption/resume, cancellation, background expiry, protected-data denial, file commits on all desktop OSes, and the complete direct MCP tool/UI/PNG path without Health.md for Mac.
 
 ## Finish checklist
 
 - Standalone works without installing/launching the Mac app.
 - No Mac/localhost/Nearby fallback exists.
 - Rust and Swift protocol tests/fixtures agree.
-- Affected direct tests pass; report any iOS build/device verification that was not run.
+- iOS build and focused direct tests pass.
 - Platform behavior matches docs.
 - Export schema version/signature was handled if output changed.
 - Docs/skills use portable `healthmd`, not `apps/apple/scripts/healthmd` or bundled helper.

@@ -1,0 +1,31 @@
+EDITORIAL DISTRIBUTION MEASUREMENT
+Prepared October 27, 2026.
+
+Before contact
+- Record the existing destination, publication/source revision, contact route, and exact story angle.
+- Reconcile any later placement with a complete backlink export before calling it a new referring domain. The earlier 20-row sample is not a full backlink profile.
+- Preserve this package's sources.json and the original downloaded assets.
+
+After authorized contact
+Record the real send date, response, independent published URL, actual destination link, link attributes, and relevant referral visits. Do not mark a contact or publication complete from a draft.
+
+Keep metrics separate
+Search Console clicks are not website unique visitors. Aggregate resource activations are not completed downloads, app installs, purchases, or linked customer journeys. Known earlier QA interactions must be excluded from organic interpretation. A link can be useful to readers even if it does not change a vendor authority score.
+
+Search feedback loop
+The retained Search Console baseline ends October 23, before the October 25–27 launches. It cannot establish results from the new guides or samples. There is no configured GSC_ACCESS_TOKEN in this session, so this package does not include fresh authenticated page/query exports.
+
+Use finalized page-filtered queries for:
+https://healthmd.app/apple-health-export/
+https://healthmd.app/apple-health-to-csv/
+https://healthmd.app/docs/cli/
+https://healthmd.app/blog/export-apple-health-data-to-obsidian/
+https://healthmd.app/docs/android/
+
+Preserve property sc-domain:healthmd.app, exact date windows, country/device context, receiving URL, publication dates, and intended actions. Do not infer a query's landing page from separate page/query aggregates.
+
+Suggested reviews, not scheduled automations
+November 8–10: discovery and indexing observations.
+November 22–24: first 28-day search/action trends.
+December 20–22: 56-day trends.
+Use equal-length periods and distinguish cohort changes from causal lift. Current low counts do not support conversion-lift promises or a large A/B test.

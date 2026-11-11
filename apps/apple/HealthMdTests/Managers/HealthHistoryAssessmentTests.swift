@@ -304,6 +304,130 @@ final class HealthHistoryAssessmentTests: XCTestCase {
         XCTAssertEqual(result?.scope, selection.scope)
     }
 
+    func testFrozenCaptureSettingsRetainMetricScopeEngineAuthorityAndCalendar() {
+        let defaults = UserDefaults(suiteName: "HistoryFrozenCaptureSettings")!
+        let live = AdvancedExportSettings(userDefaults: defaults)
+        live.metricSelection.enabledMetrics = ["steps"]
+        live.executionAppleExportEngineAuthorityIsFrozen = false
+        let snapshot = ExportSettingsSnapshot.from(live, appleExportEngineAuthorityIsFrozen: false)
+        let selection = HealthHistoryExecutionSelection(scope: scope(), settings: snapshot,
+                                                       target: .localIPhoneFolder, preset: .custom)
+        live.metricSelection.enabledMetrics = ["heart_rate_avg"]
+        let frozen = selection.makeCaptureSettings()
+        XCTAssertEqual(frozen.metricSelection.enabledMetrics, ["steps"])
+        XCTAssertEqual(frozen.exportTimeZoneOverride?.identifier, selection.scope.timeZoneIdentifier)
+        XCTAssertEqual(frozen.executionAppleExportEnginePin, snapshot.appleExportEnginePin)
+        XCTAssertEqual(frozen.executionAppleExportEngineAuthorityIsFrozen, snapshot.appleExportEngineAuthorityIsFrozen)
+        XCTAssertFalse(frozen.executionAppleExportEngineAuthorityIsFrozen, "History assessment must not freeze/repin M3 authority differently")
+        XCTAssertEqual(selection.scope.startDate, scope().startDate)
+        XCTAssertEqual(selection.scope.endDate, scope().endDate)
+    }
+
+    func testFreshInteractiveCaptureDoesNotRecoverMissingDurableContext() throws {
+        let settings = AdvancedExportSettings(userDefaults: ExportSettingsSnapshot.makeTemporaryUserDefaults())
+        let selection = HealthHistoryExecutionSelection(scope: scope(),
+            settings: ExportSettingsSnapshot.from(settings, appleExportEngineAuthorityIsFrozen: false),
+            target: .localIPhoneFolder, preset: .today)
+        XCTAssertNil(selection.settings.sleepCaptureContext)
+        let capture = selection.makeCaptureSettings()
+        let context = try manager(FakeHealthStore()).resolveSleepCaptureContext(settings: capture)
+        XCTAssertEqual(context.timeZone.identifier, selection.scope.timeZoneIdentifier)
+    }
+
+    func testFreshCaptureRetainsOptionsAndSleepChoiceAcrossHistoryAssessment() async throws {
+        let sut = manager(FakeHealthStore())
+        for attribution in SleepDayAttribution.allCases {
+            for mode in WriteMode.allCases {
+                let live = AdvancedExportSettings(userDefaults: ExportSettingsSnapshot.makeTemporaryUserDefaults())
+                live.exportFormats = Set(ExportFormat.allCases)
+                live.writeMode = mode
+                live.archiveExportFiles = true
+                live.generateRangeSummary = true
+                live.individualTracking.globalEnabled = true
+                live.dailyNoteInjection.enabled = true
+                let snapshot = ExportSettingsSnapshot.from(live, healthSubfolder: "qa-output",
+                    appleExportEngineAuthorityIsFrozen: false)
+                let selection = HealthHistoryExecutionSelection(scope: scope(), settings: snapshot,
+                    target: .localIPhoneFolder, preset: .custom, sleepDayAttribution: attribution)
+                let opposite: SleepDayAttribution = attribution == .morningEnds ? .nightBegins : .morningEnds
+                sut.setSleepDayAttribution(opposite)
+                let changed = HealthHistoryExecutionSelection(scope: selection.scope, settings: snapshot,
+                    target: selection.target, preset: selection.preset, sleepDayAttribution: opposite)
+                XCTAssertNotEqual(selection, changed, "Changing sleep attribution invalidates the history selection")
+                let capture = selection.makeCaptureSettings()
+                let context = try sut.resolveSleepCaptureContext(settings: capture)
+                XCTAssertEqual(context.sleepDayAttribution, attribution)
+                XCTAssertEqual(context.timeZone.identifier, selection.scope.timeZoneIdentifier)
+                XCTAssertFalse(capture.executionSleepCaptureContextIsFrozen)
+                let copied = ExportSettingsSnapshot.from(capture, healthSubfolder: "qa-output",
+                    appleExportEngineAuthorityIsFrozen: false)
+                var expected = snapshot
+                expected.sleepCaptureContext = context
+                expected.calendarTimeZoneIdentifier = copied.calendarTimeZoneIdentifier
+                XCTAssertEqual(copied, expected, "Every existing export option survives the handoff")
+            }
+        }
+    }
+
+    func testContinueUnverifiedIsNotAnEmptySuccessfulAssessmentOrFullHistory() {
+        let store = FakeHealthStore()
+        let sut = manager(store)
+        let request = scope(["steps", "stand_time"])
+        let result = sut.historyAssessmentNotCompleted(scope: request)
+        XCTAssertEqual(result.scope, request)
+        XCTAssertEqual(result.evidenceSource, "assessment_not_completed")
+        XCTAssertEqual(result.access(for: steps), .unassessed(reason: "assessment_not_completed"))
+        XCTAssertEqual(result.types.first { $0.id == HealthKitRecordCatalog.appleStandHourIdentifier }?.dependencyMetricIDs, ["stand_time"])
+        XCTAssertTrue(result.warningMessage.contains("did not finish"))
+        XCTAssertTrue(result.needsWarning)
+        XCTAssertTrue(store.historyRequestedIdentifiers.isEmpty)
+    }
+
+    func testProductionCoordinatorCancelledAssessmentCannotStartCapture() async {
+        let request = scope()
+        let sut = manager(FakeHealthStore())
+        let coordinator = HealthHistoryAssessmentCoordinator()
+        var pending: CheckedContinuation<HealthHistoryAssessment, Never>?
+        let task = Task {
+            await coordinator.assess(scope: request, isCurrent: { true }) {
+                await withCheckedContinuation { pending = $0 }
+            }
+        }
+        while pending == nil { await Task.yield() }
+        task.cancel()
+        pending?.resume(returning: await sut.assessHistoryAccess(scope: request))
+        let result = await task.value
+        XCTAssertNil(result)
+    }
+
+    func testOwnerDateDisclosureUsesFrozenCalendarWithoutChangingRequestedDates() async {
+        let store = FakeHealthStore()
+        let day = ISO8601DateFormatter().date(from: "2027-01-01T20:00:00Z")!
+        let endBoundary = ISO8601DateFormatter().date(from: "2027-01-01T18:00:00Z")!
+        store.historyOutcome = .boundaries([steps: endBoundary])
+        let request = HealthHistoryScope(metricIDs: ["steps"], startDate: day, endDate: day,
+            timeZoneIdentifier: "America/Los_Angeles", allAvailable: false, profileID: nil, rangeSemantics: .ownerDates)
+        let result = await manager(store).assessHistoryAccess(scope: request)
+        XCTAssertTrue(result.hasIntersectingLimit, "Capture includes the earlier hours of the requested owner day")
+        XCTAssertEqual(result.scope.startDate, day)
+        XCTAssertEqual(result.scope.endDate, day)
+        XCTAssertEqual(result.scope.sampleQueryStart, ISO8601DateFormatter().date(from: "2027-01-01T08:00:00Z"))
+    }
+
+    func testStaleRevisionScopeProfileAndTimeZoneCannotPublishPreview() async {
+        let result = await manager(FakeHealthStore()).assessHistoryAccess(scope: scope())
+        var revision = HealthHistoryAssessmentRevision()
+        let token = revision.id
+        XCTAssertTrue(revision.accepts(token, assessment: result, scope: scope()))
+        XCTAssertFalse(revision.accepts(token, assessment: result, scope: scope(["heart_rate_avg"])))
+        XCTAssertFalse(revision.accepts(token, assessment: result, scope: scope(profile: UUID())))
+        let utc = HealthHistoryScope(metricIDs: ["steps"], startDate: result.scope.startDate,
+                                    endDate: result.scope.endDate, timeZoneIdentifier: "UTC", allAvailable: false, profileID: nil)
+        XCTAssertFalse(revision.accepts(token, assessment: result, scope: utc))
+        revision.invalidate() // permission change, preset edit, or A → B → A
+        XCTAssertFalse(revision.accepts(token, assessment: result, scope: scope()))
+    }
+
     func testResolvedExportRequestKeepsOriginAndExactCaptureScopeWithoutPreferenceWrites() async throws {
         let suite = "HistoryResolvedRequest.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suite)!
@@ -311,7 +435,7 @@ final class HealthHistoryAssessmentTests: XCTestCase {
         let settings = AdvancedExportSettings(userDefaults: defaults)
         let origin = HealthHistoryExecutionSelection(scope: scope(allAvailable: true, profile: UUID()),
             settings: ExportSettingsSnapshot.from(settings), target: .localIPhoneFolder,
-            preset: .allTime, localDestinationURL: URL(fileURLWithPath: "/tmp/history-original"))
+            preset: .allTime, localDestinationURL: URL(fileURLWithPath: "/tmp/history-original"), sleepDayAttribution: .morningEnds)
         let before = defaults.persistentDomain(forName: suite) as NSDictionary?
         let coordinator = HealthHistoryAssessmentCoordinator()
         let request = coordinator.beginExportRequest(selection: origin)
@@ -327,6 +451,10 @@ final class HealthHistoryAssessmentTests: XCTestCase {
         XCTAssertEqual(resolved.selection.scope.profileID, origin.scope.profileID)
         XCTAssertEqual(resolved.selection.scope.metricIDs, origin.scope.metricIDs)
         XCTAssertEqual(resolved.selection.scope.timeZoneIdentifier, origin.scope.timeZoneIdentifier)
+        XCTAssertEqual(resolved.selection.sleepDayAttribution, .morningEnds)
+        let captureSettings = resolved.selection.makeCaptureSettings()
+        XCTAssertEqual(captureSettings.executionSleepCaptureContext?.sleepDayAttribution, .morningEnds)
+        XCTAssertEqual(captureSettings.exportTimeZoneOverride?.identifier, origin.scope.timeZoneIdentifier)
         XCTAssertEqual(resolved.selection.settings, origin.settings)
         XCTAssertEqual(resolved.selection.localDestinationURL, origin.localDestinationURL)
         XCTAssertTrue(coordinator.isCurrent(resolved, liveSelection: origin))
@@ -396,6 +524,8 @@ final class HealthHistoryAssessmentTests: XCTestCase {
         var altered = origin.settings
         altered.includeMetadata.toggle()
         let changed = [
+            HealthHistoryExecutionSelection(scope: origin.scope, settings: origin.settings, target: origin.target,
+                preset: origin.preset, localDestinationURL: origin.localDestinationURL, sleepDayAttribution: .morningEnds),
             HealthHistoryExecutionSelection(scope: origin.scope, settings: altered, target: origin.target, preset: origin.preset, localDestinationURL: origin.localDestinationURL),
             HealthHistoryExecutionSelection(scope: scope(["heart_rate_avg"], allAvailable: true), settings: origin.settings, target: origin.target, preset: origin.preset, localDestinationURL: origin.localDestinationURL),
             HealthHistoryExecutionSelection(scope: scope(allAvailable: true, profile: UUID()), settings: origin.settings, target: origin.target, preset: origin.preset, localDestinationURL: origin.localDestinationURL),
@@ -457,83 +587,5 @@ final class HealthHistoryAssessmentTests: XCTestCase {
                                    endDate: self.boundary)
         }
         XCTAssertNil(admission)
-    }
-
-    func testFrozenCaptureSettingsRetainMetricScopeEngineAuthorityAndCalendar() {
-        let defaults = UserDefaults(suiteName: "HistoryFrozenCaptureSettings")!
-        let live = AdvancedExportSettings(userDefaults: defaults)
-        live.metricSelection.enabledMetrics = ["steps"]
-        live.executionAppleExportEngineAuthorityIsFrozen = false
-        let snapshot = ExportSettingsSnapshot.from(live, appleExportEngineAuthorityIsFrozen: false)
-        let selection = HealthHistoryExecutionSelection(scope: scope(), settings: snapshot,
-                                                       target: .localIPhoneFolder, preset: .custom)
-        live.metricSelection.enabledMetrics = ["heart_rate_avg"]
-        let frozen = selection.makeCaptureSettings()
-        XCTAssertEqual(frozen.metricSelection.enabledMetrics, ["steps"])
-        XCTAssertEqual(frozen.exportTimeZoneOverride?.identifier, selection.scope.timeZoneIdentifier)
-        XCTAssertEqual(frozen.executionAppleExportEnginePin, snapshot.appleExportEnginePin)
-        XCTAssertEqual(frozen.executionAppleExportEngineAuthorityIsFrozen, snapshot.appleExportEngineAuthorityIsFrozen)
-        XCTAssertFalse(frozen.executionAppleExportEngineAuthorityIsFrozen, "History assessment must not freeze/repin M3 authority differently")
-        XCTAssertEqual(selection.scope.startDate, scope().startDate)
-        XCTAssertEqual(selection.scope.endDate, scope().endDate)
-    }
-
-    func testContinueUnverifiedIsNotAnEmptySuccessfulAssessmentOrFullHistory() {
-        let store = FakeHealthStore()
-        let sut = manager(store)
-        let request = scope(["steps", "stand_time"])
-        let result = sut.historyAssessmentNotCompleted(scope: request)
-        XCTAssertEqual(result.scope, request)
-        XCTAssertEqual(result.evidenceSource, "assessment_not_completed")
-        XCTAssertEqual(result.access(for: steps), .unassessed(reason: "assessment_not_completed"))
-        XCTAssertEqual(result.types.first { $0.id == HealthKitRecordCatalog.appleStandHourIdentifier }?.dependencyMetricIDs, ["stand_time"])
-        XCTAssertTrue(result.warningMessage.contains("did not finish"))
-        XCTAssertTrue(result.needsWarning)
-        XCTAssertTrue(store.historyRequestedIdentifiers.isEmpty)
-    }
-
-    func testProductionCoordinatorCancelledAssessmentCannotStartCapture() async {
-        let request = scope()
-        let sut = manager(FakeHealthStore())
-        let coordinator = HealthHistoryAssessmentCoordinator()
-        var pending: CheckedContinuation<HealthHistoryAssessment, Never>?
-        let task = Task {
-            await coordinator.assess(scope: request, isCurrent: { true }) {
-                await withCheckedContinuation { pending = $0 }
-            }
-        }
-        while pending == nil { await Task.yield() }
-        task.cancel()
-        pending?.resume(returning: await sut.assessHistoryAccess(scope: request))
-        let result = await task.value
-        XCTAssertNil(result)
-    }
-
-    func testOwnerDateDisclosureUsesFrozenCalendarWithoutChangingRequestedDates() async {
-        let store = FakeHealthStore()
-        let day = ISO8601DateFormatter().date(from: "2027-01-01T20:00:00Z")!
-        let endBoundary = ISO8601DateFormatter().date(from: "2027-01-01T18:00:00Z")!
-        store.historyOutcome = .boundaries([steps: endBoundary])
-        let request = HealthHistoryScope(metricIDs: ["steps"], startDate: day, endDate: day,
-            timeZoneIdentifier: "America/Los_Angeles", allAvailable: false, profileID: nil, rangeSemantics: .ownerDates)
-        let result = await manager(store).assessHistoryAccess(scope: request)
-        XCTAssertTrue(result.hasIntersectingLimit, "Capture includes the earlier hours of the requested owner day")
-        XCTAssertEqual(result.scope.startDate, day)
-        XCTAssertEqual(result.scope.endDate, day)
-        XCTAssertEqual(result.scope.sampleQueryStart, ISO8601DateFormatter().date(from: "2027-01-01T08:00:00Z"))
-    }
-
-    func testStaleRevisionScopeProfileAndTimeZoneCannotPublishPreview() async {
-        let result = await manager(FakeHealthStore()).assessHistoryAccess(scope: scope())
-        var revision = HealthHistoryAssessmentRevision()
-        let token = revision.id
-        XCTAssertTrue(revision.accepts(token, assessment: result, scope: scope()))
-        XCTAssertFalse(revision.accepts(token, assessment: result, scope: scope(["heart_rate_avg"])))
-        XCTAssertFalse(revision.accepts(token, assessment: result, scope: scope(profile: UUID())))
-        let utc = HealthHistoryScope(metricIDs: ["steps"], startDate: result.scope.startDate,
-                                    endDate: result.scope.endDate, timeZoneIdentifier: "UTC", allAvailable: false, profileID: nil)
-        XCTAssertFalse(revision.accepts(token, assessment: result, scope: utc))
-        revision.invalidate() // permission change, preset edit, or A → B → A
-        XCTAssertFalse(revision.accepts(token, assessment: result, scope: scope()))
     }
 }

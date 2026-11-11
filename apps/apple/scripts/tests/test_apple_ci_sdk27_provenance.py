@@ -70,17 +70,15 @@ class SDK27ProvenanceTests(unittest.TestCase):
             with self.subTest(receipt=malformed):
                 self.assertNotEqual(self.compare(malformed, malformed).returncode, 0)
 
-    def test_workflow_consumers_all_use_the_comparator_after_qualification(self):
-        workflow = SCRIPT.parents[3] / ".github/workflows/apple-ci.yml"
-        text = workflow.read_text()
-        self.assertEqual(text.count("python3 scripts/compare-history-sdk27-receipts.py"), 4)
-        self.assertNotIn("cmp build/logs/history-sdk27-receipt.txt", text)
-        self.assertEqual(text.count("bash scripts/qualify-history-authorization-sdk27.sh"), 5)
-        lines = text.splitlines()
-        for index, line in enumerate(lines):
-            if "python3 scripts/compare-history-sdk27-receipts.py" in line:
-                self.assertEqual(lines[index - 1].strip(),
-                                 "bash scripts/qualify-history-authorization-sdk27.sh")
+    def test_sdk_qualification_remains_an_explicit_diagnostic_not_a_portable_dependency(self):
+        # The native qualification utilities remain usable, but their former
+        # five-job hosted topology is no longer a regression requirement.
+        repo = SCRIPT.parents[3]
+        self.assertTrue(SCRIPT.with_name('qualify-history-authorization-sdk27.sh').is_file())
+        text = (repo / '.github/workflows/ci.yml').read_text()
+        self.assertNotIn('qualify-history-authorization-sdk27.sh', text)
+        self.assertNotIn('compare-history-sdk27-receipts.py', text)
+        self.assertIn('scripts/ci/run.py', text)
 
 
 if __name__ == "__main__":

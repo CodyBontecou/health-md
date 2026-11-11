@@ -44,6 +44,32 @@ final class ExportLastNDaysIntentTests: XCTestCase {
         XCTAssertEqual(ExportLastNDaysIntent(days: 500).days, 500)
     }
 
+    func testIncludeTodayDefaultsOffForExistingShortcuts() {
+        XCTAssertFalse(ExportLastNDaysIntent().includeToday)
+        XCTAssertFalse(ExportLastNDaysIntent(days: 7).includeToday)
+        XCTAssertTrue(ExportLastNDaysIntent(days: 1, includeToday: true).includeToday)
+    }
+
+    func testIncludeTodayShiftsWindowWithoutIncreasingDayCount() {
+        let dates = ExportLastNDaysIntent.exportDates(days: 7, includeToday: true,
+            now: date(2026, 5, 11, hour: 8), calendar: calendar)
+        XCTAssertEqual(dates.count, 7)
+        XCTAssertEqual(dates.first, date(2026, 5, 5))
+        XCTAssertEqual(dates.last, date(2026, 5, 11))
+        XCTAssertEqual(ExportLastNDaysIntent.exportDates(days: 0, includeToday: true,
+            now: date(2026, 5, 11, hour: 8), calendar: calendar), [date(2026, 5, 11)])
+    }
+
+    func testIncludeTodayUsesCalendarDaysAcrossDST() {
+        var localCalendar = calendar
+        localCalendar.timeZone = TimeZone(identifier: "America/New_York")!
+        let now = localCalendar.date(from: DateComponents(year: 2026, month: 3, day: 9, hour: 8))!
+        let dates = ExportLastNDaysIntent.exportDates(days: 3, includeToday: true, now: now, calendar: localCalendar)
+        XCTAssertEqual(dates.map { localCalendar.component(.day, from: $0) }, [7, 8, 9])
+        XCTAssertTrue(dates.allSatisfy { localCalendar.startOfDay(for: $0) == $0 })
+        XCTAssertEqual(dates[2].timeIntervalSince(dates[1]), 23 * 3600)
+    }
+
     private var calendar: Calendar {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(secondsFromGMT: 0)!
@@ -170,7 +196,6 @@ final class ExportIntentRunnerTests: XCTestCase {
         XCTAssertEqual(harness.stopVaultAccessCount, 0)
         XCTAssertEqual(harness.exportDatesCount, 0)
         XCTAssertEqual(harness.recordExportUseCount, 0)
-        XCTAssertEqual(harness.trackExportSucceededCount, 0)
         XCTAssertEqual(harness.updateScheduleLastExportCount, 0)
         XCTAssertTrue(harness.recordedResults.isEmpty)
     }
@@ -189,7 +214,6 @@ final class ExportIntentRunnerTests: XCTestCase {
         _ = await ExportIntentRunner.run(dates: [yesterday], dependencies: harness.dependencies)
 
         XCTAssertEqual(harness.recordExportUseCount, 0)
-        XCTAssertEqual(harness.trackExportSucceededCount, 0)
         XCTAssertEqual(harness.updateScheduleLastExportCount, 0)
         XCTAssertTrue(harness.recordedResults.isEmpty)
     }
@@ -220,7 +244,6 @@ final class ExportIntentRunnerTests: XCTestCase {
         XCTAssertEqual(remainingDates, [secondDate])
         XCTAssertEqual(harness.recordedResults.count, 1)
         XCTAssertEqual(harness.recordExportUseCount, 1)
-        XCTAssertEqual(harness.trackExportSucceededCount, 1)
         XCTAssertEqual(harness.updateScheduleLastExportCount, 0)
     }
 
@@ -247,7 +270,6 @@ final class ExportIntentRunnerTests: XCTestCase {
         XCTAssertEqual(remainingDates, [requestedDate])
         XCTAssertTrue(harness.recordedResults.isEmpty)
         XCTAssertEqual(harness.recordExportUseCount, 0)
-        XCTAssertEqual(harness.trackExportSucceededCount, 0)
         XCTAssertEqual(harness.updateScheduleLastExportCount, 0)
     }
 
@@ -273,7 +295,6 @@ final class ExportIntentRunnerTests: XCTestCase {
         XCTAssertEqual(dailyNoteUpdateCount, 0)
         XCTAssertEqual(harness.recordedResults.count, 1)
         XCTAssertEqual(harness.recordExportUseCount, 1)
-        XCTAssertEqual(harness.trackExportSucceededCount, 1)
         XCTAssertEqual(harness.updateScheduleLastExportCount, 1)
         XCTAssertTrue((try? harness.pendingStore.loadAll().isEmpty) ?? false)
     }
@@ -291,6 +312,7 @@ final class ExportIntentRunnerTests: XCTestCase {
             dates: requestedDates,
             source: .shortcut,
             createdAt: date(2026, 5, 13, hour: 9),
+            sleepCaptureContext: AppleSleepCaptureContext(timeZone: calendar.timeZone, sleepDayAttribution: .nightBegins),
             calendar: calendar
         )
         let pendingStore = SpyPendingExportStore(requests: [request])
@@ -344,7 +366,6 @@ final class ExportIntentRunnerTests: XCTestCase {
         let notificationScheduler = InspectableExportNotificationScheduler()
         var recordedResults: [ExportOrchestrator.ExportResult] = []
         var recordExportUseCount = 0
-        var trackExportSucceededCount = 0
         var updateScheduleLastExportCount = 0
         var startVaultAccessCount = 0
         var stopVaultAccessCount = 0
@@ -375,7 +396,7 @@ final class ExportIntentRunnerTests: XCTestCase {
             ExportIntentRunner.Dependencies(
                 refreshPurchaseStatus: {},
                 canExport: { true },
-                trackExportBlockedByQuota: {},
+
                 hasVaultAccess: { [weak self] in
                     self?.destinationEvents.append("hasAccess")
                     return true
@@ -399,15 +420,13 @@ final class ExportIntentRunnerTests: XCTestCase {
                     self?.exportDatesCount += 1
                     return result
                 },
-                recordResult: { [weak self] result, _, _, _, _, _ in
+                recordResult: { [weak self] result, _, _, _, _, _, _ in
                     self?.recordedResults.append(result)
                 },
                 recordExportUse: { [weak self] in
                     self?.recordExportUseCount += 1
                 },
-                trackExportSucceeded: { [weak self] _ in
-                    self?.trackExportSucceededCount += 1
-                },
+
                 updateScheduleLastExport: { [weak self] in
                     self?.updateScheduleLastExportCount += 1
                 },

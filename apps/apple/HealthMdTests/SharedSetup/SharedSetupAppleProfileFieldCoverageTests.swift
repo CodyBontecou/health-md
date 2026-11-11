@@ -5,6 +5,51 @@ import XCTest
 
 @MainActor
 final class SharedSetupAppleProfileFieldCoverageTests: XCTestCase {
+    func testRecoveryAuditRetainsEveryFrozenV1AndV2Classification() throws {
+        let currentURL = try ledgerURL()
+        let directory = currentURL.deletingLastPathComponent()
+        let v1URL = directory.appendingPathComponent("apple-profile-field-coverage.json")
+        let v2URL = directory.appendingPathComponent("apple-profile-field-coverage-v2.json")
+        let v1 = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: v1URL)) as? [String: Any])
+        let v2Data = try Data(contentsOf: v2URL)
+        XCTAssertEqual(
+            SHA256.hash(data: v2Data).map { String(format: "%02x", $0) }.joined(),
+            "35cc4677943f23372991792d48250d9e0871443e4bd2d686966aa03d12e0de8f"
+        )
+        let v2 = try XCTUnwrap(JSONSerialization.jsonObject(with: v2Data) as? [String: Any])
+        let current = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: currentURL)) as? [String: Any])
+        let v1Rows = try XCTUnwrap(v1["fields"] as? [NSDictionary])
+        let v2Rows = try XCTUnwrap(v2["fields"] as? [NSDictionary])
+        let currentRows = try XCTUnwrap(current["fields"] as? [NSDictionary]) + v1Rows.filter {
+            $0["source_type"] as? String == "ExportSettingsSnapshot" && $0["field"] as? String == "sleepCaptureContext"
+        }
+        // Revision 1 gained approved minute-persistence exclusions after the
+        // presentation audit v2 was frozen. Preserve both existing inventories.
+        for row in v1Rows {
+            XCTAssertTrue(currentRows.contains(row), "Every approved revision 1 classification must survive")
+        }
+        XCTAssertEqual(Array(currentRows.prefix(v2Rows.count)), v2Rows)
+        let historicalIdentities = Set((v1Rows + v2Rows).map {
+            "\($0["source_type"] ?? "").\($0["field"] ?? "")"
+        })
+        // Two rows postdate v1/v2: the recovery calendar authority and per-metric native detail.
+        XCTAssertEqual(currentRows.count, historicalIdentities.count + 2)
+        let recovery = try XCTUnwrap(try loadLedger().fields.first {
+            $0.sourceType == "ExportSettingsSnapshot" && $0.field == "historicalCalendarRollupPeriods"
+        })
+        XCTAssertEqual(recovery.fieldKind, .storedOnly)
+        XCTAssertEqual(recovery.disposition, .prohibited)
+        XCTAssertNil(recovery.serializedKey)
+        XCTAssertNil(recovery.contractPath)
+
+        let nativeDetail = try XCTUnwrap(try loadLedger().fields.first {
+            $0.sourceType == "MetricSelectionSnapshot" && $0.field == "nativeDetailMetricIDs"
+        })
+        XCTAssertEqual(nativeDetail.fieldKind, .stored)
+        XCTAssertEqual(nativeDetail.disposition, .localOnly)
+        XCTAssertNil(nativeDetail.contractPath)
+    }
+
     func testLedgerExactlyCoversCurrentStoredAndEncodedFields() throws {
         let ledger = try loadLedger()
         let inventories = try makeNativeInventories()
@@ -19,7 +64,7 @@ final class SharedSetupAppleProfileFieldCoverageTests: XCTestCase {
 
         for inventory in inventories {
             let rows = ledger.fields.filter { $0.sourceType == inventory.sourceType }
-            let storedRows = rows.filter { $0.fieldKind == .stored }
+            let storedRows = rows.filter { $0.fieldKind == .stored || $0.fieldKind == .storedOnly }
             let expectedStoredFields = Set(storedRows.map(\.field))
             XCTAssertEqual(
                 inventory.storedFields,
@@ -34,7 +79,7 @@ final class SharedSetupAppleProfileFieldCoverageTests: XCTestCase {
             let encodedRows = rows.filter {
                 $0.fieldKind == .stored || $0.fieldKind == .encodedOnly
             }
-            let expectedEncodedKeys = Set(encodedRows.map(\.serializedKey))
+            let expectedEncodedKeys = Set(encodedRows.compactMap(\.serializedKey))
             XCTAssertEqual(
                 inventory.encodedKeys,
                 expectedEncodedKeys,
@@ -56,7 +101,7 @@ final class SharedSetupAppleProfileFieldCoverageTests: XCTestCase {
         let ledger = try loadLedger()
 
         XCTAssertEqual(ledger.schema, "healthmd.shared_setup.apple_profile_field_coverage")
-        XCTAssertEqual(ledger.schemaVersion, 2)
+        XCTAssertEqual(ledger.schemaVersion, 3)
         XCTAssertEqual(ledger.targetContract.schema, "healthmd.shared_setup")
         XCTAssertEqual(ledger.targetContract.schemaVersion, 2)
         XCTAssertEqual(Set(ledger.fieldKinds), Set(FieldKind.allCases))
@@ -88,6 +133,14 @@ final class SharedSetupAppleProfileFieldCoverageTests: XCTestCase {
                 )
             }
 
+            if row.fieldKind == .storedOnly {
+                XCTAssertEqual(row.disposition, .prohibited)
+                XCTAssertEqual(row.field, "historicalCalendarRollupPeriods")
+                XCTAssertNil(row.serializedKey)
+            } else {
+                XCTAssertFalse(try XCTUnwrap(row.serializedKey).isEmpty)
+            }
+
             if row.fieldKind == .encodedOnly || row.fieldKind == .decodeOnly {
                 XCTAssertTrue(
                     row.disposition == .derivedOrLegacy || row.disposition == .prohibited,
@@ -117,7 +170,7 @@ final class SharedSetupAppleProfileFieldCoverageTests: XCTestCase {
         let actualAliases = Set(
             ledger.fields
                 .filter { $0.fieldKind == .decodeOnly }
-                .map { "\($0.sourceType).\($0.serializedKey)" }
+                .map { "\($0.sourceType).\($0.serializedKey ?? "")" }
         )
         let expectedAliases: Set<String> = [
             "ExportSettingsSnapshot.archiveMarkdownExports",
@@ -154,12 +207,19 @@ final class SharedSetupAppleProfileFieldCoverageTests: XCTestCase {
     }
 
     func testMinuteRefreshAuditPreservesHistoricalV2AndLocalPersistenceBoundary() throws {
-        let historical = try Data(contentsOf: ledgerURL())
+        let historicalURL = try ledgerURL().deletingLastPathComponent()
+            .appendingPathComponent("apple-profile-field-coverage-v2.json")
+        let historical = try Data(contentsOf: historicalURL)
         XCTAssertEqual(
             SHA256.hash(data: historical).map { String(format: "%02x", $0) }.joined(),
             "35cc4677943f23372991792d48250d9e0871443e4bd2d686966aa03d12e0de8f"
         )
-        let rows = Self.minuteRefreshPersistenceFields
+        let minuteFields: Set<String> = [
+            "todayRefreshIntervalMinutes", "todayRefreshPersistenceVersion", "todayRefreshRequestedV2",
+        ]
+        let rows = try loadLedger().fields.filter {
+            $0.sourceType == "ScheduledExportEntry" && minuteFields.contains($0.field)
+        }
         XCTAssertEqual(Set(rows.map(\.field)), [
             "todayRefreshIntervalMinutes", "todayRefreshPersistenceVersion", "todayRefreshRequestedV2",
         ])
@@ -169,7 +229,7 @@ final class SharedSetupAppleProfileFieldCoverageTests: XCTestCase {
             XCTAssertNil(row.contractPath, "Local minute persistence must not claim frozen Shared Setup v2 authority")
             if row.field == "todayRefreshIntervalMinutes" {
                 XCTAssertEqual(row.fieldKind, .stored)
-                XCTAssertEqual(row.disposition, .localOnly)
+                XCTAssertEqual(row.disposition, .prohibited)
             } else {
                 XCTAssertEqual(row.fieldKind, .encodedOnly)
                 XCTAssertEqual(row.disposition, .prohibited)
@@ -177,26 +237,52 @@ final class SharedSetupAppleProfileFieldCoverageTests: XCTestCase {
         }
     }
 
-    // Native minute scheduling adds no authority to frozen Shared Setup v2.
-    // Audit its exact persistence fields alongside the unchanged historical ledger.
-    private static let minuteRefreshPersistenceFields: [CoverageLedger.Field] = [
+    func testSleepCaptureAuditDoesNotGrantPortableAuthority() throws {
+        XCTAssertEqual(Self.sleepCapturePersistenceFields.count, 2)
+        let row = try XCTUnwrap(Self.sleepCapturePersistenceFields.first { $0.field == "sleepCaptureContext" })
+        XCTAssertEqual(row.sourceType, "ExportSettingsSnapshot")
+        XCTAssertEqual(row.field, "sleepCaptureContext")
+        XCTAssertEqual(row.serializedKey, row.field)
+        XCTAssertEqual(row.fieldKind, .stored)
+        XCTAssertEqual(row.disposition, .prohibited)
+        XCTAssertNil(row.contractPath)
+    }
+
+    // A frozen job's sleep authority belongs only to its durable journal.
+    // Ordinary profile/wire exclusion is exercised by AppleSleepCaptureContextTests.
+    private static let sleepCapturePersistenceFields: [CoverageLedger.Field] = [
         .init(
-            sourceType: "ScheduledExportEntry", field: "todayRefreshIntervalMinutes",
-            fieldKind: .stored, serializedKey: "todayRefreshIntervalMinutes",
+            sourceType: "ExportSettingsSnapshot", field: "externalProviderCaptureAuthority",
+            fieldKind: .stored, serializedKey: "externalProviderCaptureAuthority",
+            disposition: .prohibited, contractPath: nil,
+            reason: "Private accepted provider connections belong only to local job journals; portable profiles and wire settings cannot carry account authority."
+        ),
+        .init(
+            sourceType: "ExportSettingsSnapshot", field: "sleepCaptureContext",
+            fieldKind: .stored, serializedKey: "sleepCaptureContext",
+            disposition: .prohibited, contractPath: nil,
+            reason: "Immutable native job capture authority is journal-only and cannot be imported as portable profile authority."
+        ),
+    ]
+
+    // Added after the v3 ledger froze. The shared setup format does not change.
+    private static let localSchedulePreferenceFields: [CoverageLedger.Field] = [
+        .init(
+            sourceType: "ScheduledExportEntry", field: "includeToday",
+            fieldKind: .stored, serializedKey: "includeToday",
             disposition: .localOnly, contractPath: nil,
-            reason: "Native 30/60-minute cadence is not represented by the frozen v2 hour-only schedule grammar."
+            reason: "Include Today is a local schedule preference; shared setups do not carry it, so imports default to off."
         ),
+    ]
+
+    // Per-group compatibility detail was added after the v3 ledger froze. Frozen
+    // Shared Setup v2 cannot represent it, so setup files carry only the default level.
+    private static let perGroupDetailFields: [CoverageLedger.Field] = [
         .init(
-            sourceType: "ScheduledExportEntry", field: "todayRefreshPersistenceVersion",
-            fieldKind: .encodedOnly, serializedKey: "todayRefreshPersistenceVersion",
+            sourceType: "ExportSettingsSnapshot", field: "compatibilityDetailOverrides",
+            fieldKind: .stored, serializedKey: "compatibilityDetailOverrides",
             disposition: .prohibited, contractPath: nil,
-            reason: "Native decoder migration marker must not become portable schedule intent or activation authority."
-        ),
-        .init(
-            sourceType: "ScheduledExportEntry", field: "todayRefreshRequestedV2",
-            fieldKind: .encodedOnly, serializedKey: "todayRefreshRequestedV2",
-            disposition: .prohibited, contractPath: nil,
-            reason: "Native consent-preserving minute persistence marker must not activate an imported Shared Setup schedule."
+            reason: "Per-group detail overrides cannot be represented by frozen Shared Setup v2 compatibility_detail; portable adoption requires a reviewed successor."
         ),
     ]
 
@@ -209,7 +295,8 @@ final class SharedSetupAppleProfileFieldCoverageTests: XCTestCase {
             schema: historical.schema, schemaVersion: historical.schemaVersion,
             targetContract: historical.targetContract, fieldKinds: historical.fieldKinds,
             dispositions: historical.dispositions,
-            fields: historical.fields + Self.minuteRefreshPersistenceFields
+            fields: historical.fields + Self.sleepCapturePersistenceFields + Self.localSchedulePreferenceFields
+                + Self.perGroupDetailFields
         )
     }
 
@@ -217,7 +304,7 @@ final class SharedSetupAppleProfileFieldCoverageTests: XCTestCase {
         var directory = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
         while directory.path != "/" {
             let candidate = directory.appendingPathComponent(
-                "packages/contracts/shared-setup/v2/apple-profile-field-coverage-v2.json"
+                "packages/contracts/shared-setup/v2/apple-profile-field-coverage-v3.json"
             )
             if FileManager.default.fileExists(atPath: candidate.path) {
                 return candidate
@@ -308,12 +395,14 @@ final class SharedSetupAppleProfileFieldCoverageTests: XCTestCase {
         )
         let metricSelection = MetricSelectionSnapshot(
             enabledMetricIDs: ["steps"],
-            enabledCategoryIDs: ["activity"]
+            enabledCategoryIDs: ["activity"],
+            // Non-empty so the conditionally encoded key appears in the inventory.
+            nativeDetailMetricIDs: ["steps"]
         )
         let enginePin = try makeSyntheticAppleExportEnginePin(
             calendarTimeZoneIdentifier: "America/Los_Angeles"
         )
-        let snapshot = ExportSettingsSnapshot(
+        var snapshot = ExportSettingsSnapshot(
             exportFormats: [.markdown, .obsidianBases, .json, .csv],
             includeMetadata: false,
             groupByCategory: false,
@@ -336,6 +425,11 @@ final class SharedSetupAppleProfileFieldCoverageTests: XCTestCase {
             appleExportEnginePin: enginePin,
             appleExportEngineAuthorityIsFrozen: true,
             calendarTimeZoneIdentifier: "America/Los_Angeles"
+        )
+        snapshot.compatibilityDetailOverrides = [.sleep: .detailed]
+        snapshot.externalProviderCaptureAuthority = ExternalProviderCaptureAuthority(connections: ["whoop": UUID()])
+        snapshot.sleepCaptureContext = AppleSleepCaptureContext(
+            timeZone: TimeZone(identifier: "America/Los_Angeles")!, sleepDayAttribution: .nightBegins
         )
         let profile = ExportProfile(
             id: profileID,
@@ -413,7 +507,14 @@ final class SharedSetupAppleProfileFieldCoverageTests: XCTestCase {
         let storedFields = Set(
             Mirror(reflecting: value).children.compactMap(\.label)
         )
-        let object = try JSONSerialization.jsonObject(with: JSONEncoder().encode(value))
+        let encoder = JSONEncoder()
+        if value is ExportSettingsSnapshot {
+            // Inventory includes internal durable fields. Their ledger rows are
+            // prohibited, and ordinary profile/wire omission is checked by the
+            // dedicated sleep-authority serialization controls.
+            encoder.userInfo[ExportSettingsSnapshot.durableSleepContextEncoding] = true
+        }
+        let object = try JSONSerialization.jsonObject(with: encoder.encode(value))
         let encoded = try XCTUnwrap(
             object as? [String: Any],
             "Synthetic \(sourceType) must encode as a keyed object."
@@ -587,7 +688,7 @@ private struct CoverageLedger: Decodable {
         let sourceType: String
         let field: String
         let fieldKind: FieldKind
-        let serializedKey: String
+        let serializedKey: String?
         let disposition: Disposition
         let contractPath: String?
         let reason: String
@@ -615,6 +716,7 @@ private struct CoverageLedger: Decodable {
 
 private enum FieldKind: String, Decodable, CaseIterable {
     case stored
+    case storedOnly = "stored_only"
     case encodedOnly = "encoded_only"
     case decodeOnly = "decode_only"
 }
@@ -633,6 +735,6 @@ private enum CoverageTestError: LocalizedError {
     case ledgerNotFound
 
     var errorDescription: String? {
-        "Could not locate packages/contracts/shared-setup/v2/apple-profile-field-coverage-v2.json"
+        "Could not locate packages/contracts/shared-setup/v2/apple-profile-field-coverage-v3.json"
     }
 }

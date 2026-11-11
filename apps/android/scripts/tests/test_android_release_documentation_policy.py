@@ -5,6 +5,8 @@ import re
 import unittest
 from pathlib import Path
 
+import yaml
+
 ROOT = Path(__file__).resolve().parents[4]
 ANDROID = ROOT / "apps/android"
 # Vendored third-party gems (vendor/bundle) are dependencies, not release
@@ -189,10 +191,16 @@ class AndroidReleaseDocumentationPolicyTest(unittest.TestCase):
         self.assertEqual([], failures, "workflow bypasses paired Play scripts:\n" + "\n".join(failures))
 
     def test_scanned_cross_component_runbooks_trigger_main_push_ci(self) -> None:
-        ci = (ROOT / ".github/workflows/android-ci.yml").read_text()
-        self.assertIn("- '.github/workflows/README.md'", ci)
-        self.assertIn("- '.github/workflows/android-*.yml'", ci)
-        self.assertIn("- 'docs/migration/**'", ci)
+        wrapper = yaml.safe_load((ROOT / ".github/workflows/android-ci.yml").read_text())
+        self.assertEqual("./.github/workflows/ci.yml", wrapper["jobs"]["test"]["uses"])
+        ci = yaml.safe_load((ROOT / ".github/workflows/ci.yml").read_text())
+        # PyYAML's YAML 1.1 loader treats the GitHub Actions `on` key as True.
+        triggers = ci.get("on", ci.get(True))
+        self.assertIn("main", triggers["push"]["branches"])
+        for event in ("push", "pull_request"):
+            config = triggers[event] or {}
+            self.assertNotIn("paths", config)
+            self.assertNotIn("paths-ignore", config)
 
 
 if __name__ == "__main__":

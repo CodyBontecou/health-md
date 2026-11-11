@@ -62,7 +62,7 @@ When Markdown and Obsidian Bases are both selected, the Bases file automatically
 | Problem | Likely cause | Fix |
 |---|---|---|
 | "No formats selected" when exporting | Every format card was toggled off | Enable at least one format in **Export Format** |
-| Only Markdown appeared | Other formats not toggled on for this profile | Check the format cards on the Export tab (profiles keep their own selection) |
+| Only Markdown appeared | Other formats not toggled on for this profile | Check the format cards on the Export now screen (profiles keep their own selection) |
 | Two `.md` files per day and one looks empty | One is the Bases file; it contains only YAML frontmatter | Expected — Bases notes are query-only, open them in a database view |
 
 ## Video outline

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="m3_schedule_clinic_destination_title">Clinic destination</string>
+    <string name="m3_schedule_clinic_destination_body">Your clinic manages this destination. Use Clinic access to select it or manage sharing. Other destinations require your own Health.md access.</string>
+</resources>

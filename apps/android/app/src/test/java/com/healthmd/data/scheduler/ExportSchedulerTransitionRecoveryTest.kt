@@ -260,6 +260,7 @@ class ExportSchedulerTransitionRecoveryTest {
     ): ExportScheduler {
         val settingsRepository = mockk<SettingsRepository>(relaxed = true)
         coEvery { settingsRepository.getExportSettings() } answers { currentSettings() }
+        coEvery { settingsRepository.getSleepDayAttribution() } returns com.healthmd.domain.model.SleepDayAttribution.NIGHT_BEGINS
         val credentialStore = mockk<APIExportCredentialStore>(relaxed = true)
         coEvery { credentialStore.destinationFingerprint(any()) } returns API_FINGERPRINT
         val enginePinPlanner = mockk<ExportEnginePinPlanner>()
@@ -271,6 +272,7 @@ class ExportSchedulerTransitionRecoveryTest {
             context = context,
             workManager = workManager,
             settingsRepository = settingsRepository,
+            healthRepository = mockk(relaxed = true),
             apiCredentialStore = credentialStore,
             stateStore = stateStore,
             timeCalculator = ScheduledExportTimeCalculator(),

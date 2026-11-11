@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Advanced settings list-group headings (Material 3 pass). -->
+    <string name="m3_advanced_group_notes">笔记和条目</string>
+    <string name="m3_advanced_group_detail">时间序列数据</string>
+</resources>

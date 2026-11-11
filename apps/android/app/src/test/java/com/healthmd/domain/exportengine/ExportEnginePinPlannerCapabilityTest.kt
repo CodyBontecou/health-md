@@ -44,6 +44,18 @@ class ExportEnginePinPlannerCapabilityTest {
     }
 
     @Test
+    fun gatewayPinsUseFolderCapabilitiesWithoutChangingTheDestination() {
+        val gateway = simpleSettings().copy(exportTarget = ExportTarget.AGENT_DATA_GATEWAY)
+        assertThat(ExportEnginePinPlanner.supportsNewScheduledPin(gateway, ExportTarget.AGENT_DATA_GATEWAY)).isTrue()
+        for (unsupported in listOf(gateway.copy(writeMode = WriteMode.APPEND),
+            gateway.copy(dailyNoteInjection = DailyNoteInjectionSettings(enabled = true)),
+            gateway.copy(exportMode = ExportMode.RAW_SNAPSHOT))) {
+            assertThat(ExportEnginePinPlanner.supportsNewScheduledPin(unsupported, ExportTarget.AGENT_DATA_GATEWAY)).isFalse()
+        }
+        assertThat(gateway.exportTarget).isEqualTo(ExportTarget.AGENT_DATA_GATEWAY)
+    }
+
+    @Test
     fun apiPinsRequireCompatibilityRecordsAndAtLeastOneFormatButIgnoreFileWriteMode() {
         val supported = simpleSettings().copy(writeMode = WriteMode.APPEND)
 

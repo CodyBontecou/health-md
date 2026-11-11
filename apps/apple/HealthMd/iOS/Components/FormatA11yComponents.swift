@@ -122,18 +122,36 @@ struct FormatSelectionControl<Value: Hashable>: View {
     }
 }
 
-/// Wrapping value content; the selection menu owns the shared button style.
+/// This is the real Menu label, separately measurable without a menu-renderer placeholder.
 struct FormatSelectionValueLabel: View {
     let value: String
 
     var body: some View {
-        SecondaryMenuLabel {
+        HStack(alignment: .center, spacing: Spacing.xs) {
             Text(value)
+                .font(.footnote.weight(.medium))
+                .foregroundStyle(Color.textPrimary)
                 .lineLimit(nil)
                 .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: .infinity, alignment: .leading)
+            Image(systemName: "chevron.up.chevron.down")
+                .font(.caption2.weight(.bold))
+                .foregroundStyle(Color.textSecondary)
+                .accessibilityHidden(true)
         }
         .multilineTextAlignment(.leading)
+        .padding(.horizontal, Spacing.sm)
+        .padding(.vertical, Spacing.sm)
+        .frame(minWidth: 44, maxWidth: .infinity, minHeight: 44, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(Color.bgSecondary)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .strokeBorder(Color.borderSubtle, lineWidth: 1)
+        )
+        .contentShape(Rectangle())
     }
 }
 
@@ -216,7 +234,7 @@ struct FormatTextFieldControl: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.sm) {
-            Text(title)
+            Text(LocalizedStringKey(title))
                 .font(.body.weight(.semibold))
                 .foregroundStyle(Color.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -251,7 +269,7 @@ struct FormatTextFieldControl: View {
                 // The native glyph editor keeps its intrinsic height. The entire
                 // padded 44pt-or-larger control must also acquire editing focus.
                 .simultaneousGesture(TapGesture().onEnded { isFocused = true })
-                .accessibilityLabel(accessibilityLabel)
+                .accessibilityLabel(LocalizedStringKey(accessibilityLabel))
                 .accessibilityValue(text.isEmpty ? defaultValue : text)
                 .accessibilityIdentifier("format.input.\(title)")
 
@@ -305,12 +323,17 @@ struct FormatFrontmatterFieldContent<RenameButton: View>: View {
     @Binding var isEnabled: Bool
     @ViewBuilder var renameButton: () -> RenameButton
 
-    private var renamed: Bool { customKey != originalKey && !customKey.isEmpty }
+    @Environment(\.locale) private var locale
+
+    private var copy: FrontmatterFieldPresentation {
+        FrontmatterFieldPresentation(originalKey: originalKey, customKey: customKey,
+                                     isEnabled: isEnabled, locale: locale)
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.xs) {
             Toggle(isOn: $isEnabled) {
-                Text(originalKey)
+                Text(verbatim: copy.originalKey)
                     .font(Typography.monoEmphasis())
                     .foregroundStyle(Color.textPrimary) // Off is still an operable control.
                     .fixedSize(horizontal: false, vertical: true)
@@ -319,20 +342,20 @@ struct FormatFrontmatterFieldContent<RenameButton: View>: View {
             }
             .toggleStyle(A11ySwitchToggleStyle())
             .tint(Color.accent)
-            .accessibilityLabel(renamed ? "\(originalKey) renamed to \(customKey)" : originalKey)
-            .accessibilityValue(isEnabled ? "Enabled" : "Disabled")
-            .accessibilityHint("Double tap to \(isEnabled ? "disable" : "enable") this field")
+            .accessibilityLabel(copy.accessibilityLabel)
+            .accessibilityValue(copy.accessibilityValue)
+            .accessibilityHint(copy.accessibilityHint)
             .accessibilityIdentifier("format.field.toggle.\(originalKey)")
 
-            if renamed {
-                Text("Renamed to \(customKey)")
+            if copy.renamed {
+                Text(verbatim: copy.detail)
                     .font(.footnote)
                     .foregroundStyle(Color.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
                     .textSelection(.enabled)
                     .accessibilityHidden(true) // Included in the toggle's full label.
             } else {
-                Text(isEnabled ? "Included in frontmatter" : "Not exported")
+                Text(verbatim: copy.detail)
                     .font(.footnote)
                     .foregroundStyle(Color.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -353,12 +376,12 @@ struct FormatFrontmatterEntry: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.xs) {
-            Text(key)
+            Text(verbatim: key)
                 .font(Typography.monoEmphasis())
                 .foregroundStyle(Color.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
                 .textSelection(.enabled)
-            Text(value)
+            Text(verbatim: value)
                 .font(.footnote)
                 .foregroundStyle(Color.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -520,7 +543,7 @@ struct FormatStatPill: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
-            Text(title)
+            Text(LocalizedStringKey(title))
                 .font(.caption2.weight(.medium))
                 .foregroundStyle(Color.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -565,11 +588,11 @@ struct FormatEmptyState: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.xs) {
-            Text(title)
+            Text(LocalizedStringKey(title))
                 .font(.footnote.weight(.semibold))
                 .foregroundStyle(Color.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
-            Text(message)
+            Text(LocalizedStringKey(message))
                 .font(.footnote)
                 .foregroundStyle(Color.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -587,7 +610,7 @@ struct FormatActionLabel: View {
         HStack(spacing: Spacing.xs) {
             Image(systemName: systemImage)
                 .accessibilityHidden(true)
-            Text(title)
+            Text(LocalizedStringKey(title))
                 .font(.footnote.weight(.semibold))
                 .fixedSize(horizontal: false, vertical: true)
         }

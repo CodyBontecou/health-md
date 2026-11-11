@@ -1,0 +1,278 @@
+{
+  "schemaVersion": 2,
+  "platform": "duo",
+  "boardsDirectory": "../../../../docs/design/liquid-glass/screens",
+  "boardPrefix": "AS_Duo_",
+  "appStoreDisplayType": null,
+  "boardSize": {
+    "width": 951,
+    "height": 669
+  },
+  "scale": 3,
+  "captureSource": "device",
+  "note": "No simulator or App Store display type matches the iPhone Duo inner (951 x 669 pt) or outer (466 x 678 pt) display. These slides need captures from a real device and are written outside fastlane.",
+  "supportedLocales": [
+    "en-US",
+    "de-DE",
+    "es-ES",
+    "fr-FR",
+    "it",
+    "ja",
+    "ko",
+    "nl-NL",
+    "pt-BR",
+    "zh-Hans"
+  ],
+  "slides": [
+    {
+      "board": "AS_Duo_1",
+      "output": "duo-slide-1.png",
+      "captures": {
+        "DuoOuterG": {
+          "file": "duo-outer.png"
+        },
+        "DuoInnerArchiveG": {
+          "file": "duo-inner-archive.png"
+        }
+      },
+      "copy": {
+        "en-US": {
+          "headline": [
+            "Fold for today’s health.",
+            "{Unfold for the month.}"
+          ],
+          "caption": null
+        },
+        "de-DE": {
+          "headline": [
+            "Zugeklappt: dein Tag.",
+            "{Aufgeklappt: dein Monat.}"
+          ],
+          "caption": null
+        },
+        "es-ES": {
+          "headline": [
+            "Cerrado, tu salud de hoy.",
+            "{Abierto, todo el mes.}"
+          ],
+          "caption": null
+        },
+        "fr-FR": {
+          "headline": [
+            "Plié, votre santé du jour.",
+            "{Déplié, tout le mois.}"
+          ],
+          "caption": null
+        },
+        "it": {
+          "headline": [
+            "Chiuso, la salute di oggi.",
+            "{Aperto, tutto il mese.}"
+          ],
+          "caption": null
+        },
+        "ja": {
+          "headline": [
+            "閉じれば今日の健康。",
+            "{開けば1か月。}"
+          ],
+          "caption": null
+        },
+        "ko": {
+          "headline": [
+            "접으면 오늘의 건강.",
+            "{펼치면 한 달.}"
+          ],
+          "caption": null
+        },
+        "nl-NL": {
+          "headline": [
+            "Dicht: je gezondheid vandaag.",
+            "{Open: de hele maand.}"
+          ],
+          "caption": null
+        },
+        "pt-BR": {
+          "headline": [
+            "Fechado, a saúde de hoje.",
+            "{Aberto, o mês inteiro.}"
+          ],
+          "caption": null
+        },
+        "zh-Hans": {
+          "headline": [
+            "合上，看今天的健康。",
+            "{展开，看整个月。}"
+          ],
+          "caption": null
+        }
+      }
+    },
+    {
+      "board": "AS_Duo_2",
+      "output": "duo-slide-2.png",
+      "captures": {
+        "DuoInnerComposeG": {
+          "file": "duo-inner-automation.png"
+        }
+      },
+      "copy": {
+        "en-US": {
+          "headline": [
+            "Your health data and {the file},",
+            "side by side."
+          ],
+          "caption": null
+        },
+        "de-DE": {
+          "headline": [
+            "Deine Gesundheitsdaten und {die Datei}",
+            "Seite an Seite."
+          ],
+          "caption": null
+        },
+        "es-ES": {
+          "headline": [
+            "Tus datos de salud y {el archivo},",
+            "uno junto al otro."
+          ],
+          "caption": null
+        },
+        "fr-FR": {
+          "headline": [
+            "Vos données de santé et {le fichier},",
+            "côte à côte."
+          ],
+          "caption": null
+        },
+        "it": {
+          "headline": [
+            "I tuoi dati sulla salute e {il file},",
+            "fianco a fianco."
+          ],
+          "caption": null
+        },
+        "ja": {
+          "headline": [
+            "ヘルスケアデータと{ファイル}を、",
+            "並べて表示。"
+          ],
+          "caption": null
+        },
+        "ko": {
+          "headline": [
+            "건강 데이터와 {파일}을",
+            "나란히."
+          ],
+          "caption": null
+        },
+        "nl-NL": {
+          "headline": [
+            "Je gezondheidsgegevens en {het bestand},",
+            "naast elkaar."
+          ],
+          "caption": null
+        },
+        "pt-BR": {
+          "headline": [
+            "Seus dados de saúde e {o arquivo},",
+            "lado a lado."
+          ],
+          "caption": null
+        },
+        "zh-Hans": {
+          "headline": [
+            "健康数据与{生成的文件}，",
+            "并排呈现。"
+          ],
+          "caption": null
+        }
+      }
+    },
+    {
+      "board": "AS_Duo_3",
+      "output": "duo-slide-3.png",
+      "captures": {
+        "DuoOuterG": {
+          "file": "duo-outer.png"
+        }
+      },
+      "copy": {
+        "en-US": {
+          "headline": [
+            "Today’s health,",
+            "{pocket-size.}"
+          ],
+          "caption": null
+        },
+        "de-DE": {
+          "headline": [
+            "Deine Gesundheit heute,",
+            "{im Taschenformat.}"
+          ],
+          "caption": null
+        },
+        "es-ES": {
+          "headline": [
+            "Tu salud de hoy,",
+            "{de bolsillo.}"
+          ],
+          "caption": null
+        },
+        "fr-FR": {
+          "headline": [
+            "Votre santé du jour,",
+            "{format poche.}"
+          ],
+          "caption": null
+        },
+        "it": {
+          "headline": [
+            "La salute di oggi,",
+            "{in formato tascabile.}"
+          ],
+          "caption": null
+        },
+        "ja": {
+          "headline": [
+            "今日の健康を、",
+            "{ポケットサイズで。}"
+          ],
+          "caption": null
+        },
+        "ko": {
+          "headline": [
+            "오늘의 건강,",
+            "{주머니 속에.}"
+          ],
+          "caption": null
+        },
+        "nl-NL": {
+          "headline": [
+            "Je gezondheid vandaag,",
+            "{in zakformaat.}"
+          ],
+          "caption": null
+        },
+        "pt-BR": {
+          "headline": [
+            "A saúde de hoje,",
+            "{no seu bolso.}"
+          ],
+          "caption": null
+        },
+        "zh-Hans": {
+          "headline": [
+            "今天的健康，",
+            "{尽在掌中。}"
+          ],
+          "caption": null
+        }
+      },
+      "size": {
+        "width": 466,
+        "height": 678
+      }
+    }
+  ]
+}
