@@ -36,12 +36,14 @@ private struct ReceiverCoverageSettingsEditor: View {
                     Text("Off resends the full lookback. Today Refresh remains independent. Changes apply to new occurrences; pending work keeps its original plan.")
                 }
                 if enabled {
-                    Section("Receiver configuration") {
+                    Section {
                         TextField("Explicit HTTPS preflight URL", text: $preflightURL)
                             .textInputAutocapitalization(.never).autocorrectionDisabled().keyboardType(.URL)
                         TextField("Receiver scope ID", text: $scopeID)
                             .textInputAutocapitalization(.never).autocorrectionDisabled()
                         TextField("Correction window (0–30 days)", text: $correction).keyboardType(.numberPad)
+                    } header: {
+                        Text("Receiver configuration")
                     } footer: {
                         Text("Use your receiver's documented same-origin preflight endpoint and a scope for this platform, account and output profile. Choose a new scope after changing output settings. Choose 0 explicitly to disable completed-day correction refresh.")
                     }
