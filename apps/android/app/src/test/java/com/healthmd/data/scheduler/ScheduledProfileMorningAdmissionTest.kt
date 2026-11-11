@@ -10,6 +10,7 @@ import com.healthmd.domain.model.*
 import com.healthmd.domain.repository.HealthRepository
 import com.healthmd.domain.repository.RestorableHealthRepository
 import com.healthmd.domain.repository.SettingsRepository
+import io.mockk.every
 import io.mockk.coEvery
 import io.mockk.mockk
 import java.time.Instant
@@ -41,6 +42,7 @@ class ScheduledProfileMorningAdmissionTest {
             error("No health read is needed for profile acceptance")
     }
     private lateinit var scope: CoroutineScope
+    private lateinit var context: Context
     private lateinit var store: ScheduledProfileEntryStore
     private lateinit var dataStore: androidx.datastore.core.DataStore<androidx.datastore.preferences.core.Preferences>
     private val factory get() = ScheduledProfileSnapshotFactory(ExportEnginePinPlanner(), settingsRepository)
@@ -54,7 +56,9 @@ class ScheduledProfileMorningAdmissionTest {
         scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
         val file = temporary.newFolder().resolve("entries.preferences_pb")
         dataStore = PreferenceDataStoreFactory.create(scope = scope, produceFile = { file })
-        store = ScheduledProfileEntryStore(dataStore, mockk<Context>(relaxed = true))
+        val privateDirectory = temporary.newFolder("private")
+        context = mockk { every { noBackupFilesDir } returns privateDirectory }
+        store = ScheduledProfileEntryStore(dataStore, context)
     }
     @After fun teardown() { if (::scope.isInitialized) scope.cancel() }
 
@@ -113,7 +117,7 @@ class ScheduledProfileMorningAdmissionTest {
         val other = pending.copy(id = "replacement", settingsSnapshotJson = pending.settingsSnapshotJson.replace(grant,
             "00000000-0000-4000-8000-000000000202"))
         assertThat(store.admitOccurrence(entry, other)).isFalse()
-        val reopened = ScheduledProfileEntryStore(dataStore, mockk<Context>(relaxed = true))
+        val reopened = ScheduledProfileEntryStore(dataStore, context)
         val recovered = requireNotNull(reopened.entry(entry.profileId))
         preference = SleepDayAttribution.NIGHT_BEGINS
         grant = "00000000-0000-4000-8000-000000000203"

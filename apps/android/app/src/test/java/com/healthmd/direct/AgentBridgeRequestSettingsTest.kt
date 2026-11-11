@@ -6,6 +6,7 @@ import com.healthmd.core.CoreRegistryMetric
 import com.healthmd.data.export.JsonExporter
 import com.healthmd.direct.protocol.*
 import com.healthmd.domain.model.*
+import com.healthmd.domain.exportengine.*
 import java.io.File
 import java.time.Clock
 import java.time.Instant
@@ -40,6 +41,9 @@ class AgentBridgeRequestSettingsTest {
         assertThat(settings.shouldFetchGranularData()).isFalse()
         assertThat(settings.executionEngineAuthorityIsFrozen).isTrue()
         assertThat(settings.executionEnginePin).isNull()
+        assertThat(settings.executionSleepCaptureAuthorityIsFrozen).isTrue()
+        assertThat(settings.executionSleepCaptureContext).isEqualTo(AndroidCaptureContext(
+            ZoneId.of(result.calendarTimezone), SleepDayAttribution.NIGHT_BEGINS, "android-frozen-v4"))
         assertThat(settings.apiEndpointUrl).isEmpty()
         assertThat(settings.scheduleEnabled).isFalse()
         assertThat(settings.pendingScheduledExportRequests).isEmpty()
@@ -97,6 +101,27 @@ class AgentBridgeRequestSettingsTest {
         expect(AgentBridgeErrorCode.BINDING_CHANGED) {
             AgentBridgeRequestSettingsResolver.validateForReuse(saved, savedRequest, inputs(saved = AgentBridgeRequestSettingsSnapshot(2, native.copy(folderStructure = "changed/{year}"))))
         }
+    }
+
+    @Test
+    fun legacyResolutionWithoutCaptureContextCannotBeRepairedForReuseOrRendering() {
+        val request = intent()
+        val frozen = resolve(request)
+        val fields = json.encodeToJsonElement(frozen).jsonObject
+        val snapshot = AndroidExportSettingsSnapshotCodec.decode(fields.getValue("nativeSettingsJson").jsonPrimitive.content)
+        val oldSnapshot = snapshot.copy(version = AndroidExportSettingsSnapshot.CURRENT_VERSION, sleepCaptureContext = null)
+        val old = json.decodeFromJsonElement<AgentBridgeRequestSettingsResolution>(JsonObject(fields +
+            ("nativeSettingsJson" to JsonPrimitive(AndroidExportSettingsSnapshotCodec.encodeCanonical(oldSnapshot)))))
+        val settings = old.exporterSettings()
+        assertThat(settings.executionSleepCaptureContext).isNull()
+        assertThat(settings.executionSleepCaptureAuthorityIsFrozen).isTrue()
+        expect(AgentBridgeErrorCode.BINDING_CHANGED) {
+            AgentBridgeRequestSettingsResolver.validateForReuse(old, request, inputs())
+        }
+        assertThat(runCatching {
+            FrozenDailyAggregateExportRequest.capture(HealthData(LocalDate.parse("2026-03-08")), settings,
+                AndroidExportProfile.android_frozen_v4, ExportEngineMode.rust, DailyAggregateExportIds("old", "old"))
+        }.exceptionOrNull()).isInstanceOf(IllegalArgumentException::class.java)
     }
 
     @Test

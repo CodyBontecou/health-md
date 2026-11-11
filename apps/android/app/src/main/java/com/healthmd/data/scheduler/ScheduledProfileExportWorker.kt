@@ -325,13 +325,39 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
         }
 
         val acceptedPending = due.pendingExport
-        val storedFolderReady = if (profile.target == ExportTarget.DEVICE_FOLDER && acceptedPending?.durableOperationId != null) {
+        val acceptedOperationId = acceptedPending?.durableOperationId
+        val acceptedSettings = requireNotNull(settings)
+        val storedFolderReady = if (profile.target == ExportTarget.DEVICE_FOLDER && acceptedOperationId != null) {
             folderAdoption.withProfileFolder(profile) {
-                exportRepository.hasResumableDurableScheduledFolderOperation(acceptedPending.durableOperationId,
-                    dates, settings, profile.settingsSnapshotJson)
+                exportRepository.hasResumableDurableScheduledFolderOperation(acceptedOperationId,
+                    dates, acceptedSettings, profile.settingsSnapshotJson)
             }
         } else false
-        val hasBackgroundRead = if (storedFolderReady ||
+        val storedAPIReady = if (profile.target == ExportTarget.API_ENDPOINT &&
+            settings.exportMode == ExportMode.COMPATIBILITY && acceptedPending?.durableOperationId != null) {
+            try {
+                apiEndpointExportRunner.hasResumableDurableOperation(dates, settings,
+                    acceptedPending.durableOperationId, profile.settingsSnapshotJson)
+            } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
+            catch (_: Exception) { return authorityFailure() }
+        } else false
+        if (storedAPIReady) {
+            // A crash may have published bytes before the parent marker. Preserve the
+            // proven prepared state before replay, including every later residual retry.
+            val pending = requireNotNull(acceptedPending)
+            val execution = settings.executionAPIRecovery ?: return authorityFailure()
+            if (!execution.isStillAuthorized() ||
+                (!pending.apiJournalRequired && !execution.onJournalPrepared()) ||
+                !execution.isStillAuthorized()) return authorityFailure()
+            due = due.copy(pendingExport = pending.copy(apiJournalRequired = true))
+            settings = settings.copy(executionAPIRecovery = APIRecoveryExecution(
+                execution.authorityJson, execution.profileBinding, execution.operationId,
+                execution.settingsSnapshotJson, requireExistingJournal = true,
+                onJournalPrepared = execution.onJournalPrepared,
+                isStillAuthorized = execution.isStillAuthorized,
+            ))
+        }
+        val hasBackgroundRead = if (storedFolderReady || storedAPIReady ||
             (profile.target == ExportTarget.API_ENDPOINT && acceptedPending?.apiJournalRequired == true)) true else runCatchingCancellable {
             healthRepository.forCaptureOperation(settings).hasBackgroundReadPermission()
         }.getOrDefault(false)
@@ -418,7 +444,9 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
                                 onProgress = exportProgress,
                                 durableOperationId = durableOperationId,
                                 durableSettingsSnapshotJson = snapshotJson,
-                                requireExistingDurableOperation = pendingOperationId != null,
+                                // Admission precedes journal preparation. Only the durable
+                                // prepared fence forbids creating the original journal.
+                                requireExistingDurableOperation = storedAPIReady || due.pendingExport?.apiJournalRequired == true,
                             )
                         }
 

@@ -271,6 +271,38 @@ class APIEndpointExportRunner private constructor(
         operationStore = operationStore,
     )
 
+    /** Read-only recovery admission: validate original bytes and authority without a provider read. */
+    internal suspend fun hasResumableDurableOperation(
+        dates: List<LocalDate>, settings: ExportSettings, operationId: String, snapshotJson: String,
+    ): Boolean {
+        val frozen = settings.frozenForAPIAction()
+        val execution = frozen.executionAPIRecovery ?: throw APIRecoveryAuthorityException()
+        if (!frozen.executionAPIRecoveryRequired || execution.operationId != operationId ||
+            execution.settingsSnapshotJson != snapshotJson) throw APIRecoveryAuthorityException()
+        val endpoint = APIExportEndpoint.normalizedOrNull(frozen.apiEndpointUrl) ?: throw APIRecoveryAuthorityException()
+        val configuration = credentialStore.requestConfiguration(endpoint)?.frozenCopy() ?: throw APIRecoveryAuthorityException()
+        val store = operationStore ?: throw APIRecoveryAuthorityException()
+        val guard = frozen.apiRecoveryGuard(credentialStore, configuration) { store.requireActive(operationId) }
+        guard.verify()
+        val existing = store.load(operationId)
+        if (existing == null) {
+            if (execution.requireExistingJournal) throw APIRecoveryAuthorityException()
+            guard.verify()
+            return false
+        }
+        val normalized = dates.distinct().sorted()
+        val unresolved = existing.batches.drop(existing.acknowledgedBatchCount).flatMap { it.ownerDates }
+        if ((existing.requestedDates != normalized && unresolved != normalized) ||
+            existing.operationId != operationId || existing.destinationFingerprint != configuration.destinationFingerprint ||
+            existing.mode != resolveModeOnce(normalized, frozen) ||
+            existing.enginePinJson != frozen.executionEnginePin?.let(ExportEnginePinCodec::encodeCanonical) ||
+            existing.settingsSnapshotJson != snapshotJson || existing.apiAuthorityJson != execution.authorityJson) {
+            throw APIRecoveryAuthorityException()
+        }
+        guard.verify()
+        return true
+    }
+
     suspend fun exportDates(
         dates: List<LocalDate>,
         settings: ExportSettings,
