@@ -1,6 +1,20 @@
 # Account-sync read-view wave 1 integration report
 
-## Disposition
+## Draft PR #190 host-source milestone (2026-11-11 UTC)
+
+The inactive TypeScript collector from `a0d52fde327290ce9a06adc7d554d0064a5522e4` is now locally integrated and subset-qualified against draft head `4c86df1e6`. Its real AS05 codec, RAM and account-auth dependencies match the candidate baseline. Only the collector, its public tests and documentation are added; no router, service binding, authority, storage, wire/schema/fixture, native capability, rollout flag or deployment changes. AS07 and all twenty full child acceptances remain incomplete; PR #190 stays draft. Parent #188 integration is outside this milestone.
+
+Fresh Node **24.19.0** / Vitest **4.1.12** evidence, one worker and **384 MiB** heap: **246/246** tests pass across read-view (**47**), AS05 codec, AS06 RAM, account-auth and service-profile suites. Both unchanged strict Cloud configurations pass (`npm run typecheck` and `npm run typecheck:vm`). The real parser validates hashes/content independently of the timing hook. Tests cover complete-only publication, exact owned bytes, global pagination/coherence and item/page/byte bounds, full-observer preservation on refusal, reset/switch fences both before real parsing settles and after it settles, and retained original committed provenance. A dedicated observer test establishes that owned `parsing` diagnostics and their retention charge may appear while committed/tentative/control state remains unchanged. This resolves the documented expectation mismatch without hiding retained fields.
+
+The original 44-test candidate reached 41 passes before heap exhaustion at the 4 MiB boundary; isolated reproduction also failed. Owned byte arrays now preallocate their exact length and diagnostic byte copies use `slice`. Allocation repair alone did not make the boundary test pass: generic matcher enumeration of large byte arrays was also replaced by a loop comparing **every byte**, with normal deep comparison of every other observer field. The subsequent 256-page test timed out at 5 seconds; it now captures the full pre-refusal observer at the actual boundary and uses the same exact comparison for refusal/retry, avoiding unnecessary copies at every successful intermediate page. Neither quotas, heap allowance, timeout, parser, fixtures nor acceptance assertions were relaxed. Final five-suite execution passed in 6.35 seconds.
+
+The local `goal/account-sync/read-view-probe-1` ref resolves to `fa27a9a8`, with no probe committed. Its historical ignored artifact location is absent in this environment. No execution or independent authorship of that missing probe is claimed; the new observer/fencing coverage is authored here. Prior guards, failures, original refs and historical evidence below remain preserved, not retroactively qualified.
+
+`npm audit --audit-level=moderate` exits 1 for existing transitive `@hono/node-server@2.1.1` via MCP SDK (`GHSA-rmxm-3fg6-px4f`). Lockfile/dependencies remain unchanged. Initial sandbox dependency installation failed DNS; authorized network retry succeeded. Broken Homebrew Node24 library resolution was avoided with the existing NVM Node24. Portable runner session `pr190-read-view` retains failure and final passing receipts in ignored `.pi/verification/`; final tests receipt `efa6d452-901f-4ec3-8334-c2a734aafaf9`, typechecks `cc42b106-53e2-4a95-82a5-30d8a48e653e`, audit `92bd7406-586f-4f2b-8426-e0c2a1876fdb`.
+
+Unrun: missing independent probe, full Cloud/runtime bundling, shared/native/OS/device/physical/UI suites, real identity/health/private durability, rollout and deployment. The collector remains unimported by runtime entrypoints and unavailable by default. This finite synthetic host proof grants no account consent, authenticated completeness, accepted native revision, execution, persistence, activation or product acceptance.
+
+## Historical wave disposition
 
 **Blocked, partial, unmerged. AS00 and all twenty child acceptances remain incomplete.**
 
