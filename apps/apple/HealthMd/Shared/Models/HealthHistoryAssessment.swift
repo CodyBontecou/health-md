@@ -107,6 +107,14 @@ nonisolated struct HealthHistoryAssessment: Equatable, Sendable {
         if hasIntersectingLimit {
             return "Apple Health limits the history Health.md can read for some selected data. Earlier data is unknown, not missing. Readable records are still exported with their original dates."
         }
+        if types.contains(where: {
+            switch $0.access {
+            case .apiUnavailable, .assessmentFailed, .unassessed: return true
+            case .limited, .unknown: return false
+            }
+        }) {
+            return "Health.md could not check history access for some selected data. History coverage remains unverified. Readable records can still be exported with their original dates."
+        }
         return "Apple Health does not let Health.md distinguish full access from denied access when no boundary is returned. Empty data and completed queries do not prove full history. Readable records can still be exported."
     }
 

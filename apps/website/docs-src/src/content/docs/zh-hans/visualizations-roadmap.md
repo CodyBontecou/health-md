@@ -25,10 +25,10 @@ units: imperial
 ## 当前可视化覆盖范围
 
 <div class="reference-stats">
-<div><strong>43</strong><span>个现有插件渲染器</span></div>
+<div><strong>62</strong><span>个现有插件渲染器</span></div>
 <div><strong>18</strong><span>个导出数据类别</span></div>
 <div><strong>220+</strong><span>个规范导出键</span></div>
-<div><strong>1</strong><span>个仍需实现的通用指标层</span></div>
+<div><strong>4</strong><span>个 WHOOP 专属视图</span></div>
 </div>
 
 ## 各导出器的平台支持
@@ -161,6 +161,40 @@ Android Health Connect 不提供与 HealthKit 心境记录或 HealthKit 风格�
 - [锻炼趋势](/visualizations/workout-analytics/workout-trends/theme-colors/) — `workout-trends`
 - [锻炼间歇](/visualizations/workout-analytics/workout-intervals/theme-colors/) — `workout-intervals`
 - [锻炼地图](/visualizations/workout-analytics/workout-map/theme-colors/) — `workout-map`
+
+### WHOOP：独立的提供商数据
+
+在已启用 WHOOP 的 Apple 版本中，请在设置 → 已连接的应用中连接 WHOOP，并在导出时包含已连接的应用。这些图表读取 Apple `healthmd.health_data` v8 每日文件中的 `providers.whoop`（`healthmd.provider.whoop_daily` v1）。它们不会将 WHOOP 合并到 Apple 或 Health Connect 汇总中；WHOOP 心率变异性使用 RMSSD，而不是 Apple 的 SDNN。
+
+- [恢复 × 负荷](/visualizations/whoop/whoop-recovery-strain/theme-colors/)，`whoop-recovery-strain`：比较恢复评分（0–100%）与生理周期负荷（0–21），完整记录通过同一个周期 ID 关联。这只是关联，不是训练建议。
+- [实际睡眠与睡眠需求](/visualizations/whoop/whoop-sleep-need/theme-colors/)，`whoop-sleep-need`：分别显示睡眠时段和小睡，包括基础需求、睡眠债、近期负荷需求以及带符号的小睡调整。净需求标记必须具备全部四项已报告的组成部分；负的小睡调整仍按减法处理。
+- [睡眠评估趋势](/visualizations/whoop/whoop-sleep-trends/theme-colors/)，`whoop-sleep-trends`：WHOOP 报告的表现、一致性和效率百分比，而不是本地计算的评分。
+- [锻炼负荷与区间](/visualizations/whoop/whoop-workout-strain/theme-colors/)，`whoop-workout-strain`：每次锻炼的负荷及 WHOOP 0–5 区间。区间占比使用已报告区间时间的总和，而不是经过时长或 Apple 推算的区间；记录覆盖率与经过时长保留为独立的参考信息。
+
+完整记录和睡眠需求组成部分需要 JSON 或结构化 CSV。Markdown/Bases 仅提供无歧义的单条记录标量投影，不包含小睡身份或锻炼区间详情。这些图表不读取提供商原生侧车文件、Android Raw API Snapshots 或汇总。缺失或未评分的值不是零；部分采集状态仍然可见。日期筛选使用记录所属的导出日，而不是事件时间戳。图库预览使用合成数据，不是真实个人的记录。
+
+```health-viz
+type: whoop-recovery-strain
+last: 30
+```
+
+```health-viz
+type: whoop-sleep-need
+sleep: main
+last: 30
+```
+
+```health-viz
+type: whoop-sleep-trends
+sleep: all
+last: 30
+```
+
+```health-viz
+type: whoop-workout-strain
+limit: 12
+last: 30
+```
 
 ## 基础能力路线图
 

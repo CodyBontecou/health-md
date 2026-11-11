@@ -1,19 +1,6 @@
-name: Apple Watch CI
+name: Apple Watch diagnostics
 
 on:
-  pull_request:
-    paths:
-      - 'apps/apple/HealthMdWatch/**'
-      - 'apps/apple/HealthMdWatchShared/**'
-      - 'apps/apple/HealthMdWatchWidgets/**'
-      - 'apps/apple/HealthMd.xcodeproj/**'
-      - 'apps/apple/Packages/HealthMdWatchExport/**'
-      - 'packages/contracts/**'
-      - 'apps/apple/HealthMdTests/Contracts/ProductCapabilityManifestTests.swift'
-      - 'apps/apple/HealthMdTests/Utilities/CIQualityGateTests.swift'
-      - 'apps/android/app/src/test/java/com/healthmd/exportcontract/ProductCapabilityManifestTest.kt'
-      - '.github/workflows/apple-ci.yml'
-      - '.github/workflows/apple-watch-ci.yml'
   workflow_dispatch:
 
 permissions:
@@ -47,7 +34,7 @@ jobs:
           retention-days: 1
 
   capture-upload-and-build:
-    name: Watch capture/upload regressions
+    name: Watch capture/upload and native build diagnostics
     runs-on: macos-26
     timeout-minutes: 30
     steps:
@@ -66,6 +53,17 @@ jobs:
           mkdir -p apps/apple/build/watch-ci
           swift test --package-path apps/apple/Packages/HealthMdWatchExport --jobs 2 \
             2>&1 | tee apps/apple/build/watch-ci/tests.log
+      - name: Prepare shared core for Xcode package resolution
+        run: make -C apps/apple prepare-healthmd-core-rust
+      - name: Compile actual Watch app without signing or device launch
+        run: |
+          set -euo pipefail
+          xcodebuild build -project apps/apple/HealthMd.xcodeproj -scheme HealthMdWatch \
+            -configuration Debug -destination 'generic/platform=watchOS' \
+            -derivedDataPath apps/apple/build/watch-ci-derived -jobs 2 \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+            DEVELOPMENT_TEAM="" PROVISIONING_PROFILE_SPECIFIER="" \
+            2>&1 | tee apps/apple/build/watch-ci/build.log
       - name: Preserve bounded diagnostics
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v4

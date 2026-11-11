@@ -15,6 +15,35 @@ final class ConfigurationProtectionJourneyUITests: XCTestCase {
         }
     }
 
+    /// XCUITest can report a partly exposed preset as hittable while its tap
+    /// point is covered by the floating export actions. Scroll only inside the
+    /// unobscured content and require the whole preset to clear those actions.
+    private func scrollPresetAboveExportActions(_ preset: XCUIElement, in app: XCUIApplication) -> Bool {
+        let scrollView = app.scrollViews.firstMatch
+        for attempt in 0...6 {
+            let viewport = scrollView.frame.intersection(app.frame)
+            let actionTop = [
+                app.buttons[UITestLaunchHelper.Export.previewButton],
+                app.buttons[UITestLaunchHelper.Export.exportButton]
+            ].filter { $0.exists }.map { $0.frame.minY }.min() ?? viewport.maxY
+            let visible = CGRect(
+                x: viewport.minX, y: viewport.minY,
+                width: viewport.width, height: max(0, min(viewport.maxY, actionTop) - viewport.minY)
+            ).insetBy(dx: 0, dy: 8)
+            guard !visible.isEmpty else { return false }
+            if preset.exists && !preset.frame.isEmpty && visible.contains(preset.frame) && preset.isHittable {
+                return true
+            }
+            guard attempt < 6 else { return false }
+            let origin = app.coordinate(withNormalizedOffset: .zero)
+            origin.withOffset(CGVector(dx: visible.midX, dy: visible.minY + visible.height * 0.8)).press(
+                forDuration: 0.05,
+                thenDragTo: origin.withOffset(CGVector(dx: visible.midX, dy: visible.minY + visible.height * 0.3))
+            )
+        }
+        return false
+    }
+
     /// The sheet-local toast is duplicated by the app-level one behind the
     /// sheet. Poll the live query and return the same tappable instance that
     /// callers will interact with, rather than selecting a stale/fallback
@@ -71,14 +100,16 @@ final class ConfigurationProtectionJourneyUITests: XCTestCase {
         return isVisible()
     }
 
+    /// Opens the legacy Export Profiles management sheet. Automations now own profile
+    /// management (AutomationsGlass), so App & support no longer links here; the sheet
+    /// stays reachable for these journeys through a debug launch argument.
     private func openProfilesManagementSheet(_ app: XCUIApplication) {
-        let settingsTab = app.tabBars.buttons["Settings"]
-        XCTAssertTrue(settingsTab.waitForExistence(timeout: 5))
-        settingsTab.tap()
-
-        let profilesRow = app.buttons["export.profiles.entry"]
-        XCTAssertTrue(profilesRow.waitForExistence(timeout: 5), "Export Profiles row should exist in Settings")
-        profilesRow.tap()
+        app.terminate()
+        app.launchArguments += ["-UITestOpenExportProfiles", "YES"]
+        app.launch()
+        let settings = app.buttons["Settings"].firstMatch
+        XCTAssertTrue(settings.waitForExistence(timeout: 10))
+        settings.tap()
 
         XCTAssertTrue(
             app.navigationBars["Export Profiles"].waitForExistence(timeout: 5),
@@ -98,6 +129,7 @@ final class ConfigurationProtectionJourneyUITests: XCTestCase {
             configurationProtectionEnabled: true,
             useHealthKitExportPreviewFixtures: true
         )
+        app.launchArguments += ["-UITestOpenClassicExport", "YES"]
         app.launch()
 
         let previewButton = app.buttons[UITestLaunchHelper.Export.previewButton]
@@ -128,6 +160,7 @@ final class ConfigurationProtectionJourneyUITests: XCTestCase {
             purchaseUnlocked: true,
             configurationProtectionEnabled: true
         )
+        app.launchArguments += ["-UITestOpenClassicExport", "YES"]
         app.launch()
 
         let filenameEditor = app.buttons[UITestLaunchHelper.Export.filenameEditorButton]
@@ -215,7 +248,7 @@ final class ConfigurationProtectionJourneyUITests: XCTestCase {
         XCTAssertTrue(scrollUntilVisible(delete, in: app), "The disabled Delete action should be visible")
         XCTAssertFalse(delete.isEnabled, "The last remaining profile must not be deletable")
         delete.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
-        XCTAssertFalse(app.staticTexts["Delete this profile?"].waitForExistence(timeout: 1))
+        XCTAssertFalse(app.staticTexts["Delete this automation?"].waitForExistence(timeout: 1))
     }
 
     func testProtectedProfileSchedulesCardIsLockedOnScheduleTab() {
@@ -227,24 +260,20 @@ final class ConfigurationProtectionJourneyUITests: XCTestCase {
         )
         app.launch()
 
-        let scheduleTab = app.tabBars.buttons["Schedule"]
-        XCTAssertTrue(scheduleTab.waitForExistence(timeout: 5))
-        scheduleTab.tap()
+        // The automation's schedule (ScheduleG) carries the former Schedule tab's switches.
+        guard UITestLaunchHelper.openAutomation(in: app) else { return }
 
-        let card = app.staticTexts["Profile Schedules"]
-        XCTAssertTrue(card.waitForExistence(timeout: 5), "Profile Schedules card should exist")
-
-        let protectedRegion = app.buttons[UITestLaunchHelper.ConfigurationProtection.protectedRegion]
-            .firstMatch
-        XCTAssertTrue(
-            protectedRegion.waitForExistence(timeout: 3),
-            "The per-profile schedules card must sit inside the shared lock"
-        )
-        protectedRegion.tap()
+        let schedule = app.buttons["glass.automation.schedule"]
+        XCTAssertTrue(schedule.waitForExistence(timeout: 5), "The automation's schedule row should exist")
+        schedule.tap()
         XCTAssertTrue(
             app.buttons[UITestLaunchHelper.ConfigurationProtection.toast]
                 .waitForExistence(timeout: 3),
             "Tapping a profile schedule row must surface the blocked-change toast"
+        )
+        XCTAssertFalse(
+            app.switches["glass.schedule.enabled"].exists,
+            "The lock must keep the schedule editor closed"
         )
     }
 
@@ -257,24 +286,17 @@ final class ConfigurationProtectionJourneyUITests: XCTestCase {
         )
         app.launch()
 
-        let settingsTab = app.tabBars.buttons["Settings"]
-        XCTAssertTrue(settingsTab.waitForExistence(timeout: 5))
-        settingsTab.tap()
+        UITestLaunchHelper.openSettingsTab(in: app)
 
         let toggle = app.switches[UITestLaunchHelper.ConfigurationProtection.toggle]
         XCTAssertTrue(toggle.waitForExistence(timeout: 5))
         toggle.tap()
 
-        let exportTab = app.tabBars.buttons["Export"]
-        XCTAssertTrue(exportTab.waitForExistence(timeout: 5))
-        exportTab.tap()
-
-        let yesterday = app.buttons[UITestLaunchHelper.Export.datePresetYesterdayButton]
-        scrollUntilExists(yesterday, in: app)
-        XCTAssertTrue(yesterday.waitForExistence(timeout: 5))
-        XCTAssertTrue(yesterday.isEnabled, "Configuration controls should be enabled after protection is turned off")
-        XCTAssertFalse(app.buttons[UITestLaunchHelper.ConfigurationProtection.protectedRegion].firstMatch.exists)
-        yesterday.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+        // With the lock off, a configuration control opens instead of raising the toast.
+        guard UITestLaunchHelper.openScheduleTab(in: app) else { return }
+        let scheduleSwitch = app.switches["glass.schedule.enabled"]
+        XCTAssertTrue(scheduleSwitch.waitForExistence(timeout: 5))
+        XCTAssertTrue(scheduleSwitch.isEnabled, "Configuration controls should be enabled after protection is turned off")
         XCTAssertFalse(app.buttons[UITestLaunchHelper.ConfigurationProtection.toast].waitForExistence(timeout: 1))
     }
 }

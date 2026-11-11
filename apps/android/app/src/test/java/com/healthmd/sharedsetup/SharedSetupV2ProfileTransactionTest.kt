@@ -14,6 +14,7 @@ import com.healthmd.data.settings.ExportProfileRepository
 import com.healthmd.domain.exportengine.AndroidExportProfile
 import com.healthmd.domain.exportengine.AndroidExportSettingsSnapshot
 import com.healthmd.domain.exportengine.AndroidExportSettingsSnapshotCodec
+import com.healthmd.domain.model.DateFormatPreference
 import com.healthmd.domain.model.APIExportEndpoint
 import com.healthmd.domain.model.ExportFormat
 import com.healthmd.domain.model.ExportProfile
@@ -65,6 +66,27 @@ class SharedSetupV2ProfileTransactionTest {
     @After
     fun tearDown() {
         dataStoreScope.cancel()
+    }
+
+    @Test
+    fun `EU Dot survives shared codec import persistence and re-export`() = runTest {
+        val source = importPlan().source.let { document -> document.copy(
+            profiles = document.profiles.map { it.copy(presentation = it.presentation.copy(dateFormat = "eu_dot")) },
+        ) }
+        val codec = SharedSetupV2Codec(EmptyRegistry)
+        val decoded = codec.decode(codec.encode(source)) as SharedSetupVersionedDecodeResult.Valid
+        val mapper = SharedSetupV2Mapper(EmptyRegistry)
+        val plan = mapper.planImport(decoded.document)
+        transaction(GENERATED_ONE_ID, GENERATED_TWO_ID).apply(
+            plan, listOf("profile-001", "profile-002"), SharedSetupV2ProfileImportMode.ADD,
+        ).getOrThrow()
+        val profiles = storedProfiles()
+        for (profile in profiles) {
+            val snapshot = AndroidExportSettingsSnapshotCodec.decode(profile.settingsSnapshotJson)
+            assertThat(snapshot.restoreOnto(ExportSettings()).formatCustomization.dateFormat).isEqualTo(DateFormatPreference.EU_DOT)
+        }
+        val exported = mapper.export(profiles, profiles.first().id, emptyList(), "test")
+        assertThat(exported.profiles.map { it.presentation.dateFormat }).containsExactly("eu_dot", "eu_dot")
     }
 
     @Test

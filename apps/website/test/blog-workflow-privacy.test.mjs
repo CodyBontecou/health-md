@@ -29,7 +29,7 @@ for (const slug of slugs) {
       assert.match(pilotBoundary, qualifier);
     }
     assert.match(pilotBoundary, /only[^.\n]*exports[^.\n]*(?:intentionally|explicitly)/i);
-    assert.match(pilotBoundary, /no public signup or automatic device sync/i);
+    assert.match(pilotBoundary, /no public signup(?: or| and no) automatic device sync/i);
   });
 }
 

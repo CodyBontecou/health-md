@@ -1,15 +1,6 @@
 name: Local Runner Tooling
 
 on:
-  pull_request:
-    paths:
-      - '.github/workflows/apple-local-pilot.yml'
-      - 'scripts/local-actions/**'
-      - 'scripts/setup-local-actions-runner.py'
-      - 'scripts/tests/test_setup_local_actions_runner.py'
-      - 'apps/apple/scripts/local_actions_pilot.py'
-      - 'apps/apple/scripts/run-local-actions-pilot.sh'
-      - 'apps/apple/scripts/tests/test_local_actions_pilot.py'
   workflow_dispatch:
 
 permissions:

@@ -184,6 +184,12 @@ class HealthMdCoreServiceTest {
             expectedRegistryVersion: UInt,
         ): CoreMetricRegistrySnapshot = error("registry not used by this test")
 
+        override fun getMetricRegistryAtAuthority(
+            profile: CoreMetricRegistryProfile,
+            expectedRegistryVersion: UInt,
+            registrySha256: String,
+        ): CoreMetricRegistrySnapshot = error("historical registry not used by this test")
+
         override fun createSemanticSession(configBytes: ByteBuffer): CoreSemanticSession =
             error("semantic session not used by this test")
 

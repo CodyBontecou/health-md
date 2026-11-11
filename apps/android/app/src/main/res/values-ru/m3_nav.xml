@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="m3_nav_report_requires_access">Чтобы сохранить отчёт или поделиться им, нужен ваш собственный доступ к Health.md.</string>
+</resources>

@@ -5,6 +5,10 @@ lead: "A terminal timeout is not proof that the phone stopped. Durable jobs make
 date: "2026-09-22T14:10:00.000Z"
 updated: "2026-09-22T14:10:00.000Z"
 category: "Engineering"
+related:
+  - healthmd-cli-direct-iphone-mcp
+  - private-health-data-webhooks
+  - local-first-health-data-architecture
 draft: false
 tags:
   - healthmd

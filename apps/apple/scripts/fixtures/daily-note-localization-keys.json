@@ -1,0 +1,73 @@
+{
+  "locales": ["de", "es", "fr", "it", "ja", "ko", "nl", "pt-BR", "zh-Hans"],
+  "keys": [
+    "%lld metrics",
+    "%lld metrics enabled",
+    "Change selected metrics from Export Settings, Health Metrics",
+    "Create daily note if missing",
+    "Daily Note Injection, %@",
+    "Daily Notes Disabled",
+    "Daily note preview path",
+    "Double tap to %@ daily note injection",
+    "Double tap to disable daily note injection",
+    "Double tap to enable daily note injection",
+    "Enter a vault-relative path, such as Daily or Journal slash Daily. Leave empty for the vault root.",
+    "Enter the filename pattern without an extension.",
+    "Exports update only your daily notes. Other generated files stay configured but are skipped.",
+    "Inject metric sections into the note body",
+    "Metrics To Inject",
+    "Metrics to inject",
+    "No metrics enabled",
+    "Preview Path",
+    "Turn on Daily Note Injection to merge selected metrics into the daily notes you already keep in Obsidian.",
+    "Update daily notes only",
+    "Uses the same metric selection configured in Export Settings → Health Metrics.",
+    "Vault Root Location",
+    "With Folder set to Daily, notes are written to Daily/… at the vault root, not %@/Daily/…."
+  ],
+  "retainedKeys": {
+    "Double tap to %@ daily note injection": "Original #200 key retained; this view now selects complete localized enable/disable sentences, never English verb fragments."
+  },
+  "pluralKeys": ["%lld metrics", "%lld metrics enabled"],
+  "displayDependencies": ["Enabled", "Disabled", "No Metrics", "Exports update YAML frontmatter in the daily notes you already keep, while normal export files still follow your selected formats.", "Daily notes folder", "Daily note filename pattern"],
+  "sources": {
+    "HealthMd/iOS/Views/DailyNoteInjectionView.swift": {
+      "requiredBindings": [
+        "DailyNoteInjectionPresentation(isEnabled: settings.enabled, dailyNotesOnly: settings.dailyNotesOnly,",
+        "metricCount: enabledMetricCount, locale: locale)",
+        "title: copy.statusTitle,",
+        ".accessibilityLabel(copy.headerLabel)",
+        ".accessibilityValue(copy.statusTitle)",
+        ".accessibilityHint(copy.toggleHint)",
+        "Text(verbatim: copy.modeExplanation)",
+        "title: copy.metricsTitle,",
+        ".accessibilityValue(copy.metricsAccessibilityValue)",
+        "message: DailyNoteInjectionPresentation.vaultRootWarning(healthSubfolder, locale: locale)",
+        "Text(verbatim: message)",
+        "Text(verbatim: title)",
+        "Text(verbatim: settings.previewPath(for: Date()))",
+        ".accessibilityValue(settings.previewPath(for: Date()))",
+        "Toggle(isOn: configurationProtection.protecting($settings.enabled))",
+        "Toggle(isOn: configurationProtection.protecting(isOn))",
+        "TextField(placeholder, text: configurationProtection.protecting(text), prompt: Text(verbatim: placeholder))",
+        ".accessibilityLabel(LocalizedStringKey(accessibilityLabel))",
+        ".accessibilityHint(LocalizedStringKey(accessibilityHint))",
+        "String(localized: \"Enabled\", locale: locale)",
+        "String(localized: \"Disabled\", locale: locale)",
+        "text: $settings.folderPath,",
+        "text: $settings.filenamePattern,",
+        "placeholder: \"Daily\",",
+        "placeholder: \"{date}\",",
+        "isOn: $settings.createIfMissing,",
+        "isOn: $settings.dailyNotesOnly,",
+        "isOn: $settings.injectMarkdownSections,"
+      ],
+      "forbiddenBindings": ["settings.enabled ? \"enabled\" : \"disabled\"", "settings.enabled ? \"disable\" : \"enable\"", "Metric\\(enabledMetricCount", "String(localized: settings.folderPath)", "String(localized: settings.filenamePattern)"]
+    },
+    "HealthMd/Shared/Utilities/DailyNoteInjectionPresentation.swift": {
+      "localizedStringKeys": ["%lld metrics", "%lld metrics enabled", "Daily Note Injection, %@", "Double tap to disable daily note injection", "Double tap to enable daily note injection", "Exports update only your daily notes. Other generated files stay configured but are skipped.", "No metrics enabled", "With Folder set to Daily, notes are written to Daily/… at the vault root, not %@/Daily/…."],
+      "requiredBindings": ["metricsTitle = metricCount == 0", "metricsAccessibilityValue = metricCount == 0"],
+      "forbiddenBindings": ["trimmingCharacters", "replacingOccurrences", "DailyNoteInjectionSettings", "String(localized: healthSubfolder)"]
+    }
+  }
+}

@@ -19,7 +19,10 @@ struct SchedulingAdaptiveStack<Content: View>: View {
 struct SchedulingChoice<Value: Hashable>: Identifiable {
     let value: Value
     let title: String
+    /// Legacy callers supply controlled keys; resolved display copy opts out of lookup.
+    var titleIsResolved = false
     var id: Value { value }
+    var displayText: Text { titleIsResolved ? Text(title) : Text(LocalizedStringKey(title)) }
 }
 
 /// Segmented-style native buttons when every label fits; otherwise a native
@@ -36,7 +39,7 @@ struct SchedulingChoicePicker<Value: Hashable>: View {
                     Button {
                         if selection != choice.value { selection = choice.value }
                     } label: {
-                        Text(LocalizedStringKey(choice.title))
+                        choice.displayText
                             .font(Typography.bodyEmphasis())
                             .fixedSize(horizontal: false, vertical: true)
                             .padding(.horizontal, Spacing.s3)
@@ -68,6 +71,7 @@ struct SchedulingMenuLabel: View {
     let title: String
     let value: String
     var monospaced = false
+    var valueIsResolved = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.s1) {
@@ -76,7 +80,7 @@ struct SchedulingMenuLabel: View {
                 .foregroundStyle(Color.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
             HStack(spacing: Spacing.s2) {
-                Text(LocalizedStringKey(value))
+                (valueIsResolved ? Text(value) : Text(LocalizedStringKey(value)))
                     .font(monospaced ? Typography.monoEmphasis() : Typography.bodyEmphasis())
                     .foregroundStyle(Color.textPrimary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -102,21 +106,24 @@ struct SchedulingValueMenu<Value: Hashable>: View {
     var monospaced = false
 
     private var value: String { selectedTitle ?? choices.first { $0.value == selection }?.title ?? "" }
+    private var valueIsResolved: Bool {
+        selectedTitle == nil && choices.first { $0.value == selection }?.titleIsResolved == true
+    }
 
     var body: some View {
         A11ySelectionMenu(
             selection: selection,
             options: choices.map(\.value),
-            optionLabel: { option in Text(LocalizedStringKey(choices.first { $0.value == option }?.title ?? "")) },
+            optionLabel: { option in choices.first { $0.value == option }?.displayText ?? Text(verbatim: "") },
             // Unlike a Picker, the legacy time/unit menus also dispatch when
             // the current option is tapped. Keep that exact callback path.
             onSelect: { selection = $0 }
         ) {
-            SchedulingMenuLabel(title: title, value: value, monospaced: monospaced)
+            SchedulingMenuLabel(title: title, value: value, monospaced: monospaced, valueIsResolved: valueIsResolved)
         }
         .buttonStyle(.plain)
         .accessibilityLabel(LocalizedStringKey(title))
-        .accessibilityValue(Text(LocalizedStringKey(value)))
+        .accessibilityValue(valueIsResolved ? Text(value) : Text(LocalizedStringKey(value)))
     }
 }
 
@@ -131,7 +138,7 @@ struct SchedulingNumberControl: View {
 
     var body: some View {
         SchedulingAdaptiveStack {
-            Text(LocalizedStringKey(valueDescription ?? title))
+            (valueDescription.map { Text($0) } ?? Text(LocalizedStringKey(title)))
                 .font(Typography.body())
                 .foregroundStyle(Color.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -579,13 +586,13 @@ struct SchedulingExportActions: View {
             }
             .accessibilityIdentifier(previewIdentifier)
             .accessibilityLabel("Preview Export")
-            .accessibilityHint(Text(previewHint))
+            .accessibilityHint(Text(LocalizedStringKey(previewHint)))
             Button(action: onExport) {
                 actionLabel("Export Data", icon: "arrow.up", primary: true)
             }
             .accessibilityIdentifier(exportIdentifier)
             .accessibilityLabel("Export Health Data")
-            .accessibilityHint(Text(exportHint))
+            .accessibilityHint(Text(LocalizedStringKey(exportHint)))
         }
         .buttonStyle(.plain)
     }

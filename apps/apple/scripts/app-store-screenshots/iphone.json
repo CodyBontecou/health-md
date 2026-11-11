@@ -1,0 +1,760 @@
+{
+  "schemaVersion": 2,
+  "platform": "iphone",
+  "boardsDirectory": "../../../../docs/design/liquid-glass/screens",
+  "boardPrefix": "AS_iPhone_",
+  "appStoreDisplayType": "IPHONE_69",
+  "boardSize": {
+    "width": 440,
+    "height": 956
+  },
+  "scale": 3,
+  "supportedLocales": [
+    "en-US",
+    "de-DE",
+    "es-ES",
+    "fr-FR",
+    "it",
+    "ja",
+    "ko",
+    "nl-NL",
+    "pt-BR",
+    "zh-Hans"
+  ],
+  "slides": [
+    {
+      "board": "AS_iPhone_1",
+      "output": "appstore-ios-slide-1.png",
+      "captures": {
+        "ArchiveGlassDark": {
+          "file": "iphone-archive.png"
+        }
+      },
+      "copy": {
+        "en-US": {
+          "headline": [
+            "Your health data,",
+            "{in plain text.}"
+          ],
+          "caption": "Sleep, heart, activity and more from Apple Health — saved as Markdown files you own."
+        },
+        "de-DE": {
+          "headline": [
+            "Deine Gesundheitsdaten,",
+            "{als reiner Text.}"
+          ],
+          "caption": "Schlaf, Herz, Aktivität und mehr aus Apple Health – als Markdown-Dateien, die dir gehören."
+        },
+        "es-ES": {
+          "headline": [
+            "Tus datos de salud,",
+            "{en texto plano.}"
+          ],
+          "caption": "Sueño, corazón, actividad y más de Apple Health, guardados como archivos Markdown que son tuyos."
+        },
+        "fr-FR": {
+          "headline": [
+            "Vos données de santé,",
+            "{en texte brut.}"
+          ],
+          "caption": "Sommeil, cœur, activité et plus depuis Apple Health, enregistrés en fichiers Markdown qui vous appartiennent."
+        },
+        "it": {
+          "headline": [
+            "I tuoi dati sulla salute,",
+            "{in testo semplice.}"
+          ],
+          "caption": "Sonno, cuore, attività e altro da Apple Health, salvati come file Markdown che sono tuoi."
+        },
+        "ja": {
+          "headline": [
+            "ヘルスケアデータを、",
+            "{プレーンテキストで。}"
+          ],
+          "caption": "睡眠、心臓、アクティビティなどのApple HealthのデータをMarkdownファイルとして保存。ファイルはあなたのものです。"
+        },
+        "ko": {
+          "headline": [
+            "내 건강 데이터를",
+            "{일반 텍스트로.}"
+          ],
+          "caption": "Apple Health의 수면, 심장, 활동 등을 내가 소유하는 Markdown 파일로 저장합니다."
+        },
+        "nl-NL": {
+          "headline": [
+            "Je gezondheidsgegevens,",
+            "{in platte tekst.}"
+          ],
+          "caption": "Slaap, hart, activiteit en meer uit Apple Health, bewaard als Markdown-bestanden die van jou zijn."
+        },
+        "pt-BR": {
+          "headline": [
+            "Seus dados de saúde,",
+            "{em texto simples.}"
+          ],
+          "caption": "Sono, coração, atividade e mais do Apple Health, salvos como arquivos Markdown que são seus."
+        },
+        "zh-Hans": {
+          "headline": [
+            "你的健康数据，",
+            "{化为纯文本。}"
+          ],
+          "caption": "睡眠、心脏、活动等 Apple Health 数据，保存为属于你的 Markdown 文件。"
+        }
+      }
+    },
+    {
+      "board": "AS_iPhone_2",
+      "output": "appstore-ios-slide-2.png",
+      "captures": {
+        "ComposeGlass": {
+          "file": "iphone-automation.png"
+        }
+      },
+      "copy": {
+        "en-US": {
+          "headline": [
+            "Your sleep, heart and steps —",
+            "{saved every morning.}"
+          ],
+          "caption": null
+        },
+        "de-DE": {
+          "headline": [
+            "Schlaf, Herz und Schritte –",
+            "{jeden Morgen gesichert.}"
+          ],
+          "caption": null
+        },
+        "es-ES": {
+          "headline": [
+            "Tu sueño, corazón y pasos,",
+            "{guardados cada mañana.}"
+          ],
+          "caption": null
+        },
+        "fr-FR": {
+          "headline": [
+            "Sommeil, cœur et pas,",
+            "{enregistrés chaque matin.}"
+          ],
+          "caption": null
+        },
+        "it": {
+          "headline": [
+            "Sonno, cuore e passi,",
+            "{salvati ogni mattina.}"
+          ],
+          "caption": null
+        },
+        "ja": {
+          "headline": [
+            "睡眠、心拍、歩数を",
+            "{毎朝自動で保存。}"
+          ],
+          "caption": null
+        },
+        "ko": {
+          "headline": [
+            "수면, 심박, 걸음 수를",
+            "{매일 아침 저장.}"
+          ],
+          "caption": null
+        },
+        "nl-NL": {
+          "headline": [
+            "Je slaap, hart en stappen,",
+            "{elke ochtend bewaard.}"
+          ],
+          "caption": null
+        },
+        "pt-BR": {
+          "headline": [
+            "Seu sono, coração e passos,",
+            "{salvos toda manhã.}"
+          ],
+          "caption": null
+        },
+        "zh-Hans": {
+          "headline": [
+            "睡眠、心率和步数，",
+            "{每天早上自动保存。}"
+          ],
+          "caption": null
+        }
+      }
+    },
+    {
+      "board": "AS_iPhone_3",
+      "output": "appstore-ios-slide-3.png",
+      "captures": {
+        "ArchiveGlassFeed": {
+          "file": "iphone-archive-profile.png"
+        }
+      },
+      "copy": {
+        "en-US": {
+          "headline": [
+            "Every day of your health,",
+            "{accounted for.}"
+          ],
+          "caption": "Missed a day of sleep or heart data? Backfill it in one tap."
+        },
+        "de-DE": {
+          "headline": [
+            "Jeder Tag deiner Gesundheit,",
+            "{lückenlos erfasst.}"
+          ],
+          "caption": "Ein Tag mit Schlaf- oder Herzdaten fehlt? Mit einem Tippen nachtragen."
+        },
+        "es-ES": {
+          "headline": [
+            "Cada día de tu salud,",
+            "{sin huecos.}"
+          ],
+          "caption": "¿Te falta un día de datos de sueño o corazón? Complétalo con un toque."
+        },
+        "fr-FR": {
+          "headline": [
+            "Chaque jour de votre santé,",
+            "{sans aucun oubli.}"
+          ],
+          "caption": "Un jour de sommeil ou de cœur manquant ? Rattrapez-le d’un simple toucher."
+        },
+        "it": {
+          "headline": [
+            "Ogni giorno della tua salute,",
+            "{senza lacune.}"
+          ],
+          "caption": "Manca un giorno di dati su sonno o cuore? Recuperalo con un tocco."
+        },
+        "ja": {
+          "headline": [
+            "毎日の健康を、",
+            "{1日も欠かさず記録。}"
+          ],
+          "caption": "睡眠や心拍のデータが抜けた日も、ワンタップで補完できます。"
+        },
+        "ko": {
+          "headline": [
+            "건강한 하루하루,",
+            "{빠짐없이 기록.}"
+          ],
+          "caption": "수면이나 심박 데이터가 빠진 날이 있나요? 한 번의 탭으로 채우세요."
+        },
+        "nl-NL": {
+          "headline": [
+            "Elke dag van je gezondheid,",
+            "{zonder gaten.}"
+          ],
+          "caption": "Mist er een dag slaap- of hartgegevens? Vul hem aan met één tik."
+        },
+        "pt-BR": {
+          "headline": [
+            "Cada dia da sua saúde,",
+            "{sem lacunas.}"
+          ],
+          "caption": "Faltou um dia de dados de sono ou coração? Preencha com um toque."
+        },
+        "zh-Hans": {
+          "headline": [
+            "健康的每一天，",
+            "{都有据可查。}"
+          ],
+          "caption": "缺了一天的睡眠或心率数据？轻点一下即可补齐。"
+        }
+      }
+    },
+    {
+      "board": "AS_iPhone_4",
+      "output": "appstore-ios-slide-4.png",
+      "captures": {
+        "MetricsG": {
+          "file": "iphone-metrics.png"
+        }
+      },
+      "copy": {
+        "en-US": {
+          "headline": [
+            "{225+ health metrics.}",
+            "You choose."
+          ],
+          "caption": "Sleep stages, heart, HRV, activity, vitals, nutrition, medications and more."
+        },
+        "de-DE": {
+          "headline": [
+            "{225+ Gesundheitsmetriken.}",
+            "Du entscheidest."
+          ],
+          "caption": "Schlafphasen, Herz, HFV, Aktivität, Vitalwerte, Ernährung, Medikamente und mehr."
+        },
+        "es-ES": {
+          "headline": [
+            "{Más de 225 métricas de salud.}",
+            "Tú eliges."
+          ],
+          "caption": "Fases del sueño, corazón, VFC, actividad, constantes vitales, nutrición, medicamentos y más."
+        },
+        "fr-FR": {
+          "headline": [
+            "{Plus de 225 métriques santé.}",
+            "À vous de choisir."
+          ],
+          "caption": "Phases de sommeil, cœur, VFC, activité, signes vitaux, nutrition, médicaments et plus."
+        },
+        "it": {
+          "headline": [
+            "{Oltre 225 metriche di salute.}",
+            "Scegli tu."
+          ],
+          "caption": "Fasi del sonno, cuore, HRV, attività, parametri vitali, nutrizione, farmaci e altro."
+        },
+        "ja": {
+          "headline": [
+            "{225以上のヘルス指標。}",
+            "選ぶのはあなた。"
+          ],
+          "caption": "睡眠ステージ、心拍、HRV、アクティビティ、バイタル、栄養、服薬など。"
+        },
+        "ko": {
+          "headline": [
+            "{225개 이상의 건강 항목.}",
+            "선택은 당신의 몫."
+          ],
+          "caption": "수면 단계, 심장, HRV, 활동, 활력 징후, 영양, 복약 등."
+        },
+        "nl-NL": {
+          "headline": [
+            "{225+ meetwaarden.}",
+            "Jij kiest."
+          ],
+          "caption": "Slaapfasen, hart, HRV, activiteit, vitale functies, voeding, medicatie en meer."
+        },
+        "pt-BR": {
+          "headline": [
+            "{Mais de 225 métricas de saúde.}",
+            "Você escolhe."
+          ],
+          "caption": "Fases do sono, coração, VFC, atividade, sinais vitais, nutrição, medicamentos e mais."
+        },
+        "zh-Hans": {
+          "headline": [
+            "{225+ 项健康指标。}",
+            "由你选择。"
+          ],
+          "caption": "睡眠阶段、心脏、HRV、活动、生命体征、营养、用药等。"
+        }
+      }
+    },
+    {
+      "board": "AS_iPhone_5",
+      "output": "appstore-ios-slide-5.png",
+      "captures": {
+        "FormatsG": {
+          "file": "iphone-formats.png"
+        }
+      },
+      "copy": {
+        "en-US": {
+          "headline": [
+            "Last night’s sleep.",
+            "{Four formats.}"
+          ],
+          "caption": null
+        },
+        "de-DE": {
+          "headline": [
+            "Dein Schlaf von letzter Nacht.",
+            "{Vier Formate.}"
+          ],
+          "caption": null
+        },
+        "es-ES": {
+          "headline": [
+            "Tu sueño de anoche.",
+            "{Cuatro formatos.}"
+          ],
+          "caption": null
+        },
+        "fr-FR": {
+          "headline": [
+            "Votre nuit de sommeil.",
+            "{Quatre formats.}"
+          ],
+          "caption": null
+        },
+        "it": {
+          "headline": [
+            "Il sonno di stanotte.",
+            "{Quattro formati.}"
+          ],
+          "caption": null
+        },
+        "ja": {
+          "headline": [
+            "昨夜の睡眠を、",
+            "{4つの形式で。}"
+          ],
+          "caption": null
+        },
+        "ko": {
+          "headline": [
+            "어젯밤의 수면.",
+            "{네 가지 형식.}"
+          ],
+          "caption": null
+        },
+        "nl-NL": {
+          "headline": [
+            "Je slaap van vannacht.",
+            "{Vier formaten.}"
+          ],
+          "caption": null
+        },
+        "pt-BR": {
+          "headline": [
+            "Seu sono da última noite.",
+            "{Quatro formatos.}"
+          ],
+          "caption": null
+        },
+        "zh-Hans": {
+          "headline": [
+            "昨晚的睡眠，",
+            "{四种格式。}"
+          ],
+          "caption": null
+        }
+      }
+    },
+    {
+      "board": "AS_iPhone_6",
+      "output": "appstore-ios-slide-6.png",
+      "captures": {
+        "ExportNowG": {
+          "file": "iphone-export-now.png"
+        }
+      },
+      "copy": {
+        "en-US": {
+          "headline": [
+            "Your health data,",
+            "{anywhere you need it.}"
+          ],
+          "caption": null
+        },
+        "de-DE": {
+          "headline": [
+            "Deine Gesundheitsdaten,",
+            "{wo immer du sie brauchst.}"
+          ],
+          "caption": null
+        },
+        "es-ES": {
+          "headline": [
+            "Tus datos de salud,",
+            "{donde los necesites.}"
+          ],
+          "caption": null
+        },
+        "fr-FR": {
+          "headline": [
+            "Vos données de santé,",
+            "{là où vous en avez besoin.}"
+          ],
+          "caption": null
+        },
+        "it": {
+          "headline": [
+            "I tuoi dati sulla salute,",
+            "{ovunque ti servano.}"
+          ],
+          "caption": null
+        },
+        "ja": {
+          "headline": [
+            "ヘルスケアデータを、",
+            "{必要な場所へ。}"
+          ],
+          "caption": null
+        },
+        "ko": {
+          "headline": [
+            "내 건강 데이터를",
+            "{필요한 곳 어디로든.}"
+          ],
+          "caption": null
+        },
+        "nl-NL": {
+          "headline": [
+            "Je gezondheidsgegevens,",
+            "{waar je ze nodig hebt.}"
+          ],
+          "caption": null
+        },
+        "pt-BR": {
+          "headline": [
+            "Seus dados de saúde,",
+            "{onde você precisar.}"
+          ],
+          "caption": null
+        },
+        "zh-Hans": {
+          "headline": [
+            "你的健康数据，",
+            "{随需而至。}"
+          ],
+          "caption": null
+        }
+      }
+    },
+    {
+      "board": "AS_iPhone_7",
+      "output": "appstore-ios-slide-7.png",
+      "captures": {
+        "AutomationsGlass": {
+          "file": "iphone-automations.png"
+        },
+        "WidgetSummaryG": {
+          "file": "iphone-widget-summary.png",
+          "optional": true
+        }
+      },
+      "note": "The Health Summary widget insert is a manual 510 x 510 px crop of a small widget on a simulator Home Screen; without it the insert is left out.",
+      "copy": {
+        "en-US": {
+          "headline": [
+            "Your health journal",
+            "{writes itself.}"
+          ],
+          "caption": "Last night’s sleep and yesterday’s activity land in your daily note every morning."
+        },
+        "de-DE": {
+          "headline": [
+            "Dein Gesundheitstagebuch",
+            "{schreibt sich selbst.}"
+          ],
+          "caption": "Der Schlaf der letzten Nacht und die Aktivität von gestern landen jeden Morgen in deiner Tagesnotiz."
+        },
+        "es-ES": {
+          "headline": [
+            "Tu diario de salud",
+            "{se escribe solo.}"
+          ],
+          "caption": "El sueño de anoche y la actividad de ayer llegan cada mañana a tu nota diaria."
+        },
+        "fr-FR": {
+          "headline": [
+            "Votre journal de santé",
+            "{s’écrit tout seul.}"
+          ],
+          "caption": "Le sommeil de la nuit et l’activité de la veille arrivent chaque matin dans votre note quotidienne."
+        },
+        "it": {
+          "headline": [
+            "Il tuo diario della salute",
+            "{si scrive da solo.}"
+          ],
+          "caption": "Il sonno di stanotte e l’attività di ieri arrivano ogni mattina nella tua nota giornaliera."
+        },
+        "ja": {
+          "headline": [
+            "健康日記が",
+            "{ひとりでに書き上がる。}"
+          ],
+          "caption": "昨夜の睡眠と昨日のアクティビティが、毎朝デイリーノートに届きます。"
+        },
+        "ko": {
+          "headline": [
+            "건강 일지가",
+            "{저절로 쓰입니다.}"
+          ],
+          "caption": "어젯밤 수면과 어제 활동이 매일 아침 데일리 노트에 기록됩니다."
+        },
+        "nl-NL": {
+          "headline": [
+            "Je gezondheidsdagboek",
+            "{schrijft zichzelf.}"
+          ],
+          "caption": "De slaap van vannacht en de activiteit van gisteren staan elke ochtend in je dagnotitie."
+        },
+        "pt-BR": {
+          "headline": [
+            "Seu diário de saúde",
+            "{se escreve sozinho.}"
+          ],
+          "caption": "O sono da última noite e a atividade de ontem chegam à sua nota diária toda manhã."
+        },
+        "zh-Hans": {
+          "headline": [
+            "你的健康日记，",
+            "{自动写好。}"
+          ],
+          "caption": "昨晚的睡眠和昨天的活动，每天早上自动写入你的每日笔记。"
+        }
+      }
+    },
+    {
+      "board": "AS_iPhone_8",
+      "output": "appstore-ios-slide-8.png",
+      "captures": {
+        "SettingsGlass": {
+          "file": "iphone-settings.png"
+        }
+      },
+      "copy": {
+        "en-US": {
+          "headline": [
+            "Your health data",
+            "{stays yours.}"
+          ],
+          "caption": "Health data goes from your iPhone straight to your files. Nothing passes through a Health.md cloud."
+        },
+        "de-DE": {
+          "headline": [
+            "Deine Gesundheitsdaten",
+            "{bleiben deine.}"
+          ],
+          "caption": "Gesundheitsdaten gehen direkt von deinem iPhone in deine Dateien. Nichts läuft über eine Health.md-Cloud."
+        },
+        "es-ES": {
+          "headline": [
+            "Tus datos de salud",
+            "{siguen siendo tuyos.}"
+          ],
+          "caption": "Los datos de salud van de tu iPhone directamente a tus archivos. Nada pasa por una nube de Health.md."
+        },
+        "fr-FR": {
+          "headline": [
+            "Vos données de santé",
+            "{restent les vôtres.}"
+          ],
+          "caption": "Les données de santé vont directement de votre iPhone à vos fichiers. Rien ne transite par un cloud Health.md."
+        },
+        "it": {
+          "headline": [
+            "I tuoi dati sulla salute",
+            "{restano tuoi.}"
+          ],
+          "caption": "I dati sulla salute passano da iPhone direttamente ai tuoi file. Niente transita da un cloud di Health.md."
+        },
+        "ja": {
+          "headline": [
+            "ヘルスケアデータは",
+            "{あなただけのもの。}"
+          ],
+          "caption": "ヘルスケアデータはiPhoneからあなたのファイルへ直接届きます。Health.mdのクラウドは経由しません。"
+        },
+        "ko": {
+          "headline": [
+            "내 건강 데이터는",
+            "{온전히 나의 것.}"
+          ],
+          "caption": "건강 데이터는 iPhone에서 내 파일로 바로 전달됩니다. Health.md 클라우드를 거치지 않습니다."
+        },
+        "nl-NL": {
+          "headline": [
+            "Je gezondheidsgegevens",
+            "{blijven van jou.}"
+          ],
+          "caption": "Gezondheidsgegevens gaan van je iPhone rechtstreeks naar je bestanden. Niets loopt via een Health.md-cloud."
+        },
+        "pt-BR": {
+          "headline": [
+            "Seus dados de saúde",
+            "{continuam seus.}"
+          ],
+          "caption": "Os dados de saúde vão do seu iPhone direto para os seus arquivos. Nada passa por uma nuvem do Health.md."
+        },
+        "zh-Hans": {
+          "headline": [
+            "你的健康数据，",
+            "{始终属于你。}"
+          ],
+          "caption": "健康数据从 iPhone 直接写入你的文件，不经过任何 Health.md 云端。"
+        }
+      }
+    },
+    {
+      "board": "AS_iPhone_9",
+      "output": "appstore-ios-slide-9.png",
+      "captures": {
+        "CLIDestG": {
+          "file": "iphone-cli.png"
+        }
+      },
+      "copy": {
+        "en-US": {
+          "headline": [
+            "Your health data,",
+            "{ready for your tools.}"
+          ],
+          "caption": "Pair the healthmd CLI and MCP with a QR code."
+        },
+        "de-DE": {
+          "headline": [
+            "Deine Gesundheitsdaten,",
+            "{bereit für deine Tools.}"
+          ],
+          "caption": "Verbinde die healthmd CLI und MCP per QR-Code."
+        },
+        "es-ES": {
+          "headline": [
+            "Tus datos de salud,",
+            "{listos para tus herramientas.}"
+          ],
+          "caption": "Vincula la CLI de healthmd y MCP con un código QR."
+        },
+        "fr-FR": {
+          "headline": [
+            "Vos données de santé,",
+            "{prêtes pour vos outils.}"
+          ],
+          "caption": "Associez la CLI healthmd et MCP avec un code QR."
+        },
+        "it": {
+          "headline": [
+            "I tuoi dati sulla salute,",
+            "{pronti per i tuoi strumenti.}"
+          ],
+          "caption": "Abbina la CLI healthmd e MCP con un codice QR."
+        },
+        "ja": {
+          "headline": [
+            "ヘルスケアデータを、",
+            "{いつものツールで。}"
+          ],
+          "caption": "healthmd CLIとMCPをQRコードでペアリング。"
+        },
+        "ko": {
+          "headline": [
+            "내 건강 데이터를",
+            "{내 도구에서 바로.}"
+          ],
+          "caption": "QR 코드로 healthmd CLI 및 MCP를 연결하세요."
+        },
+        "nl-NL": {
+          "headline": [
+            "Je gezondheidsgegevens,",
+            "{klaar voor je tools.}"
+          ],
+          "caption": "Koppel de healthmd CLI en MCP met een QR-code."
+        },
+        "pt-BR": {
+          "headline": [
+            "Seus dados de saúde,",
+            "{prontos para suas ferramentas.}"
+          ],
+          "caption": "Pareie a CLI healthmd e o MCP com um código QR."
+        },
+        "zh-Hans": {
+          "headline": [
+            "你的健康数据，",
+            "{随时接入你的工具。}"
+          ],
+          "caption": "用二维码配对 healthmd CLI 和 MCP。"
+        }
+      }
+    }
+  ]
+}

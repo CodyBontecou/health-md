@@ -1,0 +1,58 @@
+{
+  "description": "Clinic sync doorbell messages and the wake request a clinic sends. Fictional values only.",
+  "enrollMessage": {
+    "headers": {
+      "Content-Type": "application/json",
+      "X-HealthMd-Message": "clinic-sync-doorbell.v1"
+    },
+    "body": {
+      "type": "healthmd.clinic_sync_doorbell",
+      "version": 1,
+      "action": "enroll",
+      "wakeService": "https://healthmd-wake.costream.workers.dev",
+      "wakeId": "0123456789abcdef0123456789abcdef",
+      "wakeKey": "CQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQk"
+    }
+  },
+  "revokeMessage": {
+    "headers": {
+      "Content-Type": "application/json",
+      "X-HealthMd-Message": "clinic-sync-doorbell.v1"
+    },
+    "body": {
+      "type": "healthmd.clinic_sync_doorbell",
+      "version": 1,
+      "action": "revoke",
+      "wakeId": "0123456789abcdef0123456789abcdef"
+    }
+  },
+  "wakeRequest": {
+    "wakeKeyVerificationHash": "8c0cc17a04942cc4f8e0fe0b302606d3108860c126428ba2ceeb5f9ed41c2b05",
+    "body": {
+      "wakeId": "0123456789abcdef0123456789abcdef",
+      "nonce": "00112233445566778899aabbccddeeff",
+      "timestamp": "2026-11-03T08:00:00Z",
+      "hmac": "ac1a87785629187ad9e3a528cd500cad1f24d78de54f5e21d6a1c07c4f4ed6e0"
+    }
+  },
+  "notification": {
+    "apns": {
+      "aps": {
+        "alert": {
+          "title-loc-key": "HEALTHMD_SYNC_REQUEST_TITLE",
+          "loc-key": "HEALTHMD_SYNC_REQUEST_BODY"
+        },
+        "sound": "default",
+        "category": "HEALTHMD_SYNC_REQUEST"
+      },
+      "healthmd": {
+        "kind": "delegated-sync-request",
+        "wakeId": "0123456789abcdef0123456789abcdef"
+      }
+    },
+    "fcmData": {
+      "kind": "delegated-sync-request",
+      "wakeId": "0123456789abcdef0123456789abcdef"
+    }
+  }
+}

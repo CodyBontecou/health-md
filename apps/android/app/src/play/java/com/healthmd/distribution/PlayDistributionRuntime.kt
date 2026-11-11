@@ -1,21 +1,32 @@
 package com.healthmd.distribution
 
-import com.healthmd.data.attribution.CampaignAttributionInitializer
-import com.healthmd.data.onboardinganalytics.OnboardingAnalyticsInitializer
-import java.util.concurrent.atomic.AtomicBoolean
+import android.content.Context
+import androidx.work.WorkManager
+import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
+import java.io.File
 import javax.inject.Inject
 
-/** Google Play integrations that are active in the phone-only release. */
+/** Google Play lifecycle: erase retired telemetry without starting collection or uploads. */
 class PlayDistributionRuntime @Inject constructor(
-    private val campaignAttributionInitializer: CampaignAttributionInitializer,
-    private val onboardingAnalyticsInitializer: OnboardingAnalyticsInitializer,
+    @ApplicationContext private val context: Context,
 ) : DistributionRuntime {
-    private val initialized = AtomicBoolean(false)
+    private val cleanupScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     override fun initialize() {
-        if (!initialized.compareAndSet(false, true)) return
-        campaignAttributionInitializer.start()
-        onboardingAnalyticsInitializer.start()
+        val workManager = WorkManager.getInstance(context)
+        workManager.cancelUniqueWork("campaign-attribution-upload")
+        workManager.cancelUniqueWork("onboarding-analytics-upload")
+        cleanupScope.launch {
+            // The retired DataStore producers are gone; these files have no active writer.
+            for (name in listOf("campaign_attribution", "onboarding_analytics")) {
+                File(context.filesDir, "datastore/$name.preferences_pb").delete()
+                File(context.filesDir, "datastore/$name.preferences_pb.tmp").delete()
+            }
+        }
     }
 
     override suspend fun reconcileForeground() = Unit

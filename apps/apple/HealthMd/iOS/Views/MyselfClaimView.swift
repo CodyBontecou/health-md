@@ -2,47 +2,121 @@
 import SwiftUI
 import StoreKit
 
+/// Claims remain unavailable in this release.
+enum MyselfClaimFeature {
+    static let isEnabled = false
+}
+
 /// Sends purchase proof only after the user chooses to claim access. No health or location data is sent.
 struct MyselfClaimView: View {
     let app: String
+    /// MyselfClaimG is pushed from App & support (Back, no Done). The launch-time claim
+    /// prompt is modal, so by default the page hosts itself with a Back-styled dismiss.
+    var presentedModally = true
     @Environment(\.openURL) private var openURL
-    @Environment(\.dismiss) private var dismiss
     @State private var busy = false
     @State private var errorMessage: String?
     @State private var openedClaim = false
+    @Environment(\.glassPalette) private var glassPalette
 
+    /// MyselfClaimG.
     var body: some View {
-        NavigationStack {
-            Form {
-                Section {
-                    Text("Your existing purchase includes complimentary lifetime access to myself.md.")
-                    Text("We’ll send your App Store purchase proof to myself.md to verify eligibility. Your health and location data stay on your device.")
-                    Text("Then sign in to choose the myself.md account that receives access. Each original purchase can be linked to one account. Family-shared access alone does not qualify; the purchaser can claim.")
-                } header: {
-                    Text("Claim free myself.md access")
-                }
-                Section {
-                    Button {
-                        Task { await claim() }
-                    } label: {
-                        if busy { ProgressView("Verifying purchase…") }
-                        else { Text(openedClaim ? "Open claim again" : "Verify purchase and continue") }
+        if presentedModally {
+            GlassModalBackStack { page }
+        } else {
+            page
+        }
+    }
+
+    private var page: some View {
+            ScrollView {
+                VStack(alignment: .leading, spacing: GlassMetrics.sectionGap) {
+                    HStack(spacing: 14) {
+                        Image("AppIconImage")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 52, height: 52)
+                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                            .accessibilityHidden(true)
+                        Text("Your purchase includes complimentary lifetime access to myself.md.")
+                            .font(.system(size: 15))
+                            .foregroundStyle(glassPalette.sec)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
-                    .disabled(busy)
+                    .padding(18)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .glassSurface()
+
+                    GlassPanel {
+                        step(String(localized: "1 · Verify purchase"),
+                             String(localized: "App Store proof only — health and location stay here"),
+                             done: openedClaim)
+                        divider
+                        step(String(localized: "2 · Choose the account"),
+                             String(localized: "Each original purchase links to one account"),
+                             done: false)
+                        divider
+                        step(String(localized: "3 · Open the myself.md app"),
+                             String(localized: "Sign in with the same account"),
+                             done: false)
+                    }
+
+                    Text("Family-shared access alone doesn’t qualify; the original purchaser can claim.")
+                        .font(.system(size: 13))
+                        .foregroundStyle(glassPalette.muted)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.horizontal, 4)
                     if openedClaim {
                         Text("Finish signing in on myself.md, then sign in with the same account in the myself.md app on iOS or Android.")
+                            .glassFont(.rowSubtitle)
+                            .foregroundStyle(glassPalette.sec)
                     }
-                    if let errorMessage { Text(errorMessage).foregroundStyle(.red).accessibilityAddTraits(.updatesFrequently) }
+                    if let errorMessage {
+                        Text(errorMessage)
+                            .glassFont(.rowSubtitle)
+                            .foregroundStyle(glassPalette.coral)
+                            .accessibilityAddTraits(.updatesFrequently)
+                    }
                 }
+                .padding(.horizontal, GlassMetrics.screenMargin)
+                .padding(.vertical, 8)
             }
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                Button {
+                    Task { await claim() }
+                } label: {
+                    if busy { ProgressView("Verifying purchase…") }
+                    else { Text(LocalizedStringKey(openedClaim ? "Open claim again" : "Verify purchase")) }
+                }
+                .buttonStyle(GlassPrimaryButtonStyle())
+                .disabled(busy)
+                .padding(.horizontal, GlassMetrics.screenMargin)
+                .padding(.top, 12)
+                .padding(.bottom, 8)
+                .background { Color.clear.glassSurface(in: Rectangle()).ignoresSafeArea(edges: .bottom) }
+            }
+            .background(glassPalette.bg.ignoresSafeArea())
             .navigationTitle("myself.md access")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Done") { dismiss() } } }
+    }
+
+    private var divider: some View {
+        Rectangle().fill(glassPalette.line).frame(height: 1).padding(.horizontal, GlassMetrics.panelPadding)
+    }
+
+    private func step(_ title: String, _ subtitle: String, done: Bool) -> some View {
+        GlassRow(title: title, subtitle: subtitle) {
+            if done {
+                Image(systemName: "checkmark.circle.fill").foregroundStyle(glassPalette.ok)
+                    .accessibilityLabel(String(localized: "Done"))
+            }
         }
+        .accessibilityElement(children: .combine)
     }
 
     @MainActor
     private func claim() async {
+        guard MyselfClaimFeature.isEnabled else { return }
         busy = true
         errorMessage = nil
         defer { busy = false }

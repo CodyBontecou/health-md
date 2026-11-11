@@ -154,6 +154,12 @@ a {
   gap: 18px;
 }
 
+.header-nav nav {
+  display: flex;
+  align-items: center;
+  gap: inherit;
+}
+
 .header-docs-link {
   position: relative;
   display: inline-flex;
@@ -277,6 +283,8 @@ main {
 
 .hero-intro h1 {
   max-width: 760px;
+  hyphens: auto;
+  overflow-wrap: anywhere;
   margin-left: clamp(-8px, -0.5vw, -4px);
   font-size: clamp(86px, 7.2vw, 114px);
   font-weight: 470;
@@ -3371,4 +3379,34 @@ html:lang(zh-Hans) .hero-intro p {
     opacity: 1;
     transform: none;
   }
+}
+
+.workflow-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 24px;
+  margin-top: 24px;
+  list-style: none;
+}
+
+.workflow-links a,
+.workflow-link a {
+  color: var(--purple);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.workflow-link {
+  margin-top: 24px;
+}
+
+.workflow-links a:hover,
+.workflow-link a:hover {
+  color: var(--ink);
+}
+
+.workflow-links a:focus-visible,
+.workflow-link a:focus-visible {
+  outline: 2px solid var(--purple);
+  outline-offset: 4px;
 }

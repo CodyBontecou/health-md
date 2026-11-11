@@ -12,6 +12,89 @@ enum IPhoneConnectedCorpusProducer {
         let acknowledgement: ConnectedCorpusTransferFinalAck
     }
 
+    struct AcceptedFileCapture {
+        let snapshot: ExportSettingsSnapshot
+        let settings: AdvancedExportSettings
+        let context: AppleSleepCaptureContext
+        let providers: (any ExternalIntegrationDailyRecordProviding)?
+        let fetchExternalRecords: MacExportJobBuilder.ExternalDailyRecordFetcher?
+    }
+
+    /// Accept configuration and provider grants before renderer qualification can suspend.
+    static func prepareFileCapture(
+        settings: AdvancedExportSettings,
+        savedSnapshot: ExportSettingsSnapshot? = nil,
+        healthSubfolder: String,
+        protocolVersion: Int,
+        healthKitManager: HealthKitManager,
+        providers: (any ExternalIntegrationDailyRecordProviding)?,
+        legacyFetcher: MacExportJobBuilder.ExternalDailyRecordFetcher? = nil,
+        needsCapture: Bool = true
+    ) async throws -> AcceptedFileCapture {
+        let context = try savedSnapshot?.recoveredSleepCaptureContext()
+            ?? healthKitManager.resolveSleepCaptureContext(settings: settings)
+        var snapshot = savedSnapshot ?? ExportSettingsSnapshot.from(settings, healthSubfolder: healthSubfolder,
+            appleExportEngineAuthorityIsFrozen: false, calendarTimeZoneIdentifier: context.calendarTimeZoneIdentifier)
+        snapshot.sleepCaptureContext = context
+        let wantsSidecars = needsCapture && snapshot.makeAdvancedExportSettings().writesExternalProviderSidecars
+        let frozenAuthority = savedSnapshot != nil || settings.executionExternalProviderCaptureAuthorityIsFrozen
+        let accepted: (any ExternalIntegrationDailyRecordProviding)?
+        var usesLegacyFetcher = false
+        if !wantsSidecars {
+            accepted = nil
+            if savedSnapshot == nil { snapshot.externalProviderCaptureAuthority = .init(connections: [:]) }
+        } else if let authority = snapshot.externalProviderCaptureAuthority {
+            accepted = try restoreProviders(authority: authority, providers: providers)
+        } else if frozenAuthority && context.sleepDayAttribution == .morningEnds {
+            throw ExternalProviderCaptureAuthority.RecoveryError.unavailable
+        } else {
+            if context.sleepDayAttribution == .morningEnds, legacyFetcher != nil, providers == nil {
+                throw ExternalProviderCaptureAuthority.RecoveryError.unavailable
+            }
+            accepted = ConnectedAppsFeature.isEnabled ? providers?.forCaptureOperation() : nil
+            usesLegacyFetcher = accepted == nil && legacyFetcher != nil && context.sleepDayAttribution == .nightBegins
+            let count = accepted?.connectedProviderCount ?? 0
+            let capturedAuthority = accepted?.captureAuthority
+            if let capturedAuthority {
+                snapshot.externalProviderCaptureAuthority = capturedAuthority
+            } else if count == 0 && !usesLegacyFetcher {
+                snapshot.externalProviderCaptureAuthority = ExternalProviderCaptureAuthority(connections: [:])
+            } else {
+                snapshot.externalProviderCaptureAuthority = nil
+            }
+            if context.sleepDayAttribution == .morningEnds, snapshot.externalProviderCaptureAuthority == nil {
+                throw ExternalProviderCaptureAuthority.RecoveryError.unavailable
+            }
+        }
+        let frozen = snapshot.makeAdvancedExportSettings()
+        let fetcher: MacExportJobBuilder.ExternalDailyRecordFetcher?
+        if let accepted, accepted.connectedProviderCount > 0 {
+            var calendar = Calendar(identifier: .gregorian); calendar.timeZone = context.timeZone
+            fetcher = { await accepted.fetchDailyRecords(for: $0, calendar: calendar) }
+        } else { fetcher = usesLegacyFetcher ? legacyFetcher : nil }
+        if savedSnapshot == nil {
+            snapshot = await MacExportJobBuilder.settingsSnapshotForNewConnectedMacOperation(frozen,
+                healthSubfolder: healthSubfolder, calendarTimeZone: context.timeZone,
+                hasNativeOnlyCompanionAction: fetcher != nil,
+                operationSurface: MacExportStreamingJobBuilder.connectedOperationSurface(protocolVersion: protocolVersion))
+        }
+        if context.sleepDayAttribution == .morningEnds,
+           snapshot.appleExportEnginePin?.hasExplicitWakeDateContracts != true {
+            throw AppleSleepCaptureContext.AvailabilityError.unapprovedAttribution
+        }
+        return AcceptedFileCapture(snapshot: snapshot, settings: snapshot.makeAdvancedExportSettings(),
+            context: context, providers: accepted, fetchExternalRecords: fetcher)
+    }
+
+    static func restoreProviders(authority: ExternalProviderCaptureAuthority,
+                                 providers: (any ExternalIntegrationDailyRecordProviding)?) throws -> (any ExternalIntegrationDailyRecordProviding)? {
+        guard !authority.connections.isEmpty else { return nil }
+        guard let providers else { throw ExternalProviderCaptureAuthority.RecoveryError.unavailable }
+        let accepted = try providers.forCaptureOperation(authority: authority)
+        guard accepted.captureAuthority == authority else { throw ExternalProviderCaptureAuthority.RecoveryError.unavailable }
+        return accepted
+    }
+
     static func sendFileExport(
         jobID: UUID,
         startDate: Date,
@@ -26,10 +109,21 @@ enum IPhoneConnectedCorpusProducer {
         negotiation: ConnectedCorpusTransferNegotiation,
         healthKitManager: HealthKitManager,
         externalRecordFetcher: MacExportJobBuilder.ExternalDailyRecordFetcher?,
+        externalIntegrations: (any ExternalIntegrationDailyRecordProviding)? = nil,
         syncService: SyncService,
         origin: ConnectedCorpusOutboundOrigin = .interactiveIPhone,
         progress: ((IPhoneConnectedCorpusProgressUpdate) -> Void)? = nil
     ) async throws -> Result {
+        let restoredJournal = IPhoneCorpusExportRecoveryManager.shared.journal(jobID: jobID)
+        let savedSnapshot = restoredJournal?.exportManifest.settingsSnapshot ?? frozenSettingsSnapshot
+        let capture = try await prepareFileCapture(settings: settings, savedSnapshot: savedSnapshot,
+            healthSubfolder: savedSnapshot?.healthSubfolder ?? healthSubfolder,
+            protocolVersion: negotiation.protocolVersion, healthKitManager: healthKitManager,
+            providers: externalIntegrations, legacyFetcher: externalRecordFetcher,
+            needsCapture: restoredJournal.map { $0.nextItemIndex < $0.totalItemCount } ?? true)
+        let captureContext = capture.context
+        let settings = capture.settings
+        let externalRecordFetcher = capture.fetchExternalRecords
         #if DEBUG
         let performanceSpan = ExportPerformanceInstrumentation.beginSpan(
             pipeline: "connected-mac",
@@ -42,40 +136,20 @@ enum IPhoneConnectedCorpusProducer {
             )
         }
         #endif
-        let metadata: MacExportStreamingJobBuilder.Metadata
-        if let frozenSettingsSnapshot {
-            metadata = MacExportStreamingJobBuilder.metadata(
-                startDate: startDate,
-                endDate: endDate,
-                requestedDates: requestedDates,
-                rollupRequestedDates: originalRequestedDates,
-                settings: settings,
-                healthSubfolder: healthSubfolder,
-                destinationDisplayName: destinationDisplayName,
-                frozenSettingsSnapshot: frozenSettingsSnapshot
-            )
-        } else {
-            metadata = await MacExportStreamingJobBuilder.metadataForNewOperation(
-                startDate: startDate,
-                endDate: endDate,
-                requestedDates: requestedDates,
-                rollupRequestedDates: originalRequestedDates,
-                settings: settings,
-                healthSubfolder: healthSubfolder,
-                destinationDisplayName: destinationDisplayName,
-                enforceConnectedOperationGate: true,
-                connectedOperationSurface: MacExportStreamingJobBuilder.connectedOperationSurface(
-                    protocolVersion: negotiation.protocolVersion
-                ),
-                hasNativeOnlyCompanionAction: settings.writesExternalProviderSidecars
-                    && externalRecordFetcher != nil
-            )
-        }
+        let savedManifest = restoredJournal?.exportManifest
+        let metadata = MacExportStreamingJobBuilder.metadata(
+            startDate: savedManifest?.dateRangeStart ?? startDate,
+            endDate: savedManifest?.dateRangeEnd ?? endDate,
+            requestedDates: savedManifest?.requestedDates ?? requestedDates,
+            rollupRequestedDates: savedManifest?.effectiveOriginalRequestedDates ?? originalRequestedDates,
+            settings: settings, healthSubfolder: capture.snapshot.healthSubfolder ?? healthSubfolder,
+            destinationDisplayName: savedManifest?.requestedTarget?.destinationDisplayName ?? destinationDisplayName,
+            frozenSettingsSnapshot: capture.snapshot)
+        capture.providers?.beginExportAction()
+        var providerActionSucceeded = false
+        defer { capture.providers?.endExportAction(succeeded: providerActionSucceeded) }
         let createdAt = Date()
-        let sourceTimeZone = metadata.settingsSnapshot.calendarTimeZoneIdentifier
-            .flatMap(TimeZone.init(identifier:))
-            ?? settings.exportTimeZoneOverride
-            ?? .current
+        let sourceTimeZone = captureContext.timeZone
         var sourceCalendar = Calendar(identifier: .gregorian)
         sourceCalendar.timeZone = sourceTimeZone
         let dateFormatter = DateFormatter()
@@ -83,7 +157,9 @@ enum IPhoneConnectedCorpusProducer {
         dateFormatter.locale = Locale(identifier: "en_US_POSIX")
         dateFormatter.timeZone = sourceTimeZone
         dateFormatter.dateFormat = "yyyy-MM-dd"
-        let exportManifest = ConnectedCorpusExportManifest(
+        var operationSnapshot = metadata.settingsSnapshot
+        operationSnapshot.sleepCaptureContext = captureContext
+        let exportManifest = savedManifest ?? ConnectedCorpusExportManifest(
             mode: .writeFiles,
             createdAt: createdAt,
             sourceDeviceName: UIDevice.current.name,
@@ -96,11 +172,10 @@ enum IPhoneConnectedCorpusProducer {
                 ?? sourceTimeZone.identifier,
             requestedDateIdentifiers: metadata.requestedDates.map { dateFormatter.string(from: $0) },
             transferDates: metadata.transferDates,
-            settingsSnapshot: metadata.settingsSnapshot,
+            settingsSnapshot: operationSnapshot,
             appleExportEnginePin: metadata.settingsSnapshot.appleExportEnginePin,
             requestedTarget: metadata.requestedTarget
         )
-        let restoredJournal = IPhoneCorpusExportRecoveryManager.shared.journal(jobID: jobID)
         var preparedDays = min(
             max(restoredJournal?.nextItemIndex ?? 0, 0),
             metadata.totalTransferDays
@@ -153,7 +228,8 @@ enum IPhoneConnectedCorpusProducer {
                         for: date,
                         detailPolicy: detailPolicy,
                         metricSelection: metricSelection,
-                        timeZone: sourceTimeZone
+                        timeZone: sourceTimeZone,
+                        captureContext: captureContext
                     )
                 },
                 fetchExternalDailyRecords: externalRecordFetcher
@@ -227,6 +303,7 @@ enum IPhoneConnectedCorpusProducer {
                 onValidatedPartitionProgress: progressHandler,
                 produceItem: produceItem
             )
+            providerActionSucceeded = senderResult.acknowledgement.accepted
             #if DEBUG
             performanceOutcome = .success
             #endif
@@ -254,6 +331,7 @@ enum IPhoneConnectedCorpusProducer {
                 }
             )
         }
+        providerActionSucceeded = senderResult.acknowledgement.accepted
         #if DEBUG
         performanceOutcome = .success
         #endif

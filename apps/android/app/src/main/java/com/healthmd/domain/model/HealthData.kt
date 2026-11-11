@@ -203,7 +203,18 @@ data class ActivityData(
     val activityIntensityMinutes: Int? = null,
     val stepSamples: List<TimestampedSample> = emptyList(),
     val activityIntensityEntries: List<ActivityIntensityEntry> = emptyList(),
+    // android-analytical-v7 interval arrays: one entry per Health Connect record, start-owned.
+    val activeCaloriesSamples: List<TimestampedSample> = emptyList(), // kcal
+    val totalCaloriesSamples: List<TimestampedSample> = emptyList(), // kcal
+    val distanceSamples: List<TimestampedSample> = emptyList(), // meters
+    val floorsSamples: List<TimestampedSample> = emptyList(), // floors
+    val elevationSamples: List<TimestampedSample> = emptyList(), // meters
 ) {
+    /** True when any v7 expansion array is present. */
+    val hasDetailExpansion: Boolean
+        get() = activeCaloriesSamples.isNotEmpty() || totalCaloriesSamples.isNotEmpty() ||
+            distanceSamples.isNotEmpty() || floorsSamples.isNotEmpty() || elevationSamples.isNotEmpty()
+
     val hasData: Boolean
         get() = steps != null || activeCalories != null || totalCalories != null ||
                 exerciseMinutes != null || flightsClimbed != null ||
@@ -213,7 +224,8 @@ data class ActivityData(
                 swimmingStrokes != null || wheelchairDistance != null ||
                 downhillSnowSportsDistance != null || moderateActivityMinutes != null ||
                 vigorousActivityMinutes != null || activityIntensityMinutes != null ||
-                stepSamples.isNotEmpty() || activityIntensityEntries.isNotEmpty()
+                stepSamples.isNotEmpty() || activityIntensityEntries.isNotEmpty() ||
+                hasDetailExpansion
 }
 
 // MARK: - Heart Data
@@ -298,11 +310,23 @@ data class BodyData(
     val leanBodyMass: Double? = null, // kg
     val bodyWaterMass: Double? = null, // kg
     val boneMass: Double? = null, // kg
+    // android-analytical-v7 instantaneous records: one entry per Health Connect record.
+    val weightSamples: List<TimestampedSample> = emptyList(), // kg
+    val heightSamples: List<TimestampedSample> = emptyList(), // meters
+    val bodyFatSamples: List<TimestampedSample> = emptyList(), // fraction (0-1)
+    val leanBodyMassSamples: List<TimestampedSample> = emptyList(), // kg
+    val boneMassSamples: List<TimestampedSample> = emptyList(), // kg
+    val bodyWaterMassSamples: List<TimestampedSample> = emptyList(), // kg
 ) {
+    /** True when any v7 expansion array is present. */
+    val hasDetailExpansion: Boolean
+        get() = weightSamples.isNotEmpty() || heightSamples.isNotEmpty() || bodyFatSamples.isNotEmpty() ||
+            leanBodyMassSamples.isNotEmpty() || boneMassSamples.isNotEmpty() || bodyWaterMassSamples.isNotEmpty()
+
     val hasData: Boolean
         get() = weight != null || bodyFatPercentage != null || height != null ||
                 bmi != null || leanBodyMass != null || bodyWaterMass != null ||
-                boneMass != null
+                boneMass != null || hasDetailExpansion
 }
 
 // MARK: - Nutrition Data
@@ -353,6 +377,8 @@ data class NutritionData(
     val biotin: Double? = null, // micrograms
     val energyFromFat: Double? = null, // kcal
     val meals: List<NutritionMealEntry> = emptyList(),
+    /** android-analytical-v7: one interval entry per HydrationRecord, liters, start-owned. */
+    val hydrationSamples: List<TimestampedSample> = emptyList(),
 ) {
     val hasData: Boolean
         get() = dietaryEnergy != null || protein != null || carbohydrates != null ||
@@ -366,7 +392,7 @@ data class NutritionData(
                 vitaminB12 != null || vitaminC != null || vitaminD != null || vitaminE != null ||
                 vitaminK != null || thiamin != null || riboflavin != null || niacin != null ||
                 folate != null || folicAcid != null || pantothenicAcid != null || biotin != null ||
-                energyFromFat != null || meals.isNotEmpty()
+                energyFromFat != null || meals.isNotEmpty() || hydrationSamples.isNotEmpty()
 }
 
 // MARK: - Mobility Data
@@ -781,7 +807,11 @@ data class HealthData(
      * individual disabled metrics before any exporter, Daily Note Injection, or Individual Entry
      * Tracking sees the data. That keeps every output format aligned to the same metric selection.
      */
-    fun filtered(selection: MetricSelectionState): HealthData {
+    fun filtered(selection: MetricSelectionState, captureContext: AndroidCaptureContext? = null): HealthData {
+        val wakeDate = captureContext?.sleepDayAttribution == SleepDayAttribution.MORNING_ENDS
+        require(!wakeDate || captureContext?.exportProfileID == "android-sleep-v6") {
+            "wake-date filtering requires versioned capture authority"
+        }
         fun enabled(metricId: String): Boolean = selection.isEnabled(metricId)
 
         val filteredSleep = SleepData(
@@ -795,7 +825,8 @@ data class HealthData(
                 when (stage.stage.lowercase()) {
                     "deep" -> enabled("sleep_deep")
                     "rem" -> enabled("sleep_rem")
-                    "light", "core", "sleeping" -> enabled("sleep_light")
+                    "light", "core" -> enabled("sleep_light")
+                    "sleeping" -> enabled(if (wakeDate) "sleep_total" else "sleep_light")
                     "awake", "wake" -> enabled("sleep_awake")
                     else -> enabled("sleep_total")
                 }
@@ -825,6 +856,11 @@ data class HealthData(
             activityIntensityMinutes = activity.activityIntensityMinutes.takeIf { enabled("activity_intensity_minutes") },
             stepSamples = if (enabled("steps")) activity.stepSamples else emptyList(),
             activityIntensityEntries = if (enabled("activity_intensity_minutes")) activity.activityIntensityEntries else emptyList(),
+            activeCaloriesSamples = if (enabled("active_calories")) activity.activeCaloriesSamples else emptyList(),
+            totalCaloriesSamples = if (enabled("total_calories")) activity.totalCaloriesSamples else emptyList(),
+            distanceSamples = if (enabled("distance")) activity.distanceSamples else emptyList(),
+            floorsSamples = if (enabled("flights_climbed")) activity.floorsSamples else emptyList(),
+            elevationSamples = if (enabled("elevation_gained")) activity.elevationSamples else emptyList(),
         )
 
         val filteredHeart = HeartData(
@@ -878,6 +914,12 @@ data class HealthData(
             leanBodyMass = body.leanBodyMass.takeIf { enabled("lean_mass") },
             bodyWaterMass = body.bodyWaterMass.takeIf { enabled("body_water_mass") },
             boneMass = body.boneMass.takeIf { enabled("bone_mass") },
+            weightSamples = if (enabled("weight")) body.weightSamples else emptyList(),
+            heightSamples = if (enabled("height")) body.heightSamples else emptyList(),
+            bodyFatSamples = if (enabled("body_fat")) body.bodyFatSamples else emptyList(),
+            leanBodyMassSamples = if (enabled("lean_mass")) body.leanBodyMassSamples else emptyList(),
+            boneMassSamples = if (enabled("bone_mass")) body.boneMassSamples else emptyList(),
+            bodyWaterMassSamples = if (enabled("body_water_mass")) body.bodyWaterMassSamples else emptyList(),
         )
 
         val filteredNutrition = NutritionData(
@@ -925,6 +967,7 @@ data class HealthData(
             biotin = nutrition.biotin.takeIf { enabled("biotin") },
             energyFromFat = nutrition.energyFromFat.takeIf { enabled("energy_from_fat") },
             meals = if (enabled("nutrition_meals")) nutrition.meals else emptyList(),
+            hydrationSamples = if (enabled("water")) nutrition.hydrationSamples else emptyList(),
         )
 
         val filteredMobility = MobilityData(

@@ -6,12 +6,13 @@ import com.healthmd.core.CoreSelfTestReport
 import com.healthmd.core.FixtureValidation
 import com.healthmd.core.HealthMdCoreReadiness
 import com.healthmd.core.HealthMdCoreService
+import com.healthmd.domain.model.HEALTHMD_CORE_REGISTRY_SHA256
 
 internal const val TEST_REQUEST_ID = "m6-request"
 internal const val TEST_SESSION_ID = "m6-session"
 
 internal fun testReadiness(
-    registrySha256: String = "a".repeat(64),
+    registrySha256: String = HEALTHMD_CORE_REGISTRY_SHA256,
     isReady: Boolean = true,
 ): HealthMdCoreReadiness {
     val info = CoreBuildInfo(
@@ -40,7 +41,7 @@ internal fun testReadiness(
 
 internal fun testRegistry(
     profile: AndroidExportProfile = AndroidExportProfile.android_frozen_v4,
-    registrySha256: String = "a".repeat(64),
+    registrySha256: String = HEALTHMD_CORE_REGISTRY_SHA256,
 ): CoreMetricRegistrySnapshot = CoreMetricRegistrySnapshot(
     registryVersion = HealthMdCoreService.EXPECTED_REGISTRY_VERSION,
     registrySha256 = registrySha256,
@@ -48,11 +49,13 @@ internal fun testRegistry(
     publicProfileId = when (profile) {
         AndroidExportProfile.android_frozen_v4 -> "android-frozen-v4"
         AndroidExportProfile.android_analytical_v5 -> "android-analytical-v5"
+        AndroidExportProfile.android_sleep_v6 -> "android-sleep-v6"
     },
     publicSchema = ExportEnginePin.PUBLIC_SCHEMA,
     publicSchemaVersion = when (profile) {
         AndroidExportProfile.android_frozen_v4 -> 4u
         AndroidExportProfile.android_analytical_v5 -> 5u
+        AndroidExportProfile.android_sleep_v6 -> 6u
     },
     profileRevision = 1u,
     categories = emptyList(),

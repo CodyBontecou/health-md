@@ -1,0 +1,49 @@
+{
+  "iaps": [
+    {
+      "id": "6780235271",
+      "name": "Family Full Access",
+      "productId": "com.codybontecou.obsidianhealth.unlock.family",
+      "type": "NON_CONSUMABLE",
+      "baseTerritory": "USA",
+      "currentPrice": {
+        "amount": "39.99",
+        "currency": "USD"
+      },
+      "estimatedProceeds": {
+        "amount": "33.99",
+        "currency": "USD"
+      }
+    },
+    {
+      "id": "6781658621",
+      "name": "Family Upgrade",
+      "productId": "com.codybontecou.obsidianhealth.unlock.family.upgrade",
+      "type": "NON_CONSUMABLE",
+      "baseTerritory": "USA",
+      "currentPrice": {
+        "amount": "20.0",
+        "currency": "USD"
+      },
+      "estimatedProceeds": {
+        "amount": "17.0",
+        "currency": "USD"
+      }
+    },
+    {
+      "id": "6761057963",
+      "name": "Unlock Full Access",
+      "productId": "com.codybontecou.obsidianhealth.unlock",
+      "type": "NON_CONSUMABLE",
+      "baseTerritory": "USA",
+      "currentPrice": {
+        "amount": "19.99",
+        "currency": "USD"
+      },
+      "estimatedProceeds": {
+        "amount": "16.99",
+        "currency": "USD"
+      }
+    }
+  ]
+}

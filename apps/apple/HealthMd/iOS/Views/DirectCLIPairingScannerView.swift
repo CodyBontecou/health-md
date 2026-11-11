@@ -16,38 +16,50 @@ struct DirectCLIPairingScannerView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.scenePhase) private var scenePhase
     let onPairingLink: (IPhoneDirectCLIPairingLink) -> Void
+    /// Dismisses to the destination's manual code entry (ScannerG "Enter code instead").
+    var onEnterCode: (() -> Void)? = nil
 
     @State private var cameraState: CameraState = .checking
     @State private var rejectedCode = false
 
+    /// The scanner always renders over the camera, so it uses the dark palette.
+    private var palette: GlassPalette { .dark }
+
     var body: some View {
         ZStack {
-            Color.black.ignoresSafeArea()
+            Color.glassHex(0x1B1B20).ignoresSafeArea()
 
             scannerContent
                 .ignoresSafeArea()
 
-            VStack(spacing: Spacing.s4) {
+            VStack(spacing: 0) {
                 HStack {
-                    Spacer()
                     Button {
                         dismiss()
                     } label: {
                         Image(systemName: "xmark")
-                            .font(.body.weight(.bold))
-                            .foregroundStyle(.white)
+                            .font(.system(size: 17, weight: .bold))
+                            .foregroundStyle(palette.text)
                             .frame(width: 44, height: 44)
-                            .background(.black.opacity(0.58), in: Circle())
+                            .glassSurface(in: Circle(), style: .strong, isInteractive: true)
                     }
+                    .buttonStyle(.plain)
                     .accessibilityLabel("Close QR scanner")
+                    Spacer()
+                    Text("Scan pairing QR")
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundStyle(palette.text)
+                        .accessibilityAddTraits(.isHeader)
+                    Spacer()
+                    Color.clear.frame(width: 44, height: 44)
                 }
 
                 Spacer()
 
                 if cameraState == .ready {
-                    RoundedRectangle(cornerRadius: 28, style: .continuous)
+                    RoundedRectangle(cornerRadius: 34, style: .continuous)
                         .stroke(.white.opacity(0.9), lineWidth: 3)
-                        .frame(width: 264, height: 264)
+                        .frame(width: 250, height: 250)
                         .shadow(color: .black.opacity(0.45), radius: 8)
                         .accessibilityHidden(true)
                 }
@@ -55,13 +67,14 @@ struct DirectCLIPairingScannerView: View {
                 Spacer()
 
                 scannerMessage
-                    .padding(Spacing.md)
+                    .padding(18)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+                    .glassSurface(cornerRadius: GlassMetrics.dialogRadius, style: .strong)
             }
-            .padding(.horizontal, Spacing.s4)
+            .padding(.horizontal, GlassMetrics.screenMargin)
             .padding(.vertical, Spacing.s4)
         }
+        .environment(\.glassPalette, palette)
         .task {
             await prepareCamera()
         }
@@ -108,52 +121,66 @@ struct DirectCLIPairingScannerView: View {
 
     @ViewBuilder
     private var scannerMessage: some View {
-        VStack(alignment: .leading, spacing: Spacing.sm) {
+        VStack(alignment: .leading, spacing: 10) {
             switch cameraState {
             case .checking:
-                Label("Preparing Camera", systemImage: "camera")
-                    .font(.headline)
-                Text("Health.md uses the camera only to recognize the pairing QR you choose.")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
+                headline(Text("Preparing Camera"))
+                caption("Health.md uses the camera only to recognize the pairing QR you choose.")
             case .ready:
-                Label("Scan Direct CLI QR", systemImage: "qrcode.viewfinder")
-                    .font(.headline)
-                Text(
-                    rejectedCode
-                        ? "That QR is not a valid Direct CLI pairing code. Scan the fresh QR shown by healthmd."
-                        : "Point the camera at the QR shown by healthmd. A valid private-network code starts pairing immediately."
-                )
-                .font(.footnote)
-                .foregroundStyle(rejectedCode ? Color.warning : .secondary)
-                .fixedSize(horizontal: false, vertical: true)
+                if rejectedCode {
+                    headline(Text("That QR is not a valid Direct CLI pairing code. Scan the fresh QR shown by healthmd."), color: palette.coral)
+                } else {
+                    headline(Text("Start pairing from \(Text(verbatim: "healthmd").font(.system(size: 15, design: .monospaced))) or your MCP client, then point at its QR."))
+                }
+                caption("The camera only reads the code you choose. If it’s blocked, enable it in Settings or enter the code instead.")
             case .permissionDenied:
-                Label("Camera Access Required", systemImage: "camera.fill")
-                    .font(.headline)
-                Text("Allow camera access in Settings to scan a Direct CLI pairing QR securely inside Health.md.")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
+                headline(Text("Camera Access Required"))
+                caption("Allow camera access in Settings to scan a Direct CLI pairing QR securely inside Health.md.")
                 Button("Open Settings") {
                     guard let settingsURL = URL(string: UIApplication.openSettingsURLString) else { return }
                     UIApplication.shared.open(settingsURL)
                 }
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(GlassPrimaryButtonStyle())
             case .unavailable:
-                Label("Camera Unavailable", systemImage: "camera.fill")
-                    .font(.headline)
-                Text("Close other apps using the camera, then try again. Manual IP and pairing-code entry remain available.")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
+                headline(Text("Camera Unavailable"))
+                caption("Close other apps using the camera, then try again. Manual IP and pairing-code entry remain available.")
                 Button("Try Again") {
                     Task { await prepareCamera() }
                 }
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(GlassPrimaryButtonStyle())
+            }
+            if let onEnterCode {
+                Button {
+                    dismiss()
+                    onEnterCode()
+                } label: {
+                    Text("Enter code instead")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundStyle(palette.text)
+                        .frame(maxWidth: .infinity, minHeight: 46)
+                        .background(Capsule().fill(palette.surface2))
+                        .overlay(Capsule().strokeBorder(palette.edge, lineWidth: 1))
+                        .contentShape(Capsule())
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("directCLI.scanner.enterCode")
             }
         }
-        .foregroundStyle(.primary)
         .accessibilityElement(children: .contain)
+    }
+
+    private func headline(_ text: Text, color: Color? = nil) -> some View {
+        text
+            .font(.system(size: 15))
+            .foregroundStyle(color ?? palette.text)
+            .fixedSize(horizontal: false, vertical: true)
+    }
+
+    private func caption(_ key: LocalizedStringKey) -> some View {
+        Text(key)
+            .font(.system(size: 13))
+            .foregroundStyle(palette.muted)
+            .fixedSize(horizontal: false, vertical: true)
     }
 
     @MainActor

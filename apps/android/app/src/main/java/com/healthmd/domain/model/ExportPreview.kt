@@ -10,10 +10,27 @@ data class ExportPreview(
     val days: List<ExportPreviewDay>,
     /** True when the files represent one immutable artifact for the complete selected range. */
     val isRangeArtifact: Boolean = false,
+    /** Accepted sleep scope, retained with the bytes rather than rebuilt from live UI settings. */
+    val sleepWindow: ExportPreviewSleepWindow? = null,
 ) {
     val totalFileCount: Int get() = days.sumOf { it.files.size + it.sideEffects.count { effect -> effect.wouldWrite } }
     val totalByteCount: Int get() = days.sumOf { day ->
         day.files.sumOf { it.byteCount } + day.sideEffects.filter { it.wouldWrite }.sumOf { it.byteCount }
+    }
+}
+
+data class ExportPreviewSleepWindow(
+    val startDate: LocalDate,
+    val endDate: LocalDate,
+    val captureContext: AndroidCaptureContext,
+) {
+    companion object {
+        fun capture(dates: List<LocalDate>, settings: ExportSettings, context: AndroidCaptureContext?): ExportPreviewSleepWindow? {
+            if (context == null || dates.isEmpty() ||
+                settings.exportMode == com.healthmd.rawexport.ExportMode.RAW_SNAPSHOT ||
+                settings.metricSelection.enabledMetricCount(HealthMetricCategory.SLEEP) == 0) return null
+            return ExportPreviewSleepWindow(dates.min(), dates.max(), context)
+        }
     }
 }
 

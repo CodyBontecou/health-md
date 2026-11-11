@@ -5,6 +5,7 @@ import com.healthmd.myselfclaim.MyselfClaimPurchaseSource
 import com.healthmd.data.billing.BillingRepositoryImpl
 import com.healthmd.domain.repository.EntitlementRepository
 import com.healthmd.domain.repository.PurchaseRepository
+import com.healthmd.domain.repository.SettingsRepository
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -20,16 +21,19 @@ object BillingModule {
     @Singleton
     fun provideBillingRepository(
         @ApplicationContext context: Context,
-    ): BillingRepositoryImpl = BillingRepositoryImpl(context)
+        settingsRepository: SettingsRepository,
+    ): BillingRepositoryImpl = BillingRepositoryImpl(context, settingsRepository)
 
     @Provides
     fun provideMyselfClaimPurchaseSource(repository: BillingRepositoryImpl): MyselfClaimPurchaseSource =
         MyselfClaimPurchaseSource { repository.myselfClaimPurchaseToken() }
 
     @Provides
+    @Singleton
     fun provideEntitlementRepository(
         repository: BillingRepositoryImpl,
-    ): EntitlementRepository = repository
+        clinic: com.healthmd.data.billing.ClinicSponsorshipManager,
+    ): EntitlementRepository = com.healthmd.data.billing.ClinicAwareEntitlementRepository(repository, clinic)
 
     @Provides
     fun providePurchaseRepository(

@@ -176,6 +176,52 @@ class PreparePlayMetadataTest(unittest.TestCase):
         write_png(phone / "2.png", width=320, height=640)
 
 
+class AuthoredSubscriptionDescriptionsTest(unittest.TestCase):
+    def authored_descriptions(self) -> dict[str, str]:
+        root = SCRIPT_PATH.parents[1]
+        default, locales = prepare_play_metadata.load_locale_config(root)
+        return {
+            locale.play_locale: prepare_play_metadata.validate_listing(root, locale, default)["full_description.txt"]
+            for locale in locales
+        }
+
+    def test_every_authored_locale_describes_conditional_trial_and_both_purchase_types(self) -> None:
+        # Pin the billing concepts, not the surrounding health-feature prose.
+        # Include draft locales: they must not silently retain the old free quota.
+        terms = {
+            "en-US": ["weekly/yearly", "Eligible first-time", "7 days free", "auto-renew", "one-time", "no trial", "permanent"],
+            "ar": ["أسبوعيًا", "سنويًا", "المؤهلون", "7 أيام مجانًا", "تلقائيًا", "فورًا", "دون تجربة", "الدائم"],
+            "bn-BD": ["সাপ্তাহিক/বার্ষিক", "যোগ্য", "7 দিন বিনামূল্যে", "স্বয়ংক্রিয়ভাবে", "এককালীন", "ট্রায়াল নেই", "স্থায়ী"],
+            "de-DE": ["Wochen-/Jahresabo", "Berechtigte", "7 Tage gratis", "automatisch", "sofort einmalig", "ohne Testphase", "dauerhafter"],
+            "es-ES": ["semanal/anual", "elegibles", "7 días gratis", "automáticamente", "inmediatamente", "pago único", "sin prueba", "permanente"],
+            "fr-FR": ["hebdomadaire/annuel", "éligibles", "7 jours gratuits", "automatique", "immédiatement", "un seul paiement", "sans essai", "permanents"],
+            "hi-IN": ["साप्ताहिक/वार्षिक", "योग्य", "7 दिन मुफ़्त", "अपने आप", "तुरंत", "एकमुश्त", "ट्रायल नहीं", "स्थायी"],
+            "ja-JP": ["週額・年額", "対象", "7日間無料", "自動更新", "一括", "購入時", "トライアルはありません", "永久"],
+            "kk": ["апталық/жылдық", "Талаптарға сай", "7 күн тегін", "автоматты", "бірден", "бір рет", "сынақ мерзімі жоқ", "тұрақты"],
+            "nl-NL": ["week-/jaarabonnement", "in aanmerking komen", "7 dagen gratis", "automatisch", "direct eenmalig", "zonder proefperiode", "permanente"],
+            "pa": ["ਹਫ਼ਤਾਵਾਰੀ/ਸਾਲਾਨਾ", "ਯੋਗ", "7 ਦਿਨ ਮੁਫ਼ਤ", "ਆਪਣੇ ਆਪ", "ਤੁਰੰਤ ਇੱਕ ਵਾਰ", "ਅਜ਼ਮਾਇਸ਼ ਨਹੀਂ", "ਸਥਾਈ"],
+            "pt-BR": ["semanal/anual", "elegíveis", "7 dias grátis", "automática", "imediatamente", "pagamento único", "sem teste", "permanente"],
+            "ro": ["săptămânal/anual", "eligibili", "7 zile gratuite", "automat", "imediat", "o singură dată", "fără probă", "permanent"],
+            "ru-RU": ["недельная/годовая", "отвечающим условиям", "7 дней бесплатно", "автоматически", "сразу разовым", "без пробного", "постоянный"],
+            "uk": ["тижнева/річна", "відповідають умовам", "7 днів безкоштовно", "автоматично", "відразу одним", "без пробного", "постійний"],
+            "zh-CN": ["按周或按年", "符合条件", "7天", "自动续订", "立即", "一次性", "不含试用", "永久"],
+        }
+        descriptions = self.authored_descriptions()
+        self.assertEqual(set(descriptions), set(terms))
+        for locale, description in descriptions.items():
+            with self.subTest(locale=locale):
+                payment = description.rsplit("\n\n", 1)[-1]
+                self.assertIn("Google Play", payment)
+                for term in terms[locale]:
+                    self.assertIn(term.casefold(), payment.casefold())
+
+    def test_billing_copy_does_not_hardcode_prices(self) -> None:
+        for locale, description in self.authored_descriptions().items():
+            with self.subTest(locale=locale):
+                payment = description.rsplit("\n\n", 1)[-1]
+                self.assertNotRegex(payment, r"[$€£¥₹₽₴₸]|\d+[.,]\d{2}")
+
+
 def write_template(path: Path, locale: str, status: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     template = {

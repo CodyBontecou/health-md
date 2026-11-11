@@ -37,6 +37,7 @@ class WatchCapabilityGovernanceTests(unittest.TestCase):
         self.assertEqual(self.watch["profiles"], [])
         self.assertEqual({row["id"] for row in self.inventory["output_profiles"]}, {
             "apple-v8", "android-frozen-v4", "android-analytical-v5",
+            "apple-v12", "android-analytical-v7",
         })
         registry_bytes = (ROOT / "packages/healthmd-core-rust/crates/healthmd-core/registry/metric-registry-v1.json").read_bytes()
         self.assertEqual(hashlib.sha256(registry_bytes).hexdigest(), REGISTRY_SHA256)

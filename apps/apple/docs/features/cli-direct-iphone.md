@@ -1,5 +1,7 @@
 # Direct iPhone CLI access
 
+> Distribution note: the Mac App Store bundled `healthmd` is sandboxed. Use the Mac app's saved folder or stream raw JSON to stdout. Install the standalone Swift or portable Rust CLI for direct file exports to arbitrary absolute destinations.
+
 ## Status
 
 - **Implementation status:** Swift direct client complete; portable Rust export protocol v1 and query protocol v3 clients implemented; basic physical connectivity confirmed, with the complete cross-client exact-build qualification matrix still required

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="m3_schedule_clinic_destination_title">Призначення клініки</string>
+    <string name="m3_schedule_clinic_destination_body">Цим призначенням керує ваша клініка. Скористайтеся «Доступом клініки», щоб вибрати його або керувати спільним доступом. Для інших призначень потрібен ваш власний доступ до Health.md.</string>
+</resources>

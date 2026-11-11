@@ -1,6 +1,54 @@
 package com.healthmd.presentation.export
 
+import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.TextUnit
+import androidx.compose.ui.text.style.TextIndent
+import androidx.compose.ui.text.ParagraphStyle
+import androidx.compose.material.icons.outlined.DataObject
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.Dispatchers
+import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.runtime.produceState
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.displayCutout
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.union
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.outlined.WrapText
+import androidx.compose.material.icons.outlined.ErrorOutline
+import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.WarningAmber
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.IconToggleButton
+import androidx.compose.material3.Surface
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import com.healthmd.presentation.common.AdaptiveActionPair
+import com.healthmd.presentation.common.EdgeToEdgeDialogWindow
+import com.healthmd.presentation.common.PrimaryButton
+import com.healthmd.presentation.common.SecondaryButton
+import com.healthmd.presentation.common.dialogNavigationBarsPadding
+import com.healthmd.presentation.settings.groupRowShape
+import com.healthmd.presentation.theme.GeistRadii
+import com.healthmd.presentation.theme.GeistSizes
+import com.healthmd.presentation.theme.GeistSpacing
+import com.healthmd.presentation.theme.LocalGeistColors
 import android.app.Activity
+import androidx.activity.compose.BackHandler
+import androidx.compose.ui.platform.testTag
+import com.healthmd.presentation.export.components.ExportDecisionAction
+import com.healthmd.presentation.export.components.ExportDecisionDialog
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.health.connect.client.contracts.ExerciseRouteRequestContract
@@ -31,6 +79,7 @@ import androidx.compose.material.icons.automirrored.outlined.Launch
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Description
+import androidx.compose.material.icons.outlined.Download
 import androidx.compose.material.icons.outlined.ExpandLess
 import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material.icons.outlined.Folder
@@ -39,6 +88,7 @@ import androidx.compose.material.icons.outlined.UploadFile
 import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -50,10 +100,14 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import com.healthmd.BuildConfig
 import com.healthmd.R
+import com.healthmd.presentation.common.HealthDatePicker
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -79,6 +133,8 @@ import com.healthmd.domain.model.ExportPreviewIssueKind
 import com.healthmd.domain.model.ExportPreviewSideEffectAction
 import com.healthmd.domain.model.ExportResult
 import com.healthmd.domain.model.ExportTarget
+import com.healthmd.domain.model.HealthMetricCategory
+import com.healthmd.domain.model.SleepDayAttribution
 import com.healthmd.presentation.common.*
 import com.healthmd.presentation.export.components.ExportProgressDialog
 import com.healthmd.presentation.i18n.localizedDisplayName
@@ -104,8 +160,24 @@ fun ExportScreen(
     onNavigateToAdvancedSettings: () -> Unit = {},
     onNavigateToSchedule: () -> Unit = {},
     onNavigateToUpgrade: () -> Unit = onNavigateToPaywall,
+    sleepDayAttribution: SleepDayAttribution = SleepDayAttribution.DEFAULT,
+    /** Set when Export now opens over the Archive; shows Back and the screen title. */
+    onBack: (() -> Unit)? = null,
+    /** Presets the range to this one date (Backfill from the Archive), once per entry. */
+    backfillDate: LocalDate? = null,
+    /** Shown as the Export now bottom sheet: a title row with Close instead of Back. */
+    asSheet: Boolean = false,
+    /** Optional control under the sheet title, such as the profile segmented buttons. */
+    profileSelector: (@Composable () -> Unit)? = null,
+    /** "See in archive" on the finished Export moment; null hides it. */
+    onSeeInArchive: (() -> Unit)? = null,
+    profilesViewModel: ExportProfilesViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val clinicAccess: com.healthmd.presentation.clinic.ClinicAccessViewModel = hiltViewModel()
+    val clinicStatus by clinicAccess.status.collectAsStateWithLifecycle()
+    val independentAccess by clinicAccess.independentAccess.collectAsStateWithLifecycle()
+    val managedClinicEndpoint = clinicStatus.endpoint.takeIf { clinicStatus.active && !independentAccess }
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val protection = LocalConfigurationProtection.current
@@ -244,11 +316,11 @@ fun ExportScreen(
         }
     }
 
-    var showStartDatePicker by remember { mutableStateOf(false) }
-    var showEndDatePicker by remember { mutableStateOf(false) }
+    var showStartDatePicker by rememberSaveable { mutableStateOf(false) }
+    var showEndDatePicker by rememberSaveable { mutableStateOf(false) }
     var showAPISettings by remember { mutableStateOf(false) }
     var showGatewaySettings by remember { mutableStateOf(false) }
-    var selectedDateRangeOption by remember {
+    var selectedDateRangeOption by rememberSaveable {
         mutableStateOf(
             DateRangeOption.fromDates(
                 startDate = uiState.startDate,
@@ -256,6 +328,20 @@ fun ExportScreen(
                 allTimeSelected = uiState.allTimeSelected,
             )
         )
+    }
+    var backfillApplied by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(backfillDate) {
+        if (backfillApplied) return@LaunchedEffect
+        if (backfillDate != null) {
+            viewModel.setDateRange(backfillDate, backfillDate)
+            selectedDateRangeOption = DateRangeOption.Custom
+        } else if (asSheet) {
+            // As on iOS, Export now opens on Yesterday unless it was asked for other dates.
+            val (start, end) = requireNotNull(ExportNowFlow.presetDates(DateRangeOption.Yesterday, LocalDate.now()))
+            viewModel.setDateRange(start, end)
+            selectedDateRangeOption = DateRangeOption.Yesterday
+        }
+        backfillApplied = true
     }
 
     var showDebugPanel by remember { mutableStateOf(false) }
@@ -340,7 +426,7 @@ fun ExportScreen(
     }
 
     // Keep export readiness and quota routing identical in the main action bar and preview.
-    val hitExportLimit = !uiState.isPurchased && uiState.freeExportsRemaining <= 0
+    val hitExportLimit = !uiState.isPurchased && !uiState.clinicDestinationAuthorized && uiState.freeExportsRemaining <= 0
     val hasSelectedFormat = uiState.hasSelectedFormat
     val canUseExportControls = uiState.hasPermissions &&
             !uiState.historyPermissionNeeded &&
@@ -357,7 +443,55 @@ fun ExportScreen(
             hasSelectedFormat &&
             !uiState.isExporting &&
             !uiState.isPreviewing
-    val exportButtonClick = if (hitExportLimit) onNavigateToPaywall else viewModel::startExport
+    val previewClick: () -> Unit = {
+        when {
+            !uiState.hasPermissions -> launchHealthPermissionRequest(
+                healthDataPermissionsToRequest,
+                emptySet(),
+            )
+            uiState.historyPermissionNeeded && historyPermissionAvailable ->
+                launchHealthPermissionRequest(
+                    healthDataPermissionsToRequest,
+                    permissionPlan.historicalReadPermissions,
+                )
+            uiState.historyPermissionNeeded -> viewModel.reportHealthConnectActionError(
+                if (historyPermissionCheckFailed) {
+                    HealthConnectActionError.ACCESS_CHECK_FAILED
+                } else {
+                    HealthConnectActionError.HISTORY_UNAVAILABLE
+                }
+            )
+            else -> viewModel.buildPreview()
+        }
+    }
+    var confirmLargeExport by rememberSaveable { mutableStateOf(false) }
+    val requestedExportDays = remember(uiState.startDate, uiState.endDate) {
+        java.time.temporal.ChronoUnit.DAYS.between(uiState.startDate, uiState.endDate).toInt() + 1
+    }
+    val exportButtonClick: () -> Unit = when {
+        hitExportLimit -> onNavigateToPaywall
+        // A long range writes many files and takes minutes: confirm before starting.
+        isLargeExport(requestedExportDays, uiState.settings.exportMode) -> { { confirmLargeExport = true } }
+        else -> viewModel::startExport
+    }
+    if (confirmLargeExport) {
+        val files = requestedExportDays * uiState.exportFormats.size.coerceAtLeast(1)
+        ExportDecisionDialog(
+            title = pluralStringResource(R.plurals.large_export_title, requestedExportDays, requestedExportDays),
+            message = pluralStringResource(R.plurals.large_export_body, files, files),
+            actions = listOf(
+                ExportDecisionAction(
+                    title = pluralStringResource(R.plurals.large_export_confirm, requestedExportDays, requestedExportDays),
+                    role = ExportDecisionAction.Role.PRIMARY,
+                    testTag = "export.now.largeConfirm",
+                ) {
+                    confirmLargeExport = false
+                    viewModel.startExport()
+                },
+                ExportDecisionAction(title = stringResource(R.string.cancel)) { confirmLargeExport = false },
+            ),
+        )
+    }
 
     uiState.postExportMilestone?.takeIf { !uiState.isPurchased }?.let { milestone ->
         PostExportGuidanceDialog(
@@ -375,19 +509,50 @@ fun ExportScreen(
         )
     }
 
-    if (uiState.isExporting) {
+    // The moment stays up, full, after a run that wrote every day; partial, failed and
+    // cancelled runs go straight to the result below, which explains them.
+    var sawExport by remember { mutableStateOf(false) }
+    var finishedRun by remember { mutableStateOf<ExportResult?>(null) }
+    LaunchedEffect(uiState.isExporting, uiState.lastResult) {
+        if (uiState.isExporting) {
+            sawExport = true
+            finishedRun = null
+        } else if (sawExport) {
+            sawExport = false
+            finishedRun = uiState.lastResult?.takeIf(::momentShowsDone)
+        }
+    }
+    val doneRun = finishedRun
+    if (uiState.isExporting || doneRun != null) {
         ExportProgressDialog(
-            current = uiState.exportProgress,
-            total = uiState.exportTotal,
-            currentDate = uiState.exportProgressDate,
+            current = doneRun?.successCount ?: uiState.exportProgress,
+            total = doneRun?.totalCount ?: uiState.exportTotal,
+            currentDate = if (doneRun != null) null else uiState.exportProgressDate,
             rangeStart = uiState.startDate,
             rangeEnd = uiState.endDate,
             exportMode = uiState.settings.exportMode,
             onCancel = { viewModel.cancelExport() },
+            isDone = doneRun != null,
+            onSeeInArchive = onSeeInArchive?.let { open -> { finishedRun = null; open() } },
+            onClose = { finishedRun = null },
+            doneSubtitle = doneRun?.let { momentDoneSubtitle(it, uiState.startDate, uiState.endDate) },
         )
     }
 
-    if (uiState.isPreviewing || uiState.preview != null) {
+    val previewDestinationLabel = uiState.destinationLabel ?: stringResource(
+        when (uiState.selectedTarget) {
+            ExportTarget.API_ENDPOINT -> R.string.export_preview_api_destination
+            ExportTarget.AGENT_DATA_GATEWAY -> R.string.export_preview_gateway_destination
+            ExportTarget.DEVICE_FOLDER -> R.string.export_preview_device_destination
+        }
+    )
+    val previewFormatsPerDay = if (uiState.settings.exportMode == ExportMode.RAW_SNAPSHOT) 1 else uiState.exportFormats.size
+    val previewExport: () -> Unit = {
+        if (hitExportLimit) viewModel.dismissPreview()
+        exportButtonClick()
+    }
+    val previewShown = uiState.isPreviewing || uiState.preview != null
+    if (previewShown && !asSheet) {
         ExportPreviewDialog(
             preview = uiState.preview,
             isLoading = uiState.isPreviewing,
@@ -414,22 +579,96 @@ fun ExportScreen(
     var floatingActionBarHeightPx by remember { mutableIntStateOf(0) }
     val floatingActionBarHeight = with(LocalDensity.current) { floatingActionBarHeightPx.toDp() }
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    // Inside the sheet, as on iOS, the preview is pushed over the form and a run that did not
+    // write every day ends on its result.
+    val sheetResult = uiState.lastResult?.takeIf { asSheet && !uiState.isExporting && ExportNowFlow.showsResultSheet(it) }
+    if (asSheet && previewShown) {
+        ExportPreviewPage(
+            preview = uiState.preview,
+            isLoading = uiState.isPreviewing,
+            destinationLabel = previewDestinationLabel,
+            formatsPerDay = previewFormatsPerDay,
+            canExport = canExportAction,
+            hitExportLimit = hitExportLimit,
+            onExport = previewExport,
+            onDismiss = { viewModel.dismissPreview() },
+            onCancel = { viewModel.cancelExport() },
+            pushed = true,
+        )
+    } else if (sheetResult != null) {
+        val folderUri = uiState.exportedFolderUri
+        ExportResultContent(
+            result = sheetResult,
+            rangeStart = uiState.startDate,
+            rangeEnd = uiState.endDate,
+            profileName = profilesViewModel.uiState.collectAsStateWithLifecycle().value.activeProfileName,
+            onRetry = { start, end ->
+                viewModel.dismissResult()
+                selectedDateRangeOption = DateRangeOption.Custom
+                viewModel.setDateRange(start, end)
+            },
+            onShowInFiles = folderUri?.takeIf {
+                sheetResult.target == ExportTarget.DEVICE_FOLDER && sheetResult.artifactCount > 0
+            }?.let { uri -> { openInFiles(uri) } },
+            onDone = {
+                viewModel.dismissResult()
+                onBack?.invoke()
+            },
+        )
+    } else Box(modifier = Modifier.fillMaxSize()) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = Spacing.md)
                 .padding(
-                    top = Spacing.lg,
+                    top = if (asSheet) 0.dp else Spacing.lg,
                     bottom = floatingActionBarHeight + Spacing.lg,
                 ),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(Spacing.md),
         ) {
+        if (asSheet && onBack != null) {
+            // As on iOS: a plain-text Cancel beside the centred title.
+            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                Text(
+                    text = stringResource(R.string.export_now_title),
+                    style = GeistType.heading16,
+                    color = AppColors.textPrimary,
+                    modifier = Modifier.semantics { heading() },
+                )
+                TextButton(
+                    onClick = onBack,
+                    modifier = Modifier.align(Alignment.CenterStart).testTag("export.now.cancel"),
+                ) {
+                    Text(stringResource(R.string.cancel), style = GeistType.label16, color = AppColors.textSecondary)
+                }
+            }
+            profileSelector?.invoke()
+        } else if (onBack != null) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+            ) {
+                IconButton(onClick = onBack) {
+                    Icon(
+                        Icons.AutoMirrored.Outlined.ArrowBack,
+                        contentDescription = stringResource(R.string.back),
+                        tint = AppColors.textPrimary,
+                    )
+                }
+                Text(
+                    text = stringResource(R.string.export_now_title),
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = AppColors.textPrimary,
+                )
+            }
+        } else {
         Spacer(modifier = Modifier.height(Spacing.md))
+        }
 
-        Row(
+        if (onBack == null) Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
@@ -457,6 +696,8 @@ fun ExportScreen(
             }
         }
 
+        // The sheet names its destination in "Will write"; Health Connect problems show as cards.
+        if (!asSheet) {
         Spacer(modifier = Modifier.height(Spacing.sm))
 
         // Status badges
@@ -517,6 +758,7 @@ fun ExportScreen(
         }
 
         Spacer(modifier = Modifier.height(Spacing.sm))
+        }
 
         // Permissions card (only if needed)
         if (!uiState.healthConnectAvailable) {
@@ -621,43 +863,88 @@ fun ExportScreen(
             )
         }
 
-        ConfigurationProtectedRegion(modifier = Modifier.fillMaxWidth()) {
+        // The dates are a one-off choice for this run, not saved configuration, so Lock
+        // configuration never blocks them (as on iOS).
         DateRangeSelectionSection(
+            sleepDayAttribution = sleepDayAttribution,
             selectedOption = selectedDateRangeOption,
+            showSleepGuidance = uiState.settings.exportMode != ExportMode.RAW_SNAPSHOT &&
+                uiState.settings.metricSelection.enabledMetricCount(HealthMetricCategory.SLEEP) > 0,
             startDate = uiState.startDate,
             endDate = uiState.endDate,
             onOptionSelected = { option ->
-                attemptConfigurationChange {
-                    selectedDateRangeOption = option
-                    when (option) {
-                        DateRangeOption.Today -> {
-                            val today = LocalDate.now()
-                            viewModel.setDateRange(today, today)
-                        }
-                        DateRangeOption.Yesterday -> {
-                            val yesterday = LocalDate.now().minusDays(1)
-                            viewModel.setDateRange(yesterday, yesterday)
-                        }
-                        DateRangeOption.AllTime -> viewModel.selectAllTime()
-                        DateRangeOption.Custom -> viewModel.setDateRange(uiState.startDate, uiState.endDate)
-                    }
+                selectedDateRangeOption = option
+                val preset = ExportNowFlow.presetDates(option, LocalDate.now())
+                when {
+                    preset != null -> viewModel.setDateRange(preset.first, preset.second)
+                    option == DateRangeOption.AllTime -> viewModel.selectAllTime()
+                    else -> viewModel.setDateRange(uiState.startDate, uiState.endDate)
                 }
             },
             onStartDateClick = {
-                attemptConfigurationChange {
-                    selectedDateRangeOption = DateRangeOption.Custom
-                    showStartDatePicker = true
-                }
+                selectedDateRangeOption = DateRangeOption.Custom
+                showStartDatePicker = true
             },
             onEndDateClick = {
-                attemptConfigurationChange {
-                    selectedDateRangeOption = DateRangeOption.Custom
-                    showEndDatePicker = true
-                }
+                selectedDateRangeOption = DateRangeOption.Custom
+                showEndDatePicker = true
             },
         )
+
+        if (asSheet) {
+            ExportWillWriteCard(
+                destination = willWriteDestination(uiState),
+                summary = willWriteSummary(uiState, requestedExportDays),
+                canPreview = canPreview,
+                onPreview = previewClick,
+            )
+            if (ExportNowFlow.showsLargeExportBanner(requestedExportDays, uiState.settings.exportMode)) {
+                ExportNowBanner(
+                    title = stringResource(R.string.export_now_large_title),
+                    message = stringResource(R.string.export_now_large_body),
+                )
+            }
+            // No "More options": the profile decides where and how the export writes. A run
+            // that cannot reach its destination says so here, with the one action that fixes it.
+            val destinationReady by rememberUpdatedState(uiState.destinationReady)
+            var settled by remember { mutableStateOf(false) }
+            LaunchedEffect(Unit) {
+                // Settings load just after the sheet opens; do not flash the setup card.
+                kotlinx.coroutines.delay(800)
+                settled = true
+            }
+            if (settled && !destinationReady) {
+                ExportDestinationSetupCard(
+                    target = uiState.selectedTarget,
+                    onSetUp = {
+                        attemptConfigurationChange {
+                            when (uiState.selectedTarget) {
+                                ExportTarget.DEVICE_FOLDER -> folderPickerLauncher.launch(null)
+                                ExportTarget.API_ENDPOINT -> showAPISettings = true
+                                ExportTarget.AGENT_DATA_GATEWAY -> showGatewaySettings = true
+                            }
+                        }
+                    },
+                )
+            }
+            // Without profiles to choose between, the sheet still lets the run pick among the
+            // destinations that are already set up.
+            val configuredTargets = listOfNotNull(
+                ExportTarget.DEVICE_FOLDER.takeIf { uiState.folderName != null },
+                ExportTarget.API_ENDPOINT.takeIf { uiState.apiEndpointConfigured },
+                ExportTarget.AGENT_DATA_GATEWAY.takeIf { uiState.agentDataGatewayConfigured },
+            )
+            val profileState by profilesViewModel.uiState.collectAsStateWithLifecycle()
+            if (profileState.rows.size < 2 && configuredTargets.size >= 2 && managedClinicEndpoint == null) {
+                ExportNowDestinationChoice(
+                    targets = configuredTargets,
+                    selected = uiState.selectedTarget,
+                    onSelect = { target -> attemptConfigurationChange { viewModel.setExportTarget(target) } },
+                )
+            }
         }
 
+        if (!asSheet) {
         val apiFormatLabel = if (uiState.settings.exportMode == ExportMode.RAW_SNAPSHOT) {
             stringResource(
                 if (uiState.settings.rawSnapshot.format == com.healthmd.rawexport.RawExportFormat.JSON) {
@@ -671,6 +958,7 @@ fun ExportScreen(
         }
         ConfigurationProtectedRegion(modifier = Modifier.fillMaxWidth()) {
         ExportTargetSelector(
+            managedClinicEndpoint = managedClinicEndpoint,
             selectedTarget = uiState.selectedTarget,
             folderSubtitle = uiState.folderName?.let {
                 stringResource(R.string.export_target_folder_selected_subtitle, it)
@@ -886,6 +1174,7 @@ fun ExportScreen(
             }
         }
         }
+        }
 
         if (!uiState.rawProviderSupported || !uiState.rawSelectionReady) {
             GeistCard {
@@ -994,8 +1283,8 @@ fun ExportScreen(
             }
         }
 
-        // Debug panel
-        GeistCard {
+        // Debug panel: diagnostics for development builds only.
+        if (BuildConfig.DEBUG) GeistCard {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -1098,41 +1387,43 @@ fun ExportScreen(
             Spacer(modifier = Modifier.height(Spacing.xl))
         }
 
-        FloatingExportActionBar(
+        val previewUnavailableReason = when {
+            uiState.settings.exportMode != ExportMode.RAW_SNAPSHOT -> null
+            !uiState.rawProviderSupported -> stringResource(R.string.raw_snapshot_provider_unsupported)
+            !uiState.rawSelectionReady -> stringResource(R.string.raw_snapshot_selection_required)
+            else -> null
+        }
+        if (asSheet) {
+            // The board's single 56dp call to action; Preview sits in the "Will write" card.
+            ExportNowCta(
+                label = when {
+                    hitExportLimit -> stringResource(R.string.unlock_button)
+                    selectedDateRangeOption == DateRangeOption.Yesterday -> stringResource(R.string.export_now_cta_yesterday)
+                    else -> pluralStringResource(R.plurals.export_now_cta_days, requestedExportDays, requestedExportDays)
+                },
+                // Clinic-sponsored delivery has no free-export allowance to show.
+                isPurchased = uiState.isPurchased || uiState.clinicDestinationAuthorized,
+                freeExportsRemaining = uiState.freeExportsRemaining,
+                hasSelectedFormat = hasSelectedFormat,
+                notice = previewUnavailableReason,
+                enabled = canExportAction,
+                isExporting = uiState.isExporting,
+                onExport = exportButtonClick,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .onSizeChanged { floatingActionBarHeightPx = it.height },
+            )
+        } else FloatingExportActionBar(
+            clinicDestinationAuthorized = uiState.clinicDestinationAuthorized,
             isPurchased = uiState.isPurchased,
             freeExportsRemaining = uiState.freeExportsRemaining,
             hasSelectedFormat = hasSelectedFormat,
             canPreview = canPreview,
-            previewUnavailableReason = when {
-                uiState.settings.exportMode != ExportMode.RAW_SNAPSHOT -> null
-                !uiState.rawProviderSupported -> stringResource(R.string.raw_snapshot_provider_unsupported)
-                !uiState.rawSelectionReady -> stringResource(R.string.raw_snapshot_selection_required)
-                else -> null
-            },
+            previewUnavailableReason = previewUnavailableReason,
             canExport = canExportAction,
             hitExportLimit = hitExportLimit,
             isExporting = uiState.isExporting,
-            onPreview = {
-                when {
-                    !uiState.hasPermissions -> launchHealthPermissionRequest(
-                        healthDataPermissionsToRequest,
-                        emptySet(),
-                    )
-                    uiState.historyPermissionNeeded && historyPermissionAvailable ->
-                        launchHealthPermissionRequest(
-                            healthDataPermissionsToRequest,
-                            permissionPlan.historicalReadPermissions,
-                        )
-                    uiState.historyPermissionNeeded -> viewModel.reportHealthConnectActionError(
-                        if (historyPermissionCheckFailed) {
-                            HealthConnectActionError.ACCESS_CHECK_FAILED
-                        } else {
-                            HealthConnectActionError.HISTORY_UNAVAILABLE
-                        }
-                    )
-                    else -> viewModel.buildPreview()
-                }
-            },
+            onPreview = previewClick,
             onExport = exportButtonClick,
             modifier = Modifier
                 .align(Alignment.BottomCenter)
@@ -1142,6 +1433,7 @@ fun ExportScreen(
 
     if (showAPISettings) {
         APIExportSettingsDialog(
+            managedClinicEndpoint = managedClinicEndpoint,
             initialEndpointUrl = uiState.settings.apiEndpointUrl,
             authorizationConfigured = uiState.apiAuthorizationConfigured,
             requestHeadersConfigured = uiState.apiRequestHeadersConfigured,
@@ -1182,19 +1474,30 @@ fun ExportScreen(
 
     // Open-with dialog (shown when Obsidian is installed)
     if (showOpenDialog) {
+        val openDialogColors = LocalGeistColors.current
         AlertDialog(
             onDismissRequest = { showOpenDialog = false },
-            containerColor = AppColors.bgSecondary,
-            tonalElevation = 0.dp,
+            containerColor = openDialogColors.gray.c200,
+            shape = RoundedCornerShape(GeistRadii.large),
+            icon = {
+                Box(
+                    Modifier
+                        .size(GeistSizes.controlLarge)
+                        .background(openDialogColors.brandSubtle, CircleShape),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(Icons.Outlined.FolderOpen, contentDescription = null, tint = openDialogColors.brandOnSubtle)
+                }
+            },
             title = {
                 Text(
                     stringResource(R.string.open_folder),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = AppColors.textPrimary,
+                    style = GeistType.heading20,
+                    color = openDialogColors.primary,
                 )
             },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                Column(verticalArrangement = Arrangement.spacedBy(GeistSpacing.space2)) {
                     SecondaryButton(
                         text = stringResource(R.string.open_with_files),
                         modifier = Modifier.fillMaxWidth(),
@@ -1218,7 +1521,11 @@ fun ExportScreen(
             confirmButton = {},
             dismissButton = {
                 TextButton(onClick = { showOpenDialog = false }) {
-                    Text(stringResource(R.string.action_close_options), color = AppColors.textMuted)
+                    Text(
+                        stringResource(R.string.action_close_options),
+                        style = GeistType.button14,
+                        color = openDialogColors.brandPrimary,
+                    )
                 }
             },
         )
@@ -1230,7 +1537,7 @@ fun ExportScreen(
         DatePickerDialog(
             onDismissRequest = { showStartDatePicker = false },
             confirmButton = {
-                TextButton(onClick = {
+                TextButton(enabled = state.selectedDateMillis != null, onClick = {
                     attemptConfigurationChange {
                         state.selectedDateMillis?.let { millis ->
                             selectedDateRangeOption = DateRangeOption.Custom
@@ -1243,14 +1550,14 @@ fun ExportScreen(
                 }) { Text(stringResource(R.string.action_set_start_date)) }
             },
             dismissButton = { TextButton(onClick = { showStartDatePicker = false }) { Text(stringResource(R.string.action_cancel_selection)) } },
-        ) { DatePicker(state = state) }
+        ) { HealthDatePicker(state = state) }
     }
     if (showEndDatePicker) {
         val state = rememberDatePickerState(initialSelectedDateMillis = uiState.endDate.toDatePickerMillis())
         DatePickerDialog(
             onDismissRequest = { showEndDatePicker = false },
             confirmButton = {
-                TextButton(onClick = {
+                TextButton(enabled = state.selectedDateMillis != null, onClick = {
                     attemptConfigurationChange {
                         state.selectedDateMillis?.let { millis ->
                             selectedDateRangeOption = DateRangeOption.Custom
@@ -1263,7 +1570,135 @@ fun ExportScreen(
                 }) { Text(stringResource(R.string.action_set_end_date)) }
             },
             dismissButton = { TextButton(onClick = { showEndDatePicker = false }) { Text(stringResource(R.string.action_cancel_selection)) } },
-        ) { DatePicker(state = state) }
+        ) { HealthDatePicker(state = state) }
+    }
+}
+
+/** Files one export writes: one per day and format, or one per day for raw snapshots. */
+internal fun willWriteFileCount(state: ExportUiState, days: Int): Int =
+    if (state.settings.exportMode == ExportMode.RAW_SNAPSHOT) days else days * state.exportFormats.size.coerceAtLeast(1)
+
+/** The destination line: the folder path, `POST host/path`, or the gateway host. */
+@Composable
+private fun willWriteDestination(state: ExportUiState): String = when (state.selectedTarget) {
+    ExportTarget.DEVICE_FOLDER -> state.folderName?.let { "$it/" }
+        ?: stringResource(R.string.export_target_folder_unselected_subtitle)
+    ExportTarget.API_ENDPOINT -> com.healthmd.presentation.archive.ArchiveCoverage.endpointLine(state.settings.apiEndpointUrl)
+        ?: stringResource(R.string.export_target_api_json_unconfigured_subtitle)
+    ExportTarget.AGENT_DATA_GATEWAY -> state.destinationLabel?.takeIf { state.agentDataGatewayConfigured }
+        ?: stringResource(R.string.export_target_gateway_unconfigured_subtitle)
+}
+
+/** iOS's "Will write" line: "About 14 files · 7 days · daily notes updated". */
+@Composable
+private fun willWriteSummary(state: ExportUiState, days: Int): String {
+    val files = willWriteFileCount(state, days)
+    val writesNotes = state.selectedTarget == ExportTarget.DEVICE_FOLDER &&
+        state.settings.exportMode != ExportMode.RAW_SNAPSHOT &&
+        state.settings.dailyNoteInjection.enabled
+    return listOfNotNull(
+        pluralStringResource(R.plurals.export_now_about_files, files, files),
+        pluralStringResource(R.plurals.export_now_days, days, days),
+        stringResource(R.string.export_now_daily_notes_updated).takeIf { writesNotes },
+    ).joinToString(" · ")
+}
+
+/** The board's "Will write" card: where the export goes and what it writes, with Preview. */
+@Composable
+private fun ExportWillWriteCard(
+    destination: String,
+    summary: String,
+    canPreview: Boolean,
+    onPreview: () -> Unit,
+) {
+    val colors = com.healthmd.presentation.theme.LocalGeistColors.current
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(com.healthmd.presentation.theme.GeistRadii.listGroup))
+            .background(colors.gray.c300)
+            .padding(start = Spacing.lg - Spacing.xxs, end = Spacing.xs, top = Spacing.xs, bottom = Spacing.md),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                stringResource(R.string.export_will_write).uppercase(),
+                style = GeistType.label12,
+                fontWeight = FontWeight.SemiBold,
+                color = colors.secondary,
+                modifier = Modifier.weight(1f),
+            )
+            TextButton(onClick = onPreview, enabled = canPreview) {
+                Text(stringResource(R.string.export_preview_button), style = GeistType.button14)
+            }
+        }
+        Text(destination, style = GeistType.copy13Mono, color = colors.primary)
+        Spacer(Modifier.height(Spacing.xxs))
+        Text(summary, style = GeistType.copy14, color = colors.secondary)
+    }
+}
+
+/** One full-width 56dp primary action, with the free-export count and blocking notes above it. */
+@Composable
+private fun ExportNowCta(
+    label: String,
+    isPurchased: Boolean,
+    freeExportsRemaining: Int,
+    hasSelectedFormat: Boolean,
+    notice: String?,
+    enabled: Boolean,
+    isExporting: Boolean,
+    onExport: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val colors = com.healthmd.presentation.theme.LocalGeistColors.current
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .background(colors.background200)
+            .padding(horizontal = Spacing.lg - Spacing.xxs, vertical = Spacing.sm),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+    ) {
+        if (!hasSelectedFormat) {
+            Text(
+                stringResource(R.string.export_no_format_selected),
+                style = MaterialTheme.typography.bodySmall,
+                color = AppColors.error,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+        notice?.let {
+            Text(it, style = MaterialTheme.typography.bodySmall, color = AppColors.textSecondary,
+                textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
+        }
+        if (!isPurchased) {
+            Text(
+                pluralStringResource(R.plurals.free_exports_remaining, freeExportsRemaining, freeExportsRemaining),
+                style = MaterialTheme.typography.bodySmall,
+                color = AppColors.textSecondary,
+            )
+        }
+        Button(
+            onClick = onExport,
+            enabled = enabled && !isExporting,
+            shape = RoundedCornerShape(com.healthmd.presentation.theme.GeistRadii.full),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = colors.brandPrimary,
+                contentColor = colors.brandOnPrimary,
+            ),
+            modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp),
+        ) {
+            if (isExporting) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(20.dp),
+                    strokeWidth = 2.dp,
+                    color = colors.brandOnPrimary,
+                )
+            } else {
+                Text(label, style = GeistType.button16, textAlign = TextAlign.Center)
+            }
+        }
     }
 }
 
@@ -1280,6 +1715,7 @@ internal fun FloatingExportActionBar(
     onPreview: () -> Unit,
     onExport: () -> Unit,
     modifier: Modifier = Modifier,
+    clinicDestinationAuthorized: Boolean = false,
 ) {
     Surface(
         modifier = modifier
@@ -1316,7 +1752,7 @@ internal fun FloatingExportActionBar(
                 )
             }
 
-            if (!isPurchased) {
+            if (!isPurchased && !clinicDestinationAuthorized) {
                 Text(
                     text = pluralStringResource(
                         R.plurals.free_exports_remaining,
@@ -1606,14 +2042,15 @@ private fun ExportFailureGroup(
     group: ExportFailureDiagnosticGroup,
     isRawSnapshot: Boolean,
 ) {
+    val colors = LocalGeistColors.current
+    // A tonal well inside the diagnostics card; hierarchy from fill, not a border.
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(Radii.card))
-            .background(AppColors.bgSecondary)
-            .border(1.dp, AppColors.borderDefault, RoundedCornerShape(Radii.card))
-            .padding(Spacing.sm),
-        verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+            .clip(RoundedCornerShape(GeistRadii.medium))
+            .background(colors.gray.c200)
+            .padding(GeistSpacing.space3),
+        verticalArrangement = Arrangement.spacedBy(GeistSpacing.space1),
     ) {
         Text(
             if (isRawSnapshot) {
@@ -1631,20 +2068,19 @@ private fun ExportFailureGroup(
                     group.count,
                 )
             },
-            style = MaterialTheme.typography.labelLarge,
-            color = AppColors.textPrimary,
-            fontWeight = FontWeight.SemiBold,
+            style = GeistType.heading14,
+            color = colors.primary,
         )
         Text(
             group.guidanceText(),
-            style = MaterialTheme.typography.bodySmall,
-            color = AppColors.textSecondary,
+            style = GeistType.copy14,
+            color = colors.secondary,
         )
         if (!isRawSnapshot && group.sampleDates.isNotEmpty()) {
             Text(
                 group.dateSampleText(),
-                style = MaterialTheme.typography.bodySmall,
-                color = AppColors.textMuted,
+                style = GeistType.copy13,
+                color = colors.secondary,
             )
         }
     }
@@ -1654,7 +2090,7 @@ private fun ExportFailureGroup(
 fun ExportFailureDiagnosticGroup.failureReasonLabel(): String = reason.localizedFailureLabel()
 
 @Composable
-private fun ExportFailureReason.localizedFailureLabel(): String =
+internal fun ExportFailureReason.localizedFailureLabel(): String =
     when (this) {
         ExportFailureReason.NO_FOLDER_SELECTED -> stringResource(R.string.export_failure_no_folder_label)
         ExportFailureReason.NO_HEALTH_DATA -> stringResource(R.string.export_failure_no_data_label)
@@ -1712,6 +2148,11 @@ fun ExportFailureDiagnosticGroup.dateSampleText(): String {
     }
 }
 
+/**
+ * Export preview as a full-screen Material 3 surface: a top app bar (Close on the file list,
+ * Back on a file), the list of files grouped by day as list-group rows, a full-height file
+ * reader, and a pinned action bar with Export as the one filled action.
+ */
 @Composable
 private fun ExportPreviewDialog(
     preview: ExportPreview?,
@@ -1724,110 +2165,248 @@ private fun ExportPreviewDialog(
     onDismiss: () -> Unit,
     onCancel: () -> Unit,
 ) {
-    var selectedFile by remember(preview) { mutableStateOf<PreviewFileDetails?>(null) }
-    val closePreview = if (isLoading) onCancel else onDismiss
+    val colors = LocalGeistColors.current
+    Dialog(
+        onDismissRequest = if (isLoading) onCancel else onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
+    ) {
+        EdgeToEdgeDialogWindow(fullScreenPage = true)
+        Surface(modifier = Modifier.fillMaxSize(), color = colors.background100) {
+            ExportPreviewPage(
+                preview = preview,
+                isLoading = isLoading,
+                destinationLabel = destinationLabel,
+                formatsPerDay = formatsPerDay,
+                canExport = canExport,
+                hitExportLimit = hitExportLimit,
+                onExport = onExport,
+                onDismiss = onDismiss,
+                onCancel = onCancel,
+                modifier = Modifier
+                    .windowInsetsPadding(WindowInsets.statusBars.union(WindowInsets.displayCutout))
+                    .dialogNavigationBarsPadding(),
+            )
+        }
+    }
+}
 
-    AlertDialog(
-        onDismissRequest = closePreview,
-        containerColor = AppColors.bgSecondary,
-        tonalElevation = 0.dp,
-        title = {
-            selectedFile?.let { file ->
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(
-                        onClick = { selectedFile = null },
-                        modifier = Modifier
-                            .size(40.dp)
-                            .clip(CircleShape)
-                            .background(AppColors.bgTertiary),
-                    ) {
-                        Icon(
-                            Icons.AutoMirrored.Outlined.ArrowBack,
-                            contentDescription = stringResource(R.string.export_preview_back_description),
-                            tint = AppColors.textPrimary,
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(Spacing.sm))
-                    Text(
-                        file.title,
-                        style = MaterialTheme.typography.titleLarge,
-                        color = AppColors.textPrimary,
-                        fontWeight = FontWeight.SemiBold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
+/**
+ * The preview's page: the file list or one file, a top bar whose Back leaves the file (or the
+ * preview), and the pinned Export action. Export now pushes it inside its sheet, as iOS does.
+ */
+@Composable
+private fun ExportPreviewPage(
+    preview: ExportPreview?,
+    isLoading: Boolean,
+    destinationLabel: String?,
+    formatsPerDay: Int,
+    canExport: Boolean,
+    hitExportLimit: Boolean,
+    onExport: () -> Unit,
+    onDismiss: () -> Unit,
+    onCancel: () -> Unit,
+    modifier: Modifier = Modifier,
+    /** Inside the sheet the list's Back returns to the sheet, so it reads as Back, not Close. */
+    pushed: Boolean = false,
+) {
+    var selectedFile by remember(preview) { mutableStateOf<PreviewFileDetails?>(null) }
+    var wrapLines by rememberSaveable { mutableStateOf(true) }
+    var formatted by rememberSaveable { mutableStateOf(true) }
+    val closePreview = if (isLoading) onCancel else onDismiss
+    BackHandler { if (selectedFile != null) selectedFile = null else closePreview() }
+    Column(modifier.fillMaxSize()) {
+        val file = selectedFile
+        PreviewTopBar(
+            title = file?.title ?: stringResource(R.string.export_preview_title),
+            subtitle = file?.subtitle,
+            isFile = file != null || pushed,
+            onNavigate = { if (file != null) selectedFile = null else closePreview() },
+            wrapLines = wrapLines,
+            onWrapLinesChange = { wrapLines = it },
+            canFormat = file != null && PreviewSyntax.forPath(file.relativePath) != PreviewSyntax.PLAIN,
+            formatted = formatted,
+            onFormattedChange = { formatted = it },
+            showsFileControls = file != null,
+        )
+        Box(
+            Modifier
+                .weight(1f)
+                .fillMaxWidth(),
+            contentAlignment = Alignment.TopCenter,
+        ) {
+            Box(
+                Modifier
+                    .widthIn(max = GeistSizes.readableContentMaxWidth)
+                    .fillMaxSize(),
+            ) {
+                when {
+                    isLoading -> ExportPreviewLoadingContent()
+                    file != null -> PreviewFileContent(file, destinationLabel, wrapLines, formatted)
+                    preview != null -> ExportPreviewFileList(
+                        preview = preview,
+                        destinationLabel = destinationLabel,
+                        formatsPerDay = formatsPerDay,
+                        onFileSelected = { selectedFile = it },
                     )
                 }
-            } ?: Text(
-                stringResource(R.string.export_preview_title),
-                style = MaterialTheme.typography.titleLarge,
-                color = AppColors.textPrimary,
-                fontWeight = FontWeight.SemiBold,
+            }
+        }
+        PreviewActionBar(
+            showExport = !isLoading && preview != null,
+            canExport = canExport,
+            hitExportLimit = hitExportLimit,
+            onExport = onExport,
+            onDone = closePreview,
+        )
+    }
+}
+
+/** Sub-screen top app bar: navigation icon, a one-line `heading-20` title and optional subtitle. */
+@Composable
+private fun PreviewTopBar(
+    title: String,
+    subtitle: String?,
+    isFile: Boolean,
+    onNavigate: () -> Unit,
+    wrapLines: Boolean,
+    onWrapLinesChange: (Boolean) -> Unit,
+    canFormat: Boolean,
+    formatted: Boolean,
+    onFormattedChange: (Boolean) -> Unit,
+    showsFileControls: Boolean = isFile,
+) {
+    val colors = LocalGeistColors.current
+    val toggleColors = IconButtonDefaults.iconToggleButtonColors(
+        contentColor = colors.secondary,
+        checkedContentColor = colors.onSecondaryContainer,
+        checkedContainerColor = colors.secondaryContainer,
+    )
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 64.dp)
+            .padding(horizontal = GeistSpacing.space1),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        IconButton(onClick = onNavigate, modifier = Modifier.size(GeistSizes.minimumTouchTarget)) {
+            Icon(
+                if (isFile) Icons.AutoMirrored.Outlined.ArrowBack else Icons.Outlined.Close,
+                contentDescription = stringResource(
+                    if (isFile) R.string.export_preview_back_description else R.string.close
+                ),
+                tint = colors.primary,
             )
-        },
-        text = {
-            when {
-                isLoading -> ExportPreviewLoadingContent()
-                selectedFile != null -> PreviewFileContent(selectedFile!!)
-                preview != null -> ExportPreviewFileList(
-                    preview = preview,
-                    destinationLabel = destinationLabel,
-                    formatsPerDay = formatsPerDay,
-                    onFileSelected = { selectedFile = it },
+        }
+        Column(
+            Modifier
+                .weight(1f)
+                .padding(horizontal = GeistSpacing.space1, vertical = GeistSpacing.space2),
+        ) {
+            Text(
+                title,
+                style = GeistType.heading20,
+                color = colors.primary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.semantics { heading() },
+            )
+            subtitle?.let {
+                Text(it, style = GeistType.copy13, color = colors.secondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+        }
+        if (showsFileControls && canFormat) {
+            val formatLabel = stringResource(R.string.export_preview_format_text)
+            IconToggleButton(
+                checked = formatted,
+                onCheckedChange = onFormattedChange,
+                modifier = Modifier
+                    .size(GeistSizes.minimumTouchTarget)
+                    .semantics { contentDescription = formatLabel },
+                colors = toggleColors,
+            ) {
+                Icon(Icons.Outlined.DataObject, contentDescription = null)
+            }
+        }
+        if (showsFileControls) {
+            val wrapLabel = stringResource(R.string.export_preview_wrap_lines)
+            IconToggleButton(
+                checked = wrapLines,
+                onCheckedChange = onWrapLinesChange,
+                modifier = Modifier
+                    .size(GeistSizes.minimumTouchTarget)
+                    .semantics { contentDescription = wrapLabel },
+                colors = toggleColors,
+            ) {
+                Icon(Icons.AutoMirrored.Outlined.WrapText, contentDescription = null)
+            }
+        }
+    }
+}
+
+/** Pinned footer: Done beside the one filled Export action, stacking when labels would crowd. */
+@Composable
+private fun PreviewActionBar(
+    showExport: Boolean,
+    canExport: Boolean,
+    hitExportLimit: Boolean,
+    onExport: () -> Unit,
+    onDone: () -> Unit,
+) {
+    val colors = LocalGeistColors.current
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .background(colors.background200)
+            .padding(horizontal = GeistSpacing.space4, vertical = GeistSpacing.space3),
+        contentAlignment = Alignment.Center,
+    ) {
+        Box(Modifier.widthIn(max = GeistSizes.readableContentMaxWidth)) {
+            if (showExport) {
+                AdaptiveActionPair(
+                    primaryAction = { modifier ->
+                        PrimaryButton(
+                            text = stringResource(if (hitExportLimit) R.string.unlock_button else R.string.export_button),
+                            onClick = onExport,
+                            enabled = canExport,
+                            icon = Icons.Outlined.UploadFile,
+                            modifier = modifier,
+                        )
+                    },
+                    secondaryAction = { modifier ->
+                        SecondaryButton(
+                            text = stringResource(R.string.export_preview_done),
+                            onClick = onDone,
+                            modifier = modifier,
+                        )
+                    },
+                )
+            } else {
+                SecondaryButton(
+                    text = stringResource(R.string.export_preview_done),
+                    onClick = onDone,
+                    modifier = Modifier.fillMaxWidth(),
                 )
             }
-        },
-        confirmButton = {
-            if (!isLoading && preview != null) {
-                Button(
-                    onClick = onExport,
-                    enabled = canExport,
-                    shape = RoundedCornerShape(Radii.button),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = AppColors.textPrimary,
-                        contentColor = AppColors.bgPrimary,
-                        disabledContainerColor = AppColors.bgTertiary,
-                        disabledContentColor = AppColors.textMuted,
-                    ),
-                ) {
-                    Icon(Icons.Outlined.UploadFile, contentDescription = null)
-                    Spacer(modifier = Modifier.width(Spacing.xs))
-                    Text(
-                        stringResource(
-                            if (hitExportLimit) R.string.unlock_button else R.string.export_button
-                        )
-                    )
-                }
-            } else {
-                TextButton(onClick = closePreview) {
-                    Text(stringResource(R.string.export_preview_done), color = AppColors.accent)
-                }
-            }
-        },
-        dismissButton = {
-            if (!isLoading && preview != null) {
-                TextButton(onClick = closePreview) {
-                    Text(stringResource(R.string.export_preview_done), color = AppColors.textSecondary)
-                }
-            }
-        },
-    )
+        }
+    }
 }
 
 @Composable
 private fun ExportPreviewLoadingContent() {
+    val colors = LocalGeistColors.current
     Column(
         modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(min = 260.dp),
+            .fillMaxSize()
+            .padding(GeistSpacing.space4),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        CircularProgressIndicator(color = AppColors.accent)
-        Spacer(modifier = Modifier.height(Spacing.md))
+        CircularProgressIndicator(color = colors.brandPrimary)
+        Spacer(modifier = Modifier.height(GeistSpacing.space4))
         Text(
             stringResource(R.string.export_preview_building),
-            style = MaterialTheme.typography.bodyMedium,
-            color = AppColors.textMuted,
+            style = GeistType.copy14,
+            color = colors.secondary,
         )
     }
 }
@@ -1839,12 +2418,13 @@ private fun ExportPreviewFileList(
     formatsPerDay: Int,
     onFileSelected: (PreviewFileDetails) -> Unit,
 ) {
+    val colors = LocalGeistColors.current
     Column(
         modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(max = 560.dp)
-            .verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = GeistSpacing.space4)
+            .padding(bottom = GeistSpacing.space6),
     ) {
         PreviewSummaryCard(
             requestedDayCount = preview.requestedDateCount,
@@ -1852,10 +2432,7 @@ private fun ExportPreviewFileList(
             destinationLabel = destinationLabel,
             isRangeArtifact = preview.isRangeArtifact,
             artifactCount = preview.totalFileCount,
-        )
-
-        Text(
-            if (preview.isRangeArtifact) {
+            totals = if (preview.isRangeArtifact) {
                 stringResource(
                     R.string.export_preview_summary,
                     dayCountLabel(preview.requestedDateCount),
@@ -1870,57 +2447,75 @@ private fun ExportPreviewFileList(
                     formatBytes(preview.totalByteCount),
                 )
             },
-            style = MaterialTheme.typography.bodyMedium,
-            color = AppColors.textSecondary,
-        )
-        if (!preview.isRangeArtifact && preview.isTruncated && preview.previewedDateCount > 0) {
-            Text(
+            limitNote = if (!preview.isRangeArtifact && preview.isTruncated && preview.previewedDateCount > 0) {
                 pluralStringResource(
                     R.plurals.export_preview_limited_days,
                     preview.previewedDateCount,
                     preview.previewedDateCount,
+                )
+            } else null,
+        )
+
+        preview.sleepWindow?.let { window ->
+            val morningEnds = window.captureContext.sleepDayAttribution == SleepDayAttribution.MORNING_ENDS
+            PreviewNote(
+                tone = PreviewNoteTone.INFO,
+                title = null,
+                message = stringResource(
+                    if (morningEnds) R.string.export_sleep_preview_window_morning_ends
+                    else R.string.export_sleep_preview_window,
+                    formatPreviewDate(window.startDate),
+                    formatPreviewDate(if (morningEnds) window.endDate else window.endDate.plusDays(1)),
+                    window.captureContext.zoneId.id,
+                ) + "\n" + stringResource(
+                    if (morningEnds) R.string.export_sleep_preview_guidance_morning_ends
+                    else R.string.export_sleep_preview_guidance
                 ),
-                style = MaterialTheme.typography.bodySmall,
-                color = AppColors.textMuted,
+                modifier = Modifier.padding(top = GeistSpacing.space3),
             )
         }
+
         if (preview.days.isEmpty()) {
-            PreviewStatusCard(
+            PreviewNote(
+                tone = PreviewNoteTone.INFO,
                 title = stringResource(R.string.export_preview_no_data_title),
                 message = stringResource(R.string.export_preview_no_data_message),
-                color = AppColors.textMuted,
+                modifier = Modifier.padding(top = GeistSpacing.space3),
             )
         }
 
         preview.days.forEach { day ->
             Text(
                 if (preview.isRangeArtifact) formatPreviewDateRange(day.requestedDates) else formatPreviewDate(day.date),
-                style = MaterialTheme.typography.labelLarge,
-                color = AppColors.textMuted,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.padding(top = Spacing.xs),
+                style = GeistType.heading14,
+                color = colors.brandPrimary,
+                modifier = Modifier
+                    .padding(start = GeistSpacing.space4, top = GeistSpacing.space6, bottom = GeistSpacing.space2)
+                    .semantics { heading() },
             )
 
             day.failureReason?.let { reason ->
-                PreviewStatusCard(
+                PreviewNote(
+                    tone = PreviewNoteTone.ERROR,
                     title = reason.localizedFailureLabel(),
                     message = day.issues.takeIf { it.isNotEmpty() }
                         ?.map { it.localizedMessage() }
                         ?.joinToString("\n")
                         ?: stringResource(R.string.export_preview_no_exportable_file),
-                    color = AppColors.error,
+                    modifier = Modifier.padding(bottom = GeistSpacing.space2),
                 )
             }
             if (day.failureReason == null && day.issues.isNotEmpty()) {
-                PreviewStatusCard(
+                PreviewNote(
+                    tone = PreviewNoteTone.WARNING,
                     title = stringResource(R.string.export_preview_warning_title),
                     message = day.issues.map { it.localizedMessage() }.joinToString("\n"),
-                    color = AppColors.warning,
+                    modifier = Modifier.padding(bottom = GeistSpacing.space2),
                 )
             }
 
-            day.files.forEach { file ->
-                val details = PreviewFileDetails(
+            val rows = day.files.map { file ->
+                PreviewFileDetails(
                     title = file.relativePath.substringAfterLast('/'),
                     subtitle = "${file.formatLabel ?: file.format.localizedDisplayName()} · ${formatBytes(file.byteCount)}",
                     relativePath = file.relativePath,
@@ -1929,16 +2524,9 @@ private fun ExportPreviewFileList(
                     previewOmittedByteCount = file.previewOmittedByteCount,
                     previewTailContent = file.previewTailContent,
                     isWritable = true,
-                )
-                PreviewFileRow(
-                    file = details,
-                    destinationLabel = destinationLabel,
-                    onClick = { onFileSelected(details) },
-                )
-            }
-
-            day.sideEffects.forEach { effect ->
-                val details = PreviewFileDetails(
+                ) to true
+            } + day.sideEffects.map { effect ->
+                PreviewFileDetails(
                     title = effect.relativePath.substringAfterLast('/'),
                     subtitle = effect.action.localizedAction() + if (effect.wouldWrite) " · ${formatBytes(effect.byteCount)}" else "",
                     relativePath = effect.relativePath,
@@ -1947,18 +2535,24 @@ private fun ExportPreviewFileList(
                     previewOmittedByteCount = 0,
                     previewTailContent = "",
                     isWritable = effect.wouldWrite,
-                )
-                PreviewFileRow(
-                    file = details,
-                    destinationLabel = destinationLabel,
-                    onClick = { if (effect.content != null) onFileSelected(details) },
-                    enabled = effect.content != null,
-                )
+                ) to (effect.content != null)
+            }
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                rows.forEachIndexed { index, (details, openable) ->
+                    PreviewFileRow(
+                        file = details,
+                        destinationLabel = destinationLabel,
+                        shape = groupRowShape(index, rows.size),
+                        onClick = { onFileSelected(details) },
+                        enabled = openable,
+                    )
+                }
             }
         }
     }
 }
 
+/** What the export writes and where, as a tonal card with the totals beneath. */
 @Composable
 private fun PreviewSummaryCard(
     requestedDayCount: Int,
@@ -1966,155 +2560,165 @@ private fun PreviewSummaryCard(
     destinationLabel: String?,
     isRangeArtifact: Boolean,
     artifactCount: Int,
+    totals: String,
+    limitNote: String?,
 ) {
+    val colors = LocalGeistColors.current
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(Radii.card))
-            .background(AppColors.bgPrimary)
-            .border(1.dp, AppColors.borderDefault, RoundedCornerShape(Radii.card))
-            .padding(Spacing.md),
-        verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+            .clip(RoundedCornerShape(GeistRadii.large))
+            .background(colors.background200)
+            .padding(GeistSpacing.space4 + GeistSpacing.space1),
+        verticalArrangement = Arrangement.spacedBy(GeistSpacing.space2),
     ) {
         PreviewSummaryRow(stringResource(R.string.section_date_range), dayCountLabel(requestedDayCount))
         PreviewSummaryRow(
             stringResource(
-                if (isRangeArtifact) {
-                    R.string.export_preview_artifacts_per_range
-                } else {
-                    R.string.export_preview_formats_per_day
-                }
+                if (isRangeArtifact) R.string.export_preview_artifacts_per_range
+                else R.string.export_preview_formats_per_day
             ),
             localizedInteger(if (isRangeArtifact) artifactCount else formatsPerDay),
         )
         PreviewSummaryRow(
             stringResource(R.string.export_preview_destination_label),
             destinationLabel ?: stringResource(R.string.export_preview_selected_folder),
+            mono = true,
         )
+        Text(
+            totals,
+            style = GeistType.copy14,
+            color = colors.secondary,
+            modifier = Modifier.padding(top = GeistSpacing.space1),
+        )
+        limitNote?.let { Text(it, style = GeistType.copy13, color = colors.secondary) }
     }
 }
 
 @Composable
-private fun PreviewSummaryRow(label: String, value: String) {
+private fun PreviewSummaryRow(label: String, value: String, mono: Boolean = false) {
+    val colors = LocalGeistColors.current
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.Top,
     ) {
-        Text(
-            label,
-            style = MaterialTheme.typography.bodyMedium,
-            color = AppColors.textSecondary,
-        )
+        Text(label, style = GeistType.copy14, color = colors.secondary)
         Text(
             value,
-            modifier = Modifier.padding(start = Spacing.md),
-            style = MaterialTheme.typography.bodyMedium,
-            color = AppColors.textPrimary,
+            modifier = Modifier.padding(start = GeistSpacing.space4),
+            style = if (mono) GeistType.label13Mono else GeistType.label14,
+            color = colors.primary,
             textAlign = TextAlign.End,
         )
     }
 }
 
+private enum class PreviewNoteTone { INFO, WARNING, ERROR }
+
+/** A tonal note (no border) whose tone is carried by its icon and title as well as color. */
 @Composable
-private fun PreviewStatusCard(title: String, message: String, color: Color) {
-    Column(
-        modifier = Modifier
+private fun PreviewNote(
+    tone: PreviewNoteTone,
+    title: String?,
+    message: String,
+    modifier: Modifier = Modifier,
+) {
+    val colors = LocalGeistColors.current
+    val (container, accent, icon) = when (tone) {
+        PreviewNoteTone.INFO -> Triple(colors.gray.c200, colors.secondary, Icons.Outlined.Info)
+        PreviewNoteTone.WARNING -> Triple(colors.amber.c100, colors.warning, Icons.Outlined.WarningAmber)
+        PreviewNoteTone.ERROR -> Triple(colors.red.c100, colors.error, Icons.Outlined.ErrorOutline)
+    }
+    Row(
+        modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(Radii.card))
-            .background(AppColors.bgPrimary)
-            .border(1.dp, AppColors.borderDefault, RoundedCornerShape(Radii.card))
-            .padding(Spacing.sm),
-        verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+            .clip(RoundedCornerShape(GeistRadii.medium))
+            .background(container)
+            .padding(GeistSpacing.space4),
+        horizontalArrangement = Arrangement.spacedBy(GeistSpacing.space3),
     ) {
-        Text(
-            title,
-            style = MaterialTheme.typography.labelLarge,
-            color = color,
-            fontWeight = FontWeight.SemiBold,
-        )
-        Text(
-            message,
-            style = MaterialTheme.typography.bodySmall,
-            color = AppColors.textSecondary,
-        )
+        Icon(icon, contentDescription = null, tint = accent, modifier = Modifier.size(20.dp))
+        Column(verticalArrangement = Arrangement.spacedBy(GeistSpacing.space1)) {
+            title?.let { Text(it, style = GeistType.heading14, color = accent) }
+            Text(message, style = GeistType.copy14, color = colors.primary)
+        }
     }
 }
 
+/** One file as a list-group row: icon circle, name, format and size, and its folder in mono. */
 @Composable
 private fun PreviewFileRow(
     file: PreviewFileDetails,
     destinationLabel: String?,
+    shape: Shape,
     onClick: () -> Unit,
     enabled: Boolean = true,
 ) {
-    val rowColor = if (file.isWritable) AppColors.accent else AppColors.textMuted
-    Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-        Row(
+    val colors = LocalGeistColors.current
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(shape)
+            .background(colors.background200)
+            .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
+            .heightIn(min = 72.dp)
+            .padding(start = GeistSpacing.space4, end = GeistSpacing.space3, top = GeistSpacing.space3, bottom = GeistSpacing.space3),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(GeistSpacing.space4),
+    ) {
+        Box(
             modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(Radii.card))
-                .background(AppColors.bgPrimary)
-                .border(1.dp, AppColors.borderDefault, RoundedCornerShape(Radii.card))
-                .clickable(enabled = enabled, onClick = onClick)
-                .padding(Spacing.md),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                .size(GeistSizes.control)
+                .background(if (file.isWritable) colors.brandSubtle else colors.gray.c300, CircleShape),
+            contentAlignment = Alignment.Center,
         ) {
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(CircleShape)
-                    .background(if (file.isWritable) AppColors.accentSubtle else AppColors.bgSecondary),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    Icons.Outlined.Description,
-                    contentDescription = null,
-                    tint = rowColor,
-                    modifier = Modifier.size(22.dp),
-                )
-            }
-            Column(modifier = Modifier.weight(1f)) {
+            Icon(
+                Icons.Outlined.Description,
+                contentDescription = null,
+                tint = if (file.isWritable) colors.brandOnSubtle else colors.secondary,
+                modifier = Modifier.size(22.dp),
+            )
+        }
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                file.title,
+                style = GeistType.label16,
+                color = if (enabled) colors.primary else colors.secondary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(file.subtitle, style = GeistType.copy14, color = colors.secondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            parentPathLabel(file.relativePath, destinationLabel)?.let { path ->
                 Text(
-                    file.title,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = if (enabled) AppColors.textPrimary else AppColors.textMuted,
-                    fontWeight = FontWeight.SemiBold,
+                    path,
+                    style = GeistType.label12Mono,
+                    color = colors.secondary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                )
-                Text(
-                    file.subtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = AppColors.textSecondary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-            if (enabled) {
-                Icon(
-                    Icons.AutoMirrored.Outlined.ArrowForwardIos,
-                    contentDescription = null,
-                    tint = AppColors.textMuted,
+                    modifier = Modifier.padding(top = GeistSpacing.space1),
                 )
             }
         }
-        parentPathLabel(file.relativePath, destinationLabel)?.let { path ->
-            Text(
-                path,
-                style = MaterialTheme.typography.bodySmall,
-                color = AppColors.textMuted,
-                modifier = Modifier.padding(start = Spacing.md),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
+        if (enabled) {
+            Icon(
+                Icons.AutoMirrored.Outlined.KeyboardArrowRight,
+                contentDescription = null,
+                tint = colors.secondary,
             )
         }
     }
 }
 
+/** The file reader: where it is written, then the content on a full-height mono surface. */
 @Composable
-private fun PreviewFileContent(file: PreviewFileDetails) {
+private fun PreviewFileContent(
+    file: PreviewFileDetails,
+    destinationLabel: String?,
+    wrapLines: Boolean,
+    formatted: Boolean,
+) {
+    val colors = LocalGeistColors.current
     val displayContent = remember(
         file.content,
         file.previewTailContent,
@@ -2132,54 +2736,108 @@ private fun PreviewFileContent(file: PreviewFileDetails) {
             ExportPreviewDisplayContent.make(file.content)
         }
     }
-    val renderedContent = displayContent.render(
-        emptyFileLabel = stringResource(R.string.export_preview_empty_file),
-        truncationMarker = stringResource(
-            R.string.export_preview_truncation_marker,
-            formatBytes(displayContent.omittedByteCount),
-            formatBytes(displayContent.originalByteCount),
-        ),
+    val emptyFileLabel = stringResource(R.string.export_preview_empty_file)
+    val truncationMarker = stringResource(
+        R.string.export_preview_truncation_marker,
+        formatBytes(displayContent.omittedByteCount),
+        formatBytes(displayContent.originalByteCount),
     )
+    val syntax = remember(file.relativePath) { PreviewSyntax.forPath(file.relativePath) }
+    val palette = PreviewPalette(
+        key = colors.brandPrimary,
+        string = colors.teal.c900,
+        literal = colors.pink.c900,
+        punctuation = colors.secondary,
+        heading = colors.primary,
+    )
+    // One monospace column, for hanging indents that keep wrapped values under their indent.
+    val textMeasurer = rememberTextMeasurer()
+    val density = LocalDensity.current
+    val columnWidth = remember(textMeasurer, density) {
+        with(density) { (textMeasurer.measure("0000000000", GeistType.label12Mono).size.width / 10f).toSp() }
+    }
+    val hangIndents = formatted && wrapLines &&
+        (syntax == PreviewSyntax.JSON || syntax == PreviewSyntax.NDJSON || syntax == PreviewSyntax.YAML)
+    // Formatting runs off the main thread: a preview holds up to 64 KB of text.
+    val renderedContent by produceState<AnnotatedString?>(
+        initialValue = null,
+        displayContent, formatted, hangIndents, syntax, palette, emptyFileLabel, truncationMarker, columnWidth,
+    ) {
+        value = null
+        value = withContext(Dispatchers.Default) {
+            when {
+                displayContent.isEmpty -> AnnotatedString(emptyFileLabel)
+                !formatted || syntax == PreviewSyntax.PLAIN -> AnnotatedString(
+                    displayContent.render(emptyFileLabel = emptyFileLabel, truncationMarker = truncationMarker),
+                )
+                else -> buildAnnotatedString {
+                    val head = ExportPreviewFormatter.format(displayContent.text, syntax, palette)
+                    append(if (hangIndents) head.withHangingIndents(columnWidth) else head)
+                    if (displayContent.isTruncated) {
+                        withStyle(SpanStyle(color = palette.punctuation)) { append(truncationMarker) }
+                        val tail = ExportPreviewFormatter.format(displayContent.tailText, syntax, palette)
+                        append(if (hangIndents) tail.withHangingIndents(columnWidth) else tail)
+                    }
+                }
+            }
+        }
+    }
+    val fullPath = listOfNotNull(destinationLabel?.takeIf { it.isNotBlank() }, file.relativePath.trim('/'))
+        .joinToString("/")
 
     Column(
         modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(max = 560.dp),
-        verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+            .fillMaxSize()
+            .padding(start = GeistSpacing.space4, end = GeistSpacing.space4, bottom = GeistSpacing.space3),
+        verticalArrangement = Arrangement.spacedBy(GeistSpacing.space3),
     ) {
-        Text(
-            stringResource(
-                if (displayContent.isTruncated) {
-                    R.string.export_preview_truncated_file
-                } else {
-                    R.string.export_preview_complete_file
-                },
-                formatBytes(displayContent.originalByteCount),
-            ),
-            style = MaterialTheme.typography.bodySmall,
-            color = AppColors.textSecondary,
-        )
-        Text(
-            file.relativePath,
-            style = MaterialTheme.typography.bodySmall,
-            color = AppColors.textMuted,
-        )
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(GeistRadii.listGroup))
+                .background(colors.background200)
+                .padding(GeistSpacing.space4),
+            verticalArrangement = Arrangement.spacedBy(GeistSpacing.space1),
+        ) {
+            SelectionContainer {
+                Text(fullPath, style = GeistType.label12Mono, color = colors.primary)
+            }
+            Text(
+                stringResource(
+                    if (displayContent.isTruncated) R.string.export_preview_truncated_file
+                    else R.string.export_preview_complete_file,
+                    formatBytes(displayContent.originalByteCount),
+                ),
+                style = GeistType.copy13,
+                color = colors.secondary,
+            )
+        }
         Box(
             modifier = Modifier
+                .weight(1f)
                 .fillMaxWidth()
-                .heightIn(min = 260.dp, max = 460.dp)
-                .clip(RoundedCornerShape(Radii.card))
-                .background(AppColors.bgPrimary)
-                .border(1.dp, AppColors.borderDefault, RoundedCornerShape(Radii.card))
+                .clip(RoundedCornerShape(GeistRadii.medium))
+                .background(colors.gray.c100)
                 .verticalScroll(rememberScrollState())
-                .padding(Spacing.sm),
+                .then(if (wrapLines) Modifier else Modifier.horizontalScroll(rememberScrollState()))
+                .padding(GeistSpacing.space4),
         ) {
-            Text(
-                renderedContent,
-                style = MaterialTheme.typography.bodySmall,
-                color = AppColors.textPrimary,
-                fontFamily = GeistMono,
-            )
+            val content = renderedContent
+            if (content == null) {
+                CircularProgressIndicator(
+                    color = colors.brandPrimary,
+                    modifier = Modifier.size(GeistSpacing.space6),
+                )
+            } else {
+                SelectionContainer {
+                    Text(
+                        content,
+                        style = GeistType.label12Mono,
+                        color = colors.primary,
+                        softWrap = wrapLines,
+                    )
+                }
+            }
         }
     }
 }
@@ -2330,3 +2988,45 @@ private fun ExportPreviewSideEffectAction.localizedAction(): String = stringReso
         ExportPreviewSideEffectAction.WRITE_INDIVIDUAL_ENTRY -> R.string.export_preview_action_write_individual_entry
     }
 )
+
+/** Ranges longer than this ask before exporting; raw snapshots are one artifact and do not. */
+internal const val LARGE_EXPORT_DAY_THRESHOLD = 90
+
+internal fun isLargeExport(days: Int, mode: ExportMode): Boolean =
+    mode != ExportMode.RAW_SNAPSHOT && days > LARGE_EXPORT_DAY_THRESHOLD
+
+/** A run that wrote every requested day ends on the moment's done state. */
+internal fun momentShowsDone(result: ExportResult): Boolean =
+    !result.wasCancelled && result.totalCount > 0 && result.successCount == result.totalCount &&
+        result.failedDateDetails.isEmpty() && result.exportMode != ExportMode.RAW_SNAPSHOT
+
+/**
+ * Turns each line's leading spaces into a paragraph indent whose wrapped lines hang one level
+ * deeper, so a long value wraps under its own indent instead of breaking after the spaces and
+ * restarting at the left edge. Display only: copied text loses its indentation.
+ */
+private fun AnnotatedString.withHangingIndents(column: TextUnit): AnnotatedString = buildAnnotatedString {
+    val source = this@withHangingIndents
+    var lineStart = 0
+    while (lineStart <= source.length) {
+        val lineEnd = source.text.indexOf('\n', lineStart).let { if (it < 0) source.length else it }
+        var contentStart = lineStart
+        while (contentStart < lineEnd && source.text[contentStart] == ' ') contentStart++
+        val indent = contentStart - lineStart
+        withStyle(
+            ParagraphStyle(
+                textIndent = TextIndent(
+                    firstLine = (column.value * indent).sp,
+                    restLine = (column.value * (indent + 2)).sp,
+                ),
+            ),
+        ) {
+            // An empty paragraph collapses; a single space keeps blank lines. Paragraph boundaries
+            // replace the newlines (a kept newline adds a blank line), so copy exact text from the
+            // raw view.
+            if (contentStart == lineEnd) append(' ') else append(source.subSequence(contentStart, lineEnd))
+        }
+        if (lineEnd == source.length) break
+        lineStart = lineEnd + 1
+    }
+}

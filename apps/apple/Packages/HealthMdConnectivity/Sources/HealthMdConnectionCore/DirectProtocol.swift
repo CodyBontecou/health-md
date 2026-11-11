@@ -160,6 +160,7 @@ public struct DirectPeerCapabilities: Codable, Equatable, Sendable {
     public let wake: DirectWakeCapabilities?
     /// Independently versioned export-admission evidence. Nil means legacy/unverified.
     public let exportHistoryObservationVersions: [Int]?
+    public let scopedDailyNoteVersions: [Int]?
 
     public init(
         protocolVersions: [Int] = [HealthMdDirectProtocol.currentVersion],
@@ -171,7 +172,8 @@ public struct DirectPeerCapabilities: Codable, Equatable, Sendable {
         transfer: DirectTransferCapabilities = .current,
         query: DirectQueryCapabilities? = nil,
         wake: DirectWakeCapabilities? = nil,
-        exportHistoryObservationVersions: [Int]? = nil
+        exportHistoryObservationVersions: [Int]? = nil,
+        scopedDailyNoteVersions: [Int]? = nil
     ) {
         self.protocolVersions = Array(Set(protocolVersions)).sorted()
         self.platform = platform
@@ -183,6 +185,12 @@ public struct DirectPeerCapabilities: Codable, Equatable, Sendable {
         self.query = query
         self.wake = wake
         self.exportHistoryObservationVersions = exportHistoryObservationVersions.map { Array(Set($0)).sorted() }
+        self.scopedDailyNoteVersions = scopedDailyNoteVersions.map { Array(Set($0)).sorted() }
+    }
+
+    public func negotiatedScopedDailyNoteVersion(with peer: Self) -> Int? {
+        scopedDailyNoteVersions?.contains(1) == true
+            && peer.scopedDailyNoteVersions?.contains(1) == true ? 1 : nil
     }
 
     public func negotiatedProtocolVersion(with peer: Self) -> Int? {
@@ -551,6 +559,7 @@ public struct DirectExportFileManifest: Codable, Equatable, Sendable {
     public let byteCount: Int64
     public let sha256: String
     public let writeMode: DirectExportFileWriteMode
+    public let scopedNotePolicy: DirectScopedDailyNotePolicy?
 
     public init(
         jobID: UUID,
@@ -558,7 +567,8 @@ public struct DirectExportFileManifest: Codable, Equatable, Sendable {
         relativePath: String,
         byteCount: Int64,
         sha256: String,
-        writeMode: DirectExportFileWriteMode
+        writeMode: DirectExportFileWriteMode,
+        scopedNotePolicy: DirectScopedDailyNotePolicy? = nil
     ) throws {
         guard !relativePath.isEmpty,
               relativePath.utf8.count <= 4_096,
@@ -572,6 +582,7 @@ public struct DirectExportFileManifest: Codable, Equatable, Sendable {
         self.byteCount = byteCount
         self.sha256 = sha256
         self.writeMode = writeMode
+        self.scopedNotePolicy = scopedNotePolicy
     }
 }
 

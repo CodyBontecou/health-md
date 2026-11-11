@@ -13,12 +13,7 @@ import urllib.parse
 import urllib.request
 from typing import Any, NamedTuple
 
-WORKFLOWS = (
-    ("CLI CI", "cli-ci.yml"),
-    ("Core Rust CI", "core-rust-ci.yml"),
-    ("Apple CI", "apple-ci.yml"),
-    ("Android CI", "android-ci.yml"),
-)
+WORKFLOWS = (("CI", "ci.yml"),)
 ACTIVE_STATUSES = {"requested", "waiting", "pending", "queued", "in_progress"}
 HARD_FAILURES = {"failure", "timed_out", "action_required", "startup_failure", "stale"}
 RECOVERABLE_CONCLUSIONS = {"cancelled", "skipped", "neutral"}

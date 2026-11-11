@@ -1,48 +1,48 @@
 {
   "schemaVersion": 1,
   "locale": "nl-NL",
-  "status": "draft",
+  "status": "reviewed",
   "direction": "ltr",
   "slides": [
     {
-      "id": "core-export",
-      "headline": "Jouw gezondheidsdata. Jouw bestanden.",
-      "supportingLine": "Exporteer toegestane Health Connect-gegevens naar bestanden die jij beheert."
+      "id": "text-file",
+      "headline": "Jij, in tekstvorm.",
+      "supportingLine": "Health.md leest Health Connect en schrijft je dagen weg als Markdown-, CSV- en JSON-bestanden van jezelf."
     },
     {
-      "id": "export-formats",
-      "headline": "Exporteer op jouw manier",
-      "supportingLine": "Markdown, Obsidian Bases, JSON en CSV."
+      "id": "interrogate",
+      "headline": "Ondervraag je eigen lijf.",
+      "supportingLine": "Geef je gezondheidsbestanden aan de AI en tools die je al gebruikt, via map, CLI of API."
     },
     {
-      "id": "health-metrics",
-      "headline": "Kies uit meer dan 100 gezondheidsmetingen",
-      "supportingLine": "Slaap, activiteit, hart, vitale functies, voeding en meer."
+      "id": "periodic-table",
+      "headline": "Jouw periodiek systeem.",
+      "supportingLine": "Kies precies welke meetwaarden je wegschrijft: slaap, hart, activiteit, vitale functies, voeding en meer."
     },
     {
-      "id": "private-by-design",
-      "headline": "Alleen-lezen. Privacy als uitgangspunt.",
-      "supportingLine": "Geen account. Geen Health.md-cloud voor gezondheidsdata."
+      "id": "day-itemized",
+      "headline": "Je dag, op de bon.",
+      "supportingLine": "Een dagnotitie landt volgens jouw schema in je vault. Jij hoeft hem alleen te lezen."
     },
     {
-      "id": "scheduled-exports",
-      "headline": "Houd je archief actueel",
-      "supportingLine": "Plan exports naar de bestemming die jij kiest."
+      "id": "pin-your-sleep",
+      "headline": "Je slaap onder de loep.",
+      "supportingLine": "Elke slaapfase die Health Connect vastlegt, als bestand bewaard om te vergelijken met de vorige honderd."
     },
     {
-      "id": "file-preview",
-      "headline": "Bekijk alles vóór de export",
-      "supportingLine": "Bekijk bestandsnamen, paden en inhoud voordat er iets wordt geschreven."
+      "id": "quilt",
+      "headline": "Je maand, als quilt.",
+      "supportingLine": "Het Archief toont elke dag die je hebt geëxporteerd en markeert de hiaten die je kunt opvullen."
     },
     {
-      "id": "home-screen-widgets",
-      "headline": "Gezondheid in één oogopslag",
-      "supportingLine": "Widgets voor activiteit, slaap, hart en overzicht."
+      "id": "preserved",
+      "headline": "Ingemaakt op je eigen apparaten.",
+      "supportingLine": "Health Connect-gegevens gaan rechtstreeks van je telefoon naar je bestanden. Niets gaat via een Health.md-cloud."
     },
     {
-      "id": "direct-cli",
-      "headline": "Rechtstreeks naar je computer",
-      "supportingLine": "Koppel met de Health.md CLI voor geverifieerde, versleutelde exports zonder cloudrelay."
+      "id": "at-a-glance",
+      "headline": "Je cijfers in één oogopslag.",
+      "supportingLine": "Widgets op je startscherm voor archief, activiteit, hart en slaap."
     }
   ]
 }

@@ -69,7 +69,7 @@ A notification per run with a day count (e.g. "Raw snapshot range ending …"), 
 
 | Problem | Likely cause | Fix |
 |---|---|---|
-| "Scheduled exports need Health Connect background access" | Background permission missing | Schedule tab → enable background access |
+| "Scheduled exports need Health Connect background access" | Background permission missing | Automations tab → enable background access |
 | Runs late or skipped | Exact-alarm access denied or OEM battery management | Grant Alarms & reminders; exempt Health.md from battery optimization |
 | Missed dates after reboot | Phone locked after restart (Health Connect gated) | Use the pending-dates retry prompt; unlock once after reboot |
 | No completion notification | Notifications off | Enable notifications; runs still recorded in History |

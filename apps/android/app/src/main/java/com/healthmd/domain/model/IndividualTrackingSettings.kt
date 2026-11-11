@@ -31,6 +31,26 @@ data class IndividualTrackingSettings(
     val requiresGranularData: Boolean
         get() = globalEnabled && trackedMetricIds.any { it in GRANULAR_TRACKING_METRICS }
 
+    /**
+     * Source detail individual entries need internally, per detail group. Capture reads it even
+     * when compatibility files summarize that group; writers never emit it unless requested.
+     */
+    fun requiredDetailSelection(): ExportDetailSelection {
+        if (!globalEnabled) return ExportDetailSelection.SUMMARY
+        val tracked = trackedMetricIds.filter { it in GRANULAR_TRACKING_METRICS }.toSet()
+        fun any(vararg ids: String) = ids.any { it in tracked }
+        val sleep = tracked.any { it.startsWith("sleep_") }
+        return ExportDetailSelection(
+            sleepSessions = sleep,
+            sleepStages = sleep,
+            activity = any("steps"),
+            heart = any("avg_hr", "min_hr", "max_hr", "walking_hr", "hrv"),
+            vitals = any("blood_oxygen", "respiratory_rate", "body_temp", "bp_systolic", "bp_diastolic", "blood_glucose"),
+            mindfulness = any("mindful_minutes", "mindful_sessions"),
+            workouts = any("workouts"),
+        )
+    }
+
     fun isMetricEnabled(metricId: String): Boolean = metricId in trackedMetricIds
 
     fun shouldTrackIndividually(metricId: String): Boolean = globalEnabled && isMetricEnabled(metricId)

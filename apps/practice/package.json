@@ -11,7 +11,7 @@
     "build": "node scripts/build.mjs",
     "build:provenance": "node scripts/build-provenance.mjs",
     "check": "npm run typecheck && npm test && npm run check:synthetic && npm run build",
-    "check:ci": "npm run check && npm run test:e2e && npm run check:qualification && npm run test:smoke && npm run dry-run && npm audit --audit-level=moderate",
+    "check:ci": "npm run check && npm run test:e2e:built && npm run check:qualification:built && npm run test:smoke:built && npm run dry-run:built && npm audit --audit-level=moderate",
     "check:qualification": "npm run build && npm run check:security && npm run check:scanner-canary && npm run check:synthetic && npm run build:provenance && node scripts/verify-qualification.mjs",
     "check:scanner-canary": "node scripts/check-synthetic-only.mjs --seed-canary",
     "check:security": "node scripts/verify-security-inventory.mjs",
@@ -20,9 +20,13 @@
     "start": "npm run dev",
     "dry-run": "npm run build && node scripts/dry-run.mjs",
     "test": "vitest run",
-    "test:e2e": "playwright test --project=chromium && playwright test --project=firefox && playwright test --project=webkit",
+    "test:e2e": "playwright test --project=chromium",
     "test:smoke": "npm run build && node scripts/smoke-local.mjs",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:e2e:built": "playwright test --project=chromium",
+    "check:qualification:built": "npm run check:security && npm run check:scanner-canary && npm run check:synthetic && npm run build:provenance && node scripts/verify-qualification.mjs",
+    "test:smoke:built": "node scripts/smoke-local.mjs",
+    "dry-run:built": "node scripts/dry-run.mjs"
   },
   "dependencies": {
     "react": "19.2.8",

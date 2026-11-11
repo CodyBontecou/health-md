@@ -1,6 +1,6 @@
 # Claim ledger: How to export Apple Health data to Obsidian
 
-Verified: 2026-10-22
+Verified: 2026-10-25
 Verified by: Codex (agent)
 Method: mixed
 
@@ -77,3 +77,15 @@ foundations. This article does not qualify those foundations for release.
   routes against the repository. The full website build/link checks qualify
   the rendered paths; images illustrate the workflow, not a claim that all
   future app layouts remain identical.
+
+## October 25 discovery-guide update
+
+The new instructions were traced against the existing iPhone export, daily-note, format, and sleep-date documentation; no new native-app or Obsidian UI qualification is claimed. Earlier mixed verification evidence above remains scoped to the earlier runs.
+
+- [x] **One-day setup and filename choices match the documented daily-note controls.** Traced to `apps/website/docs-src/src/content/docs/iphone-first-export.md` and `daily-notes.md`: vault-relative Folder, extension-free Filename, `{date}`, Create note if missing, and optional metric sections.
+- [x] **The synthetic Markdown excerpt retains exact selected fixture properties.** Compared with `apps/apple/docs/reference/generated/core/summary-day.md`: date `2026-03-15`, type `health-data`, resting heart rate `58`, sleep hours `7.75`, and steps `12500`. The article labels the excerpt as partial and synthetic.
+- [x] **Sleep-start dates and missing-data checks retain documented semantics.** Traced to `apps/website/content/blog/why-sleep-is-in-yesterdays-note.md`; the update preserves current upstream permission and Cloud-pilot qualifications.
+
+## Sleep-date clarification — 2026-10-27
+
+- [x] Supersedes earlier unconditional local-start-date shorthand. Daily compatibility sleep summaries use a local noon-to-noon journal window; after-midnight sleep can belong to the previous journal date. Raw/canonical ownership and typed session timestamps are separate. Evidence: Apple HealthKitManager sleepWindow/fetchSleepData and Apple export-schema Day ownership; Android SleepJournalSummary and android-sleep-journal-summary.md; the reusable sleep registry entry. Existing CSV/JSON fixtures, calculations, app behavior and other article validation are unchanged. This correction was source-traced, not a new device or third-party app execution.

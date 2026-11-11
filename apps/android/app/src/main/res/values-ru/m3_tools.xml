@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="m3_tools_diagnostics_verbosity">Подробность</string>
+    <string name="m3_tools_diagnostics_subsystem">Подсистема</string>
+    <string name="m3_tools_diagnostics_time_range">Период</string>
+    <string name="m3_tools_diagnostics_events">Последние события</string>
+    <string name="m3_tools_diagnostics_files">Файлы пакета</string>
+    <string name="m3_tools_direct_cli_pairing">Связать с компьютером</string>
+    <string name="m3_tools_direct_cli_manual">Ввести вручную</string>
+    <string name="m3_tools_direct_cli_computer">Связанный компьютер</string>
+    <string name="m3_tools_direct_cli_export">Экспорт</string>
+    <string name="m3_tools_clinic_title">Доступ клиники</string>
+    <string name="m3_tools_clinic_intro">Ваша клиника может оплачивать доставку на свой одобренный адрес. Вы выбираете, чем делиться. Для других мест экспорта нужен ваш собственный доступ к Health.md.</string>
+    <string name="m3_tools_clinic_storage_unavailable">Разблокируйте телефон и повторите попытку. Не удалось безопасно прочитать доступ клиники.</string>
+    <string name="m3_tools_clinic_fallback_name">Клиника</string>
+    <string name="m3_tools_clinic_sharing">Обмен данными</string>
+    <string name="m3_tools_clinic_allow_sharing">Разрешить обмен с этой клиникой</string>
+    <string name="m3_tools_clinic_sharing_description">Будут отправлены только показатели и даты, выбранные вами в Health.md. Расписание использует сохранённый выбор. Отключение обмена останавливает будущие отправки в клинику, но не удаляет копии, которые клиника уже получила.</string>
+    <string name="m3_tools_clinic_upload_token">Токен загрузки клиники (необязательно)</string>
+    <string name="m3_tools_clinic_upload_token_description">Если клиника выдала вам личный токен загрузки, введите его здесь. Он хранится безопасно и используется только для одобренного адреса этой клиники.</string>
+    <string name="m3_tools_clinic_use_destination">Использовать назначение клиники</string>
+    <string name="m3_tools_clinic_sync_requests">Запросы синхронизации</string>
+    <string name="m3_tools_clinic_allow_sync">Разрешить запросы синхронизации от этой клиники</string>
+    <string name="m3_tools_clinic_sync_description">Клиника может отправить уведомление с запросом ваших последних данных. Ничего не отправляется, пока вы не нажмёте на него; затем данные за вчера и сегодня передаются этой клинике. Отключение останавливает новые запросы.</string>
+    <string name="m3_tools_clinic_invitation">Приглашение</string>
+    <string name="m3_tools_clinic_invitation_code">Код приглашения</string>
+    <string name="m3_tools_clinic_accept_invitation">Принять приглашение</string>
+    <string name="m3_tools_clinic_not_configured">Доступ клиники не настроен в этой версии Health.md.</string>
+    <string name="m3_tools_clinic_enrollment_pending">Ваше приглашение сохранено безопасно. Повторите попытку, чтобы завершить регистрацию; новый код не нужен.</string>
+    <string name="m3_tools_clinic_retry_enrollment">Повторить регистрацию</string>
+    <string name="m3_tools_clinic_refresh">Обновить доступ клиники</string>
+    <string name="m3_tools_clinic_disconnect_clinic">Отключить клинику</string>
+    <string name="m3_tools_clinic_error">Не удалось обновить доступ клиники. Проверьте подключение или повторите сохранённую регистрацию.</string>
+    <string name="m3_tools_clinic_disconnect_question">Отключить эту клинику?</string>
+    <string name="m3_tools_clinic_disconnect_body">Обмен, оплачиваемый клиникой, прекратится. Ваш собственный купленный доступ и локальные данные о здоровье останутся доступны.</string>
+    <string name="m3_tools_clinic_disconnect">Отключить</string>
+    <string name="m3_tools_clinic_sync_sharing_required">Сначала разрешите обмен с этой клиникой.</string>
+    <string name="m3_tools_clinic_sync_push_unavailable">Запросы синхронизации недоступны в этой версии Health.md.</string>
+    <string name="m3_tools_clinic_sync_notifications_denied">Разрешение на уведомления не предоставлено. Разрешите уведомления для Health.md в настройках.</string>
+    <string name="m3_tools_clinic_sync_wake_service">Служба уведомлений недоступна. Повторите попытку позже.</string>
+    <string name="m3_tools_clinic_sync_clinic_unreachable">Не удалось связаться с клиникой. Повторите попытку позже.</string>
+    <string name="m3_tools_clinic_sync_storage">Разблокируйте телефон и повторите попытку. Не удалось безопасно сохранить ключ запроса.</string>
+</resources>

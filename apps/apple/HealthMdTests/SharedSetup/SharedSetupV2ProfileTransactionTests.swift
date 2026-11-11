@@ -33,6 +33,20 @@ final class SharedSetupV2ProfileTransactionTests: XCTestCase {
         super.tearDown()
     }
 
+    func testEUDotImportPersistsNativeProfileAndReconstruction() throws {
+        var document = try appleDocument()
+        document.profiles[0].presentation.dateFormat = .euDot
+        let decoded = try SharedSetupV2Codec.decode(SharedSetupV2Codec.encode(document))
+        let plan = SharedSetupV2Mapper.preview(decoded, registry: fixtureRegistry())
+        let transaction = makeTransaction(profileIDs: [uuid(101)], scheduleIDs: [uuid(201)])
+        _ = try transaction.apply(plan, selectedBundleIDs: [document.profiles[0].bundleID], mode: .add)
+        let profile = try XCTUnwrap(storedProfiles().first)
+        XCTAssertEqual(profile.settings.formatCustomization.dateFormat, .euDot)
+        let restored = profile.settings.makeAdvancedExportSettings()
+        Self.retainedSettings.append(restored)
+        XCTAssertEqual(restored.formatCustomization.dateFormat, .euDot)
+    }
+
     func testAddNormalizesSelectionMaterializesExactFreshProfilesAndKeepsSchedulesInert() throws {
         let existingID = uuid(1)
         let existingScheduleID = uuid(2)
@@ -742,7 +756,7 @@ final class SharedSetupV2ProfileTransactionTests: XCTestCase {
         let dependencies = ExportIntentRunner.Dependencies(
             refreshPurchaseStatus: { events.append("purchase") },
             canExport: { true },
-            trackExportBlockedByQuota: {},
+
             hasVaultAccess: {
                 events.append("vault")
                 return true
@@ -762,9 +776,9 @@ final class SharedSetupV2ProfileTransactionTests: XCTestCase {
                     failedDateDetails: []
                 )
             },
-            recordResult: { _, _, _, _, _, _ in },
+            recordResult: { _, _, _, _, _, _, _ in },
             recordExportUse: {},
-            trackExportSucceeded: { _ in },
+
             updateScheduleLastExport: {},
             pendingExportStore: InMemoryPendingExportStore(),
             exportNotificationScheduler: InspectableExportNotificationScheduler(),

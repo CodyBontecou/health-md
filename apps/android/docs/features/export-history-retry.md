@@ -4,7 +4,7 @@
 
 - **Docs status:** draft
 - **Video priority:** medium
-- **Primary screen:** History
+- **Primary screen:** History (from the Archive)
 - **Source files:** `app/src/main/java/com/healthmd/presentation/history/HistoryScreen.kt`, `app/src/main/java/com/healthmd/data/history/` (Room database, DAO, repository)
 
 ## What it does
@@ -19,7 +19,7 @@ Every export — manual, scheduled, shortcut, or API — is recorded in a local 
 
 ## Where to find it
 
-1. Open Health.md → **History** tab.
+1. Open Health.md → **Archive** → **History**.
 2. Tap an entry for the full detail sheet.
 3. On a failed entry, tap **Retry Export**.
 

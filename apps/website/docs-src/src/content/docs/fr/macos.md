@@ -1,6 +1,6 @@
 ---
-title: "App macOS"
-description: "Utilisez Health.md for Mac comme destination d’export de l’iPhone, hôte local de CLI et MCP, stockage chiffré du contexte de santé, visualiseur d’historique et autorité des dossiers."
+title: "Apple Health sur Mac avec Health.md"
+description: "Exportez les données Apple Health de l’iPhone vers le Mac ou interrogez le contexte local. Installez Health.md sur les deux appareils et configurez Mac Sync."
 ---
 
 Health.md for Mac remplit deux rôles locaux :
@@ -9,6 +9,11 @@ Health.md for Mac remplit deux rôles locaux :
 2. héberger la CLI en boucle locale, l’API de requête, le contexte de santé chiffré et l’adaptateur MCP utilisés par les agents locaux.
 
 Apple Health reste sur l’iPhone. L’app Mac ne lit pas directement HealthKit.
+
+<div class="callout">
+<strong>Commencez avec votre iPhone et votre Mac</strong>
+<p><a href="https://apps.apple.com/us/app/health-md/id6757763969" target="_blank" rel="noopener">Installez Health.md sur iPhone et Mac</a>. <a href="/fr/docs/sync/">Suivez le guide de configuration de Mac Sync</a>, <a href="/blog/health-md-for-macos/">ou commencez par le tutoriel d’export d’une journée (en anglais)</a>.</p>
+</div>
 
 ## Zones principales
 <div class="options">
@@ -24,9 +29,9 @@ Apple Health reste sur l’iPhone. L’app Mac ne lit pas directement HealthKit.
 ## Configurer une destination Mac
 1. Installez et ouvrez Health.md sur Mac.
 2. Choisissez un dossier sur le disque local, iCloud Drive ou dans un coffre Obsidian.
-3. Sur l’iPhone, activez la connectivité Mac dans l’onglet Synchronisation.
-4. Sur l’iPhone, choisissez Mac connecté comme destination.
-5. Configurez l’export et touchez Export.
+3. Sur iPhone, ouvrez **Réglages → Destination Mac** et activez-la.
+4. Sur iPhone, choisissez Mac connecté comme destination d’une automatisation (**Automatisations → automatisation → Sortie**).
+5. Touchez **Exporter maintenant**, ou laissez la planification de l’automatisation s’exécuter.
 
 L’iPhone recueille les données HealthKit et l’instantané des réglages effectifs. Les pairs actuels transfèrent des partitions de taille limitée, validées par somme de contrôle. Le Mac utilise les exportateurs de production et écrit les fichiers demandés.
 <div class="callout"><strong>Limite de HealthKit.</strong><p style="margin-top:6px;">Le Mac ne peut pas interroger Apple Health seul. Les nouveaux exports et le contexte des agents nécessitent que l’app iPhone connectée soit ouverte. Les requêtes chiffrées en cache peuvent s’exécuter sans nouvelle connexion si la couverture enregistrée suffit.</p></div>

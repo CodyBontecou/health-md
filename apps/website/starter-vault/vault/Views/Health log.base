@@ -1,0 +1,55 @@
+filters:
+  and:
+    - file.inFolder("Health")
+    - file.ext == "md"
+    - note.type == "health-data"
+properties:
+  file.name:
+    displayName: Day
+  note.steps:
+    displayName: Steps
+  note.sleep_total_hours:
+    displayName: Sleep (hours)
+  note.resting_heart_rate:
+    displayName: Resting HR (bpm)
+  note.sample_data:
+    displayName: Fictional
+summaries:
+  Observed mean: 'if(values.filter(value.isType("number")).length > 0, values.filter(value.isType("number")).mean().toFixed(2) + " · n=" + values.filter(value.isType("number")).length, "No observations")'
+  Observed total: 'if(values.filter(value.isType("number")).length > 0, values.filter(value.isType("number")).reduce(acc + value, 0) + " · n=" + values.filter(value.isType("number")).length, "No observations")'
+views:
+  - type: table
+    name: All days
+    order:
+      - file.name
+      - note.steps
+      - note.sleep_total_hours
+      - note.resting_heart_rate
+      - note.sample_data
+    sort:
+      - property: file.name
+        direction: ASC
+    summaries:
+      note.steps: Observed total
+      note.sleep_total_hours: Observed mean
+      note.resting_heart_rate: Observed mean
+  - type: table
+    name: Review week
+    filters:
+      and:
+        - 'this.week_start != null'
+        - 'this.week_end != null'
+        - 'date(note.date) >= date(this.week_start)'
+        - 'date(note.date) <= date(this.week_end)'
+    order:
+      - file.name
+      - note.steps
+      - note.sleep_total_hours
+      - note.resting_heart_rate
+    sort:
+      - property: file.name
+        direction: ASC
+    summaries:
+      note.steps: Observed total
+      note.sleep_total_hours: Observed mean
+      note.resting_heart_rate: Observed mean

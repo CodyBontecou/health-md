@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="m3_nav_report_requires_access">需要您自己的 Health.md 访问权限才能保存或分享报告。</string>
+</resources>

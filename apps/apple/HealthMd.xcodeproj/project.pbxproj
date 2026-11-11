@@ -41,6 +41,7 @@
 		9985A4A481A3E00BCD869EDC /* HealthWidgets.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5CDCF99E6E01498476F63ED /* HealthWidgets.swift */; };
 		A1C0A5E82F62100100A5E771 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A1C0A5E72F62100100A5E771 /* Assets.xcassets */; };
 		B0995875A54768B05B29752D /* WatchHealthSnapshotStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8EE59041238A4C32044037A6 /* WatchHealthSnapshotStore.swift */; };
+		A1C0A5EA2F62100100A5E773 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A1C0A5E92F62100100A5E772 /* Assets.xcassets */; };
 		B5B8607E3E14D811F78E519E /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B8B573DB34E1B6C531377506 /* Assets.xcassets */; };
 		B660CA37F4E61843D73D1979 /* WatchHealthSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0C92EF568620D0B32D839B /* WatchHealthSnapshot.swift */; };
 		C05B5A8670CDD9695D11E947 /* HealthMdWidgets.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = B13FE3C85778922B02345D54 /* HealthMdWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
@@ -50,6 +51,7 @@
 		E7A72632889E567841E8160A /* HealthMdWatchWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 7A94E3DD3CBA29DE5940F397 /* HealthMdWatchWidgets.appex */; platformFilter = watchos; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		F0A09B888CE578A656870A5E /* HealthWidgetSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8AEFB0CEDB2F557D759180ED /* HealthWidgetSnapshot.swift */; };
 		FCA3C8D53C123B834E3FB77C /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 21388098C540E1DD9899E9C7 /* Foundation.framework */; };
+		44D4D3D82018428CBCFFBC75 /* ScrawlKit in Frameworks */ = {isa = PBXBuildFile; productRef = AC119E5D78AB42968213BDC0 /* ScrawlKit */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -155,6 +157,7 @@
 		A17100000000000000000014 /* WatchExportService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Packages/HealthMdWatchExport/Sources/HealthMdWatchExport/WatchExportService.swift; sourceTree = SOURCE_ROOT; };
 		A17100000000000000000015 /* WatchExportKeychain.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Packages/HealthMdWatchExport/Sources/HealthMdWatchExport/WatchExportKeychain.swift; sourceTree = SOURCE_ROOT; };
 		A17100000000000000000016 /* WatchExportHTTP.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Packages/HealthMdWatchExport/Sources/HealthMdWatchExport/WatchExportHTTP.swift; sourceTree = SOURCE_ROOT; };
+		C11C00000000000000000001 /* NativeLicensing.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = NativeLicensing.xcconfig; path = ../licensing/deploy/NativeLicensing.xcconfig; sourceTree = SOURCE_ROOT; };
 		A90000000000000000000001 /* healthmd-mcp */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = "healthmd-mcp"; sourceTree = BUILT_PRODUCTS_DIR; };
 		A90000000000000000000002 /* main.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = "mcp-main.swift"; path = "Sources/healthmd-mcp/main.swift"; sourceTree = "<group>"; };
 		A90000000000000000000003 /* HealthMdMCPServer.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Sources/HealthMdMCPCore/HealthMdMCPServer.swift; sourceTree = "<group>"; };
@@ -185,6 +188,7 @@
 		B13FE3C85778922B02345D54 /* HealthMdWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; name = HealthMdWidgets.appex; path = HealthMdWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		C1A000032F71000100C1A003 /* CLIExportLiveActivityWidget.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CLIExportLiveActivityWidget.swift; sourceTree = "<group>"; };
 		C1A000042F71000100C1A004 /* CLIExportActivityAttributes.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = CLIExportActivityAttributes.swift; path = ../HealthMd/iOS/Components/CLIExportActivityAttributes.swift; sourceTree = "<group>"; };
+		A1C0A5E92F62100100A5E772 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		B8B573DB34E1B6C531377506 /* Assets.xcassets */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		BA117C7F83AE916A975F62C0 /* HealthMdWidgets.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = HealthMdWidgets.entitlements; sourceTree = "<group>"; };
 		E07707407965C680321DD221 /* HealthMdWatchWidgetBundle.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = HealthMdWatchWidgetBundle.swift; sourceTree = "<group>"; };
@@ -210,13 +214,8 @@
 				"macOS/SchedulingManager+macOS.swift",
 				macOS/Views/MacCLIView.swift,
 				macOS/Views/MacContentView.swift,
-				macOS/Views/MacExportView.swift,
 				macOS/Views/MacHistoryView.swift,
 				macOS/Views/MacMenuBarView.swift,
-				macOS/Views/MacMetricSelectionView.swift,
-				macOS/Views/MacOnboardingView.swift,
-				macOS/Views/MacPaywallView.swift,
-				macOS/Views/MacScheduleView.swift,
 				macOS/Views/MacSettingsView.swift,
 				macOS/Views/MacSyncView.swift,
 				macOS/Views/MacVaultFolderSection.swift,
@@ -236,16 +235,16 @@
 				iOS/AppIntents/GetLastExportStatusIntent.swift,
 				iOS/AppIntents/HealthMdAppShortcuts.swift,
 				iOS/AppIntents/SetScheduledExportEnabledIntent.swift,
-				iOS/Components/AnimatedBackground.swift,
 				iOS/Components/AnimatedButton.swift,
 				iOS/Components/ExportModal.swift,
-				iOS/Components/LiquidGlassNavBar.swift,
+				iOS/Components/NavTab.swift,
 				iOS/Components/SectionCard.swift,
 				iOS/Components/StatusIndicator.swift,
 				iOS/ClinicianReport/ClinicianReportPDFRenderer.swift,
 				iOS/ClinicianReport/ClinicianReportShareSheet.swift,
 				iOS/ClinicianReport/ClinicianReportView.swift,
 				iOS/ClinicianReport/ClinicianReportViewModel.swift,
+				iOS/ClinicSyncDoorbellManager.swift,
 				iOS/ContentView.swift,
 				iOS/HealthMdApp.swift,
 				iOS/IPhoneExportRequestHandler.swift,
@@ -263,14 +262,6 @@
 				iOS/Views/OnboardingView.swift,
 				iOS/Views/PaywallView.swift,
 				iOS/Views/ScheduleSettingsView.swift,
-				iOS/Views/SyncSettingsView.swift,
-				iPad/iPadContentView.swift,
-				iPad/iPadExportView.swift,
-				iPad/iPadHistoryView.swift,
-				iPad/iPadScheduleView.swift,
-				iPad/iPadSettingsView.swift,
-				iPad/iPadSidebar.swift,
-				iPad/iPadSyncView.swift,
 				macOS/Info.plist,
 			);
 			target = 62CC00052F15D70300F9103F /* HealthMd-macOS */;
@@ -332,6 +323,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				44D4D3D82018428CBCFFBC75 /* ScrawlKit in Frameworks */,
 				62D100022F60B00000A10000 /* Notelet in Frameworks */,
 				C0A200000000000000000012 /* HealthMdCoreRust in Frameworks */,
 				D1EC70000000000000000012 /* HealthMdConnectionCore in Frameworks */,
@@ -409,6 +401,7 @@
 				939A80158D7C75A1BF7A95DF /* WatchHealthWidgets.swift */,
 				41F75912A371DDB1294E02B9 /* Info.plist */,
 				7FD613D21A666369A7740546 /* HealthMdWatchWidgets.entitlements */,
+				A1C0A5E92F62100100A5E772 /* Assets.xcassets */,
 			);
 			name = HealthMdWatchWidgets;
 			path = HealthMdWatchWidgets;
@@ -471,6 +464,7 @@
 		624B99E62F15D70300F9103F = {
 			isa = PBXGroup;
 			children = (
+				C11C00000000000000000001 /* NativeLicensing.xcconfig */,
 				624B99F12F15D70300F9103F /* HealthMd */,
 				62A1B0032F50A00100000003 /* HealthMdTests */,
 				624B99F02F15D70300F9103F /* Products */,
@@ -601,6 +595,7 @@
 			);
 			name = HealthMd;
 			packageProductDependencies = (
+				AC119E5D78AB42968213BDC0 /* ScrawlKit */,
 				62D100012F60B00000A10000 /* Notelet */,
 				C0A200000000000000000011 /* HealthMdCoreRust */,
 				D1EC70000000000000000011 /* HealthMdConnectionCore */,
@@ -785,6 +780,7 @@
 			mainGroup = 624B99E62F15D70300F9103F;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
+				25CB6263A21849E7AF23E49D /* XCRemoteSwiftPackageReference "scrawl" */,
 				62D100002F60B00000A10000 /* XCRemoteSwiftPackageReference "notelet" */,
 				C0A200000000000000000001 /* XCLocalSwiftPackageReference "HealthMdCoreRust" */,
 				D1EC70000000000000000001 /* XCLocalSwiftPackageReference "HealthMdConnectivity" */,
@@ -812,6 +808,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A1C0A5EA2F62100100A5E773 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -894,8 +891,8 @@
 			);
 			inputPaths = (
 				"$(SRCROOT)/scripts/relocate_macos_cli_helpers.py",
-				"$(BUILT_PRODUCTS_DIR)/healthmd",
-				"$(BUILT_PRODUCTS_DIR)/healthmd-mcp",
+				"$(HEALTHMD_HELPER_INPUT_DIR)/healthmd",
+				"$(HEALTHMD_HELPER_INPUT_DIR)/healthmd-mcp",
 			);
 			name = "Embed CLI Helper";
 			outputFileListPaths = (
@@ -907,7 +904,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "python3 \"$SRCROOT/scripts/relocate_macos_cli_helpers.py\" \"$TARGET_BUILD_DIR/$WRAPPER_NAME\" --source-helpers \"$BUILT_PRODUCTS_DIR\"\n";
+			shellScript = "python3 \"$SRCROOT/scripts/relocate_macos_cli_helpers.py\" \"$TARGET_BUILD_DIR/$WRAPPER_NAME\" --source-helpers \"$HEALTHMD_HELPER_INPUT_DIR\"\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -1157,14 +1154,14 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 202610071219;
+				CURRENT_PROJECT_VERSION = 202610071225;
 				DEVELOPMENT_TEAM = 67KC823C9A;
 				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-				MARKETING_VERSION = 3.4.4;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				MARKETING_VERSION = 4.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.codybontecou.HealthMdTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = iphonesimulator;
+				SDKROOT = iphoneos;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
@@ -1181,11 +1178,11 @@
 			buildSettings = {
 				CLANG_ENABLE_OBJC_WEAK = NO;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 202610071219;
+				CURRENT_PROJECT_VERSION = 202610071225;
 				DEVELOPMENT_TEAM = 67KC823C9A;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-				MARKETING_VERSION = 3.4.4;
+				MARKETING_VERSION = 4.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.codybontecou.HealthMdUITests;
 				PRODUCT_MODULE_NAME = "$(TARGET_NAME:c99extidentifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -1205,7 +1202,7 @@
 				CLANG_ENABLE_OBJC_WEAK = NO;
 				CODE_SIGN_ENTITLEMENTS = HealthMdWidgets/HealthMdWidgets.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 202610071219;
+				CURRENT_PROJECT_VERSION = 202610071225;
 				DEVELOPMENT_TEAM = 67KC823C9A;
 				INFOPLIST_FILE = HealthMdWidgets/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -1214,7 +1211,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 3.4.4;
+				MARKETING_VERSION = 4.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.codybontecou.obsidianhealth.widgets;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphonesimulator;
@@ -1232,7 +1229,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = HealthMdWatch/HealthMdWatch.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 202610071219;
+				CURRENT_PROJECT_VERSION = 202610071225;
 				DEVELOPMENT_TEAM = 67KC823C9A;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = HealthMdWatch/Info.plist;
@@ -1242,7 +1239,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 3.4.4;
+				MARKETING_VERSION = 4.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.codybontecou.obsidianhealth.watchkitapp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
@@ -1263,7 +1260,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = HealthMdWatch/HealthMdWatch.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 202610071219;
+				CURRENT_PROJECT_VERSION = 202610071225;
 				DEVELOPMENT_TEAM = 67KC823C9A;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = HealthMdWatch/Info.plist;
@@ -1273,7 +1270,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 3.4.4;
+				MARKETING_VERSION = 4.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.codybontecou.obsidianhealth.watchkitapp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
@@ -1291,7 +1288,7 @@
 			buildSettings = {
 				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "Health.md CLI connects directly to your open iPhone app over the local network.";
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				CODE_SIGN_ENTITLEMENTS = HealthMdCLI/healthmd.entitlements;
+				CODE_SIGN_ENTITLEMENTS = "HealthMdCLI/healthmd-bundled.entitlements";
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CREATE_INFOPLIST_SECTION_IN_BINARY = YES;
@@ -1306,7 +1303,7 @@
 					"$(inherited)",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				OTHER_SWIFT_FLAGS = "$(inherited) -parse-as-library";
+				OTHER_SWIFT_FLAGS = "$(inherited) -parse-as-library -D HEALTHMD_BUNDLED_APPSTORE_CLI";
 				PRODUCT_BUNDLE_IDENTIFIER = "com.codybontecou.obsidianhealth.healthmd-cli";
 				PRODUCT_NAME = healthmd;
 				SDKROOT = macosx;
@@ -1321,7 +1318,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = HealthMdWatchWidgets/HealthMdWatchWidgets.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 202610071219;
+				CURRENT_PROJECT_VERSION = 202610071225;
 				DEVELOPMENT_TEAM = 67KC823C9A;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = HealthMdWatchWidgets/Info.plist;
@@ -1331,7 +1328,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 3.4.4;
+				MARKETING_VERSION = 4.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.codybontecou.obsidianhealth.watchkitapp.widgets;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
@@ -1347,6 +1344,7 @@
 		};
 		624B99F82F15D70500F9103F /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = C11C00000000000000000001 /* NativeLicensing.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
@@ -1407,11 +1405,13 @@
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				"SWIFT_ACTIVE_COMPILATION_CONDITIONS[sdk=*27.*]" = "DEBUG $(inherited) HEALTHMD_HAS_HISTORY_AUTHORIZATION_API";
 			};
 			name = Debug;
 		};
 		624B99F92F15D70500F9103F /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = C11C00000000000000000001 /* NativeLicensing.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
@@ -1465,6 +1465,7 @@
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				VALIDATE_PRODUCT = YES;
+				"SWIFT_ACTIVE_COMPILATION_CONDITIONS[sdk=*27.*]" = "$(inherited) HEALTHMD_HAS_HISTORY_AUTHORIZATION_API";
 			};
 			name = Release;
 		};
@@ -1476,19 +1477,19 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = BrandAccent;
 				CODE_SIGN_ENTITLEMENTS = HealthMd/HealthMd.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 202610071219;
+				CURRENT_PROJECT_VERSION = 202610071225;
 				DEVELOPMENT_TEAM = 67KC823C9A;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = HealthMd/Info.plist;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 3.4.4;
+				MARKETING_VERSION = 4.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.codybontecou.obsidianhealth;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -1509,7 +1510,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = BrandAccent;
 				CODE_SIGN_ENTITLEMENTS = HealthMd/HealthMd.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 202610071219;
+				CURRENT_PROJECT_VERSION = 202610071225;
 				DEVELOPMENT_TEAM = 67KC823C9A;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = HealthMd/Info.plist;
@@ -1521,7 +1522,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 3.4.4;
+				MARKETING_VERSION = 4.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.codybontecou.obsidianhealth;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -1537,13 +1538,14 @@
 		62A1B0092F50A00100000009 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 202610071219;
+				CURRENT_PROJECT_VERSION = 202610071225;
 				DEVELOPMENT_TEAM = 67KC823C9A;
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 3.4.4;
+				MARKETING_VERSION = 4.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.codybontecou.HealthMdTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
@@ -1562,11 +1564,11 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 202610071219;
+				CURRENT_PROJECT_VERSION = 202610071225;
 				DEVELOPMENT_TEAM = 67KC823C9A;
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 3.4.4;
+				MARKETING_VERSION = 4.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.codybontecou.HealthMdTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
@@ -1583,13 +1585,16 @@
 		62CC00062F15D70300F9103F /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				HEALTHMD_HELPER_INPUT_DIR = "$(HEALTHMD_HELPER_INPUT_DIR_$(DEPLOYMENT_LOCATION))";
+				HEALTHMD_HELPER_INPUT_DIR_NO = "$(BUILT_PRODUCTS_DIR)";
+				HEALTHMD_HELPER_INPUT_DIR_YES = "$(UNINSTALLED_PRODUCTS_DIR)/$(PLATFORM_NAME)";
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = BrandAccent;
 				CODE_SIGN_ENTITLEMENTS = "HealthMd/HealthMd-macOS.entitlements";
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 202610071219;
+				CURRENT_PROJECT_VERSION = 202610071225;
 				DEVELOPMENT_TEAM = 67KC823C9A;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -1602,7 +1607,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 3.4.4;
+				MARKETING_VERSION = 4.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.codybontecou.obsidianhealth;
 				PRODUCT_MODULE_NAME = HealthMd;
 				PRODUCT_NAME = Health.md;
@@ -1620,13 +1625,16 @@
 		62CC00072F15D70300F9103F /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				HEALTHMD_HELPER_INPUT_DIR = "$(HEALTHMD_HELPER_INPUT_DIR_$(DEPLOYMENT_LOCATION))";
+				HEALTHMD_HELPER_INPUT_DIR_NO = "$(BUILT_PRODUCTS_DIR)";
+				HEALTHMD_HELPER_INPUT_DIR_YES = "$(UNINSTALLED_PRODUCTS_DIR)/$(PLATFORM_NAME)";
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = BrandAccent;
 				CODE_SIGN_ENTITLEMENTS = "HealthMd/HealthMd-macOS.entitlements";
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 202610071219;
+				CURRENT_PROJECT_VERSION = 202610071225;
 				DEVELOPMENT_TEAM = 67KC823C9A;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -1639,7 +1647,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 3.4.4;
+				MARKETING_VERSION = 4.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.codybontecou.obsidianhealth;
 				PRODUCT_MODULE_NAME = HealthMd;
 				PRODUCT_NAME = Health.md;
@@ -1660,7 +1668,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = HealthMdWatchWidgets/HealthMdWatchWidgets.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 202610071219;
+				CURRENT_PROJECT_VERSION = 202610071225;
 				DEVELOPMENT_TEAM = 67KC823C9A;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = HealthMdWatchWidgets/Info.plist;
@@ -1670,7 +1678,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 3.4.4;
+				MARKETING_VERSION = 4.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.codybontecou.obsidianhealth.watchkitapp.widgets;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
@@ -1686,6 +1694,7 @@
 		};
 		6C18C8B2947E48198BC2435C /* Debug-iOS */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = C11C00000000000000000001 /* NativeLicensing.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
@@ -1746,6 +1755,7 @@
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				"SWIFT_ACTIVE_COMPILATION_CONDITIONS[sdk=*27.*]" = "DEBUG $(inherited) HEALTHMD_HAS_HISTORY_AUTHORIZATION_API";
 			};
 			name = "Debug-iOS";
 		};
@@ -1754,11 +1764,11 @@
 			buildSettings = {
 				CLANG_ENABLE_OBJC_WEAK = NO;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 202610071219;
+				CURRENT_PROJECT_VERSION = 202610071225;
 				DEVELOPMENT_TEAM = 67KC823C9A;
 				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-				MARKETING_VERSION = 3.4.4;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				MARKETING_VERSION = 4.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.codybontecou.HealthMdUITests;
 				PRODUCT_MODULE_NAME = "$(TARGET_NAME:c99extidentifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -1777,7 +1787,7 @@
 				CLANG_ENABLE_OBJC_WEAK = NO;
 				CODE_SIGN_ENTITLEMENTS = HealthMdWidgets/HealthMdWidgets.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 202610071219;
+				CURRENT_PROJECT_VERSION = 202610071225;
 				DEVELOPMENT_TEAM = 67KC823C9A;
 				INFOPLIST_FILE = HealthMdWidgets/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -1786,7 +1796,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 3.4.4;
+				MARKETING_VERSION = 4.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.codybontecou.obsidianhealth.widgets;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphonesimulator;
@@ -1804,7 +1814,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = HealthMdWatchWidgets/HealthMdWatchWidgets.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 202610071219;
+				CURRENT_PROJECT_VERSION = 202610071225;
 				DEVELOPMENT_TEAM = 67KC823C9A;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = HealthMdWatchWidgets/Info.plist;
@@ -1814,7 +1824,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 3.4.4;
+				MARKETING_VERSION = 4.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.codybontecou.obsidianhealth.watchkitapp.widgets;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
@@ -1832,11 +1842,11 @@
 			buildSettings = {
 				CLANG_ENABLE_OBJC_WEAK = NO;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 202610071219;
+				CURRENT_PROJECT_VERSION = 202610071225;
 				DEVELOPMENT_TEAM = 67KC823C9A;
 				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-				MARKETING_VERSION = 3.4.4;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				MARKETING_VERSION = 4.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.codybontecou.HealthMdUITests;
 				PRODUCT_MODULE_NAME = "$(TARGET_NAME:c99extidentifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -1854,7 +1864,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = HealthMdWatchWidgets/HealthMdWatchWidgets.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 202610071219;
+				CURRENT_PROJECT_VERSION = 202610071225;
 				DEVELOPMENT_TEAM = 67KC823C9A;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = HealthMdWatchWidgets/Info.plist;
@@ -1864,7 +1874,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 3.4.4;
+				MARKETING_VERSION = 4.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.codybontecou.obsidianhealth.watchkitapp.widgets;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
@@ -1881,11 +1891,11 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 202610071219;
+				CURRENT_PROJECT_VERSION = 202610071225;
 				DEVELOPMENT_TEAM = 67KC823C9A;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-				MARKETING_VERSION = 3.4.4;
+				MARKETING_VERSION = 4.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.codybontecou.HealthMdTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphonesimulator;
@@ -1905,7 +1915,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = HealthMdWatch/HealthMdWatch.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 202610071219;
+				CURRENT_PROJECT_VERSION = 202610071225;
 				DEVELOPMENT_TEAM = 67KC823C9A;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = HealthMdWatch/Info.plist;
@@ -1915,7 +1925,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 3.4.4;
+				MARKETING_VERSION = 4.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.codybontecou.obsidianhealth.watchkitapp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
@@ -1931,6 +1941,7 @@
 		};
 		9CEC71EEDC5D476DB4D246EF /* Release-iOS */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = C11C00000000000000000001 /* NativeLicensing.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
@@ -1984,6 +1995,7 @@
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				VALIDATE_PRODUCT = YES;
+				"SWIFT_ACTIVE_COMPILATION_CONDITIONS[sdk=*27.*]" = "$(inherited) HEALTHMD_HAS_HISTORY_AUTHORIZATION_API";
 			};
 			name = "Release-iOS";
 		};
@@ -1994,7 +2006,7 @@
 				CLANG_ENABLE_OBJC_WEAK = NO;
 				CODE_SIGN_ENTITLEMENTS = HealthMdWidgets/HealthMdWidgets.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 202610071219;
+				CURRENT_PROJECT_VERSION = 202610071225;
 				DEVELOPMENT_TEAM = 67KC823C9A;
 				INFOPLIST_FILE = HealthMdWidgets/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -2003,7 +2015,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 3.4.4;
+				MARKETING_VERSION = 4.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.codybontecou.obsidianhealth.widgets;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -2020,7 +2032,7 @@
 			buildSettings = {
 				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "Health.md CLI connects directly to your open iPhone app over the local network.";
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				CODE_SIGN_ENTITLEMENTS = HealthMdCLI/healthmd.entitlements;
+				CODE_SIGN_ENTITLEMENTS = "HealthMdCLI/healthmd-bundled.entitlements";
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CREATE_INFOPLIST_SECTION_IN_BINARY = YES;
@@ -2035,7 +2047,7 @@
 					"$(inherited)",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				OTHER_SWIFT_FLAGS = "$(inherited) -parse-as-library";
+				OTHER_SWIFT_FLAGS = "$(inherited) -parse-as-library -D HEALTHMD_BUNDLED_APPSTORE_CLI";
 				PRODUCT_BUNDLE_IDENTIFIER = "com.codybontecou.obsidianhealth.healthmd-cli";
 				PRODUCT_NAME = healthmd;
 				SDKROOT = macosx;
@@ -2051,7 +2063,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = HealthMdWatch/HealthMdWatch.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 202610071219;
+				CURRENT_PROJECT_VERSION = 202610071225;
 				DEVELOPMENT_TEAM = 67KC823C9A;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = HealthMdWatch/Info.plist;
@@ -2061,7 +2073,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 3.4.4;
+				MARKETING_VERSION = 4.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.codybontecou.obsidianhealth.watchkitapp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
@@ -2082,7 +2094,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = BrandAccent;
 				CODE_SIGN_ENTITLEMENTS = HealthMd/HealthMd.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 202610071219;
+				CURRENT_PROJECT_VERSION = 202610071225;
 				DEVELOPMENT_TEAM = 67KC823C9A;
 				ENABLE_PREVIEWS = YES;
 				HEALTHMD_IOS_INFO_PLIST = HealthMd/Info.plist;
@@ -2090,15 +2102,15 @@
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 3.4.4;
+				MARKETING_VERSION = 4.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.codybontecou.obsidianhealth;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = iphonesimulator;
+				SDKROOT = iphoneos;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
@@ -2114,11 +2126,11 @@
 			buildSettings = {
 				CLANG_ENABLE_OBJC_WEAK = NO;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 202610071219;
+				CURRENT_PROJECT_VERSION = 202610071225;
 				DEVELOPMENT_TEAM = 67KC823C9A;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-				MARKETING_VERSION = 3.4.4;
+				MARKETING_VERSION = 4.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.codybontecou.HealthMdUITests;
 				PRODUCT_MODULE_NAME = "$(TARGET_NAME:c99extidentifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -2138,7 +2150,7 @@
 				CLANG_ENABLE_OBJC_WEAK = NO;
 				CODE_SIGN_ENTITLEMENTS = HealthMdWidgets/HealthMdWidgets.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 202610071219;
+				CURRENT_PROJECT_VERSION = 202610071225;
 				DEVELOPMENT_TEAM = 67KC823C9A;
 				INFOPLIST_FILE = HealthMdWidgets/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -2147,7 +2159,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 3.4.4;
+				MARKETING_VERSION = 4.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.codybontecou.obsidianhealth.widgets;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -2166,7 +2178,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = BrandAccent;
 				CODE_SIGN_ENTITLEMENTS = HealthMd/HealthMd.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 202610071219;
+				CURRENT_PROJECT_VERSION = 202610071225;
 				DEVELOPMENT_TEAM = 67KC823C9A;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = HealthMd/Info.plist;
@@ -2178,7 +2190,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 3.4.4;
+				MARKETING_VERSION = 4.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.codybontecou.obsidianhealth;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphonesimulator;
@@ -2197,7 +2209,7 @@
 			buildSettings = {
 				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "Health.md CLI connects directly to your open iPhone app over the local network.";
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				CODE_SIGN_ENTITLEMENTS = HealthMdCLI/healthmd.entitlements;
+				CODE_SIGN_ENTITLEMENTS = "HealthMdCLI/healthmd-bundled.entitlements";
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CREATE_INFOPLIST_SECTION_IN_BINARY = YES;
@@ -2212,7 +2224,7 @@
 					"$(inherited)",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				OTHER_SWIFT_FLAGS = "$(inherited) -parse-as-library";
+				OTHER_SWIFT_FLAGS = "$(inherited) -parse-as-library -D HEALTHMD_BUNDLED_APPSTORE_CLI";
 				PRODUCT_BUNDLE_IDENTIFIER = "com.codybontecou.obsidianhealth.healthmd-cli";
 				PRODUCT_NAME = healthmd;
 				SDKROOT = macosx;
@@ -2224,12 +2236,15 @@
 		EE11BB000000000000000001 /* Debug-iOS */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				HEALTHMD_HELPER_INPUT_DIR = "$(HEALTHMD_HELPER_INPUT_DIR_$(DEPLOYMENT_LOCATION))";
+				HEALTHMD_HELPER_INPUT_DIR_NO = "$(BUILT_PRODUCTS_DIR)";
+				HEALTHMD_HELPER_INPUT_DIR_YES = "$(UNINSTALLED_PRODUCTS_DIR)/$(PLATFORM_NAME)";
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = BrandAccent;
 				CODE_SIGN_ENTITLEMENTS = "HealthMd/HealthMd-macOS.entitlements";
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 202610071219;
+				CURRENT_PROJECT_VERSION = 202610071225;
 				DEVELOPMENT_TEAM = 67KC823C9A;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -2242,7 +2257,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 3.4.4;
+				MARKETING_VERSION = 4.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.codybontecou.obsidianhealth;
 				PRODUCT_MODULE_NAME = HealthMd;
 				PRODUCT_NAME = Health.md;
@@ -2262,7 +2277,7 @@
 			buildSettings = {
 				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "Health.md CLI connects directly to your open iPhone app over the local network.";
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				CODE_SIGN_ENTITLEMENTS = HealthMdCLI/healthmd.entitlements;
+				CODE_SIGN_ENTITLEMENTS = "HealthMdCLI/healthmd-bundled.entitlements";
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CREATE_INFOPLIST_SECTION_IN_BINARY = YES;
@@ -2277,7 +2292,7 @@
 					"$(inherited)",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				OTHER_SWIFT_FLAGS = "$(inherited) -parse-as-library";
+				OTHER_SWIFT_FLAGS = "$(inherited) -parse-as-library -D HEALTHMD_BUNDLED_APPSTORE_CLI";
 				PRODUCT_BUNDLE_IDENTIFIER = "com.codybontecou.obsidianhealth.healthmd-cli";
 				PRODUCT_NAME = healthmd;
 				SDKROOT = macosx;
@@ -2289,12 +2304,15 @@
 		FF22CC000000000000000002 /* Release-iOS */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				HEALTHMD_HELPER_INPUT_DIR = "$(HEALTHMD_HELPER_INPUT_DIR_$(DEPLOYMENT_LOCATION))";
+				HEALTHMD_HELPER_INPUT_DIR_NO = "$(BUILT_PRODUCTS_DIR)";
+				HEALTHMD_HELPER_INPUT_DIR_YES = "$(UNINSTALLED_PRODUCTS_DIR)/$(PLATFORM_NAME)";
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = BrandAccent;
 				CODE_SIGN_ENTITLEMENTS = "HealthMd/HealthMd-macOS.entitlements";
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 202610071219;
+				CURRENT_PROJECT_VERSION = 202610071225;
 				DEVELOPMENT_TEAM = 67KC823C9A;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -2307,7 +2325,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 3.4.4;
+				MARKETING_VERSION = 4.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.codybontecou.obsidianhealth;
 				PRODUCT_MODULE_NAME = HealthMd;
 				PRODUCT_NAME = Health.md;
@@ -2457,6 +2475,14 @@
 				minimumVersion = 1.1.0;
 			};
 		};
+		25CB6263A21849E7AF23E49D /* XCRemoteSwiftPackageReference "scrawl" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/kitlangton/scrawl";
+			requirement = {
+				kind = revision;
+				revision = 6d4fa333475ef5170c4df683e306480f8618b95a;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -2504,6 +2530,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = D1EC70000000000000000001 /* XCLocalSwiftPackageReference "HealthMdConnectivity" */;
 			productName = HealthMdDirectClientCore;
+		};
+		AC119E5D78AB42968213BDC0 /* ScrawlKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 25CB6263A21849E7AF23E49D /* XCRemoteSwiftPackageReference "scrawl" */;
+			productName = ScrawlKit;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
