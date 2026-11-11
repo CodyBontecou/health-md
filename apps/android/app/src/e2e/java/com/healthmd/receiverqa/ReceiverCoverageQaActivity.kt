@@ -51,7 +51,7 @@ class ReceiverCoverageQaActivity : ComponentActivity() {
     companion object {
         private var receiver: LocalReceiver? = null
         private val cases = listOf("legacy_success", "profile_success", "legacy_empty", "profile_empty", "profile_today",
-            "legacy_partial", "profile_partial", "legacy_wide_window")
+            "legacy_partial", "profile_partial", "legacy_wide_window", "legacy_today", "legacy_cancel", "profile_cancel")
     }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -94,6 +94,7 @@ class ReceiverCoverageQaActivity : ComponentActivity() {
         val profileMode = case.startsWith("profile_")
         val wide = case == "legacy_wide_window"
         val partial = case.endsWith("_partial")
+        val cancelled = case.endsWith("_cancel")
         val empty = case.endsWith("_empty")
         val today = case.endsWith("_today")
         val lookback = if (wide) 31 else if (partial) 30 else 3
@@ -114,7 +115,8 @@ class ReceiverCoverageQaActivity : ComponentActivity() {
                 apiEndpointUrl = endpoint, exportFormat = ExportFormat.JSON, exportFormats = setOf(ExportFormat.JSON),
                 scheduleEnabled = !profileMode, scheduleCadenceValue = 1, scheduleCadenceUnit = ScheduleCadenceUnit.MINUTES,
                 scheduleHour = now.hour, scheduleMinute = now.minute, scheduleLookbackDays = lookback,
-                scheduleDateWindow = ScheduleDateWindow.PAST_COMPLETE_DAYS,
+                scheduleDateWindow = if (today && !profileMode) ScheduleDateWindow.PAST_COMPLETE_DAYS_THROUGH_TODAY
+                    else ScheduleDateWindow.PAST_COMPLETE_DAYS,
                 pendingScheduledExportRequests = emptyList(), pendingScheduledRetryDates = emptyList())
         }
         val config = ReceiverCoverageConfiguration(endpoint.replace("/upload", "/coverage"), "qa-${UUID.randomUUID()}", 0)
@@ -143,6 +145,28 @@ class ReceiverCoverageQaActivity : ComponentActivity() {
         }
         awaitCondition { allWork().any { it.id !in workIdsBefore } }
         var ids = allWork().filter { it.id !in workIdsBefore }.map { it.id }.toSet()
+        if (cancelled) {
+            awaitCondition { allWork().filter { it.id in ids }.all { it.state.isFinished } }
+            check(count("cancel_action") == 1 && count("coverage") == 1)
+            check(count("capture") == 0 && count("upload") == 0 && history.getAllEntries().first().isEmpty()) {
+                "Cancelled preflight must not capture/upload or fabricate history"
+            }
+            val beforeRecovery = planFiles().filterKeys { it !in previousPlans }.values.single().second
+            check(beforeRecovery.getValue("coverage_status").jsonPrimitive.content == "fallback_full")
+            check(beforeRecovery.getValue("residual").jsonArray.isNotEmpty())
+            // Normal future configuration edits cannot rewrite this accepted recovery plan.
+            val changed = ReceiverCoverageConfiguration(config.preflightUrl, "new-${UUID.randomUUID()}", 30)
+            ReceiverCoverageRuntime.save(this@ReceiverCoverageQaActivity, profileId ?: "legacy", changed, endpoint, credentials)
+            settings.updateExportSettingsAtomically { it.copy(filenameFormat = "changed-{date}", scheduleLookbackDays = 1) }
+            state.update(mapOf("coverage_mode" to "all")) // A requery would now return a different answer.
+            if (profileMode) {
+                entries.update(requireNotNull(profileId)) { it.copy(lookbackDays = 1) }
+                val beforeRetry = allWork().map { it.id }.toSet()
+                profileScheduler.handleAlarm(profileId)
+                awaitCondition { allWork().any { it.id !in beforeRetry } }
+                ids = ids + allWork().filter { it.id !in beforeRetry }.map { it.id }
+            } else recovery.recoverPendingDates()
+        }
         if (partial) {
             awaitCondition {
                 val plan = planFiles().filterKeys { it !in previousPlans }.values.singleOrNull()?.second
@@ -175,15 +199,17 @@ class ReceiverCoverageQaActivity : ComponentActivity() {
         } else {
             check(count("coverage") == 1) { "Expected one preflight, observed ${count("coverage")}" }
             val plan = newPlans.values.single().second
-            check(plan.getValue("coverage_status").jsonPrimitive.content == "valid") { "TLS/protocol did not yield valid coverage" }
+            check(plan.getValue("coverage_status").jsonPrimitive.content == if (cancelled) "fallback_full" else "valid") {
+                "Expected original valid selection or cancelled conservative fallback"
+            }
             check(plan.getValue("residual").jsonArray.isEmpty()) { "Journal residual was not acknowledged" }
             val selected = plan.getValue("selected").jsonArray.map { it.jsonPrimitive.content }
             check(values("capture").sorted() == selected.sorted()) { "Capture differs from frozen selection" }
             if (empty) {
                 check(selected.isEmpty() && count("upload") == 0 && history.getAllEntries().first().isEmpty())
             } else check(values("ack").flatMap { it.split(",") }.sorted() == selected.sorted()) { "ACK differs from selected dates" }
-            if (today) {
-                check(selected == listOf(LocalDate.now().toString()))
+            if (today) check(selected == listOf(LocalDate.now().toString()))
+            if (today && profileMode) {
                 val entry = requireNotNull(entries.entry(requireNotNull(profileId)))
                 check(entry.lastRefreshSuccessEpochMillis != null)
                 val captures = count("capture"); val queries = count("coverage")

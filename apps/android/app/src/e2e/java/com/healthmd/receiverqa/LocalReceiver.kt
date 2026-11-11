@@ -45,6 +45,19 @@ class LocalReceiver(private val context: Context) {
         require(body.getValue("schema").jsonPrimitive.content == "healthmd.receiver_coverage.request")
         require(body.getValue("schema_version").jsonPrimitive.int == 1)
         state.event("coverage", body.toString())
+        val cancel = state.read()["case"]?.endsWith("_cancel") == true && state.read()["cancel_sent"] != "true"
+        if (cancel) {
+            val manager = androidx.work.WorkManager.getInstance(context)
+            val running = listOf(com.healthmd.data.scheduler.ExportScheduler.EXPORT_OCCURRENCE_TAG,
+                com.healthmd.data.scheduler.ScheduledProfileScheduler.EXPORT_WORK_TAG)
+                .flatMap { manager.getWorkInfosByTag(it).get(2, java.util.concurrent.TimeUnit.SECONDS) }
+                .filter { it.state == androidx.work.WorkInfo.State.RUNNING }.distinctBy { it.id }
+            check(running.size == 1) { "Cancellation must target one real worker" }
+            val id = running.single().id
+            state.update(mapOf("cancel_sent" to "true"))
+            state.event("cancel_action", id.toString())
+            com.healthmd.data.scheduler.ScheduledExportCancelReceiver.pendingIntent(context, id).send()
+        }
         val started = System.nanoTime()
         while (state.read()["http_gate"] == "true" && System.nanoTime()-started < 60_000_000_000L) Thread.sleep(50)
         val start = LocalDate.parse(body.getValue("start").jsonPrimitive.content)
@@ -60,7 +73,9 @@ class LocalReceiver(private val context: Context) {
             put("schema", JsonPrimitive("healthmd.receiver_coverage.response"))
             put("completed_dates", JsonArray(completed.map { JsonPrimitive(it.toString()) }))
         })
-        return MockResponse().setHeader("Content-Type","application/json").setBody(response.toString())
+        return MockResponse().setHeader("Content-Type","application/json").setBody(response.toString()).also {
+            if (cancel) it.setBodyDelay(1, java.util.concurrent.TimeUnit.SECONDS)
+        }
     }
     private fun upload(request: RecordedRequest): MockResponse {
         val body = Json.parseToJsonElement(request.body.readUtf8()).jsonObject
