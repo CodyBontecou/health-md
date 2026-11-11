@@ -41,9 +41,12 @@ function ownContext(value: ReadViewContext): ReadViewContext | null {
   try {
     if (!value || typeof value !== "object" || Object.keys(value).sort().join(" ") !== "account environment generation issuer") return null;
     const { issuer, environment, account, generation } = value;
-    if (!["https://issuer-a.account-sync.example", "https://issuer-b.account-sync.example"].includes(issuer) ||
+    const sqlFixture = issuer === "https://account-auth.synthetic.example" && environment === "synthetic" &&
+      ["synthetic-account-a", "synthetic-account-b"].includes(account);
+    if (!sqlFixture && (!["https://issuer-a.account-sync.example", "https://issuer-b.account-sync.example"].includes(issuer) ||
         !["synthetic-a", "synthetic-b"].includes(environment) || !["sentinel-A", "sentinel-B"].includes(account) ||
-        !Number.isSafeInteger(generation) || generation < 0) return null;
+        !Number.isSafeInteger(generation) || generation < 0)) return null;
+    if (!Number.isSafeInteger(generation) || generation < 0) return null;
     return Object.freeze({ issuer, environment, account, generation });
   } catch { return null; }
 }

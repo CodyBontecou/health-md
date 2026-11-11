@@ -5,7 +5,7 @@
 import { SyntheticNativeAuthority } from "./account-auth-v1/authority";
 import type { AuthState, ConfigPrincipal } from "./account-auth-v1/model";
 import { parseProfileSyncV1Mutation, parseProfileSyncV1Read, ProfileSyncV1Error,
-  ValidatedProfileSyncV1Record, type ProfileSyncV1ErrorResult } from "./profile-sync-v1-contract";
+  ValidatedProfileSyncV1Record, parseProfileSyncV1Page, type ProfileSyncV1ErrorResult } from "./profile-sync-v1-contract";
 
 export type SqlValue = string | number | null;
 export interface ProfileSqlStatement { sql: string; values: readonly SqlValue[] }
@@ -31,6 +31,11 @@ export const PROFILE_SQL_CANDIDATE_SCHEMA = [
   "CREATE TABLE ps_event (owner TEXT NOT NULL, sequence INTEGER NOT NULL, body TEXT NOT NULL CHECK(json_valid(body)), PRIMARY KEY(owner,sequence)) STRICT",
   "CREATE TABLE ps_receipt (owner TEXT NOT NULL, id TEXT NOT NULL, body TEXT NOT NULL CHECK(json_valid(body)), PRIMARY KEY(owner,id)) STRICT",
   "CREATE TABLE ps_nonce (owner TEXT NOT NULL, key TEXT NOT NULL, nonce TEXT NOT NULL, PRIMARY KEY(owner,key,nonce)) STRICT",
+  "CREATE TABLE ps_view (owner TEXT NOT NULL, id TEXT NOT NULL, body TEXT NOT NULL, PRIMARY KEY(owner,id)) STRICT",
+  "CREATE TABLE ps_cursor (owner TEXT NOT NULL, token TEXT NOT NULL, view TEXT NOT NULL, position INTEGER NOT NULL, PRIMARY KEY(owner,token)) STRICT",
+  "CREATE TABLE ps_view_nonce (owner TEXT NOT NULL, key TEXT NOT NULL, nonce TEXT NOT NULL, PRIMARY KEY(owner,key,nonce)) STRICT",
+  "CREATE TRIGGER ps_profile_nonce_guard BEFORE INSERT ON ps_nonce WHEN EXISTS(SELECT 1 FROM ps_view_nonce WHERE owner=NEW.owner AND key=NEW.key AND nonce=NEW.nonce) BEGIN SELECT RAISE(ABORT,'nonce collision'); END",
+  "CREATE TRIGGER ps_view_nonce_guard BEFORE INSERT ON ps_view_nonce WHEN EXISTS(SELECT 1 FROM ps_nonce WHERE owner=NEW.owner AND key=NEW.key AND nonce=NEW.nonce) BEGIN SELECT RAISE(ABORT,'nonce collision'); END",
   "CREATE TABLE ps_guard (value INTEGER NOT NULL CHECK(value=1)) STRICT",
 ] as const;
 export interface ProfileSqlKey { readonly id: string; readonly version: number }
@@ -47,6 +52,7 @@ export interface SyntheticProfileSqlPorts {
   readonly keyReference: (owner: string) => ProfileSqlKey;
   readonly resolveKey: (owner: string, reference: ProfileSqlKey) => Promise<CryptoKey>;
   /** Timing only, never replaces actual crypto or SQL evidence. */
+  readonly clock?: () => number; // synthetic source lease clock; SQL independently fences database time
   readonly afterCrypto?: () => Promise<void>;
 }
 type Fixed = Readonly<{ schema: "healthmd.profile_sync"; schema_version: 1; result: ProfileSyncV1ErrorResult }>;
@@ -58,6 +64,7 @@ export interface ProfileSqlCandidate {
   select(request: Request, originalBytes: Uint8Array): Promise<Control>;
   mutate(request: Request, originalBytes: Uint8Array): Promise<Result>;
   read(request: Request, originalBytes: Uint8Array): Promise<Result>;
+  readPage(request: Request, originalBytes: Uint8Array): Promise<Uint8Array>;
 }
 type Meta = { profile_id: string; object_revision: number; event_sequence: number; order_key: number | null;
   deleted: boolean; content_revision: number | null; content_hash: string | null };
@@ -126,7 +133,7 @@ function empty(key: ProfileSqlKey, policy: string): Partition {
 export function createProfileSqlCandidate(ports?: SyntheticProfileSqlPorts): ProfileSqlCandidate {
   if (!ports) {
     const unavailable = async () => fixed();
-    return Object.freeze({ optIn: unavailable, withdraw: unavailable, select: unavailable, mutate: unavailable, read: unavailable });
+    return Object.freeze({ optIn: unavailable, withdraw: unavailable, select: unavailable, mutate: unavailable, read: unavailable, readPage: async () => encode(JSON.stringify(fixed())) });
   }
   requireValue(ports.sentinel === "healthmd.profile-sync.sql.synthetic-only" && ports.policy.fixtureOnly === true, "unavailable");
   const p = ports, policy = structuredClone(p.policy);
@@ -190,11 +197,11 @@ export function createProfileSqlCandidate(ports?: SyntheticProfileSqlPorts): Pro
     requireValue(s.partition.consentEpoch === captured.partition.consentEpoch &&
       s.partition.selectionEpoch === captured.partition.selectionEpoch && equal(s.partition.key, captured.partition.key), "intent_expired");
   }
-  async function commit(owner: string, s: Snapshot, partition: Partition, changes: ProfileSqlStatement[], principal: ConfigPrincipal): Promise<void> {
-    authorized(s, principal, MUTATE, false);
+  async function commit(owner: string, s: Snapshot, partition: Partition, changes: ProfileSqlStatement[], principal: ConfigPrincipal, path = MUTATE, lease = Number.MAX_SAFE_INTEGER): Promise<void> {
+    authorized(s, principal, path, false);
     // Only AS02 can resolve the actual authorizing access row. A refreshed
     // family's current generation does not identify an older valid access token.
-    const validUntil = p.authority.configAccessDeadlineAtCommit(s.auth, principal, "POST", MUTATE);
+    const validUntil = Math.min(lease, p.authority.configAccessDeadlineAtCommit(s.auth, principal, "POST", path));
     requireValue(Number.isSafeInteger(validUntil), "unavailable");
     // The CHECK failure aborts the ENTIRE D1 batch. A zero-row UPDATE is never success.
     // The auth body was checked above. Its version cannot change between that check
@@ -259,7 +266,83 @@ export function createProfileSqlCandidate(ports?: SyntheticProfileSqlPorts): Pro
       requireValue(equal(fresh.partition, partition)); return ok;
     } catch { return fixed(); }
   }
+  type View = { id: string; binding: string; mode: "snapshot"; high: number;
+    expires: number; consent: number; selection: number; limit: number; refs: string[]; tokens: string[] };
+  const now = () => { const value = p.clock?.() ?? Math.floor(Date.now() / 1000);
+    requireValue(Number.isSafeInteger(value) && value >= 0 && value <= Number.MAX_SAFE_INTEGER - 900); return value; };
+  async function document(owner: string, purpose: string, context: unknown, sealed: Sealed): Promise<unknown> {
+    requireValue(sealed.nonce.length === 24 && sealed.ciphertext.length <= 262144);
+    const handle = await key(owner, sealed.key);
+    const bytes = new Uint8Array(await crypto.subtle.decrypt({ name: "AES-GCM", iv: unhex(sealed.nonce),
+      additionalData: aad(owner, purpose, context, sealed.key) }, handle, unhex(sealed.ciphertext)));
+    await p.afterCrypto?.(); return JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
+  }
+  async function readPage(request: Request, originalBytes: Uint8Array): Promise<Uint8Array> {
+    try {
+      const bytes = own(originalBytes, 8192), principal = await authenticate(request, READ), owner = ownerOf(principal);
+      const selector = parseProfileSyncV1Read(bytes); requireValue(selector.mode !== "revision", "invalid");
+      requireValue(selector.mode === "snapshot", "resync_required"); // changes baseline/ACK protocol remains unresolved; never advance on send
+      const s = await snapshot(owner); authorized(s, principal, READ);
+      const binding = JSON.stringify([principal.clientId, principal.installationId]);
+      let view: View, position = 0, changes: ProfileSqlStatement[] = [];
+      if (selector.cursor !== null) {
+        const found = await p.sql.batch([statement("SELECT view,position FROM ps_cursor WHERE owner=? AND token=?", owner, selector.cursor)]);
+        const cursor = found[0]?.[0]; requireValue(cursor && typeof cursor.view === "string" && Number.isSafeInteger(cursor.position), "resync_required");
+        const rows = await p.sql.batch([statement("SELECT body FROM ps_view WHERE owner=? AND id=?", owner, cursor.view)]);
+        requireValue(typeof rows[0]?.[0]?.body === "string", "resync_required");
+        view = await document(owner, "view", cursor.view, JSON.parse(rows[0]![0]!.body as string) as Sealed) as View;
+        position = Number(cursor.position);
+        requireValue(view.id === cursor.view && position > 0 && view.tokens[position] === selector.cursor, "resync_required");
+      } else {
+        const counts = await p.sql.batch([statement("SELECT count(*) AS count FROM ps_view WHERE owner=?", owner)]);
+        requireValue(Number(counts[0]?.[0]?.count) < 8, "quota_exceeded"); // finite synthetic view cap, no eviction/retention policy
+        const refs = s.heads.filter(h => !h.meta.deleted).sort((a, b) =>
+          a.meta.order_key! - b.meta.order_key! || (a.meta.profile_id < b.meta.profile_id ? -1 : 1)).map(h => h.receipt);
+        requireValue(refs.length <= 100, "resync_required");
+        const id = "pss_" + hex(crypto.getRandomValues(new Uint8Array(16))), high = s.partition.sequence;
+        view = { id, binding, mode: selector.mode, high, expires: now() + 900, consent: s.partition.consentEpoch,
+          selection: s.partition.selectionEpoch, limit: selector.limit, refs, tokens: refs.map(() => "psc_" + hex(crypto.getRandomValues(new Uint8Array(32)))) };
+        const sealed = await seal(owner, "view", id, s.partition.key, encode(JSON.stringify(view)));
+        for (const value of [sealed]) changes.push(statement("INSERT INTO ps_view_nonce VALUES(?,?,?)", owner, JSON.stringify(value.key), value.nonce));
+        changes.push(statement("INSERT INTO ps_view VALUES(?,?,?)", owner, id, JSON.stringify(sealed)));
+        changes.push(statement("INSERT INTO ps_cursor SELECT ?,value,?,CAST(key AS INTEGER) FROM json_each(?) WHERE CAST(key AS INTEGER)>0", owner, id, JSON.stringify(view.tokens)));
+      }
+      requireValue(view.binding === binding && view.mode === selector.mode && view.limit === selector.limit && view.expires > now() &&
+        view.consent === s.partition.consentEpoch && view.high <= s.partition.sequence, "resync_required");
+      const items: unknown[] = []; let end = position;
+      const wire = (nextCursor: string | null) => encode(JSON.stringify({ schema: "healthmd.profile_sync", schema_version: 1,
+        mode: view.mode, snapshot_id: view.id, high_watermark: view.high, items, next_cursor: nextCursor, complete: nextCursor === null }));
+      while (end < view.refs.length && items.length < selector.limit) {
+        const receipt = s.receipts.find(r => r.id === view.refs[end]); requireValue(receipt, "resync_required");
+        requireValue(s.partition.selected.includes(receipt.meta.profile_id), "resync_required");
+        const record = await verify(owner, s, receipt);
+        requireValue(record.eventSequence <= view.high, "resync_required");
+        items.push({ schema: "healthmd.profile_sync", schema_version: 1, ...metadata(record), content_json: record.content?.contentJson ?? null });
+        if (wire(end + 1 < view.refs.length ? view.tokens[end + 1]! : null).length > 4_194_304) { items.pop(); break; }
+        end++;
+      }
+      requireValue(end === view.refs.length || items.length > 0, "quota_exceeded");
+      const complete = end === view.refs.length;
+      const reply = wire(complete ? null : view.tokens[end]!); await parseProfileSyncV1Page(reply);
+      const fresh = await snapshot(owner); gate(fresh, s, principal, READ);
+      requireValue(fresh.version === s.version && fresh.authVersion === s.authVersion && now() < view.expires, "resync_required");
+      if (changes.length) {
+        try { await commit(owner, s, s.partition, changes, principal, READ, view.expires); } catch { /* exact readback below, including lost ACK */ }
+        const rows = await p.sql.batch([statement("SELECT body FROM ps_view WHERE owner=? AND id=?", owner, view.id)]);
+        requireValue(typeof rows[0]?.[0]?.body === "string", "verification_pending");
+        const actual = await document(owner, "view", view.id, JSON.parse(rows[0]![0]!.body as string) as Sealed);
+        requireValue(equal(actual, view), "verification_pending");
+
+      }
+      const final = await snapshot(owner); gate(final, s, principal, READ); requireValue(now() < view.expires, "resync_required");
+      return reply;
+    } catch (error) {
+      const category = error instanceof ProfileSyncV1Error && ["resync_required", "quota_exceeded", "invalid"].includes(error.category) ? error.category as ProfileSyncV1ErrorResult : "unavailable";
+      return encode(JSON.stringify(fixed(category)));
+    }
+  }
   return Object.freeze({
+    readPage,
     optIn: (request: Request) => control(request, true), withdraw: (request: Request) => control(request, false),
     async select(request: Request, originalBytes: Uint8Array): Promise<Control> {
       try {
