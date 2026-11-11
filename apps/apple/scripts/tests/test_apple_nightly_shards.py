@@ -10,67 +10,9 @@ REPO = SCRIPTS.parents[2]
 sys.path.insert(0, str(SCRIPTS))
 
 
-class TopologyTests(unittest.TestCase):
-    def test_unit_job_does_not_wait_for_or_run_ui_suite(self):
-        text = (REPO / '.github/workflows/apple-nightly.yml').read_text()
-        unit = text.split('  extended-ios:\n', 1)[1].split('\n  extended-macos:', 1)[0]
-        self.assertIn('make test-ios CORE_RUST_PREPARE=:', unit)
-        self.assertNotIn('HealthMd-UITests-iOS', unit)
-        self.assertNotIn('-only-testing', unit)
-        self.assertNotIn('-skip-testing', unit)
-
-
-    def test_critical_runners_start_before_mac_coverage_and_ui_fanout(self):
-        text = (REPO / '.github/workflows/apple-nightly.yml').read_text()
-        for name in ('extended-ios', 'prepare-ui'):
-            block = text.split('  ' + name + ':\n', 1)[1].split('\n  ', 1)[0]
-            self.assertIn('needs: prepare-shared-core', block)
-            self.assertNotIn('ui-runner-gate', block)
-        for name in ('extended-macos', 'ui-shards'):
-            block = text.split('  ' + name + ':\n', 1)[1].split('\n  ', 1)[0]
-            self.assertIn('needs: [prepare-shared-core, ui-runner-gate]', block)
-        gate = text.split('  ui-runner-gate:\n', 1)[1].split('\n  extended-ios:', 1)[0]
-        self.assertIn('runs-on: ubuntu-latest', gate)
-        self.assertIn('apple_nightly_ui.py wait-build-runners', gate)
-
-    def test_build_once_enumerates_unfiltered_bundle_before_partitioning(self):
-        text = (REPO / '.github/workflows/apple-nightly.yml').read_text()
-        build = text.split('  prepare-ui:\n', 1)[1].split('\n  ui-shards:', 1)[0]
-        self.assertEqual(build.count('xcodebuild build-for-testing'), 1)
-        self.assertIn('-scheme HealthMd-UITests-iOS', build)
-        self.assertIn('ARCHS="$(uname -m)" ONLY_ACTIVE_ARCH=YES', build)
-        self.assertIn('COMPILER_INDEX_STORE_ENABLE=NO', build)
-        self.assertNotIn('generic/platform=iOS Simulator', build)
-        self.assertIn("-configuration Debug-iOS -destination '${{ steps.ui_simulator.outputs.ios_destination }}'", build)
-        self.assertIn('-enumerate-tests', build)
-        self.assertNotIn('-only-testing', build)
-        self.assertNotIn('-skip-testing', build)
-        self.assertLess(build.index('validate_ios_ui_xctestrun.py'), build.index('-enumerate-tests'))
-        self.assertLess(build.index('-enumerate-tests'), build.index('apple_nightly_ui.py plan'))
-        self.assertLess(build.index('apple_nightly_ui.py plan'), build.index('apple_nightly_ui.py pack'))
-        self.assertIn('scripts/check-warnings.sh', build)
-
-    def test_all_workers_and_exact_inventory_gate_are_required(self):
-        text = (REPO / '.github/workflows/apple-nightly.yml').read_text()
-        workers = text.split('  ui-shards:\n', 1)[1].split('\n  ui-inventory:', 1)[0]
-        self.assertIn('needs: [prepare-shared-core, ui-runner-gate]', workers)
-        self.assertNotIn('extended-ios', workers)
-        self.assertIn('shard: [1, 2, 3]', workers)
-        builder = text.split('  prepare-ui:\n', 1)[1].split('\n  ui-shards:', 1)[0]
-        self.assertIn('--shard 0', builder)
-        self.assertIn('name: nightly-ui-inventory-0', builder)
-        self.assertIn('name: nightly-ui-results-0', builder)
-        self.assertLess(builder.index('Upload prepared UI products'),
-                        builder.index('Prepare builder simulator and run UI shard zero'))
-        self.assertIn('fail-fast: false', workers)
-        self.assertNotIn('continue-on-error', workers)
-        gate = text.split('  ui-inventory:\n', 1)[1]
-        self.assertIn('needs: [prepare-ui, ui-shards]', gate)
-        self.assertIn('if: ${{ !cancelled() }}', gate)
-        self.assertIn('needs.ui-shards.result', gate)
-        self.assertIn('apple_nightly_ui.py aggregate', gate)
-        self.assertIn('nightly-ui-inventory-*', gate)
-
+# The hosted nightly topology was retired by docs/qa/two-minute-ci.md.
+# Keep behavioral planner/transport/process regressions for the opt-in tools,
+# rather than asserting that the removed workflow and its jobs still exist.
 
 # Every SDK-free test here exercises the real planner, artifact or process boundary.
 import copy
@@ -141,27 +83,6 @@ class SimulatorOverlapTests(unittest.TestCase):
                 ['xcrun', 'simctl', 'bootstatus', 'A' * 36, '-b'],
                 ['xcrun', 'simctl', 'launch', 'A' * 36, 'com.apple.DocumentsApp']])
             self.assertTrue(all(call.kwargs['check'] for call in run.call_args_list))
-        text = (REPO / '.github/workflows/apple-nightly.yml').read_text()
-        worker = text.split('  ui-shards:\n', 1)[1].split('\n  ui-inventory:', 1)[0]
-        self.assertLess(worker.index('Wait for simulator and native Files providers'),
-                        worker.index('Wait for exact-run UI products'))
-        self.assertLess(worker.index('Wait for exact-run UI products'),
-                        worker.index('Download exact-run prepared UI products'))
-        self.assertLess(worker.index('Wait for simulator and native Files providers'),
-                        worker.index('Run and audit assigned UI shard'))
-
-    def test_prepare_boot_overlaps_compilation_and_worker_boot_precedes_download(self):
-        text = (REPO / '.github/workflows/apple-nightly.yml').read_text()
-        prepare = text.split('  prepare-ui:\n', 1)[1].split('\n  ui-shards:', 1)[0]
-        worker = text.split('  ui-shards:\n', 1)[1].split('\n  ui-inventory:', 1)[0]
-        self.assertLess(prepare.index('Start simulator before independent work'),
-                        prepare.index('xcodebuild build-for-testing'))
-        self.assertLess(worker.index('Start simulator before independent work'),
-                        worker.index('Download exact-run prepared UI products'))
-        self.assertIn('steps.ui_simulator.outputs.ios_destination', prepare)
-        self.assertIn('steps.ui_simulator.outputs.ios_destination', worker)
-        self.assertNotIn('bootstatus', prepare)
-        self.assertNotIn('bootstatus', worker)
 
 
 class ProductWaitTests(unittest.TestCase):

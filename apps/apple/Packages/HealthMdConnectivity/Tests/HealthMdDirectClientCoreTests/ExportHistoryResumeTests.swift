@@ -29,6 +29,8 @@ final class ExportHistoryResumeTests: XCTestCase {
         decoder.dateDecodingStrategy = .iso8601
         let fixture = try decoder.decode(Fixture.self, from: Data(contentsOf: sourceRoot
             .appendingPathComponent("packages/contracts/export-history/v1/synthetic-direct-job.json")))
+        // Rebase runtime job lifetime; the immutable fixture still pins its original wire bytes.
+        let now = Date(timeIntervalSince1970: Date().timeIntervalSince1970.rounded(.down))
         for mode in [DirectResponseMode.rawJSON, .writeFiles] {
             let root = FileManager.default.temporaryDirectory.appendingPathComponent("history-resume-\(UUID().uuidString)")
             defer { try? FileManager.default.removeItem(at: root) }
@@ -36,7 +38,7 @@ final class ExportHistoryResumeTests: XCTestCase {
             try FileManager.default.createDirectory(at: destination, withIntermediateDirectories: true)
             let layout = try DirectClientStorageLayout(rootURL: root.appendingPathComponent("state"))
             let store = try DirectJobStore(layout: layout)
-            let request = DirectExportRequest(jobID: fixture.request.jobID, createdAt: fixture.request.createdAt,
+            let request = DirectExportRequest(jobID: fixture.request.jobID, createdAt: now,
                 dateSelection: fixture.request.dateSelection, responseMode: mode,
                 rawProfile: mode == .rawJSON ? .healthDataProjection : nil,
                 canonicalSelection: fixture.request.canonicalSelection,
@@ -51,7 +53,7 @@ final class ExportHistoryResumeTests: XCTestCase {
                 try JSONDecoder().decode(ExportHistoryObservation.self, from: JSONSerialization.data(withJSONObject: object))
             }
             func accepted(_ observation: ExportHistoryObservation?) -> DirectExportAccepted {
-                .init(jobID: request.jobID, acceptedAt: fixture.accepted.acceptedAt, peerBinding: session.peerBinding,
+                .init(jobID: request.jobID, acceptedAt: now, peerBinding: session.peerBinding,
                     resolvedDateIdentifiers: fixture.accepted.resolvedDateIdentifiers,
                     sourceTimeZoneIdentifier: fixture.accepted.sourceTimeZoneIdentifier,
                     resolvedCanonicalSelection: fixture.accepted.resolvedCanonicalSelection,

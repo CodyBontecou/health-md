@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="m3_tools_diagnostics_verbosity">Detailniveau</string>
+    <string name="m3_tools_diagnostics_subsystem">Subsysteem</string>
+    <string name="m3_tools_diagnostics_time_range">Periode</string>
+    <string name="m3_tools_diagnostics_events">Recente gebeurtenissen</string>
+    <string name="m3_tools_diagnostics_files">Bestanden in bundel</string>
+    <string name="m3_tools_direct_cli_pairing">Koppelen met je computer</string>
+    <string name="m3_tools_direct_cli_manual">Handmatig invoeren</string>
+    <string name="m3_tools_direct_cli_computer">Gekoppelde computer</string>
+    <string name="m3_tools_direct_cli_export">Exporteren</string>
+    <string name="m3_tools_clinic_title">Klinische toegang</string>
+    <string name="m3_tools_clinic_intro">Je kliniek kan de levering naar haar goedgekeurde eindpunt sponsoren. Jij kiest wat je deelt. Andere exportbestemmingen vereisen je eigen Health.md-toegang.</string>
+    <string name="m3_tools_clinic_storage_unavailable">Ontgrendel je telefoon en probeer het opnieuw. Klinische toegang kon niet veilig worden gelezen.</string>
+    <string name="m3_tools_clinic_fallback_name">Kliniek</string>
+    <string name="m3_tools_clinic_sharing">Delen</string>
+    <string name="m3_tools_clinic_allow_sharing">Delen met deze kliniek toestaan</string>
+    <string name="m3_tools_clinic_sharing_description">Alleen de metingen en datums die je in Health.md selecteert, worden verzonden. Planning gebruikt je opgeslagen selectie. Delen uitschakelen stopt toekomstige uploads naar de kliniek; kopieën die de kliniek al heeft ontvangen, worden niet verwijderd.</string>
+    <string name="m3_tools_clinic_upload_token">Uploadtoken van kliniek (optioneel)</string>
+    <string name="m3_tools_clinic_upload_token_description">Als je kliniek een persoonlijke uploadtoken verstrekt, voer die dan hier in. Deze wordt veilig opgeslagen en alleen gebruikt voor het goedgekeurde eindpunt van deze kliniek.</string>
+    <string name="m3_tools_clinic_use_destination">Klinische bestemming gebruiken</string>
+    <string name="m3_tools_clinic_sync_requests">Synchronisatieverzoeken</string>
+    <string name="m3_tools_clinic_allow_sync">Synchronisatieverzoeken van deze kliniek toestaan</string>
+    <string name="m3_tools_clinic_sync_description">Je kliniek kan een melding sturen om je nieuwste gegevens op te vragen. Er wordt niets verzonden totdat je erop tikt; dan worden gisteren en vandaag met deze kliniek gedeeld. Als je dit uitschakelt, stoppen nieuwe verzoeken.</string>
+    <string name="m3_tools_clinic_invitation">Uitnodiging</string>
+    <string name="m3_tools_clinic_invitation_code">Uitnodigingscode</string>
+    <string name="m3_tools_clinic_accept_invitation">Uitnodiging accepteren</string>
+    <string name="m3_tools_clinic_not_configured">Klinische toegang is niet geconfigureerd in deze versie van Health.md.</string>
+    <string name="m3_tools_clinic_enrollment_pending">Je uitnodiging is veilig opgeslagen. Probeer het opnieuw om de inschrijving te voltooien; je hebt geen nieuwe code nodig.</string>
+    <string name="m3_tools_clinic_retry_enrollment">Inschrijving opnieuw proberen</string>
+    <string name="m3_tools_clinic_refresh">Klinische toegang vernieuwen</string>
+    <string name="m3_tools_clinic_disconnect_clinic">Kliniek ontkoppelen</string>
+    <string name="m3_tools_clinic_error">Klinische toegang kon niet worden bijgewerkt. Controleer je verbinding of probeer je opgeslagen inschrijving opnieuw.</string>
+    <string name="m3_tools_clinic_disconnect_question">Deze kliniek ontkoppelen?</string>
+    <string name="m3_tools_clinic_disconnect_body">Door de kliniek gesponsord delen stopt. Je eigen gekochte toegang en lokale gezondheidsgegevens blijven beschikbaar.</string>
+    <string name="m3_tools_clinic_disconnect">Ontkoppelen</string>
+    <string name="m3_tools_clinic_sync_sharing_required">Sta eerst delen met deze kliniek toe.</string>
+    <string name="m3_tools_clinic_sync_push_unavailable">Synchronisatieverzoeken zijn niet beschikbaar in deze versie van Health.md.</string>
+    <string name="m3_tools_clinic_sync_notifications_denied">Toestemming voor meldingen is niet verleend. Sta meldingen voor Health.md toe in Instellingen.</string>
+    <string name="m3_tools_clinic_sync_wake_service">De meldingsservice is niet beschikbaar. Probeer het later opnieuw.</string>
+    <string name="m3_tools_clinic_sync_clinic_unreachable">Je kliniek kon niet worden bereikt. Probeer het later opnieuw.</string>
+    <string name="m3_tools_clinic_sync_storage">Ontgrendel je telefoon en probeer het opnieuw. De verzoeksleutel kon niet veilig worden opgeslagen.</string>
+</resources>

@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="m3_tools_diagnostics_verbosity">विवरण स्तर</string>
+    <string name="m3_tools_diagnostics_subsystem">उपप्रणाली</string>
+    <string name="m3_tools_diagnostics_time_range">समय सीमा</string>
+    <string name="m3_tools_diagnostics_events">हाल की घटनाएँ</string>
+    <string name="m3_tools_diagnostics_files">बंडल की फ़ाइलें</string>
+    <string name="m3_tools_direct_cli_pairing">अपने कंप्यूटर से पेयर करें</string>
+    <string name="m3_tools_direct_cli_manual">मैन्युअल रूप से दर्ज करें</string>
+    <string name="m3_tools_direct_cli_computer">पेयर किया गया कंप्यूटर</string>
+    <string name="m3_tools_direct_cli_export">एक्सपोर्ट</string>
+    <string name="m3_tools_clinic_title">क्लिनिक एक्सेस</string>
+    <string name="m3_tools_clinic_intro">आपका क्लिनिक अपने स्वीकृत एंडपॉइंट पर डिलीवरी प्रायोजित कर सकता है। क्या साझा करना है, यह आप चुनते हैं। अन्य एक्सपोर्ट गंतव्यों के लिए आपका अपना Health.md एक्सेस आवश्यक है।</string>
+    <string name="m3_tools_clinic_storage_unavailable">अपना फ़ोन अनलॉक करें और फिर से कोशिश करें। क्लिनिक एक्सेस को सुरक्षित रूप से पढ़ा नहीं जा सका।</string>
+    <string name="m3_tools_clinic_fallback_name">क्लिनिक</string>
+    <string name="m3_tools_clinic_sharing">साझाकरण</string>
+    <string name="m3_tools_clinic_allow_sharing">इस क्लिनिक के साथ साझा करने की अनुमति दें</string>
+    <string name="m3_tools_clinic_sharing_description">केवल वे मेट्रिक और तारीखें भेजी जाएँगी जिन्हें आप Health.md में चुनते हैं। शेड्यूल आपके सहेजे गए चयन का उपयोग करता है। साझाकरण बंद करने से क्लिनिक पर भविष्य के अपलोड रुक जाते हैं; क्लिनिक को पहले मिल चुकी प्रतियाँ नहीं हटतीं।</string>
+    <string name="m3_tools_clinic_upload_token">क्लिनिक अपलोड टोकन (वैकल्पिक)</string>
+    <string name="m3_tools_clinic_upload_token_description">अगर आपका क्लिनिक निजी अपलोड टोकन देता है, तो उसे यहाँ दर्ज करें। यह सुरक्षित रूप से सहेजा जाता है और केवल इस क्लिनिक के स्वीकृत एंडपॉइंट के लिए उपयोग होता है।</string>
+    <string name="m3_tools_clinic_use_destination">क्लिनिक गंतव्य का उपयोग करें</string>
+    <string name="m3_tools_clinic_sync_requests">सिंक अनुरोध</string>
+    <string name="m3_tools_clinic_allow_sync">इस क्लिनिक से सिंक अनुरोधों की अनुमति दें</string>
+    <string name="m3_tools_clinic_sync_description">आपका क्लिनिक आपका नवीनतम डेटा माँगने के लिए सूचना भेज सकता है। जब तक आप उस पर टैप नहीं करते, कुछ नहीं भेजा जाता; फिर कल और आज का डेटा इस क्लिनिक के साथ साझा किया जाता है। इसे बंद करने से नए अनुरोध रुक जाते हैं।</string>
+    <string name="m3_tools_clinic_invitation">आमंत्रण</string>
+    <string name="m3_tools_clinic_invitation_code">आमंत्रण कोड</string>
+    <string name="m3_tools_clinic_accept_invitation">आमंत्रण स्वीकार करें</string>
+    <string name="m3_tools_clinic_not_configured">Health.md के इस संस्करण में क्लिनिक एक्सेस कॉन्फ़िगर नहीं है।</string>
+    <string name="m3_tools_clinic_enrollment_pending">आपका आमंत्रण सुरक्षित रूप से सहेजा गया है। नामांकन पूरा करने के लिए फिर से कोशिश करें; नए कोड की आवश्यकता नहीं है।</string>
+    <string name="m3_tools_clinic_retry_enrollment">नामांकन फिर से आज़माएँ</string>
+    <string name="m3_tools_clinic_refresh">क्लिनिक एक्सेस रीफ़्रेश करें</string>
+    <string name="m3_tools_clinic_disconnect_clinic">क्लिनिक डिस्कनेक्ट करें</string>
+    <string name="m3_tools_clinic_error">क्लिनिक एक्सेस अपडेट नहीं हो सका। अपना कनेक्शन जाँचें, या सहेजे गए नामांकन को फिर से आज़माएँ।</string>
+    <string name="m3_tools_clinic_disconnect_question">इस क्लिनिक को डिस्कनेक्ट करें?</string>
+    <string name="m3_tools_clinic_disconnect_body">क्लिनिक-प्रायोजित साझाकरण बंद हो जाएगा। आपका खुद खरीदा गया एक्सेस और स्थानीय स्वास्थ्य डेटा उपलब्ध रहेंगे।</string>
+    <string name="m3_tools_clinic_disconnect">डिस्कनेक्ट करें</string>
+    <string name="m3_tools_clinic_sync_sharing_required">पहले इस क्लिनिक के साथ साझा करने की अनुमति दें।</string>
+    <string name="m3_tools_clinic_sync_push_unavailable">Health.md के इस संस्करण में सिंक अनुरोध उपलब्ध नहीं हैं।</string>
+    <string name="m3_tools_clinic_sync_notifications_denied">सूचना की अनुमति नहीं दी गई। सेटिंग्स में Health.md के लिए सूचनाओं की अनुमति दें।</string>
+    <string name="m3_tools_clinic_sync_wake_service">सूचना सेवा उपलब्ध नहीं है। बाद में फिर से कोशिश करें।</string>
+    <string name="m3_tools_clinic_sync_clinic_unreachable">आपके क्लिनिक से संपर्क नहीं हो सका। बाद में फिर से कोशिश करें।</string>
+    <string name="m3_tools_clinic_sync_storage">अपना फ़ोन अनलॉक करें और फिर से कोशिश करें। अनुरोध कुंजी को सुरक्षित रूप से सहेजा नहीं जा सका।</string>
+</resources>

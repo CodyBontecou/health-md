@@ -1,18 +1,15 @@
 #if os(macOS)
 import SwiftUI
 
-// MARK: - History View — Branded
+// MARK: - History (MacHistoryG)
 
+/// "History" header, glass rows of when/status, and a detail panel with why it failed, what to
+/// do, the failed dates on one mono line, and a "Technical details · Open GitHub issue" link.
 struct MacHistoryView: View {
     @ObservedObject private var historyManager = ExportHistoryManager.shared
+    @StateObject private var feedbackReporter = FeedbackReporter()
     @State private var selectedEntry: ExportHistoryEntry?
-
-    private static let dateFormatter: DateFormatter = {
-        let f = DateFormatter()
-        f.dateStyle = .medium
-        f.timeStyle = .short
-        return f
-    }()
+    @State private var showsTechnicalDetails = false
 
     private static let rangeDateFormatter: DateFormatter = {
         let f = DateFormatter()
@@ -21,46 +18,36 @@ struct MacHistoryView: View {
     }()
 
     var body: some View {
-        Group {
+        VStack(alignment: .leading, spacing: 18) {
+            Text("History")
+                .font(.system(size: 26, weight: .bold))
+                .foregroundStyle(Color.glassAdaptive(\.text))
+                .accessibilityAddTraits(.isHeader)
+
             if historyManager.history.isEmpty {
-                VStack(spacing: 16) {
-                    Image(systemName: "list.bullet.clipboard")
-                        .font(.largeTitle)
-                        .foregroundStyle(Color.textMuted)
-                    Text("No Export History")
-                        .font(BrandTypography.subheading())
-                        .foregroundStyle(Color.textPrimary)
-                    Text("Export history will appear here after your first export.")
-                        .font(BrandTypography.body())
-                        .foregroundStyle(Color.textMuted)
-                }
+                emptyState
             } else {
-                GeometryReader { proxy in
-                    if proxy.size.width < 980 {
-                        VStack(spacing: 0) {
-                            historyList
-                                .frame(minHeight: 220, idealHeight: 280, maxHeight: 320)
-
-                            Divider()
-                                .opacity(0.3)
-
-                            detailPanel
-                                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        }
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    } else {
-                        HSplitView {
-                            historyList
-                                .frame(minWidth: 320, idealWidth: 380, maxWidth: .infinity, maxHeight: .infinity)
-
-                            detailPanel
-                                .frame(minWidth: 300, idealWidth: 420, maxWidth: .infinity, maxHeight: .infinity)
-                        }
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                ViewThatFits(in: .horizontal) {
+                    HStack(alignment: .top, spacing: 14) {
+                        historyList
+                            .frame(minWidth: 320, maxWidth: .infinity)
+                        detailPanel
+                            .frame(minWidth: 320, maxWidth: .infinity)
+                    }
+                    VStack(alignment: .leading, spacing: 14) {
+                        historyList
+                            .frame(maxHeight: 280)
+                        detailPanel
                     }
                 }
             }
         }
+        .padding(.horizontal, 28)
+        .padding(.vertical, 24)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .background(Color.glassAdaptive(\.bg).ignoresSafeArea())
+        .foregroundStyle(Color.glassAdaptive(\.text))
+        .tint(Color.glassAdaptive(\.accent))
         .navigationTitle("History")
         .toolbar {
             if !historyManager.history.isEmpty {
@@ -75,65 +62,84 @@ struct MacHistoryView: View {
                 }
             }
         }
+        .feedbackFailureSheet($feedbackReporter.failure)
         .onAppear {
             selectDefaultEntryIfNeeded()
         }
         .onChange(of: historyManager.history.count, initial: false) { _, _ in
             selectDefaultEntryIfNeeded()
         }
+        .onChange(of: selectedEntry?.id) { _, _ in
+            showsTechnicalDetails = false
+        }
+    }
+
+    // MARK: - Empty state
+
+    private var emptyState: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("No Export History")
+                .font(.system(size: 16, weight: .bold))
+            Text("Export history will appear here after your first export.")
+                .font(.system(size: 13))
+                .foregroundStyle(Color.glassAdaptive(\.muted))
+        }
+        .padding(18)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .glassSurface(cornerRadius: 16)
     }
 
     // MARK: - History List
 
     private var historyList: some View {
-        List(historyManager.history, selection: $selectedEntry) { entry in
-            HStack(spacing: 10) {
-                statusIcon(for: entry)
-                    .accessibilityHidden(true)
-
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(entry.summaryDescription)
-                        .font(BrandTypography.bodyMedium())
-                        .foregroundStyle(Color.textPrimary)
-                        .lineLimit(2)
-
-                    if !entry.isFullSuccess, let message = entry.failureListMessage {
-                        Text(message)
-                            .font(BrandTypography.caption())
-                            .foregroundStyle(entry.isPartialSuccess ? Color.textSecondary : Color.error)
-                            .lineLimit(2)
-                    }
-
-                    HStack(spacing: 8) {
-                        Text(Self.dateFormatter.string(from: entry.timestamp))
-                            .font(BrandTypography.caption())
-                            .foregroundStyle(Color.textMuted)
-
-                        sourceBadge(for: entry)
-                    }
+        ScrollView {
+            VStack(alignment: .leading, spacing: 0) {
+                ForEach(Array(historyManager.history.enumerated()), id: \.element.id) { index, entry in
+                    if index > 0 { MacGlassDivider() }
+                    historyRow(entry)
                 }
-
-                Spacer()
-
-                Text(entry.isAPIEndpointDelivery || entry.isCLIRawDelivery
-                    ? "\(entry.successCount)/\(entry.totalCount)"
-                    : entry.generatedFileCountCompactDescription)
-                    .font(BrandTypography.value())
-                    .foregroundStyle(Color.textMuted)
             }
+            .padding(.horizontal, 16)
             .padding(.vertical, 2)
-            .tag(entry)
-            .accessibilityElement(children: .combine)
-            .accessibilityLabel(historyEntryAccessibilityLabel(for: entry))
-            .accessibilityHint("Select to view details")
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .glassSurface(cornerRadius: 16)
         }
+        .scrollBounceBehavior(.basedOnSize)
+    }
+
+    private func historyRow(_ entry: ExportHistoryEntry) -> some View {
+        let isSelected = selectedEntry?.id == entry.id
+        return Button {
+            selectedEntry = entry
+        } label: {
+            HStack(spacing: 12) {
+                Text(ExportHistorySummaryFormat.historyWhen(entry.timestamp))
+                    .font(.system(size: 13, weight: isSelected ? .semibold : .regular))
+                    .foregroundStyle(Color.glassAdaptive(\.text))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                Text(entry.historyStatusLine)
+                    .font(.system(size: 13))
+                    .foregroundStyle(statusColor(for: entry))
+            }
+            .frame(minHeight: 40)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(historyEntryAccessibilityLabel(for: entry))
+        .accessibilityHint("Select to view details")
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 
     private func historyEntryAccessibilityLabel(for entry: ExportHistoryEntry) -> String {
-        let date = Self.dateFormatter.string(from: entry.timestamp)
-        let base = "\(entry.localizedStatusDescription): \(entry.summaryDescription). \(entry.resultCountAccessibilityDescription). \(date)"
+        let date = ExportHistorySummaryFormat.historyWhen(entry.timestamp)
+        let base = "\(date): \(entry.historyStatusLine). \(entry.summaryDescription). \(entry.resultCountAccessibilityDescription)"
         guard let message = entry.failureListMessage else { return base }
         return "\(base). \(message)"
+    }
+
+    private func statusColor(for entry: ExportHistoryEntry) -> Color {
+        entry.isFullSuccess ? Color.glassAdaptive(\.ok) : Color.glassAdaptive(\.coral)
     }
 
     // MARK: - Detail Panel
@@ -142,205 +148,130 @@ struct MacHistoryView: View {
     private var detailPanel: some View {
         if let entry = selectedEntry {
             ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
-                    // Status header
-                    HStack(spacing: 8) {
-                        statusIcon(for: entry)
-                        Text(entry.localizedShortStatusDescription)
-                            .font(BrandTypography.heading())
-                            .foregroundStyle(Color.textPrimary)
-                    }
-                    .padding(16)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .brandGlassCard()
-
-                    // Details card
-                    VStack(alignment: .leading, spacing: 12) {
-                        BrandLabel("Details")
-
-                        detailDataRow(
-                            label: String(localized: "Timestamp"),
-                            value: Self.dateFormatter.string(from: entry.timestamp)
-                        )
-                        detailDataRow(
-                            label: String(localized: "Source"),
-                            value: entry.source.localizedDisplayName
-                        )
-                        if let targetLabel = entry.targetLabel {
-                            detailDataRow(label: String(localized: "Target"), value: targetLabel)
-                        }
-                        detailDataRow(
-                            label: String(localized: "Date Range"),
-                            value: dateRangeString(entry)
-                        )
-                        detailDataRow(
-                            label: entry.resultCountLabel,
-                            value: entry.resultCountDescription
-                        )
-                    }
-                    .padding(16)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .brandGlassCard()
+                VStack(alignment: .leading, spacing: 12) {
+                    Text(entry.historyDetailTitle())
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundStyle(Color.glassAdaptive(\.text))
+                        .accessibilityAddTraits(.isHeader)
 
                     if let reason = entry.failureReasonForDisplay {
-                        VStack(alignment: .leading, spacing: 12) {
-                            if entry.isPartialSuccess {
-                                BrandLabel("Why some dates did not export")
-                            } else {
-                                BrandLabel("Why it failed")
-                            }
-
-                            Label(reason.shortDescription, systemImage: "exclamationmark.octagon.fill")
-                                .font(BrandTypography.bodyMedium())
-                                .foregroundStyle(entry.isPartialSuccess ? Color.warning : Color.error)
-
-                            Text(reason.detailedDescription)
-                                .font(BrandTypography.body())
-                                .foregroundStyle(Color.textSecondary)
-                                .fixedSize(horizontal: false, vertical: true)
-
-                            Divider()
-                                .background(Color.borderSubtle)
-
-                            Label("What to do", systemImage: "wrench.and.screwdriver.fill")
-                                .font(BrandTypography.bodyMedium())
-                                .foregroundStyle(Color.accent)
-
-                            Text(reason.recoverySuggestion)
-                                .font(BrandTypography.body())
-                                .foregroundStyle(Color.textPrimary)
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
-                        .padding(16)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .brandGlassCard(tintOpacity: 0.02)
+                        detailBlock(String(localized: "Why it failed"), reason.detailedDescription)
+                        detailBlock(String(localized: "What to do"), reason.recoverySuggestion)
+                    } else {
+                        detailBlock(String(localized: "Date Range"), dateRangeString(entry), monospaced: true)
                     }
 
-                    if !entry.failureDiagnosticDetails.isEmpty {
-                        VStack(alignment: .leading, spacing: 8) {
-                            BrandLabel("Technical details")
-                            ForEach(entry.failureDiagnosticDetails, id: \.self) { details in
-                                Text(details)
-                                    .font(Typography.bodyMono())
-                                    .foregroundStyle(Color.textSecondary)
-                                    .textSelection(.enabled)
-                                    .fixedSize(horizontal: false, vertical: true)
-                            }
-                            Text("If the suggested fix does not work, include this message in your bug report after removing any private folder or server information.")
-                                .font(BrandTypography.caption())
-                                .foregroundStyle(Color.textMuted)
-                        }
-                        .padding(16)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .brandGlassCard(tintOpacity: 0.02)
+                    if let failedDates = entry.failedDatesLine {
+                        detailBlock(String(localized: "Failed dates"), failedDates, monospaced: true)
                     }
 
-                    if !entry.partialFailures.isEmpty {
-                        VStack(alignment: .leading, spacing: 10) {
-                            // Informational omissions (for example an optional
-                            // WorkoutKit plan this device cannot decode) do not
-                            // reduce the export below full success, so the
-                            // section reads as notes rather than warnings.
-                            BrandLabel(entry.isFullSuccess ? "Export Notes" : "Partial Export Warnings")
-                            ForEach(Array(entry.partialFailures.enumerated()), id: \.offset) { _, failure in
-                                HStack(alignment: .top, spacing: 6) {
-                                    Image(systemName: failure.isInformational == true
-                                        ? "info.circle"
-                                        : "exclamationmark.triangle.fill")
-                                        .foregroundStyle(failure.isInformational == true
-                                            ? Color.textSecondary
-                                            : Color.warning)
-                                        .font(.caption)
-                                    Text(failure.localizedSummary)
-                                        .font(BrandTypography.caption())
-                                        .foregroundStyle(Color.textMuted)
-                                        .fixedSize(horizontal: false, vertical: true)
-                                        .textSelection(.enabled)
-                                }
-                            }
-                        }
-                        .padding(16)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .brandGlassCard(tintOpacity: 0.02)
-                    }
+                    linksLine(for: entry)
 
-                    if !entry.failedDateDetails.isEmpty {
-                        VStack(alignment: .leading, spacing: 10) {
-                            BrandLabel("Failed Dates")
-                            ForEach(entry.failedDateDetails, id: \.dateString) { detail in
-                                HStack(spacing: 6) {
-                                    Image(systemName: "xmark.circle.fill")
-                                        .foregroundStyle(Color.error)
-                                        .font(.caption)
-                                    Text(detail.dateString)
-                                        .font(BrandTypography.value())
-                                        .foregroundStyle(Color.textPrimary)
-                                    Text("— \(detail.reason.shortDescription)")
-                                        .font(BrandTypography.caption())
-                                        .foregroundStyle(Color.textMuted)
-                                }
-                            }
-                        }
-                        .padding(16)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .brandGlassCard(tintOpacity: 0.02)
+                    if showsTechnicalDetails {
+                        technicalDetails(for: entry)
                     }
-
-                    Spacer()
                 }
-                .padding(16)
+                .padding(18)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .glassSurface(cornerRadius: 16)
             }
-        } else {
-            VStack(spacing: 12) {
-                Image(systemName: "doc.text.magnifyingglass")
-                    .font(.title)
-                    .foregroundStyle(Color.textMuted)
-                Text("Select an export to see details")
-                    .font(BrandTypography.body())
-                    .foregroundStyle(Color.textMuted)
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .scrollBounceBehavior(.basedOnSize)
         }
+    }
+
+    private func detailBlock(_ title: String, _ value: String, monospaced: Bool = false) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(Color.glassAdaptive(\.muted))
+                .accessibilityAddTraits(.isHeader)
+            Text(value)
+                .font(monospaced ? .system(size: 12, design: .monospaced) : .system(size: 13))
+                .lineSpacing(monospaced ? 0 : 3)
+                .foregroundStyle(Color.glassAdaptive(\.text))
+                .fixedSize(horizontal: false, vertical: true)
+                .textSelection(.enabled)
+        }
+    }
+
+    /// "Technical details · Open GitHub issue"; the issue link only follows an unsuccessful export.
+    private func linksLine(for entry: ExportHistoryEntry) -> some View {
+        HStack(spacing: 0) {
+            Button(String(localized: "Technical details")) {
+                showsTechnicalDetails.toggle()
+            }
+            .accessibilityAddTraits(showsTechnicalDetails ? .isSelected : [])
+            if !entry.isFullSuccess {
+                Text(verbatim: " · ")
+                    .accessibilityHidden(true)
+                Button(String(localized: "Open GitHub issue")) {
+                    feedbackReporter.open(.github)
+                }
+            }
+        }
+        .buttonStyle(MacGlassRowButtonStyle())
+        .font(.system(size: 13, weight: .semibold))
+        .foregroundStyle(Color.glassAdaptive(\.accent))
+    }
+
+    private func technicalDetails(for entry: ExportHistoryEntry) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            MacGlassDivider()
+            technicalRow(String(localized: "Timestamp"), entry.timestamp.formatted(date: .abbreviated, time: .shortened))
+            technicalRow(String(localized: "Source"), entry.source.localizedDisplayName)
+            if let targetLabel = entry.targetLabel {
+                technicalRow(String(localized: "Target"), targetLabel)
+            }
+            technicalRow(String(localized: "Date Range"), dateRangeString(entry))
+            technicalRow(entry.resultCountLabel, entry.resultCountDescription)
+
+            ForEach(entry.failedDateDetails, id: \.dateString) { detail in
+                technicalRow(detail.dateString, detail.reason.shortDescription)
+            }
+
+            ForEach(Array(entry.partialFailures.enumerated()), id: \.offset) { _, failure in
+                Text(failure.localizedSummary)
+                    .font(.system(size: 12))
+                    .foregroundStyle(Color.glassAdaptive(\.muted))
+                    .fixedSize(horizontal: false, vertical: true)
+                    .textSelection(.enabled)
+            }
+
+            if !entry.failureDiagnosticDetails.isEmpty {
+                ForEach(entry.failureDiagnosticDetails, id: \.self) { details in
+                    Text(details)
+                        .font(.system(size: 12, design: .monospaced))
+                        .foregroundStyle(Color.glassAdaptive(\.sec))
+                        .textSelection(.enabled)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Text("If the suggested fix does not work, include this message in your bug report after removing any private folder or server information.")
+                    .font(.system(size: 12))
+                    .foregroundStyle(Color.glassAdaptive(\.muted))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+
+    private func technicalRow(_ label: String, _ value: String) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 12) {
+            Text(label)
+                .font(.system(size: 12))
+                .foregroundStyle(Color.glassAdaptive(\.muted))
+                .lineLimit(1)
+            Spacer(minLength: 8)
+            Text(value)
+                .font(.system(size: 12))
+                .foregroundStyle(Color.glassAdaptive(\.text))
+                .lineLimit(2)
+                .truncationMode(.middle)
+                .multilineTextAlignment(.trailing)
+                .textSelection(.enabled)
+        }
+        .accessibilityElement(children: .combine)
     }
 
     // MARK: - Helpers
-
-    @ViewBuilder
-    private func statusIcon(for entry: ExportHistoryEntry) -> some View {
-        Image(systemName: entry.statusSystemImage)
-            .foregroundStyle(entry.isFullSuccess ? Color.success : entry.isPartialSuccess ? Color.warning : Color.error)
-            .accessibilityLabel(entry.localizedStatusDescription)
-    }
-
-    @ViewBuilder
-    private func sourceBadge(for entry: ExportHistoryEntry) -> some View {
-        Text(entry.source.localizedDisplayName)
-            .font(BrandTypography.caption())
-            .foregroundStyle(Color.textMuted)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 2)
-            .brandGlassPill()
-    }
-
-    @ViewBuilder
-    private func detailDataRow(label: String, value: String) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: 12) {
-            Text(label)
-                .font(BrandTypography.body())
-                .foregroundStyle(Color.textSecondary)
-                .lineLimit(1)
-
-            Spacer(minLength: 8)
-
-            Text(value)
-                .font(BrandTypography.value())
-                .foregroundStyle(Color.textPrimary)
-                .lineLimit(1)
-                .truncationMode(.middle)
-                .multilineTextAlignment(.trailing)
-                .layoutPriority(1)
-        }
-    }
 
     private func selectDefaultEntryIfNeeded() {
         guard !historyManager.history.isEmpty else {
@@ -361,7 +292,6 @@ struct MacHistoryView: View {
         let end = Self.rangeDateFormatter.string(from: entry.dateRangeEnd)
         return start == end ? start : "\(start) → \(end)"
     }
-
 }
 
 // Make ExportHistoryEntry selectable

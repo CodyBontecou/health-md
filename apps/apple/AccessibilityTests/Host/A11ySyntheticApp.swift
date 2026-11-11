@@ -101,7 +101,7 @@ struct A11yFoundationScenario: View {
                     StatusPill(status: .connected)
                     StatusPill(status: .disconnected)
                     StatusPill(status: .pending)
-                    ExportStatusBadge(status: .success("Your synthetic archive is ready to inspect. This is a complete status explanation."), onDismiss: { count += 100000 }, exportFileName: "synthetic-archive-with-a-complete-readable-file-name.md", onPreview: { count += 1000000 }, onBrowseFolder: { count += 10000000 })
+                    ExportStatusBadge(status: .success("Your synthetic archive is ready to inspect. This is a complete status explanation."), onDismiss: { count += 100000 }, exportFileName: "synthetic-archive-with-a-complete-readable-file-name.md", onPreview: { count += 1000000 }, onBrowseFolder: { count += 10000000 }, autoDismisses: false)
                 }
                 .frame(maxWidth: 320, alignment: .leading)
                 .padding(16)

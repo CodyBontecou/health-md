@@ -169,6 +169,7 @@ final class AppleDirectProtocolAuthority: DirectMessageCanonicalizing, @unchecke
     let defaultMode: AppleDirectProtocolEngineMode
 
     private let rustCore: any AppleDirectProtocolRustCore
+    private let frozenMode: AppleDirectProtocolEngineMode?
     private let lock = NSLock()
     private var operationMode: AppleDirectProtocolEngineMode?
     private var comparisonCounts: [AppleDirectProtocolStage: Int] = [:]
@@ -180,6 +181,28 @@ final class AppleDirectProtocolAuthority: DirectMessageCanonicalizing, @unchecke
     ) {
         self.defaultMode = defaultMode
         self.rustCore = rustCore
+        self.frozenMode = nil
+    }
+
+    private init(defaultMode: AppleDirectProtocolEngineMode,
+                 rustCore: any AppleDirectProtocolRustCore,
+                 frozenMode: AppleDirectProtocolEngineMode) {
+        self.defaultMode = defaultMode
+        self.rustCore = rustCore
+        self.frozenMode = frozenMode
+    }
+
+    /// Connection attempts share the immutable core/configuration, never the
+    /// mutable bootstrap/operation mode or diagnostic counters.
+    func makeSessionAuthority() -> AppleDirectProtocolAuthority {
+        AppleDirectProtocolAuthority(defaultMode: defaultMode, rustCore: rustCore)
+    }
+
+    /// Retain the selected engine after pin validation. Session bootstrap or
+    /// teardown cannot alter deterministic work performed by this context.
+    func frozenForCurrentOperation() -> AppleDirectProtocolAuthority {
+        AppleDirectProtocolAuthority(defaultMode: defaultMode, rustCore: rustCore,
+            frozenMode: activeMode)
     }
 
     static func configuredMode(
@@ -201,7 +224,7 @@ final class AppleDirectProtocolAuthority: DirectMessageCanonicalizing, @unchecke
     }
 
     private var activeMode: AppleDirectProtocolEngineMode {
-        lock.withLock { operationMode ?? defaultMode }
+        frozenMode ?? lock.withLock { operationMode ?? defaultMode }
     }
 
     func assertCompatible() throws {
@@ -216,6 +239,7 @@ final class AppleDirectProtocolAuthority: DirectMessageCanonicalizing, @unchecke
     }
 
     func beginBootstrap() {
+        guard frozenMode == nil else { return }
         lock.withLock { operationMode = .legacy }
     }
 
@@ -238,6 +262,9 @@ final class AppleDirectProtocolAuthority: DirectMessageCanonicalizing, @unchecke
     }
 
     func beginOperation(pin: AppleDirectProtocolPin?) throws {
+        if let frozenMode, frozenMode != (pin?.engine ?? .legacy) {
+            throw AppleDirectProtocolAuthorityError(stage: .compatibility)
+        }
         lock.withLock { operationMode = pin?.engine ?? .legacy }
         guard let pin else { return }
         do {
@@ -257,6 +284,7 @@ final class AppleDirectProtocolAuthority: DirectMessageCanonicalizing, @unchecke
     }
 
     func endOperation() {
+        guard frozenMode == nil else { return }
         lock.withLock { operationMode = nil }
     }
 

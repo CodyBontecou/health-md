@@ -15,6 +15,7 @@ import com.healthmd.data.settings.ExportProfileRepository
 import com.healthmd.domain.model.ExportSettings
 import com.healthmd.domain.model.ScheduleCadenceUnit
 import com.healthmd.domain.model.ScheduleDateWindow
+import com.healthmd.widget.glance.ArchiveGlanceWidget
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.time.Instant
 import java.time.LocalDate
@@ -23,6 +24,7 @@ import java.util.UUID
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
@@ -151,6 +153,7 @@ class ScheduledProfileScheduler @Inject constructor(
                 }
             }
         }
+        refreshArchiveWidgets()
     }
 
     /** Called by the alarm receiver: enqueue this entry's durable export work immediately. */
@@ -187,6 +190,7 @@ class ScheduledProfileScheduler @Inject constructor(
             }
             armEntry(entry, next, force = false)
         }
+        refreshArchiveWidgets()
     }
 
     /**
@@ -269,6 +273,18 @@ class ScheduledProfileScheduler @Inject constructor(
         mutex.withLock {
             cancelEntryRuntimeLocked(profileId)
             entryStore.delete(profileId)
+        }
+        refreshArchiveWidgets()
+    }
+
+    /** The Archive widgets show the next run; re-render them after arming changes. */
+    private suspend fun refreshArchiveWidgets() {
+        try {
+            ArchiveGlanceWidget.refresh(context)
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Exception) {
+            Timber.d(error, "Archive widget refresh after schedule change failed")
         }
     }
 

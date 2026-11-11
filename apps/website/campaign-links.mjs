@@ -6,6 +6,7 @@ export const DEFAULT_DOWNLOAD_URL = "https://healthmd.app/";
 
 export const platformLabels = {
   tt: "TikTok",
+  fb: "Facebook",
   ig: "Instagram Reels",
   yt: "YouTube Shorts",
   x: "X/Twitter",

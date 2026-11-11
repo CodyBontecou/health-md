@@ -214,6 +214,8 @@ class HealthWidgetLocaleChangeReceiver : BroadcastReceiver() {
                         HealthWidgetLocaleRefresher.rerenderAll(context.applicationContext)
                     }
                 }
+                // Archive squares, month names and run times follow the date, zone and locale.
+                runCatching { ArchiveGlanceWidget.refresh(context.applicationContext) }
             } finally {
                 pendingResult.finish()
             }
@@ -334,4 +336,11 @@ internal object HealthWidgetColors {
     val Steps = ColorProvider(day = GeistLightColors.teal.c900, night = GeistDarkColors.teal.c900)
     val Heart = ColorProvider(day = GeistLightColors.red.c900, night = GeistDarkColors.red.c900)
     val Sleep = ColorProvider(day = GeistLightColors.purple.c900, night = GeistDarkColors.purple.c900)
+    val CoverageComplete = ColorProvider(day = GeistLightColors.coverageComplete, night = GeistDarkColors.coverageComplete)
+    val CoveragePartial = ColorProvider(day = GeistLightColors.gray.c300, night = GeistDarkColors.gray.c300)
+    val CoverageMissing = ColorProvider(day = GeistLightColors.coverageMissing, night = GeistDarkColors.coverageMissing)
+    val CoverageNone = ColorProvider(day = GeistLightColors.gray.c200, night = GeistDarkColors.gray.c200)
+    // Archive widgets sit on surfaceContainerHigh; empty and partial squares use ...Highest.
+    val ArchiveSurface = ColorProvider(day = GeistLightColors.gray.c200, night = GeistDarkColors.gray.c200)
+    val ArchiveSurfaceHighest = ColorProvider(day = GeistLightColors.gray.c300, night = GeistDarkColors.gray.c300)
 }

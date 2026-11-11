@@ -21,6 +21,23 @@ final class HealthKitQueryExecutionTests: XCTestCase {
         }
     }
 
+    private actor HeldQuery {
+        private var continuation: CheckedContinuation<Int, Never>?
+        private var released = false
+
+        func value() async -> Int {
+            if released { return 1 }
+            return await withCheckedContinuation { continuation = $0 }
+        }
+
+        func release() {
+            released = true
+            let pending = continuation
+            continuation = nil
+            pending?.resume(returning: 1)
+        }
+    }
+
     /// The test releases physical completion after observing logical timeout;
     /// scheduler delays cannot accidentally turn "still outstanding" into done.
     nonisolated private final class ControlledQuery: @unchecked Sendable {
@@ -377,21 +394,29 @@ final class HealthKitQueryExecutionTests: XCTestCase {
                 maximumOutstandingQueries: 1
             )
         )
+        let physicalQuery = ControlledQuery()
+        defer { physicalQuery.complete() }
         do {
             _ = try await HealthKitQueryExecutionController.withController(controller) {
                 try await executeHealthKitQuery(
                     operation: "testBudgetHung",
                     typeIdentifier: "test.hung"
                 ) {
-                    await self.delayedValue(1, milliseconds: 120)
+                    await physicalQuery.value()
                 }
             }
+            XCTFail("Expected timeout")
         } catch {
             XCTAssertEqual(
                 (error as NSError).code,
                 HealthKitQueryExecutionError.Code.timedOut.rawValue
             )
         }
+
+        // Exercise a caller that resumes after the former 120 ms worker fixture.
+        // Budget evidence must survive delayed observation, not rely on runner speed.
+        try? await ContinuousClock().sleep(for: .milliseconds(160))
+        XCTAssertEqual(controller.snapshot().unresolvedQueries, 1)
 
         let invocations = LockedCounter()
         do {
@@ -418,6 +443,27 @@ final class HealthKitQueryExecutionTests: XCTestCase {
             )
         }
         XCTAssertEqual(invocations.value, 0)
+
+        physicalQuery.complete()
+        let physicalWorkerReleased = await waitUntil {
+            controller.snapshot().unresolvedQueries == 0
+        }
+        XCTAssertTrue(physicalWorkerReleased)
+        do {
+            let value = try await HealthKitQueryExecutionController.withController(controller) {
+                try await executeHealthKitQuery(
+                    operation: "testBudgetHealthy",
+                    typeIdentifier: "test.healthy"
+                ) {
+                    invocations.increment()
+                    return 2
+                }
+            }
+            XCTAssertEqual(value, 2)
+        } catch {
+            XCTFail("Expected budget to recover after physical completion: \(error)")
+        }
+        XCTAssertEqual(invocations.value, 1)
     }
 }
 #endif

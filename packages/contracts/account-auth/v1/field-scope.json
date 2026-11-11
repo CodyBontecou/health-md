@@ -41,10 +41,11 @@
     }
   ],
   "source_schema": {
-    "path": "packages/contracts/shared-setup/v2/shared-setup.schema.json",
+    "path": "packages/contracts/account-auth/v1/historical-source/shared-setup.schema.json",
     "sha256": "39e56dc54dfb56c556e2c71c734c00da4f02305a2a9b98ad795486c3e9c81f45",
     "profile_definition": "profile",
-    "use": "field_semantics_and_security_validation_not_bundle_grammar"
+    "use": "field_semantics_and_security_validation_not_bundle_grammar",
+    "source_path": "packages/contracts/shared-setup/v2/shared-setup.schema.json"
   },
   "disposition_to_sync": {
     "portable": "validated_content",

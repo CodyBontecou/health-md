@@ -58,6 +58,7 @@ class DefaultClinicianReportDataSource @Inject constructor(
                 includeGranularData = true,
                 zoneId = zoneId,
                 pinnedCalendarDays = true,
+                sleepDayAttribution = SleepDayAttribution.DEFAULT,
             )
             adapt(normalized, zoneId, records)
         } catch (cancelled: CancellationException) {

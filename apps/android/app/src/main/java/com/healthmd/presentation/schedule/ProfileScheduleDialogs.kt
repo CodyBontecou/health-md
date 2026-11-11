@@ -6,6 +6,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Warning
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -169,6 +171,7 @@ internal fun ProfileScheduleDiscardRecoveryDialog(
             confirmLabel = stringResource(R.string.profile_schedule_discard_recovery),
             onConfirm = onDiscard, onDismiss = onDismiss,
             tag = ProfileScheduleTags.DISCARD_RECOVERY_DIALOG, destructive = true,
+            icon = Icons.Outlined.Warning,
         ) {
             Text(stringResource(R.string.profile_schedule_discard_recovery_body),
                 style = MaterialTheme.typography.bodyMedium, color = AppColors.textPrimary,
@@ -186,6 +189,7 @@ private fun ProfileScheduleDialog(onDismiss: () -> Unit, content: @Composable ()
     val context = LocalContext.current
     Dialog(onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
+        com.healthmd.presentation.common.EdgeToEdgeDialogWindow()
         CompositionLocalProvider(
             LocalDensity provides density, LocalLayoutDirection provides direction,
             LocalConfiguration provides configuration, LocalContext provides context,
@@ -209,8 +213,9 @@ private fun ProfileScheduleDialog(onDismiss: () -> Unit, content: @Composable ()
                                 availableHeight * GeistSizes.dialogMaxHeightFraction,
                                 (availableHeight - GeistSpacing.space10 * 2).coerceAtLeast(GeistSizes.minimumTouchTarget),
                             )),
-                        shape = RoundedCornerShape(GeistRadii.medium), color = AppColors.bgPrimary,
-                        border = BorderStroke(1.dp, AppColors.borderDefault), tonalElevation = 0.dp,
+                        // M3 dialog container: rounded.lg on gray-200, no border or heavy shadow.
+                        shape = RoundedCornerShape(GeistRadii.large), color = LocalGeistColors.current.gray.c200,
+                        tonalElevation = 0.dp,
                     ) { content() }
                 }
             }
@@ -232,6 +237,8 @@ internal fun ProfileScheduleDialogContent(
     tag: String,
     confirmEnabled: Boolean = true,
     destructive: Boolean = false,
+    /** Optional M3 hero icon; the headline centers under it, as in confirmation dialogs. */
+    icon: androidx.compose.ui.graphics.vector.ImageVector? = null,
     body: @Composable ColumnScope.() -> Unit,
 ) {
     val density = LocalDensity.current
@@ -248,7 +255,12 @@ internal fun ProfileScheduleDialogContent(
         val scrollTogether = maxHeight.value / density.fontScale < GeistBreakpoints.small ||
             titleHeight + Spacing.md * 2 > maxHeight / 3
         Column(Modifier.fillMaxWidth().then(if (scrollTogether) Modifier.verticalScroll(wholeScroll) else Modifier)) {
+            if (icon != null) {
+                Icon(icon, contentDescription = null, tint = AppColors.textSecondary,
+                    modifier = Modifier.align(Alignment.CenterHorizontally).padding(top = Spacing.lg))
+            }
             Text(title, style = titleStyle, color = AppColors.textPrimary,
+                textAlign = if (icon != null) androidx.compose.ui.text.style.TextAlign.Center else null,
                 modifier = Modifier.fillMaxWidth().padding(Spacing.md).testTag(ProfileScheduleTags.TITLE)
                     .semantics { heading() })
             HorizontalDivider(color = AppColors.borderDefault)

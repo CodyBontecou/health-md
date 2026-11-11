@@ -6,13 +6,13 @@ use sha2::{Digest, Sha256};
 const FIXTURE: &[u8] = include_bytes!("fixtures/render-differential-v1.json");
 const FIXTURE_SHA256: &str = "0938986585652b3df4734ed52b3e8b8be3e6122837fb947f83a764e8c56447a2";
 const RANGE_JSON: &[u8] =
-    include_bytes!("../../../../contracts/rollup-summary/v9/fixtures/range-v9.json");
+    include_bytes!("fixtures/contracts/rollup-summary/v9/fixtures/range-v9.json");
 const RANGE_CSV: &[u8] =
-    include_bytes!("../../../../contracts/rollup-summary/v9/fixtures/range-v9.csv");
+    include_bytes!("fixtures/contracts/rollup-summary/v9/fixtures/range-v9.csv");
 const RANGE_MARKDOWN: &[u8] =
-    include_bytes!("../../../../contracts/rollup-summary/v9/fixtures/range-v9.md");
+    include_bytes!("fixtures/contracts/rollup-summary/v9/fixtures/range-v9.md");
 const RANGE_BASES: &[u8] =
-    include_bytes!("../../../../contracts/rollup-summary/v9/fixtures/range-v9-bases.md");
+    include_bytes!("fixtures/contracts/rollup-summary/v9/fixtures/range-v9-bases.md");
 
 #[test]
 fn all_profile_artifact_plans_match_exact_fixture_bytes() {

@@ -135,6 +135,11 @@ jobs:
           CARGO_REGISTRY_TOKEN: ${{ inputs.authentication == 'trusted-publishing' && steps.crates-auth.outputs.token || secrets.CARGO_REGISTRY_TOKEN }}
         run: bash scripts/publish-crate.sh ../../packages/healthmd-core-rust/Cargo.toml healthmd-protocol "$VERSION"
 
+      - name: Publish shared core
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ inputs.authentication == 'trusted-publishing' && steps.crates-auth.outputs.token || secrets.CARGO_REGISTRY_TOKEN }}
+        run: bash scripts/publish-crate.sh ../../packages/healthmd-core-rust/Cargo.toml healthmd-core "$VERSION"
+
       - name: Publish operations
         env:
           CARGO_REGISTRY_TOKEN: ${{ inputs.authentication == 'trusted-publishing' && steps.crates-auth.outputs.token || secrets.CARGO_REGISTRY_TOKEN }}

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Advanced settings list-group headings (Material 3 pass). -->
+    <string name="m3_advanced_group_notes">Notas y entradas</string>
+    <string name="m3_advanced_group_detail">Datos de series temporales</string>
+</resources>

@@ -1,0 +1,87 @@
+{
+  "calendar_timezone" : "America\/New_York",
+  "categories" : {
+    "Sleep" : [
+      {
+        "canonical_key" : "sleep_total_hours",
+        "category" : "Sleep",
+        "days_counted" : 1,
+        "display_name" : "Total Sleep",
+        "key" : "sleep_total_hours",
+        "primary_value" : "8.25",
+        "rule" : "sum",
+        "statistics" : [
+          {
+            "name" : "daily_average",
+            "value" : "8.25"
+          },
+          {
+            "name" : "minimum",
+            "value" : "8.25"
+          },
+          {
+            "name" : "maximum",
+            "value" : "8.25"
+          }
+        ],
+        "unit" : "hours"
+      }
+    ]
+  },
+  "coverage_percent" : 50,
+  "days_counted" : 2,
+  "days_expected" : 4,
+  "end_date" : "2026-11-03",
+  "generated_at" : "2026-11-04T12:00:00Z",
+  "metrics" : [
+    {
+      "canonical_key" : "sleep_total_hours",
+      "category" : "Sleep",
+      "days_counted" : 1,
+      "display_name" : "Total Sleep",
+      "key" : "sleep_total_hours",
+      "primary_value" : "8.25",
+      "rule" : "sum",
+      "statistics" : [
+        {
+          "name" : "daily_average",
+          "value" : "8.25"
+        },
+        {
+          "name" : "minimum",
+          "value" : "8.25"
+        },
+        {
+          "name" : "maximum",
+          "value" : "8.25"
+        }
+      ],
+      "unit" : "hours"
+    }
+  ],
+  "period_id" : "2026-10-31_to_2026-11-03",
+  "rollup_period" : "range",
+  "rollup_rules_version" : 11,
+  "schema" : "healthmd.rollup_summary",
+  "schema_profile" : "apple-rollup-v11",
+  "schema_version" : 11,
+  "source_dates" : [
+    "2026-11-01",
+    "2026-11-02"
+  ],
+  "source_schema" : "healthmd.health_data",
+  "source_schema_profile" : "apple-v11",
+  "source_schema_version" : 11,
+  "start_date" : "2026-10-31",
+  "time_context" : {
+    "calendar_timezone" : "America\/New_York",
+    "sleep_day_attribution" : "morning_ends",
+    "sleep_interval_clipping" : "none",
+    "sleep_owner_day_rule" : "session_end_date",
+    "timestamp_timezone" : "UTC"
+  },
+  "type" : "health_rollup",
+  "units" : {
+    "sleep_total_hours" : "hours"
+  }
+}

@@ -16,6 +16,20 @@ public struct HealthMdCoreService: Sendable {
         }
     }
 
+    public func metricRegistryAtAuthority(
+        profile: CoreMetricRegistryProfile,
+        expectedRegistryVersion: UInt32 = 1,
+        registrySHA256: String
+    ) throws -> CoreMetricRegistrySnapshot {
+        try translateError {
+            try getMetricRegistryAtAuthority(
+                profile: profile,
+                expectedRegistryVersion: expectedRegistryVersion,
+                registrySha256: registrySHA256
+            )
+        }
+    }
+
     public func metricRegistry(
         profile: CoreMetricRegistryProfile,
         expectedRegistryVersion: UInt32 = 1
@@ -78,6 +92,33 @@ public struct HealthMdCoreService: Sendable {
                 generated: generated,
                 preservePreamble: preservePreamble
             )
+        }
+    }
+
+    public func mergeScopedNote(
+        profile: CoreMetricRegistryProfile,
+        existing: String,
+        patch: String,
+        injectSections: Bool
+    ) throws -> String {
+        try translateRenderError {
+            try mergeScopedDailyNote(profile: profile, existing: existing,
+                patch: patch, injectSections: injectSections)
+        }
+    }
+
+    public func prepareScopedNote(
+        profile: CoreMetricRegistryProfile,
+        recordJSON: String,
+        bases: String,
+        markdown: String,
+        selectedProperties: [String],
+        injectSections: Bool
+    ) throws -> String {
+        try translateRenderError {
+            try prepareScopedDailyNote(profile: profile, recordJson: recordJSON,
+                bases: bases, markdown: markdown, selectedProperties: selectedProperties,
+                injectSections: injectSections)
         }
     }
 

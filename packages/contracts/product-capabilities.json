@@ -45,22 +45,111 @@
       "public_schema_version": 10,
       "compatibility": "additive",
       "comparison": "byte_for_byte"
+    },
+    {
+      "id": "apple-v12",
+      "name": "Apple v12 compatibility detail",
+      "platform": "apple",
+      "contract_id": "healthmd.health_data.apple_detail",
+      "public_schema": "healthmd.health_data",
+      "public_schema_version": 12,
+      "compatibility": "additive",
+      "comparison": "byte_for_byte"
+    },
+    {
+      "id": "android-analytical-v7",
+      "name": "Android analytical v7 compatibility detail",
+      "platform": "android",
+      "contract_id": "healthmd.health_data.android_analytical_detail",
+      "public_schema": "healthmd.health_data",
+      "public_schema_version": 7,
+      "compatibility": "additive",
+      "comparison": "byte_for_byte"
     }
   ],
   "capabilities": [
     {
-      "id": "apple.ads-purchase-attribution",
-      "name": "Apple Ads purchase attribution",
-      "classification": "apple_only",
-      "summary": "Measure campaign-to-purchase conversion using AdServices campaign dimensions and pseudonymous install-local purchase outcomes.",
+      "id": "account.clinic-sponsored-access",
+      "name": "Clinic-sponsored destination access",
+      "classification": "shared",
+      "summary": "Build-configured manually activated flat clinic sponsorship, proof-bound recoverable enrollment, signed installation-bound access, separate patient sharing consent and endpoint-scoped credentials. Sponsorship permits only approved API delivery and never sets personal purchase flags. Includes a production deployment package; disabled in unconfigured builds, with the isolated licensing service deployed and native store qualification pending.",
       "profiles": [],
       "platforms": {
         "apple": {
           "state": "available"
         },
         "android": {
+          "state": "available"
+        }
+      },
+      "evidence": [
+        "packages/contracts/clinic-sponsorship/v1/contract.md",
+        "apps/licensing/src/service.mjs",
+        "apps/apple/HealthMd/Shared/Managers/ClinicSponsorshipManager.swift",
+        "apps/android/app/src/main/java/com/healthmd/data/billing/ClinicSponsorshipManager.kt"
+      ]
+    },
+    {
+      "id": "account.clinic-sync-requests",
+      "name": "Clinic sync requests",
+      "classification": "planned",
+      "summary": "A patient with clinic-sponsored sharing may separately allow the clinic to request a sync. The phone registers a delegated doorbell with the notification-only wake service and delivers its key only to the approved clinic endpoint; a ring shows fixed, device-localized copy and only the patient's tap runs a clinic export of yesterday and today. The wake service receives no clinic metadata. Implemented on both platforms; disabled until push credentials are configured, with physical-device notification QA pending.",
+      "profiles": [],
+      "platforms": {
+        "apple": {
+          "state": "planned",
+          "target": "Complete APNs delivery, tap-to-export, revocation, and VoiceOver testing on a TestFlight build against the deployed wake service."
+        },
+        "android": {
+          "state": "planned",
+          "target": "Configure Firebase for the Play build, then complete FCM delivery, Android 13+ notification permission, tap-to-export, revocation, and TalkBack testing on supported devices."
+        }
+      },
+      "evidence": [
+        "packages/contracts/clinic-sponsorship/v1/contract.md",
+        "packages/contracts/clinic-sponsorship/v1/sync-doorbell-fixtures.json",
+        "apps/wake/src/wake.ts",
+        "apps/apple/HealthMd/iOS/ClinicSyncDoorbellManager.swift",
+        "apps/android/app/src/main/java/com/healthmd/data/clinicsync/ClinicSyncDoorbellManager.kt"
+      ]
+    },
+    {
+      "id": "support.native-review-introduction",
+      "name": "Optional introduction to native store reviews",
+      "classification": "planned",
+      "summary": "An optional purple review introduction for established users after successful export milestones or major/minor release notes. Feedback and dismissal remain available to everyone. Cooldowns record introductions and request attempts, never submitted ratings. No health data or new analytics are collected. iPhone and iPad use StoreKit for rating entry; explicit written-review actions open the App Store. The macOS companion does not present mobile review introductions.",
+      "profiles": [],
+      "platforms": {
+        "apple": {
+          "state": "available"
+        },
+        "android": {
+          "state": "planned",
+          "target": "Android review-introduction follow-up: adapt the optional purple introduction to Google Play review guidance, retain the 120-day attempt cooldown and F-Droid unavailable behavior, and wire release-note completion before enabling it."
+        }
+      },
+      "evidence": [
+        "apps/apple/HealthMd/iOS/Views/ReviewIntroductionView.swift",
+        "apps/apple/HealthMd/iOS/ReleaseNotes.swift",
+        "apps/apple/HealthMd/Shared/Utilities/ReviewManager.swift",
+        "apps/apple/HealthMdTests/Utilities/ReviewIntroductionPolicyTests.swift",
+        "apps/android/app/src/main/java/com/healthmd/domain/export/ReviewPromptPolicy.kt"
+      ]
+    },
+    {
+      "id": "apple.ads-purchase-attribution",
+      "name": "Apple Ads purchase attribution",
+      "classification": "unavailable",
+      "summary": "Custom app analytics and advertising attribution are intentionally removed from the unpublished Apple and Android candidates.",
+      "profiles": [],
+      "platforms": {
+        "apple": {
           "state": "unavailable",
-          "reason": "Apple AdServices attributes App Store acquisitions on iOS/iPadOS. Google Play Install Referrer is a separate provider and does not expose Apple Ads campaign claims."
+          "reason": "Custom in-app analytics and advertising attribution are intentionally removed. Essential app services remain."
+        },
+        "android": {
+          "state": "unavailable",
+          "reason": "Custom in-app analytics and advertising attribution are intentionally removed. Essential app services remain."
         }
       },
       "evidence": [
@@ -264,7 +353,7 @@
       "id": "export.sleep-summary",
       "name": "Sleep summaries and stages",
       "classification": "shared",
-      "summary": "Export sleep duration and the stages that both platform APIs expose.",
+      "summary": "Export sleep duration and the stages that both platform APIs expose using the shipped night_begins noon-to-noon summary window. Wake-date ownership requires the independently approved successor meanings and remains unavailable in these immutable profiles; production qualification is tracked by settings.sleep-attribution. Historical Apple v8 granular stages are window-clipped; Android v4/v5 detailed stages and parent records retain source intervals. This profile-specific detail difference does not imply equivalent raw projections or change summary ownership.",
       "profiles": [
         "apple-v8",
         "android-frozen-v4",
@@ -279,7 +368,37 @@
         }
       },
       "evidence": [
-        "apps/android/docs/export-contract/platform-native-export-boundaries.md"
+        "apps/android/docs/export-contract/platform-native-export-boundaries.md",
+        "packages/contracts/sleep-attribution/v1/contract.md",
+        "apps/apple/HealthMdTests/Managers/HealthKitManagerTests.swift",
+        "apps/android/app/src/test/java/com/healthmd/data/health/SleepJournalSummaryTest.kt"
+      ]
+    },
+    {
+      "id": "settings.sleep-attribution",
+      "name": "Sleep day attribution",
+      "classification": "shared",
+      "summary": "Current Apple and Android source admits explicit Morning ends successor profiles: whole sessions belong to the wake-up date without noon clipping, using the frozen export timezone and explicit attribution metadata. Historical Apple v8 and Android v4/v5 Night begins meanings and bytes remain unchanged. This source capability inventory does not claim that an unmerged branch is released.",
+      "profiles": [],
+      "platforms": {
+        "apple": {
+          "state": "available"
+        },
+        "android": {
+          "state": "available"
+        }
+      },
+      "evidence": [
+        "apps/apple/HealthMd/Shared/Models/SleepDayAttribution.swift",
+        "apps/apple/HealthMd/Shared/Managers/HealthKitManager.swift",
+        "apps/apple/HealthMd/Shared/Query/HealthMdSleepSessionQuery.swift",
+        "apps/apple/docs/features/export-schema.md",
+        "apps/apple/docs/features/sleep-attribution-profile-gate.md",
+        "apps/apple/HealthMd/Shared/Models/AppleSleepCaptureContext.swift",
+        "apps/android/app/src/main/java/com/healthmd/domain/model/SleepDayAttribution.kt",
+        "apps/android/app/src/main/java/com/healthmd/data/health/SleepJournalSummary.kt",
+        "apps/android/docs/export-contract/android-sleep-journal-summary.md",
+        "docs/architecture/cross-platform-unification-policy.md"
       ]
     },
     {
@@ -413,6 +532,82 @@
       "evidence": [
         "apps/apple/docs/features/time-series-data.md",
         "apps/android/docs/features/csv-export.md"
+      ]
+    },
+    {
+      "id": "export.per-group-detail-selection",
+      "name": "Per-category export detail",
+      "classification": "shared",
+      "summary": "Choose a default compatibility detail level and override it per category (sleep, activity, heart, vitals, nutrition, mobility, reproductive health, mindfulness, workouts, and body) without changing metric selection, daily summaries, file organization, or raw/canonical archives. Missing overrides reproduce the historical global switch exactly. An explicit Detailed override for a category whose records the shipped profile cannot represent selects the export.compatibility-detail-expansion successor profile; other overrides keep the shipped profiles.",
+      "profiles": [
+        "apple-v8",
+        "android-frozen-v4",
+        "android-analytical-v5"
+      ],
+      "platforms": {
+        "apple": {
+          "state": "available"
+        },
+        "android": {
+          "state": "available"
+        }
+      },
+      "evidence": [
+        "docs/features/per-group-export-detail.md",
+        "apps/android/app/src/main/java/com/healthmd/domain/model/ExportDetailPolicy.kt",
+        "apps/android/app/src/test/java/com/healthmd/export/ExportDetailSelectionTest.kt",
+        "apps/apple/HealthMd/Shared/Models/ExportSettingsSnapshot.swift",
+        "apps/apple/HealthMdTests/Models/ExportDetailOverridesTests.swift"
+      ]
+    },
+    {
+      "id": "export.sleep-session-detail",
+      "name": "Individual sleep sessions",
+      "classification": "android_only",
+      "summary": "Export each source sleep session (for example a nap and an overnight sleep) separately from stage intervals, including a Markdown session table with full date, time, and source offset.",
+      "profiles": [
+        "android-frozen-v4",
+        "android-analytical-v5"
+      ],
+      "platforms": {
+        "apple": {
+          "state": "unavailable",
+          "reason": "HealthKit exposes sleep as category-value intervals without a source session object; Health.md does not derive or label sessions it cannot read. Sleep stage intervals remain available as Detailed sleep."
+        },
+        "android": {
+          "state": "available"
+        }
+      },
+      "evidence": [
+        "docs/features/per-group-export-detail.md",
+        "apps/android/app/src/main/java/com/healthmd/data/health/SleepJournalSummary.kt",
+        "apps/android/app/src/test/java/com/healthmd/export/ExportDetailSelectionTest.kt"
+      ]
+    },
+    {
+      "id": "export.compatibility-detail-expansion",
+      "name": "Expanded native compatibility detail",
+      "classification": "shared",
+      "summary": "Per-record compatibility detail for natively exposed records that shipped profiles only summarize, written in additive successor profiles selected only by an explicit Detailed category override: apple-v12 adds start-owned detailSamples for HealthKit activity, nutrition, mobility, mindfulness, reproductive, body, temperature and spirometry samples, and per-stage source attribution on Detailed sleep stages (Android sleep sessions already carry their Health Connect data origin); android-analytical-v7 adds Health Connect calorie, distance, floors, elevation, hydration and body record arrays. Each entry keeps its source timestamps, interval, unit and identity; no points are interpolated or deduplicated. The record types are platform_distinct (HealthKit samples vs Health Connect records) and are never presented as parity. Morning ends (apple-v11, android-sleep-v6), frozen v4, daily notes and Bases frontmatter keep their shipped profiles.",
+      "profiles": [
+        "apple-v12",
+        "android-analytical-v7"
+      ],
+      "platforms": {
+        "apple": {
+          "state": "available"
+        },
+        "android": {
+          "state": "available"
+        }
+      },
+      "evidence": [
+        "docs/features/per-group-export-detail.md",
+        "apps/apple/HealthMd/Shared/Models/DetailSample.swift",
+        "apps/apple/HealthMdTests/Export/AppleV12DetailExpansionTests.swift",
+        "apps/android/app/src/main/java/com/healthmd/domain/model/DailyRecordSchemaProfile.kt",
+        "apps/android/app/src/test/java/com/healthmd/export/AnalyticalV7ExportTest.kt",
+        "apps/android/app/src/test/java/com/healthmd/data/health/HealthConnectAnalyticalV7CaptureTest.kt"
       ]
     },
     {
@@ -572,6 +767,29 @@
       ]
     },
     {
+      "id": "export.coverage-calendar",
+      "name": "Archive coverage calendar",
+      "classification": "shared",
+      "summary": "Show which health dates each export profile covered, with per-date status and gaps, rather than when exports ran.",
+      "profiles": [],
+      "platforms": {
+        "apple": {
+          "state": "available"
+        },
+        "android": {
+          "state": "available"
+        }
+      },
+      "evidence": [
+        "apps/apple/HealthMd/Shared/Coverage/CoverageProjection.swift",
+        "apps/apple/HealthMd/Shared/Coverage/ArchiveAggregation.swift",
+        "apps/apple/HealthMdTests/Coverage/CoverageLedgerTests.swift",
+        "apps/android/app/src/main/java/com/healthmd/presentation/archive/ArchiveCoverage.kt",
+        "apps/android/app/src/main/java/com/healthmd/presentation/archive/ArchiveScreen.kt",
+        "apps/android/app/src/test/java/com/healthmd/presentation/archive/ArchiveCoverageTest.kt"
+      ]
+    },
+    {
       "id": "export.agent-data-gateway",
       "name": "Agent Data gateway export destination",
       "classification": "shared",
@@ -596,6 +814,28 @@
         "apps/android/docs/features/agent-data-gateway.md",
         "apps/apple/HealthMd/Shared/Managers/AgentDataGatewayExportRunner.swift",
         "apps/android/app/src/main/java/com/healthmd/data/export/AgentDataGatewayExportRunner.kt"
+      ]
+    },
+    {
+      "id": "automation.include-today",
+      "name": "Automation exports can include today",
+      "classification": "planned",
+      "summary": "Allow an automation to export N calendar days ending today when explicitly requested; default to ending yesterday. API-targeted profiles upload through the existing platform API runner. Current-day data remains incomplete and public daily schemas are unchanged.",
+      "profiles": [],
+      "platforms": {
+        "apple": {
+          "state": "available"
+        },
+        "android": {
+          "state": "planned",
+          "target": "Follow up #252 in AutomationReceiver.ACTION_EXPORT_LAST_DAYS with an INCLUDE_TODAY boolean extra defaulting false, preserving N-day count and profile API routing, with date-window regression tests."
+        }
+      },
+      "evidence": [
+        "apps/apple/HealthMd/iOS/AppIntents/ExportLastNDaysIntent.swift",
+        "apps/apple/HealthMdTests/iOS/ExportLastNDaysIntentTests.swift",
+        "apps/apple/HealthMdTests/iOS/ExportIntentProfileResolutionTests.swift",
+        "apps/android/app/src/main/java/com/healthmd/automation/AutomationReceiver.kt"
       ]
     },
     {
@@ -690,6 +930,28 @@
         "apps/android/app/src/main/java/com/healthmd/data/scheduler/ScheduledExportCancellation.kt",
         "apps/android/app/src/main/java/com/healthmd/data/scheduler/ExportWorker.kt",
         "apps/android/app/src/main/java/com/healthmd/data/scheduler/ScheduledProfileExportWorker.kt"
+      ]
+    },
+    {
+      "id": "automation.run-overlap-policy",
+      "name": "Choose what happens when an automation's runs overlap",
+      "classification": "planned",
+      "summary": "Per-automation choice between queueing a new scheduled occurrence behind the running one or skipping it while one is in progress. Skipped days remain eligible for the next due evaluation.",
+      "profiles": [],
+      "platforms": {
+        "apple": {
+          "state": "available"
+        },
+        "android": {
+          "state": "planned",
+          "target": "Add a per-profile Queue/Skip choice to the Android automation detail and map it onto ScheduledProfileExportWorker's unique-work policy (APPEND_OR_REPLACE for Queue, KEEP for Skip) instead of the fixed REPLACE in ExportScheduler, with scheduler tests for both policies."
+        }
+      },
+      "evidence": [
+        "apps/apple/HealthMd/Shared/Models/ProfileRunOverlapPolicy.swift",
+        "apps/apple/HealthMd/iOS/SchedulingManager.swift",
+        "apps/apple/HealthMd/iOS/NewExperience/Automations/AutomationsScreens.swift",
+        "apps/android/app/src/main/java/com/healthmd/data/scheduler/ExportScheduler.kt"
       ]
     },
     {
@@ -1142,7 +1404,7 @@
       "id": "account.myself_lifetime_claim",
       "name": "Complimentary myself.md access claim",
       "classification": "shared",
-      "summary": "On iOS/iPadOS and Google Play Android, present a user-reviewed claim screen, verify eligible purchase evidence with myself.md, then hand off to explicit browser account confirmation. Opening the screen grants no access. Free macOS companion and F-Droid access do not establish a qualifying purchase.",
+      "summary": "Disabled by default behind explicit build feature flags on both platforms. When enabled on iOS/iPadOS and Google Play Android, present a user-reviewed claim screen, verify eligible purchase evidence with myself.md, then hand off to explicit browser account confirmation. Opening the screen grants no access. Free macOS companion and F-Droid access do not establish a qualifying purchase.",
       "profiles": [],
       "platforms": {
         "apple": {
@@ -1163,9 +1425,9 @@
     },
     {
       "id": "purchase.free-export-journey",
-      "name": "Free export allowance and next steps",
+      "name": "First free export and paid access",
       "classification": "shared",
-      "summary": "Five completed free export actions on iOS/iPadOS and Google Play Android, with dismissible scheduling guidance after the first and a lifetime offer after the third. Existing usage and purchased access are retained. Apple scheduling shares the allowance; Google Play scheduling requires lifetime access. Free macOS companion and F-Droid Full Access are unchanged.",
+      "summary": "On iOS/iPadOS and Google Play Android, onboarding guides users into creating an automation and running their first export for free. Further exports require active paid access. Setup, automation editing, previews, and existing files remain reachable. Historical usage is preserved through purchase, restore, and expiry. Eligible subscriptions retain store-backed trials. Free macOS companion and F-Droid Full Access are unchanged.",
       "platforms": {
         "apple": {
           "state": "available"
@@ -1176,11 +1438,32 @@
       },
       "evidence": [
         "apps/apple/HealthMd/Shared/Managers/PurchaseManager.swift",
-        "apps/apple/HealthMd/iOS/Views/ExportUpgradePrompt.swift",
+        "apps/apple/HealthMd/iOS/Views/PaywallView.swift",
         "apps/android/app/src/main/java/com/healthmd/domain/billing/FreemiumPolicy.kt",
         "apps/android/app/src/main/java/com/healthmd/presentation/export/ExportScreen.kt",
         "apps/apple/docs/features/onboarding.md",
         "apps/android/docs/features/lifetime-unlock.md"
+      ],
+      "profiles": []
+    },
+    {
+      "id": "purchase.family-sharing",
+      "name": "Native Apple Family Sharing plans",
+      "classification": "apple_only",
+      "summary": "Higher-priced Family weekly, yearly, and Lifetime plans use Apple Family Sharing. No custom family accounts or cross-platform entitlement transfer.",
+      "platforms": {
+        "apple": {
+          "state": "available"
+        },
+        "android": {
+          "state": "unavailable",
+          "reason": "Owner-approved individual-only Google Play offering. Google Play Family Library does not share in-app purchases or subscriptions; custom family account/invite infrastructure is explicitly out of scope."
+        }
+      },
+      "evidence": [
+        "apps/apple/docs/experiments/subscription-pricing-rollout.md",
+        "apps/apple/HealthMd/Shared/Managers/PurchaseManager.swift",
+        "apps/android/app/src/main/java/com/healthmd/domain/repository/PurchaseRepository.kt"
       ],
       "profiles": []
     }

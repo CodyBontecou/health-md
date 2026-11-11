@@ -1,22 +1,25 @@
 package com.healthmd.presentation.settings
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.*
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.RadioButtonDefaults
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
+import com.healthmd.presentation.common.AppSwitch
 import com.healthmd.presentation.theme.*
 
 internal object FormatCustomizationTags {
@@ -43,66 +46,114 @@ internal object FormatCustomizationTags {
     fun description(tag: String) = "$tag.description"
 }
 
-/** The row owns selection; the radio artwork never becomes a second TalkBack action. */
+/** List-group rows are 56dp tall at minimum (DESIGN.md `list-group`). */
+internal val GroupRowMinHeight = 56.dp
+
+/**
+ * Cells that share one line of a list group: the line's outer ends take the 20dp list-group
+ * corners and the joins between cells the 4dp inner corners.
+ */
+internal fun groupCellShape(index: Int, count: Int): Shape {
+    val outer = GeistRadii.listGroup
+    val inner = GeistRadii.extraSmall
+    val start = if (index == 0) outer else inner
+    val end = if (index == count - 1) outer else inner
+    return RoundedCornerShape(topStart = start, bottomStart = start, topEnd = end, bottomEnd = end)
+}
+
+/**
+ * One list-group radio row. The row owns selection; the radio artwork never becomes a second
+ * TalkBack action. Text end insets sit inside the text nodes, so the label and the description
+ * below it keep the row's whole reading width.
+ */
 @Composable
 internal fun FormatCustomizationChoice(
     label: String,
     selected: Boolean,
     onClick: () -> Unit,
     tag: String,
+    shape: Shape,
     modifier: Modifier = Modifier,
     description: String? = null,
-    labelStyle: TextStyle = MaterialTheme.typography.bodyLarge,
-    bordered: Boolean = false,
+    labelStyle: TextStyle = GeistType.copy16,
 ) {
-    val shape = RoundedCornerShape(Radii.card)
+    val colors = LocalGeistColors.current
     Column(
         modifier = modifier.fillMaxWidth().testTag(tag)
-            .heightIn(min = GeistSizes.minimumTouchTarget).clip(shape)
-            .background(if (selected) AppColors.accentSubtle else AppColors.bgPrimary)
-            .then(if (bordered) Modifier.border(
-                1.dp, if (selected) AppColors.accentBorder else AppColors.borderDefault, shape,
-            ) else Modifier)
+            .clip(shape)
+            .background(if (selected) colors.secondaryContainer else colors.background200)
             .selectable(selected = selected, role = Role.RadioButton, onClick = onClick)
-            .padding(Spacing.xs),
-        verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+            .heightIn(min = GroupRowMinHeight)
+            .padding(start = GeistSpacing.space4, top = GeistSpacing.space2, bottom = GeistSpacing.space2),
+        verticalArrangement = Arrangement.spacedBy(GeistSpacing.space1, Alignment.CenterVertically),
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+            horizontalArrangement = Arrangement.spacedBy(GeistSpacing.space2),
         ) {
             RadioButton(
                 selected = selected,
                 onClick = null,
                 modifier = Modifier.testTag(FormatCustomizationTags.indicator(tag)),
                 colors = RadioButtonDefaults.colors(
-                    selectedColor = AppColors.accent,
-                    unselectedColor = AppColors.textSecondary,
+                    selectedColor = colors.brandPrimary,
+                    unselectedColor = colors.secondary,
                 ),
             )
             Text(
                 label,
-                color = if (selected) AppColors.textPrimary else AppColors.textSecondary,
+                color = if (selected) colors.onSecondaryContainer else colors.primary,
                 style = labelStyle,
-                modifier = Modifier.weight(1f).testTag(FormatCustomizationTags.label(tag)),
+                modifier = Modifier.weight(1f).testTag(FormatCustomizationTags.label(tag))
+                    .padding(end = GeistSpacing.space4),
             )
         }
         if (description != null) {
-            // Descriptions use the whole inner width, not the column beside the indicator.
+            // Descriptions use the whole row width, not the column beside the indicator.
             Text(
                 description,
-                color = AppColors.textSecondary,
-                style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.fillMaxWidth().testTag(FormatCustomizationTags.description(tag)),
+                color = if (selected) colors.onSecondaryContainer else colors.secondary,
+                style = GeistType.copy13,
+                modifier = Modifier.fillMaxWidth().testTag(FormatCustomizationTags.description(tag))
+                    .padding(end = GeistSpacing.space4),
             )
         }
     }
 }
 
-/** Weighted choices only share a row when there is enough reading width at the user's scale. */
+/** A vertical list group of radio rows; [extra] rows (such as an editor) follow the choices. */
+@Composable
+internal fun <T : Any> FormatCustomizationChoiceGroup(
+    title: String,
+    options: List<T>,
+    selected: T,
+    onSelected: (T) -> Unit,
+    group: String,
+    label: @Composable (T) -> String,
+    extra: List<@Composable (Shape) -> Unit> = emptyList(),
+) {
+    val choices: List<@Composable (Shape) -> Unit> = options.map { option ->
+        { shape ->
+            FormatCustomizationChoice(
+                label = label(option), selected = selected == option,
+                onClick = { onSelected(option) },
+                tag = FormatCustomizationTags.choice(group, option),
+                shape = shape,
+            )
+        }
+    }
+    SettingsGroup(
+        title = title,
+        rows = choices + extra,
+        modifier = Modifier.selectableGroup().testTag(group),
+    )
+}
+
+/** Weighted choices only share a line when there is enough reading width at the user's scale. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun <T : Any> FormatCustomizationChoices(
+    title: String,
     options: List<T>,
     selected: T,
     onSelected: (T) -> Unit,
@@ -110,75 +161,77 @@ internal fun <T : Any> FormatCustomizationChoices(
     label: @Composable (T) -> String,
     description: (@Composable (T) -> String)? = null,
 ) {
-    BoxWithConstraints(Modifier.fillMaxWidth()) {
-        val stacked = GeistAdaptiveLayout.stackDetailedControls(maxWidth.value, LocalDensity.current.fontScale)
-        FlowRow(
-            modifier = Modifier.fillMaxWidth().selectableGroup().testTag(group),
-            horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
-            verticalArrangement = Arrangement.spacedBy(Spacing.xs),
-            maxItemsInEachRow = if (stacked) 1 else options.size,
-        ) {
-            options.forEach { option ->
-                // Choice contains no subcomposing layout: FlowRow can measure its intrinsic size.
-                FormatCustomizationChoice(
-                    label = label(option), selected = selected == option,
-                    onClick = { onSelected(option) },
-                    tag = FormatCustomizationTags.choice(group, option),
-                    modifier = if (stacked) Modifier.fillMaxWidth() else Modifier.weight(1f),
-                    description = description?.invoke(option),
-                    labelStyle = MaterialTheme.typography.labelLarge,
-                    bordered = true,
-                )
+    SettingsGroup(
+        title = title,
+        rows = listOf { _ ->
+            BoxWithConstraints(Modifier.fillMaxWidth()) {
+                val stacked = GeistAdaptiveLayout.stackDetailedControls(maxWidth.value, LocalDensity.current.fontScale)
+                FlowRow(
+                    modifier = Modifier.fillMaxWidth().selectableGroup().testTag(group),
+                    horizontalArrangement = Arrangement.spacedBy(2.dp),
+                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                    maxItemsInEachRow = if (stacked) 1 else options.size,
+                ) {
+                    options.forEachIndexed { index, option ->
+                        // Choice contains no subcomposing layout: FlowRow can measure its intrinsic size.
+                        FormatCustomizationChoice(
+                            label = label(option), selected = selected == option,
+                            onClick = { onSelected(option) },
+                            tag = FormatCustomizationTags.choice(group, option),
+                            shape = if (stacked) groupRowShape(index, options.size) else groupCellShape(index, options.size),
+                            modifier = if (stacked) Modifier.fillMaxWidth() else Modifier.weight(1f).fillMaxRowHeight(),
+                            description = description?.invoke(option),
+                            labelStyle = GeistType.button14,
+                        )
+                    }
+                }
             }
-        }
-    }
+        },
+    )
 }
 
-/** One labeled switch target; long labels get full width instead of wrapping beside a thumb. */
+/**
+ * One whole-row switch target on a list-group row; long labels get the full width instead of
+ * wrapping beside the thumb. The switch is indicator artwork only.
+ */
 @Composable
 internal fun FormatCustomizationToggle(
     label: String,
     checked: Boolean,
     tag: String,
+    shape: Shape,
     onCheckedChange: (Boolean) -> Unit,
 ) {
+    val colors = LocalGeistColors.current
     BoxWithConstraints(Modifier.fillMaxWidth()) {
         val stacked = GeistAdaptiveLayout.stackDetailedControls(maxWidth.value, LocalDensity.current.fontScale)
-        val text: @Composable (Modifier) -> Unit = { modifier ->
+        // The label node spans its insets, so a stacked label reports the row's full width.
+        val text: @Composable (Modifier, Modifier) -> Unit = { outer, inset ->
             Text(
-                label, color = AppColors.textPrimary, style = MaterialTheme.typography.bodyLarge,
-                modifier = modifier.testTag(FormatCustomizationTags.label(tag)),
+                label, color = colors.primary, style = GeistType.copy16,
+                modifier = outer.testTag(FormatCustomizationTags.label(tag)).then(inset),
             )
         }
-        val indicator: @Composable () -> Unit = {
-            Switch(
+        val indicator: @Composable (Modifier) -> Unit = { modifier ->
+            AppSwitch(
                 checked = checked, onCheckedChange = null,
-                modifier = Modifier.testTag(FormatCustomizationTags.indicator(tag)),
-                colors = SwitchDefaults.colors(
-                    checkedThumbColor = AppColors.onAccent,
-                    checkedTrackColor = AppColors.accent,
-                    uncheckedThumbColor = AppColors.textMuted,
-                    uncheckedTrackColor = AppColors.bgSecondary,
-                    uncheckedBorderColor = AppColors.borderDefault,
-                ),
+                modifier = modifier.testTag(FormatCustomizationTags.indicator(tag)),
             )
         }
         val target = Modifier.fillMaxWidth().testTag(tag)
-            .heightIn(min = GeistSizes.minimumTouchTarget).clip(RoundedCornerShape(Radii.card))
+            .clip(shape).background(colors.background200)
             .toggleable(value = checked, role = Role.Switch, onValueChange = onCheckedChange)
-            .padding(vertical = Spacing.xs)
+            .heightIn(min = GroupRowMinHeight)
+            .padding(vertical = GeistSpacing.space2)
         if (stacked) {
-            Column(target, verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-                text(Modifier.fillMaxWidth())
-                Box(Modifier.align(Alignment.End)) { indicator() }
+            Column(target, verticalArrangement = Arrangement.spacedBy(GeistSpacing.space1, Alignment.CenterVertically)) {
+                text(Modifier.fillMaxWidth(), Modifier.padding(horizontal = GeistSpacing.space4))
+                indicator(Modifier.align(Alignment.End).padding(end = GeistSpacing.space4))
             }
         } else {
-            Row(
-                target, verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-            ) {
-                text(Modifier.weight(1f))
-                indicator()
+            Row(target, verticalAlignment = Alignment.CenterVertically) {
+                text(Modifier.weight(1f), Modifier.padding(start = GeistSpacing.space4, end = GeistSpacing.space3))
+                indicator(Modifier.padding(end = GeistSpacing.space4))
             }
         }
     }

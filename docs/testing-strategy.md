@@ -1,19 +1,123 @@
-# Test selection and build reuse
+# Test selection
 
-The root [verification policy](../AGENTS.md#verification-policy) governs local agent work. Product/public-contract and security regressions remain required; speed comes from selecting the right surface and reusing compatible builds, not weakening assertions.
+The root [verification policy](../AGENTS.md#verification-policy) governs local work. Select checks from the owning source, tests, component Makefile, and configuration rather than treating a broad suite as the default feedback loop.
 
-## Choose a verification tier
+## Choose the surface
 
-| Tier | When | Surface |
-|---|---|---|
-| Focused feedback | Red/green iteration; edits affecting the tested behavior | Owning behavior test(s), relevant features, cheap type/lint checks |
-| Affected regressions | Completion of a coherent change/batch | Owning module plus affected interfaces/consumers, once against the finished inputs |
-| PR CI | Integration candidate | Fail-closed affected-job selection; all selected checks remain blocking |
-| Extended qualification | Release, requested qualification, or changes to that surface | Full OS/flavor/device matrix, coverage, MSRV, bindings, packaging, provenance, release smoke |
+- During iteration, run the smallest owning behavior test and relevant cheap syntax/type/lint checks.
+- At completion, run the affected module and interface regressions against the finished inputs.
+- Public schemas, wire formats, crypto/authority, persistence/recovery, FFI, platform-specific behavior, and uncertain impact require every affected producer/consumer check. Follow the root contract workflow.
+- Full OS/flavor matrices, coverage, MSRV, bindings, packaging, and release smoke are qualification surfaces. Run them when requested or when their surface changes; a focused pass is not release qualification.
 
-Public schema/wire, crypto/authority, persistence/recovery, FFI/binding, platform-specific, and uncertain-impact changes escalate to every affected producer/consumer check. Follow the root contract workflow. Skipping an opt-in local workflow is a reported gap, not proof that another platform covers it. Preconfigured CI/release workflows retain their own qualification surface.
+## Focused feedback
 
-Keep a verification receipt in the task/PR: command, relevant source/dependency/fixture inputs, toolchain, features/configuration, result, and unrun surfaces. Reuse a pass only while those inputs match. After a relevant edit, rebuild/retest; after an unrelated baseline failure, isolate its smallest failing command and report the blocker rather than repeating all suites.
+Run commands from the owning component. Substitute the real test name and relevant features; a filter does not permit omitting affected contract consumers.
+
+| Owner | Focused command |
+|---|---|
+| Rust core or CLI | `cargo test -p <crate> <filter> --locked` |
+| Apple connectivity | `swift test --package-path Packages/HealthMdConnectivity --filter <Test>` |
+| Android app | `./gradlew :app:testPlayDebugUnitTest --tests '<qualified.TestClass>' --max-workers=2` |
+| Android protocol | `./gradlew :direct-protocol:test --tests '<qualified.TestClass>'` |
+| Markdown inventory | `python3 -m unittest discover -s scripts/tests -p 'test_audit_markdown.py'` from the repository root |
+
+For an owning macOS XCTest, prepare the shared core with `make prepare-healthmd-core-rust` in `apps/apple`, then select the class or method directly:
+
+```bash
+xcodebuild test -project HealthMd.xcodeproj -scheme HealthMd-Tests-macOS \
+  -destination "platform=macOS,arch=$(uname -m)" \
+  -only-testing:HealthMdTests/<Class>[/<Method>] \
+  CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+  DEVELOPMENT_TEAM="" PROVISIONING_PROFILE_SPECIFIER=""
+```
+
+Use the component's scripts and package configuration for Node.js tests and type checks. Prefer an existing standalone module when it owns the behavior; do not create a duplicate test-only implementation to avoid an app build.
+
+## Reuse and receipts
+
+Record the command, relevant source/dependency/fixture inputs, toolchain, features/configuration, result, and relevant unrun surfaces. Reuse a passing receipt only while those inputs match. Rebuild and retest after a relevant edit. Isolate an unrelated baseline failure with its smallest failing command instead of repeating whole suites.
+
+Caches are not qualification receipts. Keep build directories isolated between worktrees and concurrent jobs; a normal incremental build still needs to validate changed inputs.
+
+## Opt-in workflows
+
+Root `make test` runs the [portable CI regression suite](qa/two-minute-ci.md) without native SDKs or devices. `make test-apple` is a broad diagnostic that includes iOS simulator work and requires explicit opt-in. Use the owning component's explicit host commands, such as `make -C apps/apple test-macos`, when their scope is appropriate.
+
+Simulator/emulator QA, device installation/launch, UI automation, and Argent require explicit authorization for the current task. A request to implement, polish UI, or run tests does not authorize those workflows. Mark relevant unrun native/visual surfaces as gaps rather than claiming another platform's tests verify them.
+
+## Native integration
+
+Use three checkpoints. During edits, run focused owning tests and cheap checks. At
+handoff, run affected-module regressions once. Before merge, the integration owner
+compiles affected native apps against the combined final source. Leaf agents can
+handoff with native compilation explicitly pending for that integration build;
+pending work is not a passing native check.
+GitHub runs the complete portable regression suite on pushes; an agent need not
+repeat that whole suite after each edit. Recheck after integrating other changes
+when they affect the verified inputs. Native compilation detects compiler/linker
+and packaging integration failures; it does not prove startup or UI behavior.
+
+```bash
+make plan-native
+make verify-native
+# Narrow a known platform or select a different integration base:
+make verify-native NATIVE_ARGS="--platform apple"
+make verify-native NATIVE_ARGS="--platform android"
+make verify-native NATIVE_ARGS="--platform all"
+make plan-native NATIVE_ARGS="--base origin/main"
+```
+
+Automatic selection compares the merge-base with `origin/main` to the current
+worktree, including staged, unstaged, deleted and nonignored new files. Apple or
+Android paths select that platform. Shared packages, scripts, root configuration
+and unknown ownership select both conservatively. Documentation-only changes and
+known CLI/web/Practice/Wake-only paths select neither. Inspect the plan; override
+selection for dependencies the path rules cannot identify. A missing base fails
+rather than skipping compilation. CLI executable changes still need their owning
+Cargo build/tests even though they select no mobile build.
+
+The coordinator waits on an OS file lock in the repository's common Git directory,
+so linked worktrees serialize their native builds. Start one invocation for a
+finished batch of changes and allow it to finish before editing those inputs.
+After acquiring the lock it recomputes selection and source identity. Waiting
+and each build step default to 30 minutes; `--wait-seconds` and `--step-timeout`
+set bounds. Cancellation/timeout terminates the owned build process group before
+releasing the lock. This coordinates cooperating invocations; direct Xcode/Gradle
+commands and separate clones do not participate. Use this entry point for heavy
+agent builds rather than launching competing native sweeps.
+
+On an arm64 Mac, Apple verification prepares source-matched Rust bindings/artifacts
+with the existing reduced `ci-arm64` scope, then compiles unsigned Debug iOS
+(simulator SDK, generic destination) and macOS apps. It never boots a simulator.
+Android compiles the Play Debug APK with one arm64 ABI, two Gradle workers and
+a single-use Gradle process (`--no-daemon`) so cancellation owns the build lifetime.
+Both use installed SDK/toolchains; commands may download normal locked build
+dependencies. F-Droid, Wear, release architectures, signing and store packaging
+remain explicit checks when those surfaces change. Shared Rust/FFI changes select
+both platforms and still require affected boundary/consumer tests.
+
+Incremental outputs stay component-scoped and separate per worktree: Apple uses
+`apps/apple/build/native-verification`, shared Cargo uses
+`packages/healthmd-core-rust/target/native-verification`, and Android uses its
+normal component build directories. Retain these while actively iterating to keep
+builds warm; task-owned output cleanup still applies when retiring a worktree.
+The coordinator always invokes the build tools; it never substitutes a stored
+passing result for compilation.
+
+Each invocation writes logs and an atomic `receipt.json` under ignored
+`.pi/native-verification/<run>/`. Receipts identify the commit, a content digest
+covering tracked and nonignored new files (including dirty/deleted source),
+worktree, command, environment selectors, toolchain logs, timing and result.
+A source change during execution makes the invocation fail. A dirty-source pass
+applies to that exact snapshot; after committing or integrating, rerun against
+the intended final commit. Receipts are local handoff evidence, not GitHub checks
+or release qualification. They contain local paths/build logs and stay ignored.
+
+For a bug fix, add the smallest reliable regression at the owning layer. Prioritize
+startup failures, lost data, broken export/protocol bytes, unauthorized access and
+recovery. If changed lifecycle, permissions, navigation or native runtime behavior
+needs device verification, report the remaining gap and obtain the existing
+explicit QA opt-in. Compilation and portable tests cannot certify those behaviors.
 
 ## Agent plan, guard, and receipt workflow
 
@@ -44,39 +148,3 @@ node scripts/verification.mjs report --session my-task \
 ```
 
 Use `run --reuse` for an explicitly reviewed replay and `--rerun-reason` for intentional repetition. `check --command '<command>' --session <id>` exposes the same JSON decision for a harness pre-tool hook: exit 2 means block, and `warnings` should be surfaced to the agent. Check errors must block, not fall through to execution. The portable CLI has no opt-in bypass; an authorized device workflow needs a reviewed human-confirming harness adapter (Pi's is included). Guard installation must be confirmed in each actual harness; instructions alone do not install hooks.
-
-## Development commands
-
-Run commands from their owning component. Replace placeholders with the actual owner and test name; a filter is not permission to omit affected contract consumers.
-
-| Owner | Focused feedback |
-|---|---|
-| Rust core or CLI | `cargo test -p <crate> <filter> --locked` with relevant features; `cargo clippy -p <crate> --all-targets --locked -- -D warnings` |
-| Apple connectivity | `swift test --package-path Packages/HealthMdConnectivity --filter <Test>` |
-| Apple app (macOS behavior) | `make test-macos TEST_FILTER=HealthMdTests/<Class>[/<Method>]` |
-| Android app | `./gradlew :app:testPlayDebugUnitTest --tests '<qualified.TestClass>' --max-workers=2` |
-| Android protocol | `./gradlew :direct-protocol:test --tests '<qualified.TestClass>'` |
-| Practice | `npm test -- <test-file>`; `npm run typecheck` |
-| Website | `node --test test/<file>.test.mjs` |
-| Markdown inventory | `python3 -m unittest discover -s scripts/tests -p 'test_audit_markdown.py'` from the repository root |
-
-Prefer existing standalone packages/modules when they own the behavior. App-hosted XCTest and Android app JVM tests may still compile substantial native dependencies even when execution is filtered. Do not invent a separate test-only implementation to bypass that cost.
-
-At the repository root:
-
-- `make` shows the router's help without running tests.
-- `make test COMPONENT=cli` (or another listed owner) runs only that component's regression route. Android's local route compiles one bounded Play Debug app variant plus its shared/Wear modules; use `make test-android-all` for all JVM variants or select F-Droid explicitly when that channel is affected.
-- `make test-all` preserves the broad smoke sweep. It is expensive and does not replace complete component/release qualification.
-- `make test-testing-tools` runs host-side orchestration regressions without product builds or devices. Install its small Python dependency with `python3 -m pip install -r scripts/testing-requirements.txt` in your tooling environment when missing.
-
-Apple `make` shows developer commands without building; `make test` means macOS tests. `make test-ios` and `make test-platforms` explicitly select simulator work and require the current task's simulator authorization. No local simulator/emulator/device/Argent workflow is authorized merely by a request to implement or run tests.
-
-## Build reuse and CI
-
-- **Apple:** macOS tests and four documentation generators use `apps/apple/build/DerivedData/macOS`, isolated per worktree. Override `DERIVED_DATA_PATH` for concurrent independent jobs; use `MACOS_DEST` for an explicit architecture. Normal `xcodebuild test` checks/rebuilds current inputs. CI sets `MACOS_CODE_COVERAGE=YES` so docs reuse the coverage compilation profile; local feedback defaults to no coverage. Staging, schema-fixture protections, exact generated-artifact drift checks, and link validation remain enabled.
-- **Nightly Apple:** one coverage-enabled macOS execution supplies both regression and coverage evidence, including the warning log.
-- **Android PRs:** unrelated CLI changes keep live Rust/Kotlin interop without a full native build/device matrix. `healthmd-client`, CLI manifests/lock/toolchain, Android, shared-core, contract, and Android-workflow changes keep the full native matrix. Push/dispatched/release qualification remains full. Selected jobs must succeed; unselected jobs must explicitly be skipped, and invalid detector outputs fail.
-- **Website:** CI installs locked dependencies once, then uses `npm run build:ci`, which builds/checks documentation once and retains localization, reference/agent-asset, visualization, and final-site checks. `npm run build` remains self-contained by installing docs dependencies first.
-- **Practice:** retain independent browser servers, scanner/canary, qualification provenance, smoke, dry-run, and security gates. Its fast local bundle build does not justify adding a general-purpose cache or weakening provenance.
-
-Caches are not qualification receipts. Keep source/toolchain/profile validation and exact-SHA release gates. Do not share mutable native build directories across concurrent worktrees or move blocking safety coverage to an unreliable scheduled runner.

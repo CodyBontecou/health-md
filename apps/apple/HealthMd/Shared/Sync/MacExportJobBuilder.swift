@@ -23,15 +23,34 @@ enum ConnectedExportDetailPolicy {
         detailPolicy: AppleExportDetailPolicy
     ) -> HealthData {
         var sanitized = record
-        if !detailPolicy.includesSelectedTimeSeries {
+        // Each group follows its own resolved detail.
+        if !detailPolicy.includesSelectedTimeSeries(for: .sleep) {
             sanitized.sleep.stages = []
+        }
+        if !detailPolicy.includesSelectedTimeSeries(for: .heart) {
             sanitized.heart.heartRateSamples = []
             sanitized.heart.hrvSamples = []
+        }
+        if !detailPolicy.includesSelectedTimeSeries(for: .vitals) {
             sanitized.vitals.bloodOxygenSamples = []
             sanitized.vitals.bloodGlucoseSamples = []
             sanitized.vitals.respiratoryRateSamples = []
             sanitized.vitals.bloodPressureSamples = []
+        }
+        if !detailPolicy.includesSelectedTimeSeries(for: .workouts) {
             sanitized.workouts = sanitized.workouts.map(summaryOnlyWorkout)
+        }
+        // apple-v12 expansion samples exist only for a Night begins operation whose policy
+        // explicitly selects apple-v12, and only for groups that resolve to Detailed.
+        let attribution = record.timeContext.sleepDayAttribution
+        for group in ExportDetailGroup.appleV12ExpansionGroups
+        where !detailPolicy.includesDetailSamples(for: group, sleepDayAttribution: attribution) {
+            sanitized.setDetailSamples([], for: group)
+        }
+        sanitized.compatibilityDetailProfile = detailPolicy.selectsAppleV12(sleepDayAttribution: attribution)
+            ? .appleV12 : nil
+        if sanitized.compatibilityDetailProfile == nil {
+            sanitized.stripSleepStageSourceAttribution()
         }
         if !detailPolicy.includesCanonicalArchive {
             sanitized.healthKitRecordArchive = nil
@@ -129,11 +148,15 @@ struct MacExportJobBuilder {
         if legacySnapshot.appleExportEnginePin != nil {
             return legacySnapshot
         }
-        guard !hasNativeOnlyCompanionAction,
-              AppleLooseDailyExportPlanner.supports(
-                  settingsSnapshot: legacySnapshot,
-                  surface: operationSurface
-              ) else {
+        let stagesWakeDateProviders = hasNativeOnlyCompanionAction
+            && legacySnapshot.sleepCaptureContext?.sleepDayAttribution == .morningEnds
+            && legacySnapshot.externalProviderCaptureAuthority?.connections.isEmpty == false
+            && (operationSurface == .connectedReceivedRangeWithoutSideEffects || operationSurface == .connectedReceivedRangeWithProviderSidecars)
+        let acceptedSurface: AppleExportOperationSurface = stagesWakeDateProviders ? .connectedReceivedRangeWithProviderSidecars : operationSurface
+        let supportsFreshSettings = legacySnapshot.sleepCaptureContext?.sleepDayAttribution == .morningEnds
+            ? AppleLooseDailyExportPlanner.supportsNewWakeDateSettings(settingsSnapshot: legacySnapshot, surface: acceptedSurface)
+            : AppleLooseDailyExportPlanner.supports(settingsSnapshot: legacySnapshot, surface: acceptedSurface)
+        guard (!hasNativeOnlyCompanionAction || stagesWakeDateProviders), supportsFreshSettings else {
             var explicitlyLegacy = legacySnapshot
             explicitlyLegacy.appleExportEnginePin = nil
             return explicitlyLegacy
@@ -142,7 +165,7 @@ struct MacExportJobBuilder {
             settings,
             healthSubfolder: healthSubfolder,
             calendarTimeZone: calendarTimeZone,
-            surface: operationSurface,
+            surface: acceptedSurface,
             policyResolver: policyResolver
         )
     }

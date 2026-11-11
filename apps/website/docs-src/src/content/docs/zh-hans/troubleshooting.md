@@ -25,7 +25,7 @@ Apple Health 或 Health Connect 导出缺少数据时，先区分**读取问题*
 
 ## “今天”中没有昨晚的睡眠
 
-Health.md 在 Apple 和 Android 上使用本地时间**正午到次日正午**的睡眠日记窗口。周二早上请导出**昨天（周一）**，即使睡眠是在周二午夜之后开始。若要同时包含睡眠和活动，可导出周一和周二。来源同步较晚时，重新导出对应日记日期。参见[日期示例](/zh-hans/docs/sleep-date-attribution/#sleep-date-examples)。
+**夜间开始日（默认）：** Health.md 在 Apple 和 Android 上使用本地时间**正午到次日正午**的睡眠日记窗口。周二早上请导出**昨天（周一）**，即使睡眠是在周二午夜之后开始。若要同时包含睡眠和活动，可导出周一和周二。来源同步较晚时，重新导出对应日记日期。参见[日期示例](/zh-hans/docs/sleep-date-attribution/#sleep-date-examples)。 **早晨结束日：** 请导出醒来的日期，周一晚上的睡眠应导出周二。两种方式都使用导出时区。
 
 ## 预览有数据，但文件夹为空
 

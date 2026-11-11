@@ -137,7 +137,10 @@ struct CanonicalRawResultEnvelope: Codable, Equatable {
             if object["schema"] as? String != HealthMdExportSchema.identifier {
                 issues.append("daily_schema_mismatch:\(day.date)")
             }
-            if object["schema_version"] as? Int != HealthMdExportSchema.version {
+            if !AppleDetailExpansionSchema.isAcceptedNightBeginsDailyIdentity(
+                schemaVersion: object["schema_version"] as? Int,
+                schemaProfile: object["schema_profile"] as? String
+            ) {
                 issues.append("daily_schema_version_mismatch:\(day.date)")
             }
             if expectsLosslessArchive {
@@ -393,7 +396,10 @@ struct CanonicalRawDayResult: Codable, Equatable {
         guard let data = canonicalJSON.data(using: .utf8),
               let object = try JSONSerialization.jsonObject(with: data) as? [String: Any],
               object["schema"] as? String == HealthMdExportSchema.identifier,
-              object["schema_version"] as? Int == HealthMdExportSchema.version,
+              AppleDetailExpansionSchema.isAcceptedNightBeginsDailyIdentity(
+                  schemaVersion: object["schema_version"] as? Int,
+                  schemaProfile: object["schema_profile"] as? String
+              ),
               object["time_context"] != nil else {
             throw CanonicalRawResultError.invalidCanonicalDailyDocument
         }
@@ -670,7 +676,7 @@ enum IPhoneExportRequestSettingsResolver {
         for request: IPhoneExportRequest,
         savedSettings: AdvancedExportSettings
     ) -> AdvancedExportSettings {
-        let settings = ExportSettingsSnapshot.from(savedSettings).makeAdvancedExportSettings()
+        let settings = ExportSettingsSnapshot.from(savedSettings).makeAdvancedExportSettings(forNewConfiguration: true)
 
         switch request.settingsPolicy {
         case .currentIPhoneSettings:

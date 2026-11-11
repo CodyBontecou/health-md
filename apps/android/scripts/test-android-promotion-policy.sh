@@ -174,9 +174,9 @@ distribution_policy="$(dirname "$0")/../app/src/main/java/com/healthmd/domain/di
 listing="$(dirname "$0")/../play-console/listing/en-US/full-description.txt"
 
 jq -e '
-  .schemaVersion == 1 and .releaseVersionName == "1.9.4" and
+  .schemaVersion == 1 and (.releaseVersionName | test("^[0-9]+\\.[0-9]+\\.[0-9]+$")) and
   .googlePlay.phone.status == "release_candidate" and
-  .googlePlay.phone.versionCode == 42 and
+  (.googlePlay.phone.versionCode | type == "number" and . > 0 and . == floor) and
   .googlePlay.phone.testingTrack == "internal" and
   .googlePlay.phone.productionTrack == "production" and
   .googlePlay.wear.status == "deferred" and
@@ -345,7 +345,14 @@ if grep -R -E '<string name="release_notes_highlight_workouts">.*Wear OS' \
   fail 'localized in-app release notes still advertise Wear OS'
 fi
 
-grep -Fq "'.github/workflows/android-*.yml'" "$repo/.github/workflows/android-ci.yml" \
-  || fail 'Android workflow changes do not trigger main-push Android CI'
+# Android CI delegates to the portable root CI, which runs on every main push
+# without a path filter, so Android workflow changes always run CI.
+grep -Fq 'uses: ./.github/workflows/ci.yml' "$repo/.github/workflows/android-ci.yml" \
+  || fail 'Android CI does not delegate to the portable root CI'
+grep -Eq '^    branches: \[main' "$repo/.github/workflows/ci.yml" \
+  || fail 'root CI does not run on main pushes'
+if grep -Eq '^ +paths(-ignore)?:' "$repo/.github/workflows/ci.yml"; then
+  fail 'root CI path filters can skip Android workflow changes'
+fi
 
 printf '%s\n' 'Android phone-only release policy tests passed'

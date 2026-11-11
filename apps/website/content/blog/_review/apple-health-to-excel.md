@@ -24,3 +24,9 @@ No Excel click-through, formula execution in Excel, device export, or visual QA 
 ## Local CSV utility — 2026-10-27
 
 - [x] The linked browser combiner appends supported five/six-field Health.md CSV rows, retains duplicate rows, leaves units and values unchanged, and handles files in the tab without network/storage sinks. Apple summary/lossless/provider fixtures and the Android excerpt round-trip in test/csv-combiner.test.mjs. The existing spreadsheet calculations and producer fixtures are unchanged. This is website verification, not a new Excel/Sheets or device execution.
+
+## Fictional spreadsheet pack — 2026-10-27
+
+- [x] Adds an authored 28-day example from the existing fictional starter dataset, not a producer schema fixture. It has 28 step values, 27 sleep values and one deliberately missing sleep date (October 8). CSV headers and metric/unit labels follow the existing six-column subset. No exporter, contract or personal data changed. The prior statement that no multi-day workbook was published is superseded by this addition.
+- [x] The Excel workbook has native charts and formula-linked calculations, with separate raw rows and daily metrics. Artifact runtime mutation checks cover changed values, blanks, zeros, invalid inputs, duplicates and date coverage; a LibreOffice round-trip recalculates the saved workbook and populates chart caches. Host checks verify cached results, formulas, series bindings, units and archive contents. No Excel UI/device export or native Google Sheets import was performed. The Sheets exercise uses combined.csv and the existing import recipe; native chart conversion is explicitly unverified.
+- [x] The authoring builder, sample pack generator, source-data checks and workbook/CSV regressions maintain the resource. Existing article routes and publication dates remain unchanged.

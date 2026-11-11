@@ -4,7 +4,7 @@ import json
 import re
 import unittest
 from pathlib import Path
-from build_source_artifacts import build_schema, compact
+from build_source_artifacts import SOURCE, build_schema, compact
 from build_transport_schema import build as build_transport
 from validator import (HERE, ROOT, Invalid, SCHEMA, ValidatedContent, digest,
                        parse_record, parse_mutation, parse_read, parse_page, parse_error, strict_json, mutation_digest, v2,
@@ -98,7 +98,8 @@ class ProfileSyncContractTests(unittest.TestCase):
         self.assertEqual(SCHEMA, build_schema())
         source_pins = json.loads((HERE / "source-pins.json").read_bytes())
         import hashlib
-        self.assertEqual(source_pins["shared_setup_schema_sha256"], hashlib.sha256((ROOT / "packages/contracts/shared-setup/v2/shared-setup.schema.json").read_bytes()).hexdigest())
+        self.assertEqual(source_pins["shared_setup_schema_path"], SOURCE.relative_to(ROOT).as_posix())
+        self.assertEqual(source_pins["shared_setup_schema_sha256"], hashlib.sha256(SOURCE.read_bytes()).hexdigest())
         self.assertEqual(source_pins["metric_registry_sha256"], hashlib.sha256((ROOT / "packages/healthmd-core-rust/crates/healthmd-core/registry/metric-registry-v1.json").read_bytes()).hexdigest())
         data = json.loads((HERE / "codec-data.json").read_bytes())
         self.assertEqual(data["shape"], SCHEMA)

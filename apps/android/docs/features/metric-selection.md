@@ -63,7 +63,7 @@ With only Sleep and Heart enabled, a daily Markdown note contains those sections
 - **Suggested title:** Choose Exactly Which Health Metrics You Export
 - **Hook:** "106 metrics. You decide which ones matter."
 - **Demo flow:**
-  1. Open metric selection from the Export tab.
+  1. Open metric selection from the Export now screen.
   2. Search "sleep", toggle a few heart metrics.
   3. Show the counter dropping, then export a lean day.
 - **Key screenshot/recording moments:** search box, tri-state category checkbox, `12/106` counter.

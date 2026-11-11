@@ -1,18 +1,32 @@
 package com.healthmd.data.health.providers.cloud
 
 import com.healthmd.data.health.HealthDataProvider
+import com.healthmd.data.health.OperationScopedHealthDataProvider
+import com.healthmd.data.health.RestorableHealthDataProvider
 import com.healthmd.domain.model.HealthData
 import java.time.LocalDate
 
 abstract class CloudHealthDataProvider(
     final override val providerId: String,
     protected val apiClient: CloudHealthApiClient,
-) : HealthDataProvider {
+) : HealthDataProvider, OperationScopedHealthDataProvider, RestorableHealthDataProvider {
     /** Truthful source-fidelity label for additive raw-manifest integrations. */
     open val fidelityDeclaration: CloudProviderFidelityDeclaration = CloudProviderFidelityDeclaration(
         providerId = providerId,
         fidelity = CloudProviderFidelity.NATIVE_API_PAYLOAD,
     )
+
+    final override suspend fun forCaptureOperation(): HealthDataProvider {
+        val acceptedClient = apiClient.forCaptureOperation(providerId)
+        return if (acceptedClient === apiClient) this else withClient(acceptedClient)
+    }
+
+    final override suspend fun acceptedConnectionId(): String? = apiClient.captureConnectionId(providerId)
+
+    final override fun forAcceptedConnection(connectionId: String?): HealthDataProvider =
+        withClient(apiClient.forAcceptedConnection(providerId, connectionId))
+
+    protected abstract fun withClient(client: CloudHealthApiClient): CloudHealthDataProvider
 
     override suspend fun isAvailable(): Boolean = apiClient.isConfigured(providerId)
 

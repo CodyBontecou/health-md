@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="automation_output_path_invalid">Enter a folder inside your vault and a filename without slashes, percent signs, or parent-directory references.</string>
+</resources>

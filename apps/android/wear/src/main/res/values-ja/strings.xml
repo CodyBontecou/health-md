@@ -45,4 +45,14 @@
     <string name="wear_preview_placeholder">プレビュー（健康値なし）</string>
     <string name="wear_complication_description">%1$s、%2$s、%3$s</string>
     <string name="wear_complication_long">%1$s %2$s・%3$s</string>
+    <string name="wear_short_activity">アクティビティ</string>
+    <string name="wear_short_recovery">回復</string>
+    <string name="wear_short_steps">歩数</string>
+    <string name="wear_short_move">ムーブ</string>
+    <string name="wear_short_exercise">運動</string>
+    <string name="wear_short_sleep">睡眠</string>
+    <string name="wear_short_resting_hr">安静時</string>
+    <string name="wear_short_average_hr">平均心拍</string>
+    <string name="wear_short_hrv">HRV</string>
+    <string name="wear_short_blood_oxygen">SpO₂</string>
 </resources>

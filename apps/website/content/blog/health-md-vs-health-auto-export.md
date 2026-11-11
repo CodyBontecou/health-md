@@ -8,7 +8,7 @@ category: "App comparison"
 related:
   - apple-health-xml-export
   - export-apple-health-data-to-obsidian
-  - export-health-data-without-the-cloud
+  - apple-health-home-assistant
 draft: false
 verified: "2026-10-26"
 verified_by: "Codex (agent)"

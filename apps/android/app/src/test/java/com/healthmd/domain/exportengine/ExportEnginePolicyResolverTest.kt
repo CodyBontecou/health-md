@@ -53,8 +53,29 @@ class ExportEnginePolicyResolverTest {
             isDebugOrTestBuild = false,
             compatibility = ExportEngineCompatibility { _, _ -> false },
         )
-        ExportEnginePolicyTarget.entries.forEach { target ->
+        ExportEnginePolicyTarget.entries.filter { it != ExportEnginePolicyTarget.ANDROID_SLEEP_V6 }.forEach { target ->
             assertThat(incompatible.resolve(target).mode).isEqualTo(ExportEngineMode.legacy)
+        }
+    }
+
+    @Test
+    fun wakeDateCandidateNeverFallsBackToLegacyOrUnqualifiedProductionPolicy() {
+        val compatibility = HealthMdCoreEngineCompatibility()
+        assertThat(compatibility.isCompatible(ExportEngineMode.legacy, AndroidExportProfile.android_sleep_v6))
+            .isFalse()
+        assertThat(compatibility.isCompatible(ExportEngineMode.legacy, AndroidExportProfile.android_frozen_v4))
+            .isTrue()
+        val resolver = ExportEnginePolicyResolver(
+            defaults = ExportEngineBuildDefaults("rust", "rust", "rust"),
+            isDebugOrTestBuild = false,
+            compatibility = allowCompatible,
+        )
+        assertThat(resolver.resolveLocal(AndroidExportProfile.android_sleep_v6).mode).isEqualTo(ExportEngineMode.rust)
+        assertThat(resolver.resolve(ExportEnginePolicyTarget.ANDROID_SLEEP_V6).mode).isEqualTo(ExportEngineMode.rust)
+        val incompatible = ExportEnginePolicyResolver(isDebugOrTestBuild = false,
+            compatibility = ExportEngineCompatibility { _, _ -> false })
+        org.junit.Assert.assertThrows(IllegalStateException::class.java) {
+            incompatible.resolveLocal(AndroidExportProfile.android_sleep_v6)
         }
     }
 

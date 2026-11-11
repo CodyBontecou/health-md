@@ -1,5 +1,9 @@
 package com.healthmd.domain.exportengine
 
+import com.healthmd.domain.model.HealthProviderCaptureAuthority
+import com.healthmd.domain.model.SleepDayAttribution
+import com.healthmd.core.HEALTHMD_SLEEP_REGISTRY_SHA256
+import com.healthmd.domain.model.AndroidCaptureContext
 import com.healthmd.domain.model.APIExportEndpoint
 import com.healthmd.domain.model.AgentDataGatewayEndpoint
 import com.healthmd.domain.model.BulletStyle
@@ -7,7 +11,10 @@ import com.healthmd.domain.model.CompatibilitySchemaProfile
 import com.healthmd.domain.model.CustomFrontmatterField
 import com.healthmd.domain.model.DailyNoteInjectionSettings
 import com.healthmd.domain.model.DateFormatPreference
+import com.healthmd.domain.model.DailyRecordSchemaProfile
 import com.healthmd.domain.model.DataTypeSelection
+import com.healthmd.domain.model.ExportDetailSelection
+import com.healthmd.domain.model.ExportDetailOverrides
 import com.healthmd.domain.model.ExportFormat
 import com.healthmd.domain.model.ExportSettings
 import com.healthmd.domain.model.ExportTarget
@@ -79,6 +86,16 @@ data class AndroidExportSettingsSnapshot(
     val folderOrganization: FolderOrganization,
     val enginePin: ExportEnginePin? = null,
     val ianaTimeZone: String,
+    /** Snapshot-v2 capture authority; missing v1/draft authority is never synthesized on decode. */
+    val sleepCaptureContext: AndroidCaptureContext? = null,
+    /** Private snapshot-v3 account authority. Absent historical snapshots never acquire it. */
+    val providerCaptureAuthority: HealthProviderCaptureAuthority? = null,
+    /**
+     * Per-group detail overrides of [includeGranularData] (wire IDs). Null whenever there is no
+     * override so every pre-existing snapshot keeps its exact canonical bytes. Older builds reject
+     * the unknown key and fail closed instead of silently dropping the requested detail.
+     */
+    val detailOverrides: Map<String, String>? = null,
 ) {
     /**
      * Applies only frozen output choices. Current folder grants, endpoint URL/credentials, schedule
@@ -124,31 +141,47 @@ data class AndroidExportSettingsSnapshot(
             dailyNoteInjection = frozen.dailyNoteInjection,
             individualTracking = frozen.individualTracking,
             includeGranularData = frozen.includeGranularData,
+            detailOverrides = frozen.detailOverrides.orEmpty(),
             exportTarget = frozen.exportTarget,
             scheduledExportTarget = frozen.scheduledExportTarget,
             subfolder = frozen.subfolder,
             folderOrganization = frozen.folderOrganization,
             executionEnginePin = null,
             executionEngineAuthorityIsFrozen = true,
+            executionSleepCaptureContext = frozen.sleepCaptureContext,
+            executionSleepCaptureAuthorityIsFrozen = true,
+            executionProviderCaptureAuthority = frozen.providerCaptureAuthority,
+            executionProviderCaptureAuthorityIsFrozen = frozen.sleepCaptureContext?.sleepDayAttribution == SleepDayAttribution.MORNING_ENDS,
         )
     }
 
     companion object {
+        // Preserve v1 encoding for legacy callers/journal identity comparisons.
         const val CURRENT_VERSION: Int = 1
+        const val CAPTURE_AUTHORITY_VERSION: Int = 2
+        const val PROVIDER_AUTHORITY_VERSION: Int = 3
 
         /** Captures and size-validates every non-secret output setting before provider reads begin. */
         fun capture(
             settings: ExportSettings,
             pin: ExportEnginePin?,
             zone: ZoneId,
+            captureContext: AndroidCaptureContext? = settings.executionSleepCaptureContext,
         ): AndroidExportSettingsSnapshot {
             val canonicalZone = runCatching { ZoneId.of(zone.id).id }.getOrElse {
                 throw AndroidExportSettingsSnapshotException(
                     AndroidExportSettingsSnapshotError.INVALID_STRUCTURE,
                 )
             }
-            val operationProfile = settings.expectedScheduledExportProfile()
+            val operationProfile = settings.expectedScheduledExportProfile(captureContext)
             val snapshot = AndroidExportSettingsSnapshot(
+                version = when {
+                    settings.executionProviderCaptureAuthority != null -> PROVIDER_AUTHORITY_VERSION
+                    captureContext != null -> CAPTURE_AUTHORITY_VERSION
+                    else -> CURRENT_VERSION
+                },
+                providerCaptureAuthority = settings.executionProviderCaptureAuthority?.validatedCopy(),
+                sleepCaptureContext = captureContext,
                 exportMode = settings.exportMode,
                 exportProfile = operationProfile,
                 rawSnapshot = settings.rawSnapshot.normalized().copy(),
@@ -165,6 +198,8 @@ data class AndroidExportSettingsSnapshot(
                 dailyNoteInjection = settings.dailyNoteInjection.immutableDeepCopy(),
                 individualTracking = settings.individualTracking.immutableDeepCopy(),
                 includeGranularData = settings.includeGranularData,
+                detailOverrides = ExportDetailOverrides.normalized(settings.typedDetailOverrides())
+                    .takeIf { it.isNotEmpty() },
                 exportTarget = settings.exportTarget,
                 scheduledExportTarget = settings.scheduledExportTarget,
                 apiEndpointIdentitySha256 = if (
@@ -415,12 +450,40 @@ object AndroidExportSettingsSnapshotCodec {
         )
 
     fun isStructurallyValid(snapshot: AndroidExportSettingsSnapshot): Boolean = runCatching {
-        if (snapshot.version != AndroidExportSettingsSnapshot.CURRENT_VERSION) return false
+        if (snapshot.version == AndroidExportSettingsSnapshot.PROVIDER_AUTHORITY_VERSION) {
+            snapshot.providerCaptureAuthority?.validatedCopy() ?: return false
+            if (snapshot.sleepCaptureContext?.sleepDayAttribution != SleepDayAttribution.MORNING_ENDS) return false
+        } else if (snapshot.providerCaptureAuthority != null) return false
+        when (snapshot.version) {
+            AndroidExportSettingsSnapshot.CURRENT_VERSION -> if (snapshot.sleepCaptureContext != null) return false
+            AndroidExportSettingsSnapshot.CAPTURE_AUTHORITY_VERSION, AndroidExportSettingsSnapshot.PROVIDER_AUTHORITY_VERSION -> {
+                val context = snapshot.sleepCaptureContext ?: return false
+                if (context.zoneId.id != snapshot.ianaTimeZone) return false
+                if (context.sleepDayAttribution == SleepDayAttribution.MORNING_ENDS) {
+                    // A saved successor is one atomic capture/profile/renderer promise.
+                    // Missing draft markers or nil pins cannot gain authority on upgrade.
+                    if (context.exportProfileID != AndroidExportProfile.android_sleep_v6.publicProfileId ||
+                        snapshot.exportProfile != AndroidExportProfile.android_sleep_v6 ||
+                        snapshot.exportMode != ExportMode.COMPATIBILITY ||
+                        snapshot.enginePin?.registrySha256 != HEALTHMD_SLEEP_REGISTRY_SHA256
+                    ) return false
+                } else if (snapshot.exportProfile == AndroidExportProfile.android_sleep_v6) return false
+                if (context.exportProfileID != null && context.exportProfileID != snapshot.exportProfile.publicProfileId) return false
+            }
+            else -> return false
+        }
+        snapshot.detailOverrides?.let { raw ->
+            val typed = ExportDetailOverrides.validated(raw) ?: return false
+            if (raw.isEmpty() || ExportDetailOverrides.normalized(typed) != raw) return false
+        }
         if (snapshot.ianaTimeZone.length > MAX_TIME_ZONE_CHARACTERS) return false
         if (ZoneId.of(snapshot.ianaTimeZone).id != snapshot.ianaTimeZone) return false
         if (snapshot.rawSnapshot.pageSize !in RawSnapshotSettings.MIN_PAGE_SIZE..RawSnapshotSettings.MAX_PAGE_SIZE) {
             return false
         }
+        if (snapshot.exportProfile == AndroidExportProfile.android_sleep_v6 &&
+            snapshot.version !in setOf(AndroidExportSettingsSnapshot.CAPTURE_AUTHORITY_VERSION,
+                AndroidExportSettingsSnapshot.PROVIDER_AUTHORITY_VERSION)) return false
         if (snapshot.exportProfile != snapshot.expectedOperationProfile()) return false
         if (snapshot.exportMode == ExportMode.RAW_SNAPSHOT && snapshot.enginePin != null) return false
 
@@ -430,6 +493,9 @@ object AndroidExportSettingsSnapshotCodec {
             if (!ExportEnginePinCodec.isStructurallyValid(pin)) return false
             if (pin.profile != snapshot.exportProfile) return false
             if (pin.ianaTimeZone != snapshot.ianaTimeZone) return false
+            // android-analytical-v7 is native-writer-only; its operations are always legacy.
+            if (snapshot.exportProfile == AndroidExportProfile.android_analytical_v5 &&
+                snapshot.resolvesAnalyticalV7()) return false
         }
 
         when (snapshot.scheduledExportTarget) {
@@ -456,15 +522,29 @@ object AndroidExportSettingsSnapshotCodec {
     private const val MAX_TIME_ZONE_CHARACTERS = 128
 }
 
-private fun ExportSettings.expectedScheduledExportProfile(): AndroidExportProfile =
-    if (scheduledExportTarget == ExportTarget.API_ENDPOINT) {
+private fun ExportSettings.expectedScheduledExportProfile(context: AndroidCaptureContext?): AndroidExportProfile =
+    if (context?.sleepDayAttribution == SleepDayAttribution.MORNING_ENDS) {
+        AndroidExportProfile.android_sleep_v6
+    } else if (scheduledExportTarget == ExportTarget.API_ENDPOINT) {
         AndroidExportProfile.android_frozen_v4
     } else {
         formatCustomization.compatibilitySchemaProfile.toAndroidExportProfile()
     }
 
+/** Local-file profile of the frozen operation; uses the same resolution as live settings. */
+private fun AndroidExportSettingsSnapshot.resolvesAnalyticalV7(): Boolean {
+    val overrides = detailOverrides?.let(ExportDetailOverrides::validated) ?: emptyMap()
+    return DailyRecordSchemaProfile.resolve(
+        formatCustomization.compatibilitySchemaProfile,
+        ExportDetailSelection.resolve(includeGranularData, overrides),
+        sleepCaptureContext?.sleepDayAttribution,
+    ).requiresLegacyEngine
+}
+
 private fun AndroidExportSettingsSnapshot.expectedOperationProfile(): AndroidExportProfile =
-    if (scheduledExportTarget == ExportTarget.API_ENDPOINT) {
+    if (sleepCaptureContext?.sleepDayAttribution == SleepDayAttribution.MORNING_ENDS) {
+        AndroidExportProfile.android_sleep_v6
+    } else if (scheduledExportTarget == ExportTarget.API_ENDPOINT) {
         AndroidExportProfile.android_frozen_v4
     } else {
         formatCustomization.compatibilitySchemaProfile.toAndroidExportProfile()
@@ -475,6 +555,7 @@ private fun CompatibilitySchemaProfile.toAndroidExportProfile(): AndroidExportPr
 }
 
 private fun AndroidExportSettingsSnapshot.immutableDeepCopy(): AndroidExportSettingsSnapshot = copy(
+    providerCaptureAuthority = providerCaptureAuthority?.validatedCopy(),
     rawSnapshot = rawSnapshot.copy(),
     dataTypes = dataTypes.copy(),
     exportFormats = exportFormats.immutableSortedBy { it.name },
@@ -482,6 +563,7 @@ private fun AndroidExportSettingsSnapshot.immutableDeepCopy(): AndroidExportSett
     metricSelection = metricSelection.immutableDeepCopy(),
     dailyNoteInjection = dailyNoteInjection.immutableDeepCopy(),
     individualTracking = individualTracking.immutableDeepCopy(),
+    detailOverrides = detailOverrides?.let { Collections.unmodifiableMap(LinkedHashMap(it.toSortedMap())) },
 )
 
 private fun FormatCustomization.immutableDeepCopy(): FormatCustomization = copy(
@@ -501,6 +583,7 @@ private fun MarkdownTemplateConfig.immutableDeepCopy(): MarkdownTemplateConfig =
 
 private fun MetricSelectionState.immutableDeepCopy(): MetricSelectionState = MetricSelectionState(
     enabledMetrics = enabledMetrics.immutableSortedBy { it },
+    nativeDetailMetricIds = nativeDetailMetricIds.immutableSortedBy { it },
 )
 
 private fun DailyNoteInjectionSettings.immutableDeepCopy(): DailyNoteInjectionSettings = copy(

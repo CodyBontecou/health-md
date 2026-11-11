@@ -252,6 +252,39 @@ struct DirectWakeWorkerClient: DirectWakeWorkerRegistering {
         return response.wakeId
     }
 
+    /// Registers (or, with `existingWakeID`, rotates) a delegated sync doorbell. The worker
+    /// receives only this install's push identity and the key hash, never who holds the key.
+    func registerDelegatedSync(verificationHash: SHA256.Digest, existingWakeID: String?) async throws -> String {
+        struct Payload: Encodable {
+            let userId: String
+            let deviceToken: String
+            let wakeKeyVerificationHash: String
+            let platform: String
+            let purpose: String
+            let wakeId: String?
+        }
+        struct Response: Decodable {
+            let wakeId: String
+        }
+        guard let deviceToken = pushRegistration.lastDeviceTokenHex else {
+            throw DirectWakeWorkerError.missingDeviceToken
+        }
+        let body = Payload(
+            userId: pushRegistration.userId,
+            deviceToken: deviceToken,
+            wakeKeyVerificationHash: Data(verificationHash).map { String(format: "%02x", $0) }.joined(),
+            platform: "apns",
+            purpose: "delegated-sync",
+            wakeId: existingWakeID
+        )
+        let data = try await post(path: "/wake/register", body: body)
+        let response = try JSONDecoder().decode(Response.self, from: data)
+        guard (1...128).contains(response.wakeId.utf8.count) else {
+            throw DirectWakeWorkerError.invalidResponse
+        }
+        return response.wakeId
+    }
+
     func unregister(wakeID: String) async throws {
         struct Payload: Encodable {
             let userId: String

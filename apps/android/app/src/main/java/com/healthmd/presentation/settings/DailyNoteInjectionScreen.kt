@@ -1,26 +1,22 @@
 package com.healthmd.presentation.settings
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import com.healthmd.domain.model.DailyNoteInjectionSettings
-import com.healthmd.presentation.common.*
-import com.healthmd.presentation.theme.AppColors
-import com.healthmd.presentation.theme.Radii
-import com.healthmd.presentation.theme.Spacing
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import com.healthmd.R
+import com.healthmd.domain.model.DailyNoteInjectionSettings
+import com.healthmd.presentation.common.SubScreen
+import com.healthmd.presentation.theme.GeistRadii
+import com.healthmd.presentation.theme.GeistSpacing
+import com.healthmd.presentation.theme.GeistType
+import com.healthmd.presentation.theme.LocalGeistColors
+import androidx.compose.foundation.shape.RoundedCornerShape
 
 @Composable
 fun DailyNoteInjectionScreen(
@@ -28,186 +24,107 @@ fun DailyNoteInjectionScreen(
     onSettingsChanged: (DailyNoteInjectionSettings) -> Unit,
     onBack: () -> Unit,
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(AppColors.bgPrimary)
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = Spacing.md, vertical = Spacing.lg),
-        verticalArrangement = Arrangement.spacedBy(Spacing.md),
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onBack) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back), tint = AppColors.textPrimary)
-            }
-            Text(
-                stringResource(R.string.section_daily_note_injection),
-                style = MaterialTheme.typography.titleLarge,
-                color = AppColors.textPrimary,
-                fontWeight = FontWeight.SemiBold,
-            )
-        }
-
-        // Description
-        GeistCard {
+    val colors = LocalGeistColors.current
+    SubScreen(title = stringResource(R.string.section_daily_note_injection), onBack = onBack) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .imePadding()
+                .verticalScroll(rememberScrollState())
+                .padding(start = GeistSpacing.space4, end = GeistSpacing.space4, bottom = GeistSpacing.space8),
+        ) {
             Text(
                 stringResource(R.string.daily_note_description),
-                style = MaterialTheme.typography.bodyMedium,
-                color = AppColors.textSecondary,
+                style = GeistType.copy14,
+                color = colors.secondary,
+                modifier = Modifier.padding(horizontal = GeistSpacing.space4, vertical = GeistSpacing.space2),
             )
-        }
 
-        // Enable toggle
-        GeistCard {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Column {
-                    Text(stringResource(R.string.daily_note_enable_title), color = AppColors.textPrimary, style = MaterialTheme.typography.titleMedium)
-                    Text(
-                        stringResource(R.string.daily_note_enable_subtitle),
-                        color = AppColors.textSecondary,
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                }
-                Switch(
-                    checked = settings.enabled,
-                    onCheckedChange = { onSettingsChanged(settings.copy(enabled = it)) },
-                    colors = SwitchDefaults.colors(
-                        checkedThumbColor = AppColors.onAccent,
-                        checkedTrackColor = AppColors.accent,
-                        uncheckedThumbColor = AppColors.textMuted,
-                        uncheckedTrackColor = AppColors.bgSecondary,
-                        uncheckedBorderColor = AppColors.borderDefault,
-                    ),
-                )
-            }
-        }
+            Spacer(Modifier.height(GeistSpacing.space2))
+            SettingsToggleRow(
+                shape = RoundedCornerShape(GeistRadii.listGroup),
+                title = stringResource(R.string.daily_note_enable_title),
+                subtitle = stringResource(R.string.daily_note_enable_subtitle),
+                checked = settings.enabled,
+                onCheckedChange = { onSettingsChanged(settings.copy(enabled = it)) },
+            )
 
-        if (settings.enabled) {
-            // Folder path
-            GeistCard {
-                SectionLabel(stringResource(R.string.section_daily_notes_folder))
-                OutlinedTextField(
-                    value = settings.folderPath,
-                    onValueChange = { onSettingsChanged(settings.copy(folderPath = it)) },
-                    modifier = Modifier.fillMaxWidth(),
-                    placeholder = { Text(stringResource(R.string.daily_notes_folder_hint), color = AppColors.textMuted) },
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = AppColors.accent,
-                        unfocusedBorderColor = AppColors.borderDefault,
-                        focusedTextColor = AppColors.textPrimary,
-                        unfocusedTextColor = AppColors.textPrimary,
-                        cursorColor = AppColors.accent,
-                    ),
-                    shape = RoundedCornerShape(Radii.card),
-                    singleLine = true,
-                )
-                Spacer(modifier = Modifier.height(Spacing.xs))
-                Text(
-                    stringResource(R.string.daily_notes_folder_help),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = AppColors.textMuted,
-                )
-            }
-
-            // Filename pattern
-            GeistCard {
-                SectionLabel(stringResource(R.string.section_filename_pattern))
-                OutlinedTextField(
-                    value = settings.filenamePattern,
-                    onValueChange = { onSettingsChanged(settings.copy(filenamePattern = it)) },
-                    modifier = Modifier.fillMaxWidth(),
-                    placeholder = { Text(stringResource(R.string.filename_template_hint), color = AppColors.textMuted) },
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = AppColors.accent,
-                        unfocusedBorderColor = AppColors.borderDefault,
-                        focusedTextColor = AppColors.textPrimary,
-                        unfocusedTextColor = AppColors.textPrimary,
-                        cursorColor = AppColors.accent,
-                    ),
-                    shape = RoundedCornerShape(Radii.card),
-                    singleLine = true,
-                )
-                Spacer(modifier = Modifier.height(Spacing.xs))
-                Text(
-                    stringResource(R.string.filename_template_tokens),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = AppColors.textMuted,
-                )
-            }
-
-            // Preview
-            GeistCard {
-                SectionLabel(stringResource(R.string.section_preview_path))
-                Text(
-                    settings.previewPath(),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = AppColors.accent,
-                )
-            }
-
-            // Markdown body sections
-            GeistCard {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(stringResource(R.string.inject_markdown_sections_title), color = AppColors.textPrimary, style = MaterialTheme.typography.bodyLarge)
+            if (settings.enabled) {
+                SettingsGroupHeading(stringResource(R.string.section_file_organization))
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    SettingsFieldRow(shape = groupRowShape(0, 3)) {
+                        // Labels wrap outside the editing field, leaving its width for input.
+                        Text(stringResource(R.string.section_daily_notes_folder), style = GeistType.label16, color = colors.primary)
+                        OutlinedTextField(
+                            value = settings.folderPath,
+                            isError = !AutomationOutputPathValidation.isSafeDailyNoteFolder(settings.folderPath),
+                            supportingText = if (!AutomationOutputPathValidation.isSafeDailyNoteFolder(settings.folderPath)) {
+                                { Text(stringResource(R.string.automation_output_path_invalid)) }
+                            } else null,
+                            onValueChange = { onSettingsChanged(settings.copy(folderPath = it)) },
+                            modifier = Modifier.fillMaxWidth(),
+                            textStyle = GeistType.copy14Mono,
+                            placeholder = { Text(stringResource(R.string.daily_notes_folder_hint), style = GeistType.copy14Mono) },
+                            colors = settingsTextFieldColors(),
+                            shape = settingsTextFieldShape,
+                            singleLine = true,
+                        )
+                        Text(stringResource(R.string.daily_notes_folder_help), style = GeistType.copy14, color = colors.secondary)
+                    }
+                    SettingsFieldRow(shape = groupRowShape(1, 3)) {
+                        Text(stringResource(R.string.section_filename_pattern), style = GeistType.label16, color = colors.primary)
+                        OutlinedTextField(
+                            value = settings.filenamePattern,
+                            isError = !AutomationOutputPathValidation.isSafeDailyNoteFilename(settings.filenamePattern),
+                            supportingText = if (!AutomationOutputPathValidation.isSafeDailyNoteFilename(settings.filenamePattern)) {
+                                { Text(stringResource(R.string.automation_output_path_invalid)) }
+                            } else null,
+                            onValueChange = { onSettingsChanged(settings.copy(filenamePattern = it)) },
+                            modifier = Modifier.fillMaxWidth(),
+                            textStyle = GeistType.copy14Mono,
+                            placeholder = { Text(stringResource(R.string.filename_template_hint), style = GeistType.copy14Mono) },
+                            colors = settingsTextFieldColors(),
+                            shape = settingsTextFieldShape,
+                            singleLine = true,
+                        )
+                        Text(stringResource(R.string.filename_template_tokens), style = GeistType.copy14, color = colors.secondary)
+                    }
+                    SettingsFieldRow(shape = groupRowShape(2, 3)) {
+                        Text(stringResource(R.string.section_preview_path), style = GeistType.label16, color = colors.primary)
+                        // The full path wraps so long folders stay readable.
+                        val valid = AutomationOutputPathValidation.isValidDailyNotes(settings)
                         Text(
-                            stringResource(R.string.inject_markdown_sections_subtitle),
-                            color = AppColors.textSecondary,
-                            style = MaterialTheme.typography.bodySmall,
+                            if (valid) settings.previewPath() else stringResource(R.string.automation_output_path_invalid),
+                            style = GeistType.copy14Mono,
+                            color = if (valid) colors.brandPrimary else colors.error,
                         )
                     }
-                    Switch(
-                        checked = settings.injectMarkdownSections,
-                        onCheckedChange = { onSettingsChanged(settings.copy(injectMarkdownSections = it)) },
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = AppColors.onAccent,
-                            checkedTrackColor = AppColors.accent,
-                            uncheckedThumbColor = AppColors.textMuted,
-                            uncheckedTrackColor = AppColors.bgSecondary,
-                            uncheckedBorderColor = AppColors.borderDefault,
-                        ),
-                    )
                 }
-            }
 
-            // Create if missing
-            GeistCard {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Column {
-                        Text(stringResource(R.string.create_note_if_missing_title), color = AppColors.textPrimary, style = MaterialTheme.typography.bodyLarge)
-                        Text(
-                            stringResource(R.string.create_note_if_missing_subtitle),
-                            color = AppColors.textSecondary,
-                            style = MaterialTheme.typography.bodySmall,
-                        )
-                    }
-                    Switch(
-                        checked = settings.createIfMissing,
-                        onCheckedChange = { onSettingsChanged(settings.copy(createIfMissing = it)) },
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = AppColors.onAccent,
-                            checkedTrackColor = AppColors.accent,
-                            uncheckedThumbColor = AppColors.textMuted,
-                            uncheckedTrackColor = AppColors.bgSecondary,
-                            uncheckedBorderColor = AppColors.borderDefault,
-                        ),
-                    )
-                }
+                SettingsGroup(
+                    title = stringResource(R.string.section_options),
+                    rows = listOf(
+                        { shape ->
+                            SettingsToggleRow(
+                                shape = shape,
+                                title = stringResource(R.string.inject_markdown_sections_title),
+                                subtitle = stringResource(R.string.inject_markdown_sections_subtitle),
+                                checked = settings.injectMarkdownSections,
+                                onCheckedChange = { onSettingsChanged(settings.copy(injectMarkdownSections = it)) },
+                            )
+                        },
+                        { shape ->
+                            SettingsToggleRow(
+                                shape = shape,
+                                title = stringResource(R.string.create_note_if_missing_title),
+                                subtitle = stringResource(R.string.create_note_if_missing_subtitle),
+                                checked = settings.createIfMissing,
+                                onCheckedChange = { onSettingsChanged(settings.copy(createIfMissing = it)) },
+                            )
+                        },
+                    ),
+                )
             }
         }
-
-        Spacer(modifier = Modifier.height(Spacing.xl))
     }
 }

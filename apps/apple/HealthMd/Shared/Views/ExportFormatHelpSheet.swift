@@ -88,13 +88,13 @@ struct ExportFormatHelpSheet: View {
                 .frame(width: 32, height: 32)
 
             VStack(alignment: .leading, spacing: 3) {
-                Text(title)
+                Text(LocalizedStringKey(title))
                     .font(Typography.bodyEmphasis())
                     .foregroundStyle(Color.textPrimary)
-                Text(subtitle)
+                Text(LocalizedStringKey(subtitle))
                     .font(Typography.label())
                     .foregroundStyle(Color.textSecondary)
-                Text(detail)
+                Text(LocalizedStringKey(detail))
                     .font(Typography.caption())
                     .foregroundStyle(Color.textMuted)
                     .fixedSize(horizontal: false, vertical: true)

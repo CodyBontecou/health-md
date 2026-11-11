@@ -62,6 +62,22 @@ app-store-output/manifest.json
 
 `app-store-output/` is ignored by git and should be reviewed manually before any App Store submission.
 
+## Animated product page header
+
+`header-video.html` and `render-header-video.cjs` produce the text-free **Amethyst pulse** creative using the Apple app icon as its source artwork. The heart floats and pulses above a decorative ECG trace with subtle violet orbits. No health records or live app capture are used.
+
+Run with Node.js, Playwright, sharp, Google Chrome, ffmpeg, and ffprobe available:
+
+```bash
+node scripts/app-store-images/render-header-video.cjs
+```
+
+Set `HEADER_NODE_MODULES` if Playwright and sharp are installed outside this tool's dependency tree, and `HEADER_CHROME` to override the macOS Chrome executable. Pass an output directory as the first argument, or set `HEADER_STILL_ONLY=1` to inspect the poster and contact sheet before encoding.
+
+The default destination is `app-store-output/header-video/`. Outputs include a self-contained HTML animation, PNG poster, contact sheet, verification JSON, and `healthmd-app-store-header.mp4`: 3840 × 1646, 30 fps, 12 seconds, H.264, silent, continuously looping. Rendering uses a deterministic clock; the exporter checks exact first/end-frame equality and validates the encoded dimensions, duration, and frame rate. The HTML supports `?still`, reduced motion, and `?capture` with `window.renderAt(seconds)`.
+
+These are the [product page header creative specifications](https://developer.apple.com/help/app-store-connect/reference/app-information/creative-assets-specifications), a different placement from conventional app preview videos. Review the creative in App Store Connect's placement preview before submitting; this tool does not upload it.
+
 ## Localized reference-swap workflow
 
 The preferred Health.md localization workflow uses an OpenAI masked image edit. It sends the English App Store master, the corresponding localized simulator capture, and a rendered localized-copy reference to OpenAI. Local post-processing restores every unmasked English-master pixel and places the real localized simulator UI into the existing device frame.

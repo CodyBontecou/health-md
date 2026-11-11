@@ -19,11 +19,11 @@ class TestingCommandTests(unittest.TestCase):
         self.assertNotIn("xcodebuild test", output)
         self.assertNotIn("./gradlew", output)
 
-    def test_test_requires_explicit_component(self):
+    def test_unscoped_test_uses_the_portable_suite(self):
         # Dry-run first: running the old unscoped target would launch every suite.
         output = self.dry_run("test")
         self.assertNotIn("xcodebuild test", output)
-        self.assertIn("COMPONENT", output)
+        self.assertIn("python3 scripts/ci/run.py", output)
 
     def test_cli_selection_does_not_run_other_components(self):
         output = self.dry_run("test", "COMPONENT=cli")

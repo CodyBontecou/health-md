@@ -22,6 +22,18 @@ tags:
 
 Apple Health's built-in **Export All Health Data** creates an XML archive. For Google Sheets, Health.md can read authorized data on your iPhone and write daily CSV files. This guide imports those files on a computer; it does not convert an existing XML archive or connect Sheets directly to Apple Health.
 
+## Try the 28-day spreadsheet sample
+
+[Download the complete sample pack](/assets/downloads/healthmd-spreadsheet-sample.zip), including **28 daily CSVs**, a combined CSV, and an [Excel workbook with steps and sleep charts](/assets/downloads/spreadsheet-sample/healthmd-health-data-sample.xlsx). You can also download [combined.csv](/assets/downloads/spreadsheet-sample/combined.csv) directly to practice the Sheets import.
+
+All values are fictional, covering **September 28 to October 25, 2026**. These are illustrative two-metric samples, not complete exporter fixtures. There are **28 recorded step days** and **27 recorded sleep days**; October 8 deliberately has no sleep reading. Missing sleep is not zero, and sleep seconds must be divided by 3600 to chart hours.
+
+![Rendered preview of the fictional Excel reference workbook with daily steps and sleep-duration charts and a gap for missing sleep.](/assets/downloads/spreadsheet-sample/workbook-preview.png)
+
+The workbook is an Excel reference. For the Sheets exercise, create a new spreadsheet, choose **File → Import → Upload**, select **combined.csv**, and choose **Comma** as the separator. Uploading sends this fictional sample to Google. Then follow Step 2 below to preserve the raw table and Step 3 to build the filtered analysis. Native Excel chart conversion in Sheets has not been verified.
+
+Your steps total should be **249,630** across 28 recorded days. Average sleep should be **7.49 hours** across 27 recorded days. Do not mix the fictional rows with your own exports, and do not replace the absent October 8 sleep row with zero. The sample workbook has fixed dates and ranges; it does not refresh from your phone.
+
 <a class="button" href="https://apps.apple.com/us/app/health-md/id6757763969">Get Health.md for iPhone</a>
 
 Health.md includes **5 free export actions**, followed by a single lifetime unlock. You do not need a Mac to create the manual iPhone export. Use a computer and a Google account for the browser-based Sheets steps below.

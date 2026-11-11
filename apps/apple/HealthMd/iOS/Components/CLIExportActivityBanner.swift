@@ -71,6 +71,16 @@ final class CLIExportActivityTracker: ObservableObject {
     }
 
     @Published private(set) var snapshot: Snapshot?
+    /// The requested source-day range of the job that began last, for the Live Activity footer.
+    private(set) var activityDateRange: (jobID: UUID, range: ClosedRange<Date>)?
+    private(set) var admissionID: UUID?
+
+    private struct ConnectedActivityOwner {
+        let sessionID: UUID
+        let fingerprint: ConnectedCorpusRequestFingerprint
+        let admissionID: UUID
+    }
+    private var connectedActivityOwner: ConnectedActivityOwner?
 
     private var dismissalTask: Task<Void, Never>?
 
@@ -83,9 +93,14 @@ final class CLIExportActivityTracker: ObservableObject {
         source: Source,
         totalDays: Int = 0,
         targetLabel: String? = nil,
-        message: String
+        message: String,
+        admissionID: UUID = UUID(),
+        dateRange: ClosedRange<Date>? = nil
     ) {
         dismissalTask?.cancel()
+        self.admissionID = admissionID
+        activityDateRange = dateRange.map { (jobID, $0) }
+        connectedActivityOwner = nil
         publish(Snapshot(
             jobID: jobID,
             source: source,
@@ -117,6 +132,10 @@ final class CLIExportActivityTracker: ObservableObject {
                 || snapshot?.jobID == jobID
                 || snapshot?.phase.isTerminal == true else { return }
         let existingTarget = snapshot?.jobID == jobID ? snapshot?.targetLabel : nil
+        if snapshot == nil || snapshot?.jobID != jobID || snapshot?.source != source {
+            admissionID = UUID()
+            connectedActivityOwner = nil
+        }
         publish(Snapshot(
             jobID: jobID,
             source: source,
@@ -160,6 +179,8 @@ final class CLIExportActivityTracker: ObservableObject {
     }
 
     func updateConnected(_ progress: ConnectedCorpusProgressSnapshot) {
+        guard snapshot == nil || snapshot?.phase.isTerminal == true
+                || (snapshot?.jobID == progress.jobID && snapshot?.source == .macApp) else { return }
         let phase: Phase
         switch progress.state {
         case .preparing:
@@ -189,9 +210,23 @@ final class CLIExportActivityTracker: ObservableObject {
             committedBytes: progress.committedBytes,
             message: message
         )
+        if let admissionID {
+            connectedActivityOwner = ConnectedActivityOwner(
+                sessionID: progress.sessionID,
+                fingerprint: progress.requestFingerprint,
+                admissionID: admissionID
+            )
+        }
         if phase.isTerminal {
             finish(jobID: progress.jobID, phase: phase, message: message)
         }
+    }
+
+    func ownsConnectedActivity(_ progress: ConnectedCorpusProgressSnapshot) -> Bool {
+        snapshot?.jobID == progress.jobID && snapshot?.source == .macApp
+            && connectedActivityOwner?.sessionID == progress.sessionID
+            && connectedActivityOwner?.fingerprint == progress.requestFingerprint
+            && connectedActivityOwner?.admissionID == admissionID
     }
 
     func finish(jobID: UUID, phase: Phase, message: String) {
@@ -213,12 +248,16 @@ final class CLIExportActivityTracker: ObservableObject {
             message: message
         ))
         dismissalTask?.cancel()
+        let completedAdmissionID = admissionID
         dismissalTask = Task { [weak self] in
             try? await Task.sleep(for: .seconds(5))
             guard !Task.isCancelled,
                   self?.snapshot?.jobID == jobID,
-                  self?.snapshot?.phase == phase else { return }
+                  self?.snapshot?.phase == phase,
+                  self?.admissionID == completedAdmissionID else { return }
             self?.snapshot = nil
+            self?.admissionID = nil
+            self?.connectedActivityOwner = nil
         }
     }
 
@@ -243,6 +282,8 @@ final class CLIExportActivityTracker: ObservableObject {
         dismissalTask?.cancel()
         dismissalTask = nil
         snapshot = nil
+        admissionID = nil
+        connectedActivityOwner = nil
         if let dismissedJobID {
             CLIExportLiveActivityController.shared.dismiss(jobID: dismissedJobID)
         }

@@ -3,28 +3,43 @@ package com.healthmd.presentation
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.dp
 import com.healthmd.R
-import com.healthmd.presentation.common.GeistCard
-import com.healthmd.presentation.theme.GeistMono
+import com.healthmd.presentation.settings.groupRowShape
+import com.healthmd.presentation.theme.GeistSizes
 import com.healthmd.presentation.theme.GeistSpacing
+import com.healthmd.presentation.theme.GeistType
 import com.healthmd.presentation.theme.HealthMdTheme
-import com.healthmd.presentation.theme.Spacing
+import com.healthmd.presentation.theme.LocalGeistColors
 
 /**
  * Activity shown when Health Connect requests the app's privacy policy / permissions rationale.
@@ -38,9 +53,7 @@ class HealthPermissionsRationaleActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             HealthMdTheme {
-                Surface(modifier = Modifier.fillMaxSize()) {
-                    RationaleScreen()
-                }
+                RationaleScreen(onClose = ::finish)
             }
         }
     }
@@ -116,91 +129,115 @@ private val categories = listOf(
 )
 
 @Composable
-private fun RationaleScreen() {
+private fun RationaleScreen(onClose: () -> Unit) {
+    val colors = LocalGeistColors.current
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = Spacing.md, vertical = Spacing.lg),
-        verticalArrangement = Arrangement.spacedBy(Spacing.md),
+            .background(colors.background100)
+            .windowInsetsPadding(WindowInsets.safeDrawing),
     ) {
-        Text(
-            text = stringResource(R.string.privacy_policy_title),
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.SemiBold,
-        )
-
-        Text(
-            text = stringResource(R.string.privacy_policy_subtitle),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-
-        Text(
-            text = stringResource(R.string.privacy_policy_direct_cli),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-
-        HorizontalDivider()
-
-        categories.forEach { category ->
-            CategoryCard(category)
-        }
-
-        HorizontalDivider()
-
-        Text(
-            text = stringResource(R.string.privacy_policy_footer),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-    }
-}
-
-@Composable
-private fun CategoryCard(category: PermissionCategory) {
-    GeistCard(
-        modifier = Modifier.fillMaxWidth(),
-        padding = Spacing.md,
-    ) {
-        Column(
-            verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 64.dp)
+                .padding(horizontal = GeistSpacing.space1),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
+            IconButton(onClick = onClose, modifier = Modifier.size(GeistSizes.minimumTouchTarget)) {
+                Icon(
+                    Icons.AutoMirrored.Outlined.ArrowBack,
+                    contentDescription = stringResource(R.string.back),
+                    tint = colors.primary,
+                )
+            }
             Text(
-                text = stringResource(category.nameRes),
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
+                text = stringResource(R.string.privacy_policy_title),
+                style = GeistType.heading24,
+                color = colors.primary,
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(start = GeistSpacing.space1, end = GeistSpacing.space3, top = GeistSpacing.space2, bottom = GeistSpacing.space2)
+                    .semantics { heading() },
             )
-
-            LabeledRow(
-                label = stringResource(R.string.privacy_permissions_label),
-                value = stringResource(category.permissionsRes),
-                monospace = true,
-            )
-
-            LabeledRow(
-                label = stringResource(R.string.privacy_export_label),
-                value = stringResource(category.exportsRes),
-            )
+        }
+        Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
+            Column(
+                modifier = Modifier
+                    .widthIn(max = GeistSizes.readableContentMaxWidth)
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(start = GeistSpacing.space4, end = GeistSpacing.space4, bottom = GeistSpacing.space6),
+                verticalArrangement = Arrangement.spacedBy(GeistSpacing.space3),
+            ) {
+                Text(
+                    text = stringResource(R.string.privacy_policy_subtitle),
+                    style = GeistType.copy16,
+                    color = colors.primary,
+                )
+                Text(
+                    text = stringResource(R.string.privacy_policy_direct_cli),
+                    style = GeistType.copy14,
+                    color = colors.secondary,
+                )
+                // One list group: rows 2dp apart, 20dp outer corners, no dividers.
+                Column(
+                    modifier = Modifier.padding(vertical = GeistSpacing.space3),
+                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                ) {
+                    categories.forEachIndexed { index, category ->
+                        CategoryRow(category, groupRowShape(index, categories.size))
+                    }
+                }
+                Text(
+                    text = stringResource(R.string.privacy_policy_footer),
+                    style = GeistType.copy13,
+                    color = colors.secondary,
+                )
+            }
         }
     }
 }
 
 @Composable
-private fun LabeledRow(label: String, value: String, monospace: Boolean = false) {
-    Row(horizontalArrangement = Arrangement.spacedBy(GeistSpacing.space1)) {
+private fun CategoryRow(category: PermissionCategory, shape: Shape) {
+    val colors = LocalGeistColors.current
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(shape)
+            .background(colors.background200)
+            .padding(GeistSpacing.space4),
+        verticalArrangement = Arrangement.spacedBy(GeistSpacing.space2),
+    ) {
         Text(
-            text = label,
-            style = MaterialTheme.typography.bodySmall,
-            fontWeight = FontWeight.Medium,
-            color = MaterialTheme.colorScheme.primary,
+            text = stringResource(category.nameRes),
+            style = GeistType.heading16,
+            color = colors.primary,
+            modifier = Modifier.semantics { heading() },
         )
+        LabeledValue(
+            label = stringResource(R.string.privacy_permissions_label),
+            value = stringResource(category.permissionsRes),
+            monospace = true,
+        )
+        LabeledValue(
+            label = stringResource(R.string.privacy_export_label),
+            value = stringResource(category.exportsRes),
+        )
+    }
+}
+
+/** Label above value so long permission names and field lists wrap at full width. */
+@Composable
+private fun LabeledValue(label: String, value: String, monospace: Boolean = false) {
+    val colors = LocalGeistColors.current
+    Column {
+        Text(text = label, style = GeistType.label12, color = colors.brandPrimary)
         Text(
             text = value,
-            style = MaterialTheme.typography.bodySmall,
-            fontFamily = if (monospace) GeistMono else null,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = if (monospace) GeistType.copy13Mono else GeistType.copy14,
+            color = colors.secondary,
         )
     }
 }

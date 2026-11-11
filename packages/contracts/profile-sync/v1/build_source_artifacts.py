@@ -12,7 +12,9 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[3]
-SOURCE = ROOT / "packages/contracts/shared-setup/v2/shared-setup.schema.json"
+# AS01 owns the byte-pinned baseline shared by field scope and AS05 projection.
+# Current Shared Setup may evolve independently; never widen sync by regeneration.
+SOURCE = ROOT / "packages/contracts/account-auth/v1/historical-source/shared-setup.schema.json"
 
 
 def compact(value):
@@ -85,6 +87,7 @@ def main():
     source_hash = hashlib.sha256(SOURCE.read_bytes()).hexdigest()
     write_json("source-pins.json", {
         "status": "proposed_synthetic_only", "shared_setup_schema_sha256": source_hash,
+        "shared_setup_schema_path": SOURCE.relative_to(ROOT).as_posix(),
         "metric_registry_sha256": hashlib.sha256((ROOT / "packages/healthmd-core-rust/crates/healthmd-core/registry/metric-registry-v1.json").read_bytes()).hexdigest(),
         "projection": "closed_v2_profile_minus_bundle_id_plus_independent_registry_origin_metadata",
     })
