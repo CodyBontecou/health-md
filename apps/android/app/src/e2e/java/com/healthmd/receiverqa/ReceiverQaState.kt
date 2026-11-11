@@ -11,7 +11,7 @@ class ReceiverQaState(context: Context) {
     private val state = directory.resolve("state.json")
     companion object { private val lock = Any() }
     fun read(): Map<String, String> = synchronized(lock) {
-        if (!Files.exists(state)) emptyMap() else Json.parseToJsonElement(Files.readString(state)).jsonObject.mapValues { it.value.jsonPrimitive.content }
+        if (!Files.exists(state)) emptyMap() else Json.parseToJsonElement(String(Files.readAllBytes(state), Charsets.UTF_8)).jsonObject.mapValues { it.value.jsonPrimitive.content }
     }
     fun update(values: Map<String, String>) = synchronized(lock) {
         val value = read() + values
@@ -19,7 +19,7 @@ class ReceiverQaState(context: Context) {
     }
     fun event(kind: String, value: String) = synchronized(lock) {
         Files.createDirectories(directory)
-        Files.writeString(directory.resolve("events.ndjson"), buildJsonObject { put("kind",kind);put("value",value) }.toString()+"\n",
+        Files.write(directory.resolve("events.ndjson"), (buildJsonObject { put("kind",kind);put("value",value) }.toString()+"\n").toByteArray(Charsets.UTF_8),
             java.nio.file.StandardOpenOption.CREATE, java.nio.file.StandardOpenOption.APPEND)
     }
     fun events(): List<JsonObject> = synchronized(lock) {

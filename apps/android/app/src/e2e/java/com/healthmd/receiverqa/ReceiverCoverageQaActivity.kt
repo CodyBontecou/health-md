@@ -120,7 +120,9 @@ class ReceiverCoverageQaActivity : ComponentActivity() {
             val template = ExportProfile("template", "Receiver QA", "", ExportTarget.API_ENDPOINT,
                 apiEndpointUrl = endpoint, createdAtEpochMillis = 1, updatedAtEpochMillis = 1)
             val frozen = snapshots.capture(template, configured)
+            val olderProfiles = profiles.getProfiles()
             val profile = profiles.add("Receiver QA $case", frozen, ExportTarget.API_ENDPOINT, apiEndpointUrl = endpoint)
+            for (older in olderProfiles) check(profiles.delete(older.id))
             profileId = profile.id
             ReceiverCoverageRuntime.save(this@ReceiverCoverageQaActivity, profile.id, config, endpoint, credentials)
             val fired = now.minusMinutes(1)
@@ -180,8 +182,12 @@ class ReceiverCoverageQaActivity : ComponentActivity() {
                 val entry = requireNotNull(entries.entry(requireNotNull(profileId)))
                 check(entry.lastRefreshSuccessEpochMillis != null)
                 val captures = count("capture"); val queries = count("coverage")
+                val beforeRepeat = allWork().map { it.id }.toSet()
                 profileScheduler.handleAlarm(profileId)
-                delay(500)
+                awaitCondition { allWork().any { it.id !in beforeRepeat } }
+                val repeatIds = allWork().filter { it.id !in beforeRepeat }.map { it.id }.toSet()
+                awaitCondition { allWork().filter { it.id in repeatIds }.all { it.state.isFinished } }
+                check(allWork().filter { it.id in repeatIds }.all { it.state == WorkInfo.State.SUCCEEDED })
                 check(count("capture") == captures && count("coverage") == queries) { "Satisfied Today slot replayed" }
             }
         }
@@ -208,8 +214,8 @@ class ReceiverCoverageQaActivity : ComponentActivity() {
     private fun planFiles(): Map<String, Pair<JsonObject, JsonObject>> {
         val path = filesDir.toPath().resolve("receiver-coverage/plans")
         if (!Files.exists(path)) return emptyMap()
-        return Files.list(path).use { files -> files.filter { it.fileName.toString().endsWith(".json") }.toList().associate { file ->
-            val envelope = Json.parseToJsonElement(Files.readString(file)).jsonObject
+        return Files.list(path).use { files -> files.iterator().asSequence().filter { it.fileName.toString().endsWith(".json") }.associate { file ->
+            val envelope = Json.parseToJsonElement(String(Files.readAllBytes(file), Charsets.UTF_8)).jsonObject
             file.fileName.toString() to (envelope to Json.parseToJsonElement(envelope.getValue("plan").jsonPrimitive.content).jsonObject)
         } }
     }
