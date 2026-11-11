@@ -225,7 +225,7 @@ final class AppleLooseDailyExportPlannerTests: XCTestCase {
             operation.artifacts.map(\.artifact.relativePath)
         )
         XCTAssertEqual(
-            preview.map(\.data),
+            preview.map { Data($0.preview.head.utf8) },
             nativePlan.artifacts.map(\.inlineData)
         )
     }
@@ -431,7 +431,7 @@ final class AppleLooseDailyExportPlannerTests: XCTestCase {
         )
         let operation = try unwrapPlanned(try await planner.planRange(
             healthData: [ExportFixtures.partialDay],
-            dailyOutputOwnerDates: [],
+            dailyOutputOwnerDates: ["2026-03-15"],
             settingsSnapshot: snapshot,
             surface: .localVaultRangeWithoutSideEffects
         ))

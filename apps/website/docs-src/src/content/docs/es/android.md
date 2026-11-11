@@ -25,6 +25,8 @@ description: "Configure Health.md para Android. Exporte datos Health Connect , s
 
 Health.md para Android convierte Health Connect en una revista de salud local. Elija las métricas que necesita y obtenga una vista previa del resultado. Luego, exporte archivos a una carpeta local, una bóveda Obsidian , una carpeta de proveedor sincronizada o un proveedor de documentos de Android grabable.
 
+La app tiene tres pestañas. **Archivo** es un calendario de las fechas de salud que cubrieron tus exportaciones, con los huecos que puedes recuperar. **Automatizaciones** reúne tus perfiles de exportación y programaciones. **Ajustes** reúne destinos, datos y opciones de la app. El botón **Exportar ahora** inicia una exportación puntual desde cualquier pestaña excepto Ajustes.
+
 <div class="options">
  <div class="option"> <strong> Health Connect fuente </strong> <p> Lee actividad, sueño, corazón, signos vitales, medidas corporales, nutrición, entrenamientos y otras categorías a través de las API Health Connect del dispositivo Android. </p> </div>
  <div class="option"> <strong> Obsidian -salida nativa </strong> <p> Escribe notas diarias, YAML/frontmatter, Obsidian notas amigables con Bases, entradas individuales y JSON compatible con el complemento Health.md Obsidian . </p> </div>
@@ -149,7 +151,7 @@ Health.md para Android es local primero:
 
 Si desea la configuración local más estricta, ejecute exportaciones manuales a una carpeta de dispositivo local y deje deshabilitadas las exportaciones programadas y la sincronización respaldada por el proveedor.
 
-El piloto separado y opcional de Health.md Cloud es para un único propietario y conserva solo las exportaciones de API enviadas intencionalmente. No hay registro público ni sincronización automática de dispositivos; este flujo de carpetas no sube datos al piloto. Consulta la [política de privacidad](/privacy-policy.html) sobre conservación, eliminación, cuota y riesgos de pérdida sin copias de seguridad.
+El piloto de nube Health.md independiente y opcional de propietario único conserva solo las exportaciones de API cargadas intencionalmente. No hay registro público ni sincronización automática de dispositivos; el flujo de trabajo de esta carpeta no se carga en ella. Consulte la [política de privacidad](/privacy-policy.html) para conocer los riesgos de retención, eliminación, cuotas y almacenamiento sin respaldo.
 
 ## Documentos relacionados
 

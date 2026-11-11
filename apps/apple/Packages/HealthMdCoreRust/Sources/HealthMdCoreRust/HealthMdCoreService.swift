@@ -95,6 +95,33 @@ public struct HealthMdCoreService: Sendable {
         }
     }
 
+    public func mergeScopedNote(
+        profile: CoreMetricRegistryProfile,
+        existing: String,
+        patch: String,
+        injectSections: Bool
+    ) throws -> String {
+        try translateRenderError {
+            try mergeScopedDailyNote(profile: profile, existing: existing,
+                patch: patch, injectSections: injectSections)
+        }
+    }
+
+    public func prepareScopedNote(
+        profile: CoreMetricRegistryProfile,
+        recordJSON: String,
+        bases: String,
+        markdown: String,
+        selectedProperties: [String],
+        injectSections: Bool
+    ) throws -> String {
+        try translateRenderError {
+            try prepareScopedDailyNote(profile: profile, recordJson: recordJSON,
+                bases: bases, markdown: markdown, selectedProperties: selectedProperties,
+                injectSections: injectSections)
+        }
+    }
+
     public func mergeMarkdown(existing: String, generated: String) throws -> String {
         try translateRenderError {
             try mergeRenderedMarkdown(existing: existing, generated: generated)

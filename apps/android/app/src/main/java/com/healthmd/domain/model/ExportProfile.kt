@@ -148,8 +148,13 @@ data class ExportSettingsSnapshotView(
     val exportFormats: Set<String> = emptySet(),
     val filenameFormat: String? = null,
     val includeGranularData: Boolean? = null,
+    val detailOverrides: Map<String, String>? = null,
     val metricSelection: MetricSelectionView? = null,
 ) {
+    /** Groups whose detail differs from the snapshot default, for profile summaries. */
+    val detailOverrideCount: Int
+        get() = detailOverrides?.size ?: 0
+
     /** Number of enabled health metrics in the frozen snapshot. */
     val enabledMetricCount: Int
         get() = metricSelection?.enabledMetrics?.size ?: 0

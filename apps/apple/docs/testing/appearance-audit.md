@@ -10,7 +10,9 @@ The shared design tokens in `HealthMd/Shared/Theme/DesignSystem.swift` use adapt
 
 No production UI currently forces a dark color scheme.
 
-No preview, marketing capture, or isolated visual treatment currently requires a dark-only appearance override. If a future capture or preview intentionally needs one, keep it outside production view composition, document the file here, and exclude only that scoped debug/preview path from `AppearanceRegressionTests`.
+The Mac App Store capture (`HealthMd/macOS/Debug/MacMarketingCapture.swift`, active only in DEBUG builds launched with `-MacMarketingCapture 1`) renders dark by default to match the App Store boards; `-MacMarketingAppearance light` selects light. The scheme is chosen inside that Debug file, and `HealthMdApp+macOS.swift` applies it only while capture is active. The iOS App Store captures set dark appearance from the UI test (`XCUIDevice.appearance`), not in the app.
+
+No preview or isolated visual treatment currently requires a dark-only appearance override. If a future capture or preview intentionally needs one, keep it outside production view composition, document the file here, and exclude only that scoped debug/preview path from `AppearanceRegressionTests`.
 
 ## Manual Check Matrix
 

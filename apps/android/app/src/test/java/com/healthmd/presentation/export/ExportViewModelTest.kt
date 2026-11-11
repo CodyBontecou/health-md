@@ -18,6 +18,7 @@ import com.healthmd.data.storage.FileExportManager
 import com.healthmd.domain.billing.FreemiumPolicy
 import com.healthmd.domain.distribution.DistributionPolicy
 import com.healthmd.domain.model.ActivityData
+import com.healthmd.domain.model.AndroidCaptureContext
 import com.healthmd.domain.model.CompatibilitySchemaProfile
 import com.healthmd.domain.model.FormatCustomization
 import com.healthmd.domain.model.ExportFormat
@@ -29,6 +30,8 @@ import com.healthmd.domain.model.ExportResult
 import com.healthmd.domain.model.ExportSettings
 import com.healthmd.domain.model.ExportTarget
 import com.healthmd.domain.model.HealthData
+import com.healthmd.domain.model.SleepDayAttribution
+import com.healthmd.domain.model.SleepDayAttributionOverride
 import com.healthmd.domain.repository.EntitlementRepository
 import com.healthmd.domain.repository.ExportHistoryRepository
 import com.healthmd.domain.repository.ExportRepository
@@ -58,6 +61,7 @@ import kotlinx.coroutines.test.TestDispatcher
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.Rule
@@ -66,6 +70,7 @@ import org.junit.rules.TestWatcher
 import org.junit.runner.Description
 import java.time.Duration
 import java.time.LocalDate
+import java.time.ZoneId
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class ExportViewModelTest {
@@ -121,6 +126,38 @@ class ExportViewModelTest {
         assertThat(exportRepository.exportCalls).isEqualTo(0)
         assertThat(historyRepository.entries).isEmpty()
         assertThat(viewModel.uiState.value.isExporting).isFalse()
+    }
+
+    @Test
+    fun exportMomentStartsFromTheNewRunNotTheLastOne() = runTest {
+        val healthRepository = FakeHealthRepository(hasPermissions = true)
+        val viewModel = createViewModel(
+            healthRepository = healthRepository,
+            exportRepository = FakeExportRepository(),
+            exportHistoryRepository = FakeExportHistoryRepository(),
+        )
+        advanceUntilIdle()
+
+        val today = LocalDate.now()
+        viewModel.setStartDate(today)
+        viewModel.setEndDate(today)
+        viewModel.startExport()
+        advanceUntilIdle()
+        assertThat(viewModel.uiState.value.exportProgressDate).isEqualTo(today)
+
+        val gate = kotlinx.coroutines.CompletableDeferred<Unit>()
+        healthRepository.fetchGate = gate
+        viewModel.setStartDate(today.minusDays(6))
+        viewModel.startExport()
+        runCurrent()
+
+        val state = viewModel.uiState.value
+        assertThat(state.isExporting).isTrue()
+        assertThat(state.exportProgress).isEqualTo(0)
+        assertThat(state.exportTotal).isEqualTo(7)
+        assertThat(state.exportProgressDate).isNull()
+        gate.complete(Unit)
+        advanceUntilIdle()
     }
 
     @Test
@@ -653,21 +690,23 @@ class ExportViewModelTest {
     }
 
     @Test
-    fun unpaidUserCannotStartEvenAFirstExport() = runTest {
+    fun unpaidUserCanCompleteFirstExportButCannotStartAnother() = runTest {
         val health = FakeHealthRepository(hasPermissions = true)
         val exports = FakeExportRepository()
         val viewModel = createViewModel(
             healthRepository = health,
             exportRepository = exports,
-            entitlementRepository = FakeBillingRepository(initialUnlocked = false),
+            entitlementRepository = FakeBillingRepository(initialUnlocked = false, verifiedAccess = true),
         )
         advanceUntilIdle()
         viewModel.startExport()
         advanceUntilIdle()
-        assertThat(health.fetchCalls).isEqualTo(0)
-        assertThat(exports.exportCalls).isEqualTo(0)
+        assertThat(exports.exportCalls).isEqualTo(1)
         assertThat(viewModel.uiState.value.freeExportsRemaining).isEqualTo(0)
-        assertThat(viewModel.uiState.value.postExportMilestone).isNull()
+        viewModel.startExport()
+        advanceUntilIdle()
+        assertThat(exports.exportCalls).isEqualTo(1)
+        assertThat(viewModel.uiState.value.isPurchased).isFalse()
     }
 
     @Test
@@ -767,8 +806,21 @@ private class FakeHealthRepository(
     var fetchCalls = 0
         private set
 
+    /** When set, each fetch waits on it, holding an export mid-run. */
+    var fetchGate: kotlinx.coroutines.CompletableDeferred<Unit>? = null
+
+    override suspend fun resolveCaptureContext(
+        zoneId: ZoneId,
+        sleepDayAttributionOverride: SleepDayAttributionOverride,
+    ) = AndroidCaptureContext(
+        zoneId,
+        (sleepDayAttributionOverride as? SleepDayAttributionOverride.Value)?.attribution
+            ?: SleepDayAttribution.DEFAULT,
+    )
+
     override suspend fun fetchHealthData(date: LocalDate): HealthData {
         fetchCalls++
+        fetchGate?.await()
         return HealthData(
             date = date,
             activity = ActivityData(steps = 1),
@@ -882,9 +934,7 @@ private class FakeSettingsRepository(
     override suspend fun getFreeExportsRemaining(): Int = FreemiumPolicy.remainingExports(freeExportsUsedState.value)
 
     override suspend fun setPurchased(purchased: Boolean) {
-        val wasPurchased = isPurchasedState.value
         isPurchasedState.value = purchased
-        if (purchased && !wasPurchased) resetFreeExports()
     }
 
     override suspend fun resolveOnboardingCompletion(): Boolean =
@@ -895,6 +945,13 @@ private class FakeSettingsRepository(
     }
 
     override suspend fun getSuccessfulExportCount(): Int = successfulExportCount
+
+    private val successfulOperationIds = mutableSetOf<String>()
+    override suspend fun recordSuccessfulExportOnce(operationId: String): Boolean {
+        if (!successfulOperationIds.add(operationId)) return false
+        incrementSuccessfulExportCount()
+        return true
+    }
 
     override suspend fun incrementSuccessfulExportCount() {
         successfulExportCount++

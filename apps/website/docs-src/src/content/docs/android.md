@@ -25,6 +25,8 @@ description: Set up Health.md for Android. Export Health Connect data, select St
 
 Health.md for Android turns Health Connect into a local-first health journal. Choose the metrics that you need and preview the output. Then export files to a local folder, Obsidian vault, synced provider folder, or writable Android document provider.
 
+The app has three tabs. **Archive** is a calendar of the health dates your exports covered, with gaps you can backfill. **Automations** holds your export profiles and schedules. **Settings** holds destinations, data and app options. The **Export now** button starts a one-off export from any tab except Settings.
+
 <div class="options">
   <div class="option"><strong>Health Connect source</strong><p>Reads activity, sleep, heart, vitals, body measurements, nutrition, workouts, and other categories through Android's on-device Health Connect APIs.</p></div>
   <div class="option"><strong>Obsidian-native output</strong><p>Writes daily notes, YAML/frontmatter, Obsidian Bases-friendly notes, individual entries, and JSON compatible with the Health.md Obsidian plugin.</p></div>

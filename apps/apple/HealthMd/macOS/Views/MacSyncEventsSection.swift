@@ -56,7 +56,7 @@ struct MacSyncEventsSection: View {
                     }
                     .buttonStyle(.borderless)
                     .controlSize(.small)
-                    .tint(Color.accent)
+                    .tint(Color.glassAdaptive(\.accent))
                     .padding(.top, 4)
                     .accessibilityHint(
                         showAll
@@ -88,11 +88,11 @@ struct MacSyncEventsSection: View {
     private var emptyState: some View {
         HStack(spacing: 10) {
             Image(systemName: "clock.arrow.circlepath")
-                .foregroundStyle(Color.textMuted)
+                .foregroundStyle(Color.glassAdaptive(\.muted))
                 .accessibilityHidden(true)
             Text("No iPhone activity yet. Run a sync or Mac export to see it here.")
                 .font(BrandTypography.body())
-                .foregroundStyle(Color.textMuted)
+                .foregroundStyle(Color.glassAdaptive(\.muted))
         }
     }
 
@@ -123,33 +123,33 @@ struct MacSyncEventsSection: View {
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
                     Text(entry.summaryDescription)
                         .font(BrandTypography.bodyMedium())
-                        .foregroundStyle(Color.textPrimary)
+                        .foregroundStyle(Color.glassAdaptive(\.text))
                         .lineLimit(2)
                     Spacer(minLength: 8)
                     if entry.kind == .dataReceived && entry.payloadByteEstimate > 0 {
                         Text(byteString(entry.payloadByteEstimate))
                             .font(BrandTypography.value())
-                            .foregroundStyle(Color.textMuted)
+                            .foregroundStyle(Color.glassAdaptive(\.muted))
                     }
                 }
 
                 HStack(spacing: 8) {
                     Text(Self.timestampFormatter.string(from: entry.timestamp))
                         .font(BrandTypography.caption())
-                        .foregroundStyle(Color.textMuted)
+                        .foregroundStyle(Color.glassAdaptive(\.muted))
                     Text("·")
                         .font(BrandTypography.caption())
-                        .foregroundStyle(Color.textMuted)
+                        .foregroundStyle(Color.glassAdaptive(\.muted))
                     Text(entry.peerName)
                         .font(BrandTypography.caption())
-                        .foregroundStyle(Color.textMuted)
+                        .foregroundStyle(Color.glassAdaptive(\.muted))
                         .lineLimit(1)
                 }
 
                 if let rangeText = dateRangeString(entry) {
                     Text(rangeText)
                         .font(BrandTypography.caption())
-                        .foregroundStyle(Color.textMuted)
+                        .foregroundStyle(Color.glassAdaptive(\.muted))
                 }
             }
         }

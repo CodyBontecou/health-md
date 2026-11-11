@@ -25,6 +25,8 @@ description: "Configura Health.md per Android. Esporta i dati Health Connect , s
 
 Health.md per Android trasforma Health Connect in un diario sanitario locale. Scegli le metriche di cui hai bisogno e visualizza l'anteprima dell'output. Quindi esporta i file in una cartella locale, Obsidian vault, cartella del provider sincronizzato o provider di documenti Android scrivibili.
 
+L’app ha tre schede. **Archivio** è un calendario delle date di salute coperte dalle tue esportazioni, con le lacune che puoi recuperare. **Automazioni** raccoglie i profili di esportazione e le pianificazioni. **Impostazioni** raccoglie destinazioni, dati e opzioni dell’app. Il pulsante **Esporta ora** avvia un’esportazione singola da qualsiasi scheda tranne Impostazioni.
+
 <div class="options">
  <div class="option"> <strong> Health Connect source </strong> <p> Legge attività, sonno, cuore, parametri vitali, misurazioni corporee, alimentazione, allenamenti e altre categorie tramite le API Health Connect integrate nel dispositivo Android. </p> </div>
  <div class="option"> <strong> Obsidian -output nativo </strong> <p> Scrive note giornaliere, YAML/frontmatter, Obsidian Note base-friendly, voci individuali e JSON compatibili con Health.md Obsidian plugin. </p> </div>
@@ -149,7 +151,7 @@ Health.md per Android è innanzitutto locale:
 
 Se desideri la configurazione locale più rigorosa, esegui le esportazioni manuali in una cartella del dispositivo locale e lascia disabilitate le esportazioni pianificate e la sincronizzazione supportata dal provider.
 
-Il progetto pilota Health.md Cloud, separato e facoltativo, è riservato a un solo proprietario e conserva solo le esportazioni API inviate intenzionalmente. Nessuna registrazione pubblica né sincronizzazione automatica dei dispositivi è disponibile; questo flusso di cartelle non carica dati nel progetto pilota. L’[informativa sulla privacy](/privacy-policy.html) descrive conservazione, eliminazione, quota e rischi di perdita senza backup.
+Il progetto pilota cloud separato e facoltativo Health.md Cloud conserva solo le esportazioni API caricate intenzionalmente al suo interno. Non è prevista alcuna registrazione pubblica né sincronizzazione automatica del dispositivo; il flusso di lavoro di questa cartella non viene caricato su di essa. Consulta l'[informativa sulla privacy](/privacy-policy.html) per i rischi di conservazione, eliminazione, quota e archiviazione senza supporto.
 
 ## Documenti correlati
 

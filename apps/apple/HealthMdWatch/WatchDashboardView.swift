@@ -1,6 +1,17 @@
 import SwiftUI
 import WidgetKit
 
+/// WatchDashboardG colours.
+private enum WatchGlass {
+    static let accent = Color(red: 0xCD / 255, green: 0xB6 / 255, blue: 0xFF / 255)
+    static let label = Color(red: 0xDA / 255, green: 0xD4 / 255, blue: 0xE8 / 255)
+    static let hrv = Color(red: 0x5E / 255, green: 0xD3 / 255, blue: 0xB0 / 255)
+    static let heart = Color(red: 0xFF / 255, green: 0x7A / 255, blue: 0x93 / 255)
+    static let steps = Color(red: 0xA6 / 255, green: 0xF2 / 255, blue: 0x5F / 255)
+    static let oxygen = Color(red: 0x5E / 255, green: 0xD3 / 255, blue: 0xF2 / 255)
+    static let line = Color.white.opacity(0.14)
+}
+
 private enum WatchHealthAccessState: Equatable {
     case unknown
     case needsAuthorization
@@ -39,19 +50,12 @@ final class WatchDashboardViewModel: ObservableObject {
         }
     }
 
-    var isAuthorizationButtonDisabled: Bool {
-        isLoading || accessState == .connected || accessState == .unavailable
+    var isHealthConnected: Bool {
+        accessState == .connected
     }
 
-    var headerMessage: String {
-        switch accessState {
-        case .connected:
-            return "Health is connected. Add Health.md widgets to your Smart Stack or watch face."
-        case .requested:
-            return "Health access was already requested for this watch. Use Refresh after changing permissions."
-        default:
-            return "Allow Health access here, then add Health.md widgets to your Smart Stack or watch face."
-        }
+    var isAuthorizationButtonDisabled: Bool {
+        isLoading || accessState == .connected || accessState == .unavailable
     }
 
     func refresh() async {
@@ -141,150 +145,140 @@ final class WatchDashboardViewModel: ObservableObject {
     }
 }
 
+/// WatchDashboardG: the crystal-heart header over five metric rows. Health access and refresh
+/// controls sit below the rows, and the access button only shows until Health is connected.
 struct WatchDashboardView: View {
     @StateObject private var viewModel = WatchDashboardViewModel()
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 10) {
-                    header
+        ScrollView {
+            VStack(alignment: .leading, spacing: 0) {
+                header
 
-                    if viewModel.isLoading {
-                        ProgressView("Updating…")
-                            .font(.footnote)
-                    }
-
-                    if let statusMessage = viewModel.statusMessage {
-                        Text(statusMessage)
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-
-                    if let errorMessage = viewModel.errorMessage {
-                        Text(errorMessage)
-                            .font(.footnote)
-                            .foregroundStyle(.red)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-
-                    Button {
-                        Task { await viewModel.requestAuthorizationAndRefresh() }
-                    } label: {
-                        Label(viewModel.authorizationButtonTitle, systemImage: "heart.text.square")
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .disabled(viewModel.isAuthorizationButtonDisabled)
-
-                    Button {
-                        Task { await viewModel.refresh() }
-                    } label: {
-                        Label("Refresh", systemImage: "arrow.clockwise")
-                    }
-                    .disabled(viewModel.isLoading)
-
-                    metricGrid
+                ForEach(metricRows) { row in
+                    WatchMetricRow(row: row)
                 }
-                .padding(.horizontal)
+
+                footer
+                    .padding(.top, 12)
             }
-            .navigationTitle("Health.md")
-            .task { await viewModel.refresh() }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 2)
         }
+        .background(Color.black)
+        .task { await viewModel.refresh() }
     }
 
     private var header: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Label("Watch Widgets", systemImage: "applewatch.watchface")
-                .font(.headline)
-            Text(viewModel.headerMessage)
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
+        HStack(spacing: 6) {
+            Image("HealthCrystalHeart")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 18, height: 18)
+                .accessibilityHidden(true)
+            Text(verbatim: "Health.md")
+                .font(.system(size: 15, weight: .bold))
         }
+        .padding(.bottom, 6)
+        .accessibilityAddTraits(.isHeader)
     }
 
-    private var metricGrid: some View {
-        VStack(spacing: 8) {
-            WatchMetricRow(
-                icon: "figure.walk",
-                title: "Steps",
-                value: WatchHealthFormatter.steps(viewModel.snapshot.steps),
-                tint: .green
-            )
-            WatchMetricRow(
-                icon: "flame.fill",
-                title: "Active",
-                value: "\(WatchHealthFormatter.wholeNumber(viewModel.snapshot.activeEnergyKilocalories)) kcal",
-                tint: .orange
-            )
-            WatchMetricRow(
-                icon: "timer",
-                title: "Exercise",
-                value: "\(WatchHealthFormatter.wholeNumber(viewModel.snapshot.exerciseMinutes)) min",
-                tint: .yellow
-            )
-            WatchMetricRow(
-                icon: "figure.stand",
-                title: "Stand",
-                value: WatchHealthFormatter.standHours(viewModel.snapshot.standHours),
-                tint: .blue
-            )
-            WatchMetricRow(
-                icon: "bed.double.fill",
-                title: "Sleep",
-                value: WatchHealthFormatter.hours(viewModel.snapshot.sleepHours),
-                tint: .indigo
-            )
-            WatchMetricRow(
-                icon: "heart.fill",
-                title: "Resting HR",
-                value: WatchHealthFormatter.bpm(viewModel.snapshot.restingHeartRate),
-                tint: .red
-            )
-            WatchMetricRow(
-                icon: "waveform.path.ecg",
-                title: "HRV",
-                value: WatchHealthFormatter.milliseconds(viewModel.snapshot.heartRateVariabilityMS),
-                tint: .cyan
-            )
-            WatchMetricRow(
-                icon: "lungs.fill",
-                title: "Blood Oxygen",
-                value: WatchHealthFormatter.percent(viewModel.snapshot.bloodOxygenPercent),
-                tint: .mint
-            )
+    private var metricRows: [WatchMetricRowModel] {
+        let snapshot = viewModel.snapshot
+        return [
+            WatchMetricRowModel(title: "Sleep", value: WatchDashboardFormat.hoursMinutes(snapshot.sleepHours), tint: WatchGlass.accent),
+            WatchMetricRowModel(title: "HRV", value: WatchHealthFormatter.milliseconds(snapshot.heartRateVariabilityMS), tint: WatchGlass.hrv),
+            WatchMetricRowModel(title: "Resting HR", value: WatchHealthFormatter.wholeNumber(snapshot.restingHeartRate), tint: WatchGlass.heart),
+            WatchMetricRowModel(title: "Steps", value: WatchHealthFormatter.wholeNumber(snapshot.steps), tint: WatchGlass.steps),
+            WatchMetricRowModel(title: "Blood oxygen", value: WatchHealthFormatter.percent(snapshot.bloodOxygenPercent), tint: WatchGlass.oxygen)
+        ]
+    }
+
+    @ViewBuilder
+    private var footer: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            if viewModel.isLoading {
+                ProgressView()
+                    .frame(maxWidth: .infinity)
+            }
+
+            if let statusMessage = viewModel.statusMessage {
+                Text(statusMessage)
+                    .font(.footnote)
+                    .foregroundStyle(WatchGlass.label)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            if let errorMessage = viewModel.errorMessage {
+                Text(errorMessage)
+                    .font(.footnote)
+                    .foregroundStyle(WatchGlass.heart)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            if !viewModel.isHealthConnected {
+                Button {
+                    Task { await viewModel.requestAuthorizationAndRefresh() }
+                } label: {
+                    Text(viewModel.authorizationButtonTitle)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(WatchGlass.accent)
+                .foregroundStyle(Color.black)
+                .disabled(viewModel.isAuthorizationButtonDisabled)
+            }
+
+            Button {
+                Task { await viewModel.refresh() }
+            } label: {
+                Label("Refresh", systemImage: "arrow.clockwise")
+            }
+            .disabled(viewModel.isLoading)
         }
     }
 }
 
-private struct WatchMetricRow: View {
-    let icon: String
+private struct WatchMetricRowModel: Identifiable {
+    var id: String { title }
     let title: String
     let value: String
     let tint: Color
+}
+
+private struct WatchMetricRow: View {
+    let row: WatchMetricRowModel
 
     var body: some View {
-        HStack(spacing: 8) {
-            Image(systemName: icon)
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(tint)
-                .frame(width: 20)
-
-            Text(title)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-
+        HStack(alignment: .firstTextBaseline) {
+            Text(LocalizedStringKey(row.title))
+                .font(.system(size: 13))
+                .foregroundStyle(WatchGlass.label)
+                .lineLimit(1)
             Spacer(minLength: 6)
-
-            Text(value)
-                .font(.caption.weight(.semibold))
+            Text(row.value)
+                .font(.system(size: 16, weight: .bold))
+                .foregroundStyle(row.tint)
                 .monospacedDigit()
-                .minimumScaleFactor(0.8)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
         }
-        .padding(.vertical, 7)
-        .padding(.horizontal, 9)
-        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .padding(.vertical, 6)
+        .padding(.horizontal, 2)
+        .overlay(alignment: .top) {
+            Rectangle().fill(WatchGlass.line).frame(height: 1)
+        }
+        .accessibilityElement(children: .combine)
+    }
+}
+
+enum WatchDashboardFormat {
+    /// "7h 12m" as on WatchDashboardG; "—" when there is no sleep.
+    static func hoursMinutes(_ hours: Double?) -> String {
+        guard let hours, hours > 0 else { return "—" }
+        let totalMinutes = Int((hours * 60).rounded())
+        let wholeHours = totalMinutes / 60
+        let minutes = totalMinutes % 60
+        return wholeHours == 0 ? "\(minutes)m" : "\(wholeHours)h \(minutes)m"
     }
 }
 

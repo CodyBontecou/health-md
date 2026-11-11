@@ -25,6 +25,8 @@ description: "为 Android 设置Health.md 。导出Health Connect数据，选择
 
 Android 版Health.md将Health Connect变成本地首屈一指的健康日志。选择您需要的指标并预览输出。然后将文件导出到本地文件夹、 Obsidian保管库、同步提供程序文件夹或可写 Android 文档提供程序。
 
+应用有三个标签页。**归档**是一个日历，显示你的导出已覆盖的健康数据日期，并可补导缺失的日期。**自动化**包含你的导出配置文件和计划。**设置**包含目标位置、数据和应用选项。除“设置”外，在任何标签页都可以用**立即导出**按钮开始一次性导出。
+
 <div class="options">
  <div class="option"> <strong> Health Connect源</strong> <p>通过 Android 设备上Health Connect API 读取活动、睡眠、心脏、生命体征、身体测量、营养、锻炼和其他类别。 </p> </div>
  <div class="option"> <strong> Obsidian -本机输出</strong> <p>编写每日笔记、YAML/frontmatter、 Obsidian基础友好笔记、个人条目和与Health.md Obsidian插件兼容的 JSON。 </p> </div>
@@ -141,15 +143,15 @@ Google Fit 被故意排除在受支持的提供商表面之外，因为Health Co
 Android 的Health.md是本地优先的：
 
 - Health Connect记录在您的 Android 设备上读取。
-- 导出内容直接写入您选择的文件夹。默认情况下，
-- 核心文件夹导出和直接设备查询不会创建Health.md服务器副本。
+- 导出内容直接写入您选择的文件夹。
+- 默认情况下，核心文件夹导出和直接设备查询不会创建Health.md服务器副本。
 - 设置和导出历史记录保留在设备上。
 - 计费由 Play 版本中的Google Play处理。 F-Droid包括无计费的无限制访问，并且不包含Health.md遥测代码或遥测身份/状态。
 - 提供商支持的文件夹根据该提供商自己的条款进行同步。
 
 如果您想要最严格的本地设置，请运行手动导出到本地设备文件夹并禁用计划导出和提供商支持的同步。
 
-另行提供的可选 Health.md Cloud 试点仅供单一所有者使用，只保留主动上传的 API 导出。不开放公众注册，不自动同步设备；此文件夹流程不会上传至该试点。保留、删除、容量配额和无备份导致的丢失风险见[隐私政策](/privacy-policy.html)。
+单独的、可选的单一所有者Health.md云试点仅保留有意上传到其中的 API 导出。没有公开注册，也没有自动设备同步；此文件夹工作流程不会上传到其中。有关保留、删除、配额和无支持的存储风险，请参阅[隐私政策](/privacy-policy.html)。
 
 ## 相关文档
 

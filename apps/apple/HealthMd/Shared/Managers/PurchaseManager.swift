@@ -121,18 +121,19 @@ nonisolated enum HealthMdPurchaseOption: String, CaseIterable, Identifiable, Sen
         switch self {
         case .family: return String(localized: "Pay once and share with up to 5 family members")
         case .familyUpgrade: return String(localized: "Upgrade pricing for existing Lifetime owners")
-        default: return String(localized: "Pay once for unlimited private exports")
+        default: return String(localized: "One purchase, charged today")
         }
     }
 
     var badge: String? { isFamilyPlan ? String(localized: "Family") : nil }
     var iconName: String { isFamilyPlan ? "person.3.fill" : "person.fill" }
 
+    /// PaywallG price-column suffix: only the weekly price carries one ("/wk"); the yearly
+    /// period is in the trial subtitle and one-time purchases say "charged today".
     var priceSuffix: String {
         switch self {
-        case .weekly, .familyWeekly: return String(localized: "/week")
-        case .yearly, .familyYearly: return String(localized: "/year")
-        default: return String(localized: " once")
+        case .weekly, .familyWeekly: return String(localized: "/wk")
+        default: return ""
         }
     }
 }
@@ -152,9 +153,9 @@ final class PurchaseManager: ObservableObject {
     static let familyUpgradeProductID = HealthMdPurchaseOption.familyUpgrade.productID
     static let productIDs = HealthMdPurchaseOption.allCases.map(\.productID)
 
-    /// Access now requires a store-backed trial, subscription, or permanent unlock.
-    /// Retain the historical usage ledger, but grant no new free export actions.
-    static let freeExportLimit = 0
+    /// Let users generate their first export before choosing paid access.
+    /// Historical usage remains in the same durable ledger.
+    static let freeExportLimit = 1
 
     /// Free-export counts after which a soft, non-blocking upgrade prompt is
     /// surfaced ("value moments"). Distinct from the hard quota block.
@@ -187,14 +188,8 @@ final class PurchaseManager: ObservableObject {
 
     @Published private(set) var isUnlocked: Bool = false {
         didSet {
-            // When status resolves to unlocked (purchase, grandfather, or
-            // restore), clear any free-export count that accumulated during
-            // the async refreshStatus() race on launch. Without this, a user
-            // who exported before refreshStatus() settled could permanently
-            // burn quota they were never supposed to spend.
+            // Preserve the first-export ledger through purchase, restore, and expiry.
             if isUnlocked && !oldValue {
-                keychain.writeInt(key: freeExportsUsedKey, value: 0)
-                keychain.writeString(key: durableExportUseIDsKey, value: "")
                 pendingUpgradePrompt = nil
             }
         }
@@ -271,17 +266,23 @@ final class PurchaseManager: ObservableObject {
         if TestMode.isUITesting {
             return TestMode.purchaseUnlocked || freeExportsUsed < Self.freeExportLimit
         }
-        return isUnlocked && (activeEntitlementExpiration.map { $0 > Date() } ?? true)
+        return canExportFree || (isUnlocked && (activeEntitlementExpiration.map { $0 > Date() } ?? true))
     }
 
-    /// Durable jobs require active access at admission, including resume.
-    /// Historical quota receipts are not a substitute for an entitlement.
+    /// Durable jobs use the same allowance at admission, including resume.
+    /// A receipt does not grant another free action after the allowance is used.
     func canExport(jobID: UUID) -> Bool {
         if TestMode.isUITesting {
             return canExport
         }
         return canExport
     }
+
+    #if DEBUG
+    /// Isolate real sandbox purchases from this device's preserved legacy grant.
+    /// StoreKit entitlements still resolve normally; no saved state is erased.
+    var sandboxPurchaseQAEnabled = ProcessInfo.processInfo.arguments.contains("-SandboxPurchasesQA")
+    #endif
 
     // MARK: - Injected Dependencies
 
@@ -569,7 +570,8 @@ final class PurchaseManager: ObservableObject {
         //   UserDefaults.standard.set("1.6.0", forKey: "debugOriginalAppVersion")
         //   UserDefaults.standard.set(1577836800.0, forKey: "debugOriginalPurchaseDate")  // optional, ms since 1970
         // Remove by setting to nil or removing the key.
-        if UserDefaults.standard.string(forKey: "debugOriginalAppVersion") != nil {
+        if !sandboxPurchaseQAEnabled,
+           UserDefaults.standard.string(forKey: "debugOriginalAppVersion") != nil {
             // The version string itself is no longer used for the decision —
             // grandfathering is purely date-based. Set `debugOriginalPurchaseDate`
             // (seconds since 1970) to test specific dates; defaults to a
@@ -596,7 +598,8 @@ final class PurchaseManager: ObservableObject {
         //
         // Hardcode in init() temporarily:
         //   UserDefaults.standard.set(true, forKey: "debugSkipToServerVerification")
-        if UserDefaults.standard.bool(forKey: "debugSkipToServerVerification") {
+        if !sandboxPurchaseQAEnabled,
+           UserDefaults.standard.bool(forKey: "debugSkipToServerVerification") {
             if await verifyLegacyWithServer() {
                 keychain.writeInt(key: serverVerifiedLegacyKey, value: 1)
                 isLegacyUser = true
@@ -633,6 +636,16 @@ final class PurchaseManager: ObservableObject {
             recordUnlockedEntitlement(entitlement)
             return
         }
+
+        #if DEBUG
+        // A fresh sandbox tester on a long-lived QA phone must be able to test
+        // subscription-only access while retaining the phone's legacy rights.
+        if sandboxPurchaseQAEnabled {
+            activeEntitlementExpiration = nil
+            isUnlocked = false
+            return
+        }
+        #endif
 
         // 2. Server-verified legacy path: a previous call to verifyLegacyWithServer()
         //    confirmed this device originally purchased before v1.7.0 and cached the
@@ -846,6 +859,15 @@ final class PurchaseManager: ObservableObject {
 
     // MARK: - Restore
 
+    /// Whether a StoreKit error only reports that the person dismissed the
+    /// Apple Account prompt, which should leave the paywall silent.
+    nonisolated static func isUserCancellation(_ error: Error) -> Bool {
+        if case StoreKitError.userCancelled = error { return true }
+        if let skError = error as? SKError, skError.code == .paymentCancelled { return true }
+        let nsError = error as NSError
+        return nsError.domain == NSURLErrorDomain && nsError.code == NSURLErrorCancelled
+    }
+
     static var restoreNotFoundMessage: String {
         String(
             localized: "No purchase found for this Apple ID.\n\nFor Family Lifetime, make sure the purchaser has Apple Family Purchase Sharing turned on, this device is signed into a member of that Apple Family, and Health.md is not hidden from purchase history. Then reopen Health.md and tap Restore Purchase again.\n\nIf you bought Health.md before v1.7.0, your access is restored automatically — try force-quitting and reopening the app. If the issue persists, contact us at cody@isolated.tech and we'll sort it out.",
@@ -892,7 +914,10 @@ final class PurchaseManager: ObservableObject {
         }
 
         if let syncError {
-            purchaseError = syncError.localizedDescription
+            // Cancelling the Apple Account sign-in is the user's choice, not a failure.
+            if !Self.isUserCancellation(syncError) {
+                purchaseError = syncError.localizedDescription
+            }
             return
         }
 
@@ -918,7 +943,8 @@ final class PurchaseManager: ObservableObject {
         // Honor the refreshStatus() debug override: when forcing a specific
         // install state for testing, don't let the silent worker check
         // re-unlock the user from a real prior purchase on this Apple ID.
-        if UserDefaults.standard.string(forKey: "debugOriginalAppVersion") != nil {
+        if sandboxPurchaseQAEnabled ||
+           UserDefaults.standard.string(forKey: "debugOriginalAppVersion") != nil {
             return
         }
         #endif
@@ -945,6 +971,9 @@ final class PurchaseManager: ObservableObject {
     /// 2. Legacy receipt file (works on App Store installs only)
     /// Returns `false` on any failure so the caller falls back gracefully.
     private func verifyLegacyWithServer() async -> Bool {
+        #if DEBUG
+        guard !sandboxPurchaseQAEnabled else { return false }
+        #endif
         // Approach 1: Send AppTransaction JWS to the worker.
         // Available on both TestFlight and App Store. The worker decodes the
         // signed payload and checks originalAppVersion without needing Apple's

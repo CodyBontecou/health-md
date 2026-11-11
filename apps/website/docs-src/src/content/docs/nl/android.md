@@ -25,6 +25,8 @@ description: "Stel Health.md in voor Android. Exporteer Health Connect gegevens,
 
 Health.md voor Android verandert Health Connect in een lokaal gezondheidstijdschrift. Kies de statistieken die u nodig heeft en bekijk een voorbeeld van de uitvoer. Exporteer vervolgens de bestanden naar een lokale map, Obsidian kluis, gesynchroniseerde providermap of beschrijfbare Android-documentprovider.
 
+De app heeft drie tabbladen. **Archief** is een kalender van de gezondheidsdatums die je exports hebben gedekt, met hiaten die je kunt aanvullen. **Automatiseringen** bevat je exportprofielen en planningen. **Instellingen** bevat bestemmingen, gegevens en app-opties. Met de knop **Nu exporteren** start je een eenmalige export vanaf elk tabblad behalve Instellingen.
+
 <div class="options">
  <div class="option"> <strong> Health Connect bron </strong> <p> Leest activiteit, slaap, hart, vitale waarden, lichaamsafmetingen, voeding, trainingen en andere categorieën via de Health Connect API's van Android op het apparaat. </p> </div>
  <div class="option"> <strong> Obsidian -native uitvoer </strong> <p> Schrijft dagelijkse notities, YAML/frontmatter, Obsidian Bases-vriendelijke notities, individuele vermeldingen en JSON compatibel met de Health.md Obsidian plug-in. </p> </div>
@@ -149,7 +151,7 @@ Health.md voor Android is eerst lokaal:
 
 Als u de strengste lokale instellingen wilt, voert u handmatige exports uit naar een lokale apparaatmap en laat u geplande exports en door de provider ondersteunde synchronisatie uitgeschakeld.
 
-De afzonderlijke, optionele Health.md Cloud-pilot is uitsluitend voor één eigenaar en bewaart alleen bewust geüploade API-exports. Er is geen openbare registratie of automatische apparaatsynchronisatie; deze mapworkflow uploadt niets naar de pilot. Het [privacybeleid](/privacy-policy.html) beschrijft bewaartermijnen, verwijdering, opslagquota en verliesrisico’s zonder back-up.
+De afzonderlijke, optionele Health.md Cloud-pilot met één eigenaar bewaart alleen API-exports die er opzettelijk naar zijn geüpload. Er is geen openbare aanmelding en geen automatische apparaatsynchronisatie; deze mapworkflow wordt er niet naartoe geüpload. Zie het [privacybeleid](/privacy-policy.html) voor risico's op het gebied van bewaren, verwijderen, quota en niet-backed opslag.
 
 ## Gerelateerde documenten
 

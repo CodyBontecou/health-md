@@ -55,4 +55,14 @@
     <string name="wear_preview_placeholder">معاينة؛ لا توجد قيمة صحية</string>
     <string name="wear_complication_description">%1$s، %2$s، %3$s</string>
     <string name="wear_complication_long">%1$s %2$s · %3$s</string>
+    <string name="wear_short_activity">النشاط</string>
+    <string name="wear_short_recovery">التعافي</string>
+    <string name="wear_short_steps">الخطوات</string>
+    <string name="wear_short_move">الحركة</string>
+    <string name="wear_short_exercise">التمرين</string>
+    <string name="wear_short_sleep">النوم</string>
+    <string name="wear_short_resting_hr">الراحة</string>
+    <string name="wear_short_average_hr">متوسط</string>
+    <string name="wear_short_hrv">HRV</string>
+    <string name="wear_short_blood_oxygen">SpO₂</string>
 </resources>

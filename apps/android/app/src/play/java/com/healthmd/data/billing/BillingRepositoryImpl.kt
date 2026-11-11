@@ -453,6 +453,9 @@ class BillingRepositoryImpl(
     }
 
     override suspend fun verifyAccess(): Boolean = withContext(Dispatchers.Main) {
+        if (com.healthmd.domain.billing.FreemiumPolicy.remainingExports(settingsRepository.getFreeExportsUsed()) > 0) {
+            return@withContext true
+        }
         // Permanent access remains usable if Play cannot be reached. A successful query,
         // however, must reconcile refunded Lifetime purchases before admitting work.
         if (!hasCompletedInitialSetup) {

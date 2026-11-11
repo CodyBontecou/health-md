@@ -20,5 +20,8 @@
         <receiver
             android:name=".widget.glance.SleepWidgetReceiver"
             tools:node="remove" />
+        <receiver
+            android:name=".widget.glance.ArchiveWidgetReceiver"
+            tools:node="remove" />
     </application>
 </manifest>

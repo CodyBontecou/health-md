@@ -34,6 +34,7 @@ enum class ScheduledProfileDateWindow {
  * Frozen exact residual work from one interrupted or failed profile occurrence. Separate groups
  * keep durable operation identities from mixing with dates that require a fresh capture.
  */
+@OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
 @Serializable
 data class ScheduledProfilePendingExport(
     val id: String,
@@ -47,6 +48,9 @@ data class ScheduledProfilePendingExport(
     val folderUri: String? = null,
     val folderDisplayName: String? = null,
     val durableOperationId: String? = null,
+    /** Accepted Morning refresh scope; legacy residuals retain their completed-day-only behavior. */
+    @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER)
+    val refreshSlotMillis: Long? = null,
 ) {
     val ownerDates: List<LocalDate>
         get() = ownerEpochDays.distinct().sorted().map(LocalDate::ofEpochDay)
@@ -324,13 +328,15 @@ object ScheduledProfileOccurrenceMath {
                     .thenBy { it.id },
             )
             .firstNotNullOfOrNull { pending ->
-                val dates = pending.ownerDates.filterNot { it.isAfter(yesterday) }
+                val dates = if (pending.refreshSlotMillis != null) pending.ownerDates
+                    else pending.ownerDates.filterNot { it.isAfter(yesterday) }
                 dates.takeIf { it.isNotEmpty() }?.let {
                     ScheduledProfileEntry.DueOccurrence(
                         entry = entry,
                         fireAtMillis = pending.fireAtMillis,
                         exportDates = it,
                         pendingExport = pending,
+                        refreshSlotMillis = pending.refreshSlotMillis,
                     )
                 }
             }

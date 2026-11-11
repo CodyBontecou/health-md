@@ -1,0 +1,7 @@
+// Public production trust configuration shared by Xcode and Gradle. No private credentials.
+// $() prevents Xcode from interpreting the URL slashes as a comment; Gradle removes it.
+CLINIC_LICENSING_URL = https:/$()/licensing.healthmd.app/
+CLINIC_LICENSING_ISSUER = https:/$()/licensing.healthmd.app/
+CLINIC_LICENSING_KEY_ID = clinic-714c74e32c16bdd4
+CLINIC_LICENSING_PUBLIC_KEY_DER = MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE7hHOLyYusgiokJYZWgXvAC9su6DL1HcZeHqgcMYbIWi3nG11gfpn5MCWupa1ZYuZGL5DMeBZpKmYF8YJ0JSG7g==
+CLINIC_LICENSING_TRUSTED_KEYS_JSON =

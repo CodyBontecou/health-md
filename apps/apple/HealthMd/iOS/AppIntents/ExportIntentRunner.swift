@@ -59,6 +59,9 @@ enum ExportIntentRunner {
     struct Dependencies {
         var refreshPurchaseStatus: () async -> Void
         var canExport: () -> Bool
+        var clinicExportAccess: (String) async -> Bool = { endpoint in
+            await ClinicSponsorshipManager.shared.authorizeExport(endpoint: endpoint)
+        }
         var hasVaultAccess: () -> Bool
         var requiresVaultReselection: () -> Bool
         var refreshVaultAccess: () -> Void
@@ -70,7 +73,7 @@ enum ExportIntentRunner {
         /// Phase 4: profile-scoped runs build request settings from the
         /// profile's frozen snapshot instead of live settings.
         var makeSettingsForProfile: (ExportProfile) -> AdvancedExportSettings = { profile in
-            AdvancedExportSettings(snapshot: profile.settings, userDefaults: .standard)
+            profile.settings.makeAdvancedExportSettings(userDefaults: .standard, forNewConfiguration: true)
         }
         /// Phase 4: adopt a profile's destinations (persisted vault keys +
         /// API endpoint) before a run; call with nil to adopt the active
@@ -138,7 +141,7 @@ enum ExportIntentRunner {
                     settings
                 },
                 makeSettingsForProfile: { profile in
-                    AdvancedExportSettings(snapshot: profile.settings, userDefaults: .standard)
+                    profile.settings.makeAdvancedExportSettings(userDefaults: .standard, forNewConfiguration: true)
                 },
                 adoptProfileDestinations: { profile in
                     ExportIntentRunner.adoptDestinationsForIntentRun(profile)
@@ -195,9 +198,9 @@ enum ExportIntentRunner {
         guard let bindingID = profile.apiEndpointID else { return legacyDestination }
         destinationStore.reloadPersistedDestinations()
         guard let endpoint = destinationStore.apiEndpoint(id: bindingID),
-              let url = URL(string: endpoint.endpointURLString.trimmingCharacters(in: .whitespacesAndNewlines)),
-              let scheme = url.scheme?.lowercased(), ["https", "http"].contains(scheme),
-              url.host?.isEmpty == false else { return nil }
+              let url = APIExportSettings.supportedEndpointURL(from: endpoint.endpointURLString) else {
+            return nil
+        }
         let token = (destinationStore.token(for: bindingID) ?? "")
             .trimmingCharacters(in: .whitespacesAndNewlines)
         let header = token.isEmpty ? nil
@@ -260,6 +263,17 @@ enum ExportIntentRunner {
         profileName: String? = nil,
         dependencies: Dependencies
     ) async -> Outcome {
+        let context = AppleSleepCaptureContext.resolve(timeZone: dependencies.calendar.timeZone,
+                                                       attribution: HealthKitManager.shared.sleepDayAttribution)
+        do { try context.requireShippedProfile() }
+        catch { return .failure(reason: error.localizedDescription) }
+        return await AppleSleepCaptureContext.pinned.withValue(context) {
+            await runWithCaptureContext(dates: dates, source: source, profileName: profileName, dependencies: dependencies)
+        }
+    }
+
+    private static func runWithCaptureContext(dates: [Date], source: ExportSource,
+                                             profileName: String?, dependencies: Dependencies) async -> Outcome {
         guard !dates.isEmpty else {
             return .failure(reason: "No dates to export")
         }
@@ -313,7 +327,10 @@ enum ExportIntentRunner {
 
         await dependencies.refreshPurchaseStatus()
 
-        guard dependencies.canExport() else {
+        let clinicAllowed = if let endpoint = apiDestination?.endpointURL.absoluteString {
+            await dependencies.clinicExportAccess(endpoint)
+        } else { false }
+        guard dependencies.canExport() || clinicAllowed else {
             return .paywall
         }
 
@@ -460,6 +477,7 @@ enum ExportIntentRunner {
             dates: dates,
             source: .shortcut,
             notificationMetadata: ["notification": ExportNotificationType.pendingExport.rawValue],
+            sleepCaptureContext: AppleSleepCaptureContext.pinned.wrappedValue,
             calendar: dependencies.calendar
         )
 

@@ -92,7 +92,7 @@ healthmd export --last 7 \
   --destination "$HOME/Documents/HealthVault"
 ```
 
-`--profile PROFILE_ID` 不能与 `--use-device-settings` 或指标/类别选择器组合使用，未知 ID 会安全失败而不是使用当前设置。请在 iPhone 或 Android 上的**设置 → 导出配置文件 → 配置文件 ID** 处复制该 ID。自动化和目标行为详见[导出配置文件](/zh-hans/docs/export-profiles/)。
+`--profile PROFILE_ID` 不能与 `--use-device-settings` 或指标、类别选择器一起使用；未知 ID 会安全失败，而不会使用当前设置。ID 可在 iPhone 上从**自动化**中该自动化的页面（**配置 ID**）复制，在 Android 上从**设置 → 导出配置方案 → 配置 ID**复制。自动化和目标位置行为请参阅[导出配置方案](/zh-hans/docs/export-profiles/)。
 
 可移植直连客户端无需 MCP 封装即可调用任何受支持的 iPhone 类型化操作：
 

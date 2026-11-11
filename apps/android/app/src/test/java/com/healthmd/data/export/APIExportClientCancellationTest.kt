@@ -27,7 +27,7 @@ class APIExportClientCancellationTest {
     fun setUp() {
         server = MockWebServer()
         server.start()
-        client = APIExportClient(OkHttpClient())
+        client = APIExportClient(OkHttpClient(), com.healthmd.testing.FakeExportEntitlements())
     }
 
     @After

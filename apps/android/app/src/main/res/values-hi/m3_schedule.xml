@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="m3_schedule_clinic_destination_title">क्लिनिक गंतव्य</string>
+    <string name="m3_schedule_clinic_destination_body">आपका क्लिनिक इस गंतव्य को प्रबंधित करता है। इसे चुनने या साझाकरण प्रबंधित करने के लिए क्लिनिक पहुँच का उपयोग करें। अन्य गंतव्यों के लिए आपकी अपनी Health.md पहुँच आवश्यक है।</string>
+</resources>

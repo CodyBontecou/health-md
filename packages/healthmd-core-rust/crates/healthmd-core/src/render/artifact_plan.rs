@@ -10,7 +10,7 @@ use unicode_normalization::UnicodeNormalization;
 
 use super::{
     ARTIFACT_PLAN_VERSION, MAX_ARTIFACT_BYTES, MAX_ARTIFACTS, MAX_INLINE_OUTPUT_BYTES, RenderError,
-    WriteMode,
+    SLEEP_ARTIFACT_PLAN_VERSION, WriteMode,
 };
 use crate::semantic::SemanticProfile;
 
@@ -157,7 +157,11 @@ impl ArtifactPlanBuilder {
     pub(crate) fn finish(self) -> Result<ArtifactPlan, RenderError> {
         Ok(ArtifactPlan {
             schema: "healthmd.artifact_plan".to_owned(),
-            artifact_plan_version: ARTIFACT_PLAN_VERSION,
+            artifact_plan_version: if self.profile.is_wake_date() {
+                SLEEP_ARTIFACT_PLAN_VERSION
+            } else {
+                ARTIFACT_PLAN_VERSION
+            },
             request_id: self.request_id,
             session_id: self.session_id,
             profile: self.profile,

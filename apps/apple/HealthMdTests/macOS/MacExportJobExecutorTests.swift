@@ -2125,7 +2125,10 @@ final class MacExportJobExecutorTests: XCTestCase {
         .from(
             settings,
             healthSubfolder: healthSubfolder,
-            calendarTimeZoneIdentifier: "UTC"
+            // These fixtures build records and requested dates in the captured
+            // process calendar unless the operation explicitly overrides it.
+            // Declaring UTC around those civil dates made valid jobs malformed.
+            calendarTimeZoneIdentifier: settings.exportTimeZoneOverride?.identifier ?? TimeZone.current.identifier
         )
     }
 

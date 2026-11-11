@@ -62,6 +62,8 @@ fun PaywallScreen(
     onClearError: () -> Unit = {},
     purchasesAvailable: Boolean = true,
     fullAccessIncluded: Boolean = false,
+    /** The three-slide carousel; false inside a host pager such as onboarding. */
+    carousel: Boolean = true,
     // Debug props
     isDebugBuild: Boolean = false,
     debugUnlockOverride: Boolean? = null,
@@ -85,6 +87,32 @@ fun PaywallScreen(
         if (isPurchasing || isRestoring) {
             onClearError()
         }
+    }
+
+    // Store channels use the carousel; included-access channels keep the single-page summary.
+    if (carousel && purchasesAvailable && !fullAccessIncluded) {
+        PaywallCarousel(
+            offers = offers,
+            onPlanPurchase = onPlanPurchase,
+            onRestore = onRestore,
+            onRetry = onRetry,
+            onDismiss = onDismiss,
+            isPurchasing = isPurchasing,
+            isRestoring = isRestoring,
+            errorMessage = errorMessage,
+            debugControls = if (isDebugBuild) {
+                {
+                    DebugPurchaseControls(
+                        debugUnlockOverride = debugUnlockOverride,
+                        onToggleUnlock = onDebugToggleUnlock,
+                        onResetState = onDebugResetState,
+                    )
+                }
+            } else {
+                null
+            },
+        )
+        return
     }
 
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {

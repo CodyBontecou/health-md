@@ -21,6 +21,23 @@ final class HealthKitQueryExecutionTests: XCTestCase {
         }
     }
 
+    private actor HeldQuery {
+        private var continuation: CheckedContinuation<Int, Never>?
+        private var released = false
+
+        func value() async -> Int {
+            if released { return 1 }
+            return await withCheckedContinuation { continuation = $0 }
+        }
+
+        func release() {
+            released = true
+            let pending = continuation
+            continuation = nil
+            pending?.resume(returning: 1)
+        }
+    }
+
     /// The test releases physical completion after observing logical timeout;
     /// scheduler delays cannot accidentally turn "still outstanding" into done.
     nonisolated private final class ControlledQuery: @unchecked Sendable {

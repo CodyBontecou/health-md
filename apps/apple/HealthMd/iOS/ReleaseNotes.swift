@@ -3,6 +3,44 @@ import Notelet
 
 // MARK: - In-app release notes
 
+/// One version's in-app release notes. Health.md renders these itself (`GlassWhatsNewScreen`);
+/// Notelet is kept only for its persisted "latest seen version" key so upgrades from
+/// earlier builds keep their seen state.
+struct HealthMdVersionNotes {
+    enum MediaKind { case image, video }
+
+    struct Row {
+        let symbolSystemName: String
+        let title: LocalizedStringResource
+        let description: LocalizedStringResource
+
+        init(symbolSystemName: String, title: LocalizedStringResource, description: LocalizedStringResource) {
+            self.symbolSystemName = symbolSystemName
+            self.title = title
+            self.description = description
+        }
+    }
+
+    enum Item {
+        case media(kind: MediaKind, url: URL, title: LocalizedStringResource, description: LocalizedStringResource)
+        case list(title: LocalizedStringResource, rows: [Row])
+    }
+
+    let version: String
+    let items: [Item]
+
+    /// Every item as a row, in order. Media items keep their title and description.
+    var rows: [Row] {
+        items.flatMap { item -> [Row] in
+            switch item {
+            case .list(_, let rows): return rows
+            case .media(let kind, _, let title, let description):
+                return [Row(symbolSystemName: kind == .video ? "play.rectangle" : "photo", title: title, description: description)]
+            }
+        }
+    }
+}
+
 enum HealthMdReleaseNotes {
     private static var fileTypeFoldersVideoURL: URL {
         Bundle.main.url(
@@ -25,17 +63,27 @@ enum HealthMdReleaseNotes {
         ) ?? Bundle.main.bundleURL
     }
 
-    static let notes: [NoteletVersionNotes] = [
+    static let notes: [HealthMdVersionNotes] = [
         .init(
             version: "3.5.0",
             items: [
                 .list(
-                    title: "Plans and privacy",
+                    title: "More ways to access Health.md",
                     rows: [
                         .init(
-                            symbolSystemName: "creditcard",
+                            symbolSystemName: "calendar",
                             title: "Weekly, yearly, or Lifetime",
-                            description: "Eligible subscriptions include a seven-day free trial. Existing Lifetime and grandfathered access remain valid."
+                            description: "Choose a subscription or a one-time Lifetime purchase. Eligible subscriptions include a 7-day free trial."
+                        ),
+                        .init(
+                            symbolSystemName: "checkmark.seal",
+                            title: "Existing access is preserved",
+                            description: "Existing Lifetime purchases and grandfathered access remain valid, including eligible Family Sharing."
+                        ),
+                        .init(
+                            symbolSystemName: "lock",
+                            title: "Clearer access terms",
+                            description: "On iPhone and iPad, an active trial, subscription, or Lifetime access is required before setup and exports. Purchase status and scheduling guidance now reflect your plan."
                         ),
                         .init(
                             symbolSystemName: "hand.raised",
@@ -971,18 +1019,46 @@ enum HealthMdReleaseNotes {
         )
     ]
 
-    static var presentedVersion: NoteletPresentedVersion? {
-        guard !TestMode.isUITesting || TestMode.showsReleaseNotes else { return nil }
+    /// Whether release notes may present in this launch (never during capture or
+    /// ordinary UI tests).
+    static var isPresentationAllowed: Bool {
+        guard !TestMode.isUITesting || TestMode.showsReleaseNotes else { return false }
 
         #if DEBUG
-        guard !MarketingCapture.isActive else { return nil }
+        guard !MarketingCapture.isActive else { return false }
         #endif
 
-        return .current
+        return true
+    }
+
+    static var currentAppVersion: String {
+        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0"
+    }
+
+    /// Notes for the running version, or nil when this version has none.
+    static func notes(for version: String) -> HealthMdVersionNotes? {
+        notes.first { $0.version == version }
+    }
+
+    /// The current version's notes when they have not been seen yet.
+    static func unseenCurrentNotes(
+        version: String = currentAppVersion,
+        latestSeenVersion: String? = NoteletStorage.getLatestSeenAppVersion()
+    ) -> HealthMdVersionNotes? {
+        guard latestSeenVersion != version, let notes = notes(for: version), !notes.rows.isEmpty else { return nil }
+        // Release notes present once per major/minor release family.
+        if !TestMode.isUITesting {
+            guard ReviewManager.shouldPresentReleaseNotes(current: version, lastSeen: latestSeenVersion) else { return nil }
+        }
+        return notes
+    }
+
+    static func markCurrentVersionAsSeen() {
+        NoteletStorage.markCurrentVersionAsSeen()
     }
 
     /// First-run onboarding already introduces the current app version. Mark it
-    /// seen before replacing onboarding with the export UI so Notelet cannot
+    /// seen before replacing onboarding with the export UI so release notes cannot
     /// race and replace the requested first-export preview.
     static func markCurrentVersionAsSeenAfterOnboarding() {
         NoteletStorage.markCurrentVersionAsSeen()
@@ -992,20 +1068,75 @@ enum HealthMdReleaseNotes {
         guard TestMode.isUITesting else { return }
         NoteletStorage.resetSeenVersion()
     }
+}
 
-    static let configuration = NoteletConfiguration(
-        nextButtonLabel: "Next",
-        doneButtonLabel: "Done",
-        accentColor: .accent
-    )
+private struct HealthMdReleaseNotesSheet: ViewModifier {
+    private struct Introduction: Identifiable { let id = UUID() }
+
+    @Binding var reviewMilestonePending: Bool
+    let canPresentReview: Bool
+    @Environment(\.scenePhase) private var scenePhase
+    @State private var presented: HealthMdVersionNotes?
+    @State private var introduction: Introduction?
+    @State private var pendingReleaseVersion: String?
+
+    func body(content: Content) -> some View {
+        content
+            .onAppear {
+                guard presented == nil, HealthMdReleaseNotes.isPresentationAllowed else { return }
+                presented = HealthMdReleaseNotes.unseenCurrentNotes()
+            }
+            .sheet(
+                isPresented: Binding(get: { presented != nil }, set: { if !$0 { presented = nil } }),
+                onDismiss: releaseNotesDidDismiss
+            ) {
+                if let presented {
+                    GlassWhatsNewScreen(notes: presented) { self.presented = nil }
+                }
+            }
+            .sheet(item: $introduction) { _ in
+                ReviewIntroductionView()
+                    .presentationDetents([.large])
+            }
+            .onChange(of: reviewMilestonePending) { _, _ in presentIntroductionIfPossible() }
+            .onChange(of: pendingReleaseVersion) { _, _ in presentIntroductionIfPossible() }
+            .onChange(of: canPresentReview) { _, _ in presentIntroductionIfPossible() }
+            .onChange(of: scenePhase) { _, _ in presentIntroductionIfPossible() }
+    }
+
+    private func releaseNotesDidDismiss() {
+        HealthMdReleaseNotes.markCurrentVersionAsSeen()
+        pendingReleaseVersion = HealthMdReleaseNotes.currentAppVersion
+    }
+
+    private func presentIntroductionIfPossible() {
+        guard !TestMode.isUITesting else { return }
+        #if DEBUG
+        guard !MarketingCapture.isActive else { return }
+        #endif
+        guard canPresentReview, scenePhase == .active, introduction == nil,
+              reviewMilestonePending || pendingReleaseVersion != nil else { return }
+        // What's New owns the first sheet. Never compete with unseen release notes.
+        guard presented == nil,
+              !HealthMdReleaseNotes.isPresentationAllowed || HealthMdReleaseNotes.unseenCurrentNotes() == nil else { return }
+        let releaseVersion = pendingReleaseVersion
+        pendingReleaseVersion = nil
+        reviewMilestonePending = false
+        guard ReviewManager.shared.claimIntroduction(forRelease: releaseVersion) else { return }
+        introduction = Introduction()
+    }
 }
 
 extension View {
-    func healthMdReleaseNotesSheet() -> some View {
-        noteletSheet(
-            notes: HealthMdReleaseNotes.notes,
-            version: HealthMdReleaseNotes.presentedVersion,
-            configuration: HealthMdReleaseNotes.configuration
-        )
+    /// Presents the glass What's New sheet once per release, then the review introduction
+    /// after an export milestone or a new release when nothing else is presenting.
+    func healthMdReleaseNotesSheet(
+        reviewMilestonePending: Binding<Bool> = .constant(false),
+        canPresentReview: Bool = true
+    ) -> some View {
+        modifier(HealthMdReleaseNotesSheet(
+            reviewMilestonePending: reviewMilestonePending,
+            canPresentReview: canPresentReview
+        ))
     }
 }

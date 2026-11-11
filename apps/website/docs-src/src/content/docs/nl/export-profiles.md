@@ -7,9 +7,9 @@ Exportprofielen houden een herhaalbare exportconfiguratie bij elkaar. Beheer ze 
 
 ## Profielen beheren en bewerken
 
-Open **Instellingen → Exportprofielen**. De lijst markeert het actieve profiel en laat je profielen maken, hernoemen, dupliceren, verwijderen, activeren of bekijken. Open de details van een profiel om de stabiele ID te kopiëren. Het laatste profiel kan niet worden verwijderd.
+Op de iPhone is elk profiel een automatisering: open **Automatiseringen** om ze te zien, tik op **+** om er een te maken en open een automatisering om die uit te voeren, te dupliceren, te pauzeren of per pagina te bewerken (meetwaarden, formaten, uitvoer, dagnotities, items, schema). De pagina toont ook de stabiele profiel-ID. **Instellingen → App en ondersteuning → Exportprofielen** bevat de volledige lijst om te hernoemen, te verwijderen en te activeren. Op Android open je **Instellingen → Exportprofielen**. Het laatste resterende profiel kan niet worden verwijderd.
 
-Het tabblad Exporteren bewerkt het actieve profiel. Activeer eerst een ander profiel als je de huidige instellingen niet wilt wijzigen.
+**Automatiseringen → Alle exportinstellingen** bewerkt het actieve profiel. Activeer eerst een ander profiel als je het huidige niet wilt bijwerken.
 
 Elk profiel bevriest de keuzes die nodig zijn om een uitvoering te herhalen:
 
@@ -29,7 +29,7 @@ Een planning is afzonderlijk gekoppeld aan de stabiele identiteit van het profie
 
 ## Namen, stabiele ID's en automatisering
 
-Een weergavenaam is voor mensen en kan veranderen. De stabiele ID maakt automatisering bestand tegen hernoemen. Kopieer die via **Instellingen → Exportprofielen → Profiel-ID**.
+Een weergavenaam is voor mensen en kan veranderen. De stabiele ID van een profiel is bedoeld voor automatisering die niet breekt bij een naamswijziging. Kopieer hem op de iPhone van de pagina van de automatisering in **Automatiseringen**, of op Android via **Instellingen → Exportprofielen → Profiel-ID**.
 
 - Apple Opdrachten selecteert een profiel op weergavenaam; een lege profielparameter gebruikt het actieve profiel.
 - Android-broadcasts via Tasker en adb kunnen de extra `PROFILE` met een stabiele ID of naam meegeven. Gebruik bij voorkeur de ID voor workflows die hernoemen moeten overleven.

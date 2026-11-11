@@ -50,8 +50,10 @@ struct ReadingMetricLabel: View {
     }
 }
 
-/// The entire header expands only. Its pill is a status display, not a bulk toggle.
-struct ReadingMetricCategoryHeader<Status: View>: View {
+/// The header area expands only; its pill is a status display. A bulk toggle,
+/// when provided, is a separate `accessory` control outside the expand button so
+/// the two actions never share one hit target or accessibility element.
+struct ReadingMetricCategoryHeader<Status: View, Accessory: View>: View {
     let title: String
     let subtitle: String
     let icon: String
@@ -59,8 +61,18 @@ struct ReadingMetricCategoryHeader<Status: View>: View {
     let accessibilityLabel: String
     let onExpand: () -> Void
     @ViewBuilder var status: () -> Status
+    @ViewBuilder var accessory: () -> Accessory
 
     var body: some View {
+        HStack(alignment: .top, spacing: 0) {
+            expandButton
+            accessory()
+                .padding(.top, Spacing.s2)
+                .padding(.trailing, Spacing.s2)
+        }
+    }
+
+    private var expandButton: some View {
         Button(action: onExpand) {
             VStack(alignment: .leading, spacing: Spacing.s2) {
                 Text(title)
@@ -98,6 +110,29 @@ struct ReadingMetricCategoryHeader<Status: View>: View {
         .accessibilityHint(isExpanded
             ? String(localized: "Double tap to collapse this category")
             : String(localized: "Double tap to expand this category"))
+    }
+}
+
+extension ReadingMetricCategoryHeader where Accessory == EmptyView {
+    init(
+        title: String,
+        subtitle: String,
+        icon: String,
+        isExpanded: Bool,
+        accessibilityLabel: String,
+        onExpand: @escaping () -> Void,
+        @ViewBuilder status: @escaping () -> Status
+    ) {
+        self.init(
+            title: title,
+            subtitle: subtitle,
+            icon: icon,
+            isExpanded: isExpanded,
+            accessibilityLabel: accessibilityLabel,
+            onExpand: onExpand,
+            status: status,
+            accessory: { EmptyView() }
+        )
     }
 }
 

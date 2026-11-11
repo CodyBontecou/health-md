@@ -25,7 +25,7 @@ class ProductCapabilityManifestTest {
         val profiles = inventory.getValue("output_profiles").jsonArray
             .map { it.jsonObject.getValue("id").jsonPrimitive.content }
             .toSet()
-        assertEquals(setOf("apple-v8", "android-frozen-v4", "android-analytical-v5"), profiles)
+        assertEquals(setOf("apple-v8", "android-frozen-v4", "android-analytical-v5", "apple-v12", "android-analytical-v7"), profiles)
 
         val capabilities = inventory.getValue("capabilities").jsonArray.map { it.jsonObject }
         val states = capabilities.associate { capability ->
@@ -40,13 +40,16 @@ class ProductCapabilityManifestTest {
         assertEquals(appleCapabilities + setOf("source.private-platform-database", "apple.ads-purchase-attribution"), idsWithState(states, "unavailable"))
         assertEquals(
             setOf(
+                "account.clinic-sync-requests",
                 "core.shared-rust-profile-engine",
                 "automation.api-recovery-authority",
                 "automation.include-today",
+                "automation.run-overlap-policy",
                 "direct.cli_agent_push_wake",
                 "export.range-summary",
                 "setup.share-portable-configuration",
                 "support.local-reporting-fallback",
+                "support.native-review-introduction",
             ),
             idsWithState(states, "planned"),
         )
@@ -65,6 +68,15 @@ class ProductCapabilityManifestTest {
             "planned",
             pushWakeCapability.getValue("classification").jsonPrimitive.content,
         )
+
+        val sleepAttributionCapability = capabilities.single {
+            it.getValue("id").jsonPrimitive.content == "settings.sleep-attribution"
+        }
+        assertEquals(
+            "shared",
+            sleepAttributionCapability.getValue("classification").jsonPrimitive.content,
+        )
+        assertTrue(sleepAttributionCapability.getValue("profiles").jsonArray.isEmpty())
 
         val claimCapability = capabilities.single {
             it.getValue("id").jsonPrimitive.content == "account.myself_lifetime_claim"
@@ -120,6 +132,7 @@ class ProductCapabilityManifestTest {
 
     private companion object {
         val sharedCapabilities = setOf(
+        "account.clinic-sponsored-access",
             "purchase.free-export-journey",
             "account.myself_lifetime_claim",
             "export.daily-files",
@@ -130,6 +143,8 @@ class ProductCapabilityManifestTest {
             "export.nutrient-totals",
             "export.mindfulness-sessions",
             "export.selected-time-series-detail",
+            "export.per-group-detail-selection",
+            "export.compatibility-detail-expansion",
             "export.completed-workouts",
             "export.mobility-and-performance",
             "export.profiles",
@@ -144,6 +159,8 @@ class ProductCapabilityManifestTest {
             "direct.cli_agent_wake",
             "direct.full_public_authorized_corpus",
             "diagnostics.local_bundle",
+            "settings.sleep-attribution",
+            "export.coverage-calendar",
         )
 
         val appleCapabilities = setOf(
@@ -164,18 +181,24 @@ class ProductCapabilityManifestTest {
             "android.nutrition-meals",
             "android.contextual-source-fields",
             "android.skin-temperature",
+            "export.sleep-session-detail",
         )
 
         val allCapabilities = sharedCapabilities + appleCapabilities + androidCapabilities + setOf(
+            "support.native-review-introduction",
+            "account.clinic-sync-requests",
             "source.private-platform-database",
             "apple.ads-purchase-attribution",
             "automation.api-recovery-authority",
             "automation.include-today",
+            "automation.run-overlap-policy",
             "direct.cli_agent_push_wake",
+            "export.coverage-calendar",
             "export.range-summary",
             "setup.share-portable-configuration",
             "account.myself_lifetime_claim",
             "core.shared-rust-profile-engine",
+            "settings.sleep-attribution",
             "support.local-reporting-fallback",
         )
     }

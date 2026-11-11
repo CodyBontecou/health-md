@@ -1,5 +1,6 @@
 import Foundation
 import SwiftUI
+import UniformTypeIdentifiers
 
 /// Routes Markdown around Quick Look because iOS can classify the `.md` extension
 /// as a game ROM instead of a text document.
@@ -29,16 +30,41 @@ struct ExportedMarkdownViewer: View {
     }
 
     let target: ExportPresentationTarget
+    /// FileViewerG is a pushed page (Back, no Done). The current call sites (export
+    /// result, status banner, folder browser) are modal, so by default the viewer hosts
+    /// itself in a stack with a Back-styled dismiss; pass `false` to push it.
+    var presentedModally = true
 
-    @Environment(\.dismiss) private var dismiss
     @State private var document: ExportedMarkdownDocument?
     @State private var errorMessage: String?
     @State private var isLoading = true
     @State private var displayMode: DisplayMode = .preview
     @State private var loadRequestID = UUID()
+    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+
+    private var glassPalette: GlassPalette {
+        .resolved(colorScheme: colorScheme, reduceTransparency: reduceTransparency)
+    }
+
+    private var pageBackground: Color { glassPalette.bg }
 
     var body: some View {
-        NavigationStack {
+        Group {
+            if presentedModally {
+                GlassModalBackStack(backIdentifier: AccessibilityID.ExportedFile.done) { page }
+            } else {
+                page
+            }
+        }
+        .glassTheme()
+        .accessibilityIdentifier(AccessibilityID.ExportedFile.viewer)
+        .task(id: loadRequestID) {
+            await loadDocument()
+        }
+    }
+
+    private var page: some View {
             Group {
                 if isLoading {
                     ProgressView("Loading exported file…")
@@ -60,31 +86,34 @@ struct ExportedMarkdownViewer: View {
                     documentView(document)
                 }
             }
-            .background(Color.bgPrimary)
+            .background(pageBackground)
             .navigationTitle(target.fileURL.lastPathComponent)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
-                        .accessibilityIdentifier(AccessibilityID.ExportedFile.done)
+                if let document {
+                    ToolbarItem(placement: .confirmationAction) {
+                        let item = ExportedMarkdownShareItem(name: target.fileURL.lastPathComponent, source: document.source)
+                        ShareLink(item: item, preview: SharePreview(item.name)) {
+                            Text("Share")
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .accessibilityIdentifier("exportedFile.share")
+                    }
                 }
             }
-        }
-        .accessibilityIdentifier(AccessibilityID.ExportedFile.viewer)
-        .task(id: loadRequestID) {
-            await loadDocument()
-        }
     }
 
     @ViewBuilder
     private func documentView(_ document: ExportedMarkdownDocument) -> some View {
         VStack(spacing: 0) {
             if document.hasRichPreview {
-                Picker("File display", selection: $displayMode) {
-                    Text("Preview").tag(DisplayMode.preview)
-                    Text("Source").tag(DisplayMode.source)
-                }
-                .pickerStyle(.segmented)
+                GlassSegmentedControl(
+                    segments: [
+                        .init(value: .preview, title: String(localized: "Preview")),
+                        .init(value: .source, title: String(localized: "Source"))
+                    ],
+                    selection: $displayMode
+                )
                 .padding(.horizontal, Spacing.s4)
                 .padding(.vertical, Spacing.s3)
                 .accessibilityIdentifier(AccessibilityID.ExportedFile.displayMode)
@@ -93,15 +122,15 @@ struct ExportedMarkdownViewer: View {
                     "This export is too large for rich preview. The complete source is shown instead.",
                     systemImage: "doc.text"
                 )
-                .font(.footnote)
-                .foregroundStyle(Color.textSecondary)
+                .glassFont(.caption)
+                .foregroundStyle(glassPalette.sec)
                 .padding(Spacing.s3)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color.bgSecondary)
+                .background(glassPalette.surface2)
                 .accessibilityIdentifier(AccessibilityID.ExportedFile.largeFileNotice)
             }
 
-            Divider()
+            Rectangle().fill(glassPalette.line).frame(height: 1)
 
             if displayMode == .preview, document.hasRichPreview {
                 ExportedMarkdownRenderedView(blocks: document.blocks)
@@ -109,14 +138,14 @@ struct ExportedMarkdownViewer: View {
                 ScrollView([.horizontal, .vertical]) {
                     Text(document.source.isEmpty ? "This file is empty." : document.source)
                         .font(.system(.body, design: .monospaced))
-                        .foregroundStyle(Color.textPrimary)
+                        .foregroundStyle(glassPalette.text)
                         .textSelection(.enabled)
                         .fixedSize(horizontal: true, vertical: false)
                         .padding(Spacing.s4)
                         .frame(maxWidth: .infinity, alignment: .topLeading)
                         .accessibilityIdentifier(AccessibilityID.ExportedFile.source)
                 }
-                .background(Color.bgPrimary)
+                .background(pageBackground)
             }
         }
     }
@@ -166,6 +195,18 @@ struct ExportedMarkdownViewer: View {
             errorMessage = error.localizedDescription
             isLoading = false
         }
+    }
+}
+
+/// FileViewerG Share: the loaded file's exact text under its original filename. Built
+/// from the bytes already read, so sharing needs no further folder access.
+nonisolated struct ExportedMarkdownShareItem: Transferable, Sendable {
+    let name: String
+    let source: String
+
+    static var transferRepresentation: some TransferRepresentation {
+        DataRepresentation(exportedContentType: .plainText) { item in Data(item.source.utf8) }
+            .suggestedFileName { $0.name }
     }
 }
 
@@ -344,12 +385,20 @@ enum ExportedMarkdownParser {
 private struct ExportedMarkdownRenderedView: View {
     let blocks: [ExportedMarkdownBlock]
 
+    @Environment(\.glassPalette) private var palette
+
+    private var primaryText: Color { palette.text }
+    private var secondaryText: Color { palette.sec }
+    private var mutedText: Color { palette.muted }
+    private var pageBackground: Color { palette.bg }
+    private var blockBackground: Color { palette.surface }
+
     var body: some View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: Spacing.s3) {
                 if blocks.isEmpty {
                     Text("This file is empty.")
-                        .foregroundStyle(Color.textSecondary)
+                        .foregroundStyle(secondaryText)
                 } else {
                     ForEach(blocks) { block in
                         blockView(block)
@@ -359,7 +408,7 @@ private struct ExportedMarkdownRenderedView: View {
             .padding(Spacing.s4)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .background(Color.bgPrimary)
+        .background(pageBackground)
         .accessibilityIdentifier(AccessibilityID.ExportedFile.rendered)
     }
 
@@ -370,14 +419,14 @@ private struct ExportedMarkdownRenderedView: View {
             Text(inlineMarkdown(block.text))
                 .font(headingFont(level: level))
                 .fontWeight(.semibold)
-                .foregroundStyle(Color.textPrimary)
+                .foregroundStyle(primaryText)
                 .textSelection(.enabled)
                 .accessibilityAddTraits(.isHeader)
 
         case .paragraph:
             Text(inlineMarkdown(block.text))
                 .font(.body)
-                .foregroundStyle(Color.textPrimary)
+                .foregroundStyle(primaryText)
                 .textSelection(.enabled)
 
         case .bullet(let level):
@@ -388,19 +437,19 @@ private struct ExportedMarkdownRenderedView: View {
                     .textSelection(.enabled)
             }
             .font(.body)
-            .foregroundStyle(Color.textPrimary)
+            .foregroundStyle(primaryText)
             .padding(.leading, CGFloat(level) * Spacing.s4)
             .accessibilityElement(children: .combine)
 
         case .numbered(let marker, let level):
             HStack(alignment: .firstTextBaseline, spacing: Spacing.s2) {
                 Text(marker)
-                    .foregroundStyle(Color.textSecondary)
+                    .foregroundStyle(secondaryText)
                 Text(inlineMarkdown(block.text))
                     .textSelection(.enabled)
             }
             .font(.body)
-            .foregroundStyle(Color.textPrimary)
+            .foregroundStyle(primaryText)
             .padding(.leading, CGFloat(level) * Spacing.s4)
             .accessibilityElement(children: .combine)
 
@@ -409,46 +458,46 @@ private struct ExportedMarkdownRenderedView: View {
                 if let language {
                     Text(language.uppercased())
                         .font(.caption2.weight(.semibold))
-                        .foregroundStyle(Color.textMuted)
+                        .foregroundStyle(mutedText)
                 }
                 Text(block.text)
                     .font(.system(.callout, design: .monospaced))
-                    .foregroundStyle(Color.textPrimary)
+                    .foregroundStyle(primaryText)
                     .textSelection(.enabled)
                     .fixedSize(horizontal: true, vertical: false)
             }
             .padding(Spacing.s3)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color.bgSecondary)
+            .background(blockBackground)
             .clipShape(RoundedRectangle(cornerRadius: GeistRadius.sm))
 
         case .table:
             ScrollView(.horizontal) {
                 Text(block.text)
                     .font(.system(.caption, design: .monospaced))
-                    .foregroundStyle(Color.textPrimary)
+                    .foregroundStyle(primaryText)
                     .textSelection(.enabled)
                     .fixedSize(horizontal: true, vertical: true)
                     .padding(Spacing.s3)
             }
-            .background(Color.bgSecondary)
+            .background(blockBackground)
             .clipShape(RoundedRectangle(cornerRadius: GeistRadius.sm))
 
         case .metadata:
             DisclosureGroup {
                 Text(block.text)
                     .font(.system(.caption, design: .monospaced))
-                    .foregroundStyle(Color.textSecondary)
+                    .foregroundStyle(secondaryText)
                     .textSelection(.enabled)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.top, Spacing.s2)
             } label: {
                 Label("Export Metadata", systemImage: "info.circle")
                     .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(Color.textPrimary)
+                    .foregroundStyle(primaryText)
             }
             .padding(Spacing.s3)
-            .background(Color.bgSecondary)
+            .background(blockBackground)
             .clipShape(RoundedRectangle(cornerRadius: GeistRadius.sm))
 
         case .divider:

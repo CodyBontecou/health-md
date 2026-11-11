@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="m3_schedule_clinic_destination_title">وجهة العيادة</string>
+    <string name="m3_schedule_clinic_destination_body">تدير عيادتك هذه الوجهة. استخدم «وصول العيادة» لتحديدها أو لإدارة المشاركة. تتطلب الوجهات الأخرى وصولك الخاص إلى Health.md.</string>
+</resources>

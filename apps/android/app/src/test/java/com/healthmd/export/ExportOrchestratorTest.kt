@@ -2,12 +2,16 @@ package com.healthmd.export
 
 import com.healthmd.data.export.ExportOrchestrator
 import com.healthmd.domain.model.ActivityData
+import com.healthmd.domain.model.AndroidCaptureContext
 import com.healthmd.domain.model.ExportFailureReason
 import com.healthmd.domain.model.ExportSettings
 import com.healthmd.domain.model.HealthData
+import com.healthmd.domain.model.SleepDayAttribution
+import com.healthmd.domain.model.SleepDayAttributionOverride
 import com.healthmd.domain.repository.ExportRepository
 import com.healthmd.domain.repository.HealthRepository
 import java.time.LocalDate
+import java.time.ZoneId
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -19,6 +23,14 @@ class ExportOrchestratorTest {
         val firstDate = LocalDate.of(2026, 4, 1)
         val rateLimitedDate = LocalDate.of(2026, 4, 2)
         val healthRepository = object : HealthRepository {
+            override suspend fun resolveCaptureContext(
+                zoneId: ZoneId,
+                sleepDayAttributionOverride: SleepDayAttributionOverride,
+            ) = AndroidCaptureContext(
+                zoneId,
+                (sleepDayAttributionOverride as? SleepDayAttributionOverride.Value)?.attribution
+                    ?: SleepDayAttribution.DEFAULT,
+            )
             override suspend fun fetchHealthData(date: LocalDate): HealthData {
                 if (date == rateLimitedDate) {
                     throw IllegalStateException("Health Connect rate limit exceeded")
@@ -57,6 +69,14 @@ class ExportOrchestratorTest {
     fun recordsHistoricalAccessSecurityExceptionAsAccessDenied() = runTest {
         val date = LocalDate.of(2026, 4, 3)
         val healthRepository = object : HealthRepository {
+            override suspend fun resolveCaptureContext(
+                zoneId: ZoneId,
+                sleepDayAttributionOverride: SleepDayAttributionOverride,
+            ) = AndroidCaptureContext(
+                zoneId,
+                (sleepDayAttributionOverride as? SleepDayAttributionOverride.Value)?.attribution
+                    ?: SleepDayAttribution.DEFAULT,
+            )
             override suspend fun fetchHealthData(date: LocalDate): HealthData {
                 throw SecurityException("Historical data access permission is required")
             }

@@ -37,6 +37,7 @@ import java.util.Locale
 fun ProfileSchedulesSection(
     viewModel: ProfileSchedulesViewModel,
     modifier: Modifier = Modifier,
+    onOpenDetails: ((String) -> Unit)? = null,
 ) {
     val uiState by viewModel.uiState.collectAsState()
     ProfileSchedulesContent(
@@ -48,6 +49,7 @@ fun ProfileSchedulesSection(
         onAddProfile = viewModel::addProfileFromCurrentSettings,
         onSaveEntry = viewModel::saveEntry,
         modifier = modifier,
+        onOpenDetails = onOpenDetails,
     )
 }
 
@@ -62,6 +64,7 @@ internal fun ProfileSchedulesContent(
     onAddProfile: () -> Unit,
     onSaveEntry: (ScheduledProfileEntry) -> Unit,
     modifier: Modifier = Modifier,
+    onOpenDetails: ((String) -> Unit)? = null,
 ) {
     val protection = LocalConfigurationProtection.current
     var pendingDeleteProfile by remember { mutableStateOf<ProfileScheduleRow?>(null) }
@@ -88,6 +91,7 @@ internal fun ProfileSchedulesContent(
                         onDelete = { pendingDeleteProfile = row },
                         onDiscardRecovery = { pendingDiscardProfile = row },
                         discardEnabled = uiState.discardingRecoveryProfileId == null,
+                        onOpenDetails = onOpenDetails?.let { open -> { open(row.profile.id) } },
                     )
                     HorizontalDivider(color = AppColors.borderDefault)
                 }

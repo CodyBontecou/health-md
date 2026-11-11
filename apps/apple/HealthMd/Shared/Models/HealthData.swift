@@ -75,12 +75,31 @@ nonisolated struct SleepStageSample: Codable, Sendable {
     let startDate: Date
     let endDate: Date
     let metadata: [String: String]
+    /// Source attribution, apple-v12 only. Capture fills these in memory; every non-v12 day
+    /// strips them (`withoutSourceAttribution()`) so apple-v8 payloads never gain the keys.
+    /// A clipped interval keeps the UUID of the HealthKit sample it was cut from.
+    let sourceUUID: UUID?
+    /// Source revision bundle identifier.
+    let source: String?
+    /// `HKSource.name`: the user-visible app or device name (for example "Withings").
+    let sourceName: String?
 
-    init(stage: String, startDate: Date, endDate: Date, metadata: [String: String] = [:]) {
+    init(
+        stage: String,
+        startDate: Date,
+        endDate: Date,
+        metadata: [String: String] = [:],
+        sourceUUID: UUID? = nil,
+        source: String? = nil,
+        sourceName: String? = nil
+    ) {
         self.stage = stage
         self.startDate = startDate
         self.endDate = endDate
         self.metadata = metadata
+        self.sourceUUID = sourceUUID
+        self.source = source
+        self.sourceName = sourceName
     }
 
     init(from decoder: Decoder) throws {
@@ -89,6 +108,17 @@ nonisolated struct SleepStageSample: Codable, Sendable {
         startDate = try container.decode(Date.self, forKey: .startDate)
         endDate = try container.decode(Date.self, forKey: .endDate)
         metadata = try container.decodeIfPresent([String: String].self, forKey: .metadata) ?? [:]
+        sourceUUID = try container.decodeIfPresent(UUID.self, forKey: .sourceUUID)
+        source = try container.decodeIfPresent(String.self, forKey: .source)
+        sourceName = try container.decodeIfPresent(String.self, forKey: .sourceName)
+    }
+
+    var hasSourceAttribution: Bool {
+        sourceUUID != nil || source != nil || sourceName != nil
+    }
+
+    func withoutSourceAttribution() -> SleepStageSample {
+        SleepStageSample(stage: stage, startDate: startDate, endDate: endDate, metadata: metadata)
     }
 }
 
@@ -111,6 +141,14 @@ nonisolated struct SleepData: Codable, Sendable {
     /// Derived from the latest InBed sample end, or the latest sleep-stage sample end
     /// when no InBed samples are recorded.
     var sessionEnd: Date? = nil
+
+    /// In-memory capture authority retained when selected output fields remove clocks.
+    /// Excluded from CodingKeys and never emitted as a metric or portable setting.
+    struct SourceSessionBounds: Sendable {
+        let start: Date?
+        let end: Date?
+    }
+    var sourceSessionBounds: SourceSessionBounds? = nil
 
     /// Individual sleep stage intervals for granular export.
     var stages: [SleepStageSample] = []
@@ -184,6 +222,9 @@ nonisolated struct ActivityData: Codable, Sendable {
     var downhillSnowSportsDistance: Double? // in meters
     var moveTime: Double? // in minutes
     var physicalEffort: Double? // kcal/hr/kg
+    /// apple-v12 source samples (start-owned, one per HKSample). Empty unless the export
+    /// selected apple-v12 and this category resolved to Detailed.
+    @OmittedWhenEmptyDetailSamples var detailSamples: [DetailSample] = []
 
     var hasData: Bool {
         steps != nil || activeCalories != nil || exerciseMinutes != nil ||
@@ -309,6 +350,8 @@ nonisolated struct VitalsData: Codable, Sendable {
     var forcedExpiratoryVolume1: Double? // liters
     var peakExpiratoryFlowRate: Double? // L/min
     var inhalerUsage: Double? // count
+    /// apple-v12 temperature and spirometry source samples. Existing vitals arrays are unchanged.
+    @OmittedWhenEmptyDetailSamples var detailSamples: [DetailSample] = []
 
     var hasData: Bool {
         respiratoryRateAvg != nil || bloodOxygenAvg != nil ||
@@ -338,6 +381,7 @@ nonisolated struct VitalsData: Codable, Sendable {
         case bloodOxygenSamples, bloodGlucoseSamples, respiratoryRateSamples, bloodPressureSamples
         case basalBodyTemperature, wristTemperature, electrodermalActivity
         case forcedVitalCapacity, forcedExpiratoryVolume1, peakExpiratoryFlowRate, inhalerUsage
+        case detailSamples
     }
 
     init(
@@ -351,7 +395,8 @@ nonisolated struct VitalsData: Codable, Sendable {
         bloodPressureSamples: [BloodPressureSample] = [],
         basalBodyTemperature: Double? = nil, wristTemperature: Double? = nil, electrodermalActivity: Double? = nil,
         forcedVitalCapacity: Double? = nil, forcedExpiratoryVolume1: Double? = nil,
-        peakExpiratoryFlowRate: Double? = nil, inhalerUsage: Double? = nil
+        peakExpiratoryFlowRate: Double? = nil, inhalerUsage: Double? = nil,
+        detailSamples: [DetailSample] = []
     ) {
         self.respiratoryRateAvg = respiratoryRateAvg; self.respiratoryRateMin = respiratoryRateMin; self.respiratoryRateMax = respiratoryRateMax
         self.bloodOxygenAvg = bloodOxygenAvg; self.bloodOxygenMin = bloodOxygenMin; self.bloodOxygenMax = bloodOxygenMax
@@ -364,6 +409,7 @@ nonisolated struct VitalsData: Codable, Sendable {
         self.basalBodyTemperature = basalBodyTemperature; self.wristTemperature = wristTemperature; self.electrodermalActivity = electrodermalActivity
         self.forcedVitalCapacity = forcedVitalCapacity; self.forcedExpiratoryVolume1 = forcedExpiratoryVolume1
         self.peakExpiratoryFlowRate = peakExpiratoryFlowRate; self.inhalerUsage = inhalerUsage
+        self.detailSamples = detailSamples
     }
 
     init(from decoder: Decoder) throws {
@@ -397,6 +443,7 @@ nonisolated struct VitalsData: Codable, Sendable {
         forcedExpiratoryVolume1 = try container.decodeIfPresent(Double.self, forKey: .forcedExpiratoryVolume1)
         peakExpiratoryFlowRate = try container.decodeIfPresent(Double.self, forKey: .peakExpiratoryFlowRate)
         inhalerUsage = try container.decodeIfPresent(Double.self, forKey: .inhalerUsage)
+        _detailSamples = try container.decode(OmittedWhenEmptyDetailSamples.self, forKey: .detailSamples)
     }
 }
 
@@ -409,6 +456,9 @@ nonisolated struct BodyData: Codable, Sendable {
     var bmi: Double?
     var leanBodyMass: Double? // in kg
     var waistCircumference: Double? // in meters
+    /// apple-v12 source samples (start-owned, one per HKSample). Empty unless the export
+    /// selected apple-v12 and this category resolved to Detailed.
+    @OmittedWhenEmptyDetailSamples var detailSamples: [DetailSample] = []
 
     var hasData: Bool {
         weight != nil || bodyFatPercentage != nil || height != nil ||
@@ -432,6 +482,9 @@ nonisolated struct NutritionData: Codable, Sendable {
     var saturatedFat: Double? // grams
     var monounsaturatedFat: Double? // grams
     var polyunsaturatedFat: Double? // grams
+    /// apple-v12 source samples (start-owned, one per HKSample). Empty unless the export
+    /// selected apple-v12 and this category resolved to Detailed.
+    @OmittedWhenEmptyDetailSamples var detailSamples: [DetailSample] = []
 
     var hasData: Bool {
         dietaryEnergy != nil || protein != nil || carbohydrates != nil ||
@@ -447,6 +500,8 @@ nonisolated struct MindfulnessData: Codable, Sendable {
     var mindfulMinutes: Double?
     var mindfulSessions: Int?
     var stateOfMind: [StateOfMindEntry] = []
+    /// apple-v12 mindful session source samples (one per HKCategorySample).
+    var detailSamples: [DetailSample] = []
 
     /// Export-only view controls used by metric-level filtering.
     ///
@@ -464,6 +519,7 @@ nonisolated struct MindfulnessData: Codable, Sendable {
         case mindfulMinutes
         case mindfulSessions
         case stateOfMind
+        case detailSamples
     }
 
     init(
@@ -473,8 +529,10 @@ nonisolated struct MindfulnessData: Codable, Sendable {
         isStateOfMindEntriesExportEnabled: Bool = true,
         isDailyMoodExportEnabled: Bool = true,
         isMomentaryEmotionExportEnabled: Bool = true,
-        isAverageValenceExportEnabled: Bool = true
+        isAverageValenceExportEnabled: Bool = true,
+        detailSamples: [DetailSample] = []
     ) {
+        self.detailSamples = detailSamples
         self.mindfulMinutes = mindfulMinutes
         self.mindfulSessions = mindfulSessions
         self.stateOfMind = stateOfMind
@@ -489,6 +547,7 @@ nonisolated struct MindfulnessData: Codable, Sendable {
         mindfulMinutes = try container.decodeIfPresent(Double.self, forKey: .mindfulMinutes)
         mindfulSessions = try container.decodeIfPresent(Int.self, forKey: .mindfulSessions)
         stateOfMind = try container.decodeIfPresent([StateOfMindEntry].self, forKey: .stateOfMind) ?? []
+        detailSamples = try container.decodeIfPresent([DetailSample].self, forKey: .detailSamples) ?? []
         isStateOfMindEntriesExportEnabled = true
         isDailyMoodExportEnabled = true
         isMomentaryEmotionExportEnabled = true
@@ -500,6 +559,9 @@ nonisolated struct MindfulnessData: Codable, Sendable {
         try container.encodeIfPresent(mindfulMinutes, forKey: .mindfulMinutes)
         try container.encodeIfPresent(mindfulSessions, forKey: .mindfulSessions)
         try container.encode(stateOfMind, forKey: .stateOfMind)
+        if !detailSamples.isEmpty {
+            try container.encode(detailSamples, forKey: .detailSamples)
+        }
     }
 
     var hasData: Bool {
@@ -674,6 +736,9 @@ nonisolated struct MobilityData: Codable, Sendable {
     var runningGroundContactTime: Double? // milliseconds
     var runningVerticalOscillation: Double? // centimeters
     var runningPower: Double? // watts
+    /// apple-v12 source samples (start-owned, one per HKSample). Empty unless the export
+    /// selected apple-v12 and this category resolved to Detailed.
+    @OmittedWhenEmptyDetailSamples var detailSamples: [DetailSample] = []
 
     var hasData: Bool {
         walkingSpeed != nil || walkingStepLength != nil ||
@@ -846,6 +911,9 @@ nonisolated struct ReproductiveHealthData: Codable, Sendable {
     var ovulationTestResult: String? // "negative", "positive", "indeterminate", "estrogen_surge"
     var cervicalMucusQuality: String? // "dry", "sticky", "creamy", "watery", "egg_white"
     var intermenstrualBleedingCount: Int?
+    /// apple-v12 source samples (start-owned, one per HKSample). Empty unless the export
+    /// selected apple-v12 and this category resolved to Detailed.
+    @OmittedWhenEmptyDetailSamples var detailSamples: [DetailSample] = []
 
     var hasData: Bool {
         menstrualFlow != nil || sexualActivityCount != nil ||
@@ -1341,13 +1409,20 @@ nonisolated struct ExportTimeContext: Codable, Equatable, Sendable {
     static let timestampTimeZoneIdentifier = "UTC"
 
     let calendarTimeZoneIdentifier: String
+    /// Which daily note owned sleep sessions when this day was captured
+    /// (issue #104). Nil means the capture used the shipped default
+    /// `night_begins` (or predates the setting), which is behaviorally
+    /// identical, so only non-default captures encode a value. This keeps
+    /// previously persisted and synced records byte-identical.
+    let sleepDayAttribution: SleepDayAttribution?
 
-    init(calendarTimeZoneIdentifier: String) {
+    init(calendarTimeZoneIdentifier: String, sleepDayAttribution: SleepDayAttribution? = nil) {
         self.calendarTimeZoneIdentifier = calendarTimeZoneIdentifier
+        self.sleepDayAttribution = sleepDayAttribution
     }
 
-    init(timeZone: TimeZone) {
-        self.init(calendarTimeZoneIdentifier: timeZone.identifier)
+    init(timeZone: TimeZone, sleepDayAttribution: SleepDayAttribution? = nil) {
+        self.init(calendarTimeZoneIdentifier: timeZone.identifier, sleepDayAttribution: sleepDayAttribution)
     }
 
     static func captured() -> ExportTimeContext {
@@ -1356,6 +1431,23 @@ nonisolated struct ExportTimeContext: Codable, Equatable, Sendable {
 
     var calendarTimeZone: TimeZone {
         TimeZone(identifier: calendarTimeZoneIdentifier) ?? TimeZone(secondsFromGMT: 0)!
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case calendarTimeZoneIdentifier
+        case sleepDayAttribution
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        calendarTimeZoneIdentifier = try container.decode(String.self, forKey: .calendarTimeZoneIdentifier)
+        sleepDayAttribution = try container.decodeIfPresent(SleepDayAttribution.self, forKey: .sleepDayAttribution)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(calendarTimeZoneIdentifier, forKey: .calendarTimeZoneIdentifier)
+        try container.encodeIfPresent(sleepDayAttribution, forKey: .sleepDayAttribution)
     }
 }
 
@@ -1417,6 +1509,10 @@ nonisolated struct HealthData: Codable, Sendable {
     var providers: HealthProviderSections? = nil
     var partialFailures: [ExportPartialFailure] = []
     var healthKitRecordArchive: HealthKitRecordArchive? = nil
+    /// apple-v12 successor marker set by capture and `ConnectedExportDetailPolicy.sanitized`.
+    /// Writers emit `detailSamples` and the v12 header only when this is set (and the day is
+    /// Night begins); otherwise output stays apple-v8 regardless of captured samples.
+    var compatibilityDetailProfile: AppleCompatibilityDetailProfile? = nil
     private var healthKitRecordCaptureStatusStorage: HealthKitRecordCaptureStatus = .notRequested
 
     /// The archive is authoritative whenever it is present, preventing status drift after decoding or mutation.
@@ -1429,6 +1525,7 @@ nonisolated struct HealthData: Codable, Sendable {
         case date, timeContext, sleep, activity, heart, vitals, body, nutrition, mindfulness, mobility, hearing
         case reproductiveHealth, cyclingPerformance, vitamins, minerals, symptoms, medications, other, workouts
         case providers, partialFailures, healthKitRecordArchive, healthKitRecordCaptureStatus
+        case compatibilityDetailProfile
     }
 
     init(
@@ -1454,8 +1551,10 @@ nonisolated struct HealthData: Codable, Sendable {
         providers: HealthProviderSections? = nil,
         partialFailures: [ExportPartialFailure] = [],
         healthKitRecordArchive: HealthKitRecordArchive? = nil,
-        healthKitRecordCaptureStatus: HealthKitRecordCaptureStatus = .notRequested
+        healthKitRecordCaptureStatus: HealthKitRecordCaptureStatus = .notRequested,
+        compatibilityDetailProfile: AppleCompatibilityDetailProfile? = nil
     ) {
+        self.compatibilityDetailProfile = compatibilityDetailProfile
         self.date = date
         self.timeContext = timeContext
         self.sleep = sleep
@@ -1508,6 +1607,10 @@ nonisolated struct HealthData: Codable, Sendable {
         providers = try container.decodeIfPresent(HealthProviderSections.self, forKey: .providers)
         partialFailures = try container.decodeIfPresent([ExportPartialFailure].self, forKey: .partialFailures) ?? []
         healthKitRecordArchive = try container.decodeIfPresent(HealthKitRecordArchive.self, forKey: .healthKitRecordArchive)
+        compatibilityDetailProfile = try container.decodeIfPresent(
+            AppleCompatibilityDetailProfile.self,
+            forKey: .compatibilityDetailProfile
+        )
         if let archive = healthKitRecordArchive {
             healthKitRecordCaptureStatusStorage = archive.captureStatus
         } else {
@@ -1543,6 +1646,7 @@ nonisolated struct HealthData: Codable, Sendable {
         try container.encode(partialFailures, forKey: .partialFailures)
         try container.encodeIfPresent(healthKitRecordArchive, forKey: .healthKitRecordArchive)
         try container.encode(healthKitRecordCaptureStatus, forKey: .healthKitRecordCaptureStatus)
+        try container.encodeIfPresent(compatibilityDetailProfile, forKey: .compatibilityDetailProfile)
     }
 
     var hasSummaryData: Bool {
@@ -1555,6 +1659,10 @@ nonisolated struct HealthData: Codable, Sendable {
 
     var hasAnyData: Bool {
         hasSummaryData || healthKitRecordArchive != nil
+            || (timeContext.sleepDayAttribution == .morningEnds && (!sleep.stages.isEmpty
+                || !heart.heartRateSamples.isEmpty || !heart.hrvSamples.isEmpty
+                || !vitals.bloodOxygenSamples.isEmpty || !vitals.bloodGlucoseSamples.isEmpty
+                || !vitals.respiratoryRateSamples.isEmpty))
     }
 }
 
@@ -1748,6 +1856,17 @@ extension HealthData {
             filtered.vitals.bloodPressureSamples = []
         }
 
+        func retainSelected(_ samples: [DetailSample]) -> [DetailSample] {
+            samples.filter { AppleDetailSampleCatalog.isSelected($0, enabledMetricIDs: enabledMetricIDs) }
+        }
+        filtered.activity.detailSamples = retainSelected(filtered.activity.detailSamples)
+        filtered.vitals.detailSamples = retainSelected(filtered.vitals.detailSamples)
+        filtered.body.detailSamples = retainSelected(filtered.body.detailSamples)
+        filtered.nutrition.detailSamples = retainSelected(filtered.nutrition.detailSamples)
+        filtered.mindfulness.detailSamples = retainSelected(filtered.mindfulness.detailSamples)
+        filtered.mobility.detailSamples = retainSelected(filtered.mobility.detailSamples)
+        filtered.reproductiveHealth.detailSamples = retainSelected(filtered.reproductiveHealth.detailSamples)
+
         let sleepStageMetricID: [String: String] = [
             "deep": "sleep_deep",
             "rem": "sleep_rem",
@@ -1759,6 +1878,14 @@ extension HealthData {
         filtered.sleep.stages = filtered.sleep.stages.filter { stage in
             guard let metricID = sleepStageMetricID[stage.stage] else { return false }
             return enabledMetricIDs.contains(metricID)
+        }
+
+        if timeContext.sleepDayAttribution == .morningEnds {
+            let retainsSleep = filtered.sleep.hasData || !filtered.sleep.stages.isEmpty
+                || filtered.sleep.sessionStart != nil || filtered.sleep.sessionEnd != nil
+            filtered.sleep.sourceSessionBounds = retainsSleep
+                ? sleep.sourceSessionBounds ?? .init(start: sleep.sessionStart, end: sleep.sessionEnd)
+                : nil
         }
 
         if let archive = filtered.healthKitRecordArchive {

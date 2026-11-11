@@ -19,8 +19,8 @@ description: "Use the macOS companion as a local destination. Your iPhone captur
 <ol>
 <li>Install and open the macOS app.</li>
 <li>On Mac, choose a destination folder so Health.md has write access.</li>
-<li>On iPhone, open the Sync tab and enable Mac connectivity.</li>
-<li>Return to the iPhone Export tab, choose <em>Connected Mac</em>, configure the export, and tap Export.</li>
+<li>On iPhone, open <strong>Settings → Mac Destination</strong> and enable it.</li>
+<li>Choose <em>Connected Mac</em> as an automation's destination (<strong>Automations → automation → Output</strong>), then use <strong>Export now</strong> or the automation's schedule.</li>
 </ol>
 
 ## Data that transfers

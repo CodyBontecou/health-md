@@ -19,7 +19,7 @@ Writes one structured JSON document per day under the `healthmd.health_data` con
 
 ## Where to find it
 
-1. Enable **JSON** in **Export Format** on the Export tab.
+1. Enable **JSON** in **Export Format** on the Export now screen.
 2. Export; one `.json` file appears per day at your destination.
 
 ## Prerequisites
@@ -56,6 +56,15 @@ Frozen v4 files look the same minus the `schemaProfile`/`schemaVersion` marker p
 |---|---|
 | **Frozen v4** (default for saved settings) | Byte-stable shape consumed by the Obsidian plugin, the compatibility API export, and existing scripts. Never changes. |
 | **Android analytical v5** (default for new installs) | Adds Android-native values and exact source details on top of v4 — everything v4 consumers expect, plus more. |
+| **Android analytical v7** (`schemaVersion: 7`) | Analytical v5 plus one entry per Health Connect record for calories, distance, floors, elevation, hydration, and body measurements. Not a separate setting: it is written only when the analytical profile is active and **Detail by category** explicitly sets Activity, Nutrition, or Body to Detailed. The global time-series switch alone keeps v5. Morning ends exports stay `android-sleep-v6` and never include these records. |
+
+Analytical v7 arrays (each entry: `timestamp`, `value`, `source`, `metadata`, `exactTime`, `exactEndTime` for intervals, `identity`; values in the units of the daily summaries):
+
+- `activity`: `activeCaloriesSamples`, `totalCaloriesSamples` (kcal), `distanceSamples`, `elevationSamples` (meters), `floorsSamples` (floors).
+- `nutrition`: `hydrationSamples` (liters).
+- `body`: `weightSamples`, `leanBodyMassSamples`, `boneMassSamples`, `bodyWaterMassSamples` (kg), `heightSamples` (meters), `bodyFatSamples` (fraction 0–1). Body records are instantaneous and carry no `exactEndTime`.
+
+Each record belongs to the day containing its start. Records are not deduplicated, interpolated, or resampled, so a day's records can sum to more than its total (overlapping origins) or less (a record that starts the previous day still counts toward this day's aggregate); use the daily totals for totals. CSV adds one `… Sample` row per record (canonical units, exact start in the Timestamp column) and Markdown adds a record table per array. Obsidian Bases and daily notes keep the v5 identity because they carry no record arrays. v7 is written by the on-device writers only.
 
 Two additional switches control extra keys: **legacy Android aliases** re-adds pre-parity key names, and **Android native fields** emits values that have no frozen v4 equivalent. The API endpoint export always embeds frozen v4 regardless of your local profile.
 
@@ -87,3 +96,14 @@ Two additional switches control extra keys: **legacy Android aliases** re-adds p
 ## Implementation notes
 
 Contract identifier is `healthmd.health_data`; frozen wire version is 4 (`HealthMdExportSchema.VERSION`). The exporter implements the documented iOS parity fixes (sleep `stages` → `sleepStages`, ISO 8601 timestamps, unified `value` keys, `mindfulMinutes`, `pushCount` alias, vitals aliases) — the full Tier-0/Tier-1 ledger is in [`ios-export-contract.md`](../export-contract/ios-export-contract.md) and [`android-ios-gap-matrix.md`](../export-contract/android-ios-gap-matrix.md); profile policy and the freeze guardrail are in [`migration-plan.md`](../export-contract/migration-plan.md). v5 is additive-only and marked with `schemaProfile`/`schemaVersion` at the top of the document; `FormatCustomization.forFrozenApiV4()` pins API v1 delivery to v4. All-connected provenance (cloud providers) is embedded under `metadata.provenance`. Never change frozen v4 bytes to create parity — a new reviewed profile is required (see the repository cross-platform policy).
+
+
+## Gated Morning ends preparation
+
+The independently versioned `android-sleep-v6` preparation path preserves selected Health Connect mindfulness sessions in JSON and carries complete emitted source records through CSV, Markdown and Bases. Exact UTC timestamps, source offsets/identity and metadata remain intact across the DST fold; saved preparation requests freeze session lists and metadata. Markdown native-record cells use literal code spans so rendered/copied JSON retains its escape characters; readers accept earlier plain cells too. These sessions are not Apple State of Mind observations. Historical v4/v5 output and capture summaries remain unchanged. This path is synthetic preparation evidence; the Morning ends setting and production admission remain gated pending full feature acceptance under Issue #104.
+
+Detailed Android-v6 Markdown now also carries the complete emitted sleep stage/parent JSON in a literal table cell alongside UTC clocks. Earlier clock-only files remain readable. Core/Light identities stay platform-specific; conflicting complete or displayed source facts reject. This is gated successor preparation, not production/provider acceptance.
+
+Morning ends preparation retains fractional elapsed sleep quantities by summing exact session/stage intervals before converting to the native duration model. Positive submillisecond sessions remain positive, including additive overlap; a total the model cannot represent exactly rejects instead of truncating. Historical Night begins retains millisecond quantization. Public profile/schema/wire identities and existing durable duration encoding are unchanged; full lossless successor recovery remains an enabling requirement.
+
+Accepted Android-v6 requests freeze every source collection before asynchronous preparation, including nested workout metadata, laps/segments/splits/routes, all six sample series and their metadata/context, and correlated source-ID maps/lists. Caller mutation after acceptance cannot alter retained facts or rendered bytes. Initially empty unqualified source collections also remain empty in the accepted snapshot; a new request still validates newly populated unsupported sources. Historical v4/v5 paths and public export/wire/journal identities are unchanged. This internal isolation correction does not open the Morning ends production gate or establish physical-provider acceptance.

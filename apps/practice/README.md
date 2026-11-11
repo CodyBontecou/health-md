@@ -22,7 +22,7 @@ npm run check:synthetic       # scan governed source, tests, docs, scripts, conf
 npm run check:scanner-canary  # prove seeded prohibited data is rejected
 npm run check:security        # verify exact route/34-operation traceability inventory
 npm run build                 # browser production bundle
-npx playwright install chromium
+npx playwright install chrome
 npm run test:e2e              # Chromium against local Wrangler
 npm run check:qualification   # prove synthetic gates are configured and production is disabled
 npm run build:provenance      # ignored metadata-only provenance receipt
@@ -58,7 +58,7 @@ See `docs/architecture.md`, `docs/threat-model.md`, and the proposed repository 
 
 The default PR gate runs `scripts/ci/practice.sh`: unit/API security regressions, type checks, a production asset build, and synthetic/security checks. The browser/qualification pipeline is an explicit diagnostic, not a default PR gate.
 
-Playwright runs exact-pinned bundled Chromium against the real local same-origin Wrangler runtime. `npm run check:ci` builds once, then shares those assets across browser, qualification, runtime-smoke, and packaging checks. Standalone commands continue to build their own assets. The `:built` scripts are internal pipeline steps and require a successful build of the current source tree first. The suite observes workflow DOM, generic JSON download bytes, print media, rendered axe including color contrast, keyboard/focus behavior, reduced motion, forced colors where supported, narrow 400%-equivalent reflow, request paths/referrers, cookie flags, browser persistence surfaces, and console/page errors. Success creates no screenshot, video, or trace; ignored synthetic-only artifacts are retained only on failure.
+Playwright runs installed Google Chrome with Chromium sandboxing enabled against the real local same-origin Wrangler runtime. Keep Chrome updated; its security updates are independent of the pinned Playwright package. CI must install Chrome and run as a non-root user with sandbox support. `npm run check:ci` builds once, then shares those assets across browser, qualification, runtime-smoke, and packaging checks. Standalone commands continue to build their own assets. The `:built` scripts are internal pipeline steps and require a successful build of the current source tree first. The suite observes workflow DOM, generic JSON download bytes, print media, rendered axe including color contrast, keyboard/focus behavior, reduced motion, forced colors where supported, narrow 400%-equivalent reflow, request paths/referrers, cookie flags, browser persistence surfaces, and console/page errors. Success creates no screenshot, video, or trace; ignored synthetic-only artifacts are retained only on failure.
 
 The versioned evidence index is `qualification/v1/`. It classifies every fixed route and all 34 operations, maps the 13 portal child TODOs and parent requirements to direct commands/tests, records supported synthetic states, and explicitly keeps production disabled. `qualification/generated/provenance.json` is ignored because SHA/dirty/tool/build metadata changes per run.
 

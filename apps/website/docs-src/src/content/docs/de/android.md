@@ -25,6 +25,8 @@ description: "Richten Sie Health.md für Android ein. Exportieren Sie Health Con
 
 Health.md für Android verwandelt Health Connect in ein lokales Gesundheitsjournal. Wählen Sie die benötigten Metriken aus und zeigen Sie eine Vorschau der Ausgabe an. Exportieren Sie dann die Dateien in einen lokalen Ordner, Obsidian Tresor, einen synchronisierten Anbieterordner oder einen beschreibbaren Android-Dokumentanbieter.
 
+Die App hat drei Tabs. **Archiv** ist ein Kalender der Gesundheitsdaten, die Ihre Exporte abgedeckt haben, mit Lücken, die Sie nachholen können. **Automationen** enthält Ihre Exportprofile und Zeitpläne. **Einstellungen** enthält Ziele, Daten und App-Optionen. Mit der Schaltfläche **Jetzt exportieren** starten Sie einen einmaligen Export von jedem Tab außer den Einstellungen.
+
 <div class="options">
  <div class="option"> <strong> Health Connect Quelle </strong> <p> Liest Aktivität, Schlaf, Herz, Vitalwerte, Körpermaße, Ernährung, Training und andere Kategorien über die geräteinternen Health Connect APIs von Android. </p> </div>
  <div class="option"> <strong> Obsidian -native Ausgabe </strong> <p> Schreibt tägliche Notizen, YAML/Frontmatter, Obsidian Bases-freundliche Notizen, individuelle Einträge und JSON, kompatibel mit dem Health.md Obsidian Plugin. </p> </div>
@@ -149,7 +151,7 @@ Health.md für Android ist lokal zuerst:
 
 Wenn Sie die strengste lokale Einrichtung wünschen, führen Sie manuelle Exporte in einen lokalen Geräteordner durch und lassen Sie geplante Exporte und die vom Anbieter unterstützte Synchronisierung deaktiviert.
 
-Der separate, optionale Health.md Cloud-Pilot ist nur für einen Eigentümer vorgesehen und speichert ausschließlich API-Exporte, die bewusst hochgeladen werden. Es gibt keine öffentliche Registrierung und keine automatische Gerätesynchronisierung; dieser Ordnerexport lädt nichts in den Pilot hoch. Die [Datenschutzerklärung](/privacy-policy.html) beschreibt Aufbewahrung, Löschung, Speicherquote und Verlustrisiken ohne Backup.
+Der separate, optionale Cloud-Pilot Health.md für einen einzelnen Eigentümer behält nur API-Exporte bei, die absichtlich dorthin hochgeladen wurden. Es gibt keine öffentliche Anmeldung und keine automatische Gerätesynchronisierung. Dieser Ordner-Workflow lädt nicht dorthin hoch. Informationen zu Aufbewahrungs-, Lösch-, Kontingent- und nicht gesicherten Speicherrisiken finden Sie in der [Datenschutzrichtlinie](/privacy-policy.html).
 
 ## Verwandte Dokumente
 

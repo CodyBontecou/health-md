@@ -5,7 +5,12 @@ import SwiftUI
 struct HealthHistoryDisclosureContent: View {
     let assessment: HealthHistoryAssessment
     let isExecution: Bool
+    /// Lets a host bound the card's height while the details are open. Nil keeps the
+    /// disclosure's own state.
+    var detailsExpanded: Binding<Bool>? = nil
     let reviewAccess: () -> Void
+
+    @State private var localDetailsExpanded = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.sm) {
@@ -26,7 +31,7 @@ struct HealthHistoryDisclosureContent: View {
             }
             .accessibilityIdentifier("export.historyWarning.reviewAccess")
             .accessibilityHint("Shows instructions for reviewing Health.md access in Apple Health")
-            DisclosureGroup {
+            DisclosureGroup(isExpanded: detailsExpanded ?? $localDetailsExpanded) {
                 ForEach(assessment.types) { type in
                     VStack(alignment: .leading, spacing: Spacing.sm) {
                         typeDetail(type)

@@ -5,11 +5,11 @@ import java.time.ZoneOffset
 
 /**
  * Shared access rules mirrored from the iOS PurchaseManager.
- * Trials are store-backed subscription entitlements, not a local export quota.
+ * The first export is free. Trials remain store-backed subscription entitlements.
  * Historical counters and legacy unlock decisions remain migration-compatible.
  */
 object FreemiumPolicy {
-    const val FREE_EXPORT_LIMIT = 0
+    const val FREE_EXPORT_LIMIT = 1
     private const val HISTORICAL_EXPORT_LIMIT = 5
     private const val LEGACY_FREE_EXPORT_LIMIT = 3
 
@@ -36,7 +36,7 @@ object FreemiumPolicy {
         )
 
     fun canExport(isUnlocked: Boolean, freeExportsUsed: Int): Boolean =
-        isUnlocked
+        isUnlocked || remainingExports(freeExportsUsed) > 0
 
     fun isLegacyUnlock(firstInstallTimeMillis: Long): Boolean =
         firstInstallTimeMillis < grandfatherCutoffMillis

@@ -62,6 +62,7 @@ struct ExportTabView: View {
     @Environment(\.scenePhase) private var scenePhase
 
     @ObservedObject private var purchaseManager = PurchaseManager.shared
+    @ObservedObject private var clinicSponsorship = ClinicSponsorshipManager.shared
     @State private var showHealthPermissionsGuide = false
     @State private var showPreviewRequirementsPrompt = false
     @State private var showFilenameEditor = false
@@ -266,13 +267,18 @@ struct ExportTabView: View {
                     ? apiExportSettings.destinationSnapshot
                     : nil,
                 connectedAppsEnabled: ConnectedAppsFeature.isEnabled,
-                fetchHealthData: { date in
+                externalIntegrations: externalIntegrations,
+                fetchHealthData: { date, snapshot in
+                    let capturedSettings = snapshot.makeAdvancedExportSettings()
                     #if DEBUG
                     if TestMode.useHealthKitExportPreviewFixtures || MarketingCapture.isActive {
                         return UITestHealthKitFixtures.exportPreviewHealthData(
                             for: date,
-                            includeGranularData: advancedSettings.effectiveDetailPolicy
-                                .includesSelectedTimeSeries
+                            includeGranularData: capturedSettings.effectiveDetailPolicy
+                                .includesSelectedTimeSeries,
+                            includeLargeSourceArchive: TestMode.healthKitExportPreviewLargeArchive
+                                && capturedSettings.effectiveDetailPolicy.includesCanonicalArchive,
+                            includePartialFailures: TestMode.healthKitExportPreviewPartialCapture
                         )
                     }
                     #endif
@@ -280,9 +286,9 @@ struct ExportTabView: View {
                     do {
                         return try await healthKitManager.fetchHealthData(
                             for: date,
-                            detailPolicy: advancedSettings.effectiveDetailPolicy,
-                            metricSelection: advancedSettings.metricSelection,
-                            timeZone: advancedSettings.exportTimeZoneOverride ?? .current
+                            detailPolicy: capturedSettings.effectiveDetailPolicy,
+                            metricSelection: capturedSettings.metricSelection,
+                            timeZone: capturedSettings.exportTimeZoneOverride ?? .current
                         )
                     } catch {
                         let descriptor = HealthKitSafeLogging.failureDescriptor(
@@ -591,6 +597,15 @@ struct ExportTabView: View {
 
     // MARK: - Date Range
 
+    private var sleepDateGuidance: LocalizedStringKey {
+        switch healthKitManager.sleepDayAttribution {
+        case .nightBegins:
+            "Sleep covers noon on each selected date through noon the next day. For last night's sleep, choose Yesterday."
+        case .morningEnds:
+            "Whole sleep sessions belong to the date they end in the export's time zone. For last night's sleep, choose Today."
+        }
+    }
+
     private var dateRangeSection: some View {
         sectionCard(title: "Date Range") {
             VStack(spacing: Spacing.md) {
@@ -607,10 +622,11 @@ struct ExportTabView: View {
                 }
 
                 if advancedSettings.metricSelection.enabledMetricCount(for: .sleep) > 0 {
-                    Text("Sleep covers noon on each selected date through noon the next day. For last night's sleep, choose Yesterday.")
+                    Text(sleepDateGuidance)
                         .font(.footnote)
                         .foregroundStyle(Color.textSecondary)
                         .frame(maxWidth: .infinity, alignment: .leading)
+                        .accessibilityIdentifier(AccessibilityID.Export.sleepDateGuidance)
                 }
 
                 if dateRangePreset == .custom {
@@ -745,8 +761,51 @@ struct ExportTabView: View {
 
                 dataDetailInlineRow
                     .configurationChangesProtected()
+
+                rowDivider()
+
+                ExportDetailOverridesSection(policy: $advancedSettings.detailPolicy)
+                    .configurationChangesProtected()
+
+                rowDivider()
+
+                sleepDayAttributionInlineRow
+                    .configurationChangesProtected()
             }
         }
+    }
+
+    /// Issue #104: chooses which daily note owns a midnight-spanning sleep
+    /// session. Stored on the capturing device and applied to every capture
+    /// path (manual, scheduled, connected, direct, and App Intents).
+    private var sleepDayAttributionInlineRow: some View {
+        HStack(alignment: .top, spacing: Spacing.s3) {
+            inlineIcon("moon.zzz", isActive: healthKitManager.sleepDayAttribution == .morningEnds)
+
+            VStack(alignment: .leading, spacing: Spacing.s2) {
+                Picker("Sleep Day Attribution", selection: Binding(
+                    get: { healthKitManager.sleepDayAttribution },
+                    set: { mode in
+                        if mode.isAvailableForShippedProfiles { healthKitManager.setSleepDayAttribution(mode) }
+                    }
+                )) {
+                    ForEach(SleepDayAttribution.allCases, id: \.rawValue) { mode in
+                        Text(mode.localizedDisplayName).tag(mode)
+                            .disabled(!mode.isAvailableForShippedProfiles)
+                    }
+                }
+                .pickerStyle(.menu)
+                .font(.body.weight(.semibold))
+                .accessibilityIdentifier(AccessibilityID.Export.sleepDayAttributionPicker)
+                .accessibilityHint(healthKitManager.sleepDayAttribution.localizedDescription)
+
+                Text(healthKitManager.sleepDayAttribution.localizedDescription)
+                    .font(.footnote)
+                    .foregroundStyle(Color.textSecondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+        .padding(.vertical, Spacing.s3)
     }
 
     private var dataDetailInlineRow: some View {
@@ -782,6 +841,14 @@ struct ExportTabView: View {
                     .font(.footnote)
                     .foregroundStyle(Color.textSecondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
+
+                if let longRangeNote = selectedPreset.localizedLongRangeNote {
+                    Label(longRangeNote, systemImage: "lightbulb")
+                        .font(.footnote)
+                        .foregroundStyle(Color.textSecondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
         }
         .padding(.vertical, Spacing.s3)
@@ -796,7 +863,7 @@ struct ExportTabView: View {
             "Data Detail",
             selection: Binding(
                 get: { AppleExportDetailPreset(policy: advancedSettings.detailPolicy) },
-                set: { advancedSettings.detailPolicy = $0.policy }
+                set: { advancedSettings.detailPolicy = advancedSettings.detailPolicy.replacingBase(with: $0.policy) }
             )
         ) {
             ForEach(presets) { preset in
@@ -1152,8 +1219,12 @@ struct ExportTabView: View {
     // MARK: - Floating Export Bar
 
     private var floatingExportBar: some View {
-        SchedulingExportFooter(
-            freeExportsRemaining: !purchaseManager.isUnlocked && canExport ? purchaseManager.freeExportsRemaining : nil,
+        let clinicCovered = exportTargetSelection == .apiEndpoint && clinicSponsorship.status.active &&
+            clinicSponsorship.status.sharingAuthorized &&
+            ClinicExportAuthorization.canonicalClinicEndpoint(apiExportSettings.endpointURLString) ==
+            clinicSponsorship.status.endpoint.flatMap(ClinicExportAuthorization.canonicalClinicEndpoint)
+        return SchedulingExportFooter(
+            freeExportsRemaining: !purchaseManager.isUnlocked && !clinicCovered && canExport ? purchaseManager.freeExportsRemaining : nil,
             freeExportsIdentifier: AccessibilityID.Export.freeExportsLabel
         ) {
             SchedulingExportActions(
@@ -1699,6 +1770,8 @@ struct ExportTabView: View {
 }
 
 struct ExportTargetSectionView: View {
+    @ObservedObject private var clinic = ClinicSponsorshipManager.shared
+    @ObservedObject private var purchases = PurchaseManager.shared
     @Binding var selection: ExportTargetSelection
     let title: String
     let localTitle: String
@@ -1761,6 +1834,12 @@ struct ExportTargetSectionView: View {
             sectionLabel(title)
             VStack(spacing: 0) {
                 VStack(spacing: Spacing.sm) {
+                    if clinic.status.active && !purchases.canExport {
+                        Text("Clinic destination").font(Typography.body())
+                        Text(clinic.status.endpoint ?? "").font(.footnote.monospaced())
+                        Text("Your clinic manages this destination. Use Clinic access to select it or manage sharing. Other destinations require your own Health.md access.")
+                            .font(.footnote).foregroundStyle(Color.textMuted)
+                    } else {
                     ExportTargetOptionRow(
                         title: localTitle,
                         icon: localIcon,
@@ -1814,6 +1893,7 @@ struct ExportTargetSectionView: View {
                     ) {
                         selection = .agentDataGateway
                         onOpenGatewaySettings?()
+                    }
                     }
                 }
             }
@@ -1930,12 +2010,20 @@ private struct ExportTargetOptionRow: View {
 }
 
 struct APIExportSettingsSheet: View {
+    @ObservedObject private var clinic = ClinicSponsorshipManager.shared
+    @ObservedObject private var purchases = PurchaseManager.shared
     @ObservedObject var settings: APIExportSettings
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var configurationProtection: ConfigurationProtectionManager
     var body: some View {
         NavigationStack {
             Form {
+                if clinic.status.active && !purchases.canExport {
+                    Section("Clinic destination") {
+                        Text(clinic.status.endpoint ?? "").font(.footnote.monospaced())
+                        Text("Your clinic manages this destination. Use Clinic access to select it or manage sharing. Other destinations require your own Health.md access.")
+                    }
+                } else {
                 Section {
                     TextField(
                         "https://api.example.com/healthmd",
@@ -1967,6 +2055,7 @@ struct APIExportSettingsSheet: View {
                     }
                 } footer: {
                     Text("Only send Apple Health data to endpoints you control or trust. API exports use your selected metrics and Data Detail setting.")
+                }
                 }
             }
             .navigationTitle("API Export")

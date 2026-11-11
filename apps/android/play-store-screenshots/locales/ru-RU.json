@@ -1,48 +1,48 @@
 {
   "schemaVersion": 1,
   "locale": "ru-RU",
-  "status": "draft",
+  "status": "reviewed",
   "direction": "ltr",
   "slides": [
     {
-      "id": "core-export",
-      "headline": "Ваши данные о здоровье. Ваши файлы.",
-      "supportingLine": "Экспортируйте разрешённые записи Health Connect в подконтрольные вам файлы."
+      "id": "text-file",
+      "headline": "Вы как текстовый файл.",
+      "supportingLine": "Health.md читает Health Connect и записывает ваши дни в файлы Markdown, CSV и JSON, которые принадлежат вам."
     },
     {
-      "id": "export-formats",
-      "headline": "Экспортируйте по-своему",
-      "supportingLine": "Markdown, Obsidian Bases, JSON и CSV."
+      "id": "interrogate",
+      "headline": "Допросите своё тело.",
+      "supportingLine": "Передайте файлы о здоровье ИИ и инструментам, которыми уже пользуетесь: через папку, CLI или API."
     },
     {
-      "id": "health-metrics",
-      "headline": "Более 100 показателей здоровья",
-      "supportingLine": "Сон, активность, сердце, жизненные показатели, питание и другое."
+      "id": "periodic-table",
+      "headline": "Ваша таблица Менделеева.",
+      "supportingLine": "Выберите, какие именно показатели записывать: сон, сердце, активность, жизненные показатели, питание и другое."
     },
     {
-      "id": "private-by-design",
-      "headline": "Только чтение. Конфиденциальность по умолчанию.",
-      "supportingLine": "Без учётной записи. Без облака медицинских данных Health.md."
+      "id": "day-itemized",
+      "headline": "Ваш день по пунктам.",
+      "supportingLine": "Ежедневная заметка появляется в хранилище по вашему расписанию. Вам остаётся прочитать."
     },
     {
-      "id": "scheduled-exports",
-      "headline": "Поддерживайте актуальность архива",
-      "supportingLine": "Экспортируйте по расписанию в выбранное место."
+      "id": "pin-your-sleep",
+      "headline": "Сон — на булавку для изучения.",
+      "supportingLine": "Каждая фаза сна из Health Connect — в файле, который можно сравнить с сотней предыдущих."
     },
     {
-      "id": "file-preview",
-      "headline": "Просмотрите перед экспортом",
-      "supportingLine": "Проверьте имена, пути и содержимое файлов до начала записи."
+      "id": "quilt",
+      "headline": "Месяц — как пэчворк.",
+      "supportingLine": "Архив показывает каждый экспортированный день и отмечает пропуски, которые стоит заполнить."
     },
     {
-      "id": "home-screen-widgets",
-      "headline": "Здоровье как на ладони",
-      "supportingLine": "Виджеты активности, сна, сердца и общей сводки."
+      "id": "preserved",
+      "headline": "Хранится на ваших устройствах.",
+      "supportingLine": "Данные Health Connect идут с телефона прямо в ваши файлы. Через облако Health.md ничего не проходит."
     },
     {
-      "id": "direct-cli",
-      "headline": "Прямо на ваш компьютер",
-      "supportingLine": "Подключите Health.md CLI для аутентифицированного шифрованного экспорта без облачного посредника."
+      "id": "at-a-glance",
+      "headline": "Ваши цифры с одного взгляда.",
+      "supportingLine": "Виджеты на главном экране: архив, активность, сердце и сон."
     }
   ]
 }

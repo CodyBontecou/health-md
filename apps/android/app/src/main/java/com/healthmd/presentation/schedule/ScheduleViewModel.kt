@@ -49,16 +49,23 @@ class ScheduleViewModel @Inject constructor(
                 settingsRepository.exportFolderUri,
                 settingsRepository.isPurchased,
                 entitlementRepository.isUnlocked,
-            ) { settings, folderUri, persistedPurchased, liveUnlocked ->
-                ScheduleCombinedState(settings, folderUri, persistedPurchased, liveUnlocked)
+                entitlementRepository.sponsoredEndpoint,
+            ) { settings, folderUri, persistedPurchased, liveUnlocked, sponsoredEndpoint ->
+                ScheduleCombinedState(settings, folderUri, persistedPurchased, liveUnlocked, sponsoredEndpoint)
             }.collect { combined ->
                 val settings = combined.settings
                 val persistedPurchased = combined.persistedPurchased
                 val liveUnlocked = combined.liveUnlocked
                 val purchased = distributionPolicy.fullAccessIncluded || persistedPurchased || liveUnlocked
+                val clinicAllowed = settings.scheduledExportTarget == ExportTarget.API_ENDPOINT &&
+                    settings.exportMode == com.healthmd.rawexport.ExportMode.COMPATIBILITY &&
+                    combined.sponsoredEndpoint != null &&
+                    com.healthmd.domain.billing.ClinicExportAuthorization.canonicalClinicEndpoint(settings.apiEndpointUrl) ==
+                    com.healthmd.domain.billing.ClinicExportAuthorization.canonicalClinicEndpoint(combined.sponsoredEndpoint)
                 _uiState.update {
                     it.copy(
-                        isEnabled = settings.scheduleEnabled && purchased,
+                        isEnabled = settings.scheduleEnabled && (purchased || clinicAllowed),
+                        clinicDestinationAuthorized = clinicAllowed,
                         cadenceValue = normalizeCadenceValue(settings.scheduleCadenceValue, settings.scheduleCadenceUnit),
                         cadenceUnit = settings.scheduleCadenceUnit,
                         hour = settings.scheduleHour,
@@ -114,7 +121,7 @@ class ScheduleViewModel @Inject constructor(
 
     fun toggleSchedule(enabled: Boolean) {
         val state = _uiState.value
-        if (enabled && !state.isPurchased) {
+        if (enabled && !state.isPurchased && !state.clinicDestinationAuthorized) {
             _uiState.update { it.copy(isEnabled = false, requiresUpgrade = true) }
             return
         }
@@ -460,6 +467,7 @@ data class ScheduleUiState(
     val dateWindow: ScheduleDateWindow = ScheduleDateWindow.PAST_COMPLETE_DAYS,
     val nextExportAtMillis: Long? = null,
     val isPurchased: Boolean = false,
+    val clinicDestinationAuthorized: Boolean = false,
     val requiresUpgrade: Boolean = false,
     val selectedTarget: ExportTarget = ExportTarget.DEVICE_FOLDER,
     val apiEndpointUrl: String = "",
@@ -480,4 +488,5 @@ private data class ScheduleCombinedState(
     val folderUri: String?,
     val persistedPurchased: Boolean,
     val liveUnlocked: Boolean,
+    val sponsoredEndpoint: String?,
 )

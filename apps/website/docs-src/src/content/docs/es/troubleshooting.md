@@ -25,7 +25,7 @@ Si un resultado estructurado indica `complete_empty`, distínguelo de resultados
 
 ## El sueño de anoche no aparece en Hoy
 
-Health.md usa una ventana local de sueño **de mediodía a mediodía** en Apple y Android. El martes por la mañana, exporta **Ayer** (lunes), incluido el sueño que comenzó después de medianoche del martes, o lunes y martes para incluir sueño y actividad. Si la fuente sincroniza tarde, repite el día del diario. Consulta [los ejemplos de fechas](/es/docs/sleep-date-attribution/#sleep-date-examples).
+**Inicio de la noche (predeterminado):** Health.md usa una ventana local de sueño **de mediodía a mediodía** en Apple y Android. El martes por la mañana, exporta **Ayer** (lunes), incluido el sueño que comenzó después de medianoche del martes, o lunes y martes para incluir sueño y actividad. Si la fuente sincroniza tarde, repite el día del diario. Consulta [los ejemplos de fechas](/es/docs/sleep-date-attribution/#sleep-date-examples). **Fin por la mañana:** exporta la fecha de despertar: el martes para la noche del lunes. Ambos modos usan la zona horaria de la exportación.
 
 ## La vista previa tiene datos, pero la carpeta está vacía
 

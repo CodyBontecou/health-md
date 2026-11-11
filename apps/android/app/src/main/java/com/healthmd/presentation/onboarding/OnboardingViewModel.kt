@@ -18,14 +18,15 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 enum class OnboardingPage {
-    WELCOME, HEALTH_ACCESS, FOLDER_SETUP, PLAY_ACCESS, INCLUDED_ACCESS, READY,
+    WELCOME, HEALTH_ACCESS, FOLDER_SETUP, INCLUDED_ACCESS, READY,
 }
 
-fun onboardingPages(policy: DistributionPolicy): List<OnboardingPage> = listOf(
+/** Store channels ask for paid access after onboarding, at the root paywall, not as a page here. */
+fun onboardingPages(policy: DistributionPolicy): List<OnboardingPage> = listOfNotNull(
     OnboardingPage.WELCOME,
     OnboardingPage.HEALTH_ACCESS,
     OnboardingPage.FOLDER_SETUP,
-    if (policy.purchasesAvailable) OnboardingPage.PLAY_ACCESS else OnboardingPage.INCLUDED_ACCESS,
+    OnboardingPage.INCLUDED_ACCESS.takeUnless { policy.purchasesAvailable },
     OnboardingPage.READY,
 )
 

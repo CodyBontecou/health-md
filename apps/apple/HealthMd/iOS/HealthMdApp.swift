@@ -21,6 +21,13 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
                 intentIdentifiers: [],
                 options: []
             ),
+            // Clinic sync requests: copy is localized on device; only the tap runs an export.
+            UNNotificationCategory(
+                identifier: ClinicSyncDoorbellManager.notificationCategory,
+                actions: [],
+                intentIdentifiers: [],
+                options: []
+            ),
         ])
         return true
     }
@@ -34,6 +41,7 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
                 await SchedulingManager.shared.performCatchUpExportIfNeeded()
                 IPhoneCorpusExportRecoveryManager.shared.applicationDidBecomeActive()
                 WidgetCenter.shared.reloadAllTimelines()
+                await ClinicSyncDoorbellManager.shared.reconcile()
             }
         }
     }
@@ -110,11 +118,23 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         let request = response.notification.request
         let pendingExportPayload = PendingExportNotificationPayload(userInfo: request.content.userInfo)
 
-        if let pendingExportPayload = pendingExportPayload {
+        if let wakeID = ClinicSyncDoorbellManager.requestedWakeID(from: request.content.userInfo) {
+            DiagnosticRecorder.shared.record(.notificationTapped, fields: [.trigger: .text("clinic_sync_request")])
+            Task { @MainActor in
+                await ClinicSyncDoorbellManager.shared.handleSyncRequestTap(wakeID: wakeID)
+                completionHandler()
+            }
+        } else if let pendingExportPayload = pendingExportPayload {
             DiagnosticRecorder.shared.record(.notificationTapped, fields: [.operationId: .text(pendingExportPayload.requestID.uuidString.lowercased()), .trigger: .text("notification")])
             Task { @MainActor in
                 await SchedulingManager.shared.waitForScheduledExportDependencies()
                 await SchedulingManager.shared.performNotificationTriggeredExport(payload: pendingExportPayload)
+                completionHandler()
+            }
+        } else if WeeklyGapNotification.isBackfillTap(userInfo: request.content.userInfo) {
+            // NotificationsG: "Tap to backfill" opens the Archive with this week's gaps.
+            Task { @MainActor in
+                WeeklyGapBackfillRouter.shared.requestBackfill()
                 completionHandler()
             }
         } else {
@@ -142,7 +162,6 @@ struct HealthMdApp: App {
     @StateObject private var advancedSettings: AdvancedExportSettings
     // Read/observe canonical persisted profile identity on the tablet route;
     // do not bootstrap/apply profiles or alter legacy tablet settings/authority.
-    @StateObject private var iPadHistoryProfileStore = ExportProfileStore()
     @StateObject private var apiExportSettings: APIExportSettings
     @StateObject private var agentDataGatewaySettings: AgentDataGatewaySettings
     @StateObject private var healthKitManager = HealthKitManager.shared
@@ -323,7 +342,6 @@ struct HealthMdApp: App {
             schedule.isEnabled = true
             schedulingManager.schedule = schedule
             UserDefaults.standard.set(true, forKey: "hasCompletedOnboarding")
-            UserDefaults.standard.set(true, forKey: "discordPromoDismissed")
         }
     }
 
@@ -335,7 +353,6 @@ struct HealthMdApp: App {
             healthKitManager.isAuthorized = true
             PurchaseManager.shared.setFreeExportsUsed(PurchaseManager.freeExportLimit)
             UserDefaults.standard.set(true, forKey: "hasCompletedOnboarding")
-            UserDefaults.standard.set(true, forKey: "discordPromoDismissed")
         }
     }
     #endif
@@ -377,6 +394,12 @@ struct HealthMdApp: App {
             forKey: SharedSetupV2ProfileTransaction.undoKey
         )
 
+        // A folder chosen through Files in an earlier journey must not reach onboarding,
+        // which renders before ContentView applies UITEST_VAULT_SELECTED.
+        if !TestMode.vaultSelected {
+            VaultManager().clearVaultFolder()
+        }
+
         // Capture the existing sync service and use the canonical singletons,
         // not StateObject wrappers whose scene storage may not be installed yet.
         Task { @MainActor in
@@ -406,11 +429,7 @@ struct HealthMdApp: App {
     var body: some Scene {
         WindowGroup {
             PurchaseAccessGate {
-                if UIDevice.current.userInterfaceIdiom == .pad {
-                    iPadContentView(historyProfileStore: iPadHistoryProfileStore)
-                } else {
-                    ContentView()
-                }
+                ContentView()
             }
             #if DEBUG
             .scrawl()
@@ -542,13 +561,14 @@ struct HealthMdApp: App {
                     )
                 }
                 directCLIService.cancelHandler = { jobID in
-                    IPhoneDirectExportCoordinator.shared.cancel(jobID: jobID)
+                    IPhoneDirectExportCoordinator.shared.cancelWithReceipt(jobID: jobID)
                 }
-                directCLIService.queryRequestHandler = { [weak directCLIService] request, channel in
+                directCLIService.queryRequestHandler = { [weak directCLIService] request, channel, protocolAuthority in
                     guard let sourceInstallationID = directCLIService?.querySourceInstallationID else { return }
                     await IPhoneDirectQueryCoordinator.shared.handle(
                         request,
                         channel: channel,
+                        protocolAuthority: protocolAuthority,
                         sourceInstallationID: sourceInstallationID,
                         healthKitManager: healthKitManager
                     )
@@ -569,7 +589,7 @@ struct HealthMdApp: App {
                     } else if !healthKitManager.isAuthorized {
                         message = "Authorize Health access before starting a direct export."
                     } else if !PurchaseManager.shared.canExport {
-                        message = "Export limit reached. Unlock Full Access to continue."
+                        message = "Active access is required. Start an eligible trial, subscribe, buy Lifetime, or restore a purchase."
                     } else if exportInProgress || queryInProgress {
                         message = "Another direct operation is already active."
                     } else {
@@ -903,11 +923,14 @@ struct HealthMdApp: App {
 
     /// Fetch health data from HealthKit for the requested dates and send to the connected Mac.
     private func handleDataRequest(dates: [Date]) async {
+        let captureContext = AppleSleepCaptureContext.resolve(attribution: healthKitManager.sleepDayAttribution)
+        do { try captureContext.requireShippedProfile() }
+        catch { syncService.lastError = error.localizedDescription; return }
         var records: [HealthData] = []
 
         for date in dates {
             do {
-                let data = try await healthKitManager.fetchHealthData(for: date)
+                let data = try await healthKitManager.fetchHealthData(for: date, captureContext: captureContext)
                 if data.hasAnyData {
                     records.append(data)
                 }
@@ -933,6 +956,9 @@ struct HealthMdApp: App {
     /// Handle a request for ALL available health data.
     /// Discovers the earliest HealthKit data date and sends data in batches with progress updates.
     private func handleAllDataRequest() async {
+        let captureContext = AppleSleepCaptureContext.resolve(attribution: healthKitManager.sleepDayAttribution)
+        do { try captureContext.requireShippedProfile() }
+        catch { syncService.lastError = error.localizedDescription; return }
         // Find the earliest date with health data
         guard let earliestDate = await healthKitManager.findEarliestHealthDataDate() else {
             // No data found — send a completion progress message
@@ -974,7 +1000,7 @@ struct HealthMdApp: App {
             var records: [HealthData] = []
             for date in batchDates {
                 do {
-                    let data = try await healthKitManager.fetchHealthData(for: date)
+                    let data = try await healthKitManager.fetchHealthData(for: date, captureContext: captureContext)
                     if data.hasAnyData {
                         records.append(data)
                     }

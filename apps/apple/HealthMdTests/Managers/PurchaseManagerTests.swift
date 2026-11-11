@@ -25,23 +25,28 @@ final class PurchaseManagerTests: XCTestCase {
         XCTAssertFalse(PurchaseManager.isLegacyUnlock(originalPurchaseDate: cutoff.addingTimeInterval(1)))
     }
 
-    func testHardPaywallRequiresEntitlementEvenOnFirstInstall() {
+    func testFirstExportIsFreeAndFurtherExportsRequireAccess() {
         let manager = makeManager()
-        XCTAssertEqual(PurchaseManager.freeExportLimit, 0)
-        XCTAssertEqual(manager.freeExportsRemaining, 0)
-        XCTAssertFalse(manager.canExportFree)
+        XCTAssertEqual(PurchaseManager.freeExportLimit, 1)
+        XCTAssertEqual(manager.freeExportsRemaining, 1)
+        XCTAssertTrue(manager.canExportFree)
+        XCTAssertTrue(manager.canExport)
+        manager.recordExportUse()
+        XCTAssertEqual(manager.freeExportsUsed, 1)
         XCTAssertFalse(manager.canExport)
         XCTAssertFalse(manager.canExport(jobID: UUID()))
+        XCTAssertNil(manager.pendingUpgradePrompt)
     }
 
-    func testNoLocalTrialOrSoftUpgradeMilestones() throws {
+    func testDurableExportConsumesOneFreeActionAndCannotBeReplayedForFree() throws {
+        let id = UUID()
         let manager = makeManager()
-        manager.recordExportUse()
-        try manager.recordExportUse(jobID: UUID())
-        XCTAssertEqual(manager.freeExportsUsed, 0)
-        XCTAssertNil(manager.pendingUpgradePrompt)
-        XCTAssertTrue(PurchaseManager.upgradePromptMilestones.isEmpty)
-        XCTAssertFalse(manager.canExport)
+        XCTAssertTrue(manager.canExport(jobID: id))
+        try manager.recordExportUse(jobID: id)
+        try manager.recordExportUse(jobID: id)
+        XCTAssertEqual(manager.freeExportsUsed, 1)
+        XCTAssertFalse(makeManager().canExport(jobID: id))
+        XCTAssertFalse(makeManager().canExport(jobID: UUID()))
     }
 
     func testHistoricalUsageIsPreservedButNeverGrantsAccess() {
@@ -53,7 +58,7 @@ final class PurchaseManagerTests: XCTestCase {
         XCTAssertFalse(manager.canExport)
         manager.resetFreeExports()
         XCTAssertEqual(manager.freeExportsUsed, 0)
-        XCTAssertFalse(manager.canExport)
+        XCTAssertTrue(manager.canExport)
     }
 
     func testOldDurableQuotaReceiptCannotBypassPaywall() {
@@ -190,7 +195,7 @@ final class PurchaseManagerTests: XCTestCase {
     func testSettingsSurfacesUseSharedPlanCopyAndGuardPermanentNotice() throws {
         let appleRoot = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
-        for path in ["HealthMd/iOS/ContentView.swift", "HealthMd/iPad/iPadSettingsView.swift", "HealthMd/iOS/Views/PaywallView.swift"] {
+        for path in ["HealthMd/iOS/NewExperience/Settings/SettingsScreen.swift", "HealthMd/iOS/Views/PaywallView.swift"] {
             let source = try String(contentsOf: appleRoot.appendingPathComponent(path), encoding: .utf8)
             XCTAssertTrue(source.contains("purchaseManager.activePlanTitle"), path)
             XCTAssertFalse(source.contains("return \"Family Lifetime active\""), path)
@@ -236,11 +241,11 @@ final class PurchaseManagerTests: XCTestCase {
         #endif
     }
 
-    func testUnlockClearsOldCountersWithoutCreatingFreeAllowance() {
+    func testUnlockPreservesUsageThroughRelocking() {
         let manager = makeManager()
         manager.setFreeExportsUsed(3)
         manager.setUnlocked(true)
-        XCTAssertEqual(manager.freeExportsUsed, 0)
+        XCTAssertEqual(manager.freeExportsUsed, 3)
         XCTAssertTrue(manager.canExport)
         manager.setUnlocked(false)
         XCTAssertFalse(manager.canExport)

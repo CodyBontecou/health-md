@@ -34,7 +34,7 @@ time_context:
 - Canonical source rows use RFC 3339 UTC with a fixed nine-digit fractional component.
 - `HKTimeZone` in metadata belongs to the source sample and may differ during travel.
 
-Canonical day ownership uses source start time in the half-open captured calendar day. Raw start/end are never clipped. Sleep summaries intentionally retain their noon-to-noon compatibility window, so use archive ownership for reconstructing events.
+Canonical day ownership uses source start time in the half-open captured calendar day. Raw start/end are never clipped. Sleep summaries intentionally retain their noon-to-noon compatibility window by default (or attribute a session to its wake-up date when the user selects the **Morning ends** mode, issue #104), so use archive ownership for reconstructing events.
 
 ## Structured unit contract
 
@@ -76,7 +76,7 @@ The corresponding structured values remain stable.
 |---|---|---|
 | ISO and clock times differ | ISO is UTC; clock uses captured calendar timezone | Convert the UTC instant for display. |
 | Record crosses midnight | Raw dates are intentionally unclipped | Use start-time ownership and retain full end time. |
-| Sleep appears on a different raw day | Summary uses compatibility noon-to-noon behavior | Use canonical ownership for source records. |
+| Sleep appears on a different raw day | Summary uses compatibility noon-to-noon behavior (or the user-selected wake-up-date attribution) | Use canonical ownership for source records. |
 | Summary/dictionary shows `µg` while a canonical source payload shows `mcg` | Both denote the reviewed microgram scale in their respective layers | Trust each exported unit; do not rescale either to `mg`. |
 | Old files use older units | Existing files are immutable historical output | Re-export under schema v8. |
 | Filename date did not change | Filename placeholders are separate | Update the filename template. |

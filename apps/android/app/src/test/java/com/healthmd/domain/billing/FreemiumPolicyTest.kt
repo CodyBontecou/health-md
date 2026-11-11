@@ -8,17 +8,18 @@ import java.time.ZoneOffset
 class FreemiumPolicyTest {
 
     @Test
-    fun hardPaywallHasNoLocalFreeExportAllowance() {
-        assertThat(FreemiumPolicy.FREE_EXPORT_LIMIT).isEqualTo(0)
-        assertThat(FreemiumPolicy.remainingExports(0)).isEqualTo(0)
+    fun firstExportIsFree() {
+        assertThat(FreemiumPolicy.FREE_EXPORT_LIMIT).isEqualTo(1)
+        assertThat(FreemiumPolicy.remainingExports(0)).isEqualTo(1)
         assertThat(FreemiumPolicy.remainingExports(1)).isEqualTo(0)
         assertThat(FreemiumPolicy.remainingExports(10)).isEqualTo(0)
         assertThat(FreemiumPolicy.remainingExports(11)).isEqualTo(0)
     }
 
     @Test
-    fun canExportRequiresAnEntitlementEvenForNewUsers() {
-        assertThat(FreemiumPolicy.canExport(isUnlocked = false, freeExportsUsed = 0)).isFalse()
+    fun furtherExportsRequireAnEntitlement() {
+        assertThat(FreemiumPolicy.canExport(isUnlocked = false, freeExportsUsed = 0)).isTrue()
+        assertThat(FreemiumPolicy.canExport(isUnlocked = false, freeExportsUsed = 1)).isFalse()
         assertThat(FreemiumPolicy.canExport(isUnlocked = false, freeExportsUsed = 4)).isFalse()
         assertThat(FreemiumPolicy.canExport(isUnlocked = false, freeExportsUsed = 10)).isFalse()
         assertThat(FreemiumPolicy.canExport(isUnlocked = true, freeExportsUsed = 10)).isTrue()

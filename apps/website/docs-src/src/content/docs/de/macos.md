@@ -31,9 +31,9 @@ Apple Health verbleibt auf dem iPhone. Die Mac-App liest HealthKit nicht direkt.
 
 1. Installieren und öffnen Sie Health.md auf dem Mac.
 2. Wählen Sie einen Zielordner auf einem lokalen Laufwerk, in iCloud Drive oder in einem Obsidian-Vault.
-3. Aktivieren Sie auf dem iPhone im Tab „Synchronisierung“ die Mac-Verbindung.
-4. Wählen Sie auf dem iPhone „Verbundener Mac“ als Exportziel.
-5. Konfigurieren Sie den Export und tippen Sie auf „Export“.
+3. Öffnen Sie auf dem iPhone **Einstellungen → Mac-Ziel** und aktivieren Sie es.
+4. Wählen Sie auf dem iPhone „Verbundener Mac“ als Ziel einer Automation (**Automationen → Automation → Ausgabe**).
+5. Tippen Sie auf **Jetzt exportieren** oder lassen Sie den Zeitplan der Automation laufen.
 
 Das iPhone erfasst HealthKit-Daten und eine Momentaufnahme der wirksamen Einstellungen. Aktuelle Gegenstellen übertragen begrenzte, mit Prüfsummen validierte Partitionen. Der Mac verwendet die produktiven Exporter und schreibt die angeforderten Dateien.
 

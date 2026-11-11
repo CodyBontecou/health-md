@@ -1,5 +1,7 @@
 /** Router for the RFC-0005 P2 wake doorbell worker. */
 
+import { parseServiceAccount } from "./fcm";
+
 export interface Env {
   DB?: D1Database;
   APNS_AUTH_KEY?: string;
@@ -7,6 +9,8 @@ export interface Env {
   APNS_TEAM_ID?: string;
   APNS_HOST?: "api.push.apple.com" | "api.sandbox.push.apple.com";
   BUNDLE_ID?: string;
+  /** Firebase service-account JSON for the Android delegated sync transport. */
+  FCM_SERVICE_ACCOUNT_JSON?: string;
 }
 
 function jsonResponse(body: unknown, status = 200): Response {
@@ -63,7 +67,8 @@ export default {
             bundleId: env.BUNDLE_ID ?? "com.codybontecou.obsidianhealth",
           }
           : null;
-      return handleWakeRequest(request, wakeEnv, apns);
+      const fcm = parseServiceAccount(env.FCM_SERVICE_ACCOUNT_JSON);
+      return handleWakeRequest(request, wakeEnv, { apns, fcm });
     }
 
     return jsonResponse({ error: "Not found" }, 404);

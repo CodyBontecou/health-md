@@ -7,92 +7,97 @@ Use este guia para produzir uma exportação pequena e verificável antes de alt
 
 <div class="availability available">
 <strong>Disponível agora · Health.md para iPhone</strong>
-<p>A primeira exportação está incluída no limite gratuito. O agendamento e outros recursos pagos podem ser configurados depois.</p>
+<p>As exportações exigem um teste ativo, uma assinatura ou acesso Lifetime. Você pode configurar agendamentos e outras automações depois.</p>
 </div>
 
 ## Antes de começar
 
-Você precisa de:
+Antes de começar, verifique se você tem:
 
-- [Health.md na App Store](https://apps.apple.com/app/health-md/id6757763969) instalado em um iPhone que contenha dados do Apple Health;
-- permissão para ler pelo menos uma categoria do Apple Health;
-- um destino gravável no app Arquivos, como iCloud Drive, No Meu iPhone ou um cofre do Obsidian.
+- [Health.md na App Store](https://apps.apple.com/app/health-md/id6757763969), instalado em um iPhone com dados do Apple Health
+- permissão para ler pelo menos uma categoria do Apple Health
+- uma pasta gravável no app Arquivos: iCloud Drive, No Meu iPhone ou um cofre do Obsidian.
 
-Para agilizar a primeira execução, mantenha as métricas padrão e a saída em Markdown. Comece com **Ontem** ou outro intervalo de um dia, em vez de todo o histórico disponível.
+Mantenha as métricas padrão e o formato Markdown. Selecione **Ontem** para um intervalo de um dia.
 
 ## 1. Conclua a configuração do iPhone
 
-Na primeira inicialização, toque em **Start Setup** (“Iniciar configuração”) e conclua as sete etapas de introdução. Autorize as categorias de saúde desejadas, examine a saída de exemplo, escolha uma pasta no app Arquivos e avance até **Ready** (“Pronto”). Quando aparecer a etapa de desbloqueio, você pode continuar com o limite gratuito.
+O Health.md mostra cinco etapas de configuração. Nenhuma impede o avanço: o acesso ao Apple Health e a pasta podem ser pulados e resolvidos depois.
 
-Se você já concluiu a introdução, abra a aba **Exportar** e confirme que o Apple Health e a pasta local estão prontos. Use o controle de pasta para substituir um destino ausente ou inacessível.
+Na primeira inicialização, toque em **Conectar Apple Health**. Autorize as categorias de saúde desejadas, revise a saída de exemplo, escolha uma pasta no Arquivos e continue até a última etapa.
+
+Depois da configuração, o app abre em **Arquivo**. Se o Apple Health ou a pasta precisarem de algo, o cartão **Requer atenção** no topo indica o que corrigir.
 
 <div class="docs-screenshot-grid">
 <figure class="docs-screenshot">
-  <a href="/docs/assets/docs/iphone-first-export/onboarding-start.webp" target="_blank" rel="noopener" aria-label="Abrir a captura de tela da introdução em tamanho real">
-    <img src="/docs/assets/docs/iphone-first-export/onboarding-start.webp" width="1206" height="2622" loading="lazy" alt="Tela de boas-vindas da introdução do Health.md na etapa 1 de 7, com o botão Start Setup." />
+  <a href="/docs/assets/docs/iphone-first-export/onboarding-start.webp" target="_blank" rel="noopener" aria-label="Abrir a captura da configuração em tamanho real">
+    <img src="/docs/assets/docs/iphone-first-export/onboarding-start.webp" width="1206" height="2622" loading="lazy" alt="Configuração do Health.md na etapa 1 de 5 com três etapas listadas e o botão para conectar o Apple Health." />
   </a>
-  <figcaption>Start Setup apresenta o arquivo local, as notas agendadas e o modelo de pastas antes de solicitar acesso. A interface desta captura autêntica permanece em inglês.</figcaption>
+  <figcaption>A configuração explica o que o Health.md lê e para onde vão os arquivos antes de pedir acesso. A interface desta captura permanece em inglês.</figcaption>
 </figure>
 <figure class="docs-screenshot">
-  <a href="/docs/assets/docs/iphone-first-export/export-setup-required.webp" target="_blank" rel="noopener" aria-label="Abrir a captura de tela de configuração necessária em tamanho real">
-    <img src="/docs/assets/docs/iphone-first-export/export-setup-required.webp" width="1206" height="2622" loading="lazy" alt="Aba Export do Health.md com Saúde desconectada, Choose Folder disponível, Local iPhone Folder selecionada e botões de intervalo de datas." />
+  <a href="/docs/assets/docs/iphone-first-export/export-now.webp" target="_blank" rel="noopener" aria-label="Abrir a captura de Exportar agora em tamanho real">
+    <img src="/docs/assets/docs/iphone-first-export/export-now.webp" width="1206" height="2622" loading="lazy" alt="Painel Exportar agora do Health.md com Ontem selecionado, um botão de somente resumo do intervalo, um resumo de um arquivo para um dia e um botão de exportar." />
   </a>
-  <figcaption>Os indicadores de prontidão deixam explícita a ausência da configuração de Saúde e da pasta. Esta captura de referência também permanece em inglês e mostra intencionalmente os dois requisitos incompletos.</figcaption>
+  <figcaption>Exportar agora mostra o que será gravado antes de começar. Esta captura de referência também mantém a interface em inglês.</figcaption>
 </figure>
 </div>
 
 ## 2. Escolha uma exportação pequena
 
-Na aba Exportar:
+Toque no botão redondo **Exportar agora** ao lado da barra de abas. Em seguida:
 
-1. Selecione **Pasta local do iPhone** como destino.
-2. Escolha **Ontem** ou um intervalo personalizado de um dia.
-3. Mantenha a seleção padrão de métricas na primeira execução.
-4. Mantenha **Markdown** selecionado. Você pode adicionar CSV, JSON ou Obsidian Bases depois que o fluxo básico funcionar.
+1. Selecione **Ontem**.
+2. Deixe **Somente resumo do intervalo de datas** desativado.
+3. Confira se **Será gravado** mostra sua pasta e cerca de um arquivo para um dia.
 
-Um intervalo curto facilita a identificação de problemas com permissões, categorias vazias e destino. Também evita interpretar uma primeira solicitação demorada como uma exportação com falha.
+A automação padrão usa a seleção de métricas padrão e **Markdown**. Para alterá-las, abra **Automações**, escolha a automação e depois **Métricas** ou **Formatos**. Adicione CSV, JSON ou Obsidian Bases depois que esta exportação funcionar. Um intervalo curto facilita encontrar problemas de permissão, de dados vazios e de pasta.
 
 <figure class="docs-screenshot docs-screenshot-single">
-  <a href="/docs/assets/docs/pt-br/iphone-first-export/metric-selection.webp" target="_blank" rel="noopener" aria-label="Abrir a captura de tela de seleção de métricas em tamanho real">
-    <img src="/docs/assets/docs/pt-br/iphone-first-export/metric-selection.webp" width="1206" height="2622" loading="lazy" alt="Tela atual de Métricas de Saúde com 217 de 219 métricas ativadas, o seletor de métricas padrão ligado, o campo de busca e as categorias Sono, Atividade e Coração." />
+  <a href="/docs/assets/docs/pt-br/iphone-first-export/metric-selection.webp" target="_blank" rel="noopener" aria-label="Abrir a captura da seleção de métricas em tamanho real">
+    <img src="/docs/assets/docs/pt-br/iphone-first-export/metric-selection.webp" width="1206" height="2622" loading="lazy" alt="Página Métricas do Health.md com a quantidade de métricas ativas, os botões Recomendado, Selecionar Tudo e Desmarcar Tudo, um campo de busca e categorias com contagens." />
   </a>
-  <figcaption>Os totais de métricas dependem da versão instalada do app e das permissões. Esta captura localizada mostra 217 de 219 métricas ativadas e as métricas padrão ligadas; não é preciso chegar a esse total para fazer a primeira exportação.</figcaption>
+  <figcaption>O total de métricas depende da versão do app e das permissões. Esta captura localizada mostra 217 de 219 métricas ativadas.</figcaption>
 </figure>
 
-## 3. Visualize antes de gravar
+## 3. Confira a pré-visualização antes de gravar
 
-Toque em **Pré-visualizar**. A pré-visualização exige acesso ao Apple Health, mas não precisa de uma pasta local gravável. Por isso, ela ajuda a distinguir um problema de permissão de leitura de um problema no app Arquivos.
+Em **Exportar agora**, toque em **Pré-visualização**. A pré-visualização precisa de acesso ao Apple Health, mas não de uma pasta gravável.
 
-Confira se a pré-visualização mostra:
+Use a pré-visualização para identificar um problema de permissão do Apple Health antes de testar a pasta.
 
-- a data solicitada;
-- os nomes e as unidades esperados das métricas;
-- valores ausentes ou indisponíveis indicados explicitamente, em vez de zeros inventados;
-- o formato selecionado e a estrutura do nome do arquivo.
+Verifique se a pré-visualização mostra:
 
-Volte à aba Exportar se precisar ajustar datas, métricas ou formatação.
+- a data solicitada
+- os nomes de métricas e as unidades esperados
+- valores ausentes ou indisponíveis em vez de zeros falsos
+- o formato escolhido e a estrutura do nome do arquivo.
+
+Feche a pré-visualização e altere os ajustes da automação se precisar mudar métricas ou formatos.
 
 <figure class="docs-screenshot docs-screenshot-single">
-  <a href="/docs/assets/docs/pt-br/iphone-first-export/export-preview.webp" target="_blank" rel="noopener" aria-label="Abrir a captura de tela da pré-visualização da exportação em tamanho real">
-    <img src="/docs/assets/docs/pt-br/iphone-first-export/export-preview.webp" width="1206" height="2622" loading="lazy" alt="Pré-visualização da Exportação do Health.md mostrando uma estimativa de exportação Markdown de um dia, períodos de consolidação, destino e nome do arquivo gerado." />
+  <a href="/docs/assets/docs/pt-br/iphone-first-export/export-preview.webp" target="_blank" rel="noopener" aria-label="Abrir a captura da pré-visualização em tamanho real">
+    <img src="/docs/assets/docs/pt-br/iphone-first-export/export-preview.webp" width="1206" height="2622" loading="lazy" alt="Pré-visualização da exportação do Health.md com a janela de sono, a estimativa de um dia em Markdown, o período de resumo, a pasta de destino e o nome de arquivo gerado." />
   </a>
-  <figcaption>A pré-visualização separa a inspeção da saída da gravação. Esta captura determinística da documentação usa dados de Saúde de exemplo e mostra explicitamente que nenhum cofre está selecionado.</figcaption>
+  <figcaption>Este exemplo usa dados de saúde de amostra.</figcaption>
 </figure>
 
 ## 4. Exporte e verifique
 
-Toque em **Exportar dados**. Se a configuração estiver incompleta, o Health.md identifica o requisito ausente de Saúde ou de pasta, em vez de iniciar silenciosamente uma gravação parcial.
+Toque em **Exportar ontem**. Se a configuração estiver incompleta, o Health.md indica o que falta no Apple Health ou na pasta.
 
-Após a conclusão:
+Quando a exportação terminar:
 
-1. Confira no app quais arquivos foram gravados, ignorados ou apresentaram falha.
-2. Abra o app Arquivos e navegue até a pasta selecionada.
-3. Abra um arquivo gerado e confirme a data, as unidades e o frontmatter.
-4. Guarde os detalhes do resultado para solucionar problemas; não presuma que houve sucesso apenas porque o botão voltou ao estado ocioso.
+1. Confira no resultado os arquivos gravados, ignorados ou com falha. O dia aparece no calendário de **Arquivo**.
+2. Abra o app Arquivos e a pasta escolhida.
+3. Abra um arquivo gerado e confira se a data, as unidades e o frontmatter estão corretos.
+4. Guarde os detalhes do resultado se precisar investigar um problema.
+
+Um dia coberto no calendário é um resumo; toque no dia para ver o status de cada automação nessa data.
 
 <div class="callout">
-<strong>Não há dados para o dia selecionado?</strong>
-<p style="margin-top:6px;">Tente um dia que você sabe que contém dados de atividade ou sono. Depois, confira a autorização de Saúde e a seleção de métricas. Um intervalo autorizado vazio é diferente de uma falha de transporte ou gravação.</p>
+<strong>Sem dados para o dia escolhido?</strong>
+<p style="margin-top:6px;">Escolha um dia com dados de atividade ou sono. Depois verifique a autorização do Apple Health e a seleção de métricas. Um intervalo vazio não é uma falha de gravação.</p>
 </div>
 
 ## Próximas etapas

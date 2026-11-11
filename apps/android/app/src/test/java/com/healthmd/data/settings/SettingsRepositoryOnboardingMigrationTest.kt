@@ -44,6 +44,17 @@ class SettingsRepositoryOnboardingMigrationTest {
     }
 
     @Test
+    fun `purchase restore and expiry preserve first export usage`() = runTest {
+        assertThat(repository.getFreeExportsRemaining()).isEqualTo(1)
+        repository.recordFreeExportUse()
+        repository.setPurchased(true)
+        repository.setPurchased(true)
+        repository.setPurchased(false)
+        assertThat(repository.getFreeExportsUsed()).isEqualTo(1)
+        assertThat(repository.getFreeExportsRemaining()).isEqualTo(0)
+    }
+
+    @Test
     fun `fresh install persists incomplete state before folder selection`() = runTest {
         assertThat(repository.resolveOnboardingCompletion()).isFalse()
 

@@ -1,5 +1,8 @@
 package com.healthmd.presentation.navigation
 
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Button
+import androidx.compose.material.icons.outlined.EventRepeat
 import com.healthmd.presentation.diagnostics.DiagnosticsScreen
 
 import androidx.compose.foundation.background
@@ -10,6 +13,9 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.outlined.FileUpload
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
@@ -17,6 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalContext
@@ -30,6 +37,12 @@ import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.dialog
+import androidx.navigation.NavType
+import androidx.navigation.navArgument
+import androidx.compose.ui.window.DialogProperties
+import com.healthmd.presentation.export.ExportNowSheet
+import com.healthmd.presentation.export.ExportProfileSelector
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.healthmd.BuildConfig
@@ -43,15 +56,29 @@ import com.healthmd.presentation.clinicianreport.ClinicianReportScreen
 import com.healthmd.presentation.export.ExportProfilesScreen
 import com.healthmd.presentation.export.ExportScreen
 import com.healthmd.presentation.history.HistoryScreen
+import com.healthmd.presentation.archive.ArchiveScreen
+import com.healthmd.presentation.archive.DayPageScreen
+import com.healthmd.presentation.archive.DayPageViewModel
+import com.healthmd.presentation.export.ExportProfilesViewModel
+import com.healthmd.presentation.schedule.rememberProfileAutosave
+import com.healthmd.presentation.schedule.guardedBack
+import com.healthmd.presentation.schedule.AutomationsScreen
+import com.healthmd.presentation.schedule.AutomationDetailPane
+import com.healthmd.presentation.schedule.AutomationRoutes
+import com.healthmd.presentation.schedule.automationProfilePages
+import com.healthmd.presentation.schedule.composer.AutomationComposerScreen
+import com.healthmd.presentation.common.GeistCard
 import com.healthmd.presentation.metrics.MetricSelectionScreen
 import com.healthmd.presentation.common.ConfigurationProtectionToast
 import com.healthmd.presentation.common.ConfigurationProtectionUi
 import com.healthmd.presentation.common.LocalConfigurationProtection
+import com.healthmd.presentation.common.LocalFloatingActionClearance
+import com.healthmd.presentation.common.LocalUsesNavigationRail
 import com.healthmd.presentation.onboarding.OnboardingScreen
 import com.healthmd.presentation.paywall.PaywallScreen
 import com.healthmd.presentation.release.AndroidReleaseNotes
-import com.healthmd.presentation.release.ReleaseNotesDialog
 import com.healthmd.presentation.release.ReleaseNotesGate
+import com.healthmd.presentation.release.WhatsNewSheet
 import com.healthmd.presentation.schedule.ScheduleScreen
 import com.healthmd.presentation.schedule.ScheduledRecoveryUiState
 import com.healthmd.presentation.schedule.ScheduledRecoveryViewModel
@@ -63,6 +90,7 @@ import com.healthmd.presentation.theme.GeistBreakpoints
 import com.healthmd.presentation.theme.GeistAdaptiveLayout
 import com.healthmd.presentation.theme.GeistRadii
 import com.healthmd.presentation.theme.GeistSizes
+import com.healthmd.presentation.theme.GeistSpacing
 import com.healthmd.presentation.theme.GeistType
 import com.healthmd.presentation.theme.LocalGeistColors
 import com.healthmd.presentation.theme.Spacing
@@ -84,54 +112,18 @@ fun HealthMdNavigation(
     myselfClaimRequestId: Long = 0L,
     scheduledRecoveryPromptRequestId: Long = 0L,
 ) {
-    // Root boundary, outside NavHost: Back/deep links cannot expose tracking
-    // without a store entitlement. F-Droid keeps its included-access policy.
     val accessViewModel: PaywallViewModel = hiltViewModel()
-    val accessUnlocked by accessViewModel.accessState.collectAsStateWithLifecycle()
+    val clinicAccessViewModel: com.healthmd.presentation.clinic.ClinicAccessViewModel = hiltViewModel()
+    val clinicStatus by clinicAccessViewModel.status.collectAsStateWithLifecycle()
+    val personalAccess by accessViewModel.isUnlocked.collectAsStateWithLifecycle()
     val accessOwner = LocalLifecycleOwner.current
     DisposableEffect(accessOwner, accessViewModel) {
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) accessViewModel.refreshAccess()
+            if (event == Lifecycle.Event.ON_RESUME) { accessViewModel.refreshAccess(); clinicAccessViewModel.refresh() }
         }
         accessOwner.lifecycle.addObserver(observer)
         onDispose { accessOwner.lifecycle.removeObserver(observer) }
     }
-    if (accessViewModel.purchasesAvailable && accessUnlocked == null) {
-        Box(Modifier.fillMaxSize().background(AppColors.bgPrimary), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator(color = AppColors.accent)
-        }
-        return
-    }
-    if (accessViewModel.purchasesAvailable && accessUnlocked != true) {
-        val offers by accessViewModel.offers.collectAsStateWithLifecycle()
-        val purchasing by accessViewModel.isPurchasing.collectAsStateWithLifecycle()
-        val restoring by accessViewModel.isRestoring.collectAsStateWithLifecycle()
-        val error by accessViewModel.purchaseError.collectAsStateWithLifecycle()
-        val context = LocalContext.current
-        PaywallScreen(
-            onPurchase = {},
-            onPlanPurchase = { plan ->
-                (context as? android.app.Activity)?.let { accessViewModel.launchPurchaseFlow(it, plan) }
-            },
-            offers = offers,
-            onRetry = accessViewModel::refreshAccess,
-            onRestore = accessViewModel::restorePurchases,
-            onDismiss = null,
-            subtitle = stringResource(R.string.paywall_access_subtitle),
-            isPurchasing = purchasing,
-            isRestoring = restoring,
-            purchaseError = error,
-            onClearError = accessViewModel::clearError,
-        )
-        return
-    }
-
-    val navController = rememberNavController()
-    val coroutineScope = rememberCoroutineScope()
-    val appContext = LocalContext.current
-    val navBackStackEntry by navController.currentBackStackEntryAsState()
-    val currentDestination = navBackStackEntry?.destination
-    val currentRoute = currentDestination?.route
 
     // Resolve the initial route once. A folder selected during onboarding is persisted to
     // settings, but must not turn into a live signal that rebuilds the navigation graph.
@@ -141,8 +133,21 @@ fun HealthMdNavigation(
             initialShouldSkipOnboarding = settingsRepository.resolveOnboardingCompletion()
         }
     }
-
     val hasCompletedOnboarding by settingsRepository.hasCompletedOnboarding.collectAsStateWithLifecycle(initialValue = null)
+
+    // Keep setup, automation editing, and completed exports reachable. Export
+    // entry points enforce paid access once the first free action is consumed.
+
+    var createFirstAutomation by rememberSaveable { mutableStateOf(false) }
+    val navController = rememberNavController()
+    val coroutineScope = rememberCoroutineScope()
+    val appContext = LocalContext.current
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentDestination = navBackStackEntry?.destination
+    // Export now is a sheet over the screen it opened from; navigation follows that screen.
+    val currentRoute = currentDestination?.route.let { route ->
+        if (route in EXPORT_SHEET_ROUTES) navController.previousBackStackEntry?.destination?.route else route
+    }
 
     // Adaptive navigation: bottom bar on compact screens, navigation rail on larger layouts.
     val showMainNav = currentRoute in NavDestination.entries.map { it.route }
@@ -237,16 +242,26 @@ fun HealthMdNavigation(
     } else {
         emptyList()
     }
-    val knownStartRoutes = NavDestination.entries.map { it.route } + paywallStartRoutes + debugStartRoutes
+    val knownStartRoutes = NavDestination.entries.map { it.route } +
+        listOf(SubRoutes.EXPORT_NOW, SubRoutes.HISTORY) + paywallStartRoutes + debugStartRoutes
+    val requestedStart = initialRoute?.takeIf { it in knownStartRoutes }
+    // A dialog destination cannot start the graph: open the Archive, then the Export now sheet.
     val startDestination = if (shouldSkipOnboarding) {
-        initialRoute?.takeIf { it in knownStartRoutes } ?: NavDestination.EXPORT.route
+        requestedStart?.takeIf { it !in EXPORT_SHEET_ROUTES } ?: NavDestination.ARCHIVE.route
     } else {
         SubRoutes.ONBOARDING
+    }
+    LaunchedEffect(shouldSkipOnboarding, requestedStart) {
+        if (shouldSkipOnboarding && requestedStart in EXPORT_SHEET_ROUTES) {
+            navController.currentBackStackEntryFlow.first()
+            navController.navigate(SubRoutes.EXPORT_NOW) { launchSingleTop = true }
+        }
     }
 
     // One graph-scoped owner exposes the device-local protection preference, toast, and
     // navigation request to every in-app configuration surface.
     val settings by settingsViewModel.settings.collectAsStateWithLifecycle()
+    val sleepDayAttribution by settingsViewModel.sleepDayAttribution.collectAsStateWithLifecycle()
     val protectionEnabled by settingsViewModel.preventAccidentalChanges.collectAsStateWithLifecycle()
     val blockedChangeToastId by settingsViewModel.blockedChangeToastId.collectAsStateWithLifecycle()
     val protectionSettingsRequestId by settingsViewModel.protectionSettingsRequestId.collectAsStateWithLifecycle()
@@ -285,6 +300,14 @@ fun HealthMdNavigation(
         AppNavigationLayout(
             destinations = if (showMainNav) NavDestination.entries else emptyList(),
             currentRoute = currentRoute,
+            onExportNow = if (showMainNav) {
+                { navController.navigate(SubRoutes.EXPORT_NOW) { launchSingleTop = true } }
+            } else {
+                null
+            },
+            // The rail keeps Export now on every destination; the phone's floating button
+            // leaves Settings, as on the board.
+            showFloatingExportNow = currentRoute != NavDestination.SETTINGS.route,
             onNavigate = { dest ->
                 navController.navigate(dest.route) {
                     popUpTo(navController.graph.findStartDestination().id) {
@@ -305,8 +328,11 @@ fun HealthMdNavigation(
                 val isDebugMarketingCapture = BuildConfig.DEBUG && initialRoute == SubRoutes.ONBOARDING
                 OnboardingScreen(
                     onComplete = {
-                        navController.navigate(NavDestination.EXPORT.route) {
+                        createFirstAutomation = true
+                        navController.navigate(NavDestination.SCHEDULE.route) {
                             popUpTo(SubRoutes.ONBOARDING) { inclusive = true }
+                            // Replayed from App & support, the Archive is already below.
+                            launchSingleTop = true
                         }
                     },
                     onUseSharedSetup = { navController.navigate(SubRoutes.SHARED_SETUP) },
@@ -315,52 +341,295 @@ fun HealthMdNavigation(
                 )
             }
 
-            composable(NavDestination.EXPORT.route) {
-                ExportScreen(
-                    onNavigateToPaywall = {
-                        if (settingsViewModel.distributionPolicy.purchasesAvailable) {
-                            navController.navigate(PaywallEntryPoint.EXPORT_LIMIT.route)
+            composable(NavDestination.ARCHIVE.route) {
+                ArchiveScreen(
+                    onExportNow = { navController.navigate(SubRoutes.EXPORT_NOW) { launchSingleTop = true } },
+                    onBackfill = { date, profileId -> navController.navigate(SubRoutes.exportBackfill(date, profileId)) },
+                    onOpenDay = { date, lane ->
+                        navController.navigate(SubRoutes.archiveDay(date, lane?.let(DayPageViewModel::encodeLane))) {
+                            launchSingleTop = true
                         }
                     },
-                    onNavigateToAdvancedSettings = { navController.navigate(SubRoutes.ADVANCED_SETTINGS) },
-                    onNavigateToSchedule = { navController.navigate(NavDestination.SCHEDULE.route) { launchSingleTop = true } },
-                    onNavigateToUpgrade = {
-                        if (settingsViewModel.distributionPolicy.purchasesAvailable) {
-                            navController.navigate(PaywallEntryPoint.UPGRADE.route)
+                    onOpenAutomation = { id ->
+                        navController.navigate(SubRoutes.automationDetail(id)) { launchSingleTop = true }
+                    },
+                    onOpenAutomations = {
+                        navController.navigate(NavDestination.AUTOMATIONS.route) {
+                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
                         }
+                    },
+                    onEditAutomation = { id ->
+                        navController.navigate(SubRoutes.automationCompose(id)) { launchSingleTop = true }
+                    },
+                    onChooseFolder = {
+                        navController.navigate(SubRoutes.FOLDER_DESTINATION) { launchSingleTop = true }
                     },
                 )
             }
+            composable(
+                SubRoutes.ARCHIVE_DAY,
+                arguments = listOf(
+                    navArgument(DayPageViewModel.LANE_ARGUMENT) {
+                        type = NavType.StringType
+                        nullable = true
+                        defaultValue = null
+                    },
+                ),
+            ) {
+                DayPageScreen(
+                    onBack = { navController.popBackStack() },
+                    onFix = { date, profileId -> navController.navigate(SubRoutes.exportBackfill(date, profileId)) },
+                )
+            }
+            // Backfill shares Export now; its route carries the one date to preset.
+            listOf(SubRoutes.EXPORT_NOW, SubRoutes.EXPORT_BACKFILL).forEach { route ->
+                dialog(
+                    route = route,
+                    arguments = if (route == SubRoutes.EXPORT_BACKFILL) {
+                        listOf(
+                            navArgument("profileId") {
+                                type = NavType.StringType
+                                nullable = true
+                                defaultValue = null
+                            },
+                        )
+                    } else {
+                        emptyList()
+                    },
+                    dialogProperties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
+                ) { entry ->
+                    // A fix from the Archive presets its automation: selecting it here is the
+                    // sheet's own Profile control (Make active), applied once per opening.
+                    val presetProfileId = entry.arguments?.getString("profileId")
+                    if (presetProfileId != null) {
+                        val profilesViewModel: ExportProfilesViewModel = hiltViewModel()
+                        val protection = LocalConfigurationProtection.current
+                        var presetApplied by rememberSaveable(presetProfileId) { mutableStateOf(false) }
+                        LaunchedEffect(presetProfileId) {
+                            if (!presetApplied && !protection.enabled) profilesViewModel.activate(presetProfileId)
+                            presetApplied = true
+                        }
+                    }
+                    val closeSheet: () -> Unit = {
+                        if (!navController.popBackStack()) {
+                            navController.navigate(NavDestination.ARCHIVE.route) { launchSingleTop = true }
+                        }
+                    }
+                    ExportNowSheet(onDismiss = closeSheet) {
+                    ExportScreen(
+                        asSheet = true,
+                        profileSelector = { ExportProfileSelector() },
+                        backfillDate = entry.arguments?.getString("date")
+                            ?.let { runCatching { LocalDate.parse(it) }.getOrNull() },
+                        onBack = closeSheet,
+                        onSeeInArchive = {
+                            // Close the sheet onto the Archive: back to it when it is below, else open it.
+                            if (!navController.popBackStack(NavDestination.ARCHIVE.route, inclusive = false)) {
+                                navController.navigate(NavDestination.ARCHIVE.route) {
+                                    popUpTo(navController.graph.findStartDestination().id)
+                                    launchSingleTop = true
+                                }
+                            }
+                        },
+                        sleepDayAttribution = sleepDayAttribution,
+                        onNavigateToPaywall = {
+                            if (settingsViewModel.distributionPolicy.purchasesAvailable) {
+                                navController.navigate(PaywallEntryPoint.EXPORT_LIMIT.route) { popUpTo(route) { inclusive = true } }
+                            }
+                        },
+                        onNavigateToAdvancedSettings = { navController.navigate(SubRoutes.ADVANCED_SETTINGS) { popUpTo(route) { inclusive = true } } },
+                        onNavigateToSchedule = { navController.navigate(NavDestination.SCHEDULE.route) {
+                            popUpTo(route) { inclusive = true }
+                            launchSingleTop = true
+                        } },
+                        onNavigateToUpgrade = {
+                            if (settingsViewModel.distributionPolicy.purchasesAvailable) {
+                                navController.navigate(PaywallEntryPoint.UPGRADE.route) { popUpTo(route) { inclusive = true } }
+                            }
+                        },
+                    )
+                    }
+                }
+            }
             composable(NavDestination.SCHEDULE.route) {
-                ScheduleScreen(
-                    onNavigateToPaywall = {
+                var selectedAutomation by rememberSaveable { mutableStateOf<String?>(null) }
+                val automationsProfiles: ExportProfilesViewModel = hiltViewModel()
+                BoxWithConstraints(Modifier.fillMaxSize()) {
+                    // Same split point as the Archive, so an unfolded foldable in landscape
+                    // (about 760 dp beside the rail) shows list and detail together.
+                    val twoPane = LocalUsesNavigationRail.current || maxWidth >= GeistBreakpoints.medium.dp
+                    val openPaywall = {
                         if (settingsViewModel.distributionPolicy.purchasesAvailable) {
                             navController.navigate(PaywallEntryPoint.SCHEDULE.route)
                         }
-                    },
-                )
+                    }
+                    val runNow: (String) -> Unit = { id ->
+                        runAutomationNow(id, automationsProfiles, protectionEnabled != false, settingsViewModel::showBlockedChangeToast) {
+                            navController.navigate(SubRoutes.EXPORT_NOW) { launchSingleTop = true }
+                        }
+                    }
+                    val schedule: @Composable () -> Unit = {
+                        AutomationsScreen(
+                            createOnArrival = createFirstAutomation,
+                            onCreationRequestConsumed = { createFirstAutomation = false },
+                            onOpenAutomation = { id ->
+                                if (twoPane) {
+                                    selectedAutomation = id
+                                } else {
+                                    navController.navigate(SubRoutes.automationDetail(id)) { launchSingleTop = true }
+                                }
+                            },
+                            onOpenHistory = {
+                                navController.navigate(SubRoutes.HISTORY) { launchSingleTop = true }
+                            },
+                            onNavigateToPaywall = openPaywall,
+                            selectedAutomationId = selectedAutomation.takeIf { twoPane },
+                        )
+                    }
+                    if (twoPane) {
+                        // List and detail side by side on tablets and unfolded foldables.
+                        Row(Modifier.fillMaxSize()) {
+                            Box(Modifier.weight(1f)) { schedule() }
+                            Box(Modifier.weight(1f).padding(Spacing.md)) {
+                                GeistCard(padding = Spacing.xxs) {
+                                    AutomationDetailPane(
+                                        profileId = selectedAutomation,
+                                        onCompose = { id -> navController.navigate(SubRoutes.automationCompose(id)) { launchSingleTop = true } },
+                                        onRunNow = runNow,
+                                        onOpenPage = { id, page -> navController.navigate(AutomationRoutes.page(id, page)) { launchSingleTop = true } },
+                                        onOpenSchedule = { id -> navController.navigate(AutomationRoutes.schedule(id)) { launchSingleTop = true } },
+                                        onDeleted = { selectedAutomation = null },
+                                    )
+                                }
+                            }
+                        }
+                    } else {
+                        ReadableWidth { schedule() }
+                    }
+                }
             }
-            composable(NavDestination.HISTORY.route) { HistoryScreen() }
+            composable(SubRoutes.HISTORY) {
+                SubScreenFrame(
+                    title = stringResource(R.string.nav_history),
+                    onBack = { navController.popBackStack() },
+                ) { HistoryScreen() }
+            }
+            composable(SubRoutes.CLINIC_ACCESS) {
+                com.healthmd.presentation.clinic.ClinicAccessScreen(
+                    onDone = { navController.popBackStack() }, viewModel = clinicAccessViewModel)
+            }
             composable(NavDestination.SETTINGS.route) {
-                SettingsScreen(
-                    viewModel = settingsViewModel,
-                    protectionSettingsRequestId = protectionSettingsRequestId,
-                    onNavigateToPaywall = {
+                var settingsDetail by rememberSaveable { mutableStateOf<String?>(null) }
+                BoxWithConstraints(Modifier.fillMaxSize()) {
+                    // Beside the rail (from `md`) the list and the open entry share the screen.
+                    val twoPane = LocalUsesNavigationRail.current
+                    // On wide layouts sub-screens open beside Settings instead of over it.
+                    val open: (String) -> Unit = { route ->
+                        if (twoPane) settingsDetail = route else navController.navigate(route) { launchSingleTop = true }
+                    }
+                    val openSchedulePaywall = {
                         if (settingsViewModel.distributionPolicy.purchasesAvailable) {
-                            navController.navigate(PaywallEntryPoint.UPGRADE.route)
+                            navController.navigate(PaywallEntryPoint.SCHEDULE.route)
                         }
-                    },
-                    onNavigateToMyselfClaim = {
-                        if (BuildConfig.MYSELF_CLAIM_ENABLED && settingsViewModel.distributionPolicy.purchasesAvailable) {
-                            navController.navigate(SubRoutes.MYSELF_CLAIM) { launchSingleTop = true }
+                    }
+                    val appSupport: @Composable () -> Unit = {
+                        SettingsAppSupport(navController, settingsViewModel, protectionSettingsRequestId)
+                    }
+                    val list: @Composable () -> Unit = {
+                        SettingsScreen(
+                            viewModel = settingsViewModel,
+                            protectionSettingsRequestId = protectionSettingsRequestId,
+                            clinicAccessAvailable = BuildConfig.CLINIC_ACCESS_ENABLED && clinicStatus.configured,
+                            onNavigateToClinicAccess = { open(SubRoutes.CLINIC_ACCESS) },
+                            onNavigateToPaywall = {
+                                if (settingsViewModel.distributionPolicy.purchasesAvailable) {
+                                    navController.navigate(PaywallEntryPoint.UPGRADE.route)
+                                }
+                            },
+                            onNavigateToClinicianReport = { open(SubRoutes.CLINICIAN_REPORT) },
+                            onNavigateToDirectCli = { open(SubRoutes.DIRECT_CLI) },
+                            onNavigateToFolderDestination = { open(SubRoutes.FOLDER_DESTINATION) },
+                            onNavigateToApiEndpoint = { open(SubRoutes.SETTINGS_API_ENDPOINT) },
+                            onNavigateToGateway = { open(SubRoutes.SETTINGS_GATEWAY) },
+                            onNavigateToConnectedApps = { open(SubRoutes.SETTINGS_CONNECTED_APPS) },
+                            onNavigateToAppSupport = { open(SubRoutes.SETTINGS_APP_SUPPORT) },
+                            onNavigateToScheduleSettings = { open(SubRoutes.SCHEDULE_SETTINGS) },
+                            onNavigateToMetrics = { navController.navigate(SubRoutes.METRIC_SELECTION) { launchSingleTop = true } },
+                            selectedEntry = if (!twoPane) {
+                                null
+                            } else {
+                                when (settingsDetail) {
+                                    SubRoutes.CLINIC_ACCESS -> SettingsEntry.CLINIC_ACCESS
+                                    SubRoutes.CLINICIAN_REPORT -> SettingsEntry.CLINICIAN_REPORT
+                                    SubRoutes.DIRECT_CLI -> SettingsEntry.DIRECT_CLI
+                                    SubRoutes.SETTINGS_API_ENDPOINT -> SettingsEntry.API
+                                    SubRoutes.SETTINGS_GATEWAY -> SettingsEntry.GATEWAY
+                                    SubRoutes.SETTINGS_CONNECTED_APPS -> SettingsEntry.CONNECTED_APPS
+                                    SubRoutes.SETTINGS_APP_SUPPORT -> SettingsEntry.APP_SUPPORT
+                                    SubRoutes.SCHEDULE_SETTINGS -> SettingsEntry.SCHEDULE
+                                    else -> SettingsEntry.FOLDER
+                                }
+                            },
+                        )
+                    }
+                    if (twoPane) {
+                        // The board's list column: 320dp on foldables and small tablets, 420dp wider.
+                        val listWidth = if (maxWidth >= SETTINGS_WIDE_LIST_MIN_WIDTH) 420.dp else 320.dp
+                        Row(Modifier.fillMaxSize()) {
+                            Box(Modifier.width(listWidth)) { list() }
+                            Box(Modifier.weight(1f).padding(Spacing.md)) {
+                                GeistCard(padding = Spacing.xxs) {
+                                    val close = { settingsDetail = null }
+                                    when (settingsDetail) {
+                                        SubRoutes.SETTINGS_API_ENDPOINT -> ApiEndpointScreen(onBack = close)
+                                        SubRoutes.SETTINGS_GATEWAY -> GatewayDestinationScreen(onBack = close)
+                                        SubRoutes.SETTINGS_CONNECTED_APPS -> ConnectedAppsScreen(viewModel = settingsViewModel)
+                                        SubRoutes.SETTINGS_APP_SUPPORT -> appSupport()
+                                        SubRoutes.SCHEDULE_SETTINGS -> ScheduleScreen(onNavigateToPaywall = openSchedulePaywall)
+                                        SubRoutes.CLINICIAN_REPORT -> if (personalAccess) {
+                                            ClinicianReportScreen(onBack = close)
+                                        } else {
+                                            Text(stringResource(R.string.m3_nav_report_requires_access),
+                                                modifier = Modifier.padding(com.healthmd.presentation.theme.Spacing.md))
+                                        }
+                                        SubRoutes.DIRECT_CLI -> DirectCliScreen(onBack = close)
+                                        SubRoutes.CLINIC_ACCESS -> com.healthmd.presentation.clinic.ClinicAccessScreen(
+                                            onDone = close, viewModel = clinicAccessViewModel)
+                                        else -> FolderDestinationScreen()
+                                    }
+                                }
+                            }
                         }
-                    },
-                    onNavigateToExportProfiles = { navController.navigate(SubRoutes.EXPORT_PROFILES) },
-                    onNavigateToClinicianReport = { navController.navigate(SubRoutes.CLINICIAN_REPORT) },
-                    onNavigateToDirectCli = { navController.navigate(SubRoutes.DIRECT_CLI) },
-                    onNavigateToSharedSetup = { navController.navigate(SubRoutes.SHARED_SETUP) },
-                    onNavigateToDiagnostics = { navController.navigate(SubRoutes.DIAGNOSTICS) },
-                )
+                    } else {
+                        ReadableWidth { list() }
+                    }
+                }
+            }
+            composable(SubRoutes.FOLDER_DESTINATION) {
+                SubScreenFrame(
+                    title = stringResource(R.string.settings_vault_title),
+                    onBack = { navController.popBackStack() },
+                ) { ReadableWidth { FolderDestinationScreen() } }
+            }
+            composable(SubRoutes.SETTINGS_APP_SUPPORT) {
+                SubScreenFrame(
+                    title = stringResource(R.string.settings_app_support),
+                    onBack = { navController.popBackStack() },
+                ) { ReadableWidth { SettingsAppSupport(navController, settingsViewModel, protectionSettingsRequestId) } }
+            }
+            composable(SubRoutes.SETTINGS_API_ENDPOINT) {
+                ReadableWidth { ApiEndpointScreen(onBack = { navController.popBackStack() }) }
+            }
+            composable(SubRoutes.SETTINGS_GATEWAY) {
+                ReadableWidth { GatewayDestinationScreen(onBack = { navController.popBackStack() }) }
+            }
+            composable(SubRoutes.SETTINGS_CONNECTED_APPS) {
+                SubScreenFrame(
+                    title = stringResource(R.string.settings_connected_apps),
+                    onBack = { navController.popBackStack() },
+                ) { ReadableWidth { ConnectedAppsScreen(viewModel = settingsViewModel) } }
             }
 
             if (BuildConfig.MYSELF_CLAIM_ENABLED && settingsViewModel.distributionPolicy.purchasesAvailable) {
@@ -376,6 +645,74 @@ fun HealthMdNavigation(
             composable(SubRoutes.EXPORT_PROFILES) {
                 ExportProfilesScreen(onBack = { navController.popBackStack() })
             }
+            composable(SubRoutes.EXPORT_PROFILE) { entry ->
+                ExportProfilesScreen(
+                    onBack = { navController.popBackStack() },
+                    initialDetailProfileId = entry.arguments?.getString("profileId"),
+                )
+            }
+            composable(SubRoutes.AUTOMATION_DETAIL) { entry ->
+                val profileId = entry.arguments?.getString("profileId")
+                val profiles: ExportProfilesViewModel = hiltViewModel()
+                // Titled with the automation's name, as on iOS; its own frame carries Back.
+                AutomationDetailPane(
+                    profileId = profileId,
+                    onBack = { navController.popBackStack() },
+                    onCompose = { id -> navController.navigate(SubRoutes.automationCompose(id)) { launchSingleTop = true } },
+                    onRunNow = { id ->
+                        runAutomationNow(id, profiles, protectionEnabled != false, settingsViewModel::showBlockedChangeToast) {
+                            navController.navigate(SubRoutes.EXPORT_NOW) { launchSingleTop = true }
+                        }
+                    },
+                    onOpenPage = { id, page -> navController.navigate(AutomationRoutes.page(id, page)) { launchSingleTop = true } },
+                    onOpenSchedule = { id -> navController.navigate(AutomationRoutes.schedule(id)) { launchSingleTop = true } },
+                    onDeleted = { navController.popBackStack() },
+                    profilesViewModel = profiles,
+                )
+            }
+            automationProfilePages(
+                navController = navController,
+                sleepDayAttribution = { sleepDayAttribution },
+                onSleepDayAttributionChanged = { mode ->
+                    settingsViewModel.performConfigurationChange { settingsViewModel.updateSleepDayAttribution(mode) }
+                },
+                showsScheduleAccessNote = settingsViewModel.distributionPolicy.purchasesAvailable,
+            )
+            composable(SubRoutes.SCHEDULE_SETTINGS) {
+                SubScreenFrame(
+                    title = stringResource(R.string.automations_schedule_settings_title),
+                    onBack = { navController.popBackStack() },
+                ) {
+                    ReadableWidth {
+                        ScheduleScreen(
+                            onNavigateToPaywall = {
+                                if (settingsViewModel.distributionPolicy.purchasesAvailable) {
+                                    navController.navigate(PaywallEntryPoint.SCHEDULE.route)
+                                }
+                            },
+                        )
+                    }
+                }
+            }
+            composable(SubRoutes.AUTOMATION_COMPOSE) { entry ->
+                val profileId = entry.arguments?.getString("profileId")
+                if (profileId != null) {
+                    AutomationComposerScreen(
+                        profileId = profileId,
+                        onBack = { navController.popBackStack() },
+                        onOpenPage = { page -> navController.navigate(AutomationRoutes.page(profileId, page)) { launchSingleTop = true } },
+                        onOpenSchedule = { navController.navigate(AutomationRoutes.schedule(profileId)) { launchSingleTop = true } },
+                        // Opened from the detail, "All settings" returns to it; from the Archive it opens it.
+                        onAllSettings = {
+                            if (navController.previousBackStackEntry?.destination?.route == SubRoutes.AUTOMATION_DETAIL) {
+                                navController.popBackStack()
+                            } else {
+                                navController.navigate(SubRoutes.automationDetail(profileId)) { launchSingleTop = true }
+                            }
+                        },
+                    )
+                }
+            }
             composable(SubRoutes.DIRECT_CLI) {
                 DirectCliScreen(onBack = { navController.popBackStack() })
             }
@@ -390,11 +727,17 @@ fun HealthMdNavigation(
                 )
             }
             composable(SubRoutes.CLINICIAN_REPORT) {
-                ClinicianReportScreen(onBack = { navController.popBackStack() })
+                if (personalAccess) {
+                    ClinicianReportScreen(onBack = { navController.popBackStack() })
+                } else {
+                    Text(stringResource(R.string.m3_nav_report_requires_access),
+                        modifier = Modifier.padding(com.healthmd.presentation.theme.Spacing.md))
+                }
             }
             composable(SubRoutes.ADVANCED_SETTINGS) {
                 AdvancedSettingsScreen(
                     settings = settings,
+                    sleepDayAttribution = sleepDayAttribution,
                     onNavigateToMetrics = { navController.navigate(SubRoutes.METRIC_SELECTION) },
                     onNavigateToFormatCustomization = { navController.navigate(SubRoutes.FORMAT_CUSTOMIZATION) },
                     onNavigateToDailyNoteInjection = { navController.navigate(SubRoutes.DAILY_NOTE_INJECTION) },
@@ -402,6 +745,16 @@ fun HealthMdNavigation(
                     onIncludeGranularDataChanged = {
                         settingsViewModel.performConfigurationChange {
                             settingsViewModel.updateIncludeGranularData(it)
+                        }
+                    },
+                    onDetailChoiceChanged = { group, choice ->
+                        settingsViewModel.performConfigurationChange {
+                            settingsViewModel.updateDetailChoice(group, choice)
+                        }
+                    },
+                    onSleepDayAttributionChanged = {
+                        settingsViewModel.performConfigurationChange {
+                            settingsViewModel.updateSleepDayAttribution(it)
                         }
                     },
                     onBack = { navController.popBackStack() },
@@ -444,14 +797,24 @@ fun HealthMdNavigation(
                 )
             }
             composable(SubRoutes.DAILY_NOTE_INJECTION) {
-                DailyNoteInjectionScreen(
-                    settings = settings.dailyNoteInjection,
-                    onSettingsChanged = {
-                        settingsViewModel.performConfigurationChange {
-                            settingsViewModel.updateDailyNoteInjection(it)
-                        }
-                    },
+                val draft = rememberProfileAutosave(
+                    SubRoutes.DAILY_NOTE_INJECTION, settings.dailyNoteInjection,
+                    isValid = AutomationOutputPathValidation::isValidDailyNotes,
+                ) { value ->
+                    settingsViewModel.performConfigurationChange {
+                        settingsViewModel.updateDailyNoteInjection(value)
+                    }
+                }
+                val back = guardedBack(
+                    holdsInvalidChange = draft.isDirty && !AutomationOutputPathValidation.isValidDailyNotes(draft.value),
+                    reason = stringResource(R.string.automation_output_path_invalid),
+                    onDiscard = draft::discard,
                     onBack = { navController.popBackStack() },
+                )
+                DailyNoteInjectionScreen(
+                    settings = draft.value,
+                    onSettingsChanged = { draft.value = it },
+                    onBack = back,
                 )
             }
             composable(SubRoutes.INDIVIDUAL_TRACKING) {
@@ -519,16 +882,7 @@ fun HealthMdNavigation(
         }
 
         if (shouldShowReleaseNotes && releaseNotes != null) {
-            ReleaseNotesDialog(
-                notes = releaseNotes,
-                onDismiss = markReleaseNotesSeen,
-                onOpenSettings = {
-                    markReleaseNotesSeen()
-                    navController.navigate(NavDestination.SETTINGS.route) {
-                        launchSingleTop = true
-                    }
-                },
-            )
+            WhatsNewSheet(notes = releaseNotes, onContinue = markReleaseNotesSeen)
         }
 
         ConfigurationProtectionToast(
@@ -611,32 +965,47 @@ private fun ScheduledRecoveryDialog(
     onDismiss: () -> Unit,
     onRecover: () -> Unit,
 ) {
+    val colors = LocalGeistColors.current
     AlertDialog(
         onDismissRequest = { if (!state.isRunning) onDismiss() },
-        title = { Text(stringResource(R.string.scheduled_recovery_title)) },
+        containerColor = colors.gray.c200,
+        shape = RoundedCornerShape(GeistRadii.large),
+        icon = { Icon(Icons.Outlined.EventRepeat, contentDescription = null, tint = colors.brandPrimary) },
+        title = {
+            Text(stringResource(R.string.scheduled_recovery_title), style = GeistType.heading24, color = colors.primary)
+        },
         text = {
             Text(
                 text = scheduledRecoveryDialogText(state),
-                style = MaterialTheme.typography.bodyMedium,
-                color = AppColors.textSecondary,
+                style = GeistType.copy14,
+                color = colors.secondary,
             )
         },
         confirmButton = {
             if (state.canRecover) {
-                TextButton(onClick = onRecover, enabled = !state.isRunning) {
+                Button(
+                    onClick = onRecover,
+                    enabled = !state.isRunning,
+                    shape = RoundedCornerShape(GeistRadii.full),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = colors.brandPrimary,
+                        contentColor = colors.brandOnPrimary,
+                    ),
+                ) {
                     Text(
                         if (state.isRunning) {
                             stringResource(R.string.scheduled_recovery_running_button)
                         } else {
                             stringResource(R.string.scheduled_recovery_retry_button)
-                        }
+                        },
+                        style = GeistType.button14,
                     )
                 }
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss, enabled = !state.isRunning) {
-                Text(stringResource(R.string.not_now))
+                Text(stringResource(R.string.not_now), style = GeistType.button14)
             }
         },
     )
@@ -709,24 +1078,69 @@ private fun localizedRecoveryDate(date: LocalDate): String {
         .format(Date.from(instant))
 }
 
+/**
+ * Run now uses the existing manual path: the automation becomes the active profile and Export
+ * now opens on it, with its progress, result and limits. Switching profiles is a configuration
+ * change, so a locked configuration only runs the automation that is already active.
+ */
+private fun runAutomationNow(
+    profileId: String,
+    profiles: ExportProfilesViewModel,
+    configurationLocked: Boolean,
+    onBlocked: () -> Unit,
+    openExportNow: () -> Unit,
+) {
+    val active = profiles.uiState.value.rows.firstOrNull { it.profile.id == profileId }?.isActive == true
+    if (!active) {
+        if (configurationLocked) {
+            onBlocked()
+            return
+        }
+        profiles.activate(profileId)
+    }
+    openExportNow()
+}
+
+/** Export now routes shown as a sheet over the current screen. */
+private val EXPORT_SHEET_ROUTES = setOf(SubRoutes.EXPORT_NOW, SubRoutes.EXPORT_BACKFILL)
+
+/** Material 3 FAB container height and its margin above the bottom bar. */
+private val FLOATING_ACTION_MIN_HEIGHT = 56.dp
+private val FLOATING_ACTION_MARGIN = 16.dp
+
+/** Content width from which the Settings list column widens to 420dp. */
+private val SETTINGS_WIDE_LIST_MIN_WIDTH = 900.dp
+
+/** Window width below which the navigation rail takes the board's compact 80dp. */
+private val COMPACT_RAIL_BREAKPOINT = 1000.dp
+
 /** Reserve the measured navigation size, including wrapped labels, rather than a fixed inset. */
 @Composable
 internal fun AppNavigationLayout(
     destinations: List<NavDestination>,
     currentRoute: String?,
     onNavigate: (NavDestination) -> Unit,
+    onExportNow: (() -> Unit)? = null,
+    showFloatingExportNow: Boolean = true,
     content: @Composable (Modifier) -> Unit,
 ) {
     BoxWithConstraints(
         modifier = Modifier.fillMaxSize().safeDrawingPadding(),
     ) {
         val useNavigationRail = maxWidth >= GeistBreakpoints.medium.dp
+        val showsFloatingAction = onExportNow != null && !useNavigationRail && showFloatingExportNow
+        // The board's compact rail (below 1000dp) is 80dp; wider windows use 96dp.
+        val railWidth = if (maxWidth < COMPACT_RAIL_BREAKPOINT) 80.dp else 96.dp
+        val density = LocalDensity.current
+        var floatingActionHeight by remember { mutableStateOf(FLOATING_ACTION_MIN_HEIGHT) }
         Row(modifier = Modifier.fillMaxSize()) {
             if (destinations.isNotEmpty() && useNavigationRail) {
                 AdaptiveNavigationRail(
                     destinations = destinations,
                     currentRoute = currentRoute,
                     onNavigate = onNavigate,
+                    onExportNow = onExportNow,
+                    width = railWidth,
                 )
             }
             Scaffold(
@@ -743,8 +1157,30 @@ internal fun AppNavigationLayout(
                         )
                     }
                 },
+                floatingActionButton = {
+                    if (onExportNow != null && showsFloatingAction) {
+                        // Measured so large font scales still clear the button.
+                        Box(
+                            Modifier.onSizeChanged {
+                                floatingActionHeight = maxOf(with(density) { it.height.toDp() }, FLOATING_ACTION_MIN_HEIGHT)
+                            },
+                        ) {
+                            ExportNowButton(onClick = onExportNow, expanded = true)
+                        }
+                    }
+                },
             ) { padding ->
-                content(Modifier.fillMaxSize().padding(padding).consumeWindowInsets(padding))
+                val clearance = if (showsFloatingAction) {
+                    floatingActionHeight + FLOATING_ACTION_MARGIN + GeistSpacing.space6
+                } else {
+                    0.dp
+                }
+                CompositionLocalProvider(
+                    LocalFloatingActionClearance provides clearance,
+                    LocalUsesNavigationRail provides (destinations.isNotEmpty() && useNavigationRail),
+                ) {
+                    content(Modifier.fillMaxSize().padding(padding).consumeWindowInsets(padding))
+                }
             }
         }
     }
@@ -755,18 +1191,23 @@ private fun AdaptiveNavigationRail(
     destinations: List<NavDestination>,
     currentRoute: String?,
     onNavigate: (NavDestination) -> Unit,
+    onExportNow: (() -> Unit)?,
+    width: androidx.compose.ui.unit.Dp,
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalGeistColors.current
     NavigationRail(
         modifier = modifier
             .fillMaxHeight()
-            .width(80.dp)
-            .background(colors.background100)
-            .border(width = 1.dp, color = colors.grayAlpha.c400)
+            .width(width)
             .verticalScroll(rememberScrollState()),
         containerColor = colors.background100,
         contentColor = colors.primary,
+        header = if (onExportNow != null) {
+            { ExportNowButton(onClick = onExportNow, expanded = false) }
+        } else {
+            null
+        },
     ) {
         Spacer(modifier = Modifier.height(Spacing.lg))
         destinations.forEach { destination ->
@@ -783,10 +1224,10 @@ private fun AdaptiveNavigationRail(
                 },
                 label = { Text(label, style = GeistType.button12) },
                 colors = NavigationRailItemDefaults.colors(
-                    selectedIconColor = colors.accent,
+                    selectedIconColor = colors.onSecondaryContainer,
                     selectedTextColor = colors.primary,
-                    indicatorColor = colors.gray.c100,
-                    unselectedIconColor = colors.disabled,
+                    indicatorColor = colors.secondaryContainer,
+                    unselectedIconColor = colors.secondary,
                     unselectedTextColor = colors.secondary,
                 ),
             )
@@ -806,11 +1247,10 @@ private fun FloatingNavBar(
     BoxWithConstraints(
         modifier = modifier
             .fillMaxWidth()
-            .background(colors.background100)
-            .border(width = 1.dp, color = colors.grayAlpha.c400)
+            .background(colors.gray.c100)
             .navigationBarsPadding()
-            .heightIn(min = 64.dp)
-            .padding(Spacing.xs),
+            .heightIn(min = 80.dp)
+            .padding(horizontal = Spacing.xs, vertical = Spacing.sm),
     ) {
         val wrapTabs = GeistAdaptiveLayout.wrapNavigation(
             maxWidth.value, LocalDensity.current.fontScale, destinations.size,
@@ -850,14 +1290,13 @@ private fun NavBarTab(
 ) {
     val colors = LocalGeistColors.current
     val contentColor = if (selected) colors.primary else colors.secondary
-    val background = if (selected) colors.gray.c100 else Color.Transparent
+    val indicator = if (selected) colors.secondaryContainer else Color.Transparent
     val label = stringResource(destination.label)
 
     Column(
         modifier = modifier
             .fillMaxHeight()
             .heightIn(min = GeistSizes.minimumTouchTarget)
-            .background(background, RoundedCornerShape(GeistRadii.small))
             .selectable(
                 selected = selected,
                 onClick = onClick,
@@ -868,19 +1307,106 @@ private fun NavBarTab(
         verticalArrangement = Arrangement.Center,
     ) {
         if (!textOnly) {
-            Icon(
-                destination.icon,
-                contentDescription = null,
-                tint = if (selected) colors.accent else contentColor,
-                modifier = Modifier.size(20.dp),
-            )
+            Box(
+                modifier = Modifier
+                    .size(width = 64.dp, height = 32.dp)
+                    .background(indicator, RoundedCornerShape(GeistRadii.full)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    destination.icon,
+                    contentDescription = null,
+                    tint = if (selected) colors.onSecondaryContainer else contentColor,
+                    modifier = Modifier.size(24.dp),
+                )
+            }
             Spacer(modifier = Modifier.height(Spacing.xxs))
         }
         Text(
             label,
             color = contentColor,
-            style = GeistType.button12,
+            style = if (selected) GeistType.button12 else GeistType.label12,
             textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+            modifier = if (textOnly) {
+                Modifier
+                    .background(indicator, RoundedCornerShape(GeistRadii.full))
+                    .padding(horizontal = Spacing.sm, vertical = Spacing.xxs)
+            } else {
+                Modifier
+            },
         )
     }
+}
+
+/** The global Export now action: extended on compact layouts, an icon FAB atop the rail. */
+@Composable
+private fun ExportNowButton(onClick: () -> Unit, expanded: Boolean) {
+    val colors = LocalGeistColors.current
+    val label = stringResource(R.string.export_now_title)
+    if (expanded) {
+        ExtendedFloatingActionButton(
+            onClick = onClick,
+            icon = { Icon(Icons.Outlined.FileUpload, contentDescription = null) },
+            text = { Text(label, style = GeistType.button14) },
+            containerColor = colors.brandSubtle,
+            contentColor = colors.brandOnSubtle,
+            shape = RoundedCornerShape(GeistRadii.medium),
+        )
+    } else {
+        FloatingActionButton(
+            onClick = onClick,
+            containerColor = colors.brandSubtle,
+            contentColor = colors.brandOnSubtle,
+            shape = RoundedCornerShape(GeistRadii.medium),
+        ) {
+            Icon(Icons.Outlined.FileUpload, contentDescription = label)
+        }
+    }
+}
+
+/** A sub-screen with Back and a title above content that has no header of its own. */
+@Composable
+private fun SubScreenFrame(
+    title: String,
+    onBack: () -> Unit,
+    content: @Composable () -> Unit,
+) {
+    Column(Modifier.fillMaxSize()) {
+        com.healthmd.presentation.common.SubScreenTopBar(title = title, onBack = onBack)
+        Box(Modifier.weight(1f)) { content() }
+    }
+}
+
+/** Centers single-column screens at a readable width on tablets and unfolded foldables. */
+@Composable
+private fun ReadableWidth(content: @Composable () -> Unit) {
+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
+        Box(Modifier.widthIn(max = GeistSizes.readableContentMaxWidth).fillMaxSize()) { content() }
+    }
+}
+
+/** App & support with its routes: setup sharing, diagnostics, the myself.md claim, onboarding. */
+@Composable
+private fun SettingsAppSupport(
+    navController: androidx.navigation.NavHostController,
+    settingsViewModel: SettingsViewModel,
+    protectionSettingsRequestId: Long?,
+) {
+    AppSupportScreen(
+        viewModel = settingsViewModel,
+        protectionSettingsRequestId = protectionSettingsRequestId,
+        onNavigateToSharedSetup = { navController.navigate(SubRoutes.SHARED_SETUP) { launchSingleTop = true } },
+        onNavigateToDiagnostics = { navController.navigate(SubRoutes.DIAGNOSTICS) { launchSingleTop = true } },
+        onNavigateToMyselfClaim = {
+            if (BuildConfig.MYSELF_CLAIM_ENABLED && settingsViewModel.distributionPolicy.purchasesAvailable) {
+                navController.navigate(SubRoutes.MYSELF_CLAIM) { launchSingleTop = true }
+            }
+        },
+        onReplayOnboarding = {
+            navController.navigate(SubRoutes.ONBOARDING) {
+                popUpTo(navController.graph.findStartDestination().id)
+                launchSingleTop = true
+            }
+        },
+    )
 }

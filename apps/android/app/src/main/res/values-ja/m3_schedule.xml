@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="m3_schedule_clinic_destination_title">クリニックの送信先</string>
+    <string name="m3_schedule_clinic_destination_body">この送信先はクリニックが管理しています。選択や共有の管理には「クリニックアクセス」を使用してください。その他の送信先には、ご自身の Health.md アクセスが必要です。</string>
+</resources>

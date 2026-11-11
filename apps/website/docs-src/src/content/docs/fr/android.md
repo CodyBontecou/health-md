@@ -25,6 +25,8 @@ description: "Configurez Health.md pour Android. Exportez les données Health Co
 
 Health.md pour Android transforme Health Connect en un premier journal de santé local. Choisissez les métriques dont vous avez besoin et prévisualisez le résultat. Exportez ensuite les fichiers vers un dossier local, un coffre-fort Obsidian , un dossier de fournisseur synchronisé ou un fournisseur de documents Android inscriptibles.
 
+L’app comporte trois onglets. **Archive** est un calendrier des dates de santé couvertes par vos exports, avec les lacunes à rattraper. **Automatisations** regroupe vos profils d’export et vos planifications. **Réglages** regroupe les destinations, les données et les options de l’app. Le bouton **Exporter maintenant** lance un export ponctuel depuis tous les onglets sauf Réglages.
+
 <div class="options">
  <div class="option"> <strong> Health Connect source </strong> <p> Lit l'activité, le sommeil, le cœur, les signes vitaux, les mensurations corporelles, la nutrition, les entraînements et d'autres catégories via les API Health Connect d'Android sur l'appareil. </p> </div>
  <div class="option"> <strong> Obsidian -sortie native </strong> <p> Écrit des notes quotidiennes, YAML/frontmatter, Obsidian Notes conviviales pour les bases, entrées individuelles et JSON compatible avec le plugin Health.md Obsidian . </p> </div>
@@ -149,7 +151,7 @@ Health.md pour Android est d'abord local :
 
 Si vous souhaitez la configuration locale la plus stricte, exécutez des exportations manuelles vers un dossier de périphérique local et laissez les exportations planifiées et la synchronisation sauvegardée par le fournisseur désactivées.
 
-Le pilote Health.md Cloud, distinct et facultatif, est réservé à un seul propriétaire et conserve uniquement les exports API envoyés volontairement. Il n’y a pas d’inscription publique ni de synchronisation automatique des appareils ; ce flux de dossiers n’envoie rien au pilote. La [politique de confidentialité](/privacy-policy.html) décrit la conservation, la suppression, le quota et les risques de perte sans sauvegarde.
+Le pilote cloud Health.md distinct et facultatif à propriétaire unique conserve uniquement les exportations d'API qui y sont intentionnellement téléchargées. Il n'y a pas d'inscription publique ni de synchronisation automatique des appareils ; ce workflow de dossier n'y est pas téléchargé. Consultez la [politique de confidentialité](/privacy-policy.html) pour connaître les risques de rétention, de suppression, de quota et de stockage non sauvegardé.
 
 ## Documents associés
 

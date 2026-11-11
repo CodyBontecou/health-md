@@ -19,8 +19,8 @@ description: "将 macOS 配套应用用作本地目标位置。iPhone 采集 Hea
 <ol>
 <li>安装并打开 macOS 应用。</li>
 <li>在 Mac 上选择目标文件夹，授予 Health.md 写入权限。</li>
-<li>在 iPhone 上打开“同步”标签页，并启用 Mac 连接。</li>
-<li>返回 iPhone 的“导出”标签页，选择<em>已连接的 Mac</em>，配置导出，然后轻点“导出”。</li>
+<li>在 iPhone 上打开<strong>设置 → Mac 目标位置</strong>并启用它。</li>
+<li>将<em>已连接的 Mac</em>选为自动化的目标位置（<strong>自动化 → 自动化 → 输出</strong>），然后使用<strong>立即导出</strong>，或让自动化按计划运行。</li>
 </ol>
 
 ## 传输内容
