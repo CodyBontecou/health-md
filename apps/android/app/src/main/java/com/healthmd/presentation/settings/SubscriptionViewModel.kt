@@ -124,7 +124,11 @@ internal fun subscriptionUi(status: SubscriptionStatus): SubscriptionUi = when (
     )
     is SubscriptionStatus.Subscribed -> SubscriptionUi(
         title = planTitle(status.plan),
-        status = if (status.isAutoRenewing) R.string.m3_subscription_status_renews else R.string.m3_subscription_status_cancelled,
+        status = when {
+            status.isAutoRenewing -> R.string.m3_subscription_status_renews
+            status.hasIncludedAccess -> R.string.m3_subscription_status_included
+            else -> R.string.m3_subscription_status_cancelled
+        },
         owned = true,
         planValue = if (status.plan == PurchasePlan.WEEKLY) R.string.m3_subscription_value_weekly else R.string.m3_subscription_value_yearly,
         showsBillingDate = status.isAutoRenewing,

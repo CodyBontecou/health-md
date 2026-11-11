@@ -40,6 +40,8 @@ class SubscriptionUiTest {
             )
             val ui = subscriptionUi((status as SubscriptionStatus.Subscribed).copy(periodEndMillis = 1_800_000_000_000L))
             assertThat(ui.action).isEqualTo(SubscriptionAction.MANAGE_IN_PLAY)
+            assertThat(ui.status).isEqualTo(if (renewing) R.string.m3_subscription_status_renews
+                else R.string.m3_subscription_status_included)
             assertThat(ui.actionNote).isNull()
             assertThat(ui.showsAccessUntil).isFalse()
             assertThat(ui.owned).isTrue()
