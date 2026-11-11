@@ -80,7 +80,9 @@ class ScheduledProfileSnapshotFactory @Inject constructor(
             original.sleepCaptureContext?.sleepDayAttribution != com.healthmd.domain.model.SleepDayAttribution.MORNING_ENDS) return profile
         val frozen = restoreFrozenSnapshot(profile, current) ?: return null
         val context = AndroidCaptureContext(zone, attribution).also { it.requireShippedProfile() }
-        val authority = if (attribution == com.healthmd.domain.model.SleepDayAttribution.MORNING_ENDS)
+        val receiverAuthority = forceFresh && profile.target == ExportTarget.API_ENDPOINT &&
+            frozen.exportMode == com.healthmd.rawexport.ExportMode.COMPATIBILITY
+        val authority = if (receiverAuthority || attribution == com.healthmd.domain.model.SleepDayAttribution.MORNING_ENDS)
             (source as? com.healthmd.domain.repository.RestorableHealthRepository
                 ?: error("Provider capture authority is unavailable")).captureProviderAuthority() else null
         val settings = frozen.copy(executionSleepCaptureContext = context, executionSleepCaptureAuthorityIsFrozen = true,

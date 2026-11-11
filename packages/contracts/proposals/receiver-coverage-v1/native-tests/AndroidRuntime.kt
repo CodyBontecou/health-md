@@ -36,9 +36,14 @@ fun main()=runBlocking {
   ReceiverCoverageRuntime.save(context,"legacy",changed,"https://example.com/upload",credentials)
   check(runtime.configurationForOccurrence("occurrence","legacy",true)==config.json())
   check(runtime.configurationForOccurrence("next-occurrence","legacy",true)==changed.json())
-  val output="{\"version\":2,\"settings\":\"original\"}"
+  val unbound="{\"version\":2,\"settings\":\"original\"}"
+  try {runtime.destination(config.json(),"https://example.com/upload",unbound,"UTC"); error("Unbound source accepted")}
+  catch(e:IllegalArgumentException){}
+  val output="{\"version\":5,\"settings\":\"original\",\"providerCaptureAuthority\":{\"selectedProviderId\":\"whoop\",\"connectionIds\":{\"whoop\":\"11111111-1111-4111-8111-111111111111\"}}}"
   val destination=runtime.destination(config.json(),"https://example.com/upload",output,"UTC")
-  try {runtime.destination(config.json(),"https://example.com/upload","{\"version\":2,\"settings\":\"edited\"}","UTC"); error("Scope reused after output edit")}
+  try {runtime.destination(config.json(),"https://example.com/upload",output.replace("original","edited"),"UTC"); error("Scope reused after output edit")}
+  catch(e:IllegalStateException){}
+  try {runtime.destination(config.json(),"https://example.com/upload",output.replace("11111111-1111-4111-8111-111111111111","22222222-2222-4222-8222-222222222222"),"UTC"); error("Scope reused after provider account change")}
   catch(e:IllegalStateException){}
   val journal=ReceiverCoverageJournal(root.resolve("receiver-coverage/plans"))
   val now=Instant.parse("2026-03-09T08:00:00Z"); val dates=listOf("2026-03-06","2026-03-07","2026-03-08")

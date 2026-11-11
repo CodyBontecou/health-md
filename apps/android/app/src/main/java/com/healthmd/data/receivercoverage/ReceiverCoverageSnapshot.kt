@@ -23,6 +23,12 @@ object ReceiverCoverageSnapshot {
             it.getValue("destination_binding").jsonPrimitive.content,it.getValue("destination_fingerprint").jsonPrimitive.content)
     }
     fun outputSettings(raw: String): String = checked(raw)?.getValue("output_settings")?.jsonPrimitive?.content ?: raw
+    /** Coverage and retry identity must include the accepted source, including Night begins. */
+    fun requireProviderBinding(output: String) {
+        val snapshot = Json.parseToJsonElement(output).jsonObject
+        require(snapshot.getValue("version").jsonPrimitive.int in setOf(3, 5) &&
+            snapshot["providerCaptureAuthority"] is JsonObject) { "Original receiver source authority is missing" }
+    }
     private fun checked(raw: String): JsonObject? = try { record(raw) }
         catch (_: Exception) { throw ReceiverCoveragePreflight.BoundaryException() }
     private fun record(raw: String): JsonObject? {
@@ -33,7 +39,7 @@ object ReceiverCoverageSnapshot {
         require(JsonObject(value.toSortedMap()).toString() == raw) // No duplicate/extra/coerced fields.
         for (key in fields - setOf("schema_version","version")) require(value.getValue(key).jsonPrimitive.isString)
         val output = Json.parseToJsonElement(value.getValue("output_settings").jsonPrimitive.content).jsonObject
-        require(output.getValue("version").jsonPrimitive.int in 1..3)
+        require(output.getValue("version").jsonPrimitive.int in setOf(1, 2, 3, 5))
         ReceiverCoverageConfiguration.parse(value.getValue("configuration").jsonPrimitive.content)
         require(Regex("[A-Za-z0-9_-]{1,128}").matches(value.getValue("plan_id").jsonPrimitive.content))
         for (key in listOf("destination_binding","destination_fingerprint")) require(Regex("[a-f0-9]{64}").matches(value.getValue(key).jsonPrimitive.content))

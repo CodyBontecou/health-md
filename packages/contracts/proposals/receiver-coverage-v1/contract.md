@@ -379,6 +379,17 @@ fields, the new reader restores only the copies present in the unchanged opaque
 wrapper and rejects contradictions. This is not Android daily/export schema v4,
 a public export change, an FFI change or a rewrite of historical settings snapshots.
 
+Android receiver-aware Night begins admissions use private output-snapshot version
+5 to retain the exact selected provider set and connection identities. Version 3
+keeps its original Morning ends meaning; version 4 remains the receiver wrapper.
+New occurrences capture current source authority, while pending work restores its
+saved authority. Account/provider changes therefore change the scope binding and
+require a new receiver scope. A receiver admission with a historical unbound output
+snapshot is rejected before preflight or capture; it cannot adopt the current
+account during retry. Enabling receiver mode on an unbound legacy schedule accepts
+a new schedule generation before selection. Existing unbound receiver recovery
+must be explicitly discarded/replaced rather than silently recaptured.
+
 Today Refresh never consults receiver state on its own. A merged occurrence adds
 its original execution-zone today independently of completed-day coverage and
 retains that owner date/slot across retry. Existing unbound residuals finish through

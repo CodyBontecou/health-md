@@ -71,6 +71,7 @@ class ReceiverCoverageRuntime(
     class Destination(val preflight: ReceiverCoveragePreflight, val fingerprint: String)
     suspend fun destination(configJson: String, endpoint: String, snapshot: String, zone: String): Destination {
         val outputSettings = ReceiverCoverageSnapshot.outputSettings(snapshot)
+        ReceiverCoverageSnapshot.requireProviderBinding(outputSettings)
         val config = ReceiverCoverageConfiguration.parse(configJson)
         check(entitlements.verifyAccess()) { "Receiver-aware selection needs independent API access" }
         val sponsored = entitlements.sponsoredEndpoint.value?.let(com.healthmd.domain.billing.ClinicExportAuthorization::canonicalClinicEndpoint)
