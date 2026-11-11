@@ -1,6 +1,7 @@
 #if os(iOS)
 #if DEBUG
 import Notelet
+import MessageUI
 #endif
 import SwiftUI
 
