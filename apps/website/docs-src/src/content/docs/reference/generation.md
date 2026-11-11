@@ -67,6 +67,10 @@ scripts/generated-automation-reference-docs.sh check
 
 `update` replaces only the corresponding generated subtree. `check` regenerates into temporary output and byte-compares it with committed artifacts.
 
+Automation staging uses a checkout-specific directory name derived from the canonical
+Apple component path. Its update script discovers and removes only that checkout's
+staging output, leaving other worktrees' staged artifacts intact.
+
 ## Determinism
 
 Fixtures use:

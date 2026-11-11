@@ -10,7 +10,12 @@ import Foundation
 @MainActor
 enum GeneratedAutomationReferenceDocumentation {
     static let relativeGeneratedDirectory = "docs/reference/generated/automation"
-    static let updateOutputDirectoryName = "healthmd-generated-automation-reference-docs-current"
+    static var updateOutputDirectoryName: String {
+        let path = repositoryRoot.resolvingSymlinksInPath().path
+        let identifier = SHA256.hash(data: Data(path.utf8))
+            .map { String(format: "%02x", $0) }.joined().prefix(16)
+        return "healthmd-generated-automation-reference-docs-\(identifier)"
+    }
 
     static let requiredArtifactNames: Set<String> = [
         "api-export-v1.json",
@@ -564,7 +569,6 @@ enum GeneratedAutomationReferenceDocumentation {
             supportsIPhoneExportRequests: true,
             supportsAllAvailableHistoryExportRequests: true,
             supportsRequestScopedContextAcquisition: true,
-            supportsIPhoneInitiatedContextRefresh: true,
             supportsPhoneContextAutomation: true,
             supportsChunkedMacExportJobs: true,
             supportsSizeBoundedConnectedTransfers: true,

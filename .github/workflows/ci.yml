@@ -52,6 +52,8 @@ jobs:
           !*.xlsx
           !*.ttf
           !*.woff2
+          /apps/cloud/public/app-icon.png
+          /apps/cloud/public/favicon.png
           PATTERNS
           git -c protocol.version=2 fetch -q --filter=blob:none --depth=1 origin "$SOURCE_REVISION"
           git checkout -q --detach FETCH_HEAD

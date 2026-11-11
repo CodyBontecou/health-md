@@ -16,7 +16,7 @@ SCRIPTS = (
     "generated-automation-reference-docs.sh",
 )
 FAKE_XCODE = '''#!/usr/bin/env python3
-import json, os, pathlib, sys
+import hashlib, json, os, pathlib, sys
 with open(os.environ["XCODE_CALLS"], "a") as out:
     out.write(json.dumps({"args": sys.argv[1:], "tz": os.getenv("TZ")}) + "\\n")
 if os.getenv("GENERATED_EXPORT_DOCS_OUTPUT_DIR") and not os.getenv("XCODE_NO_OUTPUT"):
@@ -25,6 +25,12 @@ if os.getenv("GENERATED_EXPORT_DOCS_OUTPUT_DIR") and not os.getenv("XCODE_NO_OUT
     (output / "manifest.json").write_text("{}\\n")
 if os.getenv("MUTATE_SCHEMA"):
     pathlib.Path("HealthMdTests/Fixtures/Export/export_schema_signature_v8.json").write_text("changed\\n")
+if pathlib.Path("HealthMdTests/.update-generated-automation-reference-docs").exists():
+    identifier = hashlib.sha256(str(pathlib.Path.cwd().resolve()).encode()).hexdigest()[:16]
+    output = pathlib.Path(os.environ["TMPDIR"]) / ("healthmd-generated-automation-reference-docs-" + identifier)
+    output.mkdir(parents=True, exist_ok=True)
+    (output / "manifest.json").write_text("{}\\n")
+    (output / ".complete").write_text("1")
 sys.exit(int(os.getenv("XCODE_EXIT", "0")))
 '''
 
@@ -92,7 +98,7 @@ class AppleTestingPerformanceTests(unittest.TestCase):
                 args = call["args"]
                 # Ordinary `test` still rebuilds changed sources; never stale test-without-building.
                 self.assertEqual(args[0], "test")
-                self.assertEqual(args[args.index("-derivedDataPath") + 1], str(root / "build/DerivedData/macOS"))
+                self.assertEqual(Path(args[args.index("-derivedDataPath") + 1]).resolve(), (root / "build/DerivedData/macOS").resolve())
                 self.assertIn("arch=", args[args.index("-destination") + 1])
                 self.assertIn("-enableCodeCoverage", args)
                 self.assertTrue(any(value.startswith("-only-testing:") for value in args))
@@ -112,6 +118,26 @@ class AppleTestingPerformanceTests(unittest.TestCase):
             self.assertEqual(args[args.index("-derivedDataPath") + 1], str(cache))
             self.assertEqual(args[args.index("-destination") + 1], "platform=macOS,arch=x86_64")
             self.assertEqual((cache / "sentinel").read_text(), "keep")
+
+    def test_automation_update_preserves_foreign_checkout_staging(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root, _, env = self.fixture(directory)
+            temporary = Path(directory) / "staging"
+            temporary.mkdir()
+            foreign = temporary / "healthmd-generated-automation-reference-docs-current"
+            foreign.mkdir()
+            (foreign / "sentinel").write_text("another checkout")
+            script = root / "scripts/generated-automation-reference-docs.sh"
+            # Confine discovery in this script fixture; never inspect real shared staging.
+            script.write_text(script.read_text().replace(
+                'SEARCH_ROOTS=("$HOME/Library/Containers" "${TMPDIR:-/tmp}" "/tmp")',
+                'SEARCH_ROOTS=("$TMPDIR")',
+            ))
+            result = subprocess.run(["bash", str(script), "update"],
+                env={**env, "TMPDIR": str(temporary)}, capture_output=True, text=True)
+            self.assertTrue((foreign / "sentinel").exists(), "Other checkout output was removed")
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertEqual((root / "docs/reference/generated/automation/manifest.json").read_text(), "{}\n")
 
     def test_export_check_fails_closed_on_fixture_mutation_and_cleans_marker(self):
         with tempfile.TemporaryDirectory() as directory:

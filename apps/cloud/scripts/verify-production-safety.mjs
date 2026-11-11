@@ -507,14 +507,32 @@ for (const command of [
   "npm run build:vm", "--config wrangler.ingest.toml", "--config wrangler.account.toml",
   "--config wrangler.maintenance.toml", "npm audit --audit-level=moderate",
 ]) requireText(workflow, command, "Cloud CI");
-for (const guardedPath of [
-  "apps/android/app/src/main/java/com/healthmd/data/export/APIExportClient.kt",
-  "apps/android/app/src/test/java/com/healthmd/export/APIExportClientTest.kt",
-  "apps/apple/HealthMd/Shared/Managers/APIExportClient.swift",
-  "apps/apple/HealthMd/Shared/Models/APIExportSettings.swift",
-  "apps/apple/HealthMd/Shared/Utilities/BoundedURLSessionDataLoader.swift",
-  "apps/apple/HealthMdTests/Managers/APIExportClientTests.swift",
-]) requireText(workflow, guardedPath, "Cloud CI mobile redirect trigger");
+// All changes reach the same portable gate; diagnostics are deliberately manual.
+if (/^  (?:pull_request|push):/m.test(workflow)) {
+  failures.push("Cloud diagnostics must not revive automatic component CI");
+}
+requireText(workflow, "  workflow_dispatch:", "manual Cloud diagnostics");
+const portableWorkflow = read(".github/workflows/ci.yml", repository);
+for (const fragment of ["  pull_request:", "branches: [main, testing]",
+  "timeout-minutes: 2", "python3 scripts/ci/run.py", "python3 scripts/ci/verify_run.py"]) {
+  requireText(portableWorkflow, fragment, "portable Cloud regression entrypoint");
+}
+if (/^\s+paths(?:-ignore)?:/m.test(portableWorkflow.split("permissions:")[0])) {
+  failures.push("Portable Cloud regressions must run for every source change");
+}
+requireText(read("scripts/ci/run.py", repository),
+  '"wake": ["bash", "scripts/ci/wake.sh"]', "portable Cloud group");
+requireText(read("scripts/ci/wake.sh", repository), "bash scripts/ci/cloud.sh",
+  "portable Cloud lane");
+const cloudLane = read("scripts/ci/cloud.sh", repository);
+for (const command of ["cd apps/cloud", "npm ci --ignore-scripts --no-audit --no-fund",
+  "npm run typecheck", "npm run typecheck:vm", "npm exec -- vitest run --maxWorkers=1",
+  "npm run verify:production-safety", "npm audit --audit-level=moderate"]) {
+  requireText(cloudLane, command, "portable Cloud boundary regressions");
+}
+for (const forbidden of ["continue-on-error", "--testNamePattern", "--exclude", "wrangler deploy"]) {
+  if (cloudLane.includes(forbidden)) failures.push(`Portable Cloud lane contains ${forbidden}`);
+}
 
 if (failures.length) {
   console.error(JSON.stringify({ safe: false, failures }, null, 2));

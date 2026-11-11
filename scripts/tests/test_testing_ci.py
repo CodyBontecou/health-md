@@ -77,14 +77,21 @@ class CIOrchestrationTests(unittest.TestCase):
         self.assertIn("SOURCE_REVISION", commands)
         self.assertEqual(test["env"]["HEALTHMD_CI_RESULTS"], ".pi/ci-receipts")
 
-    def test_cloud_remains_an_independent_synthetic_gate(self):
+    def test_cloud_host_regressions_are_portable_and_broad_diagnostics_manual(self):
         workflow = yaml.safe_load((ROOT / ".github/workflows/cloud-ci.yml").read_text())
+        # PyYAML's YAML 1.1 loader resolves the unquoted Actions `on` key as True.
+        self.assertEqual(set(workflow.get("on", workflow.get(True))), {"workflow_dispatch"})
         job = workflow["jobs"]["validate"]
         self.assertEqual(job["defaults"]["run"]["working-directory"], "apps/cloud")
         commands = "\n".join(step.get("run", "") for step in job["steps"])
-        for command in ("npm ci", "npm run check", "npm run verify:production-safety", "npm run test:smoke", "npm audit --audit-level=moderate"):
-            self.assertIn(command, commands)
-        self.assertTrue(all("--dry-run" in line for line in commands.splitlines() if "wrangler deploy" in line))
+        self.assertIn("npm run check", commands)
+        self.assertIn("npm run test:smoke", commands)
+        self.assertIn("bash scripts/ci/cloud.sh", (ROOT / "scripts/ci/wake.sh").read_text())
+        cloud = (ROOT / "scripts/ci/cloud.sh").read_text()
+        for command in ("npm run typecheck", "npm run typecheck:vm",
+                        "npm exec -- vitest run --maxWorkers=1",
+                        "npm run verify:production-safety", "npm audit --audit-level=moderate"):
+            self.assertIn(command, cloud)
 
     def test_non_pr_events_always_select_full_qualification(self):
         preamble = ACTION_SHELL.split("python3 - <<'PY'", 1)[0]
