@@ -86,6 +86,7 @@ final class FeedbackJourneyUITests: XCTestCase {
 
         // Editing must invalidate the persistent visible/accessibility confirmation.
         replaceText(in: editor, with: "")
+        XCTAssertEqual(editor.value as? String, "")
         let noConfirmation = expectation(
             for: NSPredicate(format: "exists == false"), evaluatedWith: app.staticTexts["Report copied"]
         )
@@ -119,10 +120,9 @@ final class FeedbackJourneyUITests: XCTestCase {
 
     private func replaceText(in editor: XCUIElement, with text: String) {
         editor.tap()
-        editor.press(forDuration: 1)
-        let selectAll = menuAction("Select All")
-        XCTAssertTrue(selectAll.waitForExistence(timeout: 5))
-        selectAll.tap()
+        // A long press may select one word and omit Select All from the edit menu.
+        // Native keyboard selection keeps replacement deterministic without changing the clipboard.
+        editor.typeKey(XCUIKeyboardKey(rawValue: "a"), modifierFlags: .command)
         editor.typeText(text.isEmpty ? XCUIKeyboardKey.delete.rawValue : text)
     }
 
