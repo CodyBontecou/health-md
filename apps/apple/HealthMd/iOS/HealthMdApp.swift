@@ -558,9 +558,11 @@ struct HealthMdApp: App {
                     externalIntegrations: externalIntegrationManager
                 )
                 if !TestMode.suppressesRuntimeServices {
-                    let profiles = iPadHistoryProfileStore
-                    directCLIService.agentBridgePlanningSessionProvider = { [weak directCLIService, profiles] in
-                        guard let directCLIService else { throw AgentBridgeValidationError.permissionRequired }
+                    directCLIService.agentBridgePlanningSessionProvider = { [weak directCLIService] in
+                        guard let directCLIService,
+                              let profiles = SharedSetupV2ExportProfileBridge.current?.profileStore else {
+                            throw AgentBridgeValidationError.permissionRequired
+                        }
                         return try directCLIService.agentBridgeNativePlanningSession(profiles: profiles)
                     }
                     directCLIService.agentBridgeExecutionReceiver = { [healthKitManager] session, channel in
