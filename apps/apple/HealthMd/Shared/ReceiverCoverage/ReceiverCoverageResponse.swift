@@ -27,7 +27,7 @@ nonisolated struct ReceiverCoverageRequest: Sendable {
 }
 
 extension ReceiverCoveragePreflight {
-    func freezeRequest(requestID: String, candidates: [String], now: Date) throws -> ReceiverCoverageRequest {
+    nonisolated func freezeRequest(requestID: String, candidates: [String], now: Date) throws -> ReceiverCoverageRequest {
         try ReceiverCoverageRequest(preflight: self, requestID: requestID, candidates: candidates, now: now)
     }
 }
@@ -49,9 +49,13 @@ nonisolated struct ReceiverCoverageEvidence: Sendable {
     }
 
     static func parse(_ body: Data, for request: ReceiverCoverageRequest) throws -> Self {
+        try parse(body, expected: request.expected, today: request.today)
+    }
+
+    static func parse(_ body: Data, expected: [String: String], today: String) throws -> Self {
         var reader = CoverageJSONReader(body)
         let (fields, dates) = try reader.response()
-        guard fields == request.expected, dates == Array(Set(dates)).sorted() else {
+        guard fields == expected, dates == Array(Set(dates)).sorted() else {
             throw ReceiverCoveragePreflight.BoundaryError.invalidResponse
         }
         for day in dates {
@@ -63,8 +67,8 @@ nonisolated struct ReceiverCoverageEvidence: Sendable {
                   (1...12).contains(month) else { throw ReceiverCoveragePreflight.BoundaryError.invalidResponse }
             let leap = year % 4 == 0 && (year % 100 != 0 || year % 400 == 0)
             let lengths = [31, leap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
-            guard (1...lengths[month - 1]).contains(date), day >= request.expected["start"]!,
-                  day < request.expected["end_exclusive"]!, day < request.today else {
+            guard (1...lengths[month - 1]).contains(date), day >= expected["start"]!,
+                  day < expected["end_exclusive"]!, day < today else {
                 throw ReceiverCoveragePreflight.BoundaryError.invalidResponse
             }
         }

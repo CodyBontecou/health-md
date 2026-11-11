@@ -52,14 +52,16 @@ class ReceiverCoverageEvidence private constructor(
 
     companion object {
         fun parse(body: ByteArray, request: ReceiverCoverageRequest): ReceiverCoverageEvidence {
+            return parse(body, request.expectedFields(), request.today)
+        }
+        internal fun parse(body: ByteArray, expected: Map<String, String>, today: String): ReceiverCoverageEvidence {
             val (fields, dates) = CoverageJSONReader(body).response()
-            val expected = request.expectedFields()
             if (fields != expected || dates != dates.distinct().sorted()) invalid()
             dates.forEach { day ->
                 if (!Regex("[0-9]{4}-[0-9]{2}-[0-9]{2}").matches(day)) invalid()
                 val date = try { LocalDate.parse(day) } catch (_: Exception) { invalid() }
                 if (date.year < 1 || day < expected.getValue("start") ||
-                    day >= expected.getValue("end_exclusive") || day >= request.today) invalid()
+                    day >= expected.getValue("end_exclusive") || day >= today) invalid()
             }
             // Encode only validated fields. Sorting gives stable evidence, never an error body.
             val normalized = (fields + mapOf("schema_version" to "1", "completed_dates" to ""))

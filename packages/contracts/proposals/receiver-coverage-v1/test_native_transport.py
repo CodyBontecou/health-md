@@ -69,6 +69,8 @@ def cases():
 
 @unittest.skipUnless(os.environ.get('HEALTHMD_TEST_NATIVE_BOUNDARY') == '1', 'explicit host native diagnostic')
 class NativeTransportTests(unittest.TestCase):
+    harness_name = 'Transport'
+
     def run_command(self, command):
         result = subprocess.run(command, capture_output=True, text=True, timeout=60)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
@@ -101,7 +103,7 @@ class NativeTransportTests(unittest.TestCase):
         with tempfile.TemporaryDirectory(prefix='healthmd-170-http-swift-') as tmp:
             directory = Path(tmp)
             main = directory / 'Transport.swift'
-            main.write_text((HERE / 'native-tests/Transport.swift').read_text().replace('/*PREPARE*/', prepare(BASE)))
+            main.write_text((HERE / f'native-tests/{self.harness_name}.swift').read_text().replace('/*PREPARE*/', prepare(BASE)))
             binary = directory / 'tests'
             source = ROOT / 'apps/apple/HealthMd/Shared/ReceiverCoverage'
             self.run_command(['swiftc', '-swift-version', '6', '-default-isolation', 'MainActor', '-module-cache-path', str(directory / 'modules'),
@@ -123,16 +125,46 @@ class NativeTransportTests(unittest.TestCase):
             self.skipTest('Kotlin compiler unavailable')
         with tempfile.TemporaryDirectory(prefix='healthmd-170-http-kotlin-') as tmp:
             directory = Path(tmp)
-            main = directory / 'Transport.kt'
-            main.write_text((HERE / 'native-tests/Transport.kt').read_text().replace('/*PREPARE*/', prepare(BASE, True)))
+            main = directory / (self.harness_name + '.kt')
+            main.write_text((HERE / f'native-tests/{self.harness_name}.kt').read_text().replace('/*PREPARE*/', prepare(BASE, True)))
             jar = directory / 'tests.jar'
             source = ROOT / 'apps/android/app/src/main/java/com/healthmd/data/receivercoverage'
             self.run_command(command + [*map(str, sorted(source.glob('*.kt'))), str(main), '-d', str(jar)])
             if compiler and stdlib:
-                runner = ['java', '-cp', os.pathsep.join([str(jar), stdlib, dependencies]), 'TransportKt']
+                runner = ['java', '-cp', os.pathsep.join([str(jar), stdlib, dependencies]), self.harness_name + 'Kt']
             else:
-                runner = ['kotlin', '-classpath', str(jar) + os.pathsep + dependencies, 'TransportKt']
+                runner = ['kotlin', '-classpath', str(jar) + os.pathsep + dependencies, self.harness_name + 'Kt']
             self.verify(self.run_command(runner + self.fixtures(directory)))
+
+
+class NativePlanTests(NativeTransportTests):
+    harness_name = 'Plan'
+
+    def plan_cases(self):
+        from copy import deepcopy
+        plan = reference.select(REQUEST, 'a' * 64, policy='missing_days', response=json.dumps(VALID), refresh_recent_days=1, today_refresh=True)
+        values = [('selected', plan.to_json(), True), ('partial', plan.resume('a' * 64, ['2026-03-07']).to_json(), True)]
+        for key, value in [('schema_version', 1), ('schema_version', True), ('destination_binding', 'b' * 64),
+                           ('coverage_response', None), ('selected', ['2026-03-08', '2026-03-09']),
+                           ('residual', ['2026-03-06']), ('extra', 1)]:
+            obj = json.loads(plan.to_json()); obj[key] = value
+            values.append((f'invalid_{key}_{len(values)}', json.dumps(obj, sort_keys=True, separators=(',', ':')), False))
+        obj = json.loads(plan.to_json()); obj['selected'] = ['2026-03-08','2026-03-09']; obj['residual'] = obj['selected']
+        values.append(('coupled_omission',json.dumps(obj,sort_keys=True,separators=(',', ':')),False))
+        values.append(('duplicate',plan.to_json()[:-1]+',"schema_version":2}',False))
+        return values
+
+    def fixtures(self, directory):
+        vectors = directory / 'plans.tsv'
+        vectors.write_text(''.join(name+'\t'+('valid' if valid else 'invalid')+'\t'+base64.b64encode(body.encode()).decode()+'\n' for name,body,valid in self.plan_cases()))
+        return [str(vectors)]
+
+    def verify(self, output):
+        actual = dict(line.split('\t',1) for line in output.strip().splitlines())
+        self.assertEqual(actual.pop('transport'), 'ok')
+        for name, body, valid in self.plan_cases():
+            self.assertEqual(actual.pop(name), base64.b64encode(body.encode()).decode() if valid else 'invalid', name)
+        self.assertEqual(actual,{})
 
 
 if __name__ == '__main__':
