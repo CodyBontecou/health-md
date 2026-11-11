@@ -683,12 +683,13 @@ class ScheduledProfileExportWorkerCancellationTest {
     @Test fun `rotated credentials cannot replay unmarked API journal`() = runTest { assertUnmarkedJournal("key") }
     @Test fun `foreign snapshot cannot replay unmarked API journal`() = runTest { assertUnmarkedJournal("snapshot") }
     @Test fun `foreign operation cannot replay unmarked API journal`() = runTest { assertUnmarkedJournal("operation") }
+    @Test fun `proven API journal remains required across two workers after deletion`() = runTest { assertUnmarkedJournal("probe-delete") }
     @Test fun `discarded unmarked API journal cannot replay`() = runTest { assertUnmarkedJournal("discard") }
 
     private suspend fun assertUnmarkedJournal(mode: String) {
             val context = ApplicationProvider.getApplicationContext<Context>()
             val root = java.nio.file.Files.createTempDirectory("unmarked-api-entry-").toFile()
-            val scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO)
+            var scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO)
             val operationId = "unmarked-${java.util.UUID.randomUUID()}"
             val store = com.healthmd.data.export.FileAPIExportOperationStore(context)
             try {
@@ -713,7 +714,7 @@ class ScheduledProfileExportWorkerCancellationTest {
                 val pending = ScheduledProfilePendingExport("pending", listOf(day.toEpochDay()), 1000L, snapshot,
                     ExportTarget.API_ENDPOINT, profile.name, apiEndpointUrl = endpoint, durableOperationId = operationId,
                     apiAuthorityJson = authority, apiJournalRequired = mode == "required-missing")
-                val dataStore = androidx.datastore.preferences.core.PreferenceDataStoreFactory.create(scope = scope,
+                var dataStore = androidx.datastore.preferences.core.PreferenceDataStoreFactory.create(scope = scope,
                     produceFile = { java.io.File(root, "entries.preferences_pb") })
                 val entries = ScheduledProfileEntryStore(dataStore, context)
                 entries.upsert(ScheduledProfileEntry(profileId = profile.id, isEnabled = true,
@@ -741,6 +742,18 @@ class ScheduledProfileExportWorkerCancellationTest {
                 coEvery { health.hasBackgroundReadPermission() } returns false
                 var queries = 0
                 val bodies = mutableListOf<String>()
+                var removedAfterProbe = false
+                val restartedStore = com.healthmd.data.export.FileAPIExportOperationStore(context)
+                val replayStore = object : com.healthmd.data.export.APIExportOperationStore by restartedStore {
+                    override suspend fun load(operationId: String): com.healthmd.data.export.DurableAPIExportOperation? {
+                        val actual = restartedStore.load(operationId)
+                        if (mode == "probe-delete" && actual != null && !removedAfterProbe) {
+                            removedAfterProbe = true
+                            restartedStore.delete(operationId)
+                        }
+                        return actual
+                    }
+                }
                 val runner = APIEndpointExportRunner(captureSource = object : com.healthmd.data.export.APIExportCaptureSource {
                     override fun isBeforeFirstUnlock() = false
                     override suspend fun capture(date: LocalDate, settings: ExportSettings): com.healthmd.domain.model.HealthData {
@@ -757,16 +770,41 @@ class ScheduledProfileExportWorkerCancellationTest {
                     }, credentialStore = credentials,
                     policyResolver = com.healthmd.domain.exportengine.ProfileScopedAPIExportEnginePolicyResolver(),
                     nativePlanner = com.healthmd.domain.exportengine.APIExportNativePlanBuilder { error("No planning") },
-                    rustPlanner = com.healthmd.domain.exportengine.APIExportRustPlanner { error("No planning") }, operationStore = com.healthmd.data.export.FileAPIExportOperationStore(context))
+                    rustPlanner = com.healthmd.domain.exportengine.APIExportRustPlanner { error("No planning") }, operationStore = replayStore)
                 val profiles = mockk<ExportProfileRepository>(relaxed = true)
                 coEvery { profiles.profileById(profile.id) } returns if (mode == "retarget") profile.copy(apiEndpointUrl = "$endpoint/changed") else profile
-                val result = worker(profileId = profile.id, settingsRepository = settings, healthRepository = health,
+                fun restartedWorker() = worker(profileId = profile.id, settingsRepository = settings, healthRepository = health,
                     exportHistoryRepository = mockk(relaxed = true), apiEndpointExportRunner = runner,
                     profileRepository = profiles, entryStore = ScheduledProfileEntryStore(dataStore, context),
                     snapshotFactory = ScheduledProfileSnapshotFactory(com.healthmd.domain.exportengine.ExportEnginePinPlanner(), settings),
-                    profileScheduler = mockk(relaxed = true)).doWork()
+                    profileScheduler = mockk(relaxed = true))
+                val result = restartedWorker().doWork()
                 assertThat(queries).isEqualTo(0)
-                if (mode == "valid") {
+                if (mode == "probe-delete") {
+                    assertThat(removedAfterProbe).isTrue()
+                    assertThat(result).isNotEqualTo(ListenableWorker.Result.success())
+                    val first = ScheduledProfileEntryStore(dataStore, context).entry(profile.id)!!.pendingExports.single()
+                    assertThat(first.apiJournalRequired).isTrue()
+                    assertThat(first.durableOperationId).isEqualTo(operationId)
+                    assertThat(first.settingsSnapshotJson).isEqualTo(snapshot)
+                    assertThat(first.apiAuthorityJson).isEqualTo(authority)
+                    scope.coroutineContext[kotlinx.coroutines.Job]?.cancel()
+                    scope.coroutineContext[kotlinx.coroutines.Job]?.join()
+                    scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO)
+                    dataStore = androidx.datastore.preferences.core.PreferenceDataStoreFactory.create(scope = scope,
+                        produceFile = { java.io.File(root, "entries.preferences_pb") })
+                    assertThat(ScheduledProfileEntryStore(dataStore, context).entry(profile.id)!!.recoveryGeneration).isEqualTo(0L)
+                    coEvery { health.hasBackgroundReadPermission() } returns true
+                    val second = restartedWorker().doWork()
+                    assertThat(second.outputData.getString(ScheduledProfileExportWorker.OUTPUT_PROFILE_ERROR))
+                        .isEqualTo("api_recovery_authority_required")
+                    val after = ScheduledProfileEntryStore(dataStore, context).entry(profile.id)!!.pendingExports.single()
+                    assertThat(after).isEqualTo(first)
+                    assertThat(after.apiJournalRequired).isTrue()
+                    assertThat(queries).isEqualTo(0)
+                    assertThat(bodies).isEmpty()
+                    coVerify(exactly = 0) { health.hasBackgroundReadPermission() }
+                } else if (mode == "valid") {
                     assertThat(result).isEqualTo(ListenableWorker.Result.success())
                     assertThat(bodies).containsExactly(body)
                     assertThat(bodies.single().toByteArray()).isEqualTo(body.toByteArray())
