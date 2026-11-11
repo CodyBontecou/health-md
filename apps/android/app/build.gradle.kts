@@ -229,6 +229,7 @@ dependencies {
     debugImplementation(libs.compose.ui.tooling)
     debugImplementation(libs.compose.ui.test.manifest)
     add("e2eImplementation", libs.compose.ui.test.manifest)
+    add("e2eImplementation", libs.okhttp.mockwebserver)
 
     // AndroidX
     implementation(libs.core.ktx)

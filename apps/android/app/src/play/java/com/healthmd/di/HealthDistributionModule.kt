@@ -18,6 +18,7 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
+import javax.inject.Named
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -32,10 +33,11 @@ object HealthDistributionModule {
     @Singleton
     fun provideHealthProviderRegistry(
         healthConnect: HealthConnectDataProvider,
+        @Named("additional_runtime_health_providers") additional: Set<@JvmSuppressWildcards HealthDataProvider>,
         whoop: WhoopCloudDataProvider,
     ): HealthProviderRegistry = HealthProviderRegistry(
         healthConnectDataProvider = healthConnect,
-        additionalProviders = listOf<HealthDataProvider>(whoop),
+        additionalProviders = listOf<HealthDataProvider>(whoop) + additional,
     )
 
     @Provides

@@ -4,7 +4,8 @@
 
     <!-- The isolated Direct CLI E2E variant must not register widget hosts or react to widget
          broadcasts while instrumentation owns the foreground activity. -->
-    <application>
+    <application android:networkSecurityConfig="@xml/receiver_qa_network_security" tools:replace="android:networkSecurityConfig">
+        <activity android:name="com.healthmd.receiverqa.ReceiverCoverageQaActivity" android:exported="true" />
         <activity
             android:name=".widget.setup.WidgetSetupActivity"
             tools:node="remove" />

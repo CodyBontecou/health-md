@@ -2,6 +2,7 @@ package com.healthmd.di
 
 import android.content.Context
 import com.healthmd.data.health.HealthConnectDataProvider
+import com.healthmd.data.health.HealthDataProvider
 import com.healthmd.data.health.HealthProviderRegistry
 import com.healthmd.data.health.providers.HealthProviderCatalog
 import com.healthmd.rawexport.RawHealthRepository
@@ -12,6 +13,7 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
+import javax.inject.Named
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -20,7 +22,8 @@ object HealthDistributionModule {
     @Singleton
     fun provideHealthProviderRegistry(
         healthConnect: HealthConnectDataProvider,
-    ): HealthProviderRegistry = HealthProviderRegistry(healthConnect)
+        @Named("additional_runtime_health_providers") additional: Set<@JvmSuppressWildcards HealthDataProvider>,
+    ): HealthProviderRegistry = HealthProviderRegistry(healthConnect, additional.toList())
 
     @Provides
     @Singleton
