@@ -90,7 +90,6 @@ final class FeedbackJourneyUITests: XCTestCase {
 
         // Editing must invalidate the persistent visible/accessibility confirmation.
         let secondAddition = "\nSynthetic edit after copy.\n"
-        editor.tap()
         editor.typeText(secondAddition)
         let report = editor.value as? String ?? ""
         XCTAssertTrue(report.contains(addition))

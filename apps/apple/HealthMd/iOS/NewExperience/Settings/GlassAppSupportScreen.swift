@@ -181,16 +181,18 @@ struct GlassAppSupportScreen: View {
         #if DEBUG
         .sheet(isPresented: $showFeedbackPasteCheck) {
             // An empty, app-owned paste destination. It never reads or writes the clipboard.
-            VStack {
-                Button { showFeedbackPasteCheck = false } label: {
-                    Text(verbatim: "Close QA paste check")
+            if TestMode.rejectsFeedbackHandoffs {
+                VStack {
+                    Button { showFeedbackPasteCheck = false } label: {
+                        Text(verbatim: "Close QA paste check")
+                    }
+                    .accessibilityIdentifier("feedback.closePasteCheck")
+                    TextEditor(text: $feedbackPasteCheckText)
+                        .accessibilityLabel(Text(verbatim: "QA pasted report"))
+                        .accessibilityIdentifier("feedback.pasteCheckText")
                 }
-                .accessibilityIdentifier("feedback.closePasteCheck")
-                TextEditor(text: $feedbackPasteCheckText)
-                    .accessibilityLabel(Text(verbatim: "QA pasted report"))
-                    .accessibilityIdentifier("feedback.pasteCheckText")
+                .padding()
             }
-            .padding()
         }
         #endif
         // MyselfClaimG and DiagnosticsG are pushed pages with Back (no Done).
