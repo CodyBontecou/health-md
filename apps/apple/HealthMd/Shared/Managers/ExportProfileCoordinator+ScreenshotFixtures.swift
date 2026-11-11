@@ -58,12 +58,12 @@ extension ExportProfileCoordinator {
         // that path inside the app container, bound as its own destination.
         var csv = base
         csv.exportFormats = [.csv]
-        let weekly = profileStore.add(
+        guard let weekly = profileStore.add(
             name: "Weekly CSV",
             settings: csv,
             target: .localIPhoneFolder,
             folderVaultID: screenshotFolderID(["Files", "Exports"]) ?? daily.folderVaultID
-        )
+        ) else { return }
         scheduledEntryStore.upsert(ScheduledExportEntry(
             profileID: weekly.id,
             isEnabled: true,
@@ -80,12 +80,12 @@ extension ExportProfileCoordinator {
             endpointURLString: "https://api.example.com/health",
             bearerToken: nil
         )
-        let feed = profileStore.add(
+        guard let feed = profileStore.add(
             name: "Agent feed",
             settings: json,
             target: .apiEndpoint,
             apiEndpointID: endpoint.id
-        )
+        ) else { return }
         scheduledEntryStore.upsert(ScheduledExportEntry(
             profileID: feed.id,
             isEnabled: true,
@@ -97,11 +97,11 @@ extension ExportProfileCoordinator {
             todayRefreshIntervalHours: 3
         ))
 
-        let mac = profileStore.add(
+        guard let mac = profileStore.add(
             name: "Mac archive",
             settings: base,
             target: .connectedMac
-        )
+        ) else { return }
         scheduledEntryStore.upsert(ScheduledExportEntry(
             profileID: mac.id,
             isEnabled: false,

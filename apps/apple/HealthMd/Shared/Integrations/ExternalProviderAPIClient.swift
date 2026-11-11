@@ -265,10 +265,6 @@ struct ExternalProviderAPIClient: Sendable {
         let path: String
         let requiredScope: String
 
-        var resource: WHOOPResourceName {
-            // All collection names are defined alongside their native v2 endpoint.
-            WHOOPResourceName(rawValue: name)!
-        }
     }
 
     private func fetchWHOOP(
