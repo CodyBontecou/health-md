@@ -1,7 +1,8 @@
 /** Notification-only router: deployed APNs v1 plus an opt-in FCM v2 extension. */
 import { jsonResponse } from "./http";
 
-// Keep the inherited optional bindings; this slice does not mutate deployment config.
+import { parseServiceAccount } from "./delegated-fcm";
+
 export interface Env {
   DB?: D1Database;
   APNS_AUTH_KEY?: string;
@@ -54,7 +55,7 @@ export default {
         host: env.APNS_HOST ?? "api.push.apple.com",
         bundleId: env.BUNDLE_ID ?? "com.codybontecou.obsidianhealth",
       } : null;
-      return await handleWakeRequest(request, wakeEnv, apns);
+      return await handleWakeRequest(request, wakeEnv, { apns, fcm: parseServiceAccount(env.FCM_SERVICE_ACCOUNT_JSON) });
     } catch {
       // Do not allow D1 errors (which may contain bindings) into platform exception logs.
       return jsonResponse({ error: "wake_storage_unavailable" }, 503);

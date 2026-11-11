@@ -13,17 +13,31 @@ import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
 import java.util.UUID
 import kotlinx.serialization.json.*
+import java.util.concurrent.ExecutionException
+import java.util.concurrent.ArrayBlockingQueue
+import java.util.concurrent.ThreadPoolExecutor
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.FutureTask
 import kotlinx.serialization.SerializationStrategy
 
 private val SECURE_MAGIC = "HMDSC001".toByteArray(StandardCharsets.US_ASCII)
 private val BINARY_MAGIC = "HMDDIRCT".toByteArray(StandardCharsets.US_ASCII)
 
-class DirectPacketConnection private constructor(
+/** Runs only synchronous packet creation/enqueue under the owner's publication transaction. */
+fun interface DirectPacketSendAuthorization {
+    fun authorizeEnqueue(enqueue: () -> Unit)
+}
+
+class DirectPacketConnection internal constructor(
     private val socket: Socket,
     private val defaultReadTimeoutMillis: Int,
 ) : Closeable {
     private val input = DataInputStream(BufferedInputStream(socket.getInputStream()))
     private val output = DataOutputStream(BufferedOutputStream(socket.getOutputStream()))
+    private val publicationExecutor = ThreadPoolExecutor(
+        1, 1, 0, TimeUnit.MILLISECONDS, ArrayBlockingQueue(1),
+        { runnable -> Thread(runnable, "healthmd-direct-publication").apply { isDaemon = true } },
+    )
     private val pendingLength = ByteArray(Long.SIZE_BYTES)
     private var pendingLengthBytes = 0
     private var pendingPayload: ByteArray? = null
@@ -31,7 +45,16 @@ class DirectPacketConnection private constructor(
 
     private val writeLock = Any()
 
-    fun send(packet: ByteArray) = synchronized(writeLock) {
+    fun send(packet: ByteArray) {
+        // A rejected local frame never entered publication. Keep the existing
+        // socket usable while the secure channel revokes its native provenance.
+        require(packet.isNotEmpty() && packet.size <= MAXIMUM_PACKET_BYTES) { "Invalid direct packet size." }
+        val task = FutureTask { writePacket(packet) }
+        enqueuePublication(task)
+        awaitPublication(task)
+    }
+
+    private fun writePacket(packet: ByteArray) = synchronized(writeLock) {
         require(packet.isNotEmpty() && packet.size <= MAXIMUM_PACKET_BYTES) { "Invalid direct packet size." }
         output.writeLong(packet.size.toLong())
         output.write(packet)
@@ -54,6 +77,46 @@ class DirectPacketConnection private constructor(
                 offset += count
             }
         } catch (failure: Throwable) { close(); throw failure }
+    }
+
+    fun send(authorization: DirectPacketSendAuthorization, packetFactory: () -> ByteArray) {
+        var publication: FutureTask<Unit>? = null
+        authorization.authorizeEnqueue {
+            check(publication == null) { "Packet authorization invoked enqueue more than once." }
+            val packet = packetFactory()
+            require(packet.isNotEmpty() && packet.size <= MAXIMUM_PACKET_BYTES) { "Invalid direct packet size." }
+            val task = FutureTask { writePacket(packet) }
+            enqueuePublication(task)
+            publication = task
+        }
+        val task = checkNotNull(publication) { "Packet authorization did not enqueue." }
+        // No ownership lock is held while a socket write waits for the peer.
+        awaitPublication(task)
+    }
+
+    private fun enqueuePublication(task: FutureTask<Unit>) {
+        try {
+            publicationExecutor.execute(task)
+        } catch (error: RuntimeException) {
+            // Never continue a stream whose packet/sequence could not be published.
+            close()
+            throw error
+        }
+    }
+
+    private fun awaitPublication(task: FutureTask<Unit>) {
+        try {
+            task.get()
+        } catch (error: InterruptedException) {
+            // A queued packet cannot be recalled. End the connection before another sender
+            // can reuse its stream after abandoning an uncertain publication.
+            close()
+            Thread.currentThread().interrupt()
+            throw error
+        } catch (error: ExecutionException) {
+            close()
+            throw error.cause ?: error
+        }
     }
 
     @Synchronized
@@ -101,7 +164,12 @@ class DirectPacketConnection private constructor(
     }
 
     override fun close() {
-        socket.close()
+        try {
+            socket.close()
+        } finally {
+            // Drain queued tasks against the closed socket, so their waiters receive an error.
+            publicationExecutor.shutdown()
+        }
     }
 
     companion object {
@@ -186,6 +254,7 @@ class DirectSecureChannel internal constructor(
             supportsDurableJobs = true,
             supportsCanonicalExtraction = false,
             transfer = TransferCapabilities(),
+            scopedDailyNoteVersions = listOf(1),
         )
         sendControl(LegacyCodec.hello(hello))
     }
@@ -197,14 +266,41 @@ class DirectSecureChannel internal constructor(
     }
 
     fun <T> sendV2(type: String, serializer: SerializationStrategy<T>, payload: T) {
+        sendV2(type, serializer, payload, null)
+    }
+
+    fun <T> sendV2(
+        type: String,
+        serializer: SerializationStrategy<T>,
+        payload: T,
+        authorization: DirectPacketSendAuthorization?,
+    ) {
         val nativeBytes = V2Codec.encode(type, serializer, payload)
-        sendControl(deterministicCore.canonicalizeV2Envelope(nativeBytes))
+        sendEncrypted(deterministicCore.canonicalizeV2Envelope(nativeBytes), authorization)
     }
 
     fun receiveV2(): ReceivedEnvelope = observingFailure {
         val payload = receive()
         require(payload is ReceivedSecurePayload.Control) { "Expected a control message." }
         V2Codec.decode(deterministicCore.canonicalizeV2Envelope(payload.bytes))
+    }
+
+    fun receiveV2(checkOwnership: () -> Unit): ReceivedEnvelope =
+        continueWhileOwned(checkOwnership) { receiveV2() }
+
+    fun pollV2(timeoutMillis: Int, checkOwnership: () -> Unit): ReceivedEnvelope? =
+        continueWhileOwned(checkOwnership) { pollV2(timeoutMillis) }
+
+    private fun <T> continueWhileOwned(checkOwnership: () -> Unit, operation: () -> T): T {
+        checkOwnership()
+        val result = try {
+            operation()
+        } catch (error: Throwable) {
+            checkOwnership()
+            throw error
+        }
+        checkOwnership()
+        return result
     }
 
     fun pollV2(timeoutMillis: Int): ReceivedEnvelope? = observingFailure {
@@ -215,6 +311,15 @@ class DirectSecureChannel internal constructor(
     }
 
     fun sendTransferChunk(transferId: String, sequence: Int, data: ByteArray) {
+        sendTransferChunk(transferId, sequence, data, null)
+    }
+
+    fun sendTransferChunk(
+        transferId: String,
+        sequence: Int,
+        data: ByteArray,
+        authorization: DirectPacketSendAuthorization?,
+    ) {
         val nativeFrame = BinaryTransferFrame.encode(transferId, sequence, data)
         sendBinary(
             deterministicCore.encodeTransferFrame(
@@ -223,12 +328,17 @@ class DirectSecureChannel internal constructor(
                 data = data,
                 nativeFrame = nativeFrame,
             ),
+            authorization,
         )
     }
 
     fun sendBinary(frame: ByteArray) {
+        sendBinary(frame, null)
+    }
+
+    fun sendBinary(frame: ByteArray, authorization: DirectPacketSendAuthorization?) {
         require(frame.startsWithBytes(BINARY_MAGIC)) { "Invalid transfer frame." }
-        sendEncrypted(frame)
+        sendEncrypted(frame, authorization)
     }
 
     fun receive(): ReceivedSecurePayload = observingFailure { receiveEncryptedFrame(packet.receive()) }
@@ -349,17 +459,23 @@ class DirectSecureChannel internal constructor(
     }
 
     @Synchronized
-    private fun sendEncrypted(plaintext: ByteArray) = observingFailure {
+    private fun sendEncrypted(plaintext: ByteArray, authorization: DirectPacketSendAuthorization? = null) = observingFailure {
         synchronized(sendLock) {
-            check(nextSendSequence != Long.MAX_VALUE) { "Direct send sequence exhausted." }
-            val envelope = ByteBuffer.allocate(SECURE_MAGIC.size + Long.SIZE_BYTES + plaintext.size)
-                .put(SECURE_MAGIC)
-                .putLong(nextSendSequence)
-                .put(plaintext)
-                .array()
-            nextSendSequence += 1
-            packet.send(LegacyCodec.encrypted(DirectCrypto.seal(envelope, sessionKey)))
-        }
+        if (authorization == null) packet.send(encryptedPacket(plaintext))
+        else packet.send(authorization) { encryptedPacket(plaintext) }
+    }
+
+    }
+
+    private fun encryptedPacket(plaintext: ByteArray): ByteArray {
+        check(nextSendSequence != Long.MAX_VALUE) { "Direct send sequence exhausted." }
+        val envelope = ByteBuffer.allocate(SECURE_MAGIC.size + Long.SIZE_BYTES + plaintext.size)
+            .put(SECURE_MAGIC)
+            .putLong(nextSendSequence)
+            .put(plaintext)
+            .array()
+        nextSendSequence += 1
+        return LegacyCodec.encrypted(DirectCrypto.seal(envelope, sessionKey))
     }
 }
 

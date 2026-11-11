@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
     <application>
         <activity android:name=".presentation.MainActivity" android:launchMode="singleTop" android:exported="true">
             <intent-filter>
@@ -9,6 +10,22 @@
                 <data android:scheme="healthmd" android:host="myself" android:path="/claim" />
             </intent-filter>
         </activity>
+        <!-- Clinic sync requests (FCM). Firebase starts only from reviewed build configuration
+             when a patient enables sync requests; no automatic init or token creation. -->
+        <service
+            android:name=".data.clinicsync.HealthMdMessagingService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
+        <meta-data
+            android:name="firebase_messaging_auto_init_enabled"
+            android:value="false" />
+        <provider
+            android:name="com.google.firebase.provider.FirebaseInitProvider"
+            android:authorities="${applicationId}.firebaseinitprovider"
+            tools:node="remove" />
         <!-- OAuth redirect callback for direct cloud health providers. -->
         <activity
             android:name=".presentation.oauth.OAuthCallbackActivity"
@@ -21,6 +38,12 @@
                 <data
                     android:scheme="healthmd"
                     android:host="oauth2redirect" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="healthmd" android:host="oauth" android:path="/callback" />
             </intent-filter>
         </activity>
     </application>

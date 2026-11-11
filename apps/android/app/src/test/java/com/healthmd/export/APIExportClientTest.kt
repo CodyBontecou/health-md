@@ -18,6 +18,7 @@ import org.junit.Test
 class APIExportClientTest {
     private lateinit var server: MockWebServer
     private lateinit var client: APIExportClient
+    private lateinit var entitlements: com.healthmd.testing.FakeExportEntitlements
 
     @Before
     fun setUp() {
@@ -34,12 +35,14 @@ class APIExportClientTest {
         server = MockWebServer()
         server.useHttps(serverCertificates.sslSocketFactory(), false)
         server.start()
+        entitlements = com.healthmd.testing.FakeExportEntitlements()
         client = APIExportClient(
             OkHttpClient.Builder()
                 .sslSocketFactory(clientCertificates.sslSocketFactory(), clientCertificates.trustManager)
                 .followRedirects(true)
                 .followSslRedirects(true)
-                .build()
+                .build(),
+            entitlements
         )
     }
 
@@ -148,5 +151,72 @@ class APIExportClientTest {
         assertThat(redirectedRequest.method).isEqualTo("POST")
         assertThat(redirectedRequest.getHeader("Authorization")).isEqualTo("Bearer secret")
         assertThat(redirectedRequest.body.readUtf8()).contains("healthmd.api_export")
+    }
+
+    @Test
+    fun managedClinicDeliveryKeepsCredentialsAndResponsesScopedAfterPersonalPurchase() = runTest {
+        entitlements.personalAccess = true
+        entitlements.clinicEndpoint = server.url("/clinic").toString()
+        entitlements.clinicAuthorization = "Bearer clinic-upload-secret"
+        server.enqueue(MockResponse().setResponseCode(202).setBody("private clinic response"))
+        val result = client.upload(server.url("/clinic").toString(), "{}", "Bearer unrelated-personal-secret",
+            listOf(APIExportRequestHeader("X-Personal-Secret", "unrelated-secret")))
+        assertThat(result.responseBodyPreview).isNull()
+        val request = server.takeRequest()
+        assertThat(request.getHeader("Authorization")).isEqualTo("Bearer clinic-upload-secret")
+        assertThat(request.getHeader("X-Personal-Secret")).isNull()
+
+        server.enqueue(MockResponse().setResponseCode(400).setBody("private rejection details"))
+        try {
+            client.upload(server.url("/clinic").toString(), "{}", null, emptyList())
+            throw AssertionError("Clinic rejection was accepted")
+        } catch (expected: APIExportClientException) {
+            assertThat(expected.message).doesNotContain("private rejection details")
+        }
+
+        server.enqueue(MockResponse().setResponseCode(307).addHeader("Location", server.url("/other")))
+        try {
+            client.upload(server.url("/clinic").toString(), "{}", null, emptyList())
+            throw AssertionError("Managed clinic redirect was followed after purchase")
+        } catch (expected: APIExportClientException) {
+            assertThat(expected.statusCode).isEqualTo(307)
+        }
+        assertThat(server.requestCount).isEqualTo(3)
+
+        server.enqueue(MockResponse().setResponseCode(204))
+        client.upload(server.url("/personal").toString(), "{}", "Bearer personal-secret", emptyList())
+        server.takeRequest()
+        server.takeRequest()
+        assertThat(server.takeRequest().getHeader("Authorization")).isEqualTo("Bearer personal-secret")
+    }
+
+    @Test
+    fun sponsoredDeliveryRejectsSubstitutionAndRedirectsBeforeLeakingCredentials() = runTest {
+        entitlements.personalAccess = false
+        entitlements.clinicEndpoint = server.url("/clinic").toString()
+        try {
+            client.upload(server.url("/other").toString(), "{}", "Bearer patient-secret", emptyList())
+            throw AssertionError("Substituted endpoint was admitted")
+        } catch (expected: com.healthmd.data.export.APIExportClientException) {
+            assertThat(expected.retryable).isFalse()
+        }
+        assertThat(server.requestCount).isEqualTo(0)
+        server.enqueue(MockResponse().setResponseCode(307).addHeader("Location", server.url("/other")))
+        try {
+            client.upload(server.url("/clinic").toString(), "{}", "Bearer patient-secret", emptyList())
+            throw AssertionError("Clinic redirect was followed")
+        } catch (expected: com.healthmd.data.export.APIExportClientException) {
+            assertThat(expected.statusCode).isEqualTo(307)
+        }
+        assertThat(server.requestCount).isEqualTo(1)
+        assertThat(server.takeRequest().path).isEqualTo("/clinic")
+        entitlements.clinicEndpoint = null
+        try {
+            client.upload(server.url("/clinic").toString(), "{}", "Bearer patient-secret", emptyList())
+            throw AssertionError("Revoked access was admitted")
+        } catch (expected: com.healthmd.data.export.APIExportClientException) {
+            assertThat(expected.retryable).isFalse()
+        }
+        assertThat(server.requestCount).isEqualTo(1)
     }
 }

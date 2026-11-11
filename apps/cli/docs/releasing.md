@@ -253,7 +253,7 @@ both workspaces and their extracted `.crate` archives. Running the workflow defi
 allows a reviewed publication-workflow fix to recover a failed first attempt without moving or
 replacing the release tag.
 
-Publication is retry-safe. For each crate in protocol → operations → client → MCP → CLI order, the workflow
+Publication is retry-safe. For each crate in protocol → shared core → operations → client → MCP → CLI order, the workflow
 packages the local source, checks whether the exact version already exists, and compares the downloaded
 registry archive byte-for-byte. An identical archive is accepted; a checksum mismatch fails
 closed. If `cargo publish` returns an unknown outcome, the workflow polls and performs the same
@@ -262,13 +262,17 @@ both the workflow and helper provide a repository-identifying user agent. The wo
 configuration intentionally applies even when a recovery run checks out an older immutable release
 SHA whose helper predates the explicit user-agent flag.
 
-Internal path dependencies carry exact versions, so crates must be published in dependency order and allowed to propagate through the index before publishing the next crate. Run these from the repository root. `healthmd-protocol`
-is published from the shared-core workspace before the four CLI-workspace crates:
+Internal path dependencies carry exact versions, so crates must be published in dependency order and allowed to propagate through the index before publishing the next crate. Run these from the repository root. `healthmd-protocol` and `healthmd-core` (the shared deterministic note merger)
+are published from the shared-core workspace before the four CLI-workspace crates:
 
 ```bash
 cargo publish --manifest-path packages/healthmd-core-rust/crates/healthmd-protocol/Cargo.toml --locked --dry-run
 cargo publish --manifest-path packages/healthmd-core-rust/crates/healthmd-protocol/Cargo.toml --locked
 # Wait until: cargo search healthmd-protocol --limit 1
+
+cargo publish --manifest-path packages/healthmd-core-rust/crates/healthmd-core/Cargo.toml --locked --dry-run
+cargo publish --manifest-path packages/healthmd-core-rust/crates/healthmd-core/Cargo.toml --locked
+# Wait until: cargo search healthmd-core --limit 1
 
 cargo publish --manifest-path apps/cli/crates/healthmd-operations/Cargo.toml --locked --dry-run
 cargo publish --manifest-path apps/cli/crates/healthmd-operations/Cargo.toml --locked

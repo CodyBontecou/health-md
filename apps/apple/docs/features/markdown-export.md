@@ -98,6 +98,24 @@ For exact records:
 | Custom writing disappeared | Write mode was Overwrite | Use **Update** for hand-edited notes. |
 | Sections duplicated | Write mode was Append | Use **Update** for repeat exports. |
 
+## Daily-note workout tables
+
+With **Daily Note Injection → Inject Metric Sections** enabled, workout sections include summary
+bullets and Details, Samples, and available Metadata tables. The frontmatter **Include Metadata**
+setting controls YAML; it does not hide the workout Metadata table. Compact/Standard/Detailed
+templates do not provide a summary-only workout switch, and a custom `{{workout_list}}` uses the
+same renderer.
+
+Deleting a table by hand is temporary: the next injection replaces app-managed sections. To keep
+only frontmatter properties, turn **Inject Metric Sections** off; this also removes the workout
+summary bullets from the injected body. There is currently no setting that retains those bullets
+while selectively omitting all workout tables.
+
+For support or implementation changes, inspect `workoutsListMarkdown(...)` in
+[`MarkdownExporter.swift`](../../HealthMd/Shared/Export/MarkdownExporter.swift) and managed-section
+replacement in [`MarkdownMerger.swift`](../../HealthMd/Shared/Export/MarkdownMerger.swift).
+Revalidate this limitation when adding workout presentation controls.
+
 ## Video outline
 
 - **Suggested title:** Readable Apple Health Notes with Lossless Capture Diagnostics

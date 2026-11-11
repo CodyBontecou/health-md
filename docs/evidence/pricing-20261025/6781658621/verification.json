@@ -1,0 +1,17 @@
+{
+  "app": "healthmd",
+  "kind": "upgrade",
+  "id": "6781658621",
+  "us_price": "19.99",
+  "non_us_overrides": 153,
+  "territories_verified": 175,
+  "mismatches": [],
+  "actual_us": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJVU0EiLCJwIjoiMTAxNzcifQ",
+    "price": "19.99",
+    "proceeds": "16.99",
+    "currency": "USD",
+    "manual": true
+  },
+  "method": "Raw API includes matched by full product/territory/point ID; CLI resolved output had incorrect amounts in some storefronts."
+}

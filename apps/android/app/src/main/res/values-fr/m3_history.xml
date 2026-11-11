@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- History status labels shown beside a status icon (no glyph prefix). -->
+    <string name="m3_history_status_success">Réussie</string>
+    <string name="m3_history_status_partial">Partielle</string>
+    <string name="m3_history_status_failed">Échouée</string>
+    <plurals name="m3_history_snapshot_actions">
+        <item quantity="one">%1$d/%2$d action d\'instantané</item>
+        <item quantity="many">%1$d/%2$d actions d\'instantané</item>
+        <item quantity="other">%1$d/%2$d actions d\'instantané</item>
+    </plurals>
+</resources>

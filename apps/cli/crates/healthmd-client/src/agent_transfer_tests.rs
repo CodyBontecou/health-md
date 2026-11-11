@@ -225,6 +225,7 @@ pub(super) async fn send_transfer_with_original(
             channel,
             platform,
             DirectMessage::FileManifest(Unlabeled::from(a::FileManifest {
+                scoped_note_policy: None,
                 job_id: SwiftUuid(session.job_id),
                 file_id: SwiftUuid(file_id),
                 relative_path: path.clone(),
@@ -234,6 +235,7 @@ pub(super) async fn send_transfer_with_original(
                     .unwrap(),
             })),
             v2::Message::ArtifactManifest(v2::ArtifactManifest {
+                scoped_note_policy: None,
                 job_id: session.job_id,
                 artifact_id: file_id,
                 kind: v2::ArtifactKind::GeneratedFile,

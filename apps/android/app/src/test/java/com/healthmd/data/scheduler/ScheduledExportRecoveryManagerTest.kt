@@ -391,6 +391,7 @@ class ScheduledExportRecoveryManagerTest {
                 acceptedSettings,
                 pin = null,
                 zone = ZoneId.of("UTC"),
+                captureContext = com.healthmd.domain.model.AndroidCaptureContext(ZoneId.of("UTC"), com.healthmd.domain.model.SleepDayAttribution.NIGHT_BEGINS),
             ),
         )
         val currentSettings = acceptedSettings.copy(
@@ -562,7 +563,7 @@ class ScheduledExportRecoveryManagerTest {
         exportHistoryRepository = historyRepository,
         rawSnapshotService = rawSnapshotService,
         apiCredentialStore = apiCredentialStore,
-        entitlementRepository = FakeBillingRepository(),
+        entitlementRepository = FakeBillingRepository(initialUnlocked = true),
         distributionPolicy = DistributionPolicy.play(),
     )
 }

@@ -398,30 +398,6 @@ impl GatewayServer {
         }
         panic!("no loopback candidate port answered; attempted {ports:?}");
     }
-
-    /// Spawn on the documented default bind (127.0.0.1:8791).
-    fn spawn_default_bind(layout: &Layout) -> Self {
-        const DEFAULT_PORT: u16 = 8_791;
-        let claim = TcpListener::bind(("127.0.0.1", DEFAULT_PORT))
-            .expect("the default gateway port must be claimable for this scenario");
-        drop(claim);
-        let mut child = Command::new(env!("CARGO_BIN_EXE_healthmd"))
-            .args(["data", "ingest-serve", "--database"])
-            .arg(layout.database())
-            .stdin(Stdio::null())
-            .stdout(Stdio::null())
-            .stderr(gateway_stderr_log(DEFAULT_PORT))
-            .spawn()
-            .expect("healthmd data ingest-serve should launch");
-        assert!(
-            wait_for_listener(&mut child, DEFAULT_PORT),
-            "the gateway must bind its documented default 127.0.0.1:8791"
-        );
-        Self {
-            child,
-            port: DEFAULT_PORT,
-        }
-    }
 }
 
 impl Drop for GatewayServer {
@@ -1018,11 +994,13 @@ fn allowlisted_origin_is_accepted() {
 }
 
 #[test]
-fn the_default_bind_is_loopback_8791() {
+fn explicit_loopback_bind_serves_ingest() {
     let _gateway_serialization = gateway_suite_lock();
 
     let layout = Layout::new();
-    let server = GatewayServer::spawn_default_bind(&layout);
+    // The parser unit test pins the default. HTTP tests must not require a
+    // public documented port to be unused by the developer's other services.
+    let server = GatewayServer::spawn(&layout, [48_401, 48_403], &[]);
     let manifest = manifest_for(COMPLETE_DAY.as_bytes(), &complete(), &[]);
     let response = post_ingest(server.port, &manifest, COMPLETE_DAY.as_bytes());
     assert_eq!(response.status, 200);

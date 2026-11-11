@@ -115,7 +115,7 @@ final class ClinicianReportViewModelTests: XCTestCase {
         XCTAssertTrue(viewModel.isBusy)
         XCTAssertFalse(viewModel.isConfigurationEditable)
         let earlier = calendar.date(byAdding: .day, value: -3, to: today)!
-        viewModel.selectPreset(.days7)
+        viewModel.selectPreset(.days90)
         viewModel.setCustomRange(start: earlier, end: earlier)
         viewModel.toggleMetric(.heartRate)
         viewModel.selectRecommendedMetrics()

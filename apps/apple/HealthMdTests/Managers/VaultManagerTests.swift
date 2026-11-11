@@ -692,6 +692,28 @@ final class VaultManagerTests: XCTestCase {
 
     // MARK: - Durable exact artifact I/O
 
+    func testExactArtifactWriteModesPreserveContentAndReplayWithoutDuplicateAppend() async throws {
+        for mode in [WriteMode.append, .update] {
+            let root = makeTempDir()
+            defer { try? FileManager.default.removeItem(at: root) }
+            let manager = makeRealFileSystemManager(vaultURL: root)
+            let binding = try manager.exactDestinationBinding()
+            let path = "Health/2026-03-08.md"
+            let original = "---\nprivate: preserved\n---\n# Journal\n## Personal\nPersonal text.\n"
+            try await manager.overwriteExactUTF8Artifact(relativePath: path, data: Data(original.utf8), binding: binding)
+            let patch = Data("---\nsteps: 42\n---\n## Activity\nSteps: 42\n".utf8)
+            try await manager.overwriteExactUTF8Artifact(relativePath: path, data: patch, binding: binding, writeMode: mode)
+            let first = try Data(contentsOf: root.appendingPathComponent(path))
+            XCTAssertTrue(String(decoding: first, as: UTF8.self).contains("Personal text."))
+            XCTAssertTrue(String(decoding: first, as: UTF8.self).contains("steps: 42"))
+            let state = try await manager.inspectExactUTF8Artifact(relativePath: path, expectedData: patch,
+                binding: binding, writeMode: mode)
+            XCTAssertEqual(state, .exact)
+            try await manager.overwriteExactUTF8Artifact(relativePath: path, data: patch, binding: binding, writeMode: mode)
+            XCTAssertEqual(try Data(contentsOf: root.appendingPathComponent(path)), first)
+        }
+    }
+
     func testExactArtifactIOUsesRawBytesAndAtomicDescriptorRelativeWrite() async throws {
         let root = makeTempDir()
         defer { try? FileManager.default.removeItem(at: root) }

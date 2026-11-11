@@ -2712,6 +2712,12 @@ fn map_direct_file_error(error: ClientError) -> CommandError {
 
 #[allow(clippy::needless_pass_by_value)]
 fn map_direct_client_error(error: ClientError) -> CommandError {
+    if let ClientError::ExportRejected(rejection) = &error {
+        return CommandError {
+            code: "direct_export_rejected",
+            message: rejection.to_string(),
+        };
+    }
     let code = match error {
         ClientError::JobNotFound => "job_not_found",
         ClientError::JobExpired => "job_expired",
@@ -2843,6 +2849,31 @@ const fn command_name(command: &Command) -> &'static str {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn ingest_gateway_defaults_to_loopback_8791_and_accepts_explicit_bind() {
+        for (extra, expected) in [
+            (vec![], "127.0.0.1:8791"),
+            (vec!["--bind", "127.0.0.1:48401"], "127.0.0.1:48401"),
+        ] {
+            let mut args = vec![
+                "healthmd",
+                "data",
+                "ingest-serve",
+                "--database",
+                "/private/agent.sqlite",
+            ];
+            args.extend(extra);
+            let cli = Cli::try_parse_from(args).unwrap();
+            let Command::Data(DataArgs {
+                command: Some(DataCommand::IngestServe(options)),
+            }) = cli.command
+            else {
+                panic!("expected ingest-serve arguments");
+            };
+            assert_eq!(options.bind.to_string(), expected);
+        }
+    }
 
     fn empty_dates() -> DateArgs {
         DateArgs {
@@ -3574,6 +3605,30 @@ mod tests {
             options.oauth_issuer.unwrap().as_str(),
             "https://auth.health.md/"
         );
+    }
+
+    #[test]
+    fn android_export_rejection_is_not_cli_receipt_corruption() {
+        use healthmd_protocol::v2::{ErrorCode, ExportPhase};
+        for map in [map_direct_file_error, map_direct_client_error] {
+            let mapped = map(ClientError::ExportRejected(
+                healthmd_client::ExportRejection {
+                    code: ErrorCode::QuotaExhausted,
+                    phase: ExportPhase::Preparing,
+                    retryable: false,
+                },
+            ));
+            assert_eq!(mapped.code, "direct_export_rejected");
+            assert!(mapped.message.contains("quota_exhausted"));
+            assert!(mapped.message.contains("preparing"));
+            assert!(mapped.message.contains("retryable: false"));
+            assert!(mapped.message.contains("billing"));
+            assert!(!mapped.message.contains("integrity"));
+        }
+        let corrupt = map_direct_file_error(ClientError::InvalidTransfer("digest mismatch".into()));
+        assert_eq!(corrupt.code, "invalid_direct_file_receipt");
+        let malformed = map_direct_client_error(ClientError::MalformedPacket);
+        assert_ne!(malformed.code, "direct_export_rejected");
     }
 
     #[test]

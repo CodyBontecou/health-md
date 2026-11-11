@@ -160,7 +160,7 @@ class MetricSelectionAccessibilityTest(display: AccessibilityDisplayCase) : Acce
         field.assertIsFocused().assertMinimumTouchTarget().assertFullyVisible().assertInsideList()
         val query = text(HealthMetrics.allMetrics.first().displayNameRes())
             .take(3).uppercase(Locale.forLanguageTag(display.language))
-        field.performTextReplacement(query)
+        field.performTextReplacement("  $query  ")
         field.assertIsFocused().assertTextContains(query)
         assertTextFits(field, GeistType.copy16.fontSize)
         // This synthetic Back callback records navigation without removing the fixture,
@@ -229,6 +229,7 @@ class MetricSelectionAccessibilityTest(display: AccessibilityDisplayCase) : Acce
         field.performImeAction()
         compose.onAllNodes(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Checkbox))
             .assertCountEquals(0)
+        compose.onNodeWithText(text(R.string.metric_search_no_results)).assertExists()
         assertNavigation(fixture, tapBack = false)
         node(MetricSelectionTags.SEARCH_ACTION).performTouchInput { click() }
         field.performTextReplacement("   ")

@@ -46,7 +46,7 @@ it("executes v2 enrollment, OAuth/FCM, replay, rotation and revoke on local work
   }));
   try {
     const DB = await mf.getD1Database("DB");
-    for (const migration of ["0001_init.sql", "0002_fcm_v2.sql"]) {
+    for (const migration of ["0001_init.sql", "0002_delegated_sync_fcm.sql", "0002_fcm_v2.sql"]) {
       const sql = readFileSync(new URL(`../migrations/${migration}`, import.meta.url), "utf8");
       for (const statement of sql.replace(/--[^\n]*/g, "").split(";").filter((s) => s.trim())) {
         await DB.prepare(statement).run();

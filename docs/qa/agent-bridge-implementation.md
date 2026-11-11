@@ -7,6 +7,42 @@ Acceptance is the [roadmap](../architecture/agent-bridge-parity-roadmap.md) and 
 
 The active PR-readiness task authorizes source edits, scoped verification and normal pushes to the existing feature branches. Feature merges, releases/deployments, real health reads, native credential provisioning, user settings/schedule mutations, device notifications and physical-device actions retain their separate authorization gates. Dependency repairs #215/#216/#217 were explicitly approved and merged. B19/B20 remain approval-blocked. Missing evidence is not a pass. Unit tests cannot qualify a physical matrix.
 
+## Main-reconciled Cloud parent integration (2026-11-10)
+
+The local bridge candidate integrates Cloud parent
+`c19a88a61cb3333add6a6b93511cb15769585480` through a history-preserving merge.
+That parent's native/generated qualification remains pending; this source integration
+does not qualify it or make either PR ready. Main's consolidated CI policy and public
+contract editions remain authoritative. The previous hosted shard failures below are
+historical evidence under the retired CI topology, not results for the merged source.
+
+Conflict resolution retains bridge-only authority, planning, guarded transport,
+accepted/uncertain Stop, immutable Resume, private journals and receipt checks alongside
+main's operation-scoped provider/sleep capture, scoped personal-note delivery and send
+enqueue leases. The current iOS CLI settings screen carries the existing local agent
+permission controls from the retired Sync screen. Current entitlement expiry bounds
+cached bridge eligibility; purchase/expiry does not reset main's durable free-use ledger.
+Apple app eligibility and Android app scheduler/capture changes still require native
+compilation and owning native regressions in the integration qualification lane.
+
+An added host boundary control fails before rejecting newly optional scoped-note policy
+in both Apple and Android base manifests: existing exact bridge approvals do not authorize
+that separate write policy. No public schema/fixture changes or new bridge advertisement
+are inferred. The separate governance index is regenerated for the merged capability
+inventory while frozen registry-v1 bytes stay unchanged. All pre-existing main capability
+records are retained; the eleven bridge capabilities remain planned.
+
+Wake retains main's delegated-sync FCM contract and the bridge's independent Worker-v2
+management/delivery proofs, fixed notification copy and bounded provider requests in
+separate modules. Both additive migration files retain their original bytes. This is
+source compatibility only, with no remote migration or deployment qualification.
+
+Full installed provisioning/orchestration, recipes/scheduling, remaining output products,
+Windows private authority, killed production-producer recovery and complete physical
+CLI/MCP × Apple/Android acceptance remain required. B19/B20 stay approval-blocked,
+extension-4/default advertisement stays closed, and the candidate remains draft.
+No push, deployment, device QA or heavy native build is part of this integration.
+
 ## Published-head CI diagnosis (2026-11-10)
 
 At published source `5a1a46ede37d53f0cc599ddc284c7dd2f400eae3`,

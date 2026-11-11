@@ -22,41 +22,18 @@ describe("practice component and production-disabled runtime boundary", () => {
     expect(pkg.private).toBe(true); expect(pkg.scripts.check).toContain("typecheck"); expect(pkg.scripts.check).toContain("npm test"); expect(pkg.scripts.check).toContain("npm run build"); expect(pkg.scripts["check:ci"]).toContain("test:e2e"); expect(pkg.scripts["check:ci"]).toContain("check:qualification"); expect(pkg.scripts["dry-run"]).toBeTruthy();
   });
 
-  it("structurally defines focused mobile policy jobs without reusable full-workflow calls", async () => {
-    const workflow = await readFile(resolve(root, "../..", ".github/workflows/practice-ci.yml"), "utf8");
-    expect(workflow).toContain("pull_request:\n  push:\n    branches: [main]\n    paths:");
+  it("runs the isolated practice qualification in the shared web lane", async () => {
+    const lane = await readFile(resolve(root, "../..", "scripts/ci/practice.sh"), "utf8");
+    expect(lane).toContain("cd apps/practice");
+    expect(lane).toContain("npm exec -- vitest run");
+    const workflow = await readFile(resolve(root, "../..", ".github/workflows/ci.yml"), "utf8");
+    expect(workflow).toContain("pull_request:");
     expect(workflow).not.toMatch(/pull_request:\s*\n\s+paths:/);
-    expect(workflow).toContain("- 'apps/apple/HealthMd.xcodeproj/**'");
-    expect(workflow).toContain("- 'apps/android/app/build.gradle.kts'");
-    expect(workflow).toContain("run: npm ci");
-    expect(workflow).toContain("run: npm run check:ci");
-    expect(workflow).toContain("practice-focused-apple-policy:");
-    expect(workflow).toContain("practice-focused-android-policy:");
-    expect(workflow).toContain("workflow_call:");
-    expect(workflow).not.toContain("uses: ./.github/workflows/apple-ci.yml");
-    expect(workflow).not.toContain("uses: ./.github/workflows/android-ci.yml");
-    expect(workflow).not.toContain("xcodebuild");
-    expect(workflow).toContain('plutil -convert json -o "$project_json" apps/apple/HealthMd.xcodeproj/project.pbxproj');
-    expect(workflow).toContain('value.get("isa") == "PBXNativeTarget" and value.get("name") == "HealthMd"');
-    expect(workflow).toContain('checked_configuration_names = {"Release", "Release-iOS"}');
-    expect(workflow).toContain("if len(releases) != 2 or {name for name, _ in releases} != checked_configuration_names:");
-    expect(workflow).toContain("baseConfigurationReference");
-    expect(workflow).toContain("if marker in json.dumps(project, sort_keys=True):");
-    expect(workflow).toContain('os.environ.get("XCODE_XCCONFIG_FILE")');
-    expect(workflow).toContain("for variable, value in os.environ.items():");
-    expect(workflow).toContain("swiftc \"$policy\" \"$harness\"");
-    expect(workflow).toContain("swiftc -D HEALTHMD_PRACTICE_COMPILED_IN");
-    expect(workflow).toContain("-Dhealthmd.practice.expectedCompiledIn=false");
-    expect(workflow).toContain("-Dhealthmd.practice.expectedCompiledIn=true");
-    expect(workflow).toContain("PRACTICE_COMPILED_IN: included");
-    // The included-policy pass no longer needs :app:clean: PRACTICE_COMPILED_IN feeds a
-    // tracked buildConfigField input, so Gradle re-runs GenerateBuildConfig plus the
-    // app-module Kotlin recompile on its own. Both focused passes must still invoke
-    // the exact policy test.
-    expect(workflow).toContain(":app:testPlayDebugUnitTest --tests com.healthmd.domain.practice.PracticeFeaturePolicyTest");
-    expect(workflow.match(/:app:testPlayDebugUnitTest --tests com\.healthmd\.domain\.practice\.PracticeFeaturePolicyTest/g)).toHaveLength(2);
-    expect(workflow).toContain("needs: [changes, validate, practice-focused-apple-policy, practice-focused-android-policy]");
-    expect(workflow.match(/ref: \$\{\{ github\.sha \}\}/g)).toHaveLength(3);
+    expect(workflow).toContain("python3 scripts/ci/run.py");
+    const web = await readFile(resolve(root, "../..", "scripts/ci/practice.sh"), "utf8");
+    expect(web).toContain("npm ci --ignore-scripts");
+    expect(web).not.toContain("xcodebuild");
+    expect(web).not.toContain("wrangler deploy");
   });
 
   it("has no website/legacy Worker dependency and no deployment route or persistence binding", async () => {

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="m3_schedule_clinic_destination_title">Назначение клиники</string>
+    <string name="m3_schedule_clinic_destination_body">Этим назначением управляет ваша клиника. Используйте «Доступ клиники», чтобы выбрать его или управлять общим доступом. Для других назначений нужен ваш собственный доступ к Health.md.</string>
+</resources>

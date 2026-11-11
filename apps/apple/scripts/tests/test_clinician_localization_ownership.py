@@ -12,7 +12,7 @@ spec.loader.exec_module(validator)
 
 
 class SharedUIOwnershipTests(unittest.TestCase):
-    def test_current_shared_setup_owns_close_without_exempting_other_legacy_keys(self):
+    def test_current_feedback_fallback_owns_close_without_exempting_other_legacy_keys(self):
         apple = Path(__file__).resolve().parents[2]
         owned = validator.reviewed_shared_ui_keys(apple)
         self.assertEqual(owned, {"Close"})
@@ -23,9 +23,9 @@ class SharedUIOwnershipTests(unittest.TestCase):
             apple = Path(directory)
             with contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
                 validator.reviewed_shared_ui_keys(apple)
-            owner = apple / "HealthMd/iOS/SharedSetup/SharedSetupCoordinator.swift"
+            owner = apple / "HealthMd/Shared/Utilities/FeedbackReporter.swift"
             owner.parent.mkdir(parents=True)
-            owner.write_text('Button("Finish") {}')
+            owner.write_text('Button(String(localized: "Finish")) {}')
             with contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
                 validator.reviewed_shared_ui_keys(apple)
 

@@ -8,15 +8,18 @@ final class AppleClinicianReportDataSource {
     private let fetch: Fetch
     private let now: () -> Date
     private let sourceAdapter: AppleClinicianReportSourceAdapter
+    private let resolveCaptureContext: (TimeZone) throws -> AppleSleepCaptureContext?
 
     init(
         fetch: @escaping Fetch,
         now: @escaping () -> Date = Date.init,
-        sourceAdapter: AppleClinicianReportSourceAdapter = AppleClinicianReportSourceAdapter()
+        sourceAdapter: AppleClinicianReportSourceAdapter = AppleClinicianReportSourceAdapter(),
+        resolveCaptureContext: @escaping (TimeZone) throws -> AppleSleepCaptureContext? = { _ in nil }
     ) {
         self.fetch = fetch
         self.now = now
         self.sourceAdapter = sourceAdapter
+        self.resolveCaptureContext = resolveCaptureContext
     }
 
     convenience init(healthKitManager: HealthKitManager, now: @escaping () -> Date = Date.init) {
@@ -36,7 +39,11 @@ final class AppleClinicianReportDataSource {
                 metricSelection: selection,
                 timeZone: timeZone
             )
-        }, now: now)
+        }, now: now, resolveCaptureContext: { timeZone in
+            let context = AppleSleepCaptureContext.resolve(timeZone: timeZone, attribution: healthKitManager.sleepDayAttribution)
+            try context.requireShippedProfile()
+            return context
+        })
     }
 
     func load(
@@ -45,6 +52,7 @@ final class AppleClinicianReportDataSource {
         locale: Locale = .current,
         progress: ProgressHandler = { _, _ in }
     ) async throws -> ClinicianReportInput {
+        let captureContext = try resolveCaptureContext(timeZone)
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = timeZone
         let generationDate = now()
@@ -69,7 +77,9 @@ final class AppleClinicianReportDataSource {
         for (index, date) in dates.enumerated() {
             try Task.checkCancellation()
             do {
-                let healthData = try await fetch(date, selection, timeZone)
+                let healthData = try await AppleSleepCaptureContext.pinned.withValue(captureContext) {
+                    try await fetch(date, selection, timeZone)
+                }
                 try Task.checkCancellation()
                 let day = sourceAdapter.adapt(
                     healthData,

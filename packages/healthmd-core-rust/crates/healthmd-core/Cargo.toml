@@ -8,7 +8,8 @@ authors.workspace = true
 license.workspace = true
 repository.workspace = true
 homepage.workspace = true
-publish = false
+publish = ["crates-io"]
+readme = "README.md"
 
 [dependencies]
 base64.workspace = true

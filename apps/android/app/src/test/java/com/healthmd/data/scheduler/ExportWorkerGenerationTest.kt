@@ -209,10 +209,11 @@ class ExportWorkerGenerationTest {
             apiRunner.exportDates(
                 dates = any(),
                 settings = capture(exportedSettings),
-                onProgress = null,
+                onProgress = any(),
                 expectedDestinationFingerprint = API_FINGERPRINT,
                 durableOperationId = capture(exportedOperationId),
                 durableSettingsSnapshotJson = any(),
+                requireExistingDurableOperation = any(),
             )
         } returns ExportResult(1, 1, target = ExportTarget.API_ENDPOINT)
         val scheduler = mockk<ExportScheduler>(relaxed = true)
@@ -269,10 +270,11 @@ class ExportWorkerGenerationTest {
             apiRunner.exportDates(
                 dates = any(),
                 settings = any(),
-                onProgress = null,
+                onProgress = any(),
                 expectedDestinationFingerprint = API_FINGERPRINT,
                 durableOperationId = any(),
                 durableSettingsSnapshotJson = any(),
+                requireExistingDurableOperation = any(),
             )
         } returns ExportResult(1, 1, target = ExportTarget.API_ENDPOINT)
         val scheduler = mockk<ExportScheduler>(relaxed = true)
@@ -306,10 +308,11 @@ class ExportWorkerGenerationTest {
             apiRunner.exportDates(
                 dates = any(),
                 settings = any(),
-                onProgress = null,
+                onProgress = any(),
                 expectedDestinationFingerprint = API_FINGERPRINT,
                 durableOperationId = any(),
                 durableSettingsSnapshotJson = any(),
+                requireExistingDurableOperation = any(),
             )
         }
         coVerify(exactly = 1) { scheduler.reconcile() }
@@ -341,10 +344,11 @@ class ExportWorkerGenerationTest {
             apiRunner.exportDates(
                 dates = any(),
                 settings = any(),
-                onProgress = null,
+                onProgress = any(),
                 expectedDestinationFingerprint = API_FINGERPRINT,
                 durableOperationId = any(),
                 durableSettingsSnapshotJson = any(),
+                requireExistingDurableOperation = any(),
             )
         } returns ExportResult(
             successCount = 0,
@@ -441,10 +445,11 @@ class ExportWorkerGenerationTest {
             apiRunner.exportDates(
                 dates = capture(exportedDates),
                 settings = any(),
-                onProgress = null,
+                onProgress = any(),
                 expectedDestinationFingerprint = API_FINGERPRINT,
                 durableOperationId = any(),
                 durableSettingsSnapshotJson = any(),
+                requireExistingDurableOperation = any(),
             )
         } answers {
             ExportResult(
@@ -519,10 +524,11 @@ class ExportWorkerGenerationTest {
             apiRunner.exportDates(
                 dates = capture(exportedDates),
                 settings = any(),
-                onProgress = null,
+                onProgress = any(),
                 expectedDestinationFingerprint = API_FINGERPRINT,
                 durableOperationId = any(),
                 durableSettingsSnapshotJson = any(),
+                requireExistingDurableOperation = any(),
             )
         } answers {
             val dates = exportedDates.captured
@@ -660,7 +666,7 @@ class ExportWorkerGenerationTest {
                 timeCalculator = ScheduledExportTimeCalculator(),
                 stateStore = stateStore,
                 exportScheduler = Lazy { exportScheduler },
-                entitlementRepository = FakeBillingRepository(),
+                entitlementRepository = FakeBillingRepository(initialUnlocked = true),
                 distributionPolicy = DistributionPolicy.play(),
             )
         }

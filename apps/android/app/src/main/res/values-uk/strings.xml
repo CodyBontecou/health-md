@@ -297,19 +297,15 @@
     <!-- Paywall screen -->
     <string name="paywall_title">Розблокувати Health.md</string>
     <string name="paywall_subtitle">Ви використали 5 безплатних експортів</string>
-    <string name="paywall_unlimited_exports">Необмежені експорти назавжди</string>
+    <string name="paywall_unlimited_exports">Необмежені експорти</string>
     <string name="paywall_scheduled_exports">Автоматизовані заплановані експорти</string>
     <string name="paywall_future_features">Усі майбутні функції включені</string>
-    <string name="paywall_one_time">Одноразовий платіж — без підписки</string>
-    <string name="paywall_unlock_button">Розблокувати Health.md</string>
     <string name="paywall_restore">Відновити покупку</string>
 
     <!-- Export progress dialog -->
     <string name="export_progress_title">Експортування даних про здоров\'я</string>
 
     <!-- Navigation labels -->
-    <string name="nav_export">Експорт</string>
-    <string name="nav_schedule">Розклад</string>
     <string name="nav_history">Історія</string>
     <string name="nav_settings">Параметри</string>
 
@@ -339,6 +335,7 @@
     <string name="date_format_display_iso8601" tools:ignore="TypographyDashes">ISO 8601 (2026-01-13)</string>
     <string name="date_format_display_us_short">Короткий формат США (01/13/2026)</string>
     <string name="date_format_display_us_long">Довгий формат США (січень 13, 2026)</string>
+    <string name="date_format_display_eu_dot">Європейський із крапками (13.01.2026)</string>
     <string name="date_format_display_eu_short">Короткий формат ЄС (13/01/2026)</string>
     <string name="date_format_display_eu_long">Довгий формат ЄС (13 січня 2026)</string>
     <string name="date_format_display_compact">Компактний (20260113)</string>
@@ -536,7 +533,6 @@
     <string name="debug_requires_history_permission">Діапазон потребує історії</string>
     <string name="debug_first_permission_grant">Перше надання дозволу</string>
     <string name="section_health_sources">Джерела здоров\'я</string>
-    <string name="health_sources_description">Health Connect — локальне джерело експорту. Health.md може експортувати дані, які підтримувані застосунки записують у Health Connect.</string>
     <string name="health_provider_status_installed">Установлено</string>
     <string name="health_provider_status_selected">Вибрано</string>
     <string name="health_provider_status_ready_to_connect">Готово до підключення</string>
@@ -554,6 +550,21 @@
     <string name="feedback_no_app_available">Немає доступної програми для відкриття цього посилання</string>
     <string name="granular_data_title">Додайте детальний часовий ряд</string>
     <string name="granular_data_description">Додайте зразки з часовими мітками, як-от частоту серцевих скорочень і стадії сну, до експорту сумісності. Для повної копії API використовуйте необроблений знімок API.</string>
+    <string name="detail_overrides_title">Деталізація за категоріями</string>
+    <string name="detail_overrides_description">Перевизначте типове значення для окремих категорій. «Підсумок» зберігає лише денні підсумки; денні зведення ніколи не змінюються.</string>
+    <string name="detail_choice_default">Типово</string>
+    <string name="detail_choice_summary">Підсумок</string>
+    <string name="detail_choice_sessions">Сеанси</string>
+    <string name="detail_choice_detailed">Детально</string>
+    <string name="detail_group_sleep_hint">«Сеанси» перелічує кожен сеанс сну з повною датою й часом. «Детально» додає фази сну.</string>
+    <string name="detail_expansion_schema_hint">«Детально» для активності, харчування або тіла додає кожен вихідний запис і переводить аналітичні експорти JSON, CSV і Markdown на схему 7.</string>
+    <string name="sleep_attribution_title">Належність сну до дня</string>
+    <string name="sleep_attribution_night_begins">Ніч початку</string>
+    <string name="sleep_attribution_morning_ends">Ранок завершення</string>
+    <string name="sleep_attribution_night_begins_description">Сон використовує проміжок щоденної нотатки від полудня до наступного полудня. Це стандартне значення, яке збігається з попередніми експортами.</string>
+    <string name="sleep_attribution_morning_ends_description">Ранок завершення недоступний для поточних профілів експорту. Виберіть Ніч початку для нового експорту.</string>
+    <string name="sleep_attribution_morning_ends_wake_description">Відносить увесь сеанс сну до дати пробудження в часовому поясі експорту.</string>
+
     <string name="metric_category_cycling">Велоспорт</string>
     <string name="metric_category_medications">Ліки</string>
     <string name="metric_category_other">Інше</string>
@@ -658,17 +669,11 @@
     <string name="scheduled_recovery_result_complete">Заплановане відновлення завершено.</string>
     <string name="scheduled_recovery_result_blocked">Планове відновлення ще не готове.</string>
     <string name="not_now">Не зараз</string>
-    <string name="release_notes_title">Що нового в %s</string>
-    <string name="release_notes_settings_hint">Ви можете налаштувати формати експорту, власний Markdown і показники в налаштуваннях.</string>
-    <string name="release_notes_open_settings">Відкрийте налаштування</string>
-    <string name="release_notes_got_it">Зрозуміло</string>
     <string name="release_notes_highlight_feedback">Сесії Direct CLI автоматично перепід\'єднуються після коротких розривів зв\'язку з комп\'ютером, тому експорти надійно завершуються.</string>
     <string name="release_notes_highlight_export_parity">Команди вікна пробудження на комп\'ютері чекають до 120 секунд, поки ви відкриєте застосунок і під\'єднаєтесь, — без push-сповіщень.</string>
     <string name="release_notes_highlight_templates">Ручне з\'єднання за адресою, портом і 20-значним кодом досі працює, зокрема зі старішими версіями CLI.</string>
     <string name="release_notes_highlight_workouts">Додано виправлення надійності та сумісності для налаштування, експорту, розкладів і підключень.</string>
     <string name="export_notification_background_permission_required">Для запланованого експорту потрібен фоновий доступ Health Connect. Відкрийте Health.md &gt; Розклад, щоб увімкнути його.</string>
-    <string name="paywall_unlock_button_price">Розблокувати за %s</string>
-    <string name="paywall_purchasing">Обробка\u2026</string>
     <string name="paywall_restoring">Відновлення\u2026</string>
     <string name="debug_purchase_title">Елементи управління налагодженням</string>
     <string name="debug_current_state">Поточний стан: %s</string>
@@ -721,7 +726,7 @@
     <string name="privacy_category_history_permissions">READ_HEALTH_DATA_HISTORY</string>
     <string name="privacy_category_history_exports">Використовується лише для великих ручних експортів, наприклад за 90 днів або за весь час, щоб Health.md міг читати дані Health Connect, старші за стандартний 30-денний період.</string>
     <string name="privacy_policy_direct_cli">Експорт Direct CLI відбувається лише після того, як ви явно створите пару з комп’ютером і підключитеся до нього. Медичні записи надсилаються через автентифіковане зашифроване з’єднання, конфіденційно зберігаються не довше семи днів для відновлюваного передавання та видаляються раніше, якщо ви скасуєте або забудете це сполучення.</string>
-    <string name="privacy_policy_footer">Health.md не керує хмарним сховищем даних про здоров’я. Власна атрибуція кампаній Health.md може надсилати випадкові UUID установлень або подій, згенеровані застосунком, і перевірені метадані кампанії, але ніколи не надсилає дані про здоров’я, необроблені дані джерела переходу, ідентифікатори пристрою, експортовані дані, дані облікового запису чи шляхи.</string>
+    <string name="privacy_policy_footer">Ця версія не збирає власну аналітику використання або дані рекламної атрибуції. Для покупок, розкладів і додаткових сервісів передбачено окремі відомості про конфіденційність.</string>
     <string name="section_export_type">Тип експорту</string>
     <string name="export_type_compatibility">Експорт сумісності</string>
     <string name="export_type_compatibility_description">Щоденні файли Markdown, Bases, JSON або CSV для існуючих робочих процесів Health.md</string>
@@ -793,7 +798,7 @@
     <string name="onboarding_skip">Пропустити</string>
     <string name="onboarding_back">Назад</string>
     <string name="export_failure_paywall_label">Потрібно розблокувати</string>
-    <string name="export_guidance_paywall">Для запланованого експорту потрібне довічне розблокування. Відкрийте систему оплати, щоб розблокувати необмежений експорт і планування.</string>
+    <string name="export_guidance_paywall">Для експорту за розкладом потрібен активний пробний період або передплата чи довічний доступ. Відкрийте екран покупки, щоб переглянути варіанти доступу.</string>
     <string name="export_source_retry">Повторна спроба</string>
     <string name="export_source_shortcut">Ярлик</string>
     <string name="export_source_remote">Віддалений запуск</string>
@@ -1141,6 +1146,8 @@
     <string name="export_preview_api_preparation_failed">Не вдалося підготувати експорт API.</string>
     <string name="export_preview_artifacts_per_range">Артефактів на діапазон</string>
     <string name="export_preview_back_description">Назад до попереднього перегляду експорту</string>
+    <string name="export_preview_wrap_lines">Переносити рядки</string>
+    <string name="export_preview_format_text">Форматувати текст</string>
     <string name="export_preview_destination_label">Призначення</string>
     <string name="export_preview_empty_file">(порожній файл)</string>
     <string name="export_preview_formats_per_day">Форматів на день</string>
@@ -1602,4 +1609,47 @@
     <string name="post_export_upgrade_action">Переглянути довічний доступ</string>
     <string name="post_export_manual_action">Продовжити ручний експорт</string>
     <string name="post_export_continue_free">Продовжити безплатно</string>
+    <string name="export_sleep_date_guidance">Сон охоплює період від полудня вибраної дати до полудня наступного дня. Для сну минулої ночі виберіть «Учора».</string>
+    <string name="export_sleep_preview_window">Вікно сну: від полудня %1$s до полудня %2$s (%3$s).</string>
+    <string name="export_sleep_preview_guidance">Якщо сон відсутній, спробуйте попередню дату. Ранковий сон може потрапити до її підсумку, навіть якщо вихідні записи датовані сьогодні. Помилки запитів наведено окремо; порожній результат також може означати недоступність читання.</string>
+    <string name="export_sleep_date_guidance_morning_ends">Сеанси сну цілком належать до дати їх завершення в часовому поясі експорту. Для сну минулої ночі виберіть «Сьогодні».</string>
+    <string name="export_sleep_preview_window_morning_ends">Дати завершення сну: з %1$s по %2$s (%3$s).</string>
+    <string name="export_sleep_preview_guidance_morning_ends">Сеанси сну цілком належать до дати завершення в часовому поясі цього експорту, без обрізання опівдні. Помилки запитів наведено окремо; порожній результат також може означати недоступність читання.</string>
+    <string name="whoop_connection_description">Підключіть WHOOP для експорту відновлення, навантаження, сну, тренувань і вимірювань тіла. Вхід відбувається в браузері; Health.md зберігає токени зашифрованими на цьому пристрої. Відключення видаляє збережене підключення на цьому пристрої.</string>
+    <string name="whoop_connect">Підключити WHOOP</string>
+    <string name="whoop_sources_description">Підключіть WHOOP для прямого експорту від постачальника або продовжуйте використовувати Health Connect для локальних записів.</string>
+    <string name="whoop_sign_in_failed">Не вдалося почати вхід у WHOOP. Перевірте з’єднання та спробуйте ще раз.</string>
+    <string name="whoop_use_health_connect">Використовувати Health Connect для експорту</string>
+    <string name="whoop_reconnect">Повторно підключити WHOOP</string>
+    <string name="whoop_disconnect">Відключити WHOOP</string>
+    <string name="whoop_use_for_exports">Використовувати WHOOP для експорту</string>
+    <string name="paywall_access_subtitle">Виберіть підписку або довічний доступ, щоб створити приватний архів здоров’я. Доступні для пробного періоду підписки включають 7 безкоштовних днів.</string>
+    <string name="paywall_plan_choices">Тижневий, річний або довічний доступ</string>
+    <string name="paywall_weekly_price">%1$s / тиждень</string>
+    <string name="paywall_yearly_price">%1$s / рік</string>
+    <string name="paywall_lifetime_price">Довічно — %1$s одноразово</string>
+    <string name="paywall_trial_then">7 днів безкоштовно, потім %1$s</string>
+    <string name="paywall_retry">Спробувати ще раз</string>
+    <string name="paywall_manage_subscriptions">Керувати підписками</string>
+    <string name="paywall_terms">Умови</string>
+    <string name="paywall_privacy">Конфіденційність</string>
+    <string name="paywall_subscription_disclosure">Відповідні підписки включають безкоштовний пробний період на 7 днів, а потім автоматично поновлюються за вказаною ціною, якщо їх не скасувати до завершення пробного або поточного періоду. Керуйте або скасуйте в Google Play. Довічний доступ оплачується відразу одним платежем. Наявний платний доступ зберігається. Довічне судження не має. Видалення програми або купівля Lifetime не скасовує існуючу підписку.</string>
+    <plurals name="widget_archive_gaps">
+        <item quantity="one">%1$s пропуск</item>
+        <item quantity="few">%1$s пропуски</item>
+        <item quantity="many">%1$s пропусків</item>
+        <item quantity="other">%1$s пропуску</item>
+    </plurals>
+    <plurals name="widget_archive_days_in_month">
+        <item quantity="one">день за %1$s</item>
+        <item quantity="few">дні за %1$s</item>
+        <item quantity="many">днів за %1$s</item>
+        <item quantity="other">дня за %1$s</item>
+    </plurals>
+
+    <string name="clinic_sync_channel_name">Запити синхронізації від клініки</string>
+    <string name="clinic_sync_request_body">Ваша клініка запитує ваші останні дані про здоров’я. Торкніться, щоб надіслати їх.</string>
+    <string name="clinic_sync_result_sent">Ваші останні дані надіслано до клініки.</string>
+    <string name="clinic_sync_result_failed">Не вдалося надіслати дані до клініки. Відкрийте Health.md і спробуйте ще раз.</string>
+    <string name="clinic_sync_result_profile_missing">Відкрийте доступ клініки в Health.md і спочатку виберіть «Використовувати призначення клініки».</string>
 </resources>

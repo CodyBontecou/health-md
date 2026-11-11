@@ -7,7 +7,7 @@ afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
 it("dispatches a verified v2 wake via a signed OAuth assertion and a fixed visible FCM notification", async () => {
   vi.spyOn(Date, "now").mockReturnValue(NOW);
-  const DB = new TestD1(["0001_init.sql", "0002_fcm_v2.sql"]);
+  const DB = new TestD1(["0001_init.sql", "0002_delegated_sync_fcm.sql", "0002_fcm_v2.sql"]);
   const { pem, publicKey } = await syntheticPem("fcm");
   const credentials = {
     type: "service_account", project_id: "synthetic-project",
@@ -60,7 +60,7 @@ it("dispatches a verified v2 wake via a signed OAuth assertion and a fixed visib
 });
 
 it("keeps OAuth tokens request-local rather than reusing one across Worker requests", async () => {
-  const DB = new TestD1(["0001_init.sql", "0002_fcm_v2.sql"]);
+  const DB = new TestD1(["0001_init.sql", "0002_delegated_sync_fcm.sql", "0002_fcm_v2.sql"]);
   let clock = NOW;
   vi.spyOn(Date, "now").mockImplementation(() => clock);
   const config = JSON.stringify({ type: "service_account", project_id: "synthetic-project",

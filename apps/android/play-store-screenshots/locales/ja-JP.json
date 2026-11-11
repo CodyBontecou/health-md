@@ -1,48 +1,48 @@
 {
   "schemaVersion": 1,
   "locale": "ja-JP",
-  "status": "draft",
+  "status": "reviewed",
   "direction": "ltr",
   "slides": [
     {
-      "id": "core-export",
-      "headline": "健康データを、自分のファイルに。",
-      "supportingLine": "許可したHealth Connectの記録を、自分で管理できるファイルに書き出せます。"
+      "id": "text-file",
+      "headline": "あなたを、テキストファイルに。",
+      "supportingLine": "Health.md は Health Connect を読み取り、毎日を Markdown・CSV・JSON の自分のファイルとして書き出します。"
     },
     {
-      "id": "export-formats",
-      "headline": "自分に合った形式で書き出し",
-      "supportingLine": "Markdown、Obsidian Bases、JSON、CSVに対応。"
+      "id": "interrogate",
+      "headline": "自分のカラダを、問いただそう。",
+      "supportingLine": "健康ファイルを、いつもの AI やツールへ。フォルダ、CLI、API で渡せます。"
     },
     {
-      "id": "health-metrics",
-      "headline": "100種類以上の健康指標",
-      "supportingLine": "睡眠、アクティビティ、心臓、バイタル、栄養など。"
+      "id": "periodic-table",
+      "headline": "あなたの元素周期表。",
+      "supportingLine": "書き出す指標を細かく選べます。睡眠、心拍、アクティビティ、バイタル、栄養など。"
     },
     {
-      "id": "private-by-design",
-      "headline": "読み取り専用。プライバシー重視。",
-      "supportingLine": "アカウント不要。Health.mdの健康データ用クラウドもありません。"
+      "id": "day-itemized",
+      "headline": "あなたの一日を、明細書に。",
+      "supportingLine": "決めたスケジュールでデイリーノートが Vault に届きます。あとは読むだけ。"
     },
     {
-      "id": "scheduled-exports",
-      "headline": "アーカイブをいつも最新に",
-      "supportingLine": "選択した保存先への書き出しをスケジュールできます。"
+      "id": "pin-your-sleep",
+      "headline": "睡眠を標本にして、じっくり観察。",
+      "supportingLine": "Health Connect が記録した睡眠ステージをすべてファイルに保存。過去100夜と見比べられます。"
     },
     {
-      "id": "file-preview",
-      "headline": "書き出す前にプレビュー",
-      "supportingLine": "書き込み前にファイル名、パス、内容を確認できます。"
+      "id": "quilt",
+      "headline": "あなたの一か月を、パッチワークに。",
+      "supportingLine": "アーカイブには書き出したすべての日が並び、埋めるべき欠落も教えてくれます。"
     },
     {
-      "id": "home-screen-widgets",
-      "headline": "健康状態をひと目で",
-      "supportingLine": "アクティビティ、睡眠、心臓、概要のウィジェット。"
+      "id": "preserved",
+      "headline": "保存先は、あなたのデバイス。",
+      "supportingLine": "Health Connect のデータはスマホから直接あなたのファイルへ。Health.md のクラウドは一切経由しません。"
     },
     {
-      "id": "direct-cli",
-      "headline": "パソコンへ直接書き出し",
-      "supportingLine": "Health.md CLIとペアリングし、クラウドを経由せず認証・暗号化された書き出しを行えます。"
+      "id": "at-a-glance",
+      "headline": "あなたの数字を、ひと目で。",
+      "supportingLine": "アーカイブ、アクティビティ、心拍、睡眠をホーム画面のウィジェットで。"
     }
   ]
 }

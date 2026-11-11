@@ -1017,6 +1017,24 @@ final class SharedSetupCoordinator: ObservableObject {
     /// coordinator plus the v2 sidecar's preserved extensions — and encodes
     /// canonical `schema_version: 2` bytes exclusively. A missing resolver
     /// or owner fails closed; there is no other writer to fall back to.
+    /// The active profile in shared-setup form, for the import summary. Nil hides the
+    /// summary; the full review does not depend on it.
+    /// The active profile's local schedule, which can hold a sub-3-hour Today Refresh
+    /// interval that the shared format (whole hours) cannot carry.
+    func currentActiveScheduleEntryForComparison() -> ScheduledExportEntry? {
+        guard let context = v2ExportContextResolver?(), let activeID = context.activeProfileID else { return nil }
+        return context.scheduledEntries.first { $0.profileID == activeID }
+    }
+
+    func currentActiveProfileForComparison() -> SharedSetupV2.Profile? {
+        guard let data = try? exportData(appVersion: "0"),
+              let document = try? SharedSetupV2Codec.decode(data)
+        else {
+            return nil
+        }
+        return document.profiles.first { $0.bundleID == document.activeProfile }
+    }
+
     func exportData(appVersion: String, calendar: Calendar = .current) throws -> Data {
         guard let context = v2ExportContextResolver?() else {
             throw SharedSetupV2CoordinatorError.v2ExportContextUnavailable
@@ -1284,13 +1302,21 @@ struct SharedSetupFlowView: View {
                     )
                 }
             }
+            .glassFormChrome()
             .navigationTitle(
                 coordinator.v2Result == nil
-                    ? "Review Shared Setup"
+                    ? "Review setup"
                     : (coordinator.v2ResultWasUndo ? "Import Undone" : "Setup Applied")
             )
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Close") { coordinator.finish(); dismiss() } } }
+            // ImportSetupG: opened from a document or link, so the flow stays modal, but its
+            // header is the board's Back (no Close).
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    GlassBackButton { coordinator.finish(); dismiss() }
+                        .accessibilityIdentifier("sharedSetup.back")
+                }
+            }
             .onAppear(perform: seedV2SelectionFromPreview)
             .onChange(of: coordinator.loadedPreview) { _, _ in seedV2SelectionFromPreview() }
         }
@@ -1304,80 +1330,210 @@ struct SharedSetupFlowView: View {
         v2ApplyMode = .add
     }
 
+    private func changeSummary(_ preview: SharedSetupV2ImportPlan) -> SharedSetupChangeSummary? {
+        guard let current = coordinator.currentActiveProfileForComparison(),
+              let incoming = preview.document.profiles.first(where: { $0.bundleID == preview.activeBundleID })
+        else {
+            return nil
+        }
+        var currentFacts = SharedSetupChangeSummary.Facts(current)
+        if let entry = coordinator.currentActiveScheduleEntryForComparison() {
+            currentFacts.todayRefreshMinutes = entry.todayRefreshEnabled ? entry.todayRefreshMinutes : nil
+        }
+        return SharedSetupChangeSummary(
+            current: currentFacts,
+            incoming: .init(incoming),
+            on: String(localized: "On"),
+            off: String(localized: "Off"),
+            todayRefreshLabel: ExportSchedule.todayRefreshLabel
+        )
+    }
+
+    /// A local minute interval stays on the existing profile when Add appends the
+    /// imported setups; the shared format cannot carry it.
+    private func unsharedRefreshMinutes() -> Int? {
+        guard v2ApplyMode == .add,
+              let entry = coordinator.currentActiveScheduleEntryForComparison(),
+              entry.todayRefreshEnabled,
+              entry.todayRefreshMinutes < 180
+        else { return nil }
+        return entry.todayRefreshMinutes
+    }
+
+    private func reviewHeadline(_ preview: SharedSetupV2ImportPlan, changes: Int?) -> String {
+        let name = preview.document.profiles.first { $0.bundleID == preview.activeBundleID }?.name
+            ?? preview.activeBundleID
+        // Zero differences from the active setup is not "0 changes": in Add mode the
+        // setup still becomes a new profile, so name it alone.
+        guard let changes, changes > 0 else { return "“\(name)”" }
+        return changes == 1
+            ? String(localized: "“\(name)” · 1 change")
+            : String(localized: "“\(name)” · \(changes) changes")
+    }
+
+    private func reviewSource(_ preview: SharedSetupV2ImportPlan) -> String {
+        let version = preview.document.createdBy.appVersion
+        let format = preview.document.schemaVersion
+        switch preview.document.createdBy.platform {
+        case .apple: return String(localized: "Shared from Health.md \(version) · setup format v\(format)")
+        case .android: return String(localized: "Shared from Health.md for Android \(version) · setup format v\(format)")
+        }
+    }
+
+    private func applySelected(_ preview: SharedSetupV2ImportPlan) {
+        do {
+            _ = try coordinator.applyV2(
+                selectedBundleIDs: orderedV2Selection(in: preview),
+                mode: v2ApplyMode
+            )
+        } catch {
+            // The coordinator publishes errorMessage for the alert.
+        }
+    }
+
+    private func glassNote(_ title: String?, _ message: String, systemImage: String, tint: KeyPath<GlassPalette, Color>) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: systemImage).foregroundStyle(Color.glassAdaptive(tint)).accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 6) {
+                if let title {
+                    Text(title).font(.system(size: 15, weight: .semibold)).foregroundStyle(Color.glassAdaptive(\.text))
+                }
+                Text(message).font(.system(size: 14)).foregroundStyle(Color.glassAdaptive(\.sec))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(.vertical, 4)
+        .accessibilityElement(children: .combine)
+        .listRowBackground(
+            RoundedRectangle(cornerRadius: GlassMetrics.panelSmallRadius, style: .continuous)
+                .fill(Color.glassAdaptive(\.glassStrong))
+                .overlay(
+                    RoundedRectangle(cornerRadius: GlassMetrics.panelSmallRadius, style: .continuous)
+                        .strokeBorder(Color.glassAdaptive(tint), lineWidth: 1)
+                )
+        )
+    }
+
+    private func changeTitle(_ field: SharedSetupChangeSummary.Field) -> String {
+        switch field {
+        case .formats: return String(localized: "Formats")
+        case .dateFormat: return String(localized: "Date format")
+        case .filename: return String(localized: "Filename")
+        case .metrics: return String(localized: "Metrics")
+        case .todayRefresh: return String(localized: "Today refresh")
+        case .dailyNotes: return String(localized: "Daily notes")
+        }
+    }
+
     private func v2Review(_ preview: SharedSetupV2ImportPlan) -> some View {
         let selectionAvailable = coordinator.isV2TransactionAvailable && !preview.hasInvalidItems
+        let summary = changeSummary(preview)
         return List {
-            Section("Bundle overview") {
-                LabeledContent("Version", value: "2")
-                LabeledContent("Profiles", value: "\(preview.document.profiles.count)")
-                LabeledContent("Active sender profile", value: preview.activeBundleID)
-                Text("This is a read-only review. Loading and changing future profile selection perform no writes.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+            Section {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(reviewHeadline(preview, changes: summary?.rows.count))
+                        .font(.system(size: 17, weight: .bold))
+                        .foregroundStyle(Color.glassAdaptive(\.text))
+                    Text(reviewSource(preview))
+                        .font(.system(size: 13))
+                        .foregroundStyle(Color.glassAdaptive(\.muted))
+                }
+                .padding(.vertical, 6)
+                .accessibilityElement(children: .combine)
+            }
+            .glassFormRows()
+
+            if let summary, !summary.rows.isEmpty {
+                Section("Changes") {
+                    ForEach(summary.rows) { row in
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(changeTitle(row.field))
+                                .font(.system(size: 15, weight: .semibold))
+                                .foregroundStyle(Color.glassAdaptive(\.text))
+                            (Text(verbatim: row.before).strikethrough()
+                                + Text(verbatim: " → ")
+                                + Text(verbatim: row.after).fontWeight(.semibold).foregroundColor(Color.glassAdaptive(\.accent)))
+                                .font(.system(size: 13))
+                                .foregroundStyle(Color.glassAdaptive(\.muted))
+                        }
+                        .padding(.vertical, 4)
+                        .accessibilityElement(children: .combine)
+                        .accessibilityValue(String(localized: "\(row.before) to \(row.after)"))
+                    }
+                }
+                .glassFormRows()
             }
 
-            if !preview.items.isEmpty {
-                Section("Bundle compatibility") {
-                    ForEach(preview.items) { compatibilityRow($0) }
+            Section {
+                glassNote(
+                    String(localized: "What stays private"),
+                    String(localized: "Never included: health data, credentials, device pairings, purchases or run history. You can undo right after applying."),
+                    systemImage: "lock",
+                    tint: \.accent
+                )
+            }
+
+            if let minutes = unsharedRefreshMinutes() {
+                Section {
+                    glassNote(
+                        nil,
+                        String(localized: "A \(minutes)-minute refresh can’t be shared between devices, so it was left unchanged."),
+                        systemImage: "exclamationmark.triangle",
+                        tint: \.coral
+                    )
                 }
+            }
+
+            // ImportSetupG covers the bundle summary above. What stays below is what the board
+            // cannot show: fail-closed compatibility notes, the choice of setups in a
+            // multi-setup bundle, custom text to review verbatim, and Add or Replace.
+            let attentionItems = preview.items.filter { $0.status != .applied }
+                + preview.profiles.flatMap { $0.items.filter { $0.status != .applied } }
+            if !attentionItems.isEmpty {
+                Section {
+                    ForEach(Array(attentionItems.enumerated()), id: \.offset) { compatibilityRow($0.element) }
+                }
+                .glassFormRows()
             }
 
             ForEach(preview.document.profiles, id: \.bundleID) { profile in
-                Section {
-                    if selectionAvailable {
-                        v2ProfileSelectionRow(profile: profile, plan: preview)
-                    }
-                    LabeledContent("Bundle ID", value: profile.bundleID)
-                    LabeledContent(
-                        "Formats",
-                        value: profile.export.formats.isEmpty
-                            ? "None"
-                            : profile.export.formats.map(\.rawValue).joined(separator: ", ")
-                    )
-                    LabeledContent("Selected metrics", value: "\(profile.metrics.enabledIDs.count)")
-                    LabeledContent("Destination", value: destinationSummary(profile.destination))
-                    LabeledContent("Schedule", value: scheduleSummary(profile.schedule))
-
-                    let hasCustomContent = profile.presentation.markdown.style == .custom ||
-                        !profile.presentation.frontmatter.customValues.isEmpty
-                    LabeledContent(
-                        "Custom content",
-                        value: hasCustomContent ? "Included — review verbatim" : "None"
-                    )
-                    if hasCustomContent {
-                        DisclosureGroup("Review custom content") {
-                            if profile.presentation.markdown.style == .custom {
-                                Text("Custom Markdown")
-                                    .font(.caption.bold())
-                                Text(profile.presentation.markdown.customText)
-                                    .font(.caption.monospaced())
-                                    .textSelection(.enabled)
-                            }
-                            ForEach(
-                                profile.presentation.frontmatter.customValues.keys.sorted(),
-                                id: \.self
-                            ) { key in
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(key).font(.caption.bold())
-                                    Text(profile.presentation.frontmatter.customValues[key] ?? "")
+                let hasCustomContent = profile.presentation.markdown.style == .custom ||
+                    !profile.presentation.frontmatter.customValues.isEmpty
+                if (selectionAvailable && preview.document.profiles.count > 1) || hasCustomContent {
+                    Section {
+                        if selectionAvailable && preview.document.profiles.count > 1 {
+                            v2ProfileSelectionRow(profile: profile, plan: preview)
+                        }
+                        if hasCustomContent {
+                            DisclosureGroup("Review custom content") {
+                                if profile.presentation.markdown.style == .custom {
+                                    Text("Custom Markdown")
+                                        .font(.caption.bold())
+                                    Text(profile.presentation.markdown.customText)
                                         .font(.caption.monospaced())
                                         .textSelection(.enabled)
                                 }
+                                ForEach(
+                                    profile.presentation.frontmatter.customValues.keys.sorted(),
+                                    id: \.self
+                                ) { key in
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(key).font(.caption.bold())
+                                        Text(profile.presentation.frontmatter.customValues[key] ?? "")
+                                            .font(.caption.monospaced())
+                                            .textSelection(.enabled)
+                                    }
+                                }
                             }
                         }
+                    } header: {
+                        Text(verbatim: profile.name)
                     }
-
-                    if let profilePlan = preview.profiles.first(where: {
-                        $0.bundleID == profile.bundleID
-                    }) {
-                        ForEach(profilePlan.items) { compatibilityRow($0) }
-                    }
-                } header: {
-                    Text("\(profile.name) · \(profile.bundleID)")
+                    .glassFormRows()
                 }
             }
 
-            Section(selectionAvailable ? "Apply" : "Apply unavailable") {
+            Section {
                 if preview.hasInvalidItems {
                     Text("This plan contains invalid items and cannot be applied.")
                 } else if coordinator.isV2TransactionAvailable {
@@ -1396,33 +1552,24 @@ struct SharedSetupFlowView: View {
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
-                    Button("Apply Shared Setup v2") {
-                        do {
-                            _ = try coordinator.applyV2(
-                                selectedBundleIDs: orderedV2Selection(in: preview),
-                                mode: v2ApplyMode
-                            )
-                        } catch {
-                            // The coordinator publishes errorMessage for the alert.
-                        }
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .frame(maxWidth: .infinity)
-                    .disabled(!coordinator.canApplyV2(
-                        selectedBundleIDs: orderedV2Selection(in: preview)
-                    ))
-                    .accessibilityIdentifier(AccessibilityID.SharedSetup.apply)
-                    .accessibilityHint("Imports the selected profiles. Every imported destination stays unbound and every imported schedule stays disabled.")
                     Text("Imported profiles are blocked until you rebind each destination on this device. One Undo is available immediately after applying.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 } else {
                     Text("No verified Shared Setup v2 Add/Replace/Undo adapter is installed.")
                 }
-                if !selectionAvailable {
-                    Button("Apply Shared Setup v2") {}
-                        .disabled(true)
-                }
+            }
+            .glassFormRows()
+        }
+        .toolbar {
+            ToolbarItem(placement: .confirmationAction) {
+                Button(String(localized: "Apply")) { applySelected(preview) }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(!selectionAvailable || !coordinator.canApplyV2(
+                        selectedBundleIDs: orderedV2Selection(in: preview)
+                    ))
+                    .accessibilityIdentifier(AccessibilityID.SharedSetup.apply)
+                    .accessibilityHint("Imports the selected profiles. Every imported destination stays unbound and every imported schedule stays disabled.")
             }
         }
     }
@@ -1709,28 +1856,6 @@ struct SharedSetupFlowView: View {
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("\(statusTitle(item.status)): \(item.title). \(item.detail)")
-    }
-
-    private func destinationSummary(_ destination: SharedSetupV2.Destination) -> String {
-        switch destination.kind {
-        case .deviceFolder:
-            "Device folder — local access required"
-        case .connectedMac:
-            "Connected Mac — local pairing required"
-        case .cloud:
-            "Cloud — unsupported, preserved only"
-        case .apiEndpoint:
-            if let endpoint = destination.apiEndpoint {
-                "API endpoint \(endpoint.host)\(endpoint.path) — credentials required"
-            } else {
-                "API endpoint — not configured"
-            }
-        }
-    }
-
-    private func scheduleSummary(_ schedule: SharedSetupV2.Schedule?) -> String {
-        guard let schedule else { return "None" }
-        return "\(schedule.cadence.value) \(schedule.cadence.unit.rawValue) from \(schedule.cadence.anchorDate), weekday \(schedule.weekday), \(String(format: "%02d:%02d", schedule.localTime.hour, schedule.localTime.minute)), \(schedule.lookbackDays)-day lookback — remains off"
     }
 
     private func icon(_ status: SharedSetupCompatibilityStatus) -> String { switch status { case .applied: "checkmark.circle.fill"; case .requiresAction: "exclamationmark.circle.fill"; case .unsupported: "minus.circle.fill"; case .invalid: "xmark.octagon.fill" } }

@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="m3_tools_diagnostics_verbosity">Егжей-тегжей деңгейі</string>
+    <string name="m3_tools_diagnostics_subsystem">Ішкі жүйе</string>
+    <string name="m3_tools_diagnostics_time_range">Уақыт аралығы</string>
+    <string name="m3_tools_diagnostics_events">Соңғы оқиғалар</string>
+    <string name="m3_tools_diagnostics_files">Пакет файлдары</string>
+    <string name="m3_tools_direct_cli_pairing">Компьютеріңізбен жұптау</string>
+    <string name="m3_tools_direct_cli_manual">Қолмен енгізу</string>
+    <string name="m3_tools_direct_cli_computer">Жұпталған компьютер</string>
+    <string name="m3_tools_direct_cli_export">Экспорт</string>
+    <string name="m3_tools_clinic_title">Клиника қолжетімділігі</string>
+    <string name="m3_tools_clinic_intro">Клиникаңыз мақұлданған мекенжайына жеткізуді қаржыландыра алады. Не бөлісетініңізді өзіңіз таңдайсыз. Басқа экспорт орындары үшін өз Health.md қолжетімділігіңіз қажет.</string>
+    <string name="m3_tools_clinic_storage_unavailable">Телефоныңыздың құлпын ашып, қайталап көріңіз. Клиника қолжетімділігін қауіпсіз оқу мүмкін болмады.</string>
+    <string name="m3_tools_clinic_fallback_name">Клиника</string>
+    <string name="m3_tools_clinic_sharing">Бөлісу</string>
+    <string name="m3_tools_clinic_allow_sharing">Осы клиникамен бөлісуге рұқсат ету</string>
+    <string name="m3_tools_clinic_sharing_description">Health.md ішінде өзіңіз таңдаған көрсеткіштер мен күндер ғана жіберіледі. Кесте сақталған таңдауыңызды пайдаланады. Бөлісуді өшіру клиникаға болашақ жүктеулерді тоқтатады; клиника бұрын алған көшірмелерді жоймайды.</string>
+    <string name="m3_tools_clinic_upload_token">Клиниканың жүктеу токені (міндетті емес)</string>
+    <string name="m3_tools_clinic_upload_token_description">Клиникаңыз жеке жүктеу токенін берсе, оны осында енгізіңіз. Ол қауіпсіз сақталады және тек осы клиниканың мақұлданған мекенжайы үшін пайдаланылады.</string>
+    <string name="m3_tools_clinic_use_destination">Клиника мекенжайын пайдалану</string>
+    <string name="m3_tools_clinic_sync_requests">Синхрондау сұраулары</string>
+    <string name="m3_tools_clinic_allow_sync">Осы клиникадан синхрондау сұрауларына рұқсат ету</string>
+    <string name="m3_tools_clinic_sync_description">Клиникаңыз соңғы деректеріңізді сұрап хабарландыру жібере алады. Оны түрткенге дейін ештеңе жіберілмейді; содан кейін кешегі және бүгінгі деректер осы клиникамен бөлісіледі. Мұны өшіру жаңа сұрауларды тоқтатады.</string>
+    <string name="m3_tools_clinic_invitation">Шақыру</string>
+    <string name="m3_tools_clinic_invitation_code">Шақыру коды</string>
+    <string name="m3_tools_clinic_accept_invitation">Шақыруды қабылдау</string>
+    <string name="m3_tools_clinic_not_configured">Health.md-тің бұл нұсқасында клиника қолжетімділігі бапталмаған.</string>
+    <string name="m3_tools_clinic_enrollment_pending">Шақыруыңыз қауіпсіз сақталды. Тіркелуді аяқтау үшін қайталаңыз; жаңа код қажет емес.</string>
+    <string name="m3_tools_clinic_retry_enrollment">Тіркелуді қайталау</string>
+    <string name="m3_tools_clinic_refresh">Клиника қолжетімділігін жаңарту</string>
+    <string name="m3_tools_clinic_disconnect_clinic">Клиниканы ажырату</string>
+    <string name="m3_tools_clinic_error">Клиника қолжетімділігін жаңарту мүмкін болмады. Байланысты тексеріңіз немесе сақталған тіркелуді қайталаңыз.</string>
+    <string name="m3_tools_clinic_disconnect_question">Осы клиниканы ажырату керек пе?</string>
+    <string name="m3_tools_clinic_disconnect_body">Клиника қаржыландыратын бөлісу тоқтайды. Өзіңіз сатып алған қолжетімділік пен жергілікті денсаулық деректері қолжетімді болып қалады.</string>
+    <string name="m3_tools_clinic_disconnect">Ажырату</string>
+    <string name="m3_tools_clinic_sync_sharing_required">Алдымен осы клиникамен бөлісуге рұқсат етіңіз.</string>
+    <string name="m3_tools_clinic_sync_push_unavailable">Health.md-тің бұл нұсқасында синхрондау сұраулары қолжетімсіз.</string>
+    <string name="m3_tools_clinic_sync_notifications_denied">Хабарландыру рұқсаты берілмеді. Параметрлерде Health.md үшін хабарландыруларға рұқсат етіңіз.</string>
+    <string name="m3_tools_clinic_sync_wake_service">Хабарландыру қызметі қолжетімсіз. Кейінірек қайталап көріңіз.</string>
+    <string name="m3_tools_clinic_sync_clinic_unreachable">Клиникаңызбен байланысу мүмкін болмады. Кейінірек қайталап көріңіз.</string>
+    <string name="m3_tools_clinic_sync_storage">Телефоныңыздың құлпын ашып, қайталап көріңіз. Сұрау кілтін қауіпсіз сақтау мүмкін болмады.</string>
+</resources>

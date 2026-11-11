@@ -300,6 +300,17 @@ nonisolated struct MarkdownMerger {
         ))
     }
 
+    /// Exact generated-property projection for a scoped injection. Unselected
+    /// values retain their original bytes; unsupported YAML never gains authority.
+    static func frontmatterProperties(named names: Set<String>, in text: String) -> [String]? {
+        guard let document = frontmatterDocument(from: text),
+              let blocks = propertyBlocks(in: document.content) else { return nil }
+        return blocks.compactMap { block in
+            guard case .string(let key) = block.key, names.contains(key) else { return nil }
+            return document.content[block.range].map(\.raw).joined()
+        }
+    }
+
     /// Split a complete Markdown document at a valid column-zero frontmatter envelope.
     /// The returned strings retain every original line ending.
     static func splitFrontmatter(from content: String) -> (frontmatter: String, body: String)? {

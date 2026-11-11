@@ -170,7 +170,17 @@ data class ExportSettings(
     val metricSelection: MetricSelectionState = MetricSelectionState(),
     val dailyNoteInjection: DailyNoteInjectionSettings = DailyNoteInjectionSettings(),
     val individualTracking: IndividualTrackingSettings = IndividualTrackingSettings(),
+    /**
+     * Default detail level for every [ExportDetailGroup]. Historical global switch; its persisted
+     * meaning is unchanged when [detailOverrides] is empty.
+     */
     val includeGranularData: Boolean = false,
+    /**
+     * Per-group detail overrides keyed by [ExportDetailGroup.wireId] with
+     * [ExportDetailChoice.wireId] values. Missing on all pre-override settings, which therefore
+     * keep their exact previous detail.
+     */
+    val detailOverrides: Map<String, String> = emptyMap(),
     /** Destination for exports started from the Export screen. */
     val exportTarget: ExportTarget = ExportTarget.DEVICE_FOLDER,
     /** Destination captured when WorkManager creates a scheduled export run. */
@@ -208,6 +218,17 @@ data class ExportSettings(
     val executionAPIRecoveryRequired: Boolean = false,
     @Transient
     val executionAPIRecovery: APIRecoveryExecution? = null,
+    /** Operation-only capture authority; never encoded as a mutable/portable preference. */
+    @Transient
+    val executionSleepCaptureContext: AndroidCaptureContext? = null,
+    /** Missing context on recovered work is not permission to read the current preference. */
+    @Transient
+    val executionSleepCaptureAuthorityIsFrozen: Boolean = false,
+    /** Private source-account authority injected by accepted jobs, never a portable preference. */
+    @Transient
+    val executionProviderCaptureAuthority: HealthProviderCaptureAuthority? = null,
+    @Transient
+    val executionProviderCaptureAuthorityIsFrozen: Boolean = false,
 ) {
     val selectedExportFormats: Set<ExportFormat>
         get() = exportFormats
@@ -217,8 +238,60 @@ data class ExportSettings(
     fun effectiveDataTypeSelection(): DataTypeSelection =
         metricSelection.toDataTypeSelection().intersect(dataTypes)
 
-    fun shouldFetchGranularData(): Boolean =
-        includeGranularData || individualTracking.requiresGranularData
+    /** Typed overrides; unknown entries from a newer build are ignored rather than guessed. */
+    fun typedDetailOverrides(): Map<ExportDetailGroup, ExportDetailChoice> =
+        ExportDetailOverrides.validated(detailOverrides)
+            ?: detailOverrides.mapNotNull { (key, value) ->
+                val group = ExportDetailGroup.fromWireId(key) ?: return@mapNotNull null
+                val choice = ExportDetailChoice.fromWireId(value)?.takeIf { it in group.supportedChoices }
+                    ?: return@mapNotNull null
+                group to choice
+            }.toMap()
+
+    /**
+     * Detail sections the export writes. [ExportDetailSelection.analyticalExpansion] is kept only
+     * when this operation resolves to `android-analytical-v7`, so capture never reads arrays a
+     * frozen v4 or wake-date v6 record cannot carry.
+     */
+    fun exportDetailSelection(): ExportDetailSelection {
+        val resolved = ExportDetailSelection.resolve(includeGranularData, typedDetailOverrides())
+        if (!resolved.analyticalExpansion) return resolved
+        val profile = DailyRecordSchemaProfile.resolve(
+            formatCustomization.compatibilitySchemaProfile,
+            resolved,
+            executionSleepCaptureContext?.sleepDayAttribution,
+        )
+        return if (profile.writesDetailExpansion) resolved else resolved.copy(analyticalExpansion = false)
+    }
+
+    /**
+     * Public daily-record profile of local compatibility files for this operation. API v1 output
+     * is separately frozen to v4 by [FormatCustomization.forFrozenApiV4].
+     */
+    fun dailyRecordSchemaProfile(): DailyRecordSchemaProfile = DailyRecordSchemaProfile.resolve(
+        formatCustomization.compatibilitySchemaProfile,
+        exportDetailSelection(),
+        executionSleepCaptureContext?.sleepDayAttribution,
+    )
+
+    /**
+     * Detail sections capture reads: exported detail plus source detail that individual-entry
+     * tracking needs internally. Tracking-only detail is never written to compatibility files.
+     */
+    fun captureDetailSelection(): ExportDetailSelection =
+        exportDetailSelection() union individualTracking.requiredDetailSelection()
+
+    fun shouldFetchGranularData(): Boolean = captureDetailSelection().any
+
+    /**
+     * Sets one group's explicit choice; null returns it to the default. Explicit choices are kept
+     * even when they equal the current default, so changing the default never moves them.
+     */
+    fun withDetailChoice(group: ExportDetailGroup, choice: ExportDetailChoice?): ExportSettings {
+        val updated = typedDetailOverrides().toMutableMap()
+        if (choice == null || choice !in group.supportedChoices) updated.remove(group) else updated[group] = choice
+        return copy(detailOverrides = ExportDetailOverrides.normalized(updated))
+    }
 
     fun formatFilename(date: LocalDate): String =
         applyDatePlaceholders(filenameFormat, date)

@@ -672,11 +672,18 @@ class MetricSelectionState: ObservableObject, Codable {
     @Published var enabledCategories: Set<String>
     /// Provider selection is independent of Apple Health metric/permission state.
     @Published var enabledWHOOPResources: Set<WHOOPResourceName> = Set(WHOOPResourceName.allCases)
+    @Published var nativeDetailMetricIDs: Set<String> = []
+
+    var effectiveNativeDetailMetricIDs: Set<String> {
+        nativeDetailMetricIDs.intersection(enabledMetrics)
+            .intersection(HealthKitRecordCatalog.cataloguedMetricIDs)
+    }
 
     enum CodingKeys: String, CodingKey {
         case enabledMetrics
         case enabledCategories
         case enabledWHOOPResources
+        case nativeDetailMetricIDs
     }
 
     init() {
@@ -751,6 +758,7 @@ class MetricSelectionState: ObservableObject, Codable {
         enabledWHOOPResources = try container.decodeIfPresent(
             Set<WHOOPResourceName>.self, forKey: .enabledWHOOPResources
         ) ?? Set(WHOOPResourceName.allCases)
+        nativeDetailMetricIDs = try container.decodeIfPresent(Set<String>.self, forKey: .nativeDetailMetricIDs) ?? []
     }
 
     func encode(to encoder: Encoder) throws {
@@ -758,6 +766,9 @@ class MetricSelectionState: ObservableObject, Codable {
         try container.encode(enabledMetrics, forKey: .enabledMetrics)
         try container.encode(enabledCategories, forKey: .enabledCategories)
         try container.encode(enabledWHOOPResources, forKey: .enabledWHOOPResources)
+        if !nativeDetailMetricIDs.isEmpty {
+            try container.encode(nativeDetailMetricIDs, forKey: .nativeDetailMetricIDs)
+        }
     }
 
     func isMetricEnabled(_ metricId: String) -> Bool {

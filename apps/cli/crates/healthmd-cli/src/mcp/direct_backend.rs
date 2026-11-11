@@ -1043,6 +1043,19 @@ fn export_success(payload: &FileReceiptPayload) -> Value {
         "failed_date_identifier_count": payload.failed_date_identifiers.len(),
         "failed_date_identifiers_truncated": payload.failed_date_identifiers.len() > MAXIMUM_RECEIPT_PATHS
     });
+    if !payload.skipped_relative_paths.is_empty() {
+        receipt["message"] = json!("Health.md completed the export with skipped notes.");
+        receipt["skipped_relative_paths"] = json!(
+            payload
+                .skipped_relative_paths
+                .iter()
+                .take(MAXIMUM_RECEIPT_PATHS)
+                .collect::<Vec<_>>()
+        );
+        receipt["skipped_relative_path_count"] = json!(payload.skipped_relative_paths.len());
+        receipt["skipped_relative_paths_truncated"] =
+            json!(payload.skipped_relative_paths.len() > MAXIMUM_RECEIPT_PATHS);
+    }
     attach_history_observation(&mut receipt, payload.history_observation.as_ref());
     if let Some(sidecar) = &payload.history_sidecar {
         receipt["history_sidecar"] = json!(sidecar);
@@ -1357,7 +1370,21 @@ fn pairing_backend_error(error: PairingCoordinatorError) -> BackendError {
 }
 
 fn backend_error(error: &ClientError, job_id: Option<Uuid>) -> BackendError {
-    let (code, message, retryable) = match error {
+    let mut mapped = if let ClientError::ExportRejected(rejection) = error {
+        BackendError::new("healthmd_export_rejected", rejection.to_string())
+            .retryable(rejection.retryable)
+    } else {
+        let (code, message, retryable) = backend_error_metadata(error);
+        BackendError::new(code, message).retryable(retryable)
+    };
+    if let Some(job_id) = job_id {
+        mapped = mapped.with_job_id(job_id);
+    }
+    mapped
+}
+
+fn backend_error_metadata(error: &ClientError) -> (&'static str, &'static str, bool) {
+    match error {
         ClientError::DeviceSelectionRequired(devices) if devices.is_empty() => (
             "healthmd_not_paired",
             "No mobile source is paired. Pair a supported device first.",
@@ -1446,12 +1473,7 @@ fn backend_error(error: &ClientError, job_id: Option<Uuid>) -> BackendError {
             "The direct mobile service is unavailable. Keep Health.md foreground and verify Direct CLI Access.",
             true,
         ),
-    };
-    let mut mapped = BackendError::new(code, message).retryable(retryable);
-    if let Some(job_id) = job_id {
-        mapped = mapped.with_job_id(job_id);
     }
-    mapped
 }
 
 #[cfg(test)]
@@ -1460,12 +1482,49 @@ mod tests {
     use healthmd_client::direct::WakeEnrollment;
 
     #[test]
+    fn android_export_rejection_is_not_mcp_integrity_failure() {
+        use healthmd_protocol::v2::{ErrorCode, ExportPhase};
+        let job_id = Uuid::new_v4();
+        for (code, retryable) in [(ErrorCode::QuotaExhausted, false), (ErrorCode::Busy, true)] {
+            let mapped = backend_error(
+                &ClientError::ExportRejected(healthmd_client::ExportRejection {
+                    code,
+                    phase: ExportPhase::Preparing,
+                    retryable,
+                }),
+                Some(job_id),
+            );
+            assert_eq!(mapped.code, "healthmd_export_rejected");
+            assert_eq!(mapped.retryable, retryable);
+            assert_eq!(mapped.job_id, Some(job_id));
+            assert!(mapped.message.contains("preparing"));
+            if code == ErrorCode::QuotaExhausted {
+                assert!(mapped.message.contains("quota_exhausted"));
+                assert!(mapped.message.contains("billing"));
+            }
+            assert!(!mapped.message.contains("integrity"));
+        }
+        let corrupt = backend_error(
+            &ClientError::InvalidTransfer("digest mismatch".into()),
+            Some(job_id),
+        );
+        assert_eq!(corrupt.code, "healthmd_integrity_error");
+        let malformed = backend_error(&ClientError::MalformedPacket, Some(job_id));
+        assert_eq!(malformed.code, "healthmd_protocol_error");
+    }
+
+    #[test]
     fn file_receipt_preserves_optional_frozen_history() {
         let mut value = json!({"job_id":Uuid::new_v4(), "status":"success",
             "destination_path":"/synthetic/vault", "files_written":1,"total_bytes":5,
             "relative_paths":["daily.md"],"success_count":1,"total_count":1,"failed_date_identifiers":[]});
         let legacy: FileReceiptPayload = serde_json::from_value(value.clone()).unwrap();
         assert!(export_success(&legacy).get("history_observation").is_none());
+        assert!(
+            export_success(&legacy)
+                .get("skipped_relative_paths")
+                .is_none()
+        );
         value["history_observation"] = json!({
             "schema":"healthmd.export_history_observation", "schema_version":1,
             "observation_id":Uuid::new_v4(), "operation_id":value["job_id"],
@@ -1486,6 +1545,21 @@ mod tests {
         assert_eq!(receipt["history_sidecar"], value["history_sidecar"]);
         assert_eq!(receipt["files_written"], 1);
         assert_eq!(receipt["status"], "success");
+        value["skipped_relative_paths"] = json!(
+            (0..300)
+                .map(|i| format!("Daily/skipped-{i}.md"))
+                .collect::<Vec<_>>()
+        );
+        let skipped: FileReceiptPayload = serde_json::from_value(value).unwrap();
+        let receipt = export_success(&skipped);
+        assert_eq!(receipt["skipped_relative_path_count"], 300);
+        assert_eq!(
+            receipt["skipped_relative_paths"].as_array().unwrap().len(),
+            256
+        );
+        assert_eq!(receipt["skipped_relative_paths_truncated"], true);
+        assert_eq!(receipt["relative_paths"], json!(["daily.md"]));
+        assert_eq!(receipt["files_written"], 1);
     }
 
     #[test]
@@ -1618,6 +1692,7 @@ mod tests {
     #[test]
     fn file_receipts_preserve_partial_outcomes_and_bound_path_lists() {
         let value = export_success(&FileReceiptPayload {
+            skipped_relative_paths: vec![],
             job_id: SwiftUuid(Uuid::nil()),
             status: "partial_success".into(),
             destination_path: "/synthetic/exports".into(),

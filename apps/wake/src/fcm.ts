@@ -1,6 +1,9 @@
 /** Firebase HTTP-v1, notification-only. All OAuth state is request-local. */
 import { isObject, providerJson } from "./http";
-import { FALLBACK_NOTIFICATION_BODY, NOTIFICATION_TITLE } from "./state";
+import { NOTIFICATION_TITLE } from "./state";
+
+// Worker-v2 copy is independently specified; v1/delegated copy changes do not retarget it.
+const FCM_V2_NOTIFICATION_BODY = "A paired computer is requesting data. Tap to continue.";
 
 export const OAUTH_TOKEN_URL = "https://oauth2.googleapis.com/token";
 export const FCM_SCOPE = "https://www.googleapis.com/auth/firebase.messaging";
@@ -66,7 +69,7 @@ async function assertion(credentials: Credentials, now: number): Promise<string>
 export function fcmNotificationPayload(deliveryToken: string): Record<string, unknown> {
   return { message: {
     token: deliveryToken,
-    notification: { title: NOTIFICATION_TITLE, body: FALLBACK_NOTIFICATION_BODY },
+    notification: { title: NOTIFICATION_TITLE, body: FCM_V2_NOTIFICATION_BODY },
     android: {
       priority: "HIGH", ttl: "300s", restricted_package_name: "com.healthmd.android",
       notification: {

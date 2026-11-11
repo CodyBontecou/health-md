@@ -178,7 +178,9 @@ pub(in crate::agent_bridge::execution) fn decode_base_payload(
             AgentPayload::Android(message) => match message.message {
                 v2::Message::TransferSession(value) => Incoming::Session(Session(value)),
                 v2::Message::ArtifactManifest(value) => {
-                    if value.job_id.to_string() != binding.request.job_id.0 {
+                    if value.job_id.to_string() != binding.request.job_id.0
+                        || value.scoped_note_policy.is_some()
+                    {
                         return Err(Error::BindingChanged.into());
                     }
                     Incoming::Manifest {
@@ -215,7 +217,9 @@ fn decode_apple_message(
     Ok(match message {
         DirectMessage::TransferSession(Unlabeled { value }) => Incoming::Session(session(value)?),
         DirectMessage::FileManifest(Unlabeled { value }) => {
-            if value.job_id.0.to_string() != binding.request.job_id.0 {
+            if value.job_id.0.to_string() != binding.request.job_id.0
+                || value.scoped_note_policy.is_some()
+            {
                 return Err(Error::BindingChanged.into());
             }
             Incoming::Manifest {
@@ -353,4 +357,78 @@ pub(in crate::agent_bridge::execution) fn encode_base_response(
             .map_err(private::unavailable)?
     };
     Ok(plaintext)
+}
+
+#[cfg(all(test, unix))]
+mod scoped_note_tests {
+    use super::*;
+    use crate::agent_retained_test_support as support;
+    use healthmd_protocol::notes::ScopedDailyNotePolicy;
+
+    #[tokio::test]
+    async fn bridge_base_manifests_reject_unapproved_scoped_note_authority() {
+        let (_temporary, _store, _output, request) = support::request().await;
+        let binding = support::native_binding(request);
+        let job = Uuid::parse_str(&binding.request.job_id.0).unwrap();
+        let policy = ScopedDailyNotePolicy {
+            version: 1,
+            record_profile: "apple-v8".into(),
+            owner_date: "2026-03-08".into(),
+            calendar_timezone: "UTC".into(),
+            create_if_missing: true,
+            inject_sections: true,
+        };
+        assert!(policy.is_valid());
+        for scoped_note_policy in [None, Some(policy)] {
+            let apple = apple::FileManifest {
+                job_id: SwiftUuid(job),
+                file_id: SwiftUuid(Uuid::nil()),
+                relative_path: "day.json".into(),
+                byte_count: 6,
+                sha256: "a".repeat(64),
+                write_mode: apple::FileWriteMode::Overwrite,
+                scoped_note_policy: scoped_note_policy.clone(),
+            };
+            let android = v2::ArtifactManifest {
+                job_id: job,
+                artifact_id: Uuid::nil(),
+                kind: v2::ArtifactKind::GeneratedFile,
+                schema: v2::ArtifactSchema {
+                    id: "healthmd.generated-files".into(),
+                    major: 1,
+                },
+                media_type: "application/json".into(),
+                byte_count: 6,
+                sha256: "a".repeat(64),
+                relative_path: Some("day.json".into()),
+                write_mode: Some(v2::FileWriteMode::Overwrite),
+                logical_checksum_sha256: None,
+                snapshot_status: None,
+                provider_id: None,
+                scoped_note_policy: scoped_note_policy.clone(),
+            };
+            let results = [
+                decode_apple_message(
+                    DirectMessage::FileManifest(Unlabeled::from(apple)),
+                    &binding,
+                ),
+                decode_base_payload(
+                    AgentPayload::Android(Box::new(v2::Envelope::new(
+                        v2::Message::ArtifactManifest(android),
+                    ))),
+                    &binding,
+                ),
+            ];
+            for result in results {
+                if scoped_note_policy.is_some() {
+                    assert!(matches!(
+                        result,
+                        Err(ClientError::Agent(Error::BindingChanged))
+                    ));
+                } else {
+                    assert!(matches!(result, Ok(Incoming::Manifest { .. })));
+                }
+            }
+        }
+    }
 }

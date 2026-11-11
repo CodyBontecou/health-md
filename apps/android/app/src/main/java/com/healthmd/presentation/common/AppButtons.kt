@@ -28,7 +28,7 @@ import com.healthmd.presentation.theme.GeistSizes
 import com.healthmd.presentation.theme.GeistType
 import com.healthmd.presentation.theme.LocalGeistColors
 
-/** Geist large primary action: one high-contrast action per view. */
+/** Material 3 filled pill: one primary action per view. */
 @Composable
 fun PrimaryButton(
     text: String,
@@ -45,11 +45,11 @@ fun PrimaryButton(
         modifier = modifier
             .fillMaxWidth()
             .defaultMinSize(minHeight = GeistSizes.controlLarge),
-        shape = RoundedCornerShape(GeistRadii.small),
+        shape = RoundedCornerShape(GeistRadii.full),
         colors = ButtonDefaults.buttonColors(
-            containerColor = colors.gray.c1000,
-            contentColor = colors.background100,
-            disabledContainerColor = colors.gray.c100,
+            containerColor = colors.brandPrimary,
+            contentColor = colors.brandOnPrimary,
+            disabledContainerColor = colors.gray.c200,
             disabledContentColor = colors.gray.c700,
         ),
         elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp),
@@ -58,7 +58,7 @@ fun PrimaryButton(
         if (isLoading) {
             CircularProgressIndicator(
                 modifier = Modifier.size(20.dp),
-                color = colors.background100,
+                color = colors.brandOnPrimary,
                 strokeWidth = 2.dp,
             )
         } else {
@@ -75,7 +75,7 @@ fun PrimaryButton(
     }
 }
 
-/** Geist bordered secondary action. */
+/** Material 3 outlined pill secondary action. */
 @Composable
 fun SecondaryButton(
     text: String,
@@ -89,14 +89,14 @@ fun SecondaryButton(
         onClick = onClick,
         enabled = enabled,
         modifier = modifier.defaultMinSize(minHeight = GeistSizes.controlLarge),
-        shape = RoundedCornerShape(GeistRadii.small),
+        shape = RoundedCornerShape(GeistRadii.full),
         colors = ButtonDefaults.outlinedButtonColors(
-            containerColor = colors.background100,
-            contentColor = colors.gray.c1000,
-            disabledContainerColor = colors.gray.c100,
+            containerColor = Color.Transparent,
+            contentColor = colors.brandPrimary,
+            disabledContainerColor = Color.Transparent,
             disabledContentColor = colors.gray.c700,
         ),
-        border = BorderStroke(1.dp, if (enabled) colors.grayAlpha.c400 else colors.grayAlpha.c200),
+        border = BorderStroke(1.dp, if (enabled) colors.gray.c500 else colors.gray.c300),
         contentPadding = ButtonDefaults.ContentPadding,
     ) {
         Row(
@@ -127,10 +127,10 @@ fun GeistIconButton(
         modifier = modifier.size(size.dp),
         shape = CircleShape,
         colors = IconButtonDefaults.outlinedIconButtonColors(
-            containerColor = colors.background100,
+            containerColor = Color.Transparent,
             contentColor = tint,
         ),
-        border = BorderStroke(1.dp, colors.grayAlpha.c400),
+        border = BorderStroke(1.dp, colors.gray.c500),
     ) {
         Icon(
             imageVector = icon,

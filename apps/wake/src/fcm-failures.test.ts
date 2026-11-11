@@ -15,7 +15,7 @@ beforeAll(async () => {
     client_email: "synthetic-worker@synthetic-project.iam.gserviceaccount.com", token_uri: "https://oauth2.googleapis.com/token" };
 });
 beforeEach(() => {
-  DB = new TestD1(["0001_init.sql", "0002_fcm_v2.sql"]);
+  DB = new TestD1(["0001_init.sql", "0002_delegated_sync_fcm.sql", "0002_fcm_v2.sql"]);
   vi.spyOn(Date, "now").mockReturnValue(NOW);
   for (const name of ["log", "error", "warn", "info", "debug"] as const) vi.spyOn(console, name).mockImplementation(() => {});
 });

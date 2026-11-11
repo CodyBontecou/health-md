@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="m3_schedule_clinic_destination_title">Destino da clínica</string>
+    <string name="m3_schedule_clinic_destination_body">Sua clínica gerencia este destino. Use Acesso da clínica para selecioná-lo ou gerenciar o compartilhamento. Outros destinos exigem seu próprio acesso ao Health.md.</string>
+</resources>

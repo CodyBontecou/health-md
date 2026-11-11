@@ -217,6 +217,12 @@ pub struct PeerCapabilities {
         skip_serializing_if = "Option::is_none"
     )]
     pub export_history_observation_versions: Option<Vec<i32>>,
+    #[serde(
+        rename = "scopedDailyNoteVersions",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub scoped_daily_note_versions: Option<Vec<i32>>,
 }
 
 impl PeerCapabilities {
@@ -236,6 +242,7 @@ impl PeerCapabilities {
             query: None,
             wake: Some(WakeCapabilities { supported: true }),
             export_history_observation_versions: None,
+            scoped_daily_note_versions: None,
         }
     }
 
@@ -278,6 +285,14 @@ impl PeerCapabilities {
                 .as_ref()
                 .is_some_and(|versions| versions.contains(&1)))
         .then_some(1)
+    }
+
+    #[must_use]
+    pub fn negotiated_scoped_daily_note_version(&self, peer: &Self) -> Option<i32> {
+        crate::notes::negotiate_scoped_daily_notes(
+            self.scoped_daily_note_versions.as_deref(),
+            peer.scoped_daily_note_versions.as_deref(),
+        )
     }
 
     #[must_use]

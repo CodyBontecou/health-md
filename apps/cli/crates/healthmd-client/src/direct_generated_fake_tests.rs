@@ -56,7 +56,6 @@ async fn android_channel(
 ) -> SecureChannel {
     let (mut channel, _) =
         connect_fake_mobile(port, 2, &trust.display_name, None, Some(trust)).await;
-    let _ = receive_cli_hello(&mut channel).await;
     channel
         .send(&DirectMessage::Hello(Unlabeled::from(mobile_capabilities(
             trust,
@@ -66,6 +65,7 @@ async fn android_channel(
         ))))
         .await
         .unwrap();
+    let _ = receive_cli_hello(&mut channel).await;
     channel
         .send_v2(&v2::Envelope::new(v2::Message::SourceHello(
             generated_hello(trust, policies),
@@ -102,7 +102,6 @@ async fn first_mobile_pairing_supports_both_sources_and_preserves_all_selectors(
             };
             let (mut channel, trust) =
                 connect_fake_mobile(port, selector, "Synthetic phone", Some(code), None).await;
-            let _ = receive_cli_hello(&mut channel).await;
             channel
                 .send(&DirectMessage::Hello(Unlabeled::from(mobile_capabilities(
                     &trust,
@@ -116,6 +115,7 @@ async fn first_mobile_pairing_supports_both_sources_and_preserves_all_selectors(
                 ))))
                 .await
                 .unwrap();
+            let _ = receive_cli_hello(&mut channel).await;
             if platform == PeerPlatform::Android {
                 channel
                     .send_v2(&v2::Envelope::new(v2::Message::SourceHello(
@@ -317,7 +317,7 @@ async fn android_unknown_and_blocked_profiles_fail_closed_without_settings_fallb
             assert!(channel.receive_v2().await.is_err()); // no saved-settings retry
         };
         let (result, ()) = tokio::join!(export, peer);
-        assert!(matches!(result, Err(ClientError::InvalidTransfer(_))));
+        assert!(matches!(result, Err(ClientError::ExportRejected(_))));
         assert_eq!(
             client.v2_job_record(job_id).unwrap().state,
             JobState::Failed
@@ -370,6 +370,7 @@ impl FileTransfer {
                 request_fingerprint: fingerprint.clone(),
             },
             manifest: v2::ArtifactManifest {
+                scoped_note_policy: None,
                 job_id: request.job_id,
                 artifact_id,
                 kind: v2::ArtifactKind::GeneratedFile,
@@ -666,13 +667,13 @@ async fn older_ios_selector_capability_is_checked_before_export_fields_are_sent(
     let peer = async {
         let (mut channel, _) =
             connect_fake_mobile(port, 1, &trust.display_name, None, Some(&trust)).await;
-        let _ = receive_cli_hello(&mut channel).await;
         let mut capabilities = mobile_capabilities(&trust, PeerPlatform::Ios, vec![1], None);
         capabilities.supports_canonical_extraction = false;
         channel
             .send(&DirectMessage::Hello(Unlabeled::from(capabilities)))
             .await
             .unwrap();
+        let _ = receive_cli_hello(&mut channel).await;
         assert!(channel.receive().await.is_err());
     };
     let (result, ()) = tokio::join!(export, peer);
@@ -694,7 +695,6 @@ async fn ios_generated_dispatch_preserves_v1_request_without_android_fallback() 
     let peer = async {
         let (mut channel, _) =
             connect_fake_mobile(port, 1, &trust.display_name, None, Some(&trust)).await;
-        let _ = receive_cli_hello(&mut channel).await;
         channel
             .send(&DirectMessage::Hello(Unlabeled::from(mobile_capabilities(
                 &trust,
@@ -704,6 +704,7 @@ async fn ios_generated_dispatch_preserves_v1_request_without_android_fallback() 
             ))))
             .await
             .unwrap();
+        let _ = receive_cli_hello(&mut channel).await;
         let SecurePayload::Message(message) = channel.receive().await.unwrap() else {
             panic!("expected v1 request")
         };

@@ -7,6 +7,78 @@ import XCTest
 /// with the main target's `AccessibilityIdentifiers.swift`.
 enum UITestLaunchHelper {
 
+    /// Establish navigation before asserting content in the destination. A
+    /// missed tab tap must report as navigation failure, not missing profiles.
+    /// The classic Settings content lives under Settings › App & support.
+    static func openSettingsTab(
+        in app: XCUIApplication,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) {
+        guard openTab("Settings", in: app, file: file, line: line) else { return }
+        // iPhone and iPad both show "App & support" under this identifier.
+        let row = app.buttons["glass.settings.appSupport"]
+        guard row.waitForExistence(timeout: 10) else {
+            XCTFail("App & support must be reachable from Settings", file: file, line: line)
+            return
+        }
+        row.tap()
+    }
+
+    /// Opens ScheduleG for the first automation: Automations › automation › Schedule.
+    /// AutomationsGlass has no "Schedule & history" row; each automation's schedule
+    /// carries the former master switch, and the Archive carries history and retry.
+    static func openScheduleTab(
+        in app: XCUIApplication,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) -> Bool {
+        guard openAutomation(in: app, file: file, line: line) else { return false }
+        let row = app.buttons["glass.automation.schedule"]
+        guard row.waitForExistence(timeout: 10) else {
+            XCTFail("Schedule must be reachable from the automation", file: file, line: line)
+            return false
+        }
+        row.tap()
+        return true
+    }
+
+    /// Opens the first automation's detail (AutomationDetailG) from Automations.
+    @discardableResult
+    static func openAutomation(
+        in app: XCUIApplication,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) -> Bool {
+        guard openTab("Automations", in: app, file: file, line: line) else { return false }
+        let card = app.buttons["glass.automation.card"].firstMatch
+        guard card.waitForExistence(timeout: 10) else {
+            XCTFail("An automation must be listed under Automations", file: file, line: line)
+            return false
+        }
+        card.tap()
+        return true
+    }
+
+    private static func openTab(
+        _ name: String,
+        in app: XCUIApplication,
+        file: StaticString,
+        line: UInt
+    ) -> Bool {
+        let tab = app.buttons[name].firstMatch
+        let hittable = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "exists == true AND isHittable == true"),
+            object: tab
+        )
+        guard XCTWaiter().wait(for: [hittable], timeout: 10) == .completed else {
+            XCTFail("\(name) tab must be hittable before navigation", file: file, line: line)
+            return false
+        }
+        tab.tap()
+        return true
+    }
+
     /// Detach system file/Quick Look view services before the next scenario
     /// relaunches this bundle. Terminating their foreground host can leave
     /// the subsequent document picker without its accessibility tree.
@@ -17,13 +89,6 @@ enum UITestLaunchHelper {
     }
 
     // MARK: - Accessibility Identifiers (mirrored from AccessibilityID)
-
-    enum Tab {
-        static let export = "tab.export"
-        static let schedule = "tab.schedule"
-        static let sync = "tab.sync"
-        static let settings = "tab.settings"
-    }
 
     enum Export {
         static let contentScroll = "export.content.scroll"
@@ -46,6 +111,7 @@ enum UITestLaunchHelper {
         static let finishSimulatedBatch = "uitest.export.finishBatch"
         static let filenameEditorButton = "export.filenameEditorButton"
         static let outputEditorSaveButton = "export.outputEditorSaveButton"
+        static let sleepDayAttributionPicker = "export.sleepDayAttribution.picker"
     }
 
     enum Notification {
@@ -85,7 +151,6 @@ enum UITestLaunchHelper {
     }
 
     enum Sync {
-        static let configurationTargetPicker = "sync.configurationTargetPicker"
         static let syncToggle = "sync.syncToggle"
         static let connectionStatus = "sync.connectionStatus"
         static let manualSyncButton = "sync.manualSyncButton"

@@ -37,7 +37,7 @@ describe("deployed APNs HTTP contract", () => {
       "apns-priority": "10", "apns-expiration": String(NOW / 1000 + 300),
     });
     expect(JSON.parse(String(options?.body))).toEqual({
-      aps: { alert: { title: "Health.md", body: "Synthetic desktop is requesting data. Tap to continue." },
+      aps: { alert: { title: "Health.md", body: "Your CLI is waiting. Open Health.md to continue on Synthetic desktop." },
         sound: "default", category: "HEALTHMD_DIRECT_WAKE" },
       healthmd: { kind: "direct-cli-wake" },
     });
@@ -53,7 +53,7 @@ describe("deployed APNs HTTP contract", () => {
 describe("opt-in FCM registration extension", () => {
   it("enrolls only an explicit FCM v2 resource with a separate management proof", async () => {
     vi.spyOn(Date, "now").mockReturnValue(NOW);
-    const DB = new TestD1(["0001_init.sql", "0002_fcm_v2.sql"]);
+    const DB = new TestD1(["0001_init.sql", "0002_delegated_sync_fcm.sql", "0002_fcm_v2.sql"]);
     const body = {
       operation: "enroll", wakeId: "12".repeat(16), userId: USER_ID,
       transport: "fcm", deliveryToken: "synthetic-fcm-token",

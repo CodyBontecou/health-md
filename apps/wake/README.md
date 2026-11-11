@@ -52,6 +52,12 @@ a bearer HMAC secret. V2 adds a separate phone-only management hash/proof withou
 altering v1 transcripts. See the extension document for the retained legacy
 limitations and self-authenticated v2 bootstrap limitations.
 
+Registrations default to an APNs Direct CLI pairing. `platform: "fcm"` and
+`purpose: "delegated-sync"` register a clinic sync request doorbell; see the
+[2026-11-03 amendment](../../docs/architecture/rfc-0005-worker-spec.md#amendment-2026-11-03-delegated-sync-doorbells-and-the-fcm-transport).
+Apply `migrations/0002_delegated_sync_fcm.sql` before deploying, and set
+`FCM_SERVICE_ACCOUNT_JSON` with `wrangler secret put` to enable Android delivery.
+
 ### HMAC construction (2026-09-03 amendment)
 
 `hmac = HMAC-SHA256(key = SHA-256(rawWakeKey), msg = "healthmd.wake.v1" ‖ nonce_hex ‖ timestamp_rfc3339)`

@@ -118,6 +118,28 @@ final class CanonicalRawResultSpoolWriterTests: XCTestCase {
         XCTAssertEqual(streamed.captureSummary, legacy.captureSummary)
     }
 
+    func testIdentityInspectionReadsSuccessorWithoutChangingHistoricalCompaction() throws {
+        let source = try ConnectedTransferFile.makeRestrictedTemporaryFile(prefix: "successor-identity-test")
+        defer { try? FileManager.default.removeItem(at: source) }
+        let bytes = try JSONSerialization.data(withJSONObject: [
+            "schema": HealthMdExportSchema.identifier, "schema_version": 11,
+            "payload": String(repeating: "x", count: 100_000),
+        ], options: [.sortedKeys])
+        try bytes.write(to: source)
+        XCTAssertEqual(try CanonicalDailyJSONStream.schemaIdentity(sourceURL: source),
+            .init(schema: HealthMdExportSchema.identifier, version: 11))
+        XCTAssertEqual(try Data(contentsOf: source), bytes)
+        XCTAssertThrowsError(try CanonicalDailyJSONStream.compactValidated(sourceURL: source, expectsLosslessArchive: false)) {
+            XCTAssertEqual($0 as? CanonicalDailyJSONStream.StreamError, .schemaMismatch)
+        }
+        for invalid in [#"{"schema":"healthmd.health_data","schema_version":11,"schema_version":8}"#,
+            #"{"schema":"healthmd.health_data","schema_version":11} trailing"#,
+            #"{"schema":"healthmd.health_data","schema_version":0}"#] {
+            try Data(invalid.utf8).write(to: source)
+            XCTAssertThrowsError(try CanonicalDailyJSONStream.schemaIdentity(sourceURL: source))
+        }
+    }
+
     func testSummaryStreamRejectsUnexpectedLosslessArchive() throws {
         let sourceURL = try ConnectedTransferFile.makeRestrictedTemporaryFile(
             prefix: "summary-with-archive-test"

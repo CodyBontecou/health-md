@@ -39,7 +39,7 @@ struct ExportModal: View {
                                         .foregroundStyle(Color.accent)
                                         .accessibilityHidden(true)
 
-                                    Text(subfolder.isEmpty ? "Selected folder" : subfolder)
+                                    Text(subfolder.isEmpty ? String(localized: "Selected folder") : subfolder)
                                         .font(Typography.bodyMono())
                                         .foregroundStyle(Color.textPrimary)
 
@@ -62,7 +62,7 @@ struct ExportModal: View {
                                 )
                             }
                             .buttonStyle(.plain)
-                            .accessibilityLabel("Subfolder: \(subfolder.isEmpty ? "Selected folder" : subfolder)")
+                            .accessibilityLabel("Subfolder: \(subfolder.isEmpty ? String(localized: "Selected folder") : subfolder)")
                             .accessibilityHint("Double tap to change subfolder name")
 
                             Text("Base folder for your health data exports")
@@ -86,7 +86,7 @@ struct ExportModal: View {
                                         .foregroundStyle(Color.accent)
                                         .accessibilityHidden(true)
 
-                                    Text(LocalizedStringKey(folderStructureDisplayText))
+                                    Text(verbatim: folderStructureDisplayText)
                                         .font(Typography.bodyMono())
                                         .foregroundStyle(Color.textPrimary)
 
@@ -212,7 +212,7 @@ struct ExportModal: View {
                                         .foregroundStyle(Color.accent)
                                         .accessibilityHidden(true)
 
-                                    Text(exportPath)
+                                    Text(verbatim: exportPath)
                                         .font(Typography.monoEmphasis())
                                         .foregroundStyle(Color.textPrimary)
                                         .lineLimit(2)
@@ -377,11 +377,11 @@ struct ExportModal: View {
     }
 
     private var folderStructureDisplayText: String {
-        let dateFolders = exportSettings.folderStructure.isEmpty ? "Flat (no date subfolders)" : exportSettings.folderStructure
+        let dateFolders = exportSettings.folderStructure.isEmpty ? String(localized: "Flat (no date subfolders)") : exportSettings.folderStructure
         if exportSettings.organizeFormatsIntoFolders {
-            return "File type folders / \(dateFolders)"
+            return String(localized: "File type folders / \(dateFolders)")
         }
-        return exportSettings.folderStructure.isEmpty ? "Flat (no subfolders)" : exportSettings.folderStructure
+        return exportSettings.folderStructure.isEmpty ? String(localized: "Flat (no subfolders)") : exportSettings.folderStructure
     }
 
     private var exportPath: String {
@@ -488,7 +488,9 @@ struct FilenameFormatEditor: View {
                                     .frame(width: 24)
                                     .accessibilityHidden(true)
 
-                                TextField("{date}", text: $tempFormat)
+                                TextField(text: $tempFormat, prompt: Text(verbatim: "{date}")) {
+                                    Text("Filename Format")
+                                }
                                     .font(Typography.bodyMono())
                                     .foregroundStyle(Color.textPrimary)
                                     .textInputAutocapitalization(.never)
@@ -517,7 +519,7 @@ struct FilenameFormatEditor: View {
                             )
 
                             HStack(alignment: .firstTextBaseline, spacing: Spacing.sm) {
-                                Text(previewFilename)
+                                Text(verbatim: previewFilename)
                                     .font(Typography.monoEmphasis())
                                     .foregroundStyle(Color.textPrimary)
                                     .lineLimit(2)
@@ -818,7 +820,7 @@ struct FolderStructureEditor: View {
                                 caption: "Path preview uses the Markdown format and a sample date."
                             )
 
-                            Text(previewPath)
+                            Text(verbatim: previewPath)
                                 .font(Typography.monoEmphasis())
                                 .foregroundStyle(Color.textPrimary)
                                 .lineLimit(3)
@@ -1057,7 +1059,7 @@ struct SubfolderEditor: View {
                             )
 
                             HStack(alignment: .firstTextBaseline, spacing: Spacing.sm) {
-                                Text(previewPath)
+                                Text(verbatim: previewPath)
                                     .font(Typography.monoEmphasis())
                                     .foregroundStyle(Color.textPrimary)
                                     .lineLimit(3)
@@ -1187,11 +1189,11 @@ private struct OutputEditorHeader: View {
                 .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 4) {
-                Text(title)
+                Text(LocalizedStringKey(title))
                     .font(Typography.displayMedium())
                     .foregroundStyle(Color.textPrimary)
 
-                Text(subtitle)
+                Text(LocalizedStringKey(subtitle))
                     .font(Typography.caption())
                     .foregroundStyle(Color.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -1235,12 +1237,12 @@ private struct OutputEditorSectionHeader: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 3) {
-            Text(title)
+            Text(LocalizedStringKey(title))
                 .font(.footnote.weight(.semibold))
                 .foregroundStyle(Color.textPrimary)
 
             if let caption {
-                Text(caption)
+                Text(LocalizedStringKey(caption))
                     .font(.caption)
                     .foregroundStyle(Color.textMuted)
                     .fixedSize(horizontal: false, vertical: true)
@@ -1273,7 +1275,7 @@ private struct OutputEditorStatusPill: View {
                     .accessibilityHidden(true)
             }
 
-            Text(text)
+            Text(LocalizedStringKey(text))
                 .font(.caption2.weight(.semibold))
         }
         .foregroundStyle(tint)
@@ -1346,7 +1348,7 @@ private struct OutputTokenRow: View {
         Button(action: action) {
             HStack(alignment: .center, spacing: Spacing.md) {
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(name)
+                    Text(LocalizedStringKey(name))
                         .font(Typography.bodyEmphasis())
                         .foregroundStyle(Color.textPrimary)
 
@@ -1376,7 +1378,7 @@ private struct OutputTokenRow: View {
         }
         .buttonStyle(.plain)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("Insert \(name) placeholder")
+        .accessibilityLabel(Text("Insert \(Text(LocalizedStringKey(name))) placeholder"))
         .accessibilityValue(placeholder)
     }
 }

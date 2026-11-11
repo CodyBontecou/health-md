@@ -33,7 +33,7 @@ Instead of writing files to a folder, Health.md can POST your export to an HTTP(
 
 1. Select API endpoint as the target and enter the URL.
 2. Add Authorization and custom headers (`Name: value` per line) as needed.
-3. Preview, then export — or enable scheduled uploads from the Schedule tab.
+3. Preview, then export — or enable scheduled uploads from the Automations tab.
 
 ## Example output
 

@@ -1,0 +1,8 @@
+{
+  "": "Empty extraction artifact; renders no language.",
+  ": %@": "Punctuation-only wrapper around a preformatted value.",
+  "%@: %@. %@": "Punctuation-only composition of already-resolved values.",
+  "%lld%%": "Numeric percentage formatting only.",
+  "•": "Bullet glyph, not language.",
+  "https://api.example.com/healthmd": "Literal API example URL; preserve endpoint bytes."
+}

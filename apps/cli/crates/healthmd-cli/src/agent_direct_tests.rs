@@ -418,6 +418,7 @@ async fn answer_approved_execute(
             channel,
             &platform,
             DirectMessage::FileManifest(Unlabeled::from(a::FileManifest {
+                scoped_note_policy: None,
                 job_id: SwiftUuid(session.job_id),
                 file_id: SwiftUuid(file),
                 relative_path: item.relative_path.0.clone(),
@@ -426,6 +427,7 @@ async fn answer_approved_execute(
                 write_mode: a::FileWriteMode::Overwrite,
             })),
             v2::Message::ArtifactManifest(v2::ArtifactManifest {
+                scoped_note_policy: None,
                 job_id: session.job_id,
                 artifact_id: file,
                 kind: v2::ArtifactKind::GeneratedFile,
@@ -922,6 +924,7 @@ async fn answer_retained_resume(
             channel,
             &platform,
             DirectMessage::FileManifest(Unlabeled::from(a::FileManifest {
+                scoped_note_policy: None,
                 job_id: SwiftUuid(session.job_id),
                 file_id: SwiftUuid(file),
                 relative_path: item.relative_path.0.clone(),
@@ -930,6 +933,7 @@ async fn answer_retained_resume(
                 write_mode: a::FileWriteMode::Overwrite,
             })),
             v2::Message::ArtifactManifest(v2::ArtifactManifest {
+                scoped_note_policy: None,
                 job_id: session.job_id,
                 artifact_id: file,
                 kind: v2::ArtifactKind::GeneratedFile,

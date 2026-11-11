@@ -703,11 +703,19 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_healthmd_core_uniffi_checksum_func_get_metric_registry(
     ): Int
+    external fun uniffi_healthmd_core_uniffi_checksum_func_get_metric_registry_at_authority(
+    ): Int
     external fun uniffi_healthmd_core_uniffi_checksum_func_merge_profile_rendered_markdown(
     ): Int
     external fun uniffi_healthmd_core_uniffi_checksum_func_merge_rendered_markdown(
     ): Int
+    external fun uniffi_healthmd_core_uniffi_checksum_func_merge_scoped_daily_note(
+    ): Int
     external fun uniffi_healthmd_core_uniffi_checksum_func_negotiate_direct_transfer(
+    ): Int
+    external fun uniffi_healthmd_core_uniffi_checksum_func_prepare_scoped_android_night_note(
+    ): Int
+    external fun uniffi_healthmd_core_uniffi_checksum_func_prepare_scoped_daily_note(
     ): Int
     external fun uniffi_healthmd_core_uniffi_checksum_func_run_self_test(
     ): Int
@@ -815,11 +823,19 @@ internal object UniffiLib {
     ): RustBuffer.ByValue
     external fun uniffi_healthmd_core_uniffi_fn_func_get_metric_registry(`profile`: RustBuffer.ByValue,`expectedRegistryVersion`: Int,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
+    external fun uniffi_healthmd_core_uniffi_fn_func_get_metric_registry_at_authority(`profile`: RustBuffer.ByValue,`expectedRegistryVersion`: Int,`registrySha256`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     external fun uniffi_healthmd_core_uniffi_fn_func_merge_profile_rendered_markdown(`profile`: RustBuffer.ByValue,`existing`: RustBuffer.ByValue,`generated`: RustBuffer.ByValue,`preservePreamble`: Byte,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_healthmd_core_uniffi_fn_func_merge_rendered_markdown(`existing`: RustBuffer.ByValue,`generated`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
+    external fun uniffi_healthmd_core_uniffi_fn_func_merge_scoped_daily_note(`profile`: RustBuffer.ByValue,`existing`: RustBuffer.ByValue,`patch`: RustBuffer.ByValue,`injectSections`: Byte,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     external fun uniffi_healthmd_core_uniffi_fn_func_negotiate_direct_transfer(`local`: RustBuffer.ByValue,`peer`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_healthmd_core_uniffi_fn_func_prepare_scoped_android_night_note(`profile`: RustBuffer.ByValue,`recordJson`: RustBuffer.ByValue,`calendarTimezone`: RustBuffer.ByValue,`bases`: RustBuffer.ByValue,`markdown`: RustBuffer.ByValue,`selectedProperties`: RustBuffer.ByValue,`injectSections`: Byte,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_healthmd_core_uniffi_fn_func_prepare_scoped_daily_note(`profile`: RustBuffer.ByValue,`recordJson`: RustBuffer.ByValue,`bases`: RustBuffer.ByValue,`markdown`: RustBuffer.ByValue,`selectedProperties`: RustBuffer.ByValue,`injectSections`: Byte,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_healthmd_core_uniffi_fn_func_run_self_test(uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
@@ -991,13 +1007,25 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_healthmd_core_uniffi_checksum_func_get_metric_registry() and 0xffff) != 44495) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if ((lib.uniffi_healthmd_core_uniffi_checksum_func_get_metric_registry_at_authority() and 0xffff) != 54132) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if ((lib.uniffi_healthmd_core_uniffi_checksum_func_merge_profile_rendered_markdown() and 0xffff) != 15241) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_healthmd_core_uniffi_checksum_func_merge_rendered_markdown() and 0xffff) != 52449) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if ((lib.uniffi_healthmd_core_uniffi_checksum_func_merge_scoped_daily_note() and 0xffff) != 24416) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if ((lib.uniffi_healthmd_core_uniffi_checksum_func_negotiate_direct_transfer() and 0xffff) != 2073) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_healthmd_core_uniffi_checksum_func_prepare_scoped_android_night_note() and 0xffff) != 45811) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_healthmd_core_uniffi_checksum_func_prepare_scoped_daily_note() and 0xffff) != 59530) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_healthmd_core_uniffi_checksum_func_run_self_test() and 0xffff) != 469) {
@@ -3834,6 +3862,18 @@ enum class CoreMetricRegistryProfile {
      */
     ANDROID_ANALYTICAL_V5,
     /**
+     * Historical Apple `healthmd.health_data` v7; appended to retain existing FFI discriminants.
+     */
+    APPLE_HEALTH_DATA_V7,
+    /**
+     * Apple wake-date daily v11, selected explicitly from registry v2.
+     */
+    APPLE_HEALTH_DATA_V11,
+    /**
+     * Android wake-date daily v6, selected explicitly from registry v2.
+     */
+    ANDROID_SLEEP_V6,
+    /**
      * Apple v10, with provider-native WHOOP v2 supplementation.
      */
     APPLE_HEALTH_DATA_V10;
@@ -5675,6 +5715,26 @@ public object FfiConverterSequenceTypeCoreRegistryUnavailableMetric: FfiConverte
     
 
         /**
+         * Retrieve an exact retained registry authority without rewriting the caller's pin.
+         *
+         * # Errors
+         * Unknown authorities and incompatible profile/version pairs fail closed.
+         */
+    @Throws(HealthmdCoreException::class) fun `getMetricRegistryAtAuthority`(`profile`: CoreMetricRegistryProfile, `expectedRegistryVersion`: kotlin.UInt, `registrySha256`: kotlin.String): CoreMetricRegistrySnapshot {
+            return FfiConverterTypeCoreMetricRegistrySnapshot.lift(
+    uniffiRustCallWithError(HealthmdCoreException) { _status ->
+    UniffiLib.uniffi_healthmd_core_uniffi_fn_func_get_metric_registry_at_authority(
+    
+        
+        FfiConverterTypeCoreMetricRegistryProfile.lower(`profile`),
+        FfiConverterUInt.lower(`expectedRegistryVersion`),
+        FfiConverterString.lower(`registrySha256`),_status)
+}
+    )
+    }
+    
+
+        /**
          * Pure profile-exact managed-Markdown merge. Destination reads and writes remain native.
          *
          * # Errors
@@ -5715,6 +5775,27 @@ public object FfiConverterSequenceTypeCoreRegistryUnavailableMetric: FfiConverte
     
 
         /**
+         * Merge a capture-scoped personal-note patch without changing whole-export behavior.
+         *
+         * # Errors
+         * Returns bounded capture/YAML/size failures or a contained panic.
+         */
+    @Throws(HealthmdRenderException::class) fun `mergeScopedDailyNote`(`profile`: CoreMetricRegistryProfile, `existing`: kotlin.String, `patch`: kotlin.String, `injectSections`: kotlin.Boolean): kotlin.String {
+            return FfiConverterString.lift(
+    uniffiRustCallWithError(HealthmdRenderException) { _status ->
+    UniffiLib.uniffi_healthmd_core_uniffi_fn_func_merge_scoped_daily_note(
+    
+        
+        FfiConverterTypeCoreMetricRegistryProfile.lower(`profile`),
+        FfiConverterString.lower(`existing`),
+        FfiConverterString.lower(`patch`),
+        FfiConverterBoolean.lower(`injectSections`),_status)
+}
+    )
+    }
+    
+
+        /**
          * Negotiate two owned capability records with the existing pure Rust algorithm.
          *
          * # Errors
@@ -5728,6 +5809,53 @@ public object FfiConverterSequenceTypeCoreRegistryUnavailableMetric: FfiConverte
         
         FfiConverterTypeCoreDirectTransferCapabilities.lower(`local`),
         FfiConverterTypeCoreDirectTransferCapabilities.lower(`peer`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * Scope unchanged historical Android JSON with an explicit captured local clock.
+         *
+         * # Errors
+         * Returns bounded profile/clock/YAML/size failures or a contained panic.
+         */
+    @Throws(HealthmdRenderException::class) fun `prepareScopedAndroidNightNote`(`profile`: CoreMetricRegistryProfile, `recordJson`: kotlin.String, `calendarTimezone`: kotlin.String, `bases`: kotlin.String, `markdown`: kotlin.String, `selectedProperties`: List<kotlin.String>, `injectSections`: kotlin.Boolean): kotlin.String {
+            return FfiConverterString.lift(
+    uniffiRustCallWithError(HealthmdRenderException) { _status ->
+    UniffiLib.uniffi_healthmd_core_uniffi_fn_func_prepare_scoped_android_night_note(
+    
+        
+        FfiConverterTypeCoreMetricRegistryProfile.lower(`profile`),
+        FfiConverterString.lower(`recordJson`),
+        FfiConverterString.lower(`calendarTimezone`),
+        FfiConverterString.lower(`bases`),
+        FfiConverterString.lower(`markdown`),
+        FfiConverterSequenceString.lower(`selectedProperties`),
+        FfiConverterBoolean.lower(`injectSections`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * Project accepted rendered artifacts into one independently versioned note patch.
+         *
+         * # Errors
+         * Returns bounded capture/YAML/size failures or a contained panic.
+         */
+    @Throws(HealthmdRenderException::class) fun `prepareScopedDailyNote`(`profile`: CoreMetricRegistryProfile, `recordJson`: kotlin.String, `bases`: kotlin.String, `markdown`: kotlin.String, `selectedProperties`: List<kotlin.String>, `injectSections`: kotlin.Boolean): kotlin.String {
+            return FfiConverterString.lift(
+    uniffiRustCallWithError(HealthmdRenderException) { _status ->
+    UniffiLib.uniffi_healthmd_core_uniffi_fn_func_prepare_scoped_daily_note(
+    
+        
+        FfiConverterTypeCoreMetricRegistryProfile.lower(`profile`),
+        FfiConverterString.lower(`recordJson`),
+        FfiConverterString.lower(`bases`),
+        FfiConverterString.lower(`markdown`),
+        FfiConverterSequenceString.lower(`selectedProperties`),
+        FfiConverterBoolean.lower(`injectSections`),_status)
 }
     )
     }

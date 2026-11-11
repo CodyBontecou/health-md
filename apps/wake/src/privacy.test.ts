@@ -5,7 +5,7 @@ import { APNS_TOKEN, USER_ID, WAKE_HASH, NOW, jsonRequest, ringBody, syntheticPe
 
 let DB: TestD1;
 beforeEach(() => {
-  DB = new TestD1(["0001_init.sql", "0002_fcm_v2.sql"]);
+  DB = new TestD1(["0001_init.sql", "0002_delegated_sync_fcm.sql", "0002_fcm_v2.sql"]);
   vi.spyOn(Date, "now").mockReturnValue(NOW);
 });
 afterEach(() => { DB.sqlite.close(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });

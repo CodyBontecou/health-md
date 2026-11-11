@@ -85,6 +85,7 @@ impl Fixture {
         let data = b"## Health\nfresh synthetic generated content with bounded bytes\n".to_vec();
         let artifact_id = Uuid::new_v4();
         let manifest = v2::ArtifactManifest {
+            scoped_note_policy: None,
             job_id,
             artifact_id,
             kind: ArtifactKind::GeneratedFile,

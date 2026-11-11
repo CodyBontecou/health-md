@@ -601,6 +601,110 @@ class CloudNativeRawSnapshotTest {
     }
 
     @Test
+    fun whoopRecoveryMetricSelectionsNeitherFetchCyclesNorFailOnMissingCyclePermission() = runTest {
+        val responseCases = listOf(
+            listOf("{\"records\":[]}"),
+            listOf(
+                "{\n \"records\":[{\"cycle_id\":101,\"native_unknown\":true}],\"next_token\":\"recovery-page-2\"\n}",
+                "{\"records\":[],\"next_token\":null}",
+            ),
+        )
+        for (metrics in listOf(setOf("hrv"), setOf("resting_hr"), setOf("hrv", "resting_hr"))) {
+            for (bodies in responseCases) {
+                val requests = mutableListOf<CloudHttpRequest>()
+                var recoveryPages = 0
+                val api = client { request ->
+                    requests += request
+                    if (request.url.path == "/developer/v2/recovery") {
+                        CloudHttpResponse(200, "application/json", body = bodies[recoveryPages++].toByteArray())
+                    } else CloudHttpResponse(403)
+                }
+                // Exercise metric selection at the raw boundary, not preselected endpoint keys.
+                val items = CloudRawHealthDataProvider(WhoopCloudDataProvider(api), api)
+                    .stream(request(selectedMetrics = metrics)).toList()
+
+                assertThat(requests.map { it.url.path })
+                    .containsExactlyElementsIn(List(bodies.size) { "/developer/v2/recovery" }).inOrder()
+                val rangeQuery = "start=2026-01-01T00%3A00%3A00Z&end=2026-01-02T00%3A00%3A00Z&limit=25"
+                assertThat(requests.map { it.url.query }).containsExactlyElementsIn(
+                    bodies.indices.map { if (it == 0) rangeQuery else "$rangeQuery&nextToken=recovery-page-2" },
+                ).inOrder()
+                val payloads = items.filterIsInstance<RawExportItem.Record>().map { it.record.providerPayload!! }
+                assertThat(payloads.map { it.endpointKey })
+                    .containsExactlyElementsIn(List(bodies.size) { WhoopCloudDataProvider.RECOVERY }).inOrder()
+                assertThat(payloads.map { it.pageOrdinal })
+                    .containsExactlyElementsIn((1..bodies.size).toList()).inOrder()
+                payloads.forEachIndexed { index, payload ->
+                    val exact = bodies[index].toByteArray()
+                    assertThat(Base64.getDecoder().decode(payload.responseBytesBase64)).isEqualTo(exact)
+                    assertThat(payload.responseText).isEqualTo(bodies[index])
+                    assertThat(payload.responseSha256).isEqualTo(RawJson.sha256(exact))
+                    assertThat(payload.queryMetadata).doesNotContainKey("nexttoken")
+                }
+                val reports = items.filterIsInstance<RawExportItem.TypeReport>().associate { it.report.typeKey to it.report }
+                assertThat(reports.getValue(WhoopCloudDataProvider.CYCLE).status).isEqualTo(RawTypeStatus.NOT_SELECTED)
+                assertThat(reports.getValue(WhoopCloudDataProvider.RECOVERY).status).isEqualTo(RawTypeStatus.EXPORTED)
+                assertThat(reports.filterKeys { it != WhoopCloudDataProvider.RECOVERY }.values.all {
+                    it.status == RawTypeStatus.NOT_SELECTED
+                }).isTrue()
+                assertThat(items.filterIsInstance<RawExportItem.Issue>()).isEmpty()
+                assertThat(items.filterIsInstance<RawExportItem.Status>().last().status).isEqualTo(RawSnapshotStatus.COMPLETE)
+            }
+        }
+    }
+
+    @Test
+    fun whoopCyclesAreSelectedForNativeEnergyAndHeartRateMetricsOnly() = runTest {
+        val exact = """
+            {"records":[{"id":101,"score":{"kilojoule":8288.297,"average_heart_rate":68,"max_heart_rate":141}}]}
+        """.trimIndent().toByteArray()
+        val requests = mutableListOf<CloudHttpRequest>()
+        val api = client { request ->
+            requests += request
+            if (request.url.path.endsWith("/cycle")) CloudHttpResponse(200, "application/json", body = exact) else
+                CloudHttpResponse(403)
+        }
+        val source = WhoopCloudDataProvider(api)
+        val cycleDefinition = source.rawEndpointDefinitions.single { it.typeKey == WhoopCloudDataProvider.CYCLE }
+        assertThat(cycleDefinition.metricIds).containsExactly("total_calories", "avg_hr", "max_hr")
+
+        val items = CloudRawHealthDataProvider(source, api)
+            .stream(request(selectedMetrics = setOf("total_calories"))).toList()
+        assertThat(requests.map { it.url.path }).containsExactly("/developer/v2/cycle")
+        val payload = items.filterIsInstance<RawExportItem.Record>().single().record.providerPayload!!
+        assertThat(payload.endpointKey).isEqualTo(WhoopCloudDataProvider.CYCLE)
+        assertThat(Base64.getDecoder().decode(payload.responseBytesBase64)).isEqualTo(exact)
+        assertThat(items.filterIsInstance<RawExportItem.TypeReport>()
+            .single { it.report.typeKey == WhoopCloudDataProvider.RECOVERY }.report.status).isEqualTo(RawTypeStatus.NOT_SELECTED)
+        assertThat(items.filterIsInstance<RawExportItem.Issue>()).isEmpty()
+        assertThat(items.filterIsInstance<RawExportItem.Status>().last().status).isEqualTo(RawSnapshotStatus.COMPLETE)
+    }
+
+    @Test
+    fun whoopRawSnapshotsPreserveRepeatedPagesWithoutNormalizedRecordDedupe() = runTest {
+        val exact = "{\n \"records\":[{\"id\":\"00000000-0000-4000-8000-000000000301\"}],\"next_token\":\"repeat\"\n}".toByteArray()
+        var calls = 0
+        val api = client {
+            calls++
+            CloudHttpResponse(200, "application/json", body = exact)
+        }
+        val items = CloudRawHealthDataProvider(WhoopCloudDataProvider(api), api)
+            .stream(request(selectedMetrics = setOf("workouts"))).toList()
+
+        val payloads = items.filterIsInstance<RawExportItem.Record>().map { it.record.providerPayload!! }
+        assertThat(calls).isEqualTo(2)
+        assertThat(payloads.map { it.pageOrdinal }).containsExactly(1, 2).inOrder()
+        payloads.forEach { payload ->
+            assertThat(Base64.getDecoder().decode(payload.responseBytesBase64)).isEqualTo(exact)
+            assertThat(payload.responseSha256).isEqualTo(RawJson.sha256(exact))
+        }
+        assertThat(items.filterIsInstance<RawExportItem.Issue>().single().issue.code).isEqualTo("pagination_cycle")
+        assertThat(items.filterIsInstance<RawExportItem.TypeReport>()
+            .single { it.report.typeKey == WhoopCloudDataProvider.WORKOUT }.report.status).isEqualTo(RawTypeStatus.READ_ERROR)
+        assertThat(items.filterIsInstance<RawExportItem.Status>().last().status).isEqualTo(RawSnapshotStatus.PARTIAL)
+    }
+
+    @Test
     fun cloudRawBoundaryMapsExactBytesToAuthoritativeBase64AndHashWithoutCredentialsOrUrls() = runTest {
         val exact = "{\n  \"data\": [{\"steps\": 42}]\n}".toByteArray()
         val api = client { CloudHttpResponse(

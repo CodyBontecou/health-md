@@ -223,8 +223,13 @@ class IndividualTrackingSettings: ObservableObject, Codable {
     }
     
     /// Generate filename for an individual entry
-    func filename(for metric: HealthMetricDefinition, date: Date, time: Date) -> String {
+    func filename(for metric: HealthMetricDefinition, date: Date, time: Date, calendarTimeZone: TimeZone? = nil) -> String {
         let dateFormatter = DateFormatter()
+        if let calendarTimeZone {
+            dateFormatter.timeZone = calendarTimeZone
+            dateFormatter.calendar = Calendar(identifier: .gregorian)
+            dateFormatter.locale = Locale(identifier: "en_US_POSIX")
+        }
         var result = filenameTemplate
         
         // {date} -> yyyy_MM_dd

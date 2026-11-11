@@ -11,7 +11,7 @@ beforeAll(async () => {
     client_email: "synthetic-worker@synthetic-project.iam.gserviceaccount.com" });
 });
 beforeEach(() => {
-  DB = new TestD1(["0001_init.sql", "0002_fcm_v2.sql"]);
+  DB = new TestD1(["0001_init.sql", "0002_delegated_sync_fcm.sql", "0002_fcm_v2.sql"]);
   clock = NOW;
   vi.spyOn(Date, "now").mockImplementation(() => clock);
   vi.stubGlobal("fetch", vi.fn(() => { throw new Error("No live provider permitted"); }));
