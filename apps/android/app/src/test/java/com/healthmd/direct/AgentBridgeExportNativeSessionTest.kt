@@ -14,6 +14,7 @@ import com.healthmd.data.settings.ExportProfileRepository
 import com.healthmd.direct.protocol.*
 import com.healthmd.domain.distribution.DistributionPolicy
 import com.healthmd.domain.exportengine.ExportEnginePinPlanner
+import com.healthmd.domain.model.SleepDayAttribution
 import com.healthmd.domain.repository.EntitlementRepository
 import com.healthmd.domain.repository.HealthRepository
 import com.healthmd.domain.repository.SettingsRepository
@@ -505,6 +506,7 @@ class AgentBridgeExportNativeSessionTest {
             every { info.isUserConfirmationRequired } returns false
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) every { info.remainingUsageCount } returns KeyProperties.UNRESTRICTED_USAGE_COUNT
             coEvery { settings.getConnectedHealthProviderIds() } returns emptySet()
+            coEvery { settings.getSleepDayAttribution() } returns SleepDayAttribution.NIGHT_BEGINS
             Files.write(identity, SOURCE.toByteArray())
             writeTrust()
             val legacy = DirectCliTrustStore(context)
@@ -513,7 +515,7 @@ class AgentBridgeExportNativeSessionTest {
                 DirectGeneratedFilesProducer(health, MarkdownExporter(), JsonExporter(), CsvExporter(), ObsidianBasesExporter()),
                 repositories, health, settings, entitlements, DistributionPolicy.fdroid(), DistributionDirectRawRequestPolicy(),
                 planner, AndroidDirectProtocolAuthority(AndroidDirectProtocolEngineMode.legacy, lazy { error("No JNI context needed") }),
-                profiles, ScheduledProfileSnapshotFactory(planner))
+                profiles, ScheduledProfileSnapshotFactory(planner, settings))
             lifecycle = AgentBridgeExportServingLifecycle(coordinator)
             every { context.noBackupFilesDir } throws AssertionError("Creating getter forbidden after setup")
             every { context.filesDir } throws AssertionError("Creating getter forbidden")

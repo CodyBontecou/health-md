@@ -439,7 +439,7 @@ class ScheduledProfileExportWorkerCancellationTest {
         val rejected = harness.worker.doWork()
         assertThat(rejected.outputData.getString(ScheduledProfileExportWorker.OUTPUT_PROFILE_ERROR))
             .isEqualTo("api_recovery_authority_required")
-        coVerify(exactly = 0) { harness.rawRunner.exportRange(any(), any(), any(), any(), any(), any(), any()) }
+        coVerify(exactly = 0) { harness.rawRunner.exportRange(any(), any(), any(), any(), any(), any()) }
         coVerify(exactly = 0) { harness.healthRepository.hasBackgroundReadPermission() }
         coVerify(exactly = 0) { harness.entryStore.recordSuccess(any(), any(), any(), any()) }
         coVerify(exactly = 0) { harness.apiRunner.exportDates(any(), any(), any(), any(), any(), any(), any()) }

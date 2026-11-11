@@ -17,10 +17,10 @@ import com.healthmd.domain.clinicianreport.ReportMetric
 import com.healthmd.domain.model.ActivityData
 import com.healthmd.domain.model.DataTypeSelection
 import com.healthmd.domain.model.HealthData
+import com.healthmd.domain.model.SleepDayAttribution
 import com.healthmd.domain.repository.SettingsRepository
 import io.mockk.coEvery
 import io.mockk.coVerify
-import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
@@ -33,7 +33,7 @@ import java.time.ZoneId
 @RunWith(RobolectricTestRunner::class)
 class ClinicianReportLocalCaptureTest {
     @Test fun cloudSelectionCannotCaptureReportThroughCloudApi() = runTest {
-        assertLocalReportCapture("fitbit")
+        assertLocalReportCapture("whoop")
     }
 
     @Test fun allConnectedSelectionCannotCaptureReportThroughCloudApi() = runTest {
@@ -41,7 +41,7 @@ class ClinicianReportLocalCaptureTest {
     }
 
     @Test fun localPermissionFailureCannotFallbackToSelectedCloud() = runTest {
-        assertLocalReportCapture("fitbit", SecurityException("private local failure"))
+        assertLocalReportCapture("whoop", SecurityException("private local failure"))
     }
 
     @Test fun localPermissionFailureCannotFallbackToAllConnectedCloud() = runTest {
@@ -53,7 +53,8 @@ class ClinicianReportLocalCaptureTest {
         val zone = ZoneId.of("Pacific/Chatham")
         val settings = mockk<SettingsRepository>(relaxed = true)
         coEvery { settings.getSelectedHealthProviderId() } returns selectedProviderId
-        coEvery { settings.getConnectedHealthProviderIds() } returns setOf("health_connect", "fitbit")
+        coEvery { settings.getConnectedHealthProviderIds() } returns setOf("health_connect", "whoop")
+        coEvery { settings.getSleepDayAttribution() } returns SleepDayAttribution.NIGHT_BEGINS
         val manager = mockk<HealthConnectManager>()
         coEvery { manager.fetchHealthDataRange(any(), any(), any(), any(), any()) } answers {
             localFailure?.let { throw it }
@@ -61,25 +62,17 @@ class ClinicianReportLocalCaptureTest {
         }
         val healthConnect = HealthModule.provideHealthConnectDataProvider(manager)
 
-        // The real Play registry and Fitbit adapter reach a mocked API boundary, never a
-        // transport, OAuth account or socket. Distinct sentinel data makes routing observable.
+        // The current Play registry and WHOOP adapter reach only a mocked API boundary.
+        // Reports must never query this configured cloud source; ordinary exports still can.
         val api = mockk<CloudHealthApiClient>()
-        coEvery { api.isConfigured("fitbit") } returns true
-        coEvery { api.token("fitbit") } returns mockk()
-        coEvery { api.getJson(any(), any(), any(), any()) } answers {
-            if (secondArg<String>().contains("/activities/date/")) {
-                Json.parseToJsonElement("""{"summary":{"steps":9999}}""")
-            } else Json.parseToJsonElement("{}")
-        }
+        coEvery { api.isConfigured("whoop") } returns true
+        coEvery { api.token("whoop") } returns mockk()
+        coEvery { api.forCaptureOperation("whoop") } returns api
+        coEvery { api.captureConnectionId("whoop") } returns "11111111-1111-4111-8111-111111111111"
+        coEvery { api.getJson(any(), any(), any(), any()) } returns
+            Json.parseToJsonElement("""{"records":[]}""")
         val registry = HealthDistributionModule.provideHealthProviderRegistry(
             healthConnect = healthConnect,
-            samsung = mockk { every { providerId } returns "samsung_health" },
-            huawei = mockk { every { providerId } returns "huawei_health" },
-            fitbit = HealthDistributionModule.provideFitbit(api),
-            garmin = mockk { every { providerId } returns "garmin" },
-            withings = HealthDistributionModule.provideWithings(api),
-            oura = HealthDistributionModule.provideOura(api),
-            polar = HealthDistributionModule.providePolar(api),
             whoop = HealthDistributionModule.provideWhoop(api),
         )
         val repository = HealthModule.provideHealthRepository(registry, settings)
@@ -115,12 +108,12 @@ class ClinicianReportLocalCaptureTest {
         coVerify(exactly = 0) { settings.setSelectedHealthProviderId(any()) }
         coVerify(exactly = 0) { settings.setHealthProviderConnected(any(), any()) }
         assertThat(settings.getSelectedHealthProviderId()).isEqualTo(selectedProviderId)
-        assertThat(settings.getConnectedHealthProviderIds()).containsExactly("health_connect", "fitbit")
+        assertThat(settings.getConnectedHealthProviderIds()).containsExactly("health_connect", "whoop")
 
         // Ordinary export still honors the same cloud/all-connected preference after a report.
         repository.fetchHealthDataRange(
             listOf(day), DataTypeSelection().deselectAll().copy(activity = true), false, zone, false,
         )
-        coVerify(atLeast = 1) { api.getJson("fitbit", any(), any(), any()) }
+        coVerify(atLeast = 1) { api.getJson("whoop", any(), any(), any()) }
     }
 }
