@@ -27,13 +27,13 @@ final class FeedbackJourneyUITests: XCTestCase {
     func testRejectedGitHubHandoffCanEditCopyAndPasteExactReport() {
         launchSupport(scenario: "rejected-handoffs")
         openSupportAction("feedback.reportBug")
-        exerciseLocalRecovery(title: "Couldn’t open GitHub", destination: "GitHub: https://github.com/")
+        exerciseLocalRecovery(title: "Couldn’t open GitHub", destination: "GitHub: https://github.com/", supportAction: "feedback.reportBug")
     }
 
     func testRejectedEmailHandoffCanEditCopyAndPasteExactReport() {
         launchSupport(scenario: "rejected-handoffs")
         openSupportAction("feedback.sendFeedback")
-        exerciseLocalRecovery(title: "Couldn’t open Mail", destination: "To: cody@isolated.tech")
+        exerciseLocalRecovery(title: "Couldn’t open Mail", destination: "To: cody@isolated.tech", supportAction: "feedback.sendFeedback")
     }
 
     func testSyntheticMailFailurePresentsFallbackAfterSheetDismissal() {
@@ -47,7 +47,7 @@ final class FeedbackJourneyUITests: XCTestCase {
         XCTAssertFalse(completion.exists, "The synthetic composer must be dismissed before recovery")
         XCTAssertTrue(app.textViews["feedback.reportText"].exists)
         app.buttons["feedback.close"].tap()
-        XCTAssertTrue(app.navigationBars["App & support"].waitForExistence(timeout: 5))
+        assertReturnedToSupport(action: "feedback.sendFeedback")
     }
 
     private func launchSupport(scenario: String) {
@@ -68,7 +68,7 @@ final class FeedbackJourneyUITests: XCTestCase {
         action.tap()
     }
 
-    private func exerciseLocalRecovery(title: String, destination: String) {
+    private func exerciseLocalRecovery(title: String, destination: String, supportAction: String) {
         XCTAssertTrue(app.staticTexts[title].waitForExistence(timeout: 5))
         let editor = app.textViews["feedback.reportText"]
         XCTAssertTrue(editor.waitForExistence(timeout: 5))
@@ -104,7 +104,17 @@ final class FeedbackJourneyUITests: XCTestCase {
         copy.tap()
         XCTAssertTrue(app.staticTexts["Report copied"].waitForExistence(timeout: 5))
         app.buttons["feedback.close"].tap()
-        XCTAssertTrue(app.navigationBars["App & support"].waitForExistence(timeout: 5))
+        assertReturnedToSupport(action: supportAction)
+    }
+
+    private func assertReturnedToSupport(action: String) {
+        let dismissed = expectation(
+            for: NSPredicate(format: "exists == false"), evaluatedWith: app.textViews["feedback.reportText"]
+        )
+        let supportAvailable = expectation(
+            for: NSPredicate(format: "exists == true AND isHittable == true"), evaluatedWith: app.buttons[action]
+        )
+        wait(for: [dismissed, supportAvailable], timeout: 5)
     }
 
     private func replaceText(in editor: XCUIElement, with text: String) {
