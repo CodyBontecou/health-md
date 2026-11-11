@@ -533,10 +533,11 @@ describe("inactive AS07 read-view public collector", () => {
     for (let start = 1; start <= 97; start += 8) {
       const a = read("snapshot", start === 1 ? null : cursor(start)), end = Math.min(start + 7, 101);
       expect(c.select(owner, a)).toEqual({ result: "pending" });
-      const before = observed(c), reply = page(Array.from({ length: end - start + 1 }, (_, i) => live(start + i)), end === 101 ? null : cursor(start + 8), "snapshot", 101);
+      const before = end === 101 ? observed(c) : null;
+      const reply = page(Array.from({ length: end - start + 1 }, (_, i) => live(start + i)), end === 101 ? null : cursor(start + 8), "snapshot", 101);
       expect(await c.receive(owner, a, reply)).toEqual({ result: end === 101 ? "quota_exceeded" : "pending" });
       retainedCommit(c, complete);
-      if (end === 101) expect(observed(c)).toEqual(before);
+      if (before) expectSameObservation(observed(c), before);
     }
   });
 
@@ -550,9 +551,12 @@ describe("inactive AS07 read-view public collector", () => {
         const reply = page(Array.from({ length: end - offset }, (_, i) => live(startSequence + offset + i, startSequence + offset + i)),
           end === count ? null : cursor(end), "changes", startSequence + count - 1);
         expect(c.select(owner, a)).toEqual({ result: "pending" });
-        const before = observed(c);
+        // Only the rejected final page needs a before/after observer comparison.
+        // Earlier pages still assert selection and admission, without repeatedly
+        // copying every retained wire byte into an unused diagnostic snapshot.
+        const before = count === 257 && end === count ? observed(c) : null;
         expect(await c.receive(owner, a, reply)).toEqual({ result: end === count ? count === 256 ? "complete" : "quota_exceeded" : "pending" });
-        if (count === 257 && end === count) expect(observed(c)).toEqual(before);
+        if (before) expectSameObservation(observed(c), before);
       }
       expect(c.view().committed!.items.length).toBe(256);
       expect(c.view().committed!.highWatermark).toBe(257);
