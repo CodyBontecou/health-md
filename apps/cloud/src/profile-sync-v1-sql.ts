@@ -101,6 +101,21 @@ function metadata(record: ValidatedProfileSyncV1Record): Meta {
   return { profile_id: record.profileId, object_revision: record.objectRevision, event_sequence: record.eventSequence,
     order_key: record.orderKey, deleted: record.deleted, content_revision: record.contentRevision, content_hash: record.content?.hash ?? null };
 }
+/** Append after every LIVE head, independent of event count or retired IDs.
+ * Invalid persisted keys are not silently normalized; an exhausted order space
+ * denies the create atomically rather than wrapping, tying or renumbering. */
+function appendOrderKey(heads: readonly Head[]): number {
+  let maximum = -1;
+  for (const head of heads) {
+    requireValue(typeof head.meta.deleted === "boolean");
+    if (head.meta.deleted) continue;
+    const key = head.meta.order_key;
+    requireValue(key !== null && Number.isSafeInteger(key) && key >= 0 && !Object.is(key, -0));
+    if (key > maximum) maximum = key;
+  }
+  requireValue(maximum < Number.MAX_SAFE_INTEGER, "quota_exceeded");
+  return maximum + 1;
+}
 function bytesIn(seal: Sealed): number { return (seal.nonce.length + seal.ciphertext.length) / 2; }
 function empty(key: ProfileSqlKey, policy: string): Partition {
   return { consent: false, consentEpoch: 0, selectionEpoch: 0, intent: null, selected: [], key, policy, sequence: 0,
@@ -286,10 +301,11 @@ export function createProfileSqlCandidate(ports?: SyntheticProfileSqlPorts): Pro
           }
           const content = mutation.operation === "delete" ? null : mutation.content ?? prior?.content ?? null;
           const effective = !prior || mutation.operation === "delete" || (mutation.operation === "reorder" ? mutation.orderKey !== prior.orderKey : content?.contentJson !== prior.content?.contentJson);
+          const createOrder = prior ? null : appendOrderKey(s.heads);
           const id = prior?.profileId ?? "psp_" + hex(crypto.getRandomValues(new Uint8Array(16)));
           const meta: Meta = effective ? { profile_id: id, object_revision: prior ? next(prior.objectRevision) : 1,
             event_sequence: next(partition.sequence), deleted: mutation.operation === "delete",
-            order_key: mutation.operation === "delete" ? null : mutation.operation === "reorder" ? mutation.orderKey : prior?.orderKey ?? partition.sequence,
+            order_key: mutation.operation === "delete" ? null : mutation.operation === "reorder" ? mutation.orderKey : prior ? prior.orderKey : createOrder,
             content_revision: !content ? null : prior?.content?.contentJson === content.contentJson ? prior.contentRevision : prior?.contentRevision ? next(prior.contentRevision) : 1,
             content_hash: content?.hash ?? null } : metadata(prior!);
           const recordBytes = encode(JSON.stringify({ schema: "healthmd.profile_sync", schema_version: 1, ...meta, content_json: content?.contentJson ?? null }));

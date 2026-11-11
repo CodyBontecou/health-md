@@ -133,6 +133,72 @@ describe("inactive AS06 actual-profile SQL transactions", () => {
     expect(h.store.db.prepare("SELECT count(*) AS count FROM ps_event").get()).toMatchObject({ count: 3 });
     expect(h.store.db.prepare("SELECT count(*) AS count FROM ps_revision").get()).toMatchObject({ count: 2 });
   });
+  it("appends a fresh SQLite create after a reordered live head, independently of event sequence", async () => {
+    const h = await harness(), first = await create(h);
+    expect(first.orderKey).toBe(0);
+    const reorder = mutation(101, "reorder", first, { order_key: 8 });
+    await h.service.select(h.ra, reorder); const moved = success(await h.service.mutate(h.ra, reorder));
+    const bytes = mutation(102, "create", undefined, { content_json: publish.content_json, content_hash: publish.content_hash });
+    await h.service.select(h.ra, bytes); const appended = success(await h.service.mutate(h.ra, bytes));
+    expect(appended.orderKey).toBe(9); expect(appended.eventSequence).toBe(3);
+    const live = h.store.db.prepare("SELECT json_extract(body,'$.meta.profile_id') AS id FROM ps_head WHERE json_extract(body,'$.meta.deleted')=0 ORDER BY json_extract(body,'$.meta.order_key'),id").all();
+    expect(live).toEqual([{ id: moved.profileId }, { id: appended.profileId }]);
+  });
+  it("uses the greatest live key, ignores deleted heads, and starts at zero when none survive", async () => {
+    const h = await harness(), first = await create(h);
+    const reorder = mutation(110, "reorder", first, { order_key: 20 });
+    await h.service.select(h.ra, reorder); const moved = success(await h.service.mutate(h.ra, reorder));
+    const secondBytes = mutation(111, "create", undefined, { content_json: publish.content_json, content_hash: publish.content_hash });
+    await h.service.select(h.ra, secondBytes); const second = success(await h.service.mutate(h.ra, secondBytes));
+    expect(second.orderKey).toBe(21);
+    const remove = mutation(112, "delete", second); await h.service.select(h.ra, remove);
+    success(await h.service.mutate(h.ra, remove));
+    const thirdBytes = mutation(113, "create", undefined, { content_json: publish.content_json, content_hash: publish.content_hash });
+    await h.service.select(h.ra, thirdBytes); const third = success(await h.service.mutate(h.ra, thirdBytes));
+    expect(third.orderKey).toBe(21); // tombstones reserve IDs, not live order positions
+    for (const [n, record] of [[114, moved], [115, third]] as const) {
+      const bytes = mutation(n, "delete", record); await h.service.select(h.ra, bytes); success(await h.service.mutate(h.ra, bytes));
+    }
+    h.store.reopen();
+    const fourthBytes = mutation(116, "create", undefined, { content_json: publish.content_json, content_hash: publish.content_hash });
+    await h.service.select(h.ra, fourthBytes); const fourth = success(await h.service.mutate(h.ra, fourthBytes));
+    expect(fourth.orderKey).toBe(0); expect(fourth.profileId).not.toBe(first.profileId);
+  });
+  it.each([Number.MAX_SAFE_INTEGER - 1, Number.MAX_SAFE_INTEGER])("handles a live key at %s without rounding, wrap or renumber", async key => {
+    const h = await harness(), first = await create(h);
+    const reorder = mutation(120, "reorder", first, { order_key: key });
+    await h.service.select(h.ra, reorder); success(await h.service.mutate(h.ra, reorder));
+    const bytes = mutation(121, "create", undefined, { content_json: publish.content_json, content_hash: publish.content_hash });
+    await h.service.select(h.ra, bytes);
+    const before = state(h), heads = h.store.db.prepare("SELECT * FROM ps_head ORDER BY id").all();
+    const result = await h.service.mutate(h.ra, bytes);
+    if (key < Number.MAX_SAFE_INTEGER) expect(success(result).orderKey).toBe(Number.MAX_SAFE_INTEGER);
+    else {
+      expect(result).toMatchObject({ result: "quota_exceeded" }); expect(state(h)).toEqual(before);
+      expect(h.store.db.prepare("SELECT * FROM ps_head ORDER BY id").all()).toEqual(heads);
+      expect(h.store.db.prepare("SELECT count(*) AS count FROM ps_receipt").get()).toMatchObject({ count: 2 });
+      expect(h.store.db.prepare("SELECT count(*) AS count FROM ps_event").get()).toMatchObject({ count: 2 });
+    }
+  });
+  it.each([-1, -Number.MAX_SAFE_INTEGER, 0.5, Number.MAX_SAFE_INTEGER + 1])("rejects an invalid persisted live order key %s before any create effects", async key => {
+    const h = await harness(); await create(h);
+    // Preserve structural head/event/receipt links to exercise allocation against
+    // corrupt stored metadata. These edits are NOT authenticated profile revisions.
+    for (const table of ["ps_head", "ps_event", "ps_receipt"]) {
+      for (const row of h.store.db.prepare(`SELECT rowid,body FROM ${table}`).all() as { rowid: number; body: string }[]) {
+        const body = JSON.parse(row.body); body.meta.order_key = key;
+        h.store.db.prepare(`UPDATE ${table} SET body=? WHERE rowid=?`).run(JSON.stringify(body), row.rowid);
+      }
+    }
+    const bytes = mutation(130, "create", undefined, { content_json: publish.content_json, content_hash: publish.content_hash });
+    expect(await h.service.select(h.ra, bytes)).toEqual({ ok: true });
+    const before = state(h);
+    expect(await h.service.mutate(h.ra, bytes)).toMatchObject({ result: "verification_pending" });
+    expect(state(h)).toEqual(before);
+    for (const table of ["ps_head", "ps_revision", "ps_receipt", "ps_event"]) {
+      expect(h.store.db.prepare(`SELECT count(*) AS count FROM ${table}`).get()).toMatchObject({ count: 1 });
+    }
+  });
   it("concurrent actual connections yield one CAS result and never overwrite another writer", async () => {
     const h = await harness(), first = await create(h);
     const peer = await sqlHarness(h.path, false); stores.push(peer.store);
