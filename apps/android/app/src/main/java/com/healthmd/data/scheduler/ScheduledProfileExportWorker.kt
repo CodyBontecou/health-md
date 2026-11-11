@@ -331,7 +331,15 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
                     dates, settings, profile.settingsSnapshotJson)
             }
         } else false
-        val hasBackgroundRead = if (storedFolderReady ||
+        val storedAPIReady = if (profile.target == ExportTarget.API_ENDPOINT &&
+            settings.exportMode == ExportMode.COMPATIBILITY && acceptedPending?.durableOperationId != null) {
+            try {
+                apiEndpointExportRunner.hasResumableDurableOperation(dates, settings,
+                    acceptedPending.durableOperationId, profile.settingsSnapshotJson)
+            } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
+            catch (_: Exception) { return authorityFailure() }
+        } else false
+        val hasBackgroundRead = if (storedFolderReady || storedAPIReady ||
             (profile.target == ExportTarget.API_ENDPOINT && acceptedPending?.apiJournalRequired == true)) true else runCatchingCancellable {
             healthRepository.forCaptureOperation(settings).hasBackgroundReadPermission()
         }.getOrDefault(false)
@@ -418,7 +426,9 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
                                 onProgress = exportProgress,
                                 durableOperationId = durableOperationId,
                                 durableSettingsSnapshotJson = snapshotJson,
-                                requireExistingDurableOperation = pendingOperationId != null,
+                                // Admission precedes journal preparation. Only the durable
+                                // prepared fence forbids creating the original journal.
+                                requireExistingDurableOperation = storedAPIReady || due.pendingExport?.apiJournalRequired == true,
                             )
                         }
 
