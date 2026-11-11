@@ -88,7 +88,7 @@
     <string name="section_write_mode">وضع الكتابة</string>
     <string name="section_filename_template">قالب اسم الملف</string>
     <string name="filename_template_hint">{date}</string>
-    <string name="filename_template_tokens">{date}, {year}, {month}, {day}, {weekday}, {monthName}, {quarter}</string>
+    <string name="filename_template_tokens">{date}, {year}, {month}, {day}, {weekday}, {monthName}, {quarter}, {week}, {weekYear}</string>
     <string name="section_format_options">خيارات الصيغة</string>
     <string name="toggle_include_frontmatter">تضمين Frontmatter</string>
     <string name="toggle_group_by_category">تجميع حسب الفئة</string>

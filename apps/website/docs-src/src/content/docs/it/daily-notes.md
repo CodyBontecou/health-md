@@ -46,6 +46,8 @@ Wrote launch notes...</code></pre>
 <li><code>{weekday}</code> — nome abbreviato (<code>Tue</code>)</li>
 <li><code>{monthName}</code> — nome completo (<code>April</code>)</li>
 <li><code>{quarter}</code> — Q1 / Q2 / Q3 / Q4</li>
+<li><code>{week}</code>, Numero della settimana ISO (<code>01</code>–<code>53</code>)</li>
+<li><code>{weekYear}</code>, Anno della settimana ISO (<code>2027-01-01 → 2026</code>)</li>
 </ul>
 <p>Esempio: <code>{year}/{monthName}/{date}-{weekday}</code> → <code>2026/April/2026-04-28-Tue.md</code>. La riga di anteprima sotto il campo mostra in tempo reale il percorso risultante.</p>
 

@@ -45,6 +45,8 @@ The template applies to every format in a [multi-format export](./multi-format-e
 | `{weekday}` | Weekday name (device locale) | `Tuesday` |
 | `{monthName}` | Month name (device locale) | `May` |
 | `{quarter}` | `Q1`–`Q4` | `Q2` |
+| `{week}` | ISO week number, zero-padded `01`–`53` | `20` |
+| `{weekYear}` | ISO week-numbering year | `2026` |
 
 ## Example output
 
@@ -85,3 +87,10 @@ Health/
 ## Implementation notes
 
 `ExportSettings.applyDatePlaceholders` performs literal sequential replacement for the seven placeholders above; unknown text is left untouched. `formatFilename(date)` resolves the template per exported day, and `aggregateRelativePath` combines subfolder + folder structure + resolved filename + per-format extension. Quarter is computed as `(monthValue - 1) / 3 + 1`. The default template constant is `{date}`.
+
+ISO weeks start on Monday; week 1 contains January 4. `{weekYear}/Week {week}`
+resolves January 1, 2027 to `2026/Week 53`, independently of device locale.
+`{year}` keeps its calendar-year meaning (`2027`). These tokens also work in
+Daily Note Injection filename patterns and previews. Keep `{date}` in daily
+filenames to avoid collisions between days in the same week. Existing templates,
+export profiles, and Shared Setup v2 grammar are unchanged.

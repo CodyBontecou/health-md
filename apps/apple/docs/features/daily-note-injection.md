@@ -102,6 +102,8 @@ While active:
 - `{weekday}` → `Tuesday`
 - `{monthName}` → `May`
 - `{quarter}` → `Q2`
+- `{week}` → ISO week number, zero-padded (`01`–`53`)
+- `{weekYear}` → ISO week-numbering year (`2026`)
 
 ## Example output
 
@@ -188,3 +190,10 @@ Frontmatter key names respect **Format Customization → Frontmatter Fields**, s
 - Daily-note injection runs once per requested date when enabled. Daily Notes Only is valid without a selected aggregate format.
 - Daily Notes Only suppresses every other destination writer and reports note update/skip counts separately from generated-file counts.
 - Collision protection blocks aggregate Markdown or Obsidian Bases writes when their target path is the same file as the daily note injection target. No collision check is needed in Daily Notes Only mode because aggregate targets are inactive.
+
+ISO weeks start on Monday and week 1 contains January 4. Use **By Year and Week**
+(`{weekYear}/Week {week}`) for weekly folders: January 1, 2027 resolves to
+`2026/Week 53`, while `{year}` stays `2027`. Week tokens use the export owner-day
+timezone, independently of locale or the device calendar. Existing templates and
+daily export schema versions are unchanged. Keep `{date}` in daily filenames to
+avoid collisions between days in the same week.

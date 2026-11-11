@@ -86,7 +86,7 @@
     <string name="section_write_mode">Режим запису</string>
     <string name="section_filename_template">Шаблон імені файлу</string>
     <string name="filename_template_hint">{date}</string>
-    <string name="filename_template_tokens">{date}, {year}, {month}, {day}, {weekday}, {monthName}, {quarter}</string>
+    <string name="filename_template_tokens">{date}, {year}, {month}, {day}, {weekday}, {monthName}, {quarter}, {week}, {weekYear}</string>
     <string name="section_format_options">Параметри формату</string>
     <string name="toggle_include_frontmatter">Включити Frontmatter</string>
     <string name="toggle_group_by_category">Групувати за категоріями</string>

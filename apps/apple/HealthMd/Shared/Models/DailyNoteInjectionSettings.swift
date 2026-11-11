@@ -22,7 +22,7 @@ class DailyNoteInjectionSettings: ObservableObject, Codable {
     @Published var folderPath: String
 
     /// Filename pattern for daily notes (without extension).
-    /// Supports: {date}, {year}, {YR}, {month}, {day}, {weekday}, {monthName}, {quarter}
+    /// Supports: {date}, {year}, {YR}, {month}, {day}, {weekday}, {monthName}, {quarter}, {week}, {weekYear}
     @Published var filenamePattern: String
 
     /// When true, create the daily note file if it does not exist.
@@ -103,7 +103,7 @@ class DailyNoteInjectionSettings: ObservableObject, Codable {
     func formatFilename(for date: Date, timeZone: TimeZone = .current) -> String {
         let fmt = DateFormatter()
         fmt.timeZone = timeZone
-        var result = filenamePattern
+        var result = ISOWeekDateTokens.apply(to: filenamePattern, for: date, timeZone: timeZone)
 
         fmt.dateFormat = "yyyy-MM-dd"
         result = result.replacingOccurrences(of: "{date}", with: fmt.string(from: date))
@@ -148,5 +148,21 @@ class DailyNoteInjectionSettings: ObservableObject, Codable {
             date: date,
             timeZone: timeZone
         )
+    }
+}
+
+/// ISO week tokens use the owner day's timezone, independently of device locale/calendar.
+/// Calendar-year tokens deliberately retain their historical formatting behavior.
+enum ISOWeekDateTokens {
+    static let folderTemplate = "{weekYear}/Week {week}"
+
+    static func apply(to template: String, for date: Date, timeZone: TimeZone) -> String {
+        var calendar = Calendar(identifier: .iso8601)
+        calendar.timeZone = timeZone
+        let week = calendar.component(.weekOfYear, from: date)
+        let year = calendar.component(.yearForWeekOfYear, from: date)
+        return template
+            .replacingOccurrences(of: "{week}", with: String(format: "%02d", week))
+            .replacingOccurrences(of: "{weekYear}", with: String(format: "%04d", year))
     }
 }

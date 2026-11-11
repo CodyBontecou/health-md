@@ -1290,6 +1290,29 @@
         "apps/android/app/src/main/java/com/healthmd/domain/repository/PurchaseRepository.kt"
       ],
       "profiles": []
+    },
+    {
+      "id": "export.iso-week-paths",
+      "name": "ISO week filenames and folders",
+      "classification": "shared",
+      "summary": "Optional {week} (01–53) and {weekYear} tokens use ISO Monday/four-day weeks for owner dates. By Year and Week selects {weekYear}/Week {week}; January 1, 2027 belongs to 2026/Week 53. Existing settings, token meanings, public daily schemas and Shared Setup v2 grammar remain unchanged.",
+      "profiles": [],
+      "platforms": {
+        "apple": {
+          "state": "available"
+        },
+        "android": {
+          "state": "available"
+        }
+      },
+      "evidence": [
+        "apps/apple/HealthMd/Shared/Models/DailyNoteInjectionSettings.swift",
+        "apps/apple/HealthMd/Shared/Models/AdvancedExportSettings.swift",
+        "apps/android/app/src/main/java/com/healthmd/domain/model/ExportSettings.kt",
+        "packages/healthmd-core-rust/crates/healthmd-core/src/render/mod.rs",
+        "apps/apple/docs/features/folder-organization.md",
+        "apps/android/docs/features/folder-organization.md"
+      ]
     }
   ]
 }

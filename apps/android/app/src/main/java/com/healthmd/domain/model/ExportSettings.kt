@@ -304,6 +304,8 @@ data class ExportSettings(
 
     companion object {
         const val DEFAULT_FILENAME_FORMAT = "{date}"
+        // Template preset: keep the frozen Shared Setup folder enum unchanged.
+        const val YEAR_WEEK_FOLDER_TEMPLATE = "{weekYear}/Week {week}"
 
         /** Defaults for a new install or an explicit user reset; persisted legacy decoding is separate. */
         fun newInstallDefaults(): ExportSettings = ExportSettings(
@@ -329,6 +331,9 @@ data class ExportSettings(
             val quarter = "Q${(date.monthValue - 1) / 3 + 1}"
             result = result.replace("{quarter}", quarter)
 
+            // ISO fields are locale-independent; calendar-year tokens above remain unchanged.
+            result = result.replace("{week}", date.get(java.time.temporal.IsoFields.WEEK_OF_WEEK_BASED_YEAR).toString().padStart(2, '0'))
+            result = result.replace("{weekYear}", date.get(java.time.temporal.IsoFields.WEEK_BASED_YEAR).toString().padStart(4, '0'))
             return result
         }
     }

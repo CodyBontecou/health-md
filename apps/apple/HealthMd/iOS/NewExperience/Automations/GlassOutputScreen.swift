@@ -29,7 +29,7 @@ struct GlassOutputScreen: View {
     @State private var showEndpointForm = false
     @State private var showGatewayForm = false
 
-    private static let dateTokens = ["{date}", "{year}", "{month}", "{day}", "{weekday}", "{monthName}", "{quarter}"]
+    private static let dateTokens = ["{date}", "{year}", "{month}", "{day}", "{weekday}", "{monthName}", "{quarter}", "{week}", "{weekYear}"]
 
     init(coordinator: ExportProfileCoordinator, profile: ExportProfile) {
         self.coordinator = coordinator
@@ -60,6 +60,9 @@ struct GlassOutputScreen: View {
                     tokens: Self.dateTokens,
                     placeholder: String(localized: "Flat")
                 )
+                Button(String(localized: "By Year and Week")) {
+                    draft.folderStructure = ISOWeekDateTokens.folderTemplate
+                }
                 GlassTemplateField(
                     title: String(localized: "Filename"),
                     text: $draft.filenameFormat,

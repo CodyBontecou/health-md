@@ -223,7 +223,7 @@
     <string name="section_write_mode">書き込みモード</string>
     <string name="section_filename_template">ファイル名テンプレート</string>
     <string name="filename_template_hint">{date}</string>
-    <string name="filename_template_tokens">{date}、{year}、{month}、{day}、{weekday}、{monthName}、{quarter}</string>
+    <string name="filename_template_tokens">{date}、{year}、{month}、{day}、{weekday}、{monthName}、{quarter}、{week}、{weekYear}</string>
     <string name="section_format_options">形式オプション</string>
     <string name="toggle_include_frontmatter">フロントマターを含める</string>
     <string name="toggle_group_by_category">カテゴリ別にグループ化</string>

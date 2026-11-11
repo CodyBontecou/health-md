@@ -46,6 +46,8 @@ Wrote launch notes...</code></pre>
 <li><code>{weekday}</code> — 星期简称（<code>Tue</code>）</li>
 <li><code>{monthName}</code> — 月份全称（<code>April</code>）</li>
 <li><code>{quarter}</code> — Q1 / Q2 / Q3 / Q4</li>
+<li><code>{week}</code>, ISO 周数 (<code>01</code>–<code>53</code>)</li>
+<li><code>{weekYear}</code>, ISO 周所属年份 (<code>2027-01-01 → 2026</code>)</li>
 </ul>
 <p>示例：<code>{year}/{monthName}/{date}-{weekday}</code> → <code>2026/April/2026-04-28-Tue.md</code>。字段下方的预览行会实时显示解析后的路径。</p>
 

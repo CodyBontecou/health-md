@@ -320,6 +320,10 @@ fun ExportProfileEditorDialog(
                     onValueChange = { value -> updateSettings { it.copy(folderStructure = value) } },
                     label = stringResource(R.string.folder_structure_template_label),
                 )
+                SecondaryButton(
+                    text = stringResource(R.string.folder_organization_by_year_week_label),
+                    onClick = { updateSettings { it.copy(folderStructure = ExportSettings.YEAR_WEEK_FOLDER_TEMPLATE) } },
+                )
                 Text(stringResource(R.string.folder_organization_label), style = GeistType.label14, color = colors.secondary)
                 val organizations = FolderOrganization.entries
                 ChoiceRows {
