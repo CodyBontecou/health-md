@@ -4,7 +4,7 @@ import Foundation
 /// Adoption boundary for receiver-coverage v1. Not wired into schedules: a caller must durably
 /// admit the frozen occurrence and selection evidence before it can capture or upload anything.
 /// Instances contain private routing metadata; never encode, describe, or log them.
-struct ReceiverCoveragePreflight {
+nonisolated struct ReceiverCoveragePreflight: Sendable {
     enum Policy: String { case fullLookback = "full_lookback", missingDays = "missing_days" }
     enum BoundaryError: Error { case invalidConfiguration, invalidOccurrence, invalidResponse, destinationChanged }
 
@@ -185,8 +185,8 @@ struct ReceiverCoveragePreflight {
 
 /// Streaming transport seam: reject metadata before reading and enforce the decompressed cap
 /// before retaining each chunk. A rejection poisons the buffer; partial bodies are never evidence.
-/// The future transport must cancel its exact call on cancellation/deadline/redirect; no retries.
-struct ReceiverCoverageResponseBuffer {
+/// HTTP adapters cancel their exact call on cancellation/deadline/redirect; no retries.
+nonisolated struct ReceiverCoverageResponseBuffer {
     private var body = Data()
     private var rejected = false
 

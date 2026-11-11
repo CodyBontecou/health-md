@@ -2,8 +2,8 @@
 
 Refs https://github.com/CodyBontecou/health-md/issues/170
 
-**Status: proposal, executable reference model, and disabled native admission
-boundaries. Neither Apple nor Android scheduler implements this feature. No
+**Status: proposal, executable reference model, native admission boundaries and
+working native HTTP transports/parsers. Neither Apple nor Android scheduler implements this feature. No
 production writer, endpoint, setting, or migration is enabled.** Review the
 remaining adoption gates below before enabling native scheduling. Do not use
 this document as evidence that an arbitrary API endpoint supports preflight.
@@ -210,12 +210,12 @@ Legacy pending requests are not rewritten, filtered, dropped, or re-bound. New
 configuration applies only to new occurrences after exact legacy residuals resolve.
 No destination-discard, migration, or local-data deletion is implemented here.
 
-## Native admission boundary (disabled source milestone)
+## Native admission and transport source milestones (scheduling disabled)
 
 Apple's [`ReceiverCoveragePreflight.swift`](../../../../apps/apple/HealthMd/Shared/ReceiverCoverage/ReceiverCoveragePreflight.swift)
 and Android's [`ReceiverCoveragePreflight.kt`](../../../../apps/android/app/src/main/java/com/healthmd/data/receivercoverage/ReceiverCoveragePreflight.kt)
-implement the same preparatory boundary, without scheduler call sites or network
-I/O. `prepare` defaults to full lookback and returns no preflight in that mode,
+implement the same preparatory boundary, without scheduler call sites. Dedicated
+HTTP clients and parsers now consume this boundary as described below. `prepare` defaults to full lookback and returns no preflight in that mode,
 even with invalid/missing preflight configuration. Explicit missing-days validates
 same-origin URLs, scope, timezone, correction window, headers and a supplied
 32-byte installation key. It constructs a keyed destination binding and headers;
@@ -253,36 +253,80 @@ The future adapter must supply the installation key from secure storage, bind th
 settings bytes. Missing/unreadable keys must block recovery; never substitute a
 new key or current settings. This transcript adds no authority to legacy journals.
 
+`ReceiverCoverageRequest` freezes the validated body, original destination binding,
+URL, effective headers, execution-zone today and echoed context in memory. It is
+not durable storage and provides no authority to overwrite an existing pending
+plan. Both native clients accept only this prepared context, never an arbitrary
+URL or replacement credential.
+
+Apple's [`ReceiverCoverageHTTPClient.swift`](../../../../apps/apple/HealthMd/Shared/ReceiverCoverage/ReceiverCoverageHTTPClient.swift)
+uses a fresh ephemeral URLSession with no shared credential/cookie/cache storage.
+It sends one authenticated POST with the frozen upload headers, refuses redirects
+and account/proxy/client-credential challenges, and retains platform TLS trust
+validation. A monotonic total budget plus an independent deadline timer bounds
+headers and streaming body; cancellation and deadline cancel/invalidate the exact
+task/session. A locked completion transition handles cancellation/EOF/deadline
+races once, without retaining native private errors.
+
+Android's [`ReceiverCoverageHTTPClient.kt`](../../../../apps/android/app/src/main/java/com/healthmd/data/receivercoverage/ReceiverCoverageHTTPClient.kt)
+uses a dedicated OkHttp client with redirects, connection retries, authenticators,
+cookies, cache and shared interceptors disabled. Call timeout, a total coroutine
+budget and a monotonic elapsed check enforce the deadline; coroutine cancellation
+cancels the exact call even while its callback reads the body. Every response body
+is closed. Test-only protocol/call-factory seams can shorten, never extend, the
+10-second budget. Neither client loops/retries or queries another origin.
+
 `ReceiverCoverageResponseBuffer` rejects non-200/non-JSON metadata before body
-retention and caps accepted streaming chunks at 64 KiB. Exceeding the cap poisons
-the buffer permanently. Its output is **unvalidated bytes**, never completed-day
-evidence. The 10-second deadline is a declared transport requirement, not an
-implemented timer. Native HTTP adapters still must enforce no redirects/retries,
-stream decompressed bytes through this cap, stop their exact network call on
-cancellation/deadline, avoid shared logging/cookie/credential side effects, and
-propagate cancellation without turning it into fallback/upload.
+retention and caps accepted streaming chunks at 64 KiB. Both HTTP adapters read
+streamed platform-decoded bytes through this buffer, reject declared oversized
+bodies early, and stop reads on overflow. Exceeding the cap poisons the buffer.
+Its output remains **unvalidated bytes** until the strict parser succeeds.
+
+The paired [`Swift parser`](../../../../apps/apple/HealthMd/Shared/ReceiverCoverage/ReceiverCoverageResponse.swift)
+and [`Kotlin parser`](../../../../apps/android/app/src/main/java/com/healthmd/data/receivercoverage/ReceiverCoverageResponse.kt)
+use flat, nonrecursive schema readers that reject duplicate keys (including escaped
+spellings), extra/missing fields, invalid UTF-8/escapes, noninteger/unsupported
+versions, unsorted/duplicate/invalid dates, more than 30 dates, future/out-of-window
+dates and every mismatched frozen context field. Only an explicit sorted retained
+date list and normalized validated response become `ReceiverCoverageEvidence`.
+Empty valid coverage remains distinct from failure. Neither parser infers a
+contiguous prefix or treats HTTP/batch success as coverage.
+
+The new-occurrence `query` outcome is validated evidence or `fallbackFull` for
+unavailable, non-200, wrong-media, malformed, oversized, mismatched or timed-out
+preflight. External cancellation throws native cancellation instead; it never
+returns fallback and must never trigger capture/upload. Direct parser errors
+remain errors, so future restore code can preserve bad pending state rather than
+calling the network or constructing a replacement plan.
 
 Host diagnostics compile the actual production source in isolation; they do not
 build native apps or use SDK health stores. They use an independent Python HMAC
 oracle, synthetic destinations/credentials, date-window vectors and streamed cap
-checks. Run with Swift and Kotlin compilers installed:
+checks. Transport diagnostics also compare parser/evidence results to the Python
+reference and exercise the real native clients with synthetic URLProtocol/OkHttp
+Call implementations: POST/auth/body fidelity, unavailable/status/media errors,
+stream bounds, redirects, total deadline and cancellation before headers and
+during body reads. They do not contact a receiver or qualify platform TLS/proxy/
+compression behavior. Run with Swift and Kotlin compilers installed:
 
 ```sh
-HEALTHMD_TEST_NATIVE_BOUNDARY=1 python3 -m unittest discover -s packages/contracts/proposals/receiver-coverage-v1 -p test_native_boundary.py -v
+HEALTHMD_TEST_NATIVE_BOUNDARY=1 python3 -m unittest discover -s packages/contracts/proposals/receiver-coverage-v1 -p 'test_native_*.py' -v
 ```
 
 If Kotlin is supplied as cached embeddable compiler jars, set
 `HEALTHMD_KOTLIN_COMPILER_CLASSPATH` and `HEALTHMD_KOTLIN_STDLIB`; otherwise the
-runner uses `kotlinc`/`kotlin` on PATH. Missing compilers are reported as skips,
+runner uses `kotlinc`/`kotlin` on PATH. The transport tests additionally require
+`HEALTHMD_KOTLIN_TRANSPORT_CLASSPATH` with the app's OkHttp/Okio, coroutines and
+kotlinx JSON/core jars (no downloads). Missing compilers/dependencies are reported as skips,
 not native verification. Temporary compiler output is removed on completion.
 These opt-in diagnostics are not added to the portable CI time budget.
 
 Both scheduler integrations remain **planned for issue #170**. Adoption requires
-strict response parsing (including duplicate keys and exact context), immutable
-selection evidence and original Today Refresh context, atomic plan admission and
+durable immutable selection evidence and original Today Refresh context, secure
+key/effective-header acquisition at admission, atomic plan admission and
 acknowledgement reconciliation, empty-selection completion semantics, settings/UI
-opt-in and warning, secure-store key ownership, and hermetic transport/storage
-fault tests before native runtime acceptance. Apple must extend
+opt-in and warning, secure-store key ownership, and hermetic storage-fault/relaunch
+and scheduler-generation race tests before native runtime acceptance. Apple must extend
 `PendingExportRequest`/`ScheduledExportCoordinator` without changing existing
 request recovery; Android must cover both `ScheduledProfileExportWorker` and
 `ExportWorker` admissions and preserve their generations, cancellation and batch
@@ -304,8 +348,8 @@ At base `b8fd904f4d299f5af4a22111d2fdccf829705ea7`:
   Those protections must be extended, not replaced by receiver coverage.
 - `APIExportClient.kt` is an upload client, not a coverage client. Its existing
   custom headers, response previews, and redirect behavior cannot be assumed safe
-  for this new read contract. New bounded/no-redirect transports need native
-  tests; this PR makes no SDK-call or transport implementation claim.
+  for this new read contract. The new isolated transports above do not change the
+  upload client or its legacy recovery behavior.
 
 Live issue/PR review found no receiver-aware selection implementation. Merged
 [PR 86](https://github.com/CodyBontecou/health-md/pull/86) implements batching, not
@@ -347,9 +391,10 @@ python3 -m unittest discover -s packages/contracts/proposals/receiver-coverage-v
 ```
 
 Reproduction remains code-derived: no device/backend scenario was run. Native
-UI/persistence migration, atomic fault injection, bounded transport/redirect/auth
-mock tests, cross-language fixture consumers, cancellation, schedule success markers,
-relaunch recovery, and actual iPhone/Android plus receiver QA are outstanding.
+UI/persistence migration, atomic fault injection, schedule success markers,
+relaunch recovery, integration compilation and actual iPhone/Android plus receiver
+QA are outstanding. Native transport/parser mock tests cover their isolated source
+boundaries only; they do not prove durable scheduling or device/network behavior.
 Passing the reference suite alone does not complete issue 170. This proposal may
 merge after contract/reference review and passing CI; keep issue 170 open and native
 adoption gated until the implementation and device acceptance above are complete.
