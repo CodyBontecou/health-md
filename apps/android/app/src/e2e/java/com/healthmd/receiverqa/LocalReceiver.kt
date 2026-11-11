@@ -69,7 +69,11 @@ class LocalReceiver(private val context: Context) {
         val fail = state.read()["fail_upload_after"]?.toIntOrNull()
         val count = state.events().count { it.getValue("kind").jsonPrimitive.content == "upload" }
         return if (fail != null && count > fail) MockResponse().setResponseCode(503)
-        else MockResponse().setResponseCode(200).also { state.event("ack", dates.joinToString(",")) }
+        else {
+            body.getValue("records").jsonArray.forEach { state.retain(it.jsonObject) }
+            state.event("ack", dates.joinToString(","))
+            MockResponse().setResponseCode(200)
+        }
     }
     fun stop() = server.shutdown()
 }

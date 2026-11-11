@@ -33,6 +33,7 @@ import kotlinx.serialization.json.*
 @AndroidEntryPoint
 class ReceiverCoverageQaActivity : ComponentActivity() {
     @Inject lateinit var settings: SettingsRepository
+    @Inject lateinit var sourceRegistry: com.healthmd.data.health.HealthProviderRegistry
     @Inject lateinit var credentials: APIExportCredentialStore
     @Inject lateinit var history: ExportHistoryRepository
     @Inject lateinit var scheduler: ExportScheduler
@@ -84,8 +85,8 @@ class ReceiverCoverageQaActivity : ComponentActivity() {
         check(profiles.getProfiles().all { it.name.startsWith("Receiver QA") }) { "Fixture refuses non-QA profiles" }
         scheduler.cancel()
         for (entry in entries.getEntries()) profileScheduler.removeEntry(entry.profileId)
-        workManager.cancelAllWork().result.get()
-        awaitCondition { workManager.getWorkInfosByTag(ExportScheduler.EXPORT_OCCURRENCE_TAG).get().none { it.state == WorkInfo.State.RUNNING } }
+        workManager.cancelAllWork().result.get(10, java.util.concurrent.TimeUnit.SECONDS)
+        awaitCondition { workManager.getWorkInfosByTag(ExportScheduler.EXPORT_OCCURRENCE_TAG).get(10, java.util.concurrent.TimeUnit.SECONDS).none { it.state == WorkInfo.State.RUNNING } }
         history.clearAll()
         state.reset()
         if (receiver == null) receiver = LocalReceiver(applicationContext).also { it.start() }
@@ -101,6 +102,10 @@ class ReceiverCoverageQaActivity : ComponentActivity() {
         settings.setPurchased(true)
         settings.setOnboardingCompleted(true)
         settings.setSelectedHealthProviderId("receiver_qa")
+        check(settings.getSelectedHealthProviderId() == "receiver_qa" &&
+            sourceRegistry.providerFor("receiver_qa") is SyntheticReceiverProvider) {
+            "Synthetic SDK source must be selected before admitting any work"
+        }
         settings.setSleepDayAttribution(SleepDayAttribution.NIGHT_BEGINS)
         credentials.saveAuthorization("receiver-coverage-synthetic")
         val now = Instant.now().atZone(ZoneId.systemDefault())
@@ -210,7 +215,7 @@ class ReceiverCoverageQaActivity : ComponentActivity() {
     private fun count(kind: String) = values(kind).size
     private fun values(kind: String) = state.events().filter { it.getValue("kind").jsonPrimitive.content == kind }.map { it.getValue("value").jsonPrimitive.content }
     private fun allWork(): List<WorkInfo> = listOf(ExportScheduler.EXPORT_OCCURRENCE_TAG, ScheduledProfileScheduler.EXPORT_WORK_TAG)
-        .flatMap { workManager.getWorkInfosByTag(it).get() }.distinctBy { it.id }
+        .flatMap { workManager.getWorkInfosByTag(it).get(10, java.util.concurrent.TimeUnit.SECONDS) }.distinctBy { it.id }
     private fun planFiles(): Map<String, Pair<JsonObject, JsonObject>> {
         val path = filesDir.toPath().resolve("receiver-coverage/plans")
         if (!Files.exists(path)) return emptyMap()

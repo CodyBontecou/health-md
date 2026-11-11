@@ -19,12 +19,22 @@ class ReceiverQaState(context: Context) {
     }
     fun event(kind: String, value: String) = synchronized(lock) {
         Files.createDirectories(directory)
-        Files.write(directory.resolve("events.ndjson"), (buildJsonObject { put("kind",kind);put("value",value) }.toString()+"\n").toByteArray(Charsets.UTF_8),
-            java.nio.file.StandardOpenOption.CREATE, java.nio.file.StandardOpenOption.APPEND)
+        val file = directory.resolve("events.ndjson")
+        val previous = if (Files.exists(file)) Files.readAllBytes(file) else byteArrayOf()
+        val event = (buildJsonObject { put("kind",kind);put("value",value) }.toString()+"\n").toByteArray(Charsets.UTF_8)
+        check(previous.size + event.size <= 256 * 1024) { "Synthetic evidence cap exceeded" }
+        ReceiverCoverageAtomicFile.write(file, previous + event)
     }
     fun events(): List<JsonObject> = synchronized(lock) {
         val file = directory.resolve("events.ndjson")
         if (!Files.exists(file)) emptyList() else Files.readAllLines(file).map { Json.parseToJsonElement(it).jsonObject }
+    }
+    fun retain(record: JsonObject) = synchronized(lock) {
+        val date = record.getValue("date").jsonPrimitive.content
+        require(java.time.LocalDate.parse(date).toString() == date)
+        val bytes = record.toString().toByteArray(Charsets.UTF_8)
+        check(bytes.size <= 128 * 1024)
+        ReceiverCoverageAtomicFile.write(directory.resolve("retained/$date.json"), bytes)
     }
     fun reset() = synchronized(lock) {
         val port = read()["port"]
