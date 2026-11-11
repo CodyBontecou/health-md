@@ -65,12 +65,21 @@ it.each(["noop","rollback","crash"] as const)("%s snapshot publication never inv
   expect(h.store.db.prepare("SELECT count(*) AS n FROM ps_cursor").get()).toMatchObject({n:0});
 });
 it.each(["owner","mode","position","tamper","expiry","withdraw","revoke"])("rejects %s cursor reuse and preserves prior committed consumer state", async failure => {
-  const h = await fixture(); const first = await parseProfileSyncV1Page(await h.service.readPage(h.pageRequest,h.read()));
+  const h = await fixture();
   const collector = createProfileSyncV1ReadView({sentinel:"healthmd.profile-sync.v1.read-view.synthetic-only",context:h.context});
   const initial = h.read(null,"snapshot",8); collector.select(h.context,initial);
   expect((await collector.receive(h.context,initial,await h.service.readPage(h.pageRequest,initial))).result).toBe("complete");
   const prior = collector.view().committed;
-  let request = h.pageRequest, bytes = h.read(first.nextCursor), service = h.service;
+  expect(collector.reset(h.context).result).toBe("resync_required");
+  const start = h.read(); expect(collector.select(h.context,start).result).toBe("pending");
+  const firstReply = await h.service.readPage(h.pageRequest,start), first = await parseProfileSyncV1Page(firstReply);
+  expect((await collector.receive(h.context,start,firstReply)).result).toBe("pending");
+  const continuation = h.read(first.nextCursor);
+  expect(collector.select(h.context,continuation).result).toBe("pending");
+  const staged = collector.view();
+  expect(staged.selected!.read.cursor).toBe(first.nextCursor);
+  expect(staged.tentative!.items).toHaveLength(1); expect(staged.committed).toEqual(prior);
+  let request = h.pageRequest, bytes = continuation, service = h.service;
   if(failure==="owner") request=h.request(h.b,"/api/profile-sync/v1/read");
   if(failure==="mode") bytes=h.read(first.nextCursor,"changes");
   if(failure==="position") h.store.db.prepare("UPDATE ps_cursor SET position=position+1 WHERE token=?").run(first.nextCursor);
@@ -78,9 +87,22 @@ it.each(["owner","mode","position","tamper","expiry","withdraw","revoke"])("reje
   if(failure==="expiry") service=createProfileSqlCandidate({...h.ports,clock:()=>Math.floor(Date.now()/1000)+901});
   if(failure==="withdraw") await h.service.withdraw(h.request(h.a));
   if(failure==="revoke") await h.authority.revoke({kind:"access",token:h.a.access_token});
-  const reply = await service.readPage(request,bytes); expect(()=>parseProfileSyncV1Error(reply)).not.toThrow();
-  // A refused unexpected response cannot replace the already complete view.
-  await collector.receive(h.context,bytes,reply); expect(collector.view().committed).toEqual(prior);
+  const reply = await service.readPage(request,bytes);
+  const expected = ["owner","mode","position","expiry"].includes(failure) ? "resync_required" : "unavailable";
+  expect(parseProfileSyncV1Error(reply).result).toBe(expected); // actual SQL error, not arbitrary reply bytes
+  // Mode fault deliberately changes the server request; deliver that real fixed
+  // error to the genuinely selected snapshot continuation to exercise error parsing.
+  expect((await collector.receive(h.context,continuation,reply)).result).toBe(expected);
+  expect(collector.view().committed).toEqual(prior);
+  if(expected === "unavailable") {
+    // Transient unavailable retains the exact pending view for retry until explicit reset.
+    expect(collector.view().tentative).toEqual(staged.tentative);
+    expect(collector.view().selected).toEqual(staged.selected);
+    expect(collector.reset(h.context).result).toBe("resync_required");
+  }
+  const final = collector.view();
+  expect(final.tentative).toBeNull(); expect(final.selected).toBeNull(); expect(final.parsing).toBeNull();
+  expect(final.requiresSnapshot).toBe(true); expect(final.committed).toEqual(prior);
 });
 it("keeps unsupported baseline-free changes fail-closed without profile or view effects",async()=>{
   const h=await fixture(); const before=h.store.db.prepare("SELECT * FROM ps_partition ORDER BY owner").all();
