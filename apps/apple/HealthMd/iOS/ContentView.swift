@@ -535,7 +535,8 @@ struct ContentView: View {
                 if TestMode.noExportFormats {
                     advancedSettings.exportFormats = []
                 }
-                if ProcessInfo.processInfo.environment["UITEST_HISTORY_ASSESSMENT"] != nil {
+                if ProcessInfo.processInfo.environment["UITEST_HISTORY_ASSESSMENT"] != nil
+                    || TestMode.earliestStepDiscovery != nil {
                     advancedSettings.metricSelection.enabledMetrics = ["steps"]
                 }
                 advancedSettings.archiveExportFiles = TestMode.archiveExports
