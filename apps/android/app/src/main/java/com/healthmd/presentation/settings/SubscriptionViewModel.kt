@@ -103,10 +103,9 @@ internal data class SubscriptionUi(
     val ended: Boolean = false,
     /** Server-verified end of the paid period; null shows Google Play as the source instead. */
     val periodEndMillis: Long? = null,
-) {
-    /** Canceled with a verified date: the "Access until" row. */
-    val showsAccessUntil: Boolean get() = !showsBillingDate && managedPlan != null && !ended && periodEndMillis != null
-}
+    /** Canceled subscription without independent permanent access: date or Play fallback. */
+    val showsAccessUntil: Boolean = false,
+)
 
 internal fun subscriptionUi(status: SubscriptionStatus): SubscriptionUi = when (status) {
     SubscriptionStatus.Unknown -> SubscriptionUi(
@@ -131,10 +130,16 @@ internal fun subscriptionUi(status: SubscriptionStatus): SubscriptionUi = when (
         showsBillingDate = status.isAutoRenewing,
         showsBilledBy = true,
         showsIncludes = true,
-        action = if (status.isAutoRenewing) SubscriptionAction.MANAGE_OR_CANCEL else SubscriptionAction.MANAGE_IN_PLAY,
-        actionNote = if (status.isAutoRenewing) R.string.m3_subscription_cancel_note else R.string.m3_subscription_cancelled_note,
+        // Included access survives cancellation; skip the sheet claiming features will stop.
+        action = if (status.isAutoRenewing && !status.hasIncludedAccess) SubscriptionAction.MANAGE_OR_CANCEL else SubscriptionAction.MANAGE_IN_PLAY,
+        actionNote = when {
+            status.hasIncludedAccess -> null
+            status.isAutoRenewing -> R.string.m3_subscription_cancel_note
+            else -> R.string.m3_subscription_cancelled_note
+        },
         managedPlan = status.plan,
         periodEndMillis = status.periodEndMillis,
+        showsAccessUntil = !status.isAutoRenewing && !status.hasIncludedAccess,
     )
     // One-time purchase: nothing renews, so there is no cancel path at all.
     SubscriptionStatus.Lifetime -> SubscriptionUi(

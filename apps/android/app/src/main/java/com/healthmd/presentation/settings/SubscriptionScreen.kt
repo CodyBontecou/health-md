@@ -53,7 +53,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -76,7 +75,8 @@ import timber.log.Timber
 /**
  * Settings › Subscription (board RF_Subscription / RF_SubEnded): the owned plan, a
  * "Manage or cancel" path through "Before you go" to Google Play, and the lapsed state.
- * Lifetime and grandfathered access show no cancel path. Prices come only from Google Play and
+ * Lifetime and grandfathered access alone show no cancel path. An independently grandfathered
+ * subscriber can still manage the owned subscription without a loss sheet. Prices come only from Google Play and
  * dates only from myself.md's server read of Google Play; neither is ever invented.
  */
 @Composable
@@ -156,7 +156,7 @@ fun SubscriptionScreen(
         SubscriptionLinks(isRestoring = isRestoring, onRestore = viewModel::restore, context = context)
     }
 
-    if (showsBeforeYouGo) {
+    if (showsBeforeYouGo && ui.action == SubscriptionAction.MANAGE_OR_CANCEL) {
         BeforeYouGoSheet(
             periodEnd = periodEnd,
             switchOffer = switchOffer,
@@ -192,7 +192,7 @@ private fun SubscriptionHeroCard(title: String, subtitle: String, owned: Boolean
             painter = painterResource(R.drawable.app_icon),
             contentDescription = null,
             contentScale = ContentScale.Crop,
-            modifier = Modifier.size(56.dp).clip(RoundedCornerShape(GeistRadii.medium)),
+            modifier = Modifier.size(GeistSizes.planArtwork).clip(RoundedCornerShape(GeistRadii.medium)),
         )
         Column(Modifier.weight(1f)) {
             Text(
@@ -212,17 +212,14 @@ private fun SubscriptionDetails(ui: SubscriptionUi, periodEnd: String?) {
         ui.planValue?.let { value ->
             add { shape -> SettingsValueRow(shape, stringResource(R.string.m3_subscription_row_plan), stringResource(value)) }
         }
-        if (ui.showsBillingDate) {
+        if (ui.showsBillingDate || ui.showsAccessUntil) {
             add { shape ->
                 SettingsValueRow(
                     shape,
-                    stringResource(R.string.m3_subscription_row_billing_date),
+                    stringResource(if (ui.showsBillingDate) R.string.m3_subscription_row_billing_date else R.string.m3_subscription_row_access_until),
                     periodEnd ?: stringResource(R.string.m3_subscription_value_billing_date),
                 )
             }
-        }
-        if (ui.showsAccessUntil && periodEnd != null) {
-            add { shape -> SettingsValueRow(shape, stringResource(R.string.m3_subscription_row_access_until), periodEnd) }
         }
         if (ui.showsBilledBy) {
             add { shape ->
@@ -246,7 +243,7 @@ private fun SubscriptionDetails(ui: SubscriptionUi, periodEnd: String?) {
         }
     }
     if (rows.isEmpty()) return
-    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(GeistSpacing.listGroupGap)) {
         rows.forEachIndexed { index, row -> row(groupRowShape(index, rows.size)) }
     }
 }
@@ -286,7 +283,7 @@ private fun SubscriptionEndedContent(onSeePlans: () -> Unit, onPlaySubscriptions
                 R.string.m3_subscription_works_health_connect_body,
             ),
         )
-        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(GeistSpacing.listGroupGap)) {
             items.forEachIndexed { index, (icon, title, body) ->
                 SettingsRow(
                     shape = groupRowShape(index, items.size),
@@ -349,7 +346,7 @@ private fun SubscriptionLinks(isRestoring: Boolean, onRestore: () -> Unit, conte
     FlowRow(horizontalArrangement = Arrangement.spacedBy(GeistSpacing.space1)) {
         TextButton(onClick = onRestore, enabled = !isRestoring, modifier = Modifier.testTag("subscription.restore")) {
             if (isRestoring) {
-                CircularProgressIndicator(Modifier.size(16.dp), color = colors.brandPrimary, strokeWidth = 2.dp)
+                CircularProgressIndicator(Modifier.size(GeistSpacing.space4), color = colors.brandPrimary, strokeWidth = GeistSizes.progressStroke)
                 Spacer(Modifier.size(GeistSpacing.space2))
                 Text(stringResource(R.string.paywall_restoring), style = GeistType.button14)
             } else {
@@ -545,7 +542,7 @@ private fun SheetList(heading: String, icon: ImageVector, tint: androidx.compose
     Column(verticalArrangement = Arrangement.spacedBy(GeistSpacing.space3)) {
         items.forEach { item ->
             Row(horizontalArrangement = Arrangement.spacedBy(GeistSpacing.space3)) {
-                Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(20.dp))
+                Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(GeistSizes.iconMedium))
                 Text(stringResource(item), style = GeistType.copy14, color = colors.primary, modifier = Modifier.weight(1f))
             }
         }
@@ -569,10 +566,9 @@ private fun TonalActionButton(
             containerColor = colors.secondaryContainer,
             contentColor = colors.onSecondaryContainer,
         ),
-        elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp),
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            icon?.let { Icon(it, contentDescription = null, modifier = Modifier.size(18.dp)) }
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(GeistSpacing.space2)) {
+            icon?.let { Icon(it, contentDescription = null, modifier = Modifier.size(GeistSizes.iconSmall)) }
             Text(text, style = GeistType.button16)
         }
     }

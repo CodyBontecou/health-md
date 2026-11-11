@@ -751,7 +751,9 @@ class BillingRepositoryImpl(
         }
         periodReadJob = scope.launch {
             val verified = verifier.verify(token)
-            if (verified == null) {
+            // A transport success can still be unusable (wrong product/state or no future date).
+            // Apply the same hourly backoff as a failed read rather than retrying every refresh.
+            if (verified == null || SubscriptionDates.periodEnd(status, verified, clock()) == null) {
                 failedPeriodRead = token to clock()
                 return@launch
             }

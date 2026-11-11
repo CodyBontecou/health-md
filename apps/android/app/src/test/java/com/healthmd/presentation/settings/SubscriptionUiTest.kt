@@ -2,6 +2,8 @@ package com.healthmd.presentation.settings
 
 import com.google.common.truth.Truth.assertThat
 import com.healthmd.R
+import com.healthmd.domain.billing.ActivePurchase
+import com.healthmd.domain.billing.SubscriptionLapse
 import com.healthmd.domain.billing.SubscriptionStatus
 import com.healthmd.domain.repository.PurchasePlan
 import org.junit.Test
@@ -24,7 +26,27 @@ class SubscriptionUiTest {
         assertThat(ui.status).isEqualTo(R.string.m3_subscription_status_cancelled)
         assertThat(ui.action).isEqualTo(SubscriptionAction.MANAGE_IN_PLAY)
         assertThat(ui.showsBillingDate).isFalse()
+        assertThat(ui.showsAccessUntil).isTrue()
+        assertThat(ui.periodEndMillis).isNull()
         assertThat(ui.managedPlan).isEqualTo(PurchasePlan.WEEKLY)
+    }
+
+    @Test fun grandfatheredSubscribersCanCancelWithoutClaimsOfLosingAccess() {
+        for (renewing in listOf(true, false)) {
+            val status = SubscriptionLapse.status(
+                ActivePurchase(PurchasePlan.WEEKLY, isAutoRenewing = renewing),
+                PurchasePlan.WEEKLY,
+                hasIncludedAccess = true,
+            )
+            val ui = subscriptionUi((status as SubscriptionStatus.Subscribed).copy(periodEndMillis = 1_800_000_000_000L))
+            assertThat(ui.action).isEqualTo(SubscriptionAction.MANAGE_IN_PLAY)
+            assertThat(ui.actionNote).isNull()
+            assertThat(ui.showsAccessUntil).isFalse()
+            assertThat(ui.owned).isTrue()
+            assertThat(ui.showsIncludes).isTrue()
+            assertThat(subscriptionManageUrl(ui, "com.healthmd.android")).contains("sku=health_md_premium_weekly")
+            assertThat(subscriptionUi(SubscriptionLapse.status(null, PurchasePlan.WEEKLY, true)).ended).isFalse()
+        }
     }
 
     @Test fun lifetimeAndIncludedAccessHaveNoCancelPath() {
@@ -75,7 +97,7 @@ class SubscriptionUiTest {
 
         val canceled = subscriptionUi(SubscriptionStatus.Subscribed(PurchasePlan.WEEKLY, isAutoRenewing = false, periodEndMillis = end))
         assertThat(canceled.showsAccessUntil).isTrue()
-        assertThat(subscriptionUi(SubscriptionStatus.Subscribed(PurchasePlan.WEEKLY, isAutoRenewing = false)).showsAccessUntil).isFalse()
+        assertThat(subscriptionUi(SubscriptionStatus.Subscribed(PurchasePlan.WEEKLY, isAutoRenewing = false)).showsAccessUntil).isTrue()
         assertThat(subscriptionUi(SubscriptionStatus.Ended(PurchasePlan.WEEKLY)).showsAccessUntil).isFalse()
     }
 

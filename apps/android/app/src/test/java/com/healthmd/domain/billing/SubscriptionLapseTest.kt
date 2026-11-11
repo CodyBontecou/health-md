@@ -47,7 +47,7 @@ class SubscriptionLapseTest {
             .isEqualTo(SubscriptionStatus.IncludedAccess)
         // A store subscription still wins so its cancel path stays reachable.
         assertThat(SubscriptionLapse.status(weekly, PurchasePlan.WEEKLY, hasIncludedAccess = true))
-            .isEqualTo(SubscriptionStatus.Subscribed(PurchasePlan.WEEKLY, isAutoRenewing = true))
+            .isEqualTo(SubscriptionStatus.Subscribed(PurchasePlan.WEEKLY, isAutoRenewing = true, hasIncludedAccess = true))
     }
 
     @Test fun primaryPrefersLifetimeThenYearlyThenWeekly() {

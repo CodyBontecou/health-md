@@ -30,6 +30,8 @@ sealed interface SubscriptionStatus {
         val plan: PurchasePlan,
         val isAutoRenewing: Boolean,
         val periodEndMillis: Long? = null,
+        /** Permanent access remains independent of this owned subscription. */
+        val hasIncludedAccess: Boolean = false,
     ) : SubscriptionStatus
 
     /** The one-time Lifetime product is owned: nothing renews and nothing can be cancelled. */
@@ -66,7 +68,7 @@ object SubscriptionLapse {
         hasIncludedAccess: Boolean,
     ): SubscriptionStatus = when {
         active?.plan == PurchasePlan.LIFETIME -> SubscriptionStatus.Lifetime
-        active != null -> SubscriptionStatus.Subscribed(active.plan, active.isAutoRenewing)
+        active != null -> SubscriptionStatus.Subscribed(active.plan, active.isAutoRenewing, hasIncludedAccess = hasIncludedAccess)
         hasIncludedAccess -> SubscriptionStatus.IncludedAccess
         rememberedPlan != null && rememberedPlan != PurchasePlan.LIFETIME ->
             SubscriptionStatus.Ended(rememberedPlan)

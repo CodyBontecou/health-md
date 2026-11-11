@@ -165,6 +165,24 @@ class BillingRevocationTest {
             .isEqualTo(NOW + DAY)
     }
 
+    @Test fun grandfatheredSubscriptionRetainsIndependentAccessThroughDateReadAndLapse() = runTest {
+        val fixture = fixture(backgroundScope, cached = false, legacyGrant = true,
+            purchases = listOf(purchase(PurchasePlan.YEARLY)),
+            verifier = { VerifiedPlaySubscription(PurchasePlan.YEARLY.productId, "active", NOW + DAY, true) })
+        fixture.repository.restorePurchase()
+        runCurrent()
+        assertThat(fixture.repository.subscriptionStatus.value).isEqualTo(
+            SubscriptionStatus.Subscribed(PurchasePlan.YEARLY, isAutoRenewing = true,
+                periodEndMillis = NOW + DAY, hasIncludedAccess = true),
+        )
+        every { fixture.client.queryPurchasesAsync(any(), any<PurchasesResponseListener>()) } answers {
+            secondArg<PurchasesResponseListener>().onQueryPurchasesResponse(result(BillingClient.BillingResponseCode.OK), emptyList())
+        }
+        assertThat(fixture.repository.restorePurchase()).isTrue()
+        assertThat(fixture.repository.subscriptionStatus.value).isEqualTo(SubscriptionStatus.IncludedAccess)
+        assertThat(fixture.repository.isPermanentlyUnlocked.value).isTrue()
+    }
+
     @Test fun mismatchedOrPastServerAnswersAreNeverShownAsADate() = runTest {
         for (answer in listOf(
             VerifiedPlaySubscription(PurchasePlan.WEEKLY.productId, "active", NOW + DAY, autoRenewing = true),
@@ -195,6 +213,36 @@ class BillingRevocationTest {
         assertThat(calls).isEqualTo(2)
         assertThat(fixture.repository.subscriptionStatus.value)
             .isEqualTo(SubscriptionStatus.Subscribed(PurchasePlan.WEEKLY, isAutoRenewing = true))
+    }
+
+    @Test fun unusableServerAnswersBackOffUntilAnHourThenRecover() = runTest {
+        for (answer in listOf(
+            VerifiedPlaySubscription(PurchasePlan.YEARLY.productId, "active", NOW + DAY, true),
+            VerifiedPlaySubscription(PurchasePlan.WEEKLY.productId, "expired", NOW + DAY, false),
+            VerifiedPlaySubscription(PurchasePlan.WEEKLY.productId, "active", NOW - DAY, true),
+            VerifiedPlaySubscription(PurchasePlan.WEEKLY.productId, "active", NOW, true),
+            VerifiedPlaySubscription(PurchasePlan.WEEKLY.productId, "active", null, true),
+        )) {
+            var calls = 0
+            var now = NOW
+            val fixture = fixture(backgroundScope, cached = false, purchases = listOf(purchase(PurchasePlan.WEEKLY)),
+                verifier = {
+                    calls++
+                    if (calls == 1) answer else VerifiedPlaySubscription(PurchasePlan.WEEKLY.productId, "active", NOW + DAY, true)
+                }, now = { now })
+            fixture.repository.restorePurchase()
+            runCurrent()
+            assertThat((fixture.repository.subscriptionStatus.value as SubscriptionStatus.Subscribed).periodEndMillis).isNull()
+            now += 60 * 60 * 1000L - 1
+            fixture.repository.restorePurchase()
+            runCurrent()
+            assertThat(calls).isEqualTo(1)
+            now++
+            fixture.repository.restorePurchase()
+            runCurrent()
+            assertThat(calls).isEqualTo(2)
+            assertThat((fixture.repository.subscriptionStatus.value as SubscriptionStatus.Subscribed).periodEndMillis).isEqualTo(NOW + DAY)
+        }
     }
 
     @Test fun emptySnapshotAfterARememberedSubscriptionReportsALapse() = runTest {
