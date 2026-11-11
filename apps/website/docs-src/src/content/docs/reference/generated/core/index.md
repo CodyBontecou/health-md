@@ -17,14 +17,14 @@ This group contains 21 deterministic artifacts. Checksums are SHA-256 hashes of 
 |---|---:|---|---|---|
 | `canonical-archive.json` | 33147 | `4413e1b7f19516d7d4fe330defc6351369dcbe62a658872fd157ef50f3935341` | — | [Download](/docs/reference/generated/core/canonical-archive.json) |
 | `canonical-json-fields.md` | 49042 | `190177dfd3e5923f8e786902d422a7e7408d661793c7e2e52d0f7078555e6e48` | [Open page](/docs/reference/generated/core/canonical-json-fields/) | [Download](/docs/reference/generated/core/canonical-json-fields.md) |
-| `csv-row-contracts.md` | 44189 | `ced67eb454ff046de7a5746bbc938e09b95a4a4814343c2f49413f1a3929fcdc` | [Open page](/docs/reference/generated/core/csv-row-contracts/) | [Download](/docs/reference/generated/core/csv-row-contracts.md) |
-| `daily-json-fields.md` | 120624 | `cc4af5712c431922533bba1907ff0864a03907504b693a4936f7e350df66100c` | [Open page](/docs/reference/generated/core/daily-json-fields/) | [Download](/docs/reference/generated/core/daily-json-fields.md) |
-| `data-dictionary.json` | 222265 | `1dfcfc07801878319500cc26b9ca7f03f00d4f50e378bb3eb483bf6c753d04fd` | — | [Download](/docs/reference/generated/core/data-dictionary.json) |
-| `lossless-day-bases.md` | 15628 | `3f9a84f98206dd7ba7b52bcaa055f774ec89ec6b60b22755abdeb6ac65a4b1e1` | — | [Download](/docs/reference/generated/core/lossless-day-bases.md) |
-| `lossless-day.csv` | 58802 | `c67db49ecbfd74ae200b34e7e30d65c688bc716c9bb285ec7194382d645f009f` | — | [Download](/docs/reference/generated/core/lossless-day.csv) |
-| `lossless-day.json` | 84633 | `0465094abb79eb74257248c11f5fa7455e800920aa177e733bfa34cd61808356` | — | [Download](/docs/reference/generated/core/lossless-day.json) |
-| `lossless-day.md` | 24315 | `88d6574df1bf970585590a2cc1af88115d6ca26bf803c9583490657738176387` | — | [Download](/docs/reference/generated/core/lossless-day.md) |
-| `manifest.json` | 3253 | `239c8a3dd94ac848d93987ec619df7bdb04aa13632d75d0ee6cf49760796221d` | — | [Download](/docs/reference/generated/core/manifest.json) |
+| `csv-row-contracts.md` | 44278 | `48d75d961bb8cf3a167315c9574789b5f5f94e835d5f320e1e45d73638768b46` | [Open page](/docs/reference/generated/core/csv-row-contracts/) | [Download](/docs/reference/generated/core/csv-row-contracts.md) |
+| `daily-json-fields.md` | 120689 | `bdc3b5debc9d58c9c5f27f76ac7ce51718c88c5773e60093db4cfab2f5de6bc7` | [Open page](/docs/reference/generated/core/daily-json-fields/) | [Download](/docs/reference/generated/core/daily-json-fields.md) |
+| `data-dictionary.json` | 222497 | `2d8b68839f906008c4f3ee0cbd8e14a407bfee0db75c15b1981bb0d6790973e0` | — | [Download](/docs/reference/generated/core/data-dictionary.json) |
+| `lossless-day-bases.md` | 15629 | `829609a7d65c4d98c113e37ab48eb5001f425b41893e72c14996846e78b95318` | — | [Download](/docs/reference/generated/core/lossless-day-bases.md) |
+| `lossless-day.csv` | 58803 | `ab69bcd9fb34245d702f019b23a0f170d77ecd16236fa0214d20d6c01d71bc3a` | — | [Download](/docs/reference/generated/core/lossless-day.csv) |
+| `lossless-day.json` | 84634 | `0ae6fb21554ab390efab4b2266f52ff43248f4d367ffc7150578d72c1ff96748` | — | [Download](/docs/reference/generated/core/lossless-day.json) |
+| `lossless-day.md` | 24316 | `3084a4314fbc6744a3e15a13737e8f64c170c56d507d7c5e7cc10f19834dcefe` | — | [Download](/docs/reference/generated/core/lossless-day.md) |
+| `manifest.json` | 3254 | `f4f664fa37e723e5fab74db0015279e6d08178d69ba3ced0c4c44e3e6d085e6e` | — | [Download](/docs/reference/generated/core/manifest.json) |
 | `metric-catalog.md` | 50456 | `c9ea08b90d5d2bc1ea88cb7eac1a95be3d8fbd2af5958b30248e7f11e5684ab6` | [Open page](/docs/reference/generated/core/metric-catalog/) | [Download](/docs/reference/generated/core/metric-catalog.md) |
 | `metric-examples.md` | 62772 | `7137c304d100c9832692f080068095016b9e72d8cbc02ffc4148aa0630d90226` | [Open page](/docs/reference/generated/core/metric-examples/) | [Download](/docs/reference/generated/core/metric-examples.md) |
 | `provider-day-bases.md` | 2677 | `bfd613114c2bf3d4c10d72efa7fea889d536dca4c333a69ff7707c90c8310b10` | — | [Download](/docs/reference/generated/core/provider-day-bases.md) |

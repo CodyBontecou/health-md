@@ -487,7 +487,7 @@ struct APIEndpointExportRunner {
     ) async throws -> PreparationResolution {
         let captureContext = settings.executionSleepCaptureContext ?? AppleSleepCaptureContext.pinned.wrappedValue
         let wakeDate = captureContext?.sleepDayAttribution == .morningEnds
-        let requestedMode: ExportEngineMode = fetchExternalDailyRecords == nil || wakeDate
+        let requestedMode: ExportEngineMode = fetchExternalDailyRecords == nil || wakeDate || settings.executionAppleExportEnginePin != nil
             ? requestedMode(settings: settings, policyResolver: policyResolver)
             : .legacy
         guard requestedMode != .legacy else {
@@ -633,7 +633,7 @@ struct APIEndpointExportRunner {
         // native-authoritative so the typed section cannot be dropped by an older path.
         let wakeDate = (settings.executionSleepCaptureContext ?? AppleSleepCaptureContext.pinned.wrappedValue)?.sleepDayAttribution == .morningEnds
             || settings.executionAppleExportEnginePin?.isWakeDate == true
-        let requestedMode: ExportEngineMode = fetchExternalDailyRecords == nil || wakeDate
+        let requestedMode: ExportEngineMode = fetchExternalDailyRecords == nil || wakeDate || settings.executionAppleExportEnginePin != nil
             ? requestedMode(settings: settings, policyResolver: policyResolver)
             : .legacy
         guard requestedMode != .legacy else {
