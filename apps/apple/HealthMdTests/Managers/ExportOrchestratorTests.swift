@@ -460,6 +460,46 @@ final class ExportOrchestratorTests: XCTestCase {
     }
 
     @MainActor
+    func testManualProviderOnlyDaysKeepSidecarsAndNormalizedSections() async throws {
+        guard ConnectedAppsFeature.isEnabled else { throw XCTSkip("Requires Connected Apps test host") }
+        let date = HealthKitFixtures.referenceDate
+        let next = try XCTUnwrap(Calendar.current.date(byAdding: .day, value: 1, to: date))
+        for attribution in [SleepDayAttribution.nightBegins, .morningEnds] {
+            for includesRange in [false, true] {
+                let dates = includesRange ? [date, next] : [date]
+                let store = FakeHealthStore()
+                store.querySumResult = { identifier, _ in
+                    guard identifier == .stepCount else { return nil }
+                    // The first day is provider-only; the range's second day also has native data.
+                    return store.queriedSumIdentifiers.count == 1 ? nil : 42
+                }
+                let manager = HealthKitManager(store: store, userDefaults: makeIsolatedDefaults())
+                manager.setSleepDayAttribution(attribution)
+                let (vault, files) = makeVaultManager(vaultPath: "/tmp/ProviderOnly-\(UUID())")
+                let settings = makeExportSettings(formats: [.json], rollupPeriods: includesRange ? [.range] : [])
+                settings.executionSleepCaptureContext = nil
+                settings.includeGranularData = true
+                settings.metricSelection.deselectAll()
+                settings.metricSelection.enabledMetrics = ["steps"]
+                settings.includeDataDictionary = false
+                let providers = MorningProviderRangeProbe()
+                let result = await ExportOrchestrator.exportDates(dates, healthKitManager: manager,
+                    vaultManager: vault, settings: settings, externalIntegrations: providers)
+
+                XCTAssertEqual(providers.accepted?.calendars.count, dates.count, "Provider admission must precede empty-day filtering")
+                XCTAssertEqual(result.successCount, dates.count, "\(result.failedDateDetails)")
+                XCTAssertEqual(result.externalRecordFileCount, dates.count)
+                let daily = try XCTUnwrap(files.files.first {
+                    $0.key.hasSuffix("/2026-03-15.json") && !$0.key.contains("/integrations/")
+                }?.value)
+                let document = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(daily.utf8)) as? [String: Any])
+                XCTAssertNotNil((document["providers"] as? [String: Any])?["whoop"])
+                XCTAssertNil((document["activity"] as? [String: Any])?["steps"])
+            }
+        }
+    }
+
+    @MainActor
     func testManualLosslessEmptyDaysProduceNoDailyFiles() async throws {
         for periods: Set<HealthRollupPeriod> in [[], [.range]] {
             let date = HealthKitFixtures.referenceDate
