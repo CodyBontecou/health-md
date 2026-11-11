@@ -784,8 +784,14 @@ final class APIEndpointExportEngineTests: XCTestCase {
         let draft = try JSONDecoder().decode(AppleSleepCaptureContext.self,
             from: JSONSerialization.data(withJSONObject: object))
         let service = HealthMdCoreService()
-        let historical = try AppleExportEnginePin(engine: .shadow, calendarTimeZoneIdentifier: "UTC",
-            buildInfo: service.buildInfo(), registrySnapshot: service.metricRegistry(profile: .appleHealthDataV8))
+        let current = try AppleExportEnginePin(engine: .shadow, calendarTimeZoneIdentifier: "UTC",
+            buildInfo: service.buildInfo(), registrySnapshot: service.metricRegistry(profile: .appleHealthDataV10))
+        var historicalObject = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(current)) as? [String: Any])
+        historicalObject["profile"] = "apple_health_data_v8"
+        historicalObject["public_schema_version"] = 8
+        historicalObject["core_api_version"] = 4
+        let historical = try JSONDecoder().decode(AppleExportEnginePin.self,
+            from: JSONSerialization.data(withJSONObject: historicalObject))
         let cases: [(AppleSleepCaptureContext, AppleExportEnginePin?, Bool)] = [
             (draft, nil, false), (valid, historical, true), (valid, nil, true),
             (AppleSleepCaptureContext(timeZone: TimeZone(identifier: "Europe/Berlin")!, sleepDayAttribution: .morningEnds), nil, false),

@@ -11,7 +11,7 @@ website/docs build is required. `make test` executes the same suite locally.
 | Core | Real pure-Rust export/semantic/rollup behavior and protocol/crypto vectors, including versioned Apple and Android profiles |
 | CLI | Transport-neutral operation validation, normalization, scope and backend contracts in `healthmd-operations` |
 | Practice | Locked dependencies, type checking, all unit/API authorization and privacy regressions, production asset build, synthetic scanner/canary and security inventory |
-| Wake | All authentication/replay/delivery policy tests and type checks for the notification-only Worker |
+| Wake | Independent Wake and Cloud checks: Wake authentication/replay/delivery policy and types; Cloud locked dependencies, both type checks, all synthetic host regressions, fail-closed production policy and dependency audit |
 | Consumer | Pinned Obsidian parser/visualization tests, CSV combiner behavior, exact producer/consumer fixture equality and Apple/Android sample preservation |
 
 These checks run against current source every time. Compilation outputs may be
@@ -24,7 +24,8 @@ different revision or tracked modification fails the consumer check.
 
 The workflow uses a shallow, blob-filtered Git checkout that omits media, archives,
 fonts and spreadsheet binaries. All retained source and textual fixture inputs remain
-present. Contract validation still checks the complete manifest, schemas, fixtures,
+present. The two small Cloud PNG assets used by route/security tests are also
+retained explicitly; tests never substitute generated assets. Contract validation still checks the complete manifest, schemas, fixtures,
 profiles and packaging mirrors; only documentation-link existence checking is omitted
 because source-only checkouts deliberately omit linked media.
 
@@ -57,7 +58,13 @@ claim. No health data is introduced into Wake.
 Explicit diagnostic commands and historical test sources remain available. None is
 moved to a mandatory nightly or revived as a hidden release regression matrix.
 Store signing, packaging, artifact provenance and publication remain separate release
-operations. The component reusable workflow interfaces invoke this same portable gate.
+operations. Cloud host coverage runs through `scripts/ci/cloud.sh` inside the
+existing Wake group; the components share no code, bindings, credentials or storage.
+No test filters or failure suppression are used. Cloud Wrangler D1/R2 smoke, VM
+bundling and Worker/profile package builds remain available through the manual-only
+`cloud-ci.yml` diagnostic workflow. They are not extra PR, nightly or release gates.
+The unchanged 90/110/120-second limits still fail closed; local timing alone cannot
+establish a hosted pass. The component reusable workflow interfaces invoke this same portable gate.
 
 ## Local execution and rollout
 

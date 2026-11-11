@@ -1,22 +1,6 @@
-name: Cloud CI
+name: Cloud diagnostics
 
 on:
-  pull_request:
-  push:
-    branches: [main]
-    paths:
-      - 'apps/cloud/**'
-      - 'docs/architecture/adr-0007-healthmd-cloud.md'
-      - 'docs/architecture/adr-0008-multi-user-healthmd-cloud-production.md'
-      - 'packages/contracts/account-auth/**'
-      - 'packages/contracts/profile-sync/**'
-      - 'packages/contracts/shared-setup/v2/**'
-      - 'packages/contracts/validate.py'
-      - 'docs/architecture/account-profile-sync-source-design.md'
-      - 'docs/architecture/account-sync-evidence-ledger.md'
-      - 'packages/contracts/product-capabilities.json'
-      - 'packages/contracts/manifest.json'
-      - '.github/workflows/cloud-ci.yml'
   workflow_dispatch:
 
 permissions:
@@ -28,7 +12,7 @@ concurrency:
 
 jobs:
   validate:
-    name: Cloud CI
+    name: Cloud diagnostics
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     defaults:

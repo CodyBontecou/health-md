@@ -40,11 +40,11 @@ This group contains 35 deterministic artifacts. Checksums are SHA-256 hashes of 
 | `mac-export-job.json` | 27691 | `eb4c6c34810ec641f5abc40cb246a52d7127c48fccf7b086879de9561539fee1` | — | [Download](/docs/reference/generated/automation/mac-export-job.json) |
 | `mac-export-result-partial.json` | 1034 | `f9c8630140c1d961e93a40cc887133da30c1c757a0dd651f81b932f9ae05c201` | — | [Download](/docs/reference/generated/automation/mac-export-result-partial.json) |
 | `mac-export-result-success.json` | 585 | `b9a72e7f9eb09520595467270d1954d373491d1620ee738da2043361a56ab03b` | — | [Download](/docs/reference/generated/automation/mac-export-result-success.json) |
-| `manifest.json` | 6337 | `a61955f2c7e4ae93bbd4c93320cc6c610fc52084dbbf7872e071c8e8fe29d8b6` | — | [Download](/docs/reference/generated/automation/manifest.json) |
-| `message-fields.md` | 134641 | `73de6e440d09b74496414a5d3dab43707f3b82e330d8fdeed113f11324017d0a` | [Open page](/docs/reference/generated/automation/message-fields/) | [Download](/docs/reference/generated/automation/message-fields.md) |
-| `peer-capabilities.json` | 1809 | `f9d50aa621b4e83322035e400b68743187693d80191e7cd84b21989db30202dc` | — | [Download](/docs/reference/generated/automation/peer-capabilities.json) |
-| `raw-result-complete.json` | 3240 | `d82df3876394ac05761c2fdc44db41b6b4021ebc8b4becba20bf51793c25f6c6` | — | [Download](/docs/reference/generated/automation/raw-result-complete.json) |
-| `raw-result-partial.json` | 5280 | `311e1f6b6225226b0a3000aab2322114e47067bfc36a54cc78f7a9e3a0482d33` | — | [Download](/docs/reference/generated/automation/raw-result-partial.json) |
+| `manifest.json` | 6337 | `f3ed2f8a9c2801725e4b4dea1d178cacd11cda183a39331b1048e1b81549f7dd` | — | [Download](/docs/reference/generated/automation/manifest.json) |
+| `message-fields.md` | 136543 | `6a763ba1585154499224ae2381e7d1b8f43c501002c79cc38cfe38992a3ec25b` | [Open page](/docs/reference/generated/automation/message-fields/) | [Download](/docs/reference/generated/automation/message-fields.md) |
+| `peer-capabilities.json` | 1860 | `2532b81720672866d94c098890a2589257e730581d17a22181efffdc013512dc` | — | [Download](/docs/reference/generated/automation/peer-capabilities.json) |
+| `raw-result-complete.json` | 3241 | `bbf8f86a366590cae7823d1e6a2134d1ad14e77d539d26a5ee3ab8e2c96eb338` | — | [Download](/docs/reference/generated/automation/raw-result-complete.json) |
+| `raw-result-partial.json` | 5281 | `05979a293411c09f05f40476d893c2335658f9426d96e2fcf9ee4a48927750cb` | — | [Download](/docs/reference/generated/automation/raw-result-partial.json) |
 | `transfer-acknowledgement.json` | 213 | `c83bbf4756dd8a07760f199c39ecb3cc5f712b3f3802f6d26a7d286caf08a62e` | — | [Download](/docs/reference/generated/automation/transfer-acknowledgement.json) |
 | `transfer-chunk.json` | 242 | `6363e031033b01e65349bc3061ee08f524cd0b09522edaa1ad1a83d0e3368418` | — | [Download](/docs/reference/generated/automation/transfer-chunk.json) |
 | `transfer-complete.json` | 183 | `f31d7bcfcdbd3d3b661368d506109597862b3257a3882a0bfcb687448140fa27` | — | [Download](/docs/reference/generated/automation/transfer-complete.json) |

@@ -264,7 +264,6 @@ struct ExternalProviderAPIClient: Sendable {
         let name: String
         let path: String
         let requiredScope: String
-
     }
 
     private func fetchWHOOP(
