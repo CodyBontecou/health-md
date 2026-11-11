@@ -137,13 +137,27 @@ describe("deadlines cover fetch and streamed bodies", () => {
   it.each(["headers", "oauth-body", "fcm-body"])("aborts a stalled %s without a retry or budget consumption", async (stage) => {
     vi.useFakeTimers(); vi.setSystemTime(NOW);
     let cancelled = false;
+    let signalEntry!: () => void;
+    const entered = new Promise<void>((resolve) => { signalEntry = resolve; });
     const stalled = () => new Response(new ReadableStream<Uint8Array>({ cancel: () => { cancelled = true; } }));
     const mocked = mockProvider();
-    if (stage === "headers") mocked.mockImplementation(() => new Promise(() => {}));
-    if (stage === "oauth-body") mocked.mockResolvedValueOnce(stalled());
-    if (stage === "fcm-body") mocked.mockResolvedValueOnce(oauth()).mockResolvedValueOnce(stalled());
+    if (stage === "headers") mocked.mockImplementation(() => {
+      signalEntry();
+      return new Promise(() => {});
+    });
+    if (stage === "oauth-body") mocked.mockImplementationOnce(async () => {
+      signalEntry();
+      return stalled();
+    });
+    if (stage === "fcm-body") mocked.mockResolvedValueOnce(oauth()).mockImplementationOnce(async () => {
+      signalEntry();
+      return stalled();
+    });
     const pending = attempt();
-    await vi.waitFor(() => expect(mocked).toHaveBeenCalledTimes(stage === "fcm-body" ? 2 : 1));
+    // Synchronize on actual provider entry after real signing, without polling
+    // or advancing the fake deadline while the crypto worker is still pending.
+    await entered;
+    expect(mocked).toHaveBeenCalledTimes(stage === "fcm-body" ? 2 : 1);
     await vi.advanceTimersByTimeAsync(5000);
     expect(await (await pending).json()).toEqual({ status: "undeliverable" });
     expect(mocked.mock.calls.at(-1)?.[1]?.signal?.aborted).toBe(true);
