@@ -221,7 +221,11 @@ internal object AgentBridgeRequestSettingsResolver {
         val paths = AgentBridgeValidation.predictedPaths(intent, output)
         val days = requestedDays(dates, ZoneId.of(intent.calendarTimezone))
         val settings = settings(output, selection)
-        val snapshot = AndroidExportSettingsSnapshot.capture(settings, null, ZoneId.of(intent.calendarTimezone))
+        // This closed bridge output is historical frozen-v4. Bind its capture clock/profile
+        // into each new private snapshot; never fill missing authority while reopening a plan.
+        val captureContext = AndroidCaptureContext(ZoneId.of(intent.calendarTimezone),
+            SleepDayAttribution.NIGHT_BEGINS, "android-frozen-v4")
+        val snapshot = AndroidExportSettingsSnapshot.capture(settings, null, captureContext.zoneId, captureContext)
         val frozenJson = AndroidExportSettingsSnapshotCodec.encodeCanonical(snapshot)
         return AgentBridgeRequestSettingsOutputResolution(output, AgentBridgeRequestSettingsResolution(
             1, AgentBridgeCodec.sha256(bytes), intent.peer, intent.destination, inputs.catalog.revision,

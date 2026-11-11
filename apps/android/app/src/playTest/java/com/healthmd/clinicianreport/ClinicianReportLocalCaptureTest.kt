@@ -18,6 +18,8 @@ import com.healthmd.domain.clinicianreport.ReportMetric
 import com.healthmd.domain.model.ActivityData
 import com.healthmd.domain.model.DataTypeSelection
 import com.healthmd.domain.model.HealthData
+import com.healthmd.domain.model.ExportDetailSelection
+import com.healthmd.domain.model.SleepDayAttribution
 import com.healthmd.domain.repository.SettingsRepository
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -54,9 +56,10 @@ class ClinicianReportLocalCaptureTest {
         val zone = ZoneId.of("Pacific/Chatham")
         val settings = mockk<SettingsRepository>(relaxed = true)
         coEvery { settings.getSelectedHealthProviderId() } returns selectedProviderId
+        coEvery { settings.getSleepDayAttribution() } returns SleepDayAttribution.NIGHT_BEGINS
         coEvery { settings.getConnectedHealthProviderIds() } returns setOf("health_connect", "whoop")
         val manager = mockk<HealthConnectManager>()
-        coEvery { manager.fetchHealthDataRange(any(), any(), any(), any(), any()) } answers {
+        coEvery { manager.fetchHealthDataRange(any(), any(), any(), any(), any(), any(), any()) } answers {
             localFailure?.let { throw it }
             firstArg<List<LocalDate>>().map { HealthData(it, activity = ActivityData(steps = 1_234)) }
         }
@@ -107,8 +110,10 @@ class ClinicianReportLocalCaptureTest {
         coVerify(exactly = 1) {
             manager.fetchHealthDataRange(
                 listOf(day), DataTypeSelection().deselectAll().copy(activity = true), true, zone, true,
+                SleepDayAttribution.NIGHT_BEGINS, ExportDetailSelection.uniform(true),
             )
         }
+        coVerify(exactly = 0) { settings.getSleepDayAttribution() }
         coVerify(exactly = 0) { settings.getSelectedHealthProviderId() }
         coVerify(exactly = 0) { settings.getConnectedHealthProviderIds() }
         coVerify(exactly = 0) { settings.setSelectedHealthProviderId(any()) }
