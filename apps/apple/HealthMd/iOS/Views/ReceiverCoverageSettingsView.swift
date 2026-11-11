@@ -26,7 +26,7 @@ private struct ReceiverCoverageSettingsEditor: View {
     @State private var preflightURL = ""
     @State private var scopeID = ""
     @State private var correction = ""
-    @State private var error = false
+    @State private var hasError = false
     var body: some View {
         NavigationStack {
             Form {
@@ -50,7 +50,7 @@ private struct ReceiverCoverageSettingsEditor: View {
                     Section { Text(ReceiverCoverageConfiguration.warning) }
                     Section { Text("Personal compatibility API destinations only. Managed clinic credentials are not supported for receiver-aware scheduling.") }
                 }
-                if error { Text("Could not save receiver-aware scheduling. Check the endpoint, scope, correction choice and secure credential storage.").foregroundStyle(.red) }
+                if hasError { Text("Could not save receiver-aware scheduling. Check the endpoint, scope, correction choice and secure credential storage.").foregroundStyle(.red) }
             }
             .navigationTitle("Receiver coverage")
             .navigationBarTitleDisplayMode(.inline)
@@ -62,12 +62,12 @@ private struct ReceiverCoverageSettingsEditor: View {
                         do {
                             let config: ReceiverCoverageConfiguration?
                             if enabled {
-                                guard let count = Int(correction), (0...30).contains(count) else { error = true; return }
+                                guard let count = Int(correction), (0...30).contains(count) else { hasError = true; return }
                                 config = ReceiverCoverageConfiguration(preflightURL: preflightURL, scopeID: scopeID, refreshRecentDays: count)
                             } else { config = nil }
                             try ReceiverCoverageSettings.shared.save(config, scope: scope, uploadURL: uploadURL)
                             dismiss()
-                        } catch { error = true }
+                        } catch { hasError = true }
                     }
                 }
             }
@@ -76,7 +76,7 @@ private struct ReceiverCoverageSettingsEditor: View {
                     if let value = try ReceiverCoverageSettings.shared.configuration(scope) {
                         enabled = true; preflightURL = value.preflightURL; scopeID = value.scopeID; correction = String(value.refreshRecentDays)
                     }
-                } catch { error = true }
+                } catch { hasError = true }
             }
         }
     }
