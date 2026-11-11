@@ -83,12 +83,9 @@ struct GlassAppSupportScreen: View {
                             tile: .settingsTileGreen,
                             showsDivider: true
                         ) {
-                            if FeedbackHelper.canSendMail {
-                                showMailCompose = true
-                            } else {
-                                feedbackReporter.open(.email)
-                            }
+                            openFeedback()
                         }
+                        .accessibilityIdentifier("feedback.sendFeedback")
                         GlassSettingsRow(
                             title: String(localized: "Report a bug"),
                             systemImage: "ladybug.fill",
@@ -96,6 +93,7 @@ struct GlassAppSupportScreen: View {
                             value: "GitHub",
                             showsDivider: true
                         ) { feedbackReporter.open(.github) }
+                        .accessibilityIdentifier("feedback.reportBug")
                         GlassSettingsRow(
                             title: String(localized: "Help us grow"),
                             systemImage: "star.fill",
@@ -148,7 +146,22 @@ struct GlassAppSupportScreen: View {
         .navigationBarTitleDisplayMode(.inline)
         .accessibilityIdentifier("glass.appSupport")
         .sheet(isPresented: $showMailCompose, onDismiss: feedbackReporter.mailSheetDismissed) {
+            #if DEBUG
+            if TestMode.simulatesFailedMailSheet {
+                // Exercise the real deferred fallback/onDismiss path without opening Mail.
+                Button {
+                    feedbackReporter.completeMail(result: .failed, error: nil)
+                    showMailCompose = false
+                } label: {
+                    Text(verbatim: "Simulate Mail failure")
+                }
+                .accessibilityIdentifier("feedback.simulateMailFailure")
+            } else {
+                MailComposeView(onCompletion: feedbackReporter.completeMail)
+            }
+            #else
             MailComposeView(onCompletion: feedbackReporter.completeMail)
+            #endif
         }
         .feedbackFailureSheet($feedbackReporter.failure)
         // MyselfClaimG and DiagnosticsG are pushed pages with Back (no Done).
@@ -193,7 +206,13 @@ struct GlassAppSupportScreen: View {
     private func openFeedbackAfterReview() {
         guard feedbackAfterReview else { return }
         feedbackAfterReview = false
-        if FeedbackHelper.canSendMail {
+        openFeedback()
+    }
+
+    private func openFeedback() {
+        if TestMode.rejectsFeedbackHandoffs {
+            feedbackReporter.open(.email)
+        } else if TestMode.simulatesFailedMailSheet || FeedbackHelper.canSendMail {
             showMailCompose = true
         } else {
             feedbackReporter.open(.email)
