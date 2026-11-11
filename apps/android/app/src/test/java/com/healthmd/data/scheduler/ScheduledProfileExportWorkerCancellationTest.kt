@@ -37,6 +37,7 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.isMockKMock
 import io.mockk.slot
 import io.mockk.CapturingSlot
 import java.time.LocalDate
@@ -879,11 +880,13 @@ class ScheduledProfileExportWorkerCancellationTest {
             override suspend fun saveAuthorization(value: String) = Unit
             override suspend fun clearAuthorization() = Unit
         }
-        coEvery { entryStore.admitAPIExport(profileId, any(), any()) } coAnswers {
-            val current = entryStore.entry(profileId)!!
-            val admitted = thirdArg<ScheduledProfilePendingExport>()
-            coEvery { entryStore.entry(profileId) } returns current.copy(pendingExports = current.pendingExports + admitted)
-            true
+        if (isMockKMock(entryStore)) {
+            coEvery { entryStore.admitAPIExport(profileId, any(), any()) } coAnswers {
+                val current = entryStore.entry(profileId)!!
+                val admitted = thirdArg<ScheduledProfilePendingExport>()
+                coEvery { entryStore.entry(profileId) } returns current.copy(pendingExports = current.pendingExports + admitted)
+                true
+            }
         }
         val context = ApplicationProvider.getApplicationContext<Context>()
         val factory = object : WorkerFactory() {
