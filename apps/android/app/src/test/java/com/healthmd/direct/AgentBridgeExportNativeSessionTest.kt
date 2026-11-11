@@ -513,7 +513,7 @@ class AgentBridgeExportNativeSessionTest {
                 DirectGeneratedFilesProducer(health, MarkdownExporter(), JsonExporter(), CsvExporter(), ObsidianBasesExporter()),
                 repositories, health, settings, entitlements, DistributionPolicy.fdroid(), DistributionDirectRawRequestPolicy(),
                 planner, AndroidDirectProtocolAuthority(AndroidDirectProtocolEngineMode.legacy, lazy { error("No JNI context needed") }),
-                profiles, ScheduledProfileSnapshotFactory(planner))
+                profiles, ScheduledProfileSnapshotFactory(planner, settings))
             lifecycle = AgentBridgeExportServingLifecycle(coordinator)
             every { context.noBackupFilesDir } throws AssertionError("Creating getter forbidden after setup")
             every { context.filesDir } throws AssertionError("Creating getter forbidden")
