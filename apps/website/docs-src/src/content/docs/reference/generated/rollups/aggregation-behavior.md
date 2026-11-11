@@ -9,7 +9,7 @@ Source: apps/apple/docs/reference/generated/rollups/aggregation-behavior.md
 Regenerate from apps/website: npm run reference:sync
 -->
 
-Generated deterministically from production `HealthMetricDataDictionary.entries(using:)` at schema v8.
+Generated deterministically from production `HealthMetricDataDictionary.entries(using:)` at schema v10.
 
 - Dictionary entries: 232
 - Distinct rule groups: 20

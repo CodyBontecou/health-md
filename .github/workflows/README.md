@@ -27,11 +27,13 @@ later. Hosted completion timestamps, not local runtime alone, establish success.
 
 ## Cloud and verification tooling
 
-The Cloud pilot adds an independent `Cloud CI / Cloud CI` gate for locked synthetic
-checks, isolated local D1/R2 smoke, fail-closed production configuration, local builds,
-dry runs, and dependency audit. `Testing Tools CI / orchestration` checks the portable
-workflow adapters and agent verification guard. Both are additional to `CI / CI`;
-neither authorizes deployment or native/device acceptance.
+Cloud host auth, persistence and security regressions run in the existing portable
+Wake group through `scripts/ci/cloud.sh`, with isolated Cloud dependencies and
+resources. Both type checks, the full synthetic host suite, fail-closed production
+configuration and dependency audit remain blocking within the same 90-second lane
+and 120-second workflow budget. No seventh job or native matrix is added.
+`Testing Tools CI / orchestration` checks the portable workflow adapters and agent
+verification guard. These checks do not authorize deployment or device acceptance.
 
 ## Android SDK setup
 
@@ -200,7 +202,16 @@ repository routes health data through the Worker.
 
 ## Opt-in cloud prototype CI (no deployment)
 
-`.github/workflows/cloud-ci.yml` runs locked Node/type/unit checks, a synthetic local Wrangler D1/R2 test of account/session, Apple v1/v2 and Android v4 ingestion, encrypted downloads, tenant isolation, and token revocation, plus a Wrangler dry-run and dependency audit. It does not deploy or receive production credentials. Main pushes are path-scoped; pull requests always report `Cloud CI / Cloud CI`. This CI never handles real health data or deploys either profile. A separately authorized unbacked, owner-operated VM pilot accepts real exports, but no general production release is approved. See [`apps/cloud/README.md`](../../apps/cloud/README.md) and [ADR-0007](../../docs/architecture/adr-0007-healthmd-cloud.md).
+`.github/workflows/cloud-ci.yml` is manual-only (`workflow_dispatch`). It retains
+locked checks, isolated Wrangler D1/R2 authentication/ingestion smoke, VM bundling,
+combined/split Worker package dry runs and dependency audit as explicit diagnostics.
+It does not deploy or receive production credentials. Cloud's full synthetic host
+regressions and fail-closed policy remain mandatory in `CI / CI`; the old
+`Cloud CI / Cloud CI` context must be removed from required branch protections in
+the coordinated rollout, rather than restored as a second PR gate. No real health
+data enters either check. No general production release is approved; see
+[`apps/cloud/README.md`](../../apps/cloud/README.md) and
+[ADR-0007](../../docs/architecture/adr-0007-healthmd-cloud.md).
 
 ## Release steps
 

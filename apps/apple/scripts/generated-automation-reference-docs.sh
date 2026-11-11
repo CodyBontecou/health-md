@@ -10,14 +10,15 @@ usage() {
 MODE="$1"
 [[ "$MODE" == "update" || "$MODE" == "check" ]] || usage
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 cd "$ROOT_DIR"
 
 GENERATED_RELATIVE="docs/reference/generated/automation"
 GENERATED_DIR="$ROOT_DIR/$GENERATED_RELATIVE"
 SCHEMA_FIXTURE_DIR="$ROOT_DIR/HealthMdTests/Fixtures/Export"
 UPDATE_MARKER="$ROOT_DIR/HealthMdTests/.update-generated-automation-reference-docs"
-OUTPUT_DIRECTORY_NAME="healthmd-generated-automation-reference-docs-current"
+WORKTREE_IDENTIFIER="$(printf '%s' "$ROOT_DIR" | shasum -a 256 | cut -c 1-16)"
+OUTPUT_DIRECTORY_NAME="healthmd-generated-automation-reference-docs-$WORKTREE_IDENTIFIER"
 SEARCH_ROOTS=("$HOME/Library/Containers" "${TMPDIR:-/tmp}" "/tmp")
 
 case "$GENERATED_DIR" in
