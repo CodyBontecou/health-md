@@ -62,10 +62,15 @@ final class WHOOPExportResourceSelectionTests: XCTestCase {
 
     func testBodyOnlySelectionOnAPastDayIsNotRequested() throws {
         let record = ExternalDailyRecord(provider: .whoop, date: "2026-03-15", payloads: [])
-        let whoop = try XCTUnwrap(HealthProviderSections.normalized(from: [record], whoopResources: [.body])?.whoop)
-        XCTAssertEqual(whoop.captureStatus, .notRequested)
-        XCTAssertNil(whoop.fetchedAt)
-        XCTAssertTrue(whoop.resources.isEmpty)
-        XCTAssertTrue(whoop.recordCountsAreValid)
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let day = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 3, day: 15)))
+        let now = try XCTUnwrap(calendar.date(byAdding: .day, value: 1, to: day))
+        // Capture resolves today's-only body selection before normalization. An
+        // explicitly planned but missing resource would correctly be partial.
+        let resources = Set<WHOOPResourceName>([.body]).requested(for: day, calendar: calendar, now: now)
+        XCTAssertTrue(resources.isEmpty)
+        XCTAssertNil(HealthProviderSections.normalized(from: [record], whoopResources: resources)?.whoop,
+                     "An unrequested historical singleton must not create a provider section")
     }
 }

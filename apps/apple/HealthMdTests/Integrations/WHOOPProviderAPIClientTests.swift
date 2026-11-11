@@ -70,6 +70,9 @@ final class WHOOPProviderAPIClientTests: XCTestCase {
         }
     }
 
+    // These end-to-end renderer assertions run in the app-hosted suite. The
+    // Foundation-only client harness has no HealthData/exporter dependency.
+    #if !HEALTHMD_FOUNDATION_CLIENT_TESTS
     func testCycleStepsSurviveSelectedFetchAndExportWithoutChangingAppleSteps() async throws {
         ExternalIntegrationURLProtocolStub.setHandler { request in
             XCTAssertEqual(request.url?.path, "/developer/v2/cycle")
@@ -79,7 +82,7 @@ final class WHOOPProviderAPIClientTests: XCTestCase {
             ]]])
         }
         let record = try await client.fetchDailyRecord(provider: .whoop, date: exportDate,
-            token: token(scope: "read:cycles"), calendar: calendar, whoopResources: [.cycles], now: exportDate)
+            token: token(scope: "read:cycles"), calendar: calendar, now: exportDate, whoopResources: [.cycles])
         var data = HealthData(date: exportDate, timeContext: ExportTimeContext(calendarTimeZoneIdentifier: calendar.timeZone.identifier))
         data.activity = ActivityData(steps: 1)
         data.providers = HealthProviderSections.normalized(from: [record], whoopResources: [.cycles])
@@ -108,7 +111,7 @@ final class WHOOPProviderAPIClientTests: XCTestCase {
         let record = try await client.fetchDailyRecord(
             provider: .whoop, date: exportDate,
             token: token(scope: "read:workout"), calendar: calendar,
-            whoopResources: [.workouts], now: exportDate
+            now: exportDate, whoopResources: [.workouts]
         )
         let providers = try XCTUnwrap(HealthProviderSections.normalized(
             from: [record], whoopResources: [.workouts]
@@ -130,6 +133,8 @@ final class WHOOPProviderAPIClientTests: XCTestCase {
         XCTAssertTrue(native.contains("\"zone_durations\""))
         XCTAssertFalse(native.contains("\"zone_duration\""))
     }
+
+    #endif
 
     func testSelectedResourcesOnlyContactTheirEndpointsAndRetainAllPages() async throws {
         var paths: [String] = []
@@ -153,7 +158,7 @@ final class WHOOPProviderAPIClientTests: XCTestCase {
         let record = try await client.fetchDailyRecord(
             provider: .whoop, date: exportDate,
             token: token(scope: "offline read:recovery read:sleep"),
-            calendar: calendar, whoopResources: [.recovery, .sleep], now: exportDate
+            calendar: calendar, now: exportDate, whoopResources: [.recovery, .sleep]
         )
         XCTAssertEqual(paths, ["/developer/v2/recovery", "/developer/v2/activity/sleep", "/developer/v2/activity/sleep"])
         XCTAssertEqual(record.payloads.map(\.name), ["recovery", "sleep", "sleep_page_2"])
@@ -171,7 +176,7 @@ final class WHOOPProviderAPIClientTests: XCTestCase {
         for resources in selections {
             let record = try await client.fetchDailyRecord(
                 provider: .whoop, date: exportDate, token: token(scope: "offline"),
-                calendar: calendar, whoopResources: resources, now: tomorrow
+                calendar: calendar, now: tomorrow, whoopResources: resources
             )
             XCTAssertTrue(record.payloads.isEmpty)
             XCTAssertFalse(record.shouldExport)
@@ -188,7 +193,7 @@ final class WHOOPProviderAPIClientTests: XCTestCase {
         let record = try await client.fetchDailyRecord(
             provider: .whoop, date: exportDate,
             token: token(scope: "offline read:body_measurement"),
-            calendar: calendar, whoopResources: [.body], now: exportDate
+            calendar: calendar, now: exportDate, whoopResources: [.body]
         )
         XCTAssertEqual(paths, ["/developer/v2/user/measurement/body"])
         XCTAssertEqual(record.payloads.map(\.name), ["body_measurements_snapshot"])
@@ -208,7 +213,7 @@ final class WHOOPProviderAPIClientTests: XCTestCase {
         }
         let record = try await client.fetchDailyRecord(
             provider: .whoop, date: exportDate, token: token(scope: "offline"),
-            calendar: calendar, whoopResources: [.recovery], now: exportDate
+            calendar: calendar, now: exportDate, whoopResources: [.recovery]
         )
         XCTAssertEqual(requestCount, 0)
         XCTAssertEqual(record.payloads.map(\.name), ["recovery"])
