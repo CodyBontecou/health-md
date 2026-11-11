@@ -1645,7 +1645,7 @@ class SchedulingManager: ObservableObject {
                 let boundary = calendar.startOfDay(for: pending.scheduledFireDate ?? pending.createdAt)
                 let completed = pending.originalRequestedDates.filter { $0 < boundary }.map { ReceiverCoveragePlan.label($0, zone: zone) }
                 // Refresh-only slots have no completed-day query and retain their existing path.
-                if !completed.isEmpty() {
+                if !completed.isEmpty {
                     let refresh = pending.originalRequestedDates.contains { calendar.isDate($0, inSameDayAs: boundary) }
                     let plan = try await ReceiverCoverageSettings.journal.resolve(id: id, authority: authority,
                         preflight: preflight, candidates: completed, now: now(), todayRefresh: refresh,
