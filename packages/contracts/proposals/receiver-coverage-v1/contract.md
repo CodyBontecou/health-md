@@ -2,9 +2,10 @@
 
 Refs https://github.com/CodyBontecou/health-md/issues/170
 
-**Status: proposal plus executable reference model only. Neither Apple nor Android
-implements this feature. No production writer, endpoint, setting, or migration is
-enabled by this change.** Review the contract before native adoption. Do not use
+**Status: proposal, executable reference model, and disabled native admission
+boundaries. Neither Apple nor Android scheduler implements this feature. No
+production writer, endpoint, setting, or migration is enabled.** Review the
+remaining adoption gates below before enabling native scheduling. Do not use
 this document as evidence that an arbitrary API endpoint supports preflight.
 
 ## Outcome and scope
@@ -209,6 +210,84 @@ Legacy pending requests are not rewritten, filtered, dropped, or re-bound. New
 configuration applies only to new occurrences after exact legacy residuals resolve.
 No destination-discard, migration, or local-data deletion is implemented here.
 
+## Native admission boundary (disabled source milestone)
+
+Apple's [`ReceiverCoveragePreflight.swift`](../../../../apps/apple/HealthMd/Shared/ReceiverCoverage/ReceiverCoveragePreflight.swift)
+and Android's [`ReceiverCoveragePreflight.kt`](../../../../apps/android/app/src/main/java/com/healthmd/data/receivercoverage/ReceiverCoveragePreflight.kt)
+implement the same preparatory boundary, without scheduler call sites or network
+I/O. `prepare` defaults to full lookback and returns no preflight in that mode,
+even with invalid/missing preflight configuration. Explicit missing-days validates
+same-origin URLs, scope, timezone, correction window, headers and a supplied
+32-byte installation key. It constructs a keyed destination binding and headers;
+request construction separately validates the frozen occurrence ID and completed
+civil dates, deriving today's owner day from execution time in the frozen zone.
+Callers must save the original occurrence/body instead of reconstructing it on
+retry. `requireOriginalDestination` rejects a changed binding; it is a comparison
+gate, not an atomic storage or secure-key adapter.
+
+The native boundary currently accepts a conservative URL subset: ASCII DNS/IPv4
+hosts, HTTPS, no percent escapes, dot segments, userinfo, query, fragment, trailing
+host dot or IPv6 literal. Scheme/host case and default port 443 normalize; an empty
+path becomes `/`. Unsupported new opt-ins are rejected, not rewritten. Existing
+full-lookback HTTP/other endpoint settings are not passed through this validator.
+Supporting more URL spellings requires paired normalization vectors first.
+
+The shared HMAC transcript is a concatenation of fields, each framed as ASCII
+UTF-8 byte count, `:`, then the exact field bytes (no separator after the field).
+Field order is:
+
+1. `receiver-coverage-destination-v1`, then `compatibility_api`;
+2. normalized upload URL, normalized explicit preflight URL;
+3. scope ID, exact calendar timezone identifier, exact frozen output-settings bytes;
+4. decimal credential/routing header count;
+5. each lowercase header name and exact value, sorted by lowercase name.
+
+Header names must be unique ignoring case, values printable ASCII, at most 64
+headers and 16 KiB of name/value bytes. Accept, Content-Type, Content-Length,
+Content-Encoding, Transfer-Encoding, Host, Connection, Trailer, TE, Upgrade,
+Expect, Proxy-Authorization and Proxy-Connection are reserved. The preflight adds
+its own JSON Accept and Content-Type after validation. The binding is lowercase
+hex HMAC-SHA256; no URLs, credentials or settings are serialized by this boundary.
+The future adapter must supply the installation key from secure storage, bind the
+*effective* upload headers after native authorization, and retain exact frozen
+settings bytes. Missing/unreadable keys must block recovery; never substitute a
+new key or current settings. This transcript adds no authority to legacy journals.
+
+`ReceiverCoverageResponseBuffer` rejects non-200/non-JSON metadata before body
+retention and caps accepted streaming chunks at 64 KiB. Exceeding the cap poisons
+the buffer permanently. Its output is **unvalidated bytes**, never completed-day
+evidence. The 10-second deadline is a declared transport requirement, not an
+implemented timer. Native HTTP adapters still must enforce no redirects/retries,
+stream decompressed bytes through this cap, stop their exact network call on
+cancellation/deadline, avoid shared logging/cookie/credential side effects, and
+propagate cancellation without turning it into fallback/upload.
+
+Host diagnostics compile the actual production source in isolation; they do not
+build native apps or use SDK health stores. They use an independent Python HMAC
+oracle, synthetic destinations/credentials, date-window vectors and streamed cap
+checks. Run with Swift and Kotlin compilers installed:
+
+```sh
+HEALTHMD_TEST_NATIVE_BOUNDARY=1 python3 -m unittest discover -s packages/contracts/proposals/receiver-coverage-v1 -p test_native_boundary.py -v
+```
+
+If Kotlin is supplied as cached embeddable compiler jars, set
+`HEALTHMD_KOTLIN_COMPILER_CLASSPATH` and `HEALTHMD_KOTLIN_STDLIB`; otherwise the
+runner uses `kotlinc`/`kotlin` on PATH. Missing compilers are reported as skips,
+not native verification. Temporary compiler output is removed on completion.
+These opt-in diagnostics are not added to the portable CI time budget.
+
+Both scheduler integrations remain **planned for issue #170**. Adoption requires
+strict response parsing (including duplicate keys and exact context), immutable
+selection evidence and original Today Refresh context, atomic plan admission and
+acknowledgement reconciliation, empty-selection completion semantics, settings/UI
+opt-in and warning, secure-store key ownership, and hermetic transport/storage
+fault tests before native runtime acceptance. Apple must extend
+`PendingExportRequest`/`ScheduledExportCoordinator` without changing existing
+request recovery; Android must cover both `ScheduledProfileExportWorker` and
+`ExportWorker` admissions and preserve their generations, cancellation and batch
+journals. Keep legacy residuals authoritative and keep full lookback as default.
+
 ## Source investigation and non-duplication
 
 At base `b8fd904f4d299f5af4a22111d2fdccf829705ea7`:
@@ -248,10 +327,10 @@ this proposed preflight. Neither branch was modified or imported.
 | External Obsidian plugin | Daily files/keys unchanged; no preflight consumer or fixture change |
 | Receiver owners | Must explicitly implement/authenticate this independent v1 query before opt-in is usable |
 
-Neither platform is staged as available. The shipped product-capability inventory
-remains unchanged; add `export.scheduled-receiver-coverage` as `planned` with both
-native targets when adoption begins, and mark `shared` only after both platforms'
-source/device gates. This proposal's parity table is not a shipped parity claim.
+Neither platform is staged as available. The product-capability inventory records
+`export.scheduled-receiver-coverage` as `planned` with both native integration
+targets. Mark it `shared` only after both platforms' source/runtime gates. The
+native admission source milestone and this parity table are not availability claims.
 
 ## Verification surface and limits
 

@@ -654,6 +654,29 @@
       ]
     },
     {
+      "id": "export.scheduled-receiver-coverage",
+      "name": "Receiver-aware scheduled API date selection",
+      "classification": "planned",
+      "summary": "Opt-in missing-day selection with explicit retained coverage and correction refresh. Native admission boundaries exist but no scheduler or transport is enabled; full lookback and exact legacy residual recovery remain unchanged.",
+      "profiles": [],
+      "platforms": {
+        "apple": {
+          "state": "planned",
+          "target": "Issue #170: integrate bounded authenticated preflight, secure-store installation key, atomic evidence-bound plan admission into ScheduledExportCoordinator/PendingExportRequest, settings opt-in and runtime acceptance."
+        },
+        "android": {
+          "state": "planned",
+          "target": "Issue #170: integrate the same bounded authenticated preflight and atomic evidence-bound plan into both profile and legacy scheduled workers, secure-store installation key, settings opt-in and runtime acceptance."
+        }
+      },
+      "evidence": [
+        "packages/contracts/proposals/receiver-coverage-v1/contract.md",
+        "apps/apple/HealthMd/Shared/ReceiverCoverage/ReceiverCoveragePreflight.swift",
+        "apps/android/app/src/main/java/com/healthmd/data/receivercoverage/ReceiverCoveragePreflight.kt",
+        "packages/contracts/proposals/receiver-coverage-v1/test_native_boundary.py"
+      ]
+    },
+    {
       "id": "export.coverage-calendar",
       "name": "Archive coverage calendar",
       "classification": "shared",
