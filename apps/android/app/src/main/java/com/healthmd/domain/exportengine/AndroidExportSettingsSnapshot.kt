@@ -444,6 +444,18 @@ object AndroidExportSettingsSnapshotCodec {
         }
     }
 
+    /** Local pending work only. Portable/profile decoding stays closed to the private wrapper. */
+    fun decodeScheduled(raw: String): AndroidExportSettingsSnapshot {
+        val output = com.healthmd.data.receivercoverage.ReceiverCoverageSnapshot.outputSettings(raw)
+        val snapshot = decode(output)
+        if (output != raw && (snapshot.scheduledExportTarget != ExportTarget.API_ENDPOINT || snapshot.exportMode != ExportMode.COMPATIBILITY)) {
+            throw AndroidExportSettingsSnapshotException(AndroidExportSettingsSnapshotError.INVALID_STRUCTURE)
+        }
+        return snapshot
+    }
+    fun decodeScheduledOrNull(raw: String?): AndroidExportSettingsSnapshot? =
+        try { raw?.let(::decodeScheduled) } catch (_: Exception) { null }
+
     fun decode(raw: String): AndroidExportSettingsSnapshot = decodeOrNull(raw)
         ?: throw AndroidExportSettingsSnapshotException(
             AndroidExportSettingsSnapshotError.INVALID_CANONICAL_JSON,

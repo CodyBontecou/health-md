@@ -71,11 +71,12 @@ class ScheduledProfileSnapshotFactory @Inject constructor(
         current: ExportSettings,
         zone: ZoneId,
         source: com.healthmd.domain.repository.HealthRepository,
+        forceFresh: Boolean = false,
     ): ExportProfile? {
         val original = AndroidExportSettingsSnapshotCodec.decodeOrNull(profile.settingsSnapshotJson) ?: return null
         val attribution = settingsRepository.getSleepDayAttribution()
         // Preserve historical Night profile pins and canonical bytes when no transition is needed.
-        if (attribution == com.healthmd.domain.model.SleepDayAttribution.NIGHT_BEGINS &&
+        if (!forceFresh && attribution == com.healthmd.domain.model.SleepDayAttribution.NIGHT_BEGINS &&
             original.sleepCaptureContext?.sleepDayAttribution != com.healthmd.domain.model.SleepDayAttribution.MORNING_ENDS) return profile
         val frozen = restoreFrozenSnapshot(profile, current) ?: return null
         val context = AndroidCaptureContext(zone, attribution).also { it.requireShippedProfile() }
@@ -102,7 +103,7 @@ class ScheduledProfileSnapshotFactory @Inject constructor(
         profile: ExportProfile,
         current: ExportSettings,
         lookbackDays: Int,
-    ): ExportSettings? = restoreFrozenSnapshot(profile, current)?.copy(
+    ): ExportSettings? = restoreFrozenSnapshot(profile, current, scheduled = true)?.copy(
         scheduleLookbackDays = lookbackDays,
     )
 
@@ -126,8 +127,9 @@ class ScheduledProfileSnapshotFactory @Inject constructor(
         executionProviderCaptureAuthorityIsFrozen = false,
     )
 
-    private fun restoreFrozenSnapshot(profile: ExportProfile, current: ExportSettings): ExportSettings? {
-        val snapshot = AndroidExportSettingsSnapshotCodec.decodeOrNull(profile.settingsSnapshotJson)
+    private fun restoreFrozenSnapshot(profile: ExportProfile, current: ExportSettings, scheduled: Boolean = false): ExportSettings? {
+        val snapshot = (if (scheduled) AndroidExportSettingsSnapshotCodec.decodeScheduledOrNull(profile.settingsSnapshotJson)
+            else AndroidExportSettingsSnapshotCodec.decodeOrNull(profile.settingsSnapshotJson))
             ?: return null
         val withDestination = current.copy(
             apiEndpointUrl = profile.apiEndpointUrl ?: current.apiEndpointUrl,

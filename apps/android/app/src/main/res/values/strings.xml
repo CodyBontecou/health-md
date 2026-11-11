@@ -1553,4 +1553,14 @@
     <string name="date_picker_show_calendar">Show calendar</string>
     <string name="date_picker_input_label">Date (YYYY-MM-DD)</string>
     <string name="date_picker_invalid_date">Enter a valid, available date in YYYY-MM-DD format.</string>
+    <string name="receiver_coverage_title">Receiver-aware scheduling</string>
+    <string name="receiver_coverage_enable">Skip retained completed days</string>
+    <string name="receiver_coverage_default_note">Off resends the full lookback. Today Refresh remains independent. Changes apply to new occurrences; pending work keeps its original plan.</string>
+    <string name="receiver_coverage_url">Explicit HTTPS preflight URL</string>
+    <string name="receiver_coverage_scope">Receiver scope ID</string>
+    <string name="receiver_coverage_correction">Correction window (0–30 days)</string>
+    <string name="receiver_coverage_scope_note">Use your receiver’s documented same-origin preflight endpoint and a scope for this platform, account and output profile. Choose a new scope after changing output settings. Choose 0 explicitly to disable completed-day correction refresh.</string>
+    <string name="receiver_coverage_warning">Already retained completed days may be skipped. Late source updates outside the correction window will not be resent automatically. Use full lookback or a manual re-export to refresh older snapshots.</string>
+    <string name="receiver_coverage_personal_only">Personal compatibility API destinations only. Managed clinic credentials are not supported for receiver-aware scheduling.</string>
+    <string name="receiver_coverage_save_error">Could not save receiver-aware scheduling. Check the endpoint, scope, correction choice and secure credential storage.</string>
 </resources>

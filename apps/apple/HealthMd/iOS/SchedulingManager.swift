@@ -449,6 +449,10 @@ class SchedulingManager: ObservableObject {
         return request.profileID.map { !isSharedSetupV2ProfileBlocked($0) } ?? true
     }
 
+    @MainActor func receiverCoverageUploadURL(for profile: ExportProfile?) -> String? {
+        scheduledAPIDestinationResolver(profile)?.endpointURL.absoluteString
+    }
+
     @MainActor private func apiIdentity(for profile: ExportProfile?) -> ScheduledAPIEndpointIdentity? {
         scheduledAPIDestinationResolver(profile).map {
             ScheduledAPIEndpointIdentity(destination: $0, bindingID: profile?.apiEndpointID)
@@ -1615,6 +1619,58 @@ class SchedulingManager: ObservableObject {
             return scheduledFailureResult(dates: dates, reason: .unknown,
                 message: Self.apiRecoveryDestinationChangedMessage)
         }
+        var dates = dates
+        var coverageCheckpoint: (String, String, String)?
+        if let pending, let config = pending.receiverCoverage {
+            do {
+                guard target == .apiEndpoint, let destination = resolvedAPIDestination,
+                      let snapshot = pending.settingsSnapshot,
+                      let zoneID = pending.originalCalendarTimeZoneIdentifier, let zone = TimeZone(identifier: zoneID) else {
+                    throw ReceiverCoveragePreflight.BoundaryError.invalidConfiguration
+                }
+                let headers = try await APIExportClient.receiverCoverageHeaders(destination)
+                guard !Task.isCancelled, shouldRetainScheduledRequest(pending), isPendingExportRequestStillStored(pending) else { throw CancellationError() }
+                let frozenOutput = try ReceiverCoverageSettings.snapshotBytes(snapshot)
+                let preflight = try ReceiverCoveragePreflight.prepare(policy: .missingDays,
+                    uploadURL: destination.endpointURL.absoluteString, preflightURL: config.preflightURL,
+                    uploadHeaders: headers, scopeID: config.scopeID, calendarTimeZone: zoneID,
+                    frozenOutputSettings: frozenOutput,
+                    refreshRecentDays: config.refreshRecentDays, installationKey: ReceiverCoverageSettings.shared.key())!
+                try ReceiverCoverageSettings.shared.bindScope(config.scopeID, settings: frozenOutput)
+                let authority = "\(pending.profileID?.uuidString ?? "legacy"):\(pending.recoveryGeneration):\(pending.scheduleEnabledAt?.timeIntervalSince1970 ?? 0):\(pending.scheduledFireDate?.timeIntervalSince1970 ?? 0):\(pending.scheduledKind.rawValue)"
+                // Stable across a crash between queue completion and the schedule marker write.
+                // Recreating a native pending UUID must never cause another receiver query.
+                let id = ReceiverCoverageSettings.planID(authority: authority)
+                var calendar = Calendar(identifier: .gregorian); calendar.timeZone = zone
+                let boundary = calendar.startOfDay(for: pending.scheduledFireDate ?? pending.createdAt)
+                let completed = pending.originalRequestedDates.filter { $0 < boundary }.map { ReceiverCoveragePlan.label($0, zone: zone) }
+                // Refresh-only slots have no completed-day query and retain their existing path.
+                if !completed.isEmpty() {
+                    let refresh = pending.originalRequestedDates.contains { calendar.isDate($0, inSameDayAs: boundary) }
+                    let plan = try await ReceiverCoverageSettings.journal.resolve(id: id, authority: authority,
+                        preflight: preflight, candidates: completed, now: now(), todayRefresh: refresh,
+                        authorized: { @MainActor [weak self] in
+                            self?.shouldRetainScheduledRequest(pending) == true && self?.isPendingExportRequestStillStored(pending) == true
+                        })
+                    guard !Task.isCancelled, shouldRetainScheduledRequest(pending), isPendingExportRequestStillStored(pending) else { throw CancellationError() }
+                    dates = try plan.residual.map { text in
+                        let civil = try ReceiverCoveragePlan.civil(text)
+                        var utc = Calendar(identifier: .gregorian); utc.timeZone = TimeZone(secondsFromGMT: 0)!
+                        return calendar.date(from: utc.dateComponents([.year, .month, .day], from: civil))!
+                    }
+                    // Atomically persist chosen/residual dates in the native queue before capture.
+                    try pendingExportStore.upsert(pending.replacingResidualDates(dates, attemptedAt: now()))
+                    coverageCheckpoint = (id, authority, preflight.destinationBinding)
+                    if dates.isEmpty {
+                        return ExportOrchestrator.ExportResult(successCount: 0, totalCount: 0, failedDateDetails: [], completedDates: [])
+                    }
+                }
+            } catch {
+                return scheduledFailureResult(dates: dates, reason: .unknown,
+                    message: "Receiver-aware scheduling requires its original saved plan and destination.",
+                    wasCancelled: error is CancellationError || Task.isCancelled)
+            }
+        }
         let context: AppleSleepCaptureContext
         do {
             if let pending {
@@ -1632,13 +1688,29 @@ class SchedulingManager: ObservableObject {
         // execution copy receives the separately persisted capture authority.
         var operationSnapshot = settingsSnapshot
         operationSnapshot?.sleepCaptureContext = context
-        return await AppleSleepCaptureContext.pinned.withValue(context) {
+        let result = await AppleSleepCaptureContext.pinned.withValue(context) {
             await runScheduledExportWithCaptureContext(dates: dates, target: target,
                 settingsSnapshot: operationSnapshot, originalRequestedDates: originalRequestedDates,
                 originalCalendarTimeZoneIdentifier: originalCalendarTimeZoneIdentifier,
                 quotaJobID: quotaJobID, notificationOperationID: notificationOperationID,
                 resolvedAPIDestination: resolvedAPIDestination)
         }
+        if let (id, authority, binding) = coverageCheckpoint, let pending {
+            do {
+                guard shouldRetainScheduledRequest(pending), isPendingExportRequestStillStored(pending) else { return result }
+                var calendar = Calendar(identifier: .gregorian)
+                calendar.timeZone = TimeZone(identifier: pending.originalCalendarTimeZoneIdentifier!)!
+                let remaining = result.remainingDates(from: dates, calendar: calendar)
+                    ?? (result.didCompleteAllRequestedDates ? [] : dates)
+                let acknowledged = dates.filter { !remaining.contains($0) }.map { ReceiverCoveragePlan.label($0, zone: calendar.timeZone) }
+                try ReceiverCoverageSettings.journal.acknowledge(id: id, authority: authority, binding: binding, dates: acknowledged)
+                try pendingExportStore.upsert(pending.replacingResidualDates(remaining, attemptedAt: now()))
+            } catch {
+                return scheduledFailureResult(dates: dates, reason: .unknown,
+                    message: "Receiver-aware progress could not be saved. Original recovery was preserved.")
+            }
+        }
+        return result
     }
 
     @MainActor

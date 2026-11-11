@@ -19,12 +19,12 @@ class ReceiverCoverageConfiguration(val preflightUrl: String, val scopeId: Strin
     }.toString()
     companion object {
         const val WARNING = "Already retained completed days may be skipped. Late source updates outside the correction window will not be resent automatically. Use full lookback or a manual re-export to refresh older snapshots."
-        fun parse(json: String): ReceiverCoverageConfiguration {
+        fun parse(json: String): ReceiverCoverageConfiguration = try {
             val o = Json.parseToJsonElement(json).jsonObject
             require(o.keys == setOf("preflight_url","scope_id","refresh_recent_days"))
-            return ReceiverCoverageConfiguration(o.getValue("preflight_url").jsonPrimitive.content,
+            ReceiverCoverageConfiguration(o.getValue("preflight_url").jsonPrimitive.content,
                 o.getValue("scope_id").jsonPrimitive.content, o.getValue("refresh_recent_days").jsonPrimitive.int)
-        }
+        } catch (_: Exception) { throw ReceiverCoveragePreflight.BoundaryException() }
     }
 }
 
@@ -81,8 +81,9 @@ class ReceiverCoverageJournal(private val directory: Path) {
     suspend fun resolve(id: String, authority: String, preflight: ReceiverCoveragePreflight,
                         candidates: List<String>, now: Instant, todayRefresh: Boolean,
                         authorized: suspend () -> Boolean,
+                        admit: suspend (ReceiverCoveragePlan) -> Unit = {},
                         query: suspend (ReceiverCoverageRequest) -> ReceiverCoverageOutcome = { ReceiverCoverageHTTPClient().query(it) }): ReceiverCoveragePlan {
-        restore(id, authority, preflight.destinationBinding)?.let { return it }
+        restore(id, authority, preflight.destinationBinding)?.let { admit(it); return it }
         val today = now.atZone(ZoneId.of(preflight.calendarTimezone)).toLocalDate().toString()
         val requestId = UUID.randomUUID().toString()
         val fallback = ReceiverCoveragePlan.select(requestId, preflight.scopeId, preflight.calendarTimezone, candidates, today,
@@ -93,7 +94,14 @@ class ReceiverCoverageJournal(private val directory: Path) {
                 save(id, Envelope(authority, true, fallback.json())); true
             }
         }
-        if (!accepted) return requireNotNull(restore(id, authority, preflight.destinationBinding))
+        if (!accepted) {
+            val restored = requireNotNull(restore(id, authority, preflight.destinationBinding))
+            admit(restored)
+            return restored
+        }
+        // Native rows may refer to this plan only AFTER the conservative intent is durable.
+        // This callback precedes notification-child registration and is repeated on restart.
+        admit(fallback)
         currentCoroutineContext().ensureActive()
         if (!authorized()) throw kotlinx.coroutines.CancellationException("Receiver occurrence invalidated")
         val outcome = query(ReceiverCoverageRequest.freeze(preflight, requestId, candidates, now))

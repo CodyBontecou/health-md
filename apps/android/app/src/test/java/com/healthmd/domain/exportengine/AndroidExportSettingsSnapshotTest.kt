@@ -38,6 +38,23 @@ import kotlinx.serialization.json.Json
 
 class AndroidExportSettingsSnapshotTest {
     @Test
+    fun receiverSnapshotIsLocalOnlyAndPreservesExactOutputAuthority() {
+        val settings = ExportSettings(exportTarget = ExportTarget.API_ENDPOINT, scheduledExportTarget = ExportTarget.API_ENDPOINT,
+            apiEndpointUrl = "https://example.com/upload")
+        val base = AndroidExportSettingsSnapshotCodec.encodeCanonical(AndroidExportSettingsSnapshot.capture(
+            settings, syntheticExportEnginePin(zoneId = "UTC"), ZoneId.of("UTC")))
+        val config = com.healthmd.data.receivercoverage.ReceiverCoverageConfiguration("https://example.com/coverage", "synthetic-scope", 1)
+        val protected = com.healthmd.data.receivercoverage.ReceiverCoverageSnapshot.wrap(base, config.json(), "original-plan", "a".repeat(64), "b".repeat(64))
+        assertThat(AndroidExportSettingsSnapshotCodec.decodeOrNull(protected)).isNull()
+        val restored = AndroidExportSettingsSnapshotCodec.decodeScheduled(protected)
+        assertThat(AndroidExportSettingsSnapshotCodec.encodeCanonical(restored)).isEqualTo(base)
+        assertThat(restored.ianaTimeZone).isEqualTo("UTC")
+        assertThat(com.healthmd.data.receivercoverage.ReceiverCoverageSnapshot.authority(protected)?.planId).isEqualTo("original-plan")
+        assertThrows(Exception::class.java) { AndroidExportSettingsSnapshotCodec.decodeScheduled(
+            protected.replace("\"schema_version\":1", "\"schema_version\":2")) }
+    }
+
+    @Test
     fun euDotSurvivesFrozenProfilePersistenceAndFormatsCalendarDates() {
         val settings = ExportSettings().let { it.copy(
             formatCustomization = it.formatCustomization.copy(dateFormat = DateFormatPreference.EU_DOT),

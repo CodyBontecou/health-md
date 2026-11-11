@@ -78,6 +78,10 @@ data class PendingScheduledExportRequest(
     val settingsSnapshotJson: String? = null,
     /** Durable prepared-body journal for API delivery. Missing preserves pre-journal behavior. */
     val apiOperationId: String? = null,
+    /** Original receiver v2 plan survives fresh-capture detachment from prepared API bodies. */
+    @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
+    @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER)
+    val receiverPlanId: String? = null,
     /** Durable exact-artifact journal for a scheduled device-folder commit. */
     val folderOperationId: String? = null,
     val firstFailedAtMillis: Long = 0L,

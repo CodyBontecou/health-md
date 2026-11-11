@@ -66,6 +66,7 @@ object APIExportAuthorization {
 }
 
 interface APIExportCredentialStore {
+    suspend fun receiverCoverageKey(create: Boolean = false): ByteArray = error("Receiver coverage secure key unavailable")
     suspend fun authorizationHeader(): String?
     suspend fun hasAuthorization(): Boolean
     suspend fun saveAuthorization(value: String)
@@ -105,6 +106,25 @@ class EncryptedAPIExportCredentialStore @Inject constructor(
             EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
             EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
         )
+    }
+
+    override suspend fun receiverCoverageKey(create: Boolean): ByteArray = withContext(Dispatchers.IO) {
+        synchronized(credentialLock) {
+            val name = "receiver_coverage_installation_key_v1"
+            val stored = preferences.getString(name, null)
+            if (stored != null) {
+                val decoded = Base64.decode(stored, Base64.NO_WRAP)
+                require(decoded.size == 32) { "Receiver coverage secure key invalid" }
+                decoded
+            } else {
+                check(create) { "Receiver coverage secure key missing" }
+                val key = ByteArray(32).also { SecureRandom().nextBytes(it) }
+                val encoded = Base64.encodeToString(key, Base64.NO_WRAP)
+                check(preferences.edit().putString(name, encoded).commit())
+                check(preferences.getString(name, null) == encoded)
+                key
+            }
+        }
     }
 
     override suspend fun authorizationHeader(): String? = withContext(Dispatchers.IO) {

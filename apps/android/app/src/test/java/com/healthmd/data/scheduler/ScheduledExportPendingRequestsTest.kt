@@ -17,6 +17,44 @@ import java.time.LocalDate
 import java.time.ZoneId
 
 class ScheduledExportPendingRequestsTest {
+    @Test
+    fun receiverFreshCaptureResidualDoesNotJoinOrEraseNewOccurrence() {
+        val oldDate = LocalDate.parse("2026-03-08")
+        val newDate = LocalDate.parse("2026-03-09")
+        for (window in listOf(ScheduleDateWindow.PAST_COMPLETE_DAYS,
+            ScheduleDateWindow.PAST_COMPLETE_DAYS_THROUGH_TODAY)) {
+            val original = ScheduledExportPendingRequests.applyCancellationResult(
+                ExportSettings(scheduledExportTarget = ExportTarget.API_ENDPOINT,
+                    scheduleLookbackDays = 1, scheduleDateWindow = window),
+                listOf(oldDate), listOf(oldDate), target = ExportTarget.API_ENDPOINT,
+                destinationFingerprint = "original", receiverPlanId = "old-occurrence")
+            assertThat(original.pendingScheduledExportRequests.single().apiOperationId).isNull()
+            val dates = ScheduledExportPendingRequests.scheduledRunDates(original, listOf(newDate.plusDays(1)),
+                destinationFingerprint = "original", receiverPlanId = "new-occurrence")
+            assertThat(dates).contains(newDate)
+            assertThat(dates).doesNotContain(oldDate)
+            if (window == ScheduleDateWindow.PAST_COMPLETE_DAYS_THROUGH_TODAY)
+                assertThat(dates).contains(newDate.plusDays(1))
+            val after = ScheduledExportPendingRequests.applyAttemptResult(original, dates, emptyList(),
+                target = ExportTarget.API_ENDPOINT, destinationFingerprint = "original", receiverPlanId = "new-occurrence")
+            assertThat(after.pendingScheduledExportRequests.single().receiverPlanId).isEqualTo("old-occurrence")
+        }
+    }
+
+    @org.junit.Test
+    fun receiverPlanSurvivesPartialAcknowledgementAndFreshCaptureDetachment() {
+        val date = java.time.LocalDate.parse("2026-03-06")
+        val settings = com.healthmd.domain.model.ExportSettings(scheduledExportTarget = com.healthmd.domain.model.ExportTarget.API_ENDPOINT)
+        val accepted = ScheduledExportPendingRequests.applyCancellationResult(settings, listOf(date), listOf(date),
+            target = com.healthmd.domain.model.ExportTarget.API_ENDPOINT, destinationFingerprint = "original", receiverPlanId = "original-plan")
+        val fresh = ScheduledExportPendingRequests.applyAttemptResult(accepted, listOf(date),
+            listOf(com.healthmd.domain.model.FailedDateDetail(date, com.healthmd.domain.model.ExportFailureReason.UNKNOWN)),
+            target = com.healthmd.domain.model.ExportTarget.API_ENDPOINT, destinationFingerprint = "original",
+            apiOperationIds = mapOf(date to "prepared-body"), freshCaptureRetryDates = setOf(date), receiverPlanId = "new-plan")
+        org.junit.Assert.assertEquals("original-plan", fresh.pendingScheduledExportRequests.single().receiverPlanId)
+        org.junit.Assert.assertNull(fresh.pendingScheduledExportRequests.single().apiOperationId)
+    }
+
 
     @Test
     fun pendingRequests_mergesLegacyDatesWithExplicitRequests() {

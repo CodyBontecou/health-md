@@ -19,6 +19,37 @@ Raw API Snapshots require HTTPS and reject every redirect. This prevents replayi
 
 Health.md also rejects malformed or duplicate headers, control characters, more than 20 custom headers, and unsafe framing/proxy headers. `Content-Type`, `Content-Length`, `Host`, `Connection`, `Transfer-Encoding`, and related framing headers remain controlled by the app. Custom headers are applied after the optional Authorization field. Saving a raw `Authorization: …` line clears and replaces the convenience Bearer/Basic value, preventing a hidden credential from resurfacing later.
 
+## Receiver-aware scheduling
+
+Source integration is implemented for personal compatibility API schedules; native
+application compilation and device/backend acceptance remain pending. Existing
+schedules resend the full lookback unless explicitly enabled.
+
+In the API schedule editor (profile or legacy schedule), open **Receiver-aware
+scheduling** and enable **Skip retained completed days**. Enter the receiver owner's
+explicit HTTPS preflight URL, a non-secret scope for this platform/account/output
+profile, and a correction window of 0–30 calendar days. The preflight and upload
+must share an HTTPS origin; queries, fragments, embedded credentials and redirects
+are rejected. Configure upload authentication normally; the preflight reuses that
+same effective authorization. Managed clinic credentials are unsupported.
+
+The receiver must implement the [receiver coverage contract](../../../packages/contracts/proposals/receiver-coverage-v1/contract.md).
+Coverage can skip retained completed days; the correction window resends recent
+candidate days even when retained. Choosing 0 disables that correction refresh.
+Late source updates outside the window will not be resent automatically. Use full
+lookback or manual re-export when older corrections matter. Today Refresh remains
+independent and is never skipped by completed-day coverage.
+
+A schedule saves its exact selected dates, capture calendar and destination before
+capture/upload. Retries use that plan without another preflight and acknowledge
+only completed dates. Valid empty selection completes only that occurrence without
+capturing or uploading health data. Cancellation keeps exact pending work; an
+interrupted preflight recovers its saved conservative full-window fallback.
+Changing or disabling this setting affects new occurrences only. Pending work
+keeps its original settings and destination; changing credentials does not reroute
+it. Choose a new receiver scope after changing output settings. Discard obsolete
+pending recovery explicitly before replacing its authority.
+
 ## Request
 
 Each export action atomically snapshots its endpoint, Authorization value, and custom headers before collecting records, then sends one request:
@@ -75,7 +106,7 @@ The request body is streamed from installation-private no-backup storage and rem
 
 The Schedule screen has its own destination selection. API schedules require network connectivity and Full Access. When Android’s Alarms & reminders access is granted, Health.md uses a one-shot exact alarm for each intended occurrence and immediately dispatches expedited export work. A durable one-time WorkManager trigger remains as a delayed backup and becomes the primary scheduler when exact-alarm access is unavailable. Each occurrence carries its intended local date, so a delayed start or retry cannot accidentally export a different day after midnight. Alarms are restored after reboot, app update, clock/timezone changes, and exact-alarm access changes.
 
-Each new completed-day profile occurrence resends the full configured lookback, including overlapping dates uploaded by earlier occurrences. A 14-day daily profile therefore sends all 14 completed days each morning, ending the day before its scheduled fire date. Today Refresh adds only today's snapshot; retries preserve exact unresolved dates instead of expanding the window. Receivers should replace or upsert each daily snapshot by `records[].date`, not append duplicate copies. The API envelope and daily-record schemas are unchanged.
+By default, each new completed-day profile occurrence resends the full configured lookback, including overlapping dates uploaded by earlier occurrences. A 14-day daily profile therefore sends all 14 completed days each morning, ending the day before its scheduled fire date. Today Refresh adds only today's snapshot; retries preserve exact unresolved dates instead of expanding the window. Receivers should replace or upsert each daily snapshot by `records[].date`, not append duplicate copies. The API envelope and daily-record schemas are unchanged.
 
 Profile schedules honor the frozen export mode: Raw API Snapshot uses the raw range runner and raw headers/body, not `healthmd.api_export`. Separated requested days are captured as separate contiguous ranges, with one artifact per provider for each range; intervening unrequested days are not queried. Raw retries start a fresh non-transactional capture and never resume a compatibility journal. Partial raw provider results retain all attempted completed days rather than interpreting artifact counts as day counts; Today Refresh succeeds only when every requested raw artifact succeeds.
 

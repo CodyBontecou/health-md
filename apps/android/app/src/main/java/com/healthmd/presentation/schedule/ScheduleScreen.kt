@@ -482,6 +482,7 @@ fun ScheduleScreen(
                 )
 
                 if (uiState.selectedTarget == ExportTarget.API_ENDPOINT) {
+                    ReceiverCoverageSettingsButton(scope = "legacy", uploadUrl = uiState.apiEndpointUrl)
                     EndpointSettingsButton(
                         configured = uiState.apiEndpointConfigured,
                         onClick = { attemptConfigurationChange { showAPISettings = true } },

@@ -82,6 +82,7 @@ final class ScheduledExportCoordinator {
             try discard(request)
             return .discarded
         }
+        let request = try pendingExportStore.loadAll().first { $0.id == request.id } ?? request
         let retryRequest: PendingExportRequest
         let requestCalendar = frozenCalendar(for: request.originalCalendarTimeZoneIdentifier)
         if let remainingDates = result.remainingDates(from: request.dates, calendar: requestCalendar) {
@@ -193,6 +194,9 @@ final class ScheduledExportCoordinator {
         let requestCalendar = frozenCalendar(
             for: frozenSettings?.calendarTimeZoneIdentifier
         )
+        let target = profile?.target ?? schedule.target
+        let coverage = target == .apiEndpoint ? try ReceiverCoverageSettings.shared.configuration(
+            ReceiverCoverageSettings.scope(profile?.profileID)) : nil
         return PendingExportRequest(
             id: makeID(),
             dates: ScheduleDateMath.exportDates(
@@ -214,6 +218,7 @@ final class ScheduledExportCoordinator {
             recoveryGeneration: profile?.recoveryGeneration ?? 0,
             scheduleEnabledAt: profile?.enabledAt ?? schedule.enabledAt,
             apiDestinationIdentity: profile?.apiDestinationIdentity ?? apiDestinationIdentity,
+            receiverCoverage: coverage,
             calendar: requestCalendar
         )
     }

@@ -657,16 +657,16 @@
       "id": "export.scheduled-receiver-coverage",
       "name": "Receiver-aware scheduled API date selection",
       "classification": "planned",
-      "summary": "Opt-in missing-day selection with explicit retained coverage and correction refresh. Native authenticated HTTP transports and strict parsers exist, but scheduling remains disabled pending atomic frozen-plan persistence; full lookback and exact legacy residual recovery remain unchanged.",
+      "summary": "Personal compatibility API schedules have explicit native opt-in, authenticated bounded preflight, atomic v2 frozen plans and exact retry residuals on Apple and Android. Full lookback remains the default. Source integration awaits queued application compilation and device/backend acceptance before released availability.",
       "profiles": [],
       "platforms": {
         "apple": {
           "state": "planned",
-          "target": "Issue #170: supply secure-store installation key/effective upload authorization, atomically persist evidence-bound plans in ScheduledExportCoordinator/PendingExportRequest, then wire preflight, settings opt-in and runtime acceptance."
+          "target": "Issue #170: qualify implemented profile/legacy scheduler, persistence and opt-in settings integration through the shared native compilation queue, then explicit device/backend acceptance; no released availability claim."
         },
         "android": {
           "state": "planned",
-          "target": "Issue #170: supply secure-store installation key/effective upload authorization, atomically persist evidence-bound plans in both profile and legacy scheduled workers, then wire preflight, settings opt-in and runtime acceptance."
+          "target": "Issue #170: qualify implemented profile/legacy scheduler, persistence and opt-in settings integration through the shared native compilation queue, then explicit device/backend acceptance; no released availability claim."
         }
       },
       "evidence": [
@@ -678,7 +678,10 @@
         "apps/apple/HealthMd/Shared/ReceiverCoverage/ReceiverCoverageResponse.swift",
         "apps/android/app/src/main/java/com/healthmd/data/receivercoverage/ReceiverCoverageHTTPClient.kt",
         "apps/android/app/src/main/java/com/healthmd/data/receivercoverage/ReceiverCoverageResponse.kt",
-        "packages/contracts/proposals/receiver-coverage-v1/test_native_transport.py"
+        "packages/contracts/proposals/receiver-coverage-v1/test_native_transport.py",
+        "apps/apple/HealthMd/Shared/Managers/ReceiverCoverageRuntime.swift",
+        "apps/android/app/src/main/java/com/healthmd/data/scheduler/ReceiverCoverageRuntime.kt",
+        "packages/contracts/proposals/receiver-coverage-v1/test_native_pending_store.py"
       ]
     },
     {
