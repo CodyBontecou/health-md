@@ -17,6 +17,45 @@ COMMANDS = [
 
 
 class CloudRoutingTests(unittest.TestCase):
+    def test_wake_and_cloud_overlap_and_both_failures_remain_blocking(self):
+        for failure in ('none', 'wake', 'cloud'):
+            with self.subTest(failure=failure), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                for component in ('wake', 'cloud'):
+                    (root / 'apps' / component).mkdir(parents=True)
+                (root / 'scripts/ci').mkdir(parents=True)
+                (root / 'scripts/ci/cloud.sh').write_text((ROOT / 'scripts/ci/cloud.sh').read_text())
+                (root / 'bin').mkdir()
+                npm = root / 'bin/npm'
+                # Each checker must observe the other before it can finish.
+                # Sequential execution fails deterministically at that barrier.
+                npm.write_text('''#!/usr/bin/env bash
+set -eu
+component=${PWD##*/}
+touch "$FIXTURE_ROOT/$component.started"
+if [[ "$component" == wake ]]; then other=cloud; else other=wake; fi
+for ((attempt=0; attempt<100; attempt++)); do
+  [[ -f "$FIXTURE_ROOT/$other.started" ]] && break
+  sleep 0.01
+done
+[[ -f "$FIXTURE_ROOT/$other.started" ]] || exit 31
+if [[ "$*" == ci* && "$component" == "$FAIL_COMPONENT" ]]; then
+  touch "$FIXTURE_ROOT/$component.finished"
+  exit 23
+fi
+if [[ "$*" == 'run check' || "$*" == 'audit --audit-level=moderate' ]]; then
+  touch "$FIXTURE_ROOT/$component.finished"
+fi
+''')
+                npm.chmod(0o755)
+                result = subprocess.run(['bash', str(ROOT / 'scripts/ci/wake.sh')],
+                    cwd=root, capture_output=True, text=True, timeout=10,
+                    env={**os.environ, 'PATH': str(root / 'bin') + os.pathsep + os.environ['PATH'],
+                         'FIXTURE_ROOT': str(root), 'FAIL_COMPONENT': failure})
+                self.assertEqual(result.returncode, 0 if failure == 'none' else 23, result.stderr)
+                self.assertTrue((root / 'wake.finished').exists())
+                self.assertTrue((root / 'cloud.finished').exists())
+
     def test_every_cloud_stage_runs_in_its_component_and_failure_stops_the_lane(self):
         for failed_stage in range(7):
             with self.subTest(failed_stage=failed_stage), tempfile.TemporaryDirectory() as directory:

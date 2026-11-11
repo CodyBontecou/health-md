@@ -36,8 +36,15 @@ limit, measured from creation (including queue time). The final gate rejects abs
 stale, dirty-source, skipped, failed or over-budget group receipts.
 
 There is no extra gate job, runner handoff or artifact transfer between groups.
-Cargo caches are restored/saved explicitly before the final timing check. There are
-no checkout or cache post-actions after that check. GitHub's own job finalization is
+Cargo caches are restored explicitly. After every group passes, a missed cache is
+published only when GitHub's authoritative attempt start leaves at least 20 seconds
+of the complete 120-second budget. The initial attempt counts from workflow creation,
+including queue time; reruns use the new attempt start, as the final verifier does.
+An unavailable API or uncertain clock skips only optional cache publication. Both
+workspaces keep their existing cache paths. The mandatory final receipt and timing
+check always remains after this decision and any upload; skipping publication never
+qualifies failed, stale or over-budget results. There are no checkout or cache
+post-actions after that check. GitHub's own job finalization is
 verified using the completed hosted-run timestamps before claiming the target.
 
 ## Coverage deliberately retired
