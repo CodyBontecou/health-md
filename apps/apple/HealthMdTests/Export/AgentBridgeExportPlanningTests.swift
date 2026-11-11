@@ -3292,6 +3292,34 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
             calendarTimeZoneIdentifier: "UTC", retainPlatformExtensions: false, rollupPeriods: []))
     }
 
+    func testFrozenAppleBatchesRequireExactExplicitProfileWithoutWideningEnginePins() throws {
+        let v8 = try HealthMdCoreService().metricRegistry(profile: .appleHealthDataV8)
+        let v10 = try HealthMdCoreService().metricRegistry(profile: .appleHealthDataV10)
+        var wrongHash = v8
+        wrongHash.registrySha256 = String(repeating: "0", count: 64)
+        let day = HealthData(date: Date(timeIntervalSince1970: 0),
+            timeContext: ExportTimeContext(calendarTimeZoneIdentifier: "UTC"))
+        XCTAssertFalse(AppleExportEnginePin.supportsRegistry(v8))
+        XCTAssertTrue(AppleExportEnginePin.supportsRegistry(v10))
+        for bounded in [false, true] {
+            let encode: (CoreMetricRegistrySnapshot, HealthMdSemanticInputAdapter.Profile) throws -> Void = { registry, profile in
+                if bounded {
+                    _ = try HealthMdSemanticInputAdapter.boundedBatches(sessionID: "explicit-profile", healthData: [day],
+                        registry: registry, profile: profile, customization: FormatCustomization(), calendarTimeZoneIdentifier: "UTC")
+                } else {
+                    _ = try HealthMdSemanticInputAdapter.batch(sessionID: "explicit-profile", batchIndex: 0,
+                        finalBatch: true, healthData: [day], registry: registry, profile: profile,
+                        customization: FormatCustomization(), calendarTimeZoneIdentifier: "UTC")
+                }
+            }
+            XCTAssertNoThrow(try encode(v8, .frozenV8))
+            XCTAssertNoThrow(try encode(v10, .current))
+            XCTAssertThrowsError(try encode(v8, .current))
+            XCTAssertThrowsError(try encode(v10, .frozenV8))
+            XCTAssertThrowsError(try encode(wrongHash, .frozenV8))
+        }
+    }
+
     func testNativeSDKRetainedCaptureReopensSignedBytesWithoutSDKReadsEmpty() async throws { try await assertNativeSDKRetainedCaptureReopens(value: nil) }
     func testNativeSDKRetainedCaptureReopensSignedBytesWithoutSDKReadsZero() async throws { try await assertNativeSDKRetainedCaptureReopens(value: 0) }
     func testNativeSDKRetainedCaptureReopensSignedBytesWithoutSDKReadsPopulated() async throws { try await assertNativeSDKRetainedCaptureReopens(value: 123) }
