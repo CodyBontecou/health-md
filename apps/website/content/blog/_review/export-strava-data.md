@@ -1,0 +1,14 @@
+# Strava export claim verification
+
+Verified 2026-10-30 by Codex (agent), method: traced. No account/device/permission/actual export/spreadsheet/product visual QA. No native behavior, schemas or generated samples changed.
+
+## Claims
+
+- [x] October30: related recommendation now includes Polar Flow's distinct export chooser. Strava body unchanged; the existing Garmin body link and three recommendations remain.
+
+- [x] Current official https://support.strava.com/en-us/articles/15401919-how-do-i-export-my-strava-data establishes website-only original/activity/bulk export, original uploaded format, GPS-dependent GPX/TCX, export_tcx suffix, Settings/My Account/Download your account/Get Started/Request download and email. Native options precede installation. Derived native-export section kept under200words from that source; no archive filename/schema/delivery-time guarantee or Health.md converter claim.
+- [x] https://support.strava.com/en-us/articles/15402024-apple-health-and-strava verifies current You/settings/Manage Apps and Devices/Health, Send to Health, outgoing type/time/distance/calories/routes, and third-party recorded-route exclusion. Automatic Uploads/30days belongs to Apple Workout→Strava, not outgoing backfill. Under200words derived, no promise that all shared activities have routes/sensor data.
+- [x] https://support.strava.com/en-us/articles/15401554-health-connect-and-strava verifies Android-only connection, GPS activity time/distance/calories outgoing, weight incoming, menu and Health Connect system/app distinction. Does not fabricate outgoing weight/route/heart-rate/indoor support or import a stale Google Fit integration. Under200words derived.
+- [x] Committed Apple HealthKitManager workout fetch/exporters and maintained workout/format/first-export guides support authorized day-scoped CSV/JSON/notes. Android HealthConnectDataProvider/HealthConnectManager plus JsonExporter workouts show distinct Health Connect capture and daily structured files. No direct Strava OAuth/import or platform parity assumption. Individual field supply depends on actual health-store records.
+- [x] Existing Apple generated CSV/JSON and Android synthetic excerpt are linked unchanged and explicitly are not Strava samples. Mixed Value, units, repeated session labels, source overlap, missingness, details/privacy and raw/daily duplication boundaries retained; no invented Android workout CSV identity contract.
+- [x] Privacy matches maintained local/default and optional single-owner retained-export pilot. No price/quota/clinical/outcome claim. Three existing related guides; incoming workout recommendation changes only related frontmatter, workout body unchanged.

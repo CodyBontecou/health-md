@@ -1,5 +1,6 @@
 package com.healthmd.direct
 
+import kotlinx.coroutines.job
 import com.healthmd.data.health.HealthConnectManager
 import com.healthmd.direct.protocol.*
 import kotlinx.serialization.Serializable
@@ -196,6 +197,14 @@ internal suspend fun AgentBridgeNativePlanningSession.sendResumedExecutionExport
         AgentBridgeNativeExportProducer.prepareTransfer(request, manager, context, renderer)
     }
 }
+
+/** SDK ownership comes from native composition; no wire value selects a manager or renderer. */
+internal suspend fun AgentBridgeNativePlanningSession.receiveAndHandleExecutionNext(channel: DirectSecureChannel,
+    manager: HealthConnectManager, renderer: AgentBridgeNativeDayRenderer = AgentBridgeNativeDayRenderer(),
+    confirmedStopIsHandled: Boolean = false): ReceivedAgentBridgePayload? =
+    receiveAndHandleExportNext(channel, kotlinx.coroutines.currentCoroutineContext().job, confirmedStopIsHandled = confirmedStopIsHandled) { request, context ->
+        AgentBridgeNativeExportProducer.prepareTransfer(request, manager, context, renderer)
+    }
 
 internal suspend fun AgentBridgeNativePlanningSession.prepareTransferExport(request: AgentBridgeExecuteRequest,
     manager: HealthConnectManager, renderer: AgentBridgeNativeDayRenderer = AgentBridgeNativeDayRenderer()

@@ -207,3 +207,24 @@ explicit opt-in where supported.
 
 This contract does not turn real failures into successful empty data. It makes discovery safe and
 makes every retained failure explicit, machine-readable, bounded, and recoverable.
+
+## Approved Agent Bridge cancellation
+
+`healthmd cancel-execution --arguments '{"job_id":"JOB_UUID"}'` and the fixed local
+MCP tool `healthmd_export_execution_cancel` accept only an existing canonical job UUID.
+Omitting CLI arguments returns local guidance without accessing credentials or the source.
+Caller-supplied phase, receipt, approval, frontier and destination fields are rejected.
+
+The operation persists/replays exact local Stop intent before contacting the paired source.
+It supports accepted-only and manifest-bound jobs and can return authenticated historical
+native confirmation without contacting the source. Revoking an export delegation does not
+renew the grant or prevent stopping its original job. Lost pairing trust/key or changed
+retained evidence rejects. No legacy export fallback is used.
+
+The result has schema `healthmd.agent_source_stop_result`, version 1, a native
+`source_receipt`, and `output_verified: false`. A native completed/partial/empty status wins
+if completion preceded Stop. This result records source facts; it does not verify current
+destination files or turn a local timeout/disconnect into source cancellation. A terminal
+receipt requires native acknowledgement or its previously authenticated retained proof.
+If an Execute/Resume request still holds the host operation gate, cancel that local request
+first, then request job Stop; local request cancellation alone is not native cancellation.

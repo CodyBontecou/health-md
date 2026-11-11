@@ -1,9 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="export_sleep_date_guidance_morning_ends">Whole sleep sessions belong to the date they end in the export\'s time zone. For last night\'s sleep, choose Today.</string>
+    <string name="export_sleep_preview_window_morning_ends">Sleep end dates: %1$s to %2$s (%3$s).</string>
+    <string name="export_sleep_preview_guidance_morning_ends">Whole sleep sessions belong to their end date in this export\'s time zone, without noon clipping. Query failures are listed separately; an empty result can also mean read access is unavailable.</string>
+    <string name="export_sleep_date_guidance">Sleep covers noon on each selected date through noon the next day. For last night\'s sleep, choose Yesterday.</string>
+    <string name="export_sleep_preview_window">Sleep window: %1$s at noon to %2$s at noon (%3$s).</string>
+    <string name="export_sleep_preview_guidance">If sleep is missing, try the preceding date. Morning sleep can appear in that date\'s summary even when its raw records are dated today. Query failures are listed separately; an empty result can also mean read access is unavailable.</string>
     <string name="app_name">Health.md</string>
 
     <!-- Common -->
     <string name="cancel">Cancel</string>
+    <string name="whoop_connection_description">Connect WHOOP to export recovery, strain, sleep, workouts, and body measurements. Sign-in uses your browser; Health.md stores tokens encrypted on this device. Disconnect removes this device’s saved connection.</string>
+    <string name="whoop_connect">Connect WHOOP</string>
+    <string name="whoop_sources_description">Connect WHOOP for direct provider exports, or continue using Health Connect for local records.</string>
+    <string name="whoop_sign_in_failed">WHOOP sign-in could not be started. Check your connection and try again.</string>
+    <string name="whoop_use_health_connect">Use Health Connect for exports</string>
+    <string name="whoop_reconnect">Reconnect WHOOP</string>
+    <string name="whoop_disconnect">Disconnect WHOOP</string>
+    <string name="whoop_use_for_exports">Use WHOOP for exports</string>
     <string name="back">Back</string>
     <string name="close">Close</string>
     <string name="refresh">Refresh</string>
@@ -240,7 +254,6 @@
     <string name="configuration_protection_blocked_action">Show why configuration changes are blocked</string>
     <string name="configuration_protection_open_setting">Open setting</string>
     <string name="section_health_sources">Health sources</string>
-    <string name="health_sources_description">Health Connect is the local export source. Data that supported apps write to Health Connect can be exported by Health.md.</string>
     <string name="health_provider_status_installed">Installed</string>
     <string name="health_provider_status_selected">Selected</string>
     <string name="health_provider_status_ready_to_connect">Ready to connect</string>
@@ -296,11 +309,28 @@
     </plurals>
     <string name="granular_data_title">Include Detailed Time-Series</string>
     <string name="granular_data_description">Add timestamped samples such as heart rate and sleep stages to compatibility exports. For an API-complete copy, use Raw API Snapshot.</string>
+    <string name="detail_overrides_title">Detail by category</string>
+    <string name="detail_overrides_description">Override the default for individual categories. Summary keeps daily totals only; daily summaries never change.</string>
+    <string name="detail_choice_default">Default</string>
+    <string name="detail_choice_summary">Summary</string>
+    <string name="detail_choice_sessions">Sessions</string>
+    <string name="detail_choice_detailed">Detailed</string>
+    <string name="detail_group_sleep_hint">Sessions lists each sleep session with full date and time. Detailed adds sleep stages.</string>
+    <string name="detail_expansion_schema_hint">Detailed Activity, Nutrition, or Body adds each source record and switches analytical JSON, CSV, and Markdown exports to schema 7.</string>
+
+    <!-- Sleep day attribution (issue #104) -->
+    <string name="sleep_attribution_title">Sleep Day Attribution</string>
+    <string name="sleep_attribution_night_begins">Night begins</string>
+    <string name="sleep_attribution_morning_ends">Morning ends</string>
+    <string name="sleep_attribution_night_begins_description">Sleep uses the daily note’s noon-to-noon window. This is the default and matches previous exports.</string>
+    <string name="sleep_attribution_morning_ends_description">Morning ends is unavailable for current export profiles. Choose Night begins for a new export.</string>
+    <string name="sleep_attribution_morning_ends_wake_description">Assigns the whole sleep session to the date you wake up, using the export’s time zone.</string>
 
     <!-- Metric selection screen -->
     <string name="metric_selection_title">Health Metrics</string>
     <string name="search_metrics_hint">Search metrics…</string>
     <string name="select_all">Select All</string>
+    <string name="metric_search_no_results">No matching metrics. Try another search.</string>
     <string name="deselect_all">Deselect All</string>
     <string name="metrics_enabled_category" tools:ignore="PluralsCandidate">%1$d/%2$d enabled</string>
 
@@ -558,10 +588,6 @@
     <string name="not_now">Not now</string>
 
     <!-- Release notes -->
-    <string name="release_notes_title">What’s New in %s</string>
-    <string name="release_notes_settings_hint">You can tune export formats, custom Markdown, and metrics from Settings.</string>
-    <string name="release_notes_open_settings">Open Settings</string>
-    <string name="release_notes_got_it">Got it</string>
     <string name="release_notes_highlight_widgets">Scheduled Raw API Snapshot exports use your profile’s raw format for API endpoints and folders.</string>
     <string name="release_notes_highlight_feedback">Scheduled snapshots include your selected lookback and Today Refresh.</string>
     <string name="release_notes_highlight_export_parity">Clear a stuck scheduled backlog with Discard pending recovery in the profile schedule.</string>
@@ -579,15 +605,22 @@
 
     <!-- Paywall screen -->
     <string name="paywall_title">Unlock Health.md</string>
-    <string name="paywall_subtitle">You\'ve used your 5 free exports</string>
-    <string name="paywall_unlimited_exports">Unlimited exports, forever</string>
+    <string name="paywall_subtitle">Choose a subscription or Lifetime access to begin your private health archive. Eligible subscriptions include a 7-day free trial.</string>
+    <string name="paywall_access_subtitle">Choose a subscription or Lifetime access to begin your private health archive. Eligible subscriptions include a 7-day free trial.</string>
+    <string name="paywall_plan_choices">Weekly, yearly, or Lifetime access</string>
+    <string name="paywall_weekly_price">%1$s / week</string>
+    <string name="paywall_yearly_price">%1$s / year</string>
+    <string name="paywall_lifetime_price">Lifetime — %1$s once</string>
+    <string name="paywall_trial_then">7 days free, then %1$s</string>
+    <string name="paywall_retry">Try again</string>
+    <string name="paywall_manage_subscriptions">Manage subscriptions</string>
+    <string name="paywall_terms">Terms</string>
+    <string name="paywall_privacy">Privacy</string>
+    <string name="paywall_subscription_disclosure">Eligible subscriptions include a 7-day free trial, then renew automatically at the displayed price unless canceled before the trial or current period ends. Manage or cancel in Google Play. Lifetime is charged immediately as a one-time purchase. Existing paid access is retained. Lifetime has no trial. Deleting the app or buying Lifetime does not cancel an existing subscription.</string>
+    <string name="paywall_unlimited_exports">Unlimited exports</string>
     <string name="paywall_scheduled_exports">Automated scheduled exports</string>
     <string name="paywall_future_features">All future features included</string>
-    <string name="paywall_one_time">One-time payment \u2014 no subscription</string>
-    <string name="paywall_unlock_button">Unlock Health.md</string>
-    <string name="paywall_unlock_button_price">Unlock for %s</string>
     <string name="paywall_restore">Restore Purchase</string>
-    <string name="paywall_purchasing">Processing\u2026</string>
     <string name="paywall_restoring">Restoring\u2026</string>
 
     <!-- Debug purchase controls -->
@@ -603,8 +636,6 @@
     <string name="export_progress_title">Exporting Health Data</string>
 
     <!-- Navigation labels -->
-    <string name="nav_export">Export</string>
-    <string name="nav_schedule">Schedule</string>
     <string name="nav_history">History</string>
     <string name="nav_settings">Settings</string>
     <string name="shortcut_export_short">Export</string>
@@ -668,7 +699,7 @@
     <string name="privacy_category_history_exports">Used only for large manual exports, such as 90 days or all time, so Health.md can read Health Connect data older than the standard 30-day window</string>
 
     <string name="privacy_policy_direct_cli">Direct CLI exports occur only after you explicitly pair and connect to your computer. Health records are sent through an authenticated encrypted connection, retained privately for resumable transfer for at most seven days, and deleted sooner when you cancel or forget the pairing.</string>
-    <string name="privacy_policy_footer">Health.md does not operate a health-data cloud. Campaign attribution may send random app-generated install/event UUIDs and validated campaign metadata. It never sends health data, raw referrers, device IDs, exports, accounts, or paths.</string>
+    <string name="privacy_policy_footer">This version does not collect custom usage analytics or advertising attribution. Purchases, scheduling, and optional services have separate privacy disclosures.</string>
 
 
     <!-- Feedback helper -->
@@ -737,6 +768,7 @@
     <string name="date_format_display_iso8601" tools:ignore="TypographyDashes">ISO 8601 (2026-01-13)</string>
     <string name="date_format_display_us_short">US Short (01/13/2026)</string>
     <string name="date_format_display_us_long">US Long (January 13, 2026)</string>
+    <string name="date_format_display_eu_dot">EU Dot (13.01.2026)</string>
     <string name="date_format_display_eu_short">EU Short (13/01/2026)</string>
     <string name="date_format_display_eu_long">EU Long (13 January 2026)</string>
     <string name="date_format_display_compact">Compact (20260113)</string>
@@ -792,11 +824,12 @@
     <string name="onboarding_storage_selected">Saving to: %s</string>
 
     <string name="onboarding_ready_title">You\'re All Set!</string>
-    <string name="onboarding_ready_subtitle">Health.md is ready to export your wellness data.</string>
-    <string name="onboarding_ready_tip_1">Tap Export to create your first health notes</string>
-    <string name="onboarding_ready_tip_2">Set up automatic exports in the Schedule tab</string>
+    <string name="onboarding_ready_included_subtitle">Create an automation, then use Run now to generate your first export. Full Access is included.</string>
+    <string name="onboarding_ready_subtitle">Create an automation, then generate your first export for free. Paid access is needed for further exports.</string>
+    <string name="onboarding_ready_tip_1">Choose the metrics and folder for your automation</string>
+    <string name="onboarding_ready_tip_2">Use Run now to save your first health notes for free</string>
     <string name="onboarding_ready_tip_3">Customize your export format in Settings</string>
-    <string name="onboarding_ready_start_button">Start Exporting</string>
+    <string name="onboarding_ready_start_button">Create My First Automation</string>
 
     <string name="onboarding_continue">Continue</string>
     <string name="onboarding_skip">Skip</string>
@@ -804,12 +837,12 @@
 
     <!-- P1 parity: billing/schedule/history/settings -->
     <string name="export_failure_paywall_label">Unlock required</string>
-    <string name="export_guidance_paywall">Scheduled exports require the lifetime unlock. Open the paywall to unlock unlimited exports and scheduling.</string>
+    <string name="export_guidance_paywall">Scheduled exports require an active trial or subscription, or Lifetime access. Open the paywall to view access options.</string>
     <string name="export_source_retry">Retry</string>
     <string name="export_source_shortcut">Shortcut</string>
     <string name="export_source_remote">Remote</string>
     <string name="schedule_unlock_required_title">Unlock scheduled exports</string>
-    <string name="schedule_unlock_required_body">Manual exports include 5 free runs. Automatic scheduled exports are included with the one-time lifetime unlock.</string>
+    <string name="schedule_unlock_required_body">Manual and scheduled exports require an active trial, subscription, or Lifetime access.</string>
     <string name="schedule_unlock_required_short">Unlock Health.md to enable scheduled exports.</string>
     <string name="export_folder_root_label">Export folder</string>
 
@@ -892,7 +925,7 @@
     <string name="direct_cli_status_export_cancelled">Android export cancelled.</string>
     <string name="direct_cli_failure_connection">Could not connect to the Health.md CLI. Confirm it is listening and try again.</string>
     <string name="direct_cli_failure_timeout">The Direct CLI session reached Android\'s time limit.</string>
-    <string name="direct_cli_failure_quota">The free export limit has been reached.</string>
+    <string name="direct_cli_failure_quota">An active trial, subscription, or Lifetime access is required.</string>
     <string name="direct_cli_failure_provider_range">Raw provider export requires an explicit range of at most 366 days.</string>
     <string name="direct_cli_failure_profile_not_found">The referenced export profile does not exist on this device.</string>
     <string name="direct_cli_failure_source_unavailable">The requested health provider is unavailable on this device.</string>
@@ -1140,6 +1173,8 @@
     <string name="export_preview_api_preparation_failed">API export preparation failed.</string>
     <string name="export_preview_artifacts_per_range">Artifacts per range</string>
     <string name="export_preview_back_description">Back to export preview</string>
+    <string name="export_preview_wrap_lines">Wrap lines</string>
+    <string name="export_preview_format_text">Format text</string>
     <string name="export_preview_destination_label">Destination</string>
     <string name="export_preview_empty_file">(empty file)</string>
     <string name="export_preview_formats_per_day">Formats per day</string>
@@ -1550,4 +1585,22 @@
     <string name="post_export_upgrade_action">See lifetime access</string>
     <string name="post_export_manual_action">Keep exporting manually</string>
     <string name="post_export_continue_free">Continue free</string>
+    <plurals name="widget_archive_gaps">
+        <item quantity="one">%1$s gap</item>
+        <item quantity="other">%1$s gaps</item>
+    </plurals>
+    <plurals name="widget_archive_days_in_month">
+        <item quantity="one">day in %1$s</item>
+        <item quantity="other">days in %1$s</item>
+    </plurals>
+
+    <string name="clinic_sync_channel_name">Clinic sync requests</string>
+    <string name="clinic_sync_request_body">Your clinic is asking for your latest health data. Tap to send it.</string>
+    <string name="clinic_sync_result_sent">Your latest data was sent to your clinic.</string>
+    <string name="clinic_sync_result_failed">Could not send your data to your clinic. Open Health.md and try again.</string>
+    <string name="clinic_sync_result_profile_missing">Open Clinic access in Health.md and choose Use clinic destination first.</string>
+    <string name="date_picker_enter_date">Enter date</string>
+    <string name="date_picker_show_calendar">Show calendar</string>
+    <string name="date_picker_input_label">Date (YYYY-MM-DD)</string>
+    <string name="date_picker_invalid_date">Enter a valid, available date in YYYY-MM-DD format.</string>
 </resources>

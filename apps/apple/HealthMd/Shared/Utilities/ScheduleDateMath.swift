@@ -23,6 +23,19 @@ enum ScheduleDateMath {
         }
     }
 
+    /// When the schedule next runs at all: the earlier of its next completed-day
+    /// export and, with Refresh today on, its next today-refresh slot. "Next run"
+    /// labels use this so a 3-hourly refresh isn't reported as tomorrow's run.
+    static func nextAnyRunDate(
+        schedule: ExportSchedule,
+        now: Date,
+        calendar: Calendar = .current
+    ) -> Date? {
+        [ScheduledExportKind.completedDay, .todayRefresh]
+            .compactMap { calculateNextRunDate(schedule: schedule, kind: $0, now: now, calendar: calendar) }
+            .min()
+    }
+
     static func nextScheduledOccurrences(
         schedule: ExportSchedule,
         now: Date,
@@ -239,8 +252,10 @@ enum ScheduleDateMath {
         let fireDay = calendar.startOfDay(for: fireDate)
         let lookbackDays = ExportSchedule.clampedLookbackDays(schedule.lookbackDays)
 
+        // Include Today adds the fire day to the window. The start stays put, so the next
+        // run still re-exports this run's partial day once that day has ended.
         guard let startDate = calendar.date(byAdding: .day, value: -lookbackDays, to: fireDay),
-              let endDate = calendar.date(byAdding: .day, value: -1, to: fireDay)
+              let endDate = calendar.date(byAdding: .day, value: schedule.includeToday ? 0 : -1, to: fireDay)
         else {
             return []
         }

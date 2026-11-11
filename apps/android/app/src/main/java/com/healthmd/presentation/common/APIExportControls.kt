@@ -1,8 +1,6 @@
 package com.healthmd.presentation.common
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -11,13 +9,16 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.defaultMinSize
-import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.displayCutout
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -29,7 +30,6 @@ import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.ErrorOutline
 import androidx.compose.material.icons.outlined.ExpandLess
 import androidx.compose.material.icons.outlined.ExpandMore
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -46,10 +46,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
@@ -69,7 +71,6 @@ import com.healthmd.domain.model.APIExportEndpoint
 import com.healthmd.domain.model.AgentDataGatewayEndpoint
 import com.healthmd.domain.model.ExportTarget
 import com.healthmd.presentation.theme.AppColors
-import com.healthmd.presentation.theme.GeistBreakpoints
 import com.healthmd.presentation.theme.GeistRadii
 import com.healthmd.presentation.theme.GeistSizes
 import com.healthmd.presentation.theme.GeistSpacing
@@ -85,15 +86,28 @@ fun ExportTargetSelector(
     onTargetSelected: (ExportTarget) -> Unit,
     modifier: Modifier = Modifier,
     gatewaySubtitle: String? = null,
+    managedClinicEndpoint: String? = null,
 ) {
+    if (managedClinicEndpoint != null) {
+        Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+            Text(stringResource(R.string.m3_schedule_clinic_destination_title), style = GeistType.heading16, color = AppColors.textPrimary)
+            Text(managedClinicEndpoint, style = GeistType.copy13Mono, color = AppColors.textSecondary)
+            Text(stringResource(R.string.m3_schedule_clinic_destination_body),
+                style = GeistType.copy13, color = AppColors.textSecondary)
+        }
+        return
+    }
     Column(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(Spacing.xs),
     ) {
         Text(
             text = stringResource(R.string.api_export_target_title),
-            style = MaterialTheme.typography.labelSmall,
-            color = AppColors.textMuted,
+            style = GeistType.heading14,
+            color = AppColors.accent,
+            modifier = Modifier
+                .padding(start = Spacing.md, top = Spacing.xs)
+                .semantics { heading() },
         )
         ExportTargetRow(
             title = stringResource(R.string.export_preview_device_destination),
@@ -139,7 +153,7 @@ private fun ExportTargetRow(
             RadioButton(selected = selected, onClick = onClick)
             Column(modifier = Modifier.weight(1f)) {
                 Text(title, style = MaterialTheme.typography.titleSmall, color = AppColors.textPrimary)
-                Text(subtitle, style = MaterialTheme.typography.bodySmall, color = AppColors.textMuted)
+                Text(subtitle, style = MaterialTheme.typography.bodySmall, color = AppColors.textSecondary)
             }
         }
     }
@@ -155,9 +169,33 @@ fun APIExportSettingsDialog(
     onSave: (endpointUrl: String, authorization: String?, requestHeaders: String?) -> Unit,
     onClearAuthorization: () -> Unit,
     onClearRequestHeaders: () -> Unit,
+    managedClinicEndpoint: String? = null,
 ) {
+    if (managedClinicEndpoint != null) {
+        val colors = LocalGeistColors.current
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = onDismiss,
+            containerColor = colors.gray.c200,
+            shape = RoundedCornerShape(GeistRadii.large),
+            tonalElevation = 0.dp,
+            title = {
+                Text(stringResource(R.string.m3_schedule_clinic_destination_title), style = GeistType.heading20, color = colors.primary)
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(GeistSpacing.space4)) {
+                    Text(managedClinicEndpoint, style = GeistType.copy13Mono, color = colors.primary)
+                    Text(stringResource(R.string.m3_schedule_clinic_destination_body), style = GeistType.copy14, color = colors.secondary)
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = onDismiss, modifier = Modifier.heightIn(min = GeistSizes.minimumTouchTarget)) {
+                    Text(stringResource(R.string.export_preview_done), style = GeistType.button14, color = colors.brandPrimary)
+                }
+            },
+        )
+        return
+    }
     val colors = LocalGeistColors.current
-    val dialogShape = RoundedCornerShape(GeistRadii.medium)
     var endpointUrl by remember { mutableStateOf(initialEndpointUrl) }
     var authorization by remember { mutableStateOf("") }
     var requestHeaders by remember { mutableStateOf("") }
@@ -215,275 +253,281 @@ fun APIExportSettingsDialog(
         }
     }
 
-    Dialog(
-        onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false),
+    EndpointSettingsFullScreenDialog(
+        title = stringResource(R.string.api_export_dialog_title),
+        description = stringResource(
+            R.string.api_export_dialog_description,
+            stringResource(R.string.api_export_literal_json),
+            stringResource(R.string.api_export_literal_post),
+            stringResource(R.string.api_export_literal_http),
+            stringResource(R.string.api_export_literal_https),
+        ),
+        closeContentDescription = stringResource(R.string.api_export_close_content_description),
+        closeLabel = stringResource(R.string.api_export_close_settings),
+        saveLabel = stringResource(R.string.api_export_save_settings),
+        onDismiss = onDismiss,
+        onSave = saveSettings,
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .windowInsetsPadding(WindowInsets.safeDrawing)
-                .padding(horizontal = GeistSpacing.space4, vertical = GeistSpacing.space10),
-            contentAlignment = Alignment.Center,
-        ) {
-            Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .fillMaxHeight(GeistSizes.dialogMaxHeightFraction)
-                    .widthIn(max = GeistBreakpoints.medium.dp),
-                shape = dialogShape,
-                color = colors.background100,
-                border = BorderStroke(1.dp, colors.grayAlpha.c400),
-                tonalElevation = 0.dp,
-            ) {
-                Column(modifier = Modifier.fillMaxSize()) {
-                    APISettingsDialogHeader(onDismiss = onDismiss)
-                    HorizontalDivider(color = colors.grayAlpha.c200)
-
-                    Column(
-                        modifier = Modifier
-                            .weight(1f)
-                            .verticalScroll(rememberScrollState())
-                            .padding(GeistSpacing.space6),
-                        verticalArrangement = Arrangement.spacedBy(GeistSpacing.space6),
-                    ) {
-                        APISettingsSection(title = stringResource(R.string.api_export_section_endpoint)) {
-                            OutlinedTextField(
-                                value = endpointUrl,
-                                onValueChange = {
-                                    endpointUrl = it
-                                    localError = null
-                                },
-                                label = { Text(stringResource(R.string.api_export_endpoint_url_label)) },
-                                placeholder = { Text(stringResource(R.string.api_export_endpoint_example)) },
-                                textStyle = GeistType.copy14Mono,
-                                keyboardOptions = KeyboardOptions(
-                                    keyboardType = KeyboardType.Uri,
-                                    imeAction = ImeAction.Next,
-                                ),
-                                singleLine = true,
-                                modifier = Modifier.fillMaxWidth(),
-                            )
-                            Text(
-                                stringResource(R.string.api_export_endpoint_help),
-                                style = GeistType.copy13,
-                                color = colors.secondary,
-                            )
-                        }
-
-                        APISettingsSection(
-                            title = stringResource(R.string.api_export_literal_authorization),
-                            optional = true,
-                        ) {
-                            if (authorizationConfigured) {
-                                StoredSecretStatus(
-                                    label = stringResource(
-                                        R.string.api_export_authorization_saved,
-                                        stringResource(R.string.api_export_literal_authorization),
-                                    ),
-                                    removeLabel = stringResource(R.string.api_export_remove_credential),
-                                    onRemove = {
-                                        localError = null
-                                        onClearAuthorization()
-                                    },
-                                )
-                            }
-                            OutlinedTextField(
-                                value = authorization,
-                                onValueChange = {
-                                    authorization = it
-                                    localError = null
-                                },
-                                label = {
-                                    Text(
-                                        if (authorizationConfigured) {
-                                            stringResource(
-                                                R.string.api_export_new_authorization_label,
-                                                stringResource(R.string.api_export_literal_authorization),
-                                            )
-                                        } else {
-                                            stringResource(
-                                                R.string.api_export_authorization_label,
-                                                stringResource(R.string.api_export_literal_bearer),
-                                                stringResource(R.string.api_export_literal_basic),
-                                            )
-                                        },
-                                    )
-                                },
-                                placeholder = {
-                                    Text(
-                                        if (authorizationConfigured) {
-                                            stringResource(R.string.api_export_authorization_replacement_placeholder)
-                                        } else {
-                                            stringResource(
-                                                R.string.api_export_authorization_placeholder,
-                                                stringResource(R.string.api_export_literal_authorization),
-                                            )
-                                        },
-                                    )
-                                },
-                                textStyle = GeistType.copy14Mono,
-                                visualTransformation = PasswordVisualTransformation(),
-                                keyboardOptions = KeyboardOptions(
-                                    keyboardType = KeyboardType.Password,
-                                    imeAction = ImeAction.Next,
-                                ),
-                                singleLine = true,
-                                modifier = Modifier.fillMaxWidth(),
-                            )
-                            Text(
-                                if (authorizationConfigured) {
-                                    stringResource(
-                                        R.string.api_export_authorization_saved_help,
-                                        stringResource(R.string.api_export_literal_bearer),
-                                    )
-                                } else {
-                                    stringResource(
-                                        R.string.api_export_authorization_help,
-                                        stringResource(R.string.api_export_literal_bearer),
-                                        stringResource(R.string.api_export_literal_basic),
-                                    )
-                                },
-                                style = GeistType.copy13,
-                                color = colors.secondary,
-                            )
-                        }
-
-                        APISettingsSection(
-                            title = stringResource(R.string.api_export_custom_headers_title),
-                            optional = true,
-                        ) {
-                            CustomHeadersDisclosure(
-                                configured = requestHeadersConfigured,
-                                expanded = requestHeadersExpanded,
-                                onClick = { requestHeadersExpanded = !requestHeadersExpanded },
-                            )
-                            if (requestHeadersExpanded) {
-                                if (requestHeadersConfigured) {
-                                    StoredSecretStatus(
-                                        label = stringResource(R.string.api_export_custom_headers_saved),
-                                        removeLabel = stringResource(R.string.api_export_remove_headers),
-                                        onRemove = {
-                                            localError = null
-                                            onClearRequestHeaders()
-                                        },
-                                    )
-                                }
-                                OutlinedTextField(
-                                    value = requestHeaders,
-                                    onValueChange = {
-                                        requestHeaders = it
-                                        localError = null
-                                    },
-                                    label = {
-                                        Text(
-                                            stringResource(
-                                                if (requestHeadersConfigured) {
-                                                    R.string.api_export_replacement_headers_label
-                                                } else {
-                                                    R.string.api_export_request_headers_label
-                                                },
-                                            ),
-                                        )
-                                    },
-                                    placeholder = {
-                                        Text(stringResource(R.string.api_export_headers_example))
-                                    },
-                                    textStyle = GeistType.copy14Mono,
-                                    minLines = 3,
-                                    maxLines = 6,
-                                    modifier = Modifier.fillMaxWidth(),
-                                )
-                                Text(
-                                    if (requestHeadersConfigured) {
-                                        stringResource(
-                                            R.string.api_export_replacement_headers_help,
-                                            stringResource(R.string.api_export_header_line_syntax),
-                                        )
-                                    } else {
-                                        stringResource(
-                                            R.string.api_export_request_headers_help,
-                                            stringResource(R.string.api_export_header_line_syntax),
-                                            stringResource(R.string.app_name),
-                                        )
-                                    },
-                                    style = GeistType.copy13,
-                                    color = colors.secondary,
-                                )
-                            }
-                        }
-
-                        localError?.let { error ->
-                            APISettingsError(error = error)
-                        }
-                    }
-
-                    HorizontalDivider(color = colors.grayAlpha.c200)
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(GeistSpacing.space4),
-                        horizontalArrangement = Arrangement.spacedBy(GeistSpacing.space3),
-                    ) {
-                        SecondaryButton(
-                            text = stringResource(R.string.api_export_close_settings),
-                            onClick = onDismiss,
-                            modifier = Modifier.weight(1f),
-                        )
-                        PrimaryButton(
-                            text = stringResource(R.string.api_export_save_settings),
-                            onClick = saveSettings,
-                            modifier = Modifier.weight(1f),
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun APISettingsDialogHeader(onDismiss: () -> Unit) {
-    val colors = LocalGeistColors.current
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(start = GeistSpacing.space6, top = GeistSpacing.space4, end = GeistSpacing.space3, bottom = GeistSpacing.space4),
-        verticalAlignment = Alignment.Top,
-        horizontalArrangement = Arrangement.spacedBy(GeistSpacing.space3),
-    ) {
-        Column(
-            modifier = Modifier
-                .weight(1f)
-                .padding(top = GeistSpacing.space1),
-            verticalArrangement = Arrangement.spacedBy(GeistSpacing.space1),
-        ) {
-            Text(
-                text = stringResource(R.string.api_export_dialog_title),
-                style = GeistType.heading20,
-                color = colors.primary,
+        APISettingsSection(title = stringResource(R.string.api_export_section_endpoint)) {
+            OutlinedTextField(
+                value = endpointUrl,
+                onValueChange = {
+                    endpointUrl = it
+                    localError = null
+                },
+                label = { Text(stringResource(R.string.api_export_endpoint_url_label)) },
+                placeholder = { Text(stringResource(R.string.api_export_endpoint_example)) },
+                textStyle = GeistType.copy14Mono,
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Uri,
+                    imeAction = ImeAction.Next,
+                ),
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
             )
             Text(
-                text = stringResource(
-                    R.string.api_export_dialog_description,
-                    stringResource(R.string.api_export_literal_json),
-                    stringResource(R.string.api_export_literal_post),
-                    stringResource(R.string.api_export_literal_http),
-                    stringResource(R.string.api_export_literal_https),
-                ),
+                stringResource(R.string.api_export_endpoint_help),
                 style = GeistType.copy13,
                 color = colors.secondary,
             )
         }
-        IconButton(
-            onClick = onDismiss,
-            modifier = Modifier.size(GeistSizes.minimumTouchTarget),
+
+        APISettingsSection(
+            title = stringResource(R.string.api_export_literal_authorization),
+            optional = true,
         ) {
-            Icon(
-                imageVector = Icons.Outlined.Close,
-                contentDescription = stringResource(R.string.api_export_close_content_description),
-                tint = colors.secondary,
+            if (authorizationConfigured) {
+                StoredSecretStatus(
+                    label = stringResource(
+                        R.string.api_export_authorization_saved,
+                        stringResource(R.string.api_export_literal_authorization),
+                    ),
+                    removeLabel = stringResource(R.string.api_export_remove_credential),
+                    onRemove = {
+                        localError = null
+                        onClearAuthorization()
+                    },
+                )
+            }
+            OutlinedTextField(
+                value = authorization,
+                onValueChange = {
+                    authorization = it
+                    localError = null
+                },
+                label = {
+                    Text(
+                        if (authorizationConfigured) {
+                            stringResource(
+                                R.string.api_export_new_authorization_label,
+                                stringResource(R.string.api_export_literal_authorization),
+                            )
+                        } else {
+                            stringResource(
+                                R.string.api_export_authorization_label,
+                                stringResource(R.string.api_export_literal_bearer),
+                                stringResource(R.string.api_export_literal_basic),
+                            )
+                        },
+                    )
+                },
+                placeholder = {
+                    Text(
+                        if (authorizationConfigured) {
+                            stringResource(R.string.api_export_authorization_replacement_placeholder)
+                        } else {
+                            stringResource(
+                                R.string.api_export_authorization_placeholder,
+                                stringResource(R.string.api_export_literal_authorization),
+                            )
+                        },
+                    )
+                },
+                textStyle = GeistType.copy14Mono,
+                visualTransformation = PasswordVisualTransformation(),
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Password,
+                    imeAction = ImeAction.Next,
+                ),
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
             )
+            Text(
+                if (authorizationConfigured) {
+                    stringResource(
+                        R.string.api_export_authorization_saved_help,
+                        stringResource(R.string.api_export_literal_bearer),
+                    )
+                } else {
+                    stringResource(
+                        R.string.api_export_authorization_help,
+                        stringResource(R.string.api_export_literal_bearer),
+                        stringResource(R.string.api_export_literal_basic),
+                    )
+                },
+                style = GeistType.copy13,
+                color = colors.secondary,
+            )
+        }
+
+        APISettingsSection(
+            title = stringResource(R.string.api_export_custom_headers_title),
+            optional = true,
+        ) {
+            CustomHeadersDisclosure(
+                configured = requestHeadersConfigured,
+                expanded = requestHeadersExpanded,
+                onClick = { requestHeadersExpanded = !requestHeadersExpanded },
+            )
+            if (requestHeadersExpanded) {
+                if (requestHeadersConfigured) {
+                    StoredSecretStatus(
+                        label = stringResource(R.string.api_export_custom_headers_saved),
+                        removeLabel = stringResource(R.string.api_export_remove_headers),
+                        onRemove = {
+                            localError = null
+                            onClearRequestHeaders()
+                        },
+                    )
+                }
+                OutlinedTextField(
+                    value = requestHeaders,
+                    onValueChange = {
+                        requestHeaders = it
+                        localError = null
+                    },
+                    label = {
+                        Text(
+                            stringResource(
+                                if (requestHeadersConfigured) {
+                                    R.string.api_export_replacement_headers_label
+                                } else {
+                                    R.string.api_export_request_headers_label
+                                },
+                            ),
+                        )
+                    },
+                    placeholder = {
+                        Text(stringResource(R.string.api_export_headers_example))
+                    },
+                    textStyle = GeistType.copy14Mono,
+                    minLines = 3,
+                    maxLines = 6,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Text(
+                    if (requestHeadersConfigured) {
+                        stringResource(
+                            R.string.api_export_replacement_headers_help,
+                            stringResource(R.string.api_export_header_line_syntax),
+                        )
+                    } else {
+                        stringResource(
+                            R.string.api_export_request_headers_help,
+                            stringResource(R.string.api_export_header_line_syntax),
+                            stringResource(R.string.app_name),
+                        )
+                    },
+                    style = GeistType.copy13,
+                    color = colors.secondary,
+                )
+            }
+        }
+
+        localError?.let { error ->
+            APISettingsError(error = error)
+        }
+    }
+}
+
+/**
+ * The Material 3 full-screen dialog for an endpoint's settings (the ExportPreviewDialog
+ * pattern): a sub-screen top bar with Close, a scrolling form at the readable width, and a
+ * pinned action bar whose one filled action saves.
+ */
+@Composable
+private fun EndpointSettingsFullScreenDialog(
+    title: String,
+    description: String,
+    closeContentDescription: String,
+    closeLabel: String,
+    saveLabel: String,
+    onDismiss: () -> Unit,
+    onSave: () -> Unit,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    val colors = LocalGeistColors.current
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
+    ) {
+        EdgeToEdgeDialogWindow(fullScreenPage = true)
+        Surface(modifier = Modifier.fillMaxSize(), color = colors.background100) {
+            Column(
+                Modifier
+                    .fillMaxSize()
+                    .windowInsetsPadding(WindowInsets.statusBars.union(WindowInsets.displayCutout))
+                    .dialogNavigationBarsPadding()
+                    .imePadding(),
+            ) {
+                SubScreenTopBar(
+                    title = title,
+                    onBack = null,
+                    actions = {
+                        IconButton(
+                            onClick = onDismiss,
+                            modifier = Modifier.size(GeistSizes.minimumTouchTarget),
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Close,
+                                contentDescription = closeContentDescription,
+                                tint = colors.primary,
+                            )
+                        }
+                    },
+                )
+                Box(
+                    Modifier
+                        .weight(1f)
+                        .fillMaxWidth(),
+                    contentAlignment = Alignment.TopCenter,
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .widthIn(max = GeistSizes.readableContentMaxWidth)
+                            .fillMaxSize()
+                            .verticalScroll(rememberScrollState())
+                            .padding(
+                                start = GeistSpacing.space4,
+                                end = GeistSpacing.space4,
+                                top = GeistSpacing.space2,
+                                bottom = GeistSpacing.space6,
+                            ),
+                        verticalArrangement = Arrangement.spacedBy(GeistSpacing.space6),
+                    ) {
+                        Text(text = description, style = GeistType.copy14, color = colors.secondary)
+                        content()
+                    }
+                }
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .background(colors.background200)
+                        .padding(horizontal = GeistSpacing.space4, vertical = GeistSpacing.space3),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Box(Modifier.widthIn(max = GeistSizes.readableContentMaxWidth)) {
+                        AdaptiveActionPair(
+                            primaryAction = { modifier ->
+                                PrimaryButton(text = saveLabel, onClick = onSave, modifier = modifier)
+                            },
+                            secondaryAction = { modifier ->
+                                SecondaryButton(text = closeLabel, onClick = onDismiss, modifier = modifier)
+                            },
+                        )
+                    }
+                }
+            }
         }
     }
 }
@@ -507,14 +551,16 @@ private fun APISettingsSection(
             Text(
                 text = title,
                 style = GeistType.heading14,
-                color = colors.primary,
-                modifier = Modifier.weight(1f),
+                color = colors.brandPrimary,
+                modifier = Modifier
+                    .weight(1f)
+                    .semantics { heading() },
             )
             if (optional) {
                 Text(
                     text = stringResource(R.string.api_export_optional_label),
                     style = GeistType.label12,
-                    color = colors.disabled,
+                    color = colors.secondary,
                 )
             }
         }
@@ -523,56 +569,62 @@ private fun APISettingsSection(
 }
 
 @Composable
-private fun StoredSecretStatus(
+internal fun StoredSecretStatus(
     label: String,
     removeLabel: String,
     onRemove: () -> Unit,
 ) {
     val colors = LocalGeistColors.current
-    val shape = RoundedCornerShape(GeistRadii.small)
+    // A tonal success note (no border); the stored value itself is never shown.
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(colors.green.c100, shape)
-            .border(1.dp, colors.green.c400, shape)
-            .padding(start = GeistSpacing.space3, end = GeistSpacing.space1),
+            .clip(RoundedCornerShape(GeistRadii.medium))
+            .background(colors.green.c100)
+            .defaultMinSize(minHeight = GeistSizes.minimumTouchTarget)
+            .padding(start = GeistSpacing.space4, end = GeistSpacing.space1),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(GeistSpacing.space2),
+        horizontalArrangement = Arrangement.spacedBy(GeistSpacing.space3),
     ) {
         Icon(
             imageVector = Icons.Outlined.CheckCircle,
             contentDescription = null,
             tint = colors.success,
-            modifier = Modifier.size(GeistSpacing.space4),
+            modifier = Modifier.size(20.dp),
         )
         Text(
             text = label,
-            style = GeistType.copy13,
-            color = colors.success,
-            modifier = Modifier.weight(1f),
+            style = GeistType.copy14,
+            color = colors.primary,
+            modifier = Modifier
+                .weight(1f)
+                .padding(vertical = GeistSpacing.space2),
         )
-        TextButton(onClick = onRemove) {
-            Text(removeLabel, style = GeistType.button12, color = colors.success)
+        TextButton(
+            onClick = onRemove,
+            modifier = Modifier.heightIn(min = GeistSizes.minimumTouchTarget),
+        ) {
+            Text(removeLabel, style = GeistType.button14, color = colors.success)
         }
     }
 }
 
 @Composable
-private fun CustomHeadersDisclosure(
+internal fun CustomHeadersDisclosure(
     configured: Boolean,
     expanded: Boolean,
     onClick: () -> Unit,
 ) {
     val colors = LocalGeistColors.current
-    val shape = RoundedCornerShape(GeistRadii.small)
+    // A one-row tonal list group; the whole row toggles the disclosure.
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .defaultMinSize(minHeight = GeistSizes.minimumTouchTarget)
-            .background(colors.background100, shape)
-            .border(1.dp, colors.grayAlpha.c400, shape)
+            .clip(RoundedCornerShape(GeistRadii.listGroup))
+            .background(colors.background200)
             .clickable(role = Role.Button, onClick = onClick)
-            .padding(horizontal = GeistSpacing.space3, vertical = GeistSpacing.space2),
+            .defaultMinSize(minHeight = 72.dp)
+            .padding(start = GeistSpacing.space4, end = GeistSpacing.space3, top = GeistSpacing.space2, bottom = GeistSpacing.space2),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(GeistSpacing.space3),
     ) {
@@ -588,7 +640,7 @@ private fun CustomHeadersDisclosure(
                         R.string.api_export_add_request_headers
                     },
                 ),
-                style = GeistType.label14,
+                style = GeistType.label16,
                 color = colors.primary,
             )
             Text(
@@ -599,7 +651,7 @@ private fun CustomHeadersDisclosure(
                         R.string.api_export_headers_add_help
                     },
                 ),
-                style = GeistType.copy13,
+                style = GeistType.copy14,
                 color = if (configured) colors.success else colors.secondary,
             )
         }
@@ -617,7 +669,7 @@ private fun CustomHeadersDisclosure(
     }
 }
 
-private sealed interface APISettingsValidationError {
+internal sealed interface APISettingsValidationError {
     data object InvalidEndpoint : APISettingsValidationError
     data class InvalidAuthorization(
         val reason: APIExportAuthorizationValidationReason,
@@ -697,29 +749,34 @@ private fun APISettingsValidationError.apiExportLocalizedMessage(): String = whe
 }
 
 @Composable
-private fun APISettingsError(error: APISettingsValidationError) {
+internal fun APISettingsError(error: APISettingsValidationError) {
+    EndpointSettingsErrorNote(message = error.apiExportLocalizedMessage())
+}
+
+/** A tonal error note (no border, the PreviewNote pattern), announced assertively. */
+@Composable
+private fun EndpointSettingsErrorNote(message: String) {
     val colors = LocalGeistColors.current
-    val shape = RoundedCornerShape(GeistRadii.small)
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(colors.red.c100, shape)
-            .border(1.dp, colors.red.c400, shape)
-            .padding(GeistSpacing.space3)
+            .clip(RoundedCornerShape(GeistRadii.medium))
+            .background(colors.red.c100)
+            .padding(GeistSpacing.space4)
             .semantics { liveRegion = LiveRegionMode.Assertive },
         verticalAlignment = Alignment.Top,
-        horizontalArrangement = Arrangement.spacedBy(GeistSpacing.space2),
+        horizontalArrangement = Arrangement.spacedBy(GeistSpacing.space3),
     ) {
         Icon(
             imageVector = Icons.Outlined.ErrorOutline,
             contentDescription = null,
             tint = colors.error,
-            modifier = Modifier.size(GeistSpacing.space4),
+            modifier = Modifier.size(20.dp),
         )
         Text(
-            text = error.apiExportLocalizedMessage(),
-            style = GeistType.copy13,
-            color = colors.error,
+            text = message,
+            style = GeistType.copy14,
+            color = colors.primary,
             modifier = Modifier.weight(1f),
         )
     }
@@ -734,7 +791,6 @@ fun AgentDataGatewaySettingsDialog(
     onSave: (endpointUrl: String) -> Unit,
 ) {
     val colors = LocalGeistColors.current
-    val dialogShape = RoundedCornerShape(GeistRadii.medium)
     var endpointUrl by remember { mutableStateOf(initialEndpointUrl) }
     var localError by remember { mutableStateOf(false) }
 
@@ -753,166 +809,54 @@ fun AgentDataGatewaySettingsDialog(
         }
     }
 
-    Dialog(
-        onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false),
+    EndpointSettingsFullScreenDialog(
+        title = stringResource(R.string.agent_data_gateway_dialog_title),
+        description = stringResource(R.string.agent_data_gateway_dialog_description),
+        closeContentDescription = stringResource(R.string.agent_data_gateway_close_content_description),
+        closeLabel = stringResource(R.string.agent_data_gateway_close_settings),
+        saveLabel = stringResource(R.string.agent_data_gateway_save_settings),
+        onDismiss = onDismiss,
+        onSave = saveSettings,
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .windowInsetsPadding(WindowInsets.safeDrawing)
-                .padding(horizontal = GeistSpacing.space4, vertical = GeistSpacing.space10),
-            contentAlignment = Alignment.Center,
+        APISettingsSection(
+            title = stringResource(R.string.agent_data_gateway_section_endpoint),
         ) {
-            Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .widthIn(max = GeistBreakpoints.medium.dp),
-                shape = dialogShape,
-                color = colors.background100,
-                border = BorderStroke(1.dp, colors.grayAlpha.c400),
-                tonalElevation = 0.dp,
-            ) {
-                Column(modifier = Modifier.fillMaxSize()) {
-                    AgentDataGatewayDialogHeader(onDismiss = onDismiss)
-                    HorizontalDivider(color = colors.grayAlpha.c200)
-
-                    Column(
-                        modifier = Modifier
-                            .weight(1f)
-                            .verticalScroll(rememberScrollState())
-                            .padding(GeistSpacing.space6),
-                        verticalArrangement = Arrangement.spacedBy(GeistSpacing.space6),
-                    ) {
-                        APISettingsSection(
-                            title = stringResource(R.string.agent_data_gateway_section_endpoint),
-                        ) {
-                            OutlinedTextField(
-                                value = endpointUrl,
-                                onValueChange = {
-                                    endpointUrl = it
-                                    localError = false
-                                },
-                                label = { Text(stringResource(R.string.agent_data_gateway_url_label)) },
-                                placeholder = { Text(stringResource(R.string.agent_data_gateway_url_example)) },
-                                textStyle = GeistType.copy14Mono,
-                                keyboardOptions = KeyboardOptions(
-                                    keyboardType = KeyboardType.Uri,
-                                    imeAction = ImeAction.Done,
-                                ),
-                                singleLine = true,
-                                modifier = Modifier.fillMaxWidth(),
-                            )
-                            Text(
-                                stringResource(R.string.agent_data_gateway_url_help),
-                                style = GeistType.copy13,
-                                color = colors.secondary,
-                            )
-                        }
-
-                        if (localError) {
-                            AgentDataGatewayError()
-                        }
-                    }
-
-                    HorizontalDivider(color = colors.grayAlpha.c200)
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(GeistSpacing.space4),
-                        horizontalArrangement = Arrangement.spacedBy(GeistSpacing.space3),
-                    ) {
-                        SecondaryButton(
-                            text = stringResource(R.string.agent_data_gateway_close_settings),
-                            onClick = onDismiss,
-                            modifier = Modifier.weight(1f),
-                        )
-                        PrimaryButton(
-                            text = stringResource(R.string.agent_data_gateway_save_settings),
-                            onClick = saveSettings,
-                            modifier = Modifier.weight(1f),
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun AgentDataGatewayDialogHeader(onDismiss: () -> Unit) {
-    val colors = LocalGeistColors.current
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(
-                start = GeistSpacing.space6,
-                top = GeistSpacing.space4,
-                end = GeistSpacing.space3,
-                bottom = GeistSpacing.space4,
-            ),
-        verticalAlignment = Alignment.Top,
-        horizontalArrangement = Arrangement.spacedBy(GeistSpacing.space3),
-    ) {
-        Column(
-            modifier = Modifier
-                .weight(1f)
-                .padding(top = GeistSpacing.space1),
-            verticalArrangement = Arrangement.spacedBy(GeistSpacing.space1),
-        ) {
-            Text(
-                text = stringResource(R.string.agent_data_gateway_dialog_title),
-                style = GeistType.heading20,
-                color = colors.primary,
+            OutlinedTextField(
+                value = endpointUrl,
+                onValueChange = {
+                    endpointUrl = it
+                    localError = false
+                },
+                label = { Text(stringResource(R.string.agent_data_gateway_url_label)) },
+                placeholder = { Text(stringResource(R.string.agent_data_gateway_url_example)) },
+                textStyle = GeistType.copy14Mono,
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Uri,
+                    imeAction = ImeAction.Done,
+                ),
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
             )
             Text(
-                text = stringResource(R.string.agent_data_gateway_dialog_description),
+                stringResource(R.string.agent_data_gateway_url_help),
                 style = GeistType.copy13,
                 color = colors.secondary,
             )
         }
-        IconButton(
-            onClick = onDismiss,
-            modifier = Modifier.size(GeistSizes.minimumTouchTarget),
-        ) {
-            Icon(
-                imageVector = Icons.Outlined.Close,
-                contentDescription = stringResource(R.string.agent_data_gateway_close_content_description),
-                tint = colors.secondary,
-            )
+
+        if (localError) {
+            AgentDataGatewayError()
         }
     }
 }
 
 @Composable
 private fun AgentDataGatewayError() {
-    val colors = LocalGeistColors.current
-    val shape = RoundedCornerShape(GeistRadii.small)
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(colors.red.c100, shape)
-            .border(1.dp, colors.red.c400, shape)
-            .padding(GeistSpacing.space3)
-            .semantics { liveRegion = LiveRegionMode.Assertive },
-        verticalAlignment = Alignment.Top,
-        horizontalArrangement = Arrangement.spacedBy(GeistSpacing.space2),
-    ) {
-        Icon(
-            imageVector = Icons.Outlined.ErrorOutline,
-            contentDescription = null,
-            tint = colors.error,
-            modifier = Modifier.size(GeistSpacing.space4),
-        )
-        Text(
-            text = stringResource(
-                R.string.agent_data_gateway_error_invalid_endpoint,
-                stringResource(R.string.api_export_literal_http),
-                stringResource(R.string.api_export_literal_https),
-            ),
-            style = GeistType.copy13,
-            color = colors.error,
-            modifier = Modifier.weight(1f),
-        )
-    }
+    EndpointSettingsErrorNote(
+        message = stringResource(
+            R.string.agent_data_gateway_error_invalid_endpoint,
+            stringResource(R.string.api_export_literal_http),
+            stringResource(R.string.api_export_literal_https),
+        ),
+    )
 }

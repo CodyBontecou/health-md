@@ -180,3 +180,10 @@ envelope discriminator, timestamp/UUID rule, hash, limit, or fixture in this spe
 Stateful `HMDSC001` sequence/replay enforcement, seal/open and AEAD nonce/key lifecycle, trusted
 reconnect/server transcripts, trust rotation, sockets, transport lifecycle, and persistence remain
 outside UniFFI and gated on a separate security review.
+
+
+## Staged scoped daily-note extension
+
+The independently versioned [scoped-note write policy](../scoped-notes-v1/contract.md) adds optional
+hello and manifest members after bilateral negotiation. It is not advertised yet. Historical
+manifests and golden fixtures remain byte-identical when the extension is absent.

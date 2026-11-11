@@ -324,6 +324,43 @@ publication. Hash computation alone is never evidence of a durable output write 
 Host commit receipts and final source confirmation remain independently required for completion.
 
 Pre-capture `accepted` receipts retain their existing zero manifest/frontier digests; they are not `F0`.
+An accepted-only host with an authenticated original acceptance and no output/transfer journal may
+send Resume with zero manifest/frontier digests and zero committed partitions. A separately authenticated
+original send intent may request the same existing-job reconciliation when acceptance delivery was
+uncertain. The intent is not acceptance: only the original authenticated source's exact stored receipt
+may promote that same host record. Neither path sends Execute, creates a native job/claim, renews an
+expiry or treats a missing native job as permission to start one. Until a real receipt is recovered,
+lookup is bounded by the original approved plan deadline plus the maximum seven-day native job
+lifetime; that bound is not a native expiry or a returned receipt.
+
+The source returns its original stored acceptance before spool admission, even when a claim or manifest
+is absent. This is source fact recovery, not capture/transfer readiness. It rechecks the original peer,
+request/approval/destination, current parent and original job lifetime without settings or SDK reads.
+A host persists that receipt before waiting for a manifest, so a later missing-spool failure preserves
+known acceptance and allows an explicit original-job Stop. Missing/ambiguous capture cannot be recaptured.
+To transfer in this mode, the source must retain the exact complete immutable manifest/spool/session/
+checkpoint and an empty acknowledged prefix; no ACK prelude is allowed. Any native acknowledged prefix
+rejects zero-digest transfer admission. A host with later output/transfer state uses its exact bound
+frontier and never falls back after a failed decoder. A retained pending Stop cannot resume export work.
+
+Stop from an uncertain send is a separate host lifecycle. An authenticated original send intent may
+publish a Stop-only pending record and send only its exact original Cancel binding to that original
+source. It does not establish acceptance, send Resume/Execute, resolve a destination, create output,
+renew export permission or require a still-current export grant. The source must independently find
+and authorize its original accepted job; missing native work cannot be created by cancellation.
+Host-private pending/confirmed forms use distinct v9/v10 MAC domains and contain no fabricated accepted
+receipt. Strict accepted-job and export-recovery readers reject both forms.
+
+Only an authenticated terminal source receipt matching the original request/job/approval binding can
+confirm this Stop. Its actual expiry must follow the observation and fit both the immutable original
+plan deadline plus seven days and seven days after observation. Lookup bounds never become accepted
+facts or renew native lifetime. An original completion that precedes Stop keeps its original status.
+The resulting historical source facts do not verify destination contents (`output_verified` remains
+false); exact local replay needs no listener or live export grant. Pending Stop remains monotonic.
+Original key/root/evidence, live caller trust, explicit cancellation and clock fences remain required
+at publication and disclosure. These independently observed fences do not claim global atomicity
+across protected-key, pairing and filesystem stores. Deployed wire schemas and export bytes are unchanged.
+
 After a real manifest is published, even an empty prefix uses its bound seed. Frontier1 adds semantics
 to this deferred extension without changing deployed base messages, frames, envelope schemas or health
 export profiles. A future hash construction must not silently replace frontier1 for a retained job;

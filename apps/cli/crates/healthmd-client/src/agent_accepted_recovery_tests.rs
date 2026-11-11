@@ -558,3 +558,434 @@ async fn retained_output_pins_attempt_presence_and_bytes_after_delaying_fence() 
         }
     }
 }
+
+#[tokio::test]
+async fn accepted_resume_preflight_preserves_evidence_and_never_reverses_stop() {
+    for platform in [PeerPlatform::Ios, PeerPlatform::Android] {
+        for case in [
+            Case::Accepted,
+            Case::Pending,
+            Case::PreSend,
+            Case::PlanExpired,
+            Case::RevokedGrant,
+            Case::WrongMac,
+            Case::Expired,
+            Case::MissingAttempt,
+            Case::MissingLock,
+            Case::LaterOutput,
+        ] {
+            let f = Box::pin(accepted_fixture(platform)).await;
+            let mut admission =
+                OutputAdmission::reserve(&f.store, &f.request, &f.clock, || async {
+                    Ok(f.output.clone())
+                })
+                .await
+                .unwrap();
+            if case != Case::PreSend {
+                admission
+                    .persist_accepted(&f.accepted, &f.clock, || async { Ok(f.output.clone()) })
+                    .await
+                    .unwrap();
+            }
+            if case == Case::Pending {
+                admission
+                    .persist_cancellation(&f.clock, || async { Ok(()) })
+                    .await
+                    .unwrap();
+            }
+            drop(admission);
+            let issuer = f.client.layout.root.join("agent-host-v1");
+            let path = issuer.join(format!("attempt-{}.json", f.request.job_id.0));
+            match case {
+                Case::PlanExpired => f.clock.advance_to(301),
+                Case::Expired => f.clock.advance_to(604_800),
+                Case::RevokedGrant => f
+                    .store
+                    .revoke_local(
+                        f.store.revision().await.unwrap(),
+                        &f.request.plan.authority_references.host.authority_id,
+                    )
+                    .await
+                    .unwrap(),
+                Case::WrongMac => {
+                    let mut value: serde_json::Value =
+                        serde_json::from_slice(&std::fs::read(&path).unwrap()).unwrap();
+                    value["mac"] = "0".repeat(64).into();
+                    std::fs::write(&path, canonical_json(&value).unwrap()).unwrap();
+                }
+                Case::MissingAttempt => std::fs::remove_file(&path).unwrap(),
+                Case::MissingLock => std::fs::remove_file(issuer.join("outputs.lock")).unwrap(),
+                Case::LaterOutput => std::fs::write(
+                    issuer.join(format!("output-{}.json", f.request.job_id.0)),
+                    b"corrupt later state",
+                )
+                .unwrap(),
+                _ => {}
+            }
+            let before = inventory(&issuer);
+            let planner = HostPlanner::new(f.store.clone());
+            let cancellation = CancellationToken::new();
+            let result = planner
+                .preflight_retained_resume(&f.peer, &f.request.job_id, &f.clock, &cancellation)
+                .await;
+            assert_eq!(
+                result.is_ok(),
+                matches!(case, Case::Accepted | Case::PlanExpired | Case::PreSend),
+                "{platform:?}/{case:?}"
+            );
+            assert_eq!(
+                inventory(&issuer),
+                before,
+                "Read-only preflight cannot repair or renew evidence"
+            );
+            assert_eq!(std::fs::read_dir(&f.output).unwrap().count(), 0);
+        }
+    }
+}
+
+#[tokio::test]
+async fn accepted_resume_preflight_rechecks_final_clock_cancellation_and_rollback() {
+    struct FinalClock {
+        time: UtcTimestamp,
+        calls: AtomicUsize,
+        target: usize,
+        replacement: Option<UtcTimestamp>,
+        cancellation: Option<CancellationToken>,
+    }
+    impl crate::agent_planning::PlanningClock for FinalClock {
+        fn now(&self) -> UtcTimestamp {
+            let at = self.calls.fetch_add(1, Ordering::SeqCst) + 1;
+            if at == self.target {
+                if let Some(token) = &self.cancellation {
+                    token.cancel();
+                }
+                if let Some(time) = &self.replacement {
+                    return time.clone();
+                }
+            }
+            self.time.clone()
+        }
+    }
+    for platform in [PeerPlatform::Ios, PeerPlatform::Android] {
+        let f = Box::pin(accepted_fixture(platform)).await;
+        let mut admission = OutputAdmission::reserve(&f.store, &f.request, &f.clock, || async {
+            Ok(f.output.clone())
+        })
+        .await
+        .unwrap();
+        admission
+            .persist_accepted(&f.accepted, &f.clock, || async { Ok(f.output.clone()) })
+            .await
+            .unwrap();
+        drop(admission);
+        let planner = HostPlanner::new(f.store.clone());
+        let time = f.clock.now();
+        let baseline = FinalClock {
+            time: time.clone(),
+            calls: AtomicUsize::new(0),
+            target: usize::MAX,
+            replacement: None,
+            cancellation: None,
+        };
+        planner
+            .preflight_retained_resume(
+                &f.peer,
+                &f.request.job_id,
+                &baseline,
+                &CancellationToken::new(),
+            )
+            .await
+            .unwrap();
+        let last = baseline.calls.load(Ordering::SeqCst);
+        for mode in ["cancel", "rollback", "expiry"] {
+            let cancellation = CancellationToken::new();
+            let replacement = match mode {
+                "rollback" => Some(
+                    serde_json::from_value(serde_json::json!(
+                        chrono::DateTime::from_timestamp(time.seconds().unwrap() - 1, 0)
+                            .unwrap()
+                            .to_rfc3339_opts(chrono::SecondsFormat::Secs, true)
+                    ))
+                    .unwrap(),
+                ),
+                "expiry" => Some(f.accepted.expires_at.clone()),
+                _ => None,
+            };
+            let clock = FinalClock {
+                time: time.clone(),
+                calls: AtomicUsize::new(0),
+                target: last,
+                replacement,
+                cancellation: (mode == "cancel").then(|| cancellation.clone()),
+            };
+            let before = inventory(&f.client.layout.root.join("agent-host-v1"));
+            assert!(
+                planner
+                    .preflight_retained_resume(&f.peer, &f.request.job_id, &clock, &cancellation)
+                    .await
+                    .is_err(),
+                "{mode}"
+            );
+            assert_eq!(clock.calls.load(Ordering::SeqCst), last);
+            assert_eq!(
+                inventory(&f.client.layout.root.join("agent-host-v1")),
+                before
+            );
+        }
+    }
+}
+
+#[tokio::test]
+async fn uncertain_intent_requires_original_native_acceptance_before_stop_and_rejects_forged_proofs()
+ {
+    for platform in [PeerPlatform::Ios, PeerPlatform::Android] {
+        for mode in [
+            "valid", "job", "request", "binding", "terminal", "count", "expiry", "renewed",
+        ] {
+            let f = Box::pin(accepted_fixture(platform)).await;
+            let admission = OutputAdmission::reserve(&f.store, &f.request, &f.clock, || async {
+                Ok(f.output.clone())
+            })
+            .await
+            .unwrap();
+            drop(admission);
+            assert!(
+                OutputAdmission::open_retained_accepted(&f.store, &f.request.job_id, &f.clock)
+                    .await
+                    .is_err(),
+                "An intent alone must not authorize Stop"
+            );
+            let mut admission =
+                OutputAdmission::open_retained_for_resume(&f.store, &f.request.job_id, &f.clock)
+                    .await
+                    .unwrap();
+            let (request, receipt) = admission.resumable_binding().unwrap();
+            assert_eq!(request, f.request);
+            assert!(receipt.is_none());
+            let mut proof = f.accepted.clone();
+            match mode {
+                "job" => proof.job_id = id(99),
+                "request" => proof.request_sha256 = Digest("f".repeat(64)),
+                "binding" => proof.binding.plan_sha256 = Digest("f".repeat(64)),
+                "terminal" => {
+                    proof.status = ExecutionReceiptStatus::Cancelled;
+                    proof.source_acknowledged = true;
+                }
+                "count" => proof.artifact_count = 1,
+                "expiry" => proof.expires_at = f.clock.now(),
+                "renewed" => {
+                    f.clock.advance_to(86_400);
+                    proof.expires_at = UtcTimestamp(
+                        chrono::DateTime::from_timestamp(
+                            f.clock.now().seconds().unwrap() + 604_800,
+                            0,
+                        )
+                        .unwrap()
+                        .to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
+                    );
+                }
+                _ => {}
+            }
+            let before = inventory(&f.client.layout.root.join("agent-host-v1"));
+            let result = admission
+                .persist_reconciled_acceptance(
+                    &proof,
+                    &f.clock,
+                    &CancellationToken::new(),
+                    &f.accepted.expires_at,
+                    || async { Ok(f.output.clone()) },
+                )
+                .await;
+            assert_eq!(result.is_ok(), mode == "valid", "{platform:?}/{mode}");
+            drop(admission);
+            if mode == "valid" {
+                let original =
+                    OutputAdmission::open_retained_accepted(&f.store, &f.request.job_id, &f.clock)
+                        .await
+                        .unwrap();
+                assert_eq!(
+                    original.accepted_binding().unwrap(),
+                    (f.request.clone(), f.accepted.clone())
+                );
+            } else {
+                assert_eq!(
+                    inventory(&f.client.layout.root.join("agent-host-v1")),
+                    before
+                );
+                assert!(
+                    OutputAdmission::open_retained_accepted(&f.store, &f.request.job_id, &f.clock)
+                        .await
+                        .is_err()
+                );
+            }
+            assert_eq!(std::fs::read_dir(&f.output).unwrap().count(), 0);
+        }
+    }
+}
+
+#[tokio::test]
+async fn reconciled_acceptance_final_publication_clock_preserves_uncertain_intent() {
+    struct PublicationClock {
+        time: UtcTimestamp,
+        calls: AtomicUsize,
+        cancellation: CancellationToken,
+        cancel: bool,
+        replacement: Option<UtcTimestamp>,
+    }
+    impl crate::agent_planning::PlanningClock for PublicationClock {
+        fn now(&self) -> UtcTimestamp {
+            if self.calls.fetch_add(1, Ordering::SeqCst) + 1 == 2 {
+                if self.cancel {
+                    self.cancellation.cancel();
+                }
+                if let Some(time) = &self.replacement {
+                    return time.clone();
+                }
+            }
+            self.time.clone()
+        }
+    }
+    for platform in [PeerPlatform::Ios, PeerPlatform::Android] {
+        for mode in ["cancel", "rollback", "native_expiry", "host_expiry"] {
+            let f = Box::pin(accepted_fixture(platform)).await;
+            drop(
+                OutputAdmission::reserve(&f.store, &f.request, &f.clock, || async {
+                    Ok(f.output.clone())
+                })
+                .await
+                .unwrap(),
+            );
+            let mut admission =
+                OutputAdmission::open_retained_for_resume(&f.store, &f.request.job_id, &f.clock)
+                    .await
+                    .unwrap();
+            let cancellation = CancellationToken::new();
+            let time = f.clock.now();
+            let host_expiry = UtcTimestamp(
+                chrono::DateTime::from_timestamp(time.seconds().unwrap() + 3600, 0)
+                    .unwrap()
+                    .to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
+            );
+            let replacement = match mode {
+                "rollback" => Some(UtcTimestamp(
+                    chrono::DateTime::from_timestamp(time.seconds().unwrap() - 1, 0)
+                        .unwrap()
+                        .to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
+                )),
+                "native_expiry" => Some(f.accepted.expires_at.clone()),
+                "host_expiry" => Some(host_expiry.clone()),
+                _ => None,
+            };
+            let clock = PublicationClock {
+                time,
+                calls: AtomicUsize::new(0),
+                cancellation: cancellation.clone(),
+                cancel: mode == "cancel",
+                replacement,
+            };
+            let issuer = f.client.layout.root.join("agent-host-v1");
+            let before = inventory(&issuer);
+            let result = admission
+                .persist_reconciled_acceptance(
+                    &f.accepted,
+                    &clock,
+                    &cancellation,
+                    &host_expiry,
+                    || async {
+                        if cancellation.is_cancelled() {
+                            return Err(ClientError::WaitCancelled);
+                        }
+                        Ok(f.output.clone())
+                    },
+                )
+                .await;
+            assert!(result.is_err(), "{platform:?}/{mode}");
+            drop(admission);
+            assert!(
+                inventory(&issuer) == before,
+                "Rejected publication must leave signed send intent unchanged: {mode}"
+            );
+        }
+    }
+}
+
+#[tokio::test]
+async fn uncertain_stop_preparation_never_requires_live_export_authority() {
+    let mut outcomes = Vec::new();
+    for platform in [PeerPlatform::Ios, PeerPlatform::Android] {
+        for mode in [
+            "current",
+            "revoked_grant",
+            "missing_destination",
+            "expired_plan",
+        ] {
+            let f = Box::pin(accepted_fixture(platform)).await;
+            // The original request was durably reserved before send, but its native
+            // acceptance reply was lost. This record must never imply acceptance.
+            let admission = OutputAdmission::reserve(&f.store, &f.request, &f.clock, || async {
+                Ok(f.output.clone())
+            })
+            .await
+            .unwrap();
+            drop(admission);
+            match mode {
+                "revoked_grant" => f
+                    .store
+                    .revoke_local(
+                        f.store.revision().await.unwrap(),
+                        &f.request.plan.authority_references.host.authority_id,
+                    )
+                    .await
+                    .unwrap(),
+                "missing_destination" => std::fs::remove_dir(&f.output).unwrap(),
+                "expired_plan" => f.clock.advance_to(301),
+                _ => {}
+            }
+            let planner = HostPlanner::new(f.store.clone());
+            let result = planner
+                .prepare_retained_cancellation(
+                    &f.peer,
+                    &f.request.job_id,
+                    &f.clock,
+                    &CancellationToken::new(),
+                    || async { Ok(()) },
+                )
+                .await;
+            let ok = matches!(result, Ok(None));
+            outcomes.push((format!("{platform:?}/{mode}"), ok));
+            if ok {
+                let path = f
+                    .client
+                    .layout
+                    .root
+                    .join("agent-host-v1")
+                    .join(format!("attempt-{}.json", f.request.job_id.0));
+                let value: serde_json::Value =
+                    serde_json::from_slice(&std::fs::read(path).unwrap()).unwrap();
+                let attempt = &value["attempt"];
+                assert!(attempt.get("accepted_receipt").is_none());
+                assert!(attempt.get("source_confirmation").is_none());
+                assert!(attempt.get("cancellation_request").is_some());
+                // Existing strict accepted-job owners cannot reinterpret this new
+                // pending uncertainty as accepted work or permission to export.
+                assert!(
+                    OutputAdmission::open_retained_accepted(&f.store, &f.request.job_id, &f.clock,)
+                        .await
+                        .is_err()
+                );
+            }
+            if mode == "missing_destination" {
+                assert!(!f.output.exists());
+            } else {
+                assert_eq!(std::fs::read_dir(&f.output).unwrap().count(), 0);
+            }
+        }
+    }
+    assert!(
+        outcomes.iter().all(|(_, ok)| *ok),
+        "Original-job Stop must remain pending without live export authority: {outcomes:?}"
+    );
+}
+
+#[path = "agent_uncertain_stop_tests.rs"]
+mod uncertain_stop_tests;

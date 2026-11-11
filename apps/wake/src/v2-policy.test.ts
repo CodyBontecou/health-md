@@ -5,7 +5,7 @@ import { MANAGEMENT_HASH, NOW, TIMESTAMP, WAKE_HASH, enrollment, jsonRequest, pr
 
 let DB: TestD1;
 beforeEach(() => {
-  DB = new TestD1(["0001_init.sql", "0002_fcm_v2.sql"]);
+  DB = new TestD1(["0001_init.sql", "0002_delegated_sync_fcm.sql", "0002_fcm_v2.sql"]);
   vi.spyOn(Date, "now").mockReturnValue(NOW);
   vi.stubGlobal("fetch", vi.fn(() => { throw new Error("No live providers permitted"); }));
 });

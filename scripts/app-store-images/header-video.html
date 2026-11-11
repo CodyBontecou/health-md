@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Health.md · Amethyst pulse</title>
+<style>
+  *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;background:#07050e;overflow:hidden}
+  body{display:grid;place-items:center}canvas{width:100%;height:auto;max-height:100%;object-fit:contain}
+</style>
+<canvas width="3840" height="1646" aria-label="Health.md's amethyst heart floats above a luminous pulse, encircled by delicate violet orbits."></canvas>
+<script>
+const canvas=document.querySelector('canvas'),ctx=canvas.getContext('2d');
+const W=1920,H=823,TAU=Math.PI*2,DURATION=12;
+const heart=new Image();heart.src='__HEART_DATA__';
+const capture=new URLSearchParams(location.search).has('capture');
+const still=new URLSearchParams(location.search).has('still');
+const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const fract=n=>n-Math.floor(n);
+function random(n){return fract(Math.sin(n*127.1+311.7)*43758.5453123)}
+function glow(x,y,rx,ry,color,alpha=1){
+ ctx.save();ctx.translate(x,y);ctx.scale(rx,ry);
+ const g=ctx.createRadialGradient(0,0,0,0,0,1);g.addColorStop(0,color);g.addColorStop(1,'transparent');
+ ctx.globalAlpha=alpha;ctx.fillStyle=g;ctx.fillRect(-1,-1,2,2);ctx.restore();
+}
+function orbitPoint(a,r,tilt){
+ const x=Math.cos(a)*r,y=Math.sin(a)*r*.43;
+ return {x:960+x*Math.cos(tilt)-y*Math.sin(tilt),y:375+x*Math.sin(tilt)+y*Math.cos(tilt),z:Math.sin(a)};
+}
+function orbit(r,tilt,t,front,index){
+ ctx.save();ctx.lineWidth=.7;
+ for(let j=0;j<180;j++){
+  const a=j/180*TAU,b=(j+1)/180*TAU,p=orbitPoint(a,r,tilt),q=orbitPoint(b,r,tilt);
+  if((p.z>0)!==front)continue;
+  ctx.strokeStyle=`rgba(183,141,255,${.045+.07*Math.pow(Math.cos(a-t*.12-index),8)})`;
+  ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(q.x,q.y);ctx.stroke();
+ }
+ const angle=t*TAU/12*(index%2?-1:1)+index*2.1,p=orbitPoint(angle,r,tilt);
+ if((p.z>0)===front){
+  glow(p.x,p.y,17,17,'#b897ff',.3);ctx.fillStyle='#ded0ff';ctx.beginPath();ctx.arc(p.x,p.y,1.9,0,TAU);ctx.fill();
+ }
+ ctx.restore();
+}
+// The waveform is decorative, with no implied measurement or personal health data.
+function ecg(x){
+ const gauss=(c,w,h)=>h*Math.exp(-Math.pow((x-c)/w,2));
+ return gauss(.18,.028,-5)+gauss(.36,.012,12)+gauss(.4,.010,-51)+gauss(.438,.014,21)+gauss(.63,.043,-11);
+}
+function pulseTrace(t){
+ const y=626,left=468,right=1452,span=right-left,phase=fract(t/3);
+ const grad=ctx.createLinearGradient(left,0,right,0);
+ grad.addColorStop(0,'transparent');grad.addColorStop(.2,'#8871b0');grad.addColorStop(.5,'#d2b5ff');grad.addColorStop(.8,'#8871b0');grad.addColorStop(1,'transparent');
+ ctx.save();ctx.strokeStyle=grad;ctx.lineWidth=1.25;ctx.globalAlpha=.55;
+ ctx.beginPath();
+ for(let i=0;i<=700;i++){
+  const x=left+span*i/700,yy=y+ecg(fract(i/700*2.8-phase));
+  if(i===0)ctx.moveTo(x,yy);else ctx.lineTo(x,yy);
+ }ctx.stroke();
+ // A short luminous crest advances with the rhythm, then disappears at the edge.
+ const head=phase,xx=left+span*head,yy=y+ecg(fract(head*2.8-phase));
+ const opacity=Math.pow(Math.sin(Math.PI*head),2);
+ glow(xx,yy,24,16,'#c0a0ff',opacity*.75);
+ ctx.globalAlpha=opacity;ctx.fillStyle='#f3eaff';ctx.beginPath();ctx.arc(xx,yy,2.1,0,TAU);ctx.fill();ctx.restore();
+}
+function renderAt(seconds){
+ const t=((seconds%DURATION)+DURATION)%DURATION;
+ ctx.setTransform(canvas.width/W,0,0,canvas.height/H,0,0);
+ ctx.fillStyle='#07050e';ctx.fillRect(0,0,W,H);
+ // Fixed lighting and generous negative space keep the header calm at listing size.
+ glow(960,365,690,480,'#22123b',.9);
+ glow(960,415,350,280,'#49206d',.28);
+ glow(960,683,330,62,'#291249',.45);
+ for(let i=0;i<68;i++){
+  const x=320+random(i+1)*1280,y=90+random(i+104)*590;
+  const alpha=(.1+random(i+201)*.25)*(.65+.35*Math.sin(TAU*t/12+random(i+301)*TAU));
+  ctx.fillStyle=`rgba(207,187,245,${alpha})`;ctx.beginPath();ctx.arc(x,y,.3+random(i+401)*.65,0,TAU);ctx.fill();
+ }
+ const orbitConfig=[[331,-.25],[380,.24],[421,-.09]];
+ orbitConfig.forEach(([r,a],i)=>orbit(r,a,t,false,i));
+ const beat=fract(t/3),bump=Math.exp(-Math.pow((beat-.12)/.055,2))+.35*Math.exp(-Math.pow((beat-.23)/.07,2));
+ const float=Math.sin(TAU*t/12),scale=1+bump*.018;
+ glow(960,380,265,250,'#8a43d7',.12+bump*.065);
+ ctx.save();ctx.translate(960,370+float*8);ctx.rotate(Math.sin(TAU*t/12)*.018);ctx.scale(scale,scale);
+ ctx.shadowColor='#9f63ea';ctx.shadowBlur=30+bump*12;
+ ctx.drawImage(heart,-215,-216,430,432);
+ ctx.restore();
+ orbitConfig.forEach(([r,a],i)=>orbit(r,a,t,true,i));
+ pulseTrace(t);
+ // Vignette and a quiet bottom edge leave room for App Store chrome.
+ const vignette=ctx.createRadialGradient(960,360,220,960,400,1050);
+ vignette.addColorStop(0,'transparent');vignette.addColorStop(1,'rgba(3,2,8,.7)');
+ ctx.fillStyle=vignette;ctx.fillRect(0,0,W,H);
+ const bottom=ctx.createLinearGradient(0,690,0,H);bottom.addColorStop(0,'transparent');bottom.addColorStop(1,'#07050e');ctx.fillStyle=bottom;ctx.fillRect(0,690,W,H-690);
+ window.__lt=t;
+}
+window.renderAt=renderAt;window.__start=()=>renderAt(0);window.__tick=dt=>renderAt(window.__lt+dt);
+window.ready=heart.decode().then(()=>{
+ renderAt(still?3:0);
+ if(!capture&&!still&&!reduced){const start=performance.now();function frame(now){renderAt((now-start)/1000);requestAnimationFrame(frame)}requestAnimationFrame(frame)}
+});
+</script>
+</html>

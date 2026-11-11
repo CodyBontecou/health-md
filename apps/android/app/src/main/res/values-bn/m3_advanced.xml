@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Advanced settings list-group headings (Material 3 pass). -->
+    <string name="m3_advanced_group_notes">নোট ও এন্ট্রি</string>
+    <string name="m3_advanced_group_detail">টাইম-সিরিজ ডেটা</string>
+</resources>

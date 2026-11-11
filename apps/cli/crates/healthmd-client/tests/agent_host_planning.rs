@@ -1144,3 +1144,109 @@ async fn root_replacement_symlinks_private_permissions_and_hardlinks_fail_closed
     std::fs::hard_link(path.join("issuer.json"), path.join("alias")).unwrap();
     assert!(store.revision().await.is_err());
 }
+
+#[derive(Clone, Copy)]
+enum EnrollmentDrift {
+    Destination,
+    Issuer,
+    IssuerPermissions,
+}
+struct EnrollmentMutation {
+    root: std::path::PathBuf,
+    permission_only: bool,
+    changed: std::sync::atomic::AtomicBool,
+}
+impl EnrollmentMutation {
+    fn apply(&self) {
+        use std::os::unix::fs::PermissionsExt as _;
+        if self.changed.swap(true, Ordering::SeqCst) {
+            return;
+        }
+        if self.permission_only {
+            std::fs::set_permissions(&self.root, std::fs::Permissions::from_mode(0o755)).unwrap();
+        } else {
+            let previous = self.root.with_extension("before");
+            std::fs::rename(&self.root, &previous).unwrap();
+            std::fs::create_dir(&self.root).unwrap();
+            std::fs::set_permissions(&self.root, std::fs::Permissions::from_mode(0o700)).unwrap();
+        }
+    }
+}
+struct EnrollmentCallbackConsent(Option<Arc<EnrollmentMutation>>);
+#[async_trait]
+impl LocalHostConsent for EnrollmentCallbackConsent {
+    async fn enroll(&self, _: &LocalEnrollment) -> Result<(), ClientError> {
+        if let Some(change) = &self.0 {
+            change.apply();
+        }
+        tokio::task::yield_now().await;
+        Ok(())
+    }
+    async fn decide(&self, _: &ExportPlan) -> Result<(), ClientError> {
+        Err(ClientError::AgentAuthorityUnavailable)
+    }
+}
+struct EnrollmentCallbackKey(Option<Arc<EnrollmentMutation>>);
+#[async_trait]
+impl ProtectedHostKey for EnrollmentCallbackKey {
+    async fn load_existing(&self, host: &ControlUuid) -> Result<SecretString, ClientError> {
+        if let Some(change) = &self.0 {
+            change.apply();
+        }
+        tokio::task::yield_now().await;
+        FakeProtectedKey.load_existing(host).await
+    }
+}
+#[tokio::test]
+async fn enrollment_rejects_directory_substitution_during_consent_and_key_callbacks() {
+    use std::os::unix::fs::PermissionsExt as _;
+    for during_key in [false, true] {
+        for drift in [
+            EnrollmentDrift::Destination,
+            EnrollmentDrift::Issuer,
+            EnrollmentDrift::IssuerPermissions,
+        ] {
+            let temporary = tempfile::tempdir().unwrap();
+            let base = std::fs::canonicalize(temporary.path()).unwrap();
+            let issuer = base.join("issuer");
+            let destination = base.join("destination");
+            std::fs::create_dir(&issuer).unwrap();
+            std::fs::create_dir(&destination).unwrap();
+            std::fs::set_permissions(&issuer, std::fs::Permissions::from_mode(0o700)).unwrap();
+            let peer = peer(PeerPlatform::Apple);
+            let mutation = Arc::new(EnrollmentMutation {
+                root: if matches!(drift, EnrollmentDrift::Destination) {
+                    destination.clone()
+                } else {
+                    issuer.clone()
+                },
+                permission_only: matches!(drift, EnrollmentDrift::IssuerPermissions),
+                changed: std::sync::atomic::AtomicBool::new(false),
+            });
+            let key = Arc::new(EnrollmentCallbackKey(during_key.then(|| mutation.clone())));
+            let consent = EnrollmentCallbackConsent((!during_key).then(|| mutation.clone()));
+            let result = HostAuthorityStore::enroll_local(
+                issuer.clone(),
+                peer.host_installation_id.clone(),
+                key,
+                LocalEnrollment {
+                    delegation: delegation(&peer, AuthorityReferenceIssuer::AuthorizedHost, &now()),
+                    binding_id: id(3),
+                    root: destination,
+                },
+                &consent,
+            )
+            .await;
+            assert!(mutation.changed.load(Ordering::SeqCst));
+            assert!(
+                result.is_err(),
+                "Enrollment must stay bound to the originally approved directory objects"
+            );
+            assert!(!issuer.join("issuer.json").exists());
+            assert!(
+                !issuer.with_extension("before").join("issuer.json").exists(),
+                "must not publish into a renamed issuer"
+            );
+        }
+    }
+}

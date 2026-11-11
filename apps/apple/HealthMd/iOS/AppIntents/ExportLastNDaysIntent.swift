@@ -1,15 +1,14 @@
 import AppIntents
 import Foundation
 
-/// Exports the last N days ending yesterday (today is excluded since it's
-/// incomplete). Useful for "catch up the past week" automations.
+/// Exports the last N days, ending yesterday unless Include Today is enabled.
 struct ExportLastNDaysIntent: AppIntent {
     static let defaultDays = 7
 
     static var title: LocalizedStringResource = "Export Last N Days of Health Data"
 
     static var description = IntentDescription(
-        "Exports the most recent days of health data, ending yesterday.",
+        "Exports the most recent days of health data, ending yesterday or optionally today.",
         categoryName: "Health"
     )
 
@@ -25,37 +24,50 @@ struct ExportLastNDaysIntent: AppIntent {
 
     @Parameter(
         title: "Number of Days",
-        description: "How many days back to export, ending yesterday.",
+        description: "How many days to export, ending yesterday or today when Include Today is on.",
         default: 7
     )
     var days: Int
 
+    @Parameter(
+        title: "Include Today",
+        description: "End the selected window today, including today’s incomplete health data.",
+        default: false
+    )
+    var includeToday: Bool
+
     init() {
+        self.includeToday = false
         self.days = Self.defaultDays
     }
 
-    init(days: Int) {
+    init(days: Int, includeToday: Bool = false) {
+        self.includeToday = includeToday
         self.days = max(days, 1)
     }
 
     static var parameterSummary: some ParameterSummary {
-        Summary("Export the last \(\.$days) days of health data")
+        Summary("Export the last \(\.$days) days of health data") {
+            \.$includeToday
+            \.$profile
+        }
     }
 
     static func exportDates(
         days: Int,
+        includeToday: Bool = false,
         now: Date = Date(),
         calendar: Calendar = .current
     ) -> [Date] {
         let requestedDays = max(days, 1)
-        let yesterday = calendar.startOfDay(
-            for: calendar.date(byAdding: .day, value: -1, to: now)!
+        let endDate = calendar.startOfDay(
+            for: includeToday ? now : calendar.date(byAdding: .day, value: -1, to: now)!
         )
-        let earliest = calendar.date(byAdding: .day, value: -(requestedDays - 1), to: yesterday)!
+        let earliest = calendar.date(byAdding: .day, value: -(requestedDays - 1), to: endDate)!
         var dates: [Date] = []
         var current = earliest
 
-        while current <= yesterday {
+        while current <= endDate {
             dates.append(current)
             guard let next = calendar.date(byAdding: .day, value: 1, to: current) else { break }
             current = next
@@ -66,7 +78,7 @@ struct ExportLastNDaysIntent: AppIntent {
 
     @MainActor
     func perform() async throws -> some IntentResult & ProvidesDialog {
-        let dates = Self.exportDates(days: days)
+        let dates = Self.exportDates(days: days, includeToday: includeToday)
         let outcome = await ExportIntentRunner.run(dates: dates, profileName: profile)
         return .result(dialog: IntentDialog(stringLiteral: ExportIntentRunner.dialog(for: outcome)))
     }

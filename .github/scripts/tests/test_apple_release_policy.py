@@ -43,12 +43,7 @@ class AppleReleasePolicyTests(unittest.TestCase):
         ci = workflow("apple-ci.yml")
         event = context("Apple Release iOS", release_tag="v3.0")
         event["inputs"]["release_sha"] = "old-tag-sha"
-        source_jobs = set(ci["jobs"]["gate"]["needs"]) - {"changes", "workflow-policy", "prepare-shared-core"}
-        # The stable core gate only combines qualified producer statuses. Every
-        # actual native producer/worker still checks out the exact release SHA.
-        self.assertEqual(ci["jobs"]["prepare-shared-core"]["runs-on"], "ubuntu-24.04")
-        source_jobs.update(name for name, job in ci["jobs"].items()
-                           if isinstance(job.get("runs-on"), str) and job["runs-on"].startswith(("xcode-", "macos-")))
+        source_jobs = set(ci["jobs"]["gate"]["needs"]) - {"changes", "workflow-policy"}
         for name in sorted(source_jobs):
             step = next(step for step in ci["jobs"][name]["steps"]
                         if step.get("uses", "").startswith("actions/checkout@"))
@@ -117,6 +112,30 @@ class AppleReleasePolicyTests(unittest.TestCase):
                     if step["name"].startswith("Verify qualified source"):
                         self.assertNotIn("if", step)
                         self.assertIn("apple-release-source.py\" verify", step["run"])
+
+    def test_draft_release_preflight_has_push_access(self):
+        for name in RELEASES:
+            with self.subTest(workflow=name):
+                self.assertEqual(
+                    workflow(name)["jobs"]["resolve-release-sha"]["permissions"]["contents"],
+                    "write",
+                    "GitHub hides draft releases from tokens without push access",
+                )
+
+    def test_macos_asset_repair_disables_store_steps_and_keeps_draft_asset_attachment(self):
+        caller = workflow("release-macos.yml")
+        event = context(caller["name"], release_tag="v3.0")
+        event["inputs"].update(skip_asc_upload=True, skip_asc_submit=True, dry_run=False)
+        event["github"]["event"]["inputs"].update(skip_asc_upload="true", skip_asc_submit="true", dry_run="false")
+        step = next(s for s in caller["jobs"]["resolve-release-sha"]["steps"] if s.get("id") == "resolve")
+        self.assertEqual(render(step["env"]["RELEASE_ASSET_ONLY"], event), "true")
+        steps = {s["name"]: s for s in caller["jobs"]["release"]["steps"]}
+        for name in ("Build App Store pkg", "Upload pkg to App Store Connect", "Create ASC version and submit for review"):
+            with self.subTest(step=name):
+                self.assertFalse(permitted(steps[name], event))
+        attach = steps["Attach macOS zip to GitHub release"]
+        self.assertTrue(permitted(attach, event))
+        self.assertNotIn("--draft=false", attach["run"])
 
     def test_existing_draft_is_required_before_qualification_not_created_after_upload(self):
         with tempfile.TemporaryDirectory() as directory:

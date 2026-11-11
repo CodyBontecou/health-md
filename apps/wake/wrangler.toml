@@ -29,3 +29,5 @@ database_id = "a9b607f9-9413-4b0e-9879-ae7e5ab348a8"
 #   APNS_AUTH_KEY — full PEM body of the .p8 APNs key
 #   APNS_KEY_ID   — 10-char Key ID matching APNS_AUTH_KEY
 #   APNS_TEAM_ID  — 10-char Apple Developer Team ID
+#   FCM_SERVICE_ACCOUNT_JSON — Firebase service-account JSON (messaging sender only);
+#                              unset keeps Android delegated sync doorbells undeliverable

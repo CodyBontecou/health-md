@@ -7,8 +7,8 @@ metric-registry-v1.json instead of parsing Swift, Kotlin, or generated documenta
 
 Registry v1's capability vocabulary is versioned migration evidence too. Unrelated new
 product/transport capabilities must not change its authority hash or invalidate retained
-semantic/render fixtures. Availability of captured IDs still follows live governance;
-a metric requiring a new capability needs a reviewed registry revision.
+semantic/render fixtures. Current availability follows live governance in the separate
+capability index; a metric requiring a new capability needs a reviewed registry revision.
 """
 
 from __future__ import annotations
@@ -448,6 +448,8 @@ def capability_inventory(
     manifest = json.loads(CAPABILITY_MANIFEST.read_text())
     capabilities = manifest["capabilities"]
     known = set(known_capability_ids)
+    if len({item["id"] for item in capabilities}) != len(capabilities):
+        raise ValueError("duplicate product capability")
     if len(known) != len(known_capability_ids):
         raise ValueError("duplicate registry capability")
     unknown = known - {capability["id"] for capability in capabilities}
@@ -459,7 +461,7 @@ def capability_inventory(
         raise ValueError("known capabilities must preserve product-capabilities order")
     missing = metric_capability_ids - known
     if missing:
-        raise ValueError(f"metric capabilities missing from registry inventory: {sorted(missing)}")
+        raise ValueError(f"metric capabilities missing from registry inventory; new metric capability requires a reviewed registry revision: {sorted(missing)}")
     return {
         "known_capability_ids": known_capability_ids,
         "available_capability_ids_by_platform": {
@@ -475,7 +477,7 @@ def capability_inventory(
 
 
 def build_registry(
-    apple: dict[str, Any], android: dict[str, Any], known_capability_ids: list[str]
+    apple: dict[str, Any], android: dict[str, Any], known_capability_ids: list[str] | None = None
 ) -> dict[str, Any]:
     ledger = parse_frozen_crosswalk()
     apple_by_id = {metric["selection_id"]: metric for metric in apple["metrics"]}
@@ -636,10 +638,19 @@ def build_registry(
                     }
                 )
 
-    # Capability lists were included in the original registry's semantic/render digest.
-    # Preserve that complete byte identity; current governance has its own index below.
-    # Retain main validation of the reviewed subset without rewriting historical metadata.
-    capability_inventory(known_capability_ids, {metric["capability_id"] for metric in semantic_metrics})
+    capability_baseline = json.loads(CAPABILITY_BASELINE.read_text())
+    if (capability_baseline["schema"] != "healthmd.metric_registry_capabilities"
+            or capability_baseline["schema_version"] != 1
+            or capability_baseline["registry_version"] != 1):
+        raise ValueError("Unsupported registry capability baseline")
+    baseline_ids = capability_baseline["capability_ids"]
+    if known_capability_ids is None:
+        known_capability_ids = baseline_ids
+    inventory = capability_inventory(
+        known_capability_ids, {metric["capability_id"] for metric in semantic_metrics}
+    )
+    if known_capability_ids != baseline_ids:
+        raise ValueError("Changed capability inventory requires a reviewed registry revision")
     frozen_capabilities = json.loads(FROZEN_CAPABILITY_BASELINE.read_text())
     return {
         "schema": "healthmd.metric_registry",

@@ -590,6 +590,58 @@ class AgentBridgeExportPlanningBoundaryTest {
         }
     }
 
+    private fun acceptanceObservation(request: AgentBridgeExecuteRequest): AgentBridgeResumeRequest {
+        val plan = request.plan as AgentBridgeGeneratedPlan
+        return AgentBridgeResumeRequest(AgentBridgeValidation.bindingFor(plan), 0, plan.intent.destination, "0".repeat(64),
+            request.jobId, "0".repeat(64), plan.intent.peer, AgentBridgeCodec.sha256(AgentBridgeCodec.encode(request)), "healthmd.agent_resume_request", 1)
+    }
+
+    @Test fun retainedAcceptanceObservationNeedsNoCaptureAndNeverRenewsOrReadsSettings() {
+        AgentBridgeExportPlanningFixture().use { f ->
+            val request = executionRequest(f)
+            val original = f.service.acceptExecution(f.peerContext, request).job
+            val bytes = ledgerBytes(f)
+            f.clock.now = f.clock.now.plusSeconds(600); f.configuration.active = false
+            val reads = f.configuration.calls
+            val observed = f.restart().retainedAcceptance(f.peerContext, acceptanceObservation(request))
+            assertThat(observed).isEqualTo(original)
+            assertThat(observed.acceptedReceipt()).isEqualTo(original.acceptedReceipt())
+            assertThat(f.configuration.calls).isEqualTo(reads)
+            assertThat(f.store.access { it!!.state.captureClaims.orEmpty() }).isEmpty()
+            assertThat(ledgerBytes(f)).isEqualTo(bytes)
+        }
+    }
+
+    @Test fun retainedAcceptanceObservationRejectsMissingChangedExpiredAndRevokedJobsWithoutRepair() {
+        for (mode in listOf("unaccepted", "job", "peer", "destination", "binding", "request", "manifest", "frontier", "count", "expired", "trust", "delayed_key", "delayed_trust")) {
+            AgentBridgeExportPlanningFixture().use { f ->
+                val request = executionRequest(f)
+                if (mode != "unaccepted") f.service.acceptExecution(f.peerContext, request)
+                val original = acceptanceObservation(request)
+                val resume = when (mode) {
+                    "job" -> original.copy(jobId = AgentBridgeExportPlanningFixture.id(99))
+                    "peer" -> original.copy(peer = f.peer.copy(sourceInstallationId = AgentBridgeExportPlanningFixture.id(99)))
+                    "destination" -> original.copy(destination = original.destination.copy(bindingId = AgentBridgeExportPlanningFixture.id(99)))
+                    "binding" -> original.copy(binding = original.binding.copy(planSha256 = "f".repeat(64)))
+                    "request" -> original.copy(requestSha256 = "f".repeat(64))
+                    "manifest" -> original.copy(manifestSha256 = "f".repeat(64))
+                    "frontier" -> original.copy(frontierSha256 = "f".repeat(64))
+                    "count" -> original.copy(committedPartitionCount = 1)
+                    else -> original
+                }
+                if (mode == "expired") f.clock.now = f.clock.now.plusSeconds(604800)
+                if (mode == "trust") f.peerContext.trusted = false
+                if (mode == "delayed_key") f.keys.onLoad = { f.keys.onLoad = null; f.clock.now = f.clock.now.plusSeconds(604800) }
+                if (mode == "delayed_trust") f.keys.onLoad = { f.keys.onLoad = null; f.peerContext.trusted = false }
+                val bytes = ledgerBytes(f); val reads = f.configuration.calls
+                try { f.service.retainedAcceptance(f.peerContext, resume); throw AssertionError("Invalid original acceptance: $mode") }
+                catch (failure: AgentBridgeException) { assertThat(failure.cause).isNull() }
+                assertThat(f.configuration.calls).isEqualTo(reads)
+                assertThat(ledgerBytes(f)).isEqualTo(bytes)
+            }
+        }
+    }
+
     @Test
     fun durableAcceptanceReplaysAfterPlanExpiryWithoutResolvingChangedSettings() {
         AgentBridgeExportPlanningFixture().use { f ->

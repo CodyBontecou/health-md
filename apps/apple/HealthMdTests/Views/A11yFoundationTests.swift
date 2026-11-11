@@ -38,6 +38,9 @@ final class A11yFoundationTests: XCTestCase {
     ] }
 
     #if os(iOS)
+    // Keep hosting probes in XCTest's Swift task context. Synchronous XCTest
+    // invocation can crash in main-actor host deallocation on older runtimes:
+    // https://github.com/swiftlang/swift/issues/85663
     private let categories: [DynamicTypeSize] = [.large, .xxxLarge, .accessibility1, .accessibility5]
 
     private func measure(_ text: String = "Health archive", font: Font, size: DynamicTypeSize) -> CGSize {
@@ -46,7 +49,7 @@ final class A11yFoundationTests: XCTestCase {
         return host.measured()
     }
 
-    func testSettledMeasurementsDoNotRepeatRunLoopWaits() {
+    func testSettledMeasurementsDoNotRepeatRunLoopWaits() async {
         func text(_ size: DynamicTypeSize) -> some View {
             Text("Settled measurement").font(.body).fixedSize()
                 .environment(\.dynamicTypeSize, size)
@@ -75,7 +78,7 @@ final class A11yFoundationTests: XCTestCase {
         XCTAssertEqual(settlingCount, 4, "Native screenshots must still settle")
     }
 
-    func testAllNineteenFontsGrowInViewScopedEnvironment() {
+    func testAllNineteenFontsGrowInViewScopedEnvironment() async {
         XCTAssertEqual(tokens.count, 19)
         // Native positive controls guard against a broken measurement environment.
         for (name, font) in tokens.map({ ($0.0, $0.1) }) + [
@@ -93,7 +96,7 @@ final class A11yFoundationTests: XCTestCase {
         }
     }
 
-    func testBundledFacesExistAndDefaultSizesAndWeightsArePreserved() throws {
+    func testBundledFacesExistAndDefaultSizesAndWeightsArePreserved() async throws {
         for name in ["Geist-Regular", "Geist-Medium", "Geist-SemiBold", "GeistMono-Regular", "GeistMono-Medium"] {
             let font = try XCTUnwrap(UIFont(name: name, size: 14), "Missing registered face; fallback is NOT success")
             XCTAssertEqual(font.fontName, name)
@@ -118,7 +121,7 @@ final class A11yFoundationTests: XCTestCase {
         XCTAssertLessThan(fontWeight(medium), fontWeight(semibold))
     }
 
-    func testMonoCharactersAndDigitsRemainEqualWidthAtEverySize() {
+    func testMonoCharactersAndDigitsRemainEqualWidthAtEverySize() async {
         for (name, font, _, _, mono) in tokens where mono {
             for category in categories {
                 let narrow = measure("iiii1111", font: font, size: category)
@@ -130,7 +133,7 @@ final class A11yFoundationTests: XCTestCase {
                           measure("WWWW", font: Typography.body(), size: .large).width)
     }
 
-    func testAlreadyCreatedFontsRespondToLiveEnvironmentChanges() {
+    func testAlreadyCreatedFontsRespondToLiveEnvironmentChanges() async {
         let font = Typography.body()
         let host = A11yHosting(Text("Live text").font(font).fixedSize().environment(\.dynamicTypeSize, .large))
         defer { host.close() }
@@ -142,7 +145,7 @@ final class A11yFoundationTests: XCTestCase {
         XCTAssertEqual(host.measured().height, before.height, accuracy: 0.5)
     }
 
-    func testProductionButtonsGrowAndHaveMinimumTargets() {
+    func testProductionButtonsGrowAndHaveMinimumTargets() async {
         for category in categories {
             let samples: [(String, AnyView)] = [
                 ("secondary", AnyView(SecondaryButton("Choose a different destination folder") {})),
@@ -162,7 +165,7 @@ final class A11yFoundationTests: XCTestCase {
         }
     }
 
-    func testProductionStatusLabelsAndSymbolContainersGrow() {
+    func testProductionStatusLabelsAndSymbolContainersGrow() async {
         let samples: [(String, AnyView)] = [
             ("connected", AnyView(StatusPill(status: .connected))),
             ("disconnected", AnyView(StatusPill(status: .disconnected))),

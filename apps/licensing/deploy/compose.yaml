@@ -1,0 +1,90 @@
+services:
+  licensing:
+    build:
+      context: ..
+      args:
+        NODE_IMAGE: ${LICENSING_NODE_IMAGE:?Set a reviewed node:24-bookworm-slim@sha256 digest}
+    image: healthmd-licensing:${LICENSING_RELEASE:?Set the source revision}
+    restart: unless-stopped
+    init: true
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 512m
+    pids_limit: 128
+    stop_grace_period: 20s
+    tmpfs: ["/tmp:size=64m,mode=1777"]
+    environment:
+      LICENSING_MODE: production
+      LICENSING_HOST: 0.0.0.0
+      LICENSING_DATABASE: /data/licensing.sqlite
+      LICENSING_ISSUER: https://${LICENSING_DOMAIN:?Set the public licensing hostname}/
+      LICENSING_KEY_ID: ${LICENSING_KEY_ID:?Set the reviewed signing key ID}
+      LICENSING_PRIVATE_KEY_FILE: /run/secrets/signing_key
+      LICENSING_OPERATOR_TOKENS_FILE: /run/secrets/operator_tokens
+      LICENSING_INGRESS_KEY_FILE: /run/secrets/ingress_key
+    # Only administration is host-published, and only on loopback. Public API goes through Caddy.
+    ports: ["127.0.0.1:8793:8793"]
+    volumes: ["${LICENSING_DATA_DIR:?Set an owner-1000 mode-0700 directory}:/data"]
+    secrets: [signing_key, operator_tokens, ingress_key]
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://127.0.0.1:8793/readyz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    logging:
+      driver: json-file
+      options: {max-size: 1m, max-file: "3"}
+  backup:
+    image: healthmd-licensing:${LICENSING_RELEASE}
+    command: [node, src/backup-runner.mjs]
+    user: "1000:1000"
+    restart: unless-stopped
+    init: true
+    read_only: true
+    network_mode: none
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 256m
+    pids_limit: 64
+    tmpfs: ["/tmp:size=128m,mode=1777"]
+    environment:
+      LICENSING_DATABASE: /data/licensing.sqlite
+      LICENSING_BACKUP_DIR: /backups
+      LICENSING_BACKUP_KEY_FILE: /run/secrets/backup_key
+    volumes: ["${LICENSING_DATA_DIR}:/data:ro", "${LICENSING_BACKUP_DIR:?Set a private backup directory}:/backups"]
+    secrets: [backup_key]
+    depends_on:
+      licensing: {condition: service_healthy}
+    healthcheck:
+      test: [CMD, node, src/backup-health.mjs]
+      interval: 5m
+      start_period: 10s
+      start_interval: 5s
+      timeout: 5s
+      retries: 1
+    logging:
+      driver: json-file
+      options: {max-size: 1m, max-file: "3"}
+  ingress:
+    image: ${LICENSING_CADDY_IMAGE:?Set a reviewed caddy:2@sha256 digest}
+    restart: unless-stopped
+    read_only: true
+    security_opt: [no-new-privileges:true]
+    mem_limit: 256m
+    pids_limit: 128
+    ports: ["80:80", "443:443"]
+    environment:
+      LICENSING_DOMAIN: ${LICENSING_DOMAIN}
+    volumes: ["./Caddyfile:/etc/caddy/Caddyfile:ro", "caddy_data:/data", "caddy_config:/config"]
+    secrets: [ingress_key]
+    depends_on:
+      licensing: {condition: service_healthy}
+secrets:
+  backup_key: {file: "${LICENSING_SECRETS_DIR}/backup-key"}
+  signing_key: {file: "${LICENSING_SECRETS_DIR:?Set the absolute secret directory}/signing.pem"}
+  operator_tokens: {file: "${LICENSING_SECRETS_DIR}/operator-tokens.json"}
+  ingress_key: {file: "${LICENSING_SECRETS_DIR}/ingress-key"}
+volumes:
+  caddy_data:
+  caddy_config:

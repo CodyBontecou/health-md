@@ -8,9 +8,8 @@ extension Notification.Name {
 import Combine
 
 nonisolated enum HealthMdPurchaseOption: String, CaseIterable, Identifiable, Sendable {
-    case individual
-    case family
-    case familyUpgrade
+    case individual, family, familyUpgrade
+    case weekly, yearly, familyWeekly, familyYearly
 
     var id: String { rawValue }
     var productID: String { rawValue }
@@ -45,17 +44,17 @@ final class PurchaseManager: ObservableObject {
     var nativePlanningCanExport: Bool { true }
     func refreshNativePlanningExportEligibility() {}
     func canExport(jobID: UUID) -> Bool { true }
-    var analyticsQuotaState: PricingAnalyticsQuotaState {
-        PricingAnalyticsQuotaState(freeExportsUsed: 0, freeExportsRemaining: 0)
-    }
+
     var isIndividualUnlocked: Bool { false }
     var isFamilyUnlocked: Bool { false }
     var canBuyFamilyUpgrade: Bool { false }
+    var activePlanTitle: String { "Full access active" }
+    var canShowPermanentAccessNotice: Bool { false }
 
     private init() {}
 
     func setUnlocked(_ value: Bool) { isUnlocked = true }
-    func setUnlockedProductID(_ productID: String?) {}
+    func setUnlockedProductID(_ productID: String?, expirationDate: Date? = nil) {}
     func setLegacyUser(_ value: Bool) { isLegacyUser = value }
     func setFreeExportsUsed(_ count: Int) {}
     func recordExportUse(offerGuidance: Bool = true) {}
@@ -63,9 +62,9 @@ final class PurchaseManager: ObservableObject {
     func loadProductsIfNeeded(force: Bool = false) async {}
     func purchase(
         _ option: HealthMdPurchaseOption = .individual,
-        source: PricingAnalyticsPurchaseSource? = nil
+        source: PurchasePresentationSource? = nil
     ) async {}
-    func restore(source: PricingAnalyticsPurchaseSource? = nil) async {}
+    func restore(source: PurchasePresentationSource? = nil) async {}
     func refreshStatus() async { isUnlocked = true }
     func attemptSilentServerVerification() async {}
     static func isLegacyUnlock(originalPurchaseDate: Date) -> Bool { true }
@@ -78,74 +77,74 @@ import StoreKit
 import Security
 
 nonisolated enum HealthMdPurchaseOption: String, CaseIterable, Identifiable, Sendable {
-    case individual
-    case family
-    case familyUpgrade
+    // Preserve the shipped non-consumable IDs for every existing owner.
+    case individual, family, familyUpgrade
+    case weekly, yearly, familyWeekly, familyYearly
 
     var id: String { rawValue }
 
     var productID: String {
+        let prefix = "com.codybontecou.obsidianhealth."
         switch self {
-        case .individual:
-            return "com.codybontecou.obsidianhealth.unlock"
-        case .family:
-            return "com.codybontecou.obsidianhealth.unlock.family"
-        case .familyUpgrade:
-            return "com.codybontecou.obsidianhealth.unlock.family.upgrade"
+        case .individual: return prefix + "unlock"
+        case .family: return prefix + "unlock.family"
+        case .familyUpgrade: return prefix + "unlock.family.upgrade"
+        case .weekly: return prefix + "pro.weekly"
+        case .yearly: return prefix + "pro.yearly.v2"
+        case .familyWeekly: return prefix + "pro.family.weekly"
+        case .familyYearly: return prefix + "pro.family.yearly.v2"
         }
     }
 
-    var analyticsProductID: PricingAnalyticsProductID {
+    var isSubscription: Bool {
         switch self {
-        case .individual:
-            return .lifetimeUnlock
-        case .family:
-            return .familyLifetimeUnlock
-        case .familyUpgrade:
-            return .familyLifetimeUpgrade
+        case .weekly, .yearly, .familyWeekly, .familyYearly: return true
+        default: return false
         }
     }
 
     var isFamilyPlan: Bool {
         switch self {
-        case .family, .familyUpgrade:
-            return true
-        case .individual:
-            return false
+        case .family, .familyUpgrade, .familyWeekly, .familyYearly: return true
+        default: return false
         }
     }
 
     var displayTitle: String {
         switch self {
-        case .individual: return "Lifetime"
-        case .family: return "Family Lifetime"
-        case .familyUpgrade: return "Upgrade to Family Lifetime"
+        case .individual: return String(localized: "Lifetime")
+        case .family: return String(localized: "Family Lifetime")
+        case .familyUpgrade: return String(localized: "Upgrade to Family Lifetime")
+        case .weekly: return String(localized: "Weekly")
+        case .yearly: return String(localized: "Yearly")
+        case .familyWeekly: return String(localized: "Family Weekly")
+        case .familyYearly: return String(localized: "Family Yearly")
         }
     }
 
     var displaySubtitle: String {
+        if isSubscription { return isFamilyPlan ? String(localized: "Auto-renewing access for your Apple Family") : String(localized: "Auto-renewing unlimited private exports") }
         switch self {
-        case .individual: return "Pay once for unlimited private exports"
-        case .family: return "Pay once and share with up to 5 family members"
-        case .familyUpgrade: return "Upgrade pricing for existing Lifetime owners"
+        case .family: return String(localized: "Pay once and share with up to 5 family members")
+        case .familyUpgrade: return String(localized: "Upgrade pricing for existing Lifetime owners")
+        default: return String(localized: "One purchase, charged today")
         }
     }
 
-    var badge: String? {
-        switch self {
-        case .family, .familyUpgrade:
-            return "Family"
-        case .individual:
-            return nil
-        }
-    }
+    var badge: String? { isFamilyPlan ? String(localized: "Family") : nil }
+    var iconName: String { isFamilyPlan ? "person.3.fill" : "person.fill" }
 
-    var iconName: String {
-        isFamilyPlan ? "person.3.fill" : "person.fill"
+    /// PaywallG price-column suffix: only the weekly price carries one ("/wk"); the yearly
+    /// period is in the trial subtitle and one-time purchases say "charged today".
+    var priceSuffix: String {
+        switch self {
+        case .weekly, .familyWeekly: return String(localized: "/wk")
+        default: return ""
+        }
     }
 }
 
-/// Manages StoreKit paid plans and the free-trial export quota.
+/// Manages StoreKit trials, subscriptions, and permanent paid access.
 /// Relies on Apple's StoreKit 2 infrastructure for paid entitlements.
 @MainActor
 final class PurchaseManager: ObservableObject {
@@ -154,18 +153,19 @@ final class PurchaseManager: ObservableObject {
 
     // MARK: - Configuration
 
-    /// Approved lifetime product IDs registered in App Store Connect.
+    /// Product IDs expected by the rollout; store activation is a release prerequisite.
     static let productID = HealthMdPurchaseOption.individual.productID
     static let familyProductID = HealthMdPurchaseOption.family.productID
     static let familyUpgradeProductID = HealthMdPurchaseOption.familyUpgrade.productID
     static let productIDs = HealthMdPurchaseOption.allCases.map(\.productID)
 
-    /// Number of free export actions before a purchase is required.
-    static let freeExportLimit = 5
+    /// Let users generate their first export before choosing paid access.
+    /// Historical usage remains in the same durable ledger.
+    static let freeExportLimit = 1
 
     /// Free-export counts after which a soft, non-blocking upgrade prompt is
     /// surfaced ("value moments"). Distinct from the hard quota block.
-    static let upgradePromptMilestones: Set<Int> = [1, 3]
+    static let upgradePromptMilestones: Set<Int> = []
 
     /// Single grandfather cutoff: anyone with `originalPurchaseDate` strictly
     /// before this is granted free access. Covers all earlier cohorts in one
@@ -194,24 +194,24 @@ final class PurchaseManager: ObservableObject {
 
     @Published private(set) var isUnlocked: Bool = false {
         didSet {
-            // When status resolves to unlocked (purchase, grandfather, or
-            // restore), clear any free-export count that accumulated during
-            // the async refreshStatus() race on launch. Without this, a user
-            // who exported before refreshStatus() settled could permanently
-            // burn quota they were never supposed to spend.
+            // Preserve the first-export ledger through purchase, restore, and expiry.
             if isUnlocked && !oldValue {
-                keychain.writeInt(key: freeExportsUsedKey, value: 0)
-                keychain.writeString(key: durableExportUseIDsKey, value: "")
                 pendingUpgradePrompt = nil
             }
             refreshNativePlanningExportEligibility()
         }
     }
-    @Published private(set) var isLegacyUser: Bool = false
+    @Published private(set) var isLegacyUser: Bool = false {
+        didSet { if isLegacyUser { activeEntitlementExpiration = nil } }
+    }
     @Published private(set) var product: Product? = nil
     @Published private(set) var familyProduct: Product? = nil
     @Published private(set) var familyUpgradeProduct: Product? = nil
     @Published private(set) var productsByID: [String: Product] = [:]
+    @Published private(set) var trialEligibleProductIDs: Set<String> = []
+    @Published private(set) var isCheckingAccess = true
+    private var entitlementExpirationTask: Task<Void, Never>?
+    private var activeEntitlementExpiration: Date?
     @Published private(set) var isLoadingProducts: Bool = false
     @Published private(set) var productLoadError: String? = nil
     @Published private(set) var purchasingOption: HealthMdPurchaseOption? = nil
@@ -273,24 +273,28 @@ final class PurchaseManager: ObservableObject {
         if TestMode.isUITesting {
             return TestMode.purchaseUnlocked || freeExportsUsed < Self.freeExportLimit
         }
-        return isUnlocked || canExportFree
+        return canExportFree || (isUnlocked && (activeEntitlementExpiration.map { $0 > Date() } ?? true))
     }
 
-    /// True when a durable export job may start or resume. A job that already
-    /// consumed its quota use can finish retrying even after the remaining
-    /// allowance reaches zero.
+    /// Durable jobs use the same allowance at admission, including resume.
+    /// A receipt does not grant another free action after the allowance is used.
     func canExport(jobID: UUID) -> Bool {
         if TestMode.isUITesting {
             return canExport
         }
-        return canExport || durableExportUseIDs.contains(jobID.uuidString.lowercased())
+        return canExport
     }
 
     /// Native observer cache only. Sampling this value never reads quota or Keychain. False also
     /// represents unknown/unreadable state; it is not an execution or durable-resume permission.
-    @Published private(set) var nativePlanningCanExport = false {
+    var nativePlanningCanExport: Bool {
+        cachedNativePlanningCanExport && (!isUnlocked ||
+            (activeEntitlementExpiration.map { $0 > Date() } ?? true))
+    }
+
+    @Published private var cachedNativePlanningCanExport = false {
         didSet {
-            guard nativePlanningCanExport != oldValue else { return }
+            guard cachedNativePlanningCanExport != oldValue else { return }
             // Post after assignment and before native mutation returns. A deferred Combine observer
             // can miss a false/true round trip while quota storage is refreshed.
             nativePlanningNotifications.post(name: .healthMdNativeExportEligibilityDidChange, object: self)
@@ -300,31 +304,35 @@ final class PurchaseManager: ObservableObject {
     /// Only native startup/entitlement/quota owners call this, never a plan/discovery request.
     /// Keep the old export API behavior independent; cached readiness must not inherit its fallback.
     func refreshNativePlanningExportEligibility() {
-        nativePlanningCanExport = false
+        cachedNativePlanningCanExport = false
         if TestMode.isUITesting {
-            nativePlanningCanExport = TestMode.purchaseUnlocked || TestMode.freeExportsUsed < Self.freeExportLimit
+            cachedNativePlanningCanExport = TestMode.purchaseUnlocked || TestMode.freeExportsUsed < Self.freeExportLimit
             return
         }
-        if isUnlocked { nativePlanningCanExport = true; return }
+        if isUnlocked { cachedNativePlanningCanExport = true; return }
         do {
             let used = try keychain.readIntOrThrow(key: freeExportsUsedKey) ?? 0
             let raw = try keychain.readStringOrThrow(key: durableExportUseIDsKey) ?? ""
             let identifiers = raw.isEmpty ? [] : raw.components(separatedBy: ",")
             guard used >= 0, identifiers.allSatisfy({ UUID(uuidString: $0)?.uuidString.lowercased() == $0 }),
                   Set(identifiers).count == identifiers.count else { return }
-            nativePlanningCanExport = used < Self.freeExportLimit && identifiers.count < Self.freeExportLimit - used
+            cachedNativePlanningCanExport = used < Self.freeExportLimit && identifiers.count < Self.freeExportLimit - used
         } catch {
             // Authentication/storage/decoding errors cannot manufacture fresh free quota.
-            nativePlanningCanExport = false
+            cachedNativePlanningCanExport = false
         }
     }
+    #if DEBUG
+    /// Isolate real sandbox purchases from this device's preserved legacy grant.
+    /// StoreKit entitlements still resolve normally; no saved state is erased.
+    var sandboxPurchaseQAEnabled = ProcessInfo.processInfo.arguments.contains("-SandboxPurchasesQA")
+    #endif
 
     // MARK: - Injected Dependencies
 
     private let nativePlanningNotifications: NotificationCenter
     private let keychain: KeychainStoring
     private let defaults: UserDefaultsStoring
-    private let analytics: PricingAnalyticsClient
     private let productLoader: @MainActor ([String]) async throws -> [Product]
     private var productLoadTask: Task<Void, Never>? = nil
 
@@ -334,7 +342,6 @@ final class PurchaseManager: ObservableObject {
         self.nativePlanningNotifications = .default
         self.keychain = SystemKeychainStore()
         self.defaults = SystemUserDefaults()
-        self.analytics = .shared
         self.productLoader = { productIDs in
             try await Product.products(for: productIDs)
         }
@@ -352,7 +359,10 @@ final class PurchaseManager: ObservableObject {
 
         // In UI test / IAP review capture mode, skip all StoreKit interactions.
         // Test state is configured via configureTestMode() / configureIAPReviewMode().
-        guard Self.usesLiveStoreKit else { return }
+        guard Self.usesLiveStoreKit else {
+            isCheckingAccess = false
+            return
+        }
 
         Task {
             await loadProduct()
@@ -373,14 +383,12 @@ final class PurchaseManager: ObservableObject {
     init(
         keychain: KeychainStoring,
         defaults: UserDefaultsStoring,
-        analytics: PricingAnalyticsClient = .shared,
         nativePlanningNotifications: NotificationCenter = NotificationCenter(),
         productLoader: @MainActor @escaping ([String]) async throws -> [Product] = { _ in [] }
     ) {
         self.nativePlanningNotifications = nativePlanningNotifications
         self.keychain = keychain
         self.defaults = defaults
-        self.analytics = analytics
         self.productLoader = productLoader
         migrateUserDefaultsToKeychain()
         refreshNativePlanningExportEligibility()
@@ -420,7 +428,8 @@ final class PurchaseManager: ObservableObject {
     }
 
     /// Test-only: directly set the active entitlement product without StoreKit.
-    func setUnlockedProductID(_ productID: String?) {
+    func setUnlockedProductID(_ productID: String?, expirationDate: Date? = nil) {
+        activeEntitlementExpiration = expirationDate
         unlockedProductID = productID
         unlockedOwnershipDescription = nil
         isUnlocked = productID != nil
@@ -436,18 +445,10 @@ final class PurchaseManager: ObservableObject {
 
     /// Test-only: set free exports used count without real keychain.
     func setFreeExportsUsed(_ count: Int) {
-        nativePlanningCanExport = false
+        cachedNativePlanningCanExport = false
         defer { refreshNativePlanningExportEligibility() }
         keychain.writeInt(key: freeExportsUsedKey, value: count)
         keychain.writeString(key: durableExportUseIDsKey, value: "")
-    }
-
-    var analyticsQuotaState: PricingAnalyticsQuotaState {
-        let used = freeExportsUsed
-        return PricingAnalyticsQuotaState(
-            freeExportsUsed: used,
-            freeExportsRemaining: freeExportsRemaining
-        )
     }
 
     var isIndividualUnlocked: Bool {
@@ -457,6 +458,28 @@ final class PurchaseManager: ObservableObject {
     var isFamilyUnlocked: Bool {
         guard let unlockedProductID else { return false }
         return Self.isFamilyEntitlement(productID: unlockedProductID)
+    }
+
+    /// Shared settings copy; a Family subscription is not Family Lifetime.
+    var activePlanTitle: String {
+        guard isUnlocked else { return "Unlock Full Access" }
+        if let productID = unlockedProductID,
+           let option = Self.purchaseOption(for: productID) {
+            let title = option == .familyUpgrade ? HealthMdPurchaseOption.family.displayTitle : option.displayTitle
+            return "\(title) active"
+        }
+        if isLegacyUser { return "Grandfathered Full Access active" }
+        return "Full access active"
+    }
+
+    /// Presentation only: an unlocked flag alone cannot justify a forever claim.
+    /// Use the existing recognized non-consumable or verified legacy evidence.
+    var canShowPermanentAccessNotice: Bool {
+        guard isUnlocked else { return false }
+        if isLegacyUser { return true }
+        guard let productID = unlockedProductID,
+              let option = Self.purchaseOption(for: productID) else { return false }
+        return !option.isSubscription
     }
 
     /// App Store Connect cannot make one non-consumable depend on another, so
@@ -480,9 +503,11 @@ final class PurchaseManager: ObservableObject {
     }
 
     private static let entitlementPriority: [String] = [
-        familyProductID,
-        familyUpgradeProductID,
-        productID,
+        familyProductID, familyUpgradeProductID, productID,
+        HealthMdPurchaseOption.familyYearly.productID,
+        HealthMdPurchaseOption.familyWeekly.productID,
+        HealthMdPurchaseOption.yearly.productID,
+        HealthMdPurchaseOption.weekly.productID,
     ]
 
     static func preferredEntitlementProductID<S: Sequence>(from productIDs: S) -> String? where S.Element == String {
@@ -494,6 +519,15 @@ final class PurchaseManager: ObservableObject {
         let productID: String
         let ownershipDescription: String
         let source: String
+        let expirationDate: Date?
+    }
+
+    static func isActiveEntitlement(
+        option: HealthMdPurchaseOption, expirationDate: Date?,
+        revocationDate: Date?, isUpgraded: Bool, now: Date = Date()
+    ) -> Bool {
+        guard revocationDate == nil, !isUpgraded else { return false }
+        return !option.isSubscription || expirationDate.map { $0 > now } == true
     }
 
     private static func preferredEntitlement(from candidates: [StoreKitEntitlementCandidate]) -> StoreKitEntitlementCandidate? {
@@ -516,18 +550,29 @@ final class PurchaseManager: ObservableObject {
             ownershipDescription: "\(entitlement.source): \(entitlement.ownershipDescription)"
         )
         isUnlocked = true
+        activeEntitlementExpiration = entitlement.expirationDate
+        entitlementExpirationTask?.cancel()
+        if let expiration = entitlement.expirationDate {
+            entitlementExpirationTask = Task { [weak self] in
+                let seconds = max(0, expiration.timeIntervalSinceNow)
+                try? await Task.sleep(for: .seconds(seconds))
+                guard !Task.isCancelled else { return }
+                await self?.refreshStatus()
+            }
+        }
     }
 
     private func entitlementCandidate(from transaction: Transaction, source: String) -> StoreKitEntitlementCandidate? {
-        guard Self.purchaseOption(for: transaction.productID) != nil,
-              transaction.revocationDate == nil else {
-            return nil
-        }
+        guard let option = Self.purchaseOption(for: transaction.productID),
+              Self.isActiveEntitlement(option: option, expirationDate: transaction.expirationDate,
+                                       revocationDate: transaction.revocationDate,
+                                       isUpgraded: transaction.isUpgraded) else { return nil }
 
         return StoreKitEntitlementCandidate(
             productID: transaction.productID,
             ownershipDescription: String(describing: transaction.ownershipType),
-            source: source
+            source: source,
+            expirationDate: transaction.expirationDate
         )
     }
 
@@ -550,6 +595,7 @@ final class PurchaseManager: ObservableObject {
 
         for await result in Transaction.all {
             guard case .verified(let transaction) = result,
+                  Self.purchaseOption(for: transaction.productID)?.isSubscription == false,
                   let candidate = entitlementCandidate(from: transaction, source: "transactionHistory") else {
                 continue
             }
@@ -564,8 +610,13 @@ final class PurchaseManager: ObservableObject {
     /// Re-evaluates unlock status from StoreKit entitlements and AppTransaction.
     /// Called on init, after purchase, and after restore.
     func refreshStatus(includeHistoricalFallback: Bool = false) async {
-        nativePlanningCanExport = false
+        cachedNativePlanningCanExport = false
         defer { refreshNativePlanningExportEligibility() }
+        defer { isCheckingAccess = false }
+        #if os(macOS)
+        isUnlocked = true
+        return
+        #endif
         #if DEBUG
         // Debug override: set "debugOriginalAppVersion" in UserDefaults to simulate
         // any install version without needing a real App Store receipt.
@@ -576,7 +627,8 @@ final class PurchaseManager: ObservableObject {
         //   UserDefaults.standard.set("1.6.0", forKey: "debugOriginalAppVersion")
         //   UserDefaults.standard.set(1577836800.0, forKey: "debugOriginalPurchaseDate")  // optional, ms since 1970
         // Remove by setting to nil or removing the key.
-        if UserDefaults.standard.string(forKey: "debugOriginalAppVersion") != nil {
+        if !sandboxPurchaseQAEnabled,
+           UserDefaults.standard.string(forKey: "debugOriginalAppVersion") != nil {
             // The version string itself is no longer used for the decision —
             // grandfathering is purely date-based. Set `debugOriginalPurchaseDate`
             // (seconds since 1970) to test specific dates; defaults to a
@@ -603,7 +655,8 @@ final class PurchaseManager: ObservableObject {
         //
         // Hardcode in init() temporarily:
         //   UserDefaults.standard.set(true, forKey: "debugSkipToServerVerification")
-        if UserDefaults.standard.bool(forKey: "debugSkipToServerVerification") {
+        if !sandboxPurchaseQAEnabled,
+           UserDefaults.standard.bool(forKey: "debugSkipToServerVerification") {
             if await verifyLegacyWithServer() {
                 keychain.writeInt(key: serverVerifiedLegacyKey, value: 1)
                 isLegacyUser = true
@@ -617,6 +670,7 @@ final class PurchaseManager: ObservableObject {
 
         unlockedProductID = nil
         unlockedOwnershipDescription = nil
+        entitlementExpirationTask?.cancel()
         isLegacyUser = false
 
         // 1. Fast path: the user already has an active StoreKit entitlement.
@@ -639,6 +693,16 @@ final class PurchaseManager: ObservableObject {
             recordUnlockedEntitlement(entitlement)
             return
         }
+
+        #if DEBUG
+        // A fresh sandbox tester on a long-lived QA phone must be able to test
+        // subscription-only access while retaining the phone's legacy rights.
+        if sandboxPurchaseQAEnabled {
+            activeEntitlementExpiration = nil
+            isUnlocked = false
+            return
+        }
+        #endif
 
         // 2. Server-verified legacy path: a previous call to verifyLegacyWithServer()
         //    confirmed this device originally purchased before v1.7.0 and cached the
@@ -735,10 +799,24 @@ final class PurchaseManager: ObservableObject {
                 }
 
                 self.productsByID = loadedProductsByID
+                var eligible: Set<String> = []
+                for product in products {
+                    if let subscription = product.subscription,
+                       let offer = subscription.introductoryOffer,
+                       offer.paymentMode == .freeTrial,
+                       ((offer.period.unit == .day && offer.period.value == 7) ||
+                        (offer.period.unit == .week && offer.period.value == 1)),
+                       await subscription.isEligibleForIntroOffer {
+                        eligible.insert(product.id)
+                    }
+                }
+                self.trialEligibleProductIDs = eligible
                 self.product = loadedProductsByID[Self.productID]
                 self.familyProduct = loadedProductsByID[Self.familyProductID]
                 self.familyUpgradeProduct = loadedProductsByID[Self.familyUpgradeProductID]
-                self.productLoadError = nil
+                let saleOptions = HealthMdPurchaseOption.allCases.filter { $0 != .familyUpgrade }
+                self.productLoadError = saleOptions.allSatisfy { loadedProductsByID[$0.productID] != nil }
+                    ? nil : Self.productUnavailableMessage
             } catch {
                 if self.productsByID.isEmpty {
                     self.productLoadError = Self.productLoadFailureMessage
@@ -769,26 +847,14 @@ final class PurchaseManager: ObservableObject {
     /// Initiates the StoreKit purchase flow. Sets `isUnlocked = true` on success.
     func purchase(
         _ option: HealthMdPurchaseOption = .individual,
-        source: PricingAnalyticsPurchaseSource? = nil
+        source: PurchasePresentationSource? = nil
     ) async {
-        analytics.trackPurchaseStarted(
-            productId: option.analyticsProductID,
-            quotaState: analyticsQuotaState,
-            source: source
-        )
 
         if option == .familyUpgrade {
             guard canBuyFamilyUpgrade else {
                 purchaseError = String(
                     localized: "Family Upgrade requires an existing Lifetime unlock.",
                     comment: "Error shown when the family-upgrade IAP is attempted without an eligible base purchase"
-                )
-                analytics.trackPurchaseFinished(
-                    outcome: .failed,
-                    errorCategory: .notUnlocked,
-                    productId: option.analyticsProductID,
-                    quotaState: analyticsQuotaState,
-                    source: source
                 )
                 return
             }
@@ -804,13 +870,6 @@ final class PurchaseManager: ObservableObject {
             purchaseError = String(
                 localized: "Product unavailable. Please try again later.",
                 comment: "IAP product unavailable error"
-            )
-            analytics.trackPurchaseFinished(
-                outcome: .failed,
-                errorCategory: .storeUnavailable,
-                productId: option.analyticsProductID,
-                quotaState: analyticsQuotaState,
-                source: source
             )
             return
         }
@@ -832,72 +891,39 @@ final class PurchaseManager: ObservableObject {
                         localized: "Purchase verification failed.",
                         comment: "IAP verification error"
                     )
-                    analytics.trackPurchaseFinished(
-                        outcome: .failed,
-                        errorCategory: .verificationFailed,
-                        productId: option.analyticsProductID,
-                        quotaState: analyticsQuotaState,
-                        source: source
-                    )
                     return
                 }
                 await tx.finish()
-                recordUnlockedProductID(
-                    tx.productID,
-                    ownershipDescription: "purchase: \(String(describing: tx.ownershipType))"
-                )
-                isUnlocked = true
-                analytics.trackPurchaseFinished(
-                    outcome: .succeeded,
-                    productId: option.analyticsProductID,
-                    quotaState: analyticsQuotaState,
-                    source: source
-                )
+                // Reconcile all current entitlements: an expired/upgraded subscription
+                // must never become a permanent unlock via a purchase callback.
+                await refreshStatus()
 
             case .pending:
                 // Ask to Buy or parental approval pending — the transaction listener
                 // will catch the approval and set isUnlocked when it arrives.
-                analytics.trackPurchaseFinished(
-                    outcome: .pending,
-                    productId: option.analyticsProductID,
-                    quotaState: analyticsQuotaState,
-                    source: source
-                )
                 break
 
             case .userCancelled:
-                analytics.trackPurchaseFinished(
-                    outcome: .cancelled,
-                    errorCategory: .userCancelled,
-                    productId: option.analyticsProductID,
-                    quotaState: analyticsQuotaState,
-                    source: source
-                )
                 break
 
             @unknown default:
-                analytics.trackPurchaseFinished(
-                    outcome: .failed,
-                    errorCategory: .unknown,
-                    productId: option.analyticsProductID,
-                    quotaState: analyticsQuotaState,
-                    source: source
-                )
                 break
             }
         } catch {
             purchaseError = error.localizedDescription
-            analytics.trackPurchaseFinished(
-                outcome: .failed,
-                errorCategory: analyticsErrorCategory(for: error),
-                productId: option.analyticsProductID,
-                quotaState: analyticsQuotaState,
-                source: source
-            )
         }
     }
 
     // MARK: - Restore
+
+    /// Whether a StoreKit error only reports that the person dismissed the
+    /// Apple Account prompt, which should leave the paywall silent.
+    nonisolated static func isUserCancellation(_ error: Error) -> Bool {
+        if case StoreKitError.userCancelled = error { return true }
+        if let skError = error as? SKError, skError.code == .paymentCancelled { return true }
+        let nsError = error as NSError
+        return nsError.domain == NSURLErrorDomain && nsError.code == NSURLErrorCancelled
+    }
 
     static var restoreNotFoundMessage: String {
         String(
@@ -916,11 +942,7 @@ final class PurchaseManager: ObservableObject {
     ///      server-side verification. This is the reliable path for users who deleted and
     ///      reinstalled after v1.7.0, breaking the local AppTransaction check. On success
     ///      the result is cached in the Keychain so the server is only ever called once.
-    func restore(source: PricingAnalyticsPurchaseSource? = nil) async {
-        analytics.trackRestoreStarted(
-            quotaState: analyticsQuotaState,
-            source: source
-        )
+    func restore(source: PurchasePresentationSource? = nil) async {
 
         isRestoring = true
         purchaseError = nil
@@ -945,33 +967,18 @@ final class PurchaseManager: ObservableObject {
         // where a valid non-consumable has synced to history but not currentEntitlements.
         await refreshStatus(includeHistoricalFallback: true)
         if isUnlocked {
-            analytics.trackRestoreFinished(
-                outcome: .succeeded,
-                productId: unlockedProductID.flatMap { Self.purchaseOption(for: $0)?.analyticsProductID },
-                quotaState: analyticsQuotaState,
-                source: source
-            )
             return
         }
 
         if let syncError {
-            purchaseError = syncError.localizedDescription
-            analytics.trackRestoreFinished(
-                outcome: .failed,
-                errorCategory: analyticsErrorCategory(for: syncError),
-                quotaState: analyticsQuotaState,
-                source: source
-            )
+            // Cancelling the Apple Account sign-in is the user's choice, not a failure.
+            if !Self.isUserCancellation(syncError) {
+                purchaseError = syncError.localizedDescription
+            }
             return
         }
 
         purchaseError = Self.restoreNotFoundMessage
-        analytics.trackRestoreFinished(
-            outcome: .failed,
-            errorCategory: .verificationFailed,
-            quotaState: analyticsQuotaState,
-            source: source
-        )
     }
 
     // MARK: - Silent Server Verification
@@ -993,7 +1000,8 @@ final class PurchaseManager: ObservableObject {
         // Honor the refreshStatus() debug override: when forcing a specific
         // install state for testing, don't let the silent worker check
         // re-unlock the user from a real prior purchase on this Apple ID.
-        if UserDefaults.standard.string(forKey: "debugOriginalAppVersion") != nil {
+        if sandboxPurchaseQAEnabled ||
+           UserDefaults.standard.string(forKey: "debugOriginalAppVersion") != nil {
             return
         }
         #endif
@@ -1020,6 +1028,9 @@ final class PurchaseManager: ObservableObject {
     /// 2. Legacy receipt file (works on App Store installs only)
     /// Returns `false` on any failure so the caller falls back gracefully.
     private func verifyLegacyWithServer() async -> Bool {
+        #if DEBUG
+        guard !sandboxPurchaseQAEnabled else { return false }
+        #endif
         // Approach 1: Send AppTransaction JWS to the worker.
         // Available on both TestFlight and App Store. The worker decodes the
         // signed payload and checks originalAppVersion without needing Apple's
@@ -1073,7 +1084,7 @@ final class PurchaseManager: ObservableObject {
 
     /// Resets the free-export counter to zero (debug/testing only).
     func resetFreeExports() {
-        nativePlanningCanExport = false
+        cachedNativePlanningCanExport = false
         defer { refreshNativePlanningExportEligibility() }
         keychain.writeInt(key: freeExportsUsedKey, value: 0)
         keychain.writeString(key: durableExportUseIDsKey, value: "")
@@ -1085,7 +1096,7 @@ final class PurchaseManager: ObservableObject {
     /// regardless of how many dates or files were written.
     /// No-op when the user is already unlocked.
     func recordExportUse(offerGuidance: Bool = true) {
-        nativePlanningCanExport = false
+        cachedNativePlanningCanExport = false
         defer { refreshNativePlanningExportEligibility() }
         guard !isUnlocked, freeExportsUsed < Self.freeExportLimit else { return }
         if TestMode.isUITesting {
@@ -1098,7 +1109,6 @@ final class PurchaseManager: ObservableObject {
             )
         }
         objectWillChange.send()
-        analytics.trackFreeExportUsed(quotaState: analyticsQuotaState)
         if offerGuidance { evaluateUpgradePrompt() }
     }
 
@@ -1106,7 +1116,7 @@ final class PurchaseManager: ObservableObject {
     /// The complete ID set is one atomic Keychain value and contributes to the
     /// computed quota, so direct and scheduled jobs remain safe to retry.
     func recordExportUse(jobID: UUID) throws {
-        nativePlanningCanExport = false
+        cachedNativePlanningCanExport = false
         defer { refreshNativePlanningExportEligibility() }
         guard !isUnlocked else { return }
         var identifiers = durableExportUseIDs
@@ -1118,7 +1128,6 @@ final class PurchaseManager: ObservableObject {
             value: identifiers.sorted().joined(separator: ",")
         )
         objectWillChange.send()
-        analytics.trackFreeExportUsed(quotaState: analyticsQuotaState)
         evaluateUpgradePrompt()
     }
 
@@ -1164,11 +1173,7 @@ final class PurchaseManager: ObservableObject {
                       Self.purchaseOption(for: tx.productID) != nil else { continue }
                 await tx.finish()
 
-                if let entitlement = self.entitlementCandidate(from: tx, source: "transactionUpdates") {
-                    self.recordUnlockedEntitlement(entitlement)
-                } else {
-                    await self.refreshStatus()
-                }
+                await self.refreshStatus()
             }
         }
     }
@@ -1347,23 +1352,6 @@ final class PurchaseManager: ObservableObject {
         originalPurchaseDate < grandfatherCutoffDate
     }
 
-    private func analyticsErrorCategory(for error: Error) -> PricingAnalyticsErrorCategory {
-        let nsError = error as NSError
-        if nsError.domain == NSURLErrorDomain {
-            switch nsError.code {
-            case NSURLErrorNotConnectedToInternet,
-                 NSURLErrorNetworkConnectionLost,
-                 NSURLErrorTimedOut,
-                 NSURLErrorCannotFindHost,
-                 NSURLErrorCannotConnectToHost:
-                return .networkUnavailable
-            default:
-                return .unknown
-            }
-        }
-
-        return .unknown
-    }
 }
 
 #endif

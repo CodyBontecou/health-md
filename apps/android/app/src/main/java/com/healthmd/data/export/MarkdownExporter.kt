@@ -3,6 +3,7 @@ package com.healthmd.data.export
 import com.healthmd.domain.model.*
 import java.util.Locale
 import kotlin.time.Duration
+import kotlin.time.toKotlinDuration
 
 class MarkdownExporter {
 
@@ -12,6 +13,7 @@ class MarkdownExporter {
         groupByCategory: Boolean = true,
         customization: FormatCustomization = FormatCustomization(),
         includeGranularData: Boolean = false,
+        detail: ExportDetailSelection = ExportDetailSelection.uniform(includeGranularData),
     ): String {
         val dateString = customization.dateFormat.format(data.date)
         val converter = customization.unitConverter
@@ -23,7 +25,7 @@ class MarkdownExporter {
 
         val markdown = buildString {
             if (includeMetadata) {
-                append(buildFrontmatter(data, dateString, customization))
+                append(buildFrontmatter(data, dateString, customization, detail))
             }
             data.compatibilityProvenance?.let { provenance ->
                 append("> All-connected provenance: attempted=${provenance.providerIdsAttempted.joinToString(",")}")
@@ -63,10 +65,10 @@ class MarkdownExporter {
             }
 
             if (template.style == MarkdownTemplateStyle.CUSTOM) {
-                append(renderCustomTemplate(data, dateString, customization, converter, bullet, headerPrefix, emojis, includeGranularData))
+                append(renderCustomTemplate(data, dateString, customization, converter, bullet, headerPrefix, emojis, detail))
             } else {
                 append("# Health Data \u2014 $dateString\n")
-                append(renderAllSections(data, converter, bullet, headerPrefix, emojis, customization, includeGranularData))
+                append(renderAllSections(data, converter, bullet, headerPrefix, emojis, customization, detail))
             }
         }
 
@@ -77,13 +79,14 @@ class MarkdownExporter {
         data: HealthData,
         dateString: String,
         customization: FormatCustomization,
+        detail: ExportDetailSelection,
     ): String = buildString {
         val fmConfig = customization.frontmatterConfig
         val converter = customization.unitConverter
 
         append("---\n")
         if (customization.compatibilitySchemaProfile == CompatibilitySchemaProfile.ANDROID_ANALYTICAL_V5) {
-            append("healthmd_schema_profile: android-analytical-v5\n")
+            append("healthmd_schema_profile: ${DailyRecordSchemaProfile.forWriter(customization, detail).publicProfileId}\n")
         }
         if (fmConfig.includeDate) {
             append("${fmConfig.customDateKey}: $dateString\n")
@@ -125,12 +128,15 @@ class MarkdownExporter {
         headerPrefix: String,
         emojis: SectionEmojis,
         customization: FormatCustomization,
-        includeGranularData: Boolean = false,
+        detail: ExportDetailSelection = ExportDetailSelection.SUMMARY,
     ): String = buildString {
         if (data.sleep.hasData) {
             append("\n$headerPrefix ${emojis.sleep}Sleep\n\n")
             append(sleepMetrics(data.sleep, bullet))
-            if (includeGranularData && data.sleep.stages.isNotEmpty()) {
+            if (detail.sleepSessionList && data.sleep.sessions.isNotEmpty()) {
+                append(sleepSessionsTable(data.sleep.sessions, customization))
+            }
+            if (detail.sleepStages && data.sleep.stages.isNotEmpty()) {
                 append("\n| Start | End | Stage |\n|-------|-----|-------|\n")
                 for (stage in data.sleep.stages) {
                     append("| ${customization.timeFormat.format(stage.startTime)} | ${customization.timeFormat.format(stage.endTime)} | ${stage.stage} |\n")
@@ -140,23 +146,31 @@ class MarkdownExporter {
         if (data.activity.hasData) {
             append("\n$headerPrefix ${emojis.activity}Activity\n\n")
             append(activityMetrics(data.activity, bullet, converter))
-            if (includeGranularData && data.activity.stepSamples.isNotEmpty()) {
+            if (detail.activity && data.activity.stepSamples.isNotEmpty()) {
                 append("\n| Time | Steps |\n|------|-------|\n")
                 for (sample in data.activity.stepSamples) {
                     append("| ${customization.timeFormat.format(sample.time)} | ${sample.value.toInt()} |\n")
                 }
             }
+            if (detail.activity && DailyRecordSchemaProfile.forWriter(customization, detail).writesDetailExpansion) {
+                val a = data.activity
+                appendExpansionTable("Active Calories (kcal)", a.activeCaloriesSamples, customization)
+                appendExpansionTable("Total Calories (kcal)", a.totalCaloriesSamples, customization)
+                appendExpansionTable("Distance (m)", a.distanceSamples, customization)
+                appendExpansionTable("Flights Climbed", a.floorsSamples, customization)
+                appendExpansionTable("Elevation Gained (m)", a.elevationSamples, customization)
+            }
         }
         if (data.heart.hasData) {
             append("\n$headerPrefix ${emojis.heart}Heart\n\n")
             append(heartMetrics(data.heart, bullet))
-            if (includeGranularData && data.heart.samples.isNotEmpty()) {
+            if (detail.heart && data.heart.samples.isNotEmpty()) {
                 append("\n| Time | BPM |\n|------|-----|\n")
                 for (sample in data.heart.samples) {
                     append("| ${customization.timeFormat.format(sample.time)} | ${sample.value.toInt()} |\n")
                 }
             }
-            if (includeGranularData && data.heart.hrvSamples.isNotEmpty()) {
+            if (detail.heart && data.heart.hrvSamples.isNotEmpty()) {
                 append("\n| Time | HRV (ms) |\n|------|----------|\n")
                 for (sample in data.heart.hrvSamples) {
                     append("| ${customization.timeFormat.format(sample.time)} | ${String.format(Locale.US, "%.1f", sample.value)} |\n")
@@ -167,17 +181,29 @@ class MarkdownExporter {
             append("\n$headerPrefix ${emojis.vitals}Vitals\n\n")
             append(vitalsMetrics(data.vitals, bullet, converter, customization.includeAndroidNativeFields ||
                 customization.compatibilitySchemaProfile == CompatibilitySchemaProfile.ANDROID_ANALYTICAL_V5))
-            if (includeGranularData) {
+            if (detail.vitals) {
                 appendVitalsSamples(data.vitals, customization, converter)
             }
         }
         if (data.body.hasData) {
             append("\n$headerPrefix ${emojis.body}Body\n\n")
             append(bodyMetrics(data.body, bullet, converter))
+            if (detail.body && DailyRecordSchemaProfile.forWriter(customization, detail).writesDetailExpansion) {
+                val b = data.body
+                appendExpansionTable("Weight (kg)", b.weightSamples, customization)
+                appendExpansionTable("Height (m)", b.heightSamples, customization)
+                appendExpansionTable("Body Fat (%)", b.bodyFatSamples, customization, scale = 100.0)
+                appendExpansionTable("Lean Body Mass (kg)", b.leanBodyMassSamples, customization)
+                appendExpansionTable("Bone Mass (kg)", b.boneMassSamples, customization)
+                appendExpansionTable("Body Water Mass (kg)", b.bodyWaterMassSamples, customization)
+            }
         }
         if (data.nutrition.hasData) {
             append("\n$headerPrefix ${emojis.nutrition}Nutrition\n\n")
             append(nutritionMetrics(data.nutrition, bullet, converter))
+            if (detail.nutrition && DailyRecordSchemaProfile.forWriter(customization, detail).writesDetailExpansion) {
+                appendExpansionTable("Water (L)", data.nutrition.hydrationSamples, customization)
+            }
         }
         if (data.mobility.hasData) {
             append("\n$headerPrefix ${emojis.mobility}Mobility\n\n")
@@ -202,6 +228,25 @@ class MarkdownExporter {
         if (data.workouts.isNotEmpty()) {
             append("\n$headerPrefix ${emojis.workouts}Workouts\n\n")
             append(workoutsMarkdown(data.workouts, bullet, customization))
+        }
+    }
+
+    /**
+     * android-analytical-v7 record table, one row per source record. Canonical units; values keep
+     * up to three decimals so small records (for example 0.25 L) are not rounded away.
+     */
+    private fun StringBuilder.appendExpansionTable(
+        valueHeader: String,
+        samples: List<TimestampedSample>,
+        customization: FormatCustomization,
+        scale: Double = 1.0,
+    ) {
+        if (samples.isEmpty()) return
+        append("\n| Time | $valueHeader |\n|------|${"-".repeat(valueHeader.length + 2)}|\n")
+        for (sample in samples) {
+            val value = java.math.BigDecimal.valueOf(sample.value * scale)
+                .setScale(3, java.math.RoundingMode.HALF_UP).stripTrailingZeros().toPlainString()
+            append("| ${customization.timeFormat.format(sample.time)} | $value |\n")
         }
     }
 
@@ -250,7 +295,7 @@ class MarkdownExporter {
         bullet: String,
         headerPrefix: String,
         emojis: SectionEmojis,
-        includeGranularData: Boolean = false,
+        detail: ExportDetailSelection = ExportDetailSelection.SUMMARY,
     ): String {
         var rendered = customization.markdownTemplate.customTemplate
 
@@ -289,7 +334,7 @@ class MarkdownExporter {
             "planned_workout_list" to plannedWorkoutsMarkdown(data.plannedWorkouts, bullet, customization),
             "medical_resources_metrics" to medicalResourcesMarkdown(data.medicalResources, bullet),
             "workout_list" to workoutsMarkdown(data.workouts, bullet, customization),
-            "metrics" to renderAllSections(data, converter, bullet, headerPrefix, emojis, customization, includeGranularData),
+            "metrics" to renderAllSections(data, converter, bullet, headerPrefix, emojis, customization, detail),
         )
         for ((key, value) in replacements) {
             rendered = rendered.replace("{{$key}}", value)
@@ -298,6 +343,31 @@ class MarkdownExporter {
     }
 
     // MARK: - Section renderers
+
+    /**
+     * One row per Health Connect source session. Full local date and time plus the source offset
+     * keep overnight sessions and naps unambiguous; the daily bedtime/wake pair above is an
+     * envelope and does not identify separate sessions.
+     */
+    private fun sleepSessionsTable(sessions: List<SleepSessionEntry>, customization: FormatCustomization): String = buildString {
+        fun stamp(local: java.time.LocalDateTime, exact: ExactSourceTimestamp?): String {
+            val text = "${customization.dateFormat.format(local.toLocalDate())} ${customization.timeFormat.format(local)}"
+            val offset = exact?.offset ?: return text
+            return "$text (UTC${if (offset == "Z") "+00:00" else offset})"
+        }
+        append("\n| Session start | Session end | Duration | Source |\n|---------------|-------------|----------|--------|\n")
+        for (session in sessions.sortedWith(compareBy({ it.startTime }, { it.endTime }))) {
+            // Elapsed time comes from exact instants so a DST transition never skews the duration.
+            val start = session.exactStartTime?.instant()
+            val end = session.exactEndTime?.instant()
+            val duration = if (start != null && end != null) java.time.Duration.between(start, end)
+                else java.time.Duration.between(session.startTime, session.endTime)
+            val formatted = if (duration.isNegative) "" else ExportHelpers.formatDuration(duration.toKotlinDuration())
+            val source = session.title?.let { title -> listOfNotNull(title, session.source).joinToString(" · ") }
+                ?: session.source.orEmpty()
+            append("| ${stamp(session.startTime, session.exactStartTime)} | ${stamp(session.endTime, session.exactEndTime)} | $formatted | ${source.replace("|", "\\|")} |\n")
+        }
+    }
 
     private fun sleepMetrics(sleep: SleepData, bullet: String): String = buildString {
         if (sleep.totalDuration > Duration.ZERO) append("$bullet **Total:** ${ExportHelpers.formatDuration(sleep.totalDuration)}\n")

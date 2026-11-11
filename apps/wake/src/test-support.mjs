@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 
 export class TestD1 {
   sqlite = new DatabaseSync(":memory:");
-  constructor(migrations = ["0001_init.sql"]) {
+  constructor(migrations = ["0001_init.sql", "0002_delegated_sync_fcm.sql"]) {
     for (const migration of migrations) this.applyMigration(migration);
   }
   applyMigration(migration) {

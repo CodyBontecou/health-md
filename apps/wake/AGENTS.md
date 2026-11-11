@@ -18,8 +18,10 @@ or pairing secrets.
 
 The worker, Rust client, and iPhone service implement one authenticated wake flow. Before changing
 HMAC construction, request fields, rate limits, enrollment, notification copy, or endpoints, update
-and validate the RFC, direct-protocol documentation, Rust tests, and Apple tests together. Android
-FCM is RFC-0005 P3 and remains planned; do not claim it is available.
+and validate the RFC, direct-protocol documentation, Rust tests, and Apple tests together. FCM carries
+only delegated sync doorbells (clinic sync requests); Android Direct CLI wake is RFC-0005 P3 and
+remains planned, so do not claim it is available. Delegated doorbells must never store or display
+holder (clinic) metadata.
 
 ## Commands
 

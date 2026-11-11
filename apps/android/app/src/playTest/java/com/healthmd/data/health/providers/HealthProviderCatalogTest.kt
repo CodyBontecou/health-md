@@ -9,7 +9,7 @@ import org.junit.Test
 class HealthProviderCatalogTest {
 
     @Test
-    fun providerCatalog_includesSupportedProvidersAndExcludesGoogleFit() {
+    fun providerCatalog_enablesOnlyHealthConnectAndWHOOP() {
         val catalog = HealthProviderCatalog(
             context = mockk<Context>(relaxed = true),
             definitions = PlayHealthProviderDefinitions.all(),
@@ -17,16 +17,7 @@ class HealthProviderCatalogTest {
         val definitions = catalog.definitions
 
         val displayNames = definitions.map { it.displayName }
-        assertThat(displayNames).containsAtLeast(
-            "Samsung Health",
-            "Huawei Health",
-            "Fitbit",
-            "Garmin Connect",
-            "Withings",
-            "Oura",
-            "Polar Flow",
-            "WHOOP",
-        )
+        assertThat(displayNames).containsExactly("Health Connect", "WHOOP")
         assertThat(displayNames).doesNotContain("Google Fit")
 
         val knownPackageNames = definitions.flatMap { definition ->

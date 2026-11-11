@@ -154,6 +154,42 @@ final class ConnectedCorpusPartitionFileTests: XCTestCase {
         XCTAssertEqual(try encoder.encode(decoded), try encoder.encode(payload))
     }
 
+    func testConnectedHealthDayCodableFixtureAdditivelyDecodesOptionalSleepAttribution() throws {
+        let date = Date(timeIntervalSince1970: 1_700_000_000)
+        let payload = ConnectedCorpusHealthDayPayload(
+            sourceDate: date,
+            isRequestedDate: true,
+            record: HealthData(
+                date: date,
+                timeContext: ExportTimeContext(
+                    calendarTimeZoneIdentifier: "America/New_York",
+                    sleepDayAttribution: .morningEnds
+                )
+            ),
+            externalDailyRecords: [],
+            failure: nil
+        )
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
+        let connectedFixture = try encoder.encode(payload)
+        let current = try JSONDecoder().decode(ConnectedCorpusHealthDayPayload.self, from: connectedFixture)
+        XCTAssertEqual(current.record?.timeContext.sleepDayAttribution, .morningEnds)
+
+        var legacyObject = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: connectedFixture) as? [String: Any]
+        )
+        var record = try XCTUnwrap(legacyObject["record"] as? [String: Any])
+        var timeContext = try XCTUnwrap(record["timeContext"] as? [String: Any])
+        XCTAssertEqual(timeContext.removeValue(forKey: "sleepDayAttribution") as? String, "morning_ends")
+        record["timeContext"] = timeContext
+        legacyObject["record"] = record
+        let legacyFixture = try JSONSerialization.data(withJSONObject: legacyObject, options: [.sortedKeys])
+        let legacy = try JSONDecoder().decode(ConnectedCorpusHealthDayPayload.self, from: legacyFixture)
+
+        XCTAssertNil(legacy.record?.timeContext.sleepDayAttribution)
+        XCTAssertEqual(legacy.record?.timeContext.calendarTimeZoneIdentifier, "America/New_York")
+    }
+
     func testStreamableApplicationItemKeepsLargeMetadataDataFileBacked() throws {
         let date = Date(timeIntervalSince1970: 1_700_000_000)
         let bytes = Data((0..<(2 * 1_024 * 1_024 + 1)).map { UInt8(truncatingIfNeeded: $0) })
@@ -440,7 +476,8 @@ final class ConnectedCorpusPartitionFileTests: XCTestCase {
             externalDailyRecords: [],
             failure: nil
         )
-        let encodeBaseline = residentBytes()
+        let encodeBaselineSnapshot = Self.currentResidentSnapshot()
+        let encodeBaseline = encodeBaselineSnapshot.footprint
         let encodeSampler = ResidentSampler()
         encodeSampler.start()
         let file = try ConnectedCorpusApplicationItemCodec.encode(
@@ -454,7 +491,8 @@ final class ConnectedCorpusPartitionFileTests: XCTestCase {
         XCTAssertLessThan(
             encodeOverhead,
             32 * 1_024 * 1_024,
-            "Production HealthData encoding must not create an item-sized Data copy"
+            "Production HealthData encoding must not create an item-sized Data copy; " +
+                "baseline: \(encodeBaselineSnapshot.summary); peak: \(encodeSampler.peakSnapshot.summary)"
         )
         source = nil
 
@@ -886,7 +924,25 @@ final class ConnectedCorpusPartitionFileTests: XCTestCase {
         Self.currentResidentBytes()
     }
 
+    nonisolated private struct ResidentSnapshot: Sendable {
+        let footprint: UInt64
+        let resident: UInt64
+        let internalBytes: UInt64
+        let externalBytes: UInt64
+        let compressed: UInt64
+        let result: kern_return_t
+
+        var summary: String {
+            "footprint=\(footprint) resident=\(resident) internal=\(internalBytes) " +
+                "external=\(externalBytes) compressed=\(compressed) task_info=\(result)"
+        }
+    }
+
     nonisolated private static func currentResidentBytes() -> UInt64 {
+        currentResidentSnapshot().footprint
+    }
+
+    nonisolated private static func currentResidentSnapshot() -> ResidentSnapshot {
         var info = task_vm_info_data_t()
         var count = mach_msg_type_number_t(
             MemoryLayout<task_vm_info_data_t>.size / MemoryLayout<natural_t>.size
@@ -901,7 +957,11 @@ final class ConnectedCorpusPartitionFileTests: XCTestCase {
                 )
             }
         }
-        return result == KERN_SUCCESS ? UInt64(info.phys_footprint) : 0
+        return ResidentSnapshot(
+            footprint: result == KERN_SUCCESS ? UInt64(info.phys_footprint) : 0,
+            resident: UInt64(info.resident_size), internalBytes: UInt64(info.internal),
+            externalBytes: UInt64(info.external), compressed: UInt64(info.compressed), result: result
+        )
     }
 
     // The lock owns all synchronization; inheriting the test target's default
@@ -909,18 +969,30 @@ final class ConnectedCorpusPartitionFileTests: XCTestCase {
     nonisolated private final class ResidentSampler: @unchecked Sendable {
         private let lock = NSLock()
         private var running = false
-        private var peak: UInt64 = 0
+        // Keep the other ledgers from the same observation as the existing footprint peak.
+        // They diagnose process-wide accounting; they do not attribute allocations to the codec.
+        private var peak = ConnectedCorpusPartitionFileTests.currentResidentSnapshot()
         private let group = DispatchGroup()
 
         var peakBytes: UInt64 {
             lock.lock(); defer { lock.unlock() }
+            return peak.footprint
+        }
+
+        var peakSnapshot: ResidentSnapshot {
+            lock.lock(); defer { lock.unlock() }
             return peak
+        }
+
+        private func observe() {
+            let sample = ConnectedCorpusPartitionFileTests.currentResidentSnapshot()
+            if sample.footprint > peak.footprint { peak = sample }
         }
 
         func start() {
             lock.lock()
             running = true
-            peak = ConnectedCorpusPartitionFileTests.currentResidentBytes()
+            peak = ConnectedCorpusPartitionFileTests.currentResidentSnapshot()
             lock.unlock()
             group.enter()
             // XCTest runs this synchronous test at user-interactive QoS. Match
@@ -931,10 +1003,7 @@ final class ConnectedCorpusPartitionFileTests: XCTestCase {
                 while true {
                     lock.lock()
                     let shouldContinue = running
-                    peak = max(
-                        peak,
-                        ConnectedCorpusPartitionFileTests.currentResidentBytes()
-                    )
+                    observe()
                     lock.unlock()
                     if !shouldContinue { return }
                     usleep(2_000)
@@ -945,7 +1014,7 @@ final class ConnectedCorpusPartitionFileTests: XCTestCase {
         func stop() {
             lock.lock()
             running = false
-            peak = max(peak, ConnectedCorpusPartitionFileTests.currentResidentBytes())
+            observe()
             lock.unlock()
             group.wait()
         }

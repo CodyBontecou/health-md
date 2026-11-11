@@ -156,6 +156,143 @@ impl<'trust> BridgeSession<'trust> {
         Box::pin(owner.request_cancellation_inner()).await
     }
 
+    /// Reconcile an existing accepted owner or uncertain original send intent. Only an
+    /// authenticated native acceptance may promote intent; no Execute or new job is sent.
+    pub(super) async fn resume_pre_manifest_execution_inner<'s, 'h>(
+        &'s mut self,
+        store: &'h HostAuthorityStore,
+        job: &ControlUuid,
+        clock: &'h dyn PlanningClock,
+    ) -> Result<HostExecution<'s, 'h, 'trust>, ClientError> {
+        if self.send_interrupted {
+            return Err(Error::BindingChanged.into());
+        }
+        self.send_interrupted = true;
+        let mut admission = OutputAdmission::open_retained_for_resume(store, job, clock).await?;
+        let (request, expected) = admission.resumable_binding()?;
+        let expiry = admission.resume_observation_expiry()?;
+        let accepted = self
+            .read_retained_acceptance(store, &request, &admission, &expiry, clock)
+            .await?;
+        if let Some(original) = expected {
+            if accepted != original {
+                return Err(Error::BindingChanged.into());
+            }
+        } else {
+            let trust = self.trust_fence;
+            let expected = &self.expected_trust;
+            let selected = self.requested_device;
+            let cancellation = &self.cancellation;
+            let host = store
+                .authorization(
+                    &request.plan.intent.peer,
+                    &request.plan.intent.destination.binding_id,
+                    Some(&request.plan.authority_references.host),
+                    clock,
+                )
+                .await?;
+            admission
+                .persist_reconciled_acceptance(
+                    &accepted,
+                    clock,
+                    cancellation,
+                    &host.delegation.expires_at,
+                    || async {
+                        store
+                            .require_output_current(
+                                &request,
+                                Some(&accepted.expires_at),
+                                clock,
+                                || async {
+                                    if cancellation.is_cancelled() {
+                                        return Err(ClientError::WaitCancelled);
+                                    }
+                                    trust.require_current(selected, expected).await?;
+                                    if cancellation.is_cancelled() {
+                                        return Err(ClientError::WaitCancelled);
+                                    }
+                                    Ok(())
+                                },
+                            )
+                            .await
+                    },
+                )
+                .await?;
+        }
+        admission.require_resumable_current(clock, &self.cancellation)?;
+        let owner = HostAcceptedExecution {
+            bridge: self,
+            store,
+            clock,
+            request,
+            accepted,
+            admission,
+        };
+        owner.require_current().await?;
+        Box::pin(owner.wait_manifest_inner()).await
+    }
+
+    async fn read_retained_acceptance(
+        &mut self,
+        store: &HostAuthorityStore,
+        request: &ExecuteRequest,
+        admission: &OutputAdmission,
+        expiry: &v4::UtcTimestamp,
+        clock: &dyn PlanningClock,
+    ) -> Result<ExecutionReceipt, ClientError> {
+        if self.peer != request.plan.intent.peer {
+            return Err(Error::BindingChanged.into());
+        }
+        let resume = v4::ResumeRequest {
+            schema: v4::ResumeRequestSchema::HealthmdAgentResumeRequest,
+            schema_version: 1,
+            job_id: request.job_id.clone(),
+            request_sha256: document_digest(request)?,
+            manifest_sha256: Digest("0".repeat(64)),
+            frontier_sha256: Digest("0".repeat(64)),
+            committed_partition_count: 0,
+            peer: request.plan.intent.peer.clone(),
+            binding: approval_binding(&request.plan),
+            destination: request.plan.intent.destination.clone(),
+        };
+        resume.validate_shape()?;
+        let cancellation = &self.cancellation;
+        let trust = self.trust_fence;
+        let expected = &self.expected_trust;
+        let selected = self.requested_device;
+        let current = || async {
+            store
+                .require_output_current(request, Some(expiry), clock, || async {
+                    if cancellation.is_cancelled() {
+                        return Err(ClientError::WaitCancelled);
+                    }
+                    trust.require_current(selected, expected).await?;
+                    if cancellation.is_cancelled() {
+                        return Err(ClientError::WaitCancelled);
+                    }
+                    Ok(())
+                })
+                .await?;
+            admission.require_resumable_current(clock, cancellation)
+        };
+        current().await?;
+        self.channel
+            .send_v4_guarded(
+                &Envelope::new(Message::ResumeRequest(Box::new(resume))),
+                self.negotiation,
+                current,
+            )
+            .await?;
+        current().await?;
+        let received = self.channel.receive_v4(self.negotiation).await?.message;
+        current().await?;
+        let Message::ExecutionReceipt(receipt) = execution_response(received, &request.request_id)?
+        else {
+            return Err(ClientError::UnexpectedMessage);
+        };
+        Ok(*receipt)
+    }
+
     async fn begin_accepted_execution_inner<'s, 'h>(
         &'s mut self,
         store: &'h HostAuthorityStore,
@@ -250,7 +387,31 @@ impl HostAuthorityStore {
         job: &ControlUuid,
         clock: &dyn PlanningClock,
     ) -> Result<SourceStopConfirmation, ClientError> {
-        let receipt = crate::agent_host::output::read_source_confirmation(self, job, clock).await?;
+        let receipt = Box::pin(crate::agent_host::output::read_source_confirmation(
+            self,
+            job,
+            clock,
+            || async { Ok(()) },
+        ))
+        .await?;
+        Ok(SourceStopConfirmation { receipt })
+    }
+    /// Historical source facts with a caller fence after the last protected-key callback,
+    /// followed by synchronous verification of the reader's pinned local evidence.
+    pub(crate) async fn retained_source_stop_confirmation_fenced<F, Fut>(
+        &self,
+        job: &ControlUuid,
+        clock: &dyn PlanningClock,
+        fence: F,
+    ) -> Result<SourceStopConfirmation, ClientError>
+    where
+        F: FnMut() -> Fut + Copy,
+        Fut: std::future::Future<Output = Result<(), ClientError>>,
+    {
+        let receipt = Box::pin(crate::agent_host::output::read_source_confirmation(
+            self, job, clock, fence,
+        ))
+        .await?;
         Ok(SourceStopConfirmation { receipt })
     }
 }
@@ -450,7 +611,8 @@ impl<'s, 'h, 'trust> HostAcceptedExecution<'s, 'h, 'trust> {
                 },
             )
             .await?;
-        self.admission.require_current()
+        self.admission
+            .require_resumable_current(self.clock, &self.bridge.cancellation)
     }
 
     async fn wait_manifest_inner(self) -> Result<HostExecution<'s, 'h, 'trust>, ClientError> {
@@ -880,6 +1042,84 @@ impl Drop for PrivateOutputFile {
 #[path = "agent_transfer.rs"]
 mod transfer;
 pub use transfer::ReceivedArtifacts;
+pub(crate) use transfer::TransferGuard;
 
 #[path = "agent_confirmation.rs"]
 mod confirmation;
+
+#[path = "agent_output_cancellation.rs"]
+mod output_cancellation;
+pub use output_cancellation::HostPendingOutputCancellation;
+
+impl BridgeSession<'_> {
+    pub(crate) fn retained_stop_cancellation_token(&self) -> tokio_util::sync::CancellationToken {
+        self.cancellation.clone()
+    }
+    pub(crate) async fn cancel_retained_uncertain(
+        &mut self,
+        store: &HostAuthorityStore,
+        job: &ControlUuid,
+        clock: &dyn PlanningClock,
+    ) -> Result<SourceStopConfirmation, ClientError> {
+        let cancellation = self.cancellation.clone();
+        let timeout = self.timeout;
+        tokio::select! { biased;
+            () = cancellation.cancelled() => Err(ClientError::WaitCancelled),
+            result = tokio::time::timeout(timeout, Box::pin(self.cancel_retained_uncertain_inner(store, job, clock))) => {
+                result.map_err(|_| ClientError::TimedOut)?
+            }
+        }
+    }
+    async fn cancel_retained_uncertain_inner(
+        &mut self,
+        store: &HostAuthorityStore,
+        job: &ControlUuid,
+        clock: &dyn PlanningClock,
+    ) -> Result<SourceStopConfirmation, ClientError> {
+        if self.send_interrupted {
+            return Err(Error::BindingChanged.into());
+        }
+        self.send_interrupted = true;
+        let trust = self.trust_fence;
+        let expected = &self.expected_trust;
+        let selected = self.requested_device;
+        let cancellation = &self.cancellation;
+        let fence = || async {
+            if cancellation.is_cancelled() {
+                return Err(ClientError::WaitCancelled);
+            }
+            trust.require_current(selected, expected).await?;
+            if cancellation.is_cancelled() {
+                return Err(ClientError::WaitCancelled);
+            }
+            Ok(())
+        };
+        let mut pending = crate::agent_host::output::UncertainStop::prepare(
+            store,
+            &self.peer,
+            job,
+            clock,
+            cancellation,
+            fence,
+        )
+        .await?;
+        let request = pending.request()?;
+        self.channel
+            .send_v4_guarded(
+                &Envelope::new(Message::CancelRequest(Box::new(request))),
+                self.negotiation,
+                || pending.require_current(clock, fence),
+            )
+            .await?;
+        pending.require_current(clock, fence).await?;
+        let Message::ExecutionReceipt(receipt) =
+            self.channel.receive_v4(self.negotiation).await?.message
+        else {
+            return Err(ClientError::UnexpectedMessage);
+        };
+        pending
+            .confirm(&receipt, clock, cancellation, fence)
+            .await?;
+        Ok(SourceStopConfirmation { receipt: *receipt })
+    }
+}

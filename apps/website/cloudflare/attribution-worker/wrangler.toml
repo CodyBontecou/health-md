@@ -7,11 +7,13 @@ routes = [
   { pattern = "healthmd.app/v/*", zone_name = "healthmd.app" },
   { pattern = "www.healthmd.app/v/*", zone_name = "healthmd.app" },
   { pattern = "healthmd.app/v1/installs*", zone_name = "healthmd.app" },
-  { pattern = "www.healthmd.app/v1/installs*", zone_name = "healthmd.app" }
+  { pattern = "www.healthmd.app/v1/installs*", zone_name = "healthmd.app" },
+  { pattern = "healthmd.app/v1/web-events*", zone_name = "healthmd.app" },
+  { pattern = "www.healthmd.app/v1/web-events*", zone_name = "healthmd.app" }
 ]
 
 [triggers]
-# Delete click/install attribution older than 13 months and rate windows older than 24 hours.
+# Expire click/install attribution and website counters within their retention periods.
 crons = ["17 4 * * *"]
 
 [vars]
@@ -23,10 +25,8 @@ DOWNLOAD_PAGE_URL = "https://healthmd.app/"
 #   npx wrangler secret put CPP_OBSIDIAN_PPID
 #   npx wrangler secret put CPP_PRIVACY_PPID
 #   npx wrangler secret put CPP_CSV_PPID
-# Extractable abuse-throttling tokens for Android install ingest. During rotation,
-# keep the old value in the PREVIOUS secret until clients have updated:
-#   npx wrangler secret put CAMPAIGN_ATTRIBUTION_INGEST_TOKEN
-#   npx wrangler secret put CAMPAIGN_ATTRIBUTION_INGEST_TOKEN_PREVIOUS
+# App-install ingestion is retired; legacy POSTs are discarded without parsing or storage.
+# Keep the route for old clients. Earlier dedicated ingest secrets can be removed after approved cutover.
 
 [[d1_databases]]
 binding = "DB"

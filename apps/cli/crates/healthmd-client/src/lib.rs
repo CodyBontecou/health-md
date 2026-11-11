@@ -24,6 +24,8 @@ pub mod packet;
 pub mod raw_receiver;
 pub mod secure_channel;
 pub mod storage;
+#[cfg(test)]
+mod test_support;
 pub mod trust;
 pub mod v2_job;
 pub mod v2_receiver;
@@ -97,6 +99,8 @@ pub enum ClientError {
     JobBusy(uuid::Uuid),
     #[error("the direct transfer is invalid: {0}")]
     InvalidTransfer(String),
+    #[error("{0}")]
+    ExportRejected(ExportRejection),
     #[error("the direct export was cancelled")]
     Cancelled,
     #[error("direct export {0} paused before completion")]
@@ -119,3 +123,30 @@ mod agent_test_support;
 
 #[cfg(all(test, unix))]
 mod agent_retained_test_support;
+/// Safe typed metadata from an authenticated, validated protocol-v2 export denial.
+/// Peer message text and details are deliberately excluded from public diagnostics.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct ExportRejection {
+    pub code: healthmd_protocol::v2::ErrorCode,
+    pub phase: healthmd_protocol::v2::ExportPhase,
+    pub retryable: bool,
+}
+
+impl std::fmt::Display for ExportRejection {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let code = serde_json::json!(self.code);
+        let phase = serde_json::json!(self.phase);
+        write!(
+            formatter,
+            "The mobile source rejected the export (reason: {}, phase: {}, retryable: {}). ",
+            code.as_str().ok_or(std::fmt::Error)?,
+            phase.as_str().ok_or(std::fmt::Error)?,
+            self.retryable,
+        )?;
+        formatter.write_str(if self.code == healthmd_protocol::v2::ErrorCode::QuotaExhausted {
+            "Check export access and billing in Health.md before starting a new export."
+        } else {
+            "Check Direct CLI Access and export readiness in Health.md before starting a new export."
+        })
+    }
+}

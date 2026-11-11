@@ -20,7 +20,7 @@ Health.md asks Health Connect for read access to the health record types it can 
 ## Where to find it
 
 1. During onboarding, the **Health** page requests permissions (see ./onboarding.md).
-2. Later, the Export tab shows a permission-required notice with a **Grant** button whenever required access is missing.
+2. Later, the Export now screen shows a permission-required notice with a **Grant** button whenever required access is missing.
 3. Android Settings → Health → Health Connect also shows and manages the granted types.
 4. Health Connect's own "privacy policy" link opens Health.md's in-app rationale screen, which maps every requested permission group to the exported fields it produces.
 
@@ -42,7 +42,7 @@ With sleep granted and nothing else, a daily export contains sleep metrics and r
 ## Tips
 
 - Grant only the categories you want exported; partial grants are fine and expected.
-- To export data older than the standard read window, grant the separate **History** permission when Health Connect offers it (the Export tab surfaces a notice with its own grant button when history access is available but missing).
+- To export data older than the standard read window, grant the separate **History** permission when Health Connect offers it (the Export now screen surfaces a notice with its own grant button when history access is available but missing).
 - Read access is read-only: Health.md never writes to Health Connect.
 - Widgets may ask for the separate background-read permission so their refresh pulse can read Health Connect in the background; denying it keeps widgets working off data read while you use the app.
 

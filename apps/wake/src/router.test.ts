@@ -4,7 +4,7 @@ import { TestD1 } from "./test-support.mjs";
 import { APNS_TOKEN, NOW, USER_ID, WAKE_HASH, enrollment, jsonRequest } from "./test-helpers";
 
 let DB: TestD1;
-beforeEach(() => { DB = new TestD1(["0001_init.sql", "0002_fcm_v2.sql"]); vi.spyOn(Date, "now").mockReturnValue(NOW); });
+beforeEach(() => { DB = new TestD1(["0001_init.sql", "0002_delegated_sync_fcm.sql", "0002_fcm_v2.sql"]); vi.spyOn(Date, "now").mockReturnValue(NOW); });
 afterEach(() => { DB.sqlite.close(); vi.useRealTimers(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
 it("preserves liveness, unknown route, method and unconfigured D1 behavior", async () => {

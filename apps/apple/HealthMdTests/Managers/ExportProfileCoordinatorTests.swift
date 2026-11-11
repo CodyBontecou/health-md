@@ -610,6 +610,61 @@ final class ExportProfileCoordinatorTests: XCTestCase {
         XCTAssertEqual(coordinator.profileStore.profiles.count, 1)
     }
 
+    func testDeletingActiveProfileDoesNotWriteItsLiveSettingsIntoTheNextProfile() throws {
+        let settings = makeSettings()
+        settings.filenameFormat = "first-{date}"
+        let coordinator = makeCoordinator(settings: settings)
+        let firstID = try XCTUnwrap(coordinator.profileStore.activeProfileID)
+        coordinator.flushEdits()
+
+        // The copy becomes active; edit it live, then delete it.
+        let second = try XCTUnwrap(coordinator.addProfileDuplicatingActive())
+        settings.filenameFormat = "second-{date}"
+        XCTAssertTrue(coordinator.deleteProfile(id: second.id))
+
+        XCTAssertEqual(coordinator.profileStore.activeProfileID, firstID)
+        let first = try XCTUnwrap(coordinator.profileStore.profile(id: firstID))
+        XCTAssertEqual(first.settings.filenameFormat, "first-{date}",
+                       "the deleted profile's live edit must not land in the next profile")
+        XCTAssertEqual(settings.filenameFormat, "first-{date}",
+                       "live settings follow the newly active profile")
+    }
+
+    func testActiveProfileSubfolderSurvivesLiveSettingsFlush() throws {
+        let coordinator = makeCoordinator()
+        let activeID = try XCTUnwrap(coordinator.profileStore.activeProfileID)
+        let profile = try XCTUnwrap(coordinator.profileStore.profile(id: activeID))
+        var edited = profile.settings
+        edited.healthSubfolder = "QA"
+
+        _ = coordinator.updateProfile(
+            id: activeID,
+            name: profile.name,
+            target: profile.target,
+            folderVaultID: profile.folderVaultID,
+            apiEndpointID: profile.apiEndpointID,
+            settings: edited
+        )
+        // The debounced observer runs this after the editor's save applies live settings.
+        coordinator.flushEdits()
+
+        XCTAssertEqual(coordinator.profileStore.profile(id: activeID)?.settings.healthSubfolder, "QA",
+                       "a flush of the live settings must keep the profile's own subfolder")
+        let copy = try XCTUnwrap(coordinator.addProfileDuplicatingActive())
+        XCTAssertEqual(copy.settings.healthSubfolder, "QA", "a duplicate keeps the subfolder too")
+    }
+
+    func testDeletingInactiveProfileKeepsTheActiveProfile() throws {
+        let coordinator = makeCoordinator()
+        let firstID = try XCTUnwrap(coordinator.profileStore.activeProfileID)
+        let other = try XCTUnwrap(coordinator.duplicateProfile(id: firstID))
+        let third = try XCTUnwrap(coordinator.addProfileDuplicatingActive())
+
+        XCTAssertTrue(coordinator.deleteProfile(id: other.id))
+        XCTAssertEqual(coordinator.profileStore.activeProfileID, third.id,
+                       "deleting another profile must not switch the active one")
+    }
+
     func testDeleteProfileCompactsSharedSetupV2SidecarEndToEnd() throws {
         // Seed the native stores exactly as a v2 import leaves them: two
         // profiles, both carrying retained-intent sidecar rows and blocked
@@ -888,6 +943,28 @@ final class ExportProfileCoordinatorTests: XCTestCase {
         )
     }
 
+    func testCreateProfilePersistsChosenAPIEndpointInsteadOfActiveBinding() throws {
+        let coordinator = makeCoordinator()
+        let first = coordinator.destinationStore.upsertAPIEndpoint(
+            name: "First", endpointURLString: "https://first.example/export", bearerToken: "first-token")
+        let second = coordinator.destinationStore.upsertAPIEndpoint(
+            name: "Second", endpointURLString: "https://second.example/export", bearerToken: "second-token")
+        _ = coordinator.createProfile(name: "First API", target: .apiEndpoint, apiEndpointID: first.id)
+        let created = try XCTUnwrap(coordinator.createProfile(
+            name: "Second API", target: .apiEndpoint, apiEndpointID: second.id))
+        XCTAssertEqual(created.apiEndpointID, second.id)
+        XCTAssertEqual(coordinator.profileStore.activeProfileID, created.id)
+        XCTAssertEqual(ExportProfileStore(userDefaults: defaults).profile(id: created.id)?.apiEndpointID, second.id)
+        XCTAssertEqual(coordinator.apiExportSettingsForTesting.endpointURLString, "https://second.example/export")
+        XCTAssertEqual(coordinator.apiExportSettingsForTesting.bearerToken, "second-token")
+
+        let legacy = try XCTUnwrap(coordinator.createProfile(name: "Current endpoint", target: .apiEndpoint))
+        XCTAssertNil(legacy.apiEndpointID, "an explicit current-endpoint choice must not inherit another binding")
+        let folder = try XCTUnwrap(coordinator.createProfile(
+            name: "Folder", target: .localIPhoneFolder, apiEndpointID: second.id))
+        XCTAssertNil(folder.apiEndpointID)
+    }
+
     func testSuggestedProfileNameSkipsTakenNames() throws {
         let coordinator = makeCoordinator()
         XCTAssertEqual(coordinator.suggestedProfileName(), "Profile")
@@ -1134,6 +1211,24 @@ final class ExportProfileCoordinatorTests: XCTestCase {
                 settings: draft
             ).isEmpty,
             "a diverging draft template clears the overlap"
+        )
+    }
+
+    func testOverlapPreviewIgnoresTheProfileBeingEdited() throws {
+        let vaultManager = makeVaultManager()
+        let coordinator = makeCoordinator(vaultManager: vaultManager)
+        selectVaultFolder(in: vaultManager, path: "/Users/x/SharedVault")
+        coordinator.vaultFolderWasSelected()
+        let only = try XCTUnwrap(coordinator.profileStore.profiles.first)
+
+        XCTAssertTrue(
+            coordinator.overlapPreviewNames(
+                target: .localIPhoneFolder,
+                folderVaultID: nil,
+                settings: ExportSettingsSnapshot.from(coordinator.liveSettings),
+                editingProfileID: only.id
+            ).isEmpty,
+            "editing the only automation never overlaps with itself"
         )
     }
 }

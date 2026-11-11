@@ -75,7 +75,9 @@ function runNode(script, env) {
   return new Promise((resolve, reject) => {
     const child = spawn(process.execPath, [script], {
       cwd: pluginRepo,
-      env: { ...process.env, ...env },
+      // The pinned mock generator uses civil-date operations. Keep demo bytes
+      // identical on developer hosts and UTC CI runners.
+      env: { ...process.env, TZ: "UTC", ...env },
       stdio: ["ignore", "pipe", "pipe"],
     });
     let stdout = "";

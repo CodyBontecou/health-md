@@ -3,10 +3,45 @@
 Automated checks are necessary but do not replace physical iPhone and Android runs against the
 exact Health.md builds advertised by a release.
 
+## CLI change consumers
+
+For command/flag, JSON-output, or MCP-catalog changes, review these consumers before pushing:
+
+| Consumer | Owner / check |
+| --- | --- |
+| Parser, structured guidance, and errors | [`main.rs`](../crates/healthmd-cli/src/main.rs), CLI guidance tests, [`command-guidance.md`](command-guidance.md) |
+| CLI/MCP declarations and profiles | [`registry.rs`](../crates/healthmd-operations/src/registry.rs), [`catalog.rs`](../crates/healthmd-mcp/src/catalog.rs), `python3 scripts/update-mcp-shared-assets.py --check` |
+| Credential-free local smoke | [`smoke-cli.py`](../scripts/smoke-cli.py), [`CLI CI`](../../../.github/workflows/cli-ci.yml) |
+| Packaged binary and signing probes | [`CLI release`](../../../.github/workflows/cli-release.yml), [`sign-macos-archive.sh`](../scripts/sign-macos-archive.sh) |
+| Development, operator, and QA skills | [Repository skills](../../../docs/agents/skills.md) |
+| Apple helper vs standalone public docs, mirrors, and locales | [Website source ownership and preflight](../../website/docs-src/README.md) |
+
+Resolve unfamiliar files with `git ls-files` in the active worktree before guessing source paths.
+
 ## Automated gate
 
 Use Python 3.11+ for the release-policy scripts (`tomllib` is required). Static documentation checks
 are not native history-authorization or physical qualification.
+
+The shared smoke harness requires Python 3.11+ and builds only this CLI workspace. Its default
+**hermetic discovery smoke** uses temporary file/Codex state and credential-free operations: help,
+schemas, setup without pairing, MCP initialization, catalogs/resources, static capabilities, and
+read-only rejection of hidden tools. Both stdio profiles and the compatibility launcher are checked
+against the generated operation catalog. It does not call `direct devices` or `healthmd_doctor`,
+open native credentials, pair, or contact a device. A pass is not native credential qualification.
+
+Local smoke does not include native-store/device-list or MCP doctor probes and needs no disposable
+macOS account, Keychain setup, or administrator intervention. Native credential upgrade coverage
+belongs to the automated signed-release probes in
+[`sign-macos-archive.sh`](../scripts/sign-macos-archive.sh) and the
+[Windows release workflow](../../../.github/workflows/cli-release.yml). Those release checks remain
+required; hermetic smoke and Rust tests with injected credential stores do not replace them.
+
+```bash
+python3 scripts/smoke-cli.py
+```
+
+The smoke result reports only hermetic coverage, and `--runner` must match the actual host.
 
 Run the independently locked shared-core workspace first:
 
@@ -40,14 +75,17 @@ python3 -m unittest \
   scripts/test_qualify_exact_ci.py \
   scripts/test_watch_cli_release.py
 python3 scripts/verify-release.py
+python3 -m unittest scripts/test_smoke_cli.py
+python3 scripts/smoke-cli.py
 dist plan --allow-dirty
 ```
 
 Do not run either workspace's Cargo command from the other directory or combine their lockfiles. CI must pass on macOS, Ubuntu, and Windows. The Android repository must also pass
-`:direct-protocol:test`, `:app:testDebugUnitTest`, and `:app:assembleDebug`. Run the ignored
+`:direct-protocol:test`, `:app:testPlayDebugUnitTest`, and `:app:assemblePlayDebug`.
+Validate F-Droid separately with `:app:testFdroidDebugUnitTest` and `:app:assembleFdroidDebug`. Run the ignored
 Rust/Kotlin live gate to verify real pairing, negotiation, status, binary artifact transfer, final
-acknowledgement, and completion. Also run `:app:connectedDebugAndroidTest` for hermetic Direct CLI
-Compose coverage. The opt-in real-app UI/transport gate is:
+acknowledgement, and completion. Also run `:app:connectedPlayDebugAndroidTest` and
+`:app:connectedFdroidDebugAndroidTest` for hermetic Direct CLI Compose coverage. The opt-in real-app UI/transport gate is:
 
 ```bash
 ANDROID_SERIAL=2C061FDH200CJN \
@@ -79,14 +117,14 @@ additive `wake_window_seconds`, and verify MCP progress-token calls emit bounded
 `notifications/progress` before the final response. `healthmd cancel` persists its durable marker
 before the wake wait, so wake expiry or local interruption there reports `direct_cancellation_pending`
 (the truthful pending state) rather than a terminal cancellation. Feed the
-same bounded stdio initialize/tools calls to both serve modes: current development exposes 23
-complete-mode tools, including agent-bridge plan and exact-approval relay, while read-only mode must
-expose exactly 13 tools with `readOnlyHint`, no pairing resource, and no pairing/export-job/agent-bridge
-declarations. Guess all ten omitted tool names and require `Unknown tool` before command dispatch.
-The two agent-bridge tools do not enlarge the frozen 21-tool CLI 1.0 scope or establish native bridge
-setup/execution support; qualify a candidate against its own exact catalog. The published alpha.7
-remains a historical 19-tool preview, checked against its versioned asset, not the development count.
-Confirm that neither stdio mode starts an MCP HTTP listener, that the
+same bounded stdio initialize/tools calls to both serve modes: the complete mode must match the
+authoritative `healthmd mcp schema` catalog, while read-only mode contains only approved readiness,
+catalog, and query tools with `readOnlyHint`, no pairing resource, and no pairing/export-job/artifact
+operations. The shared smoke harness derives the omitted names from the catalog and requires
+`Unknown tool` for every one before command dispatch. Neither stdio mode may start an MCP HTTP listener. The
+complete development mode also retains agent plan, exact approval, Execute, retained Resume and
+retained Cancel. Those tools do not qualify installed native setup or full feature acceptance.
+The frozen public-release catalog and alpha.7 draft gates remain independent. Confirm that the
 default release rejects `mcp serve-http`, and that every build rejects the removed
 `mcp serve-hosted` command. Separately run
 source builds with `cargo run --features streamable-http -- mcp serve-http --help` and
@@ -94,7 +132,7 @@ source builds with `cargo run --features streamable-http -- mcp serve-http --hel
 generated-registry freshness, CLI↔MCP canonical query parity, same-binary and compatibility-launcher
 MCP initialize/tools/resources handshakes with expanded nested schemas and examples, an isolated
 idempotent Codex
-configuration test, and isolated `healthmd direct devices` smoke tests. For Streamable HTTP, require
+configuration test, and the automated signed-release native credential upgrade probes. For Streamable HTTP, require
 loopback binding (including OAuth mode), nonempty Host policy, fail-closed browser Origin policy,
 rejection of every non-loopback Host or Origin when OAuth is absent, 2 MiB MCP framing, exact
 protocol negotiation, and cancellation. Exercise protected-resource
@@ -106,6 +144,21 @@ Verify that the HTTP relay has no synchronization routes, health-data storage di
 job, account-data API, or query fallback when the paired foreground iPhone is unavailable. Audit the
 proxy, OAuth service, and process logs to ensure they do not retain MCP arguments or health results.
 Record the exact candidate in the [health-free release evidence template](release-evidence-template.md).
+
+## Native credential blockers
+
+`HEALTHMD_CLI_DATA_DIR` isolates file state, not the operating system's credential namespace.
+An ad-hoc-signed macOS debug binary may receive prompt-free `direct_storage_unavailable` when
+existing Keychain trust does not authorize its rebuilt executable identity, or when Keychain is
+locked/unavailable. The native helper deliberately disables interactive authorization to avoid
+unattended hangs. Default hermetic smoke avoids that boundary entirely; it does not turn a storage
+failure into a pass. For everyday CLI access, use the matching stable signed identity and repair
+access only through the supported credential-store workflow; preserve existing trust. This is not
+a local smoke-test prerequisite.
+Do not delete credentials, allow plaintext storage, fake the runner platform, or weaken the
+automated signed-release credential checks to obtain a green result. Record a native-credential blocker
+separately from passing schema/catalog, Python, and Rust fixture checks. Physical pairing and
+health-data QA remain separate authorized work.
 
 ## Physical iPhone gate
 
@@ -141,7 +194,16 @@ Never attach raw output to an issue or CI log.
    digest/result, and test explicit cancellation plus cancellation-pending delivery.
 9. On macOS and Linux, test overwrite, append, both Markdown merge modes, nested directories,
    duplicate/case/Unicode-alias paths, symlink ancestors/files, destination mutation, low disk, and
-   interruption between destination commit and final confirmation.
+   interruption between destination commit and final confirmation. With synthetic scoped daily-note
+   patches, preserve a larger personal journal and multiline YAML across staging, restart, and
+   receipt recovery. Pre-scoped receiver journals containing any personal-note commit plan must
+   fail before writing, whether the plan is ready or committed; legacy append plans must upgrade
+   without changing their staged bytes. Older CLIs must reject the new journal version. With the
+   scoped-note extension configured, interrupt after a missing-note skip, create that note as its
+   owner, and resume: the note stays untouched, its skip remains durable, and written-file counts
+   exclude it. An all-skipped observed job has an empty history artifact list; MCP skip paths are
+   bounded with an honest full count. Changed/missing negotiation, invalid/orphaned skip IDs, and
+   overlapping skip/install plans must reject before destination writes.
 10. On Windows, verify status/raw/extract/resume/cancel plus protocol-v1 generated-file export into
    an existing NTFS destination, including drive-root and UNC-path validation where available.
 11. Run `healthmd setup codex` and verify first-pair, idempotent rerun, safe preservation of existing
@@ -209,7 +271,9 @@ or CI log.
 7. Exercise Disconnect, CLI cancellation, notification actions, service timeout, low storage, and
    seven-day cleanup.
 8. On macOS, Linux, and Windows, test generated-file traversal/symlink/collision defenses, all write
-   modes, nested directories, destination replacement, and idempotent commit recovery.
+   modes, nested directories, destination replacement, and idempotent commit recovery. Repeat the
+   scoped daily-note journal preservation and receiver-version recovery cases from the iPhone
+   checklist using Android-sleep-v6 patches and protocol-v2 transfers.
 9. Confirm Android Keystore invalidation fails closed and requires pairing again; inspect backup
    output to ensure direct credentials and health spools are absent.
 10. Confirm logs, notifications, CLI JSON errors, and diagnostics contain no health values, raw

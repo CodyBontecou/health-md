@@ -47,4 +47,14 @@
     <string name="wear_preview_placeholder">প্রিভিউ; কোনো স্বাস্থ্য মান নেই</string>
     <string name="wear_complication_description">%1$s, %2$s, %3$s</string>
     <string name="wear_complication_long">%1$s %2$s · %3$s</string>
+    <string name="wear_short_activity">কার্যকলাপ</string>
+    <string name="wear_short_recovery">পুনরুদ্ধার</string>
+    <string name="wear_short_steps">ধাপ</string>
+    <string name="wear_short_move">শক্তি</string>
+    <string name="wear_short_exercise">ব্যায়াম</string>
+    <string name="wear_short_sleep">ঘুম</string>
+    <string name="wear_short_resting_hr">বিশ্রাম</string>
+    <string name="wear_short_average_hr">গড় HR</string>
+    <string name="wear_short_hrv">HRV</string>
+    <string name="wear_short_blood_oxygen">SpO₂</string>
 </resources>

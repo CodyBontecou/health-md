@@ -4,7 +4,8 @@
     'www.healthmd.app': true
   };
 
-  if (!productionHosts[window.location.hostname]) {
+  if (!productionHosts[window.location.hostname] || window.navigator.globalPrivacyControl === true ||
+      window.navigator.doNotTrack === '1' || window.doNotTrack === '1') {
     return;
   }
 
@@ -29,8 +30,14 @@
       return response.ok ? response.json() : { track: false };
     })
     .then(function (gate) {
-      if (gate && gate.track) {
+      if (gate && gate.track === true) {
         loadCloudflareBeacon();
+        if (!document.querySelector('script[src="/assets/seo-funnel.js"]')) {
+          var funnel = document.createElement('script');
+          funnel.type = 'module';
+          funnel.src = '/assets/seo-funnel.js';
+          document.head.appendChild(funnel);
+        }
       }
     })
     .catch(function () {

@@ -5,6 +5,10 @@ lead: "API Endpoint replaces the folder destination with one deliberate POST to 
 date: "2026-09-22T14:00:00.000Z"
 updated: "2026-09-22T14:00:00.000Z"
 category: "Workflow guide"
+related:
+  - healthmd-cli-direct-iphone-mcp
+  - export-health-data-without-the-cloud
+  - local-first-health-data-architecture
 draft: false
 tags:
   - healthmd

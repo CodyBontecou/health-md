@@ -157,161 +157,53 @@ async function campaignRedirect(userAgent, extraHeaders = {}) {
   };
 }
 
-test("valid Android install attribution is stored with only allowlisted fields", async () => {
-  const database = new FakeD1Database();
-  const response = await worker.fetch(
-    installRequest(validInstallEvent()),
-    { ...env, DB: database, CAMPAIGN_ATTRIBUTION_INGEST_TOKEN: "throttle-token" },
-    context,
-  );
-
-  assert.equal(response.status, 202);
-  assert.deepEqual(await response.json(), { accepted: true, duplicate: false });
-  assert.equal(database.events.size, 1);
-  const [row] = database.events.values();
-  assert.equal(row.campaign_token, "yt_csv_001");
-  assert.equal(row.install_id, "11111111-1111-4111-8111-111111111111");
-  assert.equal("raw_referrer" in row, false);
-  assert.equal("ip_address" in row, false);
-  assert.equal("user_agent" in row, false);
-  assert.equal("device_model" in row, false);
-});
-
-test("duplicate event IDs are idempotent and return 2xx", async () => {
-  const database = new FakeD1Database();
-  const ingestEnv = {
-    ...env,
-    DB: database,
-    CAMPAIGN_ATTRIBUTION_INGEST_TOKEN: "throttle-token",
-  };
-
-  const first = await worker.fetch(installRequest(validInstallEvent()), ingestEnv, context);
-  const duplicate = await worker.fetch(installRequest(validInstallEvent()), ingestEnv, context);
-
-  assert.equal(first.status, 202);
-  assert.equal(duplicate.status, 200);
-  assert.deepEqual(await duplicate.json(), { accepted: true, duplicate: true });
-  assert.equal(database.events.size, 1);
-});
-
-test("event or install ID reuse with different content is rejected", async () => {
-  const database = new FakeD1Database();
-  const ingestEnv = {
-    ...env,
-    DB: database,
-    CAMPAIGN_ATTRIBUTION_INGEST_TOKEN: "throttle-token",
-  };
-  await worker.fetch(installRequest(validInstallEvent()), ingestEnv, context);
-
-  const response = await worker.fetch(
-    installRequest(validInstallEvent({ appVersion: "1.5.2" })),
-    ingestEnv,
-    context,
-  );
-
-  assert.equal(response.status, 409);
-  assert.equal(database.events.size, 1);
-});
-
-test("install ingest rejects unknown, raw, malformed, and mismatched campaign fields", async () => {
-  const invalidPayloads = [
-    validInstallEvent({ rawReferrer: "utm_source=yt&private=value" }),
-    validInstallEvent({ healthData: { steps: 1234 } }),
-    validInstallEvent({ campaignToken: "yt_privacy_001" }),
-    validInstallEvent({ medium: "cpc" }),
-    validInstallEvent({ eventId: "not-a-uuid" }),
+test("known legacy short links recover to fixed guides without attribution or query forwarding", async () => {
+  const legacyLinks = [
+    ["yt-csv-0702", "/apple-health-to-csv/"],
+    ["yt-obsidian-0702", "/blog/export-apple-health-data-to-obsidian/"],
+    ["yt-obsidian-0703", "/blog/export-apple-health-data-to-obsidian/"],
+    ["yt-obsidian-070312", "/blog/export-apple-health-data-to-obsidian/"],
   ];
-
-  for (const payload of invalidPayloads) {
-    const response = await worker.fetch(
-      installRequest(payload, { token: null }),
-      {
-        ...env,
-        DB: new FakeD1Database(),
-        ALLOW_UNAUTHENTICATED_INGEST: "true",
-      },
-      context,
-    );
-    assert.equal(response.status, 400);
+  const noAttribution = {
+    waitUntil() { assert.fail("Legacy content redirects must not enqueue attribution"); },
+  };
+  const noStorage = {
+    prepare() { assert.fail("Legacy content redirects must not write attribution"); },
+  };
+  for (const [slug, destination] of legacyLinks) {
+    for (const method of ["GET", "HEAD"]) {
+      for (const suffix of ["", "/"]) {
+        const request = new Request(`https://www.healthmd.app/v/${slug}${suffix}?next=https://evil.example&ct=fake&token=private`, { method });
+        const response = await worker.fetch(request, { ...env, DB: noStorage }, noAttribution);
+        assert.equal(response.status, 301, `${method} ${slug}${suffix}`);
+        assert.equal(response.headers.get("location"), `https://healthmd.app${destination}`);
+        assert.equal(response.headers.get("cache-control"), "public, max-age=3600");
+        assert.equal(response.headers.get("referrer-policy"), "no-referrer");
+        assert.equal(response.headers.get("x-healthmd-attribution-warning"), null);
+        assert.equal(await response.text(), "");
+      }
+    }
   }
 });
 
-test("install ingest fails closed when no token is configured", async () => {
-  const response = await worker.fetch(
-    installRequest(validInstallEvent(), { token: null }),
-    { ...env, DB: new FakeD1Database() },
-    context,
-  );
-
-  assert.equal(response.status, 503);
+test("legacy recovery remains exact and does not accept writes or unknown links", async () => {
+  for (const path of ["/v/yt-csv-0703", "/v/yt-obsidian-0703123", "/v/yt-csv-0702/extra", "/v/yt-csv-0702//", "/v/__proto__", "/v/constructor", "/v/yt-constructor-001", "/cdn-cgi/l/email-protection"]) {
+    const response = await worker.fetch(new Request(`https://healthmd.app${path}`), env, context);
+    assert.equal(response.status, 404, path);
+    assert.equal(response.headers.get("location"), null);
+  }
+  const response = await worker.fetch(new Request("https://healthmd.app/v/yt-csv-0702", { method: "POST" }), env, context);
+  assert.equal(response.status, 405);
 });
 
-test("install ingest accepts the previous token during rotation", async () => {
-  const response = await worker.fetch(
-    installRequest(validInstallEvent()),
-    {
-      ...env,
-      DB: new FakeD1Database(),
-      CAMPAIGN_ATTRIBUTION_INGEST_TOKEN: "new-token",
-      CAMPAIGN_ATTRIBUTION_INGEST_TOKEN_PREVIOUS: "throttle-token",
-    },
-    context,
-  );
-
-  assert.equal(response.status, 202);
-});
-
-test("install ingest rejects query parameters at the routed endpoint", async () => {
-  const response = await worker.fetch(
-    new Request("https://healthmd.app/v1/installs?unexpected=true", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(validInstallEvent()),
-    }),
-    { ...env, DB: new FakeD1Database(), ALLOW_UNAUTHENTICATED_INGEST: "true" },
-    context,
-  );
-
-  assert.equal(response.status, 400);
-});
-
-test("install ingest enforces token, body size, method, and aggregate rate limit", async () => {
-  const database = new FakeD1Database();
-  const protectedEnv = {
-    ...env,
-    DB: database,
-    CAMPAIGN_ATTRIBUTION_INGEST_TOKEN: "throttle-token",
-  };
-
-  const unauthorized = await worker.fetch(
-    installRequest(validInstallEvent(), { token: null }),
-    protectedEnv,
-    context,
-  );
-  assert.equal(unauthorized.status, 401);
-
-  const oversized = await worker.fetch(
-    installRequest(validInstallEvent({ padding: "x".repeat(5_000) })),
-    protectedEnv,
-    context,
-  );
-  assert.equal(oversized.status, 413);
-
-  const wrongMethod = await worker.fetch(
-    installRequest(validInstallEvent(), { method: "GET" }),
-    protectedEnv,
-    context,
-  );
-  assert.equal(wrongMethod.status, 405);
-
-  database.rateCount = 300;
-  const rateLimited = await worker.fetch(
-    installRequest(validInstallEvent()),
-    protectedEnv,
-    context,
-  );
-  assert.equal(rateLimited.status, 429);
-  assert.equal(rateLimited.headers.get("retry-after"), "60");
+test("retired Android install uploads are discarded without reading or persisting", async () => {
+  const request = new Request("https://healthmd.app/v1/installs?legacy=true", { method: "POST", body: "not JSON" });
+  const forbidden = new Proxy({}, { get() { throw new Error("retired ingest accessed service state"); } });
+  const response = await worker.fetch(request, forbidden, forbidden);
+  assert.equal(response.status, 204);
+  assert.equal(request.bodyUsed, false);
+  assert.equal(await response.text(), "");
+  assert.equal((await worker.fetch(new Request("https://healthmd.app/v1/installs"), forbidden, forbidden)).status, 410);
 });
 
 test("scheduled retention deletes only expired aggregate attribution state", async () => {
@@ -324,11 +216,14 @@ test("scheduled retention deletes only expired aggregate attribution state", asy
   );
   await retentionPromise;
 
-  assert.equal(database.batchStatements.length, 3);
+  assert.equal(database.batchStatements.length, 5);
   const statements = database.batchStatements.map((statement) => statement.sql);
   assert.ok(statements.some((sql) => sql.startsWith("DELETE FROM campaign_clicks")));
   assert.ok(statements.some((sql) => sql.startsWith("DELETE FROM campaign_installs")));
   assert.ok(statements.some((sql) => sql.startsWith("DELETE FROM campaign_ingest_windows")));
+  const funnelDelete = database.batchStatements.find(statement => statement.sql.startsWith("DELETE FROM web_funnel_daily"));
+  assert.equal(funnelDelete.values[0], "2025-03-01");
+  assert.ok(statements.some(sql => sql.startsWith("DELETE FROM web_funnel_ingest_windows")));
   assert.equal(statements.some((sql) => /ip|user_agent|request_id/i.test(sql)), false);
   const clickDelete = database.batchStatements.find((statement) =>
     statement.sql.startsWith("DELETE FROM campaign_clicks"));

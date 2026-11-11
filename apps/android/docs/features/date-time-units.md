@@ -22,7 +22,7 @@ Choose how dates, times, and quantities are written in your exports: seven date 
 1. Open the **Export** tab.
 2. Tap the **Advanced Export Settings** card ("Metrics, daily notes, individual tracking, format customization").
 3. Tap **Format Customization** — the row whose subtitle shows your current date format and unit system.
-4. A quick Metric/Imperial **Units** toggle also sits directly on the Export tab's configuration section, without opening Format Customization.
+4. A quick Metric/Imperial **Units** toggle also sits directly on the Export now screen's configuration section, without opening Format Customization.
 
 ## Prerequisites
 

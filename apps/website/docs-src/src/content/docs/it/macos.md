@@ -1,6 +1,6 @@
 ---
-title: "App macOS"
-description: "Usa Health.md per Mac come destinazione delle esportazioni da iPhone, host locale per CLI e MCP, archivio crittografato del contesto sanitario, visualizzatore della cronologia e gestore della cartella di destinazione."
+title: "Apple Health su Mac con Health.md"
+description: "Esporta i dati di Apple Health da iPhone a Mac o interroga il contesto locale. Installa Health.md su entrambi i dispositivi e configura Mac Sync."
 ---
 
 Health.md per Mac svolge due ruoli locali:
@@ -9,6 +9,11 @@ Health.md per Mac svolge due ruoli locali:
 2. ospita la CLI su loopback, l’API per le query, il contesto sanitario crittografato e l’adattatore MCP usati dagli agenti locali.
 
 Apple Health rimane su iPhone. L’app per Mac non legge direttamente HealthKit.
+
+<div class="callout">
+<strong>Inizia con iPhone e Mac</strong>
+<p><a href="https://apps.apple.com/us/app/health-md/id6757763969" target="_blank" rel="noopener">Installa Health.md su iPhone e Mac</a>. <a href="/it/docs/sync/">Segui la guida alla configurazione di Mac Sync</a>, <a href="/blog/health-md-for-macos/">oppure inizia dal tutorial per esportare un giorno (in inglese)</a>.</p>
+</div>
 
 ## Aree principali
 
@@ -26,9 +31,9 @@ Apple Health rimane su iPhone. L’app per Mac non legge direttamente HealthKit.
 
 1. Installa e apri Health.md sul Mac.
 2. Scegli una cartella di destinazione sul disco locale, in iCloud Drive o all’interno di un vault Obsidian.
-3. Su iPhone, abilita la connettività con il Mac dalla scheda Sincronizzazione.
-4. Su iPhone, scegli Mac connesso come destinazione dell’esportazione.
-5. Configura l’esportazione e tocca Esporta.
+3. Su iPhone, apri **Impostazioni → Destinazione Mac** e attivala.
+4. Su iPhone, scegli Mac collegato come destinazione di un’automazione (**Automazioni → automazione → Output**).
+5. Tocca **Esporta ora** oppure lascia che venga eseguita la pianificazione dell’automazione.
 
 L’iPhone acquisisce i dati HealthKit e l’istantanea delle impostazioni effettive. I dispositivi compatibili trasferiscono partizioni di dimensioni limitate con checksum convalidati. Il Mac usa gli strumenti di esportazione di produzione e scrive i file richiesti.
 

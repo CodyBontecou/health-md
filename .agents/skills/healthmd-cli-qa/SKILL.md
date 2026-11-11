@@ -19,9 +19,12 @@ can support ordinary screen locking after first unlock after reboot; absent/stop
 sessions need human reopening/restart. Wake cannot unlock, grant native permissions or approve work.
 See the [Android source guide](../../../apps/android/docs/features/direct-cli.md).
 
-Native extension-4 routes remain unwired/unadvertised. Stored planning/DTO checks do not deliver
-native consent/configuration/session adapters, send boundaries, bound execution/bridge receipts,
-recipes or the complete CLI/MCP × iOS/Android journey. Unit/conformance/build passes are not installed/release qualification.
+Native extension-4 remains unadvertised. Guarded native bound execution and public
+Execute/Resume/Cancel adapters exist in source. Installed native consent, host provisioning,
+recipes and the complete CLI/MCP × iOS/Android journey remain incomplete.
+Separate source-only encrypted-peer checks from native SDK, installed and physical acceptance.
+Cancel returns native source facts with `output_verified: false`, including completion winners.
+Unit/conformance/build passes are not installed/release qualification.
 Use [mobile compatibility](../../../apps/cli/docs/mobile-compatibility.md),
 [production readiness](../../../apps/cli/docs/production-readiness.md) and the
 [implementation ledger](../../../docs/qa/agent-bridge-implementation.md) for exact pending gates.
@@ -40,7 +43,7 @@ Use [mobile compatibility](../../../apps/cli/docs/mobile-compatibility.md),
 1. Independently locked shared-core and CLI Rust format/build/lint/workspace tests.
 2. Swift-generated v1/v3 and Kotlin-generated v2 fixture conformance from `healthmd-protocol`; deferred extension-4 native candidates require separate provenance and are not permissions or installed routes.
 3. Apple Connectivity/direct/exporter tests and build; Android focused direct/protocol and Play/F-Droid tests/builds per component instructions. These are source gates, not physical Pixel 7 qualification.
-4. Local CLI/MCP help, initialize/tools/resources, and offline trust smoke.
+4. Hermetic CLI/MCP discovery smoke; automated signed-release credential upgrade probes.
 5. Live LAN pair/status/raw/extract/file/durability plus every direct MCP query/export/UI/PNG path.
 6. Live Tailscale network coverage.
 7. macOS/Linux/Windows release matrix with both packaged binaries.
@@ -89,7 +92,7 @@ python3 scripts/update-mcp-shared-assets.py --check
 
 Never run these as one Cargo workspace or rewrite both lockfiles. The focused protocol test validates the canonical `packages/contracts/direct-protocol/v1/fixtures/swift-reference.json` through its byte-identical Rust packaging mirror: pairing proofs, Swift encoding, request fingerprints, and transfer frames. Changes to cryptographic transcripts, canonical JSON, enum layout, UUID/date encoding, or frames require protocol-version analysis. Never regenerate this fixture from Rust just to silence failure.
 
-CI must pass on macOS, Ubuntu, and Windows. Verify release checksums plus `healthmd --version`, `healthmd --help`, idempotent isolated `healthmd setup codex --skip-pairing`, same-binary and compatibility-launcher MCP handshakes, and isolated `healthmd direct devices`. `HEALTHMD_CLI_DATA_DIR` changes file state but does not namespace native credentials.
+Release qualification must cover macOS, Ubuntu, and Windows. Verify release checksums, discovery/setup, and same-binary and compatibility-launcher MCP handshakes. Keep native credential upgrade checks in the automated signed-release pipeline; local smoke requires no disposable account or Keychain setup. `HEALTHMD_CLI_DATA_DIR` changes file state but does not namespace native credentials.
 
 ## iPhone-side gate
 
@@ -119,6 +122,15 @@ The portable client does not require a macOS app build. If public exporter/metri
 
 ## Offline CLI smoke
 
+Run `python3 scripts/smoke-cli.py` from `apps/cli` with Python 3.11+ for hermetic discovery:
+temporary file/Codex state, registry-backed complete/read-only catalogs, compatibility-launcher
+parity, and no credentials or device contact. No disposable account or native Keychain setup is
+needed. Signed-release credential upgrade probes remain automated and separate; follow
+[release QA](../../../apps/cli/docs/qa.md#automated-gate).
+For flag, output, or catalog changes, follow the
+[consumer checklist](../../../apps/cli/docs/qa.md#cli-change-consumers).
+
+
 ```bash
 NO_COLOR=1 TERM=dumb timeout 15 healthmd --version </dev/null
 NO_COLOR=1 TERM=dumb timeout 15 healthmd --help </dev/null
@@ -133,7 +145,6 @@ NO_COLOR=1 TERM=dumb timeout 15 healthmd direct unpair </dev/null
 NO_COLOR=1 TERM=dumb timeout 15 healthmd direct reset-trust </dev/null
 NO_COLOR=1 TERM=dumb timeout 15 healthmd mcp </dev/null
 NO_COLOR=1 TERM=dumb timeout 15 healthmd setup </dev/null
-NO_COLOR=1 TERM=dumb timeout 30 healthmd direct devices </dev/null
 ```
 
 Pass:
@@ -321,6 +332,7 @@ Verify private state/output permissions and checksums. Do not describe unsigned 
 - Separately authorized exact-build Tailscale/Pixel 7/lifecycle: pass/fail/not run
 - Full four-way bridge journey: pass/fail/not run (not inferred from planning)
 - Platforms/builds under test: macOS/Linux/Windows; iOS/Android
+- Automated signed-release credential upgrade probes: pass/fail/not run
 
 ### Evidence
 - versions, source SHAs, sanitized commands, exit codes, safe JSON status codes, synthetic case IDs

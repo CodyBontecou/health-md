@@ -131,23 +131,16 @@ class JVMShardTests(unittest.TestCase):
         tree.write(path)
         self.assertEqual(self.verify()['variants']['debug']['skipped'], 1)
 
-    def test_workflow_keeps_all_nine_lanes_and_shared_lint_package_gates(self):
-        workflow = Path(__file__).resolve().parents[4] / '.github/workflows/android-ci.yml'
-        source = workflow.read_text()
-        worker = source.split('  jvm-tests:\n', 1)[1].split('  # Preserve', 1)[0]
-        self.assertEqual(worker.count('            lane:'), 9)
-        for name in m.LANES: self.assertEqual(worker.count('            lane: ' + name), 3)
-        self.assertIn('fail-fast: false', worker)
-        self.assertIn('--init-script scripts/ci-jvm-shards.init.gradle', worker)
-        self.assertIn("debug:remaining", worker)
-        self.assertEqual(worker.count("matrix.variant == 'debug' && matrix.lane == 'remaining'"), 2)
-        for command in [':healthmd-core:testDebugUnitTest', ':wearable-contract:test', ':direct-protocol:test', ':app:lintPlayDebug', 'test_verify_google_play_generated_apk_evidence.sh --phone-only']:
-            self.assertIn(command, worker)
-        gate = source.split('  test:\n', 1)[1].split('  instrumentation-shards:\n', 1)[0]
-        self.assertIn('needs: [changes, jvm-tests]', gate)
-        self.assertIn('test "$JVM_RESULT" = success', gate)
-        self.assertIn('verify-jvm-shards.py', gate)
-        self.assertNotIn('continue-on-error', worker + gate)
+    def test_sharding_stays_explicit_and_is_not_a_portable_workflow_requirement(self):
+        root = Path(__file__).resolve().parents[4]
+        init = (root / 'apps/android/scripts/ci-jvm-shards.init.gradle').read_text()
+        self.assertIn("def lane = System.getenv('HEALTHMD_JVM_LANE')", init)
+        self.assertIn('if (lane != null)', init)
+        self.assertIn('require the original unfiltered Test task', init)
+        workflow = (root / '.github/workflows/android-ci.yml').read_text()
+        self.assertIn('uses: ./.github/workflows/ci.yml', workflow)
+        self.assertNotIn('ci-jvm-shards.init.gradle', workflow)
+        self.assertNotIn('jvm-tests:', workflow)
 
 
 if __name__ == '__main__': unittest.main()

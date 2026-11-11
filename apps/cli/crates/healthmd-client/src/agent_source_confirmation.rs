@@ -28,12 +28,65 @@ impl PlanningClock for ObservedAt<'_> {
     }
 }
 
-pub(crate) async fn read_source_confirmation(
+enum ConfirmationReader {
+    Accepted,
+    Output,
+    Uncertain,
+}
+// Selection grants no authority. Every selected decoder independently authenticates its
+// entire record and evidence, and an error never retries another decoder.
+fn select_confirmation_reader(
+    store: &HostAuthorityStore,
+    job: &ControlUuid,
+) -> Result<ConfirmationReader, ClientError> {
+    let dir = store.directory()?;
+    match dir.symlink_metadata(format!("output-{}.json", job.0)) {
+        Ok(_) => return Ok(ConfirmationReader::Output),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+        Err(error) => return Err(private::unavailable(error)),
+    }
+    let hint: serde_json::Value = private_json::decode(&private::read_private(
+        &dir,
+        &format!("attempt-{}.json", job.0),
+        MAX_OUTPUT_BYTES,
+    )?)?;
+    Ok(
+        if hint
+            .pointer("/attempt/schema_version")
+            .and_then(serde_json::Value::as_u64)
+            == Some(10)
+        {
+            ConfirmationReader::Uncertain
+        } else {
+            ConfirmationReader::Accepted
+        },
+    )
+}
+
+pub(crate) async fn read_source_confirmation<F, Fut>(
     store: &HostAuthorityStore,
     job: &ControlUuid,
     clock: &dyn PlanningClock,
-) -> Result<ExecutionReceipt, ClientError> {
+    mut fence: F,
+) -> Result<ExecutionReceipt, ClientError>
+where
+    F: FnMut() -> Fut + Copy,
+    Fut: std::future::Future<Output = Result<(), ClientError>>,
+{
     job.validate_shape()?;
+    // File presence selects a decoder only; it never establishes trusted state. Each selected reader
+    // independently acquire the original lock and authenticate their complete evidence, then
+    // recheck it after the final protected-key await. A raced/unsafe hint fails closed rather
+    // than retrying a different format after authentication or binding failure.
+    match select_confirmation_reader(store, job)? {
+        ConfirmationReader::Output => {
+            return later_stop::read_confirmed_output_stop(store, job, clock, fence).await;
+        }
+        ConfirmationReader::Uncertain => {
+            return uncertain_stop::read_confirmed(store, job, clock, fence).await;
+        }
+        ConfirmationReader::Accepted => {}
+    }
     let key = key_bytes(&store.protected_key.load_existing(&store.host).await?)?;
     let dir = store.directory()?;
     let lock = private::open_private(&dir, OUTPUT_LOCK, true, false)?;
@@ -105,6 +158,14 @@ pub(crate) async fn read_source_confirmation(
     {
         return Err(ClientError::AgentAuthorityUnavailable);
     }
+    let now = clock.now();
+    now.validate_shape()?;
+    if attempt.source_confirmed_at > now {
+        return Err(ClientError::AgentAuthorityUnavailable);
+    }
+    // The caller fence follows the final key/time callback while this reader still owns
+    // the original lock and exact authenticated local evidence. No await follows it.
+    fence().await?;
     let now = clock.now();
     now.validate_shape()?;
     if attempt.source_confirmed_at > now {

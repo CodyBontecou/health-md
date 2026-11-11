@@ -4,10 +4,29 @@ All notable changes to Health.md will be documented in this file.
 
 ## [Unreleased]
 
-### Changed
-- Export progress and results now use one bottom status card throughout the iPhone app. The same card updates from preparation and progress to success, warning, cancellation, or failure, while independent settings-lock feedback stacks in the same bottom status area.
+## [3.5.0] - Unreleased
 
-## [3.4.4] - 2026-10-24
+### Mac companion
+- Sandbox both bundled CLI helpers for Mac App Store distribution. Mac-managed folders and stdout remain available; arbitrary-path direct file exports use the standalone CLI.
+
+### Privacy
+- Removed custom in-app usage analytics and advertising attribution. Earlier service records and essential connected services retain their separate disclosures.
+
+### Changed
+- Weekly and yearly subscription options with a seven-day free trial for eligible customers, alongside one-time Lifetime access; Apple Family plans use native Family Sharing.
+- On iPhone and iPad, active trial, subscription, or permanent access is required before setup and exports. Existing Lifetime and grandfathered access is preserved; the macOS companion remains free.
+- Purchase-status labels and scheduling guidance distinguish subscriptions from Lifetime access.
+
+## [3.4.5] - 2026-10-28
+
+### Added
+- EU Dot (DD.MM.YYYY) date format, saved across launches and included in shared setups on Apple and Android.
+- WHOOP connection for recovery, strain, sleep, and workout exports.
+
+### Changed
+- Sleep-date guidance explains which night each export covers.
+
+## [3.4.4] - 2026-10-27
 
 ### Added
 - Guidance after a successful export helps you export again or set up a schedule.
@@ -18,6 +37,7 @@ All notable changes to Health.md will be documented in this file.
 - Updated privacy disclosures and localized App Store descriptions explain campaign-to-purchase measurement.
 
 ### Fixed
+- Today Refresh success notifications report the exported day count instead of incorrectly saying yesterday.
 - Improved export history, connection recovery, and the export file browser.
 
 ## [3.4.3] - 2026-10-07

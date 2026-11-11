@@ -1,10 +1,8 @@
 {
-  "version": 2,
+  "version": 3,
   "runtime": { "mode": "synthetic", "productionEnabled": false, "persistence": "in-memory-resettable-test-double" },
   "browserProjects": [
-    { "name": "chromium", "realBrowserAutomation": true, "isolatedServiceProcess": true, "manualLatestTwo": false },
-    { "name": "firefox", "realBrowserAutomation": true, "isolatedServiceProcess": true, "manualLatestTwo": false },
-    { "name": "webkit", "realBrowserAutomation": true, "isolatedServiceProcess": true, "manualLatestTwo": false }
+    { "name": "chromium", "realBrowserAutomation": true, "isolatedServiceProcess": true, "manualLatestTwo": false }
   ],
   "careContexts": ["pre_visit", "medication_follow_up", "recurring_collection"],
   "qualifiedHappyRepresentation": { "period": "fixed_dates", "schedule": "all_readings", "cadence": "at_period_end" },

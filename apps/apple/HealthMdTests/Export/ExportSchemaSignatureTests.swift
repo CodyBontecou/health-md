@@ -127,11 +127,64 @@ final class ExportSchemaSignatureTests: XCTestCase {
         XCTAssertEqual(existing.payload, current.payload)
     }
 
-    private static func fixtureURL(for schemaVersion: Int) -> URL {
+    /// apple-v12 is a separately versioned successor profile with its own fixture. Its
+    /// fingerprint covers every `detailSamples` array and the v12 identity rows/keys; the v8
+    /// fixture above is independent and must stay byte-identical.
+    @MainActor
+    func testAppleV12ExportSchemaSignatureMatchesVersionedFixture() throws {
+        XCTAssertEqual(AppleDetailExpansionSchema.version, 12)
+        XCTAssertEqual(AppleDetailExpansionSchema.profile, "apple-v12")
+        let current = try AppleV12ExportSchemaSignatureSnapshot.current()
+        let fixtureURL = Self.fixtureURL(for: current.schemaVersion)
+        let existing: AppleV12ExportSchemaSignatureSnapshot? = FileManager.default.fileExists(atPath: fixtureURL.path)
+            ? try Self.decoder.decode(AppleV12ExportSchemaSignatureSnapshot.self, from: Data(contentsOf: fixtureURL))
+            : nil
+        let environment = ProcessInfo.processInfo.environment
+        let shouldUpdate = environment["UPDATE_EXPORT_SCHEMA_SIGNATURE"] == "1"
+            || FileManager.default.fileExists(atPath: Self.updateMarkerURL.path)
+        let allowUnshippedVersionRewrite = environment["ALLOW_UNSHIPPED_SCHEMA_SIGNATURE_REWRITE"] == "1"
+
+        if shouldUpdate {
+            if let existing, existing.fingerprint != current.fingerprint, !allowUnshippedVersionRewrite {
+                XCTFail("""
+                Refusing to update the apple-v12 export schema signature for an existing fixture.
+                Existing fingerprint: \(existing.fingerprint)
+                Current fingerprint:  \(current.fingerprint)
+                Introduce a new successor profile, or rerun with ALLOW_UNSHIPPED_SCHEMA_SIGNATURE_REWRITE=1
+                only while apple-v12 is unshipped, and review the fixture diff.
+                """)
+                return
+            }
+            try Self.encoder.encode(current).write(to: Self.appleV12UpdateOutputURL, options: .atomic)
+            return
+        }
+
+        let fixture = try XCTUnwrap(existing, """
+        Missing apple-v12 export schema signature fixture: \(fixtureURL.path)
+        Run scripts/update-export-schema-signature.sh.
+        """)
+        XCTAssertEqual(fixture.schema, current.schema)
+        XCTAssertEqual(fixture.schemaVersion, current.schemaVersion)
+        XCTAssertEqual(fixture.schemaProfile, current.schemaProfile)
+        XCTAssertEqual(fixture.fingerprint, current.fingerprint, """
+        apple-v12 export schema changed but its signature fixture was not updated.
+        Expected fingerprint: \(fixture.fingerprint)
+        Current fingerprint:  \(current.fingerprint)
+        Do not update the fixture to hide accidental drift.
+        """)
+        XCTAssertEqual(fixture.payload, current.payload)
+    }
+
+    private static var appleV12UpdateOutputURL: URL {
+        URL(fileURLWithPath: NSTemporaryDirectory())
+            .appendingPathComponent("healthmd-export-schema-signature-apple-v12.json")
+    }
+
+    fileprivate static func fixtureURL(for schemaVersion: Int) -> URL {
         fixturesDirectory.appendingPathComponent("export_schema_signature_v\(schemaVersion).json")
     }
 
-    private static var updateMarkerURL: URL {
+    fileprivate static var updateMarkerURL: URL {
         fixturesDirectory.appendingPathComponent(".update-export-schema-signature")
     }
 
@@ -152,13 +205,13 @@ final class ExportSchemaSignatureTests: XCTestCase {
         return try decoder.decode(ExportSchemaSignatureSnapshot.self, from: Data(contentsOf: url))
     }
 
-    private static let encoder: JSONEncoder = {
+    fileprivate static let encoder: JSONEncoder = {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
         return encoder
     }()
 
-    private static let decoder = JSONDecoder()
+    fileprivate static let decoder = JSONDecoder()
 }
 
 private struct ExportSchemaSignatureSnapshot: Codable, Equatable {
@@ -247,7 +300,7 @@ private struct ExportSchemaSignaturePayload: Codable, Equatable {
         )
     }
 
-    private static func frontmatterTopLevelKeys(_ output: String) -> [String] {
+    fileprivate static func frontmatterTopLevelKeys(_ output: String) -> [String] {
         let lines = output.components(separatedBy: "\n")
         guard lines.first == "---" else { return [] }
 
@@ -260,7 +313,7 @@ private struct ExportSchemaSignaturePayload: Codable, Equatable {
         return Array(Set(keys)).sorted()
     }
 
-    private static func jsonShapePaths(_ jsonString: String) throws -> [String] {
+    fileprivate static func jsonShapePaths(_ jsonString: String) throws -> [String] {
         let data = Data(jsonString.utf8)
         let object = try JSONSerialization.jsonObject(with: data)
         return Self.jsonShapePaths(for: object, path: "$", includeSelf: false).sorted()
@@ -317,13 +370,13 @@ private struct ExportSchemaSignaturePayload: Codable, Equatable {
         return paths
     }
 
-    private static func csvHeader(_ csv: String) -> [String] {
+    fileprivate static func csvHeader(_ csv: String) -> [String] {
         csv.components(separatedBy: "\n")
             .first?
             .components(separatedBy: ",") ?? []
     }
 
-    private static func csvRowContracts(_ csv: String) -> [CSVRowContract] {
+    fileprivate static func csvRowContracts(_ csv: String) -> [CSVRowContract] {
         csv.components(separatedBy: "\n")
             .dropFirst()
             .filter { !$0.isEmpty }
@@ -358,6 +411,63 @@ private struct ExportSchemaSignaturePayload: Codable, Equatable {
         HealthMetricDataDictionary.entries(using: customization, includeProviderEntries: true)
             .map(DataDictionaryEntrySignature.init)
             .sorted()
+    }
+}
+
+private struct AppleV12ExportSchemaSignatureSnapshot: Codable, Equatable {
+    let schema: String
+    let schemaVersion: Int
+    let schemaProfile: String
+    let fingerprint: String
+    let payload: AppleV12ExportSchemaSignaturePayload
+
+    @MainActor
+    static func current() throws -> AppleV12ExportSchemaSignatureSnapshot {
+        let payload = try AppleV12ExportSchemaSignaturePayload.current()
+        let fingerprint = SHA256.hash(data: try ExportSchemaSignatureTestsEncoder.encode(payload))
+            .map { String(format: "%02x", $0) }
+            .joined()
+        return AppleV12ExportSchemaSignatureSnapshot(
+            schema: HealthMdExportSchema.identifier,
+            schemaVersion: AppleDetailExpansionSchema.version,
+            schemaProfile: AppleDetailExpansionSchema.profile,
+            fingerprint: fingerprint,
+            payload: payload
+        )
+    }
+}
+
+private struct AppleV12ExportSchemaSignaturePayload: Codable, Equatable {
+    let schema: String
+    let schemaProfile: String
+    let markdownFrontmatterTopLevelKeys: [String]
+    let obsidianBasesFrontmatterTopLevelKeys: [String]
+    let markdownDetailSampleStructure: [String]
+    let jsonShapePaths: [String]
+    let csvHeader: [String]
+    let csvRowContracts: [CSVRowContract]
+
+    @MainActor
+    static func current() throws -> AppleV12ExportSchemaSignaturePayload {
+        let metric = ExportSchemaSignatureFixtures.metricCustomization
+        let day = ExportFixtures.appleV12DetailDay
+        let markdown = day.toMarkdown(customization: metric)
+        let csv = day.toCSV(customization: metric)
+        return AppleV12ExportSchemaSignaturePayload(
+            schema: HealthMdExportSchema.identifier,
+            schemaProfile: AppleDetailExpansionSchema.profile,
+            markdownFrontmatterTopLevelKeys: ExportSchemaSignaturePayload.frontmatterTopLevelKeys(markdown),
+            obsidianBasesFrontmatterTopLevelKeys: ExportSchemaSignaturePayload.frontmatterTopLevelKeys(
+                day.toObsidianBases(customization: metric)
+            ),
+            markdownDetailSampleStructure: markdown.components(separatedBy: "\n").filter {
+                $0.hasSuffix(" Detail Samples") || $0.hasPrefix("<summary>") && $0.contains("Detail Samples")
+                    || $0.hasPrefix("| Start | End | Metric |") || $0.hasPrefix("|-------|-----|--------|")
+            },
+            jsonShapePaths: try ExportSchemaSignaturePayload.jsonShapePaths(day.toJSON(customization: metric)),
+            csvHeader: ExportSchemaSignaturePayload.csvHeader(csv),
+            csvRowContracts: ExportSchemaSignaturePayload.csvRowContracts(csv)
+        )
     }
 }
 

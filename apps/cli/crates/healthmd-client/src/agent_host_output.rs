@@ -22,6 +22,63 @@ pub(crate) use completion::CompletionEvidence;
 #[path = "agent_source_confirmation.rs"]
 mod source_confirmation;
 pub(crate) use source_confirmation::read_source_confirmation;
+#[path = "agent_output_stop.rs"]
+mod later_stop;
+pub(crate) use later_stop::PendingOutputStop;
+#[path = "agent_uncertain_stop.rs"]
+mod uncertain_stop;
+pub(crate) use uncertain_stop::UncertainStop;
+
+/// Decoder selection only: each selected reader must authenticate its complete evidence.
+#[derive(Clone, Copy)]
+pub(crate) enum RetainedCancellationHint {
+    Uncertain,
+    Accepted,
+    Output,
+    Confirmed,
+}
+impl HostAuthorityStore {
+    /// Select the output reader by existing-file presence only. Some historical signed
+    /// output journals predate accepted-attempt records; their own reader remains authoritative.
+    /// Any selected-reader failure propagates, never falls back to accepted-only recovery.
+    pub(crate) fn has_retained_output(&self, job: &ControlUuid) -> Result<bool, ClientError> {
+        job.validate_shape()?;
+        match self
+            .directory()?
+            .symlink_metadata(format!("output-{}.json", job.0))
+        {
+            Ok(_) => Ok(true),
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(false),
+            Err(error) => Err(private::unavailable(error)),
+        }
+    }
+    pub(crate) fn retained_cancellation_hint(
+        &self,
+        job: &ControlUuid,
+    ) -> Result<RetainedCancellationHint, ClientError> {
+        job.validate_shape()?;
+        let dir = self.directory()?;
+        let output = match dir.symlink_metadata(format!("output-{}.json", job.0)) {
+            Ok(_) => true,
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => false,
+            Err(error) => return Err(private::unavailable(error)),
+        };
+        let bytes =
+            private::read_private(&dir, &format!("attempt-{}.json", job.0), MAX_OUTPUT_BYTES)?;
+        let hint: serde_json::Value = private_json::decode(&bytes)?;
+        match (
+            output,
+            hint.pointer("/attempt/schema_version")
+                .and_then(serde_json::Value::as_u64),
+        ) {
+            (false, Some(1 | 9)) => Ok(RetainedCancellationHint::Uncertain),
+            (false, Some(2 | 3)) => Ok(RetainedCancellationHint::Accepted),
+            (true, Some(1 | 2 | 5 | 7)) => Ok(RetainedCancellationHint::Output),
+            (false, Some(4 | 10)) | (true, Some(6 | 8)) => Ok(RetainedCancellationHint::Confirmed),
+            _ => Err(Error::BindingChanged.into()),
+        }
+    }
+}
 
 #[derive(Clone, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(deny_unknown_fields)]
@@ -64,11 +121,9 @@ impl NativeBinding {
             })
             .collect::<Result<Vec<_>, _>>()?;
         let predicted = &request.plan.predicted_paths;
-        let exact = matches!(
-            self.manifest.capture_status,
-            v4::ArtifactManifestCaptureStatus::Complete
-                | v4::ArtifactManifestCaptureStatus::CompleteEmpty
-        );
+        // A successful empty capture has no artifacts by the existing v4 contract.
+        // Predicted paths are not permission to fabricate files for absent source data.
+        let exact = self.manifest.capture_status == v4::ArtifactManifestCaptureStatus::Complete;
         let ordered = predicted
             .iter()
             .filter(|path| paths.contains(path))
@@ -178,6 +233,37 @@ pub(crate) struct OutputAdmission {
     attempt_name: String,
     attempt_bytes: Vec<u8>,
 }
+#[derive(Clone, Copy)]
+struct AcceptancePublicationBoundary<'a> {
+    cancellation: &'a tokio_util::sync::CancellationToken,
+    host_expires_at: &'a UtcTimestamp,
+}
+#[derive(Clone, Copy)]
+enum RetainedAttemptPurpose {
+    UncertainStop,
+    AcceptedStop,
+    Resume,
+}
+impl RetainedAttemptPurpose {
+    fn accepts(self, schema_version: u64, has_acceptance: bool, has_cancellation: bool) -> bool {
+        matches!(
+            (self, schema_version, has_acceptance, has_cancellation),
+            (
+                RetainedAttemptPurpose::AcceptedStop | RetainedAttemptPurpose::Resume,
+                2,
+                true,
+                false
+            ) | (RetainedAttemptPurpose::AcceptedStop, 3, true, true)
+                | (
+                    RetainedAttemptPurpose::Resume | RetainedAttemptPurpose::UncertainStop,
+                    1,
+                    false,
+                    false
+                )
+                | (RetainedAttemptPurpose::UncertainStop, 9, false, true)
+        )
+    }
+}
 impl OutputAdmission {
     /// Existing pre-manifest evidence only. Never create a missing lock, attempt, output
     /// journal or accepted receipt, and never promote a pre-send intent into acceptance.
@@ -185,6 +271,23 @@ impl OutputAdmission {
         store: &HostAuthorityStore,
         job: &ControlUuid,
         clock: &dyn PlanningClock,
+    ) -> Result<Self, ClientError> {
+        Self::open_retained_attempt(store, job, clock, RetainedAttemptPurpose::AcceptedStop).await
+    }
+    /// A signed send intent is uncertainty, not acceptance. Resume may query the original
+    /// native job, but only its authenticated acceptance can promote this existing record.
+    pub async fn open_retained_for_resume(
+        store: &HostAuthorityStore,
+        job: &ControlUuid,
+        clock: &dyn PlanningClock,
+    ) -> Result<Self, ClientError> {
+        Self::open_retained_attempt(store, job, clock, RetainedAttemptPurpose::Resume).await
+    }
+    async fn open_retained_attempt(
+        store: &HostAuthorityStore,
+        job: &ControlUuid,
+        clock: &dyn PlanningClock,
+        purpose: RetainedAttemptPurpose,
     ) -> Result<Self, ClientError> {
         job.validate_shape()?;
         let key = key_bytes(&store.protected_key.load_existing(&store.host).await?)?;
@@ -202,11 +305,15 @@ impl OutputAdmission {
         attempt.started_at.validate_shape()?;
         let now = clock.now();
         now.validate_shape()?;
-        let accepted = attempt
-            .accepted_receipt
-            .as_ref()
-            .ok_or(ClientError::AgentAuthorityUnavailable)?;
-        validate_accepted(&attempt.request, accepted, clock)?;
+        let accepted = attempt.accepted_receipt.as_ref();
+        if let Some(receipt) = accepted {
+            validate_accepted(&attempt.request, receipt, clock)?;
+        }
+        let allowed = purpose.accepts(
+            attempt.schema_version,
+            accepted.is_some(),
+            attempt.cancellation_request.is_some(),
+        );
         if attempt.schema != "healthmd.agent_host_execution_attempt"
             || attempt.host != store.host
             || attempt.request.job_id != *job
@@ -221,10 +328,7 @@ impl OutputAdmission {
                     .native
                     .authority_id
             || attempt.started_at > now
-            || !matches!(
-                (attempt.schema_version, &attempt.cancellation_request),
-                (2, None) | (3, Some(_))
-            )
+            || !allowed
         {
             return Err(ClientError::AgentAuthorityUnavailable);
         }
@@ -233,15 +337,19 @@ impl OutputAdmission {
                 return Err(ClientError::AgentAuthorityUnavailable);
             }
         }
-        let expected = execution_attempt_bytes(
-            &store.host,
-            &attempt.request,
-            &attempt.started_at,
-            Some(accepted),
-            attempt.cancellation_request.as_ref(),
-            None,
-            &key,
-        )?;
+        let expected = if attempt.schema_version == 9 {
+            uncertain_stop::pending_bytes(&store.host, &attempt.request, &attempt.started_at, &key)?
+        } else {
+            execution_attempt_bytes(
+                &store.host,
+                &attempt.request,
+                &attempt.started_at,
+                accepted,
+                attempt.cancellation_request.as_ref(),
+                None,
+                &key,
+            )?
+        };
         let expected: SignedExecutionAttempt = private_json::decode(&expected)?;
         if !healthmd_protocol::crypto::constant_time_equal(
             saved.mac.0.as_bytes(),
@@ -264,6 +372,56 @@ impl OutputAdmission {
         };
         admission.require_current()?;
         Ok(admission)
+    }
+    /// Synchronous tail after authority/key callbacks and the final clock observation.
+    pub fn require_resumable_current(
+        &self,
+        clock: &dyn PlanningClock,
+        cancellation: &tokio_util::sync::CancellationToken,
+    ) -> Result<(), ClientError> {
+        let expiry = self.resume_observation_expiry()?;
+        let now = clock.now();
+        now.validate_shape()?;
+        if cancellation.is_cancelled() {
+            return Err(ClientError::WaitCancelled);
+        }
+        if now < self.started_at
+            || now >= expiry
+            || self.cancellation.is_some()
+            || self.source_confirmed
+        {
+            return Err(Error::BindingChanged.into());
+        }
+        self.require_current()
+    }
+    /// A pending Stop is monotonic: it cannot be converted back into export work.
+    pub fn resumable_binding(
+        &self,
+    ) -> Result<(ExecuteRequest, Option<ExecutionReceipt>), ClientError> {
+        self.require_current()?;
+        if self.cancellation.is_some() || self.source_confirmed {
+            return Err(Error::BindingChanged.into());
+        }
+        Ok((self.request.clone(), self.accepted.clone()))
+    }
+    /// An intent has no native lifetime yet. This immutable upper bound limits receipt
+    /// lookup only: native acceptance must occur before the original plan deadline and
+    /// lasts at most seven days. It is never persisted or returned as a job expiry.
+    pub fn resume_observation_expiry(&self) -> Result<UtcTimestamp, ClientError> {
+        if let Some(accepted) = &self.accepted {
+            return Ok(accepted.expires_at.clone());
+        }
+        let seconds = self
+            .request
+            .plan
+            .expires_at
+            .seconds()?
+            .checked_add(604_800)
+            .ok_or(Error::BindingChanged)?;
+        let date = chrono::DateTime::from_timestamp(seconds, 0).ok_or(Error::BindingChanged)?;
+        let expiry = UtcTimestamp(date.to_rfc3339_opts(chrono::SecondsFormat::Secs, true));
+        expiry.validate_shape()?;
+        Ok(expiry)
     }
     pub fn accepted_binding(&self) -> Result<(ExecuteRequest, ExecutionReceipt), ClientError> {
         Ok((
@@ -329,11 +487,53 @@ impl OutputAdmission {
     }
     /// Accepted source evidence is durable before any manifest wait. This is not a terminal
     /// receipt, transfer frontier or new permission, and never renews the original lifetime.
+    /// A native receipt recovered from uncertainty must fit the immutable original
+    /// lookup window. This is the sole intent-to-acceptance transition for Resume.
+    pub async fn persist_reconciled_acceptance<F, Fut>(
+        &mut self,
+        accepted: &ExecutionReceipt,
+        clock: &dyn PlanningClock,
+        cancellation: &tokio_util::sync::CancellationToken,
+        host_expires_at: &UtcTimestamp,
+        fence: F,
+    ) -> Result<(), ClientError>
+    where
+        F: FnMut() -> Fut,
+        Fut: std::future::Future<Output = Result<PathBuf, ClientError>>,
+    {
+        if accepted.expires_at > self.resume_observation_expiry()? {
+            return Err(Error::BindingChanged.into());
+        }
+        self.persist_accepted_inner(
+            accepted,
+            clock,
+            fence,
+            Some(AcceptancePublicationBoundary {
+                cancellation,
+                host_expires_at,
+            }),
+        )
+        .await
+    }
     pub async fn persist_accepted<F, Fut>(
         &mut self,
         accepted: &ExecutionReceipt,
         clock: &dyn PlanningClock,
+        fence: F,
+    ) -> Result<(), ClientError>
+    where
+        F: FnMut() -> Fut,
+        Fut: std::future::Future<Output = Result<PathBuf, ClientError>>,
+    {
+        self.persist_accepted_inner(accepted, clock, fence, None)
+            .await
+    }
+    async fn persist_accepted_inner<F, Fut>(
+        &mut self,
+        accepted: &ExecutionReceipt,
+        clock: &dyn PlanningClock,
         mut fence: F,
+        boundary: Option<AcceptancePublicationBoundary<'_>>,
     ) -> Result<(), ClientError>
     where
         F: FnMut() -> Fut,
@@ -356,15 +556,34 @@ impl OutputAdmission {
         )?;
         private::publish(&self.dir, &self.attempt_name, &bytes, false, || async {
             fence().await?;
-            validate_accepted(&self.request, accepted, clock)?;
-            self.require_current()
+            self.require_acceptance_publication_current(accepted, clock, boundary)
         })
         .await?;
         self.attempt_bytes = bytes;
         self.accepted = Some(accepted.clone());
         fence().await?;
-        validate_accepted(&self.request, accepted, clock)?;
-        // The local exact-byte/root/held-lock proof follows every delaying callback.
+        self.require_acceptance_publication_current(accepted, clock, boundary)
+    }
+    fn require_acceptance_publication_current(
+        &self,
+        accepted: &ExecutionReceipt,
+        clock: &dyn PlanningClock,
+        boundary: Option<AcceptancePublicationBoundary<'_>>,
+    ) -> Result<(), ClientError> {
+        let now = clock.now();
+        validate_accepted_at(&self.request, accepted, &now)?;
+        if let Some(boundary) = boundary {
+            if boundary.cancellation.is_cancelled() {
+                return Err(ClientError::WaitCancelled);
+            }
+            if now < self.started_at
+                || now >= *boundary.host_expires_at
+                || self.cancellation.is_some()
+            {
+                return Err(Error::BindingChanged.into());
+            }
+        }
+        // No callback or await follows the clock/caller/lifetime and exact local proof.
         self.require_current()
     }
     /// Stop needs the exact original accepted owner/key/trust, not renewed export permission.
@@ -601,6 +820,16 @@ fn validate_source_stop_receipt(
     accepted: &ExecutionReceipt,
     receipt: &ExecutionReceipt,
 ) -> Result<(), ClientError> {
+    if receipt.expires_at != accepted.expires_at {
+        return Err(Error::BindingChanged.into());
+    }
+    validate_source_stop_identity(request, receipt)
+}
+
+fn validate_source_stop_identity(
+    request: &ExecuteRequest,
+    receipt: &ExecutionReceipt,
+) -> Result<(), ClientError> {
     v4::validate_execution_receipt(receipt)?;
     let no_manifest = receipt.manifest_sha256.0 == "0".repeat(64);
     let no_frontier = receipt.frontier_sha256.0 == "0".repeat(64);
@@ -617,7 +846,6 @@ fn validate_source_stop_receipt(
     if receipt.binding != v4::approval_binding(&request.plan)
         || receipt.job_id != request.job_id
         || receipt.request_sha256 != v4::document_digest(request)?
-        || receipt.expires_at != accepted.expires_at
         || !receipt.source_acknowledged
         || !matches!(
             receipt.status,
@@ -637,8 +865,15 @@ fn validate_accepted(
     accepted: &ExecutionReceipt,
     clock: &dyn PlanningClock,
 ) -> Result<(), ClientError> {
+    validate_accepted_at(request, accepted, &clock.now())
+}
+fn validate_accepted_at(
+    request: &ExecuteRequest,
+    accepted: &ExecutionReceipt,
+    now: &UtcTimestamp,
+) -> Result<(), ClientError> {
     v4::validate_execution_receipt(accepted)?;
-    let now = clock.now();
+    now.validate_shape()?;
     if accepted.binding != v4::approval_binding(&request.plan)
         || accepted.job_id != request.job_id
         || accepted.request_sha256 != v4::document_digest(request)?
@@ -648,7 +883,7 @@ fn validate_accepted(
         || accepted.committed_partition_count != 0
         || accepted.frontier_sha256.0 != "0".repeat(64)
         || accepted.manifest_sha256.0 != "0".repeat(64)
-        || accepted.expires_at <= now
+        || accepted.expires_at <= *now
         || accepted.expires_at.seconds()? > now.seconds()?.saturating_add(604_800)
     {
         return Err(Error::BindingChanged.into());
@@ -1047,7 +1282,17 @@ fn read_compatible_execution_attempt(
         Ok(_) => {}
     }
     let bytes = private::read_private(dir, &name, MAX_OUTPUT_BYTES)?;
-    let saved: SignedExecutionAttempt = private_json::decode(&bytes)?;
+    validate_compatible_execution_attempt(&bytes, host, binding, key)?;
+    Ok(Some(bytes))
+}
+
+fn validate_compatible_execution_attempt(
+    bytes: &[u8],
+    host: &ControlUuid,
+    binding: &NativeBinding,
+    key: &SecretBox<[u8; 32]>,
+) -> Result<SignedExecutionAttempt, ClientError> {
+    let saved: SignedExecutionAttempt = private_json::decode(bytes)?;
     saved.mac.validate_shape()?;
     let attempt = &saved.attempt;
     attempt.started_at.validate_shape()?;
@@ -1085,7 +1330,7 @@ fn read_compatible_execution_attempt(
     ) {
         return Err(ClientError::AgentAuthorityUnavailable);
     }
-    Ok(Some(bytes))
+    Ok(saved)
 }
 
 /// Load original immutable metadata by a validated local job ID, never caller-provided

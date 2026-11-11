@@ -2,6 +2,7 @@ package com.healthmd.wear.surface
 
 import android.app.PendingIntent
 import android.content.Intent
+import android.graphics.drawable.Icon
 import androidx.wear.watchface.complications.data.*
 import androidx.wear.watchface.complications.datasource.ComplicationDataTimeline
 import androidx.wear.watchface.complications.datasource.ComplicationRequest
@@ -10,6 +11,7 @@ import androidx.wear.watchface.complications.datasource.TimeInterval
 import androidx.wear.watchface.complications.datasource.TimelineEntry
 import com.healthmd.wear.MainActivity
 import com.healthmd.wear.R
+import com.healthmd.wear.WearColors
 import com.healthmd.wear.relativeAge
 import com.healthmd.wear.sync.WearSnapshotRepository
 import com.healthmd.wearable.contract.*
@@ -33,11 +35,31 @@ class AverageHeartRateComplicationService : HealthComplicationService(Metric.AVE
 class HrvComplicationService : HealthComplicationService(Metric.HRV)
 class BloodOxygenComplicationService : HealthComplicationService(Metric.BLOOD_OXYGEN)
 
-enum class Metric(val labelRes: Int, val maximum: Float) {
-    ACTIVITY(R.string.wear_activity, 10_000f), RECOVERY(R.string.wear_recovery, 12f), STEPS(R.string.wear_steps, 10_000f),
-    MOVE(R.string.wear_move, 1_000f), EXERCISE(R.string.wear_exercise, 180f), SLEEP(R.string.wear_sleep, 12f),
-    RESTING_HEART_RATE(R.string.wear_resting_hr, 220f), AVERAGE_HEART_RATE(R.string.wear_average_hr, 220f),
-    HRV(R.string.wear_hrv, 200f), BLOOD_OXYGEN(R.string.wear_blood_oxygen, 100f);
+/**
+ * One Health.md metric surfaced as a complication, plus its shared visual identity: the full
+ * label (provider list, long text, accessibility), a short title for SHORT_TEXT and RANGED_VALUE
+ * slots, the glyph shared with Tiles and the watch dashboard, and its accent color.
+ */
+enum class Metric(
+    val labelRes: Int,
+    val maximum: Float,
+    val shortLabelRes: Int,
+    val iconRes: Int,
+    val tintArgb: Long,
+) {
+    ACTIVITY(R.string.wear_activity, 10_000f, R.string.wear_short_activity, R.drawable.ic_wear_steps, WearColors.metricStepsArgb),
+    RECOVERY(R.string.wear_recovery, 12f, R.string.wear_short_recovery, R.drawable.ic_wear_sleep, WearColors.metricSleepArgb),
+    STEPS(R.string.wear_steps, 10_000f, R.string.wear_short_steps, R.drawable.ic_wear_steps, WearColors.metricStepsArgb),
+    MOVE(R.string.wear_move, 1_000f, R.string.wear_short_move, R.drawable.ic_wear_move, WearColors.metricMoveArgb),
+    EXERCISE(R.string.wear_exercise, 180f, R.string.wear_short_exercise, R.drawable.ic_wear_exercise, WearColors.metricExerciseArgb),
+    SLEEP(R.string.wear_sleep, 12f, R.string.wear_short_sleep, R.drawable.ic_wear_sleep, WearColors.metricSleepArgb),
+    RESTING_HEART_RATE(R.string.wear_resting_hr, 220f, R.string.wear_short_resting_hr, R.drawable.ic_wear_resting_heart, WearColors.metricRestingHeartArgb),
+    AVERAGE_HEART_RATE(R.string.wear_average_hr, 220f, R.string.wear_short_average_hr, R.drawable.ic_wear_average_heart, WearColors.metricAverageHeartArgb),
+    HRV(R.string.wear_hrv, 200f, R.string.wear_short_hrv, R.drawable.ic_wear_hrv, WearColors.metricHrvArgb),
+    BLOOD_OXYGEN(R.string.wear_blood_oxygen, 100f, R.string.wear_short_blood_oxygen, R.drawable.ic_wear_oxygen, WearColors.metricOxygenArgb);
+
+    /** ProtoLayout resource id for this metric's glyph; see [tileResources]. */
+    val tileIconId: String get() = "metric_${name.lowercase()}"
 
     fun data(service: android.app.Service, type: ComplicationType): ComplicationData =
         data(service, type, System.currentTimeMillis())
@@ -137,24 +159,34 @@ enum class Metric(val labelRes: Int, val maximum: Float) {
         validUntilEpochMillis: Long? = null,
     ): ComplicationData {
         val metricLabel = service.getString(labelRes)
-        val visibleTitle = if (visibleStaleLabel) note else metricLabel
+        // SHORT_TEXT and RANGED_VALUE titles fit about seven characters, so they use the short
+        // label; LONG_TEXT keeps the full label. A stale value replaces the title with its age.
+        val visibleTitle = when {
+            visibleStaleLabel -> note
+            type == ComplicationType.LONG_TEXT -> metricLabel
+            else -> service.getString(shortLabelRes)
+        }
         val formatted = if (preview) service.getString(R.string.wear_no_data_short) else format(service, numeric)
         val tap = PendingIntent.getActivity(service, ordinal, Intent(service, MainActivity::class.java).putExtra("metric", name), PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
         val title = PlainComplicationText.Builder(visibleTitle).build(); val text = PlainComplicationText.Builder(formatted).build()
         val description = PlainComplicationText.Builder(service.getString(R.string.wear_complication_description, metricLabel, formatted, note)).build()
         val validRange = validUntilEpochMillis?.let { TimeRange.before(Instant.ofEpochMilli(it)) }
+        val image = MonochromaticImage.Builder(Icon.createWithResource(service, iconRes)).build()
         return when (type) {
             ComplicationType.RANGED_VALUE -> if (preview) {
-                NoDataComplicationData(placeholder = ShortTextComplicationData.Builder(text, description).setTitle(title).build())
+                NoDataComplicationData(placeholder = ShortTextComplicationData.Builder(text, description)
+                    .setTitle(title).setMonochromaticImage(image).build())
             } else {
                 RangedValueComplicationData.Builder(numeric.toFloat().coerceIn(0f, maximum), 0f, maximum, description)
-                    .setText(text).setTitle(title).setTapAction(tap)
+                    .setText(text).setTitle(title).setMonochromaticImage(image)
+                    .setColorRamp(ColorRamp(intArrayOf(tintArgb.toInt()), interpolated = false))
+                    .setTapAction(tap)
                     .apply { validRange?.let(::setValidTimeRange) }.build()
             }
             ComplicationType.LONG_TEXT -> LongTextComplicationData.Builder(PlainComplicationText.Builder(service.getString(R.string.wear_complication_long, metricLabel, formatted, note)).build(), description)
-                .setTitle(title).setTapAction(tap).apply { validRange?.let(::setValidTimeRange) }.build()
+                .setTitle(title).setMonochromaticImage(image).setTapAction(tap).apply { validRange?.let(::setValidTimeRange) }.build()
             ComplicationType.SHORT_TEXT -> ShortTextComplicationData.Builder(text, description)
-                .setTitle(title).setTapAction(tap).apply { validRange?.let(::setValidTimeRange) }.build()
+                .setTitle(title).setMonochromaticImage(image).setTapAction(tap).apply { validRange?.let(::setValidTimeRange) }.build()
             else -> NoDataComplicationData()
         }
     }

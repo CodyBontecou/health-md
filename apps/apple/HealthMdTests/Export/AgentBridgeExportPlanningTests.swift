@@ -636,6 +636,70 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
         XCTAssertEqual((try JSONSerialization.jsonObject(with: bytes) as? [String: Any])?["version"] as? Int, 4)
     }
 
+    private func acceptanceObservation(_ request: AgentBridgeExecute) throws -> AgentBridgeResume {
+        let zero = try AgentBridgeDigest(String(repeating: "0", count: 64))
+        return .init(binding: AgentBridgeSemantics.binding(request.plan), committedPartitionCount: 0,
+            destination: request.plan.intent.destination, frontierSha256: zero, jobId: request.jobId,
+            manifestSha256: zero, peer: request.plan.intent.peer,
+            requestSha256: try AgentBridgeDigest(AgentBridgeV4Codec.digest(request)))
+    }
+
+    func testRetainedAcceptanceObservationNeedsNoCaptureAndNeverRenewsOrReadsSettings() throws {
+        let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll()
+        let request = try executionRequest(rig)
+        let original = try rig.service.acceptExecution(request, authenticatedPeer: rig.peer).job
+        let bytes = try Data(contentsOf: rig.directory.appendingPathComponent("state.json"))
+        rig.clock.advance(seconds: 600)
+        rig.reader.catalogRevision += 1; rig.reader.entitlement = .required
+        let reads = rig.reader.calls.count
+        let observed = try rig.restartedService().retainedAcceptance(acceptanceObservation(request), authenticatedPeer: rig.peer)
+        XCTAssertEqual(observed, original)
+        XCTAssertEqual(try observed.acceptedReceipt(), try original.acceptedReceipt())
+        XCTAssertEqual(rig.reader.calls.count, reads)
+        XCTAssertEqual(try rig.store.snapshot().captureClaims?.count ?? 0, 0)
+        XCTAssertEqual(try Data(contentsOf: rig.directory.appendingPathComponent("state.json")), bytes)
+    }
+
+    func testRetainedAcceptanceObservationRejectsMissingChangedExpiredAndRevokedJobsWithoutRepair() throws {
+        for mode in ["unaccepted", "job", "peer", "destination", "binding", "request", "manifest", "frontier", "count", "expired", "trust", "delayed_key", "delayed_trust", "grant"] {
+            let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll()
+            let request = try executionRequest(rig)
+            if mode != "unaccepted" { _ = try rig.service.acceptExecution(request, authenticatedPeer: rig.peer) }
+            var object = try XCTUnwrap(JSONSerialization.jsonObject(with: AgentBridgeV4Codec.encode(acceptanceObservation(request))) as? [String: Any])
+            switch mode {
+            case "job": object["job_id"] = try id(99).rawValue
+            case "peer":
+                var value = try XCTUnwrap(object["peer"] as? [String: Any]); value["source_installation_id"] = try id(99).rawValue; object["peer"] = value
+            case "destination":
+                var value = try XCTUnwrap(object["destination"] as? [String: Any]); value["binding_id"] = try id(99).rawValue; object["destination"] = value
+            case "binding":
+                var value = try XCTUnwrap(object["binding"] as? [String: Any]); value["plan_sha256"] = String(repeating: "f", count: 64); object["binding"] = value
+            case "request": object["request_sha256"] = String(repeating: "f", count: 64)
+            case "manifest": object["manifest_sha256"] = String(repeating: "f", count: 64)
+            case "frontier": object["frontier_sha256"] = String(repeating: "f", count: 64)
+            case "count": object["committed_partition_count"] = 1
+            case "expired": rig.clock.advance(seconds: 604800)
+            case "trust": rig.session.revoke()
+            case "delayed_key": rig.keys.onNextLoad { rig.clock.advance(seconds: 604800) }
+            case "delayed_trust": rig.keys.onNextLoad { rig.session.revoke() }
+            case "grant": try rig.store.revokeNativeDelegation(request.plan.authorityReferences.native, expectedGeneration: rig.store.snapshot().generation, authorization: FakeNativeAuthorization())
+            default: break
+            }
+            let incoming = try JSONSerialization.data(withJSONObject: object)
+            let bytes = try Data(contentsOf: rig.directory.appendingPathComponent("state.json"))
+            let reads = rig.reader.calls.count
+            XCTAssertThrowsError(try {
+                // Cross-field substitutions may reject at typed decode before the service.
+                let resume = try AgentBridgeV4Codec.decode(AgentBridgeResume.self, from: incoming)
+                return try rig.service.retainedAcceptance(resume, authenticatedPeer: rig.peer)
+            }(), mode) {
+                XCTAssertNotNil($0 as? AgentBridgeValidationError)
+            }
+            XCTAssertEqual(rig.reader.calls.count, reads)
+            XCTAssertEqual(try Data(contentsOf: rig.directory.appendingPathComponent("state.json")), bytes)
+        }
+    }
+
     func testDurableAcceptanceReplaysExactStoredJobAfterPlanExpiryWithoutResolvingChangedSettings() throws {
         let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll()
         let request = try executionRequest(rig)
@@ -1102,11 +1166,11 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
         if let originalFailure { throw originalFailure }
     }
 
-    private func withNativeExportPreparation(transferNegotiation: DirectTransferNegotiation? = DirectTransferCapabilities.current.negotiated(with: .current), peerTransferCapabilities: DirectTransferCapabilities? = .current, _ operation: (Rig, AgentBridgeNativePlanningSession, AgentBridgeExecute, FakeHealthStore, HealthKitManager) async throws -> Void) async throws {
+    private func withNativeExportPreparation(transferNegotiation: DirectTransferNegotiation? = DirectTransferCapabilities.current.negotiated(with: .current), peerTransferCapabilities: DirectTransferCapabilities? = .current, responseChannel: DirectSecureChannel? = nil, _ operation: (Rig, AgentBridgeNativePlanningSession, AgentBridgeExecute, FakeHealthStore, HealthKitManager) async throws -> Void) async throws {
         let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll()
         let lifecycle = AgentBridgeNativeCatalogLifecycle(); try lifecycle.observe(nativeState())
         _ = try lifecycle.publish(to: rig.store, sourceInstallationID: rig.peer.peer.sourceInstallationID)
-        let channel = DirectSecureChannel(packetConnection: NativePlanningResponsePackets(), sessionKey: SymmetricKey(size: .bits256), peerInstallationID: UUID(), peerDisplayName: "Synthetic")
+        let channel = responseChannel ?? DirectSecureChannel(packetConnection: NativePlanningResponsePackets(), sessionKey: SymmetricKey(size: .bits256), peerInstallationID: UUID(), peerDisplayName: "Synthetic")
         let planner = try nativePlanningSession(rig, lifecycle, responseChannel: channel, transferNegotiation: transferNegotiation, peerTransferCapabilities: peerTransferCapabilities)
         let request = try nativeCaptureRequest(rig, planner: planner)
         let store = FakeHealthStore()
@@ -1173,6 +1237,47 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
             if filename == "manifest.json" { XCTAssertFalse(FileManager.default.fileExists(atPath: path.path)) }
             else { XCTAssertEqual(try Data(contentsOf: path), Data("corrupt".utf8)) }
             XCTAssertEqual(store.queriedSumIdentifiers.count, 2)
+        }
+    }
+
+    func testAcceptedOnlyResumePreservesSpoolAndCannotRewindNativeAcknowledgements() async throws {
+        for acknowledged in [false, true] {
+            try await withNativeExportPreparation { rig, planner, request, store, manager in
+                store.statisticsSums[HKQuantityTypeIdentifier.stepCount.rawValue] = 123
+                let transfer = try await planner.prepareTransferExport(request, manager: manager)
+                try await planner.withRetainedCaptureContext(request) { context in
+                    _ = try context.begin(); _ = try context.preserveTransferFrontier()
+                    if acknowledged { _ = try context.recordAcknowledgedTransferPartition(0) }
+                }
+                let directory = rig.directory.appendingPathComponent("captures/" + transfer.export.requestSHA256)
+                let progress = try Data(contentsOf: directory.appendingPathComponent("progress.json"))
+                let reconnect = try transferReconnect(rig, capabilities: .current)
+                let issuer = try Data(contentsOf: rig.directory.appendingPathComponent("state.json"))
+                store.querySumResult = { _, _ in XCTFail("Accepted-only Resume cannot query SDK"); return nil }
+                let zero = try AgentBridgeDigest(String(repeating: "0", count: 64))
+                let resume = AgentBridgeResume(binding: AgentBridgeSemantics.binding(request.plan), committedPartitionCount: 0,
+                    destination: request.plan.intent.destination, frontierSha256: zero, jobId: request.jobId,
+                    manifestSha256: zero, peer: request.plan.intent.peer,
+                    requestSha256: try AgentBridgeDigest(transfer.export.requestSHA256))
+                var admitted = false
+                do {
+                    try await reconnect.withResumedCaptureContext(resume) { recovered, context in
+                        admitted = true
+                        XCTAssertEqual(try AgentBridgeV4Codec.encode(recovered), try AgentBridgeV4Codec.encode(request))
+                        _ = try context.begin()
+                        XCTAssertEqual(try context.preserveManifest(), transfer.export.manifestCanonical)
+                        XCTAssertEqual(try context.preserveTransferPlan(), transfer.checkpointCanonical)
+                    }
+                    XCTAssertFalse(acknowledged)
+                } catch {
+                    XCTAssertTrue(acknowledged)
+                    XCTAssertNotNil(error as? AgentBridgeValidationError)
+                }
+                XCTAssertEqual(admitted, !acknowledged)
+                XCTAssertEqual(try Data(contentsOf: directory.appendingPathComponent("progress.json")), progress)
+                XCTAssertEqual(try Data(contentsOf: rig.directory.appendingPathComponent("state.json")), issuer)
+                XCTAssertEqual(store.queriedSumIdentifiers.count, 2)
+            }
         }
     }
 
@@ -1769,6 +1874,147 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
 
     func testNativeCompletionRequiresExactHostReceiptsAndPersistsReplay() async throws { try await checkNativeTransferSender("complete") }
     func testNativeResumeCarriesRetainedPrefixAndConfirmsOriginalCompletionWithoutCapture() async throws { try await checkNativeTransferSender("complete-resume") }
+    func testNativeWireExecuteCapturesOnceAndConfirmsExactCompletion() async throws { try await checkNativeWireExecute("complete") }
+    func testNativeWireExecuteStopIsHandledAndReplaysExactCancellationReceipt() async throws { try await checkNativeWireExecute("stop") }
+    func testNativeWireExecuteExactReplayAfterPlanExpiryIsMetadataOnly() async throws { try await checkNativeWireExecute("replay") }
+    func testNativeWireExecuteRejectsChangedIdempotentBytesWithoutRecapture() async throws { try await checkNativeWireExecute("changed") }
+    func testNativeWireExecuteRejectsACKPrefixWithoutTreatingItAsResume() async throws { try await checkNativeWireExecute("ack") }
+
+    private func checkNativeWireExecute(_ mode: String) async throws {
+        let key = SymmetricKey(data: Data(repeating: 29, count: 32))
+        let peer = NativeExecuteWireState()
+        let enqueue: @MainActor @Sendable (Data) throws -> Void = { bytes in
+            let wire = try XCTUnwrap(peer.wire)
+            wire.appendInbound(try self.nativeResponsePacket(bytes, sequence: UInt64(peer.nextSequence), key: key))
+            peer.gates[peer.nextSequence].release(); peer.nextSequence += 1
+        }
+        let wire = NativePlanningResponsePackets(afterWrite: {
+            try await MainActor.run {
+                let packet = try XCTUnwrap(peer.wire?.packets.last)
+                guard case .encrypted(let frame) = packet else { throw AgentBridgeValidationError.invalidRequest }
+                let bytes = Data(try ManualIPSyncSecurity.open(frame, using: key).dropFirst(16))
+                if DirectTransferBinaryFrame.isBinaryFrame(bytes) {
+                    let chunk = try DirectTransferBinaryFrame.decode(bytes).chunk
+                    peer.chunks += 1
+                    try enqueue(JSONEncoder().encode(DirectMessage.transferChunkAcknowledgement(.init(transferID: chunk.transferID,
+                        sequence: chunk.sequence, accepted: true, sha256: chunk.sha256))))
+                    let open = try XCTUnwrap(peer.opens.last)
+                    XCTAssertEqual(chunk.transferID, open.partition.transferID)
+                    if chunk.sequence == open.partition.chunkCount {
+                        try enqueue(JSONEncoder().encode(DirectMessage.transferPartitionAcknowledgement(.init(sessionID: open.session.sessionID,
+                            jobID: open.session.jobID, partitionIndex: open.partition.index, transferID: chunk.transferID,
+                            partitionSHA256: open.partition.sha256, accepted: true))))
+                    }
+                } else if let envelope = try? AgentBridgeV4Codec.decode(AgentBridgeEnvelope.self, from: bytes) {
+                    peer.agent.append(envelope)
+                } else {
+                    let decoder = JSONDecoder()
+                    decoder.dateDecodingStrategy = .iso8601
+                    let message = try decoder.decode(DirectMessage.self, from: bytes)
+                    peer.base.append(message)
+                    switch message {
+                    case .transferOpen(let open):
+                        peer.opens.append(open)
+                        if mode == "stop" {
+                            try enqueue(AgentBridgeV4Codec.encode(AgentBridgeEnvelope(payload: .cancel(self.cancellationRequest(XCTUnwrap(peer.request))))))
+                        } else {
+                            try enqueue(JSONEncoder().encode(DirectMessage.transferDisposition(.init(sessionID: open.session.sessionID,
+                                jobID: open.session.jobID, partitionIndex: open.partition.index, partitionSHA256: open.partition.sha256, disposition: .needed))))
+                        }
+                    case .transferFinalize(let final):
+                        try enqueue(JSONEncoder().encode(DirectMessage.transferFinalAcknowledgement(.init(sessionID: final.sessionID,
+                            jobID: final.jobID, accepted: true, totalPartitions: final.totalPartitions, totalBytes: final.totalBytes,
+                            finalPartitionSHA256: final.finalPartitionSHA256))))
+                        let request = try XCTUnwrap(peer.request)
+                        guard let envelope = peer.agent.first(where: { if case .manifest = $0.payload { true } else { false } }),
+                              case .manifest(let manifest) = envelope.payload else { throw AgentBridgeValidationError.invalidRequest }
+                        let manifestBytes = try AgentBridgeV4Codec.encode(manifest)
+                        for artifact in manifest.artifacts {
+                            let receipt = try self.nativeHostCommit(artifact, request: request, manifest: manifestBytes)
+                            try enqueue(AgentBridgeV4Codec.encode(AgentBridgeEnvelope(payload: .commit(receipt))))
+                        }
+                    default: break
+                    }
+                }
+            }
+        }, beforeReceive: {
+            let gate = await MainActor.run {
+                let gate = peer.gates[peer.consumed]; peer.consumed += 1; return gate
+            }
+            await gate.wait()
+        }, onCancel: { Task { @MainActor in peer.gates.forEach { $0.release() } } })
+        peer.wire = wire
+        let channel = DirectSecureChannel(packetConnection: wire, sessionKey: key, peerInstallationID: UUID(), peerDisplayName: "Synthetic Execute peer")
+        defer { channel.cancel(); peer.wire = nil }
+        try await withNativeExportPreparation(responseChannel: channel) { rig, session, request, store, manager in
+            peer.request = request
+            store.querySumResult = { _, _ in
+                guard case .receipt(let accepted)? = peer.agent.first?.payload else { XCTFail("SDK read before acceptance"); return 0 }
+                XCTAssertEqual(accepted.status, .accepted)
+                return 123
+            }
+            try enqueue(AgentBridgeV4Codec.encode(AgentBridgeEnvelope(payload: .execute(request))))
+            let received = try await session.receiveAndHandleExecutionNext(on: channel, manager: manager, confirmedStopIsHandled: true)
+            XCTAssertNil(received)
+            guard peer.agent.count == 3 else { return XCTFail("Missing accepted/manifest/completion sequence") }
+            guard case .receipt(let accepted) = peer.agent[0].payload, case .manifest = peer.agent[1].payload,
+                  case .receipt(let completed) = peer.agent[2].payload else { return XCTFail("Missing accepted/manifest/completion sequence") }
+            XCTAssertFalse(accepted.sourceAcknowledged); XCTAssertTrue(completed.sourceAcknowledged)
+            XCTAssertEqual(completed.status, mode == "stop" ? .cancelled : .complete); XCTAssertEqual(completed.requestSha256.rawValue, try AgentBridgeV4Codec.digest(request))
+            XCTAssertEqual(peer.opens.count, mode == "stop" ? 1 : 2)
+            XCTAssertEqual(peer.chunks, mode == "stop" ? 0 : peer.opens.reduce(0) { $0 + $1.partition.chunkCount })
+            XCTAssertEqual(peer.base.filter { if case .completionConfirmed = $0 { true } else { false } }.count, mode == "stop" ? 0 : 1)
+            XCTAssertFalse(channel.isLocallyTerminal)
+            if mode == "stop" {
+                let ledger = rig.directory.appendingPathComponent("state.json"), before = try Data(contentsOf: rig.directory.appendingPathComponent("state.json"))
+                let writesBefore = wire.packets.count
+                try enqueue(AgentBridgeV4Codec.encode(AgentBridgeEnvelope(payload: .cancel(self.cancellationRequest(request)))))
+                let result = try await session.receiveAndHandleExecutionNext(on: channel, manager: manager, confirmedStopIsHandled: true)
+                XCTAssertNil(result)
+                guard case .receipt(let replay)? = peer.agent.last?.payload else { return XCTFail("Missing Stop replay") }
+                XCTAssertEqual(replay, completed); XCTAssertEqual(wire.packets.count, writesBefore + 1)
+                XCTAssertEqual(try Data(contentsOf: ledger), before); XCTAssertFalse(channel.isLocallyTerminal)
+            } else if mode != "complete" {
+                let ledger = rig.directory.appendingPathComponent("state.json"), before = try Data(contentsOf: rig.directory.appendingPathComponent("state.json"))
+                let writesBefore = wire.packets.count
+                rig.clock.advance(seconds: 600)
+                if mode == "ack" {
+                    let open = try XCTUnwrap(peer.opens.first)
+                    try enqueue(JSONEncoder().encode(DirectMessage.transferPartitionAcknowledgement(.init(sessionID: open.session.sessionID,
+                        jobID: open.session.jobID, partitionIndex: 0, transferID: open.partition.transferID,
+                        partitionSHA256: open.partition.sha256, accepted: true))))
+                }
+                let retry = mode == "changed" ? try AgentBridgeExecute(approval: request.approval, idempotencyKey: request.idempotencyKey,
+                    jobId: request.jobId, plan: request.plan, requestId: id(84)) : request
+                try enqueue(AgentBridgeV4Codec.encode(AgentBridgeEnvelope(payload: .execute(retry))))
+                if mode == "replay" {
+                    let result = try await session.receiveAndHandleExecutionNext(on: channel, manager: manager, confirmedStopIsHandled: true)
+                    XCTAssertNil(result)
+                    guard case .receipt(let replay)? = peer.agent.last?.payload else { return XCTFail("Missing replay receipt") }
+                    XCTAssertEqual(replay, accepted); XCTAssertEqual(wire.packets.count, writesBefore + 1)
+                    XCTAssertFalse(channel.isLocallyTerminal)
+                } else {
+                    do { _ = try await session.receiveAndHandleExecutionNext(on: channel, manager: manager, confirmedStopIsHandled: true); XCTFail("Changed bytes or ACK-prefixed Execute admitted") }
+                    catch { XCTAssertEqual(error as? AgentBridgeValidationError, .bindingChanged) }
+                    XCTAssertEqual(wire.packets.count, writesBefore); XCTAssertTrue(channel.isLocallyTerminal)
+                }
+                XCTAssertEqual(try Data(contentsOf: ledger), before)
+            }
+            XCTAssertEqual(store.queriedSumIdentifiers.count, 2)
+        }
+    }
+
+    func testNativeWireResumeReplaysOriginalAcceptanceBeforeImmutableTransfer() async throws { try await checkNativeTransferSender("wire-resume") }
+    func testNativeWireResumeReconcilesLostPartitionACKWithoutRecapture() async throws { try await checkNativeTransferSender("wire-lost-ack") }
+    func testNativeWireResumeAcceptsZeroPrefixWithoutFabricatingACK() async throws { try await checkNativeTransferSender("wire-zero-prefix") }
+    func testNativeWireResumeRejectsBindingBeforeACKAdvancement() async throws { try await checkNativeTransferSender("wire-bad-binding") }
+    func testNativeWireResumeRejectsWrongAndDuplicateACKWithoutResponse() async throws {
+        for mode in ["wire-bad-ack", "wire-double-ack"] { try await checkNativeTransferSender(mode) }
+    }
+    func testNativeWireResumePreservesOriginalAcceptanceAfterPlanExpiry() async throws { try await checkNativeTransferSender("wire-expired-plan") }
+    func testNativeWireResumeStopPreservesChannelForExactReceiptReplay() async throws { try await checkNativeTransferSender("wire-stop") }
+    func testNativeWireResumeHandledStopReturnsToControllerAndPreservesExactReceiptReplay() async throws { try await checkNativeTransferSender("wire-stop-handled") }
+
     func testNativeCompletionRejectsChangedInputWithValidCommitKey() async throws { try await checkNativeTransferSender("complete-bad-input") }
     func testNativeCompletionRejectsReorderedReceipts() async throws { try await checkNativeTransferSender("complete-order") }
     func testNativeCompletionRejectsMissingReceipt() async throws { try await checkNativeTransferSender("complete-missing") }
@@ -1810,10 +2056,13 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
                 XCTAssertEqual(try Data(contentsOf: file), before); XCTAssertEqual(store.queriedSumIdentifiers.count, 2)
                 return
             }
-            let stopTransfer = mode.hasPrefix("stop-")
+            let stopTransfer = mode.hasPrefix("stop-") || mode.hasPrefix("wire-stop")
             let keepalive = mode.contains("keepalive")
-            let completion = mode.hasPrefix("complete") || mode == "stop-host"
-            let resumedPrefix = mode == "resume" || mode == "complete-resume" || mode == "stop-resume"
+            let wireResume = mode.hasPrefix("wire-")
+            let wireInvalid = ["wire-bad-binding", "wire-bad-ack", "wire-double-ack"].contains(mode)
+            let lostAck = mode == "wire-lost-ack" || mode == "wire-bad-binding"
+            let completion = mode.hasPrefix("complete") || mode == "stop-host" || wireResume
+            let resumedPrefix = mode == "resume" || mode == "complete-resume" || mode == "stop-resume" || (wireResume && mode != "wire-zero-prefix")
             var resumeEnvelope: AgentBridgeResume?
             let originalManifest = try AgentBridgeV4Codec.decode(AgentBridgeArtifactManifest.self, from: original.export.manifestCanonical)
             var hostReceipts = try originalManifest.artifacts.map { try self.nativeHostCommit($0, request: request, manifest: original.export.manifestCanonical, badInput: mode == "complete-bad-input") }
@@ -1826,10 +2075,26 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
             if resumedPrefix || mode == "rewind" {
                 try await planner.withRetainedCaptureContext(request) { context in
                     _ = try context.begin(); _ = try context.preserveTransferFrontier()
-                    _ = try context.recordAcknowledgedTransferPartition(0)
-                    if mode == "complete-resume" || mode == "stop-resume" { resumeEnvelope = try self.resumeRequest(request, transfer: original, frontier: context.preserveTransferFrontier()) }
+                    if lostAck {
+                        try context.preserveAwaitingPartitionAcknowledgement(0)
+                        let part = original.partitions[0]
+                        let expected = try context.preserveTransferFrontier().appending(.init(partitionIndex: 0,
+                            transferID: AgentBridgeUUID(part.transferID.uuidString.lowercased()),
+                            artifactID: AgentBridgeUUID(original.export.baseFiles[0].manifest.fileID.uuidString.lowercased()),
+                            artifactOffset: 0, byteCount: part.byteCount, chunkCount: Int64(part.chunkCount), sha256: AgentBridgeDigest(part.sha256)))
+                        resumeEnvelope = try self.resumeRequest(request, transfer: original, frontier: expected)
+                    } else {
+                        _ = try context.recordAcknowledgedTransferPartition(0)
+                        if mode == "complete-resume" || mode == "stop-resume" || wireResume { resumeEnvelope = try self.resumeRequest(request, transfer: original, frontier: context.preserveTransferFrontier()) }
+                    }
                 }
             }
+            if mode == "wire-zero-prefix" {
+                try await planner.withRetainedCaptureContext(request) { context in
+                    _ = try context.begin(); resumeEnvelope = try self.resumeRequest(request, transfer: original, frontier: context.preserveTransferFrontier())
+                }
+            }
+            if mode == "wire-expired-plan" { rig.clock.advance(seconds: 600) }
             var priorCompletion: AgentBridgeExecutionReceipt?
             if mode == "stop-complete" {
                 try await planner.withRetainedCaptureContext(request) { context in
@@ -1882,11 +2147,34 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
                 } }
                 incoming.insert(try AgentBridgeV4Codec.encode(AgentBridgeEnvelope(payload: .cancel(stop))), at: try XCTUnwrap(stopIndex))
             }
-            let selectedStopIndex = stopIndex
             let stopState = NativeTransferStopState()
             if keepalive {
                 incoming = try incoming.flatMap { [try JSONEncoder().encode(DirectMessage.ping), try JSONEncoder().encode(DirectMessage.pong), $0] }
             }
+            var resumePrelude: [Data] = []
+            if wireResume {
+                if resumedPrefix {
+                    let part = original.partitions[0]
+                    let ack = DirectMessage.transferPartitionAcknowledgement(try .init(sessionID: original.session.sessionID,
+                        jobID: original.session.jobID, partitionIndex: 0, transferID: part.transferID,
+                        partitionSHA256: mode == "wire-bad-ack" ? String(repeating: "0", count: 64) : part.sha256, accepted: true))
+                    let bytes = try JSONEncoder().encode(ack)
+                    resumePrelude.append(bytes)
+                    if mode == "wire-double-ack" { resumePrelude.append(bytes) }
+                }
+                if mode != "wire-double-ack" {
+                    let value = try XCTUnwrap(resumeEnvelope)
+                    let resume = mode == "wire-bad-binding" ? AgentBridgeResume(binding: value.binding,
+                        committedPartitionCount: value.committedPartitionCount, destination: value.destination,
+                        frontierSha256: value.frontierSha256, jobId: value.jobId,
+                        manifestSha256: try AgentBridgeDigest(String(repeating: "0", count: 64)), peer: value.peer,
+                        requestSha256: value.requestSha256) : value
+                    resumePrelude.append(try AgentBridgeV4Codec.encode(AgentBridgeEnvelope(payload: .resume(resume))))
+                }
+            }
+            incoming.insert(contentsOf: resumePrelude, at: 0)
+            let resumePreludeCount = resumePrelude.count
+            let selectedStopIndex = stopIndex.map { $0 + resumePreludeCount }
             let inbound = try incoming.enumerated().map { try nativeResponsePacket($0.element, sequence: UInt64($0.offset), key: key) }
             let responseReady = NativePreparationTestGate()
             let stopReadStarted = NativePreparationTestGate()
@@ -1899,7 +2187,7 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
                 }
                 // The first pong follows manifest, session, file manifests and transfer-open.
                 await MainActor.run {
-                    if mode == "keepalive-write-revoke", writeState.count == 3 + original.export.baseFiles.count { rig.session.revoke() }
+                    if mode == "keepalive-write-revoke", writeState.count == 3 + original.export.baseFiles.count + (wireResume ? 1 : 0) { rig.session.revoke() }
                     writeState.count += 1
                 }
                 if completion { try await MainActor.run {
@@ -1910,7 +2198,7 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
                 } }
             }, afterWrite: {
                 let transferOpenWritten = await MainActor.run {
-                    let ready = writeState.count >= 3 + original.export.baseFiles.count
+                    let ready = writeState.count >= 3 + original.export.baseFiles.count + (wireResume ? 1 : 0)
                     if ready { responseReady.release() }
                     return ready
                 }
@@ -1918,7 +2206,8 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
                 // checks. A channel rejected here cannot claim source-confirmed cancellation.
                 if mode == "stop-inflight-read-revoked", transferOpenWritten { await stopReadStarted.wait() }
             }, inbound: inbound, beforeReceive: {
-                await responseReady.wait()
+                let prelude = await MainActor.run { stopState.nextReceive < resumePreludeCount }
+                if !prelude { await responseReady.wait() }
                 await MainActor.run {
                     if stopState.nextReceive == selectedStopIndex {
                         stopState.received = true
@@ -1943,6 +2232,7 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
             })
             let job = try XCTUnwrap(rig.store.snapshot().acceptedJobs?.first)
             let directory = rig.directory.appendingPathComponent("captures/" + job.requestSHA256.rawValue)
+            let progressBeforeWire = try Data(contentsOf: directory.appendingPathComponent("progress.json"))
             store.querySumResult = { _, _ in XCTFail("No SDK on immutable carriage"); return nil }
             var publicationInterrupted = false
             if mode == "publication" {
@@ -1959,7 +2249,9 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
             if stopTransfer {
                 var failure: Error?
                 do {
-                    if mode == "stop-resume" { try await reconnect.sendResumedExecutionExport(XCTUnwrap(resumeEnvelope), manager: manager, core: BridgeRenderTamperCore(mode: "forbid")) }
+                    if wireResume { _ = try await reconnect.receiveAndHandleExecutionNext(on: channel, manager: manager,
+                        confirmedStopIsHandled: mode == "wire-stop-handled", core: BridgeRenderTamperCore(mode: "forbid")) }
+                    else if mode == "stop-resume" { try await reconnect.sendResumedExecutionExport(XCTUnwrap(resumeEnvelope), manager: manager, core: BridgeRenderTamperCore(mode: "forbid")) }
                     else if completion { try await reconnect.sendExecutionExport(request, manager: manager, retained: true, core: BridgeRenderTamperCore(mode: "forbid")) }
                     else { try await reconnect.sendTransferExport(request, manager: manager, retained: true, core: BridgeRenderTamperCore(mode: "forbid")) }
                 } catch { failure = error }
@@ -1985,12 +2277,12 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
                     catch { XCTAssertEqual(wire.packets.count, count) }
                     if mode == "stop-foreign" { XCTAssertTrue(try rig.store.snapshot().cancellationIntents?.isEmpty ?? true) }
                 } else {
-                    if mode == "stop-complete" { XCTAssertNil(failure) }
+                    if mode == "stop-complete" || mode == "wire-stop-handled" { XCTAssertNil(failure) }
                     else { XCTAssertEqual(failure as? AgentBridgeValidationError, .cancelled); XCTAssertFalse(Task.isCancelled) }
                     let receipt = try XCTUnwrap(receipts().last)
                     XCTAssertTrue(receipt.sourceAcknowledged); XCTAssertEqual(receipt.requestSha256.rawValue, original.export.requestSHA256)
                     XCTAssertEqual(receipt.status, priorCompletion?.status ?? .cancelled)
-                    let expectedCount = mode == "stop-resume" ? 1 : (["stop-complete", "stop-final", "stop-host"].contains(mode) ? original.partitions.count : 0)
+                    let expectedCount = (mode == "stop-resume" || wireResume) ? 1 : (["stop-complete", "stop-final", "stop-host"].contains(mode) ? original.partitions.count : 0)
                     XCTAssertEqual(receipt.committedPartitionCount, Int64(expectedCount))
                     if let priorCompletion { XCTAssertEqual(receipt, priorCompletion) }
                     XCTAssertFalse(channel.isLocallyTerminal)
@@ -2003,7 +2295,7 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
                 XCTAssertEqual(store.queriedSumIdentifiers.count, 2)
                 return
             }
-            let fails = (completion && !["complete", "complete-resume", "complete-keepalive"].contains(mode)) || mode.hasPrefix("bad-") || ["revoke", "rewind", "publication", "keepalive-revoke", "keepalive-write-revoke"].contains(mode)
+            let fails = wireInvalid || (completion && !wireResume && !["complete", "complete-resume", "complete-keepalive"].contains(mode)) || mode.hasPrefix("bad-") || ["revoke", "rewind", "publication", "keepalive-revoke", "keepalive-write-revoke"].contains(mode)
             do {
                 if mode == "contended" {
                     try await reconnect.transmitTransfer(request, retained: true) { context in
@@ -2016,6 +2308,9 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
                         catch { XCTAssertEqual(error as? AgentBridgeValidationError, .busy) }
                         return original
                     }
+                } else if wireResume {
+                    let result = try await reconnect.receiveAndHandleExecutionNext(on: channel, manager: manager, core: BridgeRenderTamperCore(mode: "forbid"))
+                    XCTAssertNil(result)
                 } else if mode == "complete-resume" {
                     try await reconnect.sendResumedExecutionExport(XCTUnwrap(resumeEnvelope), manager: manager, core: BridgeRenderTamperCore(mode: "forbid"))
                 } else if completion {
@@ -2031,13 +2326,23 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
                 do { try await reconnect.sendTransferExport(request, manager: manager, retained: true); XCTFail("Failed owner cannot revive") }
                 catch { XCTAssertEqual(wire.packets.count, count) }
             }
+            if wireInvalid {
+                XCTAssertTrue(wire.packets.isEmpty)
+                XCTAssertEqual(try Data(contentsOf: directory.appendingPathComponent("progress.json")), progressBeforeWire)
+                XCTAssertEqual(try rig.store.snapshot().acceptedJobs, acceptedBeforeResume)
+                return
+            }
             var messages: [DirectMessage] = []; var chunks: [DirectTransferChunk] = []; var terminal: [AgentBridgeExecutionReceipt] = []
             let decoder = JSONDecoder(); decoder.dateDecodingStrategy = .iso8601
             for (sequence, packet) in wire.packets.enumerated() {
                 guard case .encrypted(let frame) = packet else { return XCTFail("Expected guarded encrypted packet") }
                 let plaintext = try ManualIPSyncSecurity.open(frame, using: key)
                 let bytes = Data(plaintext.dropFirst(16))
-                if sequence == 0 {
+                if wireResume && sequence == 0 {
+                    let envelope = try AgentBridgeV4Codec.decode(AgentBridgeEnvelope.self, from: bytes)
+                    guard case .receipt(let accepted) = envelope.payload else { return XCTFail("Expected original acceptance before resumed manifest") }
+                    XCTAssertEqual(accepted, try originalJob.acceptedReceipt())
+                } else if sequence == (wireResume ? 1 : 0) {
                     let envelope = try AgentBridgeV4Codec.decode(AgentBridgeEnvelope.self, from: bytes)
                     guard case .manifest(let manifest) = envelope.payload else { return XCTFail("Expected original v4 manifest first") }
                     XCTAssertEqual(try AgentBridgeV4Codec.encode(manifest), original.export.manifestCanonical)
@@ -2057,7 +2362,7 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
                     XCTAssertEqual(try context.preserveTransferFrontier().committedPartitionCount, Int64(original.partitions.count))
                 }
             }
-            if mode == "complete-resume" {
+            if mode == "complete-resume" || wireResume {
                 XCTAssertEqual(try rig.store.snapshot().acceptedJobs, acceptedBeforeResume)
             }
             XCTAssertEqual(messages.first, .transferSession(original.session))
@@ -3201,6 +3506,40 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
         } catch { XCTAssertEqual(error as? AgentBridgeValidationError, .permissionRequired) }
     }
     #endif
+
+    func testNativeWireResumeRecoversAcceptanceBeforeMissingSpoolWithoutCapture() async throws {
+        let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll()
+        let lifecycle = AgentBridgeNativeCatalogLifecycle(); try lifecycle.observe(nativeState())
+        _ = try lifecycle.publish(to: rig.store, sourceInstallationID: rig.peer.peer.sourceInstallationID)
+        let wire = NativePlanningResponsePackets(), key = SymmetricKey(data: Data(repeating: 7, count: 32))
+        let channel = DirectSecureChannel(packetConnection: wire, sessionKey: key, peerInstallationID: UUID(), peerDisplayName: "Synthetic reconciliation")
+        defer { channel.cancel() }
+        let planner = try nativePlanningSession(rig, lifecycle, responseChannel: channel)
+        let request = try nativeCaptureRequest(rig, planner: planner)
+        // Create the original durable acceptance and claim without any SDK capture.
+        try await planner.withCaptureContext(request) { context in _ = try context.begin() }
+        XCTAssertEqual(wire.packets.count, 1)
+        let original = try XCTUnwrap(rig.store.snapshot().acceptedJobs?.first)
+        let before = try Data(contentsOf: rig.directory.appendingPathComponent("state.json"))
+        let incoming = try AgentBridgeV4Codec.encode(AgentBridgeEnvelope(payload: .resume(acceptanceObservation(request))))
+        wire.appendInbound(try nativeResponsePacket(incoming, sequence: 0, key: key))
+        do {
+            _ = try await planner.receiveAndHandleExportNext(on: channel) { _, _ in
+                XCTFail("Missing spool must not invoke preparation or SDK capture")
+                throw AgentBridgeValidationError.spoolMissingRestartRequired
+            }
+            XCTFail("Missing spool cannot become transfer readiness")
+        } catch { XCTAssertEqual(error as? AgentBridgeValidationError, .spoolMissingRestartRequired) }
+        XCTAssertEqual(wire.receiveCount, 1)
+        XCTAssertEqual(wire.packets.count, 2)
+        guard case .encrypted(let frame) = try XCTUnwrap(wire.packets.last) else { return XCTFail("Expected encrypted original acceptance") }
+        let bytes = Data(try ManualIPSyncSecurity.open(frame, using: key).dropFirst(16))
+        let envelope = try AgentBridgeV4Codec.decode(AgentBridgeEnvelope.self, from: bytes)
+        guard case .receipt(let receipt) = envelope.payload else { return XCTFail("Expected stored acceptance only") }
+        XCTAssertEqual(receipt, try original.acceptedReceipt())
+        XCTAssertEqual(try Data(contentsOf: rig.directory.appendingPathComponent("state.json")), before)
+        XCTAssertEqual(try rig.store.snapshot().captureClaims?.count, 1)
+    }
 
     func testNativeAcceptedReceiptPrecedesCaptureAndReplaysOriginalBytes() async throws {
         let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll()
@@ -5921,6 +6260,17 @@ private final class Rig {
     }
 }
 
+@MainActor private final class NativeExecuteWireState {
+    var wire: NativePlanningResponsePackets?
+    var request: AgentBridgeExecute?
+    var agent: [AgentBridgeEnvelope] = []
+    var base: [DirectMessage] = []
+    var opens: [DirectTransferOpen] = []
+    var chunks = 0
+    var nextSequence = 0
+    var consumed = 0
+    let gates = (0..<32).map { _ in NativePreparationTestGate() }
+}
 @MainActor private final class NativeTransferWriteState { var count = 0 }
 @MainActor private final class NativeTransferStopState { var nextReceive = 0; var received = false }
 

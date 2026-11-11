@@ -30,16 +30,31 @@ internal object AgentBridgeChecks {
     }
 
     fun text(value: String, minimum: Int, maximum: Int, pattern: String? = null) {
-        require(value.codePointCount(0, value.length) in minimum..maximum)
+        visitText(value, minimum, maximum) {}
+        if (pattern != null) require(Regex(pattern).matches(value))
+    }
+
+    /** Validate Unicode scalars while visiting their original UTF-16 units. Canonical
+     * quoting can emit during this same walk without a second validation/counting scan. */
+    inline fun visitText(value: String, minimum: Int, maximum: Int, visit: (Char) -> Unit) {
+        // Each scalar occupies one or two UTF-16 units. Count units up front and
+        // subtract once per valid pair, avoiding a scalar counter/limit branch per unit.
+        require(value.length >= minimum && value.length.toLong() <= maximum.toLong() * 2)
+        var scalars = value.length
         var i = 0
         while (i < value.length) {
             val c = value[i++]
             if (c.isHighSurrogate()) {
                 require(i < value.length && value[i].isLowSurrogate())
-                i++
-            } else require(!c.isLowSurrogate())
+                scalars--
+                visit(c)
+                visit(value[i++])
+            } else {
+                require(!c.isLowSurrogate())
+                visit(c)
+            }
         }
-        if (pattern != null) require(Regex(pattern).matches(value))
+        require(scalars in minimum..maximum)
     }
 }
 
@@ -168,7 +183,8 @@ object AgentBridgeCodec {
                 value.entries.sortedWith { a, b -> compareCodePoints(a.key, b.key) }
                     .forEachIndexed { index, (key, child) ->
                         if (index > 0) output.append(',')
-                        output.append(quote(key)).append(':')
+                        appendQuoted(key, output)
+                        output.append(':')
                         appendCanonical(child, output)
                     }
                 output.append('}')
@@ -181,7 +197,9 @@ object AgentBridgeCodec {
                 }
                 output.append(']')
             }
-            is JsonPrimitive -> output.append(if (value.isString) quote(value.content) else value.content)
+            is JsonPrimitive -> {
+                if (value.isString) appendQuoted(value.content, output) else output.append(value.content)
+            }
         }
     }
 
@@ -198,22 +216,23 @@ object AgentBridgeCodec {
         return (a.length - i).compareTo(b.length - j)
     }
 
-    private fun quote(value: String): String {
-        AgentBridgeChecks.text(value, 0, 65536)
-        return buildString {
-            append('"')
-            for (c in value) when (c) {
-                '"' -> append("\\\"")
-                '\\' -> append("\\\\")
-                '\b' -> append("\\b")
-                '\u000c' -> append("\\f")
-                '\n' -> append("\\n")
-                '\r' -> append("\\r")
-                '\t' -> append("\\t")
-                else -> if (c.code < 32) append("\\u%04x".format(c.code)) else append(c)
+    // Write into the owning canonical buffer; do not allocate/copy a temporary
+    // quoted String for every key and primitive. Validation still visits every unit.
+    private fun appendQuoted(value: String, output: StringBuilder) {
+        output.append('"')
+        AgentBridgeChecks.visitText(value, 0, 65536) { c ->
+            when (c) {
+                '"' -> output.append("\\\"")
+                '\\' -> output.append("\\\\")
+                '\b' -> output.append("\\b")
+                '\u000c' -> output.append("\\f")
+                '\n' -> output.append("\\n")
+                '\r' -> output.append("\\r")
+                '\t' -> output.append("\\t")
+                else -> if (c.code < 32) output.append("\\u%04x".format(c.code)) else output.append(c)
             }
-            append('"')
         }
+        output.append('"')
     }
 
     internal inline fun <T> sanitized(block: () -> T): T = try {

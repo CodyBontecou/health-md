@@ -16,6 +16,7 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
 import com.healthmd.R
 import com.healthmd.presentation.MainActivity
+import com.healthmd.presentation.navigation.NavDestination
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
@@ -209,20 +210,19 @@ class DirectCliForegroundService : Service() {
                     true,
                 )
                 is DirectCliConnectionState.Transferring -> {
-                    val progress = if (state.totalBytes > 0) {
-                        ((state.completedBytes * 100) / state.totalBytes).toInt().coerceIn(0, 100)
-                    } else {
-                        0
-                    }
+                    val progress = DirectCliOngoingPresentation.percent(state)
                     notification(
                         getString(R.string.direct_cli_notification_transferring),
                         progress = progress,
                     )
                 }
-                is DirectCliConnectionState.Completed -> notification(completionText(state.outcome))
+                is DirectCliConnectionState.Completed -> notification(
+                    completionText(state.outcome),
+                    finished = state.outcome == DirectCliCompletion.ExportCompleted,
+                )
                 is DirectCliConnectionState.Failed -> notification(failureText(state.reason))
             }
-            manager.notify(NOTIFICATION_ID, notification)
+            manager.notify(NOTIFICATION_ID, promoteOngoing(notification, state))
         }
     }
 
@@ -240,6 +240,7 @@ class DirectCliForegroundService : Service() {
         text: String,
         indeterminate: Boolean = false,
         progress: Int? = null,
+        finished: Boolean = false,
     ): Notification {
         val openApp = PendingIntent.getActivity(
             this,
@@ -260,6 +261,21 @@ class DirectCliForegroundService : Service() {
             .setContentIntent(openApp)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
+            .apply {
+                if (finished) {
+                    // A finished export leads to the Archive, where the new days now show.
+                    val openArchive = PendingIntent.getActivity(
+                        this@DirectCliForegroundService,
+                        2,
+                        Intent(this@DirectCliForegroundService, MainActivity::class.java)
+                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                            .putExtra(MainActivity.EXTRA_START_ROUTE, NavDestination.ARCHIVE.route),
+                        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+                    )
+                    addAction(0, getString(R.string.notification_open_archive), openArchive)
+                }
+            }
+            // Disconnect stays available in every state so the session can always be ended.
             .addAction(0, getString(R.string.direct_cli_disconnect), stop)
             .apply {
                 when {
@@ -314,6 +330,26 @@ class DirectCliForegroundService : Service() {
         DirectCliFailure.EXPORT_FAILED -> getString(R.string.direct_cli_failure_export)
     }
 
+    /**
+     * On Android 16+, requests a promoted ongoing notification so the status bar shows a chip:
+     * CLI while connecting, the transfer percentage, then Done. Earlier versions are unchanged.
+     */
+    private fun promoteOngoing(notification: Notification, state: DirectCliConnectionState): Notification {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.BAKLAVA) return notification
+        val chip = when (DirectCliOngoingPresentation.stage(state)) {
+            DirectCliOngoingStage.CONNECTING -> getString(R.string.direct_cli_chip_connecting)
+            DirectCliOngoingStage.TRANSFERRING -> java.text.NumberFormat.getPercentInstance(
+                resources.configuration.locales[0],
+            ).format(DirectCliOngoingPresentation.percent(state as DirectCliConnectionState.Transferring) / 100.0)
+            DirectCliOngoingStage.COMPLETED -> getString(R.string.direct_cli_chip_done)
+            DirectCliOngoingStage.IDLE, DirectCliOngoingStage.FAILED -> return notification
+        }
+        return Notification.Builder.recoverBuilder(this, notification)
+            .setShortCriticalText(chip)
+            .addExtras(android.os.Bundle().apply { putBoolean(EXTRA_REQUEST_PROMOTED_ONGOING, true) })
+            .build()
+    }
+
     // Declared as dataSync on DirectCliForegroundService in the shared manifest.
     @SuppressLint("ForegroundServiceType")
     private fun startDirectForeground(notification: Notification) {
@@ -331,6 +367,8 @@ class DirectCliForegroundService : Service() {
 
     companion object {
         private const val CHANNEL_ID = "healthmd_direct_cli"
+        /** Notification.EXTRA_REQUEST_PROMOTED_ONGOING (API 36); not yet in the compile SDK stubs. */
+        private const val EXTRA_REQUEST_PROMOTED_ONGOING = "android.requestPromotedOngoing"
         private const val NOTIFICATION_ID = 2_647
         private const val ACTION_PAIR = "com.healthmd.direct.PAIR"
         private const val ACTION_CONNECT = "com.healthmd.direct.CONNECT"

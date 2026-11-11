@@ -1,45 +1,56 @@
 ---
-title: "Agendamento"
-description: "Execute exportações automaticamente em cadências diárias, semanais ou de calendário personalizadas. O iOS usa tarefas em segundo plano e uma notificação local de recuperação quando os dados protegidos estão indisponíveis."
+title: "Agende exportações Apple Health e solucione problemas de execuções perdidas"
+description: "Verifique uma exportação agendada, entenda a retrospectiva dos dias concluídos e recupere datas pendentes. iPhone o tempo de fundo é o melhor esforço; histórico Tentar novamente usa as configurações atuais."
 ---
 
-## A aba Agendar
-<p>É uma tela de status, não um painel de ajustes. Ela informa rapidamente:</p>
-<ul><li>Se o agendamento está ativado ou desativado</li><li>A próxima execução agendada, se houver</li><li>O resultado da última execução</li></ul>
-<p>Um botão — <em>Configurar agendamento</em> ou <em>Gerenciar agendamento</em> — abre a tela de detalhes.</p>
+Esta página descreve o agendamento iPhone . O Android tem diferentes permissões de segundo plano e requisitos de compra; veja [Automação Android](/pt-br/docs/android/).
 
-## Configurações do agendamento
-<div class="options">
-<div class="option"><strong>Ativar exportações agendadas</strong><p>Controle mestre no topo. Quando desativado, não há execuções em segundo plano nem notificações.</p></div>
-<div class="option"><strong>Frequência</strong><p>Diária, semanal ou personalizada. Agendamentos personalizados se repetem a cada N dias, semanas ou meses desde uma data inicial. O período retrospectivo define quantos dias concluídos cada execução abrange.</p></div>
-<div class="option"><strong>Horário</strong><p>Hora e minuto. O iOS trata isso como uma indicação, não como garantia — veja as limitações abaixo.</p></div>
-</div>
+## Verifique a primeira exportação agendada
 
-## Histórico de exportações
-<p>A lista no fim da tela Agendar registra cada execução agendada e seu resultado. Toque em uma linha para ver detalhes. Execuções com falha incluem um botão <em>Tentar novamente</em>, que repete o intervalo com as configurações e o destino atuais e depois registra uma nova linha no histórico.</p>
+1. Ative o perfil pretendido. Verifique suas métricas, formatos, detalhes de dados, comportamento de gravação e destino. Execute um dia concluído manualmente e inspecione o arquivo salvo ou o resultado do endpoint antes de ativar a automação.
+2. No iPhone, abra **Automações**, escolha a automação e toque em **Agendamento**; no Android, abra Agendamento e depois Configurar agendamento ou Gerenciar agendamento. Ative o agendamento, escolha Diário, Semanal ou Personalizado, defina o horário e comece com uma retrospectiva de um dia concluído. Permita notificações se quiser lembretes locais de recuperação.
+3. Verifica se o agendamento está habilitado, a próxima ocorrência e o último resultado. Após uma tentativa, inspecione os detalhes do histórico e o destino real; um rótulo ou notificação de próxima execução não é prova de que os dados foram gravados.
+4. Verifique as datas exportadas, unidades, cobertura e dados faltantes. Um arquivo salvo por si só não prova a captura completa da fonte.
 
-## Como o agendamento do iOS realmente funciona
-<div class="doc-diagram"><div class="flow-steps" aria-label="Fluxo alternativo da exportação agendada">
-<span><strong>1. Horário previsto</strong>O Health.md pede ao iOS que desperte o app perto do horário escolhido.</span>
-<span><strong>2. Tentativa em segundo plano</strong>Se o dispositivo estiver disponível, o iOS executa uma tarefa de atualização.</span>
-<span><strong>3. Alternativa com bloqueio</strong>Se o HealthKit estiver indisponível, o Health.md envia uma notificação.</span>
-<span><strong>4. Toque para concluir</strong>Ao abrir a notificação, o app pode ler o HealthKit e exportar.</span>
-</div></div>
+Na versão do telefone com assinatura habilitada, as exportações programadas e manuais exigem uma avaliação ativa, assinatura, compra vitalícia ou acesso permanente preservado. Não há permissão de livre exportação local. O acesso expirado deve ser restaurado antes que o trabalho pendente possa ser retomado. Consulte [desbloqueio e acesso pago](/pt-br/docs/paywall/).
 
-<div class="callout"><strong>Limitações do iOS que você deve conhecer.</strong><p style="margin-top:6px;">Os dados do HealthKit não podem ser lidos enquanto o dispositivo está bloqueado. As exportações agendadas usam <code>BGAppRefreshTask</code>, que o iOS agenda de forma oportunista conforme os padrões de uso — o horário definido é uma meta, não um contrato. Como alternativa, o app envia uma notificação local no horário agendado se o dispositivo estiver bloqueado; toque nela para executar a exportação.</p></div>
-<ul><li>O horário é aproximado. O iOS pode executar antes ou depois, ou ignorar a tarefa se o aparelho estiver desligado ou desconectado.</li><li>As exportações funcionam melhor quando o telefone costuma estar conectado à energia e desbloqueado aproximadamente no mesmo horário.</li><li>Se a exportação falhar porque o dispositivo estava bloqueado, toque na notificação para executá-la com acesso ao HealthKit.</li></ul>
+## Entenda a janela do dia concluído
+
+As programações diárias, semanais e personalizadas podem ter uma retrospectiva. A cadência personalizada se repete a cada N dias, semanas ou meses a partir da data de início. Cada nova ocorrência reexporta toda a janela configurada de dias concluídos, incluindo as datas exportadas anteriormente. Uma retrospectiva de três dias cobre ontem e os dois dias anteriores; a execução atrasada mantém a janela ancorada no dia do incêndio programado.
+
+A atualização de hoje é um trabalho separado do dia atual e não um substituto para a janela do dia concluído. Inspecione caminhos e comportamento de gravação antes de exportar sobreposições; não adicione instantâneos diários repetidos como novas medições.
+
+## Escolha o caminho de recuperação correto
+
+- **Recuperação agendada pendente:** desbloqueie iPhone , abra Health.md e inspecione a tentativa pendente. Ele mantém suas datas exatas não resolvidas, configurações salvas e destino. As datas concluídas permanecem concluídas; a recuperação não se expande para uma nova retrospectiva.
+- **Repetir a partir do histórico:** isso inicia uma nova execução para esse intervalo usando as configurações e o destino atualmente configurados e registra uma nova linha do histórico. Verifique a configuração ativa antes de pressionar Repetir. Não é o mesmo que retomar uma tentativa pendente congelada.
+- **Destino alterado ou indisponível:** restaure o acesso ou inspecione o perfil pendente antes de tentar novamente. Uma recuperação de API iPhone antiga não deve adotar silenciosamente um endpoint ou credencial alterado. Não inicie novas tentativas repetidamente enquanto a tentativa original não for resolvida.
+
+Revise a recuperação pendente, a identidade do perfil e as regras de destino em [Exportar perfis](/pt-br/docs/export-profiles/).
+
+## O que o iOS faz e não garante
+
+O tempo selecionado é uma meta, não um tempo de conclusão garantido. O iOS controla o tempo de execução em segundo plano e a proteção de dispositivos bloqueados pode impedir leituras HealthKit . Solicitações em segundo plano e notificações de ativação silenciosa não ignoram essa proteção.
+
+As notificações de recuperação local exigem permissão de notificação e não são uma garantia de entrega no horário previsto. Se você receber um, desbloqueie o dispositivo e abra-o para permitir que Health.md tente a recuperação. Se nenhuma notificação chegar, abra Health.md e verifique o trabalho pendente e o histórico. Verifique o resultado em vez de presumir que um alerta ou tempo decorrido significa sucesso.
 
 ## Controle programático
-<p>Você pode ativar ou desativar o agendamento nos Atalhos com o intent <em>Ativar ou desativar exportação agendada</em>. <a href="/pt-br/docs/shortcuts/">Veja exemplos em Atalhos</a>.</p>
+ <p> Você pode ativar/desativar a programação de Shortcuts usando a intenção <em> Ativar ou desativar exportação agendada </em> . <a href="/pt-br/docs/shortcuts/"> Veja Shortcuts </a> para exemplos. </p>
 
-## Agendamentos por perfil e cancelamento
+## Agendamentos e cancelamento de perfil
 
-- Cada perfil mantém seu próprio agendamento, inclusive uma cadência personalizada; trocar o perfil ativo não redireciona outro agendamento.
-- Um aviso de colisão aparece quando perfis podem gravar os mesmos caminhos gerados no mesmo destino. Revise-o antes de ativar agendamentos concorrentes; o Health.md não altera nenhum perfil silenciosamente.
-- Parar ou Cancelar encerra somente a tentativa atual. Datas concluídas permanecem assim, as pendentes podem ser repetidas e o agendamento continua ativo.
-- Cada item do histórico permanece ligado ao perfil da execução e ao rótulo privado do destino realmente usado.
+- Cada perfil pode manter sua própria programação, incluindo uma cadência personalizada. A troca do perfil ativo não redireciona a programação de outro perfil.
+- Um aviso de colisão aparece quando os perfis podem gravar os mesmos caminhos renderizados no mesmo destino. Revise-o antes de ativar programações concorrentes. Health.md não altera silenciosamente nenhum dos perfis.
+- Parar ou Cancelar encerra apenas a tentativa atual. As datas concluídas permanecem concluídas, as datas não resolvidas permanecem passíveis de nova tentativa e o agendamento permanece ativado.
+- Cada linha do histórico permanece fixada no perfil de tempo de execução e no rótulo de destino seguro para privacidade realmente usado.
 
-Gerencie configurações congeladas e destino em [Perfis de exportação](/pt-br/docs/export-profiles/).
+Gerencie as configurações congeladas e o destino por perfil em [Exportar perfis](/pt-br/docs/export-profiles/).
 
-## Relacionados
-<div class="related"><a href="/pt-br/docs/export-profiles/"><span>Perfis</span>Gerencie agendamentos e destinos independentes.</a><a href="/pt-br/docs/export/"><span>Manual</span>Exportação — para intervalos avulsos.</a><a href="/pt-br/docs/shortcuts/"><span>Automatizar</span>Atalhos — alterne o agendamento com automações.</a><a href="/pt-br/docs/sync/"><span>Entre dispositivos</span>Sincronização com o Mac — agende também no Mac.</a></div>
+## Relacionado
+
+<div class="related">
+ <a href="/pt-br/docs/export-profiles/"> <span> Vários fluxos de trabalho </span> Exporte perfis, dê a cada configuração salva seu próprio destino e cadência. </a>
+ <a href="/pt-br/docs/export/"> <span> Manual </span> Exportação, para intervalos de datas únicos. </a>
+ <a href="/pt-br/docs/shortcuts/"> <span> Automatize </span> Shortcuts , alterne a programação das automações. </a>
+ <a href="/pt-br/docs/sync/"> <span> Entre dispositivos </span> Mac Sync, agende também no Mac. </a>
+ </div>

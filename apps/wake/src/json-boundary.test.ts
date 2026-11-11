@@ -5,7 +5,7 @@ import { enrollment, NOW, jsonRequest, ringBody, revokeBody, syntheticPem, USER_
 
 let DB: TestD1;
 beforeEach(() => {
-  DB = new TestD1(["0001_init.sql", "0002_fcm_v2.sql"]);
+  DB = new TestD1(["0001_init.sql", "0002_delegated_sync_fcm.sql", "0002_fcm_v2.sql"]);
   vi.spyOn(Date, "now").mockReturnValue(NOW);
   // Every outbound call is intercepted, including unexpected ones on a red run.
   vi.stubGlobal("fetch", vi.fn<typeof fetch>().mockRejectedValue(new Error("synthetic-outbound-denied")));

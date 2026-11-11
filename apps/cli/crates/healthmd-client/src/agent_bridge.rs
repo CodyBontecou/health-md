@@ -313,9 +313,10 @@ impl PlanningSource for BridgeSession<'_> {
 
 #[path = "agent_execution.rs"]
 mod execution;
+pub(crate) use execution::TransferGuard;
 pub use execution::{
-    HostAcceptedExecution, HostExecution, HostPendingCancellation, ReceivedArtifacts,
-    SourceStopConfirmation,
+    HostAcceptedExecution, HostExecution, HostPendingCancellation, HostPendingOutputCancellation,
+    ReceivedArtifacts, SourceStopConfirmation,
 };
 
 #[cfg(all(test, unix))]

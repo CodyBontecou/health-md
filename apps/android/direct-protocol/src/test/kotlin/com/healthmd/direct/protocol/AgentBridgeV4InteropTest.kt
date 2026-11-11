@@ -245,6 +245,35 @@ class AgentBridgeV4InteropTest {
     }
 
     @Test
+    fun scalarLimitsMatchForConstructedAndReceivedCanonicalStrings() {
+        for (value in listOf("", "A\uD83D\uDE00é", "a".repeat(65536), "\uD83D\uDE00".repeat(65536))) {
+            val expected = ("\"" + value + "\"").toByteArray()
+            assertThat(AgentBridgeCodec.canonical(JsonPrimitive(value))).isEqualTo(expected)
+            assertThat(AgentBridgeCodec.canonicalize(JsonPrimitive(value).toString().toByteArray())).isEqualTo(expected)
+        }
+        AgentBridgeChecks.text("A\uD83D\uDE00é", 3, 3)
+        for (value in listOf("\uD800", "\uDC00", "\uD800x\uDC00", "a".repeat(65537), "\uD83D\uDE00".repeat(65537))) {
+            val failure = org.junit.Assert.assertThrows(AgentBridgeException::class.java) {
+                AgentBridgeCodec.canonical(JsonPrimitive(value))
+            }
+            assertThat(failure.code).isEqualTo(AgentBridgeErrorCode.INVALID_REQUEST)
+        }
+        for (bounds in listOf(2 to 2, 4 to 4)) {
+            org.junit.Assert.assertThrows(AgentBridgeException::class.java) {
+                AgentBridgeChecks.text("A\uD83D\uDE00é", bounds.first, bounds.second)
+            }
+        }
+    }
+
+    @Test
+    fun canonicalEscapesPreserveControlCharactersAndSupplementaryScalars() {
+        val value = "\"\\\b\u000c\n\r\t\u0000\u001f/\ud83d\ude00e\u0301"
+        val expected = "\"\\\"\\\\\\b\\f\\n\\r\\t\\u0000\\u001f/\ud83d\ude00e\u0301\"".toByteArray()
+        assertThat(AgentBridgeCodec.canonical(JsonPrimitive(value))).isEqualTo(expected)
+        assertThat(AgentBridgeCodec.canonicalize(JsonPrimitive(value).toString().toByteArray())).isEqualTo(expected)
+    }
+
+    @Test
     fun rawBoundaryRejectsBeforeJsonCanEraseEvidence() {
         val invalid = listOf(
             "{\"a\":1,\"a\":2}",

@@ -22,7 +22,7 @@ struct ReadingMetricToggle: View {
         .contentShape(Rectangle())
         .disabled(isUnavailable)
         .accessibilityLabel(detail.isEmpty ? name : "\(name), \(detail)")
-        .accessibilityValue(isOn ? "Enabled" : "Disabled")
+        .accessibilityValue(isOn ? String(localized: "Enabled") : String(localized: "Disabled"))
         .accessibilityHint(accessibilityHint)
     }
 }
@@ -50,8 +50,10 @@ struct ReadingMetricLabel: View {
     }
 }
 
-/// The entire header expands only. Its pill is a status display, not a bulk toggle.
-struct ReadingMetricCategoryHeader<Status: View>: View {
+/// The header area expands only; its pill is a status display. A bulk toggle,
+/// when provided, is a separate `accessory` control outside the expand button so
+/// the two actions never share one hit target or accessibility element.
+struct ReadingMetricCategoryHeader<Status: View, Accessory: View>: View {
     let title: String
     let subtitle: String
     let icon: String
@@ -59,8 +61,18 @@ struct ReadingMetricCategoryHeader<Status: View>: View {
     let accessibilityLabel: String
     let onExpand: () -> Void
     @ViewBuilder var status: () -> Status
+    @ViewBuilder var accessory: () -> Accessory
 
     var body: some View {
+        HStack(alignment: .top, spacing: 0) {
+            expandButton
+            accessory()
+                .padding(.top, Spacing.s2)
+                .padding(.trailing, Spacing.s2)
+        }
+    }
+
+    private var expandButton: some View {
         Button(action: onExpand) {
             VStack(alignment: .leading, spacing: Spacing.s2) {
                 Text(title)
@@ -94,8 +106,33 @@ struct ReadingMetricCategoryHeader<Status: View>: View {
         .buttonStyle(.plain)
         .accessibilityElement(children: .combine)
         .accessibilityLabel(accessibilityLabel)
-        .accessibilityValue(isExpanded ? "Expanded" : "Collapsed")
-        .accessibilityHint("Double tap anywhere on the category to \(isExpanded ? "collapse" : "expand")")
+        .accessibilityValue(isExpanded ? String(localized: "Expanded") : String(localized: "Collapsed"))
+        .accessibilityHint(isExpanded
+            ? String(localized: "Double tap to collapse this category")
+            : String(localized: "Double tap to expand this category"))
+    }
+}
+
+extension ReadingMetricCategoryHeader where Accessory == EmptyView {
+    init(
+        title: String,
+        subtitle: String,
+        icon: String,
+        isExpanded: Bool,
+        accessibilityLabel: String,
+        onExpand: @escaping () -> Void,
+        @ViewBuilder status: @escaping () -> Status
+    ) {
+        self.init(
+            title: title,
+            subtitle: subtitle,
+            icon: icon,
+            isExpanded: isExpanded,
+            accessibilityLabel: accessibilityLabel,
+            onExpand: onExpand,
+            status: status,
+            accessory: { EmptyView() }
+        )
     }
 }
 
@@ -391,7 +428,9 @@ struct ReadingProtectionRow: View {
         .tint(Color.accent)
         .accessibilityLabel("Prevent Accidental Changes")
         .accessibilityValue(isEnabled ? "On" : "Off")
-        .accessibilityHint("Double tap to \(isEnabled ? "allow" : "prevent") configuration changes")
+        .accessibilityHint(isEnabled
+            ? String(localized: "Double tap to allow configuration changes")
+            : String(localized: "Double tap to prevent configuration changes"))
         .accessibilityIdentifier(accessibilityIdentifier)
     }
 
@@ -408,7 +447,9 @@ struct ReadingProtectionRow: View {
             .tint(Color.accent)
             .accessibilityLabel("Prevent Accidental Changes")
             .accessibilityValue(isEnabled ? "On" : "Off")
-            .accessibilityHint("Double tap to \(isEnabled ? "allow" : "prevent") configuration changes")
+            .accessibilityHint(isEnabled
+                ? String(localized: "Double tap to allow configuration changes")
+                : String(localized: "Double tap to prevent configuration changes"))
             .accessibilityIdentifier(accessibilityIdentifier)
 
             Text(isEnabled
@@ -451,7 +492,7 @@ struct ReadingConnectionEntry<Editor: View>: View {
                 // Use the caller's existing focus binding, not a competing
                 // private FocusState that could break submission/dismissal.
                 .simultaneousGesture(TapGesture().onEnded { focusEditor() })
-                .accessibilityLabel(title)
+                .accessibilityLabel(LocalizedStringKey(title))
                 .accessibilityIdentifier(identifier)
             if !value.isEmpty {
                 Text(verbatim: value)

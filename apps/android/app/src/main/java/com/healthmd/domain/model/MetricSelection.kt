@@ -54,7 +54,17 @@ object HealthMetrics {
 @Serializable
 data class MetricSelectionState(
     val enabledMetrics: Set<String> = ALL_METRIC_IDS,
+    /** Exact native records requested independently of compatibility time-series. */
+    val nativeDetailMetricIds: Set<String> = emptySet(),
 ) {
+    val effectiveNativeDetailMetricIds: Set<String>
+        get() = nativeDetailMetricIds.filterTo(sortedSetOf()) { isEnabled(it) }
+
+    fun withNativeDetail(metricId: String, enabled: Boolean): MetricSelectionState =
+        if (metricId !in ALL_METRIC_IDS) this else copy(
+            nativeDetailMetricIds = if (enabled) nativeDetailMetricIds + metricId else nativeDetailMetricIds - metricId,
+        )
+
     val enabledCount: Int get() = enabledMetrics.count { it in ALL_METRIC_IDS }
 
     fun isEnabled(metricId: String): Boolean = metricId in ALL_METRIC_IDS && metricId in enabledMetrics

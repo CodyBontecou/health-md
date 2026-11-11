@@ -52,20 +52,28 @@ actor WHOOPRateLimitGate {
 
 struct ExternalProviderAPIClient: Sendable {
     private static let whoopBaseURL = "https://api.prod.whoop.com/developer/v2"
-    private static let maximumWHOOPCollectionPages = 100
-    private static let maximumWHOOPHistoryPages = 100
+    private static let maximumWHOOPHistoryDuration: Duration = .seconds(15 * 60)
+    private static let maximumWHOOPCursorBytes = 4_096
+    nonisolated private static let whoopHistoryTimeoutMessage =
+        "WHOOP history discovery exceeded the time safety limit. Try again later."
 
     private let responseLoader: BoundedURLSessionDataLoader
     private let whoopRateLimitGate: WHOOPRateLimitGate
     private let maximumResponseBytes: Int
     private let maximumProviderDayResponseBytes: Int
+    private let whoopHistoryDuration: Duration
+    private let whoopHistoryClock: @Sendable () -> ContinuousClock.Instant
 
     init(
         whoopRateLimitGate: WHOOPRateLimitGate = WHOOPRateLimitGate(),
         maximumResponseBytes: Int = 16 * 1_024 * 1_024,
-        maximumProviderDayResponseBytes: Int? = nil
+        maximumProviderDayResponseBytes: Int? = nil,
+        whoopHistoryDuration: Duration = Self.maximumWHOOPHistoryDuration,
+        whoopHistoryClock: @escaping @Sendable () -> ContinuousClock.Instant = { .now }
     ) {
         let maximumResponseBytes = max(1, maximumResponseBytes)
+        self.whoopHistoryDuration = min(max(.zero, whoopHistoryDuration), Self.maximumWHOOPHistoryDuration)
+        self.whoopHistoryClock = whoopHistoryClock
         self.responseLoader = BoundedURLSessionDataLoader(
             configuration: URLSession.shared.configuration
         )
@@ -81,9 +89,13 @@ struct ExternalProviderAPIClient: Sendable {
         session: URLSession,
         whoopRateLimitGate: WHOOPRateLimitGate = WHOOPRateLimitGate(),
         maximumResponseBytes: Int = 16 * 1_024 * 1_024,
-        maximumProviderDayResponseBytes: Int? = nil
+        maximumProviderDayResponseBytes: Int? = nil,
+        whoopHistoryDuration: Duration = Self.maximumWHOOPHistoryDuration,
+        whoopHistoryClock: @escaping @Sendable () -> ContinuousClock.Instant = { .now }
     ) {
         let maximumResponseBytes = max(1, maximumResponseBytes)
+        self.whoopHistoryDuration = min(max(.zero, whoopHistoryDuration), Self.maximumWHOOPHistoryDuration)
+        self.whoopHistoryClock = whoopHistoryClock
         self.responseLoader = BoundedURLSessionDataLoader(session: session)
         self.whoopRateLimitGate = whoopRateLimitGate
         self.maximumResponseBytes = maximumResponseBytes
@@ -98,8 +110,8 @@ struct ExternalProviderAPIClient: Sendable {
         date: Date,
         token: ExternalIntegrationToken,
         calendar: Calendar = .current,
-        whoopResources: Set<WHOOPResourceName> = Set(WHOOPResourceName.allCases),
-        now: Date = Date()
+        now: Date = Date(),
+        whoopResources: Set<WHOOPResourceName> = WHOOPExportResourceSelection.all
     ) async throws -> ExternalDailyRecord {
         #if DEBUG
         let performanceTimer = ExportPerformanceTimer()
@@ -172,17 +184,18 @@ struct ExternalProviderAPIClient: Sendable {
         switch provider {
         case .whoop:
             let collections = [
-                WHOOPCollection(name: "cycles", path: "/cycle", requiredScope: "read:cycles"),
-                WHOOPCollection(name: "recovery", path: "/recovery", requiredScope: "read:recovery"),
-                WHOOPCollection(name: "sleep", path: "/activity/sleep", requiredScope: "read:sleep"),
-                WHOOPCollection(name: "workouts", path: "/activity/workout", requiredScope: "read:workout")
+                WHOOPCollection(resource: .cycles, name: "cycles", path: "/cycle", requiredScope: "read:cycles"),
+                WHOOPCollection(resource: .recovery, name: "recovery", path: "/recovery", requiredScope: "read:recovery"),
+                WHOOPCollection(resource: .sleep, name: "sleep", path: "/activity/sleep", requiredScope: "read:sleep"),
+                WHOOPCollection(resource: .workouts, name: "workouts", path: "/activity/workout", requiredScope: "read:workout")
             ]
             var earliest: Date?
-            for collection in collections where token.grants(collection.requiredScope)
-                && whoopResources.contains(collection.resource) {
+            let deadline = whoopHistoryClock().advanced(by: whoopHistoryDuration)
+            for collection in collections where token.grants(collection.requiredScope) && whoopResources.contains(collection.resource) {
                 if let candidate = try await discoverEarliestWHOOPDate(
                     collection: collection,
-                    token: token
+                    token: token,
+                    deadline: deadline
                 ), earliest == nil || candidate < earliest! {
                     earliest = candidate
                 }
@@ -247,6 +260,7 @@ struct ExternalProviderAPIClient: Sendable {
     }
 
     private struct WHOOPCollection {
+        let resource: WHOOPResourceName
         let name: String
         let path: String
         let requiredScope: String
@@ -265,12 +279,13 @@ struct ExternalProviderAPIClient: Sendable {
         token: ExternalIntegrationToken,
         resources: Set<WHOOPResourceName>
     ) async throws -> [ExternalProviderPayload] {
+        // Resources the user deselected in Connected apps are not requested at all.
         let collections = [
-            WHOOPCollection(name: "cycles", path: "/cycle", requiredScope: "read:cycles"),
-            WHOOPCollection(name: "recovery", path: "/recovery", requiredScope: "read:recovery"),
-            WHOOPCollection(name: "sleep", path: "/activity/sleep", requiredScope: "read:sleep"),
-            WHOOPCollection(name: "workouts", path: "/activity/workout", requiredScope: "read:workout")
-        ]
+            WHOOPCollection(resource: .cycles, name: "cycles", path: "/cycle", requiredScope: "read:cycles"),
+            WHOOPCollection(resource: .recovery, name: "recovery", path: "/recovery", requiredScope: "read:recovery"),
+            WHOOPCollection(resource: .sleep, name: "sleep", path: "/activity/sleep", requiredScope: "read:sleep"),
+            WHOOPCollection(resource: .workouts, name: "workouts", path: "/activity/workout", requiredScope: "read:workout")
+        ].filter { resources.contains($0.resource) }
 
         var payloads: [ExternalProviderPayload] = []
         for collection in collections where resources.contains(collection.resource) {
@@ -373,16 +388,56 @@ struct ExternalProviderAPIClient: Sendable {
         )
     }
 
+    /// Brent's cursor-cycle detection retains one bounded checkpoint instead of
+    /// every historical cursor. A deterministic cursor loop always fails closed,
+    /// even when it is longer than the former 100-page ceiling.
+    private struct WHOOPCursorTraversal {
+        private var checkpoint: String?
+        private var power = 1
+        private var distance = 0
+
+        mutating func advance(to cursor: String) -> Bool {
+            guard let checkpoint else {
+                self.checkpoint = cursor
+                return true
+            }
+            guard cursor != checkpoint else { return false }
+            distance += 1
+            if distance == power {
+                self.checkpoint = cursor
+                // Saturation keeps counter arithmetic bounded without a page cap.
+                power = power > Int.max / 2 ? Int.max : power * 2
+                distance = 0
+            }
+            return true
+        }
+    }
+
+    private static func nextWHOOPCursor(in object: [String: JSONValue]) throws -> String? {
+        switch object["next_token"] {
+        case nil, .null:
+            return nil
+        case .string(let cursor):
+            guard cursor.utf8.count <= maximumWHOOPCursorBytes else {
+                throw ExternalProviderAPIError.invalidResponse
+            }
+            return cursor.isEmpty ? nil : cursor
+        default:
+            throw ExternalProviderAPIError.invalidResponse
+        }
+    }
+
     private func discoverEarliestWHOOPDate(
         collection: WHOOPCollection,
-        token: ExternalIntegrationToken
+        token: ExternalIntegrationToken,
+        deadline: ContinuousClock.Instant
     ) async throws -> Date? {
         var nextToken: String?
-        var seenTokens: Set<String> = []
+        var traversal = WHOOPCursorTraversal()
         var earliest: Date?
-        var page = 1
 
         while true {
+            try checkWHOOPHistoryDeadline(deadline)
             if let remaining = await whoopRateLimitGate.remainingSeconds() {
                 throw ExternalProviderAPIError.rateLimited(retryAfterSeconds: remaining)
             }
@@ -398,8 +453,9 @@ struct ExternalProviderAPIClient: Sendable {
             guard let url = components.url else {
                 throw ExternalProviderAPIError.invalidURL
             }
-            let (data, http) = try await response(
-                for: authorizedRequest(url: url, token: token)
+            let (data, http) = try await historyResponse(
+                for: authorizedRequest(url: url, token: token),
+                deadline: deadline
             )
             if http.statusCode == 401 { throw ExternalProviderAPIError.unauthorized }
             if http.statusCode == 429 {
@@ -414,21 +470,52 @@ struct ExternalProviderAPIClient: Sendable {
                 throw ExternalProviderAPIError.invalidResponse
             }
             for record in records {
+                try checkWHOOPHistoryDeadline(deadline)
                 guard let date = Self.earliestTimestamp(in: record) else {
                     throw ExternalProviderAPIError.invalidResponse
                 }
                 if earliest == nil || date < earliest! { earliest = date }
             }
-            guard case .string(let cursor)? = object["next_token"],
-                  !cursor.isEmpty else { return earliest }
-            guard page < Self.maximumWHOOPHistoryPages else {
-                throw ExternalProviderAPIError.invalidResponse
-            }
-            guard seenTokens.insert(cursor).inserted else {
+            try checkWHOOPHistoryDeadline(deadline)
+            guard let cursor = try Self.nextWHOOPCursor(in: object) else { return earliest }
+            guard traversal.advance(to: cursor) else {
                 throw ExternalProviderAPIError.invalidResponse
             }
             nextToken = cursor
-            page += 1
+        }
+    }
+
+    private func checkWHOOPHistoryDeadline(_ deadline: ContinuousClock.Instant) throws {
+        try Task.checkCancellation()
+        guard whoopHistoryClock() < deadline else {
+            throw ExternalProviderAPIError.requestFailed(
+                statusCode: 0,
+                message: Self.whoopHistoryTimeoutMessage
+            )
+        }
+    }
+
+    /// Race the response against the operation deadline as well as checking it
+    /// between pages, so even a slowly streaming response cannot hold history
+    /// discovery open indefinitely. Cancelling the loser cancels its URL task.
+    private func historyResponse(
+        for request: URLRequest,
+        deadline: ContinuousClock.Instant
+    ) async throws -> (Data, HTTPURLResponse) {
+        try await withThrowingTaskGroup(of: (Data, HTTPURLResponse).self) { group in
+            group.addTask { try await response(for: request) }
+            group.addTask {
+                try await Task.sleep(until: deadline, clock: .continuous)
+                throw ExternalProviderAPIError.requestFailed(
+                    statusCode: 0,
+                    message: Self.whoopHistoryTimeoutMessage
+                )
+            }
+            defer { group.cancelAll() }
+            guard let response = try await group.next() else {
+                throw ExternalProviderAPIError.invalidResponse
+            }
+            return response
         }
     }
 
@@ -464,10 +551,11 @@ struct ExternalProviderAPIClient: Sendable {
     ) async throws -> [ExternalProviderPayload] {
         var payloads: [ExternalProviderPayload] = []
         var nextToken: String?
-        var seenTokens: Set<String> = []
+        var traversal = WHOOPCursorTraversal()
 
         var page = 1
         while true {
+            try Task.checkCancellation()
             guard var components = URLComponents(string: "\(Self.whoopBaseURL)\(collection.path)") else {
                 throw ExternalProviderAPIError.invalidURL
             }
@@ -532,17 +620,9 @@ struct ExternalProviderAPIClient: Sendable {
                     data: value
                 ))
 
-                guard case .string(let cursor)? = object["next_token"], !cursor.isEmpty else { break }
-                guard page < Self.maximumWHOOPCollectionPages else {
-                    payloads.append(ExternalProviderPayload(
-                        name: "\(collection.name)_pagination",
-                        endpoint: Self.redactedEndpoint(url),
-                        statusCode: 0,
-                        error: "WHOOP pagination exceeded the 100-page safety limit."
-                    ))
-                    break
-                }
-                guard seenTokens.insert(cursor).inserted else {
+                try Task.checkCancellation()
+                guard let cursor = try Self.nextWHOOPCursor(in: object) else { break }
+                guard traversal.advance(to: cursor) else {
                     payloads.append(ExternalProviderPayload(
                         name: "\(collection.name)_pagination",
                         endpoint: Self.redactedEndpoint(url),

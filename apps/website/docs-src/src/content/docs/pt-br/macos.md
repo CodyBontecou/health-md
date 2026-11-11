@@ -1,6 +1,6 @@
 ---
-title: "App para macOS"
-description: "Use Health.md para Mac como destino de exportação do iPhone, host local da CLI e do MCP, armazenamento criptografado de contexto de saúde, visualizador de histórico e autoridade de acesso a pastas."
+title: "Apple Health no Mac com Health.md"
+description: "Exporte dados do Apple Health do iPhone para o Mac ou consulte o contexto local. Instale o Health.md nos dois dispositivos e configure o Mac Sync."
 ---
 
 O Health.md para Mac tem duas funções locais:
@@ -9,6 +9,11 @@ O Health.md para Mac tem duas funções locais:
 2. hospeda a CLI de loopback, a API de consultas, o contexto de saúde criptografado e o adaptador MCP usados por agentes locais.
 
 Apple Health permanece no iPhone. O app para Mac não lê HealthKit diretamente.
+
+<div class="callout">
+<strong>Comece com seu iPhone e Mac</strong>
+<p><a href="https://apps.apple.com/us/app/health-md/id6757763969" target="_blank" rel="noopener">Instale o Health.md no iPhone e no Mac</a>. <a href="/pt-br/docs/sync/">Siga o guia de configuração do Mac Sync</a>, <a href="/blog/health-md-for-macos/">ou comece pelo tutorial para exportar um dia (em inglês)</a>.</p>
+</div>
 
 ## Áreas principais
 
@@ -26,9 +31,9 @@ Apple Health permanece no iPhone. O app para Mac não lê HealthKit diretamente.
 
 1. Instale e abra Health.md no Mac.
 2. Escolha uma pasta de destino no disco local, no iCloud Drive ou dentro de um cofre do Obsidian.
-3. No iPhone, ative a conectividade com o Mac na aba Sincronização.
-4. No iPhone, escolha Mac conectado como destino de exportação.
-5. Configure a exportação e toque em Exportar.
+3. No iPhone, abra **Configurações → Destino no Mac** e ative-o.
+4. No iPhone, escolha Mac conectado como destino de uma automação (**Automações → automação → Saída**).
+5. Toque em **Exportar agora** ou deixe o agendamento da automação rodar.
 
 O iPhone captura dados do HealthKit e o instantâneo das configurações efetivas. Os pares atuais transferem partições de tamanho limitado, validadas por soma de verificação. O Mac usa os exportadores de produção e grava os arquivos solicitados.
 

@@ -24,7 +24,10 @@ enum CanonicalDailyJSONStream {
             let metadata = try parser.parse()
             guard metadata.rootIsObject,
                   metadata.schema == HealthMdExportSchema.identifier,
-                  metadata.schemaVersion == HealthMdExportSchema.version else {
+                  AppleDetailExpansionSchema.isAcceptedNightBeginsDailyIdentity(
+                      schemaVersion: metadata.schemaVersion,
+                      schemaProfile: metadata.schemaProfile
+                  ) else {
                 throw StreamError.schemaMismatch
             }
             if expectsLosslessArchive {
@@ -45,10 +48,25 @@ enum CanonicalDailyJSONStream {
         }
     }
 
+    struct SchemaIdentity: Equatable {
+        let schema: String
+        let version: Int
+    }
+
+    /// Inspect the exact staged document without allocating a second file or retaining its payload.
+    /// Historical compaction keeps its independent profile/archive validation above.
+    static func schemaIdentity(sourceURL: URL) throws -> SchemaIdentity {
+        let metadata = try Parser(sourceURL: sourceURL, outputURL: nil).parse()
+        guard metadata.rootIsObject, let schema = metadata.schema,
+              let version = metadata.schemaVersion, version > 0 else { throw StreamError.schemaMismatch }
+        return SchemaIdentity(schema: schema, version: version)
+    }
+
     private struct Metadata {
         var rootIsObject = false
         var schema: String?
         var schemaVersion: Int?
+        var schemaProfile: String?
         var sawArchive = false
         var archiveSchema: String?
         var archiveSchemaVersion: Int?
@@ -56,16 +74,16 @@ enum CanonicalDailyJSONStream {
 
     private final class Parser {
         private let reader: Reader
-        private let writer: Writer
+        private let writer: Writer?
         private var metadata = Metadata()
         private let maximumDepth = 256
         private let maximumKeyBytes = 4_096
         private let maximumScalarBytes = 8_192
         private let maximumKeysPerObject = 16_384
 
-        init(sourceURL: URL, outputURL: URL) throws {
+        init(sourceURL: URL, outputURL: URL?) throws {
             reader = try Reader(fileURL: sourceURL)
-            writer = try Writer(fileURL: outputURL)
+            writer = try outputURL.map { try Writer(fileURL: $0) }
         }
 
         // These stream helpers own their handles exclusively. Nonisolated teardown
@@ -77,7 +95,7 @@ enum CanonicalDailyJSONStream {
             try parseValue(path: [], depth: 0)
             try skipWhitespace()
             guard try reader.peek() == nil else { throw StreamError.malformedJSON }
-            try writer.finish()
+            try writer?.finish()
             return metadata
         }
 
@@ -148,7 +166,7 @@ enum CanonicalDailyJSONStream {
             var nextContinuationRange: ClosedRange<UInt8> = 0x80...0xbf
             while let byte = try reader.read() {
                 if byte == 0x22 {
-                    try writer.write(byte)
+                    try writer?.write(byte)
                     guard continuationBytes == 0 else { throw StreamError.malformedJSON }
                     guard capture else { return nil }
                     encoded.append(0x22)
@@ -175,10 +193,10 @@ enum CanonicalDailyJSONStream {
                     if escaped == 0x2f {
                         // Match JSONSerialization's `.withoutEscapingSlashes`
                         // output used by the legacy strict-result writer.
-                        try writer.write(escaped)
+                        try writer?.write(escaped)
                     } else {
-                        try writer.write(byte)
-                        try writer.write(escaped)
+                        try writer?.write(byte)
+                        try writer?.write(escaped)
                     }
                     if capture { encoded.append(escaped) }
                     if escaped == 0x75 {
@@ -189,12 +207,12 @@ enum CanonicalDailyJSONStream {
                                     || (0x61...0x66).contains(hex) else {
                                 throw StreamError.malformedJSON
                             }
-                            try writer.write(hex)
+                            try writer?.write(hex)
                             if capture { encoded.append(hex) }
                         }
                     }
                 } else {
-                    try writer.write(byte)
+                    try writer?.write(byte)
                     try validateUTF8Byte(
                         byte,
                         continuationBytes: &continuationBytes,
@@ -211,7 +229,7 @@ enum CanonicalDailyJSONStream {
                   (0x30...0x39).contains(byte)
                     || [0x2d, 0x2b, 0x2e, 0x45, 0x65].contains(byte) {
                 _ = try reader.read()
-                try writer.write(byte)
+                try writer?.write(byte)
                 guard bytes.count < 1_024 else { throw StreamError.tokenTooLarge }
                 bytes.append(byte)
             }
@@ -237,25 +255,27 @@ enum CanonicalDailyJSONStream {
 
         private func expect(_ expected: UInt8) throws {
             guard try reader.read() == expected else { throw StreamError.malformedJSON }
-            try writer.write(expected)
+            try writer?.write(expected)
         }
 
         private func consumeIf(_ expected: UInt8) throws -> Bool {
             guard try reader.peek() == expected else { return false }
             _ = try reader.read()
-            try writer.write(expected)
+            try writer?.write(expected)
             return true
         }
 
         private func shouldCapture(_ path: [String]) -> Bool {
             path == ["schema"]
                 || path == ["schema_version"]
+                || path == ["schema_profile"]
                 || path == ["healthkit_record_archive", "schema"]
                 || path == ["healthkit_record_archive", "schema_version"]
         }
 
         private func applyCapturedString(_ value: String?, path: [String]) {
             if path == ["schema"] { metadata.schema = value }
+            if path == ["schema_profile"] { metadata.schemaProfile = value }
             if path == ["healthkit_record_archive", "schema"] {
                 metadata.archiveSchema = value
             }

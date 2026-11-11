@@ -30,7 +30,7 @@ it("forward-migrates existing APNs rows and preserves explicit legacy rotation/r
 
 it("preserves the sandbox override and APNs availability with malformed FCM config", async () => {
   vi.spyOn(Date, "now").mockReturnValue(NOW);
-  const DB = new TestD1(["0001_init.sql", "0002_fcm_v2.sql"]);
+  const DB = new TestD1(["0001_init.sql", "0002_delegated_sync_fcm.sql", "0002_fcm_v2.sql"]);
   try {
     const { wakeId } = await (await worker.fetch(jsonRequest("/wake/register", registration), { DB })).json() as { wakeId: string };
     const env = { DB, APNS_AUTH_KEY: (await syntheticPem("apns")).pem, APNS_KEY_ID: "SYNTHKEY01", APNS_TEAM_ID: "SYNTHTEAM1",

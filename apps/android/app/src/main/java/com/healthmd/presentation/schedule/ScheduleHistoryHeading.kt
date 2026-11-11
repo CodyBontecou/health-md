@@ -57,9 +57,8 @@ internal fun ScheduleHistoryHeading(
 private fun HistoryTitle(modifier: Modifier) {
     Text(
         text = stringResource(R.string.section_export_history),
-        style = MaterialTheme.typography.titleMedium,
-        color = AppColors.textSecondary,
-        fontWeight = FontWeight.Medium,
+        style = com.healthmd.presentation.theme.GeistType.heading16,
+        color = AppColors.accent,
         modifier = modifier.testTag(ScheduleHistoryTags.TITLE).semantics { heading() },
     )
 }
@@ -73,11 +72,11 @@ private fun ClearHistoryButton(onRequestClearHistory: () -> Unit, modifier: Modi
                 .sizeIn(minWidth = GeistSizes.minimumTouchTarget, minHeight = GeistSizes.minimumTouchTarget),
             shape = RoundedCornerShape(Radii.button),
             contentPadding = PaddingValues(horizontal = Spacing.sm, vertical = Spacing.xs),
-            colors = ButtonDefaults.textButtonColors(contentColor = AppColors.textSecondary),
+            colors = ButtonDefaults.textButtonColors(contentColor = AppColors.accent),
         ) {
             Text(
                 text = stringResource(R.string.action_clear_history),
-                style = MaterialTheme.typography.titleSmall,
+                style = com.healthmd.presentation.theme.GeistType.button14,
             )
         }
     }

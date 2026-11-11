@@ -1,9 +1,22 @@
 ---
-title: "API Endpoint"
-description: "Send selected Apple Health JSON directly from iPhone to your own HTTP(S) endpoint."
+title: "Export Apple Health JSON to your own API"
+description: "Send selected Apple Health data as JSON from iPhone to your own endpoint with Health.md. See setup, payload examples, and request limits."
 ---
 
 <p>API Endpoint is an export target for users who want Health.md data to flow into their own server, webhook, database, dashboard, or automation. The iPhone still reads Apple Health. Instead of writing files, it POSTs JSON to the endpoint you configure.</p>
+
+## Choose your API workflow
+
+| Your goal | Start here |
+| --- | --- |
+| Send selected data to your server | Continue here. The iPhone sends a JSON POST to the URL you configure. |
+| Query data locally on a Mac | <a href="/docs/agent-api/">Loopback query API</a>. Keep it on this Mac; do not expose it to the network. |
+| Build an iOS health app | <a href="https://developer.apple.com/documentation/healthkit" target="_blank" rel="noopener">Apple HealthKit developer documentation</a>. |
+
+<div class="callout">
+<strong>Start with one day</strong>
+<p><a href="https://apps.apple.com/us/app/health-md/id6757763969" target="_blank" rel="noopener">Install Health.md on iPhone</a>. <a href="/docs/reference/generated/automation/api-export-v1.json">Inspect the fictional JSON example</a> before configuring your receiver.</p>
+</div>
 
 <div class="callout">
 <strong>Privacy reminder.</strong>

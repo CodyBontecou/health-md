@@ -54,25 +54,71 @@ import UIKit
 
 final class IPhoneDirectExportConnection: @unchecked Sendable {
     let channel: DirectSecureChannel
+    private let inbox: IPhoneDirectExportMessageInbox
+    private let operationProtocolAuthority: AppleDirectProtocolAuthority?
+    private let incomingProtocolSelection: IPhoneDirectIncomingProtocolSelection
     @MainActor private(set) var exportHistoryObservationVersion: Int?
+    @MainActor private(set) var scopedDailyNoteVersion: Int?
 
     @MainActor
     func configureExportHistoryObservation(local: DirectPeerCapabilities, remote: DirectPeerCapabilities) {
         exportHistoryObservationVersion = local.negotiatedExportHistoryObservationVersion(with: remote)
+        scopedDailyNoteVersion = local.negotiatedScopedDailyNoteVersion(with: remote)
     }
-
-    private let inbox = IPhoneDirectExportMessageInbox()
 
     init(channel: DirectSecureChannel) {
         self.channel = channel
+        inbox = IPhoneDirectExportMessageInbox()
+        operationProtocolAuthority = nil
+        incomingProtocolSelection = IPhoneDirectIncomingProtocolSelection()
     }
 
-    func send(_ message: DirectMessage) async throws {
-        try await channel.send(message)
+    private init(channel: DirectSecureChannel, inbox: IPhoneDirectExportMessageInbox,
+                 protocolAuthority: AppleDirectProtocolAuthority,
+                 incomingProtocolSelection: IPhoneDirectIncomingProtocolSelection) {
+        self.channel = channel
+        self.inbox = inbox
+        operationProtocolAuthority = protocolAuthority.frozenForCurrentOperation()
+        self.incomingProtocolSelection = incomingProtocolSelection
     }
 
-    func sendBinaryTransferFrame(_ frame: Data) async throws {
-        try await channel.sendBinaryTransferFrame(frame)
+    @MainActor
+    func retainingProtocolAuthority(_ authority: AppleDirectProtocolAuthority) -> IPhoneDirectExportConnection {
+        let retained = IPhoneDirectExportConnection(channel: channel, inbox: inbox, protocolAuthority: authority,
+            incomingProtocolSelection: incomingProtocolSelection)
+        retained.exportHistoryObservationVersion = exportHistoryObservationVersion
+        retained.scopedDailyNoteVersion = scopedDailyNoteVersion
+        return retained
+    }
+
+    func retainIncomingProtocolAuthority(_ authority: AppleDirectProtocolAuthority) -> IPhoneDirectIncomingProtocolLease {
+        incomingProtocolSelection.retain(authority)
+    }
+
+    nonisolated func incomingMessageCanonicalizer(fallback: AppleDirectProtocolAuthority) -> any DirectMessageCanonicalizing {
+        incomingProtocolSelection.selected(fallback: fallback)
+    }
+
+    func send(_ message: DirectMessage, ownership: AppleExportJournalCheckpoint? = nil) async throws {
+        if let operationProtocolAuthority {
+            try await channel.send(message, authorization: ownership?.sendAuthorization,
+                messageCanonicalizer: operationProtocolAuthority)
+        } else {
+            try await channel.send(message, authorization: ownership?.sendAuthorization)
+        }
+    }
+
+    func send(_ message: DirectMessage, authorization: DirectPacketSendAuthorization) async throws {
+        if let operationProtocolAuthority {
+            try await channel.send(message, authorization: authorization,
+                messageCanonicalizer: operationProtocolAuthority)
+        } else {
+            try await channel.send(message, authorization: authorization)
+        }
+    }
+
+    func sendBinaryTransferFrame(_ frame: Data, ownership: AppleExportJournalCheckpoint? = nil) async throws {
+        try await channel.sendBinaryTransferFrame(frame, authorization: ownership?.sendAuthorization)
     }
 
     func receive() async throws -> DirectMessage {
@@ -85,6 +131,33 @@ final class IPhoneDirectExportConnection: @unchecked Sendable {
 
     func finish() async {
         await inbox.finish()
+    }
+}
+
+nonisolated final class IPhoneDirectIncomingProtocolLease: @unchecked Sendable {
+    private let finish: @Sendable () -> Void
+    fileprivate init(finish: @escaping @Sendable () -> Void) { self.finish = finish }
+    func close() { finish() }
+    deinit { finish() }
+}
+
+nonisolated private final class IPhoneDirectIncomingProtocolSelection: @unchecked Sendable {
+    private let lock = NSLock()
+    private var current: (id: UUID, authority: AppleDirectProtocolAuthority)?
+
+    func retain(_ authority: AppleDirectProtocolAuthority) -> IPhoneDirectIncomingProtocolLease {
+        let id = UUID()
+        let frozen = authority.frozenForCurrentOperation()
+        lock.withLock { current = (id, frozen) }
+        return IPhoneDirectIncomingProtocolLease { [self] in
+            lock.withLock {
+                if current?.id == id { current = nil }
+            }
+        }
+    }
+
+    func selected(fallback: AppleDirectProtocolAuthority) -> any DirectMessageCanonicalizing {
+        lock.withLock { current?.authority ?? fallback }
     }
 }
 
@@ -377,6 +450,7 @@ final class IPhoneDirectCLIService: ObservableObject {
 
     var statusProvider: (() async -> DirectIPhoneStatus)?
     var agentBridgePlanningSessionProvider: (() throws -> AgentBridgeNativePlanningSession)?
+    var agentBridgeExecutionReceiver: (@MainActor @Sendable (AgentBridgeNativePlanningSession, DirectSecureChannel) async throws -> AgentBridgeSecurePayload?)?
     var exportRequestHandler: ((
         DirectExportRequest,
         DirectPeerBinding,
@@ -384,8 +458,8 @@ final class IPhoneDirectCLIService: ObservableObject {
         IPhoneDirectExportConnection,
         AppleDirectProtocolAuthority
     ) async -> Void)?
-    var cancelHandler: ((UUID) -> Bool)?
-    var queryRequestHandler: ((DirectQueryRequest, DirectSecureChannel) async -> Void)?
+    var cancelHandler: ((UUID) -> IPhoneDirectCancellationReceipt?)?
+    var queryRequestHandler: ((DirectQueryRequest, DirectSecureChannel, AppleDirectProtocolAuthority) async -> Void)?
     // Query receipt identity only; pairing, raw/file bindings and wires unchanged.
     var querySourceInstallationID: UUID { installationID }
 
@@ -393,7 +467,7 @@ final class IPhoneDirectCLIService: ObservableObject {
         DirectPeerCapabilities(protocolVersions: Self.applicationProtocolVersions,
             platform: .iOS, installationID: installationID, query: .current,
             wake: wakeManager?.advertisesWake == true ? DirectWakeCapabilities(supported: true) : nil,
-            exportHistoryObservationVersions: [1])
+            exportHistoryObservationVersions: [1], scopedDailyNoteVersions: [1])
     }
 
     private let defaults: UserDefaults
@@ -407,14 +481,7 @@ final class IPhoneDirectCLIService: ObservableObject {
     private lazy var client = DirectManualIPClient(
         installationID: installationID,
         displayName: UIDevice.current.name,
-        trustStore: trustStore,
-        messageCanonicalizer: protocolAuthority
-    )
-    private lazy var nearbyClient = DirectNearbyClient(
-        installationID: installationID,
-        displayName: UIDevice.current.name,
-        trustStore: trustStore,
-        messageCanonicalizer: protocolAuthority
+        trustStore: trustStore
     )
     private let idleTimerActivityID = UUID()
     private var reconnectTask: Task<Void, Never>?
@@ -490,6 +557,14 @@ final class IPhoneDirectCLIService: ObservableObject {
             try? trustStore.saveState(trustState)
         }
         self.needsPairingCode = trustState.trustedMac == nil
+        #if DEBUG
+        // App Store screenshots: the fixture computer was paired by QR (display only).
+        if let fixture = AppStoreScreenshotFixtures.pairedCLI {
+            let methods = DirectCLIPairingMethodStore(defaults: defaults)
+            methods.noteAttempt(.qr, at: fixture.pairedAt)
+            methods.method(forPairingAt: fixture.pairedAt)
+        }
+        #endif
     }
 
     var isEnabled: Bool {
@@ -682,11 +757,25 @@ final class IPhoneDirectCLIService: ObservableObject {
     }
 
     var pairedCLIName: String? {
-        client.savedServer()?.displayName
+        #if DEBUG
+        if let fixture = AppStoreScreenshotFixtures.pairedCLI { return fixture.name }
+        #endif
+        return client.savedServer()?.displayName
     }
 
     var hasPairedCLI: Bool {
-        client.savedServer() != nil
+        #if DEBUG
+        if AppStoreScreenshotFixtures.pairedCLI != nil { return true }
+        #endif
+        return client.savedServer() != nil
+    }
+
+    /// When the saved pairing was made. The phone does not record later use.
+    var pairedCLIPairedAt: Date? {
+        #if DEBUG
+        if let fixture = AppStoreScreenshotFixtures.pairedCLI { return fixture.pairedAt }
+        #endif
+        return client.savedServer()?.pairedAt
     }
 
     var isPairingHandoffWaitingForActiveOperation: Bool {
@@ -1010,6 +1099,10 @@ final class IPhoneDirectCLIService: ObservableObject {
     }
 
     private func startReconnectLoopIfNeeded() {
+        #if DEBUG
+        // The screenshot pairing is display only; never connect for it.
+        if AppStoreScreenshotFixtures.pairedCLI != nil { return }
+        #endif
         guard isEnabled,
               appIsActive,
               reconnectTask == nil,
@@ -1104,11 +1197,24 @@ final class IPhoneDirectCLIService: ObservableObject {
         var provisionalChannel: DirectSecureChannel?
         var pairingTrustWasWritten = false
         do {
-            try protocolAuthority.assertCompatible()
+            let sessionAuthority = protocolAuthority.makeSessionAuthority()
+            try sessionAuthority.assertCompatible()
+            let sessionClient = DirectManualIPClient(
+                installationID: installationID,
+                displayName: UIDevice.current.name,
+                trustStore: trustStore,
+                messageCanonicalizer: sessionAuthority
+            )
+            let sessionNearbyClient = DirectNearbyClient(
+                installationID: installationID,
+                displayName: UIDevice.current.name,
+                trustStore: trustStore,
+                messageCanonicalizer: sessionAuthority
+            )
             let connected: DirectSecureChannel
             switch transport {
             case .manualIP:
-                connected = try await client.connect(
+                connected = try await sessionClient.connect(
                     host: host,
                     port: port,
                     pairingCode: pairingCode,
@@ -1116,12 +1222,12 @@ final class IPhoneDirectCLIService: ObservableObject {
                 )
             case .nearby:
                 if let timeout {
-                    connected = try await nearbyClient.connect(
+                    connected = try await sessionNearbyClient.connect(
                         pairingCode: pairingCode,
                         timeout: timeout
                     )
                 } else {
-                    connected = try await nearbyClient.connectWaitingForServer(
+                    connected = try await sessionNearbyClient.connectWaitingForServer(
                         pairingCode: pairingCode
                     )
                 }
@@ -1165,6 +1271,7 @@ final class IPhoneDirectCLIService: ObservableObject {
             lastError = nil
             beginSession(
                 on: connected,
+                protocolAuthority: sessionAuthority,
                 pairingTrustWasWritten: pairingTrustWasWritten,
                 previousServer: savedServerBeforePairing,
                 pairingTrustContext: pairingTrustContext
@@ -1250,6 +1357,7 @@ final class IPhoneDirectCLIService: ObservableObject {
 
     private func beginSession(
         on connected: DirectSecureChannel,
+        protocolAuthority: AppleDirectProtocolAuthority,
         pairingTrustWasWritten: Bool,
         previousServer: ManualIPTrustedMac?,
         pairingTrustContext: IPhoneDirectCLIPairingTrustContext
@@ -1272,13 +1380,20 @@ final class IPhoneDirectCLIService: ObservableObject {
         sessionTask = Task { [weak self] in
             guard let self else { return }
             var planningReceiver: AgentBridgeNativePlanningSession?
+            var executionReceiver: (@MainActor @Sendable (AgentBridgeNativePlanningSession, DirectSecureChannel) async throws -> AgentBridgeSecurePayload?)?
             do {
                 while !Task.isCancelled {
                     // Await the original reader inline. A negotiated planning session keeps
                     // its owner and channel; revocation must never fall back to base decoding.
                     let payload: DirectSecurePayload
                     if let planningReceiver {
-                        switch try await planningReceiver.receiveAndHandleNext(on: connected) {
+                        let received: AgentBridgeSecurePayload?
+                        if let executionReceiver {
+                            received = try await executionReceiver(planningReceiver, connected)
+                        } else {
+                            received = try await planningReceiver.receiveAndHandleNext(on: connected)
+                        }
+                        switch received {
                         case nil:
                             lastInboundActivityAt = heartbeatClock.now
                             heartbeatPingSentAt = nil
@@ -1288,7 +1403,9 @@ final class IPhoneDirectCLIService: ObservableObject {
                         case .agent: throw AgentBridgeValidationError.unsupportedCapability
                         }
                     } else {
-                        payload = try await connected.receive()
+                        payload = try await connected.receive(messageCanonicalizer: {
+                            exportConnection.incomingMessageCanonicalizer(fallback: protocolAuthority)
+                        })
                     }
                     lastInboundActivityAt = heartbeatClock.now
                     heartbeatPingSentAt = nil
@@ -1307,7 +1424,8 @@ final class IPhoneDirectCLIService: ObservableObject {
                         message,
                         on: connected,
                         exportConnection: exportConnection,
-                        sessionID: sessionID
+                        sessionID: sessionID,
+                        protocolAuthority: protocolAuthority
                     )
                     if case .hello(let capabilities) = message,
                        Self.applicationProtocolVersions.contains(4), capabilities.protocolVersions.contains(4) {
@@ -1327,6 +1445,9 @@ final class IPhoneDirectCLIService: ObservableObject {
                                 throw AgentBridgeValidationError.permissionRequired
                             }
                             planningReceiver = try provider()
+                            // Pin native composition once for this accepted owner; subsequent
+                            // property changes cannot retarget an active connection's SDK.
+                            executionReceiver = self.agentBridgeExecutionReceiver
                         }
                     }
                 }
@@ -1338,8 +1459,9 @@ final class IPhoneDirectCLIService: ObservableObject {
                 }
             }
             await exportConnection.finish()
-            self.protocolAuthority.endOperation()
-            guard self.activeSessionID == sessionID else { return }
+            protocolAuthority.endOperation()
+            guard self.activeSessionID == sessionID,
+                  self.channel === connected else { return }
             self.invalidateAgentBridgeSession()
             let pairingWasIncomplete = self.provisionalPairingTrust?.sessionID == sessionID
             let pairingTrustWasRestored = self.rollbackProvisionalPairingTrustIfNeeded(
@@ -1377,7 +1499,8 @@ final class IPhoneDirectCLIService: ObservableObject {
         _ message: DirectMessage,
         on channel: DirectSecureChannel,
         exportConnection: IPhoneDirectExportConnection,
-        sessionID: UUID
+        sessionID: UUID,
+        protocolAuthority: AppleDirectProtocolAuthority
     ) async throws {
         switch message {
         case .hello(let capabilities):
@@ -1465,7 +1588,7 @@ final class IPhoneDirectCLIService: ObservableObject {
                         binding,
                         negotiation,
                         exportConnection,
-                        self.protocolAuthority
+                        protocolAuthority
                     )
                     self.finishExportOperation(operationID)
                 }
@@ -1508,9 +1631,10 @@ final class IPhoneDirectCLIService: ObservableObject {
             let operationID = UUID()
             activeQueryOperationID = operationID
             activeQueryRequestID = request.requestID
+            let queryProtocolAuthority = protocolAuthority.frozenForCurrentOperation()
             queryTask = Task { [weak self] in
                 guard let self else { return }
-                await queryRequestHandler(request, channel)
+                await queryRequestHandler(request, channel, queryProtocolAuthority)
                 self.finishQueryOperation(operationID)
             }
         case .cancel(let jobID):
@@ -1526,16 +1650,27 @@ final class IPhoneDirectCLIService: ObservableObject {
                 )))
                 break
             }
-            if cancelHandler?(jobID) == true {
-                try await channel.send(.cancelAcknowledged(jobID: jobID))
-                if exportTask != nil, await statusProvider?().activeJobID == jobID {
-                    await exportConnection.deliver(message)
+            if let receipt = cancelHandler?(jobID) {
+                guard receipt.jobID == jobID else {
+                    throw DirectChannelError.authenticationFailed("The cancellation receipt does not match this job.")
+                }
+                let operationID = activeExportOperationID
+                try await receipt.sendAcknowledgement(on: channel)
+                guard activeSessionID == sessionID, self.channel === channel,
+                      activeExportOperationID == operationID else { break }
+                if exportTask != nil {
+                    let status = await statusProvider?()
+                    guard activeSessionID == sessionID, self.channel === channel,
+                          activeExportOperationID == operationID else { break }
+                    if status?.activeJobID == jobID {
+                        await exportConnection.deliver(message)
+                    }
                 }
             } else {
                 try await channel.send(.exportRejected(DirectExportFailure(
                     jobID: jobID,
                     reason: .invalidRequest,
-                    message: "The iPhone has no matching direct export job."
+                    message: "The iPhone could not cancel this direct export."
                 )))
             }
         case .ping:
@@ -1644,7 +1779,6 @@ final class IPhoneDirectCLIService: ObservableObject {
         channel?.cancel()
         channel = nil
         remoteCapabilities = nil
-        protocolAuthority.endOperation()
         isConnected = false
         isConnecting = false
         connectedCLIName = nil

@@ -147,7 +147,28 @@ const OPERATION_DEFINITIONS: &[OperationDefinition] = &[
     OperationDefinition {
         name: "healthmd_export_approval",
         title: "Relay an existing exact export decision",
-        description: "Relay only separately stored exact host and native decisions for an issued v4 plan binding. This request and MCP annotations cannot create consent or authority. No execution adapter is provided.",
+        description: "Relay only separately stored exact host and native decisions for an issued v4 plan binding. This request and MCP annotations cannot create consent or authority. Execute requires both stored decisions and installed Agent Bridge support.",
+        kind: OperationKind::Export,
+        local_only: true,
+    },
+    OperationDefinition {
+        name: "healthmd_export_execute",
+        title: "Execute an approved stored export plan",
+        description: "Execute an exact previously issued plan using separately stored host and native decisions and its registered destination. Supply only plan/job/idempotency/request IDs; caller approval fields and destination paths are rejected. Requires installed Agent Bridge support. Returns only after durable host output and exact native confirmation. Local cancellation does not confirm source cancellation; retain IDs for recovery.",
+        kind: OperationKind::Export,
+        local_only: true,
+    },
+    OperationDefinition {
+        name: "healthmd_export_execution_resume",
+        title: "Resume an approved Agent Bridge export",
+        description: "Recover an existing signed Agent Bridge job using its retained request, manifest, registered destination and verified committed prefix. Supply only job_id. Requires the same paired source and current authority; never recaptures or falls back to legacy exports. Returns only after durable output and exact native confirmation.",
+        kind: OperationKind::Export,
+        local_only: true,
+    },
+    OperationDefinition {
+        name: "healthmd_export_execution_cancel",
+        title: "Stop a retained Agent Bridge export",
+        description: "Request or replay Stop using only an existing job_id and signed retained state. Returns native acknowledgement or its authenticated historical receipt; native completion wins if already complete. Output is explicitly not verified by this operation. Local request cancellation or timeout is not source cancellation. Never recaptures, changes destination or renews grants. Requires the authorized local surface.",
         kind: OperationKind::Export,
         local_only: true,
     },
@@ -375,11 +396,11 @@ fn base_operation_declarations() -> Vec<Value> {
                 "healthmd_export_plan" => {
                     declaration["annotations"] = json!({"readOnlyHint": true, "destructiveHint": false, "idempotentHint": false, "openWorldHint": false});
                 }
-                "healthmd_export_files" | "healthmd_export_raw" | "healthmd_export_job_resume" => {
+                "healthmd_export_execute" | "healthmd_export_execution_resume" | "healthmd_export_files" | "healthmd_export_raw" | "healthmd_export_job_resume" => {
                     declaration["_meta"] = json!({"anthropic/requiresUserInteraction": true});
                     declaration["annotations"] = mutating_annotations(false);
                 }
-                "healthmd_export_job_cancel" => {
+                "healthmd_export_job_cancel" | "healthmd_export_execution_cancel" => {
                     declaration["_meta"] = json!({"anthropic/requiresUserInteraction": true});
                     declaration["annotations"] = mutating_annotations(true);
                 }
@@ -450,6 +471,10 @@ fn base_input_schema(name: &str) -> Value {
         "healthmd_pairing_status" => pairing_status_schema(),
         "healthmd_export_plan" => crate::agent_planning::plan_input_schema(),
         "healthmd_export_approval" => crate::agent_planning::approval_input_schema(),
+        "healthmd_export_execute" => crate::agent_planning::execute_input_schema(),
+        "healthmd_export_execution_resume" | "healthmd_export_execution_cancel" => {
+            crate::agent_planning::resume_input_schema()
+        }
         "healthmd_export_files" => export_files_schema(),
         "healthmd_export_raw" => raw_export_schema(),
         "healthmd_raw_artifact_read" => raw_artifact_read_schema(),
@@ -1608,7 +1633,7 @@ mod tests {
     #[test]
     fn local_catalog_exposes_bounded_pairing_tools_with_safe_annotations() {
         let tools = list(SurfaceProfile::LocalDirect);
-        assert_eq!(tools.len(), 23);
+        assert_eq!(tools.len(), 26);
         let start = tools
             .iter()
             .find(|tool| tool["name"] == "healthmd_pairing_start")

@@ -1,16 +1,16 @@
 Health.md verwandelt autorisierte Android Health Connect-Daten in Dateien unter deiner Kontrolle.
 
-HEALTH CONNECT-DATEN NACH DEINEN WÜNSCHEN EXPORTIEREN
-Erstelle lesbare Zusammenfassungen als Markdown, Obsidian Bases, CSV und JSON oder anbieter-native Schnappschüsse als JSON/NDJSON. Wähle Messwerte, Zeitraum und Ziel, sieh Dateinamen und Inhalte vorab und exportiere in einen lokalen Ordner, einen Obsidian-Tresor, zu einem anderen Android-Dokumentanbieter, an deinen API-Endpunkt oder eine gekoppelte Health.md CLI. Health.md benötigt kein Konto und betreibt keine Cloud für Gesundheitsdaten.
+HEALTH CONNECT EXPORTIEREN
+Erstelle Markdown-, Obsidian Bases-, CSV- und JSON-Zusammenfassungen oder native JSON/NDJSON-Schnappschüsse. Wähle Messwerte, Zeitraum und Ziel; prüfe Namen und Inhalte vorab. Exportiere in lokale Ordner, Obsidian-Tresore, Android-Dokumentanbieter, eigene API-Endpunkte oder eine gekoppelte Health.md CLI.
 
 AUS ÜBER 100 GESUNDHEITSWERTEN WÄHLEN
 Exportiere autorisierte Daten zu Schlaf, Schritten, Trainings, Herzfrequenz, HRV, Blutdruck, Blutzucker, Sauerstoffsättigung, Atemfrequenz, Gewicht, Körperzusammensetzung, Ernährung, Flüssigkeitszufuhr, Mobilität, Achtsamkeit, reproduktiver Gesundheit und weiteren Health Connect-Datensätzen. Wenn du eine Kategorie ablehnst, kannst du andere autorisierte Kategorien weiterhin exportieren.
 
-VORSCHAU, ANPASSUNG UND AUTOMATISIERUNG
-Wähle Einheiten, Formate, Schreibmodi, Ordnerstruktur und detaillierte Messwerte. Sieh genaue Pfade und Inhalte vor dem Schreiben. Exportiere manuell oder nach Zeitplan an dein gewähltes Ziel. Abgeschlossene und fehlgeschlagene Vorgänge findest du im Exportverlauf.
+VORSCHAU UND AUTOMATISIERUNG
+Wähle Einheiten, Formate, Schreibmodi, Ordnerstruktur und detaillierte Messwerte. Prüfe Pfade und Inhalte vorab. Exportiere manuell oder nach Zeitplan ans gewählte Ziel; prüfe Erfolge und Fehler im Exportverlauf.
 
 GESUNDHEIT AUF EINEN BLICK
-Vier optionale Startbildschirm-Widgets zeigen autorisierte Aktivitäts-, Schlaf- und Herzübersichten aus einem Cache auf dem Gerät. Du behältst die Kontrolle über Widget-Zugriff und Aktualisierungen im Hintergrund.
+Vier optionale Widgets zeigen autorisierte Aktivitäts-, Schlaf- und Herzübersichten aus dem Gerätecache. Du steuerst Zugriff und Hintergrundaktualisierung.
 
 PERSÖNLICHE MEDIZINISCHE DATEN (FHIR)
 Wenn das Gerät persönliche Gesundheitsakten unterstützt, kannst du mit „Medizinische Daten (FHIR)“ autorisierte medizinische Ressourcen im selben benutzerkontrollierten Archiv sichern. Unterstützte Kategorien:
@@ -42,4 +42,4 @@ DATENSCHUTZ UND KONTROLLE
 • Berechtigungen können jederzeit in Health Connect geprüft oder widerrufen werden
 • Begrenzte eigene Analysen zu Installationsattribution, Einführung oder Preisen enthalten niemals Gesundheitsdaten, Details zu Health Connect-Berechtigungen, Exportinhalte, Kontotexte oder Dateipfade
 
-Health.md enthält 5 kostenlose manuelle Exportaktionen. Ein einmaliger Kauf schaltet unbegrenzte Exporte und Zeitpläne frei; es gibt kein Abonnement.
+Exporte erfordern eine aktive Testphase, ein Wochen-/Jahresabo oder lebenslangen Zugriff. Berechtigte Erstabonnenten testen 7 Tage gratis; danach verlängert sich das Abo automatisch zum angezeigten In-App-Preis, sofern es nicht vor Ende der Testphase oder Laufzeit gekündigt wird. Verwaltung und Kündigung in Google Play. Lebenslanger Zugriff wird sofort einmalig bezahlt, ohne Testphase. Bestehender dauerhafter Zugriff bleibt erhalten.

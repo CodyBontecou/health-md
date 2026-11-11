@@ -7,6 +7,81 @@ Acceptance is the [roadmap](../architecture/agent-bridge-parity-roadmap.md) and 
 
 The active PR-readiness task authorizes source edits, scoped verification and normal pushes to the existing feature branches. Feature merges, releases/deployments, real health reads, native credential provisioning, user settings/schedule mutations, device notifications and physical-device actions retain their separate authorization gates. Dependency repairs #215/#216/#217 were explicitly approved and merged. B19/B20 remain approval-blocked. Missing evidence is not a pass. Unit tests cannot qualify a physical matrix.
 
+## Main-reconciled Cloud parent integration (2026-11-10)
+
+The local bridge candidate integrates Cloud parent
+`c19a88a61cb3333add6a6b93511cb15769585480` through a history-preserving merge.
+That parent's native/generated qualification remains pending; this source integration
+does not qualify it or make either PR ready. Main's consolidated CI policy and public
+contract editions remain authoritative. The previous hosted shard failures below are
+historical evidence under the retired CI topology, not results for the merged source.
+
+Conflict resolution retains bridge-only authority, planning, guarded transport,
+accepted/uncertain Stop, immutable Resume, private journals and receipt checks alongside
+main's operation-scoped provider/sleep capture, scoped personal-note delivery and send
+enqueue leases. The current iOS CLI settings screen carries the existing local agent
+permission controls from the retired Sync screen. Current entitlement expiry bounds
+cached bridge eligibility; purchase/expiry does not reset main's durable free-use ledger.
+Apple app eligibility and Android app scheduler/capture changes still require native
+compilation and owning native regressions in the integration qualification lane.
+
+An added host boundary control fails before rejecting newly optional scoped-note policy
+in both Apple and Android base manifests: existing exact bridge approvals do not authorize
+that separate write policy. No public schema/fixture changes or new bridge advertisement
+are inferred. The separate governance index is regenerated for the merged capability
+inventory while frozen registry-v1 bytes stay unchanged. All pre-existing main capability
+records are retained; the eleven bridge capabilities remain planned.
+
+Wake retains main's delegated-sync FCM contract and the bridge's independent Worker-v2
+management/delivery proofs, fixed notification copy and bounded provider requests in
+separate modules. Both additive migration files retain their original bytes. This is
+source compatibility only, with no remote migration or deployment qualification.
+
+Full installed provisioning/orchestration, recipes/scheduling, remaining output products,
+Windows private authority, killed production-producer recovery and complete physical
+CLI/MCP × Apple/Android acceptance remain required. B19/B20 stay approval-blocked,
+extension-4/default advertisement stays closed, and the candidate remains draft.
+No push, deployment, device QA or heavy native build is part of this integration.
+
+## Published-head CI diagnosis (2026-11-10)
+
+At published source `5a1a46ede37d53f0cc599ddc284c7dd2f400eae3`,
+[Apple CI 40615080138](https://github.com/CodyBontecou/health-md/actions/runs/40615080138)
+passed macOS and iOS units, Connectivity and UI shards 0/1/3. Shard 2 failed
+`testSuccessfulExport_folderBrowserRendersOnFirstPresentationAndReopens` at the
+10-second picker-dismissal assertion. Its retained activity tree sampled the captured
+`DOCPicker.actionButton` as existing after Open; the subsequent attached hierarchy
+shows the app export screen, and the attached fresh Open query has no matches.
+The test now resolves fresh picker queries per sample and requires the app export
+action to be hittable. The original deadline, real Files setup, first-presentation
+filename assertion and reopen assertion remain. Swift parsing and all 20 SDK-free UI
+artifact-policy tests pass; fresh SDK27 shard execution is still required. This is a
+test synchronization repair, not verified runtime resolution of the hosted failure.
+
+[Android CI 40615080090](https://github.com/CodyBontecou/health-md/actions/runs/40615080090)
+still reached its 60-minute job limits: Debug completed the test command in 52m10s
+then was cancelled during lint; Release was cancelled during its test command. The
+aggregate gates correctly failed. E2E JVM, Rust/Kotlin interop and all six device
+shards passed. The seven-day JVM artifacts are no longer available; the retained
+job logs do not isolate a new source defect. No timeout, coverage or authority fence
+was relaxed. Three host CI-runner regressions pass; both JVM lanes remain unresolved.
+
+Host checks pass with Rust 1.88: all 100 bridge fake-peer tests, 23 host
+planning tests, three retained-prefix tests and formatting. Contract validation and
+all 33 bridge-contract tests pass. An initial broader host run encountered sandbox
+TCP-bind denials (138 passed, 92 failed, one ignored); an isolated bind-denial repro
+preceded the successful loopback-permitted bridge run. No production authority,
+approved binding, transfer/recovery, public contract, fixture or rollout source changed.
+Local evidence and portable verification receipts are retained under ignored
+`.pi/pr189-readiness/` and `.pi/verification/pr189-readiness/` in the isolated checkout.
+
+The PR remains draft. Installed provisioning/orchestration, recipes/scheduling,
+remaining output products, Windows private authority, killed production-producer
+recovery and full CLI/MCP × Apple/Android physical journeys remain acceptance gates.
+B19/B20 remain separately approval-blocked and extension-4 advertisement stays closed.
+This increment imports no unpublished parent #188 work. No native build, device QA,
+push, deployment or release was performed.
+
 ## Native issuer bootstrap increment (2026-10-20)
 
 The current PR acceptance work adds explicit local-native bootstrap APIs on Apple and Android.
@@ -1494,16 +1569,26 @@ Before returning evidence, the host atomically replaces the same attempt with se
 
 ### Historical source Stop evidence after restart
 
-`HostAuthorityStore.retained_source_stop_confirmation` reads an existing private v4 attempt without a source connection or an execution owner. Canonical typed fields, the separate v4 MAC domain and the original host/job/request/approval/native-authority/Cancel bindings must agree. Acceptance and the preserved terminal source receipt are validated at the authenticated observation time; inspection may therefore succeed after the original live expiry or after export delegation revocation. The observation cannot be before the original attempt, at or beyond accepted expiry, or ahead of the current trusted clock.
+`HostAuthorityStore.retained_source_stop_confirmation` reads an existing private v4 pre-manifest confirmation or v6 output Stop confirmation without a source connection or an execution owner. Output-file presence selects a decoder only; each reader separately acquires the existing lock, authenticates its complete records, and rechecks all evidence. A failed decoder never falls back to another format. Canonical typed fields, the record-specific MAC domain and the original host/job/request/approval/native-authority/Cancel bindings must agree. Acceptance and the preserved terminal source receipt are validated at the authenticated observation time; inspection may therefore succeed after the original live expiry or after export delegation revocation. The observation cannot be before the original attempt, at or beyond accepted expiry, or ahead of the current trusted clock.
 
 This read acquires only the existing private output lock and loads only the existing protected key. After its final key callback it rechecks the key, clock, root, named held lock, absence of conflicting later state and exact attempt bytes. Missing, unsafe, noncanonical, corrupt, pending or contradictory records reject without repair or writes. The result carries historical source facts only: it grants no live ownership, sends no controls, renews no lifetime and verifies no destination artifacts. Installed orchestration and full native/physical acceptance remain required.
 
 
 ### Output recovery checks coexisting execution attempts
 
-Before returning an output transaction, the host authenticates any coexisting execution-attempt record for that job. Missing legacy evidence, an exactly bound v1 pre-send intent, and a matching v2 accepted record remain compatible. Acceptance comes from the independently signed output binding; a v1 intent never supplies it. Pending v3 or confirmed v4 Stop evidence, invalid MACs or metadata, and mismatched requests or acceptance reject without repair.
+Before returning an output transaction, the host authenticates any coexisting execution-attempt record for that job. Missing legacy evidence, an exactly bound v1 pre-send intent, and a matching v2 accepted record remain compatible. Acceptance comes from the independently signed output binding; a v1 intent never supplies it. Pending v3/v5 or confirmed v4/v6 Stop evidence, invalid MACs or metadata, and mismatched requests or acceptance reject without repair.
 
-The transaction pins the attempt's exact bytes or absence and rechecks that evidence alongside its root, held named lock and output journal after delaying callbacks. Changing its bytes or presence invalidates the existing owner. This closes contradictory retained-output recovery; it does not implement later-state Stop, pre-send-uncertain reconciliation, installed orchestration or native active-worker cancellation.
+The transaction pins the attempt's exact bytes or absence and rechecks that evidence alongside its root, held named lock and output journal after delaying callbacks. Changing its bytes or presence invalidates the existing owner. This closes contradictory retained-output recovery; Stop after transfer begins, pre-send-uncertain reconciliation, installed orchestration and full native worker acceptance remain separate requirements.
+
+### Stop after the manifest and before transfer
+
+`HostExecution.request_cancellation` consumes only the original output owner before transfer starts. It durably preserves the original signed attempt, accepted binding and exact output journal in a separately authenticated v5 pending record before sending Cancel. This owner checks the original peer, protected key, accepted expiry, held named lock and evidence bytes across trust callbacks. Revoking the export delegation neither renews it nor prevents this exact Stop. Started/resumed transfer and conflicting completion state reject.
+
+`BridgeSession.request_retained_output_cancellation` reopens only that same pending v5 record on a newly authenticated channel and sends its original Cancel without rewriting the intent. It does not send Execute or Resume, accept caller replacement metadata, recapture data, create a new grant, or extend the original lifetime. After an admitted Stop, both original and retained paths keep the channel unavailable for unrelated work, including completion, failure or a dropped owner.
+
+Before confirmation, the sole receiver may validate the source's queued base session, ordered file manifests and first transfer-open, or an empty transfer-finalize. This is bounded by the known artifact count plus two controls. Wrong source/session/job/path/digest/mode/media metadata, reordering, duplicates, unrelated controls and binary data reject. No disposition, transfer ACK, source commit, spool file, destination write or transfer checkpoint is produced while stopping.
+
+Only the bound authenticated terminal receipt can produce a v6 confirmation. Its separate MAC domain embeds the original signed pending record, known manifest and source-observation time. Native completion status is preserved; the result is source evidence, never host destination success. Historical inspection authenticates every layer and checks the original lifetime at observation. Empty captures retain zero artifacts even when the plan predicted paths; absent source data never creates fabricated output files. Stop during an already-started transfer, uncertain pre-send reconciliation, installed CLI/MCP/recipe orchestration and full native/physical acceptance remain incomplete. Extension advertisement and rollout gates stay closed.
 
 ### Native Stop while export preparation is active
 
