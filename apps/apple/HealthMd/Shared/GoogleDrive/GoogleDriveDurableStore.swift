@@ -180,6 +180,7 @@ nonisolated struct GoogleDriveJournalArtifact: Codable, Equatable, Sendable {
     let mediaType: String
     let writeIntent: GoogleDriveArtifactWriteIntent
     let createIfMissing: Bool
+    var dailyNotePolicy: GoogleDriveDailyNotePolicy? = nil
     let fragmentFilename: String
     let fragmentByteCount: UInt64
     let fragmentSHA256: String
@@ -197,7 +198,7 @@ nonisolated struct GoogleDriveJournalArtifact: Codable, Equatable, Sendable {
 }
 
 nonisolated struct GoogleDriveOperationJournal: Codable, Equatable, Identifiable, Sendable {
-    static let currentVersion = 2
+    static let currentVersion = 3
 
     let version: Int
     let id: UUID
@@ -299,6 +300,7 @@ actor GoogleDriveJournalStore {
                 mediaType: artifact.mediaType,
                 writeIntent: artifact.writeIntent,
                 createIfMissing: artifact.createIfMissing,
+                dailyNotePolicy: artifact.dailyNotePolicy,
                 fragmentFilename: fragmentFilename,
                 fragmentByteCount: artifact.byteCount,
                 fragmentSHA256: artifact.sha256,
@@ -489,7 +491,13 @@ actor GoogleDriveJournalStore {
     }
 
     private static func isSupported(_ journal: GoogleDriveOperationJournal) -> Bool {
-        guard journal.version == GoogleDriveOperationJournal.currentVersion,
+        guard (journal.version == GoogleDriveOperationJournal.currentVersion ||
+                (journal.version == 2 && !journal.artifacts.contains { $0.writeIntent == .dailyNoteMerge })),
+              journal.artifacts.allSatisfy({ artifact in
+                  guard artifact.writeIntent == .dailyNoteMerge else { return artifact.dailyNotePolicy == nil }
+                  guard let policy = artifact.dailyNotePolicy else { return false }
+                  return (try? policy.merge(existing: "")) != nil
+              }),
               journal.residualOperationIDs.count <= 10_000,
               !journal.residualOperationIDs.contains(journal.id),
               Set(journal.residualOperationIDs).count == journal.residualOperationIDs.count else { return false }

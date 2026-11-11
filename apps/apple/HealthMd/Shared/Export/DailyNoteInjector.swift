@@ -18,6 +18,12 @@ import HealthMdCoreRust
 // MARK: - Daily Note Injector
 
 struct DailyNoteInjector {
+    /// Private remote staging hook. Captures an alternate Night patch before source data is released.
+    @MainActor final class ScopedNightPatches {
+        var patches: [Date: String] = [:]
+    }
+    @TaskLocal static var scopedNightPatches: ScopedNightPatches?
+
 
     // MARK: - Injection Result
 
@@ -264,8 +270,15 @@ struct DailyNoteInjector {
             return preparedContent(prepared)
         }
         guard prepared == nil else { throw AppleLooseDailyExportPlannerError.rustPlanningFailed }
-        return buildInjectionContent(healthData: healthData, settings: settings,
+        let content = buildInjectionContent(healthData: healthData, settings: settings,
             customization: customization, metricSelection: metricSelection)
+        if let collector = scopedNightPatches, let content, let makeRecord = content.nightCaptureJSON {
+            let annotation = "---\n" + (try scopedCaptureProperties(json: makeRecord())) + "---\n"
+            guard case .merged(let frontmatter) = MarkdownMerger.mergeFrontmatterOutcome(
+                existing: content.frontmatter, new: annotation) else { throw ExportError.markdownMergeRejected }
+            collector.patches[healthData.date] = frontmatter + content.body
+        }
+        return content
     }
 
     // MARK: - Public API

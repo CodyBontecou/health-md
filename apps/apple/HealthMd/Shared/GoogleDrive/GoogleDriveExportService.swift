@@ -37,12 +37,16 @@ final class GoogleDriveArtifactBundleProducer {
         // placeholders let the authoritative injector render its exact fragment without changing
         // remote missing-file semantics; unchanged placeholders are excluded below.
         var dailyNotePaths: [String: Bool] = [:]
+        let nightPatches = DailyNoteInjector.ScopedNightPatches()
+        let noteTimeZone = settingsSnapshot.sleepCaptureContext?.timeZone ?? settings.exportTimeZoneOverride ?? .current
+        var noteDates: [String: Date] = [:]
         if settings.dailyNoteInjection.enabled {
             for date in dates {
                 let path = ExportPathPlanner.dailyNoteRelativePath(
                     settings: settings.dailyNoteInjection,
-                    date: date
+                    date: date, timeZone: noteTimeZone
                 )
+                noteDates[path] = date
                 dailyNotePaths[path] = settings.dailyNoteInjection.createIfMissing
                 if !settings.dailyNoteInjection.createIfMissing {
                     let url = ExportPathPlanner.appendingRelativePath(path, to: root, isDirectory: false)
@@ -56,14 +60,16 @@ final class GoogleDriveArtifactBundleProducer {
             }
         }
 
-        let result = await ExportOrchestrator.exportDates(
-            dates,
-            healthKitManager: healthKitManager,
-            vaultManager: vault,
-            settings: settings,
-            externalIntegrations: externalIntegrations,
-            onProgress: onProgress
-        )
+        let result = await DailyNoteInjector.$scopedNightPatches.withValue(nightPatches) {
+            await ExportOrchestrator.exportDates(
+                dates,
+                healthKitManager: healthKitManager,
+                vaultManager: vault,
+                settings: settings,
+                externalIntegrations: externalIntegrations,
+                onProgress: onProgress
+            )
+        }
 
         let aggregatePaths = Set(dates.flatMap { date in
             settings.exportFormats.map {
@@ -106,6 +112,11 @@ final class GoogleDriveArtifactBundleProducer {
                 intent = .overwrite
                 createIfMissing = true
             }
+            if intent == .dailyNoteMerge && settingsSnapshot.sleepCaptureContext?.sleepDayAttribution != .morningEnds {
+                guard let date = noteDates[relativePath], nightPatches.patches[date] != nil else {
+                    throw GoogleDriveError(.remoteConflict)
+                }
+            }
             let digest = GoogleDriveDigest.sha256(data)
             artifacts.append(try GoogleDriveGeneratedArtifact(
                 id: digest,
@@ -113,7 +124,12 @@ final class GoogleDriveArtifactBundleProducer {
                 mediaType: Self.mediaType(for: pair.url),
                 writeIntent: intent,
                 createIfMissing: createIfMissing,
-                fragmentBytes: data
+                fragmentBytes: data,
+                dailyNotePolicy: intent == .dailyNoteMerge ? GoogleDriveDailyNotePolicy(
+                    recordProfile: settingsSnapshot.sleepCaptureContext?.sleepDayAttribution == .morningEnds
+                        ? "apple-v11" : "apple-v8",
+                    injectSections: settings.dailyNoteInjection.injectMarkdownSections,
+                    patch: noteDates[relativePath].flatMap { nightPatches.patches[$0] } ?? String(decoding: data, as: UTF8.self)) : nil
             ))
         }
 

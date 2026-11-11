@@ -281,6 +281,40 @@ nonisolated enum GoogleDriveArtifactWriteIntent: String, Codable, Equatable, Sen
     case dailyNoteMerge = "daily_note_merge"
 }
 
+/// Private retry authority; never serialized into profiles, public exports or protocols.
+nonisolated struct GoogleDriveDailyNotePolicy: Codable, Equatable, Sendable {
+    let recordProfile: String
+    let injectSections: Bool
+    /// Exact frozen capture, including the alternate Night patch for a scoped remote baseline.
+    let patch: String
+    let patchSHA256: String
+
+    init(recordProfile: String, injectSections: Bool, patch: String) {
+        self.recordProfile = recordProfile
+        self.injectSections = injectSections
+        self.patch = patch
+        self.patchSHA256 = GoogleDriveDigest.sha256(Data(patch.utf8))
+    }
+
+    func merge(existing: String) throws -> String {
+        guard GoogleDriveDigest.sha256(Data(patch.utf8)) == patchSHA256 else {
+            throw GoogleDriveError(.checksumMismatch)
+        }
+        guard injectSections || MarkdownMerger.splitFrontmatter(from: patch)?.body
+            .trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == true else {
+            throw GoogleDriveError(.remoteConflict)
+        }
+        let profile: CoreMetricRegistryProfile
+        switch recordProfile {
+        case "apple-v11": profile = .appleHealthDataV11
+        case "apple-v8": profile = .appleHealthDataV8
+        default: throw GoogleDriveError(.remoteConflict)
+        }
+        return try HealthMdCoreService().mergeScopedNote(profile: profile, existing: existing,
+            patch: patch, injectSections: injectSections)
+    }
+}
+
 nonisolated struct GoogleDriveGeneratedArtifact: Equatable, Sendable {
     let id: String
     let relativePath: String
@@ -289,6 +323,7 @@ nonisolated struct GoogleDriveGeneratedArtifact: Equatable, Sendable {
     /// Used only by Daily Note merge. False fails closed when no exact remote baseline exists.
     let createIfMissing: Bool
     let fragmentBytes: Data
+    let dailyNotePolicy: GoogleDriveDailyNotePolicy?
     let byteCount: UInt64
     let sha256: String
 
@@ -298,7 +333,8 @@ nonisolated struct GoogleDriveGeneratedArtifact: Equatable, Sendable {
         mediaType: String,
         writeIntent: GoogleDriveArtifactWriteIntent,
         createIfMissing: Bool = true,
-        fragmentBytes: Data
+        fragmentBytes: Data,
+        dailyNotePolicy: GoogleDriveDailyNotePolicy? = nil
     ) throws {
         guard GoogleDrivePath.isSafe(relativePath), !fragmentBytes.isEmpty else {
             throw GoogleDriveError(.remoteConflict)
@@ -312,6 +348,7 @@ nonisolated struct GoogleDriveGeneratedArtifact: Equatable, Sendable {
         self.mediaType = mediaType
         self.writeIntent = writeIntent
         self.createIfMissing = createIfMissing
+        self.dailyNotePolicy = dailyNotePolicy
         self.fragmentBytes = fragmentBytes
         self.byteCount = UInt64(fragmentBytes.count)
         self.sha256 = digest
@@ -416,7 +453,8 @@ nonisolated struct GoogleDriveGeneratedArtifactBundle: Equatable, Sendable {
         self.artifacts = artifacts
         self.digest = GoogleDriveDigest.framedSHA256(
             [String(Self.version), operationID.uuidString.lowercased(), profileID?.uuidString.lowercased() ?? "", settingsDigest, rendererIdentity]
-                + artifacts.flatMap { [$0.id, $0.relativePath, $0.mediaType, $0.writeIntent.rawValue, String($0.createIfMissing), String($0.byteCount), $0.sha256] }
+                + artifacts.flatMap { [$0.id, $0.relativePath, $0.mediaType, $0.writeIntent.rawValue, String($0.createIfMissing), String($0.byteCount), $0.sha256]
+                    + ($0.dailyNotePolicy.map { [$0.recordProfile, String($0.injectSections), GoogleDriveDigest.sha256(Data($0.patch.utf8))] } ?? []) }
         )
     }
 

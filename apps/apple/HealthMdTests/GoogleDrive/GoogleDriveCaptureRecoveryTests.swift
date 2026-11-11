@@ -104,7 +104,7 @@ final class GoogleDriveCaptureRecoveryTests: XCTestCase {
         let staged = try XCTUnwrap(attempts.first)
         let journals = try GoogleDriveJournalStore(rootURL: harness.root)
         let parent = try await journals.load(operationID: operationID)
-        XCTAssertEqual(parent.version, 2)
+        XCTAssertEqual(parent.version, GoogleDriveOperationJournal.currentVersion)
         XCTAssertEqual(parent.residualOperationIDs.count, 1)
         let childID = try XCTUnwrap(parent.residualOperationIDs.first)
         XCTAssertNotEqual(childID, operationID)

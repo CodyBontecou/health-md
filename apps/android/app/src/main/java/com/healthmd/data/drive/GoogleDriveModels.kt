@@ -120,6 +120,31 @@ enum class GeneratedArtifactWriteIntent {
     DAILY_NOTE_MERGE,
 }
 
+/** Private retry authority, never part of a profile or public export contract. */
+@Serializable
+data class GoogleDriveDailyNotePolicy(
+    val recordProfile: String,
+    val injectSections: Boolean,
+    val patch: String,
+    val patchSha256: String,
+) {
+    constructor(recordProfile: String, injectSections: Boolean, patch: String) :
+        this(recordProfile, injectSections, patch, sha256Hex(patch.encodeToByteArray()))
+
+    fun merge(existing: String): String {
+        require(sha256Hex(patch.encodeToByteArray()) == patchSha256) { "Invalid Daily Note capture digest" }
+        require(injectSections || patch.lineSequence()
+            .drop(1).dropWhile { it != "---" }.drop(1).all { it.isBlank() })
+        val profile = when (recordProfile) {
+            "android-sleep-v6" -> com.healthmd.core.CoreMetricRegistryProfile.ANDROID_SLEEP_V6
+            "android-frozen-v4" -> com.healthmd.core.CoreMetricRegistryProfile.ANDROID_FROZEN_V4
+            "android-analytical-v5" -> com.healthmd.core.CoreMetricRegistryProfile.ANDROID_ANALYTICAL_V5
+            else -> throw IllegalArgumentException("Invalid Daily Note authority")
+        }
+        return com.healthmd.core.HealthMdCoreService().mergeScopedNote(profile, existing, patch, injectSections)
+    }
+}
+
 /** Immutable destination-neutral bytes. Public renderer bytes are copied without normalization. */
 class GeneratedExportArtifact(
     val artifactId: String,
@@ -129,6 +154,7 @@ class GeneratedExportArtifact(
     bytes: ByteArray,
     missingRemotePrefix: ByteArray? = null,
     val createIfMissing: Boolean = true,
+    val dailyNotePolicy: GoogleDriveDailyNotePolicy? = null,
 ) {
     private val immutableBytes = bytes.copyOf()
     private val immutableMissingPrefix = missingRemotePrefix?.copyOf()
@@ -194,6 +220,11 @@ class GeneratedExportBundle(
                 append(it.artifactId).append('\u0000').append(it.relativePath).append('\u0000')
                 append(it.mediaType).append('\u0000').append(it.writeIntent.name).append('\u0000')
                 append(it.byteCount).append('\u0000').append(it.sha256).append('\u0000')
+                it.dailyNotePolicy?.let { policy ->
+                    append(policy.recordProfile).append('\u0000').append(policy.injectSections).append('\u0000')
+                    append(sha256Hex(policy.patch.encodeToByteArray())).append('\u0000')
+                    append(it.createIfMissing).append('\u0000')
+                }
             }
         }.encodeToByteArray())
     }

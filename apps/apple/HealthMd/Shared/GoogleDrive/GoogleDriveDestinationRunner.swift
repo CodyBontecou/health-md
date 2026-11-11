@@ -485,7 +485,10 @@ final class GoogleDriveDestinationRunner {
                 expectedSHA256: artifact.fragmentSHA256
             )
             let finalBytes: Data
-            if artifact.writeIntent == .overwrite || baseline == nil {
+            if artifact.writeIntent == .dailyNoteMerge && baseline == nil {
+                finalBytes = try GoogleDriveFinalByteMerger.merge(baseline: Data(), fragment: fragment,
+                    intent: .dailyNoteMerge, dailyNotePolicy: artifact.dailyNotePolicy)
+            } else if artifact.writeIntent == .overwrite || baseline == nil {
                 finalBytes = fragment
             } else {
                 let baseline = baseline!
@@ -513,7 +516,8 @@ final class GoogleDriveDestinationRunner {
                 finalBytes = try GoogleDriveFinalByteMerger.merge(
                     baseline: baselineBytes,
                     fragment: fragment,
-                    intent: artifact.writeIntent
+                    intent: artifact.writeIntent,
+                    dailyNotePolicy: artifact.dailyNotePolicy
                 )
             }
             let finalFilename = "\(index)-final.bin"
@@ -794,7 +798,8 @@ nonisolated enum GoogleDriveFinalByteMerger {
     static func merge(
         baseline: Data,
         fragment: Data,
-        intent: GoogleDriveArtifactWriteIntent
+        intent: GoogleDriveArtifactWriteIntent,
+        dailyNotePolicy: GoogleDriveDailyNotePolicy? = nil
     ) throws -> Data {
         switch intent {
         case .overwrite:
@@ -813,8 +818,16 @@ nonisolated enum GoogleDriveFinalByteMerger {
                   let generated = String(data: fragment, encoding: .utf8) else {
                 throw GoogleDriveError(.remoteConflict)
             }
-            // Scoped capture notes require their profile-aware merger; the legacy Drive
-            // journal does not retain that authority. Preserve both files until qualified.
+            if intent == .dailyNoteMerge, let policy = dailyNotePolicy {
+                // Validate the destination even for an ordinary Night note.
+                let scoped = try policy.merge(existing: existing)
+                if policy.recordProfile == "apple-v11" || [existing, generated].contains(where: {
+                    $0.contains("healthmd_injection_kind") || $0.contains("healthmd_daily_injection_v")
+                }) {
+                    return Data(scoped.utf8)
+                }
+            }
+            // Policy-less legacy fragments may never reinterpret a scoped capture.
             if intent == .dailyNoteMerge && [existing, generated].contains(where: {
                 $0.contains("healthmd_injection_kind") || $0.contains("healthmd_daily_injection_v")
             }) {

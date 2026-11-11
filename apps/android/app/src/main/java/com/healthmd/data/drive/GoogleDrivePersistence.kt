@@ -336,6 +336,7 @@ data class GoogleDriveJournalArtifact(
     val sha256: String,
     val missingPrefixFile: String? = null,
     val createIfMissing: Boolean = true,
+    val dailyNotePolicy: GoogleDriveDailyNotePolicy? = null,
     val phase: GoogleDriveArtifactPhase = GoogleDriveArtifactPhase.PREPARED,
     val objectId: String? = null,
     val parentId: String? = null,
@@ -371,7 +372,7 @@ data class GoogleDriveOperationJournal(
     val createdAtEpochMillis: Long,
     val updatedAtEpochMillis: Long,
 ) {
-    companion object { const val CURRENT_VERSION = 2 }
+    companion object { const val CURRENT_VERSION = 3 }
 }
 
 sealed interface GoogleDriveJournalLoad {
@@ -416,6 +417,7 @@ class GoogleDriveJournalStore @Inject constructor(
                 sha256 = artifact.sha256,
                 missingPrefixFile = prefixName,
                 createIfMissing = artifact.createIfMissing,
+                dailyNotePolicy = artifact.dailyNotePolicy,
             )
         }
         val now = System.currentTimeMillis()
@@ -527,7 +529,14 @@ class GoogleDriveJournalStore @Inject constructor(
     ): Boolean {
         // No in-place v1 migration: requested/capture-failed dates cannot be reconstructed from
         // staged bytes. Preserve the old journal/spool and require explicit recovery instead.
-        if (journal.version != GoogleDriveOperationJournal.CURRENT_VERSION ||
+        if ((journal.version != GoogleDriveOperationJournal.CURRENT_VERSION &&
+                !(journal.version == 2 && journal.artifacts.none { it.writeIntent == GeneratedArtifactWriteIntent.DAILY_NOTE_MERGE })) ||
+            journal.artifacts.any { artifact ->
+                if (artifact.writeIntent != GeneratedArtifactWriteIntent.DAILY_NOTE_MERGE) artifact.dailyNotePolicy != null
+                else try { artifact.dailyNotePolicy?.merge("") == null }
+                catch (_: Exception) { true }
+                catch (_: LinkageError) { true }
+            } ||
             journal.captureEvidence?.isValid() != true ||
             journal.captureEvidence.capturedOwnerDates != journal.ownerDates ||
             (journal.settingsSnapshotJson != null &&

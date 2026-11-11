@@ -163,6 +163,11 @@ class GeneratedExportBundleFactory private constructor(
         data: HealthData,
         settings: ExportSettings,
     ): AggregateMaterialization {
+        // The aggregate planner requires a nonempty format request. Notes-only Morning
+        // exports prepare their accepted Rust projection in dailyNoteArtifact instead.
+        if (settings.exportFormats.isEmpty()) return AggregateMaterialization(emptyList(),
+            if (settings.executionSleepCaptureContext?.sleepDayAttribution ==
+                com.healthmd.domain.model.SleepDayAttribution.MORNING_ENDS) "rust" else "legacy")
         val authoritySettings = settings.copy(exportTarget = com.healthmd.domain.model.ExportTarget.DEVICE_FOLDER)
         return when (val planning = dailyAggregatePlanner.plan(data, authoritySettings)) {
             LocalDailyAggregatePlanningResult.Legacy -> AggregateMaterialization(
@@ -228,18 +233,27 @@ class GeneratedExportBundleFactory private constructor(
             )
         }
 
-    private fun dailyNoteArtifact(
+    private suspend fun dailyNoteArtifact(
         operationId: String,
         data: HealthData,
         settings: ExportSettings,
     ): List<GeneratedExportArtifact> {
         val injection = settings.dailyNoteInjection
         if (!injection.enabled) return emptyList()
-        require(settings.executionSleepCaptureContext?.sleepDayAttribution != com.healthmd.domain.model.SleepDayAttribution.MORNING_ENDS) {
-            "Scoped Daily Notes require a profile-aware Drive merger"
-        }
-        val fragment = dailyNoteInjector.buildInjectionFragment(data, injection, settings.formatCustomization)
+        val morning = settings.executionSleepCaptureContext?.sleepDayAttribution == com.healthmd.domain.model.SleepDayAttribution.MORNING_ENDS
+        val prepared = if (morning) com.healthmd.data.export.PreparedWakeDateDailyNote.prepare(
+            data, settings, com.healthmd.domain.exportengine.DailyAggregateExportIds(
+                requestId = "$operationId-note-${data.date}", sessionId = "$operationId-note-${data.date}")) else null
+        val fragment = prepared?.patch ?: dailyNoteInjector.buildInjectionFragment(data, injection, settings.formatCustomization)
         if (fragment.isBlank()) return emptyList()
+        val patch = prepared?.patch ?: dailyNoteInjector.prepareScopedNightPatch(data, injection,
+            settings.formatCustomization, settings.metricSelection,
+            requireNotNull(settings.executionSleepCaptureContext), detail =
+                settings.exportDetailSelection())
+        val policy = GoogleDriveDailyNotePolicy(
+            if (morning) "android-sleep-v6" else if (settings.formatCustomization.compatibilitySchemaProfile ==
+                com.healthmd.domain.model.CompatibilitySchemaProfile.ANDROID_ANALYTICAL_V5)
+                "android-analytical-v5" else "android-frozen-v4", injection.injectMarkdownSections, patch)
         val dateString = settings.formatCustomization.dateFormat.format(data.date)
         return listOf(
             artifact(
@@ -250,6 +264,7 @@ class GeneratedExportBundleFactory private constructor(
                 bytes = fragment.encodeToByteArray(),
                 missingPrefix = "# $dateString\n".encodeToByteArray(),
                 createIfMissing = injection.createIfMissing,
+                dailyNotePolicy = policy,
             ),
         )
     }
@@ -282,6 +297,7 @@ class GeneratedExportBundleFactory private constructor(
         bytes: ByteArray,
         missingPrefix: ByteArray? = null,
         createIfMissing: Boolean = true,
+        dailyNotePolicy: GoogleDriveDailyNotePolicy? = null,
     ): GeneratedExportArtifact {
         val normalized = normalizeDriveRelativePath(path) ?: error("invalid relative export path")
         val digest = sha256Hex(bytes)
@@ -297,6 +313,7 @@ class GeneratedExportBundleFactory private constructor(
             bytes = bytes,
             missingRemotePrefix = missingPrefix,
             createIfMissing = createIfMissing,
+            dailyNotePolicy = dailyNotePolicy,
         )
     }
 
@@ -308,6 +325,8 @@ class GeneratedExportBundleFactory private constructor(
 
     private fun rendererPin(settings: ExportSettings, authority: String): String = buildString {
         append(
+            if (settings.executionSleepCaptureContext?.sleepDayAttribution ==
+                com.healthmd.domain.model.SleepDayAttribution.MORNING_ENDS) "android-sleep-v6" else
             when (settings.formatCustomization.compatibilitySchemaProfile) {
                 com.healthmd.domain.model.CompatibilitySchemaProfile.IOS_V4_FROZEN -> "android-frozen-v4"
                 com.healthmd.domain.model.CompatibilitySchemaProfile.ANDROID_ANALYTICAL_V5 -> "android-analytical-v5"

@@ -12,6 +12,7 @@ internal fun generateDriveFinalBytes(
     baseline: ByteArray,
     fragment: ByteArray,
     baselineExists: Boolean = true,
+    dailyNotePolicy: GoogleDriveDailyNotePolicy? = null,
 ): ByteArray = when (intent) {
     GeneratedArtifactWriteIntent.OVERWRITE -> fragment.copyOf()
     GeneratedArtifactWriteIntent.APPEND -> if (baselineExists) {
@@ -20,11 +21,18 @@ internal fun generateDriveFinalBytes(
         fragment.copyOf()
     }
     GeneratedArtifactWriteIntent.DAILY_NOTE_MERGE -> {
-        val texts = listOf(baseline.decodeToString(), fragment.decodeToString())
-        require(texts.none { "healthmd_injection_kind" in it || "healthmd_daily_injection_v" in it }) {
-            "Scoped Daily Notes require a profile-aware Drive merger"
+        val texts = listOf(baseline.decodeToString(throwOnInvalidSequence = true),
+            fragment.decodeToString(throwOnInvalidSequence = true))
+        val scoped = texts.any { "healthmd_injection_kind" in it || "healthmd_daily_injection_v" in it }
+        if (dailyNotePolicy != null) {
+            val merged = dailyNotePolicy.merge(texts[0])
+            if (scoped || dailyNotePolicy.recordProfile == "android-sleep-v6") {
+                merged.encodeToByteArray()
+            } else MarkdownMerger().merge(texts[0], texts[1]).encodeToByteArray()
+        } else {
+            require(!scoped) { "Scoped Daily Notes require a profile-aware Drive merger" }
+            MarkdownMerger().merge(texts[0], texts[1]).encodeToByteArray()
         }
-        MarkdownMerger().merge(texts[0], texts[1]).encodeToByteArray()
     }
     GeneratedArtifactWriteIntent.MARKDOWN_UPDATE -> MarkdownMerger().merge(
         baseline.toString(StandardCharsets.UTF_8),
@@ -257,8 +265,12 @@ class GoogleDriveDestinationRunner @Inject constructor(
                 baseline = baseline,
                 fragment = fragment,
                 baselineExists = existing != null || artifact.missingPrefixFile != null,
+                dailyNotePolicy = artifact.dailyNotePolicy,
             )
-        } catch (_: IllegalArgumentException) {
+        } catch (error: kotlinx.coroutines.CancellationException) { throw error
+        } catch (_: Exception) {
+            return PrepareResult.Failed(GoogleDriveErrorId.REMOTE_CONFLICT)
+        } catch (_: LinkageError) {
             return PrepareResult.Failed(GoogleDriveErrorId.REMOTE_CONFLICT)
         }
         journal = journalStore.replaceFinalBytes(journal, index, finalBytes)

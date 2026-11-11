@@ -113,6 +113,9 @@ class GeneratedExportBundleFactoryTest {
 
     @Test
     fun `daily note artifact retains preamble prefix and merges fragment exactly once`() = runTest {
+        val library = System.getenv("HEALTHMD_HOST_CORE_LIBRARY")
+        org.junit.Assume.assumeTrue("Requires an explicit host core", !library.isNullOrBlank())
+        System.setProperty("uniffi.component.healthmd_core_uniffi.libraryOverride", library)
         val settings = ExportSettings(
             exportFormats = emptySet(),
             dailyNoteInjection = DailyNoteInjectionSettings(
@@ -128,9 +131,11 @@ class GeneratedExportBundleFactoryTest {
             profileId = null,
             source = "manual",
             data = listOf(ExportFixtures.partialDay),
-            settings = settings,
+            settings = settings.copy(executionSleepCaptureContext = com.healthmd.domain.model.AndroidCaptureContext(
+                java.time.ZoneId.of("America/New_York"), com.healthmd.domain.model.SleepDayAttribution.NIGHT_BEGINS)),
         ).artifacts.single()
 
+        assertThat(artifact.dailyNotePolicy).isNotNull()
         assertThat(artifact.writeIntent).isEqualTo(GeneratedArtifactWriteIntent.DAILY_NOTE_MERGE)
         val prefix = requireNotNull(artifact.missingPrefix)
         assertThat(prefix.decodeToString()).isEqualTo("# 2026-03-15\n")
