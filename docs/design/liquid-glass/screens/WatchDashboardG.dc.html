@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Health.md glass — Watch dashboard</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+body{margin:0;color-scheme:dark}
+a{color:#CDB6FF;text-decoration:none}a:hover{color:#FFFFFF}
+button{font-family:inherit;cursor:pointer}
+@keyframes breathe{0%,100%{opacity:1}50%{opacity:.45}}
+</style>
+</helmet>
+<div style="width: 198px; height: 242px; box-sizing: border-box; position: relative; background: #0E0E11; font-family: -apple-system, 'SF Pro Text', 'SF Pro Display', Inter, system-ui, sans-serif; color: #FFFFFF; overflow: hidden; border-radius: 42px; background: #000000">
+<div aria-hidden="true" style="position: absolute; inset: 0; overflow: hidden; z-index: 0"></div>
+<div style="position: relative; z-index: 1; height: 100%; display: flex; flex-direction: column">
+<div style="flex: 1; display: flex; flex-direction: column; padding: 14px 12px"><div style="display: flex; align-items: center; gap: 6px; padding-bottom: 6px"><img src="../assets/crystal-heart.png" alt="" style="width: 18px; height: 18px"><span style="font-size: 15px; font-weight: 700">Health.md</span></div><div style="display: flex; justify-content: space-between; align-items: baseline; padding: 6px 2px; border-top: 1px solid rgba(255,255,255,0.14)"><span style="font-size: 13px; color: #DAD4E8">Sleep</span><span style="font-size: 16px; font-weight: 700; color: #CDB6FF">7h 12m</span></div><div style="display: flex; justify-content: space-between; align-items: baseline; padding: 6px 2px; border-top: 1px solid rgba(255,255,255,0.14)"><span style="font-size: 13px; color: #DAD4E8">HRV</span><span style="font-size: 16px; font-weight: 700; color: #5ED3B0">48 ms</span></div><div style="display: flex; justify-content: space-between; align-items: baseline; padding: 6px 2px; border-top: 1px solid rgba(255,255,255,0.14)"><span style="font-size: 13px; color: #DAD4E8">Resting HR</span><span style="font-size: 16px; font-weight: 700; color: #FF7A93">54</span></div><div style="display: flex; justify-content: space-between; align-items: baseline; padding: 6px 2px; border-top: 1px solid rgba(255,255,255,0.14)"><span style="font-size: 13px; color: #DAD4E8">Steps</span><span style="font-size: 16px; font-weight: 700; color: #A6F25F">8,412</span></div><div style="display: flex; justify-content: space-between; align-items: baseline; padding: 6px 2px; border-top: 1px solid rgba(255,255,255,0.14)"><span style="font-size: 13px; color: #DAD4E8">Blood oxygen</span><span style="font-size: 16px; font-weight: 700; color: #5ED3F2">97%</span></div></div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":198,"height":242}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

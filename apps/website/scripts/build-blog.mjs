@@ -181,8 +181,8 @@ async function loadPosts() {
       : date;
     const image = normalizeImage(parsed.data.image);
     const platform = parsed.data.platform ?? 'apple';
-    if (!['apple', 'android'].includes(platform)) {
-      throw new Error(`${filename}: platform must be apple or android`);
+    if (!['apple', 'android', 'both'].includes(platform)) {
+      throw new Error(`${filename}: platform must be apple, android or both`);
     }
 
     posts.push({
@@ -233,6 +233,9 @@ function headerHtml(depth = 1, platform = 'apple') {
   const store = platform === 'android'
     ? { url: 'https://play.google.com/store/apps/details?id=com.healthmd.android', label: 'Google Play' }
     : { url: 'https://apps.apple.com/us/app/health-md/id6757763969', label: 'App Store' };
+  const storeLinks = platform === 'both'
+    ? '<a href="https://apps.apple.com/us/app/health-md/id6757763969" target="_blank" rel="noopener">App Store</a><a href="https://play.google.com/store/apps/details?id=com.healthmd.android" target="_blank" rel="noopener">Google Play</a>'
+    : `<a href="${store.url}" target="_blank" rel="noopener">${store.label}</a>`;
   return `<header class="site-header">
     <div class="container header-inner">
       <a class="brand" href="${prefix}">
@@ -244,7 +247,7 @@ function headerHtml(depth = 1, platform = 'apple') {
           <a href="${prefix}visualizations/">Visualizations</a>
           <a href="${prefix}docs/">Docs</a>
           <a href="${depth === 2 ? '../' : './'}">Blog</a>
-          <a href="${store.url}" target="_blank" rel="noopener">${store.label}</a>
+          ${storeLinks}
         </nav>
         <div class="theme-toggle" role="group" aria-label="Color theme">
           <button type="button" data-theme-option="system" aria-pressed="true">Auto</button>
@@ -323,7 +326,7 @@ function documentHead({ title, socialTitle = title, description, canonical, imag
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Serif:wght@500;600;700&display=swap" rel="stylesheet">
   <script src="${prefix}assets/theme.js"></script>
-  <link rel="stylesheet" href="${depth === 2 ? '../styles.css' : 'styles.css'}">
+  <link rel="stylesheet" href="${depth === 2 ? '../styles.css' : 'styles.css'}?v=20261030-header-wrap">
   <link rel="stylesheet" href="${prefix}assets/theme-icons.css">
   <script type="application/ld+json">${escapeJsonForHtml(jsonLd)}</script>${breadcrumbJsonLd ? `
   <script type="application/ld+json">${escapeJsonForHtml(breadcrumbJsonLd)}</script>` : ''}`;
@@ -351,7 +354,7 @@ function renderIndex(posts) {
   ${documentHead({ title, description, canonical: `${SITE_URL}/blog/` })}
 </head>
 <body>
-  ${headerHtml()}
+  ${headerHtml(1, 'both')}
   <main>
     <section class="hero">
       <div class="container hero-grid">

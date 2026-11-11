@@ -26,7 +26,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.LayoutDirection
 import com.healthmd.R
 import com.healthmd.presentation.common.PrimaryButton
-import com.healthmd.presentation.common.SecondaryButton
 import com.healthmd.presentation.theme.*
 import kotlin.math.absoluteValue
 
@@ -152,12 +151,6 @@ internal fun OnboardingLayout(
                             text = stringResource(R.string.onboarding_ready_start_button),
                             onClick = onComplete,
                             icon = Icons.Outlined.RocketLaunch,
-                            modifier = modifier,
-                        )
-                        currentPage == OnboardingPage.PLAY_ACCESS -> SecondaryButton(
-                            text = stringResource(R.string.onboarding_continue),
-                            onClick = onContinue,
-                            icon = Icons.AutoMirrored.Outlined.ArrowForward,
                             modifier = modifier,
                         )
                         else -> PrimaryButton(

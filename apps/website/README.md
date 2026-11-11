@@ -101,6 +101,12 @@ Full WHOOP events and sleep-need components require Apple v8 daily JSON or struc
 
 After adopting a catalog revision, regenerate routes with `npm run visualizations:seo:source`; the production build also regenerates them in `dist`.
 
+## Documentation editing
+
+Use the [source-ownership guide](docs-src/README.md) to choose authored content or its generator.
+Run `npm run docs:navigation`, `npm run i18n:check`, and `npm run docs:check` before pushing
+contributor-guide, localized-guide, or reference-publication changes.
+
 ## Apple reference documentation
 
 Apple reference sources are read directly from the sibling `apps/apple` component. Override discovery with `HEALTHMD_APP_ROOT` or `--source` when testing another checkout.

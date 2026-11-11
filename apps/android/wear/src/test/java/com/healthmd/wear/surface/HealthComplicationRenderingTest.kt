@@ -3,6 +3,7 @@ package com.healthmd.wear.surface
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import androidx.wear.watchface.complications.data.ComplicationType
+import androidx.wear.watchface.complications.data.LongTextComplicationData
 import androidx.wear.watchface.complications.data.NoDataComplicationData
 import androidx.wear.watchface.complications.data.RangedValueComplicationData
 import androidx.wear.watchface.complications.data.ShortTextComplicationData
@@ -55,14 +56,40 @@ class HealthComplicationRenderingTest {
         assertThat(requireNotNull(steps.text).getTextAt(context.resources, Instant.ofEpochMilli(now)).toString()).contains("25,000")
     }
 
-    @Test fun `activity and recovery use their provider labels`() {
+    @Test fun `short slots use short titles while long text and descriptions keep full labels`() {
         val now = System.currentTimeMillis()
-        putSnapshot(now, WearHealthDay(localDate(now), steps = 8420, sleepMinutes = 450.0))
+        putSnapshot(now, WearHealthDay(localDate(now), steps = 8420, sleepMinutes = 450.0, bloodOxygenPercent = 97.0))
+        val instant = Instant.ofEpochMilli(now)
         val activity = Metric.ACTIVITY.data(service, ComplicationType.SHORT_TEXT, now) as ShortTextComplicationData
         val recovery = Metric.RECOVERY.data(service, ComplicationType.SHORT_TEXT, now) as ShortTextComplicationData
-        val instant = Instant.ofEpochMilli(now)
-        assertThat(requireNotNull(activity.title).getTextAt(context.resources, instant).toString()).isEqualTo("Daily Activity")
+        val oxygen = Metric.BLOOD_OXYGEN.data(service, ComplicationType.RANGED_VALUE, now) as RangedValueComplicationData
+        val longSleep = Metric.SLEEP.data(service, ComplicationType.LONG_TEXT, now) as LongTextComplicationData
+
+        assertThat(requireNotNull(activity.title).getTextAt(context.resources, instant).toString()).isEqualTo("Activity")
         assertThat(requireNotNull(recovery.title).getTextAt(context.resources, instant).toString()).isEqualTo("Recovery")
+        assertThat(requireNotNull(oxygen.title).getTextAt(context.resources, instant).toString()).isEqualTo("SpO₂")
+        assertThat(requireNotNull(activity.contentDescription).getTextAt(context.resources, instant).toString())
+            .contains("Daily Activity")
+        assertThat(requireNotNull(longSleep.title).getTextAt(context.resources, instant).toString()).isEqualTo("Sleep")
+        assertThat(longSleep.text.getTextAt(context.resources, instant).toString()).contains("not real-time")
+    }
+
+    @Test fun `every metric carries its glyph and ranged values carry the metric accent`() {
+        val now = System.currentTimeMillis()
+        putSnapshot(now, WearHealthDay(
+            localDate = localDate(now), steps = 8420, moveKilocalories = 410.0, exerciseMinutes = 34.0,
+            sleepMinutes = 450.0, restingHeartRateBpm = 58.0, averageHeartRateBpm = 73.0,
+            hrvRmssdMillis = 46.0, bloodOxygenPercent = 97.0,
+        ))
+        Metric.entries.forEach { metric ->
+            val short = metric.data(service, ComplicationType.SHORT_TEXT, now) as ShortTextComplicationData
+            val long = metric.data(service, ComplicationType.LONG_TEXT, now) as LongTextComplicationData
+            val ranged = metric.data(service, ComplicationType.RANGED_VALUE, now) as RangedValueComplicationData
+            listOf(short.monochromaticImage, long.monochromaticImage, ranged.monochromaticImage).forEach { image ->
+                assertThat(requireNotNull(image).image.resId).isEqualTo(metric.iconRes)
+            }
+            assertThat(requireNotNull(ranged.colorRamp).colors.toList()).containsExactly(metric.tintArgb.toInt())
+        }
     }
 
     @Test fun `sleep recovery and hrv use preceding overnight journal day`() {
@@ -256,6 +283,8 @@ class HealthComplicationRenderingTest {
         val text = preview.text.getTextAt(context.resources, Instant.EPOCH).toString()
         assertThat(text).doesNotContain("97")
         assertThat(text).matches("[-—]+")
+        assertThat(requireNotNull(preview.title).getTextAt(context.resources, Instant.EPOCH).toString()).isEqualTo("SpO₂")
+        assertThat(requireNotNull(preview.monochromaticImage).image.resId).isEqualTo(Metric.BLOOD_OXYGEN.iconRes)
     }
 
     private fun putSnapshot(capturedAt: Long, day: WearHealthDay) {

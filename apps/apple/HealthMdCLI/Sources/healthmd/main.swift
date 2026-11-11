@@ -5329,6 +5329,9 @@ private func dateString(daysFromToday offset: Int) throws -> String {
 }
 
 private func printGeneralHelp() {
+    #if HEALTHMD_BUNDLED_APPSTORE_CLI
+    print("App Store helper: sandboxed. Use the Mac app's saved folder or stdout; use the standalone CLI for direct exports to arbitrary paths.")
+    #endif
     print("""
     usage: healthmd [-h] [--backend {mac-app,direct}] [--device UUID]
                     [--transport {manual-ip,nearby}] [--port PORT] [--base-url BASE_URL]

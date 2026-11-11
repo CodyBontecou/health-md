@@ -1,9 +1,14 @@
 ---
-title: "Serveur MCP et App Health.md"
-description: "Utilisez Codex ou Claude pour lancer des analyses Apple Health à portée limitée, afficher des graphiques natifs et démarrer des exports Health.md persistants via une MCP App locale en bac à sable."
+title: "Serveur MCP Apple Health pour Claude et Codex"
+description: "Connectez Apple Health à Claude ou Codex avec Health.md pour Mac. Vérifiez les prérequis iPhone et suivez le guide pour interroger le contexte local."
 ---
 
 Health.md for Mac fournit un utilitaire stdio signé `healthmd-mcp`. Il permet à Codex, Claude et d’autres hôtes MCP d’interroger des données factuelles Apple Health, d’afficher des visualisations, d’actualiser le contexte local chiffré et de lancer des exports persistants approuvés via l’app Mac ouverte.
+
+<div class="callout">
+<strong>Commencez avec l’utilitaire Mac publié</strong>
+<p><a href="https://apps.apple.com/us/app/health-md/id6757763969" target="_blank" rel="noopener">Téléchargez Health.md sur l’App Store</a> pour votre Mac et votre iPhone, puis <a href="/fr/docs/guides/connect-agent/">suivez le guide de configuration</a>.</p>
+</div>
 
 ```text
 Codex / Claude / another local MCP host

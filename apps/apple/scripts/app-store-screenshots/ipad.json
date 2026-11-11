@@ -1,0 +1,269 @@
+{
+  "schemaVersion": 2,
+  "platform": "ipad",
+  "boardsDirectory": "../../../../docs/design/liquid-glass/screens",
+  "boardPrefix": "AS_iPad_",
+  "appStoreDisplayType": "IPAD_PRO_3GEN_129",
+  "boardSize": {
+    "width": 1376,
+    "height": 1032
+  },
+  "scale": 2,
+  "supportedLocales": [
+    "en-US",
+    "de-DE",
+    "es-ES",
+    "fr-FR",
+    "it",
+    "ja",
+    "ko",
+    "nl-NL",
+    "pt-BR",
+    "zh-Hans"
+  ],
+  "slides": [
+    {
+      "board": "AS_iPad_1",
+      "output": "appstore-ipad-slide-1.png",
+      "captures": {
+        "iPadArchiveG": {
+          "file": "ipad-archive.png"
+        }
+      },
+      "copy": {
+        "en-US": {
+          "headline": [
+            "Your month of health,",
+            "{at a glance.}"
+          ],
+          "caption": "Sleep, heart and activity for every day — with gaps you can fix."
+        },
+        "de-DE": {
+          "headline": [
+            "Dein Gesundheitsmonat,",
+            "{auf einen Blick.}"
+          ],
+          "caption": "Schlaf, Herz und Aktivität für jeden Tag – mit Lücken, die du schließen kannst."
+        },
+        "es-ES": {
+          "headline": [
+            "Tu mes de salud,",
+            "{de un vistazo.}"
+          ],
+          "caption": "Sueño, corazón y actividad de cada día, con huecos que puedes completar."
+        },
+        "fr-FR": {
+          "headline": [
+            "Votre mois de santé,",
+            "{en un coup d’œil.}"
+          ],
+          "caption": "Sommeil, cœur et activité pour chaque jour, avec des manques que vous pouvez combler."
+        },
+        "it": {
+          "headline": [
+            "Il tuo mese di salute,",
+            "{a colpo d’occhio.}"
+          ],
+          "caption": "Sonno, cuore e attività per ogni giorno, con lacune che puoi colmare."
+        },
+        "ja": {
+          "headline": [
+            "1か月の健康を、",
+            "{ひと目で。}"
+          ],
+          "caption": "毎日の睡眠、心拍、アクティビティ。抜けた日も補完できます。"
+        },
+        "ko": {
+          "headline": [
+            "한 달의 건강을",
+            "{한눈에.}"
+          ],
+          "caption": "매일의 수면, 심장, 활동 데이터와 채울 수 있는 빈칸까지 한 번에."
+        },
+        "nl-NL": {
+          "headline": [
+            "Je maand aan gezondheid,",
+            "{in één oogopslag.}"
+          ],
+          "caption": "Slaap, hart en activiteit voor elke dag, met gaten die je kunt aanvullen."
+        },
+        "pt-BR": {
+          "headline": [
+            "Seu mês de saúde,",
+            "{num relance.}"
+          ],
+          "caption": "Sono, coração e atividade de cada dia, com lacunas que você pode preencher."
+        },
+        "zh-Hans": {
+          "headline": [
+            "一个月的健康，",
+            "{一目了然。}"
+          ],
+          "caption": "每天的睡眠、心脏和活动数据，缺失之处可随时补齐。"
+        }
+      }
+    },
+    {
+      "board": "AS_iPad_2",
+      "output": "appstore-ipad-slide-2.png",
+      "captures": {
+        "iPadAutomationsG": {
+          "file": "ipad-automations.png"
+        }
+      },
+      "copy": {
+        "en-US": {
+          "headline": [
+            "Choose your health data.",
+            "{See the file it writes.}"
+          ],
+          "caption": null
+        },
+        "de-DE": {
+          "headline": [
+            "Wähle deine Gesundheitsdaten.",
+            "{Sieh die Datei, die entsteht.}"
+          ],
+          "caption": null
+        },
+        "es-ES": {
+          "headline": [
+            "Elige tus datos de salud.",
+            "{Mira el archivo que genera.}"
+          ],
+          "caption": null
+        },
+        "fr-FR": {
+          "headline": [
+            "Choisissez vos données.",
+            "{Voyez le fichier créé.}"
+          ],
+          "caption": null
+        },
+        "it": {
+          "headline": [
+            "Scegli i tuoi dati sulla salute.",
+            "{Guarda il file che crea.}"
+          ],
+          "caption": null
+        },
+        "ja": {
+          "headline": [
+            "ヘルスケアデータを選んで、",
+            "{書き出すファイルを確認。}"
+          ],
+          "caption": null
+        },
+        "ko": {
+          "headline": [
+            "건강 데이터를 선택하고",
+            "{생성될 파일을 확인하세요.}"
+          ],
+          "caption": null
+        },
+        "nl-NL": {
+          "headline": [
+            "Kies je gezondheidsgegevens.",
+            "{Zie het bestand dat ontstaat.}"
+          ],
+          "caption": null
+        },
+        "pt-BR": {
+          "headline": [
+            "Escolha seus dados de saúde.",
+            "{Veja o arquivo gerado.}"
+          ],
+          "caption": null
+        },
+        "zh-Hans": {
+          "headline": [
+            "选择你的健康数据，",
+            "{预览生成的文件。}"
+          ],
+          "caption": null
+        }
+      }
+    },
+    {
+      "board": "AS_iPad_3",
+      "output": "appstore-ipad-slide-3.png",
+      "captures": {
+        "iPadSettingsG": {
+          "file": "ipad-settings-cli.png"
+        }
+      },
+      "copy": {
+        "en-US": {
+          "headline": [
+            "{225+ health metrics,}",
+            "exported your way."
+          ],
+          "caption": "Notes, Bases, JSON or CSV — to your vault, Mac, CLI or API."
+        },
+        "de-DE": {
+          "headline": [
+            "{225+ Gesundheitsmetriken,}",
+            "exportiert, wie du willst."
+          ],
+          "caption": "Notizen, Bases, JSON oder CSV – in deinen Vault, auf den Mac, an CLI oder API."
+        },
+        "es-ES": {
+          "headline": [
+            "{Más de 225 métricas de salud,}",
+            "exportadas a tu manera."
+          ],
+          "caption": "Notas, Bases, JSON o CSV: a tu bóveda, Mac, CLI o API."
+        },
+        "fr-FR": {
+          "headline": [
+            "{Plus de 225 métriques santé,}",
+            "exportées à votre façon."
+          ],
+          "caption": "Notes, Bases, JSON ou CSV : vers votre coffre, Mac, CLI ou API."
+        },
+        "it": {
+          "headline": [
+            "{Oltre 225 metriche di salute,}",
+            "esportate a modo tuo."
+          ],
+          "caption": "Note, Bases, JSON o CSV: nel tuo vault, sul Mac, alla CLI o all’API."
+        },
+        "ja": {
+          "headline": [
+            "{225以上のヘルス指標を、}",
+            "好きな形で書き出し。"
+          ],
+          "caption": "ノート、Bases、JSON、CSVを、Vault、Mac、CLI、APIへ。"
+        },
+        "ko": {
+          "headline": [
+            "{225개 이상의 건강 항목,}",
+            "원하는 방식으로 내보내기."
+          ],
+          "caption": "노트, Bases, JSON 또는 CSV로 보관함, Mac, CLI, API에 내보내세요."
+        },
+        "nl-NL": {
+          "headline": [
+            "{225+ meetwaarden,}",
+            "geëxporteerd zoals jij wilt."
+          ],
+          "caption": "Notities, Bases, JSON of CSV: naar je kluis, Mac, CLI of API."
+        },
+        "pt-BR": {
+          "headline": [
+            "{Mais de 225 métricas de saúde,}",
+            "exportadas do seu jeito."
+          ],
+          "caption": "Notas, Bases, JSON ou CSV: para seu cofre, Mac, CLI ou API."
+        },
+        "zh-Hans": {
+          "headline": [
+            "{225+ 项健康指标，}",
+            "按你的方式导出。"
+          ],
+          "caption": "笔记、Bases、JSON 或 CSV，导出到知识库、Mac、CLI 或 API。"
+        }
+      }
+    }
+  ]
+}

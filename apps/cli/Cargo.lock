@@ -1079,6 +1079,7 @@ dependencies = [
  "dunce",
  "file-id",
  "fs2",
+ "healthmd-core",
  "healthmd-protocol",
  "hmac",
  "keyring",
@@ -1101,6 +1102,22 @@ dependencies = [
  "unicode-normalization",
  "uuid",
  "winsafe",
+]
+
+[[package]]
+name = "healthmd-core"
+version = "0.1.0-alpha.7"
+dependencies = [
+ "base64",
+ "chrono",
+ "chrono-tz",
+ "serde",
+ "serde_json",
+ "sha2",
+ "thiserror",
+ "tinyvec",
+ "unicode-casefold",
+ "unicode-normalization",
 ]
 
 [[package]]

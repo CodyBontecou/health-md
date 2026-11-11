@@ -1,6 +1,6 @@
 ---
-title: "macOSアプリ"
-description: "Health.md for Macを、iPhoneのエクスポート先、ローカルCLIおよびMCPホスト、暗号化されたヘルスコンテキストストア、履歴ビューア、フォルダ権限の管理元として使用します。"
+title: "Health.mdでApple HealthデータをMacで使う"
+description: "Health.mdでiPhoneのApple HealthデータをMacのフォルダに出力したり、ローカルコンテキストを照会したりできます。両方のデバイスにアプリをインストールし、Mac Syncを設定します。"
 ---
 
 Health.md for Macには、次の2つのローカルな役割があります。
@@ -9,6 +9,11 @@ Health.md for Macには、次の2つのローカルな役割があります。
 2. ローカルエージェントが使用するループバックCLI、クエリAPI、暗号化されたヘルスコンテキスト、MCPアダプターをホストする。
 
 Apple Healthは引き続きiPhone上にあります。MacアプリがHealthKitを直接読み取ることはありません。
+
+<div class="callout">
+<strong>iPhoneとMacから始める</strong>
+<p><a href="https://apps.apple.com/us/app/health-md/id6757763969" target="_blank" rel="noopener">iPhoneとMacにHealth.mdをインストール</a>してください。<a href="/ja/docs/sync/">Mac Syncの設定ガイド</a>または<a href="/blog/health-md-for-macos/">1日分のエクスポート手順（英語）</a>をご覧ください。</p>
+</div>
 
 ## 主な領域
 
@@ -26,9 +31,9 @@ Apple Healthは引き続きiPhone上にあります。MacアプリがHealthKit�
 
 1. Health.mdをMacにインストールして開きます。
 2. ローカルディスク、iCloud Drive、またはObsidian Vault内の出力先フォルダを選択します。
-3. iPhoneの同期タブからMac接続を有効にします。
-4. iPhoneで、エクスポート先として接続中のMacを選択します。
-5. エクスポートを設定し、エクスポートをタップします。
+3. iPhoneで**設定 → Macのエクスポート先**を開き、有効にします。
+4. iPhoneで、オートメーションの保存先として「接続中のMac」を選びます（**オートメーション → オートメーション → 出力**）。
+5. **今すぐエクスポート**をタップするか、オートメーションのスケジュールに任せます。
 
 iPhoneがHealthKitデータと有効な設定のスナップショットを取得します。接続中のピアは、サイズ上限付きでチェックサム検証済みのパーティションを転送します。Macは本番用エクスポーターを使用し、要求されたファイルを書き込みます。
 

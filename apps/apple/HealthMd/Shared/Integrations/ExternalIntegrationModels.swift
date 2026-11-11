@@ -176,6 +176,8 @@ struct ExternalIntegrationAccount: Codable, Equatable, Identifiable, Sendable {
     var lastSuccessfulExportAt: Date?
     var scope: String?
     var providerUserID: String?
+    /// Private Keychain binding; never exported in provider or health data.
+    var connectionID: UUID? = nil
 
     var id: ExternalIntegrationProvider { provider }
 }

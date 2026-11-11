@@ -164,6 +164,21 @@
           <p class="section-kicker">Start with one day</p>
           <h2>From your health apps to a file you can open</h2>
           <p>Your source app or wearable writes records into Health Connect. Health.md reads the categories you authorize, then writes the selected export to your chosen folder. It cannot export a record that never reached Health Connect.</p>
+          <h3 id="source-guides">Choose your source app</h3>
+          <p>Start with your source guide to compare the app's own downloads with records shared to Health Connect. Check eligibility, permissions and an actual record before installing an exporter.</p>
+          <ul>
+            <li><a href="/blog/export-samsung-health-data/">Samsung Health export guide</a>: personal data download or selected Health Connect records.</li>
+            <li><a href="/blog/export-garmin-connect-data/">Garmin Connect export guide</a>: native CSV and activity files, or Health Connect sharing on Android 14 or later.</li>
+            <li><a href="/blog/export-fitbit-data/">Fitbit export guide</a>: Google Health account downloads, TCX workouts and the separate Health Connect route.</li>
+            <li><a href="/blog/export-oura-data/">Oura export guide</a>: account download versus shared records, with membership and coverage checks.</li>
+            <li><a href="/blog/export-whoop-data/">WHOOP export guide</a>: native CSV for recovery and strain, or selected records shared to your phone.</li>
+            <li><a href="/blog/export-withings-data/">Withings export guide</a>: native CSV versus shared records, including the October 2026 account eligibility rules.</li>
+            <li><a href="/blog/export-strava-data/">Strava export guide</a>: activity files or shared time, distance and calories from GPS-based activities.</li>
+            <li><a href="/blog/export-cronometer-data/">Cronometer export guide</a>: native diary CSV versus shared nutrition and biometric records.</li>
+            <li><a href="/blog/export-myfitnesspal-data/">MyFitnessPal export guide</a>: native CSV, free reports and shared meal summaries rather than individual foods.</li>
+            <li><a href="/blog/export-google-fit-data/">Google Fit export guide</a>: Takeout, native backup and the separate shared daily-file workflow.</li>
+            <li><a href="/blog/export-polar-flow-data/">Polar Flow export guide</a>: native files, account exclusions and new records shared to Health Connect.</li>
+          </ul>
           <div class="process-list">
             <div><span>1</span><h3>Install and authorize</h3><p>Install Health.md and open Health Connect setup. Grant only the categories you want to read. In the source app, enable writing to Health Connect and let its data synchronize.</p></div>
             <div><span>2</span><h3>Choose and preview</h3><p>Select metrics, a single date with known data, and CSV, JSON, Markdown, or Obsidian Bases. Preview the output before writing files.</p></div>
@@ -197,7 +212,7 @@
           <ul>
             <li><strong>Missing records:</strong> check the source app's Health Connect write permissions, synchronization, selected day, and Health.md read permissions. An empty value does not prove that no event occurred.</li>
             <li><strong>Older dates:</strong> Health Connect restricts historical reads unless additional history access is available and granted. The default window is up to 30 days before permission was first granted, not a promise that only the latest 30 days can be exported. See <a href="https://developer.android.com/health-and-fitness/health-connect/read-data#read-older-data">Google's history access documentation</a>.</li>
-            <li><strong>Overnight sleep:</strong> Health.md assigns a sleep session to the day it started. On Tuesday morning, select Monday to inspect Monday night's sleep. See <a href="/docs/sleep-date-attribution/">sleep dates and daily notes</a>.</li>
+            <li><strong>Overnight sleep:</strong> Daily sleep summaries use a local noon-to-noon journal window. On Tuesday morning, select Monday, usually Yesterday, including sleep that began after midnight on Tuesday. A Tuesday afternoon nap belongs to Tuesday; raw source records retain separate ownership rules. See <a href="/docs/sleep-date-attribution/">sleep dates and daily notes</a>.</li>
             <li><strong>Writing fails:</strong> reselect a folder that grants persistent write access. A sync provider that does not expose a writable folder cannot be used directly; export locally and sync with a tool you choose.</li>
           </ul>
           <p>For source synchronization issues, see <a href="https://support.google.com/android/answer/13770384">Google's Health Connect troubleshooting guide</a>. Once a manual export works, the <a href="/docs/android/#scheduling-and-automation">Android scheduling guide</a> explains alarms, background access, and recovery.</p>

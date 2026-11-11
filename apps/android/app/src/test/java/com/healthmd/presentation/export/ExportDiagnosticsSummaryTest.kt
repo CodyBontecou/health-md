@@ -67,6 +67,23 @@ class ExportDiagnosticsSummaryTest {
     }
 
     @Test
+    fun accessFailuresKeepPaywallGuidanceAndRemainInspectable() {
+        val result = ExportResult(
+            successCount = 0,
+            totalCount = 1,
+            failedDateDetails = listOf(
+                FailedDateDetail(LocalDate.of(2026, 3, 1), ExportFailureReason.PAYWALL_REQUIRED),
+            ),
+        )
+
+        val summary = result.toDiagnosticsSummary()
+
+        assertEquals(ExportFailureReason.PAYWALL_REQUIRED, summary.failureGroups.single().reason)
+        assertEquals(ExportDiagnosticGuidance.PAYWALL, summary.failureGroups.single().guidance)
+        assertFalse(summary.shouldAutoDismiss)
+    }
+
+    @Test
     fun rawPartialUsesProviderNeutralGuidance() {
         val result = ExportResult(
             successCount = 0,

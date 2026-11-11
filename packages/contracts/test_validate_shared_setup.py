@@ -24,6 +24,15 @@ METRIC_REGISTRY_SHA256 = hashlib.sha256(METRIC_REGISTRY.read_bytes()).hexdigest(
 
 
 class SharedSetupV2ValidationTests(unittest.TestCase):
+    def test_eu_dot_is_a_portable_reader_and_writer_preset(self) -> None:
+        for fixture in [self.apple, self.android]:
+            payload = copy.deepcopy(fixture)
+            payload["profiles"][0]["presentation"]["date_format"] = "eu_dot"
+            self.validate(payload)
+            self.validate(payload, writer=True)
+            payload["profiles"][0]["presentation"]["date_format"] = "DD.MM.YYYY"
+            self.assert_rejected(payload)
+
     def setUp(self) -> None:
         self.apple = json.loads(APPLE_V2_FIXTURE.read_text(encoding="utf-8"))
         self.android = json.loads(ANDROID_V2_FIXTURE.read_text(encoding="utf-8"))
@@ -849,6 +858,22 @@ class SharedSetupV2InventoryFreezeTests(unittest.TestCase):
         shutil.copytree(ROOT / "packages/contracts/shared-setup/v2", self.directory)
 
     def test_unchanged_approved_inventories_and_public_assets_are_accepted(self) -> None:
+        validate.validate_shared_setup_v2_freeze(self.root)
+
+    def test_eu_dot_amendment_allows_no_other_schema_changes(self) -> None:
+        path = self.directory / "shared-setup.schema.json"
+        original = path.read_bytes()
+        for before, after in [
+            (b'"eu_dot"', b'"custom"'),
+            (b'"eu_short"', b'"eu_slash"'),
+            (b'"hour_24"', b'"hour_custom"'),
+            (b'"eu_dot",', b'"eu_dot", "custom",'),
+        ]:
+            with self.subTest(after=after):
+                path.write_bytes(original.replace(before, after, 1))
+                with self.assertRaisesRegex(validate.ContractValidationError, "public schema or fixture changed"):
+                    validate.validate_shared_setup_v2_freeze(self.root)
+        path.write_bytes(original)
         validate.validate_shared_setup_v2_freeze(self.root)
 
     def check_inventory_change(self, change: Any, error: str | None = None) -> None:

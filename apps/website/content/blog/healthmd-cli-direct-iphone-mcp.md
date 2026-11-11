@@ -30,7 +30,7 @@ This guide uses the separate portable CLI, not the signed helper inside Health.m
 
 The standalone CLI is an **unqualified public preview**. Availability checked October 26, 2026: [alpha.6](https://github.com/CodyBontecou/health-md/releases/tag/healthmd-cli/v0.1.0-alpha.6) is published with installers, desktop archives and checksum/signature assets. Alpha.7 remains a draft with no assets and is not an install target. Read [release status and compatibility](/docs/release-status/) and use a matching mobile build; package publication or a successful connection does not qualify a CLI/mobile pair for stable use.
 
-Install on macOS or Linux using the [CLI installation instructions](/docs/cli/), then inspect the installed version and commands:
+Install on macOS or Linux using the [CLI installation instructions](/docs/cli/installation/), then inspect the installed version and commands:
 
 ```bash
 brew install CodyBontecou/tap/healthmd
@@ -107,7 +107,7 @@ Local transport does not make a remote model local. Any results passed into your
 This is factual data access, not medical advice. Agents should preserve units, evidence, missingness, and limitations rather than diagnosing or calling a direction better or worse.
 
 <div class="cta-row">
-<a class="button" href="/docs/cli/">Read the CLI docs</a>
+<a class="button" href="/docs/cli/#first-export-from-your-phone">Read the Apple Health and Health Connect CLI guide</a>
 <a class="button secondary" href="/blog/query-apple-health-with-claude-or-codex/">Run a bounded agent query</a>
 <a class="button secondary" href="/docs/release-status/">Check release status</a>
 </div>

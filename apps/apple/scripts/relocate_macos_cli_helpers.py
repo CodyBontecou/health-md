@@ -24,9 +24,12 @@ def relocate(app, source_helpers=None):
             if "@loader_path/../Frameworks" not in paths:
                 raise ValueError(f"{name}: missing bundled framework lookup before relocation")
             build_paths = sorted({path for path in paths if Path(path).is_absolute() and Path(path).name == "PackageFrameworks"})
-            if build_paths:
-                for path in build_paths:
-                    subprocess.run(["install_name_tool", "-delete_rpath", path, str(helper)], check=True)
+            for path in build_paths:
+                subprocess.run(["install_name_tool", "-delete_rpath", path, str(helper)], check=True)
+            # Re-sign after editing load commands, and sign a helper that arrives unsigned.
+            unsigned = subprocess.run(["codesign", "--verify", "--strict", str(helper)],
+                                      stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode != 0
+            if build_paths or unsigned:
                 signing = ["codesign", "--force", "--sign", identity,
                            "--preserve-metadata=identifier,entitlements,requirements,flags,runtime"]
                 if identity == "-" or os.environ.get("CONFIGURATION", "").startswith("Debug"):

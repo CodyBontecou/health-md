@@ -1,8 +1,8 @@
 #!/bin/sh
 set -eu
 
-workspace_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
-repo_root=$(CDPATH= cd -- "$workspace_root/../.." && pwd)
+workspace_root=$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)
+repo_root=$(CDPATH='' cd -- "$workspace_root/../.." && pwd)
 package_root="$repo_root/apps/apple/Packages/HealthMdCoreRust"
 xcframework=${1:-"$package_root/Artifacts/HealthmdCore.xcframework"}
 stamp="$(dirname -- "$xcframework")/.healthmd-core-source.sha256"

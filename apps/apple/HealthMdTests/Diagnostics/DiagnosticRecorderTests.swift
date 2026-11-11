@@ -76,6 +76,21 @@ final class DiagnosticRecorderTests: XCTestCase {
         XCTAssertFalse(DiagnosticRecorder(directory: root).settings.enabled)
     }
 
+    func testReenablingOperationalRecordingDoesNotResumePrivateRecording() {
+        let recorder = DiagnosticRecorder(directory: root)
+        recorder.startPrivateContextRecording()
+        XCTAssertGreaterThan(recorder.settings.privateContextUntil, 0)
+
+        recorder.configure(enabled: false, verbosity: .debug)
+        XCTAssertEqual(recorder.settings.privateContextUntil, 0)
+        recorder.configure(enabled: true, verbosity: .debug)
+        XCTAssertEqual(recorder.settings.privateContextUntil, 0)
+
+        recorder.record(.peerDiscovered, fields: [.peerName: .text("SYNTHETIC_REVOKED_PEER")])
+        let events = recorder.snapshot(includePrivate: true).events
+        XCTAssertFalse(events.map(\.jsonLine).joined().contains("SYNTHETIC_REVOKED_PEER"))
+    }
+
     func testByteBudgetAndVerbosityAreIndependentOfPrivacy() throws {
         let recorder = DiagnosticRecorder(directory: root, byteLimit: 2048)
         recorder.configure(enabled: true, verbosity: .info)

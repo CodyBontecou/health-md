@@ -849,6 +849,34 @@ final class QueryFoundationTests: XCTestCase {
     XCTAssertTrue(response.limitations.contains { $0.code == "factual_observations_only" })
   }
 
+  func testSleepSessionTruncationFollowsCaptureAttribution() throws {
+    // 23:45 PT on Jul 1 → 07:30 PT on Jul 2, captured by the Jul 2 owner day.
+    let stages = [
+      SleepStageSample(
+        stage: "inBed", startDate: iso("2026-07-02T06:45:00Z"), endDate: iso("2026-07-02T14:30:00Z")),
+      SleepStageSample(
+        stage: "core", startDate: iso("2026-07-02T06:45:00Z"), endDate: iso("2026-07-02T14:30:00Z")),
+    ]
+
+    func sessions(_ attribution: SleepDayAttribution) throws -> [HealthMdContextSleepSession] {
+      try HealthMdSleepSessionQuery.contextSessions(
+        sleep: SleepData(stages: stages),
+        ownerDate: "2026-07-02",
+        ownerIntervalStart: iso("2026-07-02T07:00:00Z"),
+        calendarTimeZone: "America/Los_Angeles",
+        evidenceIDs: [],
+        attribution: attribution
+      )
+    }
+
+    // Under night-begins capture the Jul 2 window opens at Jul 2 noon PT, so a
+    // session starting before it is labeled truncated at the capture boundary.
+    XCTAssertEqual(try sessions(.nightBegins).first?.completeness, .truncatedAtStart)
+    // Under wake-up-date capture the window opens at Jul 1 noon PT and the same
+    // fully captured session is complete (issue #104).
+    XCTAssertEqual(try sessions(.morningEnds).first?.completeness, .complete)
+  }
+
   func testSleepSessionTotalsAreAuthorizedAndOverlapSafe() throws {
     let start = iso("2026-07-01T22:00:00Z")
     let end = iso("2026-07-02T05:00:00Z")

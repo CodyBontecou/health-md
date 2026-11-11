@@ -1,0 +1,918 @@
+{
+ "v": 3,
+ "createdOnFiles": {
+  "v": 1,
+  "at": "2026-10-31T23:20:00Z"
+ },
+ "title": "Health.md — Liquid Glass redesign (handoff)",
+ "launch": {
+  "view": "canvas"
+ },
+ "pages": [],
+ "boards": {
+  "ArchiveGlassDark.dc.html": {
+   "x": 0,
+   "y": 0,
+   "w": 390,
+   "h": 844,
+   "title": "Archive — glass · All profiles",
+   "radius": 44,
+   "is_interactive": true
+  },
+  "ArchiveGlassLight.dc.html": {
+   "x": 470,
+   "y": 0,
+   "w": 390,
+   "h": 844,
+   "title": "Archive — glass light · All profiles",
+   "radius": 44,
+   "is_interactive": true
+  },
+  "ComposeGlass.dc.html": {
+   "x": 940,
+   "y": 0,
+   "w": 390,
+   "h": 844,
+   "title": "Composer — glass",
+   "radius": 44,
+   "is_interactive": true
+  },
+  "AutomationsGlass.dc.html": {
+   "x": 1410,
+   "y": 0,
+   "w": 390,
+   "h": 844,
+   "title": "Automations — glass",
+   "radius": 44
+  },
+  "SettingsGlass.dc.html": {
+   "x": 1880,
+   "y": 0,
+   "w": 390,
+   "h": 844,
+   "title": "Settings — glass",
+   "radius": 44
+  },
+  "MomentGlass.dc.html": {
+   "x": 2350,
+   "y": 0,
+   "w": 390,
+   "h": 844,
+   "title": "Export moment — glass",
+   "radius": 44,
+   "is_interactive": true
+  },
+  "WidgetSmallGlass.dc.html": {
+   "x": 2820,
+   "y": 0,
+   "w": 170,
+   "h": 170,
+   "title": "Widget small — glass",
+   "radius": 26
+  },
+  "WidgetMediumGlass.dc.html": {
+   "x": 2820,
+   "y": 290,
+   "w": 364,
+   "h": 170,
+   "title": "Widget medium — glass",
+   "radius": 26
+  },
+  "ArchiveGlassWeekly.dc.html": {
+   "x": 0,
+   "y": 1100,
+   "w": 390,
+   "h": 844,
+   "title": "Archive — glass · Weekly CSV",
+   "radius": 44,
+   "is_interactive": true
+  },
+  "ArchiveGlassFeed.dc.html": {
+   "x": 470,
+   "y": 1100,
+   "w": 390,
+   "h": 844,
+   "title": "Archive — glass · Agent feed",
+   "radius": 44,
+   "is_interactive": true
+  },
+  "ArchiveGlassPaused.dc.html": {
+   "x": 940,
+   "y": 1100,
+   "w": 390,
+   "h": 844,
+   "title": "Archive — glass · paused profile",
+   "radius": 44,
+   "is_interactive": true
+  },
+  "ExportNowG.dc.html": {
+   "x": 0,
+   "y": 2500,
+   "w": 390,
+   "h": 844,
+   "title": "Export now sheet",
+   "radius": 44,
+   "is_interactive": true
+  },
+  "ExportPreviewG.dc.html": {
+   "x": 470,
+   "y": 2500,
+   "w": 390,
+   "h": 844,
+   "title": "Export preview",
+   "radius": 44
+  },
+  "LargeConfirmG.dc.html": {
+   "x": 940,
+   "y": 2500,
+   "w": 390,
+   "h": 844,
+   "title": "Confirm large export",
+   "radius": 44
+  },
+  "HistoryWarnG.dc.html": {
+   "x": 1410,
+   "y": 2500,
+   "w": 390,
+   "h": 844,
+   "title": "History access warning",
+   "radius": 44
+  },
+  "ExportResultG.dc.html": {
+   "x": 1880,
+   "y": 2500,
+   "w": 390,
+   "h": 844,
+   "title": "Export result — partial",
+   "radius": 44
+  },
+  "MetricsG.dc.html": {
+   "x": 0,
+   "y": 3800,
+   "w": 390,
+   "h": 844,
+   "title": "Metrics",
+   "radius": 44
+  },
+  "FormatsG.dc.html": {
+   "x": 470,
+   "y": 3800,
+   "w": 390,
+   "h": 844,
+   "title": "Formats & data detail",
+   "radius": 44
+  },
+  "OutputG.dc.html": {
+   "x": 940,
+   "y": 3800,
+   "w": 390,
+   "h": 844,
+   "title": "Output & files",
+   "radius": 44
+  },
+  "FormatCustomG.dc.html": {
+   "x": 1410,
+   "y": 3800,
+   "w": 390,
+   "h": 844,
+   "title": "Format customization",
+   "radius": 44
+  },
+  "DailyNoteG.dc.html": {
+   "x": 1880,
+   "y": 3800,
+   "w": 390,
+   "h": 844,
+   "title": "Daily note injection",
+   "radius": 44
+  },
+  "EntriesG.dc.html": {
+   "x": 2350,
+   "y": 3800,
+   "w": 390,
+   "h": 844,
+   "title": "Individual entries",
+   "radius": 44
+  },
+  "ScheduleG.dc.html": {
+   "x": 2820,
+   "y": 3800,
+   "w": 390,
+   "h": 844,
+   "title": "Schedule",
+   "radius": 44
+  },
+  "FolderDestG.dc.html": {
+   "x": 0,
+   "y": 5100,
+   "w": 390,
+   "h": 844,
+   "title": "Destination · folder",
+   "radius": 44
+  },
+  "MacDestG.dc.html": {
+   "x": 470,
+   "y": 5100,
+   "w": 390,
+   "h": 844,
+   "title": "Destination · Mac",
+   "radius": 44
+  },
+  "CLIDestG.dc.html": {
+   "x": 940,
+   "y": 5100,
+   "w": 390,
+   "h": 844,
+   "title": "Destination · CLI",
+   "radius": 44
+  },
+  "APIDestG.dc.html": {
+   "x": 1410,
+   "y": 5100,
+   "w": 390,
+   "h": 844,
+   "title": "Destination · API endpoint",
+   "radius": 44
+  },
+  "GatewayDestG.dc.html": {
+   "x": 1880,
+   "y": 5100,
+   "w": 390,
+   "h": 844,
+   "title": "Destination · Agent Data gateway",
+   "radius": 44
+  },
+  "AutomationDetailG.dc.html": {
+   "x": 2350,
+   "y": 5100,
+   "w": 390,
+   "h": 844,
+   "title": "Automation detail",
+   "radius": 44
+  },
+  "EmptyArchiveG.dc.html": {
+   "x": 0,
+   "y": 6400,
+   "w": 390,
+   "h": 844,
+   "title": "Archive — day one",
+   "radius": 44
+  },
+  "AttentionG.dc.html": {
+   "x": 470,
+   "y": 6400,
+   "w": 390,
+   "h": 844,
+   "title": "Needs attention",
+   "radius": 44
+  },
+  "NotificationsG.dc.html": {
+   "x": 940,
+   "y": 6400,
+   "w": 390,
+   "h": 844,
+   "title": "Notifications",
+   "radius": 44
+  },
+  "PaywallG.dc.html": {
+   "x": 0,
+   "y": 7700,
+   "w": 390,
+   "h": 844,
+   "title": "Paywall",
+   "radius": 44
+  },
+  "OnboardingG.dc.html": {
+   "x": 470,
+   "y": 7700,
+   "w": 390,
+   "h": 844,
+   "title": "Onboarding",
+   "radius": 44
+  },
+  "ConnectedAppsG.dc.html": {
+   "x": 940,
+   "y": 7700,
+   "w": 390,
+   "h": 844,
+   "title": "Connected apps",
+   "radius": 44
+  },
+  "ClinicianReportG.dc.html": {
+   "x": 1410,
+   "y": 7700,
+   "w": 390,
+   "h": 844,
+   "title": "Clinician report",
+   "radius": 44
+  },
+  "ClinicAccessG.dc.html": {
+   "x": 1880,
+   "y": 7700,
+   "w": 390,
+   "h": 844,
+   "title": "Clinic access",
+   "radius": 44
+  },
+  "DiagnosticsG.dc.html": {
+   "x": 2350,
+   "y": 7700,
+   "w": 390,
+   "h": 844,
+   "title": "Diagnostics",
+   "radius": 44
+  },
+  "SettingsMoreG.dc.html": {
+   "x": 2820,
+   "y": 7700,
+   "w": 390,
+   "h": 844,
+   "title": "Settings · app & support",
+   "radius": 44
+  },
+  "MyselfClaimG.dc.html": {
+   "x": 0,
+   "y": 9000,
+   "w": 390,
+   "h": 844,
+   "title": "myself.md claim",
+   "radius": 44
+  },
+  "ReviewG.dc.html": {
+   "x": 470,
+   "y": 9000,
+   "w": 390,
+   "h": 844,
+   "title": "Review introduction",
+   "radius": 44
+  },
+  "FileViewerG.dc.html": {
+   "x": 940,
+   "y": 9000,
+   "w": 390,
+   "h": 844,
+   "title": "Exported file viewer",
+   "radius": 44
+  },
+  "ReduceTransparencyG.dc.html": {
+   "x": 1410,
+   "y": 9000,
+   "w": 390,
+   "h": 844,
+   "title": "Accessibility · Reduce Transparency",
+   "radius": 44,
+   "is_interactive": true
+  },
+  "ComposeLargeTextG.dc.html": {
+   "x": 1880,
+   "y": 9000,
+   "w": 390,
+   "h": 844,
+   "title": "Accessibility · largest text",
+   "radius": 44
+  },
+  "ComposeGermanG.dc.html": {
+   "x": 2350,
+   "y": 9000,
+   "w": 390,
+   "h": 844,
+   "title": "Localization · German sentence",
+   "radius": 44
+  },
+  "CoverageMap.dc.html": {
+   "x": 0,
+   "y": 10300,
+   "w": 1280,
+   "h": 3200,
+   "title": "Coverage map",
+   "expand": "fill"
+  },
+  "ReportFallbackG.dc.html": {
+   "x": 0,
+   "y": 14000,
+   "w": 390,
+   "h": 844,
+   "title": "Report fallback",
+   "radius": 44
+  },
+  "ImportSetupG.dc.html": {
+   "x": 470,
+   "y": 14000,
+   "w": 390,
+   "h": 844,
+   "title": "Import setup review",
+   "radius": 44
+  },
+  "FormatHelpG.dc.html": {
+   "x": 940,
+   "y": 14000,
+   "w": 390,
+   "h": 844,
+   "title": "Formats help",
+   "radius": 44
+  },
+  "ScannerG.dc.html": {
+   "x": 1410,
+   "y": 14000,
+   "w": 390,
+   "h": 844,
+   "title": "Scan pairing QR",
+   "radius": 44
+  },
+  "WhatsNewG.dc.html": {
+   "x": 1880,
+   "y": 14000,
+   "w": 390,
+   "h": 844,
+   "title": "What’s New",
+   "radius": 44
+  },
+  "WidgetSummaryG.dc.html": {
+   "x": 0,
+   "y": 15300,
+   "w": 170,
+   "h": 170,
+   "title": "Widget · Health summary",
+   "radius": 26
+  },
+  "WidgetActivityG.dc.html": {
+   "x": 250,
+   "y": 15300,
+   "w": 170,
+   "h": 170,
+   "title": "Widget · Activity",
+   "radius": 26
+  },
+  "WidgetHeartG.dc.html": {
+   "x": 500,
+   "y": 15300,
+   "w": 364,
+   "h": 170,
+   "title": "Widget · Heart range",
+   "radius": 26
+  },
+  "LiveActivityG.dc.html": {
+   "x": 944,
+   "y": 15300,
+   "w": 364,
+   "h": 150,
+   "title": "Live Activity · CLI export",
+   "radius": 26
+  },
+  "WatchDashboardG.dc.html": {
+   "x": 1388,
+   "y": 15300,
+   "w": 198,
+   "h": 242,
+   "title": "Watch · dashboard",
+   "radius": 42
+  },
+  "WatchComplicationG.dc.html": {
+   "x": 1666,
+   "y": 15300,
+   "w": 184,
+   "h": 72,
+   "title": "Watch · complication",
+   "radius": 26
+  },
+  "iPadArchiveG.dc.html": {
+   "x": 0,
+   "y": 15900,
+   "w": 1180,
+   "h": 820,
+   "title": "iPad · Archive",
+   "radius": 18
+  },
+  "MacHomeG.dc.html": {
+   "x": 0,
+   "y": 17200,
+   "w": 1100,
+   "h": 720,
+   "title": "Mac · destination",
+   "radius": 14
+  },
+  "MacHistoryG.dc.html": {
+   "x": 1180,
+   "y": 17200,
+   "w": 1100,
+   "h": 720,
+   "title": "Mac · history",
+   "radius": 14
+  },
+  "MacCLIG.dc.html": {
+   "x": 2360,
+   "y": 17200,
+   "w": 1100,
+   "h": 720,
+   "title": "Mac · CLI & MCP",
+   "radius": 14
+  },
+  "MacMenuBarG.dc.html": {
+   "x": 3540,
+   "y": 17200,
+   "w": 300,
+   "h": 280,
+   "title": "Mac · menu bar",
+   "radius": 16
+  },
+  "iPadAutomationsG.dc.html": {
+   "x": 0,
+   "y": 18300,
+   "w": 1180,
+   "h": 820,
+   "title": "iPad · Automations",
+   "radius": 18
+  },
+  "iPadSettingsG.dc.html": {
+   "x": 1260,
+   "y": 18300,
+   "w": 1180,
+   "h": 820,
+   "title": "iPad · Settings",
+   "radius": 18
+  },
+  "MacSettingsG.dc.html": {
+   "x": 2520,
+   "y": 18300,
+   "w": 1100,
+   "h": 720,
+   "title": "Mac · settings",
+   "radius": 14
+  },
+  "DuoOuterG.dc.html": {
+   "x": 0,
+   "y": 19600,
+   "w": 466,
+   "h": 678,
+   "title": "iPhone Duo · outer display (folded)",
+   "radius": 40
+  },
+  "DuoInnerArchiveG.dc.html": {
+   "x": 546,
+   "y": 19600,
+   "w": 890,
+   "h": 626,
+   "title": "iPhone Duo · inner display · Archive",
+   "radius": 36
+  },
+  "DuoInnerComposeG.dc.html": {
+   "x": 1516,
+   "y": 19600,
+   "w": 890,
+   "h": 626,
+   "title": "iPhone Duo · inner display · composer",
+   "radius": 36
+  },
+  "DuoSplitViewG.dc.html": {
+   "x": 2486,
+   "y": 19600,
+   "w": 890,
+   "h": 626,
+   "title": "iPhone Duo · Split View (half width)",
+   "radius": 36
+  },
+  "AS_iPhone_1.dc.html": {
+   "h": 956,
+   "title": "iPhone · 1 · your health, in plain text (panorama 1/3)",
+   "w": 440,
+   "x": 0,
+   "y": 21000
+  },
+  "AS_iPhone_2.dc.html": {
+   "h": 956,
+   "title": "iPhone · 2 · choose your health data (panorama 2/3)",
+   "w": 440,
+   "x": 520,
+   "y": 21000
+  },
+  "AS_iPhone_3.dc.html": {
+   "h": 956,
+   "title": "iPhone · 3 · every health day accounted for (panorama 3/3)",
+   "w": 440,
+   "x": 1040,
+   "y": 21000
+  },
+  "AS_iPhone_4.dc.html": {
+   "h": 956,
+   "title": "iPhone · 4 · 225+ health metrics",
+   "w": 440,
+   "x": 1560,
+   "y": 21000
+  },
+  "AS_iPhone_5.dc.html": {
+   "h": 956,
+   "title": "iPhone · 5 · one night, four formats",
+   "w": 440,
+   "x": 2080,
+   "y": 21000
+  },
+  "AS_iPhone_6.dc.html": {
+   "h": 956,
+   "title": "iPhone · 6 · health data, everywhere you need it",
+   "w": 440,
+   "x": 2600,
+   "y": 21000
+  },
+  "AS_iPhone_7.dc.html": {
+   "h": 956,
+   "title": "iPhone · 7 · health journal writes itself (light)",
+   "w": 440,
+   "x": 3120,
+   "y": 21000
+  },
+  "AS_iPhone_8.dc.html": {
+   "h": 956,
+   "title": "iPhone · 8 · your health data stays yours",
+   "w": 440,
+   "x": 3640,
+   "y": 21000
+  },
+  "AS_iPhone_9.dc.html": {
+   "h": 956,
+   "title": "iPhone · 9 · health data for your tools",
+   "w": 440,
+   "x": 4160,
+   "y": 21000
+  },
+  "AS_iPad_1.dc.html": {
+   "h": 1032,
+   "title": "iPad · 1 · a month of health data",
+   "w": 1376,
+   "x": 0,
+   "y": 22400
+  },
+  "AS_iPad_2.dc.html": {
+   "h": 1032,
+   "title": "iPad · 2 · choose your health data",
+   "w": 1376,
+   "x": 1456,
+   "y": 22400
+  },
+  "AS_iPad_3.dc.html": {
+   "h": 1032,
+   "title": "iPad · 3 · 225+ health metrics",
+   "w": 1376,
+   "x": 2912,
+   "y": 22400
+  },
+  "AS_Duo_1.dc.html": {
+   "h": 669,
+   "title": "Duo · 1 · fold / unfold your health",
+   "w": 951,
+   "x": 0,
+   "y": 23900
+  },
+  "AS_Duo_2.dc.html": {
+   "h": 669,
+   "title": "Duo · 2 · health and the file, side by side",
+   "w": 951,
+   "x": 1031,
+   "y": 23900
+  },
+  "AS_Duo_3.dc.html": {
+   "h": 678,
+   "title": "Duo · 3 · outer display",
+   "w": 466,
+   "x": 2062,
+   "y": 23900
+  },
+  "AS_Mac_1.dc.html": {
+   "h": 900,
+   "title": "Mac · 1 · health files on your Mac",
+   "w": 1440,
+   "x": 0,
+   "y": 25000
+  },
+  "AS_Mac_2.dc.html": {
+   "h": 900,
+   "title": "Mac · 2 · health data for your tools",
+   "w": 1440,
+   "x": 1520,
+   "y": 25000
+  }
+ },
+ "order": [
+  "ArchiveGlassDark.dc.html",
+  "ArchiveGlassLight.dc.html",
+  "ComposeGlass.dc.html",
+  "AutomationsGlass.dc.html",
+  "SettingsGlass.dc.html",
+  "MomentGlass.dc.html",
+  "WidgetSmallGlass.dc.html",
+  "WidgetMediumGlass.dc.html",
+  "ArchiveGlassWeekly.dc.html",
+  "ArchiveGlassFeed.dc.html",
+  "ArchiveGlassPaused.dc.html",
+  "ExportNowG.dc.html",
+  "ExportPreviewG.dc.html",
+  "LargeConfirmG.dc.html",
+  "HistoryWarnG.dc.html",
+  "ExportResultG.dc.html",
+  "MetricsG.dc.html",
+  "FormatsG.dc.html",
+  "OutputG.dc.html",
+  "FormatCustomG.dc.html",
+  "DailyNoteG.dc.html",
+  "EntriesG.dc.html",
+  "ScheduleG.dc.html",
+  "FolderDestG.dc.html",
+  "MacDestG.dc.html",
+  "CLIDestG.dc.html",
+  "APIDestG.dc.html",
+  "GatewayDestG.dc.html",
+  "AutomationDetailG.dc.html",
+  "EmptyArchiveG.dc.html",
+  "AttentionG.dc.html",
+  "NotificationsG.dc.html",
+  "PaywallG.dc.html",
+  "OnboardingG.dc.html",
+  "ConnectedAppsG.dc.html",
+  "ClinicianReportG.dc.html",
+  "ClinicAccessG.dc.html",
+  "DiagnosticsG.dc.html",
+  "SettingsMoreG.dc.html",
+  "MyselfClaimG.dc.html",
+  "ReviewG.dc.html",
+  "FileViewerG.dc.html",
+  "ReduceTransparencyG.dc.html",
+  "ComposeLargeTextG.dc.html",
+  "ComposeGermanG.dc.html",
+  "CoverageMap.dc.html",
+  "ReportFallbackG.dc.html",
+  "ImportSetupG.dc.html",
+  "FormatHelpG.dc.html",
+  "ScannerG.dc.html",
+  "WhatsNewG.dc.html",
+  "WidgetSummaryG.dc.html",
+  "WidgetActivityG.dc.html",
+  "WidgetHeartG.dc.html",
+  "LiveActivityG.dc.html",
+  "WatchDashboardG.dc.html",
+  "WatchComplicationG.dc.html",
+  "iPadArchiveG.dc.html",
+  "MacHomeG.dc.html",
+  "MacHistoryG.dc.html",
+  "MacCLIG.dc.html",
+  "MacMenuBarG.dc.html",
+  "iPadAutomationsG.dc.html",
+  "iPadSettingsG.dc.html",
+  "MacSettingsG.dc.html",
+  "DuoOuterG.dc.html",
+  "DuoInnerArchiveG.dc.html",
+  "DuoInnerComposeG.dc.html",
+  "DuoSplitViewG.dc.html",
+  "AS_iPhone_1.dc.html",
+  "AS_iPhone_2.dc.html",
+  "AS_iPhone_3.dc.html",
+  "AS_iPhone_4.dc.html",
+  "AS_iPhone_5.dc.html",
+  "AS_iPhone_6.dc.html",
+  "AS_iPhone_7.dc.html",
+  "AS_iPhone_8.dc.html",
+  "AS_iPhone_9.dc.html",
+  "AS_iPad_1.dc.html",
+  "AS_iPad_2.dc.html",
+  "AS_iPad_3.dc.html",
+  "AS_Duo_1.dc.html",
+  "AS_Duo_2.dc.html",
+  "AS_Duo_3.dc.html",
+  "AS_Mac_1.dc.html",
+  "AS_Mac_2.dc.html"
+ ],
+ "notes": {
+  "glass": {
+   "x": 0,
+   "y": -260,
+   "text": "Liquid Glass — core screens",
+   "kind": "title1",
+   "maxW": 3210
+  },
+  "glassprofiles": {
+   "x": 0,
+   "y": 840,
+   "text": "Glass — Archive per profile",
+   "kind": "title1",
+   "maxW": 3210
+  },
+  "g12300": {
+   "x": 0,
+   "y": 2240,
+   "text": "Glass — Export now",
+   "kind": "title1",
+   "maxW": 3210
+  },
+  "g13600": {
+   "x": 0,
+   "y": 3540,
+   "text": "Glass — automation settings",
+   "kind": "title1",
+   "maxW": 3210
+  },
+  "g14900": {
+   "x": 0,
+   "y": 4840,
+   "text": "Glass — destinations & automation detail",
+   "kind": "title1",
+   "maxW": 3210
+  },
+  "g16200": {
+   "x": 0,
+   "y": 6140,
+   "text": "Glass — empty, error & notification states",
+   "kind": "title1",
+   "maxW": 3210
+  },
+  "g17500": {
+   "x": 0,
+   "y": 7440,
+   "text": "Glass — account, support & tools",
+   "kind": "title1",
+   "maxW": 3210
+  },
+  "g18800": {
+   "x": 0,
+   "y": 8740,
+   "text": "Glass — more account · accessibility & localization",
+   "kind": "title1",
+   "maxW": 3210
+  },
+  "cov": {
+   "x": 0,
+   "y": 10040,
+   "text": "Coverage map — zero regressions",
+   "kind": "title1",
+   "maxW": 3210
+  },
+  "g23800": {
+   "x": 0,
+   "y": 13740,
+   "text": "Glass — gaps closed",
+   "kind": "title1",
+   "maxW": 3840
+  },
+  "g25100": {
+   "x": 0,
+   "y": 15040,
+   "text": "Glass — widgets, Live Activity & Watch",
+   "kind": "title1",
+   "maxW": 3840
+  },
+  "g25700": {
+   "x": 0,
+   "y": 15640,
+   "text": "Glass — iPad",
+   "kind": "title1",
+   "maxW": 3840
+  },
+  "g27000": {
+   "x": 0,
+   "y": 16940,
+   "text": "Glass — Mac app",
+   "kind": "title1",
+   "maxW": 3840
+  },
+  "g28100": {
+   "x": 0,
+   "y": 18040,
+   "text": "Glass — iPad split views & Mac settings",
+   "kind": "title1",
+   "maxW": 3840
+  },
+  "g29400": {
+   "x": 0,
+   "y": 19340,
+   "text": "Glass — iPhone Duo (folded, unfolded, Split View)",
+   "kind": "title1",
+   "maxW": 3840
+  },
+  "nAS_Duo": {
+   "kind": "title1",
+   "maxW": 4600,
+   "text": "App Store · iPhone Duo — inner 951×669 @3× = 2853×2007 · outer 466×678 @3× = 1398×2034",
+   "x": 0,
+   "y": 23640
+  },
+  "nAS_Mac": {
+   "kind": "title1",
+   "maxW": 4600,
+   "text": "App Store · Mac — 1440×900, export @2× = 2880×1800",
+   "x": 0,
+   "y": 24740
+  },
+  "nAS_iPad": {
+   "kind": "title1",
+   "maxW": 4600,
+   "text": "App Store · iPad 13″ landscape — 1376×1032, export @2× = 2752×2064",
+   "x": 0,
+   "y": 22140
+  },
+  "nAS_iPhone": {
+   "kind": "title1",
+   "maxW": 4600,
+   "text": "App Store · iPhone 6.9″ — 440×956, export @3× = 1320×2868",
+   "x": 0,
+   "y": 20740
+  }
+ },
+ "designSystems": []
+}

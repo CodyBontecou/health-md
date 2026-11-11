@@ -75,6 +75,7 @@ class SourceDigestTests(unittest.TestCase):
                      "crates/healthmd-core/lib.rs", "crates/healthmd-core-uniffi/lib.rs",
                      "crates/healthmd-protocol/lib.rs", "scripts/build-apple-xcframework.sh",
                      "scripts/normalize-apple-xcframework.py", "scripts/validate-apple-xcframework.sh",
+                     "scripts/prepare-apple-xcframework.sh",
                      "vendor/askama_derive/src/config.rs"]
             for name in files:
                 path = workspace / name
@@ -89,15 +90,14 @@ class SourceDigestTests(unittest.TestCase):
             (workspace / "vendor/askama_derive/src/config.rs").write_text("updated parser source")
             self.assertNotEqual(before, digest())
 
-    def test_every_new_native_cache_hashes_vendored_build_sources(self):
-        for name in ("apple-ci.yml", "apple-nightly.yml"):
-            workflow = (slices.REPO / ".github/workflows" / name).read_text()
-            keys = [line for line in workflow.splitlines()
-                    if "hashFiles(" in line and "apple-" in line]
-            self.assertTrue(keys, name)
-            for key in keys:
-                with self.subTest(workflow=name, key=key):
-                    self.assertIn("'packages/healthmd-core-rust/vendor/**'", key)
+    def test_native_preparation_checks_source_and_validates_even_when_stamp_matches(self):
+        # Hosted native caches were retired. Local artifact reuse still must
+        # check the full source digest and validate the resulting XCFramework.
+        prepare = (SCRIPT.parent / 'prepare-apple-xcframework.sh').read_text()
+        self.assertIn('source_digest=$("$workspace_root/scripts/apple-source-digest.sh")', prepare)
+        self.assertIn('"$prepared_digest" != "$source_digest"', prepare)
+        self.assertIn('"$workspace_root/scripts/validate-apple-xcframework.sh" "$xcframework"', prepare)
+        self.assertLess(prepare.index('source_digest='), prepare.index('"$prepared_digest" !='))
 
 
 class NativeBuildEntrypointTests(unittest.TestCase):

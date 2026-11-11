@@ -1,0 +1,32 @@
+TIDBITS — FOUNDER WRITING BRIEF, NOT A SEND-READY MESSAGE
+Prepared October 27, 2026. No message sent.
+
+Recipient route: ace@tidbits.com
+Official contact requirements: https://tidbits.com/about/contact/
+Relevant article: Adam Engst, October 23, 2026
+https://tidbits.com/2026/10/23/what-apple-health-data-revealed-about-my-cycling-crash/
+
+Why this may fit
+The article describes wanting selected Apple Health data and working around a 255 MB archive containing a 4.7 GB XML file. Health.md offers a different starting point: read authorized records on the iPhone and select metrics, dates, and a portable output format.
+
+Founder facts to choose from when writing your own short note
+- A current, inspectable one-day CSV export demonstration is live:
+  https://healthmd.app/apple-health-to-csv/#how-it-works
+- It shows CSV enabled, preview, the written result, and the opened file. The actual fictional output is downloadable.
+- Readers can inspect a 28-day fictional workbook and input pack before installing:
+  https://healthmd.app/apple-health-to-csv/#spreadsheet-sample
+- Health.md reads authorized data on the device; it does not convert an existing Apple XML archive.
+- The screenshots use fictional fixtures in an iPhone simulator. They verify the interface and CSV writer, not physical-device permission approval.
+- A daily summary is not a substitute for timestamped records or a medical investigation. Do not claim to reproduce the article's analysis.
+
+Write the note yourself
+TidBITS explicitly discourages formulaic AI-written personalized pitches, press releases, guest/sponsored posts, and link insertions. Add your own specific reason for building this workflow and invite independent testing. Keep the first note brief and link the useful task page. Do not ask to insert a backlink, request an anchor phrase, or imply a prior conversation.
+
+Evidence available
+assets/2026-10-26.csv — exact 658-byte captured output
+assets/csv-enabled.webp, csv-preview.webp, csv-written.webp, csv-opened.webp
+assets/workbook-preview.png
+assets/healthmd-spreadsheet-sample.zip
+
+Before sending
+Verify the current App Store allowance/version, confirm review access if you intend to offer it, and send only after human review. Do not attach the full bundle unless requested.

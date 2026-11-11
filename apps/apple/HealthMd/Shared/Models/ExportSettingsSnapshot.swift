@@ -12,6 +12,57 @@ nonisolated enum ExportCompatibilityDetail: String, Codable, CaseIterable, Senda
     var includesSelectedTimeSeries: Bool { self == .selectedTimeSeries }
 }
 
+/// Stable, platform-neutral detail groups shared with Android (`ExportDetailGroup` in
+/// ExportDetailPolicy.kt) and documented in docs/features/per-group-export-detail.md.
+/// Never rename a raw value.
+nonisolated enum ExportDetailGroup: String, Codable, CaseIterable, Sendable, Comparable {
+    case sleep
+    case activity
+    case heart
+    case vitals
+    case nutrition
+    case mobility
+    case reproductiveHealth = "reproductive_health"
+    case mindfulness
+    case workouts
+    case body
+
+    /// Groups whose compatibility detail Apple exports can select independently. Sleep, heart,
+    /// vitals and workouts select their apple-v8 detail arrays. Activity, nutrition, mobility,
+    /// reproductive health, mindfulness, body and the vitals temperature/spirometry types are
+    /// projected only by the apple-v12 successor (`AppleExportDetailPolicy.selectsAppleV12`).
+    static let appleSupported: [ExportDetailGroup] = allCases
+
+    /// Groups an apple-v8 peer already understands as override keys.
+    static let appleV8OverrideGroups: Set<ExportDetailGroup> = [.sleep, .heart, .vitals, .workouts]
+
+    /// Groups whose explicit `detailed` override selects the apple-v12 successor because their
+    /// `detailSamples` cannot be represented by apple-v8.
+    static let appleV12ExpansionGroups: Set<ExportDetailGroup> = [
+        .activity, .nutrition, .mobility, .reproductiveHealth, .mindfulness, .body, .vitals,
+    ]
+
+    /// Groups whose explicit `detailed` override selects apple-v12. Sleep has no
+    /// `detailSamples`; under apple-v12 its `sleepStages` entries carry source attribution
+    /// (`sourceUUID`, `source`, `sourceName`) that apple-v8 cannot represent.
+    static let appleV12SelectingGroups: Set<ExportDetailGroup> = appleV12ExpansionGroups.union([.sleep])
+
+    /// Choices Apple can honor. HealthKit exposes sleep category intervals, not source sessions,
+    /// so Apple never offers `sessions`.
+    var appleSupportedChoices: [ExportDetailChoice] { [.summary, .detailed] }
+
+    static func < (lhs: Self, rhs: Self) -> Bool {
+        allCases.firstIndex(of: lhs)! < allCases.firstIndex(of: rhs)!
+    }
+}
+
+/// Per-group detail request. `sessions` is Android-only (Health Connect sleep sessions).
+nonisolated enum ExportDetailChoice: String, Codable, CaseIterable, Sendable {
+    case summary
+    case sessions
+    case detailed
+}
+
 /// Apple-only canonical source-record archive policy.
 nonisolated enum HealthKitSourceArchivePolicy: String, Codable, CaseIterable, Sendable {
     case none
@@ -25,8 +76,154 @@ nonisolated enum HealthKitSourceArchivePolicy: String, Codable, CaseIterable, Se
 /// The durable model deliberately supports archive-only output even though the
 /// primary UI presents Summary, Detailed Time-Series, and Lossless presets.
 nonisolated struct AppleExportDetailPolicy: Codable, Equatable, Sendable {
+    /// Default compatibility detail for every group without an explicit override.
     var compatibilityDetail: ExportCompatibilityDetail
     var healthKitSourceArchive: HealthKitSourceArchivePolicy
+    /// Explicit per-group compatibility detail. Empty reproduces the historical uniform policy
+    /// exactly. Only `ExportDetailGroup.appleSupported` groups with Apple choices are honored.
+    var compatibilityDetailOverrides: [ExportDetailGroup: ExportDetailChoice] = [:]
+    /// Nil preserves the historical policy. These IDs request only native source detail.
+    var nativeDetailMetricIDs: Set<String>? = nil
+
+    init(
+        compatibilityDetail: ExportCompatibilityDetail,
+        healthKitSourceArchive: HealthKitSourceArchivePolicy,
+        compatibilityDetailOverrides: [ExportDetailGroup: ExportDetailChoice] = [:],
+        nativeDetailMetricIDs: Set<String>? = nil
+    ) {
+        self.compatibilityDetail = compatibilityDetail
+        self.healthKitSourceArchive = healthKitSourceArchive
+        self.compatibilityDetailOverrides = Self.supportedOverrides(compatibilityDetailOverrides)
+        self.nativeDetailMetricIDs = nativeDetailMetricIDs
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case compatibilityDetail
+        case healthKitSourceArchive
+        case compatibilityDetailOverrides
+        case nativeDetailMetricIDs
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        compatibilityDetail = try container.decode(ExportCompatibilityDetail.self, forKey: .compatibilityDetail)
+        healthKitSourceArchive = try container.decode(HealthKitSourceArchivePolicy.self, forKey: .healthKitSourceArchive)
+        compatibilityDetailOverrides = try Self.decodeOverrides(
+            container.decodeIfPresent([String: String].self, forKey: .compatibilityDetailOverrides)
+        )
+        nativeDetailMetricIDs = try container.decodeIfPresent(Set<String>.self, forKey: .nativeDetailMetricIDs)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(compatibilityDetail, forKey: .compatibilityDetail)
+        try container.encode(healthKitSourceArchive, forKey: .healthKitSourceArchive)
+        if !compatibilityDetailOverrides.isEmpty {
+            try container.encode(overridesWireValue, forKey: .compatibilityDetailOverrides)
+        }
+        try container.encodeIfPresent(nativeDetailMetricIDs, forKey: .nativeDetailMetricIDs)
+    }
+
+    /// Wire form keyed by group raw value. Unknown or unsupported entries fail decoding so a
+    /// durable job never silently loses requested detail.
+    var overridesWireValue: [String: String] {
+        Dictionary(uniqueKeysWithValues: compatibilityDetailOverrides.map { ($0.key.rawValue, $0.value.rawValue) })
+    }
+
+    static func decodeOverrides(_ raw: [String: String]?) throws -> [ExportDetailGroup: ExportDetailChoice] {
+        guard let raw else { return [:] }
+        var result: [ExportDetailGroup: ExportDetailChoice] = [:]
+        for (key, value) in raw {
+            guard let group = ExportDetailGroup(rawValue: key),
+                  let choice = ExportDetailChoice(rawValue: value),
+                  ExportDetailGroup.appleSupported.contains(group),
+                  group.appleSupportedChoices.contains(choice) else {
+                throw DecodingError.dataCorrupted(.init(
+                    codingPath: [CodingKeys.compatibilityDetailOverrides],
+                    debugDescription: "Unsupported export detail override."
+                ))
+            }
+            result[group] = choice
+        }
+        return result
+    }
+
+    private static func supportedOverrides(
+        _ overrides: [ExportDetailGroup: ExportDetailChoice]
+    ) -> [ExportDetailGroup: ExportDetailChoice] {
+        overrides.filter { ExportDetailGroup.appleSupported.contains($0.key) && $0.key.appleSupportedChoices.contains($0.value) }
+    }
+
+    /// The uniform policy without per-group overrides; presets and legacy bridges use it.
+    var basePolicy: AppleExportDetailPolicy {
+        AppleExportDetailPolicy(
+            compatibilityDetail: compatibilityDetail,
+            healthKitSourceArchive: healthKitSourceArchive,
+            nativeDetailMetricIDs: nativeDetailMetricIDs
+        )
+    }
+
+    var hasDetailOverrides: Bool { !compatibilityDetailOverrides.isEmpty }
+
+    /// Applies a preset's default levels while keeping every explicit per-group choice.
+    func replacingBase(with preset: AppleExportDetailPolicy) -> AppleExportDetailPolicy {
+        AppleExportDetailPolicy(
+            compatibilityDetail: preset.compatibilityDetail,
+            healthKitSourceArchive: preset.healthKitSourceArchive,
+            compatibilityDetailOverrides: compatibilityDetailOverrides,
+            nativeDetailMetricIDs: nativeDetailMetricIDs
+        )
+    }
+
+    /// Sets one group's explicit choice; `nil` returns it to the default.
+    func settingCompatibilityDetail(_ choice: ExportDetailChoice?, for group: ExportDetailGroup) -> AppleExportDetailPolicy {
+        var overrides = compatibilityDetailOverrides
+        overrides[group] = choice
+        return AppleExportDetailPolicy(
+            compatibilityDetail: compatibilityDetail,
+            healthKitSourceArchive: healthKitSourceArchive,
+            compatibilityDetailOverrides: overrides,
+            nativeDetailMetricIDs: nativeDetailMetricIDs
+        )
+    }
+
+    /// Resolved compatibility detail for one group.
+    func includesSelectedTimeSeries(for group: ExportDetailGroup) -> Bool {
+        switch compatibilityDetailOverrides[group] {
+        case .detailed?, .sessions?: return true
+        case .summary?: return false
+        case nil: return compatibilityDetail.includesSelectedTimeSeries
+        }
+    }
+
+    /// True when an explicit `detailed` override on an expansion group or sleep selects the apple-v12
+    /// successor. Uniform presets (Detailed Time-Series, Lossless) never select it, so their
+    /// output stays apple-v8 byte-for-byte. Morning ends keeps apple-v11; see
+    /// `selectsAppleV12(sleepDayAttribution:)`.
+    var selectsAppleV12: Bool {
+        compatibilityDetailOverrides.contains { group, choice in
+            choice == .detailed && ExportDetailGroup.appleV12SelectingGroups.contains(group)
+        }
+    }
+
+    /// apple-v12 is a Night begins successor. Under Morning ends the profile stays apple-v11 and
+    /// expansion detail is neither captured nor written.
+    func selectsAppleV12(sleepDayAttribution: SleepDayAttribution?) -> Bool {
+        selectsAppleV12 && sleepDayAttribution != .morningEnds
+    }
+
+    /// Whether `group` captures and writes apple-v12 `detailSamples`.
+    func includesDetailSamples(for group: ExportDetailGroup, sleepDayAttribution: SleepDayAttribution?) -> Bool {
+        ExportDetailGroup.appleV12ExpansionGroups.contains(group)
+            && selectsAppleV12(sleepDayAttribution: sleepDayAttribution)
+            && includesSelectedTimeSeries(for: group)
+    }
+
+    /// Overrides an apple-v8-only per-group peer cannot decode or render.
+    var requiresAppleV12PeerSupport: Bool {
+        selectsAppleV12
+            || compatibilityDetailOverrides.keys.contains { !ExportDetailGroup.appleV8OverrideGroups.contains($0) }
+    }
 
     static let summary = AppleExportDetailPolicy(
         compatibilityDetail: .summary,
@@ -45,22 +242,27 @@ nonisolated struct AppleExportDetailPolicy: Codable, Equatable, Sendable {
         healthKitSourceArchive: .canonicalV1
     )
 
+    /// True when any group emits compatibility time-series.
     var includesSelectedTimeSeries: Bool {
         compatibilityDetail.includesSelectedTimeSeries
+            || compatibilityDetailOverrides.values.contains { $0 != .summary }
     }
 
     var includesCanonicalArchive: Bool {
-        healthKitSourceArchive.includesCanonicalArchive
+        healthKitSourceArchive.includesCanonicalArchive || !(nativeDetailMetricIDs?.isEmpty ?? true)
     }
 
     var hasAnyDetail: Bool {
         includesSelectedTimeSeries || includesCanonicalArchive
     }
 
-    /// The historical Boolean can represent only Summary and Lossless exactly.
+    /// The historical Boolean can represent only uniform Summary and Lossless exactly.
     var isLegacyRepresentable: Bool {
         self == .summary || self == .lossless
     }
+
+    /// Split detail states older peers may understand, provided they lack no override support.
+    var isSplitRepresentable: Bool { !hasDetailOverrides }
 
     /// Safe downgrade projection. Split states become Summary instead of
     /// unexpectedly enabling a very large archive or claiming dropped detail.
@@ -69,6 +271,14 @@ nonisolated struct AppleExportDetailPolicy: Codable, Equatable, Sendable {
     }
 
     var historyDetailLevelToken: String {
+        let base = basePolicy
+        if hasDetailOverrides {
+            return base.healthKitSourceArchive.includesCanonicalArchive ? "custom_with_archive" : "custom"
+        }
+        return base.uniformHistoryDetailLevelToken
+    }
+
+    private var uniformHistoryDetailLevelToken: String {
         if self == .detailedTimeSeries {
             return "detailed_time_series"
         } else if self == .archiveOnly {
@@ -124,7 +334,21 @@ nonisolated enum AppleExportDetailPreset: String, CaseIterable, Identifiable, Se
         }
     }
 
-    init(policy: AppleExportDetailPolicy) {
+    /// Guidance shown under archive-bearing presets so users exporting long
+    /// ranges choose the lighter preset up front instead of meeting the
+    /// large-export memory warning at confirmation time.
+    var localizedLongRangeNote: String? {
+        switch self {
+        case .summary, .detailedTimeSeries:
+            nil
+        case .losslessHealthRecords, .archiveOnly:
+            String(localized: "Exporting months or years? Detailed Time-Series keeps timestamped samples without the source archive and is much faster and lighter for long ranges.", comment: "Data-detail note recommending Detailed Time-Series for long export ranges")
+        }
+    }
+
+    init(policy fullPolicy: AppleExportDetailPolicy) {
+        // Presets describe the default level; per-group overrides are edited separately.
+        let policy = fullPolicy.basePolicy
         if policy == .summary {
             self = .summary
         } else if policy == .detailedTimeSeries {
@@ -165,17 +389,24 @@ struct ExportSettingsSnapshot: Codable, Equatable {
     var dailyNoteInjection: DailyNoteInjectionSnapshot
     var compatibilityDetail: ExportCompatibilityDetail
     var healthKitSourceArchivePolicy: HealthKitSourceArchivePolicy
+    /// Per-group compatibility detail. Encoded only when non-empty so historical snapshot bytes
+    /// and fingerprints stay unchanged; peers that cannot honor it are rejected before transfer.
+    var compatibilityDetailOverrides: [ExportDetailGroup: ExportDetailChoice] = [:]
 
     var detailPolicy: AppleExportDetailPolicy {
         get {
             AppleExportDetailPolicy(
                 compatibilityDetail: compatibilityDetail,
-                healthKitSourceArchive: healthKitSourceArchivePolicy
+                healthKitSourceArchive: healthKitSourceArchivePolicy,
+                compatibilityDetailOverrides: compatibilityDetailOverrides,
+                nativeDetailMetricIDs: metricSelection.nativeDetailMetricIDs.isEmpty ? nil
+                    : metricSelection.nativeDetailMetricIDs.intersection(metricSelection.enabledMetricIDs)
             )
         }
         set {
             compatibilityDetail = newValue.compatibilityDetail
             healthKitSourceArchivePolicy = newValue.healthKitSourceArchive
+            compatibilityDetailOverrides = newValue.compatibilityDetailOverrides
         }
     }
 
@@ -188,20 +419,28 @@ struct ExportSettingsSnapshot: Codable, Equatable {
 
     /// New v9 range-summary preference. New snapshots encode only this key.
     var generateRangeSummary: Bool
+    /// Decoded operation state, never a new setting or a new wire key. A known v7 pin
+    /// keeps the exact historical calendar keys instead of migrating its pending work.
+    private(set) var historicalCalendarRollupPeriods: [HealthRollupPeriod]? = nil
     var metricSelection: MetricSelectionSnapshot
+
+    var operationRollupPeriods: [HealthRollupPeriod] {
+        guard !dailyNotesOnlyModeEnabled else { return [] }
+        return historicalCalendarRollupPeriods ?? (generateRangeSummary ? [.range] : [])
+    }
 
     // Transitional source compatibility for call sites migrating to the single
     // range-summary preference. New durable snapshots never encode these keys.
     var generateWeeklyRollups: Bool {
-        get { generateRangeSummary }
+        get { historicalCalendarRollupPeriods?.contains(.weekly) ?? generateRangeSummary }
         set { generateRangeSummary = newValue }
     }
     var generateMonthlyRollups: Bool {
-        get { generateRangeSummary }
+        get { historicalCalendarRollupPeriods?.contains(.monthly) ?? generateRangeSummary }
         set { if newValue { generateRangeSummary = true } }
     }
     var generateYearlyRollups: Bool {
-        get { generateRangeSummary }
+        get { historicalCalendarRollupPeriods?.contains(.yearly) ?? generateRangeSummary }
         set { if newValue { generateRangeSummary = true } }
     }
     /// Immutable renderer provenance for newly planned Apple output. Missing means the snapshot
@@ -213,6 +452,14 @@ struct ExportSettingsSnapshot: Codable, Equatable {
     /// Explicit source calendar used for day ownership, roll-ups, filenames, and clock fields.
     /// Missing preserves the legacy behavior of consulting the process's current time zone.
     var calendarTimeZoneIdentifier: String?
+    /// Internal durable capture authority. Missing remains missing on decode;
+    /// a pending job cannot acquire today's mutable preference during recovery.
+    var sleepCaptureContext: AppleSleepCaptureContext? = nil
+    /// Private local job source selection. Never included in wire settings or exports.
+    var externalProviderCaptureAuthority: ExternalProviderCaptureAuthority? = nil
+    /// Journal stores opt in explicitly. Wire packets, canonical request
+    /// fingerprints and portable configuration retain their historical bytes.
+    static let durableSleepContextEncoding = CodingUserInfoKey(rawValue: "healthmd.durable_sleep_context")!
 
     enum CodingKeys: String, CodingKey {
         case exportFormats
@@ -231,6 +478,7 @@ struct ExportSettingsSnapshot: Codable, Equatable {
         case dailyNoteInjection
         case compatibilityDetail
         case healthKitSourceArchivePolicy
+        case compatibilityDetailOverrides
         case includeGranularData
         case generateRangeSummary
         case generateWeeklyRollups
@@ -240,6 +488,8 @@ struct ExportSettingsSnapshot: Codable, Equatable {
         case appleExportEnginePin
         case appleExportEngineAuthorityIsFrozen
         case calendarTimeZoneIdentifier
+        case sleepCaptureContext
+        case externalProviderCaptureAuthority
     }
 
     private enum LegacyCodingKeys: String, CodingKey {
@@ -341,6 +591,9 @@ struct ExportSettingsSnapshot: Codable, Equatable {
             HealthKitSourceArchivePolicy.self,
             forKey: .healthKitSourceArchivePolicy
         ) ?? legacyPolicy.healthKitSourceArchive
+        compatibilityDetailOverrides = try AppleExportDetailPolicy.decodeOverrides(
+            container.decodeIfPresent([String: String].self, forKey: .compatibilityDetailOverrides)
+        )
         if let rangeSummary = try container.decodeIfPresent(Bool.self, forKey: .generateRangeSummary) {
             generateRangeSummary = rangeSummary
         } else {
@@ -356,6 +609,20 @@ struct ExportSettingsSnapshot: Codable, Equatable {
             AppleExportEnginePin.self,
             forKey: .appleExportEnginePin
         )
+        if appleExportEnginePin?.profile == "apple_health_data_v7",
+           appleExportEnginePin?.registrySHA256 == AppleExportEnginePin.historicalRegistrySHA256,
+           !container.contains(.generateRangeSummary),
+           [CodingKeys.generateWeeklyRollups, .generateMonthlyRollups, .generateYearlyRollups]
+            .contains(where: container.contains) {
+            historicalCalendarRollupPeriods = try [
+                (CodingKeys.generateWeeklyRollups, HealthRollupPeriod.weekly),
+                (.generateMonthlyRollups, .monthly),
+                (.generateYearlyRollups, .yearly)
+            ].compactMap { key, period in
+                try container.decodeIfPresent(Bool.self, forKey: key) == true ? period : nil
+            }
+            generateRangeSummary = false
+        }
         // Snapshots from builds before this marker are already durable work. Missing pin always
         // meant legacy, so decode the absent marker as frozen rather than consulting current flags.
         appleExportEngineAuthorityIsFrozen = try container.decodeIfPresent(
@@ -366,6 +633,11 @@ struct ExportSettingsSnapshot: Codable, Equatable {
             String.self,
             forKey: .calendarTimeZoneIdentifier
         )
+        sleepCaptureContext = try container.decodeIfPresent(AppleSleepCaptureContext.self, forKey: .sleepCaptureContext)
+        if decoder.userInfo[Self.durableSleepContextEncoding] as? Bool == true {
+            externalProviderCaptureAuthority = try container.decodeIfPresent(ExternalProviderCaptureAuthority.self,
+                forKey: .externalProviderCaptureAuthority)
+        }
     }
 
     func encode(to encoder: Encoder) throws {
@@ -390,6 +662,9 @@ struct ExportSettingsSnapshot: Codable, Equatable {
         try container.encode(dailyNoteInjection, forKey: .dailyNoteInjection)
         try container.encode(compatibilityDetail, forKey: .compatibilityDetail)
         try container.encode(healthKitSourceArchivePolicy, forKey: .healthKitSourceArchivePolicy)
+        if !compatibilityDetailOverrides.isEmpty {
+            try container.encode(detailPolicy.overridesWireValue, forKey: .compatibilityDetailOverrides)
+        }
         // Keep a safe bridge for old decoders. Connected peers reject split
         // policies before transfer, so this field is never used to approximate
         // a split state on an old Mac.
@@ -397,7 +672,13 @@ struct ExportSettingsSnapshot: Codable, Equatable {
             detailPolicy.legacyIncludeGranularData,
             forKey: .includeGranularData
         )
-        try container.encode(generateRangeSummary, forKey: .generateRangeSummary)
+        if let periods = historicalCalendarRollupPeriods {
+            try container.encode(periods.contains(.weekly), forKey: .generateWeeklyRollups)
+            try container.encode(periods.contains(.monthly), forKey: .generateMonthlyRollups)
+            try container.encode(periods.contains(.yearly), forKey: .generateYearlyRollups)
+        } else {
+            try container.encode(generateRangeSummary, forKey: .generateRangeSummary)
+        }
         try container.encode(metricSelection, forKey: .metricSelection)
         try container.encodeIfPresent(appleExportEnginePin, forKey: .appleExportEnginePin)
         try container.encode(
@@ -408,6 +689,10 @@ struct ExportSettingsSnapshot: Codable, Equatable {
             calendarTimeZoneIdentifier,
             forKey: .calendarTimeZoneIdentifier
         )
+        if encoder.userInfo[Self.durableSleepContextEncoding] as? Bool == true {
+            try container.encodeIfPresent(sleepCaptureContext, forKey: .sleepCaptureContext)
+            try container.encodeIfPresent(externalProviderCaptureAuthority, forKey: .externalProviderCaptureAuthority)
+        }
     }
 
     static func from(
@@ -417,7 +702,7 @@ struct ExportSettingsSnapshot: Codable, Equatable {
         appleExportEngineAuthorityIsFrozen: Bool = true,
         calendarTimeZoneIdentifier: String? = nil
     ) -> ExportSettingsSnapshot {
-        ExportSettingsSnapshot(
+        var snapshot = ExportSettingsSnapshot(
             exportFormats: settings.exportFormats,
             includeMetadata: settings.includeMetadata,
             groupByCategory: settings.groupByCategory,
@@ -443,10 +728,51 @@ struct ExportSettingsSnapshot: Codable, Equatable {
             calendarTimeZoneIdentifier: calendarTimeZoneIdentifier
                 ?? settings.exportTimeZoneOverride?.identifier
         )
+        snapshot.compatibilityDetailOverrides = settings.detailPolicy.compatibilityDetailOverrides
+        snapshot.sleepCaptureContext = settings.executionSleepCaptureContext
+            ?? (settings.executionSleepCaptureContextIsFrozen ? nil : AppleSleepCaptureContext.pinned.wrappedValue)
+        snapshot.externalProviderCaptureAuthority = settings.executionExternalProviderCaptureAuthority
+        return snapshot
+    }
+
+    /// Check saved capture and renderer authority as one value without opening a
+    /// production gate or borrowing today's settings. Capture-only pending requests
+    /// may provide their own separately persisted context.
+    func validatedSleepCaptureContext(captureContext: AppleSleepCaptureContext? = nil) throws -> AppleSleepCaptureContext {
+        guard let context = captureContext ?? sleepCaptureContext else {
+            throw AppleSleepCaptureContext.AvailabilityError.missingDurableAttribution
+        }
+        if let captureContext, let sleepCaptureContext, captureContext != sleepCaptureContext {
+            throw AppleSleepCaptureContext.AvailabilityError.incompatibleDurableAuthority
+        }
+        try context.validatePersistedOperationAuthority(enginePin: appleExportEnginePin,
+            calendarTimeZoneIdentifier: calendarTimeZoneIdentifier,
+            engineAuthorityIsFrozen: appleExportEngineAuthorityIsFrozen)
+        return context
+    }
+
+    func recoveredSleepCaptureContext(captureContext: AppleSleepCaptureContext? = nil) throws -> AppleSleepCaptureContext {
+        // Preserve the production-gated error for capture-only historical draft jobs.
+        if (captureContext ?? sleepCaptureContext)?.sleepDayAttribution == .morningEnds, appleExportEnginePin == nil {
+            _ = try AppleSleepCaptureContext.recovered(captureContext ?? sleepCaptureContext)
+        }
+        let context = try validatedSleepCaptureContext(captureContext: captureContext)
+        try context.requireShippedProfile()
+        return context
     }
 
     /// Freezes the nondeterministic Apple operation inputs only while planning new work. Persisted
     /// snapshots must be copied directly and must never call this factory during resume.
+    /// Preview daily files separately from the operation's range outputs, retaining
+    /// its captured profile, registry and clock. The original snapshot remains intact.
+    func forDailyArtifactPreview() -> Self {
+        guard sleepCaptureContext?.sleepDayAttribution == .morningEnds else { return self }
+        var daily = self
+        daily.generateRangeSummary = false
+        daily.historicalCalendarRollupPeriods = nil
+        return daily
+    }
+
     static func forNewAppleOperation(
         _ settings: AdvancedExportSettings,
         healthSubfolder: String? = nil,
@@ -456,7 +782,15 @@ struct ExportSettingsSnapshot: Codable, Equatable {
         policyResolver: AppleExportEnginePolicyResolver = AppleExportEnginePolicyResolver(),
         coreExecutor: any AppleLooseDailyCoreExecuting = SystemAppleLooseDailyCoreExecutor()
     ) async -> ExportSettingsSnapshot {
-        let resolvedTimeZone = calendarTimeZone ?? settings.exportTimeZoneOverride ?? .current
+        if settings.executionSleepCaptureContextIsFrozen, settings.executionSleepCaptureContext == nil {
+            // A frozen missing context cannot borrow a parent operation's clock,
+            // attribution or new renderer authority. Preserve the stored settings.
+            return from(settings, healthSubfolder: healthSubfolder,
+                appleExportEngineAuthorityIsFrozen: true)
+        }
+        let resolvedTimeZone = settings.executionSleepCaptureContext?.timeZone
+            ?? AppleSleepCaptureContext.pinned.wrappedValue?.timeZone
+            ?? calendarTimeZone ?? settings.exportTimeZoneOverride ?? .current
         let identifier = resolvedTimeZone.identifier
         var snapshot = from(
             settings,
@@ -465,9 +799,35 @@ struct ExportSettingsSnapshot: Codable, Equatable {
             calendarTimeZoneIdentifier: identifier
         )
 
+        if !settings.executionExternalProviderCaptureAuthorityIsFrozen, snapshot.appleExportEnginePin == nil {
+            snapshot.metricSelection.enabledWHOOPResources.formIntersection(WHOOPExportResourceSelection.stored())
+        }
+        if snapshot.sleepCaptureContext == nil, !settings.executionSleepCaptureContextIsFrozen {
+            snapshot.sleepCaptureContext = AppleSleepCaptureContext.resolve(
+                timeZone: resolvedTimeZone, attribution: HealthKitManager.shared.sleepDayAttribution
+            )
+        }
+
         // This factory is only for new work, but preserve an injected execution pin defensively so
         // an accidental call during resume can never replace persisted authority with today's flag.
         if snapshot.appleExportEnginePin != nil {
+            return snapshot
+        }
+        if snapshot.sleepCaptureContext?.sleepDayAttribution == .morningEnds {
+            // Wake-date semantics have one renderer authority: explicit Apple-v11
+            // Rust. Apple-v8 rollout flags cannot select or retag this profile.
+            // Durable frozen nil authority and old draft markers retain their identity.
+            guard !(settings.executionAppleExportEngineAuthorityIsFrozen
+                        && settings.executionSleepCaptureContextIsFrozen),
+                  !hasNativeOnlyCompanionAction,
+                  (surface == .apiEndpoint ? APIEndpointExportRunner.supportsNewEnginePin(settingsSnapshot: snapshot)
+                    : AppleLooseDailyExportPlanner.supportsNewWakeDateSettings(
+                        settingsSnapshot: snapshot, surface: surface)) else { return snapshot }
+            snapshot.appleExportEnginePin = await policyResolver.pinForNewWakeDateOperation(
+                calendarTimeZoneIdentifier: identifier,
+                expectedRegistryVersion: surface != .apiEndpoint && snapshot.generateRangeSummary ? AppleExportEnginePin.wakeDateRangeRegistryVersion
+                    : AppleExportEnginePin.wakeDateDailyRegistryVersion,
+                coreExecutor: coreExecutor)
             return snapshot
         }
         guard !hasNativeOnlyCompanionAction,
@@ -504,6 +864,9 @@ struct ExportSettingsSnapshot: Codable, Equatable {
         switch surface {
         case .localVaultWithoutSideEffects,
              .localVaultRangeWithoutSideEffects,
+             .localVaultRangeWithProviderSidecars,
+             .connectedReceivedRangeWithProviderSidecars,
+             .directGeneratedFilesWithProviderSidecars,
              .directGeneratedFilesWithoutSideEffects,
              .connectedReceivedFilesWithoutSideEffects,
              .connectedReceivedRangeWithoutSideEffects,
@@ -523,14 +886,22 @@ struct ExportSettingsSnapshot: Codable, Equatable {
     /// UserDefaults so applying a received iOS snapshot never mutates the Mac's
     /// persisted export preferences.
     func makeAdvancedExportSettings(
-        userDefaults: UserDefaults = ExportSettingsSnapshot.makeTemporaryUserDefaults()
+        userDefaults: UserDefaults = ExportSettingsSnapshot.makeTemporaryUserDefaults(),
+        forNewConfiguration: Bool = false
     ) -> AdvancedExportSettings {
         let settings = AdvancedExportSettings(snapshot: self, userDefaults: userDefaults)
-        applyCalendarTimeZone(to: settings)
+        if forNewConfiguration {
+            settings.executionSleepCaptureContext = nil
+            settings.executionSleepCaptureContextIsFrozen = false
+            settings.executionExternalProviderCaptureAuthority = nil
+            settings.executionExternalProviderCaptureAuthorityIsFrozen = false
+        }
+        applyCalendarTimeZone(to: settings, includeSleepContext: !forNewConfiguration)
         return settings
     }
 
     func apply(to settings: AdvancedExportSettings) {
+        settings.historicalCalendarRollupPeriods = historicalCalendarRollupPeriods
         settings.exportFormats = exportFormats
         settings.includeMetadata = includeMetadata
         settings.groupByCategory = groupByCategory
@@ -552,7 +923,11 @@ struct ExportSettingsSnapshot: Codable, Equatable {
         applyCalendarTimeZone(to: settings)
     }
 
-    private func applyCalendarTimeZone(to settings: AdvancedExportSettings) {
+    private func applyCalendarTimeZone(to settings: AdvancedExportSettings, includeSleepContext: Bool = false) {
+        if includeSleepContext, let sleepCaptureContext {
+            settings.exportTimeZoneOverride = sleepCaptureContext.timeZone
+            return
+        }
         if let calendarTimeZoneIdentifier,
            AppleExportEnginePin.isIANAIdentifier(calendarTimeZoneIdentifier),
            let timeZone = TimeZone(identifier: calendarTimeZoneIdentifier) {
@@ -632,6 +1007,9 @@ nonisolated enum ApplePureRustAuthorityAdmission {
         switch surface {
         case .localVaultWithoutSideEffects,
              .localVaultRangeWithoutSideEffects,
+             .localVaultRangeWithProviderSidecars,
+             .connectedReceivedRangeWithProviderSidecars,
+             .directGeneratedFilesWithProviderSidecars,
              .directGeneratedFilesWithoutSideEffects,
              .connectedReceivedFilesWithoutSideEffects,
              .connectedReceivedRangeWithoutSideEffects,
@@ -656,6 +1034,9 @@ nonisolated enum ApplePureRustAuthorityAdmission {
              .connectedReceivedRangeWithoutSideEffects:
             return true
         case .legacyOnly,
+             .localVaultRangeWithProviderSidecars,
+             .connectedReceivedRangeWithProviderSidecars,
+             .directGeneratedFilesWithProviderSidecars,
              .localVaultWithoutSideEffects,
              .connectedReceivedFilesWithoutSideEffects,
              .apiEndpoint,
@@ -759,7 +1140,7 @@ struct IndividualTrackingSnapshot: Codable, Equatable {
 
 // MARK: - Daily Note Injection Snapshot
 
-struct DailyNoteInjectionSnapshot: Codable, Equatable {
+nonisolated struct DailyNoteInjectionSnapshot: Codable, Equatable, Sendable {
     var enabled: Bool
     var folderPath: String
     var filenamePattern: String
@@ -797,7 +1178,7 @@ struct DailyNoteInjectionSnapshot: Codable, Equatable {
         dailyNotesOnly = try container.decodeIfPresent(Bool.self, forKey: .dailyNotesOnly) ?? false
     }
 
-    static func from(_ settings: DailyNoteInjectionSettings) -> DailyNoteInjectionSnapshot {
+    @MainActor static func from(_ settings: DailyNoteInjectionSettings) -> DailyNoteInjectionSnapshot {
         DailyNoteInjectionSnapshot(
             enabled: settings.enabled,
             folderPath: settings.folderPath,
@@ -808,7 +1189,7 @@ struct DailyNoteInjectionSnapshot: Codable, Equatable {
         )
     }
 
-    func apply(to settings: DailyNoteInjectionSettings) {
+    @MainActor func apply(to settings: DailyNoteInjectionSettings) {
         settings.enabled = enabled
         settings.folderPath = folderPath
         settings.filenamePattern = filenamePattern
@@ -823,42 +1204,35 @@ struct DailyNoteInjectionSnapshot: Codable, Equatable {
 struct MetricSelectionSnapshot: Codable, Equatable {
     var enabledMetricIDs: Set<String>
     var enabledCategoryIDs: Set<String>
+    var nativeDetailMetricIDs: Set<String> = []
     var enabledWHOOPResources: Set<WHOOPResourceName> = Set(WHOOPResourceName.allCases)
 
-    enum CodingKeys: String, CodingKey {
-        case enabledMetricIDs, enabledCategoryIDs, enabledWHOOPResources
-    }
+    enum CodingKeys: String, CodingKey { case enabledMetricIDs, enabledCategoryIDs, nativeDetailMetricIDs, enabledWHOOPResources }
 
-    init(
-        enabledMetricIDs: Set<String>,
-        enabledCategoryIDs: Set<String>,
-        enabledWHOOPResources: Set<WHOOPResourceName> = Set(WHOOPResourceName.allCases)
-    ) {
+    init(enabledMetricIDs: Set<String>, enabledCategoryIDs: Set<String>, nativeDetailMetricIDs: Set<String> = [], enabledWHOOPResources: Set<WHOOPResourceName> = Set(WHOOPResourceName.allCases)) {
         self.enabledMetricIDs = enabledMetricIDs
         self.enabledCategoryIDs = enabledCategoryIDs
+        self.nativeDetailMetricIDs = nativeDetailMetricIDs
         self.enabledWHOOPResources = enabledWHOOPResources
     }
 
     init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        enabledMetricIDs = try container.decode(Set<String>.self, forKey: .enabledMetricIDs)
-        enabledCategoryIDs = try container.decode(Set<String>.self, forKey: .enabledCategoryIDs)
-        enabledWHOOPResources = try container.decodeIfPresent(
-            Set<WHOOPResourceName>.self, forKey: .enabledWHOOPResources
-        ) ?? Set(WHOOPResourceName.allCases)
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        enabledMetricIDs = try values.decode(Set<String>.self, forKey: .enabledMetricIDs)
+        enabledCategoryIDs = try values.decode(Set<String>.self, forKey: .enabledCategoryIDs)
+        nativeDetailMetricIDs = try values.decodeIfPresent(Set<String>.self, forKey: .nativeDetailMetricIDs) ?? []
+        enabledWHOOPResources = try values.decodeIfPresent(Set<WHOOPResourceName>.self, forKey: .enabledWHOOPResources) ?? Set(WHOOPResourceName.allCases)
     }
 
     func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(enabledMetricIDs, forKey: .enabledMetricIDs)
-        try container.encode(enabledCategoryIDs, forKey: .enabledCategoryIDs)
-        // Preserve legacy/default snapshot bytes and consumer fixtures. An explicit
-        // empty set is different from an omitted key (the legacy all-on default).
+        var values = encoder.container(keyedBy: CodingKeys.self)
+        try values.encode(enabledMetricIDs, forKey: .enabledMetricIDs)
+        try values.encode(enabledCategoryIDs, forKey: .enabledCategoryIDs)
         if enabledWHOOPResources != Set(WHOOPResourceName.allCases) {
-            try container.encode(
-                enabledWHOOPResources.sorted { $0.rawValue < $1.rawValue },
-                forKey: .enabledWHOOPResources
-            )
+            try values.encode(enabledWHOOPResources.sorted { $0.rawValue < $1.rawValue }, forKey: .enabledWHOOPResources)
+        }
+        if !nativeDetailMetricIDs.isEmpty {
+            try values.encode(nativeDetailMetricIDs, forKey: .nativeDetailMetricIDs)
         }
     }
 
@@ -866,6 +1240,7 @@ struct MetricSelectionSnapshot: Codable, Equatable {
         MetricSelectionSnapshot(
             enabledMetricIDs: selection.enabledMetrics,
             enabledCategoryIDs: selection.enabledCategories,
+            nativeDetailMetricIDs: selection.nativeDetailMetricIDs,
             enabledWHOOPResources: selection.enabledWHOOPResources
         )
     }
@@ -873,6 +1248,7 @@ struct MetricSelectionSnapshot: Codable, Equatable {
     func apply(to selection: MetricSelectionState) {
         selection.enabledMetrics = enabledMetricIDs
         selection.enabledCategories = enabledCategoryIDs
+        selection.nativeDetailMetricIDs = nativeDetailMetricIDs
         selection.enabledWHOOPResources = enabledWHOOPResources
     }
 }

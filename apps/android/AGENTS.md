@@ -1,5 +1,10 @@
 # Agents
 
+## Task navigation
+
+- Provider/OAuth/raw changes: start with the [cloud-provider source map](docs/features/cloud-providers.md), [support matrix](docs/health-provider-support.md), and [raw-provider ledger](docs/export-contract/cloud-raw-provider-ledger.md).
+- Provider verification: use the [beta-test checklist](docs/provider-beta-test-checklist.md) and the mapped Play tests; validate F-Droid separately when affected.
+
 ## Cross-platform feature and export policy
 
 Apple and Android should expose the same capability, terminology, settings semantics, and public data meaning whenever Health Connect and HealthKit permit it. Before changing a mobile feature, health metric, provider integration, exporter, API/automation behavior, or public terminology, read `../../docs/architecture/cross-platform-unification-policy.md` and inspect the Apple implementation and contract.
@@ -14,11 +19,11 @@ Apple and Android should expose the same capability, terminology, settings seman
 
 ## Design System — Required
 
-`DESIGN.md` and `DESIGN.dark.md` are the governing visual specifications for this app. They preserve Vercel’s Geist light and dark systems with the documented Health.md brand accent layer.
+`DESIGN.md` and `DESIGN.dark.md` are the governing visual specifications for this app. They define the Health.md Material 3 light and dark systems: a fixed brand-seeded tonal palette, tonal surfaces, and the Archive / Automations / Settings navigation with a global Export now action.
 
-- Use named Compose tokens from `presentation/theme`; do not add ad hoc colors, spacing, type sizes, radii, shadows, or motion values.
+- Use named Compose tokens from `presentation/theme`; do not add ad hoc colors, spacing, type sizes, radii, shadows, or motion values. The `Geist*` Kotlin identifiers are legacy names for these tokens.
 - Support both documented themes and follow the system appearance. Do not use Material dynamic color.
-- Use bundled Geist Sans for UI/copy and Geist Mono for code, paths, dates, and tabular data.
+- Use the platform sans-serif (Roboto) for UI/copy and bundled Geist Mono for code, paths, dates, and tabular data.
 - Update the governing documents first before intentionally deviating from a token.
 
 ## Verification
@@ -33,3 +38,11 @@ For explicitly requested physical-device deployment or QA, target the Pixel 7 de
 - **ADB path:** `~/Library/Android/sdk/platform-tools/adb`
 
 Use `./gradlew :app:installPlayDebug` and pass the serial to install the default Google Play channel on the physical device. Use `:app:assembleFdroidDebug` only when explicitly validating the F-Droid channel.
+
+## Agent verification
+
+Use the root [test selection guide](../../docs/testing-strategy.md) for focused
+iteration checks and native handoff. Route native integration compilation through
+root `make verify-native` so concurrent worktrees share one build queue. Inspect
+`make plan-native` before relying on automatic platform selection. A passing build
+is compilation evidence; runtime/device QA follows the root opt-in policy.

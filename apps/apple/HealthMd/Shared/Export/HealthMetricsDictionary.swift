@@ -17,6 +17,22 @@ nonisolated enum HealthMdExportSchema {
     static let dataDictionaryFilename = "_healthmd_data_dictionary.json"
 }
 
+/// Apple-only Night begins successor of apple-v8 that adds per-category `detailSamples`.
+/// Selected only by an explicit per-category `detailed` override (see
+/// `AppleExportDetailPolicy.selectsAppleV12`). Native-writer-only: daily notes, scoped notes,
+/// rollups and the data dictionary keep `HealthMdExportSchema.version`.
+nonisolated enum AppleDetailExpansionSchema {
+    static let version = 12
+    static let profile = "apple-v12"
+
+    /// Strict daily-record identity check shared by connected/API/CLI receivers: apple-v8
+    /// (no profile) or apple-v12. Every other version, including apple-v11, is rejected here.
+    static func isAcceptedNightBeginsDailyIdentity(schemaVersion: Int?, schemaProfile: String?) -> Bool {
+        if schemaVersion == HealthMdExportSchema.version { return schemaProfile == nil }
+        return schemaVersion == Self.version && schemaProfile == Self.profile
+    }
+}
+
 // MARK: - Shared Metric Export Mapping
 
 /// Canonical mapping from HealthMetrics metric IDs to exported frontmatter keys.
@@ -798,6 +814,12 @@ struct ExportMindfulnessDerivation {
 }
 
 enum ExportFrontmatterMetricBuilder {
+    private static func moodPercentage(from valence: Double) -> Int? {
+        // Preserve truncation for valid values without trapping on malformed
+        // source data. Downstream validation still receives the original valence.
+        Int(exactly: (((valence + 1.0) / 2.0) * 100).rounded(.towardZero))
+    }
+
     static func deriveMindfulness(from mindfulness: MindfulnessData) -> ExportMindfulnessDerivation {
         // Every metric is a view over the unchanged source population. In
         // particular, average valence must not change when the umbrella, daily,
@@ -814,7 +836,7 @@ enum ExportFrontmatterMetricBuilder {
             averageValence = nil
         }
 
-        let averageValencePercent = averageValence.map { Int((($0 + 1.0) / 2.0) * 100) }
+        let averageValencePercent = averageValence.flatMap { moodPercentage(from: $0) }
 
         let averageDailyMoodValence: Double?
         if !dailyMoods.isEmpty {
@@ -1298,8 +1320,8 @@ enum ExportFrontmatterMetricBuilder {
         }
         if !derivedMindfulness.dailyMoods.isEmpty {
             m["daily_mood_count"] = "\(derivedMindfulness.dailyMoods.count)"
-            if let avgDaily = derivedMindfulness.averageDailyMoodValence {
-                let dailyPct = Int(((avgDaily + 1.0) / 2.0) * 100)
+            if let avgDaily = derivedMindfulness.averageDailyMoodValence,
+               let dailyPct = moodPercentage(from: avgDaily) {
                 m["daily_mood_percent"] = "\(dailyPct)"
             }
         }

@@ -210,6 +210,32 @@ final class SyncPayloadTests: XCTestCase {
         XCTAssertEqual(decoded.healthRecords.first?.timeContext.calendarTimeZoneIdentifier, "America/Los_Angeles")
     }
 
+    func testExportTimeContext_sleepDayAttributionRoundTripAndLegacyDecode() throws {
+        // Default captures omit the marker entirely, keeping legacy record bytes.
+        let legacy = ExportTimeContext(calendarTimeZoneIdentifier: "America/Los_Angeles")
+        XCTAssertNil(legacy.sleepDayAttribution)
+        let legacyData = try JSONEncoder().encode(legacy)
+        let legacyObject = try XCTUnwrap(JSONSerialization.jsonObject(with: legacyData) as? [String: Any])
+        XCTAssertFalse(legacyObject.keys.contains("sleepDayAttribution"))
+
+        let morningEnds = ExportTimeContext(
+            calendarTimeZoneIdentifier: "America/Los_Angeles",
+            sleepDayAttribution: .morningEnds
+        )
+        let data = try JSONEncoder().encode(morningEnds)
+        let decoded = try JSONDecoder().decode(ExportTimeContext.self, from: data)
+        XCTAssertEqual(decoded.sleepDayAttribution, .morningEnds)
+        XCTAssertEqual(decoded.calendarTimeZoneIdentifier, "America/Los_Angeles")
+
+        // Pre-setting payloads decode as the shipped night-begins default.
+        let legacyJSON = """
+        {"calendarTimeZoneIdentifier":"Europe/Berlin"}
+        """
+        let decodedLegacy = try JSONDecoder().decode(ExportTimeContext.self, from: Data(legacyJSON.utf8))
+        XCTAssertNil(decodedLegacy.sleepDayAttribution)
+        XCTAssertEqual(decodedLegacy.calendarTimeZone, TimeZone(identifier: "Europe/Berlin"))
+    }
+
     func testHealthData_decodesLegacyRecordWithoutTimeContext() throws {
         let encoded = try JSONEncoder().encode(HealthData(date: Date()))
         var object = try XCTUnwrap(JSONSerialization.jsonObject(with: encoded) as? [String: Any])

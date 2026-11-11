@@ -1,27 +1,8 @@
 name = "health-md-pricing-analytics"
 main = "src/index.ts"
-compatibility_date = "2026-05-16"
+compatibility_date = "2026-05-30"
 
-# Create once with:
-#   wrangler d1 create health-md-pricing-analytics
-# D1 database created in Cloudflare account e4265f322e6380ee832b83ad45e3e8c0.
-[[d1_databases]]
-binding = "DB"
-database_name = "health-md-pricing-analytics"
-database_id = "702070de-89d1-4751-b3a3-0e5c7c8a6681"
-
-[triggers]
-# Daily retention cleanup. Events are deleted after 13 months.
-crons = ["17 3 * * *"]
-
-[vars]
-# D1 rows deliberately omit IP addresses, user agents, request URLs/headers,
-# credentials, health values, metric names/dates, vault/file paths, peer names,
-# user text, and exported content. Cloudflare still processes ordinary connection
-# information under its own terms; verify Worker Logs/Logpush separately.
-MAX_BATCH_SIZE = "50"
-
-# Optional ingest token. Currently unset in production so the mobile app does
-# not need to embed a shared token. If configured later:
-#   wrangler secret put INGEST_TOKEN
-# If unset, requests are accepted without Authorization after schema validation.
+# UNPUBLISHED: retirement responder only; no D1/KV bindings or cron triggers.
+# Existing production storage is NOT deleted by this configuration.
+[observability]
+enabled = false

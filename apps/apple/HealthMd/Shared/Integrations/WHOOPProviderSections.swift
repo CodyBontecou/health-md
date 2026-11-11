@@ -531,6 +531,21 @@ private nonisolated enum WHOOPProviderNormalizer {
             planned.insert(resource)
             builds[resource]?.payloads.append(payload)
         }
+        // Only deselected resources (or a body-only selection on a past day): nothing was
+        // requested, which the contract records as `not_requested` with no typed values.
+        if planned.isEmpty {
+            return WHOOPDailyProviderSection(
+                captureStatus: .notRequested,
+                fetchedAt: nil,
+                resources: [],
+                cycles: [],
+                recoveries: [],
+                sleep: [],
+                workouts: [],
+                body: nil,
+                warnings: []
+            )
+        }
 
         var warnings: [WHOOPWarning] = nativeWarnings.isEmpty ? [] : [WHOOPWarning(
             code: "provider_capture_failed",

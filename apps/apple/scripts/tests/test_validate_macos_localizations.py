@@ -49,14 +49,14 @@ class SourceScanningTests(unittest.TestCase):
 
 class FeedbackFallbackCoverageTests(unittest.TestCase):
     keys = [
-        "Copy Report",
+        "Copy report",
         "Edit the report, then copy it before closing. Nothing is sent automatically. Avoid including private health data.",
         "Feedback Could Not Be Sent",
-        "Feedback report",
         "Health.md could not open the GitHub issue template. No issue was submitted. You can write and copy a report here to submit later or from another device.",
         "Health.md could not open your email app. You can write and copy a report here to send later or from another device.",
         "Mail could not queue your feedback. No delivery was confirmed. You can write and copy a report here. Text entered in Mail is not available to Health.md; re-enter it below if needed.",
         "Report copied",
+        "Report text",
     ]
 
     def test_shared_feedback_reporter_is_scanned_by_the_governing_gate(self) -> None:

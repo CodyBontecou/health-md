@@ -1,0 +1,1227 @@
+{
+  "AFG": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJBRkciLCJwIjoiMTAwNjIifQ",
+    "price": "4.99",
+    "proceeds": "4.24",
+    "currency": "USD",
+    "manual": true
+  },
+  "AGO": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJBR08iLCJwIjoiMTAwODgifQ",
+    "price": "6.99",
+    "proceeds": "5.94",
+    "currency": "USD",
+    "manual": true
+  },
+  "ALB": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJBTEIiLCJwIjoiMTAxMzcifQ",
+    "price": "11.99",
+    "proceeds": "8.49",
+    "currency": "USD",
+    "manual": true
+  },
+  "ARG": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJBUkciLCJwIjoiMTAxNDIifQ",
+    "price": "12.99",
+    "proceeds": "11.04",
+    "currency": "USD",
+    "manual": true
+  },
+  "ARM": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJBUk0iLCJwIjoiMTAxMzcifQ",
+    "price": "11.99",
+    "proceeds": "8.49",
+    "currency": "USD",
+    "manual": true
+  },
+  "ATG": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJBVEciLCJwIjoiMTAxNDIifQ",
+    "price": "12.99",
+    "proceeds": "11.04",
+    "currency": "USD",
+    "manual": true
+  },
+  "AUT": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJBVVQiLCJwIjoiMTAxNzcifQ",
+    "price": "19.99",
+    "proceeds": "14.16",
+    "currency": "EUR",
+    "manual": true
+  },
+  "AZE": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJBWkUiLCJwIjoiMTAxMzcifQ",
+    "price": "11.99",
+    "proceeds": "8.64",
+    "currency": "USD",
+    "manual": true
+  },
+  "BEL": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJCRUwiLCJwIjoiMTAxNzcifQ",
+    "price": "19.99",
+    "proceeds": "14.04",
+    "currency": "EUR",
+    "manual": true
+  },
+  "BEN": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJCRU4iLCJwIjoiMTAwNzUifQ",
+    "price": "5.99",
+    "proceeds": "4.31",
+    "currency": "USD",
+    "manual": true
+  },
+  "BFA": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJCRkEiLCJwIjoiMTAwNjIifQ",
+    "price": "4.99",
+    "proceeds": "4.24",
+    "currency": "USD",
+    "manual": true
+  },
+  "BGR": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJCR1IiLCJwIjoiMTAxNTIifQ",
+    "price": "14.99",
+    "proceeds": "10.62",
+    "currency": "EUR",
+    "manual": true
+  },
+  "BHS": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJCSFMiLCJwIjoiMTAxNTIifQ",
+    "price": "14.99",
+    "proceeds": "11.58",
+    "currency": "USD",
+    "manual": true
+  },
+  "BIH": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJCSUgiLCJwIjoiMTAxMjcifQ",
+    "price": "9.99",
+    "proceeds": "7.26",
+    "currency": "EUR",
+    "manual": true
+  },
+  "BLR": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJCTFIiLCJwIjoiMTAxNTIifQ",
+    "price": "14.99",
+    "proceeds": "10.62",
+    "currency": "USD",
+    "manual": true
+  },
+  "BLZ": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJCTFoiLCJwIjoiMTAxMDEifQ",
+    "price": "7.99",
+    "proceeds": "6.79",
+    "currency": "USD",
+    "manual": true
+  },
+  "BOL": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJCT0wiLCJwIjoiMTAwODgifQ",
+    "price": "6.99",
+    "proceeds": "5.94",
+    "currency": "USD",
+    "manual": true
+  },
+  "BRA": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJCUkEiLCJwIjoiMTAyMTIifQ",
+    "price": "59.9",
+    "proceeds": "44.49",
+    "currency": "BRL",
+    "manual": true
+  },
+  "BRB": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJCUkIiLCJwIjoiMTAxMzcifQ",
+    "price": "11.99",
+    "proceeds": "8.67",
+    "currency": "USD",
+    "manual": true
+  },
+  "BTN": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJCVE4iLCJwIjoiMTAxMjcifQ",
+    "price": "9.99",
+    "proceeds": "8.09",
+    "currency": "USD",
+    "manual": true
+  },
+  "BWA": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJCV0EiLCJwIjoiMTAxMjcifQ",
+    "price": "9.99",
+    "proceeds": "8.49",
+    "currency": "USD",
+    "manual": true
+  },
+  "CHL": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJDSEwiLCJwIjoiMTAyNjIifQ",
+    "price": "14990",
+    "proceeds": "10707",
+    "currency": "CLP",
+    "manual": true
+  },
+  "CHN": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJDSE4iLCJwIjoiMTAxNTAifQ",
+    "price": "68.0",
+    "proceeds": "57.28",
+    "currency": "CNY",
+    "manual": true
+  },
+  "CIV": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJDSVYiLCJwIjoiMTAwNzUifQ",
+    "price": "5.99",
+    "proceeds": "4.31",
+    "currency": "USD",
+    "manual": true
+  },
+  "CMR": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJDTVIiLCJwIjoiMTAwNzUifQ",
+    "price": "5.99",
+    "proceeds": "4.27",
+    "currency": "USD",
+    "manual": true
+  },
+  "COD": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJDT0QiLCJwIjoiMTAwNjIifQ",
+    "price": "4.99",
+    "proceeds": "4.24",
+    "currency": "USD",
+    "manual": true
+  },
+  "COG": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJDT0ciLCJwIjoiMTAwNzUifQ",
+    "price": "5.99",
+    "proceeds": "4.31",
+    "currency": "USD",
+    "manual": true
+  },
+  "COL": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJDT0wiLCJwIjoiMTAxNDgifQ",
+    "price": "49900.0",
+    "proceeds": "35642.86",
+    "currency": "COP",
+    "manual": true
+  },
+  "CPV": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJDUFYiLCJwIjoiMTAwODgifQ",
+    "price": "6.99",
+    "proceeds": "5.94",
+    "currency": "USD",
+    "manual": true
+  },
+  "CRI": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJDUkkiLCJwIjoiMTAxNDIifQ",
+    "price": "12.99",
+    "proceeds": "11.04",
+    "currency": "USD",
+    "manual": true
+  },
+  "CYM": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJDWU0iLCJwIjoiMTAxNjcifQ",
+    "price": "17.99",
+    "proceeds": "15.29",
+    "currency": "USD",
+    "manual": true
+  },
+  "CYP": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJDWVAiLCJwIjoiMTAxNjcifQ",
+    "price": "17.99",
+    "proceeds": "12.85",
+    "currency": "EUR",
+    "manual": true
+  },
+  "CZE": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJDWkUiLCJwIjoiMTAxNTgifQ",
+    "price": "399.0",
+    "proceeds": "280.29",
+    "currency": "CZK",
+    "manual": true
+  },
+  "DEU": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJERVUiLCJwIjoiMTAxNzcifQ",
+    "price": "19.99",
+    "proceeds": "14.28",
+    "currency": "EUR",
+    "manual": true
+  },
+  "DMA": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJETUEiLCJwIjoiMTAxMjcifQ",
+    "price": "9.99",
+    "proceeds": "8.49",
+    "currency": "USD",
+    "manual": true
+  },
+  "DOM": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJET00iLCJwIjoiMTAxMjcifQ",
+    "price": "9.99",
+    "proceeds": "8.49",
+    "currency": "USD",
+    "manual": true
+  },
+  "DZA": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJEWkEiLCJwIjoiMTAxMjcifQ",
+    "price": "9.99",
+    "proceeds": "8.49",
+    "currency": "USD",
+    "manual": true
+  },
+  "ECU": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJFQ1UiLCJwIjoiMTAxMDEifQ",
+    "price": "7.99",
+    "proceeds": "6.79",
+    "currency": "USD",
+    "manual": true
+  },
+  "EGY": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJFR1kiLCJwIjoiMTAzMDkifQ",
+    "price": "499.99",
+    "proceeds": "372.8",
+    "currency": "EGP",
+    "manual": true
+  },
+  "ESP": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJFU1AiLCJwIjoiMTAxNjcifQ",
+    "price": "17.99",
+    "proceeds": "12.61",
+    "currency": "EUR",
+    "manual": true
+  },
+  "EST": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJFU1QiLCJwIjoiMTAxNjcifQ",
+    "price": "17.99",
+    "proceeds": "12.33",
+    "currency": "EUR",
+    "manual": true
+  },
+  "FIN": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJGSU4iLCJwIjoiMTAxNzcifQ",
+    "price": "19.99",
+    "proceeds": "13.54",
+    "currency": "EUR",
+    "manual": true
+  },
+  "FJI": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJGSkkiLCJwIjoiMTAxMDEifQ",
+    "price": "7.99",
+    "proceeds": "6.79",
+    "currency": "USD",
+    "manual": true
+  },
+  "FRA": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJGUkEiLCJwIjoiMTAxNzcifQ",
+    "price": "19.99",
+    "proceeds": "14.16",
+    "currency": "EUR",
+    "manual": true
+  },
+  "FSM": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJGU00iLCJwIjoiMTAwNjIifQ",
+    "price": "4.99",
+    "proceeds": "4.24",
+    "currency": "USD",
+    "manual": true
+  },
+  "GAB": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJHQUIiLCJwIjoiMTAxMjcifQ",
+    "price": "9.99",
+    "proceeds": "8.49",
+    "currency": "USD",
+    "manual": true
+  },
+  "GBR": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJHQlIiLCJwIjoiMTAxNjcifQ",
+    "price": "17.99",
+    "proceeds": "12.7",
+    "currency": "GBP",
+    "manual": true
+  },
+  "GEO": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJHRU8iLCJwIjoiMTAxMzcifQ",
+    "price": "11.99",
+    "proceeds": "8.64",
+    "currency": "USD",
+    "manual": true
+  },
+  "GHA": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJHSEEiLCJwIjoiMTAxMDEifQ",
+    "price": "7.99",
+    "proceeds": "5.66",
+    "currency": "USD",
+    "manual": true
+  },
+  "GMB": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJHTUIiLCJwIjoiMTAwNjIifQ",
+    "price": "4.99",
+    "proceeds": "4.24",
+    "currency": "USD",
+    "manual": true
+  },
+  "GNB": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJHTkIiLCJwIjoiMTAwNjIifQ",
+    "price": "4.99",
+    "proceeds": "4.24",
+    "currency": "USD",
+    "manual": true
+  },
+  "GRC": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJHUkMiLCJwIjoiMTAxNjcifQ",
+    "price": "17.99",
+    "proceeds": "12.33",
+    "currency": "EUR",
+    "manual": true
+  },
+  "GRD": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJHUkQiLCJwIjoiMTAxMjcifQ",
+    "price": "9.99",
+    "proceeds": "8.49",
+    "currency": "USD",
+    "manual": true
+  },
+  "GTM": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJHVE0iLCJwIjoiMTAxMDEifQ",
+    "price": "7.99",
+    "proceeds": "6.79",
+    "currency": "USD",
+    "manual": true
+  },
+  "GUY": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJHVVkiLCJwIjoiMTAxNjcifQ",
+    "price": "17.99",
+    "proceeds": "15.29",
+    "currency": "USD",
+    "manual": true
+  },
+  "HND": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJITkQiLCJwIjoiMTAwNjIifQ",
+    "price": "4.99",
+    "proceeds": "4.24",
+    "currency": "USD",
+    "manual": true
+  },
+  "HRV": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJIUlYiLCJwIjoiMTAxNjcifQ",
+    "price": "17.99",
+    "proceeds": "12.23",
+    "currency": "EUR",
+    "manual": true
+  },
+  "HUN": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJIVU4iLCJwIjoiMTAxODAifQ",
+    "price": "6990",
+    "proceeds": "4678",
+    "currency": "HUF",
+    "manual": true
+  },
+  "IDN": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJJRE4iLCJwIjoiMTAxODYifQ",
+    "price": "149000",
+    "proceeds": "114099",
+    "currency": "IDR",
+    "manual": true
+  },
+  "IND": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJJTkQiLCJwIjoiMTAxNzQifQ",
+    "price": "699.0",
+    "proceeds": "503.52",
+    "currency": "INR",
+    "manual": true
+  },
+  "IRQ": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJJUlEiLCJwIjoiMTAxMDEifQ",
+    "price": "7.99",
+    "proceeds": "6.79",
+    "currency": "USD",
+    "manual": true
+  },
+  "ISR": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJJU1IiLCJwIjoiMTAxNDgifQ",
+    "price": "49.9",
+    "proceeds": "42.42",
+    "currency": "ILS",
+    "manual": true
+  },
+  "ITA": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJJVEEiLCJwIjoiMTAxNzcifQ",
+    "price": "19.99",
+    "proceeds": "13.87",
+    "currency": "EUR",
+    "manual": true
+  },
+  "JAM": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJKQU0iLCJwIjoiMTAxMDEifQ",
+    "price": "7.99",
+    "proceeds": "6.79",
+    "currency": "USD",
+    "manual": true
+  },
+  "JOR": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJKT1IiLCJwIjoiMTAwODgifQ",
+    "price": "6.99",
+    "proceeds": "5.94",
+    "currency": "USD",
+    "manual": true
+  },
+  "JPN": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJKUE4iLCJwIjoiMTAyMTEifQ",
+    "price": "2500",
+    "proceeds": "1932",
+    "currency": "JPY",
+    "manual": true
+  },
+  "KAZ": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJLQVoiLCJwIjoiMTAyNzEifQ",
+    "price": "7990.0",
+    "proceeds": "5854.74",
+    "currency": "KZT",
+    "manual": true
+  },
+  "KEN": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJLRU4iLCJwIjoiMTAwNzUifQ",
+    "price": "5.99",
+    "proceeds": "4.38",
+    "currency": "USD",
+    "manual": true
+  },
+  "KGZ": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJLR1oiLCJwIjoiMTAxMDEifQ",
+    "price": "7.99",
+    "proceeds": "6.06",
+    "currency": "USD",
+    "manual": true
+  },
+  "KHM": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJLSE0iLCJwIjoiMTAxMDEifQ",
+    "price": "7.99",
+    "proceeds": "6.17",
+    "currency": "USD",
+    "manual": true
+  },
+  "KNA": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJLTkEiLCJwIjoiMTAxNDIifQ",
+    "price": "12.99",
+    "proceeds": "11.04",
+    "currency": "USD",
+    "manual": true
+  },
+  "KOR": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJLT1IiLCJwIjoiMTAyMzQifQ",
+    "price": "29000",
+    "proceeds": "22409",
+    "currency": "KRW",
+    "manual": true
+  },
+  "KWT": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJLV1QiLCJwIjoiMTAxNjcifQ",
+    "price": "17.99",
+    "proceeds": "15.29",
+    "currency": "USD",
+    "manual": true
+  },
+  "LAO": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJMQU8iLCJwIjoiMTAxMDEifQ",
+    "price": "7.99",
+    "proceeds": "6.17",
+    "currency": "USD",
+    "manual": true
+  },
+  "LBN": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJMQk4iLCJwIjoiMTAwODgifQ",
+    "price": "6.99",
+    "proceeds": "5.94",
+    "currency": "USD",
+    "manual": true
+  },
+  "LBR": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJMQlIiLCJwIjoiMTAwNjIifQ",
+    "price": "4.99",
+    "proceeds": "4.24",
+    "currency": "USD",
+    "manual": true
+  },
+  "LBY": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJMQlkiLCJwIjoiMTAxMDEifQ",
+    "price": "7.99",
+    "proceeds": "6.79",
+    "currency": "USD",
+    "manual": true
+  },
+  "LCA": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJMQ0EiLCJwIjoiMTAxMjcifQ",
+    "price": "9.99",
+    "proceeds": "8.49",
+    "currency": "USD",
+    "manual": true
+  },
+  "LKA": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJMS0EiLCJwIjoiMTAxMDEifQ",
+    "price": "7.99",
+    "proceeds": "6.79",
+    "currency": "USD",
+    "manual": true
+  },
+  "LTU": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJMVFUiLCJwIjoiMTAxNjcifQ",
+    "price": "17.99",
+    "proceeds": "12.64",
+    "currency": "EUR",
+    "manual": true
+  },
+  "LVA": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJMVkEiLCJwIjoiMTAxNjcifQ",
+    "price": "17.99",
+    "proceeds": "12.64",
+    "currency": "EUR",
+    "manual": true
+  },
+  "MAR": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJNQVIiLCJwIjoiMTAxMDEifQ",
+    "price": "7.99",
+    "proceeds": "5.66",
+    "currency": "USD",
+    "manual": true
+  },
+  "MDA": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJNREEiLCJwIjoiMTAxMzcifQ",
+    "price": "11.99",
+    "proceeds": "8.49",
+    "currency": "USD",
+    "manual": true
+  },
+  "MDG": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJNREciLCJwIjoiMTAwNjIifQ",
+    "price": "4.99",
+    "proceeds": "4.24",
+    "currency": "USD",
+    "manual": true
+  },
+  "MDV": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJNRFYiLCJwIjoiMTAxMjcifQ",
+    "price": "9.99",
+    "proceeds": "8.49",
+    "currency": "USD",
+    "manual": true
+  },
+  "MEX": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJNRVgiLCJwIjoiMTAxOTUifQ",
+    "price": "199.0",
+    "proceeds": "145.82",
+    "currency": "MXN",
+    "manual": true
+  },
+  "MKD": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJNS0QiLCJwIjoiMTAxMjcifQ",
+    "price": "9.99",
+    "proceeds": "8.49",
+    "currency": "USD",
+    "manual": true
+  },
+  "MLI": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJNTEkiLCJwIjoiMTAwNjIifQ",
+    "price": "4.99",
+    "proceeds": "4.24",
+    "currency": "USD",
+    "manual": true
+  },
+  "MLT": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJNTFQiLCJwIjoiMTAxNzcifQ",
+    "price": "19.99",
+    "proceeds": "14.4",
+    "currency": "EUR",
+    "manual": true
+  },
+  "MMR": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJNTVIiLCJwIjoiMTAwNjIifQ",
+    "price": "4.99",
+    "proceeds": "4.24",
+    "currency": "USD",
+    "manual": true
+  },
+  "MNE": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJNTkUiLCJwIjoiMTAxMzcifQ",
+    "price": "11.99",
+    "proceeds": "10.19",
+    "currency": "EUR",
+    "manual": true
+  },
+  "MNG": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJNTkciLCJwIjoiMTAxMjcifQ",
+    "price": "9.99",
+    "proceeds": "8.49",
+    "currency": "USD",
+    "manual": true
+  },
+  "MOZ": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJNT1oiLCJwIjoiMTAwNjIifQ",
+    "price": "4.99",
+    "proceeds": "4.24",
+    "currency": "USD",
+    "manual": true
+  },
+  "MRT": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJNUlQiLCJwIjoiMTAwNjIifQ",
+    "price": "4.99",
+    "proceeds": "4.24",
+    "currency": "USD",
+    "manual": true
+  },
+  "MUS": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJNVVMiLCJwIjoiMTAxNTIifQ",
+    "price": "14.99",
+    "proceeds": "11.08",
+    "currency": "USD",
+    "manual": true
+  },
+  "MWI": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJNV0kiLCJwIjoiMTAwNjIifQ",
+    "price": "4.99",
+    "proceeds": "4.24",
+    "currency": "USD",
+    "manual": true
+  },
+  "MYS": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJNWVMiLCJwIjoiMTAxOTMifQ",
+    "price": "59.9",
+    "proceeds": "47.14",
+    "currency": "MYR",
+    "manual": true
+  },
+  "NAM": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJOQU0iLCJwIjoiMTAwODgifQ",
+    "price": "6.99",
+    "proceeds": "5.94",
+    "currency": "USD",
+    "manual": true
+  },
+  "NER": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJORVIiLCJwIjoiMTAwNjIifQ",
+    "price": "4.99",
+    "proceeds": "4.24",
+    "currency": "USD",
+    "manual": true
+  },
+  "NGA": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJOR0EiLCJwIjoiMTAxOTQifQ",
+    "price": "9900.0",
+    "proceeds": "7827.91",
+    "currency": "NGN",
+    "manual": true
+  },
+  "NIC": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJOSUMiLCJwIjoiMTAwODgifQ",
+    "price": "6.99",
+    "proceeds": "5.94",
+    "currency": "USD",
+    "manual": true
+  },
+  "NPL": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJOUEwiLCJwIjoiMTAwNzUifQ",
+    "price": "5.99",
+    "proceeds": "4.42",
+    "currency": "USD",
+    "manual": true
+  },
+  "NRU": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJOUlUiLCJwIjoiMTAxMjcifQ",
+    "price": "9.99",
+    "proceeds": "8.49",
+    "currency": "USD",
+    "manual": true
+  },
+  "NZL": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJOWkwiLCJwIjoiMTAyMjYifQ",
+    "price": "29.99",
+    "proceeds": "22.17",
+    "currency": "NZD",
+    "manual": true
+  },
+  "OMN": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJPTU4iLCJwIjoiMTAxNDIifQ",
+    "price": "12.99",
+    "proceeds": "10.52",
+    "currency": "USD",
+    "manual": true
+  },
+  "PAK": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJQQUsiLCJwIjoiMTAxNjcifQ",
+    "price": "1300.0",
+    "proceeds": "1105.0",
+    "currency": "PKR",
+    "manual": true
+  },
+  "PAN": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJQQU4iLCJwIjoiMTAxNDIifQ",
+    "price": "12.99",
+    "proceeds": "11.04",
+    "currency": "USD",
+    "manual": true
+  },
+  "PER": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJQRVIiLCJwIjoiMTAxMzcifQ",
+    "price": "34.9",
+    "proceeds": "25.14",
+    "currency": "PEN",
+    "manual": true
+  },
+  "PHL": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJQSEwiLCJwIjoiMTAxNDkifQ",
+    "price": "499.0",
+    "proceeds": "378.71",
+    "currency": "PHP",
+    "manual": true
+  },
+  "PLW": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJQTFciLCJwIjoiMTAxMjcifQ",
+    "price": "9.99",
+    "proceeds": "8.49",
+    "currency": "USD",
+    "manual": true
+  },
+  "PNG": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJQTkciLCJwIjoiMTAwNjIifQ",
+    "price": "4.99",
+    "proceeds": "4.24",
+    "currency": "USD",
+    "manual": true
+  },
+  "POL": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJQT0wiLCJwIjoiMTAxOTUifQ",
+    "price": "69.99",
+    "proceeds": "48.37",
+    "currency": "PLN",
+    "manual": true
+  },
+  "PRT": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJQUlQiLCJwIjoiMTAxNjcifQ",
+    "price": "17.99",
+    "proceeds": "12.43",
+    "currency": "EUR",
+    "manual": true
+  },
+  "PRY": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJQUlkiLCJwIjoiMTAxMjcifQ",
+    "price": "9.99",
+    "proceeds": "8.49",
+    "currency": "USD",
+    "manual": true
+  },
+  "ROU": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJST1UiLCJwIjoiMTAyMTYifQ",
+    "price": "79.99",
+    "proceeds": "56.19",
+    "currency": "RON",
+    "manual": true
+  },
+  "RUS": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJSVVMiLCJwIjoiMTAzMjYifQ",
+    "price": "1290.0",
+    "proceeds": "898.77",
+    "currency": "RUB",
+    "manual": true
+  },
+  "RWA": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJSV0EiLCJwIjoiMTAwNjIifQ",
+    "price": "4.99",
+    "proceeds": "4.24",
+    "currency": "USD",
+    "manual": true
+  },
+  "SAU": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJTQVUiLCJwIjoiMTAyNDAifQ",
+    "price": "79.99",
+    "proceeds": "59.12",
+    "currency": "SAR",
+    "manual": true
+  },
+  "SEN": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJTRU4iLCJwIjoiMTAwNzUifQ",
+    "price": "5.99",
+    "proceeds": "4.31",
+    "currency": "USD",
+    "manual": true
+  },
+  "SLB": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJTTEIiLCJwIjoiMTAwNjIifQ",
+    "price": "4.99",
+    "proceeds": "4.24",
+    "currency": "USD",
+    "manual": true
+  },
+  "SLE": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJTTEUiLCJwIjoiMTAwNjIifQ",
+    "price": "4.99",
+    "proceeds": "4.24",
+    "currency": "USD",
+    "manual": true
+  },
+  "SLV": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJTTFYiLCJwIjoiMTAxMDEifQ",
+    "price": "7.99",
+    "proceeds": "6.79",
+    "currency": "USD",
+    "manual": true
+  },
+  "SRB": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJTUkIiLCJwIjoiMTAxNTIifQ",
+    "price": "14.99",
+    "proceeds": "10.62",
+    "currency": "EUR",
+    "manual": true
+  },
+  "STP": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJTVFAiLCJwIjoiMTAwNjIifQ",
+    "price": "4.99",
+    "proceeds": "4.24",
+    "currency": "USD",
+    "manual": true
+  },
+  "SUR": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJTVVIiLCJwIjoiMTAxMjcifQ",
+    "price": "9.99",
+    "proceeds": "7.72",
+    "currency": "USD",
+    "manual": true
+  },
+  "SVK": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJTVksiLCJwIjoiMTAxNjcifQ",
+    "price": "17.99",
+    "proceeds": "12.43",
+    "currency": "EUR",
+    "manual": true
+  },
+  "SVN": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJTVk4iLCJwIjoiMTAxNjcifQ",
+    "price": "17.99",
+    "proceeds": "12.53",
+    "currency": "EUR",
+    "manual": true
+  },
+  "SWE": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJTV0UiLCJwIjoiMTAxMzYifQ",
+    "price": "229.0",
+    "proceeds": "155.72",
+    "currency": "SEK",
+    "manual": true
+  },
+  "SWZ": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJTV1oiLCJwIjoiMTAwODgifQ",
+    "price": "6.99",
+    "proceeds": "5.94",
+    "currency": "USD",
+    "manual": true
+  },
+  "SYC": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJTWUMiLCJwIjoiMTAxNDIifQ",
+    "price": "12.99",
+    "proceeds": "11.04",
+    "currency": "USD",
+    "manual": true
+  },
+  "TCA": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJUQ0EiLCJwIjoiMTAxNDIifQ",
+    "price": "12.99",
+    "proceeds": "11.04",
+    "currency": "USD",
+    "manual": true
+  },
+  "TCD": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJUQ0QiLCJwIjoiMTAwNjIifQ",
+    "price": "4.99",
+    "proceeds": "4.24",
+    "currency": "USD",
+    "manual": true
+  },
+  "THA": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJUSEEiLCJwIjoiMTAxMTkifQ",
+    "price": "399.0",
+    "proceeds": "316.96",
+    "currency": "THB",
+    "manual": true
+  },
+  "TJK": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJUSksiLCJwIjoiMTAxMDEifQ",
+    "price": "7.99",
+    "proceeds": "5.96",
+    "currency": "USD",
+    "manual": true
+  },
+  "TKM": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJUS00iLCJwIjoiMTAxMjcifQ",
+    "price": "9.99",
+    "proceeds": "8.49",
+    "currency": "USD",
+    "manual": true
+  },
+  "TON": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJUT04iLCJwIjoiMTAwODgifQ",
+    "price": "6.99",
+    "proceeds": "5.94",
+    "currency": "USD",
+    "manual": true
+  },
+  "TTO": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJUVE8iLCJwIjoiMTAxNDIifQ",
+    "price": "12.99",
+    "proceeds": "11.04",
+    "currency": "USD",
+    "manual": true
+  },
+  "TUN": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJUVU4iLCJwIjoiMTAxMDEifQ",
+    "price": "7.99",
+    "proceeds": "6.79",
+    "currency": "USD",
+    "manual": true
+  },
+  "TUR": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJUVVIiLCJwIjoiMTAzODQifQ",
+    "price": "799.99",
+    "proceeds": "538.33",
+    "currency": "TRY",
+    "manual": true
+  },
+  "TZA": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJUWkEiLCJwIjoiMTAxNDUifQ",
+    "price": "14900.0",
+    "proceeds": "10411.06",
+    "currency": "TZS",
+    "manual": true
+  },
+  "UGA": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJVR0EiLCJwIjoiMTAwNzUifQ",
+    "price": "5.99",
+    "proceeds": "4.1",
+    "currency": "USD",
+    "manual": true
+  },
+  "UKR": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJVS1IiLCJwIjoiMTAxMzcifQ",
+    "price": "11.99",
+    "proceeds": "8.49",
+    "currency": "USD",
+    "manual": true
+  },
+  "URY": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJVUlkiLCJwIjoiMTAxNDIifQ",
+    "price": "12.99",
+    "proceeds": "10.86",
+    "currency": "USD",
+    "manual": true
+  },
+  "USA": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJVU0EiLCJwIjoiMTAxNzcifQ",
+    "price": "19.99",
+    "proceeds": "16.99",
+    "currency": "USD",
+    "manual": true
+  },
+  "UZB": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJVWkIiLCJwIjoiMTAxMTQifQ",
+    "price": "8.99",
+    "proceeds": "6.82",
+    "currency": "USD",
+    "manual": true
+  },
+  "VCT": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJWQ1QiLCJwIjoiMTAxMjcifQ",
+    "price": "9.99",
+    "proceeds": "8.49",
+    "currency": "USD",
+    "manual": true
+  },
+  "VEN": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJWRU4iLCJwIjoiMTAwODgifQ",
+    "price": "6.99",
+    "proceeds": "5.94",
+    "currency": "USD",
+    "manual": true
+  },
+  "VNM": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJWTk0iLCJwIjoiMTAxNzYifQ",
+    "price": "249000",
+    "proceeds": "190485",
+    "currency": "VND",
+    "manual": true
+  },
+  "VUT": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJWVVQiLCJwIjoiMTAwNjIifQ",
+    "price": "4.99",
+    "proceeds": "4.24",
+    "currency": "USD",
+    "manual": true
+  },
+  "XKS": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJYS1MiLCJwIjoiMTAxMjcifQ",
+    "price": "9.99",
+    "proceeds": "7.2",
+    "currency": "EUR",
+    "manual": true
+  },
+  "YEM": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJZRU0iLCJwIjoiMTAwNjIifQ",
+    "price": "4.99",
+    "proceeds": "4.24",
+    "currency": "USD",
+    "manual": true
+  },
+  "ZAF": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJaQUYiLCJwIjoiMTAxNDIifQ",
+    "price": "149.99",
+    "proceeds": "110.86",
+    "currency": "ZAR",
+    "manual": true
+  },
+  "ZMB": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJaTUIiLCJwIjoiMTAwNzUifQ",
+    "price": "5.99",
+    "proceeds": "4.39",
+    "currency": "USD",
+    "manual": true
+  },
+  "ZWE": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJaV0UiLCJwIjoiMTAwNzUifQ",
+    "price": "5.99",
+    "proceeds": "4.19",
+    "currency": "USD",
+    "manual": true
+  },
+  "AIA": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJBSUEiLCJwIjoiMTAxNzcifQ",
+    "price": "19.99",
+    "proceeds": "16.99",
+    "currency": "USD",
+    "manual": false
+  },
+  "ARE": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJBUkUiLCJwIjoiMTAyNDAifQ",
+    "price": "79.99",
+    "proceeds": "64.75",
+    "currency": "AED",
+    "manual": false
+  },
+  "AUS": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJBVVMiLCJwIjoiMTAyMjYifQ",
+    "price": "29.99",
+    "proceeds": "23.17",
+    "currency": "AUD",
+    "manual": false
+  },
+  "BHR": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJCSFIiLCJwIjoiMTAxNzcifQ",
+    "price": "19.99",
+    "proceeds": "15.45",
+    "currency": "USD",
+    "manual": false
+  },
+  "BMU": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJCTVUiLCJwIjoiMTAxNzcifQ",
+    "price": "19.99",
+    "proceeds": "16.99",
+    "currency": "USD",
+    "manual": false
+  },
+  "BRN": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJCUk4iLCJwIjoiMTAxNzcifQ",
+    "price": "19.99",
+    "proceeds": "16.99",
+    "currency": "USD",
+    "manual": false
+  },
+  "CAN": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJDQU4iLCJwIjoiMTAyMDIifQ",
+    "price": "24.99",
+    "proceeds": "21.24",
+    "currency": "CAD",
+    "manual": false
+  },
+  "CHE": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJDSEUiLCJwIjoiMTAxNDAifQ",
+    "price": "18.0",
+    "proceeds": "14.15",
+    "currency": "CHF",
+    "manual": false
+  },
+  "DNK": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJETksiLCJwIjoiMTAxMjEifQ",
+    "price": "179.0",
+    "proceeds": "121.72",
+    "currency": "DKK",
+    "manual": false
+  },
+  "HKG": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJIS0ciLCJwIjoiMTAxMTcifQ",
+    "price": "148.0",
+    "proceeds": "125.8",
+    "currency": "HKD",
+    "manual": false
+  },
+  "IRL": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJJUkwiLCJwIjoiMTAxOTIifQ",
+    "price": "22.99",
+    "proceeds": "15.89",
+    "currency": "EUR",
+    "manual": false
+  },
+  "ISL": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJJU0wiLCJwIjoiMTAxOTIifQ",
+    "price": "22.99",
+    "proceeds": "15.76",
+    "currency": "USD",
+    "manual": false
+  },
+  "LUX": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJMVVgiLCJwIjoiMTAxOTIifQ",
+    "price": "22.99",
+    "proceeds": "16.7",
+    "currency": "EUR",
+    "manual": false
+  },
+  "MAC": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJNQUMiLCJwIjoiMTAxNzcifQ",
+    "price": "19.99",
+    "proceeds": "16.99",
+    "currency": "USD",
+    "manual": false
+  },
+  "MSR": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJNU1IiLCJwIjoiMTAxNzcifQ",
+    "price": "19.99",
+    "proceeds": "16.99",
+    "currency": "USD",
+    "manual": false
+  },
+  "NLD": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJOTEQiLCJwIjoiMTAxOTIifQ",
+    "price": "22.99",
+    "proceeds": "16.15",
+    "currency": "EUR",
+    "manual": false
+  },
+  "NOR": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJOT1IiLCJwIjoiMTAxNDIifQ",
+    "price": "249.0",
+    "proceeds": "169.32",
+    "currency": "NOK",
+    "manual": false
+  },
+  "QAT": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJRQVQiLCJwIjoiMTAyMTYifQ",
+    "price": "69.99",
+    "proceeds": "59.49",
+    "currency": "QAR",
+    "manual": false
+  },
+  "SGP": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJTR1AiLCJwIjoiMTAyMzYifQ",
+    "price": "29.98",
+    "proceeds": "23.38",
+    "currency": "SGD",
+    "manual": false
+  },
+  "TWN": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJUV04iLCJwIjoiMTAxNDYifQ",
+    "price": "690",
+    "proceeds": "542",
+    "currency": "TWD",
+    "manual": false
+  },
+  "VGB": {
+    "price_point_id": "eyJzIjoiNjc4MTY1ODYyMSIsInQiOiJWR0IiLCJwIjoiMTAxNzcifQ",
+    "price": "19.99",
+    "proceeds": "16.99",
+    "currency": "USD",
+    "manual": false
+  }
+}

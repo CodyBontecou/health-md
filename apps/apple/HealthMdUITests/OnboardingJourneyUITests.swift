@@ -6,128 +6,61 @@ final class OnboardingJourneyUITests: XCTestCase {
         continueAfterFailure = false
     }
 
-    func testReadyCTACompletesOnboardingAndOpensFirstExportPreview() throws {
+    func testReadyCTACompletesOnboardingAndOpensAutomationCreator() throws {
         let app = UITestLaunchHelper.configuredApp(
             healthAuthorized: true,
             showOnboarding: true,
             showReleaseNotes: true,
+            purchaseUnlocked: false,
             useHealthKitExportPreviewFixtures: true,
             analyticsTransport: "offline"
         )
         app.launch()
 
-        tapButton("Start Setup", in: app)
+        tapButton("Connect Apple Health", in: app)
 
-        // Health access, then sample export (with the folded-in plugin promo).
-        tapButton("Continue Setup", in: app)
+        // Health access, then the archive folder (OnboardingG phase 2).
         tapButton("Continue Setup", in: app)
 
         // Keep folder setup optional and verify the explicit skip path remains usable.
         tapButton("Skip for Now", in: app)
-        tapButton("Create My First Export", in: app)
 
-        let markdownRow = app.descendants(matching: .any)[
-            UITestLaunchHelper.ExportPreview.markdownFileRow
-        ]
-        XCTAssertTrue(
-            markdownRow.waitForExistence(timeout: 15),
-            "Completing onboarding should open the preconfigured first-export preview instead of unseen release notes."
-        )
-        XCTAssertFalse(
-            app.staticTexts["Clearer, more reliable exports"].exists,
-            "Release notes should not replace the first-export preview after initial onboarding."
-        )
+        // Sample export preview (phase 3, with the folded-in plugin promo), then ready.
+        tapButton("Continue Setup", in: app)
+        tapButton("Create My First Automation", in: app)
+
+        let create = app.buttons["export.profiles.editor.confirm"]
+        XCTAssertTrue(create.waitForExistence(timeout: 10))
+        XCTAssertFalse(app.staticTexts[UITestLaunchHelper.Paywall.title].exists)
+        create.tap()
+        XCTAssertTrue(app.buttons["glass.composer.runNow"].waitForExistence(timeout: 10))
+        XCTAssertFalse(app.staticTexts["whatsNew.title"].exists)
     }
 
-    func testPostOnboardingPaywallAppearsAfterFirstPreviewCloses() throws {
-        let app = UITestLaunchHelper.configuredApp(
-            healthAuthorized: true,
-            showOnboarding: true,
-            useHealthKitExportPreviewFixtures: true,
-            analyticsTransport: "offline",
-            showsPostOnboardingPaywall: true
-        )
+    func testUnpaidUserReachesSetupWithoutAPaywall() throws {
+        let app = UITestLaunchHelper.configuredApp(showOnboarding: true)
         app.launch()
-
-        tapButton("Start Setup", in: app)
-        tapButton("Continue Setup", in: app)
-        tapButton("Continue Setup", in: app)
-        tapButton("Skip for Now", in: app)
-        tapButton("Create My First Export", in: app)
-
-        let markdownRow = app.descendants(matching: .any)[
-            UITestLaunchHelper.ExportPreview.markdownFileRow
-        ]
-        XCTAssertTrue(markdownRow.waitForExistence(timeout: 15))
-
-        // Closing the first preview is the value moment: the one-time
-        // post-onboarding paywall appears, non-blocking.
-        tapButton("Done", in: app)
-
-        let paywallTitle = app.descendants(matching: .any)[UITestLaunchHelper.Paywall.title]
-        XCTAssertTrue(paywallTitle.waitForExistence(timeout: 8), "Post-onboarding paywall should appear after the first preview closes")
-        let paywallSubtitle = app.descendants(matching: .any)[UITestLaunchHelper.Paywall.subtitle]
-        XCTAssertTrue(
-            paywallSubtitle.waitForExistence(timeout: 5) &&
-                paywallSubtitle.label.contains("You just previewed your first health export"),
-            "The post-onboarding paywall should use onboarding-specific copy"
-        )
-
-        // Dismiss by swiping down — the small dismiss button's identifier is
-        // unreliable through the accessibility container (same approach as
-        // PaywallJourneyUITests.testPaywallDismiss_closesPaywall).
-        let paywallElement = app.otherElements["paywall.view"]
-        if paywallElement.waitForExistence(timeout: 3) {
-            paywallElement.swipeDown()
-        } else {
-            let center = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.3))
-            let below = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.9))
-            center.press(forDuration: 0.1, thenDragTo: below)
-        }
-
-        XCTAssertFalse(
-            paywallTitle.waitForExistence(timeout: 3),
-            "Dismissing the post-onboarding paywall should return to the export tab"
-        )
+        XCTAssertTrue(app.buttons["Connect Apple Health"].waitForExistence(timeout: 10))
+        XCTAssertFalse(app.staticTexts[UITestLaunchHelper.Paywall.title].exists)
     }
 
-    func testUseSharedSetupSecondaryActionPresentsNativeDocumentPicker() throws {
+    func testWelcomeLeavesSharedSetupImportToSettings() throws {
         let app = UITestLaunchHelper.configuredApp(
             showOnboarding: true,
+            purchaseUnlocked: true,
             analyticsTransport: "offline"
         )
         app.launch()
-        addTeardownBlock { UITestLaunchHelper.finishSystemPresentation(in: app) }
 
-        let useSharedSetup = app.descendants(matching: .any)[UITestLaunchHelper.SharedSetup.use]
-        XCTAssertTrue(useSharedSetup.waitForExistence(timeout: 8))
-        XCTAssertTrue(useSharedSetup.isHittable)
-        useSharedSetup.tap()
-
-        let recents = app.staticTexts["Recents"]
-        let browse = app.staticTexts["Browse"]
-        let cancel = app.buttons["Cancel"]
-        XCTAssertTrue(
-            recents.waitForExistence(timeout: 5) ||
-                browse.waitForExistence(timeout: 2) ||
-                cancel.waitForExistence(timeout: 2),
-            "Use a Shared Setup should present the native document picker."
-        )
-
-        XCTAssertTrue(cancel.waitForExistence(timeout: 3))
-        cancel.tap()
-        XCTAssertTrue(useSharedSetup.waitForExistence(timeout: 3))
-        useSharedSetup.tap()
-        XCTAssertTrue(
-            app.staticTexts["Recents"].waitForExistence(timeout: 5) ||
-                app.staticTexts["Browse"].waitForExistence(timeout: 2) ||
-                app.buttons["Cancel"].waitForExistence(timeout: 2),
-            "Cancelling should leave the shared setup importer reusable."
+        XCTAssertTrue(app.buttons["Connect Apple Health"].waitForExistence(timeout: 8))
+        XCTAssertFalse(
+            app.descendants(matching: .any)[UITestLaunchHelper.SharedSetup.use].exists,
+            "OnboardingG's welcome has no shared-setup link; import stays in Settings."
         )
     }
 
     func testSettingsProvidesSharedSetupConfigurationCard() throws {
-        let app = UITestLaunchHelper.configuredApp(analyticsTransport: "offline")
+        let app = UITestLaunchHelper.configuredApp(purchaseUnlocked: true, analyticsTransport: "offline")
         app.launch()
         addTeardownBlock { UITestLaunchHelper.finishSystemPresentation(in: app) }
         let controls = openSharedSetupSettings(in: app)
@@ -142,7 +75,7 @@ final class OnboardingJourneyUITests: XCTestCase {
     }
 
     func testSettingsShareMenuPresentsNativeFileExporter() throws {
-        let app = UITestLaunchHelper.configuredApp(analyticsTransport: "offline")
+        let app = UITestLaunchHelper.configuredApp(purchaseUnlocked: true, analyticsTransport: "offline")
         app.launch()
         addTeardownBlock { UITestLaunchHelper.finishSystemPresentation(in: app) }
         let controls = openSharedSetupSettings(in: app)
@@ -158,7 +91,7 @@ final class OnboardingJourneyUITests: XCTestCase {
     }
 
     func testSettingsShareMenuPresentsSystemShareSheet() throws {
-        let app = UITestLaunchHelper.configuredApp(analyticsTransport: "offline")
+        let app = UITestLaunchHelper.configuredApp(purchaseUnlocked: true, analyticsTransport: "offline")
         app.launch()
         addTeardownBlock { UITestLaunchHelper.finishSystemPresentation(in: app) }
         let controls = openSharedSetupSettings(in: app)
@@ -176,40 +109,44 @@ final class OnboardingJourneyUITests: XCTestCase {
     }
 
     func testReleaseNotesStillAppearForReturningUsers() throws {
-        let app = UITestLaunchHelper.configuredApp(showReleaseNotes: true)
+        let app = UITestLaunchHelper.configuredApp(showReleaseNotes: true, purchaseUnlocked: true)
         app.launch()
 
         XCTAssertTrue(
-            app.staticTexts["Repeat exports and clearer privacy information"].waitForExistence(timeout: 8),
+            app.staticTexts["whatsNew.title"].waitForExistence(timeout: 8),
             "Returning users should still receive the current release notes for an unseen app version."
         )
+        app.buttons["whatsNew.continue"].tap()
+        XCTAssertTrue(app.staticTexts["whatsNew.title"].waitForNonExistence(timeout: 5))
     }
 
     func testSetupActionsArePrimaryAndReadyOffersRepairs() throws {
         let app = UITestLaunchHelper.configuredApp(
             showOnboarding: true,
+            purchaseUnlocked: true,
             analyticsTransport: "offline"
         )
         app.launch()
 
-        tapButton("Start Setup", in: app)
+        tapButton("Connect Apple Health", in: app)
         XCTAssertTrue(app.buttons["Connect Apple Health"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons["Skip for Now"].exists)
         tapButton("Skip for Now", in: app)
 
-        // Sample export (plugin promo folded in) goes straight to folder setup —
-        // the unlock step no longer blocks the funnel.
-        tapButton("Continue Setup", in: app)
-
+        // Paid-access setup keeps health and folder permissions repairable;
+        // the root access gate has already been satisfied by this fixture.
         XCTAssertTrue(app.buttons["Select Export Folder"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons["Skip for Now"].exists)
         tapButton("Skip for Now", in: app)
+
+        // The sample-export preview follows the folder step.
+        tapButton("Continue Setup", in: app)
 
         XCTAssertTrue(app.buttons["Connect"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons["Choose Folder"].exists)
         XCTAssertTrue(app.buttons["Create My First Export"].exists)
 
-        tapButton("Create My First Export", in: app)
+        tapButton("Create My First Automation", in: app)
         // Geist dialogs are in-tree SwiftUI overlays rather than native UIAlert instances.
         let setupPromptTitle = app.staticTexts["Finish Preview Setup"]
         XCTAssertTrue(setupPromptTitle.waitForExistence(timeout: 8))
@@ -219,20 +156,7 @@ final class OnboardingJourneyUITests: XCTestCase {
     private func openSharedSetupSettings(
         in app: XCUIApplication
     ) -> (use: XCUIElement, share: XCUIElement) {
-        if app.windows.firstMatch.frame.width > 600 {
-            let settingsSidebarItem = app.staticTexts["Settings"]
-            XCTAssertTrue(settingsSidebarItem.waitForExistence(timeout: 10))
-            settingsSidebarItem.tap()
-        } else {
-            let identifiedSettingsTab = app.buttons[UITestLaunchHelper.Tab.settings]
-            if identifiedSettingsTab.waitForExistence(timeout: 3) {
-                identifiedSettingsTab.tap()
-            } else {
-                let labeledSettingsTab = app.buttons["Settings"]
-                XCTAssertTrue(labeledSettingsTab.waitForExistence(timeout: 7))
-                labeledSettingsTab.tap()
-            }
-        }
+        UITestLaunchHelper.openSettingsTab(in: app)
 
         let configurationCard = app.descendants(matching: .any)[
             UITestLaunchHelper.SharedSetup.configurationCard

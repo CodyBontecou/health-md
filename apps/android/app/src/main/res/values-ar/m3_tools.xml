@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="m3_tools_diagnostics_verbosity">مستوى التفاصيل</string>
+    <string name="m3_tools_diagnostics_subsystem">النظام الفرعي</string>
+    <string name="m3_tools_diagnostics_time_range">النطاق الزمني</string>
+    <string name="m3_tools_diagnostics_events">الأحداث الأخيرة</string>
+    <string name="m3_tools_diagnostics_files">ملفات الحزمة</string>
+    <string name="m3_tools_direct_cli_pairing">الاقتران بحاسوبك</string>
+    <string name="m3_tools_direct_cli_manual">الإدخال يدويًا</string>
+    <string name="m3_tools_direct_cli_computer">الحاسوب المقترن</string>
+    <string name="m3_tools_direct_cli_export">تصدير</string>
+    <string name="m3_tools_clinic_title">وصول العيادة</string>
+    <string name="m3_tools_clinic_intro">يمكن لعيادتك رعاية التسليم إلى نقطة النهاية المعتمدة لديها. أنت تختار ما تشاركه. تتطلب وجهات التصدير الأخرى وصولك الخاص إلى Health.md.</string>
+    <string name="m3_tools_clinic_storage_unavailable">افتح قفل هاتفك وحاول مرة أخرى. تعذرت قراءة وصول العيادة بأمان.</string>
+    <string name="m3_tools_clinic_fallback_name">العيادة</string>
+    <string name="m3_tools_clinic_sharing">المشاركة</string>
+    <string name="m3_tools_clinic_allow_sharing">السماح بالمشاركة مع هذه العيادة</string>
+    <string name="m3_tools_clinic_sharing_description">لن يُرسل إلا المقاييس والتواريخ التي تحددها في Health.md. تستخدم الجدولة اختيارك المحفوظ. يؤدي إيقاف المشاركة إلى إيقاف عمليات الرفع المستقبلية إلى العيادة، ولا يحذف النسخ التي تلقتها العيادة بالفعل.</string>
+    <string name="m3_tools_clinic_upload_token">رمز الرفع الخاص بالعيادة (اختياري)</string>
+    <string name="m3_tools_clinic_upload_token_description">إذا زودتك عيادتك برمز رفع شخصي، فأدخله هنا. يُخزَّن بأمان ولا يُستخدم إلا لنقطة النهاية المعتمدة لهذه العيادة.</string>
+    <string name="m3_tools_clinic_use_destination">استخدام وجهة العيادة</string>
+    <string name="m3_tools_clinic_sync_requests">طلبات المزامنة</string>
+    <string name="m3_tools_clinic_allow_sync">السماح بطلبات المزامنة من هذه العيادة</string>
+    <string name="m3_tools_clinic_sync_description">يمكن لعيادتك إرسال إشعار تطلب فيه أحدث بياناتك. لا يُرسل أي شيء حتى تنقر عليه؛ وعندها تُشارك بيانات الأمس واليوم مع هذه العيادة. يؤدي إيقاف هذا الخيار إلى إيقاف الطلبات الجديدة.</string>
+    <string name="m3_tools_clinic_invitation">الدعوة</string>
+    <string name="m3_tools_clinic_invitation_code">رمز الدعوة</string>
+    <string name="m3_tools_clinic_accept_invitation">قبول الدعوة</string>
+    <string name="m3_tools_clinic_not_configured">وصول العيادة غير مُعدّ في هذا الإصدار من Health.md.</string>
+    <string name="m3_tools_clinic_enrollment_pending">دعوتك محفوظة بأمان. أعد المحاولة لإكمال التسجيل؛ لا تحتاج إلى رمز جديد.</string>
+    <string name="m3_tools_clinic_retry_enrollment">إعادة محاولة التسجيل</string>
+    <string name="m3_tools_clinic_refresh">تحديث وصول العيادة</string>
+    <string name="m3_tools_clinic_disconnect_clinic">فصل العيادة</string>
+    <string name="m3_tools_clinic_error">تعذر تحديث وصول العيادة. تحقق من اتصالك، أو أعد محاولة التسجيل المحفوظ.</string>
+    <string name="m3_tools_clinic_disconnect_question">هل تريد فصل هذه العيادة؟</string>
+    <string name="m3_tools_clinic_disconnect_body">ستتوقف المشاركة التي ترعاها العيادة. يظل وصولك الذي اشتريته وبياناتك الصحية المحلية متاحة.</string>
+    <string name="m3_tools_clinic_disconnect">فصل</string>
+    <string name="m3_tools_clinic_sync_sharing_required">اسمح بالمشاركة مع هذه العيادة أولاً.</string>
+    <string name="m3_tools_clinic_sync_push_unavailable">طلبات المزامنة غير متاحة في هذا الإصدار من Health.md.</string>
+    <string name="m3_tools_clinic_sync_notifications_denied">لم يُمنح إذن الإشعارات. اسمح بإشعارات Health.md من الإعدادات.</string>
+    <string name="m3_tools_clinic_sync_wake_service">خدمة الإشعارات غير متاحة. حاول مرة أخرى لاحقًا.</string>
+    <string name="m3_tools_clinic_sync_clinic_unreachable">تعذر الوصول إلى عيادتك. حاول مرة أخرى لاحقًا.</string>
+    <string name="m3_tools_clinic_sync_storage">افتح قفل هاتفك وحاول مرة أخرى. تعذر تخزين مفتاح الطلب بأمان.</string>
+</resources>

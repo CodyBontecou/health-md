@@ -15,6 +15,9 @@ import com.healthmd.distribution.DistributionRuntime
 import com.healthmd.data.scheduler.ExportWorker
 import com.healthmd.direct.DirectCliForegroundService
 import com.healthmd.direct.DirectCliJobStore
+import com.healthmd.data.billing.ClinicSponsorshipManager
+import com.healthmd.data.clinicsync.AndroidClinicSyncNotifier
+import com.healthmd.data.clinicsync.ClinicSyncDoorbellManager
 import com.healthmd.widget.glance.HealthWidgetLocaleRefresher
 import dagger.hilt.android.HiltAndroidApp
 import javax.inject.Inject
@@ -42,6 +45,14 @@ class HealthMdApplication : Application(), Configuration.Provider {
     @Inject
     lateinit var directCliJobStore: DirectCliJobStore
 
+    @Inject
+    lateinit var clinicSponsorship: ClinicSponsorshipManager
+
+    @Inject
+    lateinit var clinicSyncDoorbell: ClinicSyncDoorbellManager
+
+    private val clinicSyncScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
     override val workManagerConfiguration: Configuration
         get() = Configuration.Builder()
             .setWorkerFactory(workerFactory)
@@ -59,6 +70,14 @@ class HealthMdApplication : Application(), Configuration.Provider {
         createNotificationChannels()
         distributionRuntime.initialize()
         directCliJobStore.sweepExpired()
+        // A clinic sync doorbell follows consent: sharing off, disconnect or a changed
+        // binding revokes it, and FCM token changes re-register it.
+        clinicSyncScope.launch {
+            clinicSponsorship.status.collect { status ->
+                runCatching { clinicSyncDoorbell.reconcile(status) }
+                    .onFailure { Timber.w("Clinic sync doorbell reconcile failed") }
+            }
+        }
     }
 
     override fun onConfigurationChanged(newConfig: AndroidConfiguration) {
@@ -119,6 +138,7 @@ class HealthMdApplication : Application(), Configuration.Provider {
             manager.createNotificationChannel(exportChannel)
         }
         DirectCliForegroundService.createNotificationChannel(this)
+        AndroidClinicSyncNotifier.ensureChannel(this)
     }
 
     companion object {

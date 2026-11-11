@@ -13,6 +13,8 @@ import java.time.LocalDate
 class PolarCloudDataProvider(
     apiClient: CloudHealthApiClient,
 ) : CloudHealthDataProvider("polar", apiClient) {
+    protected override fun withClient(client: CloudHealthApiClient): CloudHealthDataProvider = PolarCloudDataProvider(client)
+
     override val fidelityDeclaration: CloudProviderFidelityDeclaration = CloudProviderFidelityDeclaration(
         providerId = providerId,
         fidelity = CloudProviderFidelity.UNSUPPORTED,
