@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Settings › Subscription. Dates appear only after myself.md has read them from Google Play; until then the row names Google Play. -->
+    <string name="m3_subscription_title">订阅</string>
+    <string name="m3_subscription_plan_weekly">Health.md 按周</string>
+    <string name="m3_subscription_plan_yearly">Health.md 按年</string>
+    <string name="m3_subscription_plan_lifetime">Health.md 终身</string>
+    <string name="m3_subscription_plan_full_access">Health.md 完整访问</string>
+    <string name="m3_subscription_plan_free">免费版</string>
+    <string name="m3_subscription_status_renews">有效 · 自动续订</string>
+    <string name="m3_subscription_status_cancelled">已取消 · 在已付费期限结束前仍可使用</string>
+    <string name="m3_subscription_status_lifetime">终身 · 无需续订</string>
+    <string name="m3_subscription_status_included">包含在早期安装权益中 · 无需续订</string>
+    <string name="m3_subscription_status_free">首次导出免费。付费方案提供无限次导出和自动化。</string>
+    <string name="m3_subscription_status_checking">正在检查 Google Play…</string>
+    <string name="m3_subscription_row_plan">方案</string>
+    <string name="m3_subscription_value_weekly">按周</string>
+    <string name="m3_subscription_value_yearly">按年</string>
+    <string name="m3_subscription_value_lifetime">终身 · 一次性购买</string>
+    <string name="m3_subscription_row_billing_date">下次扣费日期</string>
+    <string name="m3_subscription_value_billing_date">在 Google Play 中查看</string>
+    <string name="m3_subscription_row_access_until">可使用至</string>
+    <string name="m3_subscription_row_billed_by">扣费方</string>
+    <string name="m3_subscription_value_google_play">Google Play</string>
+    <string name="m3_subscription_row_includes">包含</string>
+    <string name="m3_subscription_value_includes">无限次导出、定时每日笔记、自动化、临床医生报告和 healthmd CLI 导出</string>
+    <string name="m3_subscription_manage_or_cancel">管理或取消</string>
+    <string name="m3_subscription_manage_in_play">在 Google Play 中管理</string>
+    <string name="m3_subscription_cancel_note">可随时在 Google Play 中取消。在已付费期限结束前，你仍可继续使用。</string>
+    <string name="m3_subscription_cancelled_note">你的订阅不会续订。你可以在 Google Play 中重新订阅或更改订阅。</string>
+    <string name="m3_subscription_see_plans">查看方案</string>
+
+    <!-- "Before you go": factual only. Both actions are the same size. -->
+    <string name="m3_subscription_sheet_title">取消之前</string>
+    <string name="m3_subscription_sheet_body">取消需在 Google Play 中进行。在已付费期限结束前你仍可继续使用，具体日期会显示在 Google Play 中。</string>
+    <!-- %1$s: the verified end of the paid period, e.g. "December 1, 2026". -->
+    <string name="m3_subscription_sheet_body_dated">取消需在 Google Play 中进行。你可继续使用至%1$s。</string>
+    <string name="m3_subscription_stops_heading">订阅结束后停止的功能</string>
+    <string name="m3_subscription_stops_exports">无限次导出，包括 healthmd CLI 导出</string>
+    <string name="m3_subscription_stops_automations">定时每日笔记和自动化</string>
+    <string name="m3_subscription_stops_reports">临床医生报告</string>
+    <string name="m3_subscription_keep_heading">你会保留的内容</string>
+    <string name="m3_subscription_keep_files">你导出的每一条笔记。它们是保存在你所选文件夹中的普通 Markdown、CSV 或 JSON 文件，并会一直保留在那里。</string>
+    <string name="m3_subscription_keep_setup">你的设置。指标、格式、目标位置和自动化都会保留，重新订阅后定时任务会再次运行。</string>
+    <string name="m3_subscription_continue_to_cancel">继续取消</string>
+    <string name="m3_subscription_keep_subscription">保留订阅</string>
+    <!-- Weekly -> Yearly offer card (Play offer switch-yearly-1y). Prices come from Google Play. -->
+    <string name="m3_subscription_offer_eyebrow">按周订阅用户优惠</string>
+    <!-- %1$s: first-year offer price from Google Play, e.g. "$19.99". -->
+    <string name="m3_subscription_offer_title">按年方案首年价格为 %1$s</string>
+    <!-- %1$s: the regular Yearly price from Google Play, e.g. "$29.99". -->
+    <string name="m3_subscription_offer_detail">之后每年 %1$s。切换立即生效，Google Play 会将本周未使用的部分折算抵扣。</string>
+    <string name="m3_subscription_offer_action">切换到按年方案</string>
+    <string name="m3_subscription_sheet_footnote">“继续取消”会打开 Google Play › 订阅中的 Health.md。</string>
+
+    <!-- After a lapse: what still works and what is paused, without nagging. -->
+    <string name="m3_subscription_ended_title">订阅已结束</string>
+    <string name="m3_subscription_ended_subtitle">%1$s 已不再有效</string>
+    <string name="m3_subscription_still_works">仍可使用</string>
+    <string name="m3_subscription_works_files_title">你导出的文件</string>
+    <string name="m3_subscription_works_files_body">保存在你所选文件夹中的普通 Markdown、CSV 或 JSON 文件。可用任何应用打开。</string>
+    <string name="m3_subscription_works_setup_title">你的设置已保存</string>
+    <string name="m3_subscription_works_setup_body">指标、格式、目标位置和自动化都保持原样。</string>
+    <string name="m3_subscription_works_health_connect_title">Health Connect 访问权限</string>
+    <string name="m3_subscription_works_health_connect_body">你授予的权限保持不变。可在 Health Connect 中更改。</string>
+    <string name="m3_subscription_paused_heading">重新订阅前暂停使用</string>
+    <string name="m3_subscription_paused_body">无限次导出 · 定时每日笔记和自动化 · 临床医生报告 · healthmd CLI 导出</string>
+    <string name="m3_subscription_paused_schedule_note">定时任务仍处于开启状态，因此每次定时运行都会记录为需要访问权限。如果不想看到这些通知，可以在“自动化”中关闭它们。</string>
+    <string name="m3_subscription_play_subscriptions">Google Play 订阅</string>
+</resources>

@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Settings › Subscription. Dates appear only after myself.md has read them from Google Play; until then the row names Google Play. -->
+    <string name="m3_subscription_title">الاشتراك</string>
+    <string name="m3_subscription_plan_weekly">Health.md أسبوعي</string>
+    <string name="m3_subscription_plan_yearly">Health.md سنوي</string>
+    <string name="m3_subscription_plan_lifetime">Health.md مدى الحياة</string>
+    <string name="m3_subscription_plan_full_access">وصول كامل إلى Health.md</string>
+    <string name="m3_subscription_plan_free">الخطة المجانية</string>
+    <string name="m3_subscription_status_renews">نشط · يتجدد تلقائيًا</string>
+    <string name="m3_subscription_status_cancelled">ملغى · يستمر الوصول حتى نهاية الفترة المدفوعة</string>
+    <string name="m3_subscription_status_lifetime">مدى الحياة · لا يوجد ما يتجدد</string>
+    <string name="m3_subscription_status_included">مضمَّن مع تثبيتك المبكر · لا يوجد ما يتجدد</string>
+    <string name="m3_subscription_status_free">أول عملية تصدير مجانية. تضيف الخطط عمليات تصدير غير محدودة والأتمتة.</string>
+    <string name="m3_subscription_status_checking">جارٍ التحقق من Google Play…</string>
+    <string name="m3_subscription_row_plan">الخطة</string>
+    <string name="m3_subscription_value_weekly">أسبوعي</string>
+    <string name="m3_subscription_value_yearly">سنوي</string>
+    <string name="m3_subscription_value_lifetime">مدى الحياة · شراء لمرة واحدة</string>
+    <string name="m3_subscription_row_billing_date">تاريخ الفوترة التالي</string>
+    <string name="m3_subscription_value_billing_date">يظهر في Google Play</string>
+    <string name="m3_subscription_row_access_until">الوصول حتى</string>
+    <string name="m3_subscription_row_billed_by">جهة الفوترة</string>
+    <string name="m3_subscription_value_google_play">Google Play</string>
+    <string name="m3_subscription_row_includes">يتضمن</string>
+    <string name="m3_subscription_value_includes">عمليات تصدير غير محدودة، وملاحظات يومية مجدولة، والأتمتة، وتقارير للطبيب، وعمليات التصدير عبر healthmd CLI</string>
+    <string name="m3_subscription_manage_or_cancel">الإدارة أو الإلغاء</string>
+    <string name="m3_subscription_manage_in_play">الإدارة في Google Play</string>
+    <string name="m3_subscription_cancel_note">يمكنك الإلغاء في أي وقت من Google Play. يستمر وصولك حتى نهاية الفترة التي دفعت مقابلها.</string>
+    <string name="m3_subscription_cancelled_note">لن يتجدد اشتراكك. يمكنك الاشتراك من جديد أو تغييره في Google Play.</string>
+    <string name="m3_subscription_see_plans">عرض الخطط</string>
+
+    <!-- "Before you go": factual only. Both actions are the same size. -->
+    <string name="m3_subscription_sheet_title">قبل أن تغادر</string>
+    <string name="m3_subscription_sheet_body">يتم الإلغاء في Google Play. يستمر وصولك حتى نهاية الفترة التي دفعت مقابلها، ويعرض Google Play هذا التاريخ.</string>
+    <!-- %1$s: the verified end of the paid period, e.g. "December 1, 2026". -->
+    <string name="m3_subscription_sheet_body_dated">يتم الإلغاء في Google Play. يستمر وصولك حتى %1$s.</string>
+    <string name="m3_subscription_stops_heading">ما يتوقف عند انتهاء اشتراكك</string>
+    <string name="m3_subscription_stops_exports">عمليات التصدير غير المحدودة، بما فيها عمليات التصدير عبر healthmd CLI</string>
+    <string name="m3_subscription_stops_automations">الملاحظات اليومية المجدولة والأتمتة</string>
+    <string name="m3_subscription_stops_reports">تقارير للطبيب</string>
+    <string name="m3_subscription_keep_heading">ما تحتفظ به</string>
+    <string name="m3_subscription_keep_files">كل ملاحظة صدّرتها. إنها ملفات Markdown أو CSV أو JSON عادية في المجلد الذي اخترته، وتبقى هناك.</string>
+    <string name="m3_subscription_keep_setup">إعداداتك. تبقى المقاييس والتنسيقات والوجهات والأتمتة محفوظة، وتعمل الجداول مجددًا إذا اشتركت من جديد.</string>
+    <string name="m3_subscription_continue_to_cancel">متابعة الإلغاء</string>
+    <string name="m3_subscription_keep_subscription">الاحتفاظ بالاشتراك</string>
+    <!-- Weekly -> Yearly offer card (Play offer switch-yearly-1y). Prices come from Google Play. -->
+    <string name="m3_subscription_offer_eyebrow">عرض لمشتركي الخطة الأسبوعية</string>
+    <!-- %1$s: first-year offer price from Google Play, e.g. "$19.99". -->
+    <string name="m3_subscription_offer_title">الخطة السنوية بسعر %1$s للسنة الأولى</string>
+    <!-- %1$s: the regular Yearly price from Google Play, e.g. "$29.99". -->
+    <string name="m3_subscription_offer_detail">ثم %1$s سنويًا. يبدأ التبديل الآن، ويضيف Google Play رصيدًا عن الجزء غير المستخدم من أسبوعك.</string>
+    <string name="m3_subscription_offer_action">التبديل إلى الخطة السنوية</string>
+    <string name="m3_subscription_sheet_footnote">يفتح «متابعة الإلغاء» Google Play › الاشتراكات لـ Health.md.</string>
+
+    <!-- After a lapse: what still works and what is paused, without nagging. -->
+    <string name="m3_subscription_ended_title">انتهى الاشتراك</string>
+    <string name="m3_subscription_ended_subtitle">%1$s لم يعد نشطًا</string>
+    <string name="m3_subscription_still_works">ما زال يعمل</string>
+    <string name="m3_subscription_works_files_title">ملفاتك المصدَّرة</string>
+    <string name="m3_subscription_works_files_body">ملفات Markdown أو CSV أو JSON عادية في المجلد الذي اخترته. افتحها في أي تطبيق.</string>
+    <string name="m3_subscription_works_setup_title">إعداداتك محفوظة</string>
+    <string name="m3_subscription_works_setup_body">تبقى المقاييس والتنسيقات والوجهات والأتمتة كما تركتها.</string>
+    <string name="m3_subscription_works_health_connect_title">الوصول إلى Health Connect</string>
+    <string name="m3_subscription_works_health_connect_body">تبقى الأذونات التي منحتها كما هي. يمكنك تغييرها في Health Connect.</string>
+    <string name="m3_subscription_paused_heading">متوقف مؤقتًا حتى تشترك من جديد</string>
+    <string name="m3_subscription_paused_body">عمليات تصدير غير محدودة · ملاحظات يومية مجدولة وأتمتة · تقارير للطبيب · عمليات التصدير عبر healthmd CLI</string>
+    <string name="m3_subscription_paused_schedule_note">تبقى الجداول مفعّلة، لذا يُسجَّل كل تشغيل مجدول على أنه يحتاج إلى وصول. أوقفها في الأتمتة إذا كنت لا تريد رؤية هذه الإشعارات.</string>
+    <string name="m3_subscription_play_subscriptions">اشتراكات Google Play</string>
+</resources>

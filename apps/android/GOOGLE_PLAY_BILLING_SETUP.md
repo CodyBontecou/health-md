@@ -34,6 +34,8 @@ A Play-signed release cannot update a debug-signed installation in place. Back u
 
 Configure an eligible seven-day free-trial offer on each subscription, followed by the infinitely recurring paid phase. The Billing SDK may represent the week as `P7D` or `P1W`; finite free phases have one cycle, while non-recurring phases have zero cycles. The app selects only an eligible seven-day trial or its paid base plan, and shows the localized price returned by Play. No fallback US price or fabricated trial is used. Product/base-plan/offer activation and regional availability must be verified in Console before shipping the hard gate.
 
+Cancel-flow retention and win-back offers (draft, not created) and the matching App Store retention messages are in [retention messages](../../docs/retention-messages.md). The app's Settings › Subscription › Manage or cancel path opens Play's page for the owned subscription (`sku` and `package`). The paywall's Manage subscriptions link does the same for the owned or just-ended plan. Renewal and end dates come from myself.md's server read of `purchases.subscriptionsv2` (`PlaySubscriptionStatusApi`), and the Weekly → Yearly card in "Before you go" appears only once the developer-determined offer `switch-yearly-1y` (tag `retention-in-app`) exists on the `yearly` base plan; both are described in the retention doc.
+
 **Never rename the existing lifetime ID.** Existing paid and previously grandfathered permanent owners retain access and restoration. No custom family accounts, invitations, or cross-store entitlement transfer are included.
 
 ## Architecture

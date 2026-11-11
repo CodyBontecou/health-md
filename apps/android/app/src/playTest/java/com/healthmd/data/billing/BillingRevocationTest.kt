@@ -11,6 +11,9 @@ import com.android.billingclient.api.Purchase
 import com.android.billingclient.api.BillingResult
 import com.android.billingclient.api.PurchasesResponseListener
 import com.google.common.truth.Truth.assertThat
+import com.healthmd.domain.billing.PlaySubscriptionVerifier
+import com.healthmd.domain.billing.SubscriptionStatus
+import com.healthmd.domain.billing.VerifiedPlaySubscription
 import com.healthmd.domain.repository.SettingsRepository
 import com.healthmd.domain.repository.PurchasePlan
 import com.healthmd.export.MainDispatcherRule
@@ -127,6 +130,90 @@ class BillingRevocationTest {
         assertThat(fixture.purchased.value).isFalse()
     }
 
+    @Test fun fullSnapshotRemembersTheOwnedSubscriptionAndItsRenewalState() = runTest {
+        val fixture = fixture(backgroundScope, cached = false, purchases = listOf(purchase(PurchasePlan.YEARLY)))
+        assertThat(fixture.repository.restorePurchase()).isTrue()
+        assertThat(fixture.repository.subscriptionStatus.value)
+            .isEqualTo(SubscriptionStatus.Subscribed(PurchasePlan.YEARLY, isAutoRenewing = true))
+        assertThat(fixture.prefs.getString(BillingRepositoryImpl.KEY_REMEMBERED_SUBSCRIPTION, null))
+            .isEqualTo(PurchasePlan.YEARLY.productId)
+    }
+
+    @Test fun serverVerifiedPeriodEndIsAddedForTheOwnedToken() = runTest {
+        val sent = mutableListOf<String>()
+        val verifier = PlaySubscriptionVerifier { token ->
+            sent += token
+            VerifiedPlaySubscription(PurchasePlan.YEARLY.productId, "active", NOW + DAY, autoRenewing = true)
+        }
+        val fixture = fixture(backgroundScope, cached = false, purchases = listOf(purchase(PurchasePlan.YEARLY)), verifier = verifier)
+        fixture.repository.restorePurchase()
+        runCurrent()
+        assertThat(fixture.repository.subscriptionStatus.value)
+            .isEqualTo(SubscriptionStatus.Subscribed(PurchasePlan.YEARLY, isAutoRenewing = true, periodEndMillis = NOW + DAY))
+        assertThat(sent).containsExactly("token-YEARLY")
+        // A later snapshot reuses the answer instead of asking again.
+        fixture.repository.restorePurchase()
+        runCurrent()
+        assertThat(sent).hasSize(1)
+        assertThat((fixture.repository.subscriptionStatus.value as SubscriptionStatus.Subscribed).periodEndMillis)
+            .isEqualTo(NOW + DAY)
+    }
+
+    @Test fun mismatchedOrPastServerAnswersAreNeverShownAsADate() = runTest {
+        for (answer in listOf(
+            VerifiedPlaySubscription(PurchasePlan.WEEKLY.productId, "active", NOW + DAY, autoRenewing = true),
+            VerifiedPlaySubscription(PurchasePlan.YEARLY.productId, "expired", NOW + DAY, autoRenewing = false),
+            VerifiedPlaySubscription(PurchasePlan.YEARLY.productId, "active", NOW - DAY, autoRenewing = true),
+        )) {
+            val fixture = fixture(backgroundScope, cached = false, purchases = listOf(purchase(PurchasePlan.YEARLY)),
+                verifier = { answer })
+            fixture.repository.restorePurchase()
+            runCurrent()
+            assertThat((fixture.repository.subscriptionStatus.value as SubscriptionStatus.Subscribed).periodEndMillis).isNull()
+        }
+    }
+
+    @Test fun failedServerReadsBackOffInsteadOfRetryingEveryRefresh() = runTest {
+        var calls = 0
+        var now = NOW
+        val fixture = fixture(backgroundScope, cached = false, purchases = listOf(purchase(PurchasePlan.WEEKLY)),
+            verifier = { calls++; null }, now = { now })
+        fixture.repository.restorePurchase()
+        runCurrent()
+        fixture.repository.restorePurchase()
+        runCurrent()
+        assertThat(calls).isEqualTo(1)
+        now += 61 * 60 * 1000L
+        fixture.repository.restorePurchase()
+        runCurrent()
+        assertThat(calls).isEqualTo(2)
+        assertThat(fixture.repository.subscriptionStatus.value)
+            .isEqualTo(SubscriptionStatus.Subscribed(PurchasePlan.WEEKLY, isAutoRenewing = true))
+    }
+
+    @Test fun emptySnapshotAfterARememberedSubscriptionReportsALapse() = runTest {
+        val fixture = fixture(backgroundScope, cached = false)
+        fixture.prefs.edit().putString(BillingRepositoryImpl.KEY_REMEMBERED_SUBSCRIPTION, PurchasePlan.WEEKLY.productId).commit()
+        assertThat(fixture.repository.restorePurchase()).isFalse()
+        assertThat(fixture.repository.subscriptionStatus.value).isEqualTo(SubscriptionStatus.Ended(PurchasePlan.WEEKLY))
+        // The memory survives so the lapse is still shown on the next launch.
+        assertThat(fixture.prefs.getString(BillingRepositoryImpl.KEY_REMEMBERED_SUBSCRIPTION, null))
+            .isEqualTo(PurchasePlan.WEEKLY.productId)
+    }
+
+    @Test fun emptySnapshotWithoutHistoryIsFree() = runTest {
+        val fixture = fixture(backgroundScope, cached = false)
+        fixture.repository.restorePurchase()
+        assertThat(fixture.repository.subscriptionStatus.value).isEqualTo(SubscriptionStatus.Free)
+    }
+
+    @Test fun failedQueryNeverReportsALapse() = runTest {
+        val fixture = fixture(backgroundScope, cached = false, responseCode = BillingClient.BillingResponseCode.SERVICE_UNAVAILABLE)
+        fixture.prefs.edit().putString(BillingRepositoryImpl.KEY_REMEMBERED_SUBSCRIPTION, PurchasePlan.WEEKLY.productId).commit()
+        fixture.repository.restorePurchase()
+        assertThat(fixture.repository.subscriptionStatus.value).isEqualTo(SubscriptionStatus.Unknown)
+    }
+
     private data class Fixture(
         val repository: BillingRepositoryImpl,
         val prefs: SharedPreferences,
@@ -139,6 +226,8 @@ class BillingRevocationTest {
         every { products } returns listOf(plan.productId)
         every { purchaseState } returns Purchase.PurchaseState.PURCHASED
         every { isAcknowledged } returns true
+        every { isAutoRenewing } returns true
+        every { purchaseToken } returns "token-${plan.name}"
     }
 
     private fun fixture(
@@ -151,6 +240,8 @@ class BillingRevocationTest {
         cached: Boolean = true,
         settingsPurchased: Boolean = cached,
         freeExportsUsed: Int = 1,
+        verifier: PlaySubscriptionVerifier? = null,
+        now: () -> Long = { NOW },
     ): Fixture {
         val app = ApplicationProvider.getApplicationContext<Context>()
         val prefs = app.getSharedPreferences("healthmd_purchase_prefs", Context.MODE_PRIVATE)
@@ -176,6 +267,11 @@ class BillingRevocationTest {
         every { client.queryPurchasesAsync(any(), any<PurchasesResponseListener>()) } answers {
             secondArg<PurchasesResponseListener>().onQueryPurchasesResponse(result(responseCode), purchases)
         }
-        return Fixture(BillingRepositoryImpl(context, settings, client, scope), prefs, purchased)
+        return Fixture(BillingRepositoryImpl(context, settings, client, scope, verifier, now), prefs, purchased)
+    }
+
+    private companion object {
+        const val NOW = 1_800_000_000_000L
+        const val DAY = 24 * 60 * 60 * 1000L
     }
 }

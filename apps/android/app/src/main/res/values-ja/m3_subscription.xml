@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Settings › Subscription. Dates appear only after myself.md has read them from Google Play; until then the row names Google Play. -->
+    <string name="m3_subscription_title">サブスクリプション</string>
+    <string name="m3_subscription_plan_weekly">Health.md 週間</string>
+    <string name="m3_subscription_plan_yearly">Health.md 年間</string>
+    <string name="m3_subscription_plan_lifetime">Health.md 買い切り</string>
+    <string name="m3_subscription_plan_full_access">Health.md フルアクセス</string>
+    <string name="m3_subscription_plan_free">無料プラン</string>
+    <string name="m3_subscription_status_renews">有効 · 自動更新</string>
+    <string name="m3_subscription_status_cancelled">キャンセル済み · 支払い済みの期間が終わるまで利用できます</string>
+    <string name="m3_subscription_status_lifetime">買い切り · 更新はありません</string>
+    <string name="m3_subscription_status_included">早期インストール特典に含まれています · 更新はありません</string>
+    <string name="m3_subscription_status_free">最初のエクスポートは無料です。プランでは無制限のエクスポートとオートメーションを利用できます。</string>
+    <string name="m3_subscription_status_checking">Google Play を確認しています…</string>
+    <string name="m3_subscription_row_plan">プラン</string>
+    <string name="m3_subscription_value_weekly">週間</string>
+    <string name="m3_subscription_value_yearly">年間</string>
+    <string name="m3_subscription_value_lifetime">買い切り · 一回払い</string>
+    <string name="m3_subscription_row_billing_date">次回の請求日</string>
+    <string name="m3_subscription_value_billing_date">Google Play で確認できます</string>
+    <string name="m3_subscription_row_access_until">利用期限</string>
+    <string name="m3_subscription_row_billed_by">請求元</string>
+    <string name="m3_subscription_value_google_play">Google Play</string>
+    <string name="m3_subscription_row_includes">含まれる内容</string>
+    <string name="m3_subscription_value_includes">無制限のエクスポート、スケジュールされたデイリーノート、オートメーション、医療従事者向けレポート、healthmd CLI エクスポート</string>
+    <string name="m3_subscription_manage_or_cancel">管理またはキャンセル</string>
+    <string name="m3_subscription_manage_in_play">Google Play で管理</string>
+    <string name="m3_subscription_cancel_note">Google Play でいつでもキャンセルできます。支払い済みの期間が終わるまで引き続き利用できます。</string>
+    <string name="m3_subscription_cancelled_note">サブスクリプションは更新されません。再登録や変更は Google Play で行えます。</string>
+    <string name="m3_subscription_see_plans">プランを見る</string>
+
+    <!-- "Before you go": factual only. Both actions are the same size. -->
+    <string name="m3_subscription_sheet_title">キャンセルの前に</string>
+    <string name="m3_subscription_sheet_body">キャンセルは Google Play で行います。支払い済みの期間が終わるまで引き続き利用でき、その日付は Google Play に表示されます。</string>
+    <!-- %1$s: the verified end of the paid period, e.g. "December 1, 2026". -->
+    <string name="m3_subscription_sheet_body_dated">キャンセルは Google Play で行います。%1$sまで引き続き利用できます。</string>
+    <string name="m3_subscription_stops_heading">サブスクリプション終了後に停止する機能</string>
+    <string name="m3_subscription_stops_exports">無制限のエクスポート（healthmd CLI エクスポートを含む）</string>
+    <string name="m3_subscription_stops_automations">スケジュールされたデイリーノートとオートメーション</string>
+    <string name="m3_subscription_stops_reports">医療従事者向けレポート</string>
+    <string name="m3_subscription_keep_heading">引き続き残るもの</string>
+    <string name="m3_subscription_keep_files">これまでにエクスポートしたすべてのノート。選択したフォルダー内の通常の Markdown、CSV、JSON ファイルで、そのまま残ります。</string>
+    <string name="m3_subscription_keep_setup">設定内容。指標、形式、保存先、オートメーションは保存されたままで、再登録するとスケジュールが再び実行されます。</string>
+    <string name="m3_subscription_continue_to_cancel">キャンセルを続ける</string>
+    <string name="m3_subscription_keep_subscription">サブスクリプションを維持</string>
+    <!-- Weekly -> Yearly offer card (Play offer switch-yearly-1y). Prices come from Google Play. -->
+    <string name="m3_subscription_offer_eyebrow">週間プラン利用者向けのオファー</string>
+    <!-- %1$s: first-year offer price from Google Play, e.g. "$19.99". -->
+    <string name="m3_subscription_offer_title">年間プランが初年度%1$s</string>
+    <!-- %1$s: the regular Yearly price from Google Play, e.g. "$29.99". -->
+    <string name="m3_subscription_offer_detail">以降は年額%1$sです。切り替えはすぐに適用され、週間プランの未使用分は Google Play でクレジットされます。</string>
+    <string name="m3_subscription_offer_action">年間プランに切り替える</string>
+    <string name="m3_subscription_sheet_footnote">「キャンセルを続ける」を選ぶと Google Play › 定期購入 の Health.md が開きます。</string>
+
+    <!-- After a lapse: what still works and what is paused, without nagging. -->
+    <string name="m3_subscription_ended_title">サブスクリプションが終了しました</string>
+    <string name="m3_subscription_ended_subtitle">%1$s は有効ではなくなりました</string>
+    <string name="m3_subscription_still_works">引き続き使えるもの</string>
+    <string name="m3_subscription_works_files_title">エクスポートしたファイル</string>
+    <string name="m3_subscription_works_files_body">選択したフォルダー内の通常の Markdown、CSV、JSON ファイルです。どのアプリでも開けます。</string>
+    <string name="m3_subscription_works_setup_title">設定は保存されています</string>
+    <string name="m3_subscription_works_setup_body">指標、形式、保存先、オートメーションはそのままです。</string>
+    <string name="m3_subscription_works_health_connect_title">Health Connect へのアクセス</string>
+    <string name="m3_subscription_works_health_connect_body">付与した権限はそのままです。変更は Health Connect で行えます。</string>
+    <string name="m3_subscription_paused_heading">再登録するまで一時停止中</string>
+    <string name="m3_subscription_paused_body">無制限のエクスポート · スケジュールされたデイリーノートとオートメーション · 医療従事者向けレポート · healthmd CLI エクスポート</string>
+    <string name="m3_subscription_paused_schedule_note">スケジュールはオンのままのため、スケジュールされた各実行はアクセスが必要として記録されます。この通知を表示したくない場合は、オートメーションでスケジュールをオフにしてください。</string>
+    <string name="m3_subscription_play_subscriptions">Google Play の定期購入</string>
+</resources>

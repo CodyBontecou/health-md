@@ -83,6 +83,9 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         StaticPurchasePreview.configure(intent.getBooleanExtra(StaticPurchasePreview.EXTRA, false))
+        com.healthmd.presentation.settings.SubscriptionStatusPreview.configure(
+            intent.getStringExtra(com.healthmd.presentation.settings.SubscriptionStatusPreview.EXTRA),
+        )
         handledMyselfClaimIntent = savedInstanceState?.getBoolean(STATE_HANDLED_MYSELF_CLAIM) == true
         handledClinicSyncIntent = savedInstanceState?.getBoolean(STATE_HANDLED_CLINIC_SYNC) == true
         val alreadyHandledExternalIntent =
