@@ -66,17 +66,7 @@ nonisolated enum HealthMdSemanticInputAdapter {
         requestedRange: HealthRollupRangeRequest? = nil,
         captureContext: AppleSleepCaptureContext? = nil
     ) throws -> Data {
-        if profile == .frozenV8 {
-        guard registry.profileId == profile.rawValue,
-              registry.publicProfileId == profile.publicProfileID,
-              registry.publicSchema == HealthMdExportSchema.identifier,
-              registry.publicSchemaVersion == profile.schemaVersion,
-              registry.profileRevision == 1,
-              registry.registryVersion == registryVersion,
-              registry.registrySha256 == HealthMetrics.registrySHA256
-        else { throw AdapterError.invalidRegistry }
-        }
-        let inputVersion = try validatedInputVersion(registry: registry,
+        let inputVersion = try validatedInputVersion(registry: registry, profile: profile,
             calendarTimeZoneIdentifier: calendarTimeZoneIdentifier, captureContext: captureContext)
         guard inputVersion == semanticInputVersion || (rollupPeriods.isEmpty && requestedRange == nil)
                 || (inputVersion == AppleExportEnginePin.wakeDateHandoffVersion
@@ -162,18 +152,7 @@ nonisolated enum HealthMdSemanticInputAdapter {
         captureContext: AppleSleepCaptureContext? = nil,
         includeArchiveExtensions: Bool = true
     ) throws -> EncodedBatch {
-        if profile == .frozenV8 {
-        guard registry.profileId == profile.rawValue,
-              registry.publicProfileId == profile.publicProfileID,
-              registry.publicSchema == HealthMdExportSchema.identifier,
-              registry.publicSchemaVersion == profile.schemaVersion,
-              registry.profileRevision == 1,
-              registry.registryVersion == registryVersion,
-              registry.registrySha256 == HealthMetrics.registrySHA256 else {
-            throw AdapterError.invalidRegistry
-        }
-        }
-        let inputVersion = try validatedInputVersion(registry: registry,
+        let inputVersion = try validatedInputVersion(registry: registry, profile: profile,
             calendarTimeZoneIdentifier: calendarTimeZoneIdentifier, captureContext: captureContext)
         guard healthData.allSatisfy({
             ($0.timeContext.sleepDayAttribution ?? .nightBegins)
@@ -354,7 +333,7 @@ nonisolated enum HealthMdSemanticInputAdapter {
         captureContext: AppleSleepCaptureContext? = nil,
         includeArchiveExtensions: Bool = true
     ) throws -> [EncodedBatch] {
-        let inputVersion = try validatedInputVersion(registry: registry,
+        let inputVersion = try validatedInputVersion(registry: registry, profile: profile,
             calendarTimeZoneIdentifier: calendarTimeZoneIdentifier, captureContext: captureContext)
         guard healthData.count <= HealthRollupRangeRequest.maximumDays else {
             throw AdapterError.limitExceeded
@@ -565,10 +544,23 @@ nonisolated enum HealthMdSemanticInputAdapter {
     @MainActor
     private static func validatedInputVersion(
         registry: CoreMetricRegistrySnapshot,
+        profile: Profile,
         calendarTimeZoneIdentifier: String,
         captureContext: AppleSleepCaptureContext?
     ) throws -> UInt32 {
-        if registry.profileId == AppleExportEnginePin.wakeDateProfileID {
+        if profile == .frozenV8 {
+            // The bridge explicitly selects frozen v8. It is not an eligible current export
+            // engine pin, and must never be inferred from registry version or caller data.
+            guard registry.profileId == profile.rawValue,
+                  registry.publicProfileId == profile.publicProfileID,
+                  registry.publicSchema == HealthMdExportSchema.identifier,
+                  registry.publicSchemaVersion == profile.schemaVersion,
+                  registry.profileRevision == 1,
+                  registry.registryVersion == registryVersion,
+                  registry.registrySha256 == HealthMetrics.registrySHA256 else {
+                throw AdapterError.invalidRegistry
+            }
+        } else if registry.profileId == AppleExportEnginePin.wakeDateProfileID {
             guard registry.publicProfileId == "apple-v11",
                   registry.publicSchema == HealthMdExportSchema.identifier,
                   registry.publicSchemaVersion == 11, registry.profileRevision == 1,
@@ -583,8 +575,7 @@ nonisolated enum HealthMdSemanticInputAdapter {
                 throw AdapterError.invalidCaptureAuthority
             }
             return AppleExportEnginePin.wakeDateHandoffVersion
-        }
-        guard AppleExportEnginePin.supportsRegistry(registry) else {
+        } else if !AppleExportEnginePin.supportsRegistry(registry) {
             throw AdapterError.invalidRegistry
         }
         guard captureContext == nil || (captureContext?.sleepDayAttribution == .nightBegins
