@@ -72,6 +72,142 @@ final class AgentDataGatewayExportRunnerTests: XCTestCase {
         try await assertRealEngineArtifactsUploadByteIdentically(attribution: .morningEnds)
     }
 
+    /// Compose the new admission owner with real materialization and socket upload.
+    /// UI-test completion bypasses dispatch, so it cannot establish this boundary.
+    @MainActor
+    func testResolvedAllTimeAdmissionUploadsFrozenDatesOverLoopback() async throws {
+        let gateway = try startGateway(.accept)
+        defer { gateway.stop() }
+        let dates = makeDates(2)
+        let store = FakeHealthStore()
+        for date in dates { try HealthKitFixtures.populateAllCategories(store, date: date) }
+        store.earliestSampleDates[HKQuantityTypeIdentifier.stepCount.rawValue] = dates[0]
+        let manager = HealthKitManager(store: store, userDefaults: makeIsolatedDefaults())
+        let selection = makeAllTimeGatewaySelection(dates: dates)
+        let coordinator = HealthHistoryAssessmentCoordinator()
+
+        let outcome = try await XCTUnwrapAsyncGatewayResult {
+            try await admittedGatewayExport(selection: selection, manager: manager,
+                coordinator: coordinator, referenceDate: dates[1], endpoint: gateway.url)
+        }
+
+        XCTAssertTrue(outcome.export.didCompleteAllRequestedDates)
+        XCTAssertTrue(outcome.uploads.didUploadAllEligibleArtifacts)
+        XCTAssertEqual(store.queriedEarliestSampleTypeIdentifiers, [HKQuantityTypeIdentifier.stepCount.rawValue])
+        XCTAssertEqual(gateway.capturedRequests.count, 2)
+        var ownerDates: Set<String> = []
+        for request in gateway.capturedRequests {
+            let manifest = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(request.manifestLine.utf8)) as? [String: Any])
+            let owner = try XCTUnwrap(manifest["owner_date"] as? String)
+            ownerDates.insert(owner)
+            XCTAssertEqual(manifest["byte_count"] as? Int, request.artifactBytes.count)
+            XCTAssertEqual(manifest["sha256"] as? String, AgentDataIngestManifest.sha256(of: request.artifactBytes))
+            XCTAssertEqual(manifest["artifact_schema"] as? String, HealthMdExportSchema.identifier)
+            let document = try XCTUnwrap(JSONSerialization.jsonObject(with: request.artifactBytes) as? [String: Any])
+            XCTAssertEqual(document["date"] as? String, owner)
+            XCTAssertEqual(document["schema"] as? String, HealthMdExportSchema.identifier)
+        }
+        XCTAssertEqual(ownerDates, ["2026-03-15", "2026-03-16"])
+        XCTAssertEqual(selection.scope.startDate, dates[0].addingTimeInterval(-365 * 86_400),
+                       "Resolved bounds must not rewrite the originating date selection")
+    }
+
+    @MainActor
+    func testStaleAllTimeAdmissionSendsNothingToLoopback() async throws {
+        let gateway = try startGateway(.accept)
+        defer { gateway.stop() }
+        let dates = makeDates(2)
+        let store = FakeHealthStore()
+        let coordinator = HealthHistoryAssessmentCoordinator()
+        store.earliestSampleDateQuery = { _ in
+            // The same UI values can return after an intervening action (ABA).
+            // A late provider result must still fail the original revision.
+            await MainActor.run { coordinator.invalidate() }
+            return dates[0]
+        }
+        let manager = HealthKitManager(store: store, userDefaults: makeIsolatedDefaults())
+        let outcome = try await admittedGatewayExport(selection: makeAllTimeGatewaySelection(dates: dates),
+            manager: manager, coordinator: coordinator, referenceDate: dates[1], endpoint: gateway.url)
+        XCTAssertNil(outcome)
+        XCTAssertTrue(gateway.capturedRequests.isEmpty)
+        XCTAssertTrue(store.historyRequestedIdentifiers.isEmpty, "Stale discovery must not reach history admission")
+    }
+
+    @MainActor
+    func testEmptyAllTimeAdmissionSendsNothingToLoopback() async throws {
+        let gateway = try startGateway(.accept)
+        defer { gateway.stop() }
+        let dates = makeDates(2)
+        let store = FakeHealthStore()
+        let manager = HealthKitManager(store: store, userDefaults: makeIsolatedDefaults())
+        do {
+            _ = try await admittedGatewayExport(selection: makeAllTimeGatewaySelection(dates: dates),
+                manager: manager, coordinator: HealthHistoryAssessmentCoordinator(),
+                referenceDate: dates[1], endpoint: gateway.url)
+            XCTFail("An empty readable store must not dispatch a gateway export")
+        } catch {
+            XCTAssertEqual(error as? NativeExportDateRangeResolver.ResolutionError, .noHealthData)
+        }
+        XCTAssertTrue(gateway.capturedRequests.isEmpty)
+        XCTAssertTrue(store.historyRequestedIdentifiers.isEmpty)
+    }
+
+    @MainActor
+    private func makeAllTimeGatewaySelection(dates: [Date]) -> HealthHistoryExecutionSelection {
+        let settings = makeSettings(formats: [.json])
+        settings.detailPolicy = .summary
+        settings.metricSelection.enabledMetrics = ["steps"]
+        return HealthHistoryExecutionSelection(scope: .init(metricIDs: ["steps"],
+            startDate: dates[0].addingTimeInterval(-365 * 86_400), endDate: dates[1],
+            timeZoneIdentifier: "GMT", allAvailable: true, profileID: nil, rangeSemantics: .ownerDates),
+            settings: .from(settings, appleExportEngineAuthorityIsFrozen: false),
+            target: .agentDataGateway, preset: .allTime)
+    }
+
+    @MainActor
+    private func admittedGatewayExport(selection: HealthHistoryExecutionSelection,
+        manager: HealthKitManager, coordinator: HealthHistoryAssessmentCoordinator,
+        referenceDate: Date, endpoint: String) async throws -> AgentDataGatewayExportResult? {
+        let request = coordinator.beginExportRequest(selection: selection)
+        guard let admitted = try await coordinator.resolveExportRequest(request,
+            liveSelection: { selection }, operation: {
+                try await NativeExportDateRangeResolver.resolve(request.dateRangeRequest,
+                    using: manager, currentRequest: { request.dateRangeRequest }, referenceDate: referenceDate)
+            }) else { return nil }
+        let assessment = await coordinator.assessExecution(requestID: admitted.id,
+            worker: HealthHistoryAssessmentWorker(),
+            notCompleted: manager.historyAssessmentNotCompleted(scope: admitted.selection.scope),
+            scope: admitted.selection.scope,
+            isCurrent: { coordinator.isCurrent(admitted, liveSelection: selection) },
+            operation: { await manager.assessHistoryAccess(scope: admitted.selection.scope) })
+        guard let assessment, !assessment.requiresExplicitContinuation,
+              coordinator.isCurrent(admitted, liveSelection: selection) else { return nil }
+        let frozen = admitted.selection.makeCaptureSettings()
+        Self.retainedSettings.append(frozen)
+        XCTAssertEqual(frozen.metricSelection.enabledMetrics, ["steps"])
+        XCTAssertEqual(frozen.exportFormats, [.json])
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try XCTUnwrap(frozen.exportTimeZoneOverride)
+        var dates: [Date] = []
+        var day = calendar.startOfDay(for: admitted.selection.scope.startDate)
+        while day <= admitted.selection.scope.endDate {
+            dates.append(day)
+            day = try XCTUnwrap(calendar.date(byAdding: .day, value: 1, to: day))
+        }
+        return await AgentDataGatewayExportRunner.export(dates: dates,
+            healthKitManager: manager, settings: frozen,
+            destination: try XCTUnwrap(AgentDataGatewayDestinationSnapshot(endpointURLString: endpoint)),
+            client: AgentDataIngestClient(maximumAttempts: 1, initialRetryDelay: 0.01, sleep: { _ in }))
+    }
+
+    @MainActor
+    private func XCTUnwrapAsyncGatewayResult(
+        _ operation: () async throws -> AgentDataGatewayExportResult?
+    ) async throws -> AgentDataGatewayExportResult {
+        let result = try await operation()
+        return try XCTUnwrap(result, "The unchanged admitted selection must reach the real gateway runner")
+    }
+
     @MainActor
     private func assertRealEngineArtifactsUploadByteIdentically(attribution: SleepDayAttribution) async throws {
         let gateway = try startGateway(.accept)
