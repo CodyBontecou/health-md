@@ -331,6 +331,67 @@ class BillingRevocationTest {
         verify(exactly = 0) { fixture.client.launchBillingFlow(any(), any()) }
     }
 
+    @Test fun failedOwnershipQueryRemovesPreviouslyVerifiedSubscriptionSessionAccess() = runTest {
+        val fixture = fixture(backgroundScope, cached = false,
+            purchases = listOf(purchase(PurchasePlan.YEARLY)))
+        assertThat(fixture.repository.verifyAccess()).isTrue()
+
+        every { fixture.client.queryPurchasesAsync(any(), any<PurchasesResponseListener>()) } answers {
+            secondArg<PurchasesResponseListener>().onQueryPurchasesResponse(
+                result(BillingClient.BillingResponseCode.SERVICE_UNAVAILABLE), emptyList(),
+            )
+        }
+
+        assertThat(fixture.repository.verifyAccess()).isFalse()
+        assertThat(fixture.repository.isUnlocked.value).isFalse()
+        assertThat(fixture.repository.isPermanentlyUnlocked.value).isFalse()
+        assertThat(fixture.purchased.value).isFalse()
+        assertThat(fixture.prefs.getBoolean("is_unlocked", true)).isFalse()
+    }
+
+    @Test fun failedOwnershipQueryPreservesAnIndependentGrandfatheredGrant() = runTest {
+        val fixture = fixture(backgroundScope, cached = false, legacyGrant = true,
+            responseCode = BillingClient.BillingResponseCode.SERVICE_UNAVAILABLE)
+
+        assertThat(fixture.repository.verifyAccess()).isTrue()
+        assertThat(fixture.repository.isUnlocked.value).isTrue()
+        assertThat(fixture.prefs.getBoolean("legacy_unlock_granted", false)).isTrue()
+    }
+
+    @Test fun productQueryFailureBlocksCheckoutAndExplicitRecoveryDoesNotUnlockOrCharge() = runTest {
+        val fixture = fixture(backgroundScope, cached = false)
+        val details = mockk<ProductDetails> {
+            every { productId } returns PurchasePlan.LIFETIME.productId
+            every { oneTimePurchaseOfferDetails } returns mockk {
+                every { formattedPrice } returns "19,99 €"
+            }
+        }
+        fun productResponse(code: Int, products: List<ProductDetails>) {
+            every { fixture.client.queryProductDetailsAsync(any(), any<ProductDetailsResponseListener>()) } answers {
+                secondArg<ProductDetailsResponseListener>().onProductDetailsResponse(
+                    result(code), QueryProductDetailsResult.create(products, emptyList()),
+                )
+            }
+        }
+        productResponse(BillingClient.BillingResponseCode.OK, listOf(details))
+        fixture.repository.refresh()
+        runCurrent()
+        assertThat(fixture.repository.offers.value.single().localizedPriceText).isEqualTo("19,99 €")
+
+        productResponse(BillingClient.BillingResponseCode.SERVICE_UNAVAILABLE, emptyList())
+        assertThat(fixture.repository.launchPurchase(mockk(relaxed = true), PurchasePlan.LIFETIME)).isFalse()
+        assertThat(fixture.repository.offers.value).isEmpty()
+        assertThat(fixture.repository.isUnlocked.value).isFalse()
+
+        productResponse(BillingClient.BillingResponseCode.OK, listOf(details))
+        fixture.repository.refresh()
+        runCurrent()
+        assertThat(fixture.repository.offers.value.single().localizedPriceText).isEqualTo("19,99 €")
+        assertThat(fixture.repository.isUnlocked.value).isFalse()
+        assertThat(fixture.purchased.value).isFalse()
+        verify(exactly = 0) { fixture.client.launchBillingFlow(any(), any()) }
+    }
+
     private data class Fixture(
         val repository: BillingRepositoryImpl,
         val prefs: SharedPreferences,
