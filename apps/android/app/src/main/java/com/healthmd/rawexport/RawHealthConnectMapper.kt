@@ -10,6 +10,8 @@ import kotlinx.serialization.json.*
 
 /** Explicit mapper for connect-client 1.2.0-alpha02. No reflection and no toString fallback. */
 object RawHealthConnectMapper {
+    internal fun startTime(record: Record): Instant = temporal(record).start
+
     fun map(record: Record, wireType: String): RawRecord {
         val temporal = temporal(record)
         return RawRecord(

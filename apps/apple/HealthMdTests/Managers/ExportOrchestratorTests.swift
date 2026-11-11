@@ -460,7 +460,51 @@ final class ExportOrchestratorTests: XCTestCase {
     }
 
     @MainActor
-    func testPinnedForegroundRangeRetainsSuccessfulEmptyCaptureWithoutDailyArtifact() async throws {
+    func testManualLosslessEmptyDaysProduceNoDailyFiles() async throws {
+        for periods: Set<HealthRollupPeriod> in [[], [.range]] {
+            let date = HealthKitFixtures.referenceDate
+            let manager = HealthKitManager(store: FakeHealthStore(), userDefaults: makeIsolatedDefaults())
+            let (vault, files) = makeVaultManager(vaultPath: "/tmp/ManualEmptyDays-\(UUID().uuidString)")
+            let settings = makeExportSettings(formats: [.json], rollupPeriods: periods)
+            settings.includeGranularData = true
+            settings.metricSelection.deselectAll()
+            settings.metricSelection.enabledMetrics = ["steps"]
+            settings.exportTimeZoneOverride = TimeZone(identifier: "UTC")
+
+            let result = await ExportOrchestrator.exportDates([date], healthKitManager: manager,
+                vaultManager: vault, settings: settings)
+
+            XCTAssertEqual(result.successCount, 0)
+            XCTAssertEqual(result.failedDateDetails.map(\.reason), [.noHealthData])
+            XCTAssertEqual(result.completedDates, [date])
+            XCTAssertFalse(files.files.keys.contains { $0.hasSuffix("/2026-03-15.json") })
+            if periods.isEmpty { XCTAssertTrue(files.files.isEmpty) }
+        }
+    }
+
+    @MainActor
+    func testManualDailyEmptinessPreservesArchiveEvidenceAndFailures() {
+        let date = HealthKitFixtures.referenceDate
+        let ownership = HealthKitDailyOwnershipMetadata(ownerDate: "2026-03-15",
+            intervalStart: date, intervalEnd: date.addingTimeInterval(86_400),
+            calendarTimeZoneIdentifier: "UTC")
+        for status in HealthKitQueryResultStatus.allCases {
+            let archive = HealthKitRecordArchive(captureStatus: status == .success ? .complete : .partial,
+                dailyOwnership: ownership, queryManifest: HealthKitQueryManifest(results: [
+                    HealthKitQueryResult(identifier: "steps", operation: "sample_query", metricIDs: ["steps"],
+                        interval: HealthKitQueryInterval(startDate: date, endDate: date.addingTimeInterval(86_400)),
+                        status: status, recordCount: 0)
+                ]))
+            var data = HealthData(date: date, healthKitRecordArchive: archive)
+            XCTAssertTrue(data.hasAnyData, "Archive/transfer evidence must remain exportable")
+            XCTAssertEqual(ExportOrchestrator.hasManualDailyOutput(data), status != .success)
+            data.activity.steps = 0
+            XCTAssertTrue(ExportOrchestrator.hasManualDailyOutput(data), "Explicit zero is data")
+        }
+    }
+
+    @MainActor
+    func testPinnedForegroundLosslessRangeRetainsSuccessfulEmptyCaptureWithoutDailyArtifact() async throws {
         UserDefaults.standard.set(
             "shadow",
             forKey: AppleExportEnginePolicyResolver.userDefaultsKey
@@ -485,7 +529,7 @@ final class ExportOrchestratorTests: XCTestCase {
             vaultPath: "/tmp/ExportOrchestratorPinnedEmptyRangeVault"
         )
         let settings = makeExportSettings(formats: [.json], rollupPeriods: [.range])
-        settings.includeGranularData = false
+        settings.includeGranularData = true
         settings.metricSelection.deselectAll()
         settings.metricSelection.enabledMetrics = ["steps"]
         let timezone = try XCTUnwrap(TimeZone(identifier: "UTC"))

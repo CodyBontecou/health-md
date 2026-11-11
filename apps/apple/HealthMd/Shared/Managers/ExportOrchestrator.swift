@@ -484,6 +484,22 @@ struct ExportOrchestrator {
         }
     }
 
+    /// Manual daily files may omit a proven-empty successful capture. Keep the general
+    /// archive evidence contract intact for serializers, direct transfers and rollups.
+    static func hasManualDailyOutput(_ data: HealthData) -> Bool {
+        guard let archive = data.healthKitRecordArchive,
+              archive.captureStatus == .complete,
+              archive.records.isEmpty, archive.externalRecords.isEmpty,
+              archive.medicationInventoryRecords.isEmpty,
+              archive.integrityWarnings.isEmpty, data.partialFailures.isEmpty,
+              archive.queryResults.allSatisfy({
+                  $0.status == .success && $0.recordCount == 0 && $0.error == nil
+              }) else { return data.hasAnyData }
+        var summary = data
+        summary.healthKitRecordArchive = nil
+        return summary.hasAnyData
+    }
+
     private static func exportDatesWithQueryController(
         _ dates: [Date],
         healthKitManager: HealthKitManager,
@@ -673,6 +689,8 @@ struct ExportOrchestrator {
                     timeZone: sourceTimeZone,
                     captureCalendar: captureCalendar
                 )
+                partialFailures.append(contentsOf: healthData.partialFailures)
+                guard hasManualDailyOutput(healthData) else { throw ExportError.noHealthData }
                 let externalRecords: [ExternalDailyRecord]
                 if healthData.hasAnyData,
                    hasProviderSideEffects,
@@ -687,7 +705,6 @@ struct ExportOrchestrator {
                 } else {
                     externalRecords = []
                 }
-                partialFailures.append(contentsOf: healthData.partialFailures)
                 // HealthKitManager has already applied the frozen selection. Reuse
                 // one snapshot for loose-file and ZIP staging renders instead of
                 // filtering a potentially dense archive for each destination.
@@ -1059,7 +1076,7 @@ struct ExportOrchestrator {
                     metricSelection: frozenSettings.metricSelection,
                     timeZone: sourceTimeZone
                 )
-                if isSelected, !isSummaryOnly, record.hasAnyData, let externalIntegrations {
+                if isSelected, !isSummaryOnly, hasManualDailyOutput(record), let externalIntegrations {
                     var providerCalendar = Calendar(identifier: .gregorian)
                     providerCalendar.timeZone = sourceTimeZone
                     let providerRecords = await externalIntegrations.fetchDailyRecords(for: date, calendar: providerCalendar)
@@ -1068,7 +1085,7 @@ struct ExportOrchestrator {
                         healthSubfolder: effectiveSettingsSnapshot.healthSubfolder ?? ""))
                 }
                 partialFailures.append(contentsOf: record.partialFailures)
-                if isSelected && !isSummaryOnly && record.hasAnyData && frozenSettings.writesIndividualEntryFiles {
+                if isSelected && !isSummaryOnly && hasManualDailyOutput(record) && frozenSettings.writesIndividualEntryFiles {
                     let entries = try vaultManager.materializeIndividualEntries(record, settingsSnapshot: effectiveSettingsSnapshot)
                     individualEntries.append(contentsOf: entries.files)
                     partialFailures.append(contentsOf: entries.partialFailures)
@@ -1076,7 +1093,8 @@ struct ExportOrchestrator {
                 // Drain Foundation render intermediates before staging this day's
                 // details and retaining the summary projection for range preparation.
                 let hasRenderableData = autoreleasepool {
-                    record.preparedExport(settings: frozenSettings).hasAnyData
+                    let prepared = record.preparedExport(settings: frozenSettings)
+                    return isSummaryOnly ? prepared.hasAnyData : hasManualDailyOutput(prepared.filteredData)
                 }
                 // A successful capture is range provenance even when the selected metrics are
                 // empty. Keep it for range-v9 source_dates/days_counted, while selecting daily
