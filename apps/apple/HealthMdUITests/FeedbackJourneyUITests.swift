@@ -76,35 +76,56 @@ final class FeedbackJourneyUITests: XCTestCase {
         XCTAssertTrue(template.contains(destination))
         XCTAssertTrue(template.contains("Problem:"))
 
-        let report = "Synthetic QA report 169\nExpected: local recovery.\nSteps: edit, copy, paste."
-        replaceText(in: editor, with: report)
-        XCTAssertEqual(editor.value as? String, report)
+        let addition = "\nSynthetic QA report 169\nExpected: local recovery.\nSteps: edit, copy, paste.\n"
+        editor.tap()
+        editor.typeText(addition)
+        let firstEdit = editor.value as? String ?? ""
+        XCTAssertTrue(firstEdit.contains(addition))
+        XCTAssertTrue(firstEdit.contains(destination))
+        XCTAssertNotEqual(firstEdit, template)
         let copy = app.buttons["feedback.copyReport"]
         XCTAssertTrue(copy.isHittable)
         copy.tap()
         XCTAssertTrue(app.staticTexts["Report copied"].waitForExistence(timeout: 5))
 
         // Editing must invalidate the persistent visible/accessibility confirmation.
-        replaceText(in: editor, with: "")
-        XCTAssertEqual(editor.value as? String, "")
+        let secondAddition = "\nSynthetic edit after copy.\n"
+        editor.tap()
+        editor.typeText(secondAddition)
+        let report = editor.value as? String ?? ""
+        XCTAssertTrue(report.contains(addition))
+        XCTAssertTrue(report.contains(secondAddition))
+        XCTAssertTrue(report.contains(destination))
+        XCTAssertNotEqual(report, firstEdit)
         let noConfirmation = expectation(
             for: NSPredicate(format: "exists == false"), evaluatedWith: app.staticTexts["Report copied"]
         )
         wait(for: [noConfirmation], timeout: 5)
         XCTAssertFalse(app.staticTexts["Copied"].exists)
-
-        // Use the native edit menu, not a test-process clipboard read or injected paste action.
-        editor.press(forDuration: 1)
-        let paste = menuAction("Paste")
-        XCTAssertTrue(paste.waitForExistence(timeout: 5))
-        paste.tap()
-        let pasted = expectation(for: NSPredicate(format: "value == %@", report), evaluatedWith: editor)
-        wait(for: [pasted], timeout: 5)
-        XCTAssertEqual(editor.value as? String, report, "Production Copy must preserve exact multiline editor text")
-        XCTAssertFalse(app.staticTexts["Report copied"].exists, "Pasting is another edit, not a copy")
         copy.tap()
         XCTAssertTrue(app.staticTexts["Report copied"].waitForExistence(timeout: 5))
         app.buttons["feedback.close"].tap()
+        assertReturnedToSupport(action: supportAction)
+
+        openSupportAction("feedback.openPasteCheck")
+        let pasteEditor = app.textViews["feedback.pasteCheckText"]
+        XCTAssertTrue(pasteEditor.waitForExistence(timeout: 5))
+        XCTAssertEqual(pasteEditor.value as? String, "", "Paste destination must start empty")
+
+        // Use the native edit menu, not a test-process clipboard read or injected paste action.
+        pasteEditor.tap()
+        pasteEditor.press(forDuration: 1)
+        let paste = menuAction("Paste")
+        XCTAssertTrue(paste.waitForExistence(timeout: 5))
+        paste.tap()
+        let pasted = expectation(for: NSPredicate(format: "value == %@", report), evaluatedWith: pasteEditor)
+        wait(for: [pasted], timeout: 5)
+        XCTAssertEqual(pasteEditor.value as? String, report, "Production Copy must preserve exact multiline editor text")
+        app.buttons["feedback.closePasteCheck"].tap()
+        let pasteCheckDismissed = expectation(
+            for: NSPredicate(format: "exists == false"), evaluatedWith: pasteEditor
+        )
+        wait(for: [pasteCheckDismissed], timeout: 5)
         assertReturnedToSupport(action: supportAction)
     }
 
@@ -116,14 +137,6 @@ final class FeedbackJourneyUITests: XCTestCase {
             for: NSPredicate(format: "exists == true AND isHittable == true"), evaluatedWith: app.buttons[action]
         )
         wait(for: [dismissed, supportAvailable], timeout: 5)
-    }
-
-    private func replaceText(in editor: XCUIElement, with text: String) {
-        editor.tap()
-        // A long press may select one word and omit Select All from the edit menu.
-        // Native keyboard selection keeps replacement deterministic without changing the clipboard.
-        editor.typeKey(XCUIKeyboardKey(rawValue: "a"), modifierFlags: .command)
-        editor.typeText(text.isEmpty ? XCUIKeyboardKey.delete.rawValue : text)
     }
 
     private func menuAction(_ title: String) -> XCUIElement {

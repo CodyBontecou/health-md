@@ -24,6 +24,10 @@ struct GlassAppSupportScreen: View {
     @State private var showDebugAlert = false
     @State private var isRunningDebug = false
     @State private var confirmingReplay = false
+    #if DEBUG
+    @State private var showFeedbackPasteCheck = false
+    @State private var feedbackPasteCheckText = ""
+    #endif
 
     private let discordURL = URL(string: "https://discord.gg/RaQYS4t6gn")!
     private let privacyPolicyURL = URL(string: "https://healthmd.app/privacy-policy.html")!
@@ -95,6 +99,15 @@ struct GlassAppSupportScreen: View {
                             showsDivider: true
                         ) { feedbackReporter.open(.github) }
                         .accessibilityIdentifier("feedback.reportBug")
+                        #if DEBUG
+                        if TestMode.rejectsFeedbackHandoffs {
+                            GlassSettingsRow(title: "QA paste check", showsDivider: true) {
+                                feedbackPasteCheckText = ""
+                                showFeedbackPasteCheck = true
+                            }
+                            .accessibilityIdentifier("feedback.openPasteCheck")
+                        }
+                        #endif
                         GlassSettingsRow(
                             title: String(localized: "Help us grow"),
                             systemImage: "star.fill",
@@ -165,6 +178,21 @@ struct GlassAppSupportScreen: View {
             #endif
         }
         .feedbackFailureSheet($feedbackReporter.failure)
+        #if DEBUG
+        .sheet(isPresented: $showFeedbackPasteCheck) {
+            // An empty, app-owned paste destination. It never reads or writes the clipboard.
+            VStack {
+                Button { showFeedbackPasteCheck = false } label: {
+                    Text(verbatim: "Close QA paste check")
+                }
+                .accessibilityIdentifier("feedback.closePasteCheck")
+                TextEditor(text: $feedbackPasteCheckText)
+                    .accessibilityLabel(Text(verbatim: "QA pasted report"))
+                    .accessibilityIdentifier("feedback.pasteCheckText")
+            }
+            .padding()
+        }
+        #endif
         // MyselfClaimG and DiagnosticsG are pushed pages with Back (no Done).
         .navigationDestination(isPresented: $showMyselfClaim) {
             MyselfClaimView(app: "health.md", presentedModally: false).glassTheme()
