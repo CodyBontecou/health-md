@@ -13,6 +13,18 @@ import org.junit.Test
 
 class HealthProviderRolloutTest {
     @Test
+    fun optionalSourceAdaptersCannotReplaceAuthoritativeHealthConnect() {
+        val healthConnect = mockk<HealthConnectDataProvider> { every { providerId } returns "health_connect" }
+        val synthetic = mockk<com.healthmd.data.health.HealthDataProvider> { every { providerId } returns "receiver_qa" }
+        val duplicate = mockk<com.healthmd.data.health.HealthDataProvider> { every { providerId } returns "health_connect" }
+        val registry = HealthDistributionModule.provideHealthProviderRegistry(healthConnect,
+            WhoopCloudDataProvider(mockk<CloudHealthApiClient>()), setOf(synthetic, duplicate))
+        assertThat(registry.exportProviders.map { it.providerId }).containsExactly("health_connect", "whoop", "receiver_qa")
+        assertThat(registry.primaryExportProvider()).isSameInstanceAs(healthConnect)
+        assertThat(registry.providerFor("health_connect")).isSameInstanceAs(healthConnect)
+    }
+
+    @Test
     fun productionOAuthRegistryOnlyOffersWHOOP() {
         assertThat(OAuthConfigRegistry().all().map { it.providerId }).containsExactly("whoop")
     }

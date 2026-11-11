@@ -22,7 +22,7 @@ object HealthDistributionModule {
     @Singleton
     fun provideHealthProviderRegistry(
         healthConnect: HealthConnectDataProvider,
-        @Named("additional_runtime_health_providers") additional: Set<@JvmSuppressWildcards HealthDataProvider>,
+        @Named("additional_runtime_health_providers") additional: Set<@JvmSuppressWildcards HealthDataProvider> = emptySet(),
     ): HealthProviderRegistry = HealthProviderRegistry(healthConnect, additional.toList())
 
     @Provides

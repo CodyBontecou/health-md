@@ -33,8 +33,8 @@ object HealthDistributionModule {
     @Singleton
     fun provideHealthProviderRegistry(
         healthConnect: HealthConnectDataProvider,
-        @Named("additional_runtime_health_providers") additional: Set<@JvmSuppressWildcards HealthDataProvider>,
         whoop: WhoopCloudDataProvider,
+        @Named("additional_runtime_health_providers") additional: Set<@JvmSuppressWildcards HealthDataProvider> = emptySet(),
     ): HealthProviderRegistry = HealthProviderRegistry(
         healthConnectDataProvider = healthConnect,
         additionalProviders = listOf<HealthDataProvider>(whoop) + additional,
