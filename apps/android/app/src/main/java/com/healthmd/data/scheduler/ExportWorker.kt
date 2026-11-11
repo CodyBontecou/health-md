@@ -348,7 +348,29 @@ class ExportWorker @AssistedInject constructor(
             pendingFolderOperationId != null,
             admissionOperationId,
         )
-        if (dates.isEmpty()) return Result.success()
+        val receiverRuntime = ReceiverCoverageRuntime(applicationContext, apiCredentialStore, entitlementRepository)
+        val selectionNow = java.time.Instant.now()
+        // One admission may cover several missed runs. Its latest due boundary owns
+        // the completed candidates; the first fire cannot erase subsequent due dates.
+        val completedCandidates = dates.filter { it < intendedRunDates.max() }
+        val receiverConfiguration = if (capturedTarget == ExportTarget.API_ENDPOINT &&
+            settings.exportMode == ExportMode.COMPATIBILITY && capturedSnapshotJson != null) {
+            try {
+                receiverRuntime.configurationForOccurrence(admissionOperationId, "legacy",
+                    ReceiverCoverageRuntime.withinSelectionBounds(completedCandidates, capturedOccurrence.configuration.zoneId, selectionNow) &&
+                        ScheduledExportPendingRequests.pendingRequests(settings).none {
+                            it.exportTarget == ExportTarget.API_ENDPOINT && it.receiverPlanId == null
+                        })
+            } catch (_: Exception) { return Result.retry() }
+        } else null
+        val refreshDue = capturedOccurrence.configuration.dateWindow == com.healthmd.domain.model.ScheduleDateWindow.PAST_COMPLETE_DAYS_THROUGH_TODAY
+        val refreshDate = selectionNow.atZone(java.time.ZoneId.of(capturedOccurrence.configuration.zoneId)).toLocalDate()
+        when (ScheduledExportPendingRequests.receiverAdmissionAction(settings, dates,
+            receiverConfiguration != null, refreshDate.takeIf { refreshDue }, destinationFingerprint, admissionOperationId)) {
+            ScheduledExportPendingRequests.ReceiverAdmissionAction.RETRY -> return Result.retry()
+            ScheduledExportPendingRequests.ReceiverAdmissionAction.COMPLETE -> return Result.success()
+            ScheduledExportPendingRequests.ReceiverAdmissionAction.EXECUTE -> Unit
+        }
         var startDate = dates.first()
         var endDate = dates.last()
 
@@ -385,24 +407,14 @@ class ExportWorker @AssistedInject constructor(
             return Result.failure()
         }
 
-        val receiverRuntime = ReceiverCoverageRuntime(applicationContext, apiCredentialStore, entitlementRepository)
         var receiverLease: ReceiverCoverageRuntime.Lease? = null
         if (capturedTarget == ExportTarget.API_ENDPOINT && settings.exportMode == ExportMode.COMPATIBILITY && capturedSnapshotJson != null) {
             try {
                 val planID = admissionOperationId
-                val selectionNow = java.time.Instant.now()
-                // One admission may cover several missed runs. Every completed owner date in
-                // that fixed admission is a candidate, not just dates before its first fire.
-                val completed = dates.filter { it < intendedRunDates.max() }
-                val configuration = receiverRuntime.configurationForOccurrence(planID, "legacy",
-                    ReceiverCoverageRuntime.withinSelectionBounds(completed, capturedOccurrence.configuration.zoneId, selectionNow) &&
-                        ScheduledExportPendingRequests.pendingRequests(settings).none { it.exportTarget == ExportTarget.API_ENDPOINT && it.receiverPlanId == null })
+                val configuration = receiverConfiguration
+                val completed = completedCandidates
                 if (configuration != null) {
-                    val refresh = capturedOccurrence.configuration.dateWindow == com.healthmd.domain.model.ScheduleDateWindow.PAST_COMPLETE_DAYS_THROUGH_TODAY
-                    val refreshDate = selectionNow.atZone(java.time.ZoneId.of(capturedOccurrence.configuration.zoneId)).toLocalDate()
-                    if (refresh && ScheduledExportPendingRequests.receiverRefreshOwnedByAnotherPlan(
-                        settings, refreshDate, destinationFingerprint, planID))
-                        return Result.retry() // Keep the new admission until the older Today owner is recovered.
+                    val refresh = refreshDue
                     if (completed.isNotEmpty() || receiverRuntime.hasPlan(planID)) {
                         receiverPlanId = planID
                         val frozenDestination = receiverRuntime.destination(configuration, settings.apiEndpointUrl,

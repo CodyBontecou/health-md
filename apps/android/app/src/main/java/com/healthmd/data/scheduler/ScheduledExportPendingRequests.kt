@@ -75,6 +75,20 @@ object ScheduledExportPendingRequests {
             it.receiverPlanId != null && it.receiverPlanId != receiverPlanId && it.date == date
     }
 
+    enum class ReceiverAdmissionAction { EXECUTE, COMPLETE, RETRY }
+
+    /** Decide admission disposition before treating an empty date-builder window as success.
+     * A different plan owning Today is outstanding work, not evidence that this refresh ran.
+     * Absent opt-in retains the historical full-lookback/empty-window behavior. */
+    fun receiverAdmissionAction(settings: ExportSettings, dates: List<LocalDate>,
+        receiverOptIn: Boolean, refreshDate: LocalDate?, destinationFingerprint: String?,
+        receiverPlanId: String): ReceiverAdmissionAction = when {
+        receiverOptIn && refreshDate != null && receiverRefreshOwnedByAnotherPlan(
+            settings, refreshDate, destinationFingerprint, receiverPlanId) -> ReceiverAdmissionAction.RETRY
+        dates.isEmpty() -> ReceiverAdmissionAction.COMPLETE
+        else -> ReceiverAdmissionAction.EXECUTE
+    }
+
     fun pendingDates(
         settings: ExportSettings,
         cutoffInclusive: LocalDate = LocalDate.now().minusDays(1),

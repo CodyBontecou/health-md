@@ -67,6 +67,34 @@ suspend fun legacyReceiverBoundary(context: Context, credentials: APIExportCrede
             Instant.parse("2026-03-10T08:00:00Z"), restoreOnly = true, authorized = { true })
         check(restoredA.plan.residual == listOf("2026-03-08") && restoredA.plan.today == "2026-03-09")
     }
+    // Same-day B: A owns BOTH yesterday and Today, so the real date builder is empty.
+    // Exercise the same production admission disposition Worker uses before any early success.
+    val owner = "same-day-A"; val newer = "same-day-B"
+    val a = runtime.resolve(owner, "legacy:$owner", config, endpoint, output, "UTC", listOf(day("09")), true,
+        Instant.parse("2026-03-10T08:00:00Z"), query = ::missing, authorized = { true })
+    val destination = runtime.destination(config, endpoint, output, "UTC")
+    val wrapped = ReceiverCoverageSnapshot.wrap(output, config, owner, destination.preflight.destinationBinding, destination.fingerprint)
+    val original = ScheduledExportPendingRequests.applyCancellationResult(
+        ExportSettings(scheduleLookbackDays = 1, scheduleDateWindow = ScheduleDateWindow.PAST_COMPLETE_DAYS_THROUGH_TODAY),
+        listOf(day("09"), day("10")), listOf(day("09"), day("10")), target = ExportTarget.API_ENDPOINT,
+        destinationFingerprint = destination.fingerprint, settingsSnapshotJson = wrapped, receiverPlanId = owner)
+    val bytesBefore = Files.readAllBytes(context.filesDir.toPath().resolve("receiver-coverage/plans/$owner.json"))
+    for (allOwned in listOf(true, false)) {
+        val pending = if (allOwned) original else ScheduledExportPendingRequests.applyAttemptResult(original,
+            listOf(day("09")), emptyList(), target = ExportTarget.API_ENDPOINT, destinationFingerprint = destination.fingerprint)
+        val built = ScheduledExportPendingRequests.scheduledRunDates(pending, listOf(day("10")),
+            destinationFingerprint = destination.fingerprint, settingsSnapshotJson = output, receiverPlanId = newer)
+        check(built == if (allOwned) emptyList<LocalDate>() else listOf(day("09")))
+        check(ScheduledExportPendingRequests.receiverAdmissionAction(pending, built, true, day("10"),
+            destination.fingerprint, newer) == ScheduledExportPendingRequests.ReceiverAdmissionAction.RETRY)
+        // Turning opt-in off preserves the pre-existing disposition, including empty success.
+        check(ScheduledExportPendingRequests.receiverAdmissionAction(pending, built, false, day("10"),
+            destination.fingerprint, newer) == if (allOwned) ScheduledExportPendingRequests.ReceiverAdmissionAction.COMPLETE
+            else ScheduledExportPendingRequests.ReceiverAdmissionAction.EXECUTE)
+    }
+    check(Files.readAllBytes(context.filesDir.toPath().resolve("receiver-coverage/plans/$owner.json")).contentEquals(bytesBefore))
+    check(!runtime.hasPlan(newer)) // Retained B does not re-preflight A or manufacture completion.
+    check(a.plan.residual == listOf("2026-03-09", "2026-03-10"))
     val operation = UUID.randomUUID(); val id = "cancel-before-registration"
     val configured = ReceiverCoverageConfiguration.parse(config)
     ReceiverCoverageRuntime.save(context, "legacy", configured, endpoint, credentials)

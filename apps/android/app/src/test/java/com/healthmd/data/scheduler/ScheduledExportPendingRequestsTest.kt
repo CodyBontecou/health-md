@@ -18,6 +18,24 @@ import java.time.ZoneId
 
 class ScheduledExportPendingRequestsTest {
     @Test
+    fun newerTodayAdmissionRetriesEvenWhenEveryRequestedDateHasAnOlderReceiverOwner() {
+        val today = LocalDate.parse("2026-03-10")
+        val original = ScheduledExportPendingRequests.applyCancellationResult(
+            ExportSettings(scheduledExportTarget = ExportTarget.API_ENDPOINT, scheduleLookbackDays = 1,
+                scheduleDateWindow = ScheduleDateWindow.PAST_COMPLETE_DAYS_THROUGH_TODAY),
+            listOf(today.minusDays(1), today), listOf(today.minusDays(1), today),
+            target = ExportTarget.API_ENDPOINT, destinationFingerprint = "original", receiverPlanId = "A")
+        val dates = ScheduledExportPendingRequests.scheduledRunDates(original, listOf(today),
+            destinationFingerprint = "original", receiverPlanId = "B")
+        assertThat(dates).isEmpty()
+        assertThat(ScheduledExportPendingRequests.receiverAdmissionAction(original, dates, true, today, "original", "B"))
+            .isEqualTo(ScheduledExportPendingRequests.ReceiverAdmissionAction.RETRY)
+        assertThat(ScheduledExportPendingRequests.receiverAdmissionAction(original, dates, false, today, "original", "B"))
+            .isEqualTo(ScheduledExportPendingRequests.ReceiverAdmissionAction.COMPLETE)
+        assertThat(original.pendingScheduledExportRequests.map { it.receiverPlanId }).containsExactly("A", "A")
+    }
+
+    @Test
     fun receiverFreshCaptureResidualDoesNotJoinOrEraseNewOccurrence() {
         val oldDate = LocalDate.parse("2026-03-08")
         val newDate = LocalDate.parse("2026-03-09")
