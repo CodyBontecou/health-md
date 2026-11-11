@@ -1,8 +1,12 @@
 """Reviewed Individual Tracking localization boundary, portable/no native SDK."""
-from copy import deepcopy
 import importlib.util
 from pathlib import Path
 import unittest
+
+try:  # Package-qualified unittest and standalone discovery have different import roots.
+    from .localization_fixtures import mutation_inputs
+except ImportError:
+    from localization_fixtures import mutation_inputs
 
 ROOT = Path(__file__).resolve().parents[2]
 SPEC = importlib.util.spec_from_file_location("individual_tracking_copy_guard", ROOT / "scripts/validate-metric-selection-localizations.py")
@@ -20,7 +24,7 @@ class IndividualTrackingLocalizationTests(unittest.TestCase):
         cls.catalog, cls.manifest, cls.sources = validator.load_inputs(MANIFEST)
 
     def inputs(self):
-        return deepcopy(self.catalog), deepcopy(self.manifest), dict(self.sources)
+        return mutation_inputs(self.catalog, self.manifest, self.sources)
 
     def test_production_locales_tokens_and_bindings(self):
         self.assertEqual(validator.validate(self.catalog, self.manifest, self.sources), [])
