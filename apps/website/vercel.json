@@ -22,6 +22,8 @@
     { "source": "/login/", "destination": "https://account.healthmd.app/login", "permanent": false },
     { "source": "/:path*/index.html", "destination": "/:path*/", "permanent": true },
     { "source": "/docs", "destination": "/docs/", "permanent": true },
+    { "source": "/docs/guides", "destination": "/docs/", "permanent": true },
+    { "source": "/docs/guides/", "destination": "/docs/", "permanent": true },
     { "source": "/es", "destination": "/es/", "permanent": true },
     { "source": "/es/docs", "destination": "/es/docs/", "permanent": true },
     { "source": "/de", "destination": "/de/", "permanent": true },

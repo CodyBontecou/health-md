@@ -24,6 +24,14 @@ class HealthMdCoreService internal constructor(
         getMetricRegistry(profile, expectedRegistryVersion)
     }
 
+    fun getMetricRegistryAtAuthority(
+        profile: CoreMetricRegistryProfile,
+        expectedRegistryVersion: UInt = EXPECTED_REGISTRY_VERSION,
+        registrySha256: String,
+    ): CoreMetricRegistrySnapshot = callNative {
+        getMetricRegistryAtAuthority(profile, expectedRegistryVersion, registrySha256)
+    }
+
     fun createSemanticSession(configurationBytes: ByteArray): HealthMdCoreSemanticSession {
         val directBytes = configurationBytes.toDirectByteBuffer()
         return callNative { HealthMdCoreSemanticSession(createSemanticSession(directBytes)) }
@@ -48,6 +56,13 @@ class HealthMdCoreService internal constructor(
         HealthMdCoreLosslessArtifactStream(bindings.value.createPlannedLosslessArtifactStream(mode, artifact))
     }
 
+    fun prepareScopedAndroidNightNote(
+        profile: CoreMetricRegistryProfile, recordJson: String, calendarTimezone: String,
+        bases: String, markdown: String, selectedProperties: List<String>, injectSections: Boolean,
+    ): String = callRenderNative {
+        prepareScopedAndroidNightNote(profile, recordJson, calendarTimezone, bases, markdown, selectedProperties, injectSections)
+    }
+
     fun mergeMarkdown(
         profile: CoreMetricRegistryProfile,
         existing: String,
@@ -55,6 +70,24 @@ class HealthMdCoreService internal constructor(
         preservePreamble: Boolean = false,
     ): String = callRenderNative {
         mergeProfileRenderedMarkdown(profile, existing, generated, preservePreamble)
+    }
+
+    fun mergeScopedNote(
+        profile: CoreMetricRegistryProfile,
+        existing: String,
+        patch: String,
+        injectSections: Boolean,
+    ): String = callRenderNative { mergeScopedDailyNote(profile, existing, patch, injectSections) }
+
+    fun prepareScopedNote(
+        profile: CoreMetricRegistryProfile,
+        recordJson: String,
+        bases: String,
+        markdown: String,
+        selectedProperties: List<String>,
+        injectSections: Boolean,
+    ): String = callRenderNative {
+        prepareScopedDailyNote(profile, recordJson, bases, markdown, selectedProperties, injectSections)
     }
 
     fun mergeMarkdown(existing: String, generated: String): String =
@@ -345,6 +378,12 @@ internal interface HealthMdCoreBindings {
         expectedRegistryVersion: UInt,
     ): CoreMetricRegistrySnapshot
 
+    fun getMetricRegistryAtAuthority(
+        profile: CoreMetricRegistryProfile,
+        expectedRegistryVersion: UInt,
+        registrySha256: String,
+    ): CoreMetricRegistrySnapshot = error("historical registry authority unavailable")
+
     fun createSemanticSession(configBytes: ByteBuffer): CoreSemanticSession
 
     fun createRenderSession(configBytes: ByteBuffer, semanticResultBytes: ByteBuffer): CoreRenderSession
@@ -362,6 +401,27 @@ internal interface HealthMdCoreBindings {
         generated: String,
         preservePreamble: Boolean,
     ): String
+
+    fun mergeScopedDailyNote(
+        profile: CoreMetricRegistryProfile,
+        existing: String,
+        patch: String,
+        injectSections: Boolean,
+    ): String = error("scoped daily-note merge is unavailable")
+
+    fun prepareScopedDailyNote(
+        profile: CoreMetricRegistryProfile,
+        recordJson: String,
+        bases: String,
+        markdown: String,
+        selectedProperties: List<String>,
+        injectSections: Boolean,
+    ): String = error("scoped daily-note preparation is unavailable")
+
+    fun prepareScopedAndroidNightNote(
+        profile: CoreMetricRegistryProfile, recordJson: String, calendarTimezone: String,
+        bases: String, markdown: String, selectedProperties: List<String>, injectSections: Boolean,
+    ): String = error("scoped Android Night capture is unavailable")
 
     fun mergeRenderedMarkdown(existing: String, generated: String): String
 
@@ -418,6 +478,12 @@ private object UniFfiHealthMdCoreBindings : HealthMdCoreBindings {
         expectedRegistryVersion: UInt,
     ): CoreMetricRegistrySnapshot = com.healthmd.core.getMetricRegistry(profile, expectedRegistryVersion)
 
+    override fun getMetricRegistryAtAuthority(
+        profile: CoreMetricRegistryProfile,
+        expectedRegistryVersion: UInt,
+        registrySha256: String,
+    ): CoreMetricRegistrySnapshot = com.healthmd.core.getMetricRegistryAtAuthority(profile, expectedRegistryVersion, registrySha256)
+
     override fun createSemanticSession(configBytes: ByteBuffer): CoreSemanticSession =
         com.healthmd.core.createSemanticSession(configBytes)
 
@@ -433,6 +499,28 @@ private object UniFfiHealthMdCoreBindings : HealthMdCoreBindings {
         mode: CoreStreamMode,
         artifact: CoreStreamArtifactConfig,
     ): CoreLosslessArtifactStream = com.healthmd.core.createPlannedLosslessArtifactStream(mode, artifact)
+
+    override fun prepareScopedDailyNote(
+        profile: CoreMetricRegistryProfile,
+        recordJson: String,
+        bases: String,
+        markdown: String,
+        selectedProperties: List<String>,
+        injectSections: Boolean,
+    ): String = com.healthmd.core.prepareScopedDailyNote(profile, recordJson, bases, markdown, selectedProperties, injectSections)
+
+    override fun prepareScopedAndroidNightNote(
+        profile: CoreMetricRegistryProfile, recordJson: String, calendarTimezone: String,
+        bases: String, markdown: String, selectedProperties: List<String>, injectSections: Boolean,
+    ): String = com.healthmd.core.prepareScopedAndroidNightNote(profile, recordJson, calendarTimezone,
+        bases, markdown, selectedProperties, injectSections)
+
+    override fun mergeScopedDailyNote(
+        profile: CoreMetricRegistryProfile,
+        existing: String,
+        patch: String,
+        injectSections: Boolean,
+    ): String = com.healthmd.core.mergeScopedDailyNote(profile, existing, patch, injectSections)
 
     override fun mergeProfileRenderedMarkdown(
         profile: CoreMetricRegistryProfile,

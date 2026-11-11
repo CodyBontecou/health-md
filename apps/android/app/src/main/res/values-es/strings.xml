@@ -375,19 +375,15 @@
     <!-- Paywall screen -->
     <string name="paywall_title">Desbloquear Health.md</string>
     <string name="paywall_subtitle">Has usado tus 5 exportaciones gratuitas</string>
-    <string name="paywall_unlimited_exports">Exportaciones ilimitadas para siempre</string>
+    <string name="paywall_unlimited_exports">Exportaciones ilimitadas</string>
     <string name="paywall_scheduled_exports">Exportaciones programadas automáticas</string>
     <string name="paywall_future_features">Todas las características futuras incluidas</string>
-    <string name="paywall_one_time">Pago único \u2014 sin suscripción</string>
-    <string name="paywall_unlock_button">Desbloquear Health.md</string>
     <string name="paywall_restore">Restaurar Compra</string>
 
     <!-- Export progress dialog -->
     <string name="export_progress_title">Exportando Datos de Salud</string>
 
     <!-- Navigation labels -->
-    <string name="nav_export">Exportar</string>
-    <string name="nav_schedule">Programación</string>
     <string name="nav_history">Historial</string>
     <string name="nav_settings">Configuración</string>
 
@@ -417,6 +413,7 @@
     <string name="date_format_display_iso8601" tools:ignore="TypographyDashes">ISO 8601 (2026-01-13)</string>
     <string name="date_format_display_us_short">US Corto (01/13/2026)</string>
     <string name="date_format_display_us_long">US Largo (enero 13, 2026)</string>
+    <string name="date_format_display_eu_dot">UE con puntos (13.01.2026)</string>
     <string name="date_format_display_eu_short">EU Corto (13/01/2026)</string>
     <string name="date_format_display_eu_long">EU Largo (13 de enero de 2026)</string>
     <string name="date_format_display_compact">Compacto (20260113)</string>
@@ -526,7 +523,6 @@
     <string name="debug_requires_history_permission">El intervalo requiere historial</string>
     <string name="debug_first_permission_grant">Primera concesión de permiso</string>
     <string name="section_health_sources">Fuentes de salud</string>
-    <string name="health_sources_description">Health Connect es la fuente de exportación local. Health.md puede exportar los datos que las aplicaciones compatibles escriben en Health Connect.</string>
     <string name="health_provider_status_installed">Instalado</string>
     <string name="health_provider_status_selected">Seleccionado</string>
     <string name="health_provider_status_ready_to_connect">Listo para conectarse</string>
@@ -544,6 +540,21 @@
     <string name="feedback_no_app_available">No hay ninguna aplicación disponible para abrir este enlace.</string>
     <string name="granular_data_title">Incluir series de tiempo detalladas</string>
     <string name="granular_data_description">Añade muestras con marca de tiempo, como la frecuencia cardíaca y las fases del sueño, a las exportaciones de compatibilidad. Para obtener una copia completa de la API, usa una instantánea bruta de la API.</string>
+    <string name="detail_overrides_title">Detalle por categoría</string>
+    <string name="detail_overrides_description">Anula el valor predeterminado para categorías concretas. Resumen conserva solo los totales diarios; los resúmenes diarios nunca cambian.</string>
+    <string name="detail_choice_default">Predeterminado</string>
+    <string name="detail_choice_summary">Resumen</string>
+    <string name="detail_choice_sessions">Sesiones</string>
+    <string name="detail_choice_detailed">Detallado</string>
+    <string name="detail_group_sleep_hint">Sesiones enumera cada sesión de sueño con fecha y hora completas. Detallado añade las fases del sueño.</string>
+    <string name="detail_expansion_schema_hint">Detallado en Actividad, Nutrición o Cuerpo añade cada registro de origen y cambia las exportaciones analíticas JSON, CSV y Markdown al esquema 7.</string>
+    <string name="sleep_attribution_title">Atribución del día de sueño</string>
+    <string name="sleep_attribution_night_begins">Comienza de noche</string>
+    <string name="sleep_attribution_morning_ends">Termina de mañana</string>
+    <string name="sleep_attribution_night_begins_description">El sueño usa el intervalo de mediodía a mediodía de la nota diaria. Es la opción predeterminada y coincide con exportaciones anteriores.</string>
+    <string name="sleep_attribution_morning_ends_description">Termina de mañana no está disponible para los perfiles de exportación actuales. Elige Comienza de noche para una nueva exportación.</string>
+    <string name="sleep_attribution_morning_ends_wake_description">Asigna toda la sesión de sueño a la fecha en que despiertas, según la zona horaria de la exportación.</string>
+
     <string name="metric_category_cycling">Ciclismo</string>
     <string name="metric_category_medications">Medicamentos</string>
     <string name="metric_category_other">Otro</string>
@@ -647,17 +658,11 @@
     <string name="scheduled_recovery_result_complete">Recuperación programada completada.</string>
     <string name="scheduled_recovery_result_blocked">La recuperación programada aún no está lista.</string>
     <string name="not_now">Ahora no</string>
-    <string name="release_notes_title">Novedades de %s</string>
-    <string name="release_notes_settings_hint">Puedes ajustar los formatos de exportación, el Markdown personalizado y las métricas desde Configuración.</string>
-    <string name="release_notes_open_settings">Abrir configuración</string>
-    <string name="release_notes_got_it">Entiendo</string>
     <string name="release_notes_highlight_feedback">Las sesiones de CLI directa se reconectan automáticamente tras breves desconexiones del escritorio, así que las exportaciones terminan de forma fiable.</string>
     <string name="release_notes_highlight_export_parity">Los comandos de ventana de activación del escritorio esperan hasta 120 segundos a que abras la app y te conectes, sin notificaciones push.</string>
     <string name="release_notes_highlight_templates">El emparejamiento manual con dirección, puerto y código de 20 dígitos sigue funcionando, incluso con versiones anteriores de la CLI.</string>
     <string name="release_notes_highlight_workouts">Incluye correcciones de fiabilidad y compatibilidad en la configuración, las exportaciones, los horarios y las conexiones.</string>
     <string name="export_notification_background_permission_required">Las exportaciones programadas necesitan acceso en segundo plano a Health Connect. Abra Health.md &gt; Programación para habilitarlo.</string>
-    <string name="paywall_unlock_button_price">Desbloquear por %s</string>
-    <string name="paywall_purchasing">Procesando\u2026</string>
     <string name="paywall_restoring">Restaurando\u2026</string>
     <string name="debug_purchase_title">Controles de depuración</string>
     <string name="debug_current_state">Estado actual: %s</string>
@@ -710,7 +715,7 @@
     <string name="privacy_category_history_permissions">READ_HEALTH_DATA_HISTORY</string>
     <string name="privacy_category_history_exports">Se usa solo para exportaciones manuales grandes, como las de 90 días o de todo el historial, para que Health.md pueda leer datos de Health Connect anteriores al intervalo estándar de 30 días.</string>
     <string name="privacy_policy_direct_cli">Las exportaciones de Direct CLI solo se realizan después de emparejar y conectar explícitamente su computadora. Los registros de salud se envían mediante una conexión autenticada y cifrada, se conservan de forma privada durante un máximo de siete días para permitir reanudar la transferencia y se eliminan antes si cancela u olvida el emparejamiento.</string>
-    <string name="privacy_policy_footer">Health.md no opera una nube de datos de salud. La atribución de campañas propia de Health.md puede enviar UUID aleatorios de instalación o evento generados por la aplicación y metadatos de campaña validados, pero nunca datos de salud, referentes sin procesar, identificadores de dispositivo, exportaciones, cuentas ni rutas.</string>
+    <string name="privacy_policy_footer">Esta versión no recopila análisis de uso propios ni atribución publicitaria. Las compras, la programación y los servicios opcionales tienen avisos de privacidad separados.</string>
     <string name="section_export_type">Tipo de exportación</string>
     <string name="export_type_compatibility">Exportación de compatibilidad</string>
     <string name="export_type_compatibility_description">Archivos diarios Markdown, Bases, JSON o CSV para flujos de trabajo Health.md existentes</string>
@@ -781,7 +786,7 @@
     <string name="onboarding_skip">Omitir</string>
     <string name="onboarding_back">Atrás</string>
     <string name="export_failure_paywall_label">Desbloqueo requerido</string>
-    <string name="export_guidance_paywall">Las exportaciones programadas requieren el desbloqueo de por vida. Abra la pantalla de compra para desbloquear las exportaciones y la programación ilimitadas.</string>
+    <string name="export_guidance_paywall">Las exportaciones programadas requieren una prueba o suscripción activa, o acceso de por vida. Abre la pantalla de compra para ver las opciones de acceso.</string>
     <string name="export_source_retry">Reintento</string>
     <string name="export_source_shortcut">Atajo</string>
     <string name="export_source_remote">Remoto</string>
@@ -1105,6 +1110,8 @@
     <string name="export_preview_api_preparation_failed">Error en la preparación de la exportación de API.</string>
     <string name="export_preview_artifacts_per_range">Artefactos por intervalo</string>
     <string name="export_preview_back_description">Volver a la vista previa de exportación</string>
+    <string name="export_preview_wrap_lines">Ajustar líneas</string>
+    <string name="export_preview_format_text">Formatear texto</string>
     <string name="export_preview_destination_label">Destino</string>
     <string name="export_preview_empty_file">(archivo vacío)</string>
     <string name="export_preview_formats_per_day">Formatos por día</string>
@@ -1521,4 +1528,45 @@
     <string name="post_export_upgrade_action">Ver acceso de por vida</string>
     <string name="post_export_manual_action">Seguir exportando manualmente</string>
     <string name="post_export_continue_free">Continuar gratis</string>
+    <string name="export_sleep_date_guidance">El sueño abarca desde el mediodía de cada fecha seleccionada hasta el mediodía siguiente. Para el sueño de anoche, elige Ayer.</string>
+    <string name="export_sleep_preview_window">Ventana de sueño: del %1$s al mediodía al %2$s al mediodía (%3$s).</string>
+    <string name="export_sleep_preview_guidance">Si falta el sueño, prueba la fecha anterior. El sueño de la mañana puede aparecer en ese resumen aunque los registros originales tengan la fecha de hoy. Los errores de consulta se indican por separado; un resultado vacío también puede significar que no hay acceso de lectura.</string>
+    <string name="export_sleep_date_guidance_morning_ends">Las sesiones de sueño completas pertenecen a la fecha en que terminan en la zona horaria de la exportación. Para el sueño de anoche, elige Hoy.</string>
+    <string name="export_sleep_preview_window_morning_ends">Fechas de fin del sueño: del %1$s al %2$s (%3$s).</string>
+    <string name="export_sleep_preview_guidance_morning_ends">Las sesiones de sueño completas pertenecen a su fecha de fin en la zona horaria de esta exportación, sin recorte al mediodía. Los errores de consulta se indican por separado; un resultado vacío también puede significar que no hay acceso de lectura.</string>
+    <string name="whoop_connection_description">Conecta WHOOP para exportar recuperación, esfuerzo, sueño, entrenamientos y medidas corporales. El inicio de sesión usa el navegador; Health.md guarda los tokens cifrados en este dispositivo. Desconectar elimina la conexión guardada en este dispositivo.</string>
+    <string name="whoop_connect">Conectar WHOOP</string>
+    <string name="whoop_sources_description">Conecta WHOOP para exportar directamente del proveedor o sigue usando Health Connect para los registros locales.</string>
+    <string name="whoop_sign_in_failed">No se pudo iniciar la sesión de WHOOP. Comprueba la conexión e inténtalo de nuevo.</string>
+    <string name="whoop_use_health_connect">Usar Health Connect para exportar</string>
+    <string name="whoop_reconnect">Volver a conectar WHOOP</string>
+    <string name="whoop_disconnect">Desconectar WHOOP</string>
+    <string name="whoop_use_for_exports">Usar WHOOP para exportar</string>
+    <string name="paywall_access_subtitle">Elige una suscripción o acceso de por vida para crear tu archivo de salud privado. Las suscripciones elegibles incluyen una prueba gratuita de 7 días.</string>
+    <string name="paywall_plan_choices">Acceso semanal, anual o de por vida</string>
+    <string name="paywall_weekly_price">%1$s / semana</string>
+    <string name="paywall_yearly_price">%1$s / año</string>
+    <string name="paywall_lifetime_price">De por vida — %1$s una vez</string>
+    <string name="paywall_trial_then">7 días gratis, después %1$s</string>
+    <string name="paywall_retry">Intentar de nuevo</string>
+    <string name="paywall_manage_subscriptions">Gestionar suscripciones</string>
+    <string name="paywall_terms">Condiciones</string>
+    <string name="paywall_privacy">Privacidad</string>
+    <string name="paywall_subscription_disclosure">Las suscripciones elegibles incluyen una prueba gratuita de 7 días y después se renuevan automáticamente al precio mostrado, salvo que se cancelen antes de terminar la prueba o el período actual. Gestiona o cancela en Google Play. El acceso de por vida se cobra inmediatamente como pago único. Se conserva el acceso de pago existente. La vida no tiene juicio. Eliminar la aplicación o comprar Lifetime no cancela una suscripción existente.</string>
+    <plurals name="widget_archive_gaps">
+        <item quantity="one">%1$s hueco</item>
+        <item quantity="many">%1$s de huecos</item>
+        <item quantity="other">%1$s huecos</item>
+    </plurals>
+    <plurals name="widget_archive_days_in_month">
+        <item quantity="one">día en %1$s</item>
+        <item quantity="many">de días en %1$s</item>
+        <item quantity="other">días en %1$s</item>
+    </plurals>
+
+    <string name="clinic_sync_channel_name">Solicitudes de sincronización de la clínica</string>
+    <string name="clinic_sync_request_body">Tu clínica solicita tus datos de salud más recientes. Toca para enviarlos.</string>
+    <string name="clinic_sync_result_sent">Tus datos más recientes se enviaron a tu clínica.</string>
+    <string name="clinic_sync_result_failed">No se pudieron enviar tus datos a la clínica. Abre Health.md e inténtalo de nuevo.</string>
+    <string name="clinic_sync_result_profile_missing">Abre el acceso de la clínica en Health.md y elige Usar destino de la clínica primero.</string>
 </resources>

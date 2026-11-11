@@ -1,0 +1,271 @@
+#if os(iOS)
+import SwiftUI
+
+/// OutputG: where an automation writes, how files are named, and what happens to a file
+/// that already exists. New destinations reuse the profile editor's forms. A pushed page
+/// that saves as it changes.
+struct GlassOutputScreen: View {
+    /// Everything this page saves, compared as one value for autosave.
+    private struct Draft: Equatable {
+        var target: ExportTargetSelection
+        var folderVaultID: UUID?
+        var apiEndpointID: UUID?
+        var googleDriveDestinationID: UUID?
+        var gatewayID: UUID?
+        var settings: ExportSettingsSnapshot
+    }
+
+    @ObservedObject var coordinator: ExportProfileCoordinator
+    @ObservedObject private var destinationStore: ProfileDestinationStore
+    let profile: ExportProfile
+
+    @Environment(\.glassPalette) private var palette
+    @EnvironmentObject private var configurationProtection: ConfigurationProtectionManager
+    @State private var target: ExportTargetSelection
+    @State private var folderVaultID: UUID?
+    @State private var apiEndpointID: UUID?
+    @State private var googleDriveDestinationID: UUID?
+    @State private var gatewayID: UUID?
+    @State private var draft: ExportSettingsSnapshot
+    @State private var showFolderImporter = false
+    @State private var showEndpointForm = false
+    @State private var showGatewayForm = false
+
+    private static let dateTokens = ["{date}", "{year}", "{month}", "{day}", "{weekday}", "{monthName}", "{quarter}"]
+
+    init(coordinator: ExportProfileCoordinator, profile: ExportProfile) {
+        self.coordinator = coordinator
+        _destinationStore = ObservedObject(wrappedValue: coordinator.destinationStore)
+        self.profile = profile
+        _googleDriveDestinationID = State(initialValue: profile.googleDriveDestinationID)
+        _target = State(initialValue: profile.target)
+        _folderVaultID = State(initialValue: profile.folderVaultID)
+        _apiEndpointID = State(initialValue: profile.apiEndpointID)
+        _gatewayID = State(initialValue: coordinator.destinationStore.agentDataGatewayBinding(profileID: profile.id))
+        _draft = State(initialValue: profile.settings)
+    }
+
+    var body: some View {
+        GlassSettingsPage(title: String(localized: "Output")) {
+            GlassSectionLabel(title: String(localized: "Where"))
+            GlassPanel {
+                GlassMenuRow(
+                    title: String(localized: "Destination"),
+                    selection: $target,
+                    options: [.localIPhoneFolder, .connectedMac, .apiEndpoint, .googleDrive, .agentDataGateway],
+                    label: Self.targetTitle
+                )
+                destinationBinding
+                GlassTemplateField(title: String(localized: "Subfolder"), text: subfolder)
+                GlassTemplateField(
+                    title: String(localized: "Folder organization"),
+                    text: $draft.folderStructure,
+                    tokens: Self.dateTokens,
+                    placeholder: String(localized: "Flat")
+                )
+                GlassTemplateField(
+                    title: String(localized: "Filename"),
+                    text: $draft.filenameFormat,
+                    tokens: Self.dateTokens
+                )
+                GlassToggleRow(
+                    title: String(localized: "Format folders"),
+                    isOn: $draft.organizeFormatsIntoFolders
+                )
+            }
+
+            GlassPanel {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("When a file exists").glassFont(.body).foregroundStyle(palette.text)
+                    GlassSegmentedControl(
+                        segments: WriteMode.allCases.map { .init(value: $0, title: $0.localizedDisplayName) },
+                        selection: $draft.writeMode
+                    )
+                    Text("Overwrite replaces the file. Append adds to the end. Update merges new values and keeps your edits.")
+                        .glassFont(.rowSubtitle)
+                        .foregroundStyle(palette.muted)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .padding(.horizontal, GlassMetrics.panelPadding)
+                .padding(.vertical, 12)
+            }
+
+            GlassPanel { GlassPathPreview(paths: draft.glassPreviewPaths) }
+            Text("Format folders are off by default so existing plugins and shortcuts keep working.")
+                .glassFont(.rowSubtitle)
+                .foregroundStyle(palette.muted)
+                .padding(.horizontal, 4)
+
+            if !overlappingNames.isEmpty {
+                let names = overlappingNames.joined(separator: ", ")
+                GlassBanner(
+                    title: String(localized: "Overlaps \(names): later runs overwrite earlier ones. Choose a different folder or filename template to keep them separate."),
+                    systemImage: "exclamationmark.triangle",
+                    tone: .warning
+                )
+            }
+            if let invalidReason {
+                GlassBanner(title: invalidReason, systemImage: "exclamationmark.triangle", tone: .warning)
+            }
+        }
+        .glassAutosave(
+            currentDraft,
+            isValid: invalidReason == nil,
+            invalidReason: invalidReason ?? "",
+            revert: restore,
+            save: save
+        )
+        .sheet(isPresented: $showFolderImporter) {
+            FolderPicker { url in
+                configurationProtection.performConfigurationChange {
+                    if let id = coordinator.importFolderSelection(url) { folderVaultID = id }
+                }
+            }
+        }
+        .sheet(isPresented: $showEndpointForm) {
+            ExportProfileEndpointFormSheet { name, url, token in
+                configurationProtection.performConfigurationChange {
+                    if let id = coordinator.importAPIEndpointSelection(
+                        name: name,
+                        endpointURLString: url,
+                        bearerToken: token
+                    ) { apiEndpointID = id }
+                }
+            }
+        }
+        .sheet(isPresented: $showGatewayForm) {
+            ExportProfileGatewayFormSheet { name, url in
+                configurationProtection.performConfigurationChange {
+                    if let id = coordinator.importAgentDataGatewaySelection(name: name, endpointURLString: url) {
+                        gatewayID = id
+                    }
+                }
+            }
+        }
+    }
+
+    @ViewBuilder private var destinationBinding: some View {
+        switch target {
+        case .localIPhoneFolder:
+            GlassMenuRow(
+                title: String(localized: "Folder"),
+                selection: $folderVaultID,
+                options: [nil] + destinationStore.vaults.map { Optional($0.id) },
+                label: { id in
+                    destinationStore.vaults.first { $0.id == id }?.name
+                        ?? String(localized: "Folder from Settings")
+                }
+            )
+            addRow(String(localized: "Choose New Folder…")) { showFolderImporter = true }
+        case .googleDrive:
+            GlassMenuRow(
+                title: "Google Drive",
+                selection: $googleDriveDestinationID,
+                options: [nil] + coordinator.googleDriveDestinationStore.destinations.map { Optional($0.id) },
+                label: { id in coordinator.googleDriveDestinationStore.destination(id: id)?.folderLabel ?? "Select a Google Drive folder" }
+            )
+        case .apiEndpoint:
+            GlassMenuRow(
+                title: String(localized: "Endpoint"),
+                selection: $apiEndpointID,
+                options: [nil] + destinationStore.apiEndpoints.map { Optional($0.id) },
+                label: { id in
+                    destinationStore.apiEndpoints.first { $0.id == id }?.name
+                        ?? String(localized: "Endpoint from Settings")
+                }
+            )
+            addRow(String(localized: "Add Endpoint…")) { showEndpointForm = true }
+        case .agentDataGateway:
+            GlassMenuRow(
+                title: String(localized: "Gateway"),
+                selection: $gatewayID,
+                options: [nil] + destinationStore.agentDataGateways.map { Optional($0.id) },
+                label: { id in
+                    destinationStore.agentDataGateways.first { $0.id == id }?.name
+                        ?? String(localized: "Gateway from Settings")
+                }
+            )
+            addRow(String(localized: "Add Gateway…")) { showGatewayForm = true }
+        case .connectedMac:
+            EmptyView()
+        }
+    }
+
+    private func addRow(_ title: String, action: @escaping () -> Void) -> some View {
+        Button {
+            configurationProtection.performConfigurationChange(action)
+        } label: {
+            GlassRow(title: title) { Image(systemName: "plus").foregroundStyle(palette.accent) }
+        }
+        .buttonStyle(.plain)
+    }
+
+    private static func targetTitle(_ target: ExportTargetSelection) -> String {
+        switch target {
+        case .localIPhoneFolder: return String(localized: "Vault on this iPhone")
+        case .connectedMac: return String(localized: "Connected Mac")
+        case .googleDrive: return "Google Drive"
+        case .apiEndpoint: return String(localized: "API Endpoint")
+        case .agentDataGateway: return String(localized: "Agent Data gateway")
+        }
+    }
+
+    private var subfolder: Binding<String> {
+        Binding(
+            get: { draft.healthSubfolder ?? "" },
+            set: { draft.healthSubfolder = $0.isEmpty ? nil : $0 }
+        )
+    }
+
+    private var invalidReason: String? {
+        AutomationOutputPathValidation.invalidReason(
+            folders: [draft.healthSubfolder ?? "", draft.folderStructure],
+            filename: draft.filenameFormat
+        )
+    }
+
+    private var overlappingNames: [String] {
+        coordinator.overlapPreviewNames(
+            target: target,
+            folderVaultID: folderVaultID,
+            googleDriveDestinationID: googleDriveDestinationID,
+            settings: draft,
+            editingProfileID: profile.id
+        )
+    }
+
+    private var currentDraft: Draft {
+        Draft(
+            target: target,
+            folderVaultID: folderVaultID,
+            apiEndpointID: apiEndpointID,
+            googleDriveDestinationID: googleDriveDestinationID,
+            gatewayID: gatewayID,
+            settings: draft
+        )
+    }
+
+    private func restore(_ saved: Draft) {
+        target = saved.target
+        folderVaultID = saved.folderVaultID
+        apiEndpointID = saved.apiEndpointID
+        googleDriveDestinationID = saved.googleDriveDestinationID
+        gatewayID = saved.gatewayID
+        draft = saved.settings
+    }
+
+    private func save(_ value: Draft) {
+        let name = coordinator.profileStore.profile(id: profile.id)?.name ?? profile.name
+        _ = coordinator.updateProfile(
+            id: profile.id,
+            name: name,
+            target: value.target,
+            folderVaultID: value.target == .localIPhoneFolder ? value.folderVaultID : nil,
+            apiEndpointID: value.target == .apiEndpoint ? value.apiEndpointID : nil,
+            googleDriveDestinationID: value.target == .googleDrive ? value.googleDriveDestinationID : nil,
+            agentDataGatewayID: value.target == .agentDataGateway ? value.gatewayID : nil,
+            settings: value.settings
+        )
+    }
+}
+#endif

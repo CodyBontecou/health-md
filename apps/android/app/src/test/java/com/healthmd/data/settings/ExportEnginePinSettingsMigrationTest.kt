@@ -18,6 +18,17 @@ class ExportEnginePinSettingsMigrationTest {
     private val json = Json { encodeDefaults = true; explicitNulls = false }
 
     @Test
+    fun euDotRoundTripsThroughPersistedSettingsDecoder() {
+        val original = ExportSettings().let { it.copy(formatCustomization = it.formatCustomization.copy(
+            dateFormat = com.healthmd.domain.model.DateFormatPreference.EU_DOT,
+        )) }
+        val restored = decodePersistedExportSettings(json.encodeToString(original))
+        assertThat(restored.formatCustomization.dateFormat).isEqualTo(com.healthmd.domain.model.DateFormatPreference.EU_DOT)
+        assertThat(decodePersistedExportSettings("{}").formatCustomization.dateFormat)
+            .isEqualTo(com.healthmd.domain.model.DateFormatPreference.ISO8601)
+    }
+
+    @Test
     fun oldDataStorePendingRequestDecodesAsLegacyNilPin() {
         val decoded = decodePersistedExportSettings(
             """{"pendingScheduledExportRequests":[{"date":"2026-06-01","attemptCount":2}]}""",

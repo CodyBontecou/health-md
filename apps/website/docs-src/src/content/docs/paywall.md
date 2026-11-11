@@ -1,30 +1,28 @@
 ---
-title: "Unlock & Paywall"
-description: "Understand 5 free actions, non-blocking reminders, Lifetime purchases, and StoreKit restore."
+title: "Plans, trials, and restore"
+description: "Weekly, yearly, and Lifetime access, eligible seven-day trials, Family Sharing, and restoration."
 ---
 
-Health.md includes 5 completed export actions before Full Access is required. One action can write multiple days and formats. Manual, scheduled, Shortcut, and direct exports share the counter when applicable.
+This guide describes the subscription-enabled phone release. Store preparation is not a public release; earlier distributed versions can show the previous free-export allowance. The installed app and store confirmation show the available offer.
 
-## When an offer appears
+## Access before setup
 
-- Onboarding has no paywall step.
-- One dismissible offer may appear after the first real preview.
-- After the first completed free export, a guide offers to review a daily schedule without turning it on.
-- After the third free export, a dismissible Lifetime offer shows two actions remaining.
-- After 5 actions, the next counted export is blocked.
+On iPhone and iPad, users without access see a mandatory paywall before setup. Start an eligible trial, subscribe, buy Lifetime, or restore an existing purchase. There is no local free-export allowance or dismissible first/third-export upsell in this release.
 
-Dismissing the earlier offers does not consume an action. Existing usage is retained when the allowance changes: users who already completed five or more counted actions need Full Access for their next new action. Purchased and grandfathered access is unchanged.
+## Plans and trials
 
-## Lifetime options
+Individual and Apple Family Sharing each offer weekly, yearly, and Lifetime access. Eligible subscriptions include a 7-day free trial, then automatically renew at the displayed price and interval. Apple determines eligibility; reinstalling or changing plans does not guarantee another trial. Lifetime is charged immediately once and has no trial or automatic renewal.
 
-StoreKit 2 offers one-time purchases with no subscription: **Individual Lifetime**, **Family Lifetime**, and a family upgrade for eligible owners. Apple's localized purchase-sheet price is authoritative. Family Lifetime depends on Apple Purchase Sharing.
+Family Sharing shares feature access with up to five other eligible family members, not health data or files. Google Play offers Individual access only. The Mac companion and F-Droid build include access without billing. Purchases do not transfer between stores.
 
-**Restore Purchase** refreshes Apple ID transactions. For Family, verify the Apple ID, Purchase Sharing, and that Health.md is visible in purchase history.
+## Manage and restore
 
-| Problem | Action |
-|---|---|
-| Price is missing | Check the network/App Store and reopen the offer. |
-| Offer appears before action 5 | It is a dismissible reminder, not the final block. |
-| A schedule paused | Purchase or restore, then use normal recovery. |
+Manage or cancel through the purchasing Apple or Google account. For Apple subscriptions, cancel at least 24 hours before the trial or period ends and follow the store confirmation. Deleting the app or buying Lifetime does not cancel an existing subscription.
 
-<div class="related"><a href="/docs/onboarding/"><span>Start</span>Five-step setup.</a><a href="/docs/scheduling/"><span>Automation</span>Shared allowance behavior.</a></div>
+Existing lifetime purchases and previously granted legacy access remain valid. Restore Purchase refreshes eligible store entitlements, not deleted files. Check Family Sharing settings if shared access is missing. A subscription alone does not qualify for the discounted Family Lifetime upgrade.
+
+## If access ends
+
+New exports and setup require active access again. Existing files remain yours in the destinations you chose. After restoring access, inspect pending work and use the normal recovery path. Missing prices require a catalog retry; a store error does not grant access.
+
+<div class="related"><a href="/docs/onboarding/"><span>Setup</span>Prepare your health archive.</a><a href="/docs/scheduling/"><span>Automation</span>Schedule and recover exports.</a></div>

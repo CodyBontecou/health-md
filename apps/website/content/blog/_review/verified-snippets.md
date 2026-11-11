@@ -78,13 +78,17 @@ provider's own rules apply, nothing about what those rules are.
 
 ## Claude Projects file upload
 
-Claude Projects accept uploaded files as persistent project knowledge across
-conversations in that Project. CSV is a supported upload type. Adding a new
-export requires a new upload — Claude only sees the files it was given.
+Claude supports CSV and JSON uploads to chats and project files/knowledge.
+Projects can reuse supplied context; the interface is changing during a staged
+rollout. The manual file-upload tutorial provides a snapshot: a new export needs
+a new upload. This does not describe every connector or agent workflow.
 
-Verified: 2026-09-26
-Source: Anthropic's Projects and file-upload documentation (Projects help
-page; file-upload help lists CSV among supported types).
+Verified: 2026-10-25
+Source: Anthropic's current upload and Projects documentation:
+https://support.claude.com/en/articles/8241126-upload-files-to-claude,
+https://support.claude.com/en/articles/9517075-what-are-projects, and
+https://support.claude.com/en/articles/9519177-how-can-i-create-and-manage-projects.
+Instructions are documentation-traced; no authenticated upload was run.
 
 ## ChatGPT path is file upload
 
@@ -98,3 +102,20 @@ Source: `content/blog/analyze-apple-health-with-claude.md`, Step 2 and its
 local-query alternative. This entry describes the tutorial's chosen workflow,
 not a product-wide capability limit. `test/blog-workflow-privacy.test.mjs`
 checks that scope in the article, ledger, and this entry.
+
+## Sleep CSV summary and interval rows
+
+Apple daily CSV sleep durations use seconds in the production v8 example.
+Compatibility summary rows can omit Timestamp; a timestamped Sleep Stage row
+contains a label plus duration in Value and an ISO-8601 start Timestamp.
+Keep daily totals separate from individual interval rows when calculating.
+Daily sleep compatibility summaries use a local noon-to-noon journal window. A night can belong to the prior journal date even when the source session begins after midnight. Raw/canonical records retain separate ownership and original timestamps.
+
+Verified: 2026-10-27
+Source: `apps/apple/HealthMd/Shared/Export/CSVExporter.swift` Sleep block,
+`apps/apple/docs/reference/generated/core/summary-day.csv`, and
+`docs-src/src/content/docs/sleep-date-attribution.md`. The website's
+`test/sleep-export-sample.test.mjs` checks the published excerpt against the
+producer fixture. This is source tracing, not a newly executed device export.
+
+Date evidence: `apps/apple/HealthMd/Shared/Managers/HealthKitManager.swift` sleepWindow/fetchSleepData; `apps/apple/docs/features/export-schema.md` Day ownership; `apps/android/app/src/main/java/com/healthmd/data/health/SleepJournalSummary.kt`; `apps/android/docs/export-contract/android-sleep-journal-summary.md`. This clarifies existing behavior; exporter schemas, aggregation and fixtures are unchanged.

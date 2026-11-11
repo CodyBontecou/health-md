@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="m3_tools_diagnostics_verbosity">Nível de detalhe</string>
+    <string name="m3_tools_diagnostics_subsystem">Subsistema</string>
+    <string name="m3_tools_diagnostics_time_range">Período</string>
+    <string name="m3_tools_diagnostics_events">Eventos recentes</string>
+    <string name="m3_tools_diagnostics_files">Arquivos do pacote</string>
+    <string name="m3_tools_direct_cli_pairing">Parear com seu computador</string>
+    <string name="m3_tools_direct_cli_manual">Inserir manualmente</string>
+    <string name="m3_tools_direct_cli_computer">Computador pareado</string>
+    <string name="m3_tools_direct_cli_export">Exportar</string>
+    <string name="m3_tools_clinic_title">Acesso da clínica</string>
+    <string name="m3_tools_clinic_intro">Sua clínica pode patrocinar o envio para o endpoint aprovado dela. Você escolhe o que compartilhar. Outros destinos de exportação exigem seu próprio acesso ao Health.md.</string>
+    <string name="m3_tools_clinic_storage_unavailable">Desbloqueie o telefone e tente novamente. Não foi possível ler o acesso da clínica com segurança.</string>
+    <string name="m3_tools_clinic_fallback_name">Clínica</string>
+    <string name="m3_tools_clinic_sharing">Compartilhamento</string>
+    <string name="m3_tools_clinic_allow_sharing">Permitir compartilhamento com esta clínica</string>
+    <string name="m3_tools_clinic_sharing_description">Somente as métricas e datas que você selecionar no Health.md serão enviadas. O agendamento usa sua seleção salva. Desativar o compartilhamento interrompe envios futuros à clínica; isso não exclui cópias que a clínica já recebeu.</string>
+    <string name="m3_tools_clinic_upload_token">Token de envio da clínica (opcional)</string>
+    <string name="m3_tools_clinic_upload_token_description">Se sua clínica fornecer um token de envio pessoal, insira-o aqui. Ele é armazenado com segurança e usado apenas para o endpoint aprovado desta clínica.</string>
+    <string name="m3_tools_clinic_use_destination">Usar destino da clínica</string>
+    <string name="m3_tools_clinic_sync_requests">Pedidos de sincronização</string>
+    <string name="m3_tools_clinic_allow_sync">Permitir pedidos de sincronização desta clínica</string>
+    <string name="m3_tools_clinic_sync_description">Sua clínica pode enviar uma notificação pedindo seus dados mais recentes. Nada é enviado até você tocar nela; então ontem e hoje são compartilhados com esta clínica. Desativar isso interrompe novos pedidos.</string>
+    <string name="m3_tools_clinic_invitation">Convite</string>
+    <string name="m3_tools_clinic_invitation_code">Código de convite</string>
+    <string name="m3_tools_clinic_accept_invitation">Aceitar convite</string>
+    <string name="m3_tools_clinic_not_configured">O acesso da clínica não está configurado nesta versão do Health.md.</string>
+    <string name="m3_tools_clinic_enrollment_pending">Seu convite está salvo com segurança. Tente novamente para concluir a inscrição; você não precisa de um novo código.</string>
+    <string name="m3_tools_clinic_retry_enrollment">Tentar inscrição novamente</string>
+    <string name="m3_tools_clinic_refresh">Atualizar acesso da clínica</string>
+    <string name="m3_tools_clinic_disconnect_clinic">Desconectar clínica</string>
+    <string name="m3_tools_clinic_error">Não foi possível atualizar o acesso da clínica. Verifique sua conexão ou tente novamente a inscrição salva.</string>
+    <string name="m3_tools_clinic_disconnect_question">Desconectar esta clínica?</string>
+    <string name="m3_tools_clinic_disconnect_body">O compartilhamento patrocinado pela clínica será interrompido. Seu próprio acesso comprado e seus dados de saúde locais continuam disponíveis.</string>
+    <string name="m3_tools_clinic_disconnect">Desconectar</string>
+    <string name="m3_tools_clinic_sync_sharing_required">Permita primeiro o compartilhamento com esta clínica.</string>
+    <string name="m3_tools_clinic_sync_push_unavailable">Os pedidos de sincronização não estão disponíveis nesta versão do Health.md.</string>
+    <string name="m3_tools_clinic_sync_notifications_denied">A permissão de notificação não foi concedida. Permita notificações do Health.md nas Configurações.</string>
+    <string name="m3_tools_clinic_sync_wake_service">O serviço de notificações não está disponível. Tente novamente mais tarde.</string>
+    <string name="m3_tools_clinic_sync_clinic_unreachable">Não foi possível contatar sua clínica. Tente novamente mais tarde.</string>
+    <string name="m3_tools_clinic_sync_storage">Desbloqueie o telefone e tente novamente. Não foi possível armazenar a chave do pedido com segurança.</string>
+</resources>

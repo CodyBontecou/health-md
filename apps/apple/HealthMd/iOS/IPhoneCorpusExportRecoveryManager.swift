@@ -37,6 +37,7 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
 
     private let store: ConnectedCorpusOutboundStore
     private let cliActivityTracker: CLIExportActivityTracker
+    private let completionRecorder: @MainActor (ConnectedCorpusOutboundJournal, MacExportResultPayload) -> Void
     private let transportProvider: @MainActor (SyncService) -> ConnectedCorpusSender.Transport
     private let connectedPeerProvider: @MainActor (SyncService) -> SyncPeerCapabilities?
     private weak var syncService: SyncService?
@@ -45,11 +46,20 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
     private var activeTask: Task<ConnectedCorpusDurableSender.Result, Error>?
     private var activeJobID: UUID?
     private var explicitlyCancelledJobIDs: Set<UUID> = []
+    /// Discard revokes immediately; only this accepted terminal checkpoint may
+    /// clean its spool once the active sender has finished unwinding.
+    private final class ScheduledDiscard {
+        var receipt: ConnectedCorpusOperationReceipt
+        init(_ receipt: ConnectedCorpusOperationReceipt) { self.receipt = receipt }
+        nonisolated deinit {}
+    }
+    private var discardedSenderCleanup: [UUID: ScheduledDiscard] = [:]
     /// Retained across disconnect/pause/resume attempts so unresolved physical
     /// HealthKit workers and their open circuits stay bounded for the full job.
     private var queryExecutionControllers: [UUID: HealthKitQueryExecutionController] = [:]
     private var resumeWhenActiveTaskFinishes = false
     private var publishedCLIJobID: UUID?
+    private var publishedCLIAdmissionID: UUID?
     /// Scheduled jobs must still belong to a live pending request and enabled period.
     /// Interactive/CLI jobs retain their independent recovery authority.
     var isScheduledRecoveryAuthorized: @MainActor (UUID) -> Bool = {
@@ -71,10 +81,13 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
         },
         connectedPeerProvider: @escaping @MainActor (SyncService) -> SyncPeerCapabilities? = {
             $0.connectionState == .connected ? $0.remoteCapabilities : nil
-        }
+        },
+        completionRecorder: @escaping @MainActor (ConnectedCorpusOutboundJournal, MacExportResultPayload) -> Void =
+            IPhoneCorpusExportRecoveryManager.recordCompletionEffects
     ) {
         self.store = store
         self.cliActivityTracker = cliActivityTracker
+        self.completionRecorder = completionRecorder
         self.transportProvider = transportProvider
         self.connectedPeerProvider = connectedPeerProvider
         self.activeSnapshot = nil
@@ -107,7 +120,7 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
     ) {
         self.syncService = syncService
         self.healthKitManager = healthKitManager
-        self.externalIntegrations = ConnectedAppsFeature.isEnabled ? externalIntegrations : nil
+        self.externalIntegrations = externalIntegrations
         cleanupExpiredJournals()
         if connectedPeerProvider(syncService) == nil {
             pauseInterruptedJournals()
@@ -296,25 +309,32 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
         _ = resumeEligibleJob()
     }
 
-    /// Synchronous local revocation precedes any peer RPC. Preserve the journal and
-    /// spool here: a sender can still be unwinding, and committed Mac files are untouched.
+    /// Revoke before peer RPC; preserve spool bytes until the active sender unwinds.
     func discardScheduledRecovery(jobID: UUID) throws {
         guard let journal = try store.load(jobID: jobID, allowExpired: true),
               journal.origin == .scheduledIPhone, !journal.state.isTerminal else { return }
-        explicitlyCancelledJobIDs.insert(jobID)
-        if activeJobID == jobID {
-            resumeWhenActiveTaskFinishes = false
-            activeTask?.cancel()
-        }
+        let receipt = try store.operationReceipt(for: journal)
         let message = "Scheduled recovery was discarded."
-        _ = try store.updateState(jobID: jobID, state: .cancelled, message: message)
+        let cancellation = try receipt.withOwnership(allowExpired: true) {
+            explicitlyCancelledJobIDs.insert(jobID)
+            let cancelled = try store.updateState(jobID: jobID, state: .cancelled, message: message)
+            let accepted = ScheduledDiscard(try store.operationReceipt(for: cancelled))
+            if activeJobID == jobID, activeTask != nil {
+                discardedSenderCleanup[jobID] = accepted
+                resumeWhenActiveTaskFinishes = false
+                activeTask?.cancel()
+            }
+            return accepted
+        }
         refreshPublishedSnapshot()
         if let syncService {
             Task { [weak syncService] in
-                _ = await syncService?.sendConnectedCorpusCancelAndWait(ConnectedCorpusTransferCancel(
-                    sessionID: journal.sessionID, jobID: jobID, reason: .userRequested,
-                    message: message, requestedAt: Date()
-                ))
+                _ = try? await cancellation.receipt.continueWhileOwned {
+                    await syncService?.sendConnectedCorpusCancelAndWait(ConnectedCorpusTransferCancel(
+                        sessionID: journal.sessionID, jobID: jobID, reason: .userRequested,
+                        message: message, requestedAt: Date()
+                    ))
+                }
             }
         }
     }
@@ -334,7 +354,8 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
             queryExecutionControllers.removeValue(forKey: jobID)
         }
         try? store.cancel(jobID: jobID)
-        if journal.cliUIProgressSnapshot != nil {
+        if journal.cliUIProgressSnapshot != nil,
+           managerOwnedCLIJobIDInTracker() == jobID {
             cliActivityTracker.finish(
                 jobID: jobID,
                 phase: .cancelled,
@@ -387,19 +408,9 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
         guard let journal = try? store.load(jobID: payload.jobID, allowExpired: true),
               journal.state == .completed,
               (try? store.markCompletionRecorded(jobID: payload.jobID)) == true else { return false }
-        let result = ExportOrchestrator.ExportResult(macExportPayload: payload)
-        ExportOrchestrator.recordResult(
-            result,
-            source: journal.origin == .scheduledIPhone ? .scheduled : .macAgent,
-            dateRangeStart: journal.exportManifest.dateRangeStart,
-            dateRangeEnd: journal.exportManifest.dateRangeEnd,
-            targetLabel: payload.destinationDisplayName ?? "Mac",
-            fileCount: payload.hasAuthoritativeFileCount
-                ? payload.totalFilesWritten : nil,
-            appleExportEnginePin: journal.exportManifest.effectiveAppleExportEnginePin
-        )
-        if payload.successCount > 0 { PurchaseManager.shared.recordExportUse() }
-        if journal.macRequest?.requestedBy == .cli {
+        completionRecorder(journal, payload)
+        if journal.macRequest?.requestedBy == .cli,
+           managerOwnedCLIJobIDInTracker() == payload.jobID {
             let phase: CLIExportActivityTracker.Phase
             switch payload.status {
             case .success: phase = .completed
@@ -421,13 +432,32 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
         return true
     }
 
+    private static func recordCompletionEffects(
+        journal: ConnectedCorpusOutboundJournal,
+        payload: MacExportResultPayload
+    ) {
+        let result = ExportOrchestrator.ExportResult(macExportPayload: payload)
+        ExportOrchestrator.recordResult(
+            result,
+            source: journal.origin == .scheduledIPhone ? .scheduled : .macAgent,
+            dateRangeStart: journal.exportManifest.dateRangeStart,
+            dateRangeEnd: journal.exportManifest.dateRangeEnd,
+            targetLabel: payload.destinationDisplayName ?? "Mac",
+            fileCount: payload.hasAuthoritativeFileCount
+                ? payload.totalFilesWritten : nil,
+            appleExportEnginePin: journal.exportManifest.effectiveAppleExportEnginePin
+        )
+        if payload.successCount > 0 { PurchaseManager.shared.recordExportUse() }
+    }
+
     @discardableResult
     func rejectRecoveredMacRequestCompletion(jobID: UUID, message: String) -> Bool {
         guard let journal = try? store.load(jobID: jobID, allowExpired: true),
               journal.origin == .macInitiated,
               journal.state == .completed,
               (try? store.markCompletionRecorded(jobID: jobID)) == true else { return false }
-        if journal.macRequest?.requestedBy == .cli {
+        if journal.macRequest?.requestedBy == .cli,
+           managerOwnedCLIJobIDInTracker() == jobID {
             cliActivityTracker.finish(
                 jobID: jobID,
                 phase: .failed,
@@ -557,12 +587,22 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
         ) -> Void)?,
         produceItem: @escaping ConnectedCorpusDurableSender.ItemProducer
     ) async throws -> ConnectedCorpusDurableSender.Result {
-        externalIntegrations?.beginExportAction()
-        defer { externalIntegrations?.endExportAction() }
+        let savedMode = try store.load(jobID: jobID, allowExpired: true)?.exportManifest.mode
+        let bookkeepingProviders = savedMode == .writeFiles || !ConnectedAppsFeature.isEnabled ? nil : externalIntegrations
+        bookkeepingProviders?.beginExportAction()
+        defer { bookkeepingProviders?.endExportAction() }
         let queryController = queryExecutionControllers[jobID]
             ?? HealthKitQueryExecutionController()
         queryExecutionControllers[jobID] = queryController
         defer {
+            if let discarded = discardedSenderCleanup.removeValue(forKey: jobID) {
+                try? discarded.receipt.withOwnership(allowExpired: true) {
+                    try store.cancel(jobID: jobID)
+                    if let cleaned = try store.load(jobID: jobID, allowExpired: true) {
+                        discarded.receipt = try store.operationReceipt(for: cleaned)
+                    }
+                }
+            }
             if let journal = try? store.load(jobID: jobID, allowExpired: true),
                journal.state.isTerminal {
                 queryExecutionControllers.removeValue(forKey: jobID)
@@ -621,7 +661,7 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
             return
         }
 
-        let ownedJobID = publishedCLIJobID ?? managerOwnedCLIJobIDInTracker()
+        let ownedJobID = managerOwnedCLIJobIDInTracker()
         guard let ownedJobID else { return }
         if let current = cliActivityTracker.snapshot,
            current.jobID == ownedJobID,
@@ -630,14 +670,19 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
             cliActivityTracker.clear(jobID: ownedJobID)
         }
         publishedCLIJobID = nil
+        publishedCLIAdmissionID = nil
     }
 
     private func publishCLIActivity(_ snapshot: ConnectedCorpusProgressSnapshot) {
-        if let publishedCLIJobID, publishedCLIJobID != snapshot.jobID {
-            cliActivityTracker.clear(jobID: publishedCLIJobID)
+        if publishedCLIJobID == snapshot.jobID,
+           publishedCLIAdmissionID != cliActivityTracker.admissionID { return }
+        if let ownedJobID = managerOwnedCLIJobIDInTracker(), ownedJobID != snapshot.jobID {
+            cliActivityTracker.clear(jobID: ownedJobID)
         }
-        publishedCLIJobID = snapshot.jobID
         cliActivityTracker.updateConnected(snapshot)
+        guard cliActivityTracker.ownsConnectedActivity(snapshot) else { return }
+        publishedCLIJobID = snapshot.jobID
+        publishedCLIAdmissionID = cliActivityTracker.admissionID
     }
 
     private func managerOwnedCLIJobIDInTracker() -> UUID? {
@@ -646,12 +691,18 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
               let journal = try? store.load(jobID: snapshot.jobID, allowExpired: true),
               journal.origin == .macInitiated,
               journal.macRequest?.requestedBy == .cli,
-              journal.macRequest?.responseMode != .contextStore else { return nil }
+              journal.macRequest?.responseMode != .contextStore,
+              cliActivityTracker.ownsConnectedActivity(journal.progressSnapshot),
+              publishedCLIJobID != snapshot.jobID
+                || publishedCLIAdmissionID == cliActivityTracker.admissionID else { return nil }
         return snapshot.jobID
     }
 
     private func cleanupExpiredJournals() {
-        for jobID in store.cleanupExpired() {
+        // Cleanup can remove a terminal journal, so retain the bound activity
+        // before crossing that durable boundary. A matching job ID is insufficient.
+        let ownedActivityJobID = managerOwnedCLIJobIDInTracker()
+        for jobID in store.cleanupExpired() where jobID == ownedActivityJobID {
             cliActivityTracker.finish(
                 jobID: jobID,
                 phase: .failed,
@@ -670,7 +721,7 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
         }
     }
 
-    private func makeRecoveredProducer(
+    func makeRecoveredProducer(
         for journal: ConnectedCorpusOutboundJournal
     ) -> ConnectedCorpusDurableSender.ItemProducer {
         let settings = journal.exportManifest.settingsSnapshot.makeAdvancedExportSettings()
@@ -698,15 +749,34 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
         formatter.timeZone = sourceTimeZone
         formatter.dateFormat = "yyyy-MM-dd"
         let healthKitManager = self.healthKitManager
-        let integrations = self.externalIntegrations
+        let fileIntegrations = self.externalIntegrations
+        let integrations = ConnectedAppsFeature.isEnabled ? fileIntegrations : nil
+        let fileProviders: Result<(any ExternalIntegrationDailyRecordProviding)?, Error> = Result {
+            guard journal.exportManifest.mode == .writeFiles,
+                  journal.nextItemIndex < journal.totalItemCount,
+                  settings.writesExternalProviderSidecars else { return nil }
+            if let authority = journal.exportManifest.settingsSnapshot.externalProviderCaptureAuthority {
+                return try IPhoneConnectedCorpusProducer.restoreProviders(authority: authority, providers: fileIntegrations)
+            }
+            guard journal.exportManifest.settingsSnapshot.sleepCaptureContext?.sleepDayAttribution != .morningEnds else {
+                throw ExternalProviderCaptureAuthority.RecoveryError.unavailable
+            }
+            return integrations?.forCaptureOperation()
+        }
 
         return { index, date in
             guard let healthKitManager else {
                 throw HealthKitManager.HealthKitError.dataNotAvailable
             }
+            // Never resolve a missing/persisted context from current preferences.
+            let captureContext = try healthKitManager.resolveSleepCaptureContext(settings: settings, timeZone: sourceTimeZone)
             let isRequested = requestedDays.contains(sourceCalendar.startOfDay(for: date))
             switch journal.exportManifest.mode {
             case .writeFiles:
+                let integrations = try fileProviders.get()
+                integrations?.beginExportAction()
+                var providerCaptureSucceeded = false
+                defer { integrations?.endExportAction(succeeded: providerCaptureSucceeded) }
                 let detailPolicy = metadata.map {
                     MacExportStreamingJobBuilder.detailPolicy(
                         for: date,
@@ -741,11 +811,13 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
                             for: date,
                             detailPolicy: detailPolicy,
                             metricSelection: selection,
-                            timeZone: sourceTimeZone
+                            timeZone: sourceTimeZone,
+                            captureContext: captureContext
                         )
                     },
                     fetchExternalDailyRecords: externalFetcher
                 )
+                providerCaptureSucceeded = outcome.failure == nil
                 return try await ConnectedCorpusSpoolItem.encodeHealthDay(
                     ConnectedCorpusHealthDayPayload(
                         sourceDate: date,
@@ -792,7 +864,8 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
                                 for: date,
                                 detailPolicy: detailPolicy,
                                 metricSelection: selection,
-                                timeZone: sourceTimeZone
+                                timeZone: sourceTimeZone,
+                                captureContext: captureContext
                             )
                         }
                         return HealthData(
@@ -831,7 +904,8 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
                             for: date,
                             detailPolicy: detailPolicy,
                             metricSelection: selection,
-                            timeZone: sourceTimeZone
+                            timeZone: sourceTimeZone,
+                            captureContext: captureContext
                         )
                     },
                     fetchExternalDailyRecords: nil

@@ -692,3 +692,84 @@
     display: grid;
   }
 }
+
+/* Task guides share the existing article width without an empty sidebar. */
+.export-guide-layout {
+  grid-template-columns: minmax(0, 820px);
+  justify-content: center;
+}
+
+.guide-steps {
+  margin: 24px 0;
+  padding-left: 24px;
+}
+
+.guide-steps li + li {
+  margin-top: 12px;
+}
+
+.guide-table {
+  margin: 24px 0;
+  overflow-x: auto;
+}
+
+.guide-table table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 16px;
+  line-height: 24px;
+}
+
+.guide-table caption {
+  margin-bottom: 12px;
+  text-align: left;
+  font-weight: 600;
+}
+
+.guide-table th,
+.guide-table td {
+  padding: 12px;
+  border: 1px solid var(--about-line);
+  text-align: left;
+  vertical-align: top;
+}
+
+.guide-table thead {
+  background: var(--about-soft);
+}
+
+.guide-table:focus-visible {
+  outline: 2px solid var(--purple);
+  outline-offset: 4px;
+}
+
+.guide-screen {
+  max-width: 320px;
+  margin: 32px auto;
+}
+
+.guide-screen img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 16px;
+}
+
+.guide-screen figcaption {
+  margin-top: 12px;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.export-guide-layout .about-card {
+  min-width: 0;
+}
+
+.export-guide-layout p code {
+  overflow-wrap: anywhere;
+}
+
+.guide-table table {
+  min-width: 600px;
+}

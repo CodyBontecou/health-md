@@ -220,8 +220,10 @@ final class GoogleDriveCaptureRecoveryTests: XCTestCase {
             settings.writeMode = .append
             settings.metricSelection.deselectAll()
             settings.metricSelection.enabledMetrics = ["steps"]
-            snapshot = ExportSettingsSnapshot.from(settings, healthSubfolder: "Health",
+            var acceptedSnapshot = ExportSettingsSnapshot.from(settings, healthSubfolder: "Health",
                 appleExportEngineAuthorityIsFrozen: true, calendarTimeZoneIdentifier: "UTC")
+            acceptedSnapshot.sleepCaptureContext = AppleSleepCaptureContext(timeZone: TimeZone(identifier: "UTC")!, sleepDayAttribution: .nightBegins)
+            snapshot = acceptedSnapshot
             healthManager = HealthKitManager(store: healthStore, userDefaults: defaults)
             destination = GoogleDriveDestination(credentialReferenceID: UUID(), accountPermissionID: "synthetic-permission",
                 folderID: "folder", canAddChildren: true)

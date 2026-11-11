@@ -1,9 +1,22 @@
 ---
-title: "Endpoint de API"
-description: "Envie JSON selecionado do Apple Health diretamente do iPhone para seu próprio endpoint HTTP(S)."
+title: "Exporte JSON do Apple Health para sua própria API"
+description: "Envie dados selecionados do Apple Health como JSON do iPhone ao seu endpoint com o Health.md. Veja configuração, exemplos e limites de requisições."
 ---
 
 <p>O Endpoint de API é um destino de exportação para usuários que desejam que os dados do Health.md sejam enviados ao próprio servidor, webhook, banco de dados, painel ou automação. O iPhone continua lendo o Apple Health; em vez de gravar arquivos, ele envia o JSON por POST ao endpoint configurado.</p>
+
+## Escolha o fluxo de API
+
+| Seu objetivo | Comece aqui |
+| --- | --- |
+| Enviar dados selecionados ao seu servidor | Siga este guia. O iPhone envia um POST JSON à URL que você configurar. |
+| Consultar dados localmente em um Mac | <a href="/pt-br/docs/agent-api/">API de consulta de loopback</a>. Mantenha a API neste Mac; não a exponha à rede. |
+| Criar um app de saúde para iOS | <a href="https://developer.apple.com/documentation/healthkit" target="_blank" rel="noopener">Documentação do Apple HealthKit para desenvolvedores</a>. |
+
+<div class="callout">
+<strong>Comece com um dia</strong>
+<p><a href="https://apps.apple.com/us/app/health-md/id6757763969" target="_blank" rel="noopener">Instale o Health.md no iPhone</a>. <a href="/docs/reference/generated/automation/api-export-v1.json">Confira o exemplo JSON fictício</a> antes de configurar o receptor.</p>
+</div>
 
 <div class="callout">
 <strong>Lembrete de privacidade.</strong>

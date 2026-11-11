@@ -9,6 +9,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 import com.healthmd.data.history.ExportHistoryDao
 import com.healthmd.data.history.ExportHistoryDatabase
 import com.healthmd.data.history.ExportHistoryRepositoryImpl
+import com.healthmd.widget.glance.ArchiveGlanceWidget
 import com.healthmd.data.settings.SettingsRepositoryImpl
 import com.healthmd.domain.repository.ExportHistoryRepository
 import com.healthmd.domain.repository.SettingsRepository
@@ -90,8 +91,11 @@ object DatabaseModule {
 
     @Provides
     @Singleton
-    fun provideExportHistoryRepository(dao: ExportHistoryDao): ExportHistoryRepository =
-        ExportHistoryRepositoryImpl(dao)
+    fun provideExportHistoryRepository(
+        dao: ExportHistoryDao,
+        @ApplicationContext context: Context,
+    ): ExportHistoryRepository =
+        ExportHistoryRepositoryImpl(dao) { ArchiveGlanceWidget.refresh(context) }
 
     @Provides
     @Singleton

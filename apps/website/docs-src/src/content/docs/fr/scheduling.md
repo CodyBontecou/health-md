@@ -1,63 +1,56 @@
 ---
-title: "Planification"
-description: "Lancez automatiquement des exports selon une cadence quotidienne, hebdomadaire ou calendaire personnalisée. iOS utilise des tâches d’arrière-plan et une notification locale de récupération lorsque les données protégées sont indisponibles."
+title: "Planifier les exportations Apple Health et résoudre les problèmes d'exécutions manquées"
+description: "Vérifiez une exportation planifiée, comprenez l’analyse des jours terminés et récupérez les dates en attente. Le timing d'arrière-plan iPhone est le meilleur effort ; historique La nouvelle tentative utilise les paramètres actuels."
 ---
 
-## L’onglet Planification
-<p>Il s’agit d’un écran d’état, pas d’un panneau de réglages. Il indique en un coup d’œil :</p>
-<ul>
-<li>si la planification est activée ou non ;</li>
-<li>la prochaine exécution planifiée, le cas échéant ;</li>
-<li>le résultat de la dernière exécution.</li>
-</ul>
-<p>Un seul bouton, <em>Configurer la planification</em> (ou <em>Gérer la planification</em>), ouvre la vue détaillée.</p>
+Cette page décrit la planification iPhone . Android a des autorisations d'arrière-plan et des exigences d'achat différentes ; voir [Automation Android](/fr/docs/android/).
 
-## Réglages de planification
-<div class="options">
-<div class="option"><strong>Activer les exports planifiés</strong><p>Interrupteur principal en haut. Lorsqu’il est désactivé, il n’y a ni exécution en arrière-plan ni notification.</p></div>
-<div class="option"><strong>Fréquence</strong><p>Quotidienne, hebdomadaire ou personnalisée. Une planification personnalisée se répète tous les N jours, semaines ou mois à partir d’une date initiale. La période rétrospective détermine le nombre de jours terminés couverts.</p></div>
-<div class="option"><strong>Heure</strong><p>Heure et minute. Pour iOS, ce réglage est une indication et non une garantie ; consultez l’encadré sur les limites ci-dessous.</p></div>
-</div>
+## Vérifiez la première exportation planifiée
 
-## Historique des exports
-<p>La liste au bas de l’écran Planification consigne chaque exécution planifiée et son résultat. Touchez une ligne pour afficher les détails. Les échecs comportent un bouton <em>Réessayer</em> qui relance la plage de dates avec les réglages et la destination actuellement configurés, puis crée une nouvelle ligne d’historique.</p>
+1. Activer le profil souhaité. Vérifiez ses métriques, ses formats, les détails des données, son comportement d'écriture et sa destination. Exécutez manuellement une journée complète et inspectez le fichier enregistré ou le résultat du point de terminaison avant d'activer l'automatisation.
+2. Sur iPhone, ouvrez **Automatisations**, choisissez l’automatisation et touchez **Planification** ; sur Android, ouvrez Planification, puis Configurer la planification ou Gérer la planification. Activez la planification, choisissez Quotidienne, Hebdomadaire ou Personnalisée, réglez l’heure et commencez avec une période rétrospective d’un jour terminé. Autorisez les notifications si vous souhaitez des rappels de reprise locaux.
+3. Vérifiez si la planification est activée, la prochaine occurrence et le dernier résultat. Après une tentative, inspectez les détails de son historique et la destination réelle ; une étiquette ou une notification de prochaine exécution ne constitue pas une preuve que les données ont été écrites.
+4. Vérifiez les dates exportées, les unités, la couverture et les données manquantes. Un fichier enregistré ne prouve pas en soi une capture complète de la source.
 
-## Fonctionnement réel de la planification iOS
-<div class="doc-diagram">
-  <div class="flow-steps" aria-label="Flux de repli d’un export planifié">
-    <span><strong>1. Heure cible</strong>Health.md demande à iOS de réveiller l’app autour de l’heure choisie.</span>
-    <span><strong>2. Tentative en arrière-plan</strong>Si l’appareil est disponible, iOS exécute une tâche d’actualisation en arrière-plan.</span>
-    <span><strong>3. Repli si verrouillé</strong>Si HealthKit est indisponible, Health.md affiche une notification.</span>
-    <span><strong>4. Toucher pour terminer</strong>L’ouverture de la notification permet à l’app de lire HealthKit et d’exporter.</span>
-  </div>
-</div>
+Dans la version téléphonique avec abonnement, les exportations planifiées et manuelles nécessitent un essai actif, un abonnement, un achat à vie ou un accès permanent préservé. Il n'existe pas d'autorisation locale de libre exportation. L’accès expiré doit être restauré avant que les travaux en attente puissent reprendre. Voir [déverrouillage et paywall](/fr/docs/paywall/).
 
-<div class="callout">
-<strong>Limites d’iOS à connaître.</strong>
-<p style="margin-top:6px;">Les données HealthKit ne sont pas lisibles lorsque l’appareil est verrouillé. Les exports planifiés utilisent <code>BGAppRefreshTask</code>, qu’iOS programme de manière opportuniste selon les habitudes d’utilisation : l’heure définie est une cible, pas un engagement. Comme solution de repli, l’app affiche une notification locale à l’heure prévue si l’appareil est verrouillé ; touchez-la pour lancer l’export.</p>
-</div>
-<ul>
-<li>L’heure planifiée est approximative. iOS peut exécuter la tâche plus tôt ou plus tard, voire l’ignorer si l’appareil est éteint ou déconnecté.</li>
-<li>Les exports planifiés fonctionnent mieux si le téléphone est régulièrement branché et déverrouillé à peu près à la même heure chaque jour.</li>
-<li>Si l’export échoue parce que l’appareil était verrouillé, touchez la notification : l’export sera alors lancé avec l’accès à HealthKit.</li>
-</ul>
+## Comprendre la fenêtre d'une journée terminée
 
-## Contrôle par programmation
-<p>Vous pouvez activer ou désactiver la planification depuis Shortcuts à l’aide de l’App Intent <em>Turn Scheduled Export On or Off</em>. <a href="/fr/docs/shortcuts/">Voir Shortcuts</a> pour des exemples.</p>
+Les plannings quotidiens, hebdomadaires et personnalisés peuvent avoir un aperçu. La cadence personnalisée se répète tous les N jours, semaines ou mois à compter de sa date de début. Chaque nouvelle occurrence réexporte l'intégralité de la fenêtre de jour terminée configurée, y compris les dates exportées auparavant. Une analyse rétrospective de trois jours couvre hier et les deux jours précédents ; l'exécution retardée maintient la fenêtre ancrée au jour d'incendie prévu.
 
-## Planifications par profil et annulation
+Today Refresh est un travail distinct de la journée en cours et ne remplace pas la fenêtre de la journée terminée. Inspectez les chemins et le comportement d'écriture avant de chevaucher les exportations ; n’ajoutez pas de clichés quotidiens répétés en tant que nouvelles mesures.
 
-- Chaque profil conserve sa propre planification, y compris une cadence personnalisée ; changer le profil actif ne redirige pas une autre planification.
-- Un avertissement de collision apparaît lorsque des profils pourraient écrire les mêmes chemins générés vers la même destination. Vérifiez-le avant d’activer des planifications concurrentes ; Health.md ne modifie aucun profil en silence.
-- Arrêter ou Annuler termine seulement la tentative en cours. Les dates terminées restent acquises, les autres sont réessayables et la planification reste active.
-- Chaque ligne d’historique reste liée au profil d’exécution et au libellé confidentiel de la destination réellement utilisée.
+## Choisissez le bon chemin de récupération
 
-Gérez réglages figés et destination dans [Profils d’exportation](/fr/docs/export-profiles/).
+- **En attente de récupération planifiée :** déverrouillez le iPhone , ouvrez Health.md et inspectez la tentative en attente. Il conserve ses dates exactes non résolues, ses paramètres enregistrés et sa destination. Les dates terminées restent terminées ; la reprise ne s’étend pas à une nouvelle rétrospective.
+- **Réessayer depuis l'historique :** cela démarre une nouvelle exécution pour cette plage en utilisant les paramètres et la destination actuellement configurés et enregistre une nouvelle ligne d'historique. Vérifiez la configuration active avant d’appuyer sur Réessayer. Ce n’est pas la même chose que de reprendre une tentative en attente gelée.
+- **Destination modifiée ou indisponible :** restaurez l'accès ou inspectez le profil en attente avant de réessayer. Une ancienne récupération d'API iPhone ne doit pas adopter silencieusement un point de terminaison ou des informations d'identification modifiés. Ne lancez pas de nouvelles tentatives à plusieurs reprises alors que la tentative d'origine n'est pas résolue.
 
-## Pages associées
+Consultez les règles de récupération en attente, d'identité du profil et de destination dans [Exporter les profils](/fr/docs/export-profiles/).
+
+## Ce que fait et ne garantit pas iOS
+
+L'heure sélectionnée est un objectif et non une heure d'achèvement garantie. iOS contrôle l'exécution en arrière-plan et la protection des appareils verrouillés peut empêcher les lectures HealthKit . Les demandes en arrière-plan et les notifications de réveil silencieuses ne contournent pas cette protection.
+
+Les notifications de récupération locale nécessitent une autorisation de notification et ne constituent pas une garantie de livraison à l'heure cible. Si vous en recevez un, déverrouillez l'appareil et ouvrez-le pour permettre à Health.md de tenter la récupération. Si aucune notification n'arrive, ouvrez Health.md et vérifiez le travail et l'historique en attente. Vérifiez le résultat plutôt que de supposer qu’une alerte ou le temps écoulé est synonyme de succès.
+
+## Contrôle programmatique
+ <p> Vous pouvez activer/désactiver la planification à partir de Shortcuts à l'aide de l'intention <em> Activer ou désactiver l'exportation programmée </em> . <a href="/fr/docs/shortcuts/"> Voir Shortcuts </a> pour des exemples. </p>
+
+## Horaires et annulation des profils
+
+- Chaque profil peut conserver son propre horaire, y compris une cadence personnalisée. Le changement de profil actif ne recible pas le planning d'un autre profil.
+- Un avertissement de collision apparaît lorsque les profils peuvent écrire les mêmes chemins rendus à la même destination. Vérifiez-le avant d'activer des planifications concurrentes. Health.md ne modifie silencieusement aucun des deux profils.
+- Stop ou Cancel met fin uniquement à la tentative en cours. Les dates terminées restent terminées, les dates non résolues peuvent être réessayées et la planification reste activée.
+- Chaque ligne de l'historique reste épinglée au profil d'exécution et à l'étiquette de destination sécurisée réellement utilisée.
+
+Gérez les paramètres gelés et la destination par profil dans [Exporter les profils](/fr/docs/export-profiles/).
+
+## En rapport
+
 <div class="related">
-  <a href="/fr/docs/export-profiles/"><span>Profils</span>Gérez des planifications et destinations indépendantes.</a>
-  <a href="/fr/docs/export/"><span>Manuel</span>Export — pour des plages de dates ponctuelles.</a>
-  <a href="/fr/docs/shortcuts/"><span>Automatiser</span>Shortcuts — activez ou désactivez la planification depuis des automatisations.</a>
-  <a href="/fr/docs/sync/"><span>Plusieurs appareils</span>Synchronisation Mac — planifiez également sur Mac.</a>
-</div>
+ <a href="/fr/docs/export-profiles/"> <span> Flux de travail multiples </span> Profils d'exportation, donnez à chaque configuration enregistrée sa propre destination et sa propre cadence. </a>
+ <a href="/fr/docs/export/"> <span> Manuel </span> Exportation, pour des plages de dates uniques. </a>
+ <a href="/fr/docs/shortcuts/"> <span> Automatiser </span> Shortcuts , basculer le calendrier des automatisations. </a>
+ <a href="/fr/docs/sync/"> <span> Multi-appareils </span> Mac Sync, planifiez également sur Mac. </a>
+ </div>

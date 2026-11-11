@@ -131,3 +131,7 @@ The release issue must include:
 8. rollout owner, monitoring window, stop thresholds, and rollback decision.
 
 Until that record is complete, customer documentation must label the feature planned/preview and `destination.google-drive` must remain `planned`.
+
+## Scoped capture Daily Notes
+
+Drive currently rejects Daily Note merges containing scoped capture annotations with a remote conflict. Before release, retain the capture profile and section policy in the private journal and use the profile-aware core merger on both platforms. Qualify Morning ends generation and Night begins updates of existing scoped notes; never strip or merge capture annotations with the legacy Markdown merger. This is a source-integration release blocker, independent of production OAuth and device receipts.

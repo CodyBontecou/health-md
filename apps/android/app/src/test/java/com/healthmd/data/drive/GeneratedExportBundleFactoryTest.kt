@@ -101,6 +101,17 @@ class GeneratedExportBundleFactoryTest {
     }
 
     @Test
+    fun `legacy Drive Daily Note merge rejects scoped capture in either input`() {
+        val scoped = "---\nhealthmd_injection_kind: daily_capture_v1\n---\n".encodeToByteArray()
+        val plain = "Personal note".encodeToByteArray()
+        for ((baseline, fragment) in listOf(scoped to plain, plain to scoped)) {
+            org.junit.Assert.assertThrows(IllegalArgumentException::class.java) {
+                generateDriveFinalBytes(GeneratedArtifactWriteIntent.DAILY_NOTE_MERGE, baseline, fragment)
+            }
+        }
+    }
+
+    @Test
     fun `daily note artifact retains preamble prefix and merges fragment exactly once`() = runTest {
         val settings = ExportSettings(
             exportFormats = emptySet(),

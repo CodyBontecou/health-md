@@ -38,6 +38,22 @@ class ExporterFixtureContractTest {
         csv = CsvExporter()
     }
 
+    @Test
+    fun euDotIsUsedAcrossReadableExportDates() {
+        val customization = com.healthmd.domain.model.FormatCustomization(
+            dateFormat = com.healthmd.domain.model.DateFormatPreference.EU_DOT,
+        )
+        val data = ExportFixtures.fullDay
+        val objectValue = Json.parseToJsonElement(json.export(data, customization = customization)).jsonObject
+        assertEquals("\"15.03.2026\"", objectValue["date"].toString())
+        assertTrue(bases.export(data, customization = customization).contains("date: 15.03.2026"))
+        assertTrue(csv.export(data, customization = customization).lineSequence().drop(1).all {
+            it.isBlank() || it.startsWith("15.03.2026,")
+        })
+        assertTrue(com.healthmd.data.export.MarkdownExporter().export(data, customization = customization)
+            .contains("# Health Data — 15.03.2026"))
+    }
+
     // ── Helpers ──────────────────────────────────────────────────────────────────────────────
 
     private fun parseJson(data: HealthData, granular: Boolean = false): JsonObject =

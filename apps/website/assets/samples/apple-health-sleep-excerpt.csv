@@ -1,0 +1,6 @@
+Date,Category,Metric,Value,Unit,Timestamp
+2026-03-15,Sleep,Total Duration,27900.0,seconds
+2026-03-15,Sleep,Deep Sleep,5400.0,seconds
+2026-03-15,Sleep,REM Sleep,8100.0,seconds
+2026-03-15,Sleep,Core Sleep,14400.0,seconds
+2026-03-15,Sleep,Sleep Stage,deep (3600s),seconds,2026-03-15T06:00:00Z

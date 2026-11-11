@@ -21,6 +21,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.Dp
@@ -32,8 +33,8 @@ import com.healthmd.presentation.theme.GeistType
 import com.healthmd.presentation.theme.LocalGeistColors
 
 /**
- * Standard Geist card. Hierarchy comes from its surface and border rather than
- * decorative elevation.
+ * Standard Material 3 tonal card. Hierarchy comes from its container surface and large
+ * corners rather than borders or decorative elevation.
  */
 @Composable
 fun GeistCard(
@@ -42,13 +43,12 @@ fun GeistCard(
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val colors = LocalGeistColors.current
-    val shape = RoundedCornerShape(GeistRadii.small)
+    val shape = RoundedCornerShape(GeistRadii.large)
 
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .background(colors.background100, shape)
-            .border(1.dp, colors.grayAlpha.c400, shape)
+            .background(colors.background200, shape)
             .padding(padding),
         content = content,
     )
@@ -62,13 +62,13 @@ fun GeistCardClickable(
     content: @Composable RowScope.() -> Unit,
 ) {
     val colors = LocalGeistColors.current
-    val shape = RoundedCornerShape(GeistRadii.small)
+    val shape = RoundedCornerShape(GeistRadii.listGroup)
 
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .background(colors.background100, shape)
-            .border(1.dp, colors.grayAlpha.c400, shape)
+            .clip(shape)
+            .background(colors.background200, shape)
             .defaultMinSize(minHeight = GeistSizes.minimumTouchTarget)
             .clickable(role = Role.Button, onClick = onClick)
             .padding(padding),
@@ -84,11 +84,11 @@ fun GeistBadge(
     content: @Composable RowScope.() -> Unit,
 ) {
     val colors = LocalGeistColors.current
-    val shape = RoundedCornerShape(GeistRadii.full)
+    val shape = RoundedCornerShape(GeistRadii.small)
 
     Row(
         modifier = modifier
-            .background(colors.background100, shape)
+            .background(colors.gray.c200, shape)
             .border(1.dp, borderColor, shape)
             .padding(horizontal = GeistSpacing.space3, vertical = GeistSpacing.space2),
         verticalAlignment = Alignment.CenterVertically,
@@ -106,8 +106,7 @@ fun GeistIconCircle(
     Box(
         modifier = modifier
             .size(size)
-            .background(colors.background100, CircleShape)
-            .border(1.dp, colors.grayAlpha.c400, CircleShape),
+            .background(colors.gray.c300, CircleShape),
         contentAlignment = Alignment.Center,
         content = content,
     )
@@ -122,7 +121,7 @@ fun SectionLabel(
     Text(
         text = text,
         style = GeistType.heading14,
-        color = colors.secondary,
+        color = colors.accent,
         modifier = modifier.padding(bottom = GeistSpacing.space2),
     )
 }

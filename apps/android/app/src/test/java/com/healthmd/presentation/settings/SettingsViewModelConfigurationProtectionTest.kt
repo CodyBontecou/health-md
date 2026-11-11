@@ -64,4 +64,30 @@ class SettingsViewModelConfigurationProtectionTest {
             advanceUntilIdle()
             assertThat(viewModel.preventAccidentalChanges.value).isTrue()
         }
+
+    @Test
+    fun appSupportConsumesOnlyTheProtectionRequestItHandled() =
+        runTest(mainDispatcherRule.testDispatcher) {
+            val repository = mockk<SettingsRepository>(relaxed = true) {
+                every { preventAccidentalChanges } returns MutableStateFlow(true)
+            }
+            val viewModel = SettingsViewModel(
+                repository,
+                mockk<HealthProviderCatalog>(relaxed = true),
+                mockk<HealthProviderConnectionManager>(relaxed = true),
+                mockk<HealthProviderDiagnosticsReporter>(relaxed = true),
+                mockk<EntitlementRepository>(relaxed = true) {
+                    every { isUnlocked } returns MutableStateFlow(false)
+                },
+                DistributionPolicy.play(),
+            )
+            viewModel.openProtectionSetting()
+            val handled = requireNotNull(viewModel.protectionSettingsRequestId.value)
+
+            viewModel.consumeProtectionSettingsRequest(handled - 1)
+            assertThat(viewModel.protectionSettingsRequestId.value).isEqualTo(handled)
+
+            viewModel.consumeProtectionSettingsRequest(handled)
+            assertThat(viewModel.protectionSettingsRequestId.value).isNull()
+        }
 }

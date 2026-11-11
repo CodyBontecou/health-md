@@ -25,10 +25,10 @@ units: imperial
 ## 현재 시각화 지원 범위
 
 <div class="reference-stats">
-<div><strong>43</strong><span>현재 제공되는 플러그인 렌더러</span></div>
+<div><strong>62</strong><span>현재 제공되는 플러그인 렌더러</span></div>
 <div><strong>18</strong><span>내보내기 데이터 카테고리</span></div>
 <div><strong>220+</strong><span>정규 내보내기 키</span></div>
-<div><strong>1</strong><span>아직 필요한 범용 측정 항목 계층</span></div>
+<div><strong>4</strong><span>WHOOP 전용 시각화</span></div>
 </div>
 
 ## 내보내기 도구별 플랫폼 지원
@@ -161,6 +161,40 @@ Android Health Connect는 이에 상응하는 HealthKit 마음 상태 기록이�
 - [운동 추세](/visualizations/workout-analytics/workout-trends/theme-colors/) — `workout-trends`
 - [운동 인터벌](/visualizations/workout-analytics/workout-intervals/theme-colors/) — `workout-intervals`
 - [운동 지도](/visualizations/workout-analytics/workout-map/theme-colors/) — `workout-map`
+
+### WHOOP: 공급자 데이터 분리
+
+WHOOP가 활성화된 Apple 버전에서는 설정 → 연결된 앱에서 WHOOP를 연결하고 내보내기에 연결된 앱을 포함하세요. 이 차트는 `healthmd.health_data` v8 Apple 일일 파일의 `providers.whoop`(`healthmd.provider.whoop_daily` v1)을 읽습니다. WHOOP를 Apple 또는 Health Connect 요약에 합치지 않습니다. WHOOP HRV는 RMSSD이며 Apple의 SDNN이 아닙니다.
+
+- [회복 × 스트레인](/visualizations/whoop/whoop-recovery-strain/theme-colors/), `whoop-recovery-strain`: 회복(0–100%)과 주기 스트레인(0–21)을 비교하고 전체 레코드에서는 동일한 주기 ID로 연결합니다. 이는 연관성이지 훈련 권장 사항이 아닙니다.
+- [달성한 수면과 필요한 수면](/visualizations/whoop/whoop-sleep-need/theme-colors/), `whoop-sleep-need`: 수면 세션과 낮잠을 별도로 표시하며 기본 필요량, 수면 부채, 최근 스트레인에 따른 필요량, 부호가 있는 낮잠 조정을 보여줍니다. 순수 필요량 표시는 보고된 네 구성 요소가 모두 있어야 합니다. 음수 낮잠 조정은 그대로 차감합니다.
+- [수면 평가 추세](/visualizations/whoop/whoop-sleep-trends/theme-colors/), `whoop-sleep-trends`: WHOOP가 보고한 성과, 일관성, 효율 백분율이며 로컬에서 계산한 점수가 아닙니다.
+- [운동 스트레인과 구간](/visualizations/whoop/whoop-workout-strain/theme-colors/), `whoop-workout-strain`: 개별 운동 스트레인과 WHOOP 구간 0–5입니다. 구간 비율은 총 보고 구간 시간을 사용하며 경과 시간이나 Apple에서 산출한 구간을 사용하지 않습니다. 기록 범위와 경과 시간은 별도 맥락으로 유지됩니다.
+
+전체 레코드와 수면 필요량 구성 요소에는 JSON 또는 구조화된 CSV를 사용하세요. Markdown/Bases는 명확한 단일 레코드의 스칼라 투영만 제공하며 낮잠 식별 정보나 운동 구간 상세 정보는 없습니다. 이 차트는 공급자 네이티브 사이드카, Android Raw API Snapshots 또는 롤업을 읽지 않습니다. 누락되거나 점수가 없는 값은 0이 아니며 부분 수집 상태도 표시됩니다. 날짜 필터는 이벤트 타임스탬프가 아닌 해당 레코드가 속한 내보내기 날짜를 사용합니다. 갤러리 미리보기는 실제 사람의 기록이 아닌 합성 데이터를 사용합니다.
+
+```health-viz
+type: whoop-recovery-strain
+last: 30
+```
+
+```health-viz
+type: whoop-sleep-need
+sleep: main
+last: 30
+```
+
+```health-viz
+type: whoop-sleep-trends
+sleep: all
+last: 30
+```
+
+```health-viz
+type: whoop-workout-strain
+limit: 12
+last: 30
+```
 
 ## 기반 기능 로드맵
 

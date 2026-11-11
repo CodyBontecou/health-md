@@ -87,4 +87,16 @@ describe("Practice Worker boundary", () => {
     expect(dynamic.status).toBe(404);
     expect(await dynamic.text()).toBe("Not found");
   });
+
+  it("returns an empty favicon response without console errors or persistent state", async () => {
+    const response = await fetchPath("/favicon.ico");
+    expect(response.status).toBe(204);
+    expect(await response.text()).toBe("");
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    expect(response.headers.get("Set-Cookie")).toBeNull();
+    expect(response.headers.get("Access-Control-Allow-Origin")).toBeNull();
+    expect((await fetchPath("/favicon.ico", { method: "POST" })).status).toBe(405);
+    expect((await fetchPath("/favicon.ico?value=fixture")).status).toBe(404);
+    expect((await fetchPath("/favicon.ico", undefined, env("production"))).status).toBe(503);
+  });
 });

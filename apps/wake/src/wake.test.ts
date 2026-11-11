@@ -151,9 +151,9 @@ describe("peer label and notification copy", () => {
   });
 
   it("renders the spec notification copy with fallback", () => {
-    expect(notificationBody("Pixel CLI")).toBe("Pixel CLI is requesting data. Tap to continue.");
+    expect(notificationBody("Pixel CLI")).toBe("Your CLI is waiting. Open Health.md to continue on Pixel CLI.");
     expect(notificationBody(null)).toBe(
-      "A paired computer is requesting data. Tap to continue.",
+      "Your CLI is waiting. Open Health.md to continue.",
     );
     const payload = notificationPayload("Pixel CLI") as {
       aps: { alert: { title: string; body: string }; sound: string; category: string };

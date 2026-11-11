@@ -71,7 +71,7 @@ struct PrimaryButton: View {
         .onLongPressGesture(minimumDuration: .infinity, pressing: { pressing in
             withOptionalMotionAnimation { isPressed = pressing }
         }, perform: {})
-        .accessibilityLabel(isLoading ? "Exporting" : title)
+        .accessibilityLabel(LocalizedStringKey(isLoading ? "Exporting" : title))
         .accessibilityAddTraits(.isButton)
         .accessibilityHint(isDisabled ? "Button disabled" : "Double tap to activate")
         .accessibilityValue(isLoading ? "In progress" : "")
@@ -140,7 +140,7 @@ struct SecondaryButton: View {
             }
         }
         .buttonStyle(SecondaryButtonStyle(color: color))
-        .accessibilityLabel(title)
+        .accessibilityLabel(LocalizedStringKey(title))
         .accessibilityAddTraits(.isButton)
         .accessibilityHint("Double tap to activate")
     }
@@ -233,9 +233,9 @@ struct DestructiveButton: View {
         .onLongPressGesture(minimumDuration: .infinity, pressing: { pressing in
             withOptionalMotionAnimation { isPressed = pressing }
         }, perform: {})
-        .accessibilityLabel(title)
+        .accessibilityLabel(LocalizedStringKey(title))
         .accessibilityAddTraits(.isButton)
-        .accessibilityHint("Double tap to \(title.lowercased())")
+        .accessibilityHint(String(localized: "Double tap to activate"))
     }
 
     private func withOptionalMotionAnimation(_ updates: () -> Void) {

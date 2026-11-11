@@ -427,6 +427,16 @@ final class GoogleDriveFoundationTests: XCTestCase {
         ))
     }
 
+    func testLegacyDriveDailyNoteMergeRejectsScopedCaptureInEitherInput() throws {
+        let scoped = Data("---\nhealthmd_injection_kind: daily_capture_v1\n---\n".utf8)
+        let plain = Data("Personal note".utf8)
+        for (baseline, fragment) in [(scoped, plain), (plain, scoped)] {
+            XCTAssertThrowsError(try GoogleDriveFinalByteMerger.merge(
+                baseline: baseline, fragment: fragment, intent: .dailyNoteMerge
+            ))
+        }
+    }
+
     func testFinalByteMergersMatchExistingAppendAndMarkdownSemantics() throws {
         let appended = try GoogleDriveFinalByteMerger.merge(
             baseline: Data("old".utf8),

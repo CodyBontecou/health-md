@@ -14,6 +14,10 @@ import com.healthmd.domain.model.FailedDateDetail
 import com.healthmd.domain.exportengine.sha256Hex
 import com.healthmd.domain.exportengine.AndroidExportSettingsSnapshotCodec
 import com.healthmd.domain.model.HealthData
+import com.healthmd.domain.repository.forCaptureOperation
+import com.healthmd.domain.repository.RestorableHealthRepository
+import com.healthmd.domain.model.AndroidCaptureContext
+import com.healthmd.domain.exportengine.AndroidExportSettingsSnapshot
 import com.healthmd.domain.repository.HealthRepository
 import java.time.LocalDate
 import java.util.UUID
@@ -69,7 +73,7 @@ class GoogleDriveExportOrchestrator @Inject constructor(
     ): ExportResult {
         val normalized = dates.distinct().sorted()
         if (normalized.isEmpty()) return ExportResult(0, 0, target = ExportTarget.GOOGLE_DRIVE)
-        val frozenSettingsSnapshotJson = settingsSnapshotJson ?: kotlinx.serialization.json.Json.encodeToString(
+        var frozenSettingsSnapshotJson = settingsSnapshotJson ?: kotlinx.serialization.json.Json.encodeToString(
             ExportSettings.serializer(),
             settings,
         )
@@ -78,6 +82,13 @@ class GoogleDriveExportOrchestrator @Inject constructor(
             GoogleDriveJournalLoad.Missing -> Unit
             is GoogleDriveJournalLoad.Found -> {
                 val journal = loaded.journal
+                if (settingsSnapshotJson == null) {
+                    val stored = journal.settingsSnapshotJson?.let { AndroidExportSettingsSnapshotCodec.decodeOrNull(it) }
+                    if (stored != null) frozenSettingsSnapshotJson = AndroidExportSettingsSnapshotCodec.encodeCanonical(
+                        AndroidExportSettingsSnapshot.capture(
+                            settings.copy(executionProviderCaptureAuthority = stored.providerCaptureAuthority),
+                            stored.enginePin, java.time.ZoneId.of(stored.ianaTimeZone), stored.sleepCaptureContext))
+                }
                 val evidence = journal.captureEvidence
                 if (evidence?.isValid() != true || journal.ownerDates != evidence.capturedOwnerDates ||
                     journal.destinationId != destinationId ||
@@ -106,6 +117,9 @@ class GoogleDriveExportOrchestrator @Inject constructor(
         val captured = mutableListOf<HealthData>()
         val failures = mutableListOf<FailedDateDetail>()
         val selection = settings.effectiveDataTypeSelection()
+        var operationSettings = settings
+        var operationSource: HealthRepository? = null
+        var captureContext: AndroidCaptureContext? = null
         normalized.forEachIndexed { index, date ->
             onProgress?.invoke(index + 1, normalized.size, date.toString())
             if (healthRepository.isBeforeFirstUnlock()) {
@@ -119,11 +133,28 @@ class GoogleDriveExportOrchestrator @Inject constructor(
                     failures += FailedDateDetail(date, ExportFailureReason.ACCESS_DENIED)
                     return@forEachIndexed
                 }
-                healthRepository.fetchHealthDataRange(
-                    listOf(date),
-                    selection,
-                    settings.shouldFetchGranularData(),
-                ).firstOrNull() ?: healthRepository.fetchHealthData(date)
+                if (operationSource == null) {
+                    val context = if (settings.executionSleepCaptureAuthorityIsFrozen || settings.executionSleepCaptureContext != null) {
+                        AndroidCaptureContext.recovered(settings.executionSleepCaptureContext)
+                    } else healthRepository.resolveCaptureContext().also { it.requireShippedProfile() }
+                    operationSettings = settings.copy(executionSleepCaptureContext = context, executionSleepCaptureAuthorityIsFrozen = true)
+                    if (!settings.executionProviderCaptureAuthorityIsFrozen && settings.executionProviderCaptureAuthority == null) {
+                        val authority = (healthRepository as? RestorableHealthRepository)?.captureProviderAuthority()
+                        if (authority != null) operationSettings = operationSettings.copy(
+                            executionProviderCaptureAuthority = authority, executionProviderCaptureAuthorityIsFrozen = true)
+                    }
+                    captureContext = context
+                    operationSource = healthRepository.forCaptureOperation(operationSettings)
+                    if (settingsSnapshotJson == null) frozenSettingsSnapshotJson = AndroidExportSettingsSnapshotCodec.encodeCanonical(
+                        AndroidExportSettingsSnapshot.capture(operationSettings, settings.executionEnginePin, context.zoneId))
+                }
+                val context = requireNotNull(captureContext)
+                requireNotNull(operationSource).fetchHealthDataRange(
+                    dates = listOf(date), dataTypes = selection,
+                    includeGranularData = settings.shouldFetchGranularData(),
+                    zoneId = context.zoneId, sleepDayAttributionOverride = context.explicitSleepDayAttributionOverride,
+                    detail = settings.captureDetailSelection(),
+                ).firstOrNull()
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (_: SecurityException) {
@@ -132,7 +163,11 @@ class GoogleDriveExportOrchestrator @Inject constructor(
             } catch (_: Exception) {
                 failures += FailedDateDetail(date, ExportFailureReason.HEALTH_CONNECT_ERROR)
                 return@forEachIndexed
-            }.filtered(selection).filtered(settings.metricSelection)
+            }?.filtered(selection)?.filtered(settings.metricSelection, requireNotNull(captureContext))
+            if (data == null) {
+                failures += FailedDateDetail(date, ExportFailureReason.NO_HEALTH_DATA)
+                return@forEachIndexed
+            }
             if (!data.hasAnyData) {
                 failures += FailedDateDetail(date, ExportFailureReason.NO_HEALTH_DATA)
             } else {
@@ -149,7 +184,7 @@ class GoogleDriveExportOrchestrator @Inject constructor(
                 profileId = profileId,
                 source = source,
                 data = captured,
-                settings = settings.copy(exportTarget = ExportTarget.GOOGLE_DRIVE),
+                settings = operationSettings.copy(exportTarget = ExportTarget.GOOGLE_DRIVE),
                 settingsSnapshotJson = frozenSettingsSnapshotJson,
                 requestedDates = normalized,
                 captureFailures = failures,

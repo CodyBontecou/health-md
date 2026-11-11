@@ -226,7 +226,6 @@
     <string name="configuration_protection_blocked_action">কেন কনফিগারেশন পরিবর্তন ব্লক করা হয়েছে তা দেখুন</string>
     <string name="configuration_protection_open_setting">সেটিং খুলুন</string>
     <string name="section_health_sources">স্বাস্থ্য সূত্র</string>
-    <string name="health_sources_description">Health Connect হলো লোকাল এক্সপোর্টের উৎস। সমর্থিত অ্যাপ Health Connect-এ যে ডেটা লেখে, Health.md তা এক্সপোর্ট করতে পারে।</string>
     <string name="health_provider_status_installed">ইনস্টল করা হয়েছে</string>
     <string name="health_provider_status_selected">নির্বাচিত</string>
     <string name="health_provider_status_ready_to_connect">সংযোগ করতে প্রস্তুত</string>
@@ -280,6 +279,21 @@
     </plurals>
     <string name="granular_data_title">বিস্তারিত সময়-সিরিজ অন্তর্ভুক্ত করুন</string>
     <string name="granular_data_description">সামঞ্জস্য রপ্তানিতে হার্ট রেট এবং ঘুমের পর্যায়ের মতো টাইমস্ট্যাম্পযুক্ত নমুনাগুলি যোগ করুন। একটি API-সম্পূর্ণ অনুলিপির জন্য, Raw API Snapshot ব্যবহার করুন।</string>
+    <string name="detail_overrides_title">বিভাগ অনুযায়ী বিস্তারিত</string>
+    <string name="detail_overrides_description">নির্দিষ্ট বিভাগের জন্য ডিফল্ট পরিবর্তন করুন। সারাংশ শুধু দৈনিক মোট রাখে; দৈনিক সারাংশ কখনও বদলায় না।</string>
+    <string name="detail_choice_default">ডিফল্ট</string>
+    <string name="detail_choice_summary">সারাংশ</string>
+    <string name="detail_choice_sessions">সেশন</string>
+    <string name="detail_choice_detailed">বিস্তারিত</string>
+    <string name="detail_group_sleep_hint">সেশন প্রতিটি ঘুমের সেশন সম্পূর্ণ তারিখ ও সময়সহ দেখায়। বিস্তারিত ঘুমের ধাপও যোগ করে।</string>
+    <string name="detail_expansion_schema_hint">কার্যকলাপ, পুষ্টি বা শরীরের জন্য বিস্তারিত প্রতিটি উৎস রেকর্ড যোগ করে এবং বিশ্লেষণমূলক JSON, CSV ও Markdown এক্সপোর্টকে স্কিমা 7-এ বদলে দেয়।</string>
+    <string name="sleep_attribution_title">ঘুমের দিন নির্ধারণ</string>
+    <string name="sleep_attribution_night_begins">রাত শুরু</string>
+    <string name="sleep_attribution_morning_ends">সকাল শেষ</string>
+    <string name="sleep_attribution_night_begins_description">ঘুম দৈনিক নোটের দুপুর থেকে পরের দিনের দুপুর পর্যন্ত সময়সীমা ব্যবহার করে। এটিই ডিফল্ট এবং আগের রপ্তানির সাথে মেলে।</string>
+    <string name="sleep_attribution_morning_ends_description">বর্তমান রপ্তানি প্রোফাইলে সকাল শেষ বিকল্পটি উপলব্ধ নয়। নতুন রপ্তানির জন্য রাত শুরু বেছে নিন।</string>
+    <string name="sleep_attribution_morning_ends_wake_description">রপ্তানির সময় অঞ্চল অনুযায়ী, পুরো ঘুমের সেশনটি আপনার জেগে ওঠার তারিখে নির্ধারণ করে।</string>
+
     <!-- Metric selection screen -->
     <string name="metric_selection_title">স্বাস্থ্য মেট্রিক্স</string>
     <string name="search_metrics_hint">মেট্রিক্স অনুসন্ধান করুন…</string>
@@ -533,10 +547,6 @@
     <string name="scheduled_recovery_result_blocked">নির্ধারিত পুনরুদ্ধার এখনও প্রস্তুত নয়।</string>
     <string name="not_now">এখন না</string>
     <!-- Release notes -->
-    <string name="release_notes_title">%s এ নতুন কি আছে</string>
-    <string name="release_notes_settings_hint">সেটিংস থেকে রপ্তানি ফরম্যাট, কাস্টম Markdown ও মেট্রিক সামঞ্জস্য করতে পারবেন।</string>
-    <string name="release_notes_open_settings">সেটিংস খুলুন</string>
-    <string name="release_notes_got_it">বুঝেছি</string>
     <string name="release_notes_highlight_feedback">ডেস্কটপ সংযোগ সংক্ষিপ্তভাবে বিচ্ছিন্ন হলে Direct CLI সেশন স্বয়ংক্রিয়ভাবে পুনরায় সংযুক্ত হয়, তাই রপ্তানি নির্ভরযোগ্যভাবে সম্পন্ন হয়।</string>
     <string name="release_notes_highlight_export_parity">ডেস্কটপের ওয়েক উইন্ডো কমান্ড আপনার অ্যাপ খুলে সংযোগ করার জন্য ১২০ সেকেন্ড পর্যন্ত অপেক্ষা করে, কোনো পুশ নোটিফিকেশন ছাড়াই।</string>
     <string name="release_notes_highlight_templates">ঠিকানা, পোর্ট এবং ২০-সংখ্যার কোড দিয়ে ম্যানুয়াল জুড়ি এখনও কাজ করে, পুরোনো CLI সংস্করণেও।</string>
@@ -552,14 +562,10 @@
     <!-- Paywall screen -->
     <string name="paywall_title">Health.md আনলক করুন</string>
     <string name="paywall_subtitle">আপনি আপনার ৫টি বিনামূল্যের রপ্তানি ব্যবহার করেছেন</string>
-    <string name="paywall_unlimited_exports">সীমাহীন রপ্তানি, চিরকাল</string>
+    <string name="paywall_unlimited_exports">সীমাহীন রপ্তানি</string>
     <string name="paywall_scheduled_exports">স্বয়ংক্রিয় নির্ধারিত রপ্তানি</string>
     <string name="paywall_future_features">সমস্ত ভবিষ্যত বৈশিষ্ট্য অন্তর্ভুক্ত</string>
-    <string name="paywall_one_time">এককালীন পেমেন্ট \u2014 কোনো সাবস্ক্রিপশন নেই</string>
-    <string name="paywall_unlock_button">Health.md আনলক করুন</string>
-    <string name="paywall_unlock_button_price">%s এর জন্য আনলক করুন</string>
     <string name="paywall_restore">ক্রয় পুনরুদ্ধার করুন</string>
-    <string name="paywall_purchasing">প্রক্রিয়াকরণ \u2026</string>
     <string name="paywall_restoring">পুনরুদ্ধার করা হচ্ছে\u2026</string>
     <!-- Debug purchase controls -->
     <string name="debug_purchase_title">ডিবাগ কন্ট্রোল</string>
@@ -572,8 +578,6 @@
     <!-- Export progress dialog -->
     <string name="export_progress_title">স্বাস্থ্য ডেটা রপ্তানি করা হচ্ছে</string>
     <!-- Navigation labels -->
-    <string name="nav_export">রপ্তানি</string>
-    <string name="nav_schedule">সময়সূচী</string>
     <string name="nav_history">ইতিহাস</string>
     <string name="nav_settings">সেটিংস</string>
     <string name="shortcut_export_short">রপ্তানি</string>
@@ -623,7 +627,7 @@
     <string name="privacy_category_history_permissions">READ_HEALTH_DATA_HISTORY</string>
     <string name="privacy_category_history_exports">শুধু বড় ম্যানুয়াল রপ্তানির জন্য ব্যবহৃত হয়, যেমন ৯০ দিন বা সব সময়, যাতে Health.md সাধারণ ৩০ দিনের সীমার চেয়ে পুরোনো Health Connect ডেটা পড়তে পারে</string>
     <string name="privacy_policy_direct_cli">আপনি স্পষ্টভাবে কম্পিউটারের সঙ্গে পেয়ার ও সংযোগ করার পরেই Direct CLI রপ্তানি হয়। স্বাস্থ্য রেকর্ডগুলো একটি প্রমাণীকৃত, এনক্রিপ্ট করা সংযোগের মাধ্যমে পাঠানো হয়। স্থানান্তর আবার শুরু করা যায়—এ জন্য সেগুলো সর্বোচ্চ সাত দিন ব্যক্তিগতভাবে রাখা হয়; আপনি বাতিল করলে বা পেয়ারিং মুছে দিলে আরও আগেই সেগুলো মুছে যায়।</string>
-    <string name="privacy_policy_footer">Health.md কোনো স্বাস্থ্য-ডেটা ক্লাউড পরিচালনা করে না। ক্যাম্পেইন অ্যাট্রিবিউশন অ্যাপের তৈরি এলোমেলো ইনস্টল/ইভেন্ট UUIDs এবং যাচাই করা ক্যাম্পেইন মেটাডেটা পাঠাতে পারে। এটি কখনো স্বাস্থ্য ডেটা, অপরিশোধিত রেফারার, ডিভাইস IDs, রপ্তানি, অ্যাকাউন্ট বা পাথ পাঠায় না।</string>
+    <string name="privacy_policy_footer">এই সংস্করণ কাস্টম ব্যবহার বিশ্লেষণ বা বিজ্ঞাপন অ্যাট্রিবিউশন ডেটা সংগ্রহ করে না। কেনাকাটা, সময়সূচি এবং ঐচ্ছিক পরিষেবার জন্য আলাদা গোপনীয়তা বিবৃতি রয়েছে।</string>
     <!-- Feedback helper -->
     <string name="feedback_email_subject">Health.md প্রতিক্রিয়া</string>
     <string name="feedback_send_chooser">প্রতিক্রিয়া পাঠান</string>
@@ -685,6 +689,7 @@
     <string name="date_format_display_iso8601" tools:ignore="TypographyDashes">ISO 8601 (2026-01-13)</string>
     <string name="date_format_display_us_short">US সংক্ষিপ্ত (01/13/2026)</string>
     <string name="date_format_display_us_long">US দীর্ঘ (জানুয়ারি 13, 2026)</string>
+    <string name="date_format_display_eu_dot">EU ডট বিভাজক (13.01.2026)</string>
     <string name="date_format_display_eu_short">EU সংক্ষিপ্ত (13/01/2026)</string>
     <string name="date_format_display_eu_long">EU দীর্ঘ (13 জানুয়ারি 2026)</string>
     <string name="date_format_display_compact">কম্প্যাক্ট (20260113)</string>
@@ -742,7 +747,7 @@
     <string name="onboarding_back">ফিরে যান</string>
     <!-- P1 parity: billing/schedule/history/settings -->
     <string name="export_failure_paywall_label">আনলক আবশ্যক</string>
-    <string name="export_guidance_paywall">নির্ধারিত রপ্তানি আজীবন আনলক প্রয়োজন. সীমাহীন এক্সপোর্ট এবং শিডিউল আনলক করতে পেওয়াল খুলুন।</string>
+    <string name="export_guidance_paywall">নির্ধারিত রপ্তানির জন্য সক্রিয় ট্রায়াল বা সাবস্ক্রিপশন, অথবা আজীবন অ্যাক্সেস প্রয়োজন। অ্যাক্সেসের বিকল্প দেখতে কেনার পর্দা খুলুন।</string>
     <string name="export_source_retry">আবার চেষ্টা করুন</string>
     <string name="export_source_shortcut">শর্টকাট</string>
     <string name="export_source_remote">দূরবর্তী</string>
@@ -1049,6 +1054,8 @@
     <string name="export_preview_api_preparation_failed">API রপ্তানির প্রস্তুতি ব্যর্থ হয়েছে।</string>
     <string name="export_preview_artifacts_per_range">প্রতি পরিসরে আর্টিফ্যাক্ট</string>
     <string name="export_preview_back_description">রপ্তানির পূর্বরূপে ফিরে যান</string>
+    <string name="export_preview_wrap_lines">লাইন মোড়ানো</string>
+    <string name="export_preview_format_text">টেক্সট ফরম্যাট করুন</string>
     <string name="export_preview_destination_label">গন্তব্য</string>
     <string name="export_preview_empty_file">(খালি ফাইল)</string>
     <string name="export_preview_formats_per_day">প্রতি দিনে ফরম্যাট</string>
@@ -1447,4 +1454,43 @@
     <string name="post_export_upgrade_action">আজীবন অ্যাক্সেস দেখুন</string>
     <string name="post_export_manual_action">ম্যানুয়াল রপ্তানি চালিয়ে যান</string>
     <string name="post_export_continue_free">বিনামূল্যে চালিয়ে যান</string>
+    <string name="export_sleep_date_guidance">ঘুমের সময়সীমা নির্বাচিত প্রতিটি তারিখের দুপুর থেকে পরের দিনের দুপুর পর্যন্ত। গত রাতের ঘুমের জন্য গতকাল বেছে নিন।</string>
+    <string name="export_sleep_preview_window">ঘুমের সময়সীমা: %1$s দুপুর থেকে %2$s দুপুর পর্যন্ত (%3$s)।</string>
+    <string name="export_sleep_preview_guidance">ঘুমের তথ্য না থাকলে আগের তারিখটি চেষ্টা করুন। মূল রেকর্ডের তারিখ আজ হলেও সকালের ঘুম আগের দিনের সারাংশে থাকতে পারে। কোয়েরির ব্যর্থতা আলাদা দেখানো হয়; খালি ফলাফলের অর্থ পড়ার অনুমতি না থাকাও হতে পারে।</string>
+    <string name="export_sleep_date_guidance_morning_ends">এক্সপোর্টের টাইম জোনে পুরো ঘুমের সেশন যে তারিখে শেষ হয় সেই তারিখের অংশ হয়। গত রাতের ঘুমের জন্য আজ বেছে নিন।</string>
+    <string name="export_sleep_preview_window_morning_ends">ঘুম শেষের তারিখ: %1$s থেকে %2$s (%3$s)।</string>
+    <string name="export_sleep_preview_guidance_morning_ends">এই এক্সপোর্টের টাইম জোনে পুরো ঘুমের সেশন তার শেষের তারিখের অংশ হয়, দুপুরে কাটা ছাড়াই। কোয়েরির ব্যর্থতা আলাদা দেখানো হয়; খালি ফলাফলের অর্থ পড়ার অনুমতি না থাকাও হতে পারে।</string>
+    <string name="whoop_connection_description">রিকভারি, পরিশ্রম, ঘুম, ব্যায়াম ও শরীরের পরিমাপ রপ্তানি করতে WHOOP সংযুক্ত করুন। সাইন-ইন ব্রাউজারে হয়; Health.md এই ডিভাইসে টোকেন এনক্রিপ্ট করে রাখে। সংযোগ বিচ্ছিন্ন করলে এই ডিভাইসের সংরক্ষিত সংযোগ মুছে যায়।</string>
+    <string name="whoop_connect">WHOOP সংযুক্ত করুন</string>
+    <string name="whoop_sources_description">সরাসরি প্রদানকারীর কাছ থেকে রপ্তানি করতে WHOOP সংযুক্ত করুন অথবা স্থানীয় রেকর্ডের জন্য Health Connect ব্যবহার চালিয়ে যান।</string>
+    <string name="whoop_sign_in_failed">WHOOP সাইন-ইন শুরু করা যায়নি। সংযোগ পরীক্ষা করে আবার চেষ্টা করুন।</string>
+    <string name="whoop_use_health_connect">রপ্তানির জন্য Health Connect ব্যবহার করুন</string>
+    <string name="whoop_reconnect">WHOOP আবার সংযুক্ত করুন</string>
+    <string name="whoop_disconnect">WHOOP সংযোগ বিচ্ছিন্ন করুন</string>
+    <string name="whoop_use_for_exports">রপ্তানির জন্য WHOOP ব্যবহার করুন</string>
+    <string name="paywall_access_subtitle">আপনার ব্যক্তিগত স্বাস্থ্য আর্কাইভ শুরু করতে সাবস্ক্রিপশন বা আজীবন অ্যাক্সেস বেছে নিন। যোগ্য সাবস্ক্রিপশনে 7 দিনের বিনামূল্যের ট্রায়াল রয়েছে।</string>
+    <string name="paywall_plan_choices">সাপ্তাহিক, বার্ষিক বা আজীবন অ্যাক্সেস</string>
+    <string name="paywall_weekly_price">%1$s / সপ্তাহ</string>
+    <string name="paywall_yearly_price">%1$s / বছর</string>
+    <string name="paywall_lifetime_price">আজীবন — একবার %1$s</string>
+    <string name="paywall_trial_then">7 দিন বিনামূল্যে, তারপর %1$s</string>
+    <string name="paywall_retry">আবার চেষ্টা করুন</string>
+    <string name="paywall_manage_subscriptions">সাবস্ক্রিপশন পরিচালনা করুন</string>
+    <string name="paywall_terms">শর্তাবলি</string>
+    <string name="paywall_privacy">গোপনীয়তা</string>
+    <string name="paywall_subscription_disclosure">যোগ্য সাবস্ক্রিপশনে 7 দিনের বিনামূল্যের ট্রায়াল রয়েছে, তারপর ট্রায়াল বা বর্তমান মেয়াদ শেষ হওয়ার আগে বাতিল না করলে দেখানো মূল্যে স্বয়ংক্রিয়ভাবে নবায়ন হয়। Google Play-তে পরিচালনা বা বাতিল করুন। আজীবন অ্যাক্সেসের জন্য সঙ্গে সঙ্গে এককালীন মূল্য নেওয়া হয়। বিদ্যমান অর্থপ্রদত্ত অ্যাক্সেস বজায় থাকে। আজীবন কোন বিচার নেই। অ্যাপ মুছে ফেলা বা লাইফটাইম কেনা একটি বিদ্যমান সাবস্ক্রিপশন বাতিল করে না।</string>
+    <plurals name="widget_archive_gaps">
+        <item quantity="one">%1$sটি ফাঁক</item>
+        <item quantity="other">%1$sটি ফাঁক</item>
+    </plurals>
+    <plurals name="widget_archive_days_in_month">
+        <item quantity="one">দিন, %1$s মাসে</item>
+        <item quantity="other">দিন, %1$s মাসে</item>
+    </plurals>
+
+    <string name="clinic_sync_channel_name">ক্লিনিকের সিঙ্ক অনুরোধ</string>
+    <string name="clinic_sync_request_body">আপনার ক্লিনিক আপনার সর্বশেষ স্বাস্থ্য ডেটা চাইছে। পাঠাতে ট্যাপ করুন।</string>
+    <string name="clinic_sync_result_sent">আপনার সর্বশেষ ডেটা আপনার ক্লিনিকে পাঠানো হয়েছে।</string>
+    <string name="clinic_sync_result_failed">আপনার ডেটা ক্লিনিকে পাঠানো যায়নি। Health.md খুলে আবার চেষ্টা করুন।</string>
+    <string name="clinic_sync_result_profile_missing">Health.md-এ ক্লিনিক অ্যাক্সেস খুলুন এবং প্রথমে ক্লিনিকের গন্তব্য ব্যবহার করুন বেছে নিন।</string>
 </resources>

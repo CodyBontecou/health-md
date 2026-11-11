@@ -197,7 +197,8 @@ class GoogleDrivePartialCaptureRecoveryTest {
     @Test fun `legacy pending recovery rejects completed upload as authority for uncaptured date`() = runTest {
         seed()
         val snapshot = AndroidExportSettingsSnapshotCodec.encodeCanonical(
-            AndroidExportSettingsSnapshot.capture(settings, null, ZoneId.of("UTC")),
+            AndroidExportSettingsSnapshot.capture(settings, null, ZoneId.of("UTC"),
+                com.healthmd.domain.model.AndroidCaptureContext(ZoneId.of("UTC"), com.healthmd.domain.model.SleepDayAttribution.NIGHT_BEGINS)),
         )
         health.fetchBehavior = { date -> if (date == second) error("synthetic capture failure") else data(date) }
         val initial = orchestrator().exportDates(listOf(first, second), settings, destination.id,
@@ -238,9 +239,11 @@ class GoogleDrivePartialCaptureRecoveryTest {
 
     @Test fun `profile partial attempt checkpoints only fresh residual and completes it after restart`() = runTest {
         seed()
-        val snapshots = ScheduledProfileSnapshotFactory(ExportEnginePinPlanner())
+        val current = FakeSettingsRepository(settings, initialPurchased = true)
+        val snapshots = ScheduledProfileSnapshotFactory(ExportEnginePinPlanner(), current)
         val snapshot = AndroidExportSettingsSnapshotCodec.encodeCanonical(
-            AndroidExportSettingsSnapshot.capture(settings, null, ZoneId.of("UTC")),
+            AndroidExportSettingsSnapshot.capture(settings, null, ZoneId.of("UTC"),
+                com.healthmd.domain.model.AndroidCaptureContext(ZoneId.of("UTC"), com.healthmd.domain.model.SleepDayAttribution.NIGHT_BEGINS)),
         )
         val profiles = ExportProfileRepository(preferences, context)
         val profile = profiles.add("Synthetic Drive", snapshot, ExportTarget.GOOGLE_DRIVE, destinationId = destination.id)
@@ -251,7 +254,6 @@ class GoogleDrivePartialCaptureRecoveryTest {
                 "initial", listOf(first.toEpochDay(), second.toEpochDay()), fireAt, snapshot, ExportTarget.GOOGLE_DRIVE,
                 profile.name, durableOperationId = "profile-initial", destinationId = destination.id,
             ))))
-        val current = FakeSettingsRepository(settings, initialPurchased = true)
         val history = FakeExportHistoryRepository()
         fun worker(): ScheduledProfileExportWorker = TestListenableWorkerBuilder<ScheduledProfileExportWorker>(context)
             .setInputData(workDataOf(ScheduledProfileExportWorker.INPUT_PROFILE_ID to profile.id))

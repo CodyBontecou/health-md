@@ -1,64 +1,56 @@
 ---
-title: "Programmazione"
-description: "Esegui automaticamente le esportazioni con cadenze giornaliere, settimanali o di calendario personalizzate. iOS usa attività in background e una notifica locale di ripristino quando i dati protetti non sono disponibili."
+title: "Pianifica le esportazioni Apple Health e risolvi i problemi relativi alle esecuzioni perse"
+description: "Verifica un'esportazione pianificata, comprendi la ricerca dei giorni completati e recupera le date in sospeso. iPhone il timing in background è il massimo sforzo; cronologia Riprova utilizza le impostazioni correnti."
 ---
 
-## Il pannello Programmazione
-<p>Una schermata di stato, non un pannello delle impostazioni. Mostra a colpo d'occhio:</p>
-<ul>
-<li>Se la programmazione è attiva o disattiva</li>
-<li>La prossima esecuzione programmata, se presente</li>
-<li>L'esito dell'ultima esecuzione</li>
-</ul>
-<p>Un unico pulsante — <em>Configura programmazione</em> (o <em>Gestisci programmazione</em>) — apre la vista dettagliata.</p>
+Questa pagina descrive la pianificazione di iPhone . Android prevede autorizzazioni in background e requisiti di acquisto diversi; vedere [Automazione Android](/it/docs/android/).
 
-## Impostazioni della programmazione
-<div class="options">
-<div class="option"><strong>Abilita esportazioni programmate</strong><p>Interruttore principale nella parte superiore. Quando è disattivato, non vengono eseguite attività in background né inviate notifiche.</p></div>
-<div class="option"><strong>Frequenza</strong><p>Giornaliera, settimanale o personalizzata. Le pianificazioni personalizzate si ripetono ogni N giorni, settimane o mesi a partire da una data iniziale. L’intervallo retrospettivo determina quanti giorni completati include ogni esecuzione.</p></div>
-<div class="option"><strong>Ora</strong><p>Ora e minuti. iOS la considera un'indicazione, non una garanzia — consulta l'avviso sulle limitazioni qui sotto.</p></div>
-</div>
+## Verifica la prima esportazione pianificata
 
-## Cronologia delle esportazioni
-<p>L'elenco nella parte inferiore della schermata Programmazione registra ogni esecuzione programmata con il relativo esito. Tocca una riga per visualizzarne i dettagli. Le esecuzioni non riuscite includono un pulsante <em>Riprova</em> che ripete l’intervallo con le impostazioni e la destinazione configurate attualmente, quindi registra una nuova riga nella cronologia.</p>
+1. Attiva il profilo desiderato. Controlla le sue metriche, i formati, i dettagli dei dati, il comportamento di scrittura e la destinazione. Esegui manualmente una giornata completata e controlla il file salvato o il risultato dell'endpoint prima di abilitare l'automazione.
+2. Su iPhone, apri **Automazioni**, scegli l’automazione e tocca **Pianificazione**; su Android, apri Pianificazione, quindi Configura pianificazione o Gestisci pianificazione. Attiva la pianificazione, scegli Giornaliera, Settimanale o Personalizzata, imposta l’orario e inizia con un recupero di un giorno concluso. Consenti le notifiche se vuoi promemoria di recupero locali.
+3. Controlla se la pianificazione è abilitata, l'occorrenza successiva e l'ultimo risultato. Dopo un tentativo, controlla i dettagli della cronologia e la destinazione effettiva; un'etichetta o una notifica di esecuzione successiva non costituisce una prova che i dati siano stati scritti.
+4. Controlla le date, le unità, la copertura e i dati mancanti esportati. Un file salvato non dimostra di per sé la completa acquisizione della fonte.
 
-## Come funziona realmente la programmazione su iOS
-<div class="doc-diagram">
-  <div class="flow-steps" aria-label="Flusso alternativo dell'esportazione programmata">
-    <span><strong>1. Ora prevista</strong>Health.md chiede a iOS di riattivare l'app in prossimità dell'ora scelta.</span>
-    <span><strong>2. Tentativo in background</strong>Se il dispositivo è disponibile, iOS esegue un'attività di aggiornamento in background.</span>
-    <span><strong>3. Soluzione alternativa con dispositivo bloccato</strong>Se HealthKit non è disponibile, Health.md invia una notifica.</span>
-    <span><strong>4. Tocca per completare</strong>Aprendo la notifica, l'app può leggere HealthKit ed eseguire l'esportazione.</span>
-  </div>
-</div>
+Nella versione del telefono abilitata all'abbonamento, le esportazioni pianificate e manuali richiedono una prova attiva, un abbonamento, un acquisto a vita o un accesso permanente conservato. Non è prevista alcuna franchigia di esportazione locale. L'accesso scaduto deve essere ripristinato prima che il lavoro in sospeso possa riprendere. Vedi [sblocco e pagamento](/it/docs/paywall/).
 
-<div class="callout">
-<strong>Limitazioni di iOS da conoscere.</strong>
-<p style="margin-top:6px;">I dati di HealthKit non sono accessibili mentre il dispositivo è bloccato. Le esportazioni programmate vengono eseguite tramite <code>BGAppRefreshTask</code>, che iOS pianifica in modo opportunistico in base alle modalità di utilizzo: l'ora impostata è un obiettivo, non una garanzia. Come soluzione alternativa, se il dispositivo è bloccato, l'app invia una notifica locale all'ora programmata; toccala per eseguire l'esportazione.</p>
-</div>
-<ul>
-<li>L'ora programmata è approssimativa. iOS potrebbe eseguire l'attività in anticipo, in ritardo oppure saltarla se il dispositivo è spento o disconnesso.</li>
-<li>Le esportazioni programmate funzionano al meglio quando l'iPhone viene collegato regolarmente all'alimentazione e sbloccato più o meno alla stessa ora ogni giorno.</li>
-<li>Se l'esportazione non riesce perché il dispositivo era bloccato, tocca la notifica: l'esportazione verrà eseguita con accesso a HealthKit.</li>
-</ul>
+## Comprendere la finestra dei giorni completati
+
+Le pianificazioni giornaliere, settimanali e personalizzate possono avere una visione retrospettiva. La cadenza personalizzata si ripete ogni N giorni, settimane o mesi dalla data di inizio. Ogni nuova occorrenza riesporta l'intera finestra di giorni completati configurata, comprese le date esportate in precedenza. Una ricerca di tre giorni copre ieri e i due giorni precedenti; l'esecuzione ritardata mantiene la finestra ancorata al giorno dell'incendio previsto.
+
+Oggi l'aggiornamento è un lavoro giornaliero separato e non sostituisce la finestra del giorno completato. Ispeziona i percorsi e scrivi il comportamento prima di sovrapporre le esportazioni; non aggiungere insieme istantanee giornaliere ripetute come nuove misurazioni.
+
+## Scegli il percorso di ripristino corretto
+
+- **Recupero pianificato in sospeso:** sblocca iPhone , apri Health.md e controlla il tentativo in sospeso. Conserva le date esatte non risolte, le impostazioni salvate e la destinazione. Le date completate rimangono completate; la ripresa non si espande in una nuova prospettiva.
+- **Riprova dalla cronologia:** avvia una nuova esecuzione per quell'intervallo utilizzando le impostazioni e la destinazione attualmente configurate e registra una nuova riga della cronologia. Controllare la configurazione attiva prima di premere Riprova. Non è la stessa cosa che riprendere un tentativo sospeso congelato.
+- **Destinazione modificata o non disponibile:** ripristina l'accesso o controlla il profilo in sospeso prima di riprovare. Un vecchio ripristino dell'API iPhone non deve adottare automaticamente un endpoint o una credenziale modificata. Non avviare ripetutamente nuovi tentativi mentre il tentativo originale non è stato risolto.
+
+Esamina il recupero in sospeso, l'identità del profilo e le regole di destinazione in [Esporta profili](/it/docs/export-profiles/).
+
+## Cosa garantisce e cosa non garantisce iOS
+
+L'orario selezionato è un obiettivo, non un orario di completamento garantito. iOS controlla il runtime in background e la protezione dei dispositivi bloccati può impedire le letture HealthKit . Le richieste in background e le notifiche di riattivazione silenziosa non ignorano tale protezione.
+
+Le notifiche di ripristino locale richiedono l'autorizzazione alla notifica e non garantiscono la consegna all'ora prevista. Se ne ricevi uno, sblocca il dispositivo e aprilo per consentire Health.md di tentare il ripristino. Se non arriva alcuna notifica, apri Health.md e controlla il lavoro e la cronologia in sospeso. Verificare il risultato anziché dare per scontato che un avviso o il tempo trascorso significhino successo.
 
 ## Controllo programmatico
-<p>Puoi attivare o disattivare la programmazione da Comandi Rapidi usando l'intento <em>Attiva o disattiva l'esportazione programmata</em>. <a href="/it/docs/shortcuts/">Consulta Comandi Rapidi</a> per alcuni esempi.</p>
+ <p> È possibile attivare/disattivare la pianificazione da Shortcuts utilizzando l'intento <em> Attiva o disattiva l'esportazione pianificata </em> . <a href="/it/docs/shortcuts/"> Vedi Shortcuts </a> per esempi. </p>
 
-## Pianificazioni per profilo e annullamento
+## Orari e cancellazione del profilo
 
-- Ogni profilo conserva la propria pianificazione, compresa una cadenza personalizzata; cambiare profilo attivo non reindirizza un’altra pianificazione.
-- Un avviso di collisione compare quando i profili potrebbero scrivere gli stessi percorsi generati nella stessa destinazione. Verificalo prima di attivare pianificazioni concorrenti; Health.md non modifica silenziosamente alcun profilo.
-- Interrompere o Annullare termina solo il tentativo corrente. Le date completate restano tali, le altre possono essere riprovate e la pianificazione resta attiva.
-- Ogni riga della cronologia resta legata al profilo di esecuzione e all’etichetta privata della destinazione effettiva.
+- Ogni profilo può mantenere il proprio programma, inclusa una cadenza personalizzata. Il cambio del profilo attivo non modifica il targeting della pianificazione di un altro profilo.
+- Viene visualizzato un avviso di collisione quando i profili potrebbero scrivere gli stessi percorsi renderizzati nella stessa destinazione. Esaminalo prima di abilitare pianificazioni concorrenti. Health.md non modifica silenziosamente nessuno dei due profili.
+- Interrompi o Annulla termina solo il tentativo corrente. Le date completate rimangono tali, le date non risolte rimangono ritentabili e la pianificazione rimane abilitata.
+- Ogni riga della cronologia rimane fissata al profilo di runtime e all'etichetta di destinazione protetta dalla privacy effettivamente utilizzata.
 
-Gestisci impostazioni congelate e destinazione in [Profili di esportazione](/it/docs/export-profiles/).
+Gestisci le impostazioni bloccate e la destinazione per profilo in [Esporta profili](/it/docs/export-profiles/).
 
-## Contenuti correlati
+## Imparentato
 
 <div class="related">
-  <a href="/it/docs/export-profiles/"><span>Profili</span>Gestisci pianificazioni e destinazioni indipendenti.</a>
-  <a href="/it/docs/export/"><span>Manuale</span>Esportazione — per intervalli di date occasionali.</a>
-  <a href="/it/docs/shortcuts/"><span>Automatizza</span>Comandi Rapidi — attiva o disattiva la programmazione tramite automazioni.</a>
-  <a href="/it/docs/sync/"><span>Tra dispositivi</span>Sincronizzazione con il Mac — programma anche sul Mac.</a>
-</div>
+ <a href="/it/docs/export-profiles/"> <span> Flussi di lavoro multipli </span> Esporta profili, assegna a ciascuna configurazione salvata la propria destinazione e cadenza. </a>
+ <a href="/it/docs/export/"> <span> Manuale </span> Esportazione, per intervalli di date una tantum. </a>
+ <a href="/it/docs/shortcuts/"> <span> Automatizza </span> Shortcuts , attiva/disattiva la pianificazione dalle automazioni. </a>
+ <a href="/it/docs/sync/"> <span> Cross-device </span> Mac Sync, pianifica anche su Mac. </a>
+ </div>

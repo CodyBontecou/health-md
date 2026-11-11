@@ -35,7 +35,7 @@ WHOOP's documented redirect is registered exactly as:
 healthmd://oauth/callback
 ```
 
-The app validates the callback scheme, host, path, and OAuth state before exchanging the code. WHOOP currently documents an exactly eight-character state value, so the WHOOP flow uses a random eight-character value. Other future providers are not forced to use that provider-specific constraint.
+The app validates the callback scheme, host, path, and OAuth state before exchanging the code, and rejects duplicate or conflicting callback parameters. It uses S256 PKCE to bind the authorization code to a device-generated verifier; the broker still holds the client secret and forwards the verifier during code exchange. This matches Android's WHOOP authorization protection. Callback query values use form decoding (`+` for a space, `%2B` for a literal plus). WHOOP currently documents an exactly eight-character state value, so the WHOOP flow uses a random eight-character value. Other future providers are not forced to use that provider-specific constraint.
 
 The broker has its own exact redirect allowlist and a mobile client gate. The gate limits casual abuse but is not treated as a durable secret because values in a shipped mobile app can be inspected.
 
@@ -160,7 +160,7 @@ Provider records are intentionally supplemental. Health.md only fetches and atta
 - Provider response data is capped at 16 MiB per request and, separately, 16 MiB in aggregate for one provider/day fetch. This keeps paginated responses bounded; exceeding either limit produces a provider warning instead of retaining additional pages.
 - Disconnect calls WHOOP's revoke endpoint before deleting local credentials. Revocation is attempted even during a data cooldown for privacy; a revoke 429 extends the same cooldown. If revocation fails, credentials remain available so the user can retry.
 
-The Connected Apps screen explains missing permissions, revoked access, rate limiting, and days where WHOOP has not produced data or a score yet.
+The Connected Apps screen explains missing permissions, revoked access, rate limiting, and days where WHOOP has not produced data or a score yet. Connection/disconnection feedback uses the same bottom-pinned activity/toast component as exports, inside the sheet so it remains visible while scrolling. Progress remains visible until the operation finishes. Success and cancellation notices dismiss after eight seconds; errors remain until dismissed or retried. OAuth callback errors show stable, actionable messages rather than raw provider descriptions or hints. A connection is reported successful only after credentials and account metadata have been saved.
 
 ## Rollout configuration
 

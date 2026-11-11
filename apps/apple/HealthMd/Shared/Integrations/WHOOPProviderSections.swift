@@ -9,10 +9,15 @@ nonisolated struct HealthProviderSections: Codable, Equatable, Sendable {
 
     var isEmpty: Bool { whoop == nil }
 
-    static func normalized(from records: [ExternalDailyRecord]) -> HealthProviderSections? {
+    /// `whoopResources` is the user's Connected apps selection, read on the device that
+    /// fetched the records; deselected resources are not planned and get no row.
+    static func normalized(
+        from records: [ExternalDailyRecord],
+        whoopResources: Set<WHOOPResourceName> = WHOOPExportResourceSelection.stored()
+    ) -> HealthProviderSections? {
         let whoopRecords = records.filter { $0.provider == .whoop }
         guard !whoopRecords.isEmpty else { return nil }
-        return HealthProviderSections(whoop: WHOOPProviderNormalizer.normalize(whoopRecords))
+        return HealthProviderSections(whoop: WHOOPProviderNormalizer.normalize(whoopRecords, resources: whoopResources))
     }
 }
 
@@ -434,7 +439,10 @@ private nonisolated enum WHOOPProviderNormalizer {
 
     private static let maximumRecordsPerCollection = 10_000
 
-    static func normalize(_ records: [ExternalDailyRecord]) -> WHOOPDailyProviderSection {
+    static func normalize(
+        _ records: [ExternalDailyRecord],
+        resources selection: Set<WHOOPResourceName> = WHOOPExportResourceSelection.all
+    ) -> WHOOPDailyProviderSection {
         let sortedRecords = records.sorted { lhs, rhs in
             if lhs.fetchedAt != rhs.fetchedAt { return lhs.fetchedAt < rhs.fetchedAt }
             return lhs.date < rhs.date
@@ -445,11 +453,26 @@ private nonisolated enum WHOOPProviderNormalizer {
         let nativeWarnings = sortedRecords.flatMap(\.warnings)
 
         var builds = Dictionary(uniqueKeysWithValues: WHOOPResourceName.allCases.map { ($0, ResourceBuild()) })
-        var planned: Set<WHOOPResourceName> = [.cycles, .recovery, .sleep, .workouts]
+        var planned = Set<WHOOPResourceName>([.cycles, .recovery, .sleep, .workouts]).intersection(selection)
         for payload in payloads {
-            guard let resource = resourceName(for: payload.name) else { continue }
+            guard let resource = resourceName(for: payload.name), selection.contains(resource) else { continue }
             planned.insert(resource)
             builds[resource]?.payloads.append(payload)
+        }
+        // Only deselected resources (or a body-only selection on a past day): nothing was
+        // requested, which the contract records as `not_requested` with no typed values.
+        if planned.isEmpty {
+            return WHOOPDailyProviderSection(
+                captureStatus: .notRequested,
+                fetchedAt: nil,
+                resources: [],
+                cycles: [],
+                recoveries: [],
+                sleep: [],
+                workouts: [],
+                body: nil,
+                warnings: []
+            )
         }
 
         var warnings: [WHOOPWarning] = nativeWarnings.isEmpty ? [] : [WHOOPWarning(

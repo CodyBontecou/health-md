@@ -138,10 +138,14 @@ final class CLIExportLiveActivityController {
     ) -> Activity<CLIExportActivityAttributes>? {
         guard !snapshot.phase.isTerminal,
               ActivityAuthorizationInfo().areActivitiesEnabled else { return nil }
+        let dateRange = CLIExportActivityTracker.shared.activityDateRange
+            .flatMap { $0.jobID == snapshot.jobID ? $0.range : nil }
         let attributes = CLIExportActivityAttributes(
             jobID: snapshot.jobID,
             sourceLabel: Self.bounded(snapshot.source.label, length: 32),
-            targetLabel: Self.bounded(snapshot.targetLabel, length: 48)
+            targetLabel: Self.bounded(snapshot.targetLabel, length: 48),
+            dateRangeStart: dateRange?.lowerBound,
+            dateRangeEnd: dateRange?.upperBound
         )
         return try? Activity.request(
             attributes: attributes,

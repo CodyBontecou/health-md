@@ -41,5 +41,9 @@ nonisolated struct CLIExportActivityAttributes: ActivityAttributes, Hashable, Se
     let jobID: UUID
     let sourceLabel: String
     let targetLabel: String
+    /// The requested source-day range for the Live Activity footer. Optional and defaulted so
+    /// attributes encoded before these fields existed still decode.
+    var dateRangeStart: Date? = nil
+    var dateRangeEnd: Date? = nil
 }
 #endif

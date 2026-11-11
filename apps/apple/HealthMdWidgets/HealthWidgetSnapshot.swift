@@ -21,6 +21,9 @@ struct HealthWidgetDay: Codable, Hashable, Identifiable, Sendable {
     var heartRateMax: Double?
     var heartRateVariabilityMS: Double?
     var bloodOxygenPercent: Double?
+    /// Average heart rate per two-hour slot from midnight (12 slots), `nil` where no samples.
+    /// Filled for today only; absent in snapshots saved before it existed.
+    var heartRateBuckets: [Double?]? = nil
 
     var hasAnyData: Bool {
         steps != nil || activeEnergyKilocalories != nil || exerciseMinutes != nil || standHours != nil ||
@@ -46,7 +49,8 @@ struct HealthWidgetDay: Codable, Hashable, Identifiable, Sendable {
             heartRateMin: 48 + wave.truncatingRemainder(dividingBy: 3),
             heartRateMax: 128 + wave * 4,
             heartRateVariabilityMS: 44 + wave * 1.7,
-            bloodOxygenPercent: 96.3 + wave * 0.12
+            bloodOxygenPercent: 96.3 + wave * 0.12,
+            heartRateBuckets: (0..<12).map { slot in 58 + Double((slot * 7 + offset * 3) % 40) }
         )
     }
 }
@@ -124,13 +128,17 @@ enum HealthWidgetSnapshotProvider {
 
         for offset in stride(from: count - 1, through: 0, by: -1) {
             guard let date = calendar.date(byAdding: .day, value: -offset, to: today) else { continue }
-            days.append(await fetchDay(date, calendar: calendar))
+            days.append(await fetchDay(date, includesHeartRateBuckets: offset == 0, calendar: calendar))
         }
 
         return HealthWidgetSnapshot(lastUpdated: .now, days: days)
     }
 
-    private static func fetchDay(_ dayStart: Date, calendar: Calendar) async -> HealthWidgetDay {
+    private static func fetchDay(
+        _ dayStart: Date,
+        includesHeartRateBuckets: Bool,
+        calendar: Calendar
+    ) async -> HealthWidgetDay {
         let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart) ?? dayStart.addingTimeInterval(86_400)
         let predicate = HKQuery.predicateForSamples(withStart: dayStart, end: dayEnd, options: [.strictStartDate])
 
@@ -146,6 +154,9 @@ enum HealthWidgetSnapshotProvider {
 
         let sleepResult = await sleep
         let heartRateResult = await heartRate
+        let buckets = includesHeartRateBuckets
+            ? await heartRateBuckets(dayStart: dayStart, dayEnd: dayEnd, calendar: calendar)
+            : nil
         return HealthWidgetDay(
             date: dayStart,
             steps: await steps,
@@ -160,8 +171,41 @@ enum HealthWidgetSnapshotProvider {
             heartRateMin: heartRateResult.minimum,
             heartRateMax: heartRateResult.maximum,
             heartRateVariabilityMS: await hrv,
-            bloodOxygenPercent: (await bloodOxygen).map { $0 * 100 }
+            bloodOxygenPercent: (await bloodOxygen).map { $0 * 100 },
+            heartRateBuckets: buckets
         )
+    }
+
+    /// Twelve two-hour average heart-rate slots for one day, from real samples.
+    private static func heartRateBuckets(dayStart: Date, dayEnd: Date, calendar: Calendar) async -> [Double?]? {
+        guard let type = HKQuantityType.quantityType(forIdentifier: .heartRate) else { return nil }
+        let unit = HKUnit.count().unitDivided(by: .minute())
+        let predicate = HKQuery.predicateForSamples(withStart: dayStart, end: dayEnd, options: [.strictStartDate])
+
+        return await withCheckedContinuation { continuation in
+            let query = HKStatisticsCollectionQuery(
+                quantityType: type,
+                quantitySamplePredicate: predicate,
+                options: .discreteAverage,
+                anchorDate: dayStart,
+                intervalComponents: DateComponents(hour: 2)
+            )
+            query.initialResultsHandler = { _, collection, _ in
+                guard let collection else {
+                    continuation.resume(returning: nil)
+                    return
+                }
+                var buckets = [Double?](repeating: nil, count: 12)
+                collection.enumerateStatistics(from: dayStart, to: dayEnd) { statistics, _ in
+                    let hours = calendar.dateComponents([.hour], from: dayStart, to: statistics.startDate).hour ?? 0
+                    let slot = hours / 2
+                    guard buckets.indices.contains(slot) else { return }
+                    buckets[slot] = statistics.averageQuantity()?.doubleValue(for: unit)
+                }
+                continuation.resume(returning: buckets.contains { $0 != nil } ? buckets : nil)
+            }
+            store.execute(query)
+        }
     }
 
     private static func cumulativeQuantity(

@@ -25,27 +25,26 @@ nonisolated struct ReportConfiguration: Equatable {
 }
 
 nonisolated enum ReportDateRangePreset: String, CaseIterable, Identifiable {
-    case days7
     case days30
     case days90
+    case months6
     case custom
 
     var id: String { rawValue }
 
     var dayCount: Int? {
         switch self {
-        case .days7: return 7
         case .days30: return 30
         case .days90: return 90
-        case .custom: return nil
+        case .months6, .custom: return nil
         }
     }
 
     func title(using copy: ClinicianReportCopy) -> String {
         switch self {
-        case .days7: return copy.string(.days_7)
         case .days30: return copy.string(.days_30)
         case .days90: return copy.string(.days_90)
+        case .months6: return copy.string(.months_6)
         case .custom: return copy.string(.custom)
         }
     }
@@ -64,7 +63,10 @@ nonisolated struct ReportDateRange: Equatable {
     ) -> ReportDateRange {
         precondition(preset != .custom)
         let todayStart = calendar.startOfDay(for: today)
-        let start = calendar.date(byAdding: .day, value: -(preset.dayCount! - 1), to: todayStart)!
+        // Six months follows the calendar; a fixed day count would drift across months.
+        let start = preset == .months6
+            ? calendar.date(byAdding: .day, value: 1, to: calendar.date(byAdding: .month, value: -6, to: todayStart)!)!
+            : calendar.date(byAdding: .day, value: -(preset.dayCount! - 1), to: todayStart)!
         return ReportDateRange(startDate: start, endDate: todayStart)
     }
 

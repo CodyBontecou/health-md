@@ -96,13 +96,13 @@ enum ExternalIntegrationProvider: String, CaseIterable, Codable, Identifiable, H
         }
     }
 
-    /// Fitbit supports native PKCE. Other current provider docs still require a
-    /// broker-held client secret for token exchange/refresh, so PKCE is not
-    /// assumed unless documented.
+    /// PKCE binds the browser authorization code to this device's verifier.
+    /// A broker-held client secret does not replace this protection; WHOOP's
+    /// native authorization uses both, as does the Android WHOOP flow.
     var usesPKCE: Bool {
         switch self {
-        case .fitbit: return true
-        case .oura, .whoop, .withings, .strava: return false
+        case .fitbit, .whoop: return true
+        case .oura, .withings, .strava: return false
         }
     }
 
@@ -176,6 +176,8 @@ struct ExternalIntegrationAccount: Codable, Equatable, Identifiable, Sendable {
     var lastSuccessfulExportAt: Date?
     var scope: String?
     var providerUserID: String?
+    /// Private Keychain binding; never exported in provider or health data.
+    var connectionID: UUID? = nil
 
     var id: ExternalIntegrationProvider { provider }
 }

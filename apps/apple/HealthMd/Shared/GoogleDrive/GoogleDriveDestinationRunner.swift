@@ -813,6 +813,13 @@ nonisolated enum GoogleDriveFinalByteMerger {
                   let generated = String(data: fragment, encoding: .utf8) else {
                 throw GoogleDriveError(.remoteConflict)
             }
+            // Scoped capture notes require their profile-aware merger; the legacy Drive
+            // journal does not retain that authority. Preserve both files until qualified.
+            if intent == .dailyNoteMerge && [existing, generated].contains(where: {
+                $0.contains("healthmd_injection_kind") || $0.contains("healthmd_daily_injection_v")
+            }) {
+                throw GoogleDriveError(.remoteConflict)
+            }
             let outcome = intent == .dailyNoteMerge
                 ? MarkdownMerger.mergePreservingPreambleOutcome(existing: existing, new: generated)
                 : MarkdownMerger.mergeOutcome(existing: existing, new: generated)

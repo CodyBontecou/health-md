@@ -3,11 +3,13 @@
     <cloud-backup>
         <exclude domain="sharedpref" path="health_md_api_export_credentials.xml" />
         <exclude domain="sharedpref" path="health_md_google_drive_account_authority.xml" />
+        <exclude domain="sharedpref" path="clinic_sponsorship_secure_v1.xml" />
         <exclude domain="file" path="datastore/health_md_settings.preferences_pb" />
     </cloud-backup>
     <device-transfer>
         <exclude domain="sharedpref" path="health_md_api_export_credentials.xml" />
         <exclude domain="sharedpref" path="health_md_google_drive_account_authority.xml" />
+        <exclude domain="sharedpref" path="clinic_sponsorship_secure_v1.xml" />
         <exclude domain="file" path="datastore/health_md_settings.preferences_pb" />
     </device-transfer>
 </data-extraction-rules>

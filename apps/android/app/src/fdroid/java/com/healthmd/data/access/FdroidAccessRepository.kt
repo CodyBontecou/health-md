@@ -5,6 +5,7 @@ import com.healthmd.domain.billing.BillingError
 import com.healthmd.domain.repository.EntitlementRepository
 import com.healthmd.domain.repository.PurchaseOffer
 import com.healthmd.domain.repository.PurchaseRepository
+import com.healthmd.domain.repository.PurchasePlan
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -22,9 +23,10 @@ class FdroidAccessRepository : EntitlementRepository, PurchaseRepository {
     override val isRestoring: StateFlow<Boolean> = idle.asStateFlow()
     override val purchaseError: StateFlow<BillingError?> = noError.asStateFlow()
     override val offer: StateFlow<PurchaseOffer?> = noOffer.asStateFlow()
+    override val offers: StateFlow<List<PurchaseOffer>> = MutableStateFlow(emptyList())
 
     override fun refresh() = Unit
-    override suspend fun launchPurchase(activity: Activity): Boolean = false
+    override suspend fun launchPurchase(activity: Activity, plan: PurchasePlan): Boolean = false
     override suspend fun restorePurchase(): Boolean = false
     override fun clearError() = Unit
     override fun debugSetUnlocked(unlocked: Boolean) = Unit

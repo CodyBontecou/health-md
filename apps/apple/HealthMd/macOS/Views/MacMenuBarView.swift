@@ -6,199 +6,94 @@ import SwiftUI
 struct MacMenuBarView: View {
     @EnvironmentObject var vaultManager: VaultManager
     @EnvironmentObject var syncService: SyncService
-    @Environment(\.openSettings) private var openSettings
-
-    // Use semantic system colors in the menu bar popup so text contrast adapts
-    // correctly to macOS material/vibrancy in both light and dark appearances.
-    private var primaryTextColor: Color { .primary }
-    private var secondaryTextColor: Color { .secondary }
-    private var mutedTextColor: Color { .secondary.opacity(0.75) }
+    @ObservedObject private var historyManager = ExportHistoryManager.shared
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            header
+        glassBody.glassTheme()
+    }
 
-            Divider().opacity(0.3)
-
-            VStack(alignment: .leading, spacing: 6) {
-                statusRow(
-                    label: String(localized: "iPhone"),
-                    connected: syncService.connectionState == .connected,
-                    detail: syncService.connectionState == .connected
-                        ? syncService.connectedPeerName ?? String(localized: "Connected")
-                        : String(localized: "Not connected")
-                )
-
-                statusRow(
-                    label: String(localized: "Destination"),
-                    connected: folderAccessHealthy,
-                    detail: destinationDetail
-                )
-
-                statusRow(
-                    label: String(localized: "Readiness"),
-                    connected: readinessIsPositive,
-                    detail: readinessText
-                )
-
-                if let lastExportSummary {
-                    HStack(spacing: 4) {
-                        Image(systemName: "clock.arrow.circlepath")
-                            .font(.caption2)
-                            .foregroundStyle(mutedTextColor)
-                            .frame(width: 14)
-                            .accessibilityHidden(true)
-                        Text("Last export:")
-                            .foregroundStyle(mutedTextColor)
-                        Text(lastExportSummary)
-                            .foregroundStyle(secondaryTextColor)
-                            .lineLimit(1)
-                            .truncationMode(.tail)
-                    }
-                    .font(BrandTypography.caption())
-                    .accessibilityElement(children: .combine)
-                    .accessibilityLabel("Last Mac export")
-                    .accessibilityValue(lastExportSummary)
-                }
+    /// MacMenuBarG: status header, last export and folder, then Open, History and Quit.
+    private var glassBody: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 8) {
+                Image("HealthCrystalHeart")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 18, height: 18)
+                    .accessibilityHidden(true)
+                Text("Mac destination")
+                    .font(.system(size: 14, weight: .bold))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                Text(readinessText)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(readinessIsPositive
+                        ? Color.glassAdaptive(\.ok)
+                        : Color.glassAdaptive(\.coral))
             }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 8)
 
-            Divider().opacity(0.3)
+            fact(String(localized: "Last export"), value: lastExportSummary)
+            fact(String(localized: "Folder"), value: folderDetail, monospaced: vaultManager.hasVaultSelection)
 
-            VStack(spacing: 2) {
-                menuAction(
-                    icon: vaultManager.hasVaultSelection ? "folder" : "folder.badge.plus",
-                    label: vaultManager.hasVaultSelection
-                        ? String(localized: "Change Destination…")
-                        : String(localized: "Choose Destination…")
-                ) {
-                    chooseDestinationFolder()
-                }
+            Rectangle()
+                .fill(Color.glassAdaptive(\.line))
+                .frame(height: 1)
+                .accessibilityHidden(true)
 
-                menuAction(
-                    icon: "macwindow",
-                    label: String(localized: "Open Mac Destination"),
-                    shortcut: "⌘0"
-                ) {
-                    WindowManager.shared.openMainWindow?()
-                }
-
-                menuAction(
-                    icon: "gearshape",
-                    label: String(localized: "Destination Settings…"),
-                    shortcut: "⌘,"
-                ) {
-                    openSettingsWindow()
-                }
+            menuAction(String(localized: "Open Health.md"), shortcut: "⌘O") {
+                showMainWindow()
             }
-            .padding(.vertical, 4)
-
-            Divider().opacity(0.3)
-
-            Button {
+            .keyboardShortcut("o", modifiers: .command)
+            menuAction(String(localized: "History")) {
+                showMainWindow(destination: .history)
+            }
+            menuAction(String(localized: "Quit Health.md"), shortcut: "⌘Q") {
                 NSApp.terminate(nil)
-            } label: {
-                HStack {
-                    Text("Quit Health.md")
-                        .font(BrandTypography.body())
-                    Spacer()
-                    Text("⌘Q")
-                        .font(BrandTypography.caption())
-                        .foregroundStyle(mutedTextColor)
-                        .accessibilityHidden(true)
-                }
-                .frame(maxWidth: .infinity)
-                .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
-            .foregroundStyle(secondaryTextColor)
-            .padding(.horizontal, 14)
-            .padding(.vertical, 8)
-            .padding(.bottom, 4)
-            .accessibilityLabel("Quit Health.md")
-            .accessibilityHint("Keyboard shortcut: Command Q")
+            .keyboardShortcut("q", modifiers: .command)
         }
+        .padding(14)
         .frame(width: 300)
+        .foregroundStyle(Color.glassAdaptive(\.text))
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Health.md Mac destination menu")
     }
 
-    // MARK: - Components
-
-    private var header: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "heart.text.square.fill")
-                .foregroundStyle(Color.accent)
-                .font(.title3)
-                .accessibilityHidden(true)
-            VStack(alignment: .leading, spacing: 1) {
-                Text("health.md")
-                    .font(Typography.monoEmphasis())
-                    .foregroundStyle(primaryTextColor)
-                Text("Mac Destination")
-                    .font(BrandTypography.caption())
-                    .foregroundStyle(mutedTextColor)
-            }
-            Spacer()
-        }
-        .padding(.horizontal, 14)
-        .padding(.top, 14)
-        .padding(.bottom, 8)
-    }
-
-    @ViewBuilder
-    private func statusRow(label: String, connected: Bool, detail: String) -> some View {
-        HStack(spacing: 4) {
-            Circle()
-                .fill(connected ? Color.success : mutedTextColor)
-                .frame(width: 6, height: 6)
-                .accessibilityHidden(true)
-            Text(label + ":")
-                .foregroundStyle(mutedTextColor)
-            Text(detail)
-                .foregroundStyle(secondaryTextColor)
+    private func fact(_ label: String, value: String, monospaced: Bool = false) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(label)
+                .font(.system(size: 12))
+                .foregroundStyle(Color.glassAdaptive(\.muted))
+            Text(value)
+                .font(.system(size: 12, design: monospaced ? .monospaced : .default))
                 .lineLimit(1)
                 .truncationMode(.middle)
         }
-        .font(BrandTypography.caption())
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(label) status")
-        .accessibilityValue(
-            String(localized: "\(connected ? String(localized: "Ready") : String(localized: "Not ready")): \(detail)")
-        )
     }
 
-    @ViewBuilder
     private func menuAction(
-        icon: String,
-        label: String,
+        _ label: String,
         shortcut: String? = nil,
         action: @escaping () -> Void
     ) -> some View {
         Button(action: action) {
-            HStack(spacing: 8) {
-                Image(systemName: icon)
-                    .foregroundStyle(Color.accent)
-                    .frame(width: 16)
-                    .accessibilityHidden(true)
+            HStack {
                 Text(label)
-                    .font(BrandTypography.body())
+                    .font(.system(size: 13))
+                    .foregroundStyle(Color.glassAdaptive(\.text))
                 Spacer()
                 if let shortcut {
                     Text(shortcut)
-                        .font(BrandTypography.caption())
-                        .foregroundStyle(mutedTextColor)
+                        .font(.system(size: 13))
+                        .foregroundStyle(Color.glassAdaptive(\.muted))
                         .accessibilityHidden(true)
                 }
             }
+            .padding(.vertical, 4)
             .frame(maxWidth: .infinity)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .foregroundStyle(secondaryTextColor)
-        .padding(.horizontal, 10)
-        .padding(.vertical, 6)
         .accessibilityLabel(label)
         .accessibilityHint(
             shortcut.map { String(localized: "Keyboard shortcut: \($0)") } ?? ""
@@ -211,11 +106,14 @@ struct MacMenuBarView: View {
         vaultManager.vaultURL != nil && vaultManager.canAccessSelectedVaultFolder()
     }
 
-    private var destinationDetail: String {
+    /// The destination path with the home folder shortened to "~", as on the board.
+    private var folderDetail: String {
         guard vaultManager.hasVaultSelection else { return String(localized: "Choose folder") }
-        return folderAccessHealthy
-            ? vaultManager.vaultName
-            : "\(vaultManager.vaultName): \(vaultManager.vaultAvailabilityText)"
+        guard folderAccessHealthy else {
+            return "\(vaultManager.vaultName): \(vaultManager.vaultAvailabilityText)"
+        }
+        guard let path = vaultManager.pathForDisplay else { return vaultManager.vaultName }
+        return MacDisplayPath.abbreviatingHome(path)
     }
 
     private var readinessIsPositive: Bool {
@@ -240,7 +138,16 @@ struct MacMenuBarView: View {
         return capabilities.platform == .iOS && capabilities.isCompatibleWithMacExportJobs
     }
 
-    private var lastExportSummary: String? {
+    /// The newest history entry as "Today 11:02 PM · Oct 30 · 1 file", falling back to this
+    /// session's result when there is no history yet.
+    private var lastExportSummary: String {
+        if let entry = historyManager.history.first {
+            return entry.lastExportMenuLine
+        }
+        return sessionExportSummary ?? String(localized: "None yet")
+    }
+
+    private var sessionExportSummary: String? {
         if let failure = syncService.lastMacExportFailure {
             return localizedFailureSummary(failure.reason)
         }
@@ -301,15 +208,12 @@ struct MacMenuBarView: View {
 
     // MARK: - Actions
 
-    private func chooseDestinationFolder() {
-        MacFolderPicker.show { url in
-            vaultManager.setVaultFolder(url)
-        }
-    }
-
-    private func openSettingsWindow() {
+    private func showMainWindow(destination: MacSidebarNavigation.Destination? = nil) {
         NSApp.activate(ignoringOtherApps: true)
-        openSettings()
+        WindowManager.shared.openMainWindow?()
+        if let destination {
+            MacSidebarNavigation.request(destination)
+        }
     }
 }
 

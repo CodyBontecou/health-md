@@ -39,6 +39,7 @@ class FormatCustomizationAccessibilityTest(display: AccessibilityDisplayCase) : 
                 DateFormatPreference.ISO8601 to text(R.string.date_format_display_iso8601),
                 DateFormatPreference.US_SHORT to text(R.string.date_format_display_us_short),
                 DateFormatPreference.US_LONG to text(R.string.date_format_display_us_long),
+                DateFormatPreference.EU_DOT to text(R.string.date_format_display_eu_dot),
                 DateFormatPreference.EU_SHORT to text(R.string.date_format_display_eu_short),
                 DateFormatPreference.EU_LONG to text(R.string.date_format_display_eu_long),
                 DateFormatPreference.COMPACT to text(R.string.date_format_display_compact),

@@ -1,6 +1,6 @@
 ---
-title: "macOS-app"
-description: "Gebruik Health.md voor Mac als iPhone-exportbestemming, lokale CLI- en MCP-host, versleutelde opslag voor gezondheidscontext, geschiedenisweergave en beheerder van de bestemmingsmap."
+title: "Apple Health op je Mac met Health.md"
+description: "Exporteer Apple Health-data van iPhone naar Mac of bevraag lokale context. Installeer Health.md op beide apparaten en stel Mac Sync in."
 ---
 
 Health.md voor Mac heeft twee lokale taken:
@@ -9,6 +9,11 @@ Health.md voor Mac heeft twee lokale taken:
 2. de app host de loopback-CLI, query-API, versleutelde gezondheidscontext en MCP-adapter voor lokale agents.
 
 Apple Health blijft op de iPhone. De Mac-app leest HealthKit niet rechtstreeks uit.
+
+<div class="callout">
+<strong>Begin met je iPhone en Mac</strong>
+<p><a href="https://apps.apple.com/us/app/health-md/id6757763969" target="_blank" rel="noopener">Installeer Health.md op iPhone en Mac</a>. <a href="/nl/docs/sync/">Volg de installatiegids voor Mac Sync</a>, <a href="/blog/health-md-for-macos/">of begin met de uitleg voor een export van één dag (Engels)</a>.</p>
+</div>
 
 ## Belangrijkste onderdelen
 
@@ -26,9 +31,9 @@ Apple Health blijft op de iPhone. De Mac-app leest HealthKit niet rechtstreeks u
 
 1. Installeer en open Health.md op de Mac.
 2. Kies een bestemmingsmap op de lokale schijf, in iCloud Drive of in een Obsidian-kluis.
-3. Schakel op de iPhone de Mac-verbinding in via het tabblad Synchronisatie.
-4. Kies op de iPhone Verbonden Mac als exportbestemming.
-5. Configureer de export en tik op Exporteren.
+3. Open op de iPhone **Instellingen → Mac-bestemming** en schakel die in.
+4. Kies op de iPhone Verbonden Mac als bestemming van een automatisering (**Automatiseringen → automatisering → Uitvoer**).
+5. Tik op **Nu exporteren**, of laat het schema van de automatisering lopen.
 
 De iPhone legt de HealthKit-gegevens en een momentopname van de actieve instellingen vast. Huidige peers dragen afgebakende partities over die met checksums zijn gevalideerd. De Mac gebruikt de productie-exporters en schrijft de gevraagde bestanden.
 

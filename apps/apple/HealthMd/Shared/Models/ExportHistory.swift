@@ -734,6 +734,7 @@ enum ExportFailureReason: String, Codable {
     case fileWriteError = "file_write_error"
     case backgroundTaskExpired = "task_expired"
     case apiEndpointNotConfigured = "api_endpoint_not_configured"
+    case apiUploadFailed = "api_upload_failed"
     case unknown = "unknown"
 
     /// History may have been written by a newer app version whose failure
@@ -762,6 +763,8 @@ enum ExportFailureReason: String, Codable {
             return String(localized: "Task timed out", comment: "Short error: background task timed out")
         case .apiEndpointNotConfigured:
             return String(localized: "API endpoint not configured", comment: "Short error: API endpoint destination has no valid endpoint")
+        case .apiUploadFailed:
+            return String(localized: "API upload failed", comment: "Short error: API upload failed")
         case .unknown:
             return String(localized: "Unknown error", comment: "Short error: unknown")
         }
@@ -794,6 +797,8 @@ enum ExportFailureReason: String, Codable {
             return String(localized: "iOS ended the background export before Health.md could finish writing all requested dates.", comment: "Detailed error: task expired")
         case .apiEndpointNotConfigured:
             return String(localized: "This export target sends data to an HTTP(S) API endpoint, but no valid endpoint URL is configured, so Health.md had nowhere to send the data.", comment: "Detailed error: API endpoint not configured")
+        case .apiUploadFailed:
+            return String(localized: "Health.md could not deliver the export to the API endpoint. The server may have rejected the request or the connection may have failed.", comment: "Detailed error: API upload failed")
         case .unknown:
             return String(localized: "Health.md encountered an unexpected error during export. Any system message captured at the time appears in the Technical details section.", comment: "Detailed error: unknown")
         }
@@ -826,6 +831,8 @@ enum ExportFailureReason: String, Codable {
             return String(localized: "Open Health.md and retry while the app is visible. If it happens again, export a smaller date range.", comment: "Recovery: task expired")
         case .apiEndpointNotConfigured:
             return String(localized: "Set a valid HTTP(S) endpoint URL under Export → API Endpoint, or turn off the schedule for the profile that targets it.", comment: "Recovery: API endpoint not configured")
+        case .apiUploadFailed:
+            return String(localized: "Check the endpoint URL, credentials, network connection, and server status, then retry the export.", comment: "Recovery: API upload failed")
         case .unknown:
             return String(localized: "Review the Technical details section below, then retry. If it fails again, include that exact message in your bug report.", comment: "Recovery: unknown export error")
         }
@@ -894,7 +901,9 @@ class ExportHistoryManager: ObservableObject {
         partialFailures: [ExportPartialFailure] = [],
         appleExportEnginePin: AppleExportEnginePin? = nil,
         operationDetails: ExportHistoryOperationDetails? = nil,
-        profileName: String? = nil
+        profileName: String? = nil,
+        profileID: UUID? = nil,
+        completedDates: [Date]? = nil
     ) {
         let entry = ExportHistoryEntry(
             id: id,
@@ -916,7 +925,7 @@ class ExportHistoryManager: ObservableObject {
             operationDetails: operationDetails,
             profileName: profileName
         )
-        addEntry(entry)
+        addEntry(entry, profileID: profileID, completedDates: completedDates)
     }
 
     /// Records a failed export attempt
@@ -938,7 +947,9 @@ class ExportHistoryManager: ObservableObject {
         partialFailures: [ExportPartialFailure] = [],
         appleExportEnginePin: AppleExportEnginePin? = nil,
         operationDetails: ExportHistoryOperationDetails? = nil,
-        profileName: String? = nil
+        profileName: String? = nil,
+        profileID: UUID? = nil,
+        completedDates: [Date]? = nil
     ) {
         let entry = ExportHistoryEntry(
             id: id,
@@ -961,20 +972,24 @@ class ExportHistoryManager: ObservableObject {
             operationDetails: operationDetails,
             profileName: profileName
         )
-        addEntry(entry)
+        addEntry(entry, profileID: profileID, completedDates: completedDates)
     }
 
     /// Clears all history
     func clearHistory() {
         history = []
         saveHistory()
+        CoverageLedgerStore.shared.clear()
     }
 
     // MARK: - Private Methods
 
-    private func addEntry(_ entry: ExportHistoryEntry) {
-        // Durable destination operations replay one stable id. Replace their prior partial/failure
-        // row after exact-journal recovery instead of either duplicating it or freezing stale state.
+    private func addEntry(
+        _ entry: ExportHistoryEntry,
+        profileID: UUID?,
+        completedDates: [Date]?
+    ) {
+        let priorHistory = history
         history.removeAll { $0.id == entry.id }
         history.insert(entry, at: 0)
 
@@ -984,6 +999,12 @@ class ExportHistoryManager: ObservableObject {
         }
 
         saveHistory()
+        CoverageLedgerStore.shared.record(
+            entry: entry,
+            explicitProfileID: profileID,
+            completedDates: completedDates,
+            priorHistory: priorHistory
+        )
     }
 
     private func loadHistory() {

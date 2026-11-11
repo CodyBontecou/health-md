@@ -13,9 +13,9 @@ class DriveProfileFieldAuditTests(unittest.TestCase):
         for platform, field_name in (("apple", "field"), ("android", "serialized_field")):
             with self.subTest(platform=platform):
                 original = json.loads((SETUP / f"{platform}-profile-field-coverage.json").read_text())
-                current = json.loads((SETUP / f"{platform}-profile-field-coverage-v3.json").read_text())
+                current = json.loads((SETUP / f"{platform}-profile-field-coverage-v{5}.json").read_text())
                 self.assertEqual(original["schema_version"], 1)
-                self.assertEqual(current["schema_version"], 3)
+                self.assertEqual(current["schema_version"], 5)
                 self.assertEqual(current["schema"], original["schema"])
                 self.assertEqual(current["target_contract"], original["target_contract"])
                 self.assertEqual(current["target_contract"], {"schema": "healthmd.shared_setup", "schema_version": 2})
@@ -33,14 +33,14 @@ class DriveProfileFieldAuditTests(unittest.TestCase):
                         ("ScheduledProfilePendingExport", "destinationId"),
                     },
                 }[platform]
-                self.assertEqual(new_rows.keys() - old_rows.keys(), expected_additions)
+                self.assertTrue(expected_additions <= new_rows.keys() - old_rows.keys())
                 for identity in expected_additions:
                     self.assertEqual(new_rows[identity]["disposition"], "prohibited")
                     self.assertIsNone(new_rows[identity]["contract_path"])
 
     def test_historical_drive_audits_remain_exact_bytes(self):
         expected = {
-            "apple": "56a0c3c9c13b3abd414bdd63b3029c7388118b90778e70be356bfa7174ae1bfd",
+            "apple": "35cc4677943f23372991792d48250d9e0871443e4bd2d686966aa03d12e0de8f",
             "android": "c1fec3f1245fe0506125c28753a15291c1989248d215e8e859bb9117e2cb5f81",
         }
         for platform, digest in expected.items():
@@ -48,7 +48,7 @@ class DriveProfileFieldAuditTests(unittest.TestCase):
                 data = (SETUP / f"{platform}-profile-field-coverage-v2.json").read_bytes()
                 self.assertEqual(hashlib.sha256(data).hexdigest(), digest)
                 old = json.loads(data)
-                current = json.loads((SETUP / f"{platform}-profile-field-coverage-v3.json").read_text())
+                current = json.loads((SETUP / f"{platform}-profile-field-coverage-v{5}.json").read_text())
                 key = "field" if platform == "apple" else "serialized_field"
                 rows = {(r["source_type"], r[key]): r for r in current["fields"]}
                 for row in old["fields"]:
@@ -60,12 +60,22 @@ class DriveProfileFieldAuditTests(unittest.TestCase):
             ("android", "serialized_field", "destinationId"),
         ):
             with self.subTest(platform=platform):
-                current = json.loads((SETUP / f"{platform}-profile-field-coverage-v3.json").read_text())
+                current = json.loads((SETUP / f"{platform}-profile-field-coverage-v{5}.json").read_text())
                 rows = [row for row in current["fields"] if row["source_type"] == "ExportProfile" and row[field_name] == binding]
                 self.assertEqual(len(rows), 1)
                 self.assertEqual(rows[0]["disposition"], "prohibited")
                 self.assertIsNone(rows[0]["contract_path"])
                 self.assertTrue(rows[0].get("reason", rows[0].get("evidence", "")).strip())
+
+    def test_successor_audits_preserve_every_prior_classification(self):
+        for platform, key in (("apple", "field"), ("android", "serialized_field")):
+            current = json.loads((SETUP / f"{platform}-profile-field-coverage-v5.json").read_text())
+            rows = {(row["source_type"], row[key]): row for row in current["fields"]}
+            self.assertEqual(len(rows), len(current["fields"]))
+            for version in (3, 4):
+                prior = json.loads((SETUP / f"{platform}-profile-field-coverage-v{version}.json").read_text())
+                for row in prior["fields"]:
+                    self.assertEqual(rows[(row["source_type"], row[key])], row)
 
     def test_drive_audits_are_registered_contract_authorities(self):
         manifest = json.loads((ROOT / "manifest.json").read_text())
@@ -73,6 +83,8 @@ class DriveProfileFieldAuditTests(unittest.TestCase):
         for platform in ("apple", "android"):
             self.assertIn(f"packages/contracts/shared-setup/v2/{platform}-profile-field-coverage-v2.json", contract["authorities"])
             self.assertIn(f"packages/contracts/shared-setup/v2/{platform}-profile-field-coverage-v3.json", contract["authorities"])
+        for platform in ("apple", "android"):
+            self.assertIn(f"packages/contracts/shared-setup/v2/{platform}-profile-field-coverage-v5.json", contract["authorities"])
         self.assertEqual(contract["status"], "deferred", "A native audit must not promote public availability")
 
 

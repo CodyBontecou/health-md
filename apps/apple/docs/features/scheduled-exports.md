@@ -11,7 +11,7 @@
 
 Scheduled Exports run recent Apple Health exports daily, weekly, or on a custom calendar cadence using the same iPhone settings as Manual Export, including formats, metrics, paths, write mode, and **Data Detail**. Custom schedules can repeat every N days, weeks, or months, covering patterns such as every other day or monthly. Targets are iPhone Folder, API Endpoint, or an already-open/connected Mac.
 
-Scheduling is available on the free plan. A scheduled request that exports at least one date consumes one of the same 5 free export actions used by manual, Shortcut, and direct exports, regardless of how many dates or files the request contains. Retries of that same durable request do not consume another use. Full Access removes the shared limit.
+In the subscription-enabled phone release, scheduling and export require an active store-backed trial, subscription, Lifetime purchase, or preserved permanent access. No local free-export allowance remains. The Mac companion and F-Droid included-access channel retain their documented exceptions. See [paid access](full-access-unlock.md).
 
 Data Detail defaults to Summary for new installs. Detailed Time-Series adds selected samples without the canonical archive; Lossless Health Records adds both and can be large, so enable it intentionally and start with a short lookback.
 
@@ -36,7 +36,7 @@ Each new completed-day profile occurrence re-exports the **entire configured loo
 - daily-note injection and individual entries for file targets, if enabled;
 - roll-ups, if explicitly enabled.
 
-Canonical records use strict source-start day ownership. Sleep summary keeps its established noon-to-noon night attribution, so the next completed-day pass remains the final compatibility summary for yesterday.
+Canonical records use strict source-start day ownership. Sleep summary keeps its established noon-to-noon night attribution, so the next completed-day pass remains the final compatibility summary for yesterday. Users who select the **Morning ends** sleep-attribution mode (issue #104) instead capture yesterday's night session in this morning's note; the device-local setting is read at each capture, so already-captured records never move retroactively.
 
 ## Completeness
 
@@ -105,7 +105,7 @@ Connected Mac schedules require an open, compatible, ready Mac to begin; they do
 
 | Problem | Likely cause | Fix |
 |---|---|---|
-| Schedule did not complete | iOS delay, lock protection, target unavailable, or free quota exhausted | Unlock/tap the recovery notification or open the app to drain pending work. If all 5 free exports are used, unlock Full Access to resume. |
+| Schedule did not complete | iOS delay, lock protection, target unavailable, or paid access expired | Unlock/tap the recovery notification or open the app to drain pending work. If access has expired, restore or obtain access before resuming. |
 | File exists but archive is partial | One source branch failed/cancelled/skipped/unsupported | Inspect manifest/diagnostics; retry if recoverable. |
 | No archive | Lossless off or legacy peer | Review Export setting and update peers. |
 | Mac schedule fails | Mac closed/not ready/incompatible | Open/update Mac, select folder, retry pending/history. |
@@ -134,4 +134,4 @@ Local persistence v2 retains the shipped integer-hour field. For minute choices,
 
 Shared Setup v2 cannot represent minute refresh. Sharing a 30/60-minute profile choice fails with an explanation; choose a 3/6/12-hour interval before sharing. Existing public v2 schema/fixture bytes and daily health export schemas are unchanged. New windows refresh the same owner-day output, not a new export format.
 
-Each new durable export request with dates counts toward the existing free-export quota; retries of that request retain their identity. Faster windows can exhaust the quota sooner. The deployed push metadata remains hour-only: minute refresh does not advertise a rounded three-hour interval. Completed-day push nudges remain; minute windows use existing native background/app-open recovery paths and remain subject to iOS data-lock and background-delivery constraints.
+Each new durable export request checks paid access; retries retain their durable request identity. There is no new free-export quota. The deployed push metadata remains hour-only: minute refresh does not advertise a rounded three-hour interval. Completed-day push nudges remain; minute windows use existing native background/app-open recovery paths and remain subject to iOS data-lock and background-delivery constraints.

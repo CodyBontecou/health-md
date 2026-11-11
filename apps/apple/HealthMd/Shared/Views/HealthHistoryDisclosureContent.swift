@@ -5,7 +5,12 @@ import SwiftUI
 struct HealthHistoryDisclosureContent: View {
     let assessment: HealthHistoryAssessment
     let isExecution: Bool
+    /// Lets a host bound the card's height while the details are open. Nil keeps the
+    /// disclosure's own state.
+    var detailsExpanded: Binding<Bool>? = nil
     let reviewAccess: () -> Void
+
+    @State private var localDetailsExpanded = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.sm) {
@@ -26,7 +31,7 @@ struct HealthHistoryDisclosureContent: View {
             }
             .accessibilityIdentifier("export.historyWarning.reviewAccess")
             .accessibilityHint("Shows instructions for reviewing Health.md access in Apple Health")
-            DisclosureGroup {
+            DisclosureGroup(isExpanded: detailsExpanded ?? $localDetailsExpanded) {
                 ForEach(assessment.types) { type in
                     VStack(alignment: .leading, spacing: Spacing.sm) {
                         typeDetail(type)
@@ -51,7 +56,7 @@ struct HealthHistoryDisclosureContent: View {
         case .limited(let boundary):
             Text("\(type.id): sample end boundary \(assessment.boundaryDescription(boundary)). Earlier starts are preserved.")
         case .apiUnavailable:
-            Text("\(type.id): history assessment requires OS 27. This does not mean health data is unavailable.")
+            Text("\(type.id): history access could not be checked. Readable health data can still be exported.")
         case .assessmentFailed:
             Text("\(type.id): history assessment failed; readable data may still be available.")
         case .unknown:

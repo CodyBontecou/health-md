@@ -1,64 +1,56 @@
 ---
-title: "Geplande exports"
-description: "Voer exports automatisch uit met dagelijkse, wekelijkse of aangepaste kalenderritmes. iOS gebruikt achtergrondtaken en een lokale herstelmelding wanneer beveiligde gegevens niet beschikbaar zijn."
+title: "Plan Apple Health exports en los problemen met gemiste runs op"
+description: "Controleer een geplande export, krijg inzicht in de terugblik op voltooide dagen en herstel openstaande datums. iPhone achtergrondtiming is de beste inspanning; geschiedenis Opnieuw proberen gebruikt huidige instellingen."
 ---
 
-## Het tabblad Schema
-<p>Dit is een statusscherm, geen instellingenpaneel. Je ziet in één oogopslag:</p>
-<ul>
-<li>of het schema aan- of uitstaat</li>
-<li>wanneer de volgende geplande uitvoering plaatsvindt</li>
-<li>wat het resultaat van de laatste uitvoering was</li>
-</ul>
-<p>Met één knop, <em>Schema instellen</em> of <em>Schema beheren</em>, open je de detailweergave.</p>
+Deze pagina beschrijft de planning van iPhone . Android heeft verschillende achtergrondrechten en aankoopvereisten; zie [Android-automatisering](/nl/docs/android/).
 
-## Schema-instellingen
-<div class="options">
-<div class="option"><strong>Geplande exports inschakelen</strong><p>De hoofdschakelaar bovenaan. Staat deze uit, dan zijn er geen uitvoeringen op de achtergrond en geen meldingen.</p></div>
-<div class="option"><strong>Frequentie</strong><p>Dagelijks, wekelijks of aangepast. Aangepaste schema’s herhalen vanaf een startdatum elke N dagen, weken of maanden. Het terugkijkvenster bepaalt hoeveel voltooide dagen elke uitvoering omvat.</p></div>
-<div class="option"><strong>Tijd</strong><p>Uur en minuut. iOS behandelt dit als richttijd, niet als garantie. Lees de toelichting over beperkingen hieronder.</p></div>
-</div>
+## Controleer de eerste geplande export
 
-## Exportgeschiedenis
-<p>De lijst onderaan het scherm Schema legt elke geplande uitvoering en het resultaat vast. Tik op een rij voor meer informatie. Bij een mislukte uitvoering staat een knop <em>Opnieuw proberen</em> waarmee je het datumbereik met de huidige instellingen en bestemming opnieuw uitvoert en daarna een nieuwe geschiedenisrij vastlegt.</p>
+1. Activeer het beoogde profiel. Controleer de statistieken, formaten, gegevensdetails, schrijfgedrag en bestemming. Voer een voltooide dag handmatig uit en inspecteer het opgeslagen bestand of eindpuntresultaat voordat u automatisering inschakelt.
+2. Open op de iPhone **Automatiseringen**, kies de automatisering en tik op **Schema**; open op Android Schema en daarna Schema instellen of Schema beheren. Schakel het schema in, kies Dagelijks, Wekelijks of Aangepast, stel de tijd in en begin met een terugblik van één afgeronde dag. Sta meldingen toe als je lokale herstelherinneringen wilt.
+3. Controleer of planning is ingeschakeld, de volgende gebeurtenis en het laatste resultaat. Inspecteer na een poging de geschiedenisgegevens en de daadwerkelijke bestemming; een label of melding voor de volgende run is geen bewijs dat er gegevens zijn geschreven.
+4. Controleer de geëxporteerde data, eenheden, dekking en ontbrekende gegevens. Een opgeslagen bestand bewijst op zichzelf niet dat de bron volledig is vastgelegd.
 
-## Hoe planning in iOS werkelijk werkt
-<div class="doc-diagram">
-  <div class="flow-steps" aria-label="Alternatief verloop voor een geplande export">
-    <span><strong>1. Richttijd</strong>Health.md vraagt iOS de app rond de gekozen tijd te activeren.</span>
-    <span><strong>2. Poging op de achtergrond</strong>Als het apparaat beschikbaar is, voert iOS een taak voor achtergrondvernieuwing uit.</span>
-    <span><strong>3. Alternatief bij vergrendeling</strong>Als HealthKit niet beschikbaar is, plaatst Health.md een melding.</span>
-    <span><strong>4. Tik om te voltooien</strong>Open de melding, zodat de app HealthKit kan lezen en kan exporteren.</span>
-  </div>
-</div>
+In de telefoonversie met abonnement vereisen geplande en handmatige exports een actieve proefperiode, abonnement, levenslange aankoop of behouden permanente toegang. Er is geen lokale vrije exportvergoeding. Verlopen toegang moet worden hersteld voordat lopende werkzaamheden kunnen worden hervat. Zie [ontgrendelen en betaalmuur](/nl/docs/paywall/).
 
-<div class="callout">
-<strong>Belangrijke beperkingen van iOS.</strong>
-<p style="margin-top:6px;">HealthKit-gegevens zijn niet leesbaar wanneer het apparaat is vergrendeld. Geplande exports gebruiken <code>BGAppRefreshTask</code>. iOS plant deze taak op basis van gebruikspatronen wanneer het systeem daar gelegenheid voor ziet. De ingestelde tijd is dus een richttijd, geen afspraak. Als alternatief plaatst de app op de geplande tijd een lokale melding wanneer het apparaat is vergrendeld. Tik daarop om de export uit te voeren.</p>
-</div>
-<ul>
-<li>De geplande tijd is bij benadering. iOS kan de taak eerder of later uitvoeren of overslaan als het apparaat uitstaat of niet verbonden is.</li>
-<li>Geplande exports werken het best als je telefoon regelmatig rond dezelfde tijd is aangesloten en ontgrendeld.</li>
-<li>Mislukt de export omdat het apparaat was vergrendeld, tik dan op de melding. De app voert de export vervolgens met HealthKit-toegang uit.</li>
-</ul>
+## Begrijp het voltooide dagvenster
 
-## Programmatisch bedienen
-<p>Je kunt het schema via Shortcuts in- of uitschakelen met de intentie <em>Geplande export in- of uitschakelen</em>. <a href="/nl/docs/shortcuts/">Bekijk Shortcuts</a> voor voorbeelden.</p>
+Dagelijkse, wekelijkse en aangepaste schema's kunnen terugkijken. Aangepaste cadans wordt elke N dagen, weken of maanden vanaf de startdatum herhaald. Bij elk nieuw exemplaar wordt het gehele geconfigureerde voltooide-dagvenster opnieuw geëxporteerd, inclusief eerder geëxporteerde datums. Een driedaagse terugblik beslaat gisteren en de twee voorgaande dagen; vertraagde uitvoering zorgt ervoor dat het venster verankerd blijft op de geplande branddag.
 
-## Profielschema’s en annulering
+Today Refresh is afzonderlijk werk voor de huidige dag en geen vervanging voor het voltooide-dagvenster. Inspecteer paden en schrijfgedrag voordat exporten elkaar overlappen; Voeg geen herhaalde dagelijkse momentopnamen toe als nieuwe metingen.
 
-- Elk profiel bewaart een eigen schema, inclusief aangepaste regelmaat; wisselen van actief profiel richt een ander schema niet opnieuw.
-- Er verschijnt een botsingswaarschuwing wanneer profielen dezelfde gegenereerde paden op dezelfde bestemming zouden kunnen schrijven. Controleer dit vóór concurrerende schema’s; Health.md wijzigt geen profiel stilzwijgend.
-- Stoppen of Annuleren eindigt alleen de huidige poging. Voltooide datums blijven behouden, open datums zijn herhaalbaar en het schema blijft actief.
-- Elke geschiedenisregel blijft gekoppeld aan het uitvoeringsprofiel en het privacyvriendelijke label van de werkelijke bestemming.
+## Kies het juiste herstelpad
 
-Beheer bevroren instellingen en bestemming in [Exportprofielen](/nl/docs/export-profiles/).
+- **In afwachting van gepland herstel:** ontgrendel iPhone , open Health.md en inspecteer de lopende poging. Het behoudt de exacte onopgeloste datums, opgeslagen instellingen en bestemming. Voltooide datums blijven voltooid; herstel breidt zich niet uit in een nieuwe terugblik.
+- **Opnieuw proberen vanuit de geschiedenis:** hiermee start u een nieuwe run voor dat bereik met gebruikmaking van de momenteel geconfigureerde instellingen en bestemming en wordt een nieuwe geschiedenisrij vastgelegd. Controleer de actieve configuratie voordat u op Opnieuw proberen drukt. Het is niet hetzelfde als het hervatten van een bevroren lopende poging.
+- **Gewijzigde of niet-beschikbare bestemming:** herstel de toegang of inspecteer het in behandeling zijnde profiel voordat u het opnieuw probeert. Een oud iPhone API-herstel mag niet stilletjes een gewijzigd eindpunt of gewijzigde inloggegevens overnemen. Start niet herhaaldelijk nieuwe pogingen terwijl de oorspronkelijke poging nog niet is opgelost.
 
-## Gerelateerde documentatie
+Bekijk lopende herstel-, profielidentiteit- en bestemmingsregels in [Profielen exporteren](/nl/docs/export-profiles/).
+
+## Wat iOS wel en niet garandeert
+
+De geselecteerde tijd is een streeftijd en geen gegarandeerde voltooiingstijd. iOS beheert de runtime op de achtergrond en de beveiliging van vergrendelde apparaten kan voorkomen dat HealthKit leest. Achtergrondverzoeken en stille wekmeldingen omzeilen deze bescherming niet.
+
+Voor lokale herstelmeldingen is toestemming voor de melding vereist en dit is geen garantie voor bezorging op het beoogde tijdstip. Als u er een ontvangt, ontgrendelt u het apparaat en opent u het zodat Health.md kan proberen het te herstellen. Als er geen melding binnenkomt, opent u Health.md en controleert u het uitstaande werk en de geschiedenis. Controleer het resultaat in plaats van aan te nemen dat een waarschuwing of verstreken tijd succes betekent.
+
+## Programmatische bediening
+ <p> U kunt het schema in-/uitschakelen vanuit Shortcuts met behulp van de intentie <em> Geplande export in- of uitschakelen </em> . <a href="/nl/docs/shortcuts/"> Zie Shortcuts </a> voor voorbeelden. </p>
+
+## Profielschema's en annulering
+
+- Elk profiel kan zijn eigen schema behouden, inclusief een aangepast ritme. Als u van actief profiel wisselt, wordt de planning van een ander profiel niet opnieuw getarget.
+- Er verschijnt een botsingswaarschuwing wanneer profielen dezelfde weergegeven paden op dezelfde bestemming kunnen schrijven. Controleer dit voordat u concurrerende schema's inschakelt. Health.md verandert geen van beide profielen stilletjes.
+- Stoppen of Annuleren beëindigt alleen de huidige poging. Voltooide datums blijven voltooid, onopgeloste datums kunnen opnieuw worden geprobeerd en de planning blijft ingeschakeld.
+- Elke geschiedenisrij blijft vastgezet aan het runtimeprofiel en het privacyveilige bestemmingslabel dat daadwerkelijk wordt gebruikt.
+
+Beheer de bevroren instellingen en de bestemming per profiel in [Profielen exporteren](/nl/docs/export-profiles/).
+
+## Verwant
 
 <div class="related">
-  <a href="/nl/docs/export-profiles/"><span>Profielen</span>Beheer onafhankelijke planningen en bestemmingen.</a>
-  <a href="/nl/docs/export/"><span>Handmatig</span>Exporteren: voor eenmalige datumbereiken.</a>
-  <a href="/nl/docs/shortcuts/"><span>Automatiseren</span>Shortcuts: schakel het schema vanuit automatiseringen.</a>
-  <a href="/nl/docs/sync/"><span>Meerdere apparaten</span>Mac-synchronisatie: plan ook op de Mac.</a>
-</div>
+ <a href="/nl/docs/export-profiles/"> <span> Meerdere workflows </span> Exporteer profielen, geef elke opgeslagen configuratie zijn eigen bestemming en cadans. </a>
+ <a href="/nl/docs/export/"> <span> Handmatig </span> Exporteren, voor eenmalige periodes. </a>
+ <a href="/nl/docs/shortcuts/"> <span> Automatiseer </span> Shortcuts , schakel het schema van automatiseringen. </a>
+ <a href="/nl/docs/sync/"> <span> Cross-device </span> Mac-synchronisatie, ook plannen op Mac. </a>
+ </div>

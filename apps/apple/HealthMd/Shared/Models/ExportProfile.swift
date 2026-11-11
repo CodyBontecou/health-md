@@ -11,9 +11,10 @@ import Combine
 /// `AdvancedExportSettings` exactly as before.
 ///
 /// Profiles deliberately exclude HealthKit authorization, quota/account state,
-/// scheduling, and device timezone. Identical profile settings must produce
-/// byte-for-byte identical export output; profiles change which request
-/// produces files, never the public export schema.
+/// scheduling, and runtime capture authority (sleep ownership, provider grants,
+/// and device timezone). Identical profile settings and accepted capture context
+/// preserve output behavior; a new occurrence resolves its own source authority
+/// without changing an already-pending job or the stored profile template.
 struct ExportProfile: Codable, Identifiable, Equatable {
     let id: UUID
     var name: String

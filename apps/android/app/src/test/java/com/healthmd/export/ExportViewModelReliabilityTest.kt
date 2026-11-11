@@ -30,7 +30,7 @@ class ExportViewModelReliabilityTest {
     private val startDate: LocalDate = LocalDate.of(2026, 1, 1)
 
     @Test
-    fun startExport_fullSuccess_updatesProgressRecordsHistoryAndConsumesOneFreeExport() = runTest(
+    fun startExport_fullSuccess_updatesProgressAndHistoryWithoutFreeQuota() = runTest(
         mainDispatcherRule.testDispatcher,
     ) {
         val dates = dates(3)
@@ -50,7 +50,7 @@ class ExportViewModelReliabilityTest {
         assertThat(state.exportProgressDate).isEqualTo(dates.last())
         assertThat(state.exportedFolderUri).isEqualTo("content://exports")
         assertThat(state.lastResult?.isFullSuccess).isTrue()
-        assertThat(state.postExportMilestone).isEqualTo(1)
+        assertThat(state.postExportMilestone).isNull()
         viewModel.dismissPostExportGuidance()
         assertThat(viewModel.uiState.value.postExportMilestone).isNull()
 
@@ -63,13 +63,13 @@ class ExportViewModelReliabilityTest {
         assertThat(history.totalCount).isEqualTo(3)
         assertThat(history.failureReason).isNull()
 
-        assertThat(dependencies.settingsRepository.decrementFreeExportsCalls).isEqualTo(1)
-        assertThat(dependencies.settingsRepository.getFreeExportsRemaining()).isEqualTo(4)
+        assertThat(dependencies.settingsRepository.decrementFreeExportsCalls).isEqualTo(0)
+        assertThat(dependencies.settingsRepository.getFreeExportsRemaining()).isEqualTo(0)
         assertThat(dependencies.settingsRepository.successfulExportCount).isEqualTo(1)
     }
 
     @Test
-    fun startExport_elevenOfNinetyPartial_recordsHistoryAndConsumesOneFreeExport() = runTest(
+    fun startExport_elevenOfNinetyPartial_recordsHistoryWithoutFreeQuota() = runTest(
         mainDispatcherRule.testDispatcher,
     ) {
         val dates = dates(90)
@@ -97,8 +97,8 @@ class ExportViewModelReliabilityTest {
         assertThat(history.failureReason).isEqualTo(ExportFailureReason.NO_HEALTH_DATA)
         assertThat(history.failedDateDetails).hasSize(79)
 
-        assertThat(dependencies.settingsRepository.decrementFreeExportsCalls).isEqualTo(1)
-        assertThat(dependencies.settingsRepository.getFreeExportsRemaining()).isEqualTo(4)
+        assertThat(dependencies.settingsRepository.decrementFreeExportsCalls).isEqualTo(0)
+        assertThat(dependencies.settingsRepository.getFreeExportsRemaining()).isEqualTo(0)
         assertThat(dependencies.settingsRepository.successfulExportCount).isEqualTo(0)
     }
 
@@ -129,7 +129,7 @@ class ExportViewModelReliabilityTest {
         assertThat(history.failedDateDetails).hasSize(2)
 
         assertThat(dependencies.settingsRepository.decrementFreeExportsCalls).isEqualTo(0)
-        assertThat(dependencies.settingsRepository.getFreeExportsRemaining()).isEqualTo(5)
+        assertThat(dependencies.settingsRepository.getFreeExportsRemaining()).isEqualTo(0)
         assertThat(dependencies.settingsRepository.successfulExportCount).isEqualTo(0)
     }
 
@@ -164,7 +164,7 @@ class ExportViewModelReliabilityTest {
         assertThat(history.totalCount).isEqualTo(3)
 
         assertThat(dependencies.settingsRepository.decrementFreeExportsCalls).isEqualTo(0)
-        assertThat(dependencies.settingsRepository.getFreeExportsRemaining()).isEqualTo(5)
+        assertThat(dependencies.settingsRepository.getFreeExportsRemaining()).isEqualTo(0)
         assertThat(dependencies.settingsRepository.successfulExportCount).isEqualTo(0)
     }
 
@@ -178,7 +178,7 @@ class ExportViewModelReliabilityTest {
         val healthRepository = FakeHealthRepository()
         val exportRepository = FakeExportRepository()
         val settingsRepository = FakeSettingsRepository()
-        val billingRepository = FakeBillingRepository()
+        val billingRepository = FakeBillingRepository(initialUnlocked = true)
         val historyRepository = FakeExportHistoryRepository()
         val fileExportManager: FileExportManager = mockk(relaxed = true)
         val exportProfileRepository = mockk<ExportProfileRepository> {

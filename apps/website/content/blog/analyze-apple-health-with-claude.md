@@ -1,11 +1,18 @@
 ---
-title: "Analyze your Apple Health data with Claude. No terminal, no code."
-description: "Export your Apple Health data with Health.md, drop the file into a Claude Project, and explore trends with example prompts."
-lead: "The non-technical path: export on iPhone, upload the file, ask questions in plain language."
+title: "How to use Apple Health data with Claude"
+description: "Export Apple Health to Claude with Health.md. Upload CSV or JSON, check dates and units, and ask for steps or sleep summaries with source evidence and missing-data checks."
+lead: "Export selected Apple Health data with Health.md, attach the CSV or JSON to Claude, and check the source rows before asking for trends. No terminal is needed for this file-upload workflow."
 date: "2026-09-26T12:00:00.000Z"
-updated: "2026-09-26T12:00:00.000Z"
+updated: "2026-10-27"
 category: "Workflow guide"
-draft: true
+related:
+  - apple-health-to-chatgpt
+  - query-apple-health-with-claude-or-codex
+  - apple-health-to-excel
+draft: false
+verified: "2026-10-27"
+verified_by: "Codex (agent)"
+verified_method: traced
 tags:
   - healthmd
   - apple-health
@@ -13,58 +20,102 @@ tags:
   - ai
 ---
 
-Your iPhone has been quietly recording your steps, sleep, and workouts for years. The hard part was never the collecting — it was getting the data out in a shape you could actually look at. A modern AI assistant is a surprisingly good way to explore it: hand Claude a file of your health data and ask questions in plain language.
+You can bring Apple Health data into Claude by exporting files from Health.md on your iPhone and uploading them to a conversation. Start with a synthetic sample, then a small range of selected metrics if you choose to share your own records. This is a manual snapshot; later phone exports require another upload.
 
-This post covers a simple file-upload workflow: export a file from the Health.md iPhone app to a folder, upload it to Claude, and chat. No terminal or code, and no server for you to run. It is deliberately limited — Claude only sees the file you hand it, and every new export means a new upload. If that tradeoff sounds fine, this is your path.
+<a class="button" href="https://apps.apple.com/us/app/health-md/id6757763969">Get Health.md for iPhone</a>
 
-## Step 1: Export what you want to explore
+Health.md includes **5 free export actions**, followed by a single lifetime unlock. Manual iPhone export does not require a Mac. You will also need a Claude account for the upload steps.
 
-In the Health.md app on your iPhone, run a folder export for the metrics and date range you're curious about. Choose CSV or JSON — both work for this, and CSV is the friendliest if you also want to peek at the data yourself in a spreadsheet.
+## Before uploading: decide what to share
 
-What you'll get: one file per day. CSV uses the header `Date,Category,Metric,Value,Unit,Timestamp`. Tell Claude which `Category` and `Metric` rows you want analyzed and to check their `Unit`. The `Value` field can also contain text or JSON, so it shouldn't treat every row as a numeric measurement.
+For the **local folder export** used in this file-upload workflow, Health.md builds the files on your device, with no Health.md server copy by default. A synced folder follows its provider's rules. The AI provider receives the files you upload and handles them under its own policies and terms.
 
-JSON is a nested daily object, with top-level `date`, `schema`, and `schema_version` fields and sections such as `activity`, `heart`, and `sleep` when those have data. It has fields and arrays, not CSV columns. Ask Claude to inspect the fields actually present, use the `units` and `time_context` metadata, and keep missing values separate from zero.
+Review Anthropic's current [consumer model-training policy](https://privacy.claude.com/en/articles/10023580-is-my-data-used-for-model-training) and [data-retention information](https://privacy.claude.com/en/articles/10023548-how-long-do-you-store-my-data) before uploading. Consumer settings, safety review, feedback, and commercial account terms can affect how conversations are used or retained. A dedicated Project organizes files; it does not make an upload local or guarantee immediate deletion from every system.
 
-Keep the export scoped. A month of sleep and steps is plenty for your first pass; you can always export more later.
+This guide does not use the separate opt-in, single-owner Health.md Cloud pilot. That pilot retains only API exports intentionally uploaded to it, has no public signup and no automatic device sync, and is not generally available. See the [Health.md privacy policy](/privacy-policy.html#retention) for that destination's boundaries.
 
-## Step 2: Upload it to a Claude Project
+## Step 1: Export only the data you want to explore
 
-Create a new Project in Claude and add your exported file (or files) as project knowledge. Everything you ask inside that Project can reference the data, and the Project keeps this analysis separate from your other chats.
+1. Install Health.md on the iPhone with your Apple Health data and authorize the categories you want to read.
+2. Choose **CSV** or **JSON**, **Summary**, and a known one-day range. Select Steps or Sleep for the first check. Preview the output before saving it to a writable folder in Files.
+3. Keep the original file so you can compare Claude's result with it. For setup, follow [your first iPhone export](/docs/iphone-first-export/). Once one day checks out, try a short range such as a week.
 
-For ChatGPT in this file-upload workflow, start a conversation and attach the exported file. You're sharing a snapshot, not configuring the local CLI/MCP connection described below.
+You get one file per day. CSV uses the header `Date,Category,Metric,Value,Unit,Timestamp`. The `Value` column is mixed-type: metadata, capture status, times, booleans, identifiers, and quoted JSON can appear alongside measurements. Ask Claude to filter `Category`, `Metric`, and `Unit` before converting numbers. Some daily summary rows omit the final Timestamp field; a CSV reader should leave that cell empty and preserve quoted commas and newlines.
 
-## Step 3: Ask about patterns, not prescriptions
+JSON is a nested daily object with top-level `date`, `schema`, and `schema_version` fields and sections such as `activity`, `heart`, and `sleep` when those have data. It has fields and arrays, not CSV columns. Ask Claude to inspect the fields actually present, including `units` and `time_context`, and keep missing values separate from zero.
 
-Stick to descriptive questions — what happened, when, and how much. Here are prompts that work well:
+For this daily-summary exercise, do not mix daily totals with weekly/monthly rollups or detailed samples. Check overlapping re-exports before uploading two files for the same date. Lossless Health Records adds an Apple-only canonical archive; it is not needed for this first summary workflow. See the [format reference](/docs/format/) for the differences.
 
-- "Summarize my sleep duration trend over the last 30 days. Give me the weekly averages."
-- "Which weeks had my highest step counts? List the top three with their totals."
-- "Compare my workout frequency month over month for the period in this file."
-- "Show me my average resting heart rate by week, and flag any weeks where the data looks sparse or missing."
-- "On days I worked out, how did my step count compare to rest days?"
-- "What percentage of days in this file have no recorded sleep data?"
+## Step 2: Attach a sample to a Claude chat
 
-Notice the pattern: each question names the metric, the period, and asks for a summary — not an interpretation. If Claude starts editorializing about what your numbers *mean* for your health, treat that as conversation, not counsel. **Claude is not a doctor, and this isn't medical advice** — it's a faster way to read your own records.
+Use the [synthetic daily CSV](/docs/reference/generated/core/summary-day.csv) or [synthetic daily JSON](/docs/reference/generated/core/summary-day.json) first. Both contain fictional values generated by the exporter, not someone's health records. Save one file to the device where you use Claude.
 
-## A word on privacy
+1. Open a new Claude conversation.
+2. Use the **+** button beside the chat box, choose **Add files or photos**, and select the file. You can also drag a file into the chat window.
+3. Confirm the intended filename is attached before sending the inspection prompt below.
 
-When you upload a file to Claude or ChatGPT, you're sharing that data with the AI provider — that's the entire point of this workflow, but do it deliberately:
+Anthropic lists CSV and JSON as supported document types in its [file-upload guide](https://support.claude.com/en/articles/8241126-upload-files-to-claude). File, context, and plan limits can change; use a small batch and check that guide if an upload is rejected. A month of daily exports is many files, so do not assume an entire date range fits in one chat upload.
 
-- Use a dedicated Project so the data doesn't linger in unrelated chats.
-- Export only the date range and metrics you actually want analyzed.
-- Delete the files from the Project when you're done exploring.
+If you prefer to keep a reusable file collection, create a Project and add the exports to its knowledge/files area. Review its visibility and sharing settings before adding personal records. Anthropic documents [Projects](https://support.claude.com/en/articles/9517075-what-are-projects) and [project file management](https://support.claude.com/en/articles/9519177-how-can-i-create-and-manage-projects); interfaces can differ during its current Projects rollout. Uploading to one chat and adding project knowledge are distinct ways to provide files.
 
-For the local folder export used in this file-upload workflow, Health.md builds the file on your iPhone and does not upload it to a Health.md server. A synced folder follows its provider's rules; the AI provider receives the file you upload and handles it under its own policies.
+For ChatGPT in this file-upload workflow, start a conversation and attach the export. That shares a snapshot; it does not configure the local CLI/MCP connection linked below.
 
-This guide doesn't use the separate opt-in, single-owner Health.md Cloud pilot. That pilot retains only API exports intentionally sent to it, has no public signup or automatic device sync, and is not generally available. See the [privacy policy](/privacy-policy.html) for that separate destination's boundaries.
+## Step 3: Check the source before asking for trends
 
-## The power-user alternative
+Start with this prompt for CSV:
 
-If you're comfortable in the terminal, there's a local-query alternative: pair the Health.md CLI with your iPhone and let an agent run live, scoped queries through the local MCP server without manual file uploads. That path queries the paired phone rather than the cloud pilot's retained exports. Returned values still follow the agent's storage and model-provider settings. That's covered in [Query Apple Health locally with Claude or Codex](/blog/query-apple-health-with-claude-or-codex/).
+```text
+Inspect only the files I attached for this analysis. First list the filenames,
+export dates, schema metadata, and units you can actually read. Tell me if any
+file could not be read completely. Do not guess missing fields or dates.
 
-For more on file uploads and local agent access, see [Use Apple Health with Claude, ChatGPT & Codex](/health-data-for-ai/).
+Use a CSV-aware parser. Preserve quoted commas/newlines and allow a missing
+final Timestamp field. Value is mixed-type: do not convert every row to a number.
 
-<div class="cta-row">
-<a class="button" href="/health-data-for-ai/">Use health data with AI</a>
-<a class="button secondary" href="/docs/guides/connect-agent/">Connect an agent</a>
-</div>
+For steps, select exactly Category=Activity, Metric=Steps, Unit=count.
+For sleep, select exactly Category=Sleep, Metric=Total Duration, Unit=seconds.
+Keep metadata, stage rows, samples, and rollups out of these daily totals.
+
+Show a table of Date, Metric, original Value, Unit, and source filename.
+Flag duplicate date/metric totals and conversion errors before aggregating.
+Do not treat an absent row as zero. Show your calculation for sleep hours.
+```
+
+For JSON, replace the CSV-parsing instructions with: “Inspect the nested daily schema and use the actual fields present, with their units and time context. Show each value's JSON field path and source filename. Keep missing fields separate from zero.” Keep the duplicate, coverage, and calculation checks.
+
+The synthetic CSV's **2026-03-15** summary has **12500 steps** and **27900.0 seconds** of sleep, or **7.75 hours**. Check those values against the file. These are expected source values, not a promise that Claude will calculate or extract them correctly. One sample day cannot establish a weekly trend.
+
+If the output disagrees, stop at that row: ask which file and field produced the answer, inspect the original, and resolve the discrepancy before using any aggregate.
+
+## Step 4: Ask a bounded question with evidence
+
+Once the source check passes, upload the intended daily files and ask a question with explicit dates, units, and coverage requirements. For example:
+
+```text
+For the calendar range I specify, group the daily step totals by weeks starting
+Monday. Show the sum, average over recorded numeric days, count of recorded days,
+and which dates have no step row. Identify partial weeks. List each source file
+and the daily values used. Do not fill missing days with zero or add duplicates.
+If you cannot read every file, say what is missing before calculating.
+```
+
+Replace “the calendar range I specify” with your actual start and end dates. You can ask the same question for daily sleep duration, converting seconds to hours. Daily sleep summaries use a local noon-to-noon journal window, so a Monday night belongs to Monday even if bedtime is after midnight. The [sleep-date guide](/docs/sleep-date-attribution/#sleep-journal-window) explains the boundary. See the [sleep export guide](/blog/export-apple-health-sleep-data/) for date selection and stage details.
+
+A useful answer separates the exported facts, the arithmetic, and uncertainty. Check totals against the daily source rows; ask for the calculation steps or generated code when available. A chart alone is not verification. For an independent spreadsheet check, use [Apple Health to Excel](/blog/apple-health-to-excel/) or [Apple Health to Google Sheets](/blog/apple-health-to-google-sheets/).
+
+Keep this descriptive: recorded duration, counts, dates, and gaps. AI output can be wrong and does not establish a diagnosis, cause, or treatment recommendation. A small or incomplete dataset should remain visibly incomplete.
+
+## Add new dates without counting them twice
+
+New exports do not update a previously uploaded file. Add the intended new files, identify the full date range again, and ask Claude to list the files used. If you re-exported a day, remove or explicitly exclude the superseded copy before recomputing. Never add the old and new daily totals together.
+
+When finished, review files, project access, conversations, and derived reports under the provider's current controls. Removing a project file does not guarantee that text already quoted in a conversation or a downloaded report disappears with it. Consult the retention policy linked above for deletion rules and exceptions.
+
+## Troubleshooting and local-query alternative
+
+- **Upload rejected:** check the current file/context limits and try one small CSV or JSON sample first.
+- **A metric is missing:** inspect the exported date, selected metrics, source records, and authorization before asking Claude to infer a value. See [export troubleshooting](/docs/troubleshooting/).
+- **Numbers or coverage look wrong:** request source rows, units, filenames, duplicate checks, and an explicit recorded-day count. Do not accept a missing row as a measured zero.
+- **You want to query the phone instead of uploading snapshots:** the separate [local CLI/MCP workflow](/blog/query-apple-health-with-claude-or-codex/) supports scoped queries against a paired iPhone. Returned values still follow the agent's storage and model-provider settings; local transport does not make a cloud model's handling local.
+
+For the broader choice between files and agent access, see [Use Apple Health with Claude, ChatGPT and Codex](/health-data-for-ai/). For the exported columns and examples, see [Apple Health to CSV](/apple-health-to-csv/).

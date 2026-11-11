@@ -1,0 +1,20 @@
+{
+  "fictional": true,
+  "start": "2026-09-28",
+  "end": "2026-10-25",
+  "days": 28,
+  "rows": 55,
+  "steps": {
+    "count": 28,
+    "sum": 249630,
+    "average": 8915.357142857143
+  },
+  "sleep_hours": {
+    "count": 27,
+    "sum": 202.10000000000002,
+    "average": 7.485185185185186
+  },
+  "missing_sleep_dates": [
+    "2026-10-08"
+  ]
+}

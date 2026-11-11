@@ -235,6 +235,9 @@ class GeneratedExportBundleFactory private constructor(
     ): List<GeneratedExportArtifact> {
         val injection = settings.dailyNoteInjection
         if (!injection.enabled) return emptyList()
+        require(settings.executionSleepCaptureContext?.sleepDayAttribution != com.healthmd.domain.model.SleepDayAttribution.MORNING_ENDS) {
+            "Scoped Daily Notes require a profile-aware Drive merger"
+        }
         val fragment = dailyNoteInjector.buildInjectionFragment(data, injection, settings.formatCustomization)
         if (fragment.isBlank()) return emptyList()
         val dateString = settings.formatCustomization.dateFormat.format(data.date)

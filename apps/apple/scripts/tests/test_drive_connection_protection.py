@@ -356,7 +356,7 @@ class DriveConnectionProtectionTests(unittest.TestCase):
         production = production.replace("import Combine\n", "")
         coordinator = (APPLE / "HealthMd/Shared/Managers/ExportProfileCoordinator.swift").read_text()
         # Compile the exact production disconnect method with synthetic profile/schedule stores.
-        method = coordinator[coordinator.index("    func disconnectGoogleDrive("):coordinator.index("    // MARK: - Profile management")]
+        method = coordinator[coordinator.index("    func disconnectGoogleDrive("):coordinator.index("    /// Imports a newly configured Agent Data gateway", coordinator.index("    func disconnectGoogleDrive("))]
         with tempfile.TemporaryDirectory(prefix=".drive-protection-test-", dir=APPLE) as temp:
             source = Path(temp) / "Checks.swift"
             source.write_text(STUBS + production + COORDINATOR_STUBS + method + "}\n" + CHECKS)

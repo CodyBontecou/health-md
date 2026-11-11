@@ -158,7 +158,7 @@ class HistoryViewModel @Inject constructor(
                         Timber.w("Raw snapshot service unavailable while retrying export history")
                     }
                 } else when (entry.target) {
-                    ExportTarget.DEVICE_FOLDER -> ExportOrchestrator(healthRepository, exportRepository)
+                    ExportTarget.DEVICE_FOLDER -> ExportOrchestrator(healthRepository, exportRepository, rawSnapshotService)
                         .exportDates(retryDates, settings)
                         .copy(target = ExportTarget.DEVICE_FOLDER)
                     ExportTarget.API_ENDPOINT -> apiEndpointExportRunner?.exportDates(

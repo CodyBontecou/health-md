@@ -367,19 +367,15 @@
     <!-- Paywall screen -->
     <string name="paywall_title">Health.md ontgrendelen</string>
     <string name="paywall_subtitle">Je hebt je 5 gratis exports opgebruikt</string>
-    <string name="paywall_unlimited_exports">Onbeperkte exports, voor altijd</string>
+    <string name="paywall_unlimited_exports">Onbeperkte exports</string>
     <string name="paywall_scheduled_exports">Automatische geplande exports</string>
     <string name="paywall_future_features">Alle toekomstige functies inbegrepen</string>
-    <string name="paywall_one_time">Eenmalige betaling — geen abonnement</string>
-    <string name="paywall_unlock_button">Health.md ontgrendelen</string>
     <string name="paywall_restore">Aankoop herstellen</string>
 
     <!-- Export progress dialog -->
     <string name="export_progress_title">Gezondheidsgegevens worden geëxporteerd</string>
 
     <!-- Navigation labels -->
-    <string name="nav_export">Export</string>
-    <string name="nav_schedule">Planning</string>
     <string name="nav_history">Geschiedenis</string>
     <string name="nav_settings">Instellingen</string>
 
@@ -409,6 +405,7 @@
     <string name="date_format_display_iso8601" tools:ignore="TypographyDashes">ISO 8601 (2026-01-13)</string>
     <string name="date_format_display_us_short">VS kort (01/13/2026)</string>
     <string name="date_format_display_us_long">VS lang (januari 13, 2026)</string>
+    <string name="date_format_display_eu_dot">EU met punten (13.01.2026)</string>
     <string name="date_format_display_eu_short">EU kort (13/01/2026)</string>
     <string name="date_format_display_eu_long">EU lang (13 januari 2026)</string>
     <string name="date_format_display_compact">Compact (20260113)</string>
@@ -516,7 +513,6 @@
     <string name="debug_requires_history_permission">Bereik heeft geschiedenis nodig</string>
     <string name="debug_first_permission_grant">Eerste toestemming verleend</string>
     <string name="section_health_sources">Gezondheidsbronnen</string>
-    <string name="health_sources_description">Health Connect is de lokale exportbron. Health.md kan gegevens exporteren die ondersteunde apps naar Health Connect schrijven.</string>
     <string name="health_provider_status_installed">Geïnstalleerd</string>
     <string name="health_provider_status_selected">Geselecteerd</string>
     <string name="health_provider_status_ready_to_connect">Klaar om te verbinden</string>
@@ -534,6 +530,21 @@
     <string name="feedback_no_app_available">Geen app beschikbaar om deze link te openen</string>
     <string name="granular_data_title">Gedetailleerde tijdreeksen opnemen</string>
     <string name="granular_data_description">Voeg meetwaarden met tijdstempel, zoals hartslag en slaapfasen, toe aan compatibiliteitsexports. Gebruik de ruwe API-snapshot voor een API-volledige kopie.</string>
+    <string name="detail_overrides_title">Detail per categorie</string>
+    <string name="detail_overrides_description">Overschrijf de standaard voor afzonderlijke categorieën. Samenvatting bewaart alleen dagtotalen; dagelijkse samenvattingen veranderen nooit.</string>
+    <string name="detail_choice_default">Standaard</string>
+    <string name="detail_choice_summary">Samenvatting</string>
+    <string name="detail_choice_sessions">Sessies</string>
+    <string name="detail_choice_detailed">Gedetailleerd</string>
+    <string name="detail_group_sleep_hint">Sessies toont elke slaapsessie met volledige datum en tijd. Gedetailleerd voegt slaapfasen toe.</string>
+    <string name="detail_expansion_schema_hint">Gedetailleerd voor Activiteit, Voeding of Lichaam voegt elk bronrecord toe en zet analytische JSON-, CSV- en Markdown-exports om naar schema 7.</string>
+    <string name="sleep_attribution_title">Toewijzing slaapdag</string>
+    <string name="sleep_attribution_night_begins">Nacht begint</string>
+    <string name="sleep_attribution_morning_ends">Ochtend eindigt</string>
+    <string name="sleep_attribution_night_begins_description">Slaap gebruikt het venster van middag tot middag van de dagnotitie. Dit is de standaard en komt overeen met eerdere exports.</string>
+    <string name="sleep_attribution_morning_ends_description">Ochtend eindigt is niet beschikbaar voor de huidige exportprofielen. Kies Nacht begint voor een nieuwe export.</string>
+    <string name="sleep_attribution_morning_ends_wake_description">Wijst de hele slaapsessie toe aan de datum waarop je wakker wordt, in de tijdzone van de export.</string>
+
     <string name="metric_category_cycling">Fietsen</string>
     <string name="metric_category_medications">Medicijnen</string>
     <string name="metric_category_other">Overig</string>
@@ -636,17 +647,11 @@
     <string name="scheduled_recovery_result_complete">Herstel van geplande exports voltooid.</string>
     <string name="scheduled_recovery_result_blocked">Herstel van geplande exports is nog niet mogelijk.</string>
     <string name="not_now">Nu niet</string>
-    <string name="release_notes_title">Wat is er nieuw in %s</string>
-    <string name="release_notes_settings_hint">Je kunt exportindelingen, aangepaste Markdown en metingen aanpassen via Instellingen.</string>
-    <string name="release_notes_open_settings">Instellingen openen</string>
-    <string name="release_notes_got_it">Begrepen</string>
     <string name="release_notes_highlight_feedback">Direct CLI-sessies maken automatisch opnieuw verbinding na korte desktoponderbrekingen, zodat exports betrouwbaar voltooid worden.</string>
     <string name="release_notes_highlight_export_parity">Wake-window-opdrachten op de desktop wachten tot 120 seconden tot je de app opent en verbindt, zonder pushmeldingen.</string>
     <string name="release_notes_highlight_templates">Handmatig koppelen met adres, poort en 20-cijferige code werkt nog steeds, ook met oudere CLI-versies.</string>
     <string name="release_notes_highlight_workouts">Bevat betrouwbaarheids- en compatibiliteitsoplossingen voor configuratie, exports, planningen en verbindingen.</string>
     <string name="export_notification_background_permission_required">Geplande exports hebben achtergrondtoegang voor Health Connect nodig. Open Health.md &gt; Planning om dit in te schakelen.</string>
-    <string name="paywall_unlock_button_price">Ontgrendel voor %s</string>
-    <string name="paywall_purchasing">Verwerken\u2026</string>
     <string name="paywall_restoring">Herstellen\u2026</string>
     <string name="debug_purchase_title">Debug-opties</string>
     <string name="debug_current_state">Huidige status: %s</string>
@@ -699,7 +704,7 @@
     <string name="privacy_category_history_permissions">READ_HEALTH_DATA_HISTORY</string>
     <string name="privacy_category_history_exports">Wordt alleen gebruikt voor grote handmatige exports, zoals 90 dagen of de volledige geschiedenis, zodat Health.md Health Connect-data kan lezen die ouder is dan het standaardvenster van 30 dagen</string>
     <string name="privacy_policy_direct_cli">Direct CLI-exports vinden alleen plaats nadat je expliciet hebt gekoppeld met en verbinding hebt gemaakt met je computer. Gezondheidsgegevens worden verzonden via een geauthenticeerde, versleutelde verbinding, maximaal zeven dagen privé bewaard om de overdracht te kunnen hervatten en eerder verwijderd wanneer je annuleert of de koppeling verwijdert.</string>
-    <string name="privacy_policy_footer">Health.md beheert geen cloud voor gezondheidsdata. Campagneattributie van de app zelf kan willekeurige, door de app gegenereerde installatie-/gebeurtenis-UUID\'s en gevalideerde campagnemetadata verzenden, maar nooit gezondheidsdata, onbewerkte referrergegevens, apparaat-ID\'s, exports, accounts of paden.</string>
+    <string name="privacy_policy_footer">Deze versie verzamelt geen eigen gebruiksanalyses of advertentietoewijzing. Voor aankopen, planning en optionele diensten gelden aparte privacyverklaringen.</string>
     <string name="section_export_type">Exporttype</string>
     <string name="export_type_compatibility">Compatibiliteitsexport</string>
     <string name="export_type_compatibility_description">Dagelijkse Markdown-, Bases-, JSON- of CSV-bestanden voor bestaande Health.md-workflows</string>
@@ -769,7 +774,7 @@
     <string name="onboarding_skip">Overslaan</string>
     <string name="onboarding_back">Terug</string>
     <string name="export_failure_paywall_label">Ontgrendeling vereist</string>
-    <string name="export_guidance_paywall">Geplande exports vereisen de levenslange ontgrendeling. Open het betaalscherm om onbeperkt te exporteren en exports te plannen.</string>
+    <string name="export_guidance_paywall">Geplande exports vereisen een actieve proefperiode of een actief abonnement, of levenslange toegang. Open het betaalscherm om de toegangsopties te bekijken.</string>
     <string name="export_source_retry">Opnieuw proberen</string>
     <string name="export_source_shortcut">Snelkoppeling</string>
     <string name="export_source_remote">Extern</string>
@@ -1075,6 +1080,8 @@
     <string name="export_preview_api_preparation_failed">Voorbereiding van API-export mislukt.</string>
     <string name="export_preview_artifacts_per_range">Artefacten per bereik</string>
     <string name="export_preview_back_description">Terug naar exportvoorbeeld</string>
+    <string name="export_preview_wrap_lines">Regels laten teruglopen</string>
+    <string name="export_preview_format_text">Tekst opmaken</string>
     <string name="export_preview_destination_label">Bestemming</string>
     <string name="export_preview_empty_file">(leeg bestand)</string>
     <string name="export_preview_formats_per_day">Formaten per dag</string>
@@ -1473,4 +1480,43 @@
     <string name="post_export_upgrade_action">Levenslange toegang bekijken</string>
     <string name="post_export_manual_action">Handmatig blijven exporteren</string>
     <string name="post_export_continue_free">Gratis doorgaan</string>
+    <string name="export_sleep_date_guidance">Slaap loopt van twaalf uur ’s middags op elke gekozen datum tot twaalf uur ’s middags de volgende dag. Kies Gisteren voor de slaap van afgelopen nacht.</string>
+    <string name="export_sleep_preview_window">Slaapvenster: %1$s om twaalf uur ’s middags tot %2$s om twaalf uur ’s middags (%3$s).</string>
+    <string name="export_sleep_preview_guidance">Ontbreekt slaap? Probeer de vorige datum. Ochtendslaap kan in die samenvatting staan, ook als de ruwe records van vandaag zijn. Queryfouten worden apart vermeld; een leeg resultaat kan ook betekenen dat leestoegang ontbreekt.</string>
+    <string name="export_sleep_date_guidance_morning_ends">Volledige slaapsessies horen bij de datum waarop ze eindigen in de tijdzone van de export. Kies Vandaag voor de slaap van afgelopen nacht.</string>
+    <string name="export_sleep_preview_window_morning_ends">Einddatums van slaap: %1$s tot %2$s (%3$s).</string>
+    <string name="export_sleep_preview_guidance_morning_ends">Volledige slaapsessies horen bij hun einddatum in de tijdzone van deze export, zonder afkapping om 12:00. Queryfouten worden apart vermeld; een leeg resultaat kan ook betekenen dat leestoegang ontbreekt.</string>
+    <string name="whoop_connection_description">Verbind WHOOP om herstel, belasting, slaap, trainingen en lichaamsmetingen te exporteren. Aanmelden gebeurt in je browser; Health.md bewaart tokens versleuteld op dit apparaat. Verbreken verwijdert de opgeslagen verbinding op dit apparaat.</string>
+    <string name="whoop_connect">WHOOP verbinden</string>
+    <string name="whoop_sources_description">Verbind WHOOP voor rechtstreekse providerexports of blijf Health Connect gebruiken voor lokale records.</string>
+    <string name="whoop_sign_in_failed">Aanmelden bij WHOOP kon niet worden gestart. Controleer je verbinding en probeer het opnieuw.</string>
+    <string name="whoop_use_health_connect">Health Connect gebruiken voor exports</string>
+    <string name="whoop_reconnect">WHOOP opnieuw verbinden</string>
+    <string name="whoop_disconnect">WHOOP-verbinding verbreken</string>
+    <string name="whoop_use_for_exports">WHOOP gebruiken voor exports</string>
+    <string name="paywall_access_subtitle">Kies een abonnement of levenslange toegang om je privégezondheidsarchief te beginnen. In aanmerking komende abonnementen bevatten een gratis proefperiode van 7 dagen.</string>
+    <string name="paywall_plan_choices">Wekelijkse, jaarlijkse of levenslange toegang</string>
+    <string name="paywall_weekly_price">%1$s / week</string>
+    <string name="paywall_yearly_price">%1$s / jaar</string>
+    <string name="paywall_lifetime_price">Levenslang — eenmalig %1$s</string>
+    <string name="paywall_trial_then">7 dagen gratis, daarna %1$s</string>
+    <string name="paywall_retry">Opnieuw proberen</string>
+    <string name="paywall_manage_subscriptions">Abonnementen beheren</string>
+    <string name="paywall_terms">Voorwaarden</string>
+    <string name="paywall_privacy">Privacy</string>
+    <string name="paywall_subscription_disclosure">In aanmerking komende abonnementen bevatten een gratis proefperiode van 7 dagen en worden daarna automatisch verlengd tegen de getoonde prijs, tenzij je opzegt voordat de proefperiode of huidige periode eindigt. Beheer of annuleer in Google Play. Levenslange toegang wordt direct als eenmalige aankoop in rekening gebracht. Bestaande betaalde toegang blijft behouden. Levenslang kent geen proces. Het verwijderen van de app of het kopen van Lifetime annuleert een bestaand abonnement niet.</string>
+    <plurals name="widget_archive_gaps">
+        <item quantity="one">%1$s hiaat</item>
+        <item quantity="other">%1$s hiaten</item>
+    </plurals>
+    <plurals name="widget_archive_days_in_month">
+        <item quantity="one">dag in %1$s</item>
+        <item quantity="other">dagen in %1$s</item>
+    </plurals>
+
+    <string name="clinic_sync_channel_name">Synchronisatieverzoeken van de kliniek</string>
+    <string name="clinic_sync_request_body">Je kliniek vraagt om je nieuwste gezondheidsgegevens. Tik om ze te versturen.</string>
+    <string name="clinic_sync_result_sent">Je nieuwste gegevens zijn naar je kliniek verstuurd.</string>
+    <string name="clinic_sync_result_failed">Je gegevens konden niet naar je kliniek worden verstuurd. Open Health.md en probeer het opnieuw.</string>
+    <string name="clinic_sync_result_profile_missing">Open Klinische toegang in Health.md en kies eerst Klinische bestemming gebruiken.</string>
 </resources>

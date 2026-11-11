@@ -1,6 +1,6 @@
 # CI Quality Gates
 
-This runbook explains how to investigate the Apple gates. Their scripts, configuration, and workflow files own the current thresholds, warning patterns, runner versions, job graph, and schedule; those values are not copied here.
+This runbook explains the opt-in Apple diagnostic gates. Their scripts and configuration own the current thresholds and warning patterns. They are not mandatory PR or nightly checks; the [portable CI strategy](../../../../docs/qa/two-minute-ci.md) owns the default regression suite.
 
 Run the commands below from `apps/apple`. The repository-root [verification policy](../../../../AGENTS.md#verification-policy) still applies: a workflow or linked runbook does not authorize local simulator/device QA. Use the root [test selection guide](../../../../docs/testing-strategy.md) for focused iteration and build reuse; these gates are not a per-edit checklist.
 
@@ -54,8 +54,8 @@ The [APNs runbook](apns-scheduling-preflight.md) owns fixture setup and focused 
 
 ## Workflow ownership and troubleshooting
 
-- [Apple PR/main CI](../../../../.github/workflows/apple-ci.yml) owns its job selection, commands, artifacts, and runner configuration.
-- [Apple nightly CI](../../../../.github/workflows/apple-nightly.yml) owns extended checks and its schedule.
+- [Apple CI](../../../../.github/workflows/apple-ci.yml) delegates to the repository's [portable CI](../../../../.github/workflows/ci.yml), which owns regression commands, receipts, deadlines, and runner configuration.
+- The former Apple nightly workflow is retired. Native compilation uses the [integration queue](../../../../docs/testing-strategy.md#native-integration); native tests and coverage remain explicit diagnostics.
 - The [workflow index](../../../../.github/workflows/README.md) explains repository-wide boundaries.
 
 Inspect the failing script, current configuration, and the exact run's logs/results before changing a gate. Check missing tools, malformed JSON, missing build output, and mismatched coverage/log paths first. Workflow summaries and archived measurements are receipts for specific runs, not current test counts or release approval.

@@ -22,6 +22,8 @@ export function nonceRetentionCutoff(nowSec: number, retentionSec: number = NONC
 export const USER_ID_RE = /^[A-Za-z0-9_-]{16,64}$/;
 export const WAKE_ID_RE = /^[A-Za-z0-9_-]{8,128}$/;
 export const APNS_TOKEN_RE = /^[A-Fa-f0-9]{32,200}$/;
+/** FCM registration token: opaque, URL-safe with ':' separators. */
+export const FCM_TOKEN_RE = /^[A-Za-z0-9_:.-]{32,4096}$/;
 /** SHA-256 verification hash: exactly 64 lowercase hex chars. */
 export const VERIFICATION_HASH_RE = /^[0-9a-f]{64}$/;
 /** Request HMAC: exactly 64 lowercase hex chars. */
@@ -29,7 +31,7 @@ export const HMAC_RE = /^[0-9a-f]{64}$/;
 /** Nonce: ≥128 bits, lowercase hex. */
 export const NONCE_RE = /^[0-9a-f]{32,128}$/;
 
-export const FALLBACK_NOTIFICATION_BODY = "A paired computer is requesting data. Tap to continue.";
+export const FALLBACK_NOTIFICATION_BODY = "Your CLI is waiting. Open Health.md to continue.";
 export const NOTIFICATION_TITLE = "Health.md";
 export const NOTIFICATION_CATEGORY = "HEALTHMD_DIRECT_WAKE";
 export const PEER_LABEL_MAX_BYTES = 128;
@@ -111,7 +113,7 @@ export function sanitizePeerLabel(value: unknown): string | null {
 }
 
 export function notificationBody(peerLabel: string | null): string {
-  return peerLabel ? `${peerLabel} is requesting data. Tap to continue.` : FALLBACK_NOTIFICATION_BODY;
+  return peerLabel ? `Your CLI is waiting. Open Health.md to continue on ${peerLabel}.` : FALLBACK_NOTIFICATION_BODY;
 }
 
 export function notificationPayload(peerLabel: string | null): Record<string, unknown> {
@@ -123,6 +125,76 @@ export function notificationPayload(peerLabel: string | null): Record<string, un
     },
     healthmd: { kind: "direct-cli-wake" },
   };
+}
+
+/**
+ * Push transport and doorbell purpose of one registration.
+ *
+ * `delegated-sync` doorbells are held by a third party the phone delivered the
+ * key to (for example a sponsoring clinic's server). The worker deliberately
+ * learns nothing about that holder: no name, endpoint, or membership. Copy is
+ * a fixed localized string resolved on the phone, so the holder can never put
+ * text in front of the patient.
+ */
+export type WakePlatform = "apns" | "fcm";
+export type WakePurpose = "direct-cli" | "delegated-sync";
+
+export const SYNC_REQUEST_CATEGORY = "HEALTHMD_SYNC_REQUEST";
+export const SYNC_REQUEST_TITLE_LOC_KEY = "HEALTHMD_SYNC_REQUEST_TITLE";
+export const SYNC_REQUEST_BODY_LOC_KEY = "HEALTHMD_SYNC_REQUEST_BODY";
+export const SYNC_REQUEST_KIND = "delegated-sync-request";
+
+export type RegistrationTarget =
+  | { ok: true; platform: WakePlatform; purpose: WakePurpose }
+  | { ok: false; error: string };
+
+/** Validate the transport/purpose pair and the device token's shape for it. */
+export function parseRegistrationTarget(
+  platform: unknown,
+  purpose: unknown,
+  deviceToken: unknown,
+): RegistrationTarget {
+  const resolvedPlatform = platform === undefined ? "apns" : platform;
+  const resolvedPurpose = purpose === undefined ? "direct-cli" : purpose;
+  if (resolvedPlatform !== "apns" && resolvedPlatform !== "fcm") {
+    return { ok: false, error: "Invalid platform" };
+  }
+  if (resolvedPurpose !== "direct-cli" && resolvedPurpose !== "delegated-sync") {
+    return { ok: false, error: "Invalid purpose" };
+  }
+  // Android Direct CLI wake is RFC-0005 P3 and remains planned.
+  if (resolvedPlatform === "fcm" && resolvedPurpose === "direct-cli") {
+    return { ok: false, error: "Unsupported purpose for platform" };
+  }
+  const tokenRe = resolvedPlatform === "apns" ? APNS_TOKEN_RE : FCM_TOKEN_RE;
+  if (typeof deviceToken !== "string" || !tokenRe.test(deviceToken)) {
+    return { ok: false, error: "Invalid deviceToken" };
+  }
+  return { ok: true, platform: resolvedPlatform, purpose: resolvedPurpose };
+}
+
+/** Visible APNs alert for a delegated sync request; copy is localized on device. */
+export function syncRequestApnsPayload(wakeId: string): Record<string, unknown> {
+  return {
+    aps: {
+      alert: {
+        "title-loc-key": SYNC_REQUEST_TITLE_LOC_KEY,
+        "loc-key": SYNC_REQUEST_BODY_LOC_KEY,
+      },
+      sound: "default",
+      category: SYNC_REQUEST_CATEGORY,
+    },
+    healthmd: { kind: SYNC_REQUEST_KIND, wakeId },
+  };
+}
+
+/**
+ * FCM data message for a delegated sync request. The app always posts the
+ * visible notification itself (localized copy, tap intent), so high priority
+ * is never spent on an invisible wake.
+ */
+export function syncRequestFcmData(wakeId: string): Record<string, string> {
+  return { kind: SYNC_REQUEST_KIND, wakeId };
 }
 
 /** Generate an opaque, unguessable wake id (128 bits, hex). */

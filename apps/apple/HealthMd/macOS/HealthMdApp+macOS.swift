@@ -283,6 +283,7 @@ struct HealthMdApp: App {
     @StateObject private var iphoneExportRequestCoordinator = MacIPhoneExportRequestCoordinator()
     @StateObject private var contextAutomationCoordinator = MacContextAutomationCoordinator()
     @StateObject private var controlServer = HealthMdControlServer()
+    @AppStorage(MacPresentationPreferences.showsMenuBarExtraKey) private var showsMenuBarExtra = true
     private let macExportJobExecutor = MacExportJobExecutor()
     private let encryptedHealthContextStore: EncryptedHealthContextStore
     private let encryptedHealthContextQueryExecutor: EncryptedHealthContextQueryExecutor
@@ -296,6 +297,7 @@ struct HealthMdApp: App {
     )
 
     init() {
+        RetiredAnalyticsCleanup.run()
         LegacyLocalAgentArtifactCleanup.runIfNeeded()
         let contextStore = EncryptedHealthContextStore()
         encryptedHealthContextStore = contextStore
@@ -327,10 +329,11 @@ struct HealthMdApp: App {
                 .environmentObject(syncService)
                 .environmentObject(healthDataStore)
                 .environmentObject(encryptedHealthContextManager)
-                .frame(minWidth: 1_100, minHeight: 680)
+                .environmentObject(controlServer)
+                .frame(minWidth: 1_100, minHeight: Self.mainWindowMinHeight)
                 .tint(Color.accent)
                 #if DEBUG
-                .preferredColorScheme(MacMarketingCapture.isActive ? .light : nil)
+                .preferredColorScheme(MacMarketingCapture.isActive ? MacMarketingCapture.colorScheme : nil)
                 #endif
                 .task {
                     #if DEBUG
@@ -339,6 +342,8 @@ struct HealthMdApp: App {
                             syncService: syncService,
                             vaultManager: vaultManager
                         )
+                        // The CLI pane reports the real localhost server, so run it for the capture.
+                        setupControlServer()
                         await MacMarketingCapture.captureWindowAndTerminate(
                             syncService: syncService,
                             vaultManager: vaultManager
@@ -389,9 +394,15 @@ struct HealthMdApp: App {
         .commands {
             CommandGroup(replacing: .newItem) { }
             MainWindowCommands()
+            MacHelpCommands()
         }
 
-        MenuBarExtra("Health.md", systemImage: "heart.text.square") {
+        Window(String(localized: "CLI & MCP Reference"), id: MacCLIReferenceView.windowID) {
+            MacCLIReferenceView()
+        }
+        .defaultSize(width: 760, height: 760)
+
+        MenuBarExtra("Health.md", systemImage: "heart.text.square", isInserted: $showsMenuBarExtra) {
             MacMenuBarView()
                 .environmentObject(schedulingManager)
                 .environmentObject(vaultManager)
@@ -410,6 +421,7 @@ struct HealthMdApp: App {
                 .environmentObject(syncService)
                 .environmentObject(healthDataStore)
                 .environmentObject(encryptedHealthContextManager)
+                .environmentObject(controlServer)
                 .tint(Color.accent)
         }
     }
@@ -1271,6 +1283,15 @@ struct HealthMdApp: App {
         guard let date = formatter.date(from: value),
               formatter.string(from: date) == value else { return nil }
         return date
+    }
+
+    /// The App Store capture sizes the whole window to 720 pt, title bar and toolbar included,
+    /// so its content must be allowed below the normal minimum.
+    private static var mainWindowMinHeight: CGFloat {
+        #if DEBUG
+        if MacMarketingCapture.isActive { return 600 }
+        #endif
+        return 680
     }
 
     private func setupControlServer() {

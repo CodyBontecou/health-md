@@ -213,13 +213,13 @@ private struct RecoveryWidgetView: View {
         case .accessoryCircular:
             RecoveryCircularView(snapshot: entry.snapshot)
         case .accessoryInline:
-            Label("Sleep \(WatchHealthFormatter.hours(entry.snapshot.sleepHours)) · HRV \(WatchHealthFormatter.milliseconds(entry.snapshot.heartRateVariabilityMS))", systemImage: "bed.double.fill")
+            Label("Sleep \(WatchHealthFormatter.hours(entry.snapshot.sleepHours)) · HRV \(WatchHealthFormatter.wholeNumber(entry.snapshot.heartRateVariabilityMS))", systemImage: "bed.double.fill")
         #if os(watchOS)
         case .accessoryCorner:
             RecoveryCornerView(snapshot: entry.snapshot)
         #endif
         default:
-            RecoveryRectangularView(snapshot: entry.snapshot)
+            GlassRecoveryRectangularView(snapshot: entry.snapshot)
         }
     }
 }
@@ -610,27 +610,29 @@ private struct ActivityRectangularView: View {
     }
 }
 
-private struct RecoveryRectangularView: View {
+/// WatchComplicationG: the 26 pt crystal heart beside a title over one summary line.
+private struct GlassRecoveryRectangularView: View {
     let snapshot: WatchHealthSnapshot
 
     var body: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "heart.text.square.fill")
-                .font(.title2)
-                .foregroundStyle(.red.gradient)
-                .frame(width: 38, height: 38)
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Recovery")
-                    .font(.headline)
+        HStack(spacing: 10) {
+            Image("HealthCrystalHeart")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 26, height: 26)
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 0) {
+                Text("RECOVERY")
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundStyle(Color(red: 0xCD / 255, green: 0xB6 / 255, blue: 0xFF / 255))
                     .widgetAccentable()
-                MetricLine(icon: "bed.double.fill", text: "\(WatchHealthFormatter.hours(snapshot.sleepHours)) sleep")
-                MetricLine(icon: "heart.fill", text: WatchHealthFormatter.bpm(snapshot.restingHeartRate))
-                MetricLine(icon: "waveform.path.ecg", text: "HRV \(WatchHealthFormatter.milliseconds(snapshot.heartRateVariabilityMS))")
+                Text("Sleep \(WatchHealthFormatter.hours(snapshot.sleepHours)) · HRV \(WatchHealthFormatter.wholeNumber(snapshot.heartRateVariabilityMS))")
+                    .font(.system(size: 15, weight: .bold))
+                    .minimumScaleFactor(0.7)
+                    .lineLimit(1)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .minimumScaleFactor(0.75)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .containerBackground(Color.black.opacity(0.12), for: .widget)
     }
 }

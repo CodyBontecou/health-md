@@ -8,7 +8,8 @@
   "field_kinds": [
     "stored",
     "encoded_only",
-    "decode_only"
+    "decode_only",
+    "stored_only"
   ],
   "dispositions": [
     "portable",
@@ -262,15 +263,6 @@
       "disposition": "prohibited",
       "contract_path": null,
       "reason": "This UUID is a native bookmark-row binding, never portable destination intent."
-    },
-    {
-      "source_type": "ExportProfile",
-      "field": "googleDriveDestinationID",
-      "field_kind": "stored",
-      "serialized_key": "googleDriveDestinationID",
-      "disposition": "prohibited",
-      "contract_path": null,
-      "reason": "The local Drive destination UUID binds device-only Google authority; only inert cloud intent may be shared, never this identity."
     },
     {
       "source_type": "ExportProfile",
@@ -760,6 +752,15 @@
     },
     {
       "source_type": "MarkdownTemplateConfig",
+      "field": "includeWorkoutDetailsAndMetadata",
+      "field_kind": "stored",
+      "serialized_key": "includeWorkoutDetailsAndMetadata",
+      "disposition": "local_only",
+      "contract_path": null,
+      "reason": "The staged workout table presentation setting is preserved in native profiles and frozen Mac jobs, but is not an allowlisted Shared Setup v2 field. Shared Setup imports keep the default enabled; portable adoption requires the Android presentation convergence target and an explicit contract review."
+    },
+    {
+      "source_type": "MarkdownTemplateConfig",
       "field": "sectionHeaderLevel",
       "field_kind": "stored",
       "serialized_key": "sectionHeaderLevel",
@@ -1066,33 +1067,6 @@
     },
     {
       "source_type": "ScheduledExportEntry",
-      "field": "todayRefreshIntervalMinutes",
-      "field_kind": "stored",
-      "serialized_key": "todayRefreshIntervalMinutes",
-      "disposition": "prohibited",
-      "contract_path": null,
-      "reason": "Local minute-cadence persistence v2 is not representable by frozen Shared Setup v2; the writer rejects minute schedules instead of rounding or omitting their intent."
-    },
-    {
-      "source_type": "ScheduledExportEntry",
-      "field": "todayRefreshPersistenceVersion",
-      "field_kind": "encoded_only",
-      "serialized_key": "todayRefreshPersistenceVersion",
-      "disposition": "prohibited",
-      "contract_path": null,
-      "reason": "Local minute-cadence persistence v2 is not representable by frozen Shared Setup v2; the writer rejects minute schedules instead of rounding or omitting their intent."
-    },
-    {
-      "source_type": "ScheduledExportEntry",
-      "field": "todayRefreshRequestedV2",
-      "field_kind": "encoded_only",
-      "serialized_key": "todayRefreshRequestedV2",
-      "disposition": "prohibited",
-      "contract_path": null,
-      "reason": "Local minute-cadence persistence v2 is not representable by frozen Shared Setup v2; the writer rejects minute schedules instead of rounding or omitting their intent."
-    },
-    {
-      "source_type": "ScheduledExportEntry",
       "field": "weekday",
       "field_kind": "stored",
       "serialized_key": "weekday",
@@ -1117,7 +1091,51 @@
       "disposition": "prohibited",
       "contract_path": null,
       "reason": "Volume identity evidence is device-bound and forbidden."
+    },
+    {
+      "source_type": "ScheduledExportEntry",
+      "field": "todayRefreshIntervalMinutes",
+      "field_kind": "stored",
+      "serialized_key": "todayRefreshIntervalMinutes",
+      "disposition": "prohibited",
+      "contract_path": null,
+      "reason": "Local minute-cadence persistence v2 is not representable by frozen Shared Setup v2; the writer rejects minute schedules instead of rounding or omitting their intent."
+    },
+    {
+      "source_type": "ScheduledExportEntry",
+      "field": "todayRefreshRequestedV2",
+      "field_kind": "encoded_only",
+      "serialized_key": "todayRefreshRequestedV2",
+      "disposition": "prohibited",
+      "contract_path": null,
+      "reason": "Local minute-cadence persistence v2 is not representable by frozen Shared Setup v2; the writer rejects minute schedules instead of rounding or omitting their intent."
+    },
+    {
+      "source_type": "ScheduledExportEntry",
+      "field": "todayRefreshPersistenceVersion",
+      "field_kind": "encoded_only",
+      "serialized_key": "todayRefreshPersistenceVersion",
+      "disposition": "prohibited",
+      "contract_path": null,
+      "reason": "Local minute-cadence persistence v2 is not representable by frozen Shared Setup v2; the writer rejects minute schedules instead of rounding or omitting their intent."
+    },
+    {
+      "source_type": "ExportSettingsSnapshot",
+      "field": "historicalCalendarRollupPeriods",
+      "field_kind": "stored_only",
+      "serialized_key": null,
+      "disposition": "prohibited",
+      "contract_path": null,
+      "reason": "Decoded pending-operation calendar authority is local recovery state. It has no new wire key; only known v7 jobs re-encode the existing historical calendar keys. New preferences and Shared Setup must never acquire it."
+    },
+    {
+      "source_type": "MetricSelectionSnapshot",
+      "field": "nativeDetailMetricIDs",
+      "field_kind": "stored",
+      "serialized_key": "nativeDetailMetricIDs",
+      "disposition": "local_only",
+      "contract_path": null,
+      "reason": "Per-metric native source detail requests are preserved in native profiles and frozen jobs (encoded only when non-empty) but are not an allowlisted Shared Setup v2 field. Shared Setup imports keep none, reproducing the historical policy; portable adoption requires an explicit contract review."
     }
-  ],
-  "audited_git_base": "1f0581c5e4676587a4a81634642d872891276c77"
+  ]
 }

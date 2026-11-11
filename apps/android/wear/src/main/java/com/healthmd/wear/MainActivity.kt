@@ -14,6 +14,7 @@ import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.LocalFireDepartment
 import androidx.compose.material.icons.rounded.MonitorHeart
 import androidx.compose.material.icons.rounded.Bedtime
+import androidx.compose.material.icons.rounded.Smartphone
 import androidx.compose.material.icons.rounded.Timer
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -151,30 +152,96 @@ private data class MetricRow(val label: String, val value: String, val icon: Ima
         verticalArrangement = Arrangement.spacedBy(WearSpacing.sm),
         contentPadding = PaddingValues(vertical = WearSpacing.lg),
     ) {
-        item { ListHeader { Text(stringResource(R.string.wear_dashboard_title), fontSize = WearType.title) } }
+        item { ListHeader { Text(stringResource(R.string.wear_dashboard_title), fontSize = WearType.title, fontWeight = FontWeight.SemiBold) } }
         if (snapshot?.permissionState == WearPermissionState.PERMISSION_REQUIRED) {
             item { StatusText(R.string.wear_permissions, WearColors.warning) }
         }
+        val staleAge = snapshot?.takeIf { freshness == WearFreshness.STALE || refreshFailed }
+            ?.let { relativeAge(context, it.capturedAtEpochMillis, now) }
+        val requestSync = {
+            syncing = true; refreshFailed = false
+            scope.launch { refreshFailed = !WearRefreshClient(context).requestRefresh(); syncing = false }
+            Unit
+        }
+        // Phone unreachable: lead with the failure and the retry; last saved values stay below.
+        if (refreshFailed) {
+            item { StatusBadge(Icons.Rounded.Smartphone, WearColors.surface, WearColors.warning) }
+            item { StatusText(R.string.wear_unreachable, WearColors.warning) }
+            staleAge?.let { age -> item { Caption(age, WearColors.muted) } }
+            item { SyncChip(syncing, requestSync) }
+        }
         when {
             versionMismatch || orderingCorrupt -> item { StatusText(R.string.wear_version_mismatch, WearColors.warning) }
-            snapshot == null -> item { StatusText(R.string.wear_setup) }
+            snapshot == null -> {
+                if (!refreshFailed) item { StatusBadge(Icons.Rounded.Smartphone, WearColors.primaryContainer, WearColors.onPrimaryContainer) }
+                item { StatusText(R.string.wear_setup) }
+            }
             snapshot?.permissionState == WearPermissionState.HEALTH_CONNECT_UNAVAILABLE -> item { StatusText(R.string.wear_health_connect_unavailable, WearColors.warning) }
             freshness == WearFreshness.EXPIRED -> item { StatusText(R.string.wear_expired, WearColors.warning) }
             freshness == WearFreshness.VERSION_MISMATCH -> item { StatusText(R.string.wear_version_mismatch, WearColors.warning) }
             metrics.isEmpty() -> item { StatusText(R.string.wear_no_data) }
             else -> {
-                if (freshness == WearFreshness.STALE) item { Text(relativeAge(context, snapshot!!.capturedAtEpochMillis, now), color = WearColors.warning, fontSize = WearType.caption) }
+                // A stale snapshot states its age above the values instead of the "not real-time" note.
+                if (freshness == WearFreshness.STALE && !refreshFailed) item { Caption(staleAge.orEmpty(), WearColors.warning) }
                 items(metrics) { metric -> MetricRowCard(metric) }
-                item { Text(stringResource(R.string.wear_not_realtime), color = WearColors.muted, fontSize = WearType.caption) }
+                if (freshness != WearFreshness.STALE) item { Caption(stringResource(R.string.wear_not_realtime), WearColors.muted) }
             }
         }
-        if (refreshFailed) item { StatusText(R.string.wear_unreachable, WearColors.warning) }
-        item { Button(onClick = {
-            syncing = true; refreshFailed = false
-            scope.launch { refreshFailed = !WearRefreshClient(context).requestRefresh(); syncing = false }
-        }, enabled = !syncing) { Text(if (syncing) stringResource(R.string.wear_syncing) else stringResource(R.string.wear_sync), fontSize = WearType.caption) } }
+        if (!refreshFailed) {
+            if (syncing) item {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(WearSize.icon),
+                    indicatorColor = WearColors.primary,
+                    trackColor = WearColors.surface,
+                    strokeWidth = WearSpacing.xs,
+                )
+            }
+            item { SyncChip(syncing, requestSync) }
+        }
     }
 }
+
+/** Primary pill action; while a request is in flight it shows the disabled tonal container. */
+@Composable private fun SyncChip(syncing: Boolean, onClick: () -> Unit) {
+    Chip(
+        onClick = onClick,
+        enabled = !syncing,
+        label = {
+            Text(
+                stringResource(if (syncing) R.string.wear_syncing else R.string.wear_sync),
+                fontSize = WearType.body,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 2,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        },
+        colors = ChipDefaults.chipColors(
+            backgroundColor = WearColors.primary,
+            contentColor = WearColors.onPrimary,
+            secondaryContentColor = WearColors.onPrimary,
+            iconColor = WearColors.onPrimary,
+            disabledBackgroundColor = WearColors.surfaceHigh,
+            disabledContentColor = WearColors.muted,
+            disabledSecondaryContentColor = WearColors.muted,
+            disabledIconColor = WearColors.muted,
+        ),
+        shape = WearShape.full,
+    )
+}
+
+/** Circular glyph badge that heads a status message (setup needed, phone unreachable). */
+@Composable private fun StatusBadge(icon: ImageVector, container: Color, tint: Color) {
+    Box(
+        modifier = Modifier.size(WearSize.badge).background(container, WearShape.full),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(WearSize.badgeIcon))
+    }
+}
+
+@Composable private fun Caption(text: String, color: Color) =
+    Text(text, color = color, fontSize = WearType.caption, textAlign = TextAlign.Center)
 
 @Composable private fun MetricRowCard(metric: MetricRow) {
     Row(
@@ -185,7 +252,7 @@ private data class MetricRow(val label: String, val value: String, val icon: Ima
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(WearSpacing.sm),
     ) {
-        Icon(metric.icon, contentDescription = null, tint = metric.tint, modifier = Modifier.size(WearSpacing.xl))
+        Icon(metric.icon, contentDescription = null, tint = metric.tint, modifier = Modifier.size(WearSize.icon))
         Text(metric.label, color = WearColors.muted, fontSize = WearType.body, modifier = Modifier.weight(1f), maxLines = 1)
         // Semibold tabular figures keep values aligned and emphasized, mirroring the watchOS row.
         Text(
@@ -200,7 +267,8 @@ private data class MetricRow(val label: String, val value: String, val icon: Ima
     }
 }
 
-@Composable private fun StatusText(id: Int, color: Color = WearColors.muted) = Text(stringResource(id), color = color, fontSize = WearType.body)
+@Composable private fun StatusText(id: Int, color: Color = WearColors.muted) =
+    Text(stringResource(id), color = color, fontSize = WearType.body, textAlign = TextAlign.Center)
 
 internal fun dashboardNextUpdate(snapshot: com.healthmd.wearable.contract.WearHealthSnapshot, now: Long, zone: ZoneId): Long {
     val stale = snapshot.capturedAtEpochMillis + com.healthmd.wearable.contract.WearHealthSnapshot.CURRENT_MILLIS + 1L

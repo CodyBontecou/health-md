@@ -1,0 +1,48 @@
+app = "healthmd-licensing"
+primary_region = "iad"
+kill_signal = "SIGTERM"
+kill_timeout = "150s"
+
+[build]
+  dockerfile = "Dockerfile.fly"
+  [build.args]
+    NODE_IMAGE = "node:24-bookworm-slim@sha256:c86ecead9e55a5210ac1727de38a4ca840bf03dcaf34dc9749addbf383b1920c"
+
+[processes]
+  app = "node src/fly-bootstrap.mjs"
+
+[env]
+  LICENSING_MODE = "production"
+  LICENSING_HOST = "127.0.0.1"
+  LICENSING_DATABASE = "/data/licensing.sqlite"
+  LICENSING_ISSUER = "https://licensing.healthmd.app/"
+  LICENSING_BACKUP_UPLOAD_URL = "https://healthmd-licensing-ops.costream.workers.dev/v1/backup"
+
+[[mounts]]
+  source = "licensing_data"
+  destination = "/data"
+  initial_size = "1gb"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = "off"
+  auto_start_machines = true
+  min_machines_running = 1
+  processes = ["app"]
+  [http_service.concurrency]
+    type = "requests"
+    soft_limit = 40
+    hard_limit = 60
+  [[http_service.checks]]
+    interval = "30s"
+    timeout = "5s"
+    grace_period = "30s"
+    method = "GET"
+    path = "/readyz"
+    [http_service.checks.headers]
+      Fly-Client-IP = "127.0.0.1"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "1gb"

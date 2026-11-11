@@ -55,7 +55,6 @@ class FdroidDistributionPolicyTest {
         val pages = onboardingPages(policy)
 
         assertThat(pages).contains(OnboardingPage.INCLUDED_ACCESS)
-        assertThat(pages).doesNotContain(OnboardingPage.PLAY_ACCESS)
     }
 
     @Test

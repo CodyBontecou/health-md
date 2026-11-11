@@ -1,13 +1,13 @@
 Health.md zet toegestane Android Health Connect-gegevens om in overdraagbare bestanden die jij kiest en beheert.
 
-EXPORTEER HEALTH CONNECT-GEGEVENS OP JOUW MANIER
-Maak leesbare overzichten in Markdown, Obsidian Bases, CSV en JSON of provider-eigen momentopnamen in JSON/NDJSON. Kies metingen, periode en bestemming, bekijk bestandsnamen en inhoud vooraf en exporteer naar een lokale map, een Obsidian-kluis, een andere Android-documentprovider, je eigen API-endpoint of een gekoppelde Health.md CLI. Health.md vereist geen account en beheert geen cloud voor gezondheidsdata.
+EXPORTEER HEALTH CONNECT-GEGEVENS
+Maak overzichten in Markdown, Obsidian Bases, CSV en JSON of provider-eigen JSON/NDJSON-momentopnamen. Kies metingen, periode en bestemming; bekijk bestandsnamen en inhoud vooraf. Exporteer naar lokale mappen, Obsidian-kluizen, Android-documentproviders, je eigen API of een gekoppelde Health.md CLI.
 
 KIES UIT MEER DAN 100 GEZONDHEIDSMETINGEN
 Exporteer toegestane gegevens over slaap, stappen, trainingen, hartslag, HRV, bloeddruk, bloedglucose, zuurstofsaturatie, ademhalingsfrequentie, gewicht, lichaamssamenstelling, voeding, hydratatie, mobiliteit, mindfulness, reproductieve gezondheid en andere Health Connect-records. Als je één categorie weigert, kun je andere toegestane categorieën blijven exporteren.
 
 BEKIJK VOORAF, PAS AAN EN AUTOMATISEER
-Kies eenheden, indelingen, schrijfmodi, mapindeling en gedetailleerde metingen. Bekijk exacte bestandspaden en inhoud voordat er iets wordt geschreven. Voer exports handmatig uit of plan ze voor een bestemming die jij kiest. Bekijk voltooide en mislukte uitvoeringen in de exportgeschiedenis.
+Kies eenheden, indelingen, schrijfmodi, mappen en gedetailleerde metingen. Bekijk paden en inhoud vooraf. Exporteer handmatig of gepland naar jouw bestemming; bekijk geslaagde en mislukte uitvoeringen in de geschiedenis.
 
 GEZONDHEID IN ÉÉN OOGOPSLAG
 Vier optionele widgets op het startscherm tonen toegestane overzichten van activiteit, slaap en hart uit een kleine cache op het apparaat. Jij houdt controle over widgettoegang en verversen op de achtergrond.
@@ -42,4 +42,4 @@ PRIVACY EN CONTROLE
 • Toestemmingen kunnen op elk moment in Health Connect worden bekeken of ingetrokken
 • Beperkte eigen analyses voor installatieattributie, onboarding of prijzen bevatten nooit gezondheidsrecords, details van Health Connect-toestemmingen, exportinhoud, accounttekst of bestandspaden
 
-Health.md bevat 5 gratis handmatige exportacties. Een eenmalige aankoop ontgrendelt onbeperkte exports en planning; er is geen abonnement.
+Exports vereisen een actieve proefperiode, week-/jaarabonnement of levenslange toegang. Nieuwe abonnees die in aanmerking komen krijgen 7 dagen gratis; daarna wordt automatisch verlengd tegen de prijs in de app, tenzij je vóór het einde van de proefperiode of huidige periode opzegt. Beheer of zeg op in Google Play. Levenslange toegang wordt direct eenmalig betaald, zonder proefperiode. Bestaande permanente toegang blijft behouden.

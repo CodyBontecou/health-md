@@ -1,5 +1,7 @@
 # Health.md
 
+The unpublished candidate removes custom in-app analytics, installation-linked event uploads, and advertising attribution. Upgrades erase retired local analytics state. Essential purchase, scheduling, provider and user-requested services remain; myself.md purchase claims stay disabled. Earlier released versions and retained server data require a separate approved retirement. Website measurement is a separate surface and is not removed by this app change.
+
 Health.md is a local-first health data platform. This repository is the canonical source for the Apple apps, Android app, standalone CLI, notification-only wake service, practice boundary, and website.
 
 ## Agent skills
@@ -53,7 +55,7 @@ make test-wake
 make test-website
 ```
 
-`make test` runs all eight component gates with at most four Make jobs, including separate iOS and macOS Xcode build directories. It completes independent gates after a failure and returns a failing exit status. Use `make test TEST_JOBS=1` for serial execution or set `TEST_JOBS` to another positive limit. Android defaults to two Gradle workers to bound Kotlin compiler memory and reuses the component init script so JVM tests execute against current repository files while compiled outputs remain reusable. Other component tools may use their own compiler or test workers within each Make job.
+`make test` runs the six retained portable regression groups concurrently, including locked npm installation. It requires Node 24, Rust 1.88, Python, and the pinned consumer checkout described in [the test strategy](docs/qa/two-minute-ci.md). CI uses one Linux runner and a source-only checkout to fit a 120-second end-to-end budget. Logs and receipts are retained under ignored `.pi/`. Native SDK builds and device/browser QA are explicit diagnostics rather than additional CI regression gates.
 
 Additional Gradle options can be supplied with `ANDROID_TEST_ARGS='--max-workers=2 --init-script scripts/ci-gradle.init.gradle --info'`. These arguments are evaluated from `apps/android`.
 

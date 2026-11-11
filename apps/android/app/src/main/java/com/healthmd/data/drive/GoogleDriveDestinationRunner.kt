@@ -19,8 +19,14 @@ internal fun generateDriveFinalBytes(
     } else {
         fragment.copyOf()
     }
-    GeneratedArtifactWriteIntent.MARKDOWN_UPDATE,
-    GeneratedArtifactWriteIntent.DAILY_NOTE_MERGE -> MarkdownMerger().merge(
+    GeneratedArtifactWriteIntent.DAILY_NOTE_MERGE -> {
+        val texts = listOf(baseline.decodeToString(), fragment.decodeToString())
+        require(texts.none { "healthmd_injection_kind" in it || "healthmd_daily_injection_v" in it }) {
+            "Scoped Daily Notes require a profile-aware Drive merger"
+        }
+        MarkdownMerger().merge(texts[0], texts[1]).encodeToByteArray()
+    }
+    GeneratedArtifactWriteIntent.MARKDOWN_UPDATE -> MarkdownMerger().merge(
         baseline.toString(StandardCharsets.UTF_8),
         fragment.toString(StandardCharsets.UTF_8),
     ).encodeToByteArray()
@@ -245,12 +251,16 @@ class GoogleDriveDestinationRunner @Inject constructor(
                 }
             }
         }
-        val finalBytes = generateDriveFinalBytes(
-            intent = artifact.writeIntent,
-            baseline = baseline,
-            fragment = fragment,
-            baselineExists = existing != null || artifact.missingPrefixFile != null,
-        )
+        val finalBytes = try {
+            generateDriveFinalBytes(
+                intent = artifact.writeIntent,
+                baseline = baseline,
+                fragment = fragment,
+                baselineExists = existing != null || artifact.missingPrefixFile != null,
+            )
+        } catch (_: IllegalArgumentException) {
+            return PrepareResult.Failed(GoogleDriveErrorId.REMOTE_CONFLICT)
+        }
         journal = journalStore.replaceFinalBytes(journal, index, finalBytes)
         artifact = journal.artifacts[index]
 

@@ -1,64 +1,56 @@
 ---
-title: "Zeitplanung"
-description: "Führen Sie Exporte automatisch mit täglicher, wöchentlicher oder benutzerdefinierter Kalenderfrequenz aus. iOS nutzt Hintergrundaufgaben und bei nicht verfügbaren geschützten Daten eine lokale Wiederherstellungsmitteilung."
+title: "Planen Sie Apple Health Exporte und beheben Sie verpasste Ausführungen"
+description: "Überprüfen Sie einen geplanten Export, verstehen Sie den Lookback für abgeschlossene Tage und stellen Sie ausstehende Daten wieder her. iPhone Hintergrund-Timing ist Best-Effort; Verlaufswiederholung verwendet aktuelle Einstellungen."
 ---
 
-## Der Tab „Zeitplan“
-<p>Eine Statusansicht, kein Einstellungsbereich. Sie erkennen auf einen Blick:</p>
-<ul>
-<li>ob der Zeitplan ein- oder ausgeschaltet ist;</li>
-<li>den nächsten geplanten Durchlauf, sofern vorhanden;</li>
-<li>das Ergebnis des letzten Durchlaufs.</li>
-</ul>
-<p>Eine Schaltfläche – <em>Zeitplan einrichten</em> oder <em>Zeitplan verwalten</em> – öffnet die Detailansicht.</p>
+Auf dieser Seite wird iPhone Planung beschrieben. Für Android gelten unterschiedliche Hintergrundberechtigungen und Kaufanforderungen. siehe [Android-Automatisierung](/de/docs/android/).
 
-## Zeitplaneinstellungen
-<div class="options">
-<div class="option"><strong>Geplante Exporte aktivieren</strong><p>Hauptschalter am oberen Rand. Ist er ausgeschaltet, gibt es weder Hintergrunddurchläufe noch Mitteilungen.</p></div>
-<div class="option"><strong>Häufigkeit</strong><p>Täglich, wöchentlich oder benutzerdefiniert. Benutzerdefinierte Zeitpläne wiederholen sich ab einem Startdatum alle N Tage, Wochen oder Monate. Der Rückblick legt fest, wie viele abgeschlossene Tage ein Lauf umfasst.</p></div>
-<div class="option"><strong>Uhrzeit</strong><p>Stunde und Minute. iOS behandelt diese Angabe als Richtwert, nicht als Garantie – beachten Sie den Hinweis zu Einschränkungen weiter unten.</p></div>
-</div>
+## Überprüfen Sie den ersten geplanten Export
 
-## Exportverlauf
-<p>Die Liste am unteren Rand der Zeitplanansicht zeichnet jeden geplanten Durchlauf mit seinem Ergebnis auf. Tippen Sie auf eine Zeile, um Details anzuzeigen. Fehlgeschlagene Durchläufe enthalten die Schaltfläche <em>Wiederholen</em>, die den Datumsbereich mit den aktuell konfigurierten Einstellungen und dem aktuellen Ziel erneut ausführt und anschließend eine neue Verlaufszeile anlegt.</p>
+1. Aktivieren Sie das vorgesehene Profil. Überprüfen Sie die Metriken, Formate, Datendetails, das Schreibverhalten und das Ziel. Führen Sie einen abgeschlossenen Tag manuell aus und überprüfen Sie die gespeicherte Datei oder das Endpunktergebnis, bevor Sie die Automatisierung aktivieren.
+2. Öffnen Sie auf dem iPhone **Automationen**, wählen Sie die Automation und tippen Sie auf **Zeitplan**; auf Android öffnen Sie „Zeitplan“ und dann „Zeitplan einrichten“ oder „Zeitplan verwalten“. Aktivieren Sie den Zeitplan, wählen Sie „Täglich“, „Wöchentlich“ oder „Benutzerdefiniert“, legen Sie die Uhrzeit fest und beginnen Sie mit einem Rückblick von einem abgeschlossenen Tag. Erlauben Sie Mitteilungen, wenn Sie lokale Wiederherstellungserinnerungen möchten.
+3. Überprüfen Sie, ob die Planung aktiviert ist, das nächste Vorkommen und das letzte Ergebnis. Überprüfen Sie nach einem Versuch die Verlaufsdetails und das tatsächliche Ziel. Ein Etikett oder eine Benachrichtigung für die nächste Ausführung ist kein Beweis dafür, dass Daten geschrieben wurden.
+4. Überprüfen Sie die exportierten Daten, Einheiten, Abdeckung und fehlenden Daten. Eine gespeicherte Datei allein beweist nicht, dass die Quelle vollständig erfasst ist.
 
-## So funktioniert die iOS-Zeitplanung tatsächlich
-<div class="doc-diagram">
-  <div class="flow-steps" aria-label="Fallback-Ablauf für einen geplanten Export">
-    <span><strong>1. Zielzeit</strong>Health.md bittet iOS, die App ungefähr zur gewählten Zeit zu aktivieren.</span>
-    <span><strong>2. Hintergrundversuch</strong>Ist das Gerät verfügbar, lässt iOS die App im Hintergrund aktualisieren.</span>
-    <span><strong>3. Ersatz bei Sperrung</strong>Ist HealthKit nicht verfügbar, zeigt Health.md eine Mitteilung an.</span>
-    <span><strong>4. Zum Abschließen tippen</strong>Wenn Sie die Mitteilung öffnen, kann die App HealthKit lesen und exportieren.</span>
-  </div>
-</div>
+In der abonnementaktivierten Telefonversion erfordern geplante und manuelle Exporte eine aktive Testversion, ein Abonnement, einen lebenslangen Kauf oder einen beibehaltenen permanenten Zugriff. Es gibt keine örtliche Freiausfuhrbewilligung. Der abgelaufene Zugriff muss wiederhergestellt werden, bevor ausstehende Arbeiten wieder aufgenommen werden können. Siehe [Entsperren und Paywall](/de/docs/paywall/).
 
-<div class="callout">
-<strong>Wichtige Einschränkungen von iOS.</strong>
-<p style="margin-top:6px;">Bei gesperrtem Gerät können HealthKit-Daten nicht gelesen werden. Geplante Exporte werden über <code>BGAppRefreshTask</code> ausgeführt, den iOS anhand des Nutzungsverhaltens nach eigenem Ermessen einplant. Ihre Zeitangabe ist daher ein Ziel, keine Zusage. Ist das Gerät gesperrt, sendet die App ersatzweise zur geplanten Zeit eine lokale Mitteilung; tippen Sie darauf, um den Export auszuführen.</p>
-</div>
-<ul>
-<li>Die geplante Uhrzeit ist ungefähr. iOS kann die Aufgabe früher oder später ausführen oder überspringen, wenn das Gerät ausgeschaltet oder nicht verbunden ist.</li>
-<li>Geplante Exporte funktionieren am besten, wenn Ihr iPhone regelmäßig ungefähr zur gleichen Tageszeit am Strom angeschlossen und entsperrt ist.</li>
-<li>Schlägt der Export wegen eines gesperrten Geräts fehl, tippen Sie auf die Mitteilung. Dadurch wird der Export mit HealthKit-Zugriff ausgeführt.</li>
-</ul>
+## Verstehen Sie das Fenster für den abgeschlossenen Tag
 
-## Programmatische Steuerung
-<p>Sie können den Zeitplan in Kurzbefehle mit dem Intent <em>Geplanten Export ein- oder ausschalten</em> aktivieren und deaktivieren. Beispiele finden Sie unter <a href="/de/docs/shortcuts/">Kurzbefehle</a>.</p>
+Tägliche, wöchentliche und benutzerdefinierte Zeitpläne können einen Rückblick haben. Die benutzerdefinierte Kadenz wird ab dem Startdatum alle N Tage, Wochen oder Monate wiederholt. Bei jedem neuen Vorkommen wird das gesamte konfigurierte Fenster für den abgeschlossenen Tag erneut exportiert, einschließlich der zuvor exportierten Daten. Ein dreitägiger Rückblick umfasst den gestrigen Tag und die beiden vorangegangenen Tage. Durch die verzögerte Ausführung bleibt das Fenster am geplanten Brandtag verankert.
 
-## Profilzeitpläne und Abbruch
+„Heute aktualisieren“ ist eine separate Arbeit für den aktuellen Tag und kein Ersatz für das Fenster für den abgeschlossenen Tag. Überprüfen Sie Pfade und Schreibverhalten, bevor sich Exporte überschneiden. Fügen Sie wiederholte tägliche Schnappschüsse nicht als neue Messungen hinzu.
 
-- Jedes Profil hat einen eigenen Zeitplan einschließlich benutzerdefinierter Frequenz; ein Wechsel des aktiven Profils leitet keinen anderen Zeitplan um.
-- Eine Kollisionswarnung erscheint, wenn Profile dieselben erzeugten Pfade am selben Ziel schreiben könnten. Prüfe sie vor konkurrierenden Zeitplänen; Health.md ändert kein Profil unbemerkt.
-- Stoppen oder Abbrechen beendet nur den aktuellen Versuch. Abgeschlossene Tage bleiben erhalten, offene Tage sind wiederholbar und der Zeitplan bleibt aktiv.
-- Jeder Verlaufseintrag bleibt mit dem Laufprofil und der tatsächlich verwendeten datenschutzfreundlichen Zielbezeichnung verbunden.
+## Wählen Sie den richtigen Wiederherstellungspfad
 
-Einstellungen und Profilziel verwaltest du unter [Exportprofile](/de/docs/export-profiles/).
+- **Ausstehende geplante Wiederherstellung:** entsperren Sie iPhone , öffnen Sie Health.md und überprüfen Sie den ausstehenden Versuch. Die genauen ungelösten Daten, gespeicherten Einstellungen und das Ziel bleiben erhalten. Abgeschlossene Termine bleiben abgeschlossen; Die Erholung weitet sich nicht zu einem neuen Rückblick aus.
+- **Retry from History:** Dies startet einen neuen Lauf für diesen Bereich unter Verwendung der aktuell konfigurierten Einstellungen und des Ziels und zeichnet eine neue Verlaufszeile auf. Überprüfen Sie die aktive Konfiguration, bevor Sie auf „Wiederholen“ klicken. Es ist nicht dasselbe wie die Fortsetzung eines eingefrorenen, ausstehenden Versuchs.
+- **Geändertes oder nicht verfügbares Ziel:** Stellen Sie den Zugriff wieder her oder überprüfen Sie das ausstehende Profil, bevor Sie es erneut versuchen. Eine alte iPhone API-Wiederherstellung darf einen geänderten Endpunkt oder Anmeldeinformationen nicht stillschweigend übernehmen. Starten Sie nicht wiederholt neue Versuche, während der ursprüngliche Versuch ungelöst ist.
 
-## Verwandte Themen
+Überprüfen Sie die ausstehenden Wiederherstellungs-, Profilidentitäts- und Zielregeln in [Profile exportieren](/de/docs/export-profiles/).
+
+## Was iOS garantiert und was nicht
+
+Die ausgewählte Zeit ist ein Ziel und keine garantierte Fertigstellungszeit. iOS steuert die Hintergrundlaufzeit und der Schutz vor gesperrten Geräten kann HealthKit Lesevorgänge verhindern. Hintergrundanfragen und stille Weckbenachrichtigungen umgehen diesen Schutz nicht.
+
+Lokale Wiederherstellungsbenachrichtigungen erfordern eine Benachrichtigungserlaubnis und stellen keine Garantie für die Zustellung zum Zielzeitpunkt dar. Wenn Sie eines erhalten, entsperren Sie das Gerät und öffnen Sie es, damit Health.md die Wiederherstellung versuchen kann. Wenn keine Benachrichtigung eintrifft, öffnen Sie Health.md und überprüfen Sie die ausstehenden Arbeiten und den Verlauf. Überprüfen Sie das Ergebnis, anstatt davon auszugehen, dass eine Warnung oder eine verstrichene Zeit Erfolg bedeuten.
+
+## Programmgesteuerte Steuerung
+ <p> Sie können den Zeitplan über Shortcuts mithilfe der Absicht <em> Geplanten Export ein- oder ausschalten </em> ein-/ausschalten. <a href="/de/docs/shortcuts/"> Beispiele finden Sie unter Shortcuts </a> . </p>
+
+## Profilpläne und Stornierung
+
+- Jedes Profil kann seinen eigenen Zeitplan beibehalten, einschließlich einer benutzerdefinierten Kadenz. Durch den Wechsel des aktiven Profils wird der Zeitplan eines anderen Profils nicht neu ausgerichtet.
+- Eine Kollisionswarnung wird angezeigt, wenn Profile dieselben gerenderten Pfade an dasselbe Ziel schreiben könnten. Überprüfen Sie es, bevor Sie konkurrierende Zeitpläne aktivieren. Health.md ändert keines der Profile stillschweigend.
+- Stop oder Cancel beendet nur den aktuellen Versuch. Abgeschlossene Termine bleiben abgeschlossen, ungelöste Termine können wiederholt werden und der Zeitplan bleibt aktiviert.
+- Jede Verlaufszeile bleibt an das tatsächlich verwendete Laufzeitprofil und die datenschutzsichere Zielbezeichnung angeheftet.
+
+Verwalten Sie die eingefrorenen Einstellungen und das Ziel pro Profil unter [Profile exportieren](/de/docs/export-profiles/).
+
+## Verwandt
 
 <div class="related">
-  <a href="/de/docs/export-profiles/"><span>Profile</span>Unabhängige Zeitpläne und Ziele verwalten.</a>
-  <a href="/de/docs/export/"><span>Manuell</span>Export – für einmalige Datumsbereiche.</a>
-  <a href="/de/docs/shortcuts/"><span>Automatisieren</span>Kurzbefehle – schalten Sie den Zeitplan über Automationen um.</a>
-  <a href="/de/docs/sync/"><span>Geräteübergreifend</span>Mac-Synchronisierung – planen Sie Exporte auch auf dem Mac.</a>
-</div>
+ <a href="/de/docs/export-profiles/"> <span> Mehrere Arbeitsabläufe </span> Exportprofile, geben Sie jedem gespeicherten Setup sein eigenes Ziel und seine eigene Kadenz. </a>
+ <a href="/de/docs/export/"> <span> Manuell </span> Export, für einmalige Datumsbereiche. </a>
+ <a href="/de/docs/shortcuts/"> <span> Automatisieren </span> Shortcuts , schalten Sie den Zeitplan von Automatisierungen um. </a>
+ <a href="/de/docs/sync/"> <span> Geräteübergreifend </span> Mac-Synchronisierung, auch auf dem Mac planen. </a>
+ </div>

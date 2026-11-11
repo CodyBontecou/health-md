@@ -43,7 +43,7 @@ class SharedSetupAndroidProfileFieldCoverageTest {
     fun ledgerExactlyCoversSerializableAndSupplementalProfileFields() {
         val ledger = ledgerObject()
         assertEquals("healthmd.shared_setup.android_profile_field_coverage", ledger.getValue("schema").jsonPrimitive.content)
-        assertEquals(4, ledger.getValue("schema_version").jsonPrimitive.content.toInt())
+        assertEquals(5, ledger.getValue("schema_version").jsonPrimitive.content.toInt())
 
         val target = ledger.getValue("target_contract").jsonObject
         assertEquals("healthmd.shared_setup", target.getValue("schema").jsonPrimitive.content)
@@ -175,7 +175,7 @@ class SharedSetupAndroidProfileFieldCoverageTest {
         while (directory != null) {
             val candidate = File(
                 directory,
-                "packages/contracts/shared-setup/v2/android-profile-field-coverage-v4.json",
+                "packages/contracts/shared-setup/v2/android-profile-field-coverage-v5.json",
             )
             if (candidate.isFile) return candidate
             directory = directory.parentFile
@@ -199,6 +199,7 @@ class SharedSetupAndroidProfileFieldCoverageTest {
             "ExportSettings" to ExportSettings.serializer().descriptor,
             "FormatCustomization" to FormatCustomization.serializer().descriptor,
             "FrontmatterConfiguration" to FrontmatterConfiguration.serializer().descriptor,
+            "HealthProviderCaptureAuthority" to com.healthmd.domain.model.HealthProviderCaptureAuthority.serializer().descriptor,
             "IndividualTrackingSettings" to IndividualTrackingSettings.serializer().descriptor,
             "MarkdownTemplateConfig" to MarkdownTemplateConfig.serializer().descriptor,
             "MetricSelectionState" to MetricSelectionState.serializer().descriptor,
@@ -277,6 +278,10 @@ class SharedSetupAndroidProfileFieldCoverageTest {
             FieldKey("DataTypeSelection", "hasAnySelected"),
             FieldKey("ExportSettings", "executionEngineAuthorityIsFrozen"),
             FieldKey("ExportSettings", "executionEnginePin"),
+            FieldKey("ExportSettings", "executionProviderCaptureAuthority"),
+            FieldKey("ExportSettings", "executionProviderCaptureAuthorityIsFrozen"),
+            FieldKey("ExportSettings", "executionSleepCaptureAuthorityIsFrozen"),
+            FieldKey("ExportSettings", "executionSleepCaptureContext"),
             FieldKey("ExportSettings", "selectedExportFormats"),
             FieldKey("FormatCustomization", "unitConverter"),
             FieldKey("IndividualTrackingSettings", "rawTrackedMetricIds"),

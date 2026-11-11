@@ -16,7 +16,7 @@ export const repositoryRecursiveRoots = Object.freeze([
   "apps/android/app/src/test/java/com/healthmd/domain/practice",
 ]);
 export const repositoryFiles = Object.freeze([
-  "AGENTS.md", "docs/architecture/adr-0003-practice-clinical-boundary.md", "docs/features/clinician-report-v1.md", ".github/workflows/practice-ci.yml",
+  "AGENTS.md", "docs/architecture/adr-0003-practice-clinical-boundary.md", "docs/features/clinician-report-v1.md", ".github/workflows/practice-ci.yml", ".github/workflows/ci.yml", "scripts/ci/practice.sh", "scripts/ci/run.py",
   "apps/android/app/build.gradle.kts", "apps/apple/HealthMd.xcodeproj/project.pbxproj",
 ]);
 export const ignoredDirectoryNames = Object.freeze(new Set([

@@ -1,26 +1,22 @@
 ---
-title: "Configuración inicial en iPhone"
-description: "Completa los cinco pasos de Health.md: privacidad, Apple Health, vista previa, carpeta y primera exportación."
+title: "iPhone incorporación"
+description: "Configure Health.md en cinco pasos: privacidad, Apple Health , vista previa, carpeta y primera exportación."
 ---
 
-La configuración inicial aparece la primera vez que abres Health.md en iPhone. Explica el modelo local y prepara Apple Health y una carpeta bajo tu control. Los análisis de producto nunca incluyen valores de salud, métricas, fechas, archivos, rutas, credenciales ni texto del usuario.
+La incorporación aparece la primera vez que abre Health.md el iPhone . Explica el modelo local primero y prepara Apple Health y una carpeta que usted controla. El análisis de productos nunca incluye valores de estado, nombres de métricas, fechas de estado, archivos, rutas, credenciales o texto de usuario.
 
-<div class="availability available"><strong>Disponible ahora · iPhone</strong><p>Son cinco pasos no bloqueantes. Puedes omitir Salud o la carpeta y configurarlas más tarde. La compra ya no bloquea la configuración.</p></div>
+<div class="availability available"> <strong> Disponible ahora · iPhone </strong> <p> Los cinco pasos no bloquean el progreso. El acceso a la salud y la carpeta se pueden omitir y reparar más tarde. Los usuarios sin acceso primero eligen un plan, inician una prueba elegible respaldada por la tienda o restablecen una compra. Estos cinco pasos de configuración siguen el muro de pago raíz. </p> </div>
 
-## Los cinco pasos
+## Cinco pasos
 
-1. **Bienvenida:** inicia la configuración o importa un archivo actual de Compartir mi configuración.
-2. **Acceso a Salud:** conecta Apple Health o elige omitirlo.
-3. **Exportación de ejemplo:** revisa Markdown, JSON, CSV o Bases y el enlace opcional al plugin de Obsidian.
-4. **Carpeta:** elige iCloud Drive, En mi iPhone, un vault de Obsidian u otro proveedor de Archivos.
-5. **Listo:** repara conexiones pendientes y abre la vista previa de la primera exportación.
+1. **Bienvenido:** inicie la configuración o importe un archivo actual de Compartir mi configuración.
+2. **Acceso a la salud:** conecta Apple Health o elige hacerlo más tarde.
+3. **Muestra:** revise Markdown , JSON, CSV o Bases y el enlace del complemento opcional Obsidian .
+4. **Carpeta:** elija iCloud Drive , en Mi iPhone , una bóveda Obsidian u otro proveedor de archivos.
+5. **Listo:** repare las conexiones que faltan y abra la primera vista previa de exportación.
 
-Después de la primera exportación gratuita completada, una guía permite revisar una programación diaria sin activarla. Después de la tercera, una oferta descartable de acceso de por vida muestra dos acciones gratuitas restantes. El límite es de cinco acciones completadas.
+La versión habilitada para suscripción no tiene asignación de libre exportación local ni recordatorio de primera o tercera exportación. Las suscripciones semanales/anuales elegibles incluyen una prueba gratuita de 7 días; Lifetime se cobra una vez inmediatamente, sin prueba. El acceso pago existente y previamente protegido sigue siendo válido. Las versiones distribuidas anteriormente pueden mostrar la oferta anterior.
 
-Puedes cambiar después permisos, métricas, carpeta, formatos, nombres, perfiles, programación y conexión con Mac.
+Los permisos, métricas, carpetas, formatos, nombres, perfiles, programación y conectividad de Mac se pueden cambiar más adelante.
 
-<div class="related">
-<a href="/es/docs/iphone-first-export/"><span>Siguiente</span>Realiza y verifica la primera exportación.</a>
-<a href="/es/docs/paywall/"><span>Planes</span>Consulta exportaciones gratuitas, recordatorios y restauración.</a>
-<a href="/es/docs/share-my-setup/"><span>Mover ajustes</span>Revisa el flujo portátil en QA.</a>
-</div>
+<div class="related"> <a href="/es/docs/iphone-first-export/"> <span> Siguiente </span> Ejecute y verifique la primera exportación. </a> <a href="/es/docs/paywall/"> <span> Planes </span> Revisar planes, probar y restaurar. </a> <a href="/es/docs/share-my-setup/"> <span> Mover configuración </span> Revisar el estado de control de calidad. </a> </div>

@@ -260,6 +260,13 @@ final class ExportProfileCoordinator: ObservableObject {
 
     // MARK: - Edit flush
 
+    /// The live settings as a snapshot, keeping the profile fields the live settings
+    /// don't carry. A profile's own subfolder lives only in its snapshot, so a plain
+    /// `from(settings)` would write nil over it on every flush of the active profile.
+    private func liveSnapshot(keepingFieldsOf profile: ExportProfile?) -> ExportSettingsSnapshot {
+        ExportSettingsSnapshot.from(settings, healthSubfolder: profile?.settings.healthSubfolder)
+    }
+
     private func observeEdits() {
         flushCancellable = settings.objectWillChange
             .debounce(for: .seconds(Self.editFlushInterval), scheduler: RunLoop.main)
@@ -272,6 +279,12 @@ final class ExportProfileCoordinator: ObservableObject {
     /// debounced on edits, immediately on profile switch, and by containers
     /// before exports or teardown. The snapshot round-trip preserves renderer
     /// authority and timezone provenance.
+    /// Name of the shared folder chosen in Settings, which profiles without their own
+    /// folder write to; nil before one is chosen.
+    var sharedFolderName: String? {
+        vaultManager.hasVaultSelection ? vaultManager.vaultName : nil
+    }
+
     func flushEdits() {
         // Keep observing later edits. This cancellable owns the subscription,
         // not just the currently debounced save.
@@ -279,7 +292,7 @@ final class ExportProfileCoordinator: ObservableObject {
               !isProfileExecutionBlocked(activeID) else { return }
         profileStore.updateSettings(
             id: activeID,
-            settings: ExportSettingsSnapshot.from(settings)
+            settings: liveSnapshot(keepingFieldsOf: profileStore.profile(id: activeID))
         )
     }
 
@@ -565,6 +578,7 @@ final class ExportProfileCoordinator: ObservableObject {
         target: ExportTargetSelection,
         folderVaultID: UUID? = nil,
         googleDriveDestinationID: UUID? = nil,
+        apiEndpointID: UUID? = nil,
         agentDataGatewayID: UUID? = nil,
         settings newSettings: ExportSettingsSnapshot? = nil
     ) -> ExportProfile? {
@@ -573,10 +587,10 @@ final class ExportProfileCoordinator: ObservableObject {
               !isProfileExecutionBlocked(source.id) else { return nil }
         let created = profileStore.add(
             name: name,
-            settings: newSettings ?? ExportSettingsSnapshot.from(settings),
+            settings: newSettings ?? liveSnapshot(keepingFieldsOf: source),
             target: target,
             folderVaultID: folderVaultID,
-            apiEndpointID: source.apiEndpointID,
+            apiEndpointID: target == .apiEndpoint ? apiEndpointID : nil,
             googleDriveDestinationID: googleDriveDestinationID
         )
         if target == .agentDataGateway {
@@ -618,20 +632,22 @@ final class ExportProfileCoordinator: ObservableObject {
             target: target,
             folderVaultID: folderVaultID,
             googleDriveDestinationID: googleDriveDestinationID,
-            settings: ExportSettingsSnapshot.from(settings)
+            settings: liveSnapshot(keepingFieldsOf: profileStore.activeProfile)
         )
     }
 
     /// Overlap preview with an explicit settings override — the profile
-    /// editor passes its draft so the warning tracks in-progress edits.
+    /// editor passes its draft so the warning tracks in-progress edits, and the
+    /// edited profile's ID so its saved copy is not reported as an overlap.
     func overlapPreviewNames(
         target: ExportTargetSelection,
         folderVaultID: UUID?,
         googleDriveDestinationID: UUID? = nil,
-        settings: ExportSettingsSnapshot
+        settings: ExportSettingsSnapshot,
+        editingProfileID: UUID? = nil
     ) -> [String] {
         let candidateID = UUID()
-        let identities = profilePathIdentities() + [
+        let identities = profilePathIdentities().filter { $0.profileID != editingProfileID } + [
             ExportProfileOverlapDetector.ProfilePathIdentity(
                 profileID: candidateID,
                 name: "",
@@ -658,7 +674,7 @@ final class ExportProfileCoordinator: ObservableObject {
               !isProfileExecutionBlocked(source.id) else { return nil }
         let copy = profileStore.add(
             name: source.name,
-            settings: ExportSettingsSnapshot.from(settings),
+            settings: liveSnapshot(keepingFieldsOf: source),
             target: source.target,
             folderVaultID: source.folderVaultID,
             apiEndpointID: source.apiEndpointID,
@@ -699,11 +715,16 @@ final class ExportProfileCoordinator: ObservableObject {
     /// Returns false when deletion was refused.
     @discardableResult
     func deleteProfile(id: UUID) -> Bool {
+        let wasActive = profileStore.activeProfileID == id
         guard profileStore.delete(id: id) else { return false }
         _ = scheduledEntryStore.delete(profileID: id)
         compactSharedSetupV2Sidecar(afterDeleting: id)
-        guard let next = profileStore.profiles.first else { return true }
-        activate(profileID: next.id)
+        // Deleting another profile leaves the active one alone. Deleting the active one
+        // hands over to the next without flushing: the live settings still hold the
+        // deleted profile's values, and the store has already pointed the active id at
+        // the next profile, so a flush would write them into that profile.
+        guard wasActive, let next = profileStore.profiles.first else { return true }
+        activate(profileID: next.id, adoptVault: true, flushOutgoing: false)
         return true
     }
 

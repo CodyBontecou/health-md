@@ -402,7 +402,18 @@ final class HealthMdDirectClientCoreTests: XCTestCase {
                 timeout: 10
             )
         }
-        try await Task.sleep(nanoseconds: 400_000_000)
+        // Cancellation must target the accepted active listener, not elapsed startup time.
+        let clock = ContinuousClock()
+        let deadline = clock.now.advanced(by: .seconds(5))
+        var accepted = false
+        while clock.now < deadline {
+            if let record = try? await controller.jobRecord(jobID: request.jobID), record.state == .accepted {
+                accepted = true
+                break
+            }
+            try await Task.sleep(nanoseconds: 10_000_000)
+        }
+        XCTAssertTrue(accepted, "The authenticated export must be accepted before cancellation")
         try await controller.cancel(
             jobID: request.jobID,
             deviceID: clientID,
@@ -829,6 +840,17 @@ final class HealthMdDirectClientCoreTests: XCTestCase {
         )
         let receiver = DirectFileReceiver(layout: layout, jobStore: store)
         try await receiver.prepare(request: request, accepted: accepted, session: session)
+        let unnegotiated = try DirectExportFileManifest(jobID: manifest.jobID, fileID: manifest.fileID,
+            relativePath: manifest.relativePath, byteCount: manifest.byteCount, sha256: manifest.sha256,
+            writeMode: .mergeMarkdownPreservingPreamble,
+            scopedNotePolicy: DirectScopedDailyNotePolicy(recordProfile: "apple-v11", ownerDate: "2026-07-01",
+                calendarTimezone: "UTC", createIfMissing: false, injectSections: true))
+        do {
+            try await receiver.store(manifest: unnegotiated)
+            XCTFail("Unnegotiated scoped note policy was accepted")
+        } catch {
+            XCTAssertEqual(error as? DirectFileReceiverError, .manifestChanged)
+        }
         try await receiver.store(manifest: manifest)
         _ = try await receiver.disposition(for: DirectTransferOpen(session: session, partition: descriptor))
         _ = try await receiver.receive(try DirectTransferChunk(
@@ -1621,12 +1643,21 @@ final class HealthMdDirectClientCoreTests: XCTestCase {
         var address = sockaddr_in()
         address.sin_len = UInt8(MemoryLayout<sockaddr_in>.size)
         address.sin_family = sa_family_t(AF_INET)
-        address.sin_port = 0
-        address.sin_addr = in_addr(s_addr: inet_addr("127.0.0.1"))
-        let result = withUnsafePointer(to: &address) {
-            $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
-                Darwin.bind(descriptor, $0, socklen_t(MemoryLayout<sockaddr_in>.size))
+        // NWListener binds wildcard addresses. Probe the same scope, outside
+        // the OS ephemeral range used concurrently by the Rust socket suite.
+        // A loopback-only port-zero probe can select a port already occupied on
+        // another interface, or immediately reused by an outgoing connection.
+        address.sin_addr = in_addr(s_addr: INADDR_ANY)
+        var result: Int32 = -1
+        for _ in 0..<32 {
+            address.sin_port = UInt16.random(in: 20_000...40_000).bigEndian
+            result = withUnsafePointer(to: &address) {
+                $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
+                    Darwin.bind(descriptor, $0, socklen_t(MemoryLayout<sockaddr_in>.size))
+                }
             }
+            if result == 0 { break }
+            guard errno == EADDRINUSE else { throw POSIXError(.EIO) }
         }
         guard result == 0 else { throw POSIXError(.EADDRINUSE) }
         var bound = sockaddr_in()

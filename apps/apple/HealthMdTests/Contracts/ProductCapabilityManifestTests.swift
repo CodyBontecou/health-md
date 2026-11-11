@@ -12,7 +12,7 @@ final class ProductCapabilityManifestTests: XCTestCase {
         XCTAssertEqual(inventory.schemaVersion, 1)
         XCTAssertEqual(
             Set(inventory.outputProfiles.map(\.id)),
-            ["apple-v8", "android-frozen-v4", "android-analytical-v5"]
+            ["apple-v8", "android-frozen-v4", "android-analytical-v5", "apple-v12", "android-analytical-v7"]
         )
 
         let states = Dictionary(uniqueKeysWithValues: inventory.capabilities.map {
@@ -26,11 +26,15 @@ final class ProductCapabilityManifestTests: XCTestCase {
         )
         XCTAssertEqual(
             Self.ids(with: .unavailable, in: states),
-            Self.androidCapabilities.union(["source.private-platform-database"])
+            Self.androidCapabilities.union(["source.private-platform-database", "apple.ads-purchase-attribution"])
         )
         XCTAssertEqual(
             Self.ids(with: .planned, in: states),
-            ["core.shared-rust-profile-engine", "setup.share-portable-configuration", "destination.google-drive"]
+            [
+                "account.clinic-sync-requests",
+                "core.shared-rust-profile-engine",
+                "setup.share-portable-configuration", "destination.google-drive",
+            ]
         )
         XCTAssertEqual(Set(states.keys), Self.allCapabilities)
         XCTAssertEqual(
@@ -47,6 +51,9 @@ final class ProductCapabilityManifestTests: XCTestCase {
             "shared"
         )
 
+        let sleepAttributionCapability = inventory.capabilities.first { $0.id == "settings.sleep-attribution" }
+        XCTAssertEqual(sleepAttributionCapability?.classification, "shared")
+        XCTAssertEqual(sleepAttributionCapability?.profiles, [])
         XCTAssertEqual(
             inventory.capabilities.first { $0.id == "direct.full_public_authorized_corpus" }?.classification,
             "shared"
@@ -94,6 +101,8 @@ final class ProductCapabilityManifestTests: XCTestCase {
     }
 
     private static let sharedCapabilities: Set<String> = [
+        "account.clinic-sponsored-access",
+        "export.coverage-calendar",
         "account.myself_lifetime_claim",
             "purchase.free-export-journey",
         "export.daily-files",
@@ -104,6 +113,8 @@ final class ProductCapabilityManifestTests: XCTestCase {
         "export.nutrient-totals",
         "export.mindfulness-sessions",
         "export.selected-time-series-detail",
+        "export.per-group-detail-selection",
+        "export.compatibility-detail-expansion",
         "export.completed-workouts",
         "export.mobility-and-performance",
         "export.profiles",
@@ -118,10 +129,12 @@ final class ProductCapabilityManifestTests: XCTestCase {
         "direct.cli_agent_wake",
         "direct.full_public_authorized_corpus",
         "diagnostics.local_bundle",
+        "settings.sleep-attribution",
     ]
 
     private static let appleCapabilities: Set<String> = [
-        "apple.ads-purchase-attribution",
+        "purchase.family-sharing",
+        "support.native-review-introduction",
         "apple.lossless-healthkit-archive",
         "apple.medication-dose-events",
         "apple.state-of-mind",
@@ -129,6 +142,8 @@ final class ProductCapabilityManifestTests: XCTestCase {
         "apple.hearing-and-symptoms",
         "apple.typed-whoop-provider-section",
         "automation.api-recovery-authority",
+        "automation.include-today",
+        "automation.run-overlap-policy",
         "direct.cli_agent_push_wake",
         "export.range-summary",
         "support.local-reporting-fallback",
@@ -142,13 +157,14 @@ final class ProductCapabilityManifestTests: XCTestCase {
         "android.nutrition-meals",
         "android.contextual-source-fields",
         "android.skin-temperature",
+        "export.sleep-session-detail",
     ]
 
     private static var allCapabilities: Set<String> {
         sharedCapabilities
             .union(appleCapabilities)
             .union(androidCapabilities)
-            .union(["source.private-platform-database", "core.shared-rust-profile-engine", "setup.share-portable-configuration", "destination.google-drive"])
+            .union(["source.private-platform-database", "apple.ads-purchase-attribution", "core.shared-rust-profile-engine", "setup.share-portable-configuration", "destination.google-drive", "account.clinic-sync-requests"])
     }
 
     private enum ManifestError: Error {
@@ -176,6 +192,7 @@ private struct CapabilityInventory: Decodable {
     struct Capability: Decodable {
         let id: String
         let classification: String
+        let profiles: [String]
         let platforms: Platforms
     }
 

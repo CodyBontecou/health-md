@@ -70,7 +70,9 @@ enum ExportIntentRunner {
     struct Dependencies {
         var refreshPurchaseStatus: () async -> Void
         var canExport: () -> Bool
-        var trackExportBlockedByQuota: () -> Void
+        var clinicExportAccess: (String) async -> Bool = { endpoint in
+            await ClinicSponsorshipManager.shared.authorizeExport(endpoint: endpoint)
+        }
         var hasVaultAccess: () -> Bool
         var requiresVaultReselection: () -> Bool
         var refreshVaultAccess: () -> Void
@@ -82,7 +84,7 @@ enum ExportIntentRunner {
         /// Phase 4: profile-scoped runs build request settings from the
         /// profile's frozen snapshot instead of live settings.
         var makeSettingsForProfile: (ExportProfile) -> AdvancedExportSettings = { profile in
-            AdvancedExportSettings(snapshot: profile.settings, userDefaults: .standard)
+            profile.settings.makeAdvancedExportSettings(userDefaults: .standard, forNewConfiguration: true)
         }
         /// Phase 4: adopt a profile's destinations (persisted vault keys +
         /// API endpoint) before a run; call with nil to adopt the active
@@ -92,10 +94,25 @@ enum ExportIntentRunner {
         var isProfileExecutionBlocked: (UUID) -> Bool = { profileID in
             SharedSetupV2ExecutionGate().isExecutionBlocked(profileID: profileID)
         }
+        var resolveAPIDestination: (ExportProfile) -> APIExportDestinationSnapshot? = { profile in
+            ExportIntentRunner.resolveAPIDestination(
+                for: profile,
+                destinationStore: ProfileDestinationStore(),
+                legacyDestination: APIExportSettings().destinationSnapshot
+            )
+        }
+        var exportAPIEndpoint: ([Date], AdvancedExportSettings, APIExportDestinationSnapshot) async -> ExportOrchestrator.ExportResult = { dates, settings, destination in
+            await APIEndpointExportRunner.export(
+                dates: dates,
+                healthKitManager: HealthKitManager.shared,
+                settings: settings,
+                destination: destination,
+                externalIntegrations: ConnectedAppsFeature.isEnabled ? ExternalIntegrationManager() : nil
+            )
+        }
         var exportDatesBackground: ([Date], AdvancedExportSettings) async -> ExportOrchestrator.ExportResult
-        var recordResult: (ExportOrchestrator.ExportResult, ExportSource, Date, Date, String?, String?) -> Void
+        var recordResult: (ExportOrchestrator.ExportResult, ExportSource, Date, Date, String?, String?, ExportTargetSelection) -> Void
         var recordExportUse: () -> Void
-        var trackExportSucceeded: (PricingAnalyticsExportMetadata) -> Void
         var updateScheduleLastExport: () -> Void
         var pendingExportStore: PendingExportStoring
         var exportNotificationScheduler: ExportNotificationScheduling
@@ -113,13 +130,7 @@ enum ExportIntentRunner {
                 canExport: {
                     PurchaseManager.shared.canExport
                 },
-                trackExportBlockedByQuota: {
-                    PricingAnalyticsClient.shared.trackExportBlockedByQuota(
-                        context: .shortcut,
-                        targetType: .localFile,
-                        quotaState: PurchaseManager.shared.analyticsQuotaState
-                    )
-                },
+
                 hasVaultAccess: {
                     vaultManager.hasVaultAccess
                 },
@@ -141,7 +152,7 @@ enum ExportIntentRunner {
                     settings
                 },
                 makeSettingsForProfile: { profile in
-                    AdvancedExportSettings(snapshot: profile.settings, userDefaults: .standard)
+                    profile.settings.makeAdvancedExportSettings(userDefaults: .standard, forNewConfiguration: true)
                 },
                 adoptProfileDestinations: { profile in
                     ExportIntentRunner.adoptDestinationsForIntentRun(profile)
@@ -158,25 +169,22 @@ enum ExportIntentRunner {
                         settings: settings
                     )
                 },
-                recordResult: { result, source, dateRangeStart, dateRangeEnd, targetLabel, profileName in
+                recordResult: { result, source, dateRangeStart, dateRangeEnd, targetLabel, profileName, exportTarget in
                     ExportOrchestrator.recordResult(
                         result,
                         source: source,
                         dateRangeStart: dateRangeStart,
                         dateRangeEnd: dateRangeEnd,
                         targetLabel: targetLabel,
+                        exportTarget: exportTarget,
+                        fileCount: exportTarget == .apiEndpoint ? 0 : nil,
                         profileName: profileName
                     )
                 },
                 recordExportUse: {
                     PurchaseManager.shared.recordExportUse()
                 },
-                trackExportSucceeded: { metadata in
-                    PricingAnalyticsClient.shared.trackExportSucceeded(
-                        metadata: metadata,
-                        quotaState: PurchaseManager.shared.analyticsQuotaState
-                    )
-                },
+
                 updateScheduleLastExport: {
                     var schedule = SchedulingManager.shared.schedule
                     schedule.updateLastExport()
@@ -188,6 +196,33 @@ enum ExportIntentRunner {
                 calendar: .current
             )
         }
+    }
+
+    /// Resolve a bound profile directly, without copying its credentials into
+    /// global preferences. A missing binding must never use another profile's URL.
+    static func resolveAPIDestination(
+        for profile: ExportProfile,
+        destinationStore: ProfileDestinationStore,
+        legacyDestination: APIExportDestinationSnapshot?
+    ) -> APIExportDestinationSnapshot? {
+        guard profile.target == .apiEndpoint else { return nil }
+        guard let bindingID = profile.apiEndpointID else { return legacyDestination }
+        destinationStore.reloadPersistedDestinations()
+        guard let endpoint = destinationStore.apiEndpoint(id: bindingID),
+              let url = APIExportSettings.supportedEndpointURL(from: endpoint.endpointURLString) else {
+            return nil
+        }
+        let token = (destinationStore.token(for: bindingID) ?? "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let header = token.isEmpty ? nil
+            : (token.localizedCaseInsensitiveContains("Bearer ") || token.localizedCaseInsensitiveContains("Basic ")
+               ? token : "Bearer \(token)")
+        return APIExportDestinationSnapshot(
+            endpointURL: url,
+            authorizationHeaderValue: header,
+            displayName: url.host ?? "API Endpoint",
+            redactedEndpointDescription: APIExportSettings.redactedEndpointDescription(for: endpoint.endpointURLString)
+        )
     }
 
     /// Adopts a profile's destination bindings into the persisted vault keys
@@ -239,6 +274,17 @@ enum ExportIntentRunner {
         profileName: String? = nil,
         dependencies: Dependencies
     ) async -> Outcome {
+        let context = AppleSleepCaptureContext.resolve(timeZone: dependencies.calendar.timeZone,
+                                                       attribution: HealthKitManager.shared.sleepDayAttribution)
+        do { try context.requireShippedProfile() }
+        catch { return .failure(reason: error.localizedDescription) }
+        return await AppleSleepCaptureContext.pinned.withValue(context) {
+            await runWithCaptureContext(dates: dates, source: source, profileName: profileName, dependencies: dependencies)
+        }
+    }
+
+    private static func runWithCaptureContext(dates: [Date], source: ExportSource,
+                                             profileName: String?, dependencies: Dependencies) async -> Outcome {
         guard !dates.isEmpty else {
             return .failure(reason: "No dates to export")
         }
@@ -259,11 +305,14 @@ enum ExportIntentRunner {
         case .unavailable:
             return .profileRequiresRebind
         }
-        if let runProfile {
+        let isAPIExport = runProfile?.target == .apiEndpoint
+        let exportTarget: ExportTargetSelection = isAPIExport ? .apiEndpoint : .localIPhoneFolder
+        // API runs resolve immutable destination snapshots and need no global adoption.
+        if let runProfile, !isAPIExport {
             dependencies.adoptProfileDestinations(runProfile)
         }
         defer {
-            if runProfile != nil {
+            if runProfile != nil, !isAPIExport {
                 dependencies.restoreActiveProfileDestinations()
             }
         }
@@ -272,32 +321,47 @@ enum ExportIntentRunner {
         guard runProfile?.target != .googleDrive else {
             return .foregroundRequired(destination: .googleDrive)
         }
-
-        dependencies.refreshVaultAccess()
-        guard !dependencies.requiresVaultReselection() else {
-            return .destinationChanged
+        let apiDestination: APIExportDestinationSnapshot?
+        if isAPIExport, let runProfile {
+            guard let destination = dependencies.resolveAPIDestination(runProfile) else {
+                return .failure(reason: ExportFailureReason.apiEndpointNotConfigured.shortDescription)
+            }
+            apiDestination = destination
+        } else {
+            apiDestination = nil
+            dependencies.refreshVaultAccess()
+            guard !dependencies.requiresVaultReselection() else {
+                return .destinationChanged
+            }
+            guard dependencies.hasVaultAccess() else {
+                return .noVault
+            }
         }
-        guard dependencies.hasVaultAccess() else {
-            return .noVault
-        }
+        let targetLabel = apiDestination?.displayName ?? dependencies.targetLabel()
 
         await dependencies.refreshPurchaseStatus()
 
-        guard dependencies.canExport() else {
-            dependencies.trackExportBlockedByQuota()
+        let clinicAllowed = if let endpoint = apiDestination?.endpointURL.absoluteString {
+            await dependencies.clinicExportAccess(endpoint)
+        } else { false }
+        guard dependencies.canExport() || clinicAllowed else {
             return .paywall
         }
 
         let settings = runProfile.map(dependencies.makeSettingsForProfile)
             ?? dependencies.makeSettings()
 
-        // Shortcuts run without an interactive Mac peer handshake, so they keep
-        // the existing local iPhone-vault destination semantics even if the app's
-        // manual Export tab is currently set to Connected Mac.
-        guard let result = await dependencies.withVaultAccess({
-            await dependencies.exportDatesBackground(dates, settings)
-        }) else {
-            return .noVault
+        let result: ExportOrchestrator.ExportResult
+        if let apiDestination {
+            result = await dependencies.exportAPIEndpoint(dates, settings, apiDestination)
+        } else {
+            // Connected Mac still uses the local folder: Shortcuts have no interactive handshake.
+            guard let fileResult = await dependencies.withVaultAccess({
+                await dependencies.exportDatesBackground(dates, settings)
+            }) else {
+                return .noVault
+            }
+            result = fileResult
         }
 
         let sortedDates = dates.sorted()
@@ -309,20 +373,13 @@ enum ExportIntentRunner {
                     source,
                     sortedDates.first!,
                     sortedDates.last!,
-                    dependencies.targetLabel(),
-                    profileNameForHistory
+                    targetLabel,
+                    profileNameForHistory,
+                    exportTarget
                 )
             }
             if result.successCount > 0 {
                 dependencies.recordExportUse()
-                dependencies.trackExportSucceeded(PricingAnalyticsExportMetadata(
-                    targetType: .localFile,
-                    formatCount: settings.exportFormats.count,
-                    metricCount: settings.metricSelection.totalEnabledCount,
-                    dateRangePreset: PricingAnalyticsDateRangePreset.custom,
-                    startDate: sortedDates.first!,
-                    endDate: sortedDates.last!
-                ))
             }
             return .cancelled(
                 remainingDates: result.remainingDates(
@@ -340,8 +397,9 @@ enum ExportIntentRunner {
                 source,
                 sortedDates.first!,
                 sortedDates.last!,
-                dependencies.targetLabel(),
-                profileNameForHistory
+                targetLabel,
+                profileNameForHistory,
+                exportTarget
             )
             return .partial(
                 exported: 0,
@@ -355,7 +413,9 @@ enum ExportIntentRunner {
 
         if result.successCount == 0 {
             let reason = result.primaryFailureReason?.shortDescription ?? "Unknown error"
-            if result.primaryFailureReason == .deviceLocked {
+            // Legacy pending Shortcut requests cannot pin an API destination. Do not
+            // queue an upload as mutable folder work; the caller can rerun after unlock.
+            if result.primaryFailureReason == .deviceLocked, !isAPIExport {
                 let didPersistPendingRequest = await createPendingShortcutRequest(
                     dates: dates,
                     reason: reason,
@@ -372,8 +432,9 @@ enum ExportIntentRunner {
                 source,
                 sortedDates.first!,
                 sortedDates.last!,
-                dependencies.targetLabel(),
-                profileNameForHistory
+                targetLabel,
+                profileNameForHistory,
+                exportTarget
             )
             logger.error("Shortcut export failed: \(reason)")
             return .failure(reason: reason)
@@ -384,20 +445,12 @@ enum ExportIntentRunner {
             source,
             sortedDates.first!,
             sortedDates.last!,
-            dependencies.targetLabel(),
-            profileNameForHistory
+            targetLabel,
+            profileNameForHistory,
+            exportTarget
         )
 
         dependencies.recordExportUse()
-        let metadata = PricingAnalyticsExportMetadata(
-            targetType: .localFile,
-            formatCount: settings.exportFormats.count,
-            metricCount: settings.metricSelection.totalEnabledCount,
-            dateRangePreset: PricingAnalyticsDateRangePreset.custom,
-            startDate: sortedDates.first!,
-            endDate: sortedDates.last!
-        )
-        dependencies.trackExportSucceeded(metadata)
 
         // Only mark the schedule's lastExport when yesterday was part of this
         // run — otherwise an arbitrary back-fill export would suppress the
@@ -438,6 +491,7 @@ enum ExportIntentRunner {
             dates: dates,
             source: .shortcut,
             notificationMetadata: ["notification": ExportNotificationType.pendingExport.rawValue],
+            sleepCaptureContext: AppleSleepCaptureContext.pinned.wrappedValue,
             calendar: dependencies.calendar
         )
 

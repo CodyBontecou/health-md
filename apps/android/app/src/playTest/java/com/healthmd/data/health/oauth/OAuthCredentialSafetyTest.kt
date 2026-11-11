@@ -30,13 +30,8 @@ class OAuthCredentialSafetyTest {
     fun defaultOAuthRegistry_usesPublicClientOrTokenBrokerOnly() {
         val configs = OAuthConfigRegistry().all()
 
-        assertThat(configs.map { it.providerId }).containsAtLeast(
-            "fitbit",
-            "withings",
-            "oura",
-            "polar",
-            "whoop",
-        )
+        // Only the qualified WHOOP integration is enabled in production.
+        assertThat(configs.map { it.providerId }).containsExactly("whoop")
         assertThat(configs.filter { it.clientSecret.isNotBlank() }).isEmpty()
         assertThat(configs.map { it.clientAuthStyle }).doesNotContain(OAuthClientAuthStyle.Basic)
     }

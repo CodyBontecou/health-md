@@ -1,7 +1,9 @@
 {
   "records": [
     {
-      "cycle_id": "cycle-1",
+      "cycle_id": 101,
+      "sleep_id": "00000000-0000-4000-8000-000000000201",
+      "score_state": "SCORED",
       "score": {
         "resting_heart_rate": 52,
         "hrv_rmssd_milli": 68.5

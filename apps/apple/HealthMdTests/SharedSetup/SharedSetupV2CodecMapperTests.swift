@@ -25,6 +25,15 @@ final class SharedSetupV2CodecMapperTests: XCTestCase {
         XCTAssertFalse(preview.profiles[0].importsScheduleEnabled)
     }
 
+    func testEUDotExportsAsPortableIDAndSurvivesCodecRoundTrip() throws {
+        var profile = makeProfile(id: profileID(1), name: "EU Dot")
+        profile.settings.formatCustomization.dateFormat = .euDot
+        let document = try map(profiles: [profile], activeProfileID: profile.id)
+        let encoded = try SharedSetupV2Codec.encode(document)
+        XCTAssertTrue(String(decoding: encoded, as: UTF8.self).contains("\"date_format\":\"eu_dot\""))
+        XCTAssertEqual(try SharedSetupV2Codec.decode(encoded).profiles[0].presentation.dateFormat, .euDot)
+    }
+
     func testMinuteSchedulesCannotBeSilentlyRoundedIntoFrozenSharedSetupV2() throws {
         let profile = makeProfile(id: profileID(1), name: "Minute profile", policy: .summary, enabledNativeIDs: ["steps"])
         for minutes in [30, 60] {

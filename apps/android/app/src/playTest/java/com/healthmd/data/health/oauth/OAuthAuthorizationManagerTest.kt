@@ -1,6 +1,7 @@
 package com.healthmd.data.health.oauth
 
 import com.google.common.truth.Truth.assertThat
+import kotlinx.coroutines.async
 import kotlinx.coroutines.test.runTest
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
@@ -131,6 +132,84 @@ class OAuthAuthorizationManagerTest {
         assertThat(body).containsEntry("refresh_token", "refresh-old")
         assertThat(body).containsEntry("client_id", "client-id")
         assertThat(body).containsEntry("client_secret", "client-secret")
+    }
+
+    @Test
+    fun whoopAuthorizationUsesEightCharacterStateAndReadOnlyScopes() = runTest {
+        val registry = OAuthConfigRegistry()
+        val config = registry.get("whoop")!!.copy(clientId = "synthetic-whoop-client")
+        val store = InMemoryOAuthTokenStore()
+        val manager = OAuthAuthorizationManager(OAuthConfigRegistry(listOf(config)), store)
+        val query = queryParameters(requireNotNull(manager.buildAuthorizationUrl("whoop")))
+
+        assertThat(query.getValue("state")).hasLength(8)
+        assertThat(store.pendingAuthorizations.getValue(query.getValue("state")).providerId).isEqualTo("whoop")
+        assertThat(query.getValue("scope").split(' ')).containsExactly(
+            "offline", "read:cycles", "read:recovery", "read:sleep", "read:workout", "read:body_measurement",
+        )
+        assertThat(query.getValue("redirect_uri")).isEqualTo("healthmd://oauth2redirect")
+    }
+
+    @Test
+    fun whoopRefreshRequestsOfflineScopeAndStoresRotatedPair() = runTest {
+        val store = InMemoryOAuthTokenStore(listOf(OAuthToken("whoop", "access-old", "refresh-old")))
+        val config = OAuthProviderConfig(
+            providerId = "whoop",
+            displayName = "WHOOP",
+            authorizationEndpoint = server.url("/oauth/authorize").toString(),
+            tokenEndpoint = server.url("/oauth/token").toString(),
+            clientId = "synthetic-whoop-client",
+            scopes = listOf("offline"),
+        )
+        val manager = OAuthAuthorizationManager(OAuthConfigRegistry(listOf(config)), store)
+        server.enqueue(MockResponse().setBody("""
+            {"access_token":"access-new","refresh_token":"refresh-new","expires_in":3600}
+        """.trimIndent()))
+
+        val token = manager.refreshToken(config, "refresh-old")
+        val body = formParameters(server.takeRequest().body.readUtf8())
+        assertThat(body).containsEntry("scope", "offline")
+        assertThat(body).containsEntry("refresh_token", "refresh-old")
+        assertThat(body).doesNotContainKey("client_secret")
+        assertThat(token.accessToken).isEqualTo("access-new")
+        assertThat(store.tokens.getValue("whoop").refreshToken).isEqualTo("refresh-new")
+
+        server.enqueue(MockResponse().setBody("{\"access_token\":\"unusable-access\"}"))
+        val failure = runCatching { manager.refreshToken(config, "refresh-new") }.exceptionOrNull()
+        assertThat(failure).isInstanceOf(OAuthAuthorizationException::class.java)
+        assertThat((failure as OAuthAuthorizationException).reason).isEqualTo(OAuthFailureReason.INVALID_TOKEN_RESPONSE)
+        assertThat(store.tokens.getValue("whoop").accessToken).isEqualTo("access-new")
+        assertThat(store.tokens.getValue("whoop").refreshToken).isEqualTo("refresh-new")
+    }
+
+    @Test
+    fun delayedRefreshCannotReplaceNewGrantOrReconnectDisconnectedAccount() = runTest {
+        for (disconnect in listOf(false, true)) {
+            val original = OAuthToken("oura", "old", "old-refresh", expiresAtEpochSeconds = 1)
+            val store = InMemoryOAuthTokenStore(listOf(original))
+            val manager = manager(store)
+            val accepted = requireNotNull(store.getCredential("oura"))
+            val started = java.util.concurrent.CountDownLatch(1)
+            val release = java.util.concurrent.CountDownLatch(1)
+            server.dispatcher = object : okhttp3.mockwebserver.Dispatcher() {
+                override fun dispatch(request: okhttp3.mockwebserver.RecordedRequest): MockResponse {
+                    started.countDown()
+                    check(release.await(10, java.util.concurrent.TimeUnit.SECONDS))
+                    return MockResponse().setBody("""{"access_token":"stale-refresh","refresh_token":"stale-next","expires_in":3600}""")
+                }
+            }
+            val pending = async(kotlinx.coroutines.Dispatchers.Default) {
+                manager.validAccessToken("oura", accepted.connectionId)
+            }
+            try {
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    check(started.await(10, java.util.concurrent.TimeUnit.SECONDS))
+                }
+                if (disconnect) store.clearToken("oura") else store.saveToken(OAuthToken("oura", "replacement", "new-refresh"))
+            } finally { release.countDown() }
+            assertThat(pending.await()).isNull()
+            assertThat(store.getToken("oura")?.accessToken).isEqualTo(if (disconnect) null else "replacement")
+        }
     }
 
     @Test

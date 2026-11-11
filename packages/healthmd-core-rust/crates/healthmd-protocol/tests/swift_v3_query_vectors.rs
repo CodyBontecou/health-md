@@ -39,6 +39,7 @@ fn rust_matches_swift_direct_query_v3_fixture() {
 
     let peer = PeerCapabilities {
         export_history_observation_versions: None,
+        scoped_daily_note_versions: None,
         protocol_versions: vec![1, IOS_QUERY_APPLICATION_PROTOCOL_VERSION],
         platform: PeerPlatform::Ios,
         installation_id: SwiftUuid(

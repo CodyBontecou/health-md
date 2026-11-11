@@ -102,6 +102,8 @@ Every profile contains `bundle_id`, `name`, and the following common sections.
 
 `presentation`, including its `frontmatter` and `markdown` objects, has the same typed values and bounds as v1. Ordered frontmatter field and placeholder arrays retain their sender setting order; writers must emit that order deterministically. Custom Markdown is preserved verbatim. Portable tokens and non-nested conditional blocks retain their v1 meanings; malformed or unsupported dialect tokens produce `requires_action` and leave the recipient's local template unchanged.
 
+`presentation.date_format` accepts `iso8601`, `us_short`, `us_long`, `eu_short`, `eu_dot`, `eu_long`, `compact`, and `friendly`. `eu_dot` is the shared EU Dot preset: zero-padded calendar day and month with a four-digit calendar year (`dd.MM.yyyy`, for example `13.01.2026`). It is an additive preset in the deferred v2 contract; older readers that do not recognize it reject the document rather than substituting another format. Custom date patterns remain unsupported. Existing daily export schema versions and direct protocols are unchanged.
+
 `individual_entries` retains the v1 common shape: effective master toggle, semantic-ID keyed metric rows, relative entries folder, category-folder preference, and explicit filename template. Per-metric folders are relative. Metric-map keys participate in the root alias union even when their row is disabled.
 
 `daily_notes` retains the v1 common shape: `enabled`, relative `folder`, one-segment `filename_template`, `create_if_missing`, and `inject_sections`. Apple Daily Notes Only remains the typed Apple extension field.
@@ -285,7 +287,11 @@ The [transaction scenario fixture](fixtures/transaction-scenarios-v1.json) is de
 
 Validation recursively proves selection normalization, active-profile fallbacks, collision suffixing, nil imported bindings, disabled imported schedules, per-generated-profile foreign/unsupported preservation, exact rollback, Undo consumption, and unchanged destination/secure-store markers. It also recursively rejects native IDs, credentials, grants, native paths/URIs, runtime timestamps/history, health data, and operation identity in the embedded or canonical public artifacts.
 
-The canonical [Apple-origin](fixtures/apple-shared-setup-v2.json) and [Android-origin](fixtures/android-shared-setup-v2.json) fixtures remain one-line UTF-8 synthetic public documents. They contain no production health data, user/account/device identity, credential, grant, pairing, native ID, or runtime state. The Apple fixture covers all four data-detail/archive combinations; the Android fixture covers compatibility and raw-snapshot modes. V2 status remains `deferred`. Its schema, canonical fixtures, and transaction scenario remain byte-frozen. Native field-coverage inventories are audit metadata, not public artifact fields, and have only the exclusion-only exception below.
+The canonical [Apple-origin](fixtures/apple-shared-setup-v2.json) and [Android-origin](fixtures/android-shared-setup-v2.json) fixtures remain one-line UTF-8 synthetic public documents. They contain no production health data, user/account/device identity, credential, grant, pairing, native ID, or runtime state. The Apple fixture covers all four data-detail/archive combinations; the Android fixture covers compatibility and raw-snapshot modes. V2 status remains `deferred`. Its schema, canonical fixtures, and transaction scenario remain byte-frozen except for the specifically approved EU Dot amendment below. Native field-coverage inventories are audit metadata, not public artifact fields, and have only the exclusion-only exception below.
+
+## EU Dot preset amendment (2026-10-28)
+
+The repository owner approved a narrow additive v2 amendment for `presentation.date_format: "eu_dot"` on Apple and Android. No new field, default, arbitrary pattern, time preset, or platform extension is authorized. Existing fixture bytes and historical baseline hashes remain unchanged. The freeze validator removes only the exact `eu_dot` enum addition after `eu_short` before comparing the schema against its historical byte hash, so every other schema edit still fails. Reader/writer and native persistence/import tests cover the new preset. Older v2 readers reject this value; users exchanging it need updated readers on both platforms. Deferred status and device/accessibility qualification gates remain unchanged.
 
 ## Native field-coverage freeze
 
@@ -317,6 +323,20 @@ public Shared Setup grammar or its frozen artifact fixtures.
 
 ## Drive and recovery source-field audit successors
 
-[Apple revision 3](apple-profile-field-coverage-v3.json) retains Drive destination authority and local recovery classifications; [Android revision 3](android-profile-field-coverage-v3.json) retains the corresponding Android exclusions. [Apple revision 4](apple-profile-field-coverage-v4.json) is the additive union with the workout presentation preference from the approved Apple revision 2 audit. Earlier inventory revisions and the public Shared Setup v2 grammar remain unchanged. Drive account/folder identity is device-only and prohibited from portable bundles.
+[Apple revision 5](apple-profile-field-coverage-v5.json) unites the Drive revision 4 audit with main’s frozen revision 3 recovery and metric detail classifications; [Android revision 3](android-profile-field-coverage-v3.json) retains the corresponding Android exclusions. [Apple revision 4](apple-profile-field-coverage-v4.json) is the additive union with the workout presentation preference from the approved Apple revision 2 audit. Earlier inventory revisions and the public Shared Setup v2 grammar remain unchanged. Drive account/folder identity is device-only and prohibited from portable bundles.
 
 [Android revision 4](android-profile-field-coverage-v4.json) is the additive union of revision 3 with main's four Agent Data gateway field classifications. Gateway endpoint identity and URL bindings remain prohibited local authority; the public Shared Setup v2 allowlist does not acquire a gateway destination kind. Earlier revision rows remain unchanged.
+
+## Apple source-field audit revision 3
+
+[Revision 3](apple-profile-field-coverage-v3.json) preserves every revision 2
+classification, incorporates the subsequently approved minute-scheduling exclusions
+from revision 1, and adds `ExportSettingsSnapshot.historicalCalendarRollupPeriods`.
+The new `stored_only` kind describes native in-memory recovery authority without
+a new serialized key. Its disposition is `prohibited`, with no Shared Setup path:
+only known historical v7 operations may restore their original calendar summary
+settings. New preferences and imported Shared Setup cannot acquire this authority.
+The public v2 grammar, fixtures and both historical audit files remain unchanged.
+Native tests verify the unchanged minute-refresh exclusions alongside the recovery field.
+
+Revision 5 on [Android](android-profile-field-coverage-v5.json) also preserves revision 4 plus the current approved source inventory. Both revision 5 audits retain every preceding classification; they do not change the portable grammar.
