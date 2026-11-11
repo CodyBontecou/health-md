@@ -145,6 +145,7 @@ class ReceiverCoverageQaActivity : ComponentActivity() {
         }
         awaitCondition { allWork().any { it.id !in workIdsBefore } }
         var ids = allWork().filter { it.id !in workIdsBefore }.map { it.id }.toSet()
+        val fixtureStoppedBackoffIds = mutableSetOf<UUID>()
         if (cancelled) {
             awaitCondition { allWork().filter { it.id in ids }.all { it.state.isFinished } }
             check(count("cancel_action") == 1 && count("coverage") == 1)
@@ -175,23 +176,55 @@ class ReceiverCoverageQaActivity : ComponentActivity() {
             check(count("coverage") == 1) { "Partial ACK must keep the original query" }
             val plan = planFiles().filterKeys { it !in previousPlans }.values.single().second
             val firstAck = values("ack").first().split(",").toSet()
-            check(plan.getValue("residual").jsonArray.none { it.jsonPrimitive.content in firstAck })
-            state.update(mapOf("fail_upload_after" to "disabled"))
-            // The initial real attempt checkpoints its partial result before explicit recovery.
-            awaitCondition { allWork().filter { it.id in ids }.all { it.state.isFinished } }
+            val residual = plan.getValue("residual").jsonArray.map { it.jsonPrimitive.content }.toSet()
+            check(firstAck.size == 7 && residual.size == 3 && count("upload") >= 2) {
+                "Expected a real seven-day ACK and failed second production batch"
+            }
+            check(residual.intersect(firstAck).isEmpty())
             if (profileMode) {
+                val ownedProfile = requireNotNull(profileId)
+                // Journal ACK precedes the native retry checkpoint. Wait for BOTH and for
+                // WorkManager to enter its actual 30-minute backoff before touching the request.
+                awaitCondition {
+                    val entry = entries.entry(ownedProfile)
+                    entry != null && entry.pendingExports.flatMap { it.ownerDates }.map { it.toString() }.toSet() == residual &&
+                        allWork().filter { it.id in ids }.let { work ->
+                            work.size == ids.size && work.all { it.state == WorkInfo.State.ENQUEUED && it.runAttemptCount > 0 }
+                        }
+                }
+                val checkpoint = requireNotNull(entries.entry(ownedProfile))
+                check(ids.size == 1) { "Fixture must own exactly the original profile request" }
+                // Cancel ONLY the observed fixture-owned delayed request, not schedule runtime,
+                // notification discard, pending rows or recovery generation. KEEP can now admit
+                // a new real worker without changing production backoff or replay authority.
+                for (id in ids) workManager.cancelWorkById(id).result.get(10, java.util.concurrent.TimeUnit.SECONDS)
+                awaitCondition { allWork().filter { it.id in ids }.all { it.state == WorkInfo.State.CANCELLED } }
+                val afterStop = requireNotNull(entries.entry(ownedProfile))
+                check(afterStop.recoveryGeneration == checkpoint.recoveryGeneration &&
+                    afterStop.pendingExports == checkpoint.pendingExports) { "Stopping fixture backoff changed recovery authority" }
+                check(planFiles().filterKeys { it !in previousPlans }.values.single().second == plan) {
+                    "Stopping fixture backoff changed the frozen plan or ACKs"
+                }
+                fixtureStoppedBackoffIds += ids
+                state.event("fixture_backoff_stop", ids.single().toString())
+                state.update(mapOf("fail_upload_after" to "disabled"))
                 val initialIds = allWork().map { it.id }.toSet()
-                profileScheduler.handleAlarm(requireNotNull(profileId))
+                profileScheduler.handleAlarm(ownedProfile)
                 awaitCondition { allWork().any { it.id !in initialIds } }
                 ids = ids + allWork().filter { it.id !in initialIds }.map { it.id }
             } else {
+                awaitCondition { allWork().filter { it.id in ids }.all { it.state.isFinished } }
+                check(settings.getExportSettings().pendingScheduledExportRequests.map { it.date.toString() }.toSet() == residual)
+                state.update(mapOf("fail_upload_after" to "disabled"))
                 recovery.recoverPendingDates() // Production exact-plan recovery, never a new preflight.
             }
         }
         awaitCondition { allWork().filter { it.id in ids }.all { it.state.isFinished } }
         val finalWork = allWork().filter { it.id in ids }
         check(finalWork.size == ids.size) { "WorkManager evidence disappeared" }
-        check(finalWork.all { it.state == WorkInfo.State.SUCCEEDED }) { "Worker states: ${finalWork.map { it.state }}" }
+        check(finalWork.all { it.state == if (it.id in fixtureStoppedBackoffIds) WorkInfo.State.CANCELLED else WorkInfo.State.SUCCEEDED }) {
+            "Worker states: ${finalWork.map { it.state }}"
+        }
         val newPlans = planFiles().filterKeys { it !in previousPlans }
         if (wide) {
             check(newPlans.isEmpty() && count("coverage") == 0)

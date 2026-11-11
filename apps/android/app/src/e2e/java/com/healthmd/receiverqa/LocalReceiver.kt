@@ -63,12 +63,7 @@ class LocalReceiver(private val context: Context) {
         val start = LocalDate.parse(body.getValue("start").jsonPrimitive.content)
         val end = LocalDate.parse(body.getValue("end_exclusive").jsonPrimitive.content)
         val all = generateSequence(start) { it.plusDays(1) }.takeWhile { it < end }.toList()
-        val completed = when (state.read()["coverage_mode"]) {
-            "all" -> all
-            "holes" -> all.filterIndexed { index, _ -> index !in setOf(0,14,29) }
-            "none" -> emptyList()
-            else -> all.filterIndexed { index, _ -> index != 1 }
-        }
+        val completed = ReceiverQaCoverage.completedDates(all, state.read()["coverage_mode"])
         val response = JsonObject(body.toMutableMap().apply {
             put("schema", JsonPrimitive("healthmd.receiver_coverage.response"))
             put("completed_dates", JsonArray(completed.map { JsonPrimitive(it.toString()) }))
