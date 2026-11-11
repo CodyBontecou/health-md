@@ -134,4 +134,10 @@ Until that record is complete, customer documentation must label the feature pla
 
 ## Scoped capture Daily Notes
 
-Drive currently rejects Daily Note merges containing scoped capture annotations with a remote conflict. Before release, retain the capture profile and section policy in the private journal and use the profile-aware core merger on both platforms. Qualify Morning ends generation and Night begins updates of existing scoped notes; never strip or merge capture annotations with the legacy Markdown merger. This is a source-integration release blocker, independent of production OAuth and device receipts.
+Private v3 Drive journals retain the frozen capture patch, profile and section policy. Both platforms use the profile-aware core merger for scoped notes and reject unsafe legacy replay. Host regressions cover Morning ends generation and Night begins updates of existing scoped notes.
+
+- [ ] Compile both apps against the integrated source and run the owning native recovery tests.
+- [ ] Qualify scoped-note creation, retry after interruption and updates of existing remote notes on physical iPhone and Android devices.
+- [ ] Verify that a missing or malformed retained policy cannot replay staged bytes through the legacy Markdown merger.
+
+These acceptance checks are separate from production OAuth and the other device receipts above.
